@@ -175,6 +175,22 @@ RUN_FLAG_VERTEX_ALPHA_RAMP = 1 << 1
 # texture (sNdsRendererHardwareIntensityCoverage). Mirror:
 # NDS_NATIVE_STAGE_RUN_FLAG_HEAD_XLU, src/nds/nds_renderer_native_owners.c.
 RUN_FLAG_HEAD_XLU = 1 << 2
+# Generator-internal run flags, spent before the packet is written
+# (_strip_generator_run_flags), so no runtime run table carries them.
+#
+# A run drawn with G_SHADING_SMOOTH clear: the RSP flat-shades each triangle
+# with the colour of its first vertex. The RSP reset list every task starts
+# from sets the bit (sys/rdp.c:26-33); the boards' lists clear it beside
+# G_LIGHTING. Tracked, not drawn: their lit faces carry one normal per face,
+# so after bake_source_lighting a face's vertices share one colour anyway.
+RUN_FLAG_FLAT_SHADE = 1 << 3
+# A run the RSP draws with G_LIGHTING set (SourceState.lighting): its vertex
+# colour bytes are normals, lit by the scene's light. bake_source_lighting
+# folds the light into the colours.
+RUN_FLAG_SOURCE_LIT = 1 << 4
+G_SHADING_SMOOTH = 1 << 21
+G_LIGHTING_BIT = 1 << 17
+G_MW_LIGHTCOL = 0x0A
 ALPHA_RAMP_TEXELS = 32
 # S10.5 texel units, as every packet ST is: the mid column of the 8-wide ramp,
 # and the T of a corner that carries the triangle's peak alpha.
@@ -2225,6 +2241,18 @@ class SourceState:
     geometry_mode: int
     othermode_h: int = DEFAULT_OTHERMODE_H
     othermode_l: int = 0
+    # The RSP's G_SHADING_SMOOTH bit, tracked apart from geometry_mode so the
+    # policies (and every runtime policy match) stay as they were.
+    shading_smooth: bool = True
+    # The RSP's G_LIGHTING bit as the battle scenes leave it: every battle's
+    # pre-render function (scVSBattleFuncLights, sc1PGameFuncLights,
+    # sc1PBonusStageFuncLights) sets it before the map draws. Also tracked
+    # apart from geometry_mode, for the same reason.
+    lighting: bool = True
+    # gSPLightColor words (G_MW_LIGHTCOL): light 1 is the directional
+    # light, light 2 the ambient one under gSPNumLights(1). None until set.
+    light_diffuse: int | None = None
+    light_ambient: int | None = None
     combine_w0: int = 0
     combine_w1: int = 0
     state_hash: int = 2166136261
@@ -2383,6 +2411,12 @@ def compile_state_delta(
 def apply_state_words(state: SourceState, op: int, w0: int, w1: int) -> None:
     if op == OP_GEOMETRYMODE:
         state.geometry_mode = (state.geometry_mode & w0) | w1
+        state.shading_smooth = (
+            (state.shading_smooth and (w0 & G_SHADING_SMOOTH) != 0)
+            or (w1 & G_SHADING_SMOOTH) != 0)
+        state.lighting = (
+            (state.lighting and (w0 & G_LIGHTING_BIT) != 0)
+            or (w1 & G_LIGHTING_BIT) != 0)
     elif op == OP_SETCOMBINE:
         state.combine_w0 = w0
         state.combine_w1 = w1
@@ -2393,6 +2427,11 @@ def apply_state_words(state: SourceState, op: int, w0: int, w1: int) -> None:
         state.othermode_h = apply_othermode(state.othermode_h, op, w0, w1)
     elif op == OP_SETOTHERMODE_L:
         state.othermode_l = apply_othermode(state.othermode_l, op, w0, w1)
+    elif op == OP_MOVEWORD and ((w0 >> 16) & 0xFF) == G_MW_LIGHTCOL:
+        if (w0 & 0xFFFF) == 0x00:
+            state.light_diffuse = (w1 >> 8) & 0xFFFFFF
+        elif (w0 & 0xFFFF) == 0x18:
+            state.light_ambient = (w1 >> 8) & 0xFFFFFF
 
 
 def apply_compiled_state_delta(
@@ -2679,6 +2718,122 @@ def _root_peak_source_alpha(
     return peak
 
 
+def stage_light_angles(desc, texts, resources) -> tuple[float, float] | None:
+    """MPGroundData.light_angle (x, y) from the stage's map header (mptypes.h:
+    four 16-byte gr_desc, map_geometry, layer_mask, wallpaper, fog colour and
+    alpha, four emblem colours, an unused word, then light_angle at +0x60).
+    mpCollisionInitGroundData copies it to gMPCollisionLightAngleX/Y."""
+    res = resources.get("stage_map")
+    symbols = [token for token in desc.text_contract_tokens.get("reloc_symbols", ())
+               if token.endswith("MapMapHeader")]
+    if res is None or not symbols or "reloc_symbols" not in texts:
+        return None
+    match = re.search(
+        r"#define " + re.escape(symbols[0]) + r" \(\(intptr_t\)(0x[0-9A-Fa-f]+)\)",
+        texts["reloc_symbols"])
+    if match is None:
+        return None
+    header = int(match.group(1), 16)
+    if header + 0x6C > len(res.payload):
+        raise falsify(f"{symbols[0]}: map header runs past the map payload")
+    angle_x, angle_y = struct.unpack_from(">ff", res.payload, header + 0x60)
+    return angle_x, angle_y
+
+
+def reflect_light_direction(angle_x: float, angle_y: float) -> tuple[int, int, int]:
+    """ftDisplayLightsDrawReflect (ftdisplaylights.c:10-27): light 1's
+    direction as the s8 words the RSP receives."""
+    import math
+    dtor = math.pi / 180.0
+    vy = -math.sin(-angle_y * dtor)
+    vz = math.cos(-angle_y * dtor)
+    vx = math.sin(angle_x * dtor) * vz
+    vz *= math.cos(angle_x * dtor)
+    return tuple(max(-128, min(127, int(c * 100.0))) for c in (vx, vy, vz))
+
+
+def bake_source_lighting(desc, texts, resources, runs, run_lights, vertices,
+                         corners, baked_world) -> None:
+    """Fold the RSP's lighting into the vertex colours of the runs drawn with
+    G_LIGHTING set (RUN_FLAG_SOURCE_LIT).
+
+    Every battle's pre-render function sets G_LIGHTING and aims light 1
+    (scVSBattleFuncLights, sc1PGameFuncLights, sc1PBonusStageFuncLights), and
+    a map list that never clears it is lit: its colour bytes are normals. The
+    native stage path has no lighting, so those normals drew as colours (the
+    boards' blue/red/green blocks, owner 10-01). The light is the map's fixed
+    angle and the lists' own gSPLightColor words, and a rigid binding's
+    rotation is baked, so each lit vertex has one constant colour:
+    ambient + diffuse * max(0, N.L), L in the object's frame (the battle
+    camera's view rides the projection, so the modelview is the model).
+    """
+    import math
+    lit = [i for i, run in enumerate(runs) if run.flags & RUN_FLAG_SOURCE_LIT]
+    angles = stage_light_angles(desc, texts, resources) if lit else None
+    if angles is None:
+        # No lit run, or a stage whose descriptor carries no map header
+        # (Sector Z: its one lit list is the wing-platform collision proxy,
+        # hidden by the native stage owner).
+        _strip_generator_run_flags(runs)
+        return
+    light = reflect_light_direction(*angles)
+    norm = math.sqrt(sum(c * c for c in light)) or 1.0
+    world_light = tuple(c / norm for c in light)
+    baked: dict[int, int] = {}
+    for run_index in lit:
+        run = runs[run_index]
+        colours = run_lights[run_index] if run_index < len(run_lights) else None
+        if colours is None or colours[0] is None or colours[1] is None:
+            raise falsify(f"run {run_index}: lit before both light colours were set")
+        diffuse, ambient = colours
+        object_light = world_light
+        if run.binding_index < len(baked_world) and baked_world[run.binding_index]:
+            m = baked_world[run.binding_index]
+            rows = (m[0:3], m[4:7], m[8:11])
+            projected = []
+            for row in rows:
+                length = math.sqrt(sum(float(c) * float(c) for c in row)) or 1.0
+                projected.append(
+                    sum(float(row[k]) * world_light[k] for k in range(3)) / length)
+            plen = math.sqrt(sum(c * c for c in projected)) or 1.0
+            object_light = tuple(c / plen for c in projected)
+        for corner in corners[run.first_corner:run.first_corner + run.triangle_count * 3]:
+            vertex = vertices[corner]
+            normal = []
+            for shift in (24, 16, 8):
+                byte = (vertex.rgba >> shift) & 0xFF
+                normal.append((byte - 256 if byte > 127 else byte) / 128.0)
+            intensity = max(0.0, sum(normal[k] * object_light[k] for k in range(3)))
+            rgb = 0
+            for shift in (16, 8, 0):
+                channel = (((ambient >> shift) & 0xFF)
+                           + intensity * ((diffuse >> shift) & 0xFF))
+                rgb = (rgb << 8) | min(255, int(channel))
+            rgba = (rgb << 8) | (vertex.rgba & 0xFF)
+            previous = baked.get(corner)
+            if previous is not None and previous != rgba:
+                raise falsify(f"dense vertex {corner} lit two ways")
+            baked[corner] = rgba
+    for run_index, run in enumerate(runs):
+        if run.flags & RUN_FLAG_SOURCE_LIT:
+            continue
+        for corner in corners[run.first_corner:run.first_corner + run.triangle_count * 3]:
+            if corner in baked:
+                raise falsify(f"dense vertex {corner} shared by a lit and an unlit run")
+    for dense, rgba in baked.items():
+        vertices[dense] = replace(vertices[dense], rgba=rgba)
+    _strip_generator_run_flags(runs)
+
+
+def _strip_generator_run_flags(runs) -> None:
+    """RUN_FLAG_SOURCE_LIT is spent here and flat shading is not drawn yet:
+    neither reaches the packet, so no runtime run table moves for them."""
+    for index, run in enumerate(runs):
+        if run.flags & (RUN_FLAG_SOURCE_LIT | RUN_FLAG_FLAT_SHADE):
+            runs[index] = replace(
+                run, flags=run.flags & ~(RUN_FLAG_SOURCE_LIT | RUN_FLAG_FLAT_SHADE))
+
+
 def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
     desc = _resolve_stage(stage)
     owners = _owner_specs_from_descriptor(desc)
@@ -2764,6 +2919,8 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
 
     bindings: list[StageBinding] = []
     runs: list[StageRun] = []
+    # Per run: the (diffuse, ambient) colours a lit run was drawn under.
+    run_lights: list[tuple[int | None, int | None] | None] = []
     vertices: list[DenseVertex] = []
     # Unpromoted source alpha per dense vertex: decode_vertex promotes zero to
     # 0xFF for every caller, and the per-triangle rule below needs the raw byte.
@@ -2976,6 +3133,7 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
                 span = current_run["state_span"]
                 assert isinstance(span, StateSpan)
                 run_state_spans.append(span)
+                run_lights.append(current_run.get("light"))
                 current_run = None
 
             for event in events:
@@ -3325,6 +3483,18 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
                                     int(current_run["flags"])
                                     | RUN_FLAG_HEAD_XLU
                                 )
+                            if not state.shading_smooth:
+                                current_run["flags"] = (
+                                    int(current_run["flags"])
+                                    | RUN_FLAG_FLAT_SHADE
+                                )
+                            if state.lighting:
+                                current_run["flags"] = (
+                                    int(current_run["flags"])
+                                    | RUN_FLAG_SOURCE_LIT
+                                )
+                                current_run["light"] = (
+                                    state.light_diffuse, state.light_ambient)
                             corners.extend(dense_indices)
                             current_run["triangles"] = int(current_run["triangles"]) + 1
                             triangle_count += 1
@@ -3382,6 +3552,8 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
     baked_world = baked_stage_world_matrices(
         resources, dobjs, repo_root, desc,
         binding_dobjs if dl_link_owner_mask else ())
+    bake_source_lighting(desc, texts, resources, runs, run_lights, vertices,
+                         corners, baked_world)
 
     if matched_omissions != omitted_draws:
         raise falsify(f"unmatched drawable omissions: {omitted_draws - matched_omissions}")
@@ -3583,7 +3755,7 @@ def validate_packet(packet: Packet, stage: str | object = "dreamland") -> None:
 
             unknown_flags = run.flags & ~(
                 RUN_FLAG_PROJECTED_CROSS_MATRIX | RUN_FLAG_VERTEX_ALPHA_RAMP
-                | RUN_FLAG_HEAD_XLU
+                | RUN_FLAG_HEAD_XLU | RUN_FLAG_FLAT_SHADE | RUN_FLAG_SOURCE_LIT
             )
             if unknown_flags:
                 raise falsify(
