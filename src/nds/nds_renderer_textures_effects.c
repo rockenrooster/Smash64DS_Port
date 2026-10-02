@@ -11292,6 +11292,10 @@ static void ndsRendererProfileTextureFormat(volatile u32 *mask,
 }
 #endif
 
+/* Stage textures whose palette read ran past a short LOADTLUT (see the
+ * palette block in ndsRendererHardwareResolveOrBindTexture). */
+volatile u32 gNdsStageShortTlutExtendCount;
+
 static void ndsRendererHardwareRejectTexture(NDSRendererStats *stats,
                                              u32 format, u32 size,
                                              u32 reason)
@@ -12782,6 +12786,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     u32 source_physical_bytes;
     u32 palette_base;
     u32 tlut_physical_bytes;
+    u32 tlut_count;
     u32 params;
     u32 key_hash;
     u32 render_tile_index;
@@ -13649,6 +13654,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     }
     tlut_src = NULL;
     palette_base = 0u;
+    tlut_count = stats->texture_tlut_count;
     if (format == NDS_RENDERER_HW_TEXTURE_FMT_CI)
     {
         u32 palette_entries;
@@ -13716,8 +13722,26 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
                 }
             }
         }
+        /* P2-6 (2026-10-01): A STAGE PALETTE SHORTER THAN ITS INDICES READS
+         * THE WORDS THAT FOLLOW IT. Fifteen of the 24 bonus boards' first
+         * texture is a CI4 brick that uses index 3 under a three-colour
+         * LOADTLUT (the other nine load four colours of the same image and
+         * draw); the RDP reads whatever TMEM held there, and refusing the
+         * texture refused the whole map -- only targets and platforms drew
+         * (owner, Kirby's boards). A stage's palette sits in its own file,
+         * so the entries past the loaded count are the source's next palette
+         * words, which is what the four-colour boards load. Fighters and
+         * effects keep the refusal. */
+        tlut_count = stats->texture_tlut_count;
+        if ((allow_stage_source_frame != FALSE) &&
+            (stats->texture_tlut_image != 0u) && (tlut_count != 0u) &&
+            (tlut_count < palette_entries))
+        {
+            tlut_count = palette_entries;
+            gNdsStageShortTlutExtendCount++;
+        }
         if ((stats->texture_tlut_image == 0u) ||
-            (stats->texture_tlut_count < palette_entries))
+            (tlut_count < palette_entries))
         {
             ndsRendererHardwareRejectTexture(
                 stats, format, size,
@@ -13790,7 +13814,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
          * the 16-bit ordered-coverage mask once per pair so the animated pixel
          * loop avoids per-pixel color blending. */
         ndsRendererHardwareBuildTexel01Ci4Lut(
-            config, tlut_src, stats->texture_tlut_count, palette_base,
+            config, tlut_src, tlut_count, palette_base,
             texel1_source.palette_base, stats->prim_lod_fraction);
         use_texel1_ci4_lut = TRUE;
         use_texel1_ci4_direct = TRUE;
@@ -13891,14 +13915,14 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
                 {
                     color = ndsRendererHardwareTextureColor(
                         config, format, size, texels_src, tlut_src,
-                        stats->texture_tlut_count, palette_base, src_index,
+                        tlut_count, palette_base, src_index,
                         ((use_texel1 != FALSE) ||
                          (alpha_ignores_texels != FALSE)) ? TRUE : FALSE);
                     if (use_texel1 != FALSE)
                     {
                         u16 color1 = ndsRendererHardwareTexel1Color(
                             &texel1_source, config, tlut_src,
-                            stats->texture_tlut_count,
+                            tlut_count,
                             texel1_origin_delta_s, texel1_origin_delta_t,
                             x, y);
 
