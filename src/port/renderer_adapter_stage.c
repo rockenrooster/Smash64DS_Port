@@ -7332,6 +7332,12 @@ volatile u32 gNdsStageDLFastLaneFills;
  * the item submit's head colours over the reset persistent stats -- and the
  * same off-screen exit as NDS_SDL_ROUTE_BAKED. */
 #define NDS_SDL_ROUTE_BAKED_ITEM 0xfdu
+/* P2-6 (2026-10-02): the GBumper's quad (the Race places them along the
+ * course; Peach's Castle drops one): the body's castle bumper owner with the
+ * body's admission -- an Item GObj of kind GBumper under the item submit, one
+ * MObj of the owner's flags whose snapshot selects a palette image -- tested
+ * again on every draw, and the snapshot taken live, as the body takes it. */
+#define NDS_SDL_ROUTE_CASTLE_BUMPER 0xfcu
 /* Yoshi's Island's capsules and boxes thrashed an 8-slot table (1,231 fills
  * for 1,469 hits a match): the owners are few, but a capsule alone draws three
  * roots, and its header and third root shared a slot under an address-bit
@@ -7426,10 +7432,26 @@ typedef struct NDSStageDLRoute
 
 static NDSStageDLRoute sNdsStageDLRoutes[NDS_SDL_ROUTES];
 
+/* P2-6 (2026-10-02): two ways, the hashed slot and its pair. The Race's
+ * bumper quad and a Bob-omb list shared a slot and evicted each other on
+ * every draw (1,021 fills for 1,021 body submits in 600 frames). Returns the
+ * slot holding `dl`, else the hashed one. */
 static inline NDSStageDLRoute *ndsStageDLRouteSlot(const Gfx *dl)
 {
-    return &sNdsStageDLRoutes[((u32)(uintptr_t)dl * 2654435761u) >>
-                              NDS_SDL_ROUTE_SHIFT];
+    const u32 index = ((u32)(uintptr_t)dl * 2654435761u) >>
+        NDS_SDL_ROUTE_SHIFT;
+    NDSStageDLRoute *slot = &sNdsStageDLRoutes[index];
+
+    if (slot->dl != dl)
+    {
+        NDSStageDLRoute *pair = &sNdsStageDLRoutes[index ^ 1u];
+
+        if (pair->dl == dl)
+        {
+            return pair;
+        }
+    }
+    return slot;
 }
 
 static void ndsStageDLRouteRecord(const Gfx *dl, NDSRelocLoadedFile *loaded,
@@ -7440,6 +7462,11 @@ static void ndsStageDLRouteRecord(const Gfx *dl, NDSRelocLoadedFile *loaded,
     if ((loaded == NULL) || (loaded->data == NULL))
     {
         return;
+    }
+    if ((slot->dl != dl) && (slot->route != NDS_SDL_ROUTE_NONE))
+    {
+        /* The hashed slot holds another list: take its pair. */
+        slot = &sNdsStageDLRoutes[(u32)(slot - sNdsStageDLRoutes) ^ 1u];
     }
     if ((slot->dl != dl) || (slot->route != route))
     {
@@ -7454,6 +7481,38 @@ static void ndsStageDLRouteRecord(const Gfx *dl, NDSRelocLoadedFile *loaded,
     slot->route = (u8)route;
 }
 
+/* The body's item-submit seeds over the reset persistent stats, with its
+ * witnesses: the head's prim/env colours and blend modes, each only where the
+ * head captured it. */
+static inline void ndsStageDLFastItemSeeds(NDSRendererStats *render_stats)
+{
+    const u32 head = (sNdsRendererAdapterItemSubmitHead <
+                      NDS_RENDERER_STAGE_DL_HEADS) ?
+        sNdsRendererAdapterItemSubmitHead : 0u;
+
+    gNdsItemRendererLastHead = head;
+    gNdsItemRendererLastColorMask = sNdsRendererAdapterItemColorMask[head];
+    gNdsItemRendererLastEnvColor = sNdsRendererAdapterItemEnvColor[head];
+    gNdsItemRendererLastOtherModeL = sNdsRendererAdapterItemOtherModeL[head];
+    gNdsItemRendererLastOtherModeH = sNdsRendererAdapterItemOtherModeH[head];
+    if ((sNdsRendererAdapterItemColorMask[head] & 1u) != 0u)
+    {
+        render_stats->prim_color = sNdsRendererAdapterItemPrimColor[head];
+    }
+    if ((sNdsRendererAdapterItemColorMask[head] & 2u) != 0u)
+    {
+        render_stats->env_color = sNdsRendererAdapterItemEnvColor[head];
+    }
+    if (sNdsRendererAdapterItemOtherModeLValid[head] != 0u)
+    {
+        render_stats->othermode_l = sNdsRendererAdapterItemOtherModeL[head];
+    }
+    if (sNdsRendererAdapterItemOtherModeHValid[head] != 0u)
+    {
+        render_stats->othermode_h = sNdsRendererAdapterItemOtherModeH[head];
+    }
+}
+
 /* TRUE when a routed owner drew `dl`; FALSE sends it to the body. */
 static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
     DObj *dobj, const Gfx *dl, GObj *camera_gobj, u32 initial_geometry_mode)
@@ -7462,6 +7521,9 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
     NDSRelocLoadedFile *loaded = route->loaded;
     GObj *owner = dobj->parent_gobj;
     u32 route_kind = NDS_SDL_ROUTE_NONE;
+#if NDS_P2_STAGE_CASTLE
+    NDSRendererNativeMaterial bumper_material;
+#endif
     NDSRendererConfig config = {0};
     NDSRendererStats *render_stats;
     NDSRendererMatrix20p12 projection;
@@ -7501,7 +7563,8 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
          (loaded->data_size != route->data_size) ||
          (loaded->asset_id != (u32)route->asset_id) ||
          ((dobj->mobj != NULL) && (route->route != NDS_SDL_ROUTE_BAKED) &&
-          (route->route != NDS_SDL_ROUTE_BAKED_ITEM)) ||
+          (route->route != NDS_SDL_ROUTE_BAKED_ITEM) &&
+          (route->route != NDS_SDL_ROUTE_CASTLE_BUMPER)) ||
          (owner == NULL) ||
          (sNdsRendererAdapterStagePersistentActive == FALSE) ||
          (sNdsRendererAdapterEffectSubmitActive != FALSE) ||
@@ -7539,6 +7602,32 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
             return FALSE;
         }
         break;
+#endif
+#if NDS_P2_STAGE_CASTLE
+    case NDS_SDL_ROUTE_CASTLE_BUMPER:
+    {
+        ITStruct *ip;
+
+        if ((owner->id != nGCCommonKindItem) ||
+            (sNdsRendererAdapterItemSubmitActive == FALSE) ||
+            (dobj->mobj == NULL) || (dobj->mobj->next != NULL) ||
+            (ndsRendererAdapterMaterialFlags(dobj->mobj) !=
+                 NDS_NATIVE_CASTLE_BUMPER_MOBJ_FLAGS) ||
+            (route->data_size < NDS_NATIVE_CASTLE_BUMPER_IMAGE_END))
+        {
+            return FALSE;
+        }
+        ip = itGetStruct(owner);
+        if ((ip == NULL) || (ip->kind != nITKindGBumper) ||
+            (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                 dobj->mobj, &bumper_material, FALSE, NULL, NULL) == FALSE) ||
+            (bumper_material.effects !=
+                 NDS_RENDERER_NATIVE_MATERIAL_PALETTE_IMAGE))
+        {
+            return FALSE;
+        }
+        break;
+    }
 #endif
     default:
     {
@@ -7671,6 +7760,23 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
             gNdsChargeShotSubmitFailCount++;
         }
     }
+#if NDS_P2_STAGE_CASTLE
+    else if (route_kind == NDS_SDL_ROUTE_CASTLE_BUMPER)
+    {
+        ndsStageDLFastItemSeeds(render_stats);
+        handled = ndsRendererSubmitNativeCastleBumper(
+            loaded->data, loaded->data_size, &bumper_material, &config,
+            render_stats);
+        if (handled != FALSE)
+        {
+            gNdsCastleBumperDrawCount++;
+        }
+        else
+        {
+            gNdsCastleBumperSubmitFailCount++;
+        }
+    }
+#endif
 #if NDS_P2_ITEM_CORE
     else if ((route_kind == NDS_SDL_ROUTE_BAKED) ||
              (route_kind == NDS_SDL_ROUTE_BAKED_ITEM))
@@ -7685,31 +7791,7 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
 
         if (route_kind == NDS_SDL_ROUTE_BAKED_ITEM)
         {
-            /* The body's item seeds, as the item routes below take them. */
-            u32 head = (sNdsRendererAdapterItemSubmitHead <
-                        NDS_RENDERER_STAGE_DL_HEADS) ?
-                sNdsRendererAdapterItemSubmitHead : 0u;
-
-            if ((sNdsRendererAdapterItemColorMask[head] & 1u) != 0u)
-            {
-                render_stats->prim_color =
-                    sNdsRendererAdapterItemPrimColor[head];
-            }
-            if ((sNdsRendererAdapterItemColorMask[head] & 2u) != 0u)
-            {
-                render_stats->env_color =
-                    sNdsRendererAdapterItemEnvColor[head];
-            }
-            if (sNdsRendererAdapterItemOtherModeLValid[head] != 0u)
-            {
-                render_stats->othermode_l =
-                    sNdsRendererAdapterItemOtherModeL[head];
-            }
-            if (sNdsRendererAdapterItemOtherModeHValid[head] != 0u)
-            {
-                render_stats->othermode_h =
-                    sNdsRendererAdapterItemOtherModeH[head];
-            }
+            ndsStageDLFastItemSeeds(render_stats);
         }
 
         for (i = 0u; (i < slots) && (i < NDS_NATIVE_BAKED_MATERIAL_SLOTS);
@@ -12280,6 +12362,14 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         if (castle_bumper_native_handled != FALSE)
         {
             gNdsCastleBumperDrawCount++;
+#if (NDS_RENDERER_PROFILE_LEVEL < 2)
+            if ((sNdsRendererAdapterEffectSubmitActive == FALSE) &&
+                (sNdsRendererAdapterStagePersistentActive != FALSE))
+            {
+                ndsStageDLRouteRecord(dl, loaded, 0u,
+                                      NDS_SDL_ROUTE_CASTLE_BUMPER);
+            }
+#endif
         }
         else
         {

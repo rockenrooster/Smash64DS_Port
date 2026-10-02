@@ -11498,12 +11498,33 @@ static u32 ndsFighterPacketLightWord(s32 x, s32 y, s32 z)
  * ndsRendererNativeRebuildProductionRunUv, evaluated from the packet's frozen
  * texture-preparation inputs plus this draw's live root modelview and LookAt.
  *
- * Sites from one run are contiguous. Link's generated texgen run owns 28
- * unique dense vertices in both details, so a 32-entry local cache keeps the
- * unavoidable divide work at the same once-per-source-vertex rate as the
- * direct owner while all repeated strip corners become table copies. Future
- * source content that exceeds that proven bound fails this optimization and
- * takes the ordinary native owner path. */
+ * Sites from one run are contiguous; a site repeating the previous site's
+ * normal copies its word. */
+_Static_assert(((((u64)0xffffu) * NDS_NATIVE_TEXGEN_SCALE_RECIP_Q48) >> 8) <=
+                   (u64)0xffffffffu,
+               "the texgen scale factor must fit a 32x32 multiply");
+
+/* ndsRendererNativeTexgenCoord's non-LINEAR value with the scale's factor
+ * made by the caller: a 32-bit dot (see ndsFighterPacketPatchTexgen) and one
+ * 32x32->64 multiply. */
+static inline s32 ndsFighterPacketTexgenScaled(
+    s32 nx, s32 ny, s32 nz, const NDSNativeTexgenDirectionQ15 *direction,
+    u32 factor)
+{
+    const s32 unit = (s32)NDS_NATIVE_TEXGEN_UNIT;
+    s32 dot = nx * direction->x + ny * direction->y + nz * direction->z;
+
+    if (dot > unit)
+    {
+        dot = unit;
+    }
+    else if (dot < -unit)
+    {
+        dot = -unit;
+    }
+    return (s32)(((u64)(u32)(dot + unit) * (u64)factor) >> 40);
+}
+
 static s32 ndsFighterPacketPatchTexgen(
     NDSFighterPacket *packet,
     const NDSRendererNativeFighterRoot *inputs,
@@ -11548,9 +11569,6 @@ static s32 ndsFighterPacketPatchTexgen(
     {
         const NDSFighterPacketTexgenGroup *group =
             ndsFighterPacketTexgenGroupAt(packet, group_index);
-        u16 cached_dense[NDS_FIGHTER_PACKET_TEXGEN_DENSE_MAX];
-        u32 cached_word[NDS_FIGHTER_PACKET_TEXGEN_DENSE_MAX];
-        u32 cached_count = 0u;
         u32 first_site;
         u32 site_end;
         u32 site_index;
@@ -11581,83 +11599,93 @@ static s32 ndsFighterPacketPatchTexgen(
             }
             directions_for = inputs[group->root].modelview_matrix;
         }
-        for (site_index = first_site; site_index < site_end; site_index++)
+        /* P2-6 (2026-10-02): a polygon's texgen sites are 93% distinct
+         * normals (Race, 1p-pf10r-st11: 364 sites a frame, 337 computed), so
+         * the unique-normal cache's search was a full scan per site and 36% of
+         * this function, and each coordinate was a call doing 64-bit products.
+         * The memo is now the previous site's normal only (strip repeats are
+         * adjacent), the per-group scale reciprocal is made once, and the dot
+         * product is 32-bit: |n| <= 128 and |direction| <= 32767 bound it by
+         * 3 * 2^22, so every value is the one the 64-bit form computed. The
+         * LINEAR form keeps ndsRendererNativeTexgenCoord. */
         {
-            const NDSFighterPacketTexgenSite *site;
-            u32 dense_id;
-            u32 cache_index;
-            u32 st;
+            const NDSNativeDenseVertex *dense_vertices =
+                sNdsNativeFighterActiveTables->dense_vertices;
+            const u32 dense_count = sNdsNativeFighterActiveTables->dense_count;
+            const u32 word_count = packet->word_count;
+            u32 *words = packet->words;
+            const u32 linear = group->reserved[0];
+            const u32 factor_s = (u32)((((u64)(group->scale_s & 0xffffu)) *
+                                        NDS_NATIVE_TEXGEN_SCALE_RECIP_Q48) >>
+                                       8);
+            const u32 factor_t = (u32)((((u64)(group->scale_t & 0xffffu)) *
+                                        NDS_NATIVE_TEXGEN_SCALE_RECIP_Q48) >>
+                                       8);
+            const s32 base_s = group->offset - ((s32)group->origin_s << 2);
+            const s32 base_t = group->offset - ((s32)group->origin_t << 2);
+            u32 last_dense = 0xffffffffu;
+            u32 st = 0u;
 
-            if (site_index < NDS_FIGHTER_PACKET_TEXGEN_SITE_MAX)
+            for (site_index = first_site; site_index < site_end; site_index++)
             {
-                site = &packet->texgen_sites[site_index];
-            }
-            else if (sites_overflow != NULL)
-            {
-                site = &sites_overflow[
-                    site_index - NDS_FIGHTER_PACKET_TEXGEN_SITE_MAX];
-            }
-            else
-            {
-                return FALSE;
-            }
-            dense_id = site->dense_id;
-            if ((site->index >= packet->word_count) ||
-                (dense_id >= sNdsNativeFighterActiveTables->dense_count))
-            {
-                return FALSE;
-            }
-            cache_index = cached_count;
-            while (cache_index != 0u)
-            {
-                cache_index--;
-                if ((u32)cached_dense[cache_index] == dense_id)
+                const NDSFighterPacketTexgenSite *site;
+                u32 dense_id;
+
+                if (site_index < NDS_FIGHTER_PACKET_TEXGEN_SITE_MAX)
                 {
-                    break;
+                    site = &packet->texgen_sites[site_index];
                 }
-            }
-            if ((cached_count == 0u) ||
-                ((u32)cached_dense[cache_index] != dense_id))
-            {
-                const NDSNativeDenseVertex *dense;
-                u32 rgba;
-                s32 nx;
-                s32 ny;
-                s32 nz;
-                s32 scaled_s;
-                s32 scaled_t;
-                s16 s;
-                s16 t;
-
-                if (cached_count >= NDS_FIGHTER_PACKET_TEXGEN_DENSE_MAX)
+                else if (sites_overflow != NULL)
+                {
+                    site = &sites_overflow[
+                        site_index - NDS_FIGHTER_PACKET_TEXGEN_SITE_MAX];
+                }
+                else
                 {
                     return FALSE;
                 }
-                dense = &sNdsNativeFighterActiveTables->dense_vertices[dense_id];
-                rgba = dense->rgba;
-                nx = (s32)(s8)(rgba >> 24);
-                ny = (s32)(s8)(rgba >> 16);
-                nz = (s32)(s8)(rgba >> 8);
-                scaled_s = ndsRendererNativeTexgenCoord(
-                    nx, ny, nz, &lookat_x, group->scale_s,
-                    group->reserved[0]);
-                scaled_t = ndsRendererNativeTexgenCoord(
-                    nx, ny, nz, &lookat_y, group->scale_t,
-                    group->reserved[0]);
-                s = (s16)(scaled_s - ((s32)group->origin_s << 2) +
-                          group->offset);
-                t = (s16)(scaled_t - ((s32)group->origin_t << 2) +
-                          group->offset);
-                st = (u32)(u16)s | ((u32)(u16)t << 16);
-                cached_dense[cached_count] = (u16)dense_id;
-                cached_word[cached_count] = st;
-                cached_count++;
+                dense_id = site->dense_id;
+                if (dense_id != last_dense)
+                {
+                    u32 rgba;
+                    s32 nx;
+                    s32 ny;
+                    s32 nz;
+                    s32 scaled_s;
+                    s32 scaled_t;
+
+                    if (dense_id >= dense_count)
+                    {
+                        return FALSE;
+                    }
+                    rgba = dense_vertices[dense_id].rgba;
+                    nx = (s32)(s8)(rgba >> 24);
+                    ny = (s32)(s8)(rgba >> 16);
+                    nz = (s32)(s8)(rgba >> 8);
+                    if (linear == 0u)
+                    {
+                        scaled_s = ndsFighterPacketTexgenScaled(
+                            nx, ny, nz, &lookat_x, factor_s);
+                        scaled_t = ndsFighterPacketTexgenScaled(
+                            nx, ny, nz, &lookat_y, factor_t);
+                    }
+                    else
+                    {
+                        scaled_s = ndsRendererNativeTexgenCoord(
+                            nx, ny, nz, &lookat_x, group->scale_s, linear);
+                        scaled_t = ndsRendererNativeTexgenCoord(
+                            nx, ny, nz, &lookat_y, group->scale_t, linear);
+                    }
+                    st = (u32)(u16)(s16)(scaled_s + base_s) |
+                         ((u32)(u16)(s16)(scaled_t + base_t) << 16);
+                    last_dense = dense_id;
+                }
+                if (site->index >= word_count)
+                {
+                    return FALSE;
+                }
+                words[site->index] = st;
             }
-            else
-            {
-                st = cached_word[cache_index];
-            }
-            packet->words[site->index] = st;
         }
     }
     return TRUE;
