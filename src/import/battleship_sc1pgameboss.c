@@ -141,6 +141,14 @@ extern void sc1PGameBossSetBossPlayer(void);
 #define llGRLastMapAnims3_0MatAnimJoint NDS_RELOC_LVALUE(0x115c0u)
 #define llGRLastMapAnims3_1AnimJoint NDS_RELOC_LVALUE(0x128e0u)
 
+/* Both gcPlayAnimAll calls below play boss wallpaper effect GObjs (lines 633
+ * and 903), whose poses only their own display reads: the fixed-cubic
+ * traversal (battleship_sys_objanim.c ndsGcPlayAnimAllFixedCubic). */
+void ndsGcPlayAnimAllFixedCubic(GObj *gobj);
+#define gcPlayAnimAll ndsGcPlayAnimAllFixedCubic
+
 #include "../../decomp/BattleShip-main/decomp/src/sc/sc1pmode/sc1pgameboss.c"
+
+#undef gcPlayAnimAll
 
 #endif /* NDS_P2_1P_GAME */

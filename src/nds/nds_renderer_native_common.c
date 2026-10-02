@@ -11788,6 +11788,9 @@ static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketAbortRecord(void)
 
 /* Slice 4: route 1 lends a battle slot's lower half to a lean list. */
 static u32 ndsFtrLeanLowerOwned(u32 battle_slot);
+/* Route 1: the slot's lean state holds no list in any entry, under the
+ * identity map, so neither half of its region carries lean words. */
+static u32 ndsFtrLeanSlotHoldsNoList(u32 battle_slot);
 #if NDS_FTR_LEAN_ORACLE_ROUTES
 /* P2-2p8 Phase 1 slice 1 (defined after ndsRendererFighterPacketRelease):
  * the oracle routes' hooks on every record and replay hit. Slice 6: lab only
@@ -12303,8 +12306,16 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
     region_base = battle_slot * region_words;
     /* P2-2p8 Phase 1 slice 1: while the lean route is live the upper half of
      * the region holds the lean copy, so the recorder owns the lower half. A
-     * packet that no longer fits faults cleanly (gNdsFighterPacketFaults). */
-    if (gNdsFtrLeanRoute != 0u)
+     * packet that no longer fits faults cleanly (gNdsFighterPacketFaults).
+     *
+     * Route 1 lends the whole region when the slot holds no lean list: a
+     * fighter the lean path never admits (1P's Master Hand, whose packet
+     * needs 7,609 words of the half's 4,420) faulted every record and drew
+     * through production every frame, ~150K ticks. A lean claim in the slot
+     * retires the wide packet before writing (ndsFtrLeanMaterialize). */
+    if ((gNdsFtrLeanRoute != 0u) &&
+        ((gNdsFtrLeanRoute != NDS_FTR_LEAN_ROUTE_DRAW) ||
+         (ndsFtrLeanSlotHoldsNoList(battle_slot) == FALSE)))
     {
         region_words /= 2u;
     }
@@ -12710,6 +12721,33 @@ static u32 ndsFtrLeanLowerOwned(u32 battle_slot)
 {
     return ((battle_slot < NDS_FIGHTER_PACKET_SLOTS) &&
             (sNdsFtrLeanSlots[battle_slot].lower_owned != 0u)) ? TRUE : FALSE;
+}
+
+/* Declared ahead of TryReplay too: its record arm takes the whole region only
+ * when this holds. The spare is checked as well, because under a swapped map
+ * the spare's list can be the one living in a half. */
+static u32 ndsFtrLeanSlotHoldsNoList(u32 battle_slot)
+{
+    const NDSFtrLeanSlotState *s;
+    u32 e;
+
+    if (battle_slot >= NDS_FIGHTER_PACKET_SLOTS)
+    {
+        return FALSE;
+    }
+    s = &sNdsFtrLeanSlots[battle_slot];
+    if ((s->lower_owned != 0u) || (s->phys_on != 0u))
+    {
+        return FALSE;
+    }
+    for (e = 0u; e <= NDS_FTR_LEAN_SPARE; e++)
+    {
+        if (s->entry[e].valid != 0u)
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
 }
 
 #if NDS_FTR_LEAN_LAB
@@ -13888,6 +13926,16 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
     root_count = sNdsNativeFighterActiveOwner->root_count;
     palette_slots = sNdsNativeFighterActiveOwner->cross_palette_slots;
     owner_tables = sNdsNativeFighterActiveTables;
+    if (NDS_FTR_LEAN_ROUTE_IS_DRAW() &&
+        (sNdsFighterPackets[battle_slot].word_capacity >
+         NDS_FTR_LEAN_HALF_WORDS))
+    {
+        /* The recorder took the whole region while the slot held no lean
+         * list (ndsFighterPacketTryReplay's arm): whichever half this list
+         * writes, that packet's words run through it. */
+        sNdsFighterPackets[battle_slot].valid = 0u;
+        sNdsFighterPackets[battle_slot].word_capacity = 0u;
+    }
     if ((entry == 0u) && NDS_FTR_LEAN_ROUTE_IS_DRAW())
     {
         /* Route 1 takes the lower half from the recorder: its packet dies

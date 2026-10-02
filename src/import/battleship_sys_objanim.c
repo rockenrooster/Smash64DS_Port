@@ -3046,12 +3046,16 @@ static void ndsGcAdvanceDObjAnimJoint(DObj *dobj)
 }
 #endif
 
+/* `fixed_cubic` is a compile-time constant at every caller, so the ITCM
+ * gcPlayAnimAll (FALSE) folds the arm away; only ndsGcPlayAnimAllFixedCubic
+ * below, in main RAM, carries it. */
 static inline __attribute__((always_inline)) void
-ndsGcPlayAnimAllStableSkip(GObj *gobj, sb32 tra_only)
+ndsGcPlayAnimAllStableSkip(GObj *gobj, sb32 tra_only, sb32 fixed_cubic)
 {
     DObj *dobj = (gobj != NULL) ? DObjGetStruct(gobj) : NULL;
 
     (void)tra_only;
+    (void)fixed_cubic;
     while (dobj != NULL)
     {
         MObj *mobj;
@@ -3064,7 +3068,16 @@ ndsGcPlayAnimAllStableSkip(GObj *gobj, sb32 tra_only)
         }
         else
 #endif
-#if NDS_R2_ANIM_CENSUS || NDS_R2_CUBIC_FIXED
+#if !NDS_R2_ANIM_CENSUS && NDS_R2_CUBIC_FIXED
+        if (fixed_cubic != FALSE)
+        {
+            gcPlayDObjAnimJoint(dobj);
+        }
+        else
+        {
+            ndsBaseGcPlayDObjAnimJoint(dobj);
+        }
+#elif NDS_R2_ANIM_CENSUS || NDS_R2_CUBIC_FIXED
         ndsBaseGcPlayDObjAnimJoint(dobj);
 #else
         gcPlayDObjAnimJoint(dobj);
@@ -3089,7 +3102,7 @@ ndsGcPlayAnimAllStableSkip(GObj *gobj, sb32 tra_only)
 }
 
 static inline __attribute__((always_inline)) void
-ndsGcPlayAnimAllBody(GObj *gobj, sb32 tra_only)
+ndsGcPlayAnimAllBody(GObj *gobj, sb32 tra_only, sb32 fixed_cubic)
 {
     DObj *dobj;
     u32 active_count = ndsAObjEvent32CollectActiveMObjs(gobj, NULL);
@@ -3098,7 +3111,7 @@ ndsGcPlayAnimAllBody(GObj *gobj, sb32 tra_only)
 
     (void)ndsAObjEvent32CollectActiveMObjs(gobj, active_mobjs);
 
-    ndsGcPlayAnimAllStableSkip(gobj, tra_only);
+    ndsGcPlayAnimAllStableSkip(gobj, tra_only, fixed_cubic);
 
     for (dobj = (gobj != NULL) ? DObjGetStruct(gobj) : NULL;
          dobj != NULL;
@@ -3128,16 +3141,31 @@ ndsGcPlayAnimAllBody(GObj *gobj, sb32 tra_only)
 void gcPlayAnimAll(GObj *gobj) __attribute__((section(".itcm")));
 void gcPlayAnimAll(GObj *gobj)
 {
-    ndsGcPlayAnimAllBody(gobj, FALSE);
+    ndsGcPlayAnimAllBody(gobj, FALSE, FALSE);
 }
 
 #if NDS_P2_STAGE_YOSTER
 /* Yoshi's Island's cloud GObjs (see ndsGcDObjAnimValuesUnread). */
 void ndsGRYosterCloudPlayAnimAll(GObj *gobj)
 {
-    ndsGcPlayAnimAllBody(gobj, TRUE);
+    ndsGcPlayAnimAllBody(gobj, TRUE, FALSE);
 }
 #endif
+
+/* P2-6 (2026-10-02). The Master Hand stage's background is ~24 boss
+ * wallpaper GObjs (sc1pgameboss.c:865, link nGCCommonLinkIDWallpaperEffect),
+ * 4-8 animated DObjs each, and gcPlayAnimAll played them through the decomp's
+ * float body: 40K ticks a frame of soft float, the largest single caller in
+ * that battle. Nothing but their own display reads those poses, so
+ * battleship_sc1pgameboss.c renames that TU's gcPlayAnimAll (it plays nothing
+ * else) to this, which takes the port player: its float AObjs evaluate the
+ * cubic in fixed point (E64, owner-authorized for non-fighter DObjs). The
+ * parse, every `length` advance and the END -> NULL step are the same code
+ * either way; only the drawn values round differently. */
+void ndsGcPlayAnimAllFixedCubic(GObj *gobj)
+{
+    ndsGcPlayAnimAllBody(gobj, FALSE, TRUE);
+}
 
 static sb32 ndsAObjEvent32NormalizeDObjTable(GObj *gobj,
                                              AObjEvent32 **anim_joints)
