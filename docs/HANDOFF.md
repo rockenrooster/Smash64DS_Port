@@ -20,10 +20,10 @@ and transitions/loading seamless. CSS/SSS audio delay + in-match SFX glitches lo
 `2026-09-26_p2-2p8-phase{2,3}-*`). Global renderer retirement remains debt. Bank measured wins (D9).
 **09-26..30 solo** (receipts `2026-09-{26..30}_p2-2p8-*`). **09-30 owner checkpoint: optimization
 paused "not 100% complete"; the 1P campaign is next.** Gate WORK P50/P95 922,240/1,240,256 (target P95
-1.12M, RED; `94ea559f062`); lab P95 1.21-1.58M by roster/stage; SZ owner roster 1.37M. 09-30 landed: baked
+1.12M, RED; `94ea559f062`; 10-02 re-bank 910,144/1,234,240, 88.8% in 2 VBlanks); lab P95 1.21-1.58M by roster/stage; SZ owner roster 1.37M. 09-30 landed: baked
 native owners (`1fe468cc3bb`), transition hold (owner r64, `VERIFIED-hold.md`), world-cache GO retry. Playtest
 r65b. Open: owner's rematch VFX loss (not reproduced on 3 stages/2 rosters; ask roster, stage, which VFX),
-Link's 3 entry frames on SZ/Saffron, Results photo (tic 0-80 black), lean remats (DK 13/match).
+Link's 3 entry frames on SZ/Saffron, lean remats (DK 13/match), Results photo (tic 0-80 black: the wipe model on link 32 has no native route or program; a display-capture photo + route prototype is parked in `artifacts/bugs/2026-10-02_results-slow/results-photo-wipe-wip.patch`, it needs the 10 wipe models' native programs).
 **10-01 1P campaign:** the walk ROM plays 0-13, bonuses, Master Hand, Ending, Staffroll, Congra with 0 battle
 failures (table `p2/P2-6-one-player.md`). Landed: intro stills/poses, staff roll, Master Hand, Race/board lights, HUD
 anchors, bonus map colours (RSP lighting baked, `390d513c5cb`), Ending room + figure (NitroFS room table), platform
