@@ -1387,18 +1387,15 @@ static u32 ndsAObjEvent32StagePart(u32 gkind)
     }
 }
 
-static u32 ndsAObjEvent32RosterLimit(u32 gkind, u32 limit)
+/* The players' entry clips plus the event32-motion margins, over `players`. */
+static u32 ndsAObjEvent32RosterClips(const SCPlayerData *players)
 {
-    u32 need = ndsAObjEvent32StagePart(gkind) + NDS_AOBJ_EVENT32_ROSTER_MARGIN;
+    u32 need = 0u;
     u32 i;
 
-    if (gSCManagerBattleState == NULL)
-    {
-        return limit;
-    }
     for (i = 0u; i < GMCOMMON_PLAYERS_MAX; i++)
     {
-        const SCPlayerData *player = &gSCManagerBattleState->players[i];
+        const SCPlayerData *player = &players[i];
 
         if ((player->pkind != nFTPlayerKindNot) &&
             (player->fkind <= nFTKindPlayableEnd))
@@ -1413,12 +1410,49 @@ static u32 ndsAObjEvent32RosterLimit(u32 gkind, u32 limit)
             }
         }
     }
+    return need;
+}
+
+static u32 ndsAObjEvent32RosterLimit(u32 gkind, u32 limit)
+{
+    u32 need = ndsAObjEvent32StagePart(gkind) + NDS_AOBJ_EVENT32_ROSTER_MARGIN;
+
+    if (gSCManagerBattleState == NULL)
+    {
+        return limit;
+    }
+    need += ndsAObjEvent32RosterClips(gSCManagerBattleState->players);
     if (need > (NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS - 1u))
     {
         need = NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS - 1u;
     }
     gNdsAObjEvent32RosterNeed = need;
     return (need > limit) ? need : limit;
+}
+
+/* VS RESULTS IS SIZED BY ITS PODIUM, NOT BY THE 5,120 DEFAULT (2026-10-02).
+ * Results normalizes the emblem and labels (46..75 entries before tic 120) and
+ * then the four fighters' victory and clap motions; the whole scene measured
+ * 572 (Mario/Kirby/Fox/Yoshi), 669 (Pikachu/Yoshi/Ness/Purin) and 743
+ * (DK/Samus/Captain/Link) live entries at tic 400 and 1,200. The default
+ * reserved 41,984 B of its general heap for 5,120, and with the static image
+ * 84 KB larger than on 09-30 the second podium fighter's owner image no
+ * longer fit (ndsSyMallocOverflowHalt at tic 120). The bound is the battle
+ * formula with no stage part: the players' entry clips, the event32-motion
+ * margins and the roster margin, 3.4x..9x what each roster used. A refused
+ * script is not a soft failure (see S1 above), which is why this is a
+ * roster bound and not a flat cut. The players are the transfer state's,
+ * the same rows the Results scene builds its podium from. */
+#define NDS_AOBJ_EVENT32_RESULTS_PART 128u
+
+static u32 ndsAObjEvent32ResultsLimit(void)
+{
+    u32 need = NDS_AOBJ_EVENT32_RESULTS_PART + NDS_AOBJ_EVENT32_ROSTER_MARGIN +
+        ndsAObjEvent32RosterClips(gSCManagerTransferBattleState.players);
+
+    gNdsAObjEvent32RosterNeed = need;
+    return (need < NDS_AOBJ_EVENT32_NORMALIZED_MAX) ?
+        need : NDS_AOBJ_EVENT32_NORMALIZED_MAX;
 }
 
 static u32 ndsAObjEvent32HashSlotsForLimit(u32 limit)
@@ -1451,6 +1485,10 @@ static u32 ndsAObjEvent32VSLimit(u32 gkind, sb32 *stage_bound)
 
     if (*stage_bound == FALSE)
     {
+        if (gSCManagerSceneData.scene_curr == nSCKindVSResults)
+        {
+            return ndsAObjEvent32ResultsLimit();
+        }
         return limit;
     }
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP

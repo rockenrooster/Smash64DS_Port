@@ -315,7 +315,13 @@ static s32 ndsSObjPreviewBasicSupported(SObj *sobj)
  * site. Intentional hidden/offscreen SObjs never reach here (callers skip
  * them silently); everything reaching here is a loud failure, never a
  * successful empty draw. */
-#if NDS_P2_MENU_WALK
+/* The census is 9,216 B of BSS, and the walk ROM is the owner's playtest ROM:
+ * left on, it came out of every scene's taskman arena there (2026-10-02, with
+ * VS Results short of heap). Opt in with NDS_P2_SOBJ_FAIL_CENSUS=1. */
+#ifndef NDS_P2_SOBJ_FAIL_CENSUS
+#define NDS_P2_SOBJ_FAIL_CENSUS 0
+#endif
+#if NDS_P2_MENU_WALK && NDS_P2_SOBJ_FAIL_CENSUS
 /* Walk builds only: one row per (scene, bitmap) the native path refused, so a
  * campaign walk names every source sprite a scene still lacks a presentation
  * for -- its shape, position, scale and how often it was asked for. */
@@ -407,7 +413,7 @@ static void ndsSObjRecordSpriteFailure(const GObj *gobj, const SObj *sobj,
                   (u32)sobj->sprite.bmsiz);
         root = (u32)(uintptr_t)sobj->sprite.bitmap;
         material = (u32)(uintptr_t)sobj->sprite.LUT;
-#if NDS_P2_MENU_WALK
+#if NDS_P2_MENU_WALK && NDS_P2_SOBJ_FAIL_CENSUS
         ndsSObjFailCensusRecord(gobj, sobj, scene);
 #endif
     }

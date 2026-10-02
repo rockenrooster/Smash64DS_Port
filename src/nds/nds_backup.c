@@ -2,6 +2,7 @@
 #include <fat.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/iosupport.h>
 
 #include <nds/nds_backup.h>
 #include "nds_scene_harness_config.h"
@@ -78,10 +79,21 @@ static void ndsBackupMount(void)
         return;
     }
     sNdsBackupMountTried = 1u;
-    /* nitroFSInit already brought libfat up when the ROM runs from a card;
-     * fatInitDefault is the documented way to make sure, and a volume that is
-     * already mounted simply stays mounted. Its result is not trusted on its
-     * own: the paths below are what decide whether there is a volume. */
+    /* nitroFSInit already brought libfat up when the ROM runs from a flashcart
+     * (fat:, through DLDI) or a DSi's SD (sd:), and that volume is the save's
+     * volume too. Mount only when neither answered.
+     *
+     * fatInitDefault is NOT idempotent: libdvm's dvmInit builds a second
+     * cached disc over the same DLDI interface and probes it again. Measured
+     * 2026-10-02 at boot: two dvmDiscCacheCreate(16 pages x 8 sectors), the
+     * second one this call's -- 65,832 B of libc heap below the taskman arena
+     * for the whole run, which every scene's general heap paid, and two
+     * independent sector caches over one card. Its result is not trusted on
+     * its own: the paths below are what decide whether there is a volume. */
+    if ((FindDevice("fat:") >= 0) || (FindDevice("sd:") >= 0))
+    {
+        return;
+    }
     (void)fatInitDefault();
 }
 
