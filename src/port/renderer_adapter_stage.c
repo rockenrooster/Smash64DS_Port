@@ -13158,7 +13158,12 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
      * could not reach. One lookup names the root for its GObj kind; its live
      * segment-E materials are the DObj's MObjs in order. */
     if ((loaded != NULL) && (dobj != NULL) && (dobj->parent_gobj != NULL) &&
-        NDS_NATIVE_BAKED_ASSET_MATCH(loaded->asset_id))
+        (NDS_NATIVE_BAKED_ASSET_MATCH(loaded->asset_id)
+#if NDS_P2_1P_GAME
+         /* The ending's room (the table it loads into its own heap). */
+         || NDS_NATIVE_BAKED_ROOM_ASSET_MATCH(loaded->asset_id)
+#endif
+        ))
     {
         u32 baked_slots = 0u;
         const void *baked = ndsNativeBakedItemFind(

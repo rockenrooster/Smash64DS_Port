@@ -113,6 +113,7 @@
 #include <sys/rdp.h>
 #include <sys/taskman.h>
 #include <sys/video.h>
+#include <nds/nds_video.h>
 #include <string.h>
 #include <nds/arm9/video.h>
 #include <nds/nds_effects.h>
@@ -526,6 +527,9 @@ static void ndsStaffrollFuncDraw(void)
          * backdrop otherwise keeps the previous menu's colour. At the first
          * draw, so a held transition frame stays until the scene draws. */
         ndsPlatformSetBackdropColor(RGB15(0, 0, 0));
+        /* The ending before it leaves its closing black fade latched
+         * (ndsVideoSetSceneFade): this first black frame releases it. */
+        ndsVideoSetSceneFade(0u, 0u);
         sNdsStaffrollBackdropSet = TRUE;
     }
     ndsPlatformSet3DLayerEnabled(TRUE);

@@ -15,43 +15,7 @@
  * Gun's shot, Goldeen, Koffing and its smog. */
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
 
-typedef struct NDSNativeBakedOp
-{
-    u32 w0;
-    u32 w1;
-    u16 arg;    /* EMIT: group; MATERIAL: segment-E slot */
-    u8 op;      /* an NDS_NATIVE_STATE_* effect, or NDS_NATIVE_BAKED_OP_* */
-    u8 pad;
-} NDSNativeBakedOp;
-
-typedef struct NDSNativeBakedGroup
-{
-    const s16 *verts;
-    const u32 *colors;
-    const u16 *indices;
-    u8 vertex_count;
-    u8 triangle_count;
-    u16 flags;          /* NDS_NATIVE_BAKED_GROUP_I_COVERAGE */
-} NDSNativeBakedGroup;
-
-/* The group draws an I4/I8 tile under a combine that reads TEXEL0 alpha
- * (Koffing's smog): its texture bakes the intensity as coverage
- * (sNdsRendererHardwareIntensityCoverage). */
-#define NDS_NATIVE_BAKED_GROUP_I_COVERAGE 1u
-
-typedef struct NDSNativeBakedRoot
-{
-    u32 root;
-    u32 file_bytes;     /* the source payload the ops' offsets live in */
-    u32 enddl_w0;       /* the root list's last word, a layout fingerprint */
-    u16 asset_id;
-    u16 gobj_kind;      /* GObj id the root is admitted for */
-    u16 first_op;
-    u16 op_count;
-    u16 top_words;      /* root list length, ENDDL included */
-    u8 material_slots;
-    u8 pad;
-} NDSNativeBakedRoot;
+#include <nds/nds_native_baked_types.h>
 
 #include "generated/nds_native_item_baked.generated.inc"
 
@@ -60,6 +24,10 @@ __attribute__((used)) volatile u32 gNdsItemBakedSubmitFailCount;
 __attribute__((used)) volatile u32 gNdsItemBakedSubmitStep;
 __attribute__((used)) volatile u32 gNdsItemBakedAlpha;
 __attribute__((used)) volatile u32 gNdsItemBakedLastRoot;
+const NDSNativeBakedRoot *gNdsNativeBakedRoomRoots;
+const NDSNativeBakedOp *gNdsNativeBakedRoomOps;
+const NDSNativeBakedGroup *gNdsNativeBakedRoomGroups;
+u32 gNdsNativeBakedRoomRootCount;
 
 /* The root `dl` names, if one is baked for this GObj kind; NULL otherwise.
  * `dl` must be the root's first word: its ENDDL word is the fingerprint. */
@@ -68,13 +36,29 @@ const void *ndsNativeBakedItemFind(u32 asset_id, u32 root, u32 gobj_kind,
 {
     u32 i;
 
+    const NDSNativeBakedRoot *table = sNdsNativeBakedRoots;
+    u32 count = NDS_NATIVE_BAKED_ROOT_COUNT;
+
     if (!NDS_NATIVE_BAKED_ASSET_MATCH(asset_id))
     {
-        return NULL;
+#if NDS_P2_1P_GAME
+        /* The room table exists only while the ending runs (it loads
+         * it into its own heap). */
+        if (NDS_NATIVE_BAKED_ROOM_ASSET_MATCH(asset_id) &&
+            (gNdsNativeBakedRoomRoots != NULL))
+        {
+            table = gNdsNativeBakedRoomRoots;
+            count = gNdsNativeBakedRoomRootCount;
+        }
+        else
+#endif
+        {
+            return NULL;
+        }
     }
-    for (i = 0u; i < NDS_NATIVE_BAKED_ROOT_COUNT; i++)
+    for (i = 0u; i < count; i++)
     {
-        const NDSNativeBakedRoot *r = &sNdsNativeBakedRoots[i];
+        const NDSNativeBakedRoot *r = &table[i];
 
         if ((r->root == root) && ((u32)r->asset_id == asset_id) &&
             ((u32)r->gobj_kind == gobj_kind))
@@ -101,8 +85,24 @@ sb32 ndsRendererSubmitNativeBaked(
 {
     const NDSNativeBakedRoot *r = (const NDSNativeBakedRoot *)handle;
     const u8 *base = (const u8 *)file_base_ptr;
+    const NDSNativeBakedOp *op_table = sNdsNativeBakedOps;
+    const NDSNativeBakedGroup *group_table = sNdsNativeBakedGroups;
     NDSRendererTraversalState state;
+    NDSRendererConfig shifted_config;
+    NDSRendererMatrix20p12 shifted_modelview;
     u32 i;
+
+#if NDS_P2_1P_GAME
+    /* A room root (the ending's loaded table) indexes the room's own ops
+     * and groups. */
+    if ((gNdsNativeBakedRoomRoots != NULL) &&
+        (r >= gNdsNativeBakedRoomRoots) &&
+        (r < gNdsNativeBakedRoomRoots + gNdsNativeBakedRoomRootCount))
+    {
+        op_table = gNdsNativeBakedRoomOps;
+        group_table = gNdsNativeBakedRoomGroups;
+    }
+#endif
 
     if ((r == NULL) || (base == NULL) || (config == NULL) || (stats == NULL))
     {
@@ -123,11 +123,31 @@ sb32 ndsRendererSubmitNativeBaked(
         gNdsItemBakedSubmitStep = 2u;
         return FALSE;
     }
+    if (r->vertex_shift != 0u)
+    {
+        /* Stored vertices are source >> vertex_shift: scale the object's
+         * axes (rows 0-2) back, translation untouched. */
+        const s32 scale = (s32)1 << r->vertex_shift;
+        u32 row;
+        u32 col;
+
+        shifted_modelview = *config->initial_modelview;
+        for (row = 0u; row < 3u; row++)
+        {
+            for (col = 0u; col < 4u; col++)
+            {
+                shifted_modelview.m[row][col] *= scale;
+            }
+        }
+        shifted_config = *config;
+        shifted_config.initial_modelview = &shifted_modelview;
+        config = &shifted_config;
+    }
 
     ndsRendererInitTraversalState(&state, config, stats, NULL, NULL, 0u);
     for (i = 0u; i < (u32)r->op_count; i++)
     {
-        const NDSNativeBakedOp *op = &sNdsNativeBakedOps[r->first_op + i];
+        const NDSNativeBakedOp *op = &op_table[r->first_op + i];
 
         switch (op->op)
         {
@@ -142,7 +162,7 @@ sb32 ndsRendererSubmitNativeBaked(
             break;
         case NDS_NATIVE_BAKED_OP_EMIT:
         {
-            const NDSNativeBakedGroup *g = &sNdsNativeBakedGroups[op->arg];
+            const NDSNativeBakedGroup *g = &group_table[op->arg];
             sb32 emitted;
 
             sNdsRendererHardwareIntensityCoverage =

@@ -29,10 +29,10 @@ paused "not 100% complete"; the 1P campaign is next.** Gate WORK P50/P95 922,240
 native owners (`1fe468cc3bb`), transition hold (owner r64, `VERIFIED-hold.md`), world-cache GO retry. Playtest
 r65b. Open: owner's rematch VFX loss (not reproduced on 3 stages/2 rosters; ask roster, stage, which VFX),
 Hitmonlee undrawn, Link's 3 entry frames on SZ/Saffron, Results photo (tic 0-80 black), lean remats (DK 13/match).
-**10-01 1P campaign:** the walk ROM plays 0-13, bonuses, Master Hand, Ending, Staffroll, Congra, 0 battle failures
-(`cwalk49`; table `p2/P2-6-one-player.md`). Staffroll + Board the Platforms lights done; intro stills baked locally
-(ROM-derived); intro poses fixed (1P demo anim rows, 201 stills re-baked). Master Hand fights (`4163eb8da0d`), Race
-lights, HUD anchors fixed. Open: owner's "bonus textures differ" (needs specifics), Ending room, then 1P P95.
+**10-01 1P campaign:** the walk ROM plays 0-13, bonuses, Master Hand, Ending, Staffroll, Congra with 0 battle
+failures (table `p2/P2-6-one-player.md`). Landed: intro stills/poses, staff roll, Master Hand, Race/board lights, HUD
+anchors, bonus map colours (RSP lighting baked, `390d513c5cb`), Ending room + figure (NitroFS room table), platform
+bake. Next: 1P P95 (BTP 18%, Polygon Team 39%, Race 72%, Yoshi Team 81%, Mario Bros, MH; profile first).
 
 ## Continue, do not restart
 

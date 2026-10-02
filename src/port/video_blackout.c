@@ -50,6 +50,8 @@ static sb32 sNdsVideoBlackout = FALSE;
 static sb32 sNdsVideoTransitionBlackout = FALSE;
 static u32 sNdsVideoSourceFadeLevel;
 static sb32 sNdsVideoBrightnessDirty = FALSE;
+static u32 sNdsVideoSceneFadeDown;
+static u32 sNdsVideoSceneFadeUp;
 
 void ndsVideoSetBlackout(sb32 black)
 {
@@ -91,6 +93,25 @@ u32 ndsVideoGetSourceFade(void)
     return sNdsVideoSourceFadeLevel;
 }
 
+void ndsVideoSetSceneFade(u32 down_level, u32 up_level)
+{
+    if (down_level > 16u)
+    {
+        down_level = 16u;
+    }
+    if (up_level > 16u)
+    {
+        up_level = 16u;
+    }
+    if ((down_level != sNdsVideoSceneFadeDown) ||
+        (up_level != sNdsVideoSceneFadeUp))
+    {
+        sNdsVideoSceneFadeDown = down_level;
+        sNdsVideoSceneFadeUp = up_level;
+        sNdsVideoBrightnessDirty = TRUE;
+    }
+}
+
 u16 ndsVideoResolveBrightnessValue(u32 blackout, u32 fade_level)
 {
     u32 level;
@@ -122,9 +143,17 @@ void ndsVideoBlackoutCommit(void)
     sNdsVideoBrightnessDirty = FALSE;
 #ifdef ARM9
     {
-        const u16 value = ndsVideoResolveBrightnessValue(
+        u16 value = ndsVideoResolveBrightnessValue(
             (u32)(sNdsVideoBlackout || sNdsVideoTransitionBlackout),
-            sNdsVideoSourceFadeLevel);
+            (sNdsVideoSceneFadeDown > sNdsVideoSourceFadeLevel) ?
+                sNdsVideoSceneFadeDown : sNdsVideoSourceFadeLevel);
+
+        /* A white scene fade only where nothing darkens: MASTER_BRIGHT
+         * mode 1 (up) brightens toward white by level/16. */
+        if ((value == 0u) && (sNdsVideoSceneFadeUp != 0u))
+        {
+            value = (u16)((1u << 14) | sNdsVideoSceneFadeUp);
+        }
 
         REG_MASTER_BRIGHT = value;
         REG_MASTER_BRIGHT_SUB = value;

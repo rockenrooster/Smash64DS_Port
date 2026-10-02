@@ -32,6 +32,12 @@ import generate_nds_native_stage as sm  # noqa: E402
 
 OUT = REPO / "src/nds/generated/nds_native_item_baked.generated.inc"
 OUT_HEADER = REPO / "include/nds/generated/nds_native_item_baked.generated.h"
+# GOBJ_SCENE roots (the 1P ending's room) ship as a NitroFS file the ending
+# loads into its own heap (battleship_mvending.c), so neither the resident
+# image nor the front-end overlay carries their ~22 KB: static bytes there are
+# taken from every scene's arena. Little-endian; see room_binary().
+ROOM_MAGIC = 0x31424D52  # 'RMB1'
+ROOM_VERSION = 1
 
 FILES = {
     "MiscData086": sm.InputSpec(
@@ -52,6 +58,10 @@ FILES = {
         "decomp/BattleShip-main/BattleShip_o2r/reloc_bonus/BonusDataBank150",
         "28e3af3f9b7fb8d553b261715ae0fb6e7b36e226b8f6aec9b2eb79487260bf1d",
         150, 4, 0, None),
+    "MVCommon": sm.InputSpec(
+        "decomp/BattleShip-main/BattleShip_o2r/reloc_movies/MVCommon",
+        "f5ed65ebf90e7a933c683d9187d3cbeb1e43f8df88756a9646988a43b7186c0e",
+        52, None, None, None),
     "Bonus2Common": sm.InputSpec(
         "decomp/BattleShip-main/BattleShip_o2r/reloc_bonus/Bonus2Common",
         "fd673c99070c36bde367a5423966d532655225c1d8af80e0e95e9bb6c1478e33",
@@ -76,6 +86,9 @@ GOBJ_ITEM = 1013
 # A stage layer's own GObj (nGCCommonKindGroundDisplay): Board the Platforms'
 # platforms are DObj subtrees hung under its layer-1 yakumono DObjs.
 GOBJ_GROUND_DISPLAY = 1009
+# A scene GObj made with id 0 (gcMakeGObjSPAfter(0, ...)): the 1P ending's
+# room objects.
+GOBJ_SCENE = 0
 
 # Every weapon draws after wpDisplayDrawNormal (wpdisplay.c:131):
 # gDPSetRenderMode(G_RM_AA_XLU_SURF, G_RM_AA_XLU_SURF2), with G_ZBUFFER
@@ -103,6 +116,23 @@ GROUND_LINK1_ROOTS = frozenset(
     for kind in ("Platform", "Boarded")
     for size in ("Small", "Medium", "Large")
     for dobj in (1, 2))
+
+# The ending's room camera (func_80017EC0 -> func_80016338, objdisplay.c:
+# 2680-2684) starts display heads 0 and 2 at G_RM_AA_ZB_OPA_SURF and heads 1
+# and 3 at G_RM_AA_ZB_XLU_SURF; the background's DL-link-1 lists draw on head 1
+# and set no mode of their own, the rest draw on head 0.
+SCENE_LINK1_ROOTS = frozenset((
+    "MVCommonRoomBackground07398",
+    "MVCommonRoomBackground074A0",
+    "MVCommonRoomBackground075A0",
+    "MVCommonRoomBackground076D8",
+    "MVCommonRoomBackground077C0",
+    "MVCommonRoomBackground07840",
+    "MVCommonRoomBackground07928",
+    "MVCommonRoomBackground079D0",
+    "MVCommonRoomBackground07A78",
+    "MVCommonRoomBackground07B60",
+))
 
 # (name, file, root, gobj kind, source note). A root that already has a
 # hand-written owner must not appear here (the adapter would draw it twice).
@@ -213,6 +243,107 @@ ENTRIES = (
      "sc1PBonusStageUpdatePlatformCount: dSC1PBonusStageBoardedPlatformDescs Large, DObj 1"),
     ("Bonus2BoardedLarge2", "Bonus2Common", 0x6128, GOBJ_GROUND_DISPLAY,
      "sc1PBonusStageUpdatePlatformCount: dSC1PBonusStageBoardedPlatformDescs Large, DObj 2"),
+    # P2-6: the 1P ending's room (mvending.c:158-236; the opening room
+    # draws the same MVCommon lists). Every DObj list of the background
+    # (gcDrawDObjTreeDLLinksForGObj), desk, books, pencils and lamp
+    # (gcDrawDObjTreeForGObj) and the tissues (gcDrawDObjDLHead0), each a
+    # GObj the scene makes with id 0.
+    ("MVCommonRoomBackground05A18", "MVCommon", 0x05A18, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x7ef0, DL link 0"),
+    ("MVCommonRoomBackground05AC8", "MVCommon", 0x05AC8, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x7f1c, DL link 0"),
+    ("MVCommonRoomBackground05BB0", "MVCommon", 0x05BB0, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x7f48, DL link 0"),
+    ("MVCommonRoomBackground05CA0", "MVCommon", 0x05CA0, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x7f74, DL link 0"),
+    ("MVCommonRoomBackground05D68", "MVCommon", 0x05D68, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x7fa0, DL link 0"),
+    ("MVCommonRoomBackground05DE8", "MVCommon", 0x05DE8, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x7fcc, DL link 0"),
+    ("MVCommonRoomBackground05EA8", "MVCommon", 0x05EA8, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x7ff8, DL link 0"),
+    ("MVCommonRoomBackground05F70", "MVCommon", 0x05F70, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x807c, DL link 0"),
+    ("MVCommonRoomBackground06058", "MVCommon", 0x06058, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x80a8, DL link 0"),
+    ("MVCommonRoomBackground06130", "MVCommon", 0x06130, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x80d4, DL link 0"),
+    ("MVCommonRoomBackground06210", "MVCommon", 0x06210, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x8100, DL link 0"),
+    ("MVCommonRoomBackground062D8", "MVCommon", 0x062D8, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x8158, DL link 0"),
+    ("MVCommonRoomBackground063F8", "MVCommon", 0x063F8, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x8184, DL link 0"),
+    ("MVCommonRoomBackground07398", "MVCommon", 0x07398, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x81dc, DL link 1"),
+    ("MVCommonRoomBackground064C0", "MVCommon", 0x064C0, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x8208, DL link 0"),
+    ("MVCommonRoomBackground074A0", "MVCommon", 0x074A0, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x8208, DL link 1"),
+    ("MVCommonRoomBackground075A0", "MVCommon", 0x075A0, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x8234, DL link 1"),
+    ("MVCommonRoomBackground076D8", "MVCommon", 0x076D8, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x828c, DL link 1"),
+    ("MVCommonRoomBackground06590", "MVCommon", 0x06590, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x82b8, DL link 0"),
+    ("MVCommonRoomBackground06680", "MVCommon", 0x06680, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x82e4, DL link 0"),
+    ("MVCommonRoomBackground06708", "MVCommon", 0x06708, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x8310, DL link 0"),
+    ("MVCommonRoomBackground067E8", "MVCommon", 0x067E8, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x833c, DL link 0"),
+    ("MVCommonRoomBackground068B8", "MVCommon", 0x068B8, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x8368, DL link 0"),
+    ("MVCommonRoomBackground077C0", "MVCommon", 0x077C0, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x83c0, DL link 1"),
+    ("MVCommonRoomBackground069C0", "MVCommon", 0x069C0, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x8444, DL link 0"),
+    ("MVCommonRoomBackground06AB0", "MVCommon", 0x06AB0, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x8470, DL link 0"),
+    ("MVCommonRoomBackground06CE0", "MVCommon", 0x06CE0, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x84c8, DL link 0"),
+    ("MVCommonRoomBackground06DD0", "MVCommon", 0x06DD0, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x84f4, DL link 0"),
+    ("MVCommonRoomBackground07840", "MVCommon", 0x07840, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x84f4, DL link 1"),
+    ("MVCommonRoomBackground06EC0", "MVCommon", 0x06EC0, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x8520, DL link 0"),
+    ("MVCommonRoomBackground07928", "MVCommon", 0x07928, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x85a4, DL link 1"),
+    ("MVCommonRoomBackground079D0", "MVCommon", 0x079D0, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x85d0, DL link 1"),
+    ("MVCommonRoomBackground07A78", "MVCommon", 0x07A78, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x8628, DL link 1"),
+    ("MVCommonRoomBackground07B60", "MVCommon", 0x07B60, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x8654, DL link 1"),
+    ("MVCommonRoomBackground06FD8", "MVCommon", 0x06FD8, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x8680, DL link 0"),
+    ("MVCommonRoomBackground070C8", "MVCommon", 0x070C8, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x86ac, DL link 0"),
+    ("MVCommonRoomBackground071B8", "MVCommon", 0x071B8, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x86d8, DL link 0"),
+    ("MVCommonRoomBackground072A8", "MVCommon", 0x072A8, GOBJ_SCENE,
+     "llMVCommonRoomBackgroundDObjDesc DObj @0x8704, DL link 0"),
+    ("MVCommonRoomDesk08CA0", "MVCommon", 0x08CA0, GOBJ_SCENE,
+     "llMVCommonRoomDeskDObjDesc DObj @0x8e24"),
+    ("MVCommonRoomBooks0A3F0", "MVCommon", 0x0A3F0, GOBJ_SCENE,
+     "llMVCommonRoomBooksDObjDesc DObj @0xa724"),
+    ("MVCommonRoomBooks0A5E8", "MVCommon", 0x0A5E8, GOBJ_SCENE,
+     "llMVCommonRoomBooksDObjDesc DObj @0xa750"),
+    ("MVCommonRoomPencils0ACF0", "MVCommon", 0x0ACF0, GOBJ_SCENE,
+     "llMVCommonRoomPencilsDObjDesc DObj @0xaeb8"),
+    ("MVCommonRoomPencils0ADD0", "MVCommon", 0x0ADD0, GOBJ_SCENE,
+     "llMVCommonRoomPencilsDObjDesc DObj @0xaee4"),
+    ("MVCommonRoomPencils0AE68", "MVCommon", 0x0AE68, GOBJ_SCENE,
+     "llMVCommonRoomPencilsDObjDesc DObj @0xaf10"),
+    ("MVCommonRoomLamp0BC28", "MVCommon", 0x0BC28, GOBJ_SCENE,
+     "llMVCommonRoomLampDObjDesc DObj @0xbdec"),
+    ("MVCommonRoomLamp0BD00", "MVCommon", 0x0BD00, GOBJ_SCENE,
+     "llMVCommonRoomLampDObjDesc DObj @0xbe18"),
+    ("MVCommonRoomLamp0BD40", "MVCommon", 0x0BD40, GOBJ_SCENE,
+     "llMVCommonRoomLampDObjDesc DObj @0xbe44"),
+    ("MVCommonRoomTissues0C690", "MVCommon", 0x0C690, GOBJ_SCENE,
+     "llMVCommonRoomTissuesDisplayList (gcDrawDObjDLHead0)"),
 )
 
 # Native state effect codes (src/nds/nds_renderer_assets.c) and the executor's
@@ -322,8 +453,211 @@ CACHE_SEEDS = {
     "Bonus2BoardedSmall2": 0x53C0,
     "Bonus2BoardedMedium2": 0x5A20,
     "Bonus2BoardedLarge2": 0x6080,
+    # The ending's props draw their DObj lists back to back on display head
+    # 0, and the later lists set only what changes: the second book's
+    # covers, the pencils' second and third lists and the lamp's head use
+    # the TLUT mode, texture and unlit, flat geometry their tree's earlier
+    # lists left. Seeds replay in order.
+    "MVCommonRoomBooks0A5E8": (0xA3F0,),
+    "MVCommonRoomPencils0ADD0": (0xACF0,),
+    "MVCommonRoomPencils0AE68": (0xACF0, 0xADD0),
+    "MVCommonRoomLamp0BD00": (0xBC28,),
+    "MVCommonRoomLamp0BD40": (0xBC28, 0xBD00),
 }
 G_MWO_POINT_ST = 0x14
+# A TLUT load one entry short of what its texture indexes: the books' CI8
+# cover loads 255 colours (gDPLoadTLUT count 255) and 4 of its texels use
+# index 255, which the RDP reads from whatever TMEM held. The DS refuses a
+# palette shorter than its texels (BAD_TLUT) and drew the books untextured,
+# so this load takes 256 entries -- the file's next word, 0x0000.
+# (file, list offset of the G_LOADTLUT) -> colours.
+TLUT_COUNT_FIXES = {
+    (52, 0x0A588): 256,
+    (52, 0x0A680): 256,
+}
+
+
+def cache_seeds(name):
+    """The seed lists of `name`, in draw order."""
+    seeds = CACHE_SEEDS.get(name, ())
+    return (seeds,) if isinstance(seeds, int) else tuple(seeds)
+
+
+# Baked lighting for the room. The room movies' pre-render functions
+# (mvEndingFuncLights, mvOpeningRoomFuncLights) set G_LIGHTING on every display
+# head (syRdpResetSettings runs them after the reset list) and aim light 1 with
+# ftDisplayLightsDrawReflect, so a room list that draws with G_LIGHTING still
+# set is lit by the RSP: its colour bytes are normals. A battle's baked roots
+# are lit by the executor itself (the battle submit's geometry carries
+# G_LIGHTING and the stage's light: Board the Platforms' platforms), but the
+# room submit does not light, so the light is folded into the colours here, as
+# the stage generator does for map lists (bake_source_lighting): ambient +
+# diffuse * max(0, N.L), with the lists' own gSPLightColor words and L carried
+# into the DObj's frame.
+G_LIGHTING = 0x20000
+# scSubsysFighterSetLightParams(45.0F, 45.0F, ...) in mvEndingFuncStart
+# (mvending.c:546) and mvOpeningRoomFuncStart (mvopeningroom.c:1355).
+LIGHT_ANGLE_ROOM = (45.0, 45.0)
+# Battle roots whose light is fixed are baked too, for speed: the executor
+# lights every vertex of a lit root every frame (Board the Platforms' platforms
+# were most of its 205K-cycle baked emit). The light is light_angle (20, 45)
+# from every bonus2 map header (the 12 boards share it); the platform DObjs
+# are unrotated with uniform scale. Such a root clears G_LIGHTING before its
+# first op and sets it again after its last, so the executor draws the baked
+# colours and every later root still finds the battle's G_LIGHTING.
+LIGHT_ANGLE_BONUS2 = (20.0, 45.0)
+BATTLE_LIGHT_BAKES = {
+    f"Bonus2{kind}{size}0": LIGHT_ANGLE_BONUS2
+    for kind in ("Platform", "Boarded")
+    for size in ("Small", "Medium", "Large")
+}
+# The executor puts a vertex in v16 as value << 4 (1/256 of a source unit per
+# hardware unit, NDS_RENDERER_HW_WORLD_UNIT_SHIFT 8), clamped to +-2047
+# source units. A root whose geometry reaches past that (the ending room's
+# walls, up to 7,658) stores its vertices shifted right and the executor
+# scales the modelview's axes back (NDSNativeBakedRoot.vertex_shift); the
+# rounding is the native stage path's (ndsRendererNativeStageVertexShift).
+V16_SOURCE_MAX = 2047
+
+
+def shift_round(value: int, shift: int) -> int:
+    if shift == 0:
+        return value
+    magnitude = (abs(value) + (1 << (shift - 1))) >> shift
+    return -magnitude if value < 0 else magnitude
+
+
+def vertex_shift_for(groups) -> int:
+    peak = max((abs(c) for verts, _ in groups for v in verts for c in v[:3]),
+               default=0)
+    shift = 0
+    while shift_round(peak, shift) > V16_SOURCE_MAX:
+        shift += 1
+        if shift > 7:
+            raise Refused(f"geometry reaches {peak}: no vertex shift fits")
+    return shift
+
+
+GEOMETRY_CLEAR_LIGHTING = (STATE_GEOMETRY, 0xD9000000 | (~G_LIGHTING & 0xFFFFFF), 0, 0)
+GEOMETRY_SET_LIGHTING = (STATE_GEOMETRY, 0xD9FFFFFF, G_LIGHTING, 0)
+# The MVCommon room's DObjDesc tables (mvending.c:158-221), searched for the
+# DObj that draws a room root, so its light rides the DObj's rest pose.
+ROOM_DOBJ_TABLES = (0x07E98, 0x08DF8, 0x0A6F8, 0x0AEB8, 0x0BDC0)
+DOBJ_DESC_BYTES = 0x2C
+DOBJ_DESC_END = 18
+
+
+def _rpy_rows(rotate, scale):
+    """syMatrixTraRotRpyRSca's 3x3 (row vectors: rows are the DObj's axes)."""
+    import math
+    r, p, y = rotate
+    sr, cr = math.sin(r), math.cos(r)
+    sp, cp = math.sin(p), math.cos(p)
+    sy, cy = math.sin(y), math.cos(y)
+    return (
+        tuple(c * scale[0] for c in (cp * cy, cp * sy, -sp)),
+        tuple(c * scale[1] for c in (sr * sp * cy - cr * sy,
+                                     sr * sp * sy + cr * cy, sr * cp)),
+        tuple(c * scale[2] for c in (cr * sp * cy + sr * sy,
+                                     cr * sp * sy - sr * cy, cr * cp)),
+    )
+
+
+def _mul_rows(a, b):
+    return tuple(tuple(sum(a[i][k] * b[k][j] for k in range(3))
+                       for j in range(3)) for i in range(3))
+
+
+def room_dobj_rows(res, root):
+    """The world axes of the room DObj whose list (or DL link) is `root`:
+    gcSetupCommonDObjs makes desc id N a child of the latest id N-1."""
+    for table in ROOM_DOBJ_TABLES:
+        chain = {}
+        offset = table
+        while True:
+            depth = struct.unpack_from(">i", res.payload, offset)[0]
+            if depth == DOBJ_DESC_END:
+                break
+            rotate = struct.unpack_from(">3f", res.payload, offset + 0x14)
+            scale = struct.unpack_from(">3f", res.payload, offset + 0x20)
+            local = _rpy_rows(rotate, scale)
+            world = local if depth == 0 else _mul_rows(local, chain[depth - 1])
+            chain[depth] = world
+            ref = res.pointer_at(offset + 4)
+            if ref is not None and ref.asset_id == res.file_id:
+                lists = [ref.offset]
+                if table == ROOM_DOBJ_TABLES[0]:
+                    # The background draws DL links (gcDrawDObjTreeDLLinks).
+                    lists = []
+                    link = ref.offset
+                    while struct.unpack_from(">i", res.payload, link)[0] != 4:
+                        target = res.pointer_at(link + 4)
+                        if target is not None:
+                            lists.append(target.offset)
+                        link += 8
+                if root in lists:
+                    return world
+            offset += DOBJ_DESC_BYTES
+    return None
+
+
+def object_light(angle, rows=None):
+    """Light 1 (ftDisplayLightsDrawReflect's s8 words) in a DObj's frame."""
+    import math
+    light = sm.reflect_light_direction(*angle)
+    norm = math.sqrt(sum(c * c for c in light)) or 1.0
+    world = tuple(c / norm for c in light)
+    if rows is None:
+        return world
+    projected = []
+    for row in rows:
+        length = math.sqrt(sum(c * c for c in row)) or 1.0
+        projected.append(sum(row[k] * world[k] for k in range(3)) / length)
+    plen = math.sqrt(sum(c * c for c in projected)) or 1.0
+    return tuple(c / plen for c in projected)
+
+
+def lit_rgba(rgba, light, diffuse, ambient):
+    """The RSP's colour for a lit vertex whose colour bytes are its normal."""
+    normal = []
+    for shift in (24, 16, 8):
+        byte = (rgba >> shift) & 0xFF
+        normal.append((byte - 256 if byte > 127 else byte) / 128.0)
+    intensity = max(0.0, sum(normal[k] * light[k] for k in range(3)))
+    rgb = 0
+    for shift in (16, 8, 0):
+        channel = (((ambient >> shift) & 0xFF)
+                   + intensity * ((diffuse >> shift) & 0xFF))
+        rgb = (rgb << 8) | min(255, int(channel))
+    return (rgb << 8) | (rgba & 0xFF)
+
+
+def end_light_state(res, offset, state, depth=0):
+    """Run a list's G_LIGHTING and gSPLightColor words over `state`
+    (lit, diffuse, ambient): what a following list inherits."""
+    if depth > 4:
+        raise Refused(f"seed list at {offset:#x} nests too deep")
+    for i in range(512):
+        at = offset + i * 8
+        w0, w1 = struct.unpack_from(">II", res.payload, at)
+        op = w0 >> 24
+        if op == 0xDF:
+            return state
+        if op == 0xD9:
+            state = (((state[0] and (w0 & G_LIGHTING) != 0)
+                      or (w1 & G_LIGHTING) != 0), state[1], state[2])
+        elif op == 0xDB and ((w0 >> 16) & 0xFF) == G_MW_LIGHTCOL:
+            if (w0 & 0xFFFF) == 0x00:
+                state = (state[0], w1 >> 8, state[2])
+            elif (w0 & 0xFFFF) == 0x18:
+                state = (state[0], state[1], w1 >> 8)
+        elif op == 0xDE:
+            ref = res.pointer_at(at + 4)
+            if ref is not None and ref.asset_id == res.file_id:
+                state = end_light_state(res, ref.offset, state, depth + 1)
+                if ((w0 >> 16) & 0xFF) == 1:
+                    return state
+    raise Refused(f"seed list at {offset:#x} has no G_ENDDL")
 
 
 def seed_cache(res, offset, cache, depth=0):
@@ -353,13 +687,22 @@ def seed_cache(res, offset, cache, depth=0):
     raise Refused(f"seed list at {offset:#x} has no G_ENDDL")
 
 
-def compile_root(name, res, root):
-    """Walk `root` once. Returns (ops, groups, top_words, material_slots)."""
+def compile_root(name, res, root, light=None, refuse_unbaked_lit=False):
+    """Walk `root` once. Returns (ops, groups, top_words, material_slots).
+
+    `light` (a unit vector in the DObj's frame) bakes the RSP's lighting
+    into the triangles drawn with G_LIGHTING set; without it those keep
+    their colour bytes, or refuse when `refuse_unbaked_lit`."""
     ops = []
     groups = []
     cache = [None] * 64
-    if name in CACHE_SEEDS:
-        seed_cache(res, CACHE_SEEDS[name], cache)
+    # (G_LIGHTING, light 1 colour, light 2 colour) as the root starts: the
+    # pre-render function's G_LIGHTING, then what its seed lists leave.
+    lighting = (True, None, None)
+    for seed in cache_seeds(name):
+        seed_cache(res, seed, cache)
+        lighting = end_light_state(res, seed, lighting)
+    lighting = list(lighting)
     pending = []
     slots = set()
     top_words = []
@@ -426,6 +769,16 @@ def compile_root(name, res, root):
                     verts = tuple(cache[k] for k in tri)
                     if any(v is None for v in verts):
                         raise Refused(f"{name}: triangle at {at:#x} reads an empty slot")
+                    if lighting[0] and light is not None:
+                        if lighting[1] is None or lighting[2] is None:
+                            raise Refused(f"{name}: lit triangle at {at:#x} "
+                                          "before both light colours")
+                        verts = tuple(v[:5] + (lit_rgba(v[5], light, lighting[1],
+                                                        lighting[2]),)
+                                      for v in verts)
+                    elif lighting[0] and refuse_unbaked_lit:
+                        raise Refused(f"{name}: lit triangle at {at:#x} has no "
+                                      "light bake")
                     pending.append(verts)
                 continue
             if op == 0xDE:
@@ -447,18 +800,27 @@ def compile_root(name, res, root):
                 continue
             flush()
             if op == 0xD9:
+                lighting[0] = ((lighting[0] and (w0 & G_LIGHTING) != 0)
+                               or (w1 & G_LIGHTING) != 0)
                 ops.append((STATE_GEOMETRY, w0, w1, 0))
             elif op == 0xFD:
                 if ref is None or ref.asset_id != res.file_id:
                     raise Refused(f"{name}: G_SETTIMG at {at:#x} is not file-local")
                 ops.append((STATE_IMAGE, w0, ref.offset, 0))
             elif op == 0xF0:
+                colours = TLUT_COUNT_FIXES.get((res.file_id, at))
+                if colours is not None:
+                    w1 = (w1 & ~(0x3FF << 14)) | ((colours - 1) << 14)
                 ops.append((STATE_LOAD_TLUT, w0, w1, 0))
             elif op == 0xFB:
                 ops.append((OP_ENV, w0, w1, 0))
             elif op == 0xDB:
                 if ((w0 >> 16) & 0xFF) != G_MW_LIGHTCOL:
                     raise Refused(f"{name}: G_MOVEWORD {w0:#010x} at {at:#x}")
+                if (w0 & 0xFFFF) == 0x00:
+                    lighting[1] = w1 >> 8
+                elif (w0 & 0xFFFF) == 0x18:
+                    lighting[2] = w1 >> 8
                 ops.append((STATE_LIGHT_COLOR, w0, w1, 0))
             elif op in STATE_OPS:
                 ops.append((STATE_OPS[op], w0, w1, 0))
@@ -466,15 +828,20 @@ def compile_root(name, res, root):
                 raise Refused(f"{name}: opcode {op:#04x} at {at:#x} is unsupported")
         raise Refused(f"{name}: list at {offset:#x} has no G_ENDDL")
 
-    if name in CACHE_SEEDS:
-        # The state the seed list leaves carries over as well: replay its
-        # state ops (not its draws or its material) first.
-        seed_ops, _, _, _ = compile_root(f"{name}.seed", res,
-                                         CACHE_SEEDS[name])
+    for index, seed in enumerate(cache_seeds(name)):
+        # The state the seed lists leave carries over as well: replay their
+        # state ops (not their draws or their materials) first, in order.
+        seed_ops, _, _, _ = compile_root(f"{name}.seed{index}", res, seed)
         ops.extend(o for o in seed_ops
                    if o[0] not in (OP_EMIT, OP_MATERIAL))
     walk(root, 0)
     flush()
+    if light is not None:
+        # Baked: the executor must never light these triangles again, so no
+        # geometry word (its own or a seed's) sets or clears G_LIGHTING.
+        ops = [(op, w0 | G_LIGHTING, w1 & ~G_LIGHTING, arg)
+               if op == STATE_GEOMETRY else (op, w0, w1, arg)
+               for op, w0, w1, arg in ops]
     if not groups:
         raise Refused(f"{name}: root {root:#x} draws nothing")
     if slots and slots != set(range(max(slots) + 1)):
@@ -482,14 +849,30 @@ def compile_root(name, res, root):
     return ops, groups, tuple(top_words), (max(slots) + 1) if slots else 0
 
 
-def build():
+def build(scene: bool = False):
+    """The resident table (scene=False) or the overlay room table (True)."""
     loaded = {key: sm.load_o2r(REPO, spec) for key, spec in FILES.items()}
     roots = []
     all_ops = []
     all_groups = []
     for name, key, root, gobj_kind, note in ENTRIES:
+        if (gobj_kind == GOBJ_SCENE) != scene:
+            continue
         res = loaded[key]
-        ops, groups, top, slots = compile_root(name, res, root)
+        light = None
+        if gobj_kind == GOBJ_SCENE:
+            light = object_light(LIGHT_ANGLE_ROOM, room_dobj_rows(res, root))
+        elif name in BATTLE_LIGHT_BAKES:
+            light = object_light(BATTLE_LIGHT_BAKES[name])
+        ops, groups, top, slots = compile_root(
+            name, res, root, light, refuse_unbaked_lit=(gobj_kind == GOBJ_SCENE))
+        if name in BATTLE_LIGHT_BAKES:
+            ops = [GEOMETRY_CLEAR_LIGHTING] + ops + [GEOMETRY_SET_LIGHTING]
+        shift = vertex_shift_for(groups)
+        if shift:
+            groups = [(tuple(tuple(shift_round(c, shift) for c in v[:3]) + v[3:]
+                             for v in verts), tris)
+                      for verts, tris in groups]
         if gobj_kind == GOBJ_WEAPON:
             ops = [(STATE_OTHERMODE, WEAPON_RENDER_MODE[0],
                     WEAPON_RENDER_MODE[1], 0)] + ops
@@ -497,12 +880,16 @@ def build():
             mode = (GROUND_LINK1_RENDER_MODE if name in GROUND_LINK1_ROOTS
                     else GROUND_LINK0_RENDER_MODE)
             ops = [(STATE_OTHERMODE, mode[0], mode[1], 0)] + ops
+        elif gobj_kind == GOBJ_SCENE:
+            mode = (GROUND_LINK1_RENDER_MODE if name in SCENE_LINK1_ROOTS
+                    else GROUND_LINK0_RENDER_MODE)
+            ops = [(STATE_OTHERMODE, mode[0], mode[1], 0)] + ops
         flags = group_flags(ops)
         group_base = len(all_groups)
         roots.append(dict(
             name=name, asset=res.file_id, root=root, gobj=gobj_kind,
             note=note, first_op=len(all_ops), op_count=len(ops),
-            slots=slots, top_words=len(top),
+            slots=slots, top_words=len(top), shift=shift,
             # The runtime reads images and TLUTs anywhere in the file, so it
             # asks for the whole source payload, as the hand owners' FILE_END
             # asks for their spans.
@@ -516,7 +903,8 @@ def build():
     return roots, all_ops, all_groups
 
 
-def render(roots, ops, groups) -> str:
+def render(roots, ops, groups, prefix="sNdsNativeBaked",
+           counts="NDS_NATIVE_BAKED", storage="static ") -> str:
     lines = [
         "/* Baked item/weapon roots (generated).",
         " * Do not hand-edit; regenerate with generate_nds_native_item_baked.py.",
@@ -528,32 +916,32 @@ def render(roots, ops, groups) -> str:
     ]
     for gi, (name, (verts, tris), _flags) in enumerate(groups):
         lines.append(f"/* group {gi}: {name}, {len(verts)} vertices, {len(tris)} triangles */")
-        lines.append(f"static const s16 sNdsNativeBakedVerts{gi}[{len(verts) * 5}] =")
+        lines.append(f"static const s16 {prefix}Verts{gi}[{len(verts) * 5}] =")
         lines.append("{")
         for v in verts:
             lines.append(f"    {v[0]}, {v[1]}, {v[2]}, {v[3]}, {v[4]},")
         lines.append("};")
-        lines.append(f"static const u32 sNdsNativeBakedColors{gi}[{len(verts)}] =")
+        lines.append(f"static const u32 {prefix}Colors{gi}[{len(verts)}] =")
         lines.append("{")
         for v in verts:
             lines.append(f"    0x{v[5]:08x}u,")
         lines.append("};")
-        lines.append(f"static const u16 sNdsNativeBakedTris{gi}[{len(tris) * 3}] =")
+        lines.append(f"static const u16 {prefix}Tris{gi}[{len(tris) * 3}] =")
         lines.append("{")
         for t in tris:
             lines.append(f"    {t[0]}u, {t[1]}u, {t[2]}u,")
         lines.append("};")
         lines.append("")
-    lines.append("static const NDSNativeBakedGroup "
-                 "sNdsNativeBakedGroups[NDS_NATIVE_BAKED_GROUP_COUNT] =")
+    lines.append(f"{storage}const NDSNativeBakedGroup "
+                 f"{prefix}Groups[{counts}_GROUP_COUNT] =")
     lines.append("{")
     for gi, (name, (verts, tris), gflags) in enumerate(groups):
-        lines.append(f"    {{ sNdsNativeBakedVerts{gi}, sNdsNativeBakedColors{gi}, "
-                     f"sNdsNativeBakedTris{gi}, {len(verts)}u, {len(tris)}u, {gflags}u }},")
+        lines.append(f"    {{ {prefix}Verts{gi}, {prefix}Colors{gi}, "
+                     f"{prefix}Tris{gi}, {len(verts)}u, {len(tris)}u, {gflags}u }},")
     lines.append("};")
     lines.append("")
-    lines.append("static const NDSNativeBakedOp "
-                 "sNdsNativeBakedOps[NDS_NATIVE_BAKED_OP_COUNT] =")
+    lines.append(f"{storage}const NDSNativeBakedOp "
+                 f"{prefix}Ops[{counts}_OP_COUNT] =")
     lines.append("{")
     current = None
     for op, w0, w1, arg, name in ops:
@@ -564,22 +952,70 @@ def render(roots, ops, groups) -> str:
                      f"/* {OP_NAMES[op]} */")
     lines.append("};")
     lines.append("")
-    lines.append("static const NDSNativeBakedRoot "
-                 "sNdsNativeBakedRoots[NDS_NATIVE_BAKED_ROOT_COUNT] =")
+    lines.append(f"{storage}const NDSNativeBakedRoot "
+                 f"{prefix}Roots[{counts}_ROOT_COUNT] =")
     lines.append("{")
     for r in roots:
         lines.append(f"    /* {r['name']}: {r['note']} */")
         lines.append(f"    {{ 0x{r['root']:05x}u, 0x{r['end']:05x}u, "
                      f"0x{r['last_w0']:08x}u, {r['asset']}u, {r['gobj']}u, "
                      f"{r['first_op']}u, {r['op_count']}u, {r['top_words']}u, "
-                     f"{r['slots']}u, 0u }},")
+                     f"{r['slots']}u, {r['shift']}u }},")
     lines.append("};")
     lines.append("")
     return "\n".join(lines)
 
 
-def render_header(roots, ops, groups) -> str:
+def fnv1a(data: bytes) -> int:
+    value = 2166136261
+    for byte in data:
+        value = ((value ^ byte) * 16777619) & 0xFFFFFFFF
+    return value
+
+
+def room_binary(roots, ops, groups) -> bytes:
+    """The room table as the ending loads it: a 32-byte header (magic,
+    version, root/op/group counts, data bytes, FNV-1a of the body, body
+    bytes), then the roots, ops and groups exactly as their C structs
+    (include/nds/nds_native_baked_types.h) lay out, a group's three pointers
+    stored as data offsets the loader rebases, then the data: every colour
+    (u32), every vertex (5 x s16), every triangle (3 x u16)."""
+    colors = bytearray()
+    verts = bytearray()
+    tris = bytearray()
+    rows = []
+    for _name, (vs, ts), gflags in groups:
+        rows.append((len(verts), len(colors), len(tris), len(vs), len(ts), gflags))
+        for v in vs:
+            colors += struct.pack("<I", v[5])
+            verts += struct.pack("<5h", *v[:5])
+        for t in ts:
+            tris += struct.pack("<3H", *t)
+    vert_base = len(colors)
+    tri_base = vert_base + len(verts)
+    data = bytes(colors) + bytes(verts) + bytes(tris)
+    data += bytes(-len(data) % 4)
+    body = bytearray()
+    for r in roots:
+        body += struct.pack("<IIIHHHHHBB", r["root"], r["end"], r["last_w0"],
+                            r["asset"], r["gobj"], r["first_op"], r["op_count"],
+                            r["top_words"], r["slots"], r["shift"])
+    for op, w0, w1, arg, _name in ops:
+        body += struct.pack("<IIHBB", w0, w1, arg, op, 0)
+    for vert_off, color_off, tri_off, nverts, ntris, gflags in rows:
+        if nverts > 0xFF or ntris > 0xFF:
+            raise Refused("room group exceeds the u8 counts")
+        body += struct.pack("<IIIBBH", vert_base + vert_off, color_off,
+                            tri_base + tri_off, nverts, ntris, gflags)
+    body += data
+    header = struct.pack("<8I", ROOM_MAGIC, ROOM_VERSION, len(roots), len(ops),
+                         len(groups), len(data), fnv1a(bytes(body)), len(body))
+    return header + bytes(body)
+
+
+def render_header(roots, ops, groups, room=None) -> str:
     assets = sorted({r["asset"] for r in roots})
+    room_roots, room_ops, room_groups = room if room is not None else ([], [], [])
     return "\n".join((
         "/* Baked item/weapon roots (generated).",
         " * Do not hand-edit; regenerate with generate_nds_native_item_baked.py. */",
@@ -593,6 +1029,11 @@ def render_header(roots, ops, groups) -> str:
         f"#define NDS_NATIVE_BAKED_OP_ENV {OP_ENV}u",
         f"#define NDS_NATIVE_BAKED_OP_MATERIAL {OP_MATERIAL}u",
         f"#define NDS_NATIVE_BAKED_OP_EMIT {OP_EMIT}u",
+        "/* The ending's room table (nitro:/movies/room_baked.bin). */",
+        f"#define NDS_NATIVE_BAKED_ROOM_MAGIC 0x{ROOM_MAGIC:08x}u",
+        f"#define NDS_NATIVE_BAKED_ROOM_VERSION {ROOM_VERSION}u",
+        "#define NDS_NATIVE_BAKED_ROOM_ASSET_MATCH(asset) \\",
+        "    (" + (" || ".join(f"((asset) == {a}u)" for a in sorted({r['asset'] for r in room_roots})) or "0") + ")",
         "/* The assets any baked root lives in: the adapter's cheap first test. */",
         "#define NDS_NATIVE_BAKED_ASSET_MATCH(asset) \\",
         "    (" + " || ".join(f"((asset) == {a}u)" for a in assets) + ")",
@@ -607,10 +1048,23 @@ def main() -> int:
     ap.add_argument("--emit", action="store_true")
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--list", action="store_true", help="print each root's ops")
+    ap.add_argument("--room-out", type=Path,
+                    help="write the ending's room table (NitroFS) here")
     args = ap.parse_args()
     roots, ops, groups = build()
+    room_roots, room_ops, room_groups = build(scene=True)
+    if args.room_out is not None:
+        blob = room_binary(room_roots, room_ops, room_groups)
+        args.room_out.parent.mkdir(parents=True, exist_ok=True)
+        if (not args.room_out.exists()) or args.room_out.read_bytes() != blob:
+            args.room_out.write_bytes(blob)
+        print(f"ROOM_BAKED_OK roots={len(room_roots)} ops={len(room_ops)} "
+              f"groups={len(room_groups)} bytes={len(blob)}")
+        if not (args.emit or args.check):
+            return 0
     packet = render(roots, ops, groups)
-    header = render_header(roots, ops, groups)
+    header = render_header(roots, ops, groups,
+                           (room_roots, room_ops, room_groups))
     if args.list:
         for op, w0, w1, arg, name in ops:
             print(f"{name:22s} {OP_NAMES[op]:11s} {w0:08x} {w1:08x} {arg}")
@@ -626,7 +1080,7 @@ def main() -> int:
                 raise RuntimeError(f"generated artefact stale: {path.relative_to(REPO)}")
     tri_total = sum(len(t) for _, (_, t), _ in groups)
     coverage = sorted({name for name, _, gflags in groups if gflags & GROUP_I_COVERAGE})
-    print(f"ITEM_BAKED_NATIVE_OK roots={len(roots)} ops={len(ops)} "
+    print(f"ITEM_BAKED_NATIVE_OK roots={len(roots)}+{len(room_roots)} ops={len(ops)}+{len(room_ops)} "
           f"groups={len(groups)} tris={tri_total} i_coverage={','.join(coverage) or '-'}")
     return 0
 

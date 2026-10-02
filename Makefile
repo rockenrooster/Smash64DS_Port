@@ -6902,6 +6902,17 @@ $(NDS_NATIVE_ITEM_BAKED_PACKET) $(NDS_NATIVE_ITEM_BAKED_HEADER) &: $(NDS_NATIVE_
 	@touch $(NDS_NATIVE_ITEM_BAKED_PACKET) $(NDS_NATIVE_ITEM_BAKED_HEADER)
 nds_renderer.o: $(NDS_NATIVE_ITEM_BAKED_PACKET) $(NDS_NATIVE_ITEM_BAKED_HEADER)
 renderer_adapter_stage.o: $(NDS_NATIVE_ITEM_BAKED_HEADER)
+battleship_mvending.o: $(NDS_NATIVE_ITEM_BAKED_HEADER)
+# P2-6 (2026-10-01): the 1P ending's room roots, same generator, as a NitroFS
+# file the ending loads into its own heap (battleship_mvending.c): no static
+# image carries them.
+ifeq ($(NDS_P2_1P_GAME),1)
+NDS_NITROFS_ROOM_BAKED := $(NITROFS_DIR)/movies/room_baked.bin
+$(NDS_NITROFS_ROOM_BAKED): $(NDS_NATIVE_ITEM_BAKED_PREREQ)
+	@mkdir -p $(dir $@)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_baked.py" --room-out "$@"
+$(OUTPUT).nds: $(NDS_NITROFS_ROOM_BAKED)
+endif
 
 $(NDS_NATIVE_ITEM_GLUCKY_PACKET) $(NDS_NATIVE_ITEM_GLUCKY_HEADER) &: $(NDS_NATIVE_ITEM_GLUCKY_PREREQ)
 	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_glucky.py" --emit

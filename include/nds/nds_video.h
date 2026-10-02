@@ -24,5 +24,11 @@ u32 ndsVideoGetSourceFade(void);
  * 0 when clear, else fade-down mode (2<<14) ORed with max(blackout?16:0,
  * clamped fade). */
 u16 ndsVideoResolveBrightnessValue(u32 blackout, u32 fade_level);
+/* Scene fade (P2-6 ending): a scene whose source paints a full-viewport
+ * black or white PRIM rectangle over its 3D (mvending.c:261-360) drives the
+ * same registers instead -- down = black level 0..16, up = white level 0..16.
+ * Black wins over white, and blackout/source fade win over both. Persists
+ * until the scene that follows clears it at its first draw. */
+void ndsVideoSetSceneFade(u32 down_level, u32 up_level);
 
 #endif

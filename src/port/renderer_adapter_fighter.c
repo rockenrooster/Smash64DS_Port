@@ -5326,8 +5326,11 @@ static sb32 ndsFighterIntroTransientSubmit(GObj *fighter_gobj)
     u32 saved_no_oracle;
 #endif
 
+    /* The ending's figure (mvEndingMakeFighter: one Demo actor in
+     * nFTDemoStatusFigureDropped) is never registered either. */
     if ((fighter_gobj == NULL) ||
-        (gNdsSceneManagerCurrKind != nSCKind1PIntro))
+        ((gNdsSceneManagerCurrKind != nSCKind1PIntro) &&
+         (gNdsSceneManagerCurrKind != nSCKindEnding)))
     {
         return FALSE;
     }
@@ -5445,10 +5448,11 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
         (ndsFighterGetNativeOwnerSlot(fp, &owner_slot) == FALSE))
     {
 #if NDS_P2_1P_GAME && (NDS_RENDERER_PROFILE_LEVEL < 2)
-        /* 1P Intro Demo fighters are never registered in the four-entry
-         * live registry (up to 21 concurrent actors). Bind each one
-         * transiently at this display boundary instead. Battle fighters
-         * always pass the gate above and never enter here. */
+        /* 1P Intro Demo fighters (up to 21 concurrent actors) and the
+         * ending's figure are never registered in the four-entry live
+         * registry. Bind each one transiently at this display boundary
+         * instead. Battle fighters always pass the gate above and never
+         * enter here. */
         (void)ndsFighterIntroTransientSubmit(fighter_gobj);
 #endif
         return;
