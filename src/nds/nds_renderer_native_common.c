@@ -11510,6 +11510,10 @@ static s32 ndsFighterPacketPatchTexgen(
     u32 input_count)
 {
     const LookAt *look_at;
+    const NDSFighterPacketTexgenSite *sites_overflow;
+    const NDSRendererMatrix20p12 *directions_for = NULL;
+    NDSNativeTexgenDirectionQ15 lookat_x = { 0, 0, 0 };
+    NDSNativeTexgenDirectionQ15 lookat_y = { 0, 0, 0 };
     u32 group_index;
 
     if (packet->texgen_group_count == 0u)
@@ -11527,14 +11531,23 @@ static s32 ndsFighterPacketPatchTexgen(
     {
         return FALSE;
     }
+    /* P2-6 (2026-10-01): the overflow sites' base is resolved once, the
+     * lookat directions are reused while consecutive groups share a root's
+     * modelview, and the unique-normal cache is searched newest first -- a
+     * strip's next corner is almost always one of the last two seen (Race:
+     * this patch was the largest single cost of its over-gate frames). */
+    {
+        const u32 slot = ndsFighterPacketSlotOf(packet);
+
+        sites_overflow = (slot < NDS_FIGHTER_PACKET_SLOTS) ?
+            sNdsFighterPacketXSites[slot] : NULL;
+    }
     for (group_index = 0u;
          group_index < (u32)packet->texgen_group_count;
          group_index++)
     {
         const NDSFighterPacketTexgenGroup *group =
             ndsFighterPacketTexgenGroupAt(packet, group_index);
-        NDSNativeTexgenDirectionQ15 lookat_x;
-        NDSNativeTexgenDirectionQ15 lookat_y;
         u16 cached_dense[NDS_FIGHTER_PACKET_TEXGEN_DENSE_MAX];
         u32 cached_word[NDS_FIGHTER_PACKET_TEXGEN_DENSE_MAX];
         u32 cached_count = 0u;
@@ -11551,25 +11564,40 @@ static s32 ndsFighterPacketPatchTexgen(
         if (((u32)group->root >= input_count) ||
             (inputs[group->root].modelview_matrix == NULL) ||
             (site_end > (u32)packet->texgen_site_count) ||
-            (site_end > NDS_FIGHTER_PACKET_ALL_TEXGEN_SITES) ||
-            (ndsRendererNativePrepareTexgenDirectionQ15(
-                 &look_at->l[0], inputs[group->root].modelview_matrix,
-                 &lookat_x) == FALSE) ||
-            (ndsRendererNativePrepareTexgenDirectionQ15(
-                 &look_at->l[1], inputs[group->root].modelview_matrix,
-                 &lookat_y) == FALSE))
+            (site_end > NDS_FIGHTER_PACKET_ALL_TEXGEN_SITES))
         {
             return FALSE;
         }
+        if (inputs[group->root].modelview_matrix != directions_for)
+        {
+            if ((ndsRendererNativePrepareTexgenDirectionQ15(
+                     &look_at->l[0], inputs[group->root].modelview_matrix,
+                     &lookat_x) == FALSE) ||
+                (ndsRendererNativePrepareTexgenDirectionQ15(
+                     &look_at->l[1], inputs[group->root].modelview_matrix,
+                     &lookat_y) == FALSE))
+            {
+                return FALSE;
+            }
+            directions_for = inputs[group->root].modelview_matrix;
+        }
         for (site_index = first_site; site_index < site_end; site_index++)
         {
-            const NDSFighterPacketTexgenSite *site =
-                ndsFighterPacketTexgenSiteAt(packet, site_index);
+            const NDSFighterPacketTexgenSite *site;
             u32 dense_id;
             u32 cache_index;
             u32 st;
 
-            if (site == NULL)
+            if (site_index < NDS_FIGHTER_PACKET_TEXGEN_SITE_MAX)
+            {
+                site = &packet->texgen_sites[site_index];
+            }
+            else if (sites_overflow != NULL)
+            {
+                site = &sites_overflow[
+                    site_index - NDS_FIGHTER_PACKET_TEXGEN_SITE_MAX];
+            }
+            else
             {
                 return FALSE;
             }
@@ -11579,14 +11607,17 @@ static s32 ndsFighterPacketPatchTexgen(
             {
                 return FALSE;
             }
-            for (cache_index = 0u; cache_index < cached_count; cache_index++)
+            cache_index = cached_count;
+            while (cache_index != 0u)
             {
+                cache_index--;
                 if ((u32)cached_dense[cache_index] == dense_id)
                 {
                     break;
                 }
             }
-            if (cache_index == cached_count)
+            if ((cached_count == 0u) ||
+                ((u32)cached_dense[cache_index] != dense_id))
             {
                 const NDSNativeDenseVertex *dense;
                 u32 rgba;
