@@ -123,8 +123,11 @@ static u32 ndsSeamRunSourceMenuScene(struct SYTaskFunction *tfunc, u32 is_result
 #if NDS_P2_1P_GAME
         /* Source 1P display scenes also evaluate one pose per presented tick. */
         if ((gNdsSceneManagerCurrKind == nSCKind1PGamePlayers) ||
+            (gNdsSceneManagerCurrKind == nSCKind1PBonus1Players) ||
+            (gNdsSceneManagerCurrKind == nSCKind1PBonus2Players) ||
             (gNdsSceneManagerCurrKind == nSCKind1PIntro) ||
-            (gNdsSceneManagerCurrKind == nSCKindEnding))
+            (gNdsSceneManagerCurrKind == nSCKindEnding) ||
+            (gNdsSceneManagerCurrKind == nSCKind1PChallenger))
         {
             gNdsFtPoseEvalTick = 1u;
         }

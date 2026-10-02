@@ -5327,10 +5327,13 @@ static sb32 ndsFighterIntroTransientSubmit(GObj *fighter_gobj)
 #endif
 
     /* The ending's figure (mvEndingMakeFighter: one Demo actor in
-     * nFTDemoStatusFigureDropped) is never registered either. */
+     * nFTDemoStatusFigureDropped) is never registered either, nor is the
+     * challenger's silhouette (sc1PChallengerMakeFighter: one Demo actor,
+     * made with ftManagerMakeFighter alone). */
     if ((fighter_gobj == NULL) ||
         ((gNdsSceneManagerCurrKind != nSCKind1PIntro) &&
-         (gNdsSceneManagerCurrKind != nSCKindEnding)))
+         (gNdsSceneManagerCurrKind != nSCKindEnding) &&
+         (gNdsSceneManagerCurrKind != nSCKind1PChallenger)))
     {
         return FALSE;
     }
