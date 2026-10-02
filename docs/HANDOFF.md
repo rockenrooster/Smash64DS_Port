@@ -16,9 +16,8 @@ receipt `artifacts/performance/2026-09-24_p2-2p8-phase1-slice7/README.md`). Root
 **Owner 09-27: VS Mode first, 1P deferred. Any 4 fighters on any stage hit the P95 gate
 with items on over a full 1-minute match (plus sudden death); CSS and SSS 100%; Results
 and transitions/loading seamless. CSS/SSS audio delay + in-match SFX glitches logged (BUG_NOTES A1/A2).**
-**Phase 2/3:** all-VS stage compilation, NDL, MISC owners, view-space particles (receipt
-`2026-09-26_p2-2p8-phase2-particle-ab`); A8 BGM `d0d02c61a83` (`2026-09-26_p2-2p8-phase3-residency`).
-Global renderer retirement remains debt. Bank measured battle wins (D9); no restarts.
+**Phase 2/3:** all-VS stage compilation, NDL, MISC owners, view-space particles, A8 BGM (receipts
+`2026-09-26_p2-2p8-phase{2,3}-*`). Global renderer retirement remains debt. Bank measured wins (D9).
 **09-26..30 solo** (receipts `2026-09-{26..30}_p2-2p8-*`). **09-30 owner checkpoint: optimization
 paused "not 100% complete"; the 1P campaign is next.** Gate WORK P50/P95 922,240/1,240,256 (target P95
 1.12M, RED; `94ea559f062`); lab P95 1.21-1.58M by roster/stage; SZ owner roster 1.37M. 09-30 landed: baked
@@ -29,10 +28,13 @@ Hitmonlee undrawn, Link's 3 entry frames on SZ/Saffron, Results photo (tic 0-80 
 failures (table `p2/P2-6-one-player.md`). Landed: intro stills/poses, staff roll, Master Hand, Race/board lights, HUD
 anchors, bonus map colours (RSP lighting baked, `390d513c5cb`), Ending room + figure (NitroFS room table), platform
 bake. Owner playtest 10-01 (Kirby): 15 of 24 bonus boards drew no map (3-colour TLUT, `98be04a7540`); Polygon Team
-froze on a copy hat the match never admitted (`1c1c67b90f4`); polygon packets now replay (`04cc889b6e4`). Owner floor
-for content work: P50 < 1.12M (>50% of frames within 2 VBlanks). 10-02: every stage 80-98%, the Race 50.2% (GX
-texgen, fast-lane routes, off-screen culls, rigid stage bindings: `p2/P2-6-one-player.md`). Other blob stages
-still ship rigid mask 0. Probes: session scratchpad `pace2.ps1`/`pacesweep.ps1`/`profwalk.ps1`.
+froze on a copy hat the match never admitted (`1c1c67b90f4`). Owner floor for content work: P50 < 1.12M
+(>50% of frames within 2 VBlanks). 10-02: every stage 80-98%, the Race 50.2% (GX
+texgen, fast-lane routes, off-screen culls, rigid stage bindings: `p2/P2-6-one-player.md`); VS venues still ship
+rigid mask 0 (pin needs a VS heap check). **10-02 VS regression fixed (`319c15bd292`):** 1P growth had shrunk the
+arena 93 KB -- VS CSS hid every preview, VS Results froze at tic 120. A duplicate FAT mount (65,832 B) is gone;
+CSS reserve 230,112 free (needs 183,072), Results podium fits on three rosters. Re-probe both after any static or
+NitroFS growth (scratchpad `resprobe.ps1`). Pikachu self-hit burst toward camera (`53e26f7b7ee`).
 
 ## Continue, do not restart
 
@@ -52,9 +54,7 @@ work. A settled experiment needs a named new invalidator to reopen.
 Read only contracts needed by the next action. The board chooses the next batch
 only after recording an outcome, a concrete blocker or an owner priority change.
 
-Keep unavailable helpers and denied Git operations recorded with their retry
-condition; use permitted serial implementation instead of repeating setup.
-Preserve owner edits and qualified artifacts. A documentation change does not
-repair a transport failure, authorize denied access or establish a game PASS.
+Record unavailable helpers and denied Git operations with their retry condition. Preserve owner
+edits and qualified artifacts; a doc change does not repair a failure or establish a game PASS.
 
 Bug-sweep lessons (2026-09-19..22): `p2/BUG_NOTES.md` "Standing lessons".

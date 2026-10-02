@@ -99,9 +99,13 @@ and a walk down the course). bonus3's mask now pins its 18 non-billboard
 bindings, the compiled GX program bakes their worlds (body 39,076 B, the
 boards' ceiling), and the run cull tests a rigid run's world box against one
 camera x projection a frame (`56a77844b42`): Race 43% -> 50.2%, at the
-floor. The other blob stages (the VS venues included) still ship mask 0;
-the same probe and pin is the next stage lever, within each venue's body
-ceiling.
+floor. The other 1P-only maps followed from the same probe over a 900-frame
+natural run (`1acbbf5bcdf`: Final Destination 0x17, the Polygon Team's 0x1,
+Metal Mario's 0xF, the small Yoshi's Island 0x1C014); all four programs still
+load, and the share within two VBlanks reads 82%, 87%, 97% and 93%. The VS
+venues still ship mask 0 and need their VS heap checked before a pin: Hyrule
+grows past its ceiling (30,252 -> 40,492 B), Saffron to 46,172 B, and Congo
+Jungle's program already declines at runtime on the loader heap (reason 3).
 
 Intro fighter stills (owner: rendered stills). The shipping intro is static
 and blits `assets/intro/*.s1i` (`ndsSC1PIntroBlitStills`), baked from this
