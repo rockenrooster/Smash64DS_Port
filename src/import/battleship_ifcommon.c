@@ -984,6 +984,38 @@ static u8 ndsIFCommonTeamStockLook(const SObj *sobj)
     }
     return NDS_BATTLE_HUD_TEAM_LOOK_NONE;
 }
+
+/* Bonus Practice's count-up timer (sc1PBonusStageMakeTimer,
+ * sc1pbonusstage.c:944-975: six digit SObjs, then the two marks, on one
+ * interface GObj whose process is sc1PBonusStageTimerProcUpdate). It joins
+ * the VS timer on the lower HUD; the source process still owns the value
+ * (sSC1PBonusStageTimerDigits, :876-890) and each SObj's visibility (the
+ * leading digit stays hidden until it first changes). Addresses only. */
+extern void sc1PBonusStageTimerProcUpdate(GObj *interface_gobj);
+extern u8 sSC1PBonusStageTimerDigits[6];
+volatile u32 gNdsIFCommonHUDBonusTimerVisible;
+volatile u32 gNdsIFCommonHUDBonusTimerMask;
+volatile u8 gNdsIFCommonHUDBonusTimerDigits[6];
+
+static s32 ndsIFCommonIsBonusTimerGObj(GObj *gobj)
+{
+    GObjProcess *proc;
+
+    if ((gSCManagerSceneData.scene_curr != nSCKind1PBonusStage) ||
+        (gobj->proc_display != lbCommonDrawSObjAttr))
+    {
+        return FALSE;
+    }
+    for (proc = gobj->gobjproc_head; proc != NULL; proc = proc->link_next)
+    {
+        if ((proc->kind == nGCProcessKindFunc) &&
+            (proc->exec.func == sc1PBonusStageTimerProcUpdate))
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
 #endif
 
 u32 ndsIFCommonRouteGObjToLowerTextHUD(GObj *gobj)
@@ -1042,6 +1074,28 @@ u32 ndsIFCommonRouteGObjToLowerTextHUD(GObj *gobj)
         }
         gNdsIFCommonHUDTeamStockCount = count;
         route = 8u;
+    }
+    else if (ndsIFCommonIsBonusTimerGObj(gobj) != FALSE)
+    {
+        SObj *sobj;
+        u32 mask = 0u;
+        u32 i = 0u;
+
+        for (sobj = SObjGetStruct(gobj); (sobj != NULL) && (i < 8u);
+             sobj = sobj->next, i++)
+        {
+            if ((sobj->sprite.attr & SP_HIDDEN) == 0u)
+            {
+                mask |= 1u << i;
+            }
+        }
+        for (i = 0u; i < 6u; i++)
+        {
+            gNdsIFCommonHUDBonusTimerDigits[i] = sSC1PBonusStageTimerDigits[i];
+        }
+        gNdsIFCommonHUDBonusTimerMask = mask;
+        gNdsIFCommonHUDBonusTimerVisible = 1u;
+        route = 16u;
     }
 #endif
     if (route != 0u)

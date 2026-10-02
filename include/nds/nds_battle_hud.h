@@ -55,6 +55,14 @@ u32 ndsIFCommonGetBattleHudDamageState(u32 player,
 #define NDS_BATTLE_HUD_TEAM_LOOK_NONE 0xffu
 extern volatile u8 gNdsIFCommonHUDTeamStockLook[NDS_BATTLE_HUD_TEAM_STOCK_MAX];
 
+/* Bonus Practice's count-up timer (sc1PBonusStageMakeTimer), published by the
+ * same route on each pass that draws it and consumed by each render: its six
+ * digits (sSC1PBonusStageTimerDigits) and which of its eight SObjs -- six
+ * digits, then the two marks -- the source shows. */
+extern volatile u32 gNdsIFCommonHUDBonusTimerVisible;
+extern volatile u32 gNdsIFCommonHUDBonusTimerMask;
+extern volatile u8 gNdsIFCommonHUDBonusTimerDigits[6];
+
 extern volatile u32 gNdsBattleHudPrepareCount;
 extern volatile u32 gNdsBattleHudRenderCount;
 extern volatile u32 gNdsBattleHudChangeCount;

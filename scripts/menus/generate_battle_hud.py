@@ -29,6 +29,13 @@ DAMAGE_SYMBOLS = [f"llIFCommonPlayerDamageDigit{i}Sprite" for i in range(10)] + 
 TIMER_SYMBOLS = [f"llIFCommonTimerDigit{i}Sprite" for i in range(10)] + [
     "llIFCommonTimerSymbolColonSprite"
 ]
+# The two marks Bonus Practice's count-up timer draws between its digit pairs
+# (sc1PBonusStageMakeTimer, sc1pbonusstage.c:965-975). Appended after every
+# other cell, so the earlier blob bytes stay as they were.
+TIMER_MARK_SYMBOLS = [
+    "llIFCommonTimerSymbolSecSprite",
+    "llIFCommonTimerSymbolCSecSprite",
+]
 STOCK_DIGIT_SYMBOLS = [f"llIFCommonDigits{i}Sprite" for i in range(10)] + [
     "llIFCommonDigitsCrossSprite"
 ]
@@ -505,6 +512,22 @@ def bake(repo_root: Path, output: Path, binary_output: Path) -> None:
         glyph_groups.append(rows)
         glyph_metrics.append(metrics)
 
+    # Bonus Practice's timer marks: the timer glyphs' own packing, appended
+    # after every other cell below.
+    timer_file = ui.RelocFile(o2r / "reloc_interface" / "IFCommonTimer")
+    mark_rows = []
+    mark_metrics = []
+    for symbol in TIMER_MARK_SYMBOLS:
+        if symbol not in offsets:
+            raise BakeError(f"missing reloc offset for {symbol}")
+        _, raster = ui.decode_sprite_raster(timer_file, symbol, offsets[symbol])
+        raster, width, height = scale_raster(ui, raster)
+        if width > 16 or height > 16:
+            raise BakeError(f"{symbol}: scaled glyph {width}x{height} exceeds 16x16")
+        mark_rows.append(pack_obj4(
+            intensity_indices(raster, width, height, 16, 16, 0, 0), 16, 16))
+        mark_metrics.append((width, height))
+
     portrait_file = ui.RelocFile(o2r / "reloc_menus" / "MNPlayersPortraits")
     portrait_gfx = []
     portrait_palettes = []
@@ -566,7 +589,7 @@ def bake(repo_root: Path, output: Path, binary_output: Path) -> None:
     graphics = glyph_groups + [portrait_gfx, [
         mario_gfx, fox_gfx, luigi_gfx, donkey_gfx, captain_gfx, samus_gfx,
         link_gfx, pikachu_gfx, yoshi_gfx, ness_gfx, purin_gfx, kirby_gfx], score_gfx,
-        [zako_gfx] + yoshi_lane_gfx]
+        [zako_gfx] + yoshi_lane_gfx, mark_rows]
     payload = b"".join(cell for group in graphics for cell in group)
     binary = struct.pack("<II", 0x31444842, len(payload)) + payload
     binary_output.parent.mkdir(parents=True, exist_ok=True)
@@ -579,6 +602,7 @@ def bake(repo_root: Path, output: Path, binary_output: Path) -> None:
         "",
         "#define NDS_BATTLE_HUD_DAMAGE_GLYPHS 11u",
         "#define NDS_BATTLE_HUD_TIMER_GLYPHS 11u",
+        f"#define NDS_BATTLE_HUD_TIMER_MARKS {len(TIMER_MARK_SYMBOLS)}u",
         "#define NDS_BATTLE_HUD_STOCK_DIGIT_GLYPHS 11u",
         f"#define NDS_BATTLE_HUD_PORTRAITS {len(PORTRAIT_SYMBOLS)}u",
         f"#define NDS_BATTLE_HUD_STOCK_OWNERS {len(MODEL_STOCK)}u",
@@ -599,6 +623,8 @@ def bake(repo_root: Path, output: Path, binary_output: Path) -> None:
     lines += c_metric_u8("kNdsBattleHudDamageMetric", glyph_metrics[0])
     lines += [""]
     lines += c_metric_u8("kNdsBattleHudTimerMetric", glyph_metrics[1])
+    lines += [""]
+    lines += c_metric_u8("kNdsBattleHudTimerMarkMetric", mark_metrics)
     lines += [""]
     lines += c_metric_u8("kNdsBattleHudStockDigitMetric", glyph_metrics[2])
     lines += [""]

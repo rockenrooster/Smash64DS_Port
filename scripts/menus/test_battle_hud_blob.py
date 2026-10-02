@@ -13,15 +13,17 @@ def test_hud_blob_preserves_pixels(tmp_path):
     subprocess.run([sys.executable, str(root / "scripts/menus/generate_battle_hud.py"),
                     "--output", str(header), "--binary-output", str(blob)], check=True)
     data = blob.read_bytes()
-    assert struct.unpack_from("<II", data) == (0x31444842, 12576)
-    assert len(data) == 12584
+    assert struct.unpack_from("<II", data) == (0x31444842, 12832)
+    assert len(data) == 12840
     # Before/after byte comparison against the prior five linked Gfx arrays.
     assert hashlib.sha256(data[8:10376]).hexdigest() == "7d0da7bfe2b26260afb84b74eb0aab9c821ce75d556847e5db4bdc853fc4436e"
     # The 1P team-row cells (Polygon icon, four Yoshi lanes) only append.
     assert hashlib.sha256(data[8:12424]).hexdigest() == "1793b9b114dc48df8ed67c85fc8e2a477f4f8fdde4ef4b66a95fd9107abd65d4"
     text = header.read_text()
     assert "kNdsBattleHudDamageGfx" not in text
-    assert "NDS_BATTLE_HUD_BLOB_BYTES 12576u" in text
+    assert "NDS_BATTLE_HUD_BLOB_BYTES 12832u" in text
+    # Bonus Practice's two timer marks only append (16x16 4bpp cells).
+    assert "NDS_BATTLE_HUD_TIMER_MARKS 2u" in text
     assert "kNdsBattleHudScorePalette" in text
     assert "kNdsBattleHudDamageMetric" in text
     assert "kNdsBattleHudPortraitPalette" in text

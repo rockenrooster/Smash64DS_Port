@@ -668,6 +668,11 @@
       "reason": "The lower-HUD route compares a GObj's display procedure with the 1P team stock procedure's address to claim it; the address is never called, and the procedure only exists on 1P battles, which keep the 1P head loaded."
     },
     {
+      "source_symbol": "ndsIFCommonRouteGObjToLowerTextHUD",
+      "target_symbol": "sc1PBonusStageTimerProcUpdate",
+      "reason": "The lower-HUD route compares a GObj's process function with the Bonus Practice timer's update address to claim it; the address is never called, and the comparison runs only in the 1P bonus stage scene, which keeps the 1P head loaded."
+    },
+    {
       "source_symbol": "ndsFrontendOverlayBeginScene",
       "target_symbol": "__nds_frontend_1p_end",
       "reason": "Overlay owner uses the 1P battle-time head's end as the address where a 1P, bonus or training battle's tail loan starts, not as executable code."

@@ -67,6 +67,8 @@ static const s16 sNdsBattleHudTimerCenterX[5] = {
 
 static u16 *sNdsBattleHudDamageGfx[NDS_BATTLE_HUD_DAMAGE_GLYPHS];
 static u16 *sNdsBattleHudTimerGfx[NDS_BATTLE_HUD_TIMER_GLYPHS];
+/* Bonus Practice's timer marks, the blob's last cells. */
+static u16 *sNdsBattleHudTimerMarkGfx[NDS_BATTLE_HUD_TIMER_MARKS];
 static u16 *sNdsBattleHudStockDigitGfx[NDS_BATTLE_HUD_STOCK_DIGIT_GLYPHS];
 static u16 *sNdsBattleHudPortraitGfx[NDS_BATTLE_HUD_PORTRAITS];
 static u16 *sNdsBattleHudStockGfx[NDS_BATTLE_HUD_STOCK_OWNERS];
@@ -91,6 +93,17 @@ static u8 sNdsBattleHudPortraitPaletteOwner[NDS_BATTLE_HUD_PLAYERS];
 static u32 sNdsBattleHudPrepared;
 #if NDS_P2_1P_GAME
 static u32 sNdsBattleHudTeamStockCount;
+/* The bonus timer this render consumed (gNdsIFCommonHUDBonusTimer*). */
+static u32 sNdsBattleHudBonusTimerMask;
+static u8 sNdsBattleHudBonusTimerDigits[6];
+/* sc1pbonusstage.c:244 dSC1PBonusStageTimerDigitPositions, then the marks'
+ * own x at :968 and :972; digits sit at y 30, the marks at y 20. */
+static const s16 sNdsBattleHudBonusTimerX[8] = {
+    NDS_BATTLE_HUD_SOURCE_SCALE(207), NDS_BATTLE_HUD_SOURCE_SCALE(222),
+    NDS_BATTLE_HUD_SOURCE_SCALE(240), NDS_BATTLE_HUD_SOURCE_SCALE(255),
+    NDS_BATTLE_HUD_SOURCE_SCALE(273), NDS_BATTLE_HUD_SOURCE_SCALE(288),
+    NDS_BATTLE_HUD_SOURCE_SCALE(231), NDS_BATTLE_HUD_SOURCE_SCALE(264)
+};
 #endif
 static u32 sNdsBattleHudStateHash = 0xffffffffu;
 
@@ -318,6 +331,12 @@ static u32 ndsBattleHudPrepare(void)
         sNdsBattleHudTeamLaneGfx[i] = ndsBattleHudAlloc(
             file, SpriteSize_8x8, NDS_BATTLE_HUD_STOCK_GFX_BYTES);
         if (sNdsBattleHudTeamLaneGfx[i] == NULL) goto failed;
+    }
+    for (i = 0u; i < NDS_BATTLE_HUD_TIMER_MARKS; i++)
+    {
+        sNdsBattleHudTimerMarkGfx[i] = ndsBattleHudAlloc(
+            file, SpriteSize_16x16, NDS_BATTLE_HUD_TIMER_GFX_BYTES);
+        if (sNdsBattleHudTimerMarkGfx[i] == NULL) goto failed;
     }
     if (fgetc(file) != EOF || ferror(file)) goto failed;
     fclose(file);
@@ -727,6 +746,47 @@ static void ndsBattleHudDrawPortrait(u32 player, u32 fkind, u32 *next_id)
                        NDS_BATTLE_HUD_PORTRAIT_PALETTE_BASE + player);
 }
 
+#if NDS_P2_1P_GAME
+/* sc1PBonusStageTimerProcUpdate's six digits at their places (y 30) and the
+ * two marks (y 20), each centred as the source centres its SObj. */
+static void ndsBattleHudDrawBonusTimer(u32 *next_id)
+{
+    u32 i;
+
+    for (i = 0u; i < 8u; i++)
+    {
+        const u8 *metric;
+        u16 *gfx;
+        s32 y;
+
+        if ((sNdsBattleHudBonusTimerMask & (1u << i)) == 0u)
+        {
+            continue;
+        }
+        if (i < 6u)
+        {
+            u32 glyph = (sNdsBattleHudBonusTimerDigits[i] <= 9u) ?
+                sNdsBattleHudBonusTimerDigits[i] : 9u;
+
+            metric = kNdsBattleHudTimerMetric[glyph];
+            gfx = sNdsBattleHudTimerGfx[glyph];
+            y = NDS_BATTLE_HUD_SOURCE_SCALE(30);
+        }
+        else
+        {
+            metric = kNdsBattleHudTimerMarkMetric[i - 6u];
+            gfx = sNdsBattleHudTimerMarkGfx[i - 6u];
+            y = NDS_BATTLE_HUD_SOURCE_SCALE(20);
+        }
+        ndsBattleHudSetOam(next_id,
+                           sNdsBattleHudBonusTimerX[i] - ((s32)metric[0] / 2),
+                           y - ((s32)metric[1] / 2),
+                           SpriteSize_16x16, gfx,
+                           NDS_BATTLE_HUD_WHITE_PALETTE);
+    }
+}
+#endif
+
 static void ndsBattleHudDrawTimer(u32 *next_id)
 {
     u32 seconds;
@@ -734,6 +794,13 @@ static void ndsBattleHudDrawTimer(u32 *next_id)
     u8 digits[4];
     u32 i;
 
+#if NDS_P2_1P_GAME
+    if (sNdsBattleHudBonusTimerMask != 0u)
+    {
+        ndsBattleHudDrawBonusTimer(next_id);
+        return;
+    }
+#endif
     if (gNdsIFCommonHUDTimerVisible == 0u)
     {
         return;
@@ -935,6 +1002,20 @@ void ndsBattleHudRender(void)
             hash = ndsBattleHudMix(hash, gNdsIFCommonHUDTeamStockLook[i]);
         }
         sNdsBattleHudTeamStockCount = team_count;
+
+        /* The bonus timer is consumed the same way: present only on a pass
+         * whose route drew it. */
+        sNdsBattleHudBonusTimerMask =
+            (gNdsIFCommonHUDBonusTimerVisible != 0u) ?
+                (gNdsIFCommonHUDBonusTimerMask & 0xffu) : 0u;
+        gNdsIFCommonHUDBonusTimerVisible = 0u;
+        hash = ndsBattleHudMix(hash, 0xb0700000u | sNdsBattleHudBonusTimerMask);
+        for (i = 0u; i < 6u; i++)
+        {
+            sNdsBattleHudBonusTimerDigits[i] =
+                gNdsIFCommonHUDBonusTimerDigits[i];
+            hash = ndsBattleHudMix(hash, sNdsBattleHudBonusTimerDigits[i]);
+        }
     }
 #endif
     if (sNdsBattleHudScoreFrame != gNdsFrameCounter) sNdsBattleHudScoreCount = 0u;
