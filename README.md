@@ -10,11 +10,47 @@ game written from scratch.
 See [PROJECT_GOAL.md](PROJECT_GOAL.md) for the authoritative product, fidelity,
 milestone, and definition-of-done contract.
 
-The current build focuses on a one-minute Mario-versus-Fox match on Dream Land,
-with items off. Bring your own legally obtained North American Super Smash Bros.
-ROM; this repository contains no Nintendo assets or ROM-derived data.
+Bring your own legally obtained North American Super Smash Bros. ROM; this
+repository contains no Nintendo assets or ROM-derived data.
 
 Please support me on Patreon to help me continue this project! (slow progress for now) https://www.patreon.com/cw/Rockenrooster
+
+## Current status (2026-10-02)
+
+The port has grown well past its first vertical slice (a one-minute Mario vs.
+Fox match on Dream Land with items off). Working today:
+
+- Title screen and full menu navigation.
+- All twelve fighters and all stages.
+- The 1P campaign is playable start to finish.
+- Four-fighter matches on one console (1 human + up to 3 CPUs; no actual DS
+  multiplayer yet).
+- All items.
+
+Not yet finished:
+
+- Stable 30 FPS everywhere. It is mostly there — matches with one to three
+  fighters hold 30 FPS, but four-fighter matches can dip to around 20 FPS until
+  the final optimization pass lands.
+- Training mode (low priority), bonus-stage buttons, the ending scene and
+  credits, the intro cinematic, and proper character unlocks.
+- Wireless multiplayer, planned as the next major phase after optimization.
+
+Known bugs and compromises:
+
+- Random freezes still occur in some areas.
+- Saffron City's garage door is always open.
+- Transition/loading screens are much longer than on N64 — a couple of seconds
+  of black between scenes instead of near-instant loads, because of the DS's
+  limited RAM and storage bandwidth.
+- Occasional audio stuttering during heavy matches and loading states.
+- The game targets 30 FPS instead of the original's 60. The DS CPU is anemic
+  compared to the N64 and has no coprocessors or FPU to offload work to, so a
+  great deal of optimization was needed to reach 30 FPS at all.
+
+Overall the project is about 75% complete; multiplayer and final optimization
+are the next big pushes. Gameplay video is captured on melonDS because it is
+easier to record, but the game works fine on real Nintendo DS hardware too.
 
 ## Quick start
 
@@ -25,15 +61,11 @@ pwsh -NoProfile -File .\Smash64DS_Port\build.ps1 -Rom C:\path\to\baserom.us.z64
 ```
 
 The script downloads pinned source dependencies, checks the ROM, regenerates the
-required assets locally, and builds `smash64ds-battle-playable-hwtri.nds`.
+required assets locally, and builds `smash64ds.nds`, the current P2 target.
 
-## Current status
-
-The battle now holds 30 fps for 95 percent of frames, passing the 1.12
-million-tick P95 cadence gate (two VBlank intervals per frame), and the
-current build passes a full play test on retail Nintendo DS hardware. In the
-shipped demo the Fox CPU climbs one level per Mario win, wrapping from 9 back
-to 1.
+One caveat: building from a completely clean checkout has not been verified end
+to end yet. If the build fails for you, please open an issue — clean-build
+support is part of the planned 1.0 release hardening.
 
 ## Prerequisites
 
@@ -68,14 +100,11 @@ little-endian `.n64` dumps are rejected.
 
 ## Expected output
 
-The reference toolchain produces:
-
-- File: `smash64ds-battle-playable-hwtri.nds`
-- Size: 11,428,864 bytes
-- SHA-256: `4D795B4E83B335598B20A3B5953FDB1821797CC5E0A825FA96A0643ABBA4A090`
-
-The build script prints the versions it found and clearly reports whether the
-output matches this identity.
+The reference toolchain builds `smash64ds.nds`, and the script reports the
+output's size and SHA-256 when it finishes. A byte-exact reference identity is
+not pinned for the P2 ROM yet — the pinned identity in `DECOMP_PIN.txt` still
+describes the frozen P1 artifact `smash64ds-battle-playable-hwtri.nds` — so
+treat small differences as expected until the P2 ROM is formally released.
 
 ## Credits
 
@@ -100,5 +129,4 @@ creates them only on your computer.
 
 Super Smash Bros., Nintendo 64, and Nintendo DS are trademarks of their
 respective owners. This is an unofficial fan project and is not affiliated with
-or endorsed by Nintendo or HAL Laboratory. See [NOTICE.md](NOTICE.md) for source
-provenance and third-party notices.
+or endorsed by Nintendo or HAL Laboratory.
