@@ -65,6 +65,14 @@ sb32 ndsParticleDrawOwnTextureParallelogram(u32 texture_name, u32 texture_w,
                                             const Vec3f *right_leg,
                                             const Vec3f *up_leg, u32 color,
                                             u8 alpha);
+/* A source LBTransform whose proc_dead is this marker has every particle it
+ * carries drawn NDS_PARTICLE_TOWARD_EYE_BIAS world units straight toward the
+ * camera eye -- the shield's depth bias, for effects that are particles rather
+ * than display procs. The tag needs no table of its own: the marker does
+ * nothing when the source pool ejects the transform, and lbParticleGetTransform
+ * clears proc_dead when it hands the transform out again. */
+struct LBTransform;
+void ndsParticleTransformTowardEye(struct LBTransform *xf);
 extern volatile u32 gNdsSourceAssetQuadAttempts;
 extern volatile u32 gNdsSourceAssetQuadDrawn;
 extern volatile u32 gNdsSourceAssetQuadMissMask;

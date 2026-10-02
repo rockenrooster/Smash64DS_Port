@@ -3958,6 +3958,18 @@ static void ndsParticleBiasTowardEye(const Vec3f *pos, f32 depth_bias,
     }
 }
 
+/* The shield's floor (NDS_R2_SHIELD_QUAD_DEPTH_BIAS in battleship_efmanager.c)
+ * for the same reason: a burst centred on a fighter's joint interleaves with
+ * that fighter's body, and the opaque body wins wherever it is nearer. 150
+ * clears a torso that is a few tens of units deep either side of the joint. */
+#define NDS_PARTICLE_TOWARD_EYE_BIAS 150.0F
+
+/* The tag, not a callback with work to do; see nds_effects.h. */
+void ndsParticleTransformTowardEye(LBTransform *xf)
+{
+    (void)xf;
+}
+
 /* ONE CAMERA-FACING QUAD OVER A TEXTURE THIS PASS DOES NOT OWN. Same submit as
  * the atlas path, but the caller supplies the texture name and the whole image
  * is the cell -- for art that cannot live on the shared sheet. The shield is
@@ -4721,6 +4733,13 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
 #if NDS_R2_POSITION_PROBE
                     ndsParticleProbeFlameFirstDraw(pc, &world_pos);
 #endif
+                    if ((pc->xf != NULL) &&
+                        (pc->xf->proc_dead == ndsParticleTransformTowardEye))
+                    {
+                        ndsParticleBiasTowardEye(&world_pos,
+                                                 NDS_PARTICLE_TOWARD_EYE_BIAS,
+                                                 &world_pos);
+                    }
                     if ((source_mirror_mask & 1u) != 0u)
                     {
                         gNdsParticleMirrorSSubmitCount++;

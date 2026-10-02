@@ -167,6 +167,7 @@ uintptr_t lEFCommonParticleTextureBankHi;
 #define efManagerPikachuThunderShockMakeEffect ndsBaseEFManagerPikachuThunderShockMakeEffect
 #define efManagerPikachuThunderJoltMakeEffect ndsBaseEFManagerPikachuThunderJoltMakeEffect
 #endif
+#define efManagerThunderAmpMakeEffect ndsBaseEFManagerThunderAmpMakeEffect
 #if NDS_P2_YOSHI
 #define efManagerYoshiShieldMakeEffect \
     ndsBaseEFManagerYoshiShieldMakeEffect
@@ -225,6 +226,7 @@ uintptr_t lEFCommonParticleTextureBankHi;
 #undef efManagerPikachuThunderShockMakeEffect
 #undef efManagerPikachuThunderJoltMakeEffect
 #endif
+#undef efManagerThunderAmpMakeEffect
 #if NDS_P2_YOSHI
 #undef efManagerYoshiShieldMakeEffect
 #undef efManagerYoshiEntryEggMakeEffect
@@ -240,6 +242,25 @@ uintptr_t lEFCommonParticleTextureBankHi;
 #if NDS_R2_FOX_BLASTER_GLOW_AOT
 #undef efManagerFoxBlasterGlowMakeEffect
 #endif
+
+/* Owner BUGS.md: "Pikachu Down B self hit blue spark effect should be moved
+ * towards the camera, similar to shield guard." The burst is bank script 0x74
+ * at Pikachu's TopN (242_PikachuMainMotion.c:1378), so it sits in the middle of
+ * his body and the opaque body hides whatever part of it is farther away. The
+ * source maker runs unchanged; its transform is then tagged so the particle
+ * pass draws every particle on it -- the children the script spawns share the
+ * same transform -- toward the eye by the shield's floor. Nothing about where
+ * the source puts the burst changes, only the depth it is drawn at. */
+LBParticle *efManagerThunderAmpMakeEffect(Vec3f *pos)
+{
+    LBParticle *pc = ndsBaseEFManagerThunderAmpMakeEffect(pos);
+
+    if ((pc != NULL) && (pc->xf != NULL))
+    {
+        pc->xf->proc_dead = ndsParticleTransformTowardEye;
+    }
+    return pc;
+}
 
 #if NDS_R2_FOX_BLASTER_GLOW_AOT
 /* EFCommon script 0x62 is a closed ten-tick flash. Its only four source
