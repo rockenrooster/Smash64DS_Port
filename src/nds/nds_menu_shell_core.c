@@ -280,6 +280,14 @@ static u32 sMenuTitleBlinkPhase;
  * ndsMenuShellPopulateTitle's per-entry seed, because this shell compiles
  * core and router as one TU (nds_menu_shell.c). */
 static u32 sMenuTitleIdleTics;
+/* The attract scenes are not brought up end to end. How to Play stands its
+ * fighters on nGRKindExplain, whose ground map (0x10b) is not staged, and
+ * entering it data-aborted in mpCollisionInitGroundData -- the owner's r67
+ * "title screen freezes after a while"; the native Characters screen has no
+ * demo arm (mncharacters.c:2571-2591) either. Until they run, the idle
+ * trigger restarts the count and the title stays up. 1 restores the source
+ * routing (a lab poke for the bring-up). */
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuTitleAttract = 0u;
 #endif
 
 static void ndsMenuShellRecordFrame(void)
@@ -1683,7 +1691,14 @@ static void ndsMenuShellUpdateTitle(u32 held, u32 taps)
             ((sMenuTitleIdleTics == 1190u) &&
              (gSCManagerSceneData.is_extend_demo_wait != FALSE)))
         {
-            ndsMenuShellTitleProceedDemoNext();
+            if (gNdsMenuTitleAttract != 0u)
+            {
+                ndsMenuShellTitleProceedDemoNext();
+            }
+            else
+            {
+                sMenuTitleIdleTics = 169u;
+            }
         }
     }
 #endif
