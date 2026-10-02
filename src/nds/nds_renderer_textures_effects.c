@@ -14482,6 +14482,30 @@ static s32 ndsRendererHardwareBindTextureOwnerMemo(
     return TRUE;
 }
 
+/* TRUE when ndsRendererHardwareBindTextureOwnerMemo would compare `memo`
+ * equal for this bind: the same key words, in the same order. It does not
+ * revalidate the cache entry; the bind still does. For callers that keep
+ * several memos per site and pick one before binding. */
+_Static_assert(NDS_RENDERER_OWNER_TEXMEMO_KEY_WORDS == 11u,
+               "the matcher compares the bind's eleven key words");
+static __attribute__((unused)) u32 ndsRendererOwnerTexMemoKeyMatches(
+    const NDSRendererOwnerTextureMemo *memo, u32 owner_id,
+    const NDSRendererStats *stats)
+{
+    return ((memo->valid != 0u) && (gNdsRendererOwnerTexMemoEnable != 0u) &&
+            (memo->key[0] == owner_id) &&
+            (memo->key[1] == stats->texture_image) &&
+            (memo->key[2] == stats->texture_tlut_image) &&
+            (memo->key[3] == stats->texture_load_texels) &&
+            (memo->key[4] == stats->prim_color) &&
+            (memo->key[5] == stats->env_color) &&
+            (memo->key[6] == stats->othermode_h) &&
+            (memo->key[7] == stats->othermode_l) &&
+            (memo->key[8] == stats->texture_combine_w0) &&
+            (memo->key[9] == stats->texture_combine_w1) &&
+            (memo->key[10] == stats->geometry_mode)) ? TRUE : FALSE;
+}
+
 static s32 ndsRendererHardwareResolveResidentTexture(
     NDSRendererStats *stats,
     const NDSRendererConfig *config,

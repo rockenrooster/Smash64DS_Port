@@ -4,12 +4,42 @@
  * packet into DS GX triangles under the supplied traversal state. */
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
 
-/* Texture memos for the baked runs (ndsRendererHardwareBindTextureOwnerMemo),
- * direct-mapped by the run's vertex table: a run's setup is generated, so
- * the table address names it. A collision only refills. */
-#define NDS_NATIVE_ITEM_WAVE1_TEXMEMO_COUNT 32u
+/* Texture memos for the baked runs (ndsRendererHardwareBindTextureOwnerMemo).
+ * One vertex table is drawn under several material states -- Board the
+ * Platforms draws one platform mesh in several colours and textures -- so a
+ * memo per table missed on every alternation (and two tables could share a
+ * direct-mapped slot): ~12 full resolves a frame on that stage, more when the
+ * platforms' material animation steps. Each (table, texture, prim) picks a
+ * two-way set; a hit or a refill makes the other way the next victim. A
+ * collision only refills. */
+#define NDS_NATIVE_ITEM_WAVE1_TEXMEMO_SETS 32u
 static NDSRendererOwnerTextureMemo
-    sNdsNativeItemWave1TexMemo[NDS_NATIVE_ITEM_WAVE1_TEXMEMO_COUNT];
+    sNdsNativeItemWave1TexMemo[NDS_NATIVE_ITEM_WAVE1_TEXMEMO_SETS * 2u];
+static u8 sNdsNativeItemWave1TexMemoVictim[NDS_NATIVE_ITEM_WAVE1_TEXMEMO_SETS];
+
+static NDSRendererOwnerTextureMemo *
+ndsNativeItemWave1TexMemoFor(u32 id, const NDSRendererStats *stats)
+{
+    const u32 set = ((id ^ (stats->texture_image * 0x9E3779B1u) ^
+                      (stats->prim_color * 0x85EBCA6Bu)) * 2654435761u) >> 27;
+    NDSRendererOwnerTextureMemo *ways = &sNdsNativeItemWave1TexMemo[set * 2u];
+    u32 way;
+
+    if (ndsRendererOwnerTexMemoKeyMatches(&ways[0], id, stats) != FALSE)
+    {
+        way = 0u;
+    }
+    else if (ndsRendererOwnerTexMemoKeyMatches(&ways[1], id, stats) != FALSE)
+    {
+        way = 1u;
+    }
+    else
+    {
+        way = sNdsNativeItemWave1TexMemoVictim[set];
+    }
+    sNdsNativeItemWave1TexMemoVictim[set] = (u8)(way ^ 1u);
+    return &ways[way];
+}
 
 static sb32 ndsNativeItemWave1Emit(
     const s16 *verts, const u32 *colors, const u16 *indices,
@@ -64,9 +94,7 @@ static sb32 ndsNativeItemWave1Emit(
     use_texture = (ndsRendererHardwareUseTexture(stats) != FALSE) ? TRUE : FALSE;
     if ((use_texture != FALSE) &&
         (ndsRendererHardwareBindTextureOwnerMemo(
-             &sNdsNativeItemWave1TexMemo[
-                 ((u32)(uintptr_t)verts >> 3) &
-                 (NDS_NATIVE_ITEM_WAVE1_TEXMEMO_COUNT - 1u)],
+             ndsNativeItemWave1TexMemoFor((u32)(uintptr_t)verts, stats),
              (u32)(uintptr_t)verts, stats, config, state) == FALSE))
     {
         *submit_step = 3u;
