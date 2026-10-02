@@ -342,6 +342,99 @@ static sb32 ndsStageGxInsideNear(const NDSStageGxRun *run, const NDSRendererMatr
     return w >= 128 && (s64)ndsRendererClampS64ToS32(z) + ndsRendererClampS64ToS32(w) >= 0;
 }
 
+/* P2-6 (2026-10-01): a run whose bounds lie wholly outside the view draws
+ * nothing, so it is skipped before its patch and DMA. The 1P courses (the
+ * Race, the boards) submit their whole map a frame while the camera shows a
+ * fraction of it. The bounds are the template's object-space box and the
+ * transform the run's own clip matrix: a dynamic binding's composed product,
+ * a rigid binding's world times the camera (one product per binding switch;
+ * a segment's runs of one binding are adjacent). Each side's plane distance
+ * (w - x, w + x, w - y, w + y) is maximised over the box's corners like the
+ * near test above; a box with no corner inside one side is invisible.
+ * Multi-binding runs are never skipped. The nine VS venues keep the old path
+ * until measured. Same-ROM A/B word gNdsStageGxCull (0 = draw every run). */
+#define NDS_STAGE_GX_CULL_FIRST_GKIND 9u /* nGRKindPupupuSmall: 1P venues on */
+volatile u32 gNdsStageGxCull __attribute__((used, section(".data"))) = 1u;
+volatile u32 gNdsStageGxCulledRuns;
+static NDSRendererMatrix20p12 sNdsStageGxCullRigid;
+static u32 sNdsStageGxCullRigidBinding = UINT_MAX;
+static u32 sNdsStageGxCullRigidGen;
+
+static sb32 ndsStageGxRunOutsideView(u32 index)
+{
+    const NDSStageGxRun *r = &sNdsStageGxRuns[index];
+    const NDSRendererMatrix20p12 *m;
+    u32 binding;
+    u32 plane;
+    u32 axis;
+
+    if ((gNdsStageGxCull == 0u) ||
+        (sNdsNativeStagePacketActive->gkind < NDS_STAGE_GX_CULL_FIRST_GKIND) ||
+        ((r->binding_lo != 0u) == (r->binding_hi != 0u)) ||
+        ((r->binding_lo & (r->binding_lo - 1u)) != 0u) ||
+        ((r->binding_hi & (r->binding_hi - 1u)) != 0u))
+    {
+        return FALSE;
+    }
+    binding = (r->binding_lo != 0u) ? (u32)__builtin_ctz(r->binding_lo) :
+        32u + (u32)__builtin_ctz(r->binding_hi);
+    if (binding >= NDS_NATIVE_STAGE_BINDING_COUNT)
+    {
+        return FALSE;
+    }
+    if ((sNdsNativeStageOwnerExecution.rigid_binding_mask &
+         ((u64)1u << binding)) != 0u)
+    {
+        if ((sNdsNativeStageOwnerExecution.binding_world == NULL) ||
+            (sNdsNativeStageOwnerExecution.camera_modelview == NULL) ||
+            (sNdsNativeStageOwnerExecution.projection == NULL))
+        {
+            return FALSE;
+        }
+        if ((sNdsStageGxCullRigidBinding != binding) ||
+            (sNdsStageGxCullRigidGen != sNdsNativeStageMatrixGen))
+        {
+            ndsRendererMtxMul20p12(
+                &sNdsNativeStageOwnerExecution.binding_world[binding],
+                sNdsNativeStageOwnerExecution.camera_modelview,
+                &sNdsStageGxCullRigid);
+            ndsRendererMtxMul20p12(&sNdsStageGxCullRigid,
+                                   sNdsNativeStageOwnerExecution.projection,
+                                   &sNdsStageGxCullRigid);
+            sNdsStageGxCullRigidBinding = binding;
+            sNdsStageGxCullRigidGen = sNdsNativeStageMatrixGen;
+        }
+        m = &sNdsStageGxCullRigid;
+    }
+    else
+    {
+        if (sNdsNativeStageOwnerExecution.binding_composed == NULL)
+        {
+            return FALSE;
+        }
+        m = &sNdsNativeStageOwnerExecution.binding_composed[binding];
+    }
+    for (plane = 0u; plane < 4u; plane++)
+    {
+        u32 col = plane >> 1;
+        s64 sign = ((plane & 1u) != 0u) ? 1 : -1;
+        s64 d = (s64)m->m[3][3] + (sign * (s64)m->m[3][col]);
+
+        for (axis = 0u; axis < 3u; axis++)
+        {
+            s64 c = (s64)m->m[axis][3] + (sign * (s64)m->m[axis][col]);
+
+            d += c * (s64)((c >= 0) ? r->maximum[axis] : r->minimum[axis]);
+        }
+        if (d < 0)
+        {
+            gNdsStageGxCulledRuns++;
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
 static sb32 ndsStageGxMaterial(u32 *dst, const NDSNativeStagePreparedRun *run,
                              u32 submit_class, u32 owner)
 {

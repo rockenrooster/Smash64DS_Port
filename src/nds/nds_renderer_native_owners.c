@@ -5035,6 +5035,11 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
                 task34_dobj_index : NDS_TASK34_STAGE_STREAM_DOBJ_NONE);
 #endif
 #if NDS_TASK36_HW_COMPOSE == 2
+        if ((stage_gx_segment != FALSE) &&
+            (ndsStageGxRunOutsideView(run_index) != FALSE))
+        {
+            continue;
+        }
         if (stage_gx_segment != FALSE && ndsStageGxDraw(run_index, segment->owner, stats) != FALSE)
         {
             emitted_triangles = run->triangle_count;

@@ -3489,11 +3489,100 @@ typedef struct NDSFighterPacketRecorder
     /* P2-2p8 Phase 1 slice 1: the tint tile the next prepare binds, if any. */
     u32 pending_tint;
     u32 pending_tint_rgb;
+    /* What the record would have needed had nothing faulted (texgen groups,
+     * texgen sites, shade sites, command words), counted past a fault. */
+    u32 in_texgen;
+    u32 need[4];
+    /* The texgen overflow is reserved at the top of this record's region. */
+    u32 x_reserved;
 } NDSFighterPacketRecorder;
 
 static NDSFighterPacket sNdsFighterPackets[NDS_FIGHTER_PACKET_SLOTS];
 static NDSFighterPacketRecorder sNdsFighterPacketRecorder;
 static u32 sNdsFighterPacketRecording;
+
+/* P2-6 (2026-10-01): TEXGEN OVERFLOW. The Polygon team is environment-mapped
+ * all over: a polygon's packet needs 28 texgen groups and 484 texgen sites
+ * against the struct's 8 and 256, so every polygon draw recorded a packet
+ * that faulted and then drew direct -- Polygon Team 1,784 faults and no hit in
+ * 900 frames, the Race 670 -- paying the record twins on top of the direct
+ * draw every frame. The struct is also every lean list's header, so it keeps
+ * its size: a record that outgrows its arrays takes the rest from the top of
+ * its own region, below which its words then stop. Groups and sites past the
+ * struct's live there, reached through the two accessors below; lean lists
+ * never outgrow the struct, so they never get here. */
+#define NDS_FIGHTER_PACKET_XTEXGEN_GROUPS 24u
+#define NDS_FIGHTER_PACKET_XTEXGEN_SITES 512u
+#define NDS_FIGHTER_PACKET_XTEXGEN_GROUP_WORDS \
+    ((u32)((NDS_FIGHTER_PACKET_XTEXGEN_GROUPS * \
+            sizeof(NDSFighterPacketTexgenGroup) + 3u) / 4u))
+#define NDS_FIGHTER_PACKET_XTEXGEN_WORDS \
+    (NDS_FIGHTER_PACKET_XTEXGEN_GROUP_WORDS + \
+     (u32)((NDS_FIGHTER_PACKET_XTEXGEN_SITES * \
+            sizeof(NDSFighterPacketTexgenSite) + 3u) / 4u))
+#define NDS_FIGHTER_PACKET_ALL_TEXGEN_GROUPS \
+    (NDS_FIGHTER_PACKET_TEXGEN_GROUP_MAX + NDS_FIGHTER_PACKET_XTEXGEN_GROUPS)
+#define NDS_FIGHTER_PACKET_ALL_TEXGEN_SITES \
+    (NDS_FIGHTER_PACKET_TEXGEN_SITE_MAX + NDS_FIGHTER_PACKET_XTEXGEN_SITES)
+static NDSFighterPacketTexgenGroup *
+    sNdsFighterPacketXGroups[NDS_FIGHTER_PACKET_SLOTS];
+static NDSFighterPacketTexgenSite *
+    sNdsFighterPacketXSites[NDS_FIGHTER_PACKET_SLOTS];
+
+/* A recorded packet's battle slot, or NDS_FIGHTER_PACKET_SLOTS for a lean
+ * list (which lives in the region, not in sNdsFighterPackets). */
+static inline u32 ndsFighterPacketSlotOf(const NDSFighterPacket *packet)
+{
+    uintptr_t at = (uintptr_t)packet;
+    uintptr_t first = (uintptr_t)&sNdsFighterPackets[0];
+
+    if ((at < first) ||
+        (at >= (uintptr_t)&sNdsFighterPackets[NDS_FIGHTER_PACKET_SLOTS]))
+    {
+        return NDS_FIGHTER_PACKET_SLOTS;
+    }
+    return (u32)((at - first) / sizeof(NDSFighterPacket));
+}
+
+static inline NDSFighterPacketTexgenGroup *ndsFighterPacketTexgenGroupAt(
+    NDSFighterPacket *packet, u32 index)
+{
+    u32 slot;
+
+    if (index < NDS_FIGHTER_PACKET_TEXGEN_GROUP_MAX)
+    {
+        return &packet->texgen_groups[index];
+    }
+    slot = ndsFighterPacketSlotOf(packet);
+    if ((index >= NDS_FIGHTER_PACKET_ALL_TEXGEN_GROUPS) ||
+        (slot >= NDS_FIGHTER_PACKET_SLOTS) ||
+        (sNdsFighterPacketXGroups[slot] == NULL))
+    {
+        return NULL;
+    }
+    return &sNdsFighterPacketXGroups[slot][
+        index - NDS_FIGHTER_PACKET_TEXGEN_GROUP_MAX];
+}
+
+static inline NDSFighterPacketTexgenSite *ndsFighterPacketTexgenSiteAt(
+    NDSFighterPacket *packet, u32 index)
+{
+    u32 slot;
+
+    if (index < NDS_FIGHTER_PACKET_TEXGEN_SITE_MAX)
+    {
+        return &packet->texgen_sites[index];
+    }
+    slot = ndsFighterPacketSlotOf(packet);
+    if ((index >= NDS_FIGHTER_PACKET_ALL_TEXGEN_SITES) ||
+        (slot >= NDS_FIGHTER_PACKET_SLOTS) ||
+        (sNdsFighterPacketXSites[slot] == NULL))
+    {
+        return NULL;
+    }
+    return &sNdsFighterPacketXSites[slot][
+        index - NDS_FIGHTER_PACKET_TEXGEN_SITE_MAX];
+}
 /* Frame-summary batch/prepare counters at the adapter's pre-check, so a
  * record frame can store what the slot's draw accrued (see NDSFighterPacket). */
 static u32 sNdsFighterPacketRecordBase[8];
@@ -3505,6 +3594,18 @@ volatile u32 gNdsFighterPacketDeclines;
 volatile u32 gNdsFighterPacketTintRerecords;
 volatile u32 gNdsFighterPacketWordsMax;
 volatile u32 gNdsFighterPacketTexgenPatches;
+/* P2-6: why records faulted (NDS_FIGHTER_PACKET_FAULT_*), and the largest
+ * texgen groups / texgen sites / shade sites / words any record needed. */
+volatile u32 gNdsFighterPacketFaultWhy[8];
+volatile u32 gNdsFighterPacketNeedMax[4];
+#define NDS_FIGHTER_PACKET_FAULT_CAPACITY 2u
+#define NDS_FIGHTER_PACKET_FAULT_TEXGEN_GROUPS 3u
+#define NDS_FIGHTER_PACKET_FAULT_TEXGEN_SITES 4u
+#define NDS_FIGHTER_PACKET_FAULT_SHADE_SITES 5u
+#define NDS_FIGHTER_PACKET_FAULT_ROOT 6u
+#define NDS_FIGHTER_PACKET_FAULT_RAW_RUN 7u
+#define NDS_FIGHTER_PACKET_FAULT(rec, why) \
+    do { if ((rec)->fault == 0u) { (rec)->fault = (why); } } while (0)
 /* Per key word (then root count, then texture residency): how often a valid
  * packet was invalidated by that cause, alone or with others. */
 volatile u32 gNdsFighterPacketMissWord[NDS_FIGHTER_PACKET_KEY_WORDS + 2u];
@@ -3566,6 +3667,7 @@ ndsFighterPacketCmd(u32 opcode, u32 param_count)
     NDSFighterPacketRecorder *rec = &sNdsFighterPacketRecorder;
     u32 first;
 
+    rec->need[3] += param_count + 1u;
     if (rec->fault != 0u)
     {
         return 0u;
@@ -3576,14 +3678,14 @@ ndsFighterPacketCmd(u32 opcode, u32 param_count)
         {
             if (rec->count >= rec->capacity)
             {
-                rec->fault = 1u;
+                NDS_FIGHTER_PACKET_FAULT(rec, NDS_FIGHTER_PACKET_FAULT_CAPACITY);
                 return 0u;
             }
             rec->words[rec->count++] = 0u;
         }
         if (rec->count >= rec->capacity)
         {
-            rec->fault = 1u;
+            NDS_FIGHTER_PACKET_FAULT(rec, NDS_FIGHTER_PACKET_FAULT_CAPACITY);
             return 0u;
         }
         rec->cmd_word = rec->count++;
@@ -3594,7 +3696,7 @@ ndsFighterPacketCmd(u32 opcode, u32 param_count)
     }
     if (rec->count + param_count > rec->capacity)
     {
-        rec->fault = 1u;
+        NDS_FIGHTER_PACKET_FAULT(rec, NDS_FIGHTER_PACKET_FAULT_CAPACITY);
         return 0u;
     }
     rec->words[rec->cmd_word] |= opcode << (rec->cmd_slot * 8u);
@@ -3734,6 +3836,34 @@ static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketRecordBoundTexture(void
  * declared after this block. */
 static void ndsFighterPacketNoteTextureEntry(void);
 
+/* Reserve the texgen overflow (TEXGEN OVERFLOW above) at the top of this
+ * record's region, once: the words below it keep the rest of the capacity. */
+static void NDS_FIGHTER_PACKET_COLD_CODE
+ndsFighterPacketReserveTexgenOverflow(NDSFighterPacketRecorder *rec)
+{
+    u32 slot = ndsFighterPacketSlotOf(rec->packet);
+    u32 *base;
+
+    if ((rec->x_reserved != 0u) || (rec->fault != 0u))
+    {
+        return;
+    }
+    if ((slot >= NDS_FIGHTER_PACKET_SLOTS) ||
+        (rec->capacity < NDS_FIGHTER_PACKET_XTEXGEN_WORDS) ||
+        (rec->count > (rec->capacity - NDS_FIGHTER_PACKET_XTEXGEN_WORDS)))
+    {
+        NDS_FIGHTER_PACKET_FAULT(rec, NDS_FIGHTER_PACKET_FAULT_CAPACITY);
+        return;
+    }
+    rec->capacity -= NDS_FIGHTER_PACKET_XTEXGEN_WORDS;
+    base = rec->words + rec->capacity;
+    sNdsFighterPacketXGroups[slot] =
+        (NDSFighterPacketTexgenGroup *)(void *)base;
+    sNdsFighterPacketXSites[slot] = (NDSFighterPacketTexgenSite *)(void *)
+        (base + NDS_FIGHTER_PACKET_XTEXGEN_GROUP_WORDS);
+    rec->x_reserved = 1u;
+}
+
 /* One hook at the end of a run's texture prepare stands in for the three
  * batch writes the production path makes through shared, ITCM-resident
  * helpers (texture bind, POLYGON_ATTR, BEGIN). Those helpers write only when
@@ -3756,20 +3886,30 @@ ndsFighterPacketRecordPrepare(
     NDSFighterPacket *packet = rec->packet;
 
     rec->texgen_group = NDS_FIGHTER_PACKET_TEXGEN_GROUP_NONE;
+    rec->in_texgen = ((use_texture != 0u) && (use_texgen != 0u)) ? 1u : 0u;
     if ((use_texture != 0u) && (use_texgen != 0u))
     {
-        if ((packet == NULL) ||
+        NDSFighterPacketTexgenGroup *group = NULL;
+
+        rec->need[0]++;
+        if ((packet != NULL) &&
             ((u32)packet->texgen_group_count >=
-             NDS_FIGHTER_PACKET_TEXGEN_GROUP_MAX) ||
+             NDS_FIGHTER_PACKET_TEXGEN_GROUP_MAX))
+        {
+            ndsFighterPacketReserveTexgenOverflow(rec);
+        }
+        if ((packet != NULL) && (rec->fault == 0u))
+        {
+            group = ndsFighterPacketTexgenGroupAt(
+                packet, packet->texgen_group_count);
+        }
+        if ((group == NULL) ||
             (rec->current_root >= NDS_FIGHTER_PACKET_ROOT_MAX))
         {
-            rec->fault = 1u;
+            NDS_FIGHTER_PACKET_FAULT(rec, NDS_FIGHTER_PACKET_FAULT_TEXGEN_GROUPS);
         }
         else
         {
-            NDSFighterPacketTexgenGroup *group =
-                &packet->texgen_groups[packet->texgen_group_count];
-
             group->scale_s = scale_s;
             group->scale_t = scale_t;
             group->origin_s = origin_s;
@@ -3805,8 +3945,12 @@ ndsFighterPacketRecordTexCoord(u32 word, u32 dense_id)
 {
     NDSFighterPacketRecorder *rec = &sNdsFighterPacketRecorder;
     NDSFighterPacket *packet = rec->packet;
-    u32 i = ndsFighterPacketCmd(FIFO_TEX_COORD, 1u);
+    NDSFighterPacketTexgenSite *site;
+    NDSFighterPacketTexgenGroup *group;
+    u32 i;
 
+    rec->need[1] += rec->in_texgen;
+    i = ndsFighterPacketCmd(FIFO_TEX_COORD, 1u);
     if (rec->fault != 0u)
     {
         return;
@@ -3816,17 +3960,29 @@ ndsFighterPacketRecordTexCoord(u32 word, u32 dense_id)
     {
         return;
     }
-    if ((packet == NULL) ||
-        (packet->texgen_site_count >= NDS_FIGHTER_PACKET_TEXGEN_SITE_MAX) ||
-        (rec->texgen_group >= (u32)packet->texgen_group_count) ||
+    if ((packet != NULL) &&
+        ((u32)packet->texgen_site_count >= NDS_FIGHTER_PACKET_TEXGEN_SITE_MAX))
+    {
+        ndsFighterPacketReserveTexgenOverflow(rec);
+        if (rec->fault != 0u)
+        {
+            return;
+        }
+    }
+    site = (packet != NULL) ?
+        ndsFighterPacketTexgenSiteAt(packet, packet->texgen_site_count) : NULL;
+    group = ((packet != NULL) &&
+             (rec->texgen_group < (u32)packet->texgen_group_count)) ?
+        ndsFighterPacketTexgenGroupAt(packet, rec->texgen_group) : NULL;
+    if ((site == NULL) || (group == NULL) ||
         (i > 0xffffu) || (dense_id > 0xffffu))
     {
-        rec->fault = 1u;
+        NDS_FIGHTER_PACKET_FAULT(rec, NDS_FIGHTER_PACKET_FAULT_TEXGEN_SITES);
         return;
     }
-    packet->texgen_sites[packet->texgen_site_count].index = (u16)i;
-    packet->texgen_sites[packet->texgen_site_count].dense_id = (u16)dense_id;
-    packet->texgen_groups[rec->texgen_group].site_count++;
+    site->index = (u16)i;
+    site->dense_id = (u16)dense_id;
+    group->site_count++;
     packet->texgen_site_count++;
 }
 
@@ -3837,9 +3993,11 @@ ndsFighterPacketRecordDiffuseAmbient(
     u32 material_color, u32 use_material, u32 tinted)
 {
     NDSFighterPacketRecorder *rec = &sNdsFighterPacketRecorder;
-    u32 i = ndsFighterPacketCmd(REG2ID(GFX_DIFFUSE_AMBIENT), 1u);
+    u32 i;
     NDSFighterPacketShadeSite *site;
 
+    rec->need[2]++;
+    i = ndsFighterPacketCmd(REG2ID(GFX_DIFFUSE_AMBIENT), 1u);
     if ((rec->fault != 0u) || (rec->packet == NULL))
     {
         return;
@@ -3847,7 +4005,7 @@ ndsFighterPacketRecordDiffuseAmbient(
     rec->words[i] = word;
     if (rec->packet->site_count >= NDS_FIGHTER_PACKET_SITE_MAX)
     {
-        rec->fault = 1u;
+        NDS_FIGHTER_PACKET_FAULT(rec, NDS_FIGHTER_PACKET_FAULT_SHADE_SITES);
         return;
     }
     site = &rec->packet->sites[rec->packet->site_count++];
@@ -3877,7 +4035,7 @@ static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketBeginRoot(
         (root_index >= NDS_FIGHTER_PACKET_ROOT_MAX) ||
         ((u32)input->gx_local_count > NDS_FIGHTER_PACKET_LOCAL_MAX))
     {
-        rec->fault = 1u;
+        NDS_FIGHTER_PACKET_FAULT(rec, NDS_FIGHTER_PACKET_FAULT_ROOT);
         return;
     }
     root = &rec->packet->roots[root_index];

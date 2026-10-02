@@ -9890,6 +9890,18 @@ static const u16 sNdsNativeTexgenLinearAcos[257] =
     65535u,
 };
 
+/* P2-6 (2026-10-01): the two divisions below were two hardware 64/32 divides
+ * a texgen vertex (330K cycles a frame of Polygon Team's polygons, 125K of
+ * the Race's, 1p-pf04-st12 / 1p-pf03-st11). Both divisors are fixed
+ * (2 * unit, and 8 * unit times the run's texture scale), so each is a
+ * multiply by a 2^40 reciprocal; the scale's is scale * floor(2^48 / 8unit)
+ * >> 8, no division at all. The dividend (dot + unit) is under 2^24, every
+ * product under 2^64, and a quotient falls one 1/16 texel short only within
+ * 2^-16 of a texel edge (host-checked over the whole scale range). */
+#define NDS_NATIVE_TEXGEN_UNIT ((u32)127u * 32767u)
+#define NDS_NATIVE_TEXGEN_SCALE_RECIP_Q48 \
+    (((u64)1u << 48) / (8u * NDS_NATIVE_TEXGEN_UNIT))
+
 static s32 ndsRendererNativeTexgenCoord(
     s32 nx,
     s32 ny,
@@ -9898,7 +9910,7 @@ static s32 ndsRendererNativeTexgenCoord(
     u32 texture_scale,
     u32 linear)
 {
-    const s64 unit = (s64)127 * 32767;
+    const s64 unit = (s64)NDS_NATIVE_TEXGEN_UNIT;
     s64 dot =
         (s64)nx * direction->x +
         (s64)ny * direction->y +
@@ -9915,9 +9927,11 @@ static s32 ndsRendererNativeTexgenCoord(
     if (linear != 0u)
     {
         /* Q8.8 table position of d in [-1, 1]; the result is the spherical
-         * expression below with (d + 1)/2 replaced by acos(-d)/pi. */
-        u32 position = (u32)ndsR2HwMathDiv64(
-            (dot + unit) * 65536, (s32)(2 * unit));
+         * expression below with (d + 1)/2 replaced by acos(-d)/pi. The
+         * reciprocal is 2^40 * 65536 / (2 * unit). */
+        u32 position = (u32)(((u64)(dot + unit) *
+                              (u64)(((u64)1u << 56) /
+                                    (2u * NDS_NATIVE_TEXGEN_UNIT))) >> 40);
         u32 index = position >> 8;
         u32 low;
         u32 high;
@@ -9940,9 +9954,9 @@ static s32 ndsRendererNativeTexgenCoord(
      * path's >>17 is exactly (source * scale >>16) / 2. Since dot+unit is
      * non-negative, folding those two truncations is exactly division by
      * 8*unit here. */
-    return ndsR2HwMathDiv64(
-        (dot + unit) * (s64)(texture_scale & 0xffffu),
-        (s32)(8 * unit));
+    return (s32)(((u64)(dot + unit) *
+                  (((u64)(texture_scale & 0xffffu) *
+                    NDS_NATIVE_TEXGEN_SCALE_RECIP_Q48) >> 8)) >> 40);
 }
 #endif
 
@@ -11502,8 +11516,8 @@ static s32 ndsFighterPacketPatchTexgen(
     {
         return TRUE;
     }
-    if ((packet->texgen_group_count > NDS_FIGHTER_PACKET_TEXGEN_GROUP_MAX) ||
-        (packet->texgen_site_count > NDS_FIGHTER_PACKET_TEXGEN_SITE_MAX) ||
+    if ((packet->texgen_group_count > NDS_FIGHTER_PACKET_ALL_TEXGEN_GROUPS) ||
+        (packet->texgen_site_count > NDS_FIGHTER_PACKET_ALL_TEXGEN_SITES) ||
         (sNdsNativeFighterActiveTables == NULL))
     {
         return FALSE;
@@ -11518,20 +11532,26 @@ static s32 ndsFighterPacketPatchTexgen(
          group_index++)
     {
         const NDSFighterPacketTexgenGroup *group =
-            &packet->texgen_groups[group_index];
+            ndsFighterPacketTexgenGroupAt(packet, group_index);
         NDSNativeTexgenDirectionQ15 lookat_x;
         NDSNativeTexgenDirectionQ15 lookat_y;
         u16 cached_dense[NDS_FIGHTER_PACKET_TEXGEN_DENSE_MAX];
         u32 cached_word[NDS_FIGHTER_PACKET_TEXGEN_DENSE_MAX];
         u32 cached_count = 0u;
-        u32 first_site = group->first_site;
-        u32 site_end = first_site + group->site_count;
+        u32 first_site;
+        u32 site_end;
         u32 site_index;
 
+        if (group == NULL)
+        {
+            return FALSE;
+        }
+        first_site = group->first_site;
+        site_end = first_site + group->site_count;
         if (((u32)group->root >= input_count) ||
             (inputs[group->root].modelview_matrix == NULL) ||
             (site_end > (u32)packet->texgen_site_count) ||
-            (site_end > NDS_FIGHTER_PACKET_TEXGEN_SITE_MAX) ||
+            (site_end > NDS_FIGHTER_PACKET_ALL_TEXGEN_SITES) ||
             (ndsRendererNativePrepareTexgenDirectionQ15(
                  &look_at->l[0], inputs[group->root].modelview_matrix,
                  &lookat_x) == FALSE) ||
@@ -11544,11 +11564,16 @@ static s32 ndsFighterPacketPatchTexgen(
         for (site_index = first_site; site_index < site_end; site_index++)
         {
             const NDSFighterPacketTexgenSite *site =
-                &packet->texgen_sites[site_index];
-            u32 dense_id = site->dense_id;
+                ndsFighterPacketTexgenSiteAt(packet, site_index);
+            u32 dense_id;
             u32 cache_index;
             u32 st;
 
+            if (site == NULL)
+            {
+                return FALSE;
+            }
+            dense_id = site->dense_id;
             if ((site->index >= packet->word_count) ||
                 (dense_id >= sNdsNativeFighterActiveTables->dense_count))
             {
@@ -11654,11 +11679,19 @@ static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketFinishRecord(
 {
     NDSFighterPacketRecorder *rec = &sNdsFighterPacketRecorder;
     NDSFighterPacket *packet = rec->packet;
+    u32 i;
 
     sNdsFighterPacketRecording = 0u;
     if (packet == NULL)
     {
         return;
+    }
+    for (i = 0u; i < 4u; i++)
+    {
+        if (rec->need[i] > gNdsFighterPacketNeedMax[i])
+        {
+            gNdsFighterPacketNeedMax[i] = rec->need[i];
+        }
     }
     if ((rec->fault == 0u) && (rec->header_valid != 0u) &&
         (rec->header_params == 0u))
@@ -11669,13 +11702,14 @@ static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketFinishRecord(
         }
         else
         {
-            rec->fault = 1u;
+            rec->fault = NDS_FIGHTER_PACKET_FAULT_CAPACITY;
         }
     }
     if ((rec->fault != 0u) || (rec->count == 0u))
     {
         packet->valid = 0u;
         gNdsFighterPacketFaults++;
+        gNdsFighterPacketFaultWhy[(rec->fault < 8u) ? rec->fault : 0u]++;
         return;
     }
     packet->word_count = rec->count;
@@ -12182,6 +12216,12 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
     rec->texgen_group = NDS_FIGHTER_PACKET_TEXGEN_GROUP_NONE;
     rec->pending_tint = 0u;
     rec->pending_tint_rgb = 0u;
+    rec->in_texgen = 0u;
+    rec->x_reserved = 0u;
+    for (i = 0u; i < 4u; i++)
+    {
+        rec->need[i] = 0u;
+    }
     /* Self-contained stream: forget every GX tracker so the first root
      * re-issues -- and the packet captures -- its matrix mode, texture and
      * polygon attributes. */
@@ -16697,13 +16737,15 @@ static s32 ndsRendererNativeSubmitProductionRun(
         {
             /* The raw emitters have no packet twin: a record frame that
              * reaches them faults the packet and keeps drawing. */
-            NDS_FIGHTER_PACKET_HOOK(sNdsFighterPacketRecorder.fault = 1u);
+            NDS_FIGHTER_PACKET_HOOK(NDS_FIGHTER_PACKET_FAULT(
+                &sNdsFighterPacketRecorder, NDS_FIGHTER_PACKET_FAULT_RAW_RUN));
             ndsRendererNativeEmitProductionRawTexturedRun(
                 run_index, (u32)run->triangle_count * 3u);
         }
         else
         {
-            NDS_FIGHTER_PACKET_HOOK(sNdsFighterPacketRecorder.fault = 1u);
+            NDS_FIGHTER_PACKET_HOOK(NDS_FIGHTER_PACKET_FAULT(
+                &sNdsFighterPacketRecorder, NDS_FIGHTER_PACKET_FAULT_RAW_RUN));
             ndsRendererNativeEmitProductionRawUntexturedRun(
                 run_index, (u32)run->triangle_count * 3u);
         }
