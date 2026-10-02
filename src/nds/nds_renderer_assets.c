@@ -3737,6 +3737,9 @@ __attribute__((used)) volatile u32 gNdsNativeKirbyHatTableHits[2];
  * counter; see the read site. */
 __attribute__((used)) volatile u32 gNdsNativeKirbyHatTableMisses[2];
 __attribute__((used)) volatile u32 gNdsNativeKirbyHatBytes;
+/* Copies whose power the match had not admitted (see the late load in
+ * ndsRendererNativeEnsureKirbyCopyHat). */
+__attribute__((used)) volatile u32 gNdsNativeKirbyHatLateLoadCount;
 #endif
 
 static const char *ndsRendererNativeOwnerImagePath(u32 owner_slot,
@@ -4087,6 +4090,7 @@ s32 ndsRendererNativeEnsureKirbyCopyHat(
     const char *path;
     u32 bytes;
     u32 max_bytes;
+    u32 in_match = FALSE;
 
     /* If a regenerate ever collapses the two per-detail unions back onto the
      * combined one, the allocation below silently returns to charging every low
@@ -4124,8 +4128,18 @@ s32 ndsRendererNativeEnsureKirbyCopyHat(
                 }
             }
         }
-        gNdsNativeKirbyHatFailCount++;
-        return FALSE;
+        /* P2-6 (2026-10-01): A POWER THE MATCH DID NOT ADMIT LOADS INTO THE
+         * SLOT'S WORKING BUFFER. The 1P ladder admits the powers of the
+         * fighters present at its start (and the Kirby Team's table); the
+         * Polygon Team's waves bring polygon kinds that set was never asked
+         * for (it admitted none at all, measured 2026-10-01), so the first
+         * swallowed polygon failed here and halted the game for good (owner
+         * playtest, Kirby, two thirds into the match).
+         * The working buffer is allocated only from what the arena can spare
+         * above the GObj floor (25,600); when it cannot, the caller keeps the
+         * power and the hat does not draw. */
+        in_match = TRUE;
+        sNdsNativeKirbyHatActive[battle_slot][use_low_detail] = NULL;
     }
     /* Display scenes may change preview kinds. Their bounded working buffers
      * retain the previous scene policy; VS never reaches this storage reader. */
@@ -4135,7 +4149,18 @@ s32 ndsRendererNativeEnsureKirbyCopyHat(
         ((u32)slot->copy_modelpart_id == copy_modelpart_id) &&
         ((u32)slot->use_low_detail == use_low_detail))
     {
+        if (in_match != FALSE)
+        {
+            sNdsNativeKirbyHatActive[battle_slot][use_low_detail] = slot;
+        }
         return TRUE;
+    }
+    if (in_match != FALSE)
+    {
+        /* A stale power's hat must not draw in place of the new one. */
+        slot->valid = 0u;
+        slot->copy_modelpart_id = 0u;
+        gNdsNativeKirbyHatLateLoadCount++;
     }
     path = ndsRendererNativeKirbyHatImagePath(
         copy_modelpart_id, use_low_detail);
@@ -4179,7 +4204,9 @@ s32 ndsRendererNativeEnsureKirbyCopyHat(
         slot->base = ndsBattleIdleScratchAlloc(max_bytes, 0x10u);
         if (slot->base == NULL)
         {
-            slot->base = syTaskmanMalloc(max_bytes, 0x10u);
+            slot->base = (in_match != FALSE) ?
+                ndsSceneAssetTryAlloc(max_bytes, 0x10u, 25600u) :
+                syTaskmanMalloc(max_bytes, 0x10u);
         }
         if (slot->base == NULL)
         {
@@ -4221,6 +4248,10 @@ s32 ndsRendererNativeEnsureKirbyCopyHat(
     slot->copy_modelpart_id = (u8)copy_modelpart_id;
     slot->use_low_detail = (u8)use_low_detail;
     slot->valid = 1u;
+    if (in_match != FALSE)
+    {
+        sNdsNativeKirbyHatActive[battle_slot][use_low_detail] = slot;
+    }
     gNdsNativeKirbyHatLoadCount++;
     gNdsNativeKirbyHatBytes += bytes;
     return TRUE;

@@ -9,6 +9,7 @@
 volatile u32 gNdsKirbyHatRequiredHighMask;
 volatile u32 gNdsKirbyHatRequiredLowMask;
 volatile u32 gNdsKirbyHatAdmissionFailure;
+volatile u32 gNdsKirbyHatMissingCount;
 
 void __attribute__((noinline, used)) ndsKirbyHatResidencyHalt(u32 reason)
 {

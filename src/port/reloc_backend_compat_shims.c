@@ -12777,9 +12777,12 @@ void ftParamSetModelPartDefaultID(GObj *fighter_gobj, s32 joint_id,
                  (ndsRendererNativeEnsureKirbyCopyHat(
                       hat_slot, (u32)modelpart_id, 1u) == FALSE)))
             {
-                /* A missing native image is a failed residency contract. It
-                 * must never silently remove the source's copied ability. */
-                ndsKirbyHatResidencyHalt(5u);
+                /* A hat that cannot be made resident does not draw; the
+                 * copied power itself is set below exactly as the source
+                 * sets it. This used to halt -- for good, mid-match: the
+                 * Polygon Team's later waves bring powers the match never
+                 * admitted (owner playtest 2026-10-01). Counted, not silent. */
+                gNdsKirbyHatMissingCount++;
             }
         }
     }
