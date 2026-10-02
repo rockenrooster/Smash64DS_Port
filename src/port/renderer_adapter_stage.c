@@ -313,6 +313,7 @@ sb32 ndsRendererSubmitNativeBaked(
     const NDSRendererConfig *config, NDSRendererStats *stats);
 sb32 ndsNativeBakedRootOffscreen(const void *handle,
                                  const NDSRendererConfig *config);
+sb32 ndsNativeBakedRootIsRoom(const void *handle);
 /* The bumper quad's (nds_native_castle_bumper.exec.inc). */
 sb32 ndsNativeCastleBumperOffscreen(const NDSRendererConfig *config);
 extern volatile u32 gNdsItemBakedDrawCount;
@@ -6318,7 +6319,10 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
     u32 owner_asset_id = 0u;
     u32 root_offset = 0u;
     sb32 candidate = FALSE;
-    NDSRendererConfig config = {0};
+    /* Zeroed where it is filled: every stage list asks here first and almost
+     * none is an entry prop, so an initialiser was a memset per list (the
+     * ending room's DObjs paid it on every draw). */
+    NDSRendererConfig config;
     NDSRendererStats stats;
     NDSRendererMatrix20p12 projection;
     NDSRendererMatrix20p12 modelview;
@@ -7075,6 +7079,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
             stats.othermode_l = G_RM_AA_ZB_XLU_SURF | G_RM_AA_ZB_XLU_SURF2;
         }
     }
+    memset(&config, 0, sizeof(config));
     config.max_depth = 4u;
     config.max_commands = 1u;
     config.max_list_commands = 1u;
@@ -7371,6 +7376,15 @@ volatile u32 gNdsStageDLFastLaneFills;
  * MObj of the owner's flags whose snapshot selects a palette image -- tested
  * again on every draw, and the snapshot taken live, as the body takes it. */
 #define NDS_SDL_ROUTE_CASTLE_BUMPER 0xfcu
+/* P2-6 (2026-10-02): the ending's room (owner: "End scene in the room with
+ * the desk is really slow"; 3-4 VBlanks a frame). Its six GObjs (kind 0) draw
+ * their DObj lists through the stage traversal, and every list paid the
+ * fast-lane miss, the entry-effect probe and the whole body for one lookup in
+ * the room table the ending loads. The route is NDS_SDL_ROUTE_BAKED's, owned
+ * by any GObj whose root lies in that table (re-tested per draw: the table
+ * leaves with the ending's heap), with the same persistent stats and
+ * off-screen exit the body's baked branch reaches. */
+#define NDS_SDL_ROUTE_BAKED_ROOM 0xfbu
 /* Yoshi's Island's capsules and boxes thrashed an 8-slot table (1,231 fills
  * for 1,469 hits a match): the owners are few, but a capsule alone draws three
  * roots, and its header and third root shared a slot under an address-bit
@@ -7557,7 +7571,8 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
 #if NDS_P2_STAGE_CASTLE
     NDSRendererNativeMaterial bumper_material;
 #endif
-    NDSRendererConfig config = {0};
+    /* Zeroed once a route is taken: most lists leave at the route test. */
+    NDSRendererConfig config;
     NDSRendererStats *render_stats;
     NDSRendererMatrix20p12 projection;
     NDSRendererMatrix20p12 modelview;
@@ -7597,6 +7612,7 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
          (loaded->asset_id != (u32)route->asset_id) ||
          ((dobj->mobj != NULL) && (route->route != NDS_SDL_ROUTE_BAKED) &&
           (route->route != NDS_SDL_ROUTE_BAKED_ITEM) &&
+          (route->route != NDS_SDL_ROUTE_BAKED_ROOM) &&
           (route->route != NDS_SDL_ROUTE_CASTLE_BUMPER)) ||
          (owner == NULL) ||
          (sNdsRendererAdapterStagePersistentActive == FALSE) ||
@@ -7635,6 +7651,16 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
             return FALSE;
         }
         break;
+#if NDS_P2_1P_GAME
+    case NDS_SDL_ROUTE_BAKED_ROOM:
+        if ((sNdsRendererAdapterItemSubmitActive != FALSE) ||
+            (ndsNativeBakedRootIsRoom(
+                 (const void *)(uintptr_t)route->root) == FALSE))
+        {
+            return FALSE;
+        }
+        break;
+#endif
 #endif
 #if NDS_P2_STAGE_CASTLE
     case NDS_SDL_ROUTE_CASTLE_BUMPER:
@@ -7698,6 +7724,7 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
                                              TRUE,
                                              &projection, &projection_ptr,
                                              &modelview, &modelview_ptr);
+    memset(&config, 0, sizeof(config));
     config.max_depth = 8u;
     config.max_commands = 8192u;
     config.max_list_commands = 512u;
@@ -7730,7 +7757,8 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
      * and the submit (Board the Platforms submits ~26 a frame, most of them
      * off screen; see ndsNativeBakedRootOffscreen). */
     if (((route_kind == NDS_SDL_ROUTE_BAKED) ||
-         (route_kind == NDS_SDL_ROUTE_BAKED_ITEM)) &&
+         (route_kind == NDS_SDL_ROUTE_BAKED_ITEM) ||
+         (route_kind == NDS_SDL_ROUTE_BAKED_ROOM)) &&
         (ndsNativeBakedRootOffscreen((const void *)(uintptr_t)route->root,
                                      &config) != FALSE))
     {
@@ -7823,7 +7851,8 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
 #endif
 #if NDS_P2_ITEM_CORE
     else if ((route_kind == NDS_SDL_ROUTE_BAKED) ||
-             (route_kind == NDS_SDL_ROUTE_BAKED_ITEM))
+             (route_kind == NDS_SDL_ROUTE_BAKED_ITEM) ||
+             (route_kind == NDS_SDL_ROUTE_BAKED_ROOM))
     {
         /* The body's baked branch: the DObj's MObjs in order are the root's
          * live segment-E materials. */
@@ -13429,6 +13458,17 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                                           NDS_SDL_ROUTE_BAKED_ITEM);
                     ndsStageDLRouteSlot(dl)->pad = (u8)baked_slots;
                 }
+#if NDS_P2_1P_GAME
+                else if ((sNdsRendererAdapterItemSubmitActive == FALSE) &&
+                         (sNdsRendererAdapterEffectSubmitActive == FALSE) &&
+                         (sNdsRendererAdapterStagePersistentActive != FALSE) &&
+                         (ndsNativeBakedRootIsRoom(baked) != FALSE))
+                {
+                    ndsStageDLRouteRecord(dl, loaded, (u32)(uintptr_t)baked,
+                                          NDS_SDL_ROUTE_BAKED_ROOM);
+                    ndsStageDLRouteSlot(dl)->pad = (u8)baked_slots;
+                }
+#endif
 #endif
             }
             else

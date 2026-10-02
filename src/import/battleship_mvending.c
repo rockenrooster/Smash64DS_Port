@@ -148,6 +148,10 @@ static void ndsMVEndingFillRect(Gfx *pkt, s32 ulx, s32 uly, s32 lrx, s32 lry)
 #include <nds/nds_platform.h>
 #include <nds/nds_reloc_assets.h>
 
+/* nds_renderer.h: the no-oracle switch the battle's stage draw sets. */
+void ndsRendererHardwareSetNoOracle(u32 enabled);
+u32 ndsRendererHardwareNoOracleEnabled(void);
+
 /* The room's baked roots (nitro:/movies/room_baked.bin, written by
  * scripts/stages/generate_nds_native_item_baked.py) live in this scene's own
  * heap for its run: read once at the start, the groups' data offsets rebased
@@ -290,6 +294,9 @@ done:
 static void ndsMVEndingSubmitRoom(GObj *gobj, u32 kind)
 {
     DObj *root = DObjGetStruct(gobj);
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    u32 saved_no_oracle;
+#endif
 
     if ((root == NULL) || (sMVEndingRoomCameraGObj == NULL))
     {
@@ -299,6 +306,13 @@ static void ndsMVEndingSubmitRoom(GObj *gobj, u32 kind)
      * staff roll and the 1P intro present theirs; BG0 shows it. */
     ndsPlatformSet3DLayerEnabled(TRUE);
     ndsPlatformSet3DViewportSource(10, 10, 310, 230);
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    /* The room's lists are baked roots: draw them as the battle draws its
+     * stage, with no oracle -- the stage fast lane (its room route) admits a
+     * list only then, and the 1P intro's fighters already draw this way. */
+    saved_no_oracle = ndsRendererHardwareNoOracleEnabled();
+    ndsRendererHardwareSetNoOracle(TRUE);
+#endif
     ndsRendererAdapterBeginStageTraversal();
     if (kind == NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD0)
     {
@@ -312,6 +326,9 @@ static void ndsMVEndingSubmitRoom(GObj *gobj, u32 kind)
                                                NDS_MV_ENDING_ROOM_GEOMETRY);
     }
     ndsRendererAdapterEndStageTraversal();
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    ndsRendererHardwareSetNoOracle(saved_no_oracle);
+#endif
 }
 
 static void ndsMVEndingDrawRoomTree(GObj *gobj)

@@ -176,6 +176,18 @@ static sb32 ndsNativeBakedRootOutsideView(
     return FALSE;
 }
 
+/* TRUE while `handle` is a root of the ending's loaded room table; the table
+ * leaves with the ending's heap, after which no handle is one. */
+sb32 ndsNativeBakedRootIsRoom(const void *handle)
+{
+    const NDSNativeBakedRoot *r = (const NDSNativeBakedRoot *)handle;
+
+    return ((gNdsNativeBakedRoomRoots != NULL) &&
+            (r >= gNdsNativeBakedRoomRoots) &&
+            (r < gNdsNativeBakedRoomRoots + gNdsNativeBakedRoomRootCount)) ?
+        TRUE : FALSE;
+}
+
 /* The fast lane's early exit (renderer_adapter_stage.c): TRUE when the
  * root `handle` under `config`'s matrices is wholly outside the view, so the
  * lane can skip its stats reset, material snapshots and submit. The lane
