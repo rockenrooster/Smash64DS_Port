@@ -1102,6 +1102,13 @@ u32 ndsMenuShellWalkWantsResultsStart(void)
  * the default VS tour) returns without touching the pads, and playback stays
  * disabled there. Called from the source-menu pump in taskman_seam_harness.c,
  * beside ndsPlatformReadInput, before the iteration's task_update. */
+/* The 1P CSS cursor path in stick holds (4 px each): UP then RIGHT from the
+ * cursor's (60,170) start. 28/24 park the puck on Link (portrait 3); 17/13
+ * on Kirby (portrait 8: row 1 is 43 px lower, column 2 is 45 px left). Poke
+ * before the 1P CSS to walk another fighter's campaign. */
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalk1PUpHolds = 28u;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalk1PRightHolds = 24u;
+
 void ndsMenuShellWalkDrive1PSourceMenus(void)
 {
     static u32 sWalk1PScene = 0xffffffffu;
@@ -1164,11 +1171,14 @@ void ndsMenuShellWalkDrive1PSourceMenus(void)
     }
     else
     {
-        if (sWalk1PTic <= 27u)
+        const u32 up_holds = gNdsMenuShellWalk1PUpHolds;
+        const u32 right_holds = gNdsMenuShellWalk1PRightHolds;
+
+        if (sWalk1PTic < up_holds)
         {
             stick_y = 80;
         }
-        else if (sWalk1PTic <= 51u)
+        else if (sWalk1PTic < (up_holds + right_holds))
         {
             stick_x = 80;
         }
