@@ -911,14 +911,24 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
         }
     }
 #if NDS_P2_KIRBY && NDS_P2_MENU_SHELL
+    /* Installed whenever the table is not, not only over a NULL pointer:
+     * after a battle or Results that loaded Kirby, gFTDataKirbyMainMotion
+     * still points into that scene's rewound arena (no select reloads it --
+     * the source's ftManagerSetupFilesKind did), so the constructor read
+     * joint 6's model part from freed memory and the preview drew 6 of its
+     * 7 roots into ndsPreviewPackLoadHalt(20). Owner r70: the CSS froze
+     * after a 4P match. */
     if ((desc != NULL) && (desc->fkind == nFTKindKirby) &&
         ((gSCManagerSceneData.scene_curr == nSCKindPlayersVS) ||
          (gSCManagerSceneData.scene_curr == nSCKind1PGamePlayers) ||
          (gSCManagerSceneData.scene_curr == nSCKind1PBonus1Players) ||
          (gSCManagerSceneData.scene_curr == nSCKind1PBonus2Players)) &&
-        (gFTDataKirbyMainMotion == NULL))
+        (gFTDataKirbyMainMotion != sNdsFTManagerKirbyPreviewCopyTable))
     {
-        sNdsFTManagerKirbyPreviewMainMotionSaved = gFTDataKirbyMainMotion;
+        if (sNdsFTManagerKirbyPreviewMainMotionActive == FALSE)
+        {
+            sNdsFTManagerKirbyPreviewMainMotionSaved = gFTDataKirbyMainMotion;
+        }
         sNdsFTManagerKirbyPreviewMainMotionActive = TRUE;
         gFTDataKirbyMainMotion = sNdsFTManagerKirbyPreviewCopyTable;
     }
