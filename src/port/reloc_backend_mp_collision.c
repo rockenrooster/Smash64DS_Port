@@ -2983,7 +2983,8 @@ volatile u32 gNdsMPWallSweepGroupRejects;
 
 /* trunc(v) when |v| < 2^20 (float spacing there is at most 1/8), else
  * FALSE. */
-static sb32 __attribute__((noinline))
+/* ITCM (P2-6, 2026-10-02: census admission, 82 B). */
+static sb32 __attribute__((noinline)) NDS_R2_ITCM_PACK2_CODE
 ndsMPWallSweepTrunc(f32 v, s32 *out)
 {
     s32 t;
@@ -3051,7 +3052,8 @@ static inline sb32 ndsMPSweepSegmentXMisses(const Vec3f *v1, const Vec3f *v2,
 static s32 ndsMPWallSweepEdgeTrunc(u32 slot, u32 which, f32 v);
 #define NDS_MP_SWEEP_REJECT_MISS_LIMIT 8u
 #define NDS_MP_SWEEP_REJECT_SKIP 32u
-static sb32 __attribute__((noinline))
+/* ITCM (P2-6, 2026-10-02: census admission, 312 B). */
+static sb32 __attribute__((noinline)) NDS_R2_ITCM_PACK2_CODE
 ndsMPSweepGroupReject(u32 *state, s32 *ip0, s32 *it0, u32 axis,
                       const Vec3f *position, const Vec3f *translate,
                       NDSMPKindGroup *g, u32 yakumono_id, sb32 is_dynamic,

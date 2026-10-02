@@ -35,6 +35,12 @@
  * existed, so it has been matching nothing and the symbol was measured in
  * .main. See docs/P1_EXECUTION_BOARD.md. */
 void ndsBaseGcRunAll(void) NDS_R2_ITCM_PACK2_CODE;
+/* P2-6 (2026-10-02): the process dispatch gcRunAll calls once per process,
+ * 160 B ranked first among the census's ITCM admissions (1p-pf14r-st11:
+ * 6,945 non-memory stall cycles a byte in .text.hot), into the room the
+ * texgen and sweep work freed. */
+#include <sys/objtypes.h>
+GObjProcess *gcRunGObjProcess(GObjProcess *gobjproc) NDS_R2_ITCM_PACK2_CODE;
 #include <battleship_overlay/src/sys/objman.c>
 #undef gcRunAll
 #undef gcSetupObjman

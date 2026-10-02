@@ -32,6 +32,10 @@ volatile u32 gNdsBattlePlayableFoxCpuEnabled = 0u;
 
 #define ftComputerSetupAll ndsBaseFTComputerSetupAll
 #define ftComputerProcessAll ndsBaseFTComputerProcessAll
+/* P2-6 (2026-10-02): 80 B, second among the census's ITCM admissions
+ * (1p-pf14r-st11), the attribute riding a declaration as gcRunAll's does. */
+#include <nds/nds_task37_itcm.h>
+void ndsBaseFTComputerProcessAll(GObj *fighter_gobj) NDS_R2_ITCM_PACK2_CODE;
 #define ftComputerSetFighterDamageDetectSize \
     ndsBaseFTComputerSetFighterDamageDetectSize
 
