@@ -133,6 +133,24 @@ background (~24 boss wallpaper GObjs) now animates through the fixed-point
 cubic (`ndsGcPlayAnimAllFixedCubic`), which took its float player off the top
 of that battle's soft-float callers.
 
+### Owner r67 playtest (2026-10-02, full 1P run as Kirby)
+
+| Report | Cause | State |
+|---|---|---|
+| Kirby's Board the Platforms: no moving platforms, unfinishable | two rail scripts share one SYInterpDesc; the event32 ledger refused the second (reason 13) and `gcAddAnimAll` installs nothing when one entry is refused | fixed `67670e1dacb` (shared descriptor admitted while its word still reads fixed) |
+| Title freezes when idle | the idle hand-off goes to How to Play, whose ground map (0x10b) is not staged: data abort | idle title stays up (`969363d8a1e`, `gNdsMenuTitleAttract` 0); How to Play, the Characters demo arm and the auto demo are not brought up |
+| 1P CSS "Option" under a blue line | the bake drew the separator fill after the labels (source fills first) | fixed `69860dc9f75` |
+| Bonus 1/2 Practice do nothing | the bonus select preloaded all 12 fighters (heap halt at the 4th); now the 1P select's one-preview boundary and the preview packs; the stage runs | select's 2D draws through the S2D tenant but its portraits exceed bank E (64 KB): garbled until it gets a baked surface like the 1P select |
+| Training Mode | owner: may be closed for now | its confirm plays the denied sound |
+| Team stock icons (Yoshi colours, Polygon characters) | the lower HUD drew every icon in the first enemy's palette / the base fighter's glyph | each icon in its member's colour; the Polygon row is the source's single polygon icon |
+| Challenger silhouette | no 3D layer, no draw route, no box, and colanim 80 had no script row | box and fighter draw; the fighter is not yet black: battle slot 0 and the transient slot drop the colanim modulate (slot 1 shows it) -- open |
+| Credits text static, crosshair mangled | the name path's SYInterpDesc header was never fixed (kind 6/512 points); the S2D presenter undid odd rows only for SP_TEXSHUF sprites | fixes applied, verification pending |
+| Held barrel glitches when hit | `ftSetupDropItem` was a stub that only cleared `fp->item_gobj`; the damage drop roll was missing | `itMainSetFighterDrop` and the source roll (replay digests re-pin) |
+| Master Hand intro "no animations" | not reproduced: Appear plays (finger joints rotate, poses change across captures) | needs the owner's detail |
+| Menu select sounds (owner: "just the A select sounds, all menus") | FGM 158 MenuSelect is a four-note rising chime in the source; the pack rendered it on the flat path (first note held: one 120 ms click at DS volume 20 rising to 62 only when an update steps the envelope, which a scene load does not run) | 158, 165, 167, 127 render their whole UCD program; the single-pitch menu clicks (157, 163, 164) follow for balance -- the flat path maps the pre-mixer target linearly where n_env.c squares it, 6-7 dB hot |
+| Bonus announcer starts too low | the composite renderer voiced a UCD rest (pitch code 0) as a note 13 semitones down; n_env.c's note op releases the sound instead | rests render as silence and the next note opens a new sound (35 cues change, sizes unchanged) |
+| Transitions go black (owner: hold the last frame) | the r64 hold kept the leaving frame only until the next scene's first display write | the display capture unit snapshots the leaving frame into a texture-free bank (B, else A) and the main screen shows it (display mode 2) until the next scene's first complete frame: title, mode select, 1P mode, 1P CSS and the intro now hold with no black (walk probe, `artifacts/bugs/2026-10-02_transition-snapshot`). Open: a battle's load needs every bank, so its first texture upload ends the snapshot under the black cover (intro -> stage 1: held 69 VBlanks, then 112 black; the texture prepare alone is 58); a main-memory copy shown by the display FIFO starves behind DMA0 (garbled), and battle exits have no texture-free bank |
+
 Intro fighter stills (owner: rendered stills). The shipping intro is static
 and blits `assets/intro/*.s1i` (`ndsSC1PIntroBlitStills`), baked from this
 renderer by the lab ROM `NDS_1P_INTRO_BAKE=1`
