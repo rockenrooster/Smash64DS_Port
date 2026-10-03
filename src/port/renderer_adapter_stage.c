@@ -4230,11 +4230,67 @@ static sb32 ndsRendererAdapterPrepareNativeStageBindingMatrix(
 #endif
 }
 
+#if NDS_LAB_STAGE_BINDING_CENSUS
+/* Lab binding-motion census (the measurement _BLOB_RIGID_MASKS in
+ * generate_nds_native_stage.py is pinned from): per stage topology, every
+ * binding whose world was built (seen) and every one whose world differed
+ * from its previous frame's (moved). A rigid candidate is seen & ~moved, less
+ * the billboards. Read with gdb after a natural run and a walk of the map.
+ * NDS_LAB_STAGE_BINDING_CENSUS=1 on a lab build only. */
+volatile u64 gNdsStageBindingSeenMask;
+volatile u64 gNdsStageBindingMovedMask;
+volatile u32 gNdsStageBindingCensusFrames;
+static u64 sNdsStageBindingCensusValid;
+static u32 sNdsStageBindingCensusGeneration = 0xffffffffu;
+static NDSRendererMatrix20p12 sNdsStageBindingCensusWorld[64];
+
+static void ndsRendererAdapterStageBindingCensus(
+    const NDSRendererAdapterNativeStageWorkspace *workspace)
+{
+    u32 binding_index;
+
+    if (sNdsStageBindingCensusGeneration != workspace->topology_generation)
+    {
+        sNdsStageBindingCensusGeneration = workspace->topology_generation;
+        sNdsStageBindingCensusValid = 0u;
+        gNdsStageBindingSeenMask = 0u;
+        gNdsStageBindingMovedMask = 0u;
+        gNdsStageBindingCensusFrames = 0u;
+    }
+    gNdsStageBindingCensusFrames++;
+    for (binding_index = 0u;
+         (binding_index < workspace->binding_count) && (binding_index < 64u);
+         binding_index++)
+    {
+        const u64 bit = (u64)1u << binding_index;
+        NDSRendererMatrix20p12 world;
+
+        if (ndsRendererAdapterBuildDObjWorldMatrixUncached(
+                workspace->binding_dobjs[binding_index], &world) == FALSE)
+        {
+            continue;
+        }
+        if (((sNdsStageBindingCensusValid & bit) != 0u) &&
+            (memcmp(&world, &sNdsStageBindingCensusWorld[binding_index],
+                    sizeof(world)) != 0))
+        {
+            gNdsStageBindingMovedMask |= bit;
+        }
+        sNdsStageBindingCensusWorld[binding_index] = world;
+        sNdsStageBindingCensusValid |= bit;
+        gNdsStageBindingSeenMask |= bit;
+    }
+}
+#endif
+
 static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
     CObj *cobj, NDSRendererAdapterNativeStageWorkspace *workspace)
 {
     u32 binding_index;
 
+#if NDS_LAB_STAGE_BINDING_CENSUS
+    ndsRendererAdapterStageBindingCensus(workspace);
+#endif
 #if NDS_TASK36_HW_COMPOSE
     NDSRendererAdapterStageFrameCamera camera;
 #if NDS_TASK103_STAGE_RUN_PHASE
