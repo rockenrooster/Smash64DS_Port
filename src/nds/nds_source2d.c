@@ -559,9 +559,14 @@ static u32 ndsS2DModulateRgba(u32 rgba)
     {
         return rgba;
     }
-    r = ((((rgba >> 24) & 0xffu) * ((m >> 16) & 0xffu)) + 127u) / 255u;
-    g = ((((rgba >> 16) & 0xffu) * ((m >> 8) & 0xffu)) + 127u) / 255u;
-    b = ((((rgba >> 8) & 0xffu) * (m & 0xffu)) + 127u) / 255u;
+    /* (x * 0x8081) >> 23 is x / 255 for every x below 2^16 (here at most
+     * 255 * 255 + 127): the stage clear's darkened photo took three divides
+     * a tap, 61 VBlanks of black for one 256x192 bake (2026-10-03). */
+    r = (((((rgba >> 24) & 0xffu) * ((m >> 16) & 0xffu)) + 127u) * 0x8081u) >>
+        23;
+    g = (((((rgba >> 16) & 0xffu) * ((m >> 8) & 0xffu)) + 127u) * 0x8081u) >>
+        23;
+    b = (((((rgba >> 8) & 0xffu) * (m & 0xffu)) + 127u) * 0x8081u) >> 23;
     return (r << 24) | (g << 16) | (b << 8) | (rgba & 0xffu);
 }
 
@@ -909,35 +914,32 @@ static void ndsS2DPrepareFilteredRows(const NDSSource2DSource *source,
     }
 }
 
-static s32 ndsS2DSampleFilteredRows(const NDSSource2DSource *source,
-                                    const NDSSource2DRowPair *pair,
-                                    u32 step_x_q16, u32 destination_x,
-                                    u8 rgba[4])
+/* A destination column's two source columns and the fraction between them
+ * (ndsS2DSampleFiltered's horizontal half). */
+static inline u32 ndsS2DFilteredColumns(u32 source_width, u32 step_x_q16,
+                                        u32 destination_x, u32 *out_x0,
+                                        u32 *out_x1)
 {
-    u32 source_width = (u32)(u16)source->sprite->width;
     s32 sx_q16 = (s32)(step_x_q16 >> 1) - 0x8000 +
                  (s32)(destination_x * step_x_q16);
     u32 sx_q8;
     u32 x0;
-    u32 x1;
-    u32 taps[4];
 
     if (sx_q16 < 0) sx_q16 = 0;
     sx_q8 = (u32)sx_q16 >> 8;
     x0 = sx_q8 >> 8;
     if (x0 >= source_width) x0 = source_width - 1u;
-    x1 = ((x0 + 1u) < source_width) ? (x0 + 1u) : x0;
-    if ((ndsS2DRowTapRGBA(source, &pair->row0, x0, &taps[0]) == 0) ||
-        (ndsS2DRowTapRGBA(source, &pair->row0, x1, &taps[1]) == 0) ||
-        (ndsS2DRowTapRGBA(source, &pair->row1, x0, &taps[2]) == 0) ||
-        (ndsS2DRowTapRGBA(source, &pair->row1, x1, &taps[3]) == 0))
-    {
-        return 0;
-    }
+    *out_x0 = x0;
+    *out_x1 = ((x0 + 1u) < source_width) ? (x0 + 1u) : x0;
+    return sx_q8 & 0xffu;
+}
+
+/* Four taps (row0 x0, row0 x1, row1 x0, row1 x1) blended. */
+static inline void ndsS2DBlendTaps(const u32 taps[4], u32 fx, u32 fy,
+                                   u8 rgba[4])
+{
     if ((taps[0] & taps[1] & taps[2] & taps[3] & 0xffu) == 0xffu)
     {
-        const u32 fx = sx_q8 & 0xffu;
-        const u32 fy = pair->fy;
         const u32 w0 = (256u - fx) * (256u - fy);
         const u32 w1 = fx * (256u - fy);
         const u32 w2 = (256u - fx) * fy;
@@ -955,10 +957,72 @@ static s32 ndsS2DSampleFilteredRows(const NDSSource2DSource *source,
 
             rgba[channel] = (u8)((s + 0x8000u) >> 16);
         }
-        return 1;
+        return;
     }
-    ndsS2DBilerp(taps, sx_q8 & 0xffu, pair->fy, rgba);
+    ndsS2DBilerp(taps, fx, fy, rgba);
+}
+
+static s32 ndsS2DSampleFilteredRows(const NDSSource2DSource *source,
+                                    const NDSSource2DRowPair *pair,
+                                    u32 step_x_q16, u32 destination_x,
+                                    u8 rgba[4])
+{
+    u32 x0;
+    u32 x1;
+    u32 taps[4];
+    const u32 fx = ndsS2DFilteredColumns((u32)(u16)source->sprite->width,
+                                         step_x_q16, destination_x, &x0,
+                                         &x1);
+
+    if ((ndsS2DRowTapRGBA(source, &pair->row0, x0, &taps[0]) == 0) ||
+        (ndsS2DRowTapRGBA(source, &pair->row0, x1, &taps[1]) == 0) ||
+        (ndsS2DRowTapRGBA(source, &pair->row1, x0, &taps[2]) == 0) ||
+        (ndsS2DRowTapRGBA(source, &pair->row1, x1, &taps[3]) == 0))
+    {
+        return 0;
+    }
+    ndsS2DBlendTaps(taps, fx, pair->fy, rgba);
     return 1;
+}
+
+/* The background bake's source rows, each converted once into the cell
+ * scratch: a 300 -> 256 resample taps every source texel about 2.3 times per
+ * row and every source row for about two destination rows, so the bake read
+ * and converted each texel ~4.6 times (2026-10-03). Slot s holds source row
+ * sNdsS2DRgbaRowY[s] (~0u: none); a row whose conversion failed is never
+ * held, and its destination rows take ndsS2DSampleFilteredRows, whose failure
+ * is the bake's, as before. */
+#define NDS_S2D_RGBA_ROW_MAX ((sizeof(sNdsS2DScratch) / sizeof(u32)) / 2u)
+static u32 sNdsS2DRgbaRowY[2];
+
+static const u32 *ndsS2DRgbaRow(const NDSSource2DSource *source,
+                                const NDSSource2DSrcRow *row, u32 keep_y)
+{
+    const u32 width = (u32)(u16)source->sprite->width;
+    u32 slot;
+    u32 *texels;
+    u32 x;
+
+    for (slot = 0u; slot < 2u; slot++)
+    {
+        if (sNdsS2DRgbaRowY[slot] == row->y)
+        {
+            return &sNdsS2DScratch[slot * NDS_S2D_RGBA_ROW_MAX];
+        }
+    }
+    /* The pair's other row stays. */
+    slot = (sNdsS2DRgbaRowY[0] == keep_y) ? 1u : 0u;
+    texels = &sNdsS2DScratch[slot * NDS_S2D_RGBA_ROW_MAX];
+    sNdsS2DRgbaRowY[slot] = ~0u;
+    for (x = 0u; x < width; x++)
+    {
+        if (ndsS2DRowTapRGBA(source, row, x, &texels[x]) == 0)
+        {
+            return NULL;
+        }
+    }
+    sNdsS2DRgbaRowY[slot] = row->y;
+    return texels;
 }
 
 /* ---- palettes ---- */
@@ -1824,6 +1888,8 @@ static s32 ndsS2DDrawBackground(const SObj *sobj,
     }
     step_x_q16 = ((u32)(u16)sobj->sprite.width << 16) / final_width;
     step_y_q16 = ((u32)(u16)sobj->sprite.height << 16) / final_height;
+    sNdsS2DRgbaRowY[0] = ~0u;
+    sNdsS2DRgbaRowY[1] = ~0u;
     for (y = 0; y < (s32)final_height; y++)
     {
         s32 out_y = screen_y + y;
@@ -1831,6 +1897,8 @@ static s32 ndsS2DDrawBackground(const SObj *sobj,
         s32 x;
         const u32 rows = (gNdsS2DRowSampler != 0u) ? 1u : 0u;
         NDSSource2DRowPair pair;
+        const u32 *rgba0 = NULL;
+        const u32 *rgba1 = NULL;
 
         if ((out_y < 0) || (out_y >= 192))
         {
@@ -1839,6 +1907,12 @@ static s32 ndsS2DDrawBackground(const SObj *sobj,
         if (rows != 0u)
         {
             ndsS2DPrepareFilteredRows(source, step_y_q16, (u32)y, &pair);
+            if ((u32)(u16)source->sprite->width <= NDS_S2D_RGBA_ROW_MAX)
+            {
+                rgba0 = ndsS2DRgbaRow(source, &pair.row0, pair.row1.y);
+                rgba1 = (rgba0 != NULL) ?
+                    ndsS2DRgbaRow(source, &pair.row1, pair.row0.y) : NULL;
+            }
         }
         row = &layer[(u32)out_y * pitch];
         for (x = 0; x < (s32)final_width; x++)
@@ -1851,29 +1925,45 @@ static s32 ndsS2DDrawBackground(const SObj *sobj,
             {
                 continue;
             }
-            if (rows != 0u)
+            if (rgba1 != NULL)
+            {
+                u32 x0;
+                u32 x1;
+                u32 taps[4];
+                const u32 fx = ndsS2DFilteredColumns(
+                    (u32)(u16)source->sprite->width, step_x_q16, (u32)x, &x0,
+                    &x1);
+
+                taps[0] = rgba0[x0];
+                taps[1] = rgba0[x1];
+                taps[2] = rgba1[x0];
+                taps[3] = rgba1[x1];
+                ndsS2DBlendTaps(taps, fx, pair.fy, rgba);
+                ok = 1;
+            }
+            else if (rows != 0u)
             {
                 ok = ndsS2DSampleFilteredRows(source, &pair, step_x_q16,
                                               (u32)x, rgba);
-                if (gNdsS2DRowVerify != 0u)
-                {
-                    u8 want[4] = { 0u, 0u, 0u, 0u };
-                    s32 want_ok = ndsS2DSampleFiltered(source, step_x_q16,
-                                                       step_y_q16, (u32)x,
-                                                       (u32)y, want);
-
-                    gNdsS2DRowVerifyPixels++;
-                    if ((want_ok != ok) ||
-                        ((ok != 0) && (memcmp(want, rgba, sizeof(want)) != 0)))
-                    {
-                        gNdsS2DRowVerifyMismatches++;
-                    }
-                }
             }
             else
             {
                 ok = ndsS2DSampleFiltered(source, step_x_q16, step_y_q16,
                                           (u32)x, (u32)y, rgba);
+            }
+            if ((rows != 0u) && (gNdsS2DRowVerify != 0u))
+            {
+                u8 want[4] = { 0u, 0u, 0u, 0u };
+                s32 want_ok = ndsS2DSampleFiltered(source, step_x_q16,
+                                                   step_y_q16, (u32)x,
+                                                   (u32)y, want);
+
+                gNdsS2DRowVerifyPixels++;
+                if ((want_ok != ok) ||
+                    ((ok != 0) && (memcmp(want, rgba, sizeof(want)) != 0)))
+                {
+                    gNdsS2DRowVerifyMismatches++;
+                }
             }
             if (ok == 0)
             {
