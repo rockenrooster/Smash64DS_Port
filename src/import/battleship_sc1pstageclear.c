@@ -118,6 +118,7 @@
 #include <sys/rdp.h>
 #include <sys/taskman.h>
 #include <sys/video.h>
+#include <nds/nds_platform.h>
 
 extern sb32 (*dLBCommonFuncMatrixList[])(void);
 sb32 sc1PStageClearCheckNoTimer(void);
@@ -140,6 +141,9 @@ extern void *gSYSchedulerCurrentFramebuffer;
  * compiles; the link stays honestly open until the orchestrator stages the
  * definitions. Offsets invented here would be fabricated data. */
 
+_Static_assert(nSCKind1PGame == NDS_PLATFORM_SCENE_KIND_1P_GAME,
+               "nds_platform.h names the 1P battle's scene kind");
+
 #define sc1PStageClearStartScene ndsBaseSC1PStageClearStartScene
 void ndsBaseSC1PStageClearStartScene(void);
 
@@ -156,9 +160,13 @@ void sc1PStageClearStartScene(void)
      * on the first source load). Reuse the compatibility framebuffer retained
      * specifically for source photo readers, and clear its old fighter-packet
      * scratch bytes before the source conversion. This preserves the source
-     * tally/wallpaper object and avoids presenting packet data as pixels; the
-     * missing last-battle photo remains a visible DS capture follow-up. */
+     * tally/wallpaper object and avoids presenting packet data as pixels.
+     * The photo itself is the battle's last frame, which the transition
+     * still shows from its capture (2026-10-03): resampled into this frame,
+     * the source copy and the prim-0x80 wallpaper draw it as on the N64. */
     memset(gSYFramebufferSets, 0, sizeof(gSYFramebufferSets));
+    (void)ndsPlatformTransitionSnapshotToN64Frame(
+        &gSYFramebufferSets[0][0][0], 320u, 231u);
     gSYSchedulerCurrentFramebuffer = &gSYFramebufferSets[0];
     /* The N64 overlay load clears these deadlines; InitVars does not. The DS
      * retains the TU, so an old bonus-page deadline could advance a new tally

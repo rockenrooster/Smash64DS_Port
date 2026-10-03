@@ -189,13 +189,16 @@ static u32 sNdsTransitionHoldPresents;
 #if NDS_TRANSITION_HOLD && NDS_RENDERER_HW_TRIANGLES
 /* The transition snapshot (ndsPlatformTransitionSnapshotBegin, below): 0, or
  * 1 + the bank (0 = A, 1 = B: captured into; 2 = C: moved into, see
- * ndsPlatformTransitionSnapshotMoveToC) the main screen now shows; the
+ * ndsPlatformTransitionSnapshotMoveToC; 3 = D: a battle exit's, see
+ * ndsPlatformTransitionSnapshotOverWallpaper) the main screen now shows; the
  * bank's VRAMCNT value to restore. Bg2Touched: the next scene was handed
  * the BG2 bitmap since the capture, so bank C is no longer free to hold it. */
 static u32 sNdsTransitionSnapshotBank;
 static u8 sNdsTransitionSnapshotBankCr;
 static u32 sNdsTransitionSnapshotBg2Touched;
 #define NDS_TRANSITION_SNAPSHOT_BANK_C 3u
+#define NDS_TRANSITION_SNAPSHOT_BANK_D 4u
+static s32 ndsPlatformTransitionSnapshotMoveToC(void);
 
 /* The next scene is about to write the BG2 bitmap: a held frame in bank C
  * gives the bank back first (under the black cover, cleared). */
@@ -207,15 +210,35 @@ static void ndsPlatformTransitionSnapshotLeaveBg2(void)
     }
     sNdsTransitionSnapshotBg2Touched = 1u;
 }
+
+/* The next scene is about to write the BG3 bitmap, whose bank D a battle
+ * exit's held frame occupies: it ends there, under the black cover. A clear
+ * alone waits (nothing of the scene's is lost: BG3 stays hidden and D's
+ * return pending until the release). */
+static void ndsPlatformTransitionSnapshotLeaveBg3(void)
+{
+    if (sNdsTransitionSnapshotBank == NDS_TRANSITION_SNAPSHOT_BANK_D)
+    {
+        ndsPlatformTransitionSnapshotAbort();
+    }
+}
+#endif
+#if NDS_RENDERER_HW_TRIANGLES
+/* BG2's affine as last written (PA, PD, X, Y; PB = PC = 0 at every write
+ * here): a battle exit's held frame redraws the wallpaper through it. */
+static s32 sNdsBg2AffineShown[4] = { 1 << 8, 1 << 8, 0, 0 };
 #endif
 /* Runtime A/B word (the control arm is the same binary); counters read by
  * the transition captures. Decline: 1 brightness, 2 display mode, 3 capture
- * busy, 4 no free texture bank, 5 capture timeout. */
+ * busy, 4 no free texture bank, 5 capture timeout, 6 a battle exit's
+ * capture timed out. */
 volatile u32 gNdsTransitionSnapshotEnable __attribute__((used, section(".data"))) = 1u;
 volatile u32 gNdsTransitionSnapshotCount;
 volatile u32 gNdsTransitionSnapshotReleaseCount;
 volatile u32 gNdsTransitionSnapshotAbortCount;
 volatile u32 gNdsTransitionSnapshotMoveCount;
+volatile u32 gNdsTransitionSnapshotPhotoCount;
+volatile u32 gNdsTransitionSnapshotExitCount;
 volatile u32 gNdsTransitionSnapshotDecline;
 volatile u32 gNdsTransitionSnapshotDeclineCount;
 volatile u32 gNdsTransitionHoldCount;
@@ -301,6 +324,16 @@ static u32 sOriginalSpritePreviewReady;
 #if NDS_RENDERER_HW_TRIANGLES
 static int sOriginalSpriteOverlayBg = -1;
 static int sOriginalSpriteOverlayForegroundBg = -1;
+
+/* Every BG2 affine write (PB = PC = 0), recorded in sNdsBg2AffineShown. */
+static void ndsPlatformSetBg2Affine(s32 pa, s32 pd, s32 dx, s32 dy)
+{
+    bgSetAffineMatrixScroll(sOriginalSpriteOverlayBg, pa, 0, 0, pd, dx, dy);
+    sNdsBg2AffineShown[0] = pa;
+    sNdsBg2AffineShown[1] = pd;
+    sNdsBg2AffineShown[2] = dx;
+    sNdsBg2AffineShown[3] = dy;
+}
 /* P2-1i. The fire's affine steps, held so a frame change can rewrite the
  * whole matrix+scroll block in one call without re-deriving them. */
 static s32 sTitleFirePa = 1 << 8;
@@ -677,8 +710,7 @@ void ndsPlatformInit(void)
     bgSetPriority(sOriginalSpriteOverlayForegroundBg, 0);
     bgSetPriority(0, 1);
     bgSetPriority(sOriginalSpriteOverlayBg, 2);
-    bgSetAffineMatrixScroll(sOriginalSpriteOverlayBg,
-                            1 << 8, 0, 0, 1 << 8, 0, 0);
+    ndsPlatformSetBg2Affine(1 << 8, 1 << 8, 0, 0);
     bgWrapOff(sOriginalSpriteOverlayBg);
     REG_BLDCNT = BLEND_ALPHA | BLEND_SRC_BG0 | BLEND_DST_BG2;
     REG_BLDALPHA = 16u | (16u << 8);
@@ -937,6 +969,12 @@ u16 *ndsPlatformGetOriginalSpriteOverlayLayer(s32 is_foreground,
         int bg = (layer != 0u) ?
             sOriginalSpriteOverlayForegroundBg : sOriginalSpriteOverlayBg;
 
+#if NDS_TRANSITION_HOLD
+        if (layer != 0u)
+        {
+            ndsPlatformTransitionSnapshotLeaveBg3();
+        }
+#endif
         if ((layer != 0u) && (sOriginalSpriteOverlayBg3Lent != 0u))
         {
             if (sOriginalSpriteOverlayBg3ReturnPending == 0u)
@@ -981,6 +1019,12 @@ u32 ndsPlatformCommitOriginalSpriteFinalLayer(s32 is_foreground,
         sOriginalSpriteOverlayForegroundBg : sOriginalSpriteOverlayBg;
     u32 bytes;
 
+#if NDS_TRANSITION_HOLD
+    if (layer != 0u)
+    {
+        ndsPlatformTransitionSnapshotLeaveBg3();
+    }
+#endif
     if ((layer != 0u) && (sOriginalSpriteOverlayBg3Lent != 0u))
     {
         if (sOriginalSpriteOverlayBg3ReturnPending == 0u)
@@ -1179,6 +1223,10 @@ void ndsPlatformCommitOriginalSpritePreviewLayer(s32 is_foreground)
         if (layer == 0u)
         {
             ndsPlatformTransitionSnapshotLeaveBg2();
+        }
+        else
+        {
+            ndsPlatformTransitionSnapshotLeaveBg3();
         }
 #endif
         if ((layer != 0u) && (sOriginalSpriteOverlayBg3Lent != 0u) &&
@@ -1486,6 +1534,15 @@ u32 ndsPlatformVramBg3Empty(void)
 s32 ndsPlatformVramTakeBankD(void)
 {
 #if NDS_RENDERER_HW_TRIANGLES
+#if NDS_TRANSITION_HOLD
+    /* A battle exit's held frame in D (a battle straight after it) moves to
+     * C first, or ends. */
+    if ((sNdsTransitionSnapshotBank == NDS_TRANSITION_SNAPSHOT_BANK_D) &&
+        (ndsPlatformTransitionSnapshotMoveToC() == FALSE))
+    {
+        ndsPlatformTransitionSnapshotAbort();
+    }
+#endif
     if (sOriginalSpriteOverlayBg3Lent != 0u)
     {
         /* A battle straight after a battle: D never left the texture slot. */
@@ -1538,6 +1595,14 @@ void ndsPlatformVramReturnBankD(void)
 static void ndsPlatformVramReturnBankDNow(void)
 {
 #if NDS_RENDERER_HW_TRIANGLES
+#if NDS_TRANSITION_HOLD
+    /* A battle exit's held frame is in D: the return waits for its release
+     * (BG3 stays hidden meanwhile; a BG3 write ends the frame first). */
+    if (sNdsTransitionSnapshotBank == NDS_TRANSITION_SNAPSHOT_BANK_D)
+    {
+        return;
+    }
+#endif
     sOriginalSpriteOverlayBg3ReturnPending = 0u;
     if (sOriginalSpriteOverlayBg3Lent == 0u)
     {
@@ -1745,7 +1810,9 @@ static s32 ndsPlatformTransitionSnapshotMoveToC(void)
     vu8 *cr = (vu8 *)0x04000240u;
     u32 bank = sNdsTransitionSnapshotBank - 1u;
 
-    if ((bank > 1u) || (sNdsTransitionSnapshotBg2Touched != 0u) ||
+    /* From A, B or (a battle exit's) D. */
+    if ((bank == 2u) || (bank > 3u) ||
+        (sNdsTransitionSnapshotBg2Touched != 0u) ||
         (cr[2] != (VRAM_ENABLE | VRAM_C_MAIN_BG_0x06000000)))
     {
         return FALSE;
@@ -1758,6 +1825,168 @@ static s32 ndsPlatformTransitionSnapshotMoveToC(void)
     sNdsTransitionSnapshotBankCr = VRAM_ENABLE | VRAM_C_MAIN_BG_0x06000000;
     sNdsTransitionSnapshotBank = NDS_TRANSITION_SNAPSHOT_BANK_C;
     gNdsTransitionSnapshotMoveCount++;
+    return TRUE;
+}
+
+/* A 1P battle's exit (2026-10-03, owner BUGS.md: "Transition from match end
+ * to score has black screen, should hold last match end frame until score is
+ * ready"). The last battle frame fills both texture banks (A and B: 256 KB of
+ * live blocks at the Hyrule exit) and reads bank D's released fighter texels
+ * and BG2's wallpaper in C, so no bank is free for the capture below
+ * (decline 4) and the tally's whole load was black. The frame is rebuilt
+ * instead: the wallpaper as BG2 shows it is copied out of C into the packet
+ * arena (the battle's packets are done; the arena is re-cleared after), the
+ * backdrop takes the wallpaper's average colour, and C is lent to the
+ * capture unit for one composited frame -- 3D, OBJ and the other layers over
+ * that backdrop, BG2 having no bank. Every captured pixel of exactly the
+ * backdrop colour is where the wallpaper showed, and the wallpaper, through
+ * BG2's own affine, fills it (a 3D or OBJ pixel of exactly that colour takes
+ * the wallpaper's pixel there, a near match). For that frame and the
+ * composite the main screen shows the rest over the average colour. The
+ * frame then goes to D, which no displayed layer reads once it shows, and C
+ * back to BG2, empty: the next scene's BG2 writes and texture uploads find
+ * their banks as before. 3D translucent over the wallpaper is kept
+ * unblended. Taken only at the 1P battle's exit, whose next scene reads the
+ * frame as its photo too (the stage clear,
+ * ndsPlatformTransitionSnapshotToN64Frame). */
+extern volatile u32 gNdsSceneManagerCurrKind __attribute__((weak));
+extern u16 gSYFramebufferSets[1][231][320];
+
+static s32 ndsPlatformTransitionSnapshotOverWallpaper(void)
+{
+    vu8 *cr = (vu8 *)0x04000240u;
+    const u16 backdrop = BG_PALETTE[0];
+    u16 key = backdrop & 0x7fffu;
+    const s32 pa = sNdsBg2AffineShown[0];
+    const s32 pd = sNdsBg2AffineShown[1];
+    u16 *wall;
+    u16 *frame = (u16 *)0x06840000u;
+    u32 wallpaper;
+    u32 sum[3] = { 0u, 0u, 0u };
+    u32 samples = 0u;
+    u8 d_cr;
+    u32 i;
+    s32 y;
+
+    if ((&gNdsSceneManagerCurrKind == NULL) ||
+        (gNdsSceneManagerCurrKind != NDS_PLATFORM_SCENE_KIND_1P_GAME) ||
+        (sizeof(gSYFramebufferSets) < 0x20000u) ||
+        (sOriginalSpriteOverlayBg < 0) ||
+        (sOriginalSpriteOverlayBg3Lent == 0u) ||
+        (sOriginalSpriteOverlayBg3ReturnPending == 0u) ||
+        (cr[2] != (VRAM_ENABLE | VRAM_C_MAIN_BG_0x06000000)) ||
+        ((cr[3] & 0x87u) != 0x83u) ||
+        (ndsPlatformTextureBankInUse(3u) != FALSE) ||
+        ((REG_DISPCNT & DISPLAY_BG0_ACTIVE) == 0u))
+    {
+        return FALSE;
+    }
+    /* The packets' DMA reads the arena this borrows. */
+    ndsRendererFighterPacketDmaWait();
+    wall = &gSYFramebufferSets[0][0][0];
+    wallpaper = (((REG_DISPCNT & DISPLAY_BG2_ACTIVE) != 0u) &&
+                 ((sOriginalSpriteOverlayLayerMask &
+                   NDS_ORIGINAL_SPRITE_OVERLAY_BACKGROUND) != 0u)) ? 1u : 0u;
+    if (wallpaper != 0u)
+    {
+        memcpy(wall, bgGetGfxPtr(sOriginalSpriteOverlayBg), 0x20000u);
+        /* Its average over a 16 x 12 grid: the backdrop while C is away,
+         * and the key. */
+        for (y = 8; y < 192; y += 16)
+        {
+            const s32 ty = (sNdsBg2AffineShown[3] + (pd * y)) >> 8;
+            s32 x;
+
+            for (x = 8; (x < 256) && (ty >= 0) && (ty < 256); x += 16)
+            {
+                const s32 tx = (sNdsBg2AffineShown[2] + (pa * x)) >> 8;
+                u32 c;
+
+                if ((tx < 0) || (tx >= 256))
+                {
+                    continue;
+                }
+                c = wall[(ty << 8) + tx];
+                if ((c & 0x8000u) == 0u)
+                {
+                    continue;
+                }
+                sum[0] += c & 0x1fu;
+                sum[1] += (c >> 5) & 0x1fu;
+                sum[2] += (c >> 10) & 0x1fu;
+                samples++;
+            }
+        }
+        if (samples != 0u)
+        {
+            key = (u16)((sum[0] / samples) | ((sum[1] / samples) << 5) |
+                        ((sum[2] / samples) << 10));
+            BG_PALETTE[0] = key;
+        }
+    }
+    cr[2] = VRAM_ENABLE;
+    REG_DISPCAPCNT = DCAP_ENABLE | DCAP_MODE(DCAP_MODE_A) |
+                     DCAP_SRC_A(DCAP_SRC_A_COMPOSITED) |
+                     DCAP_SIZE(DCAP_SIZE_256x192) | DCAP_OFFSET(0) |
+                     DCAP_BANK(2);
+    for (i = 0u; (i < 3u) && ((REG_DISPCAPCNT & DCAP_ENABLE) != 0u); i++)
+    {
+        swiWaitForVBlank();
+    }
+    if ((REG_DISPCAPCNT & DCAP_ENABLE) != 0u)
+    {
+        REG_DISPCAPCNT = 0u;
+        memcpy(frame, wall, 0x20000u);
+        cr[2] = VRAM_ENABLE | VRAM_C_MAIN_BG_0x06000000;
+        BG_PALETTE[0] = backdrop;
+        ndsRendererFighterPacketRelease();
+        gNdsTransitionSnapshotDecline = 6u;
+        return FALSE;
+    }
+    /* The wallpaper where the capture shows the key; its own transparent
+     * pixels and its outside are the real backdrop. */
+    for (y = 0; y < 192; y++)
+    {
+        const s32 ty = (sNdsBg2AffineShown[3] + (pd * y)) >> 8;
+        const u16 *src = ((wallpaper != 0u) && (ty >= 0) && (ty < 256)) ?
+            &wall[ty << 8] : NULL;
+        u16 *dst = &frame[(u32)y << 8];
+        s32 tx_q8 = sNdsBg2AffineShown[2];
+        s32 x;
+
+        for (x = 0; x < 256; x++, tx_q8 += pa)
+        {
+            u32 w = 0u;
+
+            if ((dst[x] & 0x7fffu) != key)
+            {
+                continue;
+            }
+            if ((src != NULL) && ((u32)(tx_q8 >> 8) < 256u))
+            {
+                w = src[tx_q8 >> 8];
+            }
+            dst[x] = ((w & 0x8000u) != 0u) ? (u16)w :
+                                               (u16)(backdrop | 0x8000u);
+        }
+    }
+    d_cr = cr[3];
+    cr[3] = VRAM_ENABLE;
+    dmaCopyWords(3, frame, (void *)0x06860000u, 256u * 192u * sizeof(u16));
+    swiWaitForVBlank();
+    REG_DISPCNT = (REG_DISPCNT & ~0x000F0000u) | 0x00020000u | (3u << 18);
+    BG_PALETTE[0] = backdrop;
+    /* C back to BG2, empty: the battle's wallpaper is not the next scene's. */
+    dmaFillWords(0u, frame, 0x20000u);
+    cr[2] = VRAM_ENABLE | VRAM_C_MAIN_BG_0x06000000;
+    sNdsTransitionSnapshotBankCr = d_cr;
+    sNdsTransitionSnapshotBank = NDS_TRANSITION_SNAPSHOT_BANK_D;
+    sNdsTransitionSnapshotBg2Touched = 0u;
+    ndsVideoSetTransitionMainHeld(TRUE);
+    gNdsTransitionSnapshotCount++;
+    gNdsTransitionSnapshotExitCount++;
+    /* The arena held the wallpaper: the packets' words are gone. */
+    ndsRendererFighterPacketRelease();
     return TRUE;
 }
 
@@ -1821,7 +2050,14 @@ static void ndsPlatformTransitionSnapshotBegin(void)
     }
     if (bank > 1u)
     {
-        gNdsTransitionSnapshotDecline = 4u;
+        if (ndsPlatformTransitionSnapshotOverWallpaper() != FALSE)
+        {
+            return;
+        }
+        if (gNdsTransitionSnapshotDecline == 0u)
+        {
+            gNdsTransitionSnapshotDecline = 4u;
+        }
         gNdsTransitionSnapshotDeclineCount++;
         return;
     }
@@ -1861,6 +2097,58 @@ s32 ndsPlatformTransitionSnapshotHoldsBg2(void)
     return (sNdsTransitionSnapshotBank == NDS_TRANSITION_SNAPSHOT_BANK_C) ?
         TRUE : FALSE;
 #else
+    return FALSE;
+#endif
+}
+
+/* The held frame as the N64 colour framebuffer a source photo reader copies
+ * (sc1PStageClearCopyFramebufToWallpaper: the 300x220 area at (10,10) of a
+ * 320-wide RGBA5551 frame, a word -- two pixels -- at a time). The screen
+ * shows that area at 256x192, so each N64 pixel takes the held pixel its
+ * centre falls in. The port's runtime files keep every 32-bit word
+ * byte-swapped (16-bit texel x at index x ^ 1) and the copy moves words, so
+ * the frame is written in that order. FALSE, frame untouched, without a
+ * held frame. */
+s32 ndsPlatformTransitionSnapshotToN64Frame(u16 *frame, u32 width,
+                                            u32 height)
+{
+#if NDS_TRANSITION_HOLD && NDS_RENDERER_HW_TRIANGLES
+    const u16 *held;
+    u8 column[300];
+    u32 x;
+    u32 y;
+
+    if ((sNdsTransitionSnapshotBank == 0u) || (frame == NULL) ||
+        (width < 320u) || (height < 230u))
+    {
+        return FALSE;
+    }
+    held = (const u16 *)(uintptr_t)(0x06800000u +
+                                    ((sNdsTransitionSnapshotBank - 1u) << 17));
+    for (x = 0u; x < 300u; x++)
+    {
+        column[x] = (u8)((((x << 1) + 1u) * 256u) / 600u);
+    }
+    for (y = 0u; y < 220u; y++)
+    {
+        const u16 *src = &held[((((y << 1) + 1u) * 192u) / 440u) * 256u];
+        u16 *dst = &frame[(y + 10u) * width];
+
+        for (x = 0u; x < 300u; x++)
+        {
+            u32 c = src[column[x]];
+
+            dst[(x + 10u) ^ 1u] = (u16)(((c & 0x1fu) << 11) |
+                                        (((c >> 5) & 0x1fu) << 6) |
+                                        (((c >> 10) & 0x1fu) << 1) | 1u);
+        }
+    }
+    gNdsTransitionSnapshotPhotoCount++;
+    return TRUE;
+#else
+    (void)frame;
+    (void)width;
+    (void)height;
     return FALSE;
 #endif
 }
@@ -1997,9 +2285,14 @@ void ndsPlatformTransitionThaw(void)
 void ndsPlatformTransitionThawIf3DShown(void)
 {
 #if NDS_TRANSITION_HOLD && NDS_RENDERER_HW_TRIANGLES
-    /* No texture lives in C: a snapshot there outlasts every upload. */
+    /* No texture lives in C, and none is placed in D while a battle exit's
+     * frame keeps it LCD-mapped (libnds allocates only in banks mapped as
+     * texture; a battle's take of D moves or ends it first,
+     * ndsPlatformVramTakeBankD): a snapshot in either outlasts every upload
+     * and the scene's texture VRAM reset. */
     if ((sNdsTransitionSnapshotBank != 0u) &&
         (sNdsTransitionSnapshotBank != NDS_TRANSITION_SNAPSHOT_BANK_C) &&
+        (sNdsTransitionSnapshotBank != NDS_TRANSITION_SNAPSHOT_BANK_D) &&
         (ndsPlatformTransitionSnapshotMoveToC() == FALSE))
     {
         ndsPlatformTransitionSnapshotAbort();
@@ -2230,8 +2523,7 @@ static void ndsPlatformCommitNativeWallpaperAffine(void)
         (sNativeWallpaperAffineEpoch == sOriginalSpriteOverlayEpoch[0]) &&
         (sOriginalSpriteOverlayBg >= 0))
     {
-        bgSetAffineMatrixScroll(sOriginalSpriteOverlayBg,
-                                sNativeWallpaperAffine[0], 0, 0,
+        ndsPlatformSetBg2Affine(sNativeWallpaperAffine[0],
                                 sNativeWallpaperAffine[1],
                                 sNativeWallpaperAffine[2],
                                 sNativeWallpaperAffine[3]);
@@ -2436,8 +2728,7 @@ static void ndsPlatformSceneWallpaperCommitAffine(void)
     }
     if (sSceneWallpaperAffineResetPending != FALSE)
     {
-        bgSetAffineMatrixScroll(sOriginalSpriteOverlayBg,
-                                1 << 8, 0, 0, 1 << 8, 0, 0);
+        ndsPlatformSetBg2Affine(1 << 8, 1 << 8, 0, 0);
         sSceneWallpaperAffineResetPending = FALSE;
         sSceneWallpaperAffinePending = FALSE;
         return;
@@ -2446,8 +2737,7 @@ static void ndsPlatformSceneWallpaperCommitAffine(void)
     {
         return;
     }
-    bgSetAffineMatrixScroll(sOriginalSpriteOverlayBg,
-                            sSceneWallpaperPendingHdx, 0, 0,
+    ndsPlatformSetBg2Affine(sSceneWallpaperPendingHdx,
                             sSceneWallpaperPendingVdy,
                             sSceneWallpaperPendingDx,
                             sSceneWallpaperPendingDy);

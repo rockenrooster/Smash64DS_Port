@@ -97,6 +97,15 @@ void ndsPlatformTransitionSnapshotAbort(void);
  * write ends it under the black cover, so a writer that redraws every frame
  * may wait for the frame that will be presented. */
 s32 ndsPlatformTransitionSnapshotHoldsBg2(void);
+/* nSCKind1PGame (include/sc/scene.h, whose headers this one cannot take;
+ * battleship_sc1pstageclear.c asserts the value): the battle whose exit takes
+ * the held frame over its wallpaper. */
+#define NDS_PLATFORM_SCENE_KIND_1P_GAME 52u
+/* The held frame resampled into a 320-wide N64 RGBA5551 framebuffer (the
+ * 300x220 area at (10,10), words byte-swapped like the runtime files), for
+ * a source photo reader; FALSE without a held frame. */
+s32 ndsPlatformTransitionSnapshotToN64Frame(u16 *frame, u32 width,
+                                            u32 height);
 /* An exit that cleared an OAM shadow during the hold: the Thaw uploads it
  * (engine 0 main, 1 sub). */
 void ndsPlatformTransitionHoldPendOamUpdate(u32 engine);
