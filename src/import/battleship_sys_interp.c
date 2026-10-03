@@ -52,7 +52,12 @@
 #define NDS_INTERP_FRAC_MEMO_SETS 32u
 #define NDS_INTERP_FRAC_MEMO_WAYS 2u
 #define NDS_INTERP_FRAC_POINTS_MAX 64
-#define NDS_INTERP_PATH_SLOTS 4u
+/* One slot per moving owner: the path a TraI owner's previous call walked is
+ * what its next call shares. Four slots keyed by segment served Samus's roll
+ * and the Arwing; Board the Platforms runs up to ten Bezier platforms a frame
+ * (Yoshi's board: ten scripts on two paths), which turned four slots over every
+ * call, so each one bisected from scratch. */
+#define NDS_INTERP_PATH_SLOTS 16u
 #define NDS_INTERP_PATH_DEPTH NDS_IX_PATH_DEPTH
 
 typedef struct NDSInterpFracMemo
@@ -71,6 +76,8 @@ typedef NDSIxPath NDSInterpPath;
 static NDSInterpFracMemo
     sNdsInterpFracMemo[NDS_INTERP_FRAC_MEMO_SETS][NDS_INTERP_FRAC_MEMO_WAYS];
 static NDSInterpPath sNdsInterpPaths[NDS_INTERP_PATH_SLOTS];
+/* The output vector of the call that last wrote each slot: the moving owner. */
+static const void *sNdsInterpPathOwners[NDS_INTERP_PATH_SLOTS];
 static u32 sNdsInterpPathClock;
 
 volatile u32 gNdsInterpFracMemo __attribute__((used, section(".data"))) = 1u;
@@ -382,9 +389,17 @@ static f32 ndsInterpCubicIntegral(f32 t, f32 f, f32 *cof,
     return ((q_t + sum + q_f) * factor) / 3.0F;
 }
 
-static NDSInterpPath *ndsInterpPathFor(const u32 cof_bits[5])
+/* The owner's own slot when it is still on these coefficients; else the
+ * owner's slot re-keyed (it moved to another segment), else the oldest slot.
+ * A path is only ever a hint -- each node is reused only on an exact
+ * (min, frac) match -- so the choice changes cost, never a result. */
+static NDSInterpPath *ndsInterpPathFor(const u32 cof_bits[5],
+                                       const void *owner)
 {
+    NDSInterpPath *target = NULL;
     NDSInterpPath *oldest = &sNdsInterpPaths[0];
+    u32 target_index = 0u;
+    u32 oldest_index = 0u;
     u32 i;
 
     sNdsInterpPathClock++;
@@ -392,27 +407,44 @@ static NDSInterpPath *ndsInterpPathFor(const u32 cof_bits[5])
     {
         NDSInterpPath *path = &sNdsInterpPaths[i];
 
-        if ((path->depth != 0u) &&
-            (__builtin_memcmp(path->cof, cof_bits, sizeof(path->cof)) == 0))
+        if (sNdsInterpPathOwners[i] == owner)
         {
-            path->age = sNdsInterpPathClock;
-            return path;
+            if ((path->depth != 0u) &&
+                (__builtin_memcmp(path->cof, cof_bits, sizeof(path->cof)) ==
+                 0))
+            {
+                path->age = sNdsInterpPathClock;
+                return path;
+            }
+            if (target == NULL)
+            {
+                target = path;
+                target_index = i;
+            }
         }
         if ((path->depth == 0u) || (path->age < oldest->age))
         {
             oldest = path;
+            oldest_index = i;
         }
     }
-    __builtin_memcpy(oldest->cof, cof_bits, sizeof(oldest->cof));
-    oldest->depth = 0u;
-    oldest->age = sNdsInterpPathClock;
-    return oldest;
+    if (target == NULL)
+    {
+        target = oldest;
+        target_index = oldest_index;
+    }
+    __builtin_memcpy(target->cof, cof_bits, sizeof(target->cof));
+    target->depth = 0u;
+    target->age = sNdsInterpPathClock;
+    sNdsInterpPathOwners[target_index] = owner;
+    return target;
 }
 
 /* syInterpGetFracFrame's Bezier/Catrom arm (decomp sys/interp.c), with the
  * segment index already found by the source's own scan. */
 static f32 ndsInterpGetFracFrameReuse(SYInterpDesc *desc, f32 t, s32 id,
-                                      const u32 cof_bits[5])
+                                      const u32 cof_bits[5],
+                                      const void *owner)
 {
     f32 frac_frame;
     f32 time_scale;
@@ -421,7 +453,7 @@ static f32 ndsInterpGetFracFrameReuse(SYInterpDesc *desc, f32 t, s32 id,
     f32 res;
     f32 diff;
     f32 *cof = desc->quartics + (id * 5);
-    NDSInterpPath *path = ndsInterpPathFor(cof_bits);
+    NDSInterpPath *path = ndsInterpPathFor(cof_bits, owner);
     NDSInterpSamples samples[2];
     u32 known = path->depth;
     u32 depth = 0u;
@@ -489,7 +521,8 @@ static f32 ndsInterpGetFracFrameReuse(SYInterpDesc *desc, f32 t, s32 id,
 /* The same Bezier/Catrom arm on bit patterns: the source's time_scale, then
  * the integer bisection, then the source's final divide. */
 static f32 ndsInterpGetFracFrameKernel(SYInterpDesc *desc, f32 t, s32 id,
-                                       const u32 cof_bits[5])
+                                       const u32 cof_bits[5],
+                                       const void *owner)
 {
     f32 time_scale = (t - desc->keyframes[id]) * desc->length;
     u32 reused = 0u;
@@ -497,7 +530,8 @@ static f32 ndsInterpGetFracFrameKernel(SYInterpDesc *desc, f32 t, s32 id,
     u32 frac_bits;
 
     frac_bits = ndsIxBisect(cof_bits, ndsInterpFracBits(time_scale),
-                            ndsInterpPathFor(cof_bits), &reused, &computed);
+                            ndsInterpPathFor(cof_bits, owner), &reused,
+                            &computed);
 #if NDS_TICK_HUD
     gNdsInterpFracNodesReused += reused;
     gNdsInterpFracNodesComputed += computed;
@@ -506,7 +540,8 @@ static f32 ndsInterpGetFracFrameKernel(SYInterpDesc *desc, f32 t, s32 id,
            ((f32) desc->points_num - 1.0F);
 }
 
-static f32 ndsInterpGetFracFrameMemo(SYInterpDesc *desc, f32 t)
+static f32 ndsInterpGetFracFrameMemo(SYInterpDesc *desc, f32 t,
+                                     const void *owner)
 {
     NDSInterpFracMemo *set;
     NDSInterpFracMemo hit;
@@ -603,8 +638,8 @@ static f32 ndsInterpGetFracFrameMemo(SYInterpDesc *desc, f32 t)
     else
     {
         frac = (gNdsInterpFracKernel != 0u) ?
-            ndsInterpGetFracFrameKernel(desc, t, id, cof_bits) :
-            ndsInterpGetFracFrameReuse(desc, t, id, cof_bits);
+            ndsInterpGetFracFrameKernel(desc, t, id, cof_bits, owner) :
+            ndsInterpGetFracFrameReuse(desc, t, id, cof_bits, owner);
     }
 #if NDS_TICK_HUD
     if (gNdsInterpFracOracle != 0u)
@@ -633,10 +668,12 @@ static f32 ndsInterpGetFracFrameMemo(SYInterpDesc *desc, f32 t)
  * place of the direct call (decomp sys/interp.c). */
 void syInterpCubic(Vec3f *out, SYInterpDesc *desc, f32 t)
 {
-    syInterpCubicSplineTimeFrac(out, desc, ndsInterpGetFracFrameMemo(desc, t));
+    syInterpCubicSplineTimeFrac(out, desc,
+                                ndsInterpGetFracFrameMemo(desc, t, out));
 }
 
 void syInterpQuad(Vec3f *out, SYInterpDesc *desc, f32 t)
 {
-    syInterpQuadSplineTimeFrac(out, desc, ndsInterpGetFracFrameMemo(desc, t));
+    syInterpQuadSplineTimeFrac(out, desc,
+                               ndsInterpGetFracFrameMemo(desc, t, out));
 }
