@@ -26,9 +26,11 @@ STAGES = VS_STAGES + ONE_P_STAGES
 # Heap ceiling for one stage's body (battle-lifetime, nds_stage_gx.exec.inc).
 BODY_MAX = 36992
 # The boards hold one fighter and no items, so their bodies may run larger
-# (Purin's Board the Platforms: 46,552 B); the loader's free-heap check still
+# (Purin's Board the Platforms: 46,552 B, over 49,152 B once its five static
+# bindings bake their worlds; the boards keep ~345 KB of general heap free at
+# their low-water mark, 2026-10-02); the loader's free-heap check still
 # declines a body the battle cannot keep.
-BOARD_BODY_MAX = 49152
+BOARD_BODY_MAX = 65536
 
 
 def body_max(name):

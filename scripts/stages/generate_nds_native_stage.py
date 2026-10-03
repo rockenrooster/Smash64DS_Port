@@ -5101,6 +5101,24 @@ _BLOB_RIGID_MASKS = {
     "zako": 0x1,
     "last": 0x17,
     "yostersmall": 0x1C014,
+    # Board the Platforms, every fighter's board (2026-10-02): the same probe
+    # over each board's practice run to its end (437 frames on most, 353 on
+    # Fox's), seen & ~moved. The boards carry no camera binding (their blobs'
+    # live mask is 0); the moving platforms are the high bindings each board
+    # keeps live. A board's frame-level work was its stage bindings composed on
+    # the CPU (Yoshi's: 44% of the work, 8 of its 17 bindings static).
+    "bonus2_mario": 0x3F,
+    "bonus2_fox": 0x6F,
+    "bonus2_donkey": 0x3FF,
+    "bonus2_samus": 0x7,
+    "bonus2_luigi": 0x3F,
+    "bonus2_link": 0xFFF,
+    "bonus2_yoshi": 0xFF,
+    "bonus2_captain": 0xFFF,
+    "bonus2_kirby": 0x3F,
+    "bonus2_pikachu": 0xFF,
+    "bonus2_purin": 0x1F,
+    "bonus2_ness": 0x7F,
 }
 
 #: DObj anim-joint tables the ground code attaches at RUNTIME, per stage:
