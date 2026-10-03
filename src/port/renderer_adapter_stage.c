@@ -14377,16 +14377,190 @@ void ndsRendererAdapterSubmitEffectDObjTree(void *dobj_ptr, u32 kind,
 #endif
 }
 
+/* P2-6 (2026-10-03): the Race's rolling barrel bombs and the stage bumpers
+ * (Race, the bonus boards, Peach's Castle) wholly outside the view, skipped
+ * before any of their lists pays the route, its MObj snapshots and its world
+ * matrix (~21K ticks an off-screen barrel, ~13K a bumper; the Race drew three
+ * barrels and four bumpers every frame, a camera showing one or two). The
+ * bound is the item's root position with a sphere around it: the model's
+ * radius (barrel +-222 cube, bumper quad +-180), widened by each child joint's
+ * offset and scale and by the root's scale (a bumper doubles on a hit), in
+ * the 20.12 camera matrices the lists' own culls use (the baked roots' and the
+ * bumper quad's planes, ndsNativeBakedRootOutsideView). A held item, a deeper
+ * tree or another kind draws as before. Same-ROM A/B word gNdsItemPreCull. */
+volatile u32 gNdsItemPreCull __attribute__((used, section(".data"))) = 1u;
+__attribute__((used)) volatile u32 gNdsItemPreCulled;
+__attribute__((used)) volatile u32 gNdsItemPreCullDrew;
+
+static sb32 ndsRendererAdapterItemOffscreen(DObj *root, GObj *camera_gobj)
+{
+    GObj *item_gobj;
+    const ITStruct *ip;
+    const DObj *child;
+    CObj *cobj;
+    NDSRendererMatrix20p12 projection;
+    NDSRendererMatrix20p12 modelview;
+    NDSRendererMatrix20p12 m;
+    u32 projection_valid = FALSE;
+    u32 modelview_valid = FALSE;
+    f32 model_radius;
+    f32 extent;
+    f32 scale;
+    s64 radius;
+    s32 p[3];
+    u32 plane;
+    u32 axis;
+
+    if ((gNdsItemPreCull == 0u) || (root == NULL) || (camera_gobj == NULL) ||
+        (root->parent != DOBJ_PARENT_NULL))
+    {
+        return FALSE;
+    }
+    item_gobj = root->parent_gobj;
+    ip = (item_gobj != NULL) ? itGetStruct(item_gobj) : NULL;
+    cobj = CObjGetStruct(camera_gobj);
+    if ((ip == NULL) || (cobj == NULL) || (ip->is_hold != FALSE))
+    {
+        return FALSE;
+    }
+    if (ip->kind == nITKindGBumper)
+    {
+        model_radius = 256.0F;
+    }
+    else if (ip->kind == nITKindTaruBomb)
+    {
+        model_radius = 400.0F;
+    }
+    else
+    {
+        return FALSE;
+    }
+    extent = model_radius;
+    for (child = root->child; child != NULL; child = child->sib_next)
+    {
+        f32 t = 0.0F;
+        f32 s = 0.0F;
+
+        if (child->child != NULL)
+        {
+            return FALSE;
+        }
+        for (axis = 0u; axis < 3u; axis++)
+        {
+            f32 tc = (&child->translate.vec.f.x)[axis];
+            f32 sc = (&child->scale.vec.f.x)[axis];
+
+            t += (tc < 0.0F) ? -tc : tc;
+            sc = (sc < 0.0F) ? -sc : sc;
+            s = (sc > s) ? sc : s;
+        }
+        t += model_radius * s;
+        extent = (t > extent) ? t : extent;
+    }
+    scale = 0.0F;
+    for (axis = 0u; axis < 3u; axis++)
+    {
+        f32 sr = (&root->scale.vec.f.x)[axis];
+
+        sr = (sr < 0.0F) ? -sr : sr;
+        scale = (sr > scale) ? sr : scale;
+        p[axis] = (s32)(&root->translate.vec.f.x)[axis];
+    }
+    extent *= scale;
+    /* A sibling of the root is another world-space DObj the tree draws: its
+     * offset from the root, unscaled by it. */
+    for (child = root->sib_next; child != NULL; child = child->sib_next)
+    {
+        f32 t = 0.0F;
+        f32 s = 0.0F;
+
+        if (child->child != NULL)
+        {
+            return FALSE;
+        }
+        for (axis = 0u; axis < 3u; axis++)
+        {
+            f32 tc = (&child->translate.vec.f.x)[axis] -
+                     (&root->translate.vec.f.x)[axis];
+            f32 sc = (&child->scale.vec.f.x)[axis];
+
+            t += (tc < 0.0F) ? -tc : tc;
+            sc = (sc < 0.0F) ? -sc : sc;
+            s = (sc > s) ? sc : s;
+        }
+        t += model_radius * s;
+        extent = (t > extent) ? t : extent;
+    }
+    /* +2: the position truncates toward zero. */
+    radius = (s64)extent + 2;
+    ndsRendererAdapterGetFrameCameraMatrices(cobj, &projection,
+                                             &projection_valid, &modelview,
+                                             &modelview_valid, NULL, NULL,
+                                             NULL);
+    if (projection_valid == FALSE)
+    {
+        return FALSE;
+    }
+    /* The battle camera folds its look-at into the projection and leaves no
+     * camera modelview: the lists' modelview is then the world matrix alone
+     * (ndsRendererAdapterPrepareInitialMatrices). */
+    if (modelview_valid != FALSE)
+    {
+        ndsRendererMtxMul20p12(&modelview, &projection, &m);
+    }
+    else
+    {
+        m = projection;
+    }
+    for (plane = 0u; plane < 4u; plane++)
+    {
+        const u32 col = plane >> 1;
+        const s64 sign = ((plane & 1u) != 0u) ? 1 : -1;
+        s64 d = (s64)m.m[3][3] + (sign * (s64)m.m[3][col]);
+        s64 span = 0;
+
+        for (axis = 0u; axis < 3u; axis++)
+        {
+            s64 c = (s64)m.m[axis][3] + (sign * (s64)m.m[axis][col]);
+
+            d += c * (s64)p[axis];
+            span += (c >= 0) ? c : -c;
+        }
+        if ((d + (span * radius)) < 0)
+        {
+            gNdsItemPreCulled++;
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
 void ndsRendererAdapterSubmitItemDObjTree(void *dobj_ptr, u32 kind,
                                           void *camera_gobj_ptr,
                                           u32 initial_geometry_mode)
 {
+    const sb32 offscreen = ndsRendererAdapterItemOffscreen(
+        (DObj *)dobj_ptr, (GObj *)camera_gobj_ptr);
+    const u32 triangles_before = gNdsStageGCDrawAllLoopHardwareTriangleCount;
+
+    /* gNdsItemPreCull 2: decide but draw, counting a culled item whose lists
+     * still submitted triangles (2026-10-03 Race, 900 frames: 1 of 5141, a
+     * bumper ~1600 units below the view -- GX clips it). */
+    if ((offscreen != FALSE) && (gNdsItemPreCull == 1u))
+    {
+        return;
+    }
     sNdsRendererAdapterItemSubmitActive = TRUE;
     sNdsRendererAdapterItemSubmitHead = 0u;
     ndsRendererAdapterSubmitStageDObjTreeDepth(dobj_ptr, kind, camera_gobj_ptr,
                                                initial_geometry_mode, 0u);
     sNdsRendererAdapterItemSubmitActive = FALSE;
     sNdsRendererAdapterItemSubmitHead = 0u;
+    if ((offscreen != FALSE) &&
+        (gNdsStageGCDrawAllLoopHardwareTriangleCount != triangles_before))
+    {
+        gNdsItemPreCullDrew++;
+    }
 }
 
 void ndsRendererAdapterSubmitWeaponDObjTree(void *dobj_ptr, u32 kind,

@@ -44,6 +44,12 @@ static u8 sNdsNativeItemWave1TexMemoVictim[NDS_NATIVE_ITEM_WAVE1_TEXMEMO_SETS];
 #define NDS_NATIVE_ITEM_WAVE1_TEXMEMO_SET_NONE 0xffffffffu
 static u32 sNdsNativeItemWave1TexMemoSet = NDS_NATIVE_ITEM_WAVE1_TEXMEMO_SET_NONE;
 
+/* P2-6 (2026-10-03): a baked root's groups share its matrices. The executor
+ * names one matrix generation for the whole root (0 = none: each emit takes
+ * its own, as before), so the loader elides the reload for the root's later
+ * groups unless something else loaded a matrix in between. */
+static u32 sNdsNativeItemWave1MatrixGeneration;
+
 static NDSRendererOwnerTextureMemo *
 ndsNativeItemWave1TexMemoFor(u32 id, const NDSRendererStats *stats)
 {
@@ -80,7 +86,14 @@ static sb32 ndsNativeItemWave1Emit(
     NDSRendererTraversalState *state,
     volatile u32 *submit_step, volatile u32 *alpha_witness)
 {
-    NDSRendererInputVertex vertices[24];
+    /* Per vertex, not per corner: the COLOR, TEX_COORD and VTX_16 words a
+     * corner sends depend only on its vertex and this group's state, and the
+     * corners name each vertex about twice. */
+    u32 color_words[24];
+    u32 tex_words[24];
+    u32 xy_words[24];
+    s32 z_words[24];
+    NDSRendererInputVertex vertex0;
     const NDSRendererTileState *tile;
     u32 material_color;
     u32 use_material;
@@ -107,16 +120,10 @@ static sb32 ndsNativeItemWave1Emit(
         return FALSE;
     }
 
-    for (i = 0u; i < vertex_count; i++)
-    {
-        const s16 *v = &verts[i * 5u];
-        u32 rgba = colors[i];
-
-        vertices[i] = (NDSRendererInputVertex){
-            v[0], v[1], v[2], v[3], v[4],
-            rgba >> 24, rgba >> 16, rgba >> 8, rgba
-        };
-    }
+    vertex0 = (NDSRendererInputVertex){
+        verts[0], verts[1], verts[2], verts[3], verts[4],
+        colors[0] >> 24, colors[0] >> 16, colors[0] >> 8, colors[0]
+    };
 
     NDS_FIGHTER_PACKET_DMA_WAIT();
     ndsRendererHardwareEndBatch();
@@ -143,7 +150,7 @@ static sb32 ndsNativeItemWave1Emit(
     material_color = ndsRendererHardwareColorSource(stats);
     use_material = ndsRendererHardwareUseMaterialColor(stats);
     use_vertex = ndsRendererHardwareUseVertexColor(stats);
-    poly_alpha = ndsRendererHardwareAlpha(stats, &vertices[0]);
+    poly_alpha = ndsRendererHardwareAlpha(stats, &vertex0);
     tile = &stats->texture_tiles[ndsRendererActiveTextureTile(stats)];
     texture_offset = ndsRendererHardwareTextureFilterOffset(stats);
     *alpha_witness = poly_alpha;
@@ -152,7 +159,9 @@ static sb32 ndsNativeItemWave1Emit(
     {
         NDS_LAB_BAKED_ADD(6, lab_mark);
         NDS_LAB_BAKED_MARK(lab_mark);
-        generation = ndsRendererNextMatrixGeneration();
+        generation = (sNdsNativeItemWave1MatrixGeneration != 0u) ?
+            sNdsNativeItemWave1MatrixGeneration :
+            ndsRendererNextMatrixGeneration();
         ndsRendererLoadHardwareSplitMatrices(
             config->initial_projection, config->initial_modelview, generation);
         NDS_LAB_BAKED_ADD(8, lab_mark);
@@ -164,25 +173,43 @@ static sb32 ndsNativeItemWave1Emit(
             sNdsRendererHardwareMatrixMode, generation);
         NDS_LAB_BAKED_ADD(9, lab_mark);
         NDS_LAB_BAKED_MARK(lab_mark);
-        for (corner = 0u; corner < corner_count; corner++)
+        for (i = 0u; i < vertex_count; i++)
         {
-            const NDSRendererInputVertex *v = &vertices[indices[corner]];
+            const s16 *v = &verts[i * 5u];
+            const u32 rgba = colors[i];
+            const NDSRendererInputVertex vtx = {
+                v[0], v[1], v[2], v[3], v[4],
+                rgba >> 24, rgba >> 16, rgba >> 8, rgba
+            };
+            const v16 x = ndsRendererHardwareVertexCoord(v[0], TRUE);
+            const v16 y = ndsRendererHardwareVertexCoord(v[1], TRUE);
 
-            glColor(ndsRendererHardwarePackedVertexColor(
-                stats, v, material_color, use_material, use_vertex,
-                0u, FALSE, 0u));
+            /* The words glColor, glTexCoord2t16 and glVertex3v16 write. */
+            color_words[i] = (u32)ndsRendererHardwarePackedVertexColor(
+                stats, &vtx, material_color, use_material, use_vertex,
+                0u, FALSE, 0u);
             if (use_texture != FALSE)
             {
-                glTexCoord2t16(
-                    ndsRendererHardwareTexCoord(v->s, stats->texture_scale_s,
+                tex_words[i] = TEXTURE_PACK(
+                    ndsRendererHardwareTexCoord(v[3], stats->texture_scale_s,
                         tile->uls, texture_offset),
-                    ndsRendererHardwareTexCoord(v->t, stats->texture_scale_t,
+                    ndsRendererHardwareTexCoord(v[4], stats->texture_scale_t,
                         tile->ult, texture_offset));
             }
-            glVertex3v16(
-                ndsRendererHardwareVertexCoord(v->x, TRUE),
-                ndsRendererHardwareVertexCoord(v->y, TRUE),
-                ndsRendererHardwareVertexCoord(v->z, TRUE));
+            xy_words[i] = (u32)((y << 16) | (x & 0xFFFF));
+            z_words[i] = ndsRendererHardwareVertexCoord(v[2], TRUE);
+        }
+        for (corner = 0u; corner < corner_count; corner++)
+        {
+            const u32 k = indices[corner];
+
+            GFX_COLOR = color_words[k];
+            if (use_texture != FALSE)
+            {
+                GFX_TEX_COORD = tex_words[k];
+            }
+            GFX_VERTEX16 = xy_words[k];
+            GFX_VERTEX16 = (u32)z_words[k];
         }
         for (i = 0u; i < triangle_count; i++)
         {

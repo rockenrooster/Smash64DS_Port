@@ -327,6 +327,8 @@ sb32 ndsRendererSubmitNativeBaked(
     NDS_LAB_BAKED_MARK(lab_mark);
     ndsRendererInitTraversalState(&state, config, stats, NULL, NULL, 0u);
     NDS_LAB_BAKED_ADD(3, lab_mark);
+    /* One matrix load for the root's groups (ndsNativeItemWave1Emit). */
+    sNdsNativeItemWave1MatrixGeneration = ndsRendererNextMatrixGeneration();
     for (i = 0u; i < (u32)r->op_count; i++)
     {
         const NDSNativeBakedOp *op = &op_table[r->first_op + i];
@@ -370,6 +372,7 @@ sb32 ndsRendererSubmitNativeBaked(
             NDS_LAB_BAKED_ADD(5, lab_mark);
             if (emitted == FALSE)
             {
+                sNdsNativeItemWave1MatrixGeneration = 0u;
                 return FALSE;
             }
             continue;
@@ -387,6 +390,7 @@ sb32 ndsRendererSubmitNativeBaked(
         }
         NDS_LAB_BAKED_ADD(4, lab_mark);
     }
+    sNdsNativeItemWave1MatrixGeneration = 0u;
     gNdsItemBakedSubmitStep = 9u;
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
     gNdsLabBakedAcc[2] += cpuGetTiming() - lab_total;
