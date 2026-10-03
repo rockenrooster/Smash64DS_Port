@@ -31,11 +31,25 @@ typedef struct NDSMPKindGroup
      * visits left to pass without checking. Performance only. */
     u8 reject_misses;
     u8 reject_skip;
+    /* The group's lines' [coll_pos_prev, coll_pos_next], sorted by low end
+     * and merged: sNdsMPGroupSpans[span_first, span_first + span_count). */
+    u16 span_first;
+    u16 span_count;
     u16 pad;
 } NDSMPKindGroup;
+typedef struct NDSMPGroupSpan
+{
+    s16 lo;
+    s16 hi;
+} NDSMPGroupSpan;
 static NDSMPKindGroup *sNdsMPKindGroups[nMPLineKindEnumCount];
 static u8 sNdsMPKindGroupCounts[nMPLineKindEnumCount];
+static NDSMPGroupSpan *sNdsMPGroupSpans;
 static MPGeometryData *sNdsMPKindGroupGeometry;
+/* The group rejects' slack, in coll_pos units (see ndsMPSweepGroupReject). */
+#define NDS_MP_WALL_SWEEP_SLACK 4
+/* A group with more lines keeps one span, its [ext_lo, ext_hi]. */
+#define NDS_MP_GROUP_SPAN_MAX_LINES 256
 
 _Static_assert(sizeof(MPVertexInfo) == 10u,
                "BattleShip MPVertexInfo ABI must remain 10 bytes");
@@ -2274,8 +2288,11 @@ static sb32 ndsMPBuildTopologyCache(void)
         }
     }
     kind_group_offset = (((u32)line_count * sizeof(MPVertexInfo)) + 3u) & ~3u;
+    /* Spans: at most one per line, or one for a group past the table. */
     vertex_info = syTaskmanMalloc(
-        kind_group_offset + (kind_group_total * sizeof(NDSMPKindGroup)), 8u);
+        kind_group_offset + (kind_group_total * sizeof(NDSMPKindGroup)) +
+            (((u32)line_count + kind_group_total) * sizeof(NDSMPGroupSpan)),
+        8u);
     if (vertex_info == NULL)
     {
         sNdsMPTopologyFailedGeometry = geometry;
@@ -2357,10 +2374,13 @@ static sb32 ndsMPBuildTopologyCache(void)
     {
         NDSMPKindGroup *groups =
             (NDSMPKindGroup *)((u8 *)vertex_info + kind_group_offset);
+        NDSMPGroupSpan *spans = (NDSMPGroupSpan *)(groups + kind_group_total);
+        u32 span_total = 0u;
         u32 yakumono_count = ndsMPGeometryYakumonoCount(geometry);
         u32 kind;
         u32 y;
 
+        sNdsMPGroupSpans = spans;
         if (yakumono_count > 64u)
         {
             yakumono_count = 64u;
@@ -2385,11 +2405,14 @@ static sb32 ndsMPBuildTopologyCache(void)
                 groups->yakumono_id = ndsMPLineInfoYakumonoID(info);
                 groups->reject_misses = 0u;
                 groups->reject_skip = 0u;
+                groups->span_first = 0u;
+                groups->span_count = 0u;
                 groups->pad = 0u;
                 {
                     s32 lo = 0x7fff;
                     s32 hi = -0x8000;
                     s32 l;
+                    sb32 past_table = FALSE;
 
                     for (l = (s32)groups->first;
                          l < (s32)groups->first + (s32)groups->count; l++)
@@ -2399,6 +2422,7 @@ static sb32 ndsMPBuildTopologyCache(void)
                             /* A group past the table: never rejected. */
                             lo = -0x8000;
                             hi = 0x7fff;
+                            past_table = TRUE;
                             break;
                         }
                         if (vertex_info->vertex_info[l].coll_pos_prev < lo)
@@ -2412,6 +2436,66 @@ static sb32 ndsMPBuildTopologyCache(void)
                     }
                     groups->ext_lo = (s16)lo;
                     groups->ext_hi = (s16)hi;
+                    /* The spans (P2-6, 2026-10-02): each line's own
+                     * [coll_pos_prev, coll_pos_next], insertion-sorted by low
+                     * end, then merged wherever the gap between two is at
+                     * most twice the reject's slack -- every query range is
+                     * at least that wide, so none fits in such a gap and the
+                     * merge changes no answer. A group past the table, or
+                     * too long to sort here, keeps span_count 0: the reject
+                     * then tests its [ext_lo, ext_hi] alone, as before. */
+                    if ((past_table == FALSE) &&
+                        (groups->count <= NDS_MP_GROUP_SPAN_MAX_LINES) &&
+                        ((span_total + groups->count) <=
+                         ((u32)line_count + kind_group_total)))
+                    {
+                        NDSMPGroupSpan *gs = spans + span_total;
+                        u32 n_spans = 0u;
+                        u32 r;
+                        u32 w;
+
+                        for (l = (s32)groups->first;
+                             l < (s32)groups->first + (s32)groups->count; l++)
+                        {
+                            s16 a = vertex_info->vertex_info[l].coll_pos_prev;
+                            s16 b = vertex_info->vertex_info[l].coll_pos_next;
+                            u32 k = n_spans;
+
+                            if (b < a)
+                            {
+                                s16 t = a;
+
+                                a = b;
+                                b = t;
+                            }
+                            while ((k > 0u) && (gs[k - 1u].lo > a))
+                            {
+                                gs[k] = gs[k - 1u];
+                                k--;
+                            }
+                            gs[k].lo = a;
+                            gs[k].hi = b;
+                            n_spans++;
+                        }
+                        for (r = 1u, w = 0u; r < n_spans; r++)
+                        {
+                            if (((s32)gs[r].lo - (s32)gs[w].hi) <=
+                                (2 * NDS_MP_WALL_SWEEP_SLACK))
+                            {
+                                if (gs[r].hi > gs[w].hi)
+                                {
+                                    gs[w].hi = gs[r].hi;
+                                }
+                            }
+                            else
+                            {
+                                gs[++w] = gs[r];
+                            }
+                        }
+                        groups->span_first = (u16)span_total;
+                        groups->span_count = (u16)(w + 1u);
+                        span_total += w + 1u;
+                    }
                 }
                 groups++;
                 n++;
@@ -2964,6 +3048,8 @@ static inline sb32 ndsMPF32TruncFrac(f32 v, s32 *trunc, u32 *frac)
 volatile u32 gNdsMPWallSweepCalls;
 volatile u32 gNdsMPWallSweepSegmentTests;
 volatile u32 gNdsMPWallSweepHits;
+/* Calls ndsMPWallSweepStaticMiss answered before the sweep (of the above). */
+volatile u32 gNdsMPWallSweepStaticMisses;
 
 /* The wall sweep visits every wall group of its kind on each call (Peach's
  * Castle: ~99 calls and ~290 group visits a frame), and each visit paid the
@@ -2978,7 +3064,6 @@ volatile u32 gNdsMPWallSweepHits;
  * gNdsMPWallSweepGroupReject. */
 volatile u32 gNdsMPWallSweepGroupReject __attribute__((used, section(".data"))) = 1u;
 volatile u32 gNdsMPWallSweepGroupRejects;
-#define NDS_MP_WALL_SWEEP_SLACK 4
 #define NDS_MP_WALL_SWEEP_TRUNC_MAX (1 << 20)
 
 /* trunc(v) when |v| < 2^20 (float spacing there is at most 1/8), else
@@ -3054,6 +3139,36 @@ static inline sb32 ndsMPSweepSegmentXMisses(const Vec3f *v1, const Vec3f *v2,
 static s32 ndsMPWallSweepEdgeTrunc(u32 slot, u32 which, f32 v);
 #define NDS_MP_SWEEP_REJECT_MISS_LIMIT 8u
 #define NDS_MP_SWEEP_REJECT_SKIP 32u
+
+/* TRUE when no span of group `g` meets [lo, hi] (P2-6, 2026-10-02). A line
+ * is examined only when its own [coll_pos_prev, coll_pos_next] meets the
+ * sweep's range, so the group's whole extent was a loose stand-in: the Race
+ * keeps all its walls in one group spanning the course, which no sweep ever
+ * missed (3% of 184 calls a frame rejected). The spans are sorted and
+ * disjoint; span_count 0 means none were built, and nothing is rejected. */
+static inline sb32 ndsMPGroupSpansMiss(const NDSMPKindGroup *g, s32 lo,
+                                       s32 hi)
+{
+    const NDSMPGroupSpan *s = sNdsMPGroupSpans + g->span_first;
+    const NDSMPGroupSpan *end = s + g->span_count;
+
+    if (g->span_count == 0u)
+    {
+        return FALSE;
+    }
+    for (; s < end; s++)
+    {
+        if ((s32)s->lo > hi)
+        {
+            return TRUE;
+        }
+        if ((s32)s->hi >= lo)
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
 /* ITCM (P2-6, 2026-10-02: census admission, 312 B). */
 static sb32 __attribute__((noinline)) NDS_R2_ITCM_PACK2_CODE
 ndsMPSweepGroupReject(u32 *state, s32 *ip0, s32 *it0, u32 axis,
@@ -3098,7 +3213,10 @@ ndsMPSweepGroupReject(u32 *state, s32 *ip0, s32 *it0, u32 axis,
         it = it - ie;
     }
     if ((((ip > it) ? ip : it) + NDS_MP_WALL_SWEEP_SLACK < (s32)g->ext_lo) ||
-        (((ip < it) ? ip : it) - NDS_MP_WALL_SWEEP_SLACK > (s32)g->ext_hi))
+        (((ip < it) ? ip : it) - NDS_MP_WALL_SWEEP_SLACK > (s32)g->ext_hi) ||
+        (ndsMPGroupSpansMiss(g, ((ip < it) ? ip : it) - NDS_MP_WALL_SWEEP_SLACK,
+                             ((ip > it) ? ip : it) + NDS_MP_WALL_SWEEP_SLACK) !=
+         FALSE))
     {
         g->reject_misses = 0u;
         if (axis == 0u)
@@ -3458,6 +3576,123 @@ ndsStageMPAdjustFloorLoopWallSweep(Vec3f *position,
     return found;
 }
 
+/* ndsMPWallSweepTrunc's answer without its two calls: trunc(v) when
+ * |v| < 2^20, else FALSE. */
+static inline sb32 ndsMPWallSweepTruncInline(f32 v, s32 *out)
+{
+    u32 b;
+    u32 e;
+    s32 t;
+
+    __builtin_memcpy(&b, &v, sizeof(b));
+    e = (b >> 23) & 0xffu;
+    if (e < 127u)
+    {
+        *out = 0;
+        return TRUE;
+    }
+    if (e >= 147u)
+    {
+        return FALSE;
+    }
+    t = (s32)(((b & 0x7fffffu) | 0x800000u) >> (150u - e));
+    *out = ((b & 0x80000000u) != 0u) ? -t : t;
+    return TRUE;
+}
+
+/* The wall sweep's all-reject fast path (P2-6, 2026-10-02). With the spans,
+ * the group reject proves ~94% of the Race's ~184 wall sweeps a frame find
+ * nothing, but each still paid the sweep's whole entry: a nine-register
+ * Thumb prologue with ~200 B of spills, the geometry checks, a 12-argument
+ * call and two out-of-line truncations. This asks the same question first,
+ * for a kind whose examined groups are all static, with the same truncation
+ * and the same extent and span tests. It answers TRUE only when the sweep
+ * would have rejected every group it examines -- the sweep then returns
+ * FALSE having written nothing -- and makes the sweep's own state changes
+ * (each rejected group's reject_misses, the two counters). Anything else (a
+ * dynamic or backed-off group, an operand past 2^20, geometry not current)
+ * goes to the sweep untouched. For a static group the Same and Diff forms
+ * are the same query. */
+static sb32 __attribute__((noinline))
+ndsMPWallSweepStaticMiss(const Vec3f *position, const Vec3f *translate,
+                         u32 line_kind)
+{
+    MPGeometryData *geometry = gMPCollisionGeometry;
+    NDSMPKindGroup *group;
+    u32 group_count;
+    u32 rejected = 0u;
+    u32 i;
+    s32 ip;
+    s32 it;
+    s32 lo;
+    s32 hi;
+
+    if ((gNdsMPWallSweepGroupReject == 0u) || (position == NULL) ||
+        (translate == NULL) || (geometry == NULL) ||
+        (sNdsMPKindGroupGeometry != geometry) ||
+        (sNdsMPTopologyGeometry != geometry) ||
+        (gMPCollisionVertexInfo == NULL) ||
+        (gMPCollisionYakumonoDObjs == NULL) ||
+        (ndsStageCollisionLoopGeometryReady() == FALSE) ||
+        (ndsMPWallSweepTruncInline(position->x, &ip) == FALSE) ||
+        (ndsMPWallSweepTruncInline(translate->x, &it) == FALSE))
+    {
+        return FALSE;
+    }
+    lo = ((ip < it) ? ip : it) - NDS_MP_WALL_SWEEP_SLACK;
+    hi = ((ip > it) ? ip : it) + NDS_MP_WALL_SWEEP_SLACK;
+    group = sNdsMPKindGroups[line_kind];
+    group_count = sNdsMPKindGroupCounts[line_kind];
+    for (i = 0u; i < group_count; i++)
+    {
+        const NDSMPKindGroup *g = &group[i];
+        const DObj *yakumono_dobj;
+
+        if ((g->count == 0u) ||
+            (g->yakumono_id >= NDS_MP_YAKUMONO_DOBJ_SLOTS))
+        {
+            continue;
+        }
+        yakumono_dobj = gMPCollisionYakumonoDObjs->dobjs[g->yakumono_id];
+        if ((yakumono_dobj == NULL) ||
+            (yakumono_dobj->user_data.s >= nMPYakumonoStatusOff))
+        {
+            continue;
+        }
+        if ((yakumono_dobj->anim_joint.event32 != NULL) ||
+            (yakumono_dobj->user_data.s != nMPYakumonoStatusNone) ||
+            (g->reject_skip != 0u) ||
+            ((hi >= (s32)g->ext_lo) && (lo <= (s32)g->ext_hi) &&
+             (ndsMPGroupSpansMiss(g, lo, hi) == FALSE)))
+        {
+            return FALSE;
+        }
+    }
+    for (i = 0u; i < group_count; i++)
+    {
+        NDSMPKindGroup *g = &group[i];
+        const DObj *yakumono_dobj;
+
+        if ((g->count == 0u) ||
+            (g->yakumono_id >= NDS_MP_YAKUMONO_DOBJ_SLOTS))
+        {
+            continue;
+        }
+        yakumono_dobj = gMPCollisionYakumonoDObjs->dobjs[g->yakumono_id];
+        if ((yakumono_dobj == NULL) ||
+            (yakumono_dobj->user_data.s >= nMPYakumonoStatusOff))
+        {
+            continue;
+        }
+        g->reject_misses = 0u;
+        rejected++;
+    }
+    gNdsMPWallSweepCalls++;
+    gNdsMPWallSweepGroupRejects += rejected;
+    gNdsMPWallSweepStaticMisses++;
+    return TRUE;
+}
+
 sb32 mpCollisionCheckLWallLineCollisionSame(Vec3f *position,
                                             Vec3f *translate,
                                             Vec3f *ga_last,
@@ -3471,10 +3706,11 @@ sb32 mpCollisionCheckLWallLineCollisionSame(Vec3f *position,
     {
         gNdsStageMPAdjustFloorLoopWallLCallCount++;
     }
-    hit = ndsStageMPAdjustFloorLoopWallSweep(position, translate, ga_last,
-                                             stand_line_id,
-                                             stand_coll_flags, angle,
-                                             nMPLineKindLWall, FALSE);
+    hit = (ndsMPWallSweepStaticMiss(position, translate,
+                                    nMPLineKindLWall) != FALSE) ? FALSE :
+        ndsStageMPAdjustFloorLoopWallSweep(position, translate, ga_last,
+                                           stand_line_id, stand_coll_flags,
+                                           angle, nMPLineKindLWall, FALSE);
     if (ndsFighterMarioFoxStageMPAdjustFloorLoopProofEnabled() != FALSE)
     {
         if (hit != FALSE)
@@ -3502,10 +3738,11 @@ sb32 mpCollisionCheckRWallLineCollisionSame(Vec3f *position,
     {
         gNdsStageMPAdjustFloorLoopWallRCallCount++;
     }
-    hit = ndsStageMPAdjustFloorLoopWallSweep(position, translate, ga_last,
-                                             stand_line_id,
-                                             stand_coll_flags, angle,
-                                             nMPLineKindRWall, FALSE);
+    hit = (ndsMPWallSweepStaticMiss(position, translate,
+                                    nMPLineKindRWall) != FALSE) ? FALSE :
+        ndsStageMPAdjustFloorLoopWallSweep(position, translate, ga_last,
+                                           stand_line_id, stand_coll_flags,
+                                           angle, nMPLineKindRWall, FALSE);
     if (ndsFighterMarioFoxStageMPAdjustFloorLoopProofEnabled() != FALSE)
     {
         if (hit != FALSE)
@@ -3527,6 +3764,11 @@ sb32 mpCollisionCheckLWallLineCollisionDiff(Vec3f *position,
                                             u32 *stand_coll_flags,
                                             Vec3f *angle)
 {
+    if (ndsMPWallSweepStaticMiss(position, translate, nMPLineKindLWall) !=
+        FALSE)
+    {
+        return FALSE;
+    }
     return ndsStageMPAdjustFloorLoopWallSweep(position, translate, ga_last,
                                               stand_line_id,
                                               stand_coll_flags, angle,
@@ -3540,6 +3782,11 @@ sb32 mpCollisionCheckRWallLineCollisionDiff(Vec3f *position,
                                             u32 *stand_coll_flags,
                                             Vec3f *angle)
 {
+    if (ndsMPWallSweepStaticMiss(position, translate, nMPLineKindRWall) !=
+        FALSE)
+    {
+        return FALSE;
+    }
     return ndsStageMPAdjustFloorLoopWallSweep(position, translate, ga_last,
                                               stand_line_id,
                                               stand_coll_flags, angle,
