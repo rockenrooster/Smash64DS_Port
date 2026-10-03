@@ -2310,12 +2310,12 @@ def run(slug: str | None = None) -> int:
     if args.emit:
         for path, body in outputs:
             path.parent.mkdir(parents=True, exist_ok=True)
-            if not path.exists() or path.read_text() != body:
-                path.write_text(body)
+            if not path.exists() or path.read_text(encoding="utf-8") != body:
+                path.write_text(body, encoding="utf-8")
         print("emitted " + " and ".join(str(p.relative_to(REPO)) for p, _ in outputs))
     if args.check or not args.emit:
         for path, body in outputs:
-            if not path.exists() or path.read_text() != body:
+            if not path.exists() or path.read_text(encoding="utf-8") != body:
                 raise RuntimeError(f"generated artefact stale: {path.relative_to(REPO)}")
         print(check_line)
     return 0
