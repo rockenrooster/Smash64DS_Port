@@ -23,16 +23,15 @@ extern int malloc_trim(size_t pad);
  * was NOT a 12 KiB-reserve arm. The diagnostic below now measures top-chunk
  * depletion, including fragmentation; the stress verifier requires its
  * measured high-water plus one 4 KiB allocator page to fit this reserve. */
-#if NDS_P2_MENU_SHELL && NDS_P2_1P_GAME
-/* The all-content shell needs the three overlapping VSBattle entry-thread
- * stacks.  Recent full-match/four-CPU measurements peak at 32,960 bytes of
- * libc top-chunk depletion; 0x9100 leaves 4,160 bytes above that peak, still
- * exceeding the mandatory one-page allocator margin below, and returns 3,840
- * bytes to BattleShip's taskman arena. */
-#define NDS_TASKMAN_LIBC_RUNTIME_RESERVE 0x9100u
-#else
+/* The all-content shell ran 0x9100 (2026-09-19): four-CPU VS peaked at 32,960
+ * bytes of libc top-chunk depletion, and the 3,840 bytes went to the arena.
+ * The 1P campaign spends more: libnds books every texture and palette block in
+ * libc, and the walk read 35.7 KB depleted in the Yoshi Team battle and ran out
+ * in Giant DK's (the palette manager at 303 blocks, 2026-10-02). Every build
+ * keeps 0xA000 again; the event32 plan's move into the ledger tail (-7,680 B
+ * of .bss, same day) paid for it. nds_platform.c now also refuses a GL upload
+ * that would take libc under 4 KB. */
 #define NDS_TASKMAN_LIBC_RUNTIME_RESERVE 0xA000u
-#endif
 #define NDS_TASKMAN_LIBC_RUNTIME_MARGIN 0x1000u
 /* libc's top chunk after the arena is taken: the reserve plus the most the
  * old chooser could leave there by accident (a trimmed top of up to one page
@@ -137,6 +136,19 @@ static void ndsTaskmanLibcResetAfterShrink(void)
     gNdsTaskmanLibcTopChunkMin = info.keepcost;
     gNdsTaskmanLibcRuntimeHighWater = 0u;
     sNdsTaskmanLibcLastSampleFrame = 0xffffffffu;
+}
+
+/* Whether libc can still hand libnds `need` bytes: the top chunk alone answers
+ * nearly always (one load once the direct read is validated); only when it is
+ * short does mallinfo walk the bins for every free byte. */
+sb32 ndsTaskmanLibcHasRoom(u32 need)
+{
+    if (((sNdsTaskmanLibcTopDirect != 0u) ?
+             ndsTaskmanLibcTopChunkBytes() : mallinfo().keepcost) >= need)
+    {
+        return TRUE;
+    }
+    return (mallinfo().fordblks >= need) ? TRUE : FALSE;
 }
 
 /* The taskman arena and libnds both allocate from the same newlib heap.  The

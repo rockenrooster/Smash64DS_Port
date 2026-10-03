@@ -735,6 +735,7 @@ extern volatile u32 gNdsTaskmanArenaRefineBytes;
 extern volatile u32 gNdsTaskmanLibcRuntimeHighWater;
 extern volatile u32 gNdsTaskmanLibcTopChunkMin;
 void ndsTaskmanSampleLibcHeapNow(void);
+sb32 ndsTaskmanLibcHasRoom(u32 need);
 void ndsOpeningRoomCapturePencilsCountsBefore(void);
 void ndsOpeningRoomCapturePencilsCreation(void);
 void ndsOpeningRoomRecordOverlayEject(void *gobj);

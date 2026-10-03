@@ -1976,11 +1976,28 @@ void __real_glColorTableEXT(int target, int empty1, u16 width, int empty2,
 void __real_glColorSubTableEXT(int target, int start, int count, int empty1,
                                int empty2, const u16 *data);
 
+/* libnds splits a VRAM block with a malloc it never checks (videoGL.c,
+ * vramBlock__allocateBlock), one ~28-byte node per texture and per palette.
+ * The campaign walk faulted there in the Giant DK battle (2026-10-02): the
+ * palette manager held 303 blocks and libc's top chunk was down to 624 B.
+ * An upload refused here is glTexImage2D's 0, the answer the texture cache
+ * already takes when VRAM is full: it evicts its oldest texture, whose blocks
+ * go back to libc, and retries. The margin keeps libc's other users (stdio
+ * buffers, storage calls) clear of the edge. A palette refused leaves the
+ * texture's previous palette, not a fault. */
+#define NDS_PLATFORM_GL_LIBC_ROOM 4096u
+__attribute__((used)) volatile u32 gNdsPlatformGlLibcRefusals;
+
 int __wrap_glTexImage2D(int target, int empty1, GL_TEXTURE_TYPE_ENUM type,
                         int sizeX, int sizeY, int empty2, int param,
                         const void *texture)
 {
     ndsPlatformTransitionThawIf3DShown();
+    if (ndsTaskmanLibcHasRoom(NDS_PLATFORM_GL_LIBC_ROOM) == FALSE)
+    {
+        gNdsPlatformGlLibcRefusals++;
+        return 0;
+    }
     return __real_glTexImage2D(target, empty1, type, sizeX, sizeY, empty2,
                                param, texture);
 }
@@ -1989,6 +2006,13 @@ void __wrap_glColorTableEXT(int target, int empty1, u16 width, int empty2,
                             int empty3, const u16 *table)
 {
     ndsPlatformTransitionThawIf3DShown();
+    /* A zero width (with no table) frees the palette: never refused. */
+    if ((width != 0u) && (table != NULL) &&
+        (ndsTaskmanLibcHasRoom(NDS_PLATFORM_GL_LIBC_ROOM) == FALSE))
+    {
+        gNdsPlatformGlLibcRefusals++;
+        return;
+    }
     __real_glColorTableEXT(target, empty1, width, empty2, empty3, table);
 }
 
