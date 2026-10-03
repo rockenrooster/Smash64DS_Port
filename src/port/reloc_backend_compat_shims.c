@@ -13617,6 +13617,142 @@ static void ndsMPBoundsIncludeYakumonoLines(
     }
 }
 
+/* P2-6 (2026-10-03): ndsMPBoundsIncludeYakumonoLines with current_style
+ * TRUE, over a valid box (top >= bottom, right >= left). There a vertex can
+ * raise top or lower bottom but never both, so the else-if chain is a plain
+ * max/min, and the box stays valid. Rounding is monotonic, so the largest
+ * (f32)v + t over a line set is (f32)max(v) + t: the integer extremes are
+ * found once (they depend only on the geometry) and four float adds replace
+ * two adds and four float compares per vertex. Same bounds, bit for bit.
+ * Board the Platforms runs this over every moving platform each tick: 28K
+ * ticks a tick on Purin's board. */
+typedef struct NDSMPYakumonoExtent
+{
+    s32 min_x;
+    s32 max_x;
+    s32 min_y;
+    s32 max_y;
+} NDSMPYakumonoExtent;
+
+/* The integer extents depend only on the geometry, so they are found once per
+ * line_info entry and kept while the geometry and the heap generation hold. */
+static NDSMPYakumonoExtent sNdsMPYakumonoExtents[NDS_MP_YAKUMONO_DOBJ_SLOTS];
+static u64 sNdsMPYakumonoExtentKnown;
+static u64 sNdsMPYakumonoExtentAny;
+static const void *sNdsMPYakumonoExtentGeometry;
+static u32 sNdsMPYakumonoExtentGeneration;
+
+static void ndsMPYakumonoExtentFind(NDSMPO2RHalfwordView line_info,
+                                    NDSMPYakumonoExtent *extent, sb32 *any)
+{
+    MPVertexLinks *links = gMPCollisionGeometry->vertex_links;
+    MPVertexArray *ids = gMPCollisionGeometry->vertex_id;
+    MPVertexPosContainer *verts = gMPCollisionGeometry->vertex_data;
+    s32 min_x = 0x7fffffff;
+    s32 max_x = -0x7fffffff - 1;
+    s32 min_y = 0x7fffffff;
+    s32 max_y = -0x7fffffff - 1;
+    sb32 found = FALSE;
+    u32 kind;
+
+    for (kind = 0u; kind < nMPLineKindEnumCount; kind++)
+    {
+        u32 line_id = ndsMPLineInfoGroupID(line_info, kind);
+        u32 line_count = ndsMPLineInfoLineCount(line_info, kind);
+        u32 i;
+
+        if (line_count > 4096u)
+        {
+            line_count = 4096u;
+        }
+        for (i = 0u; i < line_count; i++, line_id++)
+        {
+            u32 first_vertex = ndsMPVertexLinkFirst(links, line_id);
+            u32 vertex_count = ndsMPVertexLinkCount(links, line_id);
+            u32 vertex_index;
+
+            if ((vertex_count == 0u) || (vertex_count > 128u))
+            {
+                continue;
+            }
+            for (vertex_index = first_vertex;
+                 vertex_index < (first_vertex + vertex_count);
+                 vertex_index++)
+            {
+                u32 vertex_id = ndsMPVertexID(ids, vertex_index);
+                s32 x = ndsMPVertexX(verts, vertex_id);
+                s32 y = ndsMPVertexY(verts, vertex_id);
+
+                min_x = (x < min_x) ? x : min_x;
+                max_x = (x > max_x) ? x : max_x;
+                min_y = (y < min_y) ? y : min_y;
+                max_y = (y > max_y) ? y : max_y;
+                found = TRUE;
+            }
+        }
+    }
+    extent->min_x = min_x;
+    extent->max_x = max_x;
+    extent->min_y = min_y;
+    extent->max_y = max_y;
+    *any = found;
+}
+
+static void ndsMPBoundsIncludeYakumonoExtent(
+    NDSMPO2RHalfwordView line_info, u32 info_index, DObj *dobj,
+    MPBounds *bounds)
+{
+    const u64 bit = (u64)1u << info_index;
+    const NDSMPYakumonoExtent *extent =
+        &sNdsMPYakumonoExtents[info_index];
+    f32 v;
+
+    if ((sNdsMPYakumonoExtentGeometry != gMPCollisionGeometry) ||
+        (sNdsMPYakumonoExtentGeneration != gNdsTaskmanHeapGeneration))
+    {
+        sNdsMPYakumonoExtentGeometry = gMPCollisionGeometry;
+        sNdsMPYakumonoExtentGeneration = gNdsTaskmanHeapGeneration;
+        sNdsMPYakumonoExtentKnown = 0u;
+        sNdsMPYakumonoExtentAny = 0u;
+    }
+    if ((sNdsMPYakumonoExtentKnown & bit) == 0u)
+    {
+        sb32 any;
+
+        ndsMPYakumonoExtentFind(line_info, &sNdsMPYakumonoExtents[info_index],
+                                &any);
+        sNdsMPYakumonoExtentKnown |= bit;
+        if (any != FALSE)
+        {
+            sNdsMPYakumonoExtentAny |= bit;
+        }
+    }
+    if ((sNdsMPYakumonoExtentAny & bit) == 0u)
+    {
+        return;
+    }
+    v = (f32)extent->max_y + dobj->translate.vec.f.y;
+    if (bounds->top < v)
+    {
+        bounds->top = v;
+    }
+    v = (f32)extent->min_y + dobj->translate.vec.f.y;
+    if (bounds->bottom > v)
+    {
+        bounds->bottom = v;
+    }
+    v = (f32)extent->max_x + dobj->translate.vec.f.x;
+    if (bounds->right < v)
+    {
+        bounds->right = v;
+    }
+    v = (f32)extent->min_x + dobj->translate.vec.f.x;
+    if (bounds->left > v)
+    {
+        bounds->left = v;
+    }
+}
+
 void mpCollisionInitYakumonoAll(void)
 {
     MPBounds bounds_moved;
@@ -13683,6 +13819,7 @@ void mpCollisionUpdateBoundsCurrent(void)
     MPBounds bounds;
     MPLineInfo *line_info;
     u32 yakumono_count;
+    sb32 extent;
     u32 i;
 
     if ((ndsStageCollisionLoopGeometryReady() == FALSE) ||
@@ -13693,6 +13830,10 @@ void mpCollisionUpdateBoundsCurrent(void)
     }
 
     bounds = gMPCollisionBounds.stop;
+    /* An empty start box keeps the per-vertex else-if chain; see
+     * ndsMPBoundsIncludeYakumonoExtent. */
+    extent = ((bounds.top >= bounds.bottom) &&
+              (bounds.right >= bounds.left)) ? TRUE : FALSE;
     line_info = gMPCollisionGeometry->line_info;
     yakumono_count = ndsMPGeometryYakumonoCount(gMPCollisionGeometry);
     if (yakumono_count > NDS_MP_YAKUMONO_DOBJ_SLOTS)
@@ -13718,8 +13859,15 @@ void mpCollisionUpdateBoundsCurrent(void)
         {
             continue;
         }
-        ndsMPBoundsIncludeYakumonoLines(info, yakumono_dobj, &bounds, TRUE,
-                                        TRUE);
+        if (extent != FALSE)
+        {
+            ndsMPBoundsIncludeYakumonoExtent(info, i, yakumono_dobj, &bounds);
+        }
+        else
+        {
+            ndsMPBoundsIncludeYakumonoLines(info, yakumono_dobj, &bounds, TRUE,
+                                            TRUE);
+        }
     }
     gMPCollisionBounds.current = bounds;
 }
@@ -13756,7 +13904,75 @@ extern void gcParseMObjMatAnimJoint(MObj *mobj);
 extern void gcPlayMObjMatAnim(MObj *mobj);
 extern u16 gMPCollisionUpdateTic;
 
-static s32 ndsMPFindYakumonoDObjIndex(DObj *dobj)
+/* P2-6 (2026-10-03): mpCollisionPlayYakumonoAnim asked
+ * ndsMPFindYakumonoDObjIndex for every DObj of the ground tree, and most of
+ * them (Board the Platforms' platform parts) are no yakumono, so each scanned
+ * all 64 slots: 15K ticks a tick on Purin's board. One open-addressed table
+ * of slot + 1 per call answers the same question, first slot first. */
+#define NDS_MP_YAKUMONO_INDEX_SLOTS (2u * NDS_MP_YAKUMONO_DOBJ_SLOTS)
+_Static_assert(((NDS_MP_YAKUMONO_INDEX_SLOTS &
+                 (NDS_MP_YAKUMONO_INDEX_SLOTS - 1u)) == 0u) &&
+               (NDS_MP_YAKUMONO_DOBJ_SLOTS < 255u),
+               "the yakumono index stores slot + 1 in a byte, power-of-two table");
+
+static inline u32 ndsMPYakumonoIndexHome(const DObj *dobj)
+{
+    return ((u32)(uintptr_t)dobj * 2654435761u) >> 25;
+}
+
+static void ndsMPYakumonoIndexBuild(u8 *table)
+{
+    s32 count = gMPCollisionYakumonosNum;
+    s32 i;
+
+    memset(table, 0, NDS_MP_YAKUMONO_INDEX_SLOTS);
+    if (count > NDS_MP_YAKUMONO_DOBJ_SLOTS)
+    {
+        count = NDS_MP_YAKUMONO_DOBJ_SLOTS;
+    }
+    for (i = 0; i < count; i++)
+    {
+        const DObj *d = gMPCollisionYakumonoDObjs->dobjs[i];
+        u32 slot;
+
+        if (d == NULL)
+        {
+            continue;
+        }
+        slot = ndsMPYakumonoIndexHome(d) & (NDS_MP_YAKUMONO_INDEX_SLOTS - 1u);
+        while ((table[slot] != 0u) &&
+               (gMPCollisionYakumonoDObjs->dobjs[table[slot] - 1u] != d))
+        {
+            slot = (slot + 1u) & (NDS_MP_YAKUMONO_INDEX_SLOTS - 1u);
+        }
+        if (table[slot] == 0u)
+        {
+            table[slot] = (u8)(i + 1);
+        }
+    }
+}
+
+static s32 ndsMPYakumonoIndexFind(const u8 *table, const DObj *dobj)
+{
+    u32 slot;
+
+    if (dobj == NULL)
+    {
+        return -1;
+    }
+    slot = ndsMPYakumonoIndexHome(dobj) & (NDS_MP_YAKUMONO_INDEX_SLOTS - 1u);
+    while (table[slot] != 0u)
+    {
+        if (gMPCollisionYakumonoDObjs->dobjs[table[slot] - 1u] == dobj)
+        {
+            return (s32)table[slot] - 1;
+        }
+        slot = (slot + 1u) & (NDS_MP_YAKUMONO_INDEX_SLOTS - 1u);
+    }
+    return -1;
+}
+
+static __attribute__((unused)) s32 ndsMPFindYakumonoDObjIndex(DObj *dobj)
 {
     s32 count;
     s32 i;
@@ -13792,9 +14008,29 @@ s32 mpCollisionSetDObjNoID(s32 line_id)
     return (s32)yakumono_id;
 }
 
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+/* LAB ONLY: [0] total, [1] yakumono index search, [2] DObj joint anims,
+ * [3] MObj material anims, [4] bounds update, [5] DObjs walked, [6] MObjs,
+ * [7] yakumono count (last), [8] DObjs with a joint script, [9] calls. */
+extern u32 cpuGetTiming(void);
+__attribute__((used)) volatile u32 gNdsLabYakuAcc[10];
+#define NDS_LAB_YAKU_MARK(v) ((v) = cpuGetTiming())
+#define NDS_LAB_YAKU_ADD(i, v) (gNdsLabYakuAcc[(i)] += cpuGetTiming() - (v))
+#define NDS_LAB_YAKU_INC(i, n) (gNdsLabYakuAcc[(i)] += (n))
+#else
+#define NDS_LAB_YAKU_MARK(v) ((void)0)
+#define NDS_LAB_YAKU_ADD(i, v) ((void)0)
+#define NDS_LAB_YAKU_INC(i, n) ((void)0)
+#endif
+
 void mpCollisionPlayYakumonoAnim(GObj *ground_gobj)
 {
     DObj *dobj;
+    u8 yakumono_index[NDS_MP_YAKUMONO_INDEX_SLOTS];
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+    u32 lab_total = cpuGetTiming();
+    u32 lab_mark = 0u;
+#endif
 
     /* THE PROOF PREDICATE WAS DISABLING THE WHOLE FUNCTION.
      *
@@ -13830,11 +14066,22 @@ void mpCollisionPlayYakumonoAnim(GObj *ground_gobj)
     }
 
     dobj = DObjGetStruct(ground_gobj);
+    ndsMPYakumonoIndexBuild(yakumono_index);
+    NDS_LAB_YAKU_INC(9, 1u);
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+    gNdsLabYakuAcc[7] = (u32)gMPCollisionYakumonosNum;
+#endif
     while (dobj != NULL)
     {
         MObj *mobj;
-        s32 yakumono_id = ndsMPFindYakumonoDObjIndex(dobj);
+        s32 yakumono_id;
 
+        NDS_LAB_YAKU_MARK(lab_mark);
+        yakumono_id = ndsMPYakumonoIndexFind(yakumono_index, dobj);
+        NDS_LAB_YAKU_ADD(1, lab_mark);
+        NDS_LAB_YAKU_INC(5, 1u);
+        NDS_LAB_YAKU_INC(8, (dobj->anim_joint.event32 != NULL) ? 1u : 0u);
+        NDS_LAB_YAKU_MARK(lab_mark);
         if (yakumono_id >= 0)
         {
             if ((dobj->user_data.s != nMPYakumonoStatusOn) &&
@@ -13889,6 +14136,8 @@ void mpCollisionPlayYakumonoAnim(GObj *ground_gobj)
             gcParseDObjAnimJoint(dobj);
             gcPlayDObjAnimJoint(dobj);
         }
+        NDS_LAB_YAKU_ADD(2, lab_mark);
+        NDS_LAB_YAKU_MARK(lab_mark);
 
         mobj = dobj->mobj;
         while (mobj != NULL)
@@ -13896,7 +14145,9 @@ void mpCollisionPlayYakumonoAnim(GObj *ground_gobj)
             gcParseMObjMatAnimJoint(mobj);
             gcPlayMObjMatAnim(mobj);
             mobj = mobj->next;
+            NDS_LAB_YAKU_INC(6, 1u);
         }
+        NDS_LAB_YAKU_ADD(3, lab_mark);
 
         if (dobj->child != NULL)
         {
@@ -13925,8 +14176,10 @@ void mpCollisionPlayYakumonoAnim(GObj *ground_gobj)
         }
     }
 
+    NDS_LAB_YAKU_MARK(lab_mark);
     mpCollisionUpdateBoundsCurrent();
     mpCollisionUpdateBoundsDiff();
+    NDS_LAB_YAKU_ADD(4, lab_mark);
     if (ndsFighterMarioFoxStageMPPlatformSpeedFloorLoopProofEnabled() != FALSE)
     {
         gNdsStageMPPlatformSpeedFloorLoopBoundsUpdateCount++;
@@ -13940,6 +14193,9 @@ void mpCollisionPlayYakumonoAnim(GObj *ground_gobj)
             ndsFloatToMilliSigned(gMPCollisionBounds.diff.left);
     }
     gMPCollisionUpdateTic++;
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+    gNdsLabYakuAcc[0] += cpuGetTiming() - lab_total;
+#endif
 }
 
 void mpCollisionSetYakumonoPosID(s32 line_id, Vec3f *yakumono_pos)

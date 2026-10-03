@@ -14416,8 +14416,14 @@ static s32 ndsRendererHardwareBindTextureOwnerMemo(
     key[1] = stats->texture_image;
     key[2] = stats->texture_tlut_image;
     key[3] = stats->texture_load_texels;
-    key[4] = stats->prim_color;
-    key[5] = stats->env_color;
+    /* P2-6 (2026-10-03): prim and env without their alpha bytes. The
+     * resolver's texture key never reads either alpha (it is live polygon
+     * state; the PRIM/ENV bakes key `& 0xffffff00`), so an alpha-only
+     * material animation resolves to the same entry -- yet keyed whole, every
+     * step of Board the Platforms' blinking lights missed here and paid the
+     * full resolver: 9 of 21 binds a frame on Purin's board, 88K ticks. */
+    key[4] = stats->prim_color & 0xffffff00u;
+    key[5] = stats->env_color & 0xffffff00u;
     key[6] = stats->othermode_h;
     key[7] = stats->othermode_l;
     key[8] = stats->texture_combine_w0;
@@ -14534,8 +14540,8 @@ static __attribute__((unused)) u32 ndsRendererOwnerTexMemoKeyMatches(
             (memo->key[1] == stats->texture_image) &&
             (memo->key[2] == stats->texture_tlut_image) &&
             (memo->key[3] == stats->texture_load_texels) &&
-            (memo->key[4] == stats->prim_color) &&
-            (memo->key[5] == stats->env_color) &&
+            (memo->key[4] == (stats->prim_color & 0xffffff00u)) &&
+            (memo->key[5] == (stats->env_color & 0xffffff00u)) &&
             (memo->key[6] == stats->othermode_h) &&
             (memo->key[7] == stats->othermode_l) &&
             (memo->key[8] == stats->texture_combine_w0) &&

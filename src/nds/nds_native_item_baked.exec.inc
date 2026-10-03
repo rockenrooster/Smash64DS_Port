@@ -258,6 +258,10 @@ sb32 ndsRendererSubmitNativeBaked(
     NDSRendererMatrix20p12 shifted_modelview;
     sb32 skip_emit;
     u32 i;
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+    u32 lab_total = cpuGetTiming();
+    u32 lab_mark = 0u;
+#endif
 
 #if NDS_P2_1P_GAME
     /* A room root (the ending's loaded table) indexes the room's own ops
@@ -319,11 +323,15 @@ sb32 ndsRendererSubmitNativeBaked(
     {
         gNdsBakedCulledRoots++;
     }
+    NDS_LAB_BAKED_INC(12, (skip_emit == FALSE) ? 1u : 0u);
+    NDS_LAB_BAKED_MARK(lab_mark);
     ndsRendererInitTraversalState(&state, config, stats, NULL, NULL, 0u);
+    NDS_LAB_BAKED_ADD(3, lab_mark);
     for (i = 0u; i < (u32)r->op_count; i++)
     {
         const NDSNativeBakedOp *op = &op_table[r->first_op + i];
 
+        NDS_LAB_BAKED_MARK(lab_mark);
         switch (op->op)
         {
         case NDS_NATIVE_BAKED_OP_ENV:
@@ -344,9 +352,12 @@ sb32 ndsRendererSubmitNativeBaked(
             {
                 break;
             }
+            NDS_LAB_BAKED_INC(13, 1u);
+            NDS_LAB_BAKED_INC(14, (u32)g->triangle_count * 3u);
             sNdsRendererHardwareIntensityCoverage =
                 ((g->flags & NDS_NATIVE_BAKED_GROUP_I_COVERAGE) != 0u) ?
                     1u : 0u;
+            sNdsNativeItemWave1TexMemoSet = (u32)op->arg;
             emitted = ndsNativeItemWave1Emit(
                 g->verts, g->colors, g->indices,
                 (u32)g->vertex_count, (u32)g->triangle_count,
@@ -354,11 +365,14 @@ sb32 ndsRendererSubmitNativeBaked(
                 config, stats, &state,
                 &gNdsItemBakedSubmitStep, &gNdsItemBakedAlpha);
             sNdsRendererHardwareIntensityCoverage = 0u;
+            sNdsNativeItemWave1TexMemoSet =
+                NDS_NATIVE_ITEM_WAVE1_TEXMEMO_SET_NONE;
+            NDS_LAB_BAKED_ADD(5, lab_mark);
             if (emitted == FALSE)
             {
                 return FALSE;
             }
-            break;
+            continue;
         }
         default:
         {
@@ -371,8 +385,12 @@ sb32 ndsRendererSubmitNativeBaked(
             break;
         }
         }
+        NDS_LAB_BAKED_ADD(4, lab_mark);
     }
     gNdsItemBakedSubmitStep = 9u;
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+    gNdsLabBakedAcc[2] += cpuGetTiming() - lab_total;
+#endif
     return TRUE;
 }
 

@@ -305,6 +305,9 @@ sb32 ndsRendererSubmitNativeItemBombHei(
     const NDSRendererNativeMaterial *material,
     const NDSRendererConfig *config, NDSRendererStats *stats);
 /* The baked roots (nds_native_item_baked.exec.inc). */
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+extern volatile u32 gNdsLabBakedAcc[16];
+#endif
 const void *ndsNativeBakedItemFind(u32 asset_id, u32 root, u32 gobj_kind,
                                    const Gfx *dl, u32 *material_slots);
 sb32 ndsRendererSubmitNativeBaked(
@@ -7814,11 +7817,23 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
      * view draws nothing; skip it before the stats reset, its MObj snapshots
      * and the submit (Board the Platforms submits ~26 a frame, most of them
      * off screen; see ndsNativeBakedRootOffscreen). */
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+    u32 lab_offscreen = cpuGetTiming();
+    sb32 lab_culled = ((route_kind == NDS_SDL_ROUTE_BAKED) ||
+         (route_kind == NDS_SDL_ROUTE_BAKED_ITEM) ||
+         (route_kind == NDS_SDL_ROUTE_BAKED_ROOM)) &&
+        (ndsNativeBakedRootOffscreen((const void *)(uintptr_t)route->root,
+                                     &config) != FALSE);
+    gNdsLabBakedAcc[0] += cpuGetTiming() - lab_offscreen;
+    gNdsLabBakedAcc[15] += (lab_culled != FALSE) ? 1u : 0u;
+    if (lab_culled != FALSE)
+#else
     if (((route_kind == NDS_SDL_ROUTE_BAKED) ||
          (route_kind == NDS_SDL_ROUTE_BAKED_ITEM) ||
          (route_kind == NDS_SDL_ROUTE_BAKED_ROOM)) &&
         (ndsNativeBakedRootOffscreen((const void *)(uintptr_t)route->root,
                                      &config) != FALSE))
+#endif
     {
         gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
         gNdsStageDLFastLaneHits++;
@@ -7835,6 +7850,9 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
         gNdsStageDLFastLaneHits++;
         return TRUE;
     }
+#endif
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+    u32 lab_prep = cpuGetTiming();
 #endif
     render_stats = &sNdsRendererAdapterStagePersistentStats;
     ndsFighterDLDrawResetRuntimeRendererStats(render_stats);
@@ -7936,6 +7954,9 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
             }
             mobj = mobj->next;
         }
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+        gNdsLabBakedAcc[1] += cpuGetTiming() - lab_prep;
+#endif
         handled = (i == slots) ?
             ndsRendererSubmitNativeBaked(
                 (const void *)(uintptr_t)route->root, loaded->data,

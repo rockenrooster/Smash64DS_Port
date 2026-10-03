@@ -4,6 +4,23 @@
  * packet into DS GX triangles under the supplied traversal state. */
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
 
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+/* LAB ONLY: the foreign-platform submit split (Board the Platforms).
+ * [0] fast-lane offscreen test, [1] stats reset + material snapshots,
+ * [2] baked submit total, [3] traversal init, [4] state/material/env ops,
+ * [5] emit total, [6] emit entry (dma wait, end batch, setup), [7] texture
+ * bind, [8] matrix load, [9] batch begin, [10] corners, [11] batch end,
+ * [12] visible submits, [13] emitted groups, [14] corners, [15] culled. */
+__attribute__((used)) volatile u32 gNdsLabBakedAcc[16];
+#define NDS_LAB_BAKED_MARK(v) ((v) = cpuGetTiming())
+#define NDS_LAB_BAKED_ADD(i, v) (gNdsLabBakedAcc[(i)] += cpuGetTiming() - (v))
+#define NDS_LAB_BAKED_INC(i, n) (gNdsLabBakedAcc[(i)] += (n))
+#else
+#define NDS_LAB_BAKED_MARK(v) ((void)0)
+#define NDS_LAB_BAKED_ADD(i, v) ((void)0)
+#define NDS_LAB_BAKED_INC(i, n) ((void)0)
+#endif
+
 /* Texture memos for the baked runs (ndsRendererHardwareBindTextureOwnerMemo).
  * One vertex table is drawn under several material states -- Board the
  * Platforms draws one platform mesh in several colours and textures -- so a
@@ -17,11 +34,26 @@ static NDSRendererOwnerTextureMemo
     sNdsNativeItemWave1TexMemo[NDS_NATIVE_ITEM_WAVE1_TEXMEMO_SETS * 2u];
 static u8 sNdsNativeItemWave1TexMemoVictim[NDS_NATIVE_ITEM_WAVE1_TEXMEMO_SETS];
 
+/* P2-6 (2026-10-03): a baked root names its group's set directly (the
+ * executor sets this around each EMIT; NONE elsewhere). Board the Platforms
+ * binds ~20 platform groups a frame, consecutive in the group table, and the
+ * hashed set put three of them in one two-way set often enough to refill
+ * ~5 times a frame -- whether it did depended on the heap addresses of the
+ * texture images, i.e. on the build's layout. Consecutive groups now take
+ * consecutive sets. */
+#define NDS_NATIVE_ITEM_WAVE1_TEXMEMO_SET_NONE 0xffffffffu
+static u32 sNdsNativeItemWave1TexMemoSet = NDS_NATIVE_ITEM_WAVE1_TEXMEMO_SET_NONE;
+
 static NDSRendererOwnerTextureMemo *
 ndsNativeItemWave1TexMemoFor(u32 id, const NDSRendererStats *stats)
 {
-    const u32 set = ((id ^ (stats->texture_image * 0x9E3779B1u) ^
-                      (stats->prim_color * 0x85EBCA6Bu)) * 2654435761u) >> 27;
+    const u32 set =
+        (sNdsNativeItemWave1TexMemoSet != NDS_NATIVE_ITEM_WAVE1_TEXMEMO_SET_NONE) ?
+            (sNdsNativeItemWave1TexMemoSet &
+             (NDS_NATIVE_ITEM_WAVE1_TEXMEMO_SETS - 1u)) :
+            (((id ^ (stats->texture_image * 0x9E3779B1u) ^
+               ((stats->prim_color & 0xffffff00u) * 0x85EBCA6Bu)) *
+              2654435761u) >> 27);
     NDSRendererOwnerTextureMemo *ways = &sNdsNativeItemWave1TexMemo[set * 2u];
     u32 way;
 
@@ -59,6 +91,9 @@ static sb32 ndsNativeItemWave1Emit(
     s32 texture_offset;
     u32 corner;
     u32 i;
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+    u32 lab_mark = cpuGetTiming();
+#endif
 
     if ((verts == NULL) || (colors == NULL) || (indices == NULL) ||
         (config == NULL) || (stats == NULL) || (state == NULL) ||
@@ -92,6 +127,8 @@ static sb32 ndsNativeItemWave1Emit(
      * generic native prepare path: bind only when the decoded source state
      * actually uses a texture, and submit an untextured DS batch otherwise. */
     use_texture = (ndsRendererHardwareUseTexture(stats) != FALSE) ? TRUE : FALSE;
+    NDS_LAB_BAKED_ADD(6, lab_mark);
+    NDS_LAB_BAKED_MARK(lab_mark);
     if ((use_texture != FALSE) &&
         (ndsRendererHardwareBindTextureOwnerMemo(
              ndsNativeItemWave1TexMemoFor((u32)(uintptr_t)verts, stats),
@@ -101,6 +138,8 @@ static sb32 ndsNativeItemWave1Emit(
         return FALSE;
     }
 
+    NDS_LAB_BAKED_ADD(7, lab_mark);
+    NDS_LAB_BAKED_MARK(lab_mark);
     material_color = ndsRendererHardwareColorSource(stats);
     use_material = ndsRendererHardwareUseMaterialColor(stats);
     use_vertex = ndsRendererHardwareUseVertexColor(stats);
@@ -111,14 +150,20 @@ static sb32 ndsNativeItemWave1Emit(
 
     if (poly_alpha != 0u)
     {
+        NDS_LAB_BAKED_ADD(6, lab_mark);
+        NDS_LAB_BAKED_MARK(lab_mark);
         generation = ndsRendererNextMatrixGeneration();
         ndsRendererLoadHardwareSplitMatrices(
             config->initial_projection, config->initial_modelview, generation);
+        NDS_LAB_BAKED_ADD(8, lab_mark);
+        NDS_LAB_BAKED_MARK(lab_mark);
         ndsRendererHardwareBeginTriangleBatch(
             stats, use_texture,
             (use_texture != FALSE) ? sNdsRendererHardwareBoundTextureName : 0u,
             ndsRendererHardwarePolyFmt(stats, poly_alpha),
             sNdsRendererHardwareMatrixMode, generation);
+        NDS_LAB_BAKED_ADD(9, lab_mark);
+        NDS_LAB_BAKED_MARK(lab_mark);
         for (corner = 0u; corner < corner_count; corner++)
         {
             const NDSRendererInputVertex *v = &vertices[indices[corner]];
@@ -147,8 +192,11 @@ static sb32 ndsNativeItemWave1Emit(
         stats->hardware_zbuffer_triangle_count += triangle_count;
         stats->hardware_vertex_count += corner_count;
         sNdsRendererHardwareSubmitted = TRUE;
+        NDS_LAB_BAKED_ADD(10, lab_mark);
+        NDS_LAB_BAKED_MARK(lab_mark);
     }
     ndsRendererHardwareEndBatch();
+    NDS_LAB_BAKED_ADD(11, lab_mark);
     return TRUE;
 }
 
