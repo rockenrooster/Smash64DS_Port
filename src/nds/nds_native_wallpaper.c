@@ -26,6 +26,7 @@ volatile u32 gNdsNativeWallpaperReadFailureCount;
  * comparable with grwallpaper.c without retaining an SObj or N64 renderer. */
 __attribute__((used)) volatile u32 gNdsNativeBattleWallpaperDrawCount;
 __attribute__((used)) volatile u32 gNdsNativeBattleWallpaperFailureCount;
+__attribute__((used)) volatile u32 gNdsNativeBattleWallpaperDeferCount;
 __attribute__((used)) volatile u32 gNdsNativeBattleWallpaperGKind = 0xffffffffu;
 __attribute__((used)) volatile s32 gNdsNativeBattleWallpaperOriginX;
 __attribute__((used)) volatile s32 gNdsNativeBattleWallpaperOriginY;
@@ -391,6 +392,14 @@ s32 ndsNativeBattleWallpaperPreload(u32 gkind)
     {
         return TRUE;
     }
+    /* The frame the previous scene left (the 1P intro's still) is held in
+     * BG2's bank until the battle presents: the first presented draw pays
+     * the read instead, after the hold ends. */
+    if (ndsPlatformTransitionSnapshotHoldsBg2() != FALSE)
+    {
+        gNdsNativeBattleWallpaperDeferCount++;
+        return TRUE;
+    }
 
     /* Match the source constructor's first pose closely enough to make the
      * load legal. The first native-stage prepare overwrites this affine from
@@ -441,6 +450,14 @@ s32 ndsNativeBattleWallpaperDraw(u32 gkind,
     gNdsNativeBattleWallpaperOriginX = origin_x;
     gNdsNativeBattleWallpaperOriginY = origin_y;
     gNdsNativeBattleWallpaperScaleQ16 = scale_q16;
+    /* Not yet the presented draw while a held frame owns BG2's bank: the
+     * stage owner's prepare runs before the frame's own wallpaper commit,
+     * which ends the hold (ndsPlatformTransitionSnapshotHoldsBg2). */
+    if (ndsPlatformTransitionSnapshotHoldsBg2() != FALSE)
+    {
+        gNdsNativeBattleWallpaperDeferCount++;
+        return TRUE;
+    }
     if (ndsNativeWallpaperDraw(binding->asset_id, binding->bitmap_offset,
                                origin_x, origin_y, scale_q16, scale_q16,
                                NULL) == FALSE)

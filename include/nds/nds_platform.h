@@ -93,6 +93,10 @@ void ndsAudioReleaseDeferredBGM(void);
 void ndsPlatformTransitionThawIf3DShown(void);
 /* Ends the transition snapshot early, under the black cover. */
 void ndsPlatformTransitionSnapshotAbort(void);
+/* TRUE while the transition snapshot occupies bank C, BG2's bitmap: a BG2
+ * write ends it under the black cover, so a writer that redraws every frame
+ * may wait for the frame that will be presented. */
+s32 ndsPlatformTransitionSnapshotHoldsBg2(void);
 /* An exit that cleared an OAM shadow during the hold: the Thaw uploads it
  * (engine 0 main, 1 sub). */
 void ndsPlatformTransitionHoldPendOamUpdate(u32 engine);

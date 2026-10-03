@@ -188,10 +188,25 @@ static u32 sNdsTransitionHoldPresents;
 #endif
 #if NDS_TRANSITION_HOLD && NDS_RENDERER_HW_TRIANGLES
 /* The transition snapshot (ndsPlatformTransitionSnapshotBegin, below): 0, or
- * 1 + the texture bank (0 = A, 1 = B) the held frame was captured into and
- * the main screen now shows; the bank's VRAMCNT value to restore. */
+ * 1 + the bank (0 = A, 1 = B: captured into; 2 = C: moved into, see
+ * ndsPlatformTransitionSnapshotMoveToC) the main screen now shows; the
+ * bank's VRAMCNT value to restore. Bg2Touched: the next scene was handed
+ * the BG2 bitmap since the capture, so bank C is no longer free to hold it. */
 static u32 sNdsTransitionSnapshotBank;
 static u8 sNdsTransitionSnapshotBankCr;
+static u32 sNdsTransitionSnapshotBg2Touched;
+#define NDS_TRANSITION_SNAPSHOT_BANK_C 3u
+
+/* The next scene is about to write the BG2 bitmap: a held frame in bank C
+ * gives the bank back first (under the black cover, cleared). */
+static void ndsPlatformTransitionSnapshotLeaveBg2(void)
+{
+    if (sNdsTransitionSnapshotBank == NDS_TRANSITION_SNAPSHOT_BANK_C)
+    {
+        ndsPlatformTransitionSnapshotAbort();
+    }
+    sNdsTransitionSnapshotBg2Touched = 1u;
+}
 #endif
 /* Runtime A/B word (the control arm is the same binary); counters read by
  * the transition captures. Decline: 1 brightness, 2 display mode, 3 capture
@@ -200,6 +215,7 @@ volatile u32 gNdsTransitionSnapshotEnable __attribute__((used, section(".data"))
 volatile u32 gNdsTransitionSnapshotCount;
 volatile u32 gNdsTransitionSnapshotReleaseCount;
 volatile u32 gNdsTransitionSnapshotAbortCount;
+volatile u32 gNdsTransitionSnapshotMoveCount;
 volatile u32 gNdsTransitionSnapshotDecline;
 volatile u32 gNdsTransitionSnapshotDeclineCount;
 volatile u32 gNdsTransitionHoldCount;
@@ -935,6 +951,12 @@ u16 *ndsPlatformGetOriginalSpriteOverlayLayer(s32 is_foreground,
         {
             return NULL;
         }
+#if NDS_TRANSITION_HOLD
+        if (layer == 0u)
+        {
+            ndsPlatformTransitionSnapshotLeaveBg2();
+        }
+#endif
         if (out_pitch != NULL) { *out_pitch = 256u; }
         if (out_width != NULL) { *out_width = SCREEN_WIDTH; }
         if (out_height != NULL) { *out_height = SCREEN_HEIGHT; }
@@ -1153,6 +1175,12 @@ void ndsPlatformCommitOriginalSpritePreviewLayer(s32 is_foreground)
 
         /* A visible overlay write: the held frame ends here. */
         ndsPlatformTransitionThaw();
+#if NDS_TRANSITION_HOLD
+        if (layer == 0u)
+        {
+            ndsPlatformTransitionSnapshotLeaveBg2();
+        }
+#endif
         if ((layer != 0u) && (sOriginalSpriteOverlayBg3Lent != 0u) &&
             (sOriginalSpriteOverlayBg3ReturnPending != 0u))
         {
@@ -1247,6 +1275,15 @@ void ndsPlatformClearOriginalSpriteOverlayLayer(s32 is_foreground)
         u32 clear_bytes =
             ndsPlatformOriginalSpriteOverlayClearPixels() * sizeof(u16);
 
+#if NDS_TRANSITION_HOLD
+        /* Bank C holds the snapshot: its release clears the whole bank. */
+        if ((is_foreground == FALSE) &&
+            (sNdsTransitionSnapshotBank == NDS_TRANSITION_SNAPSHOT_BANK_C))
+        {
+            clear_bytes = 0u;
+        }
+        else
+#endif
         dmaFillHalfWords(0, bgGetGfxPtr(bg), clear_bytes);
         if (is_foreground != FALSE)
         {
@@ -1676,16 +1713,52 @@ static u32 ndsPlatformTextureBankInUse(u32 bank)
     return (guard >= 4096u) ? TRUE : FALSE;
 }
 
-/* Back to the live layers: display mode 1, the bank to its texture slot. */
+/* Back to the live layers: display mode 1, the bank to its texture slot (A,
+ * B) or, emptied first while still LCD-mapped, to BG2 (C): the held pixels
+ * are not the next scene's overlay, and its BG2 writes waited for this. */
 static void ndsPlatformTransitionSnapshotRestore(void)
 {
     vu8 *cr = (vu8 *)0x04000240u;
     u32 bank = sNdsTransitionSnapshotBank - 1u;
 
     REG_DISPCNT = (REG_DISPCNT & ~0x000F0000u) | 0x00010000u;
+    if (sNdsTransitionSnapshotBank == NDS_TRANSITION_SNAPSHOT_BANK_C)
+    {
+        dmaFillWords(0u, (void *)0x06840000u, 0x20000u);
+    }
     cr[bank] = sNdsTransitionSnapshotBankCr;
     sNdsTransitionSnapshotBank = 0u;
     ndsVideoSetTransitionMainHeld(FALSE);
+}
+
+/* A battle's load needs the texture bank the snapshot sits in (its texture
+ * prepare, ~112 VBlanks before its first frame on the 1P intro -> stage
+ * hop). Bank C is BG2's bitmap -- the battle wallpaper's and the menus'
+ * overlay, never a texture slot -- and until the next scene is handed that
+ * bitmap (sNdsTransitionSnapshotBg2Touched) nothing in it is that scene's:
+ * the held frame moves there, the main screen shows C instead (still display
+ * mode 2, identical pixels), and A/B go back to their texture slots before
+ * the upload plans around them. The hold then lasts to the scene's first BG2
+ * write (ndsPlatformTransitionSnapshotLeaveBg2) or first complete frame. */
+static s32 ndsPlatformTransitionSnapshotMoveToC(void)
+{
+    vu8 *cr = (vu8 *)0x04000240u;
+    u32 bank = sNdsTransitionSnapshotBank - 1u;
+
+    if ((bank > 1u) || (sNdsTransitionSnapshotBg2Touched != 0u) ||
+        (cr[2] != (VRAM_ENABLE | VRAM_C_MAIN_BG_0x06000000)))
+    {
+        return FALSE;
+    }
+    cr[2] = VRAM_ENABLE;
+    dmaCopyWords(3, (const void *)(0x06800000u + (bank << 17)),
+                 (void *)0x06840000u, 256u * 192u * sizeof(u16));
+    REG_DISPCNT = (REG_DISPCNT & ~0x000C0000u) | (2u << 18);
+    cr[bank] = sNdsTransitionSnapshotBankCr;
+    sNdsTransitionSnapshotBankCr = VRAM_ENABLE | VRAM_C_MAIN_BG_0x06000000;
+    sNdsTransitionSnapshotBank = NDS_TRANSITION_SNAPSHOT_BANK_C;
+    gNdsTransitionSnapshotMoveCount++;
+    return TRUE;
 }
 
 /* THE TRANSITION SNAPSHOT (owner, r68, 2026-10-02: "Do we have to have the
@@ -1776,10 +1849,21 @@ static void ndsPlatformTransitionSnapshotBegin(void)
      * capture. */
     REG_DISPCNT = (REG_DISPCNT & ~0x000F0000u) | 0x00020000u | (bank << 18);
     sNdsTransitionSnapshotBank = bank + 1u;
+    sNdsTransitionSnapshotBg2Touched = 0u;
     ndsVideoSetTransitionMainHeld(TRUE);
     gNdsTransitionSnapshotCount++;
 }
 #endif
+
+s32 ndsPlatformTransitionSnapshotHoldsBg2(void)
+{
+#if NDS_TRANSITION_HOLD && NDS_RENDERER_HW_TRIANGLES
+    return (sNdsTransitionSnapshotBank == NDS_TRANSITION_SNAPSHOT_BANK_C) ?
+        TRUE : FALSE;
+#else
+    return FALSE;
+#endif
+}
 
 /* A texture upload, or the battle's texture VRAM reset, while the snapshot
  * shows: the black cover takes the main screen at a VBlank, then the bank
@@ -1913,7 +1997,10 @@ void ndsPlatformTransitionThaw(void)
 void ndsPlatformTransitionThawIf3DShown(void)
 {
 #if NDS_TRANSITION_HOLD && NDS_RENDERER_HW_TRIANGLES
-    if (sNdsTransitionSnapshotBank != 0u)
+    /* No texture lives in C: a snapshot there outlasts every upload. */
+    if ((sNdsTransitionSnapshotBank != 0u) &&
+        (sNdsTransitionSnapshotBank != NDS_TRANSITION_SNAPSHOT_BANK_C) &&
+        (ndsPlatformTransitionSnapshotMoveToC() == FALSE))
     {
         ndsPlatformTransitionSnapshotAbort();
     }
