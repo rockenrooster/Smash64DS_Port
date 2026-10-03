@@ -1078,7 +1078,12 @@ static u32 ndsMenuFillSinkOnePlayerNativeOwner(void)
 static u32 ndsMenuFillSinkMovieNativeOwner(void)
 {
 #if NDS_P2_1P_GAME
-    u32 scene = (u32)gSCManagerSceneData.scene_curr;
+    /* The scene being run, not scene_curr: the staff roll's own draw sets
+     * scene_curr to the next scene (scstaffroll.c:2239) and keeps drawing,
+     * blacked out, for its roll-end wait -- under scene_curr those last
+     * frames' SObjs fell to the generic path, ~177 SPRITE failures at the
+     * end of every campaign (2026-10-03). */
+    u32 scene = (u32)gNdsSceneManagerCurrKind;
 
     return ((scene == (u32)nSCKindEnding) ||
             (scene == (u32)nSCKindStaffroll)) ? TRUE : FALSE;
@@ -1118,11 +1123,18 @@ void ndsSObjPreviewEndFrame(void)
     sNdsSObjFramePendingWallpaperCombine = 0u;
 }
 
+extern sb32 ndsVideoGetBlackout(void);
+
 void lbCommonDrawSObjAttr(GObj *gobj)
 {
     SObj *sobj = (gobj != NULL) ? SObjGetStruct(gobj) : NULL;
     u32 visible_sobjs = 0;
-    u32 record_startup = (gSCManagerSceneData.scene_curr == nSCKindStartup) ? 1u : 0u;
+    /* The startup logo scene being run, not scene_curr: the staff roll's
+     * draw names Startup as its successor (scstaffroll.c:2239) and keeps
+     * drawing its role/company text for the roll-end wait, which then
+     * skipped the OBJ presenter for the logo path and recorded ~177 SPRITE
+     * failures at the end of every campaign (2026-10-03). */
+    u32 record_startup = (gNdsSceneManagerCurrKind == nSCKindStartup) ? 1u : 0u;
 
     if (record_startup != 0)
     {
@@ -1185,7 +1197,17 @@ void lbCommonDrawSObjAttr(GObj *gobj)
     }
     /* The source 2D scenes with no native screen (1P intro, stage clear,
      * continue, challenger, message, congratulations): the OBJ presenter
-     * owns every sprite of the callback (src/nds/nds_source2d.c). */
+     * owns every sprite of the callback (src/nds/nds_source2d.c). Under the
+     * source blackout (SYVIDEO_FLAG_BLACKOUT, mirrored onto the master
+     * brightness) nothing they draw can show: the staff roll latches it and
+     * keeps drawing its text boxes through a 60-frame roll-end wait
+     * (scstaffroll.c:2117, :2242), whose cells the presenter could not place
+     * (~177 SPRITE failures at the end of every campaign, 2026-10-03). */
+    if ((record_startup == 0u) && (sNdsSObjFrameActive != FALSE) &&
+        (ndsSource2DIsActive() != 0) && (ndsVideoGetBlackout() != FALSE))
+    {
+        return;
+    }
     if ((record_startup == 0u) && (sNdsSObjFrameActive != FALSE) &&
         (ndsSource2DIsActive() != 0))
     {
