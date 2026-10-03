@@ -5506,6 +5506,29 @@ static void ndsRelocResetLoadedFiles(void)
     ndsFighterMarioFoxResetFileSlots();
 }
 
+/* The gkind this scene's event32 ledger is sized for (see the call below). */
+static u32 ndsRelocEvent32CapacityGKind(void)
+{
+    u32 gkind;
+
+    if (gSCManagerBattleState == NULL)
+    {
+        return 0xffffffffu;
+    }
+    gkind = (u32)gSCManagerBattleState->gkind;
+    if (gSCManagerSceneData.scene_curr == nSCKindVSBattle)
+    {
+        return gkind;
+    }
+    if ((gSCManagerSceneData.scene_curr == nSCKind1PBonusStage) &&
+        (gkind >= (u32)nGRKindBonusStageStart) &&
+        (gkind <= (u32)nGRKindBonusStageEnd))
+    {
+        return gkind;
+    }
+    return 0xffffffffu;
+}
+
 static void ndsRelocPrepareSceneCache(void)
 {
     u32 scene = (u32)gSCManagerSceneData.scene_curr;
@@ -5596,11 +5619,12 @@ static void ndsRelocPrepareSceneCache(void)
      * scene's taskman heap instead, after any old ledger/files were discarded.
      * Only VS battle has a per-stage corpus proven by the nine-stage census;
      * every other scene keeps the 5120 ceiling rather than borrowing a stale
-     * battle gkind from gSCManagerBattleState. */
+     * battle gkind from gSCManagerBattleState, except a bonus board, whose
+     * battle state sc1PBonusStageInitVars (sc1pbonusstage.c:357-407) has
+     * already pointed at this scene's board before sc1PBonusStageSetupFiles
+     * makes the first load; only a bonus gkind is taken from it. */
     (void)ndsAObjEvent32ConfigureNormalizedCapacity(
-        ((gSCManagerBattleState != NULL) &&
-         (gSCManagerSceneData.scene_curr == nSCKindVSBattle)) ?
-            (u32)gSCManagerBattleState->gkind : 0xffffffffu);
+        ndsRelocEvent32CapacityGKind());
     sNdsRelocStatusBufferCount = 0;
     sNdsRelocForceStatusBufferCount = 0;
 

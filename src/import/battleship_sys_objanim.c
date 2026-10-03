@@ -989,15 +989,23 @@ void gcPlayDObjAnimJoint(DObj *dobj)
  * signature, see sNdsAObjEvent32NormalizedSig) the ledger is 25,600 B plus
  * the 16,384 B index. */
 #define NDS_AOBJ_EVENT32_NORMALIZED_MAX 5120u
-/* One script's command plan. 128 covered every fighter script but not the
- * stage layer animations: Congo Jungle's layer-1 platform script rejected
- * with reason 11 at its 320th word (2026-09-06, admission-jungle11), which
- * silently declined gcAddAnimAll for the whole layer, so the platforms never
- * animated and their collision lines stayed absent (docs/BUGS.md). That
- * script plans 509 commands (admission-jungle12 high water), so 640 entries
- * (7,680 B of static RAM) leave a margin; gNdsAObjEvent32PlanHighWater
- * reports the real demand so the budget can be trimmed to it. */
-#define NDS_AOBJ_EVENT32_PLAN_MAX 640u
+#define NDS_AOBJ_EVENT32_BONUS2_FOX_LIMIT 7168u
+/* ONE SCRIPT'S COMMAND PLAN LIVES IN THE LEDGER'S OWN FREE TAIL (2026-10-02).
+ *
+ * The plan was a static array: 128 entries, then 640 after Congo Jungle's
+ * layer-1 platform script (509 commands) refused with reason 11 and silently
+ * declined gcAddAnimAll for the whole layer (2026-09-06). Fox's Board the
+ * Platforms hit the same cliff: its layer-1 MatAnimJoint table holds four
+ * texture-cycle scripts of 1,326 commands each (138_GRBonus2FoxFile2.c), the
+ * fourth-of-a-table refusal declined the DObj joints with it, and the platform
+ * the 1P player spawns over (DObj 11, whose script places it on its path at
+ * frame 0) stayed at its DObjDesc pose, so Fox fell to a FAILURE 0.9 s after
+ * GO with no input. A plan entry is a command pointer; the source word is
+ * still in place until commit and the native word is computed from it. So the
+ * plan is written straight into sNdsAObjEvent32Normalized[Count..Count+Plan),
+ * above the committed entries and outside the hash index, and committing an
+ * entry is indexing the slot it already occupies. Any script that fits the
+ * ledger now plans, and the 7,680 B of static RAM the array took is free. */
 #define NDS_AOBJ_EVENT32_BRANCH_DEPTH_MAX 16u
 
 typedef enum NDSAObjEvent32OwnerKind
@@ -1012,12 +1020,17 @@ typedef struct NDSAObjEvent32Normalized
     AObjEvent32 *command;
 } NDSAObjEvent32Normalized;
 
-typedef struct NDSAObjEvent32Plan
+/* One PlanStream frame: the straight run of commands it appended between its
+ * entry and its branch. Within a frame the walk only moves forward, so a
+ * command can repeat an earlier plan entry only inside an earlier frame's
+ * [first, last]; FindPlanned scans just that frame instead of the plan. */
+typedef struct NDSAObjEvent32PlanSegment
 {
-    AObjEvent32 *command;
-    u32 source_word;
-    u32 native_word;
-} NDSAObjEvent32Plan;
+    AObjEvent32 *first;
+    AObjEvent32 *last;
+    u32 plan_start;
+    u32 plan_end;
+} NDSAObjEvent32PlanSegment;
 
 /* The source command corpus is stage-dependent, but the old fixed BSS paid the
  * Planet Zebes worst case in every match. Keep 5120 as the hard/default ceiling
@@ -1037,7 +1050,9 @@ static NDSAObjEvent32Normalized *sNdsAObjEvent32Normalized;
  * floor: 19,220 B free against the 32,768 B minimum after the 5,120-entry
  * raise). */
 static u8 *sNdsAObjEvent32NormalizedSig;
-static NDSAObjEvent32Plan sNdsAObjEvent32Plan[NDS_AOBJ_EVENT32_PLAN_MAX];
+static NDSAObjEvent32PlanSegment
+    sNdsAObjEvent32PlanSegments[NDS_AOBJ_EVENT32_BRANCH_DEPTH_MAX + 1u];
+static u32 sNdsAObjEvent32PlanSegmentCount;
 
 static inline u8 ndsAObjEvent32WordSig(u32 word)
 {
@@ -1045,6 +1060,21 @@ static inline u8 ndsAObjEvent32WordSig(u32 word)
 }
 static u32 sNdsAObjEvent32NormalizedCount;
 static u32 sNdsAObjEvent32PlanCount;
+
+/* Plan entry i (see the plan note above NDS_AOBJ_EVENT32_BRANCH_DEPTH_MAX). */
+static inline AObjEvent32 *ndsAObjEvent32PlanCommand(u32 i)
+{
+    return sNdsAObjEvent32Normalized[sNdsAObjEvent32NormalizedCount + i]
+        .command;
+}
+
+/* objdef.h:272-281 source word to the ARM GCC bitfield layout. */
+static inline u32 ndsAObjEvent32NativeWord(u32 source_word)
+{
+    return ((source_word >> 25) & 0x7fu) |
+           (((source_word >> 15) & 0x03ffu) << 7) |
+           ((source_word & 0x7fffu) << 17);
+}
 /* 32 - log2(hash slots): ndsAObjEvent32HashSlot's multiplicative form. */
 static u32 sNdsAObjEvent32NormalizedHashShift = 32u;
 
@@ -1299,6 +1329,14 @@ static u32 ndsAObjEvent32CapacityForGKind(u32 gkind, sb32 *stage_bound)
         return 2560u;
     case nGRKindInishie:
         return 3072u;
+    case nGRKindBonus2Fox:
+        /* Fox's Board the Platforms: its layer-1 texture cycles alone are
+         * four 1,326-command scripts (5,304 entries, see the plan note above
+         * NDS_AOBJ_EVENT32_BRANCH_DEPTH_MAX), more than the 5,120 default
+         * holds before the board's joints and the fighter's clips. Not a VS
+         * bound: no roster formula, Applied stays 0. */
+        *stage_bound = FALSE;
+        return NDS_AOBJ_EVENT32_BONUS2_FOX_LIMIT;
     default:
         *stage_bound = FALSE;
         return NDS_AOBJ_EVENT32_NORMALIZED_MAX;
@@ -1576,6 +1614,7 @@ sb32 ndsAObjEvent32ConfigureNormalizedCapacity(u32 gkind)
     sNdsAObjEvent32Tombs = 0u;
     ndsAObjEvent32PageReset();
     sNdsAObjEvent32PlanCount = 0u;
+    sNdsAObjEvent32PlanSegmentCount = 0u;
     sNdsEvent32InterpDescFixedCount = 0u;
     if (stage_bound != FALSE)
     {
@@ -2061,8 +2100,8 @@ sb32 ndsTraIDescUsable(DObj *dobj, const AObj *aobj, u32 site)
 
 volatile u32 gNdsAObjEvent32NormalizedHighWater;
 volatile u32 gNdsAObjEvent32LiveHighWater __attribute__((used));
-/* Longest single script plan seen (commands), the demand behind
- * NDS_AOBJ_EVENT32_PLAN_MAX. */
+/* Longest single script plan seen (commands); it now borrows ledger tail
+ * room, so this is the free ledger a script needs, not a static array. */
 volatile u32 gNdsAObjEvent32PlanHighWater;
 volatile u32 gNdsAObjEvent32NormalizeScriptCount;
 volatile u32 gNdsAObjEvent32NormalizeCommandCount;
@@ -2308,16 +2347,53 @@ static s32 ndsAObjEvent32FindNormalized(AObjEvent32 *command)
 
 static s32 ndsAObjEvent32FindPlanned(AObjEvent32 *command)
 {
-    u32 i;
+    u32 s;
 
-    for (i = 0u; i < sNdsAObjEvent32PlanCount; i++)
+    for (s = 0u; s < sNdsAObjEvent32PlanSegmentCount; s++)
     {
-        if (sNdsAObjEvent32Plan[i].command == command)
+        const NDSAObjEvent32PlanSegment *segment =
+            &sNdsAObjEvent32PlanSegments[s];
+        u32 i;
+
+        if ((segment->plan_end == segment->plan_start) ||
+            (command < segment->first) || (command > segment->last))
         {
-            return (s32)i;
+            continue;
+        }
+        for (i = segment->plan_start; i < segment->plan_end; i++)
+        {
+            if (ndsAObjEvent32PlanCommand(i) == command)
+            {
+                return (s32)i;
+            }
         }
     }
     return -1;
+}
+
+/* Room for one more plan entry above the committed ledger. When the ledger is
+ * full, compacting its holes is what the old post-plan check did; the plan
+ * sits above the committed entries, so it follows them down. */
+static sb32 ndsAObjEvent32PlanReserve(void)
+{
+    u32 committed;
+
+    if ((sNdsAObjEvent32NormalizedCount + sNdsAObjEvent32PlanCount) <
+        sNdsAObjEvent32NormalizedLimit)
+    {
+        return TRUE;
+    }
+    if (sNdsAObjEvent32Holes == 0u)
+    {
+        return FALSE;
+    }
+    committed = sNdsAObjEvent32NormalizedCount;
+    ndsAObjEvent32CompactLedger();
+    memmove(&sNdsAObjEvent32Normalized[sNdsAObjEvent32NormalizedCount],
+            &sNdsAObjEvent32Normalized[committed],
+            sNdsAObjEvent32PlanCount * sizeof(sNdsAObjEvent32Normalized[0]));
+    return ((sNdsAObjEvent32NormalizedCount + sNdsAObjEvent32PlanCount) <
+            sNdsAObjEvent32NormalizedLimit) ? TRUE : FALSE;
 }
 
 static sb32 ndsAObjEvent32Reject(u32 reason, AObjEvent32 *command,
@@ -2344,12 +2420,19 @@ static sb32 ndsAObjEvent32PlanStream(AObjEvent32 *script,
                                      u32 branch_depth)
 {
     AObjEvent32 *command = script;
+    NDSAObjEvent32PlanSegment *segment;
 
     if ((script == NULL) ||
         (branch_depth > NDS_AOBJ_EVENT32_BRANCH_DEPTH_MAX))
     {
         return ndsAObjEvent32Reject(1u, script, owner_kind, 0u);
     }
+    /* One frame per branch depth, so depth 0..BRANCH_DEPTH_MAX fills it. */
+    segment = &sNdsAObjEvent32PlanSegments[sNdsAObjEvent32PlanSegmentCount++];
+    segment->first = script;
+    segment->last = script;
+    segment->plan_start = sNdsAObjEvent32PlanCount;
+    segment->plan_end = sNdsAObjEvent32PlanCount;
 
     while (TRUE)
     {
@@ -2357,7 +2440,6 @@ static sb32 ndsAObjEvent32PlanStream(AObjEvent32 *script,
         u32 source_word;
         u32 opcode;
         u32 flags;
-        u32 payload;
         u32 value_words = 0u;
         s32 normalized_index;
         sb32 is_end = FALSE;
@@ -2385,7 +2467,6 @@ static sb32 ndsAObjEvent32PlanStream(AObjEvent32 *script,
         source_word = command->u;
         opcode = (source_word >> 25) & 0x7fu;
         flags = (source_word >> 15) & 0x03ffu;
-        payload = source_word & 0x7fffu;
 
         switch (opcode)
         {
@@ -2490,19 +2571,23 @@ static sb32 ndsAObjEvent32PlanStream(AObjEvent32 *script,
                                         source_word);
         }
 
-        if ((sNdsAObjEvent32PlanCount >= NDS_AOBJ_EVENT32_PLAN_MAX) ||
-            (ndsRelocPointerRangeInLoadedFiles(
-                 command, (1u + value_words) * sizeof(*command)) == FALSE))
+        if (ndsRelocPointerRangeInLoadedFiles(
+                command, (1u + value_words) * sizeof(*command)) == FALSE)
         {
             return ndsAObjEvent32Reject(11u, command, owner_kind,
                                         source_word);
         }
+        if (ndsAObjEvent32PlanReserve() == FALSE)
+        {
+            return ndsAObjEvent32Reject(12u, command, owner_kind,
+                                        source_word);
+        }
 
-        sNdsAObjEvent32Plan[sNdsAObjEvent32PlanCount].command = command;
-        sNdsAObjEvent32Plan[sNdsAObjEvent32PlanCount].source_word = source_word;
-        sNdsAObjEvent32Plan[sNdsAObjEvent32PlanCount].native_word =
-            opcode | (flags << 7) | (payload << 17);
+        sNdsAObjEvent32Normalized[sNdsAObjEvent32NormalizedCount +
+                                  sNdsAObjEvent32PlanCount].command = command;
         sNdsAObjEvent32PlanCount++;
+        segment->last = command;
+        segment->plan_end = sNdsAObjEvent32PlanCount;
         if (sNdsAObjEvent32PlanCount > gNdsAObjEvent32PlanHighWater)
         {
             gNdsAObjEvent32PlanHighWater = sNdsAObjEvent32PlanCount;
@@ -2543,7 +2628,7 @@ static sb32 ndsAObjEvent32ValidateInterpDescs(NDSAObjEvent32OwnerKind owner_kind
     for (i = 0u; i < sNdsAObjEvent32PlanCount; i++)
     {
         u32 opcode =
-            (sNdsAObjEvent32Plan[i].source_word >> 25) & 0x7fu;
+            (ndsAObjEvent32PlanCommand(i)->u >> 25) & 0x7fu;
         const void *desc;
         u32 j;
 
@@ -2551,23 +2636,23 @@ static sb32 ndsAObjEvent32ValidateInterpDescs(NDSAObjEvent32OwnerKind owner_kind
         {
             continue;
         }
-        desc = (const void *)sNdsAObjEvent32Plan[i].command[1].p;
+        desc = (const void *)ndsAObjEvent32PlanCommand(i)[1].p;
         if (ndsRelocPointerRangeInLoadedFiles(desc, 24u) == FALSE)
         {
             gNdsEvent32SYInterpDescUnresolvedAddr = (u32)(uintptr_t)desc;
             gNdsEvent32SYInterpDescUnresolvedCount++;
-            (void)ndsAObjEvent32Reject(13u, sNdsAObjEvent32Plan[i].command,
+            (void)ndsAObjEvent32Reject(13u, ndsAObjEvent32PlanCommand(i),
                                        owner_kind,
-                                       sNdsAObjEvent32Plan[i].source_word);
+                                       ndsAObjEvent32PlanCommand(i)->u);
             return FALSE;
         }
         for (j = 0u; j < i; j++)
         {
             u32 jopcode =
-                (sNdsAObjEvent32Plan[j].source_word >> 25) & 0x7fu;
+                (ndsAObjEvent32PlanCommand(j)->u >> 25) & 0x7fu;
 
             if ((jopcode == (u32)nGCAnimEvent32SetInterp) &&
-                ((const void *)sNdsAObjEvent32Plan[j].command[1].p == desc))
+                ((const void *)ndsAObjEvent32PlanCommand(j)[1].p == desc))
             {
                 break;
             }
@@ -2586,9 +2671,9 @@ static sb32 ndsAObjEvent32ValidateInterpDescs(NDSAObjEvent32OwnerKind owner_kind
             }
             gNdsEvent32SYInterpDescUnresolvedAddr = (u32)(uintptr_t)desc;
             gNdsEvent32SYInterpDescUnresolvedCount++;
-            (void)ndsAObjEvent32Reject(13u, sNdsAObjEvent32Plan[i].command,
+            (void)ndsAObjEvent32Reject(13u, ndsAObjEvent32PlanCommand(i),
                                        owner_kind,
-                                       sNdsAObjEvent32Plan[i].source_word);
+                                       ndsAObjEvent32PlanCommand(i)->u);
             return FALSE;
         }
         fresh++;
@@ -2597,9 +2682,9 @@ static sb32 ndsAObjEvent32ValidateInterpDescs(NDSAObjEvent32OwnerKind owner_kind
         {
             gNdsEvent32SYInterpDescUnresolvedAddr = (u32)(uintptr_t)desc;
             gNdsEvent32SYInterpDescUnresolvedCount++;
-            (void)ndsAObjEvent32Reject(13u, sNdsAObjEvent32Plan[i].command,
+            (void)ndsAObjEvent32Reject(13u, ndsAObjEvent32PlanCommand(i),
                                        owner_kind,
-                                       sNdsAObjEvent32Plan[i].source_word);
+                                       ndsAObjEvent32PlanCommand(i)->u);
             return FALSE;
         }
     }
@@ -2609,7 +2694,9 @@ static sb32 ndsAObjEvent32ValidateInterpDescs(NDSAObjEvent32OwnerKind owner_kind
 /* Applies the validated fixes. Runs only after ValidateInterpDescs approved
  * the whole plan, so it cannot overflow the ledger it just budgeted. A shared
  * descriptor is already in the ledger (from an earlier script, or from the
- * plan entry that fixed it a moment ago) and is left as it is. */
+ * plan entry that fixed it a moment ago) and is left as it is. Runs before
+ * the commit, while the plan still reads the source command words; the
+ * commit after it cannot fail. */
 static void ndsAObjEvent32FixInterpDescs(void)
 {
     u32 i;
@@ -2617,12 +2704,12 @@ static void ndsAObjEvent32FixInterpDescs(void)
     for (i = 0u; i < sNdsAObjEvent32PlanCount; i++)
     {
         u32 opcode =
-            (sNdsAObjEvent32Plan[i].source_word >> 25) & 0x7fu;
+            (ndsAObjEvent32PlanCommand(i)->u >> 25) & 0x7fu;
 
         if (opcode == (u32)nGCAnimEvent32SetInterp)
         {
             u32 *word =
-                (u32 *)(void *)sNdsAObjEvent32Plan[i].command[1].p;
+                (u32 *)(void *)ndsAObjEvent32PlanCommand(i)[1].p;
 
             if (ndsEvent32InterpDescFindFixed(word) >= 0)
             {
@@ -2680,22 +2767,12 @@ static sb32 ndsAObjEvent32NormalizeScript(
         return FALSE;
     }
 
+    /* The plan reserves its ledger room entry by entry (reason 12 when the
+     * ledger, compacted, is full), so a planned script always fits. */
     sNdsAObjEvent32PlanCount = 0u;
+    sNdsAObjEvent32PlanSegmentCount = 0u;
     if (ndsAObjEvent32PlanStream(script, owner_kind, 0u) == FALSE)
     {
-        gNdsAObjEvent32NormalizeFailCount++;
-        return FALSE;
-    }
-    if (((sNdsAObjEvent32NormalizedCount + sNdsAObjEvent32PlanCount) >
-         sNdsAObjEvent32NormalizedLimit) &&
-        (sNdsAObjEvent32Holes != 0u))
-    {
-        ndsAObjEvent32CompactLedger();
-    }
-    if ((sNdsAObjEvent32NormalizedCount + sNdsAObjEvent32PlanCount) >
-        sNdsAObjEvent32NormalizedLimit)
-    {
-        (void)ndsAObjEvent32Reject(12u, script, owner_kind, script->u);
         gNdsAObjEvent32NormalizeFailCount++;
         return FALSE;
     }
@@ -2708,32 +2785,34 @@ static sb32 ndsAObjEvent32NormalizeScript(
         gNdsAObjEvent32NormalizeFailCount++;
         return FALSE;
     }
+    if (owner_kind == nNDSAObjEvent32OwnerDObj)
+    {
+        ndsAObjEvent32FixInterpDescs();
+    }
 
     if ((gNdsAObjEvent32NormalizeCommandCount == 0u) &&
         (sNdsAObjEvent32PlanCount != 0u))
     {
         gNdsAObjEvent32NormalizeFirstSourceWord =
-            sNdsAObjEvent32Plan[0].source_word;
+            ndsAObjEvent32PlanCommand(0u)->u;
         gNdsAObjEvent32NormalizeFirstNativeWord =
-            sNdsAObjEvent32Plan[0].native_word;
+            ndsAObjEvent32NativeWord(gNdsAObjEvent32NormalizeFirstSourceWord);
     }
 
+    /* Each plan entry already occupies the ledger slot it commits to: rewrite
+     * its word, sign and index that slot, and the next entry is the tail. */
     for (i = 0u; i < sNdsAObjEvent32PlanCount; i++)
     {
-        sNdsAObjEvent32Plan[i].command->u =
-            sNdsAObjEvent32Plan[i].native_word;
-        sNdsAObjEvent32Normalized[sNdsAObjEvent32NormalizedCount].command =
-            sNdsAObjEvent32Plan[i].command;
-        sNdsAObjEvent32NormalizedSig[sNdsAObjEvent32NormalizedCount] =
-            ndsAObjEvent32WordSig(sNdsAObjEvent32Plan[i].native_word);
-        ndsAObjEvent32IndexNormalized(sNdsAObjEvent32NormalizedCount);
-        ndsAObjEvent32PageAdd(sNdsAObjEvent32Plan[i].command, 1);
-        sNdsAObjEvent32NormalizedCount++;
-    }
+        AObjEvent32 *command =
+            sNdsAObjEvent32Normalized[sNdsAObjEvent32NormalizedCount].command;
+        u32 native_word = ndsAObjEvent32NativeWord(command->u);
 
-    if (owner_kind == nNDSAObjEvent32OwnerDObj)
-    {
-        ndsAObjEvent32FixInterpDescs();
+        command->u = native_word;
+        sNdsAObjEvent32NormalizedSig[sNdsAObjEvent32NormalizedCount] =
+            ndsAObjEvent32WordSig(native_word);
+        ndsAObjEvent32IndexNormalized(sNdsAObjEvent32NormalizedCount);
+        ndsAObjEvent32PageAdd(command, 1);
+        sNdsAObjEvent32NormalizedCount++;
     }
 
     if (sNdsAObjEvent32NormalizedCount > gNdsAObjEvent32NormalizedHighWater)
@@ -2771,6 +2850,7 @@ void ndsAObjEvent32ResetNormalizedScripts(void)
     sNdsAObjEvent32Tombs = 0u;
     ndsAObjEvent32PageReset();
     sNdsAObjEvent32PlanCount = 0u;
+    sNdsAObjEvent32PlanSegmentCount = 0u;
     /* Discarded with the ledger it shadows, in the same breath. */
     sNdsEvent32InterpDescFixedCount = 0u;
 }
