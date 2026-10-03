@@ -3254,6 +3254,95 @@ ndsMPWallSweepEdgeTrunc(u32 slot, u32 which, f32 v)
     return sNdsMPWallSweepEdgeInt[slot][which];
 }
 
+/* P2-6 (2026-10-03): the groups one sweep call may examine, as a mask over
+ * sNdsMPKindGroups[line_kind] (bit i = group i; all ones when the kind has
+ * no groups for this geometry or more than 64, or a truncation fails). A
+ * cleared bit is a group ndsMPSweepGroupReject's extent test rejects -- the
+ * same truncations, yakumono offsets and slack -- so no line of it can meet
+ * the sweep, and skipping it changes nothing the sweep finds (the reject's
+ * own backoff only ever decides whether to look). The per-group reject paid
+ * a call with eleven arguments and two edge lookups on every visit; Board
+ * the Platforms visits ~22 dynamic wall groups per call, 24 calls a frame,
+ * and rejects all of them (~100K ticks a frame on Purin's board). The
+ * span test stays in the reject for the groups this mask keeps. Same-ROM
+ * A/B word gNdsMPSweepCandidateMask (0 = every group visited, as before). */
+volatile u32 gNdsMPSweepCandidateMask __attribute__((used, section(".data"))) = 1u;
+#define NDS_MP_SWEEP_CANDIDATE_MIN 8u
+
+static u64 __attribute__((noinline))
+ndsMPSweepCandidates(u32 line_kind, u32 axis, const Vec3f *position,
+                     const Vec3f *translate, sb32 is_diff)
+{
+    const NDSMPKindGroup *g;
+    const sb32 has_speed =
+        ((is_diff != FALSE) && (gMPCollisionSpeeds != NULL)) ? TRUE : FALSE;
+    u64 mask = ~(u64)0;
+    u32 count;
+    u32 i;
+    s32 ip;
+    s32 it;
+
+    if ((gNdsMPSweepCandidateMask == 0u) ||
+        (sNdsMPKindGroupGeometry != gMPCollisionGeometry) ||
+        (gMPCollisionYakumonoDObjs == NULL))
+    {
+        return mask;
+    }
+    count = sNdsMPKindGroupCounts[line_kind];
+    /* Under NDS_MP_SWEEP_CANDIDATE_MIN groups the per-group rejects are
+     * already cheap; the VS stages stay out of the mask. */
+    if ((count < NDS_MP_SWEEP_CANDIDATE_MIN) || (count > 64u) ||
+        (ndsMPWallSweepTrunc((axis == 0u) ? position->x : position->y,
+                             &ip) == FALSE) ||
+        (ndsMPWallSweepTrunc((axis == 0u) ? translate->x : translate->y,
+                             &it) == FALSE))
+    {
+        return mask;
+    }
+    g = sNdsMPKindGroups[line_kind];
+    for (i = 0u; i < count; i++, g++)
+    {
+        const u32 yakumono_id = g->yakumono_id;
+        const DObj *dobj = (yakumono_id < NDS_MP_YAKUMONO_DOBJ_SLOTS) ?
+            gMPCollisionYakumonoDObjs->dobjs[yakumono_id] : NULL;
+        s32 p = ip;
+        s32 t = it;
+        s32 lo;
+        s32 hi;
+
+        if ((dobj != NULL) &&
+            ((dobj->anim_joint.event32 != NULL) ||
+             (dobj->user_data.s != nMPYakumonoStatusNone)))
+        {
+            /* ndsMPSweepGroupReject's dynamic offsets: the yakumono's edge on
+             * this axis and, for a Diff sweep, its speed. */
+            const s32 ie = ndsMPWallSweepEdgeTrunc(
+                yakumono_id, axis * 2u,
+                (axis == 0u) ? dobj->translate.vec.f.x :
+                               dobj->translate.vec.f.y);
+            const s32 id = (has_speed != FALSE) ?
+                ndsMPWallSweepEdgeTrunc(
+                    yakumono_id, axis * 2u + 1u,
+                    (axis == 0u) ? gMPCollisionSpeeds[yakumono_id].x :
+                                   gMPCollisionSpeeds[yakumono_id].y) : 0;
+
+            if ((ie == INT32_MIN) || (id == INT32_MIN))
+            {
+                continue;
+            }
+            p = p - ie + id;
+            t = t - ie;
+        }
+        lo = ((p < t) ? p : t) - NDS_MP_WALL_SWEEP_SLACK;
+        hi = ((p > t) ? p : t) + NDS_MP_WALL_SWEEP_SLACK;
+        if ((hi < (s32)g->ext_lo) || (lo > (s32)g->ext_hi))
+        {
+            mask &= ~((u64)1u << i);
+        }
+    }
+    return mask;
+}
+
 /* ud: +1 floor (crossed downward), -1 ceiling (crossed upward). */
 static sb32 ndsMPFCSegmentCrosses(const Vec3f *position,
                                   const Vec3f *translate,
@@ -3300,6 +3389,7 @@ ndsStageMPAdjustFloorLoopWallSweep(Vec3f *position,
     u32 reject_state = (gNdsMPWallSweepGroupReject != 0u) ? 0u : 2u;
     s32 ipx = 0;
     s32 itx = 0;
+    u64 candidates;
 
     if ((position == NULL) || (translate == NULL) ||
         ((line_kind != nMPLineKindLWall) && (line_kind != nMPLineKindRWall)) ||
@@ -3328,6 +3418,8 @@ ndsStageMPAdjustFloorLoopWallSweep(Vec3f *position,
     verts = geometry->vertex_data;
     group = sNdsMPKindGroups[line_kind];
     group_count = sNdsMPKindGroupCounts[line_kind];
+    candidates = ndsMPSweepCandidates(line_kind, 0u, position, translate,
+                                      is_diff);
     for (i = 0u; i < group_count; i++, group++)
     {
         s32 first = (s32)group->first;
@@ -3348,7 +3440,8 @@ ndsStageMPAdjustFloorLoopWallSweep(Vec3f *position,
         s32 line_id;
         sb32 dynamic;
 
-        if ((count <= 0) || (yakumono_id >= NDS_MP_YAKUMONO_DOBJ_SLOTS))
+        if ((count <= 0) || (yakumono_id >= NDS_MP_YAKUMONO_DOBJ_SLOTS) ||
+            (((candidates >> i) & 1u) == 0u))
         {
             continue;
         }
@@ -5996,6 +6089,7 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
     u32 reject_state = (gNdsMPSweepGroupReject != 0u) ? 0u : 2u;
     s32 ipy = 0;
     s32 ity = 0;
+    u64 candidates = ~(u64)0;
 
     if ((position == NULL) || (translate == NULL) ||
         (ndsStageCollisionLoopGeometryReady() == FALSE))
@@ -6022,6 +6116,8 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
     {
         floor_groups = sNdsMPKindGroups[nMPLineKindFloor];
         yakumono_count = sNdsMPKindGroupCounts[nMPLineKindFloor];
+        candidates = ndsMPSweepCandidates(nMPLineKindFloor, 1u, position,
+                                          translate, is_diff);
     }
     else
     {
@@ -6049,6 +6145,10 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
 
         if (floor_groups != NULL)
         {
+            if (((candidates >> i) & 1u) == 0u)
+            {
+                continue;
+            }
             first = (s32)floor_groups[i].first;
             count = (s32)floor_groups[i].count;
             yakumono_id = floor_groups[i].yakumono_id;
