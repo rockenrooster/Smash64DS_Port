@@ -1240,7 +1240,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketSector = {
     NDS_NATIVE_STAGE_SECTOR_CROSS_MATRIX_RUN_COUNT,
     NDS_NATIVE_STAGE_SECTOR_CROSS_MATRIX_TRIANGLE_COUNT,
     NDS_NATIVE_STAGE_SECTOR_CROSS_MATRIX_FOREIGN_CORNER_COUNT,
-    0ULL,
+    0x60ULL,
     0x1d110ULL,
     0u,
     NDS_NATIVE_STAGE_GKIND_SECTOR,
@@ -1300,7 +1300,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketHyrule = {
     NDS_NATIVE_STAGE_HYRULE_CROSS_MATRIX_RUN_COUNT,
     NDS_NATIVE_STAGE_HYRULE_CROSS_MATRIX_TRIANGLE_COUNT,
     NDS_NATIVE_STAGE_HYRULE_CROSS_MATRIX_FOREIGN_CORNER_COUNT,
-    0ULL,
+    0x7FEEULL,
     0ULL,
     0u,
     NDS_NATIVE_STAGE_GKIND_HYRULE,
@@ -1362,10 +1362,10 @@ static const NDSNativeStagePacket sNdsNativeStagePacketInishie = {
     NDS_NATIVE_STAGE_INISHIE_CROSS_MATRIX_FOREIGN_CORNER_COUNT,
     /* rigid_binding_mask, camera_binding_mask: DERIVE from the DObj table's
      * transform flags and the map's joint animation; 0ULL costs only the replay. */
-    /* rigid_binding_mask: not derivable here, 0 costs only the replay.
+    /* rigid_binding_mask: the generator's census row (_BLOB_RIGID_MASKS).
      * camera_binding_mask: bindings 12 and 13 carry source flag 2 (matrix
      * kind 48), read off the generated DObj table. */
-    0ULL,
+    0xC0CF57ULL,
     0x3000ULL,
     0u,
     NDS_NATIVE_STAGE_GKIND_INISHIE,
@@ -1420,10 +1420,10 @@ static const NDSNativeStagePacket sNdsNativeStagePacketZebes = {
     NDS_NATIVE_STAGE_ZEBES_CROSS_MATRIX_RUN_COUNT,
     NDS_NATIVE_STAGE_ZEBES_CROSS_MATRIX_TRIANGLE_COUNT,
     NDS_NATIVE_STAGE_ZEBES_CROSS_MATRIX_FOREIGN_CORNER_COUNT,
-    /* rigid_binding_mask: not derivable here, 0 costs only the replay.
+    /* rigid_binding_mask: the generator's census row (_BLOB_RIGID_MASKS).
      * camera_binding_mask: bindings whose DObj carries source flag 2 or 4
      * (matrix kinds 48/46), read off the generated DObj table. */
-    0ULL,
+    0x10088FDULL,
     0xff7700ULL,
     0u,
     NDS_NATIVE_STAGE_GKIND_ZEBES,
@@ -1499,7 +1499,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketYamabuki = {
      * 0xE0000 is Saffron's gate (S04): grYamabukiGateAddAnimOpen/Close move
      * DObjs 20-22, so bindings 17-19 must never replay the authored pose.
      * Keep equal to generator.blob_live_world_mask(). */
-    0ULL,
+    0x10100ULL,
     0xE4894ULL,
     0u,
     NDS_NATIVE_STAGE_GKIND_YAMABUKI,

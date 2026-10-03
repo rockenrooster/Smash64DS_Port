@@ -5119,6 +5119,27 @@ _BLOB_RIGID_MASKS = {
     "bonus2_pikachu": 0xFF,
     "bonus2_purin": 0x1F,
     "bonus2_ness": 0x7F,
+    # The VS venues (2026-10-03, P2-2p8): the lab census
+    # (NDS_LAB_STAGE_BINDING_CENSUS) over 1,900 frames of a four-CPU match on
+    # each, seen & ~moved, less the billboards and less every binding a
+    # cross-matrix run reads: a rigid binding's composed matrix is never
+    # built (the adapter skips it), and ndsStageGxComposedFor reads it for
+    # those runs' corners. That second rule is why Dream Land's row above
+    # stops short of its census (bindings 25-27 and 33-37 feed its five cross
+    # runs), and why Mushroom Kingdom keeps 16-19. Hyrule moved nothing but
+    # keeps bindings 0 and 4 live, and Saffron pins two of its eight static
+    # bindings: their baked worlds would take the stage GX body past
+    # BODY_MAX (Hyrule 40,444 B, Saffron 46,124 B against 36,992 B). Sector
+    # Z leaves its static binding 10 (the 194-triangle ship) live: its baked
+    # world costs 4,224 B of body on the venue with the least free heap
+    # (41.5 KB low-water with it; the world caches want 48 KB at GO).
+    "castle": 0xC39,
+    "sector": 0x60,
+    "jungle": 0x2139C383,
+    "zebes": 0x10088FD,
+    "hyrule": 0x7FEE,
+    "yamabuki": 0x10100,
+    "inishie": 0xC0CF57,
 }
 
 #: DObj anim-joint tables the ground code attaches at RUNTIME, per stage:

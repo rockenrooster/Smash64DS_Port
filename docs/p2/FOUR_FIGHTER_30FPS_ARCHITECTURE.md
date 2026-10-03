@@ -1071,6 +1071,18 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   Sector Z/Saffron (a texture bind fails: VRAM at the entry burst) and
   Hitmonlee (made, never reaches the adapter).
   Receipt `2026-09-30_p2-2p8-native-owners`.
+- **10-03 VS stage bindings pinned**: the blob stages shipped rigid mask 0
+  except Dream Land and Yoshi's Island, so the other seven venues composed
+  every static binding on the CPU each frame and baked no static world. A lab
+  census (seen & ~moved over 1,900 match frames, with the yakumono and
+  anim-joint maps) pins castle 6, Sector Z 2, Jungle 13, Zebes 10, Hyrule 13,
+  Saffron 2 and Mushroom Kingdom 13 bindings. A binding a cross-matrix run
+  reads stays live (a rigid binding's composed matrix is never built), and
+  Hyrule/Saffron stop at BODY_MAX. Same code, default roster: mean -20K
+  (Hyrule), -16K (Jungle), -14K (Zebes), -13K (Mushroom), -7K (castle), share
+  in two VBlanks +1..+3 points; no declines; heap low-water >= 76.9K except
+  Sector Z (binding 10 left live for its 4.2 KB of body). Receipt
+  `2026-10-03_vs-stage-pins`.
 
 ## 7. Found along the way
 
