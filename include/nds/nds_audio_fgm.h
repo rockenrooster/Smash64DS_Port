@@ -155,6 +155,7 @@ typedef struct NDSAudioFgmArm7AckTrace {
 
 void ndsAudioFgmDiagnosticsReset(void);
 void ndsAudioFgmLoadFenced(void);
+void ndsAudioFgmSoundEnable(void);
 void ndsAudioFgmUpdate(void);
 /* Menu transitions: let requested cues start before a blocking load, and
  * read cues into the cache ahead of their first request (nds_audio_fgm.c). */

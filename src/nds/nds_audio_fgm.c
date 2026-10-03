@@ -8,6 +8,7 @@
 
 #include <gm/gmsound.h>
 #include <nds/nds_audio_fgm.h>
+#include <nds/nds_bgm_ipc.h>
 #include <nds/nds_audio_storage.h>
 #include <nds/nds_freeze_diagnostics.h>
 
@@ -256,6 +257,10 @@ static NDSAudioFgmPackEntry
 static NDSAudioFgmHandle sNdsAudioFgmHandles[NDS_AUDIO_FGM_HANDLE_COUNT];
 static NDSAudioFgmHandle *sNdsAudioFgmChannelOwners[NDS_AUDIO_FGM_CHANNEL_COUNT];
 static u32 sNdsAudioFgmChannelGenerations[NDS_AUDIO_FGM_CHANNEL_COUNT];
+/* Channels this side started inside the auto-update grace (see
+ * ndsAudioFgmActiveChannels), and when. */
+static u32 sNdsAudioFgmChannelStartTicks[NDS_AUDIO_FGM_CHANNEL_COUNT];
+static u32 sNdsAudioFgmRecentStartMask;
 static u32 sNdsAudioFgmNextGeneration = 1u;
 #if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
 static u32 sNdsAudioFgmArm7AckSequence;
@@ -1725,6 +1730,114 @@ static NDSAudioFgmHandle *ndsAudioFgmHandleFromEffect(alSoundEffect *effect)
     return (NDSAudioFgmHandle *)effect;
 }
 
+/* CHANNEL QUERIES READ SHARED STATE (2026-10-02). With Calico's auto-update
+ * off (its default), soundGetActiveChannels is soundSynchronize: the game
+ * thread sends a sync command and waits until the ARM7's sound server (thread
+ * priority 12, below the BGM refill at 10) has drained everything queued
+ * before it. Every SFX start paid that round trip, and a start during a
+ * refill's storage read waited for the read. Auto-update
+ * (ndsAudioFgmSoundEnable) has the ARM7 publish the mask at SOUND_UPDATE_HZ,
+ * so a query reads memory and sends nothing. The mask lags a start by up to
+ * a few updates, so a channel this side started within the grace still reads
+ * as sounding. */
+#define NDS_AUDIO_FGM_START_GRACE_TICKS (BUS_CLOCK / 64u)
+
+/* CALICO'S SOUND DRIVER IS STARTED HERE, NOT BY LIBNDS (2026-10-02).
+ *
+ * Calico's soundInit registers the sound PXI handler and grants the ARM9 its
+ * 32 command credits; every later sound call waits for a credit. Nothing in
+ * the port called it: libnds' sound object (soundPlaySample) carried a
+ * constructor, _soundEnsureInit, that ran soundInit and micInit before main,
+ * and it was linked only because this file called soundPlaySample. With the
+ * channel picker below replacing those calls the linker dropped the object,
+ * the credits stayed 0, and the title's first sound command (the walk's
+ * Start SFX, tick 159) blocked the game thread for good. The same two calls,
+ * at the same point in startup. */
+static void __attribute__((constructor)) ndsAudioFgmStartCalicoSound(void)
+{
+    soundInit();
+    micInit();
+}
+
+/* soundEnable, then auto-update on. Repeats are free (Calico returns when the
+ * mode is already set). */
+void ndsAudioFgmSoundEnable(void)
+{
+    soundEnable();
+#if !NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
+    soundSetAutoUpdate(true);
+#endif
+}
+
+static u32 ndsAudioFgmActiveChannels(void)
+{
+    u32 active = (u32)soundGetActiveChannels();
+    u32 recent = sNdsAudioFgmRecentStartMask;
+
+    if (recent != 0u)
+    {
+        u32 now = cpuGetTiming();
+        u32 channel;
+
+        for (channel = 0u; channel < NDS_AUDIO_FGM_CHANNEL_COUNT; channel++)
+        {
+            if ((recent & (1u << channel)) == 0u)
+            {
+                continue;
+            }
+            if ((now - sNdsAudioFgmChannelStartTicks[channel]) <
+                NDS_AUDIO_FGM_START_GRACE_TICKS)
+            {
+                active |= 1u << channel;
+            }
+            else
+            {
+                recent &= ~(1u << channel);
+            }
+        }
+        sNdsAudioFgmRecentStartMask = recent;
+    }
+    return active;
+}
+
+/* Owner BUGS.md: "In match: some stuttering during heavy fighting".
+ * libnds' soundPlaySample takes the lowest channel absent from
+ * soundGetActiveChannels(), 0..15. The BGM stream owns 14 and 15 and starts
+ * each buffer's channel only at its seam, so the waiting buffer's channel
+ * reads as free: once fourteen channels sound (twelve live handles plus
+ * one-shots still playing after their handles retired), an SFX took it, and
+ * at the next seam the stream started the SFX's registers -- or waited in its
+ * refill for the SFX to end. The same call as soundPlaySample (its timer,
+ * volume, mode and length arithmetic), with the BGM pair excluded; -1 when
+ * channels 0..13 are all sounding, which the callers already handle. */
+static s32 ndsAudioFgmPlaySample(const void *data, u32 data_bytes, u16 freq,
+                                 u8 volume, u8 pan, sb32 loop,
+                                 u16 loop_point_words)
+{
+    u32 busy = ndsAudioFgmActiveChannels() | NDS_BGM_HW_CHANNEL_MASK;
+    u32 channel;
+
+    for (channel = 0u; channel < NDS_AUDIO_FGM_CHANNEL_COUNT; channel++)
+    {
+        if ((busy & (1u << channel)) == 0u)
+        {
+            break;
+        }
+    }
+    if (channel >= NDS_AUDIO_FGM_CHANNEL_COUNT)
+    {
+        return -1;
+    }
+    soundPreparePcm(channel | SOUND_START, (u32)volume << 4, pan,
+                    soundTimerFromHz(freq),
+                    (loop != FALSE) ? SoundMode_Repeat : SoundMode_OneShot,
+                    SoundFmt_ImaAdpcm, data, loop_point_words,
+                    data_bytes >> 2);
+    sNdsAudioFgmChannelStartTicks[channel] = cpuGetTiming();
+    sNdsAudioFgmRecentStartMask |= 1u << channel;
+    return (s32)channel;
+}
+
 /* P2-3 DK 324 (FuraSleep) is a source sequencer cue: three long notes restart
  * the SAME wave at ticks 0/400/810. Baking seven seconds of timeline into one
  * sample exceeds the real 52 KiB cache slot, while retaining the source wave
@@ -1775,9 +1888,8 @@ static s32 __attribute__((noinline, cold)) ndsAudioFgmRestartHandleSample(
         restart_pan = 64u;
     }
 
-    channel = soundPlaySample(
+    channel = ndsAudioFgmPlaySample(
         sNdsAudioFgmCacheSlots[(u32)handle->cache_slot].data,
-        SoundFormat_ADPCM,
         entry->data_bytes - ((u32)entry->loop_point_words * 4u),
         entry->frequency, volume, restart_pan,
         ((entry->flags & 1u) != 0u), entry->loop_point_words);
@@ -1786,7 +1898,7 @@ static s32 __attribute__((noinline, cold)) ndsAudioFgmRestartHandleSample(
         return FALSE;
     }
 
-    /* soundPlaySample chooses an inactive hardware channel. Its software owner
+    /* ndsAudioFgmPlaySample chooses an inactive hardware channel. Its software owner
      * may still be alive because the DS one-shot ended before the source note
      * duration; retire that stale owner without killing the sample just started. */
     completed_handle = sNdsAudioFgmChannelOwners[channel];
@@ -1836,16 +1948,15 @@ static s32 ndsAudioFgmStartHandle(NDSAudioFgmHandle *handle,
 #endif
 
     NDS_FREEZE_DIAGNOSTICS_FGM_ENTER(handle->fgm_id);
-    soundEnable();
+    ndsAudioFgmSoundEnable();
 #if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
     if (ndsAudioFgmIsArm7AckTarget(handle->fgm_id) != FALSE)
     {
         play_command_tick = cpuGetTiming();
     }
 #endif
-    channel = soundPlaySample(
+    channel = ndsAudioFgmPlaySample(
         sNdsAudioFgmCacheSlots[(u32)handle->cache_slot].data,
-        SoundFormat_ADPCM,
         entry->data_bytes - ((u32)entry->loop_point_words * 4u),
         entry->frequency, entry->volume, handle->effect.balance,
         ((entry->flags & 1u) != 0u), entry->loop_point_words);
@@ -1865,7 +1976,7 @@ static s32 ndsAudioFgmStartHandle(NDSAudioFgmHandle *handle,
         NDSAudioFgmHandle *completed_handle =
             sNdsAudioFgmChannelOwners[channel];
 
-        /* soundPlaySample synchronizes with ARM7 and only selects an inactive
+        /* ndsAudioFgmPlaySample only selects an inactive
          * hardware channel. Retire its completed software owner instead of
          * killing the newly started sample when the source-duration clock
          * trails the hardware one-shot completion. */
@@ -1876,7 +1987,7 @@ static s32 ndsAudioFgmStartHandle(NDSAudioFgmHandle *handle,
              completed_handle->generation))
         {
             /* BUGS.md "Some Crowd noise audio cues get cut off (the for big
-             * hits)". The retire above is justified by soundPlaySample only
+             * hits)". The retire above is justified by ndsAudioFgmPlaySample only
              * choosing an INACTIVE hardware channel -- so the owner must be
              * finished. Measure that rather than trust it.
              *
@@ -1961,7 +2072,7 @@ static s32 ndsAudioFgmValidateCachedEntry(u32 index)
         (entry->duration_ticks == 0u) || (entry->volume > 127u) ||
         (entry->pan != 64u) ||
         (entry->envelope_count > NDS_AUDIO_FGM_CACHE_MAX_ENVELOPE_POINTS) ||
-        /* The loop bit and PNT are one setting: soundPlaySample derives LEN
+        /* The loop bit and PNT are one setting: ndsAudioFgmPlaySample derives LEN
          * from loop_point_words either way, and a set bit with PNT at the IMA
          * header repeats the state word as audio.  Reject the mismatched
          * halves rather than play one. */
@@ -2523,7 +2634,7 @@ void ndsAudioFgmPauseGame(void)
         return;
     }
     now = cpuGetTiming();
-    active_channels = (u32)soundGetActiveChannels();
+    active_channels = ndsAudioFgmActiveChannels();
     for (i = 0u; i < NDS_AUDIO_FGM_HANDLE_COUNT; i++)
     {
         NDSAudioFgmHandle *handle = &sNdsAudioFgmHandles[i];

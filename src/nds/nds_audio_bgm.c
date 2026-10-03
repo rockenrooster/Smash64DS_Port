@@ -919,8 +919,9 @@ volatile u32 gNdsAudioBgmArm7Ready;
 volatile u32 gNdsAudioBgmArm7Failure;
 
 _Static_assert(sizeof(sBgmSpecs)/sizeof(sBgmSpecs[0]) <= NDS_BGM_MAX_TRACKS, "BGM index encoding");
-/* soundPlaySample scans upward from channel 0. These are its only callers,
- * so twelve FGM handles cannot claim the two BGM channels at 14/15. */
+/* The FGM picker (ndsAudioFgmPlaySample) never hands out the stream's two
+ * channels (NDS_BGM_HW_CHANNEL_MASK); twelve handles still leave headroom
+ * below them for one-shots that outlive their handles. */
 _Static_assert(NDS_AUDIO_FGM_HANDLE_CAPACITY <= 14u, "FGM overlaps BGM channels");
 
 void __attribute__((noinline, used, noreturn)) ndsAudioBgmControlHalt(u32 reason)
@@ -1186,7 +1187,7 @@ void ndsAudioBgmPlay(s32 player, s32 bgm_id)
 #endif
     }
     if (!gNdsAudioBgmSetVolumeCalls && !gNdsAudioBgmVolume) gNdsAudioBgmVolume = 0x7800u;
-    soundEnable();
+    ndsAudioFgmSoundEnable();
     ndsBgmInitialize();
     u32 generation = ndsBgmNextGeneration();
     sBgmPendingPlaying = 1u;

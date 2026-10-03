@@ -5,7 +5,7 @@
 
 _Static_assert(PxiChannel_User1 == NDS_BGM_IPC_CHANNEL, "BGM PXI channel ABI");
 #define BGM_REFILL_EVENT 0x80000000u
-#define BGM_CHANNEL 14u
+#define BGM_CHANNEL NDS_BGM_HW_CHANNEL
 
 static Thread sBgmThread;
 /* Main RAM (.sbss): ARM7's image must fit its private WRAM below the DLDI

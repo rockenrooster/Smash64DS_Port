@@ -4,6 +4,12 @@
 
 #define NDS_BGM_IPC_ABI 0x42474d32u
 #define NDS_BGM_IPC_CHANNEL 24u
+/* The two hardware channels the ARM7 stream alternates its one-shot buffers
+ * on (nds_audio_bgm_service.c). The waiting buffer's channel is prepared but
+ * not started, so a scan of active channels reads it as free; the ARM9 FGM
+ * picker excludes the pair (nds_audio_fgm.c). */
+#define NDS_BGM_HW_CHANNEL 14u
+#define NDS_BGM_HW_CHANNEL_MASK (3u << NDS_BGM_HW_CHANNEL)
 #define NDS_BGM_MAX_TRACKS 64u
 #define NDS_BGM_GENERATION_MASK 0x1ffffu
 #define NDS_BGM_REPLY_ERROR 0x03ffffffu
