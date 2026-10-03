@@ -11,6 +11,7 @@
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_startup.h>
 #include <sys/taskman.h>
+#include <sc/scene.h>
 
 /* P2-2p8: syInterpGetFracFrame without its repeated work.
  *
@@ -310,6 +311,163 @@ static sb32 ndsInterpArwingFracLookup(u32 h1, u32 h2, u32 t_bits,
         return TRUE;
     }
     return FALSE;
+}
+
+/* The scene-scale memo (P2-6, 2026-10-02). The 64-entry memo above holds a
+ * few ticks of a few owners; Board the Platforms runs up to ten Bezier
+ * platforms on looping scripts, so every tick of every platform missed and
+ * bisected (Luigi's board: the platforms' arc-length solves were 43% of the
+ * CPU's frame, ~580K ticks). Each platform's script replays the same t values
+ * on every loop, so a table that holds one loop answers every later one.
+ * Entries are keyed exactly as the small memo's (h1, h2 over every input the
+ * function reads, and t's bits) and store the result the function computed
+ * for those inputs, so a hit cannot change a result. Allocated from the scene
+ * heap on the first miss, as large as fits (4,096 entries, 64 KB, down to
+ * 1,024) while the margin stays free after it: 96 KB in a battle (a
+ * four-fighter match never has the table's worth beyond that), 32 KB on a
+ * bonus board (practice or campaign), which holds one fighter and no items
+ * (the boards keep 91-345 KB free). Dropped with the heap generation. Open addressing over a
+ * short probe; a full neighbourhood overwrites its home slot. Same-ROM A/B
+ * word gNdsInterpBigMemo (0 = never consult or allocate it). */
+#define NDS_INTERP_BIG_MEMO_ENTRIES_MAX 4096u
+#define NDS_INTERP_BIG_MEMO_ENTRIES_MIN 1024u
+#define NDS_INTERP_BIG_MEMO_PROBE 8u
+#define NDS_INTERP_BIG_MEMO_HEAP_MARGIN 0x18000u
+#define NDS_INTERP_BIG_MEMO_BONUS_MARGIN 0x8000u
+
+volatile u32 gNdsInterpBigMemo __attribute__((used, section(".data"))) = 1u;
+__attribute__((used)) volatile u32 gNdsInterpBigMemoHits;
+__attribute__((used)) volatile u32 gNdsInterpBigMemoFills;
+__attribute__((used)) volatile u32 gNdsInterpBigMemoAllocs;
+static NDSInterpFracMemo *sNdsInterpBigMemo;
+static u32 sNdsInterpBigMemoMask; /* entries - 1 */
+static u32 sNdsInterpBigMemoGeneration;
+/* Heap generation + 1 of the last allocation attempt (0 = none yet). */
+static u32 sNdsInterpBigMemoTried;
+
+static NDSInterpFracMemo *ndsInterpBigMemoTable(sb32 allocate)
+{
+    const u32 margin =
+        ((gSCManagerBattleState != NULL) &&
+         (gSCManagerBattleState->gkind >= nGRKindBonusStageStart) &&
+         (gSCManagerBattleState->gkind <= nGRKindBonusStageEnd)) ?
+            NDS_INTERP_BIG_MEMO_BONUS_MARGIN : NDS_INTERP_BIG_MEMO_HEAP_MARGIN;
+    u32 entries = NDS_INTERP_BIG_MEMO_ENTRIES_MAX;
+    u32 bytes;
+    u32 free_bytes;
+
+    if (gNdsInterpBigMemo == 0u)
+    {
+        return NULL;
+    }
+    if ((sNdsInterpBigMemo != NULL) &&
+        (sNdsInterpBigMemoGeneration == gNdsTaskmanHeapGeneration))
+    {
+        return sNdsInterpBigMemo;
+    }
+    sNdsInterpBigMemo = NULL;
+    if ((allocate == FALSE) ||
+        (sNdsInterpBigMemoTried == gNdsTaskmanHeapGeneration + 1u))
+    {
+        return NULL;
+    }
+    sNdsInterpBigMemoTried = gNdsTaskmanHeapGeneration + 1u;
+    if ((uintptr_t)gSYTaskmanGeneralHeap.end <
+        (uintptr_t)gSYTaskmanGeneralHeap.ptr)
+    {
+        return NULL;
+    }
+    free_bytes = (u32)((uintptr_t)gSYTaskmanGeneralHeap.end -
+                       (uintptr_t)gSYTaskmanGeneralHeap.ptr);
+    while ((entries >= NDS_INTERP_BIG_MEMO_ENTRIES_MIN) &&
+           (free_bytes <
+            entries * (u32)sizeof(NDSInterpFracMemo) + margin))
+    {
+        entries >>= 1;
+    }
+    if (entries < NDS_INTERP_BIG_MEMO_ENTRIES_MIN)
+    {
+        return NULL;
+    }
+    bytes = entries * (u32)sizeof(NDSInterpFracMemo);
+    sNdsInterpBigMemo = syTaskmanMalloc((size_t)bytes, 0x4u);
+    if (sNdsInterpBigMemo == NULL)
+    {
+        return NULL;
+    }
+    /* h2 is stored odd, so a zeroed entry never matches. */
+    __builtin_memset(sNdsInterpBigMemo, 0, bytes);
+    sNdsInterpBigMemoMask = entries - 1u;
+    sNdsInterpBigMemoGeneration = gNdsTaskmanHeapGeneration;
+    gNdsInterpBigMemoAllocs++;
+    return sNdsInterpBigMemo;
+}
+
+static inline u32 ndsInterpBigMemoHome(u32 h1, u32 t_bits)
+{
+    return ((h1 ^ (t_bits * 0x9e3779b1u)) >> 20) & sNdsInterpBigMemoMask;
+}
+
+static sb32 ndsInterpBigMemoLookup(u32 h1, u32 h2, u32 t_bits,
+                                   u32 *frac_bits)
+{
+    const NDSInterpFracMemo *table = ndsInterpBigMemoTable(FALSE);
+    u32 slot;
+    u32 i;
+
+    if (table == NULL)
+    {
+        return FALSE;
+    }
+    slot = ndsInterpBigMemoHome(h1, t_bits);
+    for (i = 0u; i < NDS_INTERP_BIG_MEMO_PROBE; i++)
+    {
+        const NDSInterpFracMemo *e =
+            &table[(slot + i) & sNdsInterpBigMemoMask];
+
+        if (e->h2 == 0u)
+        {
+            return FALSE;
+        }
+        if ((e->h2 == h2) && (e->h1 == h1) && (e->t_bits == t_bits))
+        {
+            *frac_bits = e->frac_bits;
+            gNdsInterpBigMemoHits++;
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+static void ndsInterpBigMemoStore(u32 h1, u32 h2, u32 t_bits, u32 frac_bits)
+{
+    NDSInterpFracMemo *table = ndsInterpBigMemoTable(TRUE);
+    NDSInterpFracMemo *e;
+    u32 slot;
+    u32 i;
+
+    if (table == NULL)
+    {
+        return;
+    }
+    slot = ndsInterpBigMemoHome(h1, t_bits);
+    e = &table[slot];
+    for (i = 0u; i < NDS_INTERP_BIG_MEMO_PROBE; i++)
+    {
+        NDSInterpFracMemo *probe =
+            &table[(slot + i) & sNdsInterpBigMemoMask];
+
+        if (probe->h2 == 0u)
+        {
+            e = probe;
+            break;
+        }
+    }
+    e->h1 = h1;
+    e->h2 = h2;
+    e->t_bits = t_bits;
+    e->frac_bits = frac_bits;
+    gNdsInterpBigMemoFills++;
 }
 
 static inline u32 ndsInterpFracBits(f32 value)
@@ -627,7 +785,11 @@ static f32 ndsInterpGetFracFrameMemo(SYInterpDesc *desc, f32 t,
         }
     }
     NDS_INTERP_FRAC_COUNT(gNdsInterpFracMemoMisses);
-    if ((gNdsArwingFracTable != 0u) &&
+    if (ndsInterpBigMemoLookup(h1, h2, t_bits, &table_bits) != FALSE)
+    {
+        frac = ndsInterpFracFloat(table_bits);
+    }
+    else if ((gNdsArwingFracTable != 0u) &&
         (ndsInterpArwingFracLookup(h1, h2, t_bits, &table_bits) != FALSE))
     {
 #if NDS_TICK_HUD
@@ -640,6 +802,7 @@ static f32 ndsInterpGetFracFrameMemo(SYInterpDesc *desc, f32 t,
         frac = (gNdsInterpFracKernel != 0u) ?
             ndsInterpGetFracFrameKernel(desc, t, id, cof_bits, owner) :
             ndsInterpGetFracFrameReuse(desc, t, id, cof_bits, owner);
+        ndsInterpBigMemoStore(h1, h2, t_bits, ndsInterpFracBits(frac));
     }
 #if NDS_TICK_HUD
     if (gNdsInterpFracOracle != 0u)
