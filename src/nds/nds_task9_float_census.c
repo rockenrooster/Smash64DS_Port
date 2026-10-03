@@ -158,12 +158,35 @@ static void ndsTask9FloatCallEnd(u32 routine, u32 start, u32 measured)
     gNdsTask9FloatCostCalls[routine] = calls + 1u;
 }
 
+/* Lab: who pays for soft float. Every 1,024th wrapped call (any routine) leaves
+ * its return address and routine in a ring that gdb dumps after a run; the
+ * per-routine counts above say how much, this says which caller. */
+#define NDS_TASK9_FLOAT_CALLER_RING 2048u
+volatile u32 gNdsTask9FloatCallerRing[NDS_TASK9_FLOAT_CALLER_RING];
+volatile u8 gNdsTask9FloatCallerRoutine[NDS_TASK9_FLOAT_CALLER_RING];
+volatile u32 gNdsTask9FloatCallerCount;
+
+static inline void ndsTask9FloatCallerSample(u32 routine, const void *caller)
+{
+    u32 n = gNdsTask9FloatCallerCount++;
+
+    if ((n & 1023u) == 0u)
+    {
+        u32 slot = (n >> 10) & (NDS_TASK9_FLOAT_CALLER_RING - 1u);
+
+        gNdsTask9FloatCallerRing[slot] = (u32)(uintptr_t)caller;
+        gNdsTask9FloatCallerRoutine[slot] = (u8)routine;
+    }
+}
+
 #define NDS_TASK9_WRAP_BINARY(result_type, name, argument_type, routine) \
     extern result_type __real_##name(argument_type left, argument_type right); \
     result_type __wrap_##name(argument_type left, argument_type right) \
     { \
         u32 start = 0u; \
-        u32 measured = ndsTask9FloatCallBegin(routine, &start); \
+        u32 measured; \
+        ndsTask9FloatCallerSample(routine, __builtin_return_address(0)); \
+        measured = ndsTask9FloatCallBegin(routine, &start); \
         result_type result = __real_##name(left, right); \
         ndsTask9FloatCallEnd(routine, start, measured); \
         return result; \
@@ -174,7 +197,9 @@ static void ndsTask9FloatCallEnd(u32 routine, u32 start, u32 measured)
     result_type __wrap_##name(argument_type value) \
     { \
         u32 start = 0u; \
-        u32 measured = ndsTask9FloatCallBegin(routine, &start); \
+        u32 measured; \
+        ndsTask9FloatCallerSample(routine, __builtin_return_address(0)); \
+        measured = ndsTask9FloatCallBegin(routine, &start); \
         result_type result = __real_##name(value); \
         ndsTask9FloatCallEnd(routine, start, measured); \
         return result; \
