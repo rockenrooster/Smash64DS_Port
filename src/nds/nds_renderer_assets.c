@@ -6894,7 +6894,10 @@ typedef struct NDSNativeStageOwnerExecution
     u32 task36_segment_active;
 #endif
     NDSRendererStats *stats;
-    u32 next_segment;
+    /* Bit i: segment i committed this frame. Segments commit in the order the
+     * runtime presents their display GObjs, which is the source's draw order;
+     * a segment presented twice is refused, never drawn twice. */
+    u32 committed_segments;
     u32 active;
 #if NDS_R2_STAGE_DIRECT
     /* R2-02 E1a. `runs[]` is a pure function of the generated run/epoch/policy

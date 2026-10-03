@@ -5083,8 +5083,10 @@ ndsRendererAdapterCommitNativeStageDisplay(
         {
             NDS_STAGE_DISPLAY_SPAN_BEGIN();
 
-            if ((i != workspace->next_segment) ||
-                ((u32)link_id != ndsRendererAdapterNativeStageSegmentLink(i)))
+            /* Presentation order, not packet order: the owner commits each
+             * segment once, whenever its GObj is drawn (Saffron's gate,
+             * segment 3, precedes segment 2). next_segment counts commits. */
+            if ((u32)link_id != ndsRendererAdapterNativeStageSegmentLink(i))
             {
                 (void)ndsRendererCommitNativeStageSegment(0xffffffffu);
                 NDS_STAGE_DISPLAY_SPAN_END();

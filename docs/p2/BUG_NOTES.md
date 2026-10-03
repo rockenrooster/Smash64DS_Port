@@ -647,6 +647,21 @@ column is a counter or a source read.
   G_RM_AA_ZB_XLU_SURF with alpha compare and G_CC_SHADE (a shaded translucent
   quad). Port seam to check next: whether the ground-actor arm emits head-1
   links with the XLU render mode before the run alpha is derived.
+- **Saffron gate never drew -- segment order (2026-10-02):** the native
+  packet orders Saffron's owners layer0 (link 4), layer1 (6), layer3 (17),
+  gate (6), but the runtime presents display GObjs by link, so the gate
+  (segment 3) arrives before layer3 (segment 2). Both the adapter
+  (`ndsRendererAdapterCommitNativeStageDisplay`) and the owner
+  (`ndsRendererCommitNativeStageSegment`) demanded the next packet index; the
+  adapter answered the mismatch with a no-op commit and returned TRUE, so
+  neither the native nor the source path drew the door, every frame, and the
+  garage read as always open (the joint, timing and collision were right all
+  along). Segments now commit in presentation order, once each per frame (a
+  committed-segment mask replaces the cursor); runs are self-contained, so
+  this is the source's own order. Only Saffron of the 38 stage packets has
+  out-of-link-order segments. Captures `saff05-*` (closed: the shutter covers
+  the opening; open: panels slid away and the head-1 lamp glow 0x0850 shows,
+  which the source's SetFlags channel enables only while open).
 - **Zebes crash = event32 ledger exhaustion (2026-09-07):** the probe's crash
   hook caught it: an abort-mode exception (cpsr 0xb7) whose saved return is
   `gcParseDObjAnimJoint` objanim.c:366 (`event32->command.opcode` through a

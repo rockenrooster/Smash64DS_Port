@@ -4673,7 +4673,7 @@ s32 ndsRendererPrepareNativeStageOwner(
         sNdsNativeStageOwnerExecution.preflight_stats.sync_command_count;
 #endif
     sNdsNativeStageOwnerExecution.stats = stats;
-    sNdsNativeStageOwnerExecution.next_segment = 0u;
+    sNdsNativeStageOwnerExecution.committed_segments = 0u;
     sNdsNativeStageOwnerExecution.active = TRUE;
 #if NDS_DREAMLAND_DS_MESH
 #endif
@@ -4723,7 +4723,7 @@ done:
         sNdsNativeStageOwnerExecution.binding_world = NULL;
         sNdsNativeStageOwnerExecution.rigid_binding_mask = 0u;
 #endif
-        sNdsNativeStageOwnerExecution.next_segment = 0u;
+        sNdsNativeStageOwnerExecution.committed_segments = 0u;
         sNdsNativeStageOwnerExecution.active = FALSE;
 #if NDS_R2_STAGE_DIRECT
         /* Any fallback invalidates the table: runs[] may be torn, and the
@@ -4880,8 +4880,17 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
     {
         return FALSE;
     }
+    /* 2026-10-02: any not-yet-committed segment, not only the next index.
+     * The packet orders segments by owner, but the runtime presents display
+     * GObjs by link and creation: Saffron's gate (segment 3, link 6) is drawn
+     * before layer3 (segment 2, link 17), and the strict cursor refused it
+     * every frame -- the adapter swallowed the refusal, so the door never drew
+     * and the garage read as always open. Every run is self-contained (the
+     * head_order note above), so committing segments in presentation order
+     * is the source's own order and a pure reordering of the packet's. */
     if ((segment_index >= NDS_NATIVE_STAGE_SEGMENT_COUNT) ||
-        (segment_index != sNdsNativeStageOwnerExecution.next_segment) ||
+        (((sNdsNativeStageOwnerExecution.committed_segments >>
+           segment_index) & 1u) != 0u) ||
         (stats == NULL))
     {
 #if NDS_RENDERER_PROFILE_LEVEL == 1
@@ -4926,7 +4935,8 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
         sNdsRendererFastTriangleCount += segment_triangles;
         sNdsRendererFastOwnerTriangleCount[
             NDS_RENDERER_PROFILE_OWNER_STAGE] += segment_triangles;
-        sNdsNativeStageOwnerExecution.next_segment++;
+        sNdsNativeStageOwnerExecution.committed_segments |=
+            (u32)1u << segment_index;
 #if NDS_RENDERER_PROFILE_LEVEL == 1
         gNdsRendererM3SegmentCount++;
         gNdsRendererM3SegmentMask |= (u32)1u << segment_index;
@@ -5196,7 +5206,8 @@ stage_account_run:
     sNdsRendererFastTriangleCount += segment_triangles;
     sNdsRendererFastOwnerTriangleCount[
         NDS_RENDERER_PROFILE_OWNER_STAGE] += segment_triangles;
-    sNdsNativeStageOwnerExecution.next_segment++;
+    sNdsNativeStageOwnerExecution.committed_segments |=
+        (u32)1u << segment_index;
 #if NDS_RENDERER_PROFILE_LEVEL == 1
     gNdsRendererM3SegmentCount++;
     gNdsRendererM3SegmentMask |= (u32)1u << segment_index;
@@ -5237,8 +5248,8 @@ void ndsRendererFinishNativeStageOwner(void)
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
         ndsRendererBenchmarkSinkEndOwner(NDS_RENDERER_PROFILE_OWNER_STAGE);
 #endif
-        if ((sNdsNativeStageOwnerExecution.next_segment !=
-             NDS_NATIVE_STAGE_SEGMENT_COUNT) ||
+        if ((sNdsNativeStageOwnerExecution.committed_segments !=
+             (((u32)1u << NDS_NATIVE_STAGE_SEGMENT_COUNT) - 1u)) ||
             (sNdsNativeStageOwnerExecution.stats == NULL) ||
             (sNdsNativeStageOwnerExecution.stats->triangle_count !=
 #if NDS_DREAMLAND_DS_MESH
@@ -5261,7 +5272,7 @@ void ndsRendererFinishNativeStageOwner(void)
     sNdsNativeStageOwnerExecution.binding_world = NULL;
     sNdsNativeStageOwnerExecution.rigid_binding_mask = 0u;
 #endif
-    sNdsNativeStageOwnerExecution.next_segment = 0u;
+    sNdsNativeStageOwnerExecution.committed_segments = 0u;
     sNdsNativeStageOwnerExecution.active = FALSE;
     sNdsRendererRuntimeOwner = NDS_RENDERER_PROFILE_OWNER_NONE;
 #if NDS_DREAMLAND_DS_MESH
