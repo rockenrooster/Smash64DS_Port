@@ -577,6 +577,13 @@ def resolve_geometry_any(state: static.DisplayState):
         or entry_source_bytes(fmt, size, width * height) > loaded_bytes
     ):
         width = static.line_pixels(size, tile.line)
+        if size == static.SIZ_32B:
+            # A 32-bit tile splits each texel across TMEM's two banks (RG low,
+            # BA high), so one qword of tile line holds four texels, not the
+            # two its DRAM stride does. Kirby's entry star (line 4) is a 16x32
+            # half star the tile mirrors in S; read as 8x64 it lost the mirror
+            # and drew as a yellow column (owner r74: "we don't see the Star").
+            width *= 2
         texels = load.load_texels * 2
         if size == SIZ_4B:
             texels *= 2

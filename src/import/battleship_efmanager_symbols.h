@@ -124,8 +124,14 @@ static uintptr_t llKirbySpecial2CutterTrailDObjDesc = 0x0DF8u;
 static uintptr_t llKirbySpecial2CutterUpAnimJoint = 0x1470u;
 static uintptr_t llKirbySpecial2CutterUpDObjDesc = 0x12E8u;
 static uintptr_t llKirbySpecial2EntryStarDObjDesc = 0x1DA8u;
-static uintptr_t llKirbySpecial2EntryStarLAnimJoint = 0x1E30u;
-static uintptr_t llKirbySpecial2EntryStarRAnimJoint = 0x1EA0u;
+/* efManagerKirbyEntryStarMakeEffect (efmanager.c:5195) writes &ll...AnimJoint
+ * into the desc on every call, after the init-time resolver: as a static
+ * uintptr_t that was a RAM address, the star's AnimJoint table read garbage,
+ * no joint got a script, anim_frame stayed 0 and efManagerNoStructProcUpdate
+ * ejected the star on its first update (owner r74: "we don't see the Star
+ * that Kirby rides on"). Address-as-offset, like the Poke Ball's above. */
+#define llKirbySpecial2EntryStarLAnimJoint (*(uintptr_t *)(uintptr_t)0x1E30u)
+#define llKirbySpecial2EntryStarRAnimJoint (*(uintptr_t *)(uintptr_t)0x1EA0u)
 static uintptr_t llKirbySpecial2VulcanJabDObjDesc = 0x0B20u;
 static uintptr_t llLinkSpecial2EntryBeamAnimJoint = 0x0B60u;
 static uintptr_t llLinkSpecial2EntryBeamDObjDesc = 0x07B8u;
