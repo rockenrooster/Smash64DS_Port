@@ -221,6 +221,19 @@ def compile_packet(packet, name='dreamland'):
                 offset = emit(op, *([0] * PARAMS[op]))
                 patches.append((offset, kind, index, aux))
 
+            held = {}
+
+            def attribute(op, kind, index, value):
+                # COLOR and TEXCOORD persist in the geometry engine: a baked
+                # value equal to the one this run last sent is not sent again
+                # (a live patch's value is unknown until the frame).
+                if value is None:
+                    patch(op, kind, index)
+                    held[op] = None
+                elif held.get(op) != value:
+                    emit(op, value)
+                    held[op] = value
+
             # Three consecutive native state words, resolved from the admitted
             # texture objects. No runtime bind/record pass is needed.
             patch(0x29, MATERIAL, run_id)
@@ -266,14 +279,8 @@ def compile_packet(packet, name='dreamland'):
                         emit(0x1C, *DEPTH_STEP_WORDS)
                     for index, v in zip(indices, vertices):
                         color, uv = attributes[index]
-                        if color is None:
-                            patch(0x20, COLOR, index)
-                        else:
-                            emit(0x20, color)
-                        if uv is None:
-                            patch(0x22, UV, index)
-                        else:
-                            emit(0x22, uv)
+                        attribute(0x20, COLOR, index, color)
+                        attribute(0x22, UV, index, uv)
                         xyz = [stage.round_shift_signed(x, shift) * 16 for x in (v.x, v.y, v.z)]
                         if not all(-32768 <= x <= 32767 for x in xyz):
                             raise ValueError('Vertex does not fit DS VTX16')
@@ -332,14 +339,8 @@ def compile_packet(packet, name='dreamland'):
                         patch(0x16, CORNER_NOZ, index, (triangle << 3) | vertex_shift)
                         emit(0x10, 2)
                     color, uv = attributes[index]
-                    if color is None:
-                        patch(0x20, COLOR, index)
-                    else:
-                        emit(0x20, color)
-                    if uv is None:
-                        patch(0x22, UV, index)
-                    else:
-                        emit(0x22, uv)
+                    attribute(0x20, COLOR, index, color)
+                    attribute(0x22, UV, index, uv)
                     xyz = ([0, 0, 0] if source_corner else
                            [stage.round_shift_signed(x, vertex_shift) * 16 for x in (v.x, v.y, v.z)])
                     if not all(-32768 <= x <= 32767 for x in xyz):

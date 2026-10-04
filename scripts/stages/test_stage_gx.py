@@ -86,6 +86,26 @@ def test_compiled_corners_patch_coverage_and_stack(name):
                 assert depth == 1
                 actual.append(tuple(struct.unpack('<h', struct.pack('<H', n))[0]
                                     for n in (args[0] & 65535, args[0] >> 16, args[1] & 65535)))
+        # COLOR and TEXCOORD persist in the geometry engine and a run sends a
+        # baked value only when it changes: every vertex must still see its
+        # own attribute, baked or patched for that very vertex.
+        patch_at = {p[0]: p for p in scope}
+        held, cursor, vertex = {}, first, 0
+        while cursor < first + count:
+            ops = words[cursor]
+            cursor += 1
+            for lane in range(4):
+                op = (ops >> (8 * lane)) & 255
+                if op in (0x20, 0x22):
+                    q = patch_at.get(cursor)
+                    held[op] = ('patch', q[2]) if q else ('baked', words[cursor])
+                elif op == 0x23:
+                    dense = indices[vertex]
+                    vertex += 1
+                    for a, attr_op in ((0, 0x20), (1, 0x22)):
+                        want = attributes[dense][a]
+                        assert held.get(attr_op) == (('patch', dense) if want is None else ('baked', want))
+                cursor += gx.PARAMS[op]
         expected = []
         for t in range(nt):
             vertices = [packet.vertices[i] for i in packet.corners[run.first_corner + 3*t:run.first_corner + 3*t + 3]]
