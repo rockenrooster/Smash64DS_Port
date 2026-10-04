@@ -213,6 +213,39 @@ SECTIONS {
 		*(.text.ftMainPlayAnim)
 		*(.text.ndsFighterDisplayContractSetCycleType)
 		*(.text.DynamicArrayGet)
+		/* Fourth pack (2026-10-04 late-window census, sz-lateprof03 section D) for
+		 * the 2,016 B ndsStageMPAdjustFloorLoopWallSweep vacated (its fast path,
+		 * first here, now answers most wall sweeps). Ranked by non-mem stall a
+		 * byte; .text.hot members stay where they are. Not by name here:
+		 * ndsRendererAdapterNdlDispatchEffect and ndsFtrLeanRunOnHotStack, 112 B
+		 * and 10 B in the tick-HUD gate ROM but 1,300 B and 2,232 B in the
+		 * shipping ROM, which inlines their bodies (the shipping link overflowed
+		 * ITCM by 1,680 B with them). */
+		*(.text.ndsMPWallSweepStaticMiss)
+		*(.text.ndsMPWallSweepTrunc)
+		*(.text.ndsAObjEvent32CollectActiveMObjs)
+		*(.text.ndsRendererAdapterNdlDispatchEffectOnHotStack)
+		*(.text.ndsRendererAdapterSubmitStageDLFastOnHotStack)
+		*(.text.ndsRendererAdapterCommitSegmentOnHotStack)
+		*(.text.ndsR2BattleUpdateOnHotStack)
+		*(.text.ndsRendererAdapterBeginStageTraversal)
+		*(.text.ndsAudioFgmUpdate)
+		*(.text.ndsBaseMPProcessCheckFloorEdgeCollisionL)
+		*(.text.ndsFighterDisplayContractCheckTargetInBounds)
+		*(.text.ndsRendererAdapterFoldDisplayProcOtherModeL)
+		*(.text.ndsFtrLookAtOutputs)
+		*(.text.gcDrawDObjTreeDLLinksForGObj)
+		*(.text.gcRunFuncCamera)
+		*(.text.func_80017CC8)
+		*(.text.ndsRendererSetParticleNoDepth)
+		*(.text.syDebugPrintf)
+		*(.text.mpCollisionGetEdgeUnderRLineID)
+		*(.text.ndsP2HurtboxRejectPoints)
+		*(.text.ndsRendererParticleFloatToFixed)
+		*(.text.ndsBaseMPProcessCheckTestFloorCollision)
+		*(.text.gmCameraCheckTargetInBounds)
+		*(.text.ndsRendererProfileSetOwner)
+		*(.text.ndsRendererInitVertexCache)
 		*.itcm.* (.text .stub .text.* .gnu.linkonce.t.*)
 		/* P2-2p8 2026-09-27: calico's thread scheduler and word copy/fill run from
 		 * main RAM. The census rents them under 800 cycles a byte, and
