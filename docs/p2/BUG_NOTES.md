@@ -7085,3 +7085,49 @@ token; the four raw expressions use the value. On the four matches that
 refused a script: detaches 0, normalize failures 0, replay IDENTICAL to the
 pre-fix runs, WORK-H within layout noise. Receipt:
 `artifacts/performance/2026-09-28_p2-2p8-s1-event32-ledger/` (S4 section).
+
+## R75 Sector Z: VS Results froze after a 4P match (owner r75, 2026-10-04, FIXED)
+
+Two faults in sequence on Sector Z with four level-9 CPUs and all items:
+1. `mnVSResultsGetSpot` reads `aheads[place - players_ahead]`, and with ties
+   above a player that index is -1..-3 (places are dense ranks). IDO places
+   `places` directly below `aheads` in the frame, so the N64 reads
+   `places[4..2]` (all 1); GCC put a padding word there and the tag position
+   table was indexed with garbage (data abort). The call now resolves to an
+   N64-layout copy, `src/import/battleship_mnvsresults_spot.c` (the source
+   definition is declared weak before the include).
+2. With the heaviest four the arena then ran out at Results tic 120 making the
+   audio thread's 4 KiB stack (free 556 B). Results' display lists peak at
+   848 / 144 B against the source's 20,000 / 1,024; the rebudget gives them
+   4,096 / 512 B (32,768 B back).
+Evidence `artifacts/bugs/2026-10-04_results-oom/README.md`; commit `979102bf1f9`.
+
+## W1 1P Continue: Kirby's arena overflow, no fighter, opaque spotlight (walk sweep, 2026-10-04, FIXED)
+
+The all-fighter campaign walk halted Kirby at the Continue after Master Hand
+(`gcAddMObjForDObj`, free 116 B at scene entry) and showed every fighter a navy
+screen with an opaque grey cylinder and no figure. Causes: the scene's two 32 KiB
+graphics heaps and 48 KiB RDP buffer (unused natively) were reserved before the
+fighter; the fallen figure is a Demo actor never registered with the live
+fighter table, and the transient submit admitted only Intro/Ending/Challenger;
+the spotlight and light pool are I4 coverage discs presented opaque; the three
+fade procs wrote fill rectangles with no DS program. Fixed by the battle
+graphics sizes, the transient admit, semi-transparent OBJs in prim colour, and
+the fades as the 2D blend from the source alphas. Evidence
+`artifacts/bugs/2026-10-04_continue-sprites/README.md`; commit `979102bf1f9`.
+
+## F1 Fire Flower head (owner row "not rendering correctly", 2026-10-04, OPEN)
+
+The item is two roots of file 86: the stem (0x4520 -> callee 0x4578, three
+leaves at 120 degrees, its own CI4 TLUT) and the head (0x4608, a 178x130 quad
+whose DObj carries XObjs Tra + kind 46, a billboard; texture 16x16 CI4 at
+0x4308, mirrored in S and T to 32x32; two palettes, 0x4190 and 0x41b8, that
+the material animation swaps every frame; LOADTLUT of 32 entries on tile 5,
+which only the stem's callee sets). The expected head is concentric
+peach/white, orange, red and dark-red rings. On the DS a resting flower shows
+its leaves and a narrow white shape where the head should be; a held flower
+showed a red disc. The DS TLUT load takes the last SETTIMG (the material's
+palette), not tile 5's TMEM, so the inherited tile is not the cause. gdb
+reads of the submit's stack arguments are stale on the cache fork; the next
+step is a lab witness flushed from the head's submit (texture name, tile 0,
+TLUT image/count, the MVP) or a close-up capture.
