@@ -1117,6 +1117,24 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   status-change pose parses and effects; the frames that draw Samus's
   Charge Shot (22% of the gate, 46% of them over) carry the combat around
   it, not the shot. Receipt `2026-10-04_stage-dl-fast-hot`.
+- **10-04 more draw on the hot stack; camera-loop trims.** G_MTX push and
+  G_POPMTX are interpreted only by the host reference, so the DS
+  `NDS_RENDERER_MODELVIEW_STACK_SIZE` is 1 and `NDSRendererTraversalState`
+  is 888 B (was 3,000): the fast lane's static reach drops to 3,632 B and the
+  NDL dispatch (impact waves, Link bomb, damage slashes) and
+  `TryNativeEntryEffect` fit on the hot stack too (`2ae07aeb07a`: same ROM
+  P50/P95 938,304/1,295,936 -> 934,144/1,280,448, over 334 -> 311). The
+  battle camera loop no longer runs five recognisers per display GObj for a
+  diagnostic count, and the stage display commit pre-tests GObjs against a
+  32-bit bloom of its segment pointers (`0ac832f3bd7`: P50 -4.9K, P95
+  -8.4K across ROMs). The collision readiness check (~1,000 interworking
+  calls a frame into ITCM) is inline (`e89136078b8`: P50 -4.6K). Rejected:
+  inline 16-word copies for the fast pass's memcpy calls (STG +8.7K) and an
+  inline `ftGetStruct` fast path at ~1,370 call sites (P50 +3.8K, SRC
+  +2.8K): small ITCM leaves beat inline main-RAM code. Gate now 925,888 /
+  1,271,488, 288 over, 1,666/1,961 in two VBlanks. Receipts
+  `2026-10-04_ndl-entry-hot`, `2026-10-04_capture-trim`,
+  `2026-10-04_micro-copies`.
 
 ## 7. Found along the way
 
