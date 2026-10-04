@@ -1,0 +1,45 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,864; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 931: ALL 5,311,360 -> 1,117,056, 4 bucket(s) corrected
+Wrote artifacts/performance/2026-10-04_stage-dyn-stride/gate-s4y.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=a2c4e0bbe7e+dirty(16) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,864     1,677,056      1.50  1,173,417     1,112,448  4,454,400      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,608        10,496      2.28      5,622         2,432     27,200        0.4
+HUD         9,344        24,384      2.61     11,305         8,128    531,968        0.8
+SRC       386,688       602,368      1.56    398,581       145,664  1,400,448       34.6
+MISC      425,472       598,528      1.41    436,179       177,152  3,314,240       38.1
+OTHR      306,688       606,016      1.98    321,729        24,000    779,200       27.5
+WAIT      283,456       580,864      2.05    299,057         2,240    758,528       25.4
+WORK      855,552     1,190,912      1.39    870,281       355,008  4,126,656       76.6
+SHDT            0             0      0.00          0             0          0        0.0
+SWRM        1,408         1,472      1.05      1,384           960      3,328        0.1
+GCRA      381,312       596,864      1.57    393,152       141,312  1,395,200       34.1
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        755             0  1,394,560        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      425,344       598,400      1.41    436,022       176,960  3,314,112       38.1
+MFLS          128           192      1.50        158           128        320        0.0
+GPOL          597           643      1.08        551            29        675        0.1
+GVTX        1,439         1,569      1.09      1,346            96      1,660        0.1
+DGSA   2,221,927,571 4,052,476,767        2,144,070,467    408,983 4,294,514,885 198,943.4
+DGSB   2,229,679,774 4,052,096,565        2,163,259,781    888,730 4,293,852,712 199,637.5
+WORK-H    846,144     1,178,112      1.39    858,977       345,472  3,594,688       75.8
+
+named=851,687 (72.6% of ALL)  VBI 2:1778 3:171 4:11 5+:1 max:8 total:1961  slips=0
+Wrote artifacts/performance/2026-10-04_stage-dyn-stride/gate-s4y.json

@@ -1831,6 +1831,15 @@ typedef struct NDSRendererAdapterNativeStageWorkspace
      * so a binding's rigid proof and its world rebuild land on the same frame
      * and the per-frame cost stays flat instead of spiking every Nth frame. */
     u8 slice44_validate_cursor;
+    /* P2-2p8 (2026-10-04): per dynamic binding, the frame validations in a
+     * row whose chain walk rebuilt nothing (saturating). A binding quiet for
+     * NDS_STAGE_DYN_QUIET_MIN of them is revalidated one frame in
+     * gNdsStageDynStride, the others reuse its world (ndsRendererAdapter
+     * PrepareNativeStageBindingMatrix). */
+    u8 dyn_quiet[NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT];
+    /* Bindings whose DObj chain holds a yakumono (moving map collision):
+     * validated every frame, never strided. Set at topology capture. */
+    u64 dyn_pinned_mask;
 #endif
 #endif
 #endif
@@ -1981,6 +1990,9 @@ __attribute__((used)) volatile u32 gNdsStageWorldCacheFreeAtAttempt;
 __attribute__((used)) volatile u32 gNdsWorldCacheAllocatedMask;
 #endif
 static u32 sNdsRendererAdapterStageWorldNextGeneration;
+/* Persistent world entries rebuilt since boot: a caller that reads it around
+ * ndsRendererAdapterPersistentStageWorldPtr learns whether its chain moved. */
+static u32 sNdsRendererAdapterStageWorldRebuilds;
 static u8 sNdsRendererAdapterStageWorldIndex[
     NDS_RENDERER_ADAPTER_STAGE_WORLD_INDEX_COUNT];
 #endif
@@ -5833,6 +5845,7 @@ static const NDSRendererMatrix20p12 *ndsRendererAdapterPersistentStageWorldPtr(
             entry->parent = node->parent;
             entry->parent_generation = parent_generation;
             entry->generation = ndsRendererAdapterNextStageWorldGeneration();
+            sNdsRendererAdapterStageWorldRebuilds++;
             entry->source_key_valid = source_key_valid;
             if (source_key_valid != FALSE)
             {

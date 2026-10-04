@@ -4188,6 +4188,56 @@ volatile u32 gNdsTask103MatBindings;
 volatile u32 gNdsStageBillboardRow3 __attribute__((used, section(".data"))) =
     1u;
 
+#if NDS_TASK44_STAGE_STEADY && NDS_R2_STAGE_VALIDATE_STRIDE
+/* Quiet dynamic bindings: revalidated one frame in this many (1, 2, 4 or 8;
+ * 1 = every frame, the behaviour before 2026-10-04). Same-ROM A/B word. */
+volatile u32 gNdsStageDynStride __attribute__((used, section(".data"))) = 4u;
+#define NDS_STAGE_DYN_QUIET_MIN 8u
+#include <gr/ground.h>
+
+/* Bindings whose DObj or an ancestor is a yakumono -- map collision that
+ * moves. Their render must never lag the collision fighters stand on, so the
+ * dynamic stride skips them. Once per topology capture. */
+static u64 __attribute__((cold)) ndsRendererAdapterStageYakumonoBindings(
+    const NDSRendererAdapterNativeStageWorkspace *workspace)
+{
+    u64 mask = 0u;
+    u32 binding_index;
+
+    if ((gMPCollisionYakumonoDObjs == NULL) || (gMPCollisionYakumonosNum <= 0))
+    {
+        return 0u;
+    }
+    for (binding_index = 0u;
+         (binding_index < workspace->binding_count) && (binding_index < 64u);
+         binding_index++)
+    {
+        DObj *dobj;
+
+        for (dobj = workspace->binding_dobjs[binding_index];
+             (dobj != NULL) && (dobj != DOBJ_PARENT_NULL);
+             dobj = dobj->parent)
+        {
+            s32 i;
+
+            for (i = 0; i < gMPCollisionYakumonosNum; i++)
+            {
+                if (gMPCollisionYakumonoDObjs->dobjs[i] == dobj)
+                {
+                    mask |= (u64)1u << binding_index;
+                    break;
+                }
+            }
+            if (((mask >> binding_index) & 1u) != 0u)
+            {
+                break;
+            }
+        }
+    }
+    return mask;
+}
+#endif
+
 static sb32 ndsRendererAdapterPrepareNativeStageBindingMatrix(
     CObj *cobj, NDSRendererAdapterNativeStageWorkspace *workspace,
     u32 binding_index
@@ -4211,7 +4261,41 @@ static sb32 ndsRendererAdapterPrepareNativeStageBindingMatrix(
 
     if (kind != 0u) { sNdsRendererAdapterMvpRecalcScaleX = 1.0F; }
     /* The cached world itself, not a copy (2026-10-04). */
+#if NDS_TASK44_STAGE_STEADY && NDS_R2_STAGE_VALIDATE_STRIDE
+    /* P2-2p8 (2026-10-04, owner ruling D12c): a dynamic binding whose chain
+     * walk rebuilt nothing for NDS_STAGE_DYN_QUIET_MIN frame validations in a
+     * row is revalidated one frame in gNdsStageDynStride (the slice 44 cursor
+     * spreads them evenly); on the others its persistent world is reused --
+     * the camera compose below still runs every frame. A rebuild returns the
+     * binding to every-frame validation, so a part that starts moving after a
+     * quiet spell shows it at most stride - 1 frames late. */
+    {
+        u8 *quiet = &workspace->dyn_quiet[binding_index];
+        const u32 stride = gNdsStageDynStride;
+        const u32 rebuilds = sNdsRendererAdapterStageWorldRebuilds;
+        const sb32 stale =
+            ((stride > 1u) && (*quiet >= NDS_STAGE_DYN_QUIET_MIN) &&
+             (((workspace->dyn_pinned_mask >> binding_index) & 1u) == 0u) &&
+             (((binding_index + workspace->slice44_validate_cursor) &
+               (stride - 1u)) != 0u)) ? TRUE : FALSE;
+
+        world_ptr = ndsRendererAdapterPersistentStageWorldPtr(dobj, &world,
+                                                              stale);
+        if (stale == FALSE)
+        {
+            if (sNdsRendererAdapterStageWorldRebuilds != rebuilds)
+            {
+                *quiet = 0u;
+            }
+            else if (*quiet < 255u)
+            {
+                (*quiet)++;
+            }
+        }
+    }
+#else
     world_ptr = ndsRendererAdapterPersistentStageWorldPtr(dobj, &world, FALSE);
+#endif
     if (world_ptr == NULL)
     { return FALSE; }
 #if NDS_TASK103_STAGE_RUN_PHASE
@@ -4512,6 +4596,10 @@ static sb32 ndsRendererAdapterCaptureTask36StageWorld(
     }
     workspace->task36_runtime_rigid_mask =
         rigid_mask;
+#if NDS_TASK44_STAGE_STEADY && NDS_R2_STAGE_VALIDATE_STRIDE
+    workspace->dyn_pinned_mask =
+        ndsRendererAdapterStageYakumonoBindings(workspace);
+#endif
     /* The stage GX cull keeps each rigid run's world-space bounds until the
      * worlds are captured again (nds_stage_gx.exec.inc). */
     gNdsStageRigidWorldSerial++;
