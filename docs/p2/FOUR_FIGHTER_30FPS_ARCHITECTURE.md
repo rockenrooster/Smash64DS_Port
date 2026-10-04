@@ -1083,6 +1083,25 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   in two VBlanks +1..+3 points; no declines; heap low-water >= 76.9K except
   Sector Z (binding 10 left live for its 4.2 KB of body). Receipt
   `2026-10-03_vs-stage-pins`.
+- **10-04 stage segments in one pass; the gate's tail is the item phase.**
+  Gate at HEAD `3472eaf646a`: WORK P50/P95 960,064/1,324,672, 384 of 1,960
+  over 1.12M, 344 of them after presented frame 800 when the item spawns pile
+  up. Against frames under 1M, the over-gate frames carry SRC +222K, MISC
+  +139K (items 38K, the camera/draw-shell remainder 41K, particles 26K,
+  weapons 26K) and FTR +69K; STG is flat. `ndsStageGxCommitFast` commits a
+  compiled stage segment in one patch pass and one DMA (runs contiguous in
+  words and patches, no hidden binding, no 1P cull, union near boxes per
+  binding; every FIFO word, span state and closing painter depth hashes
+  identical on 901 lab frames): STG P50 170,560 -> 154,688, WORK P50/P95
+  965,440/1,327,872 -> 948,288/1,316,224, two VBlanks 1,556 -> 1,597 of
+  1,961, digest identical (`fa35dd61607`). The stage prepare takes the
+  battle camera's split matrices from the frame camera cache instead of
+  building them a second time (`cbbe041ca76`, STG P50 -1.3K, digest
+  identical). Rejected: skipping a held item's attach at draw time -- the
+  latch walk writes the FTParts latches the simulation reads, and the digest
+  diverged at frame 879 -- and culling the VS venues' stage segments
+  (STG +17K). Receipts `2026-10-04_gate-head`, `2026-10-04_stage-segment-fast`,
+  `2026-10-04_stage-camera-share`.
 
 ## 7. Found along the way
 
