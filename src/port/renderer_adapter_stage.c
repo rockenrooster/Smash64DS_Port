@@ -6371,11 +6371,27 @@ static void ndsStageRejectNativeRender(DObj *dobj, const Gfx *dl,
     }
 }
 
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+/* LAB ONLY (the any-stage sweep ROM): the FoxSpecial3 Arwing roots this
+ * owner draws (Sector Z's hazard, Fox's entry), in the order of the root
+ * switch below. Per root: calls, ticks from entry through
+ * PrepareInitialMatrices, the executor's ticks, the rest (stats, config,
+ * tail), triangles. A call spanning >= 2^20 ticks (the clock's 2^22
+ * artifact) is left out. */
+volatile u32 gNdsLabArwingRootCensus[8][5] __attribute__((used));
+#define NDS_LAB_ARW_MARK(v) ((v) = cpuGetTiming())
+#else
+#define NDS_LAB_ARW_MARK(v) ((void)0)
+#endif
+
 static sb32 ndsRendererAdapterTryNativeEntryEffect(
     DObj *dobj, const Gfx *dl, GObj *camera_gobj, u32 initial_geometry_mode)
 {
 #if NDS_RENDERER_HW_TRIANGLES
     extern void *gFTManagerCommonFile;
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+    u32 lab_t[5] = { 0u, 0u, 0u, 0u, 0u };
+#endif
     const u8 *base = NULL;
     u32 owner_asset_id = 0u;
     u32 root_offset = 0u;
@@ -6407,6 +6423,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
     {
         return FALSE;
     }
+    NDS_LAB_ARW_MARK(lab_t[0]);
 
     /* Exact source asset + exact generated root is the whole admission test.
      * Do not classify arbitrary effect lists by shape: this path intentionally
@@ -7031,6 +7048,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
         (camera_gobj != NULL) ? CObjGetStruct(camera_gobj) :
             ((gGCCurrentCamera != NULL) ? CObjGetStruct(gGCCurrentCamera) : NULL),
         FALSE, &projection, &projection_ptr, &modelview, &modelview_ptr);
+    NDS_LAB_ARW_MARK(lab_t[1]);
     /* The default battle camera has one legitimate split shape where the
      * complete camera transform lives on only one side of the DS pair (the
      * world-quad bridge handles the same contract above).  The generic DL
@@ -7149,6 +7167,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
     config.initial_geometry_mode = initial_geometry_mode;
     config.texture_data_layout = NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
 
+    NDS_LAB_ARW_MARK(lab_t[2]);
     if (ndsRendererSubmitNativeEntryEffect(
             owner_asset_id, root_offset, native_materials,
             native_material_count, native_texture_variant,
@@ -7159,6 +7178,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
             NDS_NATIVE_FAILURE_REJECTED_PROGRAM, &stats);
         return FALSE;
     }
+    NDS_LAB_ARW_MARK(lab_t[3]);
 
     gNdsStageGCDrawAllLoopHardwareTriangleCount += stats.hardware_triangle_count;
     gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount +=
@@ -7175,6 +7195,29 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
         stats.hardware_texture_ready_count;
     gNdsStageGCDrawAllLoopHardwareTextureRejectCount +=
         stats.hardware_texture_reject_count;
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+    NDS_LAB_ARW_MARK(lab_t[4]);
+    if ((owner_asset_id == 161u) && ((lab_t[4] - lab_t[0]) < 0x100000u))
+    {
+        static const u16 lab_roots[8] = { 0x1fa0u, 0x2920u, 0x29d0u, 0x29f0u,
+                                          0x2a20u, 0x2868u, 0x2a50u, 0x2b00u };
+        u32 r;
+
+        for (r = 0u; r < 8u; r++)
+        {
+            if (root_offset == lab_roots[r])
+            {
+                gNdsLabArwingRootCensus[r][0]++;
+                gNdsLabArwingRootCensus[r][1] += lab_t[1] - lab_t[0];
+                gNdsLabArwingRootCensus[r][2] += lab_t[3] - lab_t[2];
+                gNdsLabArwingRootCensus[r][3] +=
+                    (lab_t[2] - lab_t[1]) + (lab_t[4] - lab_t[3]);
+                gNdsLabArwingRootCensus[r][4] += stats.hardware_triangle_count;
+                break;
+            }
+        }
+    }
+#endif
     return TRUE;
 #else
     (void)dobj;
