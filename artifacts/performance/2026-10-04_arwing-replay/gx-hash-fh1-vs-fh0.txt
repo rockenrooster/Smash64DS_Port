@@ -1,0 +1,17 @@
+Lab hash of every FoxSpecial3 packet replay (root, projection, modelview, packet words, light/othermode stats), folded per frame; A = gNdsEntryEffectFoxReplay 1 (sz-fh1.log), B = 0 (sz-fh0.log), logic frames 1000-1900
+frames 451 with replays 411 identical 411 different 0
+nf A 0 B 0
+
+
+first rows, A:
+H l=1002 n=7 h=ed11e5ff st=2 nf=0
+H l=1004 n=7 h=f12af0ca st=2 nf=0
+H l=1006 n=7 h=fa593118 st=2 nf=0
+H l=1008 n=7 h=fb6d75dc st=2 nf=0
+H l=1010 n=7 h=462b3033 st=2 nf=0
+first rows, B:
+H l=1002 n=7 h=ed11e5ff st=2 nf=0
+H l=1004 n=7 h=f12af0ca st=2 nf=0
+H l=1006 n=7 h=fa593118 st=2 nf=0
+H l=1008 n=7 h=fb6d75dc st=2 nf=0
+H l=1010 n=7 h=462b3033 st=2 nf=0

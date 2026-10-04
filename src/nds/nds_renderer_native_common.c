@@ -5873,6 +5873,50 @@ u32 ndsRendererEntryEffectStartupIdleFrames(void)
 #endif
 }
 
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP && NDS_ENTRY_PACKET_LIVE
+/* LAB ONLY: what each FoxSpecial3 packet replay hands the GX -- the root, both
+ * matrices, the packet's words and the stats it reads -- folded per frame by
+ * both the executor's branch and the replay submit, so the two can be compared
+ * at the same logic frame without screen captures (gdb resets it). */
+__attribute__((used)) volatile u32 gNdsLabFoxGxHash;
+__attribute__((used)) volatile u32 gNdsLabFoxGxHashCount;
+static void __attribute__((noinline, cold)) ndsLabFoxGxHash(u32 root_index,
+    const NDSRendererConfig *config, const NDSEntryEffectPacket *packet,
+    const NDSRendererStats *stats)
+{
+    u32 h = gNdsLabFoxGxHash ^ (root_index * 0x9e3779b1u);
+    const u32 *p = (const u32 *)(const void *)config->initial_projection;
+    const u32 *m = (const u32 *)(const void *)config->initial_modelview;
+    u32 i;
+
+#define NDS_LAB_FOX_MIX(v) (h = (h ^ (u32)(v)) * 0x01000193u)
+    for (i = 0u; i < sizeof(NDSRendererMatrix20p12) / 4u; i++)
+    {
+        NDS_LAB_FOX_MIX(p[i]);
+        NDS_LAB_FOX_MIX(m[i]);
+    }
+    NDS_LAB_FOX_MIX((uintptr_t)packet->words);
+    NDS_LAB_FOX_MIX(packet->count);
+    NDS_LAB_FOX_MIX(packet->split);
+    NDS_LAB_FOX_MIX(packet->lit);
+    for (i = 0u; i < packet->count; i++)
+    {
+        NDS_LAB_FOX_MIX(packet->words[i]);
+    }
+    NDS_LAB_FOX_MIX(stats->light_dir_x);
+    NDS_LAB_FOX_MIX(stats->light_dir_y);
+    NDS_LAB_FOX_MIX(stats->light_dir_z);
+    NDS_LAB_FOX_MIX(stats->light_dir_mask);
+    NDS_LAB_FOX_MIX(stats->othermode_l);
+#undef NDS_LAB_FOX_MIX
+    gNdsLabFoxGxHash = h;
+    gNdsLabFoxGxHashCount++;
+}
+#define NDS_LAB_FOX_GX_HASH(r, c, p, s) ndsLabFoxGxHash((r), (c), (p), (s))
+#else
+#define NDS_LAB_FOX_GX_HASH(r, c, p, s) ((void)0)
+#endif
+
 s32 ndsRendererSubmitNativeEntryEffect(
     u32 owner_asset_id, u32 root_offset,
     const NDSRendererNativeMaterial *materials, u32 material_count,
@@ -6449,6 +6493,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
             {
                 u32 bit = 1u << (root_index & 31u);
 
+                NDS_LAB_FOX_GX_HASH(root_index, config, packet, stats);
                 ndsRendererEntryEffectPacketReplay(
                     packet, stats, config->initial_modelview,
                     &light_direction_by_root[root_index],
@@ -7122,6 +7167,215 @@ s32 ndsRendererSubmitNativeEntryEffect(
     (void)root_offset;
     (void)materials;
     (void)material_count;
+    (void)config;
+    (void)stats;
+    return FALSE;
+#endif
+}
+
+/* P2-2p8 (2026-10-04, owner r75 Sector Z row): Sector Z's Arwing draws eight
+ * FoxSpecial3 roots a frame, and once their packets are recorded every draw is
+ * the executor's replay branch above: the static checks, the modelview store,
+ * the split matrix load, the state match and one packet DMA. Reaching it
+ * through the general executor walked ~15 KB of every other owner's code per
+ * root (42.8K cycles a frame at 7.9 cycles an instruction in the lab profile,
+ * artifacts/task37-census/sz-szprof02). This is that branch alone, for owner
+ * 161 with no materials, in the executor's order and with its stores. It
+ * returns FALSE whenever the executor would not take the branch -- before any
+ * GX write, except when a ramp palette or the packet turns out stale after
+ * the matrix load, which the executor then repeats with the same values.
+ * Same-ROM A/B word gNdsEntryEffectFoxReplay (0 = always the executor). */
+volatile u32 gNdsEntryEffectFoxReplay __attribute__((used, section(".data"))) = 1u;
+__attribute__((used)) volatile u32 gNdsEntryEffectFoxReplayDraws;
+__attribute__((used)) volatile u32 gNdsEntryEffectFoxReplayDeclines;
+
+
+s32 ndsRendererReplayNativeEntryEffectFox(u32 root_offset,
+    const NDSRendererConfig *config, NDSRendererStats *stats)
+{
+#if NDS_RENDERER_HW_TRIANGLES && NDS_ENTRY_PACKET_LIVE
+    const NDSEntryEffectRoot *root;
+    NDSEntryEffectStateRoot *state_root;
+    const NDSEntryEffectGroupState *state_groups;
+    NDSEntryEffectPacket *packet;
+    NDSRendererHardwareLightDirection light_direction;
+    u32 ramp_names[NDS_ENTRY_STATE_GROUPS];
+    u32 root_index;
+    u32 root_bit;
+    u32 first;
+    u32 group_offset;
+    u32 has_ramp = FALSE;
+    u32 initial_prim_color;
+    u32 initial_env_color;
+
+    NDS_FIGHTER_PACKET_DMA_WAIT();
+    if ((gNdsEntryEffectFoxReplay == 0u) || (config == NULL) ||
+        (stats == NULL) || (config->initial_projection == NULL) ||
+        (config->initial_modelview == NULL) ||
+        (gNdsEntryEffectStateCache == 0u) || (gNdsEntryEffectStaticOnce == 0u) ||
+        (root_offset == gNdsEntryEffectWitnessRoot))
+    {
+        return FALSE;
+    }
+    root = ndsRendererEntryEffectRoot(161u, root_offset);
+    if ((root == NULL) || (root->group_count == 0u) ||
+        ((u32)root->first_group + root->group_count >
+         NDS_ENTRY_EFFECT_GROUP_COUNT))
+    {
+        return FALSE;
+    }
+    root_index = (u32)(root - &sNdsEntryEffectRoots[0]);
+    root_bit = 1u << (root_index & 31u);
+    if ((root_index < NDS_ENTRY_EFFECT_FOX_ROOT_FIRST) ||
+        (root_index >= NDS_ENTRY_EFFECT_FOX_ROOT_FIRST + NDS_ENTRY_STATE_ROOTS) ||
+        ((sNdsEntryEffectRootStaticOk[root_index >> 5] & root_bit) == 0u))
+    {
+        return FALSE;
+    }
+    first = (u32)root->first_group -
+        (u32)sNdsEntryEffectRoots[NDS_ENTRY_EFFECT_FOX_ROOT_FIRST].first_group;
+    if (first + (u32)root->group_count > NDS_ENTRY_STATE_GROUPS)
+    {
+        return FALSE;
+    }
+    state_root = &sNdsEntryEffectStateRoots[
+        root_index - NDS_ENTRY_EFFECT_FOX_ROOT_FIRST];
+    state_groups = &sNdsEntryEffectStateGroups[first];
+    initial_prim_color = stats->prim_color;
+    initial_env_color = stats->env_color;
+    if (ndsRendererEntryEffectStateMatches(
+            state_root, stats, initial_prim_color, initial_env_color,
+            stats->othermode_h, stats->othermode_l,
+            config->initial_geometry_mode) == 0u)
+    {
+        return FALSE;
+    }
+    packet = ndsRendererEntryEffectPacketFor(
+        root_index - NDS_ENTRY_EFFECT_FOX_ROOT_FIRST);
+    if ((packet == NULL) || (packet->valid == 0u))
+    {
+        return FALSE;
+    }
+    /* The executor's traversal reset, ahead of its override checks. */
+    if (root_index == NDS_ENTRY_EFFECT_FOX_ROOT_FIRST)
+    {
+        memset(sNdsRendererEntryEffectModelviewValidMask, 0,
+               sizeof(sNdsRendererEntryEffectModelviewValidMask));
+    }
+    /* Its static-proven checks: the ones that read live state. */
+    for (group_offset = 0u; group_offset < root->group_count; group_offset++)
+    {
+        const NDSEntryEffectGroup *group =
+            &sNdsEntryEffectGroups[(u32)root->first_group + group_offset];
+        u32 override_index;
+
+        if (group->material_slot != 0xffu)
+        {
+            return FALSE;
+        }
+        for (override_index = 0u;
+             override_index < group->matrix_override_count;
+             override_index++)
+        {
+            u32 source_root = sNdsEntryEffectMatrixOverrideRoot[
+                (u32)group->matrix_override_first + override_index];
+
+            if ((sNdsRendererEntryEffectModelviewValidMask[source_root >> 5] &
+                 (1u << (source_root & 31u))) == 0u)
+            {
+                return FALSE;
+            }
+        }
+        if ((group->texture_slot != NDS_ENTRY_EFFECT_TEXTURE_NONE) &&
+            (sNdsRendererEntryEffectTextureName[group->texture_slot] == 0u))
+        {
+            return FALSE;
+        }
+        ramp_names[group_offset] = 0u;
+        if ((state_groups[group_offset].flags & NDS_ENTRY_STATE_RAMP) != 0u)
+        {
+            has_ramp = TRUE;
+        }
+    }
+    if ((has_ramp == FALSE) &&
+        (ndsRendererEntryEffectPacketCurrent(packet, root, first,
+                                             ramp_names) == 0u))
+    {
+        return FALSE;
+    }
+
+    ndsRendererHardwareEndBatch();
+    sNdsRendererEntryEffectModelview[root_index] = *config->initial_modelview;
+    if ((gNdsEntryEffectLazyComposed == 0u) ||
+        (ndsRendererEntryEffectIsOverrideSource(root_index) != 0u))
+    {
+        ndsRendererMtxMul20p12(
+            config->initial_modelview, config->initial_projection,
+            &sNdsRendererEntryEffectComposed[root_index]);
+    }
+    sNdsRendererEntryEffectModelviewValidMask[root_index >> 5] |= root_bit;
+    ndsRendererLoadHardwareSplitMatrices(
+        config->initial_projection, config->initial_modelview,
+        ndsRendererNextMatrixGeneration());
+    if (has_ramp != FALSE)
+    {
+        /* After the matrix load, as the executor looks them up. */
+        for (group_offset = 0u; group_offset < root->group_count;
+             group_offset++)
+        {
+            u32 index = (u32)root->first_group + group_offset;
+            const NDSEntryEffectGroup *group = &sNdsEntryEffectGroups[index];
+
+            if ((state_groups[group_offset].flags & NDS_ENTRY_STATE_RAMP) == 0u)
+            {
+                continue;
+            }
+            ramp_names[group_offset] = ndsRendererEntryRampPalette(
+                &sNdsEntryEffectTextures[group->texture_slot],
+                ((sNdsEntryEffectColorWriteMasks[index] & 1u) != 0u) ?
+                    sNdsEntryEffectPrimColors[group->prim_color_index] :
+                    initial_prim_color,
+                ((sNdsEntryEffectColorWriteMasks[index] & 2u) != 0u) ?
+                    sNdsEntryEffectEnvColors[group->env_color_index] :
+                    initial_env_color);
+            if (ramp_names[group_offset] == 0u)
+            {
+                /* The executor invalidates the state and resolves the root. */
+                gNdsEntryEffectFoxReplayDeclines++;
+                return FALSE;
+            }
+        }
+        if (ndsRendererEntryEffectPacketCurrent(packet, root, first,
+                                                ramp_names) == 0u)
+        {
+            gNdsEntryEffectFoxReplayDeclines++;
+            return FALSE;
+        }
+    }
+    NDS_LAB_FOX_GX_HASH(root_index, config, packet, stats);
+    ndsRendererEntryEffectPacketReplay(packet, stats, config->initial_modelview,
+                                       &light_direction, 0u);
+    gNdsEntryEffectStateReplays++;
+    gNdsEntryEffectNativeDrawCount++;
+    for (group_offset = 0u; group_offset < (u32)root->group_count;
+         group_offset++)
+    {
+        u32 slot = sNdsEntryEffectGroups[(u32)root->first_group + group_offset]
+            .texture_slot;
+
+        if ((slot != NDS_ENTRY_EFFECT_TEXTURE_NONE) &&
+            (sNdsEntryEffectTextureStartupOnly[slot] != 0u))
+        {
+            sNdsEntryEffectStartupDrawSerial =
+                sNdsRendererHardwareFrameSerial + 1u;
+            break;
+        }
+    }
+    gNdsEntryEffectNativeRootDraws[root_index]++;
+    gNdsEntryEffectFoxReplayDraws++;
+    return TRUE;
+#else
+    (void)root_offset;
     (void)config;
     (void)stats;
     return FALSE;

@@ -6404,6 +6404,119 @@ volatile u32 gNdsLabArwingRootCensus[8][5] __attribute__((used));
 #define NDS_LAB_ARW_MARK(v) ((void)0)
 #endif
 
+#if NDS_RENDERER_HW_TRIANGLES
+/* The entry owner's inherited state, as the executor's stats see it at
+ * submit; shared by ndsRendererAdapterTryNativeEntryEffect and the Arwing's
+ * replay submit so the two cannot drift. */
+static inline __attribute__((always_inline)) void
+ndsRendererAdapterEntryEffectSeedStats(DObj *dobj, NDSRendererStats *stats)
+{
+    ndsRendererInitStats(stats);
+    /* Light state. Both lists inherit G_LIGHTING from the battle display and
+     * carry their own gSPLightColor words in the packet; what they do not
+     * carry is seeded from what the display left in the RSP: the direction
+     * scVSBattleFuncLights aimed, re-aimed by the fighter's own
+     * ftDisplayLightsDrawReflect when it uses a light (same seed as
+     * ndsRendererAdapterBeginStageTraversal), and for a group before the
+     * first colour word the last colours written: the effect's own MObj
+     * colours when it carries MOBJ_FLAG_LIGHT1/2, otherwise the fighter
+     * material drawn before it. */
+    if ((sNdsFighterDisplayCurrentLightValid != FALSE) &&
+        (sNdsFighterDisplayCurrentLightCount != 0u))
+    {
+        stats->light_dir_x = sNdsFighterDisplayCurrentLight.l.dir[0];
+        stats->light_dir_y = sNdsFighterDisplayCurrentLight.l.dir[1];
+        stats->light_dir_z = sNdsFighterDisplayCurrentLight.l.dir[2];
+        stats->light_dir_mask = 1u;
+    }
+    {
+        MObj *mobj;
+
+        for (mobj = dobj->mobj; mobj != NULL; mobj = mobj->next)
+        {
+            u32 flags = mobj->sub.flags;
+
+            if ((flags & MOBJ_FLAG_LIGHT1) != 0u)
+            {
+                stats->light_color_1 =
+                    ndsRendererAdapterPackColor(&mobj->sub.light1color);
+                stats->light_color_mask |=
+                    NDS_FIGHTER_DISPLAY_LIGHT_COLOR_1_MASK;
+            }
+            if ((flags & MOBJ_FLAG_LIGHT2) != 0u)
+            {
+                stats->light_color_2 =
+                    ndsRendererAdapterPackColor(&mobj->sub.light2color);
+                stats->light_color_mask |=
+                    NDS_FIGHTER_DISPLAY_LIGHT_COLOR_2_MASK;
+            }
+        }
+        if (gNdsFighterDisplayContractMaterialLightSeedCount != 0u)
+        {
+            if ((stats->light_color_mask &
+                 NDS_FIGHTER_DISPLAY_LIGHT_COLOR_1_MASK) == 0u)
+            {
+                stats->light_color_1 =
+                    gNdsFighterDisplayContractMaterialLight1;
+                stats->light_color_mask |=
+                    NDS_FIGHTER_DISPLAY_LIGHT_COLOR_1_MASK;
+            }
+            if ((stats->light_color_mask &
+                 NDS_FIGHTER_DISPLAY_LIGHT_COLOR_2_MASK) == 0u)
+            {
+                stats->light_color_2 =
+                    gNdsFighterDisplayContractMaterialLight2;
+                stats->light_color_mask |=
+                    NDS_FIGHTER_DISPLAY_LIGHT_COLOR_2_MASK;
+            }
+        }
+    }
+    if (sNdsRendererAdapterEffectSubmitActive != FALSE)
+    {
+        if ((sNdsRendererAdapterEffectColorMask & 1u) != 0u)
+        {
+            stats->prim_color = sNdsRendererAdapterEffectPrimColor;
+        }
+        if ((sNdsRendererAdapterEffectColorMask & 2u) != 0u)
+        {
+            stats->env_color = sNdsRendererAdapterEffectEnvColor;
+        }
+        if (sNdsRendererAdapterEffectOtherModeValid != FALSE)
+        {
+            stats->othermode_l = sNdsRendererAdapterEffectOtherModeL;
+        }
+        /* A list-1 draw whose proc set no mode inherits the battle camera's
+         * own XLU head (gmcamera.c:1055 writes G_RM_AA_ZB_XLU_SURF into
+         * gSYTaskmanDLHeads[1] before every layer), not the last effect's. */
+        if ((sNdsRendererAdapterEffectOtherModeThisProc == 0u) &&
+            (sNdsRendererAdapterEffectSubmitHead == 1u))
+        {
+            stats->othermode_l = G_RM_AA_ZB_XLU_SURF | G_RM_AA_ZB_XLU_SURF2;
+        }
+    }
+}
+
+static inline __attribute__((always_inline)) void
+ndsRendererAdapterEntryEffectAccumulate(const NDSRendererStats *stats)
+{
+    gNdsStageGCDrawAllLoopHardwareTriangleCount += stats->hardware_triangle_count;
+    gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount +=
+        stats->hardware_zbuffer_triangle_count;
+    gNdsStageGCDrawAllLoopHardwareProjectedDepthTriangleCount +=
+        stats->hardware_projected_depth_triangle_count;
+    gNdsStageGCDrawAllLoopHardwareDecalDepthTriangleCount +=
+        stats->hardware_decal_depth_triangle_count;
+    gNdsStageGCDrawAllLoopHardwareTextureBindCount +=
+        stats->hardware_texture_bind_count;
+    gNdsStageGCDrawAllLoopHardwareTextureUploadCount +=
+        stats->hardware_texture_upload_count;
+    gNdsStageGCDrawAllLoopHardwareTextureReadyCount +=
+        stats->hardware_texture_ready_count;
+    gNdsStageGCDrawAllLoopHardwareTextureRejectCount +=
+        stats->hardware_texture_reject_count;
+}
+#endif
+
 static sb32 ndsRendererAdapterTryNativeEntryEffect(
     DObj *dobj, const Gfx *dl, GObj *camera_gobj, u32 initial_geometry_mode)
 {
@@ -7109,89 +7222,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
         return FALSE;
     }
 
-    ndsRendererInitStats(&stats);
-    /* Light state. Both lists inherit G_LIGHTING from the battle display and
-     * carry their own gSPLightColor words in the packet; what they do not
-     * carry is seeded from what the display left in the RSP: the direction
-     * scVSBattleFuncLights aimed, re-aimed by the fighter's own
-     * ftDisplayLightsDrawReflect when it uses a light (same seed as
-     * ndsRendererAdapterBeginStageTraversal), and for a group before the
-     * first colour word the last colours written: the effect's own MObj
-     * colours when it carries MOBJ_FLAG_LIGHT1/2, otherwise the fighter
-     * material drawn before it. */
-    if ((sNdsFighterDisplayCurrentLightValid != FALSE) &&
-        (sNdsFighterDisplayCurrentLightCount != 0u))
-    {
-        stats.light_dir_x = sNdsFighterDisplayCurrentLight.l.dir[0];
-        stats.light_dir_y = sNdsFighterDisplayCurrentLight.l.dir[1];
-        stats.light_dir_z = sNdsFighterDisplayCurrentLight.l.dir[2];
-        stats.light_dir_mask = 1u;
-    }
-    {
-        MObj *mobj;
-
-        for (mobj = dobj->mobj; mobj != NULL; mobj = mobj->next)
-        {
-            u32 flags = mobj->sub.flags;
-
-            if ((flags & MOBJ_FLAG_LIGHT1) != 0u)
-            {
-                stats.light_color_1 =
-                    ndsRendererAdapterPackColor(&mobj->sub.light1color);
-                stats.light_color_mask |=
-                    NDS_FIGHTER_DISPLAY_LIGHT_COLOR_1_MASK;
-            }
-            if ((flags & MOBJ_FLAG_LIGHT2) != 0u)
-            {
-                stats.light_color_2 =
-                    ndsRendererAdapterPackColor(&mobj->sub.light2color);
-                stats.light_color_mask |=
-                    NDS_FIGHTER_DISPLAY_LIGHT_COLOR_2_MASK;
-            }
-        }
-        if (gNdsFighterDisplayContractMaterialLightSeedCount != 0u)
-        {
-            if ((stats.light_color_mask &
-                 NDS_FIGHTER_DISPLAY_LIGHT_COLOR_1_MASK) == 0u)
-            {
-                stats.light_color_1 =
-                    gNdsFighterDisplayContractMaterialLight1;
-                stats.light_color_mask |=
-                    NDS_FIGHTER_DISPLAY_LIGHT_COLOR_1_MASK;
-            }
-            if ((stats.light_color_mask &
-                 NDS_FIGHTER_DISPLAY_LIGHT_COLOR_2_MASK) == 0u)
-            {
-                stats.light_color_2 =
-                    gNdsFighterDisplayContractMaterialLight2;
-                stats.light_color_mask |=
-                    NDS_FIGHTER_DISPLAY_LIGHT_COLOR_2_MASK;
-            }
-        }
-    }
-    if (sNdsRendererAdapterEffectSubmitActive != FALSE)
-    {
-        if ((sNdsRendererAdapterEffectColorMask & 1u) != 0u)
-        {
-            stats.prim_color = sNdsRendererAdapterEffectPrimColor;
-        }
-        if ((sNdsRendererAdapterEffectColorMask & 2u) != 0u)
-        {
-            stats.env_color = sNdsRendererAdapterEffectEnvColor;
-        }
-        if (sNdsRendererAdapterEffectOtherModeValid != FALSE)
-        {
-            stats.othermode_l = sNdsRendererAdapterEffectOtherModeL;
-        }
-        /* A list-1 draw whose proc set no mode inherits the battle camera's
-         * own XLU head (gmcamera.c:1055 writes G_RM_AA_ZB_XLU_SURF into
-         * gSYTaskmanDLHeads[1] before every layer), not the last effect's. */
-        if ((sNdsRendererAdapterEffectOtherModeThisProc == 0u) &&
-            (sNdsRendererAdapterEffectSubmitHead == 1u))
-        {
-            stats.othermode_l = G_RM_AA_ZB_XLU_SURF | G_RM_AA_ZB_XLU_SURF2;
-        }
-    }
+    ndsRendererAdapterEntryEffectSeedStats(dobj, &stats);
     memset(&config, 0, sizeof(config));
     config.max_depth = 4u;
     config.max_commands = 1u;
@@ -7214,21 +7245,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
     }
     NDS_LAB_ARW_MARK(lab_t[3]);
 
-    gNdsStageGCDrawAllLoopHardwareTriangleCount += stats.hardware_triangle_count;
-    gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount +=
-        stats.hardware_zbuffer_triangle_count;
-    gNdsStageGCDrawAllLoopHardwareProjectedDepthTriangleCount +=
-        stats.hardware_projected_depth_triangle_count;
-    gNdsStageGCDrawAllLoopHardwareDecalDepthTriangleCount +=
-        stats.hardware_decal_depth_triangle_count;
-    gNdsStageGCDrawAllLoopHardwareTextureBindCount +=
-        stats.hardware_texture_bind_count;
-    gNdsStageGCDrawAllLoopHardwareTextureUploadCount +=
-        stats.hardware_texture_upload_count;
-    gNdsStageGCDrawAllLoopHardwareTextureReadyCount +=
-        stats.hardware_texture_ready_count;
-    gNdsStageGCDrawAllLoopHardwareTextureRejectCount +=
-        stats.hardware_texture_reject_count;
+    ndsRendererAdapterEntryEffectAccumulate(&stats);
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
     NDS_LAB_ARW_MARK(lab_t[4]);
     if ((owner_asset_id == 161u) && ((lab_t[4] - lab_t[0]) < 0x100000u))
@@ -14709,6 +14726,63 @@ static sb32 ndsRendererAdapterIsArwingRoot(const Gfx *dl)
     }
 }
 
+/* A prepared Arwing root whose recorded packet replays: what the ordinary
+ * submit does for it (the stage DL submit admits FoxSpecial3 lists to
+ * ndsRendererAdapterTryNativeEntryEffect, whose stats seed, config and
+ * counters these are) around the executor's replay branch alone
+ * (ndsRendererReplayNativeEntryEffectFox). FALSE before any GX write
+ * whenever that branch is not the one the executor would take; the caller
+ * then takes the ordinary submit. */
+static sb32 ndsRendererAdapterSubmitArwingRootReplay(
+    const NDSRendererAdapterEntryPrepared *item, u32 initial_geometry_mode)
+{
+    NDSRendererConfig config;
+    NDSRendererStats stats;
+    NDSRendererMatrix20p12 identity;
+    const NDSRendererMatrix20p12 *projection_ptr =
+        (item->projection_valid != 0u) ? &item->projection : NULL;
+    const NDSRendererMatrix20p12 *modelview_ptr =
+        (item->modelview_valid != 0u) ? &item->modelview : NULL;
+
+    if ((gNdsStageDLEntryFirst == 0u) || (gFTDataFoxSpecial3 == NULL) ||
+        ((const u8 *)item->dl < (const u8 *)gFTDataFoxSpecial3))
+    {
+        return FALSE;
+    }
+    /* The adapter's split-camera fill. */
+    if ((projection_ptr == NULL) && (modelview_ptr != NULL))
+    {
+        ndsRendererAdapterMtxIdentity20p12(&identity);
+        projection_ptr = &identity;
+    }
+    else if ((modelview_ptr == NULL) && (projection_ptr != NULL))
+    {
+        ndsRendererAdapterMtxIdentity20p12(&identity);
+        modelview_ptr = &identity;
+    }
+    if ((projection_ptr == NULL) || (modelview_ptr == NULL))
+    {
+        return FALSE;
+    }
+    ndsRendererAdapterEntryEffectSeedStats(item->dobj, &stats);
+    memset(&config, 0, sizeof(config));
+    config.max_depth = 4u;
+    config.max_commands = 1u;
+    config.max_list_commands = 1u;
+    config.initial_projection = projection_ptr;
+    config.initial_modelview = modelview_ptr;
+    config.initial_geometry_mode = initial_geometry_mode;
+    config.texture_data_layout = NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
+    if (ndsRendererReplayNativeEntryEffectFox(
+            (u32)((const u8 *)item->dl - (const u8 *)gFTDataFoxSpecial3),
+            &config, &stats) == FALSE)
+    {
+        return FALSE;
+    }
+    ndsRendererAdapterEntryEffectAccumulate(&stats);
+    return TRUE;
+}
+
 s32 ndsRendererAdapterSubmitArwingTwoPass(void *root_ptr, void *camera_gobj_ptr,
                                           u32 initial_geometry_mode,
                                           u32 *submitted_dobjs)
@@ -14822,6 +14896,12 @@ s32 ndsRendererAdapterSubmitArwingTwoPass(void *root_ptr, void *camera_gobj_ptr,
         NDSRendererAdapterEntryPrepared *item = &items[i];
 
         sNdsRendererAdapterEffectSubmitHead = item->list_id;
+        if ((item->prepared != FALSE) &&
+            (ndsRendererAdapterSubmitArwingRootReplay(
+                 item, initial_geometry_mode) != FALSE))
+        {
+            continue;
+        }
         sNdsRendererAdapterEntryPrepared =
             (item->prepared != FALSE) ? item : NULL;
         ndsRendererAdapterSubmitStageDL(item->dobj, item->dl, camera_gobj,

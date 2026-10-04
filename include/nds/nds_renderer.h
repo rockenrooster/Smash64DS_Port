@@ -1432,6 +1432,12 @@ s32 ndsRendererSubmitNativeEntryEffect(
     const NDSRendererNativeMaterial *materials, u32 material_count,
     u32 live_texture_variant,
     const NDSRendererConfig *config, NDSRendererStats *stats);
+/* The executor's replay branch alone, for a FoxSpecial3 (asset 161) root with
+ * no materials whose recorded packet is current (Sector Z's Arwing). FALSE
+ * when the executor would take another branch; the caller then submits it
+ * through ndsRendererSubmitNativeEntryEffect. */
+s32 ndsRendererReplayNativeEntryEffectFox(u32 root_offset,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
 /* Mushroom Kingdom's source Pakkun item: file 155 root 0x0B40 is a fixed
  * two-triangle quad whose segment-E hook selects the live ALPHA-only MObj
  * sprite frame.  Palette and geometry remain source-derived AOT state. */
