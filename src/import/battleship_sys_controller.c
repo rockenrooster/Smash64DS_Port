@@ -74,8 +74,8 @@ void ndsControllerEdgeTelemetryReset(void)
 void syControllerReadDeviceData(void)
 {
     ndsSYControllerSampleDeviceData();
-    gNdsControllerReadCount++;
-    gNdsControllerEdgeSeenMask |= sSYControllerDescs[0].unk02;
+    NDS_DIAG(gNdsControllerReadCount++);
+    NDS_DIAG(gNdsControllerEdgeSeenMask |= sSYControllerDescs[0].unk02);
     if (sSYControllerDescs[0].unk02 != 0u)
     {
         gNdsControllerReadEdgeCount++;
@@ -92,8 +92,8 @@ void syControllerUpdateGlobalData(void)
         return;
     }
     ndsSYControllerPublishGlobalData();
-    gNdsControllerPublishCount++;
-    gNdsControllerPublishedTapMask |= gSYControllerDevices[0].button_tap;
+    NDS_DIAG(gNdsControllerPublishCount++);
+    NDS_DIAG(gNdsControllerPublishedTapMask |= gSYControllerDevices[0].button_tap);
     if (gSYControllerDevices[0].button_tap != 0u)
     {
         /* Paired with the Results observer's own mask, this is the whole 2x2.

@@ -5391,9 +5391,9 @@ static void ndsRendererProfilePublishSubmitSummary(void)
     gNdsRendererProfileSubmitRawCurrentCount =
         sNdsRendererHardwareSubmitClassCounts[
             NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX];
-    gNdsRendererProfileSubmitRawSnapshotCount =
+    NDS_DIAG(gNdsRendererProfileSubmitRawSnapshotCount =
         sNdsRendererHardwareSubmitClassCounts[
-            NDS_RENDERER_HW_SUBMIT_RAW_Z_SNAPSHOT_MATRIX];
+            NDS_RENDERER_HW_SUBMIT_RAW_Z_SNAPSHOT_MATRIX]);
     gNdsRendererProfileSubmitProjectedCrossCount =
         sNdsRendererHardwareSubmitClassCounts[
             NDS_RENDERER_HW_SUBMIT_PROJECTED_CROSS_MATRIX];
@@ -5403,25 +5403,25 @@ static void ndsRendererProfilePublishSubmitSummary(void)
     gNdsRendererProfileSubmitProjectedDecalCount =
         sNdsRendererHardwareSubmitClassCounts[
             NDS_RENDERER_HW_SUBMIT_PROJECTED_DECAL];
-    gNdsRendererProfileSubmitProjectedPrimDepthCount =
+    NDS_DIAG(gNdsRendererProfileSubmitProjectedPrimDepthCount =
         sNdsRendererHardwareSubmitClassCounts[
-            NDS_RENDERER_HW_SUBMIT_PROJECTED_PRIM_DEPTH];
+            NDS_RENDERER_HW_SUBMIT_PROJECTED_PRIM_DEPTH]);
     gNdsRendererProfileSubmitProjectedRangeOrMatrixCount =
         sNdsRendererHardwareSubmitClassCounts[
             NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX];
     gNdsRendererProfileSubmitRejectCount =
         sNdsRendererHardwareSubmitClassCounts[
             NDS_RENDERER_HW_SUBMIT_REJECT];
-    gNdsRendererProfileHardwareDivideSummary =
-        sNdsRendererHardwareDivideSummary;
+    NDS_DIAG(gNdsRendererProfileHardwareDivideSummary =
+        sNdsRendererHardwareDivideSummary);
     gNdsRendererProfileSourceVertexLoadCount =
         sNdsRendererHardwareSourceVertexLoadCount;
-    gNdsRendererProfileCPUTransformCount =
-        sNdsRendererHardwareCPUTransformCount;
+    NDS_DIAG(gNdsRendererProfileCPUTransformCount =
+        sNdsRendererHardwareCPUTransformCount);
     gNdsRendererProfileTransformCacheHitCount =
         sNdsRendererHardwareTransformCacheHitCount;
-    gNdsRendererProfileMatrixSnapshotCreateCount =
-        sNdsRendererHardwareMatrixSnapshotCreateCount;
+    NDS_DIAG(gNdsRendererProfileMatrixSnapshotCreateCount =
+        sNdsRendererHardwareMatrixSnapshotCreateCount);
     gNdsRendererProfileMatrixSnapshotReuseCount =
         sNdsRendererHardwareMatrixSnapshotReuseCount;
     gNdsRendererProfileMatrixSnapshotOverflowCount =
@@ -6545,17 +6545,17 @@ static void ndsRendererHardwareRecordBattleStaticTextureHit(
         return;
     }
     record_index = entry->static_record_plus1 - 1u;
-    gNdsRendererBattleStaticTexturePinnedHitCount++;
+    NDS_DIAG(gNdsRendererBattleStaticTexturePinnedHitCount++);
     if (record_index < 32u)
     {
-        gNdsRendererBattleStaticTextureSeenMask |= 1u << record_index;
+        NDS_DIAG(gNdsRendererBattleStaticTextureSeenMask |= 1u << record_index);
     }
     else
     {
-        gNdsRendererBattleStaticTextureSeenMaskHi |=
-            1u << (record_index - 32u);
+        NDS_DIAG(gNdsRendererBattleStaticTextureSeenMaskHi |=
+            1u << (record_index - 32u));
     }
-    gNdsRendererBattleStaticTextureOwnerMask |= entry->static_owner_mask;
+    NDS_DIAG(gNdsRendererBattleStaticTextureOwnerMask |= entry->static_owner_mask);
 }
 #if NDS_SCENE_MIP_CACHE_LAB
 #define NDS_RENDERER_SCENE_MIP_COUNT 3u

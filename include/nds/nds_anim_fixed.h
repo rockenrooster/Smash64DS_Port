@@ -230,7 +230,7 @@ NDS_R2_AQ_KERNEL_ATTR s32 ndsR2AnimClamp(s32 v, s32 limit)
     }
     if (v < -limit)
     {
-        gNdsR2CubicSaturations++;
+        NDS_DIAG(gNdsR2CubicSaturations++);
         return -limit;
     }
     return v;

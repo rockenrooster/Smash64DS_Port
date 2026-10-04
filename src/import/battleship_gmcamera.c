@@ -631,7 +631,7 @@ NDS_R2_CAM_ARM_FN void ndsR2CameraLookAtReflect20p12(
     s32 rz;
     s32 mag;
 
-    gNdsR2CameraFixedLookAtCalls++;
+    NDS_DIAG(gNdsR2CameraFixedLookAtCalls++);
 
     /* Negated, because positive Z is behind us -- matrix.c:305. */
     mag = ndsR2CamSqrt64(((s64)lx * lx) + ((s64)ly * ly) + ((s64)lz * lz));
@@ -746,7 +746,7 @@ NDS_R2_CAM_ARM_FN void ndsR2CameraPerspFast20p12(
     u32 row;
     u32 col;
 
-    gNdsR2CameraFixedPerspCalls++;
+    NDS_DIAG(gNdsR2CameraFixedPerspCalls++);
 
     if ((id & 0x800) != 0)
     {
@@ -758,12 +758,12 @@ NDS_R2_CAM_ARM_FN void ndsR2CameraPerspFast20p12(
     }
     if (sn == 0)
     {
-        gNdsR2CameraFixedDegenerateCount++;
+        NDS_DIAG(gNdsR2CameraFixedDegenerateCount++);
         sn = 1;
     }
     if (denom == 0)
     {
-        gNdsR2CameraFixedDegenerateCount++;
+        NDS_DIAG(gNdsR2CameraFixedDegenerateCount++);
         denom = 1;
     }
     /* Both table entries carry the same scale, so the quotient is dimensionless
@@ -1049,7 +1049,7 @@ static sb32 ndsCameraLookAtFuncMatrixFixed(Mtx *mtx, CObj *cobj, u32 level)
     u32 i;
     u32 j;
 
-    gNdsR2CameraFixedGameCalls++;
+    NDS_DIAG(gNdsR2CameraFixedGameCalls++);
 
     if (level < 3u)
     {
@@ -1180,7 +1180,7 @@ sb32 gmCameraLookAtFuncMatrix(Mtx *mtx, CObj *cobj, Gfx **dls)
     }
     else
     {
-        gNdsCameraMatrixLeanSkippedF2LCount++;
+        NDS_DIAG(gNdsCameraMatrixLeanSkippedF2LCount++);
     }
     return 0;
 }

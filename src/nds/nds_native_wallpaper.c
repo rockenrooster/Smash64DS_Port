@@ -366,7 +366,7 @@ s32 ndsNativeWallpaperDraw(u32 asset_id, u32 bitmap_offset,
     }
     else
     {
-        gNdsNativeWallpaperReuseCount++;
+        NDS_DIAG(gNdsNativeWallpaperReuseCount++);
     }
     return ndsPlatformQueueNativeWallpaperAffine(pa, pd, dx, dy);
 }

@@ -620,7 +620,7 @@ static void ndsIFCommonRecordDamageState(u32 player)
 
     if (sIFCommonPlayerDamageInterface[player].interface_gobj != NULL)
     {
-        gNdsIFCommonHUDObjectMask |= 1u << player;
+        NDS_DIAG(gNdsIFCommonHUDObjectMask |= 1u << player);
     }
 
     damage = (u32)sIFCommonPlayerDamageInterface[player].damage;
@@ -1039,7 +1039,7 @@ u32 ndsIFCommonRouteGObjToLowerTextHUD(GObj *gobj)
              (gobj->proc_display == ifCommonPlayerStockSingleProcDisplay))
     {
         route = 2u;
-        gNdsIFCommonHUDLowerStockRouteCount++;
+        NDS_DIAG(gNdsIFCommonHUDLowerStockRouteCount++);
     }
     else if ((gobj->proc_display == ifCommonPlayerDamageProcDisplay) ||
              (gobj->proc_display == ndsIFCommonPlayerDamageProcDisplayGate))

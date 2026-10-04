@@ -969,7 +969,7 @@ void ndsBattleHudRender(void)
     u32 next_id = 0u;
     u32 player;
 
-    gNdsBattleHudRenderCount++;
+    NDS_DIAG(gNdsBattleHudRenderCount++);
     if ((gNdsIFCommonHUDRecordCount == 0u) ||
         (gNdsIFCommonHUDActivePlayerMask == 0u))
     {

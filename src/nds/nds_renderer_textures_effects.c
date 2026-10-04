@@ -7091,7 +7091,7 @@ static u32 ndsRendererParticleEnvVariant(u32 atlas_name, u32 prim_bgr555,
             (sNdsParticleEnvVariants[slot].prim == prim_key) &&
             (sNdsParticleEnvVariants[slot].env == env_key))
         {
-            gNdsParticleEnvVariantHitCount++;
+            NDS_DIAG(gNdsParticleEnvVariantHitCount++);
             return (u32)sNdsParticleEnvVariants[slot].name;
         }
     }
@@ -7956,7 +7956,7 @@ s32 ndsRendererBeginParticleViewPass(
     }
     ndsRendererSetParticleCamera(projection, modelview);
     sNdsRendererParticleViewSpace = TRUE;
-    gNdsParticleViewPasses++;
+    NDS_DIAG(gNdsParticleViewPasses++);
     return TRUE;
 }
 
@@ -7969,7 +7969,7 @@ static s32 ndsRendererParticleTransformCenter(s32 center[3], u32 fraction_bits)
         gNdsParticleViewRejects++;
         return FALSE;
     }
-    gNdsParticleViewCenters++;
+    NDS_DIAG(gNdsParticleViewCenters++);
     return TRUE;
 }
 
@@ -8715,9 +8715,9 @@ ndsRendererFlushWhispyNativePacket(void)
     sNdsRendererParticlePacketStateDirty = FALSE;
     if (packet->lean_counters != FALSE)
     {
-        gNdsWhispyAOTTier4PacketQuads += packet->lean_quads;
+        NDS_DIAG(gNdsWhispyAOTTier4PacketQuads += packet->lean_quads);
         gNdsWhispyAOTTier4PacketStateGroups += packet->lean_state_groups;
-        gNdsParticleQuadSheetBreaks += packet->lean_sheet_breaks;
+        NDS_DIAG(gNdsParticleQuadSheetBreaks += packet->lean_sheet_breaks);
         gNdsParticleQuadAlphaBreaks += packet->lean_alpha_breaks;
     }
     gNdsWhispyAOTTier4PacketFlushes++;
@@ -8834,7 +8834,7 @@ ndsRendererAppendParticlePacketStateRaw(
     if (logical_palette_changed != FALSE)
     {
         sNdsRendererParticleQuadPalette = palette_key;
-        gNdsParticleQuadPaletteBreaks++;
+        NDS_DIAG(gNdsParticleQuadPaletteBreaks++);
     }
     if (alpha_changed != FALSE)
     {
@@ -8866,7 +8866,7 @@ ndsRendererAppendParticlePacketStateRaw(
     else
     {
         packet->generic_words += words;
-        gNdsParticlePacketStateGroups++;
+        NDS_DIAG(gNdsParticlePacketStateGroups++);
     }
     return TRUE;
 }
@@ -9101,7 +9101,7 @@ ndsRendererAppendParticlePacketQuad(
               ((u32)(u16)vertex[3][1] << 16);
     out[15] = (u32)(s32)vertex[3][2];
     sNdsRendererWhispyPacket.generic_words += 16u;
-    gNdsParticlePacketQuads++;
+    NDS_DIAG(gNdsParticlePacketQuads++);
     return TRUE;
 }
 
@@ -9168,7 +9168,7 @@ static s32 ndsRendererSubmitParticleQuadPacket(
         }
         sNdsRendererWhispyPacket.generic_words += 5u;
         sNdsRendererParticleScaleShift = needed;
-        gNdsParticleScaleEscalations++;
+        NDS_DIAG(gNdsParticleScaleEscalations++);
         if (needed > gNdsParticleScaleShiftMax)
         {
             gNdsParticleScaleShiftMax = needed;
@@ -9496,7 +9496,7 @@ ndsRendererPrepareWhispyQuadState(u32 texture_name, u32 poly_alpha,
         gNdsParticleMatrixModeSeen |=
             1u << (sNdsRendererHardwareMatrixMode & 7u);
         gNdsParticleMatrixLoadedSeen = sNdsRendererHardwareMatrixLoaded;
-        gNdsParticleBatchOpens++;
+        NDS_DIAG(gNdsParticleBatchOpens++);
         ndsRendererHardwareEndBatch();
         if (sNdsRendererParticleCameraValid != FALSE)
         {
@@ -15796,8 +15796,8 @@ static void ndsRendererHardwarePainterSlotFoldFrame(void)
     }
     total = bg_used + fg_used;
 
-    gNdsPainterSlotFrames++;
-    gNdsPainterSlotBgSum += bg_used;
+    NDS_DIAG(gNdsPainterSlotFrames++);
+    NDS_DIAG(gNdsPainterSlotBgSum += bg_used);
     gNdsPainterSlotFgSum += fg_used;
     if (bg_used > gNdsPainterSlotBgMax)
     {

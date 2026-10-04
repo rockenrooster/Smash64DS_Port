@@ -4340,7 +4340,7 @@ s32 ndsRendererPrepareNativeStageOwner(
          * no replay snapshot consumes these state/traversal temporaries. */
         if (r2_reuse != 0u)
         {
-            gNdsR2StagePreflightElideCount++;
+            NDS_DIAG(gNdsR2StagePreflightElideCount++);
             continue;
         }
 #endif

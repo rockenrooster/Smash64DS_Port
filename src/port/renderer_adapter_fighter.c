@@ -846,7 +846,7 @@ void ndsFighterDisplayContractHeadBoundary(u32 sky_fog_alpha, u32 is_shade_fog,
         return;
     }
     sNdsFtrDrawMemoState = 3u;      /* boundary seen; not cacheable yet */
-    gNdsFtrDrawMemoBoundary++;
+    NDS_DIAG(gNdsFtrDrawMemoBoundary++);
     if ((display_mode_master == 0u) || (fp == NULL) ||
         (fp->afterimage.drawstatus >= 2))
     {
@@ -910,8 +910,8 @@ static void ndsFtrDrawMemoFinish(void)
          * was replayed. Keeping the counter's meaning is what makes Boundary's
          * ftrContract smoke an equality control rather than a known diff. */
         gNdsFighterDisplayContractSelectedCount += n;
-        gNdsFtrDrawMemoHits++;
-        gNdsFtrDrawMemoReplayEvents += n;
+        NDS_DIAG(gNdsFtrDrawMemoHits++);
+        NDS_DIAG(gNdsFtrDrawMemoReplayEvents += n);
         sNdsFtrDrawMemoState = 0u;
         return;
     }
@@ -1186,7 +1186,7 @@ static void ndsFighterDisplayContractCapture(GObj *fighter_gobj)
     gNdsR2FighterFacingLr = (fp != NULL) ? fp->lr : 0;
     gNdsR2FighterFacingSlot =
         (fp != NULL) ? (u32)fp->nds_slot : 0xffffffffu;
-    gNdsR2FighterFacingWrites++;
+    NDS_DIAG(gNdsR2FighterFacingWrites++);
     /* Do not memoise the source entry-camera walk.  Mario/Fox Appear motions
      * deliberately mutate DOBJ_FLAG_HIDDEN inside the same status as their
      * entry animation advances.  The old memo saw the first source-hidden pose
@@ -5646,8 +5646,8 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
             gNdsFighterDLAllDrawP1HardwareTriangleCount;
         if (triangles_after > triangles_before)
         {
-            gNdsStageGCDrawAllLoopHardwareFighterTriangleCount +=
-                triangles_after - triangles_before;
+            NDS_DIAG(gNdsStageGCDrawAllLoopHardwareFighterTriangleCount +=
+                triangles_after - triangles_before);
         }
     }
 #if NDS_TICK_HUD

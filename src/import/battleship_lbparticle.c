@@ -1503,11 +1503,11 @@ ndsWhispyAOTStructFuncRunLean(GObj *gobj)
         }
     }
 
-    gNdsWhispyAOTStructVisits += stats.visits;
-    gNdsWhispyAOTStructFastUpdates += stats.fast_updates;
-    gNdsWhispyAOTStructSourceUpdates += stats.source_updates;
-    gNdsWhispyAOTDividesAvoided += stats.divides_avoided;
-    gNdsWhispyAOTTier2DirectUpdates += stats.direct_updates;
+    NDS_DIAG(gNdsWhispyAOTStructVisits += stats.visits);
+    NDS_DIAG(gNdsWhispyAOTStructFastUpdates += stats.fast_updates);
+    NDS_DIAG(gNdsWhispyAOTStructSourceUpdates += stats.source_updates);
+    NDS_DIAG(gNdsWhispyAOTDividesAvoided += stats.divides_avoided);
+    NDS_DIAG(gNdsWhispyAOTTier2DirectUpdates += stats.direct_updates);
 }
 
 static void ndsWhispyAOTStructFuncRun(GObj *gobj)
@@ -3024,7 +3024,7 @@ LBParticle *lbParticleMakeScriptID(s32 bank_id, s32 script_id)
     pc = ndsBaseLbParticleMakeScriptID(bank_id, script_id);
     if (pc != NULL)
     {
-        gNdsParticleScriptStartCount++;
+        NDS_DIAG(gNdsParticleScriptStartCount++);
     }
     return pc;
 }
@@ -3085,12 +3085,12 @@ LBGenerator *lbParticleMakeGenerator(s32 bank_id, s32 script_id)
 
 void ndsParticleRuntimePublishTallies(void)
 {
-    gNdsParticleStructsLive = gLBParticleStructsUsedNum;
-    gNdsParticleGeneratorsLive = gLBParticleGeneratorsUsedNum;
+    NDS_DIAG(gNdsParticleStructsLive = gLBParticleStructsUsedNum);
+    NDS_DIAG(gNdsParticleGeneratorsLive = gLBParticleGeneratorsUsedNum);
     gNdsParticleTransformsLive = gLBParticleTransformsUsedNum;
     gNdsParticleStructsMax = D_ovl0_800D644E;
-    gNdsParticleGeneratorsMax = D_ovl0_800D6450;
-    gNdsParticleTransformsMax = D_ovl0_800D6452;
+    NDS_DIAG(gNdsParticleGeneratorsMax = D_ovl0_800D6450);
+    NDS_DIAG(gNdsParticleTransformsMax = D_ovl0_800D6452);
     gNdsParticleRootSpawnCount = dLBParticleCurrentGeneratorID;
 }
 
@@ -4423,7 +4423,7 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
     u32 misc_particle_mark = NDS_TICK_HUD_SPAN_CLOCK();
 #endif
 
-    gNdsParticleDrawSeamCount++;
+    NDS_DIAG(gNdsParticleDrawSeamCount++);
 #if NDS_R2_FIREGRIND_NATIVE
     /* SIMULATE FIREGRIND ONCE PER FRAME, from the GENLINK(0) pass. Source
      * FireGrind lives on link 0; this pass runs on multiple particle-camera
@@ -5180,11 +5180,11 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
         {
             gNdsWhispyNativeTextureMask |= whispy_lean_texture_mask;
         }
-        gNdsParticleQuadStrideCount += whispy_lean_stride_count;
-        gNdsWhispyAOTTier2FixedTransforms += whispy_lean_fixed_transforms;
-        gNdsWhispyAOTTier2FixedSubmits += whispy_lean_fixed_submits;
-        gNdsWhispyNativeTextureDrawCount += whispy_lean_draws;
-        gNdsWhispySubmitOk += whispy_lean_submit_ok;
+        NDS_DIAG(gNdsParticleQuadStrideCount += whispy_lean_stride_count);
+        NDS_DIAG(gNdsWhispyAOTTier2FixedTransforms += whispy_lean_fixed_transforms);
+        NDS_DIAG(gNdsWhispyAOTTier2FixedSubmits += whispy_lean_fixed_submits);
+        NDS_DIAG(gNdsWhispyNativeTextureDrawCount += whispy_lean_draws);
+        NDS_DIAG(gNdsWhispySubmitOk += whispy_lean_submit_ok);
         if (whispy_lean_fixed_fallbacks != 0u)
         {
             gNdsWhispyAOTTier2FixedFallbacks +=

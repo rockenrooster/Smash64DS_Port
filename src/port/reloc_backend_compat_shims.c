@@ -3580,7 +3580,7 @@ void NDS_R2_ITCM_PACK2_CODE ftParamUpdateAnimKeys(GObj *fighter_gobj)
             }
             else
             {
-                gNdsR2FtAnimNullSkips++;
+                NDS_DIAG(gNdsR2FtAnimNullSkips++);
 #if NDS_ANIM_JOINT_AUDIT
                 if (fp->anim_desc.flags.is_anim_joint)
                 {
@@ -9312,7 +9312,7 @@ void lbCommonAddFighterPartsFigatree(DObj *root_dobj, void *figatree,
              * load-bearing. This only replaces the cursor. */
             (void)ndsFtAnimTrackBindJoint(current_dobj, trk_base, trk_index);
 #endif
-            gNdsFighterNaturalMotionFigatreeAttachCount++;
+            NDS_DIAG(gNdsFighterNaturalMotionFigatreeAttachCount++);
             if (parts != NULL)
             {
                 parts->is_have_anim = TRUE;
@@ -13895,7 +13895,7 @@ void mpCollisionAdvanceUpdateTic(GObj *ground_gobj)
         gMPCollisionUpdateTic++;
         return;
     }
-    gNdsPupupuGroundDeferredMask |= 1u << 5;
+    NDS_DIAG(gNdsPupupuGroundDeferredMask |= 1u << 5);
 }
 
 extern void gcParseDObjAnimJoint(DObj *dobj);

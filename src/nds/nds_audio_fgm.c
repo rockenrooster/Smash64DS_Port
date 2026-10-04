@@ -2459,7 +2459,7 @@ void ndsAudioFgmUpdate(void)
                 soundSetVolume(handle->channel, point[2]);
                 handle->volume = point[2];
                 handle->envelope_index++;
-                gNdsAudioFgmEnvelopeStepCount++;
+                NDS_DIAG(gNdsAudioFgmEnvelopeStepCount++);
             }
             /* THE NOTE ENDING IS A RELEASE, NOT A KILL, and this used to be a
              * bare soundKill the instant end_tick passed.
@@ -2536,7 +2536,7 @@ void ndsAudioFgmUpdate(void)
                     soundSetVolume(
                         handle->channel,
                         (u8)(((u32)handle->volume * remaining) / span));
-                    gNdsAudioFgmReleaseRampCount++;
+                    NDS_DIAG(gNdsAudioFgmReleaseRampCount++);
                 }
             }
         }

@@ -170,7 +170,7 @@ static void ndsGcRecordNdlLifetime(GObj *gobj)
     new_serial = sNdsGcNdlNextSerial++;
     if (old_serial != 0u)
     {
-        gNdsGcNdlLifetimeReuseCount++;
+        NDS_DIAG(gNdsGcNdlLifetimeReuseCount++);
         gNdsGcNdlLifetimeReuseGObj = (u32)(uintptr_t)gobj;
         gNdsGcNdlLifetimeReuseOldSerial = old_serial;
         gNdsGcNdlLifetimeReuseNewSerial = new_serial;
@@ -601,7 +601,7 @@ void gcRunAll(void)
 #endif
     after = gSYControllerDevices[0].button_tap;
 
-    gNdsGcRunAllEntryTapMask |= before;
+    NDS_DIAG(gNdsGcRunAllEntryTapMask |= before);
     gNdsGcRunAllExitTapMask |= after;
     if (before != 0u)
     {

@@ -606,7 +606,7 @@ static void ndsStageGxFlush(void)
     sNdsStageGxDmaFirst = sNdsStageGxFirstWord;
     sNdsStageGxDmaEnd = sNdsStageGxFirstWord + sNdsStageGxWordCount;
     sNdsStageGxWordCount = 0u;
-    gNdsP2StageProgDmas++;
+    NDS_DIAG(gNdsP2StageProgDmas++);
     ndsRendererHardwareInvalidateGXState(NDS_RENDERER_GX_STATE_ALL);
     sNdsRendererHardwareBoundTextureName = 0u;
     /* The packet set TEXIMAGE_PARAM / PLTT_BASE behind libnds: forget its active
@@ -1666,8 +1666,8 @@ static sb32 __attribute__((noinline)) ndsStageGxCommitFast(
     stats->triangle_count += s->triangles;
     *segment_triangles = s->triangles;
     gNdsP2StageProgDraws += segment->run_count;
-    gNdsP2StageProgWords += (u32)s->word_end - s->first_word;
-    gNdsStageGxFastCommits++;
+    NDS_DIAG(gNdsP2StageProgWords += (u32)s->word_end - s->first_word);
+    NDS_DIAG(gNdsStageGxFastCommits++);
     return TRUE;
 
 declined:

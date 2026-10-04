@@ -13244,11 +13244,11 @@ static void ndsStageGCDrawAllLoopRecordItemCapture(GObj *gobj, s32 link_id)
     {
         return;
     }
-    gNdsItemRendererCaptureCount++;
+    NDS_DIAG(gNdsItemRendererCaptureCount++);
     ip = gobj->user_data.p;
     if ((ip != NULL) && (ip->kind >= 0) && (ip->kind < 32))
     {
-        gNdsItemRendererKindMask |= 1u << (u32)ip->kind;
+        NDS_DIAG(gNdsItemRendererKindMask |= 1u << (u32)ip->kind);
     }
 }
 
@@ -13831,7 +13831,7 @@ static void ndsStageGCDrawAllLoopSubmitItemDObj(GObj *item_gobj,
     {
         return;
     }
-    gNdsItemRendererDObjDrawCount++;
+    NDS_DIAG(gNdsItemRendererDObjDrawCount++);
     root = DObjGetStruct(item_gobj);
     ip = item_gobj->user_data.p;
     if ((root == NULL) || (ip == NULL) ||
@@ -13917,8 +13917,8 @@ static void ndsStageGCDrawAllLoopSubmitItemDObj(GObj *item_gobj,
         gNdsItemRendererVisibleDrawCount++;
     }
     sNdsStageGCDrawAllLoopHardwareSubmitCount++;
-    gNdsStageGCDrawAllLoopHardwareSubmitCount =
-        sNdsStageGCDrawAllLoopHardwareSubmitCount;
+    NDS_DIAG(gNdsStageGCDrawAllLoopHardwareSubmitCount =
+        sNdsStageGCDrawAllLoopHardwareSubmitCount);
 }
 
 /* bit0 TREE, bit1 TREE_DLLINKS, bit2 DLLINKS, bit3 DLHEAD0, bit4 DLHEAD1,
@@ -15162,7 +15162,7 @@ static void ndsStageGCDrawAllLoopSubmitGroundActorDObj(GObj *actor_gobj,
     u32 two_pass_dobjs = 0u;
 #endif
 
-    gNdsStageGCDrawAllLoopGroundActorCallCount++;
+    NDS_DIAG(gNdsStageGCDrawAllLoopGroundActorCallCount++);
     if ((actor_gobj == NULL) ||
         (actor_gobj != sNdsStageGCDrawAllLoopCurrentDisplayGObj))
     {
@@ -15604,7 +15604,7 @@ ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
 #endif
     else
     {
-        gNdsStageGCDrawAllLoopNonStageCaptureCount++;
+        NDS_DIAG(gNdsStageGCDrawAllLoopNonStageCaptureCount++);
     }
 #endif
 #if NDS_RENDERER_HW_TRIANGLES

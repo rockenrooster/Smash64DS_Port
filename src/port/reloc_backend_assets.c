@@ -6574,10 +6574,10 @@ static NDSRelocLoadedFile *ndsRelocFindLoadedFileContaining(const void *ptr,
                                               ptr,
                                               size) != FALSE))
         {
-            gNdsRelocFindMemoHits++;
+            NDS_DIAG(gNdsRelocFindMemoHits++);
             if (w == 0u)
             {
-                gNdsRelocFindMemoWay0++;
+                NDS_DIAG(gNdsRelocFindMemoWay0++);
             }
             else
             {
@@ -6817,7 +6817,7 @@ void *ndsRelocResolvePointerFromFileBase(const void *file_base,
             raw = (uintptr_t)ptr;
             if ((raw <= pin->size) && (size <= (size_t)(pin->size - raw)))
             {
-                gNdsRelocResolveOffsetCount++;
+                NDS_DIAG(gNdsRelocResolveOffsetCount++);
                 resolved = (uintptr_t)pin->payload + raw;
                 if ((resolved & align_mask) != 0u)
                 {

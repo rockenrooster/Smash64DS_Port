@@ -4725,7 +4725,7 @@ void ndsPlatformEndFrame(void)
     {
         if (submitted != 0u)
         {
-            gNdsHardwareRendererSubmittedFrameCount++;
+            NDS_DIAG(gNdsHardwareRendererSubmittedFrameCount++);
         }
 /* NDS_TICK_HUD joined this condition for the slice 43 blink (2026-08-11). The
  * fighters kept submitting a CONSTANT 320/306 triangles a frame while they
@@ -4793,7 +4793,7 @@ void ndsPlatformEndFrame(void)
 #endif
         if (submitted != 0u)
         {
-            gNdsHardwareRendererFlushCount++;
+            NDS_DIAG(gNdsHardwareRendererFlushCount++);
         }
         else
         {

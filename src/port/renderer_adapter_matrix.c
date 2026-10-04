@@ -433,7 +433,7 @@ static u32 ndsRendererAdapterFighterColorModulate(const FTStruct *fp)
     {
         const GMColKeys *color = &fp->colanim.color1;
 
-        gNdsTask39FxFlashDrawCount++;
+        NDS_DIAG(gNdsTask39FxFlashDrawCount++);
         ndsTask39EffectsEngage(NDS_TASK39_FX_ENGAGED_FLASH);
         return ((u32)color->r << 24) | ((u32)color->g << 16) |
                ((u32)color->b << 8) | color->a;
@@ -4275,8 +4275,8 @@ static void ndsRendererAdapterApplyMvpRecalc(
     {
         return;
     }
-    gNdsRendererAdapterCustom47DetectedCount++;
-    gNdsRendererAdapterCustom47LastXObjsNum = dobj->xobjs_num;
+    NDS_DIAG(gNdsRendererAdapterCustom47DetectedCount++);
+    NDS_DIAG(gNdsRendererAdapterCustom47LastXObjsNum = dobj->xobjs_num);
     gNdsRendererAdapterCustom47LastKinds =
         ((dobj->xobjs_num > 0u) && (dobj->xobjs[0] != NULL) ?
             (u32)dobj->xobjs[0]->kind : 0u) |
@@ -4719,7 +4719,7 @@ static void ndsRendererAdapterApplyMvpRecalc(
         (u32)modelview->m[3][2];
     if (kind == nGCMatrixKind46)
     {
-        gNdsRendererAdapterKind46AppliedCount++;
+        NDS_DIAG(gNdsRendererAdapterKind46AppliedCount++);
     }
     else if (kind == NDS_RENDERER_ADAPTER_MVP_RECALC_Z_0X46_KIND)
     {

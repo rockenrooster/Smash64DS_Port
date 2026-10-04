@@ -290,9 +290,9 @@ void osContGetReadData(OSContPad *pad)
     gNdsControllerLivePad0StickX = pad[0].stick_x;
     gNdsControllerLivePad0StickY = pad[0].stick_y;
     gNdsControllerLivePad1Button = pad[1].button;
-    gNdsControllerLivePad1StickX = pad[1].stick_x;
+    NDS_DIAG(gNdsControllerLivePad1StickX = pad[1].stick_x);
     gNdsControllerLivePad1StickY = pad[1].stick_y;
-    gNdsControllerLiveMapCount++;
+    NDS_DIAG(gNdsControllerLiveMapCount++);
     gNdsControllerLiveReadCount++;
     gNdsControllerPollCount++;
 }

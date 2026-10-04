@@ -2882,7 +2882,7 @@ static void ndsP2NdlBindRecord(GObj *gobj, u32 serial, NDSNdlRecord *record)
         }
     }
 #endif
-    gNdsNdlNegativeBindCount++;
+    NDS_DIAG(gNdsNdlNegativeBindCount++);
 }
 
 static void ndsP2NdlAccumulateStats(const NDSRendererStats *stats)
@@ -14736,7 +14736,7 @@ static void ndsRendererAdapterSubmitStageDObjTreeDepth(
         gNdsRendererStageDObjDepthOverrunCount++;
         return;
     }
-    gNdsRendererStageDObjNodeCount++;
+    NDS_DIAG(gNdsRendererStageDObjNodeCount++);
 #if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
     if (sNdsRendererAdapterEffectSubmitActive != FALSE)
     {

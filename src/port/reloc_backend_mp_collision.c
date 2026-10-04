@@ -656,7 +656,7 @@ static inline void ndsMPVertexF32Get(MPVertexPosContainer *verts, u32 vertex_id,
     }
     else
     {
-        gNdsMPVertexF32Hits++;
+        NDS_DIAG(gNdsMPVertexF32Hits++);
     }
     *out_x = sNdsMPVertexF32X[vertex_id];
     *out_y = sNdsMPVertexF32Y[vertex_id];
@@ -751,10 +751,10 @@ ndsMPLineExtentRejects(MPVertexArray *ids, MPVertexPosContainer *verts,
     if (NDS_FCMP_LT(object_x, sNdsMPLineExtentMinX[line_id]) ||
         NDS_FCMP_GT(object_x, sNdsMPLineExtentMaxX[line_id]))
     {
-        gNdsMPLineExtentRejects++;
+        NDS_DIAG(gNdsMPLineExtentRejects++);
         return 1;
     }
-    gNdsMPLineExtentAdmits++;
+    NDS_DIAG(gNdsMPLineExtentAdmits++);
     return 0;
 }
 
@@ -813,7 +813,7 @@ static inline int ndsMPLineExtentSweepRejects(MPVertexArray *ids,
     if (NDS_FCMP_LT(sNdsMPLineExtentMaxYEps[line_id], sweep_min_y) ||
         NDS_FCMP_LT(sweep_max_y, sNdsMPLineExtentMinYEps[line_id]))
     {
-        gNdsMPLineSweepRejects++;
+        NDS_DIAG(gNdsMPLineSweepRejects++);
         return 1;
     }
     gNdsMPLineSweepAdmits++;
@@ -953,7 +953,7 @@ static s32 NDS_R2_ITCM_PACK2_CODE ndsMPGetLineKindForLineID(s32 line_id)
 
         if (cached != NDS_MP_LINE_KIND_UNKNOWN)
         {
-            gNdsMPLineKindHits++;
+            NDS_DIAG(gNdsMPLineKindHits++);
             return (cached == NDS_MP_LINE_KIND_NONE) ?
                 -1 : ((s32)cached - (s32)NDS_MP_LINE_KIND_BIAS);
         }
@@ -1325,7 +1325,7 @@ static sb32 ndsMPFindLineYakumonoID(s32 line_id, u32 *yakumono_id)
 
         if (state != NDS_MP_LINE_YAKUMONO_UNKNOWN)
         {
-            gNdsMPLineYakumonoHits++;
+            NDS_DIAG(gNdsMPLineYakumonoHits++);
             if (state == NDS_MP_LINE_YAKUMONO_MISS)
             {
                 return FALSE;
@@ -3229,7 +3229,7 @@ ndsMPSweepGroupReject(u32 *state, s32 *ip0, s32 *it0, u32 axis,
         }
         else
         {
-            gNdsMPSweepGroupRejects++;
+            NDS_DIAG(gNdsMPSweepGroupRejects++);
         }
         return TRUE;
     }
@@ -3605,7 +3605,7 @@ ndsStageMPAdjustFloorLoopWallSweep(Vec3f *position,
                 vpos_x = ndsMPVertexX(verts, next_id);
                 vpos_y = ndsMPVertexY(verts, next_id);
                 flat = (prev_x == vpos_x) ? TRUE : FALSE;
-                gNdsMPWallSweepSegmentTests++;
+                NDS_DIAG(gNdsMPWallSweepSegmentTests++);
                 if (flat != FALSE)
                 {
                     if (((lr < 0) ? (vtdist_x > vpdist_x) :
@@ -3787,9 +3787,9 @@ ndsMPWallSweepStaticMiss(const Vec3f *position, const Vec3f *translate,
         g->reject_misses = 0u;
         rejected++;
     }
-    gNdsMPWallSweepCalls++;
-    gNdsMPWallSweepGroupRejects += rejected;
-    gNdsMPWallSweepStaticMisses++;
+    NDS_DIAG(gNdsMPWallSweepCalls++);
+    NDS_DIAG(gNdsMPWallSweepGroupRejects += rejected);
+    NDS_DIAG(gNdsMPWallSweepStaticMisses++);
     return TRUE;
 }
 
@@ -4107,7 +4107,7 @@ static sb32 ndsMPProjectFloorGeometry(Vec3f *position, s32 *project_line_id,
 
         if (gMPCollisionYakumonoDObjs != NULL)
         {
-            gNdsStageCollisionLoopYakumonoDObjDeferredCount++;
+            NDS_DIAG(gNdsStageCollisionLoopYakumonoDObjDeferredCount++);
             if (yakumono_id >= 1u)
             {
                 gNdsStageCollisionLoopYakumonoDObjUnsafeIndexGuardCount++;

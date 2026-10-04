@@ -382,7 +382,7 @@ static NDS_R2_CUBIC_ATTR f32 ndsR2CubicValueFixed(const AObj *aobj)
     /* Q12 x Q16 = Q28 in the accumulator, shifted back to Q12 at the end. */
     acc = (s64)ndsR2F32ToFixed(aobj->value_base, NDS_R2_CUBIC_VF) * h_vb;
 
-    gNdsR2CubicEvals++;
+    NDS_DIAG(gNdsR2CubicEvals++);
     acc += (s64)ndsR2F32ToFixed(aobj->value_target, NDS_R2_CUBIC_VF) * h_vt;
     acc += (s64)ndsR2F32ToFixed(aobj->rate_base, NDS_R2_CUBIC_VF) * h_rb;
     acc += (s64)ndsR2F32ToFixed(aobj->rate_target, NDS_R2_CUBIC_VF) * h_rt;
@@ -2964,7 +2964,7 @@ static void ndsAObjEvent32CorrectMObjColors(MObj *mobj, sb32 force)
         default:
             continue;
         }
-        gNdsAObjEvent32ColorCorrectionCount++;
+        NDS_DIAG(gNdsAObjEvent32ColorCorrectionCount++);
     }
 }
 
@@ -3199,7 +3199,7 @@ ndsGcPlayAnimAllStableSkip(GObj *gobj, sb32 tra_only, sb32 fixed_cubic)
             gcParseMObjMatAnimJoint(mobj);
             if (was_stable_zero != FALSE)
             {
-                gNdsMObjMatAnimStableSkipCount++;
+                NDS_DIAG(gNdsMObjMatAnimStableSkipCount++);
             }
             else
             {

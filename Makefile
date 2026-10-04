@@ -1803,6 +1803,12 @@ NDS_BATTLE_FPS_HUD_DRAW ?= 1
 # tick HUD's fine per-bucket span clocks (include/nds/nds_startup.h). 0 leaves
 # FTR/STG/MISC and their splits at 0 and keeps the clock reads out of WORK.
 NDS_TICK_HUD_SPANS_DEFAULT ?= 1
+# P2-2p8 (2026-10-04, owner ruling D12a): development tallies -- gNds* counters
+# that only gdb probes and verifiers read -- go through NDS_DIAG(...). 0
+# compiles them out: the published ROM and the four-CPU gate, the
+# configuration that ships. Every other target keeps them; a probe that needs
+# them on a shipping build passes NDS_DIAG_COUNTERS=1.
+NDS_DIAG_COUNTERS ?= $(if $(filter smash64ds smash64ds-p2-fourcpu-tickhud-hwtri,$(TARGET)),0,1)
 # R2-03 E28 control arm. E16 left the software light preparation
 # (ndsRendererHardwarePrepareLitDirection's transform + sqrt + three divides,
 # and the shade LUT) running per lit epoch even though the hardware path skips
@@ -7264,6 +7270,12 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TICK_HUD_DRAW $(NDS_TICK_HUD_DRAW)'; \
 		echo '#define NDS_BATTLE_FPS_HUD_DRAW $(NDS_BATTLE_FPS_HUD_DRAW)'; \
 		echo '#define NDS_TICK_HUD_SPANS_DEFAULT $(NDS_TICK_HUD_SPANS_DEFAULT)'; \
+		echo '#define NDS_DIAG_COUNTERS $(NDS_DIAG_COUNTERS)'; \
+		echo '#if NDS_DIAG_COUNTERS'; \
+		echo '#define NDS_DIAG(...) do { __VA_ARGS__; } while (0)'; \
+		echo '#else'; \
+		echo '#define NDS_DIAG(...) ((void)0)'; \
+		echo '#endif'; \
 		echo '#define NDS_R2_FIGHTER_SHUFFLE_FOLD $(NDS_R2_FIGHTER_SHUFFLE_FOLD)'; \
 		echo '#define NDS_R2_FIGHTER_EPOCH_STATE_PROOF $(NDS_R2_FIGHTER_EPOCH_STATE_PROOF)'; \
 		echo '#define NDS_R2_FIGHTER_SHADE_SKIP $(NDS_R2_FIGHTER_SHADE_SKIP)'; \

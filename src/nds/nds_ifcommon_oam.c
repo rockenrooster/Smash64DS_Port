@@ -1946,7 +1946,7 @@ void ndsTask39EffectsUpdate(void)
         spark->pos.x += spark->vel.x;
         spark->pos.y += spark->vel.y;
         spark->age++;
-        gNdsTask39FxHitSparkUpdateCount++;
+        NDS_DIAG(gNdsTask39FxHitSparkUpdateCount++);
         lifetime = (spark->is_heavy != FALSE) ?
             NDS_TASK39_HIT_SPARK_HEAVY_LIFETIME :
             NDS_TASK39_HIT_SPARK_LIGHT_LIFETIME;
@@ -2873,8 +2873,8 @@ void ndsIFCommonNativeOamBeginFrame(void)
 #endif
     gNdsIFCommonNativeOamFrameObjectCount = 0u;
     gNdsIFCommonNativeOamFrameCloudDrawCount = 0u;
-    gNdsIFCommonNativeOamLastFallbackReason =
-        nNDSIFCommonFallbackNone;
+    NDS_DIAG(gNdsIFCommonNativeOamLastFallbackReason =
+        nNDSIFCommonFallbackNone);
     ndsTask39HitSparksDraw();
 }
 
@@ -3943,8 +3943,8 @@ static s32 ndsIFCommonEmitPlayerTag(struct GObj *gobj)
            false, false);
     sNdsIFCommonNextOamID--;
     sNdsIFCommonFrameNeedsCommit = TRUE;
-    gNdsIFCommonNativeOamFrameRecognizedCalls++;
-    gNdsIFCommonNativeOamFrameDrawCalls++;
+    NDS_DIAG(gNdsIFCommonNativeOamFrameRecognizedCalls++);
+    NDS_DIAG(gNdsIFCommonNativeOamFrameDrawCalls++);
     gNdsIFCommonNativeOamFrameObjectCount++;
     return TRUE;
 }
