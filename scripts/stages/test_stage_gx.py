@@ -37,8 +37,21 @@ def test_compiled_corners_patch_coverage_and_stack(name):
         is_noz = run.submit_class == gx.stage.SUBMIT_PROJECTED_NO_Z
         composed = cross or not static_mask & (1 << run.binding_index)
         source_corner = cross and not is_noz
-        assert sum(p[1] == gx.VIEW for p in scope) == (0 if composed else 1)
-        assert sum(p[1] in (gx.NOZ, gx.COMPOSED_NOZ) for p in scope) == (nt if is_noz and not cross else 0)
+        shifts = [max(gx.stage.stage_vertex_coordinate_shift(packet.vertices[i]) for i in
+                      packet.corners[run.first_corner + 3*t:run.first_corner + 3*t + 3])
+                  for t in range(nt)]
+        translated = (is_noz and not cross and
+                      not packet.policies[run.state_policy].geometry_mode & gx.G_TEXTURE_GEN and
+                      (not composed or len(set(shifts)) == 1))
+        assert sum(p[1] == gx.VIEW for p in scope) == (0 if composed or translated else 1)
+        assert sum(p[1] in (gx.NOZ, gx.COMPOSED_NOZ) for p in scope) == (nt if is_noz and not cross and not translated else 0)
+        # The translated painter: one matrix a run, aux = the depths it takes,
+        # and an MTX_TRANS(0, 0, -1) before every later triangle.
+        assert [p[2:] for p in scope if p[1] == gx.NOZ_VIEW_RUN] == ([(0, nt)] if translated and not composed else [])
+        assert [p[2:] for p in scope if p[1] == gx.NOZ_COMPOSED_RUN] == (
+            [(run.binding_index, shifts[0] | (nt << 3))] if translated and composed else [])
+        assert [args for op, args in gx.commands(words[first:first + count]) if op == 0x1C] == (
+            [tuple(gx.DEPTH_STEP_WORDS)] * (nt - 1) if translated else [])
         assert sum(p[1] == gx.CORNER_NOZ for p in scope) == (nt*3 if cross and is_noz else 0)
         if cross and is_noz:
             assert [p[3] >> 3 for p in scope if p[1] == gx.CORNER_NOZ] == [t for t in range(nt) for _ in range(3)]
@@ -54,8 +67,13 @@ def test_compiled_corners_patch_coverage_and_stack(name):
         assert scope[0] == (first + 1, gx.MATERIAL, index, 0)
         assert words[first] == 0x002B2A29
         assert all(first <= p[0] and p[0] + (3 if p[1] == gx.MATERIAL else 1 if p[1] in (gx.COLOR, gx.UV) else 16) <= first + count for p in scope)
-        actual, depth = [], 0
+        actual, depth, mode = [], 0, 2
         for op, args in gx.commands(words[first:first + count]):
+            # Stack and world ops act on the position matrix, the depth step
+            # on the projection; every run leaves position mode current.
+            if op == 0x10:
+                mode = args[0]
+            assert mode == (0 if op == 0x1C else 2) or op not in (0x11, 0x12, 0x18, 0x1C)
             if op == 0x11:
                 depth += 1
             elif op == 0x12:
@@ -84,7 +102,7 @@ def test_compiled_corners_patch_coverage_and_stack(name):
                 expected.append((0, 0, 0) if source_corner else tuple(
                     ((-1 if n < 0 else 1) * ((abs(n) + (1 << (vertex_shift-1))) >> vertex_shift) if vertex_shift else n) * 16
                     for n in (v.x, v.y, v.z)))
-        assert actual == expected and depth == 0
+        assert actual == expected and depth == 0 and mode == 2
         triangles += nt
     assert triangles == {'castle':136, 'sector':299, 'jungle':182, 'zebes':151,
                          'hyrule':206, 'yoster':164, 'dreamland':202,

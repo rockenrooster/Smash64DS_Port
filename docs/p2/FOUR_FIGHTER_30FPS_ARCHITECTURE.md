@@ -1183,6 +1183,19 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   `2026-10-04_fps-console`, `2026-10-04_capture-cuts`,
   `2026-10-04_instrument-out`, `2026-10-04_stage-bind-cuts`,
   `2026-10-04_itcm-pack5`.
+- **10-04 painter depth by MTX_TRANS.** Every no-Z stage triangle loaded its
+  own 16-word projection to carry its painter depth (Dream Land: 126 of
+  them, ~2,400 of 7,009 words a frame). Template version 6 loads one clip
+  transform a run into the position matrix (view x projection, or the
+  composed matrix) with the z column at w x the run's first depth, keeps the
+  projection identity, and steps each later triangle with MTX_TRANS(0, 0,
+  -1) -- a clip-space z translation, x/y/w untouched; the run consumes its
+  depths at the load. Dream Land 7,009 -> 5,589 words, 297 -> 202 patches;
+  composed runs exact in x/y/w, static runs within 17 LSB (~0.02 px), painter
+  ordering preserved (fixed-point model over 11 stages); gate captures
+  pixel-identical at two of four frames, isolated texels at the others.
+  Gate 884,224/1,223,680, 214 over, 1,732/1,961 in two VBlanks, paired
+  median -10.8K, digest identical. Receipt `2026-10-04_painter-trans`.
 
 ## 7. Found along the way
 

@@ -154,6 +154,9 @@ static sb32 ndsStageGxValidate(const NDSStageGxHeader *h, const u8 *body)
                 case 0x11: n = 0u; if (++depth > 1u) { return FALSE; } break;
                 case 0x12: n = 1u; if (depth-- != 1u) { return FALSE; } break;
                 case 0x10: case 0x40: n = 1u; break;
+                /* The translated painter's depth step, between triangles. */
+                case 0x1C: n = 3u;
+                    if (vertices == 0u || (vertices % 3u) != 0u || depth != 1u) { return FALSE; } break;
                 case 0x16: n = 16u; kind = NDS_STAGE_GX_VIEW; break;
                 case 0x18: n = 16u; kind = NDS_STAGE_GX_WORLD; break;
                 case 0x20: n = 1u; kind = NDS_STAGE_GX_COLOR; break;
@@ -169,7 +172,9 @@ static sb32 ndsStageGxValidate(const NDSStageGxHeader *h, const u8 *body)
                 }
                 if (cursor + n > end || (op == 0x12 && words[cursor] != 1u) ||
                     (op == 0x10 && words[cursor] != 0u && words[cursor] != 2u) ||
-                    (op == 0x40 && words[cursor] != 0u)) { return FALSE; }
+                    (op == 0x40 && words[cursor] != 0u) ||
+                    (op == 0x1C && (words[cursor] != 0u || words[cursor + 1u] != 0u ||
+                                    words[cursor + 2u] != 0xFFFFFFFFu))) { return FALSE; }
                 if (op == 0x18)
                 {
                     const NDSNativeStageRun *native = &sNdsNativeStageRuns[i];
@@ -207,7 +212,21 @@ static sb32 ndsStageGxValidate(const NDSStageGxHeader *h, const u8 *body)
                         (q->kind != kind && !(op == 0x16 &&
                          (q->kind == NDS_STAGE_GX_NOZ || q->kind == NDS_STAGE_GX_PROJECTION ||
                           q->kind == NDS_STAGE_GX_COMPOSED_NOZ || q->kind == NDS_STAGE_GX_CORNER_NOZ ||
-                          q->kind == NDS_STAGE_GX_COMPOSED || q->kind == NDS_STAGE_GX_CORNER_SOURCE))) ||
+                          q->kind == NDS_STAGE_GX_COMPOSED || q->kind == NDS_STAGE_GX_CORNER_SOURCE ||
+                          q->kind == NDS_STAGE_GX_NOZ_VIEW_RUN ||
+                          q->kind == NDS_STAGE_GX_NOZ_COMPOSED_RUN))) ||
+                        /* A translated painter run's one matrix consumes
+                         * every depth of the run (aux = its triangles). */
+                        ((q->kind == NDS_STAGE_GX_NOZ_VIEW_RUN ||
+                          q->kind == NDS_STAGE_GX_NOZ_COMPOSED_RUN) &&
+                         (sNdsNativeStageRuns[i].submit_class !=
+                              NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z ||
+                          r->triangles == 0u)) ||
+                        (q->kind == NDS_STAGE_GX_NOZ_VIEW_RUN &&
+                         (q->index != 0u || q->aux != r->triangles)) ||
+                        (q->kind == NDS_STAGE_GX_NOZ_COMPOSED_RUN &&
+                         (q->index >= NDS_NATIVE_STAGE_BINDING_COUNT || (q->aux & 7u) > 6u ||
+                          (u32)(q->aux >> 3) != r->triangles)) ||
                         ((q->kind == NDS_STAGE_GX_WORLD || q->kind == NDS_STAGE_GX_COMPOSED_NOZ ||
                           q->kind == NDS_STAGE_GX_COMPOSED) &&
                          (q->index >= NDS_NATIVE_STAGE_BINDING_COUNT || q->aux > 6u)) ||
@@ -281,7 +300,7 @@ static sb32 __attribute__((noinline, cold, optimize("Os"))) ndsStageGxLoad(void)
     if (!ndsRelocAssetStreamOpen(&stream, sNdsStageGxPaths[gkind]) ||
         !ndsRelocAssetStreamRead(&stream, 0u, &h, sizeof(h))) { goto failed; }
     reason = 2u;
-    if (h.magic != 0x31505847u || h.version != 5u || h.gkind != gkind ||
+    if (h.magic != 0x31505847u || h.version != 6u || h.gkind != gkind ||
         h.run_count != NDS_NATIVE_STAGE_RUN_COUNT || h.word_count == 0u || h.word_count > 16384u ||
         h.patch_count > 4096u || NDS_NATIVE_STAGE_SEGMENT_COUNT >= 32u ||
         h.segment_mask != (1u << NDS_NATIVE_STAGE_SEGMENT_COUNT) - 1u ||
@@ -709,6 +728,66 @@ static sb32 ndsStageGxComposedFor(u32 binding, u32 shift,
     return ok;
 }
 
+/* P2-2p8 (2026-10-04): the translated painter (template version 6,
+ * compile_nds_stage_gx.py NOZ_VIEW_RUN). A no-Z run loads one clip transform
+ * into the position matrix -- a static run the camera's VIEW affine times the
+ * projection (its baked world multiplies onto it in the FIFO, as onto VIEW),
+ * a composed run its composed matrix -- with the z column at w x the run's
+ * first depth. The projection matrix is identity, and each later triangle's
+ * MTX_TRANS(0, 0, -1) makes it a clip-space translation one depth step
+ * nearer: z' = z + tz * w leaves x, y and w alone. The run consumes all its
+ * depths at the load, as its per-triangle loads did. View x projection is
+ * built once per stage-matrix generation, like the VIEW affine. */
+static NDSRendererMatrix20p12 sNdsStageGxViewProjMemo;
+static u32 sNdsStageGxViewProjGen;
+
+static const NDSRendererMatrix20p12 *ndsStageGxViewProjection(void)
+{
+    if (sNdsStageGxViewProjGen != sNdsNativeStageMatrixGen + 1u)
+    {
+        NDSRendererMatrix20p12 view =
+            *sNdsNativeStageOwnerExecution.camera_modelview;
+        u32 col;
+
+        /* ndsRendererNativeBuildHierarchyHardwareAffine's scaling. */
+        for (col = 0u; col < 3u; col++)
+        {
+            view.m[3][col] = ndsRendererRoundShiftS32Signed(
+                view.m[3][col], NDS_RENDERER_HW_WORLD_UNIT_SHIFT);
+        }
+        ndsRendererMtxMul20p12(&view, sNdsNativeStageOwnerExecution.projection,
+                               &sNdsStageGxViewProjMemo);
+        sNdsStageGxViewProjGen = sNdsNativeStageMatrixGen + 1u;
+    }
+    return &sNdsStageGxViewProjMemo;
+}
+
+/* The run's matrix without its z column (written with the depth). */
+static sb32 __attribute__((noinline, cold)) ndsStageGxNoZRunMatrix(
+    u32 *dst, const NDSStageGxPatch *q)
+{
+    NDSRendererMatrix20p12 composed;
+
+    if (q->kind == NDS_STAGE_GX_NOZ_VIEW_RUN)
+    {
+        memcpy(dst, ndsStageGxViewProjection(), sizeof(composed));
+        return TRUE;
+    }
+    if (!ndsStageGxComposedFor(q->index, q->aux & 7u, &composed))
+    {
+        return FALSE;
+    }
+    memcpy(dst, &composed, sizeof(composed));
+    return TRUE;
+}
+
+/* The triangles a translated painter patch steps through. */
+static inline u32 ndsStageGxNoZRunTriangles(const NDSStageGxPatch *q)
+{
+    return (q->kind == NDS_STAGE_GX_NOZ_VIEW_RUN) ? (u32)q->aux :
+        ((u32)q->aux >> 3);
+}
+
 /* ITCM since 2026-09-27: the fill census charged it ~8.5M cycles of
  * instruction-fetch stall in main RAM; low-rent renderer residents made room. */
 /* Out of ITCM: never on Dream Land's measured match, rare elsewhere. */
@@ -756,7 +835,8 @@ static void __attribute__((noinline, cold)) ndsStageGxNoZReadBack(
     for (p = r->first_patch; p < (u32)r->first_patch + r->patch_count; p++)
     {
         const NDSStageGxPatch *q = &sNdsStageGxPatches[p];
-        if (q->kind == NDS_STAGE_GX_NOZ || q->kind == NDS_STAGE_GX_COMPOSED_NOZ || q->kind == NDS_STAGE_GX_CORNER_NOZ)
+        if (q->kind == NDS_STAGE_GX_NOZ || q->kind == NDS_STAGE_GX_COMPOSED_NOZ || q->kind == NDS_STAGE_GX_CORNER_NOZ ||
+            q->kind >= NDS_STAGE_GX_NOZ_VIEW_RUN)
         {
             u32 *dst = &sNdsStageGxWords[q->word], row;
             s16 depth;
@@ -774,6 +854,13 @@ static void __attribute__((noinline, cold)) ndsStageGxNoZReadBack(
             {
                 dst[row * 4u + 2u] = (u32)(s32)ndsRendererRoundShiftS64(
                     (s64)(s32)dst[row * 4u + 3u] * depth, 12u);
+            }
+            if (q->kind >= NDS_STAGE_GX_NOZ_VIEW_RUN)
+            {
+                /* The run's later triangles step by MTX_TRANS. */
+                sNdsRendererHardwareProjectedDepth -=
+                    NDS_RENDERER_HW_PROJECTED_DEPTH_STEP *
+                    (s32)(ndsStageGxNoZRunTriangles(q) - 1u);
             }
         }
     }
@@ -1001,6 +1088,14 @@ static sb32 __attribute__((noinline, section(".itcm"))) ndsStageGxDraw(u32 index
         else if (q->kind == NDS_STAGE_GX_MATERIAL && material_kept == FALSE &&
                  !ndsStageGxMaterial(dst, prepared, native->submit_class, owner))
         { gNdsP2StageProgDeclines++; gNdsP2StageProgReason = 6u; return FALSE; }
+        else if (q->kind >= NDS_STAGE_GX_NOZ_VIEW_RUN)
+        {
+            /* A translated painter run: its depth is written by the
+             * read-back pass, which steps the run's other triangles. */
+            if (!ndsStageGxNoZRunMatrix(dst, q))
+            { gNdsP2StageProgDeclines++; gNdsP2StageProgReason = 8u; return FALSE; }
+            noz_local = FALSE;
+        }
     }
     if (gNdsStageGxMemo != 0u)
     {
@@ -1423,6 +1518,39 @@ static sb32 __attribute__((noinline)) ndsStageGxCommitFast(
                 ndsStageGxFastDepthColumn(
                     dst, &composed, ndsRendererHardwareNextProjectedDepth());
             }
+        }
+        else if (kind >= NDS_STAGE_GX_NOZ_VIEW_RUN)
+        {
+            /* The translated painter: one matrix and the run's depths. */
+            const NDSRendererMatrix20p12 *m;
+
+            if (kind == NDS_STAGE_GX_NOZ_VIEW_RUN)
+            {
+                m = ndsStageGxViewProjection();
+            }
+            else
+            {
+                const u32 shift = q->aux & 7u;
+
+                if ((composed_shift != (s32)shift) ||
+                    (composed_binding != q->index))
+                {
+                    if (ndsStageGxComposedFor(q->index, shift, &composed) ==
+                        FALSE)
+                    {
+                        goto declined;
+                    }
+                    composed_shift = (s32)shift;
+                    composed_binding = q->index;
+                }
+                m = &composed;
+            }
+            memcpy(dst, m, sizeof(*m));
+            ndsStageGxFastDepthColumn(dst, m,
+                                      ndsRendererHardwareNextProjectedDepth());
+            sNdsRendererHardwareProjectedDepth -=
+                NDS_RENDERER_HW_PROJECTED_DEPTH_STEP *
+                (s32)(ndsStageGxNoZRunTriangles(q) - 1u);
         }
         else if (kind == NDS_STAGE_GX_UV)
         {

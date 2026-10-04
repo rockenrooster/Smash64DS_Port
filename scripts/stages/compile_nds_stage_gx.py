@@ -13,6 +13,15 @@ MAGIC = 0x31505847  # GXP1
 VIEW, WORLD, NOZ, COLOR, UV, PROJECTION, COMPOSED_NOZ, CORNER_NOZ = range(1, 9)
 MATERIAL = 9
 COMPOSED, CORNER_SOURCE = 10, 11
+# P2-2p8 (2026-10-04): a no-Z run's painter depth rides MTX_TRANS. The run's
+# position matrix carries its clip transform (the camera's view x projection,
+# or the composed matrix) with the z column set to w x its first depth, the
+# projection matrix is identity, and each later triangle's MTX_TRANS(0, 0, -1)
+# moves the projection's z one depth step: z' = z + tz * w is a clip-space
+# translation, so x, y and w are untouched. One 16-word load a run instead of
+# one a triangle; aux holds the run's triangle count (the depths it consumes).
+NOZ_VIEW_RUN, NOZ_COMPOSED_RUN = 12, 13
+G_TEXTURE_GEN = 1 << 18
 VS_STAGES = ('castle', 'sector', 'jungle', 'zebes', 'hyrule', 'yoster',
              'dreamland', 'yamabuki', 'inishie')
 # P2-6: the 1P campaign's own venues (team stages, Metal, Polygon, Final
@@ -45,8 +54,10 @@ RUN_V2 = struct.Struct('<6H6h')
 RUN = struct.Struct('<6H6h2I')
 PATCH = struct.Struct('<4H')
 PARAMS = {0: 0, 0x10: 1, 0x11: 0, 0x12: 1, 0x15: 0, 0x16: 16, 0x18: 16,
-          0x20: 1, 0x22: 1, 0x23: 2, 0x29: 1, 0x2A: 1, 0x2B: 1,
+          0x1C: 3, 0x20: 1, 0x22: 1, 0x23: 2, 0x29: 1, 0x2A: 1, 0x2B: 1,
           0x40: 1, 0x41: 0}
+# MTX_TRANS(0, 0, -1): one painter depth step nearer (20.12).
+DEPTH_STEP_WORDS = (0, 0, 0xFFFFFFFF)
 
 
 def signature(packet):
@@ -216,6 +227,64 @@ def compile_packet(packet, name='dreamland'):
             emit(0x2A, 0)
             emit(0x2B, 0)
             emit(0)
+            policy = packet.policies[run.state_policy]
+            shifts = [run_shift(packet, run, packet.corners[
+                run.first_corner + t * 3:run.first_corner + t * 3 + 3])
+                for t in range(run.triangle_count)] if is_noz and not cross else []
+            if (is_noz and not cross and not policy.geometry_mode & G_TEXTURE_GEN and
+                    (not composed or len(set(shifts)) == 1)):
+                # The translated painter (NOZ_VIEW_RUN above).
+                emit(0x10, 0)
+                emit(0x15)  # projection = identity; the depth rides MTX_TRANS
+                emit(0x10, 2)
+                if composed:
+                    emit(0x11)
+                    patch(0x16, NOZ_COMPOSED_RUN, run.binding_index,
+                          shifts[0] | (run.triangle_count << 3))
+                    emit(0x10, 0)
+                else:
+                    patch(0x16, NOZ_VIEW_RUN, 0, run.triangle_count)
+                last_shift = None
+                for triangle in range(run.triangle_count):
+                    indices = packet.corners[run.first_corner + triangle * 3:run.first_corner + triangle * 3 + 3]
+                    vertices = [packet.vertices[i] for i in indices]
+                    if any(v.matrix_binding != run.binding_index for v in vertices):
+                        raise ValueError('Foreign-binding corner needs a cross program')
+                    shift = shifts[triangle]
+                    if not composed and shift != last_shift:
+                        if last_shift is not None:
+                            emit(0x10, 2)
+                            emit(0x12, 1)
+                        emit(0x11)
+                        emit(0x18, *world_words(packet, run.binding_index, shift))
+                        baked_mask |= 1 << run.binding_index
+                        emit(0x10, 0)
+                        last_shift = shift
+                    if triangle == 0:
+                        emit(0x40, 0)  # triangles
+                    else:
+                        emit(0x1C, *DEPTH_STEP_WORDS)
+                    for index, v in zip(indices, vertices):
+                        color, uv = attributes[index]
+                        if color is None:
+                            patch(0x20, COLOR, index)
+                        else:
+                            emit(0x20, color)
+                        if uv is None:
+                            patch(0x22, UV, index)
+                        else:
+                            emit(0x22, uv)
+                        xyz = [stage.round_shift_signed(x, shift) * 16 for x in (v.x, v.y, v.z)]
+                        if not all(-32768 <= x <= 32767 for x in xyz):
+                            raise ValueError('Vertex does not fit DS VTX16')
+                        emit(0x23, (xyz[0] & 0xFFFF) | ((xyz[1] & 0xFFFF) << 16), xyz[2] & 0xFFFF)
+                emit(0x41)
+                emit(0x10, 2)
+                emit(0x12, 1)
+                runs[run_id] = (first_word, len(words) - first_word, first_patch,
+                                len(patches) - first_patch, run.triangle_count, segment_id) + bounds + (
+                                    binding_mask & 0xFFFFFFFF, binding_mask >> 32)
+                continue
             if not is_noz and not composed:
                 emit(0x10, 0)
                 patch(0x16, PROJECTION)
@@ -288,7 +357,7 @@ def compile_packet(packet, name='dreamland'):
     body += struct.pack(f'<{len(words)}I', *words)
     if len(body) > body_max(name):
         raise ValueError('GX template exceeds the stage body heap ceiling')
-    return HEADER.pack(MAGIC, 5, stage.blob_gkind(name), len(runs), len(words),
+    return HEADER.pack(MAGIC, 6, stage.blob_gkind(name), len(runs), len(words),
                        len(patches), (1 << len(packet.segments)) - 1, signature(packet), len(body),
                        stage.fnv1a_bytes(body), baked_mask & 0xFFFFFFFF, baked_mask >> 32) + body
 
@@ -296,9 +365,9 @@ def compile_packet(packet, name='dreamland'):
 def decode(blob):
     header = HEADER.unpack_from(blob)
     magic, version, _, nr, nw, np, _, _, nb, checksum, _, _ = header
-    if magic != MAGIC or version not in (1, 2, 3, 4, 5) or len(blob) != HEADER.size + nb:
+    if magic != MAGIC or version not in (1, 2, 3, 4, 5, 6) or len(blob) != HEADER.size + nb:
         raise ValueError('Invalid GX header/length')
-    record = {1: RUN_V1, 2: RUN_V2, 3: RUN, 4: RUN, 5: RUN}[version]
+    record = {1: RUN_V1, 2: RUN_V2, 3: RUN, 4: RUN, 5: RUN, 6: RUN}[version]
     if nb != nr * record.size + np * PATCH.size + nw * 4 or stage.fnv1a_bytes(blob[HEADER.size:]) != checksum:
         raise ValueError('Invalid GX body')
     pos = HEADER.size
