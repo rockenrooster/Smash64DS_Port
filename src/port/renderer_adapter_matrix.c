@@ -5618,6 +5618,77 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrixM2Profile(
 #endif
 
 #if NDS_RENDERER_HW_TRIANGLES
+/* P2-2p8 (2026-10-04): A KEYED NODE'S LOCAL, KEPT ACROSS A PARENT CHANGE.
+ * The world cache below reuses a node's world only while its parent's
+ * generation holds, so a node under a moving parent -- a held item's blade
+ * and hilt under the attach joint, which rebuilds every frame -- rebuilt its
+ * local from its unchanged TRS every frame (~2-3K ticks a list on the gate's
+ * held Beam Sword). The local is a pure function of what the source key
+ * holds, which is the reuse path's own premise, so a node whose key matches
+ * the one its kept local was built from takes that local and only
+ * recomposes. Four slots: the keyed lists under moving parents are few.
+ * Same-ROM A/B word gNdsStageLocalMemo. */
+#define NDS_RENDERER_ADAPTER_STAGE_LOCAL_MEMO 4u
+typedef struct NDSRendererAdapterStageLocalMemo
+{
+    const DObj *dobj;
+    NDSRendererAdapterStageWorldSourceKey key;
+    NDSRendererMatrix20p12 local;
+} NDSRendererAdapterStageLocalMemo;
+static NDSRendererAdapterStageLocalMemo
+    sNdsRendererAdapterStageLocalMemo[NDS_RENDERER_ADAPTER_STAGE_LOCAL_MEMO];
+static u32 sNdsRendererAdapterStageLocalMemoNext;
+volatile u32 gNdsStageLocalMemo __attribute__((used, section(".data"))) = 1u;
+__attribute__((used)) volatile u32 gNdsStageLocalMemoHits;
+
+/* The node's local, from the memo when its key matches, else built (and
+ * kept when keyed). FALSE when the build fails. */
+static sb32 ndsRendererAdapterStageLocalFor(
+    DObj *node, const NDSRendererAdapterStageWorldSourceKey *key,
+    u32 key_valid, NDSRendererMatrix20p12 *local)
+{
+    NDSRendererAdapterStageLocalMemo *slot = NULL;
+    u32 i;
+
+    if ((key_valid != FALSE) && (gNdsStageLocalMemo != 0u))
+    {
+        for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_LOCAL_MEMO; i++)
+        {
+            if (sNdsRendererAdapterStageLocalMemo[i].dobj == node)
+            {
+                slot = &sNdsRendererAdapterStageLocalMemo[i];
+                break;
+            }
+        }
+        if ((slot != NULL) &&
+            (memcmp(&slot->key, key, sizeof(*key)) == 0))
+        {
+            ndsRendererMatrixCopy20p12(local, &slot->local);
+            gNdsStageLocalMemoHits++;
+            return TRUE;
+        }
+    }
+    if (ndsRendererAdapterBuildDObjLocalMatrix(node, local) == FALSE)
+    {
+        return FALSE;
+    }
+    if ((key_valid != FALSE) && (gNdsStageLocalMemo != 0u))
+    {
+        if (slot == NULL)
+        {
+            slot = &sNdsRendererAdapterStageLocalMemo[
+                sNdsRendererAdapterStageLocalMemoNext];
+            sNdsRendererAdapterStageLocalMemoNext =
+                (sNdsRendererAdapterStageLocalMemoNext + 1u) &
+                (NDS_RENDERER_ADAPTER_STAGE_LOCAL_MEMO - 1u);
+        }
+        slot->dobj = node;
+        slot->key = *key;
+        ndsRendererMatrixCopy20p12(&slot->local, local);
+    }
+    return TRUE;
+}
+
 /* allow_stale: slice 44. TRUE means "this DObj's chain is not in this frame's
  * stride class, so a world matrix built on an earlier frame is accepted as-is".
  * Only the stage's own dynamic bindings may pass TRUE. The general caller at
@@ -5743,7 +5814,9 @@ static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
         {
             source_key_valid = ndsRendererAdapterCaptureStageWorldSourceKey(
                 node, &source_key);
-            if (ndsRendererAdapterBuildDObjLocalMatrix(node, &local) == FALSE)
+            if (ndsRendererAdapterStageLocalFor(node, &source_key,
+                                                source_key_valid,
+                                                &local) == FALSE)
             {
                 return FALSE;
             }

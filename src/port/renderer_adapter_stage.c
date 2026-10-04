@@ -7832,7 +7832,7 @@ static sb32 ndsItemReplaySameRecording(const NDSItemReplayDraw *a,
 {
     u32 i;
 
-    if ((a->valid == 0u) || (a->emit_count != b->emit_count) ||
+    if ((a->valid != 1u) || (a->emit_count != b->emit_count) ||
         (a->root_count != b->root_count))
     {
         return FALSE;
@@ -7885,10 +7885,13 @@ static NDSItemReplayDraw *sNdsItemReplayRecording;
 static u32 sNdsItemReplayRecordRoots;
 
 /* Owners whose GX output is their ndsNativeItemWave1Emit calls and nothing
- * else (fixed geometry, generated setup, no materials). */
+ * else: the MObj-less item routes (fixed geometry, generated setup, no
+ * materials). An owner the sink cannot hold (too many emits or vertices)
+ * fails its recording and keeps drawing itself. */
 static inline sb32 ndsItemReplayRouteOk(u32 route_kind)
 {
-    return (route_kind == (NDS_SDL_ROUTE_ITEM + nNDSStageDLItemSword)) ?
+    return ((route_kind >= NDS_SDL_ROUTE_ITEM) &&
+            (route_kind < (NDS_SDL_ROUTE_ITEM + nNDSStageDLItemRouteCount))) ?
         TRUE : FALSE;
 }
 
@@ -15216,7 +15219,7 @@ void ndsRendererAdapterSubmitItemDObjTreeReplay(void *dobj_ptr, u32 kind,
     u32 key_count = 0u;
     u32 i;
 
-    if ((gNdsItemReplay != 0u) && (item_kind == (u32)nITKindSword) &&
+    if ((gNdsItemReplay != 0u) &&
         (sNdsItemReplayRecording == NULL) && (root != NULL) &&
         (ndsRendererAdapterItemOffscreen(root, camera_gobj) == FALSE))
     {
@@ -15239,7 +15242,14 @@ void ndsRendererAdapterSubmitItemDObjTreeReplay(void *dobj_ptr, u32 kind,
                 (d->key_count == key_count) && (d->root_count == root_count) &&
                 (memcmp(d->key, key, key_count * sizeof(u32)) == 0))
             {
-                draw = d;
+                /* valid 2: this key failed its recording -- its owners draw
+                 * it, unrecorded, until the key changes. */
+                draw = (d->valid == 1u) ? d : NULL;
+                if (draw == NULL)
+                {
+                    d->last_used = gNdsRendererProfileFrameCount;
+                    key_count = 0u;
+                }
                 break;
             }
             if (d->root == root)
@@ -15292,11 +15302,28 @@ void ndsRendererAdapterSubmitItemDObjTreeReplay(void *dobj_ptr, u32 kind,
             const NDSRendererMatrix20p12 *modelview_ptr;
             void *saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
 
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+            u32 lab_replay_mark = cpuGetTiming();
+            const u32 lab_pim0 = gNdsLabPimAcc[0];
+            const u32 lab_pim1 = gNdsLabPimAcc[1];
+            const u32 lab_pim2 = gNdsLabPimAcc[2];
+#endif
             /* The fast lane's matrix preparation for this list, unchanged:
              * a held item's attach builds (and latches) exactly here. */
             ndsRendererAdapterPrepareInitialMatrices(
                 r->dobj, cobj, TRUE, &projection, &projection_ptr,
                 &modelview, &modelview_ptr);
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+            {
+                const u32 lab_now = cpuGetTiming();
+
+                gNdsLabItemAcc[14] += lab_now - lab_replay_mark;
+                gNdsLabItemAcc[5] += gNdsLabPimAcc[0] - lab_pim0;
+                gNdsLabItemAcc[6] += gNdsLabPimAcc[1] - lab_pim1;
+                gNdsLabItemAcc[7] += gNdsLabPimAcc[2] - lab_pim2;
+                lab_replay_mark = lab_now;
+            }
+#endif
             if ((projection_ptr == NULL) && (modelview_ptr != NULL))
             {
                 ndsRendererAdapterMtxIdentity20p12(&identity);
@@ -15317,6 +15344,9 @@ void ndsRendererAdapterSubmitItemDObjTreeReplay(void *dobj_ptr, u32 kind,
                     &sNdsRendererAdapterStagePersistentStats);
             }
             gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+            gNdsLabItemAcc[3] += cpuGetTiming() - lab_replay_mark;
+#endif
         }
         sNdsRendererAdapterItemSubmitActive = FALSE;
         sNdsRendererAdapterItemSubmitHead = 0u;
@@ -15368,6 +15398,8 @@ void ndsRendererAdapterSubmitItemDObjTreeReplay(void *dobj_ptr, u32 kind,
         }
         else
         {
+            victim->last_used = gNdsRendererProfileFrameCount;
+            victim->valid = 2u;
             gNdsItemReplayRecordFailed++;
         }
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP

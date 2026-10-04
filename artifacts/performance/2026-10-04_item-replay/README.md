@@ -58,3 +58,31 @@ By window (MITM mean / window P95): frames 800-1400 49.6K -> 36.5K,
 1,298,496 -> 1,287,040; frames 1400-2000 85.8K -> 60.5K, 1,331,968 ->
 1,295,808. Lab, frames 1440-1900: item draw 95.4K -> 59.8K a frame (attach
 22.1K of it). Replays 1,549, records 4, record failures 0, native failures 0.
+
+## Follow-up: every fixed-geometry item owner, kept locals
+
+- The replay admits all thirteen MObj-less item routes (Sword, Bat, Capsule,
+  Star Rod, Motion-Sensor Bomb, Box, Barrel, Egg, Onix, Hammer, Ray Gun, Fan,
+  Heart); an owner the sink cannot hold fails its recording, and a key whose
+  recording failed is remembered (`valid` 2) so its owners draw unrecorded
+  until the key changes. Lab verify on Peach's Castle, every item at rate 5,
+  frames 400-1200: 204 comparisons, 0 mismatches, 2 recordings refused.
+- A keyed node under a moving parent (the held sword's blade and hilt under
+  the attach joint) keeps its local across the parent's rebuild
+  (`ndsRendererAdapterStageLocalFor`, four slots, A/B word
+  `gNdsStageLocalMemo`): ~1K ticks a frame with a held sword.
+- Priced and dropped: the held item's render-only tail (normalizations,
+  compose, float -> Q20.12) in integers. The attach still read ~23K a frame
+  in the lab (the float tail is not where its time goes; the latch walk is).
+
+Lab replay split (frames 1440-1900, `gNdsLabItemAcc`): item draws 58.8K a
+frame -- attach 22.2K, other matrix preparation 18.1K over ~4 lists (camera
+0.55K, world 2.7K, compose 1.1K a list), replayed emits 10.0K, walk/key/
+lookup 7.5K over two draws.
+
+| | WORK P50 | WORK P95 | P99 | > 1.12M | two-VBlank |
+|---|---:|---:|---:|---:|---:|
+| all item routes + kept locals (`gate-routes`) | 904,448 | 1,249,216 | 1,569,408 | 241 | 1,714 / 1,961 |
+
+Same as the Sword-only arm within the single-run spread (the gate draws only
+swords); replay digest IDENTICAL.
