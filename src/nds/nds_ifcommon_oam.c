@@ -991,6 +991,71 @@ static s32 ndsIFCommonReadTrafficRgba(
     return TRUE;
 }
 
+/* The GO lettering's 0.8x footprint: each DS texel is the exact 1.25x1.25
+ * source box under it, coverage-weighted, so both strokes of every letter
+ * keep their weight. A point sample (the rule until 2026-10-04) dropped every
+ * fifth source column and row, which broke the O's right stroke to one pixel
+ * and read as "GC" (owner r75). Q8 source units; the box is 320 wide. */
+static s32 ndsIFCommonSampleAreaTrafficPixel(
+    const Sprite *sprite, const NDSIFCommonAssetSpec *spec,
+    const void *file_data, size_t file_size,
+    u32 destination_x, u32 destination_y, u8 rgba[4])
+{
+    u32 x0 = destination_x * 320u;
+    u32 x1 = x0 + 320u;
+    u32 y0 = destination_y * 320u;
+    u32 y1 = y0 + 320u;
+    u32 width = (u32)(u16)sprite->width;
+    u32 height = (u32)(u16)sprite->height;
+    u64 sum_red = 0u;
+    u64 sum_green = 0u;
+    u64 sum_blue = 0u;
+    u64 sum_alpha = 0u;
+    u32 source_y;
+
+    for (source_y = y0 >> 8; (source_y < height) && ((source_y << 8) < y1);
+         source_y++)
+    {
+        u32 top = ((source_y << 8) > y0) ? (source_y << 8) : y0;
+        u32 bottom = (((source_y + 1u) << 8) < y1) ?
+            ((source_y + 1u) << 8) : y1;
+        u32 source_x;
+
+        for (source_x = x0 >> 8;
+             (source_x < width) && ((source_x << 8) < x1); source_x++)
+        {
+            u32 left = ((source_x << 8) > x0) ? (source_x << 8) : x0;
+            u32 right = (((source_x + 1u) << 8) < x1) ?
+                ((source_x + 1u) << 8) : x1;
+            u64 weight = (u64)((right - left) * (bottom - top));
+            u32 texel;
+            u64 alpha;
+
+            if (ndsIFCommonReadTrafficRgba(
+                    sprite, spec, file_data, file_size,
+                    source_x, source_y, &texel) == FALSE)
+            {
+                return FALSE;
+            }
+            alpha = (u64)(texel & 0xffu) * weight;
+            sum_red += (u64)(texel >> 24) * alpha;
+            sum_green += (u64)((texel >> 16) & 0xffu) * alpha;
+            sum_blue += (u64)((texel >> 8) & 0xffu) * alpha;
+            sum_alpha += alpha;
+        }
+    }
+    if (sum_alpha == 0u)
+    {
+        rgba[0] = rgba[1] = rgba[2] = rgba[3] = 0u;
+        return TRUE;
+    }
+    rgba[0] = (u8)(sum_red / sum_alpha);
+    rgba[1] = (u8)(sum_green / sum_alpha);
+    rgba[2] = (u8)(sum_blue / sum_alpha);
+    rgba[3] = (u8)((sum_alpha + (320u * 320u / 2u)) / (320u * 320u));
+    return TRUE;
+}
+
 static s32 ndsIFCommonSamplePrefilteredTrafficPixel(
     const Sprite *sprite, const NDSIFCommonAssetSpec *spec,
     const void *file_data, size_t file_size,
@@ -1006,17 +1071,9 @@ static s32 ndsIFCommonSamplePrefilteredTrafficPixel(
 
     if (spec == &sNdsIFCommonAssetSpecs[nNDSIFCommonAssetShadowGo])
     {
-        if (ndsIFCommonReadTrafficRgba(
-                sprite, spec, file_data, file_size,
-                source_x, source_y, &taps[0]) == FALSE)
-        {
-            return FALSE;
-        }
-        rgba[0] = (u8)(taps[0] >> 24);
-        rgba[1] = (u8)(taps[0] >> 16);
-        rgba[2] = (u8)(taps[0] >> 8);
-        rgba[3] = (u8)taps[0];
-        return TRUE;
+        return ndsIFCommonSampleAreaTrafficPixel(
+            sprite, spec, file_data, file_size,
+            destination_x, destination_y, rgba);
     }
     if (next_x >= (u32)(u16)sprite->width)
     {
@@ -1331,14 +1388,16 @@ static u32 ndsIFCommonPaletteIndex(
     return best_index;
 }
 
-/* Established source-derived traffic palette, kept fixed so ShadowGo's point
- * sample cannot perturb the other traffic assets. Index 0 is transparent;
- * the second zero is the visible black used by the shadow. */
+/* Source-derived traffic palette (scripts/check_ifcommon_hybrid_oam.py
+ * rebuilds and pins it), fixed so no one asset's sample can perturb the
+ * others. Index 0 is transparent; the second zero is the visible black used
+ * by the shadow. 2026-10-04: the dim lamps' own prim colours (0x043f red,
+ * 0x029f orange, 0x7d89 blue) replace their old premultiplied dark shades. */
 static const u16 sNdsIFCommonTrafficPalette[32] = {
-    0x0000, 0x1084, 0x0000, 0x0842, 0x18c6, 0x14a5, 0x38a4, 0x0c63,
-    0x1ce7, 0x0421, 0x2108, 0x000e, 0x3def, 0x2529, 0x1863, 0x012e,
-    0x5ef7, 0x294a, 0x35ad, 0x24a4, 0x2d6b, 0x318c, 0x4e73, 0x39ce,
-    0x56b5, 0x000b, 0x4a52, 0x6739, 0x4631, 0x77bd, 0x00a8, 0x0006
+    0x0000, 0x1084, 0x0000, 0x0842, 0x18c6, 0x7d89, 0x14a5, 0x0c63,
+    0x043f, 0x1ce7, 0x2108, 0x0421, 0x2529, 0x029f, 0x3def, 0x5ef7,
+    0x294a, 0x35ad, 0x2084, 0x2d6b, 0x318c, 0x4e73, 0x24a5, 0x39ce,
+    0x28c6, 0x56b5, 0x1c63, 0x4a52, 0x4210, 0x6739, 0x4631, 0x77bd
 };
 
 static void ndsIFCommonReleaseTrafficAtlas(void)
@@ -1400,6 +1459,7 @@ static s32 ndsIFCommonFillTrafficAtlas(
                 u8 red;
                 u8 green;
                 u8 blue;
+                u32 alpha3;
                 u32 palette_index;
 
                 if (ndsIFCommonSamplePrefilteredTrafficPixel(
@@ -1410,16 +1470,47 @@ static s32 ndsIFCommonFillTrafficAtlas(
                     gNdsIFCommonNativeOamPrepareCloudFailureStage = 2u;
                     return FALSE;
                 }
-                if (rgba[3] < NDS_IFCOMMON_TRAFFIC_ALPHA_THRESHOLD)
+                if (traffic->asset_index >= nNDSIFCommonAssetShadowGo)
                 {
-                    continue;
+                    /* The dim lamps are TRANSLUCENT on the N64: an I4
+                     * coverage disc of the lamp's prim colour at about 47%
+                     * over the housing, whose sockets carry the bulbs'
+                     * shading and highlight. Baked opaque (the rule until
+                     * 2026-10-04) they hid that and read as flat discs (owner
+                     * r75). They and the GO lettering keep their coverage as
+                     * the texel's A3 alpha and their own colour. */
+                    alpha3 = ((u32)rgba[3] * 7u + 127u) / 255u;
+                    if (alpha3 == 0u)
+                    {
+                        continue;
+                    }
+                    if (traffic->asset_index == nNDSIFCommonAssetShadowGo)
+                    {
+                        red = rgba[0];
+                        green = rgba[1];
+                        blue = rgba[2];
+                    }
+                    else
+                    {
+                        red = asset_spec->red;
+                        green = asset_spec->green;
+                        blue = asset_spec->blue;
+                    }
                 }
-                /* The housing and dim lamps are opaque source art. Bake the
-                 * filtered coverage into RGB so their shading survives, then
-                 * use A3 only as a hard cutout mask. */
-                red = (u8)(((u32)rgba[0] * rgba[3] + 127u) / 255u);
-                green = (u8)(((u32)rgba[1] * rgba[3] + 127u) / 255u);
-                blue = (u8)(((u32)rgba[2] * rgba[3] + 127u) / 255u);
+                else
+                {
+                    if (rgba[3] < NDS_IFCOMMON_TRAFFIC_ALPHA_THRESHOLD)
+                    {
+                        continue;
+                    }
+                    /* The rod, housing and initial shadow are opaque source
+                     * art. Bake the filtered coverage into RGB so their
+                     * shading survives, then use A3 only as a hard cutout. */
+                    alpha3 = 7u;
+                    red = (u8)(((u32)rgba[0] * rgba[3] + 127u) / 255u);
+                    green = (u8)(((u32)rgba[1] * rgba[3] + 127u) / 255u);
+                    blue = (u8)(((u32)rgba[2] * rgba[3] + 127u) / 255u);
+                }
                 palette_index = ndsIFCommonPaletteIndex(
                     sNdsIFCommonTrafficPalette,
                     red, green, blue);
@@ -1428,7 +1519,7 @@ static s32 ndsIFCommonFillTrafficAtlas(
                 pixels[((u32)traffic->atlas_y + y) *
                            NDS_IFCOMMON_TRAFFIC_ATLAS_WIDTH +
                        (u32)traffic->atlas_x + x] =
-                    (u8)((7u << 5) | palette_index);
+                    (u8)((alpha3 << 5) | palette_index);
             }
         }
     }
