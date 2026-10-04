@@ -59,7 +59,11 @@ _Static_assert(sizeof(MPLineInfo) == 18u,
 static sb32 ndsMPBuildTopologyCache(void);
 static void ndsMPVertexF32Reset(void);
 
-static sb32 __attribute__((section(".itcm")))
+/* Inline (P2-2p8, 2026-10-04): ~1,000 calls a frame from main-RAM Thumb
+ * reached this ITCM body through an interworking call (~11 cycles a call in
+ * the late-window lab profile, 11.6K cycles a frame); inline it is its six
+ * loads. */
+static inline __attribute__((always_inline)) sb32
 ndsStageCollisionLoopGeometryReady(void)
 {
     /* WHETHER THE STAGE HAS GEOMETRY, NOT WHETHER IT IS ON A LIST.
