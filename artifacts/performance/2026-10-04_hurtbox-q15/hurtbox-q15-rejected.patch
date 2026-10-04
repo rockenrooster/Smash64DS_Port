@@ -1,0 +1,401 @@
+diff --git a/include/nds/nds_r2_collision_fixed.h b/include/nds/nds_r2_collision_fixed.h
+index ba37018c817..3e5b3eaee22 100644
+--- a/include/nds/nds_r2_collision_fixed.h
++++ b/include/nds/nds_r2_collision_fixed.h
+@@ -315,9 +315,15 @@ static inline uint32_t ndsR2CfxIsqrt64Portable(uint64_t value)
+ #define NDS_R2_CFX_RAD_TO_ID 651.8986206f
+ #define NDS_R2_CFX_DEG90_RAD 1.5707963268f
+ 
++/* A caller may read the half wave from another copy of the same entries
++ * (the hurtbox reject reads the lean kernel's DTCM half). */
++#ifndef NDS_R2_CFX_TABLE_READ
++#define NDS_R2_CFX_TABLE_READ(table, h) ((int32_t)(table)[(h)])
++#endif
++
+ static inline int32_t ndsR2CfxTableQ15(const uint16_t *table, int32_t index)
+ {
+-    int32_t value = (int32_t)table[index & 0x7FF];
++    int32_t value = NDS_R2_CFX_TABLE_READ(table, (uint32_t)index & 0x7FFu);
+ 
+     return (index & 0x800) ? -value : value;
+ }
+diff --git a/src/nds/nds_ftr_lean_kernel.c b/src/nds/nds_ftr_lean_kernel.c
+index 8219d341cde..8f56c2c2797 100644
+--- a/src/nds/nds_ftr_lean_kernel.c
++++ b/src/nds/nds_ftr_lean_kernel.c
+@@ -252,6 +252,22 @@ NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanSinFromIndex(s32 index)
+ }
+ #endif
+ 
++/* The DTCM half for other readers of the same sines (the hurtbox reject's
++ * local builds, src/port/nds_p2_hurtbox_reject.c), filled here if this build
++ * holds one; NULL otherwise. */
++const u16 *ndsFtrLeanSinHalfTable(void)
++{
++#if NDS_FTR_LEAN_SIN_ITCM
++    if (sNdsFtrLeanSinHalf[NDS_FTR_LEAN_SIN_HALF - 1u] == 0u)
++    {
++        ndsFtrLeanSinHalfFill();
++    }
++    return sNdsFtrLeanSinHalf;
++#else
++    return NULL;
++#endif
++}
++
+ NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanAngleIndex(f32 angle, s32 *out)
+ {
+     return ndsFighterMatrixAngleToIndexExact(angle, out);
+diff --git a/src/port/nds_p2_hurtbox_reject.c b/src/port/nds_p2_hurtbox_reject.c
+index 4e42fb0083f..dbeeae1090e 100644
+--- a/src/port/nds_p2_hurtbox_reject.c
++++ b/src/port/nds_p2_hurtbox_reject.c
+@@ -38,6 +38,23 @@
+ /* Same-ROM A/B word for the local build's zero-angle and unit-scale paths. */
+ extern volatile u32 gNdsR2CfxFastPaths;
+ #define NDS_R2_CFX_FAST_PATHS() (gNdsR2CfxFastPaths != 0u)
++/* The sines from the lean kernel's DTCM copy of the half wave when the build
++ * holds one (ndsFtrLeanSinHalfTable; an entry h >= 0x400 is
++ * gSYSinTable[0x7ff - h] there, the same value): the main-RAM table's lines
++ * were the local build's largest stall (2026-10-04 profile, ~25 cycles a
++ * lookup, six a local). */
++extern const u16 *ndsFtrLeanSinHalfTable(void) __attribute__((weak));
++static const uint16_t *sNdsP2HbSinHalf;
++static u32 sNdsP2HbSinHalfAsked;
++static inline int32_t ndsP2HbSinRead(const uint16_t *table, uint32_t h)
++{
++    /* gSYSinTable itself has the same symmetry, so one mirrored index reads
++     * either copy and the select stays branch-free at the six call sites. */
++    const uint16_t *half = (sNdsP2HbSinHalf != NULL) ? sNdsP2HbSinHalf : table;
++
++    return (int32_t)half[(h < 0x400u) ? h : (0x7ffu - h)];
++}
++#define NDS_R2_CFX_TABLE_READ(table, h) ndsP2HbSinRead((table), (h))
+ #include <nds/nds_r2_collision_fixed.h>
+ 
+ #define NDS_P2_HB_CHAIN_MAX 18
+@@ -114,6 +131,232 @@ static int ndsP2HbLocal(NDSR2CfxMtx *dst, const DObj *dobj,
+     return ndsP2HbLocalFromDObj(dst, dobj);
+ }
+ 
++/* ---- Q15 locals for scale-1.0 joints (P2-2p8, 2026-10-04) -------------------
++ *
++ * Most joints in a hurtbox chain carry scale 1.0 on all three axes, so every
++ * cell of their local rotation is a product of table sines in [-1, 1]. Held
++ * as Q15 halfwords (1.0 stored as 32767) the local composes with the
++ * parent's Q26 world through SMULWB/SMLAWB, one cycle a multiply-accumulate,
++ * in place of three 64-bit multiply-accumulates, a rounding and a range test
++ * per cell; and the local build skips its int64 cell array and conversion
++ * loop. The late-window profile priced the Q26 compose at ~470 cycles and the
++ * local build at ~1,270 (sz-lateprof03).
++ *
++ * The cost is precision. A cell carries at most 1.5 Q15 steps of error
++ * (rounding plus the 1.0 clamp), 1.4e-4 of operator norm per level against
++ * ~1e-8 for the Q26 local; the parent's rotation error moves a child's
++ * origin by |T| times it. Even the deepest chain the walk accepts with a
++ * metre of bone per level stays far inside NDS_P2_HB_MARGIN_Q12; the lab ROM
++ * measures the per-level deltas against the Q26 path (gNdsP2HbQ15MaxDR/DT).
++ * Joints with another scale, a cached float local or a latched world keep
++ * the Q26 path. Same-ROM A/B word gNdsP2HbQ15 (0 = every level Q26). */
++typedef struct NDSP2HbLocal15
++{
++    int16_t r[3][3];
++    int16_t pad;
++    int32_t t[3];
++} NDSP2HbLocal15;
++
++volatile u32 gNdsP2HbQ15 __attribute__((used, section(".data"))) = 1u;
++#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
++/* LAB ONLY: Q15 levels composed, and the largest per-level deltas against
++ * the Q26 local on the same parent (rotation cell Q26, translation Q12). */
++__attribute__((used)) volatile u32 gNdsP2HbQ15Composes;
++__attribute__((used)) volatile u32 gNdsP2HbQ15MaxDR;
++__attribute__((used)) volatile u32 gNdsP2HbQ15MaxDT;
++#endif
++
++static inline int16_t ndsP2HbQ15FromQ30(int64_t q30)
++{
++    int64_t v = (q30 + (1 << 14)) >> 15;
++
++    if (v > 32767)
++    {
++        v = 32767;
++    }
++    if (v < -32767)
++    {
++        v = -32767;
++    }
++    return (int16_t)v;
++}
++
++/* Q26 x Q15 -> the top 32 bits of the 48-bit product (Q25), and the same
++ * accumulated: SMULWB / SMLAWB (ARM state, ARMv5TE). */
++static inline int32_t ndsP2HbMulWB(int32_t a, int32_t b)
++{
++#if defined(__arm__) && !defined(__thumb__)
++    int32_t r;
++
++    __asm__("smulwb %0, %1, %2" : "=r"(r) : "r"(a), "r"(b));
++    return r;
++#else
++    return (int32_t)(((int64_t)a * (int16_t)b) >> 16);
++#endif
++}
++
++static inline int32_t ndsP2HbMlaWB(int32_t a, int32_t b, int32_t acc)
++{
++#if defined(__arm__) && !defined(__thumb__)
++    int32_t r;
++
++    __asm__("smlawb %0, %1, %2, %3" : "=r"(r) : "r"(a), "r"(b), "r"(acc));
++    return r;
++#else
++    return acc + (int32_t)(((int64_t)a * (int16_t)b) >> 16);
++#endif
++}
++
++/* The joint qualifies for the Q15 local: scale 1.0 on all axes, no cached
++ * float local (the walk has already stopped on a latched world). */
++static inline int ndsP2HbQ15Eligible(const DObj *dobj, const FTParts *parts)
++{
++    return ((gNdsP2HbQ15 != 0u) && (gNdsR2CfxFastPaths != 0u) &&
++            (parts->transform_update_mode == 0) &&
++            (ndsP2HbBits(dobj->scale.vec.f.x) == 0x3f800000u) &&
++            (ndsP2HbBits(dobj->scale.vec.f.y) == 0x3f800000u) &&
++            (ndsP2HbBits(dobj->scale.vec.f.z) == 0x3f800000u)) ? 1 : 0;
++}
++
++/* One angle's sine and cosine, ndsR2CfxSinCosQ15's values: out of line, so
++ * the three angles of a local share one copy of the index arithmetic. */
++static void __attribute__((noinline))
++ndsP2HbSinCos(float angle, int32_t out[2])
++{
++    int64_t s64;
++    int64_t c64;
++
++    ndsR2CfxSinCosQ15(gSYSinTable, angle, &s64, &c64);
++    out[0] = (int32_t)s64;
++    out[1] = (int32_t)c64;
++}
++
++/* gmCollisionTransformMatrixAll's rotation for scale 1.0 (the Q30 products
++ * ndsR2CfxBuildLocal forms, rounded once to Q15) and its Q12 translation.
++ * Returns 0 without writing when a translation leaves the guard. */
++static int __attribute__((noinline))
++ndsP2HbLocal15FromDObj(NDSP2HbLocal15 *dst, const DObj *dobj)
++{
++    const float translate[3] = { dobj->translate.vec.f.x,
++                                 dobj->translate.vec.f.y,
++                                 dobj->translate.vec.f.z };
++    int32_t sc[2];
++    int32_t sx;
++    int32_t cx;
++    int32_t sy;
++    int32_t cy;
++    int32_t sz;
++    int32_t cz;
++    int32_t sxsy;
++    int32_t cxsy;
++    int32_t t[3];
++    u32 c;
++
++    for (c = 0u; c < 3u; c++)
++    {
++        t[c] = ndsR2CollisionF32ToFixed(translate[c], NDS_R2_CFX_POS_BITS);
++        if ((t[c] == NDS_R2_COLLISION_F32_OVERFLOW) ||
++            (ndsR2CfxAbs32(t[c]) >= NDS_R2_CFX_POS_MAX))
++        {
++            return 0;
++        }
++    }
++    ndsP2HbSinCos(dobj->rotate.vec.f.x, sc);
++    sx = sc[0];
++    cx = sc[1];
++    ndsP2HbSinCos(dobj->rotate.vec.f.y, sc);
++    sy = sc[0];
++    cy = sc[1];
++    ndsP2HbSinCos(dobj->rotate.vec.f.z, sc);
++    sz = sc[0];
++    cz = sc[1];
++    NDS_R2_CFX_OPAQUE(sx);
++    NDS_R2_CFX_OPAQUE(cx);
++    NDS_R2_CFX_OPAQUE(sy);
++    NDS_R2_CFX_OPAQUE(cy);
++    NDS_R2_CFX_OPAQUE(sz);
++    NDS_R2_CFX_OPAQUE(cz);
++    sxsy = sx * sy;
++    cxsy = cx * sy;
++    NDS_R2_CFX_OPAQUE(sxsy);
++    NDS_R2_CFX_OPAQUE(cxsy);
++    dst->r[0][0] = ndsP2HbQ15FromQ30((int64_t)(cy * cz));
++    dst->r[0][1] = ndsP2HbQ15FromQ30((int64_t)(cy * sz));
++    dst->r[0][2] = ndsP2HbQ15FromQ30((int64_t)(-sy) * (INT64_C(1) << 15));
++    dst->r[1][0] = ndsP2HbQ15FromQ30(
++        ndsR2CfxShr((int64_t)sxsy * cz, NDS_R2_CFX_TRIG_BITS) -
++        (int64_t)(cx * sz));
++    dst->r[1][1] = ndsP2HbQ15FromQ30(
++        ndsR2CfxShr((int64_t)sxsy * sz, NDS_R2_CFX_TRIG_BITS) +
++        (int64_t)(cx * cz));
++    dst->r[1][2] = ndsP2HbQ15FromQ30((int64_t)(sx * cy));
++    dst->r[2][0] = ndsP2HbQ15FromQ30(
++        ndsR2CfxShr((int64_t)cxsy * cz, NDS_R2_CFX_TRIG_BITS) +
++        (int64_t)(sx * sz));
++    dst->r[2][1] = ndsP2HbQ15FromQ30(
++        ndsR2CfxShr((int64_t)cxsy * sz, NDS_R2_CFX_TRIG_BITS) -
++        (int64_t)(sx * cz));
++    dst->r[2][2] = ndsP2HbQ15FromQ30((int64_t)(cx * cy));
++    dst->pad = 0;
++    dst->t[0] = t[0];
++    dst->t[1] = t[1];
++    dst->t[2] = t[2];
++    return 1;
++}
++
++/* dst = rhs x lhs as ndsR2CfxCompose forms it (the child's local times the
++ * parent's world), with the Q15 local. |lhs| <= NDS_R2_CFX_ROT_MAX = 2^28 and
++ * |rhs| < 2^15 bound each Q25 product by 2^27 and their sum by 3 x 2^27, so
++ * nothing overflows before the range test. Reads lhs into a temp before
++ * writing dst, as the Q26 compose does. */
++static int __attribute__((noinline))
++ndsP2HbCompose15(NDSR2CfxMtx *dst, const NDSR2CfxMtx *lhs,
++                 const NDSP2HbLocal15 *rhs)
++{
++    NDSR2CfxMtx out;
++    u32 row;
++    u32 col;
++
++    for (row = 0u; row < 3u; row++)
++    {
++        const int32_t b0 = rhs->r[row][0];
++        const int32_t b1 = rhs->r[row][1];
++        const int32_t b2 = rhs->r[row][2];
++
++        for (col = 0u; col < 3u; col++)
++        {
++            int32_t acc = ndsP2HbMulWB(lhs->r[0][col], b0);
++
++            acc = ndsP2HbMlaWB(lhs->r[1][col], b1, acc);
++            acc = ndsP2HbMlaWB(lhs->r[2][col], b2, acc);
++            if ((acc > (NDS_R2_CFX_ROT_MAX >> 1)) ||
++                (acc < -(NDS_R2_CFX_ROT_MAX >> 1)))
++            {
++                return 0;
++            }
++            out.r[row][col] = acc * 2;
++        }
++    }
++    for (col = 0u; col < 3u; col++)
++    {
++        /* Q26 x Q12 -> Q38, reduced to Q12, then the parent offset. */
++        int64_t cell = ndsR2CfxShr((int64_t)lhs->r[0][col] * rhs->t[0] +
++                                       (int64_t)lhs->r[1][col] * rhs->t[1] +
++                                       (int64_t)lhs->r[2][col] * rhs->t[2],
++                                   NDS_R2_CFX_ROT_BITS) +
++                       (int64_t)lhs->t[col];
++
++        if ((cell >= (int64_t)NDS_R2_CFX_POS_MAX) ||
++            (cell <= -(int64_t)NDS_R2_CFX_POS_MAX))
++        {
++            return 0;
++        }
++        out.t[col] = (int32_t)cell;
++    }
++    *dst = out;
++    return 1;
++}
++
+ /* An upper bound on 2^39 / sqrt(s2) -- 1/s at Q26 for s^2 = s2 at Q26 -- for
+  * s2 in [NDS_R2_CFX_S2_MIN, NDS_R2_CFX_S2_MAX] = [2^22, 2^30], without the
+  * divide and square-root units (P2-2p8, 2026-09-29: their busy-waits were ~18%
+@@ -450,16 +693,71 @@ static const NDSR2CfxMtx *ndsP2HbWorldOf(DObj *joint, NDSR2CfxMtx *scratch,
+         depth--;
+         cursor = chain[depth];
+         slot = ndsP2HbSlot(cursor);
+-        if (ndsP2HbLocal(&local, cursor, chain_parts[depth]) == 0)
++        if (ndsP2HbQ15Eligible(cursor, chain_parts[depth]) != 0)
+         {
+-            return NULL;
++            NDSP2HbLocal15 local15;
++#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
++            NDSR2CfxMtx shadow;
++            int shadow_ok = 0;
++
++            if (ndsP2HbLocal(&local, cursor, chain_parts[depth]) != 0)
++            {
++                shadow_ok = ndsR2CfxCompose(&shadow, acc, &local);
++            }
++#endif
++            if (ndsP2HbLocal15FromDObj(&local15, cursor) == 0)
++            {
++                return NULL;
++            }
++            /* As below: Compose15 reads lhs into a temp first. */
++            slot->dobj = NULL;
++            if (ndsP2HbCompose15(&slot->world, acc, &local15) == 0)
++            {
++                return NULL;
++            }
++#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
++            gNdsP2HbQ15Composes++;
++            if (shadow_ok != 0)
++            {
++                u32 k;
++                u32 c;
++
++                for (k = 0u; k < 3u; k++)
++                {
++                    u32 dt = (u32)ndsR2CfxAbs32(slot->world.t[k] -
++                                                shadow.t[k]);
++
++                    if (dt > gNdsP2HbQ15MaxDT)
++                    {
++                        gNdsP2HbQ15MaxDT = dt;
++                    }
++                    for (c = 0u; c < 3u; c++)
++                    {
++                        u32 dr = (u32)ndsR2CfxAbs32(slot->world.r[k][c] -
++                                                    shadow.r[k][c]);
++
++                        if (dr > gNdsP2HbQ15MaxDR)
++                        {
++                            gNdsP2HbQ15MaxDR = dr;
++                        }
++                    }
++                }
++            }
++#endif
+         }
+-        /* Compose reads lhs into a temp before writing dst, so acc may be
+-         * this very slot (a parent on the same slot). */
+-        slot->dobj = NULL;
+-        if (ndsR2CfxCompose(&slot->world, acc, &local) == 0)
++        else
+         {
+-            return NULL;
++            if (ndsP2HbLocal(&local, cursor, chain_parts[depth]) == 0)
++            {
++                return NULL;
++            }
++            /* Compose reads lhs into a temp before writing dst, so acc may
++             * be this very slot (a parent on the same slot). */
++            slot->dobj = NULL;
++            if (ndsR2CfxCompose(&slot->world, acc, &local) == 0)
++            {
++                return NULL;
++            }
+         }
+         slot->dobj = cursor;
+         slot->epoch = epoch;
+@@ -608,6 +906,12 @@ static int ndsP2HbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
+     int32_t inv_smin;
+     u32 c;
+ 
++    if (sNdsP2HbSinHalfAsked == 0u)
++    {
++        sNdsP2HbSinHalfAsked = 1u;
++        sNdsP2HbSinHalf = (ndsFtrLeanSinHalfTable != NULL) ?
++            ndsFtrLeanSinHalfTable() : NULL;
++    }
+     /* Every step below is a pure function of its inputs (the memos only
+      * cache), so taking the damage memo first changes no result: a failure
+      * anywhere returns 0 whichever step finds it. A box of this epoch was
