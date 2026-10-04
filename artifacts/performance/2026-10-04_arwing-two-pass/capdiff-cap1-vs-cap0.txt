@@ -1,0 +1,10 @@
+_f00500.png: identical
+_f00525.png: identical
+_f00550.png: identical
+_f00575.png: identical
+_f00600.png: identical
+_f00625.png: identical
+_f00650.png: identical
+_f00675.png: identical
+_f00700.png: identical
+pairs 9, different 0

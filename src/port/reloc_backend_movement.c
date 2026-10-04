@@ -15124,6 +15124,10 @@ static void ndsStageGCDrawAllLoopSubmitGroundActorDObj(GObj *actor_gobj,
     u32 triangle_delta;
     u32 initial_geometry_mode;
     sb32 is_actor = FALSE;
+#if NDS_P2_STAGE_SECTOR && NDS_RENDERER_HW_TRIANGLES
+    sb32 is_sector_arwing = FALSE;
+    u32 two_pass_dobjs = 0u;
+#endif
 
     gNdsStageGCDrawAllLoopGroundActorCallCount++;
     if ((actor_gobj == NULL) ||
@@ -15145,6 +15149,9 @@ static void ndsStageGCDrawAllLoopSubmitGroundActorDObj(GObj *actor_gobj,
     if (ndsStageGCDrawAllLoopIsSectorArwing(actor_gobj) != FALSE)
     {
         is_actor = TRUE;
+#if NDS_RENDERER_HW_TRIANGLES
+        is_sector_arwing = TRUE;
+#endif
     }
 #endif
 #if NDS_P2_STAGE_YAMABUKI
@@ -15184,9 +15191,31 @@ static void ndsStageGCDrawAllLoopSubmitGroundActorDObj(GObj *actor_gobj,
      * cost ~5 FPS on the same frame, so the proven stage route stays. */
     ndsRendererAdapterBeginStageTraversal();
     sNdsStageGCDrawAllLoopActorKeepsZBuffer = TRUE;
-    ndsStageGCDrawAllLoopScanDObjs(actor_gobj, 0u, FALSE,
-                                   (callback_kind < 32u) ? callback_kind : 31u,
-                                   callback_kind);
+#if NDS_P2_STAGE_SECTOR && NDS_RENDERER_HW_TRIANGLES
+    /* Sector Z's Arwing: the scan's lists in two passes, matrices first
+     * (ndsRendererAdapterSubmitArwingTwoPass). The scan's own bookkeeping for
+     * an actor (owner mask 0) is the submit count and the kind bit. */
+    if ((is_sector_arwing != FALSE) &&
+        (callback_kind == NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE_DLLINKS) &&
+        (sNdsStageGCDrawAllLoopHardwareSubmitActive != FALSE) &&
+        (ndsRendererAdapterSubmitArwingTwoPass(
+             root, sNdsStageGCDrawAllLoopCurrentCameraGObj,
+             ndsStageGCDrawAllLoopInitialGeometryMode(),
+             &two_pass_dobjs) != FALSE))
+    {
+        sNdsStageGCDrawAllLoopHardwareSubmitCount += two_pass_dobjs;
+        gNdsStageGCDrawAllLoopHardwareSubmitCount =
+            sNdsStageGCDrawAllLoopHardwareSubmitCount;
+        gNdsStageGCDrawAllLoopDObjDrawKindMask |=
+            1u << ((callback_kind < 32u) ? callback_kind : 31u);
+    }
+    else
+#endif
+    {
+        ndsStageGCDrawAllLoopScanDObjs(actor_gobj, 0u, FALSE,
+                                       (callback_kind < 32u) ? callback_kind : 31u,
+                                       callback_kind);
+    }
     sNdsStageGCDrawAllLoopActorKeepsZBuffer = FALSE;
     ndsRendererAdapterEndStageTraversal();
     triangle_delta =

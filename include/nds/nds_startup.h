@@ -5581,6 +5581,12 @@ void ndsRendererAdapterEndStageTraversal(void);
 void ndsRendererAdapterSubmitStageDObj(void *dobj, u32 kind,
                                        void *camera_gobj,
                                        u32 initial_geometry_mode);
+/* Sector Z's Arwing tree (TREE_DLLINKS) in two passes: every root's matrices,
+ * then every list in source order. Returns FALSE, having drawn nothing, when
+ * the walk cannot hold the tree; *submitted_dobjs is the scan's DObj count. */
+s32 ndsRendererAdapterSubmitArwingTwoPass(void *root_dobj, void *camera_gobj,
+                                          u32 initial_geometry_mode,
+                                          u32 *submitted_dobjs);
 /* Seat the current camera's cached world->clip matrices for a direct
  * world-space quad. Used by the Fox blaster lab to avoid rebuilding the
  * BattleShip CObj matrices once per laser. */

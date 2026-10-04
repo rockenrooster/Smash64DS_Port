@@ -1,0 +1,14 @@
+matched rows 820 (A 820, B 820)
+same arwing status on 820 of 820
+status 1: n=300 WORK A p50 1028544 p95 1455040 | B p50 1038464 p95 1457856
+   WORK   A    1058424  B    1072445  A-B    -14021
+   MISC   A     197834  B     197865  A-B       -32
+   ACT    A        676  B        677  A-B        -1
+   SRC    A     524883  B     538860  A-B    -13977
+   SRCALL A     518947  B     532911  A-B    -13964
+status 2: n=325 WORK A p50 1149440 p95 1534016 | B p50 1193280 p95 1576384
+   WORK   A    1198711  B    1250977  A-B    -52266
+   MISC   A     291027  B     330160  A-B    -39133
+   ACT    A     100710  B     139941  A-B    -39231
+   SRC    A     581288  B     594169  A-B    -12881
+   SRCALL A     575821  B     588694  A-B    -12873

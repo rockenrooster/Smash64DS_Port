@@ -6371,6 +6371,26 @@ static void ndsStageRejectNativeRender(DObj *dobj, const Gfx *dl,
     }
 }
 
+#if NDS_RENDERER_HW_TRIANGLES
+/* One list's matrices, prepared ahead of its submit (Sector Z's Arwing in two
+ * passes, ndsRendererAdapterSubmitArwingTwoPass): exactly what
+ * ndsRendererAdapterPrepareInitialMatrices returned for this DObj, before the
+ * identity fill. Set only around that list's submit. */
+typedef struct NDSRendererAdapterEntryPrepared
+{
+    DObj *dobj;
+    const Gfx *dl;
+    u32 list_id;
+    u32 prepared;
+    u32 projection_valid;
+    u32 modelview_valid;
+    NDSRendererMatrix20p12 projection;
+    NDSRendererMatrix20p12 modelview;
+} NDSRendererAdapterEntryPrepared;
+
+static const NDSRendererAdapterEntryPrepared *sNdsRendererAdapterEntryPrepared;
+#endif
+
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
 /* LAB ONLY (the any-stage sweep ROM): the FoxSpecial3 Arwing roots this
  * owner draws (Sector Z's hazard, Fox's entry), in the order of the root
@@ -7043,11 +7063,25 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
 #if NDS_ENTRY_EFFECT_DIAG
     ndsEntryEffectDiagRecordDObj(root_offset, dobj);
 #endif
-    ndsRendererAdapterPrepareInitialMatrices(
-        dobj,
-        (camera_gobj != NULL) ? CObjGetStruct(camera_gobj) :
-            ((gGCCurrentCamera != NULL) ? CObjGetStruct(gGCCurrentCamera) : NULL),
-        FALSE, &projection, &projection_ptr, &modelview, &modelview_ptr);
+    if ((sNdsRendererAdapterEntryPrepared != NULL) &&
+        (sNdsRendererAdapterEntryPrepared->dobj == dobj) &&
+        (sNdsRendererAdapterEntryPrepared->dl == dl))
+    {
+        /* Prepared by the Arwing's first pass with this same call; the
+         * identity fill below still applies. */
+        projection_ptr = (sNdsRendererAdapterEntryPrepared->projection_valid != 0u) ?
+            &sNdsRendererAdapterEntryPrepared->projection : NULL;
+        modelview_ptr = (sNdsRendererAdapterEntryPrepared->modelview_valid != 0u) ?
+            &sNdsRendererAdapterEntryPrepared->modelview : NULL;
+    }
+    else
+    {
+        ndsRendererAdapterPrepareInitialMatrices(
+            dobj,
+            (camera_gobj != NULL) ? CObjGetStruct(camera_gobj) :
+                ((gGCCurrentCamera != NULL) ? CObjGetStruct(gGCCurrentCamera) : NULL),
+            FALSE, &projection, &projection_ptr, &modelview, &modelview_ptr);
+    }
     NDS_LAB_ARW_MARK(lab_t[1]);
     /* The default battle camera has one legitimate split shape where the
      * complete camera transform lives on only one side of the DS pair (the
@@ -14620,6 +14654,183 @@ void ndsRendererAdapterSubmitStageDObj(void *dobj_ptr, u32 kind,
 {
     ndsRendererAdapterSubmitStageDObjNode(dobj_ptr, kind, camera_gobj_ptr,
                                           initial_geometry_mode);
+}
+
+/* P2 (2026-10-04): SECTOR Z'S ARWING IN TWO PASSES.
+ *
+ * The Arwing draws seven FoxSpecial3 roots a frame (the body and six glow
+ * quads), each through the scan, the stage DL submit, the entry-effect
+ * adapter, matrix preparation and the 15 KB entry-effect executor -- 20-25 KB
+ * of code per list against an 8 KB instruction cache. The lab profile of the
+ * owner's 4P all-items match (artifacts/task37-census/sz-szprof01) put the
+ * Arwing frames' premium at ~230K cycles, nearly all of it memory stall
+ * (7-18 cycles per instruction), and a two-triangle glow cost 13-18K ticks.
+ *
+ * So the tree is walked once, every root's matrices are prepared in one pass
+ * (the same ndsRendererAdapterPrepareInitialMatrices call, results kept per
+ * list), and then every list is submitted in source order through the
+ * unchanged path, which takes the prepared matrices instead of preparing them
+ * again. Matrix preparation reads only the world, camera and recalc caches,
+ * none of which a submit touches, so moving it ahead changes no value. The
+ * walk mirrors ndsStageGCDrawAllLoopScanDObjs + SubmitStageDObjNode for
+ * TREE_DLLINKS (hidden subtrees skipped, NOTEXTURE lists skipped, list ids
+ * below NDS_RENDERER_STAGE_DL_HEADS); anything it cannot hold declines before
+ * drawing. Same-ROM A/B word gNdsArwingTwoPass (0 = the scan, as before). */
+#define NDS_ARWING_TWO_PASS_MAX 12u
+static NDSRendererAdapterEntryPrepared
+    sNdsRendererAdapterArwingItems[NDS_ARWING_TWO_PASS_MAX];
+volatile u32 gNdsArwingTwoPass __attribute__((used, section(".data"))) = 1u;
+volatile u32 gNdsArwingTwoPassDraws;
+volatile u32 gNdsArwingTwoPassDeclines;
+
+static sb32 ndsRendererAdapterIsArwingRoot(const Gfx *dl)
+{
+    u32 offset;
+
+    if ((gFTDataFoxSpecial3 == NULL) ||
+        ((const u8 *)dl < (const u8 *)gFTDataFoxSpecial3))
+    {
+        return FALSE;
+    }
+    offset = (u32)((const u8 *)dl - (const u8 *)gFTDataFoxSpecial3);
+    switch (offset)
+    {
+    case 0x1fa0u:
+    case 0x2920u:
+    case 0x29d0u:
+    case 0x29f0u:
+    case 0x2a20u:
+    case 0x2868u:
+    case 0x2a50u:
+    case 0x2b00u:
+        return TRUE;
+    default:
+        return FALSE;
+    }
+}
+
+s32 ndsRendererAdapterSubmitArwingTwoPass(void *root_ptr, void *camera_gobj_ptr,
+                                          u32 initial_geometry_mode,
+                                          u32 *submitted_dobjs)
+{
+    DObj *root = (DObj *)root_ptr;
+    GObj *camera_gobj = (GObj *)camera_gobj_ptr;
+    NDSRendererAdapterEntryPrepared *items = sNdsRendererAdapterArwingItems;
+    DObj *stack[32];
+    CObj *cobj;
+    u32 stack_count = 0u;
+    u32 scanned = 0u;
+    u32 count = 0u;
+    u32 dobjs = 0u;
+    u32 i;
+
+    if ((gNdsArwingTwoPass == 0u) || (root == NULL) ||
+        (submitted_dobjs == NULL))
+    {
+        return FALSE;
+    }
+    stack[stack_count++] = root;
+    while ((stack_count != 0u) && (scanned < ARRAY_COUNT(stack)))
+    {
+        DObj *dobj = stack[--stack_count];
+
+        if (dobj == NULL)
+        {
+            continue;
+        }
+        scanned++;
+        /* Two pushes at most below; a walk that could drop one declines. */
+        if (stack_count + 2u > ARRAY_COUNT(stack))
+        {
+            gNdsArwingTwoPassDeclines++;
+            return FALSE;
+        }
+        if ((dobj->flags & DOBJ_FLAG_HIDDEN) != 0)
+        {
+            if (dobj->sib_next != NULL)
+            {
+                stack[stack_count++] = dobj->sib_next;
+            }
+            continue;
+        }
+        if ((dobj->dv != NULL) && ((dobj->flags & DOBJ_FLAG_NOTEXTURE) == 0))
+        {
+            DObjDLLink *dl_link = dobj->dl_link;
+
+            dobjs++;
+            for (i = 0u; (dl_link != NULL) && (i < GC_COMMON_MAX_DLLINKS);
+                 i++, dl_link++)
+            {
+                if (dl_link->list_id == (s32)NDS_RENDERER_STAGE_DL_HEADS)
+                {
+                    break;
+                }
+                if ((dl_link->list_id >= 0) &&
+                    ((u32)dl_link->list_id < NDS_RENDERER_STAGE_DL_HEADS) &&
+                    (dl_link->dl != NULL))
+                {
+                    if (count >= NDS_ARWING_TWO_PASS_MAX)
+                    {
+                        gNdsArwingTwoPassDeclines++;
+                        return FALSE;
+                    }
+                    items[count].dobj = dobj;
+                    items[count].dl = dl_link->dl;
+                    items[count].list_id = (u32)dl_link->list_id;
+                    count++;
+                }
+            }
+        }
+        if (dobj->sib_next != NULL)
+        {
+            stack[stack_count++] = dobj->sib_next;
+        }
+        if (dobj->child != NULL)
+        {
+            stack[stack_count++] = dobj->child;
+        }
+    }
+    if (stack_count != 0u)
+    {
+        /* More DObjs than the walk holds: let the scan draw it. */
+        gNdsArwingTwoPassDeclines++;
+        return FALSE;
+    }
+
+    cobj = (camera_gobj != NULL) ? CObjGetStruct(camera_gobj) :
+        ((gGCCurrentCamera != NULL) ? CObjGetStruct(gGCCurrentCamera) : NULL);
+    for (i = 0u; i < count; i++)
+    {
+        NDSRendererAdapterEntryPrepared *item = &items[i];
+        const NDSRendererMatrix20p12 *projection_ptr = NULL;
+        const NDSRendererMatrix20p12 *modelview_ptr = NULL;
+
+        item->prepared = FALSE;
+        if (ndsRendererAdapterIsArwingRoot(item->dl) == FALSE)
+        {
+            continue;
+        }
+        ndsRendererAdapterPrepareInitialMatrices(
+            item->dobj, cobj, FALSE, &item->projection, &projection_ptr,
+            &item->modelview, &modelview_ptr);
+        item->projection_valid = (projection_ptr != NULL) ? 1u : 0u;
+        item->modelview_valid = (modelview_ptr != NULL) ? 1u : 0u;
+        item->prepared = TRUE;
+    }
+    for (i = 0u; i < count; i++)
+    {
+        NDSRendererAdapterEntryPrepared *item = &items[i];
+
+        sNdsRendererAdapterEffectSubmitHead = item->list_id;
+        sNdsRendererAdapterEntryPrepared =
+            (item->prepared != FALSE) ? item : NULL;
+        ndsRendererAdapterSubmitStageDL(item->dobj, item->dl, camera_gobj,
+                                        initial_geometry_mode);
+        sNdsRendererAdapterEntryPrepared = NULL;
+    }
+    *submitted_dobjs = dobjs;
+    gNdsArwingTwoPassDraws++;
+    return TRUE;
 }
 
 static void ndsRendererAdapterSubmitStageDObjNode(DObj *dobj, u32 kind,
