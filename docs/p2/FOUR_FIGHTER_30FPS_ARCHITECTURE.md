@@ -1296,6 +1296,13 @@ every lane, the conversion ships only if it measures cheaper (the losing pattern
 is a leaf swap that pays float<->fixed edges at its boundary; whole chains with
 fixed-point state are the candidates).
 
+**Owner ruling, 2026-10-04 (D14): fighter LOD in four-fighter matches.**
+Approved: very-low detail meshes (build-time per-fighter LOD: tiny parts merged
+into their parents, fewer joints and parts composed and drawn; hitboxes and
+gameplay untouched) and skipping parts whose projected size is under about a
+pixel. Declined: 15 Hz limb poses (fighter visual poses stay 30 Hz). Very-low
+meshes get A/B captures for the owner.
+
 ## 9. The owner's compromise list, mapped
 
 | Item | Where it lands | Weight for the gate |
