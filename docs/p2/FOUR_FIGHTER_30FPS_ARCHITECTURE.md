@@ -1235,6 +1235,13 @@ Intro experiment is withdrawn. Deferred campaign coverage and global retirement
 remain recorded obligations, not prerequisites for the next VS optimization
 batch or claims of completion.
 
+**Owner ruling, 2026-10-04 (D12):** with the gate ~116K short and exact cuts
+yielding 1-3K each, four classes are approved for the four-CPU gate -- measure
+each, ship the ones that pay: (a) instrument out of WORK (measured replay-digest
+time and fine tick-HUD timer reads); (b) particle/effect LOD in heavy frames,
+render only; (c) stage background LOD on VS stages; (d) CPU AI decisions at
+30 Hz (changes CPU behaviour and the replay digest; humans unaffected).
+
 ## 9. The owner's compromise list, mapped
 
 | Item | Where it lands | Weight for the gate |
