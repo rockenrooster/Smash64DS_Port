@@ -22,3 +22,6 @@ contract and pins the palette.
 - model-before-6x.png / model-after-6x.png: the checker's DS model of the box.
 - lab-capture-after.png: lab ROM, countdown "1" (third lamp lit).
 - go-point-vs-area.png: GO lettering at 12x9, point (old) vs area-sampled.
+- lab-go-lit.png / lab-go-lit-6x.png: lab ROM, Peach's Castle, 12 presented
+  frames after `ifCommonAnnounceGoMakeInterface` (GO lamp lit): the red lamp
+  and the gold sockets keep their shading and highlight; GO reads at 12x9.
