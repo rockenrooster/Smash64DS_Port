@@ -1775,7 +1775,17 @@ void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner)
 #define NDS_RENDERER_LOAD_TILE 7u
 
 #define NDS_RENDERER_MAX_VTX NDS_RENDERER_VERTEX_CACHE_SIZE
+/* G_MTX push and G_POPMTX are interpreted only by the host reference
+ * (src/host/graphics_reference/nds_renderer_reference.c); the DS build has no
+ * generic list interpreter, so nothing on DS pushes a modelview. One slot
+ * keeps the DS traversal state 2,176 B smaller: every native owner declares
+ * one on its stack, and the stage DL fast lane runs on the 6 KB DTCM hot
+ * stack (P2-2p8, 2026-10-04). */
+#if defined(ARM9)
+#define NDS_RENDERER_MODELVIEW_STACK_SIZE 1u
+#else
 #define NDS_RENDERER_MODELVIEW_STACK_SIZE 32u
+#endif
 #define NDS_RENDERER_N64_MTX_FRAC_BITS 16u
 #define NDS_RENDERER_DS_MTX_FRAC_BITS 12u
 #define NDS_RENDERER_MTX_PUSH_XOR 0x01u

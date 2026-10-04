@@ -3226,18 +3226,37 @@ static sb32 ndsP2NdlEmitLinkBomb(GObj *gobj, GObj *camera_gobj,
  * lifetime, unknown owner, visibility/material mismatch or native decline
  * returns FALSE and the camera loop executes the original source route.
  */
+static s32 ndsRendererAdapterNdlDispatchEffectBody(GObj *camera_gobj,
+                                                  GObj *gobj);
+
+/* P2-2p8 (2026-10-04): an admitted GObj's dispatch -- its record, its
+ * owner's native emit -- runs on the DTCM hot stack, as the stage DL fast
+ * lane does. With the one-slot modelview stack (nds_renderer_preamble.c)
+ * the deepest owner (an impact wave's native ring) stays inside the 6 KB
+ * stack; none reads storage, switches a coroutine or hands DMA a stack
+ * address. Same-ROM A/B word gNdsNdlHot. */
+volatile u32 gNdsNdlHot __attribute__((used, section(".data"))) = 1u;
+
+typedef struct NDSNdlDispatchCall
+{
+    GObj *camera_gobj;
+    GObj *gobj;
+} NDSNdlDispatchCall;
+
+static unsigned int ndsRendererAdapterNdlDispatchEffectOnHotStack(void *arg)
+{
+    const NDSNdlDispatchCall *call = (const NDSNdlDispatchCall *)arg;
+
+    return (unsigned int)ndsRendererAdapterNdlDispatchEffectBody(
+        call->camera_gobj, call->gobj);
+}
+
 s32 ndsRendererAdapterNdlDispatchEffect(void *camera_gobj_ptr,
                                         void *display_gobj_ptr,
                                         s32 link_id)
 {
     GObj *camera_gobj = camera_gobj_ptr;
     GObj *gobj = display_gobj_ptr;
-    NDSNdlRecord *record;
-    NDSRendererStats *stats;
-    u32 serial;
-    u32 kind;
-    sb32 handled = FALSE;
-    void *saved_graphics_heap_ptr;
 
     if ((gNdsP2Ndl == 0u) || (gNdsSceneManagerCurrIsBattle == 0u) ||
         (camera_gobj == NULL) || (gobj == NULL) ||
@@ -3249,6 +3268,26 @@ s32 ndsRendererAdapterNdlDispatchEffect(void *camera_gobj_ptr,
     {
         return FALSE;
     }
+    if (gNdsNdlHot != 0u)
+    {
+        NDSNdlDispatchCall call = { camera_gobj, gobj };
+
+        return (s32)ndsDtcmHotStackRun(
+            ndsRendererAdapterNdlDispatchEffectOnHotStack, &call);
+    }
+    return ndsRendererAdapterNdlDispatchEffectBody(camera_gobj, gobj);
+}
+
+static s32 ndsRendererAdapterNdlDispatchEffectBody(GObj *camera_gobj,
+                                                  GObj *gobj)
+{
+    NDSNdlRecord *record;
+    NDSRendererStats *stats;
+    u32 serial;
+    u32 kind;
+    sb32 handled = FALSE;
+    void *saved_graphics_heap_ptr;
+
     serial = ndsGcGetGObjLifetimeSerial(gobj);
     if (serial == 0u)
     {
@@ -8198,6 +8237,20 @@ static unsigned int ndsRendererAdapterSubmitStageDLFastOnHotStack(void *arg)
         call->dobj, call->dl, call->camera_gobj,
         call->initial_geometry_mode);
 }
+
+/* The entry-effect owners the lane does not route (entry packets, the
+ * rebirth halo's groups) take the same stack. Same-ROM A/B word
+ * gNdsStageDLEntryHot. */
+volatile u32 gNdsStageDLEntryHot __attribute__((used, section(".data"))) = 1u;
+
+static unsigned int ndsRendererAdapterTryNativeEntryEffectOnHotStack(void *arg)
+{
+    const NDSStageDLFastCall *call = (const NDSStageDLFastCall *)arg;
+
+    return (unsigned int)ndsRendererAdapterTryNativeEntryEffect(
+        call->dobj, call->dl, call->camera_gobj,
+        call->initial_geometry_mode);
+}
 #endif
 
 volatile u32 gNdsStageDLBodyCalls;
@@ -8235,11 +8288,30 @@ static void ndsRendererAdapterSubmitStageDLImpl(DObj *dobj, const Gfx *dl,
         }
     }
 #endif
-    if ((gNdsStageDLEntryFirst != 0u) &&
-        (ndsRendererAdapterTryNativeEntryEffect(
-             dobj, dl, camera_gobj, initial_geometry_mode) != FALSE))
+    if (gNdsStageDLEntryFirst != 0u)
     {
-        return;
+        sb32 entry_handled;
+
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+        if (gNdsStageDLEntryHot != 0u)
+        {
+            NDSStageDLFastCall call = {
+                dobj, dl, camera_gobj, initial_geometry_mode
+            };
+
+            entry_handled = (sb32)ndsDtcmHotStackRun(
+                ndsRendererAdapterTryNativeEntryEffectOnHotStack, &call);
+        }
+        else
+#endif
+        {
+            entry_handled = ndsRendererAdapterTryNativeEntryEffect(
+                dobj, dl, camera_gobj, initial_geometry_mode);
+        }
+        if (entry_handled != FALSE)
+        {
+            return;
+        }
     }
     gNdsStageDLBodyCalls++;
     ndsRendererAdapterSubmitStageDLBody(dobj, dl, camera_gobj,
