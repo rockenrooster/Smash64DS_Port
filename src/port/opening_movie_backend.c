@@ -1696,6 +1696,16 @@ gcCaptureCameraGObj(GObj *camera_gobj, sb32 is_tag_mask_or_id)
     camera_mask = camera_gobj->camera_mask;
     while (camera_mask != 0)
     {
+        /* Whole empty bytes of the link mask at once (P2-2p8, 2026-10-04):
+         * the cameras' masks are sparse and reach link 30+, and this is
+         * Thumb code (no CLZ), so the bit-at-a-time walk was most of the
+         * loop's own cost. Same links, same ascending order. */
+        if ((camera_mask & 0xffu) == 0u)
+        {
+            camera_mask >>= 8;
+            link_id += 8;
+            continue;
+        }
         if ((camera_mask & 1u) != 0)
         {
             GObj *current_gobj = gGCCommonDLLinks[link_id];

@@ -3268,6 +3268,23 @@ s32 ndsRendererAdapterNdlDispatchEffect(void *camera_gobj_ptr,
     {
         return FALSE;
     }
+    /* A GObj already bound as no NDL owner (the stage segments, every frame)
+     * declines here, as the body would, without the hot-stack switch. An
+     * unbound or stale record still goes to the body, which binds it. */
+    {
+        const u32 serial = ndsGcGetGObjLifetimeSerial(gobj);
+        const NDSNdlRecord *record =
+            &sNdsP2NdlRecords[ndsP2NdlRecordIndex(gobj)];
+
+        if ((serial == 0u) ||
+            ((record->gobj == gobj) && (record->serial == serial) &&
+             ((record->flags & NDS_P2_NDL_FLAG_BOUND) != 0u) &&
+             ((record->owner == NDS_P2_NDL_OWNER_NEGATIVE) ||
+              (record->kind >= NDS_P2_NDL_KIND_COUNT))))
+        {
+            return FALSE;
+        }
+    }
     if (gNdsNdlHot != 0u)
     {
         NDSNdlDispatchCall call = { camera_gobj, gobj };
@@ -4182,6 +4199,7 @@ static sb32 ndsRendererAdapterPrepareNativeStageBindingMatrix(
 #if NDS_TASK36_HW_COMPOSE
     DObj *dobj = workspace->binding_dobjs[binding_index];
     NDSRendererMatrix20p12 world;
+    const NDSRendererMatrix20p12 *world_ptr;
     NDSRendererMatrix20p12 *out = &workspace->binding_composed[binding_index];
     const NDSRendererMatrix20p12 *projection_ptr = NULL;
     const NDSRendererMatrix20p12 *modelview_ptr = out;
@@ -4192,7 +4210,9 @@ static sb32 ndsRendererAdapterPrepareNativeStageBindingMatrix(
 #endif
 
     if (kind != 0u) { sNdsRendererAdapterMvpRecalcScaleX = 1.0F; }
-    if (!ndsRendererAdapterBuildPersistentStageWorldMatrix(dobj, &world, FALSE))
+    /* The cached world itself, not a copy (2026-10-04). */
+    world_ptr = ndsRendererAdapterPersistentStageWorldPtr(dobj, &world, FALSE);
+    if (world_ptr == NULL)
     { return FALSE; }
 #if NDS_TASK103_STAGE_RUN_PHASE
     task103_now = cpuGetTiming();
@@ -4214,7 +4234,7 @@ static sb32 ndsRendererAdapterPrepareNativeStageBindingMatrix(
         (kind != NDS_RENDERER_ADAPTER_MVP_RECALC_PERSP_SCA_KIND) &&
         (gNdsStageBillboardRow3 != 0u))
     {
-        const NDSRendererMatrix20p12 *lhs = &world;
+        const NDSRendererMatrix20p12 *lhs = world_ptr;
 
         if (camera->modelview_valid != FALSE)
         {
@@ -4227,18 +4247,18 @@ static sb32 ndsRendererAdapterPrepareNativeStageBindingMatrix(
         }
         else if (camera->modelview_valid == FALSE)
         {
-            *out = world;
+            *out = *world_ptr;
         }
     }
     else if (camera->modelview_valid != FALSE)
     {
-        ndsRendererMtxMul20p12(&world, &camera->modelview, out);
+        ndsRendererMtxMul20p12(world_ptr, &camera->modelview, out);
         if (camera->projection_valid != FALSE)
         { ndsRendererMtxMul20p12(out, &camera->projection, out); }
     }
     else if (camera->projection_valid != FALSE)
-    { ndsRendererMtxMul20p12(&world, &camera->projection, out); }
-    else { *out = world; }
+    { ndsRendererMtxMul20p12(world_ptr, &camera->projection, out); }
+    else { *out = *world_ptr; }
 #if NDS_TASK103_STAGE_RUN_PHASE
     task103_now = cpuGetTiming();
     gNdsTask103MatComposeTicks += task103_now - task103_mark;

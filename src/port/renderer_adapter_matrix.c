@@ -5696,8 +5696,12 @@ static sb32 ndsRendererAdapterStageLocalFor(
  * reject list precisely because their locals read live FTParts state, and a
  * matrix held over even one frame there is the frozen-attachment bug cycle 52
  * already paid for. */
-static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
-    DObj *dobj, NDSRendererMatrix20p12 *out, sb32 allow_stale)
+/* P2-2p8 (2026-10-04): the world by pointer -- the entry's own matrix when
+ * the persistent cache holds it, `scratch` when the uncached builder fills it,
+ * NULL on failure -- so a caller that only reads it (the stage bindings'
+ * compose) skips the 64-byte copy. */
+static const NDSRendererMatrix20p12 *ndsRendererAdapterPersistentStageWorldPtr(
+    DObj *dobj, NDSRendererMatrix20p12 *scratch, sb32 allow_stale)
 {
     DObj *chain[NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX];
     DObj *cursor = dobj;
@@ -5720,9 +5724,9 @@ static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
 #if !NDS_R2_STAGE_VALIDATE_STRIDE
     (void)allow_stale;
 #endif
-    if ((dobj == NULL) || (out == NULL))
+    if ((dobj == NULL) || (scratch == NULL))
     {
-        return FALSE;
+        return NULL;
     }
     entry = ndsRendererAdapterFindStageWorldEntry(dobj);
     if ((entry != NULL) &&
@@ -5735,10 +5739,11 @@ static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
 #endif
          ))
     {
-        ndsRendererMatrixCopy20p12(
-            out, ndsRendererAdapterStageWorldEntryMatrix(entry));
+        const NDSRendererMatrix20p12 *hit =
+            ndsRendererAdapterStageWorldEntryMatrix(entry);
+
 #if NDS_TASK68_FALLBACK_CENSUS
-        ndsRendererAdapterRecordAttachWorld(dobj, out);
+        ndsRendererAdapterRecordAttachWorld(dobj, hit);
 #endif
 #if NDS_R2_STAGE_VALIDATE_STRIDE
         if (entry->validated_frame != frame)
@@ -5746,7 +5751,7 @@ static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
             gNdsR2Slice44StaleReuse++;
         }
 #endif
-        return TRUE;
+        return hit;
     }
     while ((cursor != NULL) && (cursor != DOBJ_PARENT_NULL) &&
            (depth < NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX))
@@ -5756,7 +5761,7 @@ static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
     }
     if ((cursor != NULL) && (cursor != DOBJ_PARENT_NULL))
     {
-        return FALSE;
+        return NULL;
     }
     if (ndsRendererAdapterEnsureStageWorldCache() == FALSE)
     {
@@ -5766,7 +5771,8 @@ static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
         gNdsLabPimAcc[4] += 1u;
 #endif
-        return ndsRendererAdapterBuildDObjWorldMatrixUncached(dobj, out);
+        return (ndsRendererAdapterBuildDObjWorldMatrixUncached(
+                    dobj, scratch) != FALSE) ? scratch : NULL;
     }
 
     ndsRendererAdapterMtxIdentity20p12(&identity);
@@ -5785,7 +5791,8 @@ static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
             gNdsLabPimAcc[4] += 0x10000u;
 #endif
-            return ndsRendererAdapterBuildDObjWorldMatrixUncached(dobj, out);
+            return (ndsRendererAdapterBuildDObjWorldMatrixUncached(
+                        dobj, scratch) != FALSE) ? scratch : NULL;
         }
         if (entry->validated_frame == frame)
         {
@@ -5818,7 +5825,7 @@ static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
                                                 source_key_valid,
                                                 &local) == FALSE)
             {
-                return FALSE;
+                return NULL;
             }
             ndsRendererMtxMulAffine20p12(
                 &local, parent_world,
@@ -5848,8 +5855,6 @@ static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
 #endif
         parent_generation = entry->generation;
     }
-    ndsRendererMatrixCopy20p12(out, parent_world);
-
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     if (reused_persistent != FALSE)
     {
@@ -5859,13 +5864,14 @@ static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
                 dobj, &oracle_world) != FALSE)
         {
             gNdsRendererProfileStageWorldPersistentOracleSampleCount++;
-            if (memcmp(out, &oracle_world, sizeof(oracle_world)) != 0)
+            if (memcmp(parent_world, &oracle_world, sizeof(oracle_world)) != 0)
             {
                 NDSRendererAdapterStageWorldCacheEntry *target =
                     ndsRendererAdapterFindStageWorldEntry(dobj);
 
                 gNdsRendererProfileStageWorldPersistentOracleMismatchCount++;
-                *out = oracle_world;
+                *scratch = oracle_world;
+                parent_world = scratch;
                 if (target != NULL)
                 {
                     target->source_key_valid = FALSE;
@@ -5883,6 +5889,29 @@ static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
         }
     }
 #endif
+    if (parent_world == &identity)
+    {
+        /* Never hand out the local. */
+        ndsRendererMatrixCopy20p12(scratch, &identity);
+        return scratch;
+    }
+    return parent_world;
+}
+
+static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
+    DObj *dobj, NDSRendererMatrix20p12 *out, sb32 allow_stale)
+{
+    const NDSRendererMatrix20p12 *world =
+        ndsRendererAdapterPersistentStageWorldPtr(dobj, out, allow_stale);
+
+    if (world == NULL)
+    {
+        return FALSE;
+    }
+    if (world != out)
+    {
+        ndsRendererMatrixCopy20p12(out, world);
+    }
     return TRUE;
 }
 #endif

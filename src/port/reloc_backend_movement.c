@@ -15858,22 +15858,40 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
 #if NDS_TICK_HUD
             u32 misc_split_mark = cpuGetTiming();
 #endif
-            ndsStageGCDrawAllLoopSubmitWeaponDObj(stage_gobj,
-                                                  callback_kind);
+            /* P2-2p8 (2026-10-04): each of the three submits returns at
+             * once unless the GObj is its kind (Is*Display tests gobj->id
+             * first), so only the matching one is called, and only its span
+             * is timed: two main-RAM calls and three clock reads fewer for
+             * every DObj-tree GObj outside the stage. */
+            switch (stage_gobj->id)
+            {
+            case nGCCommonKindWeapon:
+                ndsStageGCDrawAllLoopSubmitWeaponDObj(stage_gobj,
+                                                      callback_kind);
 #if NDS_TICK_HUD
-            gNdsMiscWeaponDrawTicks += cpuGetTiming() - misc_split_mark;
-            misc_split_mark = cpuGetTiming();
+                gNdsMiscWeaponDrawTicks += cpuGetTiming() - misc_split_mark;
 #endif
-            ndsStageGCDrawAllLoopSubmitItemDObj(stage_gobj,
-                                                callback_kind);
+                break;
+            case nGCCommonKindItem:
+                ndsStageGCDrawAllLoopSubmitItemDObj(stage_gobj,
+                                                    callback_kind);
 #if NDS_TICK_HUD
-            gNdsMiscItemDrawTicks += cpuGetTiming() - misc_split_mark;
-            misc_split_mark = cpuGetTiming();
+                gNdsMiscItemDrawTicks += cpuGetTiming() - misc_split_mark;
 #endif
-            ndsStageGCDrawAllLoopSubmitEffectDObj(stage_gobj,
-                                                  callback_kind);
+                break;
+            case nGCCommonKindEffect:
+                ndsStageGCDrawAllLoopSubmitEffectDObj(stage_gobj,
+                                                      callback_kind);
 #if NDS_TICK_HUD
-            gNdsMiscEffectDrawTicks += cpuGetTiming() - misc_split_mark;
+                gNdsMiscEffectDrawTicks += cpuGetTiming() - misc_split_mark;
+#endif
+                break;
+            default:
+                break;
+            }
+#if NDS_TICK_HUD && (NDS_P2_STAGE_JUNGLE || NDS_P2_STAGE_YOSTER || \
+    NDS_P2_STAGE_ZEBES || NDS_P2_STAGE_SECTOR || NDS_P2_STAGE_YAMABUKI || \
+    NDS_P2_STAGE_INISHIE)
             misc_split_mark = cpuGetTiming();
 #endif
 #if NDS_P2_STAGE_JUNGLE
@@ -15899,7 +15917,9 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
             ndsStageGCDrawAllLoopSubmitGroundActorDObj(stage_gobj,
                                                        callback_kind);
 #endif
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && (NDS_P2_STAGE_JUNGLE || NDS_P2_STAGE_YOSTER || \
+    NDS_P2_STAGE_ZEBES || NDS_P2_STAGE_SECTOR || NDS_P2_STAGE_YAMABUKI || \
+    NDS_P2_STAGE_INISHIE)
             gNdsMiscActorDrawTicks += cpuGetTiming() - misc_split_mark;
 #endif
         }
