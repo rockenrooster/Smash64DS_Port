@@ -1146,6 +1146,23 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   whose bodies the shipping ROM inlines stay off the name list (the first
   pack overflowed the shipping link by 1,680 B). Receipt
   `2026-10-04_itcm-pack4`.
+- **10-04 item draws replay their recorded emits.** 247 of the gate's 280
+  over-gate frames follow frame 800, and the only items alive then are Beam
+  Swords (one lying, one held by Link, a second lying from ~1440): MITM read
+  ~33K a lying sword, ~62K a held one. A lab split put each root (an
+  11-triangle blade, a 2-triangle hilt) at ~15.6K of per-root machinery
+  (emit 5.7K, generated setup 2.9K, matrix prep 3.8K, fast-lane prep and
+  tail 2.0K) plus the held item's exact attach (~21K a frame, kept: its
+  latch walk is gameplay). An item draw whose lists are all replayable
+  owners now records once (`ndsNativeItemWave1Emit` leaves each emit's
+  bound texture, batch format and alpha-test words and per-vertex words)
+  and replays under freshly prepared matrices while a verbatim key holds
+  (`ndsRendererAdapterSubmitItemDObjTreeReplay`); a lab verify mode compared
+  1,548 fresh recordings with the cached ones, 0 mismatches. Sword route
+  only for now (`cacd4fd246f`): P50/P95 920,704/1,259,712 -> 906,432/1,247,232, over 280 ->
+  241, 1,714/1,961 in two VBlanks; frames 1400-2000 MITM 85.8K -> 60.5K,
+  window P95 1,331,968 -> 1,295,808; digest identical. Receipt
+  `2026-10-04_item-replay`.
 
 ## 7. Found along the way
 
