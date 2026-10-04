@@ -63,6 +63,12 @@ _Static_assert(NDS_PARTICLE_BANKS_SOURCE_CHECKSUM == 0xa2a1e85fu,
  * 0x9362a565 -> 0x0badfd59 on 2026-09-12, deliberately. Restoring the five
  * public efmanager forwards that had been shadowed by weak no-ops admits stock
  * snap/steal, battle-score and egg-break source scripts and their children:
- * 99 -> 110 scripts, 38 -> 41 textures. The SOURCE checksum is unchanged. */
-_Static_assert(NDS_PARTICLE_BANKS_TABLE_CHECKSUM == 0x7071e21eu,
+ * 99 -> 110 scripts, 38 -> 41 textures. The SOURCE checksum is unchanged.
+ *
+ * 0x7071e21e -> 0x57d8d606 on 2026-10-04. The public makers outside the P1
+ * roster/items cut join the seams (DustCollide, ItemSpawnSwirl, KirbyStar,
+ * Psionic, Ripple): 111 -> 118 scripts, 42 -> 46 textures. The Sector Z
+ * four-CPU reject ring caught 0x69, the item spawn swirl, failing closed.
+ */
+_Static_assert(NDS_PARTICLE_BANKS_TABLE_CHECKSUM == 0x57d8d606u,
                "efcommon packed table checksum changed");

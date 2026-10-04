@@ -23,6 +23,7 @@ different effect (docs/BUGS.md Coin->Sparkle, Slash->HitNormal).
 from __future__ import annotations
 
 import argparse
+import colorsys
 import hashlib
 import json
 import os
@@ -112,6 +113,34 @@ NESS_QUAD_TEXTURE_STRIDE = 160
 NESS_MEASURED_LIVE_SCRIPTS = frozenset((0, 1, 2, 3))
 NESS_MEASURED_LIVE_TEXTURES = frozenset((0, 1))
 
+# Yoshi's fighter-owned particle bank (particles_unk2). An Egg Throw that lands
+# or expires calls efManagerYoshiEggExplodeMakeEffect (efmanager.c:5808), which
+# starts script 3 of THIS bank; its bytecode makes scripts 0, 1 and 2, so all
+# four and both textures are live. Unpacked, the bank registered empty and the
+# explosion drew only efcommon's shell shards (owner r74: "Yoshi Up B egg
+# explosions don't look the same (shrapnel pattern, explosion VFX)"). Quad rows
+# at 176 + texture id: the free run between Ness (160/161) and Yoster (192).
+YOSHI_SCRIPT_BANK = ("particles_unk2_scb",
+                     "2ad2b1239271f688208773060af33662edd54e2b7a133287a2a325d9d4f6cf9e")
+YOSHI_TEXTURE_BANK = ("particles_unk2_txb",
+                      "f82665bfc9ef8f82eb94c40c749b4716a89ec6600ee1793017d0933a1ad50975")
+YOSHI_QUAD_TEXTURE_STRIDE = 176
+YOSHI_ENTRY_CLOSURE = {3: {0, 1, 2}}
+
+# Kirby's fighter-owned particle bank (particles_unk0), unpacked for the same
+# reason as Yoshi's above. Three source makers name it: the inhale wind
+# (efManagerKirbyInhaleWindMakeEffect, efmanager.c:6112, script 12, which makes
+# 6..11) and motion-script effect kinds 0x4C/0x4D (ftparam.c:2077/2081 ->
+# func_ovl2_801031E0 script 2 -> 0, 1; func_ovl2_80103280 script 5 -> 3, 4).
+# Thirteen scripts, all reachable; three small textures. Quad rows at
+# 208 + texture id: the free run between Yoster (192) and the item bank (224).
+KIRBY_SCRIPT_BANK = ("particles_unk0_scb",
+                     "41886b4085511d778b3f02584fa58b97624d9ec12f9786001452fb1ad80d7fb9")
+KIRBY_TEXTURE_BANK = ("particles_unk0_txb",
+                      "90107f842754b3733b9ac1b9ebccf0de7e08c03f637370a40aed643ec2076173")
+KIRBY_QUAD_TEXTURE_STRIDE = 208
+KIRBY_ENTRY_CLOSURE = {2: {0, 1}, 5: {3, 4}, 12: {6, 7, 8, 9, 10, 11}}
+
 # P2-4 Yoster Island's own bank: the cloud vapor. gryoster.c's
 # grYosterCloudVaporMakeEffect names script 0 of this bank
 # (decomp gr/grcommon/gryoster.c, grYosterCloudVaporMakeEffect), and the bank
@@ -160,7 +189,8 @@ ITEM_MEASURED_LIVE_TEXTURES = frozenset((0, 1))
 # half their texels; tex0's script names frame 0 only. Every cell texel is an
 # exact 2:1 / 4:1 box average of source texels -- reduced texture resolution,
 # which PROJECT_GOAL.md allows explicitly, with no eye-tuned frame choice.
-ITEM_QUAD_CELLS = {0: (16, 16, (0,)), 1: (8, 8, (0, 1, 2, 3))}
+# 2026-10-04: source resolution in the sixth sheet (QUAD_ATLAS_SHEETS_MAX).
+ITEM_QUAD_CELLS = {0: (32, 32, (0,)), 1: (32, 32, (0, 1, 2, 3))}
 
 # Hyrule's source controller scripts create three generators each. Pack all
 # eight scripts and every texture frame: grHyruleMakeTwister rejects the hazard
@@ -455,7 +485,15 @@ QUAD_ATLAS_HEIGHT = 64
 # accounting already left ~30 KiB after four sheets, and the current static
 # prepare is 83,840 B, so this spends another proven-size block rather than
 # reducing source-live effects below the project's texture-quality bar.
-QUAD_ATLAS_SHEETS_MAX = 5
+#
+# 2026-10-04 (owner r74: "Fire texture/sprite looks low quality (Fire flower,
+# charmander, charzard, etc)"): the item bank's flame and smoke sat in the 512
+# bytes left beside everything else, at 16x16 and 8x8 from 32x32 sources --
+# 2:1 and 4:1, below the owner's 0.8x bar. A sixth proven-size 8 KiB block
+# seats them at source resolution (5 cells x 1,024 texels).
+# The same day Yoshi's egg-explosion bank (YOSHI_SCRIPT_BANK) arrives: a 64x64
+# and a 32x32 cell, 5,120 texels at the one-frame cap, in a seventh block.
+QUAD_ATLAS_SHEETS_MAX = 7
 # Admitted before anything else. These are the textures a natural single-CPU
 # Mario-vs-Fox match was OBSERVED drawing, so they must survive admission
 # whatever the packer does with the rest. Regrade this from the use mask after
@@ -515,29 +553,16 @@ QUAD_ATLAS_SHEETS_MAX = 5
 # produce; after restoring a dead effect, re-check this list before the soak.
 # FlameRandom and FlameStatic both take script 0x55 -> texture 15, which was
 # already live, which is why the burn was partly present and wholly wrong.
-# OUTSIDE THE MILESTONE, AND KEPT OUT ON PURPOSE RATHER THAN BY ACCIDENT.
-# These four are reachable from a P1 seam, so they are candidates by
-# derivation, but the owner has ruled them out of the Mario-vs-Fox Dream Land
-# items-off slice (BUGS.md, "Broad-audit exclusions 28/31/35/36 are not
-# required"). Until 2026-08-14 that ruling cost nothing to encode because the
-# packer could not seat them anyway; they simply fell off the end of the greedy
-# tail and were reported as excluded.
-#
-# THE BETTER PACKER IS WHAT MAKES THIS A DECISION. It seats five more textures
-# in the same four sheets, so without this list the greedy tail spends the
-# recovered space on 31 and 35 -- and on a PALETTED sheet that space is not
-# free. Measured on this pack: admitting them alongside the required three put
-# texture 33 (DamageNormalLight, a BUGS.md-named effect) up from 0.0409 to
-# 0.0568 mean decode error, +39%, because sheet 2's 32 entries then had to
-# cover eight textures instead of six. Textures 20, 21 and 29 moved the same
-# way by smaller margins. Deferring the four the milestone does not need
-# leaves every previously admitted texture at or better than its old accuracy.
-#
-# NOTHING IS LOST RELATIVE TO THE OLD BUILD: all four were excluded there too,
-# so they draw exactly what they drew before, which is nothing. Delete an entry
-# here when its effect enters the milestone, and re-measure the sheet it lands
-# on -- the cost is paid by that sheet's palette, not by the texel budget.
-QUAD_P1_DEFERRED = frozenset((28, 31, 35, 36))
+# EVERY REACHABLE TEXTURE GETS A CELL. Until 2026-10-04 four of them -- 28,
+# 31, 35 and 36 -- were held out by name under a P1 ruling ("Broad-audit
+# exclusions 28/31/35/36 are not required" for the Mario-vs-Fox Dream Land
+# items-off slice). P2 ships every fighter, stage and item, and all four are
+# common gameplay: 28 is DamageElectric's spark (script 0x53 -> 0x4E..0x52),
+# 35/36 are the children of DamageNormalLight's variants 0x4B/0x4C (half of
+# every light hit), 31 is Purin's music notes (0x40..0x42). Each drew nothing
+# while every counter but the quad miss mask read healthy -- the owner's r75
+# "missing VFX again". build_quad_sheet now refuses to emit an atlas that
+# leaves any packed texture without a cell.
 QUAD_KO_LIVE = frozenset((10, 13, 18, 19, 20, 21, 24))
 QUAD_MEASURED_LIVE = frozenset(
     (0, 1, 2, 10, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 24, 25, 27, 29, 33,
@@ -827,7 +852,21 @@ P1_EXTRA_SEAMS = frozenset((
     # (reloc_backend_compat_shims.c) is only half of it; per the rule above,
     # the route is not finished until this list knows about it.
     "efManagerThunderAmpMakeEffect",
+    # 2026-10-04, the rest of the public makers that start an efcommon
+    # script. P2 ships every fighter, stage and item, so the P1 roster/items
+    # cut no longer holds; the Sector Z four-CPU reject ring caught 0x69
+    # (item spawn swirl, itmanager.c:472) failing closed with reason 4.
+    # derive_reachable_scripts now refuses a public maker that is not here.
+    "efManagerDustCollideMakeEffect",
+    "efManagerItemSpawnSwirlMakeEffect",
+    "efManagerKirbyStarMakeEffect",
+    "efManagerPsionicMakeEffect",
+    "efManagerRippleMakeEffect",
 ))
+
+# Makers whose script id is a parameter; their callers seed the constants
+# (EXPLICIT_SEAM_SCRIPT_IDS), so the seam audit below skips them.
+PARAMETERIZED_SEAM_HELPERS = frozenset(("efManagerStockCommonMakeEffectID",))
 
 # efmanager.c routes these three public makers through
 # efManagerStockCommonMakeEffectID(pos_x, pos_y, script_id). The reachability
@@ -1469,6 +1508,36 @@ def derive_reachable_scripts(repo_root: Path, scripts: list[dict]) -> dict:
                 pending.append(callee)
     if not seeds:
         raise SystemExit(f"{EFMANAGER}: P1 seams named no efcommon script")
+    # Every public maker that can start an efcommon script must be a seam: a
+    # maker left off the list fails closed at runtime with nothing but the
+    # reject ring to show for it (0x69, the item spawn swirl, until 2026-10-04).
+    unlisted = []
+    for maker in sorted(set(re.findall(
+            r"^[A-Za-z_][\w \t\*]*?\b(efManager\w*MakeEffect\w*)\s*\([^;{}]*\)\s*\{",
+            text, re.M)) - set(seams)):
+        visited: set[str] = set()
+        pending = [maker]
+        names_script = False
+        while pending and not names_script:
+            name = pending.pop()
+            if name in visited:
+                continue
+            visited.add(name)
+            body = function_body(text, name)
+            if body is None:
+                continue
+            for constructor, argument in SCRIPT_CONSTRUCTORS.items():
+                for call in find_calls(body, constructor):
+                    if ((len(call) > argument) and
+                            (EFCOMMON_BANK_TOKEN in call[argument - 1])):
+                        names_script = True
+            pending.extend(sorted(set(_called_ef_functions(body)) - visited))
+        if (names_script and (maker not in EXPLICIT_SEAM_SCRIPT_IDS) and
+                (maker not in PARAMETERIZED_SEAM_HELPERS)):
+            unlisted.append(maker)
+    if unlisted:
+        raise SystemExit(f"{EFMANAGER}: makers start efcommon scripts but are "
+                         f"not seams: {', '.join(unlisted)}")
     unknown = sorted(sid for sid in seeds if sid >= len(scripts))
     if unknown:
         raise SystemExit(f"P1 seams name out-of-range scripts {unknown}")
@@ -1865,6 +1934,74 @@ def shelf_pack(cells: list[dict], width: int, height: int,
     return placed
 
 
+def palette_grouped_pack(cells: list[dict],
+                         frames_by_texture: dict[int, list[list]]):
+    """shelf_pack, with the sheets split by what their palettes must hold.
+
+    Each sheet has ONE 32-entry palette. Most particle textures are grey
+    (I4/IA sources whose colour comes from the quad's vertex colour), and any
+    number of grey cells share a grey ramp at no cost; a coloured cell on the
+    same sheet takes entries away from all of them. Measured 2026-10-04 when
+    28/31/35/36 joined: first-fit by area alone put seven textures, four of
+    them coloured, on one sheet and raised DamageNormalLight (33) from 9.3 to
+    14.5 mean premultiplied error. So grey cells pack first into the fewest
+    sheets, and coloured cells fill the rest in hue order, a sheet at a time,
+    so neighbouring hues share a table. None when that split does not fit;
+    the caller then packs by area alone.
+    """
+    def chroma_key(cell: dict):
+        texels = [texel for frame in frames_by_texture[cell["texture"]]
+                  for texel in frame if texel[3] > 0]
+        chroma = max((max(texel[:3]) - min(texel[:3]) for texel in texels),
+                     default=0)
+        if chroma <= 24:
+            return None
+        weight = sum(texel[3] for texel in texels) or 1
+        red = sum(texel[0] * texel[3] for texel in texels) / weight
+        green = sum(texel[1] * texel[3] for texel in texels) / weight
+        blue = sum(texel[2] * texel[3] for texel in texels) / weight
+        hue = colorsys.rgb_to_hsv(red / 255.0, green / 255.0, blue / 255.0)[0]
+        return (hue, cell["texture"], cell["frame"])
+
+    keys = [chroma_key(cell) for cell in cells]
+    grey = [index for index, key in enumerate(keys) if key is None]
+    coloured = sorted((index for index, key in enumerate(keys)
+                       if key is not None), key=lambda index: keys[index])
+    for grey_sheets in range(1, QUAD_ATLAS_SHEETS_MAX):
+        grey_placed = shelf_pack([cells[index] for index in grey],
+                                 QUAD_ATLAS_WIDTH, QUAD_ATLAS_HEIGHT,
+                                 grey_sheets)
+        if grey_placed is None:
+            continue
+        placement = {grey[local]: spot for local, spot in grey_placed.items()}
+        sheet = grey_sheets
+        start = 0
+        while start < len(coloured):
+            if sheet >= QUAD_ATLAS_SHEETS_MAX:
+                break
+            # The longest hue-ordered run from `start` that fits this sheet.
+            end = start
+            best = None
+            while end < len(coloured):
+                trial = shelf_pack([cells[index]
+                                    for index in coloured[start:end + 1]],
+                                   QUAD_ATLAS_WIDTH, QUAD_ATLAS_HEIGHT, 1)
+                if trial is None:
+                    break
+                best = trial
+                end += 1
+            if best is None:
+                break
+            for local, (_, origin_x, origin_y) in best.items():
+                placement[coloured[start + local]] = (sheet, origin_x,
+                                                      origin_y)
+            start = end
+            sheet += 1
+        if start == len(coloured):
+            return placement
+    return None
+
+
 def build_quad_sheet(textures: list[dict], report_rows: list[dict],
                      frames_by_texture: dict[int, list[list]],
                      extra_candidates: list[dict] | None = None) -> dict:
@@ -1893,12 +2030,10 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
     of the big multi-frame animations back reads the exclusion list, and the
     honest answer for those is halving 64x64x10 rather than growing the atlas.
     """
-    def build_candidates(rung: int, deferred: bool = False) -> list[dict]:
+    def build_candidates(rung: int) -> list[dict]:
         rows = []
         for report in report_rows:
             if not report["packed"]:
-                continue
-            if (report["texture"] in QUAD_P1_DEFERRED) != deferred:
                 continue
             texture = textures[report["texture"]]
             cell_max = QUAD_CELL_MAX
@@ -2043,30 +2178,26 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
             admitted, excluded = admit_at(rows, cap)
             chosen_cap = cap
             chosen_rung = rung
-            if not any(row["texture"] in live for row in excluded):
+            if not excluded:
                 seated = True
                 break
         if seated:
             break
-    # The deferred four never entered the search, but they still have to be
-    # NAMED here -- the report's exclusion list is how a BUGS.md row finds out
-    # that its effect has no cell, and a texture that silently stopped being a
-    # candidate would draw nothing with nothing to read.
-    for candidate in build_candidates(chosen_rung, deferred=True):
-        row = dict(candidate)
-        row["frame_list"] = quad_texture_frame_list(
-            candidate["texture"], candidate["frames"], chosen_cap)
-        row["packed_frames"] = len(row["frame_list"])
-        row["bytes"] = (candidate["width"] * candidate["height"] *
-                        row["packed_frames"])
-        row["deferred"] = True
-        excluded.append(row)
+    # A packed texture with no cell is an effect that draws nothing: the
+    # runtime fails closed on it and only the quad miss mask notices. That is
+    # a build failure, not a report row.
+    if excluded:
+        raise SystemExit(
+            "quad atlas cannot seat every packed particle texture; excluded: " +
+            ", ".join(str(row["texture"]) for row in excluded))
     excluded.sort(key=lambda row: row["texture"])
     admitted.sort(key=lambda row: row["texture"])
 
     cells = cells_for(admitted)
-    placement = shelf_pack(cells, QUAD_ATLAS_WIDTH, QUAD_ATLAS_HEIGHT,
-                           QUAD_ATLAS_SHEETS_MAX)
+    placement = palette_grouped_pack(cells, frames_by_texture)
+    if placement is None:
+        placement = shelf_pack(cells, QUAD_ATLAS_WIDTH, QUAD_ATLAS_HEIGHT,
+                               QUAD_ATLAS_SHEETS_MAX)
     if placement is None:
         raise SystemExit("quad atlas failed to pack its own admitted set")
     sheets_used = max(sheet for sheet, _, _ in placement.values()) + 1
@@ -2394,6 +2525,71 @@ def build_yoster_bank(repo_root: Path,
             "packed_frames": len(frame_list),
             "bytes": cell_w * cell_h * len(frame_list),
             "live": texture["id"] in live_textures,
+        })
+
+    return {
+        "script_payload": script_payload,
+        "offsets": [script["offset"] for script in scripts],
+        "scripts": scripts,
+        "textures": textures,
+        "texture_rows": [(texture["width"], texture["height"],
+                          texture["frames"]) for texture in textures],
+        "quad_candidates": quad_candidates,
+        "wanted": wanted,
+    }
+
+
+def build_fighter_bank(repo_root: Path,
+                       frames_by_texture: dict[int, list[list]], label: str,
+                       script_bank: tuple, texture_bank: tuple, stride: int,
+                       closure: dict[int, set[int]]) -> dict:
+    """A fighter-owned particle bank, packed whole like Ness's.
+
+    `closure` maps each script a source maker starts to the scripts its
+    bytecode makes; together they must name every script in the bank, so the
+    whole bank is live and every texture is a mandatory atlas candidate.
+    """
+    script_payload = load_o2r_blob(repo_root, *script_bank)
+    texture_payload = load_o2r_blob(repo_root, *texture_bank)
+    scripts = parse_script_bank(script_payload)
+    textures = parse_texture_bank(texture_payload)
+
+    reached = set(closure)
+    for entry, children in closure.items():
+        if (entry >= len(scripts) or
+                spawned_scripts(scripts[entry], len(scripts)) != children):
+            raise SystemExit(f"{label} particle closure changed at script {entry}")
+        reached |= children
+    if reached != set(range(len(scripts))):
+        raise SystemExit(f"{label} particle bank has unreached scripts: "
+                         f"{sorted(set(range(len(scripts))) - reached)}")
+
+    wanted = sorted({script["texture_id"] for script in scripts})
+    if wanted != list(range(len(textures))):
+        raise SystemExit(f"{label} particle textures changed: {wanted}")
+
+    quad_candidates = []
+    for texture in textures:
+        if texture["frames"] <= 0:
+            raise SystemExit(
+                f"{label} particle texture {texture['id']} has no source frames")
+        frames = [decode_texture_frame(texture_payload, texture, frame)
+                  for frame in range(texture["frames"])]
+        key = stride + texture["id"]
+        frames_by_texture[key] = frames
+        cell_w, cell_h = quad_cell_dims(texture["width"], texture["height"])
+        frame_list = quad_frame_list(texture["frames"])
+        quad_candidates.append({
+            "texture": key,
+            "width": cell_w,
+            "height": cell_h,
+            "source_width": texture["width"],
+            "source_height": texture["height"],
+            "frames": texture["frames"],
+            "frame_list": frame_list,
+            "packed_frames": len(frame_list),
+            "bytes": cell_w * cell_h * len(frame_list),
+            "live": True,
         })
 
     return {
@@ -3180,6 +3376,12 @@ def build_pack(repo_root: Path) -> dict:
     linked = len(script_payload) + table_bytes_resident
     pupupu = build_pupupu_bank(repo_root, frames_by_texture)
     ness = build_ness_bank(repo_root, frames_by_texture)
+    yoshi = build_fighter_bank(repo_root, frames_by_texture, "Yoshi",
+                               YOSHI_SCRIPT_BANK, YOSHI_TEXTURE_BANK,
+                               YOSHI_QUAD_TEXTURE_STRIDE, YOSHI_ENTRY_CLOSURE)
+    kirby = build_fighter_bank(repo_root, frames_by_texture, "Kirby",
+                               KIRBY_SCRIPT_BANK, KIRBY_TEXTURE_BANK,
+                               KIRBY_QUAD_TEXTURE_STRIDE, KIRBY_ENTRY_CLOSURE)
     # Yoster rows are env-gated (see YOSTER_BAKE_ENABLED): the default pack is
     # the verified Dream Land one, byte for byte.
     yoster = (build_yoster_bank(repo_root, frames_by_texture)
@@ -3193,15 +3395,23 @@ def build_pack(repo_root: Path) -> dict:
     # old sheet back. The Makefile bake flags and the flags stamp stay
     # Yoster-only.
     item = build_item_bank(repo_root, frames_by_texture)
+    # Dream Land's cells left the sheet 2026-10-04: with
+    # NDS_R2_WHISPY_NATIVE_TEXTURES (default on, and required by the Whispy
+    # AOT) its particles draw from their own three native textures and never
+    # looked these 1,536 texels up. The space seats the full efcommon closure.
     quads = build_quad_sheet(textures, report_rows, frames_by_texture,
-                             pupupu["quad_candidates"] + yoster_candidates +
+                             yoster_candidates +
                              ness["quad_candidates"] +
+                             yoshi["quad_candidates"] +
+                             kirby["quad_candidates"] +
                              item["quad_candidates"] + source_quads)
     shield_texels, shield_w, shield_h = build_shield_a5i3(repo_root)
     fireball_texels, fireball_w, fireball_h = build_fireball_pal16(repo_root)
     return {
         "pupupu": pupupu,
         "ness": ness,
+        "yoshi": yoshi,
+        "kirby": kirby,
         "yoster": yoster,
         "yoster_enabled": YOSTER_BAKE_ENABLED,
         "item": item,
@@ -3562,6 +3772,37 @@ extern const u32 gNdsNessScriptOffsets[NDS_NESS_SCRIPT_COUNT];
 extern const u8 gNdsNessTextureDims[NDS_NESS_TEXTURE_COUNT * 3];
 
 /* ------------------------------------------------------------------------
+ * Yoshi's fighter particle bank (particles_unk2). The Egg Throw explosion
+ * starts script 3, whose bytecode makes scripts 0..2. Unpacked it registered
+ * empty and the explosion drew nothing but efcommon's shell shards. */
+#define NDS_YOSHI_SCRIPT_COUNT {len(pack["yoshi"]["scripts"])}u
+#define NDS_YOSHI_SCRIPT_BANK_BYTES {len(pack["yoshi"]["script_payload"])}u
+#define NDS_YOSHI_TEXTURE_COUNT {len(pack["yoshi"]["textures"])}u
+#define NDS_PARTICLE_QUAD_YOSHI_STRIDE {YOSHI_QUAD_TEXTURE_STRIDE}u
+
+extern u8 gNdsYoshiScriptBank[NDS_YOSHI_SCRIPT_BANK_BYTES];
+extern const u32 gNdsYoshiScriptOffsets[NDS_YOSHI_SCRIPT_COUNT];
+/* width, height, source frame count for each source texture. */
+extern const u8 gNdsYoshiTextureDims[NDS_YOSHI_TEXTURE_COUNT * 3];
+
+/* ------------------------------------------------------------------------
+ * Kirby's fighter particle bank (particles_unk0): the inhale wind (script 12,
+ * making 6..11) and motion-script effect kinds 0x4C/0x4D (scripts 2 and 5).
+ * Unpacked it registered empty and those effects drew nothing. */
+#define NDS_KIRBY_SCRIPT_COUNT {len(pack["kirby"]["scripts"])}u
+#define NDS_KIRBY_SCRIPT_BANK_BYTES {len(pack["kirby"]["script_payload"])}u
+#define NDS_KIRBY_TEXTURE_COUNT {len(pack["kirby"]["textures"])}u
+#define NDS_PARTICLE_QUAD_KIRBY_STRIDE {KIRBY_QUAD_TEXTURE_STRIDE}u
+/* Yoster's bank tables are flag-baked into the .inc; its stride is not, and
+ * the draw needs it whatever the bake (the .inc repeats it identically). */
+#define NDS_PARTICLE_QUAD_YOSTER_STRIDE {YOSTER_QUAD_TEXTURE_STRIDE}u
+
+extern u8 gNdsKirbyScriptBank[NDS_KIRBY_SCRIPT_BANK_BYTES];
+extern const u32 gNdsKirbyScriptOffsets[NDS_KIRBY_SCRIPT_COUNT];
+/* width, height, source frame count for each source texture. */
+extern const u8 gNdsKirbyTextureDims[NDS_KIRBY_TEXTURE_COUNT * 3];
+
+/* ------------------------------------------------------------------------
  * The item bank (decomp it/itmanager.c:109-150). Lizardon's, Hitokage's and
  * the F-Flower's flame (script 0) and smoke (script 2); script 1 has no
  * maker. Same big-endian-in-place contract as the banks above, and non-const
@@ -3692,6 +3933,24 @@ def render_inc(pack: dict) -> str:
     ness_texture_rows = "\n".join(
         f"    {row[0]:3d}, {row[1]:3d}, {row[2]:3d}, /* texture {index} */"
         for index, row in enumerate(pack["ness"]["texture_rows"])
+    )
+    yoshi_offset_rows = "\n".join(
+        "    " + ", ".join(f"0x{value:08x}u"
+                           for value in pack["yoshi"]["offsets"][index:index + 6]) + ","
+        for index in range(0, len(pack["yoshi"]["offsets"]), 6)
+    )
+    yoshi_texture_rows = "\n".join(
+        f"    {row[0]:3d}, {row[1]:3d}, {row[2]:3d}, /* texture {index} */"
+        for index, row in enumerate(pack["yoshi"]["texture_rows"])
+    )
+    kirby_offset_rows = "\n".join(
+        "    " + ", ".join(f"0x{value:08x}u"
+                           for value in pack["kirby"]["offsets"][index:index + 6]) + ","
+        for index in range(0, len(pack["kirby"]["offsets"]), 6)
+    )
+    kirby_texture_rows = "\n".join(
+        f"    {row[0]:3d}, {row[1]:3d}, {row[2]:3d}, /* texture {index} */"
+        for index, row in enumerate(pack["kirby"]["texture_rows"])
     )
     item_offset_rows = "\n".join(
         "    " + ", ".join(f"0x{value:08x}u"
@@ -3883,6 +4142,35 @@ u8 gNdsNessScriptBank[NDS_NESS_SCRIPT_BANK_BYTES]
 {_hex_rows(pack["ness"]["script_payload"])}
 }};
 
+/* Yoshi's egg-explosion bank. Same mutable, normalize-once source-bytecode
+ * contract as Ness's above; quad rows at 176 + texture id. */
+const u32 gNdsYoshiScriptOffsets[NDS_YOSHI_SCRIPT_COUNT] = {{
+{yoshi_offset_rows}
+}};
+
+const u8 gNdsYoshiTextureDims[NDS_YOSHI_TEXTURE_COUNT * 3] = {{
+{yoshi_texture_rows}
+}};
+
+u8 gNdsYoshiScriptBank[NDS_YOSHI_SCRIPT_BANK_BYTES]
+    __attribute__((aligned(4))) = {{
+{_hex_rows(pack["yoshi"]["script_payload"])}
+}};
+
+/* Kirby's inhale-wind bank. Same contract; quad rows at 208 + texture id. */
+const u32 gNdsKirbyScriptOffsets[NDS_KIRBY_SCRIPT_COUNT] = {{
+{kirby_offset_rows}
+}};
+
+const u8 gNdsKirbyTextureDims[NDS_KIRBY_TEXTURE_COUNT * 3] = {{
+{kirby_texture_rows}
+}};
+
+u8 gNdsKirbyScriptBank[NDS_KIRBY_SCRIPT_BANK_BYTES]
+    __attribute__((aligned(4))) = {{
+{_hex_rows(pack["kirby"]["script_payload"])}
+}};
+
 /* The item bank. Same big-endian-in-place contract as the banks above, and
  * non-const for the same reason. Quad rows for this bank live in
  * gNdsParticleQuadFrames at 224 + texture id (see ITEM_QUAD_TEXTURE_STRIDE).
@@ -4015,6 +4303,21 @@ def render_report(pack: dict) -> dict:
             "texture_rows": pack["ness"]["texture_rows"],
             "quad_stride": NESS_QUAD_TEXTURE_STRIDE,
         },
+        **{label: {
+            "script_bank": script_bank[0],
+            "script_bank_sha256": script_bank[1],
+            "texture_bank": texture_bank[0],
+            "texture_bank_sha256": texture_bank[1],
+            "script_bank_bytes": len(pack[label]["script_payload"]),
+            "script_count": len(pack[label]["scripts"]),
+            "texture_count": len(pack[label]["textures"]),
+            "texture_rows": pack[label]["texture_rows"],
+            "quad_stride": stride,
+        } for label, script_bank, texture_bank, stride in (
+            ("yoshi", YOSHI_SCRIPT_BANK, YOSHI_TEXTURE_BANK,
+             YOSHI_QUAD_TEXTURE_STRIDE),
+            ("kirby", KIRBY_SCRIPT_BANK, KIRBY_TEXTURE_BANK,
+             KIRBY_QUAD_TEXTURE_STRIDE))},
         "whispy_native": {
             "asset_bytes": len(pack["whispy_native"]["payload"]),
             "source_sha256": pack["whispy_native"]["source_sha256"],

@@ -6396,9 +6396,12 @@ _Static_assert(NDS_PARTICLE_QUAD_ATLAS_SHEETS <= 8u,
                "particle atlas sheets would crowd the texture cache");
 static int sNdsRendererParticleAtlasName[NDS_PARTICLE_QUAD_ATLAS_SHEETS];
 #if NDS_R2_WHISPY_NATIVE_TEXTURES
+/* 9 -> 10 on 2026-10-04: a sixth quad sheet seats the item flame and smoke
+ * at source size. 10 -> 11 the same day: a seventh seats Yoshi's egg
+ * explosion and Kirby's inhale wind, their fighter banks' first cells. */
 _Static_assert(NDS_PARTICLE_QUAD_ATLAS_SHEETS +
                    NDS_WHISPY_NATIVE_TEXTURE_COUNT +
-                   NDS_R2_FOX_BLASTER_GLOW_AOT <= 9u,
+                   NDS_R2_FOX_BLASTER_GLOW_AOT <= 11u,
                "particle native textures would crowd the texture cache");
 static int sNdsRendererWhispyNativeName[NDS_WHISPY_NATIVE_TEXTURE_COUNT];
 #if NDS_R2_FOX_BLASTER_GLOW_AOT

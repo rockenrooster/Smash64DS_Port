@@ -1,24 +1,24 @@
 {
   "bytes": {
     "arena_headroom_bytes": 210320,
-    "asset_bytes": 212160,
-    "ds_palette_bytes": 1408,
-    "ds_texture_bytes": 212002,
-    "ds_texture_data_bytes": 210752,
+    "asset_bytes": 218784,
+    "ds_palette_bytes": 1504,
+    "ds_texture_bytes": 218624,
+    "ds_texture_data_bytes": 217280,
     "estimate_2026_07_27_bytes": 129768,
     "estimate_2026_07_27_scripts": 26,
     "estimate_2026_07_27_textures": 18,
     "index_table_bytes": 1283,
     "linked_bytes": 12195,
-    "pack_bytes": 224355,
-    "payload_bytes": 223072,
+    "pack_bytes": 230979,
+    "payload_bytes": 229696,
     "script_bank_bytes": 10912,
-    "source_texture_bytes": 308008,
+    "source_texture_bytes": 314272,
     "spare_bytes": 198125
   },
   "checksums": {
     "source_sha256_lo": "0xa2a1e85f",
-    "table_sha256_lo": "0x7071e21e"
+    "table_sha256_lo": "0x57d8d606"
   },
   "hyrule": {
     "asset_bytes": 6816,
@@ -91,6 +91,33 @@
       ]
     ]
   },
+  "kirby": {
+    "quad_stride": 208,
+    "script_bank": "particles_unk0_scb",
+    "script_bank_bytes": 992,
+    "script_bank_sha256": "41886b4085511d778b3f02584fa58b97624d9ec12f9786001452fb1ad80d7fb9",
+    "script_count": 13,
+    "texture_bank": "particles_unk0_txb",
+    "texture_bank_sha256": "90107f842754b3733b9ac1b9ebccf0de7e08c03f637370a40aed643ec2076173",
+    "texture_count": 3,
+    "texture_rows": [
+      [
+        32,
+        32,
+        1
+      ],
+      [
+        16,
+        16,
+        3
+      ],
+      [
+        8,
+        8,
+        1
+      ]
+    ]
+  },
   "ness": {
     "quad_stride": 160,
     "script_bank": "particles_unk1_scb",
@@ -116,6 +143,7 @@
   "quads": {
     "admitted": [
       0,
+      1,
       2,
       3,
       4,
@@ -139,26 +167,35 @@
       23,
       24,
       25,
+      26,
       27,
+      28,
       29,
       30,
+      31,
       32,
       33,
       34,
+      35,
+      36,
       37,
       38,
       40,
       41,
+      42,
+      43,
       44,
       45,
       46,
-      64,
-      65,
-      66,
       128,
       160,
       161,
+      176,
+      177,
       192,
+      208,
+      209,
+      210,
       224,
       225
     ],
@@ -168,6 +205,13 @@
         "frames": 1,
         "height": 32,
         "texture": 0,
+        "width": 32
+      },
+      {
+        "bytes": 1024,
+        "frames": 1,
+        "height": 32,
+        "texture": 1,
         "width": 32
       },
       {
@@ -332,11 +376,25 @@
         "width": 16
       },
       {
+        "bytes": 256,
+        "frames": 3,
+        "height": 16,
+        "texture": 26,
+        "width": 16
+      },
+      {
         "bytes": 128,
         "frames": 1,
         "height": 8,
         "texture": 27,
         "width": 16
+      },
+      {
+        "bytes": 1024,
+        "frames": 20,
+        "height": 32,
+        "texture": 28,
+        "width": 32
       },
       {
         "bytes": 1024,
@@ -350,6 +408,13 @@
         "frames": 10,
         "height": 32,
         "texture": 30,
+        "width": 32
+      },
+      {
+        "bytes": 1024,
+        "frames": 3,
+        "height": 32,
+        "texture": 31,
         "width": 32
       },
       {
@@ -371,6 +436,20 @@
         "frames": 8,
         "height": 32,
         "texture": 34,
+        "width": 32
+      },
+      {
+        "bytes": 1024,
+        "frames": 8,
+        "height": 32,
+        "texture": 35,
+        "width": 32
+      },
+      {
+        "bytes": 1024,
+        "frames": 8,
+        "height": 32,
+        "texture": 36,
         "width": 32
       },
       {
@@ -402,6 +481,20 @@
         "width": 32
       },
       {
+        "bytes": 1024,
+        "frames": 4,
+        "height": 32,
+        "texture": 42,
+        "width": 32
+      },
+      {
+        "bytes": 1024,
+        "frames": 1,
+        "height": 32,
+        "texture": 43,
+        "width": 32
+      },
+      {
         "bytes": 256,
         "frames": 2,
         "height": 16,
@@ -420,27 +513,6 @@
         "frames": 3,
         "height": 16,
         "texture": 46,
-        "width": 16
-      },
-      {
-        "bytes": 1024,
-        "frames": 1,
-        "height": 32,
-        "texture": 64,
-        "width": 32
-      },
-      {
-        "bytes": 256,
-        "frames": 1,
-        "height": 16,
-        "texture": 65,
-        "width": 16
-      },
-      {
-        "bytes": 256,
-        "frames": 4,
-        "height": 16,
-        "texture": 66,
         "width": 16
       },
       {
@@ -465,6 +537,20 @@
         "width": 32
       },
       {
+        "bytes": 4096,
+        "frames": 2,
+        "height": 64,
+        "texture": 176,
+        "width": 64
+      },
+      {
+        "bytes": 1024,
+        "frames": 1,
+        "height": 32,
+        "texture": 177,
+        "width": 32
+      },
+      {
         "bytes": 1024,
         "frames": 1,
         "height": 32,
@@ -472,65 +558,59 @@
         "width": 32
       },
       {
-        "bytes": 256,
+        "bytes": 1024,
         "frames": 1,
+        "height": 32,
+        "texture": 208,
+        "width": 32
+      },
+      {
+        "bytes": 256,
+        "frames": 3,
         "height": 16,
-        "texture": 224,
+        "texture": 209,
         "width": 16
       },
       {
-        "bytes": 256,
-        "frames": 4,
+        "bytes": 64,
+        "frames": 1,
         "height": 8,
-        "texture": 225,
+        "texture": 210,
         "width": 8
+      },
+      {
+        "bytes": 1024,
+        "frames": 1,
+        "height": 32,
+        "texture": 224,
+        "width": 32
+      },
+      {
+        "bytes": 4096,
+        "frames": 4,
+        "height": 32,
+        "texture": 225,
+        "width": 32
       }
     ],
-    "atlas_bytes": 40960,
+    "atlas_bytes": 57344,
     "atlas_height": 64,
     "atlas_width": 128,
-    "budget_bytes": 40960,
-    "bytes": 39680,
+    "budget_bytes": 57344,
+    "bytes": 56640,
     "cell_cap": 64,
-    "excluded": [
-      {
-        "bytes": 1024,
-        "frames": 20,
-        "height": 32,
-        "texture": 28,
-        "width": 32
-      },
-      {
-        "bytes": 1024,
-        "frames": 3,
-        "height": 32,
-        "texture": 31,
-        "width": 32
-      },
-      {
-        "bytes": 1024,
-        "frames": 8,
-        "height": 32,
-        "texture": 35,
-        "width": 32
-      },
-      {
-        "bytes": 1024,
-        "frames": 8,
-        "height": 32,
-        "texture": 36,
-        "width": 32
-      }
-    ],
+    "excluded": [],
     "frame_cap": 1,
-    "frame_count": 51,
+    "frame_count": 61,
     "held_frames": {
       "25": 2
     },
-    "palette_bytes": 320,
+    "palette_bytes": 448,
     "palette_entries": 32,
     "palette_sheet_entries": [
       8,
+      20,
+      16,
       20,
       32,
       32,
@@ -538,7 +618,7 @@
     ],
     "palette_stride_bytes": 64,
     "sheet_bytes": 8192,
-    "sheets": 5
+    "sheets": 7
   },
   "reach": {
     "p1_seams": [
@@ -558,6 +638,7 @@
       "efManagerDamageSpawnSparksMakeEffect",
       "efManagerDamageSpawnSparksRandomMakeEffect",
       "efManagerDeadExplodeMakeEffect",
+      "efManagerDustCollideMakeEffect",
       "efManagerDustDashMakeEffect",
       "efManagerDustExpandLargeMakeEffect",
       "efManagerDustExpandSmallMakeEffect",
@@ -581,10 +662,14 @@
       "efManagerImpactAirWaveMakeEffect",
       "efManagerImpactShockMakeEffect",
       "efManagerImpactWaveMakeEffect",
+      "efManagerItemSpawnSwirlMakeEffect",
+      "efManagerKirbyStarMakeEffect",
       "efManagerMarioEntryDokanMakeEffect",
       "efManagerMusicNoteMakeEffect",
+      "efManagerPsionicMakeEffect",
       "efManagerRebirthHaloMakeEffect",
       "efManagerReflectBreakMakeEffect",
+      "efManagerRippleMakeEffect",
       "efManagerSetOffMakeEffect",
       "efManagerShieldBreakMakeEffect",
       "efManagerShieldMakeEffect",
@@ -620,6 +705,7 @@
     ],
     "packed_textures": [
       0,
+      1,
       2,
       3,
       4,
@@ -644,6 +730,7 @@
       23,
       24,
       25,
+      26,
       27,
       28,
       29,
@@ -658,6 +745,8 @@
       38,
       40,
       41,
+      42,
+      43,
       44,
       45,
       46
@@ -670,6 +759,7 @@
       4,
       5,
       6,
+      7,
       8,
       9,
       10,
@@ -677,6 +767,7 @@
       12,
       13,
       14,
+      15,
       16,
       17,
       18,
@@ -758,9 +849,14 @@
       94,
       95,
       96,
+      97,
       98,
       100,
       101,
+      102,
+      103,
+      104,
+      105,
       106,
       107,
       108,
@@ -872,6 +968,13 @@
         "efManagerGetNextStructAlloc",
         "efManagerMakeEffect",
         "efManagerMakeEffectForce",
+        "efManagerSetPrevStructAlloc"
+      ],
+      "efManagerDustCollideMakeEffect": [
+        "efGetStruct",
+        "efManagerDestroyParticleGObj",
+        "efManagerGetEffectNoForce",
+        "efManagerGetNextStructAlloc",
         "efManagerSetPrevStructAlloc"
       ],
       "efManagerDustExpandSmallMakeEffect": [
@@ -1008,6 +1111,9 @@
       "101": [
         "efManagerSetOffMakeEffect"
       ],
+      "105": [
+        "efManagerItemSpawnSwirlMakeEffect"
+      ],
       "11": [
         "efManagerFireGrindMakeEffect"
       ],
@@ -1028,6 +1134,9 @@
       ],
       "14": [
         "efManagerHealSparklesMakeEffect"
+      ],
+      "15": [
+        "efManagerKirbyStarMakeEffect"
       ],
       "16": [
         "efManagerStarSplashMakeEffect"
@@ -1101,6 +1210,9 @@
       "68": [
         "efManagerBattleScoreMakeEffect"
       ],
+      "7": [
+        "efManagerPsionicMakeEffect"
+      ],
       "73": [
         "efManagerDamageNormalLightMakeEffect"
       ],
@@ -1123,6 +1235,7 @@
         "efManagerEggBreakMakeEffect"
       ],
       "85": [
+        "efManagerDustCollideMakeEffect",
         "efManagerDustExpandSmallMakeEffect",
         "efManagerDustLightMakeEffect",
         "efManagerFlameRandomMakeEffect",
@@ -1154,11 +1267,19 @@
       "96": [
         "efManagerDamageCoinMakeEffect"
       ],
+      "97": [
+        "efManagerRippleMakeEffect"
+      ],
       "98": [
         "efManagerFoxBlasterGlowMakeEffect"
       ]
     },
     "spawn_edges": {
+      "105": [
+        102,
+        103,
+        104
+      ],
       "11": [
         8,
         9,
@@ -1333,14 +1454,17 @@
       "width": 32
     },
     {
-      "ds_bytes": 0,
-      "ds_format": "NONE",
+      "ds_bytes": 1040,
+      "ds_format": "A5I3",
+      "ds_palette_entries": 8,
       "frames": 1,
       "height": 32,
-      "packed": false,
-      "reason": "not reachable from a P1 effect seam",
+      "max_error": 14.149,
+      "mean_error": 2.16,
+      "packed": true,
       "source_bytes": 544,
       "source_format": "I4",
+      "source_graded_alpha": true,
       "texture": 1,
       "width": 32
     },
@@ -1702,14 +1826,17 @@
       "width": 16
     },
     {
-      "ds_bytes": 0,
-      "ds_format": "NONE",
+      "ds_bytes": 414,
+      "ds_format": "PAL16",
+      "ds_palette_entries": 15,
       "frames": 3,
       "height": 16,
-      "packed": false,
-      "reason": "not reachable from a P1 effect seam",
+      "max_error": 0.0,
+      "mean_error": 0.0,
+      "packed": true,
       "source_bytes": 528,
       "source_format": "CI4",
+      "source_graded_alpha": false,
       "texture": 26,
       "width": 16
     },
@@ -1936,26 +2063,32 @@
       "width": 32
     },
     {
-      "ds_bytes": 0,
-      "ds_format": "NONE",
+      "ds_bytes": 4112,
+      "ds_format": "A5I3",
+      "ds_palette_entries": 8,
       "frames": 4,
       "height": 32,
-      "packed": false,
-      "reason": "not reachable from a P1 effect seam",
+      "max_error": 19.0,
+      "mean_error": 2.0549,
+      "packed": true,
       "source_bytes": 4136,
       "source_format": "IA8",
+      "source_graded_alpha": true,
       "texture": 42,
       "width": 32
     },
     {
-      "ds_bytes": 0,
-      "ds_format": "NONE",
+      "ds_bytes": 1056,
+      "ds_format": "A3I5",
+      "ds_palette_entries": 16,
       "frames": 1,
       "height": 32,
-      "packed": false,
-      "reason": "not reachable from a P1 effect seam",
+      "max_error": 17.0,
+      "mean_error": 0.811,
+      "packed": true,
       "source_bytes": 1056,
       "source_format": "IA8",
+      "source_graded_alpha": true,
       "texture": 43,
       "width": 32
     },
@@ -2064,6 +2197,28 @@
         "upload_height": 16,
         "upload_width": 16
       }
+    ]
+  },
+  "yoshi": {
+    "quad_stride": 176,
+    "script_bank": "particles_unk2_scb",
+    "script_bank_bytes": 336,
+    "script_bank_sha256": "2ad2b1239271f688208773060af33662edd54e2b7a133287a2a325d9d4f6cf9e",
+    "script_count": 4,
+    "texture_bank": "particles_unk2_txb",
+    "texture_bank_sha256": "f82665bfc9ef8f82eb94c40c749b4716a89ec6600ee1793017d0933a1ad50975",
+    "texture_count": 2,
+    "texture_rows": [
+      [
+        64,
+        64,
+        2
+      ],
+      [
+        32,
+        32,
+        1
+      ]
     ]
   },
   "yoster": {

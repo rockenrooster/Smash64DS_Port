@@ -250,12 +250,17 @@ $report = Get-Content -LiteralPath $reportPath -Raw | ConvertFrom-Json
 # being answered by the generic HitElectric sprite, so the maker had no caller
 # and the seam derivation never saw it -- BUGS.md "Down-B blue self-hit
 # explosion missing".
+# 2026-10-04: 56 -> 61 seams, 111 -> 118 scripts, 42 -> 46 textures. The
+# Sector Z four-CPU reject ring caught 0x69 (efManagerItemSpawnSwirlMakeEffect,
+# itmanager.c:472) failing closed with reason 4; the P1 roster/items cut was
+# hiding every public maker outside it. DustCollide, ItemSpawnSwirl, KirbyStar,
+# Psionic and Ripple join, and the generator now refuses an unlisted maker.
 # A moved count is a finding to explain, never a number to edit into place.
 if (([int]$report.source.script_count -ne 119) -or
     ([int]$report.source.texture_count -ne 47) -or
-    (@($report.reach.reachable_scripts).Count -ne 111) -or
-    (@($report.reach.packed_textures).Count -ne 42) -or
-    (@($report.reach.p1_seams).Count -ne 56)) {
+    (@($report.reach.reachable_scripts).Count -ne 118) -or
+    (@($report.reach.packed_textures).Count -ne 46) -or
+    (@($report.reach.p1_seams).Count -ne 61)) {
     throw ('Particle bank enumeration changed: ' +
         "$(@($report.reach.reachable_scripts).Count)/$([int]$report.source.script_count) scripts, " +
         "$(@($report.reach.packed_textures).Count)/$([int]$report.source.texture_count) textures, " +
@@ -336,15 +341,18 @@ if (($actualDisplayListSeams -join ',') -ne ($expectedDisplayListSeams -join ','
 # arena_headroom_bytes and spare_bytes do not move at all, which is the same
 # NitroFS-only accounting every row above describes. The burst was previously
 # replaced by the generic HitElectric sprite.
+# 2026-10-04: the five public makers' textures (26, 42, 43 and the second
+# Kirby-star frame set) add +6,264 source / +6,528 DS texel / +96 palette;
+# pack and asset grow 6,624 and the linked/arena numbers again do not move.
 if (([int64]$report.bytes.script_bank_bytes -ne 10912) -or
-    ([int64]$report.bytes.source_texture_bytes -ne 308008) -or
-    ([int64]$report.bytes.ds_texture_bytes -ne 212002) -or
-    ([int64]$report.bytes.ds_texture_data_bytes -ne 210752) -or
-    ([int64]$report.bytes.ds_palette_bytes -ne 1408) -or
-    ([int64]$report.bytes.payload_bytes -ne 223072) -or
+    ([int64]$report.bytes.source_texture_bytes -ne 314272) -or
+    ([int64]$report.bytes.ds_texture_bytes -ne 218624) -or
+    ([int64]$report.bytes.ds_texture_data_bytes -ne 217280) -or
+    ([int64]$report.bytes.ds_palette_bytes -ne 1504) -or
+    ([int64]$report.bytes.payload_bytes -ne 229696) -or
     ([int64]$report.bytes.index_table_bytes -ne 1283) -or
-    ([int64]$report.bytes.pack_bytes -ne 224355) -or
-    ([int64]$report.bytes.asset_bytes -ne 212160) -or
+    ([int64]$report.bytes.pack_bytes -ne 230979) -or
+    ([int64]$report.bytes.asset_bytes -ne 218784) -or
     ([int64]$report.bytes.linked_bytes -ne 12195) -or
     ([int64]$report.bytes.arena_headroom_bytes -ne 210320) -or
     ([int64]$report.bytes.spare_bytes -ne 198125)) {
@@ -535,13 +543,17 @@ if (([int64]$report.bytes.linked_bytes + [int64]$report.bytes.asset_bytes) -ne
 # benign deferral for it. It is admitted at 16x16 under
 # QUAD_THUNDER_AMP_CELL_MAX and takes 256 B and one frame in both bakes,
 # displacing nothing: the excluded SET is unchanged.
-$expectedExcluded = @(28, 31, 35, 36)
+# 2026-10-04: THE SET IS EMPTY, and the generator now refuses to bake any
+# other answer. 28 (DamageElectric), 35/36 (half of DamageNormalLight's
+# variants) and 31 (Purin's music notes) were the P1-era deferrals; P2 reaches
+# all four, and each drew nothing (owner r75: "missing VFX again").
+$expectedExcluded = @()
 $actualExcluded = @($report.quads.excluded |
     ForEach-Object { [int64]$_.texture } | Sort-Object)
 if (([int64]$report.quads.atlas_width -ne 128) -or
     ([int64]$report.quads.atlas_height -ne 64) -or
     ([int64]$report.quads.sheet_bytes -ne 8192) -or
-    ([int64]$report.quads.sheets -ne 5) -or
+    ([int64]$report.quads.sheets -ne 7) -or
     ([int64]$report.quads.atlas_bytes -ne
         ([int64]$report.quads.sheets * [int64]$report.quads.sheet_bytes)) -or
     ([int64]$report.quads.cell_cap -ne 64) -or
@@ -576,9 +588,22 @@ if (([int64]$report.quads.atlas_width -ne 128) -or
     # 2026-09-22: ThunderAmp's texture 46 is admitted at 16x16 in both bakes.
     # The frame cap at this rung is 1, so it costs 256 B, one packed frame and
     # one admitted row, and evicts nothing -- 39,680 of 40,960 with Yoster on.
-    ([int64]$report.quads.bytes -ne $(if ($yosterFlag -eq '1') { 39680 } else { 38656 })) -or
-    ([int64]$report.quads.frame_count -ne $(if ($yosterFlag -eq '1') { 51 } else { 50 })) -or
-    (@($report.quads.admitted).Count -ne $(if ($yosterFlag -eq '1') { 46 } else { 45 })) -or
+    # 2026-10-04: the item flame (224) and smoke (225) go to source size,
+    # 32x32x1 and 32x32x4 (were 16x16 and 8x8, 2:1 and 4:1 under the owner's
+    # 0.8x bar; r74 "fire looks low quality"): +4,608 B in both bakes, in a
+    # sixth 8,192-byte sheet; no other cell moves and nothing is evicted.
+    # 2026-10-04: Yoshi's egg-explosion bank (keys 176/177: 64x64 and 32x32)
+    # and Kirby's inhale-wind bank (208..210: 32x32, 16x16, 8x8) land at
+    # source size, one frame each at the cap: +6,464 B, five frames and five
+    # rows in both bakes, in a seventh sheet; nothing is evicted.
+    # Then the four deferred textures (28/31/35/36) join at 32x32x1: +4,096 B,
+    # four frames, four rows; grey and coloured cells pack on separate sheets.
+    # Then the five new seams' textures (9's twin 26, 42, 43 and 1's ripple)
+    # join and Dream Land's three cells leave (Whispy draws natively):
+    # +1,792 B net, one frame and one row.
+    ([int64]$report.quads.bytes -ne $(if ($yosterFlag -eq '1') { 56640 } else { 55616 })) -or
+    ([int64]$report.quads.frame_count -ne $(if ($yosterFlag -eq '1') { 61 } else { 60 })) -or
+    (@($report.quads.admitted).Count -ne $(if ($yosterFlag -eq '1') { 56 } else { 55 })) -or
     # 7 -> 4 on 2026-08-14, and those four are QUAD_P1_DEFERRED rather than
     # packer casualties: 28/31/35/36 are reachable but outside the Mario-vs-Fox
     # items-off milestone, and they are held out BY NAME because the sheet now
@@ -619,6 +644,27 @@ if (($null -eq $ness) -or
     throw ('Ness PK Fire particle bank changed: scripts=' +
         "$($ness.script_count) textures=$($ness.texture_count) stride=" +
         "$($ness.quad_stride) cells=$($nessCells.Count).")
+}
+# Yoshi's and Kirby's fighter banks: whole banks, every cell at source size.
+foreach ($pin in @(
+        @{ Name = 'yoshi'; Bytes = 336; Scripts = 4; Textures = 2; Stride = 176
+            Cells = @{ 176 = 4096; 177 = 1024 } },
+        @{ Name = 'kirby'; Bytes = 992; Scripts = 13; Textures = 3; Stride = 208
+            Cells = @{ 208 = 1024; 209 = 256; 210 = 64 } })) {
+    $bank = $report.($pin.Name)
+    $cells = @($report.quads.admitted_cells | Where-Object {
+            $pin.Cells.ContainsKey([int]$_.texture) })
+    $wrong = @($cells | Where-Object { [int64]$_.bytes -ne $pin.Cells[[int]$_.texture] })
+    if (($null -eq $bank) -or
+        ([int64]$bank.script_bank_bytes -ne $pin.Bytes) -or
+        ([int64]$bank.script_count -ne $pin.Scripts) -or
+        ([int64]$bank.texture_count -ne $pin.Textures) -or
+        ([int64]$bank.quad_stride -ne $pin.Stride) -or
+        ($cells.Count -ne $pin.Cells.Count) -or ($wrong.Count -ne 0)) {
+        throw ("$($pin.Name) particle bank changed: scripts=" +
+            "$($bank.script_count) textures=$($bank.texture_count) stride=" +
+            "$($bank.quad_stride) cells=$($cells.Count).")
+    }
 }
 if ([int64]$report.quads.bytes -gt [int64]$report.quads.atlas_bytes) {
     throw 'Particle quad atlas holds more texels than it has.'
@@ -665,8 +711,10 @@ if (($heal7.Count -ne 1) -or ($heal8.Count -ne 1) -or
 # set, bit 15 (FlameRandom) clear, i.e. the burn was exactly half-drawn. No soak
 # could have caught it earlier, because until the same cycle the burn could not
 # happen at all; a use-mask regrade only sees the effects the run can produce.
+# 64/65/66 (Dream Land) left 2026-10-04: NDS_R2_WHISPY_NATIVE_TEXTURES draws
+# them from their own native textures, so their atlas cells were never read.
 foreach ($id in @(0, 2, 10, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 24, 25, 27,
-                  29, 33, 34, 37, 38, 40, 41, 45, 64, 65, 66)) {
+                  29, 33, 34, 37, 38, 40, 41, 45)) {
     if (@($report.quads.admitted) -notcontains $id) {
         throw "Particle quad sheet dropped measured texture $id."
     }
@@ -741,7 +789,10 @@ if ($report.checksums.source_sha256_lo -ne '0xa2a1e85f') {
 # 0x0badfd59 -> 0x7071e21e on 2026-09-21. Pikachu's Thunder self-hit
 # burst, script 0x74, plus the one texture it names. The SOURCE checksum
 # did not move: same assets, different selection.
-if ($report.checksums.table_sha256_lo -ne '0x7071e21e') {
+# 0x7071e21e -> 0x57d8d606 on 2026-10-04. The five public makers outside the
+# P1 cut (DustCollide, ItemSpawnSwirl, KirbyStar, Psionic, Ripple): 111 -> 118
+# scripts, 42 -> 46 textures. src/nds/nds_particle_banks.c carries the pin too.
+if ($report.checksums.table_sha256_lo -ne '0x57d8d606') {
     throw "Packed particle table changed: $($report.checksums.table_sha256_lo)"
 }
 
@@ -758,8 +809,10 @@ $packed = @($report.textures | Where-Object { $_.packed })
 # The payload-row count therefore moves only 35 -> 37 for textures 7/8.
 # 40 -> 41 on 2026-09-21: Pikachu's Thunder self-hit burst, script 0x74, names
 # one more source texture.
-if ($packed.Count -ne 41) {
-    throw "Expected 40 packed image textures, found $($packed.Count)."
+# 41 -> 45 on 2026-10-04: the public makers outside the P1 cut name four more
+# image textures (1 is still the source's image-less id).
+if ($packed.Count -ne 45) {
+    throw "Expected 45 packed image textures, found $($packed.Count)."
 }
 foreach ($texture in $packed) {
     if ($texture.source_graded_alpha) {
@@ -812,8 +865,10 @@ $exact = @($packed | Where-Object { [double]$_.max_error -eq 0.0 }).Count
 # 8 -> 9 on 2026-08-12. The ninth is texture 12, the FlameLR burn sprite: a
 # 32x32 RGBA16 source that lands in PAL256 with 63 entries at zero error, so it
 # joins this set rather than costing it anything.
-if ($exact -ne 10) {
-    throw "Expected 10 bit-exact packed textures, found $exact."
+# 10 -> 11 on 2026-10-04: one of the four textures the public makers outside
+# the P1 cut bring in converts at zero error.
+if ($exact -ne 11) {
+    throw "Expected 11 bit-exact packed textures, found $exact."
 }
 
 $header = Get-Content -LiteralPath $headerPath -Raw
@@ -822,16 +877,17 @@ foreach ($token in @(
         # Every count below moved on 2026-08-12 with the three Flame seams
     # (92 -> 93 scripts, 33 -> 34 textures) and NONE of them was updated when
     # that landed, so Boundary was red from then until the row re-opened.
-    '#define NDS_PARTICLE_SCRIPT_REACHABLE_COUNT 111u',
+    # 2026-10-04: 111 -> 118 / 42 -> 46 with the public makers outside P1.
+    '#define NDS_PARTICLE_SCRIPT_REACHABLE_COUNT 118u',
     '#define NDS_PARTICLE_SCRIPT_UNREACHABLE 0xffffffffu',
     '#define NDS_PARTICLE_SCRIPT_BANK_BYTES 10912u',
     '#define NDS_PARTICLE_TEXTURE_COUNT 47u',
-    '#define NDS_PARTICLE_TEXTURE_PACKED_COUNT 42u',
-    '#define NDS_PARTICLE_TEXTURE_DATA_BYTES 210752u',
-    '#define NDS_PARTICLE_PALETTE_ENTRIES 704u',
+    '#define NDS_PARTICLE_TEXTURE_PACKED_COUNT 46u',
+    '#define NDS_PARTICLE_TEXTURE_DATA_BYTES 217280u',
+    '#define NDS_PARTICLE_PALETTE_ENTRIES 752u',
     '#define NDS_PARTICLE_TEXTURE_ASSET_PATH "nitro:/particles/efcommon_particle_textures.ds.bin"',
-    '#define NDS_PARTICLE_TEXTURE_ASSET_BYTES 212160u',
-    '#define NDS_PARTICLE_PALETTE_ASSET_OFFSET 210752u',
+    '#define NDS_PARTICLE_TEXTURE_ASSET_BYTES 218784u',
+    '#define NDS_PARTICLE_PALETTE_ASSET_OFFSET 217280u',
     '#define NDS_PARTICLE_LINKED_BYTES 12195u',
     # The quad sheet is A5I3, so the asset carries an 8-entry palette after the
     # texels and the two byte counts differ: 8,192 texels + 16 palette bytes.
@@ -850,7 +906,7 @@ foreach ($token in @(
     '#define NDS_PARTICLE_QUAD_FIRST_ROW_COUNT 256u',
     '#define NDS_PARTICLE_QUAD_FIRST_ROW_NONE 0xffu',
     '#define NDS_PARTICLE_BANKS_SOURCE_CHECKSUM 0xa2a1e85fu',
-    '#define NDS_PARTICLE_BANKS_TABLE_CHECKSUM 0x7071e21eu',
+    '#define NDS_PARTICLE_BANKS_TABLE_CHECKSUM 0x57d8d606u',
     # NOT const, deliberately: the loader byte-swaps the bank in place instead
     # of spending 10,912 bytes of taskman arena on a writable copy.
     'extern u8 gNdsParticleScriptBank[NDS_PARTICLE_SCRIPT_BANK_BYTES];',
@@ -1126,9 +1182,9 @@ if (Test-Path -LiteralPath $incPath) {
         throw "Script offset table holds $($entries.Count) entries, expected 119."
     }
     $sentinels = @($entries | Where-Object { $_ -eq '0xffffffffu' }).Count
-    if ($sentinels -ne (119 - 111)) {
+    if ($sentinels -ne (119 - 118)) {
         throw ("Script offset table holds $sentinels unreachable sentinels, " +
-            "expected $(119 - 111).")
+            "expected $(119 - 118).")
     }
     $textureBlock = [regex]::Match(
         $inc, 'gNdsParticleTextures\[[^\]]*\]\s*=\s*\{(?<body>.*?)\n\};',
@@ -1138,9 +1194,9 @@ if (Test-Path -LiteralPath $incPath) {
     }
     $unpacked = @([regex]::Matches($textureBlock.Groups['body'].Value,
         '\{\s*0,\s*0,\s*0,\s*0,\s*0xffffffffu,\s*0xffffffffu\s*\}')).Count
-    if ($unpacked -ne (47 - 42)) {
+    if ($unpacked -ne (47 - 46)) {
         throw ("Texture table holds $unpacked sentinel rows, expected " +
-            "$(47 - 42).")
+            "$(47 - 46).")
     }
     if ($inc -notmatch '\{\s*32,\s*32,\s*0,\s*0,\s*0xffffffffu,\s*0xffffffffu\s*\},\s*/\* texture 6 \*/') {
         throw 'Texture 6 lost its reachable zero-frame metadata row.'
@@ -1160,8 +1216,8 @@ if (Test-Path -LiteralPath $incPath) {
 $assetState = 'not built'
 if (Test-Path -LiteralPath $assetPath) {
     $assetBytes = (Get-Item -LiteralPath $assetPath).Length
-    if ($assetBytes -ne 212160) {
-        throw "Particle texture payload is $assetBytes bytes, expected 212160."
+    if ($assetBytes -ne 218784) {
+        throw "Particle texture payload is $assetBytes bytes, expected 218784."
     }
     $assetState = 'built'
 }

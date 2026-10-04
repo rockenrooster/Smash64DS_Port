@@ -394,6 +394,14 @@ volatile u32 gNdsParticlePoolTransformsWanted;
 extern volatile u32 gNdsParticleBankNessID;
 extern volatile u32 gNdsParticleNessScriptsPacked;
 #endif
+#if NDS_P2_YOSHI
+extern volatile u32 gNdsParticleBankYoshiID;
+extern volatile u32 gNdsParticleYoshiScriptsPacked;
+#endif
+#if NDS_P2_KIRBY
+extern volatile u32 gNdsParticleBankKirbyID;
+extern volatile u32 gNdsParticleKirbyScriptsPacked;
+#endif
 
 #if NDS_R2_WHISPY_NATIVE_AOT
 static void ndsWhispyAOTStructFuncRun(GObj *gobj);
@@ -432,6 +440,14 @@ void efParticleInitAll(void)
     gNdsParticleBankNessID = 0xffu;
     gNdsParticleNessScriptsPacked = 0u;
 #endif
+#if NDS_P2_YOSHI
+    gNdsParticleBankYoshiID = 0xffu;
+    gNdsParticleYoshiScriptsPacked = 0u;
+#endif
+#if NDS_P2_KIRBY
+    gNdsParticleBankKirbyID = 0xffu;
+    gNdsParticleKirbyScriptsPacked = 0u;
+#endif
 #if NDS_P2_STAGE_HYRULE
     gNdsParticleBankHyruleID = 0xffu;
     gNdsHyruleScriptsPacked = 0u;
@@ -464,6 +480,14 @@ extern intptr_t lGRPupupuParticleScriptBankLo;
  * address (ftdata.c:6929-6933).  Unlike stage/item banks there is no reloc_data
  * alias for this bank, so preserve that exact identity here. */
 extern s32 particles_unk1_scb_ROM_START;
+#endif
+/* Yoshi's and Kirby's FTData rows name their banks the same way
+ * (ftdata.c:4076, ftdata.c:5272). */
+#if NDS_P2_YOSHI
+extern s32 particles_unk2_scb_ROM_START;
+#endif
+#if NDS_P2_KIRBY
+extern s32 particles_unk0_scb_ROM_START;
 #endif
 #if NDS_P2_STAGE_HYRULE
 extern intptr_t lGRHyruleParticleScriptBankLo;
@@ -1575,6 +1599,16 @@ volatile u32 gNdsParticlePupupuScriptsPacked;
 volatile u32 gNdsParticleBankNessID = 0xffu;
 volatile u32 gNdsParticleNessScriptsPacked;
 #endif
+#if NDS_P2_YOSHI
+/* Yoshi's egg-explosion bank (particles_unk2); same sentinel contract. */
+volatile u32 gNdsParticleBankYoshiID = 0xffu;
+volatile u32 gNdsParticleYoshiScriptsPacked;
+#endif
+#if NDS_P2_KIRBY
+/* Kirby's inhale-wind bank (particles_unk0); same sentinel contract. */
+volatile u32 gNdsParticleBankKirbyID = 0xffu;
+volatile u32 gNdsParticleKirbyScriptsPacked;
+#endif
 #if NDS_P2_STAGE_YOSTER
 /* P2-4 Yoster. 0 means the vapor bank registered empty and the cloud
  * evaporate effect is silent; the gameplay (timers, collision, sink) is the
@@ -2373,6 +2407,93 @@ static sb32 ndsParticleLoadNessBank(s32 bank_id)
 }
 #endif
 
+#if NDS_P2_YOSHI || NDS_P2_KIRBY
+/* Yoshi's and Kirby's fighter banks: Ness's loader above, over whichever
+ * baked tables the caller names. The generator (build_fighter_bank) pins each
+ * bank's hashes and proves its source makers reach every script, so all of
+ * them must normalize; anything less registers the bank empty. */
+static sb32 sNdsYoshiBankNormalized = FALSE;
+static sb32 sNdsKirbyBankNormalized = FALSE;
+
+static sb32 ndsParticleLoadFighterBank(s32 bank_id, u8 *bank, u32 bank_bytes,
+                                       const u32 *offsets, u32 script_count,
+                                       const u8 *dims, u32 texture_count,
+                                       sb32 *normalized,
+                                       volatile u32 *packed_out)
+{
+    LBScript **scripts;
+    LBTexture **textures;
+    NDSParticleInertTexture *entries;
+    sb32 swap;
+    u32 id;
+    u32 packed = 0u;
+
+    scripts = syTaskmanMalloc(sizeof(*scripts) * script_count, 0x4);
+    textures = syTaskmanMalloc(sizeof(*textures) * texture_count, 0x4);
+    entries = syTaskmanMalloc(sizeof(*entries) * texture_count, 0x4);
+    if ((scripts == NULL) || (textures == NULL) || (entries == NULL))
+    {
+        return FALSE;
+    }
+    for (id = 0u; id < texture_count; id++)
+    {
+        const u8 *dim = &dims[id * 3u];
+
+        if ((dim[0] == 0u) || (dim[1] == 0u) || (dim[2] == 0u))
+        {
+            return FALSE;
+        }
+        entries[id] = sNdsParticleInertTexture;
+        entries[id].header.width = (s32)dim[0];
+        entries[id].header.height = (s32)dim[1];
+        entries[id].header.count = dim[2];
+        textures[id] = (LBTexture *)&entries[id];
+    }
+
+    /* Linked mutable storage, normalized on first registration only. */
+    swap = (*normalized == FALSE) ? TRUE : FALSE;
+    *normalized = TRUE;
+    for (id = 0u; id < script_count; id++)
+    {
+        u32 offset = offsets[id];
+        u32 limit = (id + 1u < script_count) ? offsets[id + 1u] : bank_bytes;
+        u32 commands = 0u;
+        u32 operands = 0u;
+        u8 *header;
+
+        scripts[id] = (LBScript *)&sNdsParticleInertScript;
+        if ((offset > limit) || (limit > bank_bytes) ||
+            ((offset & 3u) != 0u) ||
+            ((limit - offset) < sizeof(LBScriptHeader)))
+        {
+            continue;
+        }
+        header = &bank[offset];
+        ndsParticleNormalizeHeader(header, swap);
+        if ((ndsParticleNormalizeBytecode(
+                 header + sizeof(LBScriptHeader),
+                 limit - offset - (u32)sizeof(LBScriptHeader),
+                 &commands, &operands, swap) == FALSE) ||
+            (((LBScript *)header)->texture_id >= texture_count))
+        {
+            continue;
+        }
+        scripts[id] = (LBScript *)header;
+        packed++;
+    }
+    *packed_out = packed;
+    if (packed != script_count)
+    {
+        return FALSE;
+    }
+    sLBParticleScriptBanksNum[bank_id] = (s32)script_count;
+    sLBParticleTextureBanksNum[bank_id] = (s32)texture_count;
+    sLBParticleScriptBanks[bank_id] = scripts;
+    sLBParticleTextureBanks[bank_id] = textures;
+    return TRUE;
+}
+#endif
+
 #if NDS_P2_STAGE_YOSTER
 /* P2-4 Yoster Island's cloud-vapor bank. Same shape as ndsParticleLoadPupupuBank
  * above and deliberately a separate function for the same reason: the two differ
@@ -2705,6 +2826,46 @@ s32 efParticleGetLoadBankID(uintptr_t scripts_lo, uintptr_t scripts_hi,
         else
         {
             gNdsParticleBankNessID = (u32)bank_id;
+        }
+        gNdsParticleBankOtherID = (u32)bank_id;
+    }
+#endif
+#if NDS_P2_YOSHI
+    else if (scripts_lo == (uintptr_t)&particles_unk2_scb_ROM_START)
+    {
+        if (ndsParticleLoadFighterBank(
+                bank_id, gNdsYoshiScriptBank, NDS_YOSHI_SCRIPT_BANK_BYTES,
+                gNdsYoshiScriptOffsets, NDS_YOSHI_SCRIPT_COUNT,
+                gNdsYoshiTextureDims, NDS_YOSHI_TEXTURE_COUNT,
+                &sNdsYoshiBankNormalized,
+                &gNdsParticleYoshiScriptsPacked) == FALSE)
+        {
+            ndsParticleRegisterEmptyBank(bank_id);
+            gNdsParticleRejectCount++;
+        }
+        else
+        {
+            gNdsParticleBankYoshiID = (u32)bank_id;
+        }
+        gNdsParticleBankOtherID = (u32)bank_id;
+    }
+#endif
+#if NDS_P2_KIRBY
+    else if (scripts_lo == (uintptr_t)&particles_unk0_scb_ROM_START)
+    {
+        if (ndsParticleLoadFighterBank(
+                bank_id, gNdsKirbyScriptBank, NDS_KIRBY_SCRIPT_BANK_BYTES,
+                gNdsKirbyScriptOffsets, NDS_KIRBY_SCRIPT_COUNT,
+                gNdsKirbyTextureDims, NDS_KIRBY_TEXTURE_COUNT,
+                &sNdsKirbyBankNormalized,
+                &gNdsParticleKirbyScriptsPacked) == FALSE)
+        {
+            ndsParticleRegisterEmptyBank(bank_id);
+            gNdsParticleRejectCount++;
+        }
+        else
+        {
+            gNdsParticleBankKirbyID = (u32)bank_id;
         }
         gNdsParticleBankOtherID = (u32)bank_id;
     }
@@ -4454,7 +4615,7 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
 #if NDS_R2_WHISPY_NATIVE_TEXTURES
                     whispy_native = TRUE;
 #else
-                    id += NDS_PARTICLE_QUAD_PUPUPU_STRIDE;
+#error "Dream Land particles draw only through the Whispy native textures; the quad atlas has no Pupupu cells since 2026-10-04"
 #endif
 #if NDS_R2_WHISPY_NATIVE_AOT
                     if (gNdsWhispyAOTRoute >= 6u)
@@ -4476,6 +4637,35 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                      (uintptr_t)&particles_unk1_scb_ROM_START))
                 {
                     id += NDS_PARTICLE_QUAD_NESS_STRIDE;
+                    gNdsParticleQuadStrideCount++;
+                }
+#endif
+#if NDS_P2_YOSHI
+                if ((slot < ARRAY_COUNT(sEFParticleScriptBanks)) &&
+                    (sEFParticleScriptBanks[slot] ==
+                     (uintptr_t)&particles_unk2_scb_ROM_START))
+                {
+                    id += NDS_PARTICLE_QUAD_YOSHI_STRIDE;
+                    gNdsParticleQuadStrideCount++;
+                }
+#endif
+#if NDS_P2_KIRBY
+                if ((slot < ARRAY_COUNT(sEFParticleScriptBanks)) &&
+                    (sEFParticleScriptBanks[slot] ==
+                     (uintptr_t)&particles_unk0_scb_ROM_START))
+                {
+                    id += NDS_PARTICLE_QUAD_KIRBY_STRIDE;
+                    gNdsParticleQuadStrideCount++;
+                }
+#endif
+#if NDS_P2_STAGE_YOSTER
+                /* The cloud vapor's texture 0 is Yoster's own (row 192), not
+                 * common texture 0, which it drew until 2026-10-04. */
+                if ((slot < ARRAY_COUNT(sEFParticleScriptBanks)) &&
+                    (sEFParticleScriptBanks[slot] ==
+                     (uintptr_t)&lGRYosterParticleScriptBankLo))
+                {
+                    id += NDS_PARTICLE_QUAD_YOSTER_STRIDE;
                     gNdsParticleQuadStrideCount++;
                 }
 #endif

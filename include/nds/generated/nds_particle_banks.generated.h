@@ -32,31 +32,31 @@
  * Texels start at 0 and the palette at NDS_PARTICLE_PALETTE_ASSET_OFFSET, so a
  * loader reads the file once and hands glTexImage2D/glColorTableEXT slices of
  * it. Linking them instead costs the boot-time taskman arena search the same
- * 212160 bytes one-for-one and hangs the ROM before the first
+ * 218784 bytes one-for-one and hangs the ROM before the first
  * battle allocation -- the reason for the split is in the generator, above
  * TEXTURE_ASSET_NITRO_PATH. Do not "simplify" this back into an array.
  */
 
 #define NDS_PARTICLE_SCRIPT_COUNT 119u
-#define NDS_PARTICLE_SCRIPT_REACHABLE_COUNT 111u
+#define NDS_PARTICLE_SCRIPT_REACHABLE_COUNT 118u
 #define NDS_PARTICLE_SCRIPT_UNREACHABLE 0xffffffffu
 #define NDS_PARTICLE_SCRIPT_HEADER_BYTES 0x30u
 #define NDS_PARTICLE_SCRIPT_BANK_BYTES 10912u
 
 #define NDS_PARTICLE_TEXTURE_COUNT 47u
-#define NDS_PARTICLE_TEXTURE_PACKED_COUNT 42u
+#define NDS_PARTICLE_TEXTURE_PACKED_COUNT 46u
 #define NDS_PARTICLE_TEXTURE_UNPACKED 0xffffffffu
-#define NDS_PARTICLE_TEXTURE_DATA_BYTES 210752u
-#define NDS_PARTICLE_PALETTE_ENTRIES 704u
+#define NDS_PARTICLE_TEXTURE_DATA_BYTES 217280u
+#define NDS_PARTICLE_PALETTE_ENTRIES 752u
 
 /* The NitroFS texel/palette payload. */
 #define NDS_PARTICLE_TEXTURE_ASSET_PATH "nitro:/particles/efcommon_particle_textures.ds.bin"
-#define NDS_PARTICLE_TEXTURE_ASSET_BYTES 212160u
-#define NDS_PARTICLE_PALETTE_ASSET_OFFSET 210752u
+#define NDS_PARTICLE_TEXTURE_ASSET_BYTES 218784u
+#define NDS_PARTICLE_PALETTE_ASSET_OFFSET 217280u
 
 /* .rodata in the ARM9 image, and therefore charged against the arena search:
  * script bank 10912 + index tables 1283. The other
- * 212160 bytes of the 224355-byte pack are in the file above. */
+ * 218784 bytes of the 230979-byte pack are in the file above. */
 #define NDS_PARTICLE_LINKED_BYTES 12195u
 
 /* THE DRAW PATH'S PAYLOAD: one A5I3 atlas, a second encoding of the same
@@ -66,8 +66,8 @@
  *
  * ATLAS SHEETS, NOT ONE TEXTURE PER FRAME. GL names are a binding constraint
  * too: the cache holds 48 and the battle's static set pins 24, while the
- * admitted set is 51 individual frames. 5 sheets keep
- * every particle in 5 binds instead of 51.
+ * admitted set is 61 individual frames. 7 sheets keep
+ * every particle in 7 binds instead of 61.
  *
  * 8,192 BYTES IS THE MEASURED-SAFE ALLOCATION, and it is the ALLOCATION that is
  * fixed here, not the texel count -- so coverage grows by asking for more of
@@ -89,7 +89,7 @@
 #define NDS_PARTICLE_QUAD_ASSET_PATH "nitro:/particles/efcommon_particle_quads.a5i3.bin"
 #define NDS_PARTICLE_QUAD_ATLAS_WIDTH 128u
 #define NDS_PARTICLE_QUAD_ATLAS_HEIGHT 64u
-#define NDS_PARTICLE_QUAD_ATLAS_SHEETS 5u
+#define NDS_PARTICLE_QUAD_ATLAS_SHEETS 7u
 #define NDS_PARTICLE_QUAD_SHEET_BYTES 8192u
 #define NDS_PARTICLE_QUAD_CELL_CAP 64u
 #define NDS_PARTICLE_HEAL_SPARKLE_COVERAGE_REDUCTION 1u
@@ -143,9 +143,9 @@ extern const u16 gNdsShieldPalettes[NDS_SHIELD_PALETTE_COUNT]
 extern const u8 gNdsFireballTexels[NDS_FIREBALL_TEX_BYTES];
 extern const u16 gNdsFireballPalettes[NDS_FIREBALL_PALETTE_COUNT]
                                      [NDS_FIREBALL_TEX_PALETTE_ENTRIES];
-#define NDS_PARTICLE_QUAD_ASSET_BYTES 41280u
-#define NDS_PARTICLE_QUAD_TEXEL_ASSET_BYTES 40960u
-#define NDS_PARTICLE_QUAD_PALETTE_OFFSET 40960u
+#define NDS_PARTICLE_QUAD_ASSET_BYTES 57792u
+#define NDS_PARTICLE_QUAD_TEXEL_ASSET_BYTES 57344u
+#define NDS_PARTICLE_QUAD_PALETTE_OFFSET 57344u
 /* PER SHEET. The palette block is NDS_PARTICLE_QUAD_ATLAS_SHEETS tables of this
  * many entries laid end to end, so sheet N's table starts at
  * NDS_PARTICLE_QUAD_PALETTE_OFFSET + N * NDS_PARTICLE_QUAD_PALETTE_STRIDE_BYTES
@@ -160,10 +160,10 @@ extern const u16 gNdsFireballPalettes[NDS_FIREBALL_PALETTE_COUNT]
  * bytes one shared table was already spending. */
 #define NDS_PARTICLE_QUAD_PALETTE_ENTRIES 32u
 #define NDS_PARTICLE_QUAD_PALETTE_STRIDE_BYTES 64u
-#define NDS_PARTICLE_QUAD_PALETTE_BYTES 320u
-#define NDS_PARTICLE_QUAD_TEXEL_BYTES 39680u
-#define NDS_PARTICLE_QUAD_COUNT 46u
-#define NDS_PARTICLE_QUAD_FRAME_COUNT 51u
+#define NDS_PARTICLE_QUAD_PALETTE_BYTES 448u
+#define NDS_PARTICLE_QUAD_TEXEL_BYTES 56640u
+#define NDS_PARTICLE_QUAD_COUNT 56u
+#define NDS_PARTICLE_QUAD_FRAME_COUNT 61u
 #define NDS_PARTICLE_QUAD_FIRST_ROW_COUNT 256u
 #define NDS_PARTICLE_QUAD_FIRST_ROW_NONE 0xffu
 
@@ -203,7 +203,7 @@ extern const u8
 #define NDS_PARTICLE_FORMAT_DIRECT16 7u
 
 #define NDS_PARTICLE_BANKS_SOURCE_CHECKSUM 0xa2a1e85fu
-#define NDS_PARTICLE_BANKS_TABLE_CHECKSUM 0x7071e21eu
+#define NDS_PARTICLE_BANKS_TABLE_CHECKSUM 0x57d8d606u
 
 typedef struct NDSParticleTexture
 {
@@ -280,6 +280,37 @@ extern u8 gNdsNessScriptBank[NDS_NESS_SCRIPT_BANK_BYTES];
 extern const u32 gNdsNessScriptOffsets[NDS_NESS_SCRIPT_COUNT];
 /* width, height, source frame count for each source texture. */
 extern const u8 gNdsNessTextureDims[NDS_NESS_TEXTURE_COUNT * 3];
+
+/* ------------------------------------------------------------------------
+ * Yoshi's fighter particle bank (particles_unk2). The Egg Throw explosion
+ * starts script 3, whose bytecode makes scripts 0..2. Unpacked it registered
+ * empty and the explosion drew nothing but efcommon's shell shards. */
+#define NDS_YOSHI_SCRIPT_COUNT 4u
+#define NDS_YOSHI_SCRIPT_BANK_BYTES 336u
+#define NDS_YOSHI_TEXTURE_COUNT 2u
+#define NDS_PARTICLE_QUAD_YOSHI_STRIDE 176u
+
+extern u8 gNdsYoshiScriptBank[NDS_YOSHI_SCRIPT_BANK_BYTES];
+extern const u32 gNdsYoshiScriptOffsets[NDS_YOSHI_SCRIPT_COUNT];
+/* width, height, source frame count for each source texture. */
+extern const u8 gNdsYoshiTextureDims[NDS_YOSHI_TEXTURE_COUNT * 3];
+
+/* ------------------------------------------------------------------------
+ * Kirby's fighter particle bank (particles_unk0): the inhale wind (script 12,
+ * making 6..11) and motion-script effect kinds 0x4C/0x4D (scripts 2 and 5).
+ * Unpacked it registered empty and those effects drew nothing. */
+#define NDS_KIRBY_SCRIPT_COUNT 13u
+#define NDS_KIRBY_SCRIPT_BANK_BYTES 992u
+#define NDS_KIRBY_TEXTURE_COUNT 3u
+#define NDS_PARTICLE_QUAD_KIRBY_STRIDE 208u
+/* Yoster's bank tables are flag-baked into the .inc; its stride is not, and
+ * the draw needs it whatever the bake (the .inc repeats it identically). */
+#define NDS_PARTICLE_QUAD_YOSTER_STRIDE 192u
+
+extern u8 gNdsKirbyScriptBank[NDS_KIRBY_SCRIPT_BANK_BYTES];
+extern const u32 gNdsKirbyScriptOffsets[NDS_KIRBY_SCRIPT_COUNT];
+/* width, height, source frame count for each source texture. */
+extern const u8 gNdsKirbyTextureDims[NDS_KIRBY_TEXTURE_COUNT * 3];
 
 /* ------------------------------------------------------------------------
  * The item bank (decomp it/itmanager.c:109-150). Lizardon's, Hitokage's and
