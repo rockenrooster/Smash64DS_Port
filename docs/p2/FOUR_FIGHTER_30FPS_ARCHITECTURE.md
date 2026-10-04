@@ -1163,6 +1163,11 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   241, 1,714/1,961 in two VBlanks; frames 1400-2000 MITM 85.8K -> 60.5K,
   window P95 1,331,968 -> 1,295,808; digest identical. Receipt
   `2026-10-04_item-replay`.
+  Then every MObj-less item route replays (thirteen owners; a key whose
+  recording failed is remembered) and a keyed node under a moving parent
+  keeps its local (`3911899aa71`; Castle all-items verify 204/0); the
+  held item's integer render tail priced at no gain (its latch walk is the
+  cost).
 
 ## 7. Found along the way
 
