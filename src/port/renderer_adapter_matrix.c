@@ -58,6 +58,11 @@
  * compose, recalc) and the persistent world build's uncached fallbacks. */
 extern u32 cpuGetTiming(void);
 u32 gNdsLabPimAcc[5];
+/* LAB ONLY (item draw split): [0] item draw total, [1] display-proc capture,
+ * [2] tree submit, [3] traversal begin/end, [4] fast-lane PIM, [5] fast-lane
+ * prep, [6] executor, [7] fast-lane tail, [8] fast-lane item roots, [9] 0x52
+ * attach ticks, [10] 0x52 attach builds, [11] offscreen test, [15] draws. */
+__attribute__((used)) volatile u32 gNdsLabItemAcc[16];
 #define NDS_LAB_PIM_MARK(v) ((v) = cpuGetTiming())
 #define NDS_LAB_PIM_ADD(i, v) (gNdsLabPimAcc[(i)] += cpuGetTiming() - (v))
 #else
@@ -3560,11 +3565,20 @@ static sb32 ndsRendererAdapterBuildDObjXObjMatrix(
         ndsRendererAdapterCopyJointPitchToRoll(dobj);
         return FALSE;
     case NDS_RENDERER_ADAPTER_ITEM_ATTACH_MTX_KIND:
+    {
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+        u32 lab_attach = cpuGetTiming();
+#endif
         if (ndsRendererAdapterBuildItemAttachMtx(dobj, &mtx) == FALSE)
         {
             ndsRendererAdapterBuildDObjFallbackMtx(dobj, &mtx);
         }
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+        gNdsLabItemAcc[9] += cpuGetTiming() - lab_attach;
+        gNdsLabItemAcc[10]++;
+#endif
         break;
+    }
 #if NDS_P2_STAGE_SECTOR
     case NDS_RENDERER_ADAPTER_SECTOR_ARWING_MTX_KIND:
     {

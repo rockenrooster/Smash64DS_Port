@@ -13849,18 +13849,51 @@ static void ndsStageGCDrawAllLoopSubmitItemDObj(GObj *item_gobj,
         gNdsStageGCDrawAllLoopHardwareTextureReadyCount;
     texture_reject_before =
         gNdsStageGCDrawAllLoopHardwareTextureRejectCount;
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+    extern volatile u32 gNdsLabItemAcc[16];
+    u32 lab_item_start = cpuGetTiming();
+    u32 lab_item_mark = lab_item_start;
+    u32 lab_item_now;
+#define NDS_LAB_ITEM_SPLIT(i)                                              \
+    do                                                                     \
+    {                                                                      \
+        lab_item_now = cpuGetTiming();                                     \
+        gNdsLabItemAcc[(i)] += lab_item_now - lab_item_mark;               \
+        lab_item_mark = lab_item_now;                                      \
+    } while (0)
+#else
+#define NDS_LAB_ITEM_SPLIT(i) ((void)0)
+#endif
     ndsRendererAdapterCaptureItemDisplayProcState();
+    NDS_LAB_ITEM_SPLIT(1);
 
     /* Source itDisplayColAnimOPA/XLU uses Z-buffered render modes. The shared
      * stage helper clears Z outside battle link 6 because weapons intentionally
      * do so; items are the opposite and opt it back in here. */
     initial_geometry_mode = ndsStageGCDrawAllLoopInitialGeometryMode() |
                             NDS_RENDERER_GEOM_ZBUFFER;
+#if NDS_P2_ITEM_CORE
+    /* The stage traversal, the tree submit and their replay
+     * (ndsRendererAdapterSubmitItemDObjTreeReplay). */
+    ndsRendererAdapterSubmitItemDObjTreeReplay(
+        root, callback_kind, sNdsStageGCDrawAllLoopCurrentCameraGObj,
+        initial_geometry_mode, (u32)ip->kind);
+    NDS_LAB_ITEM_SPLIT(2);
+#else
     ndsRendererAdapterBeginStageTraversal();
+    NDS_LAB_ITEM_SPLIT(3);
     ndsRendererAdapterSubmitItemDObjTree(
         root, callback_kind, sNdsStageGCDrawAllLoopCurrentCameraGObj,
         initial_geometry_mode);
+    NDS_LAB_ITEM_SPLIT(2);
     ndsRendererAdapterEndStageTraversal();
+    NDS_LAB_ITEM_SPLIT(3);
+#endif
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+    gNdsLabItemAcc[0] += lab_item_mark - lab_item_start;
+    gNdsLabItemAcc[15]++;
+#endif
+#undef NDS_LAB_ITEM_SPLIT
 
     triangle_delta =
         gNdsStageGCDrawAllLoopHardwareTriangleCount - triangle_before;

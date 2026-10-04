@@ -5616,6 +5616,10 @@ void ndsRendererAdapterSubmitWeaponDObjTree(void *dobj, u32 kind,
 void ndsRendererAdapterSubmitItemDObjTree(void *dobj, u32 kind,
                                           void *camera_gobj,
                                           u32 initial_geometry_mode);
+void ndsRendererAdapterSubmitItemDObjTreeReplay(void *dobj, u32 kind,
+                                                void *camera_gobj,
+                                                u32 initial_geometry_mode,
+                                                u32 item_kind);
 s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj);
 s32 ndsRendererAdapterCommitNativeStageDisplay(void *display_gobj,
                                                 s32 link_id);

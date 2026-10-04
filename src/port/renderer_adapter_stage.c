@@ -7760,6 +7760,181 @@ static void ndsStageDLRouteRecord(const Gfx *dl, NDSRelocLoadedFile *loaded,
     slot->route = (u8)route;
 }
 
+#if NDS_P2_ITEM_CORE
+#include <nds/nds_item_replay.h>
+
+/* P2-2p8 (2026-10-04): ITEM DRAW REPLAY (include/nds/nds_item_replay.h).
+ *
+ * The gate's late match draws only Beam Swords, one lying and one held, and
+ * each root paid ~15K ticks: the stage traversal reset, the fast lane's
+ * config, stats reset and seeds, the executor's generated N64 state setup and
+ * the per-vertex words -- for an 11-triangle blade and a 2-triangle hilt
+ * whose GX output never changes while the inputs below do not. An item draw
+ * whose every list is a replayable owner records once (its emits, through
+ * ndsNativeItemWave1Emit's sink) and later draws replay: the same tree walk,
+ * the same matrix preparation per list (the held item's latch walk included:
+ * its FTParts writes are gameplay), the recorded binds, batch states and
+ * corners. The persistent stats the skipped owners would have written are
+ * dead: the next traversal resets them before any reader.
+ *
+ * The key is held verbatim, not hashed: the item's root and kind, the
+ * initial geometry mode, the traversal's light, and per list its DObj, list,
+ * head, route and the head's captured colours and blend modes. A recorded
+ * texture must still be resident, else the draw runs its owners and records
+ * again. Same-ROM A/B word gNdsItemReplay (0 = owners every draw). */
+#define NDS_ITEM_REPLAY_DRAWS 2u
+#define NDS_ITEM_REPLAY_ROOTS 4u
+#define NDS_ITEM_REPLAY_KEY_WORDS 56u
+
+typedef struct NDSItemReplayRoot
+{
+    DObj *dobj;
+    const Gfx *dl;
+    u8 head;
+    u8 emit_first;
+    u8 emit_count;
+    u8 pad;
+} NDSItemReplayRoot;
+
+typedef struct NDSItemReplayDraw
+{
+    const DObj *root;
+    u32 last_used;
+    u8 valid;
+    u8 root_count;
+    u8 key_count;
+    u8 emit_count;
+    NDSItemReplayRoot roots[NDS_ITEM_REPLAY_ROOTS];
+    u32 key[NDS_ITEM_REPLAY_KEY_WORDS];
+    NDSItemReplayEmit emits[NDS_ITEM_REPLAY_EMITS];
+    u32 pool[NDS_ITEM_REPLAY_POOL_WORDS];
+} NDSItemReplayDraw;
+
+volatile u32 gNdsItemReplay __attribute__((used, section(".data"))) = 1u;
+__attribute__((used)) volatile u32 gNdsItemReplayDraws;
+__attribute__((used)) volatile u32 gNdsItemReplayRecords;
+__attribute__((used)) volatile u32 gNdsItemReplayRecordFailed;
+__attribute__((used)) volatile u32 gNdsItemReplayNotResident;
+
+static NDSItemReplayDraw sNdsItemReplayDraws[NDS_ITEM_REPLAY_DRAWS];
+static NDSItemReplaySink sNdsItemReplaySinkState;
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+/* LAB: 1 = every draw that would replay runs its owners into a scratch
+ * recording instead, and counts a recording that differs from the cached one
+ * in any emit field or vertex word. */
+volatile u32 gNdsItemReplayVerify __attribute__((used, section(".data"))) = 0u;
+__attribute__((used)) volatile u32 gNdsItemReplayVerifyRuns;
+__attribute__((used)) volatile u32 gNdsItemReplayVerifyFail;
+static NDSItemReplayDraw sNdsItemReplayVerifyDraw;
+
+static sb32 ndsItemReplaySameRecording(const NDSItemReplayDraw *a,
+                                       const NDSItemReplayDraw *b)
+{
+    u32 i;
+
+    if ((a->valid == 0u) || (a->emit_count != b->emit_count) ||
+        (a->root_count != b->root_count))
+    {
+        return FALSE;
+    }
+    for (i = 0u; i < a->root_count; i++)
+    {
+        if ((a->roots[i].emit_first != b->roots[i].emit_first) ||
+            (a->roots[i].emit_count != b->roots[i].emit_count))
+        {
+            return FALSE;
+        }
+    }
+    for (i = 0u; i < a->emit_count; i++)
+    {
+        const NDSItemReplayEmit *x = &a->emits[i];
+        const NDSItemReplayEmit *y = &b->emits[i];
+
+        if ((x->indices != y->indices) || (x->drawn != y->drawn) ||
+            (x->use_texture != y->use_texture) ||
+            (x->vertex_count != y->vertex_count) ||
+            (x->corner_count != y->corner_count) ||
+            (x->triangle_count != y->triangle_count))
+        {
+            return FALSE;
+        }
+        if ((x->use_texture != 0u) &&
+            ((x->tex_slot != y->tex_slot) || (x->tex_name != y->tex_name) ||
+             (x->tex_generation != y->tex_generation) ||
+             (x->tex_format != y->tex_format) ||
+             (x->tex_width != y->tex_width) ||
+             (x->tex_height != y->tex_height)))
+        {
+            return FALSE;
+        }
+        if ((x->drawn != 0u) &&
+            ((x->poly_fmt != y->poly_fmt) ||
+             (x->othermode_l != y->othermode_l) ||
+             (x->blend_color != y->blend_color) ||
+             (memcmp(&a->pool[x->word_first], &b->pool[y->word_first],
+                     (u32)x->vertex_count * 4u * sizeof(u32)) != 0)))
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+#endif
+/* The draw being recorded and the lists it has seen, NULL outside one. */
+static NDSItemReplayDraw *sNdsItemReplayRecording;
+static u32 sNdsItemReplayRecordRoots;
+
+/* Owners whose GX output is their ndsNativeItemWave1Emit calls and nothing
+ * else (fixed geometry, generated setup, no materials). */
+static inline sb32 ndsItemReplayRouteOk(u32 route_kind)
+{
+    return (route_kind == (NDS_SDL_ROUTE_ITEM + nNDSStageDLItemSword)) ?
+        TRUE : FALSE;
+}
+
+/* The fast lane's item branch, around its owner call: the list must be the
+ * next one the recording's walk named, through a replayable owner. */
+static sb32 ndsItemReplayRootBegin(const DObj *dobj, const Gfx *dl,
+                                   u32 route_kind, u32 *emit_first)
+{
+    NDSItemReplayDraw *draw = sNdsItemReplayRecording;
+    const u32 index = sNdsItemReplayRecordRoots;
+
+    if (draw == NULL)
+    {
+        return FALSE;
+    }
+    if ((ndsItemReplayRouteOk(route_kind) == FALSE) ||
+        (index >= draw->root_count) || (draw->roots[index].dobj != dobj) ||
+        (draw->roots[index].dl != dl))
+    {
+        sNdsItemReplaySinkState.failed = 1u;
+        return FALSE;
+    }
+    *emit_first = sNdsItemReplaySinkState.emit_count;
+    return TRUE;
+}
+
+static void ndsItemReplayRootEnd(sb32 handled, u32 emit_first)
+{
+    NDSItemReplayDraw *draw = sNdsItemReplayRecording;
+    const u32 index = sNdsItemReplayRecordRoots;
+
+    if (draw == NULL)
+    {
+        return;
+    }
+    if (handled == FALSE)
+    {
+        sNdsItemReplaySinkState.failed = 1u;
+    }
+    draw->roots[index].emit_first = (u8)emit_first;
+    draw->roots[index].emit_count =
+        (u8)(sNdsItemReplaySinkState.emit_count - emit_first);
+    sNdsItemReplayRecordRoots = index + 1u;
+}
+#endif
+
 /* The body's item-submit seeds over the reset persistent stats, with its
  * witnesses: the head's prim/env colours and blend modes, each only where the
  * head captured it. */
@@ -7945,6 +8120,10 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
     }
     }
 
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+    const sb32 lab_item = (route_kind >= NDS_SDL_ROUTE_ITEM) ? TRUE : FALSE;
+    u32 lab_item_mark = cpuGetTiming();
+#endif
     saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
     ndsRendererAdapterPrepareInitialMatrices(dobj,
                                              (camera_gobj != NULL) ?
@@ -7956,6 +8135,19 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
                                              TRUE,
                                              &projection, &projection_ptr,
                                              &modelview, &modelview_ptr);
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+    if (lab_item != FALSE)
+    {
+        u32 lab_now = cpuGetTiming();
+
+        gNdsLabItemAcc[4] += lab_now - lab_item_mark;
+        gNdsLabItemAcc[8]++;
+        gNdsLabItemAcc[12] += gNdsLabPimAcc[1];
+        gNdsLabItemAcc[13] += gNdsLabPimAcc[0] + gNdsLabPimAcc[2] +
+                              gNdsLabPimAcc[3];
+        lab_item_mark = lab_now;
+    }
+#endif
     memset(&config, 0, sizeof(config));
     config.max_depth = 8u;
     config.max_commands = 8192u;
@@ -8177,12 +8369,35 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
         }
         const NDSStageDLItemRoute *item =
             &sNdsStageDLItemRoutes[route_kind - NDS_SDL_ROUTE_ITEM];
+        u32 replay_first = 0u;
+        const sb32 replay_record =
+            ndsItemReplayRootBegin(dobj, dl, route_kind, &replay_first);
 
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+        {
+            u32 lab_now = cpuGetTiming();
+
+            gNdsLabItemAcc[5] += lab_now - lab_item_mark;
+            lab_item_mark = lab_now;
+        }
+#endif
         handled = (item->submit_rooted != NULL) ?
             item->submit_rooted(route->root, loaded->data,
                                 loaded->data_size, &config, render_stats) :
             item->submit(loaded->data, loaded->data_size, &config,
                          render_stats);
+        if (replay_record != FALSE)
+        {
+            ndsItemReplayRootEnd(handled, replay_first);
+        }
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+        {
+            u32 lab_now = cpuGetTiming();
+
+            gNdsLabItemAcc[6] += lab_now - lab_item_mark;
+            lab_item_mark = lab_now;
+        }
+#endif
         if (handled != FALSE)
         {
             (*item->draws)++;
@@ -8239,6 +8454,12 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
         }
     }
     gNdsStageDLFastLaneHits++;
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+    if (lab_item != FALSE)
+    {
+        gNdsLabItemAcc[7] += cpuGetTiming() - lab_item_mark;
+    }
+#endif
     return TRUE;
 }
 
@@ -14790,9 +15011,16 @@ void ndsRendererAdapterSubmitItemDObjTree(void *dobj_ptr, u32 kind,
                                           void *camera_gobj_ptr,
                                           u32 initial_geometry_mode)
 {
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+    u32 lab_offscreen = cpuGetTiming();
+#endif
     const sb32 offscreen = ndsRendererAdapterItemOffscreen(
         (DObj *)dobj_ptr, (GObj *)camera_gobj_ptr);
     const u32 triangles_before = gNdsStageGCDrawAllLoopHardwareTriangleCount;
+
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+    gNdsLabItemAcc[11] += cpuGetTiming() - lab_offscreen;
+#endif
 
     /* gNdsItemPreCull 2: decide but draw, counting a culled item whose lists
      * still submitted triangles (2026-10-03 Race, 900 frames: 1 of 5141, a
@@ -14813,6 +15041,349 @@ void ndsRendererAdapterSubmitItemDObjTree(void *dobj_ptr, u32 kind,
         gNdsItemPreCullDrew++;
     }
 }
+
+#if NDS_P2_ITEM_CORE
+/* The lists ndsRendererAdapterSubmitStageDObjTreeDepth would submit, in its
+ * order: hidden subtrees skipped, siblings walked from the first child, each
+ * drawable node's list (or DLLink lists) with the head the submit names.
+ * Returns the count, or NDS_ITEM_REPLAY_ROOTS + 1 when it cannot hold them. */
+static u32 ndsItemReplayWalk(DObj *dobj, u32 kind, NDSItemReplayRoot *roots,
+                             u32 count, u32 depth)
+{
+    DObj *sibling;
+    u32 seen;
+
+    if ((dobj == NULL) || (count > NDS_ITEM_REPLAY_ROOTS))
+    {
+        return count;
+    }
+    if (depth >= NDS_RENDERER_STAGE_DOBJ_MAX_DEPTH)
+    {
+        return NDS_ITEM_REPLAY_ROOTS + 1u;
+    }
+    if ((dobj->flags & DOBJ_FLAG_HIDDEN) == 0u)
+    {
+        if (ndsRendererAdapterStageDObjDrawable(dobj, kind) != FALSE)
+        {
+            if ((kind == NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE) ||
+                (kind == NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD0) ||
+                (kind == NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD1))
+            {
+                if (dobj->dv != NULL)
+                {
+                    if (count >= NDS_ITEM_REPLAY_ROOTS)
+                    {
+                        return NDS_ITEM_REPLAY_ROOTS + 1u;
+                    }
+                    roots[count].dobj = dobj;
+                    roots[count].dl = dobj->dl;
+                    roots[count].head =
+                        (kind == NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD1) ?
+                            1u : 0u;
+                    count++;
+                }
+            }
+            else if ((kind == NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE_DLLINKS) ||
+                     (kind == NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLLINKS))
+            {
+                const DObjDLLink *dl_link = dobj->dl_link;
+                u32 link;
+
+                for (link = 0u; (dl_link != NULL) &&
+                     (link < GC_COMMON_MAX_DLLINKS); link++, dl_link++)
+                {
+                    if (dl_link->list_id == (s32)NDS_RENDERER_STAGE_DL_HEADS)
+                    {
+                        break;
+                    }
+                    if ((dl_link->list_id >= 0) &&
+                        ((u32)dl_link->list_id < NDS_RENDERER_STAGE_DL_HEADS) &&
+                        (dl_link->dl != NULL))
+                    {
+                        if (count >= NDS_ITEM_REPLAY_ROOTS)
+                        {
+                            return NDS_ITEM_REPLAY_ROOTS + 1u;
+                        }
+                        roots[count].dobj = dobj;
+                        roots[count].dl = dl_link->dl;
+                        roots[count].head = (u8)dl_link->list_id;
+                        count++;
+                    }
+                }
+            }
+            else
+            {
+                return NDS_ITEM_REPLAY_ROOTS + 1u;
+            }
+        }
+        if (dobj->child != NULL)
+        {
+            count = ndsItemReplayWalk(dobj->child, kind, roots, count,
+                                      depth + 1u);
+        }
+    }
+    if (dobj->sib_prev == NULL)
+    {
+        seen = 0u;
+        for (sibling = dobj->sib_next;
+             (sibling != NULL) && (count <= NDS_ITEM_REPLAY_ROOTS);
+             sibling = sibling->sib_next)
+        {
+            if (++seen > NDS_RENDERER_STAGE_DOBJ_MAX_SIBLINGS)
+            {
+                return NDS_ITEM_REPLAY_ROOTS + 1u;
+            }
+            count = ndsItemReplayWalk(sibling, kind, roots, count,
+                                      depth + 1u);
+        }
+    }
+    return count;
+}
+
+/* Everything an owner's GX output for these lists depends on besides the
+ * matrices and the resident textures. Returns the key length, 0 when the
+ * draw cannot be keyed. */
+static u32 ndsItemReplayKey(const DObj *root, u32 item_kind,
+                            u32 initial_geometry_mode,
+                            const NDSItemReplayRoot *roots, u32 root_count,
+                            u32 *key)
+{
+    u32 head_seen = 0u;
+    u32 n = 0u;
+    u32 i;
+
+    key[n++] = (u32)(uintptr_t)root;
+    key[n++] = item_kind;
+    key[n++] = initial_geometry_mode;
+    key[n++] = (u32)sNdsFighterDisplayCurrentLightValid;
+    key[n++] = sNdsFighterDisplayCurrentLightCount;
+    key[n++] = ((u32)(u8)sNdsFighterDisplayCurrentLight.l.dir[0]) |
+               ((u32)(u8)sNdsFighterDisplayCurrentLight.l.dir[1] << 8) |
+               ((u32)(u8)sNdsFighterDisplayCurrentLight.l.dir[2] << 16);
+    key[n++] = (u32)ndsRendererHardwareNoOracleEnabled();
+    for (i = 0u; i < root_count; i++)
+    {
+        const NDSItemReplayRoot *r = &roots[i];
+        const NDSStageDLRoute *route = ndsStageDLRouteSlot(r->dl);
+        const u32 head = r->head;
+
+        if ((route->dl != r->dl) ||
+            (ndsItemReplayRouteOk(route->route) == FALSE) ||
+            (route->loaded == NULL) ||
+            (route->loaded->data != route->data))
+        {
+            return 0u;
+        }
+        key[n++] = (u32)(uintptr_t)r->dobj;
+        key[n++] = (u32)(uintptr_t)r->dl;
+        key[n++] = head | ((u32)route->route << 8);
+        key[n++] = (u32)(uintptr_t)route->data;
+        key[n++] = route->root;
+        if ((head_seen & (1u << head)) == 0u)
+        {
+            head_seen |= 1u << head;
+            key[n++] = sNdsRendererAdapterItemColorMask[head];
+            key[n++] = sNdsRendererAdapterItemPrimColor[head];
+            key[n++] = sNdsRendererAdapterItemEnvColor[head];
+            key[n++] = sNdsRendererAdapterItemOtherModeL[head];
+            key[n++] = sNdsRendererAdapterItemOtherModeLValid[head];
+            key[n++] = sNdsRendererAdapterItemOtherModeH[head];
+            key[n++] = sNdsRendererAdapterItemOtherModeHValid[head];
+        }
+    }
+    return n;
+}
+
+/* One item GObj's tree: replayed when a recorded draw matches, else drawn by
+ * its owners inside the stage traversal (recording when every list is a
+ * replayable owner). */
+void ndsRendererAdapterSubmitItemDObjTreeReplay(void *dobj_ptr, u32 kind,
+                                                void *camera_gobj_ptr,
+                                                u32 initial_geometry_mode,
+                                                u32 item_kind)
+{
+    DObj *root = (DObj *)dobj_ptr;
+    GObj *camera_gobj = (GObj *)camera_gobj_ptr;
+    NDSItemReplayRoot roots[NDS_ITEM_REPLAY_ROOTS];
+    u32 key[NDS_ITEM_REPLAY_KEY_WORDS];
+    NDSItemReplayDraw *draw = NULL;
+    NDSItemReplayDraw *victim = &sNdsItemReplayDraws[0];
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+    const NDSItemReplayDraw *verify_against = NULL;
+#endif
+    sb32 same_root = FALSE;
+    u32 root_count = 0u;
+    u32 key_count = 0u;
+    u32 i;
+
+    if ((gNdsItemReplay != 0u) && (item_kind == (u32)nITKindSword) &&
+        (sNdsItemReplayRecording == NULL) && (root != NULL) &&
+        (ndsRendererAdapterItemOffscreen(root, camera_gobj) == FALSE))
+    {
+        root_count = ndsItemReplayWalk(root, kind, roots, 0u, 0u);
+        if ((root_count != 0u) && (root_count <= NDS_ITEM_REPLAY_ROOTS) &&
+            ((7u + (root_count * 12u)) <= NDS_ITEM_REPLAY_KEY_WORDS))
+        {
+            key_count = ndsItemReplayKey(root, item_kind,
+                                         initial_geometry_mode, roots,
+                                         root_count, key);
+        }
+    }
+    if (key_count != 0u)
+    {
+        for (i = 0u; i < NDS_ITEM_REPLAY_DRAWS; i++)
+        {
+            NDSItemReplayDraw *d = &sNdsItemReplayDraws[i];
+
+            if ((d->valid != 0u) && (d->root == root) &&
+                (d->key_count == key_count) && (d->root_count == root_count) &&
+                (memcmp(d->key, key, key_count * sizeof(u32)) == 0))
+            {
+                draw = d;
+                break;
+            }
+            if (d->root == root)
+            {
+                victim = d;       /* this item's stale draw: replace it */
+                same_root = TRUE;
+            }
+            else if ((same_root == FALSE) &&
+                     ((d->valid == 0u) ||
+                      ((victim->valid != 0u) &&
+                       (d->last_used < victim->last_used))))
+            {
+                victim = d;
+            }
+        }
+        if ((draw != NULL) &&
+            (ndsNativeItemReplayEmitsResident(draw->emits, draw->emit_count) ==
+             FALSE))
+        {
+            gNdsItemReplayNotResident++;
+            victim = draw;
+            draw = NULL;
+        }
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+        if ((draw != NULL) && (gNdsItemReplayVerify != 0u))
+        {
+            /* Draw through the owners into a scratch recording and compare
+             * it with the cached one (below). */
+            verify_against = draw;
+            victim = &sNdsItemReplayVerifyDraw;
+            draw = NULL;
+        }
+#endif
+    }
+    if (draw != NULL)
+    {
+        CObj *cobj = (camera_gobj != NULL) ? CObjGetStruct(camera_gobj) :
+            ((gGCCurrentCamera != NULL) ? CObjGetStruct(gGCCurrentCamera) :
+                                          NULL);
+        u32 triangles = 0u;
+
+        sNdsRendererAdapterItemSubmitActive = TRUE;
+        for (i = 0u; i < draw->root_count; i++)
+        {
+            const NDSItemReplayRoot *r = &draw->roots[i];
+            NDSRendererMatrix20p12 projection;
+            NDSRendererMatrix20p12 modelview;
+            NDSRendererMatrix20p12 identity;
+            const NDSRendererMatrix20p12 *projection_ptr;
+            const NDSRendererMatrix20p12 *modelview_ptr;
+            void *saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
+
+            /* The fast lane's matrix preparation for this list, unchanged:
+             * a held item's attach builds (and latches) exactly here. */
+            ndsRendererAdapterPrepareInitialMatrices(
+                r->dobj, cobj, TRUE, &projection, &projection_ptr,
+                &modelview, &modelview_ptr);
+            if ((projection_ptr == NULL) && (modelview_ptr != NULL))
+            {
+                ndsRendererAdapterMtxIdentity20p12(&identity);
+                projection_ptr = &identity;
+            }
+            else if ((modelview_ptr == NULL) && (projection_ptr != NULL))
+            {
+                ndsRendererAdapterMtxIdentity20p12(&identity);
+                modelview_ptr = &identity;
+            }
+            if ((projection_ptr != NULL) && (modelview_ptr != NULL))
+            {
+                /* The persistent stats are dead between traversals (every
+                 * reader begins one first): the batch opens borrow them. */
+                triangles += ndsNativeItemReplayEmits(
+                    &draw->emits[r->emit_first], r->emit_count, draw->pool,
+                    projection_ptr, modelview_ptr,
+                    &sNdsRendererAdapterStagePersistentStats);
+            }
+            gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
+        }
+        sNdsRendererAdapterItemSubmitActive = FALSE;
+        sNdsRendererAdapterItemSubmitHead = 0u;
+        gNdsStageGCDrawAllLoopHardwareTriangleCount += triangles;
+        gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount += triangles;
+        draw->last_used = gNdsRendererProfileFrameCount;
+        gNdsItemReplayDraws++;
+        return;
+    }
+    if (key_count != 0u)
+    {
+        /* Record this draw while its owners run. */
+        victim->valid = 0u;
+        victim->root = root;
+        victim->root_count = (u8)root_count;
+        victim->key_count = (u8)key_count;
+        victim->emit_count = 0u;
+        for (i = 0u; i < root_count; i++)
+        {
+            victim->roots[i] = roots[i];
+            victim->roots[i].emit_first = 0u;
+            victim->roots[i].emit_count = 0u;
+        }
+        memcpy(victim->key, key, key_count * sizeof(u32));
+        sNdsItemReplaySinkState.emits = victim->emits;
+        sNdsItemReplaySinkState.pool = victim->pool;
+        sNdsItemReplaySinkState.emit_count = 0u;
+        sNdsItemReplaySinkState.word_count = 0u;
+        sNdsItemReplaySinkState.failed = 0u;
+        sNdsItemReplayRecording = victim;
+        sNdsItemReplayRecordRoots = 0u;
+        ndsNativeItemReplaySetSink(&sNdsItemReplaySinkState);
+    }
+    ndsRendererAdapterBeginStageTraversal();
+    ndsRendererAdapterSubmitItemDObjTree(dobj_ptr, kind, camera_gobj_ptr,
+                                         initial_geometry_mode);
+    ndsRendererAdapterEndStageTraversal();
+    if (key_count != 0u)
+    {
+        ndsNativeItemReplaySetSink(NULL);
+        sNdsItemReplayRecording = NULL;
+        if ((sNdsItemReplaySinkState.failed == 0u) &&
+            (sNdsItemReplayRecordRoots == root_count))
+        {
+            victim->emit_count = (u8)sNdsItemReplaySinkState.emit_count;
+            victim->last_used = gNdsRendererProfileFrameCount;
+            victim->valid = 1u;
+            gNdsItemReplayRecords++;
+        }
+        else
+        {
+            gNdsItemReplayRecordFailed++;
+        }
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+        if (verify_against != NULL)
+        {
+            gNdsItemReplayVerifyRuns++;
+            if (ndsItemReplaySameRecording(victim, verify_against) == FALSE)
+            {
+                gNdsItemReplayVerifyFail++;
+            }
+            victim->valid = 0u;
+        }
+#endif
+    }
+}
+#endif
 
 void ndsRendererAdapterSubmitWeaponDObjTree(void *dobj_ptr, u32 kind,
                                             void *camera_gobj_ptr,
@@ -15194,6 +15765,18 @@ void ndsRendererAdapterSubmitItemDObjTree(void *dobj, u32 kind,
     (void)kind;
     (void)camera_gobj;
     (void)initial_geometry_mode;
+}
+
+void ndsRendererAdapterSubmitItemDObjTreeReplay(void *dobj, u32 kind,
+                                                void *camera_gobj,
+                                                u32 initial_geometry_mode,
+                                                u32 item_kind)
+{
+    (void)item_kind;
+    ndsRendererAdapterBeginStageTraversal();
+    ndsRendererAdapterSubmitItemDObjTree(dobj, kind, camera_gobj,
+                                         initial_geometry_mode);
+    ndsRendererAdapterEndStageTraversal();
 }
 
 void ndsRendererAdapterMarkDisplayProcHeads(void)

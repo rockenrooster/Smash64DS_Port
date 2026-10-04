@@ -4,6 +4,8 @@
  * packet into DS GX triangles under the supplied traversal state. */
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
 
+#include <nds/nds_item_replay.h>
+
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
 /* LAB ONLY: the foreign-platform submit split (Board the Platforms).
  * [0] fast-lane offscreen test, [1] stats reset + material snapshots,
@@ -79,6 +81,21 @@ ndsNativeItemWave1TexMemoFor(u32 id, const NDSRendererStats *stats)
     return &ways[way];
 }
 
+/* P2-2p8 (2026-10-04): the item draw replay's recording side
+ * (include/nds/nds_item_replay.h). While the adapter holds a sink, every emit
+ * also leaves what its GX output depended on besides the matrices: the
+ * texture the bind landed on, the batch's polygon format and alpha-test
+ * words, and the per-vertex words. Anything this replay cannot reproduce --
+ * a shared matrix generation, fog, a bind outside the texture cache -- marks
+ * the sink failed and the draw is simply not cached. */
+static NDSItemReplaySink *sNdsItemReplaySink;
+volatile u32 gNdsItemReplayRecordFails;
+
+void ndsNativeItemReplaySetSink(NDSItemReplaySink *sink)
+{
+    sNdsItemReplaySink = sink;
+}
+
 static sb32 ndsNativeItemWave1Emit(
     const s16 *verts, const u32 *colors, const u16 *indices,
     u32 vertex_count, u32 triangle_count, u32 corner_count,
@@ -95,11 +112,14 @@ static sb32 ndsNativeItemWave1Emit(
     s32 z_words[24];
     NDSRendererInputVertex vertex0;
     const NDSRendererTileState *tile;
+    NDSItemReplaySink *const sink = sNdsItemReplaySink;
+    NDSItemReplayEmit *rec = NULL;
     u32 material_color;
     u32 use_material;
     u32 use_texture;
     u32 use_vertex;
     u32 poly_alpha;
+    u32 poly_fmt;
     u32 generation;
     s32 texture_offset;
     u32 corner;
@@ -117,7 +137,27 @@ static sb32 ndsNativeItemWave1Emit(
         {
             *submit_step = 4u;
         }
+        if (sink != NULL)
+        {
+            sink->failed = 1u;
+        }
         return FALSE;
+    }
+    if (sink != NULL)
+    {
+        if ((sink->failed == 0u) &&
+            (sink->emit_count < NDS_ITEM_REPLAY_EMITS) &&
+            ((sink->word_count + (vertex_count * 4u)) <=
+             NDS_ITEM_REPLAY_POOL_WORDS) &&
+            (corner_count <= 0xffffu) && (triangle_count <= 0xffffu) &&
+            (sNdsNativeItemWave1MatrixGeneration == 0u))
+        {
+            rec = &sink->emits[sink->emit_count];
+        }
+        else
+        {
+            sink->failed = 1u;
+        }
     }
 
     vertex0 = (NDSRendererInputVertex){
@@ -142,7 +182,39 @@ static sb32 ndsNativeItemWave1Emit(
              (u32)(uintptr_t)verts, stats, config, state) == FALSE))
     {
         *submit_step = 3u;
+        if (sink != NULL)
+        {
+            sink->failed = 1u;
+        }
         return FALSE;
+    }
+    if (rec != NULL)
+    {
+        rec->use_texture = (u8)use_texture;
+        if (use_texture != FALSE)
+        {
+            const NDSRendererHardwareTextureCacheEntry *entry =
+                sNdsRendererHardwareActiveTextureEntry;
+            const u32 slot = (entry != NULL) ?
+                (u32)(entry - sNdsRendererHardwareTextureCache) : 0xffffffffu;
+
+            if ((entry == NULL) || (slot >= NDS_RENDERER_HW_TEXTURE_CACHE_COUNT) ||
+                (entry->ready == FALSE) || (entry->name == 0) ||
+                ((u32)entry->name != sNdsRendererHardwareBoundTextureName))
+            {
+                sink->failed = 1u;
+                rec = NULL;
+            }
+            else
+            {
+                rec->tex_slot = (u16)slot;
+                rec->tex_name = (u32)entry->name;
+                rec->tex_generation = entry->key_generation;
+                rec->tex_format = stats->hardware_texture_format;
+                rec->tex_width = stats->hardware_texture_width;
+                rec->tex_height = stats->hardware_texture_height;
+            }
+        }
     }
 
     NDS_LAB_BAKED_ADD(7, lab_mark);
@@ -166,11 +238,25 @@ static sb32 ndsNativeItemWave1Emit(
             config->initial_projection, config->initial_modelview, generation);
         NDS_LAB_BAKED_ADD(8, lab_mark);
         NDS_LAB_BAKED_MARK(lab_mark);
+        poly_fmt = ndsRendererHardwarePolyFmt(stats, poly_alpha);
+        if (rec != NULL)
+        {
+            if (ndsRendererHardwareFogStateKey(stats) != 0u)
+            {
+                sink->failed = 1u;
+                rec = NULL;
+            }
+            else
+            {
+                rec->poly_fmt = poly_fmt;
+                rec->othermode_l = stats->othermode_l;
+                rec->blend_color = stats->blend_color;
+            }
+        }
         ndsRendererHardwareBeginTriangleBatch(
             stats, use_texture,
             (use_texture != FALSE) ? sNdsRendererHardwareBoundTextureName : 0u,
-            ndsRendererHardwarePolyFmt(stats, poly_alpha),
-            sNdsRendererHardwareMatrixMode, generation);
+            poly_fmt, sNdsRendererHardwareMatrixMode, generation);
         NDS_LAB_BAKED_ADD(9, lab_mark);
         NDS_LAB_BAKED_MARK(lab_mark);
         for (i = 0u; i < vertex_count; i++)
@@ -219,12 +305,159 @@ static sb32 ndsNativeItemWave1Emit(
         stats->hardware_zbuffer_triangle_count += triangle_count;
         stats->hardware_vertex_count += corner_count;
         sNdsRendererHardwareSubmitted = TRUE;
+        if (rec != NULL)
+        {
+            u32 *words = &sink->pool[sink->word_count];
+
+            for (i = 0u; i < vertex_count; i++)
+            {
+                words[(i * 4u) + 0u] = color_words[i];
+                words[(i * 4u) + 1u] =
+                    (use_texture != FALSE) ? tex_words[i] : 0u;
+                words[(i * 4u) + 2u] = xy_words[i];
+                words[(i * 4u) + 3u] = (u32)z_words[i];
+            }
+        }
         NDS_LAB_BAKED_ADD(10, lab_mark);
         NDS_LAB_BAKED_MARK(lab_mark);
     }
     ndsRendererHardwareEndBatch();
+    if (rec != NULL)
+    {
+        rec->indices = indices;
+        rec->vertex_count = (u8)vertex_count;
+        rec->corner_count = (u16)corner_count;
+        rec->triangle_count = (u16)triangle_count;
+        rec->drawn = (poly_alpha != 0u) ? 1u : 0u;
+        rec->word_first = (u16)sink->word_count;
+        if (poly_alpha != 0u)
+        {
+            sink->word_count += vertex_count * 4u;
+        }
+        sink->emit_count++;
+    }
+    else if ((sink != NULL) && (sink->failed != 0u))
+    {
+        gNdsItemReplayRecordFails++;
+    }
     NDS_LAB_BAKED_ADD(11, lab_mark);
     return TRUE;
+}
+
+/* TRUE when every textured emit's cache entry still holds the texture it
+ * recorded (ready, same GL name, same key generation): an evicted or
+ * recycled slot sends the draw back to its owners before any GX write. */
+sb32 ndsNativeItemReplayEmitsResident(const NDSItemReplayEmit *emits,
+                                      u32 count)
+{
+    u32 i;
+
+    for (i = 0u; i < count; i++)
+    {
+        const NDSItemReplayEmit *e = &emits[i];
+        const NDSRendererHardwareTextureCacheEntry *entry;
+
+        if (e->use_texture == 0u)
+        {
+            continue;
+        }
+        if (e->tex_slot >= NDS_RENDERER_HW_TEXTURE_CACHE_COUNT)
+        {
+            return FALSE;
+        }
+        entry = &sNdsRendererHardwareTextureCache[e->tex_slot];
+        if ((entry->ready == FALSE) || ((u32)entry->name != e->tex_name) ||
+            (entry->key_generation != e->tex_generation))
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+/* One root's recorded emits under this draw's matrices, in the emit's own
+ * order: the DMA wait and batch close, the owner-memo hit tail of the bind
+ * (the LRU stamp, the name and parameter binds, the active entry, the pinned
+ * hit), the split matrix load, the batch open with the recorded format and
+ * alpha-test words, and the corners. Returns the triangles drawn. The batch
+ * open reads only the alpha-test and fog words of `scratch`; fog is set off,
+ * as every recording had it (a recording with fog fails). */
+u32 ndsNativeItemReplayEmits(const NDSItemReplayEmit *emits, u32 count,
+                             const u32 *pool, const void *projection,
+                             const void *modelview,
+                             struct NDSRendererStats *scratch)
+{
+    u32 triangles = 0u;
+    u32 i;
+
+    scratch->fog_status = 0u;
+    for (i = 0u; i < count; i++)
+    {
+        const NDSItemReplayEmit *e = &emits[i];
+
+        NDS_FIGHTER_PACKET_DMA_WAIT();
+        ndsRendererHardwareEndBatch();
+        if (e->use_texture != 0u)
+        {
+            NDSRendererHardwareTextureCacheEntry *entry =
+                &sNdsRendererHardwareTextureCache[e->tex_slot];
+
+            entry->last_used_frame = sNdsRendererHardwareFrameSerial + 1u;
+            if (entry->pinned != 0u)
+            {
+                ndsRendererHardwareBindTextureName(scratch,
+                                                   (u32)entry->name);
+                ndsRendererHardwareApplyTextureParams(entry->params);
+                sNdsRendererHardwareActiveTextureEntry = entry;
+                ndsRendererHardwareRecordBattleStaticTextureHit(entry);
+            }
+            else if (sNdsRendererHardwareActiveTextureEntry != entry)
+            {
+                ndsRendererHardwareBindTextureName(scratch,
+                                                   (u32)entry->name);
+                ndsRendererHardwareApplyTextureParams(entry->params);
+                sNdsRendererHardwareActiveTextureEntry = entry;
+            }
+        }
+        if (e->drawn != 0u)
+        {
+            const u32 generation = ndsRendererNextMatrixGeneration();
+            const u32 *words = &pool[e->word_first];
+            const u32 textured = e->use_texture;
+            u32 corner;
+            u32 t;
+
+            ndsRendererLoadHardwareSplitMatrices(
+                (const NDSRendererMatrix20p12 *)projection,
+                (const NDSRendererMatrix20p12 *)modelview, generation);
+            scratch->othermode_l = e->othermode_l;
+            scratch->blend_color = e->blend_color;
+            ndsRendererHardwareBeginTriangleBatch(
+                scratch, textured,
+                (textured != 0u) ? sNdsRendererHardwareBoundTextureName : 0u,
+                e->poly_fmt, sNdsRendererHardwareMatrixMode, generation);
+            for (corner = 0u; corner < e->corner_count; corner++)
+            {
+                const u32 *v = &words[(u32)e->indices[corner] * 4u];
+
+                GFX_COLOR = v[0];
+                if (textured != 0u)
+                {
+                    GFX_TEX_COORD = v[1];
+                }
+                GFX_VERTEX16 = v[2];
+                GFX_VERTEX16 = v[3];
+            }
+            for (t = 0u; t < e->triangle_count; t++)
+            {
+                ndsRendererProfileRecordHardwareTriangle();
+            }
+            sNdsRendererHardwareSubmitted = TRUE;
+            triangles += e->triangle_count;
+        }
+        ndsRendererHardwareEndBatch();
+    }
+    return triangles;
 }
 
 #endif
