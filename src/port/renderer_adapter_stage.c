@@ -4300,32 +4300,36 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
     u32 task103_mark = cpuGetTiming();
     u32 task103_now;
 #endif
-    {
-        if (ndsRendererAdapterBuildTask36StageCameraMatrices(
-                cobj, &workspace->projection,
-                &workspace->camera_modelview) == FALSE)
-        {
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-            gNdsRendererTask36AdapterRejectReason = 51u;
-#endif
-            return FALSE;
-        }
-    }
+    /* The frame camera first: its cache entry then holds the split look-at
+     * and perspective the stage camera is made of (see
+     * ndsRendererAdapterStageCameraFromFrameCache). */
+    ndsRendererAdapterGetFrameCameraMatrices(cobj,
+        &camera.projection, &camera.projection_valid,
+        &camera.modelview, &camera.modelview_valid, NULL, NULL, NULL);
 #if NDS_TASK103_STAGE_RUN_PHASE
     task103_now = cpuGetTiming();
-    gNdsTask103MatTask36CameraTicks += task103_now - task103_mark;
+    gNdsTask103MatFrameCameraTicks += task103_now - task103_mark;
     task103_mark = task103_now;
+#endif
+    if ((ndsRendererAdapterStageCameraFromFrameCache(
+             cobj, &workspace->projection,
+             &workspace->camera_modelview) == FALSE) &&
+        (ndsRendererAdapterBuildTask36StageCameraMatrices(
+             cobj, &workspace->projection,
+             &workspace->camera_modelview) == FALSE))
+    {
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+        gNdsRendererTask36AdapterRejectReason = 51u;
+#endif
+        return FALSE;
+    }
+#if NDS_TASK103_STAGE_RUN_PHASE
+    gNdsTask103MatTask36CameraTicks += cpuGetTiming() - task103_mark;
 #endif
     camera.recalc.perspective = &workspace->projection;
     camera.recalc.perspective_f_valid = FALSE;
     camera.recalc.mod1_valid = FALSE;
     ndsRendererAdapterMvpMemoReset(&camera.recalc);
-    ndsRendererAdapterGetFrameCameraMatrices(cobj,
-        &camera.projection, &camera.projection_valid,
-        &camera.modelview, &camera.modelview_valid, NULL, NULL, NULL);
-#if NDS_TASK103_STAGE_RUN_PHASE
-    gNdsTask103MatFrameCameraTicks += cpuGetTiming() - task103_mark;
-#endif
 #if NDS_RENDERER_M3_PHASE0_PROFILE
     gNdsRendererTask36ObservedDynamicMaskLo = 0u;
     gNdsRendererTask36ObservedDynamicMaskHi = 0u;

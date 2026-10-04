@@ -6044,6 +6044,43 @@ static void ndsRendererAdapterBuildDefaultBattleCameraMatrices(
 }
 
 #if NDS_TASK36_HW_COMPOSE
+/* P2-2p8 (2026-10-04): the stage prepare's split camera from this frame's
+ * camera cache. The 0x4C producer in ndsRendererAdapterBuildCameraMatrices
+ * keeps look-at and perspective apart for the particle pass, and they are the
+ * same two calls on the same CObj that
+ * ndsRendererAdapterBuildTask36StageCameraMatrices makes -- so the stage
+ * built the battle camera twice a frame (gate STG P50 -1.3K without the
+ * second build). Valid only for the frame that filled the entry. Same-ROM
+ * A/B word gNdsStageCameraShare (0 = build it again). */
+volatile u32 gNdsStageCameraShare __attribute__((used, section(".data"))) = 1u;
+
+static sb32 ndsRendererAdapterStageCameraFromFrameCache(
+    const CObj *cobj,
+    NDSRendererMatrix20p12 *projection,
+    NDSRendererMatrix20p12 *modelview)
+{
+    u32 i;
+
+    if ((gNdsStageCameraShare == 0u) || (cobj == NULL) ||
+        (sNdsRendererAdapterCameraCacheFrame != gNdsRendererProfileFrameCount))
+    {
+        return FALSE;
+    }
+    for (i = 0u; i < sNdsRendererAdapterCameraCacheCount; i++)
+    {
+        const NDSRendererAdapterCameraCacheEntry *entry =
+            &sNdsRendererAdapterCameraCache[i];
+
+        if ((entry->cobj == cobj) && (entry->particle.valid != FALSE))
+        {
+            MTXCOPY(projection, &entry->particle.projection);
+            MTXCOPY(modelview, &entry->particle.modelview);
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
 static sb32 ndsRendererAdapterBuildTask36StageCameraMatrices(
     CObj *cobj,
     NDSRendererMatrix20p12 *projection,
