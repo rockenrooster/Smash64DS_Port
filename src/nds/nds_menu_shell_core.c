@@ -1110,12 +1110,26 @@ u32 ndsMenuShellWalkWantsResultsStart(void)
  * the default VS tour) returns without touching the pads, and playback stays
  * disabled there. Called from the source-menu pump in taskman_seam_harness.c,
  * beside ndsPlatformReadInput, before the iteration's task_update. */
-/* The 1P CSS cursor path in stick holds (4 px each): UP then RIGHT from the
- * cursor's (60,170) start. 28/24 park the puck on Link (portrait 3); 17/13
- * on Kirby (portrait 8: row 1 is 43 px lower, column 2 is 45 px left). Poke
- * before the 1P CSS to walk another fighter's campaign. */
+/* The 1P CSS cursor path in stick holds (4 px each): UP, then LEFT, then
+ * RIGHT from the cursor's (60,170) start. 28/24 park the puck on Link
+ * (portrait 3); 17/13 on Kirby (portrait 8: row 1 is 43 px lower, column 2 is
+ * 45 px left). Every portrait: UP 28 (row 0) or 17 (row 1), then column 0
+ * LEFT 7, column 1 nothing, columns 2-5 RIGHT 13/24/35/46
+ * (mnPlayers1PGameGetPuckFighterKind: column (cursor x + 24 - 25) / 45).
+ * Poke before the 1P CSS to walk another fighter's campaign. */
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalk1PUpHolds = 28u;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalk1PLeftHolds = 0u;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalk1PRightHolds = 24u;
+/* The 1P CSS portrait to steer to by the cursor's position (0-11:
+ * mnPlayers1PGameGetFighterKind's order Luigi, Mario, DK, Link, Samus,
+ * Captain / Ness, Yoshi, Kirby, Fox, Pikachu, Jigglypuff), opening the four
+ * unlockables first. Any other value keeps the stick holds above (the bonus
+ * selects always do). */
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalk1PPortrait = 0xffu;
+#if NDS_P2_1P_GAME
+s32 ndsMNPlayers1PGameWalkCursor(s32 *x, s32 *y);
+void ndsMNPlayers1PGameWalkUnlockAll(void);
+#endif
 /* The 1P Mode menu tab the walk confirms, as down taps from 1P GAME: 0 the
  * campaign, 2 Bonus 1 Practice, 3 Bonus 2 Practice (Training is closed). The
  * bonus character selects take the same puck path as the 1P one. */
@@ -1195,21 +1209,88 @@ void ndsMenuShellWalkDrive1PSourceMenus(void)
     else
     {
         const u32 up_holds = gNdsMenuShellWalk1PUpHolds;
+        const u32 left_holds = gNdsMenuShellWalk1PLeftHolds;
         const u32 right_holds = gNdsMenuShellWalk1PRightHolds;
+        const u32 moves = up_holds + left_holds + right_holds;
+        /* A once the puck is parked (never before tic 53, the original
+         * schedule); START 42 tics later, past the 60-tic gate and the
+         * 30-tic recall lockout. */
+        const u32 select_tic = ((moves + 2u) > 53u) ? (moves + 2u) : 53u;
+#if NDS_P2_1P_GAME
+        static u32 sWalk1PSettled;
+        static u32 sWalk1PSelectTic;
+        const u32 portrait = gNdsMenuShellWalk1PPortrait;
+        s32 cursor_x;
+        s32 cursor_y;
 
+        if ((curr == (u32)nSCKind1PGamePlayers) && (portrait < 12u) &&
+            (ndsMNPlayers1PGameWalkCursor(&cursor_x, &cursor_y) != FALSE))
+        {
+            /* The puck follows the cursor at (+11,-14) and the source tests
+             * it at (+13,+12) (mnPlayers1PGameGetPuckFighterKind): a
+             * portrait's centre is cursor (23 + 45 col, 59 or 102). */
+            const s32 target_x = 23 + (45 * (s32)(portrait % 6u));
+            const s32 target_y = (portrait < 6u) ? 59 : 102;
+            const s32 dx = target_x - cursor_x;
+            const s32 dy = target_y - cursor_y;
+
+            /* Every tic: the select's InitVars reloads the mask from the
+             * save after this scene's first pump. */
+            ndsMNPlayers1PGameWalkUnlockAll();
+            if (sWalk1PTic == 0u)
+            {
+                sWalk1PSettled = 0u;
+                sWalk1PSelectTic = 0u;
+            }
+            if (sWalk1PSelectTic == 0u)
+            {
+                /* A tic moves the cursor 4 or 8 px: settle within 10 px of
+                 * the centre (a cell is 45 x 43) rather than chase it. */
+                if ((dx > 10) || (dx < -10) || (dy > 10) || (dy < -10))
+                {
+                    stick_x = (dx > 10) ? 80 : ((dx < -10) ? -80 : 0);
+                    stick_y = (dy < -10) ? 80 : ((dy > 10) ? -80 : 0);
+                    sWalk1PSettled = 0u;
+                }
+                else if ((++sWalk1PSettled >= 8u) && (sWalk1PTic >= 53u))
+                {
+                    sWalk1PSelectTic = sWalk1PTic;
+                }
+            }
+            if ((sWalk1PSelectTic != 0u) &&
+                ((sWalk1PTic == sWalk1PSelectTic) ||
+                 (sWalk1PTic == (sWalk1PSelectTic + 1u))))
+            {
+                buttons = (u16)A_BUTTON;
+            }
+            else if ((sWalk1PSelectTic != 0u) &&
+                     ((sWalk1PTic == (sWalk1PSelectTic + 42u)) ||
+                      (sWalk1PTic == (sWalk1PSelectTic + 43u))))
+            {
+                buttons = (u16)START_BUTTON;
+            }
+        }
+        else
+#endif
         if (sWalk1PTic < up_holds)
         {
             stick_y = 80;
         }
-        else if (sWalk1PTic < (up_holds + right_holds))
+        else if (sWalk1PTic < (up_holds + left_holds))
+        {
+            stick_x = -80;
+        }
+        else if (sWalk1PTic < moves)
         {
             stick_x = 80;
         }
-        else if ((sWalk1PTic == 53u) || (sWalk1PTic == 54u))
+        else if ((sWalk1PTic == select_tic) ||
+                 (sWalk1PTic == (select_tic + 1u)))
         {
             buttons = (u16)A_BUTTON;
         }
-        else if ((sWalk1PTic == 95u) || (sWalk1PTic == 96u))
+        else if ((sWalk1PTic == (select_tic + 42u)) ||
+                 (sWalk1PTic == (select_tic + 43u)))
         {
             buttons = (u16)START_BUTTON;
         }

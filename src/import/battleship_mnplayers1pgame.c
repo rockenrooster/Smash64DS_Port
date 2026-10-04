@@ -264,4 +264,28 @@ void mnPlayers1PGameStartScene(void)
     ndsMNPlayers1PPreviewRetire();
 }
 
+#if NDS_P2_MENU_WALK
+/* LAB (campaign walk, nds_menu_shell_core.c): the cursor, so the walk steers
+ * the puck to a portrait by position -- one pump tic moves it 4 or 8 px, so
+ * counted stick tics overshoot the far columns -- and the four unlockables
+ * opened (a fresh save locks Luigi, Ness, Captain Falcon and Jigglypuff). */
+s32 ndsMNPlayers1PGameWalkCursor(s32 *x, s32 *y)
+{
+    GObj *cursor = sMNPlayers1PGameSlot.cursor;
+
+    if ((cursor == NULL) || (SObjGetStruct(cursor) == NULL))
+    {
+        return FALSE;
+    }
+    *x = (s32)SObjGetStruct(cursor)->pos.x;
+    *y = (s32)SObjGetStruct(cursor)->pos.y;
+    return TRUE;
+}
+
+void ndsMNPlayers1PGameWalkUnlockAll(void)
+{
+    sMNPlayers1PGameFighterMask = LBBACKUP_CHARACTER_MASK_ALL;
+}
+#endif
+
 #endif /* NDS_P2_1P_GAME */
