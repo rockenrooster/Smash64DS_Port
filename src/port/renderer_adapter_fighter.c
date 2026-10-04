@@ -5348,11 +5348,14 @@ static sb32 ndsFighterIntroTransientSubmit(GObj *fighter_gobj)
     /* The ending's figure (mvEndingMakeFighter: one Demo actor in
      * nFTDemoStatusFigureDropped) is never registered either, nor is the
      * challenger's silhouette (sc1PChallengerMakeFighter: one Demo actor,
-     * made with ftManagerMakeFighter alone). */
+     * made with ftManagerMakeFighter alone), nor the continue screen's
+     * fallen figure (mnPlayers1PGameContinueMakeFighter, the same Dropped
+     * Demo actor; refused here it never drew, 2026-10-04). */
     if ((fighter_gobj == NULL) ||
         ((gNdsSceneManagerCurrKind != nSCKind1PIntro) &&
          (gNdsSceneManagerCurrKind != nSCKindEnding) &&
-         (gNdsSceneManagerCurrKind != nSCKind1PChallenger)))
+         (gNdsSceneManagerCurrKind != nSCKind1PChallenger) &&
+         (gNdsSceneManagerCurrKind != nSCKind1PContinue)))
     {
         return FALSE;
     }

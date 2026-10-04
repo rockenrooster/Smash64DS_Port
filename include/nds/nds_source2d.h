@@ -28,5 +28,12 @@ s32 ndsSource2DDrawGObj(struct GObj *gobj);
 s32 ndsSource2DDrawGObjModulated(struct GObj *gobj, u32 modulate_rgb);
 /* VBlank-side commit from ndsPlatformEndFrame: staged palettes and OAM. */
 void ndsSource2DCommit(void);
+/* A scene's translucent light sprites, by bitmap: drawn in their prim colour
+ * as semi-transparent OBJs behind the 3D layer, their coverage carried by the
+ * scene's BLDALPHA. NULL clears a slot; the tenant's exit clears both. */
+void ndsSource2DSetTranslucentBitmaps(const void *first, const void *second);
+/* The scene's BLDCNT/BLDALPHA/BLDY for this frame, written at the commit.
+ * The first call saves the standing blend; the tenant's exit restores it. */
+void ndsSource2DSetBlend(u16 bldcnt, u16 bldalpha, u16 bldy);
 
 #endif

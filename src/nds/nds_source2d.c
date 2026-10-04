@@ -85,6 +85,9 @@ static u32 sNdsS2DScaleYQ16 = 57195u;
 
 #define NDS_S2D_BANK_RAMP 0u
 #define NDS_S2D_BANK_LUT 1u
+/* Every visible index is the prim colour: a translucent sprite whose
+ * coverage the OBJ blend carries (ndsSource2DSetTranslucentBitmaps). */
+#define NDS_S2D_BANK_FLAT 2u
 
 typedef struct NDSSource2DShape
 {
@@ -209,6 +212,13 @@ static u32 sNdsS2DFrameNeedsCommit;
 static u32 sNdsS2DPaletteDirty;
 static u32 sNdsS2DActive;
 static u32 sNdsS2DEnterPending;
+/* A scene's translucent light sprites and its blend registers (the 1P
+ * Continue screen's spotlight and light pool, 2026-10-04). Owned only while a
+ * scene sets them; ndsSource2DExit hands the standing battle blend back. */
+static const void *sNdsS2DTranslucentBitmaps[2];
+static u32 sNdsS2DBlendOwned;
+static u16 sNdsS2DBlendSaved[2];
+static u16 sNdsS2DBlendRegs[3];
 static u32 sNdsS2DResetPending;
 /* The BG2 background: the large pictures a frame draws before its first OBJ
  * sprite (the 1P intro's sky, then Board the Platforms' picture), composited
@@ -1094,6 +1104,54 @@ static s32 ndsS2DRampBank(const SObj *sobj)
     }
     sNdsS2DPaletteDirty = 1u;
     return taken;
+}
+
+/* A translucent light sprite's bank: every index is the prim colour, so the
+ * ramp index the bake wrote (its coverage) only decides visibility and the
+ * OBJ blend supplies the coverage itself. */
+static s32 ndsS2DFlatBank(const SObj *sobj)
+{
+    const Sprite *sprite = &sobj->sprite;
+    NDSSource2DBank *bank;
+    s32 taken;
+    u32 i;
+
+    for (i = 0u; i < sNdsS2DBankCount; i++)
+    {
+        const NDSSource2DBank *b = &sNdsS2DBanks[i];
+
+        if ((b->kind == NDS_S2D_BANK_FLAT) && (b->prim_r == sprite->red) &&
+            (b->prim_g == sprite->green) && (b->prim_b == sprite->blue))
+        {
+            return (s32)i;
+        }
+    }
+    taken = ndsS2DTakeBank();
+    if (taken < 0)
+    {
+        return -1;
+    }
+    bank = &sNdsS2DBanks[taken];
+    memset(bank, 0, sizeof(*bank));
+    bank->kind = NDS_S2D_BANK_FLAT;
+    bank->prim_r = sprite->red;
+    bank->prim_g = sprite->green;
+    bank->prim_b = sprite->blue;
+    for (i = 1u; i < 16u; i++)
+    {
+        bank->colors[i] = ndsS2DRgb15(sprite->red, sprite->green,
+                                      sprite->blue);
+    }
+    sNdsS2DPaletteDirty = 1u;
+    return taken;
+}
+
+static u32 ndsS2DIsTranslucent(const Sprite *sprite)
+{
+    return ((sprite->bitmap != NULL) &&
+            (((const void *)sprite->bitmap == sNdsS2DTranslucentBitmaps[0]) ||
+             ((const void *)sprite->bitmap == sNdsS2DTranslucentBitmaps[1]))) ?
+        1u : 0u;
 }
 
 static u32 ndsS2DColorDistance(u16 a, u16 b)
@@ -2001,6 +2059,7 @@ static void ndsS2DDrawSObj(const SObj *sobj)
     u32 alpha = 15u;
     u32 tint_prim = 0u;
     u32 tint_env = 0u;
+    u32 translucent = ndsS2DIsTranslucent(sprite);
 
     gNdsSource2DDrawSObjCount++;
     sNdsS2DFrameSprites++;
@@ -2020,7 +2079,10 @@ static void ndsS2DDrawSObj(const SObj *sobj)
                               NDS_S2D_SRC_ORIGIN_X, NDS_S2D_SCALE_X_Q16);
     screen_y = ndsS2DMapCoord(ndsS2DRoundFloat(sobj->pos.y),
                               NDS_S2D_SRC_ORIGIN_Y, NDS_S2D_SCALE_Y_Q16);
-    if (background_candidate != 0u)
+    /* A translucent light is never the opaque background, even when it is a
+     * frame's first and largest sprite (the Continue spotlight before its
+     * room exists). */
+    if ((background_candidate != 0u) && (translucent == 0u))
     {
         if (((final_width * final_height) >= NDS_S2D_BACKGROUND_AREA) &&
             (sNdsS2DFrameBackgrounds < NDS_S2D_BACKGROUND_LAYERS))
@@ -2074,7 +2136,8 @@ static void ndsS2DDrawSObj(const SObj *sobj)
     }
     else if (encoding == NDS_S2D_ENC_RAMP)
     {
-        bank = ndsS2DRampBank(sobj);
+        bank = (translucent != 0u) ? ndsS2DFlatBank(sobj) :
+                                     ndsS2DRampBank(sobj);
         if (bank < 0)
         {
             encoding = NDS_S2D_ENC_BMP;
@@ -2144,11 +2207,21 @@ static void ndsS2DDrawSObj(const SObj *sobj)
                 ndsS2DRecordFailure(sobj, NDS_NATIVE_FAILURE_REJECTED_PROGRAM);
                 return;
             }
-            oamSet(&oamMain, sNdsS2DNextOamId, x, screen_y + (s32)row_y, 0,
+            /* A translucent light sits behind the 3D layer (BG0, priority 1)
+             * and in front of the BG2 background, and blends with what is
+             * under it by the scene's BLDALPHA. */
+            oamSet(&oamMain, sNdsS2DNextOamId, x, screen_y + (s32)row_y,
+                   (translucent != 0u) ? 2 : 0,
                    (cell->color_format == (u8)SpriteColorFormat_Bmp) ?
                        (int)alpha : bank,
                    cell->size, (SpriteColorFormat)cell->color_format,
                    cell->gfx, -1, false, false, false, false, false);
+            if ((translucent != 0u) &&
+                (cell->color_format != (u8)SpriteColorFormat_Bmp))
+            {
+                oamMain.oamMemory[sNdsS2DNextOamId].blendMode =
+                    OBJMODE_BLENDED;
+            }
             sNdsS2DNextOamId--;
             sNdsS2DFrameNeedsCommit = 1u;
             gNdsSource2DEmitCount++;
@@ -2252,6 +2325,15 @@ void ndsSource2DExit(void)
 {
 #if NDS_RENDERER_HW_TRIANGLES
     sNdsS2DEnterPending = 0u;
+    sNdsS2DTranslucentBitmaps[0] = NULL;
+    sNdsS2DTranslucentBitmaps[1] = NULL;
+    if (sNdsS2DBlendOwned != 0u)
+    {
+        REG_BLDCNT = sNdsS2DBlendSaved[0];
+        REG_BLDALPHA = sNdsS2DBlendSaved[1];
+        REG_BLDY = 0u;
+        sNdsS2DBlendOwned = 0u;
+    }
     if (sNdsS2DActive == 0u)
     {
         return;
@@ -2379,5 +2461,41 @@ void ndsSource2DCommit(void)
         oamUpdate(&oamMain);
         sNdsS2DFrameNeedsCommit = 0u;
     }
+    if (sNdsS2DBlendOwned != 0u)
+    {
+        REG_BLDCNT = sNdsS2DBlendRegs[0];
+        REG_BLDALPHA = sNdsS2DBlendRegs[1];
+        REG_BLDY = sNdsS2DBlendRegs[2];
+    }
+#endif
+}
+
+void ndsSource2DSetTranslucentBitmaps(const void *first, const void *second)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    sNdsS2DTranslucentBitmaps[0] = first;
+    sNdsS2DTranslucentBitmaps[1] = second;
+#else
+    (void)first;
+    (void)second;
+#endif
+}
+
+void ndsSource2DSetBlend(u16 bldcnt, u16 bldalpha, u16 bldy)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    if (sNdsS2DBlendOwned == 0u)
+    {
+        sNdsS2DBlendSaved[0] = REG_BLDCNT;
+        sNdsS2DBlendSaved[1] = REG_BLDALPHA;
+        sNdsS2DBlendOwned = 1u;
+    }
+    sNdsS2DBlendRegs[0] = bldcnt;
+    sNdsS2DBlendRegs[1] = bldalpha;
+    sNdsS2DBlendRegs[2] = bldy;
+#else
+    (void)bldcnt;
+    (void)bldalpha;
+    (void)bldy;
 #endif
 }

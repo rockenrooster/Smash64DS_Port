@@ -176,6 +176,12 @@ void ndsMNVSResultsSetLoadScene(void);
 
 void ndsBaseMNVSResultsStartScene(void);
 
+/* Weak, so the call in mnVSResultsSetPlayerTagPosition resolves to the
+ * N64-layout copy in battleship_mnvsresults_spot.c: on tied places the source
+ * reads aheads[-1..-3], which IDO's frame makes places[4..2] and GCC's frame
+ * makes garbage (a data abort at Results). */
+s32 mnVSResultsGetSpot(s32 player) __attribute__((weak));
+
 #include "../../decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c"
 
 #undef mnVSResultsStartScene

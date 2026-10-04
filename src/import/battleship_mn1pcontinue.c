@@ -73,9 +73,126 @@ extern sb32 (*dLBCommonFuncMatrixList[])(void);
 /* Landed precedent extern (battleship_mntraining.c:90); called at :1208. */
 extern void efManagerInitEffects(void);
 
+/* THE SCREEN ON THE DS (2026-10-04). Until now the Continue screen drew a
+ * navy backdrop, an opaque grey cylinder for the spotlight, no fighter, and
+ * one NO_PROGRAM failure a frame for its three fade rectangles. The source's
+ * order (camera priorities, :771-:960) is: room 90, room fade-in 80,
+ * spotlight + light pool 70, spotlight fade 60, the fighter (3D) 50, room
+ * fade-out 40, then the text. On the DS the room is the source 2D tenant's BG2
+ * background, the fighter is BG0, the spotlight and light pool are
+ * semi-transparent OBJs between them (both are I4 discs of coverage 3/15 in
+ * the prim colour, nds_source2d.c), and the three fades are the 2D blend:
+ * brightness-down on the room (and on the fighter for the fade-out) plus the
+ * lights' own BLDALPHA, from the very alphas the source procs step. */
+static void ndsMN1PContinueFuncDraw(void);
+#define scManagerFuncDraw ndsMN1PContinueFuncDraw
+
+void mnPlayers1PGameContinueRoomFadeOutProcDisplay(GObj *gobj);
+void mnPlayers1PGameContinueRoomFadeInProcDisplay(GObj *gobj);
+void mnPlayers1PGameContinueSpotlightFadeProcDisplay(GObj *gobj);
+void ndsBaseMN1PContinueRoomFadeOutProcDisplay(GObj *gobj);
+void ndsBaseMN1PContinueRoomFadeInProcDisplay(GObj *gobj);
+void ndsBaseMN1PContinueSpotlightFadeProcDisplay(GObj *gobj);
+/* Function-like, so the DEFINITIONS are renamed and the gcAddGObjDisplay
+ * references (no parentheses) bind to the wrappers below. */
+#define mnPlayers1PGameContinueRoomFadeOutProcDisplay(gobj) \
+    ndsBaseMN1PContinueRoomFadeOutProcDisplay(gobj)
+#define mnPlayers1PGameContinueRoomFadeInProcDisplay(gobj) \
+    ndsBaseMN1PContinueRoomFadeInProcDisplay(gobj)
+#define mnPlayers1PGameContinueSpotlightFadeProcDisplay(gobj) \
+    ndsBaseMN1PContinueSpotlightFadeProcDisplay(gobj)
+
 #include "../../decomp/BattleShip-main/decomp/src/mn/mn1pmode/mn1pcontinue.c"
 
+#undef mnPlayers1PGameContinueSpotlightFadeProcDisplay
+#undef mnPlayers1PGameContinueRoomFadeInProcDisplay
+#undef mnPlayers1PGameContinueRoomFadeOutProcDisplay
+#undef scManagerFuncDraw
 #undef mnPlayers1PGameContinueStartScene
+
+#include <nds/arm9/video.h>
+#include <nds/nds_platform.h>
+#include <nds/nds_source2d.h>
+
+/* The spotlight and light pool are I4 at 3/15 almost everywhere (26,206 of
+ * 26,880 spotlight texels, 4,580 of 5,920 pool texels): the blend's EVA. */
+#define NDS_MN1P_CONTINUE_LIGHT_COVERAGE 51u
+
+static u32 sNdsMN1PContinueFadeAlpha[3];
+static sb32 sNdsMN1PContinueBackdropSet;
+
+/* Each fade proc runs the source body (its alpha step) and then takes back
+ * the fill rectangle it wrote: the blend below presents that alpha. */
+#define NDS_MN1P_CONTINUE_FADE_WRAPPER(name, base, slot, alpha)              \
+    void name(GObj *gobj)                                                     \
+    {                                                                         \
+        Gfx *head = gSYTaskmanDLHeads[0];                                     \
+                                                                              \
+        base(gobj);                                                           \
+        gSYTaskmanDLHeads[0] = head;                                          \
+        sNdsMN1PContinueFadeAlpha[slot] = (u32)(alpha);                       \
+    }
+NDS_MN1P_CONTINUE_FADE_WRAPPER(mnPlayers1PGameContinueRoomFadeInProcDisplay,
+                               ndsBaseMN1PContinueRoomFadeInProcDisplay, 0,
+                               sMN1PContinueRoomFadeInAlpha)
+NDS_MN1P_CONTINUE_FADE_WRAPPER(mnPlayers1PGameContinueSpotlightFadeProcDisplay,
+                               ndsBaseMN1PContinueSpotlightFadeProcDisplay, 1,
+                               sMN1PContinueSpotlightFadeAlpha)
+NDS_MN1P_CONTINUE_FADE_WRAPPER(mnPlayers1PGameContinueRoomFadeOutProcDisplay,
+                               ndsBaseMN1PContinueRoomFadeOutProcDisplay, 2,
+                               sMN1PContinueRoomFadeOutAlpha)
+#undef NDS_MN1P_CONTINUE_FADE_WRAPPER
+
+/* The frame draw (dMN1PContinueTaskmanSetup's scManagerFuncDraw): a black
+ * backdrop (the default camera's fill, :1205), the 3D fighter through the
+ * cameras' (10,10)-(310,230) window, then this frame's blend. */
+static void ndsMN1PContinueFuncDraw(void)
+{
+    u32 room_in;
+    u32 spot;
+    u32 room_out;
+    u32 keep_room;
+    u32 keep_light;
+
+    if (sNdsMN1PContinueBackdropSet == FALSE)
+    {
+        ndsPlatformSetBackdropColor(RGB15(0, 0, 0));
+        sNdsMN1PContinueBackdropSet = TRUE;
+    }
+    if (sMN1PContinueFiles[0] != NULL)
+    {
+        ndsSource2DSetTranslucentBitmaps(
+            lbRelocGetFileData(Sprite*, sMN1PContinueFiles[0],
+                               &llMN1PContinueSpotlightSprite)->bitmap,
+            lbRelocGetFileData(Sprite*, sMN1PContinueFiles[0],
+                               &llMN1PContinueShadowSprite)->bitmap);
+    }
+    sNdsMN1PContinueFadeAlpha[0] = 0u;
+    sNdsMN1PContinueFadeAlpha[1] = 0u;
+    sNdsMN1PContinueFadeAlpha[2] = 0u;
+    ndsPlatformSet3DLayerEnabled(TRUE);
+    ndsPlatformSet3DViewportSource(10, 10, 310, 230);
+    scManagerFuncDraw();
+    ndsPlatformReset3DViewport();
+
+    /* Source order: the room under all three fades, the lights under the
+     * spotlight fade and the fade-out, the fighter under the fade-out only,
+     * the text under none. */
+    room_in = sNdsMN1PContinueFadeAlpha[0];
+    spot = sNdsMN1PContinueFadeAlpha[1];
+    room_out = sNdsMN1PContinueFadeAlpha[2];
+    keep_light = ((255u - spot) * (255u - room_out) + 127u) / 255u;
+    keep_room = ((255u - room_in) * keep_light + 127u) / 255u;
+    ndsSource2DSetBlend(
+        (u16)(BLEND_FADE_BLACK | BLEND_SRC_BG2 |
+              ((room_out != 0u) ? BLEND_SRC_BG0 : 0u) |
+              BLEND_DST_BG0 | BLEND_DST_BG2 | BLEND_DST_BACKDROP),
+        (u16)((((16u * NDS_MN1P_CONTINUE_LIGHT_COVERAGE * keep_light) +
+                (255u * 255u / 2u)) / (255u * 255u)) |
+              ((((16u * (255u - NDS_MN1P_CONTINUE_LIGHT_COVERAGE) *
+                  keep_room) + (255u * 255u / 2u)) / (255u * 255u)) << 8)),
+        (u16)((16u * (255u - keep_room) + 127u) / 255u));
+}
 
 void mnPlayers1PGameContinueStartScene(void)
 {
@@ -90,6 +207,7 @@ void mnPlayers1PGameContinueStartScene(void)
     sMN1PContinueOptionYesRetryTic = 0;
     sMN1PContinueOptionChangeWait = 0;
     sMN1PContinueIsSelectContinue = FALSE;
+    sNdsMN1PContinueBackdropSet = FALSE;
     ndsBaseMNPlayers1PGameContinueStartScene();
 }
 

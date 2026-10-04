@@ -119,6 +119,8 @@ SECTIONS {
             .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
         :battleship_mnvsresults.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx
             .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
+        :battleship_mnvsresults_spot.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx
+            .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
         :battleship_mvopeningroom.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx
             .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
         :battleship_mvopeningportraits.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx

@@ -38,6 +38,11 @@
       "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
     },
     {
+      "source_symbol": "dMN1PContinueTaskmanSetup",
+      "target_symbol": "battleship_mn1pcontinue.c::ndsMN1PContinueFuncDraw",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
       "source_symbol": "dMN1PModeTaskmanSetup",
       "target_symbol": "battleship_mn1pmode.c::ndsMN1PModeDraw",
       "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."

@@ -51,7 +51,8 @@ void syTaskmanStartTask(SYTaskmanSetup *tsetup)
     if ((desc != NULL) &&
         (((desc->flags & NDS_SCENE_FLAG_BATTLE) != 0u) ||
          (gSCManagerSceneData.scene_curr == nSCKind1PGamePlayers) ||
-         (gSCManagerSceneData.scene_curr == nSCKind1PIntro)))
+         (gSCManagerSceneData.scene_curr == nSCKind1PIntro) ||
+         (gSCManagerSceneData.scene_curr == nSCKind1PContinue)))
     {
         ndsPlatformSet3DLayerEnabled(TRUE);
     }
@@ -71,18 +72,36 @@ void syTaskmanStartTask(SYTaskmanSetup *tsetup)
      * buffer reserved a four-kind lineup ran the general heap out while making
      * the second fighter (owner playtest r55, 2026-09-30: Mario/Kirby/Fox/
      * Yoshi froze before Results). The native renderer uses neither, so they
-     * take the battle sizes here (111,600 B back); the scene's display lists
-     * keep their source capacities. */
+     * take the battle sizes here (111,600 B back); its display lists take
+     * measured bounds below. */
+    /* The 1P Continue screen (mn1pcontinue.c:1234) reserves two 32 KiB
+     * graphics heaps and a 48 KiB RDP buffer the same way, and makes the lost
+     * fighter after them: Kirby's parts ran the general heap out in
+     * gcAddMObjForDObj at the Continue after Master Hand (walk sweep
+     * 2026-10-04, HALT malloc-overflow scene 49). */
     if ((desc != NULL) &&
         (((desc->flags & NDS_SCENE_FLAG_BATTLE) != 0u) ||
          (gSCManagerSceneData.scene_curr == nSCKind1PIntro) ||
          (gSCManagerSceneData.scene_curr == nSCKind1PGamePlayers) ||
-         (gSCManagerSceneData.scene_curr == nSCKindVSResults)) &&
+         (gSCManagerSceneData.scene_curr == nSCKindVSResults) ||
+         (gSCManagerSceneData.scene_curr == nSCKind1PContinue)) &&
         (ndsBattleSetupIsRebudgeted(tsetup) == FALSE))
     {
         ds_setup = *tsetup;
         ndsBattleRebudgetSceneSetup(&ds_setup);
         if (gSCManagerSceneData.scene_curr == nSCKindVSResults)
+        {
+            /* Results' display procs write state and fill words only (the
+             * fighters draw natively): measured 2026-10-04 on the heaviest
+             * four (Ness/Kirby/Fox/Yoshi), DL0 peaked at 848 B of the source's
+             * 20,000 and DL1 at 144 B of 1,024, per context. That podium ran
+             * the arena out at tic 120 making the audio thread's 4 KiB stack
+             * (owner r75: Sector Z "Results screen also froze afterwards");
+             * these bounds hand back 32,768 B and keep ~4x the peaks. */
+            ds_setup.scene_setup.dl_buffer0_size = sizeof(Gfx) * 512u;
+            ds_setup.scene_setup.dl_buffer1_size = sizeof(Gfx) * 64u;
+        }
+        else if (gSCManagerSceneData.scene_curr == nSCKind1PContinue)
         {
             ds_setup.scene_setup.dl_buffer0_size =
                 tsetup->scene_setup.dl_buffer0_size;

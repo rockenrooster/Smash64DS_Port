@@ -127,7 +127,8 @@ static u32 ndsSeamRunSourceMenuScene(struct SYTaskFunction *tfunc, u32 is_result
             (gNdsSceneManagerCurrKind == nSCKind1PBonus2Players) ||
             (gNdsSceneManagerCurrKind == nSCKind1PIntro) ||
             (gNdsSceneManagerCurrKind == nSCKindEnding) ||
-            (gNdsSceneManagerCurrKind == nSCKind1PChallenger))
+            (gNdsSceneManagerCurrKind == nSCKind1PChallenger) ||
+            (gNdsSceneManagerCurrKind == nSCKind1PContinue))
         {
             gNdsFtPoseEvalTick = 1u;
         }

@@ -4882,6 +4882,7 @@ CFILES += battleship_gmcamera.c battleship_ftcommon_dead.c \
 endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_VS_RESULTS),1)
 CFILES += battleship_lbtransition.c battleship_mnvsresults.c \
+	battleship_mnvsresults_spot.c \
 	battleship_scsubsysfighter.c battleship_scsubsysdata.c
 endif
 CFILES += battleship_ifscreenflash.c
