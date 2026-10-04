@@ -2738,11 +2738,27 @@ s32 ndsRendererSubmitNativeRebirthHalo(
      * all eight AABB corners inside implies every enclosed source vertex is
      * inside.  Anything touching the danger band still falls back before GX. */
 #if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD
+#if NDS_R2_REBIRTH_HALO_SPLIT_MTX && !NDS_R2_REBIRTH_HALO_SPLIT_NOZ && \
+    !NDS_R2_REBIRTH_HALO_PACKED_PROJECTED && \
+    ((NDS_R2_REBIRTH_HALO_GX_GROUP_MASK & 0x3f) == 0x3f)
+    /* Split source matrices, natural Z, every group transformed by the GX:
+     * the hardware owns the multiply, divide and near-plane clip, and no CPU
+     * projection or synthetic depth is made, so the danger band does not
+     * exist on this route. A halo crossing the near plane (a 1P respawn right
+     * at the camera: Fox's Sector Z walk, 2026-10-04, 12 NO_PROGRAM failures
+     * over three frames) now draws as the N64 clips it instead of failing. */
+    if (ndsRendererRebirthHaloBoundsInsideNearPlane(
+            &state.matrix, &sNdsRebirthHaloRootBounds[root_bounds_index]) == FALSE)
+    {
+        gNdsRebirthHaloNearPlaneGxCount++;
+    }
+#else
     if (ndsRendererRebirthHaloBoundsInsideNearPlane(
             &state.matrix, &sNdsRebirthHaloRootBounds[root_bounds_index]) == FALSE)
     {
         return FALSE;
     }
+#endif
 #else
     for (group_index = first_group; group_index < last_group; group_index++)
     {

@@ -3184,6 +3184,9 @@ static u32 sNdsRendererRebirthHaloTextureName[NDS_REBIRTH_HALO_TEXTURE_COUNT];
 volatile u32 gNdsRebirthHaloFullOffloadRootCount;
 volatile u32 gNdsRebirthHaloFullOffloadBoundCornerCount;
 volatile u32 gNdsRebirthHaloFullOffloadBoundRejectCount;
+/* Roots whose bounds crossed the near plane and drew through the GX's own
+ * clip (the split-matrix route); the other routes still decline them. */
+volatile u32 gNdsRebirthHaloNearPlaneGxCount;
 #endif
 #endif
 static s32 sNdsRendererHardwareProjectedDepth =
