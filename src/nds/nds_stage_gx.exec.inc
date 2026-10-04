@@ -539,7 +539,16 @@ static sb32 ndsStageGxMaterial(u32 *dst, const NDSNativeStagePreparedRun *run,
     return TRUE;
 }
 
-#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+/* The stage hash below -- lab ROMs only, and not profile ROMs: hashing every
+ * FIFO word dominated the stage rows of the late-window lab profile. */
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP && \
+    !(defined(NDS_TASK37_PROFILE) && NDS_TASK37_PROFILE)
+#define NDS_LAB_STAGE_GX_HASH 1
+#else
+#define NDS_LAB_STAGE_GX_HASH 0
+#endif
+
+#if NDS_LAB_STAGE_GX_HASH
 /* LAB: every word the stage program sends to the FIFO, every span state and
  * each segment's closing depth and counters, hashed in order. Read and reset
  * once per logic frame by a gdb harness; the per-run loop and the segment fast
@@ -558,7 +567,7 @@ static inline void ndsLabStageGxHashWord(u32 w)
 static void ndsStageGxFlush(void)
 {
     if (sNdsStageGxWordCount == 0u) { return; }
-#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+#if NDS_LAB_STAGE_GX_HASH
     {
         u32 lab_i;
 
@@ -597,7 +606,7 @@ static void ndsStageGxFlush(void)
 static inline void ndsStageGxSetSpanState(u32 alpha,
                                           const NDSNativeStagePreparedRun *prepared)
 {
-#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+#if NDS_LAB_STAGE_GX_HASH
     gNdsLabStageGxStateHash = (gNdsLabStageGxStateHash ^ alpha) * 16777619u;
 #endif
     glEnable(GL_TEXTURE_2D);

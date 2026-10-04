@@ -5228,7 +5228,7 @@ stage_gx_fast_done:
 #endif
 #if NDS_TASK36_HW_COMPOSE == 2
     ndsStageGxFlush();
-#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+#if NDS_LAB_STAGE_GX_HASH
     /* LAB: the segment's closing painter state and counters (see
      * gNdsLabStageGxHash). */
     ndsLabStageGxHashWord((u32)sNdsRendererHardwareProjectedDepth);
