@@ -551,7 +551,9 @@ any of them (A1).
     counts divergences.
   - *Tolerance (D3):* exact for every discrete outcome. Continuous values fed back
     into simulation within 1/256 unit. Render-only values follow the visual
-    doctrine.
+    doctrine. *Exception (D13, 2026-10-04):* a deliberate float -> fixed
+    conversion of simulation math is held to mechanical equivalence instead and
+    re-baselines the digest (section 8).
 - **Visual.** Synchronised A/B captures and crops of changed geometry, with the
   owner as oracle.
 - **Memory.** Heap low-water, arena and pool high-waters per roster, at GO and at
@@ -1200,6 +1202,15 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   Dream Land's 606 COLOR commands repeated the last value; 5,589 -> 4,890
   words): gate 882,496/1,222,848, 209 over, paired median -2.1K, captures
   pixel-identical (`5c4c43cc242`, receipt `2026-10-04_attr-dedup`).
+- **10-04 development tallies out of the shipped configuration.** A late-window
+  lab profile (`sz-lateprof05`) put ~50.8K cycles a frame on lines that update
+  `gNds*` tallies read only by probes and verifiers, each a main-RAM
+  read-modify-write the 4 KB D-cache had evicted. 106 write-only sites go
+  through `NDS_DIAG(...)`, compiled out where `NDS_DIAG_COUNTERS` is 0 (the
+  published ROM and the gate; 1 elsewhere): gate 873,344/1,215,616, 199 over,
+  1,754/1,961 in two VBlanks, paired median -7.9K, digest identical
+  (`29b1e46c3ef`, receipt `2026-10-04_diag-out`). ~19K cycles of tallies whose
+  names some code reads still need a per-name review.
 
 ## 7. Found along the way
 
@@ -1271,13 +1282,27 @@ time and fine tick-HUD timer reads); (b) particle/effect LOD in heavy frames,
 render only; (c) stage background LOD on VS stages; (d) CPU AI decisions at
 30 Hz (changes CPU behaviour and the replay digest; humans unaffected).
 
+**Owner ruling, 2026-10-04 (D13): float -> fixed point is an acceptable
+compromise, game-rule code included** (physics, animation, collision, AI).
+PROJECT_GOAL's mechanical equivalence governs ("bit-exact or numerically
+identical execution is not" required). This resolves three conflicting
+statements: the /goal guardrail "game rules stay source code" (ACTIVE_GOAL.md),
+the done criterion "replay digest identical", and section 5's D3 tolerance
+"exact for every discrete outcome". For a float -> fixed conversion: the
+converted math lives in port code (decomp/ stays read-only); the conversion
+re-baselines the replay digest, which then stays the exact gate for every later
+change; discrete outcomes need mechanical equivalence, not identity. As with
+every lane, the conversion ships only if it measures cheaper (the losing pattern
+is a leaf swap that pays float<->fixed edges at its boundary; whole chains with
+fixed-point state are the candidates).
+
 ## 9. The owner's compromise list, mapped
 
 | Item | Where it lands | Weight for the gate |
 |---|---|---|
 | 1 Core performance model | A6 | Medium |
 | 2 DS-native implementation | A1, A3, A4, A8 | High |
-| 3 Numeric precision | A3/A5 whole chains, never leaves | Medium-high |
+| 3 Numeric precision | A3/A5 whole chains, never leaves; D13: simulation math may go fixed point (digest re-baselined) | Medium-high |
 | 4 Precomputation/baking | A1, A2, A4, A5 | High |
 | 5 Runtime specialization | per-fighter/stage lists; per-stage collision and actors | Medium |
 | 6 Reduced genericity | fixed pools and slot limits | Medium |
