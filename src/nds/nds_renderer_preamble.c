@@ -3189,6 +3189,9 @@ volatile u32 gNdsRebirthHaloFullOffloadBoundRejectCount;
 volatile u32 gNdsRebirthHaloNearPlaneGxCount;
 #endif
 #endif
+/* Visual-effect template triangles that crossed the near plane and went to the
+ * clipper (a wholly-behind one fans nothing) instead of declining the owner. */
+volatile u32 gNdsVisualEffectNearClipCount;
 static s32 sNdsRendererHardwareProjectedDepth =
     NDS_RENDERER_HW_PROJECTED_DEPTH_BACKGROUND_START;
 static u32 sNdsRendererHardwareProjectedBackground = TRUE;

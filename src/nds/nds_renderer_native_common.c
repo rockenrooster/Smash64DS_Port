@@ -1679,6 +1679,7 @@ s32 ndsRendererSubmitNativeVisualEffect(
     u32 vertex_count;
     u32 triangle_count;
     u32 required_mask;
+    u32 inside_mask;
     u32 poly_alpha;
     v16 projected_x[16];
     v16 projected_y[16];
@@ -1721,10 +1722,12 @@ s32 ndsRendererSubmitNativeVisualEffect(
         return FALSE;
     }
 
-    /* Transform once, and reject before touching GX if any corner needs near
-     * clipping. There is no generic fallback behind this owner, so the decline
-     * is reported by the caller as a native failure, never as an empty draw. */
+    /* Transform once. A corner across the near plane is clipped below as the
+     * RSP clips it: the 1P camera can sit inside a dust puff (Fox's Sector Z
+     * walk, 2026-10-04: 12 frames of REJECTED_PROGRAM when this owner still
+     * declined). Only the inside corners are divided. */
     required_mask = (1u << vertex_count) - 1u;
+    inside_mask = 0u;
     for (i = 0u; i < vertex_count; i++)
     {
         u32 mask = 1u << i;
@@ -1734,17 +1737,25 @@ s32 ndsRendererSubmitNativeVisualEffect(
         state.input_vertex_valid_mask |= mask;
         state.current_transform_vertex_mask |= mask;
         ndsRendererTransformVertex20p12(&state.matrix, &vertices[i], out);
-        if (ndsRendererHardwareClipZWInsideNearPlane(out->z, out->w) == FALSE)
+        if (ndsRendererHardwareClipZWInsideNearPlane(out->z, out->w) != FALSE)
         {
+            /* One perspective divide per UNIQUE vertex. The star fan reuses
+             * its centre eight times and the ring reuses every corner three
+             * times, so per-corner division would cost 24 and 48 divides
+             * against 9 and 16. */
+            projected_x[i] = ndsRendererHardwareProjectToV16(
+                (s64)out->x * NDS_RENDERER_HW_PROJECTED_VERTEX, out->w);
+            projected_y[i] = ndsRendererHardwareProjectToV16(
+                (s64)out->y * NDS_RENDERER_HW_PROJECTED_VERTEX, out->w);
+            inside_mask |= mask;
+        }
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        else
+        {
+            /* The clipper is not built at this profile level. */
             return FALSE;
         }
-        /* One perspective divide per UNIQUE vertex. The star fan reuses its
-         * centre eight times and the ring reuses every corner three times, so
-         * per-corner division would cost 24 and 48 divides against 9 and 16. */
-        projected_x[i] = ndsRendererHardwareProjectToV16(
-            (s64)out->x * NDS_RENDERER_HW_PROJECTED_VERTEX, out->w);
-        projected_y[i] = ndsRendererHardwareProjectToV16(
-            (s64)out->y * NDS_RENDERER_HW_PROJECTED_VERTEX, out->w);
+#endif
         state.vertex_valid_mask |= mask;
         stats->matrix_transform_count++;
         stats->transformed_vertex_count++;
@@ -1824,7 +1835,30 @@ s32 ndsRendererSubmitNativeVisualEffect(
         const u8 *tri = &indices[i * 3u];
         s32 depth = ndsRendererHardwareNextProjectedDepth();
         u32 corner;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        u32 tri_mask = (1u << tri[0]) | (1u << tri[1]) | (1u << tri[2]);
 
+        if ((inside_mask & tri_mask) != tri_mask)
+        {
+            /* The fighter path's clipper: the front part fans at this
+             * triangle's painter depth, which its NDC-depth emitter writes
+             * exactly as the loop below does. */
+            u32 fanned = ndsRendererHardwareSubmitNearClippedTriangle(
+                stats, &state, (u32)tri[0], (u32)tri[1], (u32)tri[2], depth);
+
+            gNdsVisualEffectNearClipCount++;
+            if (fanned != 0u)
+            {
+                sNdsRendererHardwareSubmitted = TRUE;
+            }
+            stats->triangle_count++;
+            stats->transformed_triangle_count++;
+            stats->hardware_triangle_count += fanned;
+            stats->hardware_vertex_count += fanned * 3u;
+            stats->hardware_projected_depth_triangle_count += fanned;
+            continue;
+        }
+#endif
         for (corner = 0u; corner < 3u; corner++)
         {
             u32 index = (u32)tri[corner];

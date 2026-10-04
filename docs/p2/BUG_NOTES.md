@@ -7151,3 +7151,21 @@ routes, but the shipping route (split matrices, natural Z, every group on the GX
 hardware. On that route the preflight now only counts (`gNdsRebirthHaloNearPlaneGxCount`).
 A walk rerun showed no near-plane halo (inputs follow presented frames, which the perf work
 moved), so the count is the witness to read on the next sweep.
+
+## V1 Dust template REJECTED_PROGRAM beside the 1P camera (walk sweep all6, 2026-10-04, FIXED)
+
+The all6 sweep (H1's fix in) still logged 12 stage failures on Fox's Sector Z stage, now
+REJECTED_PROGRAM. A replay of the sweep's walk from boot (same ROM, same gdb lines) hit them
+at presented frames 319-330; a direct stage-2 start did not (the RNG and the walk inputs run
+from boot). Each was the visual-effect fast lane (`ndsRendererAdapterSubmitStageDLFast`,
+route VISUAL): GObj kind 1011 (effect), an arena list (`D9000000 00000004`, texture off, 7
+vertices, six TRI2 fans = the Dust template), declined by `ndsRendererSubmitNativeVisualEffect`.
+Camera eye (-1351, 2014, 1766), at (-2547, 1958, 0), near 256; the puff (742.7, 2105.2, 84.7,
+scale 0.67/0.48) sat 215 units ahead of the eye and ~2,680 to its side -- off screen -- so its
+corners straddled the near plane and the owner returned FALSE before any GX write.
+
+The RSP clips those triangles. The owner now divides only the inside corners and sends a
+crossing triangle to `ndsRendererHardwareSubmitNearClippedTriangle` (the fighter path's
+clipper) at its own painter depth, which the clipper's NDC-depth emitter writes exactly as the
+inside loop does. Witness `gNdsVisualEffectNearClipCount`: the walk-all7 Fox walk reached stage
+3 with 0 failures and 72 clipped triangles (12 frames x 6).
