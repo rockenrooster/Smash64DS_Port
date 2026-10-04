@@ -137,6 +137,21 @@ extern volatile u32 gNdsFrameCounter;
  * a device or in a screenshot. */
 #define NDS_BATTLE_TICK_HUD_DRAW_ENABLED \
     (NDS_BATTLE_TICK_HUD_ENABLED && NDS_TICK_HUD_DRAW)
+/* P2-2p8 (2026-10-04): the developer FPS console's periodic text (the FPS/UP,
+ * SLIP, VBI and GIT rows: about five iprintf lines through the libnds console
+ * every half second, +25-40K ticks on one presented frame in fifteen) is A9
+ * instrument cost in a scripted measurement: the GDB sampler reads the pacing
+ * counters and the tick ring, never the console. NDS_BATTLE_FPS_HUD_DRAW=0
+ * (the four-CPU gate target) keeps the sampling, the published FPS group and
+ * the one clear at match start, and skips the periodic console writes. */
+#if NDS_BATTLE_FPS_HUD_DRAW
+#define NDS_BATTLE_FPS_HUD_PRINT(...) ndsPlatformPrintDebugLine(__VA_ARGS__)
+#else
+#define NDS_BATTLE_FPS_HUD_PRINT(...) ((void)0)
+#endif
+#if (NDS_R2_CAMERA_FIXED_TOGGLE || NDS_LAB_NO_CULL) && !NDS_BATTLE_FPS_HUD_DRAW
+#error "the camera and seam arm indicators print into the FPS console"
+#endif
 #if NDS_R2_CAMERA_FIXED_TOGGLE && !NDS_BATTLE_FPS_HUD_ENABLED
 /* The indicator draws into the battle FPS HUD's console. Without it the owner
  * could flip the camera arm and have no way to tell which one is on screen,
@@ -3598,10 +3613,10 @@ static void ndsPlatformRenderBattleFpsHud(void)
         gNdsBattlePlayableHudFpsTickWindow = 0u;
         ndsPlatformPublishBattleFpsHudGroup();
         consoleClear();
-        ndsPlatformPrintDebugLine(0u, "FPS --.-  UP --.-");
+        NDS_BATTLE_FPS_HUD_PRINT(0u, "FPS --.-  UP --.-");
 #if NDS_BATTLE_PHASE_HUD_ENABLED
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
-        ndsPlatformPrintDebugLine(11u, "FX 0/0/0 E0 A0");
+        NDS_BATTLE_FPS_HUD_PRINT(11u, "FX 0/0/0 E0 A0");
 #endif
         sBattlePhaseHudLastSlipCount =
             gNdsBattlePlayablePacingCadenceViolationCount;
@@ -3610,19 +3625,19 @@ static void ndsPlatformRenderBattleFpsHud(void)
         sBattlePhaseHudActiveTickSum = 0u;
         sBattlePhaseHudLoopTickSum = 0u;
         sBattlePhaseHudAvgSampleCount = 0u;
-        ndsPlatformPrintDebugLine(12u, "UPD        --");
-        ndsPlatformPrintDebugLine(13u, "DRW        --");
-        ndsPlatformPrintDebugLine(14u, "ACT        --");
-        ndsPlatformPrintDebugLine(15u, "LOOP       --");
+        NDS_BATTLE_FPS_HUD_PRINT(12u, "UPD        --");
+        NDS_BATTLE_FPS_HUD_PRINT(13u, "DRW        --");
+        NDS_BATTLE_FPS_HUD_PRINT(14u, "ACT        --");
+        NDS_BATTLE_FPS_HUD_PRINT(15u, "LOOP       --");
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && NDS_RENDERER_M3_PHASE0_PROFILE
-        ndsPlatformPrintDebugLine(16u, "PRE        --");
-        ndsPlatformPrintDebugLine(17u, "PRP        --");
-        ndsPlatformPrintDebugLine(18u, "CMT        --");
+        NDS_BATTLE_FPS_HUD_PRINT(16u, "PRE        --");
+        NDS_BATTLE_FPS_HUD_PRINT(17u, "PRP        --");
+        NDS_BATTLE_FPS_HUD_PRINT(18u, "CMT        --");
 #endif
-        ndsPlatformPrintDebugLine(19u, "SLIP        0");
-        ndsPlatformPrintDebugLine(21u, "VBI  --  --  --");
-        ndsPlatformPrintDebugLine(22u, "5+  --  max --  BGM --/--");
-        ndsPlatformPrintDebugLine(
+        NDS_BATTLE_FPS_HUD_PRINT(19u, "SLIP        0");
+        NDS_BATTLE_FPS_HUD_PRINT(21u, "VBI  --  --  --");
+        NDS_BATTLE_FPS_HUD_PRINT(22u, "5+  --  max --  BGM --/--");
+        NDS_BATTLE_FPS_HUD_PRINT(
 #if NDS_TASK36_HW_COMPOSE
             23u, "GIT %s HC%lu R%lu F%lu", NDS_TASK10_GIT_SHORT,
             (unsigned long)gNdsRendererTask36HardwareComposedDObjCount,
@@ -3644,7 +3659,7 @@ static void ndsPlatformRenderBattleFpsHud(void)
 
             for (bucket = 0u; bucket < nNDSTickHudBucketDisplayCount; bucket++)
             {
-                ndsPlatformPrintDebugLine(11u + bucket, "%s      --       --",
+                NDS_BATTLE_FPS_HUD_PRINT(11u + bucket, "%s      --       --",
                                           sBattleTickHudNames[bucket]);
             }
         }
@@ -3653,10 +3668,10 @@ static void ndsPlatformRenderBattleFpsHud(void)
          * it earns the last row the console has; the two columns are still P50
          * then P95, as every row above it. n is the live window depth, so a
          * reading taken before it reaches 128 is visibly partial. */
-        ndsPlatformPrintDebugLine(20u, "WORK      --       -- n:0");
-        ndsPlatformPrintDebugLine(21u, "VBI  --  --  --");
-        ndsPlatformPrintDebugLine(22u, "5+  --  max --");
-        ndsPlatformPrintDebugLine(23u, "GIT %s TICKHUD", NDS_TASK10_GIT_SHORT);
+        NDS_BATTLE_FPS_HUD_PRINT(20u, "WORK      --       -- n:0");
+        NDS_BATTLE_FPS_HUD_PRINT(21u, "VBI  --  --  --");
+        NDS_BATTLE_FPS_HUD_PRINT(22u, "5+  --  max --");
+        NDS_BATTLE_FPS_HUD_PRINT(23u, "GIT %s TICKHUD", NDS_TASK10_GIT_SHORT);
 #endif
         return;
     }
@@ -3743,20 +3758,20 @@ static void ndsPlatformRenderBattleFpsHud(void)
         sBattlePhaseHudAvgSampleCount++;
         avg_count = sBattlePhaseHudAvgSampleCount;
 
-        ndsPlatformPrintDebugLine(
+        NDS_BATTLE_FPS_HUD_PRINT(
             12u, "UPD %8lu %8lu", (unsigned long)upd_ticks,
             (unsigned long)(sBattlePhaseHudUpdTickSum / avg_count));
-        ndsPlatformPrintDebugLine(
+        NDS_BATTLE_FPS_HUD_PRINT(
             13u, "DRW %8lu %8lu", (unsigned long)drw_ticks,
             (unsigned long)(sBattlePhaseHudDrawTickSum / avg_count));
-        ndsPlatformPrintDebugLine(
+        NDS_BATTLE_FPS_HUD_PRINT(
             14u, "ACT %8lu %8lu", (unsigned long)act_ticks,
             (unsigned long)(sBattlePhaseHudActiveTickSum / avg_count));
-        ndsPlatformPrintDebugLine(
+        NDS_BATTLE_FPS_HUD_PRINT(
             15u, "LOOP%8lu %8lu", (unsigned long)loop_ticks,
             (unsigned long)(sBattlePhaseHudLoopTickSum / avg_count));
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
-        ndsPlatformPrintDebugLine(
+        NDS_BATTLE_FPS_HUD_PRINT(
             11u, "FX %lu/%lu/%lu E%lx A%lu",
             (unsigned long)gNdsTask39FxSpawnTicks,
             (unsigned long)gNdsTask39FxUpdateTicks,
@@ -3766,17 +3781,17 @@ static void ndsPlatformRenderBattleFpsHud(void)
 #endif
     }
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && NDS_RENDERER_M3_PHASE0_PROFILE
-    ndsPlatformPrintDebugLine(
+    NDS_BATTLE_FPS_HUD_PRINT(
         16u, "PRE %10lu",
         (unsigned long)gNdsRendererM3Phase0PreflightTicks);
-    ndsPlatformPrintDebugLine(
+    NDS_BATTLE_FPS_HUD_PRINT(
         17u, "PRP %10lu",
         (unsigned long)gNdsRendererM3Phase0PrepareRunTicks);
-    ndsPlatformPrintDebugLine(
+    NDS_BATTLE_FPS_HUD_PRINT(
         18u, "CMT %10lu",
         (unsigned long)gNdsRendererM3Phase0CommitTicks);
 #endif
-    ndsPlatformPrintDebugLine(
+    NDS_BATTLE_FPS_HUD_PRINT(
         19u, "SLIP%10lu",
         (unsigned long)(gNdsBattlePlayablePacingCadenceViolationCount -
                         sBattlePhaseHudLastSlipCount));
@@ -3785,12 +3800,12 @@ static void ndsPlatformRenderBattleFpsHud(void)
     /* Presentation-interval histogram, cumulative since HUD reset. Device A/B
      * reports read this, never min FPS, because one frame crossing the 4->5
      * VBlank boundary reads as 12 FPS while the histogram stays continuous. */
-    ndsPlatformPrintDebugLine(
+    NDS_BATTLE_FPS_HUD_PRINT(
         21u, "VBI 2:%-5lu 3:%-5lu 4:%-5lu",
         (unsigned long)gNdsBattlePlayablePacingPresentIntervalBucket[2u],
         (unsigned long)gNdsBattlePlayablePacingPresentIntervalBucket[3u],
         (unsigned long)gNdsBattlePlayablePacingPresentIntervalBucket[4u]);
-    ndsPlatformPrintDebugLine(
+    NDS_BATTLE_FPS_HUD_PRINT(
         22u, "5+:%-5lu max:%lu BGM %lu/%lu",
         (unsigned long)gNdsBattlePlayablePacingPresentIntervalBucket[
             NDS_BATTLE_PLAYABLE_PACING_INTERVAL_BUCKET_5PLUS],
@@ -3804,7 +3819,7 @@ static void ndsPlatformRenderBattleFpsHud(void)
 #endif
         );
 #if NDS_TASK36_HW_COMPOSE
-    ndsPlatformPrintDebugLine(
+    NDS_BATTLE_FPS_HUD_PRINT(
         23u, "GIT %s HC%lu R%lu F%lu", NDS_TASK10_GIT_SHORT,
         (unsigned long)gNdsRendererTask36HardwareComposedDObjCount,
         (unsigned long)(gNdsRendererTask36AdapterRejectReason |
@@ -3840,14 +3855,14 @@ static void ndsPlatformRenderBattleFpsHud(void)
                  * WORK, so nothing is actually hidden. */
                 if (bucket < (u32)nNDSTickHudBucketDisplayCount)
                 {
-                    ndsPlatformPrintDebugLine(
+                    NDS_BATTLE_FPS_HUD_PRINT(
                         11u + bucket, "%s%8lu %8lu",
                         sBattleTickHudNames[bucket],
                         (unsigned long)sBattleTickHudP50[bucket],
                         (unsigned long)sBattleTickHudP95[bucket]);
                 }
             }
-            ndsPlatformPrintDebugLine(
+            NDS_BATTLE_FPS_HUD_PRINT(
                 20u, "WORK%8lu %8lu n:%lu",
                 (unsigned long)sBattleTickHudP50[nNDSTickHudBucketWork],
                 (unsigned long)sBattleTickHudP95[nNDSTickHudBucketWork],
@@ -3856,12 +3871,12 @@ static void ndsPlatformRenderBattleFpsHud(void)
              * Device A/B reports read this, never min FPS, because one frame
              * crossing the 4->5 VBlank boundary reads as 12 FPS while the
              * histogram stays continuous. */
-            ndsPlatformPrintDebugLine(
+            NDS_BATTLE_FPS_HUD_PRINT(
                 21u, "VBI 2:%-5lu 3:%-5lu 4:%-5lu",
                 (unsigned long)gNdsBattlePlayablePacingPresentIntervalBucket[2u],
                 (unsigned long)gNdsBattlePlayablePacingPresentIntervalBucket[3u],
                 (unsigned long)gNdsBattlePlayablePacingPresentIntervalBucket[4u]);
-            ndsPlatformPrintDebugLine(
+            NDS_BATTLE_FPS_HUD_PRINT(
                 22u, "5+:%-5lu max:%lu",
                 (unsigned long)gNdsBattlePlayablePacingPresentIntervalBucket[
                     NDS_BATTLE_PLAYABLE_PACING_INTERVAL_BUCKET_5PLUS],
@@ -3876,7 +3891,7 @@ static void ndsPlatformRenderBattleFpsHud(void)
              * exist in a profile-0 build. Everything printed below is either a
              * compile-time constant or an unguarded global, so this row costs
              * the lean build nothing and cannot go stale against the flags. */
-            ndsPlatformPrintDebugLine(
+            NDS_BATTLE_FPS_HUD_PRINT(
                 23u, "GIT %s A%lx S%u C%u L%u", NDS_TASK10_GIT_SHORT,
                 (unsigned long)(gNdsTaskmanArenaChosenSize >> 12),
                 (unsigned int)NDS_TASK44_STAGE_STEADY,
@@ -3893,7 +3908,7 @@ static void ndsPlatformRenderBattleFpsHud(void)
     {
         sBattleFpsHudPrintedFpsX10 = fps_x10;
         sBattleFpsHudPrintedUpdatesX10 = updates_x10;
-        ndsPlatformPrintDebugLine(0u, "FPS %lu.%lu  UP %lu.%lu",
+        NDS_BATTLE_FPS_HUD_PRINT(0u, "FPS %lu.%lu  UP %lu.%lu",
                                   (unsigned long)(fps_x10 / 10u),
                                    (unsigned long)(fps_x10 % 10u),
                                    (unsigned long)(updates_x10 / 10u),
@@ -3909,7 +3924,7 @@ static void ndsPlatformRenderBattleFpsHud(void)
         if (arm != sBattleCameraArmPrinted)
         {
             sBattleCameraArmPrinted = arm;
-            ndsPlatformPrintDebugLine(
+            NDS_BATTLE_FPS_HUD_PRINT(
                 3u, (arm != 0u) ? "CAM  FIXED Q20.12  [SELECT]"
                                 : "CAM  FLOAT shipping[SELECT]");
         }
@@ -3942,7 +3957,7 @@ static void ndsPlatformRenderBattleFpsHud(void)
         if (arm != sBattleSeamArmPrinted)
         {
             sBattleSeamArmPrinted = arm;
-            ndsPlatformPrintDebugLine(
+            NDS_BATTLE_FPS_HUD_PRINT(
                 3u, "%s", seam_arm_names[arm % seam_arm_count]);
         }
     }

@@ -1795,6 +1795,10 @@ NDS_R2_FIGHTER_SHUFFLE_FOLD ?= 0
 # with this off -- and off is the configuration that resembles the published
 # ROM, which has no such block. On for a device read or a screenshot.
 NDS_TICK_HUD_DRAW ?= 1
+# P2-2p8 (2026-10-04): the developer FPS console's periodic rows (FPS/UP, SLIP,
+# VBI, GIT) beside it, same reasoning: the sampler reads the counters, never
+# the console text (src/nds/nds_platform.c).
+NDS_BATTLE_FPS_HUD_DRAW ?= 1
 # R2-03 E28 control arm. E16 left the software light preparation
 # (ndsRendererHardwarePrepareLitDirection's transform + sqrt + three divides,
 # and the shade LUT) running per lit epoch even though the hardware path skips
@@ -3025,6 +3029,9 @@ override NDS_R2_EFFECT_POOL := 38
 # on exactly the frames P95 is decided on -- and the GDB sampler reads the ring,
 # never the printed table. The published ROM has no such block.
 override NDS_TICK_HUD_DRAW := 0
+# The FPS console's periodic text, the same A9 class: five iprintf lines every
+# half second, +25-40K ticks on one presented frame in fifteen.
+override NDS_BATTLE_FPS_HUD_DRAW := 0
 ifeq ($(NDS_P2_FOUR_CPU_ROSTER),1)
 # P2-3r15: THIS IS NOW THE DEFAULT ARM, not the lab arm -- the flag defaults to
 # 1 on this target (see its declaration above). `NDS_P2_FOUR_CPU_ROSTER=0`
@@ -7248,6 +7255,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_FIGHTER_HW_LIGHT $(NDS_R2_FIGHTER_HW_LIGHT)'; \
 		echo '#define NDS_R2_FIGHTER_SOFT_LIGHT_KEEP $(NDS_R2_FIGHTER_SOFT_LIGHT_KEEP)'; \
 		echo '#define NDS_TICK_HUD_DRAW $(NDS_TICK_HUD_DRAW)'; \
+		echo '#define NDS_BATTLE_FPS_HUD_DRAW $(NDS_BATTLE_FPS_HUD_DRAW)'; \
 		echo '#define NDS_R2_FIGHTER_SHUFFLE_FOLD $(NDS_R2_FIGHTER_SHUFFLE_FOLD)'; \
 		echo '#define NDS_R2_FIGHTER_EPOCH_STATE_PROOF $(NDS_R2_FIGHTER_EPOCH_STATE_PROOF)'; \
 		echo '#define NDS_R2_FIGHTER_SHADE_SKIP $(NDS_R2_FIGHTER_SHADE_SKIP)'; \
