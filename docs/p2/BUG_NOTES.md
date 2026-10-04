@@ -7116,7 +7116,7 @@ graphics sizes, the transient admit, semi-transparent OBJs in prim colour, and
 the fades as the 2D blend from the source alphas. Evidence
 `artifacts/bugs/2026-10-04_continue-sprites/README.md`; commit `979102bf1f9`.
 
-## F1 Fire Flower head (owner row "not rendering correctly", 2026-10-04, OPEN)
+## F1 Fire Flower head (owner row "not rendering correctly", 2026-10-04, FIXED `51789f8726c`)
 
 The item is two roots of file 86: the stem (0x4520 -> callee 0x4578, three
 leaves at 120 degrees, its own CI4 TLUT) and the head (0x4608, a 178x130 quad
@@ -7131,3 +7131,23 @@ palette), not tile 5's TMEM, so the inherited tile is not the cause. gdb
 reads of the submit's stack arguments are stale on the cache fork; the next
 step is a lab witness flushed from the head's submit (texture name, tile 0,
 TLUT image/count, the MVP) or a close-up capture.
+
+Update (same day): the witness at each root's emit showed the head placed and textured
+correctly but with geometry mode 0x00220405 (lighting, smooth, back-face cull) against the
+stem's 0x00000005: `ndsRendererInitTraversalState` re-seeds the display's initial mode for
+every root, so the head lost the stem's word-8 clear it inherits on the N64. The head's bake
+now applies that word again. Audit of the wave-1 item generator: no other root draws without
+its own geometry mode after a sibling changed it (Star Rod's and the stem's callees share
+their root's state; Taru is a single root). The baked-item table
+(`generate_nds_native_item_baked.py`) is unaudited for the same pattern.
+
+## H1 Respawn halo NO_PROGRAM at the 1P camera (walk sweep, 2026-10-04, FIXED `cd27927037b`)
+
+Fox's Sector Z stage (1P stage 2) recorded 12 failures over three frames: EFCommonEffects3
+roots 0x2378 and 0x2a88 (RebirthHalo, DLLink 0x2A98), reason NO_PROGRAM from the stage DL
+body after `ndsRendererSubmitNativeRebirthHalo` declined. Its full-offload preflight refuses
+any root whose AABB touches the near plane; that guards the CPU-projected and synthetic-Z
+routes, but the shipping route (split matrices, natural Z, every group on the GX) clips in
+hardware. On that route the preflight now only counts (`gNdsRebirthHaloNearPlaneGxCount`).
+A walk rerun showed no near-plane halo (inputs follow presented frames, which the perf work
+moved), so the count is the witness to read on the next sweep.
