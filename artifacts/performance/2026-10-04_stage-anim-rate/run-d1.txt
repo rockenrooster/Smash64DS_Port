@@ -1,0 +1,45 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,864; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 106: ALL 5,311,168 -> 1,116,864, 4 bucket(s) corrected
+Wrote artifacts/performance/2026-10-04_stage-anim-rate/gate-d1.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=545f4c30d98+dirty(15) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,864     1,677,056      1.50  1,180,149     1,111,936  4,733,952      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,608        10,304      2.24      5,568         2,432     27,584        0.4
+HUD         9,472        24,704      2.61     11,590         7,872    850,112        0.8
+SRC       388,864       604,928      1.56    400,336       146,880  1,411,392       34.8
+MISC      438,592       610,048      1.39    448,787       192,320  3,264,832       39.3
+OTHR      296,256       590,976      1.99    313,868        25,280    764,864       26.5
+WAIT      273,344       566,272      2.07    291,447         4,480    744,064       24.5
+WORK      870,336     1,209,152      1.39    884,775       369,920  4,399,040       77.9
+SHDT            0             0      0.00          0             0          0        0.0
+SWRM        1,344         1,408      1.05      1,346           768      3,392        0.1
+GCRA      383,424       599,680      1.56    394,946       142,528  1,406,016       34.3
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        751             0  1,386,496        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      438,400       609,856      1.39    448,630       192,128  3,264,640       39.3
+MFLS          128           192      1.50        158           128        192        0.0
+GPOL          597           643      1.08        551            29        675        0.1
+GVTX        1,439         1,569      1.09      1,346            96      1,660        0.1
+DGSA   2,221,927,571 4,052,476,767        2,144,070,467    408,983 4,294,514,885 198,943.4
+DGSB   2,229,679,774 4,052,096,565        2,163,259,781    888,730 4,293,852,712 199,637.5
+WORK-H    859,968     1,193,792      1.39    873,185       360,832  3,548,928       77.0
+
+named=866,281 (73.4% of ALL)  VBI 2:1757 3:190 4:13 5+:1 max:9 total:1961  slips=0
+Wrote artifacts/performance/2026-10-04_stage-anim-rate/gate-d1.json

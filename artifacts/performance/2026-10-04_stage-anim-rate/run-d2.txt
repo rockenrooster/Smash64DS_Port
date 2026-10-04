@@ -1,0 +1,46 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 2 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,928; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 614: ALL 5,311,616 -> 1,117,312, 3 bucket(s) corrected
+  frame 1370: ALL 5,311,808 -> 1,117,504, 3 bucket(s) corrected
+Wrote artifacts/performance/2026-10-04_stage-anim-rate/gate-d2.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=545f4c30d98+dirty(16) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,928     1,677,184      1.50  1,199,299     1,111,808  4,733,824      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         5,376        10,880      2.02      5,878         2,432     29,376        0.5
+HUD         9,408        24,576      2.61     12,517         7,936    849,280        0.8
+SRC       422,976       642,880      1.52    428,535       143,104    985,728       37.9
+MISC      450,624       608,704      1.35    460,392       192,448  3,267,328       40.3
+OTHR      264,448       599,808      2.27    291,977        24,576    768,128       23.7
+WAIT      242,176       575,168      2.38    269,712         3,072    747,776       21.7
+WORK      921,664     1,257,408      1.36    925,678       365,568  4,400,256       82.5
+SHDT            0             0      0.00          0             0          0        0.0
+SWRM        1,344         1,408      1.05      1,347           768      3,456        0.1
+GCRA      417,536       637,696      1.53    423,149       138,560    980,288       37.4
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        840             0  1,386,496        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      450,496       608,512      1.35    460,236       192,320  3,267,200       40.3
+MFLS          128           192      1.50        157           128        192        0.0
+GPOL          577           652      1.13        538            29        689        0.1
+GVTX        1,387         1,580      1.14      1,302            96      1,672        0.1
+DGSA   2,306,517,556 4,067,246,400        2,227,147,834  4,192,997 4,294,186,857 206,505.5
+DGSB   2,257,420,521 4,026,148,207        2,184,783,005    893,392 4,294,559,673 202,109.8
+WORK-H    910,080     1,236,096      1.36    913,161       357,504  3,550,976       81.5
+
+named=907,322 (75.7% of ALL)  VBI 2:1685 3:267 4:8 5+:1 max:9 total:1961  slips=0
+Wrote artifacts/performance/2026-10-04_stage-anim-rate/gate-d2.json

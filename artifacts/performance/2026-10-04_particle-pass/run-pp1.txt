@@ -1,0 +1,46 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 2 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,864; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 1505: ALL 5,311,360 -> 1,117,056, 4 bucket(s) corrected
+  frame 1561: ALL 5,871,616 -> 1,677,312, 4 bucket(s) corrected
+Wrote artifacts/performance/2026-10-04_particle-pass/gate-pp1.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=545f4c30d98+dirty(15) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,864     1,677,056      1.50  1,177,228     1,112,704  4,606,912      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,608        10,304      2.24      5,582         2,432     27,904        0.4
+HUD         9,280        24,448      2.63     11,305         7,872    717,760        0.8
+SRC       388,096       604,672      1.56    399,990       146,432  1,419,264       34.7
+MISC      432,896       604,096      1.40    442,446       183,872  3,272,576       38.8
+OTHR      301,952       599,168      1.98    317,905        24,384    776,320       27.0
+WAIT      278,912       573,568      2.06    295,438         2,304    752,128       25.0
+WORK      864,128     1,194,112      1.38    877,851       361,856  4,273,600       77.4
+SHDT            0             0      0.00          0             0          0        0.0
+SWRM        1,344         1,408      1.05      1,342           768      3,328        0.1
+GCRA      382,912       599,296      1.57    394,626       141,952  1,413,888       34.3
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        751             0  1,386,048        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      432,768       603,904      1.40    442,290       183,680  3,272,384       38.7
+MFLS          128           192      1.50        156           128        512        0.0
+GPOL          597           643      1.08        551            29        675        0.1
+GVTX        1,439         1,569      1.09      1,346            96      1,660        0.1
+DGSA   2,221,927,571 4,052,476,767        2,144,070,467    408,983 4,294,514,885 198,943.4
+DGSB   2,229,679,774 4,052,096,565        2,163,259,781    888,730 4,293,852,712 199,637.5
+WORK-H    853,184     1,183,296      1.39    866,546       353,536  3,555,840       76.4
+
+named=859,323 (73.0% of ALL)  VBI 2:1767 3:180 4:13 5+:1 max:9 total:1961  slips=0
+Wrote artifacts/performance/2026-10-04_particle-pass/gate-pp1.json

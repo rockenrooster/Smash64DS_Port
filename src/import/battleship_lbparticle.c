@@ -4443,6 +4443,32 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
         }
     }
 #endif
+    /* P2-2p8 (2026-10-04): efDisplayInitAll makes four particle passes a
+     * frame (links {0, 2}, {1}, {3}, {4}), and each paid the atlas, camera
+     * and Whispy setup below (~5K cycles) before finding its links empty.
+     * A pass whose links hold no particle draws nothing; the link-0 pass also
+     * owns the Fox glow and FireGrind pools, so only the other passes return
+     * here. */
+    if ((gobj->camera_mask & (1u << 0u)) == 0u)
+    {
+        for (link = 0u; link < ARRAY_COUNT(sLBParticleStructsAllocLinks);
+             link++)
+        {
+            if (((gobj->camera_mask & (1u << link)) != 0u) &&
+                (sLBParticleStructsAllocLinks[link] != NULL))
+            {
+                break;
+            }
+        }
+        if (link == ARRAY_COUNT(sLBParticleStructsAllocLinks))
+        {
+#if NDS_TICK_HUD
+            gNdsMiscParticleDrawTicks +=
+                NDS_TICK_HUD_SPAN_CLOCK() - misc_particle_mark;
+#endif
+            return;
+        }
+    }
 #if NDS_R2_PARTICLE_DRAW
     atlas_name = ndsRendererHardwareParticleAtlasName();
 #if NDS_RENDERER_HW_TRIANGLES && NDS_R2_WHISPY_NATIVE_AOT
