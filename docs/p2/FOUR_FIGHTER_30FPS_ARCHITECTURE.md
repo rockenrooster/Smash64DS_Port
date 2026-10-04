@@ -1135,6 +1135,17 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   1,271,488, 288 over, 1,666/1,961 in two VBlanks. Receipts
   `2026-10-04_ndl-entry-hot`, `2026-10-04_capture-trim`,
   `2026-10-04_micro-copies`.
+- **10-04 ITCM fourth pack.** The wall sweep's slow path
+  (`ndsStageMPAdjustFloorLoopWallSweep`, 2,016 B, admitted 09-27 when every
+  sweep ran it) rents ~840 cycles a byte now that the all-reject fast path
+  answers first; it returns to main RAM and the fast path
+  (`ndsMPWallSweepStaticMiss`, census section D's first at ~11,200 non-mem
+  stall cycles a byte) and 24 more section D functions take the bytes by
+  name (`09dc70e015f`: P50/P95 925,376/1,273,664 -> 920,704/1,259,712, over
+  286 -> 280, 1,678/1,961 in two VBlanks, same-session baseline). Thunks
+  whose bodies the shipping ROM inlines stay off the name list (the first
+  pack overflowed the shipping link by 1,680 B). Receipt
+  `2026-10-04_itcm-pack4`.
 
 ## 7. Found along the way
 
