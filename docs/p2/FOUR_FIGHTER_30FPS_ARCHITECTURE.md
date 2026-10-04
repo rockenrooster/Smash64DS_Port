@@ -1102,6 +1102,21 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   diverged at frame 879 -- and culling the VS venues' stage segments
   (STG +17K). Receipts `2026-10-04_gate-head`, `2026-10-04_stage-segment-fast`,
   `2026-10-04_stage-camera-share`.
+- **10-04 the stage DL fast lane on the DTCM hot stack.** A late-window lab
+  profile (frames 1,200-1,840, `artifacts/task37-census/sz-lateprof01`)
+  charged the fast lane ~10 cycles an instruction: its owners' 3,000-byte
+  traversal states and its own frames lived on the main-RAM stack, and its
+  costliest rows were stack pops and frame loads. The lane now enters
+  through `ndsDtcmHotStackRun` (static reach 5,728 B of the 6,144 B stack,
+  lab high-water 5,136 B; calico runs IRQ handlers on their own stack):
+  gate P50/P95 946,304/1,309,184 -> 938,368/1,302,464, over 355 -> 330,
+  two VBlanks 1,597 -> 1,623 of 1,961, digest identical (`debe30ee031`;
+  lab item phase WORK mean -20.6K). The same profile's over-gate split puts
+  the remaining premium in hurtbox rejects (77K cycles in each of the 137
+  attack frames), soft float (~2.9K fadd and 2.2K fmul calls a frame),
+  status-change pose parses and effects; the frames that draw Samus's
+  Charge Shot (22% of the gate, 46% of them over) carry the combat around
+  it, not the shot. Receipt `2026-10-04_stage-dl-fast-hot`.
 
 ## 7. Found along the way
 
