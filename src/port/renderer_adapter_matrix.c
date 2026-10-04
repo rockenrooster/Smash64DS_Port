@@ -1786,6 +1786,10 @@ typedef struct NDSRendererAdapterNativeStageWorkspace
 {
     NDSRelocLoadedFile *loaded[NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT];
     GObj *segments[NDS_RENDERER_ADAPTER_STAGE_SEGMENT_COUNT];
+    /* One bit per non-NULL segments[] entry (NDS_STAGE_SEGMENT_BLOOM_BIT),
+     * rebuilt whenever segments[] is written: the display commit's
+     * no-false-negative pre-test for the camera loop's other GObjs. */
+    u32 segment_bloom;
     DObj *dobjs[NDS_RENDERER_ADAPTER_STAGE_DOBJ_COUNT];
     DObj *binding_dobjs[NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT];
     NDSRendererNativeStageDObj live_dobjs[

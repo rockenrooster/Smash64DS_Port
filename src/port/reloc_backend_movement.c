@@ -15535,6 +15535,12 @@ ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
             gNdsStageGCDrawAllLoopMapCaptureMask |= mask;
         }
     }
+    /* P2-2p8 (2026-10-04): the rest of this chain only counts which kind of
+     * GObj a non-stage display was -- no code reads those counters -- and it
+     * ran five recognisers (two of them DObj-tree walks) for every display
+     * GObj of every camera: ~8K cycles a frame in the late-match lab
+     * profile. Lab builds keep the census. */
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
     else if (ndsStageGCDrawAllLoopIsSelectedFighter(display) != FALSE)
     {
         gNdsStageGCDrawAllLoopFighterDisplayCallbackCount++;
@@ -15567,6 +15573,7 @@ ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
     {
         gNdsStageGCDrawAllLoopNonStageCaptureCount++;
     }
+#endif
 #if NDS_RENDERER_HW_TRIANGLES
     if (sNdsStageGCDrawAllLoopNativeStageArmed != FALSE)
     {

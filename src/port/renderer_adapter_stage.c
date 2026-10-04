@@ -3995,7 +3995,34 @@ static sb32 ndsRendererAdapterNativeStageSegmentsUnchanged(
 }
 #endif
 
+#define NDS_STAGE_SEGMENT_BLOOM_BIT(gobj) \
+    (1u << (((u32)(uintptr_t)(gobj) >> 3) & 31u))
+
+static sb32 ndsRendererAdapterCollectNativeStageTopologyBody(
+    NDSRendererAdapterNativeStageWorkspace *workspace);
+
+/* The body is the only writer of segments[]; whichever way it returns, the
+ * bloom then names every entry it left (P2-2p8, 2026-10-04). */
 static sb32 ndsRendererAdapterCollectNativeStageTopology(
+    NDSRendererAdapterNativeStageWorkspace *workspace)
+{
+    const sb32 collected =
+        ndsRendererAdapterCollectNativeStageTopologyBody(workspace);
+    u32 bloom = 0u;
+    u32 i;
+
+    for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_SEGMENT_COUNT; i++)
+    {
+        if (workspace->segments[i] != NULL)
+        {
+            bloom |= NDS_STAGE_SEGMENT_BLOOM_BIT(workspace->segments[i]);
+        }
+    }
+    workspace->segment_bloom = bloom;
+    return collected;
+}
+
+static sb32 ndsRendererAdapterCollectNativeStageTopologyBody(
     NDSRendererAdapterNativeStageWorkspace *workspace)
 {
     const u32 segment_count = ndsRendererAdapterNativeStageActiveSegmentCount();
@@ -5120,8 +5147,15 @@ ndsRendererAdapterCommitNativeStageDisplay(
     {
         return FALSE;
     }
-    /* Called for every display GObj of the stage camera: read the loaded
-     * descriptor's count once, not once per compared segment. */
+    /* Called for every display GObj of the stage camera, ~34 of ~42 of them
+     * no segment: a GObj whose bit is clear matches no entry. */
+    if ((workspace->segment_bloom &
+         NDS_STAGE_SEGMENT_BLOOM_BIT(display_gobj)) == 0u)
+    {
+        return FALSE;
+    }
+    /* Read the loaded descriptor's count once, not once per compared
+     * segment. */
     segment_count = ndsRendererAdapterNativeStageActiveSegmentCount();
     for (i = 0u; i < segment_count; i++)
     {
