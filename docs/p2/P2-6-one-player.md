@@ -32,6 +32,16 @@ and Congra (walks `cwalk29`..`cwalk48`, `artifacts/visibility/2026-10-01_1p/`).
 | Ending 48 | 0 stage | the room draws: each room GObj submits its own tree with the room camera and the MVCommon lists run as baked roots (`generate_nds_native_item_baked.py` GOBJ_SCENE). The table is a NitroFS file the ending loads into its own heap (`movies/room_baked.bin`, 22 KB; linked into the overlay tail it had cost every scene's arena 22 KB). The props' later lists inherit TLUT mode, texture and flat unlit geometry from the list before them (seed replay); the background's lit lists are baked with the room light (45, 45); walls past the v16 range store their vertices shifted (`vertex_shift`, up to 7,658 source units); the books' CI8 cover indexes one colour past its 255-entry TLUT (load widened to 256). The fade-in and closing light drive MASTER_BRIGHT (`ndsVideoSetSceneFade`); the figure draws through the intro's transient fighter submit (`end11`); 1 sprite failure a frame remains |
 | Staffroll 56 | ~1 sprite/frame | names and jobs draw natively (glyph quads, `cwalk53`); crosshair and box via the S2D tenant, frame rects in the overlay |
 | Congra 55 | 0 | correct |
+
+**10-04 all-fighter sweep** (walk-all6 = r77 content; scratchpad `cwall.ps1`, Congra
+kills by `congrawatch.ps1`): Luigi, Mario, DK, Link, Samus, Captain Falcon, Ness, Kirby,
+Pikachu, Jigglypuff and Fox play stages 0-13, Ending, Staffroll and Congra with 0 native
+failures and heap low-water 54,180-67,212, except Fox's Sector Z stage: 12 frames of an
+off-screen dust puff declining at the near plane beside the 1P camera (`6c14ffb250d`,
+BUG_NOTES V1; walk-all7 Fox: 0 failures, 72 clipped triangles). Yoshi loses Master Hand
+to the level-9 walk CPU on every try (0 failures across six fights); his Ending and
+Staffroll were walked with MH's damage poked to 299 (`yoshiend.ps1`, 0 failures,
+`artifacts/visibility/2026-10-04_endings/yend01`).
 | Bonus boards, every fighter (owner playtest 10-01, Kirby) | 0 | 15 of the 24 boards drew no map, only targets and platforms (the walk ran Link only). Their first brick is a CI4 image using index 3 under a three-colour LOADTLUT (the other nine load four colours of the same image); the RDP reads stale TMEM there, the DS resolve refused the texture (BAD_TLUT) and the stage owner refused the whole map every frame. A stage palette shorter than its indices now reads the source's following palette words (`98be04a7540`); `bonsweep.ps1`: all 24 boards load their GX program |
 | 12 Polygon Team as Kirby (owner playtest 10-01) | 0 | froze two thirds in: in a match a copy hat binds only from the set admitted at its start, and the Polygon Team admitted none, so the first swallowed polygon reached `ndsKirbyHatResidencyHalt(5)`, an infinite loop. A power outside the set now loads late into the slot's working buffer above the 25,600-byte floor; failing that the hat does not draw and the power stays (`1c1c67b90f4`; forced-empty test: 2 late loads, no freeze) |
 
