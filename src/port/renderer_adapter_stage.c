@@ -8168,6 +8168,36 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
     gNdsStageDLFastLaneHits++;
     return TRUE;
 }
+
+/* P2-2p8 (2026-10-04): the fast lane runs on the DTCM hot stack
+ * (port/coroutine.h). Its owners' 3,000-byte traversal states and the
+ * lane's own frames lived on the main-RAM stack, where the late-match lab
+ * profile charged stack-line refills to the lane's pops and frame loads
+ * (the lane ~10 cycles an instruction). Static reach from the lane is
+ * 5,728 B at most (a baked owner's texture allocation through
+ * glTexImage2D); IRQs run on their own stack. The lane reads no storage,
+ * switches no coroutine and hands DMA only static buffers (texture scratch,
+ * packet words). A lane reached from a subtree already on the hot stack
+ * (the fighter display's magnifier) runs in place, as before. Same-ROM
+ * A/B word gNdsStageDLFastHot. */
+volatile u32 gNdsStageDLFastHot __attribute__((used, section(".data"))) = 1u;
+
+typedef struct NDSStageDLFastCall
+{
+    DObj *dobj;
+    const Gfx *dl;
+    GObj *camera_gobj;
+    u32 initial_geometry_mode;
+} NDSStageDLFastCall;
+
+static unsigned int ndsRendererAdapterSubmitStageDLFastOnHotStack(void *arg)
+{
+    const NDSStageDLFastCall *call = (const NDSStageDLFastCall *)arg;
+
+    return (unsigned int)ndsRendererAdapterSubmitStageDLFast(
+        call->dobj, call->dl, call->camera_gobj,
+        call->initial_geometry_mode);
+}
 #endif
 
 volatile u32 gNdsStageDLBodyCalls;
@@ -8181,11 +8211,28 @@ static void ndsRendererAdapterSubmitStageDLImpl(DObj *dobj, const Gfx *dl,
         return;
     }
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
-    if ((gNdsStageDLFastLane != 0u) &&
-        (ndsRendererAdapterSubmitStageDLFast(
-             dobj, dl, camera_gobj, initial_geometry_mode) != FALSE))
+    if (gNdsStageDLFastLane != 0u)
     {
-        return;
+        sb32 fast_handled;
+
+        if (gNdsStageDLFastHot != 0u)
+        {
+            NDSStageDLFastCall call = {
+                dobj, dl, camera_gobj, initial_geometry_mode
+            };
+
+            fast_handled = (sb32)ndsDtcmHotStackRun(
+                ndsRendererAdapterSubmitStageDLFastOnHotStack, &call);
+        }
+        else
+        {
+            fast_handled = ndsRendererAdapterSubmitStageDLFast(
+                dobj, dl, camera_gobj, initial_geometry_mode);
+        }
+        if (fast_handled != FALSE)
+        {
+            return;
+        }
     }
 #endif
     if ((gNdsStageDLEntryFirst != 0u) &&
