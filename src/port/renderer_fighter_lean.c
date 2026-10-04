@@ -1997,14 +1997,14 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
     }
     else if (slot == 1u)
     {
-        gNdsFighterDLAllDrawP1HardwareTriangleCount += hardware_triangles;
+        NDS_DIAG(gNdsFighterDLAllDrawP1HardwareTriangleCount += hardware_triangles);
         gNdsFighterDLAllDrawP1StatusAfter = (u32)fp->status_id;
         gNdsFighterDLAllDrawP1MotionAfter = (u32)fp->motion_id;
-        gNdsFighterDLAllDrawP1GAAfter = (u32)fp->ga;
+        NDS_DIAG(gNdsFighterDLAllDrawP1GAAfter = (u32)fp->ga);
     }
     if (hardware_triangles != 0u)
     {
-        gNdsFighterDLAllDrawSlotTriangleMask |= 1u << (slot & 3u);
+        NDS_DIAG(gNdsFighterDLAllDrawSlotTriangleMask |= 1u << (slot & 3u));
     }
     gNdsFighterMarioFoxDLAllDrawCount++;
 #if NDS_FTR_LEAN_ATTR_LIVE

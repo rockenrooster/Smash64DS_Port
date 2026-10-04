@@ -829,7 +829,7 @@ ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
             return;
         }
     }
-    gNdsFtPoseStepped++;
+    NDS_DIAG(gNdsFtPoseStepped++);
     pc = dobj->anim_joint.event16;
     do
     {
@@ -1230,7 +1230,7 @@ ndsFtPosePlay(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj,
                 value;
         }
     }
-    gNdsFtPoseTrackEvals += evals;
+    NDS_DIAG(gNdsFtPoseTrackEvals += evals);
     if (NDS_FCMP_EQ_C(dobj->anim_wait, AOBJ_ANIM_END))
     {
         dobj->anim_wait = AOBJ_ANIM_NULL;
@@ -1601,7 +1601,7 @@ static void ndsFtPoseRun(NdsFtPose *pose, Vec3f *translate_scales,
                 gNdsLabPoseJointCapSkipped++;
                 continue;
             }
-            gNdsLabPoseJointCapEvaluated++;
+            NDS_DIAG(gNdsLabPoseJointCapEvaluated++);
         }
 #if NDS_FT_POSE_ORACLE
         /* The shadow's clock inputs are the live joint's: gcSetAnimSpeed and
@@ -1629,7 +1629,7 @@ static void ndsFtPoseRun(NdsFtPose *pose, Vec3f *translate_scales,
         {
             scale = (translate_scales != NULL) ?
                 &translate_scales[joint->joint_id] : NULL;
-            gNdsFtPoseJointEvals++;
+            NDS_DIAG(gNdsFtPoseJointEvals++);
             ndsFtPosePlay(pose, joint, dobj, scale, play);
             if (NDS_FCMP_EQ_C(dobj->anim_wait, AOBJ_ANIM_NULL))
             {
@@ -1640,7 +1640,7 @@ static void ndsFtPoseRun(NdsFtPose *pose, Vec3f *translate_scales,
         {
             /* Held: the clock ran, nothing else. The player catches the
              * track phases up at the next evaluation. */
-            gNdsFtPoseJointHolds++;
+            NDS_DIAG(gNdsFtPoseJointHolds++);
         }
     }
     if (pose->gobj_frame_pending != 0u)

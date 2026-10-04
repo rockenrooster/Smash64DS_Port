@@ -348,7 +348,7 @@ static sb32 ndsStageGxEligible(u32 segment)
     u32 gkind = sNdsNativeStagePacketActive->gkind;
     if (gkind >= NDS_STAGE_GX_PATH_COUNT || sNdsStageGxPaths[gkind] == NULL ||
         segment >= NDS_NATIVE_STAGE_SEGMENT_COUNT) { return FALSE; }
-    if (!ndsStageGxLoad()) { gNdsP2StageProgDeclines++; return FALSE; }
+    if (!ndsStageGxLoad()) { NDS_DIAG(gNdsP2StageProgDeclines++); return FALSE; }
     if ((sNdsStageGxStaticWorld & ~sNdsNativeStageOwnerExecution.rigid_binding_mask) != 0u)
     { gNdsP2StageProgDeclines++; gNdsP2StageProgReason = 7u; return FALSE; }
     return TRUE;
@@ -1665,7 +1665,7 @@ static sb32 __attribute__((noinline)) ndsStageGxCommitFast(
     sNdsRendererHardwareSubmitted = TRUE;
     stats->triangle_count += s->triangles;
     *segment_triangles = s->triangles;
-    gNdsP2StageProgDraws += segment->run_count;
+    NDS_DIAG(gNdsP2StageProgDraws += segment->run_count);
     NDS_DIAG(gNdsP2StageProgWords += (u32)s->word_end - s->first_word);
     NDS_DIAG(gNdsStageGxFastCommits++);
     return TRUE;

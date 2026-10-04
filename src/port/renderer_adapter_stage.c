@@ -4571,7 +4571,7 @@ static void ndsRendererAdapterValidateTask36StageWorld(
             if ((rigid_slot % NDS_R2_STAGE_VALIDATE_STRIDE) !=
                 workspace->slice44_validate_cursor)
             {
-                gNdsR2Slice44RigidSkips++;
+                NDS_DIAG(gNdsR2Slice44RigidSkips++);
                 continue;
             }
             gNdsR2Slice44RigidChecks++;
@@ -15373,7 +15373,7 @@ void ndsRendererAdapterSubmitItemDObjTreeReplay(void *dobj_ptr, u32 kind,
         gNdsStageGCDrawAllLoopHardwareTriangleCount += triangles;
         gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount += triangles;
         draw->last_used = gNdsRendererProfileFrameCount;
-        gNdsItemReplayDraws++;
+        NDS_DIAG(gNdsItemReplayDraws++);
         return;
     }
     if (key_count != 0u)

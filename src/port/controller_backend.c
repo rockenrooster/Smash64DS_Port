@@ -287,7 +287,7 @@ void osContGetReadData(OSContPad *pad)
     gNdsControllerLiveConnectedMask = 1u;
 #endif
     gNdsControllerLivePad0Button = pad[0].button;
-    gNdsControllerLivePad0StickX = pad[0].stick_x;
+    NDS_DIAG(gNdsControllerLivePad0StickX = pad[0].stick_x);
     gNdsControllerLivePad0StickY = pad[0].stick_y;
     gNdsControllerLivePad1Button = pad[1].button;
     NDS_DIAG(gNdsControllerLivePad1StickX = pad[1].stick_x);

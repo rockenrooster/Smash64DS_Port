@@ -362,7 +362,7 @@ void ndsFighterDisplayContractSetLightCount(u32 count)
     if (sNdsFighterDisplayContract.active != 0u)
     {
         sNdsFighterDisplayContract.light_count = count;
-        gNdsFighterDisplayContractLightCount += count;
+        NDS_DIAG(gNdsFighterDisplayContractLightCount += count);
     }
 }
 
@@ -406,7 +406,7 @@ sb32 ndsFighterDisplayContractCheckTargetInBounds(f32 pos_x, f32 pos_y)
     is_in_bounds = gmCameraCheckTargetInBounds(pos_x, pos_y);
     if (is_in_bounds != FALSE)
     {
-        gNdsFighterDisplayContractBoundsPassCount++;
+        NDS_DIAG(gNdsFighterDisplayContractBoundsPassCount++);
     }
     else
     {
@@ -5606,7 +5606,7 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
 
 #if NDS_VRAM_CENSUS_LIVE
         /* Slice 2a (lab): texture uploads inside this draw belong to it. */
-        gNdsVramCensusDrawSlotPlus1 = ((u32)fp->nds_slot & 3u) + 1u;
+        NDS_DIAG(gNdsVramCensusDrawSlotPlus1 = ((u32)fp->nds_slot & 3u) + 1u);
 #endif
         if (lean_route != 0u)
         {
@@ -5638,8 +5638,8 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
     sNdsFighterDisplayContractPlayback = FALSE;
     if (gNdsFighterMarioFoxDLAllDrawCount != submitted_before)
     {
-        gNdsFighterDisplayContractSubmittedCount +=
-            sNdsFighterDisplayContract.event_count;
+        NDS_DIAG(gNdsFighterDisplayContractSubmittedCount +=
+            sNdsFighterDisplayContract.event_count);
         gNdsStageGCDrawAllLoopHardwareFighterSubmitCount++;
         triangles_after =
             gNdsFighterDLAllDrawP0HardwareTriangleCount +

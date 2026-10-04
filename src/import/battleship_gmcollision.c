@@ -257,7 +257,7 @@ static sb32 ndsP2HurtboxRejectGate(const Vec3f *pos_curr, const Vec3f *pos_prev,
     }
     if (ndsP2HurtboxRejectPoints(pos_curr, pos_prev, attack_size, damage) != 0)
     {
-        gNdsP2HurtboxRejects++;
+        NDS_DIAG(gNdsP2HurtboxRejects++);
         *rejected = TRUE;
         return (mode == 1u) ? TRUE : FALSE;
     }
@@ -447,7 +447,7 @@ sb32 gmCollisionCheckFighterAttackDamageCollide(FTAttackColl *attack_coll,
     {
         if (ndsP2HurtboxRejectTest(attack_coll, damage_coll) != 0)
         {
-            gNdsP2HurtboxRejects++;
+            NDS_DIAG(gNdsP2HurtboxRejects++);
             rejected = TRUE;
             if (reject_mode == 1u)
             {

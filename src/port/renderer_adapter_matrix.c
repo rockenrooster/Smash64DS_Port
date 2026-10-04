@@ -3187,7 +3187,7 @@ static sb32 ndsRendererAdapterBuildItemAttachMtx(DObj *dobj, Mtx *out)
         item_world[3][1] += offset->y;
     }
     syMatrixF2LFixedW(&item_world, out);
-    gNdsItemRendererAttach52BuildCount++;
+    NDS_DIAG(gNdsItemRendererAttach52BuildCount++);
     return TRUE;
 }
 
@@ -5664,7 +5664,7 @@ static sb32 ndsRendererAdapterStageLocalFor(
             (memcmp(&slot->key, key, sizeof(*key)) == 0))
         {
             ndsRendererMatrixCopy20p12(local, &slot->local);
-            gNdsStageLocalMemoHits++;
+            NDS_DIAG(gNdsStageLocalMemoHits++);
             return TRUE;
         }
     }

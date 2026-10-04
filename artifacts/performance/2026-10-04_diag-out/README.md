@@ -32,3 +32,22 @@ whose name no code reads -- 23.6K cycles a frame at 60+ cycles a site.
 Paired by frame: median -7,872, 1,889 of 1,960 frames better (p10 -12.7K,
 p90 -3.0K). Replay digest IDENTICAL. The shipping build (`make
 TARGET=smash64ds`) compiles with the tallies out.
+
+## Second batch
+
+28 more sites whose names the audit flagged as read turned out to be read
+only by their own declarations (multi-name or attributed `volatile u32`
+lines, `NDS_FT_POSE_COUNTER`, the `NDS_DIAG_WORD` dump table), by other
+tallies, by a debug print, or by lab tours (`NDS_P2_NESS_SPECIAL_TOUR`,
+`NDS_P2_LINK_BOMB_TOUR`) that are not compiled on the gate or the published
+ROM. Kept as they were: engagement-mask inputs, `gNdsFtrDrawMemoSkipRoot`,
+`gNdsDtcmHotStackCalls`, `gNdsR2FighterFacingLr`,
+`gNdsFighterDisplayContractSelectedCount`, BGM state and the tick HUD.
+
+| | WORK P50 | WORK P95 | P99 | > 1.12M | two-VBlank |
+|---|---:|---:|---:|---:|---:|
+| `gate-dg0` | 873,344 | 1,215,616 | 1,540,544 | 199 | 1,754 / 1,961 |
+| `gate-dg1` (second batch) | 870,592 | 1,210,752 | 1,532,416 | 192 | 1,759 / 1,961 |
+
+Paired by frame: median -3,456, 1,757 of 1,960 frames better. Replay digest
+IDENTICAL.

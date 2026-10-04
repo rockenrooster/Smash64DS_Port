@@ -4766,8 +4766,8 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                 if ((gNdsWhispyAOTRoute >= 6u) &&
                     (id < NDS_PARTICLE_TEXTURE_USE_IDS))
                 {
-                    gNdsParticleTextureUseMask[id >> 5] |=
-                        1u << (id & 31u);
+                    NDS_DIAG(gNdsParticleTextureUseMask[id >> 5] |=
+                        1u << (id & 31u));
                     if ((u32)pc->frame_id + 1u >
                         gNdsParticleTextureFrameMax[id])
                     {
@@ -4997,7 +4997,7 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                  * link in the pair beside them instead of widening theirs,
                  * which would silently have turned a Whispy instrument into an
                  * all-particle one. */
-                gNdsParticleSubmitOkCount++;
+                NDS_DIAG(gNdsParticleSubmitOkCount++);
                 {
 #if NDS_R2_WHISPY_NATIVE_AOT
                     if (gNdsWhispyAOTRoute >= 6u)

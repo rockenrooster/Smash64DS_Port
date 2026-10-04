@@ -13903,7 +13903,7 @@ static void ndsStageGCDrawAllLoopSubmitItemDObj(GObj *item_gobj,
     texture_reject_delta =
         gNdsStageGCDrawAllLoopHardwareTextureRejectCount -
         texture_reject_before;
-    gNdsItemRendererTriangleCount += triangle_delta;
+    NDS_DIAG(gNdsItemRendererTriangleCount += triangle_delta);
     gNdsItemRendererTextureReadyCount += texture_ready_delta;
     gNdsItemRendererTextureRejectCount += texture_reject_delta;
     if (triangle_delta == 0u)
@@ -13911,7 +13911,7 @@ static void ndsStageGCDrawAllLoopSubmitItemDObj(GObj *item_gobj,
         gNdsItemRendererRejectedDrawCount++;
         return;
     }
-    gNdsItemRendererSubmitCount++;
+    NDS_DIAG(gNdsItemRendererSubmitCount++);
     if (texture_reject_delta == 0u)
     {
         gNdsItemRendererVisibleDrawCount++;

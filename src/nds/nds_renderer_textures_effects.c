@@ -7769,8 +7769,8 @@ ndsRendererParticleQ8ToV16(s32 value_q8, u32 shift)
     s32 scaled = ndsRendererParticleTruncShiftS32(
         value_q8, (NDS_RENDERER_PARTICLE_COORD_SHIFT - 4u) + shift);
 
-    if (scaled > 32767) { gNdsParticleWorldClampCount++; return (v16)32767; }
-    if (scaled < -32768) { gNdsParticleWorldClampCount++; return (v16)-32768; }
+    if (scaled > 32767) { NDS_DIAG(gNdsParticleWorldClampCount++); return (v16)32767; }
+    if (scaled < -32768) { NDS_DIAG(gNdsParticleWorldClampCount++); return (v16)-32768; }
     return (v16)scaled;
 }
 

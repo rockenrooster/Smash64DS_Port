@@ -7046,7 +7046,7 @@ static s32 ndsRendererNativeStagePreparedTexturesProven(void)
         (sNdsNativeStagePreparedTextureProofEpoch ==
          sNdsRendererHardwareTextureKeyGeneration))
     {
-        gNdsR2TexProofFastCount++;
+        NDS_DIAG(gNdsR2TexProofFastCount++);
         return TRUE;
     }
     gNdsR2TexProofSweepCount++;
