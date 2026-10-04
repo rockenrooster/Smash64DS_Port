@@ -1168,6 +1168,9 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   keeps its local (`3911899aa71`; Castle all-items verify 204/0); the
   held item's integer render tail priced at no gain (its latch walk is the
   cost).
+  Rejected the same day: exact unpacked binary32 chains for the latch walk's
+  compose, point transform and local (digest identical, P95 +68K: 11.5 KB of
+  main-RAM ARM against libgcc in ITCM; receipt `2026-10-04_exact-f32`).
 
 ## 7. Found along the way
 
