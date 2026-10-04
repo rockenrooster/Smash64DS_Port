@@ -1209,8 +1209,21 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   through `NDS_DIAG(...)`, compiled out where `NDS_DIAG_COUNTERS` is 0 (the
   published ROM and the gate; 1 elsewhere): gate 873,344/1,215,616, 199 over,
   1,754/1,961 in two VBlanks, paired median -7.9K, digest identical
-  (`29b1e46c3ef`, receipt `2026-10-04_diag-out`). ~19K cycles of tallies whose
-  names some code reads still need a per-name review.
+  (`29b1e46c3ef`, receipt `2026-10-04_diag-out`). A second batch of 28 sites
+  whose readers were only declarations, other tallies or lab tours followed
+  (`545f4c30d98`: 870,592/1,210,752, 192 over).
+- **10-04 empty particle passes and one MObj walk.** The four particle passes a
+  frame each ran the atlas/camera/Whispy setup before finding their links
+  empty; passes without link 0 (which also owns the Fox glow and FireGrind
+  pools) now return first (`28b8c40df08`: 864,192/1,204,480, 179 over,
+  paired median -6.7K). `gcPlayAnimAll` collects live MObjs in one walk
+  instead of count-then-collect (`f66920bfe76`: median -0.8K). Rejected: a
+  stage texture-entry stamp dedupe (+0.8K). Parked: stage animation at a
+  reduced rate (a ground GObj's animation feeds Dream Land's gameplay; the
+  digest diverges at sample 130; receipt `2026-10-04_stage-anim-rate`). The
+  fixed-point fighter-part chain (D13) needs residency to pay: the decomp's
+  DObj TRS are floats, so a fixed answer still converts them at entry (slice
+  52 measured the producer swap at 1.001).
 
 ## 7. Found along the way
 
