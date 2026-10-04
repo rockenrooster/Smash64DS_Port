@@ -1,0 +1,45 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,800; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 730: ALL 5,311,040 -> 1,116,736, 4 bucket(s) corrected
+Wrote artifacts/performance/2026-10-04_cpu-30hz/gate-s3-ai1.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=5c4c43cc242+dirty(15) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,800     1,676,992      1.50  1,170,636     1,112,448  4,716,928      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         5,056        10,432      2.06      5,799         2,432     32,320        0.5
+HUD         9,344        24,640      2.64     12,364         8,192    827,520        0.8
+SRC       378,816       611,264      1.61    395,834       148,480  1,096,768       33.9
+MISC      444,800       603,264      1.36    452,650       195,712  3,275,392       39.8
+OTHR      290,240       612,544      2.11    303,989        24,064    759,936       26.0
+WAIT      268,416       587,456      2.19    281,579         1,920    738,880       24.0
+WORK      871,936     1,206,848      1.38    885,201       374,784  4,382,848       78.1
+SHDT            0             0      0.00          0             0          0        0.0
+SWRM        1,472         1,536      1.04      1,447           832      3,584        0.1
+GCRA      373,248       605,888      1.62    390,357       144,256  1,086,208       33.4
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        803             0  1,401,600        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      444,672       603,072      1.36    452,532       195,648  3,275,264       39.8
+MFLS          128           128      1.00        117            64        448        0.0
+GPOL          571           634      1.11        545           171        678        0.1
+GVTX        1,379         1,533      1.11      1,320           545      1,691        0.1
+DGSA   2,100,353,196 4,034,146,136   1.92 2,096,358,623  7,958,926 4,289,550,964 188,068.9
+DGSB   2,075,623,170 4,030,753,143   1.94 2,114,251,032  3,144,264 4,290,824,949 185,854.5
+WORK-H    860,096     1,189,952      1.38    872,836       366,336  3,555,328       77.0
+
+named=866,647 (74.0% of ALL)  VBI 2:1789 3:161 4:9 5+:2 max:9 total:1961  slips=0
+Wrote artifacts/performance/2026-10-04_cpu-30hz/gate-s3-ai1.json

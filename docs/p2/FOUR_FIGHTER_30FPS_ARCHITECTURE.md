@@ -1196,6 +1196,10 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   pixel-identical at two of four frames, isolated texels at the others.
   Gate 884,224/1,223,680, 214 over, 1,732/1,961 in two VBlanks, paired
   median -10.8K, digest identical. Receipt `2026-10-04_painter-trans`.
+  Then a run sends a baked COLOR or TEXCOORD only when it changes (508 of
+  Dream Land's 606 COLOR commands repeated the last value; 5,589 -> 4,890
+  words): gate 882,496/1,222,848, 209 over, paired median -2.1K, captures
+  pixel-identical (`5c4c43cc242`, receipt `2026-10-04_attr-dedup`).
 
 ## 7. Found along the way
 

@@ -1,0 +1,46 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 2 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,928; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 1189: ALL 5,871,360 -> 1,677,056, 4 bucket(s) corrected
+  frame 1503: ALL 5,310,976 -> 1,116,672, 3 bucket(s) corrected
+Wrote artifacts/performance/2026-10-04_stage-layers/gate-m48.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=8be7015bb0b+dirty(15) dldi=ON
+
+bucket p50           p95           spread    mean          min        max           %ALLp50
+------ ---           ---           ------    ----          ---        ---           -------
+ALL     1,116,928     1,677,184      1.50     1,188,083     1,112,704  4,536,000      100.0
+FTR       136,704       215,360      1.58       144,791         9,728    997,824       12.2
+STG       144,512       151,360      1.05       146,261       137,024  1,662,272       12.9
+BG              0             0      0.00             0             0          0        0.0
+AUD         4,544        10,752      2.37         5,723         2,368     27,072        0.4
+HUD        18,560        28,096      1.51        17,236         8,064    519,040        1.7
+SRC       391,808       610,048      1.56       403,718       148,032  1,352,768       35.1
+MISC      152,320       289,280      1.90       163,054        53,504  1,727,616       13.6
+OTHR      286,720       582,144      2.03       307,301        24,448    755,264       25.7
+WAIT      263,488       558,720      2.12       284,415         2,368    733,440       23.6
+WORK      890,304     1,226,496      1.38       903,669       383,552  4,206,336       79.7
+SHDT            0             0      0.00             0             0          0        0.0
+SWRM        1,408         1,536      1.09         1,430           960      3,648        0.1
+GCRA      386,496       604,800      1.56       398,348       143,680  1,347,456       34.6
+SCPU            0             0      0.00             0             0          0        0.0
+SCAT            0             0      0.00             0             0          0        0.0
+SPRM            0             0      0.00             0             0          0        0.0
+SINT            0             0      0.00             0             0          0        0.0
+SPHD            0             0      0.00             0             0          0        0.0
+SPHC            0             0      0.00             0             0          0        0.0
+MWPN            0        28,672    28,672.00      7,989             0    201,856        0.0
+MITM       40,640        64,832      1.60        28,372             0    160,064        3.6
+MEFX            0        76,096    76,096.00     11,950             0    333,120        0.0
+MACT            0             0      0.00             0             0          0        0.0
+MPRT       36,672        72,384      1.97        39,239        11,456    252,096        3.3
+MTEX            0             0      0.00           758             0  1,399,616        0.0
+MCAP            0             0      0.00             0             0          0        0.0
+MPRO            0             0      0.00             0             0          0        0.0
+MCAM       61,440       132,416      2.16        75,390        41,920  1,715,456        5.5
+MFLS          128           128      1.00           113            64        448        0.0
+GPOL          585           631      1.08           539            29        663        0.1
+GVTX        1,403         1,533      1.09         1,312            96      1,624        0.1
+DGSA   2,221,927,571 4,052,476,767           2,144,070,467    408,983 4,294,514,885 198,932.0
+DGSB   2,229,679,774 4,052,096,565           2,163,259,781    888,730 4,293,852,712 199,626.1
+WORK-H    872,768     1,209,792      1.39       886,433       374,976  3,687,296       78.1
+
+named=880,783 (74.1% of ALL)  VBI 2:1730 3:216 4:14 5+:1 max:9 total:1961  slips=0
+Wrote artifacts/performance/2026-10-04_stage-layers/gate-m48.json

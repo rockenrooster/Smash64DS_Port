@@ -1,0 +1,46 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 2 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,800; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 757: ALL 5,311,168 -> 1,116,864, 4 bucket(s) corrected
+  frame 1669: ALL 5,311,104 -> 1,116,800, 4 bucket(s) corrected
+Wrote artifacts/performance/2026-10-04_cpu-30hz/gate-s4-ai0.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=5c4c43cc242+dirty(15) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,800     1,677,056      1.50  1,183,506     1,111,552  4,744,768      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,928        10,624      2.16      5,805         2,432     25,088        0.4
+HUD         9,216        24,640      2.67     12,787         8,192    859,904        0.8
+SRC       409,664       663,616      1.62    424,397       148,480  1,124,224       36.7
+MISC      430,656       610,368      1.42    447,142       195,200  3,267,584       38.6
+OTHR      282,816       555,840      1.97    293,376        23,872    758,848       25.3
+WAIT      260,544       532,864      2.05    270,856         3,456    737,984       23.3
+WORK      888,448     1,263,936      1.42    908,845       375,232  4,410,432       79.6
+SHDT            0             0      0.00          0             0          0        0.0
+SWRM        1,472         1,536      1.04      1,458           896      3,776        0.1
+GCRA      404,160       657,216      1.63    418,898       144,512  1,118,784       36.2
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        771             0  1,394,368        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      430,528       610,240      1.42    447,024       195,072  3,267,520       38.6
+MFLS          128           128      1.00        118            64        320        0.0
+GPOL          548           638      1.16        535           171        701        0.0
+GVTX        1,294         1,551      1.20      1,280           545      1,764        0.1
+DGSA   2,142,531,286 4,058,729,096   1.89 2,154,150,166  3,205,167 4,291,390,514 191,845.6
+DGSB   2,119,481,323 4,067,695,797   1.92 2,151,895,573  2,064,419 4,293,996,484 189,781.6
+WORK-H    877,184     1,247,680      1.42    896,058       366,784  3,550,528       78.5
+
+named=890,131 (75.2% of ALL)  VBI 2:1740 3:212 4:8 5+:1 max:9 total:1961  slips=0
+Wrote artifacts/performance/2026-10-04_cpu-30hz/gate-s4-ai0.json
