@@ -873,7 +873,7 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
         (gNdsSceneManagerCurrIsBattle != 0u))
     {
         profile_foreground = TRUE;
-        foreground_start = cpuGetTiming();
+        foreground_start = NDS_TICK_HUD_SPAN_CLOCK();
     }
 #endif
 
@@ -884,7 +884,7 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
 #if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
         if (profile_foreground != FALSE)
         {
-            u32 ticks = cpuGetTiming() - foreground_start;
+            u32 ticks = NDS_TICK_HUD_SPAN_CLOCK() - foreground_start;
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
             gNdsRendererProfileForegroundTicks += ticks;
 #endif
@@ -930,7 +930,7 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
 #if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
     if (profile_foreground != FALSE)
     {
-        u32 ticks = cpuGetTiming() - foreground_start;
+        u32 ticks = NDS_TICK_HUD_SPAN_CLOCK() - foreground_start;
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
         gNdsRendererProfileForegroundTicks += ticks;
 #endif
@@ -1099,7 +1099,7 @@ void ndsSObjPreviewEndFrame(void)
         ((gNdsSceneManagerCurrIsBattle != 0u) &&
          (sNdsSObjFrameForeground != FALSE)) ? TRUE : FALSE;
     u32 foreground_start =
-        (profile_foreground != FALSE) ? cpuGetTiming() : 0u;
+        (profile_foreground != FALSE) ? NDS_TICK_HUD_SPAN_CLOCK() : 0u;
 #endif
 
     /* Diagnose any remaining source-only menu graphics before commit. */
@@ -1108,7 +1108,7 @@ void ndsSObjPreviewEndFrame(void)
 #if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
     if (profile_foreground != FALSE)
     {
-        u32 ticks = cpuGetTiming() - foreground_start;
+        u32 ticks = NDS_TICK_HUD_SPAN_CLOCK() - foreground_start;
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
         gNdsRendererProfileForegroundTicks += ticks;
 #endif

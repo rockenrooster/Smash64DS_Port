@@ -15616,13 +15616,13 @@ ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
          * matched segment only, instead of two clock reads per display. */
 #if (NDS_TICK_HUD && NDS_TASK103_STAGE_RUN_PHASE) || \
     (NDS_RENDERER_PROFILE_LEVEL == 1)
-        u32 owner_start = cpuGetTiming();
+        u32 owner_start = NDS_TICK_HUD_SPAN_CLOCK();
         s32 handled = ndsRendererAdapterCommitNativeStageDisplay(
             display, link_id);
 
 #if NDS_TICK_HUD
         {
-            u32 stage_ticks = cpuGetTiming() - owner_start;
+            u32 stage_ticks = NDS_TICK_HUD_SPAN_CLOCK() - owner_start;
 
             gNdsTickHudStageTicks += stage_ticks;
 #if NDS_TASK103_STAGE_RUN_PHASE
@@ -15856,7 +15856,7 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
              * where ClassifyGObj REJECTED the GObj, so they are outside the
              * STG bracket by construction and land in the residual. */
 #if NDS_TICK_HUD
-            u32 misc_split_mark = cpuGetTiming();
+            u32 misc_split_mark = NDS_TICK_HUD_SPAN_CLOCK();
 #endif
             /* P2-2p8 (2026-10-04): each of the three submits returns at
              * once unless the GObj is its kind (Is*Display tests gobj->id
@@ -15869,21 +15869,21 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
                 ndsStageGCDrawAllLoopSubmitWeaponDObj(stage_gobj,
                                                       callback_kind);
 #if NDS_TICK_HUD
-                gNdsMiscWeaponDrawTicks += cpuGetTiming() - misc_split_mark;
+                gNdsMiscWeaponDrawTicks += NDS_TICK_HUD_SPAN_CLOCK() - misc_split_mark;
 #endif
                 break;
             case nGCCommonKindItem:
                 ndsStageGCDrawAllLoopSubmitItemDObj(stage_gobj,
                                                     callback_kind);
 #if NDS_TICK_HUD
-                gNdsMiscItemDrawTicks += cpuGetTiming() - misc_split_mark;
+                gNdsMiscItemDrawTicks += NDS_TICK_HUD_SPAN_CLOCK() - misc_split_mark;
 #endif
                 break;
             case nGCCommonKindEffect:
                 ndsStageGCDrawAllLoopSubmitEffectDObj(stage_gobj,
                                                       callback_kind);
 #if NDS_TICK_HUD
-                gNdsMiscEffectDrawTicks += cpuGetTiming() - misc_split_mark;
+                gNdsMiscEffectDrawTicks += NDS_TICK_HUD_SPAN_CLOCK() - misc_split_mark;
 #endif
                 break;
             default:
@@ -15892,7 +15892,7 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
 #if NDS_TICK_HUD && (NDS_P2_STAGE_JUNGLE || NDS_P2_STAGE_YOSTER || \
     NDS_P2_STAGE_ZEBES || NDS_P2_STAGE_SECTOR || NDS_P2_STAGE_YAMABUKI || \
     NDS_P2_STAGE_INISHIE)
-            misc_split_mark = cpuGetTiming();
+            misc_split_mark = NDS_TICK_HUD_SPAN_CLOCK();
 #endif
 #if NDS_P2_STAGE_JUNGLE
             /* The barrel is none of weapon/item/effect (ground kind), so the
@@ -15920,7 +15920,7 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
 #if NDS_TICK_HUD && (NDS_P2_STAGE_JUNGLE || NDS_P2_STAGE_YOSTER || \
     NDS_P2_STAGE_ZEBES || NDS_P2_STAGE_SECTOR || NDS_P2_STAGE_YAMABUKI || \
     NDS_P2_STAGE_INISHIE)
-            gNdsMiscActorDrawTicks += cpuGetTiming() - misc_split_mark;
+            gNdsMiscActorDrawTicks += NDS_TICK_HUD_SPAN_CLOCK() - misc_split_mark;
 #endif
         }
 #endif
@@ -15931,7 +15931,7 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
     if (sNdsStageGCDrawAllLoopHardwareSubmitActive != FALSE)
     {
 #if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
-        owner_start = cpuGetTiming();
+        owner_start = NDS_TICK_HUD_SPAN_CLOCK();
 #endif
         ndsRendererAdapterBeginStageTraversal();
     }
@@ -15945,7 +15945,7 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
 #if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
         if (owner_start != 0u)
         {
-            u32 owner_ticks = cpuGetTiming() - owner_start;
+            u32 owner_ticks = NDS_TICK_HUD_SPAN_CLOCK() - owner_start;
 
 #if NDS_TICK_HUD
             gNdsTickHudStageTicks += owner_ticks;
@@ -16234,14 +16234,14 @@ static void ndsStageGCDrawAllLoopPresentHardwareFrame(void)
     }
 #endif
 #if NDS_TICK_HUD
-    tickhud_owner_start = cpuGetTiming();
+    tickhud_owner_start = NDS_TICK_HUD_SPAN_CLOCK();
 #endif
     sNdsStageGCDrawAllLoopNativeStageArmed =
         ndsRendererAdapterPrepareNativeStageOwner(
             ndsBattleCompatMainCameraGObj());
 #if NDS_TICK_HUD
     {
-        u32 stage_ticks = cpuGetTiming() - tickhud_owner_start;
+        u32 stage_ticks = NDS_TICK_HUD_SPAN_CLOCK() - tickhud_owner_start;
 
         gNdsTickHudStageTicks += stage_ticks;
 #if NDS_TASK103_STAGE_RUN_PHASE
@@ -16276,7 +16276,7 @@ static void ndsStageGCDrawAllLoopPresentHardwareFrame(void)
     if (sNdsStageGCDrawAllLoopNativeStageArmed != FALSE)
     {
 #if NDS_TICK_HUD
-        tickhud_owner_start = cpuGetTiming();
+        tickhud_owner_start = NDS_TICK_HUD_SPAN_CLOCK();
 #endif
 #if NDS_RENDERER_PROFILE_LEVEL == 1
         owner_start = cpuGetTiming();
@@ -16284,7 +16284,7 @@ static void ndsStageGCDrawAllLoopPresentHardwareFrame(void)
         ndsRendererAdapterFinishNativeStageOwner();
 #if NDS_TICK_HUD
         {
-            u32 stage_ticks = cpuGetTiming() - tickhud_owner_start;
+            u32 stage_ticks = NDS_TICK_HUD_SPAN_CLOCK() - tickhud_owner_start;
 
             gNdsTickHudStageTicks += stage_ticks;
 #if NDS_TASK103_STAGE_RUN_PHASE

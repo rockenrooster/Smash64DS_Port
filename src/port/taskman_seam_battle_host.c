@@ -100,8 +100,13 @@ static u32 sNdsBattlePlayableTickHudLoopStartTick;
 static u32 sNdsReplayDigest[2];
 #if NDS_TICK_HUD
 /* The digest exists only in the measuring ROM, so its ticks are the
- * instrument's: they are charged to HUD, which WORK-H takes back out. */
+ * instrument's: they are charged to HUD and left out of WORK (owner ruling
+ * D12a). */
 static u32 sNdsReplayDigestTicks;
+/* NDS_TICK_HUD_SPAN_CLOCK (nds_startup.h): 1 times the per-bucket spans,
+ * 0 skips their clock reads (the four-CPU gate ROM's default). */
+volatile u32 gNdsTickHudSpans __attribute__((used, section(".data"))) =
+    NDS_TICK_HUD_SPANS_DEFAULT;
 #endif
 #endif
 
@@ -1068,9 +1073,17 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
          * one VBlank shows up in it instead of vanishing into the wait. */
         gNdsTickHudBuckets[nNDSTickHudBucketVBlankWait] =
             gNdsTickHudVBlankWaitTicks;
-        gNdsTickHudBuckets[nNDSTickHudBucketWork] =
-            (all >= gNdsTickHudVBlankWaitTicks) ?
-            (all - gNdsTickHudVBlankWaitTicks) : 0u;
+        /* P2-2p8 (2026-10-04, owner ruling D12a): the replay digest is the
+         * instrument's (it exists only in measuring ROMs), so its measured
+         * span leaves WORK as WAIT does. It stays in HUD, so WORK-H (WORK -
+         * HUD, harness side) now drops it twice; the gate reads WORK. */
+        {
+            const u32 not_work =
+                gNdsTickHudVBlankWaitTicks + sNdsReplayDigestTicks;
+
+            gNdsTickHudBuckets[nNDSTickHudBucketWork] =
+                (all >= not_work) ? (all - not_work) : 0u;
+        }
         /* Cycle 85 SRC split. Published AFTER `named` is summed and deliberately
          * absent from it: both spans are nested inside SRC, which `named`
          * already counts, so adding them would double-count against ALL and

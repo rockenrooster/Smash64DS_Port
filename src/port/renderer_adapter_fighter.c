@@ -5491,7 +5491,7 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
         gNdsRendererProfileFrameCount;
 #if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
     owner_id = ndsFighterNativeOwnerProfileId(owner_slot);
-    owner_start = cpuGetTiming();
+    owner_start = NDS_TICK_HUD_SPAN_CLOCK();
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
     m2_capture_start = cpuGetTiming();
@@ -5539,7 +5539,7 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
     if (sNdsFighterDisplayContract.event_count == 0u)
     {
 #if NDS_TICK_HUD
-        gNdsTickHudFighterTicks += cpuGetTiming() - owner_start;
+        gNdsTickHudFighterTicks += NDS_TICK_HUD_SPAN_CLOCK() - owner_start;
 #endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
@@ -5651,7 +5651,7 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
         }
     }
 #if NDS_TICK_HUD
-    gNdsTickHudFighterTicks += cpuGetTiming() - owner_start;
+    gNdsTickHudFighterTicks += NDS_TICK_HUD_SPAN_CLOCK() - owner_start;
 #endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \

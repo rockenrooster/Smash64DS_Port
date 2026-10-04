@@ -4596,6 +4596,19 @@ enum NDSTickHudBucket {
 extern volatile u32 gNdsTickHudBuckets[nNDSTickHudBucketCount];
 u32 ndsReplayDigestTick(void);
 extern volatile u32 gNdsTickHudVBlankWaitTicks;
+/* P2-2p8 (2026-10-04, owner ruling D12a): the tick HUD's per-span clock
+ * reads -- ~120 a presented frame, inside WORK -- are the instrument's cost,
+ * not the game's. gNdsTickHudSpans 0 (the four-CPU gate ROM's default,
+ * NDS_TICK_HUD_SPANS_DEFAULT) skips them at the high-frequency span sites:
+ * their buckets read 0 while WORK stays exact. 1 (every other ROM's default;
+ * poke it on a gate ROM) keeps the per-bucket breakdown for analysis. */
+#if NDS_TICK_HUD
+extern volatile u32 gNdsTickHudSpans;
+#define NDS_TICK_HUD_SPAN_CLOCK() \
+    ((gNdsTickHudSpans != 0u) ? cpuGetTiming() : 0u)
+#else
+#define NDS_TICK_HUD_SPAN_CLOCK() cpuGetTiming()
+#endif
 
 /* The four points at which the fighter draw can give up on the native
  * production owner and fall through to the generic display-list interpreter,

@@ -5138,9 +5138,9 @@ reject:
 #if NDS_TICK_HUD && !NDS_TASK103_STAGE_RUN_PHASE && \
     (NDS_RENDERER_PROFILE_LEVEL != 1)
 extern volatile u32 gNdsTickHudStageTicks;
-#define NDS_STAGE_DISPLAY_SPAN_BEGIN() u32 stage_span_start_ = cpuGetTiming()
+#define NDS_STAGE_DISPLAY_SPAN_BEGIN() u32 stage_span_start_ = NDS_TICK_HUD_SPAN_CLOCK()
 #define NDS_STAGE_DISPLAY_SPAN_END() \
-    (gNdsTickHudStageTicks += cpuGetTiming() - stage_span_start_)
+    (gNdsTickHudStageTicks += NDS_TICK_HUD_SPAN_CLOCK() - stage_span_start_)
 #else
 #define NDS_STAGE_DISPLAY_SPAN_BEGIN() ((void)0)
 #define NDS_STAGE_DISPLAY_SPAN_END() ((void)0)

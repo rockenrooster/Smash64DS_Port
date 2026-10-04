@@ -4420,7 +4420,7 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
      * cpuGetTiming is forward-declared at file scope rather than reached by
      * including nds/timers.h; the include-order constraint is documented
      * above. */
-    u32 misc_particle_mark = cpuGetTiming();
+    u32 misc_particle_mark = NDS_TICK_HUD_SPAN_CLOCK();
 #endif
 
     gNdsParticleDrawSeamCount++;
@@ -5208,7 +5208,7 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
     }
     ndsParticleRuntimePublishTallies();
 #if NDS_TICK_HUD
-    gNdsMiscParticleDrawTicks += cpuGetTiming() - misc_particle_mark;
+    gNdsMiscParticleDrawTicks += NDS_TICK_HUD_SPAN_CLOCK() - misc_particle_mark;
 #endif
 }
 

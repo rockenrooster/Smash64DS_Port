@@ -1171,6 +1171,18 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   Rejected the same day: exact unpacked binary32 chains for the latch walk's
   compose, point transform and local (digest identical, P95 +68K: 11.5 KB of
   main-RAM ARM against libgcc in ITCM; receipt `2026-10-04_exact-f32`).
+- **10-04 the instrument leaves the gate.** The FPS console's periodic text
+  is compiled out of the gate ROM (`d03478ba889`, A9 class) and the display
+  capture takes four exact cuts (`8aa86b448fd`: 897,408/1,236,352, 234
+  over). Under owner ruling D12a WORK now excludes the replay digest
+  (~4.0K a frame) and the gate ROM boots with the tick HUD's fine span
+  clocks off (`NDS_TICK_HUD_SPANS_DEFAULT=0`; FTR/STG/MISC read 0 there,
+  `-BootSetGlobals 'gNdsTickHudSpans=1'` restores them): 895,360/1,232,576,
+  226 over, 1,722/1,961 in two VBlanks, digest identical. Priced, no
+  effect: stage binding bookkeeping, a fifth ITCM pack. Receipts
+  `2026-10-04_fps-console`, `2026-10-04_capture-cuts`,
+  `2026-10-04_instrument-out`, `2026-10-04_stage-bind-cuts`,
+  `2026-10-04_itcm-pack5`.
 
 ## 7. Found along the way
 

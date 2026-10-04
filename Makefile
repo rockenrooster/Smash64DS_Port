@@ -1799,6 +1799,10 @@ NDS_TICK_HUD_DRAW ?= 1
 # VBI, GIT) beside it, same reasoning: the sampler reads the counters, never
 # the console text (src/nds/nds_platform.c).
 NDS_BATTLE_FPS_HUD_DRAW ?= 1
+# P2-2p8 (2026-10-04, owner ruling D12a): boot value of gNdsTickHudSpans, the
+# tick HUD's fine per-bucket span clocks (include/nds/nds_startup.h). 0 leaves
+# FTR/STG/MISC and their splits at 0 and keeps the clock reads out of WORK.
+NDS_TICK_HUD_SPANS_DEFAULT ?= 1
 # R2-03 E28 control arm. E16 left the software light preparation
 # (ndsRendererHardwarePrepareLitDirection's transform + sqrt + three divides,
 # and the shade LUT) running per lit epoch even though the hardware path skips
@@ -3032,6 +3036,9 @@ override NDS_TICK_HUD_DRAW := 0
 # The FPS console's periodic text, the same A9 class: five iprintf lines every
 # half second, +25-40K ticks on one presented frame in fifteen.
 override NDS_BATTLE_FPS_HUD_DRAW := 0
+# D12a: the fine span clocks too (~120 reads a frame); a run that wants the
+# per-bucket breakdown pokes gNdsTickHudSpans=1 at boot.
+override NDS_TICK_HUD_SPANS_DEFAULT := 0
 ifeq ($(NDS_P2_FOUR_CPU_ROSTER),1)
 # P2-3r15: THIS IS NOW THE DEFAULT ARM, not the lab arm -- the flag defaults to
 # 1 on this target (see its declaration above). `NDS_P2_FOUR_CPU_ROSTER=0`
@@ -7256,6 +7263,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_FIGHTER_SOFT_LIGHT_KEEP $(NDS_R2_FIGHTER_SOFT_LIGHT_KEEP)'; \
 		echo '#define NDS_TICK_HUD_DRAW $(NDS_TICK_HUD_DRAW)'; \
 		echo '#define NDS_BATTLE_FPS_HUD_DRAW $(NDS_BATTLE_FPS_HUD_DRAW)'; \
+		echo '#define NDS_TICK_HUD_SPANS_DEFAULT $(NDS_TICK_HUD_SPANS_DEFAULT)'; \
 		echo '#define NDS_R2_FIGHTER_SHUFFLE_FOLD $(NDS_R2_FIGHTER_SHUFFLE_FOLD)'; \
 		echo '#define NDS_R2_FIGHTER_EPOCH_STATE_PROOF $(NDS_R2_FIGHTER_EPOCH_STATE_PROOF)'; \
 		echo '#define NDS_R2_FIGHTER_SHADE_SKIP $(NDS_R2_FIGHTER_SHADE_SKIP)'; \
