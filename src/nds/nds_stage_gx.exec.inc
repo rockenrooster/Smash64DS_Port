@@ -69,6 +69,9 @@ typedef struct NDSStageGxRunMemo
 static NDSStageGxRunMemo *sNdsStageGxRunMemo;
 static NDSRendererMatrix20p12 sNdsStageGxProjCopy;
 static u32 sNdsStageGxProjSerial, sNdsStageGxProjGen;
+/* Bumped by every successful program load (the segment fast path's tables
+ * are rebuilt against it). */
+static u32 sNdsStageGxLoadSerial;
 
 static u32 ndsStageGxHashBytes(const void *data, u32 bytes, u32 hash)
 {
@@ -312,6 +315,7 @@ static sb32 __attribute__((noinline, cold, optimize("Os"))) ndsStageGxLoad(void)
     memset(sNdsStageGxRunMemo, 0, h.run_count * sizeof(NDSStageGxRunMemo));
     sNdsStageGxProjSerial++;
     sNdsStageGxProjGen = 0u;
+    sNdsStageGxLoadSerial++;
     gNdsP2StageProgLoads++; gNdsP2StageProgBytes = h.body_bytes;
     return TRUE;
 failed:
@@ -331,7 +335,8 @@ static sb32 ndsStageGxEligible(u32 segment)
     return TRUE;
 }
 
-static sb32 ndsStageGxInsideNear(const NDSStageGxRun *run, const NDSRendererMatrix20p12 *matrix)
+static inline __attribute__((always_inline)) sb32 ndsStageGxInsideNearBox(
+    const s16 *minimum, const s16 *maximum, const NDSRendererMatrix20p12 *matrix)
 {
     s64 z = matrix->m[3][2], w = matrix->m[3][3];
     u32 axis;
@@ -340,11 +345,16 @@ static sb32 ndsStageGxInsideNear(const NDSStageGxRun *run, const NDSRendererMatr
     for (axis = 0u; axis < 3u; axis++)
     {
         s32 cz = matrix->m[axis][2], cw = matrix->m[axis][3];
-        z += (s64)cz * (cz >= 0 ? run->minimum[axis] : run->maximum[axis]);
-        w += (s64)cw * (cw >= 0 ? run->minimum[axis] : run->maximum[axis]);
+        z += (s64)cz * (cz >= 0 ? minimum[axis] : maximum[axis]);
+        w += (s64)cw * (cw >= 0 ? minimum[axis] : maximum[axis]);
     }
     /* Source-Z cross corners also require nonzero W after rounding to /256. */
     return w >= 128 && (s64)ndsRendererClampS64ToS32(z) + ndsRendererClampS64ToS32(w) >= 0;
+}
+
+static inline sb32 ndsStageGxInsideNear(const NDSStageGxRun *run, const NDSRendererMatrix20p12 *matrix)
+{
+    return ndsStageGxInsideNearBox(run->minimum, run->maximum, matrix);
 }
 
 /* P2-6 (2026-10-01): a run whose bounds lie wholly outside the view draws
@@ -529,9 +539,36 @@ static sb32 ndsStageGxMaterial(u32 *dst, const NDSNativeStagePreparedRun *run,
     return TRUE;
 }
 
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+/* LAB: every word the stage program sends to the FIFO, every span state and
+ * each segment's closing depth and counters, hashed in order. Read and reset
+ * once per logic frame by a gdb harness; the per-run loop and the segment fast
+ * path must produce the same value. */
+volatile u32 gNdsLabStageGxHash = 2166136261u;
+volatile u32 gNdsLabStageGxHashWords;
+/* The span states apart: they are registers outside the FIFO, written in the
+ * same order by both paths but interleaved differently with the words. */
+volatile u32 gNdsLabStageGxStateHash = 2166136261u;
+static inline void ndsLabStageGxHashWord(u32 w)
+{
+    gNdsLabStageGxHash = (gNdsLabStageGxHash ^ w) * 16777619u;
+}
+#endif
+
 static void ndsStageGxFlush(void)
 {
     if (sNdsStageGxWordCount == 0u) { return; }
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+    {
+        u32 lab_i;
+
+        for (lab_i = 0u; lab_i < sNdsStageGxWordCount; lab_i++)
+        {
+            ndsLabStageGxHashWord(sNdsStageGxWords[sNdsStageGxFirstWord + lab_i]);
+        }
+        gNdsLabStageGxHashWords += sNdsStageGxWordCount;
+    }
+#endif
     NDS_FIGHTER_PACKET_DMA_WAIT();
     DC_FlushRange(&sNdsStageGxWords[sNdsStageGxFirstWord], sNdsStageGxWordCount * 4u);
     DMA_SRC(0) = (u32)(uintptr_t)&sNdsStageGxWords[sNdsStageGxFirstWord];
@@ -560,6 +597,9 @@ static void ndsStageGxFlush(void)
 static inline void ndsStageGxSetSpanState(u32 alpha,
                                           const NDSNativeStagePreparedRun *prepared)
 {
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+    gNdsLabStageGxStateHash = (gNdsLabStageGxStateHash ^ alpha) * 16777619u;
+#endif
     glEnable(GL_TEXTURE_2D);
     if (alpha != 0u) { glEnable(GL_ALPHA_TEST); glAlphaFunc(prepared->alpha_ref); }
     else { glDisable(GL_ALPHA_TEST); }
@@ -1011,3 +1051,492 @@ static sb32 __attribute__((noinline, section(".itcm"))) ndsStageGxDraw(u32 index
     gNdsP2StageProgDraws++; gNdsP2StageProgWords += r->word_count;
     return TRUE;
 }
+
+/* ---- P2-2p8 (2026-10-04): the segment fast path ----------------------------
+ *
+ * ndsStageGxDraw runs once per run. On Dream Land's 54 runs a frame most of
+ * its ~50K ticks were the run's own records -- the run, the prepared run, the
+ * memo, the texture entry, each a main-RAM line, fetched while DMA0 streamed
+ * the previous span -- and 27 span flushes. A segment whose runs are
+ * contiguous in words and patches, with no hidden binding, no cull and no
+ * near-plane run, is committed here in one pass over its patches instead:
+ *  - a run starts at its MATERIAL patch (the validator puts that word second
+ *    in the run, so it is the run's first patch), and a non-no-Z run makes
+ *    its foreground flip there, before any of its depths;
+ *  - every other patch is written as ndsStageGxDraw writes it, and a painter
+ *    patch's depth column right after its matrix: depths are taken in patch
+ *    order, as ndsStageGxDraw's second loop takes them;
+ *  - material and projection words are proven current by one compare each
+ *    (the prepared table's serial, the texture key generation, the projection
+ *    serial) once a pass has verified every run's memo against them; the
+ *    per-run loop forgets that proof whenever it commits the segment;
+ *  - the texture stamps, the accounting and the span states follow in run
+ *    order, and the segment's words reach the FIFO in one DMA: the spans of
+ *    ndsStageGxAppend split only where the alpha state changes, and those
+ *    registers are outside the FIFO, so the word stream is the same.
+ * A failure once the depth counter has moved restores it and returns FALSE;
+ * the per-run loop then commits the segment from the same state. Same-ROM A/B
+ * word gNdsStageGxFast (0 = the per-run loop everywhere). */
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_STAGE_GX_FAST_LIVE 1
+#else
+#define NDS_STAGE_GX_FAST_LIVE 0
+#endif
+
+#if NDS_STAGE_GX_FAST_LIVE
+volatile u32 gNdsStageGxFast __attribute__((used, section(".data"))) = 1u;
+volatile u32 gNdsStageGxFastCommits;
+volatile u32 gNdsStageGxFastDeclines;
+#define NDS_STAGE_GX_FAST_SEGMENTS 32u
+#define NDS_STAGE_GX_FAST_NEAR_MAX 96u
+typedef struct NDSStageGxFastSeg
+{
+    u32 load_serial;        /* sNdsStageGxLoadSerial + 1 these were built for */
+    u32 fresh_projection;   /* projection serial + 1 every run's words hold */
+    u32 fresh_prepared;     /* prepared serial + 1 ... */
+    u32 fresh_texgen;       /* texture key generation + 1 ... */
+    u64 binding_mask;       /* every run's binding: the hidden test */
+    u32 triangles;
+    u32 reuse;              /* sum of (triangles - 1) over the runs */
+    u32 class_triangles[NDS_RENDERER_HW_SUBMIT_CLASS_COUNT];
+    u16 first_patch;
+    u16 patch_end;
+    u16 first_word;
+    u16 word_end;
+    u16 near_first;
+    u8 near_count;
+    u8 eligible;
+} NDSStageGxFastSeg;
+/* One near-plane box per (segment, binding) over the no-Z and cross-matrix
+ * runs that read the binding: inside for the union is inside for each run. */
+typedef struct NDSStageGxFastNear
+{
+    s16 minimum[3];
+    s16 maximum[3];
+    u8 binding;
+    u8 pad;
+} NDSStageGxFastNear;
+static NDSStageGxFastSeg sNdsStageGxFastSegs[NDS_STAGE_GX_FAST_SEGMENTS];
+static NDSStageGxFastNear sNdsStageGxFastNear[NDS_STAGE_GX_FAST_NEAR_MAX];
+static u32 sNdsStageGxFastNearUsed;
+static u32 sNdsStageGxFastNearSerial;
+
+static void ndsStageGxFastForget(u32 segment_index)
+{
+    if (segment_index < NDS_STAGE_GX_FAST_SEGMENTS)
+    {
+        sNdsStageGxFastSegs[segment_index].fresh_projection = 0u;
+        sNdsStageGxFastSegs[segment_index].fresh_prepared = 0u;
+        sNdsStageGxFastSegs[segment_index].fresh_texgen = 0u;
+    }
+}
+
+static void __attribute__((noinline, cold, optimize("Os")))
+ndsStageGxFastBuild(u32 segment_index, const NDSNativeStageSegment *segment)
+{
+    NDSStageGxFastSeg *s = &sNdsStageGxFastSegs[segment_index];
+    u32 i;
+
+    if (sNdsStageGxFastNearSerial != sNdsStageGxLoadSerial + 1u)
+    {
+        sNdsStageGxFastNearSerial = sNdsStageGxLoadSerial + 1u;
+        sNdsStageGxFastNearUsed = 0u;
+    }
+    memset(s, 0, sizeof(*s));
+    s->load_serial = sNdsStageGxLoadSerial + 1u;
+    s->near_first = (u16)sNdsStageGxFastNearUsed;
+    if (segment->run_count == 0u)
+    {
+        return;
+    }
+    for (i = 0u; i < segment->run_count; i++)
+    {
+        const u32 run_index = (u32)segment->first_run + i;
+        const NDSStageGxRun *r = &sNdsStageGxRuns[run_index];
+        const NDSNativeStageRun *native = &sNdsNativeStageRuns[run_index];
+        const u32 submit_class =
+            (native->submit_class ==
+             NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX) ?
+                NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX :
+                native->submit_class;
+        u64 bindings;
+
+        if ((r->word_count < 4u) || (r->patch_count == 0u) ||
+            (native->submit_class >= NDS_RENDERER_HW_SUBMIT_CLASS_COUNT) ||
+            (native->binding_index >= 64u) ||
+            (sNdsStageGxPatches[r->first_patch].kind != NDS_STAGE_GX_MATERIAL) ||
+            (sNdsStageGxPatches[r->first_patch].index != run_index))
+        {
+            return;
+        }
+        if (i == 0u)
+        {
+            s->first_patch = r->first_patch;
+            s->first_word = r->first_word;
+        }
+        else if ((r->first_patch != s->patch_end) ||
+                 (r->first_word != s->word_end))
+        {
+            return;
+        }
+        s->patch_end = (u16)(r->first_patch + r->patch_count);
+        s->word_end = (u16)(r->first_word + r->word_count);
+        s->binding_mask |= (u64)1u << native->binding_index;
+        s->triangles += native->triangle_count;
+        s->reuse += (native->triangle_count != 0u) ?
+            (u32)native->triangle_count - 1u : 0u;
+        s->class_triangles[submit_class] += native->triangle_count;
+        if ((native->submit_class != NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z) &&
+            ((native->flags & NDS_NATIVE_STAGE_RUN_FLAG_PROJECTED_CROSS_MATRIX) ==
+             0u))
+        {
+            continue;
+        }
+        bindings = (u64)r->binding_lo | ((u64)r->binding_hi << 32);
+        while (bindings != 0u)
+        {
+            const u32 low = (u32)bindings;
+            const u32 binding = (low != 0u) ? (u32)__builtin_ctz(low) :
+                32u + (u32)__builtin_ctz((u32)(bindings >> 32));
+            NDSStageGxFastNear *n = NULL;
+            u32 k;
+            u32 axis;
+
+            bindings &= bindings - 1u;
+            for (k = 0u; k < s->near_count; k++)
+            {
+                if (sNdsStageGxFastNear[s->near_first + k].binding == binding)
+                {
+                    n = &sNdsStageGxFastNear[s->near_first + k];
+                    break;
+                }
+            }
+            if (n == NULL)
+            {
+                if ((sNdsStageGxFastNearUsed >= NDS_STAGE_GX_FAST_NEAR_MAX) ||
+                    (s->near_count == 0xffu))
+                {
+                    return;
+                }
+                n = &sNdsStageGxFastNear[sNdsStageGxFastNearUsed++];
+                s->near_count++;
+                n->binding = (u8)binding;
+                for (axis = 0u; axis < 3u; axis++)
+                {
+                    n->minimum[axis] = r->minimum[axis];
+                    n->maximum[axis] = r->maximum[axis];
+                }
+                continue;
+            }
+            for (axis = 0u; axis < 3u; axis++)
+            {
+                if (r->minimum[axis] < n->minimum[axis]) { n->minimum[axis] = r->minimum[axis]; }
+                if (r->maximum[axis] > n->maximum[axis]) { n->maximum[axis] = r->maximum[axis]; }
+            }
+        }
+    }
+    s->eligible = 1u;
+}
+
+/* ndsStageGxDraw's painter column: the four rounded Z-column writes. */
+static inline void ndsStageGxFastDepthColumn(u32 *dst,
+                                             const NDSRendererMatrix20p12 *w,
+                                             s16 depth)
+{
+    u32 row;
+
+    for (row = 0u; row < 4u; row++)
+    {
+        dst[row * 4u + 2u] = (u32)(s32)ndsRendererRoundShiftS64(
+            (s64)w->m[row][3] * depth, 12u);
+    }
+}
+
+static sb32 __attribute__((noinline)) ndsStageGxCommitFast(
+    u32 segment_index, const NDSNativeStageSegment *segment,
+    NDSRendererStats *stats, u32 *segment_triangles)
+{
+    const NDSRendererMatrix20p12 *projection =
+        sNdsNativeStageOwnerExecution.projection;
+    const NDSRendererMatrix20p12 *composed_all =
+        sNdsNativeStageOwnerExecution.binding_composed;
+    NDSStageGxFastSeg *s;
+    NDSRendererMatrix20p12 composed;
+    u64 rigid;
+    u32 projection_serial;
+    u32 prepared_serial;
+    u32 texgen;
+    sb32 projection_fresh;
+    sb32 material_fresh;
+    s32 depth_saved;
+    u32 background_saved;
+    s32 composed_shift = -1;
+    u32 composed_binding = UINT_MAX;
+    u32 corner_triangle = UINT_MAX;
+    s16 corner_depth = 0;
+    u32 span_alpha = UINT_MAX;
+    u32 p;
+    u32 i;
+
+    if ((gNdsStageGxFast == 0u) || (gNdsStageGxMemo != 1u) ||
+        (gNdsStageGxOverlap == 0u) || (gNdsNativeStageRunWitness != 0u) ||
+        (segment_index >= NDS_STAGE_GX_FAST_SEGMENTS) || (stats == NULL) ||
+        (projection == NULL) || (composed_all == NULL) ||
+        (sNdsNativeStageOwnerExecution.camera_modelview == NULL) ||
+        ((gNdsStageGxCull != 0u) &&
+         (sNdsNativeStagePacketActive->gkind >= NDS_STAGE_GX_CULL_FIRST_GKIND)))
+    {
+        return FALSE;
+    }
+    s = &sNdsStageGxFastSegs[segment_index];
+    if (s->load_serial != sNdsStageGxLoadSerial + 1u)
+    {
+        ndsStageGxFastBuild(segment_index, segment);
+    }
+    if ((s->eligible == 0u) ||
+        ((sNdsNativeStageOwnerExecution.hidden_binding_mask & s->binding_mask) !=
+         0u))
+    {
+        gNdsStageGxFastDeclines++;
+        return FALSE;
+    }
+    rigid = sNdsNativeStageOwnerExecution.rigid_binding_mask;
+    for (i = 0u; i < s->near_count; i++)
+    {
+        const NDSStageGxFastNear *n = &sNdsStageGxFastNear[s->near_first + i];
+
+        if ((((rigid >> n->binding) & 1u) == 0u) &&
+            (ndsStageGxInsideNearBox(n->minimum, n->maximum,
+                                     &composed_all[n->binding]) == FALSE))
+        {
+            gNdsStageGxFastDeclines++;
+            return FALSE;
+        }
+    }
+    projection_serial = ndsStageGxProjectionSerial();
+    prepared_serial = sNdsNativeStagePreparedSerial;
+    texgen = sNdsRendererHardwareTextureKeyGeneration;
+    projection_fresh = (s->fresh_projection == projection_serial + 1u) ?
+        TRUE : FALSE;
+    material_fresh = ((s->fresh_prepared == prepared_serial + 1u) &&
+                      (s->fresh_texgen == texgen + 1u)) ? TRUE : FALSE;
+    depth_saved = sNdsRendererHardwareProjectedDepth;
+    background_saved = sNdsRendererHardwareProjectedBackground;
+
+    for (p = s->first_patch; p < s->patch_end; p++)
+    {
+        const NDSStageGxPatch *q = &sNdsStageGxPatches[p];
+        u32 *dst = &sNdsStageGxWords[q->word];
+        const u32 kind = q->kind;
+
+        if (kind == NDS_STAGE_GX_MATERIAL)
+        {
+            const u32 run_index = q->index;
+            const NDSNativeStageRun *native = &sNdsNativeStageRuns[run_index];
+
+            composed_shift = -1;
+            composed_binding = UINT_MAX;
+            corner_triangle = UINT_MAX;
+            if (native->submit_class != NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
+            {
+                ndsRendererHardwareEnterProjectedForeground();
+            }
+            if (material_fresh == FALSE)
+            {
+                const NDSStageGxRunMemo *m = &sNdsStageGxRunMemo[run_index];
+                const NDSNativeStagePreparedRun *prepared =
+                    &sNdsNativeStageOwnerExecution.runs[run_index];
+
+                if (((m->material_gen != texgen + 1u) ||
+                     (m->poly_fmt != prepared->poly_fmt) ||
+                     (m->texture_name != prepared->texture_name) ||
+                     (m->texture_params != prepared->texture_params) ||
+                     (m->textured != prepared->textured)) &&
+                    (ndsStageGxMaterial(dst, prepared, native->submit_class,
+                                        segment->owner) == FALSE))
+                {
+                    goto declined;
+                }
+            }
+        }
+        else if (kind == NDS_STAGE_GX_VIEW)
+        {
+            if (sNdsStageGxViewGen != sNdsNativeStageMatrixGen)
+            {
+                ndsRendererNativeBuildHierarchyHardwareAffine(
+                    sNdsNativeStageOwnerExecution.camera_modelview,
+                    &sNdsStageGxViewMemo);
+                sNdsStageGxViewGen = sNdsNativeStageMatrixGen;
+            }
+            memcpy(dst, &sNdsStageGxViewMemo, sizeof(sNdsStageGxViewMemo));
+        }
+        else if (kind == NDS_STAGE_GX_NOZ)
+        {
+            if (projection_fresh == FALSE)
+            {
+                memcpy(dst, projection, sizeof(composed));
+            }
+            ndsStageGxFastDepthColumn(dst, projection,
+                                      ndsRendererHardwareNextProjectedDepth());
+        }
+        else if ((kind == NDS_STAGE_GX_COMPOSED_NOZ) ||
+                 (kind == NDS_STAGE_GX_COMPOSED) ||
+                 (kind == NDS_STAGE_GX_CORNER_NOZ))
+        {
+            const u32 binding = (kind == NDS_STAGE_GX_CORNER_NOZ) ?
+                sNdsNativeStageVertices[q->index].matrix_binding : q->index;
+            const u32 shift = (kind == NDS_STAGE_GX_CORNER_NOZ) ?
+                (q->aux & 7u) : q->aux;
+
+            if ((composed_shift != (s32)shift) || (composed_binding != binding))
+            {
+                if (ndsStageGxComposedFor(binding, shift, &composed) == FALSE)
+                {
+                    goto declined;
+                }
+                composed_shift = (s32)shift;
+                composed_binding = binding;
+            }
+            memcpy(dst, &composed, sizeof(composed));
+            if (kind == NDS_STAGE_GX_CORNER_NOZ)
+            {
+                const u32 triangle = (u32)q->aux >> 3;
+
+                if (corner_triangle != triangle)
+                {
+                    corner_triangle = triangle;
+                    corner_depth = ndsRendererHardwareNextProjectedDepth();
+                }
+                ndsStageGxFastDepthColumn(dst, &composed, corner_depth);
+            }
+            else if (kind == NDS_STAGE_GX_COMPOSED_NOZ)
+            {
+                ndsStageGxFastDepthColumn(
+                    dst, &composed, ndsRendererHardwareNextProjectedDepth());
+            }
+        }
+        else if (kind == NDS_STAGE_GX_UV)
+        {
+            const NDSNativeStagePreparedDense *v =
+                &sNdsNativeStagePreparedDense[q->index];
+
+            *dst = (u32)(u16)v->s | ((u32)(u16)v->t << 16);
+        }
+        else if (kind == NDS_STAGE_GX_COLOR)
+        {
+            *dst = sNdsNativeStagePreparedDense[q->index].packed_color;
+        }
+        else if (kind == NDS_STAGE_GX_PROJECTION)
+        {
+            if (projection_fresh == FALSE)
+            {
+                ndsStageGxProjection(dst);
+            }
+        }
+        else if (kind == NDS_STAGE_GX_CORNER_SOURCE)
+        {
+            ndsStageGxCornerSource(dst, q);
+        }
+    }
+
+    /* Every word is written: the memos now vouch for this pass's inputs. */
+    if ((material_fresh == FALSE) || (projection_fresh == FALSE))
+    {
+        for (i = 0u; i < segment->run_count; i++)
+        {
+            const u32 run_index = (u32)segment->first_run + i;
+            NDSStageGxRunMemo *m = &sNdsStageGxRunMemo[run_index];
+            const NDSNativeStagePreparedRun *prepared =
+                &sNdsNativeStageOwnerExecution.runs[run_index];
+
+            m->projection_serial = projection_serial;
+            m->poly_fmt = prepared->poly_fmt;
+            m->texture_name = prepared->texture_name;
+            m->texture_params = prepared->texture_params;
+            m->textured = prepared->textured;
+            m->material_gen = texgen + 1u;
+        }
+        s->fresh_projection = projection_serial + 1u;
+        s->fresh_prepared = prepared_serial + 1u;
+        s->fresh_texgen = texgen + 1u;
+    }
+
+    /* The first span's start (ndsStageGxAppend with nothing pending): an
+     * open Task 36 segment's FIFO pop follows any DMA still running. */
+    if (sNdsNativeStageOwnerExecution.task36_segment_active != FALSE)
+    {
+        NDS_FIGHTER_PACKET_DMA_WAIT();
+    }
+    ndsRendererNativeStageTask36EndSegment();
+    ndsRendererHardwareEndBatch();
+    for (i = 0u; i < segment->run_count; i++)
+    {
+        const NDSNativeStagePreparedRun *prepared =
+            &sNdsNativeStageOwnerExecution.runs[(u32)segment->first_run + i];
+        const u32 alpha = (prepared->alpha_test != 0u) ?
+            (0x100u | prepared->alpha_ref) : 0u;
+
+        if (prepared->textured != 0u)
+        {
+            NDSRendererHardwareTextureCacheEntry *entry = prepared->texture_entry;
+
+            entry->last_used_frame = sNdsRendererHardwareFrameSerial + 1u;
+            entry->params = prepared->texture_params;
+            if (entry->pinned != 0u)
+            {
+                ndsRendererHardwareRecordBattleStaticTextureHit(entry);
+            }
+            stats->hardware_texture_ready_count++;
+            stats->hardware_texture_bind_count++;
+            stats->hardware_texture_format = prepared->texture_format;
+            stats->hardware_texture_width = prepared->texture_width;
+            stats->hardware_texture_height = prepared->texture_height;
+            ndsRendererProfileRecordTextureBind();
+        }
+        if (alpha != span_alpha)
+        {
+            ndsStageGxSetSpanState(alpha, prepared);
+            span_alpha = alpha;
+        }
+    }
+    sNdsStageGxFirstWord = s->first_word;
+    sNdsStageGxWordCount = (u32)s->word_end - s->first_word;
+    sNdsStageGxAlpha = span_alpha;
+    ndsStageGxFlush();
+
+    /* ndsRendererNativeStageAccountRun over the segment's runs. */
+    for (i = 0u; i < NDS_RENDERER_HW_SUBMIT_CLASS_COUNT; i++)
+    {
+        sNdsRendererHardwareSubmitClassCounts[i] += s->class_triangles[i];
+    }
+    sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count += s->reuse;
+    sNdsRendererRuntimeFrameSummary.texture_prepare_reuse_count += s->reuse;
+    sNdsRendererRuntimeFrameSummary.hardware_triangles += s->triangles;
+    sNdsRendererRuntimeFrameSummary.hardware_vertices += s->triangles * 3u;
+    {
+        const u32 raw = s->class_triangles[
+            NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX];
+
+        sNdsRendererRuntimeFrameSummary.raw_current_candidate_count += raw;
+        stats->hardware_zbuffer_triangle_count += raw;
+        sNdsRendererRuntimeFrameSummary.projected_submit_fallback_count +=
+            s->triangles - raw;
+        stats->hardware_projected_depth_triangle_count += s->triangles - raw;
+    }
+    stats->hardware_triangle_count += s->triangles;
+    stats->hardware_vertex_count += s->triangles * 3u;
+    sNdsRendererHardwareSubmitted = TRUE;
+    stats->triangle_count += s->triangles;
+    *segment_triangles = s->triangles;
+    gNdsP2StageProgDraws += segment->run_count;
+    gNdsP2StageProgWords += (u32)s->word_end - s->first_word;
+    gNdsStageGxFastCommits++;
+    return TRUE;
+
+declined:
+    sNdsRendererHardwareProjectedDepth = depth_saved;
+    sNdsRendererHardwareProjectedBackground = background_saved;
+    gNdsStageGxFastDeclines++;
+    return FALSE;
+}
+#endif

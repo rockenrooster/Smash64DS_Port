@@ -2867,7 +2867,12 @@ static void ndsRendererNativeStageTask36EndSegment(void)
 }
 #endif
 
-static s32 NDS_R2_ITCM_PACK2_CODE ndsRendererNativeStageBeginRun(
+/* always_inline (2026-10-04): its one call site is the commit loop, where GCC
+ * inlined it until the segment fast path grew that function past the
+ * called-once growth limit; the out-of-line copy then landed in .itcm (2 KB)
+ * and overflowed it. */
+static inline __attribute__((always_inline)) s32 NDS_R2_ITCM_PACK2_CODE
+ndsRendererNativeStageBeginRun(
     const NDSNativeStageRun *native_run,
     const NDSNativeStagePreparedRun *run,
     u32 submit_class,
@@ -4970,6 +4975,28 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
 #if NDS_TASK34_STAGE_STREAM_CENSUS
     ndsRendererTask34StageStreamBeginSegment(segment_index);
 #endif
+#if (NDS_TASK36_HW_COMPOSE == 2) && NDS_STAGE_GX_FAST_LIVE && \
+    !NDS_TASK34_STAGE_STREAM_CENSUS && !NDS_RENDERER_M3_PHASE0_PROFILE && \
+    !NDS_DREAMLAND_CARD_CULL && \
+    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+    /* The whole segment in one patch pass and one DMA when it qualifies
+     * (ndsStageGxCommitFast); the per-run loop below otherwise, which then
+     * owns the segment's memos until the fast path re-proves them. */
+    if (stage_gx_segment != FALSE)
+    {
+        if ((binding_heads == NULL) &&
+#if NDS_RENDER_ECONOMY
+            ((gNdsRendererEconomyActiveOwnerMask &
+              ((u32)1u << segment->owner)) == 0u) &&
+#endif
+            (ndsStageGxCommitFast(segment_index, segment, stats,
+                                  &segment_triangles) != FALSE))
+        {
+            goto stage_gx_fast_done;
+        }
+        ndsStageGxFastForget(segment_index);
+    }
+#endif
 #if NDS_RENDER_ECONOMY
     if ((gNdsRendererEconomyActiveOwnerMask &
          ((u32)1u << segment->owner)) != 0u)
@@ -5193,8 +5220,24 @@ stage_account_run:
         gNdsTask103IterCount++;
 #endif
     }
+#if (NDS_TASK36_HW_COMPOSE == 2) && NDS_STAGE_GX_FAST_LIVE && \
+    !NDS_TASK34_STAGE_STREAM_CENSUS && !NDS_RENDERER_M3_PHASE0_PROFILE && \
+    !NDS_DREAMLAND_CARD_CULL && \
+    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+stage_gx_fast_done:
+#endif
 #if NDS_TASK36_HW_COMPOSE == 2
     ndsStageGxFlush();
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+    /* LAB: the segment's closing painter state and counters (see
+     * gNdsLabStageGxHash). */
+    ndsLabStageGxHashWord((u32)sNdsRendererHardwareProjectedDepth);
+    ndsLabStageGxHashWord(sNdsRendererHardwareProjectedBackground);
+    ndsLabStageGxHashWord(segment_triangles);
+    ndsLabStageGxHashWord(stats->hardware_triangle_count);
+    ndsLabStageGxHashWord(stats->hardware_zbuffer_triangle_count);
+    ndsLabStageGxHashWord(stats->hardware_texture_ready_count);
+#endif
 #endif
 #if NDS_TASK36_HW_COMPOSE
     ndsRendererNativeStageTask36EndSegment();

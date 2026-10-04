@@ -7011,9 +7011,16 @@ __attribute__((used)) volatile u32 gNdsR2TexProofSweepCount;
 __attribute__((used)) volatile u32 gNdsR2TexProofSweepFailCount;
 __attribute__((used)) volatile u32 gNdsR2TextureEpochBumpCount;
 
+/* Bumped wherever runs[] is (re)written -- this drop is the write seam (see
+ * ndsRendererNativeStagePrepareRun) -- so a reader that verified the prepared
+ * table once can prove it unchanged by one compare (the stage GX segment fast
+ * path, nds_stage_gx.exec.inc). */
+static u32 sNdsNativeStagePreparedSerial;
+
 static void ndsRendererNativeStagePreparedTextureProofDrop(void)
 {
     sNdsNativeStagePreparedTextureProofValid = FALSE;
+    sNdsNativeStagePreparedSerial++;
 }
 
 /* Pure reads of the two certificates -- "is the standing proof still current",
