@@ -2981,7 +2981,12 @@ void gcPlayMObjMatAnim(MObj *mobj)
     }
 }
 
-static u32 ndsAObjEvent32CollectActiveMObjs(GObj *gobj, MObj **active_mobjs)
+/* Every MObj of the tree whose animation is live, in tree order. Stores the
+ * first `capacity` and returns the total, so a caller whose buffer was large
+ * enough walks the tree once (P2-2p8, 2026-10-04: the count-then-collect pair
+ * walked every DObj and MObj twice per gcPlayAnimAll, ~14K cycles a frame). */
+static u32 ndsAObjEvent32CollectActiveMObjs(GObj *gobj, MObj **active_mobjs,
+                                            u32 capacity)
 {
     DObj *dobj;
     u32 count = 0u;
@@ -2996,7 +3001,7 @@ static u32 ndsAObjEvent32CollectActiveMObjs(GObj *gobj, MObj **active_mobjs)
         {
             if (mobj->anim_wait != AOBJ_ANIM_NULL)
             {
-                if (active_mobjs != NULL)
+                if (count < capacity)
                 {
                     active_mobjs[count] = mobj;
                 }
@@ -3210,17 +3215,49 @@ ndsGcPlayAnimAllStableSkip(GObj *gobj, sb32 tra_only, sb32 fixed_cubic)
     }
 }
 
+/* The MObjs live before the play, collected in one walk into this many slots
+ * on the stack; a tree with more takes ndsGcPlayAnimAllLarge. */
+#define NDS_AOBJ_ACTIVE_LOCAL 24u
+
+static inline __attribute__((always_inline)) void
+ndsGcPlayAnimAllFinish(GObj *gobj, MObj **active_mobjs, u32 active_count);
+
+/* More live MObjs than the stack slots hold: collect them again into a buffer
+ * of the exact size (the walk the old count-then-collect pair always made). */
+static void __attribute__((noinline, cold))
+ndsGcPlayAnimAllLarge(GObj *gobj, sb32 tra_only, sb32 fixed_cubic,
+                      u32 active_count)
+{
+    MObj *active_mobjs[active_count];
+
+    (void)ndsAObjEvent32CollectActiveMObjs(gobj, active_mobjs, active_count);
+    ndsGcPlayAnimAllStableSkip(gobj, tra_only, fixed_cubic);
+    ndsGcPlayAnimAllFinish(gobj, active_mobjs, active_count);
+}
+
 static inline __attribute__((always_inline)) void
 ndsGcPlayAnimAllBody(GObj *gobj, sb32 tra_only, sb32 fixed_cubic)
 {
-    DObj *dobj;
-    u32 active_count = ndsAObjEvent32CollectActiveMObjs(gobj, NULL);
-    MObj *active_mobjs[(active_count != 0u) ? active_count : 1u];
-    u32 i;
+    MObj *active_mobjs[NDS_AOBJ_ACTIVE_LOCAL];
+    const u32 active_count = ndsAObjEvent32CollectActiveMObjs(
+        gobj, active_mobjs, NDS_AOBJ_ACTIVE_LOCAL);
 
-    (void)ndsAObjEvent32CollectActiveMObjs(gobj, active_mobjs);
-
+    if (active_count > NDS_AOBJ_ACTIVE_LOCAL)
+    {
+        ndsGcPlayAnimAllLarge(gobj, tra_only, fixed_cubic, active_count);
+        return;
+    }
     ndsGcPlayAnimAllStableSkip(gobj, tra_only, fixed_cubic);
+    ndsGcPlayAnimAllFinish(gobj, active_mobjs, active_count);
+}
+
+/* After the play: the unconditional colour pass over every MObj, then the
+ * objects whose animation crossed END this call. */
+static inline __attribute__((always_inline)) void
+ndsGcPlayAnimAllFinish(GObj *gobj, MObj **active_mobjs, u32 active_count)
+{
+    DObj *dobj;
+    u32 i;
 
     for (dobj = (gobj != NULL) ? DObjGetStruct(gobj) : NULL;
          dobj != NULL;
