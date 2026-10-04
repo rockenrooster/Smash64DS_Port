@@ -1846,9 +1846,16 @@ static s32 ndsPlatformTransitionSnapshotMoveToC(void)
  * frame then goes to D, which no displayed layer reads once it shows, and C
  * back to BG2, empty: the next scene's BG2 writes and texture uploads find
  * their banks as before. 3D translucent over the wallpaper is kept
- * unblended. Taken only at the 1P battle's exit, whose next scene reads the
- * frame as its photo too (the stage clear,
- * ndsPlatformTransitionSnapshotToN64Frame). */
+ * unblended. Taken only at a 1P battle's or bonus stage's exit, whose next
+ * scene reads the frame as its photo too (the stage clear,
+ * ndsPlatformTransitionSnapshotToN64Frame).
+ *
+ * D may still hold live texture blocks (owner r74: the tally was black after
+ * Mario Bros and the Polygon Team: 11 KB and 1 KB of the battle's textures
+ * past 0x06860000 refused the capture). D is the battle's loan (lent and
+ * asked back), so every block in it is the leaving battle's: nothing draws
+ * them once the held frame replaces the 3D layer, and the next scene's entry
+ * drops their names with every other texture (glResetTextures). */
 extern volatile u32 gNdsSceneManagerCurrKind __attribute__((weak));
 extern u16 gSYFramebufferSets[1][231][320];
 
@@ -1869,14 +1876,15 @@ static s32 ndsPlatformTransitionSnapshotOverWallpaper(void)
     s32 y;
 
     if ((&gNdsSceneManagerCurrKind == NULL) ||
-        (gNdsSceneManagerCurrKind != NDS_PLATFORM_SCENE_KIND_1P_GAME) ||
+        ((gNdsSceneManagerCurrKind != NDS_PLATFORM_SCENE_KIND_1P_GAME) &&
+         (gNdsSceneManagerCurrKind !=
+          NDS_PLATFORM_SCENE_KIND_1P_BONUS_STAGE)) ||
         (sizeof(gSYFramebufferSets) < 0x20000u) ||
         (sOriginalSpriteOverlayBg < 0) ||
         (sOriginalSpriteOverlayBg3Lent == 0u) ||
         (sOriginalSpriteOverlayBg3ReturnPending == 0u) ||
         (cr[2] != (VRAM_ENABLE | VRAM_C_MAIN_BG_0x06000000)) ||
         ((cr[3] & 0x87u) != 0x83u) ||
-        (ndsPlatformTextureBankInUse(3u) != FALSE) ||
         ((REG_DISPCNT & DISPLAY_BG0_ACTIVE) == 0u))
     {
         return FALSE;

@@ -143,6 +143,8 @@ extern void *gSYSchedulerCurrentFramebuffer;
 
 _Static_assert(nSCKind1PGame == NDS_PLATFORM_SCENE_KIND_1P_GAME,
                "nds_platform.h names the 1P battle's scene kind");
+_Static_assert(nSCKind1PBonusStage == NDS_PLATFORM_SCENE_KIND_1P_BONUS_STAGE,
+               "nds_platform.h names the 1P bonus stage's scene kind");
 
 #define sc1PStageClearStartScene ndsBaseSC1PStageClearStartScene
 void ndsBaseSC1PStageClearStartScene(void);
