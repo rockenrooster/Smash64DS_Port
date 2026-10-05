@@ -4775,7 +4775,7 @@ static u32 ndsRelocP2FighterAnimAssetIDForToken(u32 token)
 }
 #endif
 
-static u32 ndsRelocAssetIDForToken(u32 token)
+static u32 ndsRelocAssetIDForTokenChain(u32 token)
 {
 #if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS
     u32 p2_anim_asset_id = ndsRelocP2FighterAnimAssetIDForToken(token);
@@ -5423,6 +5423,33 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     if (token == NDS_RELOC_ASSET_MARIO_ANIM_WALK_END) return NDS_RELOC_ASSET_MARIO_ANIM_WALK_END;
     if (ndsRelocIsMarioFoxAnimID(token) != FALSE) return token;
     return NDS_RELOC_ASSET_INVALID;
+}
+
+/* The chain above is a pure function of the token (link-time symbol
+ * addresses and constants) and walks several hundred compares before it
+ * answers a late row. Effect makers ask it on every effect they create
+ * (ndsRelocGetLoadedFileSize under the mapped-desc resolve): in four-Pikachu
+ * Thunder frames it was ~27K cycles of the heavy frames' excess. A direct-
+ * mapped memo answers a repeat token at once; a miss only refills its line.
+ * Keys hold token + 1 so the zeroed table starts empty. */
+#define NDS_RELOC_TOKEN_MEMO_LINES 64u
+static u32 sNdsRelocTokenMemoKey[NDS_RELOC_TOKEN_MEMO_LINES];
+static u32 sNdsRelocTokenMemoAsset[NDS_RELOC_TOKEN_MEMO_LINES];
+
+static u32 ndsRelocAssetIDForToken(u32 token)
+{
+    u32 line = ((token * 2654435761u) >> 26) &
+        (NDS_RELOC_TOKEN_MEMO_LINES - 1u);
+    u32 asset_id;
+
+    if (sNdsRelocTokenMemoKey[line] == token + 1u)
+    {
+        return sNdsRelocTokenMemoAsset[line];
+    }
+    asset_id = ndsRelocAssetIDForTokenChain(token);
+    sNdsRelocTokenMemoKey[line] = token + 1u;
+    sNdsRelocTokenMemoAsset[line] = asset_id;
+    return asset_id;
 }
 
 static u32 ndsRelocOpeningRoomBitForAsset(u32 file_id)

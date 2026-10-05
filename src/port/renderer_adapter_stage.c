@@ -7786,6 +7786,17 @@ volatile u32 gNdsStageDLFastLaneFills;
  * root under any owner, as the body admits it; under the effect layer it
  * takes the layer's seeds and witnesses first. */
 #define NDS_SDL_ROUTE_KIRBYSTAR 0xf2u
+/* P2-2p8 (2026-10-05), owner playtest "Pikachu Down B / Ness Up B cause P95
+ * slowdown": Thunder's bolt (its head and trail weapons, the trail effect and
+ * the shock roots) and PK Thunder's head and trail weapons drew through the
+ * body on every frame they live, a dozen lists a frame with four Pikachus.
+ * Admission is the body's owner's own, tested again on every draw: Thunder's
+ * adapter re-proves the GObj kind, the weapon kind, the root and its MObj
+ * snapshot; PK Thunder's arm re-proves the weapon kind against the recorded
+ * root, the trail id and the snapshot's effects. An owner that declines sends
+ * the list back to the body, which decides as before. */
+#define NDS_SDL_ROUTE_PIKACHU_THUNDER 0xf1u
+#define NDS_SDL_ROUTE_NESS_PKTHUNDER 0xf0u
 /* Yoshi's Island's capsules and boxes thrashed an 8-slot table (1,231 fills
  * for 1,469 hits a match): the owners are few, but a capsule alone draws three
  * roots, and its header and third root shared a slot under an address-bit
@@ -8190,6 +8201,11 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
 #if NDS_P2_STAGE_INISHIE
     const u8 *inishie_pal_base = NULL;
 #endif
+#if NDS_P2_NESS
+    NDSRendererNativeMaterial pkthunder_material;
+    u32 pkthunder_root_index = 0u;
+    u32 pkthunder_trail_color = 0u;
+#endif
     /* Zeroed once a route is taken: most lists leave at the route test. */
     NDSRendererConfig config;
     NDSRendererStats *render_stats;
@@ -8238,12 +8254,15 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
           (route->route != NDS_SDL_ROUTE_HITOKAGE) &&
           (route->route != NDS_SDL_ROUTE_FUSHIGIBANA) &&
           (route->route != NDS_SDL_ROUTE_DAMAGE_FLY_MDUST) &&
-          (route->route != NDS_SDL_ROUTE_INISHIE_PAKKUN)) ||
+          (route->route != NDS_SDL_ROUTE_INISHIE_PAKKUN) &&
+          (route->route != NDS_SDL_ROUTE_PIKACHU_THUNDER) &&
+          (route->route != NDS_SDL_ROUTE_NESS_PKTHUNDER)) ||
          (owner == NULL) ||
          (sNdsRendererAdapterStagePersistentActive == FALSE) ||
          ((sNdsRendererAdapterEffectSubmitActive != FALSE) &&
           (route->route != NDS_SDL_ROUTE_DAMAGE_FLY_MDUST) &&
-          (route->route != NDS_SDL_ROUTE_KIRBYSTAR)) ||
+          (route->route != NDS_SDL_ROUTE_KIRBYSTAR) &&
+          (route->route != NDS_SDL_ROUTE_PIKACHU_THUNDER)) ||
          (ndsRendererHardwareNoOracleEnabled() == FALSE)))
     {
         return FALSE;
@@ -8303,6 +8322,60 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
             return FALSE;
         }
         break;
+#if NDS_P2_PIKACHU
+    case NDS_SDL_ROUTE_PIKACHU_THUNDER:
+        /* The adapter re-proves the rest on every draw. */
+        if (sNdsRendererAdapterItemSubmitActive != FALSE)
+        {
+            return FALSE;
+        }
+        break;
+#endif
+#if NDS_P2_NESS
+    case NDS_SDL_ROUTE_NESS_PKTHUNDER:
+    {
+        /* The body's candidate test (PK Thunder's head and trail are
+         * NessModel weapons with one live CURRENT_IMAGE MObj). */
+        WPStruct *pkthunder_wp;
+
+        if ((owner->id != nGCCommonKindWeapon) ||
+            (sNdsRendererAdapterItemSubmitActive != FALSE) ||
+            (dobj->mobj == NULL) || (dobj->mobj->next != NULL))
+        {
+            return FALSE;
+        }
+        pkthunder_wp = wpGetStruct(owner);
+        if ((pkthunder_wp != NULL) &&
+            (pkthunder_wp->kind == nWPKindPKThunderHead) &&
+            (route->root == NDS_NATIVE_NESS_PKTHUNDER_HEAD_ROOT))
+        {
+            pkthunder_root_index = NDS_NATIVE_NESS_PKTHUNDER_HEAD_INDEX;
+        }
+        else if ((pkthunder_wp != NULL) &&
+                 (pkthunder_wp->kind == nWPKindPKThunderTrail) &&
+                 (route->root == NDS_NATIVE_NESS_PKTHUNDER_TRAIL_ROOT) &&
+                 ((u32)pkthunder_wp->weapon_vars.pkthunder_trail.trail_id <
+                  NDS_NATIVE_NESS_PKTHUNDER_TRAIL_COLOR_COUNT))
+        {
+            pkthunder_root_index = NDS_NATIVE_NESS_PKTHUNDER_TRAIL_INDEX;
+            pkthunder_trail_color =
+                (u32)pkthunder_wp->weapon_vars.pkthunder_trail.trail_id;
+        }
+        else
+        {
+            return FALSE;
+        }
+        if ((ndsRendererAdapterBuildNativeMaterialSnapshot(
+                 dobj->mobj, &pkthunder_material, FALSE, NULL, NULL) ==
+             FALSE) ||
+            (pkthunder_material.effects !=
+                 NDS_NATIVE_NESS_PKTHUNDER_MATERIAL_EFFECTS))
+        {
+            return FALSE;
+        }
+        break;
+    }
+#endif
 #if NDS_P2_ITEM_CORE
     case NDS_SDL_ROUTE_KIRBYSTAR:
         if ((sNdsRendererAdapterItemSubmitActive != FALSE) ||
@@ -8762,6 +8835,57 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
             gNdsEffectDLSubmitOtherModeOut = render_stats->othermode_l;
             NDS_DIAG(gNdsEffectDLSubmitCount++);
             NDS_DIAG(gNdsEffectDLPublishCount++);
+        }
+    }
+#endif
+#if NDS_P2_PIKACHU
+    else if (route_kind == NDS_SDL_ROUTE_PIKACHU_THUNDER)
+    {
+        /* Under the effect layer (the trail effect, the shock roots) the
+         * body's effect-submit seeds come first, as for the Kirby star. */
+        if (sNdsRendererAdapterEffectSubmitActive != FALSE)
+        {
+            if ((sNdsRendererAdapterEffectColorMask & 1u) != 0u)
+            {
+                render_stats->prim_color = sNdsRendererAdapterEffectPrimColor;
+            }
+            if ((sNdsRendererAdapterEffectColorMask & 2u) != 0u)
+            {
+                render_stats->env_color = sNdsRendererAdapterEffectEnvColor;
+            }
+            if (sNdsRendererAdapterEffectOtherModeValid != 0u)
+            {
+                render_stats->othermode_l = sNdsRendererAdapterEffectOtherModeL;
+            }
+            gNdsEffectDLSubmitOtherModeIn = render_stats->othermode_l;
+        }
+        handled = ndsRendererAdapterPikachuThunder(loaded, dobj, dl, &config,
+                                                   render_stats);
+        if (handled == FALSE)
+        {
+            /* Declined before drawing anything: the body decides. */
+            gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
+            return FALSE;
+        }
+        if (sNdsRendererAdapterEffectSubmitActive != FALSE)
+        {
+            gNdsEffectDLSubmitOtherModeOut = render_stats->othermode_l;
+            NDS_DIAG(gNdsEffectDLSubmitCount++);
+            NDS_DIAG(gNdsEffectDLPublishCount++);
+        }
+    }
+#endif
+#if NDS_P2_NESS
+    else if (route_kind == NDS_SDL_ROUTE_NESS_PKTHUNDER)
+    {
+        handled = ndsRendererSubmitNativeNessPKThunder(
+            pkthunder_root_index, &pkthunder_material, pkthunder_trail_color,
+            &config, render_stats);
+        if (handled == FALSE)
+        {
+            /* Declined before drawing anything: the body decides. */
+            gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
+            return FALSE;
         }
     }
 #endif
@@ -13393,6 +13517,18 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             ndsRendererSubmitNativeNessPKThunder(
                 ness_pkthunder_root_index, &ness_pkthunder_material,
                 ness_pkthunder_trail_color, &pkthunder_config, render_stats);
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        if ((ness_pkthunder_native_handled != FALSE) &&
+            (gNdsStageDLFastMore != 0u))
+        {
+            ndsStageDLRouteRecord(dl, loaded,
+                (ness_pkthunder_root_index ==
+                 NDS_NATIVE_NESS_PKTHUNDER_HEAD_INDEX) ?
+                    NDS_NATIVE_NESS_PKTHUNDER_HEAD_ROOT :
+                    NDS_NATIVE_NESS_PKTHUNDER_TRAIL_ROOT,
+                NDS_SDL_ROUTE_NESS_PKTHUNDER);
+        }
+#endif
     }
  #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PURIN
@@ -13411,8 +13547,19 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PIKACHU
     if (loaded != NULL && (loaded->asset_id == NDS_NATIVE_PIKACHU_THUNDER_MODEL ||
                           loaded->asset_id == NDS_NATIVE_PIKACHU_THUNDER_SPECIAL))
+    {
         pikachu_thunder_native_handled = ndsRendererAdapterPikachuThunder(
             loaded, dobj, dl, &config, render_stats);
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        if ((pikachu_thunder_native_handled != FALSE) &&
+            (gNdsStageDLFastMore != 0u))
+        {
+            ndsStageDLRouteRecord(dl, loaded,
+                                  ndsRelocNativeRootOffset(loaded, dl),
+                                  NDS_SDL_ROUTE_PIKACHU_THUNDER);
+        }
+#endif
+    }
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_NESS
     /* The last PK Thunder trail segment is an EFFECT, not a weapon
