@@ -53,7 +53,7 @@ RUN_V1 = struct.Struct('<6H')
 RUN_V2 = struct.Struct('<6H6h')
 RUN = struct.Struct('<6H6h2I')
 PATCH = struct.Struct('<4H')
-PARAMS = {0: 0, 0x10: 1, 0x11: 0, 0x12: 1, 0x15: 0, 0x16: 16, 0x18: 16,
+PARAMS = {0: 0, 0x10: 1, 0x11: 0, 0x12: 1, 0x15: 0, 0x16: 16, 0x18: 16, 0x19: 12,
           0x1C: 3, 0x20: 1, 0x22: 1, 0x23: 2, 0x29: 1, 0x2A: 1, 0x2B: 1,
           0x40: 1, 0x41: 0}
 # MTX_TRANS(0, 0, -1): one painter depth step nearer (20.12).
@@ -232,6 +232,18 @@ def compile_packet(packet, name='dreamland'):
                 lane = (lane + 1) % 4
                 return offset
 
+            def emit_world(binding, shift):
+                # An affine baked world (column 3 = 0, 0, 0, 1.0) loads as
+                # MTX_MULT_4x3: the same matrix in 12 words, not 16 (P2-2p8,
+                # 2026-10-05: the GXFIFO DMA's cost follows the words sent).
+                nonlocal baked_mask
+                w = world_words(packet, binding, shift)
+                if w[3] == 0 and w[7] == 0 and w[11] == 0 and w[15] == 4096:
+                    emit(0x19, *(w[0:3] + w[4:7] + w[8:11] + w[12:15]))
+                else:
+                    emit(0x18, *w)
+                baked_mask |= 1 << binding
+
             def patch(op, kind, index=0, aux=0):
                 offset = emit(op, *([0] * PARAMS[op]))
                 patches.append((offset, kind, index, aux))
@@ -284,8 +296,7 @@ def compile_packet(packet, name='dreamland'):
                             emit(0x10, 2)
                             emit(0x12, 1)
                         emit(0x11)
-                        emit(0x18, *world_words(packet, run.binding_index, shift))
-                        baked_mask |= 1 << run.binding_index
+                        emit_world(run.binding_index, shift)
                         emit(0x10, 0)
                         last_shift = shift
                     if triangle == 0:
@@ -329,8 +340,7 @@ def compile_packet(packet, name='dreamland'):
                     if composed:
                         pass  # the full transform is the triangle's projection
                     else:
-                        emit(0x18, *world_words(packet, run.binding_index, shift))
-                        baked_mask |= 1 << run.binding_index
+                        emit_world(run.binding_index, shift)
                     last_shift = shift
                 if triangle == 0:
                     emit(0x40, 0)  # triangles
@@ -373,7 +383,7 @@ def compile_packet(packet, name='dreamland'):
     body += struct.pack(f'<{len(words)}I', *words)
     if len(body) > body_max(name):
         raise ValueError('GX template exceeds the stage body heap ceiling')
-    return HEADER.pack(MAGIC, 7, stage.blob_gkind(name), len(runs), len(words),
+    return HEADER.pack(MAGIC, 8, stage.blob_gkind(name), len(runs), len(words),
                        len(patches), (1 << len(packet.segments)) - 1, signature(packet), len(body),
                        stage.fnv1a_bytes(body), baked_mask & 0xFFFFFFFF, baked_mask >> 32) + body
 
@@ -381,9 +391,9 @@ def compile_packet(packet, name='dreamland'):
 def decode(blob):
     header = HEADER.unpack_from(blob)
     magic, version, _, nr, nw, np, _, _, nb, checksum, _, _ = header
-    if magic != MAGIC or version not in (1, 2, 3, 4, 5, 6, 7) or len(blob) != HEADER.size + nb:
+    if magic != MAGIC or version not in (1, 2, 3, 4, 5, 6, 7, 8) or len(blob) != HEADER.size + nb:
         raise ValueError('Invalid GX header/length')
-    record = {1: RUN_V1, 2: RUN_V2, 3: RUN, 4: RUN, 5: RUN, 6: RUN, 7: RUN}[version]
+    record = {1: RUN_V1, 2: RUN_V2, 3: RUN, 4: RUN, 5: RUN, 6: RUN, 7: RUN, 8: RUN}[version]
     if nb != nr * record.size + np * PATCH.size + nw * 4 or stage.fnv1a_bytes(blob[HEADER.size:]) != checksum:
         raise ValueError('Invalid GX body')
     pos = HEADER.size

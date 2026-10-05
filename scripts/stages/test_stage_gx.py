@@ -73,7 +73,7 @@ def test_compiled_corners_patch_coverage_and_stack(name):
             # on the projection; every run leaves position mode current.
             if op == 0x10:
                 mode = args[0]
-            assert mode == (0 if op == 0x1C else 2) or op not in (0x11, 0x12, 0x18, 0x1C)
+            assert mode == (0 if op == 0x1C else 2) or op not in (0x11, 0x12, 0x18, 0x19, 0x1C)
             if op == 0x11:
                 depth += 1
             elif op == 0x12:

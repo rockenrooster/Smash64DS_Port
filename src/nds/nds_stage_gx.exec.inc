@@ -159,6 +159,8 @@ static sb32 ndsStageGxValidate(const NDSStageGxHeader *h, const u8 *body)
                     if (vertices == 0u || (vertices % 3u) != 0u || depth != 1u) { return FALSE; } break;
                 case 0x16: n = 16u; kind = NDS_STAGE_GX_VIEW; break;
                 case 0x18: n = 16u; kind = NDS_STAGE_GX_WORLD; break;
+                /* Template 8: an affine baked world as MTX_MULT_4x3. */
+                case 0x19: n = 12u; kind = NDS_STAGE_GX_WORLD; break;
                 case 0x20: n = 1u; kind = NDS_STAGE_GX_COLOR; break;
                 case 0x22: n = 1u; kind = NDS_STAGE_GX_UV; break;
                 case 0x23: n = 2u; vertices++; if (depth != 1u) { return FALSE; } break;
@@ -175,7 +177,7 @@ static sb32 ndsStageGxValidate(const NDSStageGxHeader *h, const u8 *body)
                     (op == 0x40 && words[cursor] != 0u) ||
                     (op == 0x1C && (words[cursor] != 0u || words[cursor + 1u] != 0u ||
                                     words[cursor + 2u] != 0xFFFFFFFFu))) { return FALSE; }
-                if (op == 0x18)
+                if ((op == 0x18) || (op == 0x19))
                 {
                     const NDSNativeStageRun *native = &sNdsNativeStageRuns[i];
                     u32 shift;
@@ -186,8 +188,24 @@ static sb32 ndsStageGxValidate(const NDSStageGxHeader *h, const u8 *body)
                         native->submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX ?
                         sNdsNativeStageOwnerExecution.runs[i].coordinate_shift :
                         ndsRendererNativeStageTask36TriangleShift(native, vertices / 3u);
-                    if (!ndsRendererNativeStageTask36BuildWorld(native->binding_index, shift, &expected) ||
-                        memcmp(&words[cursor], &expected, sizeof(expected)) != 0) { return FALSE; }
+                    if (!ndsRendererNativeStageTask36BuildWorld(native->binding_index, shift, &expected)) { return FALSE; }
+                    if (op == 0x18)
+                    {
+                        if (memcmp(&words[cursor], &expected, sizeof(expected)) != 0) { return FALSE; }
+                    }
+                    else
+                    {
+                        /* The 4x3 form is the 4x4 less its column 3, which
+                         * must be (0, 0, 0, 1.0). */
+                        u32 row;
+                        if (expected.m[3] != 0 || expected.m[7] != 0 || expected.m[11] != 0 ||
+                            expected.m[15] != (1 << 12)) { return FALSE; }
+                        for (row = 0u; row < 4u; row++)
+                        {
+                            if (memcmp(&words[cursor + row * 3u], &expected.m[row * 4u],
+                                       3u * sizeof(u32)) != 0) { return FALSE; }
+                        }
+                    }
                     kind = 0u;
                 }
                 if ((kind == NDS_STAGE_GX_COLOR || kind == NDS_STAGE_GX_UV) &&
@@ -300,7 +318,7 @@ static sb32 __attribute__((noinline, cold, optimize("Os"))) ndsStageGxLoad(void)
     if (!ndsRelocAssetStreamOpen(&stream, sNdsStageGxPaths[gkind]) ||
         !ndsRelocAssetStreamRead(&stream, 0u, &h, sizeof(h))) { goto failed; }
     reason = 2u;
-    if (h.magic != 0x31505847u || h.version != 7u || h.gkind != gkind ||
+    if (h.magic != 0x31505847u || h.version != 8u || h.gkind != gkind ||
         h.run_count != NDS_NATIVE_STAGE_RUN_COUNT || h.word_count == 0u || h.word_count > 16384u ||
         h.patch_count > 4096u || NDS_NATIVE_STAGE_SEGMENT_COUNT >= 32u ||
         h.segment_mask != (1u << NDS_NATIVE_STAGE_SEGMENT_COUNT) - 1u ||

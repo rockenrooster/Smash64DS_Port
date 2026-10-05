@@ -1356,6 +1356,12 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   corner past +/-511 units walks again at VTX_16. Gate same ROM paired -2.6K,
   814,656/1,127,552, digest identical; captures differ in isolated fighter
   edge pixels (receipt `2026-10-05_lean-vtx10`, word `gNdsFtrLeanVtx10`).
+  Stage templates v8 send every (affine) baked world as MTX_MULT_4x3, 12
+  words instead of 16 (Dream Land 4,890 -> 4,782 words a frame, the other VS
+  stages -4 to -192); the validator checks column 3. Gate 813,568/1,125,568,
+  100 over (receipt `2026-10-05_stage-mult43`). Tried and reverted: making the
+  DMA starts' bookkeeping stores first (paired +0.3K: the stall moves to the
+  next bus access).
 
 ## 7. Found along the way
 
