@@ -229,7 +229,36 @@ sb32 ndsBaseGmCollisionCheckItemAttackFighterDamageCollide(
 #define gmCollisionCheckItemAttackFighterDamageCollide     ndsBaseGmCollisionCheckItemAttackFighterDamageCollide
 #endif
 
+#if NDS_P2_JOINT_RESIDENT
+/* Owner ruling D13 (2026-10-04): fighter joint worlds stay in fixed point
+ * (src/port/nds_p2_hurtbox_reject.c). The decomp body keeps its float walk
+ * under the ndsBase name for the joints the resident world declines
+ * (animation locks, a guard). gmcollision.c never calls it, so the rename
+ * moves the definition and captures every call. */
+void ndsBaseGmCollisionGetFighterPartsWorldPosition(DObj *main_dobj,
+                                                    Vec3f *vec);
+#define gmCollisionGetFighterPartsWorldPosition \
+    ndsBaseGmCollisionGetFighterPartsWorldPosition
+#endif
+
 #include "../../decomp/BattleShip-main/decomp/src/gm/gmcollision.c"
+
+#if NDS_P2_JOINT_RESIDENT
+#undef gmCollisionGetFighterPartsWorldPosition
+
+int ndsP2JointWorldPosition(DObj *joint, Vec3f *vec);
+extern volatile u32 gNdsP2JointResident;
+
+void gmCollisionGetFighterPartsWorldPosition(DObj *main_dobj, Vec3f *vec)
+{
+    if ((gNdsP2JointResident != 0u) &&
+        (ndsP2JointWorldPosition(main_dobj, vec) != 0))
+    {
+        return;
+    }
+    ndsBaseGmCollisionGetFighterPartsWorldPosition(main_dobj, vec);
+}
+#endif
 
 #if NDS_P2_HURTBOX_REJECT
 #undef gmCollisionCheckWeaponAttackFighterDamageCollide

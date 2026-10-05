@@ -146,6 +146,13 @@ NDS_P2_EFFECT_CENSUS ?= 0
 # decomp float test (src/port/nds_p2_hurtbox_reject.c). gNdsP2HurtboxRejectMode
 # selects off/reject/shadow at runtime.
 NDS_P2_HURTBOX_REJECT ?= 1
+# P2-2p8 (2026-10-04), owner ruling D13: fighter joint worlds stay fixed point
+# end to end. The hurtbox reject's per-epoch world cache serves
+# gmCollisionGetFighterPartsWorldPosition and the held item's 0x52 matrix in
+# place of the float latch walk (src/port/nds_p2_hurtbox_reject.c). Re-baselines
+# the replay digest; the P2 VS targets only (the frozen P1 target keeps the
+# float walk). gNdsP2JointResident is the same-ROM A/B word.
+NDS_P2_JOINT_RESIDENT ?= $(if $(filter 1,$(NDS_P2_HURTBOX_REJECT)),$(if $(filter smash64ds-p2-fourcpu-tickhud-hwtri smash64ds-p2-shell-hwtri smash64ds-p2-shell-freeplay-hwtri smash64ds-p2-shell-loop-hwtri smash64ds,$(TARGET)),1,0),0)
 # P2-2p8: memcpy/memset/memcmp in ARM state (32-byte LDM/STM bodies), in ITCM
 # (src/nds/nds_fast_mem.c), in place of newlib's Thumb C members that Task 37
 # moved into ITCM (NDS_TASK37_ITCM_LIBC is 0 while this is 1). 0 restores them.
@@ -7351,6 +7358,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_COLLISION_L7_ORACLE $(NDS_R2_COLLISION_L7_ORACLE)'; \
 		echo '#define NDS_R2_COLLISION_FIXED $(NDS_R2_COLLISION_FIXED)'; \
 		echo '#define NDS_P2_HURTBOX_REJECT $(NDS_P2_HURTBOX_REJECT)'; \
+		echo '#define NDS_P2_JOINT_RESIDENT $(NDS_P2_JOINT_RESIDENT)'; \
 		echo '#define NDS_FAST_MEM $(NDS_FAST_MEM)'; \
 		echo '#define NDS_FTR_PRE_WALK_CENSUS $(NDS_FTR_PRE_WALK_CENSUS)'; \
 		echo '#define NDS_P2_MISC_SPLIT $(NDS_P2_MISC_SPLIT)'; \

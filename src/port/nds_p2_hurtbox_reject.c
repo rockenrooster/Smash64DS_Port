@@ -88,6 +88,142 @@ static inline u32 ndsP2HbBits(f32 value)
     return bits;
 }
 
+#if NDS_P2_JOINT_RESIDENT
+/* The relaxed local below. lbCommonSin's table index, (s32)(angle * K) with
+ * K = 0xa2f983 * 2^-14, as mantissa * 0xa2f983 * 2^(exponent - 164) truncated:
+ * the lean kernel's form (src/nds/nds_ftr_lean_kernel.c), without the float
+ * multiply's rounding step. 0 = decline (|angle| >= 2^14 or not finite). */
+static int ndsP2HbAngleIndex(f32 angle, s32 *out)
+{
+    const u32 bits = ndsP2HbBits(angle);
+    const u32 exponent = (bits >> 23) & 0xffu;
+    u32 magnitude;
+
+    if (exponent <= 116u)
+    {
+        *out = 0;
+        return 1;
+    }
+    if (exponent > 140u)
+    {
+        return 0;
+    }
+    magnitude = (u32)(((u64)((bits & 0x7fffffu) | 0x800000u) * 0xa2f983u) >>
+                      (164u - exponent));
+    *out = ((bits & 0x80000000u) != 0u) ? -(s32)magnitude : (s32)magnitude;
+    return 1;
+}
+
+static inline s32 ndsP2HbSinQ15(s32 index)
+{
+    const u32 id = (u32)index & 0xfffu;
+    const s32 value = (s32)gSYSinTable[id & 0x7ffu];
+
+    return ((id & 0x800u) != 0u) ? -value : value;
+}
+
+/* One copy of the float -> fixed edge for the six conversions a local takes. */
+static int32_t __attribute__((noinline)) ndsP2HbToFixed(f32 value,
+                                                        u32 frac_bits)
+{
+    return ndsR2CollisionF32ToFixed(value, frac_bits);
+}
+
+/* gmCollisionTransformMatrixAll's local from the DObj TRS in Q26 / Q12 (owner
+ * ruling D13, 2026-10-04: the fighter joint chain is fixed point end to end).
+ * The rotation terms are the source's, in its order, at Q30 from the Q15 table
+ * the port's lbCommonSin reads. Two relaxations against the exact builder
+ * (ndsR2CfxBuildLocal, about five times this code): the index truncates as
+ * above, and the cosine reads the index a quarter turn on rather than indexing
+ * angle + 90 degrees -- each one table step (1/4096 turn) at a rounding edge,
+ * far inside the reject's four-unit margin. 0 = decline (a scale past 4, a
+ * translation past 131,072 units, an angle the index declines). */
+static int ndsP2HbLocalFromDObj(NDSR2CfxMtx *dst, const DObj *dobj)
+{
+    const f32 scale[3] = { dobj->scale.vec.f.x, dobj->scale.vec.f.y,
+                           dobj->scale.vec.f.z };
+    const f32 translate[3] = { dobj->translate.vec.f.x,
+                               dobj->translate.vec.f.y,
+                               dobj->translate.vec.f.z };
+    s32 ix;
+    s32 iy;
+    s32 iz;
+    s32 sx;
+    s32 cx;
+    s32 sy;
+    s32 cy;
+    s32 sz;
+    s32 cz;
+    s32 sxsy;
+    s32 cxsy;
+    s32 rot[3][3]; /* Q30 */
+    u32 row;
+    u32 col;
+
+    if ((ndsP2HbAngleIndex(dobj->rotate.vec.f.x, &ix) == 0) ||
+        (ndsP2HbAngleIndex(dobj->rotate.vec.f.y, &iy) == 0) ||
+        (ndsP2HbAngleIndex(dobj->rotate.vec.f.z, &iz) == 0))
+    {
+        return 0;
+    }
+    sx = ndsP2HbSinQ15(ix);
+    cx = ndsP2HbSinQ15(ix + 0x400);
+    sy = ndsP2HbSinQ15(iy);
+    cy = ndsP2HbSinQ15(iy + 0x400);
+    sz = ndsP2HbSinQ15(iz);
+    cz = ndsP2HbSinQ15(iz + 0x400);
+    /* Pair products of Q15 entries are at most 2^30; each sum below is a
+     * rotation cell, so it stays within 2^30 plus the table's rounding. */
+    sxsy = sx * sy;
+    cxsy = cx * sy;
+    rot[0][0] = cy * cz;
+    rot[0][1] = cy * sz;
+    rot[0][2] = -sy * (1 << 15);
+    rot[1][0] = (s32)(((s64)sxsy * cz) >> 15) - (cx * sz);
+    rot[1][1] = (s32)(((s64)sxsy * sz) >> 15) + (cx * cz);
+    rot[1][2] = sx * cy;
+    rot[2][0] = (s32)(((s64)cxsy * cz) >> 15) + (sx * sz);
+    rot[2][1] = (s32)(((s64)cxsy * sz) >> 15) - (sx * cz);
+    rot[2][2] = cx * cy;
+    for (row = 0u; row < 3u; row++)
+    {
+        int32_t s;
+
+        if (ndsP2HbBits(scale[row]) == 0x3f800000u)
+        {
+            for (col = 0u; col < 3u; col++)
+            {
+                dst->r[row][col] = (rot[row][col] + 8) >> 4;
+            }
+            continue;
+        }
+        s = ndsP2HbToFixed(scale[row], NDS_R2_CFX_ROT_BITS);
+        if ((s == NDS_R2_COLLISION_F32_OVERFLOW) ||
+            (ndsR2CfxAbs32(s) > NDS_R2_CFX_ROT_MAX))
+        {
+            return 0;
+        }
+        for (col = 0u; col < 3u; col++)
+        {
+            /* Q30 x Q26 -> Q26: at most 2^58 before the shift. */
+            dst->r[row][col] =
+                (int32_t)ndsR2CfxShr((int64_t)rot[row][col] * s, 30u);
+        }
+    }
+    for (col = 0u; col < 3u; col++)
+    {
+        const int32_t t = ndsP2HbToFixed(translate[col], NDS_R2_CFX_POS_BITS);
+
+        if ((t == NDS_R2_COLLISION_F32_OVERFLOW) ||
+            (ndsR2CfxAbs32(t) >= NDS_R2_CFX_POS_MAX))
+        {
+            return 0;
+        }
+        dst->t[col] = t;
+    }
+    return 1;
+}
+#else
 static int ndsP2HbLocalFromDObj(NDSR2CfxMtx *dst, const DObj *dobj)
 {
     const float rotate[3] = { dobj->rotate.vec.f.x, dobj->rotate.vec.f.y,
@@ -100,6 +236,7 @@ static int ndsP2HbLocalFromDObj(NDSR2CfxMtx *dst, const DObj *dobj)
 
     return ndsR2CfxBuildLocal(dst, gSYSinTable, rotate, scale, translate);
 }
+#endif
 
 /* The joint's local, as the source would use it: its cached float local when
  * transform_update_mode is set, otherwise built from the DObj TRS in fixed
@@ -733,3 +870,154 @@ int ndsP2HurtboxRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
 {
     return ndsP2HbRejectPoints(pos_curr, pos_prev, attack_size, damage);
 }
+
+#if NDS_P2_JOINT_RESIDENT
+/* P2-2p8 (2026-10-04), owner ruling D13: fighter joint worlds stay in fixed
+ * point end to end. The cache above holds one world per joint per latch
+ * epoch; gmCollisionGetFighterPartsWorldPosition (src/import/
+ * battleship_gmcollision.c) and the held item's 0x52 matrix
+ * (src/port/renderer_adapter_matrix.c) read it in place of the float latch walk
+ * (func_ovl2_800EDBA4 and the locals it latches), and write no FTParts latch.
+ * A joint already latched by a float walk this epoch is read from its latch,
+ * as before. Re-baselines the replay digest: the hitbox positions and the held
+ * item's latches feed it. Same-ROM A/B word: 0 = the float paths everywhere. */
+volatile u32 gNdsP2JointResident __attribute__((used, section(".data"))) = 1u;
+
+/* Animation locks decline: gmCollisionSetMatrixNcs is not converted. */
+static const NDSR2CfxMtx *ndsP2JointWorldOf(DObj *joint, NDSR2CfxMtx *scratch)
+{
+    const FTStruct *fp;
+    NDSP2HbWorld *slot;
+
+    if ((joint == NULL) || (joint == DOBJ_PARENT_NULL) ||
+        (joint->parent_gobj == NULL))
+    {
+        return NULL;
+    }
+    fp = ftGetStruct(joint->parent_gobj);
+    if ((fp == NULL) || (fp->is_use_animlocks != FALSE))
+    {
+        return NULL;
+    }
+    return ndsP2HbWorldOf(joint, scratch, &slot);
+}
+
+/* gmCollisionGetFighterPartsWorldPosition (gm/gmcollision.c:491): *vec carried
+ * by the joint's world. The source carries it up the chain through each
+ * joint's float local, latching the locals on the way. 1 = *vec written;
+ * 0 = declined with *vec untouched (the caller runs the float body). */
+int ndsP2JointWorldPosition(DObj *joint, Vec3f *vec)
+{
+    NDSR2CfxMtx scratch;
+    const NDSR2CfxMtx *w;
+    int32_t p[3];
+    int64_t out[3];
+    u32 col;
+
+    if (ndsP2HbVec(p, vec) == 0)
+    {
+        return 0;
+    }
+    w = ndsP2JointWorldOf(joint, &scratch);
+    if (w == NULL)
+    {
+        return 0;
+    }
+    for (col = 0u; col < 3u; col++)
+    {
+        out[col] = ndsR2CfxShr((int64_t)p[0] * w->r[0][col] +
+                                   (int64_t)p[1] * w->r[1][col] +
+                                   (int64_t)p[2] * w->r[2][col],
+                               NDS_R2_CFX_ROT_BITS) +
+                   (int64_t)w->t[col];
+        if ((out[col] >= (int64_t)NDS_R2_CFX_POS_MAX) ||
+            (out[col] <= -(int64_t)NDS_R2_CFX_POS_MAX))
+        {
+            return 0;
+        }
+    }
+    vec->x = ndsR2CollisionFixedToF32(out[0], NDS_R2_CFX_POS_BITS);
+    vec->y = ndsR2CollisionFixedToF32(out[1], NDS_R2_CFX_POS_BITS);
+    vec->z = ndsR2CollisionFixedToF32(out[2], NDS_R2_CFX_POS_BITS);
+    return 1;
+}
+
+/* lbcommon.c func_ovl0_800C9A38's branch for a held item on a non-root joint
+ * without animation locks: the attach joint's local with its rows normalized,
+ * each column c then divided by the length of the parent world's row c, the
+ * result carried by the parent's world -- so the item keeps the joint's
+ * orientation and drops every scale on the chain -- and the hitlag shuffle
+ * added to the translation. Written as the Q20.12 matrix the GX takes
+ * (m[r][c]: rotation rows 0-2, translation row 3, column 3 = 0, 0, 0, 1).
+ * 0 = decline, nothing written (the caller runs the float builder). */
+int ndsP2JointItemAttach(DObj *attach, const Vec2f *shuffle, s32 m[4][4])
+{
+    NDSR2CfxMtx scratch;
+    NDSR2CfxMtx local;
+    NDSR2CfxMtx f;
+    NDSR2CfxMtx item;
+    const NDSR2CfxMtx *w;
+    int32_t inv_l[3];
+    int32_t inv_w[3];
+    int32_t shuffle_q12[2] = { 0, 0 };
+    u32 row;
+    u32 col;
+
+    if ((attach == NULL) || (attach->parent == NULL) ||
+        (attach->parent == DOBJ_PARENT_NULL))
+    {
+        return 0;
+    }
+    if (shuffle != NULL)
+    {
+        /* A few units (dFTDisplayMainShufflePositions); OVERFLOW is
+         * INT32_MIN, which the magnitude test alone would pass. */
+        shuffle_q12[0] = ndsP2HbToFixed(shuffle->x, NDS_R2_CFX_POS_BITS);
+        shuffle_q12[1] = ndsP2HbToFixed(shuffle->y, NDS_R2_CFX_POS_BITS);
+        if ((shuffle_q12[0] == NDS_R2_COLLISION_F32_OVERFLOW) ||
+            (shuffle_q12[1] == NDS_R2_COLLISION_F32_OVERFLOW) ||
+            (ndsR2CfxAbs32(shuffle_q12[0]) >= NDS_R2_CFX_POS_ONE * 64) ||
+            (ndsR2CfxAbs32(shuffle_q12[1]) >= NDS_R2_CFX_POS_ONE * 64))
+        {
+            return 0;
+        }
+    }
+    w = ndsP2JointWorldOf(attach->parent, &scratch);
+    if ((w == NULL) || (ndsP2HbLocalFromDObj(&local, attach) == 0) ||
+        (ndsR2CfxRowScales(&local, NULL, NULL, NULL, inv_l) == 0) ||
+        (ndsR2CfxRowScales(w, NULL, NULL, NULL, inv_w) == 0))
+    {
+        return 0;
+    }
+    for (row = 0u; row < 3u; row++)
+    {
+        for (col = 0u; col < 3u; col++)
+        {
+            /* A unit cell times 1/s (s >= 1/4 by the guard): within 4. */
+            const int32_t unit = (int32_t)ndsR2CfxShr(
+                (int64_t)local.r[row][col] * inv_l[row], NDS_R2_CFX_ROT_BITS);
+
+            f.r[row][col] = (int32_t)ndsR2CfxShr((int64_t)unit * inv_w[col],
+                                                 NDS_R2_CFX_ROT_BITS);
+        }
+        f.t[row] = local.t[row];
+    }
+    if (ndsR2CfxCompose(&item, w, &f) == 0)
+    {
+        return 0;
+    }
+    for (row = 0u; row < 3u; row++)
+    {
+        for (col = 0u; col < 3u; col++)
+        {
+            m[row][col] = (item.r[row][col] + (1 << 13)) >> 14;
+        }
+        m[row][3] = 0;
+    }
+    m[3][0] = item.t[0] + shuffle_q12[0];
+    m[3][1] = item.t[1] + shuffle_q12[1];
+    m[3][2] = item.t[2];
+    m[3][3] = NDS_R2_CFX_POS_ONE;
+    return 1;
+}
+#endif /* NDS_P2_JOINT_RESIDENT */

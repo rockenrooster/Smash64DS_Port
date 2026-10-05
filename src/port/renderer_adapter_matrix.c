@@ -382,6 +382,12 @@ sb32 ndsTraIDescUsable(DObj *dobj, const AObj *aobj, u32 site);
 
 extern void func_ovl2_800ED490(Mtx44f dst, Mtx44f lhs, Mtx44f rhs);
 extern Vec2f dFTDisplayMainShufflePositions[][4];
+#if NDS_P2_JOINT_RESIDENT
+/* src/port/nds_p2_hurtbox_reject.c: fighter joint worlds resident in fixed
+ * point for the latch epoch (owner ruling D13). */
+extern volatile u32 gNdsP2JointResident;
+int ndsP2JointItemAttach(DObj *attach, const Vec2f *shuffle, s32 m[4][4]);
+#endif
 #if NDS_LAB_NO_CULL
 extern volatile u32 gNdsLabSeamArm;
 #if NDS_R2_STRIP_ROUTE && (NDS_TASK56_FIGHTER_PRIMITIVES >= 1) && \
@@ -3215,6 +3221,47 @@ static sb32 ndsRendererAdapterBuildItemAttachMtx(DObj *dobj, Mtx *out)
     return TRUE;
 }
 
+#if NDS_P2_JOINT_RESIDENT
+/* The 0x52 matrix from the resident fixed-point fighter world (owner ruling
+ * D13): the float builder's guards, then its non-root, non-animlock branch in
+ * fixed point straight to the Q20.12 the GX takes. No FTParts latch is written
+ * (the float branch latches the attach local and the parent chain). FALSE =
+ * the float builder above decides, as before. */
+static sb32 ndsRendererAdapterBuildItemAttachResident(
+    DObj *dobj, NDSRendererMatrix20p12 *out)
+{
+    DObj *attach_dobj;
+    FTStruct *fp;
+
+    if ((gNdsP2JointResident == 0u) || (dobj == NULL) || (out == NULL))
+    {
+        return FALSE;
+    }
+    attach_dobj = (DObj *)dobj->user_data.p;
+    if ((attach_dobj == NULL) || (attach_dobj == DOBJ_PARENT_NULL) ||
+        (attach_dobj->parent_gobj == NULL) ||
+        (attach_dobj->parent_gobj->id != nGCCommonKindFighter) ||
+        (ftGetParts(attach_dobj) == NULL))
+    {
+        return FALSE;
+    }
+    fp = ftGetStruct(attach_dobj->parent_gobj);
+    if ((fp == NULL) ||
+        (ndsP2JointItemAttach(
+             attach_dobj,
+             (fp->shuffle_tics != 0u) ?
+                 &dFTDisplayMainShufflePositions[fp->is_shuffle_electric]
+                                                [fp->shuffle_frame_index] :
+                 NULL,
+             out->m) == 0))
+    {
+        return FALSE;
+    }
+    NDS_DIAG(gNdsItemRendererAttach52BuildCount++);
+    return TRUE;
+}
+#endif
+
 static void ndsRendererAdapterGetDObjVectorTracks(
     DObj *dobj,
     GCTranslate **translate,
@@ -3593,7 +3640,15 @@ static sb32 ndsRendererAdapterBuildDObjXObjMatrix(
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
         u32 lab_attach = cpuGetTiming();
 #endif
-        if (ndsRendererAdapterBuildItemAttachMtx(dobj, &mtx) == FALSE)
+#if NDS_P2_JOINT_RESIDENT
+        const sb32 resident =
+            ndsRendererAdapterBuildItemAttachResident(dobj, out);
+#else
+        const sb32 resident = FALSE;
+#endif
+
+        if ((resident == FALSE) &&
+            (ndsRendererAdapterBuildItemAttachMtx(dobj, &mtx) == FALSE))
         {
             ndsRendererAdapterBuildDObjFallbackMtx(dobj, &mtx);
         }
@@ -3601,6 +3656,10 @@ static sb32 ndsRendererAdapterBuildDObjXObjMatrix(
         gNdsLabItemAcc[9] += cpuGetTiming() - lab_attach;
         gNdsLabItemAcc[10]++;
 #endif
+        if (resident != FALSE)
+        {
+            return TRUE;
+        }
         break;
     }
 #if NDS_P2_STAGE_SECTOR
