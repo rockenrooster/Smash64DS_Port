@@ -78,3 +78,15 @@ Pre-divergence frames paired by frame: median -576. Late-window profile
 (`res-prof-r1` -> `res-prof-s1`): the joint machinery (walk, compose, local,
 float loads, attach) 49.7K -> 46.3K a frame; the out-of-line compose is 11.6K
 of it.
+
+## Rejected: the walk in ITCM
+
+Census `res-prof-s1` section D ranked `ndsP2HbCompose`, `ndsP2HbToFixed` and
+`ndsP2HbWorldOf` (1,356 B, ~4.6M cycles of non-mem stall over the window) above
+five named residents at 2.5-4.2K cycles a byte (`ftMainUpdateMotionEventsAll`,
+`ftPhysicsApplyGroundVelFriction`, `ftDisplayLightsDrawReflect`,
+`ndsBaseMPProcessUpdateMain`, `ndsRendererParticleFloatToFixed`). Swapped
+(build `build-gate-1004t`, digest identical to `gate-s1-tweak`): paired by
+frame median +4,160, mean +4,037, 268 of 1,960 frames better; P50/P95
+839,552/1,165,952. The evicted residents run every fighter tick and cost more
+in main RAM than the walk saved. Reverted (patch kept out of the tree).
