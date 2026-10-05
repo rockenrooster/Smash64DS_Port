@@ -951,7 +951,10 @@ static void __attribute__((noinline, cold)) ndsStageGxMemoVerifyRun(
     }
 }
 
-static sb32 __attribute__((noinline, section(".itcm"))) ndsStageGxDraw(u32 index, u32 owner, NDSRendererStats *stats)
+/* Main RAM since 2026-10-04: every stage program is head-ordered (format 7)
+ * and its segments take ndsStageGxCommitFast, so this runs only for a
+ * declined segment; its 3,576 B of ITCM went to the fighter joint walk. */
+static sb32 __attribute__((noinline)) ndsStageGxDraw(u32 index, u32 owner, NDSRendererStats *stats)
 {
     const NDSStageGxRun *r = &sNdsStageGxRuns[index];
     const NDSNativeStageRun *native = &sNdsNativeStageRuns[index];

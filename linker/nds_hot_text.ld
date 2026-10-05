@@ -246,6 +246,15 @@ SECTIONS {
 		*(.text.gmCameraCheckTargetInBounds)
 		*(.text.ndsRendererProfileSetOwner)
 		*(.text.ndsRendererInitVertexCache)
+		/* Fifth pack (2026-10-04): the 3,576 B ndsStageGxDraw left (every stage
+		 * program is head-ordered and takes the one-pass commit) go to the
+		 * fighter joint walk (src/port/nds_p2_hurtbox_reject.c) and the wall
+		 * sweep fast path's dynamic edge memo. */
+		*(.text.ndsP2HbLocalFromDObj)
+		*(.text.ndsP2HbWorldOf)
+		*(.text.ndsP2HbCompose)
+		*(.text.ndsP2HbToFixed)
+		*(.text.ndsMPWallSweepEdgeTrunc)
 		*.itcm.* (.text .stub .text.* .gnu.linkonce.t.*)
 		/* P2-2p8 2026-09-27: calico's thread scheduler and word copy/fill run from
 		 * main RAM. The census rents them under 800 cycles a byte, and
