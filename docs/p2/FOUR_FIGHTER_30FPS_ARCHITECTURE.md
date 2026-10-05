@@ -1303,6 +1303,27 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   per-draw setup for 18 triangles), Jungle's stage DL lane (~60K), the floor
   sweeps (37-53K), the pose parser's combat spikes (+100K in tail frames),
   and the lean kernel's DObj reads (~95K everywhere).
+- **10-05 render state at the presentation rate; fetch-frame bookkeeping.**
+  An official-gate profile (`artifacts/task37-census/gp2-official`, frames
+  1,100-1,900, aligned to the gate rows at r = frame - 1,101) puts the frames
+  just over 1.12M at +33K soft-float adds, +65K hurtbox reject and walk, +67K
+  effects (entry effects, impact waves, CPU-projected corners, particle
+  quads) and +28K pose parse/play over the median frame. (1) Material
+  animations (MObj colours, texture/palette indices, scroll) are render state
+  the replay digest does not fold, so they step once a presented frame, on
+  the drawn tick, by the ticks it stands for (`b3887a3bfb5`, word
+  `gNdsMObjTick30Hz`; costume bake and Yoshi's clouds keep the source rate):
+  gate same ROM P95 1,149,376 -> 1,140,992, paired -4.8K; lab paired -1.8K
+  (Hyrule) to -9.0K (Zebes) on all nine stages, digest identical. (2) Particle
+  draw lookups memoized -- per-transform axis magnitudes, the ENV variant and
+  packet binding searches, the view-space axis conversions (`44094ba0257`):
+  -0.6K paired, -1.1K in the top 5%. (3) Frames that fetch a clip (7.5% of
+  the gate's, mean 2.14M cycles vs 1.82M) spent ~41K in the ring's overlap
+  scans, a line fill per 32-byte entry per scan; the scans read compact
+  extents now (`1102299cdbb`): single fetch frames -87K at best, P95 -1.4K.
+  Measured and not kept: using streamed clips in place of the memmove
+  compaction (lost ring bytes cost re-reads; P95 +2.3K). Gate after the three:
+  ~1,139K, 110 over.
 
 ## 7. Found along the way
 
