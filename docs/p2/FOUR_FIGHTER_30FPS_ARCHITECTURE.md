@@ -1240,6 +1240,21 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   routes grade): gate 850,176/1,184,960, 160 over, 1,788/1,961 in two
   VBlanks, paired median -6.7K, digest identical; captures differ by edge
   pixels only (receipt `2026-10-04_lean-relaxed`).
+- **10-04 lean instruments out of the gate and the owner validation pool.**
+  The lean renderer's lab counters and the VRAM census followed NDS_TICK_HUD
+  alone, so the gate ROM carried them; they now also need NDS_DIAG_COUNTERS
+  (`2bc60fe00ce`: 845,504/1,181,952, 157 over). Lean events (47
+  materializations at 150-850K ticks and 196 entry switches at 25-73K a
+  match, 14.2K ticks a frame on average, all spikes) are the FTR tail:
+  priced on the gate rows, free events would be P95 -33K, a 2-4 frame split
+  only -7K. The owner validation cache held one root set per owner slot, so
+  alternating model parts re-ran the full validation each switch; a 12-entry
+  pool keyed by the root set (`be6fc76cc27`: 845,952/1,178,752, P99 -27K,
+  151 over). Rejected: the D13 latch walk (func_ovl2_800EDBA4 and its local,
+  compose and point carry) in the hurtbox kernel's fixed arithmetic with
+  float latches -- worse on all four seeds (P95 +2.1K, mean +1.3K): it runs
+  about once a frame, so its main-RAM code is cold while the float path is
+  small decomp code over ITCM soft float (receipt `2026-10-04_latch-fixed`).
 
 ## 7. Found along the way
 
