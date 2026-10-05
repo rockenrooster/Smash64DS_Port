@@ -1887,6 +1887,9 @@ static sb32 ndsRendererAdapterCollectFighterTopology(
 #if NDS_RENDERER_PROFILE_LEVEL < 2
 typedef struct NDSRendererAdapterNativeOwnerValidationCache
 {
+    /* The identity words first: a lookup rejects on them from one line. */
+    u32 valid;
+    u32 slot;
     const void *data;
     u32 asset_id;
     u32 owner_generation;
@@ -1894,17 +1897,26 @@ typedef struct NDSRendererAdapterNativeOwnerValidationCache
     u32 root_count;
     u32 battle_slot;
     u32 use_low_detail;
+    u32 stamp;                  /* LRU: the lookup serial of its last hit */
     u32 root_offsets[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
     u32 material_counts[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
-    u32 valid;
 } NDSRendererAdapterNativeOwnerValidationCache;
 
 /* The generated tables and relocated owner payload are immutable for one
  * reloc generation.  Prove every selected root/material identity each draw,
- * but do the full generated-array/span walk only when that identity changes. */
+ * but do the full generated-array/span walk only when that identity changes.
+ *
+ * P2-2p8 (2026-10-04): a pool rather than one entry per owner slot. A fighter
+ * whose model parts alternate (a hand or a face swap) moves between root sets
+ * on every lean event, and the single entry re-ran the walk each time (~15K
+ * ticks a switch, ~30K under a materialization in the four-CPU gate profile).
+ * Twelve entries keyed by slot as well hold three root sets for each of four
+ * fighters in less memory than the 25 per-slot entries did. */
+#define NDS_RENDERER_ADAPTER_OWNER_VALIDATION_POOL 12u
 static NDSRendererAdapterNativeOwnerValidationCache
     sNdsRendererAdapterNativeOwnerValidationCache[
-        NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT];
+        NDS_RENDERER_ADAPTER_OWNER_VALIDATION_POOL];
+static u32 sNdsRendererAdapterNativeOwnerValidationStamp;
 #endif
 
 typedef struct NDSRendererAdapterParticleCamera

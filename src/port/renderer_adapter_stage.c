@@ -5900,8 +5900,9 @@ ndsRendererAdapterValidateNativeOwnerCached(
     const u32 *material_counts)
 {
     NDSRendererAdapterNativeOwnerValidationCache *cache;
+    NDSRendererAdapterNativeOwnerValidationCache *victim;
+    u32 e;
     u32 i;
-    sb32 identity_matches;
 
     if ((slot >= NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT) ||
         (owner_file == NULL) ||
@@ -5913,43 +5914,55 @@ ndsRendererAdapterValidateNativeOwnerCached(
 #endif
         return FALSE;
     }
-    cache = &sNdsRendererAdapterNativeOwnerValidationCache[slot];
-    identity_matches =
-        ((cache->valid != 0u) &&
-         (cache->data == owner_file->data) &&
-         (cache->asset_id == owner_file->asset_id) &&
-         (cache->owner_generation == owner_file->owner_generation) &&
-         (cache->data_size == owner_file->data_size) &&
-         (cache->root_count == root_count) &&
-         (cache->battle_slot == battle_slot) &&
-         (cache->use_low_detail == use_low_detail)) ? TRUE : FALSE;
-    if (identity_matches != FALSE)
+    victim = &sNdsRendererAdapterNativeOwnerValidationCache[0];
+    for (e = 0u; e < NDS_RENDERER_ADAPTER_OWNER_VALIDATION_POOL; e++)
     {
+        cache = &sNdsRendererAdapterNativeOwnerValidationCache[e];
+        if (cache->valid == 0u)
+        {
+            victim = cache;
+            continue;
+        }
+        if ((victim->valid != 0u) && (cache->stamp < victim->stamp))
+        {
+            victim = cache;
+        }
+        if ((cache->slot != slot) ||
+            (cache->data != owner_file->data) ||
+            (cache->asset_id != owner_file->asset_id) ||
+            (cache->owner_generation != owner_file->owner_generation) ||
+            (cache->data_size != owner_file->data_size) ||
+            (cache->root_count != root_count) ||
+            (cache->battle_slot != battle_slot) ||
+            (cache->use_low_detail != use_low_detail))
+        {
+            continue;
+        }
         for (i = 0u; i < root_count; i++)
         {
             if ((cache->root_offsets[i] != root_offsets[i]) ||
                 (cache->material_counts[i] != material_counts[i]))
             {
-                identity_matches = FALSE;
                 break;
             }
         }
-    }
-    if (identity_matches != FALSE)
-    {
+        if (i == root_count)
+        {
 #if NDS_TICK_HUD
-        /* Cycle 98. THE counter this row existed to add: without it a cache hit
-         * and a cache miss are indistinguishable here, and deleting work whose
-         * cache already hits is the mistake cycle 93 avoided on the stage. */
-        gNdsFtrPreValidateReuse++;
+            /* Cycle 98. THE counter this row existed to add: without it a
+             * cache hit and a cache miss are indistinguishable here, and
+             * deleting work whose cache already hits is the mistake cycle 93
+             * avoided on the stage. */
+            gNdsFtrPreValidateReuse++;
 #endif
-        return TRUE;
+            cache->stamp = ++sNdsRendererAdapterNativeOwnerValidationStamp;
+            return TRUE;
+        }
     }
 
 #if NDS_TICK_HUD
     gNdsFtrPreValidateBuild++;
 #endif
-    cache->valid = FALSE;
     if (ndsRendererValidateNativeFighterOwner(
             slot, battle_slot, use_low_detail,
             ndsRelocNativeSourceSize(owner_file), root_count,
@@ -5957,6 +5970,9 @@ ndsRendererAdapterValidateNativeOwnerCached(
     {
         return FALSE;
     }
+    cache = victim;
+    cache->slot = slot;
+    cache->stamp = ++sNdsRendererAdapterNativeOwnerValidationStamp;
     cache->data = owner_file->data;
     cache->asset_id = owner_file->asset_id;
     cache->owner_generation = owner_file->owner_generation;
