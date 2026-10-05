@@ -1892,7 +1892,7 @@ void ndsRendererR2FlashProbeFrameEnd(u32 presented_frame)
             gNdsR2FlashVtxA[i] = gNdsR2FlashVtxLive[i];
             gNdsR2FlashRawA[i] = gNdsR2FlashRawLive[i];
         }
-        gNdsR2FlashLatchedA++;
+        NDS_DIAG(gNdsR2FlashLatchedA++);
     }
     else if (presented_frame == gNdsR2FlashFrameB)
     {
@@ -1904,7 +1904,7 @@ void ndsRendererR2FlashProbeFrameEnd(u32 presented_frame)
         {
             gNdsR2FlashVtxB[i] = gNdsR2FlashVtxLive[i];
         }
-        gNdsR2FlashLatchedB++;
+        NDS_DIAG(gNdsR2FlashLatchedB++);
     }
     for (i = 0u; i < NDS_R2_FLASH_SLOTS; i++)
     {
@@ -2964,7 +2964,7 @@ u32 ndsRendererHardwareReleaseTexturesInRange(const void *base, size_t size)
     {
         return 0u;
     }
-    gNdsRendererTextureRangeReleaseCalls++;
+    NDS_DIAG(gNdsRendererTextureRangeReleaseCalls++);
     for (i = NDS_RENDERER_HW_TEXTURE_STATIC_COUNT;
          i < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT; i++)
     {
@@ -2998,7 +2998,7 @@ u32 ndsRendererHardwareReleaseTexturesInRange(const void *base, size_t size)
             released++;
         }
     }
-    gNdsRendererTextureRangeReleaseEntries += released;
+    NDS_DIAG(gNdsRendererTextureRangeReleaseEntries += released);
     return released;
 #else
     (void)base;
@@ -3100,7 +3100,7 @@ ndsRendererHardwareAllocTexture(void)
         }
     }
 #if NDS_VRAM_CENSUS_LIVE && NDS_RENDERER_HW_TRIANGLES
-    gNdsFtrAdmitDynFull++;
+    NDS_DIAG(gNdsFtrAdmitDynFull++);
 #endif
     return NULL;
 }
@@ -3788,7 +3788,7 @@ s32 ndsRendererHardwarePrepareImpactWaveTextures(void)
         {
             return FALSE;
         }
-        gNdsImpactWaveNativeTexturePrepareCount++;
+        NDS_DIAG(gNdsImpactWaveNativeTexturePrepareCount++);
     }
     return TRUE;
 #else
@@ -3851,7 +3851,7 @@ s32 ndsRendererHardwarePrepareRebirthHaloTextures(void)
         {
             return FALSE;
         }
-        gNdsRebirthHaloNativeTexturePrepareCount++;
+        NDS_DIAG(gNdsRebirthHaloNativeTexturePrepareCount++);
     }
     return TRUE;
 #else
@@ -4002,12 +4002,12 @@ static u32 ndsRendererR2FighterTintLookup(u32 material_color)
     {
         if (sNdsR2FighterTints[i].rgb == rgb)
         {
-            gNdsR2FighterTintHits++;
+            NDS_DIAG(gNdsR2FighterTintHits++);
             sNdsR2FighterTints[i].last_used = sNdsRendererHardwareFrameSerial;
             return sNdsR2FighterTints[i].name;
         }
     }
-    gNdsR2FighterTintMisses++;
+    NDS_DIAG(gNdsR2FighterTintMisses++);
     for (i = 0u; i < sNdsR2FighterTintFailedCount; i++)
     {
         if (sNdsR2FighterTintFailed[i] == rgb)
@@ -4028,7 +4028,7 @@ static u32 ndsRendererR2FighterTintLookup(u32 material_color)
     }
     else
     {
-        gNdsR2FighterTintQueueFull++;
+        NDS_DIAG(gNdsR2FighterTintQueueFull++);
     }
     return 0u;
 }
@@ -4090,7 +4090,7 @@ static void ndsRendererHardwareServiceFighterTintTiles(void)
             }
             if (victim == NDS_R2_FIGHTER_TINT_SLOTS)
             {
-                gNdsR2FighterTintTableFull++;
+                NDS_DIAG(gNdsR2FighterTintTableFull++);
                 continue;
             }
             ndsRendererHardwareReleaseIFCommonCloudAtlas(
@@ -4098,7 +4098,7 @@ static void ndsRendererHardwareServiceFighterTintTiles(void)
             sNdsR2FighterTints[victim] =
                 sNdsR2FighterTints[sNdsR2FighterTintCount - 1u];
             sNdsR2FighterTintCount--;
-            gNdsR2FighterTintEvictions++;
+            NDS_DIAG(gNdsR2FighterTintEvictions++);
             gNdsR2FighterTintSetGeneration++;
         }
         memset(palette, 0, sizeof(palette));
@@ -4109,7 +4109,7 @@ static void ndsRendererHardwareServiceFighterTintTiles(void)
                 NDS_R2_FIGHTER_TINT_DIM, NDS_R2_FIGHTER_TINT_DIM, palette,
                 ndsR2FighterTintFill, NULL, &name) == FALSE)
         {
-            gNdsR2FighterTintFails++;
+            NDS_DIAG(gNdsR2FighterTintFails++);
             if (sNdsR2FighterTintFailedCount < NDS_R2_FIGHTER_TINT_QUEUE)
             {
                 sNdsR2FighterTintFailed[sNdsR2FighterTintFailedCount++] = rgb;
@@ -4136,7 +4136,7 @@ static void ndsRendererHardwareServiceFighterTintTiles(void)
                 (palette_format >= 0) ? (u32)palette_format : 0xffffffffu;
         }
         sNdsR2FighterTintCount++;
-        gNdsR2FighterTintBuilds++;
+        NDS_DIAG(gNdsR2FighterTintBuilds++);
         gNdsR2FighterTintSetGeneration++;
     }
 }
@@ -5098,7 +5098,7 @@ s32 ndsRendererHardwarePrepareHyruleTextures(void)
     {
         return TRUE;
     }
-    gNdsHyruleNativeTexturePrepareCount++;
+    NDS_DIAG(gNdsHyruleNativeTexturePrepareCount++);
     file = ndsRendererHardwareFencedTextureFopen(NDS_HYRULE_NATIVE_ASSET_PATH, "rb");
     if ((file == NULL) ||
         (ndsRendererHardwareFencedTextureFseek(file, 0, SEEK_END) != 0) ||
@@ -5168,7 +5168,7 @@ s32 ndsRendererHardwarePrepareHyruleTextures(void)
 fail:
     if (file != NULL) { (void)ndsRendererHardwareFencedTextureFclose(file); }
     ndsRendererHardwareReleaseHyruleTextures();
-    gNdsHyruleNativeTextureFailCount++;
+    NDS_DIAG(gNdsHyruleNativeTextureFailCount++);
     return FALSE;
 }
 
@@ -5867,7 +5867,7 @@ static void __attribute__((noinline)) ndsRendererHardwareBindTextureName(
     u32 i;
     s32 seen = FALSE;
 
-    gNdsTask107BindRequests++;
+    NDS_DIAG(gNdsTask107BindRequests++);
     if (sNdsTask107BindFrameSerial != sNdsRendererHardwareFrameSerial)
     {
         sNdsTask107BindFrameSerial = sNdsRendererHardwareFrameSerial;
@@ -5875,15 +5875,15 @@ static void __attribute__((noinline)) ndsRendererHardwareBindTextureName(
     }
     if (texture_name == 0u)
     {
-        gNdsTask107BindZeroNameExits++;
+        NDS_DIAG(gNdsTask107BindZeroNameExits++);
         return;
     }
     if (sNdsRendererHardwareBoundTextureName == texture_name)
     {
-        gNdsTask107BindCurrentNameElisions++;
+        NDS_DIAG(gNdsTask107BindCurrentNameElisions++);
         return;
     }
-    gNdsTask107BindIssues++;
+    NDS_DIAG(gNdsTask107BindIssues++);
     for (i = 0u; i < sNdsTask107BindNameCount; i++)
     {
         if (sNdsTask107BindNames[i] == texture_name)
@@ -5894,7 +5894,7 @@ static void __attribute__((noinline)) ndsRendererHardwareBindTextureName(
     }
     if (seen != FALSE)
     {
-        gNdsTask107BindRevisitIssues++;
+        NDS_DIAG(gNdsTask107BindRevisitIssues++);
     }
     else if (sNdsTask107BindNameCount < NDS_TASK107_BIND_NAME_CAPACITY)
     {
@@ -5902,7 +5902,7 @@ static void __attribute__((noinline)) ndsRendererHardwareBindTextureName(
     }
     else
     {
-        gNdsTask107BindNameSetOverflow++;
+        NDS_DIAG(gNdsTask107BindNameSetOverflow++);
     }
     {
         ndsRendererHardwareEndBatch();
@@ -6165,8 +6165,8 @@ s32 ndsRendererHardwareRefreshBattleStaticTexturePointers(void)
          * key_generation; the active bind has the same rule but clearing this
          * pointer also prevents a stale same-entry fast path in this frame. */
         sNdsRendererHardwareActiveTextureEntry = NULL;
-        gNdsRendererBattleStaticTextureRefreshCount++;
-        gNdsRendererBattleStaticTextureRefreshedEntryCount += refreshed;
+        NDS_DIAG(gNdsRendererBattleStaticTextureRefreshCount++);
+        NDS_DIAG(gNdsRendererBattleStaticTextureRefreshedEntryCount += refreshed);
     }
     return TRUE;
 #else
@@ -8002,7 +8002,7 @@ static s32 ndsRendererLoadParticleCameraMatrices(void)
             projection.m[row][2] = (s32)ndsRendererRoundShiftS64(
                 (s64)projection.m[row][3] * projected_z, 12u);
         }
-        gNdsParticleNoDepthLoads++;
+        NDS_DIAG(gNdsParticleNoDepthLoads++);
     }
     if (sNdsRendererParticleViewSpace != FALSE)
     {
@@ -13106,7 +13106,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
         ((1u << render_tile->masks) <= source_extent_width))
     {
         width = 1u << render_tile->masks;
-        gNdsRendererClampedWindowPeriodUploadCount++;
+        NDS_DIAG(gNdsRendererClampedWindowPeriodUploadCount++);
     }
     if ((materialize_t == FALSE) &&
         ((render_tile->cmt & NDS_RENDERER_TX_CLAMP) != 0u) &&
@@ -13115,7 +13115,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
         ((1u << render_tile->maskt) <= source_extent_height))
     {
         height = 1u << render_tile->maskt;
-        gNdsRendererClampedWindowPeriodUploadCount++;
+        NDS_DIAG(gNdsRendererClampedWindowPeriodUploadCount++);
     }
     {
         u32 wrap_width = ndsRendererHardwareTextureWrapPeriodExtent(
@@ -13125,7 +13125,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
 
         if ((wrap_width != width) || (wrap_height != height))
         {
-            gNdsRendererWrapPeriodUploadCount++;
+            NDS_DIAG(gNdsRendererWrapPeriodUploadCount++);
         }
         width = wrap_width;
         height = wrap_height;
@@ -13775,7 +13775,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
             (tlut_count < palette_entries))
         {
             tlut_count = palette_entries;
-            gNdsStageShortTlutExtendCount++;
+            NDS_DIAG(gNdsStageShortTlutExtendCount++);
         }
         if ((stats->texture_tlut_image == 0u) ||
             (tlut_count < palette_entries))
@@ -14074,7 +14074,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
         resident_palette_entries = 8u;
         resident_texture_type = GL_RGB8_A5;
         resident_upload_bytes = texel_count;
-        gNdsRendererGradedCoverageUploadCount++;
+        NDS_DIAG(gNdsRendererGradedCoverageUploadCount++);
     }
     else if ((use_texel1 == FALSE) &&
         (upload_buffer == sNdsRendererHardwareTextureScratch))
@@ -14446,7 +14446,7 @@ static s32 ndsRendererHardwareBindTextureOwnerMemo(
             (entry->key_generation != memo->entry_generation))
         {
             memo->valid = 0u;
-            gNdsRendererOwnerTexMemoStale++;
+            NDS_DIAG(gNdsRendererOwnerTexMemoStale++);
             match = FALSE;
         }
     }
@@ -14455,7 +14455,7 @@ static s32 ndsRendererHardwareBindTextureOwnerMemo(
     {
         s32 ok = ndsRendererHardwareBindTexture(stats, config, state);
 
-        gNdsRendererOwnerTexMemoVerifyRuns++;
+        NDS_DIAG(gNdsRendererOwnerTexMemoVerifyRuns++);
         if ((ok == FALSE) ||
             (sNdsRendererHardwareActiveTextureEntry !=
              &sNdsRendererHardwareTextureCache[memo->slot]) ||
@@ -14464,7 +14464,7 @@ static s32 ndsRendererHardwareBindTextureOwnerMemo(
             (stats->hardware_texture_width != memo->width) ||
             (stats->hardware_texture_height != memo->height))
         {
-            gNdsRendererOwnerTexMemoVerifyFail++;
+            NDS_DIAG(gNdsRendererOwnerTexMemoVerifyFail++);
         }
         return ok;
     }
@@ -14490,7 +14490,7 @@ static s32 ndsRendererHardwareBindTextureOwnerMemo(
         stats->hardware_texture_format = memo->format;
         stats->hardware_texture_width = memo->width;
         stats->hardware_texture_height = memo->height;
-        gNdsRendererOwnerTexMemoHits++;
+        NDS_DIAG(gNdsRendererOwnerTexMemoHits++);
         return TRUE;
     }
     if (ndsRendererHardwareBindTexture(stats, config, state) == FALSE)
@@ -14519,7 +14519,7 @@ static s32 ndsRendererHardwareBindTextureOwnerMemo(
             memo->width = stats->hardware_texture_width;
             memo->height = stats->hardware_texture_height;
             memo->valid = 1u;
-            gNdsRendererOwnerTexMemoFills++;
+            NDS_DIAG(gNdsRendererOwnerTexMemoFills++);
         }
     }
     return TRUE;
@@ -14947,7 +14947,7 @@ ndsRendererLoadHardwareSplitMatrices(
         return;
     }
 #if NDS_TASK91_DRAW_PHASE_CENSUS
-    gNdsR2MtxLoadCalls++;
+    NDS_DIAG(gNdsR2MtxLoadCalls++);
     /* Anyone else loading a matrix invalidates the content memo, or the compare
      * below would report "same as my last load" while the hardware holds
      * someone else's matrix. Conservative direction. */
@@ -14964,7 +14964,7 @@ ndsRendererLoadHardwareSplitMatrices(
         (sNdsRendererHardwareMatrixGeneration == generation))
     {
 #if NDS_TASK91_DRAW_PHASE_CENSUS
-        gNdsR2MtxLoadElidedByGeneration++;
+        NDS_DIAG(gNdsR2MtxLoadElidedByGeneration++);
 #endif
         return;
     }
@@ -14984,7 +14984,7 @@ ndsRendererLoadHardwareSplitMatrices(
             scaled_modelview.m[3][col], NDS_RENDERER_HW_WORLD_UNIT_SHIFT);
     }
 
-    gNdsR2MtxLoadPerformed++;
+    NDS_DIAG(gNdsR2MtxLoadPerformed++);
     if (sNdsR2MtxLastValid != 0u)
     {
         /* Scored separately: the loader writes two matrices per call and only
@@ -14994,9 +14994,9 @@ ndsRendererLoadHardwareSplitMatrices(
                                       sizeof(NDSRendererMatrix20p12)) == 0);
         u32 same_modelview = (memcmp(&sNdsR2MtxLastModelview, &scaled_modelview,
                                      sizeof(NDSRendererMatrix20p12)) == 0);
-        gNdsR2MtxLoadIdenticalProjection += same_projection;
-        gNdsR2MtxLoadIdenticalModelview += same_modelview;
-        gNdsR2MtxLoadIdenticalContent += (same_projection & same_modelview);
+        NDS_DIAG(gNdsR2MtxLoadIdenticalProjection += same_projection);
+        NDS_DIAG(gNdsR2MtxLoadIdenticalModelview += same_modelview);
+        NDS_DIAG(gNdsR2MtxLoadIdenticalContent += (same_projection & same_modelview));
     }
     sNdsR2MtxLastProjection = *projection;
     sNdsR2MtxLastModelview = scaled_modelview;
@@ -15289,7 +15289,7 @@ ndsRendererLoadHardwareGxComposedMatrices(
     }
     else
     {
-        gNdsR2GxComposeProjectionSkips++;
+        NDS_DIAG(gNdsR2GxComposeProjectionSkips++);
     }
     ndsRendererHardwareFighterSetMatrixMode(GL_MODELVIEW);
 
@@ -15307,20 +15307,20 @@ ndsRendererLoadHardwareGxComposedMatrices(
     else
     {
         MATRIX_RESTORE = input->gx_parent_slot;
-        gNdsR2GxComposeRestores++;
+        NDS_DIAG(gNdsR2GxComposeRestores++);
     }
     for (i = 0u; i < (u32)input->gx_local_count; i++)
     {
         ndsRendererHardwareFighterMultMatrix4x3(&input->gx_locals[i]);
     }
-    gNdsR2GxComposeMults += (u32)input->gx_local_count;
+    NDS_DIAG(gNdsR2GxComposeMults += (u32)input->gx_local_count);
     if (input->gx_store_slot < NDS_RENDERER_FIGHTER_GX_SLOT_NONE)
     {
         MATRIX_STORE = input->gx_store_slot;
-        gNdsR2GxComposeStores++;
+        NDS_DIAG(gNdsR2GxComposeStores++);
     }
     ndsRendererHardwareFighterMultMatrixWorldScaled(&sNdsR2GxIdentity20p12);
-    gNdsR2GxComposeRoots++;
+    NDS_DIAG(gNdsR2GxComposeRoots++);
 
     ndsRendererProfileRecordMatrixLoad();
     /* The generation memo cannot elide anything here: every binding leaves a
@@ -15361,7 +15361,7 @@ ndsFighterPacketLoadGxComposedRecord(
     }
     else
     {
-        gNdsR2GxComposeProjectionSkips++;
+        NDS_DIAG(gNdsR2GxComposeProjectionSkips++);
     }
     ndsRendererHardwareFighterSetMatrixMode(GL_MODELVIEW);
     ndsFighterPacketCmd1(REG2ID(MATRIX_CONTROL), (u32)GL_MODELVIEW);
@@ -15383,24 +15383,24 @@ ndsFighterPacketLoadGxComposedRecord(
         MATRIX_RESTORE = input->gx_parent_slot;
         ndsFighterPacketCmd1(REG2ID(MATRIX_RESTORE),
                              (u32)input->gx_parent_slot);
-        gNdsR2GxComposeRestores++;
+        NDS_DIAG(gNdsR2GxComposeRestores++);
     }
     for (i = 0u; i < (u32)input->gx_local_count; i++)
     {
         ndsRendererHardwareFighterMultMatrix4x3(&input->gx_locals[i]);
         ndsFighterPacketRecordLocal(i, &input->gx_locals[i]);
     }
-    gNdsR2GxComposeMults += (u32)input->gx_local_count;
+    NDS_DIAG(gNdsR2GxComposeMults += (u32)input->gx_local_count);
     if (input->gx_store_slot < NDS_RENDERER_FIGHTER_GX_SLOT_NONE)
     {
         MATRIX_STORE = input->gx_store_slot;
         ndsFighterPacketCmd1(REG2ID(MATRIX_STORE),
                              (u32)input->gx_store_slot);
-        gNdsR2GxComposeStores++;
+        NDS_DIAG(gNdsR2GxComposeStores++);
     }
     ndsRendererHardwareFighterMultMatrixWorldScaled(&sNdsR2GxIdentity20p12);
     ndsFighterPacketRecordWorldScaled(&sNdsR2GxIdentity20p12);
-    gNdsR2GxComposeRoots++;
+    NDS_DIAG(gNdsR2GxComposeRoots++);
 
     ndsRendererProfileRecordMatrixLoad();
     sNdsRendererHardwareMatrixMode = NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED;
@@ -15798,7 +15798,7 @@ static void ndsRendererHardwarePainterSlotFoldFrame(void)
 
     NDS_DIAG(gNdsPainterSlotFrames++);
     NDS_DIAG(gNdsPainterSlotBgSum += bg_used);
-    gNdsPainterSlotFgSum += fg_used;
+    NDS_DIAG(gNdsPainterSlotFgSum += fg_used);
     if (bg_used > gNdsPainterSlotBgMax)
     {
         gNdsPainterSlotBgMax = bg_used;
@@ -15813,11 +15813,11 @@ static void ndsRendererHardwarePainterSlotFoldFrame(void)
     }
     if (bg_used > 128u)
     {
-        gNdsPainterSlotBgOverBand++;
+        NDS_DIAG(gNdsPainterSlotBgOverBand++);
     }
     if (fg_used > 128u)
     {
-        gNdsPainterSlotFgOverBand++;
+        NDS_DIAG(gNdsPainterSlotFgOverBand++);
     }
     sNdsPainterSlotBgUsed = 0u;
 }

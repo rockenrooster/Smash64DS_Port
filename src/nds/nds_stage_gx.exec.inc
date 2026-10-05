@@ -518,7 +518,7 @@ static sb32 ndsStageGxRunOutsideView(u32 index)
         }
         if (d < 0)
         {
-            gNdsStageGxCulledRuns++;
+            NDS_DIAG(gNdsStageGxCulledRuns++);
             return TRUE;
         }
     }
@@ -594,7 +594,7 @@ static void ndsStageGxFlush(void)
         {
             ndsLabStageGxHashWord(sNdsStageGxWords[sNdsStageGxFirstWord + lab_i]);
         }
-        gNdsLabStageGxHashWords += sNdsStageGxWordCount;
+        NDS_DIAG(gNdsLabStageGxHashWords += sNdsStageGxWordCount);
     }
 #endif
     NDS_FIGHTER_PACKET_DMA_WAIT();
@@ -919,10 +919,10 @@ static void __attribute__((noinline, cold)) ndsStageGxMemoVerifyRun(
         if ((q->kind == NDS_STAGE_GX_MATERIAL) && (material_kept != FALSE) &&
             (ndsStageGxMaterial(fresh, prepared, submit_class, owner) != FALSE))
         {
-            gNdsStageGxMemoVerify[0] += 3u;
+            NDS_DIAG(gNdsStageGxMemoVerify[0] += 3u);
             for (i = 0u; i < 3u; i++)
             {
-                gNdsStageGxMemoVerify[1] += (fresh[i] != dst[i]) ? 1u : 0u;
+                NDS_DIAG(gNdsStageGxMemoVerify[1] += (fresh[i] != dst[i]) ? 1u : 0u);
             }
         }
         else if (((q->kind == NDS_STAGE_GX_NOZ) ||
@@ -944,8 +944,8 @@ static void __attribute__((noinline, cold)) ndsStageGxMemoVerifyRun(
                 {
                     continue;
                 }
-                gNdsStageGxMemoVerify[2]++;
-                gNdsStageGxMemoVerify[3] += (fresh[i] != dst[i]) ? 1u : 0u;
+                NDS_DIAG(gNdsStageGxMemoVerify[2]++);
+                NDS_DIAG(gNdsStageGxMemoVerify[3] += (fresh[i] != dst[i]) ? 1u : 0u);
             }
         }
     }
@@ -1425,7 +1425,7 @@ static sb32 __attribute__((noinline)) ndsStageGxCommitFast(
         ((sNdsNativeStageOwnerExecution.hidden_binding_mask & s->binding_mask) !=
          0u))
     {
-        gNdsStageGxFastDeclines++;
+        NDS_DIAG(gNdsStageGxFastDeclines++);
         return FALSE;
     }
     rigid = sNdsNativeStageOwnerExecution.rigid_binding_mask;
@@ -1437,7 +1437,7 @@ static sb32 __attribute__((noinline)) ndsStageGxCommitFast(
             (ndsStageGxInsideNearBox(n->minimum, n->maximum,
                                      &composed_all[n->binding]) == FALSE))
         {
-            gNdsStageGxFastDeclines++;
+            NDS_DIAG(gNdsStageGxFastDeclines++);
             return FALSE;
         }
     }
@@ -1697,7 +1697,7 @@ static sb32 __attribute__((noinline)) ndsStageGxCommitFast(
 declined:
     sNdsRendererHardwareProjectedDepth = depth_saved;
     sNdsRendererHardwareProjectedBackground = background_saved;
-    gNdsStageGxFastDeclines++;
+    NDS_DIAG(gNdsStageGxFastDeclines++);
     return FALSE;
 }
 #endif

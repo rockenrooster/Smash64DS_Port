@@ -169,7 +169,7 @@ static void ndsOsReclaimFinishedService(OSThread *thread)
     if (thread->id >= NDS_OS_GOBJ_THREAD_ID_MIN) return;
     portCoroutineDestroy(thread->port_coroutine);
     thread->port_coroutine = NULL;
-    gNdsOsServiceThreadReclaimCount++;
+    NDS_DIAG(gNdsOsServiceThreadReclaimCount++);
 }
 
 void osCreateThread(OSThread *thread, OSId id, void (*entry)(void *),
@@ -241,7 +241,7 @@ void osStartThread(OSThread *thread)
             gNdsOsStartThreadCreateFailCount++;
             return;
         }
-        gNdsOsThreadHeapCreateCount++;
+        NDS_DIAG(gNdsOsThreadHeapCreateCount++);
         thread->port_coroutine = coroutine;
     }
 

@@ -835,7 +835,7 @@ static int ndsP2HbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
                               dm->box_inv_smin, ndsR2CfxAbs32(am->radius),
                               am->p0, am->p1) != 0)
         {
-            gNdsP2HbBoxHits++;
+            NDS_DIAG(gNdsP2HbBoxHits++);
             return 1;
         }
         /* Not separated: the full path below repeats the test and goes on
@@ -916,7 +916,7 @@ static int ndsP2HbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
         (ndsP2HbRejectLocal(w, dm->off, dm->size, radius, am->p0,
                             am->p1) != 0))
     {
-        gNdsP2HbLocalRejects++;
+        NDS_DIAG(gNdsP2HbLocalRejects++);
         return 1;
     }
     return 0;

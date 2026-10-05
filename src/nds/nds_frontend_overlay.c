@@ -94,7 +94,7 @@ void ndsFrontendOverlayPrepareDispatch(u32 kind)
     {
         if (sNdsFrontendTailDirty != 0u)
         {
-            gNdsFrontendOverlayTailReloadCount++;
+            NDS_DIAG(gNdsFrontendOverlayTailReloadCount++);
         }
         ndsFrontendOverlayLoadNow();
     }
@@ -109,7 +109,7 @@ void ndsFrontendOverlayRestoreTail(void)
     sNdsFrontendCursor = NULL;
     if (sNdsFrontendTailDirty != 0u)
     {
-        gNdsFrontendOverlayTailReloadCount++;
+        NDS_DIAG(gNdsFrontendOverlayTailReloadCount++);
         ndsFrontendOverlayLoadNow();
     }
     sNdsFrontendTailLoaned = 0u;
@@ -147,7 +147,7 @@ void ndsFrontendOverlayBeginScene(u32 kind)
         gNdsFrontendOverlayLoanBytes =
             (u32)(__nds_frontend_end - __nds_frontend_1p_end);
         gNdsFrontendOverlayLoanCount++;
-        gNdsFrontendOverlayTailLoanCount++;
+        NDS_DIAG(gNdsFrontendOverlayTailLoanCount++);
         sNdsFrontendTailLoaned = 1u;
     }
 }

@@ -438,12 +438,12 @@ void scVSBattleFuncUpdate(void)
 #endif
     if (ndsFighterMarioFoxLivePreviewUpdateEnabled() != FALSE)
     {
-        gNdsFighterLivePreviewBaseVSBattleUpdateCount++;
+        NDS_DIAG(gNdsFighterLivePreviewBaseVSBattleUpdateCount++);
         ndsFighterMarioFoxLivePreviewRunVSBattleUpdate();
     }
     else if (ndsFighterMarioFoxGCDrawAllLoopUpdateEnabled() != FALSE)
     {
-        gNdsFighterGCDrawAllLoopBaseVSBattleUpdateCount++;
+        NDS_DIAG(gNdsFighterGCDrawAllLoopBaseVSBattleUpdateCount++);
         ndsFighterMarioFoxGCDrawAllLoopRunVSBattleUpdate();
     }
     else if (ndsFighterMarioFoxGCRunAllLoopUpdateEnabled() != FALSE)
@@ -453,17 +453,17 @@ void scVSBattleFuncUpdate(void)
     }
     else if (ndsFighterMarioFoxPreviewLoopUpdateEnabled() != FALSE)
     {
-        gNdsFighterPreviewLoopBaseVSBattleUpdateCount++;
+        NDS_DIAG(gNdsFighterPreviewLoopBaseVSBattleUpdateCount++);
         ndsFighterMarioFoxPreviewLoopRunVSBattleUpdate();
     }
     else if (ndsFighterMarioFoxControllerLoopUpdateEnabled() != FALSE)
     {
-        gNdsFighterControllerLoopBaseVSBattleUpdateCount++;
+        NDS_DIAG(gNdsFighterControllerLoopBaseVSBattleUpdateCount++);
         ndsFighterMarioFoxControllerLoopRunVSBattleUpdate();
     }
     else if (ndsFighterMarioFoxSchedulerLoopUpdateEnabled() != FALSE)
     {
-        gNdsFighterSchedulerLoopBaseVSBattleUpdateCount++;
+        NDS_DIAG(gNdsFighterSchedulerLoopBaseVSBattleUpdateCount++);
         ndsFighterMarioFoxSchedulerLoopRunVSBattleUpdate();
     }
 }

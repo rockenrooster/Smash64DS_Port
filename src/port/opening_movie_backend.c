@@ -1346,7 +1346,7 @@ static void ndsOpeningRoomRecordCapturedDisplay(GObj *camera_gobj,
     {
         return;
     }
-    gNdsOpeningRoomDrawDisplayCallbackCount++;
+    NDS_DIAG(gNdsOpeningRoomDrawDisplayCallbackCount++);
 
     if ((display_gobj != NULL) &&
         (gNdsOpeningRoomDrawFirstObjectDLLink == 0xffffffffu))
@@ -1439,24 +1439,24 @@ static void ndsOpeningRoomRecordTextureMaterialDObj(GObj *gobj,
 
         if (counted_dobj == FALSE)
         {
-            gNdsOpeningRoomDrawTextureMaterialCandidateCount++;
+            NDS_DIAG(gNdsOpeningRoomDrawTextureMaterialCandidateCount++);
             counted_dobj = TRUE;
         }
-        gNdsOpeningRoomDrawTextureMaterialMObjCount++;
+        NDS_DIAG(gNdsOpeningRoomDrawTextureMaterialMObjCount++);
 
         mask = ndsOpeningRoomMakeTextureMObjMask(
             mobj, effective_flags, &sprite_curr, &sprite_next);
         if ((mask & NDS_OPENING_ROOM_DL_MATERIAL_HAS_SPRITE_ARRAY) != 0)
         {
-            gNdsOpeningRoomDrawTextureMaterialSpriteArrayCount++;
+            NDS_DIAG(gNdsOpeningRoomDrawTextureMaterialSpriteArrayCount++);
         }
         if ((mask & NDS_OPENING_ROOM_DL_MATERIAL_HAS_CURR_SPRITE) != 0)
         {
-            gNdsOpeningRoomDrawTextureMaterialSpriteCurrCount++;
+            NDS_DIAG(gNdsOpeningRoomDrawTextureMaterialSpriteCurrCount++);
         }
         if ((mask & NDS_OPENING_ROOM_DL_MATERIAL_HAS_NEXT_SPRITE) != 0)
         {
-            gNdsOpeningRoomDrawTextureMaterialSpriteNextCount++;
+            NDS_DIAG(gNdsOpeningRoomDrawTextureMaterialSpriteNextCount++);
         }
 
         ndsOpeningRoomStoreTextureMaterialCandidate(
@@ -1553,7 +1553,7 @@ static void ndsOpeningRoomRecordDObjDraw(GObj *gobj, u32 callback_marker)
 
     if (material_dobj != NULL)
     {
-        gNdsOpeningRoomDrawMaterialCandidateCount++;
+        NDS_DIAG(gNdsOpeningRoomDrawMaterialCandidateCount++);
         if (sNdsOpeningRoomMaterialPreviewDObj == NULL)
         {
             sNdsOpeningRoomMaterialPreviewCameraGObj =
@@ -1820,8 +1820,8 @@ gcCaptureCameraGObj(GObj *camera_gobj, sb32 is_tag_mask_or_id)
                             const u32 kind = ndsP2MiscProcKind(current_gobj);
 
                             gNdsMiscProcDisplayTicks += exclusive;
-                            gNdsMiscProcDisplayKindTicks[kind] += exclusive;
-                            gNdsMiscProcDisplayKindCount[kind]++;
+                            NDS_DIAG(gNdsMiscProcDisplayKindTicks[kind] += exclusive);
+                            NDS_DIAG(gNdsMiscProcDisplayKindCount[kind]++);
                         }
 #endif
                     }
@@ -1907,7 +1907,7 @@ void func_80017DBC(GObj *gobj)
 #if NDS_IMPORT_BATTLESHIP_VS_RESULTS
     if (gSCManagerSceneData.scene_curr == nSCKindVSResults)
     {
-        gNdsVSResultsCameraProcCount++;
+        NDS_DIAG(gNdsVSResultsCameraProcCount++);
     }
 #endif
     gcCaptureCameraGObj(
@@ -1943,7 +1943,7 @@ void func_80017EC0(GObj *gobj)
         (gNdsFighterGCDrawAllLoopPrepared != 0u) &&
         (gNdsFighterMarioFoxGCDrawAllLoopResult == 0u))
     {
-        gNdsFighterGCDrawAllLoopCameraCallbackCount++;
+        NDS_DIAG(gNdsFighterGCDrawAllLoopCameraCallbackCount++);
     }
     ndsStageGCDrawAllLoopRecordCameraCallback();
 

@@ -290,7 +290,7 @@ static sb32 ndsP2HurtboxRejectGate(const Vec3f *pos_curr, const Vec3f *pos_prev,
         *rejected = TRUE;
         return (mode == 1u) ? TRUE : FALSE;
     }
-    gNdsP2HurtboxPasses++;
+    NDS_DIAG(gNdsP2HurtboxPasses++);
     return FALSE;
 }
 
@@ -311,7 +311,7 @@ sb32 gmCollisionCheckWeaponAttackFighterDamageCollide(
         attack_coll, attack_id, damage_coll);
     if ((rejected != FALSE) && (hit != FALSE))
     {
-        gNdsP2HurtboxFlips++;
+        NDS_DIAG(gNdsP2HurtboxFlips++);
     }
     return hit;
 }
@@ -333,7 +333,7 @@ sb32 gmCollisionCheckItemAttackFighterDamageCollide(
         attack_coll, attack_id, damage_coll);
     if ((rejected != FALSE) && (hit != FALSE))
     {
-        gNdsP2HurtboxFlips++;
+        NDS_DIAG(gNdsP2HurtboxFlips++);
     }
     return hit;
 }
@@ -485,7 +485,7 @@ sb32 gmCollisionCheckFighterAttackDamageCollide(FTAttackColl *attack_coll,
         }
         else
         {
-            gNdsP2HurtboxPasses++;
+            NDS_DIAG(gNdsP2HurtboxPasses++);
         }
     }
 #endif
@@ -511,7 +511,7 @@ sb32 gmCollisionCheckFighterAttackDamageCollide(FTAttackColl *attack_coll,
 #if NDS_P2_HURTBOX_REJECT
     if ((rejected != FALSE) && (hit != FALSE))
     {
-        gNdsP2HurtboxFlips++;
+        NDS_DIAG(gNdsP2HurtboxFlips++);
     }
 #endif
 #if NDS_R2_SIM_MAC_SHADOW
@@ -530,10 +530,10 @@ sb32 gmCollisionCheckFighterAttackDamageCollide(FTAttackColl *attack_coll,
     }
 #endif
 #if NDS_TICK_HUD
-    gNdsCfxFighterDamagePhaseCalls++;
+    NDS_DIAG(gNdsCfxFighterDamagePhaseCalls++);
     if (hit != FALSE)
     {
-        gNdsCfxFighterDamagePhaseHits++;
+        NDS_DIAG(gNdsCfxFighterDamagePhaseHits++);
     }
 #endif
     return hit;
@@ -551,10 +551,10 @@ sb32 gmCollisionCheckFighterAttackShieldCollide(FTAttackColl *attack_coll,
     hit = ndsBaseGmCollisionCheckFighterAttackShieldCollide(
         attack_coll, fighter_gobj, dobj, p_angle);
 #if NDS_TICK_HUD
-    gNdsCfxFighterShieldPhaseCalls++;
+    NDS_DIAG(gNdsCfxFighterShieldPhaseCalls++);
     if (hit != FALSE)
     {
-        gNdsCfxFighterShieldPhaseHits++;
+        NDS_DIAG(gNdsCfxFighterShieldPhaseHits++);
     }
 #endif
     return hit;

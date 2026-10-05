@@ -3642,13 +3642,13 @@ static void ndsRelocRecordExternalFixupSuccess(u32 source_asset_id,
 {
     if (ndsPupupuStageAssetBit(source_asset_id) != 0u)
     {
-        gNdsStagePupupuExternalFixupCount++;
+        NDS_DIAG(gNdsStagePupupuExternalFixupCount++);
         gNdsStagePupupuRelocDependencyMask |=
             ndsPupupuStageAssetBit(dep_asset_id);
     }
     if (ndsFighterMarioFoxAssetBit(source_asset_id) != 0u)
     {
-        gNdsFighterMarioFoxExternalFixupCount++;
+        NDS_DIAG(gNdsFighterMarioFoxExternalFixupCount++);
         gNdsFighterMarioFoxRelocDependencyMask |=
             ndsFighterMarioFoxDependencyBit(dep_asset_id);
     }
@@ -6594,7 +6594,7 @@ static NDSRelocLoadedFile *ndsRelocFindLoadedFileContaining(const void *ptr,
         }
     }
 
-    gNdsRelocFindMemoScans++;
+    NDS_DIAG(gNdsRelocFindMemoScans++);
     for (i = 0; i < sNdsRelocLoadedFileCount; i++)
     {
         if (ndsRelocPointerRangeInLoadedFile(&sNdsRelocLoadedFiles[i],
@@ -6609,7 +6609,7 @@ static NDSRelocLoadedFile *ndsRelocFindLoadedFileContaining(const void *ptr,
             return &sNdsRelocLoadedFiles[i];
         }
     }
-    gNdsRelocFindMemoAbsent++;
+    NDS_DIAG(gNdsRelocFindMemoAbsent++);
     return NULL;
 }
 
@@ -7192,7 +7192,7 @@ static s32 ndsRelocApplyWordByteSwapRange(u32 asset_id, void *data,
 
     if (asset_id == NDS_RELOC_ASSET_N64_LOGO)
     {
-        gNdsStartupLogoRelocWordSwapCount += words;
+        NDS_DIAG(gNdsStartupLogoRelocWordSwapCount += words);
     }
     else if (ndsRelocIsOpeningRoomAsset(asset_id) != FALSE)
     {
@@ -7312,7 +7312,7 @@ static s32 ndsRelocApplyInternalPointerFixups(NDSRelocLoadedFile *loaded)
 
     if (loaded->asset_id == NDS_RELOC_ASSET_N64_LOGO)
     {
-        gNdsStartupLogoRelocPointerFixupCount += fixed_count;
+        NDS_DIAG(gNdsStartupLogoRelocPointerFixupCount += fixed_count);
     }
     else if (ndsRelocIsOpeningRoomAsset(loaded->asset_id) != FALSE)
     {
@@ -7320,7 +7320,7 @@ static s32 ndsRelocApplyInternalPointerFixups(NDSRelocLoadedFile *loaded)
     }
     if (ndsPupupuStageAssetBit(loaded->asset_id) != 0u)
     {
-        gNdsStagePupupuInternalFixupCount += fixed_count;
+        NDS_DIAG(gNdsStagePupupuInternalFixupCount += fixed_count);
     }
     return TRUE;
 }
@@ -7533,12 +7533,12 @@ static void ndsRelocRemoveFighterAnimStatusAliases(LBFileNode *nodes,
          * Nothing is added here -- the call count goes down. */
         if (NDS_R2_RELOC_ALIAS_ROUTE_ON(1u))
         {
-            gNdsR2RelocAliasVisits++;
+            NDS_DIAG(gNdsR2RelocAliasVisits++);
             if (nodes[i].addr == data)
             {
                 u32 node_asset_id = ndsRelocAssetIDForToken((u32)nodes[i].id);
 
-                gNdsR2RelocAliasResolves++;
+                NDS_DIAG(gNdsR2RelocAliasResolves++);
                 if ((node_asset_id != asset_id) &&
                     (ndsRelocIsFighterAnimID(node_asset_id) != FALSE))
                 {
@@ -7551,8 +7551,8 @@ static void ndsRelocRemoveFighterAnimStatusAliases(LBFileNode *nodes,
         {
             u32 node_asset_id = ndsRelocAssetIDForToken((u32)nodes[i].id);
 
-            gNdsR2RelocAliasVisits++;
-            gNdsR2RelocAliasResolves++;
+            NDS_DIAG(gNdsR2RelocAliasVisits++);
+            NDS_DIAG(gNdsR2RelocAliasResolves++);
             if ((nodes[i].addr == data) && (node_asset_id != asset_id) &&
                 (ndsRelocIsFighterAnimID(node_asset_id) != FALSE))
             {
@@ -8154,8 +8154,8 @@ static s32 ndsRelocNormalizeFighterAObj16File(NDSRelocLoadedFile *loaded)
      * which loop E9 should attack -- naming the O(n^2) from reading the code was
      * an inference, and 23,491 ticks/call is far more than a table of a few tens
      * of entries can spend on compares. */
-    gNdsR2FixupAObj16TableBytes += (u32)table_bytes;
-    gNdsR2FixupAObj16DataBytes += (u32)(loaded->data_size - script_bytes);
+    NDS_DIAG(gNdsR2FixupAObj16TableBytes += (u32)table_bytes);
+    NDS_DIAG(gNdsR2FixupAObj16DataBytes += (u32)(loaded->data_size - script_bytes));
     fixup_sub = cpuGetTiming();
 #endif
     for (i = (u32)script_bytes; (i + sizeof(u32)) <= loaded->data_size;
@@ -8168,7 +8168,7 @@ static s32 ndsRelocNormalizeFighterAObj16File(NDSRelocLoadedFile *loaded)
         ndsRelocWriteNative16((u8 *)loaded->data + i + sizeof(u16), first);
     }
 #if NDS_R2_RELOC_FIXUP_TIMING
-    gNdsR2FixupAObj16SwapTicks += cpuGetTiming() - fixup_sub;
+    NDS_DIAG(gNdsR2FixupAObj16SwapTicks += cpuGetTiming() - fixup_sub);
 #endif
 
     /* Atomic refusal across the whole file. The lane swap above is reversible
@@ -8256,7 +8256,7 @@ static s32 ndsRelocNormalizeFighterAObj16File(NDSRelocLoadedFile *loaded)
             u32 unresolved;
 
 #if NDS_R2_RELOC_FIXUP_TIMING
-            gNdsR2FixupAObj16Scripts++;
+            NDS_DIAG(gNdsR2FixupAObj16Scripts++);
             fixup_sub = cpuGetTiming();
 #endif
             for (j = 0; (j * sizeof(u32)) < table_bytes; j++)
@@ -8272,8 +8272,8 @@ static s32 ndsRelocNormalizeFighterAObj16File(NDSRelocLoadedFile *loaded)
             }
             word_count = (u32)((script_end - value) / sizeof(u16));
 #if NDS_R2_RELOC_FIXUP_TIMING
-            gNdsR2FixupAObj16SuccessorTicks += cpuGetTiming() - fixup_sub;
-            gNdsR2FixupAObj16ScriptWords += word_count;
+            NDS_DIAG(gNdsR2FixupAObj16SuccessorTicks += cpuGetTiming() - fixup_sub);
+            NDS_DIAG(gNdsR2FixupAObj16ScriptWords += word_count);
             fixup_sub = cpuGetTiming();
 #endif
 
@@ -8292,7 +8292,7 @@ static s32 ndsRelocNormalizeFighterAObj16File(NDSRelocLoadedFile *loaded)
                 }
             }
 #if NDS_R2_RELOC_FIXUP_TIMING
-            gNdsR2FixupAObj16NormalizeTicks += cpuGetTiming() - fixup_sub;
+            NDS_DIAG(gNdsR2FixupAObj16NormalizeTicks += cpuGetTiming() - fixup_sub);
 #endif
         }
     }
@@ -9710,20 +9710,20 @@ static s32 ndsRelocFinalizeLoadedFile(NDSRelocLoadedFile *loaded)
 #if NDS_R2_RELOC_FIXUP_TIMING
     fixup_enter = cpuGetTiming();
     fixup_phase = fixup_enter;
-    gNdsR2FixupFinalizeCalls++;
+    NDS_DIAG(gNdsR2FixupFinalizeCalls++);
     if (ndsRelocApplyInternalPointerFixups(loaded) == FALSE)
     {
         loaded->fixups_applying = FALSE;
         return FALSE;
     }
-    gNdsR2FixupInternalTicks += cpuGetTiming() - fixup_phase;
+    NDS_DIAG(gNdsR2FixupInternalTicks += cpuGetTiming() - fixup_phase);
     fixup_phase = cpuGetTiming();
     if (ndsRelocNormalizeFighterAObj16File(loaded) == FALSE)
     {
         loaded->fixups_applying = FALSE;
         return FALSE;
     }
-    gNdsR2FixupAObj16Ticks += cpuGetTiming() - fixup_phase;
+    NDS_DIAG(gNdsR2FixupAObj16Ticks += cpuGetTiming() - fixup_phase);
     fixup_phase = cpuGetTiming();
     if ((ndsRelocNormalizeKirbyMainMotionCopyTable(loaded) == FALSE) ||
         (ndsRelocNormalizeFighterAttributesFile(loaded) == FALSE))
@@ -9731,14 +9731,14 @@ static s32 ndsRelocFinalizeLoadedFile(NDSRelocLoadedFile *loaded)
         loaded->fixups_applying = FALSE;
         return FALSE;
     }
-    gNdsR2FixupAttributesTicks += cpuGetTiming() - fixup_phase;
+    NDS_DIAG(gNdsR2FixupAttributesTicks += cpuGetTiming() - fixup_phase);
     fixup_phase = cpuGetTiming();
     if (ndsRelocApplyExternalPointerFixups(loaded) == FALSE)
     {
         loaded->fixups_applying = FALSE;
         return FALSE;
     }
-    gNdsR2FixupExternalTicks += cpuGetTiming() - fixup_phase;
+    NDS_DIAG(gNdsR2FixupExternalTicks += cpuGetTiming() - fixup_phase);
 #else
     if ((ndsRelocApplyInternalPointerFixups(loaded) == FALSE) ||
         (ndsRelocNormalizeFighterAObj16File(loaded) == FALSE) ||
@@ -9763,9 +9763,9 @@ static s32 ndsRelocFinalizeLoadedFile(NDSRelocLoadedFile *loaded)
     {
         u32 total;
 
-        gNdsR2FixupSpritesTicks += cpuGetTiming() - fixup_phase;
+        NDS_DIAG(gNdsR2FixupSpritesTicks += cpuGetTiming() - fixup_phase);
         total = cpuGetTiming() - fixup_enter;
-        gNdsR2FixupFinalizeTicks += total;
+        NDS_DIAG(gNdsR2FixupFinalizeTicks += total);
         if (total > gNdsR2FixupFinalizeMaxTicks)
         {
             gNdsR2FixupFinalizeMaxTicks = total;
@@ -10306,7 +10306,7 @@ static void ndsRelocNormalizeGroundMapAsset(NDSRelocLoadedFile *loaded)
         }
         ground_data = (const MPGroundData *)((const u8 *)loaded->data +
                                              sNdsRelocGroundMapAssets[i].header);
-        gNdsRelocGroundBoundsCount++;
+        NDS_DIAG(gNdsRelocGroundBoundsCount++);
         gNdsRelocGroundBoundsLastLeft = ground_data->camera_bound_left;
         gNdsRelocGroundBoundsLastRight = ground_data->camera_bound_right;
         gNdsRelocGroundBoundsLastBottom = ground_data->camera_bound_bottom;
@@ -10316,7 +10316,7 @@ static void ndsRelocNormalizeGroundMapAsset(NDSRelocLoadedFile *loaded)
             (ground_data->camera_bound_bottom >=
              ground_data->camera_bound_top))
         {
-            gNdsRelocGroundBoundsRejectCount++;
+            NDS_DIAG(gNdsRelocGroundBoundsRejectCount++);
             gNdsRelocGroundBoundsRejectAsset = loaded->asset_id;
         }
         return;
@@ -10768,7 +10768,7 @@ static void ndsRelocNormalizeIFAnnounceSprite(NDSRelocLoadedFile *loaded,
         (loaded->asset_id != NDS_RELOC_ASSET_IF_COMMON_ANNOUNCE) ||
         (ndsRelocRangeInLoadedFile(loaded, offset, sizeof(Sprite)) == FALSE))
     {
-        gNdsOpeningMarioSpriteNormalizeFailCount++;
+        NDS_DIAG(gNdsOpeningMarioSpriteNormalizeFailCount++);
         return;
     }
 
@@ -10780,7 +10780,7 @@ static void ndsRelocNormalizeIFAnnounceSprite(NDSRelocLoadedFile *loaded,
         ((u32)(u16)sprite->nbitmaps != 0) &&
         ((u32)(u16)sprite->nbitmaps <= 16u))
     {
-        gNdsOpeningMarioSpriteNormalizeCount++;
+        NDS_DIAG(gNdsOpeningMarioSpriteNormalizeCount++);
         return;
     }
 
@@ -10795,11 +10795,11 @@ static void ndsRelocNormalizeIFAnnounceSprite(NDSRelocLoadedFile *loaded,
         (ndsRelocNormalizeSpriteBitmapTable(loaded, sprite,
                                             bitmap_count) == FALSE))
     {
-        gNdsOpeningMarioSpriteNormalizeFailCount++;
+        NDS_DIAG(gNdsOpeningMarioSpriteNormalizeFailCount++);
         return;
     }
 
-    gNdsOpeningMarioSpriteNormalizeCount++;
+    NDS_DIAG(gNdsOpeningMarioSpriteNormalizeCount++);
 }
 
 static void ndsRelocNormalizeIFAnnounceMarioSprites(NDSRelocLoadedFile *loaded)
@@ -11017,7 +11017,7 @@ static s32 ndsRelocNormalizeOpeningActionPreviewSprite(
         (ndsRelocRangeInLoadedFile(loaded, desc->offset,
                                    sizeof(Sprite)) == FALSE))
     {
-        gNdsOpeningMovieActionPreviewSpriteNormalizeFailCount++;
+        NDS_DIAG(gNdsOpeningMovieActionPreviewSpriteNormalizeFailCount++);
         return FALSE;
     }
 
@@ -11028,7 +11028,7 @@ static s32 ndsRelocNormalizeOpeningActionPreviewSprite(
         (sprite->bmfmt == desc->bmfmt) &&
         (sprite->bmsiz == desc->bmsiz))
     {
-        gNdsOpeningMovieActionPreviewSpriteNormalizeCount++;
+        NDS_DIAG(gNdsOpeningMovieActionPreviewSpriteNormalizeCount++);
         return TRUE;
     }
 
@@ -11044,11 +11044,11 @@ static s32 ndsRelocNormalizeOpeningActionPreviewSprite(
         (ndsRelocNormalizeSpriteBitmapTable(
             loaded, sprite, desc->bitmap_count) == FALSE))
     {
-        gNdsOpeningMovieActionPreviewSpriteNormalizeFailCount++;
+        NDS_DIAG(gNdsOpeningMovieActionPreviewSpriteNormalizeFailCount++);
         return FALSE;
     }
 
-    gNdsOpeningMovieActionPreviewSpriteNormalizeCount++;
+    NDS_DIAG(gNdsOpeningMovieActionPreviewSpriteNormalizeCount++);
     return TRUE;
 }
 
@@ -11205,7 +11205,7 @@ static void ndsRelocRegisterNormalizedMObjSub(
     if (sNdsRelocNormalizedMObjSubCount >=
         NDS_RELOC_NORMALIZED_MOBJ_SUB_CAPACITY)
     {
-        gNdsOpeningRoomRelocMObjSubNormalizeFailCount++;
+        NDS_DIAG(gNdsOpeningRoomRelocMObjSubNormalizeFailCount++);
         return;
     }
     sNdsRelocNormalizedMObjSubs[sNdsRelocNormalizedMObjSubCount].record =
@@ -11287,7 +11287,7 @@ static void ndsRelocRecordMObjSubNormalize(
 
     if (mobjsub == NULL)
     {
-        gNdsOpeningRoomRelocMObjSubNormalizeFailCount++;
+        NDS_DIAG(gNdsOpeningRoomRelocMObjSubNormalizeFailCount++);
         return;
     }
 
@@ -11303,19 +11303,19 @@ static void ndsRelocRecordMObjSubNormalize(
 
     if (flags == MOBJ_FLAG_NONE)
     {
-        gNdsOpeningRoomRelocMObjSubZeroFlagCount++;
+        NDS_DIAG(gNdsOpeningRoomRelocMObjSubZeroFlagCount++);
     }
     if ((flags & MOBJ_FLAG_PRIMCOLOR) != 0)
     {
-        gNdsOpeningRoomRelocMObjSubPrimColorCount++;
+        NDS_DIAG(gNdsOpeningRoomRelocMObjSubPrimColorCount++);
     }
     if ((flags & (MOBJ_FLAG_LIGHT1 | MOBJ_FLAG_LIGHT2)) != 0)
     {
-        gNdsOpeningRoomRelocMObjSubLightCount++;
+        NDS_DIAG(gNdsOpeningRoomRelocMObjSubLightCount++);
     }
     if ((effective_flags & MOBJ_FLAG_TEXTURE) != 0)
     {
-        gNdsOpeningRoomRelocMObjSubTextureFlagCount++;
+        NDS_DIAG(gNdsOpeningRoomRelocMObjSubTextureFlagCount++);
         if (gNdsOpeningRoomRelocMObjSubFirstTextureOffset == 0xffffffffu)
         {
             if ((loaded != NULL) &&
@@ -11331,7 +11331,7 @@ static void ndsRelocRecordMObjSubNormalize(
 
     if (ndsRelocMObjSubFlagsKnown(flags) == FALSE)
     {
-        gNdsOpeningRoomRelocMObjSubNormalizeFailCount++;
+        NDS_DIAG(gNdsOpeningRoomRelocMObjSubNormalizeFailCount++);
     }
 }
 
@@ -11354,7 +11354,7 @@ static void ndsRelocNormalizeMObjSubMixedFields(NDSRelocLoadedFile *loaded,
 {
     if (mobjsub == NULL)
     {
-        gNdsOpeningRoomRelocMObjSubNormalizeFailCount++;
+        NDS_DIAG(gNdsOpeningRoomRelocMObjSubNormalizeFailCount++);
         return;
     }
 
@@ -11382,7 +11382,7 @@ static void ndsRelocNormalizeMObjSubTable(NDSRelocLoadedFile *loaded,
         (ndsRelocRangeInLoadedFile(loaded, offset, sizeof(*p_mobjsubs)) ==
          FALSE))
     {
-        gNdsOpeningRoomRelocMObjSubNormalizeFailCount++;
+        NDS_DIAG(gNdsOpeningRoomRelocMObjSubNormalizeFailCount++);
         return;
     }
 
@@ -11396,7 +11396,7 @@ static void ndsRelocNormalizeMObjSubTable(NDSRelocLoadedFile *loaded,
                 loaded, &p_mobjsubs[head_index], sizeof(*p_mobjsubs)) ==
             FALSE)
         {
-            gNdsOpeningRoomRelocMObjSubNormalizeFailCount++;
+            NDS_DIAG(gNdsOpeningRoomRelocMObjSubNormalizeFailCount++);
             return;
         }
 
@@ -11408,7 +11408,7 @@ static void ndsRelocNormalizeMObjSubTable(NDSRelocLoadedFile *loaded,
         if (ndsRelocPointerRangeInLoadedFile(
                 loaded, mobjsubs, sizeof(*mobjsubs)) == FALSE)
         {
-            gNdsOpeningRoomRelocMObjSubNormalizeFailCount++;
+            NDS_DIAG(gNdsOpeningRoomRelocMObjSubNormalizeFailCount++);
             return;
         }
 
@@ -11420,7 +11420,7 @@ static void ndsRelocNormalizeMObjSubTable(NDSRelocLoadedFile *loaded,
                     loaded, &mobjsubs[list_index], sizeof(*mobjsubs)) ==
                 FALSE)
             {
-                gNdsOpeningRoomRelocMObjSubNormalizeFailCount++;
+                NDS_DIAG(gNdsOpeningRoomRelocMObjSubNormalizeFailCount++);
                 return;
             }
 
@@ -11432,7 +11432,7 @@ static void ndsRelocNormalizeMObjSubTable(NDSRelocLoadedFile *loaded,
             if (ndsRelocPointerRangeInLoadedFile(
                     loaded, mobjsub, sizeof(*mobjsub)) == FALSE)
             {
-                gNdsOpeningRoomRelocMObjSubNormalizeFailCount++;
+                NDS_DIAG(gNdsOpeningRoomRelocMObjSubNormalizeFailCount++);
                 return;
             }
             ndsRelocNormalizeMObjSubMixedFields(loaded, mobjsub);
@@ -13452,13 +13452,13 @@ void *lbRelocGetExternHeapFile(const void *file_id, void *heap)
      * contract, which submotion payloads had never been put through). */
     if (asset_id == NDS_RELOC_ASSET_INVALID)
     {
-        gNdsRelocExternHeapUnresolvedCount++;
+        NDS_DIAG(gNdsRelocExternHeapUnresolvedCount++);
         gNdsRelocExternHeapLastUnresolvedToken = token;
         return heap;
     }
     if (heap == NULL)
     {
-        gNdsRelocExternHeapNoHeapCount++;
+        NDS_DIAG(gNdsRelocExternHeapNoHeapCount++);
         return heap;
     }
     ndsRelocPrepareSceneCache();
@@ -13467,11 +13467,11 @@ void *lbRelocGetExternHeapFile(const void *file_id, void *heap)
     loaded = ndsRelocLoadExternTreeAsset(asset_id, &heap_ptr);
     if (loaded == NULL)
     {
-        gNdsRelocExternHeapLoadFailCount++;
+        NDS_DIAG(gNdsRelocExternHeapLoadFailCount++);
         gNdsRelocExternHeapLastLoadFailAsset = asset_id;
         return heap;
     }
-    gNdsRelocExternHeapOkCount++;
+    NDS_DIAG(gNdsRelocExternHeapOkCount++);
     if (asset_id == NDS_RELOC_ASSET_N64_LOGO)
     {
         ndsRelocNormalizeN64LogoSprite(loaded);
@@ -14083,7 +14083,7 @@ static void ndsR2AnimNoteRejected(u32 asset_id, u32 size)
     }
     if (sNdsR2AnimRejectedCount >= NDS_R2_ANIM_REJECT_TRACK_MAX)
     {
-        gNdsR2AnimCacheRejectedTrackOverflow++;
+        NDS_DIAG(gNdsR2AnimCacheRejectedTrackOverflow++);
         return;
     }
     sNdsR2AnimRejectedIds[sNdsR2AnimRejectedCount++] = asset_id;
@@ -14204,7 +14204,7 @@ static void ndsR2AnimPinRescue(NDSR2AnimPin *pin)
         (pin->generation != gNdsTaskmanHeapGeneration) ||
         (heap == NULL) || (pin->fp == NULL))
     {
-        gNdsR2AnimZeroCopyDrops++;
+        NDS_DIAG(gNdsR2AnimZeroCopyDrops++);
         return;
     }
     ndsRelocPrepareFighterAnimHeapOverwrite(pin->asset_id, heap);
@@ -14236,7 +14236,7 @@ static void ndsR2AnimPinRescue(NDSR2AnimPin *pin)
             }
         }
     }
-    gNdsR2AnimZeroCopyRescues++;
+    NDS_DIAG(gNdsR2AnimZeroCopyRescues++);
 }
 
 static void ndsR2AnimPinsRescueRange(const u8 *start, const u8 *end)
@@ -14281,7 +14281,7 @@ void ndsR2AnimPinsDropGObj(GObj *gobj)
             (sNdsR2AnimPins[i].gobj == gobj))
         {
             sNdsR2AnimPins[i].state = NDS_R2_ANIM_PIN_FREE;
-            gNdsR2AnimZeroCopyDrops++;
+            NDS_DIAG(gNdsR2AnimZeroCopyDrops++);
         }
     }
 }
@@ -14637,7 +14637,7 @@ static u8 *ndsR2AnimCacheElasticYield(u8 *need_top)
     if ((want + NDS_R2_ANIM_CACHE_ELASTIC_MIN) >= ((uintptr_t)arena + bytes))
     {
         ndsR2AnimCacheArenaDropForReset();
-        gNdsR2AnimCacheElasticDrops++;
+        NDS_DIAG(gNdsR2AnimCacheElasticDrops++);
         return (u8 *)gSYTaskmanGeneralHeap.end;
     }
     if (want <= (uintptr_t)arena)
@@ -14686,7 +14686,7 @@ static sb32 ndsR2AnimCacheArenaCarveElastic(size_t available,
     gNdsR2AnimCacheArenaReservedBytes = bytes;
     gNdsR2AnimCacheArenaUsedBytes = 0u;
     gNdsR2AnimCacheArenaReserveCount++;
-    gNdsR2AnimCacheElasticCarves++;
+    NDS_DIAG(gNdsR2AnimCacheElasticCarves++);
     ndsTaskmanElasticRegister(sNdsR2AnimCacheArena, ndsR2AnimCacheElasticYield);
     return TRUE;
 }
@@ -15438,7 +15438,7 @@ static void ndsR2AnimCacheRemoveEntry(u32 index)
     }
     if (sNdsR2AnimCache[index].prefetched != 0u)
     {
-        gNdsR2AnimPrefetchWasted++;
+        NDS_DIAG(gNdsR2AnimPrefetchWasted++);
     }
     if (gNdsR2AnimCacheBytes >= sNdsR2AnimCache[index].size)
     {
@@ -15587,7 +15587,7 @@ static void *ndsR2AnimCacheRawRingAllocAligned(u32 size, u32 align)
             {
                 break;
             }
-            gNdsR2AnimCacheClockSkips++;
+            NDS_DIAG(gNdsR2AnimCacheClockSkips++);
             aligned = (u32)((((uintptr_t)past + align - 1u) &
                              ~(uintptr_t)(align - 1u)) - base);
             if ((aligned > sNdsR2AnimCacheArenaBytes) ||
@@ -15686,7 +15686,7 @@ static void ndsR2AnimCacheStore(u32 asset_id, const void *data, u32 size,
 
         if ((sNdsR2AnimStoredThisMatch[word] & bit) != 0u)
         {
-            gNdsR2AnimCacheRestores++;
+            NDS_DIAG(gNdsR2AnimCacheRestores++);
         }
         sNdsR2AnimStoredThisMatch[word] |= bit;
     }
@@ -15743,7 +15743,7 @@ static NDSR2AnimCacheEntry *ndsR2AnimCacheAddStreamEntry(u32 asset_id,
 
         if ((sNdsR2AnimStoredThisMatch[word] & bit) != 0u)
         {
-            gNdsR2AnimCacheRestores++;
+            NDS_DIAG(gNdsR2AnimCacheRestores++);
         }
         sNdsR2AnimStoredThisMatch[word] |= bit;
     }
@@ -15762,7 +15762,7 @@ static const NDSR2AnimCacheEntry *ndsR2AnimDirectReadEntry(u32 asset_id)
         (ndsR2AnimCacheArenaEnsure() == FALSE) ||
         (sNdsR2AnimCacheArenaRawOnly == FALSE))
     {
-        gNdsR2AnimDirectRefusals++;
+        NDS_DIAG(gNdsR2AnimDirectRefusals++);
         return NULL;
     }
     slot = (u8 *)ndsR2AnimCacheRawRingAllocAligned(span, 32u);
@@ -15771,7 +15771,7 @@ static const NDSR2AnimCacheEntry *ndsR2AnimDirectReadEntry(u32 asset_id)
          FALSE))
     {
         /* The slot's range was evicted and holds nothing: no entry names it. */
-        gNdsR2AnimDirectRefusals++;
+        NDS_DIAG(gNdsR2AnimDirectRefusals++);
         return NULL;
     }
     if (head != 0u)
@@ -15859,7 +15859,7 @@ static void ndsR2AnimPrefetchRetire(const u8 *lo, const u8 *hi)
         {
             (void)ndsR2AnimPrefetchWait(p);
             p->busy = 0u;
-            gNdsR2AnimPrefetchRetired++;
+            NDS_DIAG(gNdsR2AnimPrefetchRetired++);
         }
     }
 }
@@ -15876,7 +15876,7 @@ void ndsR2AnimPrefetchDrain(void)
         {
             (void)ndsR2AnimPrefetchWait(p);
             p->busy = 0u;
-            gNdsR2AnimPrefetchRetired++;
+            NDS_DIAG(gNdsR2AnimPrefetchRetired++);
         }
     }
 }
@@ -15900,7 +15900,7 @@ static void ndsR2AnimPrefetchPoll(u32 wanted)
         if ((r == 0) && (p->asset_id == wanted))
         {
             r = ndsR2AnimPrefetchWait(p);
-            gNdsR2AnimPrefetchWaits++;
+            NDS_DIAG(gNdsR2AnimPrefetchWaits++);
         }
         if (r == 0)
         {
@@ -15914,7 +15914,7 @@ static void ndsR2AnimPrefetchPoll(u32 wanted)
              (sNdsR2AnimCacheArena + sNdsR2AnimCacheArenaBytes)) ||
             (ndsR2AnimCacheFind(p->asset_id) != NULL))
         {
-            gNdsR2AnimPrefetchRetired++;
+            NDS_DIAG(gNdsR2AnimPrefetchRetired++);
             continue;
         }
         if (p->head != 0u)
@@ -15931,7 +15931,7 @@ static void ndsR2AnimPrefetchPoll(u32 wanted)
         }
         ndsR2AnimCacheAddStreamEntry(p->asset_id, p->slot, p->size)
             ->prefetched = 1u;
-        gNdsR2AnimPrefetchLanded++;
+        NDS_DIAG(gNdsR2AnimPrefetchLanded++);
     }
 }
 
@@ -16070,29 +16070,29 @@ static sb32 ndsR2AnimPrefetchIssue(u32 next)
     if (ndsRelocAssetFighterStreamClipSpan(next, &head, &size, &span,
                                            &sector) == FALSE)
     {
-        gNdsR2AnimPrefetchRefused++;
-        gNdsR2AnimPrefetchRefusedWhy[0]++;
+        NDS_DIAG(gNdsR2AnimPrefetchRefused++);
+        NDS_DIAG(gNdsR2AnimPrefetchRefusedWhy[0]++);
         return FALSE;
     }
     if ((ndsR2AnimCacheArenaEnsure() == FALSE) ||
         (sNdsR2AnimCacheArenaRawOnly == FALSE))
     {
-        gNdsR2AnimPrefetchRefused++;
-        gNdsR2AnimPrefetchRefusedWhy[1]++;
+        NDS_DIAG(gNdsR2AnimPrefetchRefused++);
+        NDS_DIAG(gNdsR2AnimPrefetchRefusedWhy[1]++);
         return FALSE;
     }
     slot = (u8 *)ndsR2AnimCacheRawRingAllocAligned(span, 32u);
     if (slot == NULL)
     {
-        gNdsR2AnimPrefetchRefused++;
-        gNdsR2AnimPrefetchRefusedWhy[2]++;
+        NDS_DIAG(gNdsR2AnimPrefetchRefused++);
+        NDS_DIAG(gNdsR2AnimPrefetchRefusedWhy[2]++);
         return FALSE;
     }
     if (ndsAudioStorageReadAsync(&p->request, sector, slot, span) == 0)
     {
         /* The reserved bytes hold nothing and no entry names them. */
-        gNdsR2AnimPrefetchRefused++;
-        gNdsR2AnimPrefetchRefusedWhy[3]++;
+        NDS_DIAG(gNdsR2AnimPrefetchRefused++);
+        NDS_DIAG(gNdsR2AnimPrefetchRefusedWhy[3]++);
         return FALSE;
     }
     p->slot = slot;
@@ -16102,7 +16102,7 @@ static sb32 ndsR2AnimPrefetchIssue(u32 next)
     p->span = span;
     p->generation = gNdsTaskmanHeapGeneration;
     p->busy = 1u;
-    gNdsR2AnimPrefetchIssued++;
+    NDS_DIAG(gNdsR2AnimPrefetchIssued++);
     return TRUE;
 }
 
@@ -16115,7 +16115,7 @@ void ndsR2AnimPrefetchIdle(void)
     {
         return;
     }
-    gNdsR2AnimPrefetchIdleCalls++;
+    NDS_DIAG(gNdsR2AnimPrefetchIdleCalls++);
     for (;;)
     {
         u32 next;
@@ -16124,7 +16124,7 @@ void ndsR2AnimPrefetchIdle(void)
 
         if (ndsPlatformTicksToPresentVBlank() < NDS_R2_ANIM_PREFETCH_IDLE_MARGIN)
         {
-            gNdsR2AnimPrefetchIdleStops++;
+            NDS_DIAG(gNdsR2AnimPrefetchIdleStops++);
             return;
         }
         ndsR2AnimPrefetchPoll(0u);
@@ -16344,7 +16344,7 @@ static sb32 ndsR2AnimPrebakeAObj16(u32 asset_id, void *payload, u32 size,
     if ((payload == NULL) || (size == 0u) || (header == NULL) ||
         (ndsRelocIsFighterAObj16Asset(asset_id) == FALSE))
     {
-        gNdsR2AObj16PrebakeDeclineKind++;
+        NDS_DIAG(gNdsR2AObj16PrebakeDeclineKind++);
         return FALSE;
     }
 
@@ -16357,7 +16357,7 @@ static sb32 ndsR2AnimPrebakeAObj16(u32 asset_id, void *payload, u32 size,
         if ((guard == 0u) || ((offset + sizeof(u32)) > size) ||
             (count >= NDS_R2_AOBJ16_PREBAKE_SLOTS_MAX))
         {
-            gNdsR2AObj16PrebakeDeclineList++;
+            NDS_DIAG(gNdsR2AObj16PrebakeDeclineList++);
             return FALSE;
         }
         guard--;
@@ -16382,18 +16382,18 @@ static sb32 ndsR2AnimPrebakeAObj16(u32 asset_id, void *payload, u32 size,
     if (ndsRelocApplyInternalPointerFixups(&view) == FALSE)
     {
         ndsR2AObj16PrebakeRestore(payload, count);
-        gNdsR2AObj16PrebakeDeclineFixup++;
+        NDS_DIAG(gNdsR2AObj16PrebakeDeclineFixup++);
         return FALSE;
     }
     if (ndsRelocNormalizeFighterAObj16File(&view) == FALSE)
     {
         ndsR2AObj16PrebakeRestore(payload, count);
-        gNdsR2AObj16PrebakeDeclineFormat++;
+        NDS_DIAG(gNdsR2AObj16PrebakeDeclineFormat++);
         return FALSE;
     }
 
     ndsR2AObj16PrebakeRestore(payload, count);
-    gNdsR2AObj16PrebakeReady++;
+    NDS_DIAG(gNdsR2AObj16PrebakeReady++);
     return TRUE;
 }
 #endif
@@ -16722,19 +16722,19 @@ s32 ndsR2AnimCachePreloadFinish(void)
 {
     u32 steps = 0u;
 
-    gNdsR2AnimPreloadBarrierRuns++;
+    NDS_DIAG(gNdsR2AnimPreloadBarrierRuns++);
     while ((ndsR2AnimCachePreloadComplete() == FALSE) && (steps < 256u))
     {
         ndsR2AnimCachePreloadStep();
         steps++;
     }
-    gNdsR2AnimPreloadBarrierSteps += steps;
+    NDS_DIAG(gNdsR2AnimPreloadBarrierSteps += steps);
     if (ndsR2AnimCachePreloadComplete() == FALSE)
     {
-        gNdsR2AnimPreloadBarrierIncompleteCount++;
+        NDS_DIAG(gNdsR2AnimPreloadBarrierIncompleteCount++);
         return FALSE;
     }
-    gNdsR2AnimPreloadBarrierCompleteCount++;
+    NDS_DIAG(gNdsR2AnimPreloadBarrierCompleteCount++);
     return TRUE;
 }
 #else
@@ -16897,7 +16897,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
     {
         u32 anim_index = asset_id - NDS_RELOC_ASSET_MARIO_ANIM_WAIT;
 
-        gNdsR204AnimForceLoadTotal++;
+        NDS_DIAG(gNdsR204AnimForceLoadTotal++);
         if (anim_index < NDS_R204_ANIM_ID_SPAN)
         {
             u32 word = anim_index >> 5;
@@ -16905,12 +16905,12 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
 
             if ((gNdsR204AnimSeen[word] & mask) != 0u)
             {
-                gNdsR204AnimForceLoadRepeat++;
+                NDS_DIAG(gNdsR204AnimForceLoadRepeat++);
             }
             else
             {
                 gNdsR204AnimSeen[word] |= mask;
-                gNdsR204AnimForceLoadDistinct++;
+                NDS_DIAG(gNdsR204AnimForceLoadDistinct++);
             }
         }
     }
@@ -16943,7 +16943,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
                 if (used->prefetched != 0u)
                 {
                     used->prefetched = 0u;
-                    gNdsR2AnimPrefetchUsed++;
+                    NDS_DIAG(gNdsR2AnimPrefetchUsed++);
                 }
             }
 #if NDS_R2_ANIM_ZERO_COPY
@@ -16957,7 +16957,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
                     if (direct != FALSE)
                     {
                         gNdsR2AnimCacheMisses++;
-                        gNdsR2AnimDirectReads++;
+                        NDS_DIAG(gNdsR2AnimDirectReads++);
                     }
                     else
                     {
@@ -17015,7 +17015,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
                 (ready == NDS_R2_ANIM_CACHE_READY_PREBAKE))
             {
                 loaded->format_fixups_applied = TRUE;
-                gNdsR2AObj16PrebakeSkips++;
+                NDS_DIAG(gNdsR2AObj16PrebakeSkips++);
             }
 #endif
             if ((loaded == NULL) ||
@@ -17775,16 +17775,16 @@ static void *ndsRelocLoadIfGameStatusCompact(u32 token, u32 asset_id,
     {
         for (i = 0u; i < drops; i++)
         {
-            gNdsRelocIfCompactDropped += drop_bytes[i];
+            NDS_DIAG(gNdsRelocIfCompactDropped += drop_bytes[i]);
         }
-        gNdsRelocIfCompactCount++;
+        NDS_DIAG(gNdsRelocIfCompactCount++);
     }
     else
     {
         /* A moved whole file maps as itself; clear the table so no lookup
          * ever consults a stale one. */
         sNdsRelocIfSpanCount = 0u;
-        gNdsRelocIfCompactMoveCount++;
+        NDS_DIAG(gNdsRelocIfCompactMoveCount++);
     }
     return image;
 }

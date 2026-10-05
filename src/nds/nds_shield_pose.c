@@ -684,7 +684,7 @@ static s32 NDS_SHIELD_POSE_HOT_CODE ndsShieldPoseRefreshBaseRow(
     if ((gNdsShieldPoseBaseMemo != 0u) &&
         (sNdsShieldPoseScratchOwner[row] == (const void *)view->h))
     {
-        gNdsShieldPoseBaseMemoHits++;
+        NDS_DIAG(gNdsShieldPoseBaseMemoHits++);
         return TRUE;
     }
     sNdsShieldPoseScratchOwner[row] = NULL;

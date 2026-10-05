@@ -338,7 +338,7 @@ static sb32 ndsNativeItemWave1Emit(
     }
     else if ((sink != NULL) && (sink->failed != 0u))
     {
-        gNdsItemReplayRecordFails++;
+        NDS_DIAG(gNdsItemReplayRecordFails++);
     }
     NDS_LAB_BAKED_ADD(11, lab_mark);
     return TRUE;

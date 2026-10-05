@@ -93,7 +93,7 @@ void ndsTaskmanSampleLibcHeapNow(void)
         if (((++sNdsTaskmanLibcTopCheck & 127u) == 0u) &&
             (top != mallinfo().keepcost))
         {
-            gNdsTaskmanLibcTopDirectMismatch++;
+            NDS_DIAG(gNdsTaskmanLibcTopDirectMismatch++);
         }
 #endif
     }

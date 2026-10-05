@@ -240,7 +240,7 @@ sb32 ndsNativeBakedRootOffscreen(const void *handle,
     {
         return FALSE;
     }
-    gNdsBakedCulledRoots++;
+    NDS_DIAG(gNdsBakedCulledRoots++);
     return TRUE;
 }
 
@@ -321,7 +321,7 @@ sb32 ndsRendererSubmitNativeBaked(
         TRUE : FALSE;
     if (skip_emit != FALSE)
     {
-        gNdsBakedCulledRoots++;
+        NDS_DIAG(gNdsBakedCulledRoots++);
     }
     NDS_LAB_BAKED_INC(12, (skip_emit == FALSE) ? 1u : 0u);
     NDS_LAB_BAKED_MARK(lab_mark);
@@ -393,7 +393,7 @@ sb32 ndsRendererSubmitNativeBaked(
     sNdsNativeItemWave1MatrixGeneration = 0u;
     gNdsItemBakedSubmitStep = 9u;
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
-    gNdsLabBakedAcc[2] += cpuGetTiming() - lab_total;
+    NDS_DIAG(gNdsLabBakedAcc[2] += cpuGetTiming() - lab_total);
 #endif
     return TRUE;
 }

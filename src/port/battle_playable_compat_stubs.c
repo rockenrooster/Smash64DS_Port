@@ -270,12 +270,12 @@ void ndsEFParticleEnsureGObjPlaceholders(void)
     if (gEFParticleStructsGObj == NULL)
     {
         gEFParticleStructsGObj = &sNdsEFParticleGObjPlaceholder;
-        gNdsEFParticleGObjPlaceholderCount++;
+        NDS_DIAG(gNdsEFParticleGObjPlaceholderCount++);
     }
     if (gEFParticleGeneratorsGObj == NULL)
     {
         gEFParticleGeneratorsGObj = &sNdsEFParticleGObjPlaceholder;
-        gNdsEFParticleGObjPlaceholderCount++;
+        NDS_DIAG(gNdsEFParticleGObjPlaceholderCount++);
     }
 }
 #else

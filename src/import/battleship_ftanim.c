@@ -171,10 +171,10 @@ static inline f32 ndsR2Recip(u32 n)
 {
     if (n < NDS_R2_RECIP_COUNT)
     {
-        gNdsR2FtAnimRecipHits++;
+        NDS_DIAG(gNdsR2FtAnimRecipHits++);
         return sNdsR2Recip[n];
     }
-    gNdsR2FtAnimRecipMisses++;
+    NDS_DIAG(gNdsR2FtAnimRecipMisses++);
     return 1.0f / (f32)n;
 }
 

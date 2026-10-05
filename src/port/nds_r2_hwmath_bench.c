@@ -360,39 +360,39 @@ void ndsR2HwMathBenchRun(void)
         float b;
         float q;
 
-        gNdsR2HwMathBenchDivGraded++;
+        NDS_DIAG(gNdsR2HwMathBenchDivGraded++);
         if (denominator < 0)
         {
-            gNdsR2HwMathBenchDivNegative++;
+            NDS_DIAG(gNdsR2HwMathBenchDivNegative++);
         }
         if (ndsR2HwMathCfxDiv64(numerator, denominator) != want_div)
         {
-            gNdsR2HwMathBenchDivMismatch++;
+            NDS_DIAG(gNdsR2HwMathBenchDivMismatch++);
         }
         if ((s32)ndsR2HwMathDivideFast(numerator, denominator) != want_div)
         {
-            gNdsR2HwMathBenchDivFastMismatch++;
+            NDS_DIAG(gNdsR2HwMathBenchDivFastMismatch++);
         }
 
-        gNdsR2HwMathBenchSqrtGraded++;
+        NDS_DIAG(gNdsR2HwMathBenchSqrtGraded++);
         if (ndsR2HwMathSqrt64Lead(radicand) != want_sqrt)
         {
-            gNdsR2HwMathBenchSqrtMismatch++;
+            NDS_DIAG(gNdsR2HwMathBenchSqrtMismatch++);
         }
         if (ndsR2HwMathSqrt64Fast(radicand) != want_sqrt)
         {
-            gNdsR2HwMathBenchSqrtFastMismatch++;
+            NDS_DIAG(gNdsR2HwMathBenchSqrtFastMismatch++);
         }
 
         __builtin_memcpy(&a, &a_bits, sizeof(a));
         __builtin_memcpy(&b, &b_bits, sizeof(b));
         q = a / b;
         __builtin_memcpy(&want_fdiv, &q, sizeof(want_fdiv));
-        gNdsR2HwMathBenchFdivGraded++;
+        NDS_DIAG(gNdsR2HwMathBenchFdivGraded++);
         if (ndsR2HwMathDivBits(a_bits, b_bits, &got_fdiv) ==
             NDS_R2_HWMATH_FDIV_FALLBACK)
         {
-            gNdsR2HwMathBenchFdivFallback++;
+            NDS_DIAG(gNdsR2HwMathBenchFdivFallback++);
         }
         else if (got_fdiv != want_fdiv)
         {
@@ -422,15 +422,15 @@ void ndsR2HwMathBenchRun(void)
 
             if ((u64)hw_quotient != want_quotient)
             {
-                gNdsR2HwMathBenchQuotMismatch++;
+                NDS_DIAG(gNdsR2HwMathBenchQuotMismatch++);
             }
             if ((u32)hw_remainder != want_remainder)
             {
-                gNdsR2HwMathBenchRemMismatch++;
+                NDS_DIAG(gNdsR2HwMathBenchRemMismatch++);
             }
             if (low == ((u64)1 << (shift - 1u)))
             {
-                gNdsR2HwMathBenchHalfCases++;
+                NDS_DIAG(gNdsR2HwMathBenchHalfCases++);
             }
 
             hw_remainder = 0;
@@ -438,11 +438,11 @@ void ndsR2HwMathBenchRun(void)
                                                 &hw_remainder);
             if ((u64)hw_quotient != want_quotient)
             {
-                gNdsR2HwMathBenchQuotLeadMismatch++;
+                NDS_DIAG(gNdsR2HwMathBenchQuotLeadMismatch++);
             }
             if ((u32)hw_remainder != want_remainder)
             {
-                gNdsR2HwMathBenchRemLeadMismatch++;
+                NDS_DIAG(gNdsR2HwMathBenchRemLeadMismatch++);
             }
         }
 
@@ -459,10 +459,10 @@ void ndsR2HwMathBenchRun(void)
             arm = ndsR2HwMathBenchSqrtfArm(root_in);
             __builtin_memcpy(&ship_bits, &ship, sizeof(ship_bits));
             __builtin_memcpy(&arm_bits, &arm, sizeof(arm_bits));
-            gNdsR2HwMathBenchSqrtfGraded++;
+            NDS_DIAG(gNdsR2HwMathBenchSqrtfGraded++);
             if (ship_bits != arm_bits)
             {
-                gNdsR2HwMathBenchSqrtfMismatch++;
+                NDS_DIAG(gNdsR2HwMathBenchSqrtfMismatch++);
             }
         }
     }

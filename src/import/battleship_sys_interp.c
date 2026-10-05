@@ -233,7 +233,7 @@ void ndsInterpArwingFracLoad(void)
     sNdsArwingFracSeg = 0u;
     sNdsArwingFracEntry = 0u;
 #if NDS_TICK_HUD
-    gNdsArwingFracLoads++;
+    NDS_DIAG(gNdsArwingFracLoads++);
     gNdsArwingFracBytes = bytes;
 #endif
 }
@@ -399,7 +399,7 @@ static NDSInterpFracMemo *ndsInterpBigMemoTable(sb32 allocate)
     __builtin_memset(sNdsInterpBigMemo, 0, bytes);
     sNdsInterpBigMemoMask = entries - 1u;
     sNdsInterpBigMemoGeneration = gNdsTaskmanHeapGeneration;
-    gNdsInterpBigMemoAllocs++;
+    NDS_DIAG(gNdsInterpBigMemoAllocs++);
     return sNdsInterpBigMemo;
 }
 
@@ -432,7 +432,7 @@ static sb32 ndsInterpBigMemoLookup(u32 h1, u32 h2, u32 t_bits,
         if ((e->h2 == h2) && (e->h1 == h1) && (e->t_bits == t_bits))
         {
             *frac_bits = e->frac_bits;
-            gNdsInterpBigMemoHits++;
+            NDS_DIAG(gNdsInterpBigMemoHits++);
             return TRUE;
         }
     }
@@ -467,7 +467,7 @@ static void ndsInterpBigMemoStore(u32 h1, u32 h2, u32 t_bits, u32 frac_bits)
     e->h2 = h2;
     e->t_bits = t_bits;
     e->frac_bits = frac_bits;
-    gNdsInterpBigMemoFills++;
+    NDS_DIAG(gNdsInterpBigMemoFills++);
 }
 
 static inline u32 ndsInterpFracBits(f32 value)
@@ -793,7 +793,7 @@ static f32 ndsInterpGetFracFrameMemo(SYInterpDesc *desc, f32 t,
         (ndsInterpArwingFracLookup(h1, h2, t_bits, &table_bits) != FALSE))
     {
 #if NDS_TICK_HUD
-        gNdsArwingFracHits++;
+        NDS_DIAG(gNdsArwingFracHits++);
 #endif
         frac = ndsInterpFracFloat(table_bits);
     }
@@ -807,11 +807,11 @@ static f32 ndsInterpGetFracFrameMemo(SYInterpDesc *desc, f32 t,
 #if NDS_TICK_HUD
     if (gNdsInterpFracOracle != 0u)
     {
-        gNdsInterpFracOracleCompares++;
+        NDS_DIAG(gNdsInterpFracOracleCompares++);
         if (ndsInterpFracBits(syInterpGetFracFrame(desc, t)) !=
             ndsInterpFracBits(frac))
         {
-            gNdsInterpFracOracleMismatches++;
+            NDS_DIAG(gNdsInterpFracOracleMismatches++);
         }
     }
 #endif

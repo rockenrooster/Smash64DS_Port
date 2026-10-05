@@ -394,7 +394,7 @@ static void ndsFighterAnimAuditRecordSetStatus(FTStruct *fp)
         ((u32)motion >= NDS_FIGHTER_ANIM_AUDIT_MOTION_CAPACITY) ||
         (motion >= fp->data->mainmotion_array_count))
     {
-        gNdsFighterAnimAuditInvalidMotionCount++;
+        NDS_DIAG(gNdsFighterAnimAuditInvalidMotionCount++);
         return;
     }
 
@@ -442,7 +442,7 @@ static void ndsFighterAnimAuditBeginNext(FTStruct *fp)
 
         gNdsFighterAnimAuditActiveKind = (u32)kind;
         gNdsFighterAnimAuditActiveMotion = sNdsFighterAnimAuditMotion;
-        gNdsFighterAnimAuditEpoch++;
+        NDS_DIAG(gNdsFighterAnimAuditEpoch++);
         if (motion_desc->anim_file_id == 0u)
         {
             ndsFighterAnimAuditIncrement(
@@ -617,7 +617,7 @@ static void ndsFighterAnimAuditUpdate(GObj *fighter_gobj)
     {
         ndsFighterAnimAuditCaptureMarker((u32)ndsFighterAnimAuditKindIndex(fp),
                                          sNdsFighterAnimAuditMotion);
-        gNdsFighterAnimAuditCaptureCount++;
+        NDS_DIAG(gNdsFighterAnimAuditCaptureCount++);
         sNdsFighterAnimAuditCapturePending = FALSE;
         sNdsFighterAnimAuditCaptured = TRUE;
         if (sNdsFighterAnimAuditMotionComplete != FALSE)

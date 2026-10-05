@@ -350,8 +350,8 @@ static s32 ndsNativeThunderGroundBindCoverageTexture(
                 NDS_NATIVE_THUNDERGROUND_IMAGE_WIDTH;
             stats->hardware_texture_height =
                 NDS_NATIVE_THUNDERGROUND_IMAGE_HEIGHT;
-            gNdsThunderGroundCoverageHitCount++;
-            gNdsThunderGroundCoverageBindCount++;
+            NDS_DIAG(gNdsThunderGroundCoverageHitCount++);
+            NDS_DIAG(gNdsThunderGroundCoverageBindCount++);
             gNdsThunderGroundCoverageImageMask |= 1u << index;
             return TRUE;
         }
@@ -418,8 +418,8 @@ static s32 ndsNativeThunderGroundBindCoverageTexture(
     stats->hardware_texture_format = NDS_NATIVE_THUNDERGROUND_TILE_FMT;
     stats->hardware_texture_width = NDS_NATIVE_THUNDERGROUND_IMAGE_WIDTH;
     stats->hardware_texture_height = NDS_NATIVE_THUNDERGROUND_IMAGE_HEIGHT;
-    gNdsThunderGroundCoveragePrepareCount++;
-    gNdsThunderGroundCoverageBindCount++;
+    NDS_DIAG(gNdsThunderGroundCoveragePrepareCount++);
+    NDS_DIAG(gNdsThunderGroundCoverageBindCount++);
     gNdsThunderGroundCoverageImageMask |= 1u << index;
     ndsNativeThunderGroundCoverageAccountVram();
     return TRUE;

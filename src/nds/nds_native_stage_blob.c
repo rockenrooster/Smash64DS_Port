@@ -161,7 +161,7 @@ s32 ndsNativeStageBlobLoad(u32 gkind)
     u32 i;
     u32 expect_slab;
 
-    gNdsNativeStageBlobLoadCount++;
+    NDS_DIAG(gNdsNativeStageBlobLoadCount++);
     gNdsNativeStageBlobActiveGKind = gkind;
     sNdsNativeStageBlobLoaded = 0u;
     if (gkind == NDS_NATIVE_STAGE_BLOB_GKIND_DREAMLAND)

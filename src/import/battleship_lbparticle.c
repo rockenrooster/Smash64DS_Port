@@ -2211,8 +2211,8 @@ static sb32 ndsParticleLoadEFCommonBank(s32 bank_id)
         }
         scripts[id] = (LBScript *)header;
         gNdsParticleBankScriptsPacked++;
-        gNdsParticleBankCommands += commands;
-        gNdsParticleBankFloatOperands += operands;
+        NDS_DIAG(gNdsParticleBankCommands += commands);
+        NDS_DIAG(gNdsParticleBankFloatOperands += operands);
     }
 
     sLBParticleScriptBanksNum[bank_id] = NDS_PARTICLE_SCRIPT_COUNT;
@@ -4146,7 +4146,7 @@ sb32 ndsParticleDrawOwnTextureQuad(u32 texture_name, u32 texture_w,
     Vec3f up;
     Vec3f draw_pos;
 
-    gNdsSourceAssetQuadAttempts++;
+    NDS_DIAG(gNdsSourceAssetQuadAttempts++);
     if ((pos == NULL) || (size <= 0.0F) || (alpha == 0u) ||
         (texture_name == 0u) || (texture_w == 0u) || (texture_h == 0u))
     {
@@ -4220,7 +4220,7 @@ sb32 ndsParticleDrawOwnTextureQuad(u32 texture_name, u32 texture_w,
         return FALSE;
     }
     ndsRendererEndParticleQuads();
-    gNdsSourceAssetQuadDrawn++;
+    NDS_DIAG(gNdsSourceAssetQuadDrawn++);
     return TRUE;
 #else
     (void)texture_name; (void)texture_w; (void)texture_h; (void)color;
@@ -4302,7 +4302,7 @@ sb32 ndsParticleDrawSourceAssetQuad(u32 texture_id, const Vec3f *pos, f32 size,
     Vec3f draw_pos;
     u32 atlas_name;
 
-    gNdsSourceAssetQuadAttempts++;
+    NDS_DIAG(gNdsSourceAssetQuadAttempts++);
     if ((pos == NULL) || (size <= 0.0F) || (alpha == 0u))
     {
         gNdsSourceAssetQuadMissMask |= 1u << 0;
@@ -4340,7 +4340,7 @@ sb32 ndsParticleDrawSourceAssetQuad(u32 texture_id, const Vec3f *pos, f32 size,
         return FALSE;
     }
     ndsRendererEndParticleQuads();
-    gNdsSourceAssetQuadDrawn++;
+    NDS_DIAG(gNdsSourceAssetQuadDrawn++);
     return TRUE;
 #else
     (void)texture_id; (void)color; (void)row; (void)right; (void)up;
@@ -4811,7 +4811,7 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                         (u32)pc->texture_id, (u32)pc->frame_id);
                     if (texture_name == 0u)
                     {
-                        gNdsHyruleNativeMissCount++;
+                        NDS_DIAG(gNdsHyruleNativeMissCount++);
                         continue;
                     }
                     hyrule_native = TRUE;
@@ -4970,15 +4970,15 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                     }
                     if ((source_mirror_mask & 1u) != 0u)
                     {
-                        gNdsParticleMirrorSSubmitCount++;
+                        NDS_DIAG(gNdsParticleMirrorSSubmitCount++);
                     }
                     if ((source_mirror_mask & 2u) != 0u)
                     {
-                        gNdsParticleMirrorTSubmitCount++;
+                        NDS_DIAG(gNdsParticleMirrorTSubmitCount++);
                     }
                     if ((source_mirror_mask & 3u) == 3u)
                     {
-                        gNdsParticleMirrorSTSubmitCount++;
+                        NDS_DIAG(gNdsParticleMirrorSTSubmitCount++);
                     }
                     submit_result = ndsRendererSubmitParticleQuad(
                         texture_name, &world_pos, pc->size,
@@ -4994,7 +4994,7 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
 #if NDS_P2_STAGE_HYRULE
                 if (hyrule_native != FALSE)
                 {
-                    gNdsHyruleNativeDrawCount++;
+                    NDS_DIAG(gNdsHyruleNativeDrawCount++);
                     gNdsHyruleNativeFrameMask |= 1u <<
                         ((pc->texture_id < 2) ? pc->texture_id : 2 + pc->frame_id);
                 }

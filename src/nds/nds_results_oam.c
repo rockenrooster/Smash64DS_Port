@@ -238,13 +238,13 @@ static u16 *ndsResultsAllocObjBytes(u32 bytes)
 
     if ((cursor & (NDS_RESULTS_OBJ_GFX_ALIGNMENT - 1u)) != 0u)
     {
-        gNdsResultsOamFailureVramFull++;
+        NDS_DIAG(gNdsResultsOamFailureVramFull++);
         return NULL;
     }
     if ((bytes > NDS_RESULTS_OBJ_VRAM_BYTES) ||
         (cursor > (NDS_RESULTS_OBJ_VRAM_BYTES - bytes)))
     {
-        gNdsResultsOamFailureVramFull++;
+        NDS_DIAG(gNdsResultsOamFailureVramFull++);
         return NULL;
     }
     gfx = (u16 *)((u8 *)SPRITE_GFX + cursor);
@@ -322,7 +322,7 @@ static s32 ndsResultsAllocPalette(u8 prim_r, u8 prim_g, u8 prim_b,
     }
     if (sNdsResultsPaletteCount >= NDS_RESULTS_PALETTE_BANKS)
     {
-        gNdsResultsOamFailurePaletteFull++;
+        NDS_DIAG(gNdsResultsOamFailurePaletteFull++);
         return -1;
     }
     bank = sNdsResultsPaletteCount++;
@@ -499,24 +499,24 @@ static s32 ndsResultsResolveSource(const Sprite *sprite,
     if ((sprite == NULL) || (source == NULL) || (sprite->bitmap == NULL) ||
         (sprite->nbitmaps <= 0))
     {
-        gNdsResultsOamFailureBadProvenance++;
+        NDS_DIAG(gNdsResultsOamFailureBadProvenance++);
         return 0;
     }
     if (ndsRelocGetLoadedPointerProvenance(sprite->bitmap, &asset_id,
                                            &bitmap_offset) == 0)
     {
-        gNdsResultsOamFailureBadProvenance++;
+        NDS_DIAG(gNdsResultsOamFailureBadProvenance++);
         return 0;
     }
     if (ndsRelocGetLoadedAssetView(asset_id, &file_data, &file_size) == 0)
     {
-        gNdsResultsOamFailureBadProvenance++;
+        NDS_DIAG(gNdsResultsOamFailureBadProvenance++);
         return 0;
     }
     if (ndsResultsRangeValid(file_data, file_size, sprite->bitmap,
                              (size_t)(u16)sprite->nbitmaps * sizeof(Bitmap)) == 0)
     {
-        gNdsResultsOamFailureBadProvenance++;
+        NDS_DIAG(gNdsResultsOamFailureBadProvenance++);
         return 0;
     }
     memset(source, 0, sizeof(*source));
@@ -541,7 +541,7 @@ static s32 ndsResultsResolveSource(const Sprite *sprite,
             (ndsResultsRangeValid(lut_data, lut_size, sprite->LUT,
                                   16u * sizeof(u16)) == 0))
         {
-            gNdsResultsOamFailureBadProvenance++;
+            NDS_DIAG(gNdsResultsOamFailureBadProvenance++);
             return 0;
         }
         source->lut_data = lut_data;
@@ -1038,7 +1038,7 @@ static NDSResultsOamCell *ndsResultsBakeCell(const NDSResultsOamSource *source,
     }
     if (sNdsResultsCellCount >= NDS_RESULTS_CELL_SLOTS)
     {
-        gNdsResultsOamFailureCellSlotsFull++;
+        NDS_DIAG(gNdsResultsOamFailureCellSlotsFull++);
         return NULL;
     }
     direct_color = ((source->sprite->bmfmt == G_IM_FMT_CI) ||
@@ -1072,11 +1072,11 @@ static NDSResultsOamCell *ndsResultsBakeCell(const NDSResultsOamSource *source,
         (ndsResultsWriteBitmapCell(cell, source, final_width, final_height) == 0) :
         (ndsResultsWriteIndexedCell(cell, source, final_width, final_height) == 0))
     {
-        gNdsResultsOamFailureBadProvenance++;
+        NDS_DIAG(gNdsResultsOamFailureBadProvenance++);
         return NULL;
     }
     sNdsResultsCellCount++;
-    gNdsResultsOamBakeCellCount++;
+    NDS_DIAG(gNdsResultsOamBakeCellCount++);
     return cell;
 }
 
@@ -1123,19 +1123,19 @@ static s32 ndsResultsPrepareSObj(const SObj *sobj, u32 *out_objects)
 
     if (ndsResultsSupportedFormat(&sobj->sprite) == 0)
     {
-        gNdsResultsOamFailureUnsupportedFormat++;
+        NDS_DIAG(gNdsResultsOamFailureUnsupportedFormat++);
         return 0;
     }
     if (ndsResultsFinalDimensions(&sobj->sprite, &final_width, &final_height) == 0)
     {
-        gNdsResultsOamFailureUnsupportedFormat++;
+        NDS_DIAG(gNdsResultsOamFailureUnsupportedFormat++);
         return 0;
     }
     if ((final_width > 256u) || (ndsResultsChooseTilePlan(final_width,
                                                           final_height,
                                                           &plan) == 0))
     {
-        gNdsResultsOamFailureTileOverflow++;
+        NDS_DIAG(gNdsResultsOamFailureTileOverflow++);
         return 0;
     }
     if (ndsResultsResolveSource(&sobj->sprite, &source) == 0)
@@ -1189,7 +1189,7 @@ static void ndsResultsRollbackOam(s32 cursor_before, u32 emit_before)
     }
     gNdsResultsOamEmitCount = emit_before;
     sNdsResultsFrameNeedsCommit = 1u;
-    gNdsResultsOamRollbackCount++;
+    NDS_DIAG(gNdsResultsOamRollbackCount++);
 }
 
 static u32 ndsResultsBitmapAlpha(u32 alpha);
@@ -1424,9 +1424,9 @@ void ndsResultsOamEnter(void)
     sNdsResultsFillPaletteBank = (u8)i;
     oamRotateScale(&oamMain, 0, 0, 128, 128);
     sNdsResultsActive = 1u;
-    gNdsResultsOamEnterCount++;
+    NDS_DIAG(gNdsResultsOamEnterCount++);
 #else
-    gNdsResultsOamFailureInactive++;
+    NDS_DIAG(gNdsResultsOamFailureInactive++);
 #endif
 }
 
@@ -1456,7 +1456,7 @@ void ndsResultsOamExit(void)
     sNdsResultsActive = 0u;
     gNdsResultsOamVramBytes = 0u;
     gNdsResultsOamPaletteCount = 0u;
-    gNdsResultsOamExitCount++;
+    NDS_DIAG(gNdsResultsOamExitCount++);
 #endif
 }
 
@@ -1485,7 +1485,7 @@ void ndsResultsOamBeginFrame(void)
     sNdsResultsNextOamId = NDS_RESULTS_FOREGROUND_TOP;
     sNdsResultsNextTintOamId = 127;
     sNdsResultsPreviousNextOamId = 127;
-    gNdsResultsOamBeginFrameCount++;
+    NDS_DIAG(gNdsResultsOamBeginFrameCount++);
 #endif
 }
 
@@ -1497,7 +1497,7 @@ u32 ndsResultsOamBakeGObj(struct GObj *gobj)
 
     if (sNdsResultsActive == 0u)
     {
-        gNdsResultsOamFailureInactive++;
+        NDS_DIAG(gNdsResultsOamFailureInactive++);
         return 0u;
     }
     if (gobj == NULL)
@@ -1538,7 +1538,7 @@ s32 ndsResultsOamDrawGObj(struct GObj *gobj)
 
     if (sNdsResultsActive == 0u)
     {
-        gNdsResultsOamFailureInactive++;
+        NDS_DIAG(gNdsResultsOamFailureInactive++);
         return 0;
     }
     if (gobj == NULL)
@@ -1563,7 +1563,7 @@ s32 ndsResultsOamDrawGObj(struct GObj *gobj)
     }
     if (required_objects > (u32)(sNdsResultsNextOamId + 1))
     {
-        gNdsResultsOamFailureOamFull++;
+        NDS_DIAG(gNdsResultsOamFailureOamFull++);
         return 0;
     }
     cursor_before = sNdsResultsNextOamId;
@@ -1579,10 +1579,10 @@ s32 ndsResultsOamDrawGObj(struct GObj *gobj)
             ndsResultsRollbackOam(cursor_before, emit_before);
             return 0;
         }
-        gNdsResultsOamDrawSObjCount++;
+        NDS_DIAG(gNdsResultsOamDrawSObjCount++);
     }
     sNdsResultsFrameNeedsCommit = 1u;
-    gNdsResultsOamDrawGObjCount++;
+    NDS_DIAG(gNdsResultsOamDrawGObjCount++);
     return 1;
 #else
     (void)gobj;
@@ -1621,7 +1621,7 @@ static s32 ndsResultsTintEarlierIndexedObjs(u32 source_alpha)
         bank = entry->palette;
         if (sNdsResultsPalettes[bank].is_tint_bank != 0u)
         {
-            gNdsResultsOamTintStacked++;
+            NDS_DIAG(gNdsResultsOamTintStacked++);
             continue;
         }
         tinted = sNdsResultsTintBank[bank];
@@ -1629,7 +1629,7 @@ static s32 ndsResultsTintEarlierIndexedObjs(u32 source_alpha)
         {
             if (sNdsResultsPaletteCount >= NDS_RESULTS_PALETTE_BANKS)
             {
-                gNdsResultsOamFailurePaletteFull++;
+                NDS_DIAG(gNdsResultsOamFailurePaletteFull++);
                 return 0;
             }
             tinted = sNdsResultsPaletteCount++;
@@ -1664,14 +1664,14 @@ s32 ndsResultsOamEmitTintPlane(u32 source_alpha)
 
     if (sNdsResultsActive == 0u)
     {
-        gNdsResultsOamFailureInactive++;
+        NDS_DIAG(gNdsResultsOamFailureInactive++);
         ndsResultsRecordFillFailure();
         return 0;
     }
     if ((sNdsResultsTintGfx == NULL) ||
         (sNdsResultsNextTintOamId < NDS_RESULTS_FOREGROUND_TOP + 4))
     {
-        gNdsResultsOamFailureOamFull++;
+        NDS_DIAG(gNdsResultsOamFailureOamFull++);
         ndsResultsRecordFillFailure();
         return 0;
     }
@@ -1713,13 +1713,13 @@ s32 ndsResultsOamEmitFillRect(s32 sx0, s32 sy0, s32 sx1, s32 sy1)
 
     if (sNdsResultsActive == 0u)
     {
-        gNdsResultsOamFailureInactive++;
+        NDS_DIAG(gNdsResultsOamFailureInactive++);
         ndsResultsRecordFillFailure();
         return 0;
     }
     if ((sx1 < sx0) || (sy1 < sy0))
     {
-        gNdsResultsOamFailureUnsupportedFormat++;
+        NDS_DIAG(gNdsResultsOamFailureUnsupportedFormat++);
         ndsResultsRecordFillFailure();
         return 0;
     }
@@ -1732,14 +1732,14 @@ s32 ndsResultsOamEmitFillRect(s32 sx0, s32 sy0, s32 sx1, s32 sy1)
     if (mapped_height == 0u) mapped_height = 1u;
     if (mapped_height > NDS_RESULTS_FILL_CELL_HEIGHT)
     {
-        gNdsResultsOamFailureUnsupportedFormat++;
+        NDS_DIAG(gNdsResultsOamFailureUnsupportedFormat++);
         ndsResultsRecordFillFailure();
         return 0;
     }
     gfx = sNdsResultsFillGfx[mapped_height - 1u];
     if (gfx == NULL)
     {
-        gNdsResultsOamFailureVramFull++;
+        NDS_DIAG(gNdsResultsOamFailureVramFull++);
         ndsResultsRecordFillFailure();
         return 0;
     }
@@ -1753,7 +1753,7 @@ s32 ndsResultsOamEmitFillRect(s32 sx0, s32 sy0, s32 sx1, s32 sy1)
     }
     if (required > (u32)(sNdsResultsNextOamId + 1))
     {
-        gNdsResultsOamFailureOamFull++;
+        NDS_DIAG(gNdsResultsOamFailureOamFull++);
         ndsResultsRecordFillFailure();
         return 0;
     }
@@ -1813,6 +1813,6 @@ void ndsResultsOamCommit(void)
     oamUpdate(&oamMain);
     sNdsResultsPreviousNextOamId = sNdsResultsNextOamId;
     sNdsResultsFrameNeedsCommit = 0u;
-    gNdsResultsOamCommitCount++;
+    NDS_DIAG(gNdsResultsOamCommitCount++);
 #endif
 }

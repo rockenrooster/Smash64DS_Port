@@ -165,13 +165,13 @@ s32 ndsFtAnimTrackBeginClip(DObj *root_dobj, const void *figatree)
     asset_id = ndsBattlePackAssetIdForSlotTable(figatree);
     if (asset_id < 0)
     {
-        gNdsFtAnimTrackBindMiss++;
+        NDS_DIAG(gNdsFtAnimTrackBindMiss++);
         return -1;
     }
     clip = ndsTrkFindClip((u32)asset_id);
     if (clip == NULL)
     {
-        gNdsFtAnimTrackBindMiss++;
+        NDS_DIAG(gNdsFtAnimTrackBindMiss++);
         return -1;
     }
     for (i = 0; i < NDS_FTANIM_TRACK_FIGHTERS; i++)
@@ -188,7 +188,7 @@ s32 ndsFtAnimTrackBeginClip(DObj *root_dobj, const void *figatree)
     }
     if (free_slot < 0)
     {
-        gNdsFtAnimTrackBindFull++;
+        NDS_DIAG(gNdsFtAnimTrackBindFull++);
         return -1;
     }
     sTrkOwner[free_slot] = root_dobj;
@@ -262,7 +262,7 @@ s32 ndsFtAnimTrackBindJoint(DObj *dobj, s32 base, s32 index)
         ndsR2FtAnimAObjToQ(blk->slot[bit]);
     }
     dobj->anim_joint.event16 = (AObjEvent16 *)(void *)blk;
-    gNdsFtAnimTrackBinds++;
+    NDS_DIAG(gNdsFtAnimTrackBinds++);
     return TRUE;
 }
 
@@ -285,7 +285,7 @@ s32 ndsFtAnimTrackBindJoint(DObj *dobj, s32 base, s32 index)
  * takes the generic parser. */
 static void ndsTrkOracleFail(u32 why, u32 kind, u32 op)
 {
-    gNdsFtAnimTrackOracleBad++;
+    NDS_DIAG(gNdsFtAnimTrackOracleBad++);
     if (gNdsFtAnimTrackOracleFirst == 0u)
     {
         gNdsFtAnimTrackOracleFirst = (why << 16) | (kind << 8) | op;
@@ -317,7 +317,7 @@ static void ndsFtAnimTrackOracle(NDSFtAnimTrackJoint *blk, const u16 *row)
     u32 per;
     u32 bit;
 
-    gNdsFtAnimTrackOracleRows++;
+    NDS_DIAG(gNdsFtAnimTrackOracleRows++);
     if (e == NULL)
     {
         ndsTrkOracleFail(1u, kind, 0u);
@@ -422,11 +422,11 @@ void ndsFtAnimTrackStep(DObj *root_dobj)
 
         if (NDS_FCMP_GT0(root_dobj->anim_wait))
         {
-            gNdsFtAnimTrackEarlyOut++;
+            NDS_DIAG(gNdsFtAnimTrackEarlyOut++);
             return;
         }
     }
-    gNdsFtAnimTrackSteps++;
+    NDS_DIAG(gNdsFtAnimTrackSteps++);
     do
     {
         const u16 *row = blk->cursor;
@@ -438,7 +438,7 @@ void ndsFtAnimTrackStep(DObj *root_dobj)
         s32 seg = 0;
         u32 bit;
 
-        gNdsFtAnimTrackRowsRun++;
+        NDS_DIAG(gNdsFtAnimTrackRowsRun++);
 #if NDS_R2_FTANIM_TRACK_ORACLE
         ndsFtAnimTrackOracle(blk, row);
 #endif

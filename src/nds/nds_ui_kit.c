@@ -521,7 +521,7 @@ s32 ndsUiKitSetText(u32 slot, const char *text, u32 rgb)
     {
         /* A menu that is not changing must not recompose; this counter is how
          * a per-frame recompose would be caught rather than measured. */
-        gNdsUiKitTextComposeSkipCount++;
+        NDS_DIAG(gNdsUiKitTextComposeSkipCount++);
         state->visible = 1u;
         sNdsUiKitDirty = TRUE;
         return TRUE;
@@ -530,7 +530,7 @@ s32 ndsUiKitSetText(u32 slot, const char *text, u32 rgb)
     width = ndsUiKitTextWidth(text);
     if (width > NDS_UI_KIT_TEXT_MAX_PX)
     {
-        gNdsUiKitTextOverflowCount++;
+        NDS_DIAG(gNdsUiKitTextOverflowCount++);
         width = NDS_UI_KIT_TEXT_MAX_PX;
     }
     chunks = (width + NDS_UI_KIT_TEXT_CHUNK_W - 1u) / NDS_UI_KIT_TEXT_CHUNK_W;
@@ -631,7 +631,7 @@ s32 ndsUiKitSetText(u32 slot, const char *text, u32 rgb)
     state->width_px = (u16)width;
     state->chunks = (u8)chunks;
     state->visible = 1u;
-    gNdsUiKitTextComposeCount++;
+    NDS_DIAG(gNdsUiKitTextComposeCount++);
     sNdsUiKitDirty = TRUE;
     return TRUE;
 }
@@ -1181,7 +1181,7 @@ s32 ndsUiKitLoadSurfaceCopy(u32 surface, u8 *buffer, u32 capacity)
     }
     /* The rows leave by DMA, which reads main RAM, not the data cache. */
     DC_FlushRange(buffer, metric->bytes);
-    gNdsUiKitSurfaceCopyLoadCount++;
+    NDS_DIAG(gNdsUiKitSurfaceCopyLoadCount++);
     return TRUE;
 }
 
@@ -1213,7 +1213,7 @@ s32 ndsUiKitBlitSurfaceCopy(u32 surface, const u8 *buffer)
         ndsUiKitSurfaceRow((const u16 *)(buffer + (row * row_bytes)), layer,
                            pitch, layer_w, layer_h, metric, (s32)row);
     }
-    gNdsUiKitSurfaceCopyBlitCount++;
+    NDS_DIAG(gNdsUiKitSurfaceCopyBlitCount++);
     return TRUE;
 }
 
@@ -1991,7 +1991,7 @@ void ndsUiKitCommit(void)
          * costs this branch and nothing else. The counter exists so a run
          * whose CommitCount stayed flat is distinguishable from one where the
          * kit was never entered. */
-        gNdsUiKitCommitIdleCount++;
+        NDS_DIAG(gNdsUiKitCommitIdleCount++);
         return;
     }
     oam = ndsUiKitOam();

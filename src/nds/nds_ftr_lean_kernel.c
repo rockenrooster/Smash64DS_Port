@@ -245,7 +245,7 @@ static void __attribute__((noinline, cold)) ndsFtrLeanSinHalfFill(void)
 
         if (gNdsFtrLeanSinHalf[h] != gSYSinTable[i])
         {
-            gNdsFtrLeanSinHalfMismatch++;
+            NDS_DIAG(gNdsFtrLeanSinHalfMismatch++);
         }
     }
 #endif

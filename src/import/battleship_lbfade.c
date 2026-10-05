@@ -119,7 +119,7 @@ void lbFadeProcDisplay(GObj *gobj)
         (u8)ndsLBFadeComputeAlpha(sLBFadeAlphaCurrent, sLBFadeAlphaMax,
                                  sLBFadeColor.a);
     sLBFadeFrameActive = TRUE;
-    gNdsLBFadeDisplayCount++;
+    NDS_DIAG(gNdsLBFadeDisplayCount++);
 }
 
 u32 ndsLBFadePeekFrame(u8 *out_r, u8 *out_g, u8 *out_b, u8 *out_alpha)

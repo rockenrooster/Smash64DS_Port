@@ -98,11 +98,11 @@ static void ndsMenuFillBlitRect(s32 ulx, s32 uly, s32 lrx, s32 lry,
         for (dst_x = x0; dst_x <= x1; dst_x++)
         {
             preview[((u32)dst_y * pitch) + (u32)dst_x] = color;
-            gNdsMenuFillPixelCount++;
+            NDS_DIAG(gNdsMenuFillPixelCount++);
         }
     }
     sNdsSObjFramePreviewDrawCount++;
-    gNdsMenuFillRectCount++;
+    NDS_DIAG(gNdsMenuFillRectCount++);
 }
 
 /* One DL word folded into the RDP track state, or composited. Opcodes are

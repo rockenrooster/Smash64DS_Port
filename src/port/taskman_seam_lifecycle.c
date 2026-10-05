@@ -111,7 +111,7 @@ void ndsOpeningMovieRecordRoomHandoff(u32 tick, u32 next_scene)
 
 void ndsOpeningPortraitsRecordStart(void)
 {
-    gNdsOpeningPortraitsDispatchCount++;
+    NDS_DIAG(gNdsOpeningPortraitsDispatchCount++);
     gNdsOpeningPortraitsStartResult = NDS_OPENING_PORTRAITS_START_PASS;
 }
 
@@ -140,7 +140,7 @@ void ndsOpeningPortraitsRecordRunTick(void)
 
 void ndsOpeningMarioRecordStart(void)
 {
-    gNdsOpeningMarioDispatchCount++;
+    NDS_DIAG(gNdsOpeningMarioDispatchCount++);
     gNdsOpeningMarioStartResult = NDS_OPENING_MARIO_START_PASS;
 }
 

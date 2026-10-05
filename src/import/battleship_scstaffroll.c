@@ -355,11 +355,11 @@ static void ndsStaffrollDrawGObjGlyphs(struct GObj *gobj)
                      name, (u32)w, (u32)h, &centre, &right, &up, color,
                      0xFFu) != FALSE))
             {
-                gNdsStaffrollGlyphDraws++;
+                NDS_DIAG(gNdsStaffrollGlyphDraws++);
             }
             else
             {
-                gNdsStaffrollGlyphFailures++;
+                NDS_DIAG(gNdsStaffrollGlyphFailures++);
             }
         }
     }
@@ -568,7 +568,7 @@ static void ndsStaffrollFixNameInterpolation(void)
         (((native >> 8) & 0xffu) == 0u) && ((native >> 16) >= 2u))
     {
         *word = native;
-        gNdsStaffrollInterpHeaderFixes++;
+        NDS_DIAG(gNdsStaffrollInterpHeaderFixes++);
     }
 }
 

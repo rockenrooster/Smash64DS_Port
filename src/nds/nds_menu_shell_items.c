@@ -125,7 +125,7 @@ static void ndsMenuShellItemsSyncRows(u32 budget)
         {
             (void)ndsUiKitBlitSurfaces(&want, 1u);
             sMenuItemsRowSurface[row] = want;
-            gNdsMenuShellItemsBlitCount++;
+            NDS_DIAG(gNdsMenuShellItemsBlitCount++);
             if (budget == 0u)
             {
                 return;

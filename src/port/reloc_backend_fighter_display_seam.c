@@ -24,7 +24,7 @@ static void ndsFtDisplayMainProcDisplayBody(GObj *fighter_gobj)
 
     if (gSCManagerSceneData.scene_curr == nSCKindVSResults)
     {
-        gNdsVSResultsFighterDisplayCount++;
+        NDS_DIAG(gNdsVSResultsFighterDisplayCount++);
     }
 #endif
     if ((ndsFighterMarioFoxDisplayProofEnabled() != FALSE) &&
@@ -53,24 +53,24 @@ static void ndsFtDisplayMainProcDisplayBody(GObj *fighter_gobj)
     }
     if (ndsFighterMarioFoxWalkLoopProofEnabled() != FALSE)
     {
-        gNdsFighterWalkLoopDisplayProbeCount++;
+        NDS_DIAG(gNdsFighterWalkLoopDisplayProbeCount++);
         return;
     }
     if (ndsFighterMarioFoxWaitProofEnabled() != FALSE)
     {
-        gNdsFighterWaitDisplayProbeCount++;
+        NDS_DIAG(gNdsFighterWaitDisplayProbeCount++);
     }
     if (ndsFighterMarioFoxWaitTickProofEnabled() != FALSE)
     {
-        gNdsFighterWaitTickDisplayProbeCount++;
+        NDS_DIAG(gNdsFighterWaitTickDisplayProbeCount++);
     }
     if (ndsFighterMarioFoxWaitGroundProofEnabled() != FALSE)
     {
-        gNdsFighterWaitGroundDisplayProbeCount++;
+        NDS_DIAG(gNdsFighterWaitGroundDisplayProbeCount++);
     }
     if (ndsFighterMarioFoxWalkInputProofEnabled() != FALSE)
     {
-        gNdsFighterWalkDisplayProbeCount++;
+        NDS_DIAG(gNdsFighterWalkDisplayProbeCount++);
     }
 #if NDS_RENDERER_HW_TRIANGLES
     /* THE SOURCE'S INVISIBILITY GATE, WHICH THIS PATH HAD DROPPED.

@@ -370,7 +370,7 @@ static void ndsSObjFailCensusRecord(const GObj *gobj, const SObj *sobj,
     }
     if (n >= NDS_SOBJ_FAIL_CENSUS_ROWS)
     {
-        gNdsSObjFailCensusDropped++;
+        NDS_DIAG(gNdsSObjFailCensusDropped++);
         return;
     }
     gNdsSObjFailCensus[n].bitmap = bitmap;
@@ -1138,22 +1138,22 @@ void lbCommonDrawSObjAttr(GObj *gobj)
 
     if (record_startup != 0)
     {
-        gNdsStartupLogoDrawCallbackCount++;
+        NDS_DIAG(gNdsStartupLogoDrawCallbackCount++);
         gNdsStartupLogoDrawGObjID = (gobj != NULL) ? gobj->id : 0xffffffffu;
         gNdsStartupLogoDrawGObjObjKind =
             (gobj != NULL) ? gobj->obj_kind : 0xffffffffu;
     }
     if (gSCManagerSceneData.scene_curr == nSCKindOpeningPortraits)
     {
-        gNdsOpeningPortraitsDrawCallbackCount++;
+        NDS_DIAG(gNdsOpeningPortraitsDrawCallbackCount++);
     }
     if (gSCManagerSceneData.scene_curr == nSCKindOpeningMario)
     {
-        gNdsOpeningMarioDrawCallbackCount++;
+        NDS_DIAG(gNdsOpeningMarioDrawCallbackCount++);
     }
     if (ndsOpeningIsImportedNameScene(gSCManagerSceneData.scene_curr) != FALSE)
     {
-        gNdsOpeningNameSceneDrawCallbackCount++;
+        NDS_DIAG(gNdsOpeningNameSceneDrawCallbackCount++);
     }
     if (sobj == NULL)
     {
@@ -1343,7 +1343,7 @@ void syRdpSetDefaultViewport(Vp *vp)
     vp->vp.vscale[2] = (s16)(0x03FF / 2);
     vp->vp.vtrans[2] = (s16)(0x03FF / 2);
 
-    gNdsRdpDefaultViewportSetCount++;
+    NDS_DIAG(gNdsRdpDefaultViewportSetCount++);
     gNdsRdpDefaultViewportScaleX = vp->vp.vscale[0];
     gNdsRdpDefaultViewportScaleY = vp->vp.vscale[1];
     gNdsRdpDefaultViewportTransX = vp->vp.vtrans[0];

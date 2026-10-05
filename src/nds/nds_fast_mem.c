@@ -207,10 +207,10 @@ void ndsFastMemSelfTest(void)
                     dst[i] = 0xa5u;
                 }
                 ret = sNdsFastMemCopy(d, &src[16u + so], size);
-                gNdsFastMemSelfTestRuns++;
+                NDS_DIAG(gNdsFastMemSelfTestRuns++);
                 if (ret != d)
                 {
-                    gNdsFastMemSelfTestFailures++;
+                    NDS_DIAG(gNdsFastMemSelfTestFailures++);
                 }
                 for (i = 0u; i < sizeof(dst); i++)
                 {
@@ -219,7 +219,7 @@ void ndsFastMemSelfTest(void)
 
                     if (dst[i] != want)
                     {
-                        gNdsFastMemSelfTestFailures++;
+                        NDS_DIAG(gNdsFastMemSelfTestFailures++);
                         break;
                     }
                 }
@@ -228,10 +228,10 @@ void ndsFastMemSelfTest(void)
                     dst[i] = 0x5au;
                 }
                 ret = sNdsFastMemSet(d, (int)(0x100u + size + so), size);
-                gNdsFastMemSelfTestRuns++;
+                NDS_DIAG(gNdsFastMemSelfTestRuns++);
                 if (ret != d)
                 {
-                    gNdsFastMemSelfTestFailures++;
+                    NDS_DIAG(gNdsFastMemSelfTestFailures++);
                 }
                 for (i = 0u; i < sizeof(dst); i++)
                 {
@@ -240,7 +240,7 @@ void ndsFastMemSelfTest(void)
 
                     if (dst[i] != want)
                     {
-                        gNdsFastMemSelfTestFailures++;
+                        NDS_DIAG(gNdsFastMemSelfTestFailures++);
                         break;
                     }
                 }
@@ -283,10 +283,10 @@ void ndsFastMemSelfTest(void)
                                 }
                             }
                             got = sNdsFastMemCmp(&src[16u + so], d, size);
-                            gNdsFastMemSelfTestRuns++;
+                            NDS_DIAG(gNdsFastMemSelfTestRuns++);
                             if (got != want)
                             {
-                                gNdsFastMemSelfTestFailures++;
+                                NDS_DIAG(gNdsFastMemSelfTestFailures++);
                             }
                             if ((spot < 6u) && (pos < size))
                             {

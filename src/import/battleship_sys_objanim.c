@@ -844,27 +844,27 @@ void gcPlayDObjAnimJoint(DObj *dobj)
     u32 speed_bits;
     u32 noanim;
 
-    gNdsR2AnimCensusCalls++;
+    NDS_DIAG(gNdsR2AnimCensusCalls++);
     if (dobj->anim_wait != AOBJ_ANIM_NULL)
     {
         speed = dobj->anim_speed;
         __builtin_memcpy(&speed_bits, &speed, sizeof(speed_bits));
         if (speed_bits == 0x3f800000u)
         {
-            gNdsR2AnimCensusSpeedOne++;
+            NDS_DIAG(gNdsR2AnimCensusSpeedOne++);
         }
         else if ((speed_bits & 0x7fffffffu) == 0u)
         {
-            gNdsR2AnimCensusSpeedZero++;
+            NDS_DIAG(gNdsR2AnimCensusSpeedZero++);
         }
         else
         {
-            gNdsR2AnimCensusSpeedOther++;
+            NDS_DIAG(gNdsR2AnimCensusSpeedOther++);
             gNdsR2AnimCensusSpeedOtherBits = speed_bits;
         }
         if (dobj->anim_wait == AOBJ_ANIM_END)
         {
-            gNdsR2AnimCensusAnimEnd++;
+            NDS_DIAG(gNdsR2AnimCensusAnimEnd++);
         }
         noanim = ((dobj->parent_gobj->flags & GOBJ_FLAG_NOANIM) != 0) ? 1u : 0u;
         for (aobj = dobj->aobj; aobj != NULL; aobj = aobj->next)
@@ -872,13 +872,13 @@ void gcPlayDObjAnimJoint(DObj *dobj)
             chain++;
             if (aobj->kind == nGCAnimKindNone)
             {
-                gNdsR2AnimCensusKindNone++;
+                NDS_DIAG(gNdsR2AnimCensusKindNone++);
                 continue;
             }
-            gNdsR2AnimCensusNodes++;
+            NDS_DIAG(gNdsR2AnimCensusNodes++);
             if (noanim != 0u)
             {
-                gNdsR2AnimCensusNoAnimSkips++;
+                NDS_DIAG(gNdsR2AnimCensusNoAnimSkips++);
             }
             switch (aobj->kind)
             {
@@ -1565,7 +1565,7 @@ sb32 ndsAObjEvent32ConfigureNormalizedCapacity(u32 gkind)
         sNdsAObjEvent32NormalizedHash = NULL;
         sNdsAObjEvent32NormalizedLimit = 0u;
         sNdsAObjEvent32NormalizedHashSlots = 0u;
-        gNdsAObjEvent32CapacityRefusedCount++;
+        NDS_DIAG(gNdsAObjEvent32CapacityRefusedCount++);
         return FALSE;
     }
 
@@ -1582,7 +1582,7 @@ sb32 ndsAObjEvent32ConfigureNormalizedCapacity(u32 gkind)
         sNdsAObjEvent32NormalizedHash = NULL;
         sNdsAObjEvent32NormalizedLimit = 0u;
         sNdsAObjEvent32NormalizedHashSlots = 0u;
-        gNdsAObjEvent32CapacityRefusedCount++;
+        NDS_DIAG(gNdsAObjEvent32CapacityRefusedCount++);
         return FALSE;
     }
     storage = syMallocSet(&gSYTaskmanGeneralHeap, (size_t)alloc_bytes, 4u);
@@ -1593,7 +1593,7 @@ sb32 ndsAObjEvent32ConfigureNormalizedCapacity(u32 gkind)
         sNdsAObjEvent32NormalizedHash = NULL;
         sNdsAObjEvent32NormalizedLimit = 0u;
         sNdsAObjEvent32NormalizedHashSlots = 0u;
-        gNdsAObjEvent32CapacityRefusedCount++;
+        NDS_DIAG(gNdsAObjEvent32CapacityRefusedCount++);
         return FALSE;
     }
 
@@ -1621,7 +1621,7 @@ sb32 ndsAObjEvent32ConfigureNormalizedCapacity(u32 gkind)
         gNdsAObjEvent32StageBoundGKind = gkind;
         gNdsAObjEvent32StageBoundLimit = limit;
         gNdsAObjEvent32StageBoundBytes = alloc_bytes;
-        gNdsAObjEvent32StageBoundApplyCount++;
+        NDS_DIAG(gNdsAObjEvent32StageBoundApplyCount++);
     }
     return TRUE;
 }
@@ -1714,7 +1714,7 @@ static void ndsAObjEvent32IndexNormalized(u32 index)
                 sNdsAObjEvent32Tombs--;
             }
             sNdsAObjEvent32NormalizedHash[slot] = (u16)(index + 1u);
-            gNdsAObjEvent32HashInsertProbeCount += probes + 1u;
+            NDS_DIAG(gNdsAObjEvent32HashInsertProbeCount += probes + 1u);
             return;
         }
         slot = (slot + 1u) & (sNdsAObjEvent32NormalizedHashSlots - 1u);
@@ -1825,7 +1825,7 @@ static void ndsAObjEvent32CompactLedger(void)
     sNdsAObjEvent32NormalizedCount = write_index;
     sNdsAObjEvent32Holes = 0u;
     ndsAObjEvent32RebuildNormalizedIndex();
-    gNdsAObjEvent32LedgerCompactions++;
+    NDS_DIAG(gNdsAObjEvent32LedgerCompactions++);
 }
 
 /* Sector Z Arwing flight-path descriptors (asset 0x99, MiscDataBank153).
@@ -1907,7 +1907,7 @@ void ndsAObjEvent32ForgetRange(const void *base, size_t size)
 
     if (ndsAObjEvent32RangeHoldsNone(range_start, range_end) != FALSE)
     {
-        gNdsAObjEvent32ForgetSkips++;
+        NDS_DIAG(gNdsAObjEvent32ForgetSkips++);
         read_index = write_index = sNdsAObjEvent32NormalizedCount;
     }
     else
@@ -1964,7 +1964,7 @@ void ndsAObjEvent32ForgetRange(const void *base, size_t size)
                     }
                     sNdsAObjEvent32Normalized[read_index].command = NULL;
                     sNdsAObjEvent32Holes++;
-                    gNdsAObjEvent32ForgetHoleRemovals++;
+                    NDS_DIAG(gNdsAObjEvent32ForgetHoleRemovals++);
                 }
                 continue;
             }
@@ -2018,7 +2018,7 @@ void ndsAObjEvent32ForgetRange(const void *base, size_t size)
         if ((rebuild != FALSE) ||
             (sNdsAObjEvent32Tombs > (sNdsAObjEvent32NormalizedHashSlots >> 2)))
         {
-            gNdsAObjEvent32ForgetHoleRebuilds++;
+            NDS_DIAG(gNdsAObjEvent32ForgetHoleRebuilds++);
             ndsAObjEvent32RebuildNormalizedIndex();
         }
     }
@@ -2087,7 +2087,7 @@ sb32 ndsTraIDescUsable(DObj *dobj, const AObj *aobj, u32 site)
     {
         return TRUE;
     }
-    gNdsTraIBadDescCount++;
+    NDS_DIAG(gNdsTraIBadDescCount++);
     gNdsTraIBadDescPtr = (u32)(uintptr_t)aobj->interpolate;
     gNdsTraIBadDescDObj = (u32)(uintptr_t)dobj;
     gNdsTraIBadDescGObj = (u32)(uintptr_t)dobj->parent_gobj;
@@ -2310,19 +2310,19 @@ static s32 ndsAObjEvent32FindNormalized(AObjEvent32 *command)
 
         if (entry == 0u)
         {
-            gNdsAObjEvent32HashMissCount++;
+            NDS_DIAG(gNdsAObjEvent32HashMissCount++);
             break;
         }
         if ((entry != NDS_AOBJ_EVENT32_TOMB) &&
             (sNdsAObjEvent32Normalized[entry - 1u].command == command))
         {
-            gNdsAObjEvent32HashHitCount++;
+            NDS_DIAG(gNdsAObjEvent32HashHitCount++);
             found = (s32)(entry - 1u);
             break;
         }
         slot = (slot + 1u) & (sNdsAObjEvent32NormalizedHashSlots - 1u);
     }
-    gNdsAObjEvent32HashProbeCount += probes + 1u;
+    NDS_DIAG(gNdsAObjEvent32HashProbeCount += probes + 1u);
     if (probes == sNdsAObjEvent32NormalizedHashSlots)
     {
         gNdsAObjEvent32HashOverflowCount++;
@@ -2332,10 +2332,10 @@ static s32 ndsAObjEvent32FindNormalized(AObjEvent32 *command)
     {
         s32 scanned = ndsAObjEvent32ScanNormalized(command);
 
-        gNdsAObjEvent32HashOracleRuns++;
+        NDS_DIAG(gNdsAObjEvent32HashOracleRuns++);
         if (scanned != found)
         {
-            gNdsAObjEvent32HashOracleMismatch++;
+            NDS_DIAG(gNdsAObjEvent32HashOracleMismatch++);
             gNdsAObjEvent32NormalizeLastFailAddress = (u32)(uintptr_t)command;
             found = scanned;
         }
@@ -2640,7 +2640,7 @@ static sb32 ndsAObjEvent32ValidateInterpDescs(NDSAObjEvent32OwnerKind owner_kind
         if (ndsRelocPointerRangeInLoadedFiles(desc, 24u) == FALSE)
         {
             gNdsEvent32SYInterpDescUnresolvedAddr = (u32)(uintptr_t)desc;
-            gNdsEvent32SYInterpDescUnresolvedCount++;
+            NDS_DIAG(gNdsEvent32SYInterpDescUnresolvedCount++);
             (void)ndsAObjEvent32Reject(13u, ndsAObjEvent32PlanCommand(i),
                                        owner_kind,
                                        ndsAObjEvent32PlanCommand(i)->u);
@@ -2670,7 +2670,7 @@ static sb32 ndsAObjEvent32ValidateInterpDescs(NDSAObjEvent32OwnerKind owner_kind
                 continue;
             }
             gNdsEvent32SYInterpDescUnresolvedAddr = (u32)(uintptr_t)desc;
-            gNdsEvent32SYInterpDescUnresolvedCount++;
+            NDS_DIAG(gNdsEvent32SYInterpDescUnresolvedCount++);
             (void)ndsAObjEvent32Reject(13u, ndsAObjEvent32PlanCommand(i),
                                        owner_kind,
                                        ndsAObjEvent32PlanCommand(i)->u);
@@ -2681,7 +2681,7 @@ static sb32 ndsAObjEvent32ValidateInterpDescs(NDSAObjEvent32OwnerKind owner_kind
             NDS_AOBJ_EVENT32_INTERP_DESC_FIXED_MAX)
         {
             gNdsEvent32SYInterpDescUnresolvedAddr = (u32)(uintptr_t)desc;
-            gNdsEvent32SYInterpDescUnresolvedCount++;
+            NDS_DIAG(gNdsEvent32SYInterpDescUnresolvedCount++);
             (void)ndsAObjEvent32Reject(13u, ndsAObjEvent32PlanCommand(i),
                                        owner_kind,
                                        ndsAObjEvent32PlanCommand(i)->u);
@@ -2721,7 +2721,7 @@ static void ndsAObjEvent32FixInterpDescs(void)
             sNdsEvent32InterpDescFixedWord[sNdsEvent32InterpDescFixedCount] =
                 *word;
             sNdsEvent32InterpDescFixedCount++;
-            gNdsEvent32SYInterpDescFixCount++;
+            NDS_DIAG(gNdsEvent32SYInterpDescFixCount++);
         }
     }
 }
@@ -2747,7 +2747,7 @@ static sb32 ndsAObjEvent32NormalizeScript(
         (sNdsAObjEvent32NormalizedLimit == 0u) ||
         (sNdsAObjEvent32NormalizedHashSlots == 0u))
     {
-        gNdsAObjEvent32CapacityRefusedCount++;
+        NDS_DIAG(gNdsAObjEvent32CapacityRefusedCount++);
         (void)ndsAObjEvent32Reject(14u, script, owner_kind, script->u);
         gNdsAObjEvent32NormalizeFailCount++;
         return FALSE;
@@ -3156,7 +3156,7 @@ static void ndsGcAdvanceDObjAnimJoint(DObj *dobj)
     {
         dobj->anim_wait = AOBJ_ANIM_NULL;
     }
-    gNdsGcDObjTraOnlySkips++;
+    NDS_DIAG(gNdsGcDObjTraOnlySkips++);
 }
 #endif
 
@@ -3395,27 +3395,27 @@ void gcAddDObjAnimJoint(DObj *dobj, AObjEvent32 *anim_joint,
     u32 phase = enter;
     sb32 admit;
 
-    gNdsR2AddDObjAnimCalls++;
+    NDS_DIAG(gNdsR2AddDObjAnimCalls++);
     admit = ((anim_joint == NULL) ||
              (ndsRelocPointerIsFighterAObj16(anim_joint) != FALSE) ||
              (ndsAObjEvent32NormalizeScript(
                   anim_joint, nNDSAObjEvent32OwnerDObj) != FALSE)) ? TRUE : FALSE;
-    gNdsR2AddDObjNormalizeTicks += cpuGetTiming() - phase;
+    NDS_DIAG(gNdsR2AddDObjNormalizeTicks += cpuGetTiming() - phase);
     if (admit != FALSE)
     {
         phase = cpuGetTiming();
         ndsBaseGcAddDObjAnimJoint(dobj, anim_joint, anim_frame);
-        gNdsR2AddDObjBaseTicks += cpuGetTiming() - phase;
+        NDS_DIAG(gNdsR2AddDObjBaseTicks += cpuGetTiming() - phase);
     }
     else
     {
         ndsBaseGcAddDObjAnimJoint(dobj, NULL, anim_frame);
-        gNdsAObjEvent32DetachCount++;
+        NDS_DIAG(gNdsAObjEvent32DetachCount++);
     }
     {
         u32 total = cpuGetTiming() - enter;
 
-        gNdsR2AddDObjAnimTicks += total;
+        NDS_DIAG(gNdsR2AddDObjAnimTicks += total);
         if (total > gNdsR2AddDObjAnimMaxTicks)
         {
             gNdsR2AddDObjAnimMaxTicks = total;
@@ -3436,7 +3436,7 @@ void gcAddDObjAnimJoint(DObj *dobj, AObjEvent32 *anim_joint,
          * new motion just overwrote; parsing it read a float as a command
          * pointer. The joint plays no script instead. */
         ndsBaseGcAddDObjAnimJoint(dobj, NULL, anim_frame);
-        gNdsAObjEvent32DetachCount++;
+        NDS_DIAG(gNdsAObjEvent32DetachCount++);
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
         ndsLabNoteDetach(dobj, anim_joint, __builtin_return_address(0));
 #endif
@@ -3455,7 +3455,7 @@ void gcAddMObjMatAnimJoint(MObj *mobj, AObjEvent32 *matanim_joint,
     else
     {
         ndsBaseGcAddMObjMatAnimJoint(mobj, NULL, anim_frame);
-        gNdsAObjEvent32DetachCount++;
+        NDS_DIAG(gNdsAObjEvent32DetachCount++);
     }
 }
 
@@ -3474,7 +3474,7 @@ void gcAddAnimJointAll(GObj *gobj, AObjEvent32 **anim_joints,
      * change is the excursion, this is where it should show. */
     u32 enter = cpuGetTiming();
 
-    gNdsR2AddAnimAllCalls++;
+    NDS_DIAG(gNdsR2AddAnimAllCalls++);
 #endif
     if ((gobj != NULL) &&
         (ndsAObjEvent32NormalizeDObjTable(gobj, anim_joints) != FALSE))
@@ -3498,7 +3498,7 @@ void gcAddAnimJointAll(GObj *gobj, AObjEvent32 **anim_joints,
          * open/close install was the one that failed. `Last` is overwritten
          * rather than latched on purpose: the question is what refused most
          * recently, not what refused first. */
-        gNdsGcAddAnimJointAllRefusedCount++;
+        NDS_DIAG(gNdsGcAddAnimJointAllRefusedCount++);
         gNdsGcAddAnimJointAllRefusedLastGObj = (u32)(uintptr_t)gobj;
         gNdsGcAddAnimJointAllRefusedLastTable = (u32)(uintptr_t)anim_joints;
     }
@@ -3506,7 +3506,7 @@ void gcAddAnimJointAll(GObj *gobj, AObjEvent32 **anim_joints,
     {
         u32 total = cpuGetTiming() - enter;
 
-        gNdsR2AddAnimAllTicks += total;
+        NDS_DIAG(gNdsR2AddAnimAllTicks += total);
         if (total > gNdsR2AddAnimAllMaxTicks)
         {
             gNdsR2AddAnimAllMaxTicks = total;

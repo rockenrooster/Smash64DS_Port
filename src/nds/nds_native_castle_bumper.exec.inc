@@ -64,7 +64,7 @@ sb32 ndsNativeCastleBumperOffscreen(const NDSRendererConfig *config)
         }
         if (i == NDS_NATIVE_CASTLE_BUMPER_VERTEX_COUNT)
         {
-            gNdsCastleBumperCulled++;
+            NDS_DIAG(gNdsCastleBumperCulled++);
             return TRUE;
         }
     }

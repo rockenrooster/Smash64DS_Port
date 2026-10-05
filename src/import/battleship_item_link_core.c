@@ -1734,7 +1734,7 @@ GObj *itManagerMakeAppearActor(void)
                  * the scene's own rewind. */
                 if (gobj == NULL)
                 {
-                    gNdsItemAppearActorRefusedCount++;
+                    NDS_DIAG(gNdsItemAppearActorRefusedCount++);
                     return NULL;
                 }
                 gcAddGObjProcess(gobj, itManagerAppearActorProcUpdate, nGCProcessKindFunc, 3); /* :593 */
@@ -1769,7 +1769,7 @@ GObj *itManagerMakeAppearActor(void)
                 }
                 itManagerSetItemSpawnWait(); /* :623 */
 
-                gNdsItemAppearActorMakeCount++;
+                NDS_DIAG(gNdsItemAppearActorMakeCount++);
 
                 return gobj; /* :625 */
             }

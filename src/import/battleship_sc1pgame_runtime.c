@@ -160,7 +160,7 @@ static void ndsSC1PGameBridgeRefuse(u8 stage)
     gNdsSC1PGameBridgeRefusedCount++;
     if (stage <= (u8)nSC1PGameStageChallengerEnd)
     {
-        gNdsSC1PGameBridgeRefusedStage[stage]++;
+        NDS_DIAG(gNdsSC1PGameBridgeRefusedStage[stage]++);
     }
 }
 

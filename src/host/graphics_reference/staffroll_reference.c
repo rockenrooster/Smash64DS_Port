@@ -191,7 +191,7 @@ s32 ndsStaffrollGlyphEnsure(const void *image, u32 width, u32 height,
     sNdsStaffrollGlyphs[i].height = (u8)height;
     sNdsStaffrollGlyphs[i].pool_offset = sNdsStaffrollGlyphPoolUsed;
     sNdsStaffrollGlyphPoolUsed += need;
-    gNdsStaffrollGlyphCacheBuildCount++;
+    NDS_DIAG(gNdsStaffrollGlyphCacheBuildCount++);
     *out_slot = i;
     return TRUE;
 }
@@ -272,7 +272,7 @@ void ndsStaffrollGlyphBlit(u32 slot, s32 org_x, s32 org_y,
                 ((u32)prim_b * (u32)intensity) + 127u);
             preview[((u32)dst_y * preview_pitch) + (u32)dst_x] =
                 ndsSpritePackRgb15(red, green, blue);
-            gNdsStaffrollGlyphDrawPixelCount++;
+            NDS_DIAG(gNdsStaffrollGlyphDrawPixelCount++);
         }
     }
 }

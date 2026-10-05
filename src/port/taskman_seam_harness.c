@@ -1718,7 +1718,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                 dSYTaskmanUpdateCount++;
                 gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
                 gNdsFighterGCRunAllLoopTaskmanUpdateCount++;
-                gNdsSCVSBattleOriginalUpdateCount++;
+                NDS_DIAG(gNdsSCVSBattleOriginalUpdateCount++);
                 gNdsSCVSBattleOriginalUpdateResult =
                     NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
                 gNdsSCVSBattleOriginalSetupMask |=
@@ -1743,8 +1743,8 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                 ndsSeamSceneUpdate();
                 dSYTaskmanUpdateCount++;
                 gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
-                gNdsFighterSchedulerLoopTaskmanUpdateCount++;
-                gNdsSCVSBattleOriginalUpdateCount++;
+                NDS_DIAG(gNdsFighterSchedulerLoopTaskmanUpdateCount++);
+                NDS_DIAG(gNdsSCVSBattleOriginalUpdateCount++);
                 gNdsSCVSBattleOriginalUpdateResult =
                     NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
                 gNdsSCVSBattleOriginalSetupMask |=
@@ -1763,8 +1763,8 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                 ndsSeamSceneUpdate();
                 dSYTaskmanUpdateCount++;
                 gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
-                gNdsFighterControllerLoopTaskmanUpdateCount++;
-                gNdsSCVSBattleOriginalUpdateCount++;
+                NDS_DIAG(gNdsFighterControllerLoopTaskmanUpdateCount++);
+                NDS_DIAG(gNdsSCVSBattleOriginalUpdateCount++);
                 gNdsSCVSBattleOriginalUpdateResult =
                     NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
                 gNdsSCVSBattleOriginalSetupMask |=
@@ -1783,8 +1783,8 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                 ndsSeamSceneUpdate();
                 dSYTaskmanUpdateCount++;
                 gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
-                gNdsFighterPreviewLoopTaskmanUpdateCount++;
-                gNdsSCVSBattleOriginalUpdateCount++;
+                NDS_DIAG(gNdsFighterPreviewLoopTaskmanUpdateCount++);
+                NDS_DIAG(gNdsSCVSBattleOriginalUpdateCount++);
                 gNdsSCVSBattleOriginalUpdateResult =
                     NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
                 gNdsSCVSBattleOriginalSetupMask |=
@@ -1809,8 +1809,8 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                 ndsSeamSceneUpdate();
                 dSYTaskmanUpdateCount++;
                 gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
-                gNdsFighterSchedulerLoopTaskmanUpdateCount++;
-                gNdsSCVSBattleOriginalUpdateCount++;
+                NDS_DIAG(gNdsFighterSchedulerLoopTaskmanUpdateCount++);
+                NDS_DIAG(gNdsSCVSBattleOriginalUpdateCount++);
                 gNdsSCVSBattleOriginalUpdateResult =
                     NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
                 gNdsSCVSBattleOriginalSetupMask |=
@@ -1829,8 +1829,8 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                 ndsSeamSceneUpdate();
                 dSYTaskmanUpdateCount++;
                 gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
-                gNdsFighterControllerLoopTaskmanUpdateCount++;
-                gNdsSCVSBattleOriginalUpdateCount++;
+                NDS_DIAG(gNdsFighterControllerLoopTaskmanUpdateCount++);
+                NDS_DIAG(gNdsSCVSBattleOriginalUpdateCount++);
                 gNdsSCVSBattleOriginalUpdateResult =
                     NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
                 gNdsSCVSBattleOriginalSetupMask |=
@@ -1855,8 +1855,8 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                 ndsSeamSceneUpdate();
                 dSYTaskmanUpdateCount++;
                 gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
-                gNdsFighterSchedulerLoopTaskmanUpdateCount++;
-                gNdsSCVSBattleOriginalUpdateCount++;
+                NDS_DIAG(gNdsFighterSchedulerLoopTaskmanUpdateCount++);
+                NDS_DIAG(gNdsSCVSBattleOriginalUpdateCount++);
                 gNdsSCVSBattleOriginalUpdateResult =
                     NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
                 gNdsSCVSBattleOriginalSetupMask |=
@@ -1890,7 +1890,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                 dSYTaskmanUpdateCount++;
                 gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
                 gNdsFighterGCRunAllLoopTaskmanUpdateCount++;
-                gNdsSCVSBattleOriginalUpdateCount++;
+                NDS_DIAG(gNdsSCVSBattleOriginalUpdateCount++);
                 gNdsSCVSBattleOriginalUpdateResult =
                     NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
                 gNdsSCVSBattleOriginalSetupMask |=
@@ -1910,7 +1910,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
         ndsSeamSceneUpdate();
         dSYTaskmanUpdateCount++;
         gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
-        gNdsSCVSBattleOriginalUpdateCount++;
+        NDS_DIAG(gNdsSCVSBattleOriginalUpdateCount++);
         gNdsSCVSBattleOriginalUpdateResult =
             NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
         gNdsSCVSBattleOriginalSetupMask |=

@@ -1592,7 +1592,7 @@ static void ndsFighterLoadOnce(const void *file_id, void **slot)
         *slot = ndsFighterLoadExternFile(file_id);
         if (*slot != NULL)
         {
-            gNdsFighterMarioFoxLoadedFileCount++;
+            NDS_DIAG(gNdsFighterMarioFoxLoadedFileCount++);
         }
     }
 }
@@ -2017,17 +2017,17 @@ static sb32 ndsMPCommonCheckFighterOnCliffEdgeBounded(GObj *fighter_gobj)
         return FALSE;
     }
 
-    gNdsFighterWaitGroundMapCheckCount++;
+    NDS_DIAG(gNdsFighterWaitGroundMapCheckCount++);
     if (ndsStageFloorFollowLoopUpdateFighter(fighter_gobj) != FALSE)
     {
-        gNdsFighterWaitGroundMapSafeFloorCount++;
+        NDS_DIAG(gNdsFighterWaitGroundMapSafeFloorCount++);
         return TRUE;
     }
     if ((fp->ga == nMPKineticsGround) &&
         (fp->coll_data.floor_line_id == 0) &&
         ((fp->coll_data.mask_stat & MAP_FLAG_FLOOR) != 0u))
     {
-        gNdsFighterWaitGroundMapSafeFloorCount++;
+        NDS_DIAG(gNdsFighterWaitGroundMapSafeFloorCount++);
         fp->coll_data.is_coll_end = FALSE;
         return TRUE;
     }
@@ -2099,7 +2099,7 @@ static void ndsFighterMarioFoxRecordDisplayProbe(GObj *fighter_gobj)
     dl_ready_count = ndsFighterCountDLReadyDObjs(root);
     parts_ptr_count = ndsFighterCountPartsPtrDObjs(root);
 
-    gNdsFighterMarioFoxDisplayCallbackCount++;
+    NDS_DIAG(gNdsFighterMarioFoxDisplayCallbackCount++);
 
     if (player == 0u)
     {

@@ -342,7 +342,7 @@ static void ndsRunMarioFoxProofUpdate(volatile u32 *counter)
     {
         (*counter)++;
     }
-    gNdsSCVSBattleOriginalUpdateCount++;
+    NDS_DIAG(gNdsSCVSBattleOriginalUpdateCount++);
     gNdsSCVSBattleOriginalUpdateResult =
         NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
     gNdsSCVSBattleOriginalSetupMask |=
@@ -1682,7 +1682,7 @@ static void ndsBattleCameraMatrixAtUndrawnTick(void)
     }
     gmCameraLookAtFuncMatrix(NULL, CObjGetStruct(gGMCameraGObj),
                              gSYTaskmanDLHeads);
-    gNdsCameraUndrawnTickRebuildCount++;
+    NDS_DIAG(gNdsCameraUndrawnTickRebuildCount++);
 }
 
 u32 ndsR2HostBattleUpdateOnce(u32 update_index)

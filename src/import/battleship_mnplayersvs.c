@@ -2367,7 +2367,7 @@ s32 ndsMNPlayersVSPreviewCycleCostume(u32 slot)
              * those addresses mean. */
             ndsFighterRendererInvalidateMaterialCachesForSlot(slot);
 #endif
-            gNdsPlayersVSPreviewCostumeChangeCount++;
+            NDS_DIAG(gNdsPlayersVSPreviewCostumeChangeCount++);
             return costume;
         }
     }
@@ -2858,7 +2858,7 @@ void ndsMNPlayersVSRunReadyTransitionProbe(void)
     }
 
     gcEjectAll();
-    gNdsPlayersVSReadyTransitionCleanupCount++;
+    NDS_DIAG(gNdsPlayersVSReadyTransitionCleanupCount++);
     mask |= (1u << 7);
 
     gNdsPlayersVSReadyTransitionPlayerCount =

@@ -207,7 +207,7 @@ GObj *gcMakeGObjSPAfter(u32 id, void (*func_run)(GObj*), u8 link, u32 priority)
         (((uintptr_t)gSYTaskmanGeneralHeap.end -
           (uintptr_t)gSYTaskmanGeneralHeap.ptr) < NDS_GC_EFFECT_ARENA_FLOOR_BYTES))
     {
-        gNdsGcEffectArenaFloorRefusals++;
+        NDS_DIAG(gNdsGcEffectArenaFloorRefusals++);
         return NULL;
     }
     gobj = ndsBaseGcMakeGObjSPAfter(id, func_run, link, priority);
@@ -341,7 +341,7 @@ void *ndsBattleIdleScratchAlloc(size_t size, u32 alignment)
     }
     sNdsBattleIdleScratch = (u8 *)(aligned + size);
     sNdsBattleIdleScratchBytes -= pad + (u32)size;
-    gNdsBattleIdleScratchServedBytes += (u32)size;
+    NDS_DIAG(gNdsBattleIdleScratchServedBytes += (u32)size);
     return (void *)aligned;
 }
 

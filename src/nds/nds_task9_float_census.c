@@ -105,7 +105,7 @@ void ndsTask9FloatCensusEndUpdate(void)
         }
         gNdsTask9FloatCensusLast[index] = count;
         gNdsTask9FloatCensusPair[index] += count;
-        gNdsTask9FloatCensusTotal[index] += count;
+        NDS_DIAG(gNdsTask9FloatCensusTotal[index] += count);
         if ((gNdsTask9FloatCensusUpdateCount == 0u) ||
             (count < gNdsTask9FloatCensusMin[index]))
         {

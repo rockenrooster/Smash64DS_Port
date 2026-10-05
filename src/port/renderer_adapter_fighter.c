@@ -198,47 +198,47 @@ static void ndsFtrContractCensusRecord(u32 slot)
              (h[NDS_FTR_CONTRACT_H_PRE] ==
               sNdsFtrContractCensusPrev[slot][NDS_FTR_CONTRACT_H_PRE])) ?
             1u : 0u;
-        gNdsFtrContractCaptures++;
-        gNdsFtrContractEventTotal += count;
+        NDS_DIAG(gNdsFtrContractCaptures++);
+        NDS_DIAG(gNdsFtrContractEventTotal += count);
         if (count == 0u)
         {
-            gNdsFtrContractZeroEvents++;
+            NDS_DIAG(gNdsFtrContractZeroEvents++);
         }
         if (h[NDS_FTR_CONTRACT_H_CNT] ==
             sNdsFtrContractCensusPrev[slot][NDS_FTR_CONTRACT_H_CNT])
         {
-            gNdsFtrContractCountSame++;
+            NDS_DIAG(gNdsFtrContractCountSame++);
         }
         if (h[NDS_FTR_CONTRACT_H_DOBJ] ==
             sNdsFtrContractCensusPrev[slot][NDS_FTR_CONTRACT_H_DOBJ])
         {
-            gNdsFtrContractDObjSame++;
+            NDS_DIAG(gNdsFtrContractDObjSame++);
         }
         if (h[NDS_FTR_CONTRACT_H_DL] ==
             sNdsFtrContractCensusPrev[slot][NDS_FTR_CONTRACT_H_DL])
         {
-            gNdsFtrContractDLSame++;
+            NDS_DIAG(gNdsFtrContractDLSame++);
         }
         if (h[NDS_FTR_CONTRACT_H_PRE] ==
             sNdsFtrContractCensusPrev[slot][NDS_FTR_CONTRACT_H_PRE])
         {
-            gNdsFtrContractPreSame++;
+            NDS_DIAG(gNdsFtrContractPreSame++);
         }
         if (key_same != 0u)
         {
-            gNdsFtrContractKeySame++;
+            NDS_DIAG(gNdsFtrContractKeySame++);
             if (same_all == 0u)
             {
-                gNdsFtrContractKeySameContractDiff++;
+                NDS_DIAG(gNdsFtrContractKeySameContractDiff++);
             }
         }
         else if (same_all != 0u)
         {
-            gNdsFtrContractKeyDiffContractSame++;
+            NDS_DIAG(gNdsFtrContractKeyDiffContractSame++);
         }
         if (same_all != 0u)
         {
-            gNdsFtrContractSame++;
+            NDS_DIAG(gNdsFtrContractSame++);
             sNdsFtrContractCensusRun[slot]++;
             if (sNdsFtrContractCensusRun[slot] > gNdsFtrContractMaxRun)
             {
@@ -247,7 +247,7 @@ static void ndsFtrContractCensusRecord(u32 slot)
         }
         else
         {
-            gNdsFtrContractChangeTotal++;
+            NDS_DIAG(gNdsFtrContractChangeTotal++);
             sNdsFtrContractCensusRun[slot] = 0u;
         }
     }
@@ -865,7 +865,7 @@ void ndsFighterDisplayContractHeadBoundary(u32 sky_fog_alpha, u32 is_shade_fog,
     {
         if (slot->key[i] != sNdsFtrDrawMemoKey[i])
         {
-            gNdsFtrDrawMemoInvalidations++;
+            NDS_DIAG(gNdsFtrDrawMemoInvalidations++);
             return;
         }
     }
@@ -887,7 +887,7 @@ static void ndsFtrDrawMemoFinish(void)
 #endif
     if (sNdsFtrDrawMemoState != 2u)
     {
-        gNdsFtrDrawMemoBypass++;
+        NDS_DIAG(gNdsFtrDrawMemoBypass++);
         sNdsFtrDrawMemoState = 0u;
         return;
     }
@@ -933,7 +933,7 @@ static void ndsFtrDrawMemoFinish(void)
         slot->key[i] = sNdsFtrDrawMemoKey[i];
     }
     slot->valid = 1u;
-    gNdsFtrDrawMemoFills++;
+    NDS_DIAG(gNdsFtrDrawMemoFills++);
     sNdsFtrDrawMemoState = 0u;
 }
 
@@ -1680,7 +1680,7 @@ static s32 ndsFighterDLAllDrawValidateRange(const Gfx *dl, size_t bytes,
          (ndsRelocFindLoadedFileContaining(dl, bytes) == NULL) &&
          (ndsRendererAdapterRangeIsEmptySegmentEDL(dl, bytes) == FALSE)))
     {
-        gNdsFighterDLAllDrawRangeRejectCount++;
+        NDS_DIAG(gNdsFighterDLAllDrawRangeRejectCount++);
         return FALSE;
     }
     return TRUE;
@@ -2272,14 +2272,14 @@ ndsFighterDLAllDrawAccumulateStats(
 
     if (slot == 0u)
     {
-        gNdsFighterDLAllDrawP0AttemptCount++;
+        NDS_DIAG(gNdsFighterDLAllDrawP0AttemptCount++);
         if (clean_selected != FALSE)
         {
-            gNdsFighterDLAllDrawP0CleanCount++;
+            NDS_DIAG(gNdsFighterDLAllDrawP0CleanCount++);
         }
         else
         {
-            gNdsFighterDLAllDrawP0FailedCount++;
+            NDS_DIAG(gNdsFighterDLAllDrawP0FailedCount++);
         }
         if ((blocker != NDS_RENDERER_BLOCKER_NONE) &&
             (gNdsFighterDLAllDrawP0FirstBlocker == 0u))
@@ -2291,7 +2291,7 @@ ndsFighterDLAllDrawAccumulateStats(
             gNdsFighterDLAllDrawP0BlockerMask |=
                 1u << (selected_index & 31u);
         }
-        gNdsFighterDLAllDrawP0CommandCount += stats->command_count;
+        NDS_DIAG(gNdsFighterDLAllDrawP0CommandCount += stats->command_count);
         if (gNdsFighterDLAllDrawP0FirstOpcode == 0u)
         {
             gNdsFighterDLAllDrawP0FirstOpcode = stats->first_opcode;
@@ -2301,7 +2301,7 @@ ndsFighterDLAllDrawAccumulateStats(
         {
             gNdsFighterDLAllDrawP0UnsupportedOpcode = unsupported_opcode;
         }
-        gNdsFighterDLAllDrawP0UnsupportedCommandCount += unsupported_count;
+        NDS_DIAG(gNdsFighterDLAllDrawP0UnsupportedCommandCount += unsupported_count);
         gNdsFighterDLAllDrawP0VertexDecodedCount +=
             state->vertex_decoded_count;
         gNdsFighterDLAllDrawP0MatrixMvpRecalcCount +=
@@ -2322,7 +2322,7 @@ ndsFighterDLAllDrawAccumulateStats(
             stats->hardware_oracle_reject_count;
         gNdsFighterDLAllDrawP0HardwareMatrixSeedCount +=
             stats->hardware_matrix_seed_count;
-        gNdsFighterDLAllDrawP0TriangleCount += state->triangle_count;
+        NDS_DIAG(gNdsFighterDLAllDrawP0TriangleCount += state->triangle_count);
         gNdsFighterDLAllDrawP0TriangleValidCount +=
             state->triangle_valid_count;
         gNdsFighterDLAllDrawP0ColorChecksum =
@@ -2331,14 +2331,14 @@ ndsFighterDLAllDrawAccumulateStats(
     }
     else if (slot == 1u)
     {
-        gNdsFighterDLAllDrawP1AttemptCount++;
+        NDS_DIAG(gNdsFighterDLAllDrawP1AttemptCount++);
         if (clean_selected != FALSE)
         {
-            gNdsFighterDLAllDrawP1CleanCount++;
+            NDS_DIAG(gNdsFighterDLAllDrawP1CleanCount++);
         }
         else
         {
-            gNdsFighterDLAllDrawP1FailedCount++;
+            NDS_DIAG(gNdsFighterDLAllDrawP1FailedCount++);
         }
         if ((blocker != NDS_RENDERER_BLOCKER_NONE) &&
             (gNdsFighterDLAllDrawP1FirstBlocker == 0u))
@@ -2350,7 +2350,7 @@ ndsFighterDLAllDrawAccumulateStats(
             gNdsFighterDLAllDrawP1BlockerMask |=
                 1u << (selected_index & 31u);
         }
-        gNdsFighterDLAllDrawP1CommandCount += stats->command_count;
+        NDS_DIAG(gNdsFighterDLAllDrawP1CommandCount += stats->command_count);
         if (gNdsFighterDLAllDrawP1FirstOpcode == 0u)
         {
             gNdsFighterDLAllDrawP1FirstOpcode = stats->first_opcode;
@@ -2360,7 +2360,7 @@ ndsFighterDLAllDrawAccumulateStats(
         {
             gNdsFighterDLAllDrawP1UnsupportedOpcode = unsupported_opcode;
         }
-        gNdsFighterDLAllDrawP1UnsupportedCommandCount += unsupported_count;
+        NDS_DIAG(gNdsFighterDLAllDrawP1UnsupportedCommandCount += unsupported_count);
         gNdsFighterDLAllDrawP1VertexDecodedCount +=
             state->vertex_decoded_count;
         gNdsFighterDLAllDrawP1MatrixMvpRecalcCount +=
@@ -2381,7 +2381,7 @@ ndsFighterDLAllDrawAccumulateStats(
             stats->hardware_oracle_reject_count;
         gNdsFighterDLAllDrawP1HardwareMatrixSeedCount +=
             stats->hardware_matrix_seed_count;
-        gNdsFighterDLAllDrawP1TriangleCount += state->triangle_count;
+        NDS_DIAG(gNdsFighterDLAllDrawP1TriangleCount += state->triangle_count);
         gNdsFighterDLAllDrawP1TriangleValidCount +=
             state->triangle_valid_count;
         gNdsFighterDLAllDrawP1ColorChecksum =
@@ -3695,7 +3695,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     }
     if (collection.total_count > collection.selected_count)
     {
-        gNdsFighterDLAllDrawTruncateCount++;
+        NDS_DIAG(gNdsFighterDLAllDrawTruncateCount++);
         gNdsFighterDLAllDrawSelectedOverflowCount +=
             collection.total_count - collection.selected_count;
     }
@@ -3872,7 +3872,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     /* Closing Reset also re-arms the mark, so OwnerPrep is well defined even on
      * the ~1.7% of calls where the native-owner block is skipped entirely. */
     task91_mark = cpuGetTiming();
-    gNdsTask91ResetTicks += task91_mark - task91_phase_start;
+    NDS_DIAG(gNdsTask91ResetTicks += task91_mark - task91_phase_start);
     task91_phase_start = task91_mark;
 #endif
     NDS_TICK_HUD_NATIVE_OWNER_MARK(nNDSTickHudNativeOwnerFallbackCalls);
@@ -4264,7 +4264,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #endif
             }
 #if NDS_TASK91_DRAW_PHASE_CENSUS
-            gNdsTask91MatrixPrepTicks += cpuGetTiming() - task91_mark;
+            NDS_DIAG(gNdsTask91MatrixPrepTicks += cpuGetTiming() - task91_mark);
 #endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
             {
@@ -4397,7 +4397,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                 native_owner_material_saved_root_count = 0u;
             }
 #if NDS_TASK91_DRAW_PHASE_CENSUS
-            gNdsTask91MaterialPrepTicks += cpuGetTiming() - task91_mark;
+            NDS_DIAG(gNdsTask91MaterialPrepTicks += cpuGetTiming() - task91_mark);
 #endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
             {
@@ -4420,7 +4420,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
      * owner inputs are built and submitted -- the matrix and material
      * preparation. What follows is the submit itself, and the census already
      * charges most of that to its own symbols. */
-    gNdsTask91OwnerPrepTicks += cpuGetTiming() - task91_phase_start;
+    NDS_DIAG(gNdsTask91OwnerPrepTicks += cpuGetTiming() - task91_phase_start);
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
     if ((native_owner_enabled != FALSE) &&
@@ -4462,7 +4462,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #endif
         }
 #if NDS_TASK91_DRAW_PHASE_CENSUS
-        gNdsTask91InputsTicks += cpuGetTiming() - task91_mark;
+        NDS_DIAG(gNdsTask91InputsTicks += cpuGetTiming() - task91_mark);
 #endif
         if (native_owner_enabled != FALSE)
         {
@@ -4542,17 +4542,17 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                 u32 task91_gxstat = NDS_TASK91_GXSTAT;
                 u32 task91_entries = (task91_gxstat >> 16) & 0x1FFu;
 
-                gNdsTask91ExecuteTicks += cpuGetTiming() - task91_mark;
-                gNdsTask91GxFifoSamples++;
+                NDS_DIAG(gNdsTask91ExecuteTicks += cpuGetTiming() - task91_mark);
+                NDS_DIAG(gNdsTask91GxFifoSamples++);
                 gNdsTask91GxStatOr |= task91_gxstat;
-                gNdsTask91GxFifoEntriesEnd += task91_entries;
+                NDS_DIAG(gNdsTask91GxFifoEntriesEnd += task91_entries);
                 if (task91_entries > gNdsTask91GxFifoMaxEnd)
                 {
                     gNdsTask91GxFifoMaxEnd = task91_entries;
                 }
                 if ((task91_gxstat & (1u << 27)) != 0u)
                 {
-                    gNdsTask91GxBusyEnd++;
+                    NDS_DIAG(gNdsTask91GxBusyEnd++);
                 }
             }
 #endif
@@ -5228,7 +5228,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     }
 
 #if NDS_TASK91_DRAW_PHASE_CENSUS
-    gNdsTask91TotalTicks += cpuGetTiming() - task91_total_start;
+    NDS_DIAG(gNdsTask91TotalTicks += cpuGetTiming() - task91_total_start);
 #endif
     gNdsFighterMarioFoxDLAllDrawCount++;
 }
@@ -5734,14 +5734,14 @@ static void ndsFighterMarioFoxRecordDLAllDrawFromDisplayCallback(
         return;
     }
 
-    gNdsFighterDLAllDrawDisplayCallbackCount++;
+    NDS_DIAG(gNdsFighterDLAllDrawDisplayCallbackCount++);
     if (slot == 0u)
     {
-        gNdsFighterDLAllDrawP0DisplayCallbackCount++;
+        NDS_DIAG(gNdsFighterDLAllDrawP0DisplayCallbackCount++);
     }
     else
     {
-        gNdsFighterDLAllDrawP1DisplayCallbackCount++;
+        NDS_DIAG(gNdsFighterDLAllDrawP1DisplayCallbackCount++);
     }
 
     ndsFighterMarioFoxDLAllDrawForSlot(slot, fp,

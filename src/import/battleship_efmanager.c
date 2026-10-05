@@ -340,7 +340,7 @@ static void ndsEFManagerRebirthHaloProcUpdateAOT(GObj *effect_gobj)
         phase = 0;
     }
     ep->effect_vars.common.size = phase;
-    gNdsRebirthHaloAotUpdateCount++;
+    NDS_DIAG(gNdsRebirthHaloAotUpdateCount++);
 }
 #endif
 
@@ -1058,7 +1058,7 @@ void ndsEFManagerStopAttachedEffects(GObj *fighter_gobj)
                 }
                 efManagerSetPrevStructAlloc(ep);
                 gcEjectGObj(effect_gobj);
-                gNdsEFManagerSourceEffectStopCount++;
+                NDS_DIAG(gNdsEFManagerSourceEffectStopCount++);
             }
         }
         effect_gobj = next;
@@ -2784,7 +2784,7 @@ static void ndsDamageSparkScale(LBParticle *pc, s32 size)
                        : (((size - 10) * 0.13F) + 1.0F);
     pc->xf->scale.x = pc->xf->scale.y = pc->xf->scale.z =
         ramp * NDS_DAMAGE_SPARK_SCALE;
-    gNdsDamageSparkScaleCount++;
+    NDS_DIAG(gNdsDamageSparkScaleCount++);
 }
 
 LBParticle *efManagerDamageNormalLightMakeEffect(Vec3f *pos, s32 player,
@@ -2811,7 +2811,7 @@ LBParticle *efManagerDamageFireMakeEffect(Vec3f *pos, s32 size)
      * from the nGMHitElementFire arms of ftmain.c (2713/2771/2808) and the
      * item equivalents, which are off, so this counts fire hits that
      * dispatched. */
-    gNdsFighterDamageFireCallCount++;
+    NDS_DIAG(gNdsFighterDamageFireCallCount++);
     return ndsBaseEFManagerDamageFireMakeEffect(pos, size);
 }
 LBParticle *efManagerFireGrindMakeEffect(Vec3f *pos)
@@ -2981,10 +2981,10 @@ GObj *ndsEFManagerMBallThrownMakeEffectChecked(Vec3f *pos, s32 lr)
     if (mask != 0u)
     {
         gNdsEntryMBallThrownRefusalMask |= mask;
-        gNdsEntryMBallThrownUnresolved++;
+        NDS_DIAG(gNdsEntryMBallThrownUnresolved++);
         return NULL;
     }
-    gNdsEntryMBallThrownCalls++;
+    NDS_DIAG(gNdsEntryMBallThrownCalls++);
     return efManagerMBallThrownMakeEffect(pos, lr);
 }
 
@@ -3039,10 +3039,10 @@ GObj *ndsEFManagerCaptureKirbyStarMakeEffectChecked(GObj *fighter_gobj)
 {
     if ((fighter_gobj == NULL) || (ndsEFManagerKirbyStarFileReady() == FALSE))
     {
-        gNdsKirbyStarCaptureUnresolved++;
+        NDS_DIAG(gNdsKirbyStarCaptureUnresolved++);
         return NULL;
     }
-    gNdsKirbyStarCaptureCalls++;
+    NDS_DIAG(gNdsKirbyStarCaptureCalls++);
     return efManagerCaptureKirbyStarMakeEffect(fighter_gobj);
 }
 
@@ -3050,10 +3050,10 @@ void ndsEFManagerLoseKirbyStarMakeEffectChecked(GObj *fighter_gobj)
 {
     if ((fighter_gobj == NULL) || (ndsEFManagerKirbyStarFileReady() == FALSE))
     {
-        gNdsKirbyStarLoseUnresolved++;
+        NDS_DIAG(gNdsKirbyStarLoseUnresolved++);
         return;
     }
-    gNdsKirbyStarLoseCalls++;
+    NDS_DIAG(gNdsKirbyStarLoseCalls++);
     (void)efManagerLoseKirbyStarMakeEffect(fighter_gobj);
 }
 #endif

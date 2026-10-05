@@ -133,7 +133,7 @@ u32 ndsReplayDigestTick(void)
     }
 
     hash = ndsReplayDigestMix(hash, (u32)syUtilsRandSeed());
-    gNdsReplayDigestTicks++;
+    NDS_DIAG(gNdsReplayDigestTicks++);
     return hash;
 }
 

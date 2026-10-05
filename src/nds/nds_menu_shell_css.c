@@ -938,7 +938,7 @@ static void ndsMenuShellCssUnderlayReserve(void)
                             NDS_CSS_UNDERLAY_BYTES * (u32)NDS_CSS_SLOTS,
                             4u) == FALSE)
     {
-        gNdsMenuShellCssUnderlayDeclineCount++;
+        NDS_DIAG(gNdsMenuShellCssUnderlayDeclineCount++);
         return;
     }
     sCssUnderlayBlock = syTaskmanMalloc(
@@ -962,7 +962,7 @@ static u8 *ndsMenuShellCssUnderlay(u32 slot, u32 surface)
         if (ndsUiKitLoadSurfaceCopy(surface, buffer,
                                     NDS_CSS_UNDERLAY_BYTES) == FALSE)
         {
-            gNdsMenuShellCssUnderlayDeclineCount++;
+            NDS_DIAG(gNdsMenuShellCssUnderlayDeclineCount++);
             return NULL;
         }
         sCssUnderlaySurface[slot] = surface;
@@ -1020,7 +1020,7 @@ static void ndsMenuShellCssStepDoors(void)
             if ((underlay != NULL) &&
                 (ndsUiKitBlitSurfaceCopy(sCssPanelSurface[i], underlay) != FALSE))
             {
-                gNdsMenuShellCssUnderlayBlitCount++;
+                NDS_DIAG(gNdsMenuShellCssUnderlayBlitCount++);
                 continue;
             }
             blits[blit_count] = sCssPanelSurface[i];
@@ -1975,7 +1975,7 @@ static u32 ndsMenuShellCssCheckLevelArrows(void)
                 }
                 else
                 {
-                    gNdsMenuShellCssHandicapChangeCount++;
+                    NDS_DIAG(gNdsMenuShellCssHandicapChangeCount++);
                 }
                 ndsMenuShellCssPopulate();
             }
@@ -1993,7 +1993,7 @@ static u32 ndsMenuShellCssCheckLevelArrows(void)
                 }
                 else
                 {
-                    gNdsMenuShellCssHandicapChangeCount++;
+                    NDS_DIAG(gNdsMenuShellCssHandicapChangeCount++);
                 }
                 ndsMenuShellCssPopulate();
             }
@@ -2220,7 +2220,7 @@ static u32 ndsMenuShellCssCheckPreviewCostume(void)
         else
         {
             ndsMenuShellCssCue(NDS_CSS_FGM_SCROLL2);
-            gNdsMenuShellCssCostumeCycleCount++;
+            NDS_DIAG(gNdsMenuShellCssCostumeCycleCount++);
         }
         return TRUE;
     }

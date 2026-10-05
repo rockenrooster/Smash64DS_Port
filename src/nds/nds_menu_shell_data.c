@@ -139,7 +139,7 @@ static void ndsMenuShellDataRefresh(void)
                 return;
             }
             sMenuDataRowSurface[row] = want;
-            gNdsMenuShellDataBlitCount++;
+            NDS_DIAG(gNdsMenuShellDataBlitCount++);
         }
     }
 }

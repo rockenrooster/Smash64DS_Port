@@ -283,7 +283,7 @@ void ndsMNMapsRunSelectVSBattleProbe(void)
     }
 
     gcEjectAll();
-    gNdsMapsSelectTransitionCleanupCount++;
+    NDS_DIAG(gNdsMapsSelectTransitionCleanupCount++);
     mask |= (1u << 7);
 
     gNdsMapsSelectTransitionSelectedSlot = (u32)sMNMapsCursorSlot;

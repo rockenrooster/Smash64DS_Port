@@ -1115,7 +1115,7 @@ static void ndsRelocAnimDirBuild(void)
                 ndsRelocAnimDirNote(asset_id, file_id);
             }
         }
-        gNdsRelocAnimDirFiles++;
+        NDS_DIAG(gNdsRelocAnimDirFiles++);
         file_id++;
     }
     gNdsRelocAnimDirRuns = sNdsRelocAnimDirRunCount;
@@ -1138,7 +1138,7 @@ static int ndsRelocAnimDirLookup(u32 asset_id)
 
         if (delta < run->count)
         {
-            gNdsRelocAnimDirHits++;
+            NDS_DIAG(gNdsRelocAnimDirHits++);
             return (int)(run->nitro_first + delta);
         }
     }
@@ -1852,7 +1852,7 @@ s32 ndsRelocAssetLoadFighterStreamClip(u32 asset_id, void *dst,
                 (u32)tickGetCount() - read_start;
         }
         gNdsRelocAssetFighterStreamReads++;
-        gNdsRelocAssetFighterStreamReadBytes += entry.size;
+        NDS_DIAG(gNdsRelocAssetFighterStreamReadBytes += entry.size);
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP && \
     NDS_TICK_HUD && !NDS_TICK_HUD_SRC_SPLIT
         /* LAB: motion reads per frame, in the SPHD column (unused without
@@ -1980,9 +1980,9 @@ s32 ndsRelocAssetReadFighterStreamClipSpan(u32 asset_id, void *dst, u32 span)
         gNdsRelocAssetFighterStreamFailures++;
         return FALSE;
     }
-    gNdsRelocAssetFighterStreamReadTicks64 += (u32)tickGetCount() - read_start;
+    NDS_DIAG(gNdsRelocAssetFighterStreamReadTicks64 += (u32)tickGetCount() - read_start);
     gNdsRelocAssetFighterStreamReads++;
-    gNdsRelocAssetFighterStreamReadBytes += size;
+    NDS_DIAG(gNdsRelocAssetFighterStreamReadBytes += size);
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP && \
     NDS_TICK_HUD && !NDS_TICK_HUD_SRC_SPLIT
     /* LAB: motion reads per frame (SPHD), as the exact-range reader counts. */
@@ -2167,14 +2167,14 @@ static s32 ndsRelocAssetLoadIntoZeroedHeapUnlocked(u32 asset_id, void *dst, u32 
         }
         for (retry = 0u; (retry < 4u) && (file == NULL); retry++)
         {
-            gNdsRelocAssetOpenRetryCount++;
+            NDS_DIAG(gNdsRelocAssetOpenRetryCount++);
             file = fopen(entry->path, "rb");
         }
         if (file == NULL)
         {
             return FALSE;
         }
-        gNdsRelocAssetOpenRetrySuccessCount++;
+        NDS_DIAG(gNdsRelocAssetOpenRetrySuccessCount++);
     }
     /* K0 line 2, "get_fat / f_lseek". The open walks the directory and seats
      * the cluster chain; the fseek below is the f_lseek proper. Both are marked

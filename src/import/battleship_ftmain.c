@@ -86,7 +86,7 @@ static sb32 ndsFTMainCheckSetFighterColAnimID(GObj *fighter_gobj,
          (fp->status_id == nFTKirbyStatusCopyFoxSpecialAirN)) &&
         (colanim_id == nGMColAnimFighterFoxSpecialHiStart))
     {
-        gNdsKirbyCopyFoxColAnimSuppressCount++;
+        NDS_DIAG(gNdsKirbyCopyFoxColAnimSuppressCount++);
         return FALSE;
     }
     if ((fp != NULL) &&
@@ -385,7 +385,7 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
     }
     else
     {
-        gNdsFtStatusFlatKept++;
+        NDS_DIAG(gNdsFtStatusFlatKept++);
     }
     /* The renderer caches (display-contract memo, draw plan, lean instance)
      * key on the drawn DObjs and their DLs. A status change moves those only
@@ -403,7 +403,7 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
     }
     else
     {
-        gNdsFtStatusRenderKept++;
+        NDS_DIAG(gNdsFtStatusRenderKept++);
     }
 #if NDS_P2_HURTBOX_REJECT
     /* The same topology change retires the hurtbox reject's cached worlds

@@ -116,7 +116,7 @@ static void ndsTaskmanElasticMakeRoom(uintptr_t top)
         return;
     }
     sNdsTaskmanElasticBase = sNdsTaskmanElasticYield((u8 *)top);
-    gNdsTaskmanElasticYields++;
+    NDS_DIAG(gNdsTaskmanElasticYields++);
     gNdsTaskmanElasticYieldBytes +=
         (u32)((uintptr_t)sNdsTaskmanElasticBase - (uintptr_t)base);
     if ((uintptr_t)sNdsTaskmanElasticBase >=

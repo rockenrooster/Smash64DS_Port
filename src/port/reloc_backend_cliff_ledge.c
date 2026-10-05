@@ -234,7 +234,7 @@ static void ndsStageMPCliffCatchFloorLoopRunProbe(void)
 
     if (gNdsStageMPCliffCatchFloorLoopCliffCatchSetStatusCount > 0u)
     {
-        gNdsStageMPCliffCatchFloorLoopPhysicsCount++;
+        NDS_DIAG(gNdsStageMPCliffCatchFloorLoopPhysicsCount++);
     }
     gNdsStageMPCliffCatchFloorLoopStatusAfter = (u32)fp->status_id;
     gNdsStageMPCliffCatchFloorLoopMotionAfter = (u32)fp->motion_id;
@@ -1026,7 +1026,7 @@ static void ndsStageMPCliffWaitDamageLoopRunProbe(void)
         (fp->fighter_gobj == NULL) ||
         (cliff_id < 0))
     {
-        gNdsStageMPCliffWaitDamageLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPCliffWaitDamageLoopUnsafeCount++);
         return;
     }
 
@@ -1034,7 +1034,7 @@ static void ndsStageMPCliffWaitDamageLoopRunProbe(void)
     root = DObjGetStruct(fighter_gobj);
     if (root == NULL)
     {
-        gNdsStageMPCliffWaitDamageLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPCliffWaitDamageLoopUnsafeCount++);
         return;
     }
     if (fp->joints[nFTPartsJointTopN] == NULL)
@@ -1550,7 +1550,7 @@ static void ndsStageMPCliffWaitDamageLoopRunProbe(void)
     }
     else
     {
-        gNdsStageMPCliffWaitDamageLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPCliffWaitDamageLoopUnsafeCount++);
     }
 }
 
@@ -2385,11 +2385,11 @@ static void ndsStageMPPassiveLoopRunStableFrames(GObj *fighter_gobj,
         {
             if (is_passive_stand != FALSE)
             {
-                gNdsStageMPPassiveLoopPassiveStandStableFrameCount++;
+                NDS_DIAG(gNdsStageMPPassiveLoopPassiveStandStableFrameCount++);
             }
             else
             {
-                gNdsStageMPPassiveLoopPassiveStableFrameCount++;
+                NDS_DIAG(gNdsStageMPPassiveLoopPassiveStableFrameCount++);
             }
         }
     }
@@ -2833,7 +2833,7 @@ static void ndsStageMPPassiveLoopRunAppealGuardProof(GObj *fighter_gobj,
     fp->input.pl.button_tap = fp->input.button_mask_l;
 
     sNdsStageMPPassiveLoopAppealActive = TRUE;
-    gNdsStageMPPassiveLoopAppealCheckCount++;
+    NDS_DIAG(gNdsStageMPPassiveLoopAppealCheckCount++);
     result = ftCommonAppealCheckInterruptCommon(fighter_gobj);
     sNdsStageMPPassiveLoopAppealActive = FALSE;
     if ((result != FALSE) &&
@@ -2993,7 +2993,7 @@ static void ndsStageMPPassiveLoopRunAppealProof(GObj *fighter_gobj,
         (u32)fp->input.button_mask_l;
 
     sNdsStageMPPassiveLoopAppealActive = TRUE;
-    gNdsStageMPPassiveLoopAppealCheckCount++;
+    NDS_DIAG(gNdsStageMPPassiveLoopAppealCheckCount++);
     result = ftCommonAppealCheckInterruptCommon(fighter_gobj);
     sNdsStageMPPassiveLoopAppealActive = FALSE;
 
@@ -4655,7 +4655,7 @@ static void ndsStageMPPassiveLoopRunWallDamageProof(GObj *fighter_gobj,
     gNdsStageMPPassiveLoopWallDamageWallLineID =
         source_wall_line_id;
 
-    gNdsStageMPPassiveLoopWallDamageCheckCount++;
+    NDS_DIAG(gNdsStageMPPassiveLoopWallDamageCheckCount++);
     sNdsStageMPPassiveLoopWallDamageActive = TRUE;
     result = ndsBaseFTCommonWallDamageCheckGoto(fighter_gobj);
     sNdsStageMPPassiveLoopWallDamageActive = FALSE;
@@ -6763,7 +6763,7 @@ static void ndsFighterMarioFoxStageMPLiveHitStatusLoopLagUpdate(
         (fp == &sNdsFighterStructPool
             [gNdsStageMPLiveHitStatusLoopVictimSlot]))
     {
-        gNdsStageMPLiveHitStatusLoopLagUpdateCount++;
+        NDS_DIAG(gNdsStageMPLiveHitStatusLoopLagUpdateCount++);
     }
     ftCommonDamageCommonProcLagUpdate(fighter_gobj);
 }
@@ -6778,7 +6778,7 @@ static void ndsFighterMarioFoxStageMPLiveHitStatusLoopLagEnd(
         (fp == &sNdsFighterStructPool
             [gNdsStageMPLiveHitStatusLoopVictimSlot]))
     {
-        gNdsStageMPLiveHitStatusLoopLagEndCount++;
+        NDS_DIAG(gNdsStageMPLiveHitStatusLoopLagEndCount++);
     }
 }
 
@@ -6798,7 +6798,7 @@ static sb32 ndsFighterMarioFoxStageMPLiveHitStatusLoopRunHitlagProbe(
     if ((victim_slot >= 2u) ||
         (gNdsStageMPLiveHitStatusLoopHitlagStart == 0u))
     {
-        gNdsStageMPLiveHitStatusLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPLiveHitStatusLoopUnsafeCount++);
         return FALSE;
     }
 
@@ -6806,7 +6806,7 @@ static sb32 ndsFighterMarioFoxStageMPLiveHitStatusLoopRunHitlagProbe(
     fighter_gobj = fp->fighter_gobj;
     if (fighter_gobj == NULL)
     {
-        gNdsStageMPLiveHitStatusLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPLiveHitStatusLoopUnsafeCount++);
         return FALSE;
     }
 
@@ -6913,7 +6913,7 @@ static sb32 ndsFighterMarioFoxStageMPLiveHitStatusLoopRunCallbackProbe(
     if ((victim_slot >= 2u) ||
         (gNdsStageMPLiveHitStatusLoopStatusAfter == 0u))
     {
-        gNdsStageMPLiveHitStatusLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPLiveHitStatusLoopUnsafeCount++);
         return FALSE;
     }
 
@@ -6921,7 +6921,7 @@ static sb32 ndsFighterMarioFoxStageMPLiveHitStatusLoopRunCallbackProbe(
     fighter_gobj = fp->fighter_gobj;
     if ((fighter_gobj == NULL) || (fp->attr == NULL))
     {
-        gNdsStageMPLiveHitStatusLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPLiveHitStatusLoopUnsafeCount++);
         return FALSE;
     }
 
@@ -9141,7 +9141,7 @@ void ndsFighterMarioFoxStageMPLiveHitDamageLoopFinalize(void)
     }
     else
     {
-        gNdsStageMPLiveHitDamageLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPLiveHitDamageLoopUnsafeCount++);
     }
 
     if (gNdsStageMPLiveHitDamageLoopBaseDashDamageSeen != 0u)
@@ -9759,7 +9759,7 @@ static void ndsStageMPDownWaitLoopRunDownStandCallbacks(GObj *fighter_gobj,
             (fp->motion_id == nFTCommonMotionDownStandU) &&
             (fp->ga == nMPKineticsGround))
         {
-            gNdsStageMPDownWaitLoopDownStandStableFrameCount++;
+            NDS_DIAG(gNdsStageMPDownWaitLoopDownStandStableFrameCount++);
         }
         else
         {
@@ -10029,15 +10029,15 @@ static void ndsStageMPDownWaitLoopRunRecoveryCallbacks(GObj *fighter_gobj,
         {
             if (is_attack != FALSE)
             {
-                gNdsStageMPDownWaitLoopAttackStableFrameCount++;
+                NDS_DIAG(gNdsStageMPDownWaitLoopAttackStableFrameCount++);
             }
             else if (is_roll_forward != FALSE)
             {
-                gNdsStageMPDownWaitLoopRollForwardStableFrameCount++;
+                NDS_DIAG(gNdsStageMPDownWaitLoopRollForwardStableFrameCount++);
             }
             else
             {
-                gNdsStageMPDownWaitLoopRollBackStableFrameCount++;
+                NDS_DIAG(gNdsStageMPDownWaitLoopRollBackStableFrameCount++);
             }
         }
         else
@@ -11939,8 +11939,8 @@ static void ndsStageMPCliffLiveLoopGObjProc(GObj *fighter_gobj)
         gNdsStageMPCliffLiveLoopUnsafeCount++;
         return;
     }
-    gNdsStageMPCliffLiveLoopCallbackCount++;
-    gNdsStageMPCliffLiveLoopGObjProcessRunCount++;
+    NDS_DIAG(gNdsStageMPCliffLiveLoopCallbackCount++);
+    NDS_DIAG(gNdsStageMPCliffLiveLoopGObjProcessRunCount++);
 
     switch (sNdsStageMPCliffLiveLoopPhase)
     {
@@ -11951,7 +11951,7 @@ static void ndsStageMPCliffLiveLoopGObjProc(GObj *fighter_gobj)
             return;
         }
         ndsStageMPCliffLiveLoopRecordStart(fp);
-        gNdsStageMPCliffLiveLoopWaitUpdateCount++;
+        NDS_DIAG(gNdsStageMPCliffLiveLoopWaitUpdateCount++);
         sNdsStageMPCliffLiveLoopWaitUpdateActive = TRUE;
         fp->proc_update(fighter_gobj);
         sNdsStageMPCliffLiveLoopWaitUpdateActive = FALSE;
@@ -12020,7 +12020,7 @@ static void ndsStageMPCliffLiveLoopGObjProc(GObj *fighter_gobj)
         }
         fighter_gobj->anim_frame = 0.0F;
         fp->anim_frame = 0.0F;
-        gNdsStageMPCliffLiveLoopQuick1UpdateCount++;
+        NDS_DIAG(gNdsStageMPCliffLiveLoopQuick1UpdateCount++);
         sNdsStageMPCliffLiveLoopQuick1UpdateActive = TRUE;
         fp->proc_update(fighter_gobj);
         sNdsStageMPCliffLiveLoopQuick1UpdateActive = FALSE;
@@ -12046,11 +12046,11 @@ static void ndsStageMPCliffLiveLoopGObjProc(GObj *fighter_gobj)
         sNdsStageMPCliffLiveLoopCommon2UpdateActive = TRUE;
         fp->proc_update(fighter_gobj);
         sNdsStageMPCliffLiveLoopCommon2UpdateActive = FALSE;
-        gNdsStageMPCliffLiveLoopCommon2PhysicsCount++;
+        NDS_DIAG(gNdsStageMPCliffLiveLoopCommon2PhysicsCount++);
         sNdsStageMPCliffLiveLoopCommon2PhysicsActive = TRUE;
         fp->proc_physics(fighter_gobj);
         sNdsStageMPCliffLiveLoopCommon2PhysicsActive = FALSE;
-        gNdsStageMPCliffLiveLoopCommon2MapCount++;
+        NDS_DIAG(gNdsStageMPCliffLiveLoopCommon2MapCount++);
         sNdsStageMPCliffLiveLoopCommon2MapActive = TRUE;
         fp->proc_map(fighter_gobj);
         sNdsStageMPCliffLiveLoopCommon2MapActive = FALSE;
@@ -13530,7 +13530,7 @@ static void ndsStageMPCliffClimbCommon2LoopRunProbe(void)
         (fp->coll_data.cliff_id < 0) ||
         (fp->coll_data.floor_line_id != fp->coll_data.cliff_id))
     {
-        gNdsStageMPCliffClimbCommon2LoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPCliffClimbCommon2LoopUnsafeCount++);
         return;
     }
 
@@ -13545,7 +13545,7 @@ static void ndsStageMPCliffClimbCommon2LoopRunProbe(void)
         (gNdsStageMPCliffClimbCommon2LoopProcPhysicsSet == 0u) ||
         (gNdsStageMPCliffClimbCommon2LoopProcMapSet == 0u))
     {
-        gNdsStageMPCliffClimbCommon2LoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPCliffClimbCommon2LoopUnsafeCount++);
         return;
     }
 
@@ -14322,7 +14322,7 @@ static void ndsStageMPCliffCommon2LoopRunProbe(void)
         (fp->coll_data.cliff_id < 0) ||
         (fp->coll_data.floor_line_id != fp->coll_data.cliff_id))
     {
-        gNdsStageMPCliffCommon2LoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPCliffCommon2LoopUnsafeCount++);
         return;
     }
 
@@ -14337,7 +14337,7 @@ static void ndsStageMPCliffCommon2LoopRunProbe(void)
         (gNdsStageMPCliffCommon2LoopProcPhysicsSet == 0u) ||
         (gNdsStageMPCliffCommon2LoopProcMapSet == 0u))
     {
-        gNdsStageMPCliffCommon2LoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPCliffCommon2LoopUnsafeCount++);
         return;
     }
 
@@ -14593,7 +14593,7 @@ static void ndsStageMPCliffEscapeActionLoopRunProbe(void)
     if ((ndsFighterStructIsPoolPointer(fp) == FALSE) ||
         (fp->fighter_gobj == NULL))
     {
-        gNdsStageMPCliffEscapeActionLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPCliffEscapeActionLoopUnsafeCount++);
         return;
     }
 
@@ -14629,7 +14629,7 @@ static void ndsStageMPCliffEscapeActionLoopRunProbe(void)
         (fp->ga != nMPKineticsGround) ||
         (fp->coll_data.cliff_id < 0))
     {
-        gNdsStageMPCliffEscapeActionLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPCliffEscapeActionLoopUnsafeCount++);
         return;
     }
 
@@ -14692,7 +14692,7 @@ static void ndsStageMPCliffEscapeActionLoopRunProbe(void)
         (fp->status_vars.common.cliffmotion.status_id !=
             nFTCommonCliffKindEscapeQuick))
     {
-        gNdsStageMPCliffEscapeActionLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPCliffEscapeActionLoopUnsafeCount++);
         return;
     }
 
@@ -14725,7 +14725,7 @@ static void ndsStageMPCliffEscapeActionLoopRunProbe(void)
         (fp->motion_id != nFTCommonMotionCliffEscapeQuick1) ||
         (fp->proc_update != ftCommonCliffEscapeQuick1ProcUpdate))
     {
-        gNdsStageMPCliffEscapeActionLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPCliffEscapeActionLoopUnsafeCount++);
         return;
     }
 
@@ -14989,7 +14989,7 @@ static void ndsStageMPCliffEscapeCommon2LoopRunProbe(void)
         (fp->coll_data.cliff_id < 0) ||
         (fp->coll_data.floor_line_id != fp->coll_data.cliff_id))
     {
-        gNdsStageMPCliffEscapeCommon2LoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPCliffEscapeCommon2LoopUnsafeCount++);
         return;
     }
 
@@ -15004,7 +15004,7 @@ static void ndsStageMPCliffEscapeCommon2LoopRunProbe(void)
         (gNdsStageMPCliffEscapeCommon2LoopProcPhysicsSet == 0u) ||
         (gNdsStageMPCliffEscapeCommon2LoopProcMapSet == 0u))
     {
-        gNdsStageMPCliffEscapeCommon2LoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPCliffEscapeCommon2LoopUnsafeCount++);
         return;
     }
 
@@ -15769,7 +15769,7 @@ void ndsFighterMarioFoxGCDrawAllLoopPrepare(void)
         if ((ndsFighterStructIsPoolPointer(fp) == FALSE) ||
             (fighter_gobj == NULL) || (root == NULL))
         {
-            gNdsFighterGCDrawAllLoopProcessAttachEscapeCount++;
+            NDS_DIAG(gNdsFighterGCDrawAllLoopProcessAttachEscapeCount++);
             continue;
         }
         fighter_gobj->flags |= GOBJ_FLAG_NORUN;
@@ -15781,7 +15781,7 @@ void ndsFighterMarioFoxGCDrawAllLoopPrepare(void)
                              3);
         if (sNdsFighterGCDrawAllLoopProcesses[i] == NULL)
         {
-            gNdsFighterGCDrawAllLoopProcessAttachEscapeCount++;
+            NDS_DIAG(gNdsFighterGCDrawAllLoopProcessAttachEscapeCount++);
         }
         else if (i == 0u)
         {
@@ -15789,7 +15789,7 @@ void ndsFighterMarioFoxGCDrawAllLoopPrepare(void)
         }
         else
         {
-            gNdsFighterGCDrawAllLoopP1ProcessAttachCount++;
+            NDS_DIAG(gNdsFighterGCDrawAllLoopP1ProcessAttachCount++);
         }
     }
 
@@ -15825,7 +15825,7 @@ void ndsFighterMarioFoxGCDrawAllLoopRunVSBattleUpdate(void)
     }
     ndsControllerPlaybackCommitFrame();
     syControllerReadDeviceData();
-    gNdsFighterGCDrawAllLoopSYReadCount++;
+    NDS_DIAG(gNdsFighterGCDrawAllLoopSYReadCount++);
     syControllerUpdateGlobalData();
     gNdsFighterGCDrawAllLoopSYUpdateCount++;
 
@@ -15877,12 +15877,12 @@ void ndsFighterMarioFoxGCDrawAllLoopRunVSBattleUpdate(void)
             (gNdsFighterGCDrawAllLoopP1GAFinal !=
                 (u32)nMPKineticsGround))
         {
-            gNdsFighterGCDrawAllLoopGADriftCount++;
+            NDS_DIAG(gNdsFighterGCDrawAllLoopGADriftCount++);
         }
         if ((gNdsFighterGCDrawAllLoopP0FloorOK != 1u) ||
             (gNdsFighterGCDrawAllLoopP1FloorOK != 1u))
         {
-            gNdsFighterGCDrawAllLoopRootYDriftCount++;
+            NDS_DIAG(gNdsFighterGCDrawAllLoopRootYDriftCount++);
         }
     }
 
@@ -16213,7 +16213,7 @@ static void ndsFighterLivePreviewPauseProofOwnedProcesses(void)
         if (sNdsFighterGCRunAllLoopProcesses[i] != NULL)
         {
             gcPauseGObjProcess(sNdsFighterGCRunAllLoopProcesses[i]);
-            gNdsFighterLivePreviewOldProcessPauseCount++;
+            NDS_DIAG(gNdsFighterLivePreviewOldProcessPauseCount++);
         }
     }
 }
@@ -16231,14 +16231,14 @@ static void ndsFighterLivePreviewPauseNonTargetGObjVisitor(GObj *gobj,
     }
     if ((gobj == target0) || (gobj == target1))
     {
-        gNdsFighterLivePreviewTargetProcessPreserveCount++;
+        NDS_DIAG(gNdsFighterLivePreviewTargetProcessPreserveCount++);
         return;
     }
-    gNdsFighterLivePreviewNonTargetGObjVisitCount++;
+    NDS_DIAG(gNdsFighterLivePreviewNonTargetGObjVisitCount++);
     if (gobj->gobjproc_head != NULL)
     {
         gcPauseGObjProcessAll(gobj);
-        gNdsFighterLivePreviewNonTargetProcessPauseCount++;
+        NDS_DIAG(gNdsFighterLivePreviewNonTargetProcessPauseCount++);
     }
     gobj->flags |= GOBJ_FLAG_NORUN;
 }
@@ -16276,11 +16276,11 @@ static void ndsFighterLivePreviewApplyFromSYController(u32 slot,
         fp->tap_stick_x = 0u;
         if (slot == 0u)
         {
-            gNdsFighterLivePreviewP0DashTapEligibleCount++;
+            NDS_DIAG(gNdsFighterLivePreviewP0DashTapEligibleCount++);
         }
         else
         {
-            gNdsFighterLivePreviewP1DashTapEligibleCount++;
+            NDS_DIAG(gNdsFighterLivePreviewP1DashTapEligibleCount++);
         }
     }
     else if (fp->tap_stick_x < FTINPUT_STICKBUFFER_TICS_MAX)
@@ -16328,19 +16328,19 @@ static void ndsFighterLivePreviewApplyFromSYController(u32 slot,
         gNdsFighterLivePreviewP0LastStickY = controller->stick_range.y;
         if ((controller->button_tap & U_CBUTTONS) != 0u)
         {
-            gNdsFighterLivePreviewP0JumpButtonTapCount++;
+            NDS_DIAG(gNdsFighterLivePreviewP0JumpButtonTapCount++);
         }
     }
     else
     {
-        gNdsFighterLivePreviewP1ControllerToFTInputCount++;
+        NDS_DIAG(gNdsFighterLivePreviewP1ControllerToFTInputCount++);
         gNdsFighterLivePreviewP1ButtonTapMask |= controller->button_tap;
         gNdsFighterLivePreviewP1ButtonHoldMask |= controller->button_hold;
         gNdsFighterLivePreviewP1LastStickX = controller->stick_range.x;
         gNdsFighterLivePreviewP1LastStickY = controller->stick_range.y;
         if ((controller->button_tap & U_CBUTTONS) != 0u)
         {
-            gNdsFighterLivePreviewP1JumpButtonTapCount++;
+            NDS_DIAG(gNdsFighterLivePreviewP1JumpButtonTapCount++);
         }
     }
 }
@@ -16367,11 +16367,11 @@ static void ndsFighterLivePreviewRecordState(u32 slot, FTStruct *fp,
     }
     else if (NDS_DEV_LIVE_INPUT_PREVIEW == 0)
     {
-        gNdsFighterLivePreviewUnexpectedStatusCount++;
+        NDS_DIAG(gNdsFighterLivePreviewUnexpectedStatusCount++);
     }
     if (previous_ga != fp->ga)
     {
-        gNdsFighterLivePreviewGADriftCount++;
+        NDS_DIAG(gNdsFighterLivePreviewGADriftCount++);
     }
     if (slot == 0u)
     {
@@ -16393,7 +16393,7 @@ static void ndsFighterLivePreviewRunSlotProcess(u32 slot, FTStruct *fp)
 
     if ((slot >= 2u) || (fp == NULL) || (fp->fighter_gobj == NULL))
     {
-        gNdsFighterLivePreviewProcessAttachEscapeCount++;
+        NDS_DIAG(gNdsFighterLivePreviewProcessAttachEscapeCount++);
         return;
     }
     state = &sNdsFighterLivePreviewStates[slot];
@@ -16423,18 +16423,18 @@ static void ndsFighterLivePreviewRunSlotProcess(u32 slot, FTStruct *fp)
         gNdsFighterLivePreviewP0FrameCount = state->total_frames;
         gNdsFighterLivePreviewP0Completed = state->completed;
         gNdsFighterLivePreviewP0InterruptCount++;
-        gNdsFighterLivePreviewP0PhysicsCount++;
-        gNdsFighterLivePreviewP0IntegrateCount++;
-        gNdsFighterLivePreviewP0MapCount++;
+        NDS_DIAG(gNdsFighterLivePreviewP0PhysicsCount++);
+        NDS_DIAG(gNdsFighterLivePreviewP0IntegrateCount++);
+        NDS_DIAG(gNdsFighterLivePreviewP0MapCount++);
     }
     else
     {
         gNdsFighterLivePreviewP1FrameCount = state->total_frames;
         gNdsFighterLivePreviewP1Completed = state->completed;
-        gNdsFighterLivePreviewP1InterruptCount++;
-        gNdsFighterLivePreviewP1PhysicsCount++;
-        gNdsFighterLivePreviewP1IntegrateCount++;
-        gNdsFighterLivePreviewP1MapCount++;
+        NDS_DIAG(gNdsFighterLivePreviewP1InterruptCount++);
+        NDS_DIAG(gNdsFighterLivePreviewP1PhysicsCount++);
+        NDS_DIAG(gNdsFighterLivePreviewP1IntegrateCount++);
+        NDS_DIAG(gNdsFighterLivePreviewP1MapCount++);
     }
 }
 
@@ -16450,18 +16450,18 @@ static void ndsFighterLivePreviewGObjProc(GObj *fighter_gobj)
     if ((slot >= 2u) || (fp == NULL) ||
         (ndsFighterStructIsPoolPointer(fp) == FALSE))
     {
-        gNdsFighterLivePreviewProcessAttachEscapeCount++;
+        NDS_DIAG(gNdsFighterLivePreviewProcessAttachEscapeCount++);
         return;
     }
     if (slot == 0u)
     {
-        gNdsFighterLivePreviewP0ProcCallbackCount++;
-        gNdsFighterLivePreviewP0GObjProcessRunCount++;
+        NDS_DIAG(gNdsFighterLivePreviewP0ProcCallbackCount++);
+        NDS_DIAG(gNdsFighterLivePreviewP0GObjProcessRunCount++);
     }
     else
     {
-        gNdsFighterLivePreviewP1ProcCallbackCount++;
-        gNdsFighterLivePreviewP1GObjProcessRunCount++;
+        NDS_DIAG(gNdsFighterLivePreviewP1ProcCallbackCount++);
+        NDS_DIAG(gNdsFighterLivePreviewP1GObjProcessRunCount++);
     }
     ndsFighterLivePreviewRunSlotProcess(slot, fp);
 }
@@ -16645,7 +16645,7 @@ void ndsFighterMarioFoxLivePreviewPrepare(void)
         if ((ndsFighterStructIsPoolPointer(fp) == FALSE) ||
             (fighter_gobj == NULL) || (root == NULL))
         {
-            gNdsFighterLivePreviewProcessAttachEscapeCount++;
+            NDS_DIAG(gNdsFighterLivePreviewProcessAttachEscapeCount++);
             continue;
         }
         fighter_gobj->flags &= ~GOBJ_FLAG_NORUN;
@@ -16658,7 +16658,7 @@ void ndsFighterMarioFoxLivePreviewPrepare(void)
                              3);
         if (sNdsFighterLivePreviewProcesses[i] == NULL)
         {
-            gNdsFighterLivePreviewProcessAttachEscapeCount++;
+            NDS_DIAG(gNdsFighterLivePreviewProcessAttachEscapeCount++);
         }
         else if (i == 0u)
         {
@@ -16666,7 +16666,7 @@ void ndsFighterMarioFoxLivePreviewPrepare(void)
         }
         else
         {
-            gNdsFighterLivePreviewP1ProcessAttachCount++;
+            NDS_DIAG(gNdsFighterLivePreviewP1ProcessAttachCount++);
         }
     }
 
@@ -16696,9 +16696,9 @@ void ndsFighterMarioFoxLivePreviewRunVSBattleUpdate(void)
     gNdsFighterLivePreviewVSBattleUpdateCount++;
 
     syControllerReadDeviceData();
-    gNdsFighterLivePreviewSYReadCount++;
+    NDS_DIAG(gNdsFighterLivePreviewSYReadCount++);
     syControllerUpdateGlobalData();
-    gNdsFighterLivePreviewSYUpdateCount++;
+    NDS_DIAG(gNdsFighterLivePreviewSYUpdateCount++);
     gNdsFighterLivePreviewLiveReadAfter = gNdsControllerLiveReadCount;
     gNdsFighterLivePreviewPlaybackReadAfter =
         gNdsControllerPlaybackReadCount;
@@ -16714,7 +16714,7 @@ void ndsFighterMarioFoxLivePreviewRunVSBattleUpdate(void)
     sNdsFighterLivePreviewActive = TRUE;
     gcRunAll();
     sNdsFighterLivePreviewActive = FALSE;
-    gNdsFighterLivePreviewRunAllCount++;
+    NDS_DIAG(gNdsFighterLivePreviewRunAllCount++);
 
     for (i = 0u; i < 2u; i++)
     {

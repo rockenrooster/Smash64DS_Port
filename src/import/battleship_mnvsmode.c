@@ -294,7 +294,7 @@ void ndsMNVSModeRunStartTransitionProbe(void)
         gNdsVSModeOriginalButtonMask;
 
     gcEjectAll();
-    gNdsVSModeStartTransitionCleanupCount++;
+    NDS_DIAG(gNdsVSModeStartTransitionCleanupCount++);
     mask |= (1u << 7);
 
     gNdsVSModeStartTransitionMask = mask;

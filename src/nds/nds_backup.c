@@ -262,7 +262,7 @@ static s32 ndsBackupFlushUnlocked(void)
         sNdsBackupPath = sNdsBackupPaths[i];
         sNdsBackupPrimaryValid = 1u;
         sNdsBackupTempValid = 0u;
-        gNdsBackupWriteCount++;
+        NDS_DIAG(gNdsBackupWriteCount++);
         return TRUE;
     }
     gNdsBackupWriteFailCount++;

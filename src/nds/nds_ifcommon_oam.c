@@ -1838,7 +1838,7 @@ void ndsTask39HitSparkSpawn(const Vec3f *pos, s32 player, s32 size,
     if ((pos == NULL) || (sNdsTask39HitSparkGfx == NULL) ||
         (ndsTask39EffectsArenaValid() == FALSE))
     {
-        gNdsTask39FxHitSparkDropCount++;
+        NDS_DIAG(gNdsTask39FxHitSparkDropCount++);
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
         sNdsTask39FxSpawnTickAccum += cpuGetTiming() - start;
 #endif
@@ -1854,7 +1854,7 @@ void ndsTask39HitSparkSpawn(const Vec3f *pos, s32 player, s32 size,
     }
     if (spark == NULL)
     {
-        gNdsTask39FxHitSparkDropCount++;
+        NDS_DIAG(gNdsTask39FxHitSparkDropCount++);
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
         sNdsTask39FxSpawnTickAccum += cpuGetTiming() - start;
 #endif
@@ -1902,7 +1902,7 @@ void ndsTask39HitSparkSpawn(const Vec3f *pos, s32 player, s32 size,
         if (spark->scale > NDS_TASK39_HIT_SPARK_SCALE_MAX)
         {
             spark->scale = NDS_TASK39_HIT_SPARK_SCALE_MAX;
-            gNdsTask39FxHitSparkScaleClampCount++;
+            NDS_DIAG(gNdsTask39FxHitSparkScaleClampCount++);
         }
     }
     gNdsTask39FxHitSparkSpawnCount++;
@@ -2435,14 +2435,14 @@ s32 ndsIFCommonNativeOamPrepareAnnouncement(u32 game_set)
                 }
             }
             sNdsIFCommonAnnounceActive = FALSE;
-            gNdsIFCommonEndBakedFailCount++;
+            NDS_DIAG(gNdsIFCommonEndBakedFailCount++);
             gNdsIFCommonNativeOamPrepareFailCount++;
             gNdsIFCommonNativeOamPrepareTicks += cpuGetTiming() - start;
             gNdsIFCommonNativeOamLastFallbackReason =
                 nNDSIFCommonFallbackBadAsset;
             return FALSE;
         }
-        gNdsIFCommonEndBakedDecodeCount++;
+        NDS_DIAG(gNdsIFCommonEndBakedDecodeCount++);
         sNdsIFCommonAnnounceActive = TRUE;
         sNdsIFCommonAnnounceGameSet = game_set;
         gNdsIFCommonNativeOamPrepareTicks += cpuGetTiming() - start;
@@ -2746,7 +2746,7 @@ s32 ndsIFCommonNativeOamBakeEndVariants(u16 *scratch, u16 *code,
                     scratch, NDS_IFCOMMON_END_BANK_BASE, FALSE, TRUE) ==
                 FALSE)
             {
-                gNdsIFCommonEndBakedFailCount++;
+                NDS_DIAG(gNdsIFCommonEndBakedFailCount++);
                 return FALSE;
             }
         }
@@ -2757,13 +2757,13 @@ s32 ndsIFCommonNativeOamBakeEndVariants(u16 *scratch, u16 *code,
             (u16 *)syTaskmanMalloc(words * sizeof(u16), 4u) : NULL;
         if (resident == NULL)
         {
-            gNdsIFCommonEndBakedFailCount++;
+            NDS_DIAG(gNdsIFCommonEndBakedFailCount++);
             return FALSE;
         }
         memcpy(resident, code, words * sizeof(u16));
         sNdsIFCommonEndBaked[game_set] = resident;
         sNdsIFCommonEndBakedWords[game_set] = words;
-        gNdsIFCommonEndBakedBytes += words * sizeof(u16);
+        NDS_DIAG(gNdsIFCommonEndBakedBytes += words * sizeof(u16));
     }
     return TRUE;
 }
@@ -2978,7 +2978,7 @@ static void ndsTask39HitSparksDraw(void)
         }
         if (sNdsIFCommonNextOamID < 0)
         {
-            gNdsTask39FxHitSparkDropCount++;
+            NDS_DIAG(gNdsTask39FxHitSparkDropCount++);
             break;
         }
         pos = spark->pos;
@@ -3005,7 +3005,7 @@ static void ndsTask39HitSparksDraw(void)
         matrix_index = ndsIFCommonMatrixForScale(inverse);
         if (matrix_index < 0)
         {
-            gNdsTask39FxHitSparkDropCount++;
+            NDS_DIAG(gNdsTask39FxHitSparkDropCount++);
             continue;
         }
         if (spark->is_heavy != FALSE)
@@ -3033,7 +3033,7 @@ static void ndsTask39HitSparksDraw(void)
         sNdsIFCommonNextOamID--;
         sNdsIFCommonFrameNeedsCommit = TRUE;
         gNdsIFCommonNativeOamFrameObjectCount++;
-        gNdsTask39FxHitSparkDrawCount++;
+        NDS_DIAG(gNdsTask39FxHitSparkDrawCount++);
     }
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     ndsTask39EffectsAddDrawTicks(cpuGetTiming() - start);

@@ -99,7 +99,7 @@ static s32 ndsMenuShellOnePlayerCssBlit(NdsUiKitSurfaceId surface)
         gNdsOnePlayerCssNativeSurfaceFailCount++;
         return FALSE;
     }
-    gNdsOnePlayerCssNativeStateBlitCount++;
+    NDS_DIAG(gNdsOnePlayerCssNativeStateBlitCount++);
     return TRUE;
 }
 
@@ -122,7 +122,7 @@ static void ndsMenuShellOnePlayerCssApplyLocks(u32 fighter_mask)
         {
             if (ndsMenuShellOnePlayerCssBlit(locked[i].surface) != FALSE)
             {
-                gNdsOnePlayerCssNativeLockedBlitCount++;
+                NDS_DIAG(gNdsOnePlayerCssNativeLockedBlitCount++);
             }
         }
     }
@@ -420,7 +420,7 @@ void ndsMenuShellOnePlayerCssExit(void)
         ndsPlatformClearOriginalSpriteOverlayLayer(FALSE);
         ndsPlatformClearOriginalSpriteOverlayLayer(TRUE);
         sNdsOnePlayerCssActive = FALSE;
-        gNdsOnePlayerCssNativeExitCount++;
+        NDS_DIAG(gNdsOnePlayerCssNativeExitCount++);
     }
     sNdsOnePlayerCssScreen = 0u;
     sNdsOnePlayerCssLastFkind = NDS_ONEP_STATE_NONE;
@@ -606,7 +606,7 @@ void ndsMenuShellBonusCssPresent(const NdsMenuShellBonusCssState *state)
     {
         return;
     }
-    gNdsBonusCssNativePresentCount++;
+    NDS_DIAG(gNdsBonusCssNativePresentCount++);
     gNdsOnePlayerCssNativeVisibleMask |= 1u; /* base */
     sNdsBonusCssBatch.count = 0u;
 
@@ -661,9 +661,9 @@ void ndsMenuShellBonusCssPresent(const NdsMenuShellBonusCssState *state)
         }
         else
         {
-            gNdsOnePlayerCssNativeStateBlitCount += sNdsBonusCssBatch.count;
+            NDS_DIAG(gNdsOnePlayerCssNativeStateBlitCount += sNdsBonusCssBatch.count);
         }
-        gNdsBonusCssNativeBatchCount++;
+        NDS_DIAG(gNdsBonusCssNativeBatchCount++);
     }
 
     /* mnPlayers1PBonusMakeReady (:2574-2657) and its blink (:2554-2571) are

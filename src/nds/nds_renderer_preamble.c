@@ -859,14 +859,14 @@ static void ndsEffectPacketRecord(u32 command_class, const u32 *words,
 
     if (command_class >= (u32)NDS_TASK29_GX_CLASS_COUNT)
     {
-        gNdsEffectPacketFaultCount++;
+        NDS_DIAG(gNdsEffectPacketFaultCount++);
         return;
     }
-    gNdsEffectPacketClassCommands[command_class]++;
-    gNdsEffectPacketClassWords[command_class] += word_count;
+    NDS_DIAG(gNdsEffectPacketClassCommands[command_class]++);
+    NDS_DIAG(gNdsEffectPacketClassWords[command_class] += word_count);
     if (command_class == (u32)NDS_TASK29_GX_VERTEX16)
     {
-        gNdsEffectPacketTotalVertexCommands++;
+        NDS_DIAG(gNdsEffectPacketTotalVertexCommands++);
     }
     bucket = ndsEffectPacketClassBucket(command_class);
     hash = (bucket == 1u) ? gNdsEffectPacketColorHash :
@@ -890,28 +890,28 @@ static void ndsEffectPacketRecord(u32 command_class, const u32 *words,
         }
         else
         {
-            gNdsEffectPacketDroppedWords++;
+            NDS_DIAG(gNdsEffectPacketDroppedWords++);
         }
         hash = (hash ^ word) * 16777619u;
     }
     if (bucket == 1u)
     {
         gNdsEffectPacketColorHash = hash;
-        gNdsEffectPacketColorWords += word_count;
-        gNdsEffectPacketTotalColorWords += word_count;
+        NDS_DIAG(gNdsEffectPacketColorWords += word_count);
+        NDS_DIAG(gNdsEffectPacketTotalColorWords += word_count);
     }
     else if (bucket == 2u)
     {
         gNdsEffectPacketMatrixHash = hash;
-        gNdsEffectPacketMatrixWords += word_count;
-        gNdsEffectPacketTotalMatrixWords += word_count;
-        gNdsEffectPacketTotalMatrixCommands++;
+        NDS_DIAG(gNdsEffectPacketMatrixWords += word_count);
+        NDS_DIAG(gNdsEffectPacketTotalMatrixWords += word_count);
+        NDS_DIAG(gNdsEffectPacketTotalMatrixCommands++);
     }
     else
     {
         gNdsEffectPacketGeomHash = hash;
         gNdsEffectPacketGeomWords += word_count;
-        gNdsEffectPacketTotalGeomWords += word_count;
+        NDS_DIAG(gNdsEffectPacketTotalGeomWords += word_count);
     }
 }
 
@@ -955,7 +955,7 @@ static void ndsEffectPhaseAddVtx(u32 mark)
     if (sNdsEffectPacketArmed != 0u)
     {
         gNdsEffectPhaseVtxTicks += cpuGetTiming() - mark;
-        gNdsEffectPhaseVtxCount++;
+        NDS_DIAG(gNdsEffectPhaseVtxCount++);
     }
 }
 
@@ -964,7 +964,7 @@ static void ndsEffectPhaseAddTri(u32 mark)
     if (sNdsEffectPacketArmed != 0u)
     {
         gNdsEffectPhaseTriTicks += cpuGetTiming() - mark;
-        gNdsEffectPhaseTriCount++;
+        NDS_DIAG(gNdsEffectPhaseTriCount++);
     }
 }
 
@@ -992,7 +992,7 @@ static void ndsEffectPacketSubmitBin(u32 bin)
     case 6u: gNdsEffectSubmitRawSnapshot++; break;
     default: gNdsEffectSubmitCrossMatrix++; break;
     }
-    gNdsEffectSubmitTotal++;
+    NDS_DIAG(gNdsEffectSubmitTotal++);
 }
 
 #define NDS_EFFECT_SUBMIT_BIN(bin) ndsEffectPacketSubmitBin(bin)
@@ -1013,7 +1013,7 @@ void ndsEffectPacketCaptureEnd(void)
 {
     sNdsEffectPacketArmed = 0u;
     gNdsEffectPacketLastWordCount = sNdsEffectPacketCursor;
-    gNdsEffectPacketCaptureCount++;
+    NDS_DIAG(gNdsEffectPacketCaptureCount++);
 }
 #endif
 
@@ -4038,7 +4038,7 @@ ndsFighterPacketRecordPrepare(
         ndsFighterPacketCmd1(REG2ID(MATRIX_CONTROL), (u32)GL_MODELVIEW);
         ndsFighterPacketCmd1(FIFO_TEX_COORD, base);
         rec->hw_texgen = 1u;
-        gNdsFighterPacketHwTexgenGroups++;
+        NDS_DIAG(gNdsFighterPacketHwTexgenGroups++);
     }
     ndsFighterPacketCmd1(REG2ID(GFX_POLY_FORMAT), poly_fmt);
     ndsFighterPacketCmd1(FIFO_BEGIN, (u32)GL_TRIANGLE);
@@ -4895,7 +4895,7 @@ ndsVramCensusTagBirth(int count, const int *names)
         }
         else
         {
-            gNdsVramCensusNameOverflow++;
+            NDS_DIAG(gNdsVramCensusNameOverflow++);
         }
     }
 }
@@ -4916,7 +4916,7 @@ static void __attribute__((noinline)) ndsVramCensusTagUpload(void)
     }
     else
     {
-        gNdsVramCensusNameOverflow++;
+        NDS_DIAG(gNdsVramCensusNameOverflow++);
     }
 }
 
@@ -5280,7 +5280,7 @@ static inline void ndsRendererProfileRecordVertexSaturate(void)
 static inline void ndsRendererProfileRecordNearPlaneTriangleReject(void)
 {
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
-    gNdsRendererProfileNearPlaneTriangleRejectCount++;
+    NDS_DIAG(gNdsRendererProfileNearPlaneTriangleRejectCount++);
 #else
     sNdsRendererRuntimeFrameSummary.near_plane_triangle_reject_count++;
 #endif

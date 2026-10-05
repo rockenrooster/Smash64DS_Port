@@ -156,7 +156,7 @@ ndsRendererExecuteNativeFighterOwnerProduction(
         return FALSE;
     }
 #if NDS_TASK91_DRAW_PHASE_CENSUS
-    gNdsR2ExecPreflightTicks += cpuGetTiming() - e15b_mark;
+    NDS_DIAG(gNdsR2ExecPreflightTicks += cpuGetTiming() - e15b_mark);
 #endif
 #if NDS_FIGHTER_PACKET_LIVE
     if (ndsFighterPacketTryReplay(
@@ -315,7 +315,7 @@ ndsRendererExecuteNativeFighterOwnerProduction(
         stats->command_count += root->source_command_count;
         ndsRendererNativeApplyRootLightPreamble(root, stats);
 #if NDS_TASK91_DRAW_PHASE_CENSUS
-        gNdsR2ExecRootTicks += cpuGetTiming() - e15b_mark;
+        NDS_DIAG(gNdsR2ExecRootTicks += cpuGetTiming() - e15b_mark);
 #endif
 
         for (epoch_offset = 0u;
@@ -378,7 +378,7 @@ ndsRendererExecuteNativeFighterOwnerProduction(
             {
                 u32 e15b_state_end = cpuGetTiming();
 
-                gNdsR2ExecStateTicks += e15b_state_end - e15b_mark;
+                NDS_DIAG(gNdsR2ExecStateTicks += e15b_state_end - e15b_mark);
                 e15b_mark = e15b_state_end;
             }
 #endif
@@ -409,7 +409,7 @@ ndsRendererExecuteNativeFighterOwnerProduction(
                 FALSE,
                 stats, state);
 #if NDS_TASK91_DRAW_PHASE_CENSUS
-            gNdsR2ExecShadeTicks += cpuGetTiming() - e15b_mark;
+            NDS_DIAG(gNdsR2ExecShadeTicks += cpuGetTiming() - e15b_mark);
 #endif
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER

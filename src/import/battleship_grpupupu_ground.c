@@ -409,7 +409,7 @@ void ndsGRPupupuRunSafeUpdateProbe(void)
     mask |= 1u << 1;
 
     grPupupuProcUpdate(gGRCommonStruct.pupupu.map_gobj[0]);
-    gNdsPupupuUpdateTickCount++;
+    NDS_DIAG(gNdsPupupuUpdateTickCount++);
 
     gNdsPupupuUpdateWhispyStatusAfterFirst =
         gGRCommonStruct.pupupu.whispy_status;
@@ -423,7 +423,7 @@ void ndsGRPupupuRunSafeUpdateProbe(void)
     }
 
     grPupupuProcUpdate(gGRCommonStruct.pupupu.map_gobj[0]);
-    gNdsPupupuUpdateTickCount++;
+    NDS_DIAG(gNdsPupupuUpdateTickCount++);
 
     gNdsPupupuUpdateWhispyStatusAfterFinal =
         gGRCommonStruct.pupupu.whispy_status;
@@ -661,7 +661,7 @@ void grCommonSetupInitAll(void)
 
 static GObj *ndsGRNonPupupuGroundStub(void)
 {
-    gNdsPupupuGroundNonPupupuStubCallCount++;
+    NDS_DIAG(gNdsPupupuGroundNonPupupuStubCallCount++);
     return NULL;
 }
 
@@ -708,11 +708,11 @@ GObj *grBonus3MakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 #if !NDS_P2_1P_GAME
 void sc1PBonusStageInitBonus2(void)
 {
-    gNdsPupupuGroundNonPupupuStubCallCount++;
+    NDS_DIAG(gNdsPupupuGroundNonPupupuStubCallCount++);
 }
 
 void sc1PBonusStageMakeBonus1Ground(void)
 {
-    gNdsPupupuGroundNonPupupuStubCallCount++;
+    NDS_DIAG(gNdsPupupuGroundNonPupupuStubCallCount++);
 }
 #endif

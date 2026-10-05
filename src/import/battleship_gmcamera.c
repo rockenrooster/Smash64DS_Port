@@ -525,7 +525,7 @@ NDS_R2_CAM_LEAF s32 ndsR2CamMulQSat(s32 a, s32 b)
 
     if ((wide > (s64)0x7fffffff) || (wide < -(s64)0x80000000))
     {
-        gNdsR2CameraFixedSaturateCount++;
+        NDS_DIAG(gNdsR2CameraFixedSaturateCount++);
         return (wide > 0) ? (s32)0x7fffffff : (s32)0x80000000;
     }
     return (s32)wide;
@@ -554,7 +554,7 @@ NDS_R2_CAM_LEAF s32 ndsR2CamF32ToQ(f32 value)
     }
     if (exponent == 0xffu)
     {
-        gNdsR2CameraFixedDegenerateCount++;
+        NDS_DIAG(gNdsR2CameraFixedDegenerateCount++);
         return 0;
     }
     magnitude = (bits.u & 0x7fffffu) | 0x800000u;
@@ -566,7 +566,7 @@ NDS_R2_CAM_LEAF s32 ndsR2CamF32ToQ(f32 value)
     else if (shift > 7)
     {
         /* |value| >= 2^19, which Q20.12 cannot hold. */
-        gNdsR2CameraFixedSaturateCount++;
+        NDS_DIAG(gNdsR2CameraFixedSaturateCount++);
         magnitude = 0x7fffffffu;
     }
     else
@@ -637,7 +637,7 @@ NDS_R2_CAM_ARM_FN void ndsR2CameraLookAtReflect20p12(
     mag = ndsR2CamSqrt64(((s64)lx * lx) + ((s64)ly * ly) + ((s64)lz * lz));
     if (mag == 0)
     {
-        gNdsR2CameraFixedDegenerateCount++;
+        NDS_DIAG(gNdsR2CameraFixedDegenerateCount++);
         mag = 1;
     }
     lx = -ndsR2CamDivQ(lx, mag);
@@ -650,7 +650,7 @@ NDS_R2_CAM_ARM_FN void ndsR2CameraLookAtReflect20p12(
     mag = ndsR2CamSqrt64(((s64)rx * rx) + ((s64)ry * ry) + ((s64)rz * rz));
     if (mag == 0)
     {
-        gNdsR2CameraFixedDegenerateCount++;
+        NDS_DIAG(gNdsR2CameraFixedDegenerateCount++);
         mag = 1;
     }
     rx = ndsR2CamDivQ(rx, mag);
@@ -663,7 +663,7 @@ NDS_R2_CAM_ARM_FN void ndsR2CameraLookAtReflect20p12(
     mag = ndsR2CamSqrt64(((s64)ux * ux) + ((s64)uy * uy) + ((s64)uz * uz));
     if (mag == 0)
     {
-        gNdsR2CameraFixedDegenerateCount++;
+        NDS_DIAG(gNdsR2CameraFixedDegenerateCount++);
         mag = 1;
     }
     ux = ndsR2CamDivQ(ux, mag);
@@ -902,7 +902,7 @@ static void ndsCameraPublishPersp(CObj *cobj, f32 scale, Mtx *project_mtx)
                        scale);
     if (project_mtx == NULL)
     {
-        gNdsCameraMatrixLeanSkippedProjectCount++;
+        NDS_DIAG(gNdsCameraMatrixLeanSkippedProjectCount++);
     }
     else
     {
@@ -1003,7 +1003,7 @@ static void ndsCameraFixedPublishPersp(CObj *cobj, f32 scale, Mtx *project_mtx,
                               scale);
     if (project_mtx == NULL)
     {
-        gNdsCameraMatrixLeanSkippedProjectCount++;
+        NDS_DIAG(gNdsCameraMatrixLeanSkippedProjectCount++);
     }
     else
     {
@@ -1088,8 +1088,8 @@ static sb32 ndsCameraLookAtFuncMatrixFixed(Mtx *mtx, CObj *cobj, u32 level)
     }
     if (max_q > (32000 << NDS_R2_CAM_Q))
     {
-        gNdsR2CameraFixedRescaleCount++;
-        gNdsCameraMatrixLeanRescaleCount++;
+        NDS_DIAG(gNdsR2CameraFixedRescaleCount++);
+        NDS_DIAG(gNdsCameraMatrixLeanRescaleCount++);
         ndsCameraFixedPublishPersp(
             cobj,
             ndsR2CamQToF32(ndsR2CamDivQ(32000 << NDS_R2_CAM_Q, max_q)),
@@ -1118,7 +1118,7 @@ static sb32 ndsCameraLookAtFuncMatrixFixed(Mtx *mtx, CObj *cobj, u32 level)
     }
     else
     {
-        gNdsCameraMatrixLeanSkippedF2LCount++;
+        NDS_DIAG(gNdsCameraMatrixLeanSkippedF2LCount++);
     }
     return 0;
 }
@@ -1134,7 +1134,7 @@ sb32 gmCameraLookAtFuncMatrix(Mtx *mtx, CObj *cobj, Gfx **dls)
     {
         return ndsCameraLookAtFuncMatrixFixed(mtx, cobj, level);
     }
-    gNdsR2CameraFixedGameFloatCalls++;
+    NDS_DIAG(gNdsR2CameraFixedGameFloatCalls++);
     if (level == 0u)
     {
         /* NULL must be safe on BOTH paths, or the control arm would fault the
@@ -1167,7 +1167,7 @@ sb32 gmCameraLookAtFuncMatrix(Mtx *mtx, CObj *cobj, Gfx **dls)
 
     if (max > 32000.0F)
     {
-        gNdsCameraMatrixLeanRescaleCount++;
+        NDS_DIAG(gNdsCameraMatrixLeanRescaleCount++);
         ndsCameraPublishPersp(cobj, 32000.0F / max, temp_mtx);
         /* W1: look_at_f still holds the first call's result, and the arguments
          * have not changed. The source recomputes it here; we reuse it. */

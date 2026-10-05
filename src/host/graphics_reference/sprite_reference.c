@@ -891,7 +891,7 @@ static s32 ndsSObjBuildWallpaperDecodeCache(
     gNdsSObjWallpaperCacheWidth = width;
     gNdsSObjWallpaperCacheHeight = height;
     gNdsSObjWallpaperCacheOpaquePixels = opaque_pixels;
-    gNdsSObjWallpaperCacheBuildTicks += cpuGetTiming() - build_start;
+    NDS_DIAG(gNdsSObjWallpaperCacheBuildTicks += cpuGetTiming() - build_start);
     sNdsSObjWallpaperDecodeCache.valid = TRUE;
     return TRUE;
 }
@@ -1076,7 +1076,7 @@ static s32 ndsSObjGetOpaqueWallpaperCache(
                     (sprite->bmsiz == G_IM_SIZ_16b)) ? 1u : 0u;
         if (shape_ok == 0u)
         {
-            gNdsSObjWallpaperShapeRejectCount++;
+            NDS_DIAG(gNdsSObjWallpaperShapeRejectCount++);
             gNdsSObjWallpaperShapeRejectAsset = loaded->asset_id;
             gNdsSObjWallpaperShapeRejectBitmaps =
                 (u32)(u16)sprite->nbitmaps;

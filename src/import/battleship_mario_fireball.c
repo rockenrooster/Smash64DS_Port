@@ -484,30 +484,30 @@ static void ndsMarioFireballApplyNativeContact(WPStruct *wp,
         coll->floor_flags = hit->flags;
         coll->floor_angle = hit->angle;
         coll->floor_dist = 0.0F;
-        gNdsFireballNativeMapFloorHitCount++;
+        NDS_DIAG(gNdsFireballNativeMapFloorHitCount++);
         break;
     case MAP_FLAG_CEIL:
         coll->ceil_line_id = hit->line_id;
         coll->ceil_flags = hit->flags;
         coll->ceil_angle = hit->angle;
-        gNdsFireballNativeMapCeilHitCount++;
+        NDS_DIAG(gNdsFireballNativeMapCeilHitCount++);
         break;
     case MAP_FLAG_LWALL:
         coll->lwall_line_id = hit->line_id;
         coll->lwall_flags = hit->flags;
         coll->lwall_angle = hit->angle;
-        gNdsFireballNativeMapLWallHitCount++;
+        NDS_DIAG(gNdsFireballNativeMapLWallHitCount++);
         break;
     case MAP_FLAG_RWALL:
         coll->rwall_line_id = hit->line_id;
         coll->rwall_flags = hit->flags;
         coll->rwall_angle = hit->angle;
-        gNdsFireballNativeMapRWallHitCount++;
+        NDS_DIAG(gNdsFireballNativeMapRWallHitCount++);
         break;
     default:
         break;
     }
-    gNdsFireballNativeMapCollisionCount++;
+    NDS_DIAG(gNdsFireballNativeMapCollisionCount++);
     gNdsFireballNativeMapLastMask = hit->mask;
     gNdsFireballNativeMapLastLineID = hit->line_id;
 }
@@ -527,23 +527,23 @@ static sb32 ndsMarioFireballMapTestAll(GObj *weapon_gobj)
     f32 curr_top;
     u32 i;
 
-    gNdsFireballNativeMapCallCount++;
+    NDS_DIAG(gNdsFireballNativeMapCallCount++);
     if (weapon_gobj == NULL)
     {
-        gNdsFireballNativeMapFallbackCount++;
+        NDS_DIAG(gNdsFireballNativeMapFallbackCount++);
         return FALSE;
     }
     if ((gSCManagerBattleState == NULL) ||
         (gSCManagerBattleState->gkind != nGRKindPupupu))
     {
-        gNdsFireballNativeMapFallbackCount++;
+        NDS_DIAG(gNdsFireballNativeMapFallbackCount++);
         return wpMapTestAll(weapon_gobj);
     }
     wp = wpGetStruct(weapon_gobj);
     dobj = DObjGetStruct(weapon_gobj);
     if ((wp == NULL) || (dobj == NULL) || (wp->kind != nWPKindFireball))
     {
-        gNdsFireballNativeMapFallbackCount++;
+        NDS_DIAG(gNdsFireballNativeMapFallbackCount++);
         return FALSE;
     }
 
@@ -612,7 +612,7 @@ static sb32 ndsMarioFireballMapTestAll(GObj *weapon_gobj)
         ndsMarioFireballApplyNativeContact(wp, dobj, &best);
     }
     coll->update_tic = gMPCollisionUpdateTic;
-    gNdsFireballNativeMapHandledCount++;
+    NDS_DIAG(gNdsFireballNativeMapHandledCount++);
     return FALSE;
 }
 #endif /* NDS_R2_FIREBALL_NATIVE_MAP_COLL */

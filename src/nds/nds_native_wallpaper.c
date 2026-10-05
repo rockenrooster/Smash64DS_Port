@@ -397,7 +397,7 @@ s32 ndsNativeBattleWallpaperPreload(u32 gkind)
      * the read instead, after the hold ends. */
     if (ndsPlatformTransitionSnapshotHoldsBg2() != FALSE)
     {
-        gNdsNativeBattleWallpaperDeferCount++;
+        NDS_DIAG(gNdsNativeBattleWallpaperDeferCount++);
         return TRUE;
     }
 
@@ -455,7 +455,7 @@ s32 ndsNativeBattleWallpaperDraw(u32 gkind,
      * which ends the hold (ndsPlatformTransitionSnapshotHoldsBg2). */
     if (ndsPlatformTransitionSnapshotHoldsBg2() != FALSE)
     {
-        gNdsNativeBattleWallpaperDeferCount++;
+        NDS_DIAG(gNdsNativeBattleWallpaperDeferCount++);
         return TRUE;
     }
     if (ndsNativeWallpaperDraw(binding->asset_id, binding->bitmap_offset,

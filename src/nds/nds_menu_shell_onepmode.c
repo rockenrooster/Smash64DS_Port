@@ -58,7 +58,7 @@ static s32 ndsMenuShellOnePlayerModeBlit(NdsUiKitSurfaceId surface)
         gNdsOnePlayerModeNativeSurfaceFailCount++;
         return FALSE;
     }
-    gNdsOnePlayerModeNativeStateBlitCount++;
+    NDS_DIAG(gNdsOnePlayerModeNativeStateBlitCount++);
     return TRUE;
 }
 
@@ -152,7 +152,7 @@ void ndsMenuShellOnePlayerModeExit(void)
         ndsPlatformClearOriginalSpriteOverlayLayer(TRUE);
         ndsPlatformSet3DLayerEnabled(FALSE);
         sNdsOnePlayerModeActive = FALSE;
-        gNdsOnePlayerModeNativeExitCount++;
+        NDS_DIAG(gNdsOnePlayerModeNativeExitCount++);
     }
     sNdsOnePlayerModeLastOption = NDS_ONEP_MODE_NONE;
     sNdsOnePlayerModeLastSelected = NDS_ONEP_MODE_NONE;

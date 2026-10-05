@@ -217,7 +217,7 @@ void ndsOpeningRoomCapturePencilsCreation(void)
         gNdsOpeningRoomPencilsDObjTreeCount++;
         if (dobj->is_anim_root != FALSE)
         {
-            gNdsOpeningRoomPencilsAnimRootCount++;
+            NDS_DIAG(gNdsOpeningRoomPencilsAnimRootCount++);
         }
         dobj = gcGetTreeDObjNext(dobj);
     }

@@ -279,10 +279,10 @@ static void ndsFTCommonAppearUpdateEffectsNoMBall(GObj *fighter_gobj)
          * EFCommonEffects3 desc this build resolves for him. */
         if (fp->fkind == nFTKindPikachu)
         {
-            gNdsEntryMBallRaysRequestCount++;
+            NDS_DIAG(gNdsEntryMBallRaysRequestCount++);
             if (efManagerMBallRaysMakeEffect(&fp->entry_pos) == NULL)
             {
-                gNdsEntryMBallRaysNullCount++;
+                NDS_DIAG(gNdsEntryMBallRaysNullCount++);
             }
         }
 #endif
@@ -291,10 +291,10 @@ static void ndsFTCommonAppearUpdateEffectsNoMBall(GObj *fighter_gobj)
          * same flag when her Master Ball opens. */
         if (fp->fkind == nFTKindPurin)
         {
-            gNdsEntryMBallRaysRequestCount++;
+            NDS_DIAG(gNdsEntryMBallRaysRequestCount++);
             if (efManagerMBallRaysMakeEffect(&fp->entry_pos) == NULL)
             {
-                gNdsEntryMBallRaysNullCount++;
+                NDS_DIAG(gNdsEntryMBallRaysNullCount++);
             }
         }
 #endif

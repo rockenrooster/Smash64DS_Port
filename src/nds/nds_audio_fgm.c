@@ -1230,8 +1230,8 @@ static s32 ndsAudioFgmReadRange(u32 offset, void *dst, u32 bytes)
                              dst, bytes) != false)
         {
             gNdsAudioFgmDirectReadCount++;
-            gNdsAudioFgmReadTicks64 += (u32)tickGetCount() - read_start;
-            gNdsAudioFgmReadBytes += bytes;
+            NDS_DIAG(gNdsAudioFgmReadTicks64 += (u32)tickGetCount() - read_start);
+            NDS_DIAG(gNdsAudioFgmReadBytes += bytes);
             return TRUE;
         }
         gNdsAudioFgmDirectFallbackCount++;
@@ -1297,7 +1297,7 @@ static s32 ndsAudioFgmFillAsync(u32 index, const NDSAudioFgmPackEntry *entry)
     slot->fill_parts = (u8)part;
     sNdsAudioFgmFillPartsInFlight += part;
     slot->fill_state = NDS_AUDIO_FGM_FILL_PENDING;
-    gNdsAudioFgmAsyncFillCount++;
+    NDS_DIAG(gNdsAudioFgmAsyncFillCount++);
     return TRUE;
 }
 
@@ -1348,7 +1348,7 @@ static void ndsAudioFgmPollFills(void)
         {
             slot->fill_state = NDS_AUDIO_FGM_FILL_READY;
             gNdsAudioFgmDirectReadCount++;
-            gNdsAudioFgmReadBytes += slot->data_bytes;
+            NDS_DIAG(gNdsAudioFgmReadBytes += slot->data_bytes);
         }
     }
 }
@@ -2390,7 +2390,7 @@ void ndsAudioFgmUpdate(void)
                     (entry == NULL) ||
                     (ndsAudioFgmStartHandle(handle, entry, now) == FALSE))
                 {
-                    gNdsAudioFgmDeferredFailCount++;
+                    NDS_DIAG(gNdsAudioFgmDeferredFailCount++);
                     gNdsAudioFgmPlayFailCount++;
                     ndsAudioFgmReleaseHandle(
                         handle, FALSE
@@ -2399,7 +2399,7 @@ void ndsAudioFgmUpdate(void)
                             now));
                     continue;
                 }
-                gNdsAudioFgmDeferredStartCount++;
+                NDS_DIAG(gNdsAudioFgmDeferredStartCount++);
             }
             u32 elapsed_cpu_ticks = now - handle->start_tick;
             u32 elapsed_fgm_ticks = (u32)(
@@ -2579,14 +2579,14 @@ void ndsAudioFgmSettle(u32 max_frames)
     {
         ndsAudioFgmUpdate();
         swiWaitForVBlank();
-        gNdsAudioFgmSettleFrames++;
+        NDS_DIAG(gNdsAudioFgmSettleFrames++);
         if (ndsAudioFgmPendingHandles() == 0u)
         {
             ndsAudioFgmUpdate();
             return;
         }
     }
-    gNdsAudioFgmSettleTimeouts++;
+    NDS_DIAG(gNdsAudioFgmSettleTimeouts++);
 }
 
 /* Starts the sample reads for `ids` that the cache does not already hold,
@@ -2608,7 +2608,7 @@ void ndsAudioFgmPrefetch(const u16 *ids, u32 count, u32 max_frames)
         if (entry != NULL)
         {
             (void)ndsAudioFgmCacheAcquire(entry);
-            gNdsAudioFgmPrefetchRequests++;
+            NDS_DIAG(gNdsAudioFgmPrefetchRequests++);
         }
     }
     for (frame = 0u; frame < max_frames; frame++)
@@ -2628,7 +2628,7 @@ void ndsAudioFgmPauseGame(void)
     u32 now;
     u32 i;
 
-    gNdsAudioFgmPauseCalls++;
+    NDS_DIAG(gNdsAudioFgmPauseCalls++);
     if (gNdsAudioFgmActiveHandles == 0u)
     {
         return;
@@ -2657,7 +2657,7 @@ void ndsAudioFgmPauseGame(void)
             handle->pause_hardware = TRUE;
         }
         handle->paused = TRUE;
-        gNdsAudioFgmPauseHandleCount++;
+        NDS_DIAG(gNdsAudioFgmPauseHandleCount++);
     }
 }
 
@@ -2666,7 +2666,7 @@ void ndsAudioFgmResumeGame(void)
     u32 now;
     u32 i;
 
-    gNdsAudioFgmResumeCalls++;
+    NDS_DIAG(gNdsAudioFgmResumeCalls++);
     if (gNdsAudioFgmActiveHandles == 0u)
     {
         return;
@@ -2700,7 +2700,7 @@ void ndsAudioFgmResumeGame(void)
         handle->pause_tick = 0u;
         handle->pause_hardware = FALSE;
         handle->paused = FALSE;
-        gNdsAudioFgmResumeHandleCount++;
+        NDS_DIAG(gNdsAudioFgmResumeHandleCount++);
     }
 }
 
@@ -2920,7 +2920,7 @@ alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan)
             handle->child_generation = child_handle->generation;
             child_handle->parent_handle = handle;
             child_handle->parent_generation = handle->generation;
-            gNdsAudioFgmChildStartCount++;
+            NDS_DIAG(gNdsAudioFgmChildStartCount++);
         }
         else
         {
@@ -2928,7 +2928,7 @@ alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan)
             {
                 ndsAudioFgmStop(child_effect);
             }
-            gNdsAudioFgmChildStartFailCount++;
+            NDS_DIAG(gNdsAudioFgmChildStartFailCount++);
         }
 
         /* The child is an implementation detail of the source D9 fork, not a

@@ -138,7 +138,7 @@ volatile u32 gNdsFtPublicCueLetRingCount;
 static void ndsFtPublicStopFGM(alSoundEffect *sfx)
 {
     (void)sfx;
-    gNdsFtPublicCueLetRingCount++;
+    NDS_DIAG(gNdsFtPublicCueLetRingCount++);
 }
 
 #define func_80026738_27338 ndsFtPublicStopFGM

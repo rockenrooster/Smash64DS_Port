@@ -4048,7 +4048,7 @@ s32 ndsRendererNativePrepareKirbyHatMatch(u32 high_mask, u32 low_mask)
             entry->valid = 1u;
             storage += (bytes + 15u) & ~15u;
             gNdsNativeKirbyHatLoadCount++;
-            gNdsNativeKirbyHatBytes += bytes;
+            NDS_DIAG(gNdsNativeKirbyHatBytes += bytes);
         }
     }
     sNdsNativeKirbyHatMatchCount = count;
@@ -4160,7 +4160,7 @@ s32 ndsRendererNativeEnsureKirbyCopyHat(
         /* A stale power's hat must not draw in place of the new one. */
         slot->valid = 0u;
         slot->copy_modelpart_id = 0u;
-        gNdsNativeKirbyHatLateLoadCount++;
+        NDS_DIAG(gNdsNativeKirbyHatLateLoadCount++);
     }
     path = ndsRendererNativeKirbyHatImagePath(
         copy_modelpart_id, use_low_detail);
@@ -4253,7 +4253,7 @@ s32 ndsRendererNativeEnsureKirbyCopyHat(
         sNdsNativeKirbyHatActive[battle_slot][use_low_detail] = slot;
     }
     gNdsNativeKirbyHatLoadCount++;
-    gNdsNativeKirbyHatBytes += bytes;
+    NDS_DIAG(gNdsNativeKirbyHatBytes += bytes);
     return TRUE;
 }
 
@@ -5236,11 +5236,11 @@ static void *ndsRendererNativePolygonPoolTake(u32 owner_slot, u32 bytes)
         }
         if (entry == NDS_NATIVE_POLYGON_POOL_ENTRIES)
         {
-            gNdsNativePolygonPoolFull++;
+            NDS_DIAG(gNdsNativePolygonPoolFull++);
             return NULL;
         }
         ndsRendererNativePolygonPoolUnbind(sNdsNativePolygonPool.owner[entry]);
-        gNdsNativePolygonPoolEvictions++;
+        NDS_DIAG(gNdsNativePolygonPoolEvictions++);
     }
     sNdsNativePolygonPool.owner[entry] = (u8)owner_slot;
     sNdsNativePolygonPool.loaded_at[entry] = ++sNdsNativePolygonPool.clock;

@@ -277,7 +277,7 @@ static s32 ndsRendererNativeBindGraded(NDSGradedQuadFill *fill, u32 prim, u32 en
                 /* Same pointer, different content. Build a second entry rather
                  * than binding texels that were decoded for another tile
                  * window, another palette or the other byte lane. */
-                gNdsGradedQuadIdentityMisses++;
+                NDS_DIAG(gNdsGradedQuadIdentityMisses++);
                 continue;
             }
             ndsRendererHardwareEndBatch();
@@ -294,7 +294,7 @@ static s32 ndsRendererNativeBindGraded(NDSGradedQuadFill *fill, u32 prim, u32 en
                 glColorTableEXT(GL_TEXTURE_2D, 0, 32, 0, 0, sNdsGradedQuadPalette);
                 entry->prim = prim;
                 entry->env = env;
-                gNdsGradedQuadPaletteUpdates++;
+                NDS_DIAG(gNdsGradedQuadPaletteUpdates++);
             }
             return TRUE;
         }
@@ -352,11 +352,11 @@ static s32 ndsRendererNativeBindGraded(NDSGradedQuadFill *fill, u32 prim, u32 en
         }
         if (slot == NDS_GRADED_QUAD_TEXTURES)
         {
-            gNdsGradedQuadTextureFails++;
+            NDS_DIAG(gNdsGradedQuadTextureFails++);
             return FALSE;
         }
         sNdsGradedQuadTextures[slot].image = NULL;
-        gNdsGradedQuadTextureRecycles++;
+        NDS_DIAG(gNdsGradedQuadTextureRecycles++);
     }
     if (fill->tlut != NULL) ndsGradedQuadTlutPalette(fill);
     else ndsGradedQuadRamp(prim, env);
@@ -366,7 +366,7 @@ static s32 ndsRendererNativeBindGraded(NDSGradedQuadFill *fill, u32 prim, u32 en
             fill, &sNdsGradedQuadTextures[slot].name) == FALSE)
     {
         sNdsGradedQuadTextures[slot].name = 0u;
-        gNdsGradedQuadTextureFails++;
+        NDS_DIAG(gNdsGradedQuadTextureFails++);
         return FALSE;
     }
     sNdsRendererHardwareBoundTextureName = sNdsGradedQuadTextures[slot].name;
@@ -380,7 +380,7 @@ static s32 ndsRendererNativeBindGraded(NDSGradedQuadFill *fill, u32 prim, u32 en
     sNdsGradedQuadTextures[slot].height = (u16)height;
     sNdsGradedQuadTextures[slot].lane = (u8)fill->lane;
     ndsGradedQuadNoteBind(&sNdsGradedQuadTextures[slot]);
-    gNdsGradedQuadTextureBuilds++;
+    NDS_DIAG(gNdsGradedQuadTextureBuilds++);
     return TRUE;
 }
 

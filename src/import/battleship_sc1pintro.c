@@ -327,7 +327,7 @@ static void ndsSC1PIntroDrawStill(char kind, u32 card, FTDemoDesc *desc,
     ndsSC1PIntroStillPath(path, kind, card, 1u, desc->fkind, desc->costume);
     if (ndsSC1PIntroBlitStill(path, layer, pitch) != FALSE)
     {
-        gNdsSC1PIntroStillsDrawn++;
+        NDS_DIAG(gNdsSC1PIntroStillsDrawn++);
     }
     else gNdsSC1PIntroStillsMissing++;
 }
@@ -358,7 +358,7 @@ static void ndsSC1PIntroBlitStills(void)
                                                      NULL, NULL);
     if ((layer == NULL) || (pitch == 0u))
     {
-        gNdsSC1PIntroStillsMissing++;
+        NDS_DIAG(gNdsSC1PIntroStillsMissing++);
         return;
     }
     /* VS fighters first: the cards' cameras draw over them. The VS still for
@@ -371,7 +371,7 @@ static void ndsSC1PIntroBlitStills(void)
         ndsSC1PIntroStillPath(path, 'o', (u32)stage, 2u, -1, 0);
         if (ndsSC1PIntroBlitStill(path, layer, pitch) == FALSE)
         {
-            gNdsSC1PIntroStillsMissing++;
+            NDS_DIAG(gNdsSC1PIntroStillsMissing++);
         }
         else gNdsSC1PIntroStillsDrawn++;
     }
@@ -483,7 +483,7 @@ extern float sqrtf(float x);
 
 void __attribute__((noinline, used)) ndsIntroBakeCaptured(void)
 {
-    gNdsIntroBakeCount++;
+    NDS_DIAG(gNdsIntroBakeCount++);
     __asm__ volatile("" ::: "memory");
 }
 

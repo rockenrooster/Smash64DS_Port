@@ -1839,7 +1839,7 @@ static s32 ndsPlatformTransitionSnapshotMoveToC(void)
     cr[bank] = sNdsTransitionSnapshotBankCr;
     sNdsTransitionSnapshotBankCr = VRAM_ENABLE | VRAM_C_MAIN_BG_0x06000000;
     sNdsTransitionSnapshotBank = NDS_TRANSITION_SNAPSHOT_BANK_C;
-    gNdsTransitionSnapshotMoveCount++;
+    NDS_DIAG(gNdsTransitionSnapshotMoveCount++);
     return TRUE;
 }
 
@@ -2006,8 +2006,8 @@ static s32 ndsPlatformTransitionSnapshotOverWallpaper(void)
     sNdsTransitionSnapshotBank = NDS_TRANSITION_SNAPSHOT_BANK_D;
     sNdsTransitionSnapshotBg2Touched = 0u;
     ndsVideoSetTransitionMainHeld(TRUE);
-    gNdsTransitionSnapshotCount++;
-    gNdsTransitionSnapshotExitCount++;
+    NDS_DIAG(gNdsTransitionSnapshotCount++);
+    NDS_DIAG(gNdsTransitionSnapshotExitCount++);
     /* The arena held the wallpaper: the packets' words are gone. */
     ndsRendererFighterPacketRelease();
     return TRUE;
@@ -2059,7 +2059,7 @@ static void ndsPlatformTransitionSnapshotBegin(void)
     }
     if (gNdsTransitionSnapshotDecline != 0u)
     {
-        gNdsTransitionSnapshotDeclineCount++;
+        NDS_DIAG(gNdsTransitionSnapshotDeclineCount++);
         return;
     }
     /* B first: slot 1 fills only after slot 0. */
@@ -2081,7 +2081,7 @@ static void ndsPlatformTransitionSnapshotBegin(void)
         {
             gNdsTransitionSnapshotDecline = 4u;
         }
-        gNdsTransitionSnapshotDeclineCount++;
+        NDS_DIAG(gNdsTransitionSnapshotDeclineCount++);
         return;
     }
     sNdsTransitionSnapshotBankCr = cr[bank];
@@ -2101,7 +2101,7 @@ static void ndsPlatformTransitionSnapshotBegin(void)
         REG_DISPCAPCNT = 0u;
         cr[bank] = sNdsTransitionSnapshotBankCr;
         gNdsTransitionSnapshotDecline = 5u;
-        gNdsTransitionSnapshotDeclineCount++;
+        NDS_DIAG(gNdsTransitionSnapshotDeclineCount++);
         return;
     }
     /* Inside the VBlank the wait returned in: the next scanout is the
@@ -2110,7 +2110,7 @@ static void ndsPlatformTransitionSnapshotBegin(void)
     sNdsTransitionSnapshotBank = bank + 1u;
     sNdsTransitionSnapshotBg2Touched = 0u;
     ndsVideoSetTransitionMainHeld(TRUE);
-    gNdsTransitionSnapshotCount++;
+    NDS_DIAG(gNdsTransitionSnapshotCount++);
 }
 #endif
 
@@ -2166,7 +2166,7 @@ s32 ndsPlatformTransitionSnapshotToN64Frame(u16 *frame, u32 width,
                                         (((c >> 10) & 0x1fu) << 1) | 1u);
         }
     }
-    gNdsTransitionSnapshotPhotoCount++;
+    NDS_DIAG(gNdsTransitionSnapshotPhotoCount++);
     return TRUE;
 #else
     (void)frame;
@@ -2186,7 +2186,7 @@ void ndsPlatformTransitionSnapshotAbort(void)
     {
         return;
     }
-    gNdsTransitionSnapshotAbortCount++;
+    NDS_DIAG(gNdsTransitionSnapshotAbortCount++);
     ndsVideoSetTransitionBlackout(TRUE);
     ndsVideoSetTransitionMainHeld(FALSE);
     swiWaitForVBlank();
@@ -2230,7 +2230,7 @@ void ndsPlatformTransitionHoldBegin(void)
     sNdsTransitionHoldPending = 0u;
     sNdsTransitionHoldWants3D = FALSE;
     sNdsTransitionHoldPresents = 0u;
-    gNdsTransitionHoldCount++;
+    NDS_DIAG(gNdsTransitionHoldCount++);
     gNdsTransitionHoldVBlank = sVBlankCount;
 #if NDS_RENDERER_HW_TRIANGLES
     ndsPlatformTransitionSnapshotBegin();
@@ -2265,7 +2265,7 @@ void ndsPlatformTransitionThaw(void)
     }
     gNdsTransitionThawCaller = (u32)(uintptr_t)__builtin_return_address(0);
     gNdsTransitionThawVBlank = sVBlankCount;
-    gNdsTransitionThawCount++;
+    NDS_DIAG(gNdsTransitionThawCount++);
     pending = sNdsTransitionHoldPending;
     sNdsTransitionHold = NDS_TRANSITION_HOLD_NONE;
     sNdsTransitionHoldPending = 0u;
@@ -2398,7 +2398,7 @@ int __wrap_glTexImage2D(int target, int empty1, GL_TEXTURE_TYPE_ENUM type,
     ndsPlatformTransitionThawIf3DShown();
     if (ndsTaskmanLibcHasRoom(NDS_PLATFORM_GL_LIBC_ROOM) == FALSE)
     {
-        gNdsPlatformGlLibcRefusals++;
+        NDS_DIAG(gNdsPlatformGlLibcRefusals++);
         return 0;
     }
     return __real_glTexImage2D(target, empty1, type, sizeX, sizeY, empty2,
@@ -2413,7 +2413,7 @@ void __wrap_glColorTableEXT(int target, int empty1, u16 width, int empty2,
     if ((width != 0u) && (table != NULL) &&
         (ndsTaskmanLibcHasRoom(NDS_PLATFORM_GL_LIBC_ROOM) == FALSE))
     {
-        gNdsPlatformGlLibcRefusals++;
+        NDS_DIAG(gNdsPlatformGlLibcRefusals++);
         return;
     }
     __real_glColorTableEXT(target, empty1, width, empty2, empty3, table);
@@ -4800,7 +4800,7 @@ void ndsPlatformEndFrame(void)
             /* Overlay-transform-only flush: no 3D frame was submitted, so
              * this is not a hardware frame flush (see the counter's own
              * comment at its definition). */
-            gNdsHardwareRendererOverlayOnlyFlushCount++;
+            NDS_DIAG(gNdsHardwareRendererOverlayOnlyFlushCount++);
         }
         sOriginalSpriteOverlayNeedsFlush = FALSE;
     }
@@ -4911,7 +4911,7 @@ void ndsPlatformEndFrame(void)
         (ndsVideoGetTransitionBlackout() == FALSE))
     {
         ndsPlatformTransitionSnapshotRestore();
-        gNdsTransitionSnapshotReleaseCount++;
+        NDS_DIAG(gNdsTransitionSnapshotReleaseCount++);
     }
 #endif
     /* Release brightness only after this frame's BG/OAM owners committed. */
