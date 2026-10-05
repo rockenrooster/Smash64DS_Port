@@ -1,0 +1,48 @@
+Tick-HUD samples repeated a presented frame (6 of 1960). EVERY duplicate is a ring-stop seam whose recorded skew explains the label collision, and no payload repeats, so these are distinct real iterations that share a frame LABEL. Percentiles are over the iterations and stand; the frame ids at those seams do not. Seam rows: 319,511,895,1087,1279,1663.
+Tick-HUD first label is frame 1, 1 before -StartFrame 2; the stops' recorded positive skew (7) accounts for it, so the rows are the requested window of real iterations labelled early.
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,800; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 1395: ALL 5,311,232 -> 1,116,928, 4 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_kirbystar-route/m0-g2.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=1..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=ed44b7a1bc0+dirty(33) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,800     1,677,248      1.50  1,201,293     1,111,296 18,330,944      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,928        10,304      2.09      5,718         2,432     28,992        0.4
+HUD         9,216        24,320      2.64     11,570         7,936    379,584        0.8
+SRC       406,592       648,064      1.59    415,845       140,800  1,175,936       36.4
+MISC      445,824       604,416      1.36    459,338       186,816 17,416,960       39.9
+OTHR      282,688       601,536      2.13    308,822        22,656    776,128       25.3
+WAIT      259,072       576,704      2.23    286,709         2,432    754,176       23.2
+WORK      893,568     1,261,632      1.41    910,574       359,360 17,994,432       80.0
+SHDT            0             0      0.00          0             0          0        0.0
+SWRM        1,408         1,472      1.05      1,397           960      3,392        0.1
+GCRA      401,280       642,816      1.60    410,347       136,128  1,170,560       35.9
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        594             0  1,020,864        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      445,760       604,352      1.36    459,246       186,752 17,416,896       39.9
+MFLS           64           128      2.00         92            64        448        0.0
+GPOL          562           655      1.17        530            51        723        0.1
+GVTX        1,347         1,556      1.16      1,274           175      1,743        0.1
+DGSA   2,171,201,471 4,069,725,545        2,131,774,420    226,229 4,293,447,369 194,412.7
+DGSB   2,223,267,474 4,055,368,550        2,158,968,673    319,904 4,294,070,849 199,074.8
+WORK-H    881,920     1,245,248      1.41    899,004       350,080 17,614,848       79.0
+
+named=892,471 (74.3% of ALL)  VBI 2:1707 3:242 4:10 5+:2 max:37 total:1961  slips=0
+extras: gNdsFrontendOverlayUsedBytes=87,936  gNdsFrontendOverlaySpillBytes=270,536  gNdsTaskmanGeneralHeapFreeMin=83,900
+Wrote artifacts/performance/2026-10-05_kirbystar-route/m0-g2.json

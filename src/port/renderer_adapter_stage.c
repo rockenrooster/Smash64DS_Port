@@ -7781,6 +7781,11 @@ volatile u32 gNdsStageDLFastLaneFills;
  * on every frame of the sweep match (3,600 and 805 body submits). */
 #define NDS_SDL_ROUTE_INISHIE_PAKKUN 0xf4u
 #define NDS_SDL_ROUTE_INISHIE_POWBLOCK 0xf3u
+/* The star quad four owners share (ITCommonObject 0x5458: the Star Rod's two
+ * weapons and Kirby's two stars, an effect): no MObj, admitted by asset and
+ * root under any owner, as the body admits it; under the effect layer it
+ * takes the layer's seeds and witnesses first. */
+#define NDS_SDL_ROUTE_KIRBYSTAR 0xf2u
 /* Yoshi's Island's capsules and boxes thrashed an 8-slot table (1,231 fills
  * for 1,469 hits a match): the owners are few, but a capsule alone draws three
  * roots, and its header and third root shared a slot under an address-bit
@@ -8237,7 +8242,8 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
          (owner == NULL) ||
          (sNdsRendererAdapterStagePersistentActive == FALSE) ||
          ((sNdsRendererAdapterEffectSubmitActive != FALSE) &&
-          (route->route != NDS_SDL_ROUTE_DAMAGE_FLY_MDUST)) ||
+          (route->route != NDS_SDL_ROUTE_DAMAGE_FLY_MDUST) &&
+          (route->route != NDS_SDL_ROUTE_KIRBYSTAR)) ||
          (ndsRendererHardwareNoOracleEnabled() == FALSE)))
     {
         return FALSE;
@@ -8297,6 +8303,15 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
             return FALSE;
         }
         break;
+#if NDS_P2_ITEM_CORE
+    case NDS_SDL_ROUTE_KIRBYSTAR:
+        if ((sNdsRendererAdapterItemSubmitActive != FALSE) ||
+            (dobj->mobj != NULL))
+        {
+            return FALSE;
+        }
+        break;
+#endif
 #if NDS_P2_STAGE_INISHIE && NDS_P2_ITEM_CORE
     case NDS_SDL_ROUTE_INISHIE_PAKKUN:
     {
@@ -8710,6 +8725,43 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
         else
         {
             NDS_DIAG(gNdsInishiePowblockSubmitFailCount++);
+        }
+    }
+#endif
+#if NDS_P2_ITEM_CORE
+    else if (route_kind == NDS_SDL_ROUTE_KIRBYSTAR)
+    {
+        if (sNdsRendererAdapterEffectSubmitActive != FALSE)
+        {
+            if ((sNdsRendererAdapterEffectColorMask & 1u) != 0u)
+            {
+                render_stats->prim_color = sNdsRendererAdapterEffectPrimColor;
+            }
+            if ((sNdsRendererAdapterEffectColorMask & 2u) != 0u)
+            {
+                render_stats->env_color = sNdsRendererAdapterEffectEnvColor;
+            }
+            if (sNdsRendererAdapterEffectOtherModeValid != 0u)
+            {
+                render_stats->othermode_l = sNdsRendererAdapterEffectOtherModeL;
+            }
+            gNdsEffectDLSubmitOtherModeIn = render_stats->othermode_l;
+        }
+        handled = ndsRendererSubmitNativeItemKirbyStar(
+            loaded->data, loaded->data_size, NULL, &config, render_stats);
+        if (handled != FALSE)
+        {
+            NDS_DIAG(gNdsItemKirbyStarDrawCount++);
+        }
+        else
+        {
+            NDS_DIAG(gNdsItemKirbyStarSubmitFailCount++);
+        }
+        if (sNdsRendererAdapterEffectSubmitActive != FALSE)
+        {
+            gNdsEffectDLSubmitOtherModeOut = render_stats->othermode_l;
+            NDS_DIAG(gNdsEffectDLSubmitCount++);
+            NDS_DIAG(gNdsEffectDLPublishCount++);
         }
     }
 #endif
@@ -14170,6 +14222,13 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         if (item_kirbystar_native_handled != FALSE)
         {
             NDS_DIAG(gNdsItemKirbyStarDrawCount++);
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            if (gNdsStageDLFastMore != 0u)
+            {
+                ndsStageDLRouteRecord(dl, loaded, NDS_NATIVE_ITEM_KIRBYSTAR_ROOT,
+                                      NDS_SDL_ROUTE_KIRBYSTAR);
+            }
+#endif
         }
         else
         {
