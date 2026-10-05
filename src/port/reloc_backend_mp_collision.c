@@ -127,7 +127,7 @@ static sb32 ndsMPReadMapObj(s32 index, u16 *kind, s16 *x, s16 *y)
     base = gMPCollisionMapObjs->mapobjs;
     if (((uintptr_t)base & (sizeof(u32) - 1u)) != 0u)
     {
-        gNdsStagePupupuMapObjUnalignedReadCount++;
+        NDS_DIAG(gNdsStagePupupuMapObjUnalignedReadCount++);
         return FALSE;
     }
     half_index = (u32)index * 3u;
@@ -267,7 +267,7 @@ void ndsMPCollisionEnsureLineGroups(void)
     if (yakumono_count > 64u)
     {
         sNdsMPLineGroupFailedGeometry = geometry;
-        gNdsCollisionRuntimeDiagnostics.topology_invalid++;
+        NDS_DIAG(gNdsCollisionRuntimeDiagnostics.topology_invalid++);
         return;
     }
     for (i = 0u; i < yakumono_count; i++)
@@ -284,7 +284,7 @@ void ndsMPCollisionEnsureLineGroups(void)
                 ((line_counts[kind] + count) > 4096u))
             {
                 sNdsMPLineGroupFailedGeometry = geometry;
-                gNdsCollisionRuntimeDiagnostics.topology_invalid++;
+                NDS_DIAG(gNdsCollisionRuntimeDiagnostics.topology_invalid++);
                 return;
             }
             line_counts[kind] += count;
@@ -308,7 +308,7 @@ void ndsMPCollisionEnsureLineGroups(void)
                     gMPCollisionLineGroups[clear_kind].line_id = NULL;
                 }
                 sNdsMPLineGroupFailedGeometry = geometry;
-                gNdsCollisionRuntimeDiagnostics.topology_invalid++;
+                NDS_DIAG(gNdsCollisionRuntimeDiagnostics.topology_invalid++);
                 return;
             }
         }
@@ -642,7 +642,7 @@ static inline void ndsMPVertexF32Get(MPVertexPosContainer *verts, u32 vertex_id,
 {
     if (vertex_id >= NDS_MP_VERTEX_F32_MAX)
     {
-        gNdsMPVertexF32Overflow++;
+        NDS_DIAG(gNdsMPVertexF32Overflow++);
         *out_x = (f32)ndsMPVertexX(verts, vertex_id);
         *out_y = (f32)ndsMPVertexY(verts, vertex_id);
         return;
@@ -652,7 +652,7 @@ static inline void ndsMPVertexF32Get(MPVertexPosContainer *verts, u32 vertex_id,
         sNdsMPVertexF32X[vertex_id] = (f32)ndsMPVertexX(verts, vertex_id);
         sNdsMPVertexF32Y[vertex_id] = (f32)ndsMPVertexY(verts, vertex_id);
         sNdsMPVertexF32Valid[vertex_id] = 1u;
-        gNdsMPVertexF32Fills++;
+        NDS_DIAG(gNdsMPVertexF32Fills++);
     }
     else
     {
@@ -723,7 +723,7 @@ static inline int ndsMPLineExtentReady(MPVertexArray *ids,
 {
     if (line_id >= NDS_MP_LINE_EXTENT_MAX)
     {
-        gNdsMPLineExtentOverflow++;
+        NDS_DIAG(gNdsMPLineExtentOverflow++);
         return 0;
     }
     if (sNdsMPLineExtentValid[line_id] == 0u)
@@ -816,7 +816,7 @@ static inline int ndsMPLineExtentSweepRejects(MPVertexArray *ids,
         NDS_DIAG(gNdsMPLineSweepRejects++);
         return 1;
     }
-    gNdsMPLineSweepAdmits++;
+    NDS_DIAG(gNdsMPLineSweepAdmits++);
     return 0;
 }
 
@@ -857,7 +857,7 @@ static void ndsMPGetFCAngle(Vec3f *angle, s32 v1x, s32 v1y, s32 v2x,
     }
     if (v2x == v1x)
     {
-        gNdsStageCollisionLoopDivisionGuardCount++;
+        NDS_DIAG(gNdsStageCollisionLoopDivisionGuardCount++);
         angle->x = 0.0F;
         angle->y = (f32)ud;
         return;
@@ -900,7 +900,7 @@ static void ndsMPGetFCAnglef(Vec3f *angle, f32 v1x, f32 v1y, f32 v2x, f32 v2y,
     }
     if (v2x == v1x)
     {
-        gNdsStageCollisionLoopDivisionGuardCount++;
+        NDS_DIAG(gNdsStageCollisionLoopDivisionGuardCount++);
         angle->x = 0.0F;
         angle->y = (f32)ud;
         return;
@@ -990,7 +990,7 @@ static s32 NDS_R2_ITCM_PACK2_CODE ndsMPGetLineKindForLineID(s32 line_id)
                 {
                     sNdsMPLineKindPlus1[(u32)line_id] =
                         (u8)(kind + NDS_MP_LINE_KIND_BIAS);
-                    gNdsMPLineKindFills++;
+                    NDS_DIAG(gNdsMPLineKindFills++);
                 }
                 return (s32)kind;
             }
@@ -999,7 +999,7 @@ static s32 NDS_R2_ITCM_PACK2_CODE ndsMPGetLineKindForLineID(s32 line_id)
     if ((u32)line_id < NDS_MP_LINE_ENDPOINT_MAX)
     {
         sNdsMPLineKindPlus1[(u32)line_id] = (u8)NDS_MP_LINE_KIND_NONE;
-        gNdsMPLineKindFills++;
+        NDS_DIAG(gNdsMPLineKindFills++);
     }
     return -1;
 }
@@ -1066,7 +1066,7 @@ static void ndsStageCollisionLoopCountLines(void)
             {
                 count = 4096u;
             }
-            gNdsStageCollisionLoopTotalLineCount += count;
+            NDS_DIAG(gNdsStageCollisionLoopTotalLineCount += count);
             if (j == nMPLineKindFloor)
             {
                 s32 first = (s32)ndsMPLineInfoGroupID(info, j);
@@ -1129,7 +1129,7 @@ static sb32 ndsMPFindLineEndpoints(s32 line_id, Vec3f *left, Vec3f *right,
     {
         u32 memo = (u32)line_id;
 
-        gNdsMPLineEndpointHits++;
+        NDS_DIAG(gNdsMPLineEndpointHits++);
         if (vertex_count != NULL)
         {
             *vertex_count = (s32)sNdsMPLineEndpointCount[memo];
@@ -1189,7 +1189,7 @@ static sb32 ndsMPFindLineEndpoints(s32 line_id, Vec3f *left, Vec3f *right,
 
                 if ((count < 2u) || (count > 128u))
                 {
-                    gNdsStageCollisionLoopBadVertexCount++;
+                    NDS_DIAG(gNdsStageCollisionLoopBadVertexCount++);
                     return FALSE;
                 }
                 last_vertex = first_vertex + count - 1u;
@@ -1235,11 +1235,11 @@ static sb32 ndsMPFindLineEndpoints(s32 line_id, Vec3f *left, Vec3f *right,
                     sNdsMPLineEndpointFlags[memo] = (u16)line_flags;
                     sNdsMPLineEndpointCount[memo] = (u8)count;
                     sNdsMPLineEndpointValid[memo] = 1u;
-                    gNdsMPLineEndpointFills++;
+                    NDS_DIAG(gNdsMPLineEndpointFills++);
                 }
                 else
                 {
-                    gNdsMPLineEndpointOverflow++;
+                    NDS_DIAG(gNdsMPLineEndpointOverflow++);
                 }
 
                 if (vertex_count != NULL)
@@ -1266,7 +1266,7 @@ static sb32 ndsMPFindLineEndpoints(s32 line_id, Vec3f *left, Vec3f *right,
             }
         }
     }
-    gNdsStageCollisionLoopOutOfRangeLineCount++;
+    NDS_DIAG(gNdsStageCollisionLoopOutOfRangeLineCount++);
     return FALSE;
 }
 
@@ -1376,7 +1376,7 @@ static sb32 ndsMPFindLineYakumonoID(s32 line_id, u32 *yakumono_id)
                     sNdsMPLineYakumonoValue[(u32)line_id] = (u8)found;
                     sNdsMPLineYakumonoState[(u32)line_id] =
                         (u8)NDS_MP_LINE_YAKUMONO_HIT;
-                    gNdsMPLineYakumonoFills++;
+                    NDS_DIAG(gNdsMPLineYakumonoFills++);
                 }
                 return TRUE;
             }
@@ -1385,7 +1385,7 @@ static sb32 ndsMPFindLineYakumonoID(s32 line_id, u32 *yakumono_id)
     if ((u32)line_id < NDS_MP_LINE_ENDPOINT_MAX)
     {
         sNdsMPLineYakumonoState[(u32)line_id] = (u8)NDS_MP_LINE_YAKUMONO_MISS;
-        gNdsMPLineYakumonoFills++;
+        NDS_DIAG(gNdsMPLineYakumonoFills++);
     }
     return FALSE;
 }
@@ -1644,7 +1644,7 @@ void mpCollisionGetVertexPositionID(s32 line_id, s32 vertex_id,
 {
     if (ndsFighterMarioFoxStageFloorEdgeLoopProofEnabled() != FALSE)
     {
-        gNdsStageFloorEdgeLoopVertexPositionCallCount++;
+        NDS_DIAG(gNdsStageFloorEdgeLoopVertexPositionCallCount++);
     }
     if ((ndsMPGetVertexPositionForLineID(line_id, vertex_id, object_pos) ==
          FALSE) ||
@@ -1767,7 +1767,7 @@ sb32 NDS_R2_ITCM_PACK2_CODE mpCollisionGetFCCommonFloor(s32 line_id, Vec3f *obje
          * reads and six __aeabi_i2f calls. */
         if (fx1 == fx2)
         {
-            gNdsStageCollisionLoopDivisionGuardCount++;
+            NDS_DIAG(gNdsStageCollisionLoopDivisionGuardCount++);
             continue;
         }
         floor_y = ndsMPLineDistanceFCf(object_x, fx1, fy1, fx2, fy2);
@@ -1781,15 +1781,15 @@ sb32 NDS_R2_ITCM_PACK2_CODE mpCollisionGetFCCommonFloor(s32 line_id, Vec3f *obje
 
             if (signed_dist > 0.0F)
             {
-                gNdsStageMPProcessFloorLoopFCCommonPositiveDistCount++;
+                NDS_DIAG(gNdsStageMPProcessFloorLoopFCCommonPositiveDistCount++);
             }
             else if (signed_dist < 0.0F)
             {
-                gNdsStageMPProcessFloorLoopFCCommonNegativeDistCount++;
+                NDS_DIAG(gNdsStageMPProcessFloorLoopFCCommonNegativeDistCount++);
             }
             else
             {
-                gNdsStageMPProcessFloorLoopFCCommonZeroDistCount++;
+                NDS_DIAG(gNdsStageMPProcessFloorLoopFCCommonZeroDistCount++);
             }
         }
         if (floor_flags != NULL)
@@ -1799,7 +1799,7 @@ sb32 NDS_R2_ITCM_PACK2_CODE mpCollisionGetFCCommonFloor(s32 line_id, Vec3f *obje
         ndsMPGetFCAnglef(angle, fx1, fy1, fx2, fy2, +1);
         if (ndsFighterMarioFoxStageFloorEdgeLoopProofEnabled() != FALSE)
         {
-            gNdsStageFloorEdgeLoopFCCommonHitCount++;
+            NDS_DIAG(gNdsStageFloorEdgeLoopFCCommonHitCount++);
         }
         return TRUE;
     }
@@ -1986,7 +1986,7 @@ sb32 mpCollisionGetFCCommonCeil(s32 line_id, Vec3f *object_pos,
 
     if (ndsFighterMarioFoxStageMPCeilFloorLoopProofEnabled() != FALSE)
     {
-        gNdsStageMPCeilFloorLoopFCCommonCallCount++;
+        NDS_DIAG(gNdsStageMPCeilFloorLoopFCCommonCallCount++);
     }
     if (ceil_dist != NULL)
     {
@@ -2008,7 +2008,7 @@ sb32 mpCollisionGetFCCommonCeil(s32 line_id, Vec3f *object_pos,
     {
         if (ndsFighterMarioFoxStageMPCeilFloorLoopProofEnabled() != FALSE)
         {
-            gNdsStageMPCeilFloorLoopFCCommonMissCount++;
+            NDS_DIAG(gNdsStageMPCeilFloorLoopFCCommonMissCount++);
         }
         return FALSE;
     }
@@ -2017,7 +2017,7 @@ sb32 mpCollisionGetFCCommonCeil(s32 line_id, Vec3f *object_pos,
     {
         if (ndsFighterMarioFoxStageMPCeilFloorLoopProofEnabled() != FALSE)
         {
-            gNdsStageMPCeilFloorLoopFCCommonMissCount++;
+            NDS_DIAG(gNdsStageMPCeilFloorLoopFCCommonMissCount++);
         }
         return FALSE;
     }
@@ -2030,7 +2030,7 @@ sb32 mpCollisionGetFCCommonCeil(s32 line_id, Vec3f *object_pos,
     {
         if (ndsFighterMarioFoxStageMPCeilFloorLoopProofEnabled() != FALSE)
         {
-            gNdsStageMPCeilFloorLoopFCCommonMissCount++;
+            NDS_DIAG(gNdsStageMPCeilFloorLoopFCCommonMissCount++);
         }
         return FALSE;
     }
@@ -2045,7 +2045,7 @@ sb32 mpCollisionGetFCCommonCeil(s32 line_id, Vec3f *object_pos,
     {
         if (ndsFighterMarioFoxStageMPCeilFloorLoopProofEnabled() != FALSE)
         {
-            gNdsStageMPCeilFloorLoopFCCommonMissCount++;
+            NDS_DIAG(gNdsStageMPCeilFloorLoopFCCommonMissCount++);
         }
         return FALSE;
     }
@@ -2079,7 +2079,7 @@ sb32 mpCollisionGetFCCommonCeil(s32 line_id, Vec3f *object_pos,
         y2 = ndsMPVertexY(verts, v2_id);
         if (x1 == x2)
         {
-            gNdsStageCollisionLoopDivisionGuardCount++;
+            NDS_DIAG(gNdsStageCollisionLoopDivisionGuardCount++);
             continue;
         }
         ceil_y = ndsMPLineDistanceFC(object_local.x, x1, y1, x2, y2);
@@ -2094,7 +2094,7 @@ sb32 mpCollisionGetFCCommonCeil(s32 line_id, Vec3f *object_pos,
         ndsMPGetFCAngle(angle, x1, y1, x2, y2, -1);
         if (ndsFighterMarioFoxStageMPCeilFloorLoopProofEnabled() != FALSE)
         {
-            gNdsStageMPCeilFloorLoopFCCommonHitCount++;
+            NDS_DIAG(gNdsStageMPCeilFloorLoopFCCommonHitCount++);
             gNdsStageMPCeilFloorLoopCeilDistMilli =
                 ndsFloatToMilliSigned(ceil_y - object_local.y);
         }
@@ -2102,7 +2102,7 @@ sb32 mpCollisionGetFCCommonCeil(s32 line_id, Vec3f *object_pos,
     }
     if (ndsFighterMarioFoxStageMPCeilFloorLoopProofEnabled() != FALSE)
     {
-        gNdsStageMPCeilFloorLoopFCCommonMissCount++;
+        NDS_DIAG(gNdsStageMPCeilFloorLoopFCCommonMissCount++);
     }
     return FALSE;
 }
@@ -2227,10 +2227,10 @@ static sb32 ndsMPBuildTopologyCache(void)
     {
         return FALSE;
     }
-    gNdsCollisionRuntimeDiagnostics.topology_build_attempts++;
+    NDS_DIAG(gNdsCollisionRuntimeDiagnostics.topology_build_attempts++);
     if ((previous_geometry != NULL) && (previous_geometry != geometry))
     {
-        gNdsCollisionRuntimeDiagnostics.topology_rebuilds++;
+        NDS_DIAG(gNdsCollisionRuntimeDiagnostics.topology_rebuilds++);
     }
     gMPCollisionVertexInfo = NULL;
     gMPCollisionLinesNum = 0;
@@ -2241,7 +2241,7 @@ static sb32 ndsMPBuildTopologyCache(void)
         (line_count > 4096))
     {
         sNdsMPTopologyFailedGeometry = geometry;
-        gNdsCollisionRuntimeDiagnostics.topology_invalid++;
+        NDS_DIAG(gNdsCollisionRuntimeDiagnostics.topology_invalid++);
         return FALSE;
     }
     /* Validate the complete decoded graph before consuming task-arena space.
@@ -2264,7 +2264,7 @@ static sb32 ndsMPBuildTopologyCache(void)
                 &prev_matches, &next_matches) == 0))
         {
             sNdsMPTopologyFailedGeometry = geometry;
-            gNdsCollisionRuntimeDiagnostics.topology_invalid++;
+            NDS_DIAG(gNdsCollisionRuntimeDiagnostics.topology_invalid++);
             return FALSE;
         }
     }
@@ -2300,7 +2300,7 @@ static sb32 ndsMPBuildTopologyCache(void)
     if (vertex_info == NULL)
     {
         sNdsMPTopologyFailedGeometry = geometry;
-        gNdsCollisionRuntimeDiagnostics.topology_invalid++;
+        NDS_DIAG(gNdsCollisionRuntimeDiagnostics.topology_invalid++);
         return FALSE;
     }
     for (line_id = 0; line_id < line_count; line_id++)
@@ -2512,7 +2512,7 @@ static sb32 ndsMPBuildTopologyCache(void)
     gMPCollisionLinesNum = line_count;
     sNdsMPTopologyGeometry = geometry;
     sNdsMPTopologyFailedGeometry = NULL;
-    gNdsCollisionRuntimeDiagnostics.topology_build_successes++;
+    NDS_DIAG(gNdsCollisionRuntimeDiagnostics.topology_build_successes++);
     gNdsCollisionRuntimeDiagnostics.topology_lines = (u32)line_count;
     gNdsCollisionRuntimeDiagnostics.topology_shared_directed =
         shared_directed;
@@ -2530,7 +2530,7 @@ static s32 ndsMPGetTopologyEdgeLineID(s32 line_id, sb32 get_next)
     MPVertexInfo *info;
     s32 result;
 
-    gNdsCollisionRuntimeDiagnostics.topology_getter_calls++;
+    NDS_DIAG(gNdsCollisionRuntimeDiagnostics.topology_getter_calls++);
     /* P2-2p5. The ensure ran on every getter call and paid its two
      * line-count memsets plus ndsStageCollisionLoopGeometryReady before its
      * own early-out (census 2026-08-23: memset 8.5M cycles, the ready check
@@ -2548,7 +2548,7 @@ static s32 ndsMPGetTopologyEdgeLineID(s32 line_id, sb32 get_next)
         (gMPCollisionVertexInfo == NULL) || (line_id < 0) ||
         (line_id >= gMPCollisionLinesNum))
     {
-        gNdsCollisionRuntimeDiagnostics.topology_getter_invalid++;
+        NDS_DIAG(gNdsCollisionRuntimeDiagnostics.topology_getter_invalid++);
         return -1;
     }
     info = &gMPCollisionVertexInfo->vertex_info[line_id];
@@ -2559,18 +2559,18 @@ static s32 ndsMPGetTopologyEdgeLineID(s32 line_id, sb32 get_next)
         info->edge_next_line_id;
     if (ndsMPTopologySourceLineIsActive(line_id) == FALSE)
     {
-        gNdsCollisionRuntimeDiagnostics.topology_inactive++;
+        NDS_DIAG(gNdsCollisionRuntimeDiagnostics.topology_inactive++);
         return -1;
     }
     result = (get_next != FALSE) ? info->edge_next_line_id :
         info->edge_prev_line_id;
     if (result >= 0)
     {
-        gNdsCollisionRuntimeDiagnostics.topology_getter_hits++;
+        NDS_DIAG(gNdsCollisionRuntimeDiagnostics.topology_getter_hits++);
     }
     else
     {
-        gNdsCollisionRuntimeDiagnostics.topology_getter_no_edge++;
+        NDS_DIAG(gNdsCollisionRuntimeDiagnostics.topology_getter_no_edge++);
     }
     return result;
 }
@@ -2980,7 +2980,7 @@ static void ndsMPGetLRAngle(Vec3f *angle, s32 v1x, s32 v1y, s32 v2x, s32 v2y,
     {
         if (v2x != v1x)
         {
-            gNdsStageCollisionLoopDivisionGuardCount++;
+            NDS_DIAG(gNdsStageCollisionLoopDivisionGuardCount++);
         }
         angle->x = (f32)lr;
         angle->y = 0.0F;
@@ -3225,7 +3225,7 @@ ndsMPSweepGroupReject(u32 *state, s32 *ip0, s32 *it0, u32 axis,
         g->reject_misses = 0u;
         if (axis == 0u)
         {
-            gNdsMPWallSweepGroupRejects++;
+            NDS_DIAG(gNdsMPWallSweepGroupRejects++);
         }
         else
         {
@@ -3419,7 +3419,7 @@ ndsStageMPAdjustFloorLoopWallSweep(Vec3f *position,
     {
         return FALSE;
     }
-    gNdsMPWallSweepCalls++;
+    NDS_DIAG(gNdsMPWallSweepCalls++);
     links = geometry->vertex_links;
     ids = geometry->vertex_id;
     verts = geometry->vertex_data;
@@ -3586,7 +3586,7 @@ ndsStageMPAdjustFloorLoopWallSweep(Vec3f *position,
             vertex_count = ndsMPVertexLinkCount(links, (u32)line_id);
             if ((vertex_count < 2u) || (vertex_count > 128u))
             {
-                gNdsStageCollisionLoopBadVertexCount++;
+                NDS_DIAG(gNdsStageCollisionLoopBadVertexCount++);
                 continue;
             }
             vpos_x = ndsMPVertexX(verts, ndsMPVertexID(ids, vertex_first));
@@ -3671,7 +3671,7 @@ ndsStageMPAdjustFloorLoopWallSweep(Vec3f *position,
     }
     if (found != FALSE)
     {
-        gNdsMPWallSweepHits++;
+        NDS_DIAG(gNdsMPWallSweepHits++);
     }
     return found;
 }
@@ -3963,7 +3963,7 @@ static sb32 ndsMPGetLRCommonWall(s32 line_id, Vec3f *object_pos,
     vertex_count = ndsMPVertexLinkCount(geometry->vertex_links, (u32)line_id);
     if ((vertex_count < 2u) || (vertex_count > 128u))
     {
-        gNdsStageCollisionLoopBadVertexCount++;
+        NDS_DIAG(gNdsStageCollisionLoopBadVertexCount++);
         return FALSE;
     }
     v1y = ndsMPVertexY(geometry->vertex_data,
@@ -4029,7 +4029,7 @@ static sb32 ndsMPGetLRCommonWall(s32 line_id, Vec3f *object_pos,
     }
     if (v2y == v1y)
     {
-        gNdsStageCollisionLoopDivisionGuardCount++;
+        NDS_DIAG(gNdsStageCollisionLoopDivisionGuardCount++);
         wall_x = ((f32)v1x + (f32)v2x) * 0.5F;
     }
     else
@@ -4146,7 +4146,7 @@ static sb32 ndsMPProjectFloorGeometry(Vec3f *position, s32 *project_line_id,
             NDS_DIAG(gNdsStageCollisionLoopYakumonoDObjDeferredCount++);
             if (yakumono_id >= 1u)
             {
-                gNdsStageCollisionLoopYakumonoDObjUnsafeIndexGuardCount++;
+                NDS_DIAG(gNdsStageCollisionLoopYakumonoDObjUnsafeIndexGuardCount++);
             }
         }
         line_end = line_first + line_count;
@@ -4165,7 +4165,7 @@ static sb32 ndsMPProjectFloorGeometry(Vec3f *position, s32 *project_line_id,
 
             if ((vertex_count < 2u) || (vertex_count > 128u))
             {
-                gNdsStageCollisionLoopBadVertexCount++;
+                NDS_DIAG(gNdsStageCollisionLoopBadVertexCount++);
                 continue;
             }
             segment_count = vertex_count - 1u;
@@ -4202,7 +4202,7 @@ static sb32 ndsMPProjectFloorGeometry(Vec3f *position, s32 *project_line_id,
                 }
                 if (x1 == x2)
                 {
-                    gNdsStageCollisionLoopDivisionGuardCount++;
+                    NDS_DIAG(gNdsStageCollisionLoopDivisionGuardCount++);
                     continue;
                 }
                 fpos = ndsMPLineDistanceFC(position->x, x1, y1, x2, y2);
@@ -4265,7 +4265,7 @@ static void ndsStageCollisionLoopRecordProject(Vec3f *position, sb32 hit,
     {
         return;
     }
-    gNdsStageCollisionLoopProjectCallCount++;
+    NDS_DIAG(gNdsStageCollisionLoopProjectCallCount++);
     if (used_geometry != FALSE)
     {
         gNdsStageCollisionLoopGeometryProjectCallCount++;
@@ -4295,7 +4295,7 @@ static void ndsStageCollisionLoopRecordProject(Vec3f *position, sb32 hit,
     }
     if ((best_slot == 0u) && (best_delta <= 256.0F))
     {
-        gNdsStageCollisionLoopP0ProjectCount++;
+        NDS_DIAG(gNdsStageCollisionLoopP0ProjectCount++);
         if (hit != FALSE)
         {
             gNdsStageCollisionLoopP0HitCount++;
@@ -4303,10 +4303,10 @@ static void ndsStageCollisionLoopRecordProject(Vec3f *position, sb32 hit,
     }
     else if ((best_slot == 1u) && (best_delta <= 256.0F))
     {
-        gNdsStageCollisionLoopP1ProjectCount++;
+        NDS_DIAG(gNdsStageCollisionLoopP1ProjectCount++);
         if (hit != FALSE)
         {
-            gNdsStageCollisionLoopP1HitCount++;
+            NDS_DIAG(gNdsStageCollisionLoopP1HitCount++);
         }
     }
 }
@@ -4331,7 +4331,7 @@ static sb32 ndsStageCollisionLoopCheckProjectFloor(
     }
     if (ndsStageCollisionLoopGeometryReady() == FALSE)
     {
-        gNdsStageCollisionLoopNoGeometryCount++;
+        NDS_DIAG(gNdsStageCollisionLoopNoGeometryCount++);
         gNdsStageCollisionLoopUnsafeFallbackAfterPrepareCount++;
         if (floor_line_id != NULL)
         {
@@ -4385,7 +4385,7 @@ static void ndsStageCollisionLoopRunProbe(Vec3f pos, u32 kind)
     Vec3f angle;
     sb32 hit;
 
-    gNdsStageCollisionLoopProbeCount++;
+    NDS_DIAG(gNdsStageCollisionLoopProbeCount++);
     hit = mpCollisionCheckProjectFloor(&pos, &line_id, &dist, &flags,
                                        &angle);
     if (hit != FALSE)
@@ -4394,14 +4394,14 @@ static void ndsStageCollisionLoopRunProbe(Vec3f pos, u32 kind)
     }
     else
     {
-        gNdsStageCollisionLoopProbeMissCount++;
+        NDS_DIAG(gNdsStageCollisionLoopProbeMissCount++);
         if (kind == 1u)
         {
-            gNdsStageCollisionLoopOffstageMissCount++;
+            NDS_DIAG(gNdsStageCollisionLoopOffstageMissCount++);
         }
         else if (kind == 2u)
         {
-            gNdsStageCollisionLoopBelowFloorMissCount++;
+            NDS_DIAG(gNdsStageCollisionLoopBelowFloorMissCount++);
         }
     }
 }
@@ -4424,7 +4424,7 @@ static void ndsStageCollisionLoopAdoptRealFloor(u32 slot)
     root = fp->joints[nFTPartsJointTopN];
     if ((ndsFighterStructIsPoolPointer(fp) == FALSE) || (root == NULL))
     {
-        gNdsStageCollisionLoopUnexpectedStatusCount++;
+        NDS_DIAG(gNdsStageCollisionLoopUnexpectedStatusCount++);
         return;
     }
     pos = root->translate.vec.f;
@@ -4432,7 +4432,7 @@ static void ndsStageCollisionLoopAdoptRealFloor(u32 slot)
     if (mpCollisionCheckProjectFloor(&pos, &line_id, &dist, &flags,
             &angle) == FALSE)
     {
-        gNdsStageCollisionLoopUnexpectedStatusCount++;
+        NDS_DIAG(gNdsStageCollisionLoopUnexpectedStatusCount++);
         return;
     }
 
@@ -4554,7 +4554,7 @@ static void ndsStageCollisionLoopRecordFinalSlot(u32 slot)
     root = fp->joints[nFTPartsJointTopN];
     if ((ndsFighterStructIsPoolPointer(fp) == FALSE) || (root == NULL))
     {
-        gNdsStageCollisionLoopUnexpectedStatusCount++;
+        NDS_DIAG(gNdsStageCollisionLoopUnexpectedStatusCount++);
         return;
     }
     pos = root->translate.vec.f;
@@ -4993,7 +4993,7 @@ void ndsFighterMarioFoxStageFloorFollowLoopPrepare(void)
         if ((fp->coll_data.floor_line_id >= 0) &&
             ((fp->coll_data.mask_stat & MAP_FLAG_FLOOR) != 0u))
         {
-            gNdsStageFloorFollowLoopInitialAdoptCount++;
+            NDS_DIAG(gNdsStageFloorFollowLoopInitialAdoptCount++);
         }
     }
 }
@@ -5031,25 +5031,25 @@ static sb32 ndsStageFloorFollowLoopUpdateFighter(GObj *fighter_gobj)
         return FALSE;
     }
     slot = fp->player;
-    gNdsStageFloorFollowLoopMapUpdateCount++;
+    NDS_DIAG(gNdsStageFloorFollowLoopMapUpdateCount++);
     if (slot == 0u)
     {
         gNdsStageFloorFollowLoopP0MapUpdateCount++;
     }
     else
     {
-        gNdsStageFloorFollowLoopP1MapUpdateCount++;
+        NDS_DIAG(gNdsStageFloorFollowLoopP1MapUpdateCount++);
     }
     if (ndsStageCollisionLoopGeometryReady() == FALSE)
     {
-        gNdsStageFloorFollowLoopNoGeometryCount++;
+        NDS_DIAG(gNdsStageFloorFollowLoopNoGeometryCount++);
         fp->coll_data.is_coll_end = TRUE;
         return FALSE;
     }
 
     probe = root->translate.vec.f;
     probe.y += 512.0F;
-    gNdsStageFloorFollowLoopProjectCallCount++;
+    NDS_DIAG(gNdsStageFloorFollowLoopProjectCallCount++);
     hit = mpCollisionCheckProjectFloor(&probe, &line_id, &dist, &flags,
                                        &angle);
     if (hit == FALSE)
@@ -5090,7 +5090,7 @@ static sb32 ndsStageFloorFollowLoopUpdateFighter(GObj *fighter_gobj)
     }
     else
     {
-        gNdsStageFloorFollowLoopP1HitCount++;
+        NDS_DIAG(gNdsStageFloorFollowLoopP1HitCount++);
         gNdsStageFloorFollowLoopP1FloorLineID = line_id;
         gNdsStageFloorFollowLoopP1FloorKind = (u32)line_kind;
         gNdsStageFloorFollowLoopP1FloorLineIsFloor = 1u;
@@ -5112,13 +5112,13 @@ static sb32 ndsStageFloorFollowLoopUpdateFighter(GObj *fighter_gobj)
 
     if (pre_drift_milli != 0)
     {
-        gNdsStageFloorFollowLoopClampCount++;
+        NDS_DIAG(gNdsStageFloorFollowLoopClampCount++);
     }
     else
     {
-        gNdsStageFloorFollowLoopNoClampCount++;
+        NDS_DIAG(gNdsStageFloorFollowLoopNoClampCount++);
     }
-    gNdsStageFloorFollowLoopGeometryHitCount++;
+    NDS_DIAG(gNdsStageFloorFollowLoopGeometryHitCount++);
     root->translate.vec.f.y = floor_y;
     fp->coll_data.floor_line_id = line_id;
     fp->coll_data.floor_dist = floor_y;
@@ -5135,7 +5135,7 @@ static sb32 ndsStageFloorFollowLoopUpdateFighter(GObj *fighter_gobj)
     if ((ndsFighterMarioFoxStageMPProcessFloorLoopProofEnabled() != FALSE) &&
         (ndsStageMPProcessFloorLoopUpdateFighter(fighter_gobj) == FALSE))
     {
-        gNdsStageMPProcessFloorLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPProcessFloorLoopUnsafeCount++);
     }
     return TRUE;
 }
@@ -5297,7 +5297,7 @@ static void ndsStageFloorEdgeLoopSeedSlot(u32 slot, f32 x, s32 line_id)
     if ((ndsFighterStructIsPoolPointer(fp) == FALSE) || (root == NULL) ||
         (ndsStageFloorEdgeLoopFloorYAtX(line_id, x, &floor_y) == FALSE))
     {
-        gNdsStageFloorEdgeLoopUnexpectedStatusCount++;
+        NDS_DIAG(gNdsStageFloorEdgeLoopUnexpectedStatusCount++);
         return;
     }
     root->translate.vec.f.x = x;
@@ -5342,16 +5342,16 @@ static void ndsStageFloorEdgeLoopRunProbe(s32 line_id, f32 x, sb32 inside)
     {
         if (hit != FALSE)
         {
-            gNdsStageFloorEdgeLoopInsideProbeHitCount++;
+            NDS_DIAG(gNdsStageFloorEdgeLoopInsideProbeHitCount++);
         }
     }
     else if (hit == FALSE)
     {
-        gNdsStageFloorEdgeLoopOutsideProbeMissCount++;
+        NDS_DIAG(gNdsStageFloorEdgeLoopOutsideProbeMissCount++);
     }
     else
     {
-        gNdsStageFloorEdgeLoopOutsideProbeUnexpectedHitCount++;
+        NDS_DIAG(gNdsStageFloorEdgeLoopOutsideProbeUnexpectedHitCount++);
     }
 }
 
@@ -5378,13 +5378,13 @@ void ndsFighterMarioFoxStageFloorEdgeLoopPrepare(void)
         (ndsStageCollisionLoopGeometryReady() != FALSE) ? 1u : 0u;
     if (gNdsStageFloorEdgeLoopGeometryReady == 0u)
     {
-        gNdsStageFloorEdgeLoopUnsafeFallbackAfterPrepareCount++;
+        NDS_DIAG(gNdsStageFloorEdgeLoopUnsafeFallbackAfterPrepareCount++);
         return;
     }
     if (ndsStageFloorEdgeLoopFindWidestFloor(&left, &right, &line_id,
             &vertex_count) == FALSE)
     {
-        gNdsStageFloorEdgeLoopUnexpectedStatusCount++;
+        NDS_DIAG(gNdsStageFloorEdgeLoopUnexpectedStatusCount++);
         return;
     }
     width = right.x - left.x;
@@ -5436,10 +5436,10 @@ static void ndsStageFloorEdgeLoopRecordPreClamp(u32 slot,
     {
         return;
     }
-    gNdsStageFloorEdgeLoopPreClampDriftSampleCount++;
+    NDS_DIAG(gNdsStageFloorEdgeLoopPreClampDriftSampleCount++);
     if (pre_drift_milli != 0)
     {
-        gNdsStageFloorEdgeLoopPreClampCount++;
+        NDS_DIAG(gNdsStageFloorEdgeLoopPreClampCount++);
     }
     if (slot == 0u)
     {
@@ -5499,7 +5499,7 @@ static void ndsStageFloorEdgeLoopRecordFighter(GObj *fighter_gobj)
     gNdsStageFloorEdgeLoopMapUpdateCount++;
     if (slot == 0u)
     {
-        gNdsStageFloorEdgeLoopP0MapUpdateCount++;
+        NDS_DIAG(gNdsStageFloorEdgeLoopP0MapUpdateCount++);
         gNdsStageFloorEdgeLoopP0FinalDistMilli = dist_milli;
         if (dist_milli < gNdsStageFloorEdgeLoopP0MinDistMilli)
         {
@@ -5517,7 +5517,7 @@ static void ndsStageFloorEdgeLoopRecordFighter(GObj *fighter_gobj)
     }
     else
     {
-        gNdsStageFloorEdgeLoopP1MapUpdateCount++;
+        NDS_DIAG(gNdsStageFloorEdgeLoopP1MapUpdateCount++);
         gNdsStageFloorEdgeLoopP1FinalDistMilli = dist_milli;
         if (dist_milli < gNdsStageFloorEdgeLoopP1MinDistMilli)
         {
@@ -5823,12 +5823,12 @@ void mpProcessSetCollProjectFloorID(MPCollData *coll_data)
         coll_data->floor_line_id = -1;
         if (ndsFighterMarioFoxStageMPProcessFloorLoopProofEnabled() != FALSE)
         {
-            gNdsStageMPProcessFloorLoopProjectFloorIDMissCount++;
+            NDS_DIAG(gNdsStageMPProcessFloorLoopProjectFloorIDMissCount++);
         }
     }
     else if (ndsFighterMarioFoxStageMPProcessFloorLoopProofEnabled() != FALSE)
     {
-        gNdsStageMPProcessFloorLoopProjectFloorIDHitCount++;
+        NDS_DIAG(gNdsStageMPProcessFloorLoopProjectFloorIDHitCount++);
     }
 }
 
@@ -5859,12 +5859,12 @@ sb32 mpProcessCheckTestFloorCollisionNew(MPCollData *coll_data)
     {
         if (ndsFighterMarioFoxStageMPProcessFloorLoopProofEnabled() != FALSE)
         {
-            gNdsStageMPProcessFloorLoopTestNewSetProjectCount++;
+            NDS_DIAG(gNdsStageMPProcessFloorLoopTestNewSetProjectCount++);
         }
         mpProcessSetCollProjectFloorID(coll_data);
         if (ndsFighterMarioFoxStageMPProcessFloorLoopProofEnabled() != FALSE)
         {
-            gNdsStageMPProcessFloorLoopTestNewMissCount++;
+            NDS_DIAG(gNdsStageMPProcessFloorLoopTestNewMissCount++);
         }
         return FALSE;
     }
@@ -5877,14 +5877,14 @@ sb32 mpProcessCheckTestFloorCollisionNew(MPCollData *coll_data)
         coll_data->mask_stat |= MAP_FLAG_FLOOR;
         if (ndsFighterMarioFoxStageMPProcessFloorLoopProofEnabled() != FALSE)
         {
-            gNdsStageMPProcessFloorLoopTestNewHitCount++;
+            NDS_DIAG(gNdsStageMPProcessFloorLoopTestNewHitCount++);
         }
         return TRUE;
     }
     is_wall_edge = FALSE;
     if (ndsFighterMarioFoxStageMPProcessFloorLoopProofEnabled() != FALSE)
     {
-        gNdsStageMPProcessFloorLoopTestNewEdgeBranchCount++;
+        NDS_DIAG(gNdsStageMPProcessFloorLoopTestNewEdgeBranchCount++);
     }
 
     mpCollisionGetFloorEdgeL(coll_data->floor_line_id, &object_pos);
@@ -5919,14 +5919,14 @@ sb32 mpProcessCheckTestFloorCollisionNew(MPCollData *coll_data)
         coll_data->floor_dist = 0.0F;
         if (ndsFighterMarioFoxStageMPProcessFloorLoopProofEnabled() != FALSE)
         {
-            gNdsStageMPProcessFloorLoopTestNewHitCount++;
+            NDS_DIAG(gNdsStageMPProcessFloorLoopTestNewHitCount++);
         }
         return TRUE;
     }
     if (ndsFighterMarioFoxStageMPProcessFloorLoopProofEnabled() != FALSE)
     {
-        gNdsStageMPProcessFloorLoopTestNewSetProjectCount++;
-        gNdsStageMPProcessFloorLoopTestNewMissCount++;
+        NDS_DIAG(gNdsStageMPProcessFloorLoopTestNewSetProjectCount++);
+        NDS_DIAG(gNdsStageMPProcessFloorLoopTestNewMissCount++);
     }
     mpProcessSetCollProjectFloorID(coll_data);
     return FALSE;
@@ -6139,7 +6139,7 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
     {
         return FALSE;
     }
-    gNdsCollisionRuntimeDiagnostics.floor_sweep_calls++;
+    NDS_DIAG(gNdsCollisionRuntimeDiagnostics.floor_sweep_calls++);
     line_info = geometry->line_info;
     links = geometry->vertex_links;
     ids = geometry->vertex_id;
@@ -6282,7 +6282,7 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
             gNdsStageMPSweepFloorLoopLineSweepVisitCount++;
             if ((vertex_count < 2u) || (vertex_count > 128u))
             {
-                gNdsStageCollisionLoopBadVertexCount++;
+                NDS_DIAG(gNdsStageCollisionLoopBadVertexCount++);
                 continue;
             }
             if ((is_dynamic != FALSE) && (gNdsMPSweepGroupHoist == 0u))
@@ -6342,7 +6342,7 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
                     (ndsMPSweepSegmentXMisses(&v1, &v2, sweep_min_x,
                                               sweep_max_x) != FALSE))
                 {
-                    gNdsMPSweepSegmentXRejects++;
+                    NDS_DIAG(gNdsMPSweepSegmentXRejects++);
                     continue;
                 }
 
@@ -6352,7 +6352,7 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
                 {
                     continue;
                 }
-                gNdsStageMPSweepFloorLoopLineSweepCandidateCount++;
+                NDS_DIAG(gNdsStageMPSweepFloorLoopLineSweepCandidateCount++);
                 hit_dist = fabsf(hit_y - (sweep_position->y - speed_y));
                 if (hit_dist >= best_dist)
                 {
@@ -6375,20 +6375,20 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
     }
     if (saw_flat_ascending_sweep != FALSE)
     {
-        gNdsCollisionRuntimeDiagnostics.floor_flat_ascending_sweeps++;
+        NDS_DIAG(gNdsCollisionRuntimeDiagnostics.floor_flat_ascending_sweeps++);
     }
     if (best_line < 0)
     {
         return FALSE;
     }
-    gNdsCollisionRuntimeDiagnostics.floor_sweep_hits++;
+    NDS_DIAG(gNdsCollisionRuntimeDiagnostics.floor_sweep_hits++);
     if (best_is_reverse_endpoint != FALSE)
     {
-        gNdsCollisionRuntimeDiagnostics.floor_reverse_endpoint_hits++;
+        NDS_DIAG(gNdsCollisionRuntimeDiagnostics.floor_reverse_endpoint_hits++);
     }
     if (best_is_flat_ascending != FALSE)
     {
-        gNdsCollisionRuntimeDiagnostics.floor_flat_ascending_accepts++;
+        NDS_DIAG(gNdsCollisionRuntimeDiagnostics.floor_flat_ascending_accepts++);
     }
     if (ga_last != NULL)
     {
@@ -6410,7 +6410,7 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
         (ndsFighterMarioFoxStageMPPlatformSpeedFloorLoopProofEnabled() !=
             FALSE))
     {
-        gNdsStageMPPlatformSpeedFloorLoopDynamicHitCount++;
+        NDS_DIAG(gNdsStageMPPlatformSpeedFloorLoopDynamicHitCount++);
         gNdsStageMPPlatformSpeedFloorLoopDynamicLineID = best_line;
         gNdsStageMPPlatformSpeedFloorLoopDynamicYakumonoID =
             best_yakumono_id;
@@ -6442,11 +6442,11 @@ sb32 mpCollisionCheckFloorLineCollisionSame(Vec3f *position,
     {
         if (hit != FALSE)
         {
-            gNdsStageMPSweepFloorLoopLineSweepSameHitCount++;
+            NDS_DIAG(gNdsStageMPSweepFloorLoopLineSweepSameHitCount++);
         }
         else
         {
-            gNdsStageMPSweepFloorLoopLineSweepSameMissCount++;
+            NDS_DIAG(gNdsStageMPSweepFloorLoopLineSweepSameMissCount++);
         }
     }
     return hit;
@@ -6463,7 +6463,7 @@ sb32 mpCollisionCheckFloorLineCollisionDiff(Vec3f *position,
 
     if (ndsFighterMarioFoxStageMPSweepFloorLoopProofEnabled() != FALSE)
     {
-        gNdsStageMPSweepFloorLoopLineSweepDiffCallCount++;
+        NDS_DIAG(gNdsStageMPSweepFloorLoopLineSweepDiffCallCount++);
     }
     hit = ndsStageMPSweepFloorLoopSweep(position, translate, ga_last,
                                         stand_line_id, stand_coll_flags,
@@ -6472,11 +6472,11 @@ sb32 mpCollisionCheckFloorLineCollisionDiff(Vec3f *position,
     {
         if (hit != FALSE)
         {
-            gNdsStageMPSweepFloorLoopLineSweepDiffHitCount++;
+            NDS_DIAG(gNdsStageMPSweepFloorLoopLineSweepDiffHitCount++);
         }
         else
         {
-            gNdsStageMPSweepFloorLoopLineSweepDiffMissCount++;
+            NDS_DIAG(gNdsStageMPSweepFloorLoopLineSweepDiffMissCount++);
         }
     }
     return hit;
@@ -6499,7 +6499,7 @@ sb32 mpProcessCheckTestFloorCollisionAdjNew(
     {
         return FALSE;
     }
-    gNdsCollisionRuntimeDiagnostics.floor_adj_calls++;
+    NDS_DIAG(gNdsCollisionRuntimeDiagnostics.floor_adj_calls++);
     map_coll = &coll_data->map_coll;
     p_map_coll = (coll_data->p_map_coll != NULL) ? coll_data->p_map_coll :
         map_coll;
@@ -6529,14 +6529,14 @@ sb32 mpProcessCheckTestFloorCollisionAdjNew(
         ((proc_map == NULL) || (proc_map(gobj) != FALSE)))
     {
         coll_data->mask_curr |= MAP_FLAG_FLOOR;
-        gNdsCollisionRuntimeDiagnostics.floor_adj_direct_hits++;
+        NDS_DIAG(gNdsCollisionRuntimeDiagnostics.floor_adj_direct_hits++);
         return TRUE;
     }
     if ((hit != FALSE) &&
         ((coll_data->floor_flags & MAP_VERTEX_COLL_PASS) != 0u) &&
         (coll_data->floor_line_id == coll_data->ignore_line_id))
     {
-        gNdsCollisionRuntimeDiagnostics.floor_adj_pass_rejects++;
+        NDS_DIAG(gNdsCollisionRuntimeDiagnostics.floor_adj_pass_rejects++);
     }
 
     if ((coll_data->mask_unk & MAP_FLAG_LWALL) != 0u)
@@ -6561,7 +6561,7 @@ sb32 mpProcessCheckTestFloorCollisionAdjNew(
             ((proc_map == NULL) || (proc_map(gobj) != FALSE)))
         {
             coll_data->mask_curr |= MAP_FLAG_FLOOR;
-            gNdsCollisionRuntimeDiagnostics.floor_adjacent_hits++;
+            NDS_DIAG(gNdsCollisionRuntimeDiagnostics.floor_adjacent_hits++);
             return TRUE;
         }
     }
@@ -6735,7 +6735,7 @@ static sb32 ndsStageMPCeilFloorLoopSweep(Vec3f *position,
 
             if ((vertex_count < 2u) || (vertex_count > 128u))
             {
-                gNdsStageCollisionLoopBadVertexCount++;
+                NDS_DIAG(gNdsStageCollisionLoopBadVertexCount++);
                 continue;
             }
             if ((is_dynamic != FALSE) && (gNdsMPSweepGroupHoist == 0u))
@@ -6772,13 +6772,13 @@ static sb32 ndsStageMPCeilFloorLoopSweep(Vec3f *position,
 
                 ndsMPVertexF32Get(verts, v1_id, &v1.x, &v1.y);
                 ndsMPVertexF32Get(verts, v2_id, &v2.x, &v2.y);
-                gNdsStageMPCeilFloorLoopLineSweepVisitCount++;
+                NDS_DIAG(gNdsStageMPCeilFloorLoopLineSweepVisitCount++);
                 if ((gNdsMPSweepSegmentXReject != 0u) &&
                     (ndsFcmpBits(v1.y) != ndsFcmpBits(v2.y)) &&
                     (ndsMPSweepSegmentXMisses(&v1, &v2, sweep_min_x,
                                               sweep_max_x) != FALSE))
                 {
-                    gNdsMPSweepSegmentXRejects++;
+                    NDS_DIAG(gNdsMPSweepSegmentXRejects++);
                     continue;
                 }
                 if (ndsMPFCSegmentCrosses(sweep_position, sweep_translate,
@@ -6786,7 +6786,7 @@ static sb32 ndsStageMPCeilFloorLoopSweep(Vec3f *position,
                 {
                     continue;
                 }
-                gNdsStageMPCeilFloorLoopLineSweepCandidateCount++;
+                NDS_DIAG(gNdsStageMPCeilFloorLoopLineSweepCandidateCount++);
                 hit_dist = fabsf(hit_y - (sweep_position->y - speed_y));
                 if (hit_dist >= best_dist)
                 {
@@ -6837,7 +6837,7 @@ sb32 mpCollisionCheckCeilLineCollisionSame(Vec3f *position,
 
     if (ndsFighterMarioFoxStageMPCeilFloorLoopProofEnabled() != FALSE)
     {
-        gNdsStageMPCeilFloorLoopLineSweepSameCallCount++;
+        NDS_DIAG(gNdsStageMPCeilFloorLoopLineSweepSameCallCount++);
     }
     hit = ndsStageMPCeilFloorLoopSweep(position, translate, ga_last,
                                        stand_line_id, stand_coll_flags,
@@ -6846,11 +6846,11 @@ sb32 mpCollisionCheckCeilLineCollisionSame(Vec3f *position,
     {
         if (hit != FALSE)
         {
-            gNdsStageMPCeilFloorLoopLineSweepSameHitCount++;
+            NDS_DIAG(gNdsStageMPCeilFloorLoopLineSweepSameHitCount++);
         }
         else
         {
-            gNdsStageMPCeilFloorLoopLineSweepSameMissCount++;
+            NDS_DIAG(gNdsStageMPCeilFloorLoopLineSweepSameMissCount++);
         }
     }
     return hit;
@@ -6867,7 +6867,7 @@ sb32 mpCollisionCheckCeilLineCollisionDiff(Vec3f *position,
 
     if (ndsFighterMarioFoxStageMPCeilFloorLoopProofEnabled() != FALSE)
     {
-        gNdsStageMPCeilFloorLoopLineSweepDiffCallCount++;
+        NDS_DIAG(gNdsStageMPCeilFloorLoopLineSweepDiffCallCount++);
     }
     hit = ndsStageMPCeilFloorLoopSweep(position, translate, ga_last,
                                        stand_line_id, stand_coll_flags,
@@ -6876,11 +6876,11 @@ sb32 mpCollisionCheckCeilLineCollisionDiff(Vec3f *position,
     {
         if (hit != FALSE)
         {
-            gNdsStageMPCeilFloorLoopLineSweepDiffHitCount++;
+            NDS_DIAG(gNdsStageMPCeilFloorLoopLineSweepDiffHitCount++);
         }
         else
         {
-            gNdsStageMPCeilFloorLoopLineSweepDiffMissCount++;
+            NDS_DIAG(gNdsStageMPCeilFloorLoopLineSweepDiffMissCount++);
         }
     }
     return hit;
@@ -6937,8 +6937,8 @@ sb32 mpProcessCheckTestCeilCollisionAdjNew(MPCollData *coll_data)
         coll_data->mask_curr |= MAP_FLAG_CEIL;
         if (ndsFighterMarioFoxStageMPCeilFloorLoopProofEnabled() != FALSE)
         {
-            gNdsStageMPCeilFloorLoopCheckHitCount++;
-            gNdsStageMPCeilFloorLoopMaskCurrCeilCount++;
+            NDS_DIAG(gNdsStageMPCeilFloorLoopCheckHitCount++);
+            NDS_DIAG(gNdsStageMPCeilFloorLoopMaskCurrCeilCount++);
         }
         return TRUE;
     }
@@ -6955,8 +6955,8 @@ sb32 mpProcessCheckTestCeilCollisionAdjNew(MPCollData *coll_data)
             coll_data->mask_curr |= MAP_FLAG_CEIL;
             if (ndsFighterMarioFoxStageMPCeilFloorLoopProofEnabled() != FALSE)
             {
-                gNdsStageMPCeilFloorLoopCheckHitCount++;
-                gNdsStageMPCeilFloorLoopMaskCurrCeilCount++;
+                NDS_DIAG(gNdsStageMPCeilFloorLoopCheckHitCount++);
+                NDS_DIAG(gNdsStageMPCeilFloorLoopMaskCurrCeilCount++);
             }
             return TRUE;
         }
@@ -6974,15 +6974,15 @@ sb32 mpProcessCheckTestCeilCollisionAdjNew(MPCollData *coll_data)
             coll_data->mask_curr |= MAP_FLAG_CEIL;
             if (ndsFighterMarioFoxStageMPCeilFloorLoopProofEnabled() != FALSE)
             {
-                gNdsStageMPCeilFloorLoopCheckHitCount++;
-                gNdsStageMPCeilFloorLoopMaskCurrCeilCount++;
+                NDS_DIAG(gNdsStageMPCeilFloorLoopCheckHitCount++);
+                NDS_DIAG(gNdsStageMPCeilFloorLoopMaskCurrCeilCount++);
             }
             return TRUE;
         }
     }
     if (ndsFighterMarioFoxStageMPCeilFloorLoopProofEnabled() != FALSE)
     {
-        gNdsStageMPCeilFloorLoopCheckMissCount++;
+        NDS_DIAG(gNdsStageMPCeilFloorLoopCheckMissCount++);
     }
     return FALSE;
 }
@@ -7022,7 +7022,7 @@ void mpProcessRunCeilCollisionAdjNew(MPCollData *coll_data)
         coll_data->mask_stat |= MAP_FLAG_CEIL;
         if (ndsFighterMarioFoxStageMPCeilFloorLoopProofEnabled() != FALSE)
         {
-            gNdsStageMPCeilFloorLoopMaskStatCeilCount++;
+            NDS_DIAG(gNdsStageMPCeilFloorLoopMaskStatCeilCount++);
         }
         return;
     }
@@ -7057,7 +7057,7 @@ void mpProcessRunCeilCollisionAdjNew(MPCollData *coll_data)
         coll_data->mask_stat |= MAP_FLAG_CEIL;
         if (ndsFighterMarioFoxStageMPCeilFloorLoopProofEnabled() != FALSE)
         {
-            gNdsStageMPCeilFloorLoopMaskStatCeilCount++;
+            NDS_DIAG(gNdsStageMPCeilFloorLoopMaskStatCeilCount++);
         }
     }
 }
@@ -7078,7 +7078,7 @@ sb32 mpProcessCheckTestFloorCollision(MPCollData *coll_data, s32 line_id)
     {
         if (ndsFighterMarioFoxStageMPSweepFloorLoopProofEnabled() != FALSE)
         {
-            gNdsStageMPSweepFloorLoopUnsafeCount++;
+            NDS_DIAG(gNdsStageMPSweepFloorLoopUnsafeCount++);
         }
         return FALSE;
     }
@@ -7123,18 +7123,18 @@ sb32 mpProcessCheckTestFloorCollision(MPCollData *coll_data, s32 line_id)
         coll_data->floor_angle = floor_angle;
         if (ndsFighterMarioFoxStageMPSweepFloorLoopProofEnabled() != FALSE)
         {
-            gNdsStageMPSweepFloorLoopCheckFloorHitCount++;
-            gNdsStageMPSweepFloorLoopLineSweepAcceptNewLineCount++;
-            gNdsStageMPSweepFloorLoopMaskCurrFloorCount++;
+            NDS_DIAG(gNdsStageMPSweepFloorLoopCheckFloorHitCount++);
+            NDS_DIAG(gNdsStageMPSweepFloorLoopLineSweepAcceptNewLineCount++);
+            NDS_DIAG(gNdsStageMPSweepFloorLoopMaskCurrFloorCount++);
         }
         return TRUE;
     }
     if (ndsFighterMarioFoxStageMPSweepFloorLoopProofEnabled() != FALSE)
     {
-        gNdsStageMPSweepFloorLoopCheckFloorMissCount++;
+        NDS_DIAG(gNdsStageMPSweepFloorLoopCheckFloorMissCount++);
         if (hit != FALSE)
         {
-            gNdsStageMPSweepFloorLoopLineSweepRejectSameLineCount++;
+            NDS_DIAG(gNdsStageMPSweepFloorLoopLineSweepRejectSameLineCount++);
         }
     }
     return FALSE;
@@ -7204,7 +7204,7 @@ sb32 mpProcessCheckTestLCliffCollision(MPCollData *coll_data)
             coll_data->mask_stat |= MAP_FLAG_LCLIFF;
             if (is_cliffcatch_diag_active != FALSE)
             {
-                gNdsStageMPCliffCatchFloorLoopLCliffHitCount++;
+                NDS_DIAG(gNdsStageMPCliffCatchFloorLoopLCliffHitCount++);
             }
             return TRUE;
         }
@@ -7237,7 +7237,7 @@ sb32 mpProcessCheckTestRCliffCollision(MPCollData *coll_data)
     }
     if (is_cliffcatch_diag_active != FALSE)
     {
-        gNdsStageMPCliffCatchFloorLoopRCliffTestCount++;
+        NDS_DIAG(gNdsStageMPCliffCatchFloorLoopRCliffTestCount++);
     }
     if (*coll_data->p_lr != -1)
     {
@@ -7275,7 +7275,7 @@ sb32 mpProcessCheckTestRCliffCollision(MPCollData *coll_data)
             coll_data->mask_stat |= MAP_FLAG_RCLIFF;
             if (is_cliffcatch_diag_active != FALSE)
             {
-                gNdsStageMPCliffCatchFloorLoopRCliffHitCount++;
+                NDS_DIAG(gNdsStageMPCliffCatchFloorLoopRCliffHitCount++);
             }
             return TRUE;
         }
@@ -7296,12 +7296,12 @@ void mpProcessSetLandingFloor(MPCollData *coll_data)
     }
     if (ndsFighterMarioFoxStageMPProcessFloorLoopProofEnabled() != FALSE)
     {
-        gNdsStageMPProcessFloorLoopSetLandingFloorCallCount++;
+        NDS_DIAG(gNdsStageMPProcessFloorLoopSetLandingFloorCallCount++);
     }
     if ((ndsFighterMarioFoxStageMPFallLandFloorLoopProofEnabled() != FALSE) &&
         (sNdsStageMPFallLandFloorLoopMapActive != FALSE))
     {
-        gNdsStageMPFallLandFloorLoopSetLandingFloorCount++;
+        NDS_DIAG(gNdsStageMPFallLandFloorLoopSetLandingFloorCount++);
     }
     map_coll = &coll_data->map_coll;
     translate = coll_data->p_translate;
@@ -7351,7 +7351,7 @@ void mpProcessSetCollideFloor(MPCollData *coll_data)
     }
     if (ndsFighterMarioFoxStageMPProcessFloorLoopProofEnabled() != FALSE)
     {
-        gNdsStageMPProcessFloorLoopSetCollideFloorCallCount++;
+        NDS_DIAG(gNdsStageMPProcessFloorLoopSetCollideFloorCallCount++);
     }
     map_coll = &coll_data->map_coll;
     translate = coll_data->p_translate;
@@ -7657,7 +7657,7 @@ void mpProcessRunFloorEdgeAdjust(MPCollData *coll_data)
 
     if (ndsFighterMarioFoxStageMPSweepFloorLoopProofEnabled() != FALSE)
     {
-        gNdsStageMPSweepFloorLoopFloorEdgeAdjustCallCount++;
+        NDS_DIAG(gNdsStageMPSweepFloorLoopFloorEdgeAdjustCallCount++);
     }
     if ((proof_active == FALSE) && (battle_playable_active == FALSE))
     {
@@ -7752,7 +7752,7 @@ static sb32 ndsStageMPProcessFloorLoopBuildCollData(FTStruct *fp,
     {
         sFallbackLR = fp->lr;
         mp_coll->p_lr = &sFallbackLR;
-        gNdsStageMPProcessFloorLoopAdapterFallbackLRCount++;
+        NDS_DIAG(gNdsStageMPProcessFloorLoopAdapterFallbackLRCount++);
     }
     mp_coll->pos_prev = fp->coll_data.pos_prev;
     mp_coll->map_coll = fp->coll_data.map_coll;
@@ -7771,7 +7771,7 @@ static sb32 ndsStageMPProcessFloorLoopBuildCollData(FTStruct *fp,
     mp_coll->rwall_line_id = -1;
     mp_coll->cliff_id = -1;
     mp_coll->ignore_line_id = fp->coll_data.ignore_line_id;
-    gNdsStageMPProcessFloorLoopAdapterBuildCount++;
+    NDS_DIAG(gNdsStageMPProcessFloorLoopAdapterBuildCount++);
     return TRUE;
 }
 
@@ -7792,7 +7792,7 @@ static void ndsStageMPProcessFloorLoopCopyBack(FTStruct *fp,
     fp->coll_data.floor_flags = mp_coll->floor_flags;
     fp->coll_data.floor_angle = mp_coll->floor_angle;
     fp->coll_data.cliff_id = mp_coll->cliff_id;
-    gNdsStageMPProcessFloorLoopAdapterCopyBackCount++;
+    NDS_DIAG(gNdsStageMPProcessFloorLoopAdapterCopyBackCount++);
 }
 
 static void ndsStageMPProcessFloorLoopInitColl(MPCollData *coll,
@@ -7855,7 +7855,7 @@ sb32 mpProcessUpdateMain(MPCollData *coll_data,
         update_count++;
         if (ndsFighterMarioFoxStageMPUpdateFloorLoopProofEnabled() != FALSE)
         {
-            gNdsStageMPUpdateFloorLoopUpdateMainSplitCount++;
+            NDS_DIAG(gNdsStageMPUpdateFloorLoopUpdateMainSplitCount++);
         }
     }
     else
@@ -7867,7 +7867,7 @@ sb32 mpProcessUpdateMain(MPCollData *coll_data,
         update_count = 10;
         if (ndsFighterMarioFoxStageMPUpdateFloorLoopProofEnabled() != FALSE)
         {
-            gNdsStageMPUpdateFloorLoopUpdateMainCapCount++;
+            NDS_DIAG(gNdsStageMPUpdateFloorLoopUpdateMainCapCount++);
         }
     }
     if (update_count <= 0)
@@ -7881,7 +7881,7 @@ sb32 mpProcessUpdateMain(MPCollData *coll_data,
     *translate = *pos_prev;
     if (ndsFighterMarioFoxStageMPUpdateFloorLoopProofEnabled() != FALSE)
     {
-        gNdsStageMPUpdateFloorLoopTranslateResetCount++;
+        NDS_DIAG(gNdsStageMPUpdateFloorLoopTranslateResetCount++);
         if ((u32)update_count > gNdsStageMPUpdateFloorLoopUpdateMainMaxStepCount)
         {
             gNdsStageMPUpdateFloorLoopUpdateMainMaxStepCount =
@@ -7904,7 +7904,7 @@ sb32 mpProcessUpdateMain(MPCollData *coll_data,
         if (ndsFighterMarioFoxStageMPUpdateFloorLoopProofEnabled() != FALSE)
         {
             gNdsStageMPUpdateFloorLoopUpdateMainStepCount++;
-            gNdsStageMPUpdateFloorLoopProcCollCallCount++;
+            NDS_DIAG(gNdsStageMPUpdateFloorLoopProcCollCallCount++);
         }
         result = proc_coll(coll_data, gobj, flags);
     }
@@ -7914,11 +7914,11 @@ sb32 mpProcessUpdateMain(MPCollData *coll_data,
     {
         if (result != FALSE)
         {
-            gNdsStageMPUpdateFloorLoopUpdateMainReturnTrueCount++;
+            NDS_DIAG(gNdsStageMPUpdateFloorLoopUpdateMainReturnTrueCount++);
         }
         else
         {
-            gNdsStageMPUpdateFloorLoopUpdateMainReturnFalseCount++;
+            NDS_DIAG(gNdsStageMPUpdateFloorLoopUpdateMainReturnFalseCount++);
         }
     }
     return result;
@@ -8179,7 +8179,7 @@ sb32 mpCommonRunFighterAllCollisions(MPCollData *coll_data,
     {
         gNdsStageMPUpdateFloorLoopAllCollisionsCallCount++;
         gNdsStageMPUpdateFloorLoopAllCollisionsWallDeferredCount += 2u;
-        gNdsStageMPUpdateFloorLoopAllCollisionsCeilDeferredCount++;
+        NDS_DIAG(gNdsStageMPUpdateFloorLoopAllCollisionsCeilDeferredCount++);
     }
     if (mpProcessCheckTestFloorCollisionNew(coll_data) != FALSE)
     {
@@ -8192,8 +8192,8 @@ sb32 mpCommonRunFighterAllCollisions(MPCollData *coll_data,
 #endif
             if (ndsFighterMarioFoxStageMPUpdateFloorLoopProofEnabled() != FALSE)
             {
-                gNdsStageMPUpdateFloorLoopAllCollisionsFloorHitCount++;
-                gNdsStageMPUpdateFloorLoopAllCollisionsFloorEdgeAdjustDeferredCount++;
+                NDS_DIAG(gNdsStageMPUpdateFloorLoopAllCollisionsFloorHitCount++);
+                NDS_DIAG(gNdsStageMPUpdateFloorLoopAllCollisionsFloorEdgeAdjustDeferredCount++);
             }
             is_floor = TRUE;
         }
@@ -8202,8 +8202,8 @@ sb32 mpCommonRunFighterAllCollisions(MPCollData *coll_data,
     {
         if (ndsFighterMarioFoxStageMPUpdateFloorLoopProofEnabled() != FALSE)
         {
-            gNdsStageMPUpdateFloorLoopAllCollisionsCliffEdgeBranchCount++;
-            gNdsStageMPUpdateFloorLoopAllCollisionsFloorMissCount++;
+            NDS_DIAG(gNdsStageMPUpdateFloorLoopAllCollisionsCliffEdgeBranchCount++);
+            NDS_DIAG(gNdsStageMPUpdateFloorLoopAllCollisionsFloorMissCount++);
         }
         coll_data->is_coll_end = TRUE;
     }
@@ -8211,8 +8211,8 @@ sb32 mpCommonRunFighterAllCollisions(MPCollData *coll_data,
     {
         if (ndsFighterMarioFoxStageMPUpdateFloorLoopProofEnabled() != FALSE)
         {
-            gNdsStageMPUpdateFloorLoopAllCollisionsStopEdgeBranchCount++;
-            gNdsStageMPUpdateFloorLoopAllCollisionsFloorMissCount++;
+            NDS_DIAG(gNdsStageMPUpdateFloorLoopAllCollisionsStopEdgeBranchCount++);
+            NDS_DIAG(gNdsStageMPUpdateFloorLoopAllCollisionsFloorMissCount++);
         }
         coll_data->is_coll_end = TRUE;
     }
@@ -8220,8 +8220,8 @@ sb32 mpCommonRunFighterAllCollisions(MPCollData *coll_data,
     {
         if (ndsFighterMarioFoxStageMPUpdateFloorLoopProofEnabled() != FALSE)
         {
-            gNdsStageMPUpdateFloorLoopAllCollisionsDefaultEndCount++;
-            gNdsStageMPUpdateFloorLoopAllCollisionsFloorMissCount++;
+            NDS_DIAG(gNdsStageMPUpdateFloorLoopAllCollisionsDefaultEndCount++);
+            NDS_DIAG(gNdsStageMPUpdateFloorLoopAllCollisionsFloorMissCount++);
         }
         coll_data->is_coll_end = TRUE;
     }
@@ -8268,7 +8268,7 @@ sb32 mpCommonRunFighterAllCollisions(MPCollData *coll_data,
                 gNdsStageMPCrossFloorLoopLiveSecondFloorHitCount++;
                 if (coll_data->floor_line_id != floor_line_id)
                 {
-                    gNdsStageMPCrossFloorLoopLiveAcceptedNewLineCount++;
+                    NDS_DIAG(gNdsStageMPCrossFloorLoopLiveAcceptedNewLineCount++);
                 }
                 if (live_slot == 0)
                 {
@@ -8281,24 +8281,24 @@ sb32 mpCommonRunFighterAllCollisions(MPCollData *coll_data,
             }
             if (is_stale_live_p0 != FALSE)
             {
-                gNdsStageMPStaleFloorLoopLiveSecondFloorHitCount++;
+                NDS_DIAG(gNdsStageMPStaleFloorLoopLiveSecondFloorHitCount++);
                 if ((floor_line_id ==
                         gNdsStageMPStaleFloorLoopStaleLineID) &&
                     (coll_data->floor_line_id ==
                         gNdsStageMPStaleFloorLoopTargetLineID))
                 {
-                    gNdsStageMPStaleFloorLoopLiveAcceptedNewLineCount++;
+                    NDS_DIAG(gNdsStageMPStaleFloorLoopLiveAcceptedNewLineCount++);
                 }
             }
             if (is_live_stale_p0 != FALSE)
             {
-                gNdsStageMPLiveStaleFloorLoopLiveSecondFloorHitCount++;
+                NDS_DIAG(gNdsStageMPLiveStaleFloorLoopLiveSecondFloorHitCount++);
                 if ((floor_line_id ==
                         gNdsStageMPLiveStaleFloorLoopStaleLineID) &&
                     (coll_data->floor_line_id ==
                         gNdsStageMPLiveStaleFloorLoopTargetLineID))
                 {
-                    gNdsStageMPLiveStaleFloorLoopLiveAcceptedNewLineCount++;
+                    NDS_DIAG(gNdsStageMPLiveStaleFloorLoopLiveAcceptedNewLineCount++);
                 }
             }
             mpProcessSetLandingFloor(coll_data);
@@ -8322,15 +8322,15 @@ sb32 mpCommonRunFighterAllCollisions(MPCollData *coll_data,
                         FALSE) &&
                     (live_slot >= 0) && (live_slot < 2))
                 {
-                    gNdsStageMPCrossFloorLoopLiveFloorEdgeAdjustCount++;
+                    NDS_DIAG(gNdsStageMPCrossFloorLoopLiveFloorEdgeAdjustCount++);
                 }
                 if (is_stale_live_p0 != FALSE)
                 {
-                    gNdsStageMPStaleFloorLoopLiveFloorEdgeAdjustCount++;
+                    NDS_DIAG(gNdsStageMPStaleFloorLoopLiveFloorEdgeAdjustCount++);
                 }
                 if (is_live_stale_p0 != FALSE)
                 {
-                    gNdsStageMPLiveStaleFloorLoopLiveFloorEdgeAdjustCount++;
+                    NDS_DIAG(gNdsStageMPLiveStaleFloorLoopLiveFloorEdgeAdjustCount++);
                 }
                 mpProcessRunFloorEdgeAdjust(coll_data);
                 is_floor = TRUE;
@@ -8341,20 +8341,20 @@ sb32 mpCommonRunFighterAllCollisions(MPCollData *coll_data,
             }
             coll_data->mask_stat &= (u16)~MAP_FLAG_FLOOREDGE;
             coll_data->is_coll_end = FALSE;
-            gNdsStageMPSweepFloorLoopIsCollEndClearCount++;
+            NDS_DIAG(gNdsStageMPSweepFloorLoopIsCollEndClearCount++);
             if ((ndsFighterMarioFoxStageMPCrossFloorLoopProofEnabled() !=
                     FALSE) &&
                 (live_slot >= 0) && (live_slot < 2))
             {
-                gNdsStageMPCrossFloorLoopLiveCollEndClearCount++;
+                NDS_DIAG(gNdsStageMPCrossFloorLoopLiveCollEndClearCount++);
             }
             if (is_stale_live_p0 != FALSE)
             {
-                gNdsStageMPStaleFloorLoopLiveCollEndClearCount++;
+                NDS_DIAG(gNdsStageMPStaleFloorLoopLiveCollEndClearCount++);
             }
             if (is_live_stale_p0 != FALSE)
             {
-                gNdsStageMPLiveStaleFloorLoopLiveCollEndClearCount++;
+                NDS_DIAG(gNdsStageMPLiveStaleFloorLoopLiveCollEndClearCount++);
             }
         }
         else
@@ -8364,15 +8364,15 @@ sb32 mpCommonRunFighterAllCollisions(MPCollData *coll_data,
                     FALSE) &&
                 (live_slot >= 0) && (live_slot < 2))
             {
-                gNdsStageMPCrossFloorLoopLiveSecondFloorMissCount++;
+                NDS_DIAG(gNdsStageMPCrossFloorLoopLiveSecondFloorMissCount++);
             }
             if (is_stale_live_p0 != FALSE)
             {
-                gNdsStageMPStaleFloorLoopLiveSecondFloorMissCount++;
+                NDS_DIAG(gNdsStageMPStaleFloorLoopLiveSecondFloorMissCount++);
             }
             if (is_live_stale_p0 != FALSE)
             {
-                gNdsStageMPLiveStaleFloorLoopLiveSecondFloorMissCount++;
+                NDS_DIAG(gNdsStageMPLiveStaleFloorLoopLiveSecondFloorMissCount++);
             }
         }
     }
@@ -8416,15 +8416,15 @@ static sb32 ndsStageMPLiveStaleFloorLoopPrimeMapMovement(FTStruct *fp,
             &target_line_id, &translate, &pos_prev) == FALSE)
     {
         sNdsStageMPLiveStaleFloorLoopProbeActive = probe_active_prev;
-        gNdsStageMPLiveStaleFloorLoopPrimeMissCount++;
+        NDS_DIAG(gNdsStageMPLiveStaleFloorLoopPrimeMissCount++);
         gNdsStageMPLiveStaleFloorLoopUnsafeCount++;
-        gNdsStageMPStaleFloorLoopPrimeMissCount++;
+        NDS_DIAG(gNdsStageMPStaleFloorLoopPrimeMissCount++);
         gNdsStageMPStaleFloorLoopUnsafeCount++;
         return FALSE;
     }
     sNdsStageMPLiveStaleFloorLoopProbeActive = probe_active_prev;
 
-    gNdsStageMPLiveStaleFloorLoopPrimeHitCount++;
+    NDS_DIAG(gNdsStageMPLiveStaleFloorLoopPrimeHitCount++);
     gNdsStageMPLiveStaleFloorLoopStaleLineID = stale_line_id;
     gNdsStageMPLiveStaleFloorLoopTargetLineID = target_line_id;
     gNdsStageMPLiveStaleFloorLoopTargetXMilli =
@@ -8433,7 +8433,7 @@ static sb32 ndsStageMPLiveStaleFloorLoopPrimeMapMovement(FTStruct *fp,
         ndsFloatToMilliSigned(translate.y + fp->coll_data.map_coll.bottom);
     gNdsStageMPLiveStaleFloorLoopSelectedCallbackCount++;
 
-    gNdsStageMPStaleFloorLoopPrimeHitCount++;
+    NDS_DIAG(gNdsStageMPStaleFloorLoopPrimeHitCount++);
     gNdsStageMPStaleFloorLoopStaleLineID = stale_line_id;
     gNdsStageMPStaleFloorLoopTargetLineID = target_line_id;
     gNdsStageMPStaleFloorLoopTargetXMilli =
@@ -8442,7 +8442,7 @@ static sb32 ndsStageMPLiveStaleFloorLoopPrimeMapMovement(FTStruct *fp,
         gNdsStageMPLiveStaleFloorLoopTargetYMilli;
 
     gNdsStageMPCrossFloorLoopPrimeAttemptCount++;
-    gNdsStageMPCrossFloorLoopPrimeHitCount++;
+    NDS_DIAG(gNdsStageMPCrossFloorLoopPrimeHitCount++);
     gNdsStageMPCrossFloorLoopSourceLineID = stale_line_id;
     gNdsStageMPCrossFloorLoopTargetLineID = target_line_id;
     gNdsStageMPCrossFloorLoopTargetXMilli =
@@ -8528,19 +8528,19 @@ static sb32 ndsStageMPMotionStaleFloorLoopPrimeMapMovement(FTStruct *fp,
             &target_line_id, &translate, &pos_prev) == FALSE)
     {
         sNdsStageMPLiveStaleFloorLoopProbeActive = probe_active_prev;
-        gNdsStageMPMotionStaleFloorLoopPrimeMissCount++;
+        NDS_DIAG(gNdsStageMPMotionStaleFloorLoopPrimeMissCount++);
         gNdsStageMPMotionStaleFloorLoopUnsafeCount++;
-        gNdsStageMPLiveStaleFloorLoopPrimeMissCount++;
+        NDS_DIAG(gNdsStageMPLiveStaleFloorLoopPrimeMissCount++);
         gNdsStageMPLiveStaleFloorLoopUnsafeCount++;
-        gNdsStageMPStaleFloorLoopPrimeMissCount++;
+        NDS_DIAG(gNdsStageMPStaleFloorLoopPrimeMissCount++);
         gNdsStageMPStaleFloorLoopUnsafeCount++;
-        gNdsStageMPCrossFloorLoopPrimeMissCount++;
+        NDS_DIAG(gNdsStageMPCrossFloorLoopPrimeMissCount++);
         gNdsStageMPCrossFloorLoopUnsafeCount++;
         return FALSE;
     }
     sNdsStageMPLiveStaleFloorLoopProbeActive = probe_active_prev;
 
-    gNdsStageMPMotionStaleFloorLoopPrimeHitCount++;
+    NDS_DIAG(gNdsStageMPMotionStaleFloorLoopPrimeHitCount++);
     gNdsStageMPMotionStaleFloorLoopStaleLineID = stale_line_id;
     gNdsStageMPMotionStaleFloorLoopTargetLineID = target_line_id;
     gNdsStageMPMotionStaleFloorLoopTargetXMilli =
@@ -8556,7 +8556,7 @@ static sb32 ndsStageMPMotionStaleFloorLoopPrimeMapMovement(FTStruct *fp,
     gNdsStageMPMotionStaleFloorLoopP0TargetYMilli =
         gNdsStageMPMotionStaleFloorLoopTargetYMilli;
 
-    gNdsStageMPLiveStaleFloorLoopPrimeHitCount++;
+    NDS_DIAG(gNdsStageMPLiveStaleFloorLoopPrimeHitCount++);
     gNdsStageMPLiveStaleFloorLoopStaleLineID = stale_line_id;
     gNdsStageMPLiveStaleFloorLoopTargetLineID = target_line_id;
     gNdsStageMPLiveStaleFloorLoopTargetXMilli =
@@ -8565,7 +8565,7 @@ static sb32 ndsStageMPMotionStaleFloorLoopPrimeMapMovement(FTStruct *fp,
         gNdsStageMPMotionStaleFloorLoopTargetYMilli;
     gNdsStageMPLiveStaleFloorLoopSelectedCallbackCount++;
 
-    gNdsStageMPStaleFloorLoopPrimeHitCount++;
+    NDS_DIAG(gNdsStageMPStaleFloorLoopPrimeHitCount++);
     gNdsStageMPStaleFloorLoopStaleLineID = stale_line_id;
     gNdsStageMPStaleFloorLoopTargetLineID = target_line_id;
     gNdsStageMPStaleFloorLoopTargetXMilli =
@@ -8573,7 +8573,7 @@ static sb32 ndsStageMPMotionStaleFloorLoopPrimeMapMovement(FTStruct *fp,
     gNdsStageMPStaleFloorLoopTargetYMilli =
         gNdsStageMPMotionStaleFloorLoopTargetYMilli;
 
-    gNdsStageMPCrossFloorLoopPrimeHitCount++;
+    NDS_DIAG(gNdsStageMPCrossFloorLoopPrimeHitCount++);
     gNdsStageMPCrossFloorLoopSourceLineID = stale_line_id;
     gNdsStageMPCrossFloorLoopTargetLineID = target_line_id;
     gNdsStageMPCrossFloorLoopTargetXMilli =
@@ -8739,7 +8739,7 @@ static void ndsStageMPUpdateFloorLoopPrimeMapMovement(GObj *fighter_gobj)
         s32 source_line_id = -1;
 
         gNdsStageMPCrossFloorLoopPrimeAttemptCount++;
-        gNdsStageMPCrossFloorLoopPrimeHitCount++;
+        NDS_DIAG(gNdsStageMPCrossFloorLoopPrimeHitCount++);
         gNdsStageMPCrossFloorLoopSourceLineID = source_line_id;
         gNdsStageMPCrossFloorLoopTargetLineID = line_id;
         gNdsStageMPCrossFloorLoopTargetXMilli =
@@ -8773,10 +8773,10 @@ static sb32 ndsStageMPUpdateFloorLoopBuildCollData(FTStruct *fp,
     mp_coll->vel_push.x = 0.0F;
     mp_coll->vel_push.y = 0.0F;
     mp_coll->vel_push.z = 0.0F;
-    gNdsStageMPUpdateFloorLoopAdapterBuildCount++;
+    NDS_DIAG(gNdsStageMPUpdateFloorLoopAdapterBuildCount++);
     if (mp_coll->p_lr == NULL)
     {
-        gNdsStageMPUpdateFloorLoopAdapterFallbackLRCount++;
+        NDS_DIAG(gNdsStageMPUpdateFloorLoopAdapterFallbackLRCount++);
     }
     if (fp->player == 0)
     {
@@ -8821,9 +8821,9 @@ static void ndsStageMPUpdateFloorLoopMirrorBaseFighter(FTStruct *fp,
     line_kind = (u32)ndsMPGetLineKindForLineID(fp->coll_data.floor_line_id);
     is_floor = (line_kind == (u32)nMPLineKindFloor) ? 1u : 0u;
 
-    gNdsStageFloorFollowLoopMapUpdateCount++;
-    gNdsStageFloorFollowLoopGeometryHitCount++;
-    gNdsStageFloorFollowLoopNoClampCount++;
+    NDS_DIAG(gNdsStageFloorFollowLoopMapUpdateCount++);
+    NDS_DIAG(gNdsStageFloorFollowLoopGeometryHitCount++);
+    NDS_DIAG(gNdsStageFloorFollowLoopNoClampCount++);
     if (slot == 0u)
     {
         gNdsStageFloorFollowLoopP0MapUpdateCount++;
@@ -8842,8 +8842,8 @@ static void ndsStageMPUpdateFloorLoopMirrorBaseFighter(FTStruct *fp,
     }
     else
     {
-        gNdsStageFloorFollowLoopP1MapUpdateCount++;
-        gNdsStageFloorFollowLoopP1HitCount += (hit != FALSE) ? 1u : 0u;
+        NDS_DIAG(gNdsStageFloorFollowLoopP1MapUpdateCount++);
+        NDS_DIAG(gNdsStageFloorFollowLoopP1HitCount += (hit != FALSE) ? 1u : 0u);
         gNdsStageFloorFollowLoopP1FloorLineID = fp->coll_data.floor_line_id;
         gNdsStageFloorFollowLoopP1FloorKind = line_kind;
         gNdsStageFloorFollowLoopP1FloorLineIsFloor = is_floor;
@@ -8883,7 +8883,7 @@ static void ndsStageMPUpdateFloorLoopCopyBack(FTStruct *fp,
         fp->coll_data.mask_stat |= MAP_FLAG_FLOOR;
         fp->coll_data.floor_dist = root->translate.vec.f.y;
     }
-    gNdsStageMPUpdateFloorLoopAdapterCopyBackCount++;
+    NDS_DIAG(gNdsStageMPUpdateFloorLoopAdapterCopyBackCount++);
     ndsStageMPUpdateFloorLoopMirrorBaseFighter(fp, hit);
 }
 
@@ -8924,8 +8924,8 @@ static sb32 ndsStageMPUpdateFloorLoopUpdateFighter(GObj *fighter_gobj)
     }
     else
     {
-        gNdsStageMPUpdateFloorLoopP1UpdateCount++;
-        gNdsStageMPProcessFloorLoopP1UpdateCount++;
+        NDS_DIAG(gNdsStageMPUpdateFloorLoopP1UpdateCount++);
+        NDS_DIAG(gNdsStageMPProcessFloorLoopP1UpdateCount++);
     }
     if (ndsStageMPUpdateFloorLoopBuildCollData(fp, &mp_coll) == FALSE)
     {
@@ -8969,19 +8969,19 @@ static sb32 ndsStageMPUpdateFloorLoopUpdateFighter(GObj *fighter_gobj)
         }
         else
         {
-            gNdsStageMPUpdateFloorLoopP1HitCount++;
-            gNdsStageMPProcessFloorLoopP1HitCount++;
+            NDS_DIAG(gNdsStageMPUpdateFloorLoopP1HitCount++);
+            NDS_DIAG(gNdsStageMPProcessFloorLoopP1HitCount++);
         }
     }
     else if (slot == 0u)
     {
         gNdsStageMPUpdateFloorLoopP0MissCount++;
-        gNdsStageMPProcessFloorLoopP0MissCount++;
+        NDS_DIAG(gNdsStageMPProcessFloorLoopP0MissCount++);
     }
     else
     {
         gNdsStageMPUpdateFloorLoopP1MissCount++;
-        gNdsStageMPProcessFloorLoopP1MissCount++;
+        NDS_DIAG(gNdsStageMPProcessFloorLoopP1MissCount++);
     }
 
     if (slot == 0u)
@@ -9083,7 +9083,7 @@ static sb32 ndsStageMPUpdateFloorLoopUpdateFighter(GObj *fighter_gobj)
                 (fp->coll_data.floor_line_id ==
                     gNdsStageMPMotionStaleFloorLoopTargetLineID))
             {
-                gNdsStageMPMotionStaleFloorLoopTargetMatchCount++;
+                NDS_DIAG(gNdsStageMPMotionStaleFloorLoopTargetMatchCount++);
             }
             if ((gNdsStageMPMotionStaleFloorLoopP0FinalFloorOK != 0u) &&
                 (gNdsStageMPMotionStaleFloorLoopTargetLineID >= 0) &&
@@ -9187,8 +9187,8 @@ sb32 mpCommonCheckFighterOnFloor(GObj *fighter_gobj)
         (sNdsStageMPCliffTickFloorLoopStatusActive != FALSE))
     {
         (void)fighter_gobj;
-        gNdsStageMPCliffTickFloorLoopOttottoFloorCheckCount++;
-        gNdsStageMPCliffTickFloorLoopOttottoFloorHitCount++;
+        NDS_DIAG(gNdsStageMPCliffTickFloorLoopOttottoFloorCheckCount++);
+        NDS_DIAG(gNdsStageMPCliffTickFloorLoopOttottoFloorHitCount++);
         return TRUE;
     }
     if (ndsBattlePlayableRuntimeEnabled() != FALSE)
@@ -9206,13 +9206,13 @@ sb32 mpCommonCheckFighterOnFloor(GObj *fighter_gobj)
     {
         return ndsMPCommonCheckFighterOnCliffEdgeBounded(fighter_gobj);
     }
-    gNdsStageMPUpdateFloorLoopCheckFloorCallCount++;
+    NDS_DIAG(gNdsStageMPUpdateFloorLoopCheckFloorCallCount++);
     if (ndsStageMPUpdateFloorLoopUpdateFighter(fighter_gobj) != FALSE)
     {
-        gNdsStageMPUpdateFloorLoopCheckFloorHitCount++;
+        NDS_DIAG(gNdsStageMPUpdateFloorLoopCheckFloorHitCount++);
         return TRUE;
     }
-    gNdsStageMPUpdateFloorLoopCheckFloorMissCount++;
+    NDS_DIAG(gNdsStageMPUpdateFloorLoopCheckFloorMissCount++);
     return FALSE;
 }
 
@@ -9269,10 +9269,10 @@ sb32 mpCommonCheckFighterOnCliffEdge(GObj *fighter_gobj)
     gNdsStageMPUpdateFloorLoopCheckCliffEdgeCallCount++;
     if (ndsStageMPUpdateFloorLoopUpdateFighter(fighter_gobj) != FALSE)
     {
-        gNdsStageMPUpdateFloorLoopCheckCliffEdgeHitCount++;
+        NDS_DIAG(gNdsStageMPUpdateFloorLoopCheckCliffEdgeHitCount++);
         return TRUE;
     }
-    gNdsStageMPUpdateFloorLoopCheckCliffEdgeMissCount++;
+    NDS_DIAG(gNdsStageMPUpdateFloorLoopCheckCliffEdgeMissCount++);
     return FALSE;
 }
 
@@ -9292,7 +9292,7 @@ static void ndsStageMPProcessFloorLoopRunStandaloneProbes(void)
     if ((line_id < 0) ||
         (ndsStageFloorEdgeLoopFloorYAtX(line_id, mid_x, &floor_y) == FALSE))
     {
-        gNdsStageMPProcessFloorLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPProcessFloorLoopUnsafeCount++);
         return;
     }
 
@@ -9303,7 +9303,7 @@ static void ndsStageMPProcessFloorLoopRunStandaloneProbes(void)
     gNdsStageMPProcessFloorLoopInsideProbeCount++;
     if (mpProcessCheckTestFloorCollisionNew(&coll) != FALSE)
     {
-        gNdsStageMPProcessFloorLoopInsideProbeHitCount++;
+        NDS_DIAG(gNdsStageMPProcessFloorLoopInsideProbeHitCount++);
         mpProcessSetLandingFloor(&coll);
         mpProcessSetCollideFloor(&coll);
     }
@@ -9315,7 +9315,7 @@ static void ndsStageMPProcessFloorLoopRunStandaloneProbes(void)
     gNdsStageMPProcessFloorLoopOutsideProbeCount++;
     if (mpProcessCheckTestFloorCollisionNew(&coll) == FALSE)
     {
-        gNdsStageMPProcessFloorLoopOutsideProbeMissCount++;
+        NDS_DIAG(gNdsStageMPProcessFloorLoopOutsideProbeMissCount++);
     }
 
     translate.x = right_x + 32.0F;
@@ -9325,7 +9325,7 @@ static void ndsStageMPProcessFloorLoopRunStandaloneProbes(void)
     gNdsStageMPProcessFloorLoopOutsideProbeCount++;
     if (mpProcessCheckTestFloorCollisionNew(&coll) == FALSE)
     {
-        gNdsStageMPProcessFloorLoopOutsideProbeMissCount++;
+        NDS_DIAG(gNdsStageMPProcessFloorLoopOutsideProbeMissCount++);
     }
 
     translate.x = mid_x;
@@ -9335,13 +9335,13 @@ static void ndsStageMPProcessFloorLoopRunStandaloneProbes(void)
     if ((mpCollisionGetFCCommonFloor(line_id, &translate, &dist, &flags,
             &angle) != FALSE) && (dist > 0.0F))
     {
-        gNdsStageMPProcessFloorLoopBelowFloorPositiveDistCount++;
+        NDS_DIAG(gNdsStageMPProcessFloorLoopBelowFloorPositiveDistCount++);
     }
     ndsStageMPProcessFloorLoopInitColl(&coll, &translate, line_id);
     if ((mpProcessCheckTestFloorCollisionNew(&coll) != FALSE) &&
         (translate.y >= floor_y))
     {
-        gNdsStageMPProcessFloorLoopBelowFloorPositiveDistCount++;
+        NDS_DIAG(gNdsStageMPProcessFloorLoopBelowFloorPositiveDistCount++);
     }
 }
 
@@ -9358,7 +9358,7 @@ void ndsFighterMarioFoxStageMPProcessFloorLoopPrepare(void)
         (gNdsStageFloorEdgeLoopPrepared != 0u) ? 1u : 0u;
     if (gNdsStageMPProcessFloorLoopBaseFloorEdgeSeen == 0u)
     {
-        gNdsStageMPProcessFloorLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPProcessFloorLoopUnsafeCount++);
         return;
     }
     ndsStageMPProcessFloorLoopRunStandaloneProbes();
@@ -9395,11 +9395,11 @@ static sb32 ndsStageMPProcessFloorLoopUpdateFighter(GObj *fighter_gobj)
     }
     else
     {
-        gNdsStageMPProcessFloorLoopP1UpdateCount++;
+        NDS_DIAG(gNdsStageMPProcessFloorLoopP1UpdateCount++);
     }
     if (ndsStageMPProcessFloorLoopBuildCollData(fp, &mp_coll) == FALSE)
     {
-        gNdsStageMPProcessFloorLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPProcessFloorLoopUnsafeCount++);
         return FALSE;
     }
     hit = mpProcessCheckTestFloorCollisionNew(&mp_coll);
@@ -9413,16 +9413,16 @@ static sb32 ndsStageMPProcessFloorLoopUpdateFighter(GObj *fighter_gobj)
         }
         else
         {
-            gNdsStageMPProcessFloorLoopP1HitCount++;
+            NDS_DIAG(gNdsStageMPProcessFloorLoopP1HitCount++);
         }
     }
     else if (slot == 0u)
     {
-        gNdsStageMPProcessFloorLoopP0MissCount++;
+        NDS_DIAG(gNdsStageMPProcessFloorLoopP0MissCount++);
     }
     else
     {
-        gNdsStageMPProcessFloorLoopP1MissCount++;
+        NDS_DIAG(gNdsStageMPProcessFloorLoopP1MissCount++);
     }
 
     if (slot == 0u)
@@ -9611,7 +9611,7 @@ static void ndsStageMPUpdateFloorLoopRunStandaloneProbes(void)
     translate.y = floor_y;
     translate.z = 0.0F;
     ndsStageMPUpdateFloorLoopInitColl(&coll, &translate, &pos_prev, line_id);
-    gNdsStageMPUpdateFloorLoopInsideProbeCount++;
+    NDS_DIAG(gNdsStageMPUpdateFloorLoopInsideProbeCount++);
     hit = mpProcessUpdateMain(&coll, mpCommonRunFighterAllCollisions, NULL,
                               MAP_PROC_TYPE_DEFAULT);
     if (hit != FALSE)
@@ -9626,12 +9626,12 @@ static void ndsStageMPUpdateFloorLoopRunStandaloneProbes(void)
     translate.y = floor_y;
     translate.z = 0.0F;
     ndsStageMPUpdateFloorLoopInitColl(&coll, &translate, &pos_prev, line_id);
-    gNdsStageMPUpdateFloorLoopOutsideProbeCount++;
+    NDS_DIAG(gNdsStageMPUpdateFloorLoopOutsideProbeCount++);
     hit = mpProcessUpdateMain(&coll, mpCommonRunFighterAllCollisions, NULL,
                               MAP_PROC_TYPE_DEFAULT);
     if (hit == FALSE)
     {
-        gNdsStageMPUpdateFloorLoopOutsideProbeMissCount++;
+        NDS_DIAG(gNdsStageMPUpdateFloorLoopOutsideProbeMissCount++);
     }
 
     pos_prev.x = mid_x;
@@ -9641,12 +9641,12 @@ static void ndsStageMPUpdateFloorLoopRunStandaloneProbes(void)
     translate.y = floor_y - 32.0F;
     translate.z = 0.0F;
     ndsStageMPUpdateFloorLoopInitColl(&coll, &translate, &pos_prev, line_id);
-    gNdsStageMPUpdateFloorLoopBelowFloorProbeCount++;
+    NDS_DIAG(gNdsStageMPUpdateFloorLoopBelowFloorProbeCount++);
     hit = mpProcessUpdateMain(&coll, mpCommonRunFighterAllCollisions, NULL,
                               MAP_PROC_TYPE_DEFAULT);
     if ((hit != FALSE) && (translate.y >= floor_y))
     {
-        gNdsStageMPUpdateFloorLoopBelowFloorHitCount++;
+        NDS_DIAG(gNdsStageMPUpdateFloorLoopBelowFloorHitCount++);
     }
 
     pos_prev.x = mid_x;
@@ -9919,7 +9919,7 @@ static void ndsStageMPSweepFloorLoopRunStandaloneProbes(void)
              (f32)gNdsStageFloorEdgeLoopRightXMilli) / 2000.0F,
             &floor_y) == FALSE))
     {
-        gNdsStageMPSweepFloorLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPSweepFloorLoopUnsafeCount++);
         return;
     }
     x = ((f32)gNdsStageFloorEdgeLoopLeftXMilli +
@@ -9937,13 +9937,13 @@ static void ndsStageMPSweepFloorLoopRunStandaloneProbes(void)
     gNdsStageMPSweepFloorLoopSameLineProbeCount++;
     if (mpProcessCheckTestFloorCollision(&coll, line_id) == FALSE)
     {
-        gNdsStageMPSweepFloorLoopSameLineProbeHitCount++;
+        NDS_DIAG(gNdsStageMPSweepFloorLoopSameLineProbeHitCount++);
     }
 
     if (ndsStageMPSweepFloorLoopChooseLine(line_id, &alt_line_id, &alt_x,
             &alt_y) == FALSE)
     {
-        gNdsStageMPSweepFloorLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPSweepFloorLoopUnsafeCount++);
         return;
     }
     gNdsStageMPSweepFloorLoopAltLineID = alt_line_id;
@@ -9958,7 +9958,7 @@ static void ndsStageMPSweepFloorLoopRunStandaloneProbes(void)
     gNdsStageMPSweepFloorLoopDiffLineProbeCount++;
     if (mpProcessCheckTestFloorCollision(&coll, line_id) != FALSE)
     {
-        gNdsStageMPSweepFloorLoopDiffLineProbeHitCount++;
+        NDS_DIAG(gNdsStageMPSweepFloorLoopDiffLineProbeHitCount++);
         mpProcessSetLandingFloor(&coll);
         if ((coll.mask_stat & MAP_FLAG_FLOOR) != 0u)
         {
@@ -9968,7 +9968,7 @@ static void ndsStageMPSweepFloorLoopRunStandaloneProbes(void)
         coll.mask_stat &= (u16)~MAP_FLAG_FLOOREDGE;
         gNdsStageMPSweepFloorLoopMaskStatFloorEdgeClearCount++;
         coll.is_coll_end = FALSE;
-        gNdsStageMPSweepFloorLoopIsCollEndClearCount++;
+        NDS_DIAG(gNdsStageMPSweepFloorLoopIsCollEndClearCount++);
     }
 
     pos_prev.x = 100000.0F;
@@ -9982,7 +9982,7 @@ static void ndsStageMPSweepFloorLoopRunStandaloneProbes(void)
     gNdsStageMPSweepFloorLoopNoHitProbeCount++;
     if (mpProcessCheckTestFloorCollision(&coll, line_id) == FALSE)
     {
-        gNdsStageMPSweepFloorLoopNoHitProbeMissCount++;
+        NDS_DIAG(gNdsStageMPSweepFloorLoopNoHitProbeMissCount++);
     }
 }
 
@@ -9999,7 +9999,7 @@ void ndsFighterMarioFoxStageMPSweepFloorLoopPrepare(void)
         (gNdsStageMPUpdateFloorLoopPrepared != 0u) ? 1u : 0u;
     if (gNdsStageMPSweepFloorLoopBaseMPUpdateSeen == 0u)
     {
-        gNdsStageMPSweepFloorLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPSweepFloorLoopUnsafeCount++);
         return;
     }
     ndsStageMPSweepFloorLoopRunStandaloneProbes();
@@ -11630,8 +11630,8 @@ static sb32 ndsStageMPWallFloorLoopTryWall(s32 floor_line_id, u32 side,
             gNdsStageMPWallFloorLoopEdgeUnderLineID =
                 edge_under_line_id;
             gNdsStageMPWallFloorLoopSide = side;
-            gNdsStageMPWallFloorLoopCheckHitCount++;
-            gNdsStageMPWallFloorLoopAdjustCallCount++;
+            NDS_DIAG(gNdsStageMPWallFloorLoopCheckHitCount++);
+            NDS_DIAG(gNdsStageMPWallFloorLoopAdjustCallCount++);
             gNdsStageMPWallFloorLoopStartXMilli =
                 ndsFloatToMilliSigned(start_x);
             gNdsStageMPWallFloorLoopStartYMilli =
@@ -12096,7 +12096,7 @@ static void ndsStageMPWallCopyFloorLoopGObjProc(GObj *fighter_gobj)
     }
 
     gNdsStageMPWallCopyFloorLoopCallbackCount++;
-    gNdsStageMPWallCopyFloorLoopGObjProcessRunCount++;
+    NDS_DIAG(gNdsStageMPWallCopyFloorLoopGObjProcessRunCount++);
     p1 = &sNdsFighterStructPool[1];
     p1_root = ((ndsFighterStructIsPoolPointer(p1) != FALSE) &&
         (p1->fighter_gobj != NULL)) ? DObjGetStruct(p1->fighter_gobj) :
@@ -12497,14 +12497,14 @@ static sb32 ndsStageMPPassFloorLoopPassCallback(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
-    gNdsStageMPPassFloorLoopPassCallbackCount++;
+    NDS_DIAG(gNdsStageMPPassFloorLoopPassCallbackCount++);
     if ((fp != NULL) && (ndsFighterStructIsPoolPointer(fp) != FALSE) &&
         (fp->player == 0))
     {
-        gNdsStageMPPassFloorLoopPassCallbackAllowCount++;
+        NDS_DIAG(gNdsStageMPPassFloorLoopPassCallbackAllowCount++);
         return TRUE;
     }
-    gNdsStageMPPassFloorLoopPassCallbackDenyCount++;
+    NDS_DIAG(gNdsStageMPPassFloorLoopPassCallbackDenyCount++);
     return FALSE;
 }
 
@@ -12677,7 +12677,7 @@ static void ndsStageMPPassFloorLoopGObjProc(GObj *fighter_gobj)
     }
 
     gNdsStageMPPassFloorLoopCallbackCount++;
-    gNdsStageMPPassFloorLoopGObjProcessRunCount++;
+    NDS_DIAG(gNdsStageMPPassFloorLoopGObjProcessRunCount++);
     p1 = &sNdsFighterStructPool[1];
     p1_root = ((ndsFighterStructIsPoolPointer(p1) != FALSE) &&
         (p1->fighter_gobj != NULL)) ? DObjGetStruct(p1->fighter_gobj) :
@@ -13393,7 +13393,7 @@ static void ndsStageMPPassInputLoopRunProof(void)
     if ((ndsFighterStructIsPoolPointer(fp) == FALSE) ||
         (fp->fighter_gobj == NULL))
     {
-        gNdsStageMPPassInputLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPPassInputLoopUnsafeCount++);
         return;
     }
 
@@ -13403,7 +13403,7 @@ static void ndsStageMPPassInputLoopRunProof(void)
         gNdsStageMPPassFloorLoopCandidateFlags | MAP_VERTEX_COLL_PASS;
     if (gNdsStageMPPassInputLoopLineID < 0)
     {
-        gNdsStageMPPassInputLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPPassInputLoopUnsafeCount++);
         return;
     }
 
@@ -13429,7 +13429,7 @@ static void ndsStageMPPassInputLoopRunProof(void)
     sNdsStageMPPassInputLoopStatusActive = TRUE;
     if (ftCommonPassCheckInterruptCommon(fighter_gobj) == FALSE)
     {
-        gNdsStageMPPassInputLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPPassInputLoopUnsafeCount++);
     }
     sNdsStageMPPassInputLoopInputActive = FALSE;
 
@@ -13439,7 +13439,7 @@ static void ndsStageMPPassInputLoopRunProof(void)
 
     if (fp->proc_interrupt != ndsBaseFTCommonSquatProcInterrupt)
     {
-        gNdsStageMPPassInputLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPPassInputLoopUnsafeCount++);
     }
     else for (i = 0u; i < 8u; i++)
     {
@@ -13447,12 +13447,12 @@ static void ndsStageMPPassInputLoopRunProof(void)
         gNdsStageMPPassInputLoopSquatProcCount++;
         if (fp->status_id == nFTCommonStatusPass)
         {
-            gNdsStageMPPassInputLoopGotoPassCount++;
+            NDS_DIAG(gNdsStageMPPassInputLoopGotoPassCount++);
             break;
         }
         if (fp->status_id != nFTCommonStatusSquat)
         {
-            gNdsStageMPPassInputLoopUnsafeCount++;
+            NDS_DIAG(gNdsStageMPPassInputLoopUnsafeCount++);
             break;
         }
     }
@@ -13507,7 +13507,7 @@ static void ndsStageMPPassInputLoopRunProof(void)
     }
     else
     {
-        gNdsStageMPPassInputLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPPassInputLoopUnsafeCount++);
     }
     sNdsStageMPPassInputLoopInputActive = FALSE;
     sNdsStageMPPassInputLoopStatusActive = FALSE;
@@ -13532,7 +13532,7 @@ static void ndsStageMPPassInputLoopRunProof(void)
     }
     else
     {
-        gNdsStageMPPassInputLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPPassInputLoopUnsafeCount++);
     }
     sNdsStageMPPassInputLoopStatusActive = FALSE;
 
@@ -13706,13 +13706,13 @@ static void ndsStageMPPlatformPosFloorLoopRunProof(void)
         (gMPCollisionSpeeds == NULL) ||
         (yakumono_id >= NDS_MP_YAKUMONO_DOBJ_SLOTS))
     {
-        gNdsStageMPPlatformPosFloorLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPPlatformPosFloorLoopUnsafeCount++);
         return;
     }
     yakumono_dobj = gMPCollisionYakumonoDObjs->dobjs[yakumono_id];
     if (yakumono_dobj == NULL)
     {
-        gNdsStageMPPlatformPosFloorLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPPlatformPosFloorLoopUnsafeCount++);
         return;
     }
 
@@ -14336,7 +14336,7 @@ static sb32 ndsStageMPPlatformSpeedFloorLoopRunWallProbe(DObj *yakumono_dobj,
     {
         return FALSE;
     }
-    gNdsStageMPPlatformSpeedFloorLoopDynamicWallHitCount++;
+    NDS_DIAG(gNdsStageMPPlatformSpeedFloorLoopDynamicWallHitCount++);
     gNdsStageMPPlatformSpeedFloorLoopDynamicWallLineID = hit_line_id;
     gNdsStageMPPlatformSpeedFloorLoopDynamicWallYakumonoID = yakumono_id;
     gNdsStageMPPlatformSpeedFloorLoopDynamicWallKind = line_kind;
@@ -14393,7 +14393,7 @@ static sb32 ndsStageMPPlatformSpeedFloorLoopRunProcessWallProbe(
         return FALSE;
     }
 
-    gNdsStageMPPlatformSpeedFloorLoopProcessWallHitCount++;
+    NDS_DIAG(gNdsStageMPPlatformSpeedFloorLoopProcessWallHitCount++);
     gNdsStageMPPlatformSpeedFloorLoopProcessWallLineID = line_id;
     gNdsStageMPPlatformSpeedFloorLoopProcessWallKind = line_kind;
     gNdsStageMPPlatformSpeedFloorLoopProcessWallMaskCurr = coll.mask_curr;
@@ -14429,13 +14429,13 @@ static void ndsStageMPPlatformSpeedFloorLoopRunProof(void)
     if ((line_id < 0) || (gMPCollisionYakumonoDObjs == NULL) ||
         (yakumono_id >= NDS_MP_YAKUMONO_DOBJ_SLOTS))
     {
-        gNdsStageMPPlatformSpeedFloorLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPPlatformSpeedFloorLoopUnsafeCount++);
         return;
     }
     yakumono_dobj = gMPCollisionYakumonoDObjs->dobjs[yakumono_id];
     if (yakumono_dobj == NULL)
     {
-        gNdsStageMPPlatformSpeedFloorLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPPlatformSpeedFloorLoopUnsafeCount++);
         return;
     }
 
@@ -14465,13 +14465,13 @@ static void ndsStageMPPlatformSpeedFloorLoopRunProof(void)
             FALSE) ||
         (gMPCollisionSpeeds == NULL))
     {
-        gNdsStageMPPlatformSpeedFloorLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPPlatformSpeedFloorLoopUnsafeCount++);
         return;
     }
     sample_x = left.x + ((right.x - left.x) * 0.5F);
     if (ndsStageFloorEdgeLoopFloorYAtX(line_id, sample_x, &floor_y) == FALSE)
     {
-        gNdsStageMPPlatformSpeedFloorLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPPlatformSpeedFloorLoopUnsafeCount++);
         return;
     }
 
@@ -14481,7 +14481,7 @@ static void ndsStageMPPlatformSpeedFloorLoopRunProof(void)
     curr.x = yakumono_dobj->translate.vec.f.x + sample_x;
     curr.y = yakumono_dobj->translate.vec.f.y + floor_y;
     curr.z = 0.0F;
-    gNdsStageMPPlatformSpeedFloorLoopDynamicProbeCount++;
+    NDS_DIAG(gNdsStageMPPlatformSpeedFloorLoopDynamicProbeCount++);
     if (mpCollisionCheckFloorLineCollisionDiff(&prev, &curr, &ga_last,
             &hit_line_id, &hit_flags, &angle) != FALSE)
     {
@@ -14489,14 +14489,14 @@ static void ndsStageMPPlatformSpeedFloorLoopRunProof(void)
         (void)angle;
         if (hit_line_id == line_id)
         {
-            gNdsStageMPPlatformSpeedFloorLoopDynamicHitCount++;
+            NDS_DIAG(gNdsStageMPPlatformSpeedFloorLoopDynamicHitCount++);
         }
     }
 
     if (ndsStageMPPlatformSpeedFloorLoopChooseCeilLine(yakumono_id,
             &ceil_line_id, &ceil_sample_x, &ceil_y) == FALSE)
     {
-        gNdsStageMPPlatformSpeedFloorLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPPlatformSpeedFloorLoopUnsafeCount++);
         return;
     }
     prev.x = yakumono_dobj->translate.vec.f.x + ceil_sample_x - speed.x;
@@ -14514,7 +14514,7 @@ static void ndsStageMPPlatformSpeedFloorLoopRunProof(void)
         (void)angle;
         if (hit_line_id == ceil_line_id)
         {
-            gNdsStageMPPlatformSpeedFloorLoopDynamicCeilHitCount++;
+            NDS_DIAG(gNdsStageMPPlatformSpeedFloorLoopDynamicCeilHitCount++);
             gNdsStageMPPlatformSpeedFloorLoopDynamicCeilLineID = hit_line_id;
             gNdsStageMPPlatformSpeedFloorLoopDynamicCeilYakumonoID =
                 yakumono_id;
@@ -14528,18 +14528,18 @@ static void ndsStageMPPlatformSpeedFloorLoopRunProof(void)
     if (ndsStageMPPlatformSpeedFloorLoopRunWallProbe(yakumono_dobj, &speed,
             yakumono_id) == FALSE)
     {
-        gNdsStageMPPlatformSpeedFloorLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPPlatformSpeedFloorLoopUnsafeCount++);
     }
     if (ndsStageMPPlatformSpeedFloorLoopRunProcessWallProbe(yakumono_dobj,
             &speed, yakumono_id) == FALSE)
     {
-        gNdsStageMPPlatformSpeedFloorLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPPlatformSpeedFloorLoopUnsafeCount++);
     }
 
     if (ndsStageMPPlatformSpeedFloorLoopRunAnimProbe(yakumono_dobj,
             &speed) == FALSE)
     {
-        gNdsStageMPPlatformSpeedFloorLoopUnsafeCount++;
+        NDS_DIAG(gNdsStageMPPlatformSpeedFloorLoopUnsafeCount++);
     }
 
     ndsStageMPPlatformSpeedFloorLoopProbeInishieAsset();
@@ -15286,12 +15286,12 @@ static void ndsStageMPStaleFloorLoopRunSourceOrderProbe(void)
     if (ndsStageMPStaleFloorLoopChoosePair(fp, &stale_line_id,
             &target_line_id, &translate, &pos_prev) == FALSE)
     {
-        gNdsStageMPStaleFloorLoopPrimeMissCount++;
+        NDS_DIAG(gNdsStageMPStaleFloorLoopPrimeMissCount++);
         gNdsStageMPStaleFloorLoopUnsafeCount++;
         return;
     }
 
-    gNdsStageMPStaleFloorLoopPrimeHitCount++;
+    NDS_DIAG(gNdsStageMPStaleFloorLoopPrimeHitCount++);
     gNdsStageMPStaleFloorLoopStaleLineID = stale_line_id;
     gNdsStageMPStaleFloorLoopTargetLineID = target_line_id;
     gNdsStageMPStaleFloorLoopTargetXMilli =
