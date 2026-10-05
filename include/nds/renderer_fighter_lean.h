@@ -231,7 +231,10 @@ enum
                                         * no list carries, exact to leave out
                                         * only at reference 0 (Captain HIGH's
                                         * cutout; owner D5 for any other) */
-    nNDSFtrLeanDeclineReserved19,
+    nNDSFtrLeanDeclineVtx10,           /* 2026-10-05: a corner outside VTX_10
+                                        * (NDS_FTR_LEAN_ENTRY_VTX16): the
+                                        * caller materializes again at VTX_16
+                                        * at once; never a declined draw */
     nNDSFtrLeanDeclineCount = 20
 };
 
@@ -686,6 +689,16 @@ s32 ndsFtrLeanKernelCompose(const NDSFtrLeanJoint *joints, u32 joint_count,
  * over the slot's whole region; route 1 -- and the oracle routes on the lab
  * two-fighter arm, NDS_FTR_LEAN_ORACLE_WIDE). */
 #define NDS_FTR_LEAN_ENTRY_WIDE 0x100u
+/* P2-2p8 (2026-10-05): the `entry` flag that keeps a list's corners VTX_16
+ * (the retry after nNDSFtrLeanDeclineVtx10). Without it a route-1 list whose
+ * every corner is a whole source unit within +/-511 (all four-CPU lists) is
+ * materialized with VTX_10 corners: one parameter word a corner instead of
+ * two, the corner's value 4x its VTX_16 value, so the list's per-root LOAD4x3
+ * translation rows and P' row 3 carry that 4x too (ndsFtrLeanKernelCompose,
+ * ndsFtrLeanPacketPatch): the clip coordinates scale uniformly by 4, which
+ * the perspective divide, the homogeneous clip and the z/w depth buffer
+ * cancel exactly, and the vector matrix (normals, lighting) is unscaled. */
+#define NDS_FTR_LEAN_ENTRY_VTX16 0x200u
 
 /* The list of `battle_slot` for `key` (still current: tint-tile set, texture
  * fence) as an entry code for ndsFtrLeanEntryActivate -- an entry whose words
@@ -776,6 +789,9 @@ void ndsFtrLeanPacketRebind(u32 battle_slot);
  * no site map. */
 #define NDS_FTR_LEAN_SITES_NONE 0xffffffffu
 #define NDS_FTR_LEAN_SITES_INPUTS 0x80000000u
+/* Bit 30: the list's corners are VTX_10 (NDS_FTR_LEAN_ENTRY_VTX16 above): the
+ * kernel writes each site's translation row at 4x. */
+#define NDS_FTR_LEAN_SITES_VTX10 0x40000000u
 u32 ndsFtrLeanPacketModelviewSites(u32 battle_slot, u32 **sites,
                                    u32 root_count);
 /* The active list's validity half: tint-tile set generation (the tile words

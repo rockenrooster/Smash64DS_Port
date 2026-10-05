@@ -26,8 +26,9 @@
  * kind x detail has (generator max, 24) instead of the draw collection's 32;
  * a plan with more selected roots is never adopted. */
 #define NDS_FTR_LEAN_ROOT_MAX NDS_FIGHTER_ADMISSION_ROOT_MAX
-_Static_assert(NDS_FTR_LEAN_ROOT_MAX < 31u,
-               "bit 31 of a modelview-sites mask is NDS_FTR_LEAN_SITES_INPUTS");
+_Static_assert(NDS_FTR_LEAN_ROOT_MAX < 30u,
+               "bits 30-31 of a modelview-sites mask are NDS_FTR_LEAN_SITES_"
+               "VTX10 and NDS_FTR_LEAN_SITES_INPUTS");
 
 /* Slice 7: the defaults are initialisers (NDS_FTR_LEAN_ROUTE_BOOT /
  * NDS_FTR_LEAN_ADMIT_BOOT: route 1, admission 2 wherever the lean path is
@@ -895,6 +896,7 @@ ndsFtrLeanMaterializeFor(u32 slot, u32 *entry, const u32 *key, u32 count,
     NDSRendererStats stats;
     u32 reason;
     u32 wide;
+    u32 vtx16 = 0u;
     u32 t1;
     u32 i;
 
@@ -949,9 +951,14 @@ ndsFtrLeanMaterializeFor(u32 slot, u32 *entry, const u32 *key, u32 count,
             *entry = 0u;
         }
         reason = ndsFtrLeanMaterialize(
-            slot, (wide != FALSE) ? NDS_FTR_LEAN_ENTRY_WIDE : *entry, key,
-            ws->production_roots, count, owner_slot, use_low_detail,
+            slot, ((wide != FALSE) ? NDS_FTR_LEAN_ENTRY_WIDE : *entry) | vtx16,
+            key, ws->production_roots, count, owner_slot, use_low_detail,
             owner_file->data, &stats);
+        if ((reason == nNDSFtrLeanDeclineVtx10) && (vtx16 == 0u))
+        {
+            vtx16 = NDS_FTR_LEAN_ENTRY_VTX16; /* a corner past VTX_10 */
+            continue;
+        }
         if ((wide != FALSE) || (allow_wide == FALSE) ||
             (reason != nNDSFtrLeanDeclineCapacity))
         {

@@ -1342,6 +1342,20 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   `2026-10-05_stage-commit-lean`). Measured and set aside: CPU composition of
   Dream Land's dynamic no-Z bindings (11 billboards, 10 swaying parts with
   cross corners, Whispy) would leave ~5K to GX composition.
+- **10-05 the GX list DMAs priced; lean lists with VTX_10 corners.** A lab
+  word skipping GXFIFO DMA starts (experiment ROM, digest identical) put the
+  DMAs at paired -25.4K a frame on the gate: stage segments -10.4K, the four
+  lean fighter lists -14.8K, the rest -0.3K -- CPU bus stalls behind the
+  112-word bursts, so the cost follows list words (receipt
+  `2026-10-05_dma-stall`). A live dump of the lean lists (8,197 words at frame
+  1,200) put VTX_16 at a third of them; every corner is a whole source unit
+  (|unit| <= 292), so route-1 lists now take VTX_10 corners, one parameter
+  word, at 4x the VTX_16 value -- the per-root LOAD4x3 translation rows and P'
+  row 3 take the same 4x, a uniform clip scale the divide, the homogeneous
+  clip and the z/w depth buffer cancel (lighting unscaled). A list with a
+  corner past +/-511 units walks again at VTX_16. Gate same ROM paired -2.6K,
+  814,656/1,127,552, digest identical; captures differ in isolated fighter
+  edge pixels (receipt `2026-10-05_lean-vtx10`, word `gNdsFtrLeanVtx10`).
 
 ## 7. Found along the way
 

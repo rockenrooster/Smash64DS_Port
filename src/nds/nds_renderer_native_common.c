@@ -12811,6 +12811,7 @@ typedef struct NDSFtrLeanEntryState
     u32 variant_cur;            /* the record the words hold */
     u32 variant_max;            /* records the tail has room for */
     u32 variant_next;           /* round-robin replacement (1..max-1) */
+    u32 vtx10;                  /* corners VTX_10 (NDS_FTR_LEAN_ENTRY_VTX16) */
     u32 dirty[NDS_FTR_LEAN_DIRTY_WORDS];
 } NDSFtrLeanEntryState;
 
@@ -12880,8 +12881,8 @@ typedef struct NDSFtrLeanSlotState
      * growth exactly 1,024 B, one D-cache way (4 KB, 4-way, 32 B lines),
      * so every BSS object behind it keeps the cache set it was measured
      * at. Unpadded, the same code read P50 +8K with SRC +4K from phase
-     * alone; padded, +3K. */
-    u8 layout_pad[88];
+     * alone; padded, +3K. (76 since the three entries' vtx10 words.) */
+    u8 layout_pad[76];
 #if NDS_FTR_LEAN_LAB
     /* census: every cache slot this fighter's lists or packets bound */
     u32 union_mask[(NDS_RENDERER_HW_TEXTURE_CACHE_COUNT + 31u) / 32u];
@@ -13427,7 +13428,16 @@ typedef struct NDSFtrLeanMat
     u32 tint_binds;
     u32 tint_pending;
     u32 mark;                   /* lab: the materializer's part timer */
+    u32 vtx10;                  /* corners as VTX_10 (NDS_FTR_LEAN_ENTRY_VTX16) */
+    u32 vtx10_fail;             /* a corner did not fit: walk again at VTX_16 */
 } NDSFtrLeanMat;
+
+/* P2-2p8 (2026-10-05): route-1 lists take VTX_10 corners where every corner
+ * fits (NDS_FTR_LEAN_ENTRY_VTX16 in renderer_fighter_lean.h). The GXFIFO DMA
+ * of the four lean lists cost ~14.8K ticks a frame of bus stalls on the gate
+ * (same ROM, DMA skipped vs kept); VTX_16's second parameter word was a third
+ * of those lists' words. Same-ROM A/B word gNdsFtrLeanVtx10 (0 = VTX_16). */
+volatile u32 gNdsFtrLeanVtx10 __attribute__((used, section(".data"))) = 1u;
 
 /* ~300 clock reads per materialization, and materializations are tail
  * frames: attribution, so only in a phase-ticks build (NDS_FTR_LEAN_TIMED). */
@@ -13740,9 +13750,32 @@ static void ndsFtrLeanMatCorners(NDSFtrLeanMat *m, const u16 *refs, u32 count,
             }
             n++;
         }
-        NDS_FTR_LEAN_OP(FIFO_VERTEX16, 2u);
-        w[n++] = prepared[d].gx_xy;
-        w[n++] = prepared[d].gx_z;
+        if (m->vtx10 != 0u)
+        {
+            /* The VTX_16 words are whole source units at 4.12 (unit << 4);
+             * VTX_10 at 4.6 holds the unit itself, 4x the VTX_16 value. */
+            const u32 xy = prepared[d].gx_xy;
+            const u32 zw = prepared[d].gx_z;
+            const s32 x = (s32)(s16)xy >> 4;
+            const s32 y = (s32)(s16)(xy >> 16) >> 4;
+            const s32 z = (s32)(s16)zw >> 4;
+
+            if ((((xy & 0x000f000fu) | (zw & 0xfu)) != 0u) ||
+                ((u32)(x + 512) >= 1024u) || ((u32)(y + 512) >= 1024u) ||
+                ((u32)(z + 512) >= 1024u))
+            {
+                m->vtx10_fail = 1u;
+            }
+            NDS_FTR_LEAN_OP(FIFO_VERTEX10, 1u);
+            w[n++] = ((u32)x & 0x3ffu) | (((u32)y & 0x3ffu) << 10) |
+                (((u32)z & 0x3ffu) << 20);
+        }
+        else
+        {
+            NDS_FTR_LEAN_OP(FIFO_VERTEX16, 2u);
+            w[n++] = prepared[d].gx_xy;
+            w[n++] = prepared[d].gx_z;
+        }
     }
     if ((cross != FALSE) && (active != palette_slot))
     {
@@ -14171,6 +14204,9 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
     /* Slice 6: NDS_FTR_LEAN_ENTRY_WIDE asks for entry 0 over the whole
      * region (route 1 only); the other entry is given up while it holds. */
     u32 wide = ((entry & NDS_FTR_LEAN_ENTRY_WIDE) != 0u) ? TRUE : FALSE;
+    u32 vtx10 = (((entry & NDS_FTR_LEAN_ENTRY_VTX16) == 0u) &&
+                 (gNdsFtrLeanVtx10 != 0u) && NDS_FTR_LEAN_ROUTE_IS_DRAW()) ?
+        1u : 0u;
     u32 capacity = (wide != FALSE) ? ndsFtrLeanWideCapacity() :
         ndsFtrLeanWordCapacity();
     /* Slice 6: the fence the old path's key would carry for this record --
@@ -14178,7 +14214,7 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
     u32 record_fence = sNdsRendererHardwareTextureKeyGeneration ^
         (sNdsRendererRuntimeTextureCacheEvictCount << 16);
 
-    entry &= ~NDS_FTR_LEAN_ENTRY_WIDE;
+    entry &= ~(NDS_FTR_LEAN_ENTRY_WIDE | NDS_FTR_LEAN_ENTRY_VTX16);
     if ((battle_slot >= NDS_FIGHTER_PACKET_SLOTS) || (key == NULL) ||
         (ndsFtrLeanEntryUsable(entry) == FALSE) || (inputs == NULL) ||
         (stats == NULL) || (asset_base == NULL) || (input_count == 0u) ||
@@ -14287,6 +14323,7 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
     m.pk.capacity = capacity;
     m.pk.cmd_slot = 4u;
     m.texgen_group = NDS_FIGHTER_PACKET_TEXGEN_GROUP_NONE;
+    m.vtx10 = vtx10;
     ndsRendererInitTraversalState(state, NULL, stats, NULL, NULL, 0u);
     state->color_modulate = packet->tint_modulate;
     if (*sNdsNativeFighterActiveDenseNormalsBuilt == 0u)
@@ -14455,6 +14492,10 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
             reason = nNDSFtrLeanDeclineCapacity;
         }
     }
+    if ((reason == 0u) && (m.vtx10_fail != 0u))
+    {
+        reason = nNDSFtrLeanDeclineVtx10;
+    }
     if (reason != 0u)
     {
         return reason;
@@ -14506,6 +14547,7 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
     es->variant_count = 0u;
     es->variant_cur = 0u;
     es->variant_next = 1u;
+    es->vtx10 = m.vtx10;
     es->fence_needed = ((packet->needs_fence != 0u) &&
                         ((packet->fence_other != 0u) ||
                          (packet->tint_bind_overflow != 0u))) ? 1u : 0u;
@@ -15575,6 +15617,10 @@ ndsFtrLeanPacketModelviewSites(u32 battle_slot, u32 **sites,
          * production inputs (the caller refreshes them for this draw). */
         mask |= NDS_FTR_LEAN_SITES_INPUTS;
     }
+    if (state->vtx10 != 0u)
+    {
+        mask |= NDS_FTR_LEAN_SITES_VTX10;
+    }
     return mask;
 }
 
@@ -15849,6 +15895,12 @@ u32 ndsFtrLeanPacketPatch(u32 battle_slot, const NDSFtrLeanPatchView *view,
         u32 pprime[16];
         u32 same = ((NDS_FTR_LEAN_SLOW_WORD() & NDS_FTR_LEAN_SLOW_SUBMIT) == 0u) ?
             TRUE : FALSE;
+        /* A VTX_10 list's eye coordinates are 4x the VTX_16 list's but its
+         * homogeneous w is still 1: row 3 takes the 4x as well (the uniform
+         * clip scale, NDS_FTR_LEAN_ENTRY_VTX16). */
+        const u32 row3_shift = (state->vtx10 != 0u) ?
+            (NDS_RENDERER_HW_WORLD_UNIT_SHIFT - 2u) :
+            NDS_RENDERER_HW_WORLD_UNIT_SHIFT;
 
         for (i = 0u; i < 12u; i++)
         {
@@ -15857,7 +15909,7 @@ u32 ndsFtrLeanPacketPatch(u32 battle_slot, const NDSFtrLeanPatchView *view,
         for (i = 12u; i < 16u; i++)
         {
             pprime[i] = (u32)ndsRendererRoundShiftS32Signed(
-                projection[i], NDS_RENDERER_HW_WORLD_UNIT_SHIFT);
+                projection[i], row3_shift);
         }
         for (i = 0u; (same != FALSE) && (i < 16u); i++)
         {

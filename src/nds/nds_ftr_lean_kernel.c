@@ -527,6 +527,12 @@ NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanSiteShift8S32(s32 value)
 {
     return (s32)(((s64)value + 0x80) >> 8);
 }
+
+/* A VTX_10 list's site row 3 (NDS_FTR_LEAN_SITES_VTX10): 4x, half up. */
+NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanSiteShift6S32(s32 value)
+{
+    return (s32)(((s64)value + 0x20) >> 6);
+}
 #else
 NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanRoundShift8S32(s32 value)
 {
@@ -545,6 +551,11 @@ NDS_FTR_LEAN_KERNEL_INLINE s64 ndsFtrLeanOutShift8S64(s64 value)
 NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanSiteShift8S32(s32 value)
 {
     return ndsFtrLeanRoundShift8S32(value);
+}
+
+NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanSiteShift6S32(s32 value)
+{
+    return (s32)(((s64)value + 0x20) >> 6);
 }
 #endif
 
@@ -854,9 +865,21 @@ ndsFtrLeanKernelCompose(const NDSFtrLeanJoint *joints, u32 joint_count,
                     dst[2] = (u32)basis[row][2];
                     dst += 3;
                 }
-                dst[0] = (u32)ndsFtrLeanSiteShift8S32(translation[0]);
-                dst[1] = (u32)ndsFtrLeanSiteShift8S32(translation[1]);
-                dst[2] = (u32)ndsFtrLeanSiteShift8S32(translation[2]);
+                if ((world_mask & NDS_FTR_LEAN_SITES_VTX10) != 0u)
+                {
+                    /* VTX_10 corners are 4x their VTX_16 value: the
+                     * translation row takes the same 4x (P' row 3 too, in
+                     * ndsFtrLeanPacketPatch), a uniform clip scale. */
+                    dst[0] = (u32)ndsFtrLeanSiteShift6S32(translation[0]);
+                    dst[1] = (u32)ndsFtrLeanSiteShift6S32(translation[1]);
+                    dst[2] = (u32)ndsFtrLeanSiteShift6S32(translation[2]);
+                }
+                else
+                {
+                    dst[0] = (u32)ndsFtrLeanSiteShift8S32(translation[0]);
+                    dst[1] = (u32)ndsFtrLeanSiteShift8S32(translation[1]);
+                    dst[2] = (u32)ndsFtrLeanSiteShift8S32(translation[2]);
+                }
             }
         }
 #if NDS_FTR_LEAN_KTIME
