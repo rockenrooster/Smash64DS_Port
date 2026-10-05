@@ -314,7 +314,9 @@ typedef struct NDSFtrLeanInstance
     u32 patch_serial;           /* memo fill serial + 1 of the last patch */
     u32 topo_hash;              /* the kept joints' links (oracle routes) */
     u8 watch_count;             /* animated MObjs, or WATCH_ALL */
-    u8 pad[3];
+    u8 alias_dst;               /* a root bound to the same joint as another */
+    u8 alias_src;               /* ... whose world it takes, 0xff = none */
+    u8 pad[1];
     const MObj *watch[NDS_FTR_LEAN_WATCH_MAX];
     u32 watch_hash[NDS_FTR_LEAN_WATCH_MAX];
     u32 root_offsets[NDS_FTR_LEAN_ROOT_MAX];
@@ -571,6 +573,8 @@ ndsFtrLeanBuildJoints(NDSFtrLeanInstance *inst, DObj *root,
     memset(binding_of, 0xff, sizeof(binding_of));
     memset(needed, 0, sizeof(needed));
     memset(depth_of, 0, sizeof(depth_of));
+    inst->alias_dst = 0xffu;
+    inst->alias_src = 0xffu;
     for (j = 0u; j < count; j++)
     {
         DObj *want_parent = (parents[j] == 0xffu) ?
@@ -592,9 +596,26 @@ ndsFtrLeanBuildJoints(NDSFtrLeanInstance *inst, DObj *root,
                 break;
             }
         }
-        if ((j >= count) || (binding_of[j] != 0xffu))
+        if (j >= count)
         {
             return FALSE;
+        }
+        if (binding_of[j] != 0xffu)
+        {
+            /* A costume accessory (Pikachu's hat, Jigglypuff's bow) is a
+             * second list under the joint its parts belong to
+             * (ndsFighterDisplayContractSelectDL): the same world, so the
+             * root takes the first root's after the compose
+             * (ndsFtrLeanApplyAlias). Refusing it sent every hatted fighter
+             * down the old path every frame -- four Pikachus drew at 15 FPS
+             * (owner 2026-10-05). One such pair is all a costume makes. */
+            if (inst->alias_dst != 0xffu)
+            {
+                return FALSE;
+            }
+            inst->alias_dst = (u8)b;
+            inst->alias_src = binding_of[j];
+            continue;
         }
         binding_of[j] = (u8)b;
     }
@@ -636,6 +657,30 @@ ndsFtrLeanBuildJoints(NDSFtrLeanInstance *inst, DObj *root,
     }
     inst->joint_count = (u8)kept;
     return (kept != 0u) ? TRUE : FALSE;
+}
+
+/* ndsFtrLeanBuildJoints' alias root draws under its source root's world: its
+ * LOAD4x3 parameters, and its Q20.12 world where the patch reads one (the
+ * kernel writes a world only for a root in the mask). */
+static void ndsFtrLeanApplyAlias(const NDSFtrLeanInstance *inst,
+                                 u32 *const *mv_sites, u32 sites)
+{
+    u32 dst = inst->alias_dst;
+    u32 src = inst->alias_src;
+
+    if ((dst >= inst->root_count) || (src >= inst->root_count))
+    {
+        return;
+    }
+    if ((mv_sites[dst] != NULL) && (mv_sites[src] != NULL))
+    {
+        memcpy(mv_sites[dst], mv_sites[src], 12u * sizeof(u32));
+    }
+    if ((dst < 32u) && (src < 32u) && (((sites >> dst) & 1u) != 0u) &&
+        (((sites >> src) & 1u) != 0u))
+    {
+        sNdsFtrLeanWorlds[dst] = sNdsFtrLeanWorlds[src];
+    }
 }
 
 /* The per-root fields the recorder's key[3] folds in -- everything a list's
@@ -1819,6 +1864,10 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
 #if NDS_FTR_LEAN_ATTR_LIVE
             retried = TRUE;
 #endif
+        }
+        if (inst->alias_dst != 0xffu)
+        {
+            ndsFtrLeanApplyAlias(inst, mv_sites, sites);
         }
         t0 = NDS_FTR_LEAN_CLOCK();
         NDS_FTR_LEAN_TCTR(gNdsFtrLean.kernel_ticks += t0 - t1);

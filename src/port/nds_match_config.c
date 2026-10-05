@@ -197,6 +197,11 @@ volatile u32 gNdsLabFourCpuGkind __attribute__((used)) =
     NDS_LAB_FOURCPU_SWEEP_GKIND;
 volatile u32 gNdsLabFourCpuKinds __attribute__((used)) =
     NDS_LAB_FOURCPU_SWEEP_KINDS;
+/* Boot-poked common costume index, one byte a slot. 0xFF (the default) takes
+ * the CSS's own rule: a kind's first player wears costume 0, a second player of
+ * the same kind costume 1, and so on -- so a roster of four of one fighter
+ * draws the four alternate costumes, as the shell's character select does. */
+volatile u32 gNdsLabFourCpuCostumes __attribute__((used)) = 0xffffffffu;
 /* Boot-poked item switch (0 keeps every kind) and rate (the enum count or
  * more keeps the preset's; 5 is very high). With the source's dITManagerForceMonsterKind this puts one Poke
  * Ball Pokemon on screen for an owner capture. */
@@ -473,20 +478,35 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
         (u8)ftParamGetCostumeCommonID((FTKind)NDS_P2_FOUR_CPU_KIND3, 0);
 #if defined(NDS_LAB_FOURCPU_WORDS) && NDS_LAB_FOURCPU_WORDS
     /* LAB ONLY: boot-poked roster, one nFTKind byte a slot (0xFF keeps
-     * the preset's). Distinct kinds keep common costume 0 legal. */
+     * the preset's), and its common costume (gNdsLabFourCpuCostumes). */
     {
         u32 slot;
 
         for (slot = 0u; slot < 4u; slot++)
         {
             u32 kind = (gNdsLabFourCpuKinds >> (slot * 8u)) & 0xffu;
+            u32 color = (gNdsLabFourCpuCostumes >> (slot * 8u)) & 0xffu;
 
             if (kind != 0xffu)
             {
                 cfg->fighters[slot].fkind = (FTKind)kind;
-                cfg->fighters[slot].costume =
-                    (u8)ftParamGetCostumeCommonID((FTKind)kind, 0);
             }
+            if (color > 3u)
+            {
+                u32 earlier;
+
+                color = 0u;
+                for (earlier = 0u; earlier < slot; earlier++)
+                {
+                    if (cfg->fighters[earlier].fkind ==
+                        cfg->fighters[slot].fkind)
+                    {
+                        color++;
+                    }
+                }
+            }
+            cfg->fighters[slot].costume = (u8)ftParamGetCostumeCommonID(
+                cfg->fighters[slot].fkind, (s32)(color & 3u));
         }
     }
 #endif

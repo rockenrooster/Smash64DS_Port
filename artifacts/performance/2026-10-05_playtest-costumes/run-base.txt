@@ -1,0 +1,45 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,672; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 441: ALL 5,310,848 -> 1,116,544, 5 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_playtest-costumes/base.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=d394d7bd177+dirty(32) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,672     1,676,352      1.50  1,153,607     1,111,104  5,310,400      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,480        10,560      2.36      5,630         2,368     28,224        0.4
+HUD         9,024        23,936      2.65     10,872         7,744    376,128        0.8
+SRC       365,824       570,432      1.56    377,949       133,568  4,638,912       32.8
+MISC      405,312       557,824      1.38    415,105       177,024  3,367,680       36.3
+OTHR      336,192       616,768      1.83    344,050        21,888    792,448       30.1
+WAIT      313,728       592,064      1.89    321,806         2,176    772,224       28.1
+WORK      813,632     1,124,032      1.38    827,856       341,312  5,224,000       72.9
+SHDT      711,807       998,463      1.40    729,916       299,007  5,050,367       63.7
+SWRM        1,472         1,536      1.04      1,468           960      3,648        0.1
+GCRA      360,128       564,672      1.57    372,389       128,768  4,633,408       32.3
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        364             0    656,064        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      405,184       557,696      1.38    414,970       176,896  3,367,552       36.3
+MFLS          128           192      1.50        135           128        192        0.0
+GPOL          597           643      1.08        550            29        672        0.1
+GVTX        1,439         1,569      1.09      1,346            96      1,652        0.1
+DGSA   2,248,335,339 4,065,321,507        2,176,252,338    408,983 4,294,514,885 201,342.5
+DGSB   2,239,784,444 4,083,387,236        2,189,176,867  1,230,618 4,293,852,712 200,576.8
+WORK-H    804,032     1,114,048      1.39    816,984       333,376  5,214,080       72.0
+
+named=809,556 (70.2% of ALL)  VBI 2:1851 3:101 4:8 5+:1 max:8 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_playtest-costumes/base.json

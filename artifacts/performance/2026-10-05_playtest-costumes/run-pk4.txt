@@ -1,0 +1,46 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 2 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 2,236,864; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 680: ALL 5,869,696 -> 1,675,392, 5 bucket(s) corrected
+  frame 1024: ALL 6,433,344 -> 2,239,040, 5 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_playtest-costumes/pk4.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=d394d7bd177+dirty(32) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     2,236,864     2,237,696      1.00  1,983,637     1,113,216  4,675,968      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,288         9,984      2.33      5,297         2,304     29,120        0.2
+HUD         8,896        24,000      2.70     11,447         7,808    692,736        0.4
+SRC       375,104       606,080      1.62    395,577       147,136  1,052,672       16.8
+MISC    1,311,680     1,510,144      1.15  1,225,399       177,728  3,364,352       58.6
+OTHR      372,224       573,184      1.54    345,917        22,080    779,136       16.6
+WAIT      349,568       551,424      1.58    324,000         2,112    759,424       15.6
+WORK    1,722,112     2,096,896      1.22  1,655,809       353,664  4,339,584       77.0
+SHDT    1,608,959     1,979,647      1.23  1,543,355       311,679  2,798,399       71.9
+SWRM        1,472         1,536      1.04      1,474           960      3,776        0.1
+GCRA      369,600       600,576      1.62    390,048       142,336  1,047,296       16.5
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        246             0    293,888        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM    1,311,552     1,510,016      1.15  1,225,264       177,600  3,364,224       58.6
+MFLS          128           192      1.50        134           128        512        0.0
+GPOL          588           652      1.11        542            50        719        0.0
+GVTX        1,481         1,665      1.12      1,378           167      1,848        0.1
+DGSA   2,214,739,266 4,039,764,907        2,210,550,659    721,480 4,294,895,380 99,010.9
+DGSB   2,238,443,582 4,105,284,304        2,217,472,390  1,420,590 4,294,273,354 100,070.6
+WORK-H  1,710,976     2,087,232      1.22  1,644,362       345,472  3,646,848       76.5
+
+named=1,637,720 (82.6% of ALL)  VBI 2:181 3:585 4:1144 5+:51 max:9 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_playtest-costumes/pk4.json

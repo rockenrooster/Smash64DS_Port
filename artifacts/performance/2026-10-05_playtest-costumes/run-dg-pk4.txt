@@ -1,0 +1,46 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 2,237,056; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 1251: ALL 6,432,000 -> 2,237,696, 5 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_playtest-costumes/dg-pk4.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=d394d7bd177+dirty(38) dldi=ON
+
+bucket p50           p95           spread     mean          min        max           %ALLp50
+------ ---           ---           ------     ----          ---        ---           -------
+ALL     2,237,056     2,238,656      1.00      2,068,526     1,115,328  4,513,664      100.0
+FTR             0             0      0.00              0             0          0        0.0
+STG             0             0      0.00              0             0          0        0.0
+BG              0             0      0.00              0             0          0        0.0
+AUD         4,224         9,984      2.36          5,246         2,240     29,504        0.2
+HUD         9,472        24,448      2.58         11,955         8,320    519,552        0.4
+SRC       385,088       616,832      1.60        405,178       149,568  1,081,152       17.2
+MISC    1,367,488     1,587,456      1.16      1,290,182       238,784  3,367,680       61.1
+OTHR      380,160       568,256      1.49        355,965        25,024    715,136       17.0
+WAIT      357,184       546,496      1.53        333,161         2,624    694,720       16.0
+WORK    1,794,176     2,192,256      1.22      1,731,425       418,496  4,180,416       80.2
+SHDT    1,659,135     2,040,703      1.23      1,599,768       372,223  2,923,775       74.2
+SWRM        1,472         1,536      1.04          1,453           960      3,776        0.1
+GCRA      379,776       611,456      1.61        399,782       145,088  1,072,576       17.0
+SCPU            0       109,696    109,696.00     24,152             0    612,544        0.0
+SCAT            0             0      0.00          1,119             0    399,232        0.0
+SPRM            0        24,960    24,960.00       5,951             0    359,104        0.0
+SINT            0             0      0.00          1,584             0     40,896        0.0
+SPHD            0             0      0.00              0             0          2        0.0
+SPHC            0             2      2.00              0             0          4        0.0
+MWPN            0             0      0.00              0             0          0        0.0
+MITM            0             0      0.00              0             0          0        0.0
+MEFX            0             0      0.00              0             0          0        0.0
+MACT            0             0      0.00              0             0          0        0.0
+MPRT            0             0      0.00              0             0          0        0.0
+MTEX            0             0      0.00            519             0    740,544        0.0
+MCAP            0        53,696    53,696.00      10,798             0    128,512        0.0
+MPRO            0           832    832.00            193             0      9,792        0.0
+MCAM    1,355,328     1,577,408      1.16      1,279,037       238,592  3,238,592       60.6
+MFLS          128           192      1.50            153           128        320        0.0
+GPOL          588           653      1.11            542            50        719        0.0
+GVTX        1,481         1,665      1.12          1,378           167      1,848        0.1
+DGSA   2,214,739,266 4,039,764,907            2,210,550,659    721,480 4,294,895,380 99,002.4
+DGSB   2,238,443,582 4,105,284,304            2,217,472,390  1,420,590 4,294,273,354 100,062.0
+WORK-H  1,782,784     2,176,896      1.22      1,719,470       409,856  3,660,864       79.7
+
+named=1,712,561 (82.8% of ALL)  VBI 2:177 3:332 4:1372 5+:80 max:9 total:1961  slips=0
+extras: gNdsFtrLean.draws=1,671  gNdsFtrLean.attempts=6,778  gNdsFtrLean.materializations=26  gNdsFtrLean.entry_hits=5,168  gNdsFtrLean.entry_switches=321  gNdsFtrLean.materialize_ticks=9,650,432  gNdsFtrLean.event_ticks=5,296,832  gNdsFtrLean.spare_hits=0  gNdsFtrLean.spare_parks=15  gNdsFtrLean.decline[0]=0  gNdsFtrLean.decline[1]=0  gNdsFtrLean.decline[2]=0  gNdsFtrLean.decline[3]=0  gNdsFtrLean.decline[4]=0  gNdsFtrLean.decline[5]=0  gNdsFtrLean.decline[6]=0  gNdsFtrLean.decline[7]=0  gNdsFtrLean.decline[8]=0  gNdsFtrLean.decline[9]=0  gNdsFtrLean.decline[10]=0  gNdsFtrLean.decline[11]=0  gNdsFtrLean.decline[12]=5,107  gNdsFtrLean.decline[13]=0  gNdsFtrLean.decline[14]=0  gNdsFtrLean.decline[15]=0  gNdsFtrLean.decline[16]=0  gNdsFtrLean.decline[17]=0  gNdsFtrLean.decline[18]=0  gNdsFtrLean.decline[19]=0  gNdsFtrLean.event[0]=0  gNdsFtrLean.event[1]=5,108  gNdsFtrLean.event[2]=0  gNdsFtrLean.event[3]=0  gNdsFtrLean.event[4]=0  gNdsFtrLean.event[5]=85  gNdsFtrLean.event[6]=0  gNdsFtrLean.event[7]=1  gNdsFtrLean.event[8]=0  gNdsFtrLean.event[9]=0  gNdsFtrLean.event[10]=0
+Wrote artifacts/performance/2026-10-05_playtest-costumes/dg-pk4.json
