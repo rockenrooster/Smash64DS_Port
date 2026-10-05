@@ -4984,7 +4984,9 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
      * owns the segment's memos until the fast path re-proves them. */
     if (stage_gx_segment != FALSE)
     {
-        if ((binding_heads == NULL) &&
+        /* A DLLink segment too: its program's words are laid out in the
+         * head passes' order (compile_nds_stage_gx.py format 7). */
+        if (
 #if NDS_RENDER_ECONOMY
             ((gNdsRendererEconomyActiveOwnerMask &
               ((u32)1u << segment->owner)) == 0u) &&

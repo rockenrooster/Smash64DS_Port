@@ -188,8 +188,23 @@ def compile_packet(packet, name='dreamland'):
     static_mask = stage.blob_rigid_mask(name) & ~stage.blob_camera_mask(packet)
     attributes = vertex_attributes(packet, name)
     baked_mask = 0
+    # A DLLink packet's runs sit in DObj preorder, and the runtime draws a
+    # segment head by head, 0 then 2 then 1 then 3 (nds_renderer_native_owners.c,
+    # the head passes). Laying each segment's words out in that order -- stable
+    # within a head -- lets the one-DMA fast path draw a multi-head segment in
+    # the same order; the run table stays indexed by run, so the per-run path
+    # is unchanged. Format v7 marks the layout.
+    head_rank = {0: 0, 2: 1, 1: 2, 3: 3}
+
+    def run_order(segment):
+        ids = list(range(segment.first_run, segment.first_run + segment.run_count))
+        if not packet.binding_heads:
+            return ids
+        return sorted(ids, key=lambda r: head_rank.get(
+            packet.binding_heads[packet.runs[r].binding_index], 4))
+
     for segment_id, segment in enumerate(packet.segments):
-        for run_id in range(segment.first_run, segment.first_run + segment.run_count):
+        for run_id in run_order(segment):
             run = packet.runs[run_id]
             cross = bool(run.flags & stage.RUN_FLAG_PROJECTED_CROSS_MATRIX)
             if run.submit_class not in (stage.SUBMIT_RAW_CURRENT, stage.SUBMIT_PROJECTED_NO_Z, stage.SUBMIT_PROJECTED_RANGE_OR_MATRIX):
@@ -358,7 +373,7 @@ def compile_packet(packet, name='dreamland'):
     body += struct.pack(f'<{len(words)}I', *words)
     if len(body) > body_max(name):
         raise ValueError('GX template exceeds the stage body heap ceiling')
-    return HEADER.pack(MAGIC, 6, stage.blob_gkind(name), len(runs), len(words),
+    return HEADER.pack(MAGIC, 7, stage.blob_gkind(name), len(runs), len(words),
                        len(patches), (1 << len(packet.segments)) - 1, signature(packet), len(body),
                        stage.fnv1a_bytes(body), baked_mask & 0xFFFFFFFF, baked_mask >> 32) + body
 
@@ -366,9 +381,9 @@ def compile_packet(packet, name='dreamland'):
 def decode(blob):
     header = HEADER.unpack_from(blob)
     magic, version, _, nr, nw, np, _, _, nb, checksum, _, _ = header
-    if magic != MAGIC or version not in (1, 2, 3, 4, 5, 6) or len(blob) != HEADER.size + nb:
+    if magic != MAGIC or version not in (1, 2, 3, 4, 5, 6, 7) or len(blob) != HEADER.size + nb:
         raise ValueError('Invalid GX header/length')
-    record = {1: RUN_V1, 2: RUN_V2, 3: RUN, 4: RUN, 5: RUN, 6: RUN}[version]
+    record = {1: RUN_V1, 2: RUN_V2, 3: RUN, 4: RUN, 5: RUN, 6: RUN, 7: RUN}[version]
     if nb != nr * record.size + np * PATCH.size + nw * 4 or stage.fnv1a_bytes(blob[HEADER.size:]) != checksum:
         raise ValueError('Invalid GX body')
     pos = HEADER.size

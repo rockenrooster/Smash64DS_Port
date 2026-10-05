@@ -300,7 +300,7 @@ static sb32 __attribute__((noinline, cold, optimize("Os"))) ndsStageGxLoad(void)
     if (!ndsRelocAssetStreamOpen(&stream, sNdsStageGxPaths[gkind]) ||
         !ndsRelocAssetStreamRead(&stream, 0u, &h, sizeof(h))) { goto failed; }
     reason = 2u;
-    if (h.magic != 0x31505847u || h.version != 6u || h.gkind != gkind ||
+    if (h.magic != 0x31505847u || h.version != 7u || h.gkind != gkind ||
         h.run_count != NDS_NATIVE_STAGE_RUN_COUNT || h.word_count == 0u || h.word_count > 16384u ||
         h.patch_count > 4096u || NDS_NATIVE_STAGE_SEGMENT_COUNT >= 32u ||
         h.segment_mask != (1u << NDS_NATIVE_STAGE_SEGMENT_COUNT) - 1u ||
@@ -1238,7 +1238,15 @@ static void ndsStageGxFastForget(u32 segment_index)
 static void __attribute__((noinline, cold, optimize("Os")))
 ndsStageGxFastBuild(u32 segment_index, const NDSNativeStageSegment *segment)
 {
+    /* A DLLink segment's runs in the head passes' order (0, 2, 1, 3), the
+     * order scripts/stages/compile_nds_stage_gx.py (format 7) lays their words
+     * out in; a layer packet's in index order. */
+    static const u8 head_order[4] = { 0u, 2u, 1u, 3u };
+    const u8 *heads = NDS_NATIVE_STAGE_BINDING_HEADS;
+    const u32 passes = (heads != NULL) ? 4u : 1u;
     NDSStageGxFastSeg *s = &sNdsStageGxFastSegs[segment_index];
+    u32 built = 0u;
+    u32 pass;
     u32 i;
 
     if (sNdsStageGxFastNearSerial != sNdsStageGxLoadSerial + 1u)
@@ -1253,6 +1261,7 @@ ndsStageGxFastBuild(u32 segment_index, const NDSNativeStageSegment *segment)
     {
         return;
     }
+    for (pass = 0u; pass < passes; pass++)
     for (i = 0u; i < segment->run_count; i++)
     {
         const u32 run_index = (u32)segment->first_run + i;
@@ -1265,6 +1274,18 @@ ndsStageGxFastBuild(u32 segment_index, const NDSNativeStageSegment *segment)
                 native->submit_class;
         u64 bindings;
 
+        if (heads != NULL)
+        {
+            /* A head the passes never draw: not this path's segment. */
+            if (heads[native->binding_index] > 3u)
+            {
+                return;
+            }
+            if (heads[native->binding_index] != head_order[pass])
+            {
+                continue;
+            }
+        }
         if ((r->word_count < 4u) || (r->patch_count == 0u) ||
             (native->submit_class >= NDS_RENDERER_HW_SUBMIT_CLASS_COUNT) ||
             (native->binding_index >= 64u) ||
@@ -1273,7 +1294,7 @@ ndsStageGxFastBuild(u32 segment_index, const NDSNativeStageSegment *segment)
         {
             return;
         }
-        if (i == 0u)
+        if (built++ == 0u)
         {
             s->first_patch = r->first_patch;
             s->first_word = r->first_word;
