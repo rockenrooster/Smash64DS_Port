@@ -1433,8 +1433,11 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   each owner draws (clean ROM, same-ROM words, digest identical): halo -5.4K,
   N Bumper -15.9K, laser -22.6K, dust -25.6K to -29.6K, Saffron's Pokemon
   -7.9K; Saffron P95 1,269,312 -> 1,261,504. Official gate 1,112,960, 1,860
-  two-VBlank presents (neutral). Receipts `2026-10-05_halo-first`,
-  `2026-10-05_more-routes`.
+  two-VBlank presents (neutral). Mushroom Kingdom's two Pakkun and its POW
+  block were drawn through the body on every frame; with their routes
+  (palette and image files re-proved each draw) its P95 is 1,224,256 ->
+  1,197,056, paired -24.6K (`7c590b1e478`). Receipts
+  `2026-10-05_halo-first`, `2026-10-05_more-routes`.
 
 ## 7. Found along the way
 
