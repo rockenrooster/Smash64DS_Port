@@ -3,6 +3,7 @@
 #include <nds/nds_scene_harness.h>
 #include <nds/nds_startup.h>
 #include <string.h>
+#include "nds_build_config.h"
 
 /* The published ROM is source-normal. Automated fast iteration explicitly
  * clears this at the pre-battle seam to skip CPU/countdown/timer work.
@@ -179,6 +180,41 @@ volatile u32 gNdsCpuDecide30Hz __attribute__((used, section(".data"))) = 0u;
 extern volatile u32 gNdsFtPoseEvalTick;
 extern SCCommonData gSCManagerSceneData;
 
+#if defined(NDS_LAB_FOURCPU_WORDS) && NDS_LAB_FOURCPU_WORDS
+/* LAB ONLY: drives chosen CPU players' inputs so a probe can make any move on
+ * demand (a special's effects, for cost and visual checks). The CPU still
+ * decides; its inputs are replaced afterwards. gNdsLabForceInputSlots is a
+ * player mask (0 = off). gNdsLabForceInput: N64 buttons in bits 0-15, stick x
+ * (s8) in bits 16-23, stick y (s8) in bits 24-31. gNdsLabForceInputPeriod:
+ * period in ticks (bits 0-15), held ticks (bits 16-31); outside the held
+ * ticks the inputs are released, so each period starts with a fresh press. */
+volatile u32 gNdsLabForceInput __attribute__((used)) = 0u;
+volatile u32 gNdsLabForceInputSlots __attribute__((used)) = 0u;
+volatile u32 gNdsLabForceInputPeriod __attribute__((used)) = 0u;
+static u32 sNdsLabForceInputTicks[4];
+
+static void __attribute__((noinline)) ndsLabForceInput(FTStruct *fp)
+{
+    u32 player = (u32)fp->player & 3u;
+    u32 period = gNdsLabForceInputPeriod & 0xffffu;
+    u32 held = gNdsLabForceInputPeriod >> 16;
+    u32 tick = sNdsLabForceInputTicks[player]++;
+
+    if ((period == 0u) || ((tick % period) < held))
+    {
+        fp->input.cp.button_inputs = (u16)gNdsLabForceInput;
+        fp->input.cp.stick_range.x = (s8)(gNdsLabForceInput >> 16);
+        fp->input.cp.stick_range.y = (s8)(gNdsLabForceInput >> 24);
+    }
+    else
+    {
+        fp->input.cp.button_inputs = 0u;
+        fp->input.cp.stick_range.x = 0;
+        fp->input.cp.stick_range.y = 0;
+    }
+}
+#endif
+
 void ftComputerProcessAll(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
@@ -229,6 +265,12 @@ void ftComputerProcessAll(GObj *fighter_gobj)
         ndsFTComputerRecord(fp);
 #endif
     }
+#if defined(NDS_LAB_FOURCPU_WORDS) && NDS_LAB_FOURCPU_WORDS
+    if (((gNdsLabForceInputSlots >> ((u32)fp->player & 3u)) & 1u) != 0u)
+    {
+        ndsLabForceInput(fp);
+    }
+#endif
 #if NDS_TICK_HUD && NDS_TICK_HUD_SRC_SPLIT
     gNdsTickHudSrcComputerTicks += cpuGetTiming() - computer_start;
 #endif

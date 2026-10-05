@@ -241,11 +241,105 @@ static void ndsSceneHarnessSeedBattlePlayableDefaults(void)
  * players' figures here when the fidelity matrix needs it. The research doc
  * requires both arms proven before acceptance, and one mode with edited
  * constants beats two modes that can drift apart. */
+#if (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_RESULTS_PLAYABLE)
+/* LAB (Results harness only): a boot-poked podium. One nFTKind byte a slot,
+ * 0xFF an empty slot; the default keeps the Mario/Fox seed below. Slot 0 is
+ * the human, the rest CPUs, and a repeated kind takes the CSS's next costume.
+ * The slot named by gNdsLabResultsWinner KOs every other player once. */
+volatile u32 gNdsLabResultsKinds __attribute__((used)) = 0xffffffffu;
+volatile u32 gNdsLabResultsWinner __attribute__((used));
+
+static void ndsSceneHarnessSeedResultsLabPodium(void)
+{
+    NdsMatchConfig *cfg = &gNdsMatchConfig;
+    s32 winner = (s32)(gNdsLabResultsWinner & 3u);
+    s32 place = 1;
+    s32 i;
+    s32 j;
+
+    ndsMatchConfigLoadMarioFoxDreamLand(cfg);
+    for (i = 0; i < NDS_MATCH_FIGHTERS_MAX; i++)
+    {
+        u32 kind = (gNdsLabResultsKinds >> (i * 8)) & 0xffu;
+        s32 color = 0;
+
+        if (kind == 0xffu)
+        {
+            cfg->fighters[i].fkind = nFTKindNull;
+            cfg->fighters[i].pkind = nFTPlayerKindNot;
+            continue;
+        }
+        for (j = 0; j < i; j++)
+        {
+            if ((cfg->fighters[j].pkind != nFTPlayerKindNot) &&
+                (cfg->fighters[j].fkind == kind))
+            {
+                color++;
+            }
+        }
+        cfg->fighters[i].fkind = (u8)kind;
+        cfg->fighters[i].pkind = (i == 0) ? nFTPlayerKindMan :
+            nFTPlayerKindCom;
+        cfg->fighters[i].level = 3;
+        cfg->fighters[i].costume =
+            (u8)ftParamGetCostumeCommonID((s32)kind, color & 3);
+    }
+    ndsMatchConfigApply(cfg);
+    gSCManagerBackupData.error_flags = 0;
+    gSCManagerBackupData.boot = 0;
+    gSCManagerBackupData.fighter_mask = LBBACKUP_CHARACTER_MASK_ALL;
+    gSCManagerBackupData.ground_mask = 0xFFFFu;
+    gSCManagerTransferBattleState.time_passed = 3600;
+    for (i = 0; i < GMCOMMON_PLAYERS_MAX; i++)
+    {
+        struct SCPlayerData *p = &gSCManagerTransferBattleState.players[i];
+
+        if (p->pkind == nFTPlayerKindNot)
+        {
+            continue;
+        }
+        if (i == winner)
+        {
+            p->place = 0;
+            p->score = 0;
+            p->falls = 0;
+            for (j = 0; j < GMCOMMON_PLAYERS_MAX; j++)
+            {
+                if ((j != winner) &&
+                    (gSCManagerTransferBattleState.players[j].pkind !=
+                     nFTPlayerKindNot))
+                {
+                    p->total_kos_players[j] = 1;
+                    p->total_damage_given += 120;
+                    p->score++;
+                }
+            }
+        }
+        else
+        {
+            p->place = (u8)place++;
+            p->score = -1;
+            p->falls = 1;
+            p->total_damage_all = 120;
+            p->total_damage_players[winner] = 120;
+        }
+    }
+    dSCManagerDefaultBattleState = gSCManagerTransferBattleState;
+}
+#endif
+
 static void ndsSceneHarnessSeedResultsPlayableDefaults(void)
 {
     struct SCPlayerData *mario;
     struct SCPlayerData *fox;
 
+#if (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_RESULTS_PLAYABLE)
+    if (gNdsLabResultsKinds != 0xffffffffu)
+    {
+        ndsSceneHarnessSeedResultsLabPodium();
+        return;
+    }
+#endif
     ndsSceneHarnessSeedBattlePlayableDefaults();
 
     gSCManagerTransferBattleState.time_passed = 3600;
