@@ -1255,6 +1255,32 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   float latches -- worse on all four seeds (P95 +2.1K, mean +1.3K): it runs
   about once a frame, so its main-RAM code is cold while the float path is
   small decomp code over ITCM soft float (receipt `2026-10-04_latch-fixed`).
+- **10-04 fighter joint worlds resident in fixed point (owner: "fixed point
+  the whole way").** The hurtbox reject's per-epoch world cache is the one
+  place a fighter joint's world is built: `gmCollisionGetFighterPartsWorldPosition`
+  reads it (point in, one fixed transform, point out) and the held item's
+  0x52 matrix reads the parent's world and writes the Q20.12 directly; neither
+  writes an FTParts latch, and the float walk/local/compose leave those paths
+  (gdb, 100 late frames: 958 composes and 1,186 locals -> 14 and 20). The local
+  builder is the relaxed form (truncating index, cosine a quarter turn on).
+  Digest re-baselined (D13, frame 221); same-ROM 4 seeds P95 -0.8K mean,
+  official seed 1,178,048 -> 1,169,536 (`97701743bdf`); the walk then reads
+  DTCM sines and composes with truncating reductions: 834,880/1,163,328, 131
+  over (`8d02498a7d8`, receipt `2026-10-04_joint-resident`). The late-window
+  profile shows the fixed walk memory-bound (~1.1K a local, ~0.9K a compose,
+  ~96K a tail frame). Rejected: the walk in ITCM for five low-rent residents
+  (paired +4.2K a frame) and body-joint locals kept across the pose-hold tick
+  in their FTParts (digest identical, 21% fewer local builds, paired -128).
+- **10-04 the worst-case search, all nine VS stages (lab sweep ROM with every
+  `NDS_P2_STAGE_*` on; the gate target stages Dream Land only, and the lab
+  stage word on it faulted at frame 0 on the other maps -- no wallpaper
+  sprite).** Preset roster, items on, 1,960 frames, lab instrument included
+  (~6% over the gate ROM): P50/P95 Castle 1,002,752/1,346,944, Sector Z
+  1,036,672/1,389,504, Jungle 1,010,368/1,427,520, Zebes 1,012,672/1,333,632,
+  Hyrule 896,512/1,153,024, Yoshi's Island 1,045,248/1,396,480, Dream Land
+  898,048/1,238,336, Saffron 1,090,880/1,456,576, Mushroom Kingdom
+  1,060,288/1,360,192 (`artifacts/performance/2026-10-04_stage-sweep/a1-*`).
+  Saffron's SRC runs +114K and MISC +77K over Dream Land's.
 
 ## 7. Found along the way
 
