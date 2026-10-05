@@ -187,6 +187,8 @@ uintptr_t lEFCommonParticleTextureBankHi;
     ndsBaseEFManagerNessPKThunderWaveMakeEffect
 #define efManagerNessPKFlashMakeEffect \
     ndsBaseEFManagerNessPKFlashMakeEffect
+#define efManagerNessPsychicMagnetMakeEffect \
+    ndsBaseEFManagerNessPsychicMagnetMakeEffect
 #endif
 #if NDS_R2_FOX_BLASTER_GLOW_AOT
 #define efManagerFoxBlasterGlowMakeEffect \
@@ -238,6 +240,7 @@ uintptr_t lEFCommonParticleTextureBankHi;
 #undef efManagerNessPKReflectTrailMakeEffect
 #undef efManagerNessPKThunderWaveMakeEffect
 #undef efManagerNessPKFlashMakeEffect
+#undef efManagerNessPsychicMagnetMakeEffect
 #endif
 #if NDS_R2_FOX_BLASTER_GLOW_AOT
 #undef efManagerFoxBlasterGlowMakeEffect
@@ -1946,7 +1949,47 @@ GObj *efManagerNessPKFlashMakeEffect(Vec3f *pos)
     ndsEFManagerEndMappedDesc(&dEFManagerNessPKFlashEffectDesc, &saved);
     return effect_gobj;
 }
+
+/* Owner 2026-10-05: "Down B needs shield guard z move treatment (so it draws
+ * over player)". The source maker runs unchanged; the first display list of
+ * the tree it built names the effect to the 0x50 matrix builder, which draws
+ * the bubble toward the eye by the shield's floor (nds_effects.h). */
+GObj *efManagerNessPsychicMagnetMakeEffect(GObj *fighter_gobj)
+{
+    GObj *effect_gobj =
+        ndsBaseEFManagerNessPsychicMagnetMakeEffect(fighter_gobj);
+    const void *dl = (effect_gobj != NULL) ?
+        ndsEffectTreeFirstDL(DObjGetStruct(effect_gobj)) : NULL;
+
+    if (dl != NULL)
+    {
+        gNdsEffectTowardEyeDL = dl;
+    }
+    return effect_gobj;
+}
 #endif
+
+/* nds_effects.h: the toward-eye model effect's first display list, and the
+ * pre-order walk (three levels; the trees are shallow) that names a tree by
+ * it. */
+const void *gNdsEffectTowardEyeDL;
+
+const void *ndsEffectTreeFirstDL(const DObj *root)
+{
+    const DObj *dobj = root;
+    u32 depth = 0u;
+
+    while ((dobj != NULL) && (depth < 3u))
+    {
+        if (dobj->dv != NULL)
+        {
+            return dobj->dv;
+        }
+        dobj = dobj->child;
+        depth++;
+    }
+    return NULL;
+}
 
 #if NDS_P2_YOSHI
 GObj *efManagerYoshiShieldMakeEffect(GObj *fighter_gobj)

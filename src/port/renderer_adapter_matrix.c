@@ -3066,6 +3066,32 @@ static sb32 ndsRendererAdapterBuildJointAttachTraMtx(DObj *dobj, Mtx *out)
         return FALSE;
     }
     gmCollisionGetFighterPartsWorldPosition(attach, &translate_base);
+    if ((gNdsEffectTowardEyeDL != NULL) &&
+        (ndsEffectTreeFirstDL(dobj) == gNdsEffectTowardEyeDL))
+    {
+        /* nds_effects.h: Ness's PSI Magnet, drawn toward the camera eye by
+         * the shield's floor so his own body stops hiding it. Translation
+         * only; the source pose and position are untouched. */
+        CObj *cobj = (gGCCurrentCamera != NULL) ?
+            CObjGetStruct(gGCCurrentCamera) : NULL;
+
+        if (cobj != NULL)
+        {
+            f32 dx = cobj->vec.eye.x - translate_base.x;
+            f32 dy = cobj->vec.eye.y - translate_base.y;
+            f32 dz = cobj->vec.eye.z - translate_base.z;
+            f32 len = sqrtf((dx * dx) + (dy * dy) + (dz * dz));
+
+            if (len > 1.0F)
+            {
+                f32 step = 150.0F / len;
+
+                translate_base.x += dx * step;
+                translate_base.y += dy * step;
+                translate_base.z += dz * step;
+            }
+        }
+    }
     syMatrixTra(out, translate_base.x, translate_base.y, translate_base.z);
     return TRUE;
 }

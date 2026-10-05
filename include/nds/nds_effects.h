@@ -73,6 +73,15 @@ sb32 ndsParticleDrawOwnTextureParallelogram(u32 texture_name, u32 texture_w,
  * clears proc_dead when it hands the transform out again. */
 struct LBTransform;
 void ndsParticleTransformTowardEye(struct LBTransform *xf);
+/* The same depth treatment for a model effect whose root follows a fighter
+ * joint (matrix kind 0x50): Ness's PSI Magnet sits on his TopN joint and the
+ * opaque body hid most of it (owner 2026-10-05: "Down B needs shield guard z
+ * move treatment"). The maker publishes the first display list of its tree;
+ * the 0x50 builder pulls a root whose tree leads with that list
+ * NDS_PARTICLE_TOWARD_EYE_BIAS units toward the camera eye. */
+struct DObj;
+extern const void *gNdsEffectTowardEyeDL;
+const void *ndsEffectTreeFirstDL(const struct DObj *root);
 extern volatile u32 gNdsSourceAssetQuadAttempts;
 extern volatile u32 gNdsSourceAssetQuadDrawn;
 extern volatile u32 gNdsSourceAssetQuadMissMask;
