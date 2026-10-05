@@ -3710,12 +3710,17 @@ static inline sb32 ndsMPWallSweepTruncInline(f32 v, s32 *out)
  * would have rejected every group it examines -- the sweep then returns
  * FALSE having written nothing -- and makes the sweep's own state changes
  * (each rejected group's reject_misses, the two counters). Anything else (a
- * dynamic or backed-off group, an operand past 2^20, geometry not current)
- * goes to the sweep untouched. For a static group the Same and Diff forms
- * are the same query. */
+ * backed-off group, an operand past 2^20, geometry not current) goes to the
+ * sweep untouched. For a static group the Same and Diff forms are the same
+ * query. A dynamic group (an animated or moving yakumono: Saffron's door, the
+ * moving platforms) takes ndsMPSweepGroupReject's own shift -- the range
+ * minus the yakumono's X edge, plus its speed in the Diff form -- so it is
+ * rejected exactly when the sweep would reject it (P2-2p8, 2026-10-04: on
+ * Saffron half of ~128 wall sweeps a frame fell through to the full sweep
+ * for a dynamic group nowhere near them). */
 static sb32 __attribute__((noinline))
 ndsMPWallSweepStaticMiss(const Vec3f *position, const Vec3f *translate,
-                         u32 line_kind)
+                         u32 line_kind, sb32 is_diff)
 {
     MPGeometryData *geometry = gMPCollisionGeometry;
     NDSMPKindGroup *group;
@@ -3759,11 +3764,42 @@ ndsMPWallSweepStaticMiss(const Vec3f *position, const Vec3f *translate,
         {
             continue;
         }
+        if (g->reject_skip != 0u)
+        {
+            return FALSE;
+        }
         if ((yakumono_dobj->anim_joint.event32 != NULL) ||
-            (yakumono_dobj->user_data.s != nMPYakumonoStatusNone) ||
-            (g->reject_skip != 0u) ||
-            ((hi >= (s32)g->ext_lo) && (lo <= (s32)g->ext_hi) &&
-             (ndsMPGroupSpansMiss(g, lo, hi) == FALSE)))
+            (yakumono_dobj->user_data.s != nMPYakumonoStatusNone))
+        {
+            const s32 ie = ndsMPWallSweepEdgeTrunc(
+                g->yakumono_id, 0u, yakumono_dobj->translate.vec.f.x);
+            const s32 id =
+                ((is_diff != FALSE) && (gMPCollisionSpeeds != NULL)) ?
+                ndsMPWallSweepEdgeTrunc(g->yakumono_id, 1u,
+                                        gMPCollisionSpeeds[g->yakumono_id].x) :
+                0;
+            s32 dp;
+            s32 dt;
+            s32 dlo;
+            s32 dhi;
+
+            if ((ie == INT32_MIN) || (id == INT32_MIN))
+            {
+                return FALSE;
+            }
+            dp = ip - ie + id;
+            dt = it - ie;
+            dlo = ((dp < dt) ? dp : dt) - NDS_MP_WALL_SWEEP_SLACK;
+            dhi = ((dp > dt) ? dp : dt) + NDS_MP_WALL_SWEEP_SLACK;
+            if ((dhi >= (s32)g->ext_lo) && (dlo <= (s32)g->ext_hi) &&
+                (ndsMPGroupSpansMiss(g, dlo, dhi) == FALSE))
+            {
+                return FALSE;
+            }
+            continue;
+        }
+        if ((hi >= (s32)g->ext_lo) && (lo <= (s32)g->ext_hi) &&
+            (ndsMPGroupSpansMiss(g, lo, hi) == FALSE))
         {
             return FALSE;
         }
@@ -3807,7 +3843,7 @@ sb32 mpCollisionCheckLWallLineCollisionSame(Vec3f *position,
         gNdsStageMPAdjustFloorLoopWallLCallCount++;
     }
     hit = (ndsMPWallSweepStaticMiss(position, translate,
-                                    nMPLineKindLWall) != FALSE) ? FALSE :
+                                    nMPLineKindLWall, FALSE) != FALSE) ? FALSE :
         ndsStageMPAdjustFloorLoopWallSweep(position, translate, ga_last,
                                            stand_line_id, stand_coll_flags,
                                            angle, nMPLineKindLWall, FALSE);
@@ -3839,7 +3875,7 @@ sb32 mpCollisionCheckRWallLineCollisionSame(Vec3f *position,
         gNdsStageMPAdjustFloorLoopWallRCallCount++;
     }
     hit = (ndsMPWallSweepStaticMiss(position, translate,
-                                    nMPLineKindRWall) != FALSE) ? FALSE :
+                                    nMPLineKindRWall, FALSE) != FALSE) ? FALSE :
         ndsStageMPAdjustFloorLoopWallSweep(position, translate, ga_last,
                                            stand_line_id, stand_coll_flags,
                                            angle, nMPLineKindRWall, FALSE);
@@ -3864,8 +3900,8 @@ sb32 mpCollisionCheckLWallLineCollisionDiff(Vec3f *position,
                                             u32 *stand_coll_flags,
                                             Vec3f *angle)
 {
-    if (ndsMPWallSweepStaticMiss(position, translate, nMPLineKindLWall) !=
-        FALSE)
+    if (ndsMPWallSweepStaticMiss(position, translate, nMPLineKindLWall,
+                                 TRUE) != FALSE)
     {
         return FALSE;
     }
@@ -3882,8 +3918,8 @@ sb32 mpCollisionCheckRWallLineCollisionDiff(Vec3f *position,
                                             u32 *stand_coll_flags,
                                             Vec3f *angle)
 {
-    if (ndsMPWallSweepStaticMiss(position, translate, nMPLineKindRWall) !=
-        FALSE)
+    if (ndsMPWallSweepStaticMiss(position, translate, nMPLineKindRWall,
+                                 TRUE) != FALSE)
     {
         return FALSE;
     }
