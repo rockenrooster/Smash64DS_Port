@@ -1458,6 +1458,31 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   loan is full; the FGM arena pins up to 133,424 of its 163,840 B). The
   patch is kept with the receipt (`2026-10-05_lean-park`) for when deleted
   machinery frees main RAM.
+- **10-05 collision segment windows; the wall static miss in one pass;
+  heavy-frame particle LOD.** (1) The floor and ceiling sweeps bound the x
+  interval a segment must meet: the sweep's truncated span, widened by
+  |dx| + 2 units when the motion falls (rises, for a ceiling) more than one
+  unit -- a flat segment's extrapolated crossing lands outside the span by at
+  most 0.001 |dx| / dy -- and not widened when the flat branch cannot hit. On
+  a line of at least 12 vertices whose x never reverses, a line whose extent
+  misses the interval is skipped and two binary searches give the run of
+  segments to walk; the point queries start where the point can first be
+  bracketed. The wall sweep's all-reject fast path proves and books each
+  group in one pass (`06e295b1313`). Same ROM, digest identical: Sector Z
+  paired -5.4K (P95 -5.7K), Yoshi's Island -1.5K, Saffron -1.0K, the rest
+  flat; bounding every line had cost Yoshi's Island +2.9K. (2) Owner ruling
+  D12b: a frame whose elapsed work has reached 1.0M ticks at its first
+  particle pass draws half of its generic particles (odd pool slots, stable
+  across consecutive heavy frames; their transforms still run;
+  `f310d5435f7`): P95 Sector Z -8.1K, Jungle -7.2K, Yoshi's Island -7.0K,
+  Dream Land -1.7K, digest identical. Official gate (`build-gate-1005u`, both,
+  same ROM): P95 1,124,992 -> 1,121,728, two-VBlank 1,854 -> 1,858; the
+  build reads +5.4K P95 against the morning's by layout alone. (3) A lab
+  census (`99b344558de`) found 56% of a fresh lean list's roots
+  word-identical to the held list's (half the lists differ in at most two
+  roots): materializations mostly re-emit words already held. Receipts
+  `2026-10-05_collision-window5`, `2026-10-05_particle-lod`,
+  `2026-10-05_lean-root-census`.
 
 ## 7. Found along the way
 
