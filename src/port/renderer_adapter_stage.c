@@ -7774,6 +7774,13 @@ volatile u32 gNdsStageDLFastLaneFills;
 #define NDS_SDL_ROUTE_HITOKAGE 0xf7u
 #define NDS_SDL_ROUTE_FUSHIGIBANA 0xf6u
 #define NDS_SDL_ROUTE_DAMAGE_FLY_MDUST 0xf5u
+/* Mushroom Kingdom's two Pakkun (file 155 root 0x0B40: one MObj of flags
+ * 0x0001 whose CURRENT_IMAGE lies in the same file, the palette in file 107)
+ * and its POW block (0x10D0: no MObj, the TLUT in file 107 and both images
+ * in file 155, every word proved against those files): items the body drew
+ * on every frame of the sweep match (3,600 and 805 body submits). */
+#define NDS_SDL_ROUTE_INISHIE_PAKKUN 0xf4u
+#define NDS_SDL_ROUTE_INISHIE_POWBLOCK 0xf3u
 /* Yoshi's Island's capsules and boxes thrashed an 8-slot table (1,231 fills
  * for 1,469 hits a match): the owners are few, but a capsule alone draws three
  * roots, and its header and third root shared a slot under an address-bit
@@ -8175,6 +8182,9 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
 #if NDS_P2_STAGE_SECTOR
     const u8 *laser_tex_base = NULL;
 #endif
+#if NDS_P2_STAGE_INISHIE
+    const u8 *inishie_pal_base = NULL;
+#endif
     /* Zeroed once a route is taken: most lists leave at the route test. */
     NDSRendererConfig config;
     NDSRendererStats *render_stats;
@@ -8222,7 +8232,8 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
           (route->route != NDS_SDL_ROUTE_NBUMPER) &&
           (route->route != NDS_SDL_ROUTE_HITOKAGE) &&
           (route->route != NDS_SDL_ROUTE_FUSHIGIBANA) &&
-          (route->route != NDS_SDL_ROUTE_DAMAGE_FLY_MDUST)) ||
+          (route->route != NDS_SDL_ROUTE_DAMAGE_FLY_MDUST) &&
+          (route->route != NDS_SDL_ROUTE_INISHIE_PAKKUN)) ||
          (owner == NULL) ||
          (sNdsRendererAdapterStagePersistentActive == FALSE) ||
          ((sNdsRendererAdapterEffectSubmitActive != FALSE) &&
@@ -8286,6 +8297,65 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
             return FALSE;
         }
         break;
+#if NDS_P2_STAGE_INISHIE && NDS_P2_ITEM_CORE
+    case NDS_SDL_ROUTE_INISHIE_PAKKUN:
+    {
+        const NDSRelocLoadedFile *pal;
+
+        if ((owner->id != nGCCommonKindItem) ||
+            (sNdsRendererAdapterItemSubmitActive == FALSE) ||
+            (dobj->mobj == NULL) || (dobj->mobj->next != NULL) ||
+            (ndsRendererAdapterMaterialFlags(dobj->mobj) != 0x0001u) ||
+            (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                 dobj->mobj, &item_route_material, FALSE, NULL, NULL) == FALSE) ||
+            (item_route_material.effects !=
+                 NDS_RENDERER_NATIVE_MATERIAL_CURRENT_IMAGE) ||
+            (ndsRelocFindLoadedFileContaining(
+                 (const void *)(uintptr_t)item_route_material.current_image,
+                 1u) != loaded))
+        {
+            return FALSE;
+        }
+        pal = ndsRelocFindLoadedFileByAsset(107u);
+        if ((pal == NULL) || (pal->data_size < (0x3620u + 32u)))
+        {
+            return FALSE;
+        }
+        inishie_pal_base = (const u8 *)pal->data;
+        break;
+    }
+    case NDS_SDL_ROUTE_INISHIE_POWBLOCK:
+    {
+        const NDSRelocLoadedFile *pal;
+        const u8 *pow_base = (const u8 *)loaded->data;
+
+        if ((owner->id != nGCCommonKindItem) ||
+            (sNdsRendererAdapterItemSubmitActive == FALSE) ||
+            (dobj->mobj != NULL))
+        {
+            return FALSE;
+        }
+        pal = ndsRelocFindLoadedFileContaining(
+            (const void *)(uintptr_t)dl[8].words.w1, 1u);
+        if ((pal == NULL) || (pal->data == NULL) ||
+            (pal->asset_id != NDS_NATIVE_INISHIE_POWBLOCK_PAL_ASSET) ||
+            (pal->data_size < NDS_NATIVE_INISHIE_POWBLOCK_TLUT_END))
+        {
+            return FALSE;
+        }
+        inishie_pal_base = (const u8 *)pal->data;
+        if ((dl[8].words.w1 != (u32)(uintptr_t)(inishie_pal_base +
+                 NDS_NATIVE_INISHIE_POWBLOCK_TLUT_OFFSET)) ||
+            (dl[14].words.w1 != (u32)(uintptr_t)(pow_base +
+                 NDS_NATIVE_INISHIE_POWBLOCK_IMAGE_A_OFFSET)) ||
+            (dl[26].words.w1 != (u32)(uintptr_t)(pow_base +
+                 NDS_NATIVE_INISHIE_POWBLOCK_IMAGE_B_OFFSET)))
+        {
+            return FALSE;
+        }
+        break;
+    }
+#endif
 #if NDS_P2_ITEM_CORE
     case NDS_SDL_ROUTE_BAKED:
         if ((owner->id != nGCCommonKindGroundDisplay) ||
@@ -8604,6 +8674,42 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
         else
         {
             NDS_DIAG(gNdsSectorLaserSubmitFailCount++);
+        }
+    }
+#endif
+#if NDS_P2_STAGE_INISHIE && NDS_P2_ITEM_CORE
+    else if (route_kind == NDS_SDL_ROUTE_INISHIE_PAKKUN)
+    {
+        ndsStageDLFastItemSeeds(render_stats);
+        handled = ndsRendererSubmitNativeInishiePakkun(
+            loaded->data, loaded->data_size, inishie_pal_base + 0x3620u,
+            &item_route_material, &config, render_stats);
+        if (handled != FALSE)
+        {
+            NDS_DIAG(gNdsInishiePakkunDrawCount++);
+        }
+        else
+        {
+            NDS_DIAG(gNdsInishiePakkunSubmitFailCount++);
+        }
+    }
+    else if (route_kind == NDS_SDL_ROUTE_INISHIE_POWBLOCK)
+    {
+        const u8 *pow_base = (const u8 *)loaded->data;
+
+        ndsStageDLFastItemSeeds(render_stats);
+        handled = ndsRendererSubmitNativeInishiePowblock(
+            inishie_pal_base + NDS_NATIVE_INISHIE_POWBLOCK_TLUT_OFFSET,
+            pow_base + NDS_NATIVE_INISHIE_POWBLOCK_IMAGE_A_OFFSET,
+            pow_base + NDS_NATIVE_INISHIE_POWBLOCK_IMAGE_B_OFFSET, &config,
+            render_stats);
+        if (handled != FALSE)
+        {
+            NDS_DIAG(gNdsInishiePowblockDrawCount++);
+        }
+        else
+        {
+            NDS_DIAG(gNdsInishiePowblockSubmitFailCount++);
         }
     }
 #endif
@@ -13134,6 +13240,13 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         if (inishie_pakkun_native_handled != FALSE)
         {
             NDS_DIAG(gNdsInishiePakkunDrawCount++);
+#if (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_P2_ITEM_CORE
+            if (gNdsStageDLFastMore != 0u)
+            {
+                ndsStageDLRouteRecord(dl, loaded, 0x0b40u,
+                                      NDS_SDL_ROUTE_INISHIE_PAKKUN);
+            }
+#endif
         }
         else
         {
@@ -13167,6 +13280,14 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         if (inishie_powblock_native_handled != FALSE)
         {
             NDS_DIAG(gNdsInishiePowblockDrawCount++);
+#if (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_P2_ITEM_CORE
+            if (gNdsStageDLFastMore != 0u)
+            {
+                ndsStageDLRouteRecord(dl, loaded,
+                                      NDS_NATIVE_INISHIE_POWBLOCK_ROOT,
+                                      NDS_SDL_ROUTE_INISHIE_POWBLOCK);
+            }
+#endif
         }
         else
         {

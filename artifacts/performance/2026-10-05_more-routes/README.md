@@ -26,4 +26,13 @@ identical on both stages:
 | Saffron | 1,269,312 -> 1,261,504 | 237 -> 231 | Pokemon 199 / dust 32 | -7.9K / -25.6K |
 
 Official gate (`build-gate-1005s`, with the halo and N Bumper changes):
-`gate-s1`.
+`gate-s1`, 1,112,960 P95, 1,860 two-VBlank presents, digest identical (neutral).
+
+Then Mushroom Kingdom's two Pakkun (file 155 root 0x0B40, drawn through the
+body on every frame: one MObj of flags 0x0001 whose CURRENT_IMAGE lies in the
+same file, the palette in file 107) and its POW block (0x10D0: no MObj, TLUT
+in file 107 found from the list's relocated word, both images in file 155):
+`NDS_SDL_ROUTE_INISHIE_PAKKUN` / `_POWBLOCK`, same word. Clean ROM
+`build-lab-clean1005h`, `mk0-g8` -> `mk1-g8`: P50 941,760 -> 916,416, P95
+1,224,256 -> 1,197,056, over 209 -> 166, paired median -24.6K, digest
+identical. The gate ROM does not compile the stage.
