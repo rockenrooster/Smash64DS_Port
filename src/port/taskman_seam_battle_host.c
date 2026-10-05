@@ -1724,6 +1724,15 @@ u32 ndsR2HostBattleUpdateOnce(u32 update_index)
      * them on the others. The Runtime 1 loop publishes the same word. */
     gNdsFtPoseEvalTick =
         ((update_index + 1u) >= ndsR2HostBattleUpdatesPerPresent()) ? 1u : 0u;
+    /* Material animations step once a presented frame, on the drawn tick, by
+     * the ticks it stands for (src/import/battleship_sys_objanim.c). */
+    {
+        extern volatile u32 gNdsMObjTick30Hz;
+        extern volatile u32 gNdsMObjTickMul;
+
+        gNdsMObjTickMul = (gNdsMObjTick30Hz == 0u) ? 1u :
+            (gNdsFtPoseEvalTick != 0u) ? (update_index + 1u) : 0u;
+    }
 #if NDS_P2_LINK_BOMB_TOUR || NDS_P2_LINK_SPECIAL_TOUR || \
     NDS_P2_NESS_VFX_PROOF || NDS_P2_YOSHI_BUG_PROOF
     /* Mode 163 enters the Runtime-2 owner before BattleShip has necessarily

@@ -42,6 +42,7 @@
 #include <port/coroutine.h>
 
 extern volatile u32 gNdsFtPoseEvalTick;
+extern volatile u32 gNdsMObjTickMul;
 
 #if NDS_R2_PATH
 
@@ -136,6 +137,8 @@ void ndsR2BattleRun(void)
     /* P2-2p6: outside this loop every source tick is a presented one for the
      * fighter pose engine (menu previews, Results), so leave its eval word set. */
     gNdsFtPoseEvalTick = 1u;
+    /* ... and material animations at the source rate. */
+    gNdsMObjTickMul = 1u;
 }
 
 #endif /* NDS_R2_PATH */

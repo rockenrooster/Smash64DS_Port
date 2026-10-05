@@ -3334,6 +3334,8 @@ extern void gcParseDObjAnimJoint(DObj *dobj);
 extern void gcPlayDObjAnimJoint(DObj *dobj);
 extern void gcParseMObjMatAnimJoint(MObj *mobj);
 extern void gcPlayMObjMatAnim(MObj *mobj);
+extern void ndsGcParseMObjMatAnimJointNow(MObj *mobj);
+extern void ndsGcPlayMObjMatAnimNow(MObj *mobj);
 extern void gcAddMObjMatAnimJoint(MObj *mobj, AObjEvent32 *matanim_joint,
                                   f32 anim_frame);
 void lbCommonPlayTranslateScaledDObjAnim(DObj *dobj, Vec3f *scale);
@@ -9702,10 +9704,12 @@ void lbCommonAddMObjForFighterPartsDObj(DObj *dobj, MObjSub **mobjsubs,
 
             if (costume_matanim_joint != NULL)
             {
+                /* A one-shot bake (its AObjs are removed right after):
+                 * the source rate, whatever tick of a batch this is. */
                 gcAddMObjMatAnimJoint(mobj, costume_matanim_joint,
                                       anim_frame);
-                gcParseMObjMatAnimJoint(mobj);
-                gcPlayMObjMatAnim(mobj);
+                ndsGcParseMObjMatAnimJointNow(mobj);
+                ndsGcPlayMObjMatAnimNow(mobj);
                 gcRemoveAObjFromMObj(mobj);
             }
             costume_matanim_joints++;
@@ -9717,8 +9721,8 @@ void lbCommonAddMObjForFighterPartsDObj(DObj *dobj, MObjSub **mobjsubs,
             if (main_matanim_joint != NULL)
             {
                 gcAddMObjMatAnimJoint(mobj, main_matanim_joint, 0.0F);
-                gcParseMObjMatAnimJoint(mobj);
-                gcPlayMObjMatAnim(mobj);
+                ndsGcParseMObjMatAnimJointNow(mobj);
+                ndsGcPlayMObjMatAnimNow(mobj);
             }
             main_matanim_joints++;
         }

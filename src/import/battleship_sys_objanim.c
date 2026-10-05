@@ -29,6 +29,7 @@ volatile u32 gNdsObjAnimBitCompare __attribute__((used, section(".data"))) = 1u;
 #define gcAddAnimAll ndsBaseGcAddAnimAll
 #define gcAddCObjCamAnimJoint ndsBaseGcAddCObjCamAnimJoint
 #define gcPlayMObjMatAnim ndsBaseGcPlayMObjMatAnim
+#define gcParseMObjMatAnimJoint ndsBaseGcParseMObjMatAnimJoint
 #define gcPlayAnimAll ndsBaseGcPlayAnimAll
 #define gcSetupCustomDObjsWithMObj ndsBaseGcSetupCustomDObjsWithMObj
 #if NDS_R2_ANIM_CENSUS || NDS_R2_CUBIC_FIXED
@@ -67,8 +68,94 @@ void ndsBaseGcPlayMObjMatAnim(MObj *mobj) __attribute__((section(".itcm")));
 #undef gcAddAnimAll
 #undef gcAddCObjCamAnimJoint
 #undef gcPlayMObjMatAnim
+#undef gcParseMObjMatAnimJoint
 #undef gcPlayAnimAll
 #undef gcSetupCustomDObjsWithMObj
+
+/* P2-2p8 (2026-10-05): material animations at the presentation rate. An
+ * MObj's animation is render state only: its tracks write the material's
+ * colours, texture and palette indices and scroll, which the draw reads and
+ * the replay digest does not fold. The source parses and plays every MObj on
+ * every 60 Hz tick, but a presented frame shows only the state its last tick
+ * left. The battle host publishes, per tick, how many ticks this one stands
+ * for (src/port/taskman_seam_battle_host.c): 0 on a batch's earlier ticks --
+ * the parser and player return without touching the MObj -- and on the drawn
+ * tick the batch's tick count, which the parser and player run as one step of
+ * that many times the MObj's speed. The parser subtracts `speed` from the wait
+ * and seeds each new segment at `-wait - speed`, and the player adds `speed`
+ * to each length, so one step of 2 * speed leaves every wait, length and
+ * value where two steps of `speed` would (up to float rounding of the wait):
+ * the drawn frame shows what it showed. An animation set on an earlier tick
+ * starts one tick late. Outside a battle the word is 1 (the source rate).
+ * Exceptions keep the source rate: the one-shot costume bake
+ * (lbCommonAddMObjForFighterPartsDObj, src/port/reloc_backend_compat_shims.c),
+ * which removes its AObjs right after its play, and Yoshi's Island's clouds,
+ * whose MObj `anim_wait` gryoster.c reads to make cloud lines solid. Same-ROM
+ * A/B word gNdsMObjTick30Hz (0 = every tick). */
+volatile u32 gNdsMObjTick30Hz __attribute__((used, section(".data"))) = 1u;
+volatile u32 gNdsMObjTickMul __attribute__((used, section(".data"))) = 1u;
+
+/* speed * mul; exact for mul 2 on a normal speed (one exponent step). */
+static inline f32 ndsMObjSpeedTimes(f32 speed, u32 mul)
+{
+    u32 bits = ndsFcmpBits(speed);
+    const u32 exponent = (bits >> 23) & 0xffu;
+
+    if ((bits << 1) == 0u)
+    {
+        return speed;
+    }
+    if ((mul == 2u) && (exponent != 0u) && (exponent < 0xfeu))
+    {
+        bits += 1u << 23;
+        __builtin_memcpy(&speed, &bits, sizeof(speed));
+        return speed;
+    }
+    return speed * (f32)mul;
+}
+
+/* One parse (or play) of `mul` ticks: the MObj's speed scaled around the
+ * source body, then restored unless the body itself set a new speed. */
+static void __attribute__((noinline)) ndsMObjStepScaled(MObj *mobj, u32 mul,
+                                                        sb32 play)
+{
+    const f32 speed = mobj->anim_speed;
+    const f32 scaled = ndsMObjSpeedTimes(speed, mul);
+
+    mobj->anim_speed = scaled;
+    if (play != FALSE)
+    {
+        ndsBaseGcPlayMObjMatAnim(mobj);
+    }
+    else
+    {
+        ndsBaseGcParseMObjMatAnimJoint(mobj);
+    }
+    if (ndsFcmpBits(mobj->anim_speed) == ndsFcmpBits(scaled))
+    {
+        mobj->anim_speed = speed;
+    }
+}
+
+void gcParseMObjMatAnimJoint(MObj *mobj)
+{
+    const u32 mul = gNdsMObjTickMul;
+
+    if (mul == 1u)
+    {
+        ndsBaseGcParseMObjMatAnimJoint(mobj);
+    }
+    else if ((mul != 0u) && (mobj != NULL))
+    {
+        ndsMObjStepScaled(mobj, mul, FALSE);
+    }
+}
+
+/* The source-rate pair, for one-shot setups that must take effect now. */
+void ndsGcParseMObjMatAnimJointNow(MObj *mobj)
+{
+    ndsBaseGcParseMObjMatAnimJoint(mobj);
+}
 
 #if NDS_R2_CUBIC_FIXED
 #undef gcPlayDObjAnimJoint
@@ -2971,6 +3058,32 @@ static void ndsAObjEvent32CorrectMObjColors(MObj *mobj, sb32 force)
 void gcPlayMObjMatAnim(MObj *mobj) __attribute__((section(".itcm")));
 void gcPlayMObjMatAnim(MObj *mobj)
 {
+    const u32 mul = gNdsMObjTickMul;
+    sb32 was_active;
+
+    if (mul == 0u)
+    {
+        return;
+    }
+    was_active = ((mobj != NULL) &&
+                  NDS_FCMP_NE_C(mobj->anim_wait, AOBJ_ANIM_NULL));
+    if ((mul == 1u) || (mobj == NULL))
+    {
+        ndsBaseGcPlayMObjMatAnim(mobj);
+    }
+    else
+    {
+        ndsMObjStepScaled(mobj, mul, TRUE);
+    }
+    if (was_active != FALSE)
+    {
+        ndsAObjEvent32CorrectMObjColors(mobj, TRUE);
+    }
+}
+
+/* gcPlayMObjMatAnim at the source rate (see ndsGcParseMObjMatAnimJointNow). */
+void ndsGcPlayMObjMatAnimNow(MObj *mobj)
+{
     sb32 was_active = ((mobj != NULL) &&
                        NDS_FCMP_NE_C(mobj->anim_wait, AOBJ_ANIM_NULL));
 
@@ -3164,7 +3277,8 @@ static void ndsGcAdvanceDObjAnimJoint(DObj *dobj)
  * gcPlayAnimAll (FALSE) folds the arm away; only ndsGcPlayAnimAllFixedCubic
  * below, in main RAM, carries it. */
 static inline __attribute__((always_inline)) void
-ndsGcPlayAnimAllStableSkip(GObj *gobj, sb32 tra_only, sb32 fixed_cubic)
+ndsGcPlayAnimAllStableSkip(GObj *gobj, sb32 tra_only, sb32 fixed_cubic,
+                           u32 mul)
 {
     DObj *dobj = (gobj != NULL) ? DObjGetStruct(gobj) : NULL;
 
@@ -3197,18 +3311,32 @@ ndsGcPlayAnimAllStableSkip(GObj *gobj, sb32 tra_only, sb32 fixed_cubic)
         gcPlayDObjAnimJoint(dobj);
 #endif
 
-        for (mobj = dobj->mobj; mobj != NULL; mobj = mobj->next)
+        /* mul 0: a batch's earlier tick, no material work (see
+         * gNdsMObjTickMul). */
+        for (mobj = (mul != 0u) ? dobj->mobj : NULL; mobj != NULL;
+             mobj = mobj->next)
         {
             sb32 was_stable_zero = ndsMObjMatAnimWasStableZero(mobj);
 
-            gcParseMObjMatAnimJoint(mobj);
+            if (mul == 1u)
+            {
+                ndsBaseGcParseMObjMatAnimJoint(mobj);
+            }
+            else
+            {
+                ndsMObjStepScaled(mobj, mul, FALSE);
+            }
             if (was_stable_zero != FALSE)
             {
                 NDS_DIAG(gNdsMObjMatAnimStableSkipCount++);
             }
-            else
+            else if (mul == 1u)
             {
                 ndsBaseGcPlayMObjMatAnim(mobj);
+            }
+            else
+            {
+                ndsMObjStepScaled(mobj, mul, TRUE);
             }
         }
         dobj = gcGetTreeDObjNext(dobj);
@@ -3226,28 +3354,35 @@ ndsGcPlayAnimAllFinish(GObj *gobj, MObj **active_mobjs, u32 active_count);
  * of the exact size (the walk the old count-then-collect pair always made). */
 static void __attribute__((noinline, cold))
 ndsGcPlayAnimAllLarge(GObj *gobj, sb32 tra_only, sb32 fixed_cubic,
-                      u32 active_count)
+                      u32 active_count, u32 mul)
 {
     MObj *active_mobjs[active_count];
 
     (void)ndsAObjEvent32CollectActiveMObjs(gobj, active_mobjs, active_count);
-    ndsGcPlayAnimAllStableSkip(gobj, tra_only, fixed_cubic);
+    ndsGcPlayAnimAllStableSkip(gobj, tra_only, fixed_cubic, mul);
     ndsGcPlayAnimAllFinish(gobj, active_mobjs, active_count);
 }
 
 static inline __attribute__((always_inline)) void
-ndsGcPlayAnimAllBody(GObj *gobj, sb32 tra_only, sb32 fixed_cubic)
+ndsGcPlayAnimAllBody(GObj *gobj, sb32 tra_only, sb32 fixed_cubic, u32 mul)
 {
     MObj *active_mobjs[NDS_AOBJ_ACTIVE_LOCAL];
-    const u32 active_count = ndsAObjEvent32CollectActiveMObjs(
-        gobj, active_mobjs, NDS_AOBJ_ACTIVE_LOCAL);
+    u32 active_count;
 
-    if (active_count > NDS_AOBJ_ACTIVE_LOCAL)
+    if (mul == 0u)
     {
-        ndsGcPlayAnimAllLarge(gobj, tra_only, fixed_cubic, active_count);
+        /* The DObjs only: no MObj collect, play or colour pass. */
+        ndsGcPlayAnimAllStableSkip(gobj, tra_only, fixed_cubic, 0u);
         return;
     }
-    ndsGcPlayAnimAllStableSkip(gobj, tra_only, fixed_cubic);
+    active_count = ndsAObjEvent32CollectActiveMObjs(
+        gobj, active_mobjs, NDS_AOBJ_ACTIVE_LOCAL);
+    if (active_count > NDS_AOBJ_ACTIVE_LOCAL)
+    {
+        ndsGcPlayAnimAllLarge(gobj, tra_only, fixed_cubic, active_count, mul);
+        return;
+    }
+    ndsGcPlayAnimAllStableSkip(gobj, tra_only, fixed_cubic, mul);
     ndsGcPlayAnimAllFinish(gobj, active_mobjs, active_count);
 }
 
@@ -3287,14 +3422,15 @@ ndsGcPlayAnimAllFinish(GObj *gobj, MObj **active_mobjs, u32 active_count)
 void gcPlayAnimAll(GObj *gobj) __attribute__((section(".itcm")));
 void gcPlayAnimAll(GObj *gobj)
 {
-    ndsGcPlayAnimAllBody(gobj, FALSE, FALSE);
+    ndsGcPlayAnimAllBody(gobj, FALSE, FALSE, gNdsMObjTickMul);
 }
 
 #if NDS_P2_STAGE_YOSTER
 /* Yoshi's Island's cloud GObjs (see ndsGcDObjAnimValuesUnread). */
 void ndsGRYosterCloudPlayAnimAll(GObj *gobj)
 {
-    ndsGcPlayAnimAllBody(gobj, TRUE, FALSE);
+    /* Source rate: gryoster.c reads these MObjs' anim_wait. */
+    ndsGcPlayAnimAllBody(gobj, TRUE, FALSE, 1u);
 }
 #endif
 
@@ -3310,7 +3446,7 @@ void ndsGRYosterCloudPlayAnimAll(GObj *gobj)
  * either way; only the drawn values round differently. */
 void ndsGcPlayAnimAllFixedCubic(GObj *gobj)
 {
-    ndsGcPlayAnimAllBody(gobj, FALSE, TRUE);
+    ndsGcPlayAnimAllBody(gobj, FALSE, TRUE, gNdsMObjTickMul);
 }
 
 static sb32 ndsAObjEvent32NormalizeDObjTable(GObj *gobj,
