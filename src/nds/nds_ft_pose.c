@@ -1081,7 +1081,7 @@ ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
             break;
 
         default:
-            gNdsObjAnimRunawayCount++;
+            NDS_DIAG(gNdsObjAnimRunawayCount++);
             gNdsObjAnimRunawayMask |= NDS_FT_POSE_RUNAWAY_BIT;
             gNdsObjAnimRunawayScript = (u32)(uintptr_t)pc;
             gNdsObjAnimRunawayOpcode = command_kind;
@@ -1091,7 +1091,7 @@ ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
         }
         if (++events >= NDS_FT_POSE_EVENT_LIMIT)
         {
-            gNdsObjAnimRunawayCount++;
+            NDS_DIAG(gNdsObjAnimRunawayCount++);
             gNdsObjAnimRunawayMask |= NDS_FT_POSE_RUNAWAY_BIT;
             gNdsObjAnimRunawayScript = (u32)(uintptr_t)pc;
             gNdsObjAnimRunawayOpcode = command_kind;

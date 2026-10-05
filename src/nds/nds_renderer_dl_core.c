@@ -397,7 +397,7 @@ ndsRendererMtxMulAffine20p12(const NDSRendererMatrix20p12 *lhs,
     temp.m[3][3] = 1 << NDS_RENDERER_DS_MTX_FRAC_BITS;
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     ndsRendererMtxMul20p12(lhs, rhs, &oracle);
-    gNdsRendererProfileAffineMatrixSamples++;
+    NDS_DIAG(gNdsRendererProfileAffineMatrixSamples++);
     for (row = 0u; row < 4u; row++)
     {
         for (col = 0u; col < 4u; col++)
@@ -422,7 +422,7 @@ ndsRendererMtxMulAffine20p12(const NDSRendererMatrix20p12 *lhs,
     }
     if (mismatch != FALSE)
     {
-        gNdsRendererProfileAffineMatrixMismatches++;
+        NDS_DIAG(gNdsRendererProfileAffineMatrixMismatches++);
     }
 #endif
     *out = temp;
@@ -718,7 +718,7 @@ static NDSRendererTask107SyncTrack *ndsRendererTask107FindSyncTrack(
     }
     if (create != FALSE)
     {
-        gNdsTask107SyncTrackerOverflow++;
+        NDS_DIAG(gNdsTask107SyncTrackerOverflow++);
     }
     return NULL;
 }
@@ -753,7 +753,7 @@ static void ndsRendererTask107RecordTextureSync(
     {
         return;
     }
-    gNdsTask107SyncCalls[site]++;
+    NDS_DIAG(gNdsTask107SyncCalls[site]++);
     tile_index = ndsRendererActiveTextureTile(stats);
     tile = &stats->texture_tiles[tile_index];
     load_seen = stats->texture_tiles[NDS_RENDERER_LOAD_TILE].set_seen;
@@ -767,7 +767,7 @@ static void ndsRendererTask107RecordTextureSync(
         (track->load_seen[tile_index] == load_seen) &&
         (memcmp(&track->tile[tile_index], tile, sizeof(*tile)) == 0))
     {
-        gNdsTask107SyncUnchanged[site]++;
+        NDS_DIAG(gNdsTask107SyncUnchanged[site]++);
     }
     track->tile[tile_index] = *tile;
     track->load_seen[tile_index] = load_seen;
@@ -1105,7 +1105,7 @@ ndsRendererRecordLoadTlut(NDSRendererStats *stats, u32 w1)
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
 static void ndsRendererProfileCombineMode(u32 w0, u32 w1)
 {
-    gNdsRendererProfileCombineModeCount++;
+    NDS_DIAG(gNdsRendererProfileCombineModeCount++);
     if (((gNdsRendererProfileCombineMode0W0 == w0) &&
          (gNdsRendererProfileCombineMode0W1 == w1)) ||
         ((gNdsRendererProfileCombineMode1W0 == w0) &&
@@ -1656,7 +1656,7 @@ static void ndsRendererRecordLightColor(NDSRendererStats *stats,
         stats->light_color_mask |= NDS_RENDERER_LIGHT_COLOR_1_MASK;
         stats->light_color_command_count++;
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
-        gNdsRendererProfileLightColorCommands++;
+        NDS_DIAG(gNdsRendererProfileLightColorCommands++);
 #endif
     }
     else if (light == 2u)
@@ -1665,7 +1665,7 @@ static void ndsRendererRecordLightColor(NDSRendererStats *stats,
         stats->light_color_mask |= NDS_RENDERER_LIGHT_COLOR_2_MASK;
         stats->light_color_command_count++;
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
-        gNdsRendererProfileLightColorCommands++;
+        NDS_DIAG(gNdsRendererProfileLightColorCommands++);
 #endif
     }
 }
@@ -1742,7 +1742,7 @@ static void ndsRendererRecordLightMoveMem(
         stats->light_dir_mask |= NDS_RENDERER_LIGHT_DIR_1_MASK;
         stats->light_direction_command_count++;
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
-        gNdsRendererProfileLightDirectionCommands++;
+        NDS_DIAG(gNdsRendererProfileLightDirectionCommands++);
 #endif
     }
 }

@@ -1281,6 +1281,28 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   898,048/1,238,336, Saffron 1,090,880/1,456,576, Mushroom Kingdom
   1,060,288/1,360,192 (`artifacts/performance/2026-10-04_stage-sweep/a1-*`).
   Saffron's SRC runs +114K and MISC +77K over Dream Land's.
+- **10-04/05 the all-stage worst case, first cuts (digest identical on every
+  stage, so frames pair one to one).** Per-stage profiles
+  (`artifacts/task37-census/p2-g0..8`, categories by scratchpad `catsum.py`)
+  put the excess over Dream Land in map collision and the stage draw. (1) The
+  wall sweep's all-reject fast path refused any kind with a dynamic group;
+  it now applies the group reject's own yakumono shift (`7c7949e0f40`:
+  Castle -36.9K, Saffron -23.9K). (2) DLLink stages (Sector Z, Hyrule,
+  Saffron, Mushroom Kingdom, Zebes) drew every segment run by run in four
+  head passes; GX programs are now compiled in head-pass order (format 7)
+  and take the one-pass commit (`72565c2ce9a`: Saffron -41.9K, Hyrule
+  -40.2K, Mushroom Kingdom -30.8K, Zebes -24.1K, Sector Z -8.9K; captures
+  pixel-identical). (3) `ndsStageGxDraw`'s now-cold 3,576 B of ITCM went to
+  the joint walk and the wall edge memo (`56f8903d10e`: every stage -2.3K to
+  -6K; official gate 831,744/1,154,496, 123 over). (4) 271 write-only
+  collision tallies behind NDS_DIAG (`88e9ea006dc`: -0.1K to -5.3K; gate
+  829,824/1,152,256). Lab P95 now: Castle 1,286,208, Sector Z 1,370,944,
+  Jungle 1,406,016, Zebes 1,290,816, Hyrule 1,098,304, Yoshi's Island
+  1,385,088, Dream Land 1,224,832, Saffron 1,365,504, Mushroom Kingdom
+  1,315,072. Left per stage: Yoshi's Island's cloud owner (~120K a frame of
+  per-draw setup for 18 triangles), Jungle's stage DL lane (~60K), the floor
+  sweeps (37-53K), the pose parser's combat spikes (+100K in tail frames),
+  and the lean kernel's DObj reads (~95K everywhere).
 
 ## 7. Found along the way
 

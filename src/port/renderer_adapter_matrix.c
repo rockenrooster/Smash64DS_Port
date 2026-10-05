@@ -1761,7 +1761,7 @@ void ndsRendererAdapterNativeStagePreloadAssets(void)
     {
         if (ndsRelocEnsureLoadedAsset(desc->asset_ids[i]) == NULL)
         {
-            gNdsNativeStagePreloadFailCount++;
+            NDS_DIAG(gNdsNativeStagePreloadFailCount++);
         }
     }
 }
@@ -2079,7 +2079,7 @@ ndsRendererAdapterRecordAttachTranslation(
     u32 axis;
 
     sNdsAttachTranslationDObj = dobj;
-    gNdsAttachTranslationSamples++;
+    NDS_DIAG(gNdsAttachTranslationSamples++);
     for (axis = 0u; axis < 3u; axis++)
     {
         gNdsAttachTranslationExpected[axis] = matrix->m[3][axis];
@@ -2100,7 +2100,7 @@ static void __attribute__((noinline, cold)) ndsRendererAdapterRecordAttachLocal(
         gNdsAttachTranslationLocal[axis] = matrix->m[3][axis];
         if (matrix->m[3][axis] != gNdsAttachTranslationExpected[axis])
         {
-            gNdsAttachTranslationLocalMismatch++;
+            NDS_DIAG(gNdsAttachTranslationLocalMismatch++);
         }
     }
 }
@@ -2119,7 +2119,7 @@ static void __attribute__((noinline, cold)) ndsRendererAdapterRecordAttachWorld(
         gNdsAttachTranslationWorld[axis] = matrix->m[3][axis];
         if (matrix->m[3][axis] != gNdsAttachTranslationExpected[axis])
         {
-            gNdsAttachTranslationWorldMismatch++;
+            NDS_DIAG(gNdsAttachTranslationWorldMismatch++);
         }
     }
 }
@@ -2166,7 +2166,7 @@ static void ndsRendererAdapterCameraLookAtReflect(
                                       at_x, at_y, at_z, up_x, up_y, up_z);
         return;
     }
-    gNdsR2CameraFixedFloatLookAtCalls++;
+    NDS_DIAG(gNdsR2CameraFixedFloatLookAtCalls++);
     syMatrixLookAtReflect(&mtx, look_at, eye_x, eye_y, eye_z,
                           at_x, at_y, at_z, up_x, up_y, up_z);
     ndsRendererAdapterMtxFromN64(&mtx, out);
@@ -2184,7 +2184,7 @@ static void ndsRendererAdapterCameraPerspFast(
                                   scale);
         return;
     }
-    gNdsR2CameraFixedFloatPerspCalls++;
+    NDS_DIAG(gNdsR2CameraFixedFloatPerspCalls++);
     syMatrixPerspFast(&mtx, persp_norm, fovy, aspect, near, far, scale);
     ndsRendererAdapterMtxFromN64(&mtx, out);
 }
@@ -2809,7 +2809,7 @@ static sb32 ndsRendererAdapterBuildFighterPartsMtx(
                     &parts->unk_dobjtrans_0x10, &direct) != FALSE)
             {
 #if NDS_R2_FIGHTER_MTX_DIRECT >= 2
-                gNdsR2MtxDirectCalls++;
+                NDS_DIAG(gNdsR2MtxDirectCalls++);
                 if (ndsRendererAdapterF2LFixedWExact(
                         &parts->unk_dobjtrans_0x10, &mtx) == FALSE)
                 {
@@ -2818,7 +2818,7 @@ static sb32 ndsRendererAdapterBuildFighterPartsMtx(
                 ndsRendererAdapterMtxFromN64(&mtx, out);
                 if (memcmp(out, &direct, sizeof(direct)) != 0)
                 {
-                    gNdsR2MtxDirectVerifyFail++;
+                    NDS_DIAG(gNdsR2MtxDirectVerifyFail++);
                 }
                 return TRUE;
 #else
@@ -2827,7 +2827,7 @@ static sb32 ndsRendererAdapterBuildFighterPartsMtx(
 #endif
             }
 #if NDS_R2_FIGHTER_MTX_DIRECT >= 2
-            gNdsR2MtxDirectFallback++;
+            NDS_DIAG(gNdsR2MtxDirectFallback++);
 #endif
         }
 #endif
@@ -2877,7 +2877,7 @@ static sb32 ndsRendererAdapterBuildFighterPartsMtx(
                     dobj->rotate.vec.f.z) != FALSE)
             {
 #if NDS_R2_FIGHTER_MTX_DIRECT >= 2
-                gNdsR2MtxDirectRpyCalls++;
+                NDS_DIAG(gNdsR2MtxDirectRpyCalls++);
                 if (ndsRendererAdapterBuildFighterTraRotRpyExact(
                         &mtx,
                         dobj->translate.vec.f.x,
@@ -2898,7 +2898,7 @@ static sb32 ndsRendererAdapterBuildFighterPartsMtx(
                 ndsRendererAdapterMtxFromN64(&mtx, out);
                 if (memcmp(out, &direct, sizeof(direct)) != 0)
                 {
-                    gNdsR2MtxDirectRpyVerifyFail++;
+                    NDS_DIAG(gNdsR2MtxDirectRpyVerifyFail++);
                 }
                 return TRUE;
 #else
@@ -2907,7 +2907,7 @@ static sb32 ndsRendererAdapterBuildFighterPartsMtx(
 #endif
             }
 #if NDS_R2_FIGHTER_MTX_DIRECT >= 2
-            gNdsR2MtxDirectRpyFallback++;
+            NDS_DIAG(gNdsR2MtxDirectRpyFallback++);
 #endif
         }
 #endif
@@ -2943,7 +2943,7 @@ static sb32 ndsRendererAdapterBuildFighterPartsMtx(
     if ((has_oracle != FALSE) &&
         (memcmp(&mtx, &oracle, sizeof(mtx)) != 0))
     {
-        gNdsRendererProfileOracleMismatches++;
+        NDS_DIAG(gNdsRendererProfileOracleMismatches++);
     }
 #endif
     ndsRendererAdapterMtxFromN64(&mtx, out);
@@ -3140,7 +3140,7 @@ static sb32 ndsRendererAdapterBuildItemAttachMtx(DObj *dobj, Mtx *out)
      * fighter takes the fallback matrix (render only). */
     if (attach_dobj->parent_gobj->id != nGCCommonKindFighter)
     {
-        gNdsRendererAdapterItemAttachStale++;
+        NDS_DIAG(gNdsRendererAdapterItemAttachStale++);
         return FALSE;
     }
     parts = ftGetParts(attach_dobj);
@@ -3589,12 +3589,12 @@ static sb32 ndsRendererAdapterBuildDObjXObjMatrix(
                                   dobj->scale.vec.f.x,
                                   dobj->scale.vec.f.y,
                                   dobj->scale.vec.f.z);
-            gNdsRendererAdapterCustom45AppliedCount++;
+            NDS_DIAG(gNdsRendererAdapterCustom45AppliedCount++);
         }
         else
         {
             ndsRendererAdapterBuildDObjFallbackMtx(dobj, &mtx);
-            gNdsRendererAdapterCustom45SoloCount++;
+            NDS_DIAG(gNdsRendererAdapterCustom45SoloCount++);
         }
         break;
     case nGCMatrixKindRecalcRotPyrR:
@@ -3653,8 +3653,8 @@ static sb32 ndsRendererAdapterBuildDObjXObjMatrix(
             ndsRendererAdapterBuildDObjFallbackMtx(dobj, &mtx);
         }
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
-        gNdsLabItemAcc[9] += cpuGetTiming() - lab_attach;
-        gNdsLabItemAcc[10]++;
+        NDS_DIAG(gNdsLabItemAcc[9] += cpuGetTiming() - lab_attach);
+        NDS_DIAG(gNdsLabItemAcc[10]++);
 #endif
         if (resident != FALSE)
         {
@@ -3716,7 +3716,7 @@ static sb32 ndsRendererAdapterBuildDObjXObjMatrix(
         arwing[3][3] = 1.0F;
 
         guMtxF2L(arwing, &mtx);
-        gNdsRendererAdapterSectorArwingMtxCount++;
+        NDS_DIAG(gNdsRendererAdapterSectorArwingMtxCount++);
         break;
     }
 #endif
@@ -3842,22 +3842,22 @@ static void ndsRendererAdapterTask91LocalMemoProbe(
     {
         sNdsTask91LocalMemoKey[slot] = dobj;
         sNdsTask91LocalMemoHash[slot] = hash;
-        gNdsTask91LocalMemoFill++;
+        NDS_DIAG(gNdsTask91LocalMemoFill++);
     }
     else if (sNdsTask91LocalMemoKey[slot] != dobj)
     {
         sNdsTask91LocalMemoKey[slot] = dobj;
         sNdsTask91LocalMemoHash[slot] = hash;
-        gNdsTask91LocalMemoEvict++;
+        NDS_DIAG(gNdsTask91LocalMemoEvict++);
     }
     else if (sNdsTask91LocalMemoHash[slot] != hash)
     {
         sNdsTask91LocalMemoHash[slot] = hash;
-        gNdsTask91LocalMemoMiss++;
+        NDS_DIAG(gNdsTask91LocalMemoMiss++);
     }
     else
     {
-        gNdsTask91LocalMemoHit++;
+        NDS_DIAG(gNdsTask91LocalMemoHit++);
     }
 }
 #endif
@@ -4496,7 +4496,7 @@ static void ndsRendererAdapterApplyMvpRecalc(
         scale.m[1][1] = scale_y;
         scale.m[2][2] = scale_x;
         ndsRendererMtxMul20p12(&scale, perspective, &source_orientation);
-        gNdsRendererAdapterMvpRecalcPerspScaCount++;
+        NDS_DIAG(gNdsRendererAdapterMvpRecalcPerspScaCount++);
     }
     else if (kind == nGCMatrixKind48)
     {
@@ -4806,7 +4806,7 @@ static void ndsRendererAdapterApplyMvpRecalc(
     }
     else if (kind == NDS_RENDERER_ADAPTER_MVP_RECALC_Z_0X46_KIND)
     {
-        gNdsRendererAdapterCustom46AppliedCount++;
+        NDS_DIAG(gNdsRendererAdapterCustom46AppliedCount++);
     }
     gNdsRendererAdapterCustom47AppliedCount++;
 }
@@ -4968,7 +4968,7 @@ ndsRendererAdapterFindDObjWorldMatrix(const DObj *dobj)
     if (ndsRendererAdapterEnsureDObjWorldCache() == FALSE)
     {
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
-        gNdsRendererProfileDObjWorldCacheMissCount++;
+        NDS_DIAG(gNdsRendererProfileDObjWorldCacheMissCount++);
 #endif
         return NULL;
     }
@@ -4989,14 +4989,14 @@ ndsRendererAdapterFindDObjWorldMatrix(const DObj *dobj)
             (sNdsRendererAdapterDObjWorldCache[cache_index].dobj == dobj))
         {
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
-            gNdsRendererProfileDObjWorldCacheHitCount++;
+            NDS_DIAG(gNdsRendererProfileDObjWorldCacheHitCount++);
 #endif
             return &sNdsRendererAdapterDObjWorldCache[cache_index].world;
         }
         slot = (slot + 1u) & NDS_RENDERER_ADAPTER_DOBJ_WORLD_INDEX_MASK;
     }
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
-    gNdsRendererProfileDObjWorldCacheMissCount++;
+    NDS_DIAG(gNdsRendererProfileDObjWorldCacheMissCount++);
 #endif
     return NULL;
 }
@@ -5018,7 +5018,7 @@ static void ndsRendererAdapterStoreDObjWorldMatrix(
          sNdsRendererAdapterDObjWorldCacheDynamicLimit))
     {
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
-        gNdsRendererProfileDObjWorldCacheOverflowCount++;
+        NDS_DIAG(gNdsRendererProfileDObjWorldCacheOverflowCount++);
 #endif
         return;
     }
@@ -5406,7 +5406,7 @@ static sb32 ndsRendererAdapterUncachedLocalMatrix(
         (ndsRendererAdapterStageWorldSourceKeyMatches(node, &m->key) != FALSE))
     {
         ndsRendererMatrixCopy20p12(local, &m->local);
-        gNdsRendererAdapterLocalMemoHits++;
+        NDS_DIAG(gNdsRendererAdapterLocalMemoHits++);
         return TRUE;
     }
     key_valid = ndsRendererAdapterCaptureStageWorldSourceKey(node, &key);
@@ -5421,7 +5421,7 @@ static sb32 ndsRendererAdapterUncachedLocalMatrix(
         m->key = key;
         ndsRendererMatrixCopy20p12(&m->local, local);
         m->valid = 1u;
-        gNdsRendererAdapterLocalMemoFills++;
+        NDS_DIAG(gNdsRendererAdapterLocalMemoFills++);
     }
     else if (m->dobj == node)
     {
@@ -5524,7 +5524,7 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrix(
     if (cached != NULL)
     {
 #if NDS_TASK91_DRAW_PHASE_CENSUS
-        gNdsTask91MtxWorldEntryHit++;
+        NDS_DIAG(gNdsTask91MtxWorldEntryHit++);
 #endif
         ndsRendererMatrixCopy20p12(out, cached);
 #if NDS_TASK68_FALLBACK_CENSUS
@@ -5541,7 +5541,7 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrix(
         cursor = cursor->parent;
     }
 #if NDS_TASK91_DRAW_PHASE_CENSUS
-    gNdsTask91MtxWorldChainDepth += depth;
+    NDS_DIAG(gNdsTask91MtxWorldChainDepth += depth);
 #endif
     if ((cursor != NULL) && (cursor != DOBJ_PARENT_NULL))
     {
@@ -5562,13 +5562,13 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrix(
     {
         ndsRendererAdapterMtxIdentity20p12(out);
 #if NDS_TASK91_DRAW_PHASE_CENSUS
-        gNdsTask91MtxWorldColdStart++;
+        NDS_DIAG(gNdsTask91MtxWorldColdStart++);
 #endif
     }
 #if NDS_TASK91_DRAW_PHASE_CENSUS
     else
     {
-        gNdsTask91MtxWorldAncestorHit++;
+        NDS_DIAG(gNdsTask91MtxWorldAncestorHit++);
     }
 #endif
 #else
@@ -5581,7 +5581,7 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrix(
         u32 task91_local_mark = cpuGetTiming();
         u32 task91_local_end;
 
-        gNdsTask91MtxWorldLocalCalls++;
+        NDS_DIAG(gNdsTask91MtxWorldLocalCalls++);
 #endif
         if (ndsRendererAdapterBuildDObjLocalMatrix(chain[i - 1u], &local) !=
             FALSE)
@@ -5831,7 +5831,7 @@ static const NDSRendererMatrix20p12 *ndsRendererAdapterPersistentStageWorldPtr(
 #if NDS_R2_STAGE_VALIDATE_STRIDE
         if (entry->validated_frame != frame)
         {
-            gNdsR2Slice44StaleReuse++;
+            NDS_DIAG(gNdsR2Slice44StaleReuse++);
         }
 #endif
         return hit;
@@ -5849,7 +5849,7 @@ static const NDSRendererMatrix20p12 *ndsRendererAdapterPersistentStageWorldPtr(
     if (ndsRendererAdapterEnsureStageWorldCache() == FALSE)
     {
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
-        gNdsRendererProfileStageWorldPersistentOverflowCount++;
+        NDS_DIAG(gNdsRendererProfileStageWorldPersistentOverflowCount++);
 #endif
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
         gNdsLabPimAcc[4] += 1u;
@@ -5869,7 +5869,7 @@ static const NDSRendererMatrix20p12 *ndsRendererAdapterPersistentStageWorldPtr(
         if (entry == NULL)
         {
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
-            gNdsRendererProfileStageWorldPersistentOverflowCount++;
+            NDS_DIAG(gNdsRendererProfileStageWorldPersistentOverflowCount++);
 #endif
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
             gNdsLabPimAcc[4] += 0x10000u;
@@ -5897,7 +5897,7 @@ static const NDSRendererMatrix20p12 *ndsRendererAdapterPersistentStageWorldPtr(
             reuse = TRUE;
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
             reused_persistent = TRUE;
-            gNdsRendererProfileStageWorldPersistentHitCount++;
+            NDS_DIAG(gNdsRendererProfileStageWorldPersistentHitCount++);
 #endif
         }
         if (reuse == FALSE)
@@ -5922,13 +5922,13 @@ static const NDSRendererMatrix20p12 *ndsRendererAdapterPersistentStageWorldPtr(
             {
                 entry->source_key = source_key;
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
-                gNdsRendererProfileStageWorldPersistentMissCount++;
+                NDS_DIAG(gNdsRendererProfileStageWorldPersistentMissCount++);
 #endif
             }
             else
             {
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
-                gNdsRendererProfileStageWorldPersistentRejectCount++;
+                NDS_DIAG(gNdsRendererProfileStageWorldPersistentRejectCount++);
 #endif
             }
         }
@@ -5947,13 +5947,13 @@ static const NDSRendererMatrix20p12 *ndsRendererAdapterPersistentStageWorldPtr(
         if (ndsRendererAdapterBuildDObjWorldMatrixUncached(
                 dobj, &oracle_world) != FALSE)
         {
-            gNdsRendererProfileStageWorldPersistentOracleSampleCount++;
+            NDS_DIAG(gNdsRendererProfileStageWorldPersistentOracleSampleCount++);
             if (memcmp(parent_world, &oracle_world, sizeof(oracle_world)) != 0)
             {
                 NDSRendererAdapterStageWorldCacheEntry *target =
                     ndsRendererAdapterFindStageWorldEntry(dobj);
 
-                gNdsRendererProfileStageWorldPersistentOracleMismatchCount++;
+                NDS_DIAG(gNdsRendererProfileStageWorldPersistentOracleMismatchCount++);
                 *scratch = oracle_world;
                 parent_world = scratch;
                 if (target != NULL)
@@ -6363,7 +6363,7 @@ static void ndsRendererAdapterGetFrameCameraMatrices(
         if (entry->cobj == cobj)
         {
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
-            gNdsRendererProfileCameraMatrixCacheHitCount++;
+            NDS_DIAG(gNdsRendererProfileCameraMatrixCacheHitCount++);
 #endif
             MTXCOPY(projection, &entry->projection);
             MTXCOPY(modelview, &entry->modelview);
@@ -6385,7 +6385,7 @@ static void ndsRendererAdapterGetFrameCameraMatrices(
     }
 
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
-    gNdsRendererProfileCameraMatrixCacheMissCount++;
+    NDS_DIAG(gNdsRendererProfileCameraMatrixCacheMissCount++);
 #endif
     if (sNdsRendererAdapterCameraCacheCount <
         NDS_RENDERER_ADAPTER_CAMERA_CACHE_COUNT)
@@ -6426,7 +6426,7 @@ static void ndsRendererAdapterGetFrameCameraMatrices(
     else
     {
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
-        gNdsRendererProfileCameraMatrixCacheOverflowCount++;
+        NDS_DIAG(gNdsRendererProfileCameraMatrixCacheOverflowCount++);
 #endif
     }
     if ((billboard_right_q12 != NULL) &&
@@ -6651,7 +6651,7 @@ static void ndsRendererAdapterPrepareInitialMatrices(
      * the stage submits hundreds of lists per frame through this same path. */
     if (sNdsRendererAdapterEffectSubmitActive != FALSE)
     {
-        gNdsRendererAdapterEffectPrepCount++;
+        NDS_DIAG(gNdsRendererAdapterEffectPrepCount++);
         gNdsRendererAdapterEffectPrepMask =
             ((camera_projection_valid != FALSE) ? 1u : 0u) |
             ((camera_modelview_valid != FALSE) ? 2u : 0u) |
@@ -6881,7 +6881,7 @@ static sb32 ndsRendererAdapterBuildFoxGunJointMtx(
                 (world.m[0][col] * 60) +
                 world.m[3][col];
         }
-        gNdsFoxGunWorldProbeCount++;
+        NDS_DIAG(gNdsFoxGunWorldProbeCount++);
     }
 #endif
 
@@ -6946,7 +6946,7 @@ static void ndsRendererAdapterSetShuffleOffset(const FTStruct *fp)
 
         sNdsR2ShuffleWorldX = (s32)(offset->x * 4096.0F);
         sNdsR2ShuffleWorldY = (s32)(offset->y * 4096.0F);
-        gNdsR2ShuffleFoldedFrames++;
+        NDS_DIAG(gNdsR2ShuffleFoldedFrames++);
     }
 }
 #endif
@@ -7249,9 +7249,9 @@ static sb32 ndsRendererAdapterCaptureOwnerChainsGx(
         workspace->gx_parent_slot[binding_index] = (parent == 0xffu) ?
             (u8)NDS_RENDERER_FIGHTER_GX_SLOT_NONE : slots[parent];
         workspace->gx_store_slot[binding_index] = slots[binding_index];
-        gNdsR2GxComposeLocals += count;
+        NDS_DIAG(gNdsR2GxComposeLocals += count);
     }
-    gNdsR2GxComposeCaptures += binding_count;
+    NDS_DIAG(gNdsR2GxComposeCaptures += binding_count);
     return TRUE;
 }
 #endif
@@ -8089,7 +8089,7 @@ ndsRendererAdapterPrepareOwnerMatricesPerBinding(
         {
 #if NDS_TASK91_DRAW_PHASE_CENSUS
             task91_mtx_mark = cpuGetTiming();
-            gNdsTask91MtxBindings++;
+            NDS_DIAG(gNdsTask91MtxBindings++);
 #endif
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
@@ -8114,7 +8114,7 @@ ndsRendererAdapterPrepareOwnerMatricesPerBinding(
             {
                 u32 task91_world_end = cpuGetTiming();
 
-                gNdsTask91MtxWorldTicks += task91_world_end - task91_mtx_mark;
+                NDS_DIAG(gNdsTask91MtxWorldTicks += task91_world_end - task91_mtx_mark);
                 task91_mtx_mark = task91_world_end;
             }
 #endif
@@ -8144,7 +8144,7 @@ ndsRendererAdapterPrepareOwnerMatricesPerBinding(
                     world;
             }
 #if NDS_TASK91_DRAW_PHASE_CENSUS
-            gNdsTask91MtxMulTicks += cpuGetTiming() - task91_mtx_mark;
+            NDS_DIAG(gNdsTask91MtxMulTicks += cpuGetTiming() - task91_mtx_mark);
 #endif
             modelview_ptrs[binding_index] =
                 &sNdsRendererAdapterNativeOwnerModelviews[binding_index];
@@ -8225,8 +8225,8 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
         &camera_modelview, &camera_modelview_valid,
         NULL, NULL, NULL);
 #if NDS_TASK91_DRAW_PHASE_CENSUS
-    gNdsTask91MtxCameraTicks += cpuGetTiming() - task91_mtx_mark;
-    gNdsTask91MtxCalls++;
+    NDS_DIAG(gNdsTask91MtxCameraTicks += cpuGetTiming() - task91_mtx_mark);
+    NDS_DIAG(gNdsTask91MtxCalls++);
 #endif
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
@@ -8408,7 +8408,7 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
              binding_index++)
         {
 #if NDS_TASK91_DRAW_PHASE_CENSUS
-            gNdsTask91MtxBindings++;
+            NDS_DIAG(gNdsTask91MtxBindings++);
 #endif
             if (sNdsRendererAdapterNativeOwnerWorkspace.
                     gx_modelview_mirror_valid != 0u)
@@ -8432,7 +8432,7 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
 gx_compose_declined:
     if (flat_worlds == FALSE)
     {
-        gNdsR2GxComposeDeclines++;
+        NDS_DIAG(gNdsR2GxComposeDeclines++);
     }
 #endif
     if (flat_worlds == FALSE)
@@ -8457,7 +8457,7 @@ gx_compose_declined:
              binding_index++)
         {
 #if NDS_TASK91_DRAW_PHASE_CENSUS
-            gNdsTask91MtxBindings++;
+            NDS_DIAG(gNdsTask91MtxBindings++);
 #endif
             modelview_ptrs[binding_index] =
                 &sNdsRendererAdapterNativeOwnerModelviews[binding_index];
@@ -8579,7 +8579,7 @@ ndsRendererAdapterGetHierarchyCameraMatrices(
             {
                 ndsRendererMatrixCopy20p12(projection, &memo->projection);
                 ndsRendererMatrixCopy20p12(modelview, &memo->modelview);
-                gNdsRendererAdapterHierarchyCameraMemoHits++;
+                NDS_DIAG(gNdsRendererAdapterHierarchyCameraMemoHits++);
                 return TRUE;
             }
             ndsRendererAdapterCameraLookAtReflect(

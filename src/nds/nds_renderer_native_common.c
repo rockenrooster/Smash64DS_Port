@@ -320,9 +320,9 @@ static inline void ndsRendererFastAccountRawTriangles(
                     triangle_count;
         }
     }
-    gNdsRendererProfileRawCurrentCandidateCount += triangle_count;
-    gNdsRendererProfileHardwareBatchReuseCount += reuse_count;
-    gNdsRendererProfileTexturePrepareReuseCount += reuse_count;
+    NDS_DIAG(gNdsRendererProfileRawCurrentCandidateCount += triangle_count);
+    NDS_DIAG(gNdsRendererProfileHardwareBatchReuseCount += reuse_count);
+    NDS_DIAG(gNdsRendererProfileTexturePrepareReuseCount += reuse_count);
     gNdsRendererProfileHardwareTriangles += triangle_count;
     gNdsRendererProfileHardwareVertices += triangle_count * 3u;
     if ((gNdsRendererProfileHardwareTriangles > 2048u) ||
@@ -451,11 +451,11 @@ static s32 ndsRendererNativePrepareDirectRun(
         {
             if (ndsRendererHardwareLitShadeCombine(stats) != FALSE)
             {
-                gNdsRendererProfileLitShadeCombineCount++;
+                NDS_DIAG(gNdsRendererProfileLitShadeCombineCount++);
             }
             if (use_material_color != FALSE)
             {
-                gNdsRendererProfileMaterialCombineCount++;
+                NDS_DIAG(gNdsRendererProfileMaterialCombineCount++);
             }
         }
 #endif
@@ -633,7 +633,7 @@ ndsRendererNativeApplyRootLightPreamble(
         NDS_RENDERER_LIGHT_COLOR_2_MASK;
     stats->light_color_command_count += 4u;
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
-    gNdsRendererProfileLightColorCommands += 4u;
+    NDS_DIAG(gNdsRendererProfileLightColorCommands += 4u);
 #endif
 }
 
@@ -669,10 +669,10 @@ ndsRendererNativeApplyStateDelta(
             (sNdsR2DeltaLastW0[e] == delta->w0) &&
             (sNdsR2DeltaLastW1[e] == delta->w1))
         {
-            gNdsR2SpanIdenticalOperands++;
+            NDS_DIAG(gNdsR2SpanIdenticalOperands++);
             if (delta->effect == NDS_NATIVE_STATE_GEOMETRY)
             {
-                gNdsR2SpanIdenticalGeometry++;
+                NDS_DIAG(gNdsR2SpanIdenticalGeometry++);
             }
         }
         sNdsR2DeltaLastW0[e] = delta->w0;
@@ -688,7 +688,7 @@ ndsRendererNativeApplyStateDelta(
      * effect so the validity key can be designed against the data. */
     if (delta->effect < 16u)
     {
-        gNdsR2DeltaEffectCounts[delta->effect]++;
+        NDS_DIAG(gNdsR2DeltaEffectCounts[delta->effect]++);
     }
 #endif
     switch (delta->effect)
@@ -835,7 +835,7 @@ ndsRendererNativeApplyStateSpan(
         return;
     }
 #if NDS_TASK91_DRAW_PHASE_CENSUS
-    gNdsR2SpanCalls++;
+    NDS_DIAG(gNdsR2SpanCalls++);
 #endif
     for (i = 0u; i < count; i++)
     {
@@ -847,14 +847,14 @@ ndsRendererNativeApplyStateSpan(
             /* +1 so an untouched entry (0) can never alias frame serial 0. */
             u32 stamp = sNdsRendererHardwareFrameSerial + 1u;
 
-            gNdsR2SpanDeltasApplied++;
+            NDS_DIAG(gNdsR2SpanDeltasApplied++);
             if (delta_index <
                 (sizeof(sNdsR2DeltaLastFrame) /
                  sizeof(sNdsR2DeltaLastFrame[0])))
             {
                 if (sNdsR2DeltaLastFrame[delta_index] == stamp)
                 {
-                    gNdsR2SpanDeltaRepeats++;
+                    NDS_DIAG(gNdsR2SpanDeltaRepeats++);
                 }
                 sNdsR2DeltaLastFrame[delta_index] = stamp;
             }
@@ -882,7 +882,7 @@ static void ndsRendererNativeApplyMaterial(
     {
         u32 e;
 
-        gNdsR2SpanMaterialInvalidations++;
+        NDS_DIAG(gNdsR2SpanMaterialInvalidations++);
         for (e = 0u; e < NDS_R2_DELTA_EFFECT_MAX; e++)
         {
             sNdsR2DeltaLastValid[e] = 0u;
@@ -1071,7 +1071,7 @@ static s32 ndsRendererHardwareBindImpactWaveTexture(
     stats->hardware_texture_format = NDS_RENDERER_HW_TEXTURE_FMT_CI;
     stats->hardware_texture_width = NDS_RENDERER_IMPACT_WAVE_TEX_WIDTH;
     stats->hardware_texture_height = NDS_RENDERER_IMPACT_WAVE_TEX_HEIGHT;
-    gNdsImpactWaveNativeTextureBindCount++;
+    NDS_DIAG(gNdsImpactWaveNativeTextureBindCount++);
     return TRUE;
 #else
     (void)stats;
@@ -1846,7 +1846,7 @@ s32 ndsRendererSubmitNativeVisualEffect(
             u32 fanned = ndsRendererHardwareSubmitNearClippedTriangle(
                 stats, &state, (u32)tri[0], (u32)tri[1], (u32)tri[2], depth);
 
-            gNdsVisualEffectNearClipCount++;
+            NDS_DIAG(gNdsVisualEffectNearClipCount++);
             if (fanned != 0u)
             {
                 sNdsRendererHardwareSubmitted = TRUE;
@@ -1927,7 +1927,7 @@ static s32 ndsRendererHardwareBindRebirthHaloTexture(
     stats->hardware_texture_format = format;
     stats->hardware_texture_width = upload_width;
     stats->hardware_texture_height = upload_height;
-    gNdsRebirthHaloNativeTextureBindCount++;
+    NDS_DIAG(gNdsRebirthHaloNativeTextureBindCount++);
     return TRUE;
 #else
     (void)stats;
@@ -2193,10 +2193,10 @@ static s32 ndsRendererRebirthHaloBoundsInsideNearPlane(
         input.y = ((corner & 2u) != 0u) ? bounds->max_y : bounds->min_y;
         input.z = ((corner & 4u) != 0u) ? bounds->max_z : bounds->min_z;
         ndsRendererTransformVertex20p12(matrix, &input, &clip);
-        gNdsRebirthHaloFullOffloadBoundCornerCount++;
+        NDS_DIAG(gNdsRebirthHaloFullOffloadBoundCornerCount++);
         if (ndsRendererHardwareClipZWInsideNearPlane(clip.z, clip.w) == FALSE)
         {
-            gNdsRebirthHaloFullOffloadBoundRejectCount++;
+            NDS_DIAG(gNdsRebirthHaloFullOffloadBoundRejectCount++);
             return FALSE;
         }
     }
@@ -2514,8 +2514,8 @@ static s32 ndsRendererRebirthHaloBuildPackedGroup(
     }
     DC_FlushRange(packet->words, (u32)packet->word_count * sizeof(u32));
     packet->valid = 1u;
-    gNdsRebirthHaloPackedBuildCount++;
-    gNdsRebirthHaloPackedWordCount += packet->word_count;
+    NDS_DIAG(gNdsRebirthHaloPackedBuildCount++);
+    NDS_DIAG(gNdsRebirthHaloPackedWordCount += packet->word_count);
     return TRUE;
 }
 
@@ -2659,8 +2659,8 @@ static s32 ndsRendererRebirthHaloBuildPackedProjectedGroup(
     }
     DC_FlushRange(packet->words, (u32)packet->word_count * sizeof(u32));
     packet->valid = 1u;
-    gNdsRebirthHaloPackedBuildCount++;
-    gNdsRebirthHaloPackedWordCount += packet->word_count;
+    NDS_DIAG(gNdsRebirthHaloPackedBuildCount++);
+    NDS_DIAG(gNdsRebirthHaloPackedWordCount += packet->word_count);
     return TRUE;
 }
 #endif
@@ -2681,7 +2681,7 @@ static void ndsRendererRebirthHaloSubmitPackedGroup(u32 group_index)
         GFX_FIFO = packet->words[word];
     }
 #endif
-    gNdsRebirthHaloPackedSubmitCount++;
+    NDS_DIAG(gNdsRebirthHaloPackedSubmitCount++);
 }
 #endif
 #endif
@@ -2784,7 +2784,7 @@ s32 ndsRendererSubmitNativeRebirthHalo(
     if (ndsRendererRebirthHaloBoundsInsideNearPlane(
             &state.matrix, &sNdsRebirthHaloRootBounds[root_bounds_index]) == FALSE)
     {
-        gNdsRebirthHaloNearPlaneGxCount++;
+        NDS_DIAG(gNdsRebirthHaloNearPlaneGxCount++);
     }
 #else
     if (ndsRendererRebirthHaloBoundsInsideNearPlane(
@@ -2838,7 +2838,7 @@ s32 ndsRendererSubmitNativeRebirthHalo(
         &state.matrix, state.matrix_generation);
     ndsRendererBuildRawHardwareMatrix(&state.matrix, &rebirth_raw_matrix);
 #endif
-    gNdsRebirthHaloFullOffloadRootCount++;
+    NDS_DIAG(gNdsRebirthHaloFullOffloadRootCount++);
 #endif
 #if NDS_R2_REBIRTH_HALO_PHASE_PROFILE
     NDS_REBIRTH_PHASE_MARK(1u, rebirth_phase_t0);
@@ -3903,11 +3903,11 @@ static void ndsRendererR2FighterShadeProofFrame(void)
     {
         if (sNdsR2ShadeFrameInputHash != gNdsR2ShadeInputHash)
         {
-            gNdsR2ShadeInputChangeCount++;
+            NDS_DIAG(gNdsR2ShadeInputChangeCount++);
         }
         if (output != gNdsR2ShadeOutputHash)
         {
-            gNdsR2ShadeOutputChangeCount++;
+            NDS_DIAG(gNdsR2ShadeOutputChangeCount++);
         }
     }
     gNdsR2ShadeInputHash = sNdsR2ShadeFrameInputHash;
@@ -3961,24 +3961,24 @@ static void __attribute__((noinline)) ndsRendererR2E16aLightCensus(
     static u32 last_material[2];
     static u8 last_valid;
 
-    gNdsR2LightEpochs++;
+    NDS_DIAG(gNdsR2LightEpochs++);
     if (last_valid != 0u)
     {
         if ((stats->light_dir_x != last_dir[0]) ||
             (stats->light_dir_y != last_dir[1]) ||
             (stats->light_dir_z != last_dir[2]))
         {
-            gNdsR2LightDirChanges++;
+            NDS_DIAG(gNdsR2LightDirChanges++);
         }
         if ((stats->light_color_1 != last_color[0]) ||
             (stats->light_color_2 != last_color[1]))
         {
-            gNdsR2LightColorChanges++;
+            NDS_DIAG(gNdsR2LightColorChanges++);
         }
         if ((material_color != last_material[0]) ||
             (color_modulate != last_material[1]))
         {
-            gNdsR2LightMaterialChanges++;
+            NDS_DIAG(gNdsR2LightMaterialChanges++);
         }
     }
     last_dir[0] = stats->light_dir_x;
@@ -5910,7 +5910,7 @@ static void __attribute__((noinline, cold)) ndsLabFoxGxHash(u32 root_index,
     NDS_LAB_FOX_MIX(stats->othermode_l);
 #undef NDS_LAB_FOX_MIX
     gNdsLabFoxGxHash = h;
-    gNdsLabFoxGxHashCount++;
+    NDS_DIAG(gNdsLabFoxGxHashCount++);
 }
 #define NDS_LAB_FOX_GX_HASH(r, c, p, s) ndsLabFoxGxHash((r), (c), (p), (s))
 #else
@@ -6628,7 +6628,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
 #endif
         if (state_replayed != FALSE)
         {
-            gNdsEntryEffectStateReplays++;
+            NDS_DIAG(gNdsEntryEffectStateReplays++);
         }
     }
 
@@ -6929,7 +6929,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
             sNdsRendererHardwareMatrixGeneration);
         if (no_z_group != FALSE)
         {
-            gNdsEntryEffectNativeNoZGroupDraws++;
+            NDS_DIAG(gNdsEntryEffectNativeNoZGroupDraws++);
         }
 
         corner = 0u;
@@ -7125,9 +7125,9 @@ s32 ndsRendererSubmitNativeEntryEffect(
     if ((state_recording != FALSE) && (state_ok != FALSE))
     {
         state_root->valid = 2u;
-        gNdsEntryEffectStateRecords++;
+        NDS_DIAG(gNdsEntryEffectStateRecords++);
     }
-    gNdsEntryEffectNativeDrawCount++;
+    NDS_DIAG(gNdsEntryEffectNativeDrawCount++);
     {
         u32 g;
 
@@ -7341,22 +7341,22 @@ s32 ndsRendererReplayNativeEntryEffectFox(u32 root_offset,
             if (ramp_names[group_offset] == 0u)
             {
                 /* The executor invalidates the state and resolves the root. */
-                gNdsEntryEffectFoxReplayDeclines++;
+                NDS_DIAG(gNdsEntryEffectFoxReplayDeclines++);
                 return FALSE;
             }
         }
         if (ndsRendererEntryEffectPacketCurrent(packet, root, first,
                                                 ramp_names) == 0u)
         {
-            gNdsEntryEffectFoxReplayDeclines++;
+            NDS_DIAG(gNdsEntryEffectFoxReplayDeclines++);
             return FALSE;
         }
     }
     NDS_LAB_FOX_GX_HASH(root_index, config, packet, stats);
     ndsRendererEntryEffectPacketReplay(packet, stats, config->initial_modelview,
                                        &light_direction, 0u);
-    gNdsEntryEffectStateReplays++;
-    gNdsEntryEffectNativeDrawCount++;
+    NDS_DIAG(gNdsEntryEffectStateReplays++);
+    NDS_DIAG(gNdsEntryEffectNativeDrawCount++);
     for (group_offset = 0u; group_offset < (u32)root->group_count;
          group_offset++)
     {
@@ -7372,7 +7372,7 @@ s32 ndsRendererReplayNativeEntryEffectFox(u32 root_offset,
         }
     }
     gNdsEntryEffectNativeRootDraws[root_index]++;
-    gNdsEntryEffectFoxReplayDraws++;
+    NDS_DIAG(gNdsEntryEffectFoxReplayDraws++);
     return TRUE;
 #else
     (void)root_offset;
@@ -7413,7 +7413,7 @@ static s32 ndsRendererPrepareEntryShieldTextures(const NDSEntryEffectTexture *te
         {
             return FALSE;
         }
-        gNdsEntryEffectNativeShieldPrepareCount++;
+        NDS_DIAG(gNdsEntryEffectNativeShieldPrepareCount++);
     }
     return TRUE;
 }
@@ -7499,7 +7499,7 @@ s32 ndsRendererHardwarePrepareEntryEffectTextures(void)
         {
             if (ndsRendererPrepareEntryShieldTextures(texture) == FALSE)
             {
-                gNdsEntryShieldTexturePrepareDeclineCount++;
+                NDS_DIAG(gNdsEntryShieldTexturePrepareDeclineCount++);
                 return FALSE;
             }
             continue;
@@ -7967,7 +7967,7 @@ static void ndsRendererEntryEffectPacketEnd(
     {
         /* Nothing a fault depends on changes within the scene. */
         packet->disabled = 1u;
-        gNdsEntryEffectPacketFaults++;
+        NDS_DIAG(gNdsEntryEffectPacketFaults++);
         return;
     }
     ndsEntryPacketCounters(stats, after);
@@ -7991,7 +7991,7 @@ static void ndsRendererEntryEffectPacketEnd(
     packet->texture_releases = gNdsEntryEffectStartupTextureReleaseCount;
     DC_FlushRange(packet->words, packet->count * 4u);
     packet->valid = 1u;
-    gNdsEntryEffectPacketRecords++;
+    NDS_DIAG(gNdsEntryEffectPacketRecords++);
 }
 
 static void ndsEntryPacketDmaStart(const u32 *words, u32 count)
@@ -8077,7 +8077,7 @@ static void __attribute__((noinline)) ndsRendererEntryEffectPacketReplay(
     gNdsEntryEffectNativeAlphaSkipCount += delta[10];
     gNdsEntryEffectNativeTextureBindCount += delta[11];
     gNdsEntryRampPaletteDraws += delta[12];
-    gNdsEntryEffectPacketReplays++;
+    NDS_DIAG(gNdsEntryEffectPacketReplays++);
 }
 #endif
 
@@ -8386,7 +8386,7 @@ static s32 __attribute__((noinline)) ndsRendererR2SampleVectorMatrix(
         if (spins >= NDS_R2_LIGHT_MATRIX_IDLE_SPINS)
         {
             idle = 0u;
-            gNdsR2LightMatrixIdleTimeouts++;
+            NDS_DIAG(gNdsR2LightMatrixIdleTimeouts++);
             break;
         }
     }
@@ -8449,7 +8449,7 @@ static s32 __attribute__((noinline)) ndsRendererR2SampleVectorMatrix(
     witness->facing_lr = gNdsR2FighterFacingLr;
     witness->facing_slot = gNdsR2FighterFacingSlot;
     witness->idle_ok = idle;
-    gNdsR2LightMatrixWitnessWrites++;
+    NDS_DIAG(gNdsR2LightMatrixWitnessWrites++);
 
     return (idle != 0u) ? stretched : 0;
 }
@@ -8569,7 +8569,7 @@ static void __attribute__((noinline)) ndsRendererR2WriteLightVector(
              * unanswerable without shipping the answer -- and left both
              * counters unwritten, which is how --gc-sections collected them
              * out of the r30 ELF entirely. */
-            gNdsR2LightMatrixStretchApplied++;
+            NDS_DIAG(gNdsR2LightMatrixStretchApplied++);
 #if NDS_R2_LIGHT_VECTOR_STRETCH_FIX
             length = (u32)stretched_len;
             numerator_scale =
@@ -8580,7 +8580,7 @@ static void __attribute__((noinline)) ndsRendererR2WriteLightVector(
                  (stretched_len <
                   (light_len_q12 - (light_len_q12 >> 5))))
         {
-            gNdsR2LightMatrixStretchDeclined++;
+            NDS_DIAG(gNdsR2LightMatrixStretchDeclined++);
         }
 #endif
         if (length != 0u)
@@ -8601,7 +8601,7 @@ static void __attribute__((noinline)) ndsRendererR2WriteLightVector(
     glPopMatrix(1);
     NDS_FIGHTER_PACKET_HOOK(ndsFighterPacketRecordLightVector(
         NDS_R2_NORMAL_PACK((int)nx, (int)ny, (int)nz)));
-    gNdsR2LightVectorWrites++;
+    NDS_DIAG(gNdsR2LightVectorWrites++);
     sNdsR2LightVectorWritten = 1u;
 }
 
@@ -8772,7 +8772,7 @@ static u16 __attribute__((noinline)) ndsRendererR2ClampDiffuseToMaterial(
     capped = (u16)RGB15(r, g, b);
     if (capped != (u16)diffuse)
     {
-        gNdsR2ShadeClampAppliedCount++;
+        NDS_DIAG(gNdsR2ShadeClampAppliedCount++);
     }
     return capped;
 }
@@ -8936,7 +8936,7 @@ ndsRendererR2EpochStateProof(u32 epoch_index, const NDSRendererStats *stats)
             NDS_R2_EPOCH_HASH(hash, tile[w]);
         }
     }
-    gNdsR2EpochStateSamples++;
+    NDS_DIAG(gNdsR2EpochStateSamples++);
     if (sNdsR2EpochStateSeen[epoch_index] == 0u)
     {
         sNdsR2EpochStateSeen[epoch_index] = 1u;
@@ -8945,11 +8945,11 @@ ndsRendererR2EpochStateProof(u32 epoch_index, const NDSRendererStats *stats)
     }
     if (sNdsR2EpochStateHash[epoch_index] != hash)
     {
-        gNdsR2EpochStateChanges++;
+        NDS_DIAG(gNdsR2EpochStateChanges++);
         if (sNdsR2EpochStateEverChanged[epoch_index] == 0u)
         {
             sNdsR2EpochStateEverChanged[epoch_index] = 1u;
-            gNdsR2EpochStateUnstableEpochs++;
+            NDS_DIAG(gNdsR2EpochStateUnstableEpochs++);
         }
         sNdsR2EpochStateHash[epoch_index] = hash;
     }
@@ -9127,11 +9127,11 @@ ndsRendererNativeShadeProductionActions(
 #if NDS_TASK91_DRAW_PHASE_CENSUS
     if (epoch_lit != FALSE)
     {
-        gNdsR2ShadeLitEpochs++;
+        NDS_DIAG(gNdsR2ShadeLitEpochs++);
     }
     else
     {
-        gNdsR2ShadeUnlitEpochs++;
+        NDS_DIAG(gNdsR2ShadeUnlitEpochs++);
     }
     if (shade_lut != NULL) { gNdsR2ShadeLutEpochs++; }
     if (use_material != 0u) { gNdsR2ShadeMaterialEpochs++; }
@@ -9250,7 +9250,7 @@ ndsRendererNativeShadeProductionActions(
             if (color_source != dense_id)
             {
 #if NDS_TASK91_DRAW_PHASE_CENSUS
-                gNdsR2ShadeVerticesCopied++;
+                NDS_DIAG(gNdsR2ShadeVerticesCopied++);
 #endif
                 sNdsNativeFighterActiveTables->prepared_dense[
                     dense_id].shaded_rgba =
@@ -9260,7 +9260,7 @@ ndsRendererNativeShadeProductionActions(
             else
             {
 #if NDS_TASK91_DRAW_PHASE_CENSUS
-                gNdsR2ShadeVerticesLit++;
+                NDS_DIAG(gNdsR2ShadeVerticesLit++);
 #endif
                 const NDSNativeDenseVertex *dense =
                     &sNdsNativeFighterActiveTables->dense_vertices[dense_id];
@@ -9435,23 +9435,23 @@ static void NDS_R2_RUN_PROOF_CODE ndsRendererR2FighterUvProofWrite(
     s16 s,
     s16 t)
 {
-    gNdsR2UvWriteCount++;
+    NDS_DIAG(gNdsR2UvWriteCount++);
     if (dense_id >= NDS_R2_UV_PROOF_MAX)
     {
-        gNdsR2UvOutOfRange++;
+        NDS_DIAG(gNdsR2UvOutOfRange++);
     }
     else if (sNdsR2UvValid[dense_id] == 0u)
     {
         sNdsR2UvValid[dense_id] = 1u;
         sNdsR2UvS[dense_id] = s;
         sNdsR2UvT[dense_id] = t;
-        gNdsR2UvFillCount++;
+        NDS_DIAG(gNdsR2UvFillCount++);
     }
     else if ((sNdsR2UvS[dense_id] != s) || (sNdsR2UvT[dense_id] != t))
     {
         sNdsR2UvS[dense_id] = s;
         sNdsR2UvT[dense_id] = t;
-        gNdsR2UvChangeCount++;
+        NDS_DIAG(gNdsR2UvChangeCount++);
     }
 }
 
@@ -9508,22 +9508,22 @@ static void NDS_R2_RUN_PROOF_CODE ndsRendererR2FighterRunProofCall(
         NDS_R2_RUN_HASH(own, state->texture_prepare_material_color);
         if (run_index >= NDS_R2_RUN_MEMO_MAX)
         {
-            gNdsR2RunMemoOutOfRange++;
+            NDS_DIAG(gNdsR2RunMemoOutOfRange++);
         }
         else if (sNdsR2RunMemoValid[run_index] == 0u)
         {
             sNdsR2RunMemoValid[run_index] = 1u;
             sNdsR2RunMemoHash[run_index] = own;
-            gNdsR2RunMemoFillCount++;
+            NDS_DIAG(gNdsR2RunMemoFillCount++);
         }
         else if (sNdsR2RunMemoHash[run_index] != own)
         {
             sNdsR2RunMemoHash[run_index] = own;
-            gNdsR2RunMemoMissCount++;
+            NDS_DIAG(gNdsR2RunMemoMissCount++);
         }
         else
         {
-            gNdsR2RunMemoHitCount++;
+            NDS_DIAG(gNdsR2RunMemoHitCount++);
         }
     }
     sNdsR2RunFrameFullHash = full;
@@ -9538,15 +9538,15 @@ static void ndsRendererR2FighterRunProofFrame(void)
     {
         if (sNdsR2RunFrameFullHash != gNdsR2RunFullHash)
         {
-            gNdsR2RunFullChangeCount++;
+            NDS_DIAG(gNdsR2RunFullChangeCount++);
         }
         if (sNdsR2RunFrameStableHash != gNdsR2RunStableHash)
         {
-            gNdsR2RunStableChangeCount++;
+            NDS_DIAG(gNdsR2RunStableChangeCount++);
         }
         if (sNdsR2RunFrameMaterialHash != gNdsR2RunMaterialHash)
         {
-            gNdsR2RunMaterialChangeCount++;
+            NDS_DIAG(gNdsR2RunMaterialChangeCount++);
         }
     }
     gNdsR2RunFullHash = sNdsR2RunFrameFullHash;
@@ -10004,7 +10004,7 @@ static void ndsRendererNativeForgetFighterRunUvTables(const void *tables)
             if ((const void *)uv->tables == tables)
             {
                 uv->tables = NULL;
-                gNdsNativeFighterRunUvForgotten++;
+                NDS_DIAG(gNdsNativeFighterRunUvForgotten++);
             }
         }
     }
@@ -10378,7 +10378,7 @@ ndsRendererNativeRebuildProductionRunUv(
         uv->heap_generation = gNdsTaskmanHeapGeneration;
     }
 #if NDS_TICK_HUD
-    gNdsR2RunUvBuild++;
+    NDS_DIAG(gNdsR2RunUvBuild++);
 #endif
     return TRUE;
 }
@@ -10429,7 +10429,7 @@ ndsRendererNativePrepareProductionRunCore(
      * `return TRUE` and so cannot see a rejected call. entries - hook calls is
      * the reject count, and the memo's safety depends on it: a run that is
      * sometimes accepted and sometimes rejected must not be baked. */
-    gNdsR2RunEntryCount++;
+    NDS_DIAG(gNdsR2RunEntryCount++);
 #endif
 #if NDS_R2_FIGHTER_RUN_PROOF >= 2
     /* E11 sizing. The census puts this function at 22,205 ticks/frame self time
@@ -10512,7 +10512,7 @@ ndsRendererNativePrepareProductionRunCore(
     }
 
 #if NDS_R2_FIGHTER_RUN_PROOF >= 2
-    gNdsR2RunValidateTicks += cpuGetTiming() - t_r2e11_phase;
+    NDS_DIAG(gNdsR2RunValidateTicks += cpuGetTiming() - t_r2e11_phase);
     t_r2e11_phase = cpuGetTiming();
 #endif
     material_color =
@@ -10731,13 +10731,13 @@ ndsRendererNativePrepareProductionRunCore(
 #if NDS_R2_FIGHTER_RUN_PROOF >= 2
     if (t_r2e11_tex_valid == 0u)
     {
-        gNdsR2RunTexPrepTicks += cpuGetTiming() - t_r2e11_phase;
-        gNdsR2RunTexPrepCount++;
+        NDS_DIAG(gNdsR2RunTexPrepTicks += cpuGetTiming() - t_r2e11_phase);
+        NDS_DIAG(gNdsR2RunTexPrepCount++);
     }
     else
     {
-        gNdsR2RunTexReuseTicks += cpuGetTiming() - t_r2e11_phase;
-        gNdsR2RunTexReuseCount++;
+        NDS_DIAG(gNdsR2RunTexReuseTicks += cpuGetTiming() - t_r2e11_phase);
+        NDS_DIAG(gNdsR2RunTexReuseCount++);
     }
     t_r2e11_phase = cpuGetTiming();
 #endif
@@ -10784,7 +10784,7 @@ ndsRendererNativePrepareProductionRunCore(
             (uv->heap_generation == gNdsTaskmanHeapGeneration))
         {
 #if NDS_TICK_HUD
-            gNdsR2RunUvSkip++;
+            NDS_DIAG(gNdsR2RunUvSkip++);
 #endif
         }
         else
@@ -10803,7 +10803,7 @@ ndsRendererNativePrepareProductionRunCore(
     }
 
 #if NDS_R2_FIGHTER_RUN_PROOF >= 2
-    gNdsR2RunUvTicks += cpuGetTiming() - t_r2e11_phase;
+    NDS_DIAG(gNdsR2RunUvTicks += cpuGetTiming() - t_r2e11_phase);
     t_r2e11_phase = cpuGetTiming();
 #endif
     if (hierarchy_run != NULL)
@@ -10846,8 +10846,8 @@ ndsRendererNativePrepareProductionRunCore(
         }
     }
 #if NDS_R2_FIGHTER_RUN_PROOF >= 2
-    gNdsR2RunTailTicks += cpuGetTiming() - t_r2e11_phase;
-    gNdsR2RunSuccessCount++;
+    NDS_DIAG(gNdsR2RunTailTicks += cpuGetTiming() - t_r2e11_phase);
+    NDS_DIAG(gNdsR2RunSuccessCount++);
 #endif
 #if NDS_R2_FIGHTER_RUN_PROOF
     ndsRendererR2FighterRunProofCall(run_index, state, &resolved_texture);
@@ -11672,7 +11672,7 @@ ndsFighterPacketApplyTintPrims(NDSFighterPacket *packet, const u32 *prims,
         {
             if (packet->sites[i].reserved[0] != 0u)
             {
-                gNdsFighterPacketTintRerecords++;
+                NDS_DIAG(gNdsFighterPacketTintRerecords++);
                 return FALSE;
             }
         }
@@ -12087,7 +12087,7 @@ static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketAbortRecord(void)
     {
         rec->packet->valid = 0u;
     }
-    gNdsFighterPacketFaults++;
+    NDS_DIAG(gNdsFighterPacketFaults++);
 }
 
 /* Slice 4: route 1 lends a battle slot's lower half to a lean list. */
@@ -12150,8 +12150,8 @@ static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketFinishRecord(
     if ((rec->fault != 0u) || (rec->count == 0u))
     {
         packet->valid = 0u;
-        gNdsFighterPacketFaults++;
-        gNdsFighterPacketFaultWhy[(rec->fault < 8u) ? rec->fault : 0u]++;
+        NDS_DIAG(gNdsFighterPacketFaults++);
+        NDS_DIAG(gNdsFighterPacketFaultWhy[(rec->fault < 8u) ? rec->fault : 0u]++);
         return;
     }
     packet->word_count = rec->count;
@@ -12370,7 +12370,7 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
 #endif
         )
     {
-        gNdsFighterPacketDeclines++;
+        NDS_DIAG(gNdsFighterPacketDeclines++);
         return 0;
     }
 #endif
@@ -12379,7 +12379,7 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
 #endif
     if ((input_count == 0u) || (input_count > NDS_FIGHTER_PACKET_ROOT_MAX))
     {
-        gNdsFighterPacketDeclines++;
+        NDS_DIAG(gNdsFighterPacketDeclines++);
         return 0;
     }
     /* The adapter precheck evaluates this packet against these exact inputs
@@ -12394,7 +12394,7 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
          * and retry through the ordinary replay/miss path. */
         if ((packet->valid == 0u) || (packet->root_count != input_count))
         {
-            gNdsFighterPacketDeclines++;
+            NDS_DIAG(gNdsFighterPacketDeclines++);
             return 0;
         }
     }
@@ -12415,18 +12415,18 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
              * skipped.  Direct callers still fail closed here: discard the
              * stale packet and let the ordinary native owner draw this frame. */
             packet->valid = 0u;
-            gNdsFighterPacketDeclines++;
+            NDS_DIAG(gNdsFighterPacketDeclines++);
             return 0;
         }
         if (packet->texgen_group_count != 0u)
         {
-            gNdsFighterPacketTexgenPatches++;
+            NDS_DIAG(gNdsFighterPacketTexgenPatches++);
         }
         ndsFighterPacketTouchTextures(packet);
         if (ndsFighterPacketApplyTint(packet, inputs) == FALSE)
         {
             packet->valid = 0u;
-            gNdsFighterPacketDeclines++;
+            NDS_DIAG(gNdsFighterPacketDeclines++);
             NDS_FTR_LEAN_CTR(gNdsFtrLean.tint_rerecords[battle_slot & 3u]++);
             return 0;
         }
@@ -12579,16 +12579,16 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
 
             if (packet->key[i] != want)
             {
-                gNdsFighterPacketMissWord[i]++;
+                NDS_DIAG(gNdsFighterPacketMissWord[i]++);
             }
         }
         if (packet->root_count != input_count)
         {
-            gNdsFighterPacketMissWord[NDS_FIGHTER_PACKET_KEY_WORDS]++;
+            NDS_DIAG(gNdsFighterPacketMissWord[NDS_FIGHTER_PACKET_KEY_WORDS]++);
         }
         if (ndsFighterPacketTexturesResident(packet) == FALSE)
         {
-            gNdsFighterPacketMissWord[NDS_FIGHTER_PACKET_KEY_WORDS + 1u]++;
+            NDS_DIAG(gNdsFighterPacketMissWord[NDS_FIGHTER_PACKET_KEY_WORDS + 1u]++);
         }
     }
     packet->valid = 0u;
@@ -12597,7 +12597,7 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
      * path declined this draw, which it counts and names). */
     if (ndsFtrLeanLowerOwned(battle_slot) != FALSE)
     {
-        gNdsFighterPacketDeclines++;
+        NDS_DIAG(gNdsFighterPacketDeclines++);
         return 0;
     }
     /* battle_slot is the adapter's source-player slot in key bits 10:9.  The
@@ -12682,7 +12682,7 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
     sNdsRendererHardwareBoundTextureName = 0u;
     sNdsRendererHardwareActiveTextureEntry = NULL;
     sNdsFighterPacketRecording = 1u;
-    gNdsFighterPacketRecords++;
+    NDS_DIAG(gNdsFighterPacketRecords++);
     return 0;
 }
 
@@ -17121,7 +17121,7 @@ static s32 ndsRendererNativeSubmitProductionRun(
 #if NDS_TASK91_DRAW_PHASE_CENSUS
     e15_t0 = cpuGetTiming();
     e15_mark = e15_t0;
-    gNdsR2SubmitCalls++;
+    NDS_DIAG(gNdsR2SubmitCalls++);
 #endif
     run_index = (u32)(run - sNdsNativeFighterActiveTables->runs);
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_TRIANGLE_NOOP
@@ -17166,7 +17166,7 @@ static s32 ndsRendererNativeSubmitProductionRun(
 #endif
 #if NDS_TASK91_DRAW_PHASE_CENSUS
     e15_mark = cpuGetTiming();
-    gNdsR2SubmitPrepTicks += e15_mark - e15_t0;
+    NDS_DIAG(gNdsR2SubmitPrepTicks += e15_mark - e15_t0);
 #endif
     if ((submit_class == NDS_NATIVE_RUN_CROSS_MATRIX) &&
         (current_palette_slot > NDS_NATIVE_GX_MATRIX_SLOT_MAX))
@@ -17194,9 +17194,9 @@ static s32 ndsRendererNativeSubmitProductionRun(
             state->texture_prepare_enabled,
             current_palette_slot, binding_palette_slots);
 #if NDS_TASK91_DRAW_PHASE_CENSUS
-        gNdsR2SubmitCrossEmitTicks += cpuGetTiming() - e15_mark;
-        gNdsR2SubmitCrossCalls++;
-        gNdsR2SubmitCrossTriangles += run->triangle_count;
+        NDS_DIAG(gNdsR2SubmitCrossEmitTicks += cpuGetTiming() - e15_mark);
+        NDS_DIAG(gNdsR2SubmitCrossCalls++);
+        NDS_DIAG(gNdsR2SubmitCrossTriangles += run->triangle_count);
 #endif
     }
     else
@@ -17242,9 +17242,9 @@ static s32 ndsRendererNativeSubmitProductionRun(
                 run_index, (u32)run->triangle_count * 3u);
         }
 #if NDS_TASK91_DRAW_PHASE_CENSUS
-        gNdsR2SubmitRawEmitTicks += cpuGetTiming() - e15_mark;
-        gNdsR2SubmitRawCalls++;
-        gNdsR2SubmitRawTriangles += run->triangle_count;
+        NDS_DIAG(gNdsR2SubmitRawEmitTicks += cpuGetTiming() - e15_mark);
+        NDS_DIAG(gNdsR2SubmitRawCalls++);
+        NDS_DIAG(gNdsR2SubmitRawTriangles += run->triangle_count);
 #endif
     }
 #else
@@ -17289,7 +17289,7 @@ static s32 ndsRendererNativeSubmitProductionRun(
     }
 #endif
 #if NDS_TASK91_DRAW_PHASE_CENSUS
-    gNdsR2SubmitTotalTicks += cpuGetTiming() - e15_t0;
+    NDS_DIAG(gNdsR2SubmitTotalTicks += cpuGetTiming() - e15_t0);
 #endif
     return TRUE;
 }

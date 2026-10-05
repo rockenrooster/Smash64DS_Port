@@ -2791,7 +2791,7 @@ static void ndsP2NdlBindRecord(GObj *gobj, u32 serial, NDSNdlRecord *record)
             record->body[0] = root->dl;
             record->hdr[0] = variant;
             record->body_count = 1u;
-            gNdsNdlBindCount++;
+            NDS_DIAG(gNdsNdlBindCount++);
             return;
         }
     }
@@ -2815,7 +2815,7 @@ static void ndsP2NdlBindRecord(GObj *gobj, u32 serial, NDSNdlRecord *record)
             {
                 record->owner = NDS_P2_NDL_OWNER_DAMAGE_SLASH;
                 record->kind = 1u;
-                gNdsNdlBindCount++;
+                NDS_DIAG(gNdsNdlBindCount++);
                 return;
             }
             record->body_count = 0u;
@@ -2828,7 +2828,7 @@ static void ndsP2NdlBindRecord(GObj *gobj, u32 serial, NDSNdlRecord *record)
         record->kind = (u8)kind;
         record->dobj[0] = DObjGetStruct(gobj);
         record->body_count = 1u;
-        gNdsNdlBindCount++;
+        NDS_DIAG(gNdsNdlBindCount++);
         return;
     }
     kind = ndsStageGCDrawAllLoopNdlGroundKind(gobj);
@@ -2838,7 +2838,7 @@ static void ndsP2NdlBindRecord(GObj *gobj, u32 serial, NDSNdlRecord *record)
         record->kind = (u8)kind;
         record->dobj[0] = DObjGetStruct(gobj);
         record->body_count = 1u;
-        gNdsNdlBindCount++;
+        NDS_DIAG(gNdsNdlBindCount++);
         return;
     }
     kind = ndsStageGCDrawAllLoopNdlWeaponKind(gobj);
@@ -2848,7 +2848,7 @@ static void ndsP2NdlBindRecord(GObj *gobj, u32 serial, NDSNdlRecord *record)
         record->kind = (u8)kind;
         record->dobj[0] = DObjGetStruct(gobj);
         record->body_count = 1u;
-        gNdsNdlBindCount++;
+        NDS_DIAG(gNdsNdlBindCount++);
         return;
     }
 #if NDS_P2_LINK
@@ -2875,7 +2875,7 @@ static void ndsP2NdlBindRecord(GObj *gobj, u32 serial, NDSNdlRecord *record)
             {
                 record->owner = NDS_P2_NDL_OWNER_ITEM;
                 record->kind = NDS_P2_NDL_KIND_IT_LINK_BOMB;
-                gNdsNdlBindCount++;
+                NDS_DIAG(gNdsNdlBindCount++);
                 return;
             }
             record->body_count = 0u;
@@ -3018,11 +3018,11 @@ static sb32 ndsP2NdlEmitImpactWave(GObj *gobj, GObj *camera_gobj,
             record->body[0], &material, variant, &config,
             &trial_stats) == FALSE)
     {
-        gNdsImpactWaveNativeFallbackCount++;
+        NDS_DIAG(gNdsImpactWaveNativeFallbackCount++);
         return FALSE;
     }
     *stats = trial_stats;
-    gNdsImpactWaveNativeDrawCount++;
+    NDS_DIAG(gNdsImpactWaveNativeDrawCount++);
     return TRUE;
 #else
     (void)gobj;
@@ -3083,7 +3083,7 @@ static sb32 ndsP2NdlEmitDamageSlash(GObj *camera_gobj,
                  asset_view, asset_bytes, record->hdr[i],
                  &material[i], &config[i]) == FALSE))
         {
-            gNdsDamageSlashSubmitFailCount++;
+            NDS_DIAG(gNdsDamageSlashSubmitFailCount++);
             return FALSE;
         }
     }
@@ -3101,13 +3101,13 @@ static sb32 ndsP2NdlEmitDamageSlash(GObj *camera_gobj,
              * state change.  Count an invariant failure, but consume this proc
              * so a partially emitted owner can never be drawn a second time by
              * the source fallback.  Acceptance requires this counter to stay 0. */
-            gNdsDamageSlashSubmitFailCount++;
+            NDS_DIAG(gNdsDamageSlashSubmitFailCount++);
             return TRUE;
         }
         gNdsDamageSlashRootMask |=
             (record->hdr[i] == NDS_NATIVE_DAMAGE_SLASH_ROOT0) ? 1u : 2u;
         gNdsDamageSlashEffectsSeen |= material[i].effects;
-        gNdsDamageSlashDrawCount++;
+        NDS_DIAG(gNdsDamageSlashDrawCount++);
     }
     return TRUE;
 }
@@ -3210,11 +3210,11 @@ static sb32 ndsP2NdlEmitLinkBomb(GObj *gobj, GObj *camera_gobj,
         {
             /* The owner has crossed into its native executor.  Never replay the
              * source proc after a possible GX mutation; keep the rejection loud. */
-            gNdsLinkBombSubmitFailCount++;
+            NDS_DIAG(gNdsLinkBombSubmitFailCount++);
             return TRUE;
         }
         *stats = trial_stats;
-        gNdsLinkBombDrawCount++;
+        NDS_DIAG(gNdsLinkBombDrawCount++);
     }
     gNdsNdlItemRejectStep = 10u;
     return TRUE;
@@ -3328,12 +3328,12 @@ static s32 ndsRendererAdapterNdlDispatchEffectBody(GObj *camera_gobj,
             camera_gobj, gobj, kind);
         if (handled != FALSE)
         {
-            gNdsNdlDispatch[kind]++;
-            gNdsNdlProcsSkipped++;
+            NDS_DIAG(gNdsNdlDispatch[kind]++);
+            NDS_DIAG(gNdsNdlProcsSkipped++);
         }
         else
         {
-            gNdsNdlFallback[kind]++;
+            NDS_DIAG(gNdsNdlFallback[kind]++);
         }
         return handled;
     }
@@ -3343,12 +3343,12 @@ static s32 ndsRendererAdapterNdlDispatchEffectBody(GObj *camera_gobj,
             camera_gobj, gobj, kind);
         if (handled != FALSE)
         {
-            gNdsNdlDispatch[kind]++;
-            gNdsNdlProcsSkipped++;
+            NDS_DIAG(gNdsNdlDispatch[kind]++);
+            NDS_DIAG(gNdsNdlProcsSkipped++);
         }
         else
         {
-            gNdsNdlFallback[kind]++;
+            NDS_DIAG(gNdsNdlFallback[kind]++);
         }
         return handled;
     }
@@ -3358,12 +3358,12 @@ static s32 ndsRendererAdapterNdlDispatchEffectBody(GObj *camera_gobj,
             camera_gobj, gobj, kind);
         if (handled != FALSE)
         {
-            gNdsNdlDispatch[kind]++;
-            gNdsNdlProcsSkipped++;
+            NDS_DIAG(gNdsNdlDispatch[kind]++);
+            NDS_DIAG(gNdsNdlProcsSkipped++);
         }
         else
         {
-            gNdsNdlFallback[kind]++;
+            NDS_DIAG(gNdsNdlFallback[kind]++);
         }
         return handled;
     }
@@ -3378,8 +3378,8 @@ static s32 ndsRendererAdapterNdlDispatchEffectBody(GObj *camera_gobj,
         if (handled != FALSE)
         {
             ndsP2NdlAccumulateStats(stats);
-            gNdsNdlDispatch[kind]++;
-            gNdsNdlProcsSkipped++;
+            NDS_DIAG(gNdsNdlDispatch[kind]++);
+            NDS_DIAG(gNdsNdlProcsSkipped++);
             ndsStageGCDrawAllLoopRecordNdlItemSubmit(
                 gobj,
                 stats->hardware_triangle_count,
@@ -3388,7 +3388,7 @@ static s32 ndsRendererAdapterNdlDispatchEffectBody(GObj *camera_gobj,
         }
         else
         {
-            gNdsNdlFallback[kind]++;
+            NDS_DIAG(gNdsNdlFallback[kind]++);
         }
         ndsRendererAdapterEndStageTraversal();
         ndsTaskmanSampleGraphicsHeap();
@@ -3417,8 +3417,8 @@ static s32 ndsRendererAdapterNdlDispatchEffectBody(GObj *camera_gobj,
     if (handled != FALSE)
     {
         ndsP2NdlAccumulateStats(stats);
-        gNdsNdlDispatch[kind]++;
-        gNdsNdlProcsSkipped++;
+        NDS_DIAG(gNdsNdlDispatch[kind]++);
+        NDS_DIAG(gNdsNdlProcsSkipped++);
         ndsStageGCDrawAllLoopRecordNdlEffectSubmit(
             stats->hardware_triangle_count,
             stats->hardware_texture_ready_count,
@@ -3426,7 +3426,7 @@ static s32 ndsRendererAdapterNdlDispatchEffectBody(GObj *camera_gobj,
     }
     else
     {
-        gNdsNdlFallback[kind]++;
+        NDS_DIAG(gNdsNdlFallback[kind]++);
     }
     ndsRendererAdapterEndStageTraversal();
     ndsTaskmanSampleGraphicsHeap();
@@ -4300,9 +4300,9 @@ static sb32 ndsRendererAdapterPrepareNativeStageBindingMatrix(
     { return FALSE; }
 #if NDS_TASK103_STAGE_RUN_PHASE
     task103_now = cpuGetTiming();
-    gNdsTask103MatWorldTicks += task103_now - task103_mark;
+    NDS_DIAG(gNdsTask103MatWorldTicks += task103_now - task103_mark);
     task103_mark = task103_now;
-    gNdsTask103MatBindings++;
+    NDS_DIAG(gNdsTask103MatBindings++);
 #endif
     /* Preserve the source multiplication order when a camera owns both parts.
      * Battle cameras normally supply LookAt*Persp in projection alone.
@@ -4345,7 +4345,7 @@ static sb32 ndsRendererAdapterPrepareNativeStageBindingMatrix(
     else { *out = *world_ptr; }
 #if NDS_TASK103_STAGE_RUN_PHASE
     task103_now = cpuGetTiming();
-    gNdsTask103MatComposeTicks += task103_now - task103_mark;
+    NDS_DIAG(gNdsTask103MatComposeTicks += task103_now - task103_mark);
     task103_mark = task103_now;
 #endif
     if (kind != 0u)
@@ -4354,8 +4354,8 @@ static sb32 ndsRendererAdapterPrepareNativeStageBindingMatrix(
             &workspace->projection, &projection_ptr, out, &modelview_ptr,
             &camera->recalc);
 #if NDS_TASK103_STAGE_RUN_PHASE
-        gNdsTask103MatRecalcTicks += cpuGetTiming() - task103_mark;
-        gNdsTask103MatRecalcCount++;
+        NDS_DIAG(gNdsTask103MatRecalcTicks += cpuGetTiming() - task103_mark);
+        NDS_DIAG(gNdsTask103MatRecalcCount++);
 #endif
         if ((modelview_ptr == NULL) || (projection_ptr != NULL)) { return FALSE; }
     }
@@ -4430,7 +4430,7 @@ static void ndsRendererAdapterStageBindingCensus(
         gNdsStageBindingMovedMask = 0u;
         gNdsStageBindingCensusFrames = 0u;
     }
-    gNdsStageBindingCensusFrames++;
+    NDS_DIAG(gNdsStageBindingCensusFrames++);
     for (binding_index = 0u;
          (binding_index < workspace->binding_count) && (binding_index < 64u);
          binding_index++)
@@ -4478,7 +4478,7 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
         &camera.modelview, &camera.modelview_valid, NULL, NULL, NULL);
 #if NDS_TASK103_STAGE_RUN_PHASE
     task103_now = cpuGetTiming();
-    gNdsTask103MatFrameCameraTicks += task103_now - task103_mark;
+    NDS_DIAG(gNdsTask103MatFrameCameraTicks += task103_now - task103_mark);
     task103_mark = task103_now;
 #endif
     if ((ndsRendererAdapterStageCameraFromFrameCache(
@@ -4494,7 +4494,7 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
         return FALSE;
     }
 #if NDS_TASK103_STAGE_RUN_PHASE
-    gNdsTask103MatTask36CameraTicks += cpuGetTiming() - task103_mark;
+    NDS_DIAG(gNdsTask103MatTask36CameraTicks += cpuGetTiming() - task103_mark);
 #endif
     camera.recalc.perspective = &workspace->projection;
     camera.recalc.perspective_f_valid = FALSE;
@@ -4527,7 +4527,7 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
             if ((workspace->task36_runtime_rigid_mask &
                  ((u64)1u << binding_index)) != 0u)
             {
-                gNdsRendererTask36RigidConstancyMismatchCount++;
+                NDS_DIAG(gNdsRendererTask36RigidConstancyMismatchCount++);
                 return FALSE;
             }
         }
@@ -4662,7 +4662,7 @@ static void ndsRendererAdapterValidateTask36StageWorld(
                 NDS_DIAG(gNdsR2Slice44RigidSkips++);
                 continue;
             }
-            gNdsR2Slice44RigidChecks++;
+            NDS_DIAG(gNdsR2Slice44RigidChecks++);
 #endif
             binding_index = workspace->task44_rigid_bindings[rigid_slot];
             if (ndsRendererAdapterStageWorldSourceKeyMatches(
@@ -4672,7 +4672,7 @@ static void ndsRendererAdapterValidateTask36StageWorld(
             {
                 workspace->task36_runtime_rigid_mask = 0u;
 #if NDS_RENDERER_PROFILE_LEVEL == 1
-                gNdsRendererTask36RigidConstancyMismatchCount++;
+                NDS_DIAG(gNdsRendererTask36RigidConstancyMismatchCount++);
 #endif
                 return;
             }
@@ -4696,7 +4696,7 @@ static void ndsRendererAdapterValidateTask36StageWorld(
         {
             workspace->task36_runtime_rigid_mask = 0u;
 #if NDS_RENDERER_PROFILE_LEVEL == 1
-            gNdsRendererTask36RigidConstancyMismatchCount++;
+            NDS_DIAG(gNdsRendererTask36RigidConstancyMismatchCount++);
 #endif
             return;
         }
@@ -4745,7 +4745,7 @@ static sb32 ndsRendererAdapterPrepareNativeStageMaterials(
 #if NDS_R2_SECOND_ENTRY_DIAG
             /* Latch the first mismatch against the selected packet before a
              * later scene can overwrite its binding and material identity. */
-            gNdsR2StageMaterialRejectCount++;
+            NDS_DIAG(gNdsR2StageMaterialRejectCount++);
             if (gNdsR2StageMaterialRejectIndex == 0xFFFFFFFFu)
             {
                 gNdsR2StageMaterialRejectIndex = i;
@@ -4785,7 +4785,7 @@ static void ndsRendererAdapterCommitNativeStageMaterials(
         workspace->material_mobjs[i]->texture_id_next =
             workspace->material_next[i];
 #if NDS_RENDERER_PROFILE_LEVEL == 1
-        gNdsRendererM3MaterialCommitCount++;
+        NDS_DIAG(gNdsRendererM3MaterialCommitCount++);
 #endif
     }
 }
@@ -4923,17 +4923,17 @@ static s32 ndsRendererAdapterPrepareNativeStageOwnerBody(
          * scene entry, last match's DObj pointers are re-admitted intact. The
          * existing counters here are PROFILE_LEVEL==1 only, which the tick-HUD
          * build is not, so this bug class was invisible to every run. */
-        gNdsR2StageSteadyAdmitCount++;
+        NDS_DIAG(gNdsR2StageSteadyAdmitCount++);
 #endif
 #if NDS_RENDERER_PROFILE_LEVEL == 1
-        gNdsRendererTask44SteadyAdmitCount++;
+        NDS_DIAG(gNdsRendererTask44SteadyAdmitCount++);
 #endif
     }
     if (steady_admitted == FALSE)
 #endif
     {
 #if NDS_TASK44_STAGE_STEADY && (NDS_RENDERER_PROFILE_LEVEL == 1)
-    gNdsRendererTask44RevalidateCount++;
+    NDS_DIAG(gNdsRendererTask44RevalidateCount++);
 #endif
     for (i = 0u; i < asset_count; i++)
     {
@@ -4976,7 +4976,7 @@ static s32 ndsRendererAdapterPrepareNativeStageOwnerBody(
 #if NDS_R2_SECOND_ENTRY_DIAG
         /* A full rebuild: binding_dobjs[] is re-collected from the live tree.
          * This is what MUST happen on a second scene entry. */
-        gNdsR2StageTopologyRebuildCount++;
+        NDS_DIAG(gNdsR2StageTopologyRebuildCount++);
 #endif
         bzero(workspace, sizeof(*workspace));
 #if NDS_R2_STAGE_VALIDATE_STRIDE
@@ -5038,7 +5038,7 @@ static s32 ndsRendererAdapterPrepareNativeStageOwnerBody(
     }
 #if NDS_TASK103_STAGE_RUN_PHASE
     task103_prep_mark = cpuGetTiming();
-    gNdsTask103PrepAdmitTicks += task103_prep_mark - task103_prep_entry;
+    NDS_DIAG(gNdsTask103PrepAdmitTicks += task103_prep_mark - task103_prep_entry);
 #endif
 #if NDS_TASK36_HW_COMPOSE
 #if NDS_R2_STAGE_VALIDATE_STRIDE
@@ -5054,7 +5054,7 @@ static s32 ndsRendererAdapterPrepareNativeStageOwnerBody(
     ndsRendererAdapterValidateTask36StageWorld(workspace);
 #endif
 #if NDS_TASK103_STAGE_RUN_PHASE
-    gNdsTask103PrepValidateTicks += cpuGetTiming() - task103_prep_mark;
+    NDS_DIAG(gNdsTask103PrepValidateTicks += cpuGetTiming() - task103_prep_mark);
     task103_prep_mark = cpuGetTiming();
 #endif
     if (ndsRendererAdapterPrepareNativeStageMatrices(cobj, workspace) == FALSE)
@@ -5071,7 +5071,7 @@ static s32 ndsRendererAdapterPrepareNativeStageOwnerBody(
         goto reject;
     }
 #if NDS_TASK103_STAGE_RUN_PHASE
-    gNdsTask103PrepMatrixTicks += cpuGetTiming() - task103_prep_mark;
+    NDS_DIAG(gNdsTask103PrepMatrixTicks += cpuGetTiming() - task103_prep_mark);
     task103_prep_mark = cpuGetTiming();
 #endif
     if (ndsRendererAdapterPrepareNativeStageMaterials(workspace) == FALSE)
@@ -5080,7 +5080,7 @@ static s32 ndsRendererAdapterPrepareNativeStageOwnerBody(
         goto reject;
     }
 #if NDS_TASK103_STAGE_RUN_PHASE
-    gNdsTask103PrepMaterialTicks += cpuGetTiming() - task103_prep_mark;
+    NDS_DIAG(gNdsTask103PrepMaterialTicks += cpuGetTiming() - task103_prep_mark);
     task103_prep_mark = cpuGetTiming();
 #endif
 
@@ -5141,7 +5141,7 @@ static s32 ndsRendererAdapterPrepareNativeStageOwnerBody(
         }
     }
 #if NDS_TASK103_STAGE_RUN_PHASE
-    gNdsTask103PrepConfigTicks += cpuGetTiming() - task103_prep_mark;
+    NDS_DIAG(gNdsTask103PrepConfigTicks += cpuGetTiming() - task103_prep_mark);
     task103_prep_mark = cpuGetTiming();
 #endif
     if (ndsRendererPrepareNativeStageOwner(
@@ -5152,8 +5152,8 @@ static s32 ndsRendererAdapterPrepareNativeStageOwnerBody(
         goto reject;
     }
 #if NDS_TASK103_STAGE_RUN_PHASE
-    gNdsTask103PrepOwnerTicks += cpuGetTiming() - task103_prep_mark;
-    gNdsTask103PrepCalls++;
+    NDS_DIAG(gNdsTask103PrepOwnerTicks += cpuGetTiming() - task103_prep_mark);
+    NDS_DIAG(gNdsTask103PrepCalls++);
 #endif
     workspace->next_segment = 0u;
     workspace->active = TRUE;
@@ -5173,7 +5173,7 @@ reject:
      * rather than only the last: the abort below is irreversible for the scene,
      * so the branch that caused it is the one worth keeping. A later reject is
      * a consequence of the first one, not independent evidence. */
-    gNdsRendererStageOwnerRejectCount++;
+    NDS_DIAG(gNdsRendererStageOwnerRejectCount++);
     gNdsRendererStageOwnerLastRejectReason = task36_reject_reason;
     if (gNdsRendererStageOwnerFirstRejectReason == 0u)
     {
@@ -5216,7 +5216,7 @@ reject:
      */
     if (gNdsRendererBattleStaticTextureArmCount != 0u)
     {
-        gNdsRendererStageOwnerPostArmRejectCount++;
+        NDS_DIAG(gNdsRendererStageOwnerPostArmRejectCount++);
     }
     return FALSE;
 }
@@ -5302,7 +5302,7 @@ ndsRendererAdapterCommitNativeStageDisplay(
                     task103_commit_start - task103_mat_start;
                 gNdsTask103CommitTicks +=
                     cpuGetTiming() - task103_commit_start;
-                gNdsTask103CommitCount++;
+                NDS_DIAG(gNdsTask103CommitCount++);
                 if (task103_committed == FALSE)
                 {
                     ndsRendererFinishNativeStageOwner();
@@ -5424,7 +5424,7 @@ static void ndsR2ChainProbe(DObj *dobj, volatile NDSR2ChainProbe *out, u32 pass)
     u32 status = NDS_R2_CHAIN_OK;
     u32 first_bad = 0u;
 
-    gNdsR2ChainProbeCount++;
+    NDS_DIAG(gNdsR2ChainProbeCount++);
     for (mobj = (dobj != NULL) ? dobj->mobj : NULL; mobj != NULL;
          mobj = mobj->next)
     {
@@ -5467,7 +5467,7 @@ static void ndsR2ChainProbe(DObj *dobj, volatile NDSR2ChainProbe *out, u32 pass)
 
     if (status != NDS_R2_CHAIN_OK)
     {
-        gNdsR2ChainProbeInvalidCount++;
+        NDS_DIAG(gNdsR2ChainProbeInvalidCount++);
         if (gNdsR2ChainProbeFirstBadPass == 0u)
         {
             gNdsR2ChainProbeFirstBadPass = pass;
@@ -5725,7 +5725,7 @@ static sb32 ndsRendererAdapterPrepareNativeMaterials(
              * cannot both be true. This counter is what tells them apart: a run
              * that is freeze-free with this still at zero proves the guard was
              * not the cure and the real cause is still live. */
-            gNdsR2MaterialWalkBoundHits++;
+            NDS_DIAG(gNdsR2MaterialWalkBoundHits++);
             /* Report what the snapshot holds so the caller rolls back exactly
              * the entries this walk mutated, no more and no fewer. */
             *out_count = count;
@@ -5750,20 +5750,20 @@ static sb32 ndsRendererAdapterPrepareNativeMaterials(
                 (keys[count].hash == hash))
             {
 #if NDS_TICK_HUD
-                gNdsR2MatKeySkip++;
+                NDS_DIAG(gNdsR2MatKeySkip++);
 #endif
                 count++;
                 continue;
             }
 #if NDS_TICK_HUD
-            gNdsR2MatKeyBuild++;
+            NDS_DIAG(gNdsR2MatKeyBuild++);
             if (keys[count].mobj != mobj)
             {
-                gNdsR2MatKeyMissIdentity++;
+                NDS_DIAG(gNdsR2MatKeyMissIdentity++);
             }
             else
             {
-                gNdsR2MatKeyMissInputs++;
+                NDS_DIAG(gNdsR2MatKeyMissInputs++);
             }
 #endif
         }
@@ -6277,7 +6277,7 @@ static sb32 ndsRendererAdapterPrepareMaterialSegment(
          * materials. gNdsTaskmanGraphicsHeapOverflowCount cannot see it: the
          * pointer never passes `end`, so the sampler has nothing to report.
          * The four-CPU stress harness asserts this at 0. */
-        gNdsTaskmanGraphicsHeapNoRoomCount++;
+        NDS_DIAG(gNdsTaskmanGraphicsHeapNoRoomCount++);
         return FALSE;
     }
 
@@ -6423,40 +6423,40 @@ static void ndsEffectPacketVerdictRecord(const Gfx *dl)
         }
         if (sNdsEffectPacketGeomHashSeen[i] == gNdsEffectPacketGeomHash)
         {
-            gNdsEffectPacketGeomMatchCount++;
+            NDS_DIAG(gNdsEffectPacketGeomMatchCount++);
         }
         else
         {
-            gNdsEffectPacketGeomVariantCount++;
+            NDS_DIAG(gNdsEffectPacketGeomVariantCount++);
         }
         if (sNdsEffectPacketGeomWordsSeen[i] != gNdsEffectPacketGeomWords)
         {
             /* Separate from the hash verdict on purpose: a stream that changed
              * LENGTH is a different failure from one that changed VALUES, and
              * only the second is a candidate for a patch table. */
-            gNdsEffectPacketGeomWordVariantCount++;
+            NDS_DIAG(gNdsEffectPacketGeomWordVariantCount++);
         }
         if (sNdsEffectPacketColorHashSeen[i] == gNdsEffectPacketColorHash)
         {
-            gNdsEffectPacketColorMatchCount++;
+            NDS_DIAG(gNdsEffectPacketColorMatchCount++);
         }
         else
         {
-            gNdsEffectPacketColorVariantCount++;
+            NDS_DIAG(gNdsEffectPacketColorVariantCount++);
         }
         if (sNdsEffectPacketMatrixHashSeen[i] == gNdsEffectPacketMatrixHash)
         {
-            gNdsEffectPacketMatrixMatchCount++;
+            NDS_DIAG(gNdsEffectPacketMatrixMatchCount++);
         }
         else
         {
-            gNdsEffectPacketMatrixVariantCount++;
+            NDS_DIAG(gNdsEffectPacketMatrixVariantCount++);
         }
         return;
     }
     if (count >= NDS_EFFECT_PACKET_TEMPLATE_CAPACITY)
     {
-        gNdsEffectPacketTableOverflow++;
+        NDS_DIAG(gNdsEffectPacketTableOverflow++);
         return;
     }
     sNdsEffectPacketKey[count] = dl;
@@ -6936,7 +6936,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
             (texture_id_curr < 0) || (texture_id_curr > 1) ||
             (texture_id_next < 0) || (texture_id_next > 1))
         {
-            gNdsEntryEffectNativeFallbackCount++;
+            NDS_DIAG(gNdsEntryEffectNativeFallbackCount++);
             return FALSE;
         }
         native_materials = &common_effect_material;
@@ -7187,7 +7187,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
             candidate = TRUE;
             if ((root_offset == 0x0440u) || (root_offset == 0x0518u))
             {
-                gNdsMBallRaysCandidateCount++;
+                NDS_DIAG(gNdsMBallRaysCandidateCount++);
             }
         }
     }
@@ -7222,7 +7222,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
             (texture_id_curr < 0) || (texture_id_curr > texture_id_max) ||
             (texture_id_next < 0) || (texture_id_next > texture_id_max))
         {
-            gNdsEntryEffectNativeFallbackCount++;
+            NDS_DIAG(gNdsEntryEffectNativeFallbackCount++);
             return FALSE;
         }
         native_materials = &common_effect_material;
@@ -7244,7 +7244,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
             (ndsRendererAdapterBuildNativeMaterialSnapshot(
                  mobj, &link_special2_material, FALSE, NULL, NULL) == FALSE))
         {
-            gNdsEntryEffectNativeFallbackCount++;
+            NDS_DIAG(gNdsEntryEffectNativeFallbackCount++);
             return FALSE;
         }
         native_materials = &link_special2_material;
@@ -7264,14 +7264,14 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
                 (ndsRendererAdapterBuildNativeMaterialSnapshot(
                      mobj, &link_spin_materials[i], FALSE, NULL, NULL) == FALSE))
             {
-                gNdsEntryEffectNativeFallbackCount++;
+                NDS_DIAG(gNdsEntryEffectNativeFallbackCount++);
                 return FALSE;
             }
             mobj = mobj->next;
         }
         if (mobj != NULL)
         {
-            gNdsEntryEffectNativeFallbackCount++;
+            NDS_DIAG(gNdsEntryEffectNativeFallbackCount++);
             return FALSE;
         }
         native_materials = link_spin_materials;
@@ -7298,7 +7298,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
         }
         else
         {
-            gNdsEntryEffectNativeFallbackCount++;
+            NDS_DIAG(gNdsEntryEffectNativeFallbackCount++);
             return FALSE;
         }
 
@@ -7320,9 +7320,9 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
                  * single loud NO_PROGRAM guard publish this one event. */
                 if (is_mballrays != FALSE)
                 {
-                    gNdsMBallRaysMaterialRejectCount++;
+                    NDS_DIAG(gNdsMBallRaysMaterialRejectCount++);
                 }
-                gNdsEntryEffectNativeFallbackCount++;
+                NDS_DIAG(gNdsEntryEffectNativeFallbackCount++);
                 return FALSE;
             }
             mobj = mobj->next;
@@ -7331,9 +7331,9 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
         {
             if (is_mballrays != FALSE)
             {
-                gNdsMBallRaysMaterialRejectCount++;
+                NDS_DIAG(gNdsMBallRaysMaterialRejectCount++);
             }
-            gNdsEntryEffectNativeFallbackCount++;
+            NDS_DIAG(gNdsEntryEffectNativeFallbackCount++);
             return FALSE;
         }
         native_materials = efcommon3_materials;
@@ -7359,7 +7359,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
                  dobj->mobj, &common_effect_material, FALSE, NULL, NULL) == FALSE) ||
             (common_effect_material.effects != expected_effects))
         {
-            gNdsEntryEffectNativeFallbackCount++;
+            NDS_DIAG(gNdsEntryEffectNativeFallbackCount++);
             /* Material rejection status packs source flags in the low half
              * and prepared effects in the high half; all values come from
              * the CPU, not a stale debugger read of the task stack. */
@@ -7417,7 +7417,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
     }
     if ((projection_ptr == NULL) || (modelview_ptr == NULL))
     {
-        gNdsEntryEffectNativeFallbackCount++;
+        NDS_DIAG(gNdsEntryEffectNativeFallbackCount++);
         ndsStageRejectNativeRender(dobj, dl,
             NDS_NATIVE_FAILURE_REJECTED_PROGRAM, NULL);
         return FALSE;
@@ -7439,7 +7439,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
             native_material_count, native_texture_variant,
             &config, &stats) == FALSE)
     {
-        gNdsEntryEffectNativeFallbackCount++;
+        NDS_DIAG(gNdsEntryEffectNativeFallbackCount++);
         ndsStageRejectNativeRender(dobj, dl,
             NDS_NATIVE_FAILURE_REJECTED_PROGRAM, &stats);
         return FALSE;
@@ -7459,12 +7459,12 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
         {
             if (root_offset == lab_roots[r])
             {
-                gNdsLabArwingRootCensus[r][0]++;
-                gNdsLabArwingRootCensus[r][1] += lab_t[1] - lab_t[0];
-                gNdsLabArwingRootCensus[r][2] += lab_t[3] - lab_t[2];
+                NDS_DIAG(gNdsLabArwingRootCensus[r][0]++);
+                NDS_DIAG(gNdsLabArwingRootCensus[r][1] += lab_t[1] - lab_t[0]);
+                NDS_DIAG(gNdsLabArwingRootCensus[r][2] += lab_t[3] - lab_t[2]);
                 gNdsLabArwingRootCensus[r][3] +=
                     (lab_t[2] - lab_t[1]) + (lab_t[4] - lab_t[3]);
-                gNdsLabArwingRootCensus[r][4] += stats.hardware_triangle_count;
+                NDS_DIAG(gNdsLabArwingRootCensus[r][4] += stats.hardware_triangle_count);
                 break;
             }
         }
@@ -7619,7 +7619,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     own = cpuGetTiming() - idle;
     if ((own >= 0x100000u) || ((idle - start) >= 0x100000u))
     {
-        gNdsLabStageDLCensusOutliers++;
+        NDS_DIAG(gNdsLabStageDLCensusOutliers++);
         return;
     }
     if ((owner != NULL) && ((id == 1012u) || (id == 1013u)) &&
@@ -7873,7 +7873,7 @@ static void ndsStageDLRouteRecord(const Gfx *dl, NDSRelocLoadedFile *loaded,
     }
     if ((slot->dl != dl) || (slot->route != route))
     {
-        gNdsStageDLFastLaneFills++;
+        NDS_DIAG(gNdsStageDLFastLaneFills++);
     }
     slot->dl = dl;
     slot->loaded = loaded;
@@ -8267,9 +8267,9 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
     {
         u32 lab_now = cpuGetTiming();
 
-        gNdsLabItemAcc[4] += lab_now - lab_item_mark;
-        gNdsLabItemAcc[8]++;
-        gNdsLabItemAcc[12] += gNdsLabPimAcc[1];
+        NDS_DIAG(gNdsLabItemAcc[4] += lab_now - lab_item_mark);
+        NDS_DIAG(gNdsLabItemAcc[8]++);
+        NDS_DIAG(gNdsLabItemAcc[12] += gNdsLabPimAcc[1]);
         gNdsLabItemAcc[13] += gNdsLabPimAcc[0] + gNdsLabPimAcc[2] +
                               gNdsLabPimAcc[3];
         lab_item_mark = lab_now;
@@ -8314,8 +8314,8 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
          (route_kind == NDS_SDL_ROUTE_BAKED_ROOM)) &&
         (ndsNativeBakedRootOffscreen((const void *)(uintptr_t)route->root,
                                      &config) != FALSE);
-    gNdsLabBakedAcc[0] += cpuGetTiming() - lab_offscreen;
-    gNdsLabBakedAcc[15] += (lab_culled != FALSE) ? 1u : 0u;
+    NDS_DIAG(gNdsLabBakedAcc[0] += cpuGetTiming() - lab_offscreen);
+    NDS_DIAG(gNdsLabBakedAcc[15] += (lab_culled != FALSE) ? 1u : 0u);
     if (lab_culled != FALSE)
 #else
     if (((route_kind == NDS_SDL_ROUTE_BAKED) ||
@@ -8326,7 +8326,7 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
 #endif
     {
         gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
-        gNdsStageDLFastLaneHits++;
+        NDS_DIAG(gNdsStageDLFastLaneHits++);
         return TRUE;
     }
 #endif
@@ -8337,7 +8337,7 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
         (ndsNativeCastleBumperOffscreen(&config) != FALSE))
     {
         gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
-        gNdsStageDLFastLaneHits++;
+        NDS_DIAG(gNdsStageDLFastLaneHits++);
         return TRUE;
     }
 #endif
@@ -8346,7 +8346,7 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
 #endif
     render_stats = &sNdsRendererAdapterStagePersistentStats;
     ndsFighterDLDrawResetRuntimeRendererStats(render_stats);
-    gNdsStageGCDrawAllLoopHardwareCarrySeedCount++;
+    NDS_DIAG(gNdsStageGCDrawAllLoopHardwareCarrySeedCount++);
 
 #if NDS_R2_IMPACT_WAVE_NATIVE
     if (route_kind == NDS_SDL_ROUTE_VISUAL)
@@ -8369,19 +8369,19 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
             sNdsRendererAdapterVisualEffectTemplate, &config, render_stats);
         if (handled != FALSE)
         {
-            gNdsVisualEffectNativeDrawCount++;
+            NDS_DIAG(gNdsVisualEffectNativeDrawCount++);
         }
         else
         {
-            gNdsVisualEffectNativeDeclineCount++;
+            NDS_DIAG(gNdsVisualEffectNativeDeclineCount++);
             ndsStageRejectNativeRender(dobj, dl,
                 NDS_NATIVE_FAILURE_REJECTED_PROGRAM, render_stats);
             /* Recorded with its own reason, as the body settles it. */
             handled = TRUE;
         }
         gNdsEffectDLSubmitOtherModeOut = render_stats->othermode_l;
-        gNdsEffectDLSubmitCount++;
-        gNdsEffectDLPublishCount++;
+        NDS_DIAG(gNdsEffectDLSubmitCount++);
+        NDS_DIAG(gNdsEffectDLPublishCount++);
     }
     else
 #endif
@@ -8391,11 +8391,11 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
             loaded->data, loaded->data_size, &config, render_stats);
         if (handled != FALSE)
         {
-            gNdsChargeShotDrawCount++;
+            NDS_DIAG(gNdsChargeShotDrawCount++);
         }
         else
         {
-            gNdsChargeShotSubmitFailCount++;
+            NDS_DIAG(gNdsChargeShotSubmitFailCount++);
         }
     }
 #if NDS_P2_STAGE_CASTLE
@@ -8407,11 +8407,11 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
             render_stats);
         if (handled != FALSE)
         {
-            gNdsCastleBumperDrawCount++;
+            NDS_DIAG(gNdsCastleBumperDrawCount++);
         }
         else
         {
-            gNdsCastleBumperSubmitFailCount++;
+            NDS_DIAG(gNdsCastleBumperSubmitFailCount++);
         }
     }
 #endif
@@ -8445,7 +8445,7 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
             mobj = mobj->next;
         }
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
-        gNdsLabBakedAcc[1] += cpuGetTiming() - lab_prep;
+        NDS_DIAG(gNdsLabBakedAcc[1] += cpuGetTiming() - lab_prep);
 #endif
         handled = (i == slots) ?
             ndsRendererSubmitNativeBaked(
@@ -8455,11 +8455,11 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
             FALSE;
         if (handled != FALSE)
         {
-            gNdsItemBakedDrawCount++;
+            NDS_DIAG(gNdsItemBakedDrawCount++);
         }
         else
         {
-            gNdsItemBakedSubmitFailCount++;
+            NDS_DIAG(gNdsItemBakedSubmitFailCount++);
         }
     }
     else
@@ -8504,7 +8504,7 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
         {
             u32 lab_now = cpuGetTiming();
 
-            gNdsLabItemAcc[5] += lab_now - lab_item_mark;
+            NDS_DIAG(gNdsLabItemAcc[5] += lab_now - lab_item_mark);
             lab_item_mark = lab_now;
         }
 #endif
@@ -8521,7 +8521,7 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
         {
             u32 lab_now = cpuGetTiming();
 
-            gNdsLabItemAcc[6] += lab_now - lab_item_mark;
+            NDS_DIAG(gNdsLabItemAcc[6] += lab_now - lab_item_mark);
             lab_item_mark = lab_now;
         }
 #endif
@@ -8543,7 +8543,7 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
     }
     ndsTaskmanSampleGraphicsHeap();
     gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
-    gNdsStageGCDrawAllLoopHardwareCarryCaptureCount++;
+    NDS_DIAG(gNdsStageGCDrawAllLoopHardwareCarryCaptureCount++);
     gNdsStageGCDrawAllLoopHardwareTriangleCount +=
         render_stats->hardware_triangle_count;
     gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount +=
@@ -8580,11 +8580,11 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
                 render_stats->hardware_texture_height;
         }
     }
-    gNdsStageDLFastLaneHits++;
+    NDS_DIAG(gNdsStageDLFastLaneHits++);
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
     if (lab_item != FALSE)
     {
-        gNdsLabItemAcc[7] += cpuGetTiming() - lab_item_mark;
+        NDS_DIAG(gNdsLabItemAcc[7] += cpuGetTiming() - lab_item_mark);
     }
 #endif
     return TRUE;
@@ -8695,7 +8695,7 @@ static void ndsRendererAdapterSubmitStageDLImpl(DObj *dobj, const Gfx *dl,
             return;
         }
     }
-    gNdsStageDLBodyCalls++;
+    NDS_DIAG(gNdsStageDLBodyCalls++);
     ndsRendererAdapterSubmitStageDLBody(dobj, dl, camera_gobj,
                                         initial_geometry_mode);
 }
@@ -9049,7 +9049,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                     (u32)rebirth_offset, &rebirth_config,
                     rebirth_render_stats) != FALSE)
             {
-                gNdsRebirthHaloNativeDrawCount++;
+                NDS_DIAG(gNdsRebirthHaloNativeDrawCount++);
                 if (rebirth_offset == 0x2378u)
                 {
                     /* Same DObj, same source matrix, adjacent source order.
@@ -9059,12 +9059,12 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                             0x2a88u, &rebirth_config,
                             rebirth_render_stats) != FALSE)
                     {
-                        gNdsRebirthHaloNativeDrawCount++;
+                        NDS_DIAG(gNdsRebirthHaloNativeDrawCount++);
                         sNdsRendererAdapterRebirthHaloSkipSecondChildList = TRUE;
                     }
                     else
                     {
-                        gNdsRebirthHaloNativeFallbackCount++;
+                        NDS_DIAG(gNdsRebirthHaloNativeFallbackCount++);
                     }
                 }
                 gNdsStageGCDrawAllLoopHardwareTriangleCount +=
@@ -9089,7 +9089,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
 #endif
                 return;
             }
-            gNdsRebirthHaloNativeFallbackCount++;
+            NDS_DIAG(gNdsRebirthHaloNativeFallbackCount++);
 #if NDS_RENDERER_HW_TRIANGLES
             ndsTaskmanSampleGraphicsHeap();
             gSYTaskmanGraphicsHeap.ptr = rebirth_saved_graphics_heap_ptr;
@@ -9421,7 +9421,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                          * reject below record it, with a counter that says
                          * WHY rather than leaving it indistinguishable from
                          * a GBumper the submit refused. */
-                        gNdsCastleBumperForeignKindCount++;
+                        NDS_DIAG(gNdsCastleBumperForeignKindCount++);
                     }
                     else if ((dobj->mobj != NULL) &&
                              (dobj->mobj->next == NULL) &&
@@ -9868,7 +9868,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                 }
                 else
                 {
-                    gNdsThunderGroundSnapshotFailCount++;
+                    NDS_DIAG(gNdsThunderGroundSnapshotFailCount++);
                 }
             }
             if (ground_step > gNdsThunderGroundCandidateStep)
@@ -9941,7 +9941,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                     }
                     else
                     {
-                        gNdsThunderJoltFxSnapshotFailCount++;
+                        NDS_DIAG(gNdsThunderJoltFxSnapshotFailCount++);
                     }
                 }
             }
@@ -10036,7 +10036,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                     }
                     else
                     {
-                        gNdsDamageSlashSnapshotFailCount++;
+                        NDS_DIAG(gNdsDamageSlashSnapshotFailCount++);
                     }
                 }
             }
@@ -10098,7 +10098,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                             /* Census says this cannot happen today.  If it
                              * ever does, say WHY rather than leave it
                              * indistinguishable from a submit refusal. */
-                            gNdsLinkBombForeignKindCount++;
+                            NDS_DIAG(gNdsLinkBombForeignKindCount++);
                         }
                         /* The root ALONE discriminates the two lists, so this
                          * arm does not gate on the DL head.  The source's own
@@ -10255,7 +10255,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                         /* The census says this cannot happen today.  If it ever
                          * does, say WHY rather than leave it indistinguishable
                          * from a submit refusal. */
-                        gNdsYamabukiMarumineForeignKindCount++;
+                        NDS_DIAG(gNdsYamabukiMarumineForeignKindCount++);
                     }
                     else
                     {
@@ -10344,7 +10344,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                     gNdsYamabukiGluckyItemKind = (u32)glucky_ip->kind;
                     if (glucky_ip->kind != nITKindGLucky)
                     {
-                        gNdsYamabukiGluckyForeignKindCount++;
+                        NDS_DIAG(gNdsYamabukiGluckyForeignKindCount++);
                     }
                     else
                     {
@@ -10413,7 +10413,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                     gNdsYamabukiPorygonItemKind = (u32)porygon_ip->kind;
                     if (porygon_ip->kind != nITKindPorygon)
                     {
-                        gNdsYamabukiPorygonForeignKindCount++;
+                        NDS_DIAG(gNdsYamabukiPorygonForeignKindCount++);
                     }
                     else
                     {
@@ -10486,7 +10486,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                     gNdsYamabukiHitokageItemKind = (u32)hitokage_ip->kind;
                     if (hitokage_ip->kind != nITKindHitokage)
                     {
-                        gNdsYamabukiHitokageForeignKindCount++;
+                        NDS_DIAG(gNdsYamabukiHitokageForeignKindCount++);
                     }
                     else
                     {
@@ -10536,7 +10536,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                                     }
                                     else
                                     {
-                                        gNdsYamabukiHitokageSnapshotFailCount++;
+                                        NDS_DIAG(gNdsYamabukiHitokageSnapshotFailCount++);
                                     }
                                 }
                             }
@@ -10571,7 +10571,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                     gNdsYamabukiFushigibanaItemKind = (u32)fushigibana_ip->kind;
                     if (fushigibana_ip->kind != nITKindFushigibana)
                     {
-                        gNdsYamabukiFushigibanaForeignKindCount++;
+                        NDS_DIAG(gNdsYamabukiFushigibanaForeignKindCount++);
                     }
                     else
                     {
@@ -10621,7 +10621,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                                     }
                                     else
                                     {
-                                        gNdsYamabukiFushigibanaSnapshotFailCount++;
+                                        NDS_DIAG(gNdsYamabukiFushigibanaSnapshotFailCount++);
                                     }
                                 }
                             }
@@ -10660,7 +10660,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                     gNdsItemStarKind = (u32)ip->kind;
                     if (ip->kind != nITKindStar)
                     {
-                        gNdsItemStarForeignKindCount++;
+                        NDS_DIAG(gNdsItemStarForeignKindCount++);
                     }
                     else if ((dobj->mobj != NULL) &&
                              (dobj->mobj->next != NULL) &&
@@ -10714,7 +10714,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                                 }
                                 else
                                 {
-                                    gNdsItemStarSnapshotFailCount++;
+                                    NDS_DIAG(gNdsItemStarSnapshotFailCount++);
                                 }
                             }
                         }
@@ -10752,7 +10752,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                         gNdsItemSwordKind = (u32)ip->kind;
                         if (ip->kind != nITKindSword)
                         {
-                            gNdsItemSwordForeignKindCount++;
+                            NDS_DIAG(gNdsItemSwordForeignKindCount++);
                         }
                         else if (dobj->mobj == NULL)
                         {
@@ -10822,7 +10822,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                     gNdsItemHammerKind = (u32)ip->kind;
                     if (ip->kind != nITKindHammer)
                     {
-                        gNdsItemHammerForeignKindCount++;
+                        NDS_DIAG(gNdsItemHammerForeignKindCount++);
                     }
                     else if (dobj->mobj == NULL)
                     {
@@ -10922,7 +10922,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                         if ((mball_is_effect == FALSE) &&
                             (ip->kind != nITKindMBall))
                         {
-                            gNdsItemMBallForeignKindCount++;
+                            NDS_DIAG(gNdsItemMBallForeignKindCount++);
                         }
                         else if ((loaded->data != NULL) &&
                                  (loaded->data_size >= NDS_NATIVE_ITEM_MBALL_FILE_END))
@@ -10995,7 +10995,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                                 }
                                 else
                                 {
-                                    gNdsItemMBallSnapshotFailCount++;
+                                    NDS_DIAG(gNdsItemMBallSnapshotFailCount++);
                                 }
                             }
                         }
@@ -11070,7 +11070,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                     item_kirbystar_native_candidate = TRUE;
                     if (kirbystar_is_effect != FALSE)
                     {
-                        gNdsItemKirbyStarFromEffectCount++;
+                        NDS_DIAG(gNdsItemKirbyStarFromEffectCount++);
                     }
                 }
             }
@@ -11106,7 +11106,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                     }
                     else if (ip->kind != nITKindGShell)
                     {
-                        gNdsItemGShellForeignKindCount++;
+                        NDS_DIAG(gNdsItemGShellForeignKindCount++);
                     }
                     else if ((dobj->mobj != NULL) &&
                              (dobj->mobj->next == NULL) &&
@@ -11148,7 +11148,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                             }
                             else
                             {
-                                gNdsItemGShellSnapshotFailCount++;
+                                NDS_DIAG(gNdsItemGShellSnapshotFailCount++);
                             }
                         }
                     }
@@ -11185,7 +11185,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                     }
                     else if (ip->kind != nITKindRShell)
                     {
-                        gNdsItemRShellForeignKindCount++;
+                        NDS_DIAG(gNdsItemRShellForeignKindCount++);
                     }
                     else if ((dobj->mobj != NULL) &&
                              (dobj->mobj->next == NULL) &&
@@ -11227,7 +11227,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                             }
                             else
                             {
-                                gNdsItemRShellSnapshotFailCount++;
+                                NDS_DIAG(gNdsItemRShellSnapshotFailCount++);
                             }
                         }
                     }
@@ -11264,7 +11264,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                         gNdsItemBatKind = (u32)ip->kind;
                         if (ip->kind != nITKindBat)
                         {
-                            gNdsItemBatForeignKindCount++;
+                            NDS_DIAG(gNdsItemBatForeignKindCount++);
                         }
                         else if ((dobj->mobj == NULL) &&
                                  (loaded->data != NULL) &&
@@ -11333,7 +11333,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                         gNdsItemCapsuleKind = (u32)ip->kind;
                         if (ip->kind != nITKindCapsule)
                         {
-                            gNdsItemCapsuleForeignKindCount++;
+                            NDS_DIAG(gNdsItemCapsuleForeignKindCount++);
                         }
                         else if ((dobj->mobj == NULL) &&
                                  (loaded->data != NULL) &&
@@ -11384,7 +11384,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             if ((sNdsRendererAdapterItemSubmitActive != FALSE) &&
                 (item_capsule_native_candidate == FALSE))
             {
-                gNdsItemCapsuleSubmitFailCount++;
+                NDS_DIAG(gNdsItemCapsuleSubmitFailCount++);
             }
         }
     }
@@ -11409,7 +11409,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                     gNdsItemBombHeiKind = (u32)ip->kind;
                     if (ip->kind != nITKindBombHei)
                     {
-                        gNdsItemBombHeiForeignKindCount++;
+                        NDS_DIAG(gNdsItemBombHeiForeignKindCount++);
                     }
                     else if ((dobj->mobj != NULL) &&
                              (dobj->mobj->next == NULL) &&
@@ -11451,7 +11451,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                             }
                             else
                             {
-                                gNdsItemBombHeiSnapshotFailCount++;
+                                NDS_DIAG(gNdsItemBombHeiSnapshotFailCount++);
                             }
                         }
                     }
@@ -11484,7 +11484,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                     gNdsItemLGunKind = (u32)ip->kind;
                     if (ip->kind != nITKindLGun)
                     {
-                        gNdsItemLGunForeignKindCount++;
+                        NDS_DIAG(gNdsItemLGunForeignKindCount++);
                     }
                     else if ((dobj->mobj == NULL) &&
                              (loaded->data != NULL) &&
@@ -11549,7 +11549,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                     gNdsItemHarisenKind = (u32)ip->kind;
                     if (ip->kind != nITKindHarisen)
                     {
-                        gNdsItemHarisenForeignKindCount++;
+                        NDS_DIAG(gNdsItemHarisenForeignKindCount++);
                     }
                     else if ((dobj->mobj == NULL) &&
                              (loaded->data != NULL) &&
@@ -11603,7 +11603,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                     gNdsItemHeartKind = (u32)ip->kind;
                     if (ip->kind != nITKindHeart)
                     {
-                        gNdsItemHeartForeignKindCount++;
+                        NDS_DIAG(gNdsItemHeartForeignKindCount++);
                     }
                     else if ((dobj->mobj == NULL) &&
                              (loaded->data != NULL) &&
@@ -11668,7 +11668,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                         gNdsItemStarRodKind = (u32)ip->kind;
                         if (ip->kind != nITKindStarRod)
                         {
-                            gNdsItemStarRodForeignKindCount++;
+                            NDS_DIAG(gNdsItemStarRodForeignKindCount++);
                         }
                         else if ((dobj->mobj == NULL) &&
                                  (loaded->data != NULL) &&
@@ -11742,7 +11742,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                         gNdsItemFFlowerKind = (u32)ip->kind;
                         if (ip->kind != nITKindFFlower)
                         {
-                            gNdsItemFFlowerForeignKindCount++;
+                            NDS_DIAG(gNdsItemFFlowerForeignKindCount++);
                         }
                         else if ((loaded->data != NULL) &&
                                  (loaded->data_size >= NDS_NATIVE_ITEM_FFLOWER_FILE_END))
@@ -11804,7 +11804,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                                 }
                                 else
                                 {
-                                    gNdsItemFFlowerSnapshotFailCount++;
+                                    NDS_DIAG(gNdsItemFFlowerSnapshotFailCount++);
                                 }
                             }
                         }
@@ -11842,7 +11842,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                         gNdsItemMSBombKind = (u32)ip->kind;
                         if (ip->kind != nITKindMSBomb)
                         {
-                            gNdsItemMSBombForeignKindCount++;
+                            NDS_DIAG(gNdsItemMSBombForeignKindCount++);
                         }
                         else if ((dobj->mobj == NULL) &&
                                  (loaded->data != NULL) &&
@@ -11916,7 +11916,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                     gNdsItemNBumperKind = (u32)ip->kind;
                     if (ip->kind != nITKindNBumper)
                     {
-                        gNdsItemNBumperForeignKindCount++;
+                        NDS_DIAG(gNdsItemNBumperForeignKindCount++);
                     }
                     else if ((dobj->mobj != NULL) &&
                              (dobj->mobj->next == NULL) &&
@@ -11959,7 +11959,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                             }
                             else
                             {
-                                gNdsItemNBumperSnapshotFailCount++;
+                                NDS_DIAG(gNdsItemNBumperSnapshotFailCount++);
                             }
                         }
                     }
@@ -11992,7 +11992,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                     gNdsItemBoxKind = (u32)ip->kind;
                     if (ip->kind != nITKindBox)
                     {
-                        gNdsItemBoxForeignKindCount++;
+                        NDS_DIAG(gNdsItemBoxForeignKindCount++);
                     }
                     else if ((dobj->mobj == NULL) &&
                              (loaded->data != NULL) &&
@@ -12046,7 +12046,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                     gNdsItemTaruKind = (u32)ip->kind;
                     if (ip->kind != nITKindTaru)
                     {
-                        gNdsItemTaruForeignKindCount++;
+                        NDS_DIAG(gNdsItemTaruForeignKindCount++);
                     }
                     else if ((dobj->mobj == NULL) &&
                              (loaded->data != NULL) &&
@@ -12099,7 +12099,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                     gNdsItemEggKind = (u32)ip->kind;
                     if (ip->kind != nITKindEgg)
                     {
-                        gNdsItemEggForeignKindCount++;
+                        NDS_DIAG(gNdsItemEggForeignKindCount++);
                     }
                     else if ((dobj->mobj == NULL) &&
                              (loaded->data != NULL) &&
@@ -12147,7 +12147,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                     gNdsItemIwarkKind = (u32)ip->kind;
                     if (ip->kind != nITKindIwark)
                     {
-                        gNdsItemIwarkForeignKindCount++;
+                        NDS_DIAG(gNdsItemIwarkForeignKindCount++);
                     }
                     else if ((dobj->mobj == NULL) &&
                              (loaded->data != NULL) &&
@@ -12208,7 +12208,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                     gNdsItemTomatoKind = (u32)tomato_ip->kind;
                     if (tomato_ip->kind != nITKindTomato)
                     {
-                        gNdsItemTomatoForeignKindCount++;
+                        NDS_DIAG(gNdsItemTomatoForeignKindCount++);
                     }
                     else
                     {
@@ -12349,18 +12349,18 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             &state, &sNdsRendererAdapterStagePersistentState);
 #endif
         inherited_segment = (state.segment_e_base != NULL) ? TRUE : FALSE;
-        gNdsStageGCDrawAllLoopHardwareCarrySeedCount++;
+        NDS_DIAG(gNdsStageGCDrawAllLoopHardwareCarrySeedCount++);
         if (inherited_texture != FALSE)
         {
-            gNdsStageGCDrawAllLoopHardwareCarryTextureSeedCount++;
+            NDS_DIAG(gNdsStageGCDrawAllLoopHardwareCarryTextureSeedCount++);
         }
         if (inherited_tile != FALSE)
         {
-            gNdsStageGCDrawAllLoopHardwareCarryTileSeedCount++;
+            NDS_DIAG(gNdsStageGCDrawAllLoopHardwareCarryTileSeedCount++);
         }
         if (inherited_segment != FALSE)
         {
-            gNdsStageGCDrawAllLoopHardwareCarrySegmentSeedCount++;
+            NDS_DIAG(gNdsStageGCDrawAllLoopHardwareCarrySegmentSeedCount++);
         }
     }
     NDS_LAB_SDL_MARK(4);
@@ -12450,7 +12450,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
     }
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 1)
-    gNdsRendererProfileMaterialTicks += cpuGetTiming() - step_start;
+    NDS_DIAG(gNdsRendererProfileMaterialTicks += cpuGetTiming() - step_start);
     step_start = cpuGetTiming();
 #endif
     ndsRendererAdapterPrepareInitialMatrices(dobj,
@@ -12472,7 +12472,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
     }
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 1)
-    gNdsRendererProfileMatrixTicks += cpuGetTiming() - step_start;
+    NDS_DIAG(gNdsRendererProfileMatrixTicks += cpuGetTiming() - step_start);
 #endif
 
     NDS_LAB_SDL_MARK(1);
@@ -12622,11 +12622,11 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             rebirth_halo_root_offset, &config, render_stats);
         if (rebirth_halo_native_handled != FALSE)
         {
-            gNdsRebirthHaloNativeDrawCount++;
+            NDS_DIAG(gNdsRebirthHaloNativeDrawCount++);
         }
         else
         {
-            gNdsRebirthHaloNativeFallbackCount++;
+            NDS_DIAG(gNdsRebirthHaloNativeFallbackCount++);
         }
     }
 #endif
@@ -12662,11 +12662,11 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             &inishie_pakkun_material, &pakkun_config, render_stats);
         if (inishie_pakkun_native_handled != FALSE)
         {
-            gNdsInishiePakkunDrawCount++;
+            NDS_DIAG(gNdsInishiePakkunDrawCount++);
         }
         else
         {
-            gNdsInishiePakkunSubmitFailCount++;
+            NDS_DIAG(gNdsInishiePakkunSubmitFailCount++);
         }
     }
     if (inishie_powblock_native_candidate != FALSE)
@@ -12695,13 +12695,13 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                 inishie_powblock_image_b, &powblock_config, render_stats);
         if (inishie_powblock_native_handled != FALSE)
         {
-            gNdsInishiePowblockDrawCount++;
+            NDS_DIAG(gNdsInishiePowblockDrawCount++);
         }
         else
         {
             /* No fallback: a refusal falls through to the loud NO_PROGRAM
              * record below, never to a generic route. */
-            gNdsInishiePowblockSubmitFailCount++;
+            NDS_DIAG(gNdsInishiePowblockSubmitFailCount++);
         }
     }
 #endif
@@ -12929,7 +12929,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             render_stats);
         if (charge_shot_native_handled != FALSE)
         {
-            gNdsChargeShotDrawCount++;
+            NDS_DIAG(gNdsChargeShotDrawCount++);
 #if NDS_RENDERER_PROFILE_LEVEL < 2
             ndsStageDLRouteRecord(dl, loaded, NDS_NATIVE_CHARGESHOT_ROOT,
                                   NDS_SDL_ROUTE_CHARGE_SHOT);
@@ -12937,7 +12937,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
         else
         {
-            gNdsChargeShotSubmitFailCount++;
+            NDS_DIAG(gNdsChargeShotSubmitFailCount++);
         }
     }
     if (thunder_jolt_native_candidate != FALSE)
@@ -12964,13 +12964,13 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             loaded->data, loaded->data_size, &jolt_config, render_stats);
         if (thunder_jolt_native_handled != FALSE)
         {
-            gNdsThunderJoltDrawCount++;
+            NDS_DIAG(gNdsThunderJoltDrawCount++);
         }
         else
         {
             /* No fallback: a refusal falls through to the loud NO_PROGRAM
              * record below, never to a generic route. */
-            gNdsThunderJoltSubmitFailCount++;
+            NDS_DIAG(gNdsThunderJoltSubmitFailCount++);
         }
     }
     if (thunder_ground_native_candidate != FALSE)
@@ -12998,11 +12998,11 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                 &ground_config, render_stats);
         if (thunder_ground_native_handled != FALSE)
         {
-            gNdsThunderGroundDrawCount++;
+            NDS_DIAG(gNdsThunderGroundDrawCount++);
         }
         else
         {
-            gNdsThunderGroundSubmitFailCount++;
+            NDS_DIAG(gNdsThunderGroundSubmitFailCount++);
         }
     }
     if (thunder_fx_native_candidate != FALSE)
@@ -13030,11 +13030,11 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                 &fx_config, render_stats);
         if (thunder_fx_native_handled != FALSE)
         {
-            gNdsThunderJoltFxDrawCount++;
+            NDS_DIAG(gNdsThunderJoltFxDrawCount++);
         }
         else
         {
-            gNdsThunderJoltFxSubmitFailCount++;
+            NDS_DIAG(gNdsThunderJoltFxSubmitFailCount++);
         }
     }
     if (damage_fly_mdust_native_seen != FALSE)
@@ -13072,11 +13072,11 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
         if (damage_slash_native_handled != FALSE)
         {
-            gNdsDamageSlashDrawCount++;
+            NDS_DIAG(gNdsDamageSlashDrawCount++);
         }
         else
         {
-            gNdsDamageSlashSubmitFailCount++;
+            NDS_DIAG(gNdsDamageSlashSubmitFailCount++);
             ndsStageRejectNativeRender(dobj, dl,
                 NDS_NATIVE_FAILURE_REJECTED_PROGRAM, render_stats);
         }
@@ -13112,7 +13112,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             &castle_bumper_material, &castle_bumper_config, render_stats);
         if (castle_bumper_native_handled != FALSE)
         {
-            gNdsCastleBumperDrawCount++;
+            NDS_DIAG(gNdsCastleBumperDrawCount++);
 #if (NDS_RENDERER_PROFILE_LEVEL < 2)
             if ((sNdsRendererAdapterEffectSubmitActive == FALSE) &&
                 (sNdsRendererAdapterStagePersistentActive != FALSE))
@@ -13124,7 +13124,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
         else
         {
-            gNdsCastleBumperSubmitFailCount++;
+            NDS_DIAG(gNdsCastleBumperSubmitFailCount++);
         }
     }
 #endif
@@ -13158,13 +13158,13 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                 render_stats);
         if (sector_laser_native_handled != FALSE)
         {
-            gNdsSectorLaserDrawCount++;
+            NDS_DIAG(gNdsSectorLaserDrawCount++);
         }
         else
         {
             /* No fallback: a refusal falls through to the loud NO_PROGRAM
              * record below, never to a generic route. */
-            gNdsSectorLaserSubmitFailCount++;
+            NDS_DIAG(gNdsSectorLaserSubmitFailCount++);
         }
     }
 #endif
@@ -13200,13 +13200,13 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             &link_bomb_config, render_stats);
         if (link_bomb_native_handled != FALSE)
         {
-            gNdsLinkBombDrawCount++;
+            NDS_DIAG(gNdsLinkBombDrawCount++);
         }
         else
         {
             /* No fallback: a refusal falls through to the loud NO_PROGRAM
              * record below, never to a generic route. */
-            gNdsLinkBombSubmitFailCount++;
+            NDS_DIAG(gNdsLinkBombSubmitFailCount++);
         }
     }
 #endif
@@ -13237,13 +13237,13 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             loaded->data, loaded->data_size, &marumine_config, render_stats);
         if (marumine_native_handled != FALSE)
         {
-            gNdsYamabukiMarumineDrawCount++;
+            NDS_DIAG(gNdsYamabukiMarumineDrawCount++);
         }
         else
         {
             /* No fallback: a refusal falls through to the loud NO_PROGRAM
              * record below, never to a generic route. */
-            gNdsYamabukiMarumineSubmitFailCount++;
+            NDS_DIAG(gNdsYamabukiMarumineSubmitFailCount++);
         }
     }
 #endif
@@ -13269,11 +13269,11 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             loaded->data, loaded->data_size, &glucky_config, render_stats);
         if (glucky_native_handled != FALSE)
         {
-            gNdsYamabukiGluckyDrawCount++;
+            NDS_DIAG(gNdsYamabukiGluckyDrawCount++);
         }
         else
         {
-            gNdsYamabukiGluckySubmitFailCount++;
+            NDS_DIAG(gNdsYamabukiGluckySubmitFailCount++);
         }
     }
 
@@ -13298,11 +13298,11 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             loaded->data, loaded->data_size, &porygon_config, render_stats);
         if (porygon_native_handled != FALSE)
         {
-            gNdsYamabukiPorygonDrawCount++;
+            NDS_DIAG(gNdsYamabukiPorygonDrawCount++);
         }
         else
         {
-            gNdsYamabukiPorygonSubmitFailCount++;
+            NDS_DIAG(gNdsYamabukiPorygonSubmitFailCount++);
         }
     }
 
@@ -13328,11 +13328,11 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             &hitokage_config, render_stats);
         if (hitokage_native_handled != FALSE)
         {
-            gNdsYamabukiHitokageDrawCount++;
+            NDS_DIAG(gNdsYamabukiHitokageDrawCount++);
         }
         else
         {
-            gNdsYamabukiHitokageSubmitFailCount++;
+            NDS_DIAG(gNdsYamabukiHitokageSubmitFailCount++);
         }
     }
 
@@ -13358,11 +13358,11 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             &fushigibana_config, render_stats);
         if (fushigibana_native_handled != FALSE)
         {
-            gNdsYamabukiFushigibanaDrawCount++;
+            NDS_DIAG(gNdsYamabukiFushigibanaDrawCount++);
         }
         else
         {
-            gNdsYamabukiFushigibanaSubmitFailCount++;
+            NDS_DIAG(gNdsYamabukiFushigibanaSubmitFailCount++);
         }
     }
 #endif
@@ -13390,11 +13390,11 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             &item_config, render_stats);
         if (item_star_native_handled != FALSE)
         {
-            gNdsItemStarDrawCount++;
+            NDS_DIAG(gNdsItemStarDrawCount++);
         }
         else
         {
-            gNdsItemStarSubmitFailCount++;
+            NDS_DIAG(gNdsItemStarSubmitFailCount++);
         }
     }
 
@@ -13420,7 +13420,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             &item_config, render_stats);
         if (item_sword_native_handled != FALSE)
         {
-            gNdsItemSwordDrawCount++;
+            NDS_DIAG(gNdsItemSwordDrawCount++);
 #if NDS_RENDERER_PROFILE_LEVEL < 2
             ndsStageDLRouteRecord(dl, loaded, item_sword_root,
                                   NDS_SDL_ROUTE_ITEM + nNDSStageDLItemSword);
@@ -13428,7 +13428,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
         else
         {
-            gNdsItemSwordSubmitFailCount++;
+            NDS_DIAG(gNdsItemSwordSubmitFailCount++);
         }
     }
 
@@ -13453,7 +13453,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             loaded->data, loaded->data_size, &item_config, render_stats);
         if (item_hammer_native_handled != FALSE)
         {
-            gNdsItemHammerDrawCount++;
+            NDS_DIAG(gNdsItemHammerDrawCount++);
 #if NDS_RENDERER_PROFILE_LEVEL < 2
             ndsStageDLRouteRecord(dl, loaded, 0u,
                                   NDS_SDL_ROUTE_ITEM + nNDSStageDLItemHammer);
@@ -13461,7 +13461,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
         else
         {
-            gNdsItemHammerSubmitFailCount++;
+            NDS_DIAG(gNdsItemHammerSubmitFailCount++);
         }
     }
 
@@ -13490,18 +13490,18 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             material, &item_config, render_stats);
         if (item_mball_native_handled != FALSE)
         {
-            gNdsItemMBallDrawCount++;
+            NDS_DIAG(gNdsItemMBallDrawCount++);
             if (item_mball_from_effect != FALSE)
             {
-                gNdsEntryMBallThrownDrawCount++;
+                NDS_DIAG(gNdsEntryMBallThrownDrawCount++);
             }
         }
         else
         {
-            gNdsItemMBallSubmitFailCount++;
+            NDS_DIAG(gNdsItemMBallSubmitFailCount++);
             if (item_mball_from_effect != FALSE)
             {
-                gNdsEntryMBallThrownSubmitFailCount++;
+                NDS_DIAG(gNdsEntryMBallThrownSubmitFailCount++);
             }
         }
     }
@@ -13528,11 +13528,11 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             render_stats);
         if (item_kirbystar_native_handled != FALSE)
         {
-            gNdsItemKirbyStarDrawCount++;
+            NDS_DIAG(gNdsItemKirbyStarDrawCount++);
         }
         else
         {
-            gNdsItemKirbyStarSubmitFailCount++;
+            NDS_DIAG(gNdsItemKirbyStarSubmitFailCount++);
         }
     }
 
@@ -13558,11 +13558,11 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             &item_config, render_stats);
         if (item_gshell_native_handled != FALSE)
         {
-            gNdsItemGShellDrawCount++;
+            NDS_DIAG(gNdsItemGShellDrawCount++);
         }
         else
         {
-            gNdsItemGShellSubmitFailCount++;
+            NDS_DIAG(gNdsItemGShellSubmitFailCount++);
         }
     }
 
@@ -13588,11 +13588,11 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             &item_config, render_stats);
         if (item_rshell_native_handled != FALSE)
         {
-            gNdsItemRShellDrawCount++;
+            NDS_DIAG(gNdsItemRShellDrawCount++);
         }
         else
         {
-            gNdsItemRShellSubmitFailCount++;
+            NDS_DIAG(gNdsItemRShellSubmitFailCount++);
         }
     }
 
@@ -13618,7 +13618,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             &item_config, render_stats);
         if (item_bat_native_handled != FALSE)
         {
-            gNdsItemBatDrawCount++;
+            NDS_DIAG(gNdsItemBatDrawCount++);
 #if NDS_RENDERER_PROFILE_LEVEL < 2
             ndsStageDLRouteRecord(dl, loaded, item_bat_root,
                                   NDS_SDL_ROUTE_ITEM + nNDSStageDLItemBat);
@@ -13626,7 +13626,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
         else
         {
-            gNdsItemBatSubmitFailCount++;
+            NDS_DIAG(gNdsItemBatSubmitFailCount++);
         }
     }
 
@@ -13652,7 +13652,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             &item_config, render_stats);
         if (item_capsule_native_handled != FALSE)
         {
-            gNdsItemCapsuleDrawCount++;
+            NDS_DIAG(gNdsItemCapsuleDrawCount++);
 #if NDS_RENDERER_PROFILE_LEVEL < 2
             ndsStageDLRouteRecord(dl, loaded, item_capsule_root,
                                   NDS_SDL_ROUTE_ITEM + nNDSStageDLItemCapsule);
@@ -13660,7 +13660,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
         else
         {
-            gNdsItemCapsuleSubmitFailCount++;
+            NDS_DIAG(gNdsItemCapsuleSubmitFailCount++);
         }
     }
 
@@ -13686,11 +13686,11 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             &item_config, render_stats);
         if (item_bombhei_native_handled != FALSE)
         {
-            gNdsItemBombHeiDrawCount++;
+            NDS_DIAG(gNdsItemBombHeiDrawCount++);
         }
         else
         {
-            gNdsItemBombHeiSubmitFailCount++;
+            NDS_DIAG(gNdsItemBombHeiSubmitFailCount++);
         }
     }
 
@@ -13715,7 +13715,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             loaded->data, loaded->data_size, &item_config, render_stats);
         if (item_lgun_native_handled != FALSE)
         {
-            gNdsItemLGunDrawCount++;
+            NDS_DIAG(gNdsItemLGunDrawCount++);
 #if NDS_RENDERER_PROFILE_LEVEL < 2
             ndsStageDLRouteRecord(dl, loaded, 0u,
                                   NDS_SDL_ROUTE_ITEM + nNDSStageDLItemLGun);
@@ -13723,7 +13723,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
         else
         {
-            gNdsItemLGunSubmitFailCount++;
+            NDS_DIAG(gNdsItemLGunSubmitFailCount++);
         }
     }
 
@@ -13748,7 +13748,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             loaded->data, loaded->data_size, &item_config, render_stats);
         if (item_harisen_native_handled != FALSE)
         {
-            gNdsItemHarisenDrawCount++;
+            NDS_DIAG(gNdsItemHarisenDrawCount++);
 #if NDS_RENDERER_PROFILE_LEVEL < 2
             ndsStageDLRouteRecord(dl, loaded, 0u,
                                   NDS_SDL_ROUTE_ITEM + nNDSStageDLItemHarisen);
@@ -13756,7 +13756,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
         else
         {
-            gNdsItemHarisenSubmitFailCount++;
+            NDS_DIAG(gNdsItemHarisenSubmitFailCount++);
         }
     }
 
@@ -13781,7 +13781,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             loaded->data, loaded->data_size, &item_config, render_stats);
         if (item_heart_native_handled != FALSE)
         {
-            gNdsItemHeartDrawCount++;
+            NDS_DIAG(gNdsItemHeartDrawCount++);
 #if NDS_RENDERER_PROFILE_LEVEL < 2
             ndsStageDLRouteRecord(dl, loaded, 0u,
                                   NDS_SDL_ROUTE_ITEM + nNDSStageDLItemHeart);
@@ -13789,7 +13789,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
         else
         {
-            gNdsItemHeartSubmitFailCount++;
+            NDS_DIAG(gNdsItemHeartSubmitFailCount++);
         }
     }
 
@@ -13815,7 +13815,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             &item_config, render_stats);
         if (item_starrod_native_handled != FALSE)
         {
-            gNdsItemStarRodDrawCount++;
+            NDS_DIAG(gNdsItemStarRodDrawCount++);
 #if NDS_RENDERER_PROFILE_LEVEL < 2
             ndsStageDLRouteRecord(dl, loaded, item_starrod_root,
                                   NDS_SDL_ROUTE_ITEM + nNDSStageDLItemStarRod);
@@ -13823,7 +13823,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
         else
         {
-            gNdsItemStarRodSubmitFailCount++;
+            NDS_DIAG(gNdsItemStarRodSubmitFailCount++);
         }
     }
 
@@ -13852,11 +13852,11 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             &item_config, render_stats);
         if (item_fflower_native_handled != FALSE)
         {
-            gNdsItemFFlowerDrawCount++;
+            NDS_DIAG(gNdsItemFFlowerDrawCount++);
         }
         else
         {
-            gNdsItemFFlowerSubmitFailCount++;
+            NDS_DIAG(gNdsItemFFlowerSubmitFailCount++);
         }
     }
 
@@ -13882,7 +13882,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             &item_config, render_stats);
         if (item_msbomb_native_handled != FALSE)
         {
-            gNdsItemMSBombDrawCount++;
+            NDS_DIAG(gNdsItemMSBombDrawCount++);
 #if NDS_RENDERER_PROFILE_LEVEL < 2
             ndsStageDLRouteRecord(dl, loaded, item_msbomb_root,
                                   NDS_SDL_ROUTE_ITEM + nNDSStageDLItemMSBomb);
@@ -13890,7 +13890,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
         else
         {
-            gNdsItemMSBombSubmitFailCount++;
+            NDS_DIAG(gNdsItemMSBombSubmitFailCount++);
         }
     }
 
@@ -13916,11 +13916,11 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             &item_config, render_stats);
         if (item_nbumper_native_handled != FALSE)
         {
-            gNdsItemNBumperDrawCount++;
+            NDS_DIAG(gNdsItemNBumperDrawCount++);
         }
         else
         {
-            gNdsItemNBumperSubmitFailCount++;
+            NDS_DIAG(gNdsItemNBumperSubmitFailCount++);
         }
     }
 
@@ -13945,7 +13945,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             loaded->data, loaded->data_size, &item_config, render_stats);
         if (item_box_native_handled != FALSE)
         {
-            gNdsItemBoxDrawCount++;
+            NDS_DIAG(gNdsItemBoxDrawCount++);
 #if NDS_RENDERER_PROFILE_LEVEL < 2
             ndsStageDLRouteRecord(dl, loaded, 0u,
                                   NDS_SDL_ROUTE_ITEM + nNDSStageDLItemBox);
@@ -13953,7 +13953,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
         else
         {
-            gNdsItemBoxSubmitFailCount++;
+            NDS_DIAG(gNdsItemBoxSubmitFailCount++);
         }
     }
 
@@ -13978,7 +13978,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             loaded->data, loaded->data_size, &item_config, render_stats);
         if (item_taru_native_handled != FALSE)
         {
-            gNdsItemTaruDrawCount++;
+            NDS_DIAG(gNdsItemTaruDrawCount++);
 #if NDS_RENDERER_PROFILE_LEVEL < 2
             ndsStageDLRouteRecord(dl, loaded, 0u,
                                   NDS_SDL_ROUTE_ITEM + nNDSStageDLItemTaru);
@@ -13986,7 +13986,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
         else
         {
-            gNdsItemTaruSubmitFailCount++;
+            NDS_DIAG(gNdsItemTaruSubmitFailCount++);
         }
     }
 
@@ -14011,7 +14011,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             loaded->data, loaded->data_size, &item_config, render_stats);
         if (item_egg_native_handled != FALSE)
         {
-            gNdsItemEggDrawCount++;
+            NDS_DIAG(gNdsItemEggDrawCount++);
 #if NDS_RENDERER_PROFILE_LEVEL < 2
             ndsStageDLRouteRecord(dl, loaded, 0u,
                                   NDS_SDL_ROUTE_ITEM + nNDSStageDLItemEgg);
@@ -14019,7 +14019,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
         else
         {
-            gNdsItemEggSubmitFailCount++;
+            NDS_DIAG(gNdsItemEggSubmitFailCount++);
         }
     }
 
@@ -14044,7 +14044,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             loaded->data, loaded->data_size, &item_config, render_stats);
         if (item_iwark_native_handled != FALSE)
         {
-            gNdsItemIwarkDrawCount++;
+            NDS_DIAG(gNdsItemIwarkDrawCount++);
 #if NDS_RENDERER_PROFILE_LEVEL < 2
             ndsStageDLRouteRecord(dl, loaded, 0u,
                                   NDS_SDL_ROUTE_ITEM + nNDSStageDLItemIwark);
@@ -14052,7 +14052,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
         else
         {
-            gNdsItemIwarkSubmitFailCount++;
+            NDS_DIAG(gNdsItemIwarkSubmitFailCount++);
         }
     }
 
@@ -14114,7 +14114,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                 FALSE;
             if (item_baked_native_handled != FALSE)
             {
-                gNdsItemBakedDrawCount++;
+                NDS_DIAG(gNdsItemBakedDrawCount++);
 #if NDS_RENDERER_PROFILE_LEVEL < 2
                 /* A ground display's baked root draws through the fast lane
                  * from now on (NDS_SDL_ROUTE_BAKED); its admission is the
@@ -14151,7 +14151,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             }
             else
             {
-                gNdsItemBakedSubmitFailCount++;
+                NDS_DIAG(gNdsItemBakedSubmitFailCount++);
             }
         }
     }
@@ -14180,11 +14180,11 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             loaded->data, loaded->data_size, &tomato_config, render_stats);
         if (item_tomato_native_handled != FALSE)
         {
-            gNdsItemTomatoDrawCount++;
+            NDS_DIAG(gNdsItemTomatoDrawCount++);
         }
         else
         {
-            gNdsItemTomatoSubmitFailCount++;
+            NDS_DIAG(gNdsItemTomatoSubmitFailCount++);
         }
     }
 #endif
@@ -14213,7 +14213,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             visual_effect_template, &visual_config, render_stats);
         if (visual_effect_native_handled != FALSE)
         {
-            gNdsVisualEffectNativeDrawCount++;
+            NDS_DIAG(gNdsVisualEffectNativeDrawCount++);
         }
         else
         {
@@ -14222,7 +14222,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
              * below publish for "nothing claimed this root". Recording it here
              * is what lets `settled` suppress those guards without turning a
              * refusal into a successful empty draw. */
-            gNdsVisualEffectNativeDeclineCount++;
+            NDS_DIAG(gNdsVisualEffectNativeDeclineCount++);
             ndsStageRejectNativeRender(dobj, dl,
                 NDS_NATIVE_FAILURE_REJECTED_PROGRAM, render_stats);
         }
@@ -14431,14 +14431,14 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         {
             /* Keep the existing rejection witness; this cannot select a
              * different renderer or discard the failure as an empty draw. */
-            gNdsImpactWaveNativeFallbackCount++;
+            NDS_DIAG(gNdsImpactWaveNativeFallbackCount++);
         }
         ndsStageRejectNativeRender(dobj, dl,
             NDS_NATIVE_FAILURE_NO_PROGRAM, render_stats);
     }
     else
     {
-        gNdsImpactWaveNativeDrawCount++;
+        NDS_DIAG(gNdsImpactWaveNativeDrawCount++);
     }
 #else
 /* Leading-and form with a constant seed, so each native owner contributes ONE
@@ -14563,7 +14563,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
          * OPA_SURF (85.vpk0.bin 0x23a8/0x2490), while its list-1 beam
          * (0x2890) emits no G_SETOTHERMODE_L at all and leaves Out == In. */
         gNdsEffectDLSubmitOtherModeOut = render_stats->othermode_l;
-        gNdsEffectDLSubmitCount++;
+        NDS_DIAG(gNdsEffectDLSubmitCount++);
         gNdsEffectDLCfgMask =
             ((config.initial_projection != NULL) ? 1u : 0u) |
             ((config.initial_modelview != NULL) ? 2u : 0u);
@@ -14636,7 +14636,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
          * can draw. Reading them cost this investigation one wrong conclusion. */
         gNdsEffectDLVertexCount = render_stats->vertex_count;
         gNdsEffectDLTriangleCount = render_stats->triangle_count;
-        gNdsEffectDLPublishCount++;
+        NDS_DIAG(gNdsEffectDLPublishCount++);
 #if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
         /* Cumulative twins of the two last-value-wins deltas above: a stop reads
          * one list from those, and the census needs the whole window. */
@@ -14673,9 +14673,9 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         &gNdsRendererDepthStageWMax);
 #endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
-    gNdsRendererProfileDLTicks += cpuGetTiming() - step_start;
+    NDS_DIAG(gNdsRendererProfileDLTicks += cpuGetTiming() - step_start);
     adapter_ticks = cpuGetTiming() - adapter_start;
-    gNdsRendererProfileStageAdapterTicks += adapter_ticks;
+    NDS_DIAG(gNdsRendererProfileStageAdapterTicks += adapter_ticks);
     ndsRendererOwnerAccumulateList(
         NDS_RENDERER_PROFILE_OWNER_STAGE, loaded, dl,
         gNdsRendererProfileOwners[
@@ -14711,16 +14711,16 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         ndsFighterDLDrawCopyPersistentRendererState(
             &sNdsRendererAdapterStagePersistentStats, render_stats);
 #endif
-        gNdsStageGCDrawAllLoopHardwareCarryCaptureCount++;
+        NDS_DIAG(gNdsStageGCDrawAllLoopHardwareCarryCaptureCount++);
         if (render_stats->command_count <= 5u)
         {
             if (inherited_texture != FALSE)
             {
-                gNdsStageGCDrawAllLoopHardwareCarryShortTextureSeedCount++;
+                NDS_DIAG(gNdsStageGCDrawAllLoopHardwareCarryShortTextureSeedCount++);
             }
             if (inherited_tile != FALSE)
             {
-                gNdsStageGCDrawAllLoopHardwareCarryShortTileSeedCount++;
+                NDS_DIAG(gNdsStageGCDrawAllLoopHardwareCarryShortTileSeedCount++);
             }
         }
     }
@@ -14837,7 +14837,7 @@ static void ndsRendererAdapterSubmitStageDObjTreeDepth(
     }
     if (depth >= NDS_RENDERER_STAGE_DOBJ_MAX_DEPTH)
     {
-        gNdsRendererStageDObjDepthOverrunCount++;
+        NDS_DIAG(gNdsRendererStageDObjDepthOverrunCount++);
         return;
     }
     NDS_DIAG(gNdsRendererStageDObjNodeCount++);
@@ -14875,7 +14875,7 @@ static void ndsRendererAdapterSubmitStageDObjTreeDepth(
         {
             if (++seen > NDS_RENDERER_STAGE_DOBJ_MAX_SIBLINGS)
             {
-                gNdsRendererStageDObjSiblingOverrunCount++;
+                NDS_DIAG(gNdsRendererStageDObjSiblingOverrunCount++);
                 break;
             }
             ndsRendererAdapterSubmitStageDObjTreeDepth(
@@ -15127,7 +15127,7 @@ static sb32 ndsRendererAdapterItemOffscreen(DObj *root, GObj *camera_gobj)
         }
         if ((d + (span * radius)) < 0)
         {
-            gNdsItemPreCulled++;
+            NDS_DIAG(gNdsItemPreCulled++);
             return TRUE;
         }
     }
@@ -15146,7 +15146,7 @@ void ndsRendererAdapterSubmitItemDObjTree(void *dobj_ptr, u32 kind,
     const u32 triangles_before = gNdsStageGCDrawAllLoopHardwareTriangleCount;
 
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
-    gNdsLabItemAcc[11] += cpuGetTiming() - lab_offscreen;
+    NDS_DIAG(gNdsLabItemAcc[11] += cpuGetTiming() - lab_offscreen);
 #endif
 
     /* gNdsItemPreCull 2: decide but draw, counting a culled item whose lists
@@ -15165,7 +15165,7 @@ void ndsRendererAdapterSubmitItemDObjTree(void *dobj_ptr, u32 kind,
     if ((offscreen != FALSE) &&
         (gNdsStageGCDrawAllLoopHardwareTriangleCount != triangles_before))
     {
-        gNdsItemPreCullDrew++;
+        NDS_DIAG(gNdsItemPreCullDrew++);
     }
 }
 
@@ -15393,7 +15393,7 @@ void ndsRendererAdapterSubmitItemDObjTreeReplay(void *dobj_ptr, u32 kind,
             (ndsNativeItemReplayEmitsResident(draw->emits, draw->emit_count) ==
              FALSE))
         {
-            gNdsItemReplayNotResident++;
+            NDS_DIAG(gNdsItemReplayNotResident++);
             victim = draw;
             draw = NULL;
         }
@@ -15441,10 +15441,10 @@ void ndsRendererAdapterSubmitItemDObjTreeReplay(void *dobj_ptr, u32 kind,
             {
                 const u32 lab_now = cpuGetTiming();
 
-                gNdsLabItemAcc[14] += lab_now - lab_replay_mark;
-                gNdsLabItemAcc[5] += gNdsLabPimAcc[0] - lab_pim0;
-                gNdsLabItemAcc[6] += gNdsLabPimAcc[1] - lab_pim1;
-                gNdsLabItemAcc[7] += gNdsLabPimAcc[2] - lab_pim2;
+                NDS_DIAG(gNdsLabItemAcc[14] += lab_now - lab_replay_mark);
+                NDS_DIAG(gNdsLabItemAcc[5] += gNdsLabPimAcc[0] - lab_pim0);
+                NDS_DIAG(gNdsLabItemAcc[6] += gNdsLabPimAcc[1] - lab_pim1);
+                NDS_DIAG(gNdsLabItemAcc[7] += gNdsLabPimAcc[2] - lab_pim2);
                 lab_replay_mark = lab_now;
             }
 #endif
@@ -15469,13 +15469,13 @@ void ndsRendererAdapterSubmitItemDObjTreeReplay(void *dobj_ptr, u32 kind,
             }
             gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
-            gNdsLabItemAcc[3] += cpuGetTiming() - lab_replay_mark;
+            NDS_DIAG(gNdsLabItemAcc[3] += cpuGetTiming() - lab_replay_mark);
 #endif
         }
         sNdsRendererAdapterItemSubmitActive = FALSE;
         sNdsRendererAdapterItemSubmitHead = 0u;
         gNdsStageGCDrawAllLoopHardwareTriangleCount += triangles;
-        gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount += triangles;
+        NDS_DIAG(gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount += triangles);
         draw->last_used = gNdsRendererProfileFrameCount;
         NDS_DIAG(gNdsItemReplayDraws++);
         return;
@@ -15518,21 +15518,21 @@ void ndsRendererAdapterSubmitItemDObjTreeReplay(void *dobj_ptr, u32 kind,
             victim->emit_count = (u8)sNdsItemReplaySinkState.emit_count;
             victim->last_used = gNdsRendererProfileFrameCount;
             victim->valid = 1u;
-            gNdsItemReplayRecords++;
+            NDS_DIAG(gNdsItemReplayRecords++);
         }
         else
         {
             victim->last_used = gNdsRendererProfileFrameCount;
             victim->valid = 2u;
-            gNdsItemReplayRecordFailed++;
+            NDS_DIAG(gNdsItemReplayRecordFailed++);
         }
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
         if (verify_against != NULL)
         {
-            gNdsItemReplayVerifyRuns++;
+            NDS_DIAG(gNdsItemReplayVerifyRuns++);
             if (ndsItemReplaySameRecording(victim, verify_against) == FALSE)
             {
-                gNdsItemReplayVerifyFail++;
+                NDS_DIAG(gNdsItemReplayVerifyFail++);
             }
             victim->valid = 0u;
         }
@@ -15700,7 +15700,7 @@ s32 ndsRendererAdapterSubmitArwingTwoPass(void *root_ptr, void *camera_gobj_ptr,
         /* Two pushes at most below; a walk that could drop one declines. */
         if (stack_count + 2u > ARRAY_COUNT(stack))
         {
-            gNdsArwingTwoPassDeclines++;
+            NDS_DIAG(gNdsArwingTwoPassDeclines++);
             return FALSE;
         }
         if ((dobj->flags & DOBJ_FLAG_HIDDEN) != 0)
@@ -15729,7 +15729,7 @@ s32 ndsRendererAdapterSubmitArwingTwoPass(void *root_ptr, void *camera_gobj_ptr,
                 {
                     if (count >= NDS_ARWING_TWO_PASS_MAX)
                     {
-                        gNdsArwingTwoPassDeclines++;
+                        NDS_DIAG(gNdsArwingTwoPassDeclines++);
                         return FALSE;
                     }
                     items[count].dobj = dobj;
@@ -15751,7 +15751,7 @@ s32 ndsRendererAdapterSubmitArwingTwoPass(void *root_ptr, void *camera_gobj_ptr,
     if (stack_count != 0u)
     {
         /* More DObjs than the walk holds: let the scan draw it. */
-        gNdsArwingTwoPassDeclines++;
+        NDS_DIAG(gNdsArwingTwoPassDeclines++);
         return FALSE;
     }
 
@@ -15793,7 +15793,7 @@ s32 ndsRendererAdapterSubmitArwingTwoPass(void *root_ptr, void *camera_gobj_ptr,
         sNdsRendererAdapterEntryPrepared = NULL;
     }
     *submitted_dobjs = dobjs;
-    gNdsArwingTwoPassDraws++;
+    NDS_DIAG(gNdsArwingTwoPassDraws++);
     return TRUE;
 }
 
