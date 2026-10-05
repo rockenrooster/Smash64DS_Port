@@ -59,3 +59,22 @@ That is the next lever.
 Correctness: hurtbox shadow mode (gNdsP2HurtboxRejectMode 2) on the resident
 arm, 0 flips through frame 1,900; frame captures (local only) show held Beam
 Swords in Link's and Fox's hands through the swing.
+
+## Follow-up: the walk's sine lookups in DTCM, a lighter compose
+
+The local builder reads the lean kernel's DTCM half of the sine table
+(`gNdsFtrLeanSinHalf`, weak, once the lean kernel has filled it), and the
+resident walk composes with truncating reductions and one unsigned range test
+a cell (`ndsP2HbCompose`). Build `build-gate-1004s` (cross-ROM against
+`build-gate-1004r` arm 1; the compose's rounding moves the digest, divergence
+frame 221):
+
+| run | P50 | P95 | > 1.12M |
+|---|---|---|---|
+| `gate-s1-r1` (1004r, resident) | 836,800 | 1,169,536 | 136 |
+| `gate-s1-tweak` (1004s) | 834,880 | 1,163,328 | 131 |
+
+Pre-divergence frames paired by frame: median -576. Late-window profile
+(`res-prof-r1` -> `res-prof-s1`): the joint machinery (walk, compose, local,
+float loads, attach) 49.7K -> 46.3K a frame; the out-of-line compose is 11.6K
+of it.

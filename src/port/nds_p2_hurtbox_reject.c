@@ -114,10 +114,20 @@ static int ndsP2HbAngleIndex(f32 angle, s32 *out)
     return 1;
 }
 
-static inline s32 ndsP2HbSinQ15(s32 index)
+/* The lean kernel's DTCM copy of the table's first half (the table is
+ * symmetric about 0x3ff.5; src/nds/nds_ftr_lean_kernel.c), filled at its first
+ * draw -- entry 0x3ff (32768) doubles as the filled flag. gSYSinTable is 4 KB
+ * of main RAM, the whole data cache, and its six lookups a local were a tenth
+ * of the walk's cycles, nearly all of it misses (res-prof-r1, 2026-10-04).
+ * Weak: a build without the copy reads gSYSinTable. */
+extern u16 gNdsFtrLeanSinHalf[0x400] __attribute__((weak));
+
+static inline s32 ndsP2HbSinQ15(const u16 *half, s32 index)
 {
     const u32 id = (u32)index & 0xfffu;
-    const s32 value = (s32)gSYSinTable[id & 0x7ffu];
+    const u32 h = id & 0x7ffu;
+    const s32 value = (half != NULL) ?
+        (s32)half[(h < 0x400u) ? h : (0x7ffu - h)] : (s32)gSYSinTable[h];
 
     return ((id & 0x800u) != 0u) ? -value : value;
 }
@@ -157,21 +167,26 @@ static int ndsP2HbLocalFromDObj(NDSR2CfxMtx *dst, const DObj *dobj)
     s32 sxsy;
     s32 cxsy;
     s32 rot[3][3]; /* Q30 */
+    const u16 *half = gNdsFtrLeanSinHalf;
     u32 row;
     u32 col;
 
+    if ((half != NULL) && (half[0x3ff] == 0u))
+    {
+        half = NULL;
+    }
     if ((ndsP2HbAngleIndex(dobj->rotate.vec.f.x, &ix) == 0) ||
         (ndsP2HbAngleIndex(dobj->rotate.vec.f.y, &iy) == 0) ||
         (ndsP2HbAngleIndex(dobj->rotate.vec.f.z, &iz) == 0))
     {
         return 0;
     }
-    sx = ndsP2HbSinQ15(ix);
-    cx = ndsP2HbSinQ15(ix + 0x400);
-    sy = ndsP2HbSinQ15(iy);
-    cy = ndsP2HbSinQ15(iy + 0x400);
-    sz = ndsP2HbSinQ15(iz);
-    cz = ndsP2HbSinQ15(iz + 0x400);
+    sx = ndsP2HbSinQ15(half, ix);
+    cx = ndsP2HbSinQ15(half, ix + 0x400);
+    sy = ndsP2HbSinQ15(half, iy);
+    cy = ndsP2HbSinQ15(half, iy + 0x400);
+    sz = ndsP2HbSinQ15(half, iz);
+    cz = ndsP2HbSinQ15(half, iz + 0x400);
     /* Pair products of Q15 entries are at most 2^30; each sum below is a
      * rotation cell, so it stays within 2^30 plus the table's rounding. */
     sxsy = sx * sy;
@@ -250,6 +265,58 @@ static int ndsP2HbLocal(NDSR2CfxMtx *dst, const DObj *dobj,
     }
     return ndsP2HbLocalFromDObj(dst, dobj);
 }
+
+#if NDS_P2_JOINT_RESIDENT
+/* ndsR2CfxCompose for the resident walk: dst = rhs carried into lhs, the
+ * same products with truncating reductions (2^-26 a cell, far under the Q12
+ * every consumer keeps) and one unsigned range test a cell for the same
+ * guards. dst may alias lhs. */
+static int ndsP2HbCompose(NDSR2CfxMtx *dst, const NDSR2CfxMtx *lhs,
+                          const NDSR2CfxMtx *rhs)
+{
+    NDSR2CfxMtx out;
+    u32 row;
+    u32 col;
+
+    for (row = 0u; row < 3u; row++)
+    {
+        for (col = 0u; col < 3u; col++)
+        {
+            const int64_t cell = ((int64_t)lhs->r[0][col] * rhs->r[row][0] +
+                                  (int64_t)lhs->r[1][col] * rhs->r[row][1] +
+                                  (int64_t)lhs->r[2][col] * rhs->r[row][2]) >>
+                                 NDS_R2_CFX_ROT_BITS;
+
+            if ((uint64_t)(cell + NDS_R2_CFX_ROT_MAX) >
+                (uint64_t)(2 * (int64_t)NDS_R2_CFX_ROT_MAX))
+            {
+                return 0;
+            }
+            out.r[row][col] = (int32_t)cell;
+        }
+    }
+    for (col = 0u; col < 3u; col++)
+    {
+        const int64_t cell = (((int64_t)lhs->r[0][col] * rhs->t[0] +
+                               (int64_t)lhs->r[1][col] * rhs->t[1] +
+                               (int64_t)lhs->r[2][col] * rhs->t[2]) >>
+                              NDS_R2_CFX_ROT_BITS) +
+                             (int64_t)lhs->t[col];
+
+        if ((uint64_t)(cell + (NDS_R2_CFX_POS_MAX - 1)) >
+            (uint64_t)(2 * ((int64_t)NDS_R2_CFX_POS_MAX - 1)))
+        {
+            return 0;
+        }
+        out.t[col] = (int32_t)cell;
+    }
+    *dst = out;
+    return 1;
+}
+#define NDS_P2_HB_COMPOSE ndsP2HbCompose
+#else
+#define NDS_P2_HB_COMPOSE ndsR2CfxCompose
+#endif
 
 /* An upper bound on 2^39 / sqrt(s2) -- 1/s at Q26 for s^2 = s2 at Q26 -- for
  * s2 in [NDS_R2_CFX_S2_MIN, NDS_R2_CFX_S2_MAX] = [2^22, 2^30], without the
@@ -594,7 +661,7 @@ static const NDSR2CfxMtx *ndsP2HbWorldOf(DObj *joint, NDSR2CfxMtx *scratch,
         /* Compose reads lhs into a temp before writing dst, so acc may be
          * this very slot (a parent on the same slot). */
         slot->dobj = NULL;
-        if (ndsR2CfxCompose(&slot->world, acc, &local) == 0)
+        if (NDS_P2_HB_COMPOSE(&slot->world, acc, &local) == 0)
         {
             return NULL;
         }
@@ -1002,7 +1069,7 @@ int ndsP2JointItemAttach(DObj *attach, const Vec2f *shuffle, s32 m[4][4])
         }
         f.t[row] = local.t[row];
     }
-    if (ndsR2CfxCompose(&item, w, &f) == 0)
+    if (NDS_P2_HB_COMPOSE(&item, w, &f) == 0)
     {
         return 0;
     }

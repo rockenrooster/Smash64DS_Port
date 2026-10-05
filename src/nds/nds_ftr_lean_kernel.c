@@ -49,7 +49,7 @@
  * arithmetic and the list stores. The kernel now lives in ITCM (funded by the
  * production execute, which a lean draw never runs: route 0's record path),
  * with the three angle conversions inline. A half-period ITCM copy of
- * gSYSinTable for its six sine lookups a joint (sNdsFtrLeanSinHalf below;
+ * gSYSinTable for its six sine lookups a joint (gNdsFtrLeanSinHalf below;
  * the 4 KB table is the whole data cache) was measured and left off
  * (NDS_FTR_LEAN_SIN_ITCM): the same ITCM holds per-draw list code for more. */
 
@@ -221,7 +221,9 @@ NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanFloatPow2ToS32(f32 value, u32 scale_bit
 #undef NDS_FTR_LEAN_SIN_ITCM
 #define NDS_FTR_LEAN_SIN_ITCM NDS_FTR_LEAN_SIN_HALF_ON
 #if NDS_FTR_LEAN_SIN_ITCM
-static u16 sNdsFtrLeanSinHalf[NDS_FTR_LEAN_SIN_HALF]
+/* Not static: the fighter joint worlds' fixed local builder
+ * (src/port/nds_p2_hurtbox_reject.c) reads it too, once filled. */
+u16 gNdsFtrLeanSinHalf[NDS_FTR_LEAN_SIN_HALF]
     NDS_FTR_LEAN_SIN_SECTION __attribute__((aligned(32)));
 #if NDS_FTR_LEAN_LAB
 /* Lab: entries of the full table the half does not reproduce (expect 0). */
@@ -234,14 +236,14 @@ static void __attribute__((noinline, cold)) ndsFtrLeanSinHalfFill(void)
 
     for (i = 0u; i < NDS_FTR_LEAN_SIN_HALF; i++)
     {
-        sNdsFtrLeanSinHalf[i] = gSYSinTable[i];
+        gNdsFtrLeanSinHalf[i] = gSYSinTable[i];
     }
 #if NDS_FTR_LEAN_LAB
     for (i = 0u; i < 0x800u; i++)
     {
         u32 h = (i < NDS_FTR_LEAN_SIN_HALF) ? i : (0x7ffu - i);
 
-        if (sNdsFtrLeanSinHalf[h] != gSYSinTable[i])
+        if (gNdsFtrLeanSinHalf[h] != gSYSinTable[i])
         {
             gNdsFtrLeanSinHalfMismatch++;
         }
@@ -256,7 +258,7 @@ NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanSinFromIndex(s32 index)
 {
     u32 id = (u32)index & 0xfffu;
     u32 h = id & 0x7ffu;
-    s32 value = (s32)sNdsFtrLeanSinHalf[
+    s32 value = (s32)gNdsFtrLeanSinHalf[
         (h < NDS_FTR_LEAN_SIN_HALF) ? h : (0x7ffu - h)];
 
     return ((id & 0x800u) != 0u) ? -value : value;
@@ -579,7 +581,7 @@ ndsFtrLeanKernelCompose(const NDSFtrLeanJoint *joints, u32 joint_count,
         return FALSE;
     }
 #if NDS_FTR_LEAN_SIN_ITCM
-    if (sNdsFtrLeanSinHalf[NDS_FTR_LEAN_SIN_HALF - 1u] == 0u)
+    if (gNdsFtrLeanSinHalf[NDS_FTR_LEAN_SIN_HALF - 1u] == 0u)
     {
         ndsFtrLeanSinHalfFill();
     }
