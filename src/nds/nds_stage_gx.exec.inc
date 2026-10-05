@@ -1220,6 +1220,12 @@ volatile u32 gNdsStageGxFastLean __attribute__((used, section(".data"))) = 1u;
 volatile u32 gNdsStageGxFastCommits;
 volatile u32 gNdsStageGxFastDeclines;
 #define NDS_STAGE_GX_FAST_SEGMENTS 32u
+#define NDS_STAGE_GX_FAST_SPANS 4u
+/* A segment whose hidden subset keeps moving goes back to declining after
+ * this many rebuilds (a build is a cold walk of the segment's runs). */
+#define NDS_STAGE_GX_FAST_VARIANT_BUILDS 8u
+/* Same-ROM A/B word for the hidden-binding builds (0 = decline, as before). */
+volatile u32 gNdsStageGxFastHidden __attribute__((used, section(".data"))) = 1u;
 #define NDS_STAGE_GX_FAST_NEAR_MAX 96u
 typedef struct NDSStageGxFastSeg
 {
@@ -1242,6 +1248,20 @@ typedef struct NDSStageGxFastSeg
     u16 near_first;
     u8 near_count;
     u8 eligible;
+    /* P2-2p8 (2026-10-05): hidden bindings. The per-run path skips a hidden
+     * binding's runs whole (no words, no state, no depths); a segment built
+     * for that hidden subset leaves the same runs out -- their patches are
+     * skipped and their words cut out of the DMA as span breaks -- so the
+     * fast commit no longer declines a segment with a hidden binding. Every
+     * run's words open with its own material state (MATERIAL is each run's
+     * first patch), so a cut-out run leaves nothing the next run reads.
+     * Sector Z's segment 0 holds the owner-hidden wing-platform proxy on
+     * every frame. */
+    u64 all_binding_mask;   /* every run's binding, hidden or not */
+    u64 skip_mask;          /* the hidden bindings this build left out */
+    u8 span_count;          /* 1 = [first_word, word_end) whole */
+    u8 variant_builds;      /* hidden-subset rebuilds since the load */
+    u16 span_word[NDS_STAGE_GX_FAST_SPANS][2];
 } NDSStageGxFastSeg;
 /* One near-plane box per (segment, binding) over the no-Z and cross-matrix
  * runs that read the binding: inside for the union is inside for each run. */
@@ -1268,7 +1288,8 @@ static void ndsStageGxFastForget(u32 segment_index)
 }
 
 static void __attribute__((noinline, cold, optimize("Os")))
-ndsStageGxFastBuild(u32 segment_index, const NDSNativeStageSegment *segment)
+ndsStageGxFastBuild(u32 segment_index, const NDSNativeStageSegment *segment,
+                    u64 hidden)
 {
     /* A DLLink segment's runs in the head passes' order (0, 2, 1, 3), the
      * order scripts/stages/compile_nds_stage_gx.py (format 7) lays their words
@@ -1277,7 +1298,10 @@ ndsStageGxFastBuild(u32 segment_index, const NDSNativeStageSegment *segment)
     const u8 *heads = NDS_NATIVE_STAGE_BINDING_HEADS;
     const u32 passes = (heads != NULL) ? 4u : 1u;
     NDSStageGxFastSeg *s = &sNdsStageGxFastSegs[segment_index];
+    const u32 variant_builds = (s->load_serial == sNdsStageGxLoadSerial + 1u) ?
+        (u32)s->variant_builds + 1u : 0u;
     u32 built = 0u;
+    u32 open = 0u;          /* the last run seen was included */
     u32 pass;
     u32 i;
 
@@ -1288,6 +1312,7 @@ ndsStageGxFastBuild(u32 segment_index, const NDSNativeStageSegment *segment)
     }
     memset(s, 0, sizeof(*s));
     s->load_serial = sNdsStageGxLoadSerial + 1u;
+    s->variant_builds = (u8)((variant_builds > 255u) ? 255u : variant_builds);
     s->near_first = (u16)sNdsStageGxFastNearUsed;
     if (segment->run_count == 0u)
     {
@@ -1338,6 +1363,26 @@ ndsStageGxFastBuild(u32 segment_index, const NDSNativeStageSegment *segment)
         }
         s->patch_end = (u16)(r->first_patch + r->patch_count);
         s->word_end = (u16)(r->first_word + r->word_count);
+        s->all_binding_mask |= (u64)1u << native->binding_index;
+        if (((hidden >> native->binding_index) & 1u) != 0u)
+        {
+            /* Left out: its words end the open span. */
+            s->skip_mask |= (u64)1u << native->binding_index;
+            open = 0u;
+            continue;
+        }
+        if (open == 0u)
+        {
+            if (s->span_count >= NDS_STAGE_GX_FAST_SPANS)
+            {
+                return;
+            }
+            s->span_word[s->span_count][0] = r->first_word;
+            s->span_count++;
+            open = 1u;
+        }
+        s->span_word[s->span_count - 1u][1] =
+            (u16)(r->first_word + r->word_count);
         s->binding_mask |= (u64)1u << native->binding_index;
         s->triangles += native->triangle_count;
         s->reuse += (native->triangle_count != 0u) ?
@@ -1474,9 +1519,22 @@ static sb32 __attribute__((noinline)) ndsStageGxCommitFast(
     s = &sNdsStageGxFastSegs[segment_index];
     if (s->load_serial != sNdsStageGxLoadSerial + 1u)
     {
-        ndsStageGxFastBuild(segment_index, segment);
+        ndsStageGxFastBuild(segment_index, segment,
+            (gNdsStageGxFastHidden != 0u) ?
+                sNdsNativeStageOwnerExecution.hidden_binding_mask : 0u);
+    }
+    else if ((gNdsStageGxFastHidden != 0u) && (s->eligible != 0u) &&
+             ((sNdsNativeStageOwnerExecution.hidden_binding_mask &
+               s->all_binding_mask) != s->skip_mask) &&
+             (s->variant_builds < NDS_STAGE_GX_FAST_VARIANT_BUILDS))
+    {
+        ndsStageGxFastBuild(segment_index, segment,
+                            sNdsNativeStageOwnerExecution.hidden_binding_mask);
     }
     if ((s->eligible == 0u) ||
+        ((s->skip_mask != 0u) &&
+         ((sNdsNativeStageOwnerExecution.hidden_binding_mask &
+           s->all_binding_mask) != s->skip_mask)) ||
         ((sNdsNativeStageOwnerExecution.hidden_binding_mask & s->binding_mask) !=
          0u))
     {
@@ -1519,6 +1577,14 @@ static sb32 __attribute__((noinline)) ndsStageGxCommitFast(
             const u32 run_index = q->index;
             const NDSNativeStageRun *native = &sNdsNativeStageRuns[run_index];
 
+            if ((s->skip_mask != 0u) &&
+                (((s->skip_mask >> native->binding_index) & 1u) != 0u))
+            {
+                /* A left-out run: past its patches (MATERIAL is its first). */
+                p = (u32)sNdsStageGxRuns[run_index].first_patch +
+                    sNdsStageGxRuns[run_index].patch_count - 1u;
+                continue;
+            }
             composed_shift = -1;
             composed_binding = UINT_MAX;
             corner_triangle = UINT_MAX;
@@ -1708,6 +1774,13 @@ static sb32 __attribute__((noinline)) ndsStageGxCommitFast(
             const u32 alpha = (prepared->alpha_test != 0u) ?
                 (0x100u | prepared->alpha_ref) : 0u;
 
+            if ((s->skip_mask != 0u) &&
+                (((s->skip_mask >> sNdsNativeStageRuns[
+                       (u32)(prepared - sNdsNativeStageOwnerExecution.runs)]
+                       .binding_index) & 1u) != 0u))
+            {
+                continue;
+            }
             if (prepared->textured != 0u)
             {
                 NDSRendererHardwareTextureCacheEntry *entry =
@@ -1746,6 +1819,12 @@ static sb32 __attribute__((noinline)) ndsStageGxCommitFast(
         const u32 alpha = (prepared->alpha_test != 0u) ?
             (0x100u | prepared->alpha_ref) : 0u;
 
+        if ((s->skip_mask != 0u) &&
+            (((s->skip_mask >> sNdsNativeStageRuns[
+                   (u32)segment->first_run + i].binding_index) & 1u) != 0u))
+        {
+            continue;
+        }
         if (prepared->textured != 0u)
         {
             NDSRendererHardwareTextureCacheEntry *entry = prepared->texture_entry;
@@ -1769,10 +1848,24 @@ static sb32 __attribute__((noinline)) ndsStageGxCommitFast(
             span_alpha = alpha;
         }
     }
-    sNdsStageGxFirstWord = s->first_word;
-    sNdsStageGxWordCount = (u32)s->word_end - s->first_word;
-    sNdsStageGxAlpha = span_alpha;
-    ndsStageGxFlush();
+    if (s->skip_mask == 0u)
+    {
+        sNdsStageGxFirstWord = s->first_word;
+        sNdsStageGxWordCount = (u32)s->word_end - s->first_word;
+        sNdsStageGxAlpha = span_alpha;
+        ndsStageGxFlush();
+    }
+    else
+    {
+        for (i = 0u; i < s->span_count; i++)
+        {
+            sNdsStageGxFirstWord = s->span_word[i][0];
+            sNdsStageGxWordCount =
+                (u32)s->span_word[i][1] - s->span_word[i][0];
+            sNdsStageGxAlpha = span_alpha;
+            ndsStageGxFlush();
+        }
+    }
 
     /* ndsRendererNativeStageAccountRun over the segment's runs. */
     if ((gNdsStageGxFastLean != 0u) && (s->class_nz_count != 0xffu))

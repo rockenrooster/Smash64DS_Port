@@ -1438,6 +1438,14 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   (palette and image files re-proved each draw) its P95 is 1,224,256 ->
   1,197,056, paired -24.6K (`7c590b1e478`). Receipts
   `2026-10-05_halo-first`, `2026-10-05_more-routes`.
+- **10-05 the stage GX fast commit across hidden bindings.** Sector Z's
+  segment 0 holds the owner-hidden wing-platform proxy and declined the
+  one-pass commit on every frame, drawing run by run. A segment is now built
+  for the hidden subset in force: the left-out runs' patches are skipped and
+  their words cut out of the DMA as span breaks (`gNdsStageGxFastHidden`).
+  Sector Z P95 1,303,232 -> 1,283,904, paired -23.2K, digest identical; the
+  lab FIFO-word hash matches the per-run path on all 201 sampled frames
+  (receipt `2026-10-05_stage-hidden-spans`).
 
 ## 7. Found along the way
 

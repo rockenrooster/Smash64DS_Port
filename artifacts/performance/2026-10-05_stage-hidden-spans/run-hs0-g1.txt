@@ -1,0 +1,47 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 2 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,928; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 1298: ALL 5,871,488 -> 1,677,184, 4 bucket(s) corrected
+  frame 1512: ALL 5,310,848 -> 1,116,544, 4 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_stage-hidden-spans/hs0-g1.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=76b3ba033bc+dirty(32) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,928     1,677,440      1.50  1,214,512     1,112,000 17,226,368      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,416         9,856      2.23      5,432         2,304     30,720        0.4
+HUD         9,088        24,576      2.70     11,372         8,128    782,592        0.8
+SRC       452,672       648,000      1.43    459,128       159,744  1,148,608       40.5
+MISC      433,216       632,448      1.46    457,924       173,120 15,882,496       38.8
+OTHR      259,776       568,128      2.19    280,656        23,616    768,768       23.3
+WAIT      238,976       546,496      2.29    258,438         2,176    748,544       21.4
+WORK      931,200     1,298,624      1.39    952,295       365,056 16,885,952       83.4
+SHDT            0             0      0.00          0             0          0        0.0
+SWRM        1,280         1,344      1.05      1,290           896      3,264        0.1
+GCRA      447,296       642,560      1.44    453,675       155,328  1,143,168       40.0
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        572             0  1,038,336        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      433,088       632,320      1.46    457,792       172,992 15,882,368       38.8
+MFLS          128           192      1.50        132           128        192        0.0
+GPOL          482           577      1.20        469            47        621        0.0
+GVTX        1,088         1,360      1.25      1,079           157      1,485        0.1
+DGSA   2,156,708,599 4,108,563,968        2,140,450,557  2,648,577 4,292,117,025 193,092.9
+DGSB   2,220,675,919 4,066,019,029        2,159,419,385    168,676 4,294,574,852 198,820.0
+WORK-H    920,832     1,282,496      1.39    940,923       356,480 16,103,360       82.4
+
+named=933,856 (76.9% of ALL)  VBI 2:1668 3:273 4:17 5+:3 max:35 total:1961  slips=0
+extras: gNdsLabStageGxFastWhy[1]=0  gNdsLabStageGxFastWhy[2]=1,961  gNdsLabStageGxFastWhy[3]=0  gNdsLabStageGxFastWhy[4]=0  gNdsLabStageGxFastWhy[5]=0
+Wrote artifacts/performance/2026-10-05_stage-hidden-spans/hs0-g1.json
