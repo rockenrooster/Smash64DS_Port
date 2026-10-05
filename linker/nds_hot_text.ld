@@ -255,6 +255,27 @@ SECTIONS {
 		*(.text.ndsP2HbCompose)
 		*(.text.ndsP2HbToFixed)
 		*(.text.ndsMPWallSweepEdgeTrunc)
+		/* Sixth pack (2026-10-05 gate census gp5-collision, section D), sized for
+		 * the shipping ROM's 384 free bytes: entries the same size in the
+		 * shipping and gate ELFs, by non-mem stall a byte. Not here:
+		 * ndsMObjStepScaled and gcParseMObjMatAnimJoint (inlined into larger
+		 * bodies in the shipping ROM) and ndsRendererAdapterNdlDispatchEffect. */
+		*(.text.ndsBaseFTComputerProcessAll)
+		*(.text.battleship_ftMainProcPhysicsMapDefault)
+		*(.text.battleship_ftMainProcSearchHitAll)
+		*(.text.ndsRendererHardwareSetNoOracle)
+		*(.text.ndsRendererHardwareParticleAtlasNameForSheet)
+		*(.text.gcPrepCameraMatrix)
+		*(.text.ndsFighterMarioFoxNaturalMotionUpdateEnabled)
+		*(.text.gcParseGObjScript)
+		*(.text.mpProcessCheckTestRCliffCollision)
+		*(.text.mpProcessCheckTestLCliffCollision)
+		*(.text.ftMainProcPhysicsMapCapture)
+		*(.text.ftCommonAttackHi4CheckInterruptCommon)
+		*(.text.ftCommonCatchCheckInterruptCommon)
+		*(.text.ftCommonDamageAirCommonProcUpdate)
+		*(.text.ftCommonKneeBendGetInputTypeCommon)
+		*(.text.fabsf)
 		*.itcm.* (.text .stub .text.* .gnu.linkonce.t.*)
 		/* P2-2p8 2026-09-27: calico's thread scheduler and word copy/fill run from
 		 * main RAM. The census rents them under 800 cycles a byte, and
