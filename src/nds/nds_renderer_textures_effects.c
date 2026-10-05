@@ -9,6 +9,15 @@
 static u32 sNdsRendererPrimRgbTexel0AlphaSourceWidth;
 static u32 sNdsRendererPrimRgbTexel0AlphaSourceOrigin;
 static u32 sNdsRendererPrimRgbTexel0AlphaSampler;
+/* Bumped whenever the dedicated name is (re)prepared or released, and the
+ * words its last bind applied: an owner texture memo may replay a bind of the
+ * dedicated name while the generation holds (ndsRendererHardwareBindTexture-
+ * OwnerMemo). */
+static u32 sNdsRendererPrimRgbTexel0AlphaGen = 1u;
+static u32 sNdsRendererPrimRgbTexel0AlphaLastParams;
+static u32 sNdsRendererPrimRgbTexel0AlphaLastFormat;
+static u32 sNdsRendererPrimRgbTexel0AlphaLastWidth;
+static u32 sNdsRendererPrimRgbTexel0AlphaLastHeight;
 __attribute__((used)) volatile u32 gNdsRendererPrimEnvMaskedBakeCount;
 #endif
 
@@ -3166,6 +3175,7 @@ void ndsRendererHardwareDiscardTextureCache(void)
      * below claiming residency for a name that no longer exists. */
     ndsRendererHardwareReleaseIFCommonCloudAtlas(
         &sNdsRendererHardwarePrimRgbTexel0AlphaName);
+    sNdsRendererPrimRgbTexel0AlphaGen++;
     sNdsRendererHardwarePrimRgbTexel0AlphaImage = 0u;
     sNdsRendererHardwarePrimRgbTexel0AlphaExtent = 0u;
     sNdsRendererHardwarePrimRgbTexel0AlphaPrim = 0u;
@@ -12742,6 +12752,8 @@ static s32 ndsRendererHardwarePreparePrimRgbTexel0AlphaTexture(
     NDSRendererPrimRgbTexel0AlphaFill fill;
     u32 prim = stats->prim_color & 0xffffff00u;
     u32 mode = ndsRendererHardwarePrimEnvTexel0BlendMode(stats);
+
+    sNdsRendererPrimRgbTexel0AlphaGen++;
     u16 color = (u16)(((prim >> 27) & 0x1fu) |
                       (((prim >> 19) & 0x1fu) << 5) |
                       (((prim >> 11) & 0x1fu) << 10));
@@ -12829,10 +12841,15 @@ static s32 ndsRendererHardwarePreparePrimRgbTexel0AlphaTexture(
 static void ndsRendererHardwareBindPrimRgbTexel0AlphaTexture(
     NDSRendererStats *stats, u32 params, u32 format, u32 width, u32 height)
 {
+    const u32 merged = ndsRendererHardwareMergeTextureParams(params);
+
     ndsRendererHardwareBindTextureName(
         stats, sNdsRendererHardwarePrimRgbTexel0AlphaName);
-    ndsRendererHardwareApplyTextureParams(
-        ndsRendererHardwareMergeTextureParams(params));
+    ndsRendererHardwareApplyTextureParams(merged);
+    sNdsRendererPrimRgbTexel0AlphaLastParams = merged;
+    sNdsRendererPrimRgbTexel0AlphaLastFormat = format;
+    sNdsRendererPrimRgbTexel0AlphaLastWidth = width;
+    sNdsRendererPrimRgbTexel0AlphaLastHeight = height;
     /* Not a cache entry, so nothing may be left pointing into the cache. */
     sNdsRendererHardwareActiveTextureEntry = NULL;
     stats->hardware_texture_ready_count++;
@@ -14481,8 +14498,17 @@ typedef struct NDSRendererOwnerTextureMemo
     u32 height;
     u16 slot;
     u8 valid;
-    u8 pad;
+    u8 dedicated;   /* the bind named the dedicated PRIM-RGB/TEXEL0-alpha name */
+    u32 params;     /* dedicated: the merged words its bind applied */
 } NDSRendererOwnerTextureMemo;
+/* P2-2p8 (2026-10-05): a bind that resolves to the dedicated PRIM-RGB/TEXEL0-
+ * alpha name (the rebirth beam, Yoshi's Island's clouds) holds no cache entry,
+ * so the memo never filled and every such bind ran the full resolver (~5K
+ * cycles; three cloud binds a frame on Yoshi's Island). It now fills with the
+ * name and the words that bind applied, valid while the dedicated name's
+ * generation holds (every prepare and release bumps it). Same-ROM A/B word
+ * gNdsRendererOwnerTexMemoDedicated. */
+volatile u32 gNdsRendererOwnerTexMemoDedicated __attribute__((used, section(".data"))) = 1u;
 
 volatile u32 gNdsRendererOwnerTexMemoHits;
 volatile u32 gNdsRendererOwnerTexMemoFills;
@@ -14535,6 +14561,28 @@ static s32 ndsRendererHardwareBindTextureOwnerMemo(
         {
             match = FALSE;
         }
+    }
+    if ((match != FALSE) && (memo->dedicated != 0u))
+    {
+        if ((gNdsRendererOwnerTexMemoDedicated != 0u) &&
+            (memo->entry_generation == sNdsRendererPrimRgbTexel0AlphaGen) &&
+            (memo->name != 0u) &&
+            (memo->name == sNdsRendererHardwarePrimRgbTexel0AlphaName))
+        {
+            ndsRendererSyncTextureTile(stats);
+            ndsRendererHardwareBindTextureName(stats, memo->name);
+            ndsRendererHardwareApplyTextureParams(memo->params);
+            sNdsRendererHardwareActiveTextureEntry = NULL;
+            stats->hardware_texture_ready_count++;
+            stats->hardware_texture_format = memo->format;
+            stats->hardware_texture_width = memo->width;
+            stats->hardware_texture_height = memo->height;
+            NDS_DIAG(gNdsRendererOwnerTexMemoHits++);
+            return TRUE;
+        }
+        memo->valid = 0u;
+        NDS_DIAG(gNdsRendererOwnerTexMemoStale++);
+        match = FALSE;
     }
     if (match != FALSE)
     {
@@ -14615,9 +14663,36 @@ static s32 ndsRendererHardwareBindTextureOwnerMemo(
             memo->format = stats->hardware_texture_format;
             memo->width = stats->hardware_texture_width;
             memo->height = stats->hardware_texture_height;
+            memo->dedicated = 0u;
             memo->valid = 1u;
             NDS_DIAG(gNdsRendererOwnerTexMemoFills++);
         }
+    }
+    else if ((entry == NULL) && (gNdsRendererOwnerTexMemoDedicated != 0u) &&
+             (sNdsRendererHardwarePrimRgbTexel0AlphaName != 0u) &&
+             (sNdsRendererHardwareBoundTextureName ==
+              sNdsRendererHardwarePrimRgbTexel0AlphaName) &&
+             (stats->hardware_texture_format ==
+              sNdsRendererPrimRgbTexel0AlphaLastFormat) &&
+             (stats->hardware_texture_width ==
+              sNdsRendererPrimRgbTexel0AlphaLastWidth) &&
+             (stats->hardware_texture_height ==
+              sNdsRendererPrimRgbTexel0AlphaLastHeight))
+    {
+        for (i = 0u; i < NDS_RENDERER_OWNER_TEXMEMO_KEY_WORDS; i++)
+        {
+            memo->key[i] = key[i];
+        }
+        memo->slot = 0u;
+        memo->name = sNdsRendererHardwarePrimRgbTexel0AlphaName;
+        memo->entry_generation = sNdsRendererPrimRgbTexel0AlphaGen;
+        memo->params = sNdsRendererPrimRgbTexel0AlphaLastParams;
+        memo->format = sNdsRendererPrimRgbTexel0AlphaLastFormat;
+        memo->width = sNdsRendererPrimRgbTexel0AlphaLastWidth;
+        memo->height = sNdsRendererPrimRgbTexel0AlphaLastHeight;
+        memo->dedicated = 1u;
+        memo->valid = 1u;
+        NDS_DIAG(gNdsRendererOwnerTexMemoFills++);
     }
     return TRUE;
 }
