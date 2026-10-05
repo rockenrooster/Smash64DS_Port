@@ -166,10 +166,47 @@ volatile u32 gNdsTask9FloatCallerRing[NDS_TASK9_FLOAT_CALLER_RING];
 volatile u8 gNdsTask9FloatCallerRoutine[NDS_TASK9_FLOAT_CALLER_RING];
 volatile u32 gNdsTask9FloatCallerCount;
 
+/* Lab (2026-10-05, owner: "software floating point should not exist, fixed
+ * point only"): every call site's exact count, so the conversion order follows
+ * the dynamic cost. Open addressing on the return address over 4,096 slots;
+ * a call site calls one routine, so the address names both. gdb dumps the two
+ * arrays after a run (scratchpad fsites.py maps them to functions). */
+#define NDS_TASK9_FLOAT_SITES 4096u
+volatile u32 gNdsTask9FloatSiteLr[NDS_TASK9_FLOAT_SITES];
+volatile u32 gNdsTask9FloatSiteCount[NDS_TASK9_FLOAT_SITES];
+volatile u32 gNdsTask9FloatSiteOverflow;
+
+static void ndsTask9FloatSiteCount(const void *caller)
+{
+    u32 key = (u32)(uintptr_t)caller;
+    u32 slot = (key * 2654435761u) >> 20;
+    u32 probe;
+
+    for (probe = 0u; probe < 64u; probe++)
+    {
+        u32 index = (slot + probe) & (NDS_TASK9_FLOAT_SITES - 1u);
+        u32 held = gNdsTask9FloatSiteLr[index];
+
+        if (held == key)
+        {
+            gNdsTask9FloatSiteCount[index]++;
+            return;
+        }
+        if (held == 0u)
+        {
+            gNdsTask9FloatSiteLr[index] = key;
+            gNdsTask9FloatSiteCount[index] = 1u;
+            return;
+        }
+    }
+    gNdsTask9FloatSiteOverflow++;
+}
+
 static inline void ndsTask9FloatCallerSample(u32 routine, const void *caller)
 {
     u32 n = gNdsTask9FloatCallerCount++;
 
+    ndsTask9FloatSiteCount(caller);
     if ((n & 1023u) == 0u)
     {
         u32 slot = (n >> 10) & (NDS_TASK9_FLOAT_CALLER_RING - 1u);

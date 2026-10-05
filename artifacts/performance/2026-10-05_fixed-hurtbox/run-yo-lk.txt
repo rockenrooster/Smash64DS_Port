@@ -1,0 +1,45 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,864; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 1568: ALL 5,311,360 -> 1,117,056, 5 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_fixed-hurtbox/yo-lk.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=dac7fea37d8+dirty(43) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,864     1,677,120      1.50  1,204,176     1,112,064  4,269,504      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,992        10,048      2.01      5,663         2,432     29,504        0.4
+HUD         9,344        24,064      2.58     11,337         7,936    363,456        0.8
+SRC       395,584       660,736      1.67    414,763       135,296  1,179,520       35.4
+MISC      444,992       680,320      1.53    459,713       177,344  3,293,760       39.8
+OTHR      295,744       574,336      1.94    312,701        22,656    792,000       26.5
+WAIT      274,112       552,384      2.02    290,676         2,496    771,776       24.5
+WORK      894,848     1,286,400      1.44    909,525       341,888  3,935,616       80.1
+SHDT      792,191     1,179,007      1.49    812,236       299,583  2,349,055       70.9
+SWRM        1,344         1,408      1.05      1,350           896      3,520        0.1
+GCRA      390,336       653,760      1.67    409,427       130,816  1,174,144       34.9
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        276             0    270,848        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      444,928       680,192      1.53    459,626       177,280  3,293,632       39.8
+MFLS           64           128      2.00         87            64        256        0.0
+GPOL          536           611      1.14        489            57        663        0.0
+GVTX        1,377         1,575      1.14      1,272           185      1,762        0.1
+DGSA   2,065,383,638 4,124,661,661   2.00 2,117,741,801  2,537,107 4,292,565,294 184,927.0
+DGSB   2,103,155,267 4,142,411,165   1.97 2,138,846,912  3,691,108 4,292,469,956 188,309.0
+WORK-H    884,096     1,274,432      1.44    898,189       333,760  3,572,160       79.2
+
+named=891,476 (74.0% of ALL)  VBI 2:1669 3:283 4:7 5+:2 max:8 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_fixed-hurtbox/yo-lk.json

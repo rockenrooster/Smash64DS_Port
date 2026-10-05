@@ -1625,6 +1625,11 @@ static sb32 ndsEFManagerMapDescOffsets(const EFDesc *desc, EFDesc *mapped)
     NDS_EF_ROSTER_DESCS(NDS_EF_DESC_COUNT_ONE))
 static EFDesc *sNdsEFDeferredDescs[NDS_EF_DEFERRED_MAX];
 static void (*sNdsEFDeferredProcs[NDS_EF_DEFERRED_MAX])(GObj *);
+/* What a slot's last failed retry saw: the loaded-file epoch (+1, so 0 means
+ * not yet tried) and the desc's file slot. The mapping is a function of those
+ * two and the desc's own offsets, so it is retried only when one changed. */
+static u32 sNdsEFDeferredTriedEpoch[NDS_EF_DEFERRED_MAX];
+static void *sNdsEFDeferredTriedBase[NDS_EF_DEFERRED_MAX];
 static u32 sNdsEFDeferredCount;
 
 static void ndsEFManagerResetDeferredDescs(void)
@@ -1646,6 +1651,8 @@ static void ndsEFManagerResetDeferredDescs(void)
         }
         sNdsEFDeferredDescs[i] = NULL;
         sNdsEFDeferredProcs[i] = NULL;
+        sNdsEFDeferredTriedEpoch[i] = 0u;
+        sNdsEFDeferredTriedBase[i] = NULL;
     }
     sNdsEFDeferredCount = 0u;
 }
@@ -1668,6 +1675,8 @@ static void ndsEFManagerDeferDesc(EFDesc *desc)
     }
     sNdsEFDeferredDescs[sNdsEFDeferredCount] = desc;
     sNdsEFDeferredProcs[sNdsEFDeferredCount] = desc->proc_display;
+    sNdsEFDeferredTriedEpoch[sNdsEFDeferredCount] = 0u;
+    sNdsEFDeferredTriedBase[sNdsEFDeferredCount] = NULL;
     sNdsEFDeferredCount++;
 }
 
@@ -1678,17 +1687,33 @@ static void ndsEFManagerDeferDesc(EFDesc *desc)
  * not a per-effect cost after the file arrives. */
 void ndsEFManagerRetryDeferredDescs(void)
 {
+    /* P2-2p8 (2026-10-05): every effect maker calls this, and a desc whose
+     * fighter is not in the match never leaves the table -- the comment above
+     * predates every kind's descs being deferrable. In forced four-Pikachu
+     * Thunder frames the retries (file span, token chain, loaded-file scans)
+     * cost ~110K. A slot is tried again only when the loaded-file table or the
+     * desc's file slot changed since it last failed. */
+    const u32 epoch = ndsRelocLoadedFilesEpoch() + 1u;
     u32 i;
 
     for (i = 0u; i < sNdsEFDeferredCount; i++)
     {
         EFDesc *desc = sNdsEFDeferredDescs[i];
         EFDesc mapped;
+        void *base;
 
         if (desc == NULL)
         {
             continue;
         }
+        base = (desc->file_head != NULL) ? *desc->file_head : NULL;
+        if ((sNdsEFDeferredTriedEpoch[i] == epoch) &&
+            (sNdsEFDeferredTriedBase[i] == base))
+        {
+            continue;
+        }
+        sNdsEFDeferredTriedEpoch[i] = epoch;
+        sNdsEFDeferredTriedBase[i] = base;
         /* Do not clear the retry slot until the SOURCE offsets can actually be
          * represented by the current file image. With compact fighter packs,
          * comparing those source offsets directly to packed data_size falsely
@@ -1815,6 +1840,75 @@ typedef struct NDSMappedEFDescOffsets
  * maker packed-relative offsets only for its synchronous construction window.
  * Restoring immediately keeps the global EFDesc source-exact and makes the
  * mapping safe across scene generations and preview-vs-battle pack layouts. */
+/* P2-2p8 (2026-10-05): the mapping above is a pure function of the desc's four
+ * source offsets, its file slot's base and the loaded-file table (spans and
+ * pack layouts), and the makers that bracket a construction ask it on every
+ * effect -- each Thunder trail segment, every tick. Direct-mapped on the desc;
+ * every input is part of the key, so a stale line can only miss. */
+#define NDS_EF_MAP_MEMO_LINES 16u
+typedef struct NDSEFMapMemo
+{
+    const EFDesc *desc;
+    void *base;
+    u32 epoch;
+    sb32 ok;
+    intptr_t source[4];
+    intptr_t mapped[4];
+} NDSEFMapMemo;
+static NDSEFMapMemo sNdsEFMapMemo[NDS_EF_MAP_MEMO_LINES];
+
+static sb32 ndsEFManagerMapDescOffsetsMemo(const EFDesc *desc,
+                                           EFDesc *mapped)
+{
+    NDSEFMapMemo *line;
+    void *base;
+    u32 epoch;
+    sb32 ok;
+
+    if ((desc == NULL) || (mapped == NULL) || (desc->file_head == NULL))
+    {
+        return FALSE;
+    }
+    base = *desc->file_head;
+    epoch = ndsRelocLoadedFilesEpoch() + 1u;
+    line = &sNdsEFMapMemo[((u32)(uintptr_t)desc * 2654435761u) >> 28];
+    if ((line->desc == desc) && (line->base == base) &&
+        (line->epoch == epoch) &&
+        (line->source[0] == desc->o_dobjsetup) &&
+        (line->source[1] == desc->o_mobjsub) &&
+        (line->source[2] == desc->o_anim_joint) &&
+        (line->source[3] == desc->o_matanim_joint))
+    {
+        if (line->ok == FALSE)
+        {
+            return FALSE;
+        }
+        *mapped = *desc;
+        mapped->o_dobjsetup = line->mapped[0];
+        mapped->o_mobjsub = line->mapped[1];
+        mapped->o_anim_joint = line->mapped[2];
+        mapped->o_matanim_joint = line->mapped[3];
+        return TRUE;
+    }
+    ok = ndsEFManagerMapDescOffsets(desc, mapped);
+    line->desc = desc;
+    line->base = base;
+    line->epoch = epoch;
+    line->ok = ok;
+    line->source[0] = desc->o_dobjsetup;
+    line->source[1] = desc->o_mobjsub;
+    line->source[2] = desc->o_anim_joint;
+    line->source[3] = desc->o_matanim_joint;
+    if (ok != FALSE)
+    {
+        line->mapped[0] = mapped->o_dobjsetup;
+        line->mapped[1] = mapped->o_mobjsub;
+        line->mapped[2] = mapped->o_anim_joint;
+        line->mapped[3] = mapped->o_matanim_joint;
+    }
+    return ok;
+}
+
 static sb32 ndsEFManagerBeginMappedDesc(EFDesc *desc,
                                         NDSMappedEFDescOffsets *saved)
 {
@@ -1826,7 +1920,7 @@ static sb32 ndsEFManagerBeginMappedDesc(EFDesc *desc,
     }
     ndsEFManagerRetryDeferredDescs();
     if ((desc->proc_display == NULL) ||
-        (ndsEFManagerMapDescOffsets(desc, &mapped) == FALSE))
+        (ndsEFManagerMapDescOffsetsMemo(desc, &mapped) == FALSE))
     {
         return FALSE;
     }

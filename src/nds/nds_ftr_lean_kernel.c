@@ -577,7 +577,7 @@ ndsFtrLeanKernelCompose(const NDSFtrLeanJoint *joints, u32 joint_count,
      * touch -- a per-joint array was a fresh, uncached line per joint on a
      * data cache that does not allocate on write. */
     NDSFtrLeanWorld stack[NDS_FTR_LEAN_DEPTH_MAX];
-    f32 accum[NDS_FTR_LEAN_DEPTH_MAX][3];
+    s32 accum[NDS_FTR_LEAN_DEPTH_MAX][3];
     u32 counts[nNDSFtrLeanJointClassCount];
     u32 use_locks = flags & NDS_FTR_LEAN_KERNEL_LOCKS;
     u32 no_fast = flags & NDS_FTR_LEAN_KERNEL_NO_FAST;
@@ -650,9 +650,9 @@ ndsFtrLeanKernelCompose(const NDSFtrLeanJoint *joints, u32 joint_count,
              * (no local, world = parent), which needs no call. */
             if (parent == NULL)
             {
-                accum[depth][0] = 1.0F;
-                accum[depth][1] = 1.0F;
-                accum[depth][2] = 1.0F;
+                accum[depth][0] = NDS_FTR_LEAN_ACCUM_ONE;
+                accum[depth][1] = NDS_FTR_LEAN_ACCUM_ONE;
+                accum[depth][2] = NDS_FTR_LEAN_ACCUM_ONE;
             }
             else
             {
@@ -686,7 +686,8 @@ ndsFtrLeanKernelCompose(const NDSFtrLeanJoint *joints, u32 joint_count,
                                         &need_slow);
             if (need_slow != FALSE)
             {
-                f32 unit[3] = { 1.0F, 1.0F, 1.0F };
+                s32 unit[3] = { NDS_FTR_LEAN_ACCUM_ONE, NDS_FTR_LEAN_ACCUM_ONE,
+                                NDS_FTR_LEAN_ACCUM_ONE };
 
                 /* No locks this draw: the builder passes the accumulator
                  * through untouched, so its value is never read. */

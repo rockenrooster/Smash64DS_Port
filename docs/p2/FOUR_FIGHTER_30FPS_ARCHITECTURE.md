@@ -1483,6 +1483,25 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   roots): materializations mostly re-emit words already held. Receipts
   `2026-10-05_collision-window5`, `2026-10-05_particle-lod`,
   `2026-10-05_lean-root-census`.
+- **10-05 owner playtest fixes; specials on the fast lane; the float census.**
+  Yoshi's Island spawn (floor projection in each platform's frame,
+  `9dc4f0f67fb`), hatted Pikachus/Jigglypuffs back on the lean path (accessory
+  alias root, `0deb4522bc2`: 4 x Pikachu costumes 0-3 P50 1.72M -> 0.83M), the
+  unlit GO lettering (`70ec049d455`), PSI Magnet over Ness (`67a1f15ac84`). A lab
+  input knob forces every CPU to perform a special together: Thunder and PK
+  Thunder drew every list through the stage DL body; fast-lane routes
+  (`dac7fea37d8`) took forced 4 x Thunder P95 1.62M -> 1.43M and forced PK
+  Thunder 1.42M -> 1.30M, and retrying deferred effect descs only when the
+  loaded-file table changes took Thunder to 1.38M (digest identical). Owner
+  ruling the same day: software float must go (fixed point only) and the old
+  machinery must be deleted, both top priority. The first per-call-site census
+  (`2026-10-05_float-census`) puts soft float at 249K ticks a frame (gate
+  roster), 310K (Sector Z) and 391K (4 x Yoshi); the hurtbox test now decides
+  in fixed point (gate digest identical, P95 -4.3K), and Yoshi's animation-lock
+  chains -- the hurtbox walk and the lean renderer's local -- followed (4 x
+  Yoshi P95 1,332K -> 1,275K, misses 317 -> 248; gate digest identical; Yoshi's
+  digest re-baselined on low-order bits, same positions and damage on screen).
+  Receipts `2026-10-05_vfx-specials`, `2026-10-05_fixed-hurtbox`.
 
 ## 7. Found along the way
 

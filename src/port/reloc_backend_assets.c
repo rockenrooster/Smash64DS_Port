@@ -18198,6 +18198,13 @@ size_t ndsRelocGetLoadedFileSize(const void *file_id)
     return (loaded != NULL) ? (size_t)loaded->data_size : 0u;
 }
 
+/* The loaded-file table's change count (every add, replace, removal and
+ * reset), for callers that keep an answer derived from it. */
+u32 ndsRelocLoadedFilesEpoch(void)
+{
+    return sNdsRelocLoadedFilesEpoch;
+}
+
 void *ndsRelocGetFileData(void *file, const void *symbol)
 {
     NDSRelocLoadedFile *loaded = ndsRelocFindLoadedFileByData(file);

@@ -2300,6 +2300,9 @@ u32 ndsRelocSYInterpDescHeaderNative(u32 swapped);
  * lbRelocGetFileSize, which answers sizeof(Sprite) for a resident file -- see
  * the definition in src/port/reloc_backend_assets.c. */
 size_t ndsRelocGetLoadedFileSize(const void *file_id);
+/* Bumped on every change to the loaded-file table (add, replace, removal,
+ * reset): an answer derived from that table is still good while it holds. */
+u32 ndsRelocLoadedFilesEpoch(void);
 
 #define lbRelocGetFileData(type, file, symbol) \
     ((type)ndsRelocGetFileData((file), (symbol)))

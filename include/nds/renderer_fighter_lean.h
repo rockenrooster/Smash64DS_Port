@@ -640,10 +640,12 @@ typedef struct NDSFtrLeanJoint
  * ndsRendererAdapterBuildSourceFighterLocalMtx result decoded to s32 16.16
  * cells in row-major 4x3 order (rows 0-2 basis, row 3 translation).
  * `accum` is the joint's animation-lock scale accumulator, read and updated
- * in place exactly as ndsRendererAdapterComposeOwnerWorldsSource threads it
- * (x, y, z floats; only the lock branches read or write it).
- * Returns FALSE where the source compose would decline. */
-typedef s32 (*NDSFtrLeanSlowLocalFn)(DObj *dobj, f32 *accum, s32 *cells,
+ * in place as ndsRendererAdapterComposeOwnerWorldsSource threads it -- x, y, z
+ * at Q16 (1.0 = NDS_FTR_LEAN_ACCUM_ONE) since 2026-10-05, when the lock
+ * joints' locals went integer (ndsFtrLeanLockLocal); only the lock branch
+ * reads or writes it. Returns FALSE where the source compose would decline. */
+#define NDS_FTR_LEAN_ACCUM_ONE 0x10000
+typedef s32 (*NDSFtrLeanSlowLocalFn)(DObj *dobj, s32 *accum, s32 *cells,
                                      u32 *has_local);
 
 /* `flags`: NDS_FTR_LEAN_KERNEL_LOCKS when fp->is_use_animlocks is set for

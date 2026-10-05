@@ -1,0 +1,47 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 3 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,800; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 258: ALL 5,311,040 -> 1,116,736, 5 bucket(s) corrected
+  frame 852: ALL 5,871,360 -> 1,677,056, 5 bucket(s) corrected
+  frame 1215: ALL 5,311,040 -> 1,116,736, 4 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_fixed-hurtbox/yo-z.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=dac7fea37d8+dirty(41) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,800     1,677,056      1.50  1,225,206     1,111,296  4,766,464      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,928         9,792      1.99      5,564         2,432     27,648        0.4
+HUD         9,408        24,192      2.57     11,693         8,000    843,904        0.8
+SRC       400,320       705,664      1.76    424,436       134,784  1,205,056       35.8
+MISC      457,664       710,592      1.55    472,336       177,472  3,309,888       41.0
+OTHR      295,296       575,232      1.95    311,178        24,832    790,912       26.4
+WAIT      273,664       553,216      2.02    289,165         2,880    770,752       24.5
+WORK      916,608     1,342,720      1.46    932,073       342,720  4,432,512       82.1
+SHDT      810,367     1,237,439      1.53    834,288       300,415  2,360,255       72.6
+SWRM        1,280         1,344      1.05      1,250           768      3,264        0.1
+GCRA      394,752       700,416      1.77    419,117       130,304  1,199,552       35.3
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        271             0    269,184        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      457,600       710,464      1.55    472,251       177,408  3,309,824       41.0
+MFLS           64           128      2.00         85            64        128        0.0
+GPOL          536           611      1.14        489            57        662        0.0
+GVTX        1,375         1,574      1.14      1,271           185      1,758        0.1
+DGSA   2,085,910,002 4,118,135,982   1.97 2,128,096,947  5,064,253 4,292,133,306 186,775.6
+DGSB   2,105,213,267 4,142,411,165   1.97 2,134,485,996    465,084 4,292,469,956 188,504.1
+WORK-H    903,936     1,326,912      1.47    920,380       334,400  3,588,608       80.9
+
+named=914,029 (74.6% of ALL)  VBI 2:1600 3:348 4:11 5+:2 max:9 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_fixed-hurtbox/yo-z.json

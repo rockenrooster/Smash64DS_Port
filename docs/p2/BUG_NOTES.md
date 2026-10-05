@@ -7169,3 +7169,72 @@ crossing triangle to `ndsRendererHardwareSubmitNearClippedTriangle` (the fighter
 clipper) at its own painter depth, which the clipper's NDC-depth emitter writes exactly as the
 inside loop does. Witness `gNdsVisualEffectNearClipCount`: the walk-all7 Fox walk reached stage
 3 with 0 failures and 72 clipped triangles (12 frames x 6).
+
+## Y1 Yoshi's Island: player 1 died at match start (owner playtest, 2026-10-05, FIXED `9dc4f0f67fb`)
+
+The spawn projection (`ftManagerMakeFighter` -> `mpCollisionCheckProjectFloor`,
+mpcollision.c:2651) queries each yakumono group in its own frame: a group whose
+platform is off is skipped, a moving one is queried at the point less its DObj
+translation. The port's `ndsMPProjectFloorGeometry` read every group's vertices as
+world positions, so a cloud's local line lay under P1's spawn and the appear's end
+restored that floor line; the first grounded update walked P1 onto the cloud, which
+evaporated during the countdown. The port function now follows the source (and a
+vertical bracketing segment answers "no floor", as the source's NaN does).
+Receipt `artifacts/verification/2026-10-05_yi-spawn/README.md`.
+
+## C1 Alternate costumes: 4 Pikachus at 15 FPS (owner playtest, 2026-10-05, FIXED `0deb4522bc2`)
+
+Costumes 1-3 give Pikachu a hat: the accessory part, a second display list under the
+head joint's matrix (ftmanager.c:789, ftdisplaymain.c:819). The display contract binds
+it to the joint that owns it, so two roots named one matrix DObj and
+`ndsFtrLeanBuildJoints` declined the fighter (reason Topology): the three hatted
+Pikachus drew through the old path every frame (4 x Pikachu, costumes 0-3: P50
+1,718,784). The joint table now accepts one shared joint as an alias root that takes
+its source root's LOAD4x3 words after the compose: P50 827,648, P95 1,166,464, the
+same as four costume-0 Pikachus. Only Pikachu and Jigglypuff have an accessory part;
+the other alternate costumes are material changes. Receipt
+`artifacts/performance/2026-10-05_playtest-costumes/README.md`.
+
+## G1 Countdown: the unlit GO lamp was a black plate (owner playtest, 2026-10-05, FIXED `70ec049d455`)
+
+The GO lettering is one 15x11 IA8 sprite drawn black before GO (`ShadowInitial`) and
+navy at GO (`ShadowGo`). The traffic atlas baked `ShadowInitial` like the opaque rod:
+any texel at 3% coverage became opaque black, and at the 0.8x footprint the strokes
+cover nearly every texel. Both colourings now keep area coverage as A3 alpha.
+Receipt `artifacts/verification/2026-10-05_unlit-go/README.md`. The owner's broader
+note (the red, orange and blue bulbs look flat) is open: the atlas's 32-colour palette
+quantizes the lamps' shading.
+
+## R2 Yoshi wins a 4P match, Results freezes (owner playtest, 2026-10-05, not reproduced)
+
+Lab (`smash64ds-results-lab-hwtri` with every NDS_P2 fighter flag; the podium seeded
+by `gNdsLabResultsKinds` / `gNdsLabResultsWinner`, `src/port/scene_harness.c`): Yoshi
+winning with each of Win1/2/3 (`sSYUtilsRandomSeed`), heavy rosters and a human
+winner run to tic 300+ with no halt. Yoshi in the roster costs ~98 KB more file
+residency than Mario before tic 110 and ~21.5 KB more at tic 120 (one more
+`ndsSceneAssetAlloc` of ~19 KB plus GObj/DObj/MObj structs).
+
+Real flow (walk ROM `walk-all7`, VS route, battle descriptor poked: Sector Z, level-9
+CPUs Yoshi / DK / Link / Samus, items on, one minute; at Results start Yoshi made a
+human and the winner; the walk's START held off): Results ran 1,800 frames, free
+heap 862,480 at scene start, 176,868 before tic 120, 54,720 after the fighters,
+50,324 from tic 295 to 1,764 (no drift), "YOSHI WINS!" with the win pose on screen.
+Note for probes: the walk ROM presses START on Results every 16 frames
+(`ndsMenuShellWalkWantsResultsStart`), and Results frames are seen at
+`ndsPlatformEndFrame`, not `ndsPlatformBeginFrame`.
+
+## P1 Pikachu Down B / Ness Up B: P95 slowdown (owner playtest, 2026-10-05, IN PROGRESS)
+
+A lab input knob (`gNdsLabForceInputSlots` / `gNdsLabForceInput` /
+`gNdsLabForceInputPeriod`, `src/import/battleship_ftcomputer.c`, lab words only)
+makes every CPU perform a special together: 4 x Thunder every 120 ticks reads
+P95 1,621,952 on Dream Land, 4 x PK Thunder every 200 ticks P50 1,012,736 /
+P95 1,419,520. Thunder spawns a trail weapon every tick (10-tick life, then a
+6-tick trail effect); each list drew through the stage DL body, and every
+effect maker retried every deferred effect descriptor (the other fighters'
+descs, whose files never load) at ~110K a heavy frame. Fixed so far: both
+specials' lists take fast-lane routes (`dac7fea37d8`: forced Thunder P95 ->
+1,433,536, forced PK Thunder -> 1,299,328; natural 4 x Pikachu P95 -15K); the
+deferred retry and the mapping now wait for the loaded-file table or the
+desc's slot to change (measuring). Receipts
+`artifacts/performance/2026-10-05_vfx-specials`.

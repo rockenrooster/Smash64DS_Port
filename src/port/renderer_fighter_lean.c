@@ -21,6 +21,8 @@
 #include <nds/renderer_fighter_lean.h>
 #include <nds/generated/nds_fighter_admission.generated.h>
 #include <nds/nds_reloc_assets.h>
+#include <nds/nds_r2_collision_mtx.h>
+#include <nds/nds_r2_hwmath_unit.h>
 
 /* Slice 2b BSS diet: the per-root arrays hold the most DL-bearing joints any
  * kind x detail has (generator max, 24) instead of the draw collection's 32;
@@ -446,21 +448,169 @@ void ndsFtrLeanNoteRebind(u32 player_slot)
     }
 }
 
-/* Every joint the kernel's integer forms do not take: the adapter's own
- * source builder with the joint's lock accumulator passed in and out exactly
- * as ComposeOwnerWorldsSource passes lock_accum[j] (one Vec3f, aliased), then
- * the same N64-cell decode that compose performs. */
-static s32 ndsFtrLeanSlowLocal(DObj *dobj, f32 *accum, s32 *cells,
+/* P2-2p8 (2026-10-05, owner: "Software floating point should not exist,
+ * fixed point only"): a lock fighter's joints (fp->is_use_animlocks, every
+ * Yoshi motion) took the adapter's float builder for every joint, every draw
+ * -- 59.5K soft-float ticks a frame for four Yoshis, the census's largest
+ * single row (artifacts/performance/2026-10-05_float-census).
+ * lbCommonFighterPartsFuncMatrix's lock branch (lb/lbcommon.c:1410-1440,
+ * lbCommonMatrixTraRotScaInv) is integer arithmetic once its inputs are: the
+ * sin table at the angle's index, the accumulated scales at 8.8 and the
+ * translation at 16.16. This takes those inputs from the float bits (the exact
+ * angle index; scales and translation at Q16, rounded) and threads the
+ * accumulated scale down the tree at Q16, so no float operation remains. The
+ * gameplay cache (transform_update_mode) holds the same NCS local of the same
+ * TRS and scale chain and is not read; the source's draw-time vec_scale
+ * write-back is not made (the next tick's latch walk rewrites it before any
+ * reader). Mechanical equivalence, owner ruling D13: a cell can move by a low
+ * bit where the source's float product rounds the other way. */
+static s32 ndsFtrLeanLockLocal(DObj *dobj, s32 *accum, s32 *cells,
                                u32 *has_local)
 {
-    Vec3f *scale = (Vec3f *)(void *)accum;
+    s32 inv_x, inv_y, inv_z;
+    s32 vec_x, vec_y, vec_z;
+    s32 indexx, indexy, indexz;
+    s32 sinx, cosx, siny, cosy, sinz, cosz;
+    s32 scax_l, scay_l, scaz_l;
+    s32 scax_inv_l, scay_inv_l, scaz_inv_l;
+    s32 s;
+    u32 parts_count = 0u;
+    u32 i;
+
+    *has_local = FALSE;
+    if ((dobj == NULL) || (dobj == DOBJ_PARENT_NULL) ||
+        (dobj->parent_gobj == NULL))
+    {
+        return FALSE;
+    }
+    /* ndsRendererAdapterBuildSourceFighterLocalMtx's XObj gate. */
+    for (i = 0u; i < dobj->xobjs_num; i++)
+    {
+        XObj *xobj = dobj->xobjs[i];
+
+        if ((xobj == NULL) || (xobj->kind == nGCMatrixKindNull))
+        {
+            continue;
+        }
+        if (xobj->kind != NDS_RENDERER_ADAPTER_FIGHTER_PARTS_MTX_KIND)
+        {
+            return FALSE;
+        }
+        parts_count++;
+    }
+    if (parts_count == 0u)
+    {
+        return TRUE; /* no local; the accumulator passes through untouched */
+    }
+    if ((parts_count != 1u) || (ftGetParts(dobj) == NULL))
+    {
+        return FALSE;
+    }
+    inv_x = accum[0];
+    inv_y = accum[1];
+    inv_z = accum[2];
+    cells[9] = ndsR2CollisionF32ToFixed(dobj->translate.vec.f.x, 16u);
+    cells[10] = ndsR2CollisionF32ToFixed(dobj->translate.vec.f.y, 16u);
+    cells[11] = ndsR2CollisionF32ToFixed(dobj->translate.vec.f.z, 16u);
+    if ((cells[9] == NDS_R2_COLLISION_F32_OVERFLOW) ||
+        (cells[10] == NDS_R2_COLLISION_F32_OVERFLOW) ||
+        (cells[11] == NDS_R2_COLLISION_F32_OVERFLOW))
+    {
+        return FALSE;
+    }
+    if ((inv_x == 0) && (inv_y == 0) && (inv_z == 0))
+    {
+        /* The source's collapsed subtree (lbcommon.c:563-614): every row is
+         * scaled by zero before the saturated reciprocal reaches it, so only
+         * the translation survives, and the zero passes to the children. */
+        for (i = 0u; i < 9u; i++)
+        {
+            cells[i] = 0;
+        }
+        *has_local = TRUE;
+        return TRUE;
+    }
+    if ((inv_x <= 0) || (inv_y <= 0) || (inv_z <= 0))
+    {
+        return FALSE; /* the source's overflow case; the float builder declines it too */
+    }
+    if ((ndsFighterMatrixAngleToIndexExact(dobj->rotate.vec.f.x, &indexx) == 0) ||
+        (ndsFighterMatrixAngleToIndexExact(dobj->rotate.vec.f.y, &indexy) == 0) ||
+        (ndsFighterMatrixAngleToIndexExact(dobj->rotate.vec.f.z, &indexz) == 0))
+    {
+        return FALSE;
+    }
+    s = ndsR2CollisionF32ToFixed(dobj->scale.vec.f.x, 16u);
+    vec_x = (s32)(((s64)s * inv_x) >> 16);
+    s = ndsR2CollisionF32ToFixed(dobj->scale.vec.f.y, 16u);
+    vec_y = (s32)(((s64)s * inv_y) >> 16);
+    s = ndsR2CollisionF32ToFixed(dobj->scale.vec.f.z, 16u);
+    vec_z = (s32)(((s64)s * inv_z) >> 16);
+    if ((vec_x < 0) || (vec_y < 0) || (vec_z < 0) ||
+        (vec_x >= (64 << 16)) || (vec_y >= (64 << 16)) ||
+        (vec_z >= (64 << 16)))
+    {
+        return FALSE;
+    }
+    accum[0] = vec_x;
+    accum[1] = vec_y;
+    accum[2] = vec_z;
+
+    sinx = ndsRendererAdapterFighterSinFromIndex(indexx);
+    cosx = ndsRendererAdapterFighterCosFromIndex(indexx);
+    siny = ndsRendererAdapterFighterSinFromIndex(indexy);
+    cosy = ndsRendererAdapterFighterCosFromIndex(indexy);
+    sinz = ndsRendererAdapterFighterSinFromIndex(indexz);
+    cosz = ndsRendererAdapterFighterCosFromIndex(indexz);
+
+    /* (s32)(x * 256.0F) for x >= 0, and (s32)((1.0F / inv) * 256.0F). */
+    scax_l = vec_x >> 8;
+    scay_l = vec_y >> 8;
+    scaz_l = vec_z >> 8;
+    scax_inv_l = (s32)ndsR2HwMathDivideFast((s64)1 << 24, inv_x);
+    scay_inv_l = (s32)ndsR2HwMathDivideFast((s64)1 << 24, inv_y);
+    scaz_inv_l = (s32)ndsR2HwMathDivideFast((s64)1 << 24, inv_z);
+
+    /* lbCommonMatrixTraRotScaInv's 3x3, row-major at 16.16. */
+    cells[0] = (((((cosy * cosz) >> 14) * scax_l) >> 8) * scax_inv_l) >> 8;
+    cells[1] = (((((cosy * sinz) >> 14) * scax_l) >> 8) * scay_inv_l) >> 8;
+    cells[2] = ((((-siny) * scax_l) >> 7) * scaz_inv_l) >> 8;
+    cells[3] = ((((((((sinx * siny) >> 15) * cosz) >> 14) -
+                   ((cosx * sinz) >> 14)) * scay_l) >> 8) * scax_inv_l) >> 8;
+    cells[4] = ((((((((sinx * siny) >> 15) * sinz) >> 14) +
+                   ((cosx * cosz) >> 14)) * scay_l) >> 8) * scay_inv_l) >> 8;
+    cells[5] = (((((sinx * cosy) >> 14) * scay_l) >> 8) * scaz_inv_l) >> 8;
+    cells[6] = ((((((((cosx * siny) >> 15) * cosz) >> 14) +
+                   ((sinx * sinz) >> 14)) * scaz_l) >> 8) * scax_inv_l) >> 8;
+    cells[7] = ((((((((cosx * siny) >> 15) * sinz) >> 14) -
+                   ((sinx * cosz) >> 14)) * scaz_l) >> 8) * scay_inv_l) >> 8;
+    cells[8] = (((((cosx * cosy) >> 14) * scaz_l) >> 8) * scaz_inv_l) >> 8;
+    *has_local = TRUE;
+    return TRUE;
+}
+
+/* Every joint the kernel's integer forms do not take. A lock fighter's joints
+ * take ndsFtrLeanLockLocal above; the others take the adapter's own source
+ * builder (the unlocked branches never read the accumulator), then the same
+ * N64-cell decode that compose performs. */
+static s32 ndsFtrLeanSlowLocal(DObj *dobj, s32 *accum, s32 *cells,
+                               u32 *has_local)
+{
+    Vec3f unit = { 1.0F, 1.0F, 1.0F };
+    const FTStruct *fp = ((dobj != NULL) && (dobj != DOBJ_PARENT_NULL) &&
+                          (dobj->parent_gobj != NULL)) ?
+        ftGetStruct(dobj->parent_gobj) : NULL;
     Mtx mtx;
     sb32 local = FALSE;
     u32 row;
     u32 col;
 
+    if ((fp != NULL) && (fp->is_use_animlocks != FALSE))
+    {
+        return ndsFtrLeanLockLocal(dobj, accum, cells, has_local);
+    }
     if (ndsRendererAdapterBuildSourceFighterLocalMtx(
-            dobj, scale, scale, &mtx, &local) == FALSE)
+            dobj, &unit, &unit, &mtx, &local) == FALSE)
     {
         return FALSE;
     }

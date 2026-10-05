@@ -1,0 +1,45 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,800; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 566: ALL 5,311,040 -> 1,116,736, 5 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_fixed-hurtbox/pkdb-z.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=dac7fea37d8+dirty(41) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,800     1,677,120      1.50  1,224,503     1,111,936  4,510,016      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,608         7,872      1.71      5,034         3,584     26,752        0.4
+HUD         9,024        22,336      2.48     10,620         7,936    583,232        0.8
+SRC       323,776       630,784      1.95    366,945       146,624  1,103,744       29.0
+MISC      407,040       748,992      1.84    460,711       178,112  3,309,184       36.4
+OTHR      410,624       559,040      1.36    381,193        22,848    779,840       36.8
+WAIT      388,928       537,664      1.38    359,572         2,880    759,552       34.8
+WORK      763,136     1,384,320      1.81    861,008       353,856  4,173,568       68.3
+SHDT      685,695     1,284,351      1.87    771,174       312,383  2,816,575       61.4
+SWRM        1,280         1,408      1.10      1,294           832      3,264        0.1
+GCRA      318,592       625,536      1.96    361,638       142,080  1,098,304       28.5
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        257             0    291,456        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      406,912       748,928      1.84    460,625       178,048  3,309,056       36.4
+MFLS           64           128      2.00         85            64        128        0.0
+GPOL          608           671      1.10        571            50        722        0.1
+GVTX        1,546         1,735      1.12      1,464           167      1,874        0.1
+DGSA   2,248,979,555 4,119,059,063        2,251,164,270  7,421,694 4,294,382,597 201,377.1
+DGSB   2,207,775,904 4,085,272,777        2,191,862,890  1,598,036 4,290,041,406 197,687.7
+WORK-H    753,408     1,373,120      1.82    850,388       345,664  3,590,336       67.5
+
+named=843,310 (68.9% of ALL)  VBI 2:1622 3:308 4:28 5+:3 max:9 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_fixed-hurtbox/pkdb-z.json

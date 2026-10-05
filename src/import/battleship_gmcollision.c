@@ -369,30 +369,37 @@ void gmCollisionGetFighterPartsWorldPosition(DObj *main_dobj, Vec3f *vec)
 #undef gmCollisionCheckWeaponAttackFighterDamageCollide
 #undef gmCollisionCheckItemAttackFighterDamageCollide
 
-int ndsP2HurtboxRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
-                             f32 attack_size, const FTDamageColl *damage);
+int ndsP2HurtboxDecidePoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
+                             f32 attack_size, s32 attack_state,
+                             const FTDamageColl *damage);
 extern volatile u32 gNdsP2HurtboxRejectMode;
 extern volatile u32 gNdsP2HurtboxRejects;
 extern volatile u32 gNdsP2HurtboxPasses;
 extern volatile u32 gNdsP2HurtboxFlips;
 
-/* Mode 1 skips the float test on a proof of a miss; mode 2 runs it anyway and
- * counts each contradicted proof as a flip. */
-static sb32 ndsP2HurtboxRejectGate(const Vec3f *pos_curr, const Vec3f *pos_prev,
-                                   f32 attack_size, const FTDamageColl *damage,
-                                   sb32 *rejected)
+/* Mode 1 answers from the kernel's decision -- a proven miss or, since
+ * 2026-10-05, the pair decided in fixed point -- and returns TRUE with *hit
+ * set; mode 2 runs the float test anyway and the caller counts each
+ * contradicted decision as a flip. *decided is -1 when the float test
+ * decides. */
+static sb32 ndsP2HurtboxDecideGate(const Vec3f *pos_curr, const Vec3f *pos_prev,
+                                   f32 attack_size, s32 attack_state,
+                                   const FTDamageColl *damage, int *decided,
+                                   sb32 *hit)
 {
     const u32 mode = gNdsP2HurtboxRejectMode;
 
-    *rejected = FALSE;
+    *decided = -1;
     if (mode == 0u)
     {
         return FALSE;
     }
-    if (ndsP2HurtboxRejectPoints(pos_curr, pos_prev, attack_size, damage) != 0)
+    *decided = ndsP2HurtboxDecidePoints(pos_curr, pos_prev, attack_size,
+                                        attack_state, damage);
+    if (*decided >= 0)
     {
         NDS_DIAG(gNdsP2HurtboxRejects++);
-        *rejected = TRUE;
+        *hit = (*decided != 0) ? TRUE : FALSE;
         return (mode == 1u) ? TRUE : FALSE;
     }
     NDS_DIAG(gNdsP2HurtboxPasses++);
@@ -402,20 +409,20 @@ static sb32 ndsP2HurtboxRejectGate(const Vec3f *pos_curr, const Vec3f *pos_prev,
 sb32 gmCollisionCheckWeaponAttackFighterDamageCollide(
     WPAttackColl *attack_coll, s32 attack_id, FTDamageColl *damage_coll)
 {
-    sb32 rejected;
-    sb32 hit;
+    int decided;
+    sb32 hit = FALSE;
 
-    if (ndsP2HurtboxRejectGate(&attack_coll->attack_pos[attack_id].pos_curr,
+    if (ndsP2HurtboxDecideGate(&attack_coll->attack_pos[attack_id].pos_curr,
                                &attack_coll->attack_pos[attack_id].pos_prev,
-                               attack_coll->size, damage_coll,
-                               &rejected) != FALSE)
+                               attack_coll->size, attack_coll->attack_state,
+                               damage_coll, &decided, &hit) != FALSE)
     {
-        return FALSE;
+        return hit;
     }
     NDS_FTPARTS_LATCH_MARK();
     hit = ndsBaseGmCollisionCheckWeaponAttackFighterDamageCollide(
         attack_coll, attack_id, damage_coll);
-    if ((rejected != FALSE) && (hit != FALSE))
+    if ((decided >= 0) && ((decided != 0) != (hit != FALSE)))
     {
         NDS_DIAG(gNdsP2HurtboxFlips++);
     }
@@ -425,20 +432,20 @@ sb32 gmCollisionCheckWeaponAttackFighterDamageCollide(
 sb32 gmCollisionCheckItemAttackFighterDamageCollide(
     ITAttackColl *attack_coll, s32 attack_id, FTDamageColl *damage_coll)
 {
-    sb32 rejected;
-    sb32 hit;
+    int decided;
+    sb32 hit = FALSE;
 
-    if (ndsP2HurtboxRejectGate(&attack_coll->attack_pos[attack_id].pos_curr,
+    if (ndsP2HurtboxDecideGate(&attack_coll->attack_pos[attack_id].pos_curr,
                                &attack_coll->attack_pos[attack_id].pos_prev,
-                               attack_coll->size, damage_coll,
-                               &rejected) != FALSE)
+                               attack_coll->size, attack_coll->attack_state,
+                               damage_coll, &decided, &hit) != FALSE)
     {
-        return FALSE;
+        return hit;
     }
     NDS_FTPARTS_LATCH_MARK();
     hit = ndsBaseGmCollisionCheckItemAttackFighterDamageCollide(
         attack_coll, attack_id, damage_coll);
-    if ((rejected != FALSE) && (hit != FALSE))
+    if ((decided >= 0) && ((decided != 0) != (hit != FALSE)))
     {
         NDS_DIAG(gNdsP2HurtboxFlips++);
     }
@@ -560,7 +567,7 @@ void ndsR2SimMacDriveJoint(DObj *joint, const Vec3f *offset, u32 arm)
 /* P2-2p8 A5 (src/port/nds_p2_hurtbox_reject.c): a fixed-point proof that the
  * float test below would miss. Mode 1 skips the float test on a proof; mode 2
  * (shadow) still runs it and counts every proof it contradicts as a flip. */
-int ndsP2HurtboxRejectTest(const FTAttackColl *attack,
+int ndsP2HurtboxDecideTest(const FTAttackColl *attack,
                            const FTDamageColl *damage);
 extern volatile u32 gNdsP2HurtboxRejectMode;
 extern volatile u32 gNdsP2HurtboxRejects;
@@ -577,17 +584,21 @@ sb32 gmCollisionCheckFighterAttackDamageCollide(FTAttackColl *attack_coll,
 #endif
 #if NDS_P2_HURTBOX_REJECT
     const u32 reject_mode = gNdsP2HurtboxRejectMode;
-    sb32 rejected = FALSE;
+    int decided = -1;
 
+    /* The kernel proves a miss or, since 2026-10-05, decides the pair in fixed
+     * point (src/port/nds_p2_hurtbox_reject.c); -1 leaves it to the float
+     * tail below. Mode 2 (shadow) runs the float tail anyway and counts every
+     * decision it contradicts as a flip. */
     if (reject_mode != 0u)
     {
-        if (ndsP2HurtboxRejectTest(attack_coll, damage_coll) != 0)
+        decided = ndsP2HurtboxDecideTest(attack_coll, damage_coll);
+        if (decided >= 0)
         {
             NDS_DIAG(gNdsP2HurtboxRejects++);
-            rejected = TRUE;
             if (reject_mode == 1u)
             {
-                return FALSE;
+                return (decided != 0) ? TRUE : FALSE;
             }
         }
         else
@@ -617,7 +628,7 @@ sb32 gmCollisionCheckFighterAttackDamageCollide(FTAttackColl *attack_coll,
     hit = ndsBaseGmCollisionCheckFighterAttackDamageCollide(attack_coll,
                                                             damage_coll);
 #if NDS_P2_HURTBOX_REJECT
-    if ((rejected != FALSE) && (hit != FALSE))
+    if ((decided >= 0) && ((decided != 0) != (hit != FALSE)))
     {
         NDS_DIAG(gNdsP2HurtboxFlips++);
     }
