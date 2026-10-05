@@ -806,6 +806,9 @@ NDS_LAB_FOURCPU_SWEEP ?=
 NDS_LAB_FOURCPU_WORDS ?=
 NDS_LAB_FOURCPU_SWEEP_GKIND ?=
 NDS_LAB_FOURCPU_SWEEP_KINDS ?=
+# LAB ONLY: the lean renderer's root-reuse census (ndsFtrLeanRootCensus,
+# gNdsLabLeanRootCensus). Empty = not compiled.
+NDS_LAB_LEAN_ROOT_CENSUS ?=
 # LAB ONLY (with NDS_LAB_FOURCPU_SWEEP=1): record every syInterpGetFracFrame
 # call's segment key, t and result in gNdsInterpCapture, for the Sector Z
 # Arwing flight-table generator. Empty = no buffer.
@@ -7177,6 +7180,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		$(if $(strip $(NDS_LAB_FOURCPU_SWEEP_GKIND)),echo '#define NDS_LAB_FOURCPU_SWEEP_GKIND $(NDS_LAB_FOURCPU_SWEEP_GKIND)u';) \
 		$(if $(strip $(NDS_LAB_FOURCPU_SWEEP_KINDS)),echo '#define NDS_LAB_FOURCPU_SWEEP_KINDS $(NDS_LAB_FOURCPU_SWEEP_KINDS)u';) \
 		$(if $(strip $(NDS_INTERP_FRAC_CAPTURE)),echo '#define NDS_INTERP_FRAC_CAPTURE 1';) \
+		$(if $(strip $(NDS_LAB_LEAN_ROOT_CENSUS)),echo '#define NDS_LAB_LEAN_ROOT_CENSUS 1';) \
 		echo '#define NDS_P2_LUIGI $(NDS_P2_LUIGI)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_LUIGI $(NDS_NATIVE_OWNER_IMAGE_LUIGI)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_DONKEY $(NDS_NATIVE_OWNER_IMAGE_DONKEY)'; \

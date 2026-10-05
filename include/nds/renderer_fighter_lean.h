@@ -721,6 +721,11 @@ void ndsFtrLeanEntryDropActive(u32 battle_slot);
  * switched to the new state; `fresh` stays a valid copy). Returns the entry
  * code to activate, or NDS_FTR_LEAN_ENTRY_NONE (activate `fresh`). */
 u32 ndsFtrLeanLearnVariant(u32 battle_slot, u32 fresh);
+#if defined(NDS_LAB_LEAN_ROOT_CENSUS) && NDS_LAB_LEAN_ROOT_CENSUS
+/* Lab: how much of `fresh` the other entry's list already holds, root by
+ * root (gNdsLabLeanRootCensus). */
+void ndsFtrLeanRootCensus(u32 battle_slot, u32 fresh);
+#endif
 /* Lab (NDS_FTR_LEAN_SLOW_VERIFY): `held` against `fresh`, a materialization
  * of the same key (verify_*). */
 void ndsFtrLeanVerifyEntries(u32 battle_slot, u32 held, u32 fresh);

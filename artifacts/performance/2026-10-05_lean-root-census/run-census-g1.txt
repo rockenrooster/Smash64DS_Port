@@ -1,0 +1,47 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 2 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,672; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 795: ALL 5,310,912 -> 1,116,608, 5 bucket(s) corrected
+  frame 812: ALL 5,310,784 -> 1,116,480, 5 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_collision-window5/census-g1.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=422facd3b0b+dirty(37) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,672     1,677,120      1.50  1,199,134     1,110,656 17,212,544      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,288         9,856      2.30      5,374         2,176     31,232        0.4
+HUD         8,768        24,256      2.77     11,017         7,744    785,728        0.8
+SRC       449,728       649,536      1.44    457,407       160,256  1,149,056       40.3
+MISC      412,800       607,168      1.47    438,478       174,080 15,865,664       37.0
+OTHR      271,872       566,784      2.08    286,858        23,552    768,448       24.3
+WAIT      250,560       544,832      2.17    264,822         2,304    748,608       22.4
+WORK      905,088     1,279,232      1.41    930,669       364,928 16,873,216       81.1
+SHDT      820,159     1,163,967      1.42    846,390       321,919 16,042,943       73.4
+SWRM        1,344         1,408      1.05      1,350           960      3,392        0.1
+GCRA      444,416       644,288      1.45    452,017       155,648  1,143,616       39.8
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        570             0  1,033,472        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      412,672       607,104      1.47    438,393       174,016 15,865,600       37.0
+MFLS           64           128      2.00         85            64        256        0.0
+GPOL          482           577      1.20        469            47        621        0.0
+GVTX        1,086         1,357      1.25      1,078           157      1,485        0.1
+DGSA   2,156,708,599 4,108,563,968        2,140,450,557  2,648,577 4,292,117,025 193,137.2
+DGSB   2,220,675,919 4,066,019,029        2,159,419,385    168,676 4,294,574,852 198,865.6
+WORK-H    895,360     1,259,584      1.41    919,653       355,584 16,087,488       80.2
+
+named=912,276 (76.1% of ALL)  VBI 2:1722 3:218 4:18 5+:3 max:35 total:1961  slips=0
+extras: gNdsLabLeanRootCensus[0]=48  gNdsLabLeanRootCensus[1]=654  gNdsLabLeanRootCensus[2]=542  gNdsLabLeanRootCensus[3]=365  gNdsLabLeanRootCensus[4]=82,170  gNdsLabLeanRootCensus[5]=46,702  gNdsLabLeanRootCensus[6]=204  gNdsLabLeanRootCensus[7]=24
+Wrote artifacts/performance/2026-10-05_collision-window5/census-g1.json

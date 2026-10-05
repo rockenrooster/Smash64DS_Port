@@ -15455,6 +15455,116 @@ static void ndsFtrLeanVariantReject(u32 reason)
 #endif
 }
 
+#if defined(NDS_LAB_LEAN_ROOT_CENSUS) && NDS_LAB_LEAN_ROOT_CENSUS
+/* Lab (2026-10-05): the reuse an incremental materialization could find. For
+ * each root, is the fresh list's block (its LOAD4x3 seed to the next root's)
+ * the held list's block word for word, patch sites masked out? [0] lists
+ * compared, [1] roots, [2] roots of equal length, [3] identical roots, [4]
+ * words, [5] words in identical roots, [6] leading identical roots, [7] lists
+ * with at most two differing roots. */
+__attribute__((used, aligned(32))) volatile u32 gNdsLabLeanRootCensus[8];
+static u32 sNdsLabLeanRootMask[2][NDS_FTR_LEAN_MASK_WORDS];
+
+void ndsFtrLeanRootCensus(u32 battle_slot, u32 fresh)
+{
+    NDSFtrLeanSlotState *s;
+    const NDSFighterPacket *a;
+    const NDSFighterPacket *b;
+    u32 held;
+    u32 roots;
+    u32 r;
+    u32 same = 0u;
+    u32 leading = 0u;
+    sb32 lead_open = TRUE;
+
+    if ((battle_slot >= NDS_FIGHTER_PACKET_SLOTS) ||
+        (fresh >= NDS_FTR_LEAN_ENTRIES))
+    {
+        return;
+    }
+    s = &sNdsFtrLeanSlots[battle_slot];
+    held = fresh ^ 1u;
+    if ((ndsFtrLeanEntryUsable(held) == FALSE) || (s->entry[held].valid == 0u) ||
+        (s->entry[fresh].valid == 0u) ||
+        (((s->entry[held].valid | s->entry[fresh].valid) &
+          NDS_FTR_LEAN_VALID_WIDE) != 0u))
+    {
+        return;
+    }
+    a = ndsFtrLeanEntryPacket(battle_slot, fresh);
+    b = ndsFtrLeanEntryPacket(battle_slot, held);
+    if ((a->root_count != b->root_count) || (a->root_count == 0u))
+    {
+        return;
+    }
+    ndsFtrLeanPatchMask(a, sNdsLabLeanRootMask[0]);
+    ndsFtrLeanPatchMask(b, sNdsLabLeanRootMask[1]);
+    roots = a->root_count;
+    gNdsLabLeanRootCensus[0]++;
+    for (r = 0u; r < roots; r++)
+    {
+        const u32 a0 = a->roots[r].seed_index;
+        const u32 b0 = b->roots[r].seed_index;
+        const u32 a1 = (r + 1u < roots) ? a->roots[r + 1u].seed_index :
+            a->word_count;
+        const u32 b1 = (r + 1u < roots) ? b->roots[r + 1u].seed_index :
+            b->word_count;
+        sb32 identical = TRUE;
+        u32 i;
+
+        gNdsLabLeanRootCensus[1]++;
+        if ((a0 == NDS_FIGHTER_PACKET_INDEX_NONE) ||
+            (b0 == NDS_FIGHTER_PACKET_INDEX_NONE) || (a1 < a0) || (b1 < b0) ||
+            (a1 > a->word_count) || (b1 > b->word_count))
+        {
+            lead_open = FALSE;
+            continue;
+        }
+        gNdsLabLeanRootCensus[4] += a1 - a0;
+        if ((a1 - a0) != (b1 - b0))
+        {
+            lead_open = FALSE;
+            continue;
+        }
+        gNdsLabLeanRootCensus[2]++;
+        for (i = 0u; i < a1 - a0; i++)
+        {
+            const u32 ia = a0 + i;
+            const u32 ib = b0 + i;
+            const u32 ma = (sNdsLabLeanRootMask[0][ia >> 5] >> (ia & 31u)) & 1u;
+            const u32 mb = (sNdsLabLeanRootMask[1][ib >> 5] >> (ib & 31u)) & 1u;
+
+            if ((ma != mb) || ((ma == 0u) && (a->words[ia] != b->words[ib])))
+            {
+                identical = FALSE;
+                break;
+            }
+        }
+        if (identical != FALSE)
+        {
+            same++;
+            gNdsLabLeanRootCensus[3]++;
+            gNdsLabLeanRootCensus[5] += a1 - a0;
+            if (lead_open != FALSE)
+            {
+                leading++;
+            }
+        }
+        else
+        {
+            lead_open = FALSE;
+        }
+    }
+    gNdsLabLeanRootCensus[6] += leading;
+    if (same + 2u >= roots)
+    {
+        gNdsLabLeanRootCensus[7]++;
+    }
+    DC_FlushRange((const void *)gNdsLabLeanRootCensus,
+                  sizeof(gNdsLabLeanRootCensus));
+}
+#endif
+
 u32 NDS_FIGHTER_PACKET_COLD_CODE
 ndsFtrLeanLearnVariant(u32 battle_slot, u32 fresh)
 {

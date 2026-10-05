@@ -1342,6 +1342,9 @@ rows:
             return reason;
         }
         materialized = 1u;
+#if defined(NDS_LAB_LEAN_ROOT_CENSUS) && NDS_LAB_LEAN_ROOT_CENSUS
+        ndsFtrLeanRootCensus(slot, entry);
+#endif
         code = ndsFtrLeanLearnVariant(slot, entry);
         if (code != NDS_FTR_LEAN_ENTRY_NONE)
         {
