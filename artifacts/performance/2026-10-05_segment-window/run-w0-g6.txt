@@ -1,0 +1,46 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,800; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 151: ALL 5,310,912 -> 1,116,608, 4 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_segment-window/w0-g6.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=422facd3b0b+dirty(31) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,800     1,676,800      1.50  1,153,557     1,111,488  4,268,352      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,352        10,432      2.40      5,502         2,240     27,904        0.4
+HUD         9,216        24,384      2.65     11,129         7,744    346,560        0.8
+SRC       369,216       574,016      1.55    378,832       133,952  1,363,392       33.1
+MISC      405,760       559,232      1.38    415,456       176,832  3,325,824       36.3
+OTHR      334,016       618,560      1.85    342,638        27,072    792,960       29.9
+WAIT      310,656       593,856      1.91    320,148         5,568    772,672       27.8
+WORK      818,496     1,127,936      1.38    829,480       340,928  3,935,616       73.3
+SHDT            0             0      0.00          0             0          0        0.0
+SWRM        1,344         1,408      1.05      1,369           896      3,392        0.1
+GCRA      363,712       568,896      1.56    373,355       129,408  1,357,888       32.6
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        352             0    633,472        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      405,632       559,104      1.38    415,321       176,704  3,325,696       36.3
+MFLS          128           192      1.50        135           128        256        0.0
+GPOL          597           643      1.08        550            29        675        0.1
+GVTX        1,439         1,569      1.09      1,346            96      1,657        0.1
+DGSA   2,248,335,339 4,065,321,507        2,176,252,338    408,983 4,294,514,885 201,319.4
+DGSB   2,239,784,444 4,083,387,236        2,189,176,867  1,230,618 4,293,852,712 200,553.8
+WORK-H    808,448     1,116,736      1.38    818,352       332,672  3,589,056       72.4
+
+named=810,919 (70.3% of ALL)  VBI 2:1844 3:108 4:8 5+:1 max:8 total:1961  slips=0
+extras: gNdsStageMPSweepFloorLoopLineSweepVisitCount=45,964
+Wrote artifacts/performance/2026-10-05_segment-window/w0-g6.json

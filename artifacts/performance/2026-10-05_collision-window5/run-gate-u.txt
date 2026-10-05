@@ -1,0 +1,46 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 2 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,800; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 1061: ALL 5,311,104 -> 1,116,800, 4 bucket(s) corrected
+  frame 1546: ALL 5,310,976 -> 1,116,672, 4 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_collision-window5/gate-u.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=422facd3b0b+dirty(39) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,800     1,676,160      1.50  1,149,776     1,111,744  4,749,248      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,416        10,432      2.36      5,536         2,368     27,904        0.4
+HUD         9,088        23,936      2.63     11,217         7,872    862,464        0.8
+SRC       365,952       567,808      1.55    375,823       133,696  1,305,216       32.8
+MISC      404,416       554,368      1.37    413,409       176,832  3,298,432       36.2
+OTHR      336,320       621,952      1.85    343,792        23,040    792,000       30.1
+WAIT      313,600       596,736      1.90    321,375         2,752    771,392       28.1
+WORK      813,696     1,118,528      1.37    824,526       341,952  4,412,672       72.9
+SHDT            0             0      0.00          0             0          0        0.0
+SWRM        1,344         1,472      1.10      1,376           960      3,520        0.1
+GCRA      360,256       562,176      1.56    370,228       129,024  1,299,712       32.3
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        358             0    644,416        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      404,352       554,304      1.37    413,324       176,768  3,298,368       36.2
+MFLS           64           128      2.00         85            64        128        0.0
+GPOL          597           643      1.08        550            29        672        0.1
+GVTX        1,439         1,569      1.09      1,346            96      1,652        0.1
+DGSA   2,248,335,339 4,065,321,507        2,176,252,338    408,983 4,294,514,885 201,319.4
+DGSB   2,239,784,444 4,083,387,236        2,189,176,867  1,230,618 4,293,852,712 200,553.8
+WORK-H    804,032     1,099,264      1.37    813,309       332,608  3,550,208       72.0
+
+named=805,985 (70.1% of ALL)  VBI 2:1858 3:94 4:8 5+:1 max:9 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_collision-window5/gate-u.json

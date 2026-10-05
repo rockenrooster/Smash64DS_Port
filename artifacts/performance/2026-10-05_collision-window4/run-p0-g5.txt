@@ -1,0 +1,48 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 4 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,736; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 323: ALL 5,310,784 -> 1,116,480, 5 bucket(s) corrected
+  frame 873: ALL 5,311,168 -> 1,116,864, 5 bucket(s) corrected
+  frame 1261: ALL 5,311,744 -> 1,117,440, 4 bucket(s) corrected
+  frame 1943: ALL 5,871,360 -> 1,677,056, 5 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_collision-window4/p0-g5.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=422facd3b0b+dirty(33) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,736     1,677,248      1.50  1,207,577     1,111,616  8,708,736      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,608        10,816      2.35      5,722         2,368     22,720        0.4
+HUD         9,088        23,872      2.63     11,706         8,000    700,864        0.8
+SRC       437,248       646,080      1.48    447,833       167,360  1,339,712       39.2
+MISC      449,664       609,536      1.36    472,111       235,520  7,437,632       40.3
+OTHR      245,184       563,648      2.30    270,206        23,232    701,184       22.0
+WAIT      223,040       541,440      2.43    247,953         2,432    680,704       20.0
+WORK      931,072     1,251,776      1.34    955,695       432,640  8,369,664       83.4
+SHDT      825,279     1,145,087      1.39    860,253       390,079  7,623,807       73.9
+SWRM        1,344         1,408      1.05      1,355           896      3,264        0.1
+GCRA      431,936       639,360      1.48    442,446       162,752  1,334,400       38.7
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        544             0    978,816        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      449,536       609,408      1.36    471,976       235,392  7,437,504       40.3
+MFLS          128           192      1.50        135           128        192        0.0
+GPOL          534           601      1.13        515           116        652        0.0
+GVTX        1,248         1,425      1.14      1,218           351      1,631        0.1
+DGSA   2,216,622,636 4,088,913,632        2,177,922,654    268,149 4,294,787,496 198,491.2
+DGSB   2,319,073,349 4,073,558,838        2,230,935,651  3,133,812 4,292,624,795 207,665.3
+WORK-H    918,912     1,241,024      1.35    943,989       424,192  7,668,800       82.3
+
+named=937,372 (77.6% of ALL)  VBI 2:1675 3:274 4:10 5+:2 max:20 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_collision-window4/p0-g5.json

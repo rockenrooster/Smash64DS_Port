@@ -1,0 +1,45 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,800; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 267: ALL 5,311,296 -> 1,116,992, 4 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_collision-window/c1-g8.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=422facd3b0b+dirty(33) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,800     1,677,184      1.50  1,179,338     1,112,448 12,283,776      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,544        10,496      2.31      5,653         2,304     30,976        0.4
+HUD         9,792        24,576      2.51     12,224         8,640    697,280        0.9
+SRC       435,200       631,104      1.45    442,142       143,872  1,105,024       39.0
+MISC      432,640       556,416      1.29    450,153       214,656 11,045,248       38.7
+OTHR      250,112       559,040      2.24    269,166        22,144    743,360       22.4
+WAIT      228,480       537,152      2.35    247,363         2,368    723,136       20.5
+WORK      913,216     1,193,216      1.31    927,453       389,504 11,944,128       81.8
+SHDT            0             0      0.00          0             0          0        0.0
+SWRM        1,408         1,472      1.05      1,417           960      3,648        0.1
+GCRA      429,568       624,704      1.45    436,591       139,200  1,094,912       38.5
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        646             0  1,148,416        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      432,512       556,288      1.29    450,019       214,528 11,045,120       38.7
+MFLS          128           192      1.50        134           128        512        0.0
+GPOL          493           583      1.18        457           108        644        0.0
+GVTX        1,143         1,386      1.21      1,088           352      1,559        0.1
+DGSA   2,214,262,814 4,066,907,822        2,157,585,562  5,032,625 4,290,499,904 198,268.5
+DGSB   2,165,373,534 4,060,433,163        2,149,789,526  4,659,048 4,294,932,140 193,890.9
+WORK-H    901,184     1,181,376      1.31    915,229       380,160 11,246,848       80.7
+
+named=910,172 (77.2% of ALL)  VBI 2:1775 3:171 4:13 5+:2 max:26 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_collision-window/c1-g8.json

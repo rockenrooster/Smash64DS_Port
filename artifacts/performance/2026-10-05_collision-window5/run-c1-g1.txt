@@ -1,0 +1,45 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,800; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 1566: ALL 5,871,488 -> 1,677,184, 5 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_collision-window5/c1-g1.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=422facd3b0b+dirty(37) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,800     1,677,184      1.50  1,194,179     1,111,360 16,778,368      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,416         9,920      2.25      5,393         2,304     30,848        0.4
+HUD         8,896        24,256      2.73     10,962         7,936    367,616        0.8
+SRC       449,408       645,632      1.44    456,158       160,896  1,146,496       40.2
+MISC      410,944       603,520      1.47    434,444       150,464 15,852,352       36.8
+OTHR      271,488       562,432      2.07    287,222        23,616    789,248       24.3
+WAIT      249,728       537,856      2.15    264,848         2,368    769,152       22.4
+WORK      903,680     1,264,832      1.40    925,570       344,128 16,441,280       80.9
+SHDT      818,367     1,150,911      1.41    841,488       302,079 16,029,631       73.3
+SWRM        1,344         1,472      1.10      1,371           896      3,456        0.1
+GCRA      443,776       639,616      1.44    450,625       156,032  1,140,992       39.7
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        566             0  1,025,536        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      410,816       603,392      1.47    434,309       150,336 15,852,160       36.8
+MFLS          128           192      1.50        136           128        192        0.0
+GPOL          482           577      1.20        469            47        621        0.0
+GVTX        1,086         1,357      1.25      1,078           157      1,485        0.1
+DGSA   2,156,708,599 4,108,563,968        2,140,450,557  2,648,577 4,292,117,025 193,115.0
+DGSB   2,220,675,919 4,066,019,029        2,159,419,385    168,676 4,294,574,852 198,842.8
+WORK-H    894,272     1,253,504      1.40    914,608       336,000 16,073,664       80.1
+
+named=906,957 (75.9% of ALL)  VBI 2:1733 3:212 4:14 5+:2 max:34 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_collision-window5/c1-g1.json

@@ -444,6 +444,15 @@ static f32 sNdsMPLineExtentMaxY[NDS_MP_LINE_EXTENT_MAX];
 static f32 sNdsMPLineExtentMaxYEps[NDS_MP_LINE_EXTENT_MAX];
 static f32 sNdsMPLineExtentMinYEps[NDS_MP_LINE_EXTENT_MAX];
 static u8 sNdsMPLineExtentValid[NDS_MP_LINE_EXTENT_MAX];
+/* P2-2p8 (2026-10-05): the line's vertex x order, filled with its extent
+ * (ndsMPSweepSegmentWindow). */
+#define NDS_MP_LINE_XORDER_NONE 0u
+#define NDS_MP_LINE_XORDER_UP 1u      /* x non-decreasing along the line */
+#define NDS_MP_LINE_XORDER_DOWN 2u    /* x non-increasing */
+static u8 sNdsMPLineXOrder[NDS_MP_LINE_EXTENT_MAX];
+/* ...and its x extent as integers (vertices are s16). */
+static s16 sNdsMPLineExtentMinXi[NDS_MP_LINE_EXTENT_MAX];
+static s16 sNdsMPLineExtentMaxXi[NDS_MP_LINE_EXTENT_MAX];
 
 u32 gNdsMPLineExtentRejects;
 u32 gNdsMPLineExtentAdmits;
@@ -680,11 +689,15 @@ static void ndsMPLineExtentFillSlow(MPVertexArray *ids,
     f32 max_x;
     f32 min_y;
     f32 max_y;
+    f32 prev_x;
+    u32 up = 1u;
+    u32 down = 1u;
     u32 k;
 
     ndsMPVertexF32Get(verts, ndsMPVertexID(ids, vertex_first), &min_x, &min_y);
     max_x = min_x;
     max_y = min_y;
+    prev_x = min_x;
     for (k = 1u; k < vertex_count; k++)
     {
         f32 vx;
@@ -692,6 +705,15 @@ static void ndsMPLineExtentFillSlow(MPVertexArray *ids,
 
         ndsMPVertexF32Get(verts, ndsMPVertexID(ids, vertex_first + k),
                           &vx, &vy);
+        if (NDS_FCMP_LT(vx, prev_x))
+        {
+            up = 0u;
+        }
+        if (NDS_FCMP_GT(vx, prev_x))
+        {
+            down = 0u;
+        }
+        prev_x = vx;
         if (NDS_FCMP_LT(vx, min_x))
         {
             min_x = vx;
@@ -715,6 +737,11 @@ static void ndsMPLineExtentFillSlow(MPVertexArray *ids,
     sNdsMPLineExtentMaxY[line_id] = max_y;
     sNdsMPLineExtentMaxYEps[line_id] = max_y + 0.001F;
     sNdsMPLineExtentMinYEps[line_id] = min_y - 0.001F;
+    sNdsMPLineXOrder[line_id] = (u8)((up != 0u) ? NDS_MP_LINE_XORDER_UP :
+        (down != 0u) ? NDS_MP_LINE_XORDER_DOWN : NDS_MP_LINE_XORDER_NONE);
+    /* Exact: the extents are conversions of s16 vertices. */
+    sNdsMPLineExtentMinXi[line_id] = (s16)(s32)min_x;
+    sNdsMPLineExtentMaxXi[line_id] = (s16)(s32)max_x;
     sNdsMPLineExtentValid[line_id] = 1u;
 }
 
@@ -1665,6 +1692,34 @@ void mpCollisionGetVertexPositionID(s32 line_id, s32 vertex_id,
     }
 }
 
+static u32 ndsMPLinePointSegmentSearch(MPVertexArray *ids,
+                                       MPVertexPosContainer *verts,
+                                       s32 line_id, u32 vertex_first,
+                                       u32 vertex_count, f32 object_x);
+volatile u32 gNdsMPSweepSegmentWindow __attribute__((used, section(".data"))) = 1u;
+/* Same-ROM A/B word for the point queries' start alone (0 = from segment 0). */
+volatile u32 gNdsMPPointSegmentStart __attribute__((used, section(".data"))) = 1u;
+#define NDS_MP_SEGMENT_WINDOW_MIN 12u
+
+/* The point queries' first segment worth testing (see
+ * ndsMPLinePointSegmentSearch); the cheap tests stay at the call site, so a
+ * short or unordered line pays no call. */
+static inline u32 ndsMPLinePointSegmentStart(MPVertexArray *ids,
+                                             MPVertexPosContainer *verts,
+                                             s32 line_id, u32 vertex_first,
+                                             u32 vertex_count, f32 object_x)
+{
+    if ((vertex_count < NDS_MP_SEGMENT_WINDOW_MIN) || (line_id < 0) ||
+        ((u32)line_id >= NDS_MP_LINE_EXTENT_MAX) ||
+        (sNdsMPLineXOrder[line_id] == NDS_MP_LINE_XORDER_NONE) ||
+        (gNdsMPSweepSegmentWindow == 0u) || (gNdsMPPointSegmentStart == 0u))
+    {
+        return 0u;
+    }
+    return ndsMPLinePointSegmentSearch(ids, verts, line_id, vertex_first,
+                                       vertex_count, object_x);
+}
+
 /* ITCM (2026-09-27): second in the four-CPU census admission table after
  * the wall sweep (~7.1K ticks/frame non-memory stall at 1,484 B). */
 sb32 NDS_R2_ITCM_PACK2_CODE mpCollisionGetFCCommonFloor(s32 line_id, Vec3f *object_pos,
@@ -1748,7 +1803,9 @@ sb32 NDS_R2_ITCM_PACK2_CODE mpCollisionGetFCCommonFloor(s32 line_id, Vec3f *obje
     {
         return FALSE;
     }
-    for (j = 0u; j < segment_count; j++)
+    for (j = ndsMPLinePointSegmentStart(ids, verts, line_id, vertex_first,
+                                        vertex_count, object_x);
+         j < segment_count; j++)
     {
         u32 v1_index = vertex_first + j;
         u32 v2_index = v1_index + 1u;
@@ -2055,7 +2112,9 @@ sb32 mpCollisionGetFCCommonCeil(s32 line_id, Vec3f *object_pos,
         }
         return FALSE;
     }
-    for (j = 0u; j < segment_count; j++)
+    for (j = ndsMPLinePointSegmentStart(ids, verts, line_id, vertex_first,
+                                        vertex_count, object_local.x);
+         j < segment_count; j++)
     {
         u32 v1_index = vertex_first + j;
         u32 v2_index = v1_index + 1u;
@@ -3062,6 +3121,7 @@ volatile u32 gNdsMPWallSweepHits;
 /* Calls ndsMPWallSweepStaticMiss answered before the sweep (of the above). */
 volatile u32 gNdsMPWallSweepStaticMisses;
 volatile u32 gNdsMPWallMissReadyCache __attribute__((used, section(".data"))) = 1u;
+volatile u32 gNdsMPWallMissOnePass __attribute__((used, section(".data"))) = 1u;
 extern volatile u32 gNdsTaskmanHeapGeneration;
 
 /* The wall sweep visits every wall group of its kind on each call (Peach's
@@ -3140,6 +3200,253 @@ static inline sb32 ndsMPSweepSegmentXMisses(const Vec3f *v1, const Vec3f *v2,
 
     return (NDS_FCMP_LT(max_x, sweep_min) || NDS_FCMP_LT(sweep_max, min_x)) ?
         TRUE : FALSE;
+}
+
+/* ndsMPWallSweepTrunc's answer without its two calls: trunc(v) when
+ * |v| < 2^20, else FALSE. */
+static inline sb32 ndsMPWallSweepTruncInline(f32 v, s32 *out)
+{
+    u32 b;
+    u32 e;
+    s32 t;
+
+    __builtin_memcpy(&b, &v, sizeof(b));
+    e = (b >> 23) & 0xffu;
+    if (e < 127u)
+    {
+        *out = 0;
+        return TRUE;
+    }
+    if (e >= 147u)
+    {
+        return FALSE;
+    }
+    t = (s32)(((b & 0x7fffffu) | 0x800000u) >> (150u - e));
+    *out = ((b & 0x80000000u) != 0u) ? -t : t;
+    return TRUE;
+}
+
+/* The floor and ceiling sweeps' segment window (P2-2p8, 2026-10-05). The
+ * per-segment x reject above still fetched both vertices of every segment and
+ * keyed four floats to prove most of a long line irrelevant: Sector Z's floor
+ * sweep ran ~570 instructions a line visit, 55K cycles a frame. On a line
+ * whose vertex x never reverses (sNdsMPLineXOrder), the segments whose x span
+ * meets an interval are one contiguous run, found by two binary searches, and
+ * the sweep walks only that run.
+ *
+ * Exact, because the interval [lo, hi] contains everything a skipped segment
+ * would need: a non-flat segment hits only where its x span meets the sweep's
+ * [min, max] of position.x / translate.x (the reject above, and the kernel's
+ * own gate), and lo/hi sit at least one unit outside that span (truncated
+ * bounds less/plus one). A flat segment tests an extrapolated crossing x
+ * instead (ndsMPFCSegmentCrossesKernel): for a floor it hits only while
+ * position.y > translate.y, at position.x + t (position.x - translate.x) with
+ * t in (-1, 0.001 / dy], so it can land outside the sweep's span by at most
+ * 0.001 |dx| / dy. The window takes that as a margin when dy > 1 (truncated y
+ * at least 3 apart): |dx| + 2 units, which also covers the truncation and the
+ * rounding of the crossing; with dy <= 0 the flat branch never hits and needs
+ * none; in between the line is walked whole. Ceilings mirror the sign. The
+ * walked run is in the original order, so ties resolve as before. A long
+ * ordered line whose whole x extent misses the window is skipped outright,
+ * and the point queries (mpCollisionGetFCCommonFloor / ...Ceil) start their
+ * walk where the point can first be bracketed (ndsMPLinePointSegmentSearch).
+ * Only lines of at least NDS_MP_SEGMENT_WINDOW_MIN vertices take any of it:
+ * on short or folded lines the bounds cost more than they saved. Same-ROM A/B
+ * words gNdsMPSweepSegmentWindow (0 = every segment walked) and
+ * gNdsMPPointSegmentStart (the point queries alone). */
+volatile u32 gNdsMPSweepLineXRejects;
+
+/* [*lo, *hi] for one sweep (ud +1 floor, -1 ceiling), or FALSE to walk every
+ * segment. */
+static sb32 __attribute__((noinline))
+ndsMPSweepWindowBounds(const Vec3f *position, const Vec3f *translate, s32 ud,
+                       s32 *lo, s32 *hi)
+{
+    s32 px;
+    s32 tx;
+    s32 py;
+    s32 ty;
+    s32 dx;
+    s32 margin;
+
+    if ((ndsMPWallSweepTruncInline(position->x, &px) == FALSE) ||
+        (ndsMPWallSweepTruncInline(translate->x, &tx) == FALSE) ||
+        (ndsMPWallSweepTruncInline(position->y, &py) == FALSE) ||
+        (ndsMPWallSweepTruncInline(translate->y, &ty) == FALSE))
+    {
+        return FALSE;
+    }
+    dx = (px > tx) ? (px - tx) : (tx - px);
+    if ((ud > 0) ? NDS_FCMP_LE(position->y, translate->y) :
+                   NDS_FCMP_GE(position->y, translate->y))
+    {
+        margin = 0;
+    }
+    else if (((ud > 0) ? (py - ty) : (ty - py)) >= 3)
+    {
+        margin = dx + 2;
+    }
+    else
+    {
+        return FALSE;
+    }
+    *lo = ((px < tx) ? px : tx) - 1 - margin;
+    *hi = ((px > tx) ? px : tx) + 1 + margin;
+    return TRUE;
+}
+
+static inline s32 ndsMPLineVertexXAt(MPVertexArray *ids,
+                                     MPVertexPosContainer *verts,
+                                     u32 vertex_first, u32 k)
+{
+    return ndsMPVertexX(verts, ndsMPVertexID(ids, vertex_first + k));
+}
+
+/* The run [*first, *last] of a monotonic line's segments whose x span meets
+ * [lo, hi] (empty when *first > *last). Segment j spans vertices j, j + 1. */
+static void __attribute__((noinline))
+ndsMPLineSegmentWindow(MPVertexArray *ids, MPVertexPosContainer *verts,
+                       u32 vertex_first, u32 vertex_count, u32 order,
+                       s32 lo, s32 hi, u32 *first, u32 *last)
+{
+    const sb32 up = (order == NDS_MP_LINE_XORDER_UP) ? TRUE : FALSE;
+    u32 a = 0u;
+    u32 b = vertex_count;
+
+    /* The first vertex inside the window's near edge (up: x >= lo, down:
+     * x <= hi); every segment ending before it misses. */
+    while (a < b)
+    {
+        const u32 m = (a + b) >> 1;
+        const s32 x = ndsMPLineVertexXAt(ids, verts, vertex_first, m);
+
+        if ((up != FALSE) ? (x < lo) : (x > hi))
+        {
+            a = m + 1u;
+        }
+        else
+        {
+            b = m;
+        }
+    }
+    *first = (a == 0u) ? 0u : (a - 1u);
+    /* The first vertex past the far edge (up: x > hi, down: x < lo); every
+     * segment starting there or later misses. */
+    a = 0u;
+    b = vertex_count;
+    while (a < b)
+    {
+        const u32 m = (a + b) >> 1;
+        const s32 x = ndsMPLineVertexXAt(ids, verts, vertex_first, m);
+
+        if ((up != FALSE) ? (x <= hi) : (x >= lo))
+        {
+            a = m + 1u;
+        }
+        else
+        {
+            b = m;
+        }
+    }
+    if (a == 0u)
+    {
+        *first = 1u;
+        *last = 0u;
+        return;
+    }
+    *last = ((a - 1u) < (vertex_count - 2u)) ? (a - 1u) : (vertex_count - 2u);
+}
+
+/* The point queries' (mpCollisionGetFCCommonFloor / ...Ceil) first segment
+ * worth testing for `object_x`. Their loop takes the first segment whose ends
+ * bracket object_x; on a line whose x never reverses, every segment before
+ * the one ending at the first vertex past object_x (up: x >= object_x, down:
+ * x <= object_x) ends short of it, so starting there finds the same segment.
+ * Same word as the sweeps' window; NaN and infinities walk the whole line. */
+static u32 __attribute__((noinline))
+ndsMPLinePointSegmentSearch(MPVertexArray *ids, MPVertexPosContainer *verts,
+                            s32 line_id, u32 vertex_first, u32 vertex_count,
+                            f32 object_x)
+{
+    sb32 up;
+    u32 a = 0u;
+    u32 b = vertex_count;
+
+    if ((gNdsMPSweepSegmentWindow == 0u) ||
+        (vertex_count < NDS_MP_SEGMENT_WINDOW_MIN) || (line_id < 0) ||
+        ((u32)line_id >= NDS_MP_LINE_EXTENT_MAX) ||
+        (sNdsMPLineExtentValid[line_id] == 0u) ||
+        (sNdsMPLineXOrder[line_id] == NDS_MP_LINE_XORDER_NONE) ||
+        (((ndsFcmpBits(object_x) >> 23) & 0xffu) == 0xffu))
+    {
+        return 0u;
+    }
+    up = (sNdsMPLineXOrder[line_id] == NDS_MP_LINE_XORDER_UP) ? TRUE : FALSE;
+    while (a < b)
+    {
+        const u32 m = (a + b) >> 1;
+        f32 fx;
+        f32 fy;
+
+        ndsMPVertexF32Get(verts, ndsMPVertexID(ids, vertex_first + m), &fx,
+                          &fy);
+        if ((up != FALSE) ? NDS_FCMP_LT(fx, object_x) :
+                            NDS_FCMP_GT(fx, object_x))
+        {
+            a = m + 1u;
+        }
+        else
+        {
+            b = m;
+        }
+    }
+    return (a == 0u) ? 0u : (a - 1u);
+}
+
+/* The segment run a sweep walks on `line_id` (`state`: 0 bounds not yet
+ * computed for this group, 1 held in `lo` and `hi`, 2 none). On a long line
+ * whose x never reverses: FALSE when the line's whole x extent misses the
+ * window (every segment's span lies inside it, so none can meet the sweep),
+ * else TRUE with the window's run. Any other line: TRUE with all of it. */
+static inline sb32 ndsMPSweepSegmentRun(MPVertexArray *ids,
+                                        MPVertexPosContainer *verts,
+                                        s32 line_id, u32 vertex_first,
+                                        u32 vertex_count,
+                                        const Vec3f *sweep_position,
+                                        const Vec3f *sweep_translate, s32 ud,
+                                        u32 *state, s32 *lo, s32 *hi,
+                                        u32 *first, u32 *last)
+{
+    *first = 0u;
+    *last = vertex_count - 2u;
+    /* Only a long line whose x never reverses pays for the bounds (Yoshi's
+     * Island's short or folded lines paid them for nothing: +2.5K a frame). */
+    if ((gNdsMPSweepSegmentWindow == 0u) ||
+        (vertex_count < NDS_MP_SEGMENT_WINDOW_MIN) || (line_id < 0) ||
+        ((u32)line_id >= NDS_MP_LINE_EXTENT_MAX) ||
+        (sNdsMPLineExtentValid[line_id] == 0u) ||
+        (sNdsMPLineXOrder[line_id] == NDS_MP_LINE_XORDER_NONE))
+    {
+        return TRUE;
+    }
+    if (*state == 0u)
+    {
+        *state = (ndsMPSweepWindowBounds(sweep_position, sweep_translate, ud,
+                                         lo, hi) != FALSE) ? 1u : 2u;
+    }
+    if (*state != 1u)
+    {
+        return TRUE;
+    }
+    if (((s32)sNdsMPLineExtentMaxXi[line_id] < *lo) ||
+        ((s32)sNdsMPLineExtentMinXi[line_id] > *hi))
+    {
+        NDS_DIAG(gNdsMPSweepLineXRejects++);
+        return FALSE;
+    }
+    ndsMPLineSegmentWindow(ids, verts, vertex_first, vertex_count,
+                           sNdsMPLineXOrder[line_id], *lo, *hi, first, last);
+    return TRUE;
 }
 
 /* 1 = reject group `g`'s lines for this sweep, on axis `axis` (0 x for the
@@ -3685,30 +3992,6 @@ ndsStageMPAdjustFloorLoopWallSweep(Vec3f *position,
     return found;
 }
 
-/* ndsMPWallSweepTrunc's answer without its two calls: trunc(v) when
- * |v| < 2^20, else FALSE. */
-static inline sb32 ndsMPWallSweepTruncInline(f32 v, s32 *out)
-{
-    u32 b;
-    u32 e;
-    s32 t;
-
-    __builtin_memcpy(&b, &v, sizeof(b));
-    e = (b >> 23) & 0xffu;
-    if (e < 127u)
-    {
-        *out = 0;
-        return TRUE;
-    }
-    if (e >= 147u)
-    {
-        return FALSE;
-    }
-    t = (s32)(((b & 0x7fffffu) | 0x800000u) >> (150u - e));
-    *out = ((b & 0x80000000u) != 0u) ? -t : t;
-    return TRUE;
-}
-
 /* The wall sweep's all-reject fast path (P2-6, 2026-10-02). With the spans,
  * the group reject proves ~94% of the Race's ~184 wall sweeps a frame find
  * nothing, but each still paid the sweep's whole entry: a nine-register
@@ -3776,6 +4059,77 @@ ndsMPWallSweepStaticMiss(const Vec3f *position, const Vec3f *translate,
     hi = ((ip > it) ? ip : it) + NDS_MP_WALL_SWEEP_SLACK;
     group = sNdsMPKindGroups[line_kind];
     group_count = sNdsMPKindGroupCounts[line_kind];
+    /* P2-2p8 (2026-10-05): one pass. Each group proved rejected takes the
+     * sweep's reject bookkeeping (reject_misses = 0) as it is proved, instead
+     * of a second pass after all are: if a later group sends the call to the
+     * sweep, the sweep rejects the earlier ones again and writes the same 0
+     * (or, past its candidate mask, skips them). reject_misses only paces the
+     * backoff of a check that never changes what a sweep finds. Same-ROM A/B
+     * word gNdsMPWallMissOnePass (0 = two passes). */
+    if (gNdsMPWallMissOnePass != 0u)
+    {
+        for (i = 0u; i < group_count; i++)
+        {
+            NDSMPKindGroup *g = &group[i];
+            const DObj *yakumono_dobj;
+
+            if ((g->count == 0u) ||
+                (g->yakumono_id >= NDS_MP_YAKUMONO_DOBJ_SLOTS))
+            {
+                continue;
+            }
+            yakumono_dobj = gMPCollisionYakumonoDObjs->dobjs[g->yakumono_id];
+            if ((yakumono_dobj == NULL) ||
+                (yakumono_dobj->user_data.s >= nMPYakumonoStatusOff))
+            {
+                continue;
+            }
+            if (g->reject_skip != 0u)
+            {
+                return FALSE;
+            }
+            if ((yakumono_dobj->anim_joint.event32 != NULL) ||
+                (yakumono_dobj->user_data.s != nMPYakumonoStatusNone))
+            {
+                const s32 ie = ndsMPWallSweepEdgeTrunc(
+                    g->yakumono_id, 0u, yakumono_dobj->translate.vec.f.x);
+                const s32 id =
+                    ((is_diff != FALSE) && (gMPCollisionSpeeds != NULL)) ?
+                    ndsMPWallSweepEdgeTrunc(
+                        g->yakumono_id, 1u,
+                        gMPCollisionSpeeds[g->yakumono_id].x) : 0;
+                s32 dp;
+                s32 dt;
+                s32 dlo;
+                s32 dhi;
+
+                if ((ie == INT32_MIN) || (id == INT32_MIN))
+                {
+                    return FALSE;
+                }
+                dp = ip - ie + id;
+                dt = it - ie;
+                dlo = ((dp < dt) ? dp : dt) - NDS_MP_WALL_SWEEP_SLACK;
+                dhi = ((dp > dt) ? dp : dt) + NDS_MP_WALL_SWEEP_SLACK;
+                if ((dhi >= (s32)g->ext_lo) && (dlo <= (s32)g->ext_hi) &&
+                    (ndsMPGroupSpansMiss(g, dlo, dhi) == FALSE))
+                {
+                    return FALSE;
+                }
+            }
+            else if ((hi >= (s32)g->ext_lo) && (lo <= (s32)g->ext_hi) &&
+                     (ndsMPGroupSpansMiss(g, lo, hi) == FALSE))
+            {
+                return FALSE;
+            }
+            g->reject_misses = 0u;
+            rejected++;
+        }
+        NDS_DIAG(gNdsMPWallSweepCalls++);
+        NDS_DIAG(gNdsMPWallSweepGroupRejects += rejected);
+        NDS_DIAG(gNdsMPWallSweepStaticMisses++);
+        return TRUE;
+    }
     for (i = 0u; i < group_count; i++)
     {
         const NDSMPKindGroup *g = &group[i];
@@ -6161,6 +6515,9 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
     s32 ipy = 0;
     s32 ity = 0;
     u64 candidates = ~(u64)0;
+    u32 window_state = 0u;
+    s32 window_lo = 0;
+    s32 window_hi = 0;
 
     if ((position == NULL) || (translate == NULL) ||
         (ndsStageCollisionLoopGeometryReady() == FALSE))
@@ -6295,6 +6652,7 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
             group_translate.x = translate->x - vedge_x;
             group_translate.y = translate->y - vedge_y;
         }
+        window_state = 0u;
         for (line_id = first; line_id < end; line_id++)
         {
             u32 vertex_first = ndsMPVertexLinkFirst(links, (u32)line_id);
@@ -6306,6 +6664,8 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
             f32 sweep_min_x;
             f32 sweep_max_x;
             u32 j;
+            u32 j_first;
+            u32 j_last;
 
             gNdsStageMPSweepFloorLoopLineSweepVisitCount++;
             if ((vertex_count < 2u) || (vertex_count > 128u))
@@ -6335,7 +6695,15 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
                 sweep_position->x : sweep_translate->x;
             sweep_max_x = NDS_FCMP_LT(sweep_position->x, sweep_translate->x) ?
                 sweep_translate->x : sweep_position->x;
-            for (j = 0u; j + 1u < vertex_count; j++)
+            if (ndsMPSweepSegmentRun(ids, verts, line_id, vertex_first,
+                                     vertex_count, sweep_position,
+                                     sweep_translate, +1, &window_state,
+                                     &window_lo, &window_hi, &j_first,
+                                     &j_last) == FALSE)
+            {
+                continue;
+            }
+            for (j = j_first; (j <= j_last) && (j + 1u < vertex_count); j++)
             {
                 u32 v1_id = ndsMPVertexID(ids, vertex_first + j);
                 u32 v2_id = ndsMPVertexID(ids, vertex_first + j + 1u);
@@ -6634,6 +7002,9 @@ static sb32 ndsStageMPCeilFloorLoopSweep(Vec3f *position,
     s32 ity = 0;
     NDSMPKindGroup *ceil_group = NULL;
     u32 ceil_groups_left = 0u;
+    u32 window_state = 0u;
+    s32 window_lo = 0;
+    s32 window_hi = 0;
 
     if ((position == NULL) || (translate == NULL) ||
         (ndsStageCollisionLoopGeometryReady() == FALSE))
@@ -6749,6 +7120,7 @@ static sb32 ndsStageMPCeilFloorLoopSweep(Vec3f *position,
             group_translate.x = translate->x - vedge_x;
             group_translate.y = translate->y - vedge_y;
         }
+        window_state = 0u;
         for (line_id = first; line_id < end; line_id++)
         {
             u32 vertex_first = ndsMPVertexLinkFirst(links, (u32)line_id);
@@ -6760,6 +7132,8 @@ static sb32 ndsStageMPCeilFloorLoopSweep(Vec3f *position,
             f32 sweep_min_x;
             f32 sweep_max_x;
             u32 j;
+            u32 j_first;
+            u32 j_last;
 
             if ((vertex_count < 2u) || (vertex_count > 128u))
             {
@@ -6788,7 +7162,15 @@ static sb32 ndsStageMPCeilFloorLoopSweep(Vec3f *position,
                 sweep_position->x : sweep_translate->x;
             sweep_max_x = NDS_FCMP_LT(sweep_position->x, sweep_translate->x) ?
                 sweep_translate->x : sweep_position->x;
-            for (j = 0u; j + 1u < vertex_count; j++)
+            if (ndsMPSweepSegmentRun(ids, verts, line_id, vertex_first,
+                                     vertex_count, sweep_position,
+                                     sweep_translate, -1, &window_state,
+                                     &window_lo, &window_hi, &j_first,
+                                     &j_last) == FALSE)
+            {
+                continue;
+            }
+            for (j = j_first; (j <= j_last) && (j + 1u < vertex_count); j++)
             {
                 u32 v1_id = ndsMPVertexID(ids, vertex_first + j);
                 u32 v2_id = ndsMPVertexID(ids, vertex_first + j + 1u);
