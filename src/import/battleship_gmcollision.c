@@ -241,7 +241,111 @@ void ndsBaseGmCollisionGetFighterPartsWorldPosition(DObj *main_dobj,
     ndsBaseGmCollisionGetFighterPartsWorldPosition
 #endif
 
+#if NDS_P2_JOINT_RESIDENT && NDS_P2_HURTBOX_REJECT
+/* P2-2p8 (2026-10-05): every entry point into this file that can set a
+ * fighter FTParts latch (unk_dobjtrans_0x5/6/7, transform_update_mode 1) bumps
+ * gNdsFtPartsLatchWrites first, so the per-tick latch clears
+ * (src/port/reloc_backend_compat_shims.c) may skip a subtree no latch was set
+ * in since its last clear. These six have no callers inside gmcollision.c, so
+ * the rename moves each definition and captures every call;
+ * func_ovl2_800EDBA4's three in-file callers (func_ovl2_800EDE00/EDE5C and the
+ * world-position body) are reached only through entry points that bump. */
+#define NDS_FTPARTS_LATCH_GATE 1
+extern volatile u32 gNdsFtPartsLatchWrites;
+void ndsLatchBaseFuncOvl2800EDBA4(DObj *main_dobj);
+void ndsLatchBaseFuncOvl2800EE018(DObj *main_dobj, Vec3f *vec);
+sb32 ndsLatchBaseWeaponAttackShieldCollide(WPAttackColl *attack_coll,
+                                            s32 attack_id, GObj *fighter_gobj,
+                                            DObj *dobj, f32 *p_angle,
+                                            Vec3f *vec);
+sb32 ndsLatchBaseWeaponAttackSpecialCollide(WPAttackColl *attack_coll,
+                                             s32 attack_id, FTStruct *fp,
+                                             FTSpecialColl *special_coll);
+sb32 ndsLatchBaseItemAttackShieldCollide(ITAttackColl *attack_coll,
+                                          s32 attack_id, GObj *fighter_gobj,
+                                          DObj *dobj, f32 *p_angle,
+                                          Vec3f *vec);
+sb32 ndsLatchBaseItemAttackSpecialCollide(ITAttackColl *attack_coll,
+                                           s32 attack_id, FTStruct *fp,
+                                           FTSpecialColl *special_coll);
+#define func_ovl2_800EDBA4 ndsLatchBaseFuncOvl2800EDBA4
+#define func_ovl2_800EE018 ndsLatchBaseFuncOvl2800EE018
+#define gmCollisionCheckWeaponAttackShieldCollide \
+    ndsLatchBaseWeaponAttackShieldCollide
+#define gmCollisionCheckWeaponAttackSpecialCollide \
+    ndsLatchBaseWeaponAttackSpecialCollide
+#define gmCollisionCheckItemAttackShieldCollide \
+    ndsLatchBaseItemAttackShieldCollide
+#define gmCollisionCheckItemAttackSpecialCollide \
+    ndsLatchBaseItemAttackSpecialCollide
+#define NDS_FTPARTS_LATCH_MARK() (gNdsFtPartsLatchWrites++)
+#else
+#define NDS_FTPARTS_LATCH_GATE 0
+#define NDS_FTPARTS_LATCH_MARK() ((void)0)
+#endif
+
 #include "../../decomp/BattleShip-main/decomp/src/gm/gmcollision.c"
+
+#if NDS_FTPARTS_LATCH_GATE
+#undef func_ovl2_800EDBA4
+#undef func_ovl2_800EE018
+#undef gmCollisionCheckWeaponAttackShieldCollide
+#undef gmCollisionCheckWeaponAttackSpecialCollide
+#undef gmCollisionCheckItemAttackShieldCollide
+#undef gmCollisionCheckItemAttackSpecialCollide
+
+void func_ovl2_800EDBA4(DObj *main_dobj)
+{
+    NDS_FTPARTS_LATCH_MARK();
+    ndsLatchBaseFuncOvl2800EDBA4(main_dobj);
+}
+
+void func_ovl2_800EE018(DObj *main_dobj, Vec3f *vec)
+{
+    NDS_FTPARTS_LATCH_MARK();
+    ndsLatchBaseFuncOvl2800EE018(main_dobj, vec);
+}
+
+sb32 gmCollisionCheckWeaponAttackShieldCollide(WPAttackColl *attack_coll,
+                                               s32 attack_id,
+                                               GObj *fighter_gobj, DObj *dobj,
+                                               f32 *p_angle, Vec3f *vec)
+{
+    NDS_FTPARTS_LATCH_MARK();
+    return ndsLatchBaseWeaponAttackShieldCollide(attack_coll, attack_id,
+                                                 fighter_gobj, dobj, p_angle,
+                                                 vec);
+}
+
+sb32 gmCollisionCheckWeaponAttackSpecialCollide(WPAttackColl *attack_coll,
+                                                s32 attack_id, FTStruct *fp,
+                                                FTSpecialColl *special_coll)
+{
+    NDS_FTPARTS_LATCH_MARK();
+    return ndsLatchBaseWeaponAttackSpecialCollide(attack_coll, attack_id, fp,
+                                                  special_coll);
+}
+
+sb32 gmCollisionCheckItemAttackShieldCollide(ITAttackColl *attack_coll,
+                                             s32 attack_id,
+                                             GObj *fighter_gobj, DObj *dobj,
+                                             f32 *p_angle, Vec3f *vec)
+{
+    NDS_FTPARTS_LATCH_MARK();
+    return ndsLatchBaseItemAttackShieldCollide(attack_coll, attack_id,
+                                               fighter_gobj, dobj, p_angle,
+                                               vec);
+}
+
+sb32 gmCollisionCheckItemAttackSpecialCollide(ITAttackColl *attack_coll,
+                                              s32 attack_id, FTStruct *fp,
+                                              FTSpecialColl *special_coll)
+{
+    NDS_FTPARTS_LATCH_MARK();
+    return ndsLatchBaseItemAttackSpecialCollide(attack_coll, attack_id, fp,
+                                                special_coll);
+}
+#endif
 
 #if NDS_P2_JOINT_RESIDENT
 #undef gmCollisionGetFighterPartsWorldPosition
@@ -256,6 +360,7 @@ void gmCollisionGetFighterPartsWorldPosition(DObj *main_dobj, Vec3f *vec)
     {
         return;
     }
+    NDS_FTPARTS_LATCH_MARK();
     ndsBaseGmCollisionGetFighterPartsWorldPosition(main_dobj, vec);
 }
 #endif
@@ -307,6 +412,7 @@ sb32 gmCollisionCheckWeaponAttackFighterDamageCollide(
     {
         return FALSE;
     }
+    NDS_FTPARTS_LATCH_MARK();
     hit = ndsBaseGmCollisionCheckWeaponAttackFighterDamageCollide(
         attack_coll, attack_id, damage_coll);
     if ((rejected != FALSE) && (hit != FALSE))
@@ -329,6 +435,7 @@ sb32 gmCollisionCheckItemAttackFighterDamageCollide(
     {
         return FALSE;
     }
+    NDS_FTPARTS_LATCH_MARK();
     hit = ndsBaseGmCollisionCheckItemAttackFighterDamageCollide(
         attack_coll, attack_id, damage_coll);
     if ((rejected != FALSE) && (hit != FALSE))
@@ -490,6 +597,7 @@ sb32 gmCollisionCheckFighterAttackDamageCollide(FTAttackColl *attack_coll,
     }
 #endif
 
+    NDS_FTPARTS_LATCH_MARK();
 #if NDS_R2_COLLISION_FIXED
     ndsR2CfxPrepareFighterJoint(damage_coll->joint);
 #endif
@@ -545,6 +653,7 @@ sb32 gmCollisionCheckFighterAttackShieldCollide(FTAttackColl *attack_coll,
 {
     sb32 hit;
 
+    NDS_FTPARTS_LATCH_MARK();
 #if NDS_R2_COLLISION_FIXED
     ndsR2CfxPrepareFighterJoint(dobj);
 #endif

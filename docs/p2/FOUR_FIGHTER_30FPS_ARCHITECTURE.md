@@ -1324,6 +1324,15 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   Measured and not kept: using streamed clips in place of the memmove
   compaction (lost ring bytes cost re-reads; P95 +2.3K). Gate after the three:
   ~1,139K, 110 over.
+- **10-05 FTParts latch clears skip clean subtrees.** The two per-tick latch
+  clears a fighter walked every FTParts of its subtree, and 20,799 of 21,437
+  found nothing set (gdb census). Every latch writer now bumps
+  `gNdsFtPartsLatchWrites`, and a clear with the counter unchanged since the
+  subtree's last clear is skipped (word `gNdsFtPartsCleanSkip`); a batch's
+  held tick also skips the fighter MObj loops. Gate same ROM P95 1,148,160 ->
+  1,141,696, paired -6.7K; shipped build 820,544/1,137,344, 107 over; digest
+  identical on the gate and all nine lab stages (receipt
+  `2026-10-05_ftparts-cleanskip`).
 
 ## 7. Found along the way
 

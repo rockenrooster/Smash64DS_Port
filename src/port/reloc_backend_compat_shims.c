@@ -3031,8 +3031,35 @@ typedef struct NDSFtPartsFlatWalk
     const DObj *root;
     u32 heap_generation;
     u32 count;
+    /* gNdsFtPartsLatchWrites when this subtree's latch words, and its update
+     * modes, were last cleared (valid bits below). */
+    u32 clean_words_at;
+    u32 clean_modes_at;
+    u32 clean_valid;
     FTParts *parts[NDS_FTPARTS_FLAT_MAX];
 } NDSFtPartsFlatWalk;
+
+/* P2-2p8 (2026-10-05). Two latch clears a fighter a tick (after its
+ * animation and after its physics move it) walked every FTParts of the
+ * subtree, a line fill each -- and 97% of them found nothing set: on the gate,
+ * 4,177 latched parts in 535,802 visited, 20,799 of 21,437 clears with none
+ * (`gNdsFtPartsLatchWrites` census, build-gate-dirty). Every writer of a
+ * latch -- the gmcollision.c entry points that reach the float latch walk
+ * (src/import/battleship_gmcollision.c), the fixed ring, the stub joint --
+ * bumps this counter first, so a subtree cleared since its last value holds
+ * no latch and the clear is skipped: the same state, without the walk. Only
+ * where every such writer is wrapped (NDS_P2_JOINT_RESIDENT with
+ * NDS_P2_HURTBOX_REJECT). Same-ROM A/B word gNdsFtPartsCleanSkip. */
+volatile u32 gNdsFtPartsLatchWrites;
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+volatile u32 gNdsLabFtPartsCleanSkipViolations __attribute__((used));
+volatile u32 gNdsLabFtPartsCleanVerify __attribute__((used, section(".data"))) = 0u;
+#endif
+#if NDS_P2_JOINT_RESIDENT && NDS_P2_HURTBOX_REJECT
+volatile u32 gNdsFtPartsCleanSkip __attribute__((used, section(".data"))) = 1u;
+#else
+volatile u32 gNdsFtPartsCleanSkip __attribute__((used, section(".data"))) = 0u;
+#endif
 
 /* P2-2p8 stall class: this table was MEASURED in DTCM and is deliberately not
  * left there. Moving it read WORK-H -10,176, STG -7,936 and SRC -4,992 with
@@ -3205,6 +3232,7 @@ static const NDSFtPartsFlatWalk *ndsFTParamsFlatWalkFor(DObj *root)
     flat->root = root;
     flat->heap_generation = gNdsTaskmanHeapGeneration;
     flat->count = count;
+    flat->clean_valid = 0u;
     return flat;
 }
 
@@ -3257,7 +3285,44 @@ ndsFTParamsInvalidateSubtree(DObj *root, sb32 reset_mode)
     flat = ndsFTParamsFlatWalkFor(root);
     if (flat != NULL)
     {
+        NDSFtPartsFlatWalk *mut = (NDSFtPartsFlatWalk *)(uintptr_t)flat;
+        const u32 writes = gNdsFtPartsLatchWrites;
+
+        if ((gNdsFtPartsCleanSkip != 0u) && ((flat->clean_valid & 1u) != 0u) &&
+            (flat->clean_words_at == writes) &&
+            ((reset_mode == FALSE) ||
+             (((flat->clean_valid & 2u) != 0u) &&
+              (flat->clean_modes_at == writes))))
+        {
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+            /* LAB (poke gNdsLabFtPartsCleanVerify=1): a skipped subtree must
+             * hold no latch. Off by default: the check reads every part the
+             * skip exists not to read. */
+            if (gNdsLabFtPartsCleanVerify != 0u)
+            {
+                u32 i;
+
+                for (i = 0u; i < flat->count; i++)
+                {
+                    if ((flat->parts[i]->unk_dobjtrans_word != 0) ||
+                        ((reset_mode != FALSE) &&
+                         (flat->parts[i]->transform_update_mode == 1)))
+                    {
+                        gNdsLabFtPartsCleanSkipViolations++;
+                    }
+                }
+            }
+#endif
+            return;
+        }
         ndsFTParamsInvalidateFlatParts(flat, reset_mode);
+        mut->clean_words_at = writes;
+        mut->clean_valid |= 1u;
+        if (reset_mode != FALSE)
+        {
+            mut->clean_modes_at = writes;
+            mut->clean_valid |= 2u;
+        }
         return;
     }
     for (child = root->child; child != NULL; child = child->sib_next)
@@ -3336,6 +3401,7 @@ extern void gcParseMObjMatAnimJoint(MObj *mobj);
 extern void gcPlayMObjMatAnim(MObj *mobj);
 extern void ndsGcParseMObjMatAnimJointNow(MObj *mobj);
 extern void ndsGcPlayMObjMatAnimNow(MObj *mobj);
+extern volatile u32 gNdsMObjTickMul;
 extern void gcAddMObjMatAnimJoint(MObj *mobj, AObjEvent32 *matanim_joint,
                                   f32 anim_frame);
 void lbCommonPlayTranslateScaledDObjAnim(DObj *dobj, Vec3f *scale);
@@ -3447,6 +3513,7 @@ void NDS_R2_ITCM_PACK2_CODE ftParamUpdateAnimKeys(GObj *fighter_gobj)
     f32 anim_wait_bak;
     s32 joint_limit;
     s32 i;
+    u32 mobj_mul;
 
     if (fp == NULL)
     {
@@ -3454,6 +3521,7 @@ void NDS_R2_ITCM_PACK2_CODE ftParamUpdateAnimKeys(GObj *fighter_gobj)
     }
     p_joint = &fp->joints[nFTPartsJointTopN];
     joint_limit = ndsFTStructJointLoopLimit(fp);
+    mobj_mul = gNdsMObjTickMul;
 #if NDS_ANIM_JOINT_AUDIT
     /* Once per call, OUTSIDE the idle-joint skip, so a Dispatch32 of zero can be
      * read: FlagFrames 0 means the flag was never set here, FlagFrames high with
@@ -3510,12 +3578,13 @@ void NDS_R2_ITCM_PACK2_CODE ftParamUpdateAnimKeys(GObj *fighter_gobj)
                 {
                     translate_scales++;
                 }
-                mobj = joint->mobj;
-                while (mobj != NULL)
+                /* A batch's earlier tick plays no material (gNdsMObjTickMul
+                 * 0): the joint's DObj is not even read. */
+                for (mobj = (mobj_mul != 0u) ? joint->mobj : NULL;
+                     mobj != NULL; mobj = mobj->next)
                 {
                     gcParseMObjMatAnimJoint(mobj);
                     gcPlayMObjMatAnim(mobj);
-                    mobj = mobj->next;
                 }
                 continue;
             }
@@ -3595,12 +3664,11 @@ void NDS_R2_ITCM_PACK2_CODE ftParamUpdateAnimKeys(GObj *fighter_gobj)
                 translate_scales++;
             }
 
-            mobj = joint->mobj;
-            while (mobj != NULL)
+            for (mobj = (mobj_mul != 0u) ? joint->mobj : NULL; mobj != NULL;
+                 mobj = mobj->next)
             {
                 gcParseMObjMatAnimJoint(mobj);
                 gcPlayMObjMatAnim(mobj);
-                mobj = mobj->next;
             }
         }
 #if NDS_FT_POSE_ORACLE
@@ -12516,6 +12584,7 @@ static FTStruct *__attribute__((noinline)) ftGetStructBuildStub(GObj *fighter_go
         stub_parts = &top_parts;
         bzero(stub_parts, sizeof(*stub_parts));
         stub_joint->user_data.p = stub_parts;
+        gNdsFtPartsLatchWrites++;
         stub_parts->unk_dobjtrans_0x5 = 1;
         stub_parts->unk_dobjtrans_0x6 = 1;
         stub_parts->unk_dobjtrans_0x7 = 1;

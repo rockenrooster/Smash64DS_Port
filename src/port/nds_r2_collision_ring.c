@@ -252,6 +252,13 @@ static int ndsR2CfxBuildChain(DObj *main_dobj)
 
 void ndsR2CfxPrepareFighterJoint(DObj *main_dobj)
 {
+    /* Sets latches: the per-tick clears must see it (reloc_backend_compat_
+     * shims.c, gNdsFtPartsLatchWrites). */
+    {
+        extern volatile u32 gNdsFtPartsLatchWrites;
+
+        gNdsFtPartsLatchWrites++;
+    }
     FTParts *parts;
 
     if (gNdsCfxRingEnable == 0u)
