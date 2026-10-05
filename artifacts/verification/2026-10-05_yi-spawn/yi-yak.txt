@@ -1,0 +1,37 @@
+0xfffffffc in ?? ()
+
+111	    ndsP2Arm9WramInit();
+
+503	    __asm__ volatile("" ::: "memory");
+AT 1
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+$1 = {x = 0.000114000002, y = 0, z = 0.000285999995}
+$2 = 0
+$3 = {x = 7335, y = -60.0014038, z = 0}
+$4 = 1
+$5 = (AObjEvent32 *) 0x0 <ftMainSearchGroundHit>
+$6 = {x = 3855, y = 1919.9989, z = 0}
+$7 = 1
+$8 = (AObjEvent32 *) 0x0 <ftMainSearchGroundHit>
+$9 = {x = -3960.01318, y = 779.999512, z = 0}
+$10 = 1
+$11 = (AObjEvent32 *) 0x0 <ftMainSearchGroundHit>
+$12 = (DObj *) 0x2322768
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-yak-f1.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 3
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+$13 = {x = 0.000114000002, y = 0, z = 0.000285999995}
+$14 = 0
+$15 = {x = 7335, y = -60.0014038, z = 0}
+$16 = 1
+$17 = (AObjEvent32 *) 0x0 <ftMainSearchGroundHit>
+$18 = {x = 3855, y = 1919.9989, z = 0}
+$19 = 1
+$20 = (AObjEvent32 *) 0x0 <ftMainSearchGroundHit>
+$21 = {x = -3960.01318, y = 779.999512, z = 0}
+$22 = 1
+$23 = (AObjEvent32 *) 0x0 <ftMainSearchGroundHit>
+$24 = (DObj *) 0x2322768
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-yak-f3.png

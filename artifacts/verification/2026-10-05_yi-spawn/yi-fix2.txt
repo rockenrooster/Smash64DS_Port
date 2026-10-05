@@ -1,0 +1,53 @@
+0xfffffffc in ?? ()
+
+111	    ndsP2Arm9WramInit();
+
+503	    __asm__ volatile("" ::: "memory");
+AT 1
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+$1 = 5
+$2 = {x = 629, y = -299.635254, z = 0}
+$3 = 6
+$4 = {x = 0, y = 0, z = 0}
+$5 = 0
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-fix2-f1.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 60
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+$6 = 220
+$7 = {x = 629, y = -299.635254, z = 0}
+$8 = 6
+$9 = {x = 629, y = -299.635254, z = 0}
+$10 = 6
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-fix2-f60.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 100
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+$11 = 220
+$12 = {x = 629, y = -299.635254, z = 0}
+$13 = 6
+$14 = {x = 629, y = -299.635254, z = 0}
+$15 = 6
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-fix2-f100.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 104
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+$16 = 220
+$17 = {x = 629, y = -299.635254, z = 0}
+$18 = 6
+$19 = {x = 629, y = -299.635254, z = 0}
+$20 = 6
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-fix2-f104.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 110
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+$21 = 10
+$22 = {x = 629, y = -299.635254, z = 0}
+$23 = 6
+$24 = {x = 629, y = -299.635254, z = 0}
+$25 = 6
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-fix2-f110.png

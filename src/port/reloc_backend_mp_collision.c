@@ -4512,6 +4512,16 @@ static sb32 ndsMPProjectFloorGeometry(Vec3f *position, s32 *project_line_id,
     {
         yakumono_count = 64u;
     }
+    /* mpcollision.c:2651-2749, group for group. A group whose platform is
+     * switched off (a Yoshi's Island cloud that evaporated) has no floor, and
+     * a moving one (the clouds, which grYosterUpdateCloudSolid places every
+     * update) is queried in its own frame: the point less the platform's
+     * translation, as every other line query here does. This walk read every
+     * group's vertices as world positions, so at spawn Yoshi's Island's cloud
+     * line (local vertices about its own origin) projected under player 1's
+     * entry point: the appear restored that line as the fighter's floor and
+     * the first grounded update walked him onto the far cloud, which
+     * evaporated under him during the countdown. */
     for (i = 0u; i < yakumono_count; i++)
     {
         NDSMPO2RHalfwordView info = ndsMPLineInfoAt(line_info, i);
@@ -4522,14 +4532,26 @@ static sb32 ndsMPProjectFloorGeometry(Vec3f *position, s32 *project_line_id,
         s32 line_id;
         s32 line_end;
         u32 yakumono_id = ndsMPLineInfoYakumonoID(info);
+        const DObj *yakumono_dobj;
+        f32 vpdist_x = position->x;
+        f32 vpdist_y = position->y;
 
-        if (gMPCollisionYakumonoDObjs != NULL)
+        if ((line_count == 0) || (gMPCollisionYakumonoDObjs == NULL) ||
+            (yakumono_id >= NDS_MP_YAKUMONO_DOBJ_SLOTS))
         {
-            NDS_DIAG(gNdsStageCollisionLoopYakumonoDObjDeferredCount++);
-            if (yakumono_id >= 1u)
-            {
-                NDS_DIAG(gNdsStageCollisionLoopYakumonoDObjUnsafeIndexGuardCount++);
-            }
+            continue;
+        }
+        yakumono_dobj = gMPCollisionYakumonoDObjs->dobjs[yakumono_id];
+        if ((yakumono_dobj == NULL) ||
+            (yakumono_dobj->user_data.s >= nMPYakumonoStatusOff))
+        {
+            continue;
+        }
+        if ((yakumono_dobj->anim_joint.event32 != NULL) ||
+            (yakumono_dobj->user_data.s != nMPYakumonoStatusNone))
+        {
+            vpdist_x = position->x - yakumono_dobj->translate.vec.f.x;
+            vpdist_y = position->y - yakumono_dobj->translate.vec.f.y;
         }
         line_end = line_first + line_count;
         if ((line_end - line_first) > 4096)
@@ -4555,10 +4577,10 @@ static sb32 ndsMPProjectFloorGeometry(Vec3f *position, s32 *project_line_id,
             x_last = ndsMPVertexX(verts,
                                   ndsMPVertexID(ids,
                                                 vertex_first + segment_count));
-            if (!(((f32)x_first <= position->x &&
-                   (f32)x_last >= position->x) ||
-                  ((f32)x_last <= position->x &&
-                   (f32)x_first >= position->x)))
+            if (!(((f32)x_first <= vpdist_x &&
+                   (f32)x_last >= vpdist_x) ||
+                  ((f32)x_last <= vpdist_x &&
+                   (f32)x_first >= vpdist_x)))
             {
                 continue;
             }
@@ -4575,21 +4597,22 @@ static sb32 ndsMPProjectFloorGeometry(Vec3f *position, s32 *project_line_id,
                 f32 fpos;
                 f32 gdist;
 
-                if (!(((f32)x1 <= position->x &&
-                       (f32)x2 >= position->x) ||
-                      ((f32)x2 <= position->x &&
-                       (f32)x1 >= position->x)))
+                if (!(((f32)x1 <= vpdist_x && (f32)x2 >= vpdist_x) ||
+                      ((f32)x2 <= vpdist_x && (f32)x1 >= vpdist_x)))
                 {
                     continue;
                 }
+                /* The source takes the first segment that brackets x; a
+                 * vertical one interpolates 0/0, and a NaN never compares
+                 * below the point, so that line offers no floor. */
                 if (x1 == x2)
                 {
                     NDS_DIAG(gNdsStageCollisionLoopDivisionGuardCount++);
-                    continue;
+                    break;
                 }
-                fpos = ndsMPLineDistanceFC(position->x, x1, y1, x2, y2);
-                gdist = fpos - position->y;
-                if ((fpos <= position->y) &&
+                fpos = ndsMPLineDistanceFC(vpdist_x, x1, y1, x2, y2);
+                gdist = fpos - vpdist_y;
+                if ((fpos <= vpdist_y) &&
                     (fabsf(gdist) < line_project_pos))
                 {
                     best_line = line_id;

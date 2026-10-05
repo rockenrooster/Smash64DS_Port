@@ -1,0 +1,59 @@
+0xfffffffc in ?? ()
+
+111	    ndsP2Arm9WramInit();
+
+503	    __asm__ volatile("" ::: "memory");
+AT 100
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+$1 = 220
+$2 = {x = 629, y = -244, z = 0}
+$3 = 6
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-p1-win0-f100.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 104
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+$4 = 220
+$5 = {x = 629, y = -244, z = 0}
+$6 = 6
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-p1-win0-f104.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 108
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+$7 = 36
+$8 = {x = -3280.01318, y = 510.999512, z = 0}
+$9 = 2
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-p1-win0-f108.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 112
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+$10 = 35
+$11 = {x = -3280.01318, y = 470.999512, z = 0}
+$12 = 2
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-p1-win0-f112.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 116
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+$13 = 35
+$14 = {x = -3280.01318, y = 430.999512, z = 0}
+$15 = 2
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-p1-win0-f116.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 120
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+$16 = 35
+$17 = {x = -3280.01318, y = 390.999512, z = 0}
+$18 = 2
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-p1-win0-f120.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 300
+FALLS 1 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+$19 = 7
+$20 = {x = 0, y = 6133.82715, z = 0}
+$21 = -2
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-p1-win0-f300.png

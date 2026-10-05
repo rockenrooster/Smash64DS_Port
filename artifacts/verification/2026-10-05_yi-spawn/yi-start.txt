@@ -1,0 +1,38 @@
+0xfffffffc in ?? ()
+
+111	    ndsP2Arm9WramInit();
+
+503	    __asm__ volatile("" ::: "memory");
+AT 30
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-start-f30.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 90
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-start-f90.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 150
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-start-f150.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 210
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-start-f210.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 300
+FALLS 1 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-start-f300.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 450
+FALLS 1 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-start-f450.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 700
+FALLS 1 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-start-f700.png

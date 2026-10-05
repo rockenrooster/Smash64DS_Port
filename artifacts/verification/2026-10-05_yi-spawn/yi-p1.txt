@@ -1,0 +1,103 @@
+0xfffffffc in ?? ()
+
+111	    ndsP2Arm9WramInit();
+
+503	    __asm__ volatile("" ::: "memory");
+AT 60
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+$1 = 220
+$2 = 1
+$3 = 6
+$4 = {x = 629, y = -244, z = 0}
+$5 = 2
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-p1-f60.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 120
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+$6 = 35
+$7 = 0
+$8 = 2
+$9 = {x = -3280.01318, y = 390.999512, z = 0}
+$10 = 2
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-p1-f120.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 170
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+$11 = 26
+$12 = 1
+$13 = -1
+$14 = {x = -3280.01318, y = 252.999512, z = 0}
+$15 = 2
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-p1-f170.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 180
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+$16 = 26
+$17 = 1
+$18 = -1
+$19 = {x = -3280.01318, y = -712.000488, z = 0}
+$20 = 2
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-p1-f180.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 190
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+$21 = 26
+$22 = 1
+$23 = -1
+$24 = {x = -3280.01318, y = -1832.00049, z = 0}
+$25 = 2
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-p1-f190.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 200
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+$26 = 24
+$27 = 1
+$28 = -1
+$29 = {x = -3012.01318, y = -1937.87183, z = 0}
+$30 = 2
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-p1-f200.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 210
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+$31 = 24
+$32 = 1
+$33 = -1
+$34 = {x = -2418.01416, y = -1362.552, z = 0}
+$35 = 2
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-p1-f210.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 220
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+$36 = 231
+$37 = 1
+$38 = -1
+$39 = {x = -1695.81445, y = -1261.9259, z = 0}
+$40 = 2
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-p1-f220.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 235
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+$41 = 231
+$42 = 1
+$43 = -1
+$44 = {x = -555.814453, y = -1405.16357, z = 0}
+$45 = 2
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-p1-f235.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 250
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+$46 = 231
+$47 = 1
+$48 = -1
+$49 = {x = 584.185547, y = -2087.50342, z = 0}
+$50 = 2
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-p1-f250.png

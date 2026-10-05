@@ -1,0 +1,99 @@
+0xfffffffc in ?? ()
+
+111	    ndsP2Arm9WramInit();
+
+503	    __asm__ volatile("" ::: "memory");
+AT 3
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+$1 = 5
+$2 = {x = 629, y = -244, z = 0}
+$3 = 2
+$4 = {629, 90, 756, -990}
+$5 = {-96, 2409, 1513, 1032}
+$6 = 15
+$7 = {{gobj = 0x2322e08, dobj = {0x23231f8, 0x23233b8, 0x2323578}, altitude = -60.0014038, pressure = 0, status = 0 '\000', anim_id = -1 '\377', is_cloud_line_active = 1 '\001', pressure_timer = -1 '\377', evaporate_wait = 0 '\000'}, {gobj = 0x2323738, dobj = {0x2323b28, 0x2323ce8, 0x2323ea8}, altitude = 1919.9989, pressure = 0, status = 0 '\000', anim_id = -1 '\377', is_cloud_line_active = 1 '\001', pressure_timer = -1 '\377', evaporate_wait = 0 '\000'}, {gobj = 0x2324068, dobj = {0x2324458, 0x2324618, 0x23247d8}, altitude = 779.999512, pressure = 5, status = 0 '\000', anim_id = -1 '\377', is_cloud_line_active = 1 '\001', pressure_timer = 119 'w', evaporate_wait = 0 '\000'}}
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-p1b-f3.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 20
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+$8 = 5
+$9 = {x = 629, y = -244, z = 0}
+$10 = 2
+$11 = {629, 90, 756, -990}
+$12 = {-96, 2409, 1513, 1032}
+$13 = 15
+$14 = {{gobj = 0x2322e08, dobj = {0x23231f8, 0x23233b8, 0x2323578}, altitude = -60.0014038, pressure = 0, status = 0 '\000', anim_id = -1 '\377', is_cloud_line_active = 1 '\001', pressure_timer = -1 '\377', evaporate_wait = 0 '\000'}, {gobj = 0x2323738, dobj = {0x2323b28, 0x2323ce8, 0x2323ea8}, altitude = 1919.9989, pressure = 0, status = 0 '\000', anim_id = -1 '\377', is_cloud_line_active = 1 '\001', pressure_timer = -1 '\377', evaporate_wait = 0 '\000'}, {gobj = 0x2324068, dobj = {0x2324458, 0x2324618, 0x23247d8}, altitude = 779.999512, pressure = 5, status = 0 '\000', anim_id = -1 '\377', is_cloud_line_active = 1 '\001', pressure_timer = 119 'w', evaporate_wait = 0 '\000'}}
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-p1b-f20.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 45
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+$15 = 5
+$16 = {x = 629, y = -244, z = 0}
+$17 = 2
+$18 = {629, 90, 756, -990}
+$19 = {-96, 2409, 1513, 1032}
+$20 = 15
+$21 = {{gobj = 0x2322e08, dobj = {0x23231f8, 0x23233b8, 0x2323578}, altitude = -60.0014038, pressure = 0, status = 0 '\000', anim_id = -1 '\377', is_cloud_line_active = 1 '\001', pressure_timer = -1 '\377', evaporate_wait = 0 '\000'}, {gobj = 0x2323738, dobj = {0x2323b28, 0x2323ce8, 0x2323ea8}, altitude = 1919.9989, pressure = 0, status = 0 '\000', anim_id = -1 '\377', is_cloud_line_active = 1 '\001', pressure_timer = -1 '\377', evaporate_wait = 0 '\000'}, {gobj = 0x2324068, dobj = {0x2324458, 0x2324618, 0x23247d8}, altitude = 779.999512, pressure = 5, status = 0 '\000', anim_id = -1 '\377', is_cloud_line_active = 1 '\001', pressure_timer = 119 'w', evaporate_wait = 0 '\000'}}
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-p1b-f45.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 75
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+$22 = 220
+$23 = {x = 629, y = -244, z = 0}
+$24 = 6
+$25 = {629, 90, 756, -990}
+$26 = {-96, 2409, 1513, 1032}
+$27 = 15
+$28 = {{gobj = 0x2322e08, dobj = {0x23231f8, 0x23233b8, 0x2323578}, altitude = -60.0014038, pressure = 0, status = 0 '\000', anim_id = -1 '\377', is_cloud_line_active = 1 '\001', pressure_timer = -1 '\377', evaporate_wait = 0 '\000'}, {gobj = 0x2323738, dobj = {0x2323b28, 0x2323ce8, 0x2323ea8}, altitude = 1919.9989, pressure = 0, status = 0 '\000', anim_id = -1 '\377', is_cloud_line_active = 1 '\001', pressure_timer = -1 '\377', evaporate_wait = 0 '\000'}, {gobj = 0x2324068, dobj = {0x2324458, 0x2324618, 0x23247d8}, altitude = 779.999512, pressure = 0, status = 0 '\000', anim_id = -1 '\377', is_cloud_line_active = 1 '\001', pressure_timer = -1 '\377', evaporate_wait = 0 '\000'}}
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-p1b-f75.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 100
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+$29 = 220
+$30 = {x = 629, y = -244, z = 0}
+$31 = 6
+$32 = {629, 90, 756, -990}
+$33 = {-96, 2409, 1513, 1032}
+$34 = 15
+$35 = {{gobj = 0x2322e08, dobj = {0x23231f8, 0x23233b8, 0x2323578}, altitude = -60.0014038, pressure = 0, status = 0 '\000', anim_id = -1 '\377', is_cloud_line_active = 1 '\001', pressure_timer = -1 '\377', evaporate_wait = 0 '\000'}, {gobj = 0x2323738, dobj = {0x2323b28, 0x2323ce8, 0x2323ea8}, altitude = 1919.9989, pressure = 0, status = 0 '\000', anim_id = -1 '\377', is_cloud_line_active = 1 '\001', pressure_timer = -1 '\377', evaporate_wait = 0 '\000'}, {gobj = 0x2324068, dobj = {0x2324458, 0x2324618, 0x23247d8}, altitude = 779.999512, pressure = 0, status = 0 '\000', anim_id = -1 '\377', is_cloud_line_active = 1 '\001', pressure_timer = -1 '\377', evaporate_wait = 0 '\000'}}
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-p1b-f100.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 120
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+$36 = 35
+$37 = {x = -3280.01318, y = 390.999512, z = 0}
+$38 = 2
+$39 = {629, 90, 756, -990}
+$40 = {-96, 2409, 1513, 1032}
+$41 = 15
+$42 = {{gobj = 0x2322e08, dobj = {0x23231f8, 0x23233b8, 0x2323578}, altitude = -60.0014038, pressure = 0, status = 0 '\000', anim_id = -1 '\377', is_cloud_line_active = 1 '\001', pressure_timer = -1 '\377', evaporate_wait = 0 '\000'}, {gobj = 0x2323738, dobj = {0x2323b28, 0x2323ce8, 0x2323ea8}, altitude = 1919.9989, pressure = 0, status = 0 '\000', anim_id = -1 '\377', is_cloud_line_active = 1 '\001', pressure_timer = -1 '\377', evaporate_wait = 0 '\000'}, {gobj = 0x2324068, dobj = {0x2324458, 0x2324618, 0x23247d8}, altitude = 779.999512, pressure = 150, status = 0 '\000', anim_id = -1 '\377', is_cloud_line_active = 1 '\001', pressure_timer = 90 'Z', evaporate_wait = 0 '\000'}}
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-p1b-f120.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 140
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+$43 = 35
+$44 = {x = -3280.01318, y = 360.999512, z = 0}
+$45 = 2
+$46 = {629, 90, 756, -990}
+$47 = {-96, 2409, 1513, 1032}
+$48 = 15
+$49 = {{gobj = 0x2322e08, dobj = {0x23231f8, 0x23233b8, 0x2323578}, altitude = -60.0014038, pressure = 0, status = 0 '\000', anim_id = -1 '\377', is_cloud_line_active = 1 '\001', pressure_timer = -1 '\377', evaporate_wait = 0 '\000'}, {gobj = 0x2323738, dobj = {0x2323b28, 0x2323ce8, 0x2323ea8}, altitude = 1919.9989, pressure = 0, status = 0 '\000', anim_id = -1 '\377', is_cloud_line_active = 1 '\001', pressure_timer = -1 '\377', evaporate_wait = 0 '\000'}, {gobj = 0x2324068, dobj = {0x2324458, 0x2324618, 0x23247d8}, altitude = 779.999512, pressure = 180, status = 0 '\000', anim_id = -1 '\377', is_cloud_line_active = 1 '\001', pressure_timer = 50 '2', evaporate_wait = 0 '\000'}}
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-p1b-f140.png
+
+503	    __asm__ volatile("" ::: "memory");
+AT 160
+FALLS 0 0 0 0 SCORE 0 0 0 0 STOCK 2 2 2 2
+$50 = 35
+$51 = {x = -3280.01318, y = 360.999512, z = 0}
+$52 = 2
+$53 = {629, 90, 756, -990}
+$54 = {-96, 2409, 1513, 1032}
+$55 = 15
+$56 = {{gobj = 0x2322e08, dobj = {0x23231f8, 0x23233b8, 0x2323578}, altitude = -60.0014038, pressure = 0, status = 0 '\000', anim_id = -1 '\377', is_cloud_line_active = 1 '\001', pressure_timer = -1 '\377', evaporate_wait = 0 '\000'}, {gobj = 0x2323738, dobj = {0x2323b28, 0x2323ce8, 0x2323ea8}, altitude = 1919.9989, pressure = 0, status = 0 '\000', anim_id = -1 '\377', is_cloud_line_active = 1 '\001', pressure_timer = -1 '\377', evaporate_wait = 0 '\000'}, {gobj = 0x2324068, dobj = {0x2324458, 0x2324618, 0x23247d8}, altitude = 779.999512, pressure = 180, status = 0 '\000', anim_id = -1 '\377', is_cloud_line_active = 1 '\001', pressure_timer = 10 '\n', evaporate_wait = 0 '\000'}}
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-10-05_playtest\yi-p1b-f160.png
