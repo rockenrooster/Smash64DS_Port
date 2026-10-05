@@ -87,8 +87,15 @@
  * texture witnesses: gNdsFtrLean below) are the lab instrument. A build
  * without NDS_TICK_HUD has no gNdsFtrLean at all; NDS_FTR_LEAN_CTR() compiles
  * to nothing there, and the oracle / census bodies are compiled out (routes 2
- * and 3 still patch and disarm, they just record nothing). */
-#if defined(NDS_TICK_HUD) && NDS_TICK_HUD
+ * and 3 still patch and disarm, they just record nothing).
+ *
+ * P2-2p8 (2026-10-04, owner ruling D12a): the four-CPU gate ROM carries the
+ * tick HUD but measures the shipping configuration, so the lean instrument
+ * also needs NDS_DIAG_COUNTERS (0 on the published ROM and the gate, 1 in
+ * every lab build); the gate then compiles the shipping image's lean path
+ * (no counters, no oracle routes, the route 1 entry inlined). */
+#if defined(NDS_TICK_HUD) && NDS_TICK_HUD && \
+    defined(NDS_DIAG_COUNTERS) && NDS_DIAG_COUNTERS
 #define NDS_FTR_LEAN_LAB 1
 #define NDS_FTR_LEAN_CTR(...) do { __VA_ARGS__; } while (0)
 #else
@@ -831,8 +838,10 @@ void ndsFtrLeanNoteTexturePart(u32 slot);
  * every frame end and latches snapshots (GO, first fighter texture reject,
  * the worst largest-free frame of the P0 episode and after it). Tagging runs
  * whenever the build has NDS_TICK_HUD so names created before the poke are
- * attributed too. */
-#if defined(NDS_TICK_HUD) && NDS_TICK_HUD
+ * attributed too. Lab builds only: like the lean counters above it also needs
+ * NDS_DIAG_COUNTERS, so the gate ROM does not tag or publish. */
+#if defined(NDS_TICK_HUD) && NDS_TICK_HUD && \
+    defined(NDS_DIAG_COUNTERS) && NDS_DIAG_COUNTERS
 #define NDS_VRAM_CENSUS_LIVE 1
 #else
 #define NDS_VRAM_CENSUS_LIVE 0
