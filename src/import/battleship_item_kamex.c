@@ -65,19 +65,11 @@ extern Vec3f *syVectorDiff3D(Vec3f *dst, Vec3f *src, Vec3f *sub);
 extern LBParticle *efManagerDustHeavyMakeEffect(Vec3f *pos, s32 lr);
 extern LBParticle *efManagerSparkleWhiteScaleMakeEffect(Vec3f *pos, f32 scale);
 
-/* efManagerDamageSpawnSparksMakeEffect (decomp ef/efmanager.h:57) is
- * DEFERRED, not merely undeclared. The port's efmanager import defines only
- * the Random variant (battleship_efmanager.c:2350); the plain maker this
- * source calls (decomp ef/efmanager.c:3493) and its effect desc are not
- * ported, so the maker cannot be linked, let alone called. The sparks are
- * the hydro muzzle flash and nothing reads them: the hydro weapon, the
- * recoil push and the spawn wait below are all set independently of the
- * maker, so skipping the call leaves the source's own gameplay path
- * intact, the same way the item core leaves its deferred spawn swirl out.
- *
- * Same deferral the item core already takes for itMainSetAppearSpin and
- * efManagerItemSpawnSwirlMakeEffect. When the efmanager import lands the
- * plain sparks maker, restore the call verbatim. */
+/* decomp ef/efmanager.h:57. The plain sparks maker and its effect desc are
+ * both in the efmanager import now (BUG_NOTES 2026-09-21 item 3); the hydro
+ * muzzle flash is the source's call again (owner 10-04: "No VFX for some
+ * pokemon (Blastoise)"). */
+extern GObj *efManagerDamageSpawnSparksMakeEffect(Vec3f *pos, s32 lr);
 
 /* decomp itkamex.h:8-28 verbatim. The port publishes no per-kind item
  * procs, so the source header's declarations travel with this TU, exactly
@@ -226,8 +218,7 @@ void itKamexAttackUpdateHydro(GObj *item_gobj)
         else pos.x += ITKAMEX_OTHER_HYDRO_SPAWN_OFF_X * ip->lr;
 
         itKamexAttackMakeHydro(item_gobj, &pos);
-        /* efManagerDamageSpawnSparksMakeEffect(&pos, ip->lr) -- deferred; see
-         * the note above the status-desc table. */
+        efManagerDamageSpawnSparksMakeEffect(&pos, ip->lr);
         func_800269C0_275C0(nSYAudioFGMKamexHydro);
 
         ip->item_vars.kamex.hydro_spawn_wait = syUtilsRandIntRange(ITKAMEX_HYDRO_SPAWN_WAIT_RANDOM) + ITKAMEX_HYDRO_SPAWN_WAIT_CONST;
