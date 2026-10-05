@@ -1333,6 +1333,15 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   1,141,696, paired -6.7K; shipped build 820,544/1,137,344, 107 over; digest
   identical on the gate and all nine lab stages (receipt
   `2026-10-05_ftparts-cleanskip`).
+- **10-05 stage commit accounting, wall-sweep readiness.** The stage fast
+  commit sums its per-run texture accounting once per segment and adds only
+  the classes a segment holds (word `gNdsStageGxFastLean`, paired -1.5K); the
+  wall sweep's fast path proves its geometry checks once per geometry and heap
+  generation (word `gNdsMPWallMissReadyCache`, -1.9K). Together paired -3.4K,
+  gate 817,024/1,130,560, 105 over, digest identical (receipt
+  `2026-10-05_stage-commit-lean`). Measured and set aside: CPU composition of
+  Dream Land's dynamic no-Z bindings (11 billboards, 10 swaying parts with
+  cross corners, Whispy) would leave ~5K to GX composition.
 
 ## 7. Found along the way
 

@@ -1192,6 +1192,13 @@ static sb32 __attribute__((noinline)) ndsStageGxDraw(u32 index, u32 owner, NDSRe
 
 #if NDS_STAGE_GX_FAST_LIVE
 volatile u32 gNdsStageGxFast __attribute__((used, section(".data"))) = 1u;
+/* P2-2p8 (2026-10-05): the fast commit's per-run texture accounting is summed
+ * once after the run walk, and its class accounting adds only the (at most
+ * two) classes the segment's runs hold instead of all eight -- the same
+ * totals, without a read-modify-write per run and per class (accounting and
+ * run loop were ~19K cycles of the commit's ~72K a frame on Dream Land).
+ * Same-ROM A/B word gNdsStageGxFastLean (0 = the per-run writes). */
+volatile u32 gNdsStageGxFastLean __attribute__((used, section(".data"))) = 1u;
 volatile u32 gNdsStageGxFastCommits;
 volatile u32 gNdsStageGxFastDeclines;
 #define NDS_STAGE_GX_FAST_SEGMENTS 32u
@@ -1206,6 +1213,10 @@ typedef struct NDSStageGxFastSeg
     u32 triangles;
     u32 reuse;              /* sum of (triangles - 1) over the runs */
     u32 class_triangles[NDS_RENDERER_HW_SUBMIT_CLASS_COUNT];
+    u32 raw_triangles;      /* class_triangles[RAW_Z_CURRENT_MATRIX] */
+    u8 class_nz[2];         /* the classes with triangles, when at most two */
+    u8 class_nz_count;      /* ... how many; 0xff: more than two */
+    u8 pad_nz;
     u16 first_patch;
     u16 patch_end;
     u16 first_word;
@@ -1363,6 +1374,22 @@ ndsStageGxFastBuild(u32 segment_index, const NDSNativeStageSegment *segment)
             }
         }
     }
+    /* The commit's accounting adds only the classes that hold triangles. */
+    for (i = 0u; i < NDS_RENDERER_HW_SUBMIT_CLASS_COUNT; i++)
+    {
+        if (s->class_triangles[i] == 0u)
+        {
+            continue;
+        }
+        if (s->class_nz_count >= 2u)
+        {
+            s->class_nz_count = 0xffu;
+            break;
+        }
+        s->class_nz[s->class_nz_count++] = (u8)i;
+    }
+    s->raw_triangles =
+        s->class_triangles[NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX];
     s->eligible = 1u;
 }
 
@@ -1630,6 +1657,55 @@ static sb32 __attribute__((noinline)) ndsStageGxCommitFast(
     }
     ndsRendererNativeStageTask36EndSegment();
     ndsRendererHardwareEndBatch();
+    if (gNdsStageGxFastLean != 0u)
+    {
+        /* The per-run texture accounting summed once after the walk: the
+         * stats keep the last textured run's format, as the per-run writes
+         * left them, and nothing between reads them. */
+        const NDSNativeStagePreparedRun *prepared =
+            &sNdsNativeStageOwnerExecution.runs[segment->first_run];
+        const NDSNativeStagePreparedRun *const prepared_end =
+            prepared + segment->run_count;
+        const NDSNativeStagePreparedRun *last_textured = NULL;
+        const u32 frame_stamp = sNdsRendererHardwareFrameSerial + 1u;
+        u32 textured_runs = 0u;
+
+        for (; prepared < prepared_end; prepared++)
+        {
+            const u32 alpha = (prepared->alpha_test != 0u) ?
+                (0x100u | prepared->alpha_ref) : 0u;
+
+            if (prepared->textured != 0u)
+            {
+                NDSRendererHardwareTextureCacheEntry *entry =
+                    prepared->texture_entry;
+
+                entry->last_used_frame = frame_stamp;
+                entry->params = prepared->texture_params;
+                if (entry->pinned != 0u)
+                {
+                    ndsRendererHardwareRecordBattleStaticTextureHit(entry);
+                }
+                textured_runs++;
+                last_textured = prepared;
+            }
+            if (alpha != span_alpha)
+            {
+                ndsStageGxSetSpanState(alpha, prepared);
+                span_alpha = alpha;
+            }
+        }
+        if (last_textured != NULL)
+        {
+            stats->hardware_texture_ready_count += textured_runs;
+            stats->hardware_texture_bind_count += textured_runs;
+            stats->hardware_texture_format = last_textured->texture_format;
+            stats->hardware_texture_width = last_textured->texture_width;
+            stats->hardware_texture_height = last_textured->texture_height;
+            ndsRendererProfileRecordTextureBinds(textured_runs);
+        }
+    }
+    else
     for (i = 0u; i < segment->run_count; i++)
     {
         const NDSNativeStagePreparedRun *prepared =
@@ -1666,6 +1742,17 @@ static sb32 __attribute__((noinline)) ndsStageGxCommitFast(
     ndsStageGxFlush();
 
     /* ndsRendererNativeStageAccountRun over the segment's runs. */
+    if ((gNdsStageGxFastLean != 0u) && (s->class_nz_count != 0xffu))
+    {
+        for (i = 0u; i < s->class_nz_count; i++)
+        {
+            const u32 klass = s->class_nz[i];
+
+            sNdsRendererHardwareSubmitClassCounts[klass] +=
+                s->class_triangles[klass];
+        }
+    }
+    else
     for (i = 0u; i < NDS_RENDERER_HW_SUBMIT_CLASS_COUNT; i++)
     {
         sNdsRendererHardwareSubmitClassCounts[i] += s->class_triangles[i];
@@ -1675,8 +1762,7 @@ static sb32 __attribute__((noinline)) ndsStageGxCommitFast(
     sNdsRendererRuntimeFrameSummary.hardware_triangles += s->triangles;
     sNdsRendererRuntimeFrameSummary.hardware_vertices += s->triangles * 3u;
     {
-        const u32 raw = s->class_triangles[
-            NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX];
+        const u32 raw = s->raw_triangles;
 
         sNdsRendererRuntimeFrameSummary.raw_current_candidate_count += raw;
         stats->hardware_zbuffer_triangle_count += raw;

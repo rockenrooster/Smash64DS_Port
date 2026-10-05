@@ -199,10 +199,16 @@ static void ndsMPCollisionClearTopologySnapshot(void)
     gNdsCollisionRuntimeDiagnostics.topology_last_next = -1;
 }
 
+/* The geometry (and heap generation) ndsMPWallSweepStaticMiss last proved
+ * ready; every topology reset or rebuild clears it. */
+static MPGeometryData *sNdsMPWallMissReadyGeometry;
+static u32 sNdsMPWallMissReadyGen;
+
 void ndsMPCollisionInvalidateTopology(void)
 {
     u32 kind;
 
+    sNdsMPWallMissReadyGeometry = NULL;
     sNdsMPLineGroupGeometry = NULL;
     sNdsMPTopologyGeometry = NULL;
     sNdsMPLineGroupFailedGeometry = NULL;
@@ -2236,6 +2242,7 @@ static sb32 ndsMPBuildTopologyCache(void)
     gMPCollisionLinesNum = 0;
     sNdsMPTopologyGeometry = NULL;
     sNdsMPKindGroupGeometry = NULL;
+    sNdsMPWallMissReadyGeometry = NULL;
     ndsMPCollisionClearTopologySnapshot();
     if ((geometry == NULL) || (line_count <= 0) ||
         (line_count > 4096))
@@ -3054,6 +3061,8 @@ volatile u32 gNdsMPWallSweepSegmentTests;
 volatile u32 gNdsMPWallSweepHits;
 /* Calls ndsMPWallSweepStaticMiss answered before the sweep (of the above). */
 volatile u32 gNdsMPWallSweepStaticMisses;
+volatile u32 gNdsMPWallMissReadyCache __attribute__((used, section(".data"))) = 1u;
+extern volatile u32 gNdsTaskmanHeapGeneration;
 
 /* The wall sweep visits every wall group of its kind on each call (Peach's
  * Castle: ~99 calls and ~290 group visits a frame), and each visit paid the
@@ -3733,13 +3742,32 @@ ndsMPWallSweepStaticMiss(const Vec3f *position, const Vec3f *translate,
     s32 hi;
 
     if ((gNdsMPWallSweepGroupReject == 0u) || (position == NULL) ||
-        (translate == NULL) || (geometry == NULL) ||
-        (sNdsMPKindGroupGeometry != geometry) ||
-        (sNdsMPTopologyGeometry != geometry) ||
-        (gMPCollisionVertexInfo == NULL) ||
-        (gMPCollisionYakumonoDObjs == NULL) ||
-        (ndsStageCollisionLoopGeometryReady() == FALSE) ||
-        (ndsMPWallSweepTruncInline(position->x, &ip) == FALSE) ||
+        (translate == NULL))
+    {
+        return FALSE;
+    }
+    /* P2-2p8 (2026-10-05): the geometry checks are proved once per geometry
+     * and heap generation, not on each of ~100 calls a frame: within both,
+     * only a topology reset or rebuild (which clears the proof) or a scene's
+     * end (a new heap generation) can change what they test. Same-ROM A/B
+     * word gNdsMPWallMissReadyCache (0 = every call). */
+    if ((gNdsMPWallMissReadyCache == 0u) ||
+        (geometry != sNdsMPWallMissReadyGeometry) ||
+        (sNdsMPWallMissReadyGen != gNdsTaskmanHeapGeneration))
+    {
+        if ((geometry == NULL) ||
+            (sNdsMPKindGroupGeometry != geometry) ||
+            (sNdsMPTopologyGeometry != geometry) ||
+            (gMPCollisionVertexInfo == NULL) ||
+            (gMPCollisionYakumonoDObjs == NULL) ||
+            (ndsStageCollisionLoopGeometryReady() == FALSE))
+        {
+            return FALSE;
+        }
+        sNdsMPWallMissReadyGeometry = geometry;
+        sNdsMPWallMissReadyGen = gNdsTaskmanHeapGeneration;
+    }
+    if ((ndsMPWallSweepTruncInline(position->x, &ip) == FALSE) ||
         (ndsMPWallSweepTruncInline(translate->x, &it) == FALSE))
     {
         return FALSE;

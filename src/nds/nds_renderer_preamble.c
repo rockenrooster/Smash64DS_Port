@@ -5076,6 +5076,16 @@ static inline void ndsRendererProfileRecordTextureBind(void)
 #endif
 }
 
+/* `count` binds at once (the stage segment fast path's runs). */
+static inline void ndsRendererProfileRecordTextureBinds(u32 count)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+    gNdsRendererProfileTextureBinds += count;
+#else
+    sNdsRendererRuntimeFrameSummary.texture_binds += count;
+#endif
+}
+
 static inline void ndsRendererProfileRecordTextureUpload(u32 bytes)
 {
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
