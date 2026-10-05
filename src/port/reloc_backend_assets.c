@@ -13992,6 +13992,69 @@ _Static_assert(NDS_R2_ANIM_CACHE_ENTRIES * 2u <= NDS_R2_ANIM_CACHE_INDEX_SLOTS,
                "anim cache index load factor");
 static u16 sNdsR2AnimCacheIndex[NDS_R2_ANIM_CACHE_INDEX_SLOTS];
 static u32 sNdsR2AnimCacheCount;
+/* Each entry's ring extent and CLOCK mark, apart from the 32-byte entries
+ * (P2-2p8, 2026-10-05). A ring allocation scans every entry up to nine times
+ * (eight CLOCK steps and the eviction) for byte ranges overlapping its slot;
+ * over the entries that was one line fill per entry per scan -- ~150 entries
+ * missed nine times, ~40K cycles in a frame that fetches a clip, 7.5% of the
+ * gate's frames and most of its heaviest. Here the scans read 5 bytes an entry
+ * that stay in the data cache across them. Extents are 16-byte units from
+ * sNdsR2AnimCacheExtentOrigin (the block's base when reserved, which the
+ * elastic yield only moves forward), Hi rounded up: every payload and every
+ * ring slot starts 16-aligned, so the unit test is the byte test. An entry
+ * outside the units' range reads as never overlapping. Same-ROM A/B word
+ * gNdsR2AnimCacheExtents (0 = scan the entries). */
+static u16 sNdsR2AnimCacheLo[NDS_R2_ANIM_CACHE_ENTRIES];
+static u16 sNdsR2AnimCacheHi[NDS_R2_ANIM_CACHE_ENTRIES];
+static u8 sNdsR2AnimCacheRef[NDS_R2_ANIM_CACHE_ENTRIES];
+static uintptr_t sNdsR2AnimCacheExtentOrigin;
+__attribute__((used, section(".data"))) volatile u32 gNdsR2AnimCacheExtents = 1u;
+#define NDS_R2_ANIM_EXTENT_NONE 0xffffu
+
+static inline u32 ndsR2AnimExtentUnitFloor(const void *p)
+{
+    const uintptr_t a = (uintptr_t)p;
+
+    if ((a < sNdsR2AnimCacheExtentOrigin) ||
+        (((a - sNdsR2AnimCacheExtentOrigin) >> 4) >= NDS_R2_ANIM_EXTENT_NONE))
+    {
+        return NDS_R2_ANIM_EXTENT_NONE;
+    }
+    return (u32)((a - sNdsR2AnimCacheExtentOrigin) >> 4);
+}
+
+static inline u32 ndsR2AnimExtentUnitCeil(const void *p)
+{
+    const uintptr_t a = (uintptr_t)p;
+
+    if ((a < sNdsR2AnimCacheExtentOrigin) ||
+        (((a - sNdsR2AnimCacheExtentOrigin + 15u) >> 4) >=
+         NDS_R2_ANIM_EXTENT_NONE))
+    {
+        return NDS_R2_ANIM_EXTENT_NONE;
+    }
+    return (u32)((a - sNdsR2AnimCacheExtentOrigin + 15u) >> 4);
+}
+
+/* Entry `i`'s extent from its payload and size, mark cleared. */
+static void ndsR2AnimCacheSetExtent(u32 i)
+{
+    const u8 *s = (const u8 *)sNdsR2AnimCache[i].payload;
+    const u32 lo = ndsR2AnimExtentUnitFloor(s);
+    const u32 hi = ndsR2AnimExtentUnitCeil(s + sNdsR2AnimCache[i].size);
+
+    if ((lo == NDS_R2_ANIM_EXTENT_NONE) || (hi == NDS_R2_ANIM_EXTENT_NONE))
+    {
+        sNdsR2AnimCacheLo[i] = NDS_R2_ANIM_EXTENT_NONE;
+        sNdsR2AnimCacheHi[i] = NDS_R2_ANIM_EXTENT_NONE;
+    }
+    else
+    {
+        sNdsR2AnimCacheLo[i] = (u16)lo;
+        sNdsR2AnimCacheHi[i] = (u16)hi;
+    }
+    sNdsR2AnimCacheRef[i] = 0u;
+}
 /* Reserved from gSYTaskmanGeneralHeap, NOT static BSS -- see the header comment on
  * NDS_R2_ANIM_CACHE_ARENA_BYTES for why BSS cannot afford this. */
 static u8 *sNdsR2AnimCacheArena;
@@ -14678,6 +14741,7 @@ static sb32 ndsR2AnimCacheArenaCarveElastic(size_t available,
     bytes &= ~31u;
     sNdsR2AnimCacheReserveFailLatched = FALSE;
     sNdsR2AnimCacheArena = (u8 *)(top - bytes);
+    sNdsR2AnimCacheExtentOrigin = (uintptr_t)sNdsR2AnimCacheArena & ~(uintptr_t)15u;
     sNdsR2AnimCacheArenaBytes = bytes;
     sNdsR2AnimCacheArenaUsed = 0u;
     sNdsR2AnimCacheArenaRawOnly = TRUE;
@@ -14798,6 +14862,7 @@ static sb32 ndsR2AnimCacheArenaEnsure(void)
     }
     sNdsR2AnimCacheReserveFailLatched = FALSE;
     sNdsR2AnimCacheArena = block;
+    sNdsR2AnimCacheExtentOrigin = (uintptr_t)block & ~(uintptr_t)15u;
     sNdsR2AnimCacheArenaBytes = arena_bytes;
     /* RawOnly is what tells the pack loader there is no carved region to stream
      * into; it is TRUE here for exactly the same reason it is TRUE for the
@@ -15017,6 +15082,7 @@ static sb32 ndsR2AnimCacheArenaEnsureSetup(void)
         return FALSE;
     }
     sNdsR2AnimCacheArena = block;
+    sNdsR2AnimCacheExtentOrigin = (uintptr_t)block & ~(uintptr_t)15u;
     sNdsR2AnimCacheArenaBytes = bytes;
     sNdsR2AnimCacheArenaUsed = 0u;
     sNdsR2AnimCacheArenaRawOnly = TRUE;
@@ -15475,6 +15541,9 @@ static void ndsR2AnimCacheRemoveEntry(u32 index)
         }
         sNdsR2AnimCache[index] =
             sNdsR2AnimCache[sNdsR2AnimCacheCount];
+        sNdsR2AnimCacheLo[index] = sNdsR2AnimCacheLo[sNdsR2AnimCacheCount];
+        sNdsR2AnimCacheHi[index] = sNdsR2AnimCacheHi[sNdsR2AnimCacheCount];
+        sNdsR2AnimCacheRef[index] = sNdsR2AnimCacheRef[sNdsR2AnimCacheCount];
     }
 }
 
@@ -15488,6 +15557,28 @@ static void ndsR2AnimCacheEvictRawRange(u32 offset, u32 size)
     ndsR2AnimPinsRescueRange(write_start, write_end);
 #endif
 
+    if (gNdsR2AnimCacheExtents != 0u)
+    {
+        const u32 lo = ndsR2AnimExtentUnitFloor(write_start);
+        const u32 hi = ndsR2AnimExtentUnitCeil(write_end);
+
+        if ((lo != NDS_R2_ANIM_EXTENT_NONE) && (hi != NDS_R2_ANIM_EXTENT_NONE))
+        {
+            while (i < sNdsR2AnimCacheCount)
+            {
+                if ((sNdsR2AnimCacheLo[i] < hi) && (lo < sNdsR2AnimCacheHi[i]) &&
+                    (sNdsR2AnimCacheHi[i] != NDS_R2_ANIM_EXTENT_NONE))
+                {
+                    ndsR2AnimCacheRemoveEntry(i);
+                }
+                else
+                {
+                    i++;
+                }
+            }
+            return;
+        }
+    }
     while (i < sNdsR2AnimCacheCount)
     {
         const u8 *entry_start = sNdsR2AnimCache[i].payload;
@@ -15567,8 +15658,33 @@ static void *ndsR2AnimCacheRawRingAllocAligned(u32 size, u32 align)
             const u8 *hi = lo + size;
             const u8 *past = NULL;
             u32 i;
+            const u32 ulo = ndsR2AnimExtentUnitFloor(lo);
+            const u32 uhi = ndsR2AnimExtentUnitCeil(hi);
 
-            for (i = 0u; i < sNdsR2AnimCacheCount; i++)
+            if ((gNdsR2AnimCacheExtents != 0u) &&
+                (ulo != NDS_R2_ANIM_EXTENT_NONE) &&
+                (uhi != NDS_R2_ANIM_EXTENT_NONE))
+            {
+                for (i = 0u; i < sNdsR2AnimCacheCount; i++)
+                {
+                    if ((sNdsR2AnimCacheRef[i] != 0u) &&
+                        (sNdsR2AnimCacheLo[i] < uhi) &&
+                        (ulo < sNdsR2AnimCacheHi[i]) &&
+                        (sNdsR2AnimCacheHi[i] != NDS_R2_ANIM_EXTENT_NONE))
+                    {
+                        NDSR2AnimCacheEntry *e = &sNdsR2AnimCache[i];
+                        const u8 *t = (const u8 *)e->payload + e->size;
+
+                        sNdsR2AnimCacheRef[i] = 0u;
+                        e->referenced = 0u;
+                        if ((past == NULL) || (t > past))
+                        {
+                            past = t;
+                        }
+                    }
+                }
+            }
+            else for (i = 0u; i < sNdsR2AnimCacheCount; i++)
             {
                 NDSR2AnimCacheEntry *e = &sNdsR2AnimCache[i];
                 const u8 *s = (const u8 *)e->payload;
@@ -15577,6 +15693,7 @@ static void *ndsR2AnimCacheRawRingAllocAligned(u32 size, u32 align)
                 if ((e->referenced != 0u) && (s < hi) && (lo < t))
                 {
                     e->referenced = 0u;
+                    sNdsR2AnimCacheRef[i] = 0u;
                     if ((past == NULL) || (t > past))
                     {
                         past = t;
@@ -15657,6 +15774,7 @@ static void ndsR2AnimCacheStore(u32 asset_id, const void *data, u32 size,
     ndsR2AnimCacheIndexInsert(asset_id, sNdsR2AnimCacheCount - 1u);
     entry->size = size;
     entry->payload = payload;
+    ndsR2AnimCacheSetExtent(sNdsR2AnimCacheCount - 1u);
     entry->header = *header;
     /* Written unconditionally, and that is not defensive tidiness: entries are
      * reused across a scene rewind, so leaving this field alone would let a slot
@@ -15728,6 +15846,7 @@ static NDSR2AnimCacheEntry *ndsR2AnimCacheAddStreamEntry(u32 asset_id,
     ndsR2AnimCacheIndexInsert(asset_id, sNdsR2AnimCacheCount - 1u);
     entry->size = size;
     entry->payload = payload;
+    ndsR2AnimCacheSetExtent(sNdsR2AnimCacheCount - 1u);
     memset(&entry->header, 0, sizeof(entry->header));
     entry->header.file_id = asset_id;
     entry->header.data_size = size;
@@ -16502,6 +16621,7 @@ static void ndsR2AnimWarmLoadOne(u32 asset_id)
         ndsR2AnimCacheIndexInsert(asset_id, sNdsR2AnimCacheCount - 1u);
         entry->size = (u32)loaded_size;
         entry->payload = payload;
+        ndsR2AnimCacheSetExtent(sNdsR2AnimCacheCount - 1u);
         entry->header = header;
         if (stream_ready != FALSE)
         {
@@ -16940,6 +17060,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
 
                 /* A use: the ring steps over this clip on its next pass. */
                 used->referenced = 1u;
+                sNdsR2AnimCacheRef[used - sNdsR2AnimCache] = 1u;
                 if (used->prefetched != 0u)
                 {
                     used->prefetched = 0u;
