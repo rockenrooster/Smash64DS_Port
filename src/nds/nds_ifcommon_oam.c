@@ -1069,7 +1069,10 @@ static s32 ndsIFCommonSamplePrefilteredTrafficPixel(
     u32 next_y = source_y + 1u;
     u32 taps[4];
 
-    if (spec == &sNdsIFCommonAssetSpecs[nNDSIFCommonAssetShadowGo])
+    /* Both colourings of the GO lettering (black before GO, navy at GO) are
+     * the same 15x11 sprite and take the same area filter. */
+    if ((spec == &sNdsIFCommonAssetSpecs[nNDSIFCommonAssetShadowGo]) ||
+        (spec == &sNdsIFCommonAssetSpecs[nNDSIFCommonAssetShadowInitial]))
     {
         return ndsIFCommonSampleAreaTrafficPixel(
             sprite, spec, file_data, file_size,
@@ -1470,7 +1473,7 @@ static s32 ndsIFCommonFillTrafficAtlas(
                     gNdsIFCommonNativeOamPrepareCloudFailureStage = 2u;
                     return FALSE;
                 }
-                if (traffic->asset_index >= nNDSIFCommonAssetShadowGo)
+                if (traffic->asset_index >= nNDSIFCommonAssetShadowInitial)
                 {
                     /* The dim lamps are TRANSLUCENT on the N64: an I4
                      * coverage disc of the lamp's prim colour at about 47%
@@ -1478,13 +1481,20 @@ static s32 ndsIFCommonFillTrafficAtlas(
                      * shading and highlight. Baked opaque (the rule until
                      * 2026-10-04) they hid that and read as flat discs (owner
                      * r75). They and the GO lettering keep their coverage as
-                     * the texel's A3 alpha and their own colour. */
+                     * the texel's A3 alpha and their own colour. The black
+                     * lettering the unlit GO lamp carries is the same IA8
+                     * sprite: cut out opaque at 3% coverage, its 0.8x
+                     * footprint filled the lamp with a black plate and left
+                     * the letters as blue gaps (owner, 2026-10-05: "Unlit
+                     * GO still looks pretty bad"). */
                     alpha3 = ((u32)rgba[3] * 7u + 127u) / 255u;
                     if (alpha3 == 0u)
                     {
                         continue;
                     }
-                    if (traffic->asset_index == nNDSIFCommonAssetShadowGo)
+                    if ((traffic->asset_index == nNDSIFCommonAssetShadowGo) ||
+                        (traffic->asset_index ==
+                         nNDSIFCommonAssetShadowInitial))
                     {
                         red = rgba[0];
                         green = rgba[1];
@@ -1503,9 +1513,9 @@ static s32 ndsIFCommonFillTrafficAtlas(
                     {
                         continue;
                     }
-                    /* The rod, housing and initial shadow are opaque source
-                     * art. Bake the filtered coverage into RGB so their
-                     * shading survives, then use A3 only as a hard cutout. */
+                    /* The rod and housing are opaque source art. Bake the
+                     * filtered coverage into RGB so their shading survives,
+                     * then use A3 only as a hard cutout. */
                     alpha3 = 7u;
                     red = (u8)(((u32)rgba[0] * rgba[3] + 127u) / 255u);
                     green = (u8)(((u32)rgba[1] * rgba[3] + 127u) / 255u);

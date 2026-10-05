@@ -59,6 +59,7 @@ EXPECTED_TRAFFIC_PALETTE = (
     10570, 13741, 8324, 11627, 12684, 20083, 9381, 14798,
     10438, 22197, 7267, 19026, 16912, 26425, 17969, 30653,
 )
+SHADOW_INITIAL_ASSET_INDEX = 5
 SHADOW_GO_ASSET_INDEX = 6
 # 2026-10-04: GO's lettering is area-sampled with graded alpha (see
 # sample_area_traffic_pixel); '#' is any texel with nonzero A3.
@@ -907,7 +908,7 @@ def sample_prefiltered_traffic_pixel(
     source_y_q8 = destination_y * 320 + 32
     source_x = source_x_q8 >> 8
     source_y = source_y_q8 >> 8
-    if asset_index == SHADOW_GO_ASSET_INDEX:
+    if asset_index in (SHADOW_INITIAL_ASSET_INDEX, SHADOW_GO_ASSET_INDEX):
         return sample_area_traffic_pixel(
             data, sprite, asset, destination_x, destination_y)
     next_x = min(source_x + 1, sprite["width"] - 1)
@@ -1440,14 +1441,15 @@ def verify(
         EXPECTED_TRAFFIC_ATLAS_RECTS, start=3
     ):
         _, _, width, height = rect
-        # Rod, housing and the initial shadow are opaque cutouts; the GO
-        # lettering and the three dim lamps keep their coverage as alpha
-        # (the lamps in their own prim colour, translucent over the housing
-        # exactly as the N64 blends them).
+        # Rod and housing are opaque cutouts; both colourings of the GO
+        # lettering (black before GO, navy at GO) and the three dim lamps
+        # keep their coverage as alpha (the lamps in their own prim colour,
+        # translucent over the housing exactly as the N64 blends them).
         traffic_samples.append([
-            (opaque_traffic_rgba if asset_index < SHADOW_GO_ASSET_INDEX else
-             (lambda rgba: translucent_traffic_rgba(
-                 rgba, None if asset_index == SHADOW_GO_ASSET_INDEX else
+            (opaque_traffic_rgba if asset_index < SHADOW_INITIAL_ASSET_INDEX
+             else (lambda rgba: translucent_traffic_rgba(
+                 rgba, None if asset_index in (
+                     SHADOW_INITIAL_ASSET_INDEX, SHADOW_GO_ASSET_INDEX) else
                  assets[asset_index]["prim"])))(
                 sample_prefiltered_traffic_pixel(
                     data, sprites[asset_index], assets[asset_index],
