@@ -1,0 +1,46 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 2 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,864; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 2: ALL 12,569,152 -> 8,374,848, 4 bucket(s) corrected
+  frame 423: ALL 5,310,976 -> 1,116,672, 4 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_halo-first/hf0-g5.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=7645c45e2da+dirty(31) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,864     1,677,376      1.50  1,205,415     1,111,552  8,374,848      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,672        10,688      2.29      5,737         2,368     22,208        0.4
+HUD         9,152        23,872      2.61     11,602         8,064    376,128        0.8
+SRC       435,136       644,032      1.48    445,420       166,720  1,034,432       39.0
+MISC      451,392       619,392      1.37    472,323       234,048  7,428,608       40.4
+OTHR      244,992       560,256      2.29    270,333        21,824    704,192       21.9
+WAIT      223,424       537,152      2.40    248,570         2,368    683,904       20.0
+WORK      930,432     1,255,296      1.35    952,963       429,696  8,036,224       83.3
+SHDT            0             0      0.00          0             0          0        0.0
+SWRM        1,280         1,408      1.10      1,303           768      3,328        0.1
+GCRA      429,888       638,272      1.48    440,060       162,240  1,029,184       38.5
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        555             0    999,296        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      451,264       619,264      1.37    472,194       233,920  7,428,480       40.4
+MFLS          128           128      1.00        129            64        384        0.0
+GPOL          534           602      1.13        515           116        652        0.0
+GVTX        1,249         1,428      1.14      1,220           351      1,631        0.1
+DGSA   2,216,622,636 4,088,913,632        2,177,922,654    268,149 4,294,787,496 198,468.4
+DGSB   2,319,073,349 4,073,558,838        2,230,935,651  3,133,812 4,292,624,795 207,641.5
+WORK-H    917,184     1,236,224      1.35    941,361       421,568  7,660,096       82.1
+
+named=935,082 (77.6% of ALL)  VBI 2:1674 3:276 4:9 5+:2 max:19 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_halo-first/hf0-g5.json

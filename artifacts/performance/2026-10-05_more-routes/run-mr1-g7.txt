@@ -1,0 +1,46 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 2 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,864; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 508: ALL 5,871,232 -> 1,676,928, 4 bucket(s) corrected
+  frame 1454: ALL 6,433,024 -> 2,238,720, 4 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_more-routes/mr1-g7.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=7645c45e2da+dirty(31) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,864     1,677,440      1.50  1,201,651     1,111,808 14,981,696      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         5,120        10,688      2.09      5,828         2,432     25,600        0.5
+HUD         9,536        24,704      2.59     12,100         8,128    422,400        0.9
+SRC       450,176       684,992      1.52    459,602       150,656  1,354,112       40.3
+MISC      424,320       569,152      1.34    443,143       183,936 14,011,008       38.0
+OTHR      256,512       560,448      2.18    280,978        23,424    767,360       23.0
+WAIT      234,944       537,984      2.29    259,041         2,368    747,328       21.0
+WORK      926,400     1,251,840      1.35    938,462       365,888 14,644,544       82.9
+SHDT            0             0      0.00          0             0          0        0.0
+SWRM        1,280         1,344      1.05      1,264           960      3,264        0.1
+GCRA      444,800       679,680      1.53    454,216       146,240  1,348,672       39.8
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        718             0  1,238,528        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      424,192       568,960      1.34    443,004       183,744 14,010,816       38.0
+MFLS          128           192      1.50        139            64        192        0.0
+GPOL          534           599      1.12        518           107        637        0.0
+GVTX        1,261         1,434      1.14      1,236           348      1,545        0.1
+DGSA   2,210,163,411 4,177,770,340        2,172,861,237  1,496,193 4,293,538,848 197,890.1
+DGSB   2,236,045,117 4,193,138,285        2,169,596,261  3,879,013 4,291,372,683 200,207.5
+WORK-H    914,496     1,238,080      1.35    926,362       357,568 14,222,144       81.9
+
+named=920,673 (76.6% of ALL)  VBI 2:1711 3:230 4:15 5+:5 max:31 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_more-routes/mr1-g7.json

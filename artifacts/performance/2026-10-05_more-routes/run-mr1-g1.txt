@@ -1,0 +1,45 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,864; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 1846: ALL 5,310,976 -> 1,116,672, 4 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_more-routes/mr1-g1.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=7645c45e2da+dirty(31) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,864     1,677,440      1.50  1,214,967     1,112,192 16,988,224      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,480        10,112      2.26      5,535         2,432     31,616        0.4
+HUD         9,088        24,576      2.70     11,230         8,000    494,080        0.8
+SRC       450,880       645,568      1.43    457,183       160,512  1,150,976       40.4
+MISC      439,040       639,168      1.46    463,081       174,976 15,935,488       39.3
+OTHR      256,768       566,848      2.21    277,939        21,952    764,672       23.0
+WAIT      236,032       545,088      2.31    255,927         2,368    744,896       21.1
+WORK      932,288     1,302,016      1.40    955,231       368,384 16,650,880       83.5
+SHDT            0             0      0.00          0             0          0        0.0
+SWRM        1,280         1,280      1.00      1,254           896      3,200        0.1
+GCRA      445,504       640,192      1.44    451,893       155,840  1,145,792       39.9
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        580             0  1,052,736        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      438,912       639,040      1.46    462,942       174,848 15,935,360       39.3
+MFLS          128           192      1.50        139            64        256        0.0
+GPOL          482           577      1.20        469            47        621        0.0
+GVTX        1,088         1,360      1.25      1,079           157      1,485        0.1
+DGSA   2,156,708,599 4,108,563,968        2,140,450,557  2,648,577 4,292,117,025 193,104.0
+DGSB   2,220,675,919 4,066,019,029        2,159,419,385    168,676 4,294,574,852 198,831.4
+WORK-H    922,496     1,288,512      1.40    944,001       360,064 16,156,800       82.6
+
+named=937,029 (77.1% of ALL)  VBI 2:1668 3:271 4:19 5+:3 max:35 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_more-routes/mr1-g1.json

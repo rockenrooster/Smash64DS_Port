@@ -1421,6 +1421,20 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   100-1,900) puts the remaining body lists at the rebirth halo's three roots
   (105-163 frames a match), the N Bumper, the Sector Z Arwing laser, the
   damage-fly dust and Saffron's Pokemon.
+- **10-05 the body's remaining owners get fast-lane routes; the halo goes
+  first.** Each list the census found now takes a route the body records when
+  its owner draws it, with the body's admission tested again every draw: the N
+  Bumper (one palette-image MObj), the Arwing laser (a weapon; its texture
+  file re-proved from the list's relocated words), Saffron's Marumine, GLucky
+  and Porygon (item routes) and Hitokage and Fushigibana (a CURRENT_IMAGE
+  snapshot), and the damage-fly dust (an effect: the effect layer's seeds and
+  witnesses, then the body's own helper). The RebirthHalo arm runs from the
+  dispatcher ahead of the entry probe and the body's prologue. On the frames
+  each owner draws (clean ROM, same-ROM words, digest identical): halo -5.4K,
+  N Bumper -15.9K, laser -22.6K, dust -25.6K to -29.6K, Saffron's Pokemon
+  -7.9K; Saffron P95 1,269,312 -> 1,261,504. Official gate 1,112,960, 1,860
+  two-VBlank presents (neutral). Receipts `2026-10-05_halo-first`,
+  `2026-10-05_more-routes`.
 
 ## 7. Found along the way
 

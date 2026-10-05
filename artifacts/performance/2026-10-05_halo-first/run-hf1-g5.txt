@@ -1,0 +1,45 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,864; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 1485: ALL 5,869,888 -> 1,675,584, 4 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_halo-first/hf1-g5.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=7645c45e2da+dirty(31) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,864     1,677,376      1.50  1,205,694     1,112,256  8,366,016      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,672        10,816      2.32      5,746         2,368     22,080        0.4
+HUD         9,216        23,808      2.58     11,607         8,000    369,536        0.8
+SRC       435,520       646,080      1.48    445,431       166,720  1,033,536       39.0
+MISC      451,648       618,944      1.37    471,951       233,920  7,428,544       40.4
+OTHR      246,848       559,744      2.27    270,959        21,824    704,320       22.1
+WAIT      224,256       537,856      2.40    249,197         2,240    684,032       20.1
+WORK      930,560     1,254,784      1.35    952,617       429,632  8,029,120       83.3
+SHDT            0             0      0.00          0             0          0        0.0
+SWRM        1,280         1,408      1.10      1,306           768      3,264        0.1
+GCRA      430,272       637,504      1.48    440,062       162,240  1,028,160       38.5
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        557             0  1,003,008        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      451,520       618,816      1.37    471,822       233,792  7,428,416       40.4
+MFLS          128           128      1.00        128            64        192        0.0
+GPOL          534           602      1.13        515           116        652        0.0
+GVTX        1,249         1,428      1.14      1,220           351      1,631        0.1
+DGSA   2,216,622,636 4,088,913,632        2,177,922,654    268,149 4,294,787,496 198,468.4
+DGSB   2,319,073,349 4,073,558,838        2,230,935,651  3,133,812 4,292,624,795 207,641.5
+WORK-H    917,184     1,237,824      1.35    941,010       421,504  7,659,584       82.1
+
+named=934,735 (77.5% of ALL)  VBI 2:1673 3:277 4:9 5+:2 max:19 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_halo-first/hf1-g5.json

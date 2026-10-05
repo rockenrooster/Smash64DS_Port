@@ -7702,9 +7702,12 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
  * segment-E material are not routed. Same-ROM A/B word gNdsStageDLFastLane
  * (0 = every draw through the body). */
 volatile u32 gNdsStageDLFastLane __attribute__((used, section(".data"))) = 1u;
-/* Same-ROM A/B word for the Fire Flower routes (0 = its lists stay in the
- * body). */
+/* Same-ROM A/B word for the Fire Flower and N Bumper routes (0 = their lists
+ * stay in the body). */
 volatile u32 gNdsStageDLFastFFlower __attribute__((used, section(".data"))) = 1u;
+/* Same-ROM A/B word for the laser, Saffron Pokemon and damage-fly dust
+ * routes (0 = their lists stay in the body). */
+volatile u32 gNdsStageDLFastMore __attribute__((used, section(".data"))) = 1u;
 volatile u32 gNdsStageDLFastLaneHits;
 volatile u32 gNdsStageDLFastLaneFills;
 
@@ -7752,6 +7755,25 @@ volatile u32 gNdsStageDLFastLaneFills;
  * lists a frame for as long as a flower is out (Jungle's sweep match, frame
  * 820 on, ~29K cycles a frame). */
 #define NDS_SDL_ROUTE_FFLOWER_LIVE 0xfau
+/* P2-2p8 (2026-10-05): the N Bumper's quad (ITCommonObject 0x7558, the list
+ * the castle bumper draws, under an item of kind NBumper): the body's
+ * admission -- the item submit, one MObj of the owner's flags, a
+ * palette-image snapshot taken live -- tested again on every draw. Sector Z's
+ * sweep match drew it through the body on 238 frames. */
+#define NDS_SDL_ROUTE_NBUMPER 0xf9u
+/* P2-2p8 (2026-10-05), the next owners a body-submit census found drawn
+ * through the body every frame they live (clean sweep ROM, frames
+ * 100-1,900): Sector Z's Arwing laser (226 frames; a weapon, no MObj, its
+ * texture in a second file the list's relocated words name -- re-proved each
+ * draw), Saffron's Hitokage and Fushigibana (one CURRENT_IMAGE material
+ * snapshot, taken live), and the damage-fly dust (an effect; its MObj
+ * snapshot taken live by the body's own helper, under the effect layer's
+ * seeds and witnesses). Each admission is the body's, tested again on every
+ * draw. Saffron's MObj-less Marumine, GLucky and Porygon are item routes. */
+#define NDS_SDL_ROUTE_SECTOR_LASER 0xf8u
+#define NDS_SDL_ROUTE_HITOKAGE 0xf7u
+#define NDS_SDL_ROUTE_FUSHIGIBANA 0xf6u
+#define NDS_SDL_ROUTE_DAMAGE_FLY_MDUST 0xf5u
 /* Yoshi's Island's capsules and boxes thrashed an 8-slot table (1,231 fills
  * for 1,469 hits a match): the owners are few, but a capsule alone draws three
  * roots, and its header and third root shared a slot under an address-bit
@@ -7792,6 +7814,11 @@ enum
     nNDSStageDLItemHarisen,
     nNDSStageDLItemHeart,
     nNDSStageDLItemFFlower,
+#if NDS_P2_STAGE_YAMABUKI
+    nNDSStageDLItemMarumine,
+    nNDSStageDLItemGLucky,
+    nNDSStageDLItemPorygon,
+#endif
     nNDSStageDLItemRouteCount
 };
 
@@ -7843,6 +7870,17 @@ static const NDSStageDLItemRoute sNdsStageDLItemRoutes[nNDSStageDLItemRouteCount
     [nNDSStageDLItemFFlower] = { NULL, ndsStageDLSubmitFFlowerBranch,
         &gNdsItemFFlowerDrawCount, &gNdsItemFFlowerSubmitFailCount,
         nITKindFFlower },
+#if NDS_P2_STAGE_YAMABUKI
+    [nNDSStageDLItemMarumine] = { ndsRendererSubmitNativeYamabukiMarumine,
+        NULL, &gNdsYamabukiMarumineDrawCount,
+        &gNdsYamabukiMarumineSubmitFailCount, nITKindMarumine },
+    [nNDSStageDLItemGLucky] = { ndsRendererSubmitNativeItemGLucky, NULL,
+        &gNdsYamabukiGluckyDrawCount, &gNdsYamabukiGluckySubmitFailCount,
+        nITKindGLucky },
+    [nNDSStageDLItemPorygon] = { ndsRendererSubmitNativeItemPorygon, NULL,
+        &gNdsYamabukiPorygonDrawCount, &gNdsYamabukiPorygonSubmitFailCount,
+        nITKindPorygon },
+#endif
 };
 #endif
 
@@ -8131,7 +8169,11 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
     NDSRendererNativeMaterial bumper_material;
 #endif
 #if NDS_P2_ITEM_CORE
-    NDSRendererNativeMaterial fflower_material;
+    /* The Fire Flower's or the N Bumper's live snapshot. */
+    NDSRendererNativeMaterial item_route_material;
+#endif
+#if NDS_P2_STAGE_SECTOR
+    const u8 *laser_tex_base = NULL;
 #endif
     /* Zeroed once a route is taken: most lists leave at the route test. */
     NDSRendererConfig config;
@@ -8176,10 +8218,15 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
           (route->route != NDS_SDL_ROUTE_BAKED_ITEM) &&
           (route->route != NDS_SDL_ROUTE_BAKED_ROOM) &&
           (route->route != NDS_SDL_ROUTE_CASTLE_BUMPER) &&
-          (route->route != NDS_SDL_ROUTE_FFLOWER_LIVE)) ||
+          (route->route != NDS_SDL_ROUTE_FFLOWER_LIVE) &&
+          (route->route != NDS_SDL_ROUTE_NBUMPER) &&
+          (route->route != NDS_SDL_ROUTE_HITOKAGE) &&
+          (route->route != NDS_SDL_ROUTE_FUSHIGIBANA) &&
+          (route->route != NDS_SDL_ROUTE_DAMAGE_FLY_MDUST)) ||
          (owner == NULL) ||
          (sNdsRendererAdapterStagePersistentActive == FALSE) ||
-         (sNdsRendererAdapterEffectSubmitActive != FALSE) ||
+         ((sNdsRendererAdapterEffectSubmitActive != FALSE) &&
+          (route->route != NDS_SDL_ROUTE_DAMAGE_FLY_MDUST)) ||
          (ndsRendererHardwareNoOracleEnabled() == FALSE)))
     {
         return FALSE;
@@ -8195,6 +8242,46 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
     case NDS_SDL_ROUTE_CHARGE_SHOT:
         if ((owner->id != nGCCommonKindWeapon) ||
             (sNdsRendererAdapterItemSubmitActive != FALSE))
+        {
+            return FALSE;
+        }
+        break;
+#if NDS_P2_STAGE_SECTOR
+    case NDS_SDL_ROUTE_SECTOR_LASER:
+    {
+        /* The texture file, found from the pointer the list carries and
+         * proved against both relocated words, as the body proves it. */
+        const NDSRelocLoadedFile *laser_tex;
+
+        if ((owner->id != nGCCommonKindWeapon) ||
+            (sNdsRendererAdapterItemSubmitActive != FALSE) ||
+            (dobj->mobj != NULL))
+        {
+            return FALSE;
+        }
+        laser_tex = ndsRelocFindLoadedFileContaining(
+            (const void *)(uintptr_t)dl[14].words.w1, 1u);
+        if ((laser_tex == NULL) || (laser_tex->data == NULL) ||
+            (laser_tex->asset_id != NDS_NATIVE_SECTOR_LASER_TEX_ASSET) ||
+            (laser_tex->data_size < NDS_NATIVE_SECTOR_LASER_TEX_END))
+        {
+            return FALSE;
+        }
+        laser_tex_base = (const u8 *)laser_tex->data;
+        if ((dl[8].words.w1 != (u32)(uintptr_t)(laser_tex_base +
+                 NDS_NATIVE_SECTOR_LASER_TLUT_OFFSET)) ||
+            (dl[14].words.w1 != (u32)(uintptr_t)(laser_tex_base +
+                 NDS_NATIVE_SECTOR_LASER_IMAGE_OFFSET)))
+        {
+            return FALSE;
+        }
+        break;
+    }
+#endif
+    case NDS_SDL_ROUTE_DAMAGE_FLY_MDUST:
+        /* The body's arm admits the list by asset and root alone; its helper
+         * snapshots the MObj under an effect owner. */
+        if (sNdsRendererAdapterItemSubmitActive != FALSE)
         {
             return FALSE;
         }
@@ -8268,8 +8355,58 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
         ip = itGetStruct(owner);
         if ((ip == NULL) || (ip->kind != nITKindFFlower) ||
             (ndsRendererAdapterBuildNativeMaterialSnapshot(
-                 dobj->mobj, &fflower_material, FALSE, NULL, NULL) == FALSE) ||
-            (fflower_material.effects !=
+                 dobj->mobj, &item_route_material, FALSE, NULL, NULL) == FALSE) ||
+            (item_route_material.effects !=
+                 NDS_RENDERER_NATIVE_MATERIAL_PALETTE_IMAGE))
+        {
+            return FALSE;
+        }
+        break;
+    }
+#if NDS_P2_STAGE_YAMABUKI
+    case NDS_SDL_ROUTE_HITOKAGE:
+    case NDS_SDL_ROUTE_FUSHIGIBANA:
+    {
+        ITStruct *ip;
+
+        if ((owner->id != nGCCommonKindItem) ||
+            (sNdsRendererAdapterItemSubmitActive == FALSE) ||
+            (dobj->mobj == NULL))
+        {
+            return FALSE;
+        }
+        ip = itGetStruct(owner);
+        if ((ip == NULL) ||
+            (ip->kind != ((route_kind == NDS_SDL_ROUTE_HITOKAGE) ?
+                              nITKindHitokage : nITKindFushigibana)) ||
+            (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                 dobj->mobj, &item_route_material, FALSE, NULL, NULL) == FALSE) ||
+            (item_route_material.effects !=
+                 NDS_RENDERER_NATIVE_MATERIAL_CURRENT_IMAGE))
+        {
+            return FALSE;
+        }
+        break;
+    }
+#endif
+    case NDS_SDL_ROUTE_NBUMPER:
+    {
+        ITStruct *ip;
+
+        if ((owner->id != nGCCommonKindItem) ||
+            (sNdsRendererAdapterItemSubmitActive == FALSE) ||
+            (dobj->mobj == NULL) || (dobj->mobj->next != NULL) ||
+            (ndsRendererAdapterMaterialFlags(dobj->mobj) !=
+                 NDS_NATIVE_ITEM_NBUMPER_MOBJ_FLAGS) ||
+            (route->data_size < NDS_NATIVE_ITEM_NBUMPER_FILE_END))
+        {
+            return FALSE;
+        }
+        ip = itGetStruct(owner);
+        if ((ip == NULL) || (ip->kind != nITKindNBumper) ||
+            (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                 dobj->mobj, &item_route_material, FALSE, NULL, NULL) == FALSE) ||
+            (item_route_material.effects !=
                  NDS_RENDERER_NATIVE_MATERIAL_PALETTE_IMAGE))
         {
             return FALSE;
@@ -8453,6 +8590,57 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
             NDS_DIAG(gNdsChargeShotSubmitFailCount++);
         }
     }
+#if NDS_P2_STAGE_SECTOR
+    else if (route_kind == NDS_SDL_ROUTE_SECTOR_LASER)
+    {
+        handled = ndsRendererSubmitNativeSectorArwingLaser(
+            laser_tex_base + NDS_NATIVE_SECTOR_LASER_TLUT_OFFSET,
+            laser_tex_base + NDS_NATIVE_SECTOR_LASER_IMAGE_OFFSET, &config,
+            render_stats);
+        if (handled != FALSE)
+        {
+            NDS_DIAG(gNdsSectorLaserDrawCount++);
+        }
+        else
+        {
+            NDS_DIAG(gNdsSectorLaserSubmitFailCount++);
+        }
+    }
+#endif
+    else if (route_kind == NDS_SDL_ROUTE_DAMAGE_FLY_MDUST)
+    {
+        /* The body's effect-submit seeds and witnesses, then its arm. */
+        if (sNdsRendererAdapterEffectSubmitActive != FALSE)
+        {
+            if ((sNdsRendererAdapterEffectColorMask & 1u) != 0u)
+            {
+                render_stats->prim_color = sNdsRendererAdapterEffectPrimColor;
+            }
+            if ((sNdsRendererAdapterEffectColorMask & 2u) != 0u)
+            {
+                render_stats->env_color = sNdsRendererAdapterEffectEnvColor;
+            }
+            if (sNdsRendererAdapterEffectOtherModeValid != 0u)
+            {
+                render_stats->othermode_l = sNdsRendererAdapterEffectOtherModeL;
+            }
+            gNdsEffectDLSubmitOtherModeIn = render_stats->othermode_l;
+        }
+        if (ndsRendererAdapterSubmitDamageFlyMDust(
+                dobj, loaded, &config, render_stats) == FALSE)
+        {
+            ndsStageRejectNativeRender(dobj, dl,
+                NDS_NATIVE_FAILURE_REJECTED_PROGRAM, render_stats);
+        }
+        if (sNdsRendererAdapterEffectSubmitActive != FALSE)
+        {
+            gNdsEffectDLSubmitOtherModeOut = render_stats->othermode_l;
+            NDS_DIAG(gNdsEffectDLSubmitCount++);
+            NDS_DIAG(gNdsEffectDLPublishCount++);
+        }
+        /* Settled either way, as the body settles it. */
+        handled = TRUE;
+    }
 #if NDS_P2_STAGE_CASTLE
     else if (route_kind == NDS_SDL_ROUTE_CASTLE_BUMPER)
     {
@@ -8476,7 +8664,7 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
         ndsStageDLFastItemSeeds(render_stats);
         handled = ndsRendererSubmitNativeItemFFlower(
             NDS_NATIVE_ITEM_FFLOWER_LIVE_ROOT, loaded->data,
-            loaded->data_size, &fflower_material, &config, render_stats);
+            loaded->data_size, &item_route_material, &config, render_stats);
         if (handled != FALSE)
         {
             NDS_DIAG(gNdsItemFFlowerDrawCount++);
@@ -8484,6 +8672,56 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
         else
         {
             NDS_DIAG(gNdsItemFFlowerSubmitFailCount++);
+        }
+    }
+#if NDS_P2_STAGE_YAMABUKI
+    else if ((route_kind == NDS_SDL_ROUTE_HITOKAGE) ||
+             (route_kind == NDS_SDL_ROUTE_FUSHIGIBANA))
+    {
+        ndsStageDLFastItemSeeds(render_stats);
+        if (route_kind == NDS_SDL_ROUTE_HITOKAGE)
+        {
+            handled = ndsRendererSubmitNativeItemHitokage(
+                loaded->data, loaded->data_size, &item_route_material,
+                &config, render_stats);
+            if (handled != FALSE)
+            {
+                NDS_DIAG(gNdsYamabukiHitokageDrawCount++);
+            }
+            else
+            {
+                NDS_DIAG(gNdsYamabukiHitokageSubmitFailCount++);
+            }
+        }
+        else
+        {
+            handled = ndsRendererSubmitNativeItemFushigibana(
+                loaded->data, loaded->data_size, &item_route_material,
+                &config, render_stats);
+            if (handled != FALSE)
+            {
+                NDS_DIAG(gNdsYamabukiFushigibanaDrawCount++);
+            }
+            else
+            {
+                NDS_DIAG(gNdsYamabukiFushigibanaSubmitFailCount++);
+            }
+        }
+    }
+#endif
+    else if (route_kind == NDS_SDL_ROUTE_NBUMPER)
+    {
+        ndsStageDLFastItemSeeds(render_stats);
+        handled = ndsRendererSubmitNativeItemNBumper(
+            loaded->data, loaded->data_size, &item_route_material, &config,
+            render_stats);
+        if (handled != FALSE)
+        {
+            NDS_DIAG(gNdsItemNBumperDrawCount++);
+        }
+        else
+        {
+            NDS_DIAG(gNdsItemNBumperSubmitFailCount++);
         }
     }
     else if ((route_kind == NDS_SDL_ROUTE_BAKED) ||
@@ -8705,6 +8943,159 @@ static unsigned int ndsRendererAdapterTryNativeEntryEffectOnHotStack(void *arg)
 }
 #endif
 
+#if NDS_R2_REBIRTH_HALO_NATIVE && NDS_R2_REBIRTH_HALO_FAST_ADAPTER
+/* P2-2p8 (2026-10-05): the RebirthHalo arm ahead of the body. It sat at the
+ * top of ndsRendererAdapterSubmitStageDLBody, so its three lists (two on the
+ * child DObj, one on the rotating grandchild) each paid the entry-effect
+ * probe and the body's prologue -- a ~29 KB function's frame and locals --
+ * before arriving at the native owner: ~100-160 frames a match after every
+ * respawn, on every stage. The same statements now run from the dispatcher
+ * right after the fast lane; a list they decline goes on to the entry probe
+ * and the body as before (whose own copy of the arm stands down). Same-ROM
+ * A/B word gNdsStageDLHaloFirst (0 = the arm in the body). */
+volatile u32 gNdsStageDLHaloFirst __attribute__((used, section(".data"))) = 1u;
+
+static sb32 __attribute__((noinline)) ndsRendererAdapterTryRebirthHalo(
+    DObj *dobj, const Gfx *dl, GObj *camera_gobj, u32 initial_geometry_mode)
+{
+    if ((sNdsRendererAdapterRebirthHaloNativeActive != FALSE) &&
+        (gEFManagerFiles[2] != NULL) &&
+        ((const u8 *)dl >= (const u8 *)gEFManagerFiles[2]))
+    {
+        uintptr_t rebirth_offset = (uintptr_t)((const u8 *)dl -
+                                               (const u8 *)gEFManagerFiles[2]);
+
+        if ((rebirth_offset == 0x2378u) || (rebirth_offset == 0x2a88u) ||
+            (rebirth_offset == 0x27e8u))
+        {
+            NDSRendererConfig rebirth_config = {0};
+            NDSRendererStats rebirth_stats;
+            NDSRendererStats *rebirth_render_stats;
+            NDSRendererMatrix20p12 rebirth_projection;
+            NDSRendererMatrix20p12 rebirth_modelview;
+            const NDSRendererMatrix20p12 *rebirth_projection_ptr;
+            const NDSRendererMatrix20p12 *rebirth_modelview_ptr;
+#if NDS_RENDERER_HW_TRIANGLES
+            void *rebirth_saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
+#endif
+
+            /* 0x2378 and 0x2a88 are the two DL links on the SAME child DObj.
+             * Once the first one has emitted both native roots with one matrix
+             * setup, the tree walker will immediately offer 0x2a88 again. */
+            if ((rebirth_offset == 0x2a88u) &&
+                (sNdsRendererAdapterRebirthHaloSkipSecondChildList != FALSE))
+            {
+                sNdsRendererAdapterRebirthHaloSkipSecondChildList = FALSE;
+                return TRUE;
+            }
+
+            ndsRendererAdapterPrepareInitialMatrices(
+                dobj,
+                (camera_gobj != NULL) ? CObjGetStruct(camera_gobj) :
+                    ((gGCCurrentCamera != NULL) ? CObjGetStruct(gGCCurrentCamera) : NULL),
+                TRUE,
+                &rebirth_projection,
+                &rebirth_projection_ptr,
+                &rebirth_modelview,
+                &rebirth_modelview_ptr);
+
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+            if (sNdsRendererAdapterStagePersistentActive != FALSE)
+            {
+                rebirth_render_stats = &sNdsRendererAdapterStagePersistentStats;
+                ndsFighterDLDrawResetRuntimeRendererStats(rebirth_render_stats);
+            }
+            else
+#endif
+            {
+                rebirth_render_stats = &rebirth_stats;
+                ndsRendererInitStats(rebirth_render_stats);
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
+                if (sNdsRendererAdapterStagePersistentActive != FALSE)
+                {
+                    ndsFighterDLDrawCopyPersistentRendererState(
+                        rebirth_render_stats, &sNdsRendererAdapterStagePersistentStats);
+                }
+#endif
+            }
+            if ((sNdsRendererAdapterEffectColorMask & 1u) != 0u)
+            {
+                rebirth_render_stats->prim_color = sNdsRendererAdapterEffectPrimColor;
+            }
+            if ((sNdsRendererAdapterEffectColorMask & 2u) != 0u)
+            {
+                rebirth_render_stats->env_color = sNdsRendererAdapterEffectEnvColor;
+            }
+            if (sNdsRendererAdapterEffectOtherModeValid != 0u)
+            {
+                rebirth_render_stats->othermode_l = sNdsRendererAdapterEffectOtherModeL;
+            }
+
+            rebirth_config.max_depth = 8u;
+            rebirth_config.max_commands = 8192u;
+            rebirth_config.max_list_commands = 512u;
+            rebirth_config.initial_projection = rebirth_projection_ptr;
+            rebirth_config.initial_modelview = rebirth_modelview_ptr;
+            rebirth_config.initial_geometry_mode = initial_geometry_mode;
+            rebirth_config.texture_data_layout = NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
+
+            if (ndsRendererSubmitNativeRebirthHalo(
+                    (u32)rebirth_offset, &rebirth_config,
+                    rebirth_render_stats) != FALSE)
+            {
+                NDS_DIAG(gNdsRebirthHaloNativeDrawCount++);
+                if (rebirth_offset == 0x2378u)
+                {
+                    /* Same DObj, same source matrix, adjacent source order.
+                     * Keep the live renderer state produced by 0x2378 and emit
+                     * its second linked list without rebuilding the adapter. */
+                    if (ndsRendererSubmitNativeRebirthHalo(
+                            0x2a88u, &rebirth_config,
+                            rebirth_render_stats) != FALSE)
+                    {
+                        NDS_DIAG(gNdsRebirthHaloNativeDrawCount++);
+                        sNdsRendererAdapterRebirthHaloSkipSecondChildList = TRUE;
+                    }
+                    else
+                    {
+                        NDS_DIAG(gNdsRebirthHaloNativeFallbackCount++);
+                    }
+                }
+                gNdsStageGCDrawAllLoopHardwareTriangleCount +=
+                    rebirth_render_stats->hardware_triangle_count;
+                gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount +=
+                    rebirth_render_stats->hardware_zbuffer_triangle_count;
+                gNdsStageGCDrawAllLoopHardwareProjectedDepthTriangleCount +=
+                    rebirth_render_stats->hardware_projected_depth_triangle_count;
+                gNdsStageGCDrawAllLoopHardwareDecalDepthTriangleCount +=
+                    rebirth_render_stats->hardware_decal_depth_triangle_count;
+                gNdsStageGCDrawAllLoopHardwareTextureBindCount +=
+                    rebirth_render_stats->hardware_texture_bind_count;
+                gNdsStageGCDrawAllLoopHardwareTextureUploadCount +=
+                    rebirth_render_stats->hardware_texture_upload_count;
+                gNdsStageGCDrawAllLoopHardwareTextureReadyCount +=
+                    rebirth_render_stats->hardware_texture_ready_count;
+                gNdsStageGCDrawAllLoopHardwareTextureRejectCount +=
+                    rebirth_render_stats->hardware_texture_reject_count;
+#if NDS_RENDERER_HW_TRIANGLES
+                ndsTaskmanSampleGraphicsHeap();
+                gSYTaskmanGraphicsHeap.ptr = rebirth_saved_graphics_heap_ptr;
+#endif
+                return TRUE;
+            }
+            NDS_DIAG(gNdsRebirthHaloNativeFallbackCount++);
+#if NDS_RENDERER_HW_TRIANGLES
+            ndsTaskmanSampleGraphicsHeap();
+            gSYTaskmanGraphicsHeap.ptr = rebirth_saved_graphics_heap_ptr;
+#endif
+        }
+    }
+    return FALSE;
+}
+#else
+volatile u32 gNdsStageDLHaloFirst __attribute__((used, section(".data"))) = 0u;
+#endif
+
 volatile u32 gNdsStageDLBodyCalls;
 
 static void ndsRendererAdapterSubmitStageDLImpl(DObj *dobj, const Gfx *dl,
@@ -8738,6 +9129,15 @@ static void ndsRendererAdapterSubmitStageDLImpl(DObj *dobj, const Gfx *dl,
         {
             return;
         }
+    }
+#endif
+#if NDS_R2_REBIRTH_HALO_NATIVE && NDS_R2_REBIRTH_HALO_FAST_ADAPTER
+    if ((gNdsStageDLHaloFirst != 0u) &&
+        (sNdsRendererAdapterRebirthHaloNativeActive != FALSE) &&
+        (ndsRendererAdapterTryRebirthHalo(dobj, dl, camera_gobj,
+                                          initial_geometry_mode) != FALSE))
+    {
+        return;
     }
 #endif
     if (gNdsStageDLEntryFirst != 0u)
@@ -9034,7 +9434,8 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
      * matrix of the child and rotating grandchild while isolating the cost of
      * generic adapter ceremony. A later all-tree owner can merge the duplicate
      * child matrix/load once this gate has a visual/tick verdict. */
-    if ((sNdsRendererAdapterRebirthHaloNativeActive != FALSE) &&
+    if ((gNdsStageDLHaloFirst == 0u) &&
+        (sNdsRendererAdapterRebirthHaloNativeActive != FALSE) &&
         (gEFManagerFiles[2] != NULL) &&
         ((const u8 *)dl >= (const u8 *)gEFManagerFiles[2]))
     {
@@ -13115,6 +13516,13 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             ndsStageRejectNativeRender(dobj, dl,
                 NDS_NATIVE_FAILURE_REJECTED_PROGRAM, render_stats);
         }
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        else if (gNdsStageDLFastMore != 0u)
+        {
+            ndsStageDLRouteRecord(dl, loaded, NDS_NATIVE_DAMAGE_FLY_MDUST_ROOT,
+                                  NDS_SDL_ROUTE_DAMAGE_FLY_MDUST);
+        }
+#endif
         damage_fly_mdust_native_settled = TRUE;
     }
     if (damage_slash_native_seen != FALSE)
@@ -13229,6 +13637,13 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         if (sector_laser_native_handled != FALSE)
         {
             NDS_DIAG(gNdsSectorLaserDrawCount++);
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            if (gNdsStageDLFastMore != 0u)
+            {
+                ndsStageDLRouteRecord(dl, loaded, NDS_NATIVE_SECTOR_LASER_ROOT,
+                                      NDS_SDL_ROUTE_SECTOR_LASER);
+            }
+#endif
         }
         else
         {
@@ -13308,6 +13723,13 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         if (marumine_native_handled != FALSE)
         {
             NDS_DIAG(gNdsYamabukiMarumineDrawCount++);
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            if (gNdsStageDLFastMore != 0u)
+            {
+                ndsStageDLRouteRecord(dl, loaded, 0u,
+                                      NDS_SDL_ROUTE_ITEM + nNDSStageDLItemMarumine);
+            }
+#endif
         }
         else
         {
@@ -13340,6 +13762,13 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         if (glucky_native_handled != FALSE)
         {
             NDS_DIAG(gNdsYamabukiGluckyDrawCount++);
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            if (gNdsStageDLFastMore != 0u)
+            {
+                ndsStageDLRouteRecord(dl, loaded, 0u,
+                                      NDS_SDL_ROUTE_ITEM + nNDSStageDLItemGLucky);
+            }
+#endif
         }
         else
         {
@@ -13369,6 +13798,13 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         if (porygon_native_handled != FALSE)
         {
             NDS_DIAG(gNdsYamabukiPorygonDrawCount++);
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            if (gNdsStageDLFastMore != 0u)
+            {
+                ndsStageDLRouteRecord(dl, loaded, 0u,
+                                      NDS_SDL_ROUTE_ITEM + nNDSStageDLItemPorygon);
+            }
+#endif
         }
         else
         {
@@ -13399,6 +13835,13 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         if (hitokage_native_handled != FALSE)
         {
             NDS_DIAG(gNdsYamabukiHitokageDrawCount++);
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            if (gNdsStageDLFastMore != 0u)
+            {
+                ndsStageDLRouteRecord(dl, loaded, NDS_NATIVE_ITEM_HITOKAGE_ROOT,
+                                      NDS_SDL_ROUTE_HITOKAGE);
+            }
+#endif
         }
         else
         {
@@ -13429,6 +13872,13 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         if (fushigibana_native_handled != FALSE)
         {
             NDS_DIAG(gNdsYamabukiFushigibanaDrawCount++);
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            if (gNdsStageDLFastMore != 0u)
+            {
+                ndsStageDLRouteRecord(dl, loaded, NDS_NATIVE_ITEM_FUSHIGIBANA_ROOT,
+                                      NDS_SDL_ROUTE_FUSHIGIBANA);
+            }
+#endif
         }
         else
         {
@@ -13996,6 +14446,14 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         if (item_nbumper_native_handled != FALSE)
         {
             NDS_DIAG(gNdsItemNBumperDrawCount++);
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            if (gNdsStageDLFastFFlower != 0u)
+            {
+                ndsStageDLRouteRecord(dl, loaded,
+                                      NDS_NATIVE_ITEM_NBUMPER_ROOT,
+                                      NDS_SDL_ROUTE_NBUMPER);
+            }
+#endif
         }
         else
         {
