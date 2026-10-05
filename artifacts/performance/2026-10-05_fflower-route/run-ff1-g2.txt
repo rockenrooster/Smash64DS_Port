@@ -1,0 +1,45 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,928; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 249: ALL 5,311,040 -> 1,116,736, 4 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_fflower-route/ff1-g2.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=44d6775c69a+dirty(35) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,928     1,677,504      1.50  1,206,677     1,112,768 18,554,368      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,992        10,560      2.12      5,783         2,432     26,688        0.4
+HUD         9,216        24,192      2.62     11,677         7,936    641,920        0.8
+SRC       409,664       651,456      1.59    418,622       140,416  1,270,848       36.7
+MISC      444,672       613,952      1.38    459,846       185,472 17,376,704       39.8
+OTHR      285,248       602,816      2.11    310,749        23,488    776,960       25.5
+WAIT      265,216       578,688      2.18    289,091         3,776    756,800       23.7
+WORK      896,640     1,276,288      1.42    913,594       357,056 18,216,896       80.3
+SHDT            0             0      0.00          0             0          0        0.0
+SWRM        1,408         1,536      1.09      1,437         1,024      3,456        0.1
+GCRA      404,096       646,016      1.60    413,086       135,936  1,265,280       36.2
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        597             0  1,024,384        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      444,544       613,824      1.38    459,718       185,344 17,376,576       39.8
+MFLS          128           128      1.00        128            64        256        0.0
+GPOL          562           655      1.17        530            51        723        0.1
+GVTX        1,347         1,556      1.16      1,274           175      1,743        0.1
+DGSA   2,171,201,471 4,069,725,545        2,131,774,420    226,229 4,293,447,369 194,390.5
+DGSB   2,223,267,474 4,055,368,550        2,158,968,673    319,904 4,294,070,849 199,052.0
+WORK-H    884,480     1,260,288      1.42    901,917       347,584 17,574,976       79.2
+
+named=895,928 (74.2% of ALL)  VBI 2:1690 3:258 4:11 5+:2 max:37 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_fflower-route/ff1-g2.json

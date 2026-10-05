@@ -1,0 +1,46 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 2 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,864; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 614: ALL 5,871,296 -> 1,676,992, 4 bucket(s) corrected
+  frame 1543: ALL 5,311,040 -> 1,116,736, 4 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_clean-sweep/k1-g3.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=44d6775c69a+dirty(34) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,864     1,677,120      1.50  1,178,812     1,112,000 13,385,664      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,608        10,176      2.21      5,613         2,432     28,800        0.4
+HUD         9,024        23,488      2.60     10,835         8,064    601,472        0.8
+SRC       427,392       635,072      1.49    435,500       170,112  1,061,952       38.3
+MISC      415,488       568,320      1.37    436,229       171,648 12,220,544       37.2
+OTHR      273,216       596,736      2.18    290,634        23,680    760,704       24.5
+WAIT      251,456       572,672      2.28    268,906         2,304    741,248       22.5
+WORK      890,880     1,195,328      1.34    905,953       372,288 13,048,384       79.8
+SHDT            0             0      0.00          0             0          0        0.0
+SWRM        1,280         1,344      1.05      1,291           896      3,328        0.1
+GCRA      422,080       629,376      1.49    430,146       165,568  1,056,768       37.8
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        533             0    935,232        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      415,360       568,192      1.37    436,095       171,520 12,220,416       37.2
+MFLS          128           192      1.50        133            64        448        0.0
+GPOL          537           616      1.15        493            28        659        0.0
+GVTX        1,233         1,397      1.13      1,132            88      1,551        0.1
+DGSA   2,165,876,429 4,154,044,862        2,180,429,386  1,363,111 4,293,517,014 193,924.8
+DGSB   2,177,856,051 4,198,270,827        2,177,962,403  1,469,628 4,294,307,470 194,997.4
+WORK-H    878,464     1,181,056      1.34    895,118       364,160 12,446,912       78.7
+
+named=888,177 (75.3% of ALL)  VBI 2:1779 3:167 4:14 5+:1 max:28 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_clean-sweep/k1-g3.json

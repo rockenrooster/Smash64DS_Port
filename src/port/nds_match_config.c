@@ -186,7 +186,7 @@ _Static_assert(NDS_P2_PROOF_FIGHTER0 <= nFTKindPlayableEnd,
 #endif
 #endif
 
-#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+#if defined(NDS_LAB_FOURCPU_WORDS) && NDS_LAB_FOURCPU_WORDS
 #ifndef NDS_LAB_FOURCPU_SWEEP_GKIND
 #define NDS_LAB_FOURCPU_SWEEP_GKIND 0xffu
 #endif
@@ -430,8 +430,8 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
      * the rate scmanager.c:583 seeds, nSCBattleItemSwitchMiddle. */
     cfg->item_toggles = ~0u;
     cfg->item_appearance_rate = nSCBattleItemSwitchMiddle;
-#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
-    /* LAB ONLY (Makefile NDS_LAB_FOURCPU_SWEEP): boot-poked stage. */
+#if defined(NDS_LAB_FOURCPU_WORDS) && NDS_LAB_FOURCPU_WORDS
+    /* LAB ONLY (Makefile NDS_LAB_FOURCPU_SWEEP or _WORDS): boot-poked stage. */
     if (gNdsLabFourCpuGkind < 9u)
     {
         cfg->gkind = (u8)gNdsLabFourCpuGkind;
@@ -471,7 +471,7 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
     cfg->fighters[3].fkind = (FTKind)NDS_P2_FOUR_CPU_KIND3;
     cfg->fighters[3].costume =
         (u8)ftParamGetCostumeCommonID((FTKind)NDS_P2_FOUR_CPU_KIND3, 0);
-#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+#if defined(NDS_LAB_FOURCPU_WORDS) && NDS_LAB_FOURCPU_WORDS
     /* LAB ONLY: boot-poked roster, one nFTKind byte a slot (0xFF keeps
      * the preset's). Distinct kinds keep common costume 0 legal. */
     {

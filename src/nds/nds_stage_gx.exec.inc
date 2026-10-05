@@ -1425,6 +1425,16 @@ static inline void ndsStageGxFastDepthColumn(u32 *dst,
     }
 }
 
+/* LAB (stage/roster words builds only): why a segment's fast commit declined,
+ * one counter a reason, read by gdb. 1 eligible, 2 hidden binding, 3 near
+ * box, 4 material, 5 composed, 6 painter composed. */
+#if defined(NDS_LAB_FOURCPU_WORDS) && NDS_LAB_FOURCPU_WORDS
+volatile u32 gNdsLabStageGxFastWhy[8] __attribute__((used));
+#define NDS_STAGE_GX_FAST_WHY(n) (gNdsLabStageGxFastWhy[(n)]++)
+#else
+#define NDS_STAGE_GX_FAST_WHY(n) ((void)0)
+#endif
+
 static sb32 __attribute__((noinline)) ndsStageGxCommitFast(
     u32 segment_index, const NDSNativeStageSegment *segment,
     NDSRendererStats *stats, u32 *segment_triangles)
@@ -1470,6 +1480,7 @@ static sb32 __attribute__((noinline)) ndsStageGxCommitFast(
         ((sNdsNativeStageOwnerExecution.hidden_binding_mask & s->binding_mask) !=
          0u))
     {
+        NDS_STAGE_GX_FAST_WHY((s->eligible == 0u) ? 1u : 2u);
         NDS_DIAG(gNdsStageGxFastDeclines++);
         return FALSE;
     }
@@ -1482,6 +1493,7 @@ static sb32 __attribute__((noinline)) ndsStageGxCommitFast(
             (ndsStageGxInsideNearBox(n->minimum, n->maximum,
                                      &composed_all[n->binding]) == FALSE))
         {
+            NDS_STAGE_GX_FAST_WHY(3u);
             NDS_DIAG(gNdsStageGxFastDeclines++);
             return FALSE;
         }
@@ -1528,6 +1540,7 @@ static sb32 __attribute__((noinline)) ndsStageGxCommitFast(
                     (ndsStageGxMaterial(dst, prepared, native->submit_class,
                                         segment->owner) == FALSE))
                 {
+                    NDS_STAGE_GX_FAST_WHY(4u);
                     goto declined;
                 }
             }
@@ -1565,6 +1578,7 @@ static sb32 __attribute__((noinline)) ndsStageGxCommitFast(
             {
                 if (ndsStageGxComposedFor(binding, shift, &composed) == FALSE)
                 {
+                    NDS_STAGE_GX_FAST_WHY(5u);
                     goto declined;
                 }
                 composed_shift = (s32)shift;
@@ -1607,6 +1621,7 @@ static sb32 __attribute__((noinline)) ndsStageGxCommitFast(
                     if (ndsStageGxComposedFor(q->index, shift, &composed) ==
                         FALSE)
                     {
+                        NDS_STAGE_GX_FAST_WHY(6u);
                         goto declined;
                     }
                     composed_shift = (s32)shift;

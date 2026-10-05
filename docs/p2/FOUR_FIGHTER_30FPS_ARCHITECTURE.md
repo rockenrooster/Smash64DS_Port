@@ -1391,6 +1391,36 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   30%). Found: a present with WORK above ~1,110K misses its second VBlank
   (the replay digest's ~3.9K and ~5.5K of frame-boundary time sit outside
   WORK), so the two-VBlank share tracks WORK <= ~1,110K, not 1,120K.
+- **10-05 a clean worst-case ROM; Yoshi's Island clouds; Fire Flower routes.**
+  The lab sweep ROM's instruments (stage/Fox GX FIFO hashes, item
+  accumulators, the Fire Flower recorder) inflated the heavy stages by 93K-125K
+  P95. `NDS_LAB_FOURCPU_WORDS=1` compiles the stage/roster words alone; on it
+  (P50/P95): Castle 888,000/1,206,272, Sector Z 931,584/1,278,016, Jungle
+  913,280/1,280,832, Zebes 890,880/1,195,328, Hyrule 767,552/1,012,288,
+  Yoshi's Island 947,840/1,274,688, Dream Land 815,616/1,124,992, Saffron
+  924,544/1,249,280, Mushroom Kingdom 936,448/1,218,560
+  (`artifacts/performance/2026-10-05_clean-sweep`); the excess over Dream
+  Land is simulation (+69K to +122K in the P92-98 band) and, on Sector Z,
+  Jungle and Yoshi's Island, the draw (+75K to +87K). (1) Yoshi's Island's
+  cloud locals are all Tra builds, so a drawable's chain is its three
+  translations summed and the kind-48 recalc needs only row 3 of chain x
+  camera: 7 local builds and 9 multiplies a cloud become integer
+  conversions and 3 row products, bit for bit (`gNdsYosterCloudFast`, paired
+  -15.3K); the three drawables' shared corner words are kept with their
+  inputs (`gNdsYosterCloudCornerMemo`, -5.3K). (2) The Fire Flower's two lists
+  reached their owner through the whole stage-DL body every draw; the body now
+  records fast-lane routes for both roots (`gNdsStageDLFastFFlower`; Jungle
+  P95 1,310,272 -> 1,277,376, paired -27.3K). Replay digest identical on every
+  pair and on the official gate (1,111,168, 1,861 two-VBlank presents,
+  neutral: neither owner draws in its match). Receipts
+  `2026-10-05_cloud-fast`, `2026-10-05_fflower-route`. Found: Sector Z's
+  segment 0 declines the GX fast commit every frame for the owner-hidden
+  wing-platform proxy binding (lab counters `gNdsLabStageGxFastWhy`); a
+  degenerate-binding exemption measured nothing and was reverted
+  (`2026-10-05_sz-degenerate`). A body-submit census (clean ROM, frames
+  100-1,900) puts the remaining body lists at the rebirth halo's three roots
+  (105-163 frames a match), the N Bumper, the Sector Z Arwing laser, the
+  damage-fly dust and Saffron's Pokemon.
 
 ## 7. Found along the way
 

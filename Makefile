@@ -798,7 +798,12 @@ NDS_LAB_FOURCPU_TWO ?=
 # `NDS_LAB_FOURCPU_SWEEP_GKIND=<n>` sets the stage word's initial value, for
 # harnesses that cannot poke it (the profile census);
 # `NDS_LAB_FOURCPU_SWEEP_KINDS=<decimal word>` does the same for the roster.
+# `NDS_LAB_FOURCPU_WORDS=1` compiles the same words WITHOUT the sweep's lab
+# instruments (stage/Fox GX hashes, item/PIM/baked accumulators, lean-event
+# and status-change columns): the per-stage worst case on the gate's own
+# configuration.
 NDS_LAB_FOURCPU_SWEEP ?=
+NDS_LAB_FOURCPU_WORDS ?=
 NDS_LAB_FOURCPU_SWEEP_GKIND ?=
 NDS_LAB_FOURCPU_SWEEP_KINDS ?=
 # LAB ONLY (with NDS_LAB_FOURCPU_SWEEP=1): record every syInterpGetFracFrame
@@ -7168,6 +7173,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_FOUR_CPU_KIND3 $(NDS_P2_FOUR_CPU_KIND3)'; \
 		$(if $(strip $(NDS_LAB_FOURCPU_TWO)),echo '#define NDS_LAB_FOURCPU_TWO 1';) \
 		$(if $(strip $(NDS_LAB_FOURCPU_SWEEP)),echo '#define NDS_LAB_FOURCPU_SWEEP 1';) \
+		$(if $(strip $(NDS_LAB_FOURCPU_SWEEP)$(NDS_LAB_FOURCPU_WORDS)),echo '#define NDS_LAB_FOURCPU_WORDS 1';) \
 		$(if $(strip $(NDS_LAB_FOURCPU_SWEEP_GKIND)),echo '#define NDS_LAB_FOURCPU_SWEEP_GKIND $(NDS_LAB_FOURCPU_SWEEP_GKIND)u';) \
 		$(if $(strip $(NDS_LAB_FOURCPU_SWEEP_KINDS)),echo '#define NDS_LAB_FOURCPU_SWEEP_KINDS $(NDS_LAB_FOURCPU_SWEEP_KINDS)u';) \
 		$(if $(strip $(NDS_INTERP_FRAC_CAPTURE)),echo '#define NDS_INTERP_FRAC_CAPTURE 1';) \

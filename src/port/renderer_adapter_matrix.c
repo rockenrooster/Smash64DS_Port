@@ -9028,6 +9028,49 @@ static NDSRendererAdapterNativeYosterCloudWorkspace
 
 volatile u32 gNdsNativeYosterCloudFailStep;
 
+/* P2-2p8 (2026-10-05): the cloud's matrices without the generic builders.
+ * Every local is a Tra -- the root and mids carry Tra alone, a drawable Tra
+ * beside the kind-48 recalc its build skips -- so each is the identity with
+ * row 3 = RoundShift20p12(FTOFIX32(translate)) (syMatrixTra, then the 16.16 ->
+ * 20.12 load; ndsRendererAdapterFloatPow2ToS32 is FTOFIX32 bit for bit). Such
+ * products are exact: a drawable's chain is the identity with the three
+ * translations summed in row 3, and the kind-48 recalc keeps only row 3 of
+ * chain x camera modelview, formed here with ndsRendererMtxMulRow3_20p12's
+ * arithmetic. 7 local builds (syMatrixTra, a Mtx split and a 16-cell load
+ * each) and 9 full multiplies become 21 integer conversions and 3 row
+ * products; the matrices the executor reads are the old path's. A
+ * translation at or past 2^14 units takes the old path. Same-ROM A/B word
+ * gNdsYosterCloudFast (0 = the generic builders). */
+volatile u32 gNdsYosterCloudFast __attribute__((used, section(".data"))) = 1u;
+
+static sb32 ndsRendererAdapterYosterCloudTra20p12(const DObj *joint,
+                                                  s32 out[3])
+{
+    const f32 *v = &joint->translate.vec.f.x;
+    u32 c;
+
+    for (c = 0u; c < 3u; c++)
+    {
+        union
+        {
+            f32 f;
+            u32 u;
+        } bits = { v[c] };
+        s32 e;
+
+        /* |v| < 2^14: FTOFIX32 stays inside an s32 with no saturation. */
+        if ((((bits.u >> 23) & 0xffu) >= (127u + 14u)) ||
+            (ndsRendererAdapterFloatPow2ToS32(v[c], 16u, &e) == FALSE))
+        {
+            return FALSE;
+        }
+        /* ndsRendererMtxLoadN64ToDS20p12's round shift by 4: half away from
+         * zero. */
+        out[c] = (e < 0) ? -((-e + 8) >> 4) : ((e + 8) >> 4);
+    }
+    return TRUE;
+}
+
 sb32 ndsRendererAdapterSubmitNativeYosterCloud(void *root_ptr, void *cobj,
     u32 initial_geometry_mode, NDSRendererStats *stats)
 {
@@ -9036,11 +9079,15 @@ sb32 ndsRendererAdapterSubmitNativeYosterCloud(void *root_ptr, void *cobj,
     DObj *draws[3];
     NDSRendererAdapterNativeYosterCloudWorkspace *workspace =
         &sNdsRendererAdapterNativeYosterCloudWorkspace;
-    NDSRelocLoadedFile *loaded;
+    NDSRelocLoadedFile *loaded = NULL;
+    NDSRelocLoadedFile *loaded0 = NULL;
     u32 alphas[3];
     u32 i;
     const void *live_data = NULL;
     u32 live_size = 0u;
+    sb32 view_ok;
+    s32 tra[7][3];
+    sb32 fast;
 
     if ((root == NULL) || (stats == NULL))
     {
@@ -9074,13 +9121,24 @@ sb32 ndsRendererAdapterSubmitNativeYosterCloud(void *root_ptr, void *cobj,
             return FALSE;
         }
     }
+    /* The live view of bank 154 and the file holding a drawable's list are
+     * pure queries: asked once, not once a drawable (the three share the
+     * list). */
+    view_ok = ndsRelocGetLoadedAssetView(154u, &live_data, &live_size);
     for (i = 0u; i < 3u; i++)
     {
         /* Every drawable executes the shared bank-154 DL with its own MObj. */
-        loaded = ndsRelocFindLoadedFileContaining(draws[i]->dv, sizeof(Gfx));
+        if ((i == 0u) || (draws[i]->dv != draws[0]->dv))
+        {
+            loaded = ndsRelocFindLoadedFileContaining(draws[i]->dv,
+                                                      sizeof(Gfx));
+        }
+        if (i == 0u)
+        {
+            loaded0 = loaded;
+        }
         if ((loaded == NULL) || (loaded->asset_id != 154u) ||
-            ((ndsRelocGetLoadedAssetView(154u, &live_data, &live_size) == FALSE) ||
-             (live_data != loaded->data)) ||
+            ((view_ok == FALSE) || (live_data != loaded->data)) ||
             (draws[i]->dv != (void *)((u8 *)loaded->data + 0x0580u)) ||
             (draws[i]->mobj == NULL))
         {
@@ -9144,14 +9202,28 @@ sb32 ndsRendererAdapterSubmitNativeYosterCloud(void *root_ptr, void *cobj,
         gNdsNativeYosterCloudFailStep = 0u;
         return TRUE;
     }
+    fast = (gNdsYosterCloudFast != 0u) ? TRUE : FALSE;
+    for (i = 0u; (fast != FALSE) && (i < 7u); i++)
+    {
+        fast = ndsRendererAdapterYosterCloudTra20p12(
+            workspace->hierarchy_joints[i], tra[i]);
+    }
     for (i = 0u; i < 7u; i++)
     {
         DObj *joint = workspace->hierarchy_joints[i];
+        NDSRendererMatrix20p12 *local =
+            &workspace->hierarchy_storage.hierarchy_locals[i];
 
-        if ((ndsRendererAdapterBuildDObjLocalMatrix(joint,
-                &workspace->hierarchy_storage.hierarchy_locals[i]) == FALSE) ||
-            (ndsRendererAdapterMatrixIsAffine20p12(
-                &workspace->hierarchy_storage.hierarchy_locals[i]) == FALSE))
+        if (fast != FALSE)
+        {
+            ndsRendererAdapterMtxIdentity20p12(local);
+            local->m[3][0] = tra[i][0];
+            local->m[3][1] = tra[i][1];
+            local->m[3][2] = tra[i][2];
+        }
+        else if ((ndsRendererAdapterBuildDObjLocalMatrix(joint, local) ==
+                  FALSE) ||
+                 (ndsRendererAdapterMatrixIsAffine20p12(local) == FALSE))
         {
             gNdsNativeYosterCloudFailStep = 10u;
             return FALSE;
@@ -9178,13 +9250,38 @@ sb32 ndsRendererAdapterSubmitNativeYosterCloud(void *root_ptr, void *cobj,
         const NDSRendererMatrix20p12 *projection_ptr =
             &workspace->hierarchy_projection;
 
-        ndsRendererMtxMul20p12(
-            &workspace->hierarchy_storage.hierarchy_locals[4u + i],
-            &workspace->hierarchy_storage.hierarchy_locals[1u + i], mvp);
-        ndsRendererMtxMul20p12(mvp,
-            &workspace->hierarchy_storage.hierarchy_locals[0], mvp);
-        ndsRendererMtxMul20p12(mvp,
-            &workspace->hierarchy_camera_modelview, mvp);
+        if (fast != FALSE)
+        {
+            /* |each| < 2^26 (20.12 of < 2^14 units): the sums cannot clamp,
+             * so the chain's row 3 is (sum, 1) and rows 0-2 are the camera
+             * modelview's. */
+            NDSRendererMatrix20p12 chain;
+            u32 c;
+
+            for (c = 0u; c < 3u; c++)
+            {
+                chain.m[3][c] = tra[4u + i][c] + tra[1u + i][c] + tra[0][c];
+                mvp->m[0][c] = workspace->hierarchy_camera_modelview.m[0][c];
+                mvp->m[1][c] = workspace->hierarchy_camera_modelview.m[1][c];
+                mvp->m[2][c] = workspace->hierarchy_camera_modelview.m[2][c];
+            }
+            chain.m[3][3] = 1 << 12;
+            mvp->m[0][3] = workspace->hierarchy_camera_modelview.m[0][3];
+            mvp->m[1][3] = workspace->hierarchy_camera_modelview.m[1][3];
+            mvp->m[2][3] = workspace->hierarchy_camera_modelview.m[2][3];
+            ndsRendererMtxMulRow3_20p12(
+                &chain, &workspace->hierarchy_camera_modelview, mvp);
+        }
+        else
+        {
+            ndsRendererMtxMul20p12(
+                &workspace->hierarchy_storage.hierarchy_locals[4u + i],
+                &workspace->hierarchy_storage.hierarchy_locals[1u + i], mvp);
+            ndsRendererMtxMul20p12(mvp,
+                &workspace->hierarchy_storage.hierarchy_locals[0], mvp);
+            ndsRendererMtxMul20p12(mvp,
+                &workspace->hierarchy_camera_modelview, mvp);
+        }
         /* BuildDObjLocalMatrix deliberately skips kind 48. The source then
          * replaces MVP orientation while retaining the composed translation;
          * reuse that owning seam for each drawable's live scale and camera. */
@@ -9199,7 +9296,7 @@ sb32 ndsRendererAdapterSubmitNativeYosterCloud(void *root_ptr, void *cobj,
             return FALSE;
         }
     }
-    loaded = ndsRelocFindLoadedFileContaining(draws[0]->dv, sizeof(Gfx));
+    loaded = loaded0;
     gNdsNativeYosterCloudFailStep = 0u;
     return ndsRendererSubmitNativeYosterCloud(loaded->data, loaded->data_size,
         &workspace->hierarchy, workspace->drawable_mvps,

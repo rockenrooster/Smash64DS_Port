@@ -7702,6 +7702,9 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
  * segment-E material are not routed. Same-ROM A/B word gNdsStageDLFastLane
  * (0 = every draw through the body). */
 volatile u32 gNdsStageDLFastLane __attribute__((used, section(".data"))) = 1u;
+/* Same-ROM A/B word for the Fire Flower routes (0 = its lists stay in the
+ * body). */
+volatile u32 gNdsStageDLFastFFlower __attribute__((used, section(".data"))) = 1u;
 volatile u32 gNdsStageDLFastLaneHits;
 volatile u32 gNdsStageDLFastLaneFills;
 
@@ -7741,6 +7744,14 @@ volatile u32 gNdsStageDLFastLaneFills;
  * leaves with the ending's heap), with the same persistent stats and
  * off-screen exit the body's baked branch reaches. */
 #define NDS_SDL_ROUTE_BAKED_ROOM 0xfbu
+/* P2-2p8 (2026-10-05): the Fire Flower's live root (0x4608): one MObj whose
+ * snapshot selects a palette image, as the body's candidate admits it --
+ * an Item GObj of kind FFlower under the item submit, the owner's MObj flags
+ * -- tested again on every draw, the snapshot taken live. Its branch root
+ * (0x4520, no MObj) is an ordinary item route. Each draw paid the body: two
+ * lists a frame for as long as a flower is out (Jungle's sweep match, frame
+ * 820 on, ~29K cycles a frame). */
+#define NDS_SDL_ROUTE_FFLOWER_LIVE 0xfau
 /* Yoshi's Island's capsules and boxes thrashed an 8-slot table (1,231 fills
  * for 1,469 hits a match): the owners are few, but a capsule alone draws three
  * roots, and its header and third root shared a slot under an address-bit
@@ -7780,8 +7791,19 @@ enum
     nNDSStageDLItemLGun,
     nNDSStageDLItemHarisen,
     nNDSStageDLItemHeart,
+    nNDSStageDLItemFFlower,
     nNDSStageDLItemRouteCount
 };
+
+/* The Fire Flower's branch root: no material. */
+static sb32 ndsStageDLSubmitFFlowerBranch(u32 root, const void *base,
+                                          u32 bytes,
+                                          const NDSRendererConfig *config,
+                                          NDSRendererStats *stats)
+{
+    return ndsRendererSubmitNativeItemFFlower(root, base, bytes, NULL, config,
+                                              stats);
+}
 
 static const NDSStageDLItemRoute sNdsStageDLItemRoutes[nNDSStageDLItemRouteCount] =
 {
@@ -7818,6 +7840,9 @@ static const NDSStageDLItemRoute sNdsStageDLItemRoutes[nNDSStageDLItemRouteCount
     [nNDSStageDLItemHeart] = { ndsRendererSubmitNativeItemHeart, NULL,
         &gNdsItemHeartDrawCount, &gNdsItemHeartSubmitFailCount,
         nITKindHeart },
+    [nNDSStageDLItemFFlower] = { NULL, ndsStageDLSubmitFFlowerBranch,
+        &gNdsItemFFlowerDrawCount, &gNdsItemFFlowerSubmitFailCount,
+        nITKindFFlower },
 };
 #endif
 
@@ -8105,6 +8130,9 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
 #if NDS_P2_STAGE_CASTLE
     NDSRendererNativeMaterial bumper_material;
 #endif
+#if NDS_P2_ITEM_CORE
+    NDSRendererNativeMaterial fflower_material;
+#endif
     /* Zeroed once a route is taken: most lists leave at the route test. */
     NDSRendererConfig config;
     NDSRendererStats *render_stats;
@@ -8147,7 +8175,8 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
          ((dobj->mobj != NULL) && (route->route != NDS_SDL_ROUTE_BAKED) &&
           (route->route != NDS_SDL_ROUTE_BAKED_ITEM) &&
           (route->route != NDS_SDL_ROUTE_BAKED_ROOM) &&
-          (route->route != NDS_SDL_ROUTE_CASTLE_BUMPER)) ||
+          (route->route != NDS_SDL_ROUTE_CASTLE_BUMPER) &&
+          (route->route != NDS_SDL_ROUTE_FFLOWER_LIVE)) ||
          (owner == NULL) ||
          (sNdsRendererAdapterStagePersistentActive == FALSE) ||
          (sNdsRendererAdapterEffectSubmitActive != FALSE) ||
@@ -8215,6 +8244,32 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
             (ndsRendererAdapterBuildNativeMaterialSnapshot(
                  dobj->mobj, &bumper_material, FALSE, NULL, NULL) == FALSE) ||
             (bumper_material.effects !=
+                 NDS_RENDERER_NATIVE_MATERIAL_PALETTE_IMAGE))
+        {
+            return FALSE;
+        }
+        break;
+    }
+#endif
+#if NDS_P2_ITEM_CORE
+    case NDS_SDL_ROUTE_FFLOWER_LIVE:
+    {
+        ITStruct *ip;
+
+        if ((owner->id != nGCCommonKindItem) ||
+            (sNdsRendererAdapterItemSubmitActive == FALSE) ||
+            (dobj->mobj == NULL) || (dobj->mobj->next != NULL) ||
+            (ndsRendererAdapterMaterialFlags(dobj->mobj) !=
+                 NDS_NATIVE_ITEM_FFLOWER_MOBJ_FLAGS) ||
+            (route->data_size < NDS_NATIVE_ITEM_FFLOWER_FILE_END))
+        {
+            return FALSE;
+        }
+        ip = itGetStruct(owner);
+        if ((ip == NULL) || (ip->kind != nITKindFFlower) ||
+            (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                 dobj->mobj, &fflower_material, FALSE, NULL, NULL) == FALSE) ||
+            (fflower_material.effects !=
                  NDS_RENDERER_NATIVE_MATERIAL_PALETTE_IMAGE))
         {
             return FALSE;
@@ -8416,6 +8471,21 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
     }
 #endif
 #if NDS_P2_ITEM_CORE
+    else if (route_kind == NDS_SDL_ROUTE_FFLOWER_LIVE)
+    {
+        ndsStageDLFastItemSeeds(render_stats);
+        handled = ndsRendererSubmitNativeItemFFlower(
+            NDS_NATIVE_ITEM_FFLOWER_LIVE_ROOT, loaded->data,
+            loaded->data_size, &fflower_material, &config, render_stats);
+        if (handled != FALSE)
+        {
+            NDS_DIAG(gNdsItemFFlowerDrawCount++);
+        }
+        else
+        {
+            NDS_DIAG(gNdsItemFFlowerSubmitFailCount++);
+        }
+    }
     else if ((route_kind == NDS_SDL_ROUTE_BAKED) ||
              (route_kind == NDS_SDL_ROUTE_BAKED_ITEM) ||
              (route_kind == NDS_SDL_ROUTE_BAKED_ROOM))
@@ -13853,6 +13923,15 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         if (item_fflower_native_handled != FALSE)
         {
             NDS_DIAG(gNdsItemFFlowerDrawCount++);
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            if (gNdsStageDLFastFFlower != 0u)
+            {
+                ndsStageDLRouteRecord(dl, loaded, item_fflower_root,
+                    (item_fflower_root == NDS_NATIVE_ITEM_FFLOWER_LIVE_ROOT) ?
+                        NDS_SDL_ROUTE_FFLOWER_LIVE :
+                        (NDS_SDL_ROUTE_ITEM + nNDSStageDLItemFFlower));
+            }
+#endif
         }
         else
         {

@@ -28,6 +28,29 @@
  * the fixed texture re-resolved through the full resolver every draw. */
 static NDSRendererOwnerTextureMemo sNdsNativeOwnerTexMemo_yostercloud[1];
 
+/* P2-2p8 (2026-10-05): every drawable emits the same shared corners, and
+ * unlit a corner's words are fixed by a few inputs: its colour is the vertex
+ * colour against the material's RGB (the packed colour reads no alpha), its
+ * texture coordinate follows the bound tile's scale and origin and the
+ * filter offset, its position is the packet's. The words are kept with those
+ * inputs and replayed while they hold -- three drawables of three clouds a
+ * frame -- and built as before for a lit material. Same-ROM A/B word
+ * gNdsYosterCloudCornerMemo (0 = every corner built per drawable). */
+volatile u32 gNdsYosterCloudCornerMemo __attribute__((used, section(".data"))) = 1u;
+
+#define NDS_YOSTER_CLOUD_CORNER_MEMO_KEYS 9u
+typedef struct NDSNativeYosterCloudCornerMemo
+{
+    u32 key[NDS_YOSTER_CLOUD_CORNER_MEMO_KEYS];
+    u32 valid;
+    u32 color[NDS_NATIVE_ACTOR_YOSTER_CLOUD_TRIANGLE_COUNT];
+    u32 texcoord[NDS_NATIVE_ACTOR_YOSTER_CLOUD_TRIANGLE_COUNT];
+    u32 xy[NDS_NATIVE_ACTOR_YOSTER_CLOUD_TRIANGLE_COUNT];
+    u32 z[NDS_NATIVE_ACTOR_YOSTER_CLOUD_TRIANGLE_COUNT];
+} NDSNativeYosterCloudCornerMemo;
+
+static NDSNativeYosterCloudCornerMemo sNdsNativeYosterCloudCornerMemo;
+
 /* One cloud instance: 3 drawables x 2 shared triangles = 6 live triangles
  * when solid. prim_alpha_* are the drawables' live MObj prim alphas
  * (mobj->sub.primcolor.s.a, the exact field objdisplay.c submits). */
@@ -168,6 +191,55 @@ sb32 ndsRendererSubmitNativeYosterCloud(const void *packet_base,
             sNdsRendererHardwareMatrixMode, generation);
         first = (u32)run[1] * 3u;
         count = (u32)run[2] * 3u;
+        if ((gNdsYosterCloudCornerMemo != 0u) &&
+            (count <= NDS_NATIVE_ACTOR_YOSTER_CLOUD_TRIANGLE_COUNT) &&
+            ((stats->geometry_mode & NDS_RENDERER_GEOM_LIGHTING) == 0u))
+        {
+            NDSNativeYosterCloudCornerMemo *memo =
+                &sNdsNativeYosterCloudCornerMemo;
+            const u32 key[NDS_YOSTER_CLOUD_CORNER_MEMO_KEYS] = {
+                material_color & 0xffffff00u, use_material, use_vertex,
+                stats->texture_scale_s, stats->texture_scale_t, tile->uls,
+                tile->ult, (u32)texture_offset, (first << 16) | count
+            };
+            u32 k;
+
+            if ((memo->valid == 0u) ||
+                (memcmp(memo->key, key, sizeof(key)) != 0))
+            {
+                for (k = 0u; k < count; k++)
+                {
+                    const NDSRendererInputVertex *v = &vertices[
+                        sNdsNativeActorYosterCloudTriIndices[first + k]];
+                    const v16 x = ndsRendererHardwareVertexCoord(v->x, TRUE);
+                    const v16 y = ndsRendererHardwareVertexCoord(v->y, TRUE);
+                    const v16 z = ndsRendererHardwareVertexCoord(v->z, TRUE);
+                    const s16 s = ndsRendererHardwareTexCoord(v->s,
+                        stats->texture_scale_s, tile->uls, texture_offset);
+                    const s16 t = ndsRendererHardwareTexCoord(v->t,
+                        stats->texture_scale_t, tile->ult, texture_offset);
+
+                    /* The words glColor, glTexCoord2t16 and glVertex3v16
+                     * write. */
+                    memo->color[k] = (u32)ndsRendererHardwarePackedVertexColor(
+                        stats, v, material_color, use_material, use_vertex,
+                        0u, FALSE, 0u);
+                    memo->texcoord[k] = TEXTURE_PACK(s, t);
+                    memo->xy[k] = ((u32)(s32)y << 16) | ((u32)x & 0xffffu);
+                    memo->z[k] = (u32)(s32)z;
+                }
+                memcpy(memo->key, key, sizeof(key));
+                memo->valid = 1u;
+            }
+            for (k = 0u; k < count; k++)
+            {
+                GFX_COLOR = memo->color[k];
+                GFX_TEX_COORD = memo->texcoord[k];
+                GFX_VERTEX16 = memo->xy[k];
+                GFX_VERTEX16 = memo->z[k];
+            }
+        }
+        else
         for (corner = first; corner < first + count; corner++)
         {
             const NDSRendererInputVertex *v =

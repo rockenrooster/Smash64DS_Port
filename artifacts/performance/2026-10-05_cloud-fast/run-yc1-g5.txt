@@ -1,0 +1,45 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,800; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 1476: ALL 5,871,104 -> 1,676,800, 4 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_cloud-fast/yc1-g5.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=44d6775c69a+dirty(36) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,800     1,677,312      1.50  1,207,559     1,112,640  8,800,128      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,736        10,944      2.31      5,804         2,432     23,488        0.4
+HUD         9,024        23,808      2.64     11,682         7,936    814,464        0.8
+SRC       433,408       643,456      1.48    444,031       168,000  1,069,760       38.8
+MISC      454,848       622,912      1.37    475,426       238,848  7,414,720       40.7
+OTHR      245,248       559,232      2.28    270,617        23,296    773,440       22.0
+WAIT      223,424       537,920      2.41    248,893         2,368    751,552       20.0
+WORK      932,352     1,257,600      1.35    954,816       436,608  8,461,632       83.5
+SHDT            0             0      0.00          0             0          0        0.0
+SWRM        1,280         1,408      1.10      1,300           832      3,392        0.1
+GCRA      428,224       637,376      1.49    438,725       163,584  1,060,480       38.3
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        550             0    986,816        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      454,720       622,784      1.37    475,292       238,720  7,414,592       40.7
+MFLS          128           192      1.50        134            64        512        0.0
+GPOL          534           602      1.13        515           116        652        0.0
+GVTX        1,249         1,428      1.14      1,220           351      1,631        0.1
+DGSA   2,216,622,636 4,088,913,632        2,177,922,654    268,149 4,294,787,496 198,479.8
+DGSB   2,319,073,349 4,073,558,838        2,230,935,651  3,133,812 4,292,624,795 207,653.4
+WORK-H    920,128     1,239,936      1.35    943,134       428,224  7,647,168       82.4
+
+named=936,943 (77.6% of ALL)  VBI 2:1668 3:281 4:10 5+:2 max:20 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_cloud-fast/yc1-g5.json

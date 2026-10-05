@@ -1,0 +1,46 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 2 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,864; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 227: ALL 5,871,232 -> 1,676,928, 4 bucket(s) corrected
+  frame 1583: ALL 5,311,104 -> 1,116,800, 4 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_cloud-fast/cm0-g5.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=44d6775c69a+dirty(37) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,864     1,677,376      1.50  1,211,377     1,112,000  8,637,696      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,736        10,816      2.28      5,808         2,432     22,592        0.4
+HUD         9,280        24,064      2.59     11,820         8,064    612,096        0.8
+SRC       432,960       643,648      1.49    443,832       167,424  1,030,848       38.8
+MISC      455,296       623,424      1.37    478,649       239,360  7,457,216       40.8
+OTHR      245,184       561,024      2.29    271,269        24,064    695,808       22.0
+WAIT      223,872       539,904      2.41    249,420         3,072    675,328       20.0
+WORK      932,736     1,262,784      1.35    957,986       437,760  8,301,120       83.5
+SHDT            0             0      0.00          0             0          0        0.0
+SWRM        1,280         1,344      1.05      1,265           832      3,200        0.1
+GCRA      427,776       635,968      1.49    438,475       162,880  1,025,600       38.3
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        560             0  1,009,536        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      455,168       623,296      1.37    478,521       239,232  7,457,088       40.8
+MFLS          128           128      1.00        129            64        448        0.0
+GPOL          534           602      1.13        515           116        652        0.0
+GVTX        1,249         1,428      1.14      1,220           351      1,631        0.1
+DGSA   2,216,622,636 4,088,913,632        2,177,922,654    268,149 4,294,787,496 198,468.4
+DGSB   2,319,073,349 4,073,558,838        2,230,935,651  3,133,812 4,292,624,795 207,641.5
+WORK-H    919,616     1,252,032      1.36    946,167       429,376  7,689,024       82.3
+
+named=940,109 (77.6% of ALL)  VBI 2:1662 3:287 4:10 5+:2 max:20 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_cloud-fast/cm0-g5.json
