@@ -1446,6 +1446,18 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   Sector Z P95 1,303,232 -> 1,283,904, paired -23.2K, digest identical; the
   lab FIFO-word hash matches the per-run path on all 201 sampled frames
   (receipt `2026-10-05_stage-hidden-spans`).
+- **10-05 Kirby's star quad on the fast lane; a parked-list pool measured and
+  parked.** The star quad the Star Rod's weapons and Kirby's stars share takes
+  a fast-lane route (`2cc13c51bad`; Castle P50 -2.4K, digest identical). A
+  pool of compact slots holding evicted lean lists for any fighter (copied
+  out, copied back in on a key hit) cut Sector Z's P95 1,273,408 ->
+  1,236,928 with six 16 KB slots (45 revivals of 80 materializations) but
+  Dream Land's only -3.6K: it pays where the general heap is too tight for
+  the per-slot spare, and those stages have no room for it (Sector Z's heap
+  low-water 65,208 against Dream Land's 182,744, same roster; the VS overlay
+  loan is full; the FGM arena pins up to 133,424 of its 163,840 B). The
+  patch is kept with the receipt (`2026-10-05_lean-park`) for when deleted
+  machinery frees main RAM.
 
 ## 7. Found along the way
 

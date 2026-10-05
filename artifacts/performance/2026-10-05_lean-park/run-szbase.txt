@@ -1,0 +1,47 @@
+Tick-HUD samples repeated a presented frame (5 of 1960). EVERY duplicate is a ring-stop seam whose recorded skew explains the label collision, and no payload repeats, so these are distinct real iterations that share a frame LABEL. Percentiles are over the iterations and stand; the frame ids at those seams do not. Seam rows: 126,318,1086,1566,1854.
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,800; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 1535: ALL 5,871,424 -> 1,677,120, 3 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_lean-park/szbase.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=3..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=ed44b7a1bc0+dirty(33) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,800     1,677,312      1.50  1,191,941     1,110,784  2,798,272      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,416         9,984      2.26      5,457         2,432     31,552        0.4
+HUD         8,960        24,640      2.75     10,874         7,808     28,480        0.8
+SRC       451,840       646,912      1.43    458,586       159,936  1,164,352       40.5
+MISC      412,096       610,048      1.48    428,668       151,552  1,706,816       36.9
+OTHR      271,744       566,592      2.09    288,356        24,128    789,952       24.3
+WAIT      250,560       543,872      2.17    265,986         2,176    769,472       22.4
+WORK      907,008     1,272,320      1.40    922,184       344,000  2,343,616       81.2
+SHDT            0             0      0.00          0             0          0        0.0
+SWRM        1,408         1,472      1.05      1,393         1,024      3,520        0.1
+GCRA      446,528       641,344      1.44    453,169       155,392  1,159,104       40.0
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00         43             0     24,512        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      411,968       609,984      1.48    428,579       151,488  1,706,752       36.9
+MFLS           64           128      2.00         90            64        192        0.0
+GPOL          482           577      1.20        470            47        621        0.0
+GVTX        1,088         1,360      1.25      1,079           157      1,485        0.1
+DGSA   2,157,072,272 4,108,563,968        2,141,462,708  2,648,577 4,292,117,025 193,147.6
+DGSB   2,220,675,919 4,066,019,029        2,159,571,300    168,676 4,294,574,852 198,842.8
+WORK-H    897,664     1,259,584      1.40    911,311       336,000  2,334,720       80.4
+
+named=903,585 (75.8% of ALL)  VBI 2:1716 3:227 4:15 5+:3 max:34 total:1961  slips=0
+extras: gNdsFtrLeanPark[0]=0  gNdsFtrLeanPark[1]=0  gNdsFtrLeanPark[2]=0  gNdsFtrLeanPark[3]=0  gNdsAudioFgmDirectReadCount=225
+Wrote artifacts/performance/2026-10-05_lean-park/szbase.json

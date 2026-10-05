@@ -1,0 +1,46 @@
+Tick-HUD samples repeated a presented frame (4 of 1960). EVERY duplicate is a ring-stop seam whose recorded skew explains the label collision, and no payload repeats, so these are distinct real iterations that share a frame LABEL. Percentiles are over the iterations and stand; the frame ids at those seams do not. Seam rows: 991,1279,1567,1759.
+Tick-HUD first label is frame 1, 1 before -StartFrame 2; the stops' recorded positive skew (5) accounts for it, so the rows are the requested window of real iterations labelled early.
+Wrote artifacts/performance/2026-10-05_lean-park/szp16.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=1..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=ed44b7a1bc0+dirty(33) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,800     1,677,248      1.50  1,192,281     1,111,360 16,912,832      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,224         9,344      2.21      5,218         2,432     25,728        0.4
+HUD         8,960        24,576      2.74     11,085         7,680    432,640        0.8
+SRC       451,840       644,032      1.43    457,258       160,064  1,153,792       40.5
+MISC      411,328       582,336      1.42    431,397       151,360 15,921,536       36.8
+OTHR      271,360       562,944      2.07    287,323        22,144    789,824       24.3
+WAIT      249,536       538,816      2.16    264,971         2,176    769,472       22.3
+WORK      906,112     1,234,688      1.36    923,546       344,320 16,576,000       81.1
+SHDT            0             0      0.00          0             0          0        0.0
+SWRM        1,408         1,472      1.05      1,389         1,024      3,456        0.1
+GCRA      446,208       637,184      1.43    451,853       155,392  1,148,416       40.0
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        574             0  1,040,512        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      411,264       582,208      1.42    431,306       151,296 15,921,472       36.8
+MFLS           64           128      2.00         91            64        128        0.0
+GPOL          482           577      1.20        469            47        621        0.0
+GVTX        1,088         1,360      1.25      1,079           157      1,485        0.1
+DGSA   2,156,708,599 4,108,563,968        2,140,450,557  2,648,577 4,292,117,025 193,115.0
+DGSB   2,220,675,919 4,066,019,029        2,159,419,385    168,676 4,294,574,852 198,842.8
+WORK-H    896,448     1,220,032      1.36    912,461       336,320 16,143,360       80.3
+
+named=904,958 (75.9% of ALL)  VBI 2:1738 3:210 4:10 5+:3 max:35 total:1961  slips=0
+extras: gNdsFtrLeanPark[0]=45  gNdsFtrLeanPark[1]=76  gNdsFtrLeanPark[2]=6  gNdsFtrLeanPark[3]=0  gNdsAudioFgmDirectReadCount=221
+Wrote artifacts/performance/2026-10-05_lean-park/szp16.json

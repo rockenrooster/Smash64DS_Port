@@ -1,0 +1,374 @@
+diff --git a/src/nds/nds_audio_fgm.c b/src/nds/nds_audio_fgm.c
+index a128738c577..8f6454a578a 100644
+--- a/src/nds/nds_audio_fgm.c
++++ b/src/nds/nds_audio_fgm.c
+@@ -227,6 +227,23 @@ static u32 sNdsAudioFgmFillPartsInFlight;
+ /* Lab sizing word (boot poke): the arena bytes actually used, <= the array. */
+ __attribute__((used)) volatile u32 gNdsAudioFgmArenaLimit =
+     NDS_AUDIO_FGM_CACHE_BYTES;
++/* P2-2p8 (2026-10-05): the arena tail a lowered gNdsAudioFgmArenaLimit leaves
++ * unused (no fill places past the limit, ndsAudioFgmArenaPlace), lent to the
++ * lean parked-list pool (src/nds/nds_renderer_native_common.c). */
++u8 *ndsLeanParkPoolMemory(u32 *bytes)
++{
++    u32 limit = gNdsAudioFgmArenaLimit;
++
++    limit = (limit + 31u) & ~31u;
++    if (limit >= NDS_AUDIO_FGM_CACHE_BYTES)
++    {
++        *bytes = 0u;
++        return NULL;
++    }
++    *bytes = NDS_AUDIO_FGM_CACHE_BYTES - limit;
++    return &sNdsAudioFgmCache[limit];
++}
++
+ /* Every envelope in the pack, read once at load: 24 cues, 448 B. A play used
+  * to re-read its envelope from ROM on the game thread. */
+ #define NDS_AUDIO_FGM_ENVELOPE_TABLE_BYTES 512u
+diff --git a/src/nds/nds_renderer_native_common.c b/src/nds/nds_renderer_native_common.c
+index 684cd9273fd..8df109fd847 100644
+--- a/src/nds/nds_renderer_native_common.c
++++ b/src/nds/nds_renderer_native_common.c
+@@ -13102,6 +13102,7 @@ typedef struct NDSFtrLeanSlotState
+ 
+ static NDSFtrLeanSlotState sNdsFtrLeanSlots[NDS_FIGHTER_PACKET_SLOTS];
+ static void ndsFtrLeanSpareIdentity(NDSFtrLeanSlotState *s);
++static void ndsFtrLeanParkDrop(u32 battle_slot);
+ 
+ static inline void ndsFtrLeanMarkDirty(NDSFtrLeanEntryState *state,
+                                        const u32 *words, u32 first,
+@@ -13322,6 +13323,7 @@ void ndsFtrLeanPacketDrop(u32 battle_slot)
+     {
+         s->spare_buf = NULL;
+     }
++    ndsFtrLeanParkDrop(battle_slot);
+ }
+ 
+ void ndsFtrLeanPacketNoteKind(u32 battle_slot, u32 kind)
+@@ -15010,6 +15012,313 @@ static void ndsFtrLeanSpareIdentity(NDSFtrLeanSlotState *s)
+ /* The miss path, with `victim` chosen: the code of the spare's list for `key`,
+  * swapped in as `victim` (NONE when the spare does not hold it), else the
+  * victim's valid list parked in the spare before it is overwritten. */
++/* P2-2p8 (2026-10-05): parked lists. A slot's states outnumber its entries
++ * (Sector Z's sweep match: 80 materializations, 54 of them a key the slot
++ * had drawn before; each ~470K ticks, and 53 of the match's top 98 frames
++ * were such a frame), and the heap spare is refused wherever the battle's
++ * free bytes sit under its keep-free floor. A pool of slots outside the
++ * general heap holds evicted entries for any battle slot -- the entry state,
++ * the packet, its words (and Link's texgen site map after them) and its
++ * variant records, copied out compactly -- and a miss whose key a parked copy
++ * holds copies it back in as the victim (after parking the victim's own list)
++ * and re-bases its words: a copy of ~14 KB each way instead of a
++ * materialization. A parked copy is matched by the entry rules (tint set,
++ * texture fence, key, variant records), so a list whose textures moved is
++ * never revived. Each pool slot opens with its head (battle slot, LRU stamp,
++ * entry state), so the pool costs no BSS. The memory comes from
++ * ndsLeanParkPoolMemory (weak; NULL = no pool). Same-ROM A/B word
++ * gNdsFtrLeanParkPool (0 = the heap spare, as before); gNdsFtrLeanParkSlotBytes
++ * sizes a pool slot (0 = room for any list). */
++#define NDS_FTR_LEAN_PARK_MAX 12u
++#define NDS_FTR_LEAN_PARK_FREE 0xffu
++volatile u32 gNdsFtrLeanParkPool __attribute__((used, section(".data"))) = 1u;
++volatile u32 gNdsFtrLeanParkSlotBytes __attribute__((used, section(".data"))) =
++    0u;
++/* Lab tallies, cleaned on change: [0] revivals, [1] parks, [2] pool slots,
++ * [3] parks refused (no room in a pool slot). */
++__attribute__((used, aligned(32))) volatile u32 gNdsFtrLeanPark[8];
++
++typedef struct NDSFtrLeanParkHead
++{
++    u32 slot;                   /* battle slot, or NDS_FTR_LEAN_PARK_FREE */
++    u32 stamp;                  /* LRU: the park serial */
++    u32 list_words;             /* words copied after the packet (the floor) */
++    u32 pad;
++    NDSFtrLeanEntryState state;
++} NDSFtrLeanParkHead;
++#define NDS_FTR_LEAN_PARK_HEAD_WORDS \
++    ((((u32)sizeof(NDSFtrLeanParkHead)) + 31u) / 32u * 8u)
++
++static u32 *sNdsFtrLeanParkBase;
++static u32 sNdsFtrLeanParkSlotWords;
++static u32 sNdsFtrLeanParkCount;
++static u32 sNdsFtrLeanParkGen;  /* gNdsTaskmanHeapGeneration + 1 set up */
++static u32 sNdsFtrLeanParkStamp;
++
++/* The pool's bytes: weak, so a build with no lender has no pool. */
++__attribute__((weak)) u8 *ndsLeanParkPoolMemory(u32 *bytes)
++{
++    *bytes = 0u;
++    return NULL;
++}
++
++static inline NDSFtrLeanParkHead *ndsFtrLeanParkHeadAt(u32 i)
++{
++    return (NDSFtrLeanParkHead *)(void *)(sNdsFtrLeanParkBase +
++                                          (i * sNdsFtrLeanParkSlotWords));
++}
++
++static void ndsFtrLeanParkTally(u32 index, u32 value)
++{
++    gNdsFtrLeanPark[index] = value;
++    DC_FlushRange((const void *)gNdsFtrLeanPark, sizeof(gNdsFtrLeanPark));
++}
++
++static u32 ndsFtrLeanParkReady(void)
++{
++    if (sNdsFtrLeanParkGen != gNdsTaskmanHeapGeneration + 1u)
++    {
++        const u32 full_words =
++            NDS_FTR_LEAN_PARK_HEAD_WORDS + ndsFtrLeanHalfWords();
++        u32 slot_words = (gNdsFtrLeanParkSlotBytes + 31u) / 32u * 8u;
++        u32 bytes = 0u;
++        u8 *base = ndsLeanParkPoolMemory(&bytes);
++        u32 i;
++
++        sNdsFtrLeanParkGen = gNdsTaskmanHeapGeneration + 1u;
++        if ((slot_words == 0u) || (slot_words > full_words))
++        {
++            slot_words = full_words;
++        }
++        sNdsFtrLeanParkSlotWords = slot_words;
++        sNdsFtrLeanParkCount = 0u;
++        sNdsFtrLeanParkBase = NULL;
++        if (base != NULL)
++        {
++            const uintptr_t aligned = ((uintptr_t)base + 31u) &
++                ~(uintptr_t)31u;
++            const u32 skip = (u32)(aligned - (uintptr_t)base);
++
++            if (bytes > skip)
++            {
++                sNdsFtrLeanParkBase = (u32 *)(void *)aligned;
++                sNdsFtrLeanParkCount = (bytes - skip) / (slot_words * 4u);
++            }
++        }
++        if (sNdsFtrLeanParkCount > NDS_FTR_LEAN_PARK_MAX)
++        {
++            sNdsFtrLeanParkCount = NDS_FTR_LEAN_PARK_MAX;
++        }
++        for (i = 0u; i < sNdsFtrLeanParkCount; i++)
++        {
++            ndsFtrLeanParkHeadAt(i)->slot = NDS_FTR_LEAN_PARK_FREE;
++        }
++        ndsFtrLeanParkTally(2u, sNdsFtrLeanParkCount);
++    }
++    return (sNdsFtrLeanParkCount != 0u) ? TRUE : FALSE;
++}
++
++/* ndsFtrLeanPacketDrop's rule for the parked copies of a slot. */
++static void ndsFtrLeanParkDrop(u32 battle_slot)
++{
++    u32 i;
++
++    if (sNdsFtrLeanParkGen != gNdsTaskmanHeapGeneration + 1u)
++    {
++        return;
++    }
++    for (i = 0u; i < sNdsFtrLeanParkCount; i++)
++    {
++        NDSFtrLeanParkHead *h = ndsFtrLeanParkHeadAt(i);
++
++        if (h->slot == battle_slot)
++        {
++            h->slot = NDS_FTR_LEAN_PARK_FREE;
++        }
++    }
++}
++
++/* The words after the packet a list owns: its words, and Link's texgen site
++ * map right after them (the variant floor, ndsFtrLeanMaterialize). */
++static u32 ndsFtrLeanParkFloor(const NDSFtrLeanEntryState *es,
++                               const NDSFighterPacket *packet)
++{
++    u32 floor = packet->word_count;
++
++#if NDS_P2_LINK
++    if (es->texgen_map != NDS_FTR_LEAN_TEXGEN_MAP_NONE)
++    {
++        floor = ((floor + 7u) & ~7u) + NDS_FTR_LEAN_TEXGEN_MAP_WORDS;
++    }
++#else
++    (void)es;
++#endif
++    return floor;
++}
++
++/* ndsFtrLeanEntryMatch over a parked copy: its state, its own records (the
++ * compact tail keeps their top-down order). */
++static u32 ndsFtrLeanParkMatch(const NDSFtrLeanParkHead *h, const u32 *key,
++                               u32 fence)
++{
++    const NDSFtrLeanEntryState *es = &h->state;
++    const u32 *tail;
++    u32 r;
++
++    if ((es->valid == 0u) ||
++        ((es->tint_set_generation != gNdsR2FighterTintSetGeneration) &&
++         (es->tint_folds != 0u)))
++    {
++        return NDS_FTR_LEAN_ENTRY_NONE;
++    }
++    if (((es->fence_needed == 0u) || (es->fence == fence)) &&
++        (ndsFtrLeanKeyEqual(es->key, key) != FALSE))
++    {
++        return 0u;
++    }
++    tail = (const u32 *)(const void *)h + NDS_FTR_LEAN_PARK_HEAD_WORDS +
++        NDS_FTR_LEAN_STRUCT_WORDS + h->list_words +
++        (es->variant_count * NDS_FTR_LEAN_VARIANT_WORDS);
++    for (r = 0u; r < es->variant_count; r++)
++    {
++        const NDSFtrLeanVariant *v = (const NDSFtrLeanVariant *)(const void *)
++            (tail - ((r + 1u) * NDS_FTR_LEAN_VARIANT_WORDS));
++
++        if ((r != es->variant_cur) &&
++            ((v->fence_needed == 0u) || (v->fence == fence)) &&
++            (ndsFtrLeanKeyEqual(v->key, key) != FALSE))
++        {
++            return (r + 1u) << 4;
++        }
++    }
++    return NDS_FTR_LEAN_ENTRY_NONE;
++}
++
++/* The miss path through the pool: park the victim's valid list, and revive
++ * `key`'s parked copy as the victim when one holds it. */
++static u32 ndsFtrLeanParkTake(u32 battle_slot, u32 victim, const u32 *key)
++{
++    NDSFtrLeanSlotState *s = &sNdsFtrLeanSlots[battle_slot];
++    NDSFtrLeanEntryState *ves = &s->entry[victim];
++    const u32 fence = ndsFtrLeanFenceNow();
++    NDSFtrLeanParkHead *found = NULL;
++    u32 found_bits = 0u;
++    u32 i;
++
++    for (i = 0u; i < sNdsFtrLeanParkCount; i++)
++    {
++        NDSFtrLeanParkHead *h = ndsFtrLeanParkHeadAt(i);
++
++        if (h->slot == battle_slot)
++        {
++            const u32 bits = ndsFtrLeanParkMatch(h, key, fence);
++
++            if (bits != NDS_FTR_LEAN_ENTRY_NONE)
++            {
++                found = h;
++                found_bits = bits;
++                break;
++            }
++        }
++    }
++    if ((ves->valid != 0u) && ((ves->valid & NDS_FTR_LEAN_VALID_WIDE) == 0u))
++    {
++        const u32 *src = ndsFtrLeanEntryBase(battle_slot, victim);
++        const u32 floor = ndsFtrLeanParkFloor(ves,
++            (const NDSFighterPacket *)(const void *)src);
++        const u32 records = ves->variant_count * NDS_FTR_LEAN_VARIANT_WORDS;
++        NDSFtrLeanParkHead *park = NULL;
++
++        if (((floor + records) <= ndsFtrLeanWordCapacity()) &&
++            ((NDS_FTR_LEAN_PARK_HEAD_WORDS + NDS_FTR_LEAN_STRUCT_WORDS +
++              floor + records) <= sNdsFtrLeanParkSlotWords))
++        {
++            /* A free slot, else the least recently parked copy (never the
++             * one about to be revived). */
++            for (i = 0u; i < sNdsFtrLeanParkCount; i++)
++            {
++                NDSFtrLeanParkHead *h = ndsFtrLeanParkHeadAt(i);
++
++                if (h == found)
++                {
++                    continue;
++                }
++                if (h->slot == NDS_FTR_LEAN_PARK_FREE)
++                {
++                    park = h;
++                    break;
++                }
++                if ((park == NULL) || ((s32)(h->stamp - park->stamp) < 0))
++                {
++                    park = h;
++                }
++            }
++        }
++        else
++        {
++            ndsFtrLeanParkTally(3u, gNdsFtrLeanPark[3] + 1u);
++        }
++        if (park != NULL)
++        {
++            u32 *dst = (u32 *)(void *)park + NDS_FTR_LEAN_PARK_HEAD_WORDS;
++
++            memcpy(dst, src,
++                   (NDS_FTR_LEAN_STRUCT_WORDS + floor) * sizeof(u32));
++            if (records != 0u)
++            {
++                memcpy(dst + NDS_FTR_LEAN_STRUCT_WORDS + floor,
++                       src + NDS_FTR_LEAN_STRUCT_WORDS +
++                           ndsFtrLeanWordCapacity() - records,
++                       records * sizeof(u32));
++            }
++            park->state = *ves;
++            park->list_words = floor;
++            park->slot = battle_slot;
++            park->stamp = ++sNdsFtrLeanParkStamp;
++            ndsFtrLeanParkTally(1u, gNdsFtrLeanPark[1] + 1u);
++        }
++    }
++    ves->valid = 0u;
++    if (s->active == victim)
++    {
++        s->active = NDS_FTR_LEAN_ENTRY_NONE;
++    }
++    if (found == NULL)
++    {
++        return NDS_FTR_LEAN_ENTRY_NONE;
++    }
++    {
++        u32 *dst = ndsFtrLeanEntryBase(battle_slot, victim);
++        const u32 *src = (const u32 *)(const void *)found +
++            NDS_FTR_LEAN_PARK_HEAD_WORDS;
++        const u32 floor = found->list_words;
++        const u32 records =
++            found->state.variant_count * NDS_FTR_LEAN_VARIANT_WORDS;
++        NDSFighterPacket *packet;
++
++        /* Nothing may still be streaming the victim's old words. */
++        ndsFighterPacketDmaWait();
++        memcpy(dst, src, (NDS_FTR_LEAN_STRUCT_WORDS + floor) * sizeof(u32));
++        if (records != 0u)
++        {
++            memcpy(dst + NDS_FTR_LEAN_STRUCT_WORDS + ndsFtrLeanWordCapacity() -
++                       records,
++                   src + NDS_FTR_LEAN_STRUCT_WORDS + floor,
++                   records * sizeof(u32));
++        }
++        *ves = found->state;
++        memset(ves->dirty, 0, sizeof(ves->dirty));
++        packet = (NDSFighterPacket *)(void *)dst;
++        packet->words = dst + NDS_FTR_LEAN_STRUCT_WORDS;
++        /* The DMA reads the words from memory: clean them, as a fresh
++         * materialization does. */
++        DC_FlushRange(packet->words, packet->word_count * sizeof(u32));
++        found->slot = NDS_FTR_LEAN_PARK_FREE;
++        ndsFtrLeanParkTally(0u, gNdsFtrLeanPark[0] + 1u);
++        return victim | found_bits;
++    }
++}
++
+ u32 ndsFtrLeanSpareTake(u32 battle_slot, u32 victim, const u32 *key)
+ {
+     NDSFtrLeanSlotState *s;
+@@ -15035,6 +15344,11 @@ u32 ndsFtrLeanSpareTake(u32 battle_slot, u32 victim, const u32 *key)
+     {
+         return NDS_FTR_LEAN_ENTRY_NONE;
+     }
++    if ((gNdsFtrLeanParkPool != 0u) && (s->phys_on == 0u) &&
++        (s->spare_buf == NULL) && (ndsFtrLeanParkReady() != FALSE))
++    {
++        return ndsFtrLeanParkTake(battle_slot, victim, key);
++    }
+     if (s->spare_buf != NULL)
+     {
+         code = ndsFtrLeanEntryMatch(battle_slot, NDS_FTR_LEAN_SPARE, key,

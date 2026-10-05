@@ -1,0 +1,4 @@
+AT 100 gNdsFrontendOverlayLoanBytes=88256 gNdsFrontendOverlayUsedBytes=88256 gNdsFrontendOverlaySpillBytes=249196 gNdsFrontendOverlayAllocCount=9 gNdsTaskmanGeneralHeapFreeMin=91348
+AT 1900 gNdsFrontendOverlayLoanBytes=88256 gNdsFrontendOverlayUsedBytes=88256 gNdsFrontendOverlaySpillBytes=249196 gNdsFrontendOverlayAllocCount=9 gNdsTaskmanGeneralHeapFreeMin=65208
+warning: could not convert 'main' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
