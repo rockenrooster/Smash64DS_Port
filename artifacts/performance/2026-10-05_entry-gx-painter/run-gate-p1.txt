@@ -1,0 +1,45 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,800; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 227: ALL 5,311,104 -> 1,116,800, 4 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_entry-gx-painter/gate-p1.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=8485fc0749e+dirty(37) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,800     1,675,776      1.50  1,148,763     1,112,064  4,351,552      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,352        10,368      2.38      5,518         2,304     27,712        0.4
+HUD         9,088        24,256      2.67     11,078         7,744    520,384        0.8
+SRC       365,504       564,608      1.54    374,839       134,016  1,316,224       32.7
+MISC      401,088       553,728      1.38    410,926       175,872  3,261,184       35.9
+OTHR      339,776       623,296      1.83    346,402        26,496    792,768       30.4
+WAIT      317,056       598,528      1.89    323,974         4,288    772,544       28.4
+WORK      810,176     1,111,552      1.37    820,922       341,056  4,026,432       72.5
+SHDT            0             0      0.00          0             0          0        0.0
+SWRM        1,408         1,472      1.05      1,396           960      3,456        0.1
+GCRA      360,128       558,016      1.55    369,528       129,600  1,310,976       32.2
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        358             0    644,608        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      400,960       553,600      1.38    410,793       175,744  3,261,056       35.9
+MFLS          128           192      1.50        134           128        576        0.0
+GPOL          597           643      1.08        550            29        675        0.1
+GVTX        1,439         1,569      1.09      1,346            96      1,657        0.1
+DGSA   2,248,335,339 4,065,321,507        2,176,252,338    408,983 4,294,514,885 201,319.4
+DGSB   2,239,784,444 4,083,387,236        2,189,176,867  1,230,618 4,293,852,712 200,553.8
+WORK-H    799,744     1,095,872      1.37    809,844       331,648  3,506,048       71.6
+
+named=802,361 (69.8% of ALL)  VBI 2:1861 3:91 4:8 5+:1 max:8 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_entry-gx-painter/gate-p1.json

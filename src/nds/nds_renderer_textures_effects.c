@@ -7061,6 +7061,9 @@ volatile u32 gNdsParticleEnvVariantDeferred
 static u32 sNdsParticleEnvVariantEpoch = 1u;
 static u32 sNdsParticleEnvVariantPending;
 static u32 sNdsParticleEnvVariantPendingBanks;
+/* gNdsRendererSceneTextureVramResetCount at the queue: a reset since then
+ * retired the palettes the queue targets. */
+static u32 sNdsParticleEnvVariantPendingReset;
 static u32 sNdsParticleEnvVariantStage[NDS_PARTICLE_ENV_VARIANT_COUNT]
                                       [NDS_PARTICLE_QUAD_PALETTE_ENTRIES / 2u];
 volatile u32 gNdsParticleEnvVariantCommits;
@@ -7248,6 +7251,8 @@ static u32 ndsRendererParticleEnvVariant(u32 atlas_name, u32 prim_bgr555,
          * in. No GL call, so an open packet keeps its material state. */
         sNdsParticleEnvVariantPending |= 1u << slot;
         sNdsParticleEnvVariantPendingBanks |= variant->banks;
+        sNdsParticleEnvVariantPendingReset =
+            gNdsRendererSceneTextureVramResetCount;
         variant->sheet = sheet;
         variant->prim = prim_key;
         variant->env = env_key;
@@ -7368,27 +7373,12 @@ static u32 ndsRendererParticleEnvVariant(u32 atlas_name, u32 prim_bgr555,
         if ((palette != NULL) &&
             (((uintptr_t)palette->vramAddr & 3u) == 0u))
         {
-            const uintptr_t first = (uintptr_t)palette->vramAddr;
-            const uintptr_t last = first +
-                (NDS_PARTICLE_QUAD_PALETTE_ENTRIES * sizeof(u16)) - 1u;
-            u32 banks = 0u;
-
-            if ((first < (uintptr_t)VRAM_F) && (last >= (uintptr_t)VRAM_E))
-            {
-                banks |= 1u;
-            }
-            if ((first < (uintptr_t)VRAM_G) && (last >= (uintptr_t)VRAM_F))
-            {
-                banks |= 2u;
-            }
-            if ((first < (uintptr_t)VRAM_H) && (last >= (uintptr_t)VRAM_G))
-            {
-                banks |= 4u;
-            }
-            if (banks != 0u)
+            variant->banks = ndsRendererPaletteBanksFor(
+                palette->vramAddr,
+                NDS_PARTICLE_QUAD_PALETTE_ENTRIES * sizeof(u16));
+            if (variant->banks != 0u)
             {
                 variant->vram = (u32 *)palette->vramAddr;
-                variant->banks = banks;
             }
         }
     }
@@ -7401,20 +7391,18 @@ static u32 ndsRendererParticleEnvVariant(u32 atlas_name, u32 prim_bgr555,
     return (u32)variant->name;
 }
 
-/* The VBlank that swaps the built frame in (the platform's scheduled wait
- * calls this after its first retrace, the one after the flush): the frame
- * that referenced the old contents has stopped rendering and the new one
- * starts at line 214, so the queued palettes land now, with banks E-G mapped
- * to the CPU only while the 3D engine reads none of them. Every epoch ends
- * here, which also drops the lookup memos -- a memo hit does not restamp
- * its entry. */
-void ndsRendererParticleEnvVariantCommit(void)
+/* The VBlank that swaps the built frame in (ndsRendererCommitDeferredPalettes,
+ * from the platform's scheduled wait after its first retrace, the one after
+ * the flush): the frame that referenced the old contents has stopped
+ * rendering and the new one starts at line 214, so the queued palettes land
+ * now, with banks E-G mapped to the CPU only while the 3D engine reads none
+ * of them. Every epoch ends here, which also drops the lookup memos -- a memo
+ * hit does not restamp its entry. */
+static void ndsRendererParticleEnvVariantCommit(void)
 {
     u32 pending = sNdsParticleEnvVariantPending;
     u32 banks;
-    u8 saved_e;
-    u8 saved_f;
-    u8 saved_g;
+    u32 saved;
 
     sNdsParticleEnvVariantEpoch++;
     sNdsParticleMaterialGen++;
@@ -7425,21 +7413,12 @@ void ndsRendererParticleEnvVariantCommit(void)
     banks = sNdsParticleEnvVariantPendingBanks;
     sNdsParticleEnvVariantPending = 0u;
     sNdsParticleEnvVariantPendingBanks = 0u;
-    saved_e = VRAM_E_CR;
-    saved_f = VRAM_F_CR;
-    saved_g = VRAM_G_CR;
-    if ((banks & 1u) != 0u)
+    if (sNdsParticleEnvVariantPendingReset !=
+        gNdsRendererSceneTextureVramResetCount)
     {
-        VRAM_E_CR = VRAM_ENABLE;
+        return;
     }
-    if ((banks & 2u) != 0u)
-    {
-        VRAM_F_CR = VRAM_ENABLE;
-    }
-    if ((banks & 4u) != 0u)
-    {
-        VRAM_G_CR = VRAM_ENABLE;
-    }
+    saved = ndsRendererPaletteBanksToLcd(banks);
     do
     {
         const u32 slot = (u32)__builtin_ctz(pending);
@@ -7453,18 +7432,7 @@ void ndsRendererParticleEnvVariantCommit(void)
             dst[i] = src[i];
         }
     } while (pending != 0u);
-    if ((banks & 4u) != 0u)
-    {
-        VRAM_G_CR = saved_g;
-    }
-    if ((banks & 2u) != 0u)
-    {
-        VRAM_F_CR = saved_f;
-    }
-    if ((banks & 1u) != 0u)
-    {
-        VRAM_E_CR = saved_e;
-    }
+    ndsRendererPaletteBanksRestore(banks, saved);
     NDS_DIAG(gNdsParticleEnvVariantCommits++);
 }
 

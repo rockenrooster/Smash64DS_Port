@@ -4941,6 +4941,68 @@ static void ndsVramCensusTagReset(void)
 }
 #endif
 
+/* DEFERRED PALETTE REWRITES (P2-2p8, 2026-10-05; KO pillar variants and
+ * entry ramps). A palette is copied in from its staging words at the VBlank
+ * that swaps the frame in, with the banks holding it (bit 0 E, 1 F, 2 G)
+ * mapped to the CPU only for the copy. */
+static u32 ndsRendererPaletteBanksFor(const void *lcd, u32 bytes)
+{
+    const uintptr_t first = (uintptr_t)lcd;
+    const uintptr_t last = first + bytes - 1u;
+    u32 banks = 0u;
+
+    if ((first < (uintptr_t)VRAM_F) && (last >= (uintptr_t)VRAM_E))
+    {
+        banks |= 1u;
+    }
+    if ((first < (uintptr_t)VRAM_G) && (last >= (uintptr_t)VRAM_F))
+    {
+        banks |= 2u;
+    }
+    if ((first < (uintptr_t)VRAM_H) && (last >= (uintptr_t)VRAM_G))
+    {
+        banks |= 4u;
+    }
+    return banks;
+}
+
+/* Maps `banks` to LCD; returns the E/F/G control bytes it replaced. */
+static u32 ndsRendererPaletteBanksToLcd(u32 banks)
+{
+    const u32 saved = (u32)VRAM_E_CR | ((u32)VRAM_F_CR << 8) |
+                      ((u32)VRAM_G_CR << 16);
+
+    if ((banks & 1u) != 0u)
+    {
+        VRAM_E_CR = VRAM_ENABLE;
+    }
+    if ((banks & 2u) != 0u)
+    {
+        VRAM_F_CR = VRAM_ENABLE;
+    }
+    if ((banks & 4u) != 0u)
+    {
+        VRAM_G_CR = VRAM_ENABLE;
+    }
+    return saved;
+}
+
+static void ndsRendererPaletteBanksRestore(u32 banks, u32 saved)
+{
+    if ((banks & 4u) != 0u)
+    {
+        VRAM_G_CR = (u8)(saved >> 16);
+    }
+    if ((banks & 2u) != 0u)
+    {
+        VRAM_F_CR = (u8)(saved >> 8);
+    }
+    if ((banks & 1u) != 0u)
+    {
+        VRAM_E_CR = (u8)saved;
+    }
+}
+
 static inline int ndsRendererHardwareFencedGlGenTextures(int count,
                                                          int *names)
 {

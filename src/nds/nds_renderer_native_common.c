@@ -5712,6 +5712,7 @@ static u32 ndsRendererEntryKoPalette(u32 part, u32 primitive, u32 environment)
  * A slot is eligible only if EVERY group that samples it is a ramp group, so
  * an assigned palette can never leak into a modulate draw of the same image. */
 #define NDS_ENTRY_RAMP_PALETTES 12u
+#define NDS_ENTRY_RAMP_PALETTE_WIDTH 32u
 typedef struct NDSEntryRampPalette
 {
     const u16 *source;
@@ -5719,10 +5720,21 @@ typedef struct NDSEntryRampPalette
     u32 generation;
     u32 prim;
     u32 env;
+    /* Deferred rewrites: the palette's LCD address (NULL: never rewritten in
+     * place), the banks it spans, the last epoch that referenced it. */
+    u32 *vram;
+    u32 banks;
+    u32 epoch;
 } NDSEntryRampPalette;
 static NDSEntryRampPalette sNdsEntryRampPalettes[NDS_ENTRY_RAMP_PALETTES];
 static u32 sNdsEntryRampPaletteNext;
-static u16 sNdsEntryRampPaletteScratch[32] __attribute__((aligned(32)));
+static u32 sNdsEntryRampStage[NDS_ENTRY_RAMP_PALETTES]
+                             [NDS_ENTRY_RAMP_PALETTE_WIDTH / 2u];
+static u32 sNdsEntryRampPending;
+static u32 sNdsEntryRampPendingBanks;
+/* One per presented frame; entries start at 0, never the current one. */
+static u32 sNdsEntryRampEpoch = 1u;
+volatile u32 gNdsEntryRampDeferred __attribute__((used, section(".data"))) = 1u;
 static u8 sNdsEntryRampSlotState[NDS_ENTRY_EFFECT_TEXTURE_COUNT]; /* 0 unknown, 1 yes, 2 no */
 __attribute__((used)) volatile u32 gNdsEntryRampPaletteBakes;
 /* One root's resolved material, selectable from gdb: alpha, prim, env,
@@ -5775,12 +5787,57 @@ static s32 ndsRendererEntryRampSlotEligible(u32 texture_slot)
     return (sNdsEntryRampSlotState[texture_slot] == 1u) ? TRUE : FALSE;
 }
 
-/* Returns a palette-only GL name, or 0. May change the bound texture. */
+/* Returns a palette-only GL name, or 0. May change the bound texture.
+ *
+ * P2-2p8 (2026-10-05): DEFERRED REWRITES, as for the KO pillar variants
+ * (ndsRendererParticleEnvVariantCommit). A miss used to glColorTableEXT a live
+ * name mid-frame -- libnds frees and reallocates the palette and maps banks
+ * F/G to LCD while the 3D engine renders, and the entry being replaced could
+ * still be on screen (Link's Spin Attack keys nine oranges at once). Now each
+ * entry allocates a 32-entry palette once, a miss takes the least recently
+ * used entry that no draw of the frame being built references, bakes into
+ * that entry's staging copy, and ndsRendererEntryRampPaletteCommit copies it
+ * in at the VBlank that swaps the frame in. Same-ROM A/B word
+ * gNdsEntryRampDeferred (0 = the immediate round robin). */
+static u32 ndsRendererEntryRampVictim(u32 generation)
+{
+    const u32 epoch = sNdsEntryRampEpoch;
+    u32 best = NDS_ENTRY_RAMP_PALETTES;
+    u32 best_age = 0u;
+    u32 i;
+
+    for (i = 0u; i < NDS_ENTRY_RAMP_PALETTES; i++)
+    {
+        const NDSEntryRampPalette *entry = &sNdsEntryRampPalettes[i];
+        u32 age;
+
+        if ((entry->name == 0u) || (entry->generation != generation))
+        {
+            return i;
+        }
+        if (entry->vram == NULL)
+        {
+            continue;
+        }
+        age = epoch - entry->epoch;
+        if (age > best_age)
+        {
+            best_age = age;
+            best = i;
+        }
+    }
+    return best;
+}
+
 static u32 ndsRendererEntryRampPalette(const NDSEntryEffectTexture *texture,
                                        u32 primitive, u32 environment)
 {
     u32 generation = gNdsRendererSceneTextureVramResetCount + 1u;
     NDSEntryRampPalette *entry;
+    u32 deferred = gNdsEntryRampDeferred;
+    u32 width = (u32)texture->palette_entries;
+    u32 slot;
+    u16 *bake;
     int palette_width = 0;
     int name;
     u32 i;
@@ -5794,23 +5851,57 @@ static u32 ndsRendererEntryRampPalette(const NDSEntryEffectTexture *texture,
             (entry->source == texture->palette) &&
             (entry->prim == primitive) && (entry->env == environment))
         {
+            entry->epoch = sNdsEntryRampEpoch;
             return entry->name;
         }
     }
-    entry = &sNdsEntryRampPalettes[sNdsEntryRampPaletteNext];
-    sNdsEntryRampPaletteNext++;
-    if (sNdsEntryRampPaletteNext >= NDS_ENTRY_RAMP_PALETTES)
+    if (deferred != 0u)
     {
-        sNdsEntryRampPaletteNext = 0u;
+        slot = ndsRendererEntryRampVictim(generation);
+        if (slot >= NDS_ENTRY_RAMP_PALETTES)
+        {
+            return 0u;
+        }
+        width = NDS_ENTRY_RAMP_PALETTE_WIDTH;
     }
+    else
+    {
+        slot = sNdsEntryRampPaletteNext;
+        sNdsEntryRampPaletteNext++;
+        if (sNdsEntryRampPaletteNext >= NDS_ENTRY_RAMP_PALETTES)
+        {
+            sNdsEntryRampPaletteNext = 0u;
+        }
+    }
+    entry = &sNdsEntryRampPalettes[slot];
     if (entry->generation != generation)
     {
         entry->name = 0u; /* the name died with the scene reset */
+        entry->vram = NULL;
+        sNdsEntryRampPending &= ~(1u << slot);
     }
+    bake = (u16 *)sNdsEntryRampStage[slot];
     for (i = 0u; i < texture->palette_entries; i++)
     {
-        sNdsEntryRampPaletteScratch[i] = ndsRendererHardwareBlendPrimEnvTexel0(
+        bake[i] = ndsRendererHardwareBlendPrimEnvTexel0(
             texture->palette[i], primitive | 0xffu, environment | 0xffu);
+    }
+    for (; i < NDS_ENTRY_RAMP_PALETTE_WIDTH; i++)
+    {
+        bake[i] = 0u;
+    }
+    if ((deferred != 0u) && (entry->name != 0u) && (entry->vram != NULL))
+    {
+        /* Queued: the palette changes at the VBlank that swaps this frame
+         * in. No GL call. */
+        sNdsEntryRampPending |= 1u << slot;
+        sNdsEntryRampPendingBanks |= entry->banks;
+        entry->source = texture->palette;
+        entry->prim = primitive;
+        entry->env = environment;
+        entry->epoch = sNdsEntryRampEpoch;
+        gNdsEntryRampPaletteBakes++;
+        return entry->name;
     }
     name = (int)entry->name;
     ndsRendererHardwareEndBatch();
@@ -5821,26 +5912,87 @@ static u32 ndsRendererEntryRampPalette(const NDSEntryEffectTexture *texture,
     ndsRendererHardwareBindTextureState((u32)name);
     sNdsRendererHardwareBoundTextureName = (u32)name;
     sNdsRendererHardwareActiveTextureEntry = NULL;
-    glColorTableEXT(GL_TEXTURE_2D, 0, (int)texture->palette_entries, 0, 0,
-                    sNdsEntryRampPaletteScratch);
+    glColorTableEXT(GL_TEXTURE_2D, 0, (int)width, 0, 0, bake);
     glGetColorTableParameterEXT(GL_TEXTURE_2D, GL_COLOR_TABLE_WIDTH_EXT,
                                 &palette_width);
-    if (palette_width != (int)texture->palette_entries)
+    if (palette_width != (int)width)
     {
         ndsRendererHardwareFencedGlDeleteTextures(1, &name);
         sNdsRendererHardwareBoundTextureName = 0u;
         entry->name = 0u;
+        entry->vram = NULL;
         return 0u;
+    }
+    /* Where the palette lives, so later misses rewrite it in place. */
+    entry->vram = NULL;
+    entry->banks = 0u;
+    if (deferred != 0u)
+    {
+        const gl_palette_data *palette = (const gl_palette_data *)
+            DynamicArrayGet(&glGlob->palettePtrs,
+                            (unsigned int)glGlob->activePalette);
+
+        if ((palette != NULL) &&
+            (((uintptr_t)palette->vramAddr & 3u) == 0u))
+        {
+            entry->banks = ndsRendererPaletteBanksFor(
+                palette->vramAddr, NDS_ENTRY_RAMP_PALETTE_WIDTH * sizeof(u16));
+            if (entry->banks != 0u)
+            {
+                entry->vram = (u32 *)palette->vramAddr;
+            }
+        }
     }
     entry->name = (u32)name;
     entry->generation = generation;
     entry->source = texture->palette;
     entry->prim = primitive;
     entry->env = environment;
+    entry->epoch = sNdsEntryRampEpoch;
     gNdsEntryRampPaletteBakes++;
     return entry->name;
 }
 
+/* The swap VBlank (ndsRendererCommitDeferredPalettes): the queued ramp
+ * palettes land, unless a scene reset retired the palettes they target. */
+static void ndsRendererEntryRampPaletteCommit(void)
+{
+    u32 pending = sNdsEntryRampPending;
+    u32 banks;
+    u32 saved;
+
+    sNdsEntryRampEpoch++;
+    if (pending == 0u)
+    {
+        return;
+    }
+    banks = sNdsEntryRampPendingBanks;
+    sNdsEntryRampPending = 0u;
+    sNdsEntryRampPendingBanks = 0u;
+    saved = ndsRendererPaletteBanksToLcd(banks);
+    do
+    {
+        const u32 slot = (u32)__builtin_ctz(pending);
+        const NDSEntryRampPalette *entry = &sNdsEntryRampPalettes[slot];
+        const u32 *src = sNdsEntryRampStage[slot];
+        u32 *dst = entry->vram;
+        u32 i;
+
+        pending &= pending - 1u;
+        /* A scene reset since the queue retired this palette. */
+        if ((dst == NULL) || (entry->name == 0u) ||
+            (entry->generation !=
+             gNdsRendererSceneTextureVramResetCount + 1u))
+        {
+            continue;
+        }
+        for (i = 0u; i < (NDS_ENTRY_RAMP_PALETTE_WIDTH / 2u); i++)
+        {
+            dst[i] = src[i];
+        }
+    } while (pending != 0u);
+    ndsRendererPaletteBanksRestore(banks, saved);
+}
 /* Which refusal the entry-effect owner took (lab builds only: the stores
  * stay out of the gate ROM). A distinct constant store per site keeps GCC
  * from merging the tails. */
@@ -5916,6 +6068,37 @@ static void __attribute__((noinline, cold)) ndsLabFoxGxHash(u32 root_index,
 #else
 #define NDS_LAB_FOX_GX_HASH(r, c, p, s) ((void)0)
 #endif
+
+/* P2-2p8 (2026-10-05): a no-Z entry group whose corners all load under its
+ * root's matrix draws through the GX instead of transforming and dividing
+ * every corner on the CPU (ndsRendererHardwareClipVertex). That painter path
+ * submits v16 z = depth * 4096 / w -- a constant clip-space z of depth / 4096
+ * -- so the GX gets the root's composed matrix with its z column replaced by
+ * that constant, at the GX clip scale (CPU clip / 256,
+ * ndsRendererBuildRawHardwareMatrix). x and y are the same transform done by
+ * the engine; the engine also clips what the CPU path only divided. Same-ROM
+ * A/B word gNdsEntryEffectGxPainter (0 = the CPU painter). */
+volatile u32 gNdsEntryEffectGxPainter __attribute__((used, section(".data"))) =
+    1u;
+
+static void ndsRendererEntryEffectLoadPainter(
+    const NDSRendererMatrix20p12 *composed, s32 depth)
+{
+    NDSRendererMatrix20p12 identity;
+    NDSRendererMatrix20p12 painter;
+
+    ndsRendererMtxIdentity20p12(&identity);
+    ndsRendererBuildRawHardwareMatrix(composed, &painter);
+    painter.m[0][2] = 0;
+    painter.m[1][2] = 0;
+    painter.m[2][2] = 0;
+    painter.m[3][2] = ndsRendererRoundShiftS32Signed(
+        depth, NDS_RENDERER_HW_WORLD_UNIT_SHIFT);
+    ndsRendererLoadHardwareMatrixPair(
+        &identity, &painter, NDS_RENDERER_HW_MATRIX_MODE_NONE, 0u, FALSE);
+    /* No later load may take this pair for its own. */
+    sNdsRendererHardwareMatrixLoaded = FALSE;
+}
 
 s32 ndsRendererSubmitNativeEntryEffect(
     u32 owner_asset_id, u32 root_offset,
@@ -6652,6 +6835,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
             (group->matrix_override_count != 0u) ? TRUE : FALSE;
         u32 no_z_group;
         u32 cpu_projected_group;
+        u32 gx_painter_group;
         s32 painter_depth = 0;
         u32 matrix_override_cursor = 0u;
         const NDSEntryEffectPairState *geometry_state =
@@ -6692,8 +6876,13 @@ s32 ndsRendererSubmitNativeEntryEffect(
         no_z_group =
             ((stats->geometry_mode & NDS_RENDERER_GEOM_ZBUFFER) == 0u) ?
                 TRUE : FALSE;
+        gx_painter_group =
+            ((no_z_group != FALSE) && (projected_group == FALSE) &&
+             (gNdsEntryEffectGxPainter != 0u)) ? TRUE : FALSE;
         cpu_projected_group =
-            ((projected_group != FALSE) || (no_z_group != FALSE)) ? TRUE : FALSE;
+            ((projected_group != FALSE) ||
+             ((no_z_group != FALSE) && (gx_painter_group == FALSE))) ?
+                TRUE : FALSE;
         stats->othermode_h = (initial_othermode_h & ~othermode_writes->a) |
                             (othermode_state->a & othermode_writes->a);
         stats->othermode_l = (initial_othermode_l & ~othermode_writes->b) |
@@ -6862,8 +7051,8 @@ s32 ndsRendererSubmitNativeEntryEffect(
         poly_fmt &= ~((u32)POLY_FORMAT_LIGHT0);
         hw_lit_group =
             ((gNdsEntryEffectHwLight >= 2u) && (lit != FALSE) &&
-             (cpu_projected_group == FALSE) && (ramp_palette == 0u) &&
-             (use_material_color == FALSE) &&
+             (cpu_projected_group == FALSE) && (gx_painter_group == FALSE) &&
+             (ramp_palette == 0u) && (use_material_color == FALSE) &&
              ((stats->light_dir_mask & NDS_RENDERER_LIGHT_DIR_1_MASK) != 0u) &&
              ((stats->light_color_mask & NDS_ENTRY_EFFECT_LIGHT_COLORS) ==
               NDS_ENTRY_EFFECT_LIGHT_COLORS)) ? TRUE : FALSE;
@@ -6878,6 +7067,28 @@ s32 ndsRendererSubmitNativeEntryEffect(
                     config->initial_modelview, config->initial_projection,
                     &sNdsRendererEntryEffectComposed[root_index]);
                 composed_ready = TRUE;
+            }
+        }
+        else if (gx_painter_group != FALSE)
+        {
+            hw_light_loaded = FALSE;
+            if (composed_ready == FALSE)
+            {
+                ndsRendererMtxMul20p12(
+                    config->initial_modelview, config->initial_projection,
+                    &sNdsRendererEntryEffectComposed[root_index]);
+                composed_ready = TRUE;
+            }
+            /* The CPU painter takes one depth a triangle; the group draws at
+             * its first and consumes the rest. */
+            ndsRendererEntryEffectLoadPainter(
+                &sNdsRendererEntryEffectComposed[root_index],
+                ndsRendererHardwareNextProjectedDepth());
+            if (group->triangle_count > 1u)
+            {
+                sNdsRendererHardwareProjectedDepth -=
+                    NDS_RENDERER_HW_PROJECTED_DEPTH_STEP *
+                    ((s32)group->triangle_count - 1);
             }
         }
         else
@@ -6934,7 +7145,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
 
         corner = 0u;
         if ((static_proven != FALSE) && (gNdsEntryEffectFastCorners != 0u) &&
-            (cpu_projected_group == FALSE) &&
+            (cpu_projected_group == FALSE) && (gx_painter_group == FALSE) &&
             ((hw_lit_group != FALSE) || (ramp_palette != 0u)) &&
             ((sNdsEntryEffectRootCoordsFit[root_index >> 5] &
               (1u << (root_index & 31u))) != 0u) &&
@@ -7067,7 +7278,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
                     ndsRendererEntryEffectCoord(vtx->z));
             }
         }
-        if (cpu_projected_group != FALSE)
+        if ((cpu_projected_group != FALSE) || (gx_painter_group != FALSE))
         {
             ndsRendererHardwareEnterProjectedForeground();
         }
@@ -7111,7 +7322,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
         /* Groups whose merged source state has G_ZBUFFER clear follow the
          * generic interpreter's projected painter path. Mixed-matrix groups
          * also remain CPU-projected, with their source clip depth intact. */
-        if (cpu_projected_group != FALSE)
+        if ((cpu_projected_group != FALSE) || (gx_painter_group != FALSE))
         {
             stats->hardware_projected_depth_triangle_count +=
                 group->triangle_count;
@@ -18007,6 +18218,19 @@ static s32 ndsRendererExecuteNativeFighterRootHardware(
     return TRUE;
 #undef state
 }
+/* The swap VBlank's deferred palette rewrites, called from the platform's
+ * scheduled wait (nds_platform.c): the KO pillar variants and the entry
+ * ramps. */
+void ndsRendererCommitDeferredPalettes(void)
+{
+#if NDS_R2_PARTICLE_RUNTIME
+    ndsRendererParticleEnvVariantCommit();
+#endif
+#if (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_R2_FIGHTER_HW_LIGHT
+    ndsRendererEntryRampPaletteCommit();
+#endif
+}
+
 #endif
 
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)

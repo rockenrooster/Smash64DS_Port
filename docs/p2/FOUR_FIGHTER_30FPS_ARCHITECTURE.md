@@ -1376,6 +1376,21 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   `2026-10-05_env-defer`, word `gNdsParticleEnvVariantDeferred`). This also
   removes the commonest mid-frame VRAM remap, a candidate for the KO-burst
   screen corruption in BUGS.md.
+- **10-05 entry ramps deferred too; no-Z entry groups through the GX.** The
+  entry ramp palettes (Link's spin oranges, glows) now rewrite the same way
+  (`gNdsEntryRampDeferred`; digest identical, cost neutral on the gate, receipt
+  `2026-10-05_ramp-defer`). A no-Z entry group's CPU painter submitted
+  z = depth * 4096 / w, a constant clip z; the GX now draws such a group with
+  the root's composed matrix and that constant in the z column instead of a
+  CPU transform and divide per corner (`gNdsEntryEffectGxPainter`). Same ROM:
+  P95 1,116,416 -> 1,111,552, over 97 -> 92, two-VBlank presents 1,857 ->
+  1,861, Link's spin frames -19K to -28K, digest identical; the KO frame
+  capture is pixel-identical (receipt `2026-10-05_entry-gx-painter`).
+  Measured and rejected: the effect submitters built Thumb (profile, all
+  frames +11K cycles, KO frames +38K; the impact wave grew 10% and slowed
+  30%). Found: a present with WORK above ~1,110K misses its second VBlank
+  (the replay digest's ~3.9K and ~5.5K of frame-boundary time sit outside
+  WORK), so the two-VBlank share tracks WORK <= ~1,110K, not 1,120K.
 
 ## 7. Found along the way
 

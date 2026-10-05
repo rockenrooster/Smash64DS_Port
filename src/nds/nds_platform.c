@@ -4666,10 +4666,10 @@ static void ndsPlatformWaitForScheduledVBlank(void)
     sIdlePresentVBlank = earliest;
     ndsR2AnimPrefetchIdle();
     swiWaitForVBlank();
-#if NDS_RENDERER_HW_TRIANGLES && NDS_R2_PARTICLE_RUNTIME
+#if NDS_RENDERER_HW_TRIANGLES
     /* The first retrace after the flush swapped the frame in: the palette
      * rewrites its draws queued land now, before line 214 renders it. */
-    ndsRendererParticleEnvVariantCommit();
+    ndsRendererCommitDeferredPalettes();
 #endif
     while ((earliest != 0u) &&
            ((s32)(sVBlankCount - earliest) < 0))
