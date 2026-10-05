@@ -4423,6 +4423,56 @@ static u32 sNdsFireGrindLastUpdateFrame;
 extern void efDisplayZPerspCLDProcDisplay(GObj *effect_gobj);
 extern void efDisplayZPerspXLUProcDisplay(GObj *effect_gobj);
 
+/* P2-2p8 (2026-10-05, owner ruling D12b: particle/effect LOD in heavy frames,
+ * render only). A presented frame whose work has already reached
+ * gNdsParticleHeavyLodTicks when its first particle pass starts draws half
+ * of its generic particles: those in odd slots of the particle pool, so a
+ * particle keeps its visibility across consecutive heavy frames instead of
+ * flickering. Score digits (the HUD), Whispy's native quads, the Fox glow and
+ * FireGrind draw as before; the particles' simulation is untouched, so the
+ * replay digest cannot move. The elapsed time is measured from the battle
+ * iteration's start (gNdsBattleIterationStartTick); outside a battle, or past
+ * four VBlanks of a stale stamp, nothing is decimated. 0 = never. The default
+ * (1,000,000 ticks) is calibrated on the clean lab ROM: the first particle
+ * pass comes ~80-100K ticks before a frame's end, so it marks nearly every
+ * frame that ends above 1.12M and none that ends under 1.0M. Same-ROM A/B
+ * (artifacts/performance/2026-10-05_particle-lod): P95 Sector Z -8.1K,
+ * Jungle -7.2K, Yoshi's Island -7.0K, Dream Land -1.7K. */
+#ifndef NDS_PARTICLE_HEAVY_LOD_TICKS
+#define NDS_PARTICLE_HEAVY_LOD_TICKS 1000000u
+#endif
+volatile u32 gNdsParticleHeavyLodTicks __attribute__((used, section(".data"))) =
+    NDS_PARTICLE_HEAVY_LOD_TICKS;
+extern volatile u32 gNdsBattleIterationStartTick;
+static u32 sNdsParticleLodIteration;
+static u32 sNdsParticleLodHalve;
+
+static void ndsParticleHeavyLodDecide(void)
+{
+    const u32 start = gNdsBattleIterationStartTick;
+
+    if (start == sNdsParticleLodIteration)
+    {
+        return;
+    }
+    sNdsParticleLodIteration = start;
+    sNdsParticleLodHalve = 0u;
+    if ((start != 0u) && (gNdsParticleHeavyLodTicks != 0u))
+    {
+        const u32 elapsed = cpuGetTiming() - start;
+
+#if NDS_TICK_HUD && defined(NDS_LAB_FOURCPU_WORDS) && NDS_LAB_FOURCPU_WORDS
+        /* Lab calibration: the clean ROM leaves the SHDT span unclocked, so
+         * the column carries this frame's elapsed work at its first pass. */
+        gNdsTickHudSrcHitDetectTicks = elapsed;
+#endif
+        if ((elapsed >= gNdsParticleHeavyLodTicks) && (elapsed < 2240000u))
+        {
+            sNdsParticleLodHalve = 1u;
+        }
+    }
+}
+
 static void ndsLbParticleDrawTexturesBody(GObj *gobj)
 {
     Vec3f right;
@@ -4507,6 +4557,7 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
             return;
         }
     }
+    ndsParticleHeavyLodDecide();
 #if NDS_R2_PARTICLE_DRAW
     atlas_name = ndsRendererHardwareParticleAtlasName();
 #if NDS_RENDERER_HW_TRIANGLES && NDS_R2_WHISPY_NATIVE_AOT
@@ -5006,6 +5057,15 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                         ndsParticleBiasTowardEye(&world_pos,
                                                  NDS_PARTICLE_TOWARD_EYE_BIAS,
                                                  &world_pos);
+                    }
+                    /* The heavy-frame LOD skips the quad only: the transform
+                     * above still ran, and its draw-time effects on the
+                     * particle's LBTransform (the affine, Ready -> Finished)
+                     * are the ones a drawn frame makes. */
+                    if ((sNdsParticleLodHalve != 0u) &&
+                        ((((uintptr_t)pc / sizeof(*pc)) & 1u) != 0u))
+                    {
+                        continue;
                     }
                     if ((source_mirror_mask & 1u) != 0u)
                     {

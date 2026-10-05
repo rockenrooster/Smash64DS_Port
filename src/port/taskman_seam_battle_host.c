@@ -75,6 +75,11 @@ volatile u32 gNdsYoshiBugHostWatchdogUpdateEnabled;
 #define NDS_BATTLE_PLAYABLE_PRESENT_VBLANKS 2u
 #define NDS_BATTLE_PLAYABLE_EARLY_COMBAT_TICKS 1800u
 
+/* P2-2p8 (2026-10-05): the cpuGetTiming of this presented frame's start (set
+ * by ndsR2HostBattleIterationBegin, never 0 once set), for render-side
+ * decisions that weigh the frame's elapsed work (the heavy-frame particle
+ * LOD, battleship_lbparticle.c). 0 = no iteration has begun. */
+volatile u32 gNdsBattleIterationStartTick;
 static u32 sNdsBattlePlayablePacingStartTick;
 static u32 sNdsBattlePlayableLastPresentVBlank;
 static u32 sNdsBattlePlayableLastDeadFrames;
@@ -1271,6 +1276,7 @@ void ndsR2HostBattlePrepare(void)
 
 void ndsR2HostBattleIterationBegin(void)
 {
+    gNdsBattleIterationStartTick = cpuGetTiming() | 1u;
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     sNdsR2ProfileInputTicks = 0u;
     sNdsR2ProfileUpdateTicks = 0u;

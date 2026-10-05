@@ -1,0 +1,45 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,736; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 1100: ALL 5,310,976 -> 1,116,672, 4 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_particle-lod/L0-g6.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=422facd3b0b+dirty(33) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,736     1,676,544      1.50  1,152,291     1,111,744  4,717,888      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,544        10,496      2.31      5,678         2,368     28,096        0.4
+HUD         9,216        24,192      2.62     11,296         7,680    791,232        0.8
+SRC       368,576       573,056      1.55    378,548       134,336  1,371,456       33.0
+MISC      405,568       558,400      1.38    415,579       177,984  3,326,720       36.3
+OTHR      332,864       616,704      1.85    341,190        23,936    790,400       29.8
+WAIT      310,016       591,936      1.91    318,947         2,176    770,624       27.8
+WORK      817,920     1,127,296      1.38    829,373       342,720  4,384,768       73.2
+SHDT            0             0      0.00          0             0          0        0.0
+SWRM        1,344         1,408      1.05      1,376           960      3,264        0.1
+GCRA      363,136       567,040      1.56    373,024       129,664  1,365,952       32.5
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        354             0    637,696        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      405,440       558,272      1.38    415,444       177,856  3,326,592       36.3
+MFLS          128           192      1.50        134           128        512        0.0
+GPOL          597           643      1.08        550            29        675        0.1
+GVTX        1,439         1,569      1.09      1,346            96      1,657        0.1
+DGSA   2,248,335,339 4,065,321,507        2,176,252,338    408,983 4,294,514,885 201,331.0
+DGSB   2,239,784,444 4,083,387,236        2,189,176,867  1,230,618 4,293,852,712 200,565.3
+WORK-H    807,296     1,115,136      1.38    818,077       333,440  3,593,536       72.3
+
+named=811,101 (70.4% of ALL)  VBI 2:1849 3:103 4:8 5+:1 max:9 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_particle-lod/L0-g6.json

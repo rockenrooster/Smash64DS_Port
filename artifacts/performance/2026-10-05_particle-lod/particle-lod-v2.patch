@@ -1,0 +1,104 @@
+diff --git a/src/import/battleship_lbparticle.c b/src/import/battleship_lbparticle.c
+index 41798e69ae4..ff8046b5337 100644
+--- a/src/import/battleship_lbparticle.c
++++ b/src/import/battleship_lbparticle.c
+@@ -4423,6 +4423,51 @@ static u32 sNdsFireGrindLastUpdateFrame;
+ extern void efDisplayZPerspCLDProcDisplay(GObj *effect_gobj);
+ extern void efDisplayZPerspXLUProcDisplay(GObj *effect_gobj);
+ 
++/* P2-2p8 (2026-10-05, owner ruling D12b: particle/effect LOD in heavy frames,
++ * render only). A presented frame whose work has already reached
++ * gNdsParticleHeavyLodTicks when its first particle pass starts draws half
++ * of its generic particles: those in odd slots of the particle pool, so a
++ * particle keeps its visibility across consecutive heavy frames instead of
++ * flickering. Score digits (the HUD), Whispy's native quads, the Fox glow and
++ * FireGrind draw as before; the particles' simulation is untouched, so the
++ * replay digest cannot move. The elapsed time is measured from the battle
++ * iteration's start (gNdsBattleIterationStartTick); outside a battle, or past
++ * four VBlanks of a stale stamp, nothing is decimated. 0 = never. */
++#ifndef NDS_PARTICLE_HEAVY_LOD_TICKS
++#define NDS_PARTICLE_HEAVY_LOD_TICKS 0u
++#endif
++volatile u32 gNdsParticleHeavyLodTicks __attribute__((used, section(".data"))) =
++    NDS_PARTICLE_HEAVY_LOD_TICKS;
++extern volatile u32 gNdsBattleIterationStartTick;
++static u32 sNdsParticleLodIteration;
++static u32 sNdsParticleLodHalve;
++
++static void ndsParticleHeavyLodDecide(void)
++{
++    const u32 start = gNdsBattleIterationStartTick;
++
++    if (start == sNdsParticleLodIteration)
++    {
++        return;
++    }
++    sNdsParticleLodIteration = start;
++    sNdsParticleLodHalve = 0u;
++    if ((start != 0u) && (gNdsParticleHeavyLodTicks != 0u))
++    {
++        const u32 elapsed = cpuGetTiming() - start;
++
++#if NDS_TICK_HUD && defined(NDS_LAB_FOURCPU_WORDS) && NDS_LAB_FOURCPU_WORDS
++        /* Lab calibration: the clean ROM leaves the SHDT span unclocked, so
++         * the column carries this frame's elapsed work at its first pass. */
++        gNdsTickHudSrcHitDetectTicks = elapsed;
++#endif
++        if ((elapsed >= gNdsParticleHeavyLodTicks) && (elapsed < 2240000u))
++        {
++            sNdsParticleLodHalve = 1u;
++        }
++    }
++}
++
+ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
+ {
+     Vec3f right;
+@@ -4507,6 +4552,7 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
+             return;
+         }
+     }
++    ndsParticleHeavyLodDecide();
+ #if NDS_R2_PARTICLE_DRAW
+     atlas_name = ndsRendererHardwareParticleAtlasName();
+ #if NDS_RENDERER_HW_TRIANGLES && NDS_R2_WHISPY_NATIVE_AOT
+@@ -5007,6 +5053,15 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
+                                                  NDS_PARTICLE_TOWARD_EYE_BIAS,
+                                                  &world_pos);
+                     }
++                    /* The heavy-frame LOD skips the quad only: the transform
++                     * above still ran, and its draw-time effects on the
++                     * particle's LBTransform (the affine, Ready -> Finished)
++                     * are the ones a drawn frame makes. */
++                    if ((sNdsParticleLodHalve != 0u) &&
++                        ((((uintptr_t)pc / sizeof(*pc)) & 1u) != 0u))
++                    {
++                        continue;
++                    }
+                     if ((source_mirror_mask & 1u) != 0u)
+                     {
+                         NDS_DIAG(gNdsParticleMirrorSSubmitCount++);
+diff --git a/src/port/taskman_seam_battle_host.c b/src/port/taskman_seam_battle_host.c
+index f05284c85e1..e0d8d3ba19b 100644
+--- a/src/port/taskman_seam_battle_host.c
++++ b/src/port/taskman_seam_battle_host.c
+@@ -75,6 +75,11 @@ volatile u32 gNdsYoshiBugHostWatchdogUpdateEnabled;
+ #define NDS_BATTLE_PLAYABLE_PRESENT_VBLANKS 2u
+ #define NDS_BATTLE_PLAYABLE_EARLY_COMBAT_TICKS 1800u
+ 
++/* P2-2p8 (2026-10-05): the cpuGetTiming of this presented frame's start (set
++ * by ndsR2HostBattleIterationBegin, never 0 once set), for render-side
++ * decisions that weigh the frame's elapsed work (the heavy-frame particle
++ * LOD, battleship_lbparticle.c). 0 = no iteration has begun. */
++volatile u32 gNdsBattleIterationStartTick;
+ static u32 sNdsBattlePlayablePacingStartTick;
+ static u32 sNdsBattlePlayableLastPresentVBlank;
+ static u32 sNdsBattlePlayableLastDeadFrames;
+@@ -1271,6 +1276,7 @@ void ndsR2HostBattlePrepare(void)
+ 
+ void ndsR2HostBattleIterationBegin(void)
+ {
++    gNdsBattleIterationStartTick = cpuGetTiming() | 1u;
+ #if NDS_RENDERER_PROFILE_LEVEL >= 1
+     sNdsR2ProfileInputTicks = 0u;
+     sNdsR2ProfileUpdateTicks = 0u;

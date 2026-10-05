@@ -1,0 +1,45 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,800; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 2: ALL 8,677,056 -> 4,482,752, 5 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_particle-lod/L1-g5.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=422facd3b0b+dirty(31) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,800     1,677,248      1.50  1,203,047     1,112,192  4,482,752      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,736        10,880      2.30      5,800         2,368     22,528        0.4
+HUD         9,088        23,808      2.62     11,686         7,872    673,536        0.8
+SRC       437,568       646,336      1.48    447,626       167,296  1,109,504       39.2
+MISC      450,048       610,816      1.36    467,919       235,840  3,239,744       40.3
+OTHR      244,928       565,312      2.31    270,017        22,720    700,416       21.9
+WAIT      222,784       543,616      2.44    248,045         2,752    680,320       19.9
+WORK      930,432     1,249,408      1.34    951,084       433,152  4,144,000       83.3
+SHDT      824,895     1,142,719      1.39    855,886       390,015  3,425,919       73.9
+SWRM        1,344         1,408      1.05      1,349           896      3,456        0.1
+GCRA      432,128       638,976      1.48    442,104       162,688  1,104,000       38.7
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        545             0    981,824        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      449,856       610,688      1.36    467,785       235,712  3,239,616       40.3
+MFLS          128           192      1.50        134           128        192        0.0
+GPOL          534           601      1.13        515           116        652        0.0
+GVTX        1,247         1,425      1.14      1,218           351      1,631        0.1
+DGSA   2,216,622,636 4,088,913,632        2,177,922,654    268,149 4,294,787,496 198,479.8
+DGSB   2,319,073,349 4,073,558,838        2,230,935,651  3,133,812 4,292,624,795 207,653.4
+WORK-H    918,464     1,236,224      1.35    939,398       424,128  3,470,464       82.2
+
+named=933,031 (77.6% of ALL)  VBI 2:1675 3:275 4:9 5+:2 max:20 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_particle-lod/L1-g5.json

@@ -1,0 +1,45 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,544; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 1816: ALL 5,310,784 -> 1,116,480, 4 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_particle-lod/gate-lod1.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=3d006c61060+dirty(35) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,544     1,676,608      1.50  1,154,134     1,111,296  4,757,632      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,416        10,624      2.41      5,657         2,304     27,520        0.4
+HUD         9,088        24,128      2.65     11,186         7,616    801,472        0.8
+SRC       376,192       576,832      1.53    385,671       144,640  1,319,552       33.7
+MISC      401,664       563,648      1.40    413,327       174,592  3,344,128       36.0
+OTHR      328,704       615,424      1.87    338,293        26,688    784,512       29.4
+WAIT      306,112       590,720      1.93    315,746         4,864    764,352       27.4
+WORK      822,016     1,137,600      1.38    834,498       349,056  4,427,328       73.6
+SHDT            0             0      0.00          0             0          0        0.0
+SWRM        1,472         1,536      1.04      1,479           960      3,712        0.1
+GCRA      370,624       571,328      1.54    380,112       139,904  1,314,048       33.2
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        360             0    647,616        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      401,600       563,584      1.40    413,220       174,464  3,344,064       36.0
+MFLS          128           128      1.00        107            64        192        0.0
+GPOL          596           642      1.08        550            29        675        0.1
+GVTX        1,438         1,566      1.09      1,345            96      1,656        0.1
+DGSA   2,248,335,339 4,065,321,507        2,176,252,338    408,983 4,294,514,885 201,365.6
+DGSB   2,239,784,444 4,083,387,236        2,189,176,867  1,230,618 4,293,852,712 200,599.7
+WORK-H    811,968     1,122,880      1.38    823,312       340,544  3,625,856       72.7
+
+named=815,841 (70.7% of ALL)  VBI 2:1841 3:112 4:7 5+:1 max:9 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_particle-lod/gate-lod1.json

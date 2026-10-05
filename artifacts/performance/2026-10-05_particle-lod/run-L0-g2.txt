@@ -1,0 +1,46 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 2 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,736; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 2: ALL 18,713,472 -> 14,519,168, 4 bucket(s) corrected
+  frame 1200: ALL 5,310,848 -> 1,116,544, 4 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_particle-lod/L0-g2.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=422facd3b0b+dirty(31) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,736     1,677,376      1.50  1,202,728     1,110,912 14,519,168      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,928        10,432      2.12      5,750         2,304     25,088        0.4
+HUD         9,152        24,128      2.64     11,707         7,808    806,784        0.8
+SRC       413,568       654,592      1.58    422,805       140,480  1,186,816       37.0
+MISC      444,032       603,584      1.36    455,077       185,920 13,174,912       39.8
+OTHR      280,768       598,464      2.13    307,388        22,144    776,896       25.1
+WAIT      258,944       573,824      2.22    285,492         2,368    756,608       23.2
+WORK      898,880     1,265,792      1.41    913,209       356,992 14,179,968       80.5
+SHDT            0             0      0.00          0             0          0        0.0
+SWRM        1,344         1,408      1.05      1,331           896      3,264        0.1
+GCRA      407,936       649,216      1.59    417,299       135,936  1,181,312       36.5
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        588             0  1,010,944        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      443,904       603,456      1.36    454,943       185,792 13,174,784       39.8
+MFLS          128           192      1.50        135           128        256        0.0
+GPOL          562           655      1.17        530            51        723        0.1
+GVTX        1,347         1,556      1.16      1,274           175      1,743        0.1
+DGSA   2,171,201,471 4,069,725,545        2,131,774,420    226,229 4,293,447,369 194,423.9
+DGSB   2,223,267,474 4,055,368,550        2,158,968,673    319,904 4,294,070,849 199,086.2
+WORK-H    887,296     1,254,016      1.41    901,502       347,520 13,373,184       79.5
+
+named=895,339 (74.4% of ALL)  VBI 2:1695 3:254 4:10 5+:2 max:38 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_particle-lod/L0-g2.json
