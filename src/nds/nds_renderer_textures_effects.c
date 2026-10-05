@@ -7008,8 +7008,30 @@ fail:
  *
  * Alpha is excluded from the key (and from the bake, which keeps the sheet
  * coverage bit): the 8-bit source alpha still becomes POLYGON_ATTR per quad,
- * exactly as the legacy path does. */
-#define NDS_PARTICLE_ENV_VARIANT_COUNT 8u
+ * exactly as the legacy path does.
+ *
+ * P2-2p8 (2026-10-05): DEFERRED REWRITES. Eight entries did not cover a burst:
+ * the gate's KO frames carry up to 13 distinct (sheet, prim, env) keys a frame
+ * (particles of different ages sit at different points of the prim ramp), so
+ * the round robin rebaked 124 times in 19 frames, and each rebake was a
+ * glColorTableEXT on a live name -- libnds frees the palette block, allocates
+ * a new one (a walk of ~300 vramBlock nodes) and maps banks F/G to LCD
+ * mid-frame, ~11.7K cycles. Worse, it rewrote palettes the frame on screen
+ * was still rendering from (the previous frame's KO quads), and unmapped every
+ * palette from the 3D engine while it rendered.
+ *
+ * Now each of 16 entries allocates its palette once and keeps it. A miss
+ * takes the least recently used entry that NO draw of the frame being built
+ * references, bakes into that entry's staging copy and queues it; the copy
+ * lands in the palette at the VBlank that swaps the frame in
+ * (ndsRendererParticleEnvVariantCommit, called from the platform's
+ * scheduled-VBlank wait), when the frame it replaces has stopped rendering
+ * and the next has not started. 16 entries: the burst's 44 distinct keys bake
+ * 56 times and no frame runs out (the trace replay, 2026-10-05). 1,024 bytes
+ * of palette RAM. Same-ROM A/B word gNdsParticleEnvVariantDeferred (0 = the
+ * eight-entry immediate round robin). */
+#define NDS_PARTICLE_ENV_VARIANT_COUNT 16u
+#define NDS_PARTICLE_ENV_VARIANT_IMMEDIATE_COUNT 8u
 #define NDS_PARTICLE_ENV_VARIANT_WHITE 0x7FFFu
 typedef struct NDSParticleEnvVariant
 {
@@ -7022,10 +7044,26 @@ typedef struct NDSParticleEnvVariant
     u32 palette_format;
     s32 palette_name;
 #endif
+    /* The palette's LCD address (NULL: never rewritten in place), the banks
+     * it spans (bit 0 E, 1 F, 2 G), the last epoch that referenced it, and a
+     * refused allocation (palette RAM full) that is not retried. */
+    u32 *vram;
+    u32 banks;
+    u32 epoch;
+    u32 refused;
 } NDSParticleEnvVariant;
 static NDSParticleEnvVariant
     sNdsParticleEnvVariants[NDS_PARTICLE_ENV_VARIANT_COUNT];
 static u32 sNdsParticleEnvVariantNext;
+volatile u32 gNdsParticleEnvVariantDeferred
+    __attribute__((used, section(".data"))) = 1u;
+/* One epoch per presented frame; entries start at 0, never the current one. */
+static u32 sNdsParticleEnvVariantEpoch = 1u;
+static u32 sNdsParticleEnvVariantPending;
+static u32 sNdsParticleEnvVariantPendingBanks;
+static u32 sNdsParticleEnvVariantStage[NDS_PARTICLE_ENV_VARIANT_COUNT]
+                                      [NDS_PARTICLE_QUAD_PALETTE_ENTRIES / 2u];
+volatile u32 gNdsParticleEnvVariantCommits;
 /* P2-2p8 (2026-10-05): a burst's particles share one sheet, prim and env, and
  * each quad searched the sheet names and the variant table twice (the variant
  * for its colours, then the packet binding for that variant) to find the
@@ -7060,7 +7098,6 @@ static s32
 static u32 sNdsRendererParticlePacketStateDirty;
 static void ndsRendererFlushWhispyNativePacket(void);
 #endif
-static u16 sNdsParticleEnvVariantScratch[NDS_PARTICLE_QUAD_PALETTE_ENTRIES];
 volatile u32 gNdsParticleEnvVariantBakeCount;
 volatile u32 gNdsParticleEnvVariantHitCount;
 /* ENVCOLOR was set and no variant could be produced, so the quad drew with the
@@ -7087,6 +7124,45 @@ static u32 ndsRendererParticleSheetForName(u32 atlas_name)
     return NDS_PARTICLE_QUAD_ATLAS_SHEETS;
 }
 
+/* The entry a deferred miss may take: one never allocated, else the least
+ * recently referenced entry no draw of the frame being built references
+ * (an older epoch), so the queued rewrite cannot change a palette this
+ * frame's queued draws already point at. NDS_PARTICLE_ENV_VARIANT_COUNT when
+ * every entry is in this frame's use. */
+static u32 ndsRendererParticleEnvVariantVictim(void)
+{
+    const u32 epoch = sNdsParticleEnvVariantEpoch;
+    u32 best = NDS_PARTICLE_ENV_VARIANT_COUNT;
+    u32 best_age = 0u;
+    u32 slot;
+
+    for (slot = 0u; slot < NDS_PARTICLE_ENV_VARIANT_COUNT; slot++)
+    {
+        const NDSParticleEnvVariant *variant = &sNdsParticleEnvVariants[slot];
+        u32 age;
+
+        if (variant->refused != 0u)
+        {
+            continue;
+        }
+        if (variant->valid == 0u)
+        {
+            return slot;
+        }
+        if (variant->vram == NULL)
+        {
+            continue;
+        }
+        age = epoch - variant->epoch;
+        if (age > best_age)
+        {
+            best_age = age;
+            best = slot;
+        }
+    }
+    return best;
+}
+
 /* Palette-only GL name for (sheet, prim, env), or 0 to stay on the legacy
  * vertex-tint path. 0 also covers non-sheet images (Hyrule native names),
  * which keep today's behaviour rather than failing closed. */
@@ -7102,6 +7178,9 @@ static u32 ndsRendererParticleEnvVariant(u32 atlas_name, u32 prim_bgr555,
     u32 r5;
     u32 g5;
     u32 b5;
+    u32 deferred;
+    u16 *bake;
+    NDSParticleEnvVariant *variant;
     int name = 0;
     int palette_width = 0;
 
@@ -7120,9 +7199,30 @@ static u32 ndsRendererParticleEnvVariant(u32 atlas_name, u32 prim_bgr555,
             (sNdsParticleEnvVariants[slot].env == env_key))
         {
             NDS_DIAG(gNdsParticleEnvVariantHitCount++);
+            sNdsParticleEnvVariants[slot].epoch = sNdsParticleEnvVariantEpoch;
             return (u32)sNdsParticleEnvVariants[slot].name;
         }
     }
+    deferred = gNdsParticleEnvVariantDeferred;
+    if (deferred != 0u)
+    {
+        slot = ndsRendererParticleEnvVariantVictim();
+        if (slot >= NDS_PARTICLE_ENV_VARIANT_COUNT)
+        {
+            return 0u;
+        }
+    }
+    else
+    {
+        slot = sNdsParticleEnvVariantNext;
+        sNdsParticleEnvVariantNext++;
+        if (sNdsParticleEnvVariantNext >=
+            NDS_PARTICLE_ENV_VARIANT_IMMEDIATE_COUNT)
+        {
+            sNdsParticleEnvVariantNext = 0u;
+        }
+    }
+    variant = &sNdsParticleEnvVariants[slot];
     /* A miss rewrites the tables below (bake, base palette, failures). */
     sNdsParticleMaterialGen++;
     /* 5-to-8 expansion keeps the top five bits identical to the source
@@ -7134,13 +7234,27 @@ static u32 ndsRendererParticleEnvVariant(u32 atlas_name, u32 prim_bgr555,
     prim_word = (((r5 << 3) | (r5 >> 2)) << 24) |
                 (((g5 << 3) | (g5 >> 2)) << 16) |
                 (((b5 << 3) | (b5 >> 2)) << 8) | 0xFFu;
+    bake = (u16 *)sNdsParticleEnvVariantStage[slot];
     for (entry = 0u; entry < NDS_PARTICLE_QUAD_PALETTE_ENTRIES; entry++)
     {
-        sNdsParticleEnvVariantScratch[entry] =
-            ndsRendererHardwareBlendPrimEnvTexel0(
-                sNdsRendererParticleAtlasPalette[
-                    (sheet * NDS_PARTICLE_QUAD_PALETTE_ENTRIES) + entry],
-                prim_word, env_key);
+        bake[entry] = ndsRendererHardwareBlendPrimEnvTexel0(
+            sNdsRendererParticleAtlasPalette[
+                (sheet * NDS_PARTICLE_QUAD_PALETTE_ENTRIES) + entry],
+            prim_word, env_key);
+    }
+    if ((deferred != 0u) && (variant->valid != 0u))
+    {
+        /* Queued: the palette changes at the VBlank that swaps this frame
+         * in. No GL call, so an open packet keeps its material state. */
+        sNdsParticleEnvVariantPending |= 1u << slot;
+        sNdsParticleEnvVariantPendingBanks |= variant->banks;
+        variant->sheet = sheet;
+        variant->prim = prim_key;
+        variant->env = env_key;
+        variant->epoch = sNdsParticleEnvVariantEpoch;
+        sNdsParticleMaterialGen++;
+        gNdsParticleEnvVariantBakeCount++;
+        return (u32)variant->name;
     }
     /* Before the first variant is ever assigned onto this sheet, capture the
      * sheet's own palette under a name of its own. Without this there is no
@@ -7188,20 +7302,17 @@ static u32 ndsRendererParticleEnvVariant(u32 atlas_name, u32 prim_bgr555,
 #endif
         sNdsParticleBasePaletteName[sheet] = base_name;
     }
-    slot = sNdsParticleEnvVariantNext;
-    sNdsParticleEnvVariantNext++;
-    if (sNdsParticleEnvVariantNext >= NDS_PARTICLE_ENV_VARIANT_COUNT)
+    if (variant->valid == 0u)
     {
-        sNdsParticleEnvVariantNext = 0u;
-    }
-    if (sNdsParticleEnvVariants[slot].valid == 0u)
-    {
+#if NDS_R2_WHISPY_NATIVE_AOT
+        ndsRendererFlushWhispyNativePacket();
+#endif
         if (ndsRendererHardwareFencedGlGenTextures(1, &name) == 0)
         {
             return 0u;
         }
-        sNdsParticleEnvVariants[slot].name = name;
-        sNdsParticleEnvVariants[slot].valid = TRUE;
+        variant->name = name;
+        variant->valid = TRUE;
     }
 #if NDS_R2_WHISPY_NATIVE_AOT
     else
@@ -7211,18 +7322,17 @@ static u32 ndsRendererParticleEnvVariant(u32 atlas_name, u32 prim_bgr555,
         ndsRendererFlushWhispyNativePacket();
     }
 #endif
-    ndsRendererHardwareBindTextureName(
-        NULL, (u32)sNdsParticleEnvVariants[slot].name);
+    ndsRendererHardwareBindTextureName(NULL, (u32)variant->name);
     glColorTableEXT(GL_TEXTURE_2D, 0, NDS_PARTICLE_QUAD_PALETTE_ENTRIES, 0, 0,
-                    sNdsParticleEnvVariantScratch);
+                    bake);
     glGetColorTableParameterEXT(GL_TEXTURE_2D, GL_COLOR_TABLE_WIDTH_EXT,
                                 &palette_width);
     if (palette_width != (int)NDS_PARTICLE_QUAD_PALETTE_ENTRIES)
     {
-        ndsRendererHardwareFencedGlDeleteTextures(
-            1, &sNdsParticleEnvVariants[slot].name);
-        sNdsParticleEnvVariants[slot].name = 0;
-        sNdsParticleEnvVariants[slot].valid = FALSE;
+        ndsRendererHardwareFencedGlDeleteTextures(1, &variant->name);
+        variant->name = 0;
+        variant->valid = FALSE;
+        variant->refused = deferred;
         sNdsRendererHardwareBoundTextureName = 0u;
         return 0u;
     }
@@ -7235,26 +7345,127 @@ static u32 ndsRendererParticleEnvVariant(u32 atlas_name, u32 prim_bgr555,
             &variant_palette_format);
         if (variant_palette_format < 0)
         {
-            ndsRendererHardwareFencedGlDeleteTextures(
-                1, &sNdsParticleEnvVariants[slot].name);
-            sNdsParticleEnvVariants[slot].name = 0;
-            sNdsParticleEnvVariants[slot].valid = FALSE;
+            ndsRendererHardwareFencedGlDeleteTextures(1, &variant->name);
+            variant->name = 0;
+            variant->valid = FALSE;
+            variant->refused = deferred;
             sNdsRendererHardwareBoundTextureName = 0u;
             return 0u;
         }
-        sNdsParticleEnvVariants[slot].palette_format =
-            (u32)variant_palette_format;
-        sNdsParticleEnvVariants[slot].palette_name =
-            (s32)glGlob->activePalette;
+        variant->palette_format = (u32)variant_palette_format;
+        variant->palette_name = (s32)glGlob->activePalette;
         sNdsRendererParticlePacketStateDirty = TRUE;
     }
 #endif
-    sNdsParticleEnvVariants[slot].sheet = sheet;
-    sNdsParticleEnvVariants[slot].prim = prim_key;
-    sNdsParticleEnvVariants[slot].env = env_key;
+    /* Where the palette lives, so later misses rewrite it in place. */
+    variant->vram = NULL;
+    variant->banks = 0u;
+    {
+        const gl_palette_data *palette = (const gl_palette_data *)
+            DynamicArrayGet(&glGlob->palettePtrs,
+                            (unsigned int)glGlob->activePalette);
+
+        if ((palette != NULL) &&
+            (((uintptr_t)palette->vramAddr & 3u) == 0u))
+        {
+            const uintptr_t first = (uintptr_t)palette->vramAddr;
+            const uintptr_t last = first +
+                (NDS_PARTICLE_QUAD_PALETTE_ENTRIES * sizeof(u16)) - 1u;
+            u32 banks = 0u;
+
+            if ((first < (uintptr_t)VRAM_F) && (last >= (uintptr_t)VRAM_E))
+            {
+                banks |= 1u;
+            }
+            if ((first < (uintptr_t)VRAM_G) && (last >= (uintptr_t)VRAM_F))
+            {
+                banks |= 2u;
+            }
+            if ((first < (uintptr_t)VRAM_H) && (last >= (uintptr_t)VRAM_G))
+            {
+                banks |= 4u;
+            }
+            if (banks != 0u)
+            {
+                variant->vram = (u32 *)palette->vramAddr;
+                variant->banks = banks;
+            }
+        }
+    }
+    variant->sheet = sheet;
+    variant->prim = prim_key;
+    variant->env = env_key;
+    variant->epoch = sNdsParticleEnvVariantEpoch;
     sNdsParticleMaterialGen++;
     gNdsParticleEnvVariantBakeCount++;
-    return (u32)sNdsParticleEnvVariants[slot].name;
+    return (u32)variant->name;
+}
+
+/* The VBlank that swaps the built frame in (the platform's scheduled wait
+ * calls this after its first retrace, the one after the flush): the frame
+ * that referenced the old contents has stopped rendering and the new one
+ * starts at line 214, so the queued palettes land now, with banks E-G mapped
+ * to the CPU only while the 3D engine reads none of them. Every epoch ends
+ * here, which also drops the lookup memos -- a memo hit does not restamp
+ * its entry. */
+void ndsRendererParticleEnvVariantCommit(void)
+{
+    u32 pending = sNdsParticleEnvVariantPending;
+    u32 banks;
+    u8 saved_e;
+    u8 saved_f;
+    u8 saved_g;
+
+    sNdsParticleEnvVariantEpoch++;
+    sNdsParticleMaterialGen++;
+    if (pending == 0u)
+    {
+        return;
+    }
+    banks = sNdsParticleEnvVariantPendingBanks;
+    sNdsParticleEnvVariantPending = 0u;
+    sNdsParticleEnvVariantPendingBanks = 0u;
+    saved_e = VRAM_E_CR;
+    saved_f = VRAM_F_CR;
+    saved_g = VRAM_G_CR;
+    if ((banks & 1u) != 0u)
+    {
+        VRAM_E_CR = VRAM_ENABLE;
+    }
+    if ((banks & 2u) != 0u)
+    {
+        VRAM_F_CR = VRAM_ENABLE;
+    }
+    if ((banks & 4u) != 0u)
+    {
+        VRAM_G_CR = VRAM_ENABLE;
+    }
+    do
+    {
+        const u32 slot = (u32)__builtin_ctz(pending);
+        const u32 *src = sNdsParticleEnvVariantStage[slot];
+        u32 *dst = sNdsParticleEnvVariants[slot].vram;
+        u32 i;
+
+        pending &= pending - 1u;
+        for (i = 0u; i < (NDS_PARTICLE_QUAD_PALETTE_ENTRIES / 2u); i++)
+        {
+            dst[i] = src[i];
+        }
+    } while (pending != 0u);
+    if ((banks & 4u) != 0u)
+    {
+        VRAM_G_CR = saved_g;
+    }
+    if ((banks & 2u) != 0u)
+    {
+        VRAM_F_CR = saved_f;
+    }
+    if ((banks & 1u) != 0u)
+    {
+        VRAM_E_CR = saved_e;
+    }
+    NDS_DIAG(gNdsParticleEnvVariantCommits++);
 }
 
 static void ndsRendererParticleEnvVariantDiscard(void)
@@ -7280,7 +7491,14 @@ static void ndsRendererParticleEnvVariantDiscard(void)
             sNdsParticleEnvVariants[slot].palette_name = 0;
 #endif
         }
+        sNdsParticleEnvVariants[slot].vram = NULL;
+        sNdsParticleEnvVariants[slot].banks = 0u;
+        sNdsParticleEnvVariants[slot].epoch = 0u;
+        sNdsParticleEnvVariants[slot].refused = 0u;
     }
+    /* A queued rewrite targets a palette that no longer exists. */
+    sNdsParticleEnvVariantPending = 0u;
+    sNdsParticleEnvVariantPendingBanks = 0u;
     for (slot = 0u; slot < NDS_PARTICLE_QUAD_ATLAS_SHEETS; slot++)
     {
         if (sNdsParticleBasePaletteName[slot] != 0)

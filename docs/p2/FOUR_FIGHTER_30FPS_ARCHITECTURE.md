@@ -1362,6 +1362,20 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   100 over (receipt `2026-10-05_stage-mult43`). Tried and reverted: making the
   DMA starts' bookkeeping stores first (paired +0.3K: the stall moves to the
   next bus access).
+- **10-05 KO pillar palettes rewritten at the swap VBlank.** The KO burst
+  carries up to 13 distinct ENVCOLOR keys a frame (44 over the burst), so the
+  eight-entry variant round robin rebaked 124 times in 19 frames, each a
+  `glColorTableEXT` on a live name (libnds free + alloc, banks F/G mapped to
+  LCD mid-frame, and a palette the on-screen frame still read): 357 of the
+  match's 394 mid-match GL uploads. Now 16 entries keep their palettes; a miss
+  takes the LRU entry the frame being built does not reference, bakes into its
+  staging copy, and `ndsRendererParticleEnvVariantCommit` copies the queued
+  palettes in at the first VBlank after the flush. Same ROM: P95 1,125,184 ->
+  1,118,528 (paired -7.9K), KO frames -47K to -146K, 101 -> 97 over, digest
+  identical; two-VBlank presents 1,857/1,961 (94.7%) (receipt
+  `2026-10-05_env-defer`, word `gNdsParticleEnvVariantDeferred`). This also
+  removes the commonest mid-frame VRAM remap, a candidate for the KO-burst
+  screen corruption in BUGS.md.
 
 ## 7. Found along the way
 

@@ -2111,6 +2111,7 @@ void ndsRendererHardwareSetNoOracle(u32 enabled);
 u32 ndsRendererHardwareNoOracleEnabled(void);
 u32 ndsRendererHardwareConsumeSubmittedFrame(void);
 u32 ndsRendererHardwareCommitPendingTextureRefreshes(void);
+void ndsRendererParticleEnvVariantCommit(void);
 void ndsRendererProfileSetOwner(NDSRendererProfileOwner owner);
 void ndsRendererProfileSetSourceProvenance(u32 owner_occurrence,
                                            u32 list_ordinal,

@@ -1,0 +1,46 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 2 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,864; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 65: ALL 5,311,040 -> 1,116,736, 4 bucket(s) corrected
+  frame 1190: ALL 5,871,680 -> 1,677,376, 4 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_env-defer/gate-n1.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=0146ae7bc33+dirty(35) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,864     1,676,672      1.50  1,149,702     1,111,616  4,421,568      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,480        10,624      2.37      5,650         2,368     28,096        0.4
+HUD         9,152        24,256      2.65     11,114         7,744    498,624        0.8
+SRC       366,144       566,272      1.55    375,922       133,504  1,307,840       32.8
+MISC      397,248       550,976      1.39    407,701       171,392  3,336,768       35.6
+OTHR      342,912       628,608      1.83    349,315        24,896    797,632       30.7
+WAIT      319,872       603,648      1.89    326,856         2,816    777,408       28.6
+WORK      807,680     1,118,528      1.38    818,907       336,320  4,089,920       72.3
+SHDT            0             0      0.00          0             0          0        0.0
+SWRM        1,344         1,408      1.05      1,325           832      3,328        0.1
+GCRA      360,768       560,832      1.55    370,548       129,024  1,302,400       32.3
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        369             0    662,784        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      397,184       550,848      1.39    407,595       171,328  3,336,640       35.6
+MFLS          128           128      1.00        106            64        448        0.0
+GPOL          597           643      1.08        550            29        675        0.1
+GVTX        1,439         1,569      1.09      1,346            96      1,657        0.1
+DGSA   2,248,335,339 4,065,321,507        2,176,252,338    408,983 4,294,514,885 201,307.9
+DGSB   2,239,784,444 4,083,387,236        2,189,176,867  1,230,618 4,293,852,712 200,542.3
+WORK-H    797,888     1,102,528      1.38    807,793       327,040  3,591,296       71.4
+
+named=800,387 (69.6% of ALL)  VBI 2:1857 3:96 4:7 5+:1 max:8 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_env-defer/gate-n1.json
