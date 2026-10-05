@@ -115,12 +115,32 @@ typedef struct NDSFtrLeanWorld
  * branch and no 64-bit negates -- identical results for every |x| < 2^62
  * (the compose's sums are products of s32 16.16 cells and s32 Q20 bases,
  * far inside that). */
+#ifndef NDS_FTR_LEAN_RELAXED
+#define NDS_FTR_LEAN_RELAXED 0
+#endif
+
+/* P2-2p8 (2026-10-04), NDS_FTR_LEAN_RELAXED: the kernel's outputs are list
+ * words only (the LOAD4x3 sites and a texgen root's world): render data, no
+ * gameplay reads them. Its exactness was the old compose's, kept so the lean
+ * oracle routes could grade it bit for bit; relaxed, the compose truncates
+ * (the bases are Q20, so the 2^-20 floor is far below the Q12 the hardware
+ * keeps), the Q20 -> Q12 output step rounds half up, and the angle index
+ * truncates the 48-bit product instead of reproducing the float multiply's
+ * rounding (an index one step off at a rounding edge: 1/4096 turn). ~20% of
+ * the kernel's instructions in the late-window profile (sz-lateprof05). */
+#if NDS_FTR_LEAN_RELAXED
+NDS_FTR_LEAN_KERNEL_INLINE s64 ndsFtrLeanRoundShiftS64(s64 value, u32 shift)
+{
+    return value >> shift;
+}
+#else
 NDS_FTR_LEAN_KERNEL_INLINE s64 ndsFtrLeanRoundShiftS64(s64 value, u32 shift)
 {
     s64 bias = ((s64)1 << (shift - 1u)) - (s64)(value < 0);
 
     return (value + bias) >> shift;
 }
+#endif
 
 /* ndsRendererAdapterFloatPow2ToS32 (renderer_adapter_matrix.c), verbatim. */
 NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanFloatPow2ToS32(f32 value, u32 scale_bits,
@@ -252,10 +272,41 @@ NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanSinFromIndex(s32 index)
 }
 #endif
 
+#if NDS_FTR_LEAN_RELAXED
+/* truncf(angle * 651.8986f) without the float multiply's rounding step: the
+ * multiplier is 0xa2f983 * 2^-14, so the product is mantissa * 0xa2f983 *
+ * 2^(exponent - 164), truncated. Same domain and failures as the exact form
+ * (nds_fighter_matrix_index.h). */
+NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanAngleIndex(f32 angle, s32 *out)
+{
+    union
+    {
+        f32 f;
+        u32 u;
+    } bits = { angle };
+    const u32 exponent = (bits.u >> 23) & 0xffu;
+    u32 magnitude;
+
+    if (exponent <= 116u)
+    {
+        *out = 0;
+        return TRUE;
+    }
+    if (exponent > 140u)
+    {
+        return FALSE;
+    }
+    magnitude = (u32)(((u64)((bits.u & 0x7fffffu) | 0x800000u) *
+                       0xa2f983u) >> (164u - exponent));
+    *out = ((bits.u & 0x80000000u) != 0u) ? -(s32)magnitude : (s32)magnitude;
+    return TRUE;
+}
+#else
 NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanAngleIndex(f32 angle, s32 *out)
 {
     return ndsFighterMatrixAngleToIndexExact(angle, out);
 }
+#endif
 
 /* The TraRotRpy / TraRotRpyRSca cells, unscaled when `scaled` is 0 (the
  * scales are then ignored). Returns FALSE where the integer forms cannot
@@ -456,6 +507,25 @@ NDS_FTR_LEAN_KERNEL_INLINE u32 ndsFtrLeanFastLocal(const NDSFtrLeanJoint *joint,
 /* ndsRendererAdapterSourceRoundShiftS64(v, 8) for an s32 v, which is also
  * ndsRendererRoundShiftS32Signed(v, 8) (TFX): round half away from zero in
  * the 32-bit magnitude domain, exact for every s32 including INT_MIN. */
+#if NDS_FTR_LEAN_RELAXED
+/* Half up. Inputs are Q20 bases and Q12 translations, far from INT_MAX. */
+NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanRoundShift8S32(s32 value)
+{
+    return (value + 0x80) >> 8;
+}
+
+/* The world translation's Q20 -> Q12 step, half up. */
+NDS_FTR_LEAN_KERNEL_INLINE s64 ndsFtrLeanOutShift8S64(s64 value)
+{
+    return (value + 0x80) >> 8;
+}
+
+/* A site's row 3 (a clamped Q12 translation, which may sit at INT_MAX). */
+NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanSiteShift8S32(s32 value)
+{
+    return (s32)(((s64)value + 0x80) >> 8);
+}
+#else
 NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanRoundShift8S32(s32 value)
 {
     u32 bits = (u32)value;
@@ -464,6 +534,17 @@ NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanRoundShift8S32(s32 value)
 
     return ((bits & 0x80000000u) != 0u) ? -(s32)rounded : (s32)rounded;
 }
+
+NDS_FTR_LEAN_KERNEL_INLINE s64 ndsFtrLeanOutShift8S64(s64 value)
+{
+    return ndsFtrLeanRoundShiftS64(value, 8u);
+}
+
+NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanSiteShift8S32(s32 value)
+{
+    return ndsFtrLeanRoundShift8S32(value);
+}
+#endif
 
 s32 NDS_FTR_LEAN_KERNEL_CODE
 ndsFtrLeanKernelCompose(const NDSFtrLeanJoint *joints, u32 joint_count,
@@ -710,7 +791,7 @@ ndsFtrLeanKernelCompose(const NDSFtrLeanJoint *joints, u32 joint_count,
             }
             for (col = 0u; col < 3u; col++)
             {
-                s64 value = ndsFtrLeanRoundShiftS64(out->translation[col], 8u);
+                s64 value = ndsFtrLeanOutShift8S64(out->translation[col]);
 
                 if ((value < (s64)(-2147483647 - 1)) ||
                     (value > (s64)2147483647))
@@ -771,9 +852,9 @@ ndsFtrLeanKernelCompose(const NDSFtrLeanJoint *joints, u32 joint_count,
                     dst[2] = (u32)basis[row][2];
                     dst += 3;
                 }
-                dst[0] = (u32)ndsFtrLeanRoundShift8S32(translation[0]);
-                dst[1] = (u32)ndsFtrLeanRoundShift8S32(translation[1]);
-                dst[2] = (u32)ndsFtrLeanRoundShift8S32(translation[2]);
+                dst[0] = (u32)ndsFtrLeanSiteShift8S32(translation[0]);
+                dst[1] = (u32)ndsFtrLeanSiteShift8S32(translation[1]);
+                dst[2] = (u32)ndsFtrLeanSiteShift8S32(translation[2]);
             }
         }
 #if NDS_FTR_LEAN_KTIME

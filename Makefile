@@ -230,6 +230,12 @@ NDS_P2_COMPACT_GROUND_MAPS ?= \
 # (gNdsFtrLeanSlow bit 8, gNdsFtrLean.kernel_part_ticks). Lab (tick-HUD)
 # builds only, own build dir -- forced to 0 below for every other target.
 NDS_FTR_LEAN_KTIME ?= 0
+# P2-2p8 (2026-10-04, owner ruling D13 class: render precision only): 1 lets
+# the lean fighter kernel truncate where it reproduced the old compose's
+# round-half-away-from-zero steps and the source's float-rounded angle index
+# (src/nds/nds_ftr_lean_kernel.c). Sub-LSB vertex differences, no gameplay
+# input. 0 restores the bit-exact kernel the lean oracle routes (2/3) grade.
+NDS_FTR_LEAN_RELAXED ?= 1
 NDS_RENDERER_M2_DETAILED_LEDGER ?= 0
 NDS_RENDERER_M3_PHASE0_PROFILE ?= 0
 # Lab: per-binding stage motion census (renderer_adapter_stage.c); pins
@@ -7065,6 +7071,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_IF_GAMESTATUS_COMPACT $(NDS_IF_GAMESTATUS_COMPACT)'; \
 		echo '#define NDS_P2_COMPACT_GROUND_MAPS $(NDS_P2_COMPACT_GROUND_MAPS)'; \
 		echo '#define NDS_FTR_LEAN_KTIME $(NDS_FTR_LEAN_KTIME)'; \
+		echo '#define NDS_FTR_LEAN_RELAXED $(NDS_FTR_LEAN_RELAXED)'; \
 		echo '#define NDS_RENDERER_M2_DETAILED_LEDGER $(NDS_RENDERER_M2_DETAILED_LEDGER)'; \
 		echo '#define NDS_RENDERER_M3_PHASE0_PROFILE $(NDS_RENDERER_M3_PHASE0_PROFILE)'; \
 		echo '#define NDS_LAB_STAGE_BINDING_CENSUS $(NDS_LAB_STAGE_BINDING_CENSUS)'; \

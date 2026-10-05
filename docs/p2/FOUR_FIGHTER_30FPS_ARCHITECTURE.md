@@ -1224,6 +1224,22 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   fixed-point fighter-part chain (D13) needs residency to pay: the decomp's
   DObj TRS are floats, so a fixed answer still converts them at entry (slice
   52 measured the producer swap at 1.001).
+- **10-04 quiet dynamic stage bindings (D12c class, render only).** A dynamic
+  stage binding whose world did not rebuild for eight validations is checked
+  one frame in four (`gNdsStageDynStride`; bindings a yakumono DObj names stay
+  every frame): gate 855,744/1,192,064, 169 over, 1,778/1,961 in two VBlanks,
+  digest identical, captures pixel-identical (`71a93c22d59`, receipt
+  `2026-10-04_stage-dyn-stride`). A spans-on breakdown of that ROM
+  (`artifacts/performance/2026-10-04_breakdown`): the P90-95 band over the
+  median is SRC +185K, MISC +77K (camera remainder +22K, weapons +18K,
+  particles +16K, items +12K, effects +9K), FTR +18K, STG +2K.
+- **10-04 lean fighter kernel at render precision.** The kernel's outputs are
+  list words only, so it no longer reproduces the old compose's
+  round-half-away steps or the float-rounded angle index
+  (`NDS_FTR_LEAN_RELAXED`, default 1; 0 is the exact kernel the lab oracle
+  routes grade): gate 850,176/1,184,960, 160 over, 1,788/1,961 in two
+  VBlanks, paired median -6.7K, digest identical; captures differ by edge
+  pixels only (receipt `2026-10-04_lean-relaxed`).
 
 ## 7. Found along the way
 
