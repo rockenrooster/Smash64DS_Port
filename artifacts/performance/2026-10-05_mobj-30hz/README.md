@@ -29,3 +29,19 @@ Replay digest identical on all nine stages (`a8-g*.csv` against
 +2.6K, Dream Land -1.0K, Saffron -0.2K, Mushroom Kingdom +1.7K): layout drift
 between the two lab images. Same-ROM arms: `a8m0-g*.csv` (word 0) against
 `a8-g*.csv` (word 1).
+
+## Lab sweep, same ROM (`build-lab-sweepall8`, word 0 `a8m0-g*` -> word 1 `a8-g*`)
+
+| stage | P50 | P95 | > 1.12M | paired median |
+|---|---|---|---|---:|
+| Castle | 960,640 -> 956,992 | 1,286,464 -> 1,282,944 | 305 -> 295 | -2,752 |
+| Sector Z | 1,029,824 -> 1,026,880 | 1,396,480 -> 1,389,184 | 606 -> 586 | -3,456 |
+| Jungle | 1,003,712 -> 1,003,008 | 1,410,048 -> 1,403,968 | 537 -> 524 | -2,304 |
+| Zebes | 984,512 -> 975,168 | 1,287,808 -> 1,275,136 | 352 -> 316 | -8,960 |
+| Hyrule | 851,968 -> 850,624 | 1,101,824 -> 1,096,704 | 80 -> 77 | -1,792 |
+| Yoshi's Island | 1,042,688 -> 1,036,544 | 1,382,656 -> 1,376,704 | 597 -> 584 | -3,968 |
+| Dream Land | 895,488 -> 889,472 | 1,225,984 -> 1,215,936 | 198 -> 193 | -4,992 |
+| Saffron | 1,022,144 -> 1,015,744 | 1,371,776 -> 1,369,280 | 516 -> 498 | -4,608 |
+| Mushroom Kingdom | 1,024,704 -> 1,019,776 | 1,316,608 -> 1,308,416 | 473 -> 449 | -4,608 |
+
+Replay digest identical on every stage in both arms.

@@ -3804,6 +3804,20 @@ static sb32 ndsParticleSetCurrentCamera(Vec3f *right, Vec3f *up)
  * their script-local origin. Reuse the source matrix builder and its
  * Ready/Finished cache contract, then scale/mirror the camera-facing axes by
  * the transformed local X/Y magnitudes. */
+#define NDS_PARTICLE_XF_SCALE_SLOTS 16u
+typedef struct NDSParticleXfScale
+{
+    const LBTransform *xf;
+    u32 transform_id;
+    f32 scale_x;
+    f32 scale_y;
+} NDSParticleXfScale;
+static NDSParticleXfScale sNdsParticleXfScale[NDS_PARTICLE_XF_SCALE_SLOTS];
+/* Bumped with dLBParticleCurrentTransformID, which is a u8 and repeats every
+ * 256 passes. */
+static u32 sNdsParticleDrawPass = 1u;
+volatile u32 gNdsParticleXfScaleCache __attribute__((used, section(".data"))) = 1u;
+
 static void ndsParticleTransformForDraw(LBParticle *pc,
                                         const Vec3f *camera_right,
                                         const Vec3f *camera_up,
@@ -3879,15 +3893,39 @@ static void ndsParticleTransformForDraw(LBParticle *pc,
     }
 #endif
     {
-        f32 scale_x = sqrtf(SQUARE(xf->affine[0][0]) +
+        /* The transform's two axis magnitudes (and their diagonal-sign
+         * mirrors) are the same for every particle of this transform in this
+         * pass -- its affine is built once a pass above -- so a burst paid
+         * two sqrtf and nine float products a particle for one answer. Kept
+         * per transform for the pass, exactly the values computed below.
+         * Same-ROM A/B word gNdsParticleXfScaleCache (0 = per particle). */
+        NDSParticleXfScale *memo =
+            &sNdsParticleXfScale[((uintptr_t)xf >> 4) &
+                                 (NDS_PARTICLE_XF_SCALE_SLOTS - 1u)];
+        f32 scale_x;
+        f32 scale_y;
+
+        if ((gNdsParticleXfScaleCache != 0u) && (memo->xf == xf) &&
+            (memo->transform_id == sNdsParticleDrawPass))
+        {
+            scale_x = memo->scale_x;
+            scale_y = memo->scale_y;
+        }
+        else
+        {
+            scale_x = sqrtf(SQUARE(xf->affine[0][0]) +
                             SQUARE(xf->affine[0][1]) +
                             SQUARE(xf->affine[0][2]));
-        f32 scale_y = sqrtf(SQUARE(xf->affine[1][0]) +
+            scale_y = sqrtf(SQUARE(xf->affine[1][0]) +
                             SQUARE(xf->affine[1][1]) +
                             SQUARE(xf->affine[1][2]));
-
-        if (xf->affine[0][0] < 0.0F) { scale_x = -scale_x; }
-        if (xf->affine[1][1] < 0.0F) { scale_y = -scale_y; }
+            if (xf->affine[0][0] < 0.0F) { scale_x = -scale_x; }
+            if (xf->affine[1][1] < 0.0F) { scale_y = -scale_y; }
+            memo->xf = xf;
+            memo->transform_id = sNdsParticleDrawPass;
+            memo->scale_x = scale_x;
+            memo->scale_y = scale_y;
+        }
         if (view_space != FALSE)
         {
             quad_right->x = scale_x;
@@ -4531,6 +4569,7 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
 #endif
 
     dLBParticleCurrentTransformID++;
+    sNdsParticleDrawPass++;
 
     for (link = 0u; link < ARRAY_COUNT(sLBParticleStructsAllocLinks); link++)
     {

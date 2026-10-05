@@ -6659,6 +6659,10 @@ volatile u32 gNdsRendererFoxGunDrawCount;
 volatile u32 gNdsRendererFoxGunTriangleCount;
 #endif
 
+/* Bumped by every writer of the particle sheet, variant and binding tables
+ * (see gNdsParticleLookupMemo). */
+static u32 sNdsParticleMaterialGen = 1u;
+
 /* Sheets already uploaded when a later one fails are direct scene-owned GL
  * names. Reclaim those names here so a partial prepare cannot leak texture or
  * palette VRAM for the rest of the scene. */
@@ -6666,6 +6670,7 @@ static void ndsRendererParticleAtlasReleaseSheets(void)
 {
     u32 sheet;
 
+    sNdsParticleMaterialGen++;
     for (sheet = 0u; sheet < NDS_PARTICLE_QUAD_ATLAS_SHEETS; sheet++)
     {
         if (sNdsRendererParticleAtlasName[sheet] != 0)
@@ -7011,6 +7016,19 @@ typedef struct NDSParticleEnvVariant
 static NDSParticleEnvVariant
     sNdsParticleEnvVariants[NDS_PARTICLE_ENV_VARIANT_COUNT];
 static u32 sNdsParticleEnvVariantNext;
+/* P2-2p8 (2026-10-05): a burst's particles share one sheet, prim and env, and
+ * each quad searched the sheet names and the variant table twice (the variant
+ * for its colours, then the packet binding for that variant) to find the
+ * answer the previous quad found. Both lookups are pure reads of the sheet,
+ * variant and binding tables; every writer of those tables bumps this
+ * generation, and a one-entry memo of each lookup holds only while it is
+ * unchanged. Same-ROM A/B word gNdsParticleLookupMemo (0 = search). */
+volatile u32 gNdsParticleLookupMemo __attribute__((used, section(".data"))) = 1u;
+static u32 sNdsParticleEnvMemoGen;
+static u32 sNdsParticleEnvMemoAtlas;
+static u32 sNdsParticleEnvMemoPrim;
+static u32 sNdsParticleEnvMemoEnv;
+static u32 sNdsParticleEnvMemoName;
 /* Palette-only names holding each sheet's ORIGINAL palette, created the first
  * time that sheet bakes a variant. They exist because glAssignColorTable
  * copies the palette of the NAMED texture onto the BOUND one, so assigning a
@@ -7095,6 +7113,8 @@ static u32 ndsRendererParticleEnvVariant(u32 atlas_name, u32 prim_bgr555,
             return (u32)sNdsParticleEnvVariants[slot].name;
         }
     }
+    /* A miss rewrites the tables below (bake, base palette, failures). */
+    sNdsParticleMaterialGen++;
     /* 5-to-8 expansion keeps the top five bits identical to the source
      * channels, which is all ndsRendererHardwareBlendPrimEnvTexel0 reads, so
      * rebuilding the word from BGR555 is exact rather than lossy. */
@@ -7222,6 +7242,7 @@ static u32 ndsRendererParticleEnvVariant(u32 atlas_name, u32 prim_bgr555,
     sNdsParticleEnvVariants[slot].sheet = sheet;
     sNdsParticleEnvVariants[slot].prim = prim_key;
     sNdsParticleEnvVariants[slot].env = env_key;
+    sNdsParticleMaterialGen++;
     gNdsParticleEnvVariantBakeCount++;
     return (u32)sNdsParticleEnvVariants[slot].name;
 }
@@ -7230,6 +7251,7 @@ static void ndsRendererParticleEnvVariantDiscard(void)
 {
     u32 slot;
 
+    sNdsParticleMaterialGen++;
     for (slot = 0u; slot < NDS_PARTICLE_ENV_VARIANT_COUNT; slot++)
     {
         if (sNdsParticleEnvVariants[slot].valid != 0u)
@@ -7292,6 +7314,7 @@ s32 ndsRendererHardwarePrepareParticleAtlas(void)
 #endif
         return TRUE;
     }
+    sNdsParticleMaterialGen++;
     gNdsRendererParticleAtlasPrepareCount++;
     /* ONE SHEET AT A TIME against the scratch. The sheet size is fixed at the
      * 8,192-byte allocation that has never been refused and the SHEET COUNT is
@@ -8107,6 +8130,10 @@ static s32 ndsRendererSubmitParticleQuadPacket(
  * The batch is opened lazily on the first quad and closed by
  * ndsRendererEndParticleQuads, so the whole particle pass is ONE glBegin and
  * ONE texture bind however many particles it carries. */
+static u32 sNdsParticleBasisValid;
+static u32 sNdsParticleBasisBits[2];
+static s32 sNdsParticleBasisQ13[2];
+
 s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
                                   u32 color, u8 alpha,
                                   u32 envcolor, u32 particle_flags,
@@ -8143,12 +8170,41 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
     }
     if (sNdsRendererParticleViewSpace != FALSE)
     {
-        if ((ndsRendererParticleFloatToFixed(
-                 right->x, NDS_RENDERER_PARTICLE_BASIS_SHIFT, &right_q13[0]) == FALSE) ||
-            (ndsRendererParticleFloatToFixed(
-                 up->y, NDS_RENDERER_PARTICLE_BASIS_SHIFT, &up_q13[1]) == FALSE) ||
-            (ndsRendererParticleTransformCenter(
-                 center_q8, NDS_RENDERER_PARTICLE_COORD_SHIFT) == FALSE))
+        /* A burst's quads share their two view-space axis lengths: the last
+         * conversion is kept on its source bits (gNdsParticleLookupMemo). */
+        union
+        {
+            f32 f;
+            u32 u;
+        } rx = { right->x }, uy = { up->y };
+
+        if ((gNdsParticleLookupMemo != 0u) && (sNdsParticleBasisValid != 0u) &&
+            (rx.u == sNdsParticleBasisBits[0]) &&
+            (uy.u == sNdsParticleBasisBits[1]))
+        {
+            right_q13[0] = sNdsParticleBasisQ13[0];
+            up_q13[1] = sNdsParticleBasisQ13[1];
+        }
+        else if ((ndsRendererParticleFloatToFixed(
+                      right->x, NDS_RENDERER_PARTICLE_BASIS_SHIFT,
+                      &right_q13[0]) == FALSE) ||
+                 (ndsRendererParticleFloatToFixed(
+                      up->y, NDS_RENDERER_PARTICLE_BASIS_SHIFT,
+                      &up_q13[1]) == FALSE))
+        {
+            sNdsParticleBasisValid = 0u;
+            return FALSE;
+        }
+        else
+        {
+            sNdsParticleBasisBits[0] = rx.u;
+            sNdsParticleBasisBits[1] = uy.u;
+            sNdsParticleBasisQ13[0] = right_q13[0];
+            sNdsParticleBasisQ13[1] = up_q13[1];
+            sNdsParticleBasisValid = 1u;
+        }
+        if (ndsRendererParticleTransformCenter(
+                center_q8, NDS_RENDERER_PARTICLE_COORD_SHIFT) == FALSE)
         {
             return FALSE;
         }
@@ -8241,8 +8297,27 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
     env_palette_name = 0u;
     if ((particle_flags & NDS_RENDERER_PARTICLE_QUAD_ENVCOLOR) != 0u)
     {
-        env_palette_name = ndsRendererParticleEnvVariant(
-            atlas_name, color, envcolor);
+        const u32 prim_key = color & 0x7FFFu;
+        const u32 env_key = envcolor & 0xFFFFFF00u;
+
+        if ((gNdsParticleLookupMemo != 0u) &&
+            (sNdsParticleEnvMemoGen == sNdsParticleMaterialGen) &&
+            (sNdsParticleEnvMemoAtlas == atlas_name) &&
+            (sNdsParticleEnvMemoPrim == prim_key) &&
+            (sNdsParticleEnvMemoEnv == env_key))
+        {
+            env_palette_name = sNdsParticleEnvMemoName;
+        }
+        else
+        {
+            env_palette_name = ndsRendererParticleEnvVariant(
+                atlas_name, color, envcolor);
+            sNdsParticleEnvMemoGen = sNdsParticleMaterialGen;
+            sNdsParticleEnvMemoAtlas = atlas_name;
+            sNdsParticleEnvMemoPrim = prim_key;
+            sNdsParticleEnvMemoEnv = env_key;
+            sNdsParticleEnvMemoName = env_palette_name;
+        }
         if (env_palette_name == 0u)
         {
             gNdsParticleEnvVariantFallbackCount++;
@@ -8992,16 +9067,31 @@ ndsRendererAppendWhispyPacketScale(u32 scale_shift)
     return TRUE;
 }
 
+/* The sheet path's last answer (see gNdsParticleLookupMemo). */
+static u32 sNdsParticleBindMemoGen;
+static u32 sNdsParticleBindMemoTexture;
+static u32 sNdsParticleBindMemoEnv;
+static NDSRendererWhispyNativeBinding sNdsParticleBindMemo;
+
 static sb32 ndsRendererParticlePacketBindingFor(
     u32 texture_name, u32 env_palette_name,
     NDSRendererWhispyNativeBinding *out)
 {
-    u32 sheet = ndsRendererParticleSheetForName(texture_name);
+    u32 sheet;
 
     if (out == NULL)
     {
         return FALSE;
     }
+    if ((gNdsParticleLookupMemo != 0u) &&
+        (sNdsParticleBindMemoGen == sNdsParticleMaterialGen) &&
+        (sNdsParticleBindMemoTexture == texture_name) &&
+        (sNdsParticleBindMemoEnv == env_palette_name))
+    {
+        *out = sNdsParticleBindMemo;
+        return TRUE;
+    }
+    sheet = ndsRendererParticleSheetForName(texture_name);
     if (sheet < NDS_PARTICLE_QUAD_ATLAS_SHEETS)
     {
         u32 slot;
@@ -9013,25 +9103,32 @@ static sb32 ndsRendererParticlePacketBindingFor(
             return FALSE;
         }
         *out = sNdsRendererParticleAtlasBinding[sheet];
-        if (env_palette_name == 0u)
+        if (env_palette_name != 0u)
         {
-            return TRUE;
-        }
-        for (slot = 0u; slot < NDS_PARTICLE_ENV_VARIANT_COUNT; slot++)
-        {
-            if ((sNdsParticleEnvVariants[slot].valid != FALSE) &&
-                ((u32)sNdsParticleEnvVariants[slot].name ==
-                 env_palette_name) &&
-                (sNdsParticleEnvVariants[slot].sheet == sheet))
+            for (slot = 0u; slot < NDS_PARTICLE_ENV_VARIANT_COUNT; slot++)
             {
-                out->palette_format =
-                    sNdsParticleEnvVariants[slot].palette_format;
-                out->palette_name =
-                    sNdsParticleEnvVariants[slot].palette_name;
-                return TRUE;
+                if ((sNdsParticleEnvVariants[slot].valid != FALSE) &&
+                    ((u32)sNdsParticleEnvVariants[slot].name ==
+                     env_palette_name) &&
+                    (sNdsParticleEnvVariants[slot].sheet == sheet))
+                {
+                    out->palette_format =
+                        sNdsParticleEnvVariants[slot].palette_format;
+                    out->palette_name =
+                        sNdsParticleEnvVariants[slot].palette_name;
+                    break;
+                }
+            }
+            if (slot == NDS_PARTICLE_ENV_VARIANT_COUNT)
+            {
+                return FALSE;
             }
         }
-        return FALSE;
+        sNdsParticleBindMemo = *out;
+        sNdsParticleBindMemoTexture = texture_name;
+        sNdsParticleBindMemoEnv = env_palette_name;
+        sNdsParticleBindMemoGen = sNdsParticleMaterialGen;
+        return TRUE;
     }
 
     /* Hyrule and any later scene-native particle texture is still admitted to
