@@ -117,7 +117,10 @@ static int64_t __attribute__((target("arm"))) ndsAtanUnitQ30(int64_t t)
     den = NDS_ATAN_ONE_Q30 + ((t * (int64_t)index) >> 8);
     delta = ndsR2HwMathDivideFast(num << 30, den);
     d3 = (((delta * delta) >> 30) * delta) >> 30;
-    return (int64_t)sNdsAtanQ30[index] + delta - (d3 / 3);
+    /* The math unit truncates as C does: the same quotient without
+     * __aeabi_ldivmod. */
+    return (int64_t)sNdsAtanQ30[index] + delta -
+           ndsR2HwMathDivideFast(d3, 3);
 }
 
 /* atan(|x|) at Q30 from x's float bits (the sign bit is ignored). */
@@ -167,7 +170,8 @@ f32 syUtilsArcTan(f32 div)
                                     30u);
 }
 
-f32 syUtilsArcTan2(f32 y, f32 x)
+/* ARM state (2026-10-06): Thumb has no CLZ (__clzdi2 calls). */
+f32 __attribute__((target("arm"))) syUtilsArcTan2(f32 y, f32 x)
 {
     const u32 ybits = ndsUtilsBits(y);
     const u32 xbits = ndsUtilsBits(x);

@@ -50,8 +50,10 @@ static int32_t __attribute__((noinline, target("arm"))) ndsComQ12(f32 value)
 /* r units, squared, at Q24. */
 #define NDS_COM_RANGE_SQ_Q24(r) ((uint64_t)((r) * 4096) * (uint64_t)((r) * 4096))
 
-/* ftcomputer.c:3716 */
-sb32 ftComputerCheckFindTarget(FTStruct *this_fp)
+/* ftcomputer.c:3716. ARM state (2026-10-06): Thumb has no CLZ (__clzdi2
+ * calls). */
+sb32 __attribute__((target("arm")))
+ftComputerCheckFindTarget(FTStruct *this_fp)
 {
     FTComputer *com = &this_fp->computer;
     FTStruct *other_fp;

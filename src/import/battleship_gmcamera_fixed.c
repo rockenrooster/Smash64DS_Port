@@ -19,6 +19,7 @@
 #include <stdint.h>
 
 #include <nds/nds_r2_collision_mtx.h>
+#include <nds/nds_r2_hwmath_unit.h>
 
 extern f32 dGMCameraPlayerZoomRanges[];
 void gmCameraSetBoundsPosition(Vec3f *pos);
@@ -102,8 +103,9 @@ static int32_t ndsCamAtYFactorQ16(int32_t dist_q)
         return 1 << 15;
     }
     /* (dist - 1000) / 1000, Q16. */
-    t_q16 = (int32_t)(((int64_t)(dist_q - (1000 * NDS_CAM_ONE_Q)) << NDS_CAM_ZQ) /
-                      (1000 * NDS_CAM_ONE_Q));
+    t_q16 = (int32_t)ndsR2HwMathDivideFast(
+        (int64_t)(dist_q - (1000 * NDS_CAM_ONE_Q)) << NDS_CAM_ZQ,
+        1000 * NDS_CAM_ONE_Q);
     return (1 << 15) - (int32_t)(((int64_t)t_q16 * k_q16) >> NDS_CAM_ZQ);
 }
 
