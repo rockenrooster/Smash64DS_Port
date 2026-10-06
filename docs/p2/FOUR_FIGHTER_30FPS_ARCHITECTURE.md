@@ -1569,6 +1569,19 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   that match reads P95 1,087,616. Particle centres in Q8 cost +2-3K (64-bit
   products, an extra submit layer) and were reverted. Receipt
   `2026-10-05_cpu-detect-fixed`.
+- **10-05 night: path arc length in fixed point; the float kernel and its
+  tables deleted.** syInterpGetFracFrame's Bezier/Catrom arm (Sector Z's
+  Arwing, Samus's rolls, the Board the Platforms boards) keeps the source's
+  bisection and Simpson integrals in integers (`include/nds/nds_interp_fixed.h`:
+  Q22 frames, a Q30 Horner, the math unit's sqrt pipelined behind the next
+  sample, one int64 unit, the final divide rounded to nearest even); 99.7% of
+  calls are bit-identical to the float source and every digest is unchanged.
+  The bit-exact soft-float kernel, its oracle and capture, the 103 KB Arwing
+  flight table and the 64 KB scene-heap result table are deleted. Sector Z
+  paired P95 -26.9K (1,188,032), gate -2.1K (1,086,016). Over-gate Sector Z
+  frames are now texture upload, lean re-materialisation and status-change
+  setup; soft float is ~15K cycles of their premium. Receipt
+  `2026-10-05_interp-fixed`.
 
 ## 7. Found along the way
 

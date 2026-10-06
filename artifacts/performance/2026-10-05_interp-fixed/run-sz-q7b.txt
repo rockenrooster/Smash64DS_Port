@@ -1,0 +1,45 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,864; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 1724: ALL 5,311,168 -> 1,116,864, 5 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_interp-fixed/sz-q7b.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=c38bdd7a9f4+dirty(40) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,864     1,677,184      1.50  1,187,081     1,112,064 16,737,536      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,352         9,792      2.25      5,399         2,368     23,680        0.4
+HUD         8,832        24,192      2.74     10,672         7,808    317,952        0.8
+SRC       438,592       627,456      1.43    445,834       153,216  1,051,584       39.3
+MISC      412,096       577,408      1.40    428,681       151,360 15,872,000       36.9
+OTHR      281,408       563,520      2.00    296,496        21,888    795,712       25.2
+WAIT      260,480       541,376      2.08    274,755         2,368    776,320       23.3
+WORK      890,368     1,209,280      1.36    908,610       337,088 16,401,792       79.7
+SHDT      806,911     1,104,127      1.37    826,986       295,615 16,040,127       72.2
+SWRM        1,280         1,344      1.05      1,284           896      3,264        0.1
+GCRA      433,280       622,144      1.44    440,563       148,864  1,046,080       38.8
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        578             0  1,047,104        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      411,968       577,344      1.40    428,577       151,232 15,871,872       36.9
+MFLS          128           128      1.00        104            64        128        0.0
+GPOL          477           567      1.19        463            47        604        0.0
+GVTX        1,073         1,334      1.24      1,060           157      1,442        0.1
+DGSA   2,151,297,068 4,051,513,036        2,133,514,594    676,991 4,286,422,441 192,619.4
+DGSB   2,119,168,438 4,104,172,124   1.94 2,135,049,252  2,524,074 4,280,928,178 189,742.7
+WORK-H    880,448     1,196,416      1.36    897,938       329,024 16,083,840       78.8
+
+named=890,586 (75.0% of ALL)  VBI 2:1755 3:193 4:11 5+:2 max:34 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_interp-fixed/sz-q7b.json

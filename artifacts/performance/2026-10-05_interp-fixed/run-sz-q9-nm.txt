@@ -1,0 +1,45 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,800; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 893: ALL 5,310,912 -> 1,116,608, 4 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_interp-fixed/sz-q9-nm.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=c38bdd7a9f4+dirty(40) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,800     1,677,056      1.50  1,184,046     1,112,576 16,976,192      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,416         9,920      2.25      5,458         2,368     25,856        0.4
+HUD         8,768        24,384      2.78     10,769         7,936    564,224        0.8
+SRC       436,608       621,568      1.42    443,212       152,512  1,048,640       39.1
+MISC      410,752       573,248      1.40    427,907       151,168 15,865,664       36.8
+OTHR      281,344       559,872      1.99    296,700        21,504    795,712       25.2
+WAIT      259,712       536,512      2.07    274,829         2,176    776,320       23.3
+WORK      887,744     1,194,944      1.35    905,483       336,896 16,639,360       79.5
+SHDT      804,799     1,093,631      1.36    823,765       295,487 16,030,783       72.1
+SWRM        1,344         1,408      1.05      1,336           896      3,456        0.1
+GCRA      431,424       616,384      1.43    437,953       148,096  1,043,392       38.6
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        574             0  1,039,680        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      410,688       573,120      1.40    427,800       151,040 15,865,536       36.8
+MFLS          128           128      1.00        107            64        128        0.0
+GPOL          477           567      1.19        463            47        604        0.0
+GVTX        1,073         1,334      1.24      1,060           157      1,442        0.1
+DGSA   2,151,297,068 4,051,513,036        2,133,514,594    676,991 4,286,422,441 192,630.5
+DGSB   2,119,168,438 4,104,172,124   1.94 2,135,049,252  2,524,074 4,280,928,178 189,753.6
+WORK-H    878,528     1,184,832      1.35    894,714       328,576 16,075,136       78.7
+
+named=887,346 (74.9% of ALL)  VBI 2:1766 3:182 4:11 5+:2 max:35 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_interp-fixed/sz-q9-nm.json

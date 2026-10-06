@@ -147,13 +147,12 @@ void ndsBaseGRCommonSetupInitAll(void);
  *   DObj renderer rather than a Sector-specific native packet; the law 8
  *   packet for every stage is one pipeline job (P2-4n1).
  */
-void ndsInterpArwingFracLoad(void);
 u32 ndsRendererEntryEffectPacketArenaWords(void);
 void ndsRendererEntryEffectPacketArenaSet(u32 *arena, u32 words);
 
 /* The checked allocator halts on an overflow, and the match still allocates
  * after stage setup; the packet arena is taken only when this much stays free
- * after it (the flight table's margin). */
+ * after it. */
 #define NDS_GR_SECTOR_PACKET_HEAP_MARGIN 0x18000u
 
 /* The Arwing's draw packets (nds_renderer_native_common.c): one arena in this
@@ -176,9 +175,6 @@ static void ndsGRSectorEntryPacketArenaInit(void)
 void ndsGRSectorSetupInitAll(void)
 {
     ndsBaseGRCommonSetupInitAll();
-    /* The Arwing's flight table (battleship_sys_interp.c): its results for the
-     * eight authored patterns, into this scene's heap. */
-    ndsInterpArwingFracLoad();
     ndsGRSectorEntryPacketArenaInit();
 }
 
