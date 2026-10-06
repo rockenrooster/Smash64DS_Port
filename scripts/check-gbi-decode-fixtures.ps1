@@ -2925,9 +2925,8 @@ Assert-True ($gcRunAllVerifier.Contains('hwftr=')) 'gcRunAll verifier hardware f
 $movement = Get-Content (Join-Path $root 'src/port/reloc_backend_movement.c') -Raw
 Assert-True ($movement.Contains('ndsStageGCDrawAllLoopSubmitHardwareFrame')) 'Stage gcDrawAll hardware replay hook is missing.'
 Assert-True ($openingBackend -match '(?s)native_stage_handled =\s*ndsRendererAdapterNdlDispatchEffect\(.*?if \(native_stage_handled == FALSE\)\s*\{\s*native_stage_handled =\s*ndsStageGCDrawAllLoopRecordCapturedDisplay\(.*?if \(native_stage_handled == FALSE\).*?current_gobj->proc_display\(current_gobj\);') 'M1 NDL no longer dispatches in source order before capture and then falls through to the source display proc only when both native seams decline.'
-# NDL defaults on since the 09-26 Phase 2 particle/dust batch (NDL default on,
-# particle selector retired); the .data word remains the one-ROM A/B switch.
-Assert-True ($rendererAdapter -match '__attribute__\(\(section\("\.data"\)\)\)\s+volatile\s+u32\s+gNdsP2Ndl\s*=\s*1u;' -and
+# NDL is the only route: its .data A/B word was deleted on 2026-10-06.
+Assert-True ((-not $rendererAdapter.Contains('gNdsP2Ndl')) -and
     $rendererAdapter.Contains('ndsGcGetGObjLifetimeSerial(gobj)') -and
     $rendererAdapter.Contains('ndsP2NdlBindRecord(gobj, serial, record);') -and
     $rendererAdapter.Contains('(walk != DOBJ_PARENT_NULL)') -and
@@ -2939,7 +2938,7 @@ Assert-True ($rendererAdapter -match '__attribute__\(\(section\("\.data"\)\)\)\s
     $rendererAdapter.Contains('NDS_P2_NDL_KIND_IT_LINK_BOMB') -and
     $rendererAdapter.Contains('gNdsNdlDispatch[kind]++') -and
     $rendererAdapter.Contains('gNdsNdlFallback[kind]++') -and
-    $rendererAdapter.Contains('gNdsNdlProcsSkipped++')) 'M1 NDL lost its explicit .data A/B word, lifetime-keyed binding, direct effect owners, or engagement accounting.'
+    $rendererAdapter.Contains('gNdsNdlProcsSkipped++')) 'M1 NDL lost its lifetime-keyed binding, direct effect owners, or engagement accounting, or regained an A/B word.'
 Assert-True ($objmanImport.Contains('u32 ndsGcGetGObjLifetimeSerial(const GObj *gobj)') -and
     $objmanImport.Contains('sNdsGcNdlSerialSlots[NDS_GC_NDL_SERIAL_SLOTS]') -and
     $objmanImport.Contains('sNdsGcNdlNextSerial') -and
@@ -2953,10 +2952,11 @@ Assert-True ($objmanImport.Contains('u32 ndsGcGetGObjLifetimeSerial(const GObj *
     $objmanImport.Contains('gNdsGcNdlLifetimeReuseOldSerial = old_serial;') -and
     $objmanImport.Contains('gNdsGcNdlLifetimeReuseNewSerial = new_serial;') -and
     $objmanImport.Contains('sNdsGcNdlSerialSlots[slot].serial = new_serial;')) 'Phase-2 NDL no longer has an O(1) allocation-lifetime witness for effect/weapon/item/ground GObjs and recycled-address serial changes.'
-Assert-True ($scVSBattleImport -match '(?s)if \(gNdsP2Ndl != 0u\)\s*\{\s*\(void\)ndsRendererHardwarePrepareDamageSlashTextures\(\);\s*\}' -and
+Assert-True ($scVSBattleImport.Contains('(void)ndsRendererHardwarePrepareDamageSlashTextures();') -and
     $damageSlashNative.Contains('NDS_NATIVE_DAMAGE_SLASH_TEXTURE_COUNT') -and
-    $damageSlashNative -match '(?s)if \(gNdsP2Ndl == 0u\)\s*\{\s*return TRUE;\s*\}.*?for \(slot = 0u; slot < NDS_NATIVE_DAMAGE_SLASH_TEXTURE_COUNT; slot\+\+\)' -and
-    $damageSlashNative -match '(?s)if \(gNdsP2Ndl != 0u\).*?sNdsDamageSlashTextureNames\[slot\].*?Route 0 is the exact pre-M1 control.*?ndsRendererHardwareFencedGlTexImage2D') 'M1 DamageSlash no longer keeps the 13-frame resident arm and exact pre-M1 two-name hot-upload control in one ROM.'
+    $damageSlashNative -match '(?s)for \(slot = 0u; slot < NDS_NATIVE_DAMAGE_SLASH_TEXTURE_COUNT; slot\+\+\)' -and
+    (-not $damageSlashNative.Contains('gNdsP2Ndl')) -and
+    (-not $damageSlashNative.Contains('ndsRendererHardwareFencedGlTexImage2D'))) 'M1 DamageSlash no longer draws from its 13 resident frame names alone.'
 Assert-True ($rendererHeader.Contains('NDS_RENDERER_PROFILE_OWNER_EFFECT') -and
     $task49Differ.Contains('[ValidateRange(0,31)][int]$Owner = 0') -and
     $task49Differ.Contains('[string[]]$BootSetGlobals = @()') -and

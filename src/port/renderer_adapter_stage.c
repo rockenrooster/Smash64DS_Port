@@ -2506,7 +2506,6 @@ typedef struct NDSNdlRecord
     u8 pad[3];
 } NDSNdlRecord;
 
-__attribute__((section(".data"))) volatile u32 gNdsP2Ndl = 1u;
 volatile u32 gNdsNdlDispatch[NDS_P2_NDL_KIND_COUNT];
 volatile u32 gNdsNdlFallback[NDS_P2_NDL_KIND_COUNT];
 volatile u32 gNdsNdlProcsSkipped;
@@ -3257,7 +3256,7 @@ s32 ndsRendererAdapterNdlDispatchEffect(void *camera_gobj_ptr,
     GObj *camera_gobj = camera_gobj_ptr;
     GObj *gobj = display_gobj_ptr;
 
-    if ((gNdsP2Ndl == 0u) || (gNdsSceneManagerCurrIsBattle == 0u) ||
+    if ((gNdsSceneManagerCurrIsBattle == 0u) ||
         (camera_gobj == NULL) || (gobj == NULL) ||
         ((gobj->id != nGCCommonKindEffect) &&
          (gobj->id != nGCCommonKindGround) &&

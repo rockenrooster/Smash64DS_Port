@@ -16,9 +16,9 @@ param(
     # The registry gate never passes it, so the default stays the gate build
     # running exactly as shipped. Every poked name is reported with the run.
     [string[]]$SetGlobals = @(),
-    # Creation-time A/B words such as gNdsP2Ndl must land before the battle
-    # prepares resident textures, so forward them to the sampler's main-break
-    # poke instead of waiting for the first presented-frame marker.
+    # Creation-time A/B words must land before the battle prepares resident
+    # textures, so forward them to the sampler's main-break poke instead of
+    # waiting for the first presented-frame marker.
     [string[]]$BootSetGlobals = @(),
     # Calibrated from the first crash-free four-CPU source match: source
     # identity/clock are read exactly at presented frame 1, while the tick-HUD
@@ -310,7 +310,6 @@ $memoryGlobals = @(
     # DamageSlash); the first post-M1 efground batch appends Lakitu/Bronto in
     # slots 2/3. Array elements are legal sampler expressions; its ELF
     # preflight validates their base symbol.
-    'gNdsP2Ndl',
     'gNdsNdlDispatch[0]',
     'gNdsNdlDispatch[1]',
     'gNdsNdlDispatch[2]',
@@ -665,8 +664,8 @@ $leanRoute = 1
 $leanAttempts = $extra['gNdsFtrLean.attempts']
 $leanDraws = $extra['gNdsFtrLean.draws']
 $leanDeclines = if ($leanAttempts -gt $leanDraws) { $leanAttempts - $leanDraws } else { 0 }
-$ndlEnabled = ([uint64]$extra['gNdsP2Ndl'] -ne 0)
-if ($ndlEnabled) {
+# The NDL route word is gone (2026-10-06): NDL is the only route.
+if ($true) {
     $ndlDispatch = $extra['gNdsNdlDispatch[0]'] + $extra['gNdsNdlDispatch[1]'] +
         $extra['gNdsNdlDispatch[2]'] + $extra['gNdsNdlDispatch[3]'] +
         $extra['gNdsNdlDispatch[4]'] + $extra['gNdsNdlDispatch[5]'] +
@@ -1038,7 +1037,7 @@ $memory = [PSCustomObject]@{
     damageSlashTextureUpdateCount = $extra['gNdsDamageSlashTextureUpdateCount']
     damageSlashTextureBindCount = $extra['gNdsDamageSlashTextureBindCount']
     damageSlashBadImageCount = $extra['gNdsDamageSlashBadImageCount']
-    p2Ndl = $extra['gNdsP2Ndl']
+    p2Ndl = 1
     ndlImpactWaveDispatch = $extra['gNdsNdlDispatch[0]']
     ndlDamageSlashDispatch = $extra['gNdsNdlDispatch[1]']
     ndlEfLakituDispatch = $extra['gNdsNdlDispatch[2]']

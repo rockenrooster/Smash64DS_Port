@@ -430,7 +430,6 @@ extern volatile u32 gNdsEffectRendererDObjFieldMask;
 #define NDS_P2_NDL_KIND_WP_BLASTER       7u
 #define NDS_P2_NDL_KIND_IT_LINK_BOMB      8u
 #define NDS_P2_NDL_KIND_COUNT            9u
-extern volatile u32 gNdsP2Ndl;
 extern volatile u32 gNdsNdlDispatch[NDS_P2_NDL_KIND_COUNT];
 extern volatile u32 gNdsNdlFallback[NDS_P2_NDL_KIND_COUNT];
 extern volatile u32 gNdsNdlProcsSkipped;

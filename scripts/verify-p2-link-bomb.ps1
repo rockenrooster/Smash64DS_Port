@@ -111,7 +111,6 @@ try {
         'set confirm off',
         'set remotetimeout 20',
         ("target remote 127.0.0.1:{0}" -f $ctx.GdbPort),
-        'set var gNdsP2Ndl = 1',
         'set $link_stop = 0',
         'tbreak ndsLinkBombTourProofStop',
         'commands',

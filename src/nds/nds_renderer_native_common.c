@@ -1080,10 +1080,6 @@ static s32 ndsRendererHardwareBindImpactWaveTexture(
 }
 #endif
 
-#if NDS_RENDERER_HW_TRIANGLES && NDS_R2_IMPACT_WAVE_NATIVE
-extern volatile u32 gNdsP2Ndl;
-#endif
-
 s32 ndsRendererSubmitNativeImpactWave(
     const NDSRendererInputVertex *vertices, u32 vertex_count,
     const u8 *triangle_indices, u32 triangle_count,
@@ -1109,9 +1105,6 @@ s32 ndsRendererSubmitNativeImpactWave(
     u32 use_texture;
     s32 texture_offset;
     u32 matrix_generation;
-    v16 projected_x[18];
-    v16 projected_y[18];
-    v16 projected_z[18];
     u32 i;
 
     /* This is deliberately a closed owner, not a general mesh API. Keeping the
@@ -1137,52 +1130,20 @@ s32 ndsRendererSubmitNativeImpactWave(
 
     ndsRendererInitTraversalState(
         &state, config, stats, &vertex_storage, NULL, 0u);
-    if (((gNdsP2Ndl == 0u) && (state.matrix_valid == 0u)) ||
-        ((gNdsP2Ndl != 0u) &&
-         ((config->initial_projection == NULL) ||
-          (config->initial_modelview == NULL))))
+    if ((config->initial_projection == NULL) ||
+        (config->initial_modelview == NULL))
     {
         return FALSE;
     }
 
-    /* Route 0 is the exact pre-M1 control: CPU-transform/project the immutable
-     * ring once and emit cached projected corners.  Route 1 keeps only the
-     * source vertices and lets GX perform world/view/projection for the fixed
-     * body.  Both paths need real traversal backing for input/color/UV state. */
+    /* Only the source vertices are kept: GX performs world/view/projection
+     * for the fixed body. The traversal still backs input/color/UV state. */
     for (i = 0u; i < vertex_count; i++)
     {
         u32 mask = 1u << i;
 
         state.input_vertices[i] = vertices[i];
         state.input_vertex_valid_mask |= mask;
-        if (gNdsP2Ndl == 0u)
-        {
-            NDSRendererClipVertex20p12 *out = &state.vertices[i];
-
-            state.current_transform_vertex_mask |= mask;
-            ndsRendererTransformVertex20p12(&state.matrix, &vertices[i], out);
-            if (ndsRendererHardwareClipZWInsideNearPlane(out->z, out->w) == FALSE)
-            {
-                return FALSE;
-            }
-            projected_x[i] = ndsRendererHardwareProjectToV16(
-                (s64)out->x * NDS_RENDERER_HW_PROJECTED_VERTEX, out->w);
-            projected_y[i] = ndsRendererHardwareProjectToV16(
-                (s64)out->y * NDS_RENDERER_HW_PROJECTED_VERTEX, out->w);
-            projected_z[i] = ndsRendererHardwareSourceDepthToV16(
-                (s64)out->z * NDS_RENDERER_HW_PROJECTED_VERTEX, out->w);
-            state.vertex_valid_mask |= mask;
-            stats->matrix_transform_count++;
-            stats->transformed_vertex_count++;
-            if (stats->transformed_vertex_count == 1u)
-            {
-                stats->first_transformed_x = out->x;
-                stats->first_transformed_y = out->y;
-                stats->first_transformed_z = out->z;
-                stats->first_transformed_w = out->w;
-            }
-            ndsRendererProfileRecordCPUTransform();
-        }
         ndsRendererProfileRecordSourceVertexLoad();
     }
     if (stats->vertex_count < vertex_count)
@@ -1190,14 +1151,9 @@ s32 ndsRendererSubmitNativeImpactWave(
         stats->vertex_count = vertex_count;
     }
 
-    /* Route 0 remains the exact pre-M1 control. Route 1's camera-loop
-     * interception may fall back to the source proc only before a GX write, so
-     * only that arm defers the hardware side-effect boundary to the admitted
-     * resident texture bind below. */
-    if (gNdsP2Ndl == 0u)
-    {
-        ndsRendererHardwareEndBatch();
-    }
+    /* The camera-loop interception may fall back to the source proc only
+     * before a GX write, so the hardware side-effect boundary waits for the
+     * admitted resident texture bind below. */
     if (stats->first_opcode == 0u)
     {
         stats->first_opcode = source_setup[0].words.w0 >> 24;
@@ -1250,14 +1206,7 @@ s32 ndsRendererSubmitNativeImpactWave(
     ndsRendererRecordSetImage(
         stats, source_setup[13].words.w0, source_setup[13].words.w1);
 
-    if (gNdsP2Ndl != 0u)
-    {
-        ndsRendererNativeApplyMaterialPreflight(material, stats, &state);
-    }
-    else
-    {
-        ndsRendererNativeApplyMaterial(material, stats, &state);
-    }
+    ndsRendererNativeApplyMaterialPreflight(material, stats, &state);
 
     NDS_IMPACT_INVALIDATE();
     NDS_IMPACT_HASH(16u);
@@ -1362,92 +1311,46 @@ s32 ndsRendererSubmitNativeImpactWave(
 
     if (poly_alpha != 0u)
     {
-        if (gNdsP2Ndl != 0u)
+        matrix_generation = ndsRendererNextMatrixGeneration();
+        ndsRendererLoadHardwareSplitMatrices(
+            config->initial_projection, config->initial_modelview,
+            matrix_generation);
+        ndsRendererHardwareBeginTriangleBatch(
+            stats, use_texture, state.texture_prepare_name,
+            state.texture_prepare_poly_fmt,
+            sNdsRendererHardwareMatrixMode, matrix_generation);
+
+        for (i = 0u; i < triangle_count; i++)
         {
-            matrix_generation = ndsRendererNextMatrixGeneration();
-            ndsRendererLoadHardwareSplitMatrices(
-                config->initial_projection, config->initial_modelview,
-                matrix_generation);
-            ndsRendererHardwareBeginTriangleBatch(
-                stats, use_texture, state.texture_prepare_name,
-                state.texture_prepare_poly_fmt,
-                sNdsRendererHardwareMatrixMode, matrix_generation);
+            const u8 *tri = &triangle_indices[i * 3u];
+            u32 corner;
 
-            for (i = 0u; i < triangle_count; i++)
+            for (corner = 0u; corner < 3u; corner++)
             {
-                const u8 *tri = &triangle_indices[i * 3u];
-                u32 corner;
+                u32 index = (u32)tri[corner];
+                const NDSRendererInputVertex *v = &vertices[index];
+                v16 out_x = ndsRendererHardwareVertexCoord(v->x, TRUE);
+                v16 out_y = ndsRendererHardwareVertexCoord(v->y, TRUE);
+                v16 out_z = ndsRendererHardwareVertexCoord(v->z, TRUE);
 
-                for (corner = 0u; corner < 3u; corner++)
+                glColor(state.prepared_vertex_colors[index]);
+                if (use_texture != FALSE)
                 {
-                    u32 index = (u32)tri[corner];
-                    const NDSRendererInputVertex *v = &vertices[index];
-                    v16 out_x = ndsRendererHardwareVertexCoord(v->x, TRUE);
-                    v16 out_y = ndsRendererHardwareVertexCoord(v->y, TRUE);
-                    v16 out_z = ndsRendererHardwareVertexCoord(v->z, TRUE);
-
-                    glColor(state.prepared_vertex_colors[index]);
-                    if (use_texture != FALSE)
-                    {
-                        glTexCoord2t16(state.prepared_texcoord_s[index],
-                                      state.prepared_texcoord_t[index]);
-                    }
-                    ndsRendererProfileHWVertexRange(out_x, out_y, out_z);
-                    glVertex3v16(out_x, out_y, out_z);
+                    glTexCoord2t16(state.prepared_texcoord_s[index],
+                                  state.prepared_texcoord_t[index]);
                 }
-                sNdsRendererHardwareSubmitted = TRUE;
-#if NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE
-                sNdsRendererBenchmarkTriangleCount++;
-#endif
-                stats->triangle_count++;
-                stats->hardware_triangle_count++;
-                stats->hardware_vertex_count += 3u;
-                stats->hardware_zbuffer_triangle_count++;
-                ndsRendererProfileRecordHardwareTriangle();
+                ndsRendererProfileHWVertexRange(out_x, out_y, out_z);
+                glVertex3v16(out_x, out_y, out_z);
             }
-        }
-        else
-        {
-            ndsRendererHardwareEnterProjectedForeground();
-            ndsRendererLoadHardwareMatrices(NULL, FALSE);
-            ndsRendererHardwareBeginTriangleBatch(
-                stats, use_texture, state.texture_prepare_name,
-                state.texture_prepare_poly_fmt,
-                sNdsRendererHardwareMatrixMode,
-                sNdsRendererHardwareMatrixGeneration);
-
-            for (i = 0u; i < triangle_count; i++)
-            {
-                const u8 *tri = &triangle_indices[i * 3u];
-                u32 corner;
-
-                for (corner = 0u; corner < 3u; corner++)
-                {
-                    u32 index = (u32)tri[corner];
-                    v16 out_z = projected_z[index];
-
-                    glColor(state.prepared_vertex_colors[index]);
-                    if (use_texture != FALSE)
-                    {
-                        glTexCoord2t16(state.prepared_texcoord_s[index],
-                                      state.prepared_texcoord_t[index]);
-                    }
-                    ndsRendererProfileHWVertexRange(
-                        projected_x[index], projected_y[index], out_z);
-                    glVertex3v16(projected_x[index], projected_y[index], out_z);
-                }
-                sNdsRendererHardwareSubmitted = TRUE;
+            sNdsRendererHardwareSubmitted = TRUE;
 #if NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE
-                sNdsRendererBenchmarkTriangleCount++;
+            sNdsRendererBenchmarkTriangleCount++;
 #endif
-                stats->triangle_count++;
-                stats->transformed_triangle_count++;
-                stats->hardware_triangle_count++;
-                stats->hardware_vertex_count += 3u;
-                stats->hardware_projected_depth_triangle_count++;
-                ndsRendererProfileRecordProjectedSubmit();
-                ndsRendererProfileRecordHardwareTriangle();
-            }
+            stats->triangle_count++;
+            stats->hardware_triangle_count++;
+            stats->hardware_vertex_count += 3u;
+            stats->hardware_zbuffer_triangle_count++;
+            ndsRendererProfileRecordHardwareTriangle();
         }
     }
     ndsRendererHardwareEndBatch();

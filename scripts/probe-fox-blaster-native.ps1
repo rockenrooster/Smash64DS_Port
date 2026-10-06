@@ -102,7 +102,6 @@ if (-not $Control) {
 }
 if ($P2Ndl) {
     $required += @(
-        'gNdsP2Ndl',
         'gNdsNdlDispatch',
         'gNdsNdlFallback',
         'gNdsNdlProcsSkipped',
@@ -156,7 +155,6 @@ try {
         'tbreak scVSBattleStartBattle',
         'continue',
         'set variable gNdsBattlePlayableFoxCpuEnabled = 1',
-        $(if ($P2Ndl) { 'set variable gNdsP2Ndl = 1' }),
         'tbreak battleship_wpFoxBlasterMakeWeapon',
         'continue',
         'set $blaster_spawn_frame = gNdsBattlePlayablePacingPresentedFrames',

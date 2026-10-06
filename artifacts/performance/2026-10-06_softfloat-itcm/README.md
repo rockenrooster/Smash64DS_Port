@@ -165,3 +165,15 @@ frame over 298 callers. Top: `ndsMPFCSegmentCrossesKernel` 5.5K,
 +16K), lean materialization (~+155K in 7 frames) and the pose engine
 (~+70K, every tail frame).
 
+## q42 (reverted): the floor/ceiling crossing kernel's rejects in integers
+
+`ndsMPFCSegmentCrossesNone` ahead of `ndsMPFCSegmentCrossesKernel`: the
+`sx == 0` and flat-segment tests from order keys, and the sloped segment's
+"current point not past the line" (`curr_height_scaled > -extent_epsilon`)
+from a 64-bit cross product of truncations with a proven error bound. Exact
+(digests identical), but slower: paired median gate -384, Castle +3,328,
+Sector Z +7,936. The bound only decides points more than ~8 units from the
+line (|s| x distance against ~3 x the summed extents), and the kernel's calls
+are dominated by fighters on or next to the surface, so nearly every call
+paid the integer test and then the float kernel. CSVs kept.
+

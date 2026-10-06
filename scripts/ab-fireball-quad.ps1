@@ -184,9 +184,6 @@ function Run-Arm {
             'tbreak scVSBattleStartBattle',
             'continue',
             'set gNdsBattlePlayableFoxCpuEnabled = 0',
-            $(if ($P2Ndl -and ($ArmName -eq 'quad')) {
-                'set gNdsP2Ndl = 1'
-            }),
             $throwLines,
             'printf "FIREBALL_FRAMES=%u,%u\n", $fb1, $fb2',
             # Both fireballs live and rolling: sample buckets from the ROM's own

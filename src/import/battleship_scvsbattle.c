@@ -200,12 +200,8 @@ void ndsBattlePrepareSceneTextures(void)
 #if NDS_RENDERER_HW_TRIANGLES
     /* M1: the 13 DamageSlash MaterialAnim frames are only 10,752 bytes in
      * PAL16.  Make them resident here so a hit frame performs a name bind and
-     * never replaces texture storage from inside gcDrawAll.  Route 0 is the
-     * same-ROM control and must retain the pre-M1 two-name update path. */
-    if (gNdsP2Ndl != 0u)
-    {
-        (void)ndsRendererHardwarePrepareDamageSlashTextures();
-    }
+     * never replaces texture storage from inside gcDrawAll. */
+    (void)ndsRendererHardwarePrepareDamageSlashTextures();
 #endif
 #if NDS_R2_REBIRTH_HALO_NATIVE && NDS_RENDERER_HW_TRIANGLES
     /* Five tiny AOT-native names (four PAL16, one A5I3) after every large

@@ -29,7 +29,6 @@ volatile u32 gNdsDamageSlashBadImageCount;
 extern volatile u32 gNdsRendererTextureScratchDamageSlashBytesHighWater;
 
 static u32 sNdsDamageSlashTextureNames[NDS_NATIVE_DAMAGE_SLASH_TEXTURE_COUNT];
-static u32 sNdsDamageSlashTextureLoadedSlot[2] = { 0xffffffffu, 0xffffffffu };
 static u32 sNdsDamageSlashTextureGeneration;
 
 #define NDS_DAMAGE_SLASH_MATERIAL_EFFECTS \
@@ -129,11 +128,6 @@ s32 ndsRendererHardwarePrepareDamageSlashTextures(void)
     NDSRendererConfig config;
     u32 slot;
 
-    if (gNdsP2Ndl == 0u)
-    {
-        return TRUE;
-    }
-
     /* Keep the retired hot-path diagnostics link-visible.  M1 requires these
      * to read exactly zero after scene preparation: any later non-zero value
      * would prove that per-hit upload/scratch work returned. */
@@ -191,101 +185,14 @@ static s32 ndsDamageSlashEnsureTexture(
     const u8 *asset_base, u32 asset_bytes, u32 child, u32 slot,
     const NDSRendererConfig *config)
 {
-    const u8 *shape;
-    u32 offset;
-    u32 source_bytes;
-    NDSDamageSlashTextureFill fill;
-    int size_x;
-    int size_y;
-    u32 upload_bytes;
-
+    (void)asset_bytes;
     if ((asset_base == NULL) || (config == NULL) || (child > 1u) ||
         (slot >= NDS_NATIVE_DAMAGE_SLASH_TEXTURE_COUNT))
     {
         return FALSE;
     }
-
-    if (gNdsP2Ndl != 0u)
-    {
-        return ((sNdsDamageSlashTextureGeneration == gNdsTaskmanHeapGeneration) &&
-                (sNdsDamageSlashTextureNames[slot] != 0u)) ? TRUE : FALSE;
-    }
-
-    /* Route 0 is the exact pre-M1 control.  It keeps one allocation per
-     * simultaneously drawable child and replaces that allocation's texels
-     * when CURRENT_IMAGE advances. */
-    if (sNdsDamageSlashTextureGeneration != gNdsTaskmanHeapGeneration)
-    {
-        memset(sNdsDamageSlashTextureNames, 0,
-               sizeof(sNdsDamageSlashTextureNames));
-        sNdsDamageSlashTextureLoadedSlot[0] = 0xffffffffu;
-        sNdsDamageSlashTextureLoadedSlot[1] = 0xffffffffu;
-        sNdsDamageSlashTextureGeneration = gNdsTaskmanHeapGeneration;
-    }
-    if (sNdsDamageSlashTextureLoadedSlot[child] == slot)
-    {
-        return TRUE;
-    }
-    shape = sNdsDamageSlashTextureShape[slot];
-    offset = sNdsDamageSlashTextureOffsets[slot];
-    source_bytes = ((u32)shape[0] * shape[1]) >> 1;
-    if ((offset > asset_bytes) || (source_bytes > asset_bytes - offset))
-    {
-        gNdsDamageSlashTexturePrepareFailCount++;
-        return FALSE;
-    }
-    fill.config = config;
-    fill.source = asset_base + offset;
-    fill.source_width = shape[0];
-    fill.source_height = shape[1];
-    fill.upload_width = shape[2];
-    fill.upload_height = shape[3];
-    fill.mirror_s = shape[4];
-
-    if (sNdsDamageSlashTextureNames[child] == 0u)
-    {
-        if (ndsRendererHardwarePrepareIFCommonPal16Atlas(
-                fill.upload_width, fill.upload_height,
-                sNdsDamageSlashPalette, ndsDamageSlashTextureFill, &fill,
-                &sNdsDamageSlashTextureNames[child]) == FALSE)
-        {
-            gNdsDamageSlashTexturePrepareFailCount++;
-            return FALSE;
-        }
-        gNdsDamageSlashTexturePrepareCount++;
-        sNdsDamageSlashTextureLoadedSlot[child] = slot;
-        return TRUE;
-    }
-
-    upload_bytes = ((u32)shape[2] * shape[3]) >> 1;
-    NDS_RENDERER_CAPACITY_HIGH_WATER(
-        gNdsRendererTextureScratchDamageSlashBytesHighWater, upload_bytes);
-    if ((upload_bytes > sizeof(sNdsRendererHardwareTextureScratch)) ||
-        (ndsDamageSlashTextureFill(
-             (u8 *)sNdsRendererHardwareTextureScratch, upload_bytes,
-             &fill) == FALSE) ||
-        (ndsRendererHardwareTextureSizeEnum(shape[2], &size_x) == FALSE) ||
-        (ndsRendererHardwareTextureSizeEnum(shape[3], &size_y) == FALSE))
-    {
-        gNdsDamageSlashTexturePrepareFailCount++;
-        return FALSE;
-    }
-    ndsRendererHardwareEndBatch();
-    ndsRendererHardwareBindTextureState((int)sNdsDamageSlashTextureNames[child]);
-    if (ndsRendererHardwareFencedGlTexImage2D(
-            GL_TEXTURE_2D, 0, GL_RGB16, size_x, size_y, 0,
-            TEXGEN_TEXCOORD | GL_TEXTURE_COLOR0_TRANSPARENT,
-            sNdsRendererHardwareTextureScratch) == 0)
-    {
-        gNdsDamageSlashTexturePrepareFailCount++;
-        return FALSE;
-    }
-    sNdsRendererHardwareBoundTextureName =
-        sNdsDamageSlashTextureNames[child];
-    sNdsRendererHardwareActiveTextureEntry = NULL;
-    sNdsDamageSlashTextureLoadedSlot[child] = slot;
-    gNdsDamageSlashTextureUpdateCount++;
-    return TRUE;
+    return ((sNdsDamageSlashTextureGeneration == gNdsTaskmanHeapGeneration) &&
+            (sNdsDamageSlashTextureNames[slot] != 0u)) ? TRUE : FALSE;
 }
 
 static s32 ndsDamageSlashTextureSlot(
@@ -340,9 +247,7 @@ static s32 ndsDamageSlashBindTexture(
     {
         return FALSE;
     }
-    name = (gNdsP2Ndl != 0u) ?
-        sNdsDamageSlashTextureNames[slot] :
-        sNdsDamageSlashTextureNames[child];
+    name = sNdsDamageSlashTextureNames[slot];
     if (name == 0u)
     {
         return FALSE;
@@ -410,10 +315,6 @@ sb32 ndsRendererPreflightNativeDamageSlash(
         return FALSE;
     }
 
-    if (gNdsP2Ndl == 0u)
-    {
-        return TRUE;
-    }
     if ((ndsDamageSlashTextureSlot(
              asset_base, asset_bytes, child,
              (const void *)(uintptr_t)material->current_image,
@@ -503,15 +404,8 @@ sb32 ndsRendererSubmitNativeDamageSlash(
     {
         ndsDamageSlashSetup1(stats, palette);
     }
-    if (gNdsP2Ndl != 0u)
-    {
-        /* Keep every route-1 rejection before the first GX mutation. */
-        ndsRendererNativeApplyMaterialPreflight(material, stats, &state);
-    }
-    else
-    {
-        ndsRendererNativeApplyMaterial(material, stats, &state);
-    }
+    /* Keep every rejection before the first GX mutation. */
+    ndsRendererNativeApplyMaterialPreflight(material, stats, &state);
     if (child == 0u)
     {
         ndsDamageSlashAfterMaterial0(stats);
@@ -555,27 +449,16 @@ sb32 ndsRendererSubmitNativeDamageSlash(
         gNdsDamageSlashSubmitStep = 5u;
         return FALSE;
     }
-    if (gNdsP2Ndl == 0u)
-    {
-        /* Route 0 is the exact pre-M1 control: fence/close before a possible
-         * glTexImage2D update, exactly as the old hot-upload owner did. */
-        NDS_FIGHTER_PACKET_DMA_WAIT();
-        ndsRendererHardwareEndBatch();
-    }
     if (ndsDamageSlashEnsureTexture(
             asset_base, asset_bytes, child, texture_slot, config) == FALSE)
     {
         gNdsDamageSlashSubmitStep = 6u;
         return FALSE;
     }
-    if (gNdsP2Ndl != 0u)
-    {
-        NDS_FIGHTER_PACKET_DMA_WAIT();
-    }
-    /* On route 1, ndsDamageSlashBindTexture ->
-     * ndsRendererHardwareBindTextureName closes any open batch itself. Delaying
-     * that bind until all route-1 checks have passed keeps FALSE a safe source
-     * fallback result. Route 0 already closed at its historical point above. */
+    NDS_FIGHTER_PACKET_DMA_WAIT();
+    /* ndsDamageSlashBindTexture -> ndsRendererHardwareBindTextureName closes
+     * any open batch itself. Delaying that bind until every check has passed
+     * keeps FALSE a safe source fallback result. */
     if (ndsDamageSlashBindTexture(child, texture_slot, stats, &state) == FALSE)
     {
         gNdsDamageSlashSubmitStep = 7u;

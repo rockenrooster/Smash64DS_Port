@@ -112,3 +112,23 @@ checkers of the retired gates (`check-`/`verify-mpprocess-private-import.ps1`,
 forwarding bridge are now unconditional. Measured with q41
 (`../2026-10-06_softfloat-itcm`): digests identical on all three configs.
 
+## Batch 5a (q43): the NDL route word `gNdsP2Ndl`
+
+`gNdsP2Ndl` (a `.data` A/B word, 1 since the 09-26 Phase 2 batch) and its
+route-0 arms: DamageSlash's pre-M1 two-name hot-upload control
+(`ndsDamageSlashEnsureTexture` now only checks the 13 resident names; the
+per-child loaded-slot table is gone), ImpactWave's CPU-projected corner path
+(GX transforms the fixed body, the only path left), the route checks in the
+NDL dispatch, the GObj lifetime witness and the VS battle's resident-texture
+prepare. Scripts that poked or read the word (`verify-p2-four-fighter-stress`,
+`verify-p2-link-bomb`, `probe-fox-blaster-native`, `ab-fireball-quad`,
+`check-gbi-decode-fixtures`) no longer do.
+
+| config | digest diff | P50 | P95 | over | paired median |
+|---|---|---|---|---|---|
+| gate | 0 | 765,888 -> 764,672 | 1,050,368 -> 1,043,584 | 60 -> 57 | -2,048 |
+| g0 | 0 | 802,816 -> 799,424 | 1,101,376 -> 1,093,696 | 78 -> 77 | -2,624 |
+| sz | 0 | 847,424 -> 848,576 | 1,154,752 -> 1,159,552 | 120 -> 120 | +64 |
+
+(Baseline q41, `../2026-10-06_softfloat-itcm`.)
+

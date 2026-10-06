@@ -142,9 +142,7 @@ static void ndsGcRecordNdlLifetime(GObj *gobj)
     u32 new_serial;
 
 #if NDS_RENDERER_HW_TRIANGLES
-    extern volatile u32 gNdsP2Ndl;
-
-    if ((gNdsP2Ndl == 0u) || (gobj == NULL))
+    if (gobj == NULL)
     {
         return;
     }
