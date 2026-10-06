@@ -1377,11 +1377,16 @@ restart:
 rows:
     sNdsRendererAdapterMaterialRowClaimMask = 0u;
     key[0] = 2166136261u;
+    /* ndsRendererAdapterMaterialIdentity's fold, taken here from the same
+     * hashes the row keys need (same order: roots, then each chain). */
+    ident = 2166136261u;
     for (i = 0u; i < count; i++)
     {
         u32 row = ndsRendererAdapterMaterialRow(inst->material_dobjs[i], i);
         NDSRendererNativeMaterial *rows =
             sNdsRendererAdapterNativeOwnerMaterials[row];
+        NDSRendererAdapterMaterialKey *keys =
+            sNdsRendererAdapterNativeOwnerMaterialKeys[row];
         const u32 *row_words = (const u32 *)(const void *)rows;
         const MObj *mobj;
         u32 n = 0u;
@@ -1392,11 +1397,35 @@ rows:
                  inst->material_dobjs[i]->mobj : NULL;
              mobj != NULL; mobj = mobj->next)
         {
-            if ((n >= NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX) ||
-                (ndsRendererAdapterBuildNativeMaterialSnapshot(
-                     (MObj *)mobj, &rows[n], FALSE, NULL, NULL) == FALSE))
+            u32 hash;
+
+            if (n >= NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX)
             {
                 return nNDSFtrLeanDeclineMaterial;
+            }
+            hash = ndsRendererAdapterMaterialAnimHash(mobj);
+            ident = (ident ^ hash) * 16777619u;
+            ident ^= (u32)(uintptr_t)mobj;
+            /* The row's key (2026-10-06), as the old path keeps it: a row
+             * entry built from this MObj with these complete inputs this heap
+             * generation holds the snapshot a build would make, bit for bit
+             * (the build is a pure function of the hashed inputs; this one
+             * does not advance the texture ids, so the hash is the MObj's
+             * before and after). Lean events rebuilt every material of every
+             * root without it. */
+            if ((keys[n].mobj != mobj) ||
+                (keys[n].heap_generation != gNdsTaskmanHeapGeneration) ||
+                (keys[n].hash != hash))
+            {
+                if (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                        (MObj *)mobj, &rows[n], FALSE, NULL, NULL) == FALSE)
+                {
+                    keys[n].mobj = NULL;
+                    return nNDSFtrLeanDeclineMaterial;
+                }
+                keys[n].mobj = mobj;
+                keys[n].heap_generation = gNdsTaskmanHeapGeneration;
+                keys[n].hash = hash;
             }
             n++;
         }
@@ -1437,7 +1466,6 @@ rows:
     NDS_FTR_LEAN_EVENT_PART(2u, ev_mark);
     ndsFtrLeanRefreshInputs(inst, color_modulate);
     ndsFtrLeanView(&view, inst, color_modulate, ws->production_roots);
-    ident = ndsRendererAdapterMaterialIdentity(inst->material_dobjs, count);
     rr_key = ndsFtrLeanRerecordKey(ident, key, ws->production_roots, count);
     NDS_FTR_LEAN_EVENT_PART(3u, ev_mark);
     code = (force_new != FALSE) ? NDS_FTR_LEAN_ENTRY_NONE :

@@ -204,10 +204,17 @@ static void ndsMPCollisionClearTopologySnapshot(void)
 static MPGeometryData *sNdsMPWallMissReadyGeometry;
 static u32 sNdsMPWallMissReadyGen;
 
+/* The geometry and ground data ndsMPCollisionEnsureLineGroups last found
+ * complete (groups built, topology built or refused); every topology reset
+ * clears it. Saves its pointer checks on the ~40 asks a frame. */
+static MPGeometryData *sNdsMPEnsureFastGeometry;
+static const void *sNdsMPEnsureFastGround;
+
 void ndsMPCollisionInvalidateTopology(void)
 {
     u32 kind;
 
+    sNdsMPEnsureFastGeometry = NULL;
     sNdsMPWallMissReadyGeometry = NULL;
     sNdsMPLineGroupGeometry = NULL;
     sNdsMPTopologyGeometry = NULL;
@@ -237,6 +244,11 @@ void ndsMPCollisionEnsureLineGroups(void)
     u32 i;
     u32 kind;
 
+    if ((geometry != NULL) && (geometry == sNdsMPEnsureFastGeometry) &&
+        ((const void *)gMPCollisionGroundData == sNdsMPEnsureFastGround))
+    {
+        return;
+    }
     if (geometry != sNdsMPLineGroupGeometry)
     {
         ndsMPCollisionInvalidateTopology();
@@ -254,6 +266,13 @@ void ndsMPCollisionEnsureLineGroups(void)
             (sNdsMPTopologyFailedGeometry != geometry))
         {
             (void)ndsMPBuildTopologyCache();
+        }
+        if (((geometry == sNdsMPTopologyGeometry) &&
+             (gMPCollisionVertexInfo != NULL)) ||
+            (sNdsMPTopologyFailedGeometry == geometry))
+        {
+            sNdsMPEnsureFastGeometry = geometry;
+            sNdsMPEnsureFastGround = gMPCollisionGroundData;
         }
         return;
     }
@@ -1942,6 +1961,15 @@ static u32 sNdsMPAiFloorKey[NDS_MP_AI_FLOOR_MEMO_SLOTS][2];
 static u8 sNdsMPAiFloorAnswer[NDS_MP_AI_FLOOR_MEMO_SLOTS];
 static u32 sNdsMPAiFloorCount;
 static u32 sNdsMPAiFloorNext;
+/* The yakumono ids of the groups that own floor lines, per geometry
+ * (2026-10-06): only their DObjs reach the answer -- the floor loop asks
+ * mpCollisionGetFCCommonFloor about floor lines, and a line's yakumono is its
+ * group's -- so the snapshot reads only them, and no longer re-reads every
+ * group's line-info halfwords on every ask (Peach's Castle: ~14K cycles a
+ * frame of snapshot). */
+static MPGeometryData *sNdsMPAiFloorIdsGeometry;
+static u32 sNdsMPAiFloorIdsCount;
+static u8 sNdsMPAiFloorIds[NDS_MP_AI_FLOOR_YAKUMONO_MAX];
 
 static inline u32 ndsMPAiFloorBits(f32 value)
 {
@@ -1951,40 +1979,62 @@ static inline u32 ndsMPAiFloorBits(f32 value)
     return bits;
 }
 
+/* Fill sNdsMPAiFloorIds for `geometry`; FALSE when it has more groups than
+ * the snapshot holds (no memo for this stage). */
+static sb32 __attribute__((noinline, cold))
+ndsMPAiFloorIdsFor(MPGeometryData *geometry)
+{
+    const u32 count = ndsMPGeometryYakumonoCount(geometry);
+    u32 n = 0u;
+    u32 i;
+
+    sNdsMPAiFloorIdsGeometry = NULL;
+    if (count > NDS_MP_AI_FLOOR_YAKUMONO_MAX)
+    {
+        return FALSE;
+    }
+    for (i = 0u; i < count; i++)
+    {
+        NDSMPO2RHalfwordView info = ndsMPLineInfoAt(geometry->line_info, i);
+
+        if (ndsMPLineInfoLineCount(info, nMPLineKindFloor) == 0u)
+        {
+            continue;
+        }
+        sNdsMPAiFloorIds[n++] = (u8)((ndsMPLineInfoYakumonoID(info) < 0xffu) ?
+            ndsMPLineInfoYakumonoID(info) : 0xffu);
+    }
+    sNdsMPAiFloorIdsCount = n;
+    sNdsMPAiFloorIdsGeometry = geometry;
+    return TRUE;
+}
+
 /* Refresh the yakumono snapshot; returns FALSE when it could not be taken
  * (the memo is then bypassed). Empties the memo on any change. */
 static sb32 __attribute__((noinline)) ndsMPAiFloorSnapshot(void)
 {
     MPGeometryData *geometry = gMPCollisionGeometry;
-    MPLineInfo *line_info;
     u32 count;
     u32 i;
     sb32 same;
 
     if ((geometry == NULL) || (geometry->line_info == NULL) ||
-        (gMPCollisionYakumonoDObjs == NULL))
+        (gMPCollisionYakumonoDObjs == NULL) ||
+        ((sNdsMPAiFloorIdsGeometry != geometry) &&
+         (ndsMPAiFloorIdsFor(geometry) == FALSE)))
     {
         sNdsMPAiFloorCount = 0u;
         sNdsMPAiFloorGeometry = NULL;
         return FALSE;
     }
-    line_info = geometry->line_info;
-    count = ndsMPGeometryYakumonoCount(geometry);
-    if (count > NDS_MP_AI_FLOOR_YAKUMONO_MAX)
-    {
-        /* More groups than the snapshot holds: no memo for this stage. */
-        sNdsMPAiFloorCount = 0u;
-        sNdsMPAiFloorGeometry = NULL;
-        return FALSE;
-    }
+    count = sNdsMPAiFloorIdsCount;
     same = ((sNdsMPAiFloorGeometry == geometry) &&
             (sNdsMPAiFloorYakumonoCount == count)) ? TRUE : FALSE;
     for (i = 0u; i < count; i++)
     {
         NDSMPAiFloorYakumono now;
         NDSMPAiFloorYakumono *was = &sNdsMPAiFloorYakumono[i];
-        u32 yakumono_id =
-            ndsMPLineInfoYakumonoID(ndsMPLineInfoAt(line_info, i));
+        u32 yakumono_id = sNdsMPAiFloorIds[i];
 
         now.dobj = (yakumono_id < NDS_MP_YAKUMONO_DOBJ_SLOTS) ?
             gMPCollisionYakumonoDObjs->dobjs[yakumono_id] : NULL;
@@ -2054,7 +2104,7 @@ sb32 func_ovl2_800F8FFC(Vec3f *position)
 
         if ((mpCollisionGetFCCommonFloor(floors->line_id[i], position,
                  &floor_dist, NULL, NULL) != FALSE) &&
-            (floor_dist < 0.001F))
+            NDS_FCMP_LT_C(floor_dist, 0.001F))
         {
             answer = TRUE;
             break;
@@ -6704,7 +6754,7 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
             u32 j_first;
             u32 j_last;
 
-            gNdsStageMPSweepFloorLoopLineSweepVisitCount++;
+            NDS_DIAG(gNdsStageMPSweepFloorLoopLineSweepVisitCount++);
             if ((vertex_count < 2u) || (vertex_count > 128u))
             {
                 NDS_DIAG(gNdsStageCollisionLoopBadVertexCount++);

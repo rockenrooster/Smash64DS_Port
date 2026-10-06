@@ -378,7 +378,7 @@ void ndsFighterDisplayContractSetLight(const Light *light, u32 slot)
     {
         sNdsFighterDisplayContract.light = *light;
         sNdsFighterDisplayContract.light_valid = TRUE;
-        gNdsFighterDisplayContractLightDirectionCount++;
+        NDS_DIAG(gNdsFighterDisplayContractLightDirectionCount++);
     }
 }
 
