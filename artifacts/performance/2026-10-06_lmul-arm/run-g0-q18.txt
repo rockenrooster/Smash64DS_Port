@@ -1,0 +1,46 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 2 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,864; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 172: ALL 5,311,168 -> 1,116,864, 5 bucket(s) corrected
+  frame 270: ALL 5,310,912 -> 1,116,608, 5 bucket(s) corrected
+Wrote artifacts/performance/2026-10-06_lmul-arm/g0-q18.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=15620bc44b1+dirty(36) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,864     1,677,056      1.50  1,171,481     1,111,616 10,764,224      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         5,056        10,304      2.04      5,681         2,304     26,368        0.5
+HUD         9,280        24,320      2.62     11,915         8,384    456,896        0.8
+SRC       435,200       660,416      1.52    444,314       148,544  1,060,224       39.0
+MISC      364,544       513,216      1.41    383,157       133,888  9,762,240       32.6
+OTHR      317,824       553,792      1.74    326,414        21,440    819,584       28.5
+WAIT      297,280       530,176      1.78    305,212         2,432    800,064       26.6
+WORK      834,688     1,190,592      1.43    862,215       313,024 10,426,944       74.7
+SHDT      745,023     1,091,839      1.47    776,059       270,719  9,925,247       66.7
+SWRM        1,344         1,408      1.05      1,326           832      3,328        0.1
+GCRA      429,824       654,784      1.52    438,909       143,744  1,054,976       38.5
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        578             0  1,035,456        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      364,416       513,088      1.41    383,021       133,760  9,762,112       32.6
+MFLS          128           192      1.50        135           128        192        0.0
+GPOL          496           557      1.12        473            68        605        0.0
+GVTX        1,131         1,285      1.14      1,095           214      1,424        0.1
+DGSA   2,111,017,074 4,069,956,070   1.93 2,126,091,786  4,383,315 4,293,901,612 189,012.9
+DGSB   2,115,964,441 4,116,377,028   1.95 2,147,507,286    406,719 4,294,683,778 189,455.9
+WORK-H    822,656     1,177,152      1.43    850,300       303,296  9,970,048       73.7
+
+named=845,067 (72.1% of ALL)  VBI 2:1803 3:142 4:13 5+:3 max:23 total:1961  slips=0
+Wrote artifacts/performance/2026-10-06_lmul-arm/g0-q18.json

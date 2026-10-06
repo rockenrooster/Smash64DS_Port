@@ -90,7 +90,9 @@ static inline u32 ndsUtilsBits(f32 value)
  * (2026-10-05, 2M random arguments a function): atan 6.2e-8 rad from the true
  * value against the source continued fraction's 1.7e-7; atan2 2.2e-7 against
  * 2.8e-7. */
-static int64_t ndsAtanUnitQ30(int64_t t)
+/* ARM state (2026-10-06): its 64-bit products were __aeabi_lmul calls in
+ * Thumb. */
+static int64_t __attribute__((target("arm"))) ndsAtanUnitQ30(int64_t t)
 {
     int64_t num;
     int64_t den;

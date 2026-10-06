@@ -15771,7 +15771,8 @@ void ndsRendererAdapterSubmitEffectDObjTree(void *dobj_ptr, u32 kind,
  * tree or another kind draws as before. */
 __attribute__((used)) volatile u32 gNdsItemPreCulled;
 
-static sb32 ndsRendererAdapterItemOffscreen(DObj *root, GObj *camera_gobj)
+static sb32 __attribute__((target("arm")))
+ndsRendererAdapterItemOffscreen(DObj *root, GObj *camera_gobj)
 {
     GObj *item_gobj;
     const ITStruct *ip;

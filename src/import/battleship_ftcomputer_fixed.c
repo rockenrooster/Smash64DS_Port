@@ -192,7 +192,9 @@ sb32 ftComputerCheckEvadeDistance(FTStruct *this_fp)
  * and giant scalings and the cliff-ledge widening are the source's float
  * code, and the cliff-catch walk reads them as floats. Every branch, write and
  * random draw is the source's, in its order. */
-sb32 ftComputerCheckDetectTarget(FTStruct *this_fp, f32 detect_range_base)
+/* ARM state (2026-10-06): its int64 branches called __aeabi_lmul in Thumb. */
+sb32 __attribute__((target("arm")))
+ftComputerCheckDetectTarget(FTStruct *this_fp, f32 detect_range_base)
 {
     // This was a wildddddddddd match...
     FTComputer *com = &this_fp->computer;

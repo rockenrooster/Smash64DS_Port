@@ -107,8 +107,10 @@ static int32_t ndsCamAtYFactorQ16(int32_t dist_q)
     return (1 << 15) - (int32_t)(((int64_t)t_q16 * k_q16) >> NDS_CAM_ZQ);
 }
 
-/* gmcamera.c:231 */
-void gmCameraUpdateInterests(Vec3f *vec, f32 *hz, f32 *vt)
+/* gmcamera.c:231. ARM state (2026-10-06): its 64-bit products were
+ * __aeabi_lmul calls in Thumb. */
+void __attribute__((target("arm")))
+gmCameraUpdateInterests(Vec3f *vec, f32 *hz, f32 *vt)
 {
     s32 players_num;
     s32 i;

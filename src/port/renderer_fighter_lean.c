@@ -476,8 +476,10 @@ void ndsFtrLeanNoteRebind(u32 player_slot)
  * campaign walks. */
 volatile u32 gNdsFtrLeanLockFail;
 
-static s32 ndsFtrLeanLockLocal(DObj *dobj, s32 *accum, s32 *cells,
-                               u32 *has_local)
+/* ARM state (2026-10-06): its 64-bit products were nine __aeabi_lmul calls
+ * a joint in Thumb (every Yoshi motion locks). */
+static s32 __attribute__((target("arm")))
+ndsFtrLeanLockLocal(DObj *dobj, s32 *accum, s32 *cells, u32 *has_local)
 {
     s32 inv_x, inv_y, inv_z;
     s32 vec_x, vec_y, vec_z;

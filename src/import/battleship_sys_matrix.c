@@ -96,9 +96,11 @@ void syMatrixF2L(Mtx44f *src, Mtx *dst)
 }
 
 /* matrix.c:1086 with `sx * 256` (a float multiply by 2^8 truncated into an
- * s32) taken from the bits; every other line is the source's. */
-void syMatrixTraRotRpyRSca(Mtx *m, f32 tx, f32 ty, f32 tz, f32 r, f32 p,
-                           f32 y, f32 sx, f32 sy, f32 sz)
+ * s32) taken from the bits; every other line is the source's. ARM state
+ * (2026-10-06): its 64-bit products were __aeabi_lmul calls in Thumb. */
+void __attribute__((target("arm")))
+syMatrixTraRotRpyRSca(Mtx *m, f32 tx, f32 ty, f32 tz, f32 r, f32 p,
+                      f32 y, f32 sx, f32 sy, f32 sz)
 {
     s32 sinr, sinp, siny;
     s32 cosr, cosp, cosy;
