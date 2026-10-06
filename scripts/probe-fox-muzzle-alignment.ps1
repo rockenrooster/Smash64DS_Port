@@ -194,7 +194,7 @@ try {
         'x/16dw &sNdsRendererAdapterCameraCache[0].projection',
         'printf "FOXALIGN FIGHTERCAM MODELVIEW\n"',
         'x/16dw &sNdsRendererAdapterCameraCache[0].modelview',
-        'printf "FOXALIGN PARTICLECACHE enabled=%u valid=%u key=0x%x hit=%u miss=%u loads=%u\n", gNdsParticleCameraCacheEnabled, sNdsParticleCameraValid, sNdsParticleCameraKey, gNdsParticleCameraCacheHitCount, gNdsParticleCameraCacheMissCount, gNdsParticleCameraLoads',
+        'printf "FOXALIGN PARTICLECACHE valid=%u key=0x%x hit=%u miss=%u loads=%u\n", sNdsParticleCameraValid, sNdsParticleCameraKey, gNdsParticleCameraCacheHitCount, gNdsParticleCameraCacheMissCount, gNdsParticleCameraLoads',
         'printf "FOXALIGN PARTICLECACHE PROJECTION\n"',
         'x/16dw &sNdsParticleCameraProjection',
         'printf "FOXALIGN PARTICLECACHE MODELVIEW\n"',

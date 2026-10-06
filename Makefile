@@ -189,13 +189,12 @@ NDS_TICK_HUD_SRC_SPLIT ?= 0
 # state, GObjs and top joints live there (include/nds/nds_arm9_wram.h).
 # 0 is the lab control (ARM7 on calico's ds7.ld, the pool on the heap).
 NDS_P2_ARM9_WRAM ?= 1
-# P2-2p8 Phase 1 slice 7: the lean fighter path is every image's default --
-# gNdsFtrLeanRoute 1 and gNdsFtrLeanAdmit 2 are initialisers
-# (include/nds/renderer_fighter_lean.h NDS_FTR_LEAN_ROUTE_BOOT /
+# P2-2p8 Phase 1 slice 7: the lean fighter path is the only fighter path and
+# gNdsFtrLeanAdmit 2 is an initialiser (include/nds/renderer_fighter_lean.h
 # NDS_FTR_LEAN_ADMIT_BOOT), so slices 2c-6's lab boot value
 # NDS_FTR_LEAN_ADMIT_DEFAULT and its non-tick-HUD pass NDS_FTR_LEAN_ADMIT_LAB
-# are gone. Route 0 + admission 0 (the old path) is a GDB poke on the same ROM
-# at boot: scripts/sample-tick-hud-buckets.ps1 -BootSetGlobals.
+# are gone. Admission 0 is a GDB poke on the same ROM at boot:
+# scripts/sample-tick-hud-buckets.ps1 -BootSetGlobals.
 # P2-2p8 Phase 1 slice 2c: 1 compiles the texture cache's exact-key shadow
 # and whole-match identity journal (NDS_RENDERER_HW_TEXTURE_KEY_SHADOW 1,
 # about 29.5 KB of static RAM) that count runtime identity collisions under
@@ -651,25 +650,6 @@ NDS_R2_ANIM_CUT_ROUTE ?= 0
 # for the strip arm to exist; at 0 the route folds away and the selected
 # emitter is whatever that flag chose.
 NDS_R2_STRIP_ROUTE ?= 0
-# Cycle 118. The same instrument for the map-collision lane. At 1 the endpoint
-# memo in `ndsMPFindLineEndpoints` is selected by `gNdsR2MPRoute` at run time, so
-# its A/B runs on ONE binary -- which is the only way to read a cut of its size
-# (5,861 tk/fr of a flat 543-cycle function) against the +-8,544 cross-build
-# placement floor. At 0 the test folds to a constant, the memo ships, and the
-# ROM carries no route check. The memo is FILLED in both arms so the control
-# pays the identical fill and only the lookup differs.
-NDS_R2_MP_ROUTE ?= 0
-# Slice 45. Same-binary A/B for the fighter-AObj16 alias-scan reorder in
-# ndsRelocRemoveFighterAObj16StatusAliases. At 1 the ROM carries both arms and
-# `-SetGlobals gNdsR2RelocAliasRoute=0` selects the original operand order at
-# identical placement; at 0 the test folds to a constant and the reorder ships
-# with no route check.
-#
-# BANKED at 0. One binary, builds/build-c122-alias, 1600 frames from 438,
-# NDS_R2_BOTH_CPU=1, DLDI ON: Resolves 16,002 -> 1,143 of the same 16,067 node
-# visits (-92.9%), WORK-H P95 1,227,456 -> 1,215,296 (-12,160), P50 936,448 ->
-# 936,704 (+256, noise). Set to 1 only to re-measure it.
-NDS_R2_RELOC_ALIAS_ROUTE ?= 0
 # R2-03 E47. The native fighter owner derives its material colour and its
 # use-material predicate from `stats` per epoch, the way the generic path does,
 # instead of reading a baked policy flag and always taking prim_color. The
@@ -1488,45 +1468,10 @@ NDS_R2_FTR_CONTRACT_CENSUS ?= 0
 # poke reaches gNdsFtrDrawMemoRoute (its own 32-byte line), so an A/B is one
 # binary and two arms.
 NDS_R2_FTR_DRAW_MEMO ?= 1
-# Cycle 100: the INITIAL VALUE of gNdsFtrPlanRoute (the baked fighter draw
-# plan). 0 = the eligibility pass and the owner-validate cache run every draw,
-# exactly as shipped; 1 = both are replaced by replaying a plan baked at scene
-# entry.
-#
-# This exists because the runtime poke cannot reach that flag, and the reason is
-# worth stating so nobody re-derives it: `-SetGlobals` writes main RAM through
-# the GDB stub, but gNdsFtrPlanRoute shares its 32-byte ARM9 D-cache line with
-# gNdsTickHudVBlankWaitTicks, which the tick HUD writes every frame. The line is
-# therefore permanently resident and dirty, so the guest keeps reading its stale
-# cached 0 and each writeback stamps that 0 back over the poke. Measured cycle
-# 100: poked 7, read back 7 in the same stop, 0 plan hits over 1,216 draws, and
-# 0 at end of run -- while a sibling four bytes lower, in the PREVIOUS cache
-# line, survived the same batch. Both arms compile identical text and both keep
-# the flag in .data (see diagnostics.c), so the two builds differ in exactly one
-# word of initialised data and nothing else moves.
-#
-# DEFAULT 1 = KEEP, cycle 100. Equivalence first: gNdsFtrPlanVerifyMismatch 0
-# over 3,960 verified draws on the both-CPU arm and 3,954 on Boundary, with
-# fighter triangles byte-identical on both (636,480/604,044 and
-# 612,800/624,852), and the validate call count falling 3,963 -> 3 per match.
-# Price, three A/B pairs of layout-identical builds, whole match, 1,600 samples:
-# WORK-H P50 -3,776 (Boundary), -5,056 and -9,472 (both-CPU); over-gate frames
-# -6, -38, -31. It is a P50/mean lever and NOT gate progress -- the P95 delta
-# read -8,832, -2,368 and +5,248 across those same pairs, so P95 is not
-# resolvable for a change this size and no gate figure may be banked from it.
-NDS_FTR_PLAN_ROUTE ?= 1
 # P2-3r6 lab instrument: record the modelview/projection, poly format and
 # emitted triangle count of each Mario entry-pipe root into globals, where a
 # gdb stub read is sound. Default 0; the shipped ROM pays nothing.
 NDS_ENTRY_EFFECT_DIAG ?= 0
-# Cycle 100: arm the baked plan's equivalence check (derive the plan live on
-# every baked draw and memcmp it against the baked one). Build-time for the same
-# cache-line reason as the route above, and the reason is sharper here:
-# gNdsFtrPlanVerify shares its line with gNdsFtrPlanHit, which increments on
-# every baked draw -- so on the arm you would want to verify, the line is
-# guaranteed dirty and the poke is guaranteed to be stamped back to 0.
-# Never read ticks from a build with this on; it computes both paths by design.
-NDS_FTR_PLAN_VERIFY ?= 0
 # Second-entry (Sudden Death / rematch) MObj chain validator. Records the
 # fighter material chain before the counting pass and again immediately before
 # the writing pass, so "when does the list first become invalid" is measured
@@ -2027,44 +1972,6 @@ NDS_R2_SHIELD_QUAD ?= 1
 # full stage collision for the projectile every frame -- and is a separate
 # seam that this does not touch.
 NDS_R2_FIREBALL_QUAD ?= 1
-# Cache ndsParticleSetCurrentCamera's answer for as long as its inputs hold.
-# DEFAULT ON, cycle 102 -- measured, pixel-identical. See the block comment in
-# battleship_lbparticle.c for the mechanism.
-#
-# That function is called once per quad by all three quad entry points, and each
-# call rebuilds a perspective matrix, a look-at basis (three sqrtf) and a full
-# 4x4 float guMtxCatF for a camera that cannot move within a frame. Measured
-# 2026-08-09 on ROM 3B1159ED (artifacts/performance/2026-08-09_mtxcat-callers
-# .json): it is 81.8% of the guMtxCatF + syMatrixLookAtF class, and that class
-# is 24.2% of all __aeabi_fadd + __aeabi_fmul -- so with its own direct share it
-# is about 23% of the frame's float and the largest single float consumer.
-#
-# THE RESULT, both-CPU arm, whole match, 1,600 samples, frames 442-2041, DLDI
-# ON, slips=0, no repeated frames on either arm (artifacts/performance/
-# 2026-08-09_c102-camcache-{ctl,cand}{,-rows.csv}.json):
-#
-#   WORK-H P50  1,129,664 -> 1,112,896   -16,768
-#   WORK-H P95  1,665,856 -> 1,649,088   -16,768
-#   MISC   P50    119,872 ->   102,848   -17,024   (owns the whole win)
-#   FTR    P50    418,560 ->   418,432      -128   (flat -- the falsifier)
-#
-# Cache ran 3,054 hits / 1,458 misses. That is the CEILING, not a thrash: the
-# camera moves every frame, so the frame's first cacheable call must rebuild and
-# the other two hit.
-#
-# BIT-EXACT, AND MEASURED AS SUCH rather than argued: a hit replays the identical
-# float result. Four matched-tic frames (900/901/1200/1201, software renderer)
-# compare PIXEL-IDENTICAL on the game screen, max channel delta 0. Crop the top
-# screen at 400x298, NOT 400x300 -- melonDS puts the screen boundary at row 298,
-# and a 300-row crop catches two rows of tick-HUD text whose numbers differ
-# between arms by construction. That cost one false "regression" reading.
-#
-# THE A/B PAIRING IS WHY THIS READS AT ALL. Gated at RUNTIME on a .data word,
-# not on this flag, so both arms link byte-identical. The first attempt used a
-# #if: 672 bytes moved `.main` and cost FTR +19,712 P50 -- a bucket the change
-# never calls, and 15x what the board's 1.85-cycles-per-added-byte rule entitles
-# 672 bytes to. That placement artifact INVERTED the sign of a real -16,768 win.
-NDS_R2_PARTICLE_CAMERA_CACHE ?= 1
 # The battle camera's matrix chain is Q20.12 only since 2026-10-06: the float
 # arms, the lean levels (NDS_R2_CAMERA_MATRIX_LEAN, shipped level 2) and the
 # route word / SELECT toggle (NDS_R2_CAMERA_FIXED, NDS_R2_CAMERA_FIXED_TOGGLE)
@@ -2369,17 +2276,6 @@ NDS_R2_HWMATH_BENCH ?= 0
 # Arm 0 is exactly what shipped before this date; arm 3 is exactly what ships
 # after it.
 NDS_R2_HWMATH_ROUTE ?= 0
-# Lab SAME-BINARY route for the tile-sync memo (2026-08-16). The memo itself is
-# unconditional and ships; this flag only adds the `.data` selector and the two
-# engagement counters that price it. Task 107's census measured 72.835% of
-# ndsRendererSyncTextureTile's 146,221 whole-match calls to be exact repeats
-# against an 8,867 tk/fr owner -- far under the >=14,080 rank-80 cross-build
-# floor, so a two-build A/B cannot decide it.
-#   gNdsR2TileSyncRoute  0 = republish always (the pre-memo behaviour)
-#                        1 = skip the proven-redundant republish (ships)
-# Both arms evaluate the predicate and both advance the sync serial, so
-# gNdsR2TileSyncSkips/Runs must be IDENTICAL on the two arms.
-NDS_R2_TILESYNC_ROUTE ?= 0
 # 2026-08-16. ndsR2AnimValueQ into ITCM. The marginal-80 per-PC census charges
 # the kernel 26,664 tk/fr and 21,719 of that -- 81.4% -- is `icache_fill` on
 # 1,028 bytes entered 370.6 times a frame. That is the largest single
@@ -2391,14 +2287,6 @@ NDS_R2_TILESYNC_ROUTE ?= 0
 # fighter joint; the four-CPU census executed this kernel ZERO times, and its
 # 1,028 B went to ndsFtPosePlay.
 NDS_R2_ANIM_Q_ITCM_ON ?= 0
-# Lab SAME-BINARY route for that placement: two out-of-line copies of one body,
-# one in .itcm and one in .main, selected by a `.data` word. Costs 1,028 B of
-# .main and nothing in the shipped build.
-#   gNdsR2AnimItcmRoute  0 = call the .main copy (the pre-move behaviour)
-#                        1 = call the .itcm copy (ships)
-# Both arms execute identical instructions on identical inputs, so
-# gNdsR2CubicEvals must read IDENTICALLY on the two arms.
-NDS_R2_ANIM_ITCM_ROUTE ?= 0
 # Task 44 stage steady-state excision: generation-based admission, dense
 # rigid/dynamic binding lists, and the hoisted GX capture-active test. Requires
 # the Task 36 hardware-compose stage owner; meaningless without it.
@@ -7058,8 +6946,6 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_AOBJ16_PREBAKE $(NDS_R2_AOBJ16_PREBAKE)'; \
 		echo '#define NDS_R2_ANIM_CUT_ROUTE $(NDS_R2_ANIM_CUT_ROUTE)'; \
 		echo '#define NDS_R2_STRIP_ROUTE $(NDS_R2_STRIP_ROUTE)'; \
-		echo '#define NDS_R2_MP_ROUTE $(NDS_R2_MP_ROUTE)'; \
-		echo '#define NDS_R2_RELOC_ALIAS_ROUTE $(NDS_R2_RELOC_ALIAS_ROUTE)'; \
 		echo '#define NDS_R2_MATERIAL_DYNAMIC $(NDS_R2_MATERIAL_DYNAMIC)'; \
 		echo '#define NDS_R2_FLASH_PROBE $(NDS_R2_FLASH_PROBE)'; \
 		echo '#define NDS_R2_ANIM_CENSUS $(NDS_R2_ANIM_CENSUS)'; \
@@ -7164,9 +7050,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK75_LOAD_CENSUS $(NDS_TASK75_LOAD_CENSUS)'; \
 		echo '#define NDS_R2_FTR_CONTRACT_CENSUS $(NDS_R2_FTR_CONTRACT_CENSUS)'; \
 		echo '#define NDS_R2_FTR_DRAW_MEMO $(NDS_R2_FTR_DRAW_MEMO)u'; \
-		echo '#define NDS_FTR_PLAN_ROUTE $(NDS_FTR_PLAN_ROUTE)u'; \
 		echo '#define NDS_ENTRY_EFFECT_DIAG $(NDS_ENTRY_EFFECT_DIAG)'; \
-		echo '#define NDS_FTR_PLAN_VERIFY $(NDS_FTR_PLAN_VERIFY)u'; \
 		echo '#define NDS_R2_SECOND_ENTRY_DIAG $(NDS_R2_SECOND_ENTRY_DIAG)'; \
 		echo '#define NDS_R2_SCENE_LOOP_WALK $(NDS_R2_SCENE_LOOP_WALK)u'; \
 		echo '#define NDS_P2_UI_KIT $(NDS_P2_UI_KIT)'; \
@@ -7238,7 +7122,6 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_PARTICLE_DRAW $(NDS_R2_PARTICLE_DRAW)'; \
 		echo '#define NDS_R2_SHIELD_QUAD $(NDS_R2_SHIELD_QUAD)'; \
 		echo '#define NDS_R2_FIREBALL_QUAD $(NDS_R2_FIREBALL_QUAD)'; \
-		echo '#define NDS_R2_PARTICLE_CAMERA_CACHE $(NDS_R2_PARTICLE_CAMERA_CACHE)'; \
 		echo '#define NDS_R2_FOX_BLASTER_QUAD $(NDS_R2_FOX_BLASTER_QUAD)'; \
 		echo '#define NDS_R2_FOX_BLASTER_GLOW_AOT $(NDS_R2_FOX_BLASTER_GLOW_AOT)'; \
 		echo '#define NDS_R2_FOX_GUN_OVERLAY $(NDS_R2_FOX_GUN_OVERLAY)'; \
@@ -7280,9 +7163,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_CFX_HWMATH $(NDS_R2_CFX_HWMATH)'; \
 		echo '#define NDS_R2_HWMATH_BENCH $(NDS_R2_HWMATH_BENCH)'; \
 		echo '#define NDS_R2_HWMATH_ROUTE $(NDS_R2_HWMATH_ROUTE)'; \
-		echo '#define NDS_R2_TILESYNC_ROUTE $(NDS_R2_TILESYNC_ROUTE)'; \
 		echo '#define NDS_R2_ANIM_Q_ITCM_ON $(NDS_R2_ANIM_Q_ITCM_ON)'; \
-		echo '#define NDS_R2_ANIM_ITCM_ROUTE $(NDS_R2_ANIM_ITCM_ROUTE)'; \
 		echo '#define NDS_TASK39_FX_SPRITES $(NDS_TASK39_FX_SPRITES)'; \
 		echo '#define NDS_TASK39_FX_FLASH $(NDS_TASK39_FX_FLASH)'; \
 		echo '#define NDS_R2_PARTICLE_RUNTIME $(NDS_R2_PARTICLE_RUNTIME)'; \

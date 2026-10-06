@@ -18,11 +18,6 @@ param(
     # Keep gdb attached past the Sudden Death entry, let the core run, then
     # interrupt it and report where it stopped. Mutually exclusive with the
     # picture watch by construction -- one stub session per emulation run.
-    # Clear gNdsR2MaterialWalkBoundEnabled at battle start, restoring the
-    # pre-guard unbounded material write walk in the SAME binary. The only way
-    # to attribute the Sudden Death freeze to the guard rather than to the code
-    # placement that adding the guard caused -- two builds cannot separate those.
-    [switch]$DisableWalkBound,
     # R2-07 E2. Route each stage segment at battle start, in the SAME binary, so
     # the second-entry corruption can be attributed to a route. Needs a ROM built
     # NDS_R2_STAGE_ROUTE_PROBE=1. There are THREE routes, and the arms need all
@@ -364,12 +359,7 @@ try {
         'printf "SD-STAGE=shot-match1\n"',
         # Drop it so the drive to Sudden Death is not stopped 60 times a second.
         'delete $bpnum'
-    ) } else { @() }) + $(if ($DisableWalkBound) { @(
-        'set variable gNdsR2MaterialWalkBoundEnabled = 0',
-        'printf "SD-WALK-BOUND-ENABLED=%u\n", gNdsR2MaterialWalkBoundEnabled'
-    ) } else { @(
-        'printf "SD-WALK-BOUND-ENABLED=%u\n", gNdsR2MaterialWalkBoundEnabled'
-    ) }) + $(if (($StageRouteReplayMask -ge 0) -or ($StageRouteGenericMask -ge 0)) { @(
+    ) } else { @() }) + $(if (($StageRouteReplayMask -ge 0) -or ($StageRouteGenericMask -ge 0)) { @(
         # The observed masks need no clearing here: the renderer rotates them
         # into Last* once per frame, so a read is always exactly one completed
         # frame and match one cannot contaminate match two.

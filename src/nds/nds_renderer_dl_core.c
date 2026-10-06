@@ -801,15 +801,7 @@ ndsRendererSyncTextureTile(NDSRendererStats *stats)
     if ((stats->texture_tile_sync_serial == stats->texture_tile_write_serial) &&
         (stats->texture_render_tile == tile_index))
     {
-        NDS_R2_TILESYNC_COUNT_SKIP();
-        if (NDS_R2_TILESYNC_MEMO_ON())
-        {
-            return;
-        }
-    }
-    else
-    {
-        NDS_R2_TILESYNC_COUNT_RUN();
+        return;
     }
     stats->texture_tile_sync_serial = stats->texture_tile_write_serial;
     tile = &stats->texture_tiles[tile_index];

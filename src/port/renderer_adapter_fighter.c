@@ -2586,9 +2586,8 @@ u32 gNdsTask91GxStatOr;
  * stores both matrix_bindings and material_dobjs. A source status change must
  * therefore miss this cache even when every reloc identity word still matches.
  *
- * gNdsFtrPlanRoute remains runtime-selectable for same-binary A/B; the shipping
- * default is route 1, so the lifetime key above is part of the correctness
- * contract rather than lab-only instrumentation.
+ * The plan is unconditional, so the lifetime key above is part of the
+ * correctness contract rather than lab-only instrumentation.
  * ------------------------------------------------------------------------- */
 
 typedef enum NDSFighterDrawPlanResult
@@ -2655,7 +2654,7 @@ static sb32 ndsFighterDrawPlanHit(u32 slot, u32 use_low_detail)
     const NDSFighterDrawPlan *plan;
     const NDSRelocLoadedFile *file;
 
-    if ((gNdsFtrPlanRoute == 0u) || (slot >= GMCOMMON_PLAYERS_MAX))
+    if (slot >= GMCOMMON_PLAYERS_MAX)
     {
         return FALSE;
     }
@@ -2946,53 +2945,6 @@ static void ndsFighterDrawPlanApply(
     }
 }
 
-#if NDS_TICK_HUD
-/* Equivalence by construction, and it supersedes any variance rate: on a draw
- * that took the baked path, derive the plan live and memcmp it against the
- * baked one. Zero mismatches over a whole match is the claim, and it covers
- * fields no cycle-98 counter covered (material_dobj, matrix_dobj, the resolved
- * file and the root offsets). Armed only by gNdsFtrPlanVerify, because
- * computing both paths is exactly what a tick measurement must not do. The
- * caller applies the baked plan AFTER this returns, so the workspace this
- * scribbles on is overwritten before it is read. */
-static NDSFighterDrawPlanData sNdsFighterDrawPlanVerifyScratch;
-
-static void ndsFighterDrawPlanVerify(
-    u32 slot, u32 owner_slot, u32 use_low_detail,
-    FTStruct *fp, DObj *root, u32 expected_asset_id,
-    NDSRendererAdapterNativeOwnerWorkspace *workspace)
-{
-    NDSFighterDrawPlanData *scratch = &sNdsFighterDrawPlanVerifyScratch;
-    NDSFighterDLAllDrawCollection live;
-    NDSRelocLoadedFile *owner_file = NULL;
-    u32 root_program;
-    u32 programs_tried;
-
-    ndsFighterCollectAllDObjsWithDL(root, &live);
-#if NDS_R2_FOX_GUN_OVERLAY
-    ndsFighterCollectStripFoxGunSidecar(fp, &live);
-#else
-    (void)fp;
-#endif
-    (void)ndsFighterDrawPlanResolve(
-        owner_slot, expected_asset_id, &live, workspace, &owner_file);
-    root_program = ndsRendererNativeFighterSelectRootProgram(
-        owner_slot, use_low_detail, workspace->root_offsets,
-        live.selected_count, &programs_tried);
-    if (root_program == 0xffu)
-    {
-        root_program = 0u;
-    }
-    ndsFighterDrawPlanGather(
-        &live, owner_file, root_program, workspace, scratch);
-    gNdsFtrPlanVerifyRuns++;
-    if (memcmp(scratch, &sNdsFighterDrawPlan[slot].data,
-               sizeof(*scratch)) != 0)
-    {
-        gNdsFtrPlanVerifyMismatch++;
-    }
-}
-#endif
 #endif
 
 /* P2-2 separates two values that were accidentally identical in the old
@@ -4036,13 +3988,6 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
              * would have hit and returned TRUE without doing anything else. */
 #if NDS_TICK_HUD
             gNdsFtrPlanHit++;
-            if (gNdsFtrPlanVerify != 0u)
-            {
-                ndsFighterDrawPlanVerify(
-                    slot, owner_slot, use_low_detail,
-                    fp, root, expected_asset_id,
-                    &sNdsRendererAdapterNativeOwnerWorkspace);
-            }
 #endif
             native_owner_file = sNdsFighterDrawPlan[slot].data.owner_file;
             ndsFighterDrawPlanApply(
@@ -4136,7 +4081,6 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             }
             else if ((native_owner_enabled != FALSE) &&
                      (native_owner_plan_cacheable != FALSE) &&
-                     (gNdsFtrPlanRoute != 0u) &&
                      (sNdsIntroTransientActive == FALSE) &&
                      (slot < GMCOMMON_PLAYERS_MAX))
             {

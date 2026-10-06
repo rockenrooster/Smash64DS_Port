@@ -36,23 +36,20 @@
  * ndsFtrLeanEntryWide). Captain HIGH's alpha cutout is exact without its
  * register (reference 0; nNDSFtrLeanDeclineAlphaTest otherwise).
  *
- *   gNdsFtrLeanRoute  0  off: no fighter draws (a lab control)
- *                     1  the lean path draws every fighter (the DEFAULT,
- *                        NDS_FTR_LEAN_ROUTE_BOOT); both halves of the slot's
- *                        region are lean entries. 2026-10-05 (owner: delete
- *                        the old machinery): the old executor, its packet
- *                        recorder and the oracle routes 2/3 that compared
- *                        the lean lists against it are gone.
+ * The lean path draws every fighter; both halves of the slot's region are lean
+ * entries. 2026-10-05/06 (owner: delete the old machinery): the old executor,
+ * its packet recorder, the oracle routes 2/3 that compared the lean lists
+ * against it, and the route word gNdsFtrLeanRoute itself are gone.
  *   gNdsFtrLeanAdmit  0 / 1 / 2: fighter texture admission, see the slice
  *                        2b block at the end of this header (2 is the
  *                        DEFAULT since slice 7, NDS_FTR_LEAN_ADMIT_BOOT)
  *
- * Both words live in DTCM: it is uncached, so a GDB poke is seen by the next
- * read (a main-RAM word that shares a dirty D-cache line gets stamped back --
- * see gNdsFtrPlanRoute's note in diagnostics_collision_runtime.c). They are
- * whole u32 words (never poke one byte). Slice 7: both carry their default as
- * an initialiser, so the A/B control -- route 0 and admission 0, the old path
- * on the same ROM -- is a poke after crt0 and before the battle is built
+ * The admission word lives in DTCM: it is uncached, so a GDB poke is seen by
+ * the next read (a main-RAM word that shares a dirty D-cache line gets stamped back --
+ * the cycle-100 fighter draw plan's route word measured that). It is a whole
+ * u32 word (never poke one byte). Slice 7: it carries its default as an
+ * initialiser, so the A/B control -- admission 0 on the same ROM -- is a poke
+ * after crt0 and before the battle is built
  * (scripts/sample-tick-hud-buckets.ps1 -BootSetGlobals, at `main`): the
  * admission runs while the battle loads, before the first frame marker. */
 
@@ -79,23 +76,17 @@
 #define NDS_FTR_LEAN_CTR(...) ((void)0)
 #endif
 
-#define NDS_FTR_LEAN_ROUTE_OFF 0u
-#define NDS_FTR_LEAN_ROUTE_DRAW 1u
-
 /* P2-2p8 Phase 1 slice 7: lean is the default. Every image that compiles the
  * lean path boots with route 1 and admission 2 -- the shipping ROMs, the shell
  * loop and the four-CPU stress target alike (the lab-only
  * NDS_FTR_LEAN_ADMIT_DEFAULT / NDS_FTR_LEAN_ADMIT_LAB boot values are gone).
  * An image without the lean path keeps both words 0: nothing reads them. */
 #if NDS_FTR_LEAN_LIVE
-#define NDS_FTR_LEAN_ROUTE_BOOT NDS_FTR_LEAN_ROUTE_DRAW
 #define NDS_FTR_LEAN_ADMIT_BOOT NDS_FTR_LEAN_ADMIT_REGIONS
 #else
-#define NDS_FTR_LEAN_ROUTE_BOOT NDS_FTR_LEAN_ROUTE_OFF
 #define NDS_FTR_LEAN_ADMIT_BOOT 0u
 #endif
 
-extern volatile u32 gNdsFtrLeanRoute;
 extern volatile u32 gNdsFtrLeanAdmit;
 /* Slice 3 cost A/B (DTCM runtime word, default 0 = every slice 3 cut on).
  * Each bit puts one part back to its slice 1 form on the same ROM, so the

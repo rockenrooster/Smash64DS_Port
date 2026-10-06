@@ -359,13 +359,11 @@ $memoryGlobals = @(
     # itself with use_low_detail=1.
     'gNdsFtrPlanBuild',
     'gNdsFtrPlanHit',
-    'gNdsFtrPlanVerifyMismatch',
     # P2-2p8 Phase 1 slice 7: the lean fighter path is the default (route 1,
     # admission 2), and it draws this roster's low-detail fighters from lists
     # materialized from the same generated owner tables. It resolves the
     # owner's plan only on events, so the old path's plan cache above is idle
     # whenever every draw is lean: the stable-plan proof below reads these.
-    'gNdsFtrLeanRoute',
     'gNdsFtrLeanAdmit',
     'gNdsFtrLean.attempts',
     'gNdsFtrLean.draws',
@@ -660,11 +658,10 @@ if (($extra['gNdsParticlePacketQuads'] -eq 0) -or
 Write-Output ("Source spline descriptors normalized: " +
     $extra['gNdsRelocSYInterpDescFixCount'])
 $nativePlanHit = $extra['gNdsFtrPlanHit']
-$nativePlanMismatch = $extra['gNdsFtrPlanVerifyMismatch']
-# P2-2p8 Phase 1 slice 7. Route 1 (the default): the lean path must have drawn,
-# and any draw it declined went to the old path, which must then prove its plan
-# exactly as route 0 does. Route 0 (a poked A/B control): the old proof.
-$leanRoute = $extra['gNdsFtrLeanRoute']
+# P2-2p8 Phase 1 slice 7: the lean path must have drawn, and any draw it
+# declined went to the plan path, which must then prove its plan. The lean
+# route word is gone (2026-10-06): lean is the only route.
+$leanRoute = 1
 $leanAttempts = $extra['gNdsFtrLean.attempts']
 $leanDraws = $extra['gNdsFtrLean.draws']
 $leanDeclines = if ($leanAttempts -gt $leanDraws) { $leanAttempts - $leanDraws } else { 0 }
@@ -693,18 +690,11 @@ if ($ndlEnabled) {
             "updates=$($extra['gNdsDamageSlashTextureUpdateCount']).")
     }
 }
-if ($leanRoute -eq 1) {
-    if (($leanDraws -eq 0) -or ($nativePlanMismatch -ne 0) -or
-        (($leanDeclines -ne 0) -and (($nativePlanBuild -eq 0) -or ($nativePlanHit -eq 0)))) {
-        throw ("Four-CPU low-detail fighters did not prove a stable validated draw: " +
-            "lean route 1 draws=$leanDraws attempts=$leanAttempts declines=$leanDeclines; " +
-            "old-path plan build=$nativePlanBuild hit=$nativePlanHit verifyMismatch=$nativePlanMismatch.")
-    }
-} elseif (($nativePlanBuild -eq 0) -or ($nativePlanHit -eq 0) -or
-    ($nativePlanMismatch -ne 0)) {
-    throw ("Four-CPU low-detail native owner did not prove a stable validated plan: " +
-        "build=$nativePlanBuild hit=$nativePlanHit verifyMismatch=$nativePlanMismatch " +
-        "(lean route $leanRoute).")
+if (($leanDraws -eq 0) -or
+    (($leanDeclines -ne 0) -and (($nativePlanBuild -eq 0) -or ($nativePlanHit -eq 0)))) {
+    throw ("Four-CPU low-detail fighters did not prove a stable validated draw: " +
+        "lean draws=$leanDraws attempts=$leanAttempts declines=$leanDeclines; " +
+        "plan build=$nativePlanBuild hit=$nativePlanHit.")
 }
 if (($extra['gNdsFighterDLAllDrawP0HardwareTriangleCount'] -eq 0) -or
     ($extra['gNdsFighterDLAllDrawP1HardwareTriangleCount'] -eq 0)) {
@@ -1077,7 +1067,6 @@ $memory = [PSCustomObject]@{
     leanAttempts = $leanAttempts
     leanDraws = $leanDraws
     nativeOwnerPlanHit = $nativePlanHit
-    nativeOwnerPlanVerifyMismatch = $nativePlanMismatch
     # SLOT totals, not kind totals. Named by slot since P2-3f9: they happen to
     # be Samus and Fox on the landed-content roster, and a field name that says so would
     # quietly relabel a different fighter's triangles the next time slot 0

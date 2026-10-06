@@ -9188,19 +9188,12 @@ static u32 *ndsRendererWhispyPacketReserve(u32 words)
  * latches it.  The source particle order is untouched: this is the same
  * command sequence the immediate path emits, merely packed in cached RAM. */
 static inline __attribute__((always_inline)) sb32
-ndsRendererAppendWhispyPacketState(u32 texture_name, u32 texture_slot,
-                                   u32 poly_alpha, u32 submit_route)
+ndsRendererAppendWhispyPacketState(u32 texture_slot, u32 poly_alpha)
 {
+    /* The submit proved the slot's binding before it opened the packet. */
     const NDSRendererWhispyNativeBinding *binding =
-        (submit_route >= 7u) ?
-        &sNdsRendererWhispyNativeBinding[texture_slot] :
-        ndsRendererWhispyNativeBindingFor(texture_name, texture_slot);
+        &sNdsRendererWhispyNativeBinding[texture_slot];
 
-    if (binding == NULL)
-    {
-        gNdsWhispyAOTTier4PacketFallbacks++;
-        return FALSE;
-    }
     return ndsRendererAppendParticlePacketStateRaw(
         binding->texture_name, binding->texture_format,
         binding->palette_format, binding->palette_name,
@@ -9922,7 +9915,7 @@ s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
                                       u32 color, u8 alpha,
                                       u32 mirror_mask,
                                       u32 texture_w, u32 texture_h,
-                                      u32 submit_route)
+                                      sb32 packet)
 {
     NDS_FIGHTER_PACKET_DMA_WAIT();
     s32 center[3];
@@ -9952,7 +9945,7 @@ s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
     }
     poly_alpha = ((u32)alpha >> 3) & 31u;
     if (poly_alpha == 0u) { poly_alpha = 1u; }
-    if (submit_route >= 7u)
+    if (packet != FALSE)
     {
         u32 binding_bit;
 
@@ -9971,27 +9964,20 @@ s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
         }
         sNdsRendererWhispyLeanBindingMask |= binding_bit;
     }
-    else if ((submit_route >= 3u) &&
-             (ndsRendererWhispyNativeBindingFor(
-                  texture_name, texture_slot) == NULL))
+    else if (ndsRendererWhispyNativeBindingFor(
+                 texture_name, texture_slot) == NULL)
     {
-        if (submit_route >= 4u)
-        {
-            gNdsWhispyAOTTier4PacketFallbacks++;
-        }
         return -1;
     }
-    if (submit_route < 4u)
+    if (packet == FALSE)
     {
-        /* Supports debugger route changes without allowing an older packet to
-         * cross the first immediate-mode quad. Normal runs never take this
-         * branch with a non-empty packet. */
+        /* An immediate-mode quad (the Fox blaster glow) must not let an
+         * older packet cross it. */
         ndsRendererFlushWhispyNativePacket();
     }
     else if (sNdsRendererWhispyPacket.word_count == 0u)
     {
-        sNdsRendererWhispyPacket.lean_counters =
-            (submit_route >= 6u) ? TRUE : FALSE;
+        sNdsRendererWhispyPacket.lean_counters = TRUE;
     }
 
     if (fixed_center_q12 != NULL)
@@ -10039,7 +10025,7 @@ s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
         up[1] = ((mirror_mask & 2u) != 0u) ? -size_q8 * 16 : size_q8 * 16;
         up[0] = up[2] = 0;
     }
-    else if ((submit_route >= 7u) &&
+    else if ((packet != FALSE) &&
         (sNdsRendererWhispyLegCacheValid != FALSE) &&
         (sNdsRendererWhispyLegCacheSizeQ8 == size_q8) &&
         (sNdsRendererWhispyLegCacheMirrorMask == (mirror_mask & 3u)))
@@ -10067,7 +10053,7 @@ s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
             up[axis] = (sNdsRendererWhispyUp[axis] * leg_size_q8) /
                        (s32)(1u << NDS_RENDERER_WHISPY_LEG_SHIFT);
         }
-        if (submit_route >= 7u)
+        if (packet != FALSE)
         {
             sNdsRendererWhispyLegCacheSizeQ8 = size_q8;
             sNdsRendererWhispyLegCacheMirrorMask = mirror_mask & 3u;
@@ -10090,7 +10076,7 @@ s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
                         ndsRendererWhispyAbsS32(up[axis]);
         if (candidate > extent) { extent = candidate; }
     }
-    if (submit_route >= 7u)
+    if (packet != FALSE)
     {
         needed = sNdsRendererParticleScaleShift;
     }
@@ -10100,7 +10086,7 @@ s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
     {
         needed++;
     }
-    if (submit_route >= 7u)
+    if (packet != FALSE)
     {
         coordinates_safe =
             ((extent / (s32)(1u <<
@@ -10108,12 +10094,12 @@ s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
              32767) ? TRUE : FALSE;
     }
 
-    if (submit_route >= 4u)
+    if (packet != FALSE)
     {
         if (sNdsRendererParticleQuadOpen == 0u)
         {
             /* Establish the camera/matrix stack once. The first material bind
-             * uses route 3's exact direct-register transition; every later
+             * uses the exact direct-register transition; every later
              * state/quad command in this contiguous run goes through DMA. */
             ndsRendererPrepareWhispyQuadState(
                 texture_name, poly_alpha, texture_slot, 3u);
@@ -10122,11 +10108,11 @@ s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
     else
     {
         ndsRendererPrepareWhispyQuadState(
-            texture_name, poly_alpha, texture_slot, submit_route);
+            texture_name, poly_alpha, texture_slot, 3u);
     }
     if (needed > sNdsRendererParticleScaleShift)
     {
-        if (submit_route >= 4u)
+        if (packet != FALSE)
         {
             if (ndsRendererAppendWhispyPacketScale(needed) == FALSE)
             {
@@ -10148,15 +10134,14 @@ s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
             gNdsParticleScaleShiftMax = needed;
         }
     }
-    if (submit_route >= 4u)
+    if (packet != FALSE)
     {
         if (ndsRendererAppendWhispyPacketState(
-                texture_name, texture_slot, poly_alpha,
-                submit_route) == FALSE)
+                texture_slot, poly_alpha) == FALSE)
         {
             return -1;
         }
-        if ((submit_route >= 7u) && (coordinates_safe != FALSE))
+        if (coordinates_safe != FALSE)
         {
             for (corner = 0u; corner < 4u; corner++)
             {
@@ -10249,13 +10234,13 @@ s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
                                       u32 color, u8 alpha,
                                       u32 mirror_mask,
                                       u32 texture_w, u32 texture_h,
-                                      u32 submit_route)
+                                      sb32 packet)
 {
     NDS_FIGHTER_PACKET_DMA_WAIT();
     (void)texture_name; (void)pos; (void)size; (void)color; (void)alpha;
     (void)fixed_center_q12; (void)fixed_size_q8;
     (void)texture_slot; (void)mirror_mask; (void)texture_w; (void)texture_h;
-    (void)submit_route;
+    (void)packet;
     return -1;
 }
 #endif
@@ -19045,13 +19030,13 @@ s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
                                       u32 color, u8 alpha,
                                       u32 mirror_mask,
                                       u32 texture_w, u32 texture_h,
-                                      u32 submit_route)
+                                      sb32 packet)
 {
     NDS_FIGHTER_PACKET_DMA_WAIT();
     (void)texture_name; (void)pos; (void)size; (void)color; (void)alpha;
     (void)fixed_center_q12; (void)fixed_size_q8;
     (void)texture_slot; (void)mirror_mask; (void)texture_w; (void)texture_h;
-    (void)submit_route;
+    (void)packet;
     return -1;
 }
 

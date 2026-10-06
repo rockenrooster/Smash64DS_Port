@@ -28,3 +28,55 @@ Baseline q32 = `artifacts/performance/2026-10-06_fixed-collision/*-q32.csv`.
 
 Neutral to slightly positive (the level/route loads and the dead float arm's
 code are gone from the hot path), digest identical. Kept.
+
+## q34: folded compile-time routes and three shipped runtime words
+
+Deleted, all with the shipped arm kept and every probe updated:
+
+- compile-time routes that folded to the shipped arm at 0: `NDS_R2_MP_ROUTE`
+  (`gNdsR2MPRoute`, the endpoint / yakumono / line-kind memos),
+  `NDS_R2_RELOC_ALIAS_ROUTE` (`gNdsR2RelocAliasRoute`, the alias-scan
+  reorder), `NDS_R2_TILESYNC_ROUTE` (`gNdsR2TileSyncRoute`, the tile-sync
+  memo) and `NDS_R2_ANIM_ITCM_ROUTE` (`gNdsR2AnimItcmRoute`, two copies of
+  the anim kernel);
+- runtime words read every use in the shipped ROM: `gNdsR2AObj16PrebakeRoute`
+  (1), `gNdsR2MaterialWalkBoundEnabled` (1, the Sudden Death guard) and
+  `gNdsParticleCameraCacheEnabled` (`NDS_R2_PARTICLE_CAMERA_CACHE` = 1).
+
+| config | digest diff | P50 | P95 | over | paired median |
+|---|---|---|---|---|---|
+| gate | 0 | 776,896 -> 776,064 | 1,059,840 -> 1,060,032 | 65 -> 62 | -704 |
+| g0 | 0 | 810,048 -> 809,728 | 1,156,480 -> 1,158,400 | 116 -> 117 | -512 |
+| sz | 0 | 858,880 -> 861,056 | 1,163,648 -> 1,174,272 | 128 -> 130 | -704 |
+
+The Sector Z P95 line is window noise, not the change: from frame 60 on the
+two runs read P95 1,153,728 and 1,153,856, the hundred slowest q34 frames
+are a paired -1,152 median, and the frames that moved most (+85K at 1155,
++63K at 1552) are SRC-only spikes on identical game state. Per-frame
+polygon/vertex counts match on all but 1, 1 and 5 frames of 1,960.
+
+## q35: the Whispy route arms, the fighter plan route and verify, the lean route word
+
+Deleted:
+
+- `gNdsWhispyAOTRoute` (7) and its arms 0-6 in `battleship_lbparticle.c`: the
+  source/conservative generator and struct paths (`ndsWhispyAOTUpdateStruct`,
+  `ndsWhispyAOTApplyBlends`), the route-1 rigid draw arm, the float-compare
+  generator match, and every `route >= N` counter split. The renderer's
+  `ndsRendererSubmitWhispyNativeQuad` takes `sb32 packet` (TRUE Whispy, FALSE
+  the Fox blaster glow) instead of a route, and its route 4-6 branches are gone;
+- `gNdsFtrPlanRoute` (`NDS_FTR_PLAN_ROUTE` = 1) and the plan equivalence arm
+  `gNdsFtrPlanVerify` with its verify function and counters;
+- `gNdsFtrLeanRoute`, unread since the old fighter executor went (2026-10-05).
+
+| config | digest diff | P50 | P95 | over | paired median |
+|---|---|---|---|---|---|
+| gate | 0 | 776,064 -> 776,576 | 1,060,032 -> 1,059,072 | 62 -> 62 | +384 |
+| g0 | 0 | 809,728 -> 808,192 | 1,158,400 -> 1,149,824 | 117 -> 115 | -64 |
+| sz | 0 | 861,056 -> 859,392 | 1,174,272 -> 1,171,264 | 130 -> 130 | -896 |
+
+Neutral. GPOL/GVTX differ on 45 / 96 / 128 frames by +-1..5 quads, both
+signs about equally: `GFX_POLYGON_RAM_USAGE` is read before the frame's flush
+while the geometry engine may still be draining the FIFO, so it races the
+particle pass at the end of the draw, which this change retimes. A dropped
+quad would move one way only.

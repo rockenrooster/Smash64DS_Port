@@ -559,8 +559,8 @@ extern const u8 gNdsItemTextureDims[6];
  * half of this cut. The per-emission random angles use gSYSinTable, the DS-
  * resident source sine table, instead of four ARM9 libm calls. The small table
  * error affects presentation only; RNG call count/order and spawn construction
- * remain source-owned. Route 5 compiles the closed post-construction control
- * states while retaining these same source objects and ownership lists. */
+ * remain source-owned. The closed post-construction control states keep
+ * these same source objects and ownership lists. */
 typedef struct NDSWhispyAOTGeneratorDesc
 {
     u8 script_id;
@@ -609,25 +609,16 @@ volatile u32 gNdsWhispyAOTStructSourceUpdates;
 volatile u32 gNdsWhispyAOTStructTicks;
 #endif
 volatile u32 gNdsWhispyAOTDividesAvoided;
-volatile u32 gNdsWhispyAOTRigidDraws;
-volatile u32 gNdsWhispyAOTRigidDrawFallbacks;
 volatile u32 gNdsWhispyAOTTier2GeneratorMatches;
 volatile u32 gNdsWhispyAOTTier2DirectUpdates;
 volatile u32 gNdsWhispyAOTTier2FixedTransforms;
 volatile u32 gNdsWhispyAOTTier2FixedSubmits;
 volatile u32 gNdsWhispyAOTTier2FixedFallbacks;
-/* Runtime A/B selector for the lab ROM. All arms keep the identical linked
- * image and cache placement: 0 is source, 1 is the conservative divide/trig
- * cut, 2 is the closed direct-update/fixed-submit kernel, 3 adds pinned binds,
- * 4 sends those same source-ordered fixed vertices/state through one bounded
- * GXFIFO DMA packet per run, 5 also compiles the three closed scripts'
- * wait/loop/blend/end transitions plus source-identical pool retirement, and 6
- * runs that closed update/draw path as one ARM/O3 kernel with pass-local proof
- * tallies and cached exact-script identity. Route 7 additionally removes
- * repeat validation/leg/clamp work from the already-bounded GX packet path.
- * Route 7 is the owner-approved promoted default; build-time overrides retain
- * the source route for controlled A/B and fallback verification. */
-volatile u32 gNdsWhispyAOTRoute = 7u;
+/* Route 7, the owner-approved promoted default, is the only Whispy path since
+ * 2026-10-06 (owner: "Delete Old machinery"): the selector gNdsWhispyAOTRoute
+ * and its arms 0-6 (source, divide/trig cut, direct-update/fixed-submit,
+ * pinned binds, GXFIFO packets, closed transitions, the ARM/O3 kernel without
+ * the packet-path validation cut) are gone. */
 
 /* Exact bytecode identity remains the selector, but after one full bank/table
  * proof there is no reason to chase the same three script tables for every
@@ -664,8 +655,7 @@ ndsWhispyAOTDescForBytecode(u8 bank_id, u8 texture_id, const u8 *bytecode)
     case 1u: index = 2u; break;
     default: return NULL;
     }
-    if ((gNdsWhispyAOTRoute >= 6u) &&
-        (sNdsWhispyAOTScriptCacheSlot == slot) &&
+    if ((sNdsWhispyAOTScriptCacheSlot == slot) &&
         (sNdsWhispyAOTScriptCache[index] != NULL) &&
         (sNdsWhispyAOTScriptCache[index] == bytecode))
     {
@@ -686,16 +676,13 @@ ndsWhispyAOTDescForBytecode(u8 bank_id, u8 texture_id, const u8 *bytecode)
     {
         return NULL;
     }
-    if (gNdsWhispyAOTRoute >= 6u)
+    if (sNdsWhispyAOTScriptCacheSlot != slot)
     {
-        if (sNdsWhispyAOTScriptCacheSlot != slot)
-        {
-            sNdsWhispyAOTScriptCacheSlot = slot;
-            memset(sNdsWhispyAOTScriptCache, 0,
-                   sizeof(sNdsWhispyAOTScriptCache));
-        }
-        sNdsWhispyAOTScriptCache[index] = bytecode;
+        sNdsWhispyAOTScriptCacheSlot = slot;
+        memset(sNdsWhispyAOTScriptCache, 0,
+               sizeof(sNdsWhispyAOTScriptCache));
     }
+    sNdsWhispyAOTScriptCache[index] = bytecode;
     return &sNdsWhispyAOTGenerators[index];
 }
 
@@ -727,25 +714,13 @@ static sb32 ndsWhispyAOTGeneratorMatches(
     {
         return FALSE;
     }
-    if (gNdsWhispyAOTRoute >= 2u)
-    {
-        /* Exact bank + exact bytecode already prove these immutable header
-         * fields. Re-comparing eight floats through __aeabi_fcmpeq for every
-         * generator on every frame was validation in the hottest possible
-         * place. The generated-bank checker pins the source hash instead. */
-        gNdsWhispyAOTTier2GeneratorMatches++;
-        return TRUE;
-    }
-    return ((gn->texture_id == desc->texture_id) &&
-            (gn->vel.x == desc->vel_x) &&
-            (gn->vel.y == desc->vel_y) &&
-            (gn->vel.z == desc->vel_z) &&
-            (gn->unk_gn_0x38 == desc->radius) &&
-            (gn->unk_gn_0x3C == desc->angle_span) &&
-            (gn->update_rate == desc->update_rate) &&
-            (gn->generator_vars.rotate.base == 0.0F) &&
-            (gn->generator_vars.rotate.target == F_CST_DTOR32(360.0F))) ?
-        TRUE : FALSE;
+    /* Exact bank + exact bytecode already prove the immutable header fields
+     * (texture, velocity, radius, angle span, update rate, rotate range).
+     * Re-comparing eight floats through __aeabi_fcmpeq for every generator on
+     * every frame was validation in the hottest possible place; the
+     * generated-bank checker pins the source hash instead. */
+    gNdsWhispyAOTTier2GeneratorMatches++;
+    return TRUE;
 }
 
 /* Fast only when EVERY queued generator is one of the three exact Whispy
@@ -761,14 +736,6 @@ static void ndsWhispyAOTGeneratorFuncRun(GObj *gobj)
     u32 tick_start = cpuGetTiming();
 #endif
 
-    if (gNdsWhispyAOTRoute == 0u)
-    {
-        lbParticleGeneratorFuncRun(gobj);
-#if NDS_TICK_HUD && NDS_WHISPY_AOT_TICKS
-        gNdsWhispyAOTGeneratorTicks += cpuGetTiming() - tick_start;
-#endif
-        return;
-    }
     if (sLBParticleGeneratorsQueued == NULL)
     {
         lbParticleGeneratorFuncRun(gobj);
@@ -948,47 +915,7 @@ static u8 ndsWhispyAOTBlendChannel(u8 current, u8 target, u16 length)
     return (u8)(value >> 16);
 }
 
-static void ndsWhispyAOTApplyBlends(LBParticle *pc,
-                                    u16 size_length,
-                                    u16 prim_length,
-                                    u16 env_length)
-{
-    if (size_length != 0u)
-    {
-        pc->size += (pc->size_target - pc->size) *
-                    sNdsWhispySizeReciprocal[size_length];
-        pc->size_target_length = size_length - 1u;
-        gNdsWhispyAOTDividesAvoided++;
-    }
-    if (prim_length != 0u)
-    {
-        pc->primcolor.r = ndsWhispyAOTBlendChannel(
-            pc->primcolor.r, pc->target_primcolor.r, prim_length);
-        pc->primcolor.g = ndsWhispyAOTBlendChannel(
-            pc->primcolor.g, pc->target_primcolor.g, prim_length);
-        pc->primcolor.b = ndsWhispyAOTBlendChannel(
-            pc->primcolor.b, pc->target_primcolor.b, prim_length);
-        pc->primcolor.a = ndsWhispyAOTBlendChannel(
-            pc->primcolor.a, pc->target_primcolor.a, prim_length);
-        pc->primcolor_target_length = prim_length - 1u;
-        gNdsWhispyAOTDividesAvoided += 4u;
-    }
-    if (env_length != 0u)
-    {
-        pc->envcolor.r = ndsWhispyAOTBlendChannel(
-            pc->envcolor.r, pc->target_envcolor.r, env_length);
-        pc->envcolor.g = ndsWhispyAOTBlendChannel(
-            pc->envcolor.g, pc->target_envcolor.g, env_length);
-        pc->envcolor.b = ndsWhispyAOTBlendChannel(
-            pc->envcolor.b, pc->target_envcolor.b, env_length);
-        pc->envcolor.a = ndsWhispyAOTBlendChannel(
-            pc->envcolor.a, pc->target_envcolor.a, env_length);
-        pc->envcolor_target_length = env_length - 1u;
-        gNdsWhispyAOTDividesAvoided += 4u;
-    }
-}
-
-/* Route 6's source-equivalent blend kernel. A colour channel already at its
+/* The source-equivalent blend kernel. A colour channel already at its
  * target is mathematically unchanged by BattleShip's blend expression; avoid
  * its multiply/shift/store while retaining the proof counter's source-operation
  * meaning. Whispy's terminal fades change alpha only, so three of four channel
@@ -1059,8 +986,8 @@ static void ndsWhispyAOTSetPrimAlphaBlend(LBParticle *pc,
 
 /* AOT control states are bytecode cursor offsets after the source constructor's
  * immediate first update. The generated-bank hash pins every command byte.
- * Keeping the source cursor/timer/loop fields current makes the route reversible
- * at any frame and gives route 4 an exact same-ROM control. */
+ * Keeping the source cursor/timer/loop fields current lets any particle fall
+ * back to the source updater at any frame. */
 static sb32 ndsWhispyAOTAdvanceScript2(LBParticle *pc)
 {
     switch (pc->bytecode_csr)
@@ -1236,7 +1163,7 @@ typedef struct NDSWhispyAOTLeanStats
     u32 direct_updates;
 } NDSWhispyAOTLeanStats;
 
-/* Identical closed ownership as route 5, but its proof values live in the ARM
+/* Closed ownership of exact Whispy scripts 2/3/4; its proof values live in the ARM
  * runner's locals until the end of the once-per-frame pass. This removes three
  * to four volatile global read/modify/writes from every live particle update. */
 static inline NDS_WHISPY_AOT_INLINE_CODE LBParticle *
@@ -1322,156 +1249,6 @@ ndsWhispyAOTUpdateStructLean(LBParticle *pc, LBParticle *previous,
     return pc->next;
 }
 
-/* Route 5 owns every post-construction update for exact Whispy scripts 2/3/4:
- * fixed control transitions, reciprocal blends, lifetime, pool retirement and
- * their closed gravity/friction motion. Routes 1-4 remain unchanged below as
- * synchronized controls. */
-static LBParticle *ndsWhispyAOTUpdateStruct(
-    LBParticle *pc, LBParticle *previous, s32 link)
-{
-    const NDSWhispyAOTGeneratorDesc *desc =
-        ndsWhispyAOTDescForBytecode(
-            pc->bank_id, pc->texture_id, pc->bytecode);
-    u16 size_length = pc->size_target_length;
-    u16 prim_length = pc->primcolor_target_length;
-    u16 env_length = pc->envcolor_target_length;
-    LBParticle *next;
-
-    if (desc == NULL)
-    {
-        return lbParticleUpdateStruct(pc, previous, link);
-    }
-    gNdsWhispyAOTStructVisits++;
-    if (gNdsWhispyAOTRoute >= 5u)
-    {
-        const u16 motion_mask = LBPARTICLE_FLAG_GRAVITY |
-                                LBPARTICLE_FLAG_FRICTION |
-                                LBPARTICLE_FLAG_VORTEX |
-                                LBPARTICLE_FLAG_ATTACH;
-
-        if ((pc->flags & LBPARTICLE_FLAG_PAUSE) != 0u)
-        {
-            gNdsWhispyAOTStructFastUpdates++;
-            return pc->next;
-        }
-        if ((pc->lifetime == 0u) || (pc->bytecode_timer == 0u) ||
-            (size_length > 17u) || (prim_length > 17u) ||
-            (env_length > 17u) ||
-            ((pc->flags & motion_mask) != desc->particle_flags))
-        {
-            gNdsWhispyAOTStructSourceUpdates++;
-            return lbParticleUpdateStruct(pc, previous, link);
-        }
-        if (pc->bytecode_timer == 1u)
-        {
-            if (ndsWhispyAOTAdvanceBytecode(pc, desc) == FALSE)
-            {
-                gNdsWhispyAOTStructSourceUpdates++;
-                return lbParticleUpdateStruct(pc, previous, link);
-            }
-        }
-        else
-        {
-            pc->bytecode_timer--;
-        }
-
-        size_length = pc->size_target_length;
-        prim_length = pc->primcolor_target_length;
-        env_length = pc->envcolor_target_length;
-        ndsWhispyAOTApplyBlends(
-            pc, size_length, prim_length, env_length);
-        pc->lifetime--;
-        gNdsWhispyAOTTier2DirectUpdates++;
-        gNdsWhispyAOTStructFastUpdates++;
-        if (pc->lifetime == 0u)
-        {
-            return ndsWhispyAOTEjectStruct(pc, previous, link);
-        }
-
-        if ((pc->flags & LBPARTICLE_FLAG_GRAVITY) != 0u)
-        {
-            pc->vel.y -= pc->gravity;
-        }
-        if (((pc->flags & LBPARTICLE_FLAG_FRICTION) != 0u) &&
-            (desc->script_id != 4u))
-        {
-            pc->vel.x *= pc->friction;
-            pc->vel.y *= pc->friction;
-            pc->vel.z *= pc->friction;
-        }
-        pc->pos.x += pc->vel.x;
-        pc->pos.y += pc->vel.y;
-        pc->pos.z += pc->vel.z;
-        return pc->next;
-    }
-    if ((pc->flags & LBPARTICLE_FLAG_PAUSE) || (pc->lifetime <= 1u) ||
-        (pc->bytecode_timer <= 1u) ||
-        (size_length > 16u) || (prim_length > 16u) ||
-        (env_length > 16u))
-    {
-        gNdsWhispyAOTStructSourceUpdates++;
-        return lbParticleUpdateStruct(pc, previous, link);
-    }
-
-    if (gNdsWhispyAOTRoute >= 2u)
-    {
-        const u16 motion_mask = LBPARTICLE_FLAG_GRAVITY |
-                                LBPARTICLE_FLAG_FRICTION |
-                                LBPARTICLE_FLAG_VORTEX |
-                                LBPARTICLE_FLAG_ATTACH;
-
-        /* A timer above one cannot enter the bytecode interpreter, and a
-         * lifetime above one cannot eject. Exact bank/texture/bytecode identity
-         * plus the motion-bit check therefore closes this frame to the small
-         * kernel below. Presentation flags (ENV colour, alpha blend, masks)
-         * deliberately remain source-owned and may coexist with these bits. */
-        if ((pc->flags & motion_mask) == desc->particle_flags)
-        {
-            pc->bytecode_timer--;
-            ndsWhispyAOTApplyBlends(
-                pc, size_length, prim_length, env_length);
-            pc->lifetime--;
-
-            if ((pc->flags & LBPARTICLE_FLAG_GRAVITY) != 0u)
-            {
-                pc->vel.y -= pc->gravity;
-            }
-            if (((pc->flags & LBPARTICLE_FLAG_FRICTION) != 0u) &&
-                (desc->script_id != 4u))
-            {
-                pc->vel.x *= pc->friction;
-                pc->vel.y *= pc->friction;
-                pc->vel.z *= pc->friction;
-            }
-            /* Script 4's source friction is exactly 1.0F. Omitting its three
-             * identity multiplies is bit-exact for finite source velocities. */
-            pc->pos.x += pc->vel.x;
-            pc->pos.y += pc->vel.y;
-            pc->pos.z += pc->vel.z;
-            gNdsWhispyAOTTier2DirectUpdates++;
-            gNdsWhispyAOTStructFastUpdates++;
-            return pc->next;
-        }
-        gNdsWhispyAOTStructSourceUpdates++;
-        return lbParticleUpdateStruct(pc, previous, link);
-    }
-
-    if ((size_length | prim_length | env_length) == 0u)
-    {
-        gNdsWhispyAOTStructSourceUpdates++;
-        return lbParticleUpdateStruct(pc, previous, link);
-    }
-
-    pc->size_target_length = 0u;
-    pc->primcolor_target_length = 0u;
-    pc->envcolor_target_length = 0u;
-    next = lbParticleUpdateStruct(pc, previous, link);
-
-    ndsWhispyAOTApplyBlends(pc, size_length, prim_length, env_length);
-    gNdsWhispyAOTStructFastUpdates++;
-    return next;
-}
-
 static NDS_WHISPY_AOT_FAST_CODE void
 ndsWhispyAOTStructFuncRunLean(GObj *gobj)
 {
@@ -1517,56 +1294,11 @@ ndsWhispyAOTStructFuncRunLean(GObj *gobj)
 
 static void ndsWhispyAOTStructFuncRun(GObj *gobj)
 {
-    u32 flags = gobj->flags;
-    s32 link;
 #if NDS_TICK_HUD && NDS_WHISPY_AOT_TICKS
     u32 tick_start = cpuGetTiming();
 #endif
 
-    if (gNdsWhispyAOTRoute >= 6u)
-    {
-        ndsWhispyAOTStructFuncRunLean(gobj);
-#if NDS_TICK_HUD && NDS_WHISPY_AOT_TICKS
-        gNdsWhispyAOTStructTicks += cpuGetTiming() - tick_start;
-#endif
-        return;
-    }
-    if (gNdsWhispyAOTRoute == 0u)
-    {
-        lbParticleStructFuncRun(gobj);
-#if NDS_TICK_HUD && NDS_WHISPY_AOT_TICKS
-        gNdsWhispyAOTStructTicks += cpuGetTiming() - tick_start;
-#endif
-        return;
-    }
-    for (link = 0; link < ARRAY_COUNT(sLBParticleStructsAllocLinks);
-         link++, flags >>= 1)
-    {
-        LBParticle *previous;
-        LBParticle *current;
-
-        if ((flags & 0x10000u) != 0u)
-        {
-            continue;
-        }
-        previous = NULL;
-        current = sLBParticleStructsAllocLinks[link];
-        while (current != NULL)
-        {
-            LBParticle *next =
-                ndsWhispyAOTUpdateStruct(current, previous, link);
-
-            if (current->next == next)
-            {
-                previous = current;
-                current = next;
-            }
-            else
-            {
-                current = next;
-            }
-        }
-    }
+    ndsWhispyAOTStructFuncRunLean(gobj);
 #if NDS_TICK_HUD && NDS_WHISPY_AOT_TICKS
     gNdsWhispyAOTStructTicks += cpuGetTiming() - tick_start;
 #endif
@@ -3281,7 +3013,7 @@ static void ndsParticleDrawFoxBlasterGlowAOT(
             texture_name, NDS_FOX_BLASTER_GLOW_BINDING_SLOT,
             NULL, 0.0F, draw_center_q12,
             sNdsFoxBlasterGlowSizeQ8[age],
-            0x7fffu, 255u, 0u, 16u, 16u, 3u);
+            0x7fffu, 255u, 0u, 16u, 16u, FALSE);
         if (submit_result < 0)
         {
             /* The exact binding/fixed contract should make this unreachable.
@@ -3369,18 +3101,8 @@ static NDSRendererMatrix20p12
 static u8 sNdsParticleCameraValid[NDS_PARTICLE_CAMERA_CACHE_WAYS];
 static u32 sNdsParticleCameraNextWay;
 
-/* THE ROUTE IS A .data WORD, NOT A #if, and that is a measurement decision
- * rather than a style one. c101's first arm gated this on the preprocessor,
- * which moved 672 bytes of `.main` and cost `FTR` +19,712 P50 -- a bucket this
- * code never calls, and 15x the growth the board's 1.85-cycles-per-added-byte
- * rule entitles 672 bytes to. The delta measured was placement, not mechanism.
- * With the route in `.data` both arms link with byte-identical text and bss and
- * differ in one initialised word, which is the pairing cycle 100 proved out.
- * The section attribute is required: an initialiser of 0 would otherwise land
- * the control arm's copy in `.bss` and reintroduce the very skew it removes. */
-volatile u32 gNdsParticleCameraCacheEnabled
-    __attribute__((section(".data"))) = NDS_R2_PARTICLE_CAMERA_CACHE;
-
+/* Shipped since cycle 102 (-16,768 WORK-H P50, pixel-identical); its route
+ * word gNdsParticleCameraCacheEnabled was deleted 2026-10-06. */
 /* Engagement pair, same contract as the shield's and the fireball's: Hit
  * climbing with Miss near the quad-draw count is the cache working; Miss
  * tracking Hit means the key never matches and the rebuild is still running
@@ -3537,7 +3259,7 @@ static sb32 ndsParticleSetCurrentCamera(Vec3f *right, Vec3f *up)
     key.persp_far = cobj->projection.persp.far;
     key.scale = cobj->projection.persp.scale;
     renderer_reuse = ndsParticleCameraCanReuseRenderer(cobj);
-    if ((gNdsParticleCameraCacheEnabled != 0u) && (cobj->xobjs_num != 0))
+    if (cobj->xobjs_num != 0)
     {
         u32 way;
 
@@ -3602,7 +3324,6 @@ static sb32 ndsParticleSetCurrentCamera(Vec3f *right, Vec3f *up)
             up->x = ndsParticleCameraQ12ToF32(up_q12[0]);
             up->y = ndsParticleCameraQ12ToF32(up_q12[1]);
             up->z = ndsParticleCameraQ12ToF32(up_q12[2]);
-            if (gNdsParticleCameraCacheEnabled != 0u)
             {
                 u32 way = sNdsParticleCameraNextWay;
 
@@ -3787,7 +3508,7 @@ static sb32 ndsParticleSetCurrentCamera(Vec3f *right, Vec3f *up)
     /* Stored only for the branch the key describes. Every FALSE return above
      * leaves sNdsParticleCameraValid untouched, so a rejected camera can never
      * be served from the cache. */
-    if ((gNdsParticleCameraCacheEnabled != 0u) && (cobj->xobjs_num != 0))
+    if (cobj->xobjs_num != 0)
     {
         u32 way = sNdsParticleCameraNextWay;
 
@@ -4101,11 +3822,7 @@ static sb32 ndsParticleTransformForDraw(LBParticle *pc,
                                         s32 center_q8[3],
                                         Vec3f *quad_right,
                                         Vec3f *quad_up,
-                                        sb32 view_space
-#if NDS_R2_WHISPY_NATIVE_AOT
-                                        , sb32 rigid_whispy
-#endif
-                                        )
+                                        sb32 view_space)
 {
     LBTransform *xf = pc->xf;
 
@@ -4132,35 +3849,6 @@ static sb32 ndsParticleTransformForDraw(LBParticle *pc,
         }
         xf->transform_id = dLBParticleCurrentTransformID;
     }
-#if NDS_R2_WHISPY_NATIVE_AOT
-    /* Both Pupupu roots attach a rigid translate + Y rotation with unit scale.
-     * The generic path takes two square roots per particle just to recover
-     * magnitudes 1 and 1 from that matrix. Preserve its diagonal-sign mirror
-     * rule, but let the GX camera matrix own the rest of the transform. */
-    if ((rigid_whispy != FALSE) && (gNdsWhispyAOTRoute != 0u))
-    {
-        if ((xf->scale.x == 1.0F) && (xf->scale.y == 1.0F) &&
-            (xf->scale.z == 1.0F))
-        {
-            ndsParticleWorldF32(xf, &pc->pos, world_pos);
-            if (xf->affine[0][0] < 0.0F)
-            {
-                quad_right->x = -quad_right->x;
-                quad_right->y = -quad_right->y;
-                quad_right->z = -quad_right->z;
-            }
-            if (xf->affine[1][1] < 0.0F)
-            {
-                quad_up->x = -quad_up->x;
-                quad_up->y = -quad_up->y;
-                quad_up->z = -quad_up->z;
-            }
-            gNdsWhispyAOTRigidDraws++;
-            return FALSE;
-        }
-        gNdsWhispyAOTRigidDrawFallbacks++;
-    }
-#endif
     {
         /* The transform's two axis magnitudes (and their diagonal-sign
          * mirrors) and its fixed-point form are the same for every particle
@@ -4278,10 +3966,6 @@ static sb32 ndsWhispyAOTTier2TransformForDraw(LBParticle *pc,
     {
         *world_pos = pc->pos;
         *mirror_mask = 0u;
-        if (gNdsWhispyAOTRoute < 6u)
-        {
-            gNdsWhispyAOTTier2FixedTransforms++;
-        }
         return TRUE;
     }
     if (xf->transform_id != dLBParticleCurrentTransformID)
@@ -4342,10 +4026,6 @@ static sb32 ndsWhispyAOTTier2TransformForDraw(LBParticle *pc,
     world_pos->z = (xf->affine[0][2] * pc->pos.x) +
                    (xf->affine[2][2] * pc->pos.z) + xf->affine[3][2];
     *mirror_mask = mirror;
-    if (gNdsWhispyAOTRoute < 6u)
-    {
-        gNdsWhispyAOTTier2FixedTransforms++;
-    }
     return TRUE;
 }
 
@@ -4835,7 +4515,7 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
         atlas_name = 0u;
     }
 #if NDS_R2_WHISPY_NATIVE_AOT
-    if ((atlas_name != 0u) && (gNdsWhispyAOTRoute >= 2u))
+    if (atlas_name != 0u)
     {
         u32 texture;
 
@@ -4853,10 +4533,9 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
     {
         fox_blaster_glow_name =
             ndsRendererHardwareFoxBlasterGlowName();
-        if (gNdsWhispyAOTRoute < 2u)
-        {
-            ndsRendererSetWhispyNativeBasis(&right, &up);
-        }
+#if !NDS_R2_WHISPY_NATIVE_AOT
+        ndsRendererSetWhispyNativeBasis(&right, &up);
+#endif
     }
 #endif
 #else
@@ -4945,9 +4624,7 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
             {
                 continue;
             }
-#if NDS_R2_WHISPY_NATIVE_AOT
-            if (gNdsWhispyAOTRoute < 6u)
-#endif
+#if !NDS_R2_WHISPY_NATIVE_AOT
             {
                 gNdsParticleTextureUseMask[id >> 5] |= 1u << (id & 31u);
                 /* frame_id + 1, so "never drawn" and "drew frame 0" differ. */
@@ -4958,6 +4635,7 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                         (u8)(pc->frame_id + 1u);
                 }
             }
+#endif
             if (atlas_name == 0u)
             {
                 continue;
@@ -4990,15 +4668,10 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
 #error "Dream Land particles draw only through the Whispy native textures; the quad atlas has no Pupupu cells since 2026-10-04"
 #endif
 #if NDS_R2_WHISPY_NATIVE_AOT
-                    if (gNdsWhispyAOTRoute >= 6u)
-                    {
-                        whispy_lean_stride_count++;
-                    }
-                    else
+                    whispy_lean_stride_count++;
+#else
+                    gNdsParticleQuadStrideCount++;
 #endif
-                    {
-                        gNdsParticleQuadStrideCount++;
-                    }
                 }
 #if NDS_P2_NESS
                 /* Ness source textures 0/1 are their own bank, not EFCommon
@@ -5059,8 +4732,7 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
             if (whispy_native != FALSE)
             {
 #if NDS_R2_WHISPY_NATIVE_AOT
-                if ((gNdsWhispyAOTRoute >= 6u) &&
-                    ((u32)pc->texture_id < 3u))
+                if ((u32)pc->texture_id < 3u)
                 {
                     u32 frame_max = (u32)pc->frame_id + 1u;
 
@@ -5075,20 +4747,14 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                 if ((u32)pc->frame_id < 32u)
                 {
 #if NDS_R2_WHISPY_NATIVE_AOT
-                    if (gNdsWhispyAOTRoute >= 6u)
-                    {
-                        whispy_lean_source_frames |= 1u << pc->frame_id;
-                    }
-                    else
+                    whispy_lean_source_frames |= 1u << pc->frame_id;
+#else
+                    gNdsWhispyNativeSourceFrameMask |= 1u << pc->frame_id;
 #endif
-                    {
-                        gNdsWhispyNativeSourceFrameMask |= 1u << pc->frame_id;
-                    }
                 }
 #if NDS_R2_WHISPY_NATIVE_AOT
-                texture_name = ((gNdsWhispyAOTRoute >= 2u) &&
-                                ((u32)pc->texture_id <
-                                 ARRAY_COUNT(whispy_native_names))) ?
+                texture_name = ((u32)pc->texture_id <
+                                ARRAY_COUNT(whispy_native_names)) ?
                     whispy_native_names[pc->texture_id] :
                     ndsRendererHardwareWhispyNativeName(pc->texture_id);
 #else
@@ -5135,8 +4801,7 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                  * of 2 and gNdsParticleTextureFrameMax[224] against 47.
                  * These two are a per-texture census of the UNSTRIDED ids,
                  * so re-check rather than widen them. */
-                if ((gNdsWhispyAOTRoute >= 6u) &&
-                    (id < NDS_PARTICLE_TEXTURE_USE_IDS))
+                if (id < NDS_PARTICLE_TEXTURE_USE_IDS)
                 {
                     NDS_DIAG(gNdsParticleTextureUseMask[id >> 5] |=
                         1u << (id & 31u));
@@ -5234,8 +4899,7 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
             {
                 s32 submit_result = -1;
 #if NDS_R2_WHISPY_NATIVE_AOT
-                if ((whispy_native != FALSE) &&
-                    (gNdsWhispyAOTRoute >= 2u))
+                if (whispy_native != FALSE)
                 {
                     u32 mirror_mask;
                     sb32 transform_ok;
@@ -5244,49 +4908,24 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                         pc, &world_pos, &mirror_mask);
                     if (transform_ok != FALSE)
                     {
-                        if (gNdsWhispyAOTRoute >= 6u)
-                        {
-                            whispy_lean_fixed_transforms++;
-                        }
+                        whispy_lean_fixed_transforms++;
                         submit_result = ndsRendererSubmitWhispyNativeQuad(
                             texture_name, (u32)pc->texture_id,
                             &world_pos, pc->size, NULL, 0,
                             color, pc->primcolor.a, mirror_mask,
-                            texture_width, texture_height,
-                            gNdsWhispyAOTRoute);
+                            texture_width, texture_height, TRUE);
                         if (submit_result > 0)
                         {
-                            if (gNdsWhispyAOTRoute >= 6u)
-                            {
-                                whispy_lean_fixed_submits++;
-                            }
-                            else
-                            {
-                                gNdsWhispyAOTTier2FixedSubmits++;
-                            }
+                            whispy_lean_fixed_submits++;
                         }
                         else if (submit_result < 0)
                         {
-                            if (gNdsWhispyAOTRoute >= 6u)
-                            {
-                                whispy_lean_fixed_fallbacks++;
-                            }
-                            else
-                            {
-                                gNdsWhispyAOTTier2FixedFallbacks++;
-                            }
+                            whispy_lean_fixed_fallbacks++;
                         }
                     }
                     else
                     {
-                        if (gNdsWhispyAOTRoute >= 6u)
-                        {
-                            whispy_lean_fixed_fallbacks++;
-                        }
-                        else
-                        {
-                            gNdsWhispyAOTTier2FixedFallbacks++;
-                        }
+                        whispy_lean_fixed_fallbacks++;
                     }
                 }
 #endif
@@ -5298,12 +4937,7 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                     s32 center_q8[3];
                     const sb32 center_fixed = ndsParticleTransformForDraw(
                         pc, &right, &up, &world_pos, center_q8,
-                        &quad_right, &quad_up, view_space
-#if NDS_R2_WHISPY_NATIVE_AOT
-                        , ((whispy_native != FALSE) &&
-                           (gNdsWhispyAOTRoute == 1u))
-#endif
-                    );
+                        &quad_right, &quad_up, view_space);
 #if NDS_R2_POSITION_PROBE
                     if (center_fixed != FALSE)
                     {
@@ -5383,18 +5017,12 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                 if (whispy_native != FALSE)
                 {
 #if NDS_R2_WHISPY_NATIVE_AOT
-                    if (gNdsWhispyAOTRoute >= 6u)
-                    {
-                        whispy_lean_draws++;
-                        whispy_lean_texture_mask |= 1u << pc->texture_id;
-                    }
-                    else
+                    whispy_lean_draws++;
+                    whispy_lean_texture_mask |= 1u << pc->texture_id;
+#else
+                    gNdsWhispyNativeTextureDrawCount++;
+                    gNdsWhispyNativeTextureMask |= 1u << pc->texture_id;
 #endif
-                    {
-                        gNdsWhispyNativeTextureDrawCount++;
-                        gNdsWhispyNativeTextureMask |=
-                            1u << pc->texture_id;
-                    }
                 }
 #endif
                 /* KO particles draw on link 2, so the Whispy counters below
@@ -5404,44 +5032,26 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                  * which would silently have turned a Whispy instrument into an
                  * all-particle one. */
                 NDS_DIAG(gNdsParticleSubmitOkCount++);
+                if (link == 1u)
                 {
 #if NDS_R2_WHISPY_NATIVE_AOT
-                    if (gNdsWhispyAOTRoute >= 6u)
-                    {
-                        if (link == 1u)
-                        {
-                            whispy_lean_submit_ok++;
-                        }
-                    }
-                    else
+                    whispy_lean_submit_ok++;
+#else
+                    gNdsWhispySubmitOk++;
 #endif
-                    {
-                        if (link == 1u)
-                        {
-                            gNdsWhispySubmitOk++;
-                        }
-                    }
                 }
             }
             /* Same split as the ok counter above. */
             else
             {
                 gNdsParticleSubmitFailCount++;
+                if (link == 1u)
+                {
 #if NDS_R2_WHISPY_NATIVE_AOT
-                if (gNdsWhispyAOTRoute >= 6u)
-                {
-                    if (link == 1u)
-                    {
-                        whispy_lean_submit_fail++;
-                    }
-                }
-                else
+                    whispy_lean_submit_fail++;
+#else
+                    gNdsWhispySubmitFail++;
 #endif
-                {
-                    if (link == 1u)
-                    {
-                        gNdsWhispySubmitFail++;
-                    }
                 }
             }
             }
@@ -5533,7 +5143,6 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
     ndsRendererSetParticleNoDepth(0u);
 #endif
 #if NDS_R2_WHISPY_NATIVE_AOT
-    if (gNdsWhispyAOTRoute >= 6u)
     {
         u32 texture;
 

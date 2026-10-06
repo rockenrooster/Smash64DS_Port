@@ -1975,10 +1975,10 @@ void ndsRendererSetWhispyNativeBasis(const Vec3f *right, const Vec3f *up);
  * Q12 lets every visible source state avoid soft-float conversion. */
 s32 ndsRendererParticlePositionToQ12(const Vec3f *pos,
                                      s32 fixed_center_q12[3]);
-/* Convert one rigid Whispy root + local particle position to the renderer's
- * Q12 center without ARM9 software-float matrix arithmetic. `affine == NULL`
- * is the identity transform. The optional oracle executes the source float
- * expression and records its Q12 delta; it is for the route-3 lab arm only. */
+/* One native-texture particle quad: `packet` TRUE appends it to the Whispy
+ * GXFIFO packet (Dream Land's wind leaves), FALSE draws it in immediate mode
+ * (the Fox blaster glow). Returns 1 drawn, 0 invisible, -1 declined (the
+ * caller falls back to the generic corner builder). */
 s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
                                       u32 texture_slot,
                                       const Vec3f *pos, f32 size,
@@ -1987,7 +1987,7 @@ s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
                                       u32 color, u8 alpha,
                                       u32 mirror_mask,
                                       u32 texture_w, u32 texture_h,
-                                      u32 submit_route);
+                                      sb32 packet);
 /* OWNER DECISION 2026-08-13 -- the approved draw-only bore offset.
  *
  * BattleShip spawns Fox's shot and its flash at gun joint-17 local (60,0,0)

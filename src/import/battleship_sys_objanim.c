@@ -543,44 +543,11 @@ static NDS_R2_ANIM_Q_BODY_ATTR f32 ndsR2AnimValueQBody(const AObj *aobj)
     return ndsR2FixedToF32(out, NDS_R2_AQ_VF);
 }
 
-#if NDS_R2_ANIM_ITCM_ROUTE
-/* Lab SAME-BINARY route for the placement. Two out-of-line copies of one body,
- * one in .itcm and one in .main; a `.data` word picks which `bl` the caller
- * takes. Placement is a link-time property of a symbol, so it cannot be routed
- * on one copy -- but it CAN be routed between two, and that turns a cross-build
- * question with a >=14,080 rank-80 floor into a zero-repeat-floor difference.
- *
- * .data AND NOT .bss, per nds_r2_sqrtf.c: a zero-initialised route word with no
- * explicit section lands in .bss and drags a ~10,000 tk/fr placement floor.
- *
- * Both arms run identical instructions on identical inputs, so the engagement
- * control is an EQUALITY: gNdsR2CubicEvals must read the same on both arms. */
-volatile u32 gNdsR2AnimItcmRoute
-    __attribute__((used, section(".data"))) = 1u;
-
-static NDS_R2_CUBIC_ATTR f32 ndsR2AnimValueQMain(const AObj *aobj)
-{
-    return ndsR2AnimValueQBody(aobj);
-}
-
-static NDS_R2_CUBIC_ATTR NDS_R2_ANIM_Q_ITCM f32
-ndsR2AnimValueQItcm(const AObj *aobj)
-{
-    return ndsR2AnimValueQBody(aobj);
-}
-
-static f32 ndsR2AnimValueQ(const AObj *aobj)
-{
-    return (gNdsR2AnimItcmRoute != 0u) ? ndsR2AnimValueQItcm(aobj)
-                                       : ndsR2AnimValueQMain(aobj);
-}
-#else
 static NDS_R2_CUBIC_ATTR NDS_R2_ANIM_Q_ITCM f32
 ndsR2AnimValueQ(const AObj *aobj)
 {
     return ndsR2AnimValueQBody(aobj);
 }
-#endif
 /* NDS_R2_CUBIC_FIXED_KERNEL_END */
 
 /* The original body with the arithmetic replaced twice over: E64's fixed cubic

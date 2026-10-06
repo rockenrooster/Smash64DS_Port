@@ -5361,15 +5361,6 @@ void ndsRendererAdapterFinishNativeStageOwner(void)
  * material write walk's capacity guard actually fires, and a guard whose hit
  * count nobody can read is indistinguishable from one that never runs. */
 volatile u32 gNdsR2MaterialWalkBoundHits;
-/* Runtime toggle so ONE binary can run both arms. Clearing this from a debugger
- * restores the pre-guard unbounded walk with identical code layout, identical
- * inlining and an identical ROM -- which is the only way to attribute the
- * Sudden Death freeze to the guard rather than to the placement change adding
- * the guard caused. Two different builds cannot answer that question; this
- * campaign has repeatedly measured layout moving results on its own (E11
- * removed real work and P95 still rose 15,744). Defaults to 1: the guard is
- * live in every build, and only a deliberate debugger write disables it. */
-volatile u32 gNdsR2MaterialWalkBoundEnabled = 1u;
 
 #if NDS_R2_SECOND_ENTRY_DIAG
 /* Second-entry chain validator. Default OFF (Makefile NDS_R2_SECOND_ENTRY_DIAG).
@@ -5707,7 +5698,7 @@ static sb32 ndsRendererAdapterPrepareNativeMaterials(
          * scene presents two frames and then none, with no overflow assert
          * firing anywhere, and an interrupt landing inside this loop's inlined
          * material build. */
-        if ((gNdsR2MaterialWalkBoundEnabled != 0u) && (count >= capacity))
+        if (count >= capacity)
         {
             /* Engagement proof, and it is NOT decoration. The Sudden Death
              * freeze stopped when this guard went in, but the default-off chain

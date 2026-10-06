@@ -5,7 +5,6 @@ param(
     [ValidateRange(1, 8)][int]$RunnerSlot = 6,
     [ValidateRange(30, 600)][int]$TimeoutSeconds = 300,
     [ValidateRange(20, 1200)][int]$CaptureFrame = 100,
-    [ValidateRange(0, 7)][int]$Route = 7,
     [ValidateRange(0, 1)][int]$ExpectedFoxCpu = 0,
     [ValidateRange(0, 1200)][int]$TraceFrames = 0,
     [string]$Label = 'native-textures',
@@ -95,9 +94,6 @@ if ($AOT) {
         'gNdsWhispyAOTStructFastUpdates',
         'gNdsWhispyAOTStructSourceUpdates',
         'gNdsWhispyAOTDividesAvoided',
-        'gNdsWhispyAOTRigidDraws',
-        'gNdsWhispyAOTRigidDrawFallbacks',
-        'gNdsWhispyAOTRoute',
         'gNdsWhispyAOTTier2GeneratorMatches',
         'gNdsWhispyAOTTier2DirectUpdates',
         'gNdsWhispyAOTTier2FixedTransforms',
@@ -158,12 +154,6 @@ try {
     )
     if (-not $NaturalWindWait) {
         $commands += 'set var gGRCommonStruct.pupupu.whispy_wind_wait = 4'
-    }
-    if ($AOT) {
-        # Set the writable route selector at the first completed battle frame
-        # so every tier can be measured from one ROM; the lab's initialized
-        # default remains the most optimized route 7.
-        $commands += ("set var gNdsWhispyAOTRoute = {0}" -f $Route)
     }
     $commands += @(
         'end',
@@ -266,9 +256,7 @@ try {
                 'gNdsWhispyAOTStructFastUpdates, ' +
                 'gNdsWhispyAOTStructSourceUpdates, ' +
                 'gNdsWhispyAOTDividesAvoided, ' +
-                'gNdsWhispyAOTRigidDraws, ' +
-                'gNdsWhispyAOTRigidDrawFallbacks, ' +
-                'gNdsWhispyAOTRoute, ' +
+                '0, 0, 7, ' +
                 'gNdsWhispyAOTTier2GeneratorMatches, ' +
                 'gNdsWhispyAOTTier2DirectUpdates, ' +
                 'gNdsWhispyAOTTier2FixedTransforms, ' +
@@ -332,66 +320,21 @@ try {
         throw "Whispy native contract failed:`n$($capture.Stdout)"
     }
     if ($AOT) {
-        $aotPattern = if ($Route -ge 5) {
+        $aotPattern =
             'WHISPY_AOT gen_fast=[1-9][0-9]* .*emits=[1-9][0-9]* ' +
             'trig_pairs=[1-9][0-9]* .*struct_fast=[1-9][0-9]* ' +
             'struct_source=0 divides_avoided=[1-9][0-9]* .*' +
-            ("rigid_fallback=0 route={0} " -f $Route) +
+            'rigid_fallback=0 route=7 ' +
             'tier2_matches=[1-9][0-9]* tier2_direct=[1-9][0-9]* ' +
             'tier2_xform=[1-9][0-9]* tier2_submit=[1-9][0-9]* ' +
             'tier2_fallback=0 fast_bind=[1-9][0-9]* bind_fallback=0 ' +
             'packet_quads=[1-9][0-9]* packet_state=[1-9][0-9]* ' +
             'packet_flush=[1-9][0-9]* packet_words=[1-9][0-9]* ' +
             'packet_fallback=0'
-        } elseif ($Route -eq 4) {
-            'WHISPY_AOT gen_fast=[1-9][0-9]* .*emits=[1-9][0-9]* ' +
-            'trig_pairs=[1-9][0-9]* .*struct_fast=[1-9][0-9]* .*' +
-            'divides_avoided=[1-9][0-9]* .*rigid_fallback=0 route=4 ' +
-            'tier2_matches=[1-9][0-9]* tier2_direct=[1-9][0-9]* ' +
-            'tier2_xform=[1-9][0-9]* tier2_submit=[1-9][0-9]* ' +
-            'tier2_fallback=0 fast_bind=[1-9][0-9]* bind_fallback=0 ' +
-            'packet_quads=[1-9][0-9]* packet_state=[1-9][0-9]* ' +
-            'packet_flush=[1-9][0-9]* packet_words=[1-9][0-9]* ' +
-            'packet_fallback=0'
-        } elseif ($Route -eq 3) {
-            'WHISPY_AOT gen_fast=[1-9][0-9]* .*emits=[1-9][0-9]* ' +
-            'trig_pairs=[1-9][0-9]* .*struct_fast=[1-9][0-9]* .*' +
-            'divides_avoided=[1-9][0-9]* .*rigid_fallback=0 route=3 ' +
-            'tier2_matches=[1-9][0-9]* tier2_direct=[1-9][0-9]* ' +
-            'tier2_xform=[1-9][0-9]* tier2_submit=[1-9][0-9]* ' +
-            'tier2_fallback=0 fast_bind=[1-9][0-9]* bind_fallback=0 ' +
-            'packet_quads=0 packet_state=0 packet_flush=0 packet_words=0 ' +
-            'packet_fallback=0'
-        } elseif ($Route -eq 2) {
-            'WHISPY_AOT gen_fast=[1-9][0-9]* .*emits=[1-9][0-9]* ' +
-            'trig_pairs=[1-9][0-9]* .*struct_fast=[1-9][0-9]* .*' +
-            'divides_avoided=[1-9][0-9]* .*rigid_fallback=0 route=2 ' +
-            'tier2_matches=[1-9][0-9]* tier2_direct=[1-9][0-9]* ' +
-            'tier2_xform=[1-9][0-9]* tier2_submit=[1-9][0-9]* ' +
-            'tier2_fallback=0 fast_bind=0 bind_fallback=0 ' +
-            'packet_quads=0 packet_state=0 packet_flush=0 packet_words=0 ' +
-            'packet_fallback=0'
-        } elseif ($Route -eq 1) {
-            'WHISPY_AOT gen_fast=[1-9][0-9]* .*emits=[1-9][0-9]* ' +
-            'trig_pairs=[1-9][0-9]* .*struct_fast=[1-9][0-9]* .*' +
-            'divides_avoided=[1-9][0-9]* rigid=[1-9][0-9]* ' +
-            'rigid_fallback=0 route=1 tier2_matches=0 tier2_direct=0 ' +
-            'tier2_xform=0 tier2_submit=0 tier2_fallback=0 fast_bind=0 ' +
-            'bind_fallback=0 ' +
-            'packet_quads=0 packet_state=0 packet_flush=0 ' +
-            'packet_words=0 packet_fallback=0'
-        } else {
-            'WHISPY_AOT gen_fast=0 .*struct_fast=0 .*rigid=0 ' +
-            'rigid_fallback=0 route=0 tier2_matches=0 tier2_direct=0 ' +
-            'tier2_xform=0 tier2_submit=0 tier2_fallback=0 fast_bind=0 ' +
-            'bind_fallback=0 ' +
-            'packet_quads=0 packet_state=0 packet_flush=0 ' +
-            'packet_words=0 packet_fallback=0'
-        }
         if ($capture.Stdout -notmatch $aotPattern) {
             throw "Whispy AOT engagement contract failed:`n$($capture.Stdout)"
         }
-        if ($Route -ge 5) {
+        if ($true) {
             $fullAot = [regex]::Match(
                 $capture.Stdout,
                 'struct_visits=([0-9]+) struct_fast=([0-9]+) ' +

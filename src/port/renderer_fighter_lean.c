@@ -32,9 +32,8 @@ _Static_assert(NDS_FTR_LEAN_ROOT_MAX < 30u,
                "bits 30-31 of a modelview-sites mask are NDS_FTR_LEAN_SITES_"
                "VTX10 and NDS_FTR_LEAN_SITES_INPUTS");
 
-/* Slice 7: the defaults are initialisers (NDS_FTR_LEAN_ROUTE_BOOT /
- * NDS_FTR_LEAN_ADMIT_BOOT: route 1, admission 2 wherever the lean path is
- * compiled). The ".dtcm.bss" input section is a LOADED one -- the linker
+/* Slice 7: the default is an initialiser (NDS_FTR_LEAN_ADMIT_BOOT: admission
+ * 2 wherever the lean path is compiled). The ".dtcm.bss" input section is a LOADED one -- the linker
  * script's `*(.dtcm .dtcm.*)` rule places it in the .dtcm output section with
  * the other initialised DTCM data (these words were already 'D' there at 0),
  * so the value is copied from the image at boot and costs no byte. A rule
@@ -42,14 +41,10 @@ _Static_assert(NDS_FTR_LEAN_ROOT_MAX < 30u,
  * the initialisers silently and ship route 0: the slice 7 README reads them
  * back from the shipping ELF (objdump of .dtcm) and at boot (gdb). */
 #if defined(__arm__)
-volatile u32 gNdsFtrLeanRoute
-    __attribute__((used, section(".dtcm.bss"), aligned(4))) =
-        NDS_FTR_LEAN_ROUTE_BOOT;
 volatile u32 gNdsFtrLeanAdmit
     __attribute__((used, section(".dtcm.bss"), aligned(4))) =
         NDS_FTR_LEAN_ADMIT_BOOT;
 #else
-volatile u32 gNdsFtrLeanRoute = NDS_FTR_LEAN_ROUTE_BOOT;
 volatile u32 gNdsFtrLeanAdmit = NDS_FTR_LEAN_ADMIT_BOOT;
 #endif
 #if NDS_FTR_LEAN_LAB

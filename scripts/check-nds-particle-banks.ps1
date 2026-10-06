@@ -1053,12 +1053,10 @@ if (($whispyAsset.Length -ne [int64]$whispy.asset_bytes) -or
 
 # The first lab changes only the final draw texture. The AOT lab keeps every
 # root, allocation pool, transform and child constructor in BattleShip's real
-# objects. Route 5 additionally compiles the three exact emitted scripts'
-# post-construction waits/loops/blends and copies the source lifetime-zero
-# unlink/eject branch at that owning seam; route 6 keeps that ownership while
-# collapsing its hot proof writes and unchanged blend channels; route 7 removes
-# repeat validation and bounded coordinate work from the renderer packet. Route
-# 6 remains the same-ROM control for the final cut.
+# objects, compiles the three exact emitted scripts' post-construction
+# waits/loops/blends, copies the source lifetime-zero unlink/eject branch at
+# that owning seam, and draws through the renderer's GXFIFO packet (route 7,
+# the only route since its selector and arms 0-6 were deleted 2026-10-06).
 # Pin exact Pupupu identity, all-or-source generator fallback, reversible source
 # cursors, source-owned pools/transforms, and both promoted build defaults. The
 # routed implementation itself defaults to the verified full-AOT/GXFIFO path.
@@ -1084,25 +1082,18 @@ foreach ($banned in @(
 foreach ($token in @(
     'ndsWhispyAOTDescForBytecode(',
     'gn->bank_id, (u8)gn->texture_id, gn->bytecode',
-    'gNdsWhispyAOTRoute == 0u',
-    'gNdsWhispyAOTRoute = 7u;',
     'lbParticleGeneratorFuncRun(gobj);',
-    'lbParticleStructFuncRun(gobj);',
     'lbParticleMakeParam(',
     'all-or-source preflight',
-    'pc->bytecode_timer <= 1u',
     'LBPARTICLE_FLAG_VORTEX |',
-    'gNdsWhispyAOTRoute >= 5u',
-    'gNdsWhispyAOTRoute >= 6u',
     'ndsWhispyAOTAdvanceBytecode(',
     'ndsWhispyAOTEjectStruct(',
     'ndsWhispyAOTApplyBlendsLean(',
     'ndsWhispyAOTStructFuncRunLean(',
     'lbParticleEjectTransform(pc->xf);',
-    'gNdsWhispyAOTTier2DirectUpdates++;',
+    'gNdsWhispyAOTTier2DirectUpdates += stats.direct_updates',
     'ndsWhispyAOTTier2TransformForDraw(',
-    'gNdsWhispyAOTTier2FixedFallbacks++;',
-    'gNdsWhispyAOTRigidDrawFallbacks++')) {
+    'whispy_lean_fixed_fallbacks++;')) {
     if (-not $runtime.Contains($token)) {
         throw "Whispy AOT ownership/fallback guard lost: $token"
     }
@@ -1121,7 +1112,7 @@ foreach ($token in @(
     'DMA_FIFO',
     'ARM946E-S has no FPU.',
     'NDS_RENDERER_WHISPY_COORD_SHIFT',
-    'submit_route >= 7u',
+    'sNdsRendererWhispyPacket.lean_counters = TRUE;',
     'sNdsRendererWhispyLeanBindingMask',
     'sNdsRendererWhispyLegCacheValid',
     'ndsRendererWhispyCoordToV16Unchecked(',

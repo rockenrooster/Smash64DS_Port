@@ -575,31 +575,6 @@ static u8 sNdsMPLineKindPlus1[NDS_MP_LINE_ENDPOINT_MAX];
 u32 gNdsMPLineKindHits;
 u32 gNdsMPLineKindFills;
 
-/* One-binary A/B, same instrument as `gNdsR2FighterStripRoute`, and BITWISE the
- * way `gNdsR2AnimCutRoute` is so one binary can attribute several cuts:
- *
- *   bit 1  the endpoint memo         (slice 35, -7,232 and -7,552 P95 on two
- *                                    separately-linked binaries)
- *   bit 2  the yakumono-id memo      (slice 36, -4,864 P95 isolated)
- *   bit 4  the line-kind memo        (slice 37)
- *
- * `.data` and aligned(32) so the poke owns its cache line. Default is ALL BITS,
- * so an unpoked ROM is the full candidate and `-SetGlobals gNdsR2MPRoute=N`
- * selects a subset at the SAME placement -- the only way to read cuts of this
- * size against the +-8,544 cross-build floor.
- *
- * **The default-0 trap, which this file inherits.** At NDS_R2_MP_ROUTE=0 the
- * test folds to a constant `1`, so a NEW BIT SHIPS ON in every published ROM the
- * moment it is written. That is intended here -- both memos are exact -- but it
- * means a bit is never a way to keep something out of the shipped ROM. Use a
- * compile flag for that. */
-#if NDS_R2_MP_ROUTE
-volatile u32 gNdsR2MPRoute
-    __attribute__((section(".data"), aligned(32))) = 7u;
-#define NDS_R2_MP_ROUTE_ON(bit) ((gNdsR2MPRoute & (bit)) != 0u)
-#else
-#define NDS_R2_MP_ROUTE_ON(bit) (1)
-#endif
 
 static void ndsMPVertexF32Reset(void)
 {
@@ -1045,7 +1020,7 @@ static s32 NDS_R2_ITCM_PACK2_CODE ndsMPGetLineKindForLineID(s32 line_id)
     /* Both outcomes memoised. Neither exit touches a counter, so a served answer
      * is observationally identical, and the -1 is the expensive one: it walks
      * every yakumono and every kind before returning. */
-    if (NDS_R2_MP_ROUTE_ON(4u) && ((u32)line_id < NDS_MP_LINE_ENDPOINT_MAX))
+    if ((u32)line_id < NDS_MP_LINE_ENDPOINT_MAX)
     {
         u32 cached = sNdsMPLineKindPlus1[(u32)line_id];
 
@@ -1221,8 +1196,7 @@ static sb32 ndsMPFindLineEndpoints(s32 line_id, Vec3f *left, Vec3f *right,
     }
     /* The geometry-ready guard stays ABOVE this: a memo entry says what the
      * geometry held, never that it is still current to read. */
-    if (NDS_R2_MP_ROUTE_ON(1u) &&
-        ((u32)line_id < NDS_MP_LINE_ENDPOINT_MAX) &&
+    if (((u32)line_id < NDS_MP_LINE_ENDPOINT_MAX) &&
         (sNdsMPLineEndpointValid[(u32)line_id] != 0u))
     {
         u32 memo = (u32)line_id;
@@ -1417,7 +1391,7 @@ static sb32 ndsMPFindLineYakumonoID(s32 line_id, u32 *yakumono_id)
     /* Slice 36. Both outcomes are memoised -- see the table's comment: neither
      * exit of this function touches a counter, so a served answer is
      * observationally identical, and the MISS is the expensive one to serve. */
-    if (NDS_R2_MP_ROUTE_ON(2u) && ((u32)line_id < NDS_MP_LINE_ENDPOINT_MAX))
+    if ((u32)line_id < NDS_MP_LINE_ENDPOINT_MAX)
     {
         u32 state = sNdsMPLineYakumonoState[(u32)line_id];
 

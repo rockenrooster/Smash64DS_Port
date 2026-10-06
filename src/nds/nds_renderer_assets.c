@@ -6483,29 +6483,6 @@ static u32 sNdsTask107BindNameCount;
 static u32 sNdsTask107BindNames[NDS_TASK107_BIND_NAME_CAPACITY];
 #endif
 
-#if NDS_R2_TILESYNC_ROUTE
-/* Lab SAME-BINARY route for the tile-sync memo. One `.data` word selects
- * whether the proven-redundant republish is skipped; both arms evaluate the
- * predicate and both keep texture_tile_sync_serial in step, so the ONLY
- * difference between them is the 19-field store burst, and the two counters
- * below must read IDENTICALLY on both arms -- that equality is the control.
- *
- * .data AND NOT .bss, for the reason nds_r2_sqrtf.c states: a zero-initialised
- * route word without an explicit section attribute lands in .bss and drags a
- * ~10,000 tk/fr placement floor. */
-volatile u32 gNdsR2TileSyncRoute
-    __attribute__((used, section(".data"))) = 1u;
-__attribute__((used)) volatile u32 gNdsR2TileSyncSkips;
-__attribute__((used)) volatile u32 gNdsR2TileSyncRuns;
-#define NDS_R2_TILESYNC_MEMO_ON() (gNdsR2TileSyncRoute != 0u)
-#define NDS_R2_TILESYNC_COUNT_SKIP() (gNdsR2TileSyncSkips++)
-#define NDS_R2_TILESYNC_COUNT_RUN() (gNdsR2TileSyncRuns++)
-#else
-#define NDS_R2_TILESYNC_MEMO_ON() (1)
-#define NDS_R2_TILESYNC_COUNT_SKIP() ((void)0)
-#define NDS_R2_TILESYNC_COUNT_RUN() ((void)0)
-#endif
-
 #if NDS_TASK90_SHADE_CENSUS
 /* Task 90. The instrument behind NDS_RENDERER_HW_LIGHT_SHADE_CACHE_COUNT: it
  * records every light-shade request in order, so the cache size is set from the

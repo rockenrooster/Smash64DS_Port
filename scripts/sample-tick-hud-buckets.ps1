@@ -155,8 +155,8 @@ param(
     # marker, which on a target that boots straight into a battle is AFTER the
     # fighters are made and the battle's textures are prepared -- too late for
     # a word read there. P2-2p8 Phase 1 slice 7 made gNdsFtrLeanAdmit default
-    # to 2 (the creation-time admission) and gNdsFtrLeanRoute to 1; their A/B
-    # control is 0 on the same ROM, poked here.
+    # to 2 (the creation-time admission); its A/B control is 0 on the same
+    # ROM, poked here.
     [string[]]$BootSetGlobals = @(),
     [string]$BootBreak = 'main',
     [string]$JsonOut = ''

@@ -7468,31 +7468,6 @@ s32 ndsRelocPointerIsFighterAObj32(const void *ptr)
                TRUE : FALSE;
 }
 
-/* Slice 45. Same-binary A/B route for the alias-scan reorder below, and .data
- * aligned(32) for the same reason gNdsR2MPRoute is: the poke has to own its
- * cache line so `-SetGlobals` picks an arm at IDENTICAL placement. A relink
- * moves WORK-H P95 by more than this cut is worth (R2-06 E11 measured +15,744
- * from a change that added negative bytes), so a cross-build pair could not
- * read it.
- *
- *   bit 1  order the alias scan's conjunction cheap-test-first
- *
- * Default is the candidate, so an unpoked ROM is the fast arm and
- * `-SetGlobals gNdsR2RelocAliasRoute=0` restores the original order.
- *
- * BANKED, and the flag now defaults to 0 so the reorder ships with the test
- * folded out. One binary, `builds/build-c122-alias`: Resolves 16,002 -> 1,143
- * of the same 16,067 visits, WORK-H P95 1,227,456 -> 1,215,296 (-12,160), P50
- * +256. The control arm reproduced the c122 bank to 2,176, which is what makes
- * the -12,160 readable at all. */
-#if NDS_R2_RELOC_ALIAS_ROUTE
-volatile u32 gNdsR2RelocAliasRoute
-    __attribute__((section(".data"), aligned(32))) = 1u;
-#define NDS_R2_RELOC_ALIAS_ROUTE_ON(bit) ((gNdsR2RelocAliasRoute & (bit)) != 0u)
-#else
-#define NDS_R2_RELOC_ALIAS_ROUTE_ON(bit) (1)
-#endif
-
 /* Engagement proof, per the standing rule that an optimization which silently
  * never fires is indistinguishable from one that fired and saved nothing.
  * `Resolves` counts the calls to ndsRelocAssetIDForToken this scan actually
@@ -7556,29 +7531,13 @@ static void ndsRelocRemoveFighterAnimStatusAliases(LBFileNode *nodes,
          * put three lookup arrays in .main.bss and lost to a chain of
          * branch-predictable link-time immediates that was already resident.
          * Nothing is added here -- the call count goes down. */
-        if (NDS_R2_RELOC_ALIAS_ROUTE_ON(1u))
-        {
-            NDS_DIAG(gNdsR2RelocAliasVisits++);
-            if (nodes[i].addr == data)
-            {
-                u32 node_asset_id = ndsRelocAssetIDForToken((u32)nodes[i].id);
-
-                NDS_DIAG(gNdsR2RelocAliasResolves++);
-                if ((node_asset_id != asset_id) &&
-                    (ndsRelocIsFighterAnimID(node_asset_id) != FALSE))
-                {
-                    ndsRelocRemoveStatusNodeAt(nodes, count, i);
-                    continue;
-                }
-            }
-        }
-        else
+        NDS_DIAG(gNdsR2RelocAliasVisits++);
+        if (nodes[i].addr == data)
         {
             u32 node_asset_id = ndsRelocAssetIDForToken((u32)nodes[i].id);
 
-            NDS_DIAG(gNdsR2RelocAliasVisits++);
             NDS_DIAG(gNdsR2RelocAliasResolves++);
-            if ((nodes[i].addr == data) && (node_asset_id != asset_id) &&
+            if ((node_asset_id != asset_id) &&
                 (ndsRelocIsFighterAnimID(node_asset_id) != FALSE))
             {
                 ndsRelocRemoveStatusNodeAt(nodes, count, i);
@@ -16440,17 +16399,6 @@ typedef struct NDSR2AObj16PrebakeSlot {
 static NDSR2AObj16PrebakeSlot
     sNdsR2AObj16PrebakeSlots[NDS_R2_AOBJ16_PREBAKE_SLOTS_MAX];
 
-/* Same-binary A/B route. Two builds of this change differing only by 3,584
- * bytes of scratch read WORK-H P50 1,093,152 and 1,119,136 -- 25,760 apart,
- * 4.5x the cross-build P50 floor -- while the second one did strictly LESS
- * work (351 skips against 259). Relinking moved the body further than the
- * change did, exactly as R2-06 E11 says it will, so the two arms have to be
- * the SAME bytes. Poked to 0 by the harness at the first frame-complete
- * marker; warm stepping runs one asset per scene update, so at most one entry
- * can be prebaked before the poke lands and gNdsR2AObj16PrebakeReady reports
- * it. Route 0 is a decline, which is a performance outcome only. */
-volatile u32 gNdsR2AObj16PrebakeRoute = 1u;
-
 volatile u32 gNdsR2AObj16PrebakeReady;
 volatile u32 gNdsR2AObj16PrebakeSlotsMax;
 volatile u32 gNdsR2AObj16PrebakeDeclineKind;
@@ -16477,11 +16425,6 @@ static sb32 ndsR2AnimPrebakeAObj16(u32 asset_id, void *payload, u32 size,
     u32 count = 0u;
     u32 guard;
     u16 slot_index;
-
-    if (gNdsR2AObj16PrebakeRoute == 0u)
-    {
-        return FALSE;
-    }
 
     if ((payload == NULL) || (size == 0u) || (header == NULL) ||
         (ndsRelocIsFighterAObj16Asset(asset_id) == FALSE))
