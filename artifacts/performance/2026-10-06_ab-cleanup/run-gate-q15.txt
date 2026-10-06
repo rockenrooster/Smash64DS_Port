@@ -1,0 +1,46 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 2 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,608; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 74: ALL 5,311,104 -> 1,116,800, 5 bucket(s) corrected
+  frame 999: ALL 5,310,912 -> 1,116,608, 5 bucket(s) corrected
+Wrote artifacts/performance/2026-10-06_ab-cleanup/gate-q15.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=36d7cd0a0b2+dirty(31) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,608     1,118,080      1.00  1,142,643     1,111,232  4,527,232      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,864        10,304      2.12      5,563         2,240     26,112        0.4
+HUD         9,088        23,808      2.62     11,672         7,808    547,072        0.8
+SRC       352,832       548,992      1.56    364,037       132,352    997,312       31.6
+MISC      401,472       543,104      1.35    406,836       174,720  3,386,368       36.0
+OTHR      351,168       635,008      1.81    354,535        30,208    795,136       31.4
+WAIT      328,768       611,200      1.86    333,362         9,408    775,744       29.4
+WORK      794,752     1,081,536      1.36    805,484       337,664  4,198,272       71.2
+SHDT      693,951       976,063      1.41    709,412       294,271  1,862,783       62.1
+SWRM        1,216         1,280      1.05      1,191           768      3,200        0.1
+GCRA      347,520       544,000      1.57    358,867       128,064    992,064       31.1
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        367             0    642,752        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      401,344       543,040      1.35    406,721       174,592  3,386,240       35.9
+MFLS          128           128      1.00        115            64        192        0.0
+GPOL          592           673      1.14        542            29        755        0.1
+GVTX        1,419         1,596      1.12      1,315            96      1,750        0.1
+DGSA   2,250,718,284 4,050,421,973        2,184,942,484  1,678,878 4,291,383,562 201,567.5
+DGSB   2,254,346,240 4,035,342,474        2,215,590,844  2,771,092 4,285,088,836 201,892.4
+WORK-H    783,872     1,072,256      1.37    793,812       328,512  3,651,200       70.2
+
+named=788,108 (69.0% of ALL)  VBI 2:1876 3:83 4:1 5+:1 max:9 total:1961  slips=0
+Wrote artifacts/performance/2026-10-06_ab-cleanup/gate-q15.json

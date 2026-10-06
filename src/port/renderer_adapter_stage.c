@@ -3234,8 +3234,7 @@ static s32 ndsRendererAdapterNdlDispatchEffectBody(GObj *camera_gobj,
  * lane does. With the one-slot modelview stack (nds_renderer_preamble.c)
  * the deepest owner (an impact wave's native ring) stays inside the 6 KB
  * stack; none reads storage, switches a coroutine or hands DMA a stack
- * address. Same-ROM A/B word gNdsNdlHot. */
-volatile u32 gNdsNdlHot __attribute__((used, section(".data"))) = 1u;
+ * address. */
 
 typedef struct NDSNdlDispatchCall
 {
@@ -3285,14 +3284,12 @@ s32 ndsRendererAdapterNdlDispatchEffect(void *camera_gobj_ptr,
             return FALSE;
         }
     }
-    if (gNdsNdlHot != 0u)
     {
         NDSNdlDispatchCall call = { camera_gobj, gobj };
 
         return (s32)ndsDtcmHotStackRun(
             ndsRendererAdapterNdlDispatchEffectOnHotStack, &call);
     }
-    return ndsRendererAdapterNdlDispatchEffectBody(camera_gobj, gobj);
 }
 
 static s32 ndsRendererAdapterNdlDispatchEffectBody(GObj *camera_gobj,
@@ -7679,9 +7676,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
  * an entry model to its generated owner -- eight times a frame for Sector Z's
  * Arwing. The admission now runs in this small frame and the general body is
  * entered only for what it declines; a candidate the owner refuses records
- * its failure there exactly as before. Same-ROM A/B word gNdsStageDLEntryFirst
- * (0 = the body admits, as before). */
-volatile u32 gNdsStageDLEntryFirst __attribute__((used, section(".data"))) = 1u;
+ * its failure there exactly as before. */
 
 static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
     DObj *dobj, const Gfx *dl, GObj *camera_gobj, u32 initial_geometry_mode);
@@ -7699,15 +7694,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
  * file, its asset and data, the root); everything live -- the GObj kind, the
  * item kind, a NULL MObj, the submit context -- is tested again each draw,
  * and anything else falls to the body as before. Owners with an MObj or a
- * segment-E material are not routed. Same-ROM A/B word gNdsStageDLFastLane
- * (0 = every draw through the body). */
-volatile u32 gNdsStageDLFastLane __attribute__((used, section(".data"))) = 1u;
-/* Same-ROM A/B word for the Fire Flower and N Bumper routes (0 = their lists
- * stay in the body). */
-volatile u32 gNdsStageDLFastFFlower __attribute__((used, section(".data"))) = 1u;
-/* Same-ROM A/B word for the laser, Saffron Pokemon and damage-fly dust
- * routes (0 = their lists stay in the body). */
-volatile u32 gNdsStageDLFastMore __attribute__((used, section(".data"))) = 1u;
+ * segment-E material are not routed. */
 volatile u32 gNdsStageDLFastLaneHits;
 volatile u32 gNdsStageDLFastLaneFills;
 
@@ -7991,7 +7978,7 @@ static void ndsStageDLRouteRecord(const Gfx *dl, NDSRelocLoadedFile *loaded,
  * initial geometry mode, the traversal's light, and per list its DObj, list,
  * head, route and the head's captured colours and blend modes. A recorded
  * texture must still be resident, else the draw runs its owners and records
- * again. Same-ROM A/B word gNdsItemReplay (0 = owners every draw). */
+ * again. */
 #define NDS_ITEM_REPLAY_DRAWS 2u
 #define NDS_ITEM_REPLAY_ROOTS 4u
 #define NDS_ITEM_REPLAY_KEY_WORDS 56u
@@ -8020,7 +8007,6 @@ typedef struct NDSItemReplayDraw
     u32 pool[NDS_ITEM_REPLAY_POOL_WORDS];
 } NDSItemReplayDraw;
 
-volatile u32 gNdsItemReplay __attribute__((used, section(".data"))) = 1u;
 __attribute__((used)) volatile u32 gNdsItemReplayDraws;
 __attribute__((used)) volatile u32 gNdsItemReplayRecords;
 __attribute__((used)) volatile u32 gNdsItemReplayRecordFailed;
@@ -9189,9 +9175,7 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
  * glTexImage2D); IRQs run on their own stack. The lane reads no storage,
  * switches no coroutine and hands DMA only static buffers (texture scratch,
  * packet words). A lane reached from a subtree already on the hot stack
- * (the fighter display's magnifier) runs in place, as before. Same-ROM
- * A/B word gNdsStageDLFastHot. */
-volatile u32 gNdsStageDLFastHot __attribute__((used, section(".data"))) = 1u;
+ * (the fighter display's magnifier) runs in place, as before. */
 
 typedef struct NDSStageDLFastCall
 {
@@ -9211,9 +9195,7 @@ static unsigned int ndsRendererAdapterSubmitStageDLFastOnHotStack(void *arg)
 }
 
 /* The entry-effect owners the lane does not route (entry packets, the
- * rebirth halo's groups) take the same stack. Same-ROM A/B word
- * gNdsStageDLEntryHot. */
-volatile u32 gNdsStageDLEntryHot __attribute__((used, section(".data"))) = 1u;
+ * rebirth halo's groups) take the same stack. */
 
 static unsigned int ndsRendererAdapterTryNativeEntryEffectOnHotStack(void *arg)
 {
@@ -9389,25 +9371,13 @@ static void ndsRendererAdapterSubmitStageDLImpl(DObj *dobj, const Gfx *dl,
         return;
     }
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
-    if (gNdsStageDLFastLane != 0u)
     {
-        sb32 fast_handled;
+        NDSStageDLFastCall call = {
+            dobj, dl, camera_gobj, initial_geometry_mode
+        };
 
-        if (gNdsStageDLFastHot != 0u)
-        {
-            NDSStageDLFastCall call = {
-                dobj, dl, camera_gobj, initial_geometry_mode
-            };
-
-            fast_handled = (sb32)ndsDtcmHotStackRun(
-                ndsRendererAdapterSubmitStageDLFastOnHotStack, &call);
-        }
-        else
-        {
-            fast_handled = ndsRendererAdapterSubmitStageDLFast(
-                dobj, dl, camera_gobj, initial_geometry_mode);
-        }
-        if (fast_handled != FALSE)
+        if ((sb32)ndsDtcmHotStackRun(
+                ndsRendererAdapterSubmitStageDLFastOnHotStack, &call) != FALSE)
         {
             return;
         }
@@ -9422,26 +9392,20 @@ static void ndsRendererAdapterSubmitStageDLImpl(DObj *dobj, const Gfx *dl,
         return;
     }
 #endif
-    if (gNdsStageDLEntryFirst != 0u)
     {
         sb32 entry_handled;
-
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
-        if (gNdsStageDLEntryHot != 0u)
-        {
-            NDSStageDLFastCall call = {
-                dobj, dl, camera_gobj, initial_geometry_mode
-            };
+        NDSStageDLFastCall call = {
+            dobj, dl, camera_gobj, initial_geometry_mode
+        };
 
-            entry_handled = (sb32)ndsDtcmHotStackRun(
-                ndsRendererAdapterTryNativeEntryEffectOnHotStack, &call);
-        }
-        else
+        entry_handled = (sb32)ndsDtcmHotStackRun(
+            ndsRendererAdapterTryNativeEntryEffectOnHotStack, &call);
+#else
+        entry_handled = ndsRendererAdapterTryNativeEntryEffect(
+            dobj, dl, camera_gobj, initial_geometry_mode);
 #endif
-        {
-            entry_handled = ndsRendererAdapterTryNativeEntryEffect(
-                dobj, dl, camera_gobj, initial_geometry_mode);
-        }
+
         if (entry_handled != FALSE)
         {
             return;
@@ -9696,14 +9660,8 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
     }
 
     /* Entry models execute their generated native owners (admitted by the
-     * caller unless gNdsStageDLEntryFirst is 0). Unhandled required roots
-     * below report a native failure; no interpreter is available. */
-    if ((gNdsStageDLEntryFirst == 0u) &&
-        (ndsRendererAdapterTryNativeEntryEffect(
-             dobj, dl, camera_gobj, initial_geometry_mode) != FALSE))
-    {
-        return;
-    }
+     * caller). Unhandled required roots below report a native failure; no
+     * interpreter is available. */
 
 #if NDS_R2_REBIRTH_HALO_NATIVE && NDS_R2_REBIRTH_HALO_FAST_ADAPTER
     /* RebirthHalo is already identified by the effect-tree owner before any
@@ -13417,11 +13375,8 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         {
             NDS_DIAG(gNdsInishiePakkunDrawCount++);
 #if (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_P2_ITEM_CORE
-            if (gNdsStageDLFastMore != 0u)
-            {
-                ndsStageDLRouteRecord(dl, loaded, 0x0b40u,
-                                      NDS_SDL_ROUTE_INISHIE_PAKKUN);
-            }
+            ndsStageDLRouteRecord(dl, loaded, 0x0b40u,
+                                  NDS_SDL_ROUTE_INISHIE_PAKKUN);
 #endif
         }
         else
@@ -13457,12 +13412,9 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         {
             NDS_DIAG(gNdsInishiePowblockDrawCount++);
 #if (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_P2_ITEM_CORE
-            if (gNdsStageDLFastMore != 0u)
-            {
-                ndsStageDLRouteRecord(dl, loaded,
-                                      NDS_NATIVE_INISHIE_POWBLOCK_ROOT,
-                                      NDS_SDL_ROUTE_INISHIE_POWBLOCK);
-            }
+            ndsStageDLRouteRecord(dl, loaded,
+                                  NDS_NATIVE_INISHIE_POWBLOCK_ROOT,
+                                  NDS_SDL_ROUTE_INISHIE_POWBLOCK);
 #endif
         }
         else
@@ -13518,8 +13470,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                 ness_pkthunder_root_index, &ness_pkthunder_material,
                 ness_pkthunder_trail_color, &pkthunder_config, render_stats);
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-        if ((ness_pkthunder_native_handled != FALSE) &&
-            (gNdsStageDLFastMore != 0u))
+        if (ness_pkthunder_native_handled != FALSE)
         {
             ndsStageDLRouteRecord(dl, loaded,
                 (ness_pkthunder_root_index ==
@@ -13551,8 +13502,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         pikachu_thunder_native_handled = ndsRendererAdapterPikachuThunder(
             loaded, dobj, dl, &config, render_stats);
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-        if ((pikachu_thunder_native_handled != FALSE) &&
-            (gNdsStageDLFastMore != 0u))
+        if (pikachu_thunder_native_handled != FALSE)
         {
             ndsStageDLRouteRecord(dl, loaded,
                                   ndsRelocNativeRootOffset(loaded, dl),
@@ -13837,7 +13787,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                 NDS_NATIVE_FAILURE_REJECTED_PROGRAM, render_stats);
         }
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-        else if (gNdsStageDLFastMore != 0u)
+        else
         {
             ndsStageDLRouteRecord(dl, loaded, NDS_NATIVE_DAMAGE_FLY_MDUST_ROOT,
                                   NDS_SDL_ROUTE_DAMAGE_FLY_MDUST);
@@ -13958,11 +13908,8 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         {
             NDS_DIAG(gNdsSectorLaserDrawCount++);
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-            if (gNdsStageDLFastMore != 0u)
-            {
-                ndsStageDLRouteRecord(dl, loaded, NDS_NATIVE_SECTOR_LASER_ROOT,
-                                      NDS_SDL_ROUTE_SECTOR_LASER);
-            }
+            ndsStageDLRouteRecord(dl, loaded, NDS_NATIVE_SECTOR_LASER_ROOT,
+                                  NDS_SDL_ROUTE_SECTOR_LASER);
 #endif
         }
         else
@@ -14044,11 +13991,8 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         {
             NDS_DIAG(gNdsYamabukiMarumineDrawCount++);
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-            if (gNdsStageDLFastMore != 0u)
-            {
-                ndsStageDLRouteRecord(dl, loaded, 0u,
-                                      NDS_SDL_ROUTE_ITEM + nNDSStageDLItemMarumine);
-            }
+            ndsStageDLRouteRecord(dl, loaded, 0u,
+                                  NDS_SDL_ROUTE_ITEM + nNDSStageDLItemMarumine);
 #endif
         }
         else
@@ -14083,11 +14027,8 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         {
             NDS_DIAG(gNdsYamabukiGluckyDrawCount++);
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-            if (gNdsStageDLFastMore != 0u)
-            {
-                ndsStageDLRouteRecord(dl, loaded, 0u,
-                                      NDS_SDL_ROUTE_ITEM + nNDSStageDLItemGLucky);
-            }
+            ndsStageDLRouteRecord(dl, loaded, 0u,
+                                  NDS_SDL_ROUTE_ITEM + nNDSStageDLItemGLucky);
 #endif
         }
         else
@@ -14119,11 +14060,8 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         {
             NDS_DIAG(gNdsYamabukiPorygonDrawCount++);
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-            if (gNdsStageDLFastMore != 0u)
-            {
-                ndsStageDLRouteRecord(dl, loaded, 0u,
-                                      NDS_SDL_ROUTE_ITEM + nNDSStageDLItemPorygon);
-            }
+            ndsStageDLRouteRecord(dl, loaded, 0u,
+                                  NDS_SDL_ROUTE_ITEM + nNDSStageDLItemPorygon);
 #endif
         }
         else
@@ -14156,11 +14094,8 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         {
             NDS_DIAG(gNdsYamabukiHitokageDrawCount++);
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-            if (gNdsStageDLFastMore != 0u)
-            {
-                ndsStageDLRouteRecord(dl, loaded, NDS_NATIVE_ITEM_HITOKAGE_ROOT,
-                                      NDS_SDL_ROUTE_HITOKAGE);
-            }
+            ndsStageDLRouteRecord(dl, loaded, NDS_NATIVE_ITEM_HITOKAGE_ROOT,
+                                  NDS_SDL_ROUTE_HITOKAGE);
 #endif
         }
         else
@@ -14193,11 +14128,8 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         {
             NDS_DIAG(gNdsYamabukiFushigibanaDrawCount++);
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-            if (gNdsStageDLFastMore != 0u)
-            {
-                ndsStageDLRouteRecord(dl, loaded, NDS_NATIVE_ITEM_FUSHIGIBANA_ROOT,
-                                      NDS_SDL_ROUTE_FUSHIGIBANA);
-            }
+            ndsStageDLRouteRecord(dl, loaded, NDS_NATIVE_ITEM_FUSHIGIBANA_ROOT,
+                                  NDS_SDL_ROUTE_FUSHIGIBANA);
 #endif
         }
         else
@@ -14370,11 +14302,8 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         {
             NDS_DIAG(gNdsItemKirbyStarDrawCount++);
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-            if (gNdsStageDLFastMore != 0u)
-            {
-                ndsStageDLRouteRecord(dl, loaded, NDS_NATIVE_ITEM_KIRBYSTAR_ROOT,
-                                      NDS_SDL_ROUTE_KIRBYSTAR);
-            }
+            ndsStageDLRouteRecord(dl, loaded, NDS_NATIVE_ITEM_KIRBYSTAR_ROOT,
+                                  NDS_SDL_ROUTE_KIRBYSTAR);
 #endif
         }
         else
@@ -14701,13 +14630,10 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         {
             NDS_DIAG(gNdsItemFFlowerDrawCount++);
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-            if (gNdsStageDLFastFFlower != 0u)
-            {
-                ndsStageDLRouteRecord(dl, loaded, item_fflower_root,
-                    (item_fflower_root == NDS_NATIVE_ITEM_FFLOWER_LIVE_ROOT) ?
-                        NDS_SDL_ROUTE_FFLOWER_LIVE :
-                        (NDS_SDL_ROUTE_ITEM + nNDSStageDLItemFFlower));
-            }
+            ndsStageDLRouteRecord(dl, loaded, item_fflower_root,
+                (item_fflower_root == NDS_NATIVE_ITEM_FFLOWER_LIVE_ROOT) ?
+                    NDS_SDL_ROUTE_FFLOWER_LIVE :
+                    (NDS_SDL_ROUTE_ITEM + nNDSStageDLItemFFlower));
 #endif
         }
         else
@@ -14774,12 +14700,9 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         {
             NDS_DIAG(gNdsItemNBumperDrawCount++);
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-            if (gNdsStageDLFastFFlower != 0u)
-            {
-                ndsStageDLRouteRecord(dl, loaded,
-                                      NDS_NATIVE_ITEM_NBUMPER_ROOT,
-                                      NDS_SDL_ROUTE_NBUMPER);
-            }
+            ndsStageDLRouteRecord(dl, loaded,
+                                  NDS_NATIVE_ITEM_NBUMPER_ROOT,
+                                  NDS_SDL_ROUTE_NBUMPER);
 #endif
         }
         else
@@ -15850,10 +15773,8 @@ void ndsRendererAdapterSubmitEffectDObjTree(void *dobj_ptr, u32 kind,
  * offset and scale and by the root's scale (a bumper doubles on a hit), in
  * the 20.12 camera matrices the lists' own culls use (the baked roots' and the
  * bumper quad's planes, ndsNativeBakedRootOutsideView). A held item, a deeper
- * tree or another kind draws as before. Same-ROM A/B word gNdsItemPreCull. */
-volatile u32 gNdsItemPreCull __attribute__((used, section(".data"))) = 1u;
+ * tree or another kind draws as before. */
 __attribute__((used)) volatile u32 gNdsItemPreCulled;
-__attribute__((used)) volatile u32 gNdsItemPreCullDrew;
 
 static sb32 ndsRendererAdapterItemOffscreen(DObj *root, GObj *camera_gobj)
 {
@@ -15874,7 +15795,7 @@ static sb32 ndsRendererAdapterItemOffscreen(DObj *root, GObj *camera_gobj)
     u32 plane;
     u32 axis;
 
-    if ((gNdsItemPreCull == 0u) || (root == NULL) || (camera_gobj == NULL) ||
+    if ((root == NULL) || (camera_gobj == NULL) ||
         (root->parent != DOBJ_PARENT_NULL))
     {
         return FALSE;
@@ -16007,16 +15928,12 @@ void ndsRendererAdapterSubmitItemDObjTree(void *dobj_ptr, u32 kind,
 #endif
     const sb32 offscreen = ndsRendererAdapterItemOffscreen(
         (DObj *)dobj_ptr, (GObj *)camera_gobj_ptr);
-    const u32 triangles_before = gNdsStageGCDrawAllLoopHardwareTriangleCount;
 
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
     NDS_DIAG(gNdsLabItemAcc[11] += cpuGetTiming() - lab_offscreen);
 #endif
 
-    /* gNdsItemPreCull 2: decide but draw, counting a culled item whose lists
-     * still submitted triangles (2026-10-03 Race, 900 frames: 1 of 5141, a
-     * bumper ~1600 units below the view -- GX clips it). */
-    if ((offscreen != FALSE) && (gNdsItemPreCull == 1u))
+    if (offscreen != FALSE)
     {
         return;
     }
@@ -16026,11 +15943,6 @@ void ndsRendererAdapterSubmitItemDObjTree(void *dobj_ptr, u32 kind,
                                                initial_geometry_mode, 0u);
     sNdsRendererAdapterItemSubmitActive = FALSE;
     sNdsRendererAdapterItemSubmitHead = 0u;
-    if ((offscreen != FALSE) &&
-        (gNdsStageGCDrawAllLoopHardwareTriangleCount != triangles_before))
-    {
-        NDS_DIAG(gNdsItemPreCullDrew++);
-    }
 }
 
 #if NDS_P2_ITEM_CORE
@@ -16207,8 +16119,7 @@ void ndsRendererAdapterSubmitItemDObjTreeReplay(void *dobj_ptr, u32 kind,
     u32 key_count = 0u;
     u32 i;
 
-    if ((gNdsItemReplay != 0u) &&
-        (sNdsItemReplayRecording == NULL) && (root != NULL) &&
+    if ((sNdsItemReplayRecording == NULL) && (root != NULL) &&
         (ndsRendererAdapterItemOffscreen(root, camera_gobj) == FALSE))
     {
         root_count = ndsItemReplayWalk(root, kind, roots, 0u, 0u);
@@ -16440,11 +16351,10 @@ void ndsRendererAdapterSubmitStageDObj(void *dobj_ptr, u32 kind,
  * walk mirrors ndsStageGCDrawAllLoopScanDObjs + SubmitStageDObjNode for
  * TREE_DLLINKS (hidden subtrees skipped, NOTEXTURE lists skipped, list ids
  * below NDS_RENDERER_STAGE_DL_HEADS); anything it cannot hold declines before
- * drawing. Same-ROM A/B word gNdsArwingTwoPass (0 = the scan, as before). */
+ * drawing. */
 #define NDS_ARWING_TWO_PASS_MAX 12u
 static NDSRendererAdapterEntryPrepared
     sNdsRendererAdapterArwingItems[NDS_ARWING_TWO_PASS_MAX];
-volatile u32 gNdsArwingTwoPass __attribute__((used, section(".data"))) = 1u;
 volatile u32 gNdsArwingTwoPassDraws;
 volatile u32 gNdsArwingTwoPassDeclines;
 
@@ -16492,7 +16402,7 @@ static sb32 ndsRendererAdapterSubmitArwingRootReplay(
     const NDSRendererMatrix20p12 *modelview_ptr =
         (item->modelview_valid != 0u) ? &item->modelview : NULL;
 
-    if ((gNdsStageDLEntryFirst == 0u) || (gFTDataFoxSpecial3 == NULL) ||
+    if ((gFTDataFoxSpecial3 == NULL) ||
         ((const u8 *)item->dl < (const u8 *)gFTDataFoxSpecial3))
     {
         return FALSE;
@@ -16546,7 +16456,7 @@ s32 ndsRendererAdapterSubmitArwingTwoPass(void *root_ptr, void *camera_gobj_ptr,
     u32 dobjs = 0u;
     u32 i;
 
-    if ((gNdsArwingTwoPass == 0u) || (root == NULL) ||
+    if ((root == NULL) ||
         (submitted_dobjs == NULL))
     {
         return FALSE;
