@@ -14730,9 +14730,6 @@ typedef struct NDSRendererOwnerTextureMemo
 volatile u32 gNdsRendererOwnerTexMemoHits;
 volatile u32 gNdsRendererOwnerTexMemoFills;
 volatile u32 gNdsRendererOwnerTexMemoStale;
-/* Same-binary A/B word: 0 sends every owner bind through the full resolver. */
-volatile u32 gNdsRendererOwnerTexMemoEnable
-    __attribute__((used, section(".data"))) = 1u;
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
 /* LAB: 1 = run the full resolver on every bind and count where a memo hit
  * would have answered differently. */
@@ -14769,8 +14766,7 @@ static s32 ndsRendererHardwareBindTextureOwnerMemo(
     key[8] = stats->texture_combine_w0;
     key[9] = stats->texture_combine_w1;
     key[10] = stats->geometry_mode;
-    match = ((memo->valid != 0u) &&
-             (gNdsRendererOwnerTexMemoEnable != 0u)) ? TRUE : FALSE;
+    match = (memo->valid != 0u) ? TRUE : FALSE;
     for (i = 0u; (match != FALSE) && (i < NDS_RENDERER_OWNER_TEXMEMO_KEY_WORDS);
          i++)
     {
@@ -14923,7 +14919,7 @@ static __attribute__((unused)) u32 ndsRendererOwnerTexMemoKeyMatches(
     const NDSRendererOwnerTextureMemo *memo, u32 owner_id,
     const NDSRendererStats *stats)
 {
-    return ((memo->valid != 0u) && (gNdsRendererOwnerTexMemoEnable != 0u) &&
+    return ((memo->valid != 0u) &&
             (memo->key[0] == owner_id) &&
             (memo->key[1] == stats->texture_image) &&
             (memo->key[2] == stats->texture_tlut_image) &&

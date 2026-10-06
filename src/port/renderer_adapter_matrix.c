@@ -5397,9 +5397,6 @@ typedef struct NDSRendererAdapterLocalMemo
 } NDSRendererAdapterLocalMemo;
 static NDSRendererAdapterLocalMemo
     sNdsRendererAdapterLocalMemo[NDS_RENDERER_ADAPTER_LOCAL_MEMO_COUNT];
-/* Same-binary A/B word: 0 rebuilds every local as before. */
-volatile u32 gNdsRendererAdapterLocalMemoEnable
-    __attribute__((used, section(".data"))) = 1u;
 volatile u32 gNdsRendererAdapterLocalMemoHits;
 volatile u32 gNdsRendererAdapterLocalMemoFills;
 
@@ -5411,10 +5408,6 @@ static sb32 ndsRendererAdapterUncachedLocalMatrix(
     NDSRendererAdapterStageWorldSourceKey key;
     sb32 key_valid;
 
-    if (gNdsRendererAdapterLocalMemoEnable == 0u)
-    {
-        return ndsRendererAdapterBuildDObjLocalMatrix(node, local);
-    }
     if ((m->valid != 0u) && (m->dobj == node) &&
         (ndsRendererAdapterStageWorldSourceKeyMatches(node, &m->key) != FALSE))
     {
@@ -8489,9 +8482,6 @@ typedef struct NDSRendererAdapterHierarchyCameraMemo
 } NDSRendererAdapterHierarchyCameraMemo;
 static NDSRendererAdapterHierarchyCameraMemo
     sNdsRendererAdapterHierarchyCameraMemo;
-/* Same-binary A/B word: 0 rebuilds both matrices on every call, as before. */
-volatile u32 gNdsRendererAdapterHierarchyCameraMemoEnable
-    __attribute__((used, section(".data"))) = 1u;
 volatile u32 gNdsRendererAdapterHierarchyCameraMemoHits;
 
 static void ndsRendererAdapterHierarchyCameraKey(const CObj *cobj, u32 *key)
@@ -8545,8 +8535,7 @@ ndsRendererAdapterGetHierarchyCameraMatrices(
             u32 key[NDS_RENDERER_ADAPTER_HIERARCHY_CAMERA_KEY_WORDS];
 
             ndsRendererAdapterHierarchyCameraKey(cobj, key);
-            if ((gNdsRendererAdapterHierarchyCameraMemoEnable != 0u) &&
-                (memo->valid != 0u) && (memo->cobj == cobj) &&
+            if ((memo->valid != 0u) && (memo->cobj == cobj) &&
                 (memcmp(memo->key, key, sizeof(key)) == 0) &&
                 (cobj->projection.persp.norm == memo->norm))
             {

@@ -309,10 +309,8 @@ void ndsSamusAttackTourRecordStatusTransition(GObj *fighter_gobj,
 #endif
 
 /* See the flattened-walk block in ftMainSetStatus below. */
-__attribute__((used, section(".data"))) volatile u32 gNdsFtStatusFlatKeep = 1u;
 __attribute__((used)) volatile u32 gNdsFtStatusFlatKept;
-/* The renderer half of the same test (2026-10-02); 0 = always invalidate. */
-__attribute__((used, section(".data"))) volatile u32 gNdsFtStatusRenderKeep = 1u;
+/* The renderer half of the same test (2026-10-02). */
 __attribute__((used)) volatile u32 gNdsFtStatusRenderKept;
 
 void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
@@ -376,9 +374,8 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
      * in the OLD or the NEW word, and TransN's is one of them. With none set
      * in either word no DObj was added, ejected or re-linked, the flattened
      * walk still lists the same FTParts in the same order, and re-walking it
-     * is ~3.6K ticks a change for nothing. Same-ROM A/B word
-     * gNdsFtStatusFlatKeep (0 = always drop). */
-    if ((gNdsFtStatusFlatKeep == 0u) || (nds_topology_fp == NULL) ||
+     * is ~3.6K ticks a change for nothing. */
+    if ((nds_topology_fp == NULL) ||
         ((nds_topology_word & ~0x1Fu) != 0u))
     {
         ndsFTParamsInvalidateFlatWalkCacheForFighter(fighter_gobj);
@@ -394,9 +391,8 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
      * (ndsFTParamInvalidateModelPartRenderer); texture parts reach the lean
      * path through its writer serial. Re-deriving them after every change
      * cost the next draw the source DL walk, the material hashes and the
-     * lean re-tuple and re-proof, which found the same answer. Same-ROM A/B
-     * word gNdsFtStatusRenderKeep. */
-    if ((gNdsFtStatusRenderKeep == 0u) || (nds_topology_fp == NULL) ||
+     * lean re-tuple and re-proof, which found the same answer. */
+    if ((nds_topology_fp == NULL) ||
         ((nds_topology_word & ~0x1Fu) != 0u))
     {
         ndsFighterRendererInvalidateStatusCachesOnSetStatus(fighter_gobj);

@@ -651,11 +651,9 @@ static s32 NDS_SHIELD_POSE_CODE ndsShieldPoseApplyScript(
  * shared by every guarding fighter, so each apply decodes its base rows again
  * (~3.8K ticks an all-joint apply); a row that already holds this blob's
  * values, decoded in this heap generation, is left as it is. Only
- * ndsShieldPoseRefreshBaseRow writes the scratch. Same-ROM A/B word
- * gNdsShieldPoseBaseMemo (0 = decode every time). */
+ * ndsShieldPoseRefreshBaseRow writes the scratch. */
 static const void *sNdsShieldPoseScratchOwner[NDS_SHIELD_POSE_MAX_BASE_COUNT];
 static u32 sNdsShieldPoseScratchGeneration;
-__attribute__((used, section(".data"))) volatile u32 gNdsShieldPoseBaseMemo = 1u;
 __attribute__((used)) volatile u32 gNdsShieldPoseBaseMemoHits;
 
 static s32 NDS_SHIELD_POSE_HOT_CODE ndsShieldPoseRefreshBaseRow(
@@ -681,8 +679,7 @@ static s32 NDS_SHIELD_POSE_HOT_CODE ndsShieldPoseRefreshBaseRow(
         }
         sNdsShieldPoseScratchGeneration = gNdsTaskmanHeapGeneration;
     }
-    if ((gNdsShieldPoseBaseMemo != 0u) &&
-        (sNdsShieldPoseScratchOwner[row] == (const void *)view->h))
+    if (sNdsShieldPoseScratchOwner[row] == (const void *)view->h)
     {
         NDS_DIAG(gNdsShieldPoseBaseMemoHits++);
         return TRUE;

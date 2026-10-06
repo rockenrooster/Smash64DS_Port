@@ -1779,10 +1779,8 @@ static u32 sNdsEvent32InterpDescFixedCount;
  * and inserts reuse. Every live entry keeps its index and its slot, so every
  * lookup returns what it returned before. Holes are compacted out (with the
  * one rebuild) only when an append would not fit, and tombstones are
- * rebuilt away once they fill a quarter of the index. Same-ROM A/B word
- * gNdsAObjEvent32ForgetHoles (0 = compact and rebuild at every forget). */
+ * rebuilt away once they fill a quarter of the index. */
 #define NDS_AOBJ_EVENT32_TOMB 0xffffu
-__attribute__((used, section(".data"))) volatile u32 gNdsAObjEvent32ForgetHoles = 1u;
 __attribute__((used)) volatile u32 gNdsAObjEvent32ForgetHoleRemovals;
 __attribute__((used)) volatile u32 gNdsAObjEvent32ForgetHoleRebuilds;
 __attribute__((used)) volatile u32 gNdsAObjEvent32LedgerCompactions;
@@ -2520,8 +2518,8 @@ void ndsAObjEvent32ForgetRange(const void *base, size_t size)
     u32 edge_lo[2];
     u32 edge_hi[2];
     u32 side;
-    const sb32 holes = ((gNdsAObjEvent32ForgetHoles != 0u) &&
-                        (sNdsAObjEvent32NormalizedHash != NULL)) ? TRUE : FALSE;
+    const sb32 holes =
+        (sNdsAObjEvent32NormalizedHash != NULL) ? TRUE : FALSE;
     sb32 rebuild = FALSE;
 
     if ((base == NULL) || (size == 0u))

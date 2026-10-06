@@ -14692,8 +14692,7 @@ static sb32 ndsR2AnimCacheArenaReserveDecline(void)
  * calls ndsR2AnimCacheElasticYield); the entries in the returned range are
  * dropped and the block's base moves up. Cached templates are copied into a
  * fighter's own heap before use, so nothing ever points into the block and
- * giving bytes back is always safe. Same-ROM A/B word below. */
-__attribute__((used, section(".data"))) volatile u32 gNdsR2AnimCacheElastic = 1u;
+ * giving bytes back is always safe. */
 __attribute__((used)) volatile u32 gNdsR2AnimCacheElasticCarves;
 __attribute__((used)) volatile u32 gNdsR2AnimCacheElasticDrops;
 /* Bytes kept below the block at the carve, so the next small allocations do
@@ -14833,7 +14832,7 @@ static sb32 ndsR2AnimCacheArenaEnsure(void)
               ~((uintptr_t)NDS_RELOC_ALIGN_BYTES - 1u);
     available = ((uintptr_t)gSYTaskmanGeneralHeap.end >= aligned) ?
         (uintptr_t)gSYTaskmanGeneralHeap.end - aligned : 0u;
-    if ((reserve == 0u) && (gNdsR2AnimCacheElastic != 0u))
+    if (reserve == 0u)
     {
         return ndsR2AnimCacheArenaCarveElastic(available, fighter_bytes);
     }
@@ -15848,8 +15847,7 @@ static void ndsR2AnimCacheStore(u32 asset_id, const void *data, u32 size,
  * then pins it exactly as it pins a hit. The heap copy, its registration and
  * the second storage request go; the bytes the parser reads are the pack's
  * own either way. Any refusal returns NULL before an entry exists and the
- * established miss path runs. Same-ROM A/B word gNdsR2AnimDirectRead. */
-__attribute__((used, section(".data"))) volatile u32 gNdsR2AnimDirectRead = 1u;
+ * established miss path runs. */
 __attribute__((used)) volatile u32 gNdsR2AnimDirectReads;
 __attribute__((used)) volatile u32 gNdsR2AnimDirectRefusals;
 
@@ -17069,7 +17067,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
         sb32 direct = FALSE;
 
 #if NDS_R2_FTANIM_STREAM && NDS_R2_ANIM_ZERO_COPY
-        if ((cached == NULL) && (gNdsR2AnimDirectRead != 0u))
+        if (cached == NULL)
         {
             cached = ndsR2AnimDirectReadEntry(asset_id);
             direct = (cached != NULL) ? TRUE : FALSE;

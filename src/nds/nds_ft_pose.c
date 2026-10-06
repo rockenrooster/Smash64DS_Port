@@ -756,11 +756,10 @@ static void ndsFtPoseAdvanceTail(NdsFtPose *pose, NdsFtPoseJoint *joint)
  * for every Cubic track a parse writes, and a status change's first parse
  * writes most of a clip's tracks. Payloads are frame counts, so the first 256
  * are filled once from that same function and read back: the same words by
- * construction. Same-ROM A/B word gNdsFtPoseRecipLut (0 = call every time). */
+ * construction. */
 #define NDS_FT_POSE_RECIP_LUT 256u
 static s32 sNdsFtPoseRecipQ30[NDS_FT_POSE_RECIP_LUT];
 static u32 sNdsFtPoseRecipFilled;
-__attribute__((used, section(".data"))) volatile u32 gNdsFtPoseRecipLut = 1u;
 
 static void __attribute__((noinline, cold)) ndsFtPoseRecipFill(void)
 {
@@ -777,7 +776,7 @@ static void __attribute__((noinline, cold)) ndsFtPoseRecipFill(void)
 static inline __attribute__((always_inline, target("arm"))) s32
 ndsFtPoseRecipQ30(u32 n)
 {
-    if ((n < NDS_FT_POSE_RECIP_LUT) && (gNdsFtPoseRecipLut != 0u))
+    if (n < NDS_FT_POSE_RECIP_LUT)
     {
         if (sNdsFtPoseRecipFilled == 0u)
         {

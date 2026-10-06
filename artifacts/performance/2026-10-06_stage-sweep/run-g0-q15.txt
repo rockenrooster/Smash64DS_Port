@@ -1,0 +1,45 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,672; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 1896: ALL 5,871,296 -> 1,676,992, 5 bucket(s) corrected
+Wrote D:\Stuff\DevFolder\Smash64DS_Port\artifacts\performance\2026-10-06_stage-sweep/g0-q15.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=764bd89bf79+dirty(39) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,672     1,676,864      1.50  1,173,479     1,111,936 11,177,984      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         5,056        10,304      2.04      5,708         2,240     26,816        0.5
+HUD         9,280        24,128      2.60     12,121         8,256    788,480        0.8
+SRC       437,632       662,272      1.51    446,978       149,696  1,057,728       39.2
+MISC      367,104       516,544      1.41    386,396       137,152  9,841,472       32.9
+OTHR      312,576       552,768      1.77    322,276        25,088    815,424       28.0
+WAIT      291,392       531,392      1.82    300,802         2,304    795,776       26.1
+WORK      841,408     1,198,464      1.42    868,585       316,992 10,837,376       75.3
+SHDT      751,871     1,098,943      1.46    782,562       274,495 10,005,567       67.3
+SWRM        1,216         1,280      1.05      1,192           832      3,072        0.1
+GCRA      432,512       656,832      1.52    441,729       145,280  1,052,608       38.7
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        576             0  1,032,192        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      366,976       516,416      1.41    386,280       137,024  9,841,344       32.9
+MFLS          128           128      1.00        116            64        512        0.0
+GPOL          496           557      1.12        473            68        605        0.0
+GVTX        1,132         1,285      1.14      1,096           214      1,424        0.1
+DGSA   2,111,017,074 4,069,956,070   1.93 2,126,091,786  4,383,315 4,293,901,612 189,045.4
+DGSB   2,115,964,441 4,116,377,028   1.95 2,147,507,286    406,719 4,294,683,778 189,488.4
+WORK-H    829,056     1,188,544      1.43    856,464       307,200 10,048,896       74.2
+
+named=851,203 (72.5% of ALL)  VBI 2:1796 3:149 4:13 5+:3 max:24 total:1961  slips=0
+Wrote D:\Stuff\DevFolder\Smash64DS_Port\artifacts\performance\2026-10-06_stage-sweep/g0-q15.json

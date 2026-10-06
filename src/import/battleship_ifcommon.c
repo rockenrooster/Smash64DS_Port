@@ -931,15 +931,11 @@ void ndsIFCommonRecordHUDState(void)
  * meter from sIFCommonPlayerDamageInterface through
  * ndsIFCommonRecordHUDState / ndsIFCommonGetBattleHudDamageState, which the
  * update callback keeps. It was ~180 soft-float calls and ~7K ticks every
- * battle frame. Same-ROM A/B word gNdsIFCommonDamageDisplaySkip (0 = call
- * it). */
-volatile u32 gNdsIFCommonDamageDisplaySkip
-    __attribute__((used, section(".data"))) = 1u;
+ * battle frame. */
 
 u32 ndsIFCommonSkipDamageDisplay(void)
 {
-    return ((gNdsIFCommonDamageDisplaySkip != 0u) &&
-            (gNdsIFCommonHUDLowerTextMode != 0u) &&
+    return ((gNdsIFCommonHUDLowerTextMode != 0u) &&
             (gNdsSceneManagerCurrIsBattle != 0u)) ? TRUE : FALSE;
 }
 

@@ -4182,9 +4182,6 @@ volatile u32 gNdsTask103MatRecalcCount;
 volatile u32 gNdsTask103MatBindings;
 #endif
 
-volatile u32 gNdsStageBillboardRow3 __attribute__((used, section(".data"))) =
-    1u;
-
 #if NDS_TASK44_STAGE_STEADY && NDS_R2_STAGE_VALIDATE_STRIDE
 /* Quiet dynamic bindings: revalidated one frame in this many (1, 2, 4 or 8;
  * 1 = every frame, the behaviour before 2026-10-04). Same-ROM A/B word. */
@@ -4309,11 +4306,9 @@ static sb32 ndsRendererAdapterPrepareNativeStageBindingMatrix(
      * ApplyMvpRecalc below, which reads only the translation row of this
      * product -- so only that row is formed, bit for bit the full product's.
      * Not the persp-scale kind: its scale-conversion refusal returns with the
-     * product itself as the result. Same-ROM A/B word gNdsStageBillboardRow3
-     * (0 = the full products). */
+     * product itself as the result. */
     if ((kind != 0u) &&
-        (kind != NDS_RENDERER_ADAPTER_MVP_RECALC_PERSP_SCA_KIND) &&
-        (gNdsStageBillboardRow3 != 0u))
+        (kind != NDS_RENDERER_ADAPTER_MVP_RECALC_PERSP_SCA_KIND))
     {
         const NDSRendererMatrix20p12 *lhs = world_ptr;
 
