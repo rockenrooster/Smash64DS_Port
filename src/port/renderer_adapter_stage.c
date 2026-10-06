@@ -8061,19 +8061,40 @@ static sb32 ndsItemReplaySameRecording(const NDSItemReplayDraw *a,
     return TRUE;
 }
 #endif
-/* The draw being recorded and the lists it has seen, NULL outside one. */
+/* The draw being recorded and the lists it has seen, NULL outside one; and
+ * whether one of its lists drew without a sink emit (the recording is then
+ * dropped, not kept). */
 static NDSItemReplayDraw *sNdsItemReplayRecording;
 static u32 sNdsItemReplayRecordRoots;
+static u32 sNdsItemReplayRecordEmpty;
 
 /* Owners whose GX output is their ndsNativeItemWave1Emit calls and nothing
  * else: the MObj-less item routes (fixed geometry, generated setup, no
  * materials). An owner the sink cannot hold (too many emits or vertices)
- * fails its recording and keeps drawing itself. */
+ * fails its recording and keeps drawing itself.
+ *
+ * NOT Saffron's three gate Pokemon (owner, 2026-10-06: "Regression, pokemon
+ * hazards are not visible"). Marumine, GLucky and Porygon draw through their
+ * own traversal and never call the sink, so since 2026-10-04 (3911899aa71,
+ * every item route admitted) their first draw recorded zero emits and every
+ * later draw replayed nothing: two owner calls a monster, then invisible
+ * (walk-1006e, Chansey and Electrode). */
 static inline sb32 ndsItemReplayRouteOk(u32 route_kind)
 {
-    return ((route_kind >= NDS_SDL_ROUTE_ITEM) &&
-            (route_kind < (NDS_SDL_ROUTE_ITEM + nNDSStageDLItemRouteCount))) ?
-        TRUE : FALSE;
+    if ((route_kind < NDS_SDL_ROUTE_ITEM) ||
+        (route_kind >= (NDS_SDL_ROUTE_ITEM + nNDSStageDLItemRouteCount)))
+    {
+        return FALSE;
+    }
+#if NDS_P2_STAGE_YAMABUKI
+    if ((route_kind == (NDS_SDL_ROUTE_ITEM + nNDSStageDLItemMarumine)) ||
+        (route_kind == (NDS_SDL_ROUTE_ITEM + nNDSStageDLItemGLucky)) ||
+        (route_kind == (NDS_SDL_ROUTE_ITEM + nNDSStageDLItemPorygon)))
+    {
+        return FALSE;
+    }
+#endif
+    return TRUE;
 }
 
 /* The fast lane's item branch, around its owner call: the list must be the
@@ -8111,6 +8132,14 @@ static void ndsItemReplayRootEnd(sb32 handled, u32 emit_first)
     if (handled == FALSE)
     {
         sNdsItemReplaySinkState.failed = 1u;
+    }
+    else if (sNdsItemReplaySinkState.emit_count == emit_first)
+    {
+        /* Drawn without one sink emit: a baked root culled outside the view
+         * (or an owner that never calls the sink). Kept, the recording would
+         * replay this list as nothing even once it is back in view, so this
+         * frame's recording is dropped and the next draw records again. */
+        sNdsItemReplayRecordEmpty = 1u;
     }
     draw->roots[index].emit_first = (u8)emit_first;
     draw->roots[index].emit_count =
@@ -16263,6 +16292,7 @@ void ndsRendererAdapterSubmitItemDObjTreeReplay(void *dobj_ptr, u32 kind,
         sNdsItemReplaySinkState.failed = 0u;
         sNdsItemReplayRecording = victim;
         sNdsItemReplayRecordRoots = 0u;
+        sNdsItemReplayRecordEmpty = 0u;
         ndsNativeItemReplaySetSink(&sNdsItemReplaySinkState);
     }
     ndsRendererAdapterBeginStageTraversal();
@@ -16273,8 +16303,12 @@ void ndsRendererAdapterSubmitItemDObjTreeReplay(void *dobj_ptr, u32 kind,
     {
         ndsNativeItemReplaySetSink(NULL);
         sNdsItemReplayRecording = NULL;
-        if ((sNdsItemReplaySinkState.failed == 0u) &&
-            (sNdsItemReplayRecordRoots == root_count))
+        if (sNdsItemReplayRecordEmpty != 0u)
+        {
+            victim->valid = 0u;
+        }
+        else if ((sNdsItemReplaySinkState.failed == 0u) &&
+                 (sNdsItemReplayRecordRoots == root_count))
         {
             victim->emit_count = (u8)sNdsItemReplaySinkState.emit_count;
             victim->last_used = gNdsRendererProfileFrameCount;

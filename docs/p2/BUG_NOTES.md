@@ -7438,3 +7438,31 @@ The source's card cameras draw into the viewport 10..310, mapped to 8..248 on
 the DS, and the bake captured exactly that, so stills stopped 8 px from the
 edge. They now draw 8 px outward (player and allies left, VS fighters right),
 clipped at the edge (91e73032c3d).
+
+## Saffron City Pokemon invisible (owner playtest, 2026-10-06, regression) -- FIXED
+
+Owner: "Regression, pokemon hazards are not visible."
+
+Repro (shipping walk ROM walk-1006e, scratchpad `saffwalk2.ps1`): every real
+stage-select cell poked to Saffron after each front-end overlay load (the
+table lives in the overlay, which the VS battle borrows as asset storage;
+poking at `main` or breaking in `ndsMatchConfigApply` did not work). Chansey
+and Electrode spawned from the gate and were never drawn while their effects
+were (Electrode's explosion). Their owners
+(`ndsRendererSubmitNativeItemGLucky`, `ndsRendererSubmitNativeYamabukiMarumine`)
+were called exactly twice per monster, then never again, with no native
+failure recorded. Venusaur and Charmander, which do not use the stage-DL item
+routes, stayed visible -- which is why the lab census looked healthy.
+
+Cause: 3911899aa71 (2026-10-04) admitted every MObj-less stage-DL item route
+to the item draw replay, which records an item's `ndsNativeItemWave1Emit`
+output once and replays it. Marumine, GLucky and Porygon draw through their
+own traversal and never call the sink, so the recording held zero emits and
+every later frame replayed nothing.
+
+Fix: those three routes are out of `ndsItemReplayRouteOk`; and a recording in
+which any list drew without a sink emit is dropped rather than kept (a baked
+root culled outside the view at record time would otherwise replay as nothing
+after it came back into view). walk-1006g: the GLucky owner runs every frame
+(20 calls in 20 frames) and Chansey and Electrode are drawn
+(`artifacts/visibility/2026-10-06_saffron-monsters/sw8-*`, local).

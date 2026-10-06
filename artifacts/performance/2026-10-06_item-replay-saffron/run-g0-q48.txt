@@ -1,0 +1,46 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 2 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,864; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 473: ALL 5,311,168 -> 1,116,864, 5 bucket(s) corrected
+  frame 1274: ALL 5,311,168 -> 1,116,864, 5 bucket(s) corrected
+Wrote artifacts/performance/2026-10-06_item-replay-saffron/g0-q48.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=37aac808d40+dirty(31) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,864     1,118,080      1.00  1,146,757     1,111,872  9,349,632      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         5,312        10,496      1.98      5,910         2,560     22,976        0.5
+HUD         9,344        24,256      2.60     12,265         8,448    843,904        0.8
+SRC       401,792       613,696      1.53    411,335       139,264  1,014,080       36.0
+MISC      354,880       479,616      1.35    366,367       126,080  7,969,920       31.8
+OTHR      347,712       556,672      1.60    350,880        23,936    835,200       31.1
+WAIT      327,744       535,040      1.63    329,612         2,112    816,000       29.3
+WORK      794,112     1,093,440      1.38    812,988       297,088  9,013,504       71.1
+SHDT      705,983       981,759      1.39    726,464       255,359  8,125,695       63.2
+SWRM        1,216         1,280      1.05      1,232           832      3,264        0.1
+GCRA      396,544       607,360      1.53    406,183       134,720  1,009,024       35.5
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        583             0  1,044,544        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      354,816       479,552      1.35    366,282       126,016  7,969,856       31.8
+MFLS           64           128      2.00         85            64        448        0.0
+GPOL          497           557      1.12        474            68        605        0.0
+GVTX        1,134         1,286      1.13      1,097           214      1,424        0.1
+DGSA   2,156,107,775 4,085,789,599        2,143,769,046  4,136,899 4,294,504,546 193,050.2
+DGSB   2,132,237,381 4,083,937,101   1.92 2,129,613,282  1,447,036 4,293,768,537 190,912.9
+WORK-H    780,224     1,073,088      1.38    800,722       286,912  8,169,600       69.9
+
+named=795,877 (69.4% of ALL)  VBI 2:1879 3:73 4:7 5+:2 max:21 total:1961  slips=0
+Wrote artifacts/performance/2026-10-06_item-replay-saffron/g0-q48.json
