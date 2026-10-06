@@ -7353,3 +7353,88 @@ nds_p2_hurtbox_reject.c, each the source's body with the joint's world taken
 by `gmCollisionGetFighterPartsWorldPosition` -- the resident fixed world the
 hit was decided on, the float walk as its fallback. The trajectory is
 unchanged (the impact point feeds effects only).
+
+## Master Hand brief invisible frames before the fight (owner playtest, 2026-10-06) -- FIXED
+
+Owner: "During master hand intro (pre fight), MH has brief invisible frames."
+
+Measured (campaign walk ROM walk-1006d, `-StartStage 13`): window captures
+every 2 ticks show the hand missing for ~1 s of the fly-in, and
+`is_magnify_show` is 1 over the same ticks (620-652 in that run), so
+`ftDisplayMainProcDisplay` was taking its magnify branch and returning before
+the draw. The bounds test failed because the projection was wrong: at tick 640
+the hand at (900, 1571, -10323) projected to y = 136.57 where the float
+arithmetic gives 7.6.
+
+Cause: `ndsProjectToViewport` (src/port/renderer_adapter_fighter.c, the
+fixed-point `func_ovl2_800EB924` since 2026-10-05) converts the camera
+matrix's rotation rows to Q28 through `ndsR2CollisionF32ToFixed`, which
+declines a left shift of 7 -- every |v| in [4, 8) -- and the projection
+saturated those cells to 8.0. The intro camera's perspective scale is
+cot(25/2) = 4.52 (m[1][1] = 4.516602); 8 x 1571.37 - 6774.9 = 5796 and
+110 x 5796 / 4668 = 136.6 reproduces the bad value exactly. The close-up
+entry variant (`gmCameraSetStatusPlayerZoom(..., 28.0F)`, cot 14 = 4.01) is
+the same defect, and the likely cause of the owner's "during the close up
+version of fighter intros, fighters become invisible".
+
+Fix (a0a4cafe982): a declined cell converts at Q27 and doubles; a float in
+[4, 8) is a multiple of 2^-21, so the Q28 value is exact. Below 4 (the battle
+camera) nothing changes: lab replay digest identical on gate, Castle and
+Sector Z. walk-1006e: `is_magnify_show` 0 at every tick 616-664 and the hand
+in every capture 620-660 (`artifacts/visibility/2026-10-05_oldexec/mhc4`,
+local). Receipt `artifacts/performance/2026-10-06_projection`.
+
+The fly-in itself ("Idle during fly-in"): the Appear AnimJoint drives the
+finger joints for the whole window (joints 10/13/19/22 change between every
+sample from anim frame 41 to 591; 19's z rotation -0.05 -> -1.43 rad between
+frames 295 and 305) and the drawn fingers follow them (captures keyed on the
+anim frame, `artifacts/visibility/2026-10-05_oldexec/mhf1`). Probes:
+scratchpad `mhfly.ps1`, `mhfingers.ps1`.
+
+## Close-up entry fighters invisible (owner playtest, 2026-10-06) -- FIXED
+
+Owner: "during the close up version of fighter intros, fighters become
+invisible. I suggest moving the camera back some." Same defect as the Master
+Hand row above: focus id 2 zooms with `gmCameraSetStatusPlayerZoom(...,
+28.0F)`, cot 14 = 4.01, which the fixed-point projection saturated, so the
+zoomed fighter failed its bounds test and was culled as magnified. No camera
+change was needed. walk-1006e with the focus forced to 2 (scratchpad
+`entrywalk.ps1`; the forcing breakpoint must fire after the roll, on the first
+call with `phase != 0`): `is_magnify_show` 0 for each zoomed fighter, Mario
+drawn coming out of his pipe (`artifacts/visibility/2026-10-06_entry-closeup`,
+local). Fixed by a0a4cafe982.
+
+## Generic ring VFX (owner playtest, 2026-10-06) -- FIXED
+
+Owner: "Generic yellow/green/green ring VFX still played for some effects.
+Need to audit against source." The ring is the port's Wave visual template
+(green 0x60ff80 / yellow 0xffff80). Audit of `ftParamMakeEffect`
+(src/port/reloc_backend_compat_shims.c) against ftparam.c:1892-2112: the
+ring answered FlashSmall (tech), FlashLarge and Ripple (Pikachu's Quick
+Attack, Ness's PSI Magnet, efdef.h); Psionic drew the electric sprite,
+KirbyStar nothing, SparkleWhiteMulti and HealSparkles the generic star,
+EggBreak a dust puff, DamageNormal the HitNormal star. All now take their
+source makers (9c897c32647). The ELF census showed SetOff, FlashMiddle,
+CatchSwirl, ImpactWave and the damage makers were already the source's.
+Still stand-ins: the DObj-tree makers (ShockSmall, DamageFly*, StarRodSpark,
+FireSpark), which need their display-list links on the hardware path.
+Particle scripts consume the global random stream, so the gate replay
+re-baselined at HealSparkles' first request (frame 1,344); receipt
+`artifacts/performance/2026-10-06_source-vfx`.
+
+## GO lamp lettering blurry (owner playtest, 2026-10-06) -- FIXED
+
+Owner: "GO unlit and lit is still blurry and hard to read. maybe we should
+generate new candidates". Six candidates rendered by the host model
+(scratchpad `go_candidates.py`, sheets in
+`artifacts/visibility/2026-10-06_go-candidates`, local): current area filter,
+hard-edged area, nearest 0.8x, source 1:1, and two hand-set pixel fonts. Owner
+picked E (12x9, two-pixel strokes). Shipped as `sNdsIFCommonGoLampGlyph` in
+the source lettering's mean colour (22dcad81fce); host checker updated.
+
+## 1P intro stills too far from the screen edges (owner playtest, 2026-10-06) -- FIXED
+
+The source's card cameras draw into the viewport 10..310, mapped to 8..248 on
+the DS, and the bake captured exactly that, so stills stopped 8 px from the
+edge. They now draw 8 px outward (player and allies left, VS fighters right),
+clipped at the edge (91e73032c3d).
