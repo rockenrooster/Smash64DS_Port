@@ -103,6 +103,10 @@ NDS_MPPROCESS_ABI_OFFSET(ignore_line_id, 0xccu);
 #endif
 
 void ndsBaseMPProcessResetMultiWallCount(void);
+/* reloc_backend_mp_collision.c: TRUE when no wall line of `line_kind` can be
+ * met by any of the source wall test's five sweeps (the test then only resets
+ * the multiwall count and returns FALSE). */
+sb32 ndsMPProcessWallTestMiss(const MPCollData *coll_data, u32 line_kind);
 void ndsBaseMPProcessSetMultiWallLineID(s32 line_id);
 void ndsBaseMPProcessSetLastWallCollideLeft(void);
 void ndsBaseMPProcessSetLastWallCollideRight(void);

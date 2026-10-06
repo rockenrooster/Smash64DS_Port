@@ -4259,6 +4259,113 @@ ndsMPWallSweepStaticMiss(const Vec3f *position, const Vec3f *translate,
     return TRUE;
 }
 
+/* An object's whole wall test in one integer reject (P2-2p8, 2026-10-06;
+ * owner: "Replace ALL soft float with fixed point"). The source's
+ * mpProcessCheckTest{L,R}WallCollision (mpprocess.c:467, 691) sweeps five
+ * segments whose x ends are the previous and the current position and those
+ * plus or minus the collision box's half width -- twenty float adds to build
+ * them, ~200 a frame on Peach's Castle -- and nearly every sweep is answered
+ * by ndsMPWallSweepStaticMiss. This asks that question once for an x range
+ * holding all five: both positions truncated, widened by the larger box
+ * width's truncation plus 3 (a truncated rounded sum lies within 2 of the
+ * sum of the truncations, and one more covers the rounding at the edge).
+ * A range that misses every group's extent and spans contains five ranges
+ * that miss them too, so TRUE means each sweep would have returned FALSE
+ * having written only the reject bookkeeping written here; a dynamic group is
+ * widened by its speed as well, which covers both the Diff and the Same form.
+ * Anything the static miss would not answer goes to the source test. */
+sb32 ndsMPProcessWallTestMiss(const MPCollData *coll_data, u32 line_kind)
+{
+    MPGeometryData *geometry = gMPCollisionGeometry;
+    const NDSMPKindGroup *end;
+    NDSMPKindGroup *g;
+    s32 ipp;
+    s32 it;
+    s32 iw;
+    s32 ipw;
+    s32 lo;
+    s32 hi;
+
+    if ((coll_data == NULL) || (coll_data->p_translate == NULL) ||
+        (coll_data->p_map_coll == NULL) ||
+        (geometry != sNdsMPWallMissReadyGeometry) ||
+        (sNdsMPWallMissReadyGen != gNdsTaskmanHeapGeneration) ||
+        (ndsMPWallSweepTruncInline(coll_data->pos_prev.x, &ipp) == FALSE) ||
+        (ndsMPWallSweepTruncInline(coll_data->p_translate->x, &it) ==
+         FALSE) ||
+        (ndsMPWallSweepTruncInline(coll_data->map_coll.width, &iw) ==
+         FALSE) ||
+        (ndsMPWallSweepTruncInline(coll_data->p_map_coll->width, &ipw) ==
+         FALSE))
+    {
+        return FALSE;
+    }
+    iw = (iw < 0) ? -iw : iw;
+    ipw = (ipw < 0) ? -ipw : ipw;
+    iw = ((iw > ipw) ? iw : ipw) + 3;
+    lo = ((ipp < it) ? ipp : it) - iw;
+    hi = ((ipp > it) ? ipp : it) + iw;
+    /* Every segment end must truncate in range, as each sweep requires. */
+    if ((lo <= -(1 << 20)) || (hi >= (1 << 20)))
+    {
+        return FALSE;
+    }
+    lo -= NDS_MP_WALL_SWEEP_SLACK;
+    hi += NDS_MP_WALL_SWEEP_SLACK;
+    g = sNdsMPKindGroups[line_kind];
+    end = g + sNdsMPKindGroupCounts[line_kind];
+    for (; g < end; g++)
+    {
+        const DObj *yakumono_dobj;
+
+        if ((g->count == 0u) ||
+            (g->yakumono_id >= NDS_MP_YAKUMONO_DOBJ_SLOTS))
+        {
+            continue;
+        }
+        yakumono_dobj = gMPCollisionYakumonoDObjs->dobjs[g->yakumono_id];
+        if ((yakumono_dobj == NULL) ||
+            (yakumono_dobj->user_data.s >= nMPYakumonoStatusOff))
+        {
+            continue;
+        }
+        if (g->reject_skip != 0u)
+        {
+            return FALSE;
+        }
+        if ((yakumono_dobj->anim_joint.event32 != NULL) ||
+            (yakumono_dobj->user_data.s != nMPYakumonoStatusNone))
+        {
+            const s32 ie = ndsMPWallSweepEdgeTrunc(
+                g->yakumono_id, 0u, yakumono_dobj->translate.vec.f.x);
+            s32 id = (gMPCollisionSpeeds != NULL) ?
+                ndsMPWallSweepEdgeTrunc(g->yakumono_id, 1u,
+                                        gMPCollisionSpeeds[g->yakumono_id].x) :
+                0;
+
+            if ((ie == INT32_MIN) || (id == INT32_MIN))
+            {
+                return FALSE;
+            }
+            id = (id < 0) ? -id : id;
+            if ((hi - ie + id >= (s32)g->ext_lo) &&
+                (lo - ie - id <= (s32)g->ext_hi) &&
+                (ndsMPGroupSpansMiss(g, lo - ie - id, hi - ie + id) == FALSE))
+            {
+                return FALSE;
+            }
+        }
+        else if ((hi >= (s32)g->ext_lo) && (lo <= (s32)g->ext_hi) &&
+                 (ndsMPGroupSpansMiss(g, lo, hi) == FALSE))
+        {
+            return FALSE;
+        }
+        g->reject_misses = 0u;
+    }
+    NDS_DIAG(gNdsMPWallSweepStaticMisses++);
+    return TRUE;
+}
+
 sb32 mpCollisionCheckLWallLineCollisionSame(Vec3f *position,
                                             Vec3f *translate,
                                             Vec3f *ga_last,

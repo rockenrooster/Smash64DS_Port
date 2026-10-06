@@ -10992,8 +10992,18 @@ static u16 ndsRendererHardwareConvertIA(u8 intensity, u8 alpha,
 static u32 ndsRendererHardwarePackResolvedPal16(
     u16 *pixels, u32 pixel_count, u16 palette[16], u32 *color0_transparent)
 {
+    /* Colour -> palette index through a 32-slot open-addressed table and a
+     * last-colour shortcut (P2-2p8, 2026-10-06): the per-pixel linear search
+     * of up to 16 entries, twice, was 614K of the ~1.0M cycles one 64x64
+     * first-use conversion cost (artifacts/performance/2026-10-06_texmiss).
+     * Same palette, same order, same packing. Slot 0xff is empty; the opaque
+     * bit is folded in so 0x0000 and 0x8000 cannot collide by construction. */
     u8 *packed = (u8 *)pixels;
+    u16 keys[32];
+    u8 slots[32];
     u32 palette_count = 0u;
+    u32 last = 0x10000u;
+    u32 last_index = 0u;
     u32 i;
 
     if ((pixels == NULL) || (palette == NULL) ||
@@ -11001,26 +11011,32 @@ static u32 ndsRendererHardwarePackResolvedPal16(
     {
         return 0u;
     }
+    memset(slots, 0xff, sizeof(slots));
 
     for (i = 0u; i < pixel_count; i++)
     {
-        u16 color = ((pixels[i] & 0x8000u) != 0u) ? pixels[i] : 0u;
-        u32 index;
+        const u32 color = ((pixels[i] & 0x8000u) != 0u) ? pixels[i] : 0u;
+        u32 h;
 
-        for (index = 0u; index < palette_count; index++)
+        if (color == last)
         {
-            if (palette[index] == color)
-            {
-                break;
-            }
+            continue;
         }
-        if (index == palette_count)
+        last = color;
+        h = (color ^ (color >> 5) ^ (color >> 10)) & 31u;
+        while ((slots[h] != 0xffu) && (keys[h] != (u16)color))
+        {
+            h = (h + 1u) & 31u;
+        }
+        if (slots[h] == 0xffu)
         {
             if (palette_count >= 16u)
             {
                 return 0u;
             }
-            palette[palette_count++] = color;
+            keys[h] = (u16)color;
+            slots[h] = (u8)palette_count;
+            palette[palette_count++] = (u16)color;
         }
     }
 
@@ -11032,33 +11048,52 @@ static u32 ndsRendererHardwarePackResolvedPal16(
         if (palette[i] == 0u)
         {
             u16 first = palette[0];
+            u32 h;
 
             palette[0] = 0u;
             palette[i] = first;
             *color0_transparent = TRUE;
+            if (i != 0u)
+            {
+                for (h = 0u; h < 32u; h++)
+                {
+                    if (slots[h] == 0u)
+                    {
+                        slots[h] = (u8)i;
+                    }
+                    else if (slots[h] == (u8)i)
+                    {
+                        slots[h] = 0u;
+                    }
+                }
+            }
             break;
         }
     }
 
+    last = 0x10000u;
     for (i = 0u; i < pixel_count; i++)
     {
-        u16 color = ((pixels[i] & 0x8000u) != 0u) ? pixels[i] : 0u;
-        u32 index;
+        const u32 color = ((pixels[i] & 0x8000u) != 0u) ? pixels[i] : 0u;
 
-        for (index = 0u; index < palette_count; index++)
+        if (color != last)
         {
-            if (palette[index] == color)
+            u32 h = (color ^ (color >> 5) ^ (color >> 10)) & 31u;
+
+            while (keys[h] != (u16)color)
             {
-                break;
+                h = (h + 1u) & 31u;
             }
+            last = color;
+            last_index = slots[h];
         }
         if ((i & 1u) != 0u)
         {
-            packed[i >> 1] |= (u8)(index << 4);
+            packed[i >> 1] |= (u8)(last_index << 4);
         }
         else
         {
-            packed[i >> 1] = (u8)index;
+            packed[i >> 1] = (u8)last_index;
         }
     }
     return palette_count;

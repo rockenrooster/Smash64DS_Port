@@ -90,3 +90,27 @@ MatShade/Pack`) ~+170K, the pose engine (`ndsFtPoseParse/Play/BindEntry`)
 ~+68K and the hurtbox kernels (`ndsP2HbRejectPoints/LocalFromDObj/Compose/
 WorldOf`) ~+54K. Soft float is a P50 lever (~70K a frame executed); the P95
 levers are texture binds and lean events.
+
+## q38: the wall tests in one integer reject; the PAL16 packer hashed (exact)
+
+- `mpProcessCheckTest{L,R}WallCollision` (mpprocess.c:467, 691) sweep five
+  segments built from the previous and current positions and the collision
+  box's half width (twenty float adds) and nearly every sweep is answered by
+  `ndsMPWallSweepStaticMiss`. `ndsMPProcessWallTestMiss` asks that question
+  once in integers for an x range holding all five (both positions truncated,
+  widened by the larger width's truncation plus 3, the static miss's slack
+  added); a range that misses every group's extent and spans contains five
+  that do, so TRUE means each sweep would have returned FALSE having written
+  only the reject bookkeeping it writes too (dynamic groups widened by their
+  speed, covering the Diff and Same forms). The live bridge asks it first.
+- `ndsRendererHardwarePackResolvedPal16` (the first-use texture conversion's
+  16-colour repack, 614K of a ~1.0M-cycle 64x64 conversion on Sector Z)
+  maps colour to index through a 32-slot open-addressed table with a
+  last-colour shortcut instead of a per-pixel linear search, twice. Same
+  palette, order and packing.
+
+| config | digest diff | P50 | P95 | over | paired median |
+|---|---|---|---|---|---|
+| gate | 0 | 777,344 -> 765,696 | 1,060,160 -> 1,048,576 | 65 -> 59 | -10,624 |
+| g0 (Castle) | 0 | 815,232 -> 805,120 | 1,112,064 -> 1,100,864 | 87 -> 79 | -11,200 |
+| sz (Sector Z) | 0 | 862,912 -> 851,328 | 1,167,936 -> 1,166,720 | 131 -> 122 | -11,072 |

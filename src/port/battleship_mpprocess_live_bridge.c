@@ -2,7 +2,9 @@
  * Reversible public ABI bridge for the renamed BattleShip mp/mpprocess.c TU.
  *
  * Keep this file to exact one-to-one forwarding wrappers (mpProcessUpdateMain
- * also picks the stack it runs on). The source import owns collision
+ * also picks the stack it runs on; the two wall tests first ask the port's
+ * whole-test reject, ndsMPProcessWallTestMiss, which answers only when the
+ * source test would have found nothing). The source import owns collision
  * behavior; this port seam owns only live symbol selection.
  */
 #include <nds/nds_mpprocess_source.h>
@@ -29,6 +31,11 @@ void mpProcessSetMultiWallLineID(s32 line_id)
 
 sb32 mpProcessCheckTestLWallCollision(MPCollData *coll_data)
 {
+    if (ndsMPProcessWallTestMiss(coll_data, nMPLineKindLWall) != FALSE)
+    {
+        ndsBaseMPProcessResetMultiWallCount();
+        return FALSE;
+    }
     return ndsBaseMPProcessCheckTestLWallCollision(coll_data);
 }
 
@@ -39,6 +46,11 @@ void mpProcessRunLWallCollision(MPCollData *coll_data)
 
 sb32 mpProcessCheckTestRWallCollision(MPCollData *coll_data)
 {
+    if (ndsMPProcessWallTestMiss(coll_data, nMPLineKindRWall) != FALSE)
+    {
+        ndsBaseMPProcessResetMultiWallCount();
+        return FALSE;
+    }
     return ndsBaseMPProcessCheckTestRWallCollision(coll_data);
 }
 
