@@ -1640,6 +1640,18 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   prepared again after GO (`e585e7e82f4`, the last native failure in a Poke
   Ball match). Gate after these: P50/P95 763,392 / 1,074,496, Castle
   800,000 / 1,096,384, Sector Z 852,544 / 1,182,144 (lab ring dump).
+- **10-06 (evening): soft float out of the HUD, the camera's stage modes and
+  the blast-zone test** (owner: "replace all soft float with fixed point";
+  convert wholesale, measure once). The HUD's OAM anchors (scales, origins,
+  player tags, item arrows, traffic/cloud sprites) project in Q22 through
+  `ndsProjectToViewportQ22`; Zebes' and Inishie's camera modes run the Q
+  camera core (Zebes' acid clamp and Inishie's zero pan in Q); the blast-zone
+  test and the camera's on-screen test compare float order keys against
+  cached bound keys; `syUtilsRandFloat() < 1/6` is `syUtilsRandUShort() <=
+  10922` (same generator step). Exact except the HUD pixels, so every digest
+  stays identical (6 stages). Paired: Zebes -6.8K, Mushroom Kingdom -2.9K,
+  the rest within +-1K. Both ITCM residents were rewritten compact (the
+  first build overflowed ITCM by 880 B). Receipt `2026-10-06_s1-fixed`.
 
 ## 7. Found along the way
 

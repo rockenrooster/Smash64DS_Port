@@ -21,6 +21,9 @@
 #endif
 #include <nds/nds_renderer.h>
 #include <nds/nds_startup.h>
+#include <nds/nds_fixed_convert.h>
+#include <nds/nds_fcmp.h>
+#include <nds/nds_r2_hwmath_unit.h>
 #include <nds/nds_task39_effect_census.h>
 #include <gm/generic.h>
 #include <sys/obj.h>
@@ -114,6 +117,12 @@ extern f32 __sinf(f32 value);
 extern void func_ovl2_800EB924(CObj *cobj, Mtx44f matrix, Vec3f *pos,
                                f32 *dist_x, f32 *dist_y);
 extern sb32 gmCameraCheckTargetInBounds(f32 pos_x, f32 pos_y);
+/* renderer_adapter_fighter.c: func_ovl2_800EB924's fixed projection, its two
+ * results left at Q22 (the HUD anchors below stay integers end to end). */
+extern void ndsProjectToViewportQ22(CObj *cobj, Mtx44f matrix,
+                                    const int32_t p_q12[3],
+                                    int64_t *dist_x_q22,
+                                    int64_t *dist_y_q22);
 
 #ifndef CObjGetStruct
 #define CObjGetStruct(gobj) ((CObj *)((gobj)->obj))
@@ -585,9 +594,11 @@ volatile u32 gNdsTask39FxObjVramBytes;
 volatile u32 gNdsTask39FxObjVramRemaining;
 
 static void ndsTask39HitSparksDraw(void);
+#if NDS_TASK39_FX_SPRITES
 static s32 ndsIFCommonRoundFloatHalfUp(f32 value);
 static f32 ndsIFCommonBattleScreenX(f32 projected_x);
 static f32 ndsIFCommonBattleScreenY(f32 projected_y);
+#endif
 static void ndsIFCommonResetPlayerTags(void);
 static void ndsIFCommonResetItemArrow(void);
 static void ndsIFCommonResetCommonLetters(void);
@@ -3104,16 +3115,90 @@ static u32 ndsIFCommonBitmapAlpha(u8 source_alpha)
     return (((u32)source_alpha * 15u) + 127u) / 255u;
 }
 
+#if NDS_TASK39_FX_SPRITES
 static s32 ndsIFCommonRoundFloatHalfUp(f32 value)
 {
     return (value >= 0.0F) ? (s32)(value + 0.5F) :
                              (s32)(value - 0.5F);
 }
+#endif
 
 static s32 ndsIFCommonRoundQ16HalfUp(s32 value)
 {
     return (value >= 0) ? ((value + 0x8000) >> 16) :
                           -(((-value) + 0x8000) >> 16);
+}
+
+/* The HUD's anchors without soft float (owner 2026-10-05: fixed point only).
+ * Render only. A source float (an SObj position or scale the decomp wrote)
+ * enters at Q16 through ndsF32ToFixed, integer bit arithmetic; the float
+ * products `value * k` and their half-away rounding become one 64-bit
+ * product, so an anchor can land one unit from the float product's. */
+static s32 __attribute__((noinline, target("arm")))
+ndsIFCommonScaleRound(f32 value, u32 k)
+{
+    const int64_t prod = (int64_t)ndsF32ToFixed(value, 16u) * (int64_t)k;
+
+    return (prod >= 0) ? (s32)((prod + 0x8000) >> 16) :
+                         -(s32)(((-prod) + 0x8000) >> 16);
+}
+
+/* An unsigned scale (a negative source scale reads 0, as the float
+ * conversion's truncation to unsigned did). */
+static u32 ndsIFCommonScaleRoundU(f32 value, u32 k)
+{
+    const s32 v = ndsIFCommonScaleRound(value, k);
+
+    return (v > 0) ? (u32)v : 0u;
+}
+
+/* A Q22 value rounded half away from zero to an integer. */
+static s32 __attribute__((noinline, target("arm")))
+ndsIFCommonRoundQ22HalfUp(int64_t value)
+{
+    return (value >= 0) ? (s32)((value + (1 << 21)) >> 22) :
+                          -(s32)(((-value) + (1 << 21)) >> 22);
+}
+
+/* ndsIFCommonBattleScreenX/Y at Q22 (see there): 128 + x * 128 / half_w and
+ * 96 - y * 96 / half_h, half = viewport / 2, or the 0.8 fallback. */
+static int64_t __attribute__((noinline, target("arm")))
+ndsIFCommonBattleScreenXQ22(int64_t projected_x_q22)
+{
+    const s32 width = gGMCameraStruct.viewport_width;
+
+    if (width > 0)
+    {
+        return (INT64_C(128) << 22) +
+               ndsR2HwMathDivideFast(projected_x_q22 * 256, width);
+    }
+    return (INT64_C(128) << 22) +
+           ndsR2HwMathDivideFast(projected_x_q22 * 4, 5);
+}
+
+static int64_t __attribute__((noinline, target("arm")))
+ndsIFCommonBattleScreenYQ22(int64_t projected_y_q22)
+{
+    const s32 height = gGMCameraStruct.viewport_height;
+
+    if (height > 0)
+    {
+        return (INT64_C(96) << 22) -
+               ndsR2HwMathDivideFast(projected_y_q22 * 192, height);
+    }
+    return (INT64_C(96) << 22) -
+           ndsR2HwMathDivideFast(projected_y_q22 * 4, 5);
+}
+
+/* gmCameraCheckTargetInBounds at Q22: the half extents are the source's
+ * integer quotients. */
+static s32 ndsIFCommonInBoundsQ22(int64_t x_q22, int64_t y_q22)
+{
+    const int64_t half_w = (int64_t)(gGMCameraStruct.viewport_width / 2) << 22;
+    const int64_t half_h = (int64_t)(gGMCameraStruct.viewport_height / 2) << 22;
+
+    return ((x_q22 < -half_w) || (x_q22 > half_w) || (y_q22 < -half_h) ||
+            (y_q22 > half_h)) ? FALSE : TRUE;
 }
 
 /* A battle point the source projects (func_ovl2_800EB924: x, y about the
@@ -3123,6 +3208,7 @@ static s32 ndsIFCommonRoundQ16HalfUp(s32 value)
  * right only for screen-fixed HUD. Anchoring a fighter's tag, an item arrow
  * or a hit spark at 0.8 pulled it toward the centre by up to ~8 px at the
  * screen's edges (owner 10-01: tags "offset around edges of screen"). */
+#if NDS_TASK39_FX_SPRITES
 static f32 ndsIFCommonBattleScreenX(f32 projected_x)
 {
     f32 half = (f32)gGMCameraStruct.viewport_width * 0.5F;
@@ -3138,6 +3224,7 @@ static f32 ndsIFCommonBattleScreenY(f32 projected_y)
     return (half > 0.0F) ? (96.0F - (projected_y * (96.0F / half))) :
                            (96.0F - (projected_y * 0.8F));
 }
+#endif
 
 static s32 ndsIFCommonEmitSObj(const SObj *sobj, u32 asset_index)
 {
@@ -3180,12 +3267,10 @@ static s32 ndsIFCommonEmitSObj(const SObj *sobj, u32 asset_index)
                    (asset_index >= NDS_IFCOMMON_END_FIRST)) ?
                       TRUE : FALSE;
 
-    scale_x_q16 = (u32)((sobj->sprite.scalex *
-        (f32)(prefiltered ? (1u << 16) :
-                            NDS_IFCOMMON_SCREEN_SCALE_Q16)) + 0.5F);
-    scale_y_q16 = (u32)((sobj->sprite.scaley *
-        (f32)(prefiltered ? (1u << 16) :
-                            NDS_IFCOMMON_SCREEN_SCALE_Q16)) + 0.5F);
+    scale_x_q16 = ndsIFCommonScaleRoundU(sobj->sprite.scalex,
+        prefiltered ? (1u << 16) : NDS_IFCOMMON_SCREEN_SCALE_Q16);
+    scale_y_q16 = ndsIFCommonScaleRoundU(sobj->sprite.scaley,
+        prefiltered ? (1u << 16) : NDS_IFCOMMON_SCREEN_SCALE_Q16);
     if ((scale_x_q16 == 0u) || (scale_y_q16 == 0u) ||
         (scale_x_q16 != scale_y_q16))
     {
@@ -3204,10 +3289,10 @@ static s32 ndsIFCommonEmitSObj(const SObj *sobj, u32 asset_index)
     {
         return FALSE;
     }
-    origin_x = ndsIFCommonRoundQ16HalfUp(ndsIFCommonRoundFloatHalfUp(
-        sobj->pos.x * (f32)NDS_IFCOMMON_SCREEN_SCALE_Q16));
-    origin_y = ndsIFCommonRoundQ16HalfUp(ndsIFCommonRoundFloatHalfUp(
-        sobj->pos.y * (f32)NDS_IFCOMMON_SCREEN_SCALE_Q16));
+    origin_x = ndsIFCommonRoundQ16HalfUp(ndsIFCommonScaleRound(
+        sobj->pos.x, NDS_IFCOMMON_SCREEN_SCALE_Q16));
+    origin_y = ndsIFCommonRoundQ16HalfUp(ndsIFCommonScaleRound(
+        sobj->pos.y, NDS_IFCOMMON_SCREEN_SCALE_Q16));
     size_double = (scale_x_q16 > (1u << 16)) ? TRUE : FALSE;
 
     for (tile_index = 0u; tile_index < asset->tile_count; tile_index++)
@@ -3271,10 +3356,10 @@ static s32 ndsIFCommonTrafficSObjValid(
     {
         return FALSE;
     }
-    scale_x_q16 = (u32)((sobj->sprite.scalex *
-        (f32)NDS_IFCOMMON_SCREEN_SCALE_Q16) + 0.5F);
-    scale_y_q16 = (u32)((sobj->sprite.scaley *
-        (f32)NDS_IFCOMMON_SCREEN_SCALE_Q16) + 0.5F);
+    scale_x_q16 = ndsIFCommonScaleRoundU(sobj->sprite.scalex,
+        NDS_IFCOMMON_SCREEN_SCALE_Q16);
+    scale_y_q16 = ndsIFCommonScaleRoundU(sobj->sprite.scaley,
+        NDS_IFCOMMON_SCREEN_SCALE_Q16);
     return ((scale_x_q16 == NDS_IFCOMMON_SCREEN_SCALE_Q16) &&
             (scale_y_q16 == NDS_IFCOMMON_SCREEN_SCALE_Q16)) ? TRUE : FALSE;
 }
@@ -3282,12 +3367,10 @@ static s32 ndsIFCommonTrafficSObjValid(
 static s32 ndsIFCommonEmitTrafficSObj(
     const SObj *sobj, const NDSIFCommonTrafficSpec *traffic)
 {
-    s32 origin_x = ndsIFCommonRoundQ16HalfUp(
-        ndsIFCommonRoundFloatHalfUp(
-            sobj->pos.x * (f32)NDS_IFCOMMON_SCREEN_SCALE_Q16));
-    s32 origin_y = ndsIFCommonRoundQ16HalfUp(
-        ndsIFCommonRoundFloatHalfUp(
-            sobj->pos.y * (f32)NDS_IFCOMMON_SCREEN_SCALE_Q16));
+    s32 origin_x = ndsIFCommonRoundQ16HalfUp(ndsIFCommonScaleRound(
+        sobj->pos.x, NDS_IFCOMMON_SCREEN_SCALE_Q16));
+    s32 origin_y = ndsIFCommonRoundQ16HalfUp(ndsIFCommonScaleRound(
+        sobj->pos.y, NDS_IFCOMMON_SCREEN_SCALE_Q16));
 
     if (ndsRendererHardwareDrawIFCommonCloudAtlas(
             sNdsIFCommonTrafficTextureName,
@@ -3338,10 +3421,10 @@ static s32 ndsIFCommonCloudSObjValid(
     {
         return FALSE;
     }
-    scale_x_q16 = (u32)((sobj->sprite.scalex *
-        (f32)NDS_IFCOMMON_SCREEN_SCALE_Q16) + 0.5F);
-    scale_y_q16 = (u32)((sobj->sprite.scaley *
-        (f32)NDS_IFCOMMON_SCREEN_SCALE_Q16) + 0.5F);
+    scale_x_q16 = ndsIFCommonScaleRoundU(sobj->sprite.scalex,
+        NDS_IFCOMMON_SCREEN_SCALE_Q16);
+    scale_y_q16 = ndsIFCommonScaleRoundU(sobj->sprite.scaley,
+        NDS_IFCOMMON_SCREEN_SCALE_Q16);
     if ((scale_x_q16 == 0u) || (scale_x_q16 != scale_y_q16))
     {
         return FALSE;
@@ -3353,12 +3436,12 @@ static s32 ndsIFCommonCloudSObjValid(
 static s32 ndsIFCommonEmitCloudSObj(
     const SObj *sobj, const NDSIFCommonCloudSpec *cloud)
 {
-    s32 origin_x_q16 = ndsIFCommonRoundFloatHalfUp(
-        sobj->pos.x * (f32)NDS_IFCOMMON_SCREEN_SCALE_Q16);
-    s32 origin_y_q16 = ndsIFCommonRoundFloatHalfUp(
-        sobj->pos.y * (f32)NDS_IFCOMMON_SCREEN_SCALE_Q16);
-    u32 source_scale_q16 = (u32)((sobj->sprite.scalex *
-        (f32)NDS_IFCOMMON_SCREEN_SCALE_Q16) + 0.5F);
+    s32 origin_x_q16 = ndsIFCommonScaleRound(sobj->pos.x,
+        NDS_IFCOMMON_SCREEN_SCALE_Q16);
+    s32 origin_y_q16 = ndsIFCommonScaleRound(sobj->pos.y,
+        NDS_IFCOMMON_SCREEN_SCALE_Q16);
+    u32 source_scale_q16 = ndsIFCommonScaleRoundU(sobj->sprite.scalex,
+        NDS_IFCOMMON_SCREEN_SCALE_Q16);
     u32 atlas_scale_q16 = (cloud->kind == nNDSIFCommonCloudLight) ?
         (1u << 16) : (source_scale_q16 + 1u) / 2u;
     s32 x_q16 = origin_x_q16 +
@@ -3800,9 +3883,9 @@ static s32 ndsIFCommonEmitPlayerTag(struct GObj *gobj)
     FTStruct *fp;
     DObj *topn;
     CObj *cobj;
-    Vec3f pos;
-    f32 projected_x;
-    f32 projected_y;
+    int32_t pos_q12[3];
+    int64_t projected_x;
+    int64_t projected_y;
     s32 screen_x;
     s32 screen_y;
     u32 tag;
@@ -3823,8 +3906,8 @@ static s32 ndsIFCommonEmitPlayerTag(struct GObj *gobj)
      * generic path, which owns XLU blending and scaling. */
     if (((sobj->sprite.attr & SP_TRANSPARENT) == 0u) ||
         (sobj->sprite.alpha != 255u) ||
-        (sobj->sprite.scalex != 1.0F) ||
-        (sobj->sprite.scaley != 1.0F))
+        NDS_FCMP_NE_C(sobj->sprite.scalex, 1.0F) ||
+        NDS_FCMP_NE_C(sobj->sprite.scaley, 1.0F))
     {
         return ndsIFCommonPlayerTagMiss(
             nNDSIFCommonFallbackRuntimeColor);
@@ -3894,7 +3977,7 @@ static s32 ndsIFCommonEmitPlayerTag(struct GObj *gobj)
     {
         return ndsIFCommonPlayerTagMiss(nNDSIFCommonFallbackNotPrepared);
     }
-    if ((fp->playertag_wait != 1) && (cobj->vec.eye.z <= 6000.0F))
+    if ((fp->playertag_wait != 1) && NDS_FCMP_LE(cobj->vec.eye.z, 6000.0F))
     {
         return ndsIFCommonPlayerTagRecognized();
     }
@@ -3904,22 +3987,25 @@ static s32 ndsIFCommonEmitPlayerTag(struct GObj *gobj)
         return ndsIFCommonPlayerTagMiss(nNDSIFCommonFallbackBadAsset);
     }
     topn = fp->joints[nFTPartsJointTopN];
-    pos = topn->translate.vec.f;
-    pos.y += fp->attr->camera_zoom_base;
-    func_ovl2_800EB924(cobj, gGMCameraMatrix, &pos,
-                       &projected_x, &projected_y);
-    if (gmCameraCheckTargetInBounds(projected_x, projected_y) == FALSE)
+    pos_q12[0] = ndsF32ToFixed(topn->translate.vec.f.x, 12u);
+    pos_q12[1] = ndsF32ToFixed(topn->translate.vec.f.y, 12u) +
+                 ndsF32ToFixed(fp->attr->camera_zoom_base, 12u);
+    pos_q12[2] = ndsF32ToFixed(topn->translate.vec.f.z, 12u);
+    ndsProjectToViewportQ22(cobj, gGMCameraMatrix, pos_q12,
+                            &projected_x, &projected_y);
+    if (ndsIFCommonInBoundsQ22(projected_x, projected_y) == FALSE)
     {
         return ndsIFCommonPlayerTagRecognized();
     }
     /* The source's SObj position: the tag's bottom centre on the projected
      * point. The OAM tag is the sprite's own size, so it is centred on the
      * point's DS position rather than scaled with it. */
-    screen_x = ndsIFCommonRoundFloatHalfUp(
-        ndsIFCommonBattleScreenX(projected_x) -
-        ((f32)sobj->sprite.width * 0.5F));
-    screen_y = ndsIFCommonRoundFloatHalfUp(
-        ndsIFCommonBattleScreenY(projected_y) - (f32)sobj->sprite.height);
+    screen_x = ndsIFCommonRoundQ22HalfUp(
+        ndsIFCommonBattleScreenXQ22(projected_x) -
+        ((int64_t)sobj->sprite.width << 21));
+    screen_y = ndsIFCommonRoundQ22HalfUp(
+        ndsIFCommonBattleScreenYQ22(projected_y) -
+        ((int64_t)sobj->sprite.height << 22));
     if ((screen_x <= -32) || (screen_x >= 256) ||
         (screen_y <= -32) || (screen_y >= 192))
     {
@@ -4012,7 +4098,8 @@ static s32 ndsIFCommonEmitItemArrow(struct GObj *gobj)
         return ndsIFCommonItemArrowRecognized();
     }
     if (((sobj->sprite.attr & SP_TRANSPARENT) == 0u) ||
-        (sobj->sprite.scalex != 1.0F) || (sobj->sprite.scaley != 1.0F) ||
+        NDS_FCMP_NE_C(sobj->sprite.scalex, 1.0F) ||
+        NDS_FCMP_NE_C(sobj->sprite.scaley, 1.0F) ||
         (sobj->sprite.bmfmt != G_IM_FMT_I) ||
         (sobj->sprite.bmsiz != G_IM_SIZ_4b) ||
         (sobj->sprite.nbitmaps != 1) ||
@@ -4044,16 +4131,18 @@ static s32 ndsIFCommonEmitItemArrow(struct GObj *gobj)
      * (pos = centre + projected - (width / 2, height)); that point takes the
      * battle 3D's mapping (ndsIFCommonBattleScreenX/Y) and the 0.8-scaled
      * arrow hangs from it. */
-    origin_x = ndsIFCommonRoundFloatHalfUp(
-        ndsIFCommonBattleScreenX(
-            (sobj->pos.x + ((f32)NDS_IFCOMMON_ITEM_WIDTH * 0.5F)) -
-            (f32)gGMCameraStruct.viewport_center_x) -
-        ((f32)NDS_IFCOMMON_ITEM_WIDTH * 0.4F));
-    origin_y = ndsIFCommonRoundFloatHalfUp(
-        ndsIFCommonBattleScreenY(
-            (f32)gGMCameraStruct.viewport_center_y -
-            (sobj->pos.y + (f32)NDS_IFCOMMON_ITEM_HEIGHT)) -
-        ((f32)NDS_IFCOMMON_ITEM_HEIGHT * 0.8F));
+    origin_x = ndsIFCommonRoundQ22HalfUp(
+        ndsIFCommonBattleScreenXQ22(
+            ((int64_t)ndsF32ToFixed(sobj->pos.x, 16u) << 6) +
+            ((int64_t)NDS_IFCOMMON_ITEM_WIDTH << 21) -
+            ((int64_t)gGMCameraStruct.viewport_center_x << 22)) -
+        ((((int64_t)NDS_IFCOMMON_ITEM_WIDTH << 22) * 2) / 5));
+    origin_y = ndsIFCommonRoundQ22HalfUp(
+        ndsIFCommonBattleScreenYQ22(
+            ((int64_t)gGMCameraStruct.viewport_center_y << 22) -
+            (((int64_t)ndsF32ToFixed(sobj->pos.y, 16u) << 6) +
+             ((int64_t)NDS_IFCOMMON_ITEM_HEIGHT << 22))) -
+        ((((int64_t)NDS_IFCOMMON_ITEM_HEIGHT << 22) * 4) / 5));
     center_x = origin_x + ndsIFCommonRoundQ16HalfUp(
         (s32)(NDS_IFCOMMON_ITEM_CELL_WIDTH / 2u) * (s32)scale_q16);
     center_y = origin_y + ndsIFCommonRoundQ16HalfUp(
@@ -4254,10 +4343,10 @@ static s32 ndsIFCommonEmitBonusTasks(struct GObj *gobj)
                     nNDSIFCommonFallbackMatrixLimit);
             }
         }
-        origin_x = ndsIFCommonRoundQ16HalfUp(ndsIFCommonRoundFloatHalfUp(
-            sobj->pos.x * (f32)NDS_IFCOMMON_SCREEN_SCALE_Q16));
-        origin_y = ndsIFCommonRoundQ16HalfUp(ndsIFCommonRoundFloatHalfUp(
-            sobj->pos.y * (f32)NDS_IFCOMMON_SCREEN_SCALE_Q16));
+        origin_x = ndsIFCommonRoundQ16HalfUp(ndsIFCommonScaleRound(
+            sobj->pos.x, NDS_IFCOMMON_SCREEN_SCALE_Q16));
+        origin_y = ndsIFCommonRoundQ16HalfUp(ndsIFCommonScaleRound(
+            sobj->pos.y, NDS_IFCOMMON_SCREEN_SCALE_Q16));
         x = origin_x + ndsIFCommonRoundQ16HalfUp(
             (s32)(NDS_IFCOMMON_TASK_SIZE / 2u) * (s32)scale_q16) -
             (s32)(NDS_IFCOMMON_TASK_SIZE / 2u);
@@ -4484,7 +4573,8 @@ static s32 ndsIFCommonEmitCommonLetters(struct GObj *gobj)
             continue;
         }
         if ((ndsIFCommonIsCommonLetter(sobj) == FALSE) ||
-            (sobj->sprite.scalex != 1.0F) || (sobj->sprite.scaley != 1.0F))
+            NDS_FCMP_NE_C(sobj->sprite.scalex, 1.0F) ||
+            NDS_FCMP_NE_C(sobj->sprite.scaley, 1.0F))
         {
             return ndsIFCommonItemArrowMiss(nNDSIFCommonFallbackBadAsset);
         }
@@ -4499,8 +4589,10 @@ static s32 ndsIFCommonEmitCommonLetters(struct GObj *gobj)
         }
         ndsIFCommonCommonPalette(sobj);
         oamSet(&oamMain, sNdsIFCommonNextOamID,
-               ndsIFCommonRoundFloatHalfUp(sobj->pos.x * 0.8F),
-               ndsIFCommonRoundFloatHalfUp(sobj->pos.y * 0.8F), 0,
+               ndsIFCommonRoundQ16HalfUp(ndsIFCommonScaleRound(
+                   sobj->pos.x, NDS_IFCOMMON_SCREEN_SCALE_Q16)),
+               ndsIFCommonRoundQ16HalfUp(ndsIFCommonScaleRound(
+                   sobj->pos.y, NDS_IFCOMMON_SCREEN_SCALE_Q16)), 0,
                NDS_IFCOMMON_COMMON_PALETTE,
                SpriteSize_32x32, SpriteColorFormat_16Color, gfx, -1,
                false, false, false, false, false);

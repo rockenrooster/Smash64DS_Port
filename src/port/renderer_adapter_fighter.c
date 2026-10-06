@@ -498,9 +498,12 @@ ndsProjectRatioQ22(int64_t num, int64_t den)
     return ndsR2HwMathDivideFast(num * (INT64_C(1) << 22), den);
 }
 
+/* The projection's two results before they leave as floats: Q22 units of
+ * the source's dist_x / dist_y, from a Q12 point (saturated like the float
+ * entry's). For integer consumers (the HUD's OAM anchors). */
 void __attribute__((target("arm")))
-ndsProjectToViewport(CObj *cobj, Mtx44f matrix, Vec3f *pos, f32 *dist_x,
-                     f32 *dist_y)
+ndsProjectToViewportQ22(CObj *cobj, Mtx44f matrix, const int32_t p_q12[3],
+                        int64_t *dist_x_q22, int64_t *dist_y_q22)
 {
     const int64_t clamp = INT64_C(109951162778); /* 0.1 at Q40 */
     int64_t acc[3];
@@ -544,9 +547,13 @@ ndsProjectToViewport(CObj *cobj, Mtx44f matrix, Vec3f *pos, f32 *dist_x,
         }
         sNdsProjectValid = 1u;
     }
-    p[0] = ndsProjectToFixed(pos->x, 12u, INT32_C(1) << 28);
-    p[1] = ndsProjectToFixed(pos->y, 12u, INT32_C(1) << 28);
-    p[2] = ndsProjectToFixed(pos->z, 12u, INT32_C(1) << 28);
+    for (col = 0u; col < 3u; col++)
+    {
+        const int32_t limit = INT32_C(1) << 28;
+
+        p[col] = (p_q12[col] >= limit) ? limit :
+                 ((p_q12[col] <= -limit) ? -limit : p_q12[col]);
+    }
     for (col = 0u; col < 3u; col++)
     {
         acc[col] = ((int64_t)sNdsProjectQ[0][col] * p[0]) +
@@ -559,12 +566,26 @@ ndsProjectToViewport(CObj *cobj, Mtx44f matrix, Vec3f *pos, f32 *dist_x,
     {
         acc[2] = (acc[2] < 0) ? -clamp : clamp;
     }
-    *dist_x = ndsR2CollisionFixedToF32(
-        (int64_t)(cobj->viewport.vp.vscale[0] / 4) *
-            ndsProjectRatioQ22(acc[0], acc[2]), 22u);
-    *dist_y = ndsR2CollisionFixedToF32(
-        (int64_t)(cobj->viewport.vp.vscale[1] / 4) *
-            ndsProjectRatioQ22(acc[1], acc[2]), 22u);
+    *dist_x_q22 = (int64_t)(cobj->viewport.vp.vscale[0] / 4) *
+        ndsProjectRatioQ22(acc[0], acc[2]);
+    *dist_y_q22 = (int64_t)(cobj->viewport.vp.vscale[1] / 4) *
+        ndsProjectRatioQ22(acc[1], acc[2]);
+}
+
+void __attribute__((target("arm")))
+ndsProjectToViewport(CObj *cobj, Mtx44f matrix, Vec3f *pos, f32 *dist_x,
+                     f32 *dist_y)
+{
+    int32_t p[3];
+    int64_t dx;
+    int64_t dy;
+
+    p[0] = ndsProjectToFixed(pos->x, 12u, INT32_C(1) << 28);
+    p[1] = ndsProjectToFixed(pos->y, 12u, INT32_C(1) << 28);
+    p[2] = ndsProjectToFixed(pos->z, 12u, INT32_C(1) << 28);
+    ndsProjectToViewportQ22(cobj, matrix, p, &dx, &dy);
+    *dist_x = ndsR2CollisionFixedToF32(dx, 22u);
+    *dist_y = ndsR2CollisionFixedToF32(dy, 22u);
 }
 
 void ndsFighterDisplayContractProjectTarget(CObj *cobj,

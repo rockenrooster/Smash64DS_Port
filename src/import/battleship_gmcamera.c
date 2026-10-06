@@ -73,6 +73,11 @@ void mpCollisionGetPlayerMapObjPosition(s32 player, Vec3f *pos);
 /* 2026-10-06: the default battle camera's strong definition is the Q12 one in
  * battleship_gmcamera_fixed.c (dGMCameraFuncList binds to it at link time). */
 #pragma weak gmCameraDefaultFuncCamera
+/* 2026-10-06: Zebes' and Mushroom Kingdom's cameras too (the same Q12 body). */
+#pragma weak gmCameraZebesFuncCamera
+#pragma weak gmCameraInishieFuncCamera
+/* 2026-10-06: the exact integer-compare form is in battleship_gmcamera_fixed.c. */
+#pragma weak gmCameraCheckTargetInBounds
 
 #include "../../decomp/BattleShip-main/decomp/src/gm/gmcamera.c"
 
@@ -357,6 +362,7 @@ static void ndsCameraDefaultFuncCameraWitness(GObj *camera_gobj)
 
 static void ndsCameraZebesFuncCameraWitness(GObj *camera_gobj)
 {
+#if NDS_CAMERA_FRAME_WITNESS
     CObj *cobj = CObjGetStruct(camera_gobj);
     f32 max;
     Vec3f scale;
@@ -374,10 +380,15 @@ static void ndsCameraZebesFuncCameraWitness(GObj *camera_gobj)
     gmCameraUpdateAcidZoom(cobj, &scale);
     gmCameraApplyVel(cobj);
     gmCameraApplyFOV(cobj);
+#else
+    /* The Q12 camera (battleship_gmcamera_fixed.c), as the default's. */
+    gmCameraZebesFuncCamera(camera_gobj);
+#endif
 }
 
 static void ndsCameraInishieFuncCameraWitness(GObj *camera_gobj)
 {
+#if NDS_CAMERA_FRAME_WITNESS
     CObj *cobj = CObjGetStruct(camera_gobj);
     f32 max;
     Vec3f scale;
@@ -395,6 +406,10 @@ static void ndsCameraInishieFuncCameraWitness(GObj *camera_gobj)
     func_ovl2_8010C5C0(cobj, &scale);
     gmCameraApplyVel(cobj);
     gmCameraApplyFOV(cobj);
+#else
+    /* The Q12 camera (battleship_gmcamera_fixed.c), as the default's. */
+    gmCameraInishieFuncCamera(camera_gobj);
+#endif
 }
 
 void gmCameraMakeBattleCamera(void)

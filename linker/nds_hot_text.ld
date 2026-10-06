@@ -120,8 +120,9 @@ SECTIONS {
 		*(.text.ndsR2CamDivQ)
 		/* Second pack, same census, for the bytes ndsRendererCommitNativeStageSegment
 		 * and __aeabi_l2f vacated: ranked by non-mem stall less the ITCM tier's own
-		 * 0.31 cycles an instruction, per byte. */
-		*(.text.ftCommonDeadCheckInterruptCommon)
+		 * 0.31 cycles an instruction, per byte. ftCommonDeadCheckInterruptCommon
+		 * left 2026-10-06: it was an 8 B forwarder to the source body and is
+		 * now the 480 B integer-compare port (eight calls a frame). */
 		*(.text.ftMainProcUpdateInterrupt)
 		*(.text.mpCommonUpdateFighterSlopeContour)
 		*(.text.__sinf)

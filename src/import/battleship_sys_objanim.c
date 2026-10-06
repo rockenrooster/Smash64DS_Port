@@ -3737,7 +3737,7 @@ static sb32 ndsGcDObjAnimValuesUnread(const DObj *dobj)
 {
     const AObj *aobj;
 
-    if ((dobj->anim_wait == AOBJ_ANIM_NULL) ||
+    if (NDS_FCMP_EQ_C(dobj->anim_wait, AOBJ_ANIM_NULL) ||
         (dobj->xobjs_num != 1) || (dobj->xobjs[0] == NULL) ||
         (dobj->xobjs[0]->kind != nGCMatrixKindTra))
     {

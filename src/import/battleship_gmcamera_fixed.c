@@ -23,6 +23,7 @@
 #include <nds/nds_r2_hwmath_unit.h>
 #include <nds/nds_native_wallpaper.h>
 #include <nds/nds_fixed_convert.h>
+#include <nds/nds_fcmp.h>
 
 #ifndef CObjGetStruct
 #define CObjGetStruct(gobj) ((CObj *)((gobj)->obj))
@@ -526,8 +527,22 @@ static int32_t ndsCamPanScaleQ16(int32_t dist)
                13000 * NDS_CAM_ONE_Q);
 }
 
-void __attribute__((target("arm")))
-gmCameraDefaultFuncCamera(GObj *camera_gobj)
+/* The three battle cameras of dGMCameraFuncList that differ from the default
+ * in one step only (gmcamera.c:624, :676, :753): Zebes eases the eye toward a
+ * target held above the acid (gmCameraUpdateAcidZoom), Mushroom Kingdom looks
+ * straight ahead (gmCameraUpdateInishieFocus is gmCameraGetAdjustAtAngle with
+ * both angles 0). One Q12 body plays all three. */
+enum
+{
+    NDS_CAM_MODE_DEFAULT,
+    NDS_CAM_MODE_ZEBES,
+    NDS_CAM_MODE_INISHIE
+};
+
+void grZebesAcidGetLevelInfo(f32 *current, f32 *step);
+
+static void __attribute__((noinline, target("arm")))
+ndsCamFuncCameraQ(GObj *camera_gobj, u32 mode)
 {
     CObj *cobj = CObjGetStruct(camera_gobj);
     int32_t box[2];
@@ -576,26 +591,34 @@ gmCameraDefaultFuncCamera(GObj *camera_gobj)
     at[1] += ndsCamMulQ16(box[1] - at[1], pan_q16);
     at[2] += ndsCamMulQ16(-at[2], pan_q16);
 
-    /* func_ovl2_8010C3C0: the look angles from the panned `at`,
-     * -F_CLC_DTOR32(v / 133.0F) = v * -1.3120567e-4 (Q32 563,536). */
-    angle_y = -(int32_t)(((int64_t)(at[1] - (900 * NDS_CAM_ONE_Q)) *
-                          INT64_C(563536)) >> 32);
-    if (angle_y > NDS_CAM_LOOK_UP_Q)
+    if (mode == NDS_CAM_MODE_INISHIE)
     {
-        angle_y = NDS_CAM_LOOK_UP_Q;
+        /* gmCameraUpdateInishieFocus: no look angles. */
+        angle_x = angle_y = 0;
     }
-    if (angle_y < NDS_CAM_LOOK_DOWN_Q)
+    else
     {
-        angle_y = NDS_CAM_LOOK_DOWN_Q;
-    }
-    angle_x = -(int32_t)(((int64_t)at[0] * INT64_C(563536)) >> 32);
-    if (angle_x > NDS_CAM_LOOK_SIDE_Q)
-    {
-        angle_x = NDS_CAM_LOOK_SIDE_Q;
-    }
-    if (angle_x < -NDS_CAM_LOOK_SIDE_Q)
-    {
-        angle_x = -NDS_CAM_LOOK_SIDE_Q;
+        /* func_ovl2_8010C3C0: the look angles from the panned `at`,
+         * -F_CLC_DTOR32(v / 133.0F) = v * -1.3120567e-4 (Q32 563,536). */
+        angle_y = -(int32_t)(((int64_t)(at[1] - (900 * NDS_CAM_ONE_Q)) *
+                              INT64_C(563536)) >> 32);
+        if (angle_y > NDS_CAM_LOOK_UP_Q)
+        {
+            angle_y = NDS_CAM_LOOK_UP_Q;
+        }
+        if (angle_y < NDS_CAM_LOOK_DOWN_Q)
+        {
+            angle_y = NDS_CAM_LOOK_DOWN_Q;
+        }
+        angle_x = -(int32_t)(((int64_t)at[0] * INT64_C(563536)) >> 32);
+        if (angle_x > NDS_CAM_LOOK_SIDE_Q)
+        {
+            angle_x = NDS_CAM_LOOK_SIDE_Q;
+        }
+        if (angle_x < -NDS_CAM_LOOK_SIDE_Q)
+        {
+            angle_x = -NDS_CAM_LOOK_SIDE_Q;
+        }
     }
 
     /* gmCameraGetAdjustAtAngle(at, &dir, x = angle_x, y = angle_y), Q15. */
@@ -607,16 +630,36 @@ gmCameraDefaultFuncCamera(GObj *camera_gobj)
     dir[0] = (ndsCamSinQ15(id) * dir[2]) >> 15;
     dir[2] = (dir[2] * ndsCamSinQ15(id + 0x400)) >> 15;
 
-    /* func_ovl2_8010C5C0: eye eased a tenth of the way to at + dist * dir. */
+    /* func_ovl2_8010C5C0: eye eased a tenth of the way to at + dist * dir.
+     * gmCameraUpdateAcidZoom is the same ease with the target held at
+     * least 3000 units above the acid (its level plus its rise step). */
     eye[0] = ndsCamQ(cobj->vec.eye.x);
     eye[1] = ndsCamQ(cobj->vec.eye.y);
     eye[2] = ndsCamQ(cobj->vec.eye.z);
-    for (i = 0u; i < 3u; i++)
     {
-        const int32_t pan =
-            at[i] + (int32_t)(((int64_t)dist * dir[i]) >> 15);
+        int32_t pan[3];
 
-        eye[i] += ndsCamMulQ16(pan - eye[i], NDS_CAM_TENTH_Q16);
+        for (i = 0u; i < 3u; i++)
+        {
+            pan[i] = at[i] + (int32_t)(((int64_t)dist * dir[i]) >> 15);
+        }
+        if (mode == NDS_CAM_MODE_ZEBES)
+        {
+            f32 current;
+            f32 step;
+            int32_t acid;
+
+            grZebesAcidGetLevelInfo(&current, &step);
+            acid = ndsCamQ(current) + ndsCamQ(step) + (3000 * NDS_CAM_ONE_Q);
+            if (pan[1] < acid)
+            {
+                pan[1] = acid;
+            }
+        }
+        for (i = 0u; i < 3u; i++)
+        {
+            eye[i] += ndsCamMulQ16(pan[i] - eye[i], NDS_CAM_TENTH_Q16);
+        }
     }
 
     /* gmCameraApplyVel */
@@ -637,6 +680,64 @@ gmCameraDefaultFuncCamera(GObj *camera_gobj)
 
     /* gmCameraApplyFOV */
     cobj->projection.persp.fovy = gGMCameraStruct.fovy;
+}
+
+void gmCameraDefaultFuncCamera(GObj *camera_gobj)
+{
+    ndsCamFuncCameraQ(camera_gobj, NDS_CAM_MODE_DEFAULT);
+}
+
+/* gmcamera.c:676 (battleship_gmcamera.c makes the decomp definition weak). */
+void gmCameraZebesFuncCamera(GObj *camera_gobj)
+{
+    ndsCamFuncCameraQ(camera_gobj, NDS_CAM_MODE_ZEBES);
+}
+
+/* gmcamera.c:753 (battleship_gmcamera.c makes the decomp definition weak). */
+void gmCameraInishieFuncCamera(GObj *camera_gobj)
+{
+    ndsCamFuncCameraQ(camera_gobj, NDS_CAM_MODE_INISHIE);
+}
+
+/* gmcamera.c:1539 without soft float, exact (the HUD's magnify and tag tests
+ * ask it for every fighter every frame). The half extents are integer
+ * quotients the source promotes to float; the order keys (nds_fcmp.h) of
+ * their images are built when the viewport changes (integer bit construction,
+ * exact under 2^24), the point's two keys once a call, and the four compares
+ * are integer ones -- exact for every non-NaN pair. Compact on purpose: it is
+ * ITCM-resident. */
+static s32 sNdsCamBoundsHalfW = -1;
+static s32 sNdsCamBoundsHalfH = -1;
+static u32 sNdsCamBoundsKey[4];
+
+static void __attribute__((noinline, cold))
+ndsCamBoundsRebuild(s32 half_w, s32 half_h)
+{
+    sNdsCamBoundsHalfW = half_w;
+    sNdsCamBoundsHalfH = half_h;
+    sNdsCamBoundsKey[0] = ndsFcmpKey(ndsFixedToF32(-half_w, 0u));
+    sNdsCamBoundsKey[1] = ndsFcmpKey(ndsFixedToF32(half_w, 0u));
+    sNdsCamBoundsKey[2] = ndsFcmpKey(ndsFixedToF32(-half_h, 0u));
+    sNdsCamBoundsKey[3] = ndsFcmpKey(ndsFixedToF32(half_h, 0u));
+}
+
+sb32 gmCameraCheckTargetInBounds(f32 pos_x, f32 pos_y)
+{
+    const s32 half_w = gGMCameraStruct.viewport_width / 2;
+    const s32 half_h = gGMCameraStruct.viewport_height / 2;
+    u32 kx;
+    u32 ky;
+
+    if ((half_w != sNdsCamBoundsHalfW) || (half_h != sNdsCamBoundsHalfH))
+    {
+        ndsCamBoundsRebuild(half_w, half_h);
+    }
+    kx = ndsFcmpKey(pos_x);
+    ky = ndsFcmpKey(pos_y);
+
+    return ((kx >= sNdsCamBoundsKey[0]) && (kx <= sNdsCamBoundsKey[1]) &&
+            (ky >= sNdsCamBoundsKey[2]) && (ky <= sNdsCamBoundsKey[3])) ?
+        TRUE : FALSE;
 }
 
 /* gr/grwallpaper.c:45 grWallpaperCalcPersp, the source SObj's position and
