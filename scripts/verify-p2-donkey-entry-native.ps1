@@ -59,17 +59,15 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 $output = Get-Content -LiteralPath $Artifact -Raw
 $roster = [regex]::Match($output, 'ROSTER=(0x[0-9a-fA-F]+),(0x[0-9a-fA-F]+)')
-$packet = [regex]::Match($output,
-    'PACKET=(\d+),(\d+),(\d+),(\d+),(\d+),(\d+),(\d+),(\d+),(\d+),(\d+),(\d+),(\d+),(\d+)')
-$slot3 = [regex]::Match($output,
-    'PKSLOT3=(\d+),(\d+),(\d+),(\d+),(\d+),(\d+),(\d+)')
+# 2026-10-05: the packet recorder is gone; the lean path draws every fighter
+# and counts a declined draw (LEAN=).
+$lean = [regex]::Match($output, 'LEAN=(\d+)')
 $texture = [regex]::Match($output, 'TEXTURE=(\d+),(\d+),(\d+)')
 $entry = [regex]::Match($output, 'ENTRY_NATIVE=(\d+),(\d+),(\d+),(\d+),(\d+)')
 
 foreach ($pair in @(
     @{ Match=$roster; Name='roster' },
-    @{ Match=$packet; Name='packet' },
-    @{ Match=$slot3; Name='slot-3 packet' },
+    @{ Match=$lean; Name='lean' },
     @{ Match=$texture; Name='texture' },
     @{ Match=$entry; Name='entry-native' }
 )) {
@@ -86,18 +84,9 @@ Assert-DonkeyEntryNative ($kindWord -eq 0x03080204) `
 Assert-DonkeyEntryNative ($drawMask -eq 0xF) `
     ('Four-CPU proof did not draw all four source fighters: drawMask=0x{0:x}' -f $drawMask) $output
 
-$packetFaults = [int]$packet.Groups[3].Value
-$packetDeclines = [int]$packet.Groups[4].Value
-Assert-DonkeyEntryNative ($packetFaults -eq 0 -and $packetDeclines -eq 0) `
-    "Donkey's four-fighter native packet path faulted or declined." $output
-
-$slot3Valid = [int]$slot3.Groups[1].Value
-$slot3Words = [int]$slot3.Groups[2].Value
-$slot3Roots = [int]$slot3.Groups[4].Value
-$slot3Textures = [int]$slot3.Groups[6].Value
-Assert-DonkeyEntryNative `
-    ($slot3Valid -eq 1 -and $slot3Words -gt 0 -and $slot3Roots -gt 0 -and $slot3Textures -gt 0) `
-    'Donkey slot 3 did not establish a complete production native packet.' $output
+$leanSkipped = [int]$lean.Groups[1].Value
+Assert-DonkeyEntryNative ($leanSkipped -eq 0) `
+    "The lean path declined (skipped) a fighter draw during the Donkey entry proof." $output
 
 $textureRejects = [int]$texture.Groups[3].Value
 Assert-DonkeyEntryNative ($textureRejects -eq 0) `

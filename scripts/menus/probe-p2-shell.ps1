@@ -273,9 +273,7 @@ $required = @(
     'gNdsPlayersVSPreviewDwellSkipCount',
     'gNdsPlayersVSPreviewDwellHoldTicCount',
     'gNdsPlayersVSPreviewDwellCommitCount',
-    'gNdsFighterPacketHits', 'gNdsFighterPacketRecords',
-    'gNdsFighterPacketFaults', 'gNdsFighterPacketDeclines',
-    'gNdsFighterPacketWordsMax', 'gNdsFighterPacketMissWord'
+    'gNdsFtrLeanSkippedDraws'
 )
 $nm_lines = & $nm $elf
 $symbols = $nm_lines | ForEach-Object { ($_ -split '\s+')[-1] }
@@ -566,13 +564,9 @@ try {
         'printf "CSSREBUILDIO %d rebuild=%u payload=%u max=%u\n", $n, gNdsPlayersVSPreviewRebuildCount, gNdsPlayersVSPreviewRebuildPayloadReadCount, gNdsPlayersVSPreviewRebuildPayloadReadMax',
         'printf "CSSRESACT %d acq=%u hit=%u cached=%u load=%u finish=%u payload=%u max=%u retry=%u fail=%u\n", $n, gNdsPlayersVSPreviewAcquireCount, gNdsPlayersVSPreviewAcquireHitCount, gNdsPlayersVSPreviewAcquireCachedHitCount, gNdsPlayersVSPreviewAcquireLoadCount, gNdsPlayersVSPreviewAcquireLoadFinishCount, gNdsPlayersVSPreviewAcquirePayloadReadCount, gNdsPlayersVSPreviewAcquirePayloadReadMax, gNdsPlayersVSPreviewAcquireRetryCount, gNdsPlayersVSPreviewAcquireFailCount',
         'printf "CSSRESREL %d rel=%u last=%u retire=%u/%u reuse=%u exit=%u residual=%u dwell=%u/%u/%u/%u\n", $n, gNdsPlayersVSPreviewReleaseCount, gNdsPlayersVSPreviewReleaseLastRefCount, gNdsPlayersVSPreviewReleaseRetireBeginCount, gNdsPlayersVSPreviewReleaseRetireCount, gNdsPlayersVSPreviewReleaseReuseRetireCount, gNdsPlayersVSPreviewReleaseExitRetireCount, gNdsPlayersVSPreviewReleaseExitResidualRefCount, gNdsPlayersVSPreviewDwellRequestCount, gNdsPlayersVSPreviewDwellSkipCount, gNdsPlayersVSPreviewDwellHoldTicCount, gNdsPlayersVSPreviewDwellCommitCount',
-        # P2-2 packet replay owns one slot per source player. A CSS action that
-        # rebuilds one preview should re-record that slot, not evict the other
-        # three. Keep the full miss-word census here so a remaining warm-idle
-        # miss can be attributed before inventing another cache. A packet that
-        # exceeds its region is a recorder fault; wordsmax says how close the
-        # widest packet came, so a decline can be read against real headroom.
-        'printf "CSSPKT %d hit=%u rec=%u fault=%u decline=%u wordsmax=%u m0=%u m1=%u m2=%u m3=%u m4=%u m5=%u roots=%u tex=%u\n", $n, gNdsFighterPacketHits, gNdsFighterPacketRecords, gNdsFighterPacketFaults, gNdsFighterPacketDeclines, gNdsFighterPacketWordsMax, gNdsFighterPacketMissWord[0], gNdsFighterPacketMissWord[1], gNdsFighterPacketMissWord[2], gNdsFighterPacketMissWord[3], gNdsFighterPacketMissWord[4], gNdsFighterPacketMissWord[5], gNdsFighterPacketMissWord[6], gNdsFighterPacketMissWord[7]',
+        # 2026-10-05: the packet recorder is gone; a lean decline skips the
+        # fighter's draw and counts it.
+        'printf "CSSLEAN %d skipped=%u\n", $n, gNdsFtrLeanSkippedDraws',
         # BGM playback, seams and refills run on the ARM7 since d0d02c61a83, so
         # the ARM9 blocking-load fence (suspend/resume counters) is gone; seam
         # misses and error stops are what remain to watch across CSS loads.

@@ -1561,6 +1561,14 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   floor/ceil integers (exact). Sector Z -2.1K, 4 x Yoshi -0.7K, gate flat,
   digests identical. Census after Q2: 3,332 soft-float calls a frame (gate),
   4,101 (Sector Z), 3,544 (4 x Yoshi). Receipt `2026-10-05_camera-fixed`.
+- **10-05 late: the CPU attack pick in fixed point; particle centres refuted.**
+  ftComputerCheckDetectTarget's per-attack prediction runs at Q12 (inputs once
+  a call, 32-bit products: with int64 products the Thumb TU called
+  `__aeabi_lmul` 17 times and ran +0.8-1.0K slower than float). Sector Z
+  +0.3K, 4 x Yoshi -0.6K; the gate's AI decides differently from frame 424 and
+  that match reads P95 1,087,616. Particle centres in Q8 cost +2-3K (64-bit
+  products, an extra submit layer) and were reverted. Receipt
+  `2026-10-05_cpu-detect-fixed`.
 
 ## 7. Found along the way
 

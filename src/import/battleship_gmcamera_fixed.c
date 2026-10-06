@@ -57,24 +57,27 @@ static inline int32_t ndsCamQ(f32 value)
     return ndsCamToFixed(value, NDS_CAM_Q, NDS_CAM_LIMIT_Q);
 }
 
-/* units * zoom, Q12, from a Q16 zoom. */
+/* units * zoom, Q12, from a Q16 zoom. 32-bit: units <= 1000 and a zoom
+ * below 2^18 (4x) keep the product under 2^28 (a 64-bit product is a libgcc
+ * call in this Thumb TU). */
 static inline int32_t ndsCamUnitsTimes(int32_t units, int32_t zoom_q16)
 {
-    return (int32_t)(((int64_t)units * zoom_q16) >> (NDS_CAM_ZQ - NDS_CAM_Q));
+    return (units * zoom_q16) >> (NDS_CAM_ZQ - NDS_CAM_Q);
 }
 
 /* gmCameraCalcFighterZoomRange at Q16: the three products the source takes
- * one at a time, each rounded to Q16. */
+ * one at a time, each rounded to Q16 from Q12 factors (32-bit: factors under
+ * 8x keep each product under 2^30). */
 static int32_t ndsCamFighterZoomQ16(FTStruct *fp, int32_t zoom_q16)
 {
-    const int32_t limit = INT32_C(1) << 30;
-    int32_t z = (int32_t)(((int64_t)zoom_q16 *
-                           ndsCamToFixed(fp->camera_zoom_frame, NDS_CAM_ZQ,
-                                         limit) + (1 << 15)) >> NDS_CAM_ZQ);
+    const int32_t limit = INT32_C(1) << 19;    /* 8.0 at Q16 */
+    int32_t z = (((zoom_q16 >> 4) *
+                  (ndsCamToFixed(fp->camera_zoom_frame, NDS_CAM_ZQ, limit) >> 4)) +
+                 (1 << 7)) >> 8;
 
-    z = (int32_t)(((int64_t)z *
-                   ndsCamToFixed(fp->camera_zoom_range, NDS_CAM_ZQ, limit) +
-                   (1 << 15)) >> NDS_CAM_ZQ);
+    z = (((z >> 4) *
+          (ndsCamToFixed(fp->camera_zoom_range, NDS_CAM_ZQ, limit) >> 4)) +
+         (1 << 7)) >> 8;
     if ((fp->status_id == nFTCommonStatusWait) && (fp->status_total_tics >= 120))
     {
         z = (z * 3) >> 2;

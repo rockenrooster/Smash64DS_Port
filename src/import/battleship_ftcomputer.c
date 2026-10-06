@@ -31,10 +31,11 @@ volatile u32 gNdsBattlePlayableFoxCpuEnabled = 0u;
 #define bzero(ptr, size) memset((ptr), 0, (size))
 #endif
 
-/* 2026-10-05: battleship_ftcomputer_fixed.c defines these two in fixed point;
+/* 2026-10-05: battleship_ftcomputer_fixed.c defines these three in fixed point;
  * weak here, so the decomp's own calls below reach those too. */
 #pragma weak ftComputerCheckFindTarget
 #pragma weak ftComputerCheckEvadeDistance
+#pragma weak ftComputerCheckDetectTarget
 
 #define ftComputerSetupAll ndsBaseFTComputerSetupAll
 #define ftComputerProcessAll ndsBaseFTComputerProcessAll

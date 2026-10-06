@@ -1,0 +1,45 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,800; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 475: ALL 5,310,976 -> 1,116,672, 5 bucket(s) corrected
+Wrote D:\Stuff\DevFolder\Smash64DS_Port\artifacts\performance\2026-10-05_cpu-detect-fixed/gate-q5-p0.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=6e9ad3ce79b+dirty(35) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,736     1,118,656      1.00  1,144,424     1,109,248  4,375,232      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,928        10,240      2.08      5,641         2,368     23,424        0.4
+HUD         9,024        23,872      2.65     11,559         7,808    435,584        0.8
+SRC       358,784       555,392      1.55    369,611       134,912  1,011,328       32.1
+MISC      407,296       550,912      1.35    412,953       177,344  3,341,376       36.5
+OTHR      339,392       629,696      1.86    344,661        27,200    790,720       30.4
+WAIT      318,208       605,376      1.90    323,007         7,232    771,072       28.5
+WORK      807,936     1,094,912      1.36    817,619       342,464  4,044,480       72.3
+SHDT      703,807       988,223      1.40    718,842       298,431  1,861,311       63.0
+SWRM        1,344         1,408      1.05      1,346           896      3,456        0.1
+GCRA      353,280       549,888      1.56    364,088       130,176  1,005,824       31.6
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        367             0    639,744        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      407,168       550,784      1.35    412,845       177,216  3,341,248       36.5
+MFLS          128           128      1.00        108            64        384        0.0
+GPOL          592           673      1.14        542            29        755        0.1
+GVTX        1,419         1,596      1.12      1,315            96      1,750        0.1
+DGSA   2,250,718,284 4,050,421,973        2,184,942,484  1,678,878 4,291,383,562 201,544.3
+DGSB   2,254,346,240 4,035,342,474        2,215,590,844  2,771,092 4,285,088,836 201,869.2
+WORK-H    797,632     1,083,840      1.36    806,060       333,120  3,608,896       71.4
+
+named=799,764 (69.9% of ALL)  VBI 2:1870 3:89 4:1 5+:1 max:8 total:1961  slips=0
+Wrote D:\Stuff\DevFolder\Smash64DS_Port\artifacts\performance\2026-10-05_cpu-detect-fixed/gate-q5-p0.json

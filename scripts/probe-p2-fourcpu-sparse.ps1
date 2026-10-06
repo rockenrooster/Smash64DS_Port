@@ -10,8 +10,6 @@ param(
     [ValidateRange(32,2048)][int]$Frame = 32,
     [switch]$FirstProductionAfterFrame,
     [switch]$PacketFaultCensus,
-    [switch]$FirstPacketFault,
-    [switch]$FirstActualPacketFault,
     [switch]$FirstTextureReject,
     [switch]$FirstDirectReject,
     [switch]$FighterTextureReject,
@@ -868,102 +866,6 @@ try {
             'continue'
         )
     }
-    if ($FirstPacketFault) {
-        # The raw-path emitters exist only where NDS_FIGHTER_LEGACY_EXEC=1 (R1
-        # retired them from the P2 targets); a break on a symbol the ELF does
-        # not link would end gdb's batch script at that line.
-        $rawEmitters = @(& $nm $elf | ForEach-Object { ($_ -split '\s+')[-1] } |
-            Where-Object { $_ -like 'ndsRendererNativeEmitProductionRaw*Run' })
-        foreach ($emitter in @('ndsRendererNativeEmitProductionRawTexturedRun',
-                               'ndsRendererNativeEmitProductionRawUntexturedRun')) {
-            if ($rawEmitters -contains $emitter) {
-                $tag = if ($emitter -like '*Untextured*') { 'raw-untextured' } else { 'raw-textured' }
-                $gdbLines += @(
-                    "break $emitter if sNdsFighterPacketRecording != 0",
-                    'commands', 'silent',
-                    ('printf "FIRSTFAULT=' + $tag + ' frame=%u battle_slot=%d root=%u run=%u\n", gNdsBattlePlayablePacingPresentedFrames, sNdsFighterPacketRecorder.packet - sNdsFighterPackets, sNdsFighterPacketRecorder.current_root, run_index'),
-                    'detach', 'quit', 'end')
-            }
-        }
-        $gdbLines += @(
-            'break ndsFighterPacketTryReplay if gNdsBattlePlayablePacingPresentedFrames >= 65',
-            'commands', 'silent',
-            'printf "PKTRY frame=%u slot=%u owner=%u roots=%u rec=%u fault=%u\n", gNdsBattlePlayablePacingPresentedFrames, (texture_memo_owner_key >> 9) & 3, owner_slot, input_count, sNdsFighterPacketRecording, sNdsFighterPacketRecorder.fault',
-            'continue', 'end',
-            'break ndsFighterPacketFinishRecord if gNdsBattlePlayablePacingPresentedFrames >= 65',
-            'commands', 'silent',
-            'printf "PKFIN frame=%u slot=%d count=%u fault=%u\n", gNdsBattlePlayablePacingPresentedFrames, sNdsFighterPacketRecorder.packet - sNdsFighterPackets, sNdsFighterPacketRecorder.count, sNdsFighterPacketRecorder.fault',
-            'continue', 'end',
-            'break ndsRendererLoadHardwareSplitMatrices if sNdsFighterPacketRecording != 0',
-            'commands', 'silent',
-            'printf "FIRSTFAULT=split frame=%u battle_slot=%d root=%u\n", gNdsBattlePlayablePacingPresentedFrames, sNdsFighterPacketRecorder.packet - sNdsFighterPackets, sNdsFighterPacketRecorder.current_root',
-            'bt 20',
-            'detach', 'quit', 'end',
-            'break ndsFighterPacketLoadGxComposedRecord if input->projection_matrix == 0 || input->gx_seed == 0 || (input->gx_local_count != 0 && input->gx_locals == 0)',
-            'commands', 'silent',
-            'printf "FIRSTFAULT=matrix-input frame=%u battle_slot=%d root=%u\n", gNdsBattlePlayablePacingPresentedFrames, sNdsFighterPacketRecorder.packet - sNdsFighterPackets, root_index',
-            'detach', 'quit', 'end',
-            'continue'
-        )
-    }
-    if ($FirstActualPacketFault) {
-        $gdbLines += @(
-            'break ndsFighterPacketAbortRecord',
-            'commands', 'silent',
-            'printf "ACTUALFAULT=abort frame=%u\n", gNdsBattlePlayablePacingPresentedFrames',
-            'up',
-            'info args',
-            'info locals',
-            'p/x stats->geometry_mode',
-            'p/x stats->othermode_h',
-            'p/x stats->othermode_l',
-            'p/x stats->texture_combine_w0',
-            'p/x stats->texture_combine_w1',
-            'p/x stats->env_color',
-            'p stats->blocker',
-            'p state->matrix_valid',
-            'p state->matrix_generation',
-            'p state->modelview_valid',
-            'p state->texture_prepare_valid',
-            'p state->texture_prepare_enabled',
-            'p/x input->root_offset',
-            'p input->gx_valid',
-            'p input->gx_modelview_mirror_valid',
-            'p sNdsNativeFighterActiveTables->epoch_direct_policy[epoch_index]',
-            'bt 12', 'detach', 'quit', 'end',
-            # Exact stores from this ELF's disassembly. Source-line breakpoints
-            # land on shared optimized compares and produce false positives.
-            'break *0x01ffc5b0',
-            'commands', 'silent',
-            'printf "ACTUALFAULT=split-record frame=%u root=%u\n", gNdsBattlePlayablePacingPresentedFrames, root_index',
-            'bt 12', 'detach', 'quit', 'end',
-            'break *0x0200395c',
-            'commands', 'silent',
-            'printf "ACTUALFAULT=packet-capacity frame=%u\n", gNdsBattlePlayablePacingPresentedFrames',
-            'bt 12', 'detach', 'quit', 'end',
-            'break *0x02003a8c',
-            'commands', 'silent',
-            'printf "ACTUALFAULT=shade-sites frame=%u\n", gNdsBattlePlayablePacingPresentedFrames',
-            'bt 12', 'detach', 'quit', 'end',
-            'break *0x02003b24',
-            'commands', 'silent',
-            'printf "ACTUALFAULT=root-locals frame=%u\n", gNdsBattlePlayablePacingPresentedFrames',
-            'bt 12', 'detach', 'quit', 'end',
-            'break *0x02003b7c',
-            'commands', 'silent',
-            'printf "ACTUALFAULT=root-null-or-index frame=%u\n", gNdsBattlePlayablePacingPresentedFrames',
-            'bt 12', 'detach', 'quit', 'end',
-            'break *0x02004978',
-            'commands', 'silent',
-            'printf "ACTUALFAULT=gx-input frame=%u\n", gNdsBattlePlayablePacingPresentedFrames',
-            'bt 12', 'detach', 'quit', 'end',
-            'break *0x020042dc',
-            'commands', 'silent',
-            'printf "ACTUALFAULT=finish-invalid frame=%u\n", gNdsBattlePlayablePacingPresentedFrames',
-            'bt 12', 'detach', 'quit', 'end',
-            'continue'
-        )
-    }
     if ($FirstTextureReject) {
         # Stop before the helper's first instruction, not a source-line stop
         # after optimized register reuse. Those registers identify the actual
@@ -1089,7 +991,7 @@ try {
             'detach', 'quit'
         )
     }
-    elseif (-not $FirstPacketFault -and -not $FirstActualPacketFault -and -not $FirstTextureReject -and -not $FirstDirectReject -and -not $FighterTextureReject -and -not $FirstKirbyReject -and -not $FirstCopyLinkReject -and -not $FirstDonkeyReject -and -not $FirstSamusReject -and -not $FirstSamusMorphReject -and -not $FirstLinkReject -and -not $FirstLinkSpecialNReject -and -not $FirstLinkSpinReject -and -not $FirstCutterReject -and -not $FirstSwordReject -and -not $HeapFloorStaircase) {
+    elseif (-not $FirstTextureReject -and -not $FirstDirectReject -and -not $FighterTextureReject -and -not $FirstKirbyReject -and -not $FirstCopyLinkReject -and -not $FirstDonkeyReject -and -not $FirstSamusReject -and -not $FirstSamusMorphReject -and -not $FirstLinkReject -and -not $FirstLinkSpecialNReject -and -not $FirstLinkSpinReject -and -not $FirstCutterReject -and -not $FirstSwordReject -and -not $HeapFloorStaircase) {
     $gdbLines += @(
         ('break *0x{0:x8}' -f $sparseMarkerAddress),
         'commands',
@@ -1162,34 +1064,9 @@ try {
         ('printf "GFXHEAP=%u,%u,%u,%u\n", ' +
          'gNdsTaskmanGraphicsHeapCapacity, gNdsTaskmanGraphicsHeapHighWater, ' +
          'gNdsTaskmanGraphicsHeapOverflowCount, gNdsTaskmanGraphicsHeapNoRoomCount'),
-        ('printf "PACKET=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", ' +
-         'gNdsFighterPacketHits, gNdsFighterPacketRecords, ' +
-         'gNdsFighterPacketFaults, gNdsFighterPacketDeclines, ' +
-         'gNdsFighterPacketMissWord[0], gNdsFighterPacketMissWord[1], ' +
-         'gNdsFighterPacketMissWord[2], gNdsFighterPacketMissWord[3], ' +
-         'gNdsFighterPacketMissWord[4], gNdsFighterPacketMissWord[5], ' +
-         'gNdsFighterPacketMissWord[6], gNdsFighterPacketMissWord[7], ' +
-         'gNdsFighterPacketWordsMax'),
-        ('printf "PKSLOT0=%u,%u,%u,%u,%u,%u,%u\n", ' +
-         'sNdsFighterPackets[0].valid, sNdsFighterPackets[0].word_count, ' +
-         'sNdsFighterPackets[0].word_capacity, sNdsFighterPackets[0].root_count, ' +
-         'sNdsFighterPackets[0].site_count, sNdsFighterPackets[0].texture_count, ' +
-         'sNdsFighterPackets[0].needs_fence'),
-        ('printf "PKSLOT1=%u,%u,%u,%u,%u,%u,%u\n", ' +
-         'sNdsFighterPackets[1].valid, sNdsFighterPackets[1].word_count, ' +
-         'sNdsFighterPackets[1].word_capacity, sNdsFighterPackets[1].root_count, ' +
-         'sNdsFighterPackets[1].site_count, sNdsFighterPackets[1].texture_count, ' +
-         'sNdsFighterPackets[1].needs_fence'),
-        ('printf "PKSLOT2=%u,%u,%u,%u,%u,%u,%u\n", ' +
-         'sNdsFighterPackets[2].valid, sNdsFighterPackets[2].word_count, ' +
-         'sNdsFighterPackets[2].word_capacity, sNdsFighterPackets[2].root_count, ' +
-         'sNdsFighterPackets[2].site_count, sNdsFighterPackets[2].texture_count, ' +
-         'sNdsFighterPackets[2].needs_fence'),
-        ('printf "PKSLOT3=%u,%u,%u,%u,%u,%u,%u\n", ' +
-         'sNdsFighterPackets[3].valid, sNdsFighterPackets[3].word_count, ' +
-         'sNdsFighterPackets[3].word_capacity, sNdsFighterPackets[3].root_count, ' +
-         'sNdsFighterPackets[3].site_count, sNdsFighterPackets[3].texture_count, ' +
-         'sNdsFighterPackets[3].needs_fence'),
+        # 2026-10-05: the packet recorder is gone; a lean decline skips
+        # the fighter's draw and counts it here.
+        ('printf "LEAN=%u\n", gNdsFtrLeanSkippedDraws'),
         ('printf "TEXTURE=%u,%u,%u\n", ' +
          'gNdsFighterDLAllDrawHardwareTextureReadyCount, ' +
          'gNdsFighterDLAllDrawHardwareTextureUploadCount, ' +
@@ -1443,7 +1320,7 @@ try {
         throw "P2-2 sparse GDB probe failed: $(Get-Content $gdbErr -Raw)"
     }
     $output = Get-Content $gdbOut -Raw
-    if ($FirstPacketFault -or $FirstActualPacketFault -or $FirstTextureReject -or $FirstDirectReject -or $FighterTextureReject -or $PhysicalSpanFault -or $FirstPoseBindFull -or $FirstKirbyReject -or $FirstCopyLinkReject -or $FirstDonkeyReject -or $FirstSamusReject -or $FirstSamusMorphReject -or $FirstLinkReject -or $FirstLinkSpecialNReject -or $FirstLinkSpinReject -or $FirstCutterReject -or $FirstSwordReject -or $HeapFloorStaircase) {
+    if ($FirstTextureReject -or $FirstDirectReject -or $FighterTextureReject -or $PhysicalSpanFault -or $FirstPoseBindFull -or $FirstKirbyReject -or $FirstCopyLinkReject -or $FirstDonkeyReject -or $FirstSamusReject -or $FirstSamusMorphReject -or $FirstLinkReject -or $FirstLinkSpecialNReject -or $FirstLinkSpinReject -or $FirstCutterReject -or $FirstSwordReject -or $HeapFloorStaircase) {
         if ($FirstKirbyReject -and
             ($output -notmatch 'KIRBYREJECT=') -and
             ($output -notmatch 'KIRBYREJECT_NONE_THROUGH=')) {
@@ -1656,15 +1533,6 @@ try {
         }
         if ($FirstTextureReject -and ($output -notmatch 'TEXTUREREJECT=')) {
             throw "First texture reject probe never reached a reject site:`n$output"
-        }
-        if (($FirstPacketFault -or $FirstActualPacketFault) -and
-            ($output -notmatch 'FIRSTFAULT=')) {
-            if ($FirstActualPacketFault -and ($output -notmatch 'ACTUALFAULT=')) {
-                throw "First actual packet fault probe never reached a fault site:`n$output"
-            }
-            elseif (-not $FirstActualPacketFault) {
-                throw "First packet fault probe never reached a known fault site:`n$output"
-            }
         }
         $artifactDir = Split-Path -Parent $Artifact
         if ($artifactDir) { New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null }
