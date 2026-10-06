@@ -293,6 +293,22 @@ sb32 ndsLatchBaseItemAttackSpecialCollide(ITAttackColl *attack_coll,
 #pragma weak gmCollisionCheckItemInFighterRange
 #endif
 
+#if NDS_P2_JOINT_RESIDENT
+/* 2026-10-06 (owner: "hit VFX play at wrong locations"). The hurtbox test
+ * decides in fixed point and writes no FTParts latch
+ * (src/port/nds_p2_hurtbox_reject.c), but these four read the hurt or shield
+ * joint's parts->mtx_translate straight after a hit, relying on the source
+ * test's float walk to have filled it this tick: they placed every hit spark,
+ * shock and sword slash halfway between the attack and a stale or empty
+ * matrix. The strong definitions in src/port/nds_p2_hurtbox_reject.c take
+ * the joint's world through gmCollisionGetFighterPartsWorldPosition -- the
+ * world the test itself used, with the float walk as its fallback. */
+#pragma weak gmCollisionGetShieldPosition
+#pragma weak gmCollisionGetFighterAttackDamagePosition
+#pragma weak gmCollisionGetWeaponAttackFighterDamagePosition
+#pragma weak gmCollisionGetItemAttackFighterDamagePosition
+#endif
+
 #include "../../decomp/BattleShip-main/decomp/src/gm/gmcollision.c"
 
 #if NDS_FTPARTS_LATCH_GATE

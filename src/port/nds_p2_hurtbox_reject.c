@@ -1532,6 +1532,71 @@ static sb32 ndsAttackRangeTest(const Vec3f *pos_curr, const Vec3f *pos_prev,
     return ndsAttackRangeHit(pos_prev, obj, lo_x, hi_x, lo_y, hi_y);
 }
 
+#if NDS_P2_JOINT_RESIDENT
+/* gmcollision.c's four FTParts latch readers (weak in
+ * src/import/battleship_gmcollision.c, 2026-10-06; owner: "hit VFX play at
+ * wrong locations"). Each is the source's body with the hurt or shield joint's
+ * world taken by gmCollisionGetFighterPartsWorldPosition -- the resident fixed
+ * world ndsP2HbDecidePoints decided the hit on, the float walk as fallback --
+ * instead of read from parts->mtx_translate, which the fixed hit test no
+ * longer fills. */
+void gmCollisionGetFighterAttackPosition(Vec3f *dst, FTAttackColl *attack_coll);
+void gmCollisionGetWeaponAttackPosition(Vec3f *dst, WPAttackColl *attack_coll,
+                                        s32 attack_id);
+void gmCollisionGetItemAttackPosition(Vec3f *dst, ITAttackColl *attack_coll,
+                                      s32 attack_id);
+void gmCollisionGetCommonImpactPosition(Vec3f *dst, Vec3f *pos, Vec3f *offset);
+void gmCollisionGetShieldPosition(Vec3f *dst, GObj *gobj, DObj *dobj)
+{
+    dst->x = 0.0F;
+    dst->y = 0.0F;
+    dst->z = 0.0F;
+    gmCollisionGetFighterPartsWorldPosition(dobj, dst);
+    dst->z = DObjGetStruct(gobj)->translate.vec.f.z;
+}
+
+void gmCollisionGetFighterAttackDamagePosition(Vec3f *dst,
+                                               FTAttackColl *attack_coll,
+                                               FTDamageColl *damage_coll)
+{
+    Vec3f attack_pos;
+    Vec3f damage_pos;
+
+    gmCollisionGetFighterAttackPosition(&attack_pos, attack_coll);
+    damage_pos = damage_coll->offset;
+    gmCollisionGetFighterPartsWorldPosition(damage_coll->joint, &damage_pos);
+    gmCollisionGetCommonImpactPosition(dst, &attack_pos, &damage_pos);
+}
+
+void gmCollisionGetWeaponAttackFighterDamagePosition(Vec3f *dst,
+                                                     WPAttackColl *attack_coll,
+                                                     s32 attack_id,
+                                                     FTDamageColl *damage_coll)
+{
+    Vec3f attack_pos;
+    Vec3f damage_pos;
+
+    gmCollisionGetWeaponAttackPosition(&attack_pos, attack_coll, attack_id);
+    damage_pos = damage_coll->offset;
+    gmCollisionGetFighterPartsWorldPosition(damage_coll->joint, &damage_pos);
+    gmCollisionGetCommonImpactPosition(dst, &attack_pos, &damage_pos);
+}
+
+void gmCollisionGetItemAttackFighterDamagePosition(Vec3f *dst,
+                                                   ITAttackColl *attack_coll,
+                                                   s32 attack_id,
+                                                   FTDamageColl *damage_coll)
+{
+    Vec3f attack_pos;
+    Vec3f damage_pos;
+
+    gmCollisionGetItemAttackPosition(&attack_pos, attack_coll, attack_id);
+    damage_pos = damage_coll->offset;
+    gmCollisionGetFighterPartsWorldPosition(damage_coll->joint, &damage_pos);
+    gmCollisionGetCommonImpactPosition(dst, &attack_pos, &damage_pos);
+}
+#endif
+
 sb32 gmCollisionCheckFighterInFighterRange(FTAttackColl *attack_coll,
                                            GObj *fighter_gobj)
 {

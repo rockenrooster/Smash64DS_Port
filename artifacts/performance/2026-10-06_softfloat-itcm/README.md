@@ -114,3 +114,24 @@ levers are texture binds and lean events.
 | gate | 0 | 777,344 -> 765,696 | 1,060,160 -> 1,048,576 | 65 -> 59 | -10,624 |
 | g0 (Castle) | 0 | 815,232 -> 805,120 | 1,112,064 -> 1,100,864 | 87 -> 79 | -11,200 |
 | sz (Sector Z) | 0 | 862,912 -> 851,328 | 1,167,936 -> 1,166,720 | 131 -> 122 | -11,072 |
+
+## q39 (reverted): mpProcessUpdateMain's single step in integers
+
+A bit-exact port copy of `mpProcessUpdateMain`'s common case (two
+truncations prove the step is under 250 units; the zero stage-velocity and
+zero-Z adds skipped with -0.0 handled) read paired +1,728 / +768 / +640:
+the extra call layer and truncations cost what the skipped adds saved.
+Reverted; csvs kept.
+
+## q40: hit impact points from the fixed joint world (owner bug fix)
+
+See `docs/p2/BUG_NOTES.md` ("Hit VFX at wrong locations"). The four
+gmcollision.c latch readers take the hurt/shield joint's world through
+`gmCollisionGetFighterPartsWorldPosition` instead of a stale
+`parts->mtx_translate`.
+
+| config | digest diff | P50 | P95 | over | paired median |
+|---|---|---|---|---|---|
+| gate | 0 | 765,696 -> 766,080 | 1,048,576 -> 1,048,704 | 59 -> 59 | -64 |
+| g0 (Castle) | 0 | 805,120 -> 803,584 | 1,100,864 -> 1,102,400 | 79 -> 78 | -896 |
+| sz (Sector Z) | 0 | 851,328 -> 849,920 | 1,166,720 -> 1,165,120 | 122 -> 120 | -576 |

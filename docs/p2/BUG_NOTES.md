@@ -7311,3 +7311,34 @@ to Q form in `4011b3b0316`) gives bit-identical joint values to the ROM from
 before it (walk-d1). Probe: scratchpad `mhprobe4.ps1`; captures
 `artifacts/visibility/2026-10-05_oldexec/mh6`, `mh8` (local, ROM-derived).
 Asked the owner which moment looks stiff.
+
+## Hit VFX at wrong locations (owner playtest, 2026-10-06, walk-1006b) -- FIXED
+
+Owner: "during match, hit VFX play at wrong locations" -- the pink impact
+circle after normal A hits and the sword-slash effect (screenshot: Sector Z,
+Mario vs Fox, the circle on the hull far below both fighters).
+
+Cause: since 2026-10-05 the fighter hurtbox test decides in fixed point
+(`ndsP2HbDecidePoints`, src/port/nds_p2_hurtbox_reject.c) and, by design,
+writes no FTParts latch. Four gmcollision.c functions read the hurt (or
+shield) joint's float latch `parts->mtx_translate` straight after a hit
+without building it, relying on the source test's float walk to have filled
+it this tick: `gmCollisionGetFighterAttackDamagePosition`,
+`gmCollisionGetWeaponAttackFighterDamagePosition`,
+`gmCollisionGetItemAttackFighterDamagePosition` and
+`gmCollisionGetShieldPosition`. The impact point is the midpoint of the
+attack and that matrix, so every spark, shock and slash sat halfway toward a
+stale (or never filled) world -- hundreds of units off.
+
+Measured on the gate (Dream Land, 4 CPUs), same frames, same trajectory:
+frame 1248's slash at (-195, 808) before, (842, 372) after, with the victim's
+body joint at (835, 300); frame 512's at (-1417, 2168) before, (-1513, 3023)
+after beside the airborne victim at (-1632, 3060). Captures:
+`artifacts/visibility/2026-10-06_hitvfx/slash-q38-*` (blue slash drawn in
+the tree) and `slash-q40-*` (on the fighters).
+
+Fix: the four are weak in src/import/battleship_gmcollision.c and strong in
+nds_p2_hurtbox_reject.c, each the source's body with the joint's world taken
+by `gmCollisionGetFighterPartsWorldPosition` -- the resident fixed world the
+hit was decided on, the float walk as its fallback. The trajectory is
+unchanged (the impact point feeds effects only).
