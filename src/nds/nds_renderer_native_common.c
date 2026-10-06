@@ -13340,10 +13340,14 @@ void ndsFtrLeanPacketNoteKind(u32 battle_slot, u32 kind)
  * entry's tail after its words; the per-draw pass is then the same arithmetic
  * on the same helpers and a table copy. */
 #if NDS_P2_LINK
+/* Link's lists hold at most this many groups; the map stays this size when
+ * a list's group array grows (32 since 2026-10-05, for the 1P owners' GX
+ * texgen, which the map never covers). */
+#define NDS_FTR_LEAN_TEXGEN_MAP_GROUPS 8u
 typedef struct NDSFtrLeanTexgenMap
 {
-    u8 slot_count[NDS_FIGHTER_PACKET_TEXGEN_GROUP_MAX];
-    u16 dense[NDS_FIGHTER_PACKET_TEXGEN_GROUP_MAX]
+    u8 slot_count[NDS_FTR_LEAN_TEXGEN_MAP_GROUPS];
+    u16 dense[NDS_FTR_LEAN_TEXGEN_MAP_GROUPS]
              [NDS_FIGHTER_PACKET_TEXGEN_DENSE_MAX];
     u8 site_slot[NDS_FIGHTER_PACKET_TEXGEN_SITE_MAX];
 } NDSFtrLeanTexgenMap;
@@ -13377,7 +13381,7 @@ static u32 ndsFtrLeanBuildTexgenMap(const NDSFighterPacket *lean)
     u32 g;
 
     if ((lean->texgen_group_count == 0u) || (map == NULL) ||
-        (lean->texgen_group_count > NDS_FIGHTER_PACKET_TEXGEN_GROUP_MAX) ||
+        (lean->texgen_group_count > NDS_FTR_LEAN_TEXGEN_MAP_GROUPS) ||
         (lean->texgen_site_count > NDS_FIGHTER_PACKET_TEXGEN_SITE_MAX))
     {
         return NDS_FTR_LEAN_TEXGEN_MAP_NONE;
@@ -13389,6 +13393,12 @@ static u32 ndsFtrLeanBuildTexgenMap(const NDSFighterPacket *lean)
         u32 end = first + group->site_count;
         u32 count = 0u;
         u32 s;
+
+        if (group->reserved[1] != 0u)
+        {
+            /* A GX texgen group: the generic patch fills its matrix. */
+            return NDS_FTR_LEAN_TEXGEN_MAP_NONE;
+        }
 
         if ((end > (u32)lean->texgen_site_count) ||
             (end > NDS_FIGHTER_PACKET_TEXGEN_SITE_MAX))
@@ -13436,7 +13446,7 @@ static s32 ndsFtrLeanPatchTexgenMapped(
     {
         return TRUE;
     }
-    if ((packet->texgen_group_count > NDS_FIGHTER_PACKET_TEXGEN_GROUP_MAX) ||
+    if ((packet->texgen_group_count > NDS_FTR_LEAN_TEXGEN_MAP_GROUPS) ||
         (packet->texgen_site_count > NDS_FIGHTER_PACKET_TEXGEN_SITE_MAX) ||
         (sNdsNativeFighterActiveTables == NULL) || (worlds == NULL))
     {
@@ -13641,6 +13651,8 @@ typedef struct NDSFtrLeanMat
     u32 mark;                   /* lab: the materializer's part timer */
     u32 vtx10;                  /* corners as VTX_10 (NDS_FTR_LEAN_ENTRY_VTX16) */
     u32 vtx10_fail;             /* a corner did not fit: walk again at VTX_16 */
+    u32 hw_texgen_ok;           /* the owner takes GX texgen (1P owners) */
+    u32 hw_texgen;              /* the current run's texture matrix is loaded */
 } NDSFtrLeanMat;
 
 /* P2-2p8 (2026-10-05): route-1 lists take VTX_10 corners where every corner
@@ -13932,7 +13944,9 @@ static void ndsFtrLeanMatCorners(NDSFtrLeanMat *m, const u16 *refs, u32 count,
         }
         NDS_FTR_LEAN_OP(shade_op, 1u);
         w[n++] = normals[d];
-        if (textured != 0u)
+        /* Under GX texgen the engine forms the coordinate from the NORMAL;
+         * a TEXCOORD here would replace it (RecordTexCoord). */
+        if ((textured != 0u) && (m->hw_texgen == 0u))
         {
             NDS_FTR_LEAN_OP(FIFO_TEX_COORD, 1u);
             if (texgen == FALSE)
@@ -14034,6 +14048,7 @@ ndsFtrLeanMatRun(NDSFtrLeanMat *m, u32 run_index, u32 epoch_policy,
     u32 submit_class;
     u32 textured;
     u32 triangles;
+    NDSFighterPacketTexgenGroup *hw_group;
 
     if ((run_index >= tables->run_count) ||
         (family >= (sizeof(sNdsNativeFighterDirectPolicies) /
@@ -14236,7 +14251,18 @@ ndsFtrLeanMatRun(NDSFtrLeanMat *m, u32 run_index, u32 epoch_policy,
         ndsRendererR2BindTintTile(stats, tint);
     }
     /* ndsFighterPacketRecordPrepare. */
+    if (m->hw_texgen != 0u)
+    {
+        /* ndsFighterPacketRecordTexIdentity: the previous run's GX texgen
+         * matrix stops here; the mode-1 binds everywhere else expect the
+         * identity. */
+        ndsFtrLeanPack1(pk, REG2ID(MATRIX_CONTROL), (u32)GL_TEXTURE);
+        (void)ndsFtrLeanPack(pk, REG2ID(MATRIX_IDENTITY), 0u);
+        ndsFtrLeanPack1(pk, REG2ID(MATRIX_CONTROL), (u32)GL_MODELVIEW);
+        m->hw_texgen = 0u;
+    }
     m->texgen_group = NDS_FIGHTER_PACKET_TEXGEN_GROUP_NONE;
+    hw_group = NULL;
     if (((use_texture != FALSE) || (tint != 0u)) &&
         ((stats->geometry_mode & NDS_RENDERER_GEOM_TEXTURE_GEN) != 0u))
     {
@@ -14264,6 +14290,18 @@ ndsFtrLeanMatRun(NDSFtrLeanMat *m, u32 run_index, u32 epoch_policy,
         group->reserved[2] = 0u;
         m->texgen_group = packet->texgen_group_count;
         packet->texgen_group_count++;
+        /* 2026-10-05: the recorder's GX texgen (gNdsFighterPacketHwTexgen)
+         * for the 1P owners, whose spherical texgen covers the whole model
+         * (a Polygon's CPU sites outgrew the list): a lit, textured,
+         * spherical run takes TEXIMAGE_PARAM texgen mode 2 and a texture
+         * matrix the per-draw patch fills (ndsFighterPacketPatchTexgen's
+         * reserved[1] branch), and its corners carry no TEXCOORD. */
+        if ((m->hw_texgen_ok != 0u) && (use_texture != FALSE) &&
+            (tint == 0u) && (run_poly_light != 0u) &&
+            (group->reserved[0] == 0u) && (gNdsFighterPacketHwTexgen != 0u))
+        {
+            hw_group = group;
+        }
     }
     if ((use_texture != FALSE) || (tint != 0u))
     {
@@ -14276,6 +14314,12 @@ ndsFtrLeanMatRun(NDSFtrLeanMat *m, u32 run_index, u32 epoch_policy,
         if (pk->fault == 0u)
         {
             pk->words[tex_index] = (u32)glGetTexParameter();
+            if (hw_group != NULL)
+            {
+                pk->words[tex_index] =
+                    (pk->words[tex_index] & ~((u32)3u << 30)) |
+                    ((u32)2u << 30);
+            }
         }
         glGetColorTableParameterEXT(
             GL_TEXTURE_2D, GL_COLOR_TABLE_FORMAT_EXT, &palette_format);
@@ -14322,6 +14366,31 @@ ndsFtrLeanMatRun(NDSFtrLeanMat *m, u32 run_index, u32 epoch_policy,
     else
     {
         ndsFtrLeanPack1(pk, REG2ID(GFX_TEX_FORMAT), 0u);
+    }
+    if (hw_group != NULL)
+    {
+        /* RecordPrepare's GX texgen tail: the matrix words (zero until the
+         * patch), then the source texcoord's constant part. */
+        const u32 base = ndsFighterPacketTexgenBaseWord(
+            hw_group->scale_s, hw_group->scale_t, hw_group->origin_s,
+            hw_group->origin_t, hw_group->offset);
+        u32 at;
+        u32 k;
+
+        ndsFtrLeanPack1(pk, REG2ID(MATRIX_CONTROL), (u32)GL_TEXTURE);
+        at = ndsFtrLeanPack(pk, REG2ID(MATRIX_LOAD4x3), 12u);
+        if (pk->fault == 0u)
+        {
+            for (k = 0u; k < 12u; k++)
+            {
+                pk->words[at + k] = 0u;
+            }
+            hw_group->origin_s = at;
+            hw_group->reserved[1] = 1u;
+        }
+        ndsFtrLeanPack1(pk, REG2ID(MATRIX_CONTROL), (u32)GL_MODELVIEW);
+        ndsFtrLeanPack1(pk, FIFO_TEX_COORD, base);
+        m->hw_texgen = 1u;
     }
     ndsFtrLeanPack1(pk, REG2ID(GFX_POLY_FORMAT),
                     state->texture_prepare_poly_fmt);
@@ -14535,6 +14604,8 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
     m.pk.cmd_slot = 4u;
     m.texgen_group = NDS_FIGHTER_PACKET_TEXGEN_GROUP_NONE;
     m.vtx10 = vtx10;
+    m.hw_texgen_ok = (owner_slot >= NDS_RENDERER_NATIVE_FIGHTER_OWNER_MMARIO) ?
+        1u : 0u;
     ndsRendererInitTraversalState(state, NULL, stats, NULL, NULL, 0u);
     state->color_modulate = packet->tint_modulate;
     if (*sNdsNativeFighterActiveDenseNormalsBuilt == 0u)
@@ -14683,6 +14754,14 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
     ndsRendererHardwareInvalidateGXState(NDS_RENDERER_GX_STATE_ALL);
     sNdsRendererHardwareBoundTextureName = 0u;
     sNdsRendererHardwareActiveTextureEntry = NULL;
+    if ((reason == 0u) && (m.hw_texgen != 0u))
+    {
+        /* The record's end restores the identity texture matrix too. */
+        ndsFtrLeanPack1(&m.pk, REG2ID(MATRIX_CONTROL), (u32)GL_TEXTURE);
+        (void)ndsFtrLeanPack(&m.pk, REG2ID(MATRIX_IDENTITY), 0u);
+        ndsFtrLeanPack1(&m.pk, REG2ID(MATRIX_CONTROL), (u32)GL_MODELVIEW);
+        m.hw_texgen = 0u;
+    }
     if (reason == 0u)
     {
         if ((m.pk.header_valid != 0u) && (m.pk.header_params == 0u))
@@ -14801,6 +14880,24 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
         if (index > es->texgen_last)
         {
             es->texgen_last = index;
+        }
+    }
+    for (i = 0u; i < (u32)packet->texgen_group_count; i++)
+    {
+        /* A GX texgen group's twelve matrix words (origin_s names the first)
+         * are patched every draw like the sites. */
+        const NDSFighterPacketTexgenGroup *group = &packet->texgen_groups[i];
+
+        if (group->reserved[1] != 0u)
+        {
+            if (group->origin_s < es->texgen_first)
+            {
+                es->texgen_first = group->origin_s;
+            }
+            if ((group->origin_s + 11u) > es->texgen_last)
+            {
+                es->texgen_last = group->origin_s + 11u;
+            }
         }
     }
 #if NDS_P2_LINK

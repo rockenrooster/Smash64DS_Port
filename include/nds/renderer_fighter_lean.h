@@ -69,19 +69,7 @@
  * admission runs while the battle loads, before the first frame marker. */
 
 #include <nds/nds_renderer.h>
-
-/* Mirrors NDS_FIGHTER_PACKET_LIVE (src/nds/nds_renderer_preamble.c): the lean
- * lists live in the packet arena and reuse its patch helpers. */
-#if defined(NDS_R2_FIGHTER_PACKET) && NDS_R2_FIGHTER_PACKET && \
-    defined(NDS_RENDERER_HW_TRIANGLES) && NDS_RENDERER_HW_TRIANGLES && \
-    (NDS_RENDERER_PROFILE_LEVEL < 2) && \
-    defined(NDS_R2_FIGHTER_GX_COMPOSE) && NDS_R2_FIGHTER_GX_COMPOSE && \
-    defined(NDS_R2_FIGHTER_HW_MTX) && NDS_R2_FIGHTER_HW_MTX && \
-    defined(NDS_R2_FIGHTER_HW_LIGHT) && NDS_R2_FIGHTER_HW_LIGHT
-#define NDS_FTR_LEAN_LIVE 1
-#else
-#define NDS_FTR_LEAN_LIVE 0
-#endif
+#include <nds/nds_ftr_lean_live.h>
 
 /* Slice 2b BSS diet: the lean counters (engagement, kernel, oracle, census,
  * texture witnesses: gNdsFtrLean below) are the lab instrument. A build
@@ -103,16 +91,11 @@
 #define NDS_FTR_LEAN_CTR(...) ((void)0)
 #endif
 
-/* Slice 6: the oracle routes (2 oracle-exact, 3 oracle-shipped) are lab
- * tools -- they compare against the recorder and count, and a build without
- * the tick HUD has no counters to show them. The shipping image takes route 1
- * or the old path only (a poked 2 or 3 draws as route 0), so none of their
- * branches is compiled into it. */
-#if NDS_FTR_LEAN_LAB
-#define NDS_FTR_LEAN_ORACLE_ROUTES 1
-#else
+/* Slice 6: the oracle routes (2 oracle-exact, 3 oracle-shipped) compared the
+ * lean lists against the old executor's recorder. 2026-10-05 (owner: delete
+ * the old machinery): the old executor is gone from every lean build, so
+ * there is nothing left to compare against and no build compiles them. */
 #define NDS_FTR_LEAN_ORACLE_ROUTES 0
-#endif
 
 /* Slice 6: the route 1 entry (ndsFtrLeanRun) has one call site; the shipping
  * image inlines it there, as slice 5's did before this slice's growth took it
@@ -259,13 +242,12 @@ enum
 
 /* Slice 6: every VS kind is a lean kind -- the twelve owner slots Mario (0)
  * through Kirby (11), NDS_RENDERER_NATIVE_FIGHTER_OWNER_*. The owner slot is
- * the kind (the instance's tuple field). The 1P-only owners (Metal Mario 12,
- * the Polygon team 13-23, Master Hand 24) stay on the old executor for now:
- * a 2026-10-05 campaign walk with all 25 admitted declined Metal Mario and
- * every Polygon on Capacity -- they are environment-mapped all over (a
- * Polygon needs 28 texgen groups and 484 sites against a list's 8 and 256),
- * which the recorder covers with GX texgen and its overflow arrays and the
- * lean materializer does not yet. Master Hand drew lean.
+ * the kind (the instance's tuple field). 2026-10-05 (owner: delete the old
+ * machinery): the 1P-only owners too -- Metal Mario (12), the Polygon team
+ * (13-23), Master Hand (24). Metal Mario and the Polygons are
+ * environment-mapped all over (a Polygon: 28 texgen groups, 484 sites against
+ * a list's 8 and 256), so their lit spherical runs take the recorder's GX
+ * texgen (no sites) and a list holds 32 groups.
  *
  * The lab counters' per-kind rows (k_*[NDS_FTR_LEAN_KINDS]) are indexed by
  * BATTLE SLOT since slice 6 -- a four-fighter roster has four rows whatever
@@ -273,7 +255,7 @@ enum
  * roster (Donkey, Samus, Link, Kirby in slots 0-3) the rows are the slice 3-5
  * kind rows exactly. */
 #define NDS_FTR_LEAN_KINDS 4u
-#define NDS_FTR_LEAN_KIND_COUNT 12u
+#define NDS_FTR_LEAN_KIND_COUNT NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT
 #define NDS_FTR_LEAN_KIND_NONE 0xffu
 #define NDS_FTR_LEAN_OWNER_KIND(owner)                                      \
     (((u32)(owner) < NDS_FTR_LEAN_KIND_COUNT) ? (u32)(owner) :              \

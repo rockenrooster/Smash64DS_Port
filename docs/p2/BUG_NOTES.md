@@ -7238,3 +7238,39 @@ specials' lists take fast-lane routes (`dac7fea37d8`: forced Thunder P95 ->
 deferred retry and the mapping now wait for the loaded-file table or the
 desc's slot to change (measuring). Receipts
 `artifacts/performance/2026-10-05_vfx-specials`.
+
+## Y1 continued: VS Results out of memory at tic 120 (2026-10-05, REPRODUCED)
+
+A VS walk (`scratchpad vsres2.ps1`: Dream Land, level-9 CPUs Kirby / Yoshi /
+Link / Ness, Kirby the winner, the walk's START held off) halts in
+`ndsSyMallocOverflowHalt` on Results: free heap 119,784 until tic 115, then at
+tic 120 the four podium fighters' files arrive (`ndsSceneAssetAlloc`, ~87 KB)
+and the win BGM, leaving 8,020 (walk ROM `walk-oldexec2`) or 4,436
+(`walk-oldexec3`, a list header grown by 672 B x 4 recorded packets). The
+first ROM then fails a 108-byte allocation at tic ~270, the second the 4,216-byte
+announcer thread (`mnVSResultsMakeAudioThread`) at tic 120 itself -- the
+freeze the owner saw. A gdb trace of every Results `syTaskmanMalloc`
+(`vsres3.ps1`): 815 KB in 704 allocations -- `mnVSResultsFuncStart` 130 KB
+plus 4 x 11.8 KB, `efManagerInitEffects` 95 KB (52.7 + 28.4 + 13.6 KB),
+`ndsLBTransitionMalloc` 47.6 KB, `ndsSceneAssetAlloc` 202 KB and
+`ndsRelocEnsureLoadedAsset` 149 KB of fighter files, particle structs 26 KB.
+Removing the old fighter executor from every lean build returns 34.9 KB of
+code and 19.2 KB of BSS to the arena (measuring the same walk next).
+
+## C2 Continue walk: preview-pack load halt at GAME SET (2026-10-05, FOUND)
+
+The 1P walk with the player dropped below the blast zone every 200 frames
+reached stage 2 (Sector Z) and halted in `ndsPreviewPackLoadHalt` (reason 20,
+kind 5 = Link) at GAME SET: Link's lean draw refused the frame's roots
+(decline reason Validate) and fell back to the old executor, whose
+production path asks for a preview pack in battle. Reproduced twice
+(`walk-oldexec`, `walk-oldexec3`). With the old executor gone the frame's
+draw is skipped and counted (`gNdsFtrLeanSkippedDraws`) instead; why that
+pose fails validation is still open.
+
+## Y1 result: Results fits without the old executor (2026-10-05, WALK-VERIFIED)
+
+The same walk on `walk-d1` (old executor compiled out) ran Results 400
+frames: free heap 172,764 until the announcer thread at frame 124, then
+48,532 to the end; no halt, 0 skipped lean draws. Awaiting the owner's
+playtest before the row closes.

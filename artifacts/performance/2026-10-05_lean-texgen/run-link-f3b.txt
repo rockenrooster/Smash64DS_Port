@@ -1,0 +1,46 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 2 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,736; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 1456: ALL 5,312,128 -> 1,117,824, 5 bucket(s) corrected
+  frame 1540: ALL 5,311,104 -> 1,116,800, 5 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_lean-texgen/link-f3b.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=527326370c5+dirty(34) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,736     1,676,992      1.50  1,194,016     1,111,808  4,737,664      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,736         9,984      2.11      5,601         2,176     28,864        0.4
+HUD         9,152        25,024      2.73     12,018         7,872    812,736        0.8
+SRC       374,784       622,848      1.66    395,091       132,480  1,205,376       33.6
+MISC      449,920       613,504      1.36    462,849       176,832  3,340,288       40.3
+OTHR      302,208       576,512      1.91    318,458        22,016    794,688       27.1
+WAIT      281,344       552,064      1.96    296,140         2,304    774,848       25.2
+WORK      875,008     1,242,496      1.42    893,828       338,432  4,406,400       78.4
+SHDT      759,935     1,119,423      1.47    789,287       296,319  2,294,655       68.0
+SWRM        1,344         1,472      1.10      1,359           896      3,328        0.1
+GCRA      369,600       617,600      1.67    389,764       128,192  1,200,128       33.1
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        208             0    182,080        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      449,792       613,376      1.36    462,720       176,704  3,340,160       40.3
+MFLS          128           128      1.00        130           128        576        0.0
+GPOL          663           715      1.08        597            38        765        0.1
+GVTX        1,608         1,760      1.09      1,469           129      1,889        0.1
+DGSA   2,157,782,387 4,071,326,532        2,152,966,851    183,988 4,288,307,941 193,222.2
+DGSB   2,052,418,036 4,066,503,007   1.98 2,099,972,472    879,737 4,294,723,640 183,787.2
+WORK-H    863,616     1,230,144      1.42    881,810       330,240  3,593,664       77.3
+
+named=875,559 (73.3% of ALL)  VBI 2:1723 3:217 4:13 5+:8 max:9 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_lean-texgen/link-f3b.json

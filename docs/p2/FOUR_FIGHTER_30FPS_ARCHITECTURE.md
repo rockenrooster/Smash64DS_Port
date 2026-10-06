@@ -1522,6 +1522,18 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   256, and the recorder's GX texgen is not yet in the lean materializer).
   Master Hand and the ending figure draw lean. Receipt
   `2026-10-05_fixed-leaves`.
+- **10-05 late: GX texgen in lean lists; the old executor compiled out.**
+  Lean lists for the environment-mapped 1P owners (Metal Mario slot onward)
+  let the geometry engine derive texture coordinates from the normals
+  (TEXIMAGE_PARAM texgen mode 2, the texture matrix patched per frame; the
+  header holds 32 groups): the late campaign walk drew every fighter lean,
+  0 declines. The old fighter executor is then compiled only where the lean
+  path is not (`include/nds/nds_ftr_lean_live.h`); a lean decline skips the
+  draw and counts it. Text -34.9 KB, BSS -19.2 KB; gate P95 1,118,592 ->
+  1,105,344 (paired -2.4K), Sector Z 1,268,992 -> 1,236,672, 4 x Yoshi
+  1,267,520 -> 1,265,280, every digest identical. The VS Results
+  out-of-memory (bug Y1) no longer reproduces: 48.5 KB free after the
+  Results audio thread. Receipt `2026-10-05_lean-texgen`.
 
 ## 7. Found along the way
 

@@ -3548,6 +3548,13 @@ static void ndsFighterRejectNativeRender(FTStruct *fp, DObj *dobj,
     }
 }
 
+#include <nds/nds_ftr_lean_live.h>
+
+/* The old fighter executor: the production run, its packet record and
+ * replay. 2026-10-05 (owner: delete the old machinery): every lean build
+ * draws through the lean path alone (renderer_fighter_lean.c), so only a
+ * build without it compiles this. */
+#if !NDS_FTR_LEAN_LIVE
 static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                                                u16 *pixels, u32 pitch)
 {
@@ -5331,6 +5338,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #endif
     gNdsFighterMarioFoxDLAllDrawCount++;
 }
+#endif /* !NDS_FTR_LEAN_LIVE */
 
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
@@ -5371,21 +5379,9 @@ static void ndsRendererAdapterM2FinishOwner(
 }
 #endif
 
-/* 2026-10-05 (owner: delete the old machinery): every draw the old executor
- * still takes, and the owner slots it took them for, until it is deleted. */
-volatile u32 gNdsOldExecutorDraws;
-volatile u32 gNdsOldExecutorOwnerMask;
-
-static void __attribute__((unused)) ndsOldExecutorCensus(const FTStruct *fp)
-{
-    u32 owner;
-
-    gNdsOldExecutorDraws++;
-    if (ndsFighterGetNativeOwnerSlot(fp, &owner) != FALSE)
-    {
-        gNdsOldExecutorOwnerMask |= 1u << (owner & 31u);
-    }
-}
+/* 2026-10-05 (owner: delete the old machinery): fighter draws the lean path
+ * declined -- skipped, since no other renderer is behind it. */
+volatile u32 gNdsFtrLeanSkippedDraws;
 
 #if NDS_P2_1P_GAME && NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
 /* 1P Intro transient native context.
@@ -5514,12 +5510,13 @@ static sb32 ndsFighterIntroTransientSubmit(GObj *fighter_gobj)
     sNdsFighterDisplayContractPlayback = TRUE;
 #if NDS_FTR_LEAN_LIVE
     if (ndsFtrLeanTransientDraw(fp, rebind) == FALSE)
-#endif
     {
-        ndsOldExecutorCensus(fp);
-        ndsFighterMarioFoxDLAllDrawForSlot(
-            NDS_INTRO_TRANSIENT_SCRATCH_SLOT, fp, NULL, 0u);
+        gNdsFtrLeanSkippedDraws++;
     }
+#else
+    ndsFighterMarioFoxDLAllDrawForSlot(
+        NDS_INTRO_TRANSIENT_SCRATCH_SLOT, fp, NULL, 0u);
+#endif
     (void)rebind;
     sNdsFighterDisplayContractPlayback = saved_playback;
 #if NDS_R2_FIGHTER_NO_ORACLE && (NDS_RENDERER_PROFILE_LEVEL < 2)
@@ -5543,7 +5540,6 @@ static sb32 ndsFighterIntroTransientSubmit(GObj *fighter_gobj)
 #if NDS_FTR_LEAN_LIVE
 static NDS_FTR_LEAN_RUN_INLINE sb32
 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route);
-static void ndsFtrLeanAfterOldPath(u32 slot, FTStruct *fp, u32 hits_before);
 static void ndsFtrLeanFrameEnd(void);
 
 /* ndsFtrLeanRun on the DTCM hot stack (port/coroutine.h). */
@@ -5720,39 +5716,26 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
 #endif
 #if NDS_FTR_LEAN_LIVE
     {
-        /* P2-2p8 Phase 1 slice 1 (H1). Route 0 is the plain call below.
-         * Slice 6: the shipping image knows route 1 only
-         * (NDS_FTR_LEAN_ORACLE_ROUTES). */
-#if NDS_FTR_LEAN_ORACLE_ROUTES
-        u32 lean_route = gNdsFtrLeanRoute;
-#else
-        u32 lean_route = (gNdsFtrLeanRoute == NDS_FTR_LEAN_ROUTE_DRAW) ?
-            NDS_FTR_LEAN_ROUTE_DRAW : 0u;
-#endif
-        u32 lean_hits = 0u;
-        sb32 lean_drew = FALSE;
+        sb32 lean_drew;
 
 #if NDS_VRAM_CENSUS_LIVE
         /* Slice 2a (lab): texture uploads inside this draw belong to it. */
         NDS_DIAG(gNdsVramCensusDrawSlotPlus1 = ((u32)fp->nds_slot & 3u) + 1u);
 #endif
-        if (lean_route != 0u)
+        /* 2026-10-05 (owner: delete the old machinery): the lean path is the
+         * fighter renderer. A draw it declines is skipped and counted; there
+         * is no executor behind it (campaign and VS walks: 0 declines
+         * outside one GAME SET frame). */
         {
-            NDSFtrLeanRunCall call = { (u32)fp->nds_slot, fp, lean_route };
+            NDSFtrLeanRunCall call = { (u32)fp->nds_slot, fp,
+                                       NDS_FTR_LEAN_ROUTE_DRAW };
 
             lean_drew = (sb32)ndsDtcmHotStackRun(ndsFtrLeanRunOnHotStack,
                                                  &call);
-            lean_hits = gNdsFighterPacketHits;
         }
         if (lean_drew == FALSE)
         {
-            ndsOldExecutorCensus(fp);
-            ndsFighterMarioFoxDLAllDrawForSlot((u32)fp->nds_slot, fp,
-                                               NULL, 0u);
-            if (lean_route != 0u)
-            {
-                ndsFtrLeanAfterOldPath((u32)fp->nds_slot, fp, lean_hits);
-            }
+            gNdsFtrLeanSkippedDraws++;
         }
 #if NDS_VRAM_CENSUS_LIVE
         gNdsVramCensusDrawSlotPlus1 = 0u;
@@ -5873,9 +5856,11 @@ static void ndsFighterMarioFoxRecordDLAllDrawFromDisplayCallback(
         NDS_DIAG(gNdsFighterDLAllDrawP1DisplayCallbackCount++);
     }
 
+#if !NDS_FTR_LEAN_LIVE
     ndsFighterMarioFoxDLAllDrawForSlot(slot, fp,
                                        sNdsFighterDLAllDrawPixels,
                                        sNdsFighterDLAllDrawPitch);
+#endif
 }
 
 /* P2-2p8 Phase 1 slice 1: the lean fighter path shares this translation

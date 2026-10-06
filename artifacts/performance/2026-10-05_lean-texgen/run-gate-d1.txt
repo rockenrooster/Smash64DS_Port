@@ -1,0 +1,45 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,800; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 1032: ALL 5,311,040 -> 1,116,736, 5 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_lean-texgen/gate-d1.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=527326370c5+dirty(38) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,800     1,676,352      1.50  1,150,604     1,111,424  4,677,056      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,480        10,496      2.34      5,608         2,368     28,608        0.4
+HUD         9,152        24,256      2.65     11,235         7,936    755,584        0.8
+SRC       368,960       565,376      1.53    377,112       133,696  1,337,856       33.0
+MISC      408,320       558,656      1.37    417,126       177,280  3,331,776       36.6
+OTHR      329,088       617,472      1.88    339,521        23,168    790,720       29.5
+WAIT      307,520       592,896      1.93    317,460         2,944    770,688       27.5
+WORK      820,224     1,114,816      1.36    829,272       342,848  4,347,328       73.4
+SHDT      718,399       997,247      1.39    731,739       299,071  1,857,599       64.3
+SWRM        1,344         1,408      1.05      1,344           896      3,392        0.1
+GCRA      363,328       559,936      1.54    371,664       129,216  1,332,416       32.5
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        359             0    645,568        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      408,192       558,528      1.37    416,997       177,152  3,331,648       36.6
+MFLS          128           128      1.00        129            64        640        0.0
+GPOL          596           643      1.08        548            29        672        0.1
+GVTX        1,439         1,569      1.09      1,341            96      1,652        0.1
+DGSA   2,271,025,253 4,053,265,608        2,196,203,133    408,983 4,292,542,737 203,351.1
+DGSB   2,239,784,444 4,085,716,662        2,181,657,936  1,230,618 4,292,739,132 200,553.8
+WORK-H    809,856     1,104,768      1.36    818,037       333,184  3,591,744       72.5
+
+named=811,081 (70.5% of ALL)  VBI 2:1853 3:101 4:6 5+:1 max:9 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_lean-texgen/gate-d1.json

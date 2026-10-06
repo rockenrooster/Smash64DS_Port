@@ -1,0 +1,45 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,736; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 963: ALL 5,311,616 -> 1,117,312, 5 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_fixed-leaves/gate-f3b.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=aefb6f4b30c+dirty(86) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,736     1,676,416      1.50  1,151,047     1,111,360  4,548,352      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,352        10,432      2.40      5,536         2,240     27,456        0.4
+HUD         9,216        24,192      2.62     11,233         7,936    623,744        0.8
+SRC       370,432       569,216      1.54    379,693       134,784  1,299,520       33.2
+MISC      407,552       558,336      1.37    416,462       176,576  3,334,272       36.5
+OTHR      327,360       616,704      1.88    338,124        22,592    791,488       29.3
+WAIT      304,896       592,192      1.94    315,998         2,624    771,712       27.3
+WORK      822,656     1,127,232      1.37    831,024       341,440  4,218,112       73.7
+SHDT      721,343     1,004,799      1.39    734,282       299,007  1,865,855       64.6
+SWRM        1,408         1,472      1.05      1,378           896      3,520        0.1
+GCRA      365,120       563,840      1.54    374,352       130,176  1,294,272       32.7
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        355             0    639,616        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      407,424       558,208      1.37    416,332       176,448  3,334,080       36.5
+MFLS          128           128      1.00        130           128        576        0.0
+GPOL          596           643      1.08        548            29        673        0.1
+GVTX        1,439         1,567      1.09      1,341            96      1,652        0.1
+DGSA   2,271,025,253 4,053,265,608        2,196,203,133    408,983 4,292,542,737 203,362.8
+DGSB   2,239,784,444 4,085,716,662        2,181,657,936  1,230,618 4,292,739,132 200,565.3
+WORK-H    811,520     1,109,568      1.37    819,791       332,992  3,594,368       72.7
+
+named=812,924 (70.6% of ALL)  VBI 2:1851 3:103 4:6 5+:1 max:9 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_fixed-leaves/gate-f3b.json

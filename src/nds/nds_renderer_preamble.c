@@ -3394,7 +3394,9 @@ typedef struct NDSFighterPacketTexgenSite
 } NDSFighterPacketTexgenSite;
 
 #define NDS_FIGHTER_PACKET_SITE_MAX 64u
-#define NDS_FIGHTER_PACKET_TEXGEN_GROUP_MAX 8u
+/* 32 since 2026-10-05: a lean list's GX texgen groups (one per lit spherical
+ * run) for the environment-mapped 1P owners -- a Polygon has 28. */
+#define NDS_FIGHTER_PACKET_TEXGEN_GROUP_MAX 32u
 #define NDS_FIGHTER_PACKET_TEXGEN_SITE_MAX 256u
 #define NDS_FIGHTER_PACKET_TEXGEN_DENSE_MAX 32u
 #define NDS_FIGHTER_PACKET_TEXGEN_GROUP_NONE 0xffffffffu

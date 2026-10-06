@@ -2256,26 +2256,6 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
     return TRUE;
 }
 
-/* After the old path drew this fighter: retire an unconsumed oracle arm,
- * and when the draw was not a replay hit (it prepared materials, which may
- * have written this fighter's MObjs) re-prove the whole identity on the next
- * lean draw. */
-static void ndsFtrLeanAfterOldPath(u32 slot, FTStruct *fp, u32 hits_before)
-{
-    (void)fp;
-#if NDS_FTR_LEAN_ORACLE_ROUTES
-    if (ndsFtrLeanShadowArmed(slot) != 0u)
-    {
-        ndsFtrLeanShadowArm(slot, 0u);
-        NDS_FTR_LEAN_CTR(gNdsFtrLean.oracle_unconsumed++);
-    }
-#endif
-    if (gNdsFighterPacketHits == hits_before)
-    {
-        sNdsFtrLeanInstances[slot].reprove = 1u;
-    }
-}
-
 /* Slice 2b: the lab pokes gNdsFtrLeanAdmit after setup, so the admission of
  * an already-made battle runs at the first frame end that sees the word. Once
  * the admission has run, this frame end is past the battle's setup uploads:
