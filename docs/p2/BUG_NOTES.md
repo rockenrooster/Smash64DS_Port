@@ -7312,6 +7312,17 @@ before it (walk-d1). Probe: scratchpad `mhprobe4.ps1`; captures
 `artifacts/visibility/2026-10-05_oldexec/mh6`, `mh8` (local, ROM-derived).
 Asked the owner which moment looks stiff.
 
+Follow-up (2026-10-06): the owner answered "During master hand intro (pre
+fight)". Both pre-fight moments follow the source. The pre-stage card makes
+the boss with `ftMainSetStatus(fighter_gobj, 0x1000E, card_anim_frame_id,
+0.0F, ...)`, `gcPlayAnimAll`, `gcEndProcessAll` (sc1pintro.c:1001-1003): one
+pose at anim speed 0 with no animation process, and the only process added
+after is the z slide (`sc1PIntroVSFighterProcUpdate`). The port's card is the
+still baked from that same source card (`assets/intro/o13.s1i`, 120 x 101).
+The battle's Appear runs frame for frame to GO (probe above: anim frame 599
+on the tick before GO, Wait from GO). Asked the owner whether the card should
+get an idle loop anyway, which N64 does not do.
+
 ## Hit VFX at wrong locations (owner playtest, 2026-10-06, walk-1006b) -- FIXED
 
 Owner: "during match, hit VFX play at wrong locations" -- the pink impact
