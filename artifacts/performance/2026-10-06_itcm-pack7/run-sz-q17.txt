@@ -1,0 +1,45 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,736; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 1522: ALL 5,310,976 -> 1,116,672, 5 bucket(s) corrected
+Wrote artifacts/performance/2026-10-06_itcm-pack7/sz-q17.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=2736c95960e+dirty(31) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,736     1,676,928      1.50  1,177,501     1,110,464 16,960,704      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,288         9,536      2.22      5,284         2,240     26,112        0.4
+HUD         9,024        24,576      2.72     11,014         7,872    550,144        0.8
+SRC       422,976       605,120      1.43    432,145       151,232  4,672,576       37.9
+MISC      406,720       569,984      1.40    424,398       148,992 15,866,944       36.4
+OTHR      292,544       562,496      1.92    304,660        24,320    800,896       26.2
+WAIT      271,296       537,536      1.98    282,956         2,688    781,568       24.3
+WORK      869,120     1,184,768      1.36    890,860       332,032 16,624,320       77.8
+SHDT      787,455     1,074,047      1.36    809,453       290,239 16,028,543       70.5
+SWRM        1,344         1,408      1.05      1,345           896      3,456        0.1
+GCRA      417,664       599,808      1.44    426,793       146,816  4,667,392       37.4
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        572             0  1,036,544        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      406,592       569,792      1.40    424,261       148,864 15,866,816       36.4
+MFLS          128           192      1.50        138           128        576        0.0
+GPOL          477           567      1.19        463            47        604        0.0
+GVTX        1,073         1,334      1.24      1,060           157      1,442        0.1
+DGSA   2,151,297,068 4,051,513,036        2,133,514,594    676,991 4,286,422,441 192,641.5
+DGSB   2,119,168,438 4,104,172,124   1.94 2,135,049,252  2,524,074 4,280,928,178 189,764.5
+WORK-H    859,584     1,168,448      1.36    879,847       323,968 16,074,176       77.0
+
+named=872,841 (74.1% of ALL)  VBI 2:1795 3:154 4:10 5+:2 max:35 total:1961  slips=0
+Wrote artifacts/performance/2026-10-06_itcm-pack7/sz-q17.json

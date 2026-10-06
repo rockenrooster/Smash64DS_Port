@@ -276,6 +276,24 @@ SECTIONS {
 		*(.text.ftCommonDamageAirCommonProcUpdate)
 		*(.text.ftCommonKneeBendGetInputTypeCommon)
 		*(.text.fabsf)
+		/* Seventh pack (2026-10-06 Castle / Saffron / Sector Z over-gate
+		 * censuses, section D), for the ITCM the A/B-word deletions freed
+		 * (shipping 1,400 B, lab 1,256 B): main-RAM functions at 3,700+
+		 * non-mem stall cycles a byte in all three, same size in the
+		 * shipping and lab ELFs. Not here: ndsRendererAdapterNdlDispatchEffect
+		 * (1,300 B inlined in the shipping ROM) and libgcc's __aeabi_lmul /
+		 * __clzdi2 (archive members, not named sections). */
+		*(.text.ndsMObjStepScaled)
+		*(.text.mpCollisionCheckFloorLineCollisionDiff)
+		*(.text.gcParseMObjMatAnimJoint)
+		*(.text.mpCollisionCheckLWallLineCollisionDiff)
+		*(.text.ndsMatrixFloatToFix)
+		*(.text.mpCollisionCheckCeilLineCollisionDiff)
+		*(.text.mpCollisionCheckRWallLineCollisionDiff)
+		*(.text.ndsMPAiFloorSnapshot)
+		*(.text.ndsProjectRatioQ22)
+		*(.text.ndsBaseGcAddDObjAnimJoint)
+		*(.text.lbCommonGetTreeDObjNextFromRoot)
 		*.itcm.* (.text .stub .text.* .gnu.linkonce.t.*)
 		/* P2-2p8 2026-09-27: calico's thread scheduler and word copy/fill run from
 		 * main RAM. The census rents them under 800 cycles a byte, and
