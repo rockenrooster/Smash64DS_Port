@@ -139,8 +139,10 @@ ftComputerCheckFindTarget(FTStruct *this_fp)
 
 /* ftcomputer.c:3796. The source leads the opponent by three ticks of
  * vel_air.x on BOTH axes (it reads .x for y too); kept. Its sqrt compared
- * against 1500 and 2500 is the squared distance against their squares. */
-sb32 ftComputerCheckEvadeDistance(FTStruct *this_fp)
+ * against 1500 and 2500 is the squared distance against their squares. ARM
+ * state: the squares were __aeabi_lmul calls in Thumb. */
+sb32 __attribute__((target("arm")))
+ftComputerCheckEvadeDistance(FTStruct *this_fp)
 {
     GObj *other_gobj = gGCCommonLinks[nGCCommonLinkIDFighter];
 

@@ -8327,6 +8327,10 @@ static u32 sNdsParticleBasisValid;
 static u32 sNdsParticleBasisBits[2];
 static s32 sNdsParticleBasisQ13[2];
 
+_Static_assert(NDS_RENDERER_PARTICLE_CENTER_SHIFT ==
+               NDS_RENDERER_PARTICLE_COORD_SHIFT,
+               "the fixed-centre entry takes the submitter's own Q8 centre");
+
 s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
                                   u32 color, u8 alpha,
                                   u32 envcolor, u32 particle_flags,
@@ -8334,6 +8338,31 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
                                   u32 mirror_mask,
                                   u32 atlas_x, u32 atlas_y,
                                   u32 atlas_w, u32 atlas_h)
+{
+    s32 center_q8[3];
+
+    if ((pos == NULL) ||
+        (ndsRendererParticleFloatToFixed(
+             pos->x, NDS_RENDERER_PARTICLE_COORD_SHIFT, &center_q8[0]) == FALSE) ||
+        (ndsRendererParticleFloatToFixed(
+             pos->y, NDS_RENDERER_PARTICLE_COORD_SHIFT, &center_q8[1]) == FALSE) ||
+        (ndsRendererParticleFloatToFixed(
+             pos->z, NDS_RENDERER_PARTICLE_COORD_SHIFT, &center_q8[2]) == FALSE))
+    {
+        return FALSE;
+    }
+    return ndsRendererSubmitParticleQuadQ8(
+        atlas_name, center_q8, size, color, alpha, envcolor, particle_flags,
+        right, up, mirror_mask, atlas_x, atlas_y, atlas_w, atlas_h);
+}
+
+s32 ndsRendererSubmitParticleQuadQ8(u32 atlas_name, const s32 center[3],
+                                    f32 size, u32 color, u8 alpha,
+                                    u32 envcolor, u32 particle_flags,
+                                    const Vec3f *right, const Vec3f *up,
+                                    u32 mirror_mask,
+                                    u32 atlas_x, u32 atlas_y,
+                                    u32 atlas_w, u32 atlas_h)
 {
     NDS_FIGHTER_PACKET_DMA_WAIT();
     s32 center_q8[3];
@@ -8346,21 +8375,19 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
     u32 env_palette_name;
     u32 axis;
 
-    if ((atlas_name == 0u) || (pos == NULL) || (right == NULL) || (up == NULL))
+    if ((atlas_name == 0u) || (center == NULL) || (right == NULL) ||
+        (up == NULL))
     {
         return FALSE;
     }
-    if ((ndsRendererParticleFloatToFixed(
-             pos->x, NDS_RENDERER_PARTICLE_COORD_SHIFT, &center_q8[0]) == FALSE) ||
-        (ndsRendererParticleFloatToFixed(
-             pos->y, NDS_RENDERER_PARTICLE_COORD_SHIFT, &center_q8[1]) == FALSE) ||
-        (ndsRendererParticleFloatToFixed(
-             pos->z, NDS_RENDERER_PARTICLE_COORD_SHIFT, &center_q8[2]) == FALSE) ||
-        (ndsRendererParticleFloatToFixed(
-             size, NDS_RENDERER_PARTICLE_COORD_SHIFT, &size_q8) == FALSE))
+    if (ndsRendererParticleFloatToFixed(
+            size, NDS_RENDERER_PARTICLE_COORD_SHIFT, &size_q8) == FALSE)
     {
         return FALSE;
     }
+    center_q8[0] = center[0];
+    center_q8[1] = center[1];
+    center_q8[2] = center[2];
     if (sNdsRendererParticleViewSpace != FALSE)
     {
         /* A burst's quads share their two view-space axis lengths: the last

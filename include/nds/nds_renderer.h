@@ -1955,6 +1955,17 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
                                   u32 mirror_mask,
                                   u32 atlas_x, u32 atlas_y,
                                   u32 atlas_w, u32 atlas_h);
+/* The same quad with its world centre already in fixed point at
+ * NDS_RENDERER_PARTICLE_CENTER_SHIFT fraction bits (the conversion the float
+ * entry above makes first). */
+#define NDS_RENDERER_PARTICLE_CENTER_SHIFT 8u
+s32 ndsRendererSubmitParticleQuadQ8(u32 atlas_name, const s32 center_q8[3],
+                                    f32 size, u32 color, u8 alpha,
+                                    u32 envcolor, u32 particle_flags,
+                                    const Vec3f *right, const Vec3f *up,
+                                    u32 mirror_mask,
+                                    u32 atlas_x, u32 atlas_y,
+                                    u32 atlas_w, u32 atlas_h);
 /* Exact-script Whispy native seam. The camera basis is quantized once per pass;
  * each native full-texture quad then reaches GX as fixed coordinates without
  * rebuilding four float corners. Submit returns -1 when the closed fixed-point

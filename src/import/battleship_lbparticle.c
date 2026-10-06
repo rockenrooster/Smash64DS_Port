@@ -74,6 +74,9 @@
 #include <nds/nds_startup.h>
 #include <nds/generated/nds_particle_banks.generated.h>
 #include <nds/nds_renderer.h>
+#include <nds/nds_fcmp.h>
+#include <nds/nds_r2_collision_mtx.h>
+#include <nds/nds_r2_hwmath_unit.h>
 
 /* The DECOMP sc/scene.h, by path, not the port's <sc/scene.h>. INCLUDES puts
  * include/ ahead of the decomp tree, so the angled form silently selects
@@ -3804,6 +3807,16 @@ static sb32 ndsParticleSetCurrentCamera(Vec3f *right, Vec3f *up)
  * their script-local origin. Reuse the source matrix builder and its
  * Ready/Finished cache contract, then scale/mirror the camera-facing axes by
  * the transformed local X/Y magnitudes. */
+/*
+ * FIXED POINT (P2-2p8, 2026-10-06; owner: "Software floating point should not
+ * exist, fixed point only"). The source builder's affine is taken to Q16 (the
+ * 3x3) and to the submitter's Q8 (the translation) once per transform and
+ * pass, and a particle's centre is three 64-bit dot products straight into
+ * that Q8 -- it was nine soft-float products and nine adds a particle, then
+ * the submitter's own float -> Q8 conversion. The axis magnitudes come from
+ * the same Q16 rows through the math unit's square root. Render only: the
+ * particle and its transform keep the source's state and contract. A
+ * transform or position past the fixed range keeps the float products. */
 #define NDS_PARTICLE_XF_SCALE_SLOTS 16u
 typedef struct NDSParticleXfScale
 {
@@ -3811,16 +3824,183 @@ typedef struct NDSParticleXfScale
     u32 transform_id;
     f32 scale_x;
     f32 scale_y;
+    u32 fixed_ok;
+    s32 r_q16[9];
+    s32 t_q8[3];
 } NDSParticleXfScale;
 static NDSParticleXfScale sNdsParticleXfScale[NDS_PARTICLE_XF_SCALE_SLOTS];
 /* Bumped with dLBParticleCurrentTransformID, which is a u8 and repeats every
  * 256 passes. */
 static u32 sNdsParticleDrawPass = 1u;
 
-static void ndsParticleTransformForDraw(LBParticle *pc,
+/* |row| of the transform's 3x3, with the source's diagonal-sign mirror. */
+static f32 __attribute__((target("arm")))
+ndsParticleXfAxisScale(const s32 *row, f32 diagonal)
+{
+    const u64 sq = (u64)((s64)row[0] * row[0]) +
+                   (u64)((s64)row[1] * row[1]) +
+                   (u64)((s64)row[2] * row[2]);
+    const f32 scale =
+        ndsR2CollisionFixedToF32((s64)ndsR2HwMathSqrt64Fast(sq), 16u);
+
+    return (NDS_FCMP_LT0(diagonal) != 0) ? -scale : scale;
+}
+
+static void __attribute__((noinline, target("arm")))
+ndsParticleXfMemoFill(NDSParticleXfScale *memo, const LBTransform *xf)
+{
+    u32 ok = 1u;
+    u32 row;
+    u32 col;
+
+    for (row = 0u; row < 3u; row++)
+    {
+        for (col = 0u; col < 3u; col++)
+        {
+            const s32 v = ndsR2CollisionF32ToFixed(xf->affine[row][col], 16u);
+
+            /* |cell| < 2^14 keeps every row's squared length in 64 bits. */
+            if ((v == NDS_R2_COLLISION_F32_OVERFLOW) || (v >= (1 << 30)) ||
+                (v <= -(1 << 30)))
+            {
+                ok = 0u;
+            }
+            memo->r_q16[(row * 3u) + col] = v;
+        }
+        memo->t_q8[row] = ndsR2CollisionF32ToFixed(
+            xf->affine[3][row], NDS_RENDERER_PARTICLE_CENTER_SHIFT);
+        if (memo->t_q8[row] == NDS_R2_COLLISION_F32_OVERFLOW)
+        {
+            ok = 0u;
+        }
+    }
+    if (ok != 0u)
+    {
+        memo->scale_x = ndsParticleXfAxisScale(&memo->r_q16[0],
+                                               xf->affine[0][0]);
+        memo->scale_y = ndsParticleXfAxisScale(&memo->r_q16[3],
+                                               xf->affine[1][1]);
+    }
+    else
+    {
+        memo->scale_x = sqrtf(SQUARE(xf->affine[0][0]) +
+                              SQUARE(xf->affine[0][1]) +
+                              SQUARE(xf->affine[0][2]));
+        memo->scale_y = sqrtf(SQUARE(xf->affine[1][0]) +
+                              SQUARE(xf->affine[1][1]) +
+                              SQUARE(xf->affine[1][2]));
+        if (xf->affine[0][0] < 0.0F) { memo->scale_x = -memo->scale_x; }
+        if (xf->affine[1][1] < 0.0F) { memo->scale_y = -memo->scale_y; }
+    }
+    memo->xf = xf;
+    memo->transform_id = sNdsParticleDrawPass;
+    memo->fixed_ok = ok;
+}
+
+/* affine x pos at Q8: row-vector convention, world.x = a00 x + a10 y + a20 z
+ * + a30, as the float products below. */
+static sb32 __attribute__((noinline, target("arm")))
+ndsParticleCenterQ8(const NDSParticleXfScale *memo, const Vec3f *pos,
+                    s32 center_q8[3])
+{
+    const s32 *r = memo->r_q16;
+    const s32 px = ndsR2CollisionF32ToFixed(
+        pos->x, NDS_RENDERER_PARTICLE_CENTER_SHIFT);
+    const s32 py = ndsR2CollisionF32ToFixed(
+        pos->y, NDS_RENDERER_PARTICLE_CENTER_SHIFT);
+    const s32 pz = ndsR2CollisionF32ToFixed(
+        pos->z, NDS_RENDERER_PARTICLE_CENTER_SHIFT);
+    u32 i;
+
+    if ((px == NDS_R2_COLLISION_F32_OVERFLOW) ||
+        (py == NDS_R2_COLLISION_F32_OVERFLOW) ||
+        (pz == NDS_R2_COLLISION_F32_OVERFLOW))
+    {
+        return FALSE;
+    }
+    for (i = 0u; i < 3u; i++)
+    {
+        const s64 v = ((((s64)r[i] * px) + ((s64)r[3u + i] * py) +
+                        ((s64)r[6u + i] * pz)) >> 16) +
+                      memo->t_q8[i];
+
+        if ((v > (s64)INT_MAX) || (v < -(s64)INT_MAX))
+        {
+            return FALSE;
+        }
+        center_q8[i] = (s32)v;
+    }
+    return TRUE;
+}
+
+/* ndsParticleBiasTowardEye at Q8: 150 units along the unit vector to the eye,
+ * when the eye is more than one unit away. */
+static void __attribute__((noinline, target("arm")))
+ndsParticleBiasTowardEyeQ8(s32 center_q8[3], f32 depth_bias)
+{
+    CObj *cobj =
+        (gGCCurrentCamera != NULL) ? CObjGetStruct(gGCCurrentCamera) : NULL;
+    const s32 bias_q8 =
+        ndsR2CollisionF32ToFixed(depth_bias, NDS_RENDERER_PARTICLE_CENTER_SHIFT);
+    s64 d[3];
+    u64 sq = 0u;
+    u32 len;
+    u32 i;
+
+    if ((cobj == NULL) || (bias_q8 == 0) ||
+        (bias_q8 == NDS_R2_COLLISION_F32_OVERFLOW))
+    {
+        return;
+    }
+    for (i = 0u; i < 3u; i++)
+    {
+        const s32 eye = ndsR2CollisionF32ToFixed(
+            (&cobj->vec.eye.x)[i], NDS_RENDERER_PARTICLE_CENTER_SHIFT);
+
+        if (eye == NDS_R2_COLLISION_F32_OVERFLOW)
+        {
+            return;
+        }
+        d[i] = (s64)eye - center_q8[i];
+        if ((d[i] >= ((s64)1 << 30)) || (d[i] <= -((s64)1 << 30)))
+        {
+            return;
+        }
+        sq += (u64)(d[i] * d[i]);
+    }
+    len = ndsR2HwMathSqrt64Fast(sq);
+    if (len <= (1u << NDS_RENDERER_PARTICLE_CENTER_SHIFT))
+    {
+        return;
+    }
+    for (i = 0u; i < 3u; i++)
+    {
+        center_q8[i] += (s32)ndsR2HwMathDivideFast(d[i] * bias_q8, (s64)len);
+    }
+}
+
+/* The float product, for a transform or position past the fixed range. */
+static void __attribute__((noinline))
+ndsParticleWorldF32(const LBTransform *xf, const Vec3f *pos, Vec3f *world_pos)
+{
+    world_pos->x = (xf->affine[0][0] * pos->x) +
+                   (xf->affine[1][0] * pos->y) +
+                   (xf->affine[2][0] * pos->z) + xf->affine[3][0];
+    world_pos->y = (xf->affine[0][1] * pos->x) +
+                   (xf->affine[1][1] * pos->y) +
+                   (xf->affine[2][1] * pos->z) + xf->affine[3][1];
+    world_pos->z = (xf->affine[0][2] * pos->x) +
+                   (xf->affine[1][2] * pos->y) +
+                   (xf->affine[2][2] * pos->z) + xf->affine[3][2];
+}
+
+/* TRUE when the centre came out in fixed point (center_q8, for
+ * ndsRendererSubmitParticleQuadQ8); FALSE leaves it in *world_pos. */
+static sb32 ndsParticleTransformForDraw(LBParticle *pc,
                                         const Vec3f *camera_right,
                                         const Vec3f *camera_up,
                                         Vec3f *world_pos,
+                                        s32 center_q8[3],
                                         Vec3f *quad_right,
                                         Vec3f *quad_up,
                                         sb32 view_space
@@ -3836,7 +4016,7 @@ static void ndsParticleTransformForDraw(LBParticle *pc,
     *quad_up = *camera_up;
     if (xf == NULL)
     {
-        return;
+        return FALSE;
     }
     if (xf->transform_id != dLBParticleCurrentTransformID)
     {
@@ -3854,15 +4034,6 @@ static void ndsParticleTransformForDraw(LBParticle *pc,
         }
         xf->transform_id = dLBParticleCurrentTransformID;
     }
-    world_pos->x = (xf->affine[0][0] * pc->pos.x) +
-                   (xf->affine[1][0] * pc->pos.y) +
-                   (xf->affine[2][0] * pc->pos.z) + xf->affine[3][0];
-    world_pos->y = (xf->affine[0][1] * pc->pos.x) +
-                   (xf->affine[1][1] * pc->pos.y) +
-                   (xf->affine[2][1] * pc->pos.z) + xf->affine[3][1];
-    world_pos->z = (xf->affine[0][2] * pc->pos.x) +
-                   (xf->affine[1][2] * pc->pos.y) +
-                   (xf->affine[2][2] * pc->pos.z) + xf->affine[3][2];
 #if NDS_R2_WHISPY_NATIVE_AOT
     /* Both Pupupu roots attach a rigid translate + Y rotation with unit scale.
      * The generic path takes two square roots per particle just to recover
@@ -3873,6 +4044,7 @@ static void ndsParticleTransformForDraw(LBParticle *pc,
         if ((xf->scale.x == 1.0F) && (xf->scale.y == 1.0F) &&
             (xf->scale.z == 1.0F))
         {
+            ndsParticleWorldF32(xf, &pc->pos, world_pos);
             if (xf->affine[0][0] < 0.0F)
             {
                 quad_right->x = -quad_right->x;
@@ -3886,59 +4058,47 @@ static void ndsParticleTransformForDraw(LBParticle *pc,
                 quad_up->z = -quad_up->z;
             }
             gNdsWhispyAOTRigidDraws++;
-            return;
+            return FALSE;
         }
         gNdsWhispyAOTRigidDrawFallbacks++;
     }
 #endif
     {
         /* The transform's two axis magnitudes (and their diagonal-sign
-         * mirrors) are the same for every particle of this transform in this
-         * pass -- its affine is built once a pass above -- so a burst paid
-         * two sqrtf and nine float products a particle for one answer. Kept
-         * per transform for the pass, exactly the values computed below. */
+         * mirrors) and its fixed-point form are the same for every particle
+         * of this transform in this pass -- its affine is built once a pass
+         * above -- so they are kept per transform for the pass. */
         NDSParticleXfScale *memo =
             &sNdsParticleXfScale[((uintptr_t)xf >> 4) &
                                  (NDS_PARTICLE_XF_SCALE_SLOTS - 1u)];
-        f32 scale_x;
-        f32 scale_y;
 
-        if ((memo->xf == xf) &&
-            (memo->transform_id == sNdsParticleDrawPass))
+        if ((memo->xf != xf) ||
+            (memo->transform_id != sNdsParticleDrawPass))
         {
-            scale_x = memo->scale_x;
-            scale_y = memo->scale_y;
-        }
-        else
-        {
-            scale_x = sqrtf(SQUARE(xf->affine[0][0]) +
-                            SQUARE(xf->affine[0][1]) +
-                            SQUARE(xf->affine[0][2]));
-            scale_y = sqrtf(SQUARE(xf->affine[1][0]) +
-                            SQUARE(xf->affine[1][1]) +
-                            SQUARE(xf->affine[1][2]));
-            if (xf->affine[0][0] < 0.0F) { scale_x = -scale_x; }
-            if (xf->affine[1][1] < 0.0F) { scale_y = -scale_y; }
-            memo->xf = xf;
-            memo->transform_id = sNdsParticleDrawPass;
-            memo->scale_x = scale_x;
-            memo->scale_y = scale_y;
+            ndsParticleXfMemoFill(memo, xf);
         }
         if (view_space != FALSE)
         {
-            quad_right->x = scale_x;
-            quad_up->y = scale_y;
+            quad_right->x = memo->scale_x;
+            quad_up->y = memo->scale_y;
         }
         else
         {
-            quad_right->x *= scale_x;
-            quad_right->y *= scale_x;
-            quad_right->z *= scale_x;
-            quad_up->x *= scale_y;
-            quad_up->y *= scale_y;
-            quad_up->z *= scale_y;
+            quad_right->x *= memo->scale_x;
+            quad_right->y *= memo->scale_x;
+            quad_right->z *= memo->scale_x;
+            quad_up->x *= memo->scale_y;
+            quad_up->y *= memo->scale_y;
+            quad_up->z *= memo->scale_y;
+        }
+        if ((memo->fixed_ok != 0u) &&
+            (ndsParticleCenterQ8(memo, &pc->pos, center_q8) != FALSE))
+        {
+            return TRUE;
         }
     }
+    ndsParticleWorldF32(xf, &pc->pos, world_pos);
+    return FALSE;
 }
 
 #if NDS_R2_POSITION_PROBE
@@ -4659,7 +4819,7 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
 #endif
             u32 id;
 
-            if (pc->size == 0.0F)
+            if (NDS_FCMP_EQ0(pc->size))
             {
                 continue;
             }
@@ -5037,24 +5197,41 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                     u32 source_mirror_mask =
                         ((pc->flags & LBPARTICLE_FLAG_MASKS) ? 1u : 0u) |
                         ((pc->flags & LBPARTICLE_FLAG_MASKT) ? 2u : 0u);
-
-                    ndsParticleTransformForDraw(
-                        pc, &right, &up, &world_pos, &quad_right, &quad_up,
-                        view_space
+                    s32 center_q8[3];
+                    const sb32 center_fixed = ndsParticleTransformForDraw(
+                        pc, &right, &up, &world_pos, center_q8,
+                        &quad_right, &quad_up, view_space
 #if NDS_R2_WHISPY_NATIVE_AOT
                         , ((whispy_native != FALSE) &&
                            (gNdsWhispyAOTRoute == 1u))
 #endif
                     );
 #if NDS_R2_POSITION_PROBE
+                    if (center_fixed != FALSE)
+                    {
+                        world_pos.x = ndsR2CollisionFixedToF32(
+                            center_q8[0], NDS_RENDERER_PARTICLE_CENTER_SHIFT);
+                        world_pos.y = ndsR2CollisionFixedToF32(
+                            center_q8[1], NDS_RENDERER_PARTICLE_CENTER_SHIFT);
+                        world_pos.z = ndsR2CollisionFixedToF32(
+                            center_q8[2], NDS_RENDERER_PARTICLE_CENTER_SHIFT);
+                    }
                     ndsParticleProbeFlameFirstDraw(pc, &world_pos);
 #endif
                     if ((pc->xf != NULL) &&
                         (pc->xf->proc_dead == ndsParticleTransformTowardEye))
                     {
-                        ndsParticleBiasTowardEye(&world_pos,
-                                                 NDS_PARTICLE_TOWARD_EYE_BIAS,
-                                                 &world_pos);
+                        if (center_fixed != FALSE)
+                        {
+                            ndsParticleBiasTowardEyeQ8(
+                                center_q8, NDS_PARTICLE_TOWARD_EYE_BIAS);
+                        }
+                        else
+                        {
+                            ndsParticleBiasTowardEye(
+                                &world_pos, NDS_PARTICLE_TOWARD_EYE_BIAS,
+                                &world_pos);
+                        }
                     }
                     /* The heavy-frame LOD skips the quad only: the transform
                      * above still ran, and its draw-time effects on the
@@ -5077,13 +5254,21 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                     {
                         NDS_DIAG(gNdsParticleMirrorSTSubmitCount++);
                     }
-                    submit_result = ndsRendererSubmitParticleQuad(
-                        texture_name, &world_pos, pc->size,
-                        color, pc->primcolor.a, envcolor, particle_flags,
-                        &quad_right, &quad_up,
-                        source_mirror_mask,
-                        texture_x, texture_y,
-                        texture_width, texture_height);
+                    submit_result = (center_fixed != FALSE) ?
+                        ndsRendererSubmitParticleQuadQ8(
+                            texture_name, center_q8, pc->size,
+                            color, pc->primcolor.a, envcolor, particle_flags,
+                            &quad_right, &quad_up,
+                            source_mirror_mask,
+                            texture_x, texture_y,
+                            texture_width, texture_height) :
+                        ndsRendererSubmitParticleQuad(
+                            texture_name, &world_pos, pc->size,
+                            color, pc->primcolor.a, envcolor, particle_flags,
+                            &quad_right, &quad_up,
+                            source_mirror_mask,
+                            texture_x, texture_y,
+                            texture_width, texture_height);
                 }
             if (submit_result != FALSE)
             {
@@ -5161,34 +5346,6 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
                     }
                 }
             }
-            }
-            /* TEMPORARY DIAGNOSTIC, BUGS.md row 1. Remove with that row.
-             *
-             * world_pos is a STACK LOCAL, and row 4 established the hard way
-             * that gdb reads those as 0.0 on this remote while globals are
-             * sound -- a whole root cause was published and withdrawn on that.
-             * So the last unmeasured step of row 1, what the submit actually
-             * receives for Whispy's link-1 particles and whether it accepts
-             * them, is recorded here into globals instead of read from outside.
-             * Also latches the v16 clamp: nds_renderer.c scales world by 16 and
-             * saturates at +/-32767, so |world| > 2047.9 is drawn on the rail
-             * rather than where it belongs. */
-            if ((link == 1u)
-#if NDS_R2_WHISPY_NATIVE_AOT
-                && (gNdsWhispyAOTRoute < 6u)
-#endif
-               )
-            {
-                gNdsWhispyDrawX = world_pos.x;
-                gNdsWhispyDrawY = world_pos.y;
-                gNdsWhispyDrawSize = pc->size;
-                /* Mirrors the renderer's own count rather than re-deriving a
-                 * reach here. The reach is no longer a constant this file can
-                 * know: ndsRendererSubmitParticleQuad now picks the vertex
-                 * factor per batch and escalates when a quad needs it, so the
-                 * only honest clamp count is the one taken at the conversion.
-                 * Same variable, so probe-vfx-contracts.ps1 keeps reading it. */
-                gNdsWhispyDrawClamped = gNdsParticleWorldClampCount;
             }
 #endif
         }

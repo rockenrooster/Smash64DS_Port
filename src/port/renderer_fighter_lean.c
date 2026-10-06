@@ -477,8 +477,10 @@ void ndsFtrLeanNoteRebind(u32 player_slot)
 volatile u32 gNdsFtrLeanLockFail;
 
 /* ARM state (2026-10-06): its 64-bit products were nine __aeabi_lmul calls
- * a joint in Thumb (every Yoshi motion locks). */
-static s32 __attribute__((target("arm")))
+ * a joint in Thumb (every Yoshi motion locks). noinline: GCC inlines an ARM
+ * function into a Thumb caller and compiles it as Thumb, which kept all nine
+ * calls inside ndsFtrLeanSlowLocal. */
+static s32 __attribute__((noinline, target("arm")))
 ndsFtrLeanLockLocal(DObj *dobj, s32 *accum, s32 *cells, u32 *has_local)
 {
     s32 inv_x, inv_y, inv_z;

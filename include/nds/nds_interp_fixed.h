@@ -414,8 +414,10 @@ static NDS_IFX_ARM uint32_t ndsIfxQuotientBits(uint32_t num, uint32_t den)
 }
 
 /* syInterpGetFracFrame's Bezier/Catrom arm from the source's segment scan on:
- * the result's binary32 bits in *out_bits, or 0 (outside the domain). */
-static NDS_IFX_ARM __attribute__((unused)) int
+ * the result's binary32 bits in *out_bits, or 0 (outside the domain).
+ * noinline: inlined into its Thumb caller it compiles as Thumb, and its
+ * 64-bit products and CLZs become libgcc calls. */
+static NDS_IFX_ARM __attribute__((unused, noinline)) int
 ndsIfxFracFrame(uint32_t t_bits, uint32_t keyframe_bits, uint32_t length_bits,
                 const uint32_t cof_bits[5], uint32_t id, uint32_t points_num,
                 NDSIfxPath *path, uint32_t *out_bits)
