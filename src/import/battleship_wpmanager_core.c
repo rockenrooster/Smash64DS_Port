@@ -76,6 +76,8 @@ extern void gcDrawDObjTreeDLLinksForGObj(GObj *gobj);
 extern void lbCommonDObjScaleXProcDisplay(GObj *gobj);
 extern void wpDisplayDObjTreeDLLinks(GObj *weapon_gobj);
 extern void func_ovl3_80167618(GObj *weapon_gobj);
+extern void wpDisplayMain(GObj *weapon_gobj, void (*proc_display)(GObj *));
+extern void gcDrawDObjTreeForGObj(GObj *gobj);
 extern void wpDisplayDObjDLLinks(GObj *weapon_gobj);
 extern void wpDisplayDLHead1(GObj *weapon_gobj);
 extern f32 lbCommonNormDist2D(Vec3f *p);
@@ -111,6 +113,30 @@ extern Gfx dFTDisplayMainMapCollisionBottomDL[];
 extern Gfx dFTDisplayMainMapCollisionTopDL[];
 
 #define NDS_WPMANAGER_BRIDGE __attribute__((weak))
+
+/* wpmanager.c picks func_ovl3_80167618 for a DObjDesc weapon without DL links:
+ * wpDisplayMain(weapon, lbCommonDObjScaleXProcDisplay), the whole DObj tree at
+ * gGCScaleX 1.0 (lbcommon.c:2067). The port's lbCommonDObjScaleXProcDisplay is
+ * a deliberate no-op -- effect descriptors share it and some have their own
+ * DS owners -- so every such weapon drew nothing unless its maker installed a
+ * seam (Link's Boomerang, Fox's blaster). Blastoise's Hydro Pump (owner:
+ * "Hydro water still draws as faint dotted rings plus a stray white quad";
+ * the water itself never reached the renderer), Onix's rocks, Meowth's
+ * coins and Beedrill's swarm all have baked native owners
+ * (generate_nds_native_item_baked.py) that nothing reached. Their trees now
+ * draw through the DS adapter under the source's wpDisplayMain state.
+ *
+ * Master Hand's finger-gun bullets are one too (their list's baked owner,
+ * BossBullet, landed with this seam). */
+static void ndsWPDrawDObjTree(GObj *weapon_gobj)
+{
+    gcDrawDObjTreeForGObj(weapon_gobj);
+}
+
+static void ndsWPDisplayDObjTree(GObj *weapon_gobj)
+{
+    wpDisplayMain(weapon_gobj, ndsWPDrawDObjTree);
+}
 
 static const f32 dNDSWeaponStaleTable[] = { 0.75F, 0.82F, 0.89F, 0.96F };
 
@@ -500,7 +526,7 @@ GObj *wpManagerMakeWeapon(GObj *parent_gobj, WPDesc *wp_desc, Vec3f *spawn_pos,
                            wp_desc->transform_types.tk2,
                            wp_desc->transform_types.tk3);
         proc_display = (wp_desc->flags & WEAPON_FLAG_DOBJLINKS) ?
-            wpDisplayDObjTreeDLLinks : func_ovl3_80167618;
+            wpDisplayDObjTreeDLLinks : ndsWPDisplayDObjTree;
     }
     else
     {

@@ -77,6 +77,10 @@ FILES = {
         "5495f90a2d16eebebd8d93af2c42c53cbdc3e5a35d316eae234000ef77fa3071",
         336, 22, 0,
         "ba9cf122f9db7ff477f04ad708a2798a4ebe31bd4d1b124ca0a277aec821ab1b"),
+    "BossModel": sm.InputSpec(
+        "decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/BossModel",
+        "922b090fff108bf91fc3951883f84a54d05db89a5e8fa80d1870d08f4f42232a",
+        344, None, None, None),
 }
 
 # GObj ids (decomp sys/objdef.h): the owner a root is admitted for.
@@ -197,6 +201,12 @@ ENTRIES = (
      "GRYamabukiMap 0x308 FushigibanaRazorWeaponAttributes, DObj 1 list 1"),
     ("NessSpecial2Effect", "NessSpecial2", 0x08E0, GOBJ_EFFECT,
      "NessSpecial2 root 0x08e0, a Ness effect"),
+    # Master Hand's finger-gun bullets: BossMainMotion 0x774 / 0x7A8 (Normal /
+    # Hard WeaponAttributes) both point at BossModel's DObjDesc 0x2CB8, whose
+    # DObj 1 carries this list (DObj 0 has none). A DObjDesc weapon without DL
+    # links: drawn through the weapon tree seam (battleship_wpmanager_core.c).
+    ("BossBullet", "BossModel", 0x2BA0, GOBJ_WEAPON,
+     "BossMainMotion 0x774/0x7A8 BulletNormal/HardWeaponAttributes, DObj 1"),
     ("NessPKFirePillarBase", "NessSpecial3", 0x0870, GOBJ_ITEM,
      "NessSpecial1 0x34 PKFireItemAttributes, DObj 2 (itnesspkfire.c)"),
     ("NessPKFirePillarFlame", "NessSpecial3", 0x0960, GOBJ_ITEM,
