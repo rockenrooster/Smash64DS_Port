@@ -3963,13 +3963,12 @@ volatile u32 gNdsR2FighterTintFails;
 volatile u32 gNdsR2FighterTintQueueFull;
 volatile u32 gNdsR2FighterTintTableFull;
 volatile u32 gNdsR2FighterTintEvictions;
-/* Bumped whenever a tile is created or deleted, and mixed into every fighter
- * packet key (ndsFighterPacketBuildKey). A packet recorded before its colour's
- * tile existed carries fold words, and one recorded while a tile existed binds
- * it by name; either is wrong the moment the set changes, so the set's
- * generation is part of what a packet is valid for. Measured on r49's first
- * cut: the first battle frame recorded before the tile was built and replayed
- * the capped fold for the rest of the match. */
+/* Bumped whenever a tile is created or deleted; a lean list remembers the
+ * generation its tint binds were resolved under (tint_set_generation). A list
+ * made before its colour's tile existed carries fold words, and one made while
+ * a tile existed binds it by name; either is wrong the moment the set changes.
+ * Measured on r49's first cut: the first battle frame was captured before the
+ * tile was built and drew the capped fold for the rest of the match. */
 volatile u32 gNdsR2FighterTintSetGeneration;
 
 static s32 ndsR2FighterTintFill(u8 *pixels, u32 bytes, void *user_data)
@@ -4131,11 +4130,10 @@ static void ndsRendererHardwareServiceFighterTintTiles(void)
         sNdsR2FighterTints[sNdsR2FighterTintCount].last_used =
             sNdsRendererHardwareFrameSerial;
         {
-            /* P2-2p8 Phase 1 slice 1: capture exactly the words a recorded
-             * packet binds for this tile. The prepare above returns with the
-             * tile bound and its palette set (libnds's active texture), so
-             * the same two getters ndsFighterPacketRecordBoundTexture reads
-             * after a bind return them here -- reads only, no GX write. */
+            /* P2-2p8 Phase 1 slice 1: capture exactly the words a lean list
+             * binds for this tile. The prepare above returns with the tile
+             * bound and its palette set (libnds's active texture), so the
+             * two getters return them here -- reads only, no GX write. */
             int palette_format = -1;
 
             sNdsR2FighterTints[sNdsR2FighterTintCount].teximage =
@@ -15457,162 +15455,6 @@ static inline void ndsRendererHardwareFighterMultMatrixWorldScaled(
  * commands acts on the position and vector matrices together -- which is what
  * NDS_R2_FIGHTER_HW_LIGHT needs, and the scale is a no-op on the 3x3 vector
  * matrix because it only touches row 3. */
-#if NDS_FIGHTER_PACKET_LIVE
-/* Record-frame tees for the loader below. Each records the parameter index the
- * replay patches every frame; the world-unit scale is a constant. */
-static void ndsFighterPacketRecordProjection(
-    const NDSRendererMatrix20p12 *projection)
-{
-    NDSFighterPacketRecorder *rec = &sNdsFighterPacketRecorder;
-    u32 i;
-
-    ndsFighterPacketCmd1(REG2ID(MATRIX_CONTROL), (u32)GL_PROJECTION);
-    i = ndsFighterPacketCmd(REG2ID(MATRIX_LOAD4x4), 16u);
-    if ((rec->fault == 0u) && (rec->packet != NULL))
-    {
-        ndsFighterPacketStoreMatrix4x4(&rec->words[i], projection);
-        if (rec->packet->projection_index == NDS_FIGHTER_PACKET_INDEX_NONE)
-        {
-            rec->packet->projection_index = (u16)i;
-        }
-    }
-}
-
-static void ndsFighterPacketRecordSeed(const NDSRendererMatrix20p12 *seed)
-{
-    NDSFighterPacketRecorder *rec = &sNdsFighterPacketRecorder;
-    u32 i = ndsFighterPacketCmd(REG2ID(MATRIX_LOAD4x4), 16u);
-
-    if ((rec->fault == 0u) && (rec->packet != NULL) &&
-        (rec->current_root < NDS_FIGHTER_PACKET_ROOT_MAX))
-    {
-        ndsFighterPacketStoreMatrix4x4(&rec->words[i], seed);
-        rec->packet->roots[rec->current_root].seed_index = (u16)i;
-    }
-}
-
-static void ndsFighterPacketRecordLocal(
-    u32 local, const NDSRendererMatrix20p12 *matrix)
-{
-    NDSFighterPacketRecorder *rec = &sNdsFighterPacketRecorder;
-    u32 i = ndsFighterPacketCmd(REG2ID(MATRIX_MULT4x3), 12u);
-
-    if ((rec->fault == 0u) && (rec->packet != NULL) &&
-        (rec->current_root < NDS_FIGHTER_PACKET_ROOT_MAX) &&
-        (local < NDS_FIGHTER_PACKET_LOCAL_MAX))
-    {
-        ndsFighterPacketStoreMatrix4x3(&rec->words[i], matrix);
-        rec->packet->roots[rec->current_root].local_index[local] = (u16)i;
-    }
-}
-
-static void ndsFighterPacketRecordWorldScaled(
-    const NDSRendererMatrix20p12 *matrix)
-{
-    NDSFighterPacketRecorder *rec = &sNdsFighterPacketRecorder;
-    u32 i = ndsFighterPacketCmd(REG2ID(MATRIX_MULT4x4), 16u);
-
-    if (rec->fault == 0u)
-    {
-        u32 *dst = &rec->words[i];
-        u32 row;
-        u32 col;
-
-        for (row = 0u; row < 3u; row++)
-        {
-            *dst++ = (u32)matrix->m[row][0];
-            *dst++ = (u32)matrix->m[row][1];
-            *dst++ = (u32)matrix->m[row][2];
-            *dst++ = (u32)matrix->m[row][3];
-        }
-        for (col = 0u; col < 4u; col++)
-        {
-            *dst++ = (u32)ndsRendererRoundShiftS32Signed(
-                matrix->m[3][col], NDS_RENDERER_HW_WORLD_UNIT_SHIFT);
-        }
-    }
-}
-
-/* Exact parameter words used by the split loader's GL_MODELVIEW LOAD4x4.
- * Source matrices stay in BattleShip world units; row 3 alone crosses the
- * world-unit seam here, matching ndsRendererHardwareFighterLoadModelviewWorldScaled. */
-static void ndsFighterPacketStoreSplitModelview(
-    u32 *dst, const NDSRendererMatrix20p12 *matrix)
-{
-    u32 row;
-    u32 col;
-
-    for (row = 0u; row < 3u; row++)
-    {
-        *dst++ = (u32)matrix->m[row][0];
-        *dst++ = (u32)matrix->m[row][1];
-        *dst++ = (u32)matrix->m[row][2];
-        *dst++ = (u32)matrix->m[row][3];
-    }
-    for (col = 0u; col < 4u; col++)
-    {
-        *dst++ = (u32)ndsRendererRoundShiftS32Signed(
-            matrix->m[3][col], NDS_RENDERER_HW_WORLD_UNIT_SHIFT);
-    }
-}
-
-/* CPU-composed source-world roots are a deliberate native path, not a packet
- * failure. Tee their two matrix loads into the packet while preserving the
- * record frame's proven direct loader. The packet is intentionally
- * self-contained even if that direct loader elides by generation: replay must
- * not depend on matrix state that existed before its FIFO DMA began.
- *
- * gx_valid is already part of the packet shape key. For split roots the fixed
- * patch table therefore has an unambiguous alternate layout:
- * local_index[0] = projection LOAD4x4, seed_index = scaled modelview LOAD4x4. */
-static void NDS_FIGHTER_PACKET_COLD_CODE
-ndsFighterPacketLoadSplitMatricesRecord(
-    u32 root_index, const NDSRendererNativeFighterRoot *input, u32 generation)
-{
-    NDSFighterPacketRecorder *rec = &sNdsFighterPacketRecorder;
-    NDSFighterPacketRoot *root;
-    u32 projection_index;
-    u32 modelview_index;
-
-    if ((input == NULL) || (input->projection_matrix == NULL) ||
-        (input->modelview_matrix == NULL))
-    {
-        rec->fault = 1u;
-        return;
-    }
-    ndsFighterPacketBeginRoot(root_index, input);
-    if ((rec->fault != 0u) || (rec->packet == NULL) ||
-        (root_index >= NDS_FIGHTER_PACKET_ROOT_MAX))
-    {
-        rec->fault = 1u;
-        return;
-    }
-
-    ndsRendererLoadHardwareSplitMatrices(
-        input->projection_matrix, input->modelview_matrix, generation);
-
-    root = &rec->packet->roots[root_index];
-    ndsFighterPacketCmd1(REG2ID(MATRIX_CONTROL), (u32)GL_PROJECTION);
-    projection_index = ndsFighterPacketCmd(REG2ID(MATRIX_LOAD4x4), 16u);
-    if (rec->fault != 0u)
-    {
-        return;
-    }
-    ndsFighterPacketStoreMatrix4x4(
-        &rec->words[projection_index], input->projection_matrix);
-    root->local_index[0] = (u16)projection_index;
-
-    ndsFighterPacketCmd1(REG2ID(MATRIX_CONTROL), (u32)GL_MODELVIEW);
-    modelview_index = ndsFighterPacketCmd(REG2ID(MATRIX_LOAD4x4), 16u);
-    if (rec->fault != 0u)
-    {
-        return;
-    }
-    ndsFighterPacketStoreSplitModelview(
-        &rec->words[modelview_index], input->modelview_matrix);
-    root->seed_index = (u16)modelview_index;
-}
-#endif
 
 /* 2026-09-27: out of ITCM (old path only; the four-CPU census never
  * executed it). Its bytes went to the census's small high-stall admissions. */
@@ -15690,83 +15532,6 @@ ndsRendererLoadHardwareGxComposedMatrices(
     sNdsRendererHardwareMatrixLoaded = FALSE;
 }
 
-#if NDS_FIGHTER_PACKET_LIVE
-/* Record-frame twin of the loader above, selected per root by the production
- * execute: the hardware receives exactly the words the loader pushes, and the
- * packet records them with the parameter indices the replay patches. Main RAM
- * and cold -- it runs only on the frame a packet is recorded -- which is what
- * keeps the record path out of the full ITCM region. */
-static void NDS_FIGHTER_PACKET_COLD_CODE
-ndsFighterPacketLoadGxComposedRecord(
-    u32 root_index, const NDSRendererNativeFighterRoot *input, u32 generation)
-{
-    u32 i;
-
-    ndsFighterPacketBeginRoot(root_index, input);
-    if ((input->projection_matrix == NULL) || (input->gx_seed == NULL) ||
-        ((input->gx_local_count != 0u) && (input->gx_locals == NULL)))
-    {
-        sNdsFighterPacketRecorder.fault = 1u;
-        return;
-    }
-    ndsRendererHardwareEndBatch();
-    if (input->projection_matrix != sNdsR2GxLastProjection)
-    {
-        ndsRendererHardwareFighterSetMatrixMode(GL_PROJECTION);
-        ndsRendererHardwareFighterLoadMatrix4x4(input->projection_matrix);
-        sNdsR2GxLastProjection = input->projection_matrix;
-        ndsFighterPacketRecordProjection(input->projection_matrix);
-    }
-    else
-    {
-        NDS_DIAG(gNdsR2GxComposeProjectionSkips++);
-    }
-    ndsRendererHardwareFighterSetMatrixMode(GL_MODELVIEW);
-    ndsFighterPacketCmd1(REG2ID(MATRIX_CONTROL), (u32)GL_MODELVIEW);
-    if (input->gx_parent_slot >= NDS_RENDERER_FIGHTER_GX_SLOT_NONE)
-    {
-        if (input->gx_seed_is_identity != 0u)
-        {
-            MATRIX_IDENTITY = 0;
-            ndsFighterPacketCmd0(REG2ID(MATRIX_IDENTITY));
-        }
-        else
-        {
-            ndsRendererHardwareFighterLoadMatrix4x4(input->gx_seed);
-            ndsFighterPacketRecordSeed(input->gx_seed);
-        }
-    }
-    else
-    {
-        MATRIX_RESTORE = input->gx_parent_slot;
-        ndsFighterPacketCmd1(REG2ID(MATRIX_RESTORE),
-                             (u32)input->gx_parent_slot);
-        NDS_DIAG(gNdsR2GxComposeRestores++);
-    }
-    for (i = 0u; i < (u32)input->gx_local_count; i++)
-    {
-        ndsRendererHardwareFighterMultMatrix4x3(&input->gx_locals[i]);
-        ndsFighterPacketRecordLocal(i, &input->gx_locals[i]);
-    }
-    NDS_DIAG(gNdsR2GxComposeMults += (u32)input->gx_local_count);
-    if (input->gx_store_slot < NDS_RENDERER_FIGHTER_GX_SLOT_NONE)
-    {
-        MATRIX_STORE = input->gx_store_slot;
-        ndsFighterPacketCmd1(REG2ID(MATRIX_STORE),
-                             (u32)input->gx_store_slot);
-        NDS_DIAG(gNdsR2GxComposeStores++);
-    }
-    ndsRendererHardwareFighterMultMatrixWorldScaled(&sNdsR2GxIdentity20p12);
-    ndsFighterPacketRecordWorldScaled(&sNdsR2GxIdentity20p12);
-    NDS_DIAG(gNdsR2GxComposeRoots++);
-
-    ndsRendererProfileRecordMatrixLoad();
-    sNdsRendererHardwareMatrixMode = NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED;
-    sNdsRendererHardwareMatrixGeneration = generation;
-    sNdsRendererHardwareMatrixLoaded = FALSE;
-}
-
-#endif
 #endif
 #endif
 

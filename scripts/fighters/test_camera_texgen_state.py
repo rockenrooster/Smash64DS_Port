@@ -386,14 +386,10 @@ class CameraTexgenStateTest(unittest.TestCase):
         self.assertIn("use_texgen", window, "texgen gate context")
         self.assertIn("look_at->l[0]", window, "LookAt leg context")
 
-    def test_packet_replay_reuses_exact_precheck_texgen(self):
+    def test_lean_list_patches_live_texgen(self):
+        # 2026-10-05: the packet recorder and its replay are gone; a lean list
+        # refreshes its texgen words through the same patch every frame.
         patch = function(RENDERER, "ndsFighterPacketPatchTexgen")
-        precheck = function(RENDERER, "ndsRendererFighterPacketPrecheck")
-        replay_start = RENDERER.index("ndsFighterPacketTryReplay(")
-        replay_end = RENDERER.index(
-            "void ndsRendererFighterPacketDmaWait", replay_start
-        )
-        replay = RENDERER[replay_start:replay_end]
 
         for needle in (
             "ndsRendererAdapterCurrentLookAt()",
@@ -402,50 +398,11 @@ class CameraTexgenStateTest(unittest.TestCase):
             "texgen_sites",
             "modelview_matrix",
         ):
-            self.assertIn(needle, patch, f"packet live texgen seam: {needle}")
-        self.assertIn(
-            "ndsFighterPacketPatchTexgen(packet, inputs, input_count)",
-            precheck,
-            "precheck must prove texgen patchability before material prep is skipped",
-        )
-        self.assertIn(
-            "ndsFighterPacketPatchTexgen(packet, inputs, input_count)",
-            replay,
-            "ordinary replay/miss path must still refresh live texgen",
-        )
-        self.assertIn(
-            "(prechecked == 0u) &&",
-            replay,
-            "exact prechecked hits must not repeat the same texgen patch",
-        )
+            self.assertIn(needle, patch, f"lean live texgen seam: {needle}")
         self.assertNotIn(
             "owner_slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_LINK",
-            replay,
+            patch,
             "Link must not be unconditionally declined after live texgen patching",
-        )
-
-        execute_start = PRODUCTION.index(
-            "ndsRendererExecuteNativeFighterOwnerProduction("
-        )
-        early_hit = PRODUCTION.index("packet_prechecked != 0u", execute_start)
-        preflight = PRODUCTION.index(
-            "ndsRendererNativePreflightProductionOwner(", execute_start
-        )
-        ordinary_replay = PRODUCTION.index("packet_key, FALSE,", preflight)
-        self.assertLess(
-            early_hit,
-            preflight,
-            "exact packet hits must be consumed before whole-owner preflight",
-        )
-        self.assertGreater(
-            ordinary_replay,
-            preflight,
-            "miss/fail-safe route must retain preflight before ordinary replay/record",
-        )
-        self.assertIn(
-            "packet_key, TRUE,",
-            PRODUCTION[early_hit:preflight],
-            "prechecked hit must use the exact precheck handoff",
         )
 
     def test_extracted_provider_keeps_both_legs(self):

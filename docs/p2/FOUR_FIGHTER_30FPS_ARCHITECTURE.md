@@ -1534,6 +1534,15 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   1,267,520 -> 1,265,280, every digest identical. The VS Results
   out-of-memory (bug Y1) no longer reproduces: 48.5 KB free after the
   Results audio thread. Receipt `2026-10-05_lean-texgen`.
+- **10-05 late: the packet recorder and the lean oracle deleted.** With the old
+  executor compiled out, the recorder and its replay had no caller in any
+  configuration; they are deleted from the source with every hook site, the
+  record twins of the production emitters, the texgen overflow store and the
+  18 KB packet array (heap +18,176 B), and the lab oracle routes that compared
+  the lean lists against them went too (-2.9K lines). Digests identical; gate
+  P95 1,108,928, Sector Z 1,228,032 (paired drift +1.5K to +4K from layout,
+  the hooks' 472 ITCM bytes not yet re-admitted). Receipt
+  `2026-10-05_recorder-deleted`.
 
 ## 7. Found along the way
 

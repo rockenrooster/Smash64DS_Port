@@ -29,7 +29,6 @@ ndsRendererNativeAbortProductionRun(
             stats, cross_triangle_count, cross_reuse_count);
     }
     ndsRendererHardwareEndBatch();
-    NDS_FIGHTER_PACKET_HOOK(ndsFighterPacketAbortRecord());
 }
 
 s32 NDS_RENDERER_NATIVE_FIGHTER_CODE
@@ -116,31 +115,7 @@ ndsRendererExecuteNativeFighterOwnerProduction(
 #endif
         return FALSE;
     }
-#if NDS_FIGHTER_PACKET_LIVE
-    /* The adapter's precheck already validated owner identity, built these
-     * native inputs and proved the exact packet match before it skipped the
-     * material rows. A replay consumes only those inputs plus the packet; the
-     * resolved root/table arrays produced by whole-owner preflight are record
-     * path state. Consume the same-frame proof first and delete that redundant
-     * preflight from steady replay hits. TryReplay fails closed without arming
-     * a recorder if the immediate-handoff contract is ever broken. */
-    if ((packet_prechecked != 0u) &&
-        (ndsFighterPacketTryReplay(
-             slot, use_low_detail, texture_memo_owner_key, packet_key, TRUE,
-             inputs, input_count, stats, out_hardware_started) != 0))
-    {
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-        ndsRendererProfileM2FinishProduction(
-            m2_owner, m2_total_start,
-            m2_lighting_before, m2_root_gx_before,
-            m2_run_prepare_before, m2_emit_account_before, TRUE);
-#endif
-        return TRUE;
-    }
-#else
     (void)packet_prechecked;
-#endif
     if (ndsRendererNativePreflightProductionOwner(
             slot, (texture_memo_owner_key >> 9) & 3u,
             use_low_detail, asset_base, inputs, input_count,
@@ -158,23 +133,7 @@ ndsRendererExecuteNativeFighterOwnerProduction(
 #if NDS_TASK91_DRAW_PHASE_CENSUS
     NDS_DIAG(gNdsR2ExecPreflightTicks += cpuGetTiming() - e15b_mark);
 #endif
-#if NDS_FIGHTER_PACKET_LIVE
-    if (ndsFighterPacketTryReplay(
-            slot, use_low_detail, texture_memo_owner_key, packet_key, FALSE,
-            inputs, input_count, stats, out_hardware_started) != 0)
-    {
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-        ndsRendererProfileM2FinishProduction(
-            m2_owner, m2_total_start,
-            m2_lighting_before, m2_root_gx_before,
-            m2_run_prepare_before, m2_emit_account_before, TRUE);
-#endif
-        return TRUE;
-    }
-#else
     (void)packet_key;
-#endif
     root_count = sNdsNativeFighterActiveOwner->root_count;
     palette_slots = sNdsNativeFighterActiveOwner->cross_palette_slots;
 
@@ -203,9 +162,6 @@ ndsRendererExecuteNativeFighterOwnerProduction(
      * one test from conflating "the colour never arrived" with "the dot product
      * is zero". */
     GFX_LIGHT_COLOR = (u32)RGB15(31, 31, 31);
-    NDS_FIGHTER_PACKET_HOOK(
-        ndsFighterPacketCmd1(REG2ID(GFX_LIGHT_COLOR),
-                             (u32)RGB15(31, 31, 31)));
 #endif
 #if NDS_R2_FIGHTER_GX_COMPOSE
     /* Nothing outside this loop is known to leave GL_PROJECTION alone, so the
@@ -256,27 +212,11 @@ ndsRendererExecuteNativeFighterOwnerProduction(
          * the fail-closed answer for this owner. */
         if (input->gx_valid != 0u)
         {
-#if NDS_FIGHTER_PACKET_LIVE
-            if (sNdsFighterPacketRecording != 0u)
-            {
-                ndsFighterPacketLoadGxComposedRecord(
-                    root_index, input, state->matrix_generation);
-            }
-            else
-#endif
             ndsRendererLoadHardwareGxComposedMatrices(
                 input, state->matrix_generation);
         }
         else
         {
-#if NDS_FIGHTER_PACKET_LIVE
-            if (sNdsFighterPacketRecording != 0u)
-            {
-                ndsFighterPacketLoadSplitMatricesRecord(
-                    root_index, input, state->matrix_generation);
-            }
-            else
-#endif
             ndsRendererLoadHardwareSplitMatrices(
                 input->projection_matrix, input->modelview_matrix,
                 state->matrix_generation);
@@ -294,8 +234,6 @@ ndsRendererExecuteNativeFighterOwnerProduction(
         if (palette_slot <= NDS_NATIVE_GX_MATRIX_SLOT_MAX)
         {
             glStoreMatrix((int)palette_slot);
-            NDS_FIGHTER_PACKET_HOOK(
-                ndsFighterPacketCmd1(REG2ID(MATRIX_STORE), palette_slot));
         }
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
@@ -489,10 +427,6 @@ ndsRendererExecuteNativeFighterOwnerProduction(
             stats, cross_triangle_count, cross_reuse_count);
     }
     ndsRendererHardwareEndBatch();
-    NDS_FIGHTER_PACKET_HOOK(ndsFighterPacketFinishRecord(
-        native_run_count, native_triangle_count,
-        raw_triangle_count, raw_reuse_count,
-        cross_triangle_count, cross_reuse_count));
     sNdsRendererFastRunCount += native_run_count;
     sNdsRendererFastTriangleCount += native_triangle_count;
     if ((u32)sNdsRendererRuntimeOwner <

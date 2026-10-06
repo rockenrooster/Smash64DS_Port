@@ -8304,26 +8304,6 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
         seed_is_identity = FALSE;
     }
 #endif
-#if NDS_R2_FIGHTER_GX_COMPOSE
-    /* P2-2p8 Phase 1 (H4): the lean route-2 oracle forces the Q43.20 source
-     * compose for the four lean kinds (slice 1: Samus; slice 3: Donkey --
-     * already source -- Samus, Link, Kirby), so the words TryReplay patches
-     * are the ones the lean kernel must reproduce bit for bit. The animation
-     * lock arm below is that same compose, so it proves the draw too. */
-#if NDS_FTR_LEAN_ORACLE_ROUTES
-    u32 lean_force_source =
-        ((gNdsFtrLeanRoute == NDS_FTR_LEAN_ROUTE_ORACLE_EXACT) &&
-         (NDS_FTR_LEAN_OWNER_KIND(slot) != NDS_FTR_LEAN_KIND_NONE)) ?
-            TRUE : FALSE;
-
-    if (lean_force_source != FALSE)
-    {
-        gNdsFtrLeanOracleSourceOk = 0u;
-    }
-#else
-    const u32 lean_force_source = FALSE;    /* slice 6: a lab route */
-#endif
-#endif
     /* Animation locks change the source local matrix and scale accumulator.
      * Compose those source matrices on ARM9, then submit the same native owner
      * geometry. A failed lock conversion must not fall into ordinary TRS. */
@@ -8340,14 +8320,6 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
             {
                 return FALSE;
             }
-#if NDS_R2_FIGHTER_GX_COMPOSE
-#if NDS_FTR_LEAN_ORACLE_ROUTES
-            if (lean_force_source != FALSE)
-            {
-                gNdsFtrLeanOracleSourceOk = 1u;
-            }
-#endif
-#endif
         }
     }
     /* One forward pass over the baked binding order, composing straight into the
@@ -8363,13 +8335,11 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
     sNdsRendererAdapterNativeOwnerWorkspace.gx_modelview_mirror_valid = 0u;
     /* Source-world seam repair.  Keep this deliberately narrow until every
      * owner is visually/source-qualified: Mario is owner slot 0, and profile
-     * owner ids are one-based so DK's native slot is DONKEY-1.
-     * (H4, the lean oracle's forced source compose, is declared above.) */
+     * owner ids are one-based so DK's native slot is DONKEY-1. */
     if ((flat_worlds != FALSE) || (((slot == 0u)
 #if NDS_P2_DONKEY
          || (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_DONKEY)
 #endif
-         || (lean_force_source != FALSE)
          ) &&
 #if NDS_LAB_NO_CULL
         (gNdsLabSeamArm == NDS_RENDERER_ADAPTER_LAB_SOURCE_WORLD_ARM) &&
@@ -8379,12 +8349,6 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
              sNdsRendererAdapterNativeOwnerModelviews, &compose_seed,
              seed_is_identity) != FALSE)))
     {
-#if NDS_FTR_LEAN_ORACLE_ROUTES
-        if ((lean_force_source != FALSE) && (flat_worlds == FALSE))
-        {
-            gNdsFtrLeanOracleSourceOk = 1u;
-        }
-#endif
         flat_worlds = TRUE;
     }
     else if (ndsRendererAdapterCaptureOwnerChainsGx(

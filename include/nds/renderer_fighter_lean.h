@@ -34,27 +34,15 @@
  * and Fox's electric skeleton (program 0xFE), Fox's blaster sidecar, and wide
  * entries for the high-detail lists longer than an entry (see
  * ndsFtrLeanEntryWide). Captain HIGH's alpha cutout is exact without its
- * register (reference 0; nNDSFtrLeanDeclineAlphaTest otherwise). Routes 2
- * and 3 are lab tools, compiled into the tick-HUD image only
- * (NDS_FTR_LEAN_ORACLE_ROUTES).
+ * register (reference 0; nNDSFtrLeanDeclineAlphaTest otherwise).
  *
- *   gNdsFtrLeanRoute  0  off -- the old path (the A/B control since slice 7)
- *                     1  lean path draws the VS kinds (the DEFAULT since
- *                        slice 7, NDS_FTR_LEAN_ROUTE_BOOT); both halves of the
- *                        slot's region are lean entries, and the recorder
- *                        never arms for a slot whose lower half the lean
- *                        path owns (a declined draw runs production direct)
- *                     2  oracle-exact: the old path draws (recorder in the
- *                        lower half) with the Q43.20 source compose forced;
- *                        the lean path materializes/patches its entry in the
- *                        upper half and TryReplay (or the re-record) compares
- *                        it SEMANTICALLY: every non-matrix command exactly,
- *                        P' and each LOAD4x3 against the recorded projection
- *                        and split modelview word for word, and the composed
- *                        clip matrices (rows 0-2 exact, row 3 within 1 LSB)
- *                     3  oracle-shipped: as 2 with the old path unchanged
- *                        (2 and 3 on the lab two-fighter arm also compare
- *                        the wide lists: NDS_FTR_LEAN_ORACLE_WIDE)
+ *   gNdsFtrLeanRoute  0  off: no fighter draws (a lab control)
+ *                     1  the lean path draws every fighter (the DEFAULT,
+ *                        NDS_FTR_LEAN_ROUTE_BOOT); both halves of the slot's
+ *                        region are lean entries. 2026-10-05 (owner: delete
+ *                        the old machinery): the old executor, its packet
+ *                        recorder and the oracle routes 2/3 that compared
+ *                        the lean lists against it are gone.
  *   gNdsFtrLeanAdmit  0 / 1 / 2: fighter texture admission, see the slice
  *                        2b block at the end of this header (2 is the
  *                        DEFAULT since slice 7, NDS_FTR_LEAN_ADMIT_BOOT)
@@ -91,49 +79,8 @@
 #define NDS_FTR_LEAN_CTR(...) ((void)0)
 #endif
 
-/* Slice 6: the oracle routes (2 oracle-exact, 3 oracle-shipped) compared the
- * lean lists against the old executor's recorder. 2026-10-05 (owner: delete
- * the old machinery): the old executor is gone from every lean build, so
- * there is nothing left to compare against and no build compiles them. */
-#define NDS_FTR_LEAN_ORACLE_ROUTES 0
-
-/* Slice 6: the route 1 entry (ndsFtrLeanRun) has one call site; the shipping
- * image inlines it there, as slice 5's did before this slice's growth took it
- * past GCC's inline limit (an outlined copy costs its own prologue and the
- * caller's spills). The lab image keeps it outlined, as slice 5's lab did. */
-#if NDS_FTR_LEAN_ORACLE_ROUTES
-#define NDS_FTR_LEAN_RUN_INLINE
-#else
-#define NDS_FTR_LEAN_RUN_INLINE inline __attribute__((always_inline))
-#endif
-
-/* The list functions (materialize, find, guard, patch) run under the route
- * that called them; in the shipping image that is route 1 only. */
-#if NDS_FTR_LEAN_ORACLE_ROUTES
-#define NDS_FTR_LEAN_ROUTE_IS_DRAW() \
-    (gNdsFtrLeanRoute == NDS_FTR_LEAN_ROUTE_DRAW)
-#else
-#define NDS_FTR_LEAN_ROUTE_IS_DRAW() (1)
-#endif
-
-/* Slice 6 (lab, the two-fighter roster arm NDS_LAB_FOURCPU_TWO): a wide list
- * (route 1: entry 0 over the battle slot's whole region) cannot share that
- * region with the oracle routes' reference -- the recorder's packet in the
- * lower half -- and an absent player's region is lent to a battle-lifetime
- * pool, so the oracle routes keep the wide lists of battle slots 0 and 1 in
- * a lab-only buffer (nds_renderer_native_common.c) and route 2 compares the
- * high-detail lists that outgrow an entry like any other. */
-#if NDS_FTR_LEAN_ORACLE_ROUTES && defined(NDS_LAB_FOURCPU_TWO) && \
-    NDS_LAB_FOURCPU_TWO
-#define NDS_FTR_LEAN_ORACLE_WIDE 1
-#else
-#define NDS_FTR_LEAN_ORACLE_WIDE 0
-#endif
-
 #define NDS_FTR_LEAN_ROUTE_OFF 0u
 #define NDS_FTR_LEAN_ROUTE_DRAW 1u
-#define NDS_FTR_LEAN_ROUTE_ORACLE_EXACT 2u
-#define NDS_FTR_LEAN_ROUTE_ORACLE_SHIPPED 3u
 
 /* P2-2p8 Phase 1 slice 7: lean is the default. Every image that compiles the
  * lean path boots with route 1 and admission 2 -- the shipping ROMs, the shell
@@ -275,22 +222,6 @@ enum
     nNDSFtrLeanJointClassCount = 8
 };
 
-/* Oracle word classes (oracle_mismatch[], k_oracle_mismatch[][]). */
-enum
-{
-    nNDSFtrLeanOracleStructure = 0,    /* command sequence / counts differ */
-    nNDSFtrLeanOracleProjection,       /* P' != the recorded projection with
-                                        * row 3 >> 8 */
-    nNDSFtrLeanOracleModelview,        /* LOAD4x3 != the recorded split
-                                        * modelview (or its m33 != 16) */
-    nNDSFtrLeanOracleShade,            /* DIF_AMB word */
-    nNDSFtrLeanOracleLight,            /* LIGHT_VECTOR word */
-    nNDSFtrLeanOracleOther,            /* any other command parameter */
-    nNDSFtrLeanOracleTint,             /* tint-tile TEXIMAGE / PLTT word */
-    nNDSFtrLeanOracleTexgen,           /* texgen TEXCOORD word */
-    nNDSFtrLeanOracleClassCount = 8
-};
-
 /* One flushed block of counters, read with
  * -ExtraGlobals gNdsFtrLean.<field>. Published to main RAM once per frame at
  * the end of the fighter submit loop (a stop reads RAM, not the D-cache). */
@@ -298,7 +229,6 @@ typedef struct NDSFtrLeanCounters
 {
     /* engagement */
     u32 draws;                  /* route 1: lean path drew */
-    u32 shadow_runs;            /* routes 2/3: lean patched its entry */
     u32 attempts;
     u32 decline[20];
     u32 event[11];              /* nNDSFtrLeanEvent* */
@@ -385,32 +315,6 @@ typedef struct NDSFtrLeanCounters
     u32 submit_ticks;
     u32 dma_wait_ticks;         /* lean submit's own DMA0 busy wait */
     u32 dma_wait_spins;
-    /* oracle */
-    u32 oracle_runs;
-    u32 oracle_words;           /* lean words compared */
-    u32 oracle_mismatch[8];     /* nNDSFtrLeanOracle* */
-    u32 oracle_clip_max[2];     /* max |clip delta| rows 0-2, row 3 */
-    u32 oracle_clip_roots;      /* roots whose clip matrices were composed */
-    u32 oracle_donor_memo;      /* texture words of a donor-table root that
-                                 * differ: production's run texture memo
-                                 * keys on (run index, player), so a donor
-                                 * root replays the owner root's texture */
-    u32 oracle_key_moved;       /* compared entry's key != this draw's */
-    u32 oracle_record_under_hit[2];   /* same, differs (outside sites) */
-    u32 oracle_record_diff[8];  /* record-under-hit differences by class */
-    u32 oracle_unconsumed;      /* shadow armed, old path never replayed */
-    u32 oracle_source_miss;     /* route 2: forced source compose failed */
-    u32 oracle_first[8];        /* first mismatch: frame, slot<<24|class<<16
-                                   |root, lean cmd, lean param index, lean
-                                   word, recorded word, lean command ordinal,
-                                   recorded command ordinal */
-    u32 oracle_shade_first[16]; /* slice 6: the first shade mismatch's site
-                                   inputs -- frame, slot<<24|root, lean
-                                   light1, light2, material, use|pfr<<8|
-                                   tinted<<16|root<<24, the same four for the
-                                   recorded site, lean / recorded modulate,
-                                   lean / recorded prim hash, lean / recorded
-                                   word */
     /* Phase 0 leftovers */
     u32 ge_busy_samples;        /* GXSTAT sampled at the end of each fighter */
     u32 ge_busy_hits;           /* ... with bit 27 (GE busy) set */
@@ -465,9 +369,6 @@ typedef struct NDSFtrLeanCounters
     u32 k_kernel_class[4][8];   /* nNDSFtrLeanJoint* */
     u32 k_program_draws[4][16]; /* draws by root program (15 = >= 15) */
     u32 k_high_draws[4];        /* draws at HIGH detail */
-    u32 k_oracle_runs[4];
-    u32 k_oracle_mismatch[4][8];
-    u32 k_oracle_donor_memo[4];
     u32 k_key_events[4];        /* lab census, per kind */
     u32 k_key_seen_before[4];
     u32 k_key_miss[4][6];
@@ -595,7 +496,6 @@ extern NDSFtrLeanAttr gNdsFtrLeanAttr;
 
 /* Route-2 handshake: set by the old path's matrix prep when the forced
  * Q43.20 source compose produced this draw's matrices. */
-extern volatile u32 gNdsFtrLeanOracleSourceOk;
 
 /* ---- the joint kernel (src/nds/nds_ftr_lean_kernel.c) ---------------- */
 
@@ -675,8 +575,7 @@ s32 ndsFtrLeanKernelCompose(const NDSFtrLeanJoint *joints, u32 joint_count,
 #define NDS_FTR_LEAN_KEY_WORDS 6u
 #define NDS_FTR_LEAN_ENTRY_NONE 0xffu
 /* Slice 6: ndsFtrLeanMaterialize's `entry` flag for a wide list (entry 0
- * over the slot's whole region; route 1 -- and the oracle routes on the lab
- * two-fighter arm, NDS_FTR_LEAN_ORACLE_WIDE). */
+ * over the slot's whole region). */
 #define NDS_FTR_LEAN_ENTRY_WIDE 0x100u
 /* P2-2p8 (2026-10-05): the `entry` flag that keeps a list's corners VTX_16
  * (the retry after nNDSFtrLeanDeclineVtx10). Without it a route-1 list whose
@@ -729,10 +628,10 @@ u32 ndsFtrLeanEntryActivate(u32 battle_slot, u32 code);
  * packet's key moves: re-derive the active list's shade words as that record
  * would (the execute's modulate, 0, over this draw's prims) and name the live
  * modulate, so the per-frame ApplyTint evolves them as the replay's. */
-/* The old path's packet key (ndsFighterPacketBuildKey) over the lean inputs,
- * less the tint-tile set generation: when it moves, or the packet was
- * invalidated, the old path re-records and a held list takes the record's
- * shade derivation (ndsFtrLeanEntryResetShade). */
+/* The packet recorder's key (the recorder was deleted 2026-10-05) over the
+ * lean inputs, less the tint-tile set generation: when it moves, or the slot
+ * was invalidated, a held list takes a fresh record's shade derivation
+ * (ndsFtrLeanEntryResetShade), as the recorder's timing did. */
 u32 ndsFtrLeanRerecordKey(u32 ident, const u32 *key,
                           const NDSRendererNativeFighterRoot *inputs,
                           u32 input_count);
@@ -771,9 +670,6 @@ u32 ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
                           u32 use_low_detail, const void *asset_base,
                           NDSRendererStats *stats);
 void ndsFtrLeanPacketDrop(u32 battle_slot);
-/* The slot's DObj/MObj graph was rebuilt (a model part, a costume): the
- * recorder's packet is gone; the lean lists stay (content keys). */
-void ndsFtrLeanPacketRebind(u32 battle_slot);
 /* The active list's per-root LOAD4x3 parameter sites, for the kernel to
  * write (their cache lines are marked for the submit). Returns the mask of
  * roots whose Q20.12 world the patch also reads (Link's texgen group roots),
@@ -820,16 +716,11 @@ u32 ndsFtrLeanEntryWide(u32 battle_slot, u32 entry);
  * adapter at every attempt. Slice 6: the row is the battle slot itself (see
  * NDS_FTR_LEAN_KINDS). */
 void ndsFtrLeanPacketNoteKind(u32 battle_slot, u32 kind);
-void ndsFtrLeanShadowArm(u32 battle_slot, u32 armed);
-u32 ndsFtrLeanShadowArmed(u32 battle_slot);
 void ndsFtrLeanCountersPublish(void);
 void ndsFtrLeanTextureCensus(void);
 void ndsFtrLeanNoteGo(u32 frame);
 void ndsFtrLeanNoteTextureReject(u32 reason, u32 format, u32 size);
 void ndsFtrLeanNoteTextureUpload(u32 bytes);
-/* nds_renderer_preamble.c: every packet replay hit. A hit draw runs no
- * material preparation, so it cannot have written the fighter's MObjs. */
-extern volatile u32 gNdsFighterPacketHits;
 /* nds_renderer_textures_effects.c: the resident tint tile for a colour, as
  * the TEXIMAGE_PARAM / PLTT_BASE words a packet bind records (pltt is
  * 0xffffffff when the tile has no palette). FALSE when not resident. */

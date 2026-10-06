@@ -757,7 +757,6 @@ ndsRendererNativeApplyStateDelta(
         break;
     case NDS_NATIVE_STATE_PRIM:
         NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
-        NDS_FIGHTER_PACKET_HOOK(sNdsFighterPacketRecorder.prim_overridden = 1u);
         stats->prim_color = delta->w1;
         stats->prim_min_level = (delta->w0 >> 8) & 0xffu;
         stats->prim_lod_fraction = delta->w0 & 0xffu;
@@ -934,7 +933,6 @@ static void ndsRendererNativeApplyMaterial(
     if ((effects & NDS_RENDERER_NATIVE_MATERIAL_PRIM) != 0u)
     {
         NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
-        NDS_FIGHTER_PACKET_HOOK(sNdsFighterPacketRecorder.prim_overridden = 1u);
         stats->prim_color = material->prim_w1;
         stats->prim_min_level = (material->prim_w0 >> 8) & 0xffu;
         stats->prim_lod_fraction = material->prim_w0 & 0xffu;
@@ -3492,10 +3490,10 @@ ndsRendererNativeDirectReject(NDSRendererStats *stats)
 #if NDS_FIGHTER_PACKET_LIVE
 /* THE TRAP THIS PROBE EXISTS TO AVOID, AND IT CAUGHT ME TOO (2026-08-25).
  * With NDS_R2_FIGHTER_PACKET the shipped fighter draw is a DMA replay of a
- * recorded GX stream: ndsFighterPacketTryReplay returns before the production
- * execute, so nothing below runs on a hit, and the recorder tees
- * `state->texture_prepare_poly_fmt` -- the UNPATCHED value -- into the packet
- * before the begin-batch site the probe patches. Arms 1 and 2 then produce
+ * prebuilt GX list (the lean path; the packet recorder until 2026-10-05): the
+ * production execute never runs, and the list took
+ * `state->texture_prepare_poly_fmt` -- the UNPATCHED value -- before the
+ * begin-batch site the probe patches. Arms 1 and 2 then produce
  * BYTE-IDENTICAL frames, which reads exactly like "culling makes no
  * difference". Build the probe with NDS_R2_FIGHTER_PACKET=0. */
 #error "NDS_LAB_NO_CULL needs NDS_R2_FIGHTER_PACKET=0; a packet replay ignores every arm"
@@ -8046,7 +8044,7 @@ static void ndsEntryPacketCounters(const NDSRendererStats *stats, u32 *out)
 
 /* One packed command: a header word carries four opcodes and their parameters
  * follow in order. Every command recorded here takes a parameter, so no header
- * needs the zero-parameter dummy word (ndsFighterPacketCmd). */
+ * needs the zero-parameter dummy word (ndsFtrLeanPack). */
 static void ndsEntryPacketCmd(NDSEntryEffectPacketRecorder *rec, u32 opcode,
                               u32 param_count, u32 p0, u32 p1)
 {
@@ -8810,8 +8808,6 @@ static void __attribute__((noinline)) ndsRendererR2WriteLightVector(
     glLoadIdentity();
     GFX_LIGHT_VECTOR = NDS_R2_NORMAL_PACK((int)nx, (int)ny, (int)nz);
     glPopMatrix(1);
-    NDS_FIGHTER_PACKET_HOOK(ndsFighterPacketRecordLightVector(
-        NDS_R2_NORMAL_PACK((int)nx, (int)ny, (int)nz)));
     NDS_DIAG(gNdsR2LightVectorWrites++);
     sNdsR2LightVectorWritten = 1u;
 }
@@ -9069,7 +9065,6 @@ static void __attribute__((noinline)) ndsRendererR2OpenTintBatch(
     ndsRendererNativeBeginDirectBatch(stats, TRUE, tint, poly_fmt,
                                       matrix_generation);
     GFX_TEX_COORD = word;
-    NDS_FIGHTER_PACKET_HOOK(ndsFighterPacketRecordTexCoord(word, 0u));
 }
 #endif
 
@@ -9394,15 +9389,6 @@ ndsRendererNativeShadeProductionActions(
                            NDS_R2_SHADE_WITNESS_SLOTS].shade =
             diffuse | (ambient << 16);
         ndsRendererHardwareWriteDiffuseAmbient(diffuse | (ambient << 16));
-        /* A tinted site is recorded as the no-material raw light it wrote, so
-         * the replay's re-derivation (ndsFighterPacketApplyTint) produces the
-         * same word; the tile itself is in the packet's recorded bind. */
-        NDS_FIGHTER_PACKET_HOOK(
-            ndsFighterPacketRecordDiffuseAmbient(
-                diffuse | (ambient << 16),
-                stats->light_color_1, stats->light_color_2,
-                (tinted != 0u) ? 0u : material_color,
-                (tinted != 0u) ? 0u : use_material, tinted));
         (void)tinted;
         hardware_lit = TRUE;
     }
@@ -10900,26 +10886,6 @@ ndsRendererNativePrepareProductionRunCore(
     {
         ndsRendererR2BindTintTile(stats, tint);
     }
-    /* P2-2p8 Phase 1 slice 1: name the tint bind the prepare records. */
-    NDS_FIGHTER_PACKET_HOOK(
-        (sNdsFighterPacketRecorder.pending_tint = tint,
-         sNdsFighterPacketRecorder.pending_tint_rgb = sNdsR2EpochTintRgb));
-    NDS_FIGHTER_PACKET_HOOK(ndsFighterPacketRecordPrepare(
-        ((use_texture != FALSE) || (tint != 0u)) ? TRUE : FALSE,
-        state->texture_prepare_poly_fmt,
-        /* 0 none, 1 spherical, 2 linear: the group remembers its mapping. */
-        ((stats->geometry_mode & NDS_RENDERER_GEOM_TEXTURE_GEN) == 0u) ? 0u :
-        ((stats->geometry_mode & NDS_RENDERER_GEOM_TEXTURE_GEN_LINEAR) != 0u) ?
-            2u : 1u,
-        state->texture_prepare_scale_s,
-        state->texture_prepare_scale_t,
-        state->texture_prepare_origin_s,
-        state->texture_prepare_origin_t,
-        state->texture_prepare_offset,
-        /* The corners send GFX_NORMAL (GX texgen's input) exactly when the
-         * run lights. */
-        ((state->texture_prepare_poly_fmt & POLY_FORMAT_LIGHT0) != 0u) ?
-            1u : 0u));
     if ((hierarchy_run != NULL) && (policy->textured != 0u) &&
         (resolved_texture.entry == NULL))
     {
@@ -11416,174 +11382,6 @@ ndsRendererNativeEmitProductionCrossRun(
     }
 }
 
-#if NDS_FIGHTER_PACKET_LIVE && (NDS_TASK56_FIGHTER_PRIMITIVES >= 1)
-#if NDS_LAB_CULL_PROBE
-#error "NDS_R2_FIGHTER_PACKET does not carry the lab cull tint"
-#endif
-/* Record-frame twins of the two production emitters: the hardware receives
- * exactly the words the plain emitters push, and the packet receives the same
- * words packed. Main RAM on purpose -- they run only on the frame a packet is
- * (re)recorded. */
-static inline void ndsFighterPacketEmitCornerShade(u32 run_index, u32 dense_id)
-{
-#if NDS_R2_FIGHTER_HW_LIGHT
-    const NDSNativeRun *run = &sNdsNativeFighterActiveTables->runs[run_index];
-
-    if (ndsRendererNativeRunUsesVertexColor(run) != FALSE)
-    {
-        u32 color = sNdsNativeFighterActiveDenseNormals[dense_id];
-
-        ndsRendererHardwareWriteFighterColorWord(color);
-        ndsFighterPacketCmd1(FIFO_COLOR, color);
-        return;
-    }
-#if NDS_R2_UNLIT_VERTEX_EPOCH
-    if (sNdsR2EpochUnlitVertexColor != 0u)
-    {
-        u32 color = ndsRendererR2DenseVertexColor15(dense_id);
-
-        ndsRendererHardwareWriteFighterColorWord(color);
-        ndsFighterPacketCmd1(FIFO_COLOR, color);
-        return;
-    }
-#endif
-    {
-        u32 normal = sNdsNativeFighterActiveDenseNormals[dense_id];
-
-        ndsRendererHardwareWriteNormalWord(normal);
-        ndsFighterPacketCmd1(FIFO_NORMAL, normal);
-    }
-#else
-    {
-        u32 color =
-            sNdsNativeFighterActiveTables->prepared_dense[dense_id].packed_color;
-
-        ndsRendererHardwareWriteFighterColorWord(color);
-        ndsFighterPacketCmd1(FIFO_COLOR, color);
-    }
-#endif
-}
-
-static inline void ndsFighterPacketEmitCornerTail(
-    u32 dense_id,
-    const NDSNativePreparedDenseVertex *prepared,
-    u32 textured)
-{
-    if (textured != 0u)
-    {
-        u32 st = (u32)(u16)prepared->s | ((u32)(u16)prepared->t << 16);
-
-        ndsRendererHardwareWriteFighterTexCoordWord(st);
-        ndsFighterPacketRecordTexCoord(st, dense_id);
-    }
-    ndsRendererHardwareWriteFighterVertex16Words(
-        prepared->gx_xy, prepared->gx_z);
-    ndsFighterPacketCmd2(FIFO_VERTEX16, prepared->gx_xy, prepared->gx_z);
-}
-
-static void NDS_RENDERER_NATIVE_FIGHTER_MAIN_CODE
-ndsRendererNativeEmitProductionPrimitiveGroupsPacket(
-    u32 run_index,
-    u32 textured)
-{
-    u32 g = sNdsNativeFighterActiveTables->primitive_group_first[run_index];
-    u32 remaining_groups =
-        sNdsNativeFighterActiveTables->primitive_group_count[run_index];
-    u32 current_type = (u32)GL_TRIANGLE;
-
-    while (remaining_groups-- != 0u)
-    {
-        u32 gtype = sNdsNativeFighterActiveTables->primitive_group_type[g];
-        const u16 *vref = &sNdsNativeFighterActiveTables->primitive_vertices[
-            sNdsNativeFighterActiveTables->primitive_group_first_vertex[g]];
-        u32 remaining =
-            sNdsNativeFighterActiveTables->primitive_group_vertex_count[g];
-
-        g++;
-        if ((gtype != current_type) || (gtype != (u32)GL_TRIANGLE))
-        {
-            glBegin((GL_GLBEGIN_ENUM)gtype);
-            ndsFighterPacketCmd1(FIFO_BEGIN, gtype);
-            current_type = gtype;
-        }
-        while (remaining-- != 0u)
-        {
-            u32 dense_id = *vref++;
-
-            ndsFighterPacketEmitCornerShade(run_index, dense_id);
-            ndsFighterPacketEmitCornerTail(
-                dense_id,
-                &sNdsNativeFighterActiveTables->prepared_dense[dense_id],
-                textured);
-        }
-    }
-    if (current_type != (u32)GL_TRIANGLE)
-    {
-        glBegin(GL_TRIANGLE);
-        ndsFighterPacketCmd1(FIFO_BEGIN, (u32)GL_TRIANGLE);
-    }
-}
-
-static void NDS_RENDERER_NATIVE_FIGHTER_MAIN_CODE
-ndsRendererNativeEmitProductionCrossRunPacket(
-    u32 run_index,
-    u32 corner_count,
-    u32 textured,
-    u32 current_palette_slot,
-    const u8 *binding_palette_slots)
-{
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
-    u32 group = sNdsNativeFighterActiveTables->primitive_group_first[run_index];
-    const u16 *corner = &sNdsNativeFighterActiveTables->primitive_vertices[
-        sNdsNativeFighterActiveTables->primitive_group_first_vertex[group]];
-#else
-    const u16 *corner =
-        &sNdsNativeFighterActiveTables->packed_corners[
-            (u32)sNdsNativeFighterActiveTables->runs[run_index].first_triangle * 3u];
-#endif
-    u32 active_palette_slot = current_palette_slot;
-    u32 remaining = corner_count;
-
-    while (remaining-- != 0u)
-    {
-        u32 packed = *corner++;
-        u32 dense_id = packed & NDS_NATIVE_DENSE_ID_MASK;
-        const NDSNativeDenseVertex *dense =
-            &sNdsNativeFighterActiveTables->dense_vertices[dense_id];
-        u32 palette_slot;
-
-        if (binding_palette_slots != NULL)
-        {
-            palette_slot = binding_palette_slots[dense->matrix_binding];
-        }
-        else
-        {
-            palette_slot = packed >> NDS_NATIVE_PACKED_CORNER_MATRIX_SHIFT;
-        }
-        if (palette_slot == NDS_NATIVE_GX_MATRIX_CURRENT)
-        {
-            palette_slot = current_palette_slot;
-        }
-        if (palette_slot != active_palette_slot)
-        {
-            glRestoreMatrix((int)palette_slot);
-            ndsFighterPacketCmd1(REG2ID(MATRIX_RESTORE), palette_slot);
-            active_palette_slot = palette_slot;
-        }
-        ndsFighterPacketEmitCornerShade(run_index, dense_id);
-        ndsFighterPacketEmitCornerTail(
-            dense_id,
-            &sNdsNativeFighterActiveTables->prepared_dense[dense_id],
-            textured);
-    }
-    if (active_palette_slot != current_palette_slot)
-    {
-        glRestoreMatrix((int)current_palette_slot);
-        ndsFighterPacketCmd1(REG2ID(MATRIX_RESTORE), current_palette_slot);
-    }
-}
-#endif
-
 static inline void ndsRendererNativeAccountGXCrossTriangles(
     NDSRendererStats *stats,
     u32 triangle_count,
@@ -11672,125 +11470,6 @@ extern u16 gSYFramebufferSets[1][231][320];
 static u32 ndsFighterPacketMix(u32 hash, u32 value)
 {
     return (hash ^ value) * 16777619u;
-}
-
-/* Every input the packet's static words were derived from, cheap enough to
- * hash per fighter per frame: the adapter's material identity (live MObj keys
- * plus the colour modulate), the owner/costume/detail/instance key, the
- * generated program and arena generation, each root's display preamble minus
- * the patched light direction, each root's chain shape, and the texture cache
- * placement fences. */
-static void ndsFighterPacketBuildKey(
-    u32 texture_memo_owner_key,
-    u32 packet_key,
-    const NDSRendererNativeFighterRoot *inputs,
-    u32 input_count,
-    u32 *key)
-{
-    u32 preamble_hash = 2166136261u;
-    u32 shape_hash = 2166136261u;
-    u32 i;
-
-    for (i = 0u; i < input_count; i++)
-    {
-        const NDSRendererNativeFighterRoot *input = &inputs[i];
-        const NDSRendererNativeFighterPreamble *preamble = input->preamble;
-
-        preamble_hash = ndsFighterPacketMix(preamble_hash, input->root_offset);
-        preamble_hash = ndsFighterPacketMix(preamble_hash,
-                                            preamble->geometry_mode);
-        preamble_hash = ndsFighterPacketMix(preamble_hash,
-                                            preamble->cycle_type);
-        preamble_hash = ndsFighterPacketMix(preamble_hash,
-                                            preamble->render_mode);
-        /* prim_color and the colour modulate are deliberately NOT here: the
-         * shade sites re-derive their DIF_AMB words from them on replay. */
-        preamble_hash = ndsFighterPacketMix(preamble_hash,
-                                            preamble->env_color);
-        preamble_hash = ndsFighterPacketMix(preamble_hash, preamble->flags);
-        preamble_hash = ndsFighterPacketMix(
-            preamble_hash, input->config->initial_geometry_mode);
-        preamble_hash = ndsFighterPacketMix(preamble_hash,
-                                            input->material_count);
-        shape_hash = ndsFighterPacketMix(
-            shape_hash,
-            (u32)input->gx_parent_slot |
-                ((u32)input->gx_store_slot << 8) |
-                ((u32)input->gx_local_count << 16) |
-                ((u32)input->gx_seed_is_identity << 24) |
-                ((u32)input->gx_valid << 25));
-    }
-    /* The fighter tint tiles a packet may bind, or whose absence it recorded
-     * as fold words: see gNdsR2FighterTintSetGeneration. */
-    preamble_hash = ndsFighterPacketMix(preamble_hash,
-                                        gNdsR2FighterTintSetGeneration);
-    key[0] = packet_key;
-    key[1] = texture_memo_owner_key;
-    key[2] = (u32)(uintptr_t)sNdsNativeFighterActiveTables ^
-             (gNdsTaskmanHeapGeneration * 0x9E3779B1u);
-    key[3] = preamble_hash;
-    key[4] = shape_hash ^ (input_count << 26);
-    /* The global texture fence is only part of the key for a packet whose
-     * textures could not be validated individually (needs_fence). */
-    key[5] = sNdsRendererHardwareTextureKeyGeneration ^
-             (sNdsRendererRuntimeTextureCacheEvictCount << 16);
-}
-
-static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketNoteTextureEntry(void)
-{
-    NDSFighterPacketRecorder *rec = &sNdsFighterPacketRecorder;
-    NDSFighterPacket *packet = rec->packet;
-    const NDSRendererHardwareTextureCacheEntry *entry =
-        sNdsRendererHardwareActiveTextureEntry;
-    u32 slot;
-    u32 i;
-
-    if (packet == NULL)
-    {
-        return;
-    }
-    if (entry == NULL)
-    {
-        packet->needs_fence = 1u;
-        /* P2-2p8 Phase 1 slice 1: a tint-tile bind is validated per tile by
-         * the lean path; every other cause keeps needing the global fence. */
-        if ((rec->pending_tint == 0u) && (packet->fence_other < 0xffu))
-        {
-            packet->fence_other++;
-        }
-        return;
-    }
-    slot = (u32)(entry - sNdsRendererHardwareTextureCache);
-    if (slot >= NDS_RENDERER_HW_TEXTURE_CACHE_COUNT)
-    {
-        packet->needs_fence = 1u;
-        if (packet->fence_other < 0xffu)
-        {
-            packet->fence_other++;
-        }
-        return;
-    }
-    for (i = 0u; i < (u32)packet->texture_count; i++)
-    {
-        if (packet->textures[i].slot_plus1 == slot + 1u)
-        {
-            return;
-        }
-    }
-    if ((u32)packet->texture_count >= NDS_FIGHTER_PACKET_TEXTURE_MAX)
-    {
-        packet->needs_fence = 1u;
-        if (packet->fence_other < 0xffu)
-        {
-            packet->fence_other++;
-        }
-        return;
-    }
-    packet->textures[packet->texture_count].slot_plus1 = (u16)(slot + 1u);
-    packet->textures[packet->texture_count].name = (u16)entry->name;
-    packet->textures[packet->texture_count].key_generation =
-        entry->key_generation;
-    packet->texture_count++;
 }
 
 static s32 ndsFighterPacketTexturesResident(const NDSFighterPacket *packet)
@@ -11883,7 +11562,6 @@ ndsFighterPacketApplyTintPrims(NDSFighterPacket *packet, const u32 *prims,
         {
             if (packet->sites[i].reserved[0] != 0u)
             {
-                NDS_DIAG(gNdsFighterPacketTintRerecords++);
                 return FALSE;
             }
         }
@@ -11913,8 +11591,8 @@ ndsFighterPacketApplyTintPrims(NDSFighterPacket *packet, const u32 *prims,
             /* THE SAME CLAMP THE PRODUCTION PATH APPLIES (:7347), AND ITS ABSENCE
              * HERE WAS P04/K02/J01.
              *
-             * The word this function overwrites was recorded CLAMPED --
-             * ndsFighterPacketRecordDiffuseAmbient tees the post-clamp value. This
+             * The word this function overwrites was written CLAMPED -- the
+             * shade site holds the post-clamp value. This
              * re-derive rebuilt it from the frozen inputs and stopped one call
              * short, so the first tint move (damage flash, invincibility blink,
              * team colour) replaced a clamped word with an unclamped one and then
@@ -11949,24 +11627,6 @@ ndsFighterPacketApplyTintPrims(NDSFighterPacket *packet, const u32 *prims,
     packet->tint_modulate = modulate;
     packet->tint_prim_hash = prim_hash;
     return TRUE;
-}
-
-static s32 ndsFighterPacketApplyTint(
-    NDSFighterPacket *packet, const NDSRendererNativeFighterRoot *inputs)
-{
-    u32 prims[NDS_FIGHTER_PACKET_ROOT_MAX];
-    u32 i;
-
-    if (packet->root_count > NDS_FIGHTER_PACKET_ROOT_MAX)
-    {
-        return FALSE;
-    }
-    for (i = 0u; i < packet->root_count; i++)
-    {
-        prims[i] = inputs[i].preamble->prim_color;
-    }
-    return ndsFighterPacketApplyTintPrims(
-        packet, prims, inputs[0].config->color_modulate);
 }
 
 /* ndsRendererR2WriteLightVector's normalisation, same hardware units.
@@ -12084,7 +11744,6 @@ static s32 ndsFighterPacketPatchTexgen(
     u32 input_count)
 {
     const LookAt *look_at;
-    const NDSFighterPacketTexgenSite *sites_overflow;
     const NDSRendererMatrix20p12 *directions_for = NULL;
     NDSNativeTexgenDirectionQ15 lookat_x = { 0, 0, 0 };
     NDSNativeTexgenDirectionQ15 lookat_y = { 0, 0, 0 };
@@ -12094,8 +11753,8 @@ static s32 ndsFighterPacketPatchTexgen(
     {
         return TRUE;
     }
-    if ((packet->texgen_group_count > NDS_FIGHTER_PACKET_ALL_TEXGEN_GROUPS) ||
-        (packet->texgen_site_count > NDS_FIGHTER_PACKET_ALL_TEXGEN_SITES) ||
+    if ((packet->texgen_group_count > NDS_FIGHTER_PACKET_TEXGEN_GROUP_MAX) ||
+        (packet->texgen_site_count > NDS_FIGHTER_PACKET_TEXGEN_SITE_MAX) ||
         (sNdsNativeFighterActiveTables == NULL))
     {
         return FALSE;
@@ -12105,37 +11764,26 @@ static s32 ndsFighterPacketPatchTexgen(
     {
         return FALSE;
     }
-    /* P2-6 (2026-10-01): the overflow sites' base is resolved once, the
-     * lookat directions are reused while consecutive groups share a root's
-     * modelview, and the unique-normal cache is searched newest first -- a
-     * strip's next corner is almost always one of the last two seen (Race:
-     * this patch was the largest single cost of its over-gate frames). */
-    {
-        const u32 slot = ndsFighterPacketSlotOf(packet);
-
-        sites_overflow = (slot < NDS_FIGHTER_PACKET_SLOTS) ?
-            sNdsFighterPacketXSites[slot] : NULL;
-    }
+    /* P2-6 (2026-10-01): the lookat directions are reused while consecutive
+     * groups share a root's modelview, and the unique-normal cache is searched
+     * newest first -- a strip's next corner is almost always one of the last
+     * two seen (Race: this patch was the largest single cost of its over-gate
+     * frames). */
     for (group_index = 0u;
          group_index < (u32)packet->texgen_group_count;
          group_index++)
     {
         const NDSFighterPacketTexgenGroup *group =
-            ndsFighterPacketTexgenGroupAt(packet, group_index);
+            &packet->texgen_groups[group_index];
         u32 first_site;
         u32 site_end;
         u32 site_index;
 
-        if (group == NULL)
-        {
-            return FALSE;
-        }
         first_site = group->first_site;
         site_end = first_site + group->site_count;
         if (((u32)group->root >= input_count) ||
             (inputs[group->root].modelview_matrix == NULL) ||
-            (site_end > (u32)packet->texgen_site_count) ||
-            (site_end > NDS_FIGHTER_PACKET_ALL_TEXGEN_SITES))
+            (site_end > (u32)packet->texgen_site_count))
         {
             return FALSE;
         }
@@ -12202,22 +11850,10 @@ static s32 ndsFighterPacketPatchTexgen(
 
             for (site_index = first_site; site_index < site_end; site_index++)
             {
-                const NDSFighterPacketTexgenSite *site;
+                const NDSFighterPacketTexgenSite *site =
+                    &packet->texgen_sites[site_index];
                 u32 dense_id;
 
-                if (site_index < NDS_FIGHTER_PACKET_TEXGEN_SITE_MAX)
-                {
-                    site = &packet->texgen_sites[site_index];
-                }
-                else if (sites_overflow != NULL)
-                {
-                    site = &sites_overflow[
-                        site_index - NDS_FIGHTER_PACKET_TEXGEN_SITE_MAX];
-                }
-                else
-                {
-                    return FALSE;
-                }
                 dense_id = site->dense_id;
                 if (dense_id != last_dense)
                 {
@@ -12289,234 +11925,6 @@ static u32 ndsFighterPacketTexgenBaseWord(u32 scale_s, u32 scale_t,
 }
 #endif
 
-static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketAbortRecord(void)
-{
-    NDSFighterPacketRecorder *rec = &sNdsFighterPacketRecorder;
-
-    sNdsFighterPacketRecording = 0u;
-    if (rec->packet != NULL)
-    {
-        rec->packet->valid = 0u;
-    }
-    NDS_DIAG(gNdsFighterPacketFaults++);
-}
-
-/* Slice 4: route 1 lends a battle slot's lower half to a lean list. */
-static u32 ndsFtrLeanLowerOwned(u32 battle_slot);
-/* Route 1: the slot's lean state holds no list in any entry, under the
- * identity map, so neither half of its region carries lean words. */
-static u32 ndsFtrLeanSlotHoldsNoList(u32 battle_slot);
-#if NDS_FTR_LEAN_ORACLE_ROUTES
-/* P2-2p8 Phase 1 slice 1 (defined after ndsRendererFighterPacketRelease):
- * the oracle routes' hooks on every record and replay hit. Slice 6: lab only
- * (NDS_FTR_LEAN_ORACLE_ROUTES) -- the shipping image arms no shadow draw. */
-static void ndsFtrLeanOnRecorded(NDSFighterPacket *packet);
-static void ndsFtrLeanOracleCompare(u32 battle_slot,
-                                    const NDSFighterPacket *packet);
-static void ndsFtrLeanOnReplayHit(u32 battle_slot,
-                                  const NDSFighterPacket *packet);
-#endif
-
-static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketFinishRecord(
-    u32 run_count,
-    u32 triangle_count,
-    u32 raw_triangles,
-    u32 raw_reuse,
-    u32 cross_triangles,
-    u32 cross_reuse)
-{
-    NDSFighterPacketRecorder *rec = &sNdsFighterPacketRecorder;
-    NDSFighterPacket *packet = rec->packet;
-    u32 i;
-
-    sNdsFighterPacketRecording = 0u;
-    if (packet == NULL)
-    {
-        return;
-    }
-    if (rec->hw_texgen != 0u)
-    {
-        /* The last run was GX texgen: leave the identity texture matrix. */
-        ndsFighterPacketRecordTexIdentity();
-    }
-    for (i = 0u; i < 4u; i++)
-    {
-        if (rec->need[i] > gNdsFighterPacketNeedMax[i])
-        {
-            gNdsFighterPacketNeedMax[i] = rec->need[i];
-        }
-    }
-    if ((rec->fault == 0u) && (rec->header_valid != 0u) &&
-        (rec->header_params == 0u))
-    {
-        if (rec->count < rec->capacity)
-        {
-            rec->words[rec->count++] = 0u;
-        }
-        else
-        {
-            rec->fault = NDS_FIGHTER_PACKET_FAULT_CAPACITY;
-        }
-    }
-    if ((rec->fault != 0u) || (rec->count == 0u))
-    {
-        packet->valid = 0u;
-        NDS_DIAG(gNdsFighterPacketFaults++);
-        NDS_DIAG(gNdsFighterPacketFaultWhy[(rec->fault < 8u) ? rec->fault : 0u]++);
-        return;
-    }
-    packet->word_count = rec->count;
-    if (packet->needs_fence == 0u)
-    {
-        packet->key[5] = 0u;
-    }
-    packet->run_count = run_count;
-    packet->triangle_count = triangle_count;
-    packet->raw_triangles = raw_triangles;
-    packet->raw_reuse = raw_reuse;
-    packet->cross_triangles = cross_triangles;
-    packet->cross_reuse = cross_reuse;
-#if NDS_RENDERER_FRAME_SUMMARY_COUNTERS
-    {
-        /* The raw/cross credits add `reuse` to both reuse counters on a hit
-         * as they did during this record, so the stored residual excludes
-         * them (clamped: the window cannot accrue less than it credited). */
-        u32 credited = raw_reuse + cross_reuse;
-        u32 reuse = sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count -
-            sNdsFighterPacketRecordBase[1];
-        u32 prepare_reuse =
-            sNdsRendererRuntimeFrameSummary.texture_prepare_reuse_count -
-            sNdsFighterPacketRecordBase[4];
-
-        packet->batch_begin =
-            sNdsRendererRuntimeFrameSummary.hardware_batch_begin_count -
-            sNdsFighterPacketRecordBase[0];
-        packet->batch_reuse = (reuse > credited) ? (reuse - credited) : 0u;
-        packet->batch_end =
-            sNdsRendererRuntimeFrameSummary.hardware_batch_end_count -
-            sNdsFighterPacketRecordBase[2];
-        packet->prepare_begin =
-            sNdsRendererRuntimeFrameSummary.texture_prepare_count -
-            sNdsFighterPacketRecordBase[3];
-        packet->prepare_reuse =
-            (prepare_reuse > credited) ? (prepare_reuse - credited) : 0u;
-        packet->matrix_loads =
-            sNdsRendererRuntimeFrameSummary.matrix_load_count -
-            sNdsFighterPacketRecordBase[5];
-        packet->texture_binds =
-            sNdsRendererRuntimeFrameSummary.texture_binds -
-            sNdsFighterPacketRecordBase[6];
-    }
-#else
-    packet->batch_begin = 0u;
-    packet->batch_reuse = 0u;
-    packet->batch_end = 0u;
-    packet->prepare_begin = 0u;
-    packet->prepare_reuse = 0u;
-    packet->matrix_loads = 0u;
-    packet->texture_binds = 0u;
-#endif
-    /* The dense-vertex walk counts one source vertex load per vertex word
-     * it emits; the replay emits the same words. */
-    packet->vertex_loads = sNdsRendererHardwareSourceVertexLoadCount -
-        sNdsFighterPacketRecordBase[7];
-    DC_FlushRange(packet->words, packet->word_count * sizeof(u32));
-    if (packet->word_count > gNdsFighterPacketWordsMax)
-    {
-        gNdsFighterPacketWordsMax = packet->word_count;
-    }
-    packet->valid = 1u;
-#if NDS_FTR_LEAN_ORACLE_ROUTES
-    ndsFtrLeanOnRecorded(packet);
-#endif
-}
-
-/* The hit predicate, shared by the replay and the adapter's pre-check so the
- * two can never disagree about a frame. */
-static s32 ndsFighterPacketMatches(
-    const NDSFighterPacket *packet, const u32 *key, u32 input_count)
-{
-    u32 fence = (packet->needs_fence != 0u) ? key[5] : 0u;
-
-    return ((packet->valid != 0u) && (packet->root_count == input_count) &&
-            (packet->key[0] == key[0]) && (packet->key[1] == key[1]) &&
-            (packet->key[2] == key[2]) && (packet->key[3] == key[3]) &&
-            (packet->key[4] == key[4]) && (packet->key[5] == fence) &&
-            (ndsFighterPacketTexturesResident(packet) != FALSE)) ? TRUE : FALSE;
-}
-
-/* P2-2p4. The adapter asks before it prepares materials: on a hit the replay
- * reads none of them, and the material rows, snapshots and validation were
- * 48K ticks a frame of work whose only consumer was the record path. The
- * answer is exact because the replay evaluates the same predicate on the same
- * inputs a moment later. */
-s32 ndsRendererFighterPacketPrecheck(
-    u32 slot,
-    u32 use_low_detail,
-    u32 texture_memo_owner_key,
-    u32 packet_key,
-    const NDSRendererNativeFighterRoot *inputs,
-    u32 input_count)
-{
-    u32 battle_slot = (texture_memo_owner_key >> 9) & 3u;
-    NDSFighterPacket *packet = &sNdsFighterPackets[battle_slot];
-    u32 key[NDS_FIGHTER_PACKET_KEY_WORDS];
-
-#if NDS_RENDERER_FRAME_SUMMARY_COUNTERS
-    /* Window start for a record this frame: everything the slot's draw
-     * accrues from here to the finish is what a replay hit skips. */
-    sNdsFighterPacketRecordBase[0] =
-        sNdsRendererRuntimeFrameSummary.hardware_batch_begin_count;
-    sNdsFighterPacketRecordBase[1] =
-        sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count;
-    sNdsFighterPacketRecordBase[2] =
-        sNdsRendererRuntimeFrameSummary.hardware_batch_end_count;
-    sNdsFighterPacketRecordBase[3] =
-        sNdsRendererRuntimeFrameSummary.texture_prepare_count;
-    sNdsFighterPacketRecordBase[4] =
-        sNdsRendererRuntimeFrameSummary.texture_prepare_reuse_count;
-    sNdsFighterPacketRecordBase[5] =
-        sNdsRendererRuntimeFrameSummary.matrix_load_count;
-    sNdsFighterPacketRecordBase[6] =
-        sNdsRendererRuntimeFrameSummary.texture_binds;
-#endif
-    sNdsFighterPacketRecordBase[7] = sNdsRendererHardwareSourceVertexLoadCount;
-#if NDS_P2_CAPTAIN
-    /* Keep packet eligibility identical to replay. Captain HIGH changes alpha
-     * test state outside the recorded FIFO stream, so it can never be a
-     * prechecked replay hit. (Slice 6, lab: the lean oracle routes record and
-     * replay it -- the reference for its lean list; see TryReplay.) */
-    if ((slot == 4u) && (use_low_detail == 0u)
-#if NDS_FTR_LEAN_ORACLE_ROUTES
-        && (gNdsFtrLeanRoute < NDS_FTR_LEAN_ROUTE_ORACLE_EXACT)
-#endif
-        )
-    {
-        return FALSE;
-    }
-#endif
-    if ((inputs == NULL) || (input_count == 0u) ||
-        (input_count > NDS_FIGHTER_PACKET_ROOT_MAX) ||
-        (ndsRendererNativeSelectFighterRuntimeTables(
-             slot, use_low_detail) == FALSE))
-    {
-        return FALSE;
-    }
-    ndsFighterPacketBuildKey(texture_memo_owner_key, packet_key,
-                             inputs, input_count, key);
-    if (ndsFighterPacketMatches(packet, key, input_count) == FALSE)
-    {
-        return FALSE;
-    }
-    /* A predicted hit lets the adapter skip every material row for this draw,
-     * so it must also prove any live texgen words can be refreshed. */
-    if (ndsFighterPacketPatchTexgen(packet, inputs, input_count) == FALSE)
-    {
-        return FALSE;
-    }
-    return TRUE;
-}
-
 /* A fighter packet sets TEXIMAGE_PARAM / PLTT_BASE behind libnds. Forget
  * libnds's active names too, or a later glBindTexture of the name it still
  * holds returns without writing the registers and draws with the packet's
@@ -12526,375 +11934,6 @@ static void __attribute__((noinline)) ndsRendererForgetLibndsTexture(void)
 {
     glGlobalData.activeTexture = 0;
     glGlobalData.activePalette = 0;
-}
-
-/* The per-frame path. A hit patches the moving words, flushes, DMAs the
- * packet and leaves every CPU-side GX tracker invalidated so the next writer
- * re-issues its state. A miss arms a record into the slot's arena region and
- * resets the same trackers, so the record frame's first root writes -- and
- * the packet captures -- every word a self-contained replay needs. Returns 1
- * on a hit, 0 when the caller must run the ordinary path. */
-static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
-    u32 owner_slot,
-    u32 use_low_detail,
-    u32 texture_memo_owner_key,
-    u32 packet_key,
-    u32 prechecked,
-    const NDSRendererNativeFighterRoot *inputs,
-    u32 input_count,
-    NDSRendererStats *stats,
-    u32 *out_hardware_started)
-{
-    u32 battle_slot = (texture_memo_owner_key >> 9) & 3u;
-    NDSFighterPacket *packet = &sNdsFighterPackets[battle_slot];
-    NDSFighterPacketRecorder *rec = &sNdsFighterPacketRecorder;
-    u32 key[NDS_FIGHTER_PACKET_KEY_WORDS];
-    u32 region_words;
-    u32 region_base;
-    u32 i;
-
-    sNdsFighterPacketRecording = 0u;
-    rec->packet = NULL;
-#if NDS_P2_CAPTAIN
-    /* Captain HIGH is the only generated Captain detail containing source
-     * G_SETOTHERMODE_L / G_AC_THRESHOLD plus G_SETBLENDCOLOR. Alpha-test
-     * enable/reference are DS register state, not geometry-FIFO commands, so a
-     * FIFO-only packet cannot replay that HIGH-detail cutout epoch faithfully.
-     *
-     * BattleShip selects LOW detail for 3+ fighters. The source-derived LOW
-     * program contains zero 0xe2 (SETOTHERMODE_L) and zero 0xf9
-     * (SETBLENDCOLOR) deltas -- the owner generator records this distinction
-     * explicitly, and its Captain comment names HIGH as the first detail to
-     * contain either opcode. LOW therefore has no out-of-FIFO alpha register
-     * state to preserve, and may use the same packet replay contract as the
-     * other low-detail fighters. Keep only HIGH on the direct path.
-     *
-     * Slice 6 (lab): the lean oracle routes (2/3) record and replay it too,
-     * as the reference the route compares Captain HIGH's lean list against:
-     * its cutout's reference is 0, which decides no DS pixel (see the lean
-     * materializer's threshold rule), so the FIFO-only packet draws what the
-     * direct path draws. */
-    if ((owner_slot == 4u) &&
-        (use_low_detail == 0u)
-#if NDS_FTR_LEAN_ORACLE_ROUTES
-        && (gNdsFtrLeanRoute < NDS_FTR_LEAN_ROUTE_ORACLE_EXACT)
-#endif
-        )
-    {
-        NDS_DIAG(gNdsFighterPacketDeclines++);
-        return 0;
-    }
-#endif
-#if !NDS_P2_CAPTAIN
-    (void)owner_slot;
-#endif
-    if ((input_count == 0u) || (input_count > NDS_FIGHTER_PACKET_ROOT_MAX))
-    {
-        NDS_DIAG(gNdsFighterPacketDeclines++);
-        return 0;
-    }
-    /* The adapter precheck evaluates this packet against these exact inputs
-     * immediately before execute. A predicted hit has already checked the full
-     * key, texture slot/name/generation residency and live texgen patch. No
-     * renderer mutation occurs between that proof and this call. Consume it
-     * directly instead of rebuilding the same key and texgen work. */
-    if (prechecked != 0u)
-    {
-        /* Fail safe if a future caller breaks the immediate-handoff contract.
-         * Do not arm a recorder here; the caller will run whole-owner preflight
-         * and retry through the ordinary replay/miss path. */
-        if ((packet->valid == 0u) || (packet->root_count != input_count))
-        {
-            NDS_DIAG(gNdsFighterPacketDeclines++);
-            return 0;
-        }
-    }
-    else
-    {
-        ndsFighterPacketBuildKey(texture_memo_owner_key, packet_key,
-                                 inputs, input_count, key);
-    }
-    if ((prechecked != 0u) ||
-        (ndsFighterPacketMatches(packet, key, input_count) != FALSE))
-    {
-        u32 *words = packet->words;
-
-        if ((prechecked == 0u) &&
-            (ndsFighterPacketPatchTexgen(packet, inputs, input_count) == FALSE))
-        {
-            /* The adapter precheck normally catches this before materials are
-             * skipped.  Direct callers still fail closed here: discard the
-             * stale packet and let the ordinary native owner draw this frame. */
-            packet->valid = 0u;
-            NDS_DIAG(gNdsFighterPacketDeclines++);
-            return 0;
-        }
-        if (packet->texgen_group_count != 0u)
-        {
-            NDS_DIAG(gNdsFighterPacketTexgenPatches++);
-        }
-        ndsFighterPacketTouchTextures(packet);
-        if (ndsFighterPacketApplyTint(packet, inputs) == FALSE)
-        {
-            packet->valid = 0u;
-            NDS_DIAG(gNdsFighterPacketDeclines++);
-            NDS_FTR_LEAN_CTR(gNdsFtrLean.tint_rerecords[battle_slot & 3u]++);
-            return 0;
-        }
-        if (packet->projection_index != NDS_FIGHTER_PACKET_INDEX_NONE)
-        {
-            ndsFighterPacketStoreMatrix4x4(
-                &words[packet->projection_index],
-                inputs[0].projection_matrix);
-        }
-        for (i = 0u; i < input_count; i++)
-        {
-            const NDSRendererNativeFighterRoot *input = &inputs[i];
-            const NDSFighterPacketRoot *root = &packet->roots[i];
-            u32 j;
-
-            if (input->gx_valid != 0u)
-            {
-                if (root->seed_index != NDS_FIGHTER_PACKET_INDEX_NONE)
-                {
-                    ndsFighterPacketStoreMatrix4x4(
-                        &words[root->seed_index], input->gx_seed);
-                }
-                for (j = 0u; j < (u32)root->local_count; j++)
-                {
-                    if (root->local_index[j] != NDS_FIGHTER_PACKET_INDEX_NONE)
-                    {
-                        ndsFighterPacketStoreMatrix4x3(
-                            &words[root->local_index[j]], &input->gx_locals[j]);
-                    }
-                }
-            }
-            else
-            {
-                /* Split-matrix packets use the same fixed root patch table:
-                 * local_index[0] carries this root's live projection and
-                 * seed_index its live world-scaled modelview.  gx_valid is in
-                 * the packet shape key, so a GX-chain packet can never be
-                 * interpreted as this layout (or vice versa). */
-                if (root->local_index[0] != NDS_FIGHTER_PACKET_INDEX_NONE)
-                {
-                    ndsFighterPacketStoreMatrix4x4(
-                        &words[root->local_index[0]], input->projection_matrix);
-                }
-                if (root->seed_index != NDS_FIGHTER_PACKET_INDEX_NONE)
-                {
-                    ndsFighterPacketStoreSplitModelview(
-                        &words[root->seed_index], input->modelview_matrix);
-                }
-            }
-        }
-        if ((packet->light_index != NDS_FIGHTER_PACKET_INDEX_NONE) &&
-            (packet->light_valid != 0u) &&
-            ((u32)packet->light_root < input_count))
-        {
-            const NDSRendererNativeFighterPreamble *preamble =
-                inputs[packet->light_root].preamble;
-
-            if ((preamble->flags &
-                 NDS_RENDERER_NATIVE_PREAMBLE_LIGHT_VALID) != 0u)
-            {
-                words[packet->light_index] = ndsFighterPacketLightWord(
-                    preamble->light_dir_x, preamble->light_dir_y,
-                    preamble->light_dir_z);
-            }
-        }
-#if NDS_FTR_LEAN_ORACLE_ROUTES
-        ndsFtrLeanOnReplayHit(battle_slot, packet);
-#endif
-        DC_FlushRange(words, packet->word_count * sizeof(u32));
-
-        ndsRendererHardwareEndBatch();
-        glEnable(GL_TEXTURE_2D);
-        glDisable(GL_ALPHA_TEST);
-        glDisable(GL_FOG);
-        while ((DMA_CR(0) & DMA_BUSY) != 0u) { }
-        DMA_SRC(0) = (u32)(uintptr_t)words;
-        DMA_DEST(0) = (u32)(uintptr_t)&GFX_FIFO;
-        DMA_CR(0) = DMA_FIFO | packet->word_count;
-        /* Not waited here: the next FIFO writer waits (P2-2p3). */
-        sNdsFighterPacketDmaPending = 1u;
-
-        ndsRendererHardwareInvalidateGXState(NDS_RENDERER_GX_STATE_ALL);
-        sNdsRendererHardwareBoundTextureName = 0u;
-        ndsRendererForgetLibndsTexture();
-        sNdsRendererHardwareActiveTextureEntry = NULL;
-        sNdsR2GxLastProjection = NULL;
-        sNdsRendererHardwareMatrixMode =
-            NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED;
-        sNdsRendererHardwareMatrixGeneration = ndsRendererNextMatrixGeneration();
-        sNdsRendererHardwareMatrixLoaded = FALSE;
-
-        if (stats->first_opcode == 0u)
-        {
-            stats->first_opcode = NDS_RENDERER_OP_RDPPIPESYNC;
-        }
-        if (packet->raw_triangles != 0u)
-        {
-            ndsRendererFastAccountRawTriangles(
-                stats, packet->raw_triangles, packet->raw_reuse);
-        }
-        if (packet->cross_triangles != 0u)
-        {
-            ndsRendererNativeAccountGXCrossTriangles(
-                stats, packet->cross_triangles, packet->cross_reuse);
-        }
-#if NDS_RENDERER_FRAME_SUMMARY_COUNTERS
-        /* The replayed stream carries the record frame's BEGIN/END pairs and
-         * texture binds verbatim; credit them as the record frame did. */
-        sNdsRendererRuntimeFrameSummary.hardware_batch_begin_count +=
-            packet->batch_begin;
-        sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count +=
-            packet->batch_reuse;
-        sNdsRendererRuntimeFrameSummary.hardware_batch_end_count +=
-            packet->batch_end;
-        sNdsRendererRuntimeFrameSummary.texture_prepare_count +=
-            packet->prepare_begin;
-        sNdsRendererRuntimeFrameSummary.texture_prepare_reuse_count +=
-            packet->prepare_reuse;
-        sNdsRendererRuntimeFrameSummary.matrix_load_count +=
-            packet->matrix_loads;
-        sNdsRendererRuntimeFrameSummary.texture_binds +=
-            packet->texture_binds;
-#endif
-        sNdsRendererHardwareSourceVertexLoadCount += packet->vertex_loads;
-        stats->triangle_count += packet->triangle_count;
-        sNdsRendererFastRunCount += packet->run_count;
-        sNdsRendererFastTriangleCount += packet->triangle_count;
-        if ((u32)sNdsRendererRuntimeOwner <
-            (u32)NDS_RENDERER_PROFILE_OWNER_COUNT)
-        {
-            sNdsRendererFastOwnerTriangleCount[
-                (u32)sNdsRendererRuntimeOwner] += packet->triangle_count;
-        }
-        *out_hardware_started = TRUE;
-        gNdsFighterPacketHits++;
-        return 1;
-    }
-
-    /* Miss: arm a record into this slot's fixed quarter of the shared arena.
-     * Presentation detail decides what gets recorded, not where the packet
-     * lives: PlayersVS keeps source HIGH detail with four simultaneous preview
-     * slots, so every battle slot needs an independent resident packet. */
-    if (packet->valid != 0u)
-    {
-        /* Which key words moved, for the churn census: a stale packet that
-         * re-records every frame costs the record path, not the replay. */
-        for (i = 0u; i < NDS_FIGHTER_PACKET_KEY_WORDS; i++)
-        {
-            u32 want = ((i == 5u) && (packet->needs_fence == 0u)) ? 0u : key[i];
-
-            if (packet->key[i] != want)
-            {
-                NDS_DIAG(gNdsFighterPacketMissWord[i]++);
-            }
-        }
-        if (packet->root_count != input_count)
-        {
-            NDS_DIAG(gNdsFighterPacketMissWord[NDS_FIGHTER_PACKET_KEY_WORDS]++);
-        }
-        if (ndsFighterPacketTexturesResident(packet) == FALSE)
-        {
-            NDS_DIAG(gNdsFighterPacketMissWord[NDS_FIGHTER_PACKET_KEY_WORDS + 1u]++);
-        }
-    }
-    packet->valid = 0u;
-    /* P2-2p8 Phase 1 slice 4: route 1 lent this slot's lower half to a lean
-     * list, so there is nowhere to record: the owner draws direct (the lean
-     * path declined this draw, which it counts and names). */
-    if (ndsFtrLeanLowerOwned(battle_slot) != FALSE)
-    {
-        NDS_DIAG(gNdsFighterPacketDeclines++);
-        return 0;
-    }
-    /* battle_slot is the adapter's source-player slot in key bits 10:9.  The
-     * adapter rejects slots outside GMCOMMON_PLAYERS_MAX before packing it and
-     * both packet seams decode those two bits with &3.  The arena is therefore
-     * four fixed, equal regions; there is no runtime partition-end condition to
-     * test here.  A packet that actually outgrows its region is detected by the
-     * recorder's count/capacity checks and reported through PacketFaults. */
-    region_words = NDS_FIGHTER_PACKET_REGION_WORDS;
-    region_base = battle_slot * region_words;
-    /* P2-2p8 Phase 1 slice 1: while the lean route is live the upper half of
-     * the region holds the lean copy, so the recorder owns the lower half. A
-     * packet that no longer fits faults cleanly (gNdsFighterPacketFaults).
-     *
-     * Route 1 lends the whole region when the slot holds no lean list: a
-     * fighter the lean path never admits (1P's Master Hand, whose packet
-     * needs 7,609 words of the half's 4,420) faulted every record and drew
-     * through production every frame, ~150K ticks. A lean claim in the slot
-     * retires the wide packet before writing (ndsFtrLeanMaterialize). */
-    if ((gNdsFtrLeanRoute != 0u) &&
-        ((gNdsFtrLeanRoute != NDS_FTR_LEAN_ROUTE_DRAW) ||
-         (ndsFtrLeanSlotHoldsNoList(battle_slot) == FALSE)))
-    {
-        region_words /= 2u;
-    }
-    for (i = 0u; i < NDS_FIGHTER_PACKET_KEY_WORDS; i++)
-    {
-        packet->key[i] = key[i];
-    }
-    packet->words = (u32 *)(void *)&gSYFramebufferSets[0][0][0] + region_base;
-    packet->word_capacity = region_words;
-    packet->word_count = 0u;
-    packet->root_count = input_count;
-    packet->projection_index = NDS_FIGHTER_PACKET_INDEX_NONE;
-    packet->light_index = NDS_FIGHTER_PACKET_INDEX_NONE;
-    packet->light_root = 0u;
-    packet->light_valid = 0u;
-    packet->needs_fence = 0u;
-    packet->texture_count = 0u;
-    packet->site_count = 0u;
-    packet->texgen_group_count = 0u;
-    packet->texgen_site_count = 0u;
-    packet->tint_bind_count = 0u;
-    packet->tint_bind_overflow = 0u;
-    packet->tint_bind_seen = 0u;
-    packet->fence_other = 0u;
-    packet->tint_modulate = inputs[0].config->color_modulate;
-    packet->tint_prim_hash = 2166136261u;
-    for (i = 0u; i < input_count; i++)
-    {
-        packet->tint_prim_hash = ndsFighterPacketMix(
-            packet->tint_prim_hash, inputs[i].preamble->prim_color);
-    }
-    rec->packet = packet;
-    rec->inputs = inputs;
-    rec->prim_overridden = 0u;
-    rec->words = packet->words;
-    rec->count = 0u;
-    rec->capacity = packet->word_capacity;
-    rec->cmd_slot = 4u;
-    rec->cmd_word = 0u;
-    rec->header_params = 0u;
-    rec->header_valid = 0u;
-    rec->fault = 0u;
-    rec->current_root = 0u;
-    rec->texgen_group = NDS_FIGHTER_PACKET_TEXGEN_GROUP_NONE;
-    rec->pending_tint = 0u;
-    rec->pending_tint_rgb = 0u;
-    rec->in_texgen = 0u;
-    rec->x_reserved = 0u;
-    rec->hw_texgen = 0u;
-    rec->tex_param_or = 0u;
-    for (i = 0u; i < 4u; i++)
-    {
-        rec->need[i] = 0u;
-    }
-    /* Self-contained stream: forget every GX tracker so the first root
-     * re-issues -- and the packet captures -- its matrix mode, texture and
-     * polygon attributes. */
-    ndsRendererHardwareEndBatch();
-    ndsRendererHardwareInvalidateGXState(NDS_RENDERER_GX_STATE_ALL);
-    sNdsRendererHardwareBoundTextureName = 0u;
-    sNdsRendererHardwareActiveTextureEntry = NULL;
-    sNdsFighterPacketRecording = 1u;
-    NDS_DIAG(gNdsFighterPacketRecords++);
-    return 0;
 }
 
 void ndsRendererFighterPacketDmaWait(void)
@@ -12908,13 +11947,10 @@ void ndsRendererFighterPacketInvalidateAll(void)
 
     /* A preview/costume rebuild happens on the update side, normally between
      * draws, but wait anyway: the borrowed arena must not be considered free
-     * for a new recording while DMA0 can still be consuming an old stream. */
+     * for a new list while DMA0 can still be consuming an old one. */
     ndsFighterPacketDmaWait();
-    sNdsFighterPacketRecording = 0u;
-    sNdsFighterPacketRecorder.packet = NULL;
     for (i = 0u; i < NDS_FIGHTER_PACKET_SLOTS; i++)
     {
-        sNdsFighterPackets[i].valid = 0u;
         ndsFtrLeanPacketDrop(i);
     }
 }
@@ -12930,16 +11966,11 @@ void ndsRendererFighterPacketInvalidateSlot(u32 slot)
      * honor the packet arena's DMA lifetime before making one region reusable;
      * a future caller reaching this seam earlier must not race DMA0. */
     ndsFighterPacketDmaWait();
-    sNdsFighterPacketRecording = 0u;
-    sNdsFighterPacketRecorder.packet = NULL;
-    sNdsFighterPackets[slot].valid = 0u;
-    /* The recorder's packet is keyed by MObj address, so a rebuilt DObj/MObj
-     * graph re-records it; a lean list is keyed by content (the material
-     * rows, the roots' display fields, the owner file and the heap
-     * generation), so the fighter's lists stay valid and the next draw's
-     * event path re-selects one by key (P2-2p8 Phase 1 slice 4: DK's and
-     * Samus's model-part swaps re-materialized every list they held). */
-    ndsFtrLeanPacketRebind(slot);
+    /* A lean list is keyed by content (the material rows, the roots' display
+     * fields, the owner file and the heap generation), so the fighter's lists
+     * stay valid and the next draw's event path re-selects one by key (P2-2p8
+     * Phase 1 slice 4: DK's and Samus's model-part swaps re-materialized every
+     * list they held). */
 }
 
 void ndsRendererFighterPacketRelease(void)
@@ -13081,7 +12112,6 @@ typedef struct NDSFtrLeanSlotState
 {
     NDSFtrLeanEntryState entry[NDS_FTR_LEAN_ENTRIES + 1u]; /* [2] the spare */
     u32 active;                 /* entry index, NDS_FTR_LEAN_ENTRY_NONE */
-    u32 armed;
     u32 kind;                   /* counters' kind index, NONE = unknown */
     u32 lower_owned;            /* route 1: entry 0 holds a lean list */
     u32 *spare_buf;             /* general heap, this heap generation */
@@ -13150,25 +12180,8 @@ ndsFtrLeanFlushDirty(NDSFtrLeanEntryState *state, const u32 *words)
     return bytes;
 }
 
-#if NDS_FTR_LEAN_ORACLE_WIDE
-/* Slice 6 (lab, the two-fighter arm): the oracle routes' wide lists of battle
- * slots 0 and 1 (NDS_FTR_LEAN_ORACLE_WIDE). Their own regions hold the
- * recorder's reference packet in the lower half, and an absent player's
- * region is not idle -- ndsRendererFighterPacketIdleRegion lends it to a
- * battle-lifetime pool (a first cut that wrote there overwrote Donkey's DObjs
- * at match entry). 70,720 B of BSS that only this lab image carries. */
-static u32 sNdsFtrLeanOracleWide[2][NDS_FTR_LEAN_REGION_WORDS]
-    __attribute__((aligned(32)));
-#endif
-
 static u32 *ndsFtrLeanEntryBase(u32 slot, u32 entry)
 {
-#if NDS_FTR_LEAN_ORACLE_WIDE
-    if ((entry == 0u) && (slot < 2u) && !NDS_FTR_LEAN_ROUTE_IS_DRAW())
-    {
-        return sNdsFtrLeanOracleWide[slot];
-    }
-#endif
     {
         const NDSFtrLeanSlotState *s = &sNdsFtrLeanSlots[slot];
         u32 buffer = (s->phys_on != 0u) ? (u32)s->phys[entry] : entry;
@@ -13223,47 +12236,9 @@ static NDSFighterPacket *ndsFtrLeanActive(u32 slot,
     return ndsFtrLeanEntryPacket(slot, s->active);
 }
 
-/* Route 1 uses both entries; the oracle routes leave the lower half to the
- * recorder, their reference. */
 static inline u32 ndsFtrLeanEntryUsable(u32 entry)
 {
-    return ((entry < NDS_FTR_LEAN_ENTRIES) &&
-            ((entry == 1u) || NDS_FTR_LEAN_ROUTE_IS_DRAW() ||
-             NDS_FTR_LEAN_ORACLE_WIDE)) ? TRUE : FALSE;
-}
-
-/* Declared ahead of TryReplay (whose miss path asks it). */
-static u32 ndsFtrLeanLowerOwned(u32 battle_slot)
-{
-    return ((battle_slot < NDS_FIGHTER_PACKET_SLOTS) &&
-            (sNdsFtrLeanSlots[battle_slot].lower_owned != 0u)) ? TRUE : FALSE;
-}
-
-/* Declared ahead of TryReplay too: its record arm takes the whole region only
- * when this holds. The spare is checked as well, because under a swapped map
- * the spare's list can be the one living in a half. */
-static u32 ndsFtrLeanSlotHoldsNoList(u32 battle_slot)
-{
-    const NDSFtrLeanSlotState *s;
-    u32 e;
-
-    if (battle_slot >= NDS_FIGHTER_PACKET_SLOTS)
-    {
-        return FALSE;
-    }
-    s = &sNdsFtrLeanSlots[battle_slot];
-    if ((s->lower_owned != 0u) || (s->phys_on != 0u))
-    {
-        return FALSE;
-    }
-    for (e = 0u; e <= NDS_FTR_LEAN_SPARE; e++)
-    {
-        if (s->entry[e].valid != 0u)
-        {
-            return FALSE;
-        }
-    }
-    return TRUE;
+    return (entry < NDS_FTR_LEAN_ENTRIES) ? TRUE : FALSE;
 }
 
 #if NDS_FTR_LEAN_LAB
@@ -13289,14 +12264,6 @@ static u32 ndsFtrLeanTextureBytes(u32 params)
 }
 #endif
 
-void ndsFtrLeanPacketRebind(u32 battle_slot)
-{
-    if (battle_slot < NDS_FIGHTER_PACKET_SLOTS)
-    {
-        sNdsFtrLeanSlots[battle_slot].armed = 0u;
-    }
-}
-
 void ndsFtrLeanPacketDrop(u32 battle_slot)
 {
     NDSFtrLeanSlotState *s;
@@ -13312,9 +12279,8 @@ void ndsFtrLeanPacketDrop(u32 battle_slot)
         s->entry[e].valid = 0u;
     }
     s->active = NDS_FTR_LEAN_ENTRY_NONE;
-    s->armed = 0u;
-    /* The recorder may use the lower half again: the identity map, no spare
-     * list, and no buffer from an older heap generation. */
+    /* The identity map, no spare list, and no buffer from an older heap
+     * generation. */
     s->lower_owned = 0u;
     s->entry[NDS_FTR_LEAN_SPARE].valid = 0u;
     s->phys_on = 0u;
@@ -13531,29 +12497,13 @@ static s32 ndsFtrLeanPatchTexgenMapped(
 }
 #endif
 
-void ndsFtrLeanShadowArm(u32 battle_slot, u32 armed)
-{
-    if (battle_slot < NDS_FIGHTER_PACKET_SLOTS)
-    {
-        sNdsFtrLeanSlots[battle_slot].armed = armed;
-    }
-}
-
-u32 ndsFtrLeanShadowArmed(u32 battle_slot)
-{
-    return (battle_slot < NDS_FIGHTER_PACKET_SLOTS) ?
-        sNdsFtrLeanSlots[battle_slot].armed : 0u;
-}
-
 /* ---- slice 4: the list materializer --------------------------------------
  * ndsRendererExecuteNativeFighterOwnerProduction's walk, its run prepare
  * (ndsRendererNativePrepareProductionRunCore, packet mode 0, no hierarchy
- * run), its shade (ndsRendererNativeShadeProductionActions) and the packet
- * twins of its two emitters, into a lean entry: no geometry reaches GX; the
- * words and patch tables are the ones the recorder's hooks record
- * (ndsFighterPacketCmd's packing, RecordPrepare / RecordBoundTexture /
- * NoteTextureEntry / RecordTexCoord / RecordDiffuseAmbient / BeginRoot), and
- * the matrices take the lean layout. The run texture memo is never read: a
+ * run), its shade (ndsRendererNativeShadeProductionActions) and its two
+ * emitters, into a lean entry: no geometry reaches GX; the words and patch
+ * tables are the ones the packet recorder (deleted 2026-10-05) captured from
+ * a live draw, and the matrices take the lean layout. The run texture memo is never read: a
  * donor-table root binds its own texture (production's memo keys on the run
  * index and the player, so it replays the owner root's texture there -- the
  * oracle names that class instead of counting it). */
@@ -13569,7 +12519,7 @@ typedef struct NDSFtrLeanPacker
     u32 fault;
 } NDSFtrLeanPacker;
 
-/* ndsFighterPacketCmd exactly: a header word carries up to four opcodes and
+/* The packed GX command: a header word carries up to four opcodes and
  * each opcode's parameters follow in order; a header whose commands take no
  * parameters at all gets one dummy word before the next header. Returns the
  * index of the command's first parameter word. */
@@ -13700,7 +12650,8 @@ static u32 ndsFtrLeanSpanSetsPrim(u16 first, u32 count)
     return FALSE;
 }
 
-/* ndsFighterPacketNoteTextureEntry for the bind the prepare just made. */
+/* The bind the prepare just made: its cache entry, validated per draw, or
+ * the global texture fence when there is none. */
 static void NDS_FIGHTER_PACKET_COLD_CODE
 ndsFtrLeanMatNoteTexture(NDSFtrLeanMat *m, u32 tint)
 {
@@ -13784,7 +12735,7 @@ ndsFtrLeanMatShade(NDSFtrLeanMat *m, const NDSNativeEpoch *epoch,
 
         if (m->light_written == FALSE)
         {
-            /* ndsFighterPacketRecordLightVector's table entry; the vector
+            /* The light vector's table entry; the vector
              * command itself sits in the head, under the identity. */
             packet->light_root = (u8)m->root;
             packet->light_valid = 1u;
@@ -13861,7 +12812,7 @@ ndsFtrLeanMatShade(NDSFtrLeanMat *m, const NDSNativeEpoch *epoch,
  * corner's dense vertex is in its run's unique list, host-proved over every
  * table set, so the prepared storage the emitter reads holds exactly this --
  * or a texgen site the per-draw patch fills) and the packed VTX16 position.
- * ndsFighterPacketCmd's packing, with the packer held in locals and one
+ * ndsFtrLeanPack's packing, with the packer held in locals and one
  * capacity check per corner. */
 #define NDS_FTR_LEAN_OP(opcode, params)                                     \
     do                                                                     \
@@ -14250,10 +13201,10 @@ ndsFtrLeanMatRun(NDSFtrLeanMat *m, u32 run_index, u32 epoch_policy,
     {
         ndsRendererR2BindTintTile(stats, tint);
     }
-    /* ndsFighterPacketRecordPrepare. */
+    /* The run's prepare: texture matrix, bind, POLYGON_ATTR, BEGIN. */
     if (m->hw_texgen != 0u)
     {
-        /* ndsFighterPacketRecordTexIdentity: the previous run's GX texgen
+        /* The previous run's GX texgen
          * matrix stops here; the mode-1 binds everywhere else expect the
          * identity. */
         ndsFtrLeanPack1(pk, REG2ID(MATRIX_CONTROL), (u32)GL_TEXTURE);
@@ -14305,7 +13256,7 @@ ndsFtrLeanMatRun(NDSFtrLeanMat *m, u32 run_index, u32 epoch_policy,
     }
     if ((use_texture != FALSE) || (tint != 0u))
     {
-        /* ndsFighterPacketRecordBoundTexture: the words libnds holds for the
+        /* The words libnds holds for the
          * bind just made (the prepare's or the tint tile's). */
         int palette_format = -1;
         u32 tex_index = ndsFtrLeanPack(pk, REG2ID(GFX_TEX_FORMAT), 1u);
@@ -14485,8 +13436,7 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
      * region (route 1 only); the other entry is given up while it holds. */
     u32 wide = ((entry & NDS_FTR_LEAN_ENTRY_WIDE) != 0u) ? TRUE : FALSE;
     u32 vtx10 = (((entry & NDS_FTR_LEAN_ENTRY_VTX16) == 0u) &&
-                 (gNdsFtrLeanVtx10 != 0u) && NDS_FTR_LEAN_ROUTE_IS_DRAW()) ?
-        1u : 0u;
+                 (gNdsFtrLeanVtx10 != 0u)) ? 1u : 0u;
     u32 capacity = (wide != FALSE) ? ndsFtrLeanWideCapacity() :
         ndsFtrLeanWordCapacity();
     /* Slice 6: the fence the old path's key would carry for this record --
@@ -14500,10 +13450,7 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
         (stats == NULL) || (asset_base == NULL) || (input_count == 0u) ||
         (input_count > NDS_FIGHTER_PACKET_ROOT_MAX) ||
         (input_count > 32u) ||
-        ((wide != FALSE) &&
-         ((entry != 0u) ||
-          (!NDS_FTR_LEAN_ROUTE_IS_DRAW() &&
-           ((NDS_FTR_LEAN_ORACLE_WIDE == 0) || (battle_slot >= 2u))))))
+        ((wide != FALSE) && (entry != 0u)))
     {
         return nNDSFtrLeanDeclineInputs;
     }
@@ -14546,23 +13493,9 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
     root_count = sNdsNativeFighterActiveOwner->root_count;
     palette_slots = sNdsNativeFighterActiveOwner->cross_palette_slots;
     owner_tables = sNdsNativeFighterActiveTables;
-    if (NDS_FTR_LEAN_ROUTE_IS_DRAW() &&
-        (sNdsFighterPackets[battle_slot].word_capacity >
-         NDS_FTR_LEAN_HALF_WORDS))
+    if (entry == 0u)
     {
-        /* The recorder took the whole region while the slot held no lean
-         * list (ndsFighterPacketTryReplay's arm): whichever half this list
-         * writes, that packet's words run through it. */
-        sNdsFighterPackets[battle_slot].valid = 0u;
-        sNdsFighterPackets[battle_slot].word_capacity = 0u;
-    }
-    if ((entry == 0u) && NDS_FTR_LEAN_ROUTE_IS_DRAW())
-    {
-        /* Route 1 takes the lower half from the recorder: its packet dies
-         * with it, and it never arms here again while the half is lean. (An
-         * oracle route's entry 0 is a wide list elsewhere -- see
-         * NDS_FTR_LEAN_ORACLE_WIDE.) */
-        sNdsFighterPackets[battle_slot].valid = 0u;
+        /* Entry 0 holds a list from here on: the spare may swap with it. */
         if (slot_state->lower_owned == 0u)
         {
             NDS_FTR_LEAN_CTR(gNdsFtrLean.region_takes++);
@@ -15113,7 +14046,7 @@ u32 ndsFtrLeanSpareTake(u32 battle_slot, u32 victim, const u32 *key)
     u32 code;
 
     if ((battle_slot >= NDS_FIGHTER_PACKET_SLOTS) || (key == NULL) ||
-        (victim >= NDS_FTR_LEAN_ENTRIES) || !NDS_FTR_LEAN_ROUTE_IS_DRAW())
+        (victim >= NDS_FTR_LEAN_ENTRIES))
     {
         return NDS_FTR_LEAN_ENTRY_NONE;
     }
@@ -15242,10 +14175,6 @@ u32 ndsFtrLeanEntryVictim(u32 battle_slot)
     {
         return NDS_FTR_LEAN_ENTRY_NONE;
     }
-    if (!NDS_FTR_LEAN_ROUTE_IS_DRAW())
-    {
-        return 1u;
-    }
     s = &sNdsFtrLeanSlots[battle_slot];
     fence = ndsFtrLeanFenceNow();
     /* An empty or stale entry first -- the upper half before the lower (it
@@ -15283,7 +14212,6 @@ void ndsFtrLeanEntryDropActive(u32 battle_slot)
         s->entry[s->active].valid = 0u;
     }
     s->active = NDS_FTR_LEAN_ENTRY_NONE;
-    s->armed = 0u;
 }
 
 u32 ndsFtrLeanEntryWide(u32 battle_slot, u32 entry)
@@ -15886,11 +14814,12 @@ void ndsFtrLeanVerifyEntries(u32 battle_slot, u32 held, u32 fresh)
 #endif
 }
 
-/* The old path re-records its packet whenever ndsFighterPacketBuildKey's
- * words move (or the packet is invalidated), and a record derives every shade
- * word at the execute's modulate (0) while naming the live one -- so the
- * shade words of a replayed fighter depend on WHEN it last re-recorded. This
- * is that key's shadow over the lean inputs: the material identity (the live
+/* The packet recorder (deleted 2026-10-05) re-recorded whenever its key's
+ * words moved (or the packet was invalidated), and a record derived every
+ * shade word at the execute's modulate (0) while naming the live one -- so
+ * the shade words of a fighter depend on WHEN it last re-recorded, and the
+ * lean path keeps that timing. This is that key's shadow over the lean
+ * inputs: the material identity (the live
  * MObj keys, pointers included), the roots' display fields and chain shapes,
  * and the lean key's owner / file / program / head words for the tables and
  * heap generation. The tint-tile set generation is left out: a moved set is
@@ -16079,7 +15008,7 @@ ndsFtrLeanPacketGuard(u32 battle_slot, u32 touch)
     {
         return nNDSFtrLeanEventFence;
     }
-    if ((state->all_pinned != 0u) && NDS_FTR_LEAN_ROUTE_IS_DRAW() &&
+    if ((state->all_pinned != 0u) &&
         ((NDS_FTR_LEAN_SLOW_WORD() & NDS_FTR_LEAN_SLOW_GUARD) == 0u))
     {
         return 0u;
@@ -16111,7 +15040,7 @@ static s32 ndsFtrLeanPatchTintTiles(NDSFighterPacket *packet,
                                     const NDSFtrLeanPatchView *view,
                                     u32 force)
 {
-    u32 touch = NDS_FTR_LEAN_ROUTE_IS_DRAW() ? 1u : 0u;
+    const u32 touch = 1u;
     u32 i;
 
     for (i = 0u; i < (u32)packet->tint_bind_count; i++)
@@ -16583,517 +15512,6 @@ ndsFtrLeanPacketSubmit(u32 battle_slot)
 }
 
 #if NDS_FTR_LEAN_LAB
-/* ---- slice 4 oracle (routes 2/3): the lean list against the old path's
- * packet, SEMANTICALLY. The two layouts differ only in their matrix and
- * light-bracket commands, so both streams are decoded and walked together
- * with those skipped: every other command must be the same command with the
- * same parameter words. The matrices are proved per root through the two
- * root tables: P' must be the recorded projection with row 3 >> 8, the
- * LOAD4x3 the first three columns of the recorded split modelview (whose
- * fourth column must be (0, 0, 0, 16)); the clip matrices both compose to
- * are then equal in rows 0-2 and within one LSB in row 3 (phase1-spec.md
- * section 4), which the oracle also measures. */
-typedef struct NDSFtrLeanDecoder
-{
-    const u32 *words;
-    u32 count;
-    u32 pos;
-    u32 header;
-    u32 slot;
-    u32 header_params;
-    u32 ordinal;
-} NDSFtrLeanDecoder;
-
-static u32 ndsFtrLeanCmdParams(u32 op)
-{
-    switch (op)
-    {
-    case 0x10u: case 0x12u: case 0x13u: case 0x14u:
-    case 0x20u: case 0x21u: case 0x22u:
-    case 0x29u: case 0x2Au: case 0x2Bu:
-    case 0x30u: case 0x31u: case 0x32u: case 0x33u:
-    case 0x40u:
-        return 1u;
-    case 0x11u: case 0x15u: case 0x41u:
-        return 0u;
-    case 0x16u:
-        return 16u;
-    case 0x17u:
-        return 12u;
-    case 0x18u:
-        return 16u;
-    case 0x19u:
-        return 12u;
-    case 0x1Au:
-        return 9u;
-    case 0x1Bu: case 0x1Cu:
-        return 3u;
-    case 0x23u:
-        return 2u;
-    case 0x24u: case 0x25u: case 0x26u: case 0x27u: case 0x28u:
-        return 1u;
-    default:
-        return 0xffu;
-    }
-}
-
-/* The next command: its opcode, first parameter index and parameter count.
- * FALSE at the end of the stream (or on an unknown opcode: *op = 0xff). */
-static s32 ndsFtrLeanDecodeNext(NDSFtrLeanDecoder *d, u32 *op, u32 *first,
-                                u32 *count)
-{
-    for (;;)
-    {
-        u32 byte;
-        u32 n;
-
-        if (d->slot >= 4u)
-        {
-            if (d->pos >= d->count)
-            {
-                return FALSE;
-            }
-            d->header = d->words[d->pos++];
-            d->slot = 0u;
-            d->header_params = 0u;
-        }
-        byte = (d->header >> (d->slot * 8u)) & 0xffu;
-        d->slot++;
-        if (byte == 0u)
-        {
-            if ((d->slot >= 4u) && (d->header_params == 0u))
-            {
-                d->pos++;       /* the dummy word of a parameterless header */
-            }
-            continue;
-        }
-        n = ndsFtrLeanCmdParams(byte);
-        if ((n == 0xffu) || (d->pos + n > d->count))
-        {
-            *op = 0xffu;
-            return FALSE;
-        }
-        *op = byte;
-        *first = d->pos;
-        *count = n;
-        d->pos += n;
-        d->header_params += n;
-        d->ordinal++;
-        if ((d->slot >= 4u) && (d->header_params == 0u))
-        {
-            d->pos++;
-        }
-        return TRUE;
-    }
-}
-
-/* The next command that is not part of either layout's matrix / light
- * bracket. `light` receives a LIGHT_VECTOR parameter index when one passes;
- * `root` counts the LOAD4x3 commands (the lean list's root boundaries). */
-static s32 ndsFtrLeanDecodeBody(NDSFtrLeanDecoder *d, u32 *op, u32 *first,
-                                u32 *count, u32 *light, u32 *root)
-{
-    while (ndsFtrLeanDecodeNext(d, op, first, count) != FALSE)
-    {
-        switch (*op)
-        {
-        case 0x10u: case 0x11u: case 0x12u: case 0x15u: case 0x16u:
-            continue;
-        case 0x17u:
-            (*root)++;
-            continue;
-        case 0x32u:
-            *light = *first;
-            continue;
-        default:
-            return TRUE;
-        }
-    }
-    return FALSE;
-}
-
-/* (a x b) >> 12 in the geometry engine's 20.12, 64-bit accumulate. */
-static void ndsFtrLeanOracleCompose(const s32 *a, const s32 *b, s32 *out)
-{
-    u32 r;
-    u32 c;
-    u32 k;
-
-    for (r = 0u; r < 4u; r++)
-    {
-        for (c = 0u; c < 4u; c++)
-        {
-            s64 sum = 0;
-
-            for (k = 0u; k < 4u; k++)
-            {
-                sum += (s64)a[(r * 4u) + k] * (s64)b[(k * 4u) + c];
-            }
-            out[(r * 4u) + c] = (s32)(sum >> 12);
-        }
-    }
-}
-
-static u32 ndsFtrLeanOracleSiteClass(const NDSFighterPacket *lean, u32 index,
-                                     u32 op)
-{
-    u32 i;
-
-    if (op == 0x30u)
-    {
-        return nNDSFtrLeanOracleShade;
-    }
-    for (i = 0u; i < (u32)lean->tint_bind_count; i++)
-    {
-        if ((index == lean->tint_binds[i].tex_index) ||
-            (index == lean->tint_binds[i].pal_index))
-        {
-            return nNDSFtrLeanOracleTint;
-        }
-    }
-    for (i = 0u; i < (u32)lean->texgen_site_count; i++)
-    {
-        if (index == lean->texgen_sites[i].index)
-        {
-            return nNDSFtrLeanOracleTexgen;
-        }
-    }
-    return nNDSFtrLeanOracleOther;
-}
-
-static void ndsFtrLeanOracleNote(u32 slot, u32 klass, u32 root, u32 op,
-                                 u32 lean_index, u32 lean_word,
-                                 u32 rec_word, u32 lean_ord, u32 rec_ord,
-                                 u32 under_hit, u32 kind)
-{
-    if (under_hit != 0u)
-    {
-        gNdsFtrLean.oracle_record_diff[klass]++;
-        return;
-    }
-    gNdsFtrLean.oracle_mismatch[klass]++;
-    if (kind < NDS_FTR_LEAN_KINDS)
-    {
-        gNdsFtrLean.k_oracle_mismatch[kind][klass]++;
-    }
-    if (gNdsFtrLean.oracle_first[0] == 0u)
-    {
-        gNdsFtrLean.oracle_first[0] = sNdsRendererHardwareFrameSerial + 1u;
-        gNdsFtrLean.oracle_first[1] =
-            (slot << 24) | (klass << 16) | (root & 0xffffu);
-        gNdsFtrLean.oracle_first[2] = op;
-        gNdsFtrLean.oracle_first[3] = lean_index;
-        gNdsFtrLean.oracle_first[4] = lean_word;
-        gNdsFtrLean.oracle_first[5] = rec_word;
-        gNdsFtrLean.oracle_first[6] = lean_ord;
-        gNdsFtrLean.oracle_first[7] = rec_ord;
-    }
-}
-
-/* Returns the number of differences counted as mismatches (under_hit: the
- * number outside every patch-site class). */
-static u32 ndsFtrLeanOracleSemantic(u32 slot, const NDSFighterPacket *rec,
-                                    const NDSFighterPacket *lean,
-                                    const NDSFtrLeanEntryState *es,
-                                    u32 under_hit, u32 kind)
-{
-    NDSFtrLeanDecoder dr;
-    NDSFtrLeanDecoder dl;
-    u32 bad = 0u;
-    u32 outside = 0u;
-    u32 r;
-
-    if ((rec->root_count != lean->root_count) ||
-        (lean->projection_index == NDS_FIGHTER_PACKET_INDEX_NONE))
-    {
-        ndsFtrLeanOracleNote(slot, nNDSFtrLeanOracleStructure, 0u, 0u, 0u,
-                             rec->root_count, lean->root_count, 0u, 0u,
-                             under_hit, kind);
-        return 1u;
-    }
-    /* Matrices, root by root through the root tables. */
-    for (r = 0u; r < lean->root_count; r++)
-    {
-        const NDSFighterPacketRoot *rr = &rec->roots[r];
-        const s32 *p;
-        const s32 *mv;
-        const s32 *l43;
-        const s32 *pp;
-        s32 mv43[16];
-        s32 clip_rec[16];
-        s32 clip_lean[16];
-        u32 k;
-
-        if ((rr->local_index[0] == NDS_FIGHTER_PACKET_INDEX_NONE) ||
-            (rr->seed_index == NDS_FIGHTER_PACKET_INDEX_NONE) ||
-            ((u32)rr->local_index[0] + 16u > rec->word_count) ||
-            ((u32)rr->seed_index + 16u > rec->word_count) ||
-            (lean->roots[r].seed_index == NDS_FIGHTER_PACKET_INDEX_NONE))
-        {
-            ndsFtrLeanOracleNote(slot, nNDSFtrLeanOracleStructure, r, 0x16u,
-                                 0u, 0u, 0u, 0u, 0u, under_hit, kind);
-            bad++;
-            outside++;
-            continue;
-        }
-        p = (const s32 *)(const void *)&rec->words[rr->local_index[0]];
-        mv = (const s32 *)(const void *)&rec->words[rr->seed_index];
-        l43 = (const s32 *)(const void *)&lean->words[lean->roots[r].seed_index];
-        pp = (const s32 *)(const void *)&lean->words[lean->projection_index];
-        for (k = 0u; k < 16u; k++)
-        {
-            s32 want = (k < 12u) ? p[k] :
-                ndsRendererRoundShiftS32Signed(
-                    p[k], NDS_RENDERER_HW_WORLD_UNIT_SHIFT);
-
-            if (pp[k] != want)
-            {
-                ndsFtrLeanOracleNote(slot, nNDSFtrLeanOracleProjection, r,
-                                     0x16u, lean->projection_index + k,
-                                     (u32)pp[k], (u32)p[k], 0u, 0u,
-                                     under_hit, kind);
-                bad++;
-            }
-        }
-        for (k = 0u; k < 16u; k++)
-        {
-            u32 row = k >> 2;
-            u32 col = k & 3u;
-            s32 want = (col < 3u) ? l43[(row * 3u) + col] :
-                ((row == 3u) ? 16 : 0);
-
-            mv43[k] = (col < 3u) ? l43[(row * 3u) + col] :
-                ((row == 3u) ? 4096 : 0);
-            if (mv[k] != want)
-            {
-                ndsFtrLeanOracleNote(slot, nNDSFtrLeanOracleModelview, r,
-                                     0x17u, lean->roots[r].seed_index,
-                                     (u32)want, (u32)mv[k], 0u, 0u,
-                                     under_hit, kind);
-                bad++;
-            }
-        }
-        /* What the two layouts compose to: the clip matrix the hardware
-         * multiplies every vertex of this root by. */
-        ndsFtrLeanOracleCompose(mv, p, clip_rec);
-        ndsFtrLeanOracleCompose(mv43, pp, clip_lean);
-        for (k = 0u; k < 16u; k++)
-        {
-            s32 delta = clip_rec[k] - clip_lean[k];
-            u32 magnitude = (delta < 0) ? (u32)-delta : (u32)delta;
-            u32 which = (k >= 12u) ? 1u : 0u;
-
-            if (magnitude > gNdsFtrLean.oracle_clip_max[which])
-            {
-                gNdsFtrLean.oracle_clip_max[which] = magnitude;
-            }
-        }
-        gNdsFtrLean.oracle_clip_roots++;
-    }
-    /* The command streams, matrix and light brackets skipped. */
-    memset(&dr, 0, sizeof(dr));
-    memset(&dl, 0, sizeof(dl));
-    dr.words = rec->words;
-    dr.count = rec->word_count;
-    dr.slot = 4u;
-    dl.words = lean->words;
-    dl.count = lean->word_count;
-    dl.slot = 4u;
-    {
-        u32 rec_light = 0xffffffffu;
-        u32 lean_light = 0xffffffffu;
-        u32 rec_roots = 0u;
-        u32 lean_roots = 0u;
-
-        for (;;)
-        {
-            u32 rop = 0u;
-            u32 rfirst = 0u;
-            u32 rn = 0u;
-            u32 lop = 0u;
-            u32 lfirst = 0u;
-            u32 ln = 0u;
-            s32 rok = ndsFtrLeanDecodeBody(&dr, &rop, &rfirst, &rn,
-                                           &rec_light, &rec_roots);
-            s32 lok = ndsFtrLeanDecodeBody(&dl, &lop, &lfirst, &ln,
-                                           &lean_light, &lean_roots);
-            u32 root = (lean_roots != 0u) ? (lean_roots - 1u) : 0u;
-            u32 k;
-
-            if ((rok == FALSE) && (lok == FALSE))
-            {
-                if ((rop == 0xffu) || (lop == 0xffu))
-                {
-                    ndsFtrLeanOracleNote(slot, nNDSFtrLeanOracleStructure,
-                                         root, 0xffu, dl.pos, lop, rop,
-                                         dl.ordinal, dr.ordinal, under_hit,
-                                         kind);
-                    bad++;
-                    outside++;
-                }
-                break;
-            }
-            if ((rok != lok) || (rop != lop) || (rn != ln))
-            {
-                ndsFtrLeanOracleNote(slot, nNDSFtrLeanOracleStructure, root,
-                                     lop, lfirst, lop, rop, dl.ordinal,
-                                     dr.ordinal, under_hit, kind);
-                bad++;
-                outside++;
-                break;
-            }
-            for (k = 0u; k < ln; k++)
-            {
-                u32 lw = lean->words[lfirst + k];
-                u32 rw = rec->words[rfirst + k];
-                u32 klass;
-
-                if (lw == rw)
-                {
-                    continue;
-                }
-                klass = ndsFtrLeanOracleSiteClass(lean, lfirst + k, lop);
-                if ((root < 32u) && (((es->donor_mask >> root) & 1u) != 0u) &&
-                    ((lop == 0x2Au) || (lop == 0x2Bu) || (lop == 0x22u)))
-                {
-                    /* Production's run texture memo: a donor-table root
-                     * replays the owner root's texture and UV there. */
-                    gNdsFtrLean.oracle_donor_memo++;
-                    if (kind < NDS_FTR_LEAN_KINDS)
-                    {
-                        gNdsFtrLean.k_oracle_donor_memo[kind]++;
-                    }
-                    continue;
-                }
-                ndsFtrLeanOracleNote(slot, klass, root, lop, lfirst + k, lw,
-                                     rw, dl.ordinal, dr.ordinal, under_hit,
-                                     kind);
-                if ((klass == nNDSFtrLeanOracleShade) && (under_hit == 0u) &&
-                    (gNdsFtrLean.oracle_shade_first[0] == 0u))
-                {
-                    /* Slice 6 lab: the first shade mismatch's site inputs on
-                     * both sides (the word is a pure function of them and
-                     * the modulate). */
-                    u32 s;
-
-                    gNdsFtrLean.oracle_shade_first[0] =
-                        sNdsRendererHardwareFrameSerial + 1u;
-                    gNdsFtrLean.oracle_shade_first[1] = (slot << 24) | root;
-                    for (s = 0u; s < lean->site_count; s++)
-                    {
-                        const NDSFighterPacketShadeSite *x = &lean->sites[s];
-
-                        if (x->index == (lfirst + k))
-                        {
-                            gNdsFtrLean.oracle_shade_first[2] = x->light_color_1;
-                            gNdsFtrLean.oracle_shade_first[3] = x->light_color_2;
-                            gNdsFtrLean.oracle_shade_first[4] = x->material_color;
-                            gNdsFtrLean.oracle_shade_first[5] =
-                                (u32)x->use_material |
-                                ((u32)x->prim_from_root << 8) |
-                                ((u32)x->reserved[1] << 16) | ((u32)x->root << 24);
-                        }
-                    }
-                    for (s = 0u; s < rec->site_count; s++)
-                    {
-                        const NDSFighterPacketShadeSite *x = &rec->sites[s];
-
-                        if (x->index == (rfirst + k))
-                        {
-                            gNdsFtrLean.oracle_shade_first[6] = x->light_color_1;
-                            gNdsFtrLean.oracle_shade_first[7] = x->light_color_2;
-                            gNdsFtrLean.oracle_shade_first[8] = x->material_color;
-                            gNdsFtrLean.oracle_shade_first[9] =
-                                (u32)x->use_material |
-                                ((u32)x->prim_from_root << 8) |
-                                ((u32)x->reserved[0] << 16) | ((u32)x->root << 24);
-                        }
-                    }
-                    gNdsFtrLean.oracle_shade_first[10] = lean->tint_modulate;
-                    gNdsFtrLean.oracle_shade_first[11] = rec->tint_modulate;
-                    gNdsFtrLean.oracle_shade_first[12] = lean->tint_prim_hash;
-                    gNdsFtrLean.oracle_shade_first[13] = rec->tint_prim_hash;
-                    gNdsFtrLean.oracle_shade_first[14] = lw;
-                    gNdsFtrLean.oracle_shade_first[15] = rw;
-                }
-                bad++;
-                if (klass == nNDSFtrLeanOracleOther)
-                {
-                    outside++;
-                }
-            }
-        }
-        if ((rec_light != 0xffffffffu) &&
-            ((lean_light == 0xffffffffu) ||
-             (rec->words[rec_light] != lean->words[lean_light])))
-        {
-            ndsFtrLeanOracleNote(slot, nNDSFtrLeanOracleLight, 0u, 0x32u,
-                                 lean_light,
-                                 (lean_light != 0xffffffffu) ?
-                                     lean->words[lean_light] : 0u,
-                                 rec->words[rec_light], 0u, 0u, under_hit,
-                                 kind);
-            bad++;
-        }
-    }
-    return (under_hit != 0u) ? outside : bad;
-}
-#endif
-
-#if NDS_FTR_LEAN_ORACLE_ROUTES
-static void ndsFtrLeanOracleCompare(u32 battle_slot,
-                                    const NDSFighterPacket *packet)
-{
-#if NDS_FTR_LEAN_LAB
-    NDSFtrLeanEntryState *es;
-    const NDSFighterPacket *lean;
-    u32 kind;
-#endif
-
-    if ((battle_slot >= NDS_FIGHTER_PACKET_SLOTS) ||
-        (sNdsFtrLeanSlots[battle_slot].armed == 0u))
-    {
-        return;
-    }
-    sNdsFtrLeanSlots[battle_slot].armed = 0u;
-#if NDS_FTR_LEAN_LAB
-    kind = sNdsFtrLeanSlots[battle_slot].kind;
-    lean = ndsFtrLeanActive(battle_slot, &es);
-    gNdsFtrLean.oracle_runs++;
-    if (lean == NULL)
-    {
-        return;
-    }
-    if ((gNdsFtrLeanRoute == NDS_FTR_LEAN_ROUTE_ORACLE_EXACT) &&
-        (gNdsFtrLeanOracleSourceOk == 0u))
-    {
-        gNdsFtrLean.oracle_source_miss++;
-        return;
-    }
-    /* k_oracle_runs counts the draws actually compared. */
-    if (kind < NDS_FTR_LEAN_KINDS)
-    {
-        gNdsFtrLean.k_oracle_runs[kind]++;
-    }
-    gNdsFtrLean.oracle_words += lean->word_count;
-    (void)ndsFtrLeanOracleSemantic(battle_slot, packet, lean, es, 0u, kind);
-#else
-    (void)packet;
-#endif
-}
-
-static void ndsFtrLeanOnReplayHit(u32 battle_slot,
-                                  const NDSFighterPacket *packet)
-{
-    if (battle_slot >= NDS_FIGHTER_PACKET_SLOTS)
-    {
-        return;
-    }
-    ndsFtrLeanOracleCompare(battle_slot, packet);
-}
-#endif
-
-#if NDS_FTR_LEAN_LAB
 /* Census of the texture cache; also the admission's print-first number. */
 static void ndsFtrLeanCensusCache(u32 *out)
 {
@@ -17198,56 +15616,6 @@ void ndsFtrLeanNoteGo(u32 frame)
     (void)frame;
 #endif
 }
-
-#if NDS_FTR_LEAN_ORACLE_ROUTES
-/* Every recorded fighter packet: the texture union census, and the oracle's
- * record-under-hit compare (routes 2/3: the old path re-recorded on a draw
- * the lean list was patched for -- the fresh record against the list). */
-static void ndsFtrLeanOnRecorded(NDSFighterPacket *packet)
-{
-    u32 slot;
-    u32 i;
-
-    if ((packet < &sNdsFighterPackets[0]) ||
-        (packet >= &sNdsFighterPackets[NDS_FIGHTER_PACKET_SLOTS]))
-    {
-        return;
-    }
-    slot = (u32)(packet - &sNdsFighterPackets[0]);
-    for (i = 0u; i < (u32)packet->texture_count; i++)
-    {
-        u32 cache_slot = (u32)packet->textures[i].slot_plus1 - 1u;
-
-        if (cache_slot >= NDS_RENDERER_HW_TEXTURE_CACHE_COUNT)
-        {
-            continue;
-        }
-#if NDS_FTR_LEAN_LAB
-        sNdsFtrLeanSlots[slot].union_mask[cache_slot >> 5] |=
-            1u << (cache_slot & 31u);
-#endif
-    }
-    if (sNdsFtrLeanSlots[slot].armed != 0u)
-    {
-        sNdsFtrLeanSlots[slot].armed = 0u;
-#if NDS_FTR_LEAN_LAB
-        {
-            NDSFtrLeanEntryState *es;
-            const NDSFighterPacket *lean = ndsFtrLeanActive(slot, &es);
-
-            if (lean != NULL)
-            {
-                u32 outside = ndsFtrLeanOracleSemantic(
-                    slot, packet, lean, es, 1u, sNdsFtrLeanSlots[slot].kind);
-
-                gNdsFtrLean.oracle_record_under_hit[
-                    (outside != 0u) ? 1u : 0u]++;
-            }
-        }
-#endif
-    }
-}
-#endif
 
 /* Texture reject witness: the first fighter-owned reject since boot, with
  * the cache census at that instant (the P0 entry failure's root cause). */
@@ -17405,11 +15773,6 @@ void ndsFtrLeanPacketDrop(u32 battle_slot)
     (void)battle_slot;
 }
 
-void ndsFtrLeanPacketRebind(u32 battle_slot)
-{
-    (void)battle_slot;
-}
-
 u32 ndsFtrLeanRerecordKey(u32 ident, const u32 *key,
                           const NDSRendererNativeFighterRoot *inputs,
                           u32 input_count)
@@ -17480,18 +15843,6 @@ u32 ndsFtrLeanPacketPatch(u32 battle_slot, const NDSFtrLeanPatchView *view,
 }
 
 u32 ndsFtrLeanPacketSubmit(u32 battle_slot)
-{
-    (void)battle_slot;
-    return 0u;
-}
-
-void ndsFtrLeanShadowArm(u32 battle_slot, u32 armed)
-{
-    (void)battle_slot;
-    (void)armed;
-}
-
-u32 ndsFtrLeanShadowArmed(u32 battle_slot)
 {
     (void)battle_slot;
     return 0u;
@@ -17649,16 +16000,6 @@ static s32 ndsRendererNativeSubmitProductionRun(
 #endif
     if (submit_class == NDS_NATIVE_RUN_CROSS_MATRIX)
     {
-#if NDS_FIGHTER_PACKET_LIVE && (NDS_TASK56_FIGHTER_PRIMITIVES >= 1)
-        if (sNdsFighterPacketRecording != 0u)
-        {
-            ndsRendererNativeEmitProductionCrossRunPacket(
-                run_index, (u32)run->triangle_count * 3u,
-                state->texture_prepare_enabled,
-                current_palette_slot, binding_palette_slots);
-        }
-        else
-#endif
         ndsRendererNativeEmitProductionCrossRun(
             run_index, (u32)run->triangle_count * 3u,
             state->texture_prepare_enabled,
@@ -17682,14 +16023,6 @@ static s32 ndsRendererNativeSubmitProductionRun(
          * exactly as the raw emitters read the packed corners unmasked. */
         if (NDS_R2_STRIP_ROUTE_ON())
         {
-#if NDS_FIGHTER_PACKET_LIVE
-            if (sNdsFighterPacketRecording != 0u)
-            {
-                ndsRendererNativeEmitProductionPrimitiveGroupsPacket(
-                    run_index, state->texture_prepare_enabled);
-            }
-            else
-#endif
             ndsRendererNativeEmitProductionPrimitiveGroups(
                 run_index, state->texture_prepare_enabled);
         }
@@ -17697,17 +16030,11 @@ static s32 ndsRendererNativeSubmitProductionRun(
 #endif
         if (state->texture_prepare_enabled != 0u)
         {
-            /* The raw emitters have no packet twin: a record frame that
-             * reaches them faults the packet and keeps drawing. */
-            NDS_FIGHTER_PACKET_HOOK(NDS_FIGHTER_PACKET_FAULT(
-                &sNdsFighterPacketRecorder, NDS_FIGHTER_PACKET_FAULT_RAW_RUN));
             ndsRendererNativeEmitProductionRawTexturedRun(
                 run_index, (u32)run->triangle_count * 3u);
         }
         else
         {
-            NDS_FIGHTER_PACKET_HOOK(NDS_FIGHTER_PACKET_FAULT(
-                &sNdsFighterPacketRecorder, NDS_FIGHTER_PACKET_FAULT_RAW_RUN));
             ndsRendererNativeEmitProductionRawUntexturedRun(
                 run_index, (u32)run->triangle_count * 3u);
         }

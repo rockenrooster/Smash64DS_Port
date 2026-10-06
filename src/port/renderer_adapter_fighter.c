@@ -5538,8 +5538,8 @@ static sb32 ndsFighterIntroTransientSubmit(GObj *fighter_gobj)
 #include <nds/renderer_fighter_lean.h>
 #include <port/coroutine.h>
 #if NDS_FTR_LEAN_LIVE
-static NDS_FTR_LEAN_RUN_INLINE sb32
-ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route);
+static inline __attribute__((always_inline)) sb32
+ndsFtrLeanRun(u32 slot, FTStruct *fp);
 static void ndsFtrLeanFrameEnd(void);
 
 /* ndsFtrLeanRun on the DTCM hot stack (port/coroutine.h). */
@@ -5547,14 +5547,13 @@ typedef struct NDSFtrLeanRunCall
 {
     u32 slot;
     FTStruct *fp;
-    u32 route;
 } NDSFtrLeanRunCall;
 
 static unsigned int ndsFtrLeanRunOnHotStack(void *arg)
 {
     const NDSFtrLeanRunCall *call = arg;
 
-    return (unsigned int)ndsFtrLeanRun(call->slot, call->fp, call->route);
+    return (unsigned int)ndsFtrLeanRun(call->slot, call->fp);
 }
 #endif
 
@@ -5727,8 +5726,7 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
          * is no executor behind it (campaign and VS walks: 0 declines
          * outside one GAME SET frame). */
         {
-            NDSFtrLeanRunCall call = { (u32)fp->nds_slot, fp,
-                                       NDS_FTR_LEAN_ROUTE_DRAW };
+            NDSFtrLeanRunCall call = { (u32)fp->nds_slot, fp };
 
             lean_drew = (sb32)ndsDtcmHotStackRun(ndsFtrLeanRunOnHotStack,
                                                  &call);

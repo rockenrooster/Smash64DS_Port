@@ -1,0 +1,45 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,736; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 644: ALL 5,311,040 -> 1,116,736, 5 bucket(s) corrected
+Wrote D:\Stuff\DevFolder\Smash64DS_Port\artifacts\performance\2026-10-05_recorder-deleted/sz-r1.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=d81d7f70fb1+dirty(39) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,736     1,677,184      1.50  1,201,136     1,111,232 16,992,256      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,352         9,664      2.22      5,345         2,304     26,304        0.4
+HUD         8,960        24,256      2.71     10,983         7,936    596,160        0.8
+SRC       458,304       667,072      1.46    465,059       158,144  1,065,024       41.0
+MISC      410,176       572,800      1.40    427,024       150,976 15,845,440       36.7
+OTHR      274,560       566,208      2.06    292,725        22,080    792,192       24.6
+WAIT      253,056       544,704      2.15    270,802         2,368    772,416       22.7
+WORK      906,176     1,234,816      1.36    926,577       340,864 16,658,048       81.1
+SHDT      822,591     1,142,271      1.39    845,159       299,583 16,018,047       73.7
+SWRM        1,280         1,408      1.10      1,299           896      3,264        0.1
+GCRA      452,864       661,696      1.46    459,635       153,472  1,059,712       40.6
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        571             0  1,035,200        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      410,048       572,672      1.40    426,888       150,848 15,845,248       36.7
+MFLS          128           192      1.50        136           128        192        0.0
+GPOL          478           567      1.19        464            47        602        0.0
+GVTX        1,076         1,335      1.24      1,062           157      1,442        0.1
+DGSA   2,151,297,068 4,051,513,036        2,133,514,594    676,991 4,286,422,441 192,641.5
+DGSB   2,119,168,438 4,104,172,124   1.94 2,135,049,252  2,524,074 4,280,928,178 189,764.5
+WORK-H    897,024     1,223,296      1.36    915,593       332,544 16,061,888       80.3
+
+named=908,411 (75.6% of ALL)  VBI 2:1705 3:244 4:10 5+:2 max:35 total:1961  slips=0
+Wrote D:\Stuff\DevFolder\Smash64DS_Port\artifacts\performance\2026-10-05_recorder-deleted/sz-r1.json

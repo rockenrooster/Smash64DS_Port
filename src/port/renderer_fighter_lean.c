@@ -58,9 +58,6 @@ NDSFtrLeanCounters gNdsFtrLean __attribute__((used, aligned(32)));
 #if NDS_FTR_LEAN_ATTR_LIVE
 NDSFtrLeanAttr gNdsFtrLeanAttr __attribute__((used, aligned(32)));
 #endif
-#if NDS_FTR_LEAN_ORACLE_ROUTES
-volatile u32 gNdsFtrLeanOracleSourceOk __attribute__((used));
-#endif
 #if NDS_VRAM_CENSUS_LIVE
 /* Slice 2a (lab): 1 = walk the texture/palette VRAM at every frame end.
  * DTCM like the route words, so a gdb poke is never hidden by the cache. */
@@ -314,7 +311,6 @@ typedef struct NDSFtrLeanInstance
     u32 pre_hash;               /* the roots' key[3] preamble fields */
     u32 pre_serial;             /* memo fill serial + 1 they were proven at */
     u32 patch_serial;           /* memo fill serial + 1 of the last patch */
-    u32 topo_hash;              /* the kept joints' links (oracle routes) */
     u8 watch_count;             /* animated MObjs, or WATCH_ALL */
     u8 alias_dst;               /* a root bound to the same joint as another */
     u8 alias_src;               /* ... whose world it takes, 0xff = none */
@@ -691,24 +687,6 @@ static u32 ndsFtrLeanLocalKind(DObj *dobj, const FTParts **parts_out)
     return NDS_FTR_LEAN_LOCAL_PARTS;
 }
 
-/* The live links of every kept joint (the oracle routes' topology proof, and
- * the cost A/B's slice 1 guard). */
-static u32 ndsFtrLeanTopologyHash(const NDSFtrLeanInstance *inst)
-{
-    u32 h = 2166136261u;
-    u32 j;
-
-    for (j = 0u; j < inst->joint_count; j++)
-    {
-        const DObj *dobj = inst->joints[j].dobj;
-
-        h = (h ^ (u32)(uintptr_t)dobj->child) * 16777619u;
-        h = (h ^ (u32)(uintptr_t)dobj->sib_next) * 16777619u;
-        h = (h ^ (u32)(uintptr_t)dobj->parent) * 16777619u;
-    }
-    return h;
-}
-
 /* The live topology ComposeOwnerWorldsSource collects every draw, captured
  * once per event with the same link checks, then cut to the joints a drawn
  * binding hangs from: a binding's world (lock accumulator included) depends
@@ -1000,11 +978,8 @@ static s32 ndsFtrLeanRetuple(u32 slot, FTStruct *fp, NDSFtrLeanInstance *inst)
     inst->patch_serial = 0u;
     /* A status change may add or drop DObjs that draw nothing (the drawn
      * collection above is unchanged), which moves the kept joints' child and
-     * sibling links but no drawn world; the oracle routes' link hash restarts
-     * from here. Re-parenting a kept joint is the kernel's to refuse. */
-#if NDS_FTR_LEAN_ORACLE_ROUTES
-    inst->topo_hash = ndsFtrLeanTopologyHash(inst);
-#endif
+     * sibling links but no drawn world. Re-parenting a kept joint is the
+     * kernel's to refuse. */
     NDS_FTR_LEAN_CTR(gNdsFtrLean.retuples++);
     return TRUE;
 }
@@ -1133,12 +1108,6 @@ ndsFtrLeanMaterializeFor(u32 slot, u32 *entry, const u32 *key, u32 count,
             sNdsRendererAdapterNativeOwnerMaterialRows[i]];
         input->gx_modelview_mirror_valid = 0u;
     }
-#if NDS_FTR_LEAN_ORACLE_ROUTES && !NDS_FTR_LEAN_ORACLE_WIDE
-    if (gNdsFtrLeanRoute != NDS_FTR_LEAN_ROUTE_DRAW)
-    {
-        allow_wide = FALSE;         /* wide lists are route 1's */
-    }
-#endif
     wide = ((allow_wide != FALSE) && (use_low_detail == FALSE) &&
             (sNdsFtrLeanInstances[slot].wide_high != 0u)) ? TRUE : FALSE;
     ndsRendererProfileSetOwner(ndsFighterNativeOwnerProfileId(owner_slot));
@@ -1614,9 +1583,6 @@ listed:
     inst->pre_serial = (sNdsFtrLeanMemoFromSlot != 0u) ?
         (sNdsFtrLeanMemoFill[slot] + 1u) : 0u;
     inst->patch_serial = 0u;
-#if NDS_FTR_LEAN_ORACLE_ROUTES
-    inst->topo_hash = ndsFtrLeanTopologyHash(inst);
-#endif
     inst->rebind = 0u;
     inst->reprove = 0u;
     inst->valid = 1u;
@@ -1655,16 +1621,13 @@ listed:
  * list's own guard. Returns 0 or the event that moves the draw to the event
  * path. */
 static u32 ndsFtrLeanProve(u32 slot, FTStruct *fp, NDSFtrLeanInstance *inst,
-                           u32 kind, u32 use_low_detail, u32 route,
-                           u32 slow_mode, u32 *mark)
+                           u32 kind, u32 use_low_detail, u32 slow_mode,
+                           u32 *mark)
 {
     const NDSRelocLoadedFile *file = inst->owner_file;
     u32 reason;
     u32 row = slot & 3u;        /* counter row (attribution ROM only) */
 
-#if !NDS_FTR_LEAN_ORACLE_ROUTES
-    route = NDS_FTR_LEAN_ROUTE_DRAW;    /* the shipping image's only route */
-#endif
     (void)row;
     if (inst->valid == 0u)
     {
@@ -1703,16 +1666,7 @@ static u32 ndsFtrLeanProve(u32 slot, FTStruct *fp, NDSFtrLeanInstance *inst,
         NDS_FTR_LEAN_GUARD_PART(7u, *mark);
     }
     /* Topology: the kernel proves every kept joint's parent link per draw
-     * (the source compose's own check). The oracle routes and the cost A/B's
-     * slice 1 form also hash the kept joints' child/sibling links. */
-#if NDS_FTR_LEAN_ORACLE_ROUTES
-    if (((route != NDS_FTR_LEAN_ROUTE_DRAW) ||
-         ((slow_mode & NDS_FTR_LEAN_SLOW_GUARD) != 0u)) &&
-        (ndsFtrLeanTopologyHash(inst) != inst->topo_hash))
-    {
-        return nNDSFtrLeanEventKernel;
-    }
-#endif
+     * (the source compose's own check). */
     NDS_FTR_LEAN_GUARD_PART(1u, *mark);
     /* The material identity, proven through its writers (see
      * NDS_FTR_LEAN_WATCH_MAX); a moved identity is an event: the entry for
@@ -1720,8 +1674,7 @@ static u32 ndsFtrLeanProve(u32 slot, FTStruct *fp, NDSFtrLeanInstance *inst,
     {
         u32 watch_ok = (inst->texpart_serial ==
                         sNdsFtrLeanTexPartSerial[slot]) ? TRUE : FALSE;
-        u32 full = ((route != NDS_FTR_LEAN_ROUTE_DRAW) ||
-                    ((slow_mode & NDS_FTR_LEAN_SLOW_GUARD) != 0u) ||
+        u32 full = (((slow_mode & NDS_FTR_LEAN_SLOW_GUARD) != 0u) ||
                     (inst->reprove != 0u) ||
                     (inst->watch_count == NDS_FTR_LEAN_WATCH_ALL)) ?
             TRUE : FALSE;
@@ -1794,15 +1747,14 @@ static u32 ndsFtrLeanProve(u32 slot, FTStruct *fp, NDSFtrLeanInstance *inst,
         NDS_FTR_LEAN_CTR(gNdsFtrLean.pre_skips++);
     }
     NDS_FTR_LEAN_GUARD_PART(4u, *mark);
-    reason = ndsFtrLeanPacketGuard(slot,
-        (route == NDS_FTR_LEAN_ROUTE_DRAW) ? 1u : 0u);
+    reason = ndsFtrLeanPacketGuard(slot, 1u);
     NDS_FTR_LEAN_GUARD_PART(5u, *mark);
     return reason;
 }
 
-/* Returns TRUE when route 1 drew the fighter (the old path must not run). */
-static NDS_FTR_LEAN_RUN_INLINE sb32
-ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
+/* Returns TRUE when the lean path drew the fighter. */
+static inline __attribute__((always_inline)) sb32
+ndsFtrLeanRun(u32 slot, FTStruct *fp)
 {
     NDSFtrLeanInstance *inst = &sNdsFtrLeanInstances[slot];
     u32 owner_slot = 0u;
@@ -1833,9 +1785,6 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
     u32 retried = FALSE;
 #endif
 
-#if !NDS_FTR_LEAN_ORACLE_ROUTES
-    route = NDS_FTR_LEAN_ROUTE_DRAW;    /* the shipping image's only route */
-#endif
     kind = ndsFtrLeanEligible(fp, &owner_slot);
     if (kind == NDS_FTR_LEAN_KIND_NONE)
     {
@@ -1904,7 +1853,7 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
     use_low_detail = (fp->detail_curr == nFTPartsDetailLow) ? TRUE : FALSE;
     color_modulate = ndsRendererAdapterFighterColorModulate(fp);
     ndsFtrLeanPacketNoteKind(slot, row);
-    event = ndsFtrLeanProve(slot, fp, inst, kind, use_low_detail, route,
+    event = ndsFtrLeanProve(slot, fp, inst, kind, use_low_detail,
                             slow_mode, &mark);
     for (pass = 0u;; pass++)
     {
@@ -1944,8 +1893,7 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
                 ndsFtrLeanDecline(row, reason);
                 return FALSE;
             }
-            event = ndsFtrLeanPacketGuard(slot,
-                (route == NDS_FTR_LEAN_ROUTE_DRAW) ? 1u : 0u);
+            event = ndsFtrLeanPacketGuard(slot, 1u);
             if (event != 0u)
             {
                 ndsFtrLeanInvalidate(slot, TRUE);
@@ -2029,9 +1977,6 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
                 ndsFtrLeanDecline(row, nNDSFtrLeanDeclineKernel);
                 return FALSE;
             }
-#if NDS_FTR_LEAN_ORACLE_ROUTES
-            inst->topo_hash = ndsFtrLeanTopologyHash(inst);
-#endif
             NDS_FTR_LEAN_CTR(gNdsFtrLean.kernel_rebuilds++);
 #if NDS_FTR_LEAN_ATTR_LIVE
             retried = TRUE;
@@ -2154,17 +2099,8 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
     t1 = NDS_FTR_LEAN_CLOCK();
     NDS_FTR_LEAN_TCTR(gNdsFtrLean.patch_ticks += t1 - t0);
     NDS_FTR_LEAN_TCTR(gNdsFtrLean.k_patch_ticks[row] += t1 - t0);
-#if NDS_FTR_LEAN_ORACLE_ROUTES
-    if (route != NDS_FTR_LEAN_ROUTE_DRAW)
-    {
-        ndsFtrLeanShadowArm(slot, 1u);
-        NDS_FTR_LEAN_CTR(gNdsFtrLean.shadow_runs++);
-        NDS_FTR_LEAN_CTR(gNdsFtrLean.k_draws[row]++);
-        return FALSE;
-    }
-#endif
 
-    /* Route 1: submit, then the bookkeeping DrawForSlot does after a
+    /* Submit, then the bookkeeping DrawForSlot does after a
      * successful native draw (RAF tail), so every verifier count agrees. */
     gNdsFtrDeclineStage = 0u;
     gNdsFtrDeclineDisplayListClause = 0u;
@@ -2305,8 +2241,7 @@ volatile u32 gNdsFtrLeanTransientDraws;
     (NDS_RENDERER_PROFILE_LEVEL < 2)
 static sb32 ndsFtrLeanTransientDraw(FTStruct *fp, sb32 rebind)
 {
-    NDSFtrLeanRunCall call = { NDS_INTRO_TRANSIENT_SCRATCH_SLOT, fp,
-                               NDS_FTR_LEAN_ROUTE_DRAW };
+    NDSFtrLeanRunCall call = { NDS_INTRO_TRANSIENT_SCRATCH_SLOT, fp };
     sb32 drew;
 
     ndsFtrLeanMatchReset();
