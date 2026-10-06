@@ -850,9 +850,27 @@ static inline int ndsMPLineExtentSweepRejects(MPVertexArray *ids,
     return 0;
 }
 
+/* A flat segment's height is v1y, bit for bit (P2-2p8, 2026-10-06; owner:
+ * "Software floating point should not exist"): with v1y == v2y the factor
+ * (v2y - v1y) is +0, a finite quotient times +0 is a signed zero, and v1y plus
+ * a signed zero is v1y -- v1y converts an s16, so it is never -0. The quotient
+ * is finite when opx is finite and v1x != v2x, which the test requires (a
+ * vertical segment keeps the expression, NaN and all). Every flat floor and
+ * ceiling skips three subtracts, a divide, a multiply and an add. */
+static inline s32 ndsMPFlatSegmentExact(f32 opx, u32 v1x_bits, u32 v2x_bits,
+                                        u32 v1y_bits, u32 v2y_bits)
+{
+    return (v1y_bits == v2y_bits) && (v1x_bits != v2x_bits) &&
+           ((ndsFcmpBits(opx) & 0x7F800000u) != 0x7F800000u);
+}
+
 static f32 ndsMPLineDistanceFC(f32 opx, s32 v1x, s32 v1y, s32 v2x,
                                s32 v2y)
 {
+    if (ndsMPFlatSegmentExact(opx, (u32)v1x, (u32)v2x, (u32)v1y, (u32)v2y))
+    {
+        return (f32)v1y;
+    }
     return (f32)v1y + (((opx - (f32)v1x) / ((f32)v2x - (f32)v1x)) *
         ((f32)v2y - (f32)v1y));
 }
@@ -860,9 +878,15 @@ static f32 ndsMPLineDistanceFC(f32 opx, s32 v1x, s32 v1y, s32 v2x,
 /* The same expression on the vertex cache's floats (ndsMPVertexF32Get). Each
  * (f32)v of an s16 vertex coordinate is exact and the cache holds exactly
  * that value, so every operand -- and so every rounding -- is the integer
- * form's; only the four __aeabi_i2f calls are gone. */
+ * form's; only the four __aeabi_i2f calls are gone. Exact conversions of
+ * integers are equal exactly when their bits are. */
 static f32 ndsMPLineDistanceFCf(f32 opx, f32 v1x, f32 v1y, f32 v2x, f32 v2y)
 {
+    if (ndsMPFlatSegmentExact(opx, ndsFcmpBits(v1x), ndsFcmpBits(v2x),
+                              ndsFcmpBits(v1y), ndsFcmpBits(v2y)))
+    {
+        return v1y;
+    }
     return v1y + (((opx - v1x) / (v2x - v1x)) * (v2y - v1y));
 }
 
@@ -1845,8 +1869,9 @@ sb32 NDS_R2_ITCM_PACK2_CODE mpCollisionGetFCCommonFloor(s32 line_id, Vec3f *obje
         /* 2026-09-27: the accepted segment works on the cached floats (exact
          * conversions of the s16 vertices, so x1 == x2 iff fx1 == fx2 and
          * every operand below is the integer form's) instead of four O2R
-         * reads and six __aeabi_i2f calls. */
-        if (fx1 == fx2)
+         * reads and six __aeabi_i2f calls. Exact conversions are equal
+         * exactly when their bits are. */
+        if (ndsFcmpBits(fx1) == ndsFcmpBits(fx2))
         {
             NDS_DIAG(gNdsStageCollisionLoopDivisionGuardCount++);
             continue;

@@ -14601,6 +14601,8 @@ ndsFtrLeanLearnVariant(u32 battle_slot, u32 fresh)
     u32 i;
     u32 word_capacity = ndsFtrLeanWordCapacity();
     u32 mask_words = ndsFtrLeanMaskWords();
+    /* The differing words, in index order, until a seventeenth rejects. */
+    u16 diff_index[NDS_FTR_LEAN_VARIANT_DIFF_MAX];
 
     if ((battle_slot >= NDS_FIGHTER_PACKET_SLOTS) ||
         (fresh >= NDS_FTR_LEAN_ENTRIES))
@@ -14644,18 +14646,24 @@ ndsFtrLeanLearnVariant(u32 battle_slot, u32 fresh)
     mask = ndsFtrLeanEntryWords(battle_slot, fresh) +
         word_capacity - mask_words;
     ndsFtrLeanPatchMask(a, mask);
+    /* One pass (2026-10-06): the differences are recorded as they are found
+     * and the scan stops at the seventeenth, where it used to count every
+     * difference in the list and then walk it again to record them -- two
+     * reads of two ~16 KB lists from main RAM after every materialization,
+     * the learn's whole cost (~46K cycles a marked frame, 4 x Yoshi). Same
+     * records, same rejects. */
     for (i = 0u; i < a->word_count; i++)
     {
         if ((((mask[i >> 5] >> (i & 31u)) & 1u) == 0u) &&
             (a->words[i] != b->words[i]))
         {
-            n++;
+            if (n == NDS_FTR_LEAN_VARIANT_DIFF_MAX)
+            {
+                ndsFtrLeanVariantReject(3u);
+                return NDS_FTR_LEAN_ENTRY_NONE;
+            }
+            diff_index[n++] = (u16)i;
         }
-    }
-    if (n > NDS_FTR_LEAN_VARIANT_DIFF_MAX)
-    {
-        ndsFtrLeanVariantReject(3u);
-        return NDS_FTR_LEAN_ENTRY_NONE;
     }
     if (hs->variant_count == 0u)
     {
@@ -14691,17 +14699,15 @@ ndsFtrLeanLearnVariant(u32 battle_slot, u32 fresh)
     {
         v->key[i] = fs->key[i];
     }
-    for (i = 0u; i < a->word_count; i++)
+    for (i = 0u; i < n; i++)
     {
-        if ((((mask[i >> 5] >> (i & 31u)) & 1u) == 0u) &&
-            (a->words[i] != b->words[i]))
-        {
-            v->index[v->diff_count] = (u16)i;
-            v->base[v->diff_count] = b->words[i];
-            v->value[v->diff_count] = a->words[i];
-            v->diff_count++;
-        }
+        const u32 word = diff_index[i];
+
+        v->index[i] = (u16)word;
+        v->base[i] = b->words[word];
+        v->value[i] = a->words[word];
     }
+    v->diff_count = (u8)n;
     v->fence = fs->fence;
     v->fence_needed = (u8)fs->fence_needed;
     v->all_pinned = (u8)fs->all_pinned;
