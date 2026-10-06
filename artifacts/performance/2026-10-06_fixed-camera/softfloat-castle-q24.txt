@@ -1,0 +1,331 @@
+total est 119,450 cyc/frame over 330 callers
+    5,330  mpCollisionGetFCCommonFloor                           fsub 53.7, fdiv 12.9, fmul 12.9, fadd 12.9
+    4,893  ndsFtPoseParse                                        fadd 115.9, udivsi3 0.7
+    4,145  ndsBaseMPProcessUpdateMain                            fadd 70.4, fsub 15.6, fcmplt 15.6, fcmpgt 15.6, fdiv 0.2
+    3,788  syMatrixRotRpyRF                                      fmul 39.3, cosf 8.4, sinf 8.4, fadd 5.6, fsub 5.6
+    3,751  ndsMPFCSegmentCrossesKernel                           fsub 67.8, fmul 30.1, fadd 6.6, fdiv 0.1
+    3,663  lbParticleUpdateStruct.part.0                         fadd 39.4, fmul 21.6, fsub 6.9, i2f 6.0, fdiv 6.0
+    3,482  syVectorNorm3D                                        fmul 45.8, fadd 15.3, sqrtf 7.6, fcmpeq 7.6, fdiv 7.6
+    3,345  ndsBaseMPProcessCheckTestLWallCollision               fadd 79.6
+    3,345  ndsBaseMPProcessCheckTestRWallCollision               fadd 56.9, fsub 22.8
+    3,092  func_ovl2_800ED490                                    fmul 60.0, fadd 45.0
+    3,056  battleship_ftMainProcUpdateInterrupt                  fadd 31.7, fcmplt 21.4, i2f 20.1, fmul 20.1, fsub 11.6
+    2,867  syVectorAdd3D                                         fadd 68.3
+    2,854  gmCollisionCheckItemInFighterRange                    fsub 41.0, fcmpgt 28.8, fadd 13.4, fcmplt 6.7
+    2,364  syMatrixLookAtF                                       fmul 38.9, fadd 12.0, fsub 9.0, fdiv 3.0, sqrtf 3.0
+    2,352  syVectorDiff3D                                        fsub 56.0
+    2,270  grWallpaperCalcPersp                                  fmul 12.0, fsub 12.0, fcmplt 8.0, fcmpgt 6.0, fdiv 6.0
+    2,231  syVectorMag3D                                         fmul 32.8, fadd 21.9, sqrtf 10.9
+    2,129  gmCameraGetClampDimensionsMax                         fdiv 10.0, fmul 10.0, i2f 4.0, fcmplt 4.0, fcmpgt 1.9
+    2,052  ndsBaseMPProcessCheckTestLWallCollisionAdjNew         fadd 48.9
+    2,052  ndsBaseMPProcessCheckTestRWallCollisionAdjNew         fadd 31.1, fsub 17.8
+    1,969  ftMainProcPhysicsMap                                  fcmpeq 22.2, fadd 15.4, fcmpge 8.0, i2f 8.0, fcmpgt 7.8
+    1,931  mpCollisionUpdateBoundsCurrent                        fadd 23.9, i2f 23.9, fcmplt 12.0, fcmpgt 12.0, fcmpge 4.0
+    1,829  gcParseDObjAnimJoint                                  fadd 19.6, fsub 13.6, ui2f 9.5, udivsi3 6.0
+    1,813  mpCollisionPlayYakumonoAnim                           fsub 29.9, fcmpge 6.0, fadd 6.0, fmul 6.0, f2iz 6.0
+    1,696  func_ovl2_8010C3C0                                    fdiv 8.0, fmul 4.0, fcmplt 4.0, fcmpgt 4.0, fsub 2.0
+    1,653  ndsBaseFTCommonGuardGetJointTransform                 fsub 15.9, fmul 15.9, fadd 15.9
+    1,609  syMatrixPerspFastF                                    fmul 7.9, fdiv 6.6, ui2f 2.6, fadd 2.6, lmul 1.3
+    1,587  ndsNativeBattleWallpaperDraw                          fmul 10.0, fsub 9.0, fadd 6.0, fdiv 3.0, fcmplt 3.0
+    1,516  mpCollisionCheckProjectFloor                          fsub 14.9, i2f 10.8, fcmpge 3.8, fcmplt 3.6, fdiv 2.3
+    1,482  atanf                                                 fmul 28.0, fadd 12.0, fsub 10.0
+    1,237  guMtxCatF                                             fmul 19.9, fadd 19.9
+    1,229  ftPhysicsSetGroundVelTransferAir                      fmul 21.0, fadd 11.7, fcmpgt 6.5, fcmplt 5.9, i2f 5.3
+    1,158  gmCameraSetBoundsPosition                             i2f 31.4, fcmplt 16.6, fcmpgt 16.4
+    1,150  gmCameraDefaultFuncCamera                             fsub 9.0, fmul 8.0, fadd 4.0, fcmple 2.0, fcmpgt 2.0
+    1,142  ndsBaseGcPlayMObjMatAnim                              fmul 18.5, fadd 12.1, fsub 5.5, f2uiz 0.9, f2iz 0.6
+    1,060  ndsBaseFTCommonDeadCheckInterruptCommon               i2f 29.5, fcmpgt 14.7, fcmplt 14.7
+    1,011  itProcessProcItemMain                                 i2f 9.8, fadd 8.3, fsub 7.4, fcmpgt 4.9, fcmplt 4.9
+      987  ndsStageMPAdjustFloorLoopWallSweep                    fsub 11.6, fadd 8.8, fcmplt 7.9, fcmpgt 0.1, fcmpge 0.1
+      857  ftComputerUpdateInputs.part.0                         fcmplt 6.5, fsub 5.5, fcmpgt 4.6, fcmpeq 3.5, fmul 2.8
+      812  ndsIFCommonNativeOamDrawGObj                          fadd 7.7, fmul 7.2, fcmpge 4.3, f2iz 4.3, f2uiz 3.4
+      769  syMatrixRowscaleF                                     fcmpeq 33.7, fmul 11.5
+      766  lbCommonTan                                           fcmpeq 4.0, fdiv 4.0
+      713  ndsBaseMPProcessCheckFloorEdgeCollisionR              fadd 11.3, fsub 5.7
+      713  ndsBaseMPProcessCheckFloorEdgeCollisionL              fadd 17.0
+      705  gmCollisionSetMatrixNcs                               fmul 17.6, fcmpeq 4.9, fadd 1.4, fsub 1.4, fdiv 0.9
+      697  ftComputerCheckSetTargetEdgeRight                     fsub 4.1, fmul 2.1, fcmpgt 2.1, fdiv 1.9, f2iz 1.9
+      665  ndsBattleHudRender                                    fmul 5.1, fadd 5.1, udivsi3 3.4, f2iz 3.4, fcmpge 3.4
+      661  gmCollisionCheckFighterInFighterRange                 fsub 8.7, fcmpgt 7.2, fadd 3.9, fcmplt 1.2
+      625  gmCollisionTransformMatrixAll                         fmul 19.8, fcmpeq 3.2, fadd 2.1, fsub 2.1
+      590  lbCommonCos                                           fadd 14.0
+      570  lbParticleGeneratorFuncRun                            fmul 5.6, fadd 2.7, fsub 1.0, cosf 0.8, sinf 0.8
+      553  ndsRendererAdapterBuildNativeMaterialSnapshot         f2iz 3.4, fmul 2.1, ui2f 1.9, fdiv 1.9, fcmpgt 1.2
+      546  ftComputerCheckTargetItemOrTwister                    fcmpgt 5.6, fadd 5.5, fmul 5.5, fsub 2.8
+      545  gmCameraCheckTargetInBounds                           i2f 10.5, fcmpgt 10.5, fcmplt 10.4
+      503  func_ovl3_80135B78                                    fsub 4.4, fmul 4.3, fcmpgt 3.8, i2f 3.2, fadd 0.6
+      493  ndsRendererAdapterApplyMvpRecalc                      fmul 24.6
+      482  ndsBaseMPProcessCheckTestFloorCollisionNew            fadd 11.4, fcmple 0.1, fsub 0.1
+      478  ndsBaseMPProcessCheckTestFloorCollision               fadd 11.4
+      463  battleship_ftPublicProcUpdate                         fsub 8.0, fcmplt 8.0
+      459  ftComputerFollowObjectiveWalk                         fcmplt 10.1, fcmpgt 4.2, fsub 4.2, fcmple 2.1, fadd 0.3
+      458  syVectorScale3D                                       fmul 22.9
+      438  ftComputerCheckDetectTarget                           fadd 6.0, fmul 3.3, fcmplt 1.4, i2f 1.3, fsub 0.8
+      411  func_ovl2_8010C5C0                                    fmul 8.0, fadd 6.0
+      387  ndsBaseGcParseMObjMatAnimJoint                        fsub 3.0, fadd 2.9, fcmpgt 1.5, fcmple 1.2, ui2f 1.2
+      385  ftComputerGetObjectiveStatus                          fmul 4.2, fsub 4.2, fcmpgt 2.1, fadd 2.1, fcmple 0.0
+      384  ndsMPCheckWallSurfaceTilt                             i2f 3.2, fcmpgt 2.7, fsub 2.4, fadd 1.0, fmul 0.8
+      358  func_ovl2_800EDA0C                                    fmul 4.6, fadd 1.5, fcmpeq 1.4, fdiv 0.8, sqrtf 0.8
+      352  __ieee754_atan2f                                      fdiv 2.0
+      346  ndsRendererHardwarePrepareLitDirection                fmul 2.4, fdiv 1.2, f2iz 1.2, fadd 0.8, sqrtf 0.4
+      335  mpCollisionUpdateBoundsDiff                           fsub 8.0
+      331  gmCameraGetAdjustAtAngle                              fadd 6.0, fmul 4.0
+      330  gmCameraUpdateInterests                               fadd 7.9
+      329  ftMainUpdateMotionEventsAll                           fcmpeq 8.8, fcmpgt 4.6, fsub 2.4, fcmple 0.9
+      321  ndsRendererAdapterItemOffscreen                       fcmplt 12.0, f2iz 6.0, fmul 2.0
+      319  syUtilsRandFloat                                      i2f 8.0, fmul 8.0
+      315  ftMainUpdateMotionEventsForwardEffect                 fcmpeq 8.4, fcmpgt 4.4, fsub 2.3, fcmple 0.9
+      311  ndsSObjDrawCachedWallpaperFinal.isra.0                fcmplt 4.0, fcmpgt 4.0, f2iz 2.0, fmul 2.0, fadd 2.0
+      296  ftComputerCheckFindTarget                             i2f 14.8
+      294  ndsR2CamQToF32                                        i2f 14.7
+      283  ftPhysicsApplyGroundVelFriction                       fcmplt 8.2, fcmpgt 4.1, fmul 4.1, fsub 0.1, fadd 0.0
+      274  itProcessUpdateAttackPositions                        fadd 6.5
+      270  ifCommonPlayerTagProcDisplay                          fcmpgt 3.7, i2f 3.1, fsub 1.6, fadd 1.3, f2iz 1.0
+      265  osRecvMesg                                            idivmod 5.3
+      265  osSendMesg                                            idivmod 5.3
+      258  ifCommonPlayerDamageUpdateDigits                      fcmpeq 7.8, fmul 1.2, fsub 0.9, i2f 0.8, ui2f 0.4
+      245  ndsBaseFTDisplayMainProcDisplay                       fadd 4.2, fcmplt 3.9, i2f 0.2, fmul 0.2
+      241  ndsRendererAdapterMvpMod1F                            fsub 2.0, fmul 2.0, sqrtf 1.0, fadd 1.0, fcmplt 1.0
+      239  ndsNativeWallpaperDraw                                udivsi3 4.0, lmul 4.0
+      232  ftComputerFollowObjectiveAttack.part.0                fcmplt 4.7, fcmpgt 1.4, fmul 1.4, fadd 1.4, fsub 1.1
+      209  ifCommonTimerProcDisplay                              idivmod 4.0, i2f 0.2, fsub 0.1, fmul 0.1, f2iz 0.1
+      204  ndsBaseFtDisplayLightsDrawReflect                     fmul 2.7, f2iz 1.1, fdiv 0.8
+      196  ndsRendererAdapterBuildDObjXObjMatrix                 fmul 2.7, fadd 0.6, fsub 0.5, sqrtf 0.4, fdiv 0.4
+      194  ndsBaseFTCommonGuardUpdateShieldAngle                 i2f 1.0, fdiv 0.7, fmul 0.5, fcmpgt 0.5, fcmplt 0.2
+      193  gmCollisionGetWorldPosition                           fadd 3.1, fmul 3.1
+      191  efManagerDustLightProcUpdate                          fadd 4.5
+      187  ndsBaseMPProcessCheckTestFloorCollisionAdjNew         fadd 4.5
+      187  ndsBaseMPProcessCheckTestCeilCollisionAdjNew          fadd 4.4
+      180  ndsShieldPoseSpanFits                                 udivsi3 4.5
+      167  func_ovl3_80138AA8                                    fcmplt 1.6, fsub 0.8, i2f 0.6, fdiv 0.4, fcmpgt 0.4
+      158  ndsParticleSetCurrentCamera                           fmul 1.3, f2iz 1.3, i2f 1.0, fdiv 0.5, fcmpeq 0.2
+      153  ndsIFCommonBattleScreenY                              fmul 1.0, i2f 0.5, fcmpgt 0.5, fdiv 0.5, fsub 0.5
+      153  ndsIFCommonBattleScreenX                              fmul 1.0, i2f 0.5, fcmpgt 0.5, fdiv 0.5, fadd 0.5
+      142  ndsR2CameraPerspFast20p12                             fmul 5.1, f2iz 2.6
+      137  battleship_ftMainProcParams                           fcmpeq 8.0, f2iz 0.2, fsub 0.1, i2f 0.0, fmul 0.0
+      118  ndsBaseFTCommonGuardInitJoints                        fcmpeq 3.5, fmul 0.3, fdiv 0.3, i2f 0.1, fadd 0.1
+      117  ndsStageMPCeilFloorLoopSweep                          fsub 1.8, fadd 0.9
+      111  ftDisplayMainDrawAfterImage                           fmul 1.1, f2iz 1.1, fadd 0.9, i2f 0.9, divsi3 0.1
+      110  ndsParticleBiasTowardEye.part.0                       fmul 0.6, fadd 0.5, fdiv 0.3, fsub 0.3, fcmpgt 0.1
+      108  ftMainParseMotionEvent                                i2f 3.3, fadd 0.5, fsub 0.5, fmul 0.1
+      107  ftMainUpdateColAnim                                   divsi3 2.0, i2f 0.9
+      105  ftPhysicsGetAirVelTransN                              fmul 1.6, fsub 0.7, i2f 0.4, sinf 0.2, fadd 0.2
+      105  ftComputerCheckSetTargetEdgeLeft                      fsub 1.3, fcmplt 1.3, fcmpge 0.6, fmul 0.4, fadd 0.2
+       99  func_ovl3_8013877C                                    fcmplt 2.1, fsub 1.3, fcmpgt 0.6, f2d 0.0, d2f 0.0
+       98  syVectorRotateAbout3D                                 fmul 1.6, fadd 0.6, fsub 0.2, fdiv 0.1, fcmpeq 0.1
+       92  ftPhysicsSetGroundVelAbsStickRange                    fcmplt 1.6, i2f 0.8, fmul 0.8, fsub 0.8
+       91  gcAddMObjForDObj                                      fdiv 0.5, i2f 0.5
+       86  ndsBaseMPProcessSetCollProjectFloorID                 fadd 2.0
+       85  gmCollisionTestSphere                                 fdiv 0.3, fsub 0.3, fmul 0.3, fadd 0.3, fcmpeq 0.1
+       84  grCastleBumperProcUpdate                              fadd 2.0
+       84  ndsMPCheckLRSurfaceFlat                               fcmpgt 0.8, fsub 0.6, i2f 0.4, fcmple 0.1, fdiv 0.1
+       83  ftComputerCheckFindItem                               fcmpeq 2.1, fcmple 0.3, fsub 0.3, fmul 0.3, sqrtf 0.2
+       81  ftCommonRebirthCommonProcMap                          fsub 0.3, fdiv 0.3, i2f 0.3, fmul 0.3, fadd 0.3
+       78  ndsMPLinePositionLocalToWorld                         fadd 1.8
+       77  ftPhysicsApplyAirVelXFriction                         fcmplt 1.8, fcmpgt 1.6, fadd 0.3, fsub 0.2
+       74  ftPhysicsApplyGroundVelTransN                         fmul 1.4, fsub 0.7, i2f 0.7, fcmplt 0.3
+       72  ndsAudioFgmStartHandle                                uldivmod 0.6, lmul 0.3
+       72  ndsBaseMPProcessCheckTestRCliffCollision              fsub 0.9, fadd 0.9
+       69  lbParticleRotateVel                                   fmul 0.7, fadd 0.2, sinf 0.1, cosf 0.1, sqrtf 0.0
+       68  ifCommonCountdownThread                               fsub 1.6, fcmpeq 0.1
+       67  ndsMPGetLRCommonWall                                  i2f 0.6, fsub 0.5, fcmpge 0.2, fadd 0.2, fcmple 0.2
+       65  gmCollisionTestRectangle                              fsub 0.4, fcmplt 0.4, fadd 0.2, fdiv 0.2, fcmpge 0.0
+       63  ndsRendererHardwareResolveOrBindTexture               udivsi3 1.6
+       61  ftPhysicsApplyAirVelFriction                          fsub 1.0, fcmplt 1.0
+       60  syVectorAngleDiff3D                                   fmul 0.8, fadd 0.5, sqrtf 0.2, fcmpgt 0.1, fcmpeq 0.1
+       59  ndsPlatformRenderDebugHud                             udivsi3 1.0, lmul 0.1, uldivmod 0.1
+       58  ftParamMakeEffect                                     fcmpeq 1.3, fadd 0.5, fmul 0.2, fsub 0.2
+       54  ftComputerProcDefault                                 fcmplt 3.0, i2f 0.2, fmul 0.2
+       52  wpProcessProcWeaponMain                               i2f 0.5, fadd 0.4, fsub 0.4, fcmpgt 0.4, fcmplt 0.4
+       52  ftComputerSetCommandWaitShort                         fadd 0.7, i2f 0.6, fmul 0.3, f2uiz 0.3
+       50  ndsRendererHardwareConsumeSubmittedFrame              ldivmod 0.4
+       48  gcPlayAnimAll                                         fcmpeq 3.0
+       47  efManagerDustLightMakeEffect                          fmul 0.5, cosf 0.1, fadd 0.1, fcmpeq 0.1, fsub 0.1
+       47  ndsBaseFTCommonGuardUpdateJoints                      fmul 0.2, fdiv 0.2, i2f 0.1, fadd 0.1
+       47  efManagerQuakeProcUpdate                              fcmple 0.8, fcmpgt 0.8, fmul 0.2, fdiv 0.1
+       43  ftPhysicsCheckClampAirVelXDec                         fcmplt 1.4, fcmpgt 1.4
+       43  efManagerDefaultProcUpdate                            fadd 1.0
+       42  battleship_ftMainSetStatus                            fcmpeq 0.7, fmul 0.4, i2f 0.4, fsub 0.4
+       40  ndsBattlePlayablePacingUpdate                         lmul 2.0
+       40  __aeabi_f2ulz                                         f2d 2.0
+       37  func_ovl3_80138EE4                                    fcmplt 0.6, fmul 0.4, fadd 0.3, fsub 0.1, i2f 0.1
+       37  ftPhysicsClampAirVelXStickRange                       i2f 0.4, fmul 0.4, fadd 0.4, fcmplt 0.4, fcmpgt 0.2
+       37  efManagerImpactWaveProcUpdate                         fcmple 0.4, fcmpgt 0.4, fsub 0.4, fcmplt 0.4
+       36  gmCollisionSetInvertMatrix                            fmul 0.9, fsub 0.3, fadd 0.1, fcmpeq 0.0, fdiv 0.0
+       35  ndsAObjEvent32CorrectMObjColors.part.0                fmul 1.2, f2iz 0.6, fcmple 0.2
+       35  efManagerDamageFlySparksProcUpdate                    fadd 0.7, fcmple 0.2
+       34  __udivmoddi4                                          clzdi2 2.2
+       34  ndsAudioFgmUpdate.part.0                              udivsi3 0.9
+       33  func_ovl3_8013837C                                    fcmplt 1.4, fmul 0.2, i2f 0.1, f2uiz 0.1, fadd 0.1
+       32  __aeabi_f2lz                                          fcmplt 2.0
+       32  ndsFtrLeanBuildWatch                                  fcmpeq 2.0
+       32  ndsAObjEvent32CollectActiveMObjs                      fcmpeq 2.0
+       32  syVectorNormCross3D                                   fmul 0.6, fsub 0.2, fadd 0.1, sqrtf 0.1, fcmpeq 0.1
+       31  wpSamusChargeShotProcUpdate                           i2f 0.1, fsub 0.1, fdiv 0.1, fmul 0.1
+       31  func_ovl3_80134964                                    fcmplt 0.6, fcmpge 0.6, fcmple 0.6, fadd 0.0, i2f 0.0
+       31  ndsBaseMPProcessRunLWallCollisionAdjNew               fadd 0.5, fcmple 0.2, fcmplt 0.2, fcmpge 0.1, fcmpgt 0.0
+       31  __aeabi_uidivmod                                      udivsi3 0.8
+       29  ifCommonPlayerDamageUpdateAnim                        fadd 0.7, udivsi3 0.0
+       29  ndsEFManagerShieldQuadProcDisplay                     fmul 0.6, fadd 0.2, fcmpgt 0.1, sqrtf 0.1
+       29  itLinkBombWaitProcUpdate                              fcmplt 0.9, fcmpeq 0.6, i2f 0.3
+       29  ftDonkeySpecialNLoopProcUpdate                        fcmplt 0.9, fcmpge 0.9
+       28  efManagerDamageFlyOrbsProcUpdate                      fadd 0.5, fsub 0.2
+       28  ndsBaseFTCommonDamageInitDamageVars                   fmul 0.2, fcmplt 0.1, fcmpge 0.1, i2f 0.1, fdiv 0.0
+       27  __clzdi2                                              clzsi2 2.3
+       25  ndsLbParticleDrawTexturesOnHotStack                   fmul 0.3, udivsi3 0.3, fadd 0.2
+       23  ndsBaseFTCommonAttack1CheckInterruptCommon            fcmpeq 1.4, fsub 0.0
+       23  ndsBaseFTCommonDamageFlyRollUpdateModelPitch          fadd 0.4, i2f 0.2, fmul 0.2
+       22  battleship_ftAnimEndSetWait                           fcmple 1.4
+       21  lbCommonMag2D                                         fmul 0.3, fadd 0.2, sqrtf 0.2
+       20  ndsBattleHudSubmitScoreParticle                       f2iz 0.2, fadd 0.2, fmul 0.2, fcmpge 0.2
+       20  ftPhysicsApplyAirVelDriftFastFall                     fcmplt 0.4, fsub 0.1, fmul 0.1, i2f 0.1, fadd 0.1
+       20  ndsRelocFormatAnimPath.constprop.0                    uidivmod 0.2, udivsi3 0.2
+       18  ndsStageMPSweepFloorLoopSweep                         f2iz 0.2, fsub 0.2, fadd 0.1, fcmpge 0.1
+       17  mpCommonRunFighterAllCollisions                       fsub 0.2, fadd 0.2, fcmple 0.1
+       17  ndsBaseFTCommonDamageAirCommonProcUpdate              fcmple 1.1
+       15  ndsBaseFTCommonCapturePulledRotateScale               fmul 0.8
+       15  ndsIFCommonGetBattleHudDamageState                    i2f 0.1, fmul 0.1, f2iz 0.1, fdiv 0.0, fsub 0.0
+       15  ftParamGetCommonKnockback                             fmul 0.4, i2f 0.1, fadd 0.1, ui2f 0.0, fcmpge 0.0
+       15  ftPhysicsApplyGravityClampTVel                        fsub 0.3, fcmplt 0.3
+       15  ifCommonPlayerArrowsFuncRun                           fcmplt 0.6, fcmpgt 0.3
+       13  ndsBaseEFManagerDamageNormalLightMakeEffect           fmul 0.1, fadd 0.1, cosf 0.0, sinf 0.0, i2f 0.0
+       13  func_ovl2_800EDE5C                                    fmul 0.2, fadd 0.1, sqrtf 0.1
+       12  ndsBaseMPProcessCheckTestLCliffCollision              fadd 0.3
+       11  ndsAudioFgmPlaySample                                 udivsi3 0.3
+       11  ndsOAAdvanceTail                                      fadd 0.3
+       10  ndsMPLinePositionWorldToLocal                         fsub 0.2
+        9  efManagerDamageSpawnOrbsProcUpdate                    fadd 0.1, fmul 0.1, fsub 0.0, cosf 0.0, sinf 0.0
+        8  itMainApplyGravityClampTVel                           fsub 0.1, fcmpgt 0.1
+        8  ndsFtrLeanRunOnHotStack                               fmul 0.2, f2iz 0.2
+        8  ftPhysicsCheckClampAirVelXDecMax                      fcmplt 0.5
+        8  itLinkBombFallProcUpdate                              i2f 0.1, fcmpeq 0.1, fcmplt 0.1
+        8  gmCollisionCheckFighterAttackItemDamageCollide        fadd 0.2
+        8  ftParamGetHitLag                                      fmul 0.1, i2f 0.1, f2iz 0.1, fadd 0.0
+        7  ifCommonPlayerArrowsUpdateFlags                       fcmplt 0.5
+        7  ndsBaseFTCommonCatchProcUpdate                        fcmpgt 0.2, fsub 0.0, fcmple 0.0, ui2f 0.0, fdiv 0.0
+        7  ndsMPCommonProcFighterDamage                          fcmpge 0.1, fmul 0.1, f2iz 0.1, fadd 0.1, fsub 0.0
+        7  ndsBaseFTCommonDownBounceProcUpdate                   fcmple 0.4
+        6  itVisualsUpdateSpin                                   fadd 0.1
+        6  ftParamGetHitStun                                     fdiv 0.0
+        6  ftPhysicsApplyGravityDefault                          fsub 0.1, fcmplt 0.1
+        6  ftLinkSpecialAirHiProcPhysics                         fmul 0.3
+        6  ndsMPSlopeUnit                                        i2f 0.0, fdiv 0.0, fmul 0.0, fadd 0.0, sqrtf 0.0
+        5  mpCollisionGetVertexPositionID                        i2f 0.3
+        5  ftParamSetDamageShuffle                               f2iz 0.1, fmul 0.1, i2f 0.1, fadd 0.0
+        5  ndsBaseFTCommonDownBounceSetStatus                    fdiv 0.0, f2iz 0.0, i2f 0.0, fsub 0.0, fcmplt 0.0
+        5  ndsParticleDrawOwnTextureQuad                         fcmpeq 0.2, fcmple 0.1
+        5  efManagerDamageSpawnMDustProcUpdate                   fmul 0.1, i2f 0.0, fdiv 0.0, cosf 0.0, sinf 0.0
+        5  battleship_ftAnimEndCheckSetStatus                    fcmple 0.3
+        4  ndsBaseFTCommonEscapeProcUpdate                       fcmple 0.3
+        4  lbCommonMakePositionFGM                               fdiv 0.0, fmul 0.0, f2iz 0.0
+        4  gmCollisionGetFighterAttackDamagePosition             fadd 0.1, fmul 0.1
+        4  efManagerNoStructProcUpdate                           fcmple 0.3
+        4  ftLinkSpecialAirHiProcUpdate                          fcmple 0.3
+        4  ftPhysicsCheckSetFastFall                             fcmplt 0.3
+        4  efManagerHaveStructProcUpdate                         fcmple 0.3
+        4  itLinkBombHoldProcUpdate                              i2f 0.1, fcmpeq 0.1, fcmplt 0.1
+        4  func_ovl2_800EE050.part.0                             fmul 0.0, fsub 0.0, fadd 0.0, fdiv 0.0, fcmpeq 0.0
+        3  ftComputerWaitGetTarget                               fmul 0.0, fadd 0.0, f2uiz 0.0
+        3  syMatrixRotRpyR                                       lmul 0.2
+        3  ftDonkeySpecialNEndProcUpdate                         fcmple 0.2
+        3  ndsEFManagerImpactWaveNdlHeader                       f2iz 0.2
+        3  ndsBaseMPProcessSetLandingFloor                       fadd 0.1
+        3  ndsBaseFTCommonLandingProcInterrupt                   fcmplt 0.1, fadd 0.0, fcmpge 0.0
+        3  ftCommonItemThrowProcUpdate                           fcmple 0.1, fmul 0.0, i2f 0.0, fdiv 0.0, cosf 0.0
+        3  ndsMPLineExtentFillSlow                               i2f 0.1, f2iz 0.0, fadd 0.0, fsub 0.0
+        3  ndsBaseFTCommonDamageCommonProcPhysics                fcmplt 0.2
+        3  efManagerDamageNormalLightMakeEffect                  fmul 0.1, fadd 0.0, i2f 0.0
+        3  efManagerSetOffMakeEffect                             fmul 0.0, fadd 0.0, cosf 0.0, sinf 0.0, i2f 0.0
+        3  ftParamGetCapturedDamage                              fmul 0.0, i2f 0.0, fadd 0.0, f2iz 0.0
+        2  ndsBaseFTCommonAttack12CheckGoto                      fsub 0.0, fcmpeq 0.0
+        2  efManagerDustHeavyDoubleMakeEffect                    fadd 0.0, fcmpeq 0.0
+        2  ndsUtilsArcSinQ30                                     lmul 0.1
+        2  ndsBaseFTCommonThrowProcUpdate                        fcmple 0.1
+        2  efManagerDustHeavyMakeEffect                          fadd 0.1
+        2  ndsBaseFTCommonDamageCommonProcUpdate                 fcmple 0.1
+        2  itMainGetDamageOutput                                 fmul 0.0, fadd 0.0, i2f 0.0, f2iz 0.0
+        2  ftParamGetStaledDamage                                fcmpeq 0.1
+        2  ifScreenFlashProcDisplay                              divsi3 0.0
+        2  ftCommonCaptureWaitProcMap                            fadd 0.0
+        2  itMapSetGroundRebound                                 fmul 0.0, fadd 0.0, fcmpeq 0.0, fdiv 0.0
+        2  ndsFTParamApplyModelPartCurrent.isra.0                ui2f 0.1
+        2  ndsMPFindLineEndpoints                                i2f 0.1
+        2  efManagerDustHeavyDoubleProcUpdate                    fsub 0.0
+        2  ftParamVelDamageTransferGround                        fmul 0.0, fcmpeq 0.0, fcmpgt 0.0, fcmplt 0.0
+        2  ftComputerFollowObjectiveAlly.part.0                  fcmplt 0.0, fsub 0.0, fmul 0.0, fadd 0.0, fcmpgt 0.0
+        1  mpCommonSetFighterGround                              i2f 0.0, fmul 0.0
+        1  ndsBaseFTCommonDamageSetPublic                        fcmpge 0.0, fcmpgt 0.0, fmul 0.0, fcmplt 0.0
+        1  gmCollisionGetItemAttackFighterDamagePosition         fadd 0.0, fmul 0.0
+        1  gmCollisionGetItemAttackPosition                      fadd 0.0, fmul 0.0
+        1  func_ovl3_801346D4                                    fsub 0.0, fcmpgt 0.0, fadd 0.0, fcmplt 0.0
+        1  battleship_ftMainProcessHitCollisionStatsMain         fcmplt 0.1, fcmpgt 0.0
+        1  gmCollisionGetFighterAttackItemDamagePosition         fadd 0.0, fmul 0.0
+        1  ndsBaseFTCommonThrownReleaseThrownUpdateStats         fmul 0.0, fadd 0.0, f2iz 0.0, i2f 0.0, fcmplt 0.0
+        1  syUtilsArcCos                                         clzdi2 0.1
+        1  itManagerMakeItem                                     i2f 0.0, fmul 0.0
+        1  lbCommonReflect2D                                     fmul 0.0, fadd 0.0
+        1  ndsBaseFTCommonGuardOnProcUpdate                      fcmple 0.1
+        1  ndsBaseFTCommonCapturePulledProcMap                   fcmpge 0.0, fadd 0.0, fmul 0.0
+        1  efManagerDustDashMakeEffect                           fadd 0.0
+        1  ndsMPGetWallEdgeU                                     fcmpge 0.1
+        1  efManagerDeadExplodeMakeEffect                        fmul 0.0, fdiv 0.0
+        1  ndsBaseFTCommonDamageSetDustEffectInterval            fcmplt 0.1
+        1  gmCollisionGetFighterAttacksPosition                  fadd 0.0, fmul 0.0
+        1  ndsBaseFTCommonGuardOffProcUpdate                     fcmple 0.1
+        1  func_ovl2_800EEEAC                                    fadd 0.0, fsub 0.0, fcmple 0.0, fcmpge 0.0
+        1  ndsBaseMPProcessSetCollideFloor                       fadd 0.0
+        1  ndsBaseFTCommonDamageCommonProcLagUpdate              fadd 0.0, i2f 0.0, fmul 0.0
+        1  ftComputerProcessTrait                                fmul 0.0, fadd 0.0, f2uiz 0.0
+        1  func_ovl2_800EF5D4                                    fcmpgt 0.0, fadd 0.0, fcmplt 0.0, fsub 0.0
+        1  ftMainUpdateMotionEventsForward                       fcmpeq 0.0, fcmpgt 0.0, fsub 0.0
+        1  ftParamGetStickAngleRads                              i2f 0.0
+        1  ftSamusSpecialNStartSetStatus                         i2f 0.0, fdiv 0.0, fmul 0.0, fadd 0.0
+        1  syUtilsArcSin                                         clzdi2 0.0
+        1  wpManagerMakeWeapon                                   i2f 0.0, fmul 0.0
+        1  ftSamusSpecialNStartProcUpdate                        fcmple 0.0
+        1  battleship_ftMainSearchFighterCatch                   fcmpgt 0.0, fsub 0.0, fcmplt 0.0
+        1  mpCommonSetFighterLandingParams                       fcmpeq 0.0
+        1  ndsBaseFTCommonDamageCheckMakeScreenFlash             fcmpgt 0.0
+        1  ftPublicCommonCheck                                   fcmpge 0.0
+        1  ndsPrivateMPGetWallEdgeD                              fcmplt 0.0
+        0  ndsAudioFgmStop                                       uidivmod 0.0
+        0  battleship_ftAnimEndSetFall                           fcmple 0.0
+        0  ndsBaseFTCommonTurnProcUpdate                         fcmple 0.0
+        0  wpSamusChargeShotMakeWeapon                           fdiv 0.0
+        0  wpProcessUpdateHitPositions                           fcmpeq 0.0, fadd 0.0
+        0  ifCommonPlayerDamageStartBreakAnim                    fadd 0.0, fsub 0.0
+        0  ndsBaseFTCommonDamageUpdateMain                       fcmpeq 0.0
+        0  ndsBaseFTCommonAttackAirCheckInterruptCommon          fcmplt 0.0, fcmpgt 0.0
+        0  ftPhysicsClampAirVelXMax                              fcmplt 0.0
+        0  ftComputerFollowObjectivePatrol.part.0                fcmplt 0.0, fmul 0.0, fadd 0.0, fcmpgt 0.0
+        0  ftCommonRebirthDownSetStatus                          fadd 0.0, i2f 0.0
+        0  itLinkBombThrownProcHit                               fcmplt 0.0, fcmpgt 0.0, i2f 0.0, fmul 0.0
+        0  ftMainUpdateDamageStatItem                            fcmplt 0.0, fcmpgt 0.0
+        0  ndsBaseFTCommonThrownSetStatusDamageRelease           fcmplt 0.0, fcmpge 0.0, fsub 0.0
+        0  ndsBaseFTCommonThrownReleaseFighterLoseGrip           fsub 0.0
+        0  gmCollisionGetDamageSlashRotation                     fsub 0.0
+        0  efManagerDamageSlashMakeEffect                        fmul 0.0, i2f 0.0, fadd 0.0
+        0  ftPublicDecideCommon                                  fcmpge 0.0
+        0  ftCommonDeadDownSetStatus                             fcmpgt 0.0, i2f 0.0
+        0  ndsBaseFTCommonAttackAirProcMap                       fcmpgt 0.0, ui2f 0.0, fmul 0.0
+        0  ftPublicTryPlayFallSpecialReact                       fcmpge 0.0, fcmple 0.0, fcmplt 0.0
+        0  itLinkBombExplodeUpdateAttackEvent                    ui2f 0.0
+        0  itMainSetSpinVelLR                                    fcmpge 0.0
+        0  ndsAudioFgmPlayAtPan                                  uidivmod 0.0
+        0  ifCommonPlayerStockMakeStockSnap                      ui2f 0.0, i2f 0.0
+        0  ftDonkeySpecialNEndSetStatus                          i2f 0.0, fmul 0.0
+        0  ifCommonPlayerScoreMakeEffect                         i2f 0.0
+        0  efManagerStockSnapMakeEffect                          fmul 0.0
+        0  mpCollisionGetMapObjPositionID                        i2f 0.0
+        0  ftMainUpdateHiddenPartID                              ui2f 0.0
+        0  itMapSetGround                                        i2f 0.0, fmul 0.0
+        0  ftCommonLightThrowDecideSetStatus                     fcmple 0.0, fcmplt 0.0
+        0  ftCommonFallSpecialSetStatus                          fmul 0.0
+        0  itProcessUpdateDamageStatFighter                      fcmplt 0.0
+        0  ndsBaseFTCommonDownForwardOrBackCheckInterruptCommon  fcmplt 0.0
+        0  ftKirbyThrowFProcMap                                  fcmplt 0.0
+        0  itMainSetFighterThrow                                 fcmplt 0.0
+        0  ndsBaseFTCommonLandingSetStatus                       fcmple 0.0
+        0  ndsBaseFTCommonDamageCheckCatchResist                 fcmpeq 0.0
+        0  ftPhysicsClampAirVelX                                 fcmplt 0.0
+        0  ftManagerInitFighter                                  fcmpgt 0.0

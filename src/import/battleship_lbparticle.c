@@ -77,6 +77,7 @@
 #include <nds/nds_fcmp.h>
 #include <nds/nds_r2_collision_mtx.h>
 #include <nds/nds_r2_hwmath_unit.h>
+#include <nds/nds_fighter_matrix_index.h>
 
 /* The DECOMP sc/scene.h, by path, not the port's <sc/scene.h>. INCLUDES puts
  * include/ ahead of the decomp tree, so the angled form silently selects
@@ -3979,6 +3980,102 @@ ndsParticleBiasTowardEyeQ8(s32 center_q8[3], f32 depth_bias)
     }
 }
 
+/* syMatrixTraRotRpyRScaF (sys/matrix.c) in integers (P2-2p8, 2026-10-06; owner:
+ * "Software floating point should not exist, fixed point only"). The source
+ * builder took six __sinf/__cosf calls and ~40 soft-float products a build,
+ * ~1.6K ticks, and a particle draw pass builds 2.8 a frame. The angles take
+ * the table sine at 4096 steps a turn (lbCommonSin's index, the lean lock
+ * kernel's ndsFighterMatrixAngleToIndexExact), the rotation is formed at Q30
+ * and the row scales applied at Q16, and the cells are written back as the
+ * affine's floats, so its layout, its Ready/Finished cache and every reader
+ * keep their contract. Render only (no particle reaches the replay digest);
+ * an angle past the kernel's range keeps the source builder. */
+static inline s32 ndsParticleSinQ15(s32 index)
+{
+    const u32 id = (u32)index & 0xfffu;
+    const s32 value = (s32)gSYSinTable[id & 0x7ffu];
+
+    return ((id & 0x800u) != 0u) ? -value : value;
+}
+
+/* A Q30 rotation cell times a row scale, as the affine's float. RowscaleF
+ * leaves a zero cell zero, which the product does by itself. */
+static inline f32 ndsParticleCellF32(s32 cell_q30, s32 scale_q16, u32 unit)
+{
+    if (unit != 0u)
+    {
+        return ndsR2CollisionFixedToF32((s64)cell_q30, 30u);
+    }
+    return ndsR2CollisionFixedToF32((s64)cell_q30 * scale_q16, 46u);
+}
+
+static void __attribute__((noinline, target("arm")))
+ndsParticleTraRotRpyRScaQ(Mtx44f *mf, f32 tx, f32 ty, f32 tz, f32 r, f32 p,
+                          f32 y, f32 sx, f32 sy, f32 sz)
+{
+    int32_t ir;
+    int32_t ip;
+    int32_t iy;
+    s32 sr, cr, sp, cp, sy_, cy;
+    s32 sx_q, sy_q, sz_q;
+    u32 ux, uy, uz;
+    s32 srsp;
+    s32 crsp;
+    s32 cell[3][3];
+    u32 row;
+    u32 col;
+
+    sx_q = ndsR2CollisionF32ToFixed(sx, 16u);
+    sy_q = ndsR2CollisionF32ToFixed(sy, 16u);
+    sz_q = ndsR2CollisionF32ToFixed(sz, 16u);
+    if ((ndsFighterMatrixAngleToIndexExact(r, &ir) == 0) ||
+        (ndsFighterMatrixAngleToIndexExact(p, &ip) == 0) ||
+        (ndsFighterMatrixAngleToIndexExact(y, &iy) == 0) ||
+        (sx_q == NDS_R2_COLLISION_F32_OVERFLOW) ||
+        (sy_q == NDS_R2_COLLISION_F32_OVERFLOW) ||
+        (sz_q == NDS_R2_COLLISION_F32_OVERFLOW))
+    {
+        syMatrixTraRotRpyRScaF(mf, tx, ty, tz, r, p, y, sx, sy, sz);
+        return;
+    }
+    ux = (sx_q == (1 << 16)) ? 1u : 0u;
+    uy = (sy_q == (1 << 16)) ? 1u : 0u;
+    uz = (sz_q == (1 << 16)) ? 1u : 0u;
+    sr = ndsParticleSinQ15(ir);
+    cr = ndsParticleSinQ15(ir + 0x400);
+    sp = ndsParticleSinQ15(ip);
+    cp = ndsParticleSinQ15(ip + 0x400);
+    sy_ = ndsParticleSinQ15(iy);
+    cy = ndsParticleSinQ15(iy + 0x400);
+    /* syMatrixRotRpyRF's nine cells at Q30 (Q15 x Q15; the three-factor
+     * terms take the first product back to Q15). */
+    srsp = (sr * sp) >> 15;
+    crsp = (cr * sp) >> 15;
+    cell[0][0] = cp * cy;
+    cell[0][1] = cp * sy_;
+    cell[0][2] = -(sp << 15);
+    cell[1][0] = (srsp * cy) - (cr * sy_);
+    cell[1][1] = (srsp * sy_) + (cr * cy);
+    cell[1][2] = sr * cp;
+    cell[2][0] = (crsp * cy) + (sr * sy_);
+    cell[2][1] = (crsp * sy_) - (sr * cy);
+    cell[2][2] = cr * cp;
+    for (col = 0u; col < 3u; col++)
+    {
+        (*mf)[0][col] = ndsParticleCellF32(cell[0][col], sx_q, ux);
+        (*mf)[1][col] = ndsParticleCellF32(cell[1][col], sy_q, uy);
+        (*mf)[2][col] = ndsParticleCellF32(cell[2][col], sz_q, uz);
+    }
+    for (row = 0u; row < 3u; row++)
+    {
+        (*mf)[row][3] = 0.0F;
+    }
+    (*mf)[3][0] = tx;
+    (*mf)[3][1] = ty;
+    (*mf)[3][2] = tz;
+    (*mf)[3][3] = 1.0F;
+}
+
 /* The float product, for a transform or position past the fixed range. */
 static void __attribute__((noinline))
 ndsParticleWorldF32(const LBTransform *xf, const Vec3f *pos, Vec3f *world_pos)
@@ -4022,7 +4119,7 @@ static sb32 ndsParticleTransformForDraw(LBParticle *pc,
     {
         if (xf->transform_status != nLBTransformStatusFinished)
         {
-            syMatrixTraRotRpyRScaF(
+            ndsParticleTraRotRpyRScaQ(
                 &xf->affine,
                 xf->translate.x, xf->translate.y, xf->translate.z,
                 xf->rotate.x, xf->rotate.y, xf->rotate.z,
@@ -4190,7 +4287,7 @@ static sb32 ndsWhispyAOTTier2TransformForDraw(LBParticle *pc,
     {
         if (xf->transform_status != nLBTransformStatusFinished)
         {
-            syMatrixTraRotRpyRScaF(
+            ndsParticleTraRotRpyRScaQ(
                 &xf->affine,
                 xf->translate.x, xf->translate.y, xf->translate.z,
                 xf->rotate.x, xf->rotate.y, xf->rotate.z,

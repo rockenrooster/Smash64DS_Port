@@ -17,6 +17,11 @@ s32 ndsNativeBattleWallpaperDraw(u32 gkind,
                                  f32 eye_x, f32 eye_y, f32 eye_z,
                                  f32 at_x, f32 at_y, f32 at_z);
 s32 ndsNativeBattleWallpaperPreload(u32 gkind);
+/* grWallpaperCalcPersp (motion 0) / grWallpaperSectorProcUpdate (1) /
+ * grWallpaperMakeStatic (2) in integers: the wallpaper's position and scale
+ * at Q16 from the camera's eye and target. FALSE past the fixed range. */
+s32 ndsWallpaperPerspQ(u32 motion, const Vec3f *eye, const Vec3f *at,
+                       s32 *pos_x_q16, s32 *pos_y_q16, s32 *scale_q16);
 void ndsNativeWallpaperInvalidate(void);
 
 #endif

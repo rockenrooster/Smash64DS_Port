@@ -1,0 +1,46 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 2 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,608; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 389: ALL 5,310,976 -> 1,116,672, 5 bucket(s) corrected
+  frame 1280: ALL 5,310,976 -> 1,116,672, 3 bucket(s) corrected
+Wrote artifacts/performance/2026-10-06_fixed-camera/gate-q26.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=0eb4bdec1f7+dirty(38) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,608     1,117,760      1.00  1,138,402     1,111,872  4,620,224      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,992        10,368      2.08      5,759         2,496     28,480        0.4
+HUD         8,960        23,616      2.64     11,628         7,936    705,856        0.8
+SRC       335,104       539,584      1.61    349,484       124,160    978,624       30.0
+MISC      398,464       537,792      1.35    402,381       174,784  3,330,496       35.7
+OTHR      368,448       638,464      1.73    369,150        24,704    803,008       33.0
+WAIT      346,816       614,080      1.77    347,482         2,688    783,360       31.1
+WORK      775,104     1,059,776      1.37    787,164       329,920  4,291,072       69.4
+SHDT      673,087       956,799      1.42    690,724       286,271  1,853,695       60.3
+SWRM        1,280         1,408      1.10      1,307           896      3,392        0.1
+GCRA      329,536       533,824      1.62    344,059       119,552    973,184       29.5
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        370             0    647,232        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      398,272       537,664      1.35    402,247       174,656  3,330,368       35.7
+MFLS          128           192      1.50        135           128        256        0.0
+GPOL          592           673      1.14        542            29        755        0.1
+GVTX        1,419         1,597      1.13      1,315            96      1,750        0.1
+DGSA   2,250,718,284 4,050,421,973        2,184,942,484  1,678,878 4,291,383,562 201,567.5
+DGSB   2,254,346,240 4,035,342,474        2,215,590,844  2,771,092 4,285,088,836 201,892.4
+WORK-H    764,928     1,048,512      1.37    775,536       320,320  3,585,216       68.5
+
+named=769,252 (67.6% of ALL)  VBI 2:1891 3:68 4:1 5+:1 max:9 total:1961  slips=0
+Wrote artifacts/performance/2026-10-06_fixed-camera/gate-q26.json

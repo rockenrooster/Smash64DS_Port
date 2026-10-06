@@ -11,6 +11,8 @@
 #include <nds/renderer_fighter_lean.h>
 #include <nds/nds_r2_camera_fixed.h>
 #include <nds/nds_fcmp.h>
+#include <nds/nds_r2_collision_mtx.h>
+#include <nds/nds_r2_hwmath_unit.h>
 #if NDS_R2_FOX_GUN_OVERLAY
 #include <nds/nds_fox_gun.h>
 #endif
@@ -4199,11 +4201,20 @@ static sb32 ndsRendererAdapterMvpParentScaleX(DObj *dobj, f32 *out)
 
 /* One camera's source-derived billboard operands, scoped to a stage frame.
  * Geometry bindings share these values; no persistent source-state mirror. */
+/* The kind-48 Mod1's look-at, as its two direction cosines (Q30); `zero` is
+ * the source's degenerate camera (syMatrixScaF 0). */
+typedef struct NDSRendererAdapterMvpMod1Q
+{
+    s32 l1_q30;
+    s32 l2_q30;
+    u32 zero;
+} NDSRendererAdapterMvpMod1Q;
+
 typedef struct NDSRendererAdapterMvpCamera
 {
     const NDSRendererMatrix20p12 *perspective;
     Mtx44f perspective_f;
-    Mtx44f mod1_f;
+    NDSRendererAdapterMvpMod1Q mod1;
     u32 perspective_f_valid;
     u32 mod1_valid;
 } NDSRendererAdapterMvpCamera;
@@ -4258,22 +4269,93 @@ static void ndsRendererAdapterMvpPerspectiveF(
         cobj->projection.persp.far, cobj->projection.persp.scale);
 }
 
-static void ndsRendererAdapterMvpMod1F(
-    CObj *cobj, Mtx44f perspective_f, Mtx44f *out)
+/* THE KIND-48 MOD1 IN INTEGERS (P2-2p8, 2026-10-06; owner: "Software floating
+ * point should not exist, fixed point only"). The float form built
+ * syMatrixLookAtF(0, eye.y, e; 0, at.y, 0; up 0, 1, 0) x the perspective
+ * (objdisplay.c:3094-3118), e the eye's horizontal distance from the target:
+ * three square roots, three reciprocals and a 4x4 product, ~5K ticks a frame
+ * on Peach's Castle with syMatrixPerspFastF. That look-at turns about X alone.
+ * With d = eye.y - at.y and m = sqrt(d^2 + e^2), L1 = d / m and L2 = e / m,
+ * its rotation rows are (1, 0, 0), (0, L2, L1) and (0, -L1, L2), so the three
+ * Mod1 rows kind 48 keeps are (P00, 0, 0, 0), (0, L2 P11, L1 P22, L1 P23) and
+ * (0, -L1 P11, L2 P22, L2 P23): two cosines from the math unit's square root
+ * and divider, and five terms of the camera's own 20.12 projection. A
+ * horizontal distance under one Q12 step is the source's zero matrix (its
+ * 0.0001F test). Render only. */
+static void __attribute__((target("arm")))
+ndsRendererAdapterMvpMod1Q(CObj *cobj, NDSRendererAdapterMvpMod1Q *out)
 {
-    f32 dx = cobj->vec.at.x - cobj->vec.eye.x;
-    f32 dz = cobj->vec.at.z - cobj->vec.eye.z;
-    f32 eye_z = sqrtf((dz * dz) + (dx * dx));
-    if (eye_z < 0.0001F)
+    const s64 dx = (s64)ndsR2CollisionF32ToFixed(cobj->vec.at.x, 12u) -
+                   ndsR2CollisionF32ToFixed(cobj->vec.eye.x, 12u);
+    const s64 dz = (s64)ndsR2CollisionF32ToFixed(cobj->vec.at.z, 12u) -
+                   ndsR2CollisionF32ToFixed(cobj->vec.eye.z, 12u);
+    const s64 d = (s64)ndsR2CollisionF32ToFixed(cobj->vec.eye.y, 12u) -
+                  ndsR2CollisionF32ToFixed(cobj->vec.at.y, 12u);
+    s64 e;
+    s64 m;
+
+    e = (s64)ndsR2HwMathSqrt64Fast((u64)((dx * dx) + (dz * dz)));
+    out->zero = (e == 0) ? TRUE : FALSE;
+    if (out->zero != FALSE)
     {
-        syMatrixScaF(out, 0.0F, 0.0F, 0.0F);
+        out->l1_q30 = 0;
+        out->l2_q30 = 0;
+        return;
     }
-    else
+    m = (s64)ndsR2HwMathSqrt64Fast((u64)((d * d) + (e * e)));
+    out->l1_q30 = (s32)ndsR2HwMathDivideFast(d << 30, m);
+    out->l2_q30 = (s32)ndsR2HwMathDivideFast(e << 30, m);
+}
+
+/* Q30 x Q12 -> Q12, rounded. */
+static inline s32 ndsMvpMulQ30(s32 a_q30, s32 b_q12)
+{
+    return (s32)((((s64)a_q30 * b_q12) + (1 << 29)) >> 30);
+}
+
+/* Q12 x Q16 -> Q12, rounded. */
+static inline s32 ndsMvpScaleQ16(s32 a_q12, s32 s_q16)
+{
+    return (s32)((((s64)a_q12 * s_q16) + (1 << 15)) >> 16);
+}
+
+/* The kind-48 rows: Mod1 rows 0 and 2 by the X recalc scale, row 1 by the Y
+ * one (the source's `mod1_f[row][col] * scale`), straight into 20.12. */
+static void __attribute__((target("arm")))
+ndsRendererAdapterMvpKind48RowsQ(const NDSRendererAdapterMvpMod1Q *mod1,
+                                 const NDSRendererMatrix20p12 *persp,
+                                 f32 scale_x, f32 scale_y,
+                                 NDSRendererMatrix20p12 *out)
+{
+    s32 sx = ndsR2CollisionF32ToFixed(scale_x, 16u);
+    s32 sy = ndsR2CollisionF32ToFixed(scale_y, 16u);
+    const s32 p00 = persp->m[0][0];
+    const s32 p11 = persp->m[1][1];
+    const s32 p22 = persp->m[2][2];
+    const s32 p23 = persp->m[2][3];
+    u32 row;
+    u32 col;
+
+    for (row = 0u; row < 4u; row++)
     {
-        syMatrixLookAtF(out, 0.0F, cobj->vec.eye.y, eye_z,
-                       0.0F, cobj->vec.at.y, 0.0F, 0.0F, 1.0F, 0.0F);
-        guMtxCatF(*out, perspective_f, *out);
+        for (col = 0u; col < 4u; col++)
+        {
+            out->m[row][col] = 0;
+        }
     }
+    out->m[3][3] = 1 << 12;
+    if ((mod1->zero != FALSE) || (sx == NDS_R2_COLLISION_F32_OVERFLOW) ||
+        (sy == NDS_R2_COLLISION_F32_OVERFLOW))
+    {
+        return;
+    }
+    out->m[0][0] = ndsMvpScaleQ16(p00, sx);
+    out->m[1][1] = ndsMvpScaleQ16(ndsMvpMulQ30(mod1->l2_q30, p11), sy);
+    out->m[1][2] = ndsMvpScaleQ16(ndsMvpMulQ30(mod1->l1_q30, p22), sy);
+    out->m[1][3] = ndsMvpScaleQ16(ndsMvpMulQ30(mod1->l1_q30, p23), sy);
+    out->m[2][1] = ndsMvpScaleQ16(-ndsMvpMulQ30(mod1->l1_q30, p11), sx);
+    out->m[2][2] = ndsMvpScaleQ16(ndsMvpMulQ30(mod1->l2_q30, p22), sx);
+    out->m[2][3] = ndsMvpScaleQ16(ndsMvpMulQ30(mod1->l2_q30, p23), sx);
 }
 
 /* One camera memo for every billboard recalc outside the stage prepare
@@ -4455,7 +4537,7 @@ static void ndsRendererAdapterApplyMvpRecalc(
                                       cobj->projection.persp.far,
                                       cobj->projection.persp.scale);
     }
-    if ((kind == nGCMatrixKind48) || (kind == nGCMatrixKind46) ||
+    if ((kind == nGCMatrixKind46) ||
         (kind == NDS_RENDERER_ADAPTER_MVP_RECALC_Z_0X46_KIND) ||
         (kind == NDS_RENDERER_ADAPTER_EF_GROUND_BILLBOARD_KIND))
     {
@@ -4514,7 +4596,8 @@ static void ndsRendererAdapterApplyMvpRecalc(
     else if (kind == nGCMatrixKind48)
     {
         f32 parent_scale_x;
-        f32 (*mod1_f)[4] = zrot_f;
+        NDSRendererAdapterMvpMod1Q local_mod1;
+        const NDSRendererAdapterMvpMod1Q *mod1 = &local_mod1;
 
         if (ndsRendererAdapterMvpParentScaleX(dobj, &parent_scale_x) == FALSE)
         {
@@ -4525,19 +4608,20 @@ static void ndsRendererAdapterApplyMvpRecalc(
         }
         /* gmCameraDefaultProcDisplay selects camera matrix mode 3. Its Mod1
          * removes yaw, preserves the vertical eye/target relation, and then
-         * multiplies by perspective (objdisplay.c:3094-3118). */
+         * multiplies by perspective (objdisplay.c:3094-3118); see
+         * ndsRendererAdapterMvpMod1Q. */
         if (camera != NULL)
         {
             if (camera->mod1_valid == FALSE)
             {
-                ndsRendererAdapterMvpMod1F(cobj, perspective_f, &camera->mod1_f);
+                ndsRendererAdapterMvpMod1Q(cobj, &camera->mod1);
                 camera->mod1_valid = TRUE;
             }
-            mod1_f = camera->mod1_f;
+            mod1 = &camera->mod1;
         }
         else
         {
-            ndsRendererAdapterMvpMod1F(cobj, perspective_f, &zrot_f);
+            ndsRendererAdapterMvpMod1Q(cobj, &local_mod1);
         }
         recalc_scale_x = parent_scale_x * dobj->scale.vec.f.x;
         recalc_scale_y = parent_scale_x * dobj->scale.vec.f.y;
@@ -4562,20 +4646,10 @@ static void ndsRendererAdapterApplyMvpRecalc(
             }
             if (cached == FALSE)
             {
-                memset(&source_orientation_f, 0, sizeof(source_orientation_f));
-                source_orientation_f[3][3] = 1.0F;
-                for (row = 0u; row < 3u; row++)
-                {
-                    f32 scale = (row == 1u) ? recalc_scale_y : recalc_scale_x;
-                    for (col = 0u; col < 4u; col++)
-                    {
-                        source_orientation_f[row][col] =
-                            mod1_f[row][col] * scale;
-                    }
-                }
-                syMatrixF2L(&source_orientation_f, &rotation_mtx);
-                ndsRendererAdapterMtxFromN64(&rotation_mtx,
-                                             &source_orientation);
+                ndsRendererAdapterMvpKind48RowsQ(mod1, perspective,
+                                                 recalc_scale_x,
+                                                 recalc_scale_y,
+                                                 &source_orientation);
                 if (ndsRendererAdapterMvpMemoFor(camera) &&
                     (sNdsMvpMemo48Count < NDS_MVP_MEMO_48))
                 {

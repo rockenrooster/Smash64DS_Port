@@ -16,4 +16,8 @@ void sc1PGameBossInitWallpaper(void);
  * shared <PR/gbi.h> (real F3DEX2 word pairs); the local zero-stubs hid
  * them and zeroed the 1P wallpaper FILL list. */
 
+/* 2026-10-06: the strong grWallpaperCalcPersp is the integer one in
+ * battleship_gmcamera_fixed.c (ndsWallpaperPerspQ). */
+#pragma weak grWallpaperCalcPersp
+
 #include "../../decomp/BattleShip-main/decomp/src/gr/grwallpaper.c"

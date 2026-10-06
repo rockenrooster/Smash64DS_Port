@@ -6,6 +6,7 @@
 #include <nds/nds_platform.h>
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_r2_hwmath_unit.h>
+#include <nds/nds_r2_collision_mtx.h>
 
 #include "generated/native_wallpapers.generated.inc"
 
@@ -67,7 +68,6 @@ static const NDSNativeBattleWallpaperBinding sBattleWallpaperBindings[9] =
     { 0x1005Bu, 0x269C8u, NDS_NATIVE_BATTLE_WALLPAPER_COMMON }  /* Inishie */
 };
 
-#define NDS_NATIVE_WALLPAPER_PI 3.14159265358979323846F
 #define NDS_NATIVE_WALLPAPER_STRETCH_SHIFT 3u
 
 static s32 ndsNativeWallpaperMul9Div8Signed(s32 value)
@@ -79,6 +79,152 @@ static s32 ndsNativeWallpaperMul9Div8Signed(s32 value)
     return (value < 0) ? -scaled : scaled;
 }
 
+/* battleship_sys_utils.c: atan2 at Q30 on two integers of one scale. */
+int64_t ndsUtilsAtan2Q30(int64_t y, int64_t x);
+
+#define NDS_WALLPAPER_Q 12u
+#define NDS_WALLPAPER_PI_Q30 INT64_C(3373259426)
+/* 1.004 and 2.0 at Q16. */
+#define NDS_WALLPAPER_SCALE_MIN_Q16 65798
+#define NDS_WALLPAPER_SCALE_MAX_Q16 131072
+
+/* 20000 / (mag + bias) at Q16 from a Q12 magnitude, clamped as the source. */
+static s32 ndsWallpaperScaleQ16(s64 mag_q, s32 bias)
+{
+    const s64 den = mag_q + ((s64)bias << NDS_WALLPAPER_Q);
+    s64 scale = (den > 0) ?
+        ndsR2HwMathDivideFast((s64)20000 << (NDS_WALLPAPER_Q + 16u), den) :
+        NDS_WALLPAPER_SCALE_MAX_Q16;
+
+    if (scale < NDS_WALLPAPER_SCALE_MIN_Q16)
+    {
+        scale = NDS_WALLPAPER_SCALE_MIN_Q16;
+    }
+    else if (scale > NDS_WALLPAPER_SCALE_MAX_Q16)
+    {
+        scale = NDS_WALLPAPER_SCALE_MAX_Q16;
+    }
+    return (s32)scale;
+}
+
+/* grWallpaperCalcPersp (gr/grwallpaper.c:45) and grWallpaperSectorProcUpdate
+ * in integers (P2-2p8, 2026-10-06; owner: "Software floating point should not
+ * exist, fixed point only"). The eye-to-target offset enters at Q12, its
+ * length is the math unit's square root, the two angles come from the
+ * syUtilsArcTan2 kernel at Q30 and the scale and position leave at Q16:
+ * the source's two square roots, two arctangents and ~40 float operations a
+ * tick, twice a frame between the source SObj update and this owner. Every
+ * branch and clamp is the source's, in its order. Render only. */
+s32 __attribute__((target("arm")))
+ndsWallpaperPerspQ(u32 motion, const Vec3f *eye, const Vec3f *at,
+                   s32 *pos_x_q16, s32 *pos_y_q16, s32 *scale_q16)
+{
+    s32 dx;
+    s32 dy;
+    s32 dz;
+    s64 mag;
+    s32 scale;
+
+    if (motion == NDS_NATIVE_BATTLE_WALLPAPER_STATIC)
+    {
+        *pos_x_q16 = 10 << 16;
+        *pos_y_q16 = 10 << 16;
+        *scale_q16 = 1 << 16;
+        return TRUE;
+    }
+    dx = ndsR2CollisionF32ToFixed(eye->x, NDS_WALLPAPER_Q);
+    dy = ndsR2CollisionF32ToFixed(eye->y, NDS_WALLPAPER_Q);
+    dz = ndsR2CollisionF32ToFixed(eye->z, NDS_WALLPAPER_Q);
+    {
+        const s32 ax = ndsR2CollisionF32ToFixed(at->x, NDS_WALLPAPER_Q);
+        const s32 ay = ndsR2CollisionF32ToFixed(at->y, NDS_WALLPAPER_Q);
+        const s32 az = ndsR2CollisionF32ToFixed(at->z, NDS_WALLPAPER_Q);
+
+        if ((dx == NDS_R2_COLLISION_F32_OVERFLOW) ||
+            (dy == NDS_R2_COLLISION_F32_OVERFLOW) ||
+            (dz == NDS_R2_COLLISION_F32_OVERFLOW) ||
+            (ax == NDS_R2_COLLISION_F32_OVERFLOW) ||
+            (ay == NDS_R2_COLLISION_F32_OVERFLOW) ||
+            (az == NDS_R2_COLLISION_F32_OVERFLOW))
+        {
+            return FALSE;
+        }
+        dx -= ax;
+        dy -= ay;
+        dz -= az;
+    }
+    mag = (s64)ndsR2HwMathSqrt64Fast(((u64)((s64)dx * dx)) +
+                                     ((u64)((s64)dy * dy)) +
+                                     ((u64)((s64)dz * dz)));
+    if (motion == NDS_NATIVE_BATTLE_WALLPAPER_SECTOR)
+    {
+        /* zoom = (scale - 1) * 0.5; pos = 10 - extent * zoom. */
+        s32 zoom;
+
+        scale = ndsWallpaperScaleQ16(mag, 10000);
+        zoom = (scale - (1 << 16)) >> 1;
+        *pos_x_q16 = (10 << 16) - (300 * zoom);
+        *pos_y_q16 = (10 << 16) - (220 * zoom);
+        *scale_q16 = scale;
+        return TRUE;
+    }
+    if (motion == NDS_NATIVE_BATTLE_WALLPAPER_COMMON)
+    {
+        s64 angle_x = 0;
+        s64 angle_y = 0;
+        s32 width;
+        s32 height;
+        s32 pos_x;
+        s32 pos_y;
+        s32 minimum;
+
+        if (dz >= 0)
+        {
+            angle_y = ndsUtilsAtan2Q30(dx, dz);
+            angle_x = ndsUtilsAtan2Q30(dy, dz);
+        }
+        scale = ndsWallpaperScaleQ16(mag, 8000);
+        width = 300 * scale;
+        height = 220 * scale;
+        /* (angle / pi) * extent - (extent - screen) * 0.5 */
+        pos_x = (s32)ndsR2HwMathDivideFast(angle_y * width,
+                                           NDS_WALLPAPER_PI_Q30) -
+                ((width - (320 << 16)) >> 1);
+        pos_y = (s32)ndsR2HwMathDivideFast(-angle_x * height,
+                                           NDS_WALLPAPER_PI_Q30) -
+                ((height - (240 << 16)) >> 1);
+        if (pos_x > (10 << 16))
+        {
+            pos_x = 10 << 16;
+        }
+        else
+        {
+            minimum = (-width - (10 << 16)) + (320 << 16);
+            if (pos_x < minimum)
+            {
+                pos_x = minimum;
+            }
+        }
+        if (pos_y > (10 << 16))
+        {
+            pos_y = 10 << 16;
+        }
+        else
+        {
+            minimum = (-height - (10 << 16)) + (240 << 16);
+            if (pos_y < minimum)
+            {
+                pos_y = minimum;
+            }
+        }
+        *pos_x_q16 = pos_x;
+        *pos_y_q16 = pos_y;
+        *scale_q16 = scale;
+        return TRUE;
+    }
+    return FALSE;
+}
+
 /* Native transcription of grWallpaperCalcPersp / grWallpaperSectorProcUpdate
  * plus grWallpaperMakeStatic. The final 9/8 centre stretch is the existing DS
  * overscan correction already used by the SObj preview path. */
@@ -88,91 +234,36 @@ static s32 ndsNativeBattleWallpaperTransform(
     f32 at_x, f32 at_y, f32 at_z,
     s32 *origin_x, s32 *origin_y, u32 *scale_q16)
 {
-    f32 dist_x;
-    f32 dist_y;
-    f32 dist_z;
-    f32 mag;
-    f32 scale;
-    f32 pos_x;
-    f32 pos_y;
+    Vec3f eye;
+    Vec3f at;
+    s32 pos_x;
+    s32 pos_y;
+    s32 scale;
 
     if ((binding == NULL) || (origin_x == NULL) || (origin_y == NULL) ||
         (scale_q16 == NULL))
     {
         return FALSE;
     }
-    if (binding->motion == NDS_NATIVE_BATTLE_WALLPAPER_STATIC)
-    {
-        pos_x = 10.0F;
-        pos_y = 10.0F;
-        scale = 1.0F;
-    }
-    else
-    {
-        dist_x = eye_x - at_x;
-        dist_y = eye_y - at_y;
-        dist_z = eye_z - at_z;
-        mag = sqrtf((dist_x * dist_x) + (dist_y * dist_y) +
-                    (dist_z * dist_z));
-        if (!(mag >= 0.0F))
-        {
-            return FALSE;
-        }
-        if (binding->motion == NDS_NATIVE_BATTLE_WALLPAPER_SECTOR)
-        {
-            f32 zoom;
-
-            scale = 20000.0F / (mag + 10000.0F);
-            if (scale < 1.004F) scale = 1.004F;
-            else if (scale > 2.0F) scale = 2.0F;
-            zoom = (scale - 1.0F) * 0.5F;
-            pos_x = 10.0F - (300.0F * zoom);
-            pos_y = 10.0F - (220.0F * zoom);
-        }
-        else if (binding->motion == NDS_NATIVE_BATTLE_WALLPAPER_COMMON)
-        {
-            f32 angle_x = 0.0F;
-            f32 angle_y = 0.0F;
-            f32 width;
-            f32 height;
-            f32 minimum;
-
-            if (dist_z >= 0.0F)
-            {
-                angle_y = atan2f(dist_x, dist_z);
-                angle_x = atan2f(dist_y, dist_z);
-            }
-            scale = 20000.0F / (mag + 8000.0F);
-            if (scale < 1.004F) scale = 1.004F;
-            else if (scale > 2.0F) scale = 2.0F;
-            width = 300.0F * scale;
-            height = 220.0F * scale;
-            pos_x = ((angle_y / NDS_NATIVE_WALLPAPER_PI) * width) -
-                    ((width - 320.0F) * 0.5F);
-            pos_y = ((-angle_x / NDS_NATIVE_WALLPAPER_PI) * height) -
-                    ((height - 240.0F) * 0.5F);
-            if (pos_x > 10.0F) pos_x = 10.0F;
-            minimum = (-width - 10.0F) + 320.0F;
-            if (pos_x < minimum) pos_x = minimum;
-            if (pos_y > 10.0F) pos_y = 10.0F;
-            minimum = (-height - 10.0F) + 240.0F;
-            if (pos_y < minimum) pos_y = minimum;
-        }
-        else
-        {
-            return FALSE;
-        }
-    }
-
-    if ((pos_x < -32768.0F) || (pos_x > 32767.0F) ||
-        (pos_y < -32768.0F) || (pos_y > 32767.0F) ||
-        (scale < 1.0F) || (scale > 2.0F))
+    eye.x = eye_x;
+    eye.y = eye_y;
+    eye.z = eye_z;
+    at.x = at_x;
+    at.y = at_y;
+    at.z = at_z;
+    if (ndsWallpaperPerspQ(binding->motion, &eye, &at, &pos_x, &pos_y,
+                           &scale) == FALSE)
     {
         return FALSE;
     }
-    *origin_x = (s32)pos_x;
-    *origin_y = (s32)pos_y;
-    *scale_q16 = (u32)((scale * 65536.0F) + 0.5F);
+    if ((scale < (1 << 16)) || (scale > (2 << 16)))
+    {
+        return FALSE;
+    }
+    /* (s32)pos: the cast truncates toward zero. */
+    *origin_x = (pos_x >= 0) ? (pos_x >> 16) : -((-pos_x) >> 16);
+    *origin_y = (pos_y >= 0) ? (pos_y >> 16) : -((-pos_y) >> 16);
+    *scale_q16 = (u32)scale;
 
     /* Existing port presentation law: compensate for N64 overscan while
      * preserving the source camera transform itself. */

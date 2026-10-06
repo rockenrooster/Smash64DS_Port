@@ -70,6 +70,9 @@ void mpCollisionGetPlayerMapObjPosition(s32 player, Vec3f *pos);
  * is in battleship_gmcamera_fixed.c; the three cameras here that call it bind
  * to that one at link time. */
 #pragma weak gmCameraUpdateInterests
+/* 2026-10-06: the default battle camera's strong definition is the Q12 one in
+ * battleship_gmcamera_fixed.c (dGMCameraFuncList binds to it at link time). */
+#pragma weak gmCameraDefaultFuncCamera
 
 #include "../../decomp/BattleShip-main/decomp/src/gm/gmcamera.c"
 
@@ -330,6 +333,7 @@ static void ndsCameraRecordFrame(const Vec3f *center, f32 half_w, f32 half_h)
  * interest calculation runs once; no camera math is repeated. */
 static void ndsCameraDefaultFuncCameraWitness(GObj *camera_gobj)
 {
+#if NDS_CAMERA_FRAME_WITNESS
     CObj *cobj = CObjGetStruct(camera_gobj);
     f32 max;
     Vec3f scale;
@@ -347,6 +351,11 @@ static void ndsCameraDefaultFuncCameraWitness(GObj *camera_gobj)
     func_ovl2_8010C5C0(cobj, &scale);
     gmCameraApplyVel(cobj);
     gmCameraApplyFOV(cobj);
+#else
+    /* The Q12 camera (battleship_gmcamera_fixed.c), the default status's
+     * strong definition; the float chain above stays for the lab witness. */
+    gmCameraDefaultFuncCamera(camera_gobj);
+#endif
 }
 
 static void ndsCameraZebesFuncCameraWitness(GObj *camera_gobj)

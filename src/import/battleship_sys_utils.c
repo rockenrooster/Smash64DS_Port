@@ -161,6 +161,39 @@ static int64_t ndsAtanMagQ30(u32 bits)
     }
 }
 
+/* atan2 at Q30 on two integers of one scale (2026-10-06), for callers already
+ * in fixed point (the wallpaper perspective): the same unit kernel, the
+ * quadrants of atan2, a result in [-pi, pi]. */
+int64_t __attribute__((target("arm"))) ndsUtilsAtan2Q30(int64_t y, int64_t x)
+{
+    const int64_t ay = (y < 0) ? -y : y;
+    const int64_t ax = (x < 0) ? -x : x;
+    int64_t a;
+
+    if (ax == 0)
+    {
+        if (ay == 0)
+        {
+            return 0;
+        }
+        return (y < 0) ? -NDS_ATAN_HALF_PI_Q30 : NDS_ATAN_HALF_PI_Q30;
+    }
+    if (ay <= ax)
+    {
+        a = ndsAtanUnitQ30(ndsR2HwMathDivideFast(ay << 30, ax));
+    }
+    else
+    {
+        a = NDS_ATAN_HALF_PI_Q30 -
+            ndsAtanUnitQ30(ndsR2HwMathDivideFast(ax << 30, ay));
+    }
+    if (x < 0)
+    {
+        a = NDS_ATAN_PI_Q30 - a;
+    }
+    return (y < 0) ? -a : a;
+}
+
 f32 syUtilsArcTan(f32 div)
 {
     const u32 bits = ndsUtilsBits(div);
