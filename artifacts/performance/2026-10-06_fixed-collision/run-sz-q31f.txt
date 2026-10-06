@@ -1,0 +1,45 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,736; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 1386: ALL 5,310,656 -> 1,116,352, 5 bucket(s) corrected
+Wrote artifacts/performance/2026-10-06_fixed-collision/sz-q31f.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=54c972398d2+dirty(40) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,736     1,676,992      1.50  1,169,615     1,112,960 16,831,936      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,352         9,792      2.25      5,344         2,304     23,552        0.4
+HUD         9,024        23,936      2.65     10,875         8,000    437,248        0.8
+SRC       411,520       604,864      1.47    420,552       145,024  1,004,288       36.9
+MISC      405,248       563,264      1.39    421,586       149,760 15,857,344       36.3
+OTHR      303,616       552,832      1.82    311,257        22,144    804,800       27.2
+WAIT      281,920       528,128      1.87    289,737         2,176    785,408       25.2
+WORK      856,448     1,169,856      1.37    876,197       328,000 16,495,872       76.7
+SHDT      775,231     1,058,175      1.36    795,334       286,207 16,014,463       69.4
+SWRM        1,344         1,472      1.10      1,370           960      3,456        0.1
+GCRA      406,208       599,680      1.48    415,244       140,608    998,784       36.4
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        581             0  1,055,680        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      405,120       563,136      1.39    421,445       149,632 15,857,216       36.3
+MFLS          128           192      1.50        141           128        256        0.0
+GPOL          477           566      1.19        463            47        604        0.0
+GVTX        1,074         1,335      1.24      1,061           157      1,446        0.1
+DGSA   2,151,297,068 4,051,513,036        2,133,514,594    676,991 4,286,422,441 192,641.5
+DGSB   2,119,168,438 4,104,172,124   1.94 2,135,049,252  2,524,074 4,280,928,178 189,764.5
+WORK-H    845,568     1,157,312      1.37    865,322       319,616 16,058,624       75.7
+
+named=858,357 (73.4% of ALL)  VBI 2:1813 3:138 4:8 5+:2 max:34 total:1961  slips=0
+Wrote artifacts/performance/2026-10-06_fixed-collision/sz-q31f.json

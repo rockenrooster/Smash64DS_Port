@@ -23,6 +23,8 @@
  * turn into __aeabi_lmul calls. */
 
 #include <ft/fighter.h>
+#include <it/item.h>
+#include <wp/weapon.h>
 #include <macros.h>
 
 /* The DS divide and square-root units for the kernel's two overridable
@@ -32,6 +34,11 @@
  * defaults were a bit-by-bit __aeabi_ldivmod and a 32-step digit root on every
  * slot miss. */
 #include <nds/nds_r2_hwmath_unit.h>
+#include <nds/nds_fcmp.h>
+
+#ifndef DObjGetStruct
+#define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
+#endif
 #define NDS_R2_CFX_DIV64(numerator, denominator) \
     ndsR2HwMathCfxDiv64((int64_t)(numerator), (int64_t)(denominator))
 #define NDS_R2_CFX_ISQRT64(value) ndsR2HwMathCfxIsqrt64(value)
@@ -1482,3 +1489,74 @@ int ndsP2JointItemAttach(DObj *attach, const Vec2f *shuffle, s32 m[4][4])
     return 1;
 }
 #endif /* NDS_P2_JOINT_RESIDENT */
+
+/* gm/gmcollision.c's three "is this attack near that fighter" tests
+ * (gmCollisionCheckFighterInFighterRange, ...WeaponInFighterRange,
+ * ...ItemInFighterRange): gmCollisionCheckAttackInFighterRange on the current
+ * position, and on the previous one too unless the attack is transferring.
+ * Here the four bounds are formed once a test with the source's float
+ * operations, and the comparisons are the order-key integer compares of
+ * nds_fcmp.h (exact for two runtime floats, proven over every adjacent float
+ * pair by scripts/check_fcmp_exact.py), so every answer is the source's, bit
+ * for bit (P2-2p8, 2026-10-06; up to eight __aeabi_fcmp a test).
+ * battleship_gmcollision.c makes the decomp definitions weak. */
+static inline sb32 ndsAttackRangeHit(const Vec3f *attack, const Vec3f *obj,
+                                     f32 lo_x, f32 hi_x, f32 lo_y, f32 hi_y)
+{
+    const f32 distx = attack->x - obj->x;
+    const f32 disty = attack->y - obj->y;
+
+    return (NDS_FCMP_LT(distx, lo_x) || NDS_FCMP_GT(distx, hi_x) ||
+            NDS_FCMP_LT(disty, lo_y) || NDS_FCMP_GT(disty, hi_y)) ?
+        FALSE : TRUE;
+}
+
+static sb32 ndsAttackRangeTest(const Vec3f *pos_curr, const Vec3f *pos_prev,
+                               sb32 transfer, GObj *fighter_gobj, f32 size)
+{
+    const Vec3f *range = &ftGetStruct(fighter_gobj)->attr->hit_detect_range;
+    const Vec3f *obj = &DObjGetStruct(fighter_gobj)->translate.vec.f;
+    const f32 lo_x = -range->z - size;
+    const f32 hi_x = range->z + size;
+    const f32 lo_y = -range->y - size;
+    const f32 hi_y = range->x + size;
+
+    if (ndsAttackRangeHit(pos_curr, obj, lo_x, hi_x, lo_y, hi_y) != FALSE)
+    {
+        return TRUE;
+    }
+    if (transfer != FALSE)
+    {
+        return FALSE;
+    }
+    return ndsAttackRangeHit(pos_prev, obj, lo_x, hi_x, lo_y, hi_y);
+}
+
+sb32 gmCollisionCheckFighterInFighterRange(FTAttackColl *attack_coll,
+                                           GObj *fighter_gobj)
+{
+    return ndsAttackRangeTest(
+        &attack_coll->pos_curr, &attack_coll->pos_prev,
+        (attack_coll->attack_state == nGMAttackStateTransfer) ? TRUE : FALSE,
+        fighter_gobj, attack_coll->size);
+}
+
+sb32 gmCollisionCheckWeaponInFighterRange(WPAttackColl *attack_coll,
+                                          s32 attack_id, GObj *fighter_gobj)
+{
+    return ndsAttackRangeTest(
+        &attack_coll->attack_pos[attack_id].pos_curr,
+        &attack_coll->attack_pos[attack_id].pos_prev,
+        (attack_coll->attack_state == nGMAttackStateTransfer) ? TRUE : FALSE,
+        fighter_gobj, attack_coll->size);
+}
+
+sb32 gmCollisionCheckItemInFighterRange(ITAttackColl *attack_coll,
+                                        s32 attack_id, GObj *fighter_gobj)
+{
+    return ndsAttackRangeTest(
+        &attack_coll->attack_pos[attack_id].pos_curr,
+        &attack_coll->attack_pos[attack_id].pos_prev,
+        (attack_coll->attack_state == nGMAttackStateTransfer) ? TRUE : FALSE,
+        fighter_gobj, attack_coll->size);
+}

@@ -1,0 +1,45 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,736; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 1171: ALL 5,311,616 -> 1,117,312, 5 bucket(s) corrected
+Wrote artifacts/performance/2026-10-06_fixed-collision/gate-q32.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=54c972398d2+dirty(38) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,736     1,117,696      1.00  1,137,632     1,112,000  4,571,840      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,992        10,624      2.13      5,711         2,304     28,608        0.4
+HUD         9,152        23,808      2.60     11,736         7,744    643,264        0.8
+SRC       337,280       536,192      1.59    350,671       123,840    982,336       30.2
+MISC      394,496       534,720      1.36    398,302       169,664  3,344,064       35.3
+OTHR      370,368       643,392      1.74    371,213        25,664    808,896       33.2
+WAIT      349,120       619,200      1.77    350,077         4,544    789,376       31.3
+WORK      772,928     1,062,272      1.37    783,794       324,224  4,241,536       69.2
+SHDT      670,463       950,143      1.42    687,376       280,511  1,859,967       60.0
+SWRM        1,408         1,536      1.09      1,440           960      3,648        0.1
+GCRA      331,904       531,008      1.60    345,321       119,360    977,024       29.7
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        382             0    669,632        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      394,304       534,592      1.36    398,160       169,536  3,343,872       35.3
+MFLS          128           192      1.50        142           128        576        0.0
+GPOL          592           673      1.14        542            29        755        0.1
+GVTX        1,419         1,595      1.12      1,315            96      1,750        0.1
+DGSA   2,250,718,284 4,050,421,973        2,184,942,484  1,678,878 4,291,383,562 201,544.3
+DGSB   2,254,346,240 4,035,342,474        2,215,590,844  2,771,092 4,285,088,836 201,869.2
+WORK-H    762,112     1,046,272      1.37    772,058       314,880  3,598,272       68.2
+
+named=766,420 (67.4% of ALL)  VBI 2:1894 3:65 4:1 5+:1 max:9 total:1961  slips=0
+Wrote artifacts/performance/2026-10-06_fixed-collision/gate-q32.json

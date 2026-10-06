@@ -13,6 +13,7 @@
 #include <nds/nds_fcmp.h>
 #include <nds/nds_r2_collision_mtx.h>
 #include <nds/nds_r2_hwmath_unit.h>
+#include <nds/nds_fixed_convert.h>
 #if NDS_R2_FOX_GUN_OVERLAY
 #include <nds/nds_fox_gun.h>
 #endif
@@ -4282,15 +4283,15 @@ static void ndsRendererAdapterMvpPerspectiveF(
  * and divider, and five terms of the camera's own 20.12 projection. A
  * horizontal distance under one Q12 step is the source's zero matrix (its
  * 0.0001F test). Render only. */
-static void __attribute__((target("arm")))
+static void __attribute__((noinline, target("arm")))
 ndsRendererAdapterMvpMod1Q(CObj *cobj, NDSRendererAdapterMvpMod1Q *out)
 {
-    const s64 dx = (s64)ndsR2CollisionF32ToFixed(cobj->vec.at.x, 12u) -
-                   ndsR2CollisionF32ToFixed(cobj->vec.eye.x, 12u);
-    const s64 dz = (s64)ndsR2CollisionF32ToFixed(cobj->vec.at.z, 12u) -
-                   ndsR2CollisionF32ToFixed(cobj->vec.eye.z, 12u);
-    const s64 d = (s64)ndsR2CollisionF32ToFixed(cobj->vec.eye.y, 12u) -
-                  ndsR2CollisionF32ToFixed(cobj->vec.at.y, 12u);
+    const s64 dx = (s64)ndsF32ToFixed(cobj->vec.at.x, 12u) -
+                   ndsF32ToFixed(cobj->vec.eye.x, 12u);
+    const s64 dz = (s64)ndsF32ToFixed(cobj->vec.at.z, 12u) -
+                   ndsF32ToFixed(cobj->vec.eye.z, 12u);
+    const s64 d = (s64)ndsF32ToFixed(cobj->vec.eye.y, 12u) -
+                  ndsF32ToFixed(cobj->vec.at.y, 12u);
     s64 e;
     s64 m;
 
@@ -4321,14 +4322,14 @@ static inline s32 ndsMvpScaleQ16(s32 a_q12, s32 s_q16)
 
 /* The kind-48 rows: Mod1 rows 0 and 2 by the X recalc scale, row 1 by the Y
  * one (the source's `mod1_f[row][col] * scale`), straight into 20.12. */
-static void __attribute__((target("arm")))
+static void __attribute__((noinline, target("arm")))
 ndsRendererAdapterMvpKind48RowsQ(const NDSRendererAdapterMvpMod1Q *mod1,
                                  const NDSRendererMatrix20p12 *persp,
                                  f32 scale_x, f32 scale_y,
                                  NDSRendererMatrix20p12 *out)
 {
-    s32 sx = ndsR2CollisionF32ToFixed(scale_x, 16u);
-    s32 sy = ndsR2CollisionF32ToFixed(scale_y, 16u);
+    s32 sx = ndsF32ToFixed(scale_x, 16u);
+    s32 sy = ndsF32ToFixed(scale_y, 16u);
     const s32 p00 = persp->m[0][0];
     const s32 p11 = persp->m[1][1];
     const s32 p22 = persp->m[2][2];

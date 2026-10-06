@@ -1,0 +1,46 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 2 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,608; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 1237: ALL 5,871,744 -> 1,677,440, 4 bucket(s) corrected
+  frame 1601: ALL 5,311,168 -> 1,116,864, 5 bucket(s) corrected
+Wrote artifacts/performance/2026-10-06_fixed-collision/sz-q30.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=54c972398d2+dirty(38) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,608     1,676,800      1.50  1,168,046     1,110,784 16,818,368      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,416         9,728      2.20      5,441         2,496     23,872        0.4
+HUD         8,896        24,192      2.72     10,809         7,936    430,272        0.8
+SRC       408,000       600,704      1.47    417,904       145,344  1,048,512       36.5
+MISC      402,944       560,768      1.39    418,993       148,736 15,849,344       36.1
+OTHR      307,968       549,632      1.78    314,898        24,704    806,720       27.6
+WAIT      286,272       523,968      1.83    292,971         4,160    787,200       25.6
+WORK      852,160     1,164,160      1.37    871,353       326,016 16,481,472       76.3
+SHDT      769,855     1,056,575      1.37    790,616       284,607 16,006,719       68.9
+SWRM        1,408         1,472      1.05      1,381           960      3,392        0.1
+GCRA      402,624       595,328      1.48    412,597       140,800  1,043,264       36.1
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        577             0  1,047,680        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      402,816       560,640      1.39    418,861       148,608 15,849,216       36.1
+MFLS          128           192      1.50        132           128        448        0.0
+GPOL          477           566      1.19        463            47        604        0.0
+GVTX        1,074         1,336      1.24      1,061           157      1,446        0.1
+DGSA   1,951,014,449 4,074,436,952   2.09 2,051,067,415  1,144,501 4,290,014,124 174,726.9
+DGSB   1,932,993,549 4,043,364,515   2.09 2,033,730,602  1,098,664 4,294,662,282 173,113.0
+WORK-H    842,432     1,152,192      1.37    860,544       317,952 16,051,200       75.4
+
+named=853,147 (73.0% of ALL)  VBI 2:1818 3:133 4:8 5+:2 max:34 total:1961  slips=0
+Wrote artifacts/performance/2026-10-06_fixed-collision/sz-q30.json

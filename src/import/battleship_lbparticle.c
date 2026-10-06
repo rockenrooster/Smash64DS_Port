@@ -78,6 +78,7 @@
 #include <nds/nds_r2_collision_mtx.h>
 #include <nds/nds_r2_hwmath_unit.h>
 #include <nds/nds_fighter_matrix_index.h>
+#include <nds/nds_fixed_convert.h>
 
 /* The DECOMP sc/scene.h, by path, not the port's <sc/scene.h>. INCLUDES puts
  * include/ ahead of the decomp tree, so the angled form silently selects
@@ -3842,7 +3843,7 @@ ndsParticleXfAxisScale(const s32 *row, f32 diagonal)
                    (u64)((s64)row[1] * row[1]) +
                    (u64)((s64)row[2] * row[2]);
     const f32 scale =
-        ndsR2CollisionFixedToF32((s64)ndsR2HwMathSqrt64Fast(sq), 16u);
+        ndsFixedToF32((s32)ndsR2HwMathSqrt64Fast(sq), 16u);
 
     return (NDS_FCMP_LT0(diagonal) != 0) ? -scale : scale;
 }
@@ -3858,7 +3859,7 @@ ndsParticleXfMemoFill(NDSParticleXfScale *memo, const LBTransform *xf)
     {
         for (col = 0u; col < 3u; col++)
         {
-            const s32 v = ndsR2CollisionF32ToFixed(xf->affine[row][col], 16u);
+            const s32 v = ndsF32ToFixed(xf->affine[row][col], 16u);
 
             /* |cell| < 2^14 keeps every row's squared length in 64 bits. */
             if ((v == NDS_R2_COLLISION_F32_OVERFLOW) || (v >= (1 << 30)) ||
@@ -3868,7 +3869,7 @@ ndsParticleXfMemoFill(NDSParticleXfScale *memo, const LBTransform *xf)
             }
             memo->r_q16[(row * 3u) + col] = v;
         }
-        memo->t_q8[row] = ndsR2CollisionF32ToFixed(
+        memo->t_q8[row] = ndsF32ToFixed(
             xf->affine[3][row], NDS_RENDERER_PARTICLE_CENTER_SHIFT);
         if (memo->t_q8[row] == NDS_R2_COLLISION_F32_OVERFLOW)
         {
@@ -4004,9 +4005,9 @@ static inline f32 ndsParticleCellF32(s32 cell_q30, s32 scale_q16, u32 unit)
 {
     if (unit != 0u)
     {
-        return ndsR2CollisionFixedToF32((s64)cell_q30, 30u);
+        return ndsFixedToF32(cell_q30, 30u);
     }
-    return ndsR2CollisionFixedToF32((s64)cell_q30 * scale_q16, 46u);
+    return ndsFixed64ToF32((s64)cell_q30 * scale_q16, 46u);
 }
 
 static void __attribute__((noinline, target("arm")))
@@ -4025,9 +4026,9 @@ ndsParticleTraRotRpyRScaQ(Mtx44f *mf, f32 tx, f32 ty, f32 tz, f32 r, f32 p,
     u32 row;
     u32 col;
 
-    sx_q = ndsR2CollisionF32ToFixed(sx, 16u);
-    sy_q = ndsR2CollisionF32ToFixed(sy, 16u);
-    sz_q = ndsR2CollisionF32ToFixed(sz, 16u);
+    sx_q = ndsF32ToFixed(sx, 16u);
+    sy_q = ndsF32ToFixed(sy, 16u);
+    sz_q = ndsF32ToFixed(sz, 16u);
     if ((ndsFighterMatrixAngleToIndexExact(r, &ir) == 0) ||
         (ndsFighterMatrixAngleToIndexExact(p, &ip) == 0) ||
         (ndsFighterMatrixAngleToIndexExact(y, &iy) == 0) ||

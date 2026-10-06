@@ -7,6 +7,7 @@
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_r2_hwmath_unit.h>
 #include <nds/nds_r2_collision_mtx.h>
+#include <nds/nds_fixed_convert.h>
 
 #include "generated/native_wallpapers.generated.inc"
 
@@ -115,9 +116,50 @@ static s32 ndsWallpaperScaleQ16(s64 mag_q, s32 bias)
  * the source's two square roots, two arctangents and ~40 float operations a
  * tick, twice a frame between the source SObj update and this owner. Every
  * branch and clamp is the source's, in its order. Render only. */
+/* The last answer and its inputs' bits: the frame's present asks with the
+ * same eye and target as the tick's SObj update before it. */
+static u32 sNdsWallpaperPerspKey[7];
+static s32 sNdsWallpaperPerspOut[3];
+static u32 sNdsWallpaperPerspValid;
+
+static s32 ndsWallpaperPerspCompute(u32 motion, const Vec3f *eye,
+                                    const Vec3f *at, s32 *pos_x_q16,
+                                    s32 *pos_y_q16, s32 *scale_q16);
+
 s32 __attribute__((target("arm")))
 ndsWallpaperPerspQ(u32 motion, const Vec3f *eye, const Vec3f *at,
                    s32 *pos_x_q16, s32 *pos_y_q16, s32 *scale_q16)
+{
+    u32 key[7];
+    s32 ok;
+
+    key[0] = motion;
+    __builtin_memcpy(&key[1], eye, sizeof(Vec3f));
+    __builtin_memcpy(&key[4], at, sizeof(Vec3f));
+    if ((sNdsWallpaperPerspValid != 0u) &&
+        (__builtin_memcmp(key, sNdsWallpaperPerspKey, sizeof(key)) == 0))
+    {
+        *pos_x_q16 = sNdsWallpaperPerspOut[0];
+        *pos_y_q16 = sNdsWallpaperPerspOut[1];
+        *scale_q16 = sNdsWallpaperPerspOut[2];
+        return TRUE;
+    }
+    ok = ndsWallpaperPerspCompute(motion, eye, at, pos_x_q16, pos_y_q16,
+                                  scale_q16);
+    sNdsWallpaperPerspValid = (ok != FALSE) ? 1u : 0u;
+    if (ok != FALSE)
+    {
+        __builtin_memcpy(sNdsWallpaperPerspKey, key, sizeof(key));
+        sNdsWallpaperPerspOut[0] = *pos_x_q16;
+        sNdsWallpaperPerspOut[1] = *pos_y_q16;
+        sNdsWallpaperPerspOut[2] = *scale_q16;
+    }
+    return ok;
+}
+
+static s32 __attribute__((noinline, target("arm")))
+ndsWallpaperPerspCompute(u32 motion, const Vec3f *eye, const Vec3f *at,
+                         s32 *pos_x_q16, s32 *pos_y_q16, s32 *scale_q16)
 {
     s32 dx;
     s32 dy;
@@ -132,13 +174,13 @@ ndsWallpaperPerspQ(u32 motion, const Vec3f *eye, const Vec3f *at,
         *scale_q16 = 1 << 16;
         return TRUE;
     }
-    dx = ndsR2CollisionF32ToFixed(eye->x, NDS_WALLPAPER_Q);
-    dy = ndsR2CollisionF32ToFixed(eye->y, NDS_WALLPAPER_Q);
-    dz = ndsR2CollisionF32ToFixed(eye->z, NDS_WALLPAPER_Q);
+    dx = ndsF32ToFixed(eye->x, NDS_WALLPAPER_Q);
+    dy = ndsF32ToFixed(eye->y, NDS_WALLPAPER_Q);
+    dz = ndsF32ToFixed(eye->z, NDS_WALLPAPER_Q);
     {
-        const s32 ax = ndsR2CollisionF32ToFixed(at->x, NDS_WALLPAPER_Q);
-        const s32 ay = ndsR2CollisionF32ToFixed(at->y, NDS_WALLPAPER_Q);
-        const s32 az = ndsR2CollisionF32ToFixed(at->z, NDS_WALLPAPER_Q);
+        const s32 ax = ndsF32ToFixed(at->x, NDS_WALLPAPER_Q);
+        const s32 ay = ndsF32ToFixed(at->y, NDS_WALLPAPER_Q);
+        const s32 az = ndsF32ToFixed(at->z, NDS_WALLPAPER_Q);
 
         if ((dx == NDS_R2_COLLISION_F32_OVERFLOW) ||
             (dy == NDS_R2_COLLISION_F32_OVERFLOW) ||

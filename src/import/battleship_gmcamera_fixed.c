@@ -22,6 +22,7 @@
 #include <nds/nds_r2_collision_mtx.h>
 #include <nds/nds_r2_hwmath_unit.h>
 #include <nds/nds_native_wallpaper.h>
+#include <nds/nds_fixed_convert.h>
 
 #ifndef CObjGetStruct
 #define CObjGetStruct(gobj) ((CObj *)((gobj)->obj))
@@ -409,18 +410,20 @@ ndsCamInterestsQ(int32_t vec_q[2], int32_t *hz_out, int32_t *vt_out)
     }
 }
 
-/* gmcamera.c:231, for the cameras that keep the source's float callers. */
-void gmCameraUpdateInterests(Vec3f *vec, f32 *hz, f32 *vt)
+/* gmcamera.c:231, for the cameras that keep the source's float callers
+ * (ARM state: its conversions use CLZ). */
+void __attribute__((target("arm")))
+gmCameraUpdateInterests(Vec3f *vec, f32 *hz, f32 *vt)
 {
     int32_t vec_q[2];
     int32_t hz_q;
     int32_t vt_q;
 
     ndsCamInterestsQ(vec_q, &hz_q, &vt_q);
-    *hz = ndsR2CollisionFixedToF32(hz_q, NDS_CAM_Q);
-    *vt = ndsR2CollisionFixedToF32(vt_q, NDS_CAM_Q);
-    vec->x = ndsR2CollisionFixedToF32(vec_q[0], NDS_CAM_Q);
-    vec->y = ndsR2CollisionFixedToF32(vec_q[1], NDS_CAM_Q);
+    *hz = ndsFixedToF32(hz_q, NDS_CAM_Q);
+    *vt = ndsFixedToF32(vt_q, NDS_CAM_Q);
+    vec->x = ndsFixedToF32(vec_q[0], NDS_CAM_Q);
+    vec->y = ndsFixedToF32(vec_q[1], NDS_CAM_Q);
     vec->z = 0.0F;
 }
 
@@ -623,14 +626,14 @@ gmCameraDefaultFuncCamera(GObj *camera_gobj)
     gGMCameraStruct.vel_at.x = gGMCameraStruct.vel_at.y =
         gGMCameraStruct.vel_at.z = 0.0F;
 
-    cobj->vec.at.x = ndsR2CollisionFixedToF32(at[0], NDS_CAM_Q);
-    cobj->vec.at.y = ndsR2CollisionFixedToF32(at[1], NDS_CAM_Q);
-    cobj->vec.at.z = ndsR2CollisionFixedToF32(at[2], NDS_CAM_Q);
-    cobj->vec.eye.x = ndsR2CollisionFixedToF32(eye[0], NDS_CAM_Q);
-    cobj->vec.eye.y = ndsR2CollisionFixedToF32(eye[1], NDS_CAM_Q);
-    cobj->vec.eye.z = ndsR2CollisionFixedToF32(eye[2], NDS_CAM_Q);
-    gGMCameraStruct.target_dist = ndsR2CollisionFixedToF32(dist, NDS_CAM_Q);
-    gGMCameraStruct.fovy = ndsR2CollisionFixedToF32(fovy, NDS_CAM_Q);
+    cobj->vec.at.x = ndsFixedToF32(at[0], NDS_CAM_Q);
+    cobj->vec.at.y = ndsFixedToF32(at[1], NDS_CAM_Q);
+    cobj->vec.at.z = ndsFixedToF32(at[2], NDS_CAM_Q);
+    cobj->vec.eye.x = ndsFixedToF32(eye[0], NDS_CAM_Q);
+    cobj->vec.eye.y = ndsFixedToF32(eye[1], NDS_CAM_Q);
+    cobj->vec.eye.z = ndsFixedToF32(eye[2], NDS_CAM_Q);
+    gGMCameraStruct.target_dist = ndsFixedToF32(dist, NDS_CAM_Q);
+    gGMCameraStruct.fovy = ndsFixedToF32(fovy, NDS_CAM_Q);
 
     /* gmCameraApplyFOV */
     cobj->projection.persp.fovy = gGMCameraStruct.fovy;
@@ -640,7 +643,7 @@ gmCameraDefaultFuncCamera(GObj *camera_gobj)
  * scale from the battle camera, through the integer kernel the native BG2
  * owner draws with (nds_native_wallpaper.c; battleship_grwallpaper.c makes
  * the decomp definition weak). Render only. */
-void grWallpaperCalcPersp(SObj *wallpaper_sobj)
+void __attribute__((target("arm"))) grWallpaperCalcPersp(SObj *wallpaper_sobj)
 {
     CObj *cobj = CObjGetStruct(gGMCameraGObj);
     s32 pos_x;
@@ -653,7 +656,7 @@ void grWallpaperCalcPersp(SObj *wallpaper_sobj)
         return;
     }
     wallpaper_sobj->sprite.scalex = wallpaper_sobj->sprite.scaley =
-        ndsR2CollisionFixedToF32(scale, 16u);
-    wallpaper_sobj->pos.x = ndsR2CollisionFixedToF32(pos_x, 16u);
-    wallpaper_sobj->pos.y = ndsR2CollisionFixedToF32(pos_y, 16u);
+        ndsFixedToF32(scale, 16u);
+    wallpaper_sobj->pos.x = ndsFixedToF32(pos_x, 16u);
+    wallpaper_sobj->pos.y = ndsFixedToF32(pos_y, 16u);
 }

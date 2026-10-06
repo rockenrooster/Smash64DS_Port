@@ -284,6 +284,15 @@ sb32 ndsLatchBaseItemAttackSpecialCollide(ITAttackColl *attack_coll,
 #define NDS_FTPARTS_LATCH_MARK() ((void)0)
 #endif
 
+/* 2026-10-06: the strong definitions of the three attack-near-fighter tests
+ * (bounds once, order-key compares, same answers) are in
+ * nds_p2_hurtbox_reject.c. */
+#if NDS_P2_HURTBOX_REJECT
+#pragma weak gmCollisionCheckFighterInFighterRange
+#pragma weak gmCollisionCheckWeaponInFighterRange
+#pragma weak gmCollisionCheckItemInFighterRange
+#endif
+
 #include "../../decomp/BattleShip-main/decomp/src/gm/gmcollision.c"
 
 #if NDS_FTPARTS_LATCH_GATE

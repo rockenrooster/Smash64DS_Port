@@ -16,6 +16,7 @@
 #define syUtilsArcTan2 ndsBaseSyUtilsArcTan2
 #define syUtilsArcSin ndsBaseSyUtilsArcSin
 #define syUtilsArcCos ndsBaseSyUtilsArcCos
+#include <nds/nds_fixed_convert.h>
 #include "../../decomp/BattleShip-main/decomp/src/sys/utils.c"
 #undef syUtilsArcTan
 #undef syUtilsArcTan2
@@ -192,6 +193,24 @@ int64_t __attribute__((target("arm"))) ndsUtilsAtan2Q30(int64_t y, int64_t x)
         a = NDS_ATAN_PI_Q30 - a;
     }
     return (y < 0) ? -a : a;
+}
+
+int32_t __attribute__((noinline, target("arm")))
+ndsF32ToFixed(float value, unsigned int frac_bits)
+{
+    return ndsR2CollisionF32ToFixed(value, frac_bits);
+}
+
+float __attribute__((noinline, target("arm")))
+ndsFixedToF32(int32_t value, unsigned int frac_bits)
+{
+    return ndsR2CollisionFixedToF32((int64_t)value, frac_bits);
+}
+
+float __attribute__((noinline, target("arm")))
+ndsFixed64ToF32(int64_t value, unsigned int frac_bits)
+{
+    return ndsR2CollisionFixedToF32(value, frac_bits);
 }
 
 f32 syUtilsArcTan(f32 div)
