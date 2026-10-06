@@ -8338,6 +8338,22 @@ efManagerSparkleWhiteScaleMakeEffect(Vec3f *pos, f32 scale);
 extern LBParticle *ndsEFManagerChargeSparkleMakeEffect(Vec3f *pos);
 extern __attribute__((weak)) LBParticle *
 efManagerFlashMiddleMakeEffect(Vec3f *pos);
+/* The source makers of the kinds that used to fall to a stand-in below (BUGS.md
+ * 1P, owner 2026-10-06: "Generic yellow/green/green ring VFX still played for
+ * some effects. Need to audit against source"). Every one starts an efcommon
+ * bank script that the generator has packed since 2026-10-04, when it began
+ * refusing an unlisted public maker (scripts/generate_nds_particle_banks.py). */
+extern LBParticle *efManagerFlashSmallMakeEffect(Vec3f *pos);
+extern LBParticle *efManagerFlashLargeMakeEffect(Vec3f *pos);
+extern LBGenerator *efManagerRippleMakeEffect(Vec3f *pos);
+extern LBParticle *efManagerPsionicMakeEffect(Vec3f *pos);
+extern LBGenerator *efManagerKirbyStarMakeEffect(Vec3f *pos);
+extern LBParticle *efManagerSparkleWhiteMultiMakeEffect(Vec3f *pos);
+extern LBParticle *efManagerHealSparklesMakeEffect(Vec3f *pos);
+extern LBParticle *efManagerEggBreakMakeEffect(Vec3f *pos);
+extern __attribute__((weak)) LBParticle *
+efManagerDamageNormalLightMakeEffect(Vec3f *pos, s32 player, s32 size,
+                                     sb32 is_static);
 
 /* THE PARTICLE-ONLY HALF OF THE SOURCE DISPATCH (ftparam.c:1892-2112).
  *
@@ -8590,6 +8606,41 @@ static sb32 ndsFTParamMakeSourceEffect(s32 effect_id, s32 lr, Vec3f *pos,
     case nEFKindFlashMiddle:
         *effect = efManagerFlashMiddleMakeEffect(pos);
         return TRUE;
+    /* The source's expanding green circles (efdef.h: FlashSmall "plays when
+     * teching", FlashLarge "large expanding green circle") and the Ripple of
+     * Pikachu's Quick Attack and Ness's PSI Magnet. All three were answered by
+     * the generic green/yellow Wave ring below -- the owner's "generic ring"
+     * report (2026-10-06). The real makers draw from the global random stream
+     * like every particle script, as on N64, so a replay that reaches one of
+     * these kinds re-baselines its digest. */
+    case nEFKindFlashSmall:
+        *effect = efManagerFlashSmallMakeEffect(pos);
+        return TRUE;
+    case nEFKindFlashLarge:
+        *effect = efManagerFlashLargeMakeEffect(pos);
+        return TRUE;
+    case nEFKindRipple:
+        *effect = efManagerRippleMakeEffect(pos);
+        return TRUE;
+    /* Same audit: Ness's PSI sparkles (was the electric sprite), Kirby's
+     * landing star (was nothing at all), the white multi-sparkle and the heal
+     * sparkles (were the generic star), the egg shell (was a dust puff). */
+    case nEFKindPsionic:
+        *effect = efManagerPsionicMakeEffect(pos);
+        return TRUE;
+    case nEFKindKirbyStar:
+        *effect = efManagerKirbyStarMakeEffect(pos);
+        return TRUE;
+    case nEFKindSparkleWhiteMulti:
+        *effect = efManagerSparkleWhiteMultiMakeEffect(pos);
+        return TRUE;
+    case nEFKindHealSparkles:
+        *effect = efManagerHealSparklesMakeEffect(pos);
+        return TRUE;
+    case nEFKindEggBreak:
+        efManagerEggBreakMakeEffect(pos);
+        *effect = NULL;
+        return TRUE;
     case nEFKindMusicNote:
         efManagerMusicNoteMakeEffect(pos);
         *effect = NULL;
@@ -8791,6 +8842,15 @@ void *ftParamMakeEffect(GObj *fighter_gobj, s32 effect_id, s32 joint_id,
         }
     }
 #if NDS_R2_SOURCE_EFFECTS_PARTICLE
+    /* ftparam.c:1894: the normal hit spark at the source's fixed size 10. Its
+     * bank script is picked by the requesting fighter's player
+     * (dEFManagerDamageNormalLightIDs), which the seam below does not carry;
+     * the generic HitNormal star stood in for it. */
+    if ((effect_id == nEFKindDamageNormal) && (fighter_gobj != NULL))
+    {
+        return efManagerDamageNormalLightMakeEffect(
+            &pos, ftGetStruct(fighter_gobj)->player, 10, FALSE);
+    }
     {
         void *source_effect = NULL;
 
