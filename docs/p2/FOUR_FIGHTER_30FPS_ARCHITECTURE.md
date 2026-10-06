@@ -1543,6 +1543,15 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   P95 1,108,928, Sector Z 1,228,032 (paired drift +1.5K to +4K from layout,
   the hooks' 472 ITCM bytes not yet re-admitted). Receipt
   `2026-10-05_recorder-deleted`.
+- **10-05 late: stage animation in fixed point; the wall sweep's integer box.**
+  The event32 parser writes stage and item joint tracks in the fighters' Q form
+  (Requirement 4), so the player's length add, Linear, Step and cubic run in
+  integers (the DObj clock and Sector Z's path parameter stay f32): Sector Z
+  paired -5.1K, gate -2.0K, digests identical (4 x Yoshi's moves on 146
+  transient frames). The wall sweep then skips a segment whose integer box
+  misses the motion's before any float compare (exact): Sector Z -1.7K, gate
+  -0.2K. Gate P95 1,107,328, Sector Z 1,219,584, 4 x Yoshi 1,261,184. Receipt
+  `2026-10-05_stage-anim-q`.
 
 ## 7. Found along the way
 

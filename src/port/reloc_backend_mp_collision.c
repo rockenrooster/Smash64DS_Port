@@ -3785,6 +3785,9 @@ ndsStageMPAdjustFloorLoopWallSweep(Vec3f *position,
         f32 vdist2;
         s32 range_lo;
         s32 range_hi;
+        s32 y_lo;
+        s32 y_hi;
+        u32 frac_hi;
         s32 line_id;
         sb32 dynamic;
 
@@ -3885,6 +3888,39 @@ ndsStageMPAdjustFloorLoopWallSweep(Vec3f *position,
                 }
             }
         }
+        /* P2-2p8 (2026-10-05, owner: fixed point only): the motion's y span
+         * as integers, floor of its low end and ceiling of its high one, for
+         * the per-segment box test below. A segment whose integer x span
+         * misses [range_lo, range_hi] or whose y span misses [y_lo, y_hi]
+         * fails both surface tests' own bound checks (the x one carries the
+         * same 0.001 slack range_lo/hi do; the y one has none), so it is
+         * skipped before any float compare: exact, not an approximation.
+         * Out-of-range motion keeps every segment (y_lo > y_hi never). */
+        {
+            const f32 y_min = NDS_FCMP_LT(vpdist_y, vtdist_y) ? vpdist_y :
+                                                                vtdist_y;
+            const f32 y_max = NDS_FCMP_LT(vpdist_y, vtdist_y) ? vtdist_y :
+                                                                vpdist_y;
+            u32 frac;
+
+            if ((ndsMPF32TruncFrac(y_min, &y_lo, &frac) == FALSE) ||
+                (ndsMPF32TruncFrac(y_max, &y_hi, &frac_hi) == FALSE))
+            {
+                y_lo = INT32_MIN;
+                y_hi = INT32_MAX;
+            }
+            else
+            {
+                if ((frac != 0u) && !NDS_MP_F32_POSITIVE(y_min))
+                {
+                    y_lo--;
+                }
+                if ((frac_hi != 0u) && NDS_MP_F32_POSITIVE(y_max))
+                {
+                    y_hi++;
+                }
+            }
+        }
         for (line_id = first; line_id < (first + count); line_id++)
         {
             const MPVertexInfo *vinfo;
@@ -3947,6 +3983,15 @@ ndsStageMPAdjustFloorLoopWallSweep(Vec3f *position,
                 vpos_y = ndsMPVertexY(verts, next_id);
                 flat = (prev_x == vpos_x) ? TRUE : FALSE;
                 NDS_DIAG(gNdsMPWallSweepSegmentTests++);
+                /* The integer box test (see y_lo above). One unit of slack
+                 * on x covers the rounding of the tests' own +-0.001. */
+                if ((((prev_x > vpos_x) ? prev_x : vpos_x) + 1 < range_lo) ||
+                    (((prev_x < vpos_x) ? prev_x : vpos_x) - 1 > range_hi) ||
+                    (((prev_y > vpos_y) ? prev_y : vpos_y) < y_lo) ||
+                    (((prev_y < vpos_y) ? prev_y : vpos_y) > y_hi))
+                {
+                    continue;
+                }
                 if (flat != FALSE)
                 {
                     if (((lr < 0) ? (vtdist_x > vpdist_x) :

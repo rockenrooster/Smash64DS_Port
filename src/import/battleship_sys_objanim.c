@@ -39,6 +39,12 @@ volatile u32 gNdsObjAnimBitCompare __attribute__((used, section(".data"))) = 1u;
  * call with it and a port-side replacement actually runs. */
 #define gcPlayDObjAnimJoint ndsBaseGcPlayDObjAnimJoint
 #endif
+#if NDS_R2_CUBIC_FIXED
+/* 2026-10-05: the event32 parser and the value getter in Q form (the port
+ * definitions follow the player below). */
+#define gcParseDObjAnimJoint ndsBaseGcParseDObjAnimJoint
+#define gcGetAObjValue ndsBaseGcGetAObjValue
+#endif
 
 /* Campaign 01 re-knapsack, 2026-08-17, gave ndsBaseGcPlayAnimAll 80 ITCM bytes
  * for 1,070 I-cache-fill tk/fr. P2-2p8 N04.08 removed its last call site --
@@ -71,6 +77,10 @@ void ndsBaseGcPlayMObjMatAnim(MObj *mobj) __attribute__((section(".itcm")));
 #undef gcParseMObjMatAnimJoint
 #undef gcPlayAnimAll
 #undef gcSetupCustomDObjsWithMObj
+#if NDS_R2_CUBIC_FIXED
+#undef gcParseDObjAnimJoint
+#undef gcGetAObjValue
+#endif
 
 /* P2-2p8 (2026-10-05): material animations at the presentation rate. An
  * MObj's animation is render state only: its tracks write the material's
@@ -799,6 +809,554 @@ void gcPlayDObjAnimJoint(DObj *dobj)
 void lbCommonPlayTranslateScaledDObjAnim(DObj *dobj, Vec3f *scale)
 {
     ndsPlayDObjAnimJointBody(dobj, scale);
+}
+
+/* P2-2p8 (2026-10-05, owner: "Software floating point should not exist, fixed
+ * point only"; ruling D13 re-baselines the digest): the stage and item joint
+ * AObjs in Q form, as the fighter parser has written them since Requirement 4
+ * (battleship_ftanim.c). The source's event32 parser below writes every
+ * rotate, translate and scale track as a Q kind -- value and rate Q12, Linear's
+ * rate Q16, length Q12, the cubic's reciprocal Q30 -- so the player's per-node
+ * length add, its Linear/Step arms and the cubic run in integers instead of
+ * converting six floats a node (Sector Z's census: the player and this parser
+ * were 25K soft-float cycles a frame). The DObj's own clock (anim_wait,
+ * anim_frame, anim_speed) stays f32: stage code reads it. The path-parameter
+ * track TraI stays float too -- Q12 of a path's [0, 1] would step Sector Z's
+ * Arwing up to a couple of units along its loop. Readers of a Q node go
+ * through the player or gcGetAObjValue (below), which dispatch on `kind`.
+ * Same-ROM A/B word gNdsStageAnimQ (0 = the source's float kinds; a node keeps
+ * the form it was last written in, so poke it before the battle loads). */
+volatile u32 gNdsStageAnimQ __attribute__((used, section(".data"))) = 1u;
+
+/* One AObj into Q form before this parser writes a Q kind on it (the fighter
+ * parser's ndsR2AnimAObjToQConvert): the arms carry fields forward, so a node
+ * written half in each form would read an f32 bit pattern as Q. */
+static void __attribute__((noinline)) ndsOAObjToQConvert(AObj *a, s32 kind)
+{
+    if (kind == nGCAnimKindNone)
+    {
+        /* gcAddAObjForDObj's zeros are the same word in both forms; its
+         * length_invert of 1.0F is not, and a zero-payload event keeps it. */
+        a->length_invert = ndsR2AQStore(1 << NDS_R2_AQ_IF);
+        return;
+    }
+    if (kind > nGCAnimKindCubic)
+    {
+        return;
+    }
+    a->length_invert = ndsR2AQStore(ndsR2F32ToFixed(a->length_invert,
+        (kind == nGCAnimKindStep) ? NDS_R2_AQ_LF : NDS_R2_AQ_IF));
+    a->length = ndsR2AQStore(ndsR2F32ToFixed(a->length, NDS_R2_AQ_LF));
+    a->value_base = ndsR2AQStore(ndsR2F32ToFixed(a->value_base, NDS_R2_AQ_VF));
+    a->value_target =
+        ndsR2AQStore(ndsR2F32ToFixed(a->value_target, NDS_R2_AQ_VF));
+    a->rate_base = ndsR2AQStore(ndsR2F32ToFixed(a->rate_base,
+        (kind == nGCAnimKindLinear) ? NDS_R2_AQ_RF : NDS_R2_AQ_VF));
+    a->rate_target =
+        ndsR2AQStore(ndsR2F32ToFixed(a->rate_target, NDS_R2_AQ_VF));
+    a->kind = (u8)(kind + ((s32)NDS_R2_AQ_KIND_BASE - nGCAnimKindStep));
+}
+
+/* TRUE when this parser writes `track` in Q form. */
+static inline u32 ndsOATrackQ(u32 q, s32 track)
+{
+    return ((q != 0u) && (track != nGCAnimTrackTraI)) ? 1u : 0u;
+}
+
+/* The node for joint track `i`, created on first use (the source's), and in
+ * the form `tq` asks for. */
+static inline AObj *ndsOATrack(DObj *dobj, AObj **track_aobjs, s32 i, u32 tq)
+{
+    AObj *a = track_aobjs[i];
+
+    if (a == NULL)
+    {
+        a = gcAddAObjForDObj(dobj, i + nGCAnimTrackJointStart);
+        track_aobjs[i] = a;
+    }
+    if ((tq != 0u) && ((s32)a->kind < (s32)NDS_R2_AQ_KIND_BASE))
+    {
+        ndsOAObjToQConvert(a, (s32)a->kind);
+    }
+    return a;
+}
+
+/* 1/n as the Q30 reciprocal, rounded to nearest (n is a 15-bit payload). */
+static inline f32 ndsOARecipQ(u32 n)
+{
+    return ndsR2AQStore((s32)(((1u << NDS_R2_AQ_IF) + (n >> 1)) / n));
+}
+
+/* `-anim_wait - anim_speed`, a new segment's starting length, in Q12. */
+static inline s32 ndsOASegmentStartQ(const DObj *dobj)
+{
+    return -(ndsR2F32ToFixed(dobj->anim_wait, NDS_R2_AQ_LF) +
+             ndsR2F32ToFixed(dobj->anim_speed, NDS_R2_AQ_LF));
+}
+
+/* Every live node's length advanced by `speed + wait` (the two exits that
+ * leave the script), in each node's own form. */
+static void ndsOAAdvanceTail(DObj *dobj)
+{
+    const f32 tail = dobj->anim_speed + dobj->anim_wait;
+    const s32 tail_q = ndsR2F32ToFixed(dobj->anim_speed, NDS_R2_AQ_LF) +
+                       ndsR2F32ToFixed(dobj->anim_wait, NDS_R2_AQ_LF);
+    AObj *a;
+
+    for (a = dobj->aobj; a != NULL; a = a->next)
+    {
+        if (a->kind == nGCAnimKindNone)
+        {
+            continue;
+        }
+        if (a->kind >= NDS_R2_AQ_KIND_BASE)
+        {
+            a->length = ndsR2AQStore(ndsR2AQLoad(a->length) + tail_q);
+        }
+        else
+        {
+            a->length += tail;
+        }
+    }
+}
+
+/* sys/objanim.c:268, the event32 parser, writing Q kinds (see above). Its
+ * control flow, callbacks and DObj clock are the source's line for line. */
+void gcParseDObjAnimJoint(DObj *dobj)
+{
+    AObj *track_aobjs[nGCAnimTrackJointEnd - nGCAnimTrackJointStart + 1];
+    AObj *aobj;
+    s32 i;
+    u32 command_kind;
+    u32 flags;
+    u32 payload_u;
+    f32 payload;
+    const u32 q = (gNdsStageAnimQ != 0u) ? 1u : 0u;
+
+    if (NDS_FCMP_EQ_C(dobj->anim_wait, AOBJ_ANIM_NULL))
+    {
+        return;
+    }
+    if (NDS_FCMP_EQ_C(dobj->anim_wait, AOBJ_ANIM_CHANGED))
+    {
+        dobj->anim_wait = -dobj->anim_frame;
+    }
+    else
+    {
+        dobj->anim_wait -= dobj->anim_speed;
+        dobj->anim_frame += dobj->anim_speed;
+        dobj->parent_gobj->anim_frame = dobj->anim_frame;
+
+        if (NDS_FCMP_GT0(dobj->anim_wait))
+        {
+            return;
+        }
+    }
+    for (i = 0; i < (s32)ARRAY_COUNT(track_aobjs); i++)
+    {
+        track_aobjs[i] = NULL;
+    }
+    for (aobj = dobj->aobj; aobj != NULL; aobj = aobj->next)
+    {
+        if ((aobj->track >= nGCAnimTrackJointStart) &&
+            (aobj->track <= nGCAnimTrackJointEnd))
+        {
+            track_aobjs[aobj->track - nGCAnimTrackJointStart] = aobj;
+        }
+    }
+    do
+    {
+        if (dobj->anim_joint.event32 == NULL)
+        {
+            ndsOAAdvanceTail(dobj);
+            dobj->anim_frame = dobj->anim_wait;
+            dobj->parent_gobj->anim_frame = dobj->anim_wait;
+            dobj->anim_wait = AOBJ_ANIM_END;
+            return;
+        }
+        command_kind = dobj->anim_joint.event32->command.opcode;
+
+        switch (command_kind)
+        {
+        case nGCAnimEvent32SetVal0RateBlock:
+        case nGCAnimEvent32SetVal0Rate:
+        case nGCAnimEvent32SetValRateBlock:
+        case nGCAnimEvent32SetValRate:
+        {
+            /* Cubic: the target value, then (SetValRate) the target rate. */
+            const u32 with_rate =
+                ((command_kind == nGCAnimEvent32SetValRateBlock) ||
+                 (command_kind == nGCAnimEvent32SetValRate)) ? 1u : 0u;
+            const s32 len_q = ndsOASegmentStartQ(dobj);
+
+            payload_u = dobj->anim_joint.event32->command.payload;
+            payload = (f32)payload_u;
+            flags = AObjAnimAdvance(dobj->anim_joint.event32)->command.flags;
+
+            for (i = 0; i < (s32)ARRAY_COUNT(track_aobjs);
+                 i++, flags = flags >> 1)
+            {
+                AObj *a;
+                u32 tq;
+
+                if (!(flags))
+                {
+                    break;
+                }
+                if (!(flags & 1))
+                {
+                    continue;
+                }
+                tq = ndsOATrackQ(q, i + nGCAnimTrackJointStart);
+                a = ndsOATrack(dobj, track_aobjs, i, tq);
+                a->value_base = a->value_target;
+                a->rate_base = a->rate_target;
+                if (tq != 0u)
+                {
+                    a->value_target = ndsR2AQStore(ndsR2F32ToFixed(
+                        dobj->anim_joint.event32->f, NDS_R2_AQ_VF));
+                    AObjAnimAdvance(dobj->anim_joint.event32);
+                    a->rate_target = (with_rate != 0u) ?
+                        ndsR2AQStore(ndsR2F32ToFixed(
+                            dobj->anim_joint.event32->f, NDS_R2_AQ_VF)) :
+                        ndsR2AQStore(0);
+                    a->kind = NDS_R2_AQ_KIND_CUBIC;
+                    if (payload_u != 0u)
+                    {
+                        a->length_invert = ndsOARecipQ(payload_u);
+                    }
+                    a->length = ndsR2AQStore(len_q);
+                }
+                else
+                {
+                    a->value_target = dobj->anim_joint.event32->f;
+                    AObjAnimAdvance(dobj->anim_joint.event32);
+                    a->rate_target = (with_rate != 0u) ?
+                        dobj->anim_joint.event32->f : 0.0F;
+                    a->kind = nGCAnimKindCubic;
+                    if (payload_u != 0u)
+                    {
+                        a->length_invert = 1.0F / payload;
+                    }
+                    a->length = -dobj->anim_wait - dobj->anim_speed;
+                }
+                if (with_rate != 0u)
+                {
+                    AObjAnimAdvance(dobj->anim_joint.event32);
+                }
+            }
+            if ((command_kind == nGCAnimEvent32SetVal0RateBlock) ||
+                (command_kind == nGCAnimEvent32SetValRateBlock))
+            {
+                dobj->anim_wait += payload;
+            }
+            break;
+        }
+
+        case nGCAnimEvent32SetValBlock:
+        case nGCAnimEvent32SetVal:
+        {
+            const s32 len_q = ndsOASegmentStartQ(dobj);
+
+            payload_u = dobj->anim_joint.event32->command.payload;
+            payload = (f32)payload_u;
+            flags = AObjAnimAdvance(dobj->anim_joint.event32)->command.flags;
+
+            for (i = 0; i < (s32)ARRAY_COUNT(track_aobjs);
+                 i++, flags = flags >> 1)
+            {
+                AObj *a;
+                u32 tq;
+
+                if (!(flags))
+                {
+                    break;
+                }
+                if (!(flags & 1))
+                {
+                    continue;
+                }
+                tq = ndsOATrackQ(q, i + nGCAnimTrackJointStart);
+                a = ndsOATrack(dobj, track_aobjs, i, tq);
+                a->value_base = a->value_target;
+                if (tq != 0u)
+                {
+                    const u32 was_linear =
+                        (a->kind == NDS_R2_AQ_KIND_LINEAR) ? 1u : 0u;
+
+                    a->value_target = ndsR2AQStore(ndsR2F32ToFixed(
+                        dobj->anim_joint.event32->f, NDS_R2_AQ_VF));
+                    AObjAnimAdvance(dobj->anim_joint.event32);
+                    a->kind = NDS_R2_AQ_KIND_LINEAR;
+                    if (payload_u != 0u)
+                    {
+                        /* (target - base) / payload, Q16, the magnitude
+                         * rounded to nearest (the fighter parser's). */
+                        s32 d = (ndsR2AQLoad(a->value_target) -
+                                 ndsR2AQLoad(a->value_base))
+                                    << (NDS_R2_AQ_RF - NDS_R2_AQ_VF);
+                        u32 h = payload_u >> 1;
+                        s32 r = (d < 0) ?
+                            -(s32)(((u32)(-d) + h) / payload_u) :
+                            (s32)(((u32)d + h) / payload_u);
+
+                        a->rate_base = ndsR2AQStore(r);
+                    }
+                    else if (was_linear == 0u)
+                    {
+                        /* The source keeps the old rate as the line's, and
+                         * a Linear node holds its rate at Q16. */
+                        a->rate_base = ndsR2AQStore(ndsR2AQLoad(a->rate_base)
+                            << (NDS_R2_AQ_RF - NDS_R2_AQ_VF));
+                    }
+                    a->length = ndsR2AQStore(len_q);
+                    a->rate_target = ndsR2AQStore(0);
+                }
+                else
+                {
+                    a->value_target = dobj->anim_joint.event32->f;
+                    AObjAnimAdvance(dobj->anim_joint.event32);
+                    a->kind = nGCAnimKindLinear;
+                    if (payload_u != 0u)
+                    {
+                        a->rate_base =
+                            (a->value_target - a->value_base) / payload;
+                    }
+                    a->length = -dobj->anim_wait - dobj->anim_speed;
+                    a->rate_target = 0.0F;
+                }
+            }
+            if (command_kind == nGCAnimEvent32SetValBlock)
+            {
+                dobj->anim_wait += payload;
+            }
+            break;
+        }
+
+        case nGCAnimEvent32SetTargetRate:
+            flags = AObjAnimAdvance(dobj->anim_joint.event32)->command.flags;
+
+            for (i = 0; i < (s32)ARRAY_COUNT(track_aobjs);
+                 i++, flags = flags >> 1)
+            {
+                AObj *a;
+                u32 tq;
+
+                if (!(flags))
+                {
+                    break;
+                }
+                if (!(flags & 1))
+                {
+                    continue;
+                }
+                tq = ndsOATrackQ(q, i + nGCAnimTrackJointStart);
+                a = ndsOATrack(dobj, track_aobjs, i, tq);
+                a->rate_target = (tq != 0u) ?
+                    ndsR2AQStore(ndsR2F32ToFixed(dobj->anim_joint.event32->f,
+                                                 NDS_R2_AQ_VF)) :
+                    dobj->anim_joint.event32->f;
+                AObjAnimAdvance(dobj->anim_joint.event32);
+            }
+            break;
+
+        case nGCAnimEvent32Wait:
+            dobj->anim_wait += (f32)AObjAnimAdvance(
+                dobj->anim_joint.event32)->command.payload;
+            break;
+
+        case nGCAnimEvent32SetValAfterBlock:
+        case nGCAnimEvent32SetValAfter:
+        {
+            const s32 len_q = ndsOASegmentStartQ(dobj);
+
+            payload_u = dobj->anim_joint.event32->command.payload;
+            payload = (f32)payload_u;
+            flags = AObjAnimAdvance(dobj->anim_joint.event32)->command.flags;
+
+            for (i = 0; i < (s32)ARRAY_COUNT(track_aobjs);
+                 i++, flags = flags >> 1)
+            {
+                AObj *a;
+                u32 tq;
+
+                if (!(flags))
+                {
+                    break;
+                }
+                if (!(flags & 1))
+                {
+                    continue;
+                }
+                tq = ndsOATrackQ(q, i + nGCAnimTrackJointStart);
+                a = ndsOATrack(dobj, track_aobjs, i, tq);
+                a->value_base = a->value_target;
+                if (tq != 0u)
+                {
+                    a->value_target = ndsR2AQStore(ndsR2F32ToFixed(
+                        dobj->anim_joint.event32->f, NDS_R2_AQ_VF));
+                    AObjAnimAdvance(dobj->anim_joint.event32);
+                    a->kind = NDS_R2_AQ_KIND_STEP;
+                    /* Step's length_invert is a frame count (Q12). */
+                    a->length_invert =
+                        ndsR2AQStore((s32)payload_u << NDS_R2_AQ_LF);
+                    a->length = ndsR2AQStore(len_q);
+                    a->rate_target = ndsR2AQStore(0);
+                }
+                else
+                {
+                    a->value_target = dobj->anim_joint.event32->f;
+                    AObjAnimAdvance(dobj->anim_joint.event32);
+                    a->kind = nGCAnimKindStep;
+                    a->length_invert = payload;
+                    a->length = -dobj->anim_wait - dobj->anim_speed;
+                    a->rate_target = 0.0F;
+                }
+            }
+            if (command_kind == nGCAnimEvent32SetValAfterBlock)
+            {
+                dobj->anim_wait += payload;
+            }
+            break;
+        }
+
+        case nGCAnimEvent32SetAnim:
+            AObjAnimAdvance(dobj->anim_joint.event32);
+            dobj->anim_joint.event32 = dobj->anim_joint.event32->p;
+            dobj->anim_frame = -dobj->anim_wait;
+            dobj->parent_gobj->anim_frame = -dobj->anim_wait;
+
+            if ((dobj->is_anim_root != FALSE) &&
+                (dobj->parent_gobj->func_anim != NULL))
+            {
+                dobj->parent_gobj->func_anim(dobj, -2, 0);
+            }
+            break;
+
+        case nGCAnimEvent32Jump:
+            AObjAnimAdvance(dobj->anim_joint.event32);
+            dobj->anim_joint.event32 = dobj->anim_joint.event32->p;
+
+            if ((dobj->is_anim_root != FALSE) &&
+                (dobj->parent_gobj->func_anim != NULL))
+            {
+                dobj->parent_gobj->func_anim(dobj, -2, 0);
+            }
+            break;
+
+        case ANIM_CMD_12:
+            /* Every flagged node's length advanced by the payload. */
+            payload_u = dobj->anim_joint.event32->command.payload;
+            flags = AObjAnimAdvance(dobj->anim_joint.event32)->command.flags;
+
+            for (i = 0; i < (s32)ARRAY_COUNT(track_aobjs);
+                 i++, flags = flags >> 1)
+            {
+                AObj *a;
+
+                if (!(flags))
+                {
+                    break;
+                }
+                if (!(flags & 1))
+                {
+                    continue;
+                }
+                a = ndsOATrack(dobj, track_aobjs, i, 0u);
+                if (a->kind >= NDS_R2_AQ_KIND_BASE)
+                {
+                    a->length = ndsR2AQStore(ndsR2AQLoad(a->length) +
+                        ((s32)payload_u << NDS_R2_AQ_LF));
+                }
+                else
+                {
+                    a->length += (f32)payload_u;
+                }
+            }
+            break;
+
+        case nGCAnimEvent32SetInterp:
+            AObjAnimAdvance(dobj->anim_joint.event32);
+
+            if (track_aobjs[nGCAnimTrackTraI - nGCAnimTrackJointStart] == NULL)
+            {
+                track_aobjs[nGCAnimTrackTraI - nGCAnimTrackJointStart] =
+                    gcAddAObjForDObj(dobj, nGCAnimTrackTraI);
+            }
+            track_aobjs[nGCAnimTrackTraI - nGCAnimTrackJointStart]->interpolate =
+                dobj->anim_joint.event32->p;
+
+            AObjAnimAdvance(dobj->anim_joint.event32);
+            break;
+
+        case nGCAnimEvent32End:
+            ndsOAAdvanceTail(dobj);
+            dobj->anim_frame = dobj->anim_wait;
+            dobj->parent_gobj->anim_frame = dobj->anim_wait;
+            dobj->anim_wait = AOBJ_ANIM_END;
+
+            if ((dobj->is_anim_root != FALSE) &&
+                (dobj->parent_gobj->func_anim != NULL))
+            {
+                dobj->parent_gobj->func_anim(dobj, -1, 0);
+            }
+            return;
+
+        case nGCAnimEvent32SetFlags:
+            dobj->flags = dobj->anim_joint.event32->command.flags;
+            dobj->anim_wait += (f32)AObjAnimAdvance(
+                dobj->anim_joint.event32)->command.payload;
+            break;
+
+        case ANIM_CMD_16:
+            if (dobj->parent_gobj->func_anim != NULL)
+            {
+                dobj->parent_gobj->func_anim(
+                    dobj, dobj->anim_joint.event32->command.flags >> 8,
+                    (u8)dobj->anim_joint.event32->command.flags);
+            }
+            dobj->anim_wait += (f32)AObjAnimAdvance(
+                dobj->anim_joint.event32)->command.payload;
+            break;
+
+        case ANIM_CMD_17:
+            flags = dobj->anim_joint.event32->command.flags;
+            dobj->anim_wait += (f32)AObjAnimAdvance(
+                dobj->anim_joint.event32)->command.payload;
+
+            for (i = 4; i < 14; i++, flags = flags >> 1)
+            {
+                if (!(flags))
+                {
+                    break;
+                }
+                if (flags & 1)
+                {
+                    if (dobj->parent_gobj->func_anim != NULL)
+                    {
+                        dobj->parent_gobj->func_anim(
+                            dobj, i, dobj->anim_joint.event32->f);
+                    }
+                    AObjAnimAdvance(dobj->anim_joint.event32);
+                }
+            }
+            break;
+
+        default:
+            break;
+        }
+    } while (!NDS_FCMP_GT0(dobj->anim_wait));
+}
+
+/* sys/objanim.c:672 for either form: grsector.c reads the Arwing's TraI value
+ * through it, and the scaled-translate player once did. */
+f32 gcGetAObjValue(AObj *aobj)
+{
+    if (aobj->kind >= NDS_R2_AQ_KIND_BASE)
+    {
+        return ndsR2AnimValueQ(aobj);
+    }
+    return ndsBaseGcGetAObjValue(aobj);
 }
 #else
 /* lb/lbcommon.c:1261, verbatim, for the NDS_R2_LAB_CUBIC_OFF escape hatch where
@@ -3259,10 +3817,20 @@ static void ndsGcAdvanceDObjAnimJoint(DObj *dobj)
     {
         for (aobj = dobj->aobj; aobj != NULL; aobj = aobj->next)
         {
-            if (aobj->kind != nGCAnimKindNone)
+            if (aobj->kind == nGCAnimKindNone)
             {
-                aobj->length += dobj->anim_speed;
+                continue;
             }
+#if NDS_R2_CUBIC_FIXED
+            /* A Q node (the stage parser's since 2026-10-05) advances in Q. */
+            if (aobj->kind >= NDS_R2_AQ_KIND_BASE)
+            {
+                aobj->length = ndsR2AQStore(ndsR2AQLoad(aobj->length) +
+                    ndsR2F32ToFixed(dobj->anim_speed, NDS_R2_AQ_LF));
+                continue;
+            }
+#endif
+            aobj->length += dobj->anim_speed;
         }
     }
     else
