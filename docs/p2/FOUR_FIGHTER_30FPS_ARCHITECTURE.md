@@ -1623,6 +1623,23 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   identical), and the AI floor memo's snapshot reads only the yakumono groups
   that own floor lines (`ff9dc8ee0ca`, Castle -7.4K paired). All digests
   identical. Receipts `2026-10-06_flat-learn`, `_lean-matkey`.
+- **10-06 (afternoon): owner playtest rows.** The fixed-point
+  `func_ovl2_800EB924` saturated perspective scales in [4, 8) (the shared
+  float-to-fixed converter declines a left shift of 7), so narrow cameras --
+  Master Hand's intro, the close-up entries -- culled the fighter as
+  magnified (`a0a4cafe982`). Motion-script effect kinds that still drew
+  stand-ins take their source particle makers (`9c897c32647`): the replay
+  digest re-baselines, because particle scripts draw from the game's one
+  random stream as on N64 (gate diverges three frames after the first
+  HealSparkles). The item draw replay had admitted Saffron's three gate
+  Pokemon, whose owners never call its sink, so it replayed them as nothing
+  (`f8e22c5a117`); DObjDesc weapons without DL links reached a port no-op
+  display and never drew -- Blastoise's water, Onix's rocks, Meowth's coins,
+  Beedrill's swarm, Master Hand's bullets (`4e01f85a9c8`); and the
+  flying-dust bands that do not fit beside Dream Land's pinned set are
+  prepared again after GO (`e585e7e82f4`, the last native failure in a Poke
+  Ball match). Gate after these: P50/P95 763,392 / 1,074,496, Castle
+  800,000 / 1,096,384, Sector Z 852,544 / 1,182,144 (lab ring dump).
 
 ## 7. Found along the way
 
