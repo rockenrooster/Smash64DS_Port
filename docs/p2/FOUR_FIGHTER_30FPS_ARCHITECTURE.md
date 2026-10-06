@@ -1600,6 +1600,29 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   lab verifier or a config default (`gNdsFtPartsCleanSkip`,
   `gNdsStageDLHaloFirst`, `gNdsObjAnimBitCompare` in the objanim patch), and
   about forty in other declaration forms. Runs `2026-10-06_ab-cleanup`.
+- **10-06: libgcc helpers out of the hot fixed-point code.** Thumb-1 has no
+  SMULL or CLZ, so a Thumb int64 product or `__builtin_clz` is a libgcc call.
+  The hot callers moved to ARM state (`c6c5ed936ee`, `6e7e354f98c`) and 64-bit
+  divides went to the math unit. GCC inlines a static `target("arm")`
+  function into a Thumb caller *as Thumb*, which had kept all nine
+  `__aeabi_lmul` calls of the animation-lock local in place; `noinline` fixed
+  it (`a465ea01751`, 4 x Yoshi P50/P95 -11K). ARM state for big main-RAM
+  functions without 64-bit math does not pay: three map-collision sweeps read
+  Sector Z +4.9K (I-cache) and were dropped. Receipts `2026-10-06_lmul-arm`,
+  `_clz-div`, `_particle-fixed`.
+- **10-06: particle centres in fixed point** (owner: "fixed point only"): a
+  transformed particle's centre is three 64-bit dot products of the
+  transform's Q16/Q8 form, straight into the submitter's Q8
+  (`ndsRendererSubmitParticleQuadQ8`); nine float products and nine adds a
+  particle before. Render only.
+- **10-06: exact cuts in collision and the lean path.** A flat segment's
+  height is `v1y` bit for bit, so flat floor/ceiling queries skip the
+  interpolation's six float operations; the lean variant learn diffs two lists
+  in one early-exit pass (`45db4a84823`). Lean events check the old path's
+  per-row material keys before rebuilding a snapshot (99.9% of rebuilds were
+  identical), and the AI floor memo's snapshot reads only the yakumono groups
+  that own floor lines (`ff9dc8ee0ca`, Castle -7.4K paired). All digests
+  identical. Receipts `2026-10-06_flat-learn`, `_lean-matkey`.
 
 ## 7. Found along the way
 
