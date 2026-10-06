@@ -7274,3 +7274,40 @@ The same walk on `walk-d1` (old executor compiled out) ran Results 400
 frames: free heap 172,764 until the announcer thread at frame 124, then
 48,532 to the end; no halt, 0 skipped lean draws. Awaiting the owner's
 playtest before the row closes.
+
+## P1 update: natural 4 x Pikachu passes, 4 x Ness 6K over (2026-10-06, q24)
+
+The lab four-CPU ROM at `0eb4bdec1f7` (Thunder/PK Thunder fast lanes,
+deferred-retry epoch, parked-list pool), natural CPU play on Dream Land, one
+run each (`artifacts/performance/2026-10-06_vfx-rosters`): 4 x Pikachu WORK-H
+P50 800,320 / P95 1,109,824 (83 of 1,898 frames over, gate passes); 4 x Ness
+P50 770,240 / P95 1,126,208 (99 over, 6.2K above the gate). The Ness tail is
+the general SRC/render tail, not PK Thunder alone; it closes with the
+remaining P95 work.
+
+## M1 Master Hand stiff before the fight (owner playtest, 2026-10-06, NOT REPRODUCED)
+
+Owner row: before the fight Master Hand's fingers do not articulate; after GO
+the idle plays. Reference: N64 video "Mario VS. Master Hand (VERY HARD)".
+
+What the source does: `sc1PGameWaitStageBossUpdate` (sc1pgame.c:1543) puts
+the boss in `nFTBossStatusAppear` and sleeps 600 ticks before GO; Appear is
+an AnimJoint (event32) motion (`FTBossAnimAppear`, flags 0x40000008) whose
+end hands over to `ftBossWaitSetStatus` (ftcommonentry.c:125), and its length
+is the same 600 frames, so on N64 too the hand is in Appear for the whole
+pre-GO window and enters Wait at GO. The 1P "VS Master Hand" card
+(sc1pintro.c:980) sets the boss's status with anim speed 0 and ends its
+processes: a static pose on N64 as well (the video's card does not move).
+
+What the port does (campaign walk ROM, `-StartStage 13`, gdb every frame of
+the battle): status 252 (Appear) from the battle's first tick to GO, then 221
+(Wait); anim_frame advances one frame per tick; the finger joints (7..28)
+change every frame (joint 19's z rotation swings -0.02 -> -1.40 -> -0.09 rad
+in the last 75 frames before GO). Window captures every 2-4 frames show the
+fingers curling and opening, and the sequence lines up with the video's when
+both are aligned on GO (close-up of the palm ~5 s before GO, fist view ~4.5 s,
+the slam ~1.1 s). The ROM at HEAD (walk-1006, after the event32 parser moved
+to Q form in `4011b3b0316`) gives bit-identical joint values to the ROM from
+before it (walk-d1). Probe: scratchpad `mhprobe4.ps1`; captures
+`artifacts/visibility/2026-10-05_oldexec/mh6`, `mh8` (local, ROM-derived).
+Asked the owner which moment looks stiff.
