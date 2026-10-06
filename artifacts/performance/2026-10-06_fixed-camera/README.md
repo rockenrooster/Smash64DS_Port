@@ -41,3 +41,14 @@ Lab four-CPU ROM, one run each, WORK-H (`runsum.py`), paired (`pairab.py`):
 
 Castle q27 frame 1446 (WORK-H 5.1M) is the cpuGetTiming 2^22 wrap: its SRC
 less 4,194,304 is the 544K every other build reads there.
+
+## q28: the pose clock's integer path (exact)
+
+`ndsF32AddBits` (the fighter pose clock's binary32 add) takes an integer
+path when both operands are integer-valued and below 2^23 -- a speed-1 clock
+with whole-frame waits -- and re-encodes the exact sum with CLZ; anything
+else keeps `__aeabi_fadd`. Bit-exact by construction (host check: 120,039
+fast-path cases of 200,000, 0 mismatches against IEEE binary32, edge values
+included), digest identical. Neutral on time (gate paired +576, Castle 0;
+4 x Yoshi q24 -> q28 P95 1,171,008 -> 1,164,160, paired -6,656 with q25-q27),
+kept because it takes the clock's common case off soft float.

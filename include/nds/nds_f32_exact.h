@@ -42,6 +42,50 @@
  * GCC at ~50 instructions, ran from main RAM (~300 calls a frame). The host
  * build keeps the integer form, so the proof above still covers it. */
 #if defined(__arm__) && defined(ARM9)
+/* THE INTEGER CLOCK (2026-10-06; owner: "Software floating point should not
+ * exist, fixed point only"). A clock that runs at speed 1 with whole-frame
+ * waits stays integer-valued, and two integers below 2^23 sum exactly in
+ * binary32, so for that class the add is an integer add re-encoded with CLZ
+ * -- the same bits __aeabi_fadd returns, the sign of a zero sum included
+ * (x + -x is +0 under round-to-nearest, and a zero operand leaves the
+ * fallback below). Anything else (a fraction, a zero, |x| >= 2^23) takes
+ * libgcc's adder. Needs ARM state for CLZ, as the header note says. */
+static inline int ndsF32BitsSmallInt(uint32_t bits, int32_t *out)
+{
+    const uint32_t e = (bits >> 23) & 0xffu;
+    uint32_t frac;
+    uint32_t m;
+
+    /* 1 <= |x| < 2^23: unbiased exponent 0..22. */
+    if ((e < 127u) || (e > 149u))
+    {
+        return 0;
+    }
+    frac = 150u - e;            /* 23 - unbiased exponent, 1..23 */
+    m = (bits & 0x7fffffu) | 0x800000u;
+    if ((m & ((1u << frac) - 1u)) != 0u)
+    {
+        return 0;
+    }
+    m >>= frac;
+    *out = ((bits & 0x80000000u) != 0u) ? -(int32_t)m : (int32_t)m;
+    return 1;
+}
+
+static inline uint32_t ndsF32FromSmallInt(int32_t n)
+{
+    const uint32_t sign = (n < 0) ? 0x80000000u : 0u;
+    const uint32_t a = (n < 0) ? (uint32_t)(-n) : (uint32_t)n;
+    uint32_t e;
+
+    if (a == 0u)
+    {
+        return 0u;
+    }
+    e = 31u - (uint32_t)__builtin_clz(a);
+    return sign | ((e + 127u) << 23) | ((a << (23u - e)) & 0x7fffffu);
+}
+
 static inline uint32_t ndsF32AddBits(uint32_t a, uint32_t b)
 {
     union
@@ -49,7 +93,14 @@ static inline uint32_t ndsF32AddBits(uint32_t a, uint32_t b)
         uint32_t u;
         float f;
     } x, y, r;
+    int32_t ia;
+    int32_t ib;
 
+    if ((ndsF32BitsSmallInt(a, &ia) != 0) &&
+        (ndsF32BitsSmallInt(b, &ib) != 0))
+    {
+        return ndsF32FromSmallInt(ia + ib);
+    }
     x.u = a;
     y.u = b;
     r.f = x.f + y.f;
