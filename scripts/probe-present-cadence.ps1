@@ -23,7 +23,9 @@ param(
     # caught it. An int[] parameter cannot be passed correctly through the one
     # launch form the measurement rules require, so it is not offered.
     [string]$FlipAt = '',
-    [string]$RouteGlobal = 'gNdsR2CameraFixedEnabled',
+    # A u32 .data word to flip (-FlipAt) or force (-RouteInitial); the camera
+    # route word this defaulted to was deleted 2026-10-06.
+    [string]$RouteGlobal = '',
     # Comma-separated u32 globals appended to every -PerFrame row as
     # `x0=.. x1=..`. Same reason as sample-tick-hud-buckets.ps1's flag: a
     # cadence row without an engagement or cache counter beside it cannot tell

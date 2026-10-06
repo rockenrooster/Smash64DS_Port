@@ -32,12 +32,8 @@
  * fractional bits. A Q20.12 kernel lands in the same representable set; only
  * the INTERMEDIATE rounding differs.
  *
- * ROUTE, NOT #if. gNdsR2CameraFixedEnabled is a `.data` word so one binary can
- * be poked through both arms with byte-identical placement
- * (`-SetGlobals gNdsR2CameraFixedEnabled=0|1`). It carries an explicit section
- * attribute because a zero-initialised route word lands in `.bss` and shifts
- * every later `.data` object, which is how a previous same-binary pair acquired
- * a ~10,000 tk/fr placement floor.
+ * The float chain and its route word (gNdsR2CameraFixedEnabled) were deleted
+ * 2026-10-06; this is the only camera arithmetic.
  *
  * THE DIVIDE AND THE ROOT ARE THE DS HARDWARE UNITS, never a library 64-bit
  * divide: `__udivmoddi4` already runs 11.70 times/frame at 2,909 tk/fr and the
@@ -52,9 +48,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/* 0 = the shipped float chain, 1 = Q20.12. */
-extern volatile u32 gNdsR2CameraFixedEnabled;
 
 /* Engagement counters. A route that silently never fires is indistinguishable
  * from a route that fired and saved nothing, and this campaign has shipped that

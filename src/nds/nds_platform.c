@@ -57,29 +57,6 @@
 #define NDS_SCENE_MIP_CACHE_LAB 0
 #endif
 
-#ifndef NDS_R2_CAMERA_FIXED_TOGGLE
-#define NDS_R2_CAMERA_FIXED_TOGGLE 0
-#endif
-
-#if NDS_R2_CAMERA_FIXED_TOGGLE
-/* Lab-only live A/B of the Q20.12 camera chain. gNdsR2CameraFixedEnabled is
- * already a `.data` word read at each call site rather than a compile-time
- * gate, so flipping it between frames is exactly the same switch -SetGlobals
- * performs -- the only new thing here is who pushes it.
- *
- * SAFE MID-MATCH, and the reason is structural rather than empirical: both arms
- * of both producers are pure functions of the CObj passed to them that frame,
- * and every value either arm publishes -- gGMCameraMatrix, sGCMatrixProjectL,
- * gGCMatrixPerspF, the caller's Mtx, the renderer's NDSRendererMatrix20p12 --
- * is rewritten from scratch on the next entry. Nothing is carried across a
- * frame, so no arm can read a value the other arm left behind. The one field
- * BOTH arms write into live state, gGMCameraStruct.look_at, has exactly two
- * referrers in this tree and they are those two writes; its only consumers in
- * the source are gSPLookAtX/gSPLookAtY, which are RSP display-list commands
- * this port does not emit. No simulation reader exists, so the flip cannot
- * desync the fight. See artifacts/performance/2026-08-16_camera-fixedpoint/. */
-#include <nds/nds_r2_camera_fixed.h>
-#endif
 #if NDS_R2_SIM_MAC_SHADOW
 #include <nds/nds_r2_sim_mac_fixed.h>
 #endif
@@ -149,24 +126,13 @@ extern volatile u32 gNdsFrameCounter;
 #else
 #define NDS_BATTLE_FPS_HUD_PRINT(...) ((void)0)
 #endif
-#if (NDS_R2_CAMERA_FIXED_TOGGLE || NDS_LAB_NO_CULL) && !NDS_BATTLE_FPS_HUD_DRAW
-#error "the camera and seam arm indicators print into the FPS console"
-#endif
-#if NDS_R2_CAMERA_FIXED_TOGGLE && !NDS_BATTLE_FPS_HUD_ENABLED
-/* The indicator draws into the battle FPS HUD's console. Without it the owner
- * could flip the camera arm and have no way to tell which one is on screen,
- * which is the one failure this build exists to prevent -- so it is a build
- * error, not a silently degraded ROM. */
-#error "NDS_R2_CAMERA_FIXED_TOGGLE needs NDS_BATTLE_FPS_HUD_ENABLED for its arm indicator"
+#if NDS_LAB_NO_CULL && !NDS_BATTLE_FPS_HUD_DRAW
+#error "the seam arm indicator prints into the FPS console"
 #endif
 #if NDS_LAB_NO_CULL && !NDS_BATTLE_FPS_HUD_ENABLED
 /* Same rule for the seam probe: an arm nobody can read off the screenshot is
  * not evidence. */
 #error "NDS_LAB_NO_CULL needs NDS_BATTLE_FPS_HUD_ENABLED for its arm indicator"
-#endif
-#if NDS_LAB_NO_CULL && NDS_R2_CAMERA_FIXED_TOGGLE
-/* Both bind SELECT and both print row 3. One SELECT meaning per build. */
-#error "NDS_LAB_NO_CULL and NDS_R2_CAMERA_FIXED_TOGGLE both own SELECT"
 #endif
 #if !NDS_RENDERER_HW_TRIANGLES
 static u16 *sFramebuffer;
@@ -300,15 +266,10 @@ static const char *const sMenuFpsHudNames[NDS_MENU_SHELL_SCREEN_COUNT] = {
     "ITEM", "OPTION", "BACKUP", "DATA", "SOUND", "VSREC"
 };
 #endif
-#if NDS_R2_CAMERA_FIXED_TOGGLE
+#if NDS_LAB_NO_CULL
 /* Its own repaint gate rather than a field of the text HUD's fingerprint: that
  * fingerprint is a function of match state only, so an arm flip would not
- * repaint until the clock or a damage value happened to change and the owner
- * would press SELECT and watch nothing happen for up to a second. */
-static u32 sBattleCameraArmPrinted = 0xffffffffu;
-#endif
-#if NDS_LAB_NO_CULL
-/* Same gate, same reason, for the seam probe's arm line. */
+ * repaint until the clock or a damage value happened to change. */
 static u32 sBattleSeamArmPrinted = 0xffffffffu;
 #endif
 static u32 sBattleTextHudReady;
@@ -791,20 +752,10 @@ u32 ndsPlatformReadInput(void)
     sHeldKeys = held;
     gNdsPlatformHeldKeys = held;
 
-#if NDS_R2_CAMERA_FIXED_TOGGLE
-    /* SELECT is the only key the battle leaves unbound, so binding it here
-     * cannot shadow a real input. keysDown() is READ, never re-scanned: the
-     * single scanKeys() above is the frame's only scan and a second one would
-     * eat the edge ndsControllerLiveButtons depends on. */
-    if ((keysDown() & KEY_SELECT) != 0)
-    {
-        gNdsR2CameraFixedEnabled = (gNdsR2CameraFixedEnabled != 0u) ? 0u : 1u;
-    }
-#endif
 #if NDS_LAB_NO_CULL
-    /* BUGS.md #10 / P2-3r17 seam probe. Same key, same read-not-rescan rule as
-     * the camera toggle above; the two are mutually exclusive by the #error in
-     * the HUD block, so SELECT still has exactly one meaning per build. */
+    /* BUGS.md #10 / P2-3r17 seam probe. SELECT is the only key the battle
+     * leaves unbound; keysDown() is READ, never re-scanned (the single
+     * scanKeys() above is the frame's only scan). */
     if ((keysDown() & KEY_SELECT) != 0)
     {
         (void)ndsRendererLabSeamAdvanceArm();
@@ -3597,11 +3548,6 @@ static void ndsPlatformRenderBattleFpsHud(void)
         sBattleFpsHudPrintedUpdatesX10 = 0xffffffffu;
         sBattleTextHudReady = FALSE;
         sBattleTextHudFingerprint = 0xffffffffu;
-#if NDS_R2_CAMERA_FIXED_TOGGLE
-        /* consoleClear() below wipes row 3 with the rest; the block at the end
-         * of this same call repaints it. */
-        sBattleCameraArmPrinted = 0xffffffffu;
-#endif
 #if NDS_LAB_NO_CULL
         sBattleSeamArmPrinted = 0xffffffffu;
 #endif
@@ -3912,24 +3858,9 @@ static void ndsPlatformRenderBattleFpsHud(void)
                                    (unsigned long)(updates_x10 / 10u),
                                    (unsigned long)(updates_x10 % 10u));
     }
-#if NDS_R2_CAMERA_FIXED_TOGGLE
-    /* Row 3 is free in this configuration: row 0 is FPS, row 2 TIME, rows 5/6
-     * and 9/10 the two players, and rows 11+ belong to the tick HUD, which is
-     * compiled out here (NDS_TICK_HUD is 0 on the proof target). */
-    {
-        u32 arm = (gNdsR2CameraFixedEnabled != 0u) ? 1u : 0u;
-
-        if (arm != sBattleCameraArmPrinted)
-        {
-            sBattleCameraArmPrinted = arm;
-            NDS_BATTLE_FPS_HUD_PRINT(
-                3u, (arm != 0u) ? "CAM  FIXED Q20.12  [SELECT]"
-                                : "CAM  FLOAT shipping[SELECT]");
-        }
-    }
-#endif
 #if NDS_LAB_NO_CULL
-    /* Row 3, same reasoning as the camera toggle's indicator above. */
+    /* Row 3 is free in this configuration: row 0 is FPS, row 2 TIME, rows 5/6
+     * and 9/10 the two players, rows 11+ the tick HUD. */
     {
     #if NDS_R2_STRIP_ROUTE && (NDS_TASK56_FIGHTER_PRIMITIVES >= 1) && \
         (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_RENDERER_HW_TRIANGLES
@@ -4226,9 +4157,6 @@ void ndsPlatformClearBattleTextHud(void)
     sBattleFpsHudPrintedFpsX10 = 0xffffffffu;
     sBattleTextHudReady = FALSE;
     sBattleTextHudFingerprint = 0xffffffffu;
-#if NDS_R2_CAMERA_FIXED_TOGGLE
-    sBattleCameraArmPrinted = 0xffffffffu;
-#endif
 #if NDS_LAB_NO_CULL
     sBattleSeamArmPrinted = 0xffffffffu;
 #endif

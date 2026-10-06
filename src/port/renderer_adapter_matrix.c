@@ -2137,58 +2137,29 @@ static void ndsRendererAdapterMtxFromN64(
     ndsRendererMtxLoadN64ToDS20p12(src, dst);
 }
 
-/* The renderer's camera producers, routed.  Every site below ran
- *
- *     syMatrixLookAtReflect(&mtx, &look_at, ...)   float chain + syMatrixF2L
- *     ndsRendererAdapterMtxFromN64(&mtx, out)      s15.16 -> Q20.12
- *
- * which is float -> 16.16 -> 12.12 for a consumer that only ever sees twelve
- * fractional bits.  The Q20.12 arm produces the SAME representable value with
- * no float and no intermediate Mtx, so syMatrixF2L disappears for 4.138 of its
- * 6.138 entries a frame rather than being converted.
- *
- * The route word is read, not compiled: gNdsR2CameraFixedEnabled lives in
- * `.data` so one binary carries both arms with byte-identical placement.  See
- * include/nds/nds_r2_camera_fixed.h. */
+/* The renderer's camera producers in Q20.12: the same representable value the
+ * float chain (syMatrixLookAtReflect / syMatrixPerspFast, syMatrixF2L,
+ * ndsRendererAdapterMtxFromN64) reached through s15.16, with no float and no
+ * intermediate Mtx. The float arm and its route word were deleted 2026-10-06.
+ * `look_at` is a stack local nothing reads at every caller, so the six
+ * reflectance conversions are skipped (NULL). */
 static void ndsRendererAdapterCameraLookAtReflect(
     NDSRendererMatrix20p12 *out, LookAt *look_at,
     f32 eye_x, f32 eye_y, f32 eye_z,
     f32 at_x, f32 at_y, f32 at_z,
     f32 up_x, f32 up_y, f32 up_z)
 {
-    Mtx mtx;
-
-    if (gNdsR2CameraFixedEnabled != 0u)
-    {
-        /* NULL, not `look_at`: every caller here passes a stack local that
-         * nothing reads, so the six reflectance conversions are dead work the
-         * float arm still pays and this arm skips. */
-        (void)look_at;
-        ndsR2CameraLookAtReflect20p12(out, NULL, eye_x, eye_y, eye_z,
-                                      at_x, at_y, at_z, up_x, up_y, up_z);
-        return;
-    }
-    NDS_DIAG(gNdsR2CameraFixedFloatLookAtCalls++);
-    syMatrixLookAtReflect(&mtx, look_at, eye_x, eye_y, eye_z,
-                          at_x, at_y, at_z, up_x, up_y, up_z);
-    ndsRendererAdapterMtxFromN64(&mtx, out);
+    (void)look_at;
+    ndsR2CameraLookAtReflect20p12(out, NULL, eye_x, eye_y, eye_z,
+                                  at_x, at_y, at_z, up_x, up_y, up_z);
 }
 
 static void ndsRendererAdapterCameraPerspFast(
     NDSRendererMatrix20p12 *out, u16 *persp_norm,
     f32 fovy, f32 aspect, f32 near, f32 far, f32 scale)
 {
-    Mtx mtx;
-
-    if (gNdsR2CameraFixedEnabled != 0u)
-    {
-        ndsR2CameraPerspFast20p12(out, persp_norm, fovy, aspect, near, far,
-                                  scale);
-        return;
-    }
-    NDS_DIAG(gNdsR2CameraFixedFloatPerspCalls++);
-    syMatrixPerspFast(&mtx, persp_norm, fovy, aspect, near, far, scale);
-    ndsRendererAdapterMtxFromN64(&mtx, out);
+    ndsR2CameraPerspFast20p12(out, persp_norm, fovy, aspect, near, far,
+                              scale);
 }
 
 static inline sb32 ndsRendererAdapterFloatPow2ToS32(
@@ -8571,7 +8542,7 @@ static void ndsRendererAdapterHierarchyCameraKey(const CObj *cobj, u32 *key)
     memcpy(&key[11], &persp->near, sizeof(u32));
     memcpy(&key[12], &persp->far, sizeof(u32));
     memcpy(&key[13], &persp->scale, sizeof(u32));
-    key[14] = gNdsR2CameraFixedEnabled;
+    key[14] = 1u; /* the Q20.12 chain (formerly its route word) */
 }
 
 /* Cold with the hierarchy mode it serves: only

@@ -1110,8 +1110,6 @@ volatile u32 gNdsR2FighterFacingWrites;
  * gNdsFtrLeanSlow bit 128 calls it every time (the slice 4 form, same ROM). */
 extern Mtx44f gGMCameraMatrix;
 extern Mtx *sGCMatrixProjectL;
-extern volatile u32 gNdsCameraMatrixLeanEnabled;
-extern volatile u32 gNdsR2CameraFixedEnabled;
 const LookAt *ndsR2CameraCurrentLookAt(void);
 static const CObj *sNdsFtrLookAtCObj;
 static u32 sNdsFtrLookAtIn;
@@ -1146,9 +1144,7 @@ static u32 __attribute__((noinline)) ndsFtrLookAtInputs(const CObj *cobj)
     _Static_assert(__builtin_offsetof(GCPersp, scale) ==
                        __builtin_offsetof(GCPersp, fovy) + 4u * sizeof(f32),
                    "LookAt inputs: fovy .. scale must be consecutive");
-    h = ndsFtrLookAtMixWords(h, &cobj->projection.persp.fovy, 5u);
-    h = (h ^ gNdsCameraMatrixLeanEnabled) * 16777619u;
-    return (h ^ gNdsR2CameraFixedEnabled) * 16777619u;
+    return ndsFtrLookAtMixWords(h, &cobj->projection.persp.fovy, 5u);
 }
 
 static u32 __attribute__((noinline)) ndsFtrLookAtOutputs(const CObj *cobj)
@@ -1238,12 +1234,9 @@ static void ndsFighterDisplayContractCapture(GObj *fighter_gobj)
         CObj *look_cobj = CObjGetStruct(gGMCameraGObj);
         u32 look_in = ndsFtrLookAtInputs(look_cobj);
 
-        /* Level 0 is the decomp control arm, which also emits LookAt,
-         * projection and PerspNormalize GBI into dls[0]; only the port's
-         * levels (1-3, shipping 2) are pure matrix writers, so only they may
-         * skip. */
-        if ((gNdsCameraMatrixLeanEnabled == 0u) ||
-            (look_cobj != sNdsFtrLookAtCObj) || (look_in != sNdsFtrLookAtIn) ||
+        /* gmCameraLookAtFuncMatrix is a pure matrix writer (no GBI), so an
+         * unchanged camera may skip it. */
+        if ((look_cobj != sNdsFtrLookAtCObj) || (look_in != sNdsFtrLookAtIn) ||
             ((NDS_FTR_LEAN_SLOW_WORD() & NDS_FTR_LEAN_SLOW_HEAD_LOOKAT) != 0u) ||
             (ndsFtrLookAtOutputs(look_cobj) != sNdsFtrLookAtOut))
         {
@@ -1254,23 +1247,16 @@ static void ndsFighterDisplayContractCapture(GObj *fighter_gobj)
         }
         else
         {
-            /* The call's graphics-heap footprint, kept: below camera path
-             * level 3 it takes one Mtx for its projection before anything
-             * the head allocates, so the head's own allocations (the scene
-             * Light the display contract copies whole, uninitialised colour
-             * bytes included, into the draw memo's key) land where they
-             * always did. The Mtx itself is not rewritten: nothing on this
-             * port reads sGCMatrixProjectL (battleship_gmcamera.c, W2b). */
-            if (gNdsCameraMatrixLeanEnabled < 3u)
-            {
-                sGCMatrixProjectL = (Mtx *)gSYTaskmanGraphicsHeap.ptr;
-                gSYTaskmanGraphicsHeap.ptr =
-                    (void *)((Mtx *)gSYTaskmanGraphicsHeap.ptr + 1);
-            }
-            else
-            {
-                sGCMatrixProjectL = NULL;
-            }
+            /* The call's graphics-heap footprint, kept: it takes one Mtx for
+             * its projection before anything the head allocates, so the
+             * head's own allocations (the scene Light the display contract
+             * copies whole, uninitialised colour bytes included, into the
+             * draw memo's key) land where they always did. The Mtx itself is
+             * not rewritten: nothing on this port reads sGCMatrixProjectL
+             * (battleship_gmcamera.c, W2b). */
+            sGCMatrixProjectL = (Mtx *)gSYTaskmanGraphicsHeap.ptr;
+            gSYTaskmanGraphicsHeap.ptr =
+                (void *)((Mtx *)gSYTaskmanGraphicsHeap.ptr + 1);
         }
 #else
         gmCameraLookAtFuncMatrix(NULL,
