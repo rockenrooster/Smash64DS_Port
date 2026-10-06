@@ -1511,16 +1511,108 @@ static inline sb32 ndsAttackRangeHit(const Vec3f *attack, const Vec3f *obj,
         FALSE : TRUE;
 }
 
+/* A float of magnitude below 2^20 truncated toward zero (within 1 of it);
+ * FALSE for anything larger, infinite or NaN. */
+static inline sb32 ndsAttackRangeTrunc(f32 v, s32 *out)
+{
+    u32 b;
+    u32 e;
+    s32 t;
+
+    __builtin_memcpy(&b, &v, sizeof(b));
+    e = (b >> 23) & 0xffu;
+    if (e < 127u)
+    {
+        *out = 0;
+        return TRUE;
+    }
+    if (e >= 147u)
+    {
+        return FALSE;
+    }
+    t = (s32)(((b & 0x7fffffu) | 0x800000u) >> (150u - e));
+    *out = ((b & 0x80000000u) != 0u) ? -t : t;
+    return TRUE;
+}
+
+/* ndsAttackRangeHit in integers (owner: "Replace ALL soft float with fixed
+ * point"): 1 a hit, 0 a miss, -1 too close to a bound to tell. The float
+ * distance and each float bound is one rounded subtract or add of two
+ * truncated floats (each within 1), under 2^21 (rounding within 1/8), so
+ * each is within 2.125 of its integer form here; outside 5 units of every
+ * bound the float compares give the same answer. */
+static inline s32 ndsAttackRangeHitInt(const Vec3f *attack, s32 ox, s32 oy,
+                                       s32 lo_x, s32 hi_x, s32 lo_y, s32 hi_y)
+{
+    s32 dx;
+    s32 dy;
+
+    if ((ndsAttackRangeTrunc(attack->x, &dx) == FALSE) ||
+        (ndsAttackRangeTrunc(attack->y, &dy) == FALSE))
+    {
+        return -1;
+    }
+    dx -= ox;
+    dy -= oy;
+    if ((dx < lo_x - 5) || (dx > hi_x + 5) || (dy < lo_y - 5) ||
+        (dy > hi_y + 5))
+    {
+        return 0;
+    }
+    if ((dx > lo_x + 5) && (dx < hi_x - 5) && (dy > lo_y + 5) &&
+        (dy < hi_y - 5))
+    {
+        return 1;
+    }
+    return -1;
+}
+
 static sb32 ndsAttackRangeTest(const Vec3f *pos_curr, const Vec3f *pos_prev,
                                sb32 transfer, GObj *fighter_gobj, f32 size)
 {
     const Vec3f *range = &ftGetStruct(fighter_gobj)->attr->hit_detect_range;
     const Vec3f *obj = &DObjGetStruct(fighter_gobj)->translate.vec.f;
-    const f32 lo_x = -range->z - size;
-    const f32 hi_x = range->z + size;
-    const f32 lo_y = -range->y - size;
-    const f32 hi_y = range->x + size;
+    f32 lo_x;
+    f32 hi_x;
+    f32 lo_y;
+    f32 hi_y;
+    s32 ox;
+    s32 oy;
+    s32 rx;
+    s32 ry;
+    s32 rz;
+    s32 sz;
 
+    if ((ndsAttackRangeTrunc(obj->x, &ox) != FALSE) &&
+        (ndsAttackRangeTrunc(obj->y, &oy) != FALSE) &&
+        (ndsAttackRangeTrunc(range->x, &rx) != FALSE) &&
+        (ndsAttackRangeTrunc(range->y, &ry) != FALSE) &&
+        (ndsAttackRangeTrunc(range->z, &rz) != FALSE) &&
+        (ndsAttackRangeTrunc(size, &sz) != FALSE))
+    {
+        const s32 curr = ndsAttackRangeHitInt(pos_curr, ox, oy, -rz - sz,
+                                              rz + sz, -ry - sz, rx + sz);
+
+        if (curr == 1)
+        {
+            return TRUE;
+        }
+        if (curr == 0)
+        {
+            const s32 prev = (transfer != FALSE) ? 0 :
+                ndsAttackRangeHitInt(pos_prev, ox, oy, -rz - sz, rz + sz,
+                                     -ry - sz, rx + sz);
+
+            if (prev >= 0)
+            {
+                return (prev != 0) ? TRUE : FALSE;
+            }
+        }
+    }
+    lo_x = -range->z - size;
+    hi_x = range->z + size;
+    lo_y = -range->y - size;
+    hi_y = range->x + size;
     if (ndsAttackRangeHit(pos_curr, obj, lo_x, hi_x, lo_y, hi_y) != FALSE)
     {
         return TRUE;

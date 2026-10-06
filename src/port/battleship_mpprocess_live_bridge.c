@@ -1,5 +1,5 @@
 /*
- * Reversible public ABI bridge for the renamed BattleShip mp/mpprocess.c TU.
+ * Public ABI bridge for the renamed BattleShip mp/mpprocess.c TU.
  *
  * Keep this file to exact one-to-one forwarding wrappers (mpProcessUpdateMain
  * also picks the stack it runs on; the two wall tests first ask the port's
@@ -9,10 +9,6 @@
  */
 #include <nds/nds_mpprocess_source.h>
 #include <port/coroutine.h>
-
-#if NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE != 1
-#error "battleship_mpprocess_live_bridge.c requires the LIVE mpprocess import"
-#endif
 
 void mpProcessSetCollProjectFloorID(MPCollData *coll_data)
 {

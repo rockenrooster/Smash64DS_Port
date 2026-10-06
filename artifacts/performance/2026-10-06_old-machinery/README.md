@@ -96,3 +96,19 @@ a literal 1 where they read the OAM word.
 | sz | 0 | 859,392 -> 859,648 | 1,171,264 -> 1,163,392 | 130 -> 126 | +64 |
 
 Neutral.
+
+## Batch 4 (with q41): the pre-source mpprocess path and its gates
+
+`NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE` has been 1 in every build since BUGS.md
+#1 linked mp/mpprocess.c live. Deleted: the four `#if
+!NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE` blocks of
+`src/port/reloc_backend_mp_collision.c` (the port's bounded reimplementations
+of the wall/floor/ceiling AdjNew tests and `mpProcessUpdateMain`, 1,300 lines),
+the weak no-op AdjNew/ceil-edge bridges in `battleship_wpmanager_core.c`, the
+LIVE/PRIVATE Makefile flags with the private compile-only check list
+(`NDS_PRIVATE_CHECK_CFILES`/`OFILES`), the bridge's flag guard, and the four
+checkers of the retired gates (`check-`/`verify-mpprocess-private-import.ps1`,
+`check-`/`verify-mpprocess-live-link.ps1`, 2,404 lines). The source TU and its
+forwarding bridge are now unconditional. Measured with q41
+(`../2026-10-06_softfloat-itcm`): digests identical on all three configs.
+

@@ -3687,17 +3687,6 @@ override NDS_RENDERER_BENCHMARK_MODE := 4
 endif
 override NDS_IMPORT_BATTLESHIP_FTMAIN := 1
 override NDS_IMPORT_BATTLESHIP_FTMANAGER := 1
-# BUGS.md #1: graduated live. The private gate compiled mpprocess.c without
-# linking it, so the shipping ROM ran the bounded port reimplementations and
-# took mpProcessRun{L,R}WallCollisionAdjNew / mpProcessRunCeilEdgeAdjust from
-# the weak no-op bridges in battleship_wpmanager_core.c -- no wall push-out and
-# no ceiling-edge adjust at all. Both gates stay switchable; the private mode is
-# still what verify-mpprocess-private-import.ps1 drives.
-NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE ?= 1
-NDS_IMPORT_BATTLESHIP_MPPROCESS_PRIVATE ?= 0
-ifeq ($(NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE)$(NDS_IMPORT_BATTLESHIP_MPPROCESS_PRIVATE),11)
-$(error NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE=1 requires NDS_IMPORT_BATTLESHIP_MPPROCESS_PRIVATE=0)
-endif
 override NDS_IMPORT_BATTLESHIP_FTCOMPUTER := 1
 override NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET := 1
 NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE ?= 1
@@ -4274,7 +4263,6 @@ export VPATH := $(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
 export DEPSDIR := $(CURDIR)/$(BUILD)
 
 # Keep this list explicit. Adding an original subsystem is a deliberate port step.
-NDS_PRIVATE_CHECK_CFILES :=
 NDS_MPPROCESS_SOURCE_CFILES := battleship_mpprocess_edge_support.c \
 	battleship_mpprocess.c
 CFILES := main.c nds_platform.c nds_native_wallpaper.c nds_ifcommon_oam.c nds_results_oam.c nds_source2d.c nds_task39_effect_census.c nds_reloc_assets.c nds_native_stage_blob.c nds_audio_assets.c nds_audio_bgm.c nds_audio_fgm.c nds_audio_storage.c nds_renderer.c battle_playable_static_textures.c nds_battlepack_anim.c n64_stubs.c coroutine.c \
@@ -4683,12 +4671,9 @@ ifeq ($(NDS_P2_NNESS),1)
 # BattleShip owns NNess's specials and articles verbatim (admit_fighter.py).
 CFILES += battleship_ftn_polygons.c
 endif
-ifeq ($(NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE),1)
+# mp/mpprocess.c runs live (BUGS.md #1); the bridge only forwards.
 CFILES += $(NDS_MPPROCESS_SOURCE_CFILES) \
 	battleship_mpprocess_live_bridge.c
-else ifeq ($(NDS_IMPORT_BATTLESHIP_MPPROCESS_PRIVATE),1)
-NDS_PRIVATE_CHECK_CFILES += $(NDS_MPPROCESS_SOURCE_CFILES)
-endif
 CFILES += battleship_ftstatus_callback_aliases.c \
 	battleship_ftstatus_map_physics_shims.c \
 	battleship_ftstatus_inactive_stubs.c \
@@ -4843,9 +4828,8 @@ export OFILES := \
 	$(if $(filter 1,$(NDS_TASK9_FLOAT_ITCM)),$(NDS_TASK9_FLOAT_ITCM_OFILES)) \
 	$(NDS_TASK37_ITCM_OFILES) \
 	$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
-export NDS_PRIVATE_CHECK_OFILES := $(NDS_PRIVATE_CHECK_CFILES:.c=.o)
-export NDS_MPPROCESS_STRICT_OFILES := $(NDS_PRIVATE_CHECK_OFILES) \
-	$(if $(filter 1,$(NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE)),$(NDS_MPPROCESS_SOURCE_CFILES:.c=.o) battleship_mpprocess_live_bridge.o)
+export NDS_MPPROCESS_STRICT_OFILES := $(NDS_MPPROCESS_SOURCE_CFILES:.c=.o) \
+	battleship_mpprocess_live_bridge.o
 # libnds/Calico are system headers: -isystem keeps -Wundef (and the other -Wall/
 # -Wextra diagnostics) firing on project sources while silencing the proven
 # `__ASSEMBLER__`/`__cplusplus` -Wundef flood from calico.h/types.h, which
@@ -6140,7 +6124,7 @@ else
 # environment; native devkitARM tools otherwise fail to launch with ENOENT.
 unexport NDS_NITROFS_RELOC_FILES
 
-DEPENDS := $(OFILES:.o=.d) $(NDS_PRIVATE_CHECK_OFILES:.o=.d)
+DEPENDS := $(OFILES:.o=.d)
 NDS_BUILD_CONFIG := $(PROJECT_ROOT)/$(BUILD)/nds_build_config.h
 NDS_BUILD_REVISION := $(PROJECT_ROOT)/$(BUILD)/nds_build_revision.h
 NDS_SCENE_HARNESS_CONFIG := $(PROJECT_ROOT)/$(BUILD)/nds_scene_harness_config.h
@@ -7169,8 +7153,6 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_PARTICLE_RUNTIME $(NDS_R2_PARTICLE_RUNTIME)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FTMAIN $(NDS_IMPORT_BATTLESHIP_FTMAIN)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FTMANAGER $(NDS_IMPORT_BATTLESHIP_FTMANAGER)'; \
-		echo '#define NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE $(NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE)'; \
-		echo '#define NDS_IMPORT_BATTLESHIP_MPPROCESS_PRIVATE $(NDS_IMPORT_BATTLESHIP_MPPROCESS_PRIVATE)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FTCOMPUTER $(NDS_IMPORT_BATTLESHIP_FTCOMPUTER)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET $(NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE $(NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE)'; \
@@ -7454,7 +7436,7 @@ $(OUTPUT).elf: | $(dir $(OUTPUT))
 $(dir $(OUTPUT)):
 	@mkdir -p "$@"
 
-$(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES) \
+$(OUTPUT).elf: $(OFILES) \
 	$(NDS_HOT_TEXT_SPECS) $(NDS_HOT_TEXT_LINKER_SCRIPT) $(NDS_MEMORY_LINKER_SCRIPT) $(NDS_FRONTEND_OVERLAY_LINKER_SCRIPT) \
 	$(NDS_TASK32_DRAW_HOT_FRAGMENT) $(NDS_PARTICLE_BANKS_INC) \
 	$(NDS_BATTLE_STATIC_TEXTURE_INC) $(NDS_ENTRY_EFFECT_INC) \
@@ -7501,7 +7483,7 @@ $(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES) \
 	$(NDS_NATIVE_ACTOR_BRONTO_PACKET) \
 	$(NDS_NATIVE_ACTOR_TARU_PACKET) $(NDS_NATIVE_ACTOR_TARU_HEADER) \
 	$(NDS_NATIVE_IMAGE_HEADER)
-$(OFILES) $(NDS_PRIVATE_CHECK_OFILES): $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG) $(NDS_FTANIM_TRACK_PREREQ)
+$(OFILES): $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG) $(NDS_FTANIM_TRACK_PREREQ)
 # Revision telemetry owners only. Every other TU must NOT depend on the
 # revision header, or the per-commit recompile this split removes returns.
 nds_platform.o nds_task10_hardware_calibration.o: $(NDS_BUILD_REVISION)

@@ -135,3 +135,33 @@ gmcollision.c latch readers take the hurt/shield joint's world through
 | gate | 0 | 765,696 -> 766,080 | 1,048,576 -> 1,048,704 | 59 -> 59 | -64 |
 | g0 (Castle) | 0 | 805,120 -> 803,584 | 1,100,864 -> 1,102,400 | 79 -> 78 | -896 |
 | sz (Sector Z) | 0 | 851,328 -> 849,920 | 1,166,720 -> 1,165,120 | 122 -> 120 | -576 |
+
+## q41: the attack range test in integers (exact)
+
+`gmCollisionCheck{Fighter,Weapon,Item}InFighterRange` (the hit search's
+broad phase, `ndsAttackRangeTest`) formed its four bounds and two distances
+with six float adds and subtracts per test. The test now truncates the
+fighter position, `hit_detect_range` and the attack size and decides in
+integers: every float distance or bound is one rounded add of two truncated
+floats, within 2.125 of its integer form, so outside 5 units of every bound
+the float compares answer the same. Within 5 units, or for anything over
+2^20, the float test runs. Shipped with old-machinery batch 4.
+
+| config | digest diff | P50 | P95 | over | paired median |
+|---|---|---|---|---|---|
+| gate | 0 | 766,080 -> 765,888 | 1,048,704 -> 1,050,368 | 59 -> 60 | -384 |
+| g0 (Castle) | 0 | 803,584 -> 802,816 | 1,102,400 -> 1,101,376 | 78 -> 78 | -1,088 |
+| sz (Sector Z) | 0 | 849,920 -> 847,424 | 1,165,120 -> 1,154,752 | 120 -> 120 | -1,792 |
+
+## Sector Z census at q40 (`artifacts/task37-census/sz-prof40`)
+
+Soft float by caller (fcallers.py, calibrated per-call costs): 87.7K cycles a
+frame over 298 callers. Top: `ndsMPFCSegmentCrossesKernel` 5.5K,
+`ftMainProcUpdateInterrupt` 4.8K, `mpProcessUpdateMain` 4.8K,
+`gcParseDObjAnimJoint` 4.1K, `mpCollisionPlayYakumonoAnim` 3.1K,
+`ftCommonGuardGetJointTransform` 3.0K, `func_ovl2_800ED490` 2.8K,
+`syVectorAdd3D` 2.4K, `lbParticleUpdateStruct` 2.2K. Over-gate frames (26 of
+384) carry texture conversion (`ResolveOrBindTexture` +75K, `TextureColor`
++16K), lean materialization (~+155K in 7 frames) and the pose engine
+(~+70K, every tail frame).
+

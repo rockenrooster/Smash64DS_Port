@@ -120,8 +120,7 @@ Correct as they stand, recorded so they are not re-reported:
   source-shaped compatibility seams.
 - Mario/Fox special wall, ceiling, and edge adjustment is complete: `mpprocess`
   is linked live and the special-collision runner does the source's wall pair
-  and ceiling-edge adjust. `check-mpprocess-private-import.ps1` now reports
-  NOT-APPLICABLE against a live build; `check-mpprocess-live-link.ps1` owns it.
+  and ceiling-edge adjust. The pre-source port path and its gates are deleted.
 - Original common particle script/texture banks are not resident. All 178
   Mario/Fox motion-effect calls plus the P1 reflector, blaster-glow, and
   fireball seams route to bounded source-derived DS presentation, but they do
