@@ -7466,3 +7466,58 @@ root culled outside the view at record time would otherwise replay as nothing
 after it came back into view). walk-1006g: the GLucky owner runs every frame
 (20 calls in 20 frames) and Chansey and Electrode are drawn
 (`artifacts/visibility/2026-10-06_saffron-monsters/sw8-*`, local).
+
+## Blastoise's Hydro Pump water never drew; nor Onix's rocks, Meowth's coins, Beedrill's swarm, Master Hand's bullets (2026-10-06) -- FIXED
+
+Owner row (Items): "No VFX for some pokemon (Blastoise)" -- muzzle sparks restored
+10-04 -- "Hydro water still draws as faint dotted rings plus a stray white
+quad".
+
+Repro (lab q48, Poke Balls only, every Poke Ball monster forced to Blastoise
+at `itManagerMakeItemKind`'s first instruction; scratchpad `kamexcap*.ps1`):
+the hydro weapon exists (root DObj without a list, child DObj with the list and
+its MObj, the child's Y scale animating 1.0 -> 4.0 -> 1.5), its baked owner
+groups (KamexHydro0/1) were never emitted, and nothing showed in front of the
+cannon.
+
+Cause: `wpManagerMakeWeapon` gives a DObjDesc weapon without DL links
+`func_ovl3_80167618`, which is `wpDisplayMain(weapon,
+lbCommonDObjScaleXProcDisplay)` -- the whole tree at gGCScaleX 1.0. The port's
+`lbCommonDObjScaleXProcDisplay` is a deliberate no-op (effect descriptors
+share it), so every such weapon drew nothing unless its maker installed its
+own seam; Link's Boomerang and Fox's blaster had one. The decomp's DObjDesc
+weapons without links: Iwark's rock, Kamex's hydro, Nyars's coin, Spear's and
+Pippi's swarm (Pippi's maker installs the source's own display), and the two
+boss bullets. All but the bullets already had baked native owners that nothing
+reached.
+
+Fix: those weapons draw `wpDisplayMain(weapon, gcDrawDObjTreeForGObj)`
+(`ndsWPDisplayDObjTree`, src/import/battleship_wpmanager_core.c); the bullets'
+list (BossModel 0x2BA0, DObj 1 of the DObjDesc at 0x2CB8 that both
+BulletNormal and BulletHard attributes name) gets a baked owner, BossBullet
+(18 vertices, 22 triangles).
+
+Verified on lab q49 (same forced-Blastoise match): the water draws in front of
+the cannon in both shots, an upright quad whose Y scale the source animation
+drives (child DObj translate (60, 0, 0), rotation 0, Y scale 1 -> 4 -> 1.5;
+the list's 16x24 CI4 water texture), with 0 native failures
+(`artifacts/visibility/2026-10-06_kamex-hydro/k4-*`, local).
+
+## Flying dust (DamageFlyMDust) refused on Dream Land: a native failure (2026-10-06) -- FIXED
+
+Found while chasing Blastoise: the lab Poke Ball match recorded 27 native
+failures, all `NDS_NATIVE_FAILURE_STAGE` / REJECTED_PROGRAM for kind 1011
+(effect) in EFCommonEffects1 (asset 83) root 0xCA58 -- DamageFlyMDust, the
+dust a launched fighter trails. Its owner draws seven 32x32 IA16 frames as
+four A5I3 intensity bands each, 25 resident 1 KB names, prepared at battle
+start after every larger owner (`ndsBattlePrepareSceneTextures`). On Dream
+Land, whose pinned static set the scene prepares first, there was room for
+nine: the lab gate showed 9 prepared and 1 refused
+(`gNdsDamageFlyMDustTexturePrepareCount` / `...FailCount`), so any dust frame
+needing a missing band failed its preflight and drew nothing.
+
+Fix: right after GO, once the entry-only textures are retired
+(`scVSBattleFuncUpdate`), the prepare runs again; it keeps the bands it holds
+and fills the missing ones. Lab q49 gate: 25 prepared (the one start-time
+refusal remains counted), and the forced-Blastoise match that recorded 27
+failures records none.

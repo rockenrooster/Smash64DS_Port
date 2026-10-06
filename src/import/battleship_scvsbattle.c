@@ -415,6 +415,15 @@ void scVSBattleFuncUpdate(void)
         }
         ndsRendererHardwareReleaseEntryStartupTextures();
         sNdsSCVSBattleEntryStartupTexturesRetired = TRUE;
+        /* The flying-dust planes are 25 resident 1 KB bands, prepared at
+         * scene start after every larger owner. On Dream Land the pinned
+         * static corpus leaves room for nine (lab gate q48: 9 prepared, 1
+         * refused), and a dust frame whose bands are missing fails its
+         * preflight -- a recorded native failure, the dust not drawn (27 in
+         * a Poke Ball lab match). The startup names just released make room:
+         * the prepare keeps the bands it holds and fills only the missing
+         * ones, two frames into GO. */
+        (void)ndsRendererHardwarePrepareDamageFlyMDustTextures();
     }
 #endif
 
