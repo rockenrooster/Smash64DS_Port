@@ -1582,6 +1582,14 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   frames are now texture upload, lean re-materialisation and status-change
   setup; soft float is ~15K cycles of their premium. Receipt
   `2026-10-05_interp-fixed`.
+- **10-06: the hurtbox joint cache doubled and the narrow-test frame cached.**
+  The 4 x Yoshi over-gate profile put hit detection first (cofactor frames,
+  lock-chain locals, rejects). The joint-world cache had 64 direct-mapped
+  slots for ~100 joints, so chains evicted each other inside a tick; it has
+  128 now (+14.6 KB BSS), and each slot keeps its world's cofactor frame.
+  The reflection light is memoised by its two angles. All exact: digests
+  identical. 4 x Yoshi P95 -15.9K (1,238,464 / 1,234,368), gate -4.8K
+  (1,079,936), Sector Z flat. Receipt `2026-10-06_hurtbox-cache`.
 
 ## 7. Found along the way
 

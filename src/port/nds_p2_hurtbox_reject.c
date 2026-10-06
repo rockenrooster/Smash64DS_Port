@@ -43,7 +43,10 @@ extern volatile u32 gNdsR2CfxFastPaths;
 #define NDS_P2_HB_CHAIN_MAX 18
 /* Four world units, Q12. */
 #define NDS_P2_HB_MARGIN_Q12 (INT32_C(4) << NDS_R2_CFX_POS_BITS)
-#define NDS_P2_HB_CACHE_SLOTS 64u
+/* 2026-10-05: four fighters bring ~100 joints to the hit-detection phase;
+ * 64 direct-mapped slots evicted chain worlds the same tick recomposed. */
+#define NDS_P2_HB_CACHE_SLOTS 128u
+#define NDS_P2_HB_CACHE_SHIFT 25u
 
 volatile u32 gNdsR2CfxFastPaths __attribute__((used, section(".data"))) = 1u;
 
@@ -72,6 +75,11 @@ typedef struct NDSP2HbWorld
      * takes only its own kind's entries. */
     u32 lock;
     int32_t nscale[3];
+    /* 1 = `frame` is this world's narrow-test frame (ndsP2HbDecidePoints):
+     * the cofactor inverse, with the lock walk's 1/nscale when `lock`. Reset
+     * wherever the world is (re)written, like inv_smin_q26. */
+    u32 frame_ok;
+    NDSR2CfxFrame frame;
 } NDSP2HbWorld;
 
 static NDSP2HbWorld sNdsP2HbCache[NDS_P2_HB_CACHE_SLOTS];
@@ -82,7 +90,8 @@ static NDSP2HbWorld sNdsP2HbCache[NDS_P2_HB_CACHE_SLOTS];
  * hash spreads them. */
 static inline NDSP2HbWorld *ndsP2HbSlot(const void *dobj)
 {
-    return &sNdsP2HbCache[((u32)(uintptr_t)dobj * 0x9E3779B1u) >> 26];
+    return &sNdsP2HbCache[((u32)(uintptr_t)dobj * 0x9E3779B1u) >>
+                          NDS_P2_HB_CACHE_SHIFT];
 }
 
 static inline u32 ndsP2HbBits(f32 value)
@@ -641,6 +650,7 @@ static const NDSR2CfxMtx *ndsP2HbWorldOf(DObj *joint, NDSR2CfxMtx *scratch,
             slot->dobj = cursor;
             slot->epoch = epoch;
             slot->inv_smin_q26 = 0;
+            slot->frame_ok = 0u;
             slot->lock = 0u;
             acc = &slot->world;
             break;
@@ -675,6 +685,7 @@ static const NDSR2CfxMtx *ndsP2HbWorldOf(DObj *joint, NDSR2CfxMtx *scratch,
         slot->dobj = cursor;
         slot->epoch = epoch;
         slot->inv_smin_q26 = 0;
+        slot->frame_ok = 0u;
         slot->lock = 0u;
         acc = &slot->world;
     }
@@ -890,6 +901,7 @@ static const NDSR2CfxMtx *ndsP2HbWorldOfLock(DObj *joint, NDSR2CfxMtx *scratch,
             slot->dobj = cursor;
             slot->epoch = epoch;
             slot->inv_smin_q26 = 0;
+            slot->frame_ok = 0u;
             slot->lock = 1u;
             acc = &slot->world;
             acc_scale = slot->nscale;
@@ -928,6 +940,7 @@ static const NDSR2CfxMtx *ndsP2HbWorldOfLock(DObj *joint, NDSR2CfxMtx *scratch,
         slot->dobj = cursor;
         slot->epoch = epoch;
         slot->inv_smin_q26 = 0;
+        slot->frame_ok = 0u;
         slot->lock = 1u;
         acc = &slot->world;
         acc_scale = slot->nscale;
@@ -1273,16 +1286,29 @@ static int ndsP2HbDecidePoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
         u32 c;
 
         w = ndsP2HbWorldOfLock(damage->joint, &scratch, &slot, nscale);
-        if ((w == NULL) || (ndsR2CfxMakeFrameCofactor(&frame, w) == 0))
+        if ((slot != NULL) && (slot->frame_ok != 0u))
         {
-            NDS_DIAG(gNdsP2HbNarrowDeclined++);
-            return -1;
+            frame = slot->frame;
         }
-        for (c = 0u; c < 3u; c++)
+        else
         {
-            /* 2^(26 + 16) / Q16 -> Q26; nscale > 0 by the walk's guards. */
-            frame.inv_scale[c] =
-                (int32_t)NDS_R2_CFX_DIV64((int64_t)1 << 42, nscale[c]);
+            if ((w == NULL) || (ndsR2CfxMakeFrameCofactor(&frame, w) == 0))
+            {
+                NDS_DIAG(gNdsP2HbNarrowDeclined++);
+                return -1;
+            }
+            for (c = 0u; c < 3u; c++)
+            {
+                /* 2^(26 + 16) / Q16 -> Q26; nscale > 0 by the walk's
+                 * guards. */
+                frame.inv_scale[c] =
+                    (int32_t)NDS_R2_CFX_DIV64((int64_t)1 << 42, nscale[c]);
+            }
+            if (slot != NULL)
+            {
+                slot->frame = frame;
+                slot->frame_ok = 1u;
+            }
         }
 #else
         NDS_DIAG(gNdsP2HbNarrowDeclined++);
@@ -1292,10 +1318,22 @@ static int ndsP2HbDecidePoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
     else
     {
         w = ndsP2HbWorldOf(damage->joint, &scratch, &slot);
-        if ((w == NULL) || (ndsR2CfxMakeFrameCofactor(&frame, w) == 0))
+        if ((slot != NULL) && (slot->frame_ok != 0u))
         {
-            NDS_DIAG(gNdsP2HbNarrowDeclined++);
-            return -1;
+            frame = slot->frame;
+        }
+        else
+        {
+            if ((w == NULL) || (ndsR2CfxMakeFrameCofactor(&frame, w) == 0))
+            {
+                NDS_DIAG(gNdsP2HbNarrowDeclined++);
+                return -1;
+            }
+            if (slot != NULL)
+            {
+                slot->frame = frame;
+                slot->frame_ok = 1u;
+            }
         }
     }
     result = ndsR2CfxTestRectangle(am->p0, am->p1, am->radius,

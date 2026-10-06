@@ -1,0 +1,46 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 2 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,800; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 1039: ALL 5,311,040 -> 1,116,736, 5 bucket(s) corrected
+  frame 1889: ALL 5,311,936 -> 1,117,632, 5 bucket(s) corrected
+Wrote artifacts/performance/2026-10-06_hurtbox-cache/sz-q11b.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=5c3c0ef1e39+dirty(33) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,800     1,677,056      1.50  1,182,576     1,111,488 16,902,272      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,352         9,664      2.22      5,374         2,368     25,408        0.4
+HUD         8,832        24,192      2.74     10,774         7,808    475,456        0.8
+SRC       437,056       622,848      1.43    443,239       153,216  1,019,328       39.1
+MISC      409,664       570,432      1.39    426,640       151,104 15,881,600       36.7
+OTHR      282,496       559,360      1.98    296,549        21,760    795,840       25.3
+WAIT      260,928       535,744      2.05    275,272         2,304    776,768       23.4
+WORK      885,376     1,197,312      1.35    903,615       336,640 16,566,208       79.3
+SHDT      802,367     1,091,775      1.36    822,028       295,615 16,046,527       71.8
+SWRM        1,280         1,344      1.05      1,280           896      3,264        0.1
+GCRA      431,680       617,536      1.43    437,907       148,608  1,014,016       38.7
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        573             0  1,038,720        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      409,536       570,368      1.39    426,535       150,976 15,881,472       36.7
+MFLS          128           128      1.00        105            64        448        0.0
+GPOL          477           567      1.19        463            47        604        0.0
+GVTX        1,073         1,334      1.24      1,060           157      1,446        0.1
+DGSA   2,151,297,068 4,051,513,036        2,133,514,594    676,991 4,286,422,441 192,630.5
+DGSB   2,119,168,438 4,104,172,124   1.94 2,135,049,252  2,524,074 4,280,928,178 189,753.6
+WORK-H    875,648     1,183,424      1.35    892,841       328,320 16,090,752       78.4
+
+named=886,027 (74.9% of ALL)  VBI 2:1770 3:179 4:10 5+:2 max:34 total:1961  slips=0
+Wrote artifacts/performance/2026-10-06_hurtbox-cache/sz-q11b.json

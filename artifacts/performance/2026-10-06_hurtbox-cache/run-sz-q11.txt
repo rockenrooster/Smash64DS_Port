@@ -1,0 +1,45 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,800; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 654: ALL 5,310,912 -> 1,116,608, 4 bucket(s) corrected
+Wrote artifacts/performance/2026-10-06_hurtbox-cache/sz-q11.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=5c3c0ef1e39+dirty(33) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,800     1,677,056      1.50  1,185,568     1,110,208 16,892,544      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,352         9,728      2.24      5,381         2,368     25,664        0.4
+HUD         8,832        24,320      2.75     10,779         7,744    473,344        0.8
+SRC       436,864       623,488      1.43    445,195       152,960  4,679,808       39.1
+MISC      409,088       570,560      1.39    426,631       151,104 15,873,856       36.6
+OTHR      282,688       559,744      1.98    297,582        22,720    795,584       25.3
+WAIT      261,312       537,024      2.06    276,302         2,240    776,640       23.4
+WORK      885,440     1,204,288      1.36    905,573       336,768 16,556,160       79.3
+SHDT      803,263     1,093,119      1.36    823,978       295,743 16,039,679       71.9
+SWRM        1,280         1,344      1.05      1,281           960      3,392        0.1
+GCRA      431,488       617,600      1.43    439,863       148,352  4,674,432       38.6
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        575             0  1,043,584        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      408,960       570,496      1.39    426,526       150,976 15,873,728       36.6
+MFLS          128           128      1.00        105            64        192        0.0
+GPOL          477           567      1.19        463            47        604        0.0
+GVTX        1,073         1,334      1.24      1,060           157      1,446        0.1
+DGSA   2,151,297,068 4,051,513,036        2,133,514,594    676,991 4,286,422,441 192,630.5
+DGSB   2,119,168,438 4,104,172,124   1.94 2,135,049,252  2,524,074 4,280,928,178 189,753.6
+WORK-H    875,520     1,188,096      1.36    894,794       328,448 16,082,816       78.4
+
+named=887,986 (74.9% of ALL)  VBI 2:1767 3:182 4:10 5+:2 max:34 total:1961  slips=0
+Wrote artifacts/performance/2026-10-06_hurtbox-cache/sz-q11.json
