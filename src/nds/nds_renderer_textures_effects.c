@@ -13050,6 +13050,15 @@ static void ndsRendererHardwareBindPrimRgbTexel0AlphaTexture(
  * libnds name and glTexImage2D. */
 #define NDS_FTR_CARVE_LIVE 1
 static u32 sNdsFtrCarveActive;
+#if defined(NDS_LAB_TEXMISS) && NDS_LAB_TEXMISS
+#include <nds/arm9/cache.h>
+/* LAB ONLY: the over-gate texture census ring (frame, image, tlut,
+ * format|size|flags, width|height, combine words, key hash, texel1 fraction,
+ * spare) -- see the battle fallback in ResolveOrBindTexture. */
+#define NDS_LAB_TEXMISS_MAX 1024u
+__attribute__((used)) u32 gNdsLabTexMiss[NDS_LAB_TEXMISS_MAX][10];
+__attribute__((used)) volatile u32 gNdsLabTexMissCount;
+#endif
 static s32 ndsFtrCarveUpload(NDSRendererHardwareTextureCacheEntry *entry,
                              u32 type, u32 size_x, u32 size_y, u32 params,
                              const void *texels, u32 palette_entries,
@@ -13889,6 +13898,35 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     }
     ndsRendererHardwareRecordBattleTextureFence(
         NDS_RENDERER_BATTLE_TEXTURE_FENCE_MANIFEST_FALLBACK);
+#if defined(NDS_LAB_TEXMISS) && NDS_LAB_TEXMISS
+    /* LAB ONLY (Makefile NDS_LAB_TEXMISS): every converted miss, for the
+     * over-gate texture census. The count keeps running past the end. */
+    {
+        u32 n = gNdsLabTexMissCount;
+
+        if (n < NDS_LAB_TEXMISS_MAX)
+        {
+            u32 *rec = gNdsLabTexMiss[n];
+
+            rec[0] = gNdsRendererProfileFrameCount;
+            rec[1] = (u32)key.image;
+            rec[2] = (u32)key.tlut_image;
+            rec[3] = (format << 24) | (size << 16) | (u32)key.flags;
+            rec[4] = (width << 16) | height;
+            rec[5] = key.combine_w0;
+            rec[6] = key.combine_w1;
+            rec[7] = key_hash;
+            rec[8] = (use_texel1 != FALSE) ? (0x80000000u |
+                                              key.prim_lod_fraction) : 0u;
+            rec[9] = 0u;
+            /* The debugger reads memory, not the data cache. */
+            DC_FlushRange(rec, sizeof(gNdsLabTexMiss[0]));
+        }
+        gNdsLabTexMissCount = n + 1u;
+        DC_FlushRange((const void *)&gNdsLabTexMissCount,
+                      sizeof(gNdsLabTexMissCount));
+    }
+#endif
     if (use_texel1 != FALSE)
     {
         fraction_entry =
