@@ -4228,10 +4228,6 @@ static u32 sNdsMvpMemo46Key[NDS_MVP_MEMO_46][4];
 static u32 sNdsMvpMemo46AccAfter[NDS_MVP_MEMO_46];
 static NDSRendererMatrix20p12 sNdsMvpMemo46Rows[NDS_MVP_MEMO_46];
 
-/* Same-binary A/B word (a whole-word gdb poke at boot): 0 runs every
- * billboard through the full build, as before the memo. */
-volatile u32 gNdsMvpMemoEnable __attribute__((used, section(".data"))) = 1u;
-
 /* The camera whose operands the rows were built from. The memo is shared by
  * the stage prepare's camera and the shared camera below, so a row is served
  * only to the camera that last reset it: whichever of the two built rows
@@ -4241,7 +4237,7 @@ static const NDSRendererAdapterMvpCamera *sNdsMvpMemoOwner;
 static void ndsRendererAdapterMvpMemoReset(const NDSRendererAdapterMvpCamera *owner)
 {
     sNdsMvpMemoOwner = owner;
-    sNdsMvpMemoOn = (gNdsMvpMemoEnable != 0u) ? 1u : 0u;
+    sNdsMvpMemoOn = 1u;
     sNdsMvpMemo48Count = 0u;
     sNdsMvpMemo46Count = 0u;
 }
@@ -4344,8 +4340,6 @@ static NDSRendererAdapterMvpCamera *ndsRendererAdapterSharedMvpCamera(CObj *cobj
     return &sNdsSharedMvpCamera;
 }
 
-volatile u32 gNdsMvpRecalcRow3 __attribute__((used, section(".data"))) = 1u;
-
 static void ndsRendererAdapterApplyMvpRecalc(
     DObj *dobj,
     u32 kind,
@@ -4422,16 +4416,10 @@ static void ndsRendererAdapterApplyMvpRecalc(
     /* Every kind below replaces rows 0-2 of the composed MVP and keeps its
      * translation row, so only that row is formed here, with the full
      * product's arithmetic (P2-2p8, 2026-09-29; the stage billboards'
-     * ndsRendererMtxMulRow3_20p12). Same-ROM A/B word gNdsMvpRecalcRow3. */
-    if ((*modelview_ptr != NULL) && (*projection_ptr != NULL) &&
-        (gNdsMvpRecalcRow3 != 0u))
+     * ndsRendererMtxMulRow3_20p12). */
+    if ((*modelview_ptr != NULL) && (*projection_ptr != NULL))
     {
         ndsRendererMtxMulRow3_20p12(
-            *modelview_ptr, *projection_ptr, &composed);
-    }
-    else if ((*modelview_ptr != NULL) && (*projection_ptr != NULL))
-    {
-        ndsRendererMtxMul20p12(
             *modelview_ptr, *projection_ptr, &composed);
     }
     else if (*modelview_ptr != NULL)
@@ -5734,8 +5722,7 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrixM2Profile(
  * held Beam Sword). The local is a pure function of what the source key
  * holds, which is the reuse path's own premise, so a node whose key matches
  * the one its kept local was built from takes that local and only
- * recomposes. Four slots: the keyed lists under moving parents are few.
- * Same-ROM A/B word gNdsStageLocalMemo. */
+ * recomposes. Four slots: the keyed lists under moving parents are few. */
 #define NDS_RENDERER_ADAPTER_STAGE_LOCAL_MEMO 4u
 typedef struct NDSRendererAdapterStageLocalMemo
 {
@@ -5746,7 +5733,6 @@ typedef struct NDSRendererAdapterStageLocalMemo
 static NDSRendererAdapterStageLocalMemo
     sNdsRendererAdapterStageLocalMemo[NDS_RENDERER_ADAPTER_STAGE_LOCAL_MEMO];
 static u32 sNdsRendererAdapterStageLocalMemoNext;
-volatile u32 gNdsStageLocalMemo __attribute__((used, section(".data"))) = 1u;
 __attribute__((used)) volatile u32 gNdsStageLocalMemoHits;
 
 /* The node's local, from the memo when its key matches, else built (and
@@ -5758,7 +5744,7 @@ static sb32 ndsRendererAdapterStageLocalFor(
     NDSRendererAdapterStageLocalMemo *slot = NULL;
     u32 i;
 
-    if ((key_valid != FALSE) && (gNdsStageLocalMemo != 0u))
+    if (key_valid != FALSE)
     {
         for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_LOCAL_MEMO; i++)
         {
@@ -5780,7 +5766,7 @@ static sb32 ndsRendererAdapterStageLocalFor(
     {
         return FALSE;
     }
-    if ((key_valid != FALSE) && (gNdsStageLocalMemo != 0u))
+    if (key_valid != FALSE)
     {
         if (slot == NULL)
         {
@@ -6279,9 +6265,7 @@ static void ndsRendererAdapterBuildDefaultBattleCameraMatrices(
  * same two calls on the same CObj that
  * ndsRendererAdapterBuildTask36StageCameraMatrices makes -- so the stage
  * built the battle camera twice a frame (gate STG P50 -1.3K without the
- * second build). Valid only for the frame that filled the entry. Same-ROM
- * A/B word gNdsStageCameraShare (0 = build it again). */
-volatile u32 gNdsStageCameraShare __attribute__((used, section(".data"))) = 1u;
+ * second build). Valid only for the frame that filled the entry. */
 
 static sb32 ndsRendererAdapterStageCameraFromFrameCache(
     const CObj *cobj,
@@ -6290,7 +6274,7 @@ static sb32 ndsRendererAdapterStageCameraFromFrameCache(
 {
     u32 i;
 
-    if ((gNdsStageCameraShare == 0u) || (cobj == NULL) ||
+    if ((cobj == NULL) ||
         (sNdsRendererAdapterCameraCacheFrame != gNdsRendererProfileFrameCount))
     {
         return FALSE;
@@ -9028,9 +9012,7 @@ volatile u32 gNdsNativeYosterCloudFailStep;
  * arithmetic. 7 local builds (syMatrixTra, a Mtx split and a 16-cell load
  * each) and 9 full multiplies become 21 integer conversions and 3 row
  * products; the matrices the executor reads are the old path's. A
- * translation at or past 2^14 units takes the old path. Same-ROM A/B word
- * gNdsYosterCloudFast (0 = the generic builders). */
-volatile u32 gNdsYosterCloudFast __attribute__((used, section(".data"))) = 1u;
+ * translation at or past 2^14 units takes the old path. */
 
 static sb32 ndsRendererAdapterYosterCloudTra20p12(const DObj *joint,
                                                   s32 out[3])
@@ -9191,7 +9173,7 @@ sb32 ndsRendererAdapterSubmitNativeYosterCloud(void *root_ptr, void *cobj,
         gNdsNativeYosterCloudFailStep = 0u;
         return TRUE;
     }
-    fast = (gNdsYosterCloudFast != 0u) ? TRUE : FALSE;
+    fast = TRUE;
     for (i = 0u; (fast != FALSE) && (i < 7u); i++)
     {
         fast = ndsRendererAdapterYosterCloudTra20p12(

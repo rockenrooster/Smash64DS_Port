@@ -34,9 +34,7 @@ static NDSRendererOwnerTextureMemo sNdsNativeOwnerTexMemo_yostercloud[1];
  * texture coordinate follows the bound tile's scale and origin and the
  * filter offset, its position is the packet's. The words are kept with those
  * inputs and replayed while they hold -- three drawables of three clouds a
- * frame -- and built as before for a lit material. Same-ROM A/B word
- * gNdsYosterCloudCornerMemo (0 = every corner built per drawable). */
-volatile u32 gNdsYosterCloudCornerMemo __attribute__((used, section(".data"))) = 1u;
+ * frame -- and built as before for a lit material. */
 
 #define NDS_YOSTER_CLOUD_CORNER_MEMO_KEYS 9u
 typedef struct NDSNativeYosterCloudCornerMemo
@@ -191,8 +189,7 @@ sb32 ndsRendererSubmitNativeYosterCloud(const void *packet_base,
             sNdsRendererHardwareMatrixMode, generation);
         first = (u32)run[1] * 3u;
         count = (u32)run[2] * 3u;
-        if ((gNdsYosterCloudCornerMemo != 0u) &&
-            (count <= NDS_NATIVE_ACTOR_YOSTER_CLOUD_TRIANGLE_COUNT) &&
+        if ((count <= NDS_NATIVE_ACTOR_YOSTER_CLOUD_TRIANGLE_COUNT) &&
             ((stats->geometry_mode & NDS_RENDERER_GEOM_LIGHTING) == 0u))
         {
             NDSNativeYosterCloudCornerMemo *memo =

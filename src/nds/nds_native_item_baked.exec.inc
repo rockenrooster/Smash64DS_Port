@@ -87,7 +87,7 @@ const void *ndsNativeBakedItemFind(u32 asset_id, u32 root, u32 gobj_kind,
  * root and heap generation); when every corner lies outside one side plane
  * of its own clip matrix (modelview x projection, the same test as the stage
  * GX runs) its EMIT ops are skipped. Its state ops still run, so what the
- * next list inherits is unchanged. A/B word gNdsBakedCull (0 = emit all). */
+ * next list inherits is unchanged. */
 #define NDS_NATIVE_BAKED_BOUNDS_CACHE 64u
 typedef struct NDSNativeBakedBounds
 {
@@ -98,7 +98,6 @@ typedef struct NDSNativeBakedBounds
     u32 empty;
 } NDSNativeBakedBounds;
 static NDSNativeBakedBounds sNdsNativeBakedBounds[NDS_NATIVE_BAKED_BOUNDS_CACHE];
-volatile u32 gNdsBakedCull __attribute__((used, section(".data"))) = 1u;
 __attribute__((used)) volatile u32 gNdsBakedCulledRoots;
 
 static sb32 ndsNativeBakedRootOutsideView(
@@ -202,7 +201,7 @@ sb32 ndsNativeBakedRootOffscreen(const void *handle,
     NDSRendererConfig shifted_config;
     NDSRendererMatrix20p12 shifted_modelview;
 
-    if ((gNdsBakedCull == 0u) || (r == NULL) || (config == NULL) ||
+    if ((r == NULL) || (config == NULL) ||
         (config->initial_projection == NULL) ||
         (config->initial_modelview == NULL))
     {
@@ -315,9 +314,8 @@ sb32 ndsRendererSubmitNativeBaked(
         config = &shifted_config;
     }
 
-    skip_emit = ((gNdsBakedCull != 0u) &&
-                 (ndsNativeBakedRootOutsideView(
-                      r, op_table, group_table, config) != FALSE)) ?
+    skip_emit = (ndsNativeBakedRootOutsideView(
+                     r, op_table, group_table, config) != FALSE) ?
         TRUE : FALSE;
     if (skip_emit != FALSE)
     {

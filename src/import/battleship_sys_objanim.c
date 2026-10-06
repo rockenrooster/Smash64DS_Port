@@ -100,9 +100,7 @@ void ndsBaseGcPlayMObjMatAnim(MObj *mobj) __attribute__((section(".itcm")));
  * Exceptions keep the source rate: the one-shot costume bake
  * (lbCommonAddMObjForFighterPartsDObj, src/port/reloc_backend_compat_shims.c),
  * which removes its AObjs right after its play, and Yoshi's Island's clouds,
- * whose MObj `anim_wait` gryoster.c reads to make cloud lines solid. Same-ROM
- * A/B word gNdsMObjTick30Hz (0 = every tick). */
-volatile u32 gNdsMObjTick30Hz __attribute__((used, section(".data"))) = 1u;
+ * whose MObj `anim_wait` gryoster.c reads to make cloud lines solid. */
 volatile u32 gNdsMObjTickMul __attribute__((used, section(".data"))) = 1u;
 
 /* speed * mul; exact for mul 2 on a normal speed (one exponent step). */
@@ -823,10 +821,7 @@ void lbCommonPlayTranslateScaledDObjAnim(DObj *dobj, Vec3f *scale)
  * anim_frame, anim_speed) stays f32: stage code reads it. The path-parameter
  * track TraI stays float too -- Q12 of a path's [0, 1] would step Sector Z's
  * Arwing up to a couple of units along its loop. Readers of a Q node go
- * through the player or gcGetAObjValue (below), which dispatch on `kind`.
- * Same-ROM A/B word gNdsStageAnimQ (0 = the source's float kinds; a node keeps
- * the form it was last written in, so poke it before the battle loads). */
-volatile u32 gNdsStageAnimQ __attribute__((used, section(".data"))) = 1u;
+ * through the player or gcGetAObjValue (below), which dispatch on `kind`. */
 
 /* One AObj into Q form before this parser writes a Q kind on it (the fighter
  * parser's ndsR2AnimAObjToQConvert): the arms carry fields forward, so a node
@@ -858,9 +853,9 @@ static void __attribute__((noinline)) ndsOAObjToQConvert(AObj *a, s32 kind)
 }
 
 /* TRUE when this parser writes `track` in Q form. */
-static inline u32 ndsOATrackQ(u32 q, s32 track)
+static inline u32 ndsOATrackQ(s32 track)
 {
-    return ((q != 0u) && (track != nGCAnimTrackTraI)) ? 1u : 0u;
+    return (track != nGCAnimTrackTraI) ? 1u : 0u;
 }
 
 /* The node for joint track `i`, created on first use (the source's), and in
@@ -931,7 +926,6 @@ void gcParseDObjAnimJoint(DObj *dobj)
     u32 flags;
     u32 payload_u;
     f32 payload;
-    const u32 q = (gNdsStageAnimQ != 0u) ? 1u : 0u;
 
     if (NDS_FCMP_EQ_C(dobj->anim_wait, AOBJ_ANIM_NULL))
     {
@@ -1007,7 +1001,7 @@ void gcParseDObjAnimJoint(DObj *dobj)
                 {
                     continue;
                 }
-                tq = ndsOATrackQ(q, i + nGCAnimTrackJointStart);
+                tq = ndsOATrackQ(i + nGCAnimTrackJointStart);
                 a = ndsOATrack(dobj, track_aobjs, i, tq);
                 a->value_base = a->value_target;
                 a->rate_base = a->rate_target;
@@ -1076,7 +1070,7 @@ void gcParseDObjAnimJoint(DObj *dobj)
                 {
                     continue;
                 }
-                tq = ndsOATrackQ(q, i + nGCAnimTrackJointStart);
+                tq = ndsOATrackQ(i + nGCAnimTrackJointStart);
                 a = ndsOATrack(dobj, track_aobjs, i, tq);
                 a->value_base = a->value_target;
                 if (tq != 0u)
@@ -1150,7 +1144,7 @@ void gcParseDObjAnimJoint(DObj *dobj)
                 {
                     continue;
                 }
-                tq = ndsOATrackQ(q, i + nGCAnimTrackJointStart);
+                tq = ndsOATrackQ(i + nGCAnimTrackJointStart);
                 a = ndsOATrack(dobj, track_aobjs, i, tq);
                 a->rate_target = (tq != 0u) ?
                     ndsR2AQStore(ndsR2F32ToFixed(dobj->anim_joint.event32->f,
@@ -1188,7 +1182,7 @@ void gcParseDObjAnimJoint(DObj *dobj)
                 {
                     continue;
                 }
-                tq = ndsOATrackQ(q, i + nGCAnimTrackJointStart);
+                tq = ndsOATrackQ(i + nGCAnimTrackJointStart);
                 a = ndsOATrack(dobj, track_aobjs, i, tq);
                 a->value_base = a->value_target;
                 if (tq != 0u)
@@ -2310,22 +2304,13 @@ volatile u32 gNdsAObjEvent32HashOracleMismatch;
  * lookup took 12.2 probes and an insert ~37, at a load under 20% (P2-2p8,
  * 2026-09-29). The multiplicative hash takes the product's top bits, which
  * every input bit reaches. Placement only: the ledger's keys are unique, so a
- * probe returns the same index whatever the hash. Same-ROM A/B word
- * gNdsAObjEvent32HashMul (0 = the folds); it is read at every probe start, so
- * it may only change between scenes (the index is rebuilt at each). */
-volatile u32 gNdsAObjEvent32HashMul __attribute__((used, section(".data"))) = 1u;
+ * probe returns the same index whatever the hash. */
 
 static u32 ndsAObjEvent32HashSlot(const AObjEvent32 *command)
 {
-    u32 h = (u32)(uintptr_t)command >> 2;
+    const u32 h = (u32)(uintptr_t)command >> 2;
 
-    if (gNdsAObjEvent32HashMul != 0u)
-    {
-        return (h * 0x9E3779B1u) >> sNdsAObjEvent32NormalizedHashShift;
-    }
-    h ^= h >> 7;
-    h ^= h >> 13;
-    return h & (sNdsAObjEvent32NormalizedHashSlots - 1u);
+    return (h * 0x9E3779B1u) >> sNdsAObjEvent32NormalizedHashShift;
 }
 
 static s32 ndsAObjEvent32ScanNormalized(const AObjEvent32 *command)
@@ -3781,14 +3766,13 @@ static inline sb32 ndsMObjMatAnimWasStableZero(const MObj *mobj)
  * battleship_gryoster_ground.c renames gryoster.c's gcPlayAnimAll to
  * ndsGRYosterCloudPlayAnimAll, so no other GObj pays a test and the ITCM
  * gcPlayAnimAll is unchanged. */
-volatile u32 gNdsGcDObjTraOnlyEnable __attribute__((used, section(".data"))) = 1u;
 volatile u32 gNdsGcDObjTraOnlySkips;
 
 static sb32 ndsGcDObjAnimValuesUnread(const DObj *dobj)
 {
     const AObj *aobj;
 
-    if ((gNdsGcDObjTraOnlyEnable == 0u) || (dobj->anim_wait == AOBJ_ANIM_NULL) ||
+    if ((dobj->anim_wait == AOBJ_ANIM_NULL) ||
         (dobj->xobjs_num != 1) || (dobj->xobjs[0] == NULL) ||
         (dobj->xobjs[0]->kind != nGCMatrixKindTra))
     {

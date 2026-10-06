@@ -247,7 +247,6 @@ static s32 sNdsBg2AffineShown[4] = { 1 << 8, 1 << 8, 0, 0 };
  * the transition captures. Decline: 1 brightness, 2 display mode, 3 capture
  * busy, 4 no free texture bank, 5 capture timeout, 6 a battle exit's
  * capture timed out. */
-volatile u32 gNdsTransitionSnapshotEnable __attribute__((used, section(".data"))) = 1u;
 volatile u32 gNdsTransitionSnapshotCount;
 volatile u32 gNdsTransitionSnapshotReleaseCount;
 volatile u32 gNdsTransitionSnapshotAbortCount;
@@ -2037,8 +2036,7 @@ static void ndsPlatformTransitionSnapshotBegin(void)
     u32 bank;
     u32 i;
 
-    if ((gNdsTransitionSnapshotEnable == 0u) ||
-        (sNdsTransitionSnapshotBank != 0u))
+    if (sNdsTransitionSnapshotBank != 0u)
     {
         return;
     }

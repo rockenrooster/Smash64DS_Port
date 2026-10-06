@@ -6668,7 +6668,7 @@ volatile u32 gNdsRendererFoxGunTriangleCount;
 #endif
 
 /* Bumped by every writer of the particle sheet, variant and binding tables
- * (see gNdsParticleLookupMemo). */
+ * (the particle lookup memos). */
 static u32 sNdsParticleMaterialGen = 1u;
 
 /* Sheets already uploaded when a later one fails are direct scene-owned GL
@@ -7071,8 +7071,7 @@ volatile u32 gNdsParticleEnvVariantCommits;
  * answer the previous quad found. Both lookups are pure reads of the sheet,
  * variant and binding tables; every writer of those tables bumps this
  * generation, and a one-entry memo of each lookup holds only while it is
- * unchanged. Same-ROM A/B word gNdsParticleLookupMemo (0 = search). */
-volatile u32 gNdsParticleLookupMemo __attribute__((used, section(".data"))) = 1u;
+ * unchanged. */
 static u32 sNdsParticleEnvMemoGen;
 static u32 sNdsParticleEnvMemoAtlas;
 static u32 sNdsParticleEnvMemoPrim;
@@ -8365,14 +8364,14 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
     if (sNdsRendererParticleViewSpace != FALSE)
     {
         /* A burst's quads share their two view-space axis lengths: the last
-         * conversion is kept on its source bits (gNdsParticleLookupMemo). */
+         * conversion is kept on its source bits. */
         union
         {
             f32 f;
             u32 u;
         } rx = { right->x }, uy = { up->y };
 
-        if ((gNdsParticleLookupMemo != 0u) && (sNdsParticleBasisValid != 0u) &&
+        if ((sNdsParticleBasisValid != 0u) &&
             (rx.u == sNdsParticleBasisBits[0]) &&
             (uy.u == sNdsParticleBasisBits[1]))
         {
@@ -8494,8 +8493,7 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
         const u32 prim_key = color & 0x7FFFu;
         const u32 env_key = envcolor & 0xFFFFFF00u;
 
-        if ((gNdsParticleLookupMemo != 0u) &&
-            (sNdsParticleEnvMemoGen == sNdsParticleMaterialGen) &&
+        if ((sNdsParticleEnvMemoGen == sNdsParticleMaterialGen) &&
             (sNdsParticleEnvMemoAtlas == atlas_name) &&
             (sNdsParticleEnvMemoPrim == prim_key) &&
             (sNdsParticleEnvMemoEnv == env_key))
@@ -9261,7 +9259,7 @@ ndsRendererAppendWhispyPacketScale(u32 scale_shift)
     return TRUE;
 }
 
-/* The sheet path's last answer (see gNdsParticleLookupMemo). */
+/* The sheet path's last answer (the particle lookup memos). */
 static u32 sNdsParticleBindMemoGen;
 static u32 sNdsParticleBindMemoTexture;
 static u32 sNdsParticleBindMemoEnv;
@@ -9277,8 +9275,7 @@ static sb32 ndsRendererParticlePacketBindingFor(
     {
         return FALSE;
     }
-    if ((gNdsParticleLookupMemo != 0u) &&
-        (sNdsParticleBindMemoGen == sNdsParticleMaterialGen) &&
+    if ((sNdsParticleBindMemoGen == sNdsParticleMaterialGen) &&
         (sNdsParticleBindMemoTexture == texture_name) &&
         (sNdsParticleBindMemoEnv == env_palette_name))
     {
@@ -14728,9 +14725,7 @@ typedef struct NDSRendererOwnerTextureMemo
  * so the memo never filled and every such bind ran the full resolver (~5K
  * cycles; three cloud binds a frame on Yoshi's Island). It now fills with the
  * name and the words that bind applied, valid while the dedicated name's
- * generation holds (every prepare and release bumps it). Same-ROM A/B word
- * gNdsRendererOwnerTexMemoDedicated. */
-volatile u32 gNdsRendererOwnerTexMemoDedicated __attribute__((used, section(".data"))) = 1u;
+ * generation holds (every prepare and release bumps it). */
 
 volatile u32 gNdsRendererOwnerTexMemoHits;
 volatile u32 gNdsRendererOwnerTexMemoFills;
@@ -14786,8 +14781,7 @@ static s32 ndsRendererHardwareBindTextureOwnerMemo(
     }
     if ((match != FALSE) && (memo->dedicated != 0u))
     {
-        if ((gNdsRendererOwnerTexMemoDedicated != 0u) &&
-            (memo->entry_generation == sNdsRendererPrimRgbTexel0AlphaGen) &&
+        if ((memo->entry_generation == sNdsRendererPrimRgbTexel0AlphaGen) &&
             (memo->name != 0u) &&
             (memo->name == sNdsRendererHardwarePrimRgbTexel0AlphaName))
         {
@@ -14890,7 +14884,7 @@ static s32 ndsRendererHardwareBindTextureOwnerMemo(
             NDS_DIAG(gNdsRendererOwnerTexMemoFills++);
         }
     }
-    else if ((entry == NULL) && (gNdsRendererOwnerTexMemoDedicated != 0u) &&
+    else if ((entry == NULL) &&
              (sNdsRendererHardwarePrimRgbTexel0AlphaName != 0u) &&
              (sNdsRendererHardwareBoundTextureName ==
               sNdsRendererHardwarePrimRgbTexel0AlphaName) &&

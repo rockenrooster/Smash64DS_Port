@@ -1171,8 +1171,6 @@ typedef struct NDSR2AnimPin
     NDSRelocAssetHeader header;
 } NDSR2AnimPin;
 static NDSR2AnimPin sNdsR2AnimPins[NDS_R2_ANIM_PIN_SLOTS];
-/* Same-ROM A/B word: 0 keeps the copy path for every hit. */
-volatile u32 gNdsR2AnimZeroCopy __attribute__((used, section(".data"))) = 1u;
 __attribute__((used)) volatile u32 gNdsR2AnimZeroCopyHits;
 __attribute__((used)) volatile u32 gNdsR2AnimZeroCopyRescues;
 __attribute__((used)) volatile u32 gNdsR2AnimZeroCopyDrops;
@@ -17071,8 +17069,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
         sb32 direct = FALSE;
 
 #if NDS_R2_FTANIM_STREAM && NDS_R2_ANIM_ZERO_COPY
-        if ((cached == NULL) && (gNdsR2AnimDirectRead != 0u) &&
-            (gNdsR2AnimZeroCopy != 0u))
+        if ((cached == NULL) && (gNdsR2AnimDirectRead != 0u))
         {
             cached = ndsR2AnimDirectReadEntry(asset_id);
             direct = (cached != NULL) ? TRUE : FALSE;
@@ -17095,8 +17092,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
                 }
             }
 #if NDS_R2_ANIM_ZERO_COPY
-            if ((gNdsR2AnimZeroCopy != 0u) &&
-                (cached->aobj16_ready == NDS_R2_ANIM_CACHE_READY_STREAM))
+            if (cached->aobj16_ready == NDS_R2_ANIM_CACHE_READY_STREAM)
             {
                 const u8 *payload = ndsR2AnimPinTake(heap, cached, asset_id);
 

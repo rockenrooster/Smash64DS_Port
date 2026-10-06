@@ -1733,10 +1733,9 @@ u32 ndsR2HostBattleUpdateOnce(u32 update_index)
     /* Material animations step once a presented frame, on the drawn tick, by
      * the ticks it stands for (src/import/battleship_sys_objanim.c). */
     {
-        extern volatile u32 gNdsMObjTick30Hz;
         extern volatile u32 gNdsMObjTickMul;
 
-        gNdsMObjTickMul = (gNdsMObjTick30Hz == 0u) ? 1u :
+        gNdsMObjTickMul =
             (gNdsFtPoseEvalTick != 0u) ? (update_index + 1u) : 0u;
     }
 #if NDS_P2_LINK_BOMB_TOUR || NDS_P2_LINK_SPECIAL_TOUR || \

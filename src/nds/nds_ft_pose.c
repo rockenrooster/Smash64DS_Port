@@ -1404,8 +1404,7 @@ static inline void ndsFtPoseClearRunEntry(NdsFtPose *pose, u32 e)
  * without entering the parser -- the same wait, frame and published GObj
  * frame bits, from integer operations. Anything else (another speed, a
  * fraction, a sign, a sentinel state, a wait that reaches zero) goes to
- * ndsFtPoseParse unchanged. Same-ROM A/B word: gNdsFtPoseWholeStep. */
-volatile u32 gNdsFtPoseWholeStep __attribute__((used, section(".data"))) = 1u;
+ * ndsFtPoseParse unchanged. */
 
 /* `bits` as a non-negative whole number below 2^24; 0 when it is not one. */
 static inline u32 ndsFtPoseWholeValue(u32 bits, u32 *value)
@@ -1447,7 +1446,7 @@ static inline u32 ndsFtPoseWholeStep(NdsFtPose *pose, NdsFtPoseJoint *joint,
     u32 wait;
     u32 frame;
 
-    if ((gNdsFtPoseWholeStep == 0u) || (pose->speed_bits != 0x3f800000u) ||
+    if ((pose->speed_bits != 0x3f800000u) ||
         (ndsR2FloatBits(dobj->anim_wait) !=
          ndsR2FloatBits(NDS_FT_POSE_RUNNING)) ||
         (ndsFtPoseWholeValue(joint->wait_bits, &wait) == 0u) ||

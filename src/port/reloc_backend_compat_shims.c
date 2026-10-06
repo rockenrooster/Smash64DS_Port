@@ -12202,21 +12202,11 @@ ndsLbCommonSinTableBits(f32 x)
     return out;
 }
 
-/* Same-ROM A/B word: 0 runs the previous float expressions. */
-volatile u32 gNdsLbCommonTrigInt __attribute__((used, section(".data"))) = 1u;
-
 f32 __attribute__((section(".itcm"))) lbCommonSin(f32 angle)
 {
     u32 bits;
     f32 sin;
 
-    if (gNdsLbCommonTrigInt == 0u)
-    {
-        s32 index = ((s32)(angle * 651.8986206F)) & 0xFFF;
-
-        sin = (f32)gSYSinTable[index & SINTABLE_MASK_ID] * (1.0F / 32768.0F);
-        return (index & 0x800) ? -sin : sin;
-    }
     bits = ndsLbCommonSinTableBits(angle);
     __builtin_memcpy(&sin, &bits, sizeof(sin));
     return sin;
@@ -12227,14 +12217,6 @@ f32 __attribute__((section(".itcm"))) lbCommonCos(f32 angle)
     u32 bits;
     f32 cos;
 
-    if (gNdsLbCommonTrigInt == 0u)
-    {
-        s32 index =
-            ((s32)((angle + F_CST_DTOR32(90.0F)) * 651.8986206F)) & 0xFFF;
-
-        cos = (f32)gSYSinTable[index & SINTABLE_MASK_ID] * (1.0F / 32768.0F);
-        return (index & 0x800) ? -cos : cos;
-    }
     bits = ndsLbCommonSinTableBits(angle + F_CST_DTOR32(90.0F));
     __builtin_memcpy(&cos, &bits, sizeof(cos));
     return cos;

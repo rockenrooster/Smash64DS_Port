@@ -33,10 +33,8 @@ static u32 sNdsStageGxFirstWord, sNdsStageGxWordCount, sNdsStageGxAlpha;
  * ticks a frame (a 968-cycle DMA0CNT read, 19 a frame). Now the CPU patches
  * the next runs while the geometry engine drains the previous span, and a
  * wait remains only where a FIFO command follows (an open Task 36 segment's
- * matrix pop) or a DMA would be re-armed (ndsStageGxFlush). Same-ROM A/B
- * word: gNdsStageGxOverlap (0 = the old drain at every span start). */
+ * matrix pop) or a DMA would be re-armed (ndsStageGxFlush). */
 static u32 sNdsStageGxDmaFirst, sNdsStageGxDmaEnd;
-volatile u32 gNdsStageGxOverlap __attribute__((used, section(".data"))) = 1u;
 
 /* Words that outlive the frame (P2-2p8, 2026-09-29). The program's words are
  * a persistent buffer nothing but these patches writes, so a patch whose
@@ -49,9 +47,7 @@ volatile u32 gNdsStageGxOverlap __attribute__((used, section(".data"))) = 1u;
  *    is constant within a match unless the FOV moves; the per-triangle depth
  *    column the painter pass writes is still rewritten every frame.
  * Each run remembers what its words hold; a run that returned early keeps its
- * old record, so a skipped frame never vouches for words it did not write.
- * Same-ROM A/B word gNdsStageGxMemo (0 = patch every word every frame). */
-volatile u32 gNdsStageGxMemo __attribute__((used, section(".data"))) = 1u;
+ * old record, so a skipped frame never vouches for words it did not write. */
 typedef struct NDSStageGxRunMemo
 {
     u32 poly_fmt;
@@ -404,9 +400,8 @@ static inline sb32 ndsStageGxInsideNear(const NDSStageGxRun *run, const NDSRende
  * (w - x, w + x, w - y, w + y) is maximised over the box's corners like the
  * near test above; a box with no corner inside one side is invisible.
  * Multi-binding runs are never skipped. The nine VS venues keep the old path
- * until measured. Same-ROM A/B word gNdsStageGxCull (0 = draw every run). */
+ * until measured. */
 #define NDS_STAGE_GX_CULL_FIRST_GKIND 9u /* nGRKindPupupuSmall: 1P venues on */
-volatile u32 gNdsStageGxCull __attribute__((used, section(".data"))) = 1u;
 volatile u32 gNdsStageGxCulledRuns;
 /* P2-6 (2026-10-02): A RIGID RUN TESTS ITS WORLD BOX. A rigid binding's world
  * is constant until the next capture, so its runs' object-space boxes go to
@@ -465,8 +460,7 @@ static sb32 ndsStageGxRunOutsideView(u32 index)
     u32 plane;
     u32 axis;
 
-    if ((gNdsStageGxCull == 0u) ||
-        (sNdsNativeStagePacketActive->gkind < NDS_STAGE_GX_CULL_FIRST_GKIND) ||
+    if ((sNdsNativeStagePacketActive->gkind < NDS_STAGE_GX_CULL_FIRST_GKIND) ||
         ((r->binding_lo != 0u) == (r->binding_hi != 0u)) ||
         ((r->binding_lo & (r->binding_lo - 1u)) != 0u) ||
         ((r->binding_hi & (r->binding_hi - 1u)) != 0u))
@@ -658,9 +652,7 @@ static inline void ndsStageGxSetSpanState(u32 alpha,
  * cycles, 27 spans a frame, 8K ticks of the whole-match gate profile on that
  * one instruction. The writes and their order are unchanged -- after a flush
  * no batch is open, so neither the Task 36 end nor EndBatch below writes
- * these registers -- only the DMA they no longer wait behind has moved.
- * Same-ROM A/B word gNdsStageGxStateFirst (0 = after the flush). */
-volatile u32 gNdsStageGxStateFirst __attribute__((used, section(".data"))) = 1u;
+ * these registers -- only the DMA they no longer wait behind has moved. */
 
 static void ndsStageGxAppend(const NDSStageGxRun *run,
                            const NDSNativeStagePreparedRun *prepared)
@@ -672,11 +664,8 @@ static void ndsStageGxAppend(const NDSStageGxRun *run,
         (run->first_word != sNdsStageGxFirstWord + sNdsStageGxWordCount ||
          alpha != sNdsStageGxAlpha))
     {
-        if (gNdsStageGxStateFirst != 0u)
-        {
-            ndsStageGxSetSpanState(alpha, prepared);
-            state_written = TRUE;
-        }
+        ndsStageGxSetSpanState(alpha, prepared);
+        state_written = TRUE;
         ndsStageGxFlush();
     }
     if (sNdsStageGxWordCount == 0u)
@@ -685,8 +674,7 @@ static void ndsStageGxAppend(const NDSStageGxRun *run,
          * hidden run or state edge. Only an open Task 36 segment writes the
          * FIFO here (its matrix mode and pop), and only that has to follow
          * the previous span's DMA. */
-        if ((gNdsStageGxOverlap == 0u) ||
-            (sNdsNativeStageOwnerExecution.task36_segment_active != FALSE))
+        if (sNdsNativeStageOwnerExecution.task36_segment_active != FALSE)
         {
             NDS_FIGHTER_PACKET_DMA_WAIT();
         }
@@ -915,60 +903,6 @@ static inline u32 ndsStageGxProjectionSerial(void)
     return sNdsStageGxProjSerial;
 }
 
-/* gNdsStageGxMemo = 2 (lab): the memo still decides, and every word it keeps
- * is compared with the word the patch would have written. [0] material words
- * checked, [1] of them different, [2] projection words checked, [3] different
- * (the painter's z column excluded: it is rewritten every frame). */
-volatile u32 gNdsStageGxMemoVerify[4] __attribute__((used));
-
-static void __attribute__((noinline, cold)) ndsStageGxMemoVerifyRun(
-    const NDSStageGxRun *r, const NDSNativeStagePreparedRun *prepared,
-    u32 submit_class, u32 owner, sb32 projection_kept, sb32 material_kept)
-{
-    u32 p;
-
-    for (p = r->first_patch; p < (u32)r->first_patch + r->patch_count; p++)
-    {
-        const NDSStageGxPatch *q = &sNdsStageGxPatches[p];
-        const u32 *dst = &sNdsStageGxWords[q->word];
-        u32 fresh[16];
-        u32 i;
-
-        if ((q->kind == NDS_STAGE_GX_MATERIAL) && (material_kept != FALSE) &&
-            (ndsStageGxMaterial(fresh, prepared, submit_class, owner) != FALSE))
-        {
-            NDS_DIAG(gNdsStageGxMemoVerify[0] += 3u);
-            for (i = 0u; i < 3u; i++)
-            {
-                NDS_DIAG(gNdsStageGxMemoVerify[1] += (fresh[i] != dst[i]) ? 1u : 0u);
-            }
-        }
-        else if (((q->kind == NDS_STAGE_GX_NOZ) ||
-                  (q->kind == NDS_STAGE_GX_PROJECTION)) &&
-                 (projection_kept != FALSE))
-        {
-            if (q->kind == NDS_STAGE_GX_NOZ)
-            {
-                memcpy(fresh, sNdsNativeStageOwnerExecution.projection,
-                       sizeof(fresh));
-            }
-            else
-            {
-                ndsStageGxProjection(fresh);
-            }
-            for (i = 0u; i < 16u; i++)
-            {
-                if ((q->kind == NDS_STAGE_GX_NOZ) && ((i & 3u) == 2u))
-                {
-                    continue;
-                }
-                NDS_DIAG(gNdsStageGxMemoVerify[2]++);
-                NDS_DIAG(gNdsStageGxMemoVerify[3] += (fresh[i] != dst[i]) ? 1u : 0u);
-            }
-        }
-    }
-}
-
 /* Main RAM since 2026-10-04: every stage program is head-ordered (format 7)
  * and its segments take ndsStageGxCommitFast, so this runs only for a
  * declined segment; its 3,576 B of ITCM went to the fighter joint walk. */
@@ -998,9 +932,8 @@ static sb32 __attribute__((noinline)) ndsStageGxDraw(u32 index, u32 owner, NDSRe
      * ndsStageGxFlush's DMA, and the cold path's caller drains first), so it
      * waits only when the DMA in flight may still be reading the words it is
      * about to patch. */
-    if ((gNdsStageGxOverlap == 0u) ||
-        ((r->first_word < sNdsStageGxDmaEnd) &&
-         ((u32)r->first_word + r->word_count > sNdsStageGxDmaFirst)))
+    if ((r->first_word < sNdsStageGxDmaEnd) &&
+        ((u32)r->first_word + r->word_count > sNdsStageGxDmaFirst))
     {
         NDS_FIGHTER_PACKET_DMA_WAIT();
     }
@@ -1019,26 +952,18 @@ static sb32 __attribute__((noinline)) ndsStageGxDraw(u32 index, u32 owner, NDSRe
         ndsStageGxRefreshNear(native);
         return FALSE;
     }
-    if (gNdsStageGxMemo != 0u)
-    {
-        NDSStageGxRunMemo *m = &sNdsStageGxRunMemo[index];
+    NDSStageGxRunMemo *m = &sNdsStageGxRunMemo[index];
 
-        projection_serial = ndsStageGxProjectionSerial();
-        projection_kept = (m->projection_serial == projection_serial) ?
-            TRUE : FALSE;
-        material_kept =
-            ((m->material_gen ==
-              sNdsRendererHardwareTextureKeyGeneration + 1u) &&
-             (m->poly_fmt == prepared->poly_fmt) &&
-             (m->texture_name == prepared->texture_name) &&
-             (m->texture_params == prepared->texture_params) &&
-             (m->textured == prepared->textured)) ? TRUE : FALSE;
-        if (gNdsStageGxMemo == 2u)
-        {
-            ndsStageGxMemoVerifyRun(r, prepared, native->submit_class, owner,
-                                    projection_kept, material_kept);
-        }
-    }
+    projection_serial = ndsStageGxProjectionSerial();
+    projection_kept = (m->projection_serial == projection_serial) ?
+        TRUE : FALSE;
+    material_kept =
+        ((m->material_gen ==
+          sNdsRendererHardwareTextureKeyGeneration + 1u) &&
+         (m->poly_fmt == prepared->poly_fmt) &&
+         (m->texture_name == prepared->texture_name) &&
+         (m->texture_params == prepared->texture_params) &&
+         (m->textured == prepared->textured)) ? TRUE : FALSE;
     /* Validate/patch non-painter inputs before consuming depth or emitting vertices. */
     for (p = r->first_patch; p < (u32)r->first_patch + r->patch_count; p++)
     {
@@ -1118,18 +1043,13 @@ static sb32 __attribute__((noinline)) ndsStageGxDraw(u32 index, u32 owner, NDSRe
             noz_local = FALSE;
         }
     }
-    if (gNdsStageGxMemo != 0u)
-    {
-        /* Every patch of the run was written or proven current. */
-        NDSStageGxRunMemo *m = &sNdsStageGxRunMemo[index];
-
-        m->projection_serial = projection_serial;
-        m->poly_fmt = prepared->poly_fmt;
-        m->texture_name = prepared->texture_name;
-        m->texture_params = prepared->texture_params;
-        m->textured = prepared->textured;
-        m->material_gen = sNdsRendererHardwareTextureKeyGeneration + 1u;
-    }
+    /* Every patch of the run was written or proven current. */
+    m->projection_serial = projection_serial;
+    m->poly_fmt = prepared->poly_fmt;
+    m->texture_name = prepared->texture_name;
+    m->texture_params = prepared->texture_params;
+    m->textured = prepared->textured;
+    m->material_gen = sNdsRendererHardwareTextureKeyGeneration + 1u;
     if (native->submit_class != NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
     { ndsRendererHardwareEnterProjectedForeground(); }
     if (noz_local != FALSE)
@@ -1200,8 +1120,7 @@ static sb32 __attribute__((noinline)) ndsStageGxDraw(u32 index, u32 owner, NDSRe
  *    ndsStageGxAppend split only where the alpha state changes, and those
  *    registers are outside the FIFO, so the word stream is the same.
  * A failure once the depth counter has moved restores it and returns FALSE;
- * the per-run loop then commits the segment from the same state. Same-ROM A/B
- * word gNdsStageGxFast (0 = the per-run loop everywhere). */
+ * the per-run loop then commits the segment from the same state. */
 #if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_STAGE_GX_FAST_LIVE 1
 #else
@@ -1209,14 +1128,11 @@ static sb32 __attribute__((noinline)) ndsStageGxDraw(u32 index, u32 owner, NDSRe
 #endif
 
 #if NDS_STAGE_GX_FAST_LIVE
-volatile u32 gNdsStageGxFast __attribute__((used, section(".data"))) = 1u;
 /* P2-2p8 (2026-10-05): the fast commit's per-run texture accounting is summed
  * once after the run walk, and its class accounting adds only the (at most
  * two) classes the segment's runs hold instead of all eight -- the same
  * totals, without a read-modify-write per run and per class (accounting and
- * run loop were ~19K cycles of the commit's ~72K a frame on Dream Land).
- * Same-ROM A/B word gNdsStageGxFastLean (0 = the per-run writes). */
-volatile u32 gNdsStageGxFastLean __attribute__((used, section(".data"))) = 1u;
+ * run loop were ~19K cycles of the commit's ~72K a frame on Dream Land). */
 volatile u32 gNdsStageGxFastCommits;
 volatile u32 gNdsStageGxFastDeclines;
 #define NDS_STAGE_GX_FAST_SEGMENTS 32u
@@ -1224,8 +1140,6 @@ volatile u32 gNdsStageGxFastDeclines;
 /* A segment whose hidden subset keeps moving goes back to declining after
  * this many rebuilds (a build is a cold walk of the segment's runs). */
 #define NDS_STAGE_GX_FAST_VARIANT_BUILDS 8u
-/* Same-ROM A/B word for the hidden-binding builds (0 = decline, as before). */
-volatile u32 gNdsStageGxFastHidden __attribute__((used, section(".data"))) = 1u;
 #define NDS_STAGE_GX_FAST_NEAR_MAX 96u
 typedef struct NDSStageGxFastSeg
 {
@@ -1506,13 +1420,11 @@ static sb32 __attribute__((noinline)) ndsStageGxCommitFast(
     u32 p;
     u32 i;
 
-    if ((gNdsStageGxFast == 0u) || (gNdsStageGxMemo != 1u) ||
-        (gNdsStageGxOverlap == 0u) || (gNdsNativeStageRunWitness != 0u) ||
+    if ((gNdsNativeStageRunWitness != 0u) ||
         (segment_index >= NDS_STAGE_GX_FAST_SEGMENTS) || (stats == NULL) ||
         (projection == NULL) || (composed_all == NULL) ||
         (sNdsNativeStageOwnerExecution.camera_modelview == NULL) ||
-        ((gNdsStageGxCull != 0u) &&
-         (sNdsNativeStagePacketActive->gkind >= NDS_STAGE_GX_CULL_FIRST_GKIND)))
+        (sNdsNativeStagePacketActive->gkind >= NDS_STAGE_GX_CULL_FIRST_GKIND))
     {
         return FALSE;
     }
@@ -1520,10 +1432,9 @@ static sb32 __attribute__((noinline)) ndsStageGxCommitFast(
     if (s->load_serial != sNdsStageGxLoadSerial + 1u)
     {
         ndsStageGxFastBuild(segment_index, segment,
-            (gNdsStageGxFastHidden != 0u) ?
-                sNdsNativeStageOwnerExecution.hidden_binding_mask : 0u);
+            sNdsNativeStageOwnerExecution.hidden_binding_mask);
     }
-    else if ((gNdsStageGxFastHidden != 0u) && (s->eligible != 0u) &&
+    else if ((s->eligible != 0u) &&
              ((sNdsNativeStageOwnerExecution.hidden_binding_mask &
                s->all_binding_mask) != s->skip_mask) &&
              (s->variant_builds < NDS_STAGE_GX_FAST_VARIANT_BUILDS))
@@ -1756,97 +1667,57 @@ static sb32 __attribute__((noinline)) ndsStageGxCommitFast(
     }
     ndsRendererNativeStageTask36EndSegment();
     ndsRendererHardwareEndBatch();
-    if (gNdsStageGxFastLean != 0u)
+    /* The per-run texture accounting summed once after the walk: the
+     * stats keep the last textured run's format, as the per-run writes
+     * left them, and nothing between reads them. */
+    const NDSNativeStagePreparedRun *prepared =
+        &sNdsNativeStageOwnerExecution.runs[segment->first_run];
+    const NDSNativeStagePreparedRun *const prepared_end =
+        prepared + segment->run_count;
+    const NDSNativeStagePreparedRun *last_textured = NULL;
+    const u32 frame_stamp = sNdsRendererHardwareFrameSerial + 1u;
+    u32 textured_runs = 0u;
+
+    for (; prepared < prepared_end; prepared++)
     {
-        /* The per-run texture accounting summed once after the walk: the
-         * stats keep the last textured run's format, as the per-run writes
-         * left them, and nothing between reads them. */
-        const NDSNativeStagePreparedRun *prepared =
-            &sNdsNativeStageOwnerExecution.runs[segment->first_run];
-        const NDSNativeStagePreparedRun *const prepared_end =
-            prepared + segment->run_count;
-        const NDSNativeStagePreparedRun *last_textured = NULL;
-        const u32 frame_stamp = sNdsRendererHardwareFrameSerial + 1u;
-        u32 textured_runs = 0u;
-
-        for (; prepared < prepared_end; prepared++)
-        {
-            const u32 alpha = (prepared->alpha_test != 0u) ?
-                (0x100u | prepared->alpha_ref) : 0u;
-
-            if ((s->skip_mask != 0u) &&
-                (((s->skip_mask >> sNdsNativeStageRuns[
-                       (u32)(prepared - sNdsNativeStageOwnerExecution.runs)]
-                       .binding_index) & 1u) != 0u))
-            {
-                continue;
-            }
-            if (prepared->textured != 0u)
-            {
-                NDSRendererHardwareTextureCacheEntry *entry =
-                    prepared->texture_entry;
-
-                entry->last_used_frame = frame_stamp;
-                entry->params = prepared->texture_params;
-                if (entry->pinned != 0u)
-                {
-                    ndsRendererHardwareRecordBattleStaticTextureHit(entry);
-                }
-                textured_runs++;
-                last_textured = prepared;
-            }
-            if (alpha != span_alpha)
-            {
-                ndsStageGxSetSpanState(alpha, prepared);
-                span_alpha = alpha;
-            }
-        }
-        if (last_textured != NULL)
-        {
-            stats->hardware_texture_ready_count += textured_runs;
-            stats->hardware_texture_bind_count += textured_runs;
-            stats->hardware_texture_format = last_textured->texture_format;
-            stats->hardware_texture_width = last_textured->texture_width;
-            stats->hardware_texture_height = last_textured->texture_height;
-            ndsRendererProfileRecordTextureBinds(textured_runs);
-        }
-    }
-    else
-    for (i = 0u; i < segment->run_count; i++)
-    {
-        const NDSNativeStagePreparedRun *prepared =
-            &sNdsNativeStageOwnerExecution.runs[(u32)segment->first_run + i];
         const u32 alpha = (prepared->alpha_test != 0u) ?
             (0x100u | prepared->alpha_ref) : 0u;
 
         if ((s->skip_mask != 0u) &&
             (((s->skip_mask >> sNdsNativeStageRuns[
-                   (u32)segment->first_run + i].binding_index) & 1u) != 0u))
+                   (u32)(prepared - sNdsNativeStageOwnerExecution.runs)]
+                   .binding_index) & 1u) != 0u))
         {
             continue;
         }
         if (prepared->textured != 0u)
         {
-            NDSRendererHardwareTextureCacheEntry *entry = prepared->texture_entry;
+            NDSRendererHardwareTextureCacheEntry *entry =
+                prepared->texture_entry;
 
-            entry->last_used_frame = sNdsRendererHardwareFrameSerial + 1u;
+            entry->last_used_frame = frame_stamp;
             entry->params = prepared->texture_params;
             if (entry->pinned != 0u)
             {
                 ndsRendererHardwareRecordBattleStaticTextureHit(entry);
             }
-            stats->hardware_texture_ready_count++;
-            stats->hardware_texture_bind_count++;
-            stats->hardware_texture_format = prepared->texture_format;
-            stats->hardware_texture_width = prepared->texture_width;
-            stats->hardware_texture_height = prepared->texture_height;
-            ndsRendererProfileRecordTextureBind();
+            textured_runs++;
+            last_textured = prepared;
         }
         if (alpha != span_alpha)
         {
             ndsStageGxSetSpanState(alpha, prepared);
             span_alpha = alpha;
         }
+    }
+    if (last_textured != NULL)
+    {
+        stats->hardware_texture_ready_count += textured_runs;
+        stats->hardware_texture_bind_count += textured_runs;
+        stats->hardware_texture_format = last_textured->texture_format;
+        stats->hardware_texture_width = last_textured->texture_width;
+        stats->hardware_texture_height = last_textured->texture_height;
+        ndsRendererProfileRecordTextureBinds(textured_runs);
     }
     if (s->skip_mask == 0u)
     {
@@ -1868,7 +1739,7 @@ static sb32 __attribute__((noinline)) ndsStageGxCommitFast(
     }
 
     /* ndsRendererNativeStageAccountRun over the segment's runs. */
-    if ((gNdsStageGxFastLean != 0u) && (s->class_nz_count != 0xffu))
+    if (s->class_nz_count != 0xffu)
     {
         for (i = 0u; i < s->class_nz_count; i++)
         {

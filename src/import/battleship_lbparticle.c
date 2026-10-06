@@ -3816,7 +3816,6 @@ static NDSParticleXfScale sNdsParticleXfScale[NDS_PARTICLE_XF_SCALE_SLOTS];
 /* Bumped with dLBParticleCurrentTransformID, which is a u8 and repeats every
  * 256 passes. */
 static u32 sNdsParticleDrawPass = 1u;
-volatile u32 gNdsParticleXfScaleCache __attribute__((used, section(".data"))) = 1u;
 
 static void ndsParticleTransformForDraw(LBParticle *pc,
                                         const Vec3f *camera_right,
@@ -3897,15 +3896,14 @@ static void ndsParticleTransformForDraw(LBParticle *pc,
          * mirrors) are the same for every particle of this transform in this
          * pass -- its affine is built once a pass above -- so a burst paid
          * two sqrtf and nine float products a particle for one answer. Kept
-         * per transform for the pass, exactly the values computed below.
-         * Same-ROM A/B word gNdsParticleXfScaleCache (0 = per particle). */
+         * per transform for the pass, exactly the values computed below. */
         NDSParticleXfScale *memo =
             &sNdsParticleXfScale[((uintptr_t)xf >> 4) &
                                  (NDS_PARTICLE_XF_SCALE_SLOTS - 1u)];
         f32 scale_x;
         f32 scale_y;
 
-        if ((gNdsParticleXfScaleCache != 0u) && (memo->xf == xf) &&
+        if ((memo->xf == xf) &&
             (memo->transform_id == sNdsParticleDrawPass))
         {
             scale_x = memo->scale_x;

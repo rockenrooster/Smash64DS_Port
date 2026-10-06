@@ -171,18 +171,6 @@ void ftComputerSetupAll(GObj *fighter_gobj)
 #endif
 }
 
-/* P2-2p8 (2026-10-04, owner ruling D12d): CPU decisions at 30 Hz in VS
- * battles. ftComputerProcessAll (ftcomputer.c:7801) decides -- trait,
- * behaviour, objective -- on every source tick on which its input script is
- * idle (input_wait 0). On a batch's earlier tick (gNdsFtPoseEvalTick 0) the
- * same body runs without that decision: the behaviour-change countdown still
- * ticks, and ftComputerUpdateInputs has nothing to do while input_wait is 0,
- * so the inputs in force are held one tick longer. Each CPU decides at most
- * once a presentation; a one-tick batch (every tick is the last) keeps the
- * source rate, as do 1P battles. Changes CPU behaviour and the replay digest
- * (owner-approved); humans are unaffected. A/B word gNdsCpuDecide30Hz
- * (0 = every tick). */
-volatile u32 gNdsCpuDecide30Hz __attribute__((used, section(".data"))) = 0u;
 extern volatile u32 gNdsFtPoseEvalTick;
 extern SCCommonData gSCManagerSceneData;
 
@@ -252,16 +240,6 @@ void ftComputerProcessAll(GObj *fighter_gobj)
         fp->input.cp.button_inputs = 0u;
         fp->input.cp.stick_range.x = 0;
         fp->input.cp.stick_range.y = 0;
-    }
-    else if ((gNdsCpuDecide30Hz != 0u) && (gNdsFtPoseEvalTick == 0u) &&
-             (fp->fkind != nFTKindBoss) && (fp->computer.input_wait == 0) &&
-             (gSCManagerSceneData.scene_curr == nSCKindVSBattle))
-    {
-        /* The source body with its decision block skipped (see above). */
-        if (fp->computer.behavior_change_wait != 0)
-        {
-            fp->computer.behavior_change_wait--;
-        }
     }
     else
     {

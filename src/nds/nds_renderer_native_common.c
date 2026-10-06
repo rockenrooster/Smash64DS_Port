@@ -5481,8 +5481,7 @@ static void __attribute__((noinline)) ndsRendererEntryEffectLoadLitMatrices(
  * behind -- texturing on, the last threshold group's alpha reference, fog,
  * alpha test off -- are set on the CPU. The arena exists only on Sector Z
  * (ndsGRSectorSetupInitAll); elsewhere Fox's entry Arwing is one fly-by.
- * Same-ROM A/B word gNdsEntryEffectPacket (0 = the group loop every draw). */
-volatile u32 gNdsEntryEffectPacket __attribute__((used, section(".data"))) = 1u;
+ */
 __attribute__((used)) volatile u32 gNdsEntryEffectPacketRecords;
 __attribute__((used)) volatile u32 gNdsEntryEffectPacketReplays;
 __attribute__((used)) volatile u32 gNdsEntryEffectPacketFaults;
@@ -7393,8 +7392,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
  * returns FALSE whenever the executor would not take the branch -- before any
  * GX write, except when a ramp palette or the packet turns out stale after
  * the matrix load, which the executor then repeats with the same values.
- * Same-ROM A/B word gNdsEntryEffectFoxReplay (0 = always the executor). */
-volatile u32 gNdsEntryEffectFoxReplay __attribute__((used, section(".data"))) = 1u;
+ */
 __attribute__((used)) volatile u32 gNdsEntryEffectFoxReplayDraws;
 __attribute__((used)) volatile u32 gNdsEntryEffectFoxReplayDeclines;
 
@@ -7418,7 +7416,7 @@ s32 ndsRendererReplayNativeEntryEffectFox(u32 root_offset,
     u32 initial_env_color;
 
     NDS_FIGHTER_PACKET_DMA_WAIT();
-    if ((gNdsEntryEffectFoxReplay == 0u) || (config == NULL) ||
+    if ((config == NULL) ||
         (stats == NULL) || (config->initial_projection == NULL) ||
         (config->initial_modelview == NULL) ||
         (gNdsEntryEffectStateCache == 0u) || (gNdsEntryEffectStaticOnce == 0u) ||
@@ -7985,8 +7983,7 @@ static NDSEntryEffectPacket *ndsRendererEntryEffectPacketFor(u32 slot)
 {
     NDSEntryEffectPacket *packet;
 
-    if ((gNdsEntryEffectPacket == 0u) ||
-        (sNdsEntryEffectPacketArenaGeneration != gNdsTaskmanHeapGeneration))
+    if (sNdsEntryEffectPacketArenaGeneration != gNdsTaskmanHeapGeneration)
     {
         return NULL;
     }
@@ -12609,8 +12606,7 @@ typedef struct NDSFtrLeanMat
  * fits (NDS_FTR_LEAN_ENTRY_VTX16 in renderer_fighter_lean.h). The GXFIFO DMA
  * of the four lean lists cost ~14.8K ticks a frame of bus stalls on the gate
  * (same ROM, DMA skipped vs kept); VTX_16's second parameter word was a third
- * of those lists' words. Same-ROM A/B word gNdsFtrLeanVtx10 (0 = VTX_16). */
-volatile u32 gNdsFtrLeanVtx10 __attribute__((used, section(".data"))) = 1u;
+ * of those lists' words. */
 
 /* ~300 clock reads per materialization, and materializations are tail
  * frames: attribution, so only in a phase-ticks build (NDS_FTR_LEAN_TIMED). */
@@ -13435,8 +13431,7 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
     /* Slice 6: NDS_FTR_LEAN_ENTRY_WIDE asks for entry 0 over the whole
      * region (route 1 only); the other entry is given up while it holds. */
     u32 wide = ((entry & NDS_FTR_LEAN_ENTRY_WIDE) != 0u) ? TRUE : FALSE;
-    u32 vtx10 = (((entry & NDS_FTR_LEAN_ENTRY_VTX16) == 0u) &&
-                 (gNdsFtrLeanVtx10 != 0u)) ? 1u : 0u;
+    u32 vtx10 = ((entry & NDS_FTR_LEAN_ENTRY_VTX16) == 0u) ? 1u : 0u;
     u32 capacity = (wide != FALSE) ? ndsFtrLeanWideCapacity() :
         ndsFtrLeanWordCapacity();
     /* Slice 6: the fence the old path's key would carry for this record --
