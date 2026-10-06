@@ -28,6 +28,9 @@ _Static_assert(sizeof(NDSBattleForeignImageRow) == 16u, "foreign image row ABI")
 typedef struct NDSPreviewResident {
     u32 generation;
     u32 model_source_bytes;
+    /* Bit i: section i's spans ascend by source offset without overlap
+     * (checked at REGISTER), so a lookup may binary-search them. */
+    u32 sorted_sections;
     NDSPreviewPackSection *sections;
     NDSPreviewPackSpan *spans;
 #if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
@@ -121,6 +124,44 @@ static s32 ndsPreviewFileOffset(const NDSRelocLoadedFile *loaded,
         if (!ndsPreviewRange(source_offset, size, loaded->data_size)) { return FALSE; }
         *out_offset = source_offset;
         return TRUE;
+    }
+    if ((size != 0u) &&
+        ((resident->sorted_sections & (1u << loaded->reserved[1])) != 0u))
+    {
+        /* Ascending, non-overlapping spans: only the last span starting at or
+         * before the offset can hold it, which is the one the scan below
+         * would find (P2-2p8, 2026-10-06: a lean materialization maps every
+         * image delta, ~750 cycles a scan on a battle core pack). */
+        const NDSPreviewPackSpan *spans = &resident->spans[section->first_span];
+        u32 lo = 0u;
+        u32 hi = section->span_count;
+
+        while (lo < hi)
+        {
+            const u32 mid = (lo + hi) >> 1;
+
+            if (spans[mid].source_offset <= source_offset)
+            {
+                lo = mid + 1u;
+            }
+            else
+            {
+                hi = mid;
+            }
+        }
+        if (lo != 0u)
+        {
+            const NDSPreviewPackSpan *span = &spans[lo - 1u];
+
+            if (ndsPreviewRange(source_offset - span->source_offset, size,
+                                span->data_bytes))
+            {
+                *out_offset = span->data_offset + source_offset -
+                    span->source_offset;
+                return TRUE;
+            }
+        }
+        return FALSE;
     }
     for (i = 0u; i < section->span_count; i++)
     {
@@ -766,14 +807,24 @@ s32 ndsRelocPreviewFighterLoadStep(void *handle, u32 byte_budget, u32 *out_bytes
         resident->sections = load->sections;
         resident->spans = load->spans;
         resident->generation = sNdsRelocSceneGeneration;
+        resident->sorted_sections = 0u;
         for (i = 0u; i < load->section_count; i++)
         {
             const NDSPreviewPackSection *s = &load->sections[i];
+            u32 sorted = 1u;
             u32 j;
 
             for (j = 0u; j < s->span_count; j++)
             {
                 const NDSPreviewPackSpan *span = &load->spans[s->first_span + j];
+
+                if ((j != 0u) &&
+                    ((span[-1].source_offset > span->source_offset) ||
+                     (span[-1].data_bytes >
+                      span->source_offset - span[-1].source_offset)))
+                {
+                    sorted = 0u;
+                }
 
                 if (!ndsPreviewRange(span->source_offset, span->data_bytes,
                                      s->source_bytes) ||
@@ -782,6 +833,10 @@ s32 ndsRelocPreviewFighterLoadStep(void *handle, u32 byte_budget, u32 *out_bytes
                 {
                     ndsPreviewPackLoadHalt(8u, (u32)fkind);
                 }
+            }
+            if ((sorted != 0u) && (i < 32u))
+            {
+                resident->sorted_sections |= 1u << i;
             }
             if (ndsRelocFindLoadedFileByAsset(s->asset_id) != NULL)
             {

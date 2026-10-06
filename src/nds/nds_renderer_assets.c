@@ -4263,7 +4263,7 @@ s32 ndsRendererNativeEnsureKirbyCopyHat(
  * program's SourceOwners table, or NULL for a face head (whose program is
  * single-file) and for any owner that is not a trio program at all -- both
  * fall through to the owner's own tables. */
-static const u8 *ndsKirbyTrioProgramSourceOwners(
+static const u8 *ndsKirbyTrioProgramSourceOwnersScan(
     const NDSNativeFighterOwnerRuntime *owner, u32 *count, u32 *detail)
 {
     u32 index;
@@ -4294,6 +4294,35 @@ static const u8 *ndsKirbyTrioProgramSourceOwners(
         return sNdsNativeKirbyCopyTransitionSourceOwners;
     }
     return NULL;
+}
+
+/* The scan's answer is a pure function of the owner (every table is const),
+ * and a materialization asks it for every root of one owner: the last
+ * owner's answer is kept (P2-2p8, 2026-10-06). *detail is written only when
+ * the scan writes it. */
+static const u8 *ndsKirbyTrioProgramSourceOwners(
+    const NDSNativeFighterOwnerRuntime *owner, u32 *count, u32 *detail)
+{
+    static const NDSNativeFighterOwnerRuntime *s_owner;
+    static const u8 *s_owners;
+    static u32 s_count;
+    static u32 s_detail;
+    static u32 s_valid;
+
+    if ((s_valid == 0u) || (owner != s_owner))
+    {
+        s_detail = 0u;
+        s_owners = ndsKirbyTrioProgramSourceOwnersScan(owner, &s_count,
+                                                       &s_detail);
+        s_owner = owner;
+        s_valid = 1u;
+    }
+    *count = s_count;
+    if (s_owners != NULL)
+    {
+        *detail = s_detail;
+    }
+    return s_owners;
 }
 #endif
 

@@ -177,3 +177,32 @@ line (|s| x distance against ~3 x the summed extents), and the kernel's calls
 are dominated by fighters on or next to the surface, so nearly every call
 paid the integer test and then the float kernel. CSVs kept.
 
+## q44 (clock reverted) and q45: materialization lookups (exact)
+
+The Sector Z census put two lookups in every lean materialization:
+`ndsPreviewFileOffset` (each native image delta maps its source offset
+through the battle core pack's spans by a linear scan, ~750 cycles a call,
+38.6K a materialization frame) and `ndsKirbyTrioProgramSourceOwners` (a
+12-entry pointer scan per root for every fighter, 14.7K). q45 keeps:
+
+- span map: a section whose spans ascend without overlap (checked once when
+  the pack registers, `sorted_sections`) is binary-searched; only the last
+  span starting at or before the offset can hold it, which is the span the
+  scan returns. Size-0 queries and unsorted sections keep the scan.
+- trio owners: the scan is a pure function of the owner (const tables), so
+  the last owner's answer is kept.
+
+q44 also ran the object-animation clock (`gcParseDObjAnimJoint`'s wait and
+frame adds and payload conversions) through `nds_f32_exact.h`'s small-integer
+path, bit for bit; inlined into the Thumb parser it read paired +2,176 /
++3,328 / +4,608 against q43 (the libgcc adder in ITCM is cheaper than the
+inline integer path plus `__clzsi2`). Reverted; q45 is q44 without it.
+
+| config | digest diff | P50 | P95 | over | paired median (vs q43) |
+|---|---|---|---|---|---|
+| gate | 0 | 764,672 -> 763,648 | 1,043,584 -> 1,046,144 | 57 -> 58 | +384 |
+| g0 (Castle) | 0 | 799,424 -> 800,512 | 1,093,696 -> 1,095,552 | 77 -> 77 | +768 |
+| sz (Sector Z) | 0 | 848,576 -> 847,616 | 1,159,552 -> 1,155,136 | 120 -> 119 | -896 |
+
+Neutral (the lookups run in materialization frames only); kept as exact.
+
