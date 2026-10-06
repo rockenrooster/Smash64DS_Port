@@ -12129,6 +12129,7 @@ typedef struct NDSFtrLeanSlotState
 
 static NDSFtrLeanSlotState sNdsFtrLeanSlots[NDS_FIGHTER_PACKET_SLOTS];
 static void ndsFtrLeanSpareIdentity(NDSFtrLeanSlotState *s);
+static void ndsFtrLeanPoolDrop(u32 battle_slot);
 
 static inline void ndsFtrLeanMarkDirty(NDSFtrLeanEntryState *state,
                                        const u32 *words, u32 first,
@@ -12285,6 +12286,7 @@ void ndsFtrLeanPacketDrop(u32 battle_slot)
     {
         s->spare_buf = NULL;
     }
+    ndsFtrLeanPoolDrop(battle_slot);
 }
 
 void ndsFtrLeanPacketNoteKind(u32 battle_slot, u32 kind)
@@ -14032,12 +14034,314 @@ static void ndsFtrLeanSpareIdentity(NDSFtrLeanSlotState *s)
     s->phys_on = 0u;
 }
 
+/* ---- the parked-list pool behind the spare (P2-2p8, 2026-10-06) -----------
+ * A slot's states outnumber its two entries and spare: on the four-CPU lab
+ * match 91% of the lean key events name a key the slot has drawn before, yet
+ * 4 x Yoshi materializes 75 lists for 36 distinct keys and Peach's Castle 45
+ * for 26 -- every one of the others re-derives a list the slot held earlier
+ * and lost (~300-500K ticks each, the over-gate frames' largest premium).
+ * The spare keeps one evicted list; the pool keeps the lists the spare is
+ * about to lose: the entry state, the packet, its words (and Link's texgen
+ * map after them) and its variant records, copied compactly into one of a
+ * few fixed slots from the battle's general heap. A miss whose key a parked
+ * copy holds (by the entry rules: tint set, texture fence, key, records)
+ * copies it back into the victim and re-bases its words -- ~10K cycles of
+ * copying instead of a materialization. The lab pool of 2026-10-05
+ * (`artifacts/performance/2026-10-05_lean-park`) replaced the spare where the
+ * heap refused it; this one stands behind it. Sized once per heap generation
+ * at its first use, leaving the spare floor and every slot's pending spare. */
+#define NDS_FTR_LEAN_POOL_MAX 8u
+#define NDS_FTR_LEAN_POOL_FREE 0xffu
+typedef struct NDSFtrLeanPoolHead
+{
+    u32 slot;                   /* battle slot, or NDS_FTR_LEAN_POOL_FREE */
+    u32 stamp;                  /* LRU: the park serial */
+    u32 list_words;             /* words copied after the packet (the floor) */
+    u32 pad;
+    NDSFtrLeanEntryState state;
+} NDSFtrLeanPoolHead;
+#define NDS_FTR_LEAN_POOL_HEAD_WORDS \
+    ((((u32)sizeof(NDSFtrLeanPoolHead)) + 31u) / 32u * 8u)
+#define NDS_FTR_LEAN_POOL_SLOT_WORDS \
+    (NDS_FTR_LEAN_POOL_HEAD_WORDS + NDS_FTR_LEAN_HALF_WORDS)
+
+static u32 *sNdsFtrLeanPoolBase;
+static u32 sNdsFtrLeanPoolCount;
+static u32 sNdsFtrLeanPoolGen;  /* gNdsTaskmanHeapGeneration + 1 sized */
+static u32 sNdsFtrLeanPoolStamp;
+
+static inline NDSFtrLeanPoolHead *ndsFtrLeanPoolAt(u32 i)
+{
+    return (NDSFtrLeanPoolHead *)(void *)(sNdsFtrLeanPoolBase +
+                                          (i * NDS_FTR_LEAN_POOL_SLOT_WORDS));
+}
+
+static u32 __attribute__((noinline, cold)) ndsFtrLeanPoolSize(void)
+{
+    const u32 slot_bytes = NDS_FTR_LEAN_POOL_SLOT_WORDS * (u32)sizeof(u32);
+    const u32 spare_bytes = ndsFtrLeanHalfWords() * (u32)sizeof(u32);
+    u32 reserve = NDS_FTR_LEAN_SPARE_KEEP_FREE;
+    u32 free_bytes;
+    u32 count;
+    u32 i;
+
+    sNdsFtrLeanPoolGen = gNdsTaskmanHeapGeneration + 1u;
+    sNdsFtrLeanPoolBase = NULL;
+    sNdsFtrLeanPoolCount = 0u;
+    for (i = 0u; i < NDS_FIGHTER_PACKET_SLOTS; i++)
+    {
+        if ((sNdsFtrLeanSlots[i].spare_buf == NULL) ||
+            (sNdsFtrLeanSlots[i].spare_gen != gNdsTaskmanHeapGeneration))
+        {
+            reserve += spare_bytes;     /* that slot's spare may still come */
+        }
+    }
+    free_bytes = ((uintptr_t)gSYTaskmanGeneralHeap.end >
+                  (uintptr_t)gSYTaskmanGeneralHeap.ptr) ?
+        (u32)((uintptr_t)gSYTaskmanGeneralHeap.end -
+              (uintptr_t)gSYTaskmanGeneralHeap.ptr) : 0u;
+    count = (free_bytes > reserve) ? ((free_bytes - reserve) / slot_bytes) :
+        0u;
+    if (count > NDS_FTR_LEAN_POOL_MAX)
+    {
+        count = NDS_FTR_LEAN_POOL_MAX;
+    }
+    if (count != 0u)
+    {
+        u32 *base = syTaskmanMalloc(count * slot_bytes, 32u);
+
+        if (base != NULL)
+        {
+            sNdsFtrLeanPoolBase = base;
+            sNdsFtrLeanPoolCount = count;
+            for (i = 0u; i < count; i++)
+            {
+                ndsFtrLeanPoolAt(i)->slot = NDS_FTR_LEAN_POOL_FREE;
+            }
+        }
+    }
+    return sNdsFtrLeanPoolCount;
+}
+
+static inline u32 ndsFtrLeanPoolReady(void)
+{
+    if (sNdsFtrLeanPoolGen != gNdsTaskmanHeapGeneration + 1u)
+    {
+        (void)ndsFtrLeanPoolSize();
+    }
+    return (sNdsFtrLeanPoolCount != 0u) ? TRUE : FALSE;
+}
+
+/* ndsFtrLeanPacketDrop's rule for a slot's parked copies. */
+static void ndsFtrLeanPoolDrop(u32 battle_slot)
+{
+    u32 i;
+
+    if (sNdsFtrLeanPoolGen != gNdsTaskmanHeapGeneration + 1u)
+    {
+        return;
+    }
+    for (i = 0u; i < sNdsFtrLeanPoolCount; i++)
+    {
+        NDSFtrLeanPoolHead *h = ndsFtrLeanPoolAt(i);
+
+        if (h->slot == battle_slot)
+        {
+            h->slot = NDS_FTR_LEAN_POOL_FREE;
+        }
+    }
+}
+
+/* The words after the packet a list owns: its words, and Link's texgen site
+ * map right after them (the variant floor, ndsFtrLeanMaterialize). */
+static u32 ndsFtrLeanPoolFloor(const NDSFtrLeanEntryState *es,
+                               const NDSFighterPacket *packet)
+{
+    u32 floor = packet->word_count;
+
+#if NDS_P2_LINK
+    if (es->texgen_map != NDS_FTR_LEAN_TEXGEN_MAP_NONE)
+    {
+        floor = ((floor + 7u) & ~7u) + NDS_FTR_LEAN_TEXGEN_MAP_WORDS;
+    }
+#else
+    (void)es;
+#endif
+    return floor;
+}
+
+/* ndsFtrLeanEntryMatch over a parked copy (its records keep their top-down
+ * order after the words): 0 or a record's bits, or NONE. */
+static u32 ndsFtrLeanPoolMatch(const NDSFtrLeanPoolHead *h, const u32 *key,
+                               u32 fence)
+{
+    const NDSFtrLeanEntryState *es = &h->state;
+    const u32 *tail;
+    u32 r;
+
+    if ((es->valid == 0u) ||
+        ((es->tint_set_generation != gNdsR2FighterTintSetGeneration) &&
+         (es->tint_folds != 0u)))
+    {
+        return NDS_FTR_LEAN_ENTRY_NONE;
+    }
+    if (((es->fence_needed == 0u) || (es->fence == fence)) &&
+        (ndsFtrLeanKeyEqual(es->key, key) != FALSE))
+    {
+        return 0u;
+    }
+    tail = (const u32 *)(const void *)h + NDS_FTR_LEAN_POOL_HEAD_WORDS +
+        NDS_FTR_LEAN_STRUCT_WORDS + h->list_words +
+        (es->variant_count * NDS_FTR_LEAN_VARIANT_WORDS);
+    for (r = 0u; r < es->variant_count; r++)
+    {
+        const NDSFtrLeanVariant *v = (const NDSFtrLeanVariant *)(const void *)
+            (tail - ((r + 1u) * NDS_FTR_LEAN_VARIANT_WORDS));
+
+        if ((r != es->variant_cur) &&
+            ((v->fence_needed == 0u) || (v->fence == fence)) &&
+            (ndsFtrLeanKeyEqual(v->key, key) != FALSE))
+        {
+            return (r + 1u) << 4;
+        }
+    }
+    return NDS_FTR_LEAN_ENTRY_NONE;
+}
+
+static NDSFtrLeanPoolHead *ndsFtrLeanPoolFind(u32 battle_slot, const u32 *key,
+                                              u32 fence, u32 *bits)
+{
+    u32 i;
+
+    for (i = 0u; i < sNdsFtrLeanPoolCount; i++)
+    {
+        NDSFtrLeanPoolHead *h = ndsFtrLeanPoolAt(i);
+
+        if (h->slot == battle_slot)
+        {
+            const u32 b = ndsFtrLeanPoolMatch(h, key, fence);
+
+            if (b != NDS_FTR_LEAN_ENTRY_NONE)
+            {
+                *bits = b;
+                return h;
+            }
+        }
+    }
+    return NULL;
+}
+
+/* Copy entry `e`'s valid list (any buffer the map gives it) into a free pool
+ * slot, else the least recently parked one -- never `keep`, the copy about to
+ * be revived. */
+static void __attribute__((noinline)) ndsFtrLeanPoolStore(
+    u32 battle_slot, u32 e, const NDSFtrLeanPoolHead *keep)
+{
+    const NDSFtrLeanEntryState *es = &sNdsFtrLeanSlots[battle_slot].entry[e];
+    const u32 *src;
+    NDSFtrLeanPoolHead *park = NULL;
+    u32 floor;
+    u32 records;
+    u32 i;
+
+    if ((es->valid == 0u) || ((es->valid & NDS_FTR_LEAN_VALID_WIDE) != 0u))
+    {
+        return;
+    }
+    src = ndsFtrLeanEntryBase(battle_slot, e);
+    floor = ndsFtrLeanPoolFloor(es, (const NDSFighterPacket *)(const void *)src);
+    records = es->variant_count * NDS_FTR_LEAN_VARIANT_WORDS;
+    if ((floor + records) > ndsFtrLeanWordCapacity())
+    {
+        return;
+    }
+    for (i = 0u; i < sNdsFtrLeanPoolCount; i++)
+    {
+        NDSFtrLeanPoolHead *h = ndsFtrLeanPoolAt(i);
+
+        if (h == keep)
+        {
+            continue;
+        }
+        if (h->slot == NDS_FTR_LEAN_POOL_FREE)
+        {
+            park = h;
+            break;
+        }
+        if ((park == NULL) || ((s32)(h->stamp - park->stamp) < 0))
+        {
+            park = h;
+        }
+    }
+    if (park == NULL)
+    {
+        return;
+    }
+    {
+        u32 *dst = (u32 *)(void *)park + NDS_FTR_LEAN_POOL_HEAD_WORDS;
+
+        memcpy(dst, src, (NDS_FTR_LEAN_STRUCT_WORDS + floor) * sizeof(u32));
+        if (records != 0u)
+        {
+            memcpy(dst + NDS_FTR_LEAN_STRUCT_WORDS + floor,
+                   src + NDS_FTR_LEAN_STRUCT_WORDS +
+                       ndsFtrLeanWordCapacity() - records,
+                   records * sizeof(u32));
+        }
+    }
+    park->state = *es;
+    park->list_words = floor;
+    park->slot = battle_slot;
+    park->stamp = ++sNdsFtrLeanPoolStamp;
+    NDS_FTR_LEAN_CTR(gNdsFtrLean.spare_parks++);
+}
+
+/* Copy a parked list back as entry `victim` and free its pool slot; returns
+ * the entry code (the victim, with the record's bits). */
+static u32 __attribute__((noinline)) ndsFtrLeanPoolRevive(
+    u32 battle_slot, u32 victim, NDSFtrLeanPoolHead *found, u32 bits)
+{
+    NDSFtrLeanEntryState *ves = &sNdsFtrLeanSlots[battle_slot].entry[victim];
+    u32 *dst = ndsFtrLeanEntryBase(battle_slot, victim);
+    const u32 *src = (const u32 *)(const void *)found +
+        NDS_FTR_LEAN_POOL_HEAD_WORDS;
+    const u32 floor = found->list_words;
+    const u32 records = found->state.variant_count * NDS_FTR_LEAN_VARIANT_WORDS;
+    NDSFighterPacket *packet;
+
+    /* Nothing may still be streaming the victim's old words. */
+    ndsFighterPacketDmaWait();
+    memcpy(dst, src, (NDS_FTR_LEAN_STRUCT_WORDS + floor) * sizeof(u32));
+    if (records != 0u)
+    {
+        memcpy(dst + NDS_FTR_LEAN_STRUCT_WORDS + ndsFtrLeanWordCapacity() -
+                   records,
+               src + NDS_FTR_LEAN_STRUCT_WORDS + floor,
+               records * sizeof(u32));
+    }
+    *ves = found->state;
+    memset(ves->dirty, 0, sizeof(ves->dirty));
+    packet = (NDSFighterPacket *)(void *)dst;
+    packet->words = dst + NDS_FTR_LEAN_STRUCT_WORDS;
+    /* The DMA reads the words from memory: clean them, as a fresh
+     * materialization does. */
+    DC_FlushRange(packet->words, packet->word_count * sizeof(u32));
+    found->slot = NDS_FTR_LEAN_POOL_FREE;
+    NDS_FTR_LEAN_CTR(gNdsFtrLean.spare_hits++);
+    return victim | bits;
+}
+
 /* The miss path, with `victim` chosen: the code of the spare's list for `key`,
  * swapped in as `victim` (NONE when the spare does not hold it), else the
- * victim's valid list parked in the spare before it is overwritten. */
+ * victim's valid list parked in the spare before it is overwritten -- the
+ * spare's own list going to the pool first -- and `key`'s parked copy, if the
+ * pool holds one, copied back as the victim. */
 u32 ndsFtrLeanSpareTake(u32 battle_slot, u32 victim, const u32 *key)
 {
     NDSFtrLeanSlotState *s;
+    NDSFtrLeanPoolHead *pooled = NULL;
+    u32 pooled_bits = 0u;
+    u32 pool;
     u32 code;
 
     if ((battle_slot >= NDS_FIGHTER_PACKET_SLOTS) || (key == NULL) ||
@@ -14071,9 +14375,17 @@ u32 ndsFtrLeanSpareTake(u32 battle_slot, u32 victim, const u32 *key)
             return victim | (code & ~0xfu);
         }
     }
+    pool = ndsFtrLeanPoolReady();
+    if (pool != FALSE)
+    {
+        pooled = ndsFtrLeanPoolFind(battle_slot, key, ndsFtrLeanFenceNow(),
+                                    &pooled_bits);
+    }
     if (s->entry[victim].valid == 0u)
     {
-        return NDS_FTR_LEAN_ENTRY_NONE;
+        return (pooled != NULL) ?
+            ndsFtrLeanPoolRevive(battle_slot, victim, pooled, pooled_bits) :
+            NDS_FTR_LEAN_ENTRY_NONE;
     }
     if (s->spare_buf == NULL)
     {
@@ -14083,25 +14395,38 @@ u32 ndsFtrLeanSpareTake(u32 battle_slot, u32 victim, const u32 *key)
              (uintptr_t)gSYTaskmanGeneralHeap.ptr) ||
             ((uintptr_t)gSYTaskmanGeneralHeap.end -
              (uintptr_t)gSYTaskmanGeneralHeap.ptr <
-             bytes + NDS_FTR_LEAN_SPARE_KEEP_FREE))
+             bytes + NDS_FTR_LEAN_SPARE_KEEP_FREE) ||
+            ((s->spare_buf = syTaskmanMalloc(bytes, 32u)) == NULL))
         {
+            /* No spare: the pool alone keeps the victim's list. */
             NDS_FTR_LEAN_CTR(gNdsFtrLean.spare_alloc_refused++);
-            return NDS_FTR_LEAN_ENTRY_NONE;
-        }
-        s->spare_buf = syTaskmanMalloc(bytes, 32u);
-        if (s->spare_buf == NULL)
-        {
-            return NDS_FTR_LEAN_ENTRY_NONE;
+            if (pool == FALSE)
+            {
+                return NDS_FTR_LEAN_ENTRY_NONE;
+            }
+            ndsFtrLeanPoolStore(battle_slot, victim, pooled);
+            s->entry[victim].valid = 0u;
+            return (pooled != NULL) ?
+                ndsFtrLeanPoolRevive(battle_slot, victim, pooled,
+                                     pooled_bits) :
+                NDS_FTR_LEAN_ENTRY_NONE;
         }
         s->spare_gen = gNdsTaskmanHeapGeneration;
         s->entry[NDS_FTR_LEAN_SPARE].valid = 0u;
         NDS_FTR_LEAN_CTR(gNdsFtrLean.spare_allocs++);
     }
+    /* The swap overwrites the spare's list: keep it in the pool first. */
+    if (pool != FALSE)
+    {
+        ndsFtrLeanPoolStore(battle_slot, NDS_FTR_LEAN_SPARE, pooled);
+    }
     ndsFtrLeanSpareSwap(s, victim);
     /* The victim now maps to the old spare buffer, about to be rewritten. */
     s->entry[victim].valid = 0u;
     NDS_FTR_LEAN_CTR(gNdsFtrLean.spare_parks++);
-    return NDS_FTR_LEAN_ENTRY_NONE;
+    return (pooled != NULL) ?
+        ndsFtrLeanPoolRevive(battle_slot, victim, pooled, pooled_bits) :
+        NDS_FTR_LEAN_ENTRY_NONE;
 }
 
 void ndsFtrLeanNoteKeyMiss(u32 battle_slot, const u32 *key)

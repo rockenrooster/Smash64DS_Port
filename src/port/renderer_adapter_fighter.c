@@ -487,10 +487,15 @@ ndsProjectToViewport(CObj *cobj, Mtx44f matrix, Vec3f *pos, f32 *dist_x,
     {
         for (col = 0u; col < 3u; col++)
         {
-            u32 bits;
+            /* A union read: the 4-byte __builtin_memcpy here, at a variable
+             * column, compiled to a real memcpy call (12 a projection). */
+            union
+            {
+                f32 f;
+                u32 u;
+            } cell = { matrix[row][sNdsProjectCols[col]] };
+            const u32 bits = cell.u;
 
-            __builtin_memcpy(&bits, &matrix[row][sNdsProjectCols[col]],
-                             sizeof(bits));
             if (bits != sNdsProjectSrc[row][col])
             {
                 same = 0u;
