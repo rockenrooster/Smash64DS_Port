@@ -225,7 +225,17 @@ typedef struct NDSSC1PIntroStillHeader
 __attribute__((used)) volatile u32 gNdsSC1PIntroStillsDrawn;
 __attribute__((used)) volatile u32 gNdsSC1PIntroStillsMissing;
 
-static s32 ndsSC1PIntroBlitStill(const char *path, u16 *layer, u32 pitch)
+/* How far each still moves outward from where the bake captured it (owner,
+ * 2026-10-06: "Rendered stills are still not horizontally offset correctly,
+ * they need to be closer to the screen side edges"). The source's card cameras
+ * use the viewport 10..310 (sc1pintro.c:1177), which the DS maps to 8..248, and
+ * the bake's capture ends there, so every still stopped 8 px short of the
+ * edge with sky beyond it. The player's and allies' cards move left, the
+ * stage's VS fighters right; what passes the edge is clipped. */
+#define NDS_SC1P_INTRO_STILL_EDGE_SHIFT 8
+
+static s32 ndsSC1PIntroBlitStill(const char *path, u16 *layer, u32 pitch,
+                                 s32 shift)
 {
     NDSSC1PIntroStillHeader header;
     FILE *file;
@@ -259,14 +269,16 @@ static s32 ndsSC1PIntroBlitStill(const char *path, u16 *layer, u32 pitch)
             for (y = 0u; y < header.h; y++)
             {
                 const u8 *row = texels + (y * header.tex_w);
-                u16 *dst = layer + ((header.y + y) * pitch) + header.x;
+                u16 *dst = layer + ((header.y + y) * pitch);
                 u32 x;
 
                 for (x = 0u; x < header.w; x++)
                 {
-                    if (row[x] != 0u)
+                    const s32 sx = (s32)header.x + (s32)x + shift;
+
+                    if ((row[x] != 0u) && (sx >= 0) && (sx < 256))
                     {
-                        dst[x] = palette[row[x]] | 0x8000u;
+                        dst[sx] = palette[row[x]] | 0x8000u;
                     }
                 }
             }
@@ -325,7 +337,8 @@ static void ndsSC1PIntroDrawStill(char kind, u32 card, FTDemoDesc *desc,
     char path[48];
 
     ndsSC1PIntroStillPath(path, kind, card, 1u, desc->fkind, desc->costume);
-    if (ndsSC1PIntroBlitStill(path, layer, pitch) != FALSE)
+    if (ndsSC1PIntroBlitStill(path, layer, pitch,
+                              -NDS_SC1P_INTRO_STILL_EDGE_SHIFT) != FALSE)
     {
         NDS_DIAG(gNdsSC1PIntroStillsDrawn++);
     }
@@ -366,10 +379,12 @@ static void ndsSC1PIntroBlitStills(void)
     ndsSC1PIntroStillPath(path, 'o', (u32)stage, 2u,
                           sSC1PIntroPlayerFighterDemoDesc.fkind,
                           sSC1PIntroPlayerFighterDemoDesc.costume);
-    if (ndsSC1PIntroBlitStill(path, layer, pitch) == FALSE)
+    if (ndsSC1PIntroBlitStill(path, layer, pitch,
+                              NDS_SC1P_INTRO_STILL_EDGE_SHIFT) == FALSE)
     {
         ndsSC1PIntroStillPath(path, 'o', (u32)stage, 2u, -1, 0);
-        if (ndsSC1PIntroBlitStill(path, layer, pitch) == FALSE)
+        if (ndsSC1PIntroBlitStill(path, layer, pitch,
+                                  NDS_SC1P_INTRO_STILL_EDGE_SHIFT) == FALSE)
         {
             NDS_DIAG(gNdsSC1PIntroStillsMissing++);
         }
