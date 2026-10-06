@@ -1,0 +1,45 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,736; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 906: ALL 5,310,848 -> 1,116,544, 5 bucket(s) corrected
+Wrote artifacts/performance/2026-10-06_ab-cleanup/gate-q13.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=a8b18ac0876+dirty(36) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,736     1,118,336      1.00  1,143,411     1,111,936  4,641,728      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,928        10,112      2.05      5,572         2,368     24,256        0.4
+HUD         9,088        23,936      2.63     11,754         7,808    754,176        0.8
+SRC       354,496       549,568      1.55    365,815       133,632  1,000,384       31.7
+MISC      404,416       548,800      1.36    409,768       176,704  3,288,448       36.2
+OTHR      346,048       631,168      1.82    350,501        21,504    792,192       31.0
+WAIT      325,760       607,488      1.86    329,653         2,176    772,864       29.2
+WORK      798,912     1,088,320      1.36    810,011       340,672  4,307,968       71.5
+SHDT      697,215       984,383      1.41    712,631       297,279  1,856,703       62.4
+SWRM        1,344         1,408      1.05      1,336           896      3,520        0.1
+GCRA      349,184       544,448      1.56    360,509       129,216    995,136       31.3
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        372             0    650,112        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      404,288       548,736      1.36    409,661       176,640  3,288,384       36.2
+MFLS          128           128      1.00        106            64        192        0.0
+GPOL          592           673      1.14        542            29        755        0.1
+GVTX        1,419         1,596      1.12      1,315            96      1,750        0.1
+DGSA   2,250,718,284 4,050,421,973        2,184,942,484  1,678,878 4,291,383,562 201,544.3
+DGSB   2,254,346,240 4,035,342,474        2,215,590,844  2,771,092 4,285,088,836 201,869.2
+WORK-H    788,608     1,078,976      1.37    798,257       331,200  3,553,792       70.6
+
+named=792,909 (69.3% of ALL)  VBI 2:1874 3:85 4:1 5+:1 max:9 total:1961  slips=0
+Wrote artifacts/performance/2026-10-06_ab-cleanup/gate-q13.json

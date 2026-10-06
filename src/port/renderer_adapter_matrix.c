@@ -385,7 +385,6 @@ extern Vec2f dFTDisplayMainShufflePositions[][4];
 #if NDS_P2_JOINT_RESIDENT
 /* src/port/nds_p2_hurtbox_reject.c: fighter joint worlds resident in fixed
  * point for the latch epoch (owner ruling D13). */
-extern volatile u32 gNdsP2JointResident;
 int ndsP2JointItemAttach(DObj *attach, const Vec2f *shuffle, s32 m[4][4]);
 #endif
 #if NDS_LAB_NO_CULL
@@ -3259,7 +3258,7 @@ static sb32 ndsRendererAdapterBuildItemAttachResident(
     DObj *attach_dobj;
     FTStruct *fp;
 
-    if ((gNdsP2JointResident == 0u) || (dobj == NULL) || (out == NULL))
+    if ((dobj == NULL) || (out == NULL))
     {
         return FALSE;
     }

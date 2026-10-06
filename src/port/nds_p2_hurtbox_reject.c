@@ -35,9 +35,6 @@
 #define NDS_R2_CFX_DIV64(numerator, denominator) \
     ndsR2HwMathCfxDiv64((int64_t)(numerator), (int64_t)(denominator))
 #define NDS_R2_CFX_ISQRT64(value) ndsR2HwMathCfxIsqrt64(value)
-/* Same-ROM A/B word for the local build's zero-angle and unit-scale paths. */
-extern volatile u32 gNdsR2CfxFastPaths;
-#define NDS_R2_CFX_FAST_PATHS() (gNdsR2CfxFastPaths != 0u)
 #include <nds/nds_r2_collision_fixed.h>
 
 #define NDS_P2_HB_CHAIN_MAX 18
@@ -48,15 +45,9 @@ extern volatile u32 gNdsR2CfxFastPaths;
 #define NDS_P2_HB_CACHE_SLOTS 128u
 #define NDS_P2_HB_CACHE_SHIFT 25u
 
-volatile u32 gNdsR2CfxFastPaths __attribute__((used, section(".data"))) = 1u;
-
-/* 0 off, 1 reject, 2 shadow: decide, count, and still run the float path so a
- * wrong reject shows up as a flip. `.data` so both values occupy one word. */
-volatile u32 gNdsP2HurtboxRejectMode __attribute__((used, section(".data"))) = 1u;
 __attribute__((used)) volatile u32 gNdsP2HurtboxRejects;
 __attribute__((used)) volatile u32 gNdsP2HurtboxPasses;
 __attribute__((used)) volatile u32 gNdsP2HurtboxDeclines;
-__attribute__((used)) volatile u32 gNdsP2HurtboxFlips;
 /* Bumped wherever the source clears FTParts latches (the port's
  * ftParamsUpdateFighterPartsTransform shims and the flat-walk topology reset),
  * so a cached world never outlives the latch state it stands beside. */
@@ -373,16 +364,12 @@ static int32_t ndsP2HbInvSqrtQ26(uint32_t s2)
     return (int32_t)(t << (15u - ((q + 1u) >> 1)));
 }
 
-/* Same-ROM A/B word: 0 takes 1/s_min from the divide and root units. */
-volatile u32 gNdsP2HbInvTable __attribute__((used, section(".data"))) = 1u;
-
 /* 1/s_min for the world `w` (the caller keeps it in the joint's slot).
  * 0 = decline. */
 static int32_t ndsP2HbInvSMinOf(const NDSR2CfxMtx *w)
 {
     int32_t s2[3];
     int32_t s2_min;
-    uint32_t s_q24;
     int32_t inv;
 
     if (ndsR2CfxRowScales(w, s2, NULL, NULL, NULL) == 0)
@@ -392,23 +379,8 @@ static int32_t ndsP2HbInvSMinOf(const NDSR2CfxMtx *w)
     s2_min = s2[0];
     if (s2[1] < s2_min) { s2_min = s2[1]; }
     if (s2[2] < s2_min) { s2_min = s2[2]; }
-    if (gNdsP2HbInvTable != 0u)
-    {
-        /* RowScales' guard already put s2_min in the table's range. */
-        inv = ndsP2HbInvSqrtQ26((uint32_t)s2_min);
-    }
-    else
-    {
-        /* floor(sqrt(s2 << 22)) = s at Q24, rounded DOWN, so its reciprocal
-         * rounded UP bounds 1/s from above. s2 >= 1/16 (the guard) keeps the
-         * quotient inside int32. */
-        s_q24 = NDS_R2_CFX_ISQRT64((uint64_t)s2_min << 22);
-        if (s_q24 == 0u)
-        {
-            return 0;
-        }
-        inv = NDS_R2_CFX_DIV64((int64_t)1 << 50, (int64_t)s_q24) + 1;
-    }
+    /* RowScales' guard already put s2_min in the table's range. */
+    inv = ndsP2HbInvSqrtQ26((uint32_t)s2_min);
     return inv;
 }
 
@@ -485,8 +457,7 @@ static NDSP2HbDamageMemo sNdsP2HbDamageMemo[NDS_P2_HB_DAMAGE_MEMO_SLOTS];
  * distance to the face plane. Requiring it to exceed NDS_P2_HB_MARGIN_Q12 *
  * |n_k|_1 keeps the world-axis test's four-unit margin; h uses the table bound
  * on 1/s_k, which is never below the float's. Values outside the guards
- * decline. A/B word gNdsP2HbLocalTest (0 = world axes only). */
-volatile u32 gNdsP2HbLocalTest __attribute__((used, section(".data"))) = 1u;
+ * decline. */
 __attribute__((used)) volatile u32 gNdsP2HbLocalRejects;
 
 static int ndsP2HbRejectLocal(const NDSR2CfxMtx *w, const int32_t off[3],
@@ -1056,9 +1027,7 @@ static inline int ndsP2HbAxisReject(const int32_t center[3],
  * the gate's ~14,000 tests a match). The pieces the separation test reads are
  * kept in the coll's damage memo entry for the epoch; a re-test runs the same
  * separation test on them and goes on to the full path only when it does not
- * separate (the local test needs the world). Same-ROM A/B word
- * gNdsP2HbBoxCache (0 = always the full path). */
-volatile u32 gNdsP2HbBoxCache __attribute__((used, section(".data"))) = 1u;
+ * separate (the local test needs the world). */
 __attribute__((used)) volatile u32 gNdsP2HbBoxHits;
 
 /* 1 = the float test would certainly miss; 0 = let it decide.
@@ -1103,7 +1072,7 @@ static int ndsP2HbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
     {
         return 0;
     }
-    if ((gNdsP2HbBoxCache != 0u) && (dm->box_valid != 0u) &&
+    if ((dm->box_valid != 0u) &&
         (dm->box_epoch == epoch) && (dm->box_fp->is_use_animlocks == FALSE))
     {
         am = ndsP2HbAttackPoints(pos_curr, pos_prev, attack_size);
@@ -1192,9 +1161,8 @@ static int ndsP2HbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
     {
         return 1;
     }
-    if ((gNdsP2HbLocalTest != 0u) &&
-        (ndsP2HbRejectLocal(w, dm->off, dm->size, radius, am->p0,
-                            am->p1) != 0))
+    if (ndsP2HbRejectLocal(w, dm->off, dm->size, radius, am->p0,
+                           am->p1) != 0)
     {
         NDS_DIAG(gNdsP2HbLocalRejects++);
         return 1;
@@ -1232,9 +1200,7 @@ int ndsP2HurtboxRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
  * may decide the other way (owner ruling D13; the replay digest re-baselines).
  * The FTParts latches are not written, as for a rejected pair; their readers
  * build them as before. 1 = hit, 0 = miss, -1 = a value outside the fixed
- * guards, for the float tail. A/B word gNdsP2HbNarrowFixed (0 = the float tail
- * decides every pair the reject does not). */
-volatile u32 gNdsP2HbNarrowFixed __attribute__((used, section(".data"))) = 1u;
+ * guards, for the float tail. */
 __attribute__((used)) volatile u32 gNdsP2HbNarrowDecided;
 __attribute__((used)) volatile u32 gNdsP2HbNarrowDeclined;
 
@@ -1254,10 +1220,6 @@ static int ndsP2HbDecidePoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
     if (ndsP2HbRejectPoints(pos_curr, pos_prev, attack_size, damage) != 0)
     {
         return 0;
-    }
-    if (gNdsP2HbNarrowFixed == 0u)
-    {
-        return -1;
     }
     /* The reject left its pieces cached -- both memos and the joint's world
      * for the epoch -- so these are lookups; a head it declined declines here
@@ -1372,8 +1334,7 @@ int ndsP2HurtboxDecidePoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
  * (func_ovl2_800EDBA4 and the locals it latches), and write no FTParts latch.
  * A joint already latched by a float walk this epoch is read from its latch,
  * as before. Re-baselines the replay digest: the hitbox positions and the held
- * item's latches feed it. Same-ROM A/B word: 0 = the float paths everywhere. */
-volatile u32 gNdsP2JointResident __attribute__((used, section(".data"))) = 1u;
+ * item's latches feed it. */
 
 /* Animation-lock fighters take gmCollisionSetMatrixNcs's chain in fixed point
  * (ndsP2HbWorldOfLock, 2026-10-05); everyone else the plain walk. */
