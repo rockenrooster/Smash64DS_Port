@@ -66,6 +66,11 @@ void mpCollisionGetPlayerMapObjPosition(s32 player, Vec3f *pos);
 #define gmCameraLookAtFuncMatrix battleship_gmCameraLookAtFuncMatrix
 #define gmCameraMakeBattleCamera battleship_gmCameraMakeBattleCamera
 
+/* 2026-10-05 (owner: fixed point only): the interest box's strong definition
+ * is in battleship_gmcamera_fixed.c; the three cameras here that call it bind
+ * to that one at link time. */
+#pragma weak gmCameraUpdateInterests
+
 #include "../../decomp/BattleShip-main/decomp/src/gm/gmcamera.c"
 
 #undef gmCameraMakeBattleCamera

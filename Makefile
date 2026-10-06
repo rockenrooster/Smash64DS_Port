@@ -4915,7 +4915,7 @@ ifeq ($(NDS_IMPORT_BATTLESHIP_FTCOMPUTER),1)
 CFILES += battleship_ftcomputer.c battleship_ftcomputer_fixed.c
 endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE),1)
-CFILES += battleship_gmcamera.c battleship_ftcommon_dead.c \
+CFILES += battleship_gmcamera.c battleship_gmcamera_fixed.c battleship_ftcommon_dead.c \
 	battleship_ftcommon_rebirth.c battleship_ftcommon_sleep.c \
 	battleship_ftcommon_entry.c \
 	battleship_grwallpaper.c \

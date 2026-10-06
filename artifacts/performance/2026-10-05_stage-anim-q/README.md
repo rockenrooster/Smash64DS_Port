@@ -42,3 +42,25 @@ both surface tests' own bound checks, so the skip is exact.
 | gate `gate-q1` -> `gate-q2` | 814,080 -> 813,504 | 1,105,280 -> 1,107,328 | 88 -> 90 | identical | -0.2K |
 | Sector Z `sz-q1` -> `sz-q2` | 896,768 -> 895,616 | 1,220,032 -> 1,219,584 | 195 -> 192 | identical | -1.7K |
 | 4 x Yoshi `yo-q1` -> `yo-q2` | 891,200 -> 891,328 | 1,263,232 -> 1,261,184 | 244 -> 237 | identical | -0.4K |
+
+## Every stage: gNdsStageAnimQ 1 vs 0 on the Q2 ROM (`sweep/`)
+
+One ROM, the A/B word poked at boot, default four-CPU roster, items on.
+
+| gkind | stage | P95 q0 -> q1 | digest | paired median |
+|---:|---|---|---|---|
+| 0 | Peach's Castle | 1,234,304 -> 1,225,792 | 656 frames from frame 2 | -- |
+| 1 | Sector Z | 1,224,768 -> 1,219,584 | identical | -3.5K |
+| 2 | Congo Jungle | 1,198,464 -> 1,196,288 | 846 frames from frame 891 | -0.4K |
+| 3 | Planet Zebes | 1,164,416 -> 1,160,768 | identical | -2.0K |
+| 4 | Hyrule Castle | 1,030,080 -> 1,031,808 | identical | -0.3K |
+| 5 | Yoshi's Island | 1,187,968 -> 1,187,776 | identical | -3.0K |
+| 6 | Dream Land | 1,110,016 -> 1,107,328 | identical | -0.4K |
+| 7 | Saffron City | 1,213,120 -> 1,214,528 | 120 frames from frame 1,130 | -2.2K |
+| 8 | Mushroom Kingdom | 1,224,320 -> 1,221,504 | 822 frames from frame 92 | (32 frames) |
+
+The four stages whose digest moves carry platforms or hazards driven by joint
+translate tracks. The motion check (`probe/`, gdb at frames 100/400/800/1,200)
+reads Peach's Castle's moving platform at 1079.2786 / -1082.8857 / -356.3975 /
+1796.3999 against the float arm's 1079.2793 / -1082.8828 / -356.4000 /
+1796.4000: at most 0.003 units apart, every other platform identical.

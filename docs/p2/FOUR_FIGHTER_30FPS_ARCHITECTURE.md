@@ -1552,6 +1552,15 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   misses the motion's before any float compare (exact): Sector Z -1.7K, gate
   -0.2K. Gate P95 1,107,328, Sector Z 1,219,584, 4 x Yoshi 1,261,184. Receipt
   `2026-10-05_stage-anim-q`.
+  Per stage (one ROM, A/B word): every stage flat or better, Peach's Castle,
+  Jungle, Saffron and Mushroom Kingdom's digests move (their platforms' tracks;
+  Peach's Castle's moving platform within 0.003 units of the float arm).
+- **10-05 late: the camera's interest box in fixed point; integer floor
+  brackets.** gmCameraUpdateInterests (~150 soft-float calls a frame) takes a
+  fixed-point strong definition; the floor projection's bracket tests run on
+  floor/ceil integers (exact). Sector Z -2.1K, 4 x Yoshi -0.7K, gate flat,
+  digests identical. Census after Q2: 3,332 soft-float calls a frame (gate),
+  4,101 (Sector Z), 3,544 (4 x Yoshi). Receipt `2026-10-05_camera-fixed`.
 
 ## 7. Found along the way
 

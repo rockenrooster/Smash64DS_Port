@@ -4605,6 +4605,9 @@ static sb32 ndsMPProjectFloorGeometry(Vec3f *position, s32 *project_line_id,
         const DObj *yakumono_dobj;
         f32 vpdist_x = position->x;
         f32 vpdist_y = position->y;
+        s32 px_floor;
+        s32 px_ceil;
+        sb32 px_int;
 
         if ((line_count == 0) || (gMPCollisionYakumonoDObjs == NULL) ||
             (yakumono_id >= NDS_MP_YAKUMONO_DOBJ_SLOTS))
@@ -4628,6 +4631,35 @@ static sb32 ndsMPProjectFloorGeometry(Vec3f *position, s32 *project_line_id,
         {
             line_end = line_first + 4096;
         }
+        /* P2-2p8 (2026-10-05, owner: fixed point only): the bracket tests
+         * `(f32)x <= px` and `(f32)x >= px` on integer vertices are exactly
+         * `x <= floor(px)` and `x >= ceil(px)`, so they run on two integers
+         * taken once per group from px's bits (an i2f and a float compare per
+         * test before). A px the bits cannot bound (huge, inf, NaN) keeps the
+         * float tests. */
+        {
+            u32 frac;
+
+            px_int = ndsMPF32TruncFrac(vpdist_x, &px_floor, &frac);
+            px_ceil = px_floor;
+            if ((px_int != FALSE) && (frac != 0u))
+            {
+                if (NDS_MP_F32_POSITIVE(vpdist_x))
+                {
+                    px_ceil = px_floor + 1;
+                }
+                else
+                {
+                    px_floor = px_floor - 1;
+                }
+            }
+        }
+#define NDS_MP_BRACKETS(xa, xb)                                          \
+    ((px_int != FALSE) ?                                                 \
+        ((((xa) <= px_floor) && ((xb) >= px_ceil)) ||                    \
+         (((xb) <= px_floor) && ((xa) >= px_ceil))) :                    \
+        ((((f32)(xa) <= vpdist_x) && ((f32)(xb) >= vpdist_x)) ||         \
+         (((f32)(xb) <= vpdist_x) && ((f32)(xa) >= vpdist_x))))
         for (line_id = line_first; line_id < line_end; line_id++)
         {
             u32 vertex_first = ndsMPVertexLinkFirst(links, (u32)line_id);
@@ -4647,10 +4679,7 @@ static sb32 ndsMPProjectFloorGeometry(Vec3f *position, s32 *project_line_id,
             x_last = ndsMPVertexX(verts,
                                   ndsMPVertexID(ids,
                                                 vertex_first + segment_count));
-            if (!(((f32)x_first <= vpdist_x &&
-                   (f32)x_last >= vpdist_x) ||
-                  ((f32)x_last <= vpdist_x &&
-                   (f32)x_first >= vpdist_x)))
+            if (!NDS_MP_BRACKETS(x_first, x_last))
             {
                 continue;
             }
@@ -4667,8 +4696,7 @@ static sb32 ndsMPProjectFloorGeometry(Vec3f *position, s32 *project_line_id,
                 f32 fpos;
                 f32 gdist;
 
-                if (!(((f32)x1 <= vpdist_x && (f32)x2 >= vpdist_x) ||
-                      ((f32)x2 <= vpdist_x && (f32)x1 >= vpdist_x)))
+                if (!NDS_MP_BRACKETS(x1, x2))
                 {
                     continue;
                 }
@@ -4694,6 +4722,7 @@ static sb32 ndsMPProjectFloorGeometry(Vec3f *position, s32 *project_line_id,
                 break;
             }
         }
+#undef NDS_MP_BRACKETS
     }
     if (best_line < 0)
     {
