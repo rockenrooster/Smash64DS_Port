@@ -78,6 +78,16 @@ void sc1PManagerUpdateScene(void)
         sNdsWalkStartStagePoked = 1u;
     }
 #endif
+#if defined(NDS_1P_PLAYTEST_START_STAGE) && (NDS_1P_PLAYTEST_START_STAGE >= 0)
+    /* PLAYTEST ROMs (Makefile NDS_1P_PLAYTEST_START_STAGE; owner 2026-10-06:
+     * "a way to easily playtest masterhand without going through the whole
+     * 1p campaign"): a game entering the ladder at its first stage enters at
+     * this one, every time 1P is started. */
+    if (gSCManagerSceneData.spgame_stage == 0u)
+    {
+        gSCManagerSceneData.spgame_stage = (u8)NDS_1P_PLAYTEST_START_STAGE;
+    }
+#endif
     ndsBaseSC1PManagerUpdateScene();
 }
 

@@ -1532,6 +1532,11 @@ NDS_1P_INTRO_BAKE ?= 0
 # LAB ONLY (with NDS_P2_MENU_WALK): the 1P ladder stage the walk starts at; -1
 # is the source's own start. For instruments that run without a debugger.
 NDS_1P_WALK_START_STAGE ?= -1
+# PLAYTEST ROMs only (owner 2026-10-06: "a way to easily playtest masterhand
+# without going through the whole 1p campaign"): a 1P game that starts at the
+# first stage starts at this ladder stage instead (13 = Master Hand); -1 is
+# the source's own ladder. Never set in the published ROM.
+NDS_1P_PLAYTEST_START_STAGE ?= -1
 # The bake runs the live intro, whose Link needs the intro root program; no
 # shipping scene does (generate_nds_native_owners.py LINK_INTRO_PROGRAM). The
 # owners are generated into the shared source tree, so the value is stamped
@@ -7042,6 +7047,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_MENU_WALK $(NDS_P2_MENU_WALK)u'; \
 		echo '#define NDS_1P_INTRO_BAKE $(NDS_1P_INTRO_BAKE)'; \
 		echo '#define NDS_1P_WALK_START_STAGE ($(NDS_1P_WALK_START_STAGE))'; \
+		echo '#define NDS_1P_PLAYTEST_START_STAGE ($(NDS_1P_PLAYTEST_START_STAGE))'; \
 		echo '#define NDS_BOOT_DIAG_TEXT $(NDS_BOOT_DIAG_TEXT)'; \
 		echo '#define NDS_R2_PATH $(NDS_R2_PATH)'; \
 		echo '#define NDS_R2_STAGE_DIRECT $(NDS_R2_STAGE_DIRECT)'; \
