@@ -1,0 +1,45 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,672; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 574: ALL 5,310,976 -> 1,116,672, 5 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_fixed-leaves/gate-f3-s2.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=aefb6f4b30c+dirty(43) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,672     1,676,224      1.50  1,148,653     1,110,144  4,470,464      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         5,376        11,136      2.07      5,951         2,496     27,968        0.5
+HUD         8,832        23,616      2.67     10,887         7,808    539,712        0.8
+SRC       385,536       571,648      1.48    386,808       134,208    934,976       34.5
+MISC      403,008       532,416      1.32    411,102       175,744  3,336,128       36.1
+OTHR      318,144       619,264      1.95    333,904        23,552    792,960       28.5
+WAIT      296,640       594,240      2.00    311,614         3,456    772,480       26.6
+WORK      829,952     1,118,656      1.35    833,306       340,992  4,140,608       74.3
+SHDT      714,751       995,967      1.39    722,641       297,535  2,127,103       64.0
+SWRM        1,344         1,472      1.10      1,349           832      3,328        0.1
+GCRA      380,160       566,400      1.49    381,428       129,664    924,736       34.0
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        383             0    645,568        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      402,944       532,352      1.32    411,016       175,680  3,336,064       36.1
+MFLS           64           128      2.00         86            64        128        0.0
+GPOL          562           645      1.15        524            29        698        0.1
+GVTX        1,359         1,559      1.15      1,276            96      1,697        0.1
+DGSA   2,056,541,041 4,090,961,111   1.99 2,082,506,797  1,641,126 4,278,460,694 184,167.0
+DGSB   2,094,888,053 4,050,541,981   1.93 2,111,220,315  2,477,456 4,291,388,579 187,601.0
+WORK-H    820,032     1,105,792      1.35    822,419       331,648  3,600,896       73.4
+
+named=814,748 (70.9% of ALL)  VBI 2:1858 3:98 4:4 5+:1 max:8 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_fixed-leaves/gate-f3-s2.json

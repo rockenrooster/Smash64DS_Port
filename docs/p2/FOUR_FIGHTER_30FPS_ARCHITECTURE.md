@@ -1502,6 +1502,26 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   Yoshi P95 1,332K -> 1,275K, misses 317 -> 248; gate digest identical; Yoshi's
   digest re-baselined on low-order bits, same positions and damage on screen).
   Receipts `2026-10-05_vfx-specials`, `2026-10-05_fixed-hurtbox`.
+- **10-05 night: float leaves to fixed point; the old executor's last users.**
+  Soft float measured by the PC profile is ~11% of busy cycles (the census's
+  per-call ticks read 3-4x high: its wrapper times itself). Two batches moved
+  the arctangent family, sinf/cosf, the Mtx builders' conversions, guMtxCatF's
+  zero terms, stage/item animation (fixed cubic for every DObj), the map
+  normals (an exact per-slope memo), the CPU target search and ftparam's
+  projection to fixed point: census-estimated soft float gate 65K -> 50K,
+  Sector Z 84K -> 69K, 4 x Yoshi 102K -> 54K ticks a frame, with WORK flat on
+  identical game states (paired before the digests part: gate +0.8K / +0.1K,
+  Sector Z -1.2K / -2.9K, Yoshi -2.0K). Code size decides it: inlined
+  converters grew syMatrixF2L to 1.6 KB and the fixed projection is entered
+  cold once per fighter draw (+2-3K MCAM on Sector Z). The 1P scenes' Demo
+  actors (ending figure, challenger, continue) now draw on the lean path's
+  scratch slot. A campaign-walk census of every old-executor draw
+  (`gNdsOldExecutorDraws`, `gNdsFtrLeanDeclineReasons`) leaves Metal Mario and
+  the Polygon team: lean declines them on Capacity, being environment-mapped
+  all over (a Polygon: 28 texgen groups, 484 sites; a lean list holds 8 and
+  256, and the recorder's GX texgen is not yet in the lean materializer).
+  Master Hand and the ending figure draw lean. Receipt
+  `2026-10-05_fixed-leaves`.
 
 ## 7. Found along the way
 

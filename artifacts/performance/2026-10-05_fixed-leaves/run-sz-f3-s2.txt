@@ -1,0 +1,46 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 2 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,672; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 243: ALL 5,311,104 -> 1,116,800, 5 bucket(s) corrected
+  frame 299: ALL 5,311,104 -> 1,116,800, 4 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_fixed-leaves/sz-f3-s2.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=aefb6f4b30c+dirty(43) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,672     1,677,248      1.50  1,208,389     1,112,128 16,791,232      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,544        10,240      2.25      5,629         2,560     33,344        0.4
+HUD         8,896        22,976      2.58     10,315         7,808    360,000        0.8
+SRC       468,608       697,088      1.49    474,116       156,992  1,104,512       42.0
+MISC      401,536       582,720      1.45    424,018       174,080 15,878,592       36.0
+OTHR      263,360       623,936      2.37    294,312        22,336    771,904       23.6
+WAIT      242,368       599,680      2.47    272,163         2,432    752,000       21.7
+WORK      921,152     1,290,368      1.40    932,355       361,152 16,453,504       82.5
+SHDT      837,311     1,195,391      1.43    854,409       319,807 16,050,175       75.0
+SWRM        1,344         1,408      1.05      1,332           896      3,584        0.1
+GCRA      463,360       691,904      1.49    468,798       152,320  1,099,392       41.5
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        677             0  1,029,248        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      401,408       582,656      1.45    423,931       174,016 15,878,528       35.9
+MFLS           64           128      2.00         87            64        256        0.0
+GPOL          493           542      1.10        466            47        580        0.0
+GVTX        1,109         1,256      1.13      1,061           157      1,401        0.1
+DGSA   2,291,434,336 4,170,539,860        2,243,826,784  2,122,975 4,291,135,714 205,202.1
+DGSB   2,252,945,480 4,154,366,725        2,237,750,864  2,448,963 4,294,317,082 201,755.3
+WORK-H    910,784     1,275,072      1.40    922,040       353,024 16,093,504       81.6
+
+named=914,078 (75.6% of ALL)  VBI 2:1687 3:254 4:18 5+:2 max:34 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_fixed-leaves/sz-f3-s2.json

@@ -385,8 +385,20 @@ _Static_assert(NDS_FTR_LEAN_ROOT_MAX <= NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED,
 #endif
 
 /* `row`: the counter row, the battle slot (slice 6; NDS_FTR_LEAN_KINDS). */
+/* 2026-10-05 (owner: delete the old machinery): every build records which
+ * owners declined and why (a bit per decline reason, per owner slot), so a
+ * campaign walk names whatever still falls back to the old executor. */
+volatile u32 gNdsFtrLeanDeclineCount;
+volatile u32 gNdsFtrLeanDeclineReasons[NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT];
+static u32 sNdsFtrLeanRunOwner;
+
 static void ndsFtrLeanDecline(u32 row, u32 reason)
 {
+    gNdsFtrLeanDeclineCount++;
+    if (sNdsFtrLeanRunOwner < NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT)
+    {
+        gNdsFtrLeanDeclineReasons[sNdsFtrLeanRunOwner] |= 1u << (reason & 31u);
+    }
 #if NDS_FTR_LEAN_LAB
     if (reason < nNDSFtrLeanDeclineCount)
     {
@@ -464,6 +476,10 @@ void ndsFtrLeanNoteRebind(u32 player_slot)
  * write-back is not made (the next tick's latch walk rewrites it before any
  * reader). Mechanical equivalence, owner ruling D13: a cell can move by a low
  * bit where the source's float product rounds the other way. */
+/* Which of the checks below refused a joint (bits 0-5, in order), for the
+ * campaign walks. */
+volatile u32 gNdsFtrLeanLockFail;
+
 static s32 ndsFtrLeanLockLocal(DObj *dobj, s32 *accum, s32 *cells,
                                u32 *has_local)
 {
@@ -494,6 +510,7 @@ static s32 ndsFtrLeanLockLocal(DObj *dobj, s32 *accum, s32 *cells,
         }
         if (xobj->kind != NDS_RENDERER_ADAPTER_FIGHTER_PARTS_MTX_KIND)
         {
+            gNdsFtrLeanLockFail |= 1u;
             return FALSE;
         }
         parts_count++;
@@ -504,6 +521,7 @@ static s32 ndsFtrLeanLockLocal(DObj *dobj, s32 *accum, s32 *cells,
     }
     if ((parts_count != 1u) || (ftGetParts(dobj) == NULL))
     {
+        gNdsFtrLeanLockFail |= 2u;
         return FALSE;
     }
     inv_x = accum[0];
@@ -516,6 +534,7 @@ static s32 ndsFtrLeanLockLocal(DObj *dobj, s32 *accum, s32 *cells,
         (cells[10] == NDS_R2_COLLISION_F32_OVERFLOW) ||
         (cells[11] == NDS_R2_COLLISION_F32_OVERFLOW))
     {
+        gNdsFtrLeanLockFail |= 4u;
         return FALSE;
     }
     if ((inv_x == 0) && (inv_y == 0) && (inv_z == 0))
@@ -532,12 +551,14 @@ static s32 ndsFtrLeanLockLocal(DObj *dobj, s32 *accum, s32 *cells,
     }
     if ((inv_x <= 0) || (inv_y <= 0) || (inv_z <= 0))
     {
+        gNdsFtrLeanLockFail |= 8u;
         return FALSE; /* the source's overflow case; the float builder declines it too */
     }
     if ((ndsFighterMatrixAngleToIndexExact(dobj->rotate.vec.f.x, &indexx) == 0) ||
         (ndsFighterMatrixAngleToIndexExact(dobj->rotate.vec.f.y, &indexy) == 0) ||
         (ndsFighterMatrixAngleToIndexExact(dobj->rotate.vec.f.z, &indexz) == 0))
     {
+        gNdsFtrLeanLockFail |= 16u;
         return FALSE;
     }
     s = ndsR2CollisionF32ToFixed(dobj->scale.vec.f.x, 16u);
@@ -550,6 +571,7 @@ static s32 ndsFtrLeanLockLocal(DObj *dobj, s32 *accum, s32 *cells,
         (vec_x >= (64 << 16)) || (vec_y >= (64 << 16)) ||
         (vec_z >= (64 << 16)))
     {
+        gNdsFtrLeanLockFail |= 32u;
         return FALSE;
     }
     accum[0] = vec_x;
@@ -987,15 +1009,14 @@ static s32 ndsFtrLeanRetuple(u32 slot, FTStruct *fp, NDSFtrLeanInstance *inst)
     return TRUE;
 }
 
-/* Every VS kind (slice 6; slices 3-5: the four stress kinds), any detail,
- * native production mode, never the 1P intro's transient actors (they never
- * plan). */
+/* Every VS kind (slice 6), any detail, native production mode; since
+ * 2026-10-05 the 1P scenes' Demo actors too, on the scratch slot
+ * (ndsFtrLeanTransientDraw). */
 static u32 ndsFtrLeanEligible(FTStruct *fp, u32 *owner_slot)
 {
     u32 kind;
 
-    if ((sNdsIntroTransientActive != FALSE) ||
-        (ndsFighterGetNativeOwnerSlot(fp, owner_slot) == FALSE))
+    if (ndsFighterGetNativeOwnerSlot(fp, owner_slot) == FALSE)
     {
         return NDS_FTR_LEAN_KIND_NONE;
     }
@@ -1820,6 +1841,7 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
     {
         return FALSE;   /* not a lean kind: not an attempt */
     }
+    sNdsFtrLeanRunOwner = owner_slot;
     NDS_FTR_LEAN_CTR(gNdsFtrLean.attempts++);
     NDS_FTR_LEAN_CTR(gNdsFtrLean.k_attempts[row]++);
     NDS_FTR_LEAN_CTR(gNdsFtrLean.k_owner[row] = owner_slot + 1u);
@@ -2271,7 +2293,9 @@ static void ndsFtrLeanAdmitFrame(void)
 /* End of the fighter submit loop, once per presented frame: per-match reset,
  * the admission at the first frame after the poke, the GO latch, the GE busy
  * sample, and the counter publish. */
-static void ndsFtrLeanFrameEnd(void)
+/* Once per taskman heap generation (a new battle or scene): every slot's plan
+ * and lists go, since the DObjs and files they name are gone. */
+static void ndsFtrLeanMatchReset(void)
 {
     if (sNdsFtrLeanMatchHeapGen != gNdsTaskmanHeapGeneration)
     {
@@ -2287,6 +2311,41 @@ static void ndsFtrLeanFrameEnd(void)
         }
         NDS_FTR_LEAN_CTR(gNdsFtrLean.go_frame = 0u);
     }
+}
+
+/* 2026-10-05 (owner: delete the old machinery). The 1P scenes' Demo actors --
+ * the ending's figure, the challenger's silhouette, the continue screen's
+ * fallen figure (renderer_adapter_fighter.c ndsFighterIntroTransientSubmit)
+ * -- are never registered, so they draw on the scratch slot: per heap
+ * generation like a battle, and from a fresh plan whenever a different actor
+ * binds it. TRUE when the lean draw submitted. */
+volatile u32 gNdsFtrLeanTransientDraws;
+
+#if NDS_P2_1P_GAME && NDS_RENDERER_HW_TRIANGLES && \
+    (NDS_RENDERER_PROFILE_LEVEL < 2)
+static sb32 ndsFtrLeanTransientDraw(FTStruct *fp, sb32 rebind)
+{
+    NDSFtrLeanRunCall call = { NDS_INTRO_TRANSIENT_SCRATCH_SLOT, fp,
+                               NDS_FTR_LEAN_ROUTE_DRAW };
+    sb32 drew;
+
+    ndsFtrLeanMatchReset();
+    if (rebind != FALSE)
+    {
+        ndsFtrLeanInvalidate(NDS_INTRO_TRANSIENT_SCRATCH_SLOT, TRUE);
+    }
+    drew = (sb32)ndsDtcmHotStackRun(ndsFtrLeanRunOnHotStack, &call);
+    if (drew != FALSE)
+    {
+        gNdsFtrLeanTransientDraws++;
+    }
+    return drew;
+}
+#endif
+
+static void ndsFtrLeanFrameEnd(void)
+{
+    ndsFtrLeanMatchReset();
     ndsFtrLeanAdmitFrame();
 #if NDS_FTR_LEAN_LAB
     if ((gNdsFtrLean.go_frame == 0u) && (gSCManagerBattleState != NULL) &&

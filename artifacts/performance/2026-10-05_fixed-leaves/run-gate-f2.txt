@@ -1,0 +1,46 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 2 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,800; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 693: ALL 5,311,040 -> 1,116,736, 5 bucket(s) corrected
+  frame 1074: ALL 5,311,424 -> 1,117,120, 4 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_fixed-leaves/gate-f2.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=aefb6f4b30c+dirty(38) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,800     1,676,672      1.50  1,152,809     1,111,424  4,563,072      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         4,544        10,432      2.30      5,631         2,432     27,200        0.4
+HUD         9,280        24,320      2.62     11,313         8,000    626,944        0.8
+SRC       366,208       565,888      1.55    376,011       132,864  1,092,736       32.8
+MISC      405,568       559,680      1.38    415,752       176,896  3,344,128       36.3
+OTHR      335,680       619,008      1.84    344,102        25,088    791,360       30.1
+WAIT      312,896       594,368      1.90    321,605         2,752    771,008       28.0
+WORK      816,448     1,127,424      1.38    827,290       342,400  4,233,664       73.1
+SHDT      713,599     1,000,575      1.40    729,052       299,007  1,866,751       63.9
+SWRM        1,408         1,472      1.05      1,385           960      3,456        0.1
+GCRA      360,896       560,576      1.55    370,574       128,256  1,087,360       32.3
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        358             0    644,672        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      405,504       559,616      1.38    415,666       176,832  3,344,064       36.3
+MFLS           64           128      2.00         86            64        192        0.0
+GPOL          597           643      1.08        550            29        672        0.1
+GVTX        1,439         1,569      1.09      1,346            96      1,652        0.1
+DGSA   2,285,650,159 4,088,185,390        2,215,453,996  1,020,934 4,293,351,193 204,660.7
+DGSB   2,260,494,954 4,086,507,723        2,210,913,148  5,688,924 4,294,774,552 202,408.2
+WORK-H    805,824     1,113,856      1.38    815,977       333,120  3,606,720       72.2
+
+named=808,707 (70.2% of ALL)  VBI 2:1845 3:109 4:6 5+:1 max:9 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_fixed-leaves/gate-f2.json

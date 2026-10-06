@@ -1,0 +1,45 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,672; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 1548: ALL 5,310,976 -> 1,116,672, 5 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_fixed-leaves/yo-f3.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=aefb6f4b30c+dirty(43) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,672     1,676,992      1.50  1,202,572     1,114,496  4,252,672      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         5,056        10,112      2.00      5,746         2,560     27,968        0.5
+HUD         9,024        24,192      2.68     11,132         7,872    327,424        0.8
+SRC       397,824       655,424      1.65    415,047       135,232  1,159,424       35.6
+MISC      444,416       685,312      1.54    458,549       175,168  3,314,176       39.8
+OTHR      292,672       588,352      2.01    312,098        23,616    792,768       26.2
+WAIT      271,040       561,408      2.07    290,127         2,624    772,416       24.3
+WORK      897,024     1,279,616      1.43    908,444       340,800  3,920,896       80.3
+SHDT      794,047     1,172,671      1.48    812,105       299,135  2,343,295       71.1
+SWRM        1,344         1,408      1.05      1,331           832      3,392        0.1
+GCRA      392,640       650,048      1.66    409,675       130,496  1,153,920       35.2
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        275             0    269,248        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      444,352       685,184      1.54    458,462       175,104  3,314,048       39.8
+MFLS           64           128      2.00         86            64        448        0.0
+GPOL          536           611      1.14        487            57        663        0.0
+GVTX        1,377         1,575      1.14      1,267           185      1,762        0.1
+DGSA   2,083,884,863 4,124,661,661   1.98 2,111,491,949  5,064,253 4,294,579,349 186,615.7
+DGSB   2,035,472,387 4,126,107,849   2.03 2,100,963,081    755,242 4,291,943,493 182,280.2
+WORK-H    886,464     1,264,192      1.43    897,312       332,672  3,593,472       79.4
+
+named=890,474 (74.0% of ALL)  VBI 2:1674 3:278 4:7 5+:2 max:8 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_fixed-leaves/yo-f3.json

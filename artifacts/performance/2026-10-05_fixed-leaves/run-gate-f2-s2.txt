@@ -1,0 +1,45 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,736; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 1038: ALL 5,311,488 -> 1,117,184, 5 bucket(s) corrected
+Wrote artifacts/performance/2026-10-05_fixed-leaves/gate-f2-s2.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=aefb6f4b30c+dirty(43) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,736     1,676,160      1.50  1,150,378     1,111,168  5,310,528      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         5,248        11,136      2.12      5,869         2,496     24,832        0.5
+HUD         9,024        23,808      2.64     11,163         8,000    626,944        0.8
+SRC       383,744       574,272      1.50    387,022       132,864  4,692,864       34.4
+MISC      401,984       535,168      1.33    411,783       176,896  3,344,128       36.0
+OTHR      320,320       617,664      1.93    334,540        25,792    791,360       28.7
+WAIT      298,240       592,320      1.99    312,107         3,008    771,008       26.7
+WORK      826,880     1,129,280      1.37    834,549       342,400  5,218,560       74.0
+SHDT      708,927       988,287      1.39    721,244       299,007  5,035,135       63.5
+SWRM        1,408         1,472      1.05      1,387           960      3,456        0.1
+GCRA      378,368       568,896      1.50    381,590       128,256  4,687,552       33.9
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        383             0    644,672        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      401,856       535,104      1.33    411,697       176,832  3,344,064       36.0
+MFLS           64           128      2.00         86            64        256        0.0
+GPOL          563           645      1.15        527            29        698        0.1
+GVTX        1,359         1,558      1.15      1,281            96      1,697        0.1
+DGSA   2,063,737,780 4,092,102,024   1.98 2,096,507,645  1,641,126 4,289,691,455 184,800.9
+DGSB   2,108,215,673 4,095,899,174   1.94 2,114,803,787  2,356,018 4,294,735,116 188,783.7
+WORK-H    817,024     1,109,312      1.36    823,386       333,120  5,208,832       73.2
+
+named=815,837 (70.9% of ALL)  VBI 2:1860 3:96 4:4 5+:1 max:9 total:1961  slips=0
+Wrote artifacts/performance/2026-10-05_fixed-leaves/gate-f2-s2.json

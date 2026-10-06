@@ -259,8 +259,13 @@ enum
 
 /* Slice 6: every VS kind is a lean kind -- the twelve owner slots Mario (0)
  * through Kirby (11), NDS_RENDERER_NATIVE_FIGHTER_OWNER_*. The owner slot is
- * the kind (the instance's tuple field). The 1P-only owners (Metal Mario, the
- * Polygon team, Master Hand: slots 12+) stay on the old path.
+ * the kind (the instance's tuple field). The 1P-only owners (Metal Mario 12,
+ * the Polygon team 13-23, Master Hand 24) stay on the old executor for now:
+ * a 2026-10-05 campaign walk with all 25 admitted declined Metal Mario and
+ * every Polygon on Capacity -- they are environment-mapped all over (a
+ * Polygon needs 28 texgen groups and 484 sites against a list's 8 and 256),
+ * which the recorder covers with GX texgen and its overflow arrays and the
+ * lean materializer does not yet. Master Hand drew lean.
  *
  * The lab counters' per-kind rows (k_*[NDS_FTR_LEAN_KINDS]) are indexed by
  * BATTLE SLOT since slice 6 -- a four-fighter roster has four rows whatever

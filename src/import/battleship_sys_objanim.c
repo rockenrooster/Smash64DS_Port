@@ -3419,10 +3419,16 @@ ndsGcPlayAnimAllFinish(GObj *gobj, MObj **active_mobjs, u32 active_count)
     }
 }
 
+/* P2-2p8 (2026-10-05, owner: "Software floating point should not exist, fixed
+ * point only"; ruling D13 re-baselines the digest): every stage and item DObj
+ * now takes the port player, whose float AObjs evaluate the cubic in fixed
+ * point (E64) -- until today only the Master Hand wallpaper did (below). The
+ * float census put the decomp body at 2.3K ticks a frame on Dream Land and
+ * 6.7K on Sector Z. */
 void gcPlayAnimAll(GObj *gobj) __attribute__((section(".itcm")));
 void gcPlayAnimAll(GObj *gobj)
 {
-    ndsGcPlayAnimAllBody(gobj, FALSE, FALSE, gNdsMObjTickMul);
+    ndsGcPlayAnimAllBody(gobj, FALSE, TRUE, gNdsMObjTickMul);
 }
 
 #if NDS_P2_STAGE_YOSTER

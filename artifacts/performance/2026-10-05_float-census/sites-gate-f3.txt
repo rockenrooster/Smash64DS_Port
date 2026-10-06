@@ -1,0 +1,123 @@
+sites 4001  calls 6,721,153  est cycles 374,612,218  per frame 3,537 calls, 197,164 cycles
+routine cost (ticks/call): fadd=58 fsub=60 fmul=54 fdiv=100 fcmpeq=46 fcmplt=44 fcmple=78 fcmpge=48 fcmpgt=46 f2iz=60 f2uiz=115 i2f=47 ui2f=47 f2d=103 d2f=132 dadd=135 dsub=349 dmul=226
+ cyc/frame  cum%  calls/f  function  [file]  routines
+     8,625   4.4      153  ftComputerCheckDetectTarget  [decomp/BattleShip-main/decomp/src/ft/ftcomputer.c]  fmul:39 fsub:32 fadd:29 i2f:18
+     7,674   8.3      149  gmCameraUpdateInterests  [decomp/BattleShip-main/decomp/src/gm/gmcamera.c]  fmul:37 fcmplt:32 fcmpgt:32 fadd:26
+     7,163  11.9      131  ndsLbParticleDrawTexturesOnHotStack  [src/import/battleship_lbparticle.c]  fmul:61 fadd:56 fcmpeq:6 fcmplt:6
+     6,520  15.2      119  ndsBaseMPProcessUpdateMain  [decomp/BattleShip-main/decomp/src/mp/mpprocess.c]  fadd:71 fcmpgt:15 fsub:15 fcmplt:15
+     6,422  18.5      104  mpCollisionGetFCCommonFloor  [src/port/reloc_backend_mp_collision.c]  fsub:51 fcmpeq:12 fmul:12 fdiv:12
+     6,169  21.6      119  ndsMPCheckWallSurfaceTilt  [src/port/reloc_backend_mp_collision.c]  fcmpgt:44 i2f:28 fsub:28 fadd:12
+     5,773  24.5       99  mpCollisionCheckProjectFloor  [src/port/reloc_backend_compat_shims.c]  i2f:34 fcmple:22 fcmpge:18 fsub:11
+     5,589  27.4       98  ndsRendererAdapterBuildNativeMaterialSnapshot  [src/port/renderer_adapter_stage.c]  fmul:20 ui2f:18 f2iz:13 fdiv:10
+     5,203  30.0       90  ndsFtPoseParse  [src/nds/nds_ft_pose.c]  fadd:89
+     4,494  32.3       77  syVectorNorm3D  [decomp/BattleShip-main/decomp/src/sys/vector.c]  fmul:46 fadd:15 fdiv:7 fcmpeq:7
+     4,433  34.5       71  gcPlayDObjAnimJoint  [src/import/battleship_sys_objanim.c]  fadd:45 fcmple:18 fmul:6
+     4,404  36.8       79  func_ovl2_800ED490  [decomp/BattleShip-main/decomp/src/gm/gmcollision.c]  fmul:45 fadd:34
+     4,398  39.0       75  ndsBaseMPProcessCheckTestRWallCollision  [decomp/BattleShip-main/decomp/src/mp/mpprocess.c]  fadd:53 fsub:21
+     4,366  41.2       75  ndsBaseMPProcessCheckTestLWallCollision  [decomp/BattleShip-main/decomp/src/mp/mpprocess.c]  fadd:75
+     4,237  43.3       67  ftDisplayLightsDrawReflect  [decomp/BattleShip-main/decomp/src/ft/ftdisplaylights.c]  fmul:39 f2iz:16 fdiv:11
+     4,197  45.5       69  gcParseDObjAnimJoint  [builds/build-lab-fcen1005f3/battleship_overlay/src/sys/objanim.c]  fsub:22 fadd:16 fcmpgt:9 fcmple:7
+     3,929  47.5       68  syVectorAdd3D  [decomp/BattleShip-main/decomp/src/sys/vector.c]  fadd:67
+     3,618  49.3       63  syMatrixLookAtF  [decomp/BattleShip-main/decomp/src/sys/matrix.c]  fmul:39 fadd:12 fsub:9 fdiv:3
+     3,554  51.1       60  lbParticleUpdateStruct.part.0  [decomp/BattleShip-main/decomp/src/lb/lbparticle.c]  fadd:31 fmul:15 fsub:5 fdiv:4
+     3,536  52.9       71  ftMainProcPhysicsMap  [decomp/BattleShip-main/decomp/src/ft/ftmain.c]  fcmpeq:22 fadd:15 fcmpgt:8 i2f:8
+     3,304  54.6       56  ndsBaseMPProcessCheckTestRWallCollisionAdjNew  [decomp/BattleShip-main/decomp/src/mp/mpprocess.c]  fadd:35 fsub:20
+     3,273  56.2       56  ndsBaseMPProcessCheckTestLWallCollisionAdjNew  [decomp/BattleShip-main/decomp/src/mp/mpprocess.c]  fadd:56
+     3,272  57.9       55  syVectorDiff3D  [decomp/BattleShip-main/decomp/src/sys/vector.c]  fsub:54
+     2,931  59.4       50  grWallpaperCalcPersp  [decomp/BattleShip-main/decomp/src/gr/grwallpaper.c]  fmul:12 fsub:12 fcmplt:8 fcmpgt:6
+     2,883  60.8       63  gmCameraSetBoundsPosition  [decomp/BattleShip-main/decomp/src/gm/gmcamera.c]  i2f:30 fcmplt:16 fcmpgt:16
+     2,878  62.3       52  syVectorMag3D  [decomp/BattleShip-main/decomp/src/sys/vector.c]  fmul:31 fadd:20
+     2,678  63.7       58  ndsBaseFTCommonDeadCheckInterruptCommon  [decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommondead.c]  i2f:29 fcmpgt:14 fcmplt:14
+     2,527  64.9       47  ndsRendererAdapterApplyMvpRecalc  [src/port/renderer_adapter_matrix.c]  fmul:47
+     2,369  66.1       40  ndsIFCommonNativeOamDrawGObj  [src/nds/nds_ifcommon_oam.c]  fadd:9 fmul:6 fcmpge:5 f2iz:5
+     2,230  67.3       40  guMtxCatF  [src/import/battleship_libultra_gu_mtxcatf.c]  fadd:20 fmul:20
+     2,204  68.4       42  ftPhysicsSetGroundVelTransferAir  [src/port/reloc_backend_compat_shims.c]  fmul:18 fadd:9 fcmpgt:4 fcmplt:4
+     2,191  69.5       38  ndsBaseGcPlayMObjMatAnim  [builds/build-lab-fcen1005f3/battleship_overlay/src/sys/objanim.c]  fmul:18 fadd:11 fsub:5 fcmple:0
+     2,159  70.6       39  syMatrixRotRpyRF  [decomp/BattleShip-main/decomp/src/sys/matrix.c]  fmul:30 fsub:4 fadd:4
+     2,053  71.6       40  battleship_ftMainProcUpdateInterrupt  [decomp/BattleShip-main/decomp/src/ft/ftmain.c]  fadd:10 fcmplt:7 i2f:6 fmul:6
+     1,867  72.6       41  gmCameraCheckTargetInBounds  [decomp/BattleShip-main/decomp/src/gm/gmcamera.c]  i2f:13 fcmpgt:13 fcmplt:13
+     1,865  73.5       28  gmCameraGetClampDimensionsMax  [decomp/BattleShip-main/decomp/src/gm/gmcamera.c]  fmul:9 fdiv:9 fcmplt:3 i2f:3
+     1,781  74.4       34  ftComputerUpdateInputs.part.0  [decomp/BattleShip-main/decomp/src/ft/ftcomputer.c]  fcmplt:8 fsub:5 fcmpgt:5 fcmpeq:4
+     1,673  75.3       29  ndsBaseFTCommonGuardGetJointTransform  [decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonguard1.c]  fsub:9 fmul:9 fadd:9
+     1,646  76.1       35  syMatrixRowscaleF  [decomp/BattleShip-main/decomp/src/sys/matrix.c]  fcmpeq:26 fmul:8
+     1,633  77.0       27  gmCameraDefaultFuncCamera  [decomp/BattleShip-main/decomp/src/gm/gmcamera.c]  fsub:8 fmul:7 fadd:3 fcmplt:1
+     1,595  77.8       29  gmCollisionCheckFighterInFighterRange  [decomp/BattleShip-main/decomp/src/gm/gmcollision.c]  fsub:13 fcmpgt:10 fadd:4 fcmplt:1
+     1,544  78.5       22  syMatrixPerspFastF  [decomp/BattleShip-main/decomp/src/sys/matrix.c]  fmul:7 fdiv:6 fadd:2 ui2f:2
+     1,535  79.3       26  ndsMPFCSegmentCrossesKernel  [include/nds/nds_mp_floor_crossing.h]  fsub:24 fdiv:0 fmul:0 fadd:0
+     1,395  80.0       21  func_ovl2_8010C3C0  [decomp/BattleShip-main/decomp/src/gm/gmcamera.c]  fdiv:7 fcmplt:3 fmul:3 fcmpgt:3
+     1,264  80.7       22  lbCommonCos  [src/port/reloc_backend_compat_shims.c]  fadd:21
+     1,238  81.3       23  syVectorScale3D  [decomp/BattleShip-main/decomp/src/sys/vector.c]  fmul:23
+     1,222  81.9       23  ifCommonPlayerTagProcDisplay  [decomp/BattleShip-main/decomp/src/if/ifcommon.c]  i2f:8 fsub:4 fcmpgt:3 fadd:3
+     1,138  82.5       21  gmCollisionTransformMatrixAll  [decomp/BattleShip-main/decomp/src/gm/gmcollision.c]  fmul:15 fcmpeq:2 fadd:1 fsub:1
+     1,096  83.1       21  ftComputerFollowObjectiveWalk  [decomp/BattleShip-main/decomp/src/ft/ftcomputer.c]  fcmplt:7 fcmpgt:5 fsub:3 fcmple:2
+     1,072  83.6       17  ndsBattleHudRender  [src/nds/nds_battle_hud.c]  fadd:4 fmul:4 fcmpge:2 f2iz:2
+       943  84.1       16  ndsBaseMPProcessCheckFloorEdgeCollisionR  [decomp/BattleShip-main/decomp/src/mp/mpprocess.c]  fadd:10 fsub:5
+       935  84.5       16  ndsBaseMPProcessCheckFloorEdgeCollisionL  [decomp/BattleShip-main/decomp/src/mp/mpprocess.c]  fadd:16
+       933  85.0       16  ndsSObjDrawCachedWallpaperFinal.isra.0  [src/port/sprite_preview_backend.c]  fcmplt:4 fcmpgt:4 fadd:2 fmul:2
+       915  85.5       18  syUtilsRandFloat  [decomp/BattleShip-main/decomp/src/sys/utils.c]  fmul:9 i2f:9
+       835  85.9       14  ndsBaseGcParseMObjMatAnimJoint  [builds/build-lab-fcen1005f3/battleship_overlay/src/sys/objanim.c]  fsub:4 fadd:4 fcmpgt:3 fcmple:1
+       824  86.3       16  battleship_ftPublicProcUpdate  [decomp/BattleShip-main/decomp/src/ft/ftpublic.c]  fcmplt:8 fsub:8
+       783  86.7       16  ftMainUpdateMotionEventsAll  [decomp/BattleShip-main/decomp/src/ft/ftmain.c]  fcmpeq:8 fcmpgt:4 fsub:2 fcmple:0
+       776  87.1       14  func_ovl2_8010C5C0  [decomp/BattleShip-main/decomp/src/gm/gmcamera.c]  fmul:8 fadd:6
+       756  87.5       15  ftMainUpdateMotionEventsForwardEffect  [decomp/BattleShip-main/decomp/src/ft/ftmain.c]  fcmpeq:7 fcmpgt:4 fsub:2 fcmple:0
+       744  87.9       16  ndsR2CamQToF32  [src/import/battleship_gmcamera.c]  i2f:15
+       693  88.2       12  ndsWhispyAOTStructFuncRunLean.isra.0  [src/import/battleship_lbparticle.c]  fadd:6 fmul:2 fsub:2
+       669  88.6       12  lbParticleGeneratorFuncRun  [decomp/BattleShip-main/decomp/src/lb/lbparticle.c]  fmul:5 fadd:2 fsub:1 fcmplt:1
+       661  88.9       14  ftComputerCheckFindTarget  [src/import/battleship_ftcomputer_fixed.c]  i2f:14
+       652  89.2       12  ftComputerGetObjectiveStatus  [decomp/BattleShip-main/decomp/src/ft/ftcomputer.c]  fmul:3 fsub:3 fcmpgt:1 fadd:1
+       650  89.6       12  ftComputerCheckTargetItemOrTwister  [decomp/BattleShip-main/decomp/src/ft/ftcomputer.c]  fmul:5 fadd:5 fsub:0 fcmpgt:0
+       647  89.9       14  ftPhysicsApplyGroundVelFriction  [src/port/reloc_backend_compat_shims.c]  fcmplt:6 fcmpgt:3 fmul:3 fsub:0
+       628  90.2       11  ndsBaseMPProcessCheckTestFloorCollisionNew  [decomp/BattleShip-main/decomp/src/mp/mpprocess.c]  fadd:10 fsub:0 fcmple:0
+       624  90.5       11  ndsBaseMPProcessCheckTestFloorCollision  [decomp/BattleShip-main/decomp/src/mp/mpprocess.c]  fadd:10
+       618  90.8       12  itProcessProcItemMain  [decomp/BattleShip-main/decomp/src/it/itprocess.c]  fadd:3 i2f:2 fsub:2 fcmpgt:1
+       571  91.1       11  ndsStageMPAdjustFloorLoopWallSweep  [src/port/reloc_backend_mp_collision.c]  fsub:3 fcmplt:3 fadd:3 fcmpge:0
+       570  91.4        9  ndsIFCommonBattleScreenY  [src/nds/nds_ifcommon_oam.c]  fmul:3 fdiv:1 fcmpgt:1 fsub:1
+       567  91.7        9  ndsIFCommonBattleScreenX  [src/nds/nds_ifcommon_oam.c]  fmul:3 fadd:1 fdiv:1 fcmpgt:1
+       559  92.0       12  ifCommonPlayerDamageUpdateDigits  [decomp/BattleShip-main/decomp/src/if/ifcommon.c]  fcmpeq:7 fmul:1 fsub:0 i2f:0
+       545  92.3        7  lbCommonTan  [src/port/battle_playable_compat_stubs.c]  fcmpeq:3 fdiv:3
+       527  92.5        9  gmCameraGetAdjustAtAngle  [decomp/BattleShip-main/decomp/src/gm/gmcamera.c]  fadd:5 fmul:3
+       456  92.8        9  wpProcessProcWeaponMain  [decomp/BattleShip-main/decomp/src/wp/wpprocess.c]  i2f:2 fcmpgt:1 fsub:1 fcmplt:1
+       420  93.0        8  ftDisplayMainDrawAfterImage  [decomp/BattleShip-main/decomp/src/ft/ftdisplaymain.c]  f2iz:2 fmul:1 fadd:1 i2f:1
+       417  93.2        8  ndsBaseFTDisplayMainProcDisplay  [decomp/BattleShip-main/decomp/src/ft/ftdisplaymain.c]  fadd:4 fcmplt:3 fmul:0 i2f:0
+       416  93.4        9  battleship_ftMainProcParams  [decomp/BattleShip-main/decomp/src/ft/ftmain.c]  fcmpeq:8 f2iz:0 fsub:0 fadd:0
+       410  93.6        8  ftComputerFollowObjectiveAttack.part.0  [decomp/BattleShip-main/decomp/src/ft/ftcomputer.c]  fcmplt:3 fcmpgt:1 fadd:1 fmul:1
+       396  93.8        7  gmCollisionCheckWeaponInFighterRange  [decomp/BattleShip-main/decomp/src/gm/gmcollision.c]  fsub:3 fcmpgt:2 fadd:1 fcmplt:0
+       383  94.0        7  ftComputerCheckFindItem  [decomp/BattleShip-main/decomp/src/ft/ftcomputer.c]  fcmpeq:1 fcmple:1 fsub:1 fmul:1
+       378  94.2        7  ndsR2CameraPerspFast20p12  [src/import/battleship_gmcamera.c]  fmul:4 f2iz:2
+       378  94.4        8  gcPlayAnimAll  [src/import/battleship_sys_objanim.c]  fcmpeq:8
+       330  94.6        6  ndsWhispyAOTGeneratorFuncRun  [src/import/battleship_lbparticle.c]  fmul:2 fsub:1 fcmpge:1 fadd:0
+       328  94.7        8  func_ovl2_800F8FFC  [src/port/reloc_backend_mp_collision.c]  fcmplt:7
+       328  94.9        6  ndsRendererAdapterMvpMod1F  [src/port/renderer_adapter_matrix.c]  fmul:2 fsub:2 fadd:1 fcmplt:1
+       305  95.0        6  func_ovl3_80135B78  [decomp/BattleShip-main/decomp/src/ft/ftcomputer.c]  fsub:1 fmul:1 fcmpgt:1 i2f:0
+       299  95.2        6  func_ovl3_801346D4  [decomp/BattleShip-main/decomp/src/ft/ftcomputer.c]  fsub:1 fcmplt:1 fadd:1 fcmpgt:0
+       298  95.3        5  ndsBaseMPProcessCheckTestFloorCollisionAdjNew  [decomp/BattleShip-main/decomp/src/mp/mpprocess.c]  fadd:5
+       298  95.5        5  ndsBaseMPProcessCheckTestCeilCollisionAdjNew  [decomp/BattleShip-main/decomp/src/mp/mpprocess.c]  fadd:5
+       259  95.6        5  ftPhysicsApplyAirVelXFriction  [src/port/reloc_backend_compat_shims.c]  fcmplt:2 fcmpgt:1 fadd:0 fsub:0
+       243  95.8        4  gmCollisionGetWorldPosition  [decomp/BattleShip-main/decomp/src/gm/gmcollision.c]  fadd:2 fmul:2
+       232  95.9        5  ndsAObjEvent32CollectActiveMObjs  [src/import/battleship_sys_objanim.c]  fcmpeq:5
+       226  96.0        4  ndsRendererHardwarePrepareLitDirection  [src/nds/nds_renderer_textures_effects.c]  fmul:1 fdiv:0 l2f:0 f2iz:0
+       225  96.1        4  ftPhysicsApplyAirVelDriftFastFall  [src/port/reloc_backend_compat_shims.c]  fcmplt:1 fsub:0 i2f:0 fadd:0
+       217  96.2        4  ftPhysicsSetGroundVelAbsStickRange  [src/port/reloc_backend_compat_shims.c]  fcmplt:1 i2f:0 fmul:0 fsub:0
+       205  96.3        4  func_ovl3_80138AA8  [decomp/BattleShip-main/decomp/src/ft/ftcomputer.c]  fcmplt:1 fsub:0 i2f:0 fcmpgt:0
+       197  96.4        4  ftComputerProcDefault  [decomp/BattleShip-main/decomp/src/ft/ftcomputer.c]  fcmplt:3 fmul:0 i2f:0
+       188  96.5        4  ftMainParseMotionEvent  [decomp/BattleShip-main/decomp/src/ft/ftmain.c]  i2f:2 fadd:0 fsub:0 fmul:0
+       184  96.6        3  grPupupuWhispySetWindPush  [decomp/BattleShip-main/decomp/src/gr/grcommon/grpupupu.c]  fcmple:1 fcmpge:0 fmul:0 fadd:0
+       177  96.7        3  syVectorRotateAbout3D  [decomp/BattleShip-main/decomp/src/sys/vector.c]  fmul:1 fadd:0 fsub:0 fdiv:0
+       169  96.8        3  func_ovl3_8013877C  [decomp/BattleShip-main/decomp/src/ft/ftcomputer.c]  fcmplt:1 fsub:0 fcmpgt:0 f2d:0
+       166  96.9        4  ftPhysicsCheckClampAirVelXDec  [src/port/reloc_backend_compat_shims.c]  fcmplt:1 fcmpgt:1 fadd:0
+       161  96.9        3  gmCollisionCheckItemInFighterRange  [decomp/BattleShip-main/decomp/src/gm/gmcollision.c]  fsub:1 fcmpgt:1 fadd:0 fcmplt:0
+       158  97.0        2  grPupupuWhispyUpdateBlink  [decomp/BattleShip-main/decomp/src/gr/grcommon/grpupupu.c]  fcmple:2
+       154  97.1        3  ndsAObjEvent32CorrectMObjColors.part.0  [src/import/battleship_sys_objanim.c]  fmul:1 f2iz:0 fcmple:0
+       151  97.2        3  ifCommonItemArrowProcDisplay  [decomp/BattleShip-main/decomp/src/if/ifcommon.c]  i2f:1 fadd:0 fsub:0 f2iz:0
+       148  97.3        3  ndsBaseFTCommonGuardInitJoints  [decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonguard1.c]  fcmpeq:2 fdiv:0 fmul:0 i2f:0
+       148  97.3        3  ndsBaseMPProcessSetCollProjectFloorID  [decomp/BattleShip-main/decomp/src/mp/mpprocess.c]  fadd:2
+       136  97.4        2  efManagerImpactWaveProcUpdate  [decomp/BattleShip-main/decomp/src/ef/efmanager.c]  fcmple:0 fcmplt:0 fsub:0 fcmpgt:0
+       135  97.5        2  efManagerQuakeProcUpdate  [decomp/BattleShip-main/decomp/src/ef/efmanager.c]  fmul:0 fcmple:0 fcmpgt:0 fdiv:0
+       133  97.5        2  syVectorNormCross3D  [decomp/BattleShip-main/decomp/src/sys/vector.c]  fmul:1 fsub:0 fadd:0 fcmpeq:0
+       122  97.6        2  ftPhysicsApplyGroundVelTransN  [src/port/reloc_backend_compat_shims.c]  fmul:1 fsub:0 i2f:0 fcmplt:0
+       117  97.7        2  ndsBaseMPProcessCheckTestLCliffCollision  [decomp/BattleShip-main/decomp/src/mp/mpprocess.c]  fadd:2
+       111  97.7        2  wpProcessUpdateHitPositions  [decomp/BattleShip-main/decomp/src/wp/wpprocess.c]  fadd:1 fcmpeq:0 fmul:0
+       106  97.8        2  func_ovl2_800EF5D4  [decomp/BattleShip-main/decomp/src/gm/gmcollision.c]  fcmpgt:0 fadd:0 fsub:0 fcmplt:0
+       106  97.8        1  battleship_ftAnimEndSetWait  [decomp/BattleShip-main/decomp/src/ft/ftanimend.c]  fcmple:1
+       104  97.9        2  ndsEFManagerVisualProcUpdate  [src/import/battleship_efmanager.c]  fadd:1 fcmple:0 fsub:0
+       104  97.9        2  ndsBaseMPProcessCheckTestRCliffCollision  [decomp/BattleShip-main/decomp/src/mp/mpprocess.c]  fsub:0 fadd:0 fcmplt:0

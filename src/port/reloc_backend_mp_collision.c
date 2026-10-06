@@ -869,87 +869,112 @@ static f32 ndsMPLineDistanceFCf(f32 opx, f32 v1x, f32 v1y, f32 v2x, f32 v2y)
     return v1y + (((opx - v1x) / (v2x - v1x)) * (v2y - v1y));
 }
 
+/* The unit slope of a collision segment, memoized (P2-2p8, 2026-10-05; owner:
+ * "Software floating point should not exist, fixed point only"). Every floor/
+ * ceiling (FC) and wall (LR) normal below is built from py = -(a / b) and
+ * inv_len = 1 / sqrtf(py * py + 1) over two integer vertex differences -- two
+ * divides, a square root and four more float operations -- so the pair
+ * (py * inv_len, inv_len) is a pure function of (a, b), and stage vertices are
+ * static. A direct-mapped table serves every repeat bit for bit; only a
+ * slope's first visit runs the float expressions, the same ones, so a cached
+ * pair is exactly what they compute. Negating a product negates its operand's
+ * product exactly, so the -py * inv_len arms are -px. No caller passes a zero
+ * (both guard a == 0 and b == 0 first), so the zeroed table holds no false
+ * key. */
+#define NDS_MP_SLOPE_MEMO 32u
+
+typedef struct NDSMPSlopeMemo
+{
+    s32 a;
+    s32 b;
+    f32 px;
+    f32 il;
+} NDSMPSlopeMemo;
+
+static NDSMPSlopeMemo sNdsMPSlopeMemo[NDS_MP_SLOPE_MEMO];
+
+static void ndsMPSlopeUnit(s32 a, s32 b, f32 *px, f32 *il)
+{
+    NDSMPSlopeMemo *m = &sNdsMPSlopeMemo[
+        (((u32)a * 0x9E3779B1u) ^ ((u32)b * 0x85EBCA77u)) >> 27];
+
+    if ((m->a != a) || (m->b != b))
+    {
+        const f32 py = -((f32)a / (f32)b);
+        const f32 inv_len = 1.0F / sqrtf((py * py) + 1.0F);
+
+        m->a = a;
+        m->b = b;
+        m->px = py * inv_len;
+        m->il = inv_len;
+    }
+    *px = m->px;
+    *il = m->il;
+}
+
+/* An s16 vertex coordinate held as an exact float (ndsMPVertexF32Get), back
+ * to its integer from the bits. */
+static inline s32 ndsMPVertexFloatInt(f32 v)
+{
+    u32 bits;
+    u32 exponent;
+    s32 magnitude;
+
+    __builtin_memcpy(&bits, &v, sizeof(bits));
+    exponent = (bits >> 23) & 0xFFu;
+    if (exponent < 127u)
+    {
+        return 0;
+    }
+    magnitude = (s32)(((bits & 0x7FFFFFu) | 0x800000u) >> (150u - exponent));
+    return ((bits & 0x80000000u) != 0u) ? -magnitude : magnitude;
+}
+
+/* `ud` is +1 or -1 at every call site, so (f32)ud is +-1.0F. */
 static void ndsMPGetFCAngle(Vec3f *angle, s32 v1x, s32 v1y, s32 v2x,
                             s32 v2y, s32 ud)
 {
-    f32 py;
-    f32 inv_len;
-    f32 dist_y;
+    f32 px;
+    f32 il;
 
     if (angle == NULL)
     {
         return;
     }
     angle->z = 0.0F;
-    dist_y = (f32)(v2y - v1y);
-    if (dist_y == 0.0F)
+    if (v2y == v1y)
     {
         angle->x = 0.0F;
-        angle->y = (f32)ud;
+        angle->y = (ud < 0) ? -1.0F : 1.0F;
         return;
     }
     if (v2x == v1x)
     {
         NDS_DIAG(gNdsStageCollisionLoopDivisionGuardCount++);
         angle->x = 0.0F;
-        angle->y = (f32)ud;
+        angle->y = (ud < 0) ? -1.0F : 1.0F;
         return;
     }
-    py = -(dist_y / (f32)(v2x - v1x));
-    inv_len = 1.0F / sqrtf((py * py) + 1.0F);
+    ndsMPSlopeUnit(v2y - v1y, v2x - v1x, &px, &il);
     if (ud < 0)
     {
-        angle->x = -py * inv_len;
-        angle->y = -inv_len;
+        angle->x = -px;
+        angle->y = -il;
     }
     else
     {
-        angle->x = py * inv_len;
-        angle->y = inv_len;
+        angle->x = px;
+        angle->y = il;
     }
 }
 
-/* ndsMPGetFCAngle on cached vertex floats. An s16 difference is exact in f32
- * whether it is taken before or after the conversion, so (f32)(v2y - v1y) ==
- * v2y_f - v1y_f and the compares agree: identical results. */
+/* ndsMPGetFCAngle on cached vertex floats, which hold the s16 coordinates
+ * exactly. */
 static void ndsMPGetFCAnglef(Vec3f *angle, f32 v1x, f32 v1y, f32 v2x, f32 v2y,
                              s32 ud)
 {
-    f32 py;
-    f32 inv_len;
-    f32 dist_y;
-
-    if (angle == NULL)
-    {
-        return;
-    }
-    angle->z = 0.0F;
-    dist_y = v2y - v1y;
-    if (dist_y == 0.0F)
-    {
-        angle->x = 0.0F;
-        angle->y = (f32)ud;
-        return;
-    }
-    if (v2x == v1x)
-    {
-        NDS_DIAG(gNdsStageCollisionLoopDivisionGuardCount++);
-        angle->x = 0.0F;
-        angle->y = (f32)ud;
-        return;
-    }
-    py = -(dist_y / (v2x - v1x));
-    inv_len = 1.0F / sqrtf((py * py) + 1.0F);
-    if (ud < 0)
-    {
-        angle->x = -py * inv_len;
-        angle->y = -inv_len;
-    }
-    else
-    {
-        angle->x = py * inv_len;
-        angle->y = inv_len;
-    }
+    ndsMPGetFCAngle(angle, ndsMPVertexFloatInt(v1x), ndsMPVertexFloatInt(v1y),
+                    ndsMPVertexFloatInt(v2x), ndsMPVertexFloatInt(v2y), ud);
 }
 
 /* R2-03 E51 measured this scan and the table it suggested is REFUTED: Dream
@@ -3035,11 +3060,12 @@ ndsMPCheckWallSurfaceTilt(s32 v1x, s32 v1y, s32 v2x, s32 v2y, f32 d1x, f32 d1y,
     return TRUE;
 }
 
+/* `lr` is +1 or -1 at every call site; the slope comes from ndsMPSlopeUnit. */
 static void ndsMPGetLRAngle(Vec3f *angle, s32 v1x, s32 v1y, s32 v2x, s32 v2y,
                             s32 lr)
 {
-    f32 py;
-    f32 inv_len;
+    f32 px;
+    f32 il;
 
     angle->z = 0.0F;
     if ((v2x == v1x) || (v2y == v1y))
@@ -3048,21 +3074,20 @@ static void ndsMPGetLRAngle(Vec3f *angle, s32 v1x, s32 v1y, s32 v2x, s32 v2y,
         {
             NDS_DIAG(gNdsStageCollisionLoopDivisionGuardCount++);
         }
-        angle->x = (f32)lr;
+        angle->x = (lr < 0) ? -1.0F : 1.0F;
         angle->y = 0.0F;
         return;
     }
-    py = -((f32)(v2x - v1x) / (f32)(v2y - v1y));
-    inv_len = 1.0F / sqrtf((py * py) + 1.0F);
+    ndsMPSlopeUnit(v2x - v1x, v2y - v1y, &px, &il);
     if (lr < 0)
     {
-        angle->x = -inv_len;
-        angle->y = -py * inv_len;
+        angle->x = -il;
+        angle->y = -px;
     }
     else
     {
-        angle->x = inv_len;
-        angle->y = py * inv_len;
+        angle->x = il;
+        angle->y = px;
     }
 }
 

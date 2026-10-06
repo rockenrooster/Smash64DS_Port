@@ -415,43 +415,142 @@ sb32 ndsFighterDisplayContractCheckTargetInBounds(f32 pos_x, f32 pos_y)
     return is_in_bounds;
 }
 
+/* BattleShip ftparam.c:2421-2439 in fixed point (P2-2p8, 2026-10-05; owner:
+ * "Software floating point should not exist, fixed point only"; ruling D13).
+ * The camera matrix's rotation rows are below 8 in magnitude (look-at times
+ * the perspective's ~1-4 scales) and its translation row below 2^19, so they
+ * take Q28 and Q12; positions take Q12 (saturated at 2^16 units, past every
+ * blast zone); the three dot products accumulate at Q40 in 64 bits, the
+ * source's |w| >= 0.1 clamp is applied there, and x / w and y / w come from
+ * the hardware divider (both scaled under 2^40 first, so the Q22 quotient
+ * fits). The integer `vscale / 4` multiplies the quotient as in the source. A
+ * matrix element outside those ranges never occurs with the game camera; it
+ * would saturate rather than wrap. The converted matrix is kept while its
+ * twelve source words are unchanged (once a frame for the game camera, which
+ * every caller passes). */
+#include <stdint.h>
+#include <nds/nds_r2_collision_mtx.h>
+#include <nds/nds_r2_hwmath_unit.h>
+
+static const u32 sNdsProjectCols[3] = { 0u, 1u, 3u };
+static u32 sNdsProjectSrc[4][3];
+static int32_t sNdsProjectQ[4][3];
+static u32 sNdsProjectValid;
+
+static __attribute__((noinline, target("arm"))) int32_t
+ndsProjectToFixed(f32 value, u32 bits_frac, int32_t limit)
+{
+    int32_t q = ndsR2CollisionF32ToFixed(value, bits_frac);
+    u32 bits;
+
+    __builtin_memcpy(&bits, &value, sizeof(bits));
+    if ((q == NDS_R2_COLLISION_F32_OVERFLOW) || (q >= limit) || (q <= -limit))
+    {
+        return ((bits & 0x80000000u) != 0u) ? -limit : limit;
+    }
+    return q;
+}
+
+static int64_t __attribute__((target("arm")))
+ndsProjectRatioQ22(int64_t num, int64_t den)
+{
+    const uint64_t an = (num < 0) ? (uint64_t)-num : (uint64_t)num;
+    const uint64_t ad = (den < 0) ? (uint64_t)-den : (uint64_t)den;
+    const uint64_t m = (an > ad) ? an : ad;
+    u32 shift = 0u;
+
+    if (m >= (UINT64_C(1) << 40))
+    {
+        shift = (u32)(64 - __builtin_clzll(m)) - 40u;
+    }
+    num >>= shift;
+    den >>= shift;
+    if (den == 0)
+    {
+        return 0;
+    }
+    return ndsR2HwMathDivideFast(num * (INT64_C(1) << 22), den);
+}
+
+void __attribute__((target("arm")))
+ndsProjectToViewport(CObj *cobj, Mtx44f matrix, Vec3f *pos, f32 *dist_x,
+                     f32 *dist_y)
+{
+    const int64_t clamp = INT64_C(109951162778); /* 0.1 at Q40 */
+    int64_t acc[3];
+    int32_t p[3];
+    u32 row;
+    u32 col;
+    u32 same = sNdsProjectValid;
+
+    for (row = 0u; row < 4u; row++)
+    {
+        for (col = 0u; col < 3u; col++)
+        {
+            u32 bits;
+
+            __builtin_memcpy(&bits, &matrix[row][sNdsProjectCols[col]],
+                             sizeof(bits));
+            if (bits != sNdsProjectSrc[row][col])
+            {
+                same = 0u;
+                sNdsProjectSrc[row][col] = bits;
+            }
+        }
+    }
+    if (same == 0u)
+    {
+        for (row = 0u; row < 4u; row++)
+        {
+            for (col = 0u; col < 3u; col++)
+            {
+                const f32 v = matrix[row][sNdsProjectCols[col]];
+
+                sNdsProjectQ[row][col] = (row < 3u) ?
+                    ndsProjectToFixed(v, 28u, INT32_MAX) :
+                    ndsProjectToFixed(v, 12u, INT32_MAX);
+            }
+        }
+        sNdsProjectValid = 1u;
+    }
+    p[0] = ndsProjectToFixed(pos->x, 12u, INT32_C(1) << 28);
+    p[1] = ndsProjectToFixed(pos->y, 12u, INT32_C(1) << 28);
+    p[2] = ndsProjectToFixed(pos->z, 12u, INT32_C(1) << 28);
+    for (col = 0u; col < 3u; col++)
+    {
+        acc[col] = ((int64_t)sNdsProjectQ[0][col] * p[0]) +
+                   ((int64_t)sNdsProjectQ[1][col] * p[1]) +
+                   ((int64_t)sNdsProjectQ[2][col] * p[2]) +
+                   ((int64_t)sNdsProjectQ[3][col] << 28);
+    }
+    /* acc[2] is w: |w| < 0.1 becomes +-0.1, a zero w +0.1. */
+    if ((acc[2] < clamp) && (acc[2] > -clamp))
+    {
+        acc[2] = (acc[2] < 0) ? -clamp : clamp;
+    }
+    *dist_x = ndsR2CollisionFixedToF32(
+        (int64_t)(cobj->viewport.vp.vscale[0] / 4) *
+            ndsProjectRatioQ22(acc[0], acc[2]), 22u);
+    *dist_y = ndsR2CollisionFixedToF32(
+        (int64_t)(cobj->viewport.vp.vscale[1] / 4) *
+            ndsProjectRatioQ22(acc[1], acc[2]), 22u);
+}
+
 void ndsFighterDisplayContractProjectTarget(CObj *cobj,
                                             Mtx44f matrix,
                                             Vec3f *pos,
                                             f32 *dist_x,
                                             f32 *dist_y)
 {
-    f32 x;
-    f32 y;
-    f32 z;
-    f32 projected_x;
-    f32 projected_y;
-    f32 scale;
-
     if ((cobj == NULL) || (pos == NULL) || (dist_x == NULL) ||
         (dist_y == NULL))
     {
         return;
     }
-    /* BattleShip ftparam.c:2421-2439, used by fighter magnify culling. */
-    x = pos->x;
-    y = pos->y;
-    z = pos->z;
-    projected_x = ((matrix[0][0] * x) + (matrix[1][0] * y) +
-                   (matrix[2][0] * z)) + matrix[3][0];
-    projected_y = ((matrix[0][1] * x) + (matrix[1][1] * y) +
-                   (matrix[2][1] * z)) + matrix[3][1];
-    scale = ((matrix[0][3] * x) + (matrix[1][3] * y) +
-             (matrix[2][3] * z)) + matrix[3][3];
-    if (ABSF(scale) < 0.1F)
-    {
-        scale = (scale < 0.0F) ? -0.1F : 0.1F;
-    }
-    scale = 1.0F / scale;
-    *dist_x = (cobj->viewport.vp.vscale[0] / 4) *
-              (projected_x * scale);
-    *dist_y = (cobj->viewport.vp.vscale[1] / 4) *
-              (projected_y * scale);
+    /* BattleShip ftparam.c:2421-2439, used by fighter magnify culling: the
+     * fixed-point projection func_ovl2_800EB924 uses (2026-10-05,
+     * battle_playable_compat_stubs.c). */
+    ndsProjectToViewport(cobj, matrix, pos, dist_x, dist_y);
 }
 
 void ndsFighterDisplayContractSelectDL(const Gfx *dl)
@@ -5272,6 +5371,22 @@ static void ndsRendererAdapterM2FinishOwner(
 }
 #endif
 
+/* 2026-10-05 (owner: delete the old machinery): every draw the old executor
+ * still takes, and the owner slots it took them for, until it is deleted. */
+volatile u32 gNdsOldExecutorDraws;
+volatile u32 gNdsOldExecutorOwnerMask;
+
+static void __attribute__((unused)) ndsOldExecutorCensus(const FTStruct *fp)
+{
+    u32 owner;
+
+    gNdsOldExecutorDraws++;
+    if (ndsFighterGetNativeOwnerSlot(fp, &owner) != FALSE)
+    {
+        gNdsOldExecutorOwnerMask |= 1u << (owner & 31u);
+    }
+}
+
 #if NDS_P2_1P_GAME && NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
 /* 1P Intro transient native context.
  *
@@ -5331,6 +5446,10 @@ static void ndsFighterIntroTransientInvalidateScratch(void)
         NDS_INTRO_TRANSIENT_SCRATCH_SLOT);
 }
 
+#if NDS_FTR_LEAN_LIVE
+static sb32 ndsFtrLeanTransientDraw(FTStruct *fp, sb32 rebind);
+#endif
+
 /* Draw one Intro Demo fighter natively through the scratch slot. Returns
  * TRUE when the submit reached native production. Caller-owned: the
  * normal contract gate calls this only after its own tracked/slot checks
@@ -5341,6 +5460,7 @@ static sb32 ndsFighterIntroTransientSubmit(GObj *fighter_gobj)
     u32 owner_slot;
     u32 submitted_before;
     sb32 saved_playback;
+    sb32 rebind = FALSE;
 #if NDS_R2_FIGHTER_NO_ORACLE && (NDS_RENDERER_PROFILE_LEVEL < 2)
     u32 saved_no_oracle;
 #endif
@@ -5375,6 +5495,7 @@ static sb32 ndsFighterIntroTransientSubmit(GObj *fighter_gobj)
         ndsFighterIntroTransientInvalidateScratch();
         sNdsIntroTransientBoundGObj = fighter_gobj;
         gNdsIntroTransientBindChanges++;
+        rebind = TRUE;
     }
     gNdsIntroTransientSubmitCount++;
     submitted_before = gNdsFighterMarioFoxDLAllDrawCount;
@@ -5391,8 +5512,15 @@ static sb32 ndsFighterIntroTransientSubmit(GObj *fighter_gobj)
 #endif
     saved_playback = sNdsFighterDisplayContractPlayback;
     sNdsFighterDisplayContractPlayback = TRUE;
-    ndsFighterMarioFoxDLAllDrawForSlot(
-        NDS_INTRO_TRANSIENT_SCRATCH_SLOT, fp, NULL, 0u);
+#if NDS_FTR_LEAN_LIVE
+    if (ndsFtrLeanTransientDraw(fp, rebind) == FALSE)
+#endif
+    {
+        ndsOldExecutorCensus(fp);
+        ndsFighterMarioFoxDLAllDrawForSlot(
+            NDS_INTRO_TRANSIENT_SCRATCH_SLOT, fp, NULL, 0u);
+    }
+    (void)rebind;
     sNdsFighterDisplayContractPlayback = saved_playback;
 #if NDS_R2_FIGHTER_NO_ORACLE && (NDS_RENDERER_PROFILE_LEVEL < 2)
     ndsRendererHardwareSetNoOracle(saved_no_oracle);
@@ -5618,6 +5746,7 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
         }
         if (lean_drew == FALSE)
         {
+            ndsOldExecutorCensus(fp);
             ndsFighterMarioFoxDLAllDrawForSlot((u32)fp->nds_slot, fp,
                                                NULL, 0u);
             if (lean_route != 0u)
