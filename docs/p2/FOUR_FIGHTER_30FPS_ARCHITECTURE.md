@@ -1590,6 +1590,16 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   The reflection light is memoised by its two angles. All exact: digests
   identical. 4 x Yoshi P95 -15.9K (1,238,464 / 1,234,368), gate -4.8K
   (1,079,936), Sector Z flat. Receipt `2026-10-06_hurtbox-cache`.
+- **10-06: 52 concluded A/B words deleted with their losing branches**
+  (owner: "Delete Old machinery"). Hurtbox and map-collision words
+  (`0a41e57a743`), stage GX, object animation, renderer, shims and the float
+  lbCommonSin/Cos (`36d7cd0a0b2`), the stage DL adapter (`e7479f8b565`); the
+  unshipped 30 Hz CPU arm went with its word. Every digest identical. Paired
+  medians fell 1-5K per batch; at q15 the gate reads P95 1,073,664, Sector Z
+  1,173,632, 4 x Yoshi 1,221,504 (WORK-H). Left: words whose old branch is a
+  lab verifier or a config default (`gNdsFtPartsCleanSkip`,
+  `gNdsStageDLHaloFirst`, `gNdsObjAnimBitCompare` in the objanim patch), and
+  about forty in other declaration forms. Runs `2026-10-06_ab-cleanup`.
 
 ## 7. Found along the way
 
