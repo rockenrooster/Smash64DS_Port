@@ -62,7 +62,6 @@ void ndsTask39EffectsUpdate(void);
 void ndsTask39EffectsAddDrawTicks(u32 ticks);
 void ndsTask39EffectsEngage(u32 mask);
 
-extern volatile u32 gNdsIFCommonNativeOamEnabled;
 extern volatile u32 gNdsIFCommonNativeOamPrepareCount;
 extern volatile u32 gNdsIFCommonNativeOamPrepareSuccessCount;
 extern volatile u32 gNdsIFCommonNativeOamPrepareFailCount;

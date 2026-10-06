@@ -16710,14 +16710,8 @@ void ndsR2AnimCachePreloadMatch(void)
  * resident. The bound is retained for fail-open/background callers and to keep
  * each NitroFS burst small, not because battle startup is racing live audio.
  *
- * `.data` aligned(32) so `-SetGlobals gNdsR2AnimWarmStep=1` restores the old
- * cadence at IDENTICAL placement -- and a route A/B is legitimate here in a way
- * it is not for a gameplay change, because a hit and a miss load the same bytes
- * and differ only in where they came from. The cache's own contract says so:
- * every failure path degrades to the uncached load, a performance outcome and
- * never a correctness one. */
-volatile u32 gNdsR2AnimWarmStep
-    __attribute__((section(".data"), aligned(32))) = 4u;
+ * (The step was a `.data` route word, gNdsR2AnimWarmStep, until 2026-10-06.) */
+#define NDS_R2_ANIM_WARM_STEP 4u
 
 volatile u32 gNdsR2AnimPreloadBarrierRuns;
 volatile u32 gNdsR2AnimPreloadBarrierSteps;
@@ -16754,17 +16748,9 @@ void ndsR2AnimCachePreloadStep(void)
 #endif
 
     {
-        /* Read the route ONCE. Reading it per iteration would put a volatile
-         * load inside the loop being measured, the same reason
-         * gcPlayDObjAnimJoint hoists its own. Clamped so a poke of 0 cannot
-         * stall the walk forever and leave the match streaming silently. */
-        u32 step = gNdsR2AnimWarmStep;
+        u32 step = NDS_R2_ANIM_WARM_STEP;
         u32 i;
 
-        if (step == 0u)
-        {
-            step = 1u;
-        }
         ndsR2AnimCacheValidateGeneration();
         /* The pack first, and ALONE while it is streaming. Two reasons: the
          * arena is a bump allocator, so the blob must own the low bytes before

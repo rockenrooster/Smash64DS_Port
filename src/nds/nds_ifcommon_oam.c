@@ -151,7 +151,7 @@ enum NDSIFCommonNativeAssetKind
 enum NDSIFCommonNativeFallbackReason
 {
     nNDSIFCommonFallbackNone,
-    nNDSIFCommonFallbackDisabled,
+    nNDSIFCommonFallbackDisabled, /* retired 2026-10-06 with its route word */
     nNDSIFCommonFallbackNotPrepared,
     nNDSIFCommonFallbackUnknownSprite,
     nNDSIFCommonFallbackRuntimeColor,
@@ -534,7 +534,6 @@ static u32 sNdsTask39FxSpawnTickAccum;
 static u32 sNdsTask39FxUpdateTickAccum;
 #endif
 
-volatile u32 gNdsIFCommonNativeOamEnabled = 1u;
 volatile u32 gNdsIFCommonNativeOamPrepareCount;
 volatile u32 gNdsIFCommonNativeOamPrepareSuccessCount;
 volatile u32 gNdsIFCommonNativeOamPrepareFailCount;
@@ -3820,10 +3819,6 @@ static s32 ndsIFCommonEmitPlayerTag(struct GObj *gobj)
     {
         return ndsIFCommonPlayerTagMiss(nNDSIFCommonFallbackBadAsset);
     }
-    if (gNdsIFCommonNativeOamEnabled == 0u)
-    {
-        return ndsIFCommonPlayerTagMiss(nNDSIFCommonFallbackDisabled);
-    }
     player = ifGetPlayer(gobj);
     if ((player < 0) || (player >= GMCOMMON_PLAYERS_MAX))
     {
@@ -4010,10 +4005,6 @@ static s32 ndsIFCommonEmitItemArrow(struct GObj *gobj)
     if (sobj->sprite.alpha == 0u)
     {
         return ndsIFCommonItemArrowRecognized();
-    }
-    if (gNdsIFCommonNativeOamEnabled == 0u)
-    {
-        return ndsIFCommonItemArrowMiss(nNDSIFCommonFallbackDisabled);
     }
     if (ndsIFCommonNativeOamBakeItemArrow(&sobj->sprite) == FALSE)
     {
@@ -4214,10 +4205,6 @@ static s32 ndsIFCommonEmitBonusTasks(struct GObj *gobj)
     s32 matrix_index = -1;
     SObj *sobj;
 
-    if (gNdsIFCommonNativeOamEnabled == 0u)
-    {
-        return ndsIFCommonItemArrowMiss(nNDSIFCommonFallbackDisabled);
-    }
     for (sobj = SObjGetStruct(gobj); sobj != NULL; sobj = sobj->next)
     {
         s32 origin_x;
@@ -4469,10 +4456,6 @@ static s32 ndsIFCommonEmitCommonLetters(struct GObj *gobj)
 {
     SObj *sobj;
 
-    if (gNdsIFCommonNativeOamEnabled == 0u)
-    {
-        return ndsIFCommonItemArrowMiss(nNDSIFCommonFallbackDisabled);
-    }
     for (sobj = SObjGetStruct(gobj); sobj != NULL; sobj = sobj->next)
     {
         u16 *gfx;
@@ -4623,15 +4606,6 @@ s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj)
         return FALSE;
     }
     gNdsIFCommonNativeOamFrameRecognizedCalls++;
-    if (gNdsIFCommonNativeOamEnabled == 0u)
-    {
-        gNdsIFCommonNativeOamFrameFallbackCalls++;
-        gNdsIFCommonNativeOamLastFallbackReason =
-            nNDSIFCommonFallbackDisabled;
-        NDS_IFCOMMON_TELEMETRY_ADD(
-            gNdsIFCommonNativeOamFrameTicks, start);
-        return FALSE;
-    }
     if (sNdsIFCommonPrepared == FALSE)
     {
         gNdsIFCommonNativeOamFrameFallbackCalls++;

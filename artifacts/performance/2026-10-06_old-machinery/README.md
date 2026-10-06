@@ -80,3 +80,19 @@ signs about equally: `GFX_POLYGON_RAM_USAGE` is read before the frame's flush
 while the geometry engine may still be draining the FIFO, so it races the
 particle pass at the end of the draw, which this change retimes. A dropped
 quad would move one way only.
+
+## q36: the HUD native-OAM word and the anim warm-step word
+
+Deleted `gNdsIFCommonNativeOamEnabled` (1 since its lane closed; its five
+fallback checks and the 819-line A/B verifier
+`scripts/verify-ifcommon-native-oam.ps1` that poked it to 0) and
+`gNdsR2AnimWarmStep` (4, now `NDS_R2_ANIM_WARM_STEP`). Two capture scripts print
+a literal 1 where they read the OAM word.
+
+| config | digest diff | P50 | P95 | over | paired median |
+|---|---|---|---|---|---|
+| gate | 0 | 776,576 -> 776,896 | 1,059,072 -> 1,059,328 | 62 -> 62 | +192 |
+| g0 | 0 | 808,192 -> 809,664 | 1,149,824 -> 1,148,544 | 115 -> 113 | +576 |
+| sz | 0 | 859,392 -> 859,648 | 1,171,264 -> 1,163,392 | 130 -> 126 | +64 |
+
+Neutral.
