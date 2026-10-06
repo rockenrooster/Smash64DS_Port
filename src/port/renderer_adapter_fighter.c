@@ -451,6 +451,32 @@ ndsProjectToFixed(f32 value, u32 bits_frac, int32_t limit)
     return q;
 }
 
+/* A rotation-row cell at Q28. ndsR2CollisionF32ToFixed declines a left shift
+ * of 7, which is every |v| in [4, 8) at Q28, although it fits; the old code
+ * saturated those to 8. That is the perspective scale itself once the field of
+ * view narrows under ~28 degrees (cot 12.5 = 4.52 in Master Hand's intro, cot
+ * 14 = 4.01 in the close-up entries): the projected point doubled, the bounds
+ * test failed and ftDisplayMainProcDisplay culled the fighter as magnified
+ * (owner, 2026-10-06: "MH has brief invisible frames"; close-up entry
+ * fighters "become invisible"). A float in [4, 8) is a multiple of 2^-21,
+ * exact at Q27, so it converts there and doubles; below 4 nothing changes. */
+static int32_t __attribute__((target("arm")))
+ndsProjectRowToQ28(f32 value)
+{
+    int32_t q = ndsR2CollisionF32ToFixed(value, 28u);
+
+    if (q == NDS_R2_COLLISION_F32_OVERFLOW)
+    {
+        q = ndsProjectToFixed(value, 27u, INT32_C(1) << 30);
+        if ((q == (INT32_C(1) << 30)) || (q == -(INT32_C(1) << 30)))
+        {
+            return (q < 0) ? -INT32_MAX : INT32_MAX;
+        }
+        return q * 2;
+    }
+    return q;
+}
+
 static int64_t __attribute__((target("arm")))
 ndsProjectRatioQ22(int64_t num, int64_t den)
 {
@@ -512,7 +538,7 @@ ndsProjectToViewport(CObj *cobj, Mtx44f matrix, Vec3f *pos, f32 *dist_x,
                 const f32 v = matrix[row][sNdsProjectCols[col]];
 
                 sNdsProjectQ[row][col] = (row < 3u) ?
-                    ndsProjectToFixed(v, 28u, INT32_MAX) :
+                    ndsProjectRowToQ28(v) :
                     ndsProjectToFixed(v, 12u, INT32_MAX);
             }
         }

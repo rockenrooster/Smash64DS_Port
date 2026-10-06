@@ -1,0 +1,45 @@
+cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 1 of 1960 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,116,864; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 1824: ALL 5,311,296 -> 1,116,992, 4 bucket(s) corrected
+Wrote artifacts/performance/2026-10-06_projection/g0-q46.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1960 frames=2..1961 melonDS=1.0 sha=DE80E46BDCF1FD98 git=a15b5370a6e+dirty(32) dldi=ON
+
+bucket p50           p95           spread mean          min        max           %ALLp50
+------ ---           ---           ------ ----          ---        ---           -------
+ALL     1,116,864     1,118,016      1.00  1,146,627     1,112,704  9,081,472      100.0
+FTR             0             0      0.00          0             0          0        0.0
+STG             0             0      0.00          0             0          0        0.0
+BG              0             0      0.00          0             0          0        0.0
+AUD         5,120        10,432      2.04      5,698         2,176     23,424        0.5
+HUD         9,152        24,000      2.62     11,953         8,320    599,104        0.8
+SRC       402,304       615,488      1.53    411,164       139,584  1,006,080       36.0
+MISC      356,288       481,280      1.35    367,396       127,040  7,943,872       31.9
+OTHR      348,416       558,336      1.60    350,416        21,632    835,264       31.2
+WAIT      326,720       534,464      1.64    328,976         2,304    815,424       29.3
+WORK      795,584     1,096,128      1.38    813,609       297,920  8,742,784       71.2
+SHDT      707,775       989,247      1.40    727,469       255,487  8,100,479       63.4
+SWRM        1,216         1,280      1.05      1,231           768      3,136        0.1
+GCRA      396,288       608,768      1.54    405,724       135,040  1,000,704       35.5
+SCPU            0             0      0.00          0             0          0        0.0
+SCAT            0             0      0.00          0             0          0        0.0
+SPRM            0             0      0.00          0             0          0        0.0
+SINT            0             0      0.00          0             0          0        0.0
+SPHD            0             0      0.00          0             0          0        0.0
+SPHC            0             0      0.00          0             0          0        0.0
+MWPN            0             0      0.00          0             0          0        0.0
+MITM            0             0      0.00          0             0          0        0.0
+MEFX            0             0      0.00          0             0          0        0.0
+MACT            0             0      0.00          0             0          0        0.0
+MPRT            0             0      0.00          0             0          0        0.0
+MTEX            0             0      0.00        589             0  1,054,720        0.0
+MCAP            0             0      0.00          0             0          0        0.0
+MPRO            0             0      0.00          0             0          0        0.0
+MCAM      356,160       481,216      1.35    367,285       126,912  7,943,744       31.9
+MFLS          128           128      1.00        110            64        192        0.0
+GPOL          497           557      1.12        474            68        605        0.0
+GVTX        1,134         1,286      1.13      1,097           214      1,424        0.1
+DGSA   2,156,107,775 4,085,789,599        2,143,769,046  4,136,899 4,294,504,546 193,050.2
+DGSB   2,132,237,381 4,083,937,101   1.92 2,129,613,282  1,447,036 4,293,768,537 190,912.9
+WORK-H    782,592     1,077,312      1.38    801,656       287,872  8,143,680       70.1
+
+named=796,211 (69.4% of ALL)  VBI 2:1878 3:75 4:6 5+:2 max:20 total:1961  slips=0
+Wrote artifacts/performance/2026-10-06_projection/g0-q46.json
