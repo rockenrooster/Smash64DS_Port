@@ -61,22 +61,26 @@ EXPECTED_TRAFFIC_PALETTE = (
 )
 SHADOW_INITIAL_ASSET_INDEX = 5
 SHADOW_GO_ASSET_INDEX = 6
-# 2026-10-04: GO's lettering is area-sampled with graded alpha (see
-# sample_area_traffic_pixel); '#' is any texel with nonzero A3.
-EXPECTED_SHADOW_GO_POINT_MASK = (
-    "############",
-    "############",
-    "###.########",
-    "########..##",
-    "########..##",
-    "##..####..##",
-    "############",
-    "############",
-    "#####..#####",
+# 2026-10-06: GO's lettering (both colourings) is a hand-set 12x9 pixel font
+# at full coverage in the source lettering's colour (owner's pick "E",
+# ndsIFCommonGoLampInk); '#' is any texel with nonzero A3.
+GO_LAMP_GLYPH = (
+    ".####..####.",
+    "##....##..##",
+    "##....##..##",
+    "##.##.##..##",
+    "##..#.##..##",
+    "##..#.##..##",
+    "##..#.##..##",
+    ".####..####.",
+    "............",
 )
-EXPECTED_TRAFFIC_DISTINCT_COLORS = 42
+EXPECTED_SHADOW_GO_POINT_MASK = GO_LAMP_GLYPH
+# 2026-10-06: 42 -> 35, the lettering's graded shades became one colour each.
+EXPECTED_TRAFFIC_DISTINCT_COLORS = 35
 EXPECTED_TRAFFIC_PALETTE_MAX_ERROR = 12
-EXPECTED_TRAFFIC_NONZERO = (176, 2026, 97, 97, 124, 71, 196)
+# 2026-10-06: the two lettering cells 97 -> 57, the glyph's set texels.
+EXPECTED_TRAFFIC_NONZERO = (176, 2026, 57, 57, 124, 71, 196)
 EXPECTED_GO_STROKE_RUNS = (
     (0, 13, ((5, 52),)),
     (1, 13, ((6, 52),)),
@@ -872,32 +876,32 @@ def traffic_rgba(
     )
 
 
-def sample_area_traffic_pixel(
+def go_lamp_ink(
     data: bytes, sprite: dict[str, int], asset: dict[str, object],
-    destination_x: int, destination_y: int,
-) -> tuple[int, int, int, int]:
-    """ndsIFCommonSampleAreaTrafficPixel: the exact 1.25x1.25 source box."""
-    x0 = destination_x * 320
-    y0 = destination_y * 320
-    x1, y1 = x0 + 320, y0 + 320
-    sums = [0, 0, 0, 0]
-    source_y = y0 >> 8
-    while source_y < sprite["height"] and (source_y << 8) < y1:
-        top, bottom = max(source_y << 8, y0), min((source_y + 1) << 8, y1)
-        source_x = x0 >> 8
-        while source_x < sprite["width"] and (source_x << 8) < x1:
-            left, right = max(source_x << 8, x0), min((source_x + 1) << 8, x1)
-            texel = traffic_rgba(data, sprite, asset, source_x, source_y)
-            alpha = texel[3] * (right - left) * (bottom - top)
-            for channel in range(3):
-                sums[channel] += texel[channel] * alpha
-            sums[3] += alpha
-            source_x += 1
-        source_y += 1
-    if not sums[3]:
-        return 0, 0, 0, 0
-    return (sums[0] // sums[3], sums[1] // sums[3], sums[2] // sums[3],
-            (sums[3] + 320 * 320 // 2) // (320 * 320))
+) -> tuple[int, int, int]:
+    """ndsIFCommonGoLampInk: the mean of the texels above half coverage."""
+    texels = [
+        traffic_rgba(data, sprite, asset, x, y)
+        for y in range(sprite["height"])
+        for x in range(sprite["width"])
+    ]
+    opaque = [texel for texel in texels if texel[3] > 128]
+    if not opaque:
+        fail("GO lamp lettering has no opaque texel")
+    return tuple(
+        sum(texel[channel] for texel in opaque) // len(opaque)
+        for channel in range(3)
+    )
+
+
+def go_lamp_glyph_samples(
+    data: bytes, sprite: dict[str, int], asset: dict[str, object],
+) -> list[tuple[int, int, int, int]]:
+    ink = go_lamp_ink(data, sprite, asset)
+    return [
+        (*ink, 255) if cell == "#" else (0, 0, 0, 0)
+        for row in GO_LAMP_GLYPH for cell in row
+    ]
 
 
 def sample_prefiltered_traffic_pixel(
@@ -908,9 +912,6 @@ def sample_prefiltered_traffic_pixel(
     source_y_q8 = destination_y * 320 + 32
     source_x = source_x_q8 >> 8
     source_y = source_y_q8 >> 8
-    if asset_index in (SHADOW_INITIAL_ASSET_INDEX, SHADOW_GO_ASSET_INDEX):
-        return sample_area_traffic_pixel(
-            data, sprite, asset, destination_x, destination_y)
     next_x = min(source_x + 1, sprite["width"] - 1)
     next_y = min(source_y + 1, sprite["height"] - 1)
     taps = (
@@ -946,14 +947,13 @@ def sample_prefiltered_traffic_pixel(
 
 
 def translucent_traffic_rgba(
-    rgba: tuple[int, int, int, int], prim: tuple[int, ...] | None,
+    rgba: tuple[int, int, int, int], prim: tuple[int, ...],
 ) -> tuple[int, int, int, int]:
-    """GO lettering and dim lamps: own colour, coverage kept as A3 alpha."""
+    """Dim lamps: their prim colour, coverage kept as A3 alpha."""
     alpha3 = (rgba[3] * 7 + 127) // 255
     if not alpha3:
         return 0, 0, 0, 0
-    rgb = tuple(prim) if prim is not None else rgba[:3]
-    return *rgb, (alpha3 * 255 + 3) // 7
+    return *tuple(prim), (alpha3 * 255 + 3) // 7
 
 
 def opaque_traffic_rgba(
@@ -1306,7 +1306,7 @@ def check_runtime_contract(root: Path, source: str) -> None:
         "ndsIFCommonNativeOamPrepareAnnouncement(",
         "ndsIFCommonSamplePrefilteredGoPixel(",
         "ndsIFCommonSamplePrefilteredTrafficPixel(",
-        "spec == &sNdsIFCommonAssetSpecs[nNDSIFCommonAssetShadowGo]",
+        "sNdsIFCommonGoLampGlyph[y][x] != '#'",
         "weighted_premultiplied",
         "NDS_IFCOMMON_GO_ALPHA_THRESHOLD 112u",
         "NDS_IFCOMMON_TRAFFIC_ALPHA_THRESHOLD 8u",
@@ -1441,16 +1441,19 @@ def verify(
         EXPECTED_TRAFFIC_ATLAS_RECTS, start=3
     ):
         _, _, width, height = rect
-        # Rod and housing are opaque cutouts; both colourings of the GO
-        # lettering (black before GO, navy at GO) and the three dim lamps
-        # keep their coverage as alpha (the lamps in their own prim colour,
-        # translucent over the housing exactly as the N64 blends them).
+        # Both colourings of the GO lettering (black before GO, navy at GO)
+        # are the hand-set glyph in the source lettering's colour.
+        if asset_index in (SHADOW_INITIAL_ASSET_INDEX, SHADOW_GO_ASSET_INDEX):
+            traffic_samples.append(go_lamp_glyph_samples(
+                data, sprites[asset_index], assets[asset_index]))
+            continue
+        # Rod and housing are opaque cutouts; the three dim lamps keep their
+        # coverage as alpha in their own prim colour, translucent over the
+        # housing exactly as the N64 blends them.
         traffic_samples.append([
             (opaque_traffic_rgba if asset_index < SHADOW_INITIAL_ASSET_INDEX
              else (lambda rgba: translucent_traffic_rgba(
-                 rgba, None if asset_index in (
-                     SHADOW_INITIAL_ASSET_INDEX, SHADOW_GO_ASSET_INDEX) else
-                 assets[asset_index]["prim"])))(
+                 rgba, assets[asset_index]["prim"])))(
                 sample_prefiltered_traffic_pixel(
                     data, sprites[asset_index], assets[asset_index],
                     asset_index, x, y,
@@ -1648,7 +1651,7 @@ def verify(
         f"{traffic_nonzero}"
     )
     print("  flare: two prepare-once A5I3 source-alpha atlases")
-    print("  traffic: prepare-once A3I5: opaque housing, translucent dim lamps and GO lettering")
+    print("  traffic: prepare-once A3I5: opaque housing, translucent dim lamps, glyph GO lettering")
     print("  GO: prepare-once direct RGB555+A1 bitmap OAM")
     print("  overlay texture residency: 57344 bytes, three palettes")
     print("  draw-callback conversion/upload: 0/0; ending assets prepare at source creation")

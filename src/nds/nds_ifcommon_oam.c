@@ -990,71 +990,6 @@ static s32 ndsIFCommonReadTrafficRgba(
     return TRUE;
 }
 
-/* The GO lettering's 0.8x footprint: each DS texel is the exact 1.25x1.25
- * source box under it, coverage-weighted, so both strokes of every letter
- * keep their weight. A point sample (the rule until 2026-10-04) dropped every
- * fifth source column and row, which broke the O's right stroke to one pixel
- * and read as "GC" (owner r75). Q8 source units; the box is 320 wide. */
-static s32 ndsIFCommonSampleAreaTrafficPixel(
-    const Sprite *sprite, const NDSIFCommonAssetSpec *spec,
-    const void *file_data, size_t file_size,
-    u32 destination_x, u32 destination_y, u8 rgba[4])
-{
-    u32 x0 = destination_x * 320u;
-    u32 x1 = x0 + 320u;
-    u32 y0 = destination_y * 320u;
-    u32 y1 = y0 + 320u;
-    u32 width = (u32)(u16)sprite->width;
-    u32 height = (u32)(u16)sprite->height;
-    u64 sum_red = 0u;
-    u64 sum_green = 0u;
-    u64 sum_blue = 0u;
-    u64 sum_alpha = 0u;
-    u32 source_y;
-
-    for (source_y = y0 >> 8; (source_y < height) && ((source_y << 8) < y1);
-         source_y++)
-    {
-        u32 top = ((source_y << 8) > y0) ? (source_y << 8) : y0;
-        u32 bottom = (((source_y + 1u) << 8) < y1) ?
-            ((source_y + 1u) << 8) : y1;
-        u32 source_x;
-
-        for (source_x = x0 >> 8;
-             (source_x < width) && ((source_x << 8) < x1); source_x++)
-        {
-            u32 left = ((source_x << 8) > x0) ? (source_x << 8) : x0;
-            u32 right = (((source_x + 1u) << 8) < x1) ?
-                ((source_x + 1u) << 8) : x1;
-            u64 weight = (u64)((right - left) * (bottom - top));
-            u32 texel;
-            u64 alpha;
-
-            if (ndsIFCommonReadTrafficRgba(
-                    sprite, spec, file_data, file_size,
-                    source_x, source_y, &texel) == FALSE)
-            {
-                return FALSE;
-            }
-            alpha = (u64)(texel & 0xffu) * weight;
-            sum_red += (u64)(texel >> 24) * alpha;
-            sum_green += (u64)((texel >> 16) & 0xffu) * alpha;
-            sum_blue += (u64)((texel >> 8) & 0xffu) * alpha;
-            sum_alpha += alpha;
-        }
-    }
-    if (sum_alpha == 0u)
-    {
-        rgba[0] = rgba[1] = rgba[2] = rgba[3] = 0u;
-        return TRUE;
-    }
-    rgba[0] = (u8)(sum_red / sum_alpha);
-    rgba[1] = (u8)(sum_green / sum_alpha);
-    rgba[2] = (u8)(sum_blue / sum_alpha);
-    rgba[3] = (u8)((sum_alpha + (320u * 320u / 2u)) / (320u * 320u));
-    return TRUE;
-}
-
 static s32 ndsIFCommonSamplePrefilteredTrafficPixel(
     const Sprite *sprite, const NDSIFCommonAssetSpec *spec,
     const void *file_data, size_t file_size,
@@ -1068,15 +1003,6 @@ static s32 ndsIFCommonSamplePrefilteredTrafficPixel(
     u32 next_y = source_y + 1u;
     u32 taps[4];
 
-    /* Both colourings of the GO lettering (black before GO, navy at GO) are
-     * the same 15x11 sprite and take the same area filter. */
-    if ((spec == &sNdsIFCommonAssetSpecs[nNDSIFCommonAssetShadowGo]) ||
-        (spec == &sNdsIFCommonAssetSpecs[nNDSIFCommonAssetShadowInitial]))
-    {
-        return ndsIFCommonSampleAreaTrafficPixel(
-            sprite, spec, file_data, file_size,
-            destination_x, destination_y, rgba);
-    }
     if (next_x >= (u32)(u16)sprite->width)
     {
         next_x = source_x;
@@ -1411,6 +1337,78 @@ static void ndsIFCommonReleaseTrafficAtlas(void)
     }
 }
 
+/* The GO lamp's lettering, both colourings (black before GO, navy at GO), as
+ * a hand-set 12x9 pixel font on the source sprite's 0.8x footprint (owner,
+ * 2026-10-06: '"GO" unlit and lit is still blurry and hard to read. maybe we
+ * should generate new candidates'; picked candidate E of
+ * artifacts/visibility/2026-10-06_go-candidates). The source's 15x11 IA8
+ * lettering has two-texel strokes, and at 0.8x every resampling of it puts
+ * strokes between DS texels: the point sample read "GC" (owner r75) and the
+ * area filter left soft grey strokes. The glyph keeps the source's colour --
+ * the mean of the colouring's opaque texels (ndsIFCommonGoLampInk) -- at full
+ * coverage. scripts/check_ifcommon_hybrid_oam.py pins the same mask. */
+#define NDS_IFCOMMON_GO_LAMP_GLYPH_WIDTH 12u
+#define NDS_IFCOMMON_GO_LAMP_GLYPH_HEIGHT 9u
+static const char sNdsIFCommonGoLampGlyph[NDS_IFCOMMON_GO_LAMP_GLYPH_HEIGHT]
+                                         [NDS_IFCOMMON_GO_LAMP_GLYPH_WIDTH +
+                                          1u] = {
+    ".####..####.",
+    "##....##..##",
+    "##....##..##",
+    "##.##.##..##",
+    "##..#.##..##",
+    "##..#.##..##",
+    "##..#.##..##",
+    ".####..####.",
+    "............",
+};
+
+/* The mean colour of the lettering sprite's texels above half coverage, in
+ * this colouring (its prim/env lerp by intensity). */
+static s32 ndsIFCommonGoLampInk(
+    const Sprite *sprite, const NDSIFCommonAssetSpec *spec,
+    const void *file_data, size_t file_size, u8 ink[3])
+{
+    u32 width = (u32)(u16)sprite->width;
+    u32 height = (u32)(u16)sprite->height;
+    u32 sum_red = 0u;
+    u32 sum_green = 0u;
+    u32 sum_blue = 0u;
+    u32 count = 0u;
+    u32 y;
+
+    for (y = 0u; y < height; y++)
+    {
+        u32 x;
+
+        for (x = 0u; x < width; x++)
+        {
+            u32 texel;
+
+            if (ndsIFCommonReadTrafficRgba(sprite, spec, file_data,
+                                           file_size, x, y, &texel) == FALSE)
+            {
+                return FALSE;
+            }
+            if ((texel & 0xffu) > 128u)
+            {
+                sum_red += texel >> 24;
+                sum_green += (texel >> 16) & 0xffu;
+                sum_blue += (texel >> 8) & 0xffu;
+                count++;
+            }
+        }
+    }
+    if (count == 0u)
+    {
+        return FALSE;
+    }
+    ink[0] = (u8)(sum_red / count);
+    ink[1] = (u8)(sum_green / count);
+    ink[2] = (u8)(sum_blue / count);
+    return TRUE;
+}
+
 typedef struct NDSIFCommonTrafficFillContext
 {
     const void *file_data;
@@ -1451,6 +1449,43 @@ static s32 ndsIFCommonFillTrafficAtlas(
         }
         asset = &sNdsIFCommonAssets[traffic->asset_index];
         asset_spec = &sNdsIFCommonAssetSpecs[traffic->asset_index];
+        if ((traffic->asset_index == nNDSIFCommonAssetShadowInitial) ||
+            (traffic->asset_index == nNDSIFCommonAssetShadowGo))
+        {
+            u8 ink[3];
+            u32 palette_index;
+
+            if ((traffic->width != NDS_IFCOMMON_GO_LAMP_GLYPH_WIDTH) ||
+                (traffic->height != NDS_IFCOMMON_GO_LAMP_GLYPH_HEIGHT) ||
+                (ndsIFCommonGoLampInk(asset->sprite, asset_spec,
+                                      context->file_data, context->file_size,
+                                      ink) == FALSE))
+            {
+                gNdsIFCommonNativeOamPrepareCloudFailureStage = 2u;
+                return FALSE;
+            }
+            palette_index = ndsIFCommonPaletteIndex(
+                sNdsIFCommonTrafficPalette, ink[0], ink[1], ink[2]);
+            for (y = 0u; y < NDS_IFCOMMON_GO_LAMP_GLYPH_HEIGHT; y++)
+            {
+                u32 x;
+
+                for (x = 0u; x < NDS_IFCOMMON_GO_LAMP_GLYPH_WIDTH; x++)
+                {
+                    if (sNdsIFCommonGoLampGlyph[y][x] != '#')
+                    {
+                        continue;
+                    }
+                    gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[
+                        NDS_IFCOMMON_TRAFFIC_PROOF_OFFSET + traffic_index]++;
+                    pixels[((u32)traffic->atlas_y + y) *
+                               NDS_IFCOMMON_TRAFFIC_ATLAS_WIDTH +
+                           (u32)traffic->atlas_x + x] =
+                        (u8)((7u << 5) | palette_index);
+                }
+            }
+            continue;
+        }
         for (y = 0u; y < traffic->height; y++)
         {
             u32 x;
@@ -1472,39 +1507,23 @@ static s32 ndsIFCommonFillTrafficAtlas(
                     gNdsIFCommonNativeOamPrepareCloudFailureStage = 2u;
                     return FALSE;
                 }
-                if (traffic->asset_index >= nNDSIFCommonAssetShadowInitial)
+                if (traffic->asset_index >= nNDSIFCommonAssetRedDim)
                 {
                     /* The dim lamps are TRANSLUCENT on the N64: an I4
                      * coverage disc of the lamp's prim colour at about 47%
                      * over the housing, whose sockets carry the bulbs'
                      * shading and highlight. Baked opaque (the rule until
                      * 2026-10-04) they hid that and read as flat discs (owner
-                     * r75). They and the GO lettering keep their coverage as
-                     * the texel's A3 alpha and their own colour. The black
-                     * lettering the unlit GO lamp carries is the same IA8
-                     * sprite: cut out opaque at 3% coverage, its 0.8x
-                     * footprint filled the lamp with a black plate and left
-                     * the letters as blue gaps (owner, 2026-10-05: "Unlit
-                     * GO still looks pretty bad"). */
+                     * r75). They keep their coverage as the texel's A3 alpha
+                     * and their own colour. */
                     alpha3 = ((u32)rgba[3] * 7u + 127u) / 255u;
                     if (alpha3 == 0u)
                     {
                         continue;
                     }
-                    if ((traffic->asset_index == nNDSIFCommonAssetShadowGo) ||
-                        (traffic->asset_index ==
-                         nNDSIFCommonAssetShadowInitial))
-                    {
-                        red = rgba[0];
-                        green = rgba[1];
-                        blue = rgba[2];
-                    }
-                    else
-                    {
-                        red = asset_spec->red;
-                        green = asset_spec->green;
-                        blue = asset_spec->blue;
-                    }
+                    red = asset_spec->red;
+                    green = asset_spec->green;
+                    blue = asset_spec->blue;
                 }
                 else
                 {
