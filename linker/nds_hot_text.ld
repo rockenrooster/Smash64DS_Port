@@ -107,7 +107,6 @@ SECTIONS {
 		*(.text.gcRunGObj)
 		*(.text.syVectorMag3D)
 		*(.text.syVectorDiff3D)
-		*(.text.syMatrixTraRotRpyRScaF)
 		*(.text.mpCollisionCheckRWallLineCollisionSame)
 		*(.text.mpCollisionCheckLWallLineCollisionSame)
 		*(.text.mpCollisionCheckFloorLineCollisionSame)
@@ -224,7 +223,6 @@ SECTIONS {
 		*(.text.ndsMPWallSweepStaticMiss)
 		*(.text.ndsMPWallSweepTrunc)
 		*(.text.ndsAObjEvent32CollectActiveMObjs)
-		*(.text.ndsRendererAdapterNdlDispatchEffectOnHotStack)
 		*(.text.ndsRendererAdapterSubmitStageDLFastOnHotStack)
 		*(.text.ndsRendererAdapterCommitSegmentOnHotStack)
 		*(.text.ndsR2BattleUpdateOnHotStack)
@@ -294,6 +292,12 @@ SECTIONS {
 		*(.text.ndsProjectRatioQ22)
 		*(.text.ndsBaseGcAddDObjAnimJoint)
 		*(.text.lbCommonGetTreeDObjNextFromRoot)
+		/* Eighth pack (2026-10-06, fixed-point collision): the Q12 sloped-floor
+		 * height of mpCollisionGetFCCommonFloor (itself ITCM), in the bytes of
+		 * ndsRendererAdapterNdlDispatchEffectOnHotStack (1,116 B at 70-137 cycles
+		 * a byte on Castle, Saffron and Yoshi's Island) and of
+		 * syMatrixTraRotRpyRScaF (no particle caller since the Q transform). */
+		*(.text.ndsMPFloorDistQ12)
 		*.itcm.* (.text .stub .text.* .gnu.linkonce.t.*)
 		/* P2-2p8 2026-09-27: calico's thread scheduler and word copy/fill run from
 		 * main RAM. The census rents them under 800 cycles a byte, and

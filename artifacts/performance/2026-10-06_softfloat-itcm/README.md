@@ -56,3 +56,37 @@ calls, i.e. by converting callers to fixed point, largest first:
 Total estimate 87.9K cycles a frame over 315 callers (fcallers.py on the
 census, same per-call costs as the earlier sim-side classification). The map
 collision cluster alone is ~25K.
+
+## q37: the sloped floor height in Q12, in ITCM
+
+From the parked collision patch, only the point query: `mpCollisionGetFCCommonFloor`
+(itself ITCM) takes a flat segment's height as the source's one subtract and a
+sloped one from `ndsMPFloorDistQ12` (one 64-bit product and a math-unit
+divide on the Q12 point; the source's three subtracts, divide, multiply and
+add, ~400 cycles a hit, 13 hits a frame on Castle). The height (568 B) goes to
+ITCM in the bytes of `ndsRendererAdapterNdlDispatchEffectOnHotStack`
+(1,116 B at 70-137 cycles a byte on Castle, Saffron and Yoshi's Island) and of
+`syMatrixTraRotRpyRScaF` (no caller left). The sweeps stay float: their Q12
+kernel is 1,764 B and does not fit.
+
+| config | digest diff | P50 | P95 | over | paired median |
+|---|---|---|---|---|---|
+| gate | 0 | 776,896 -> 777,344 | 1,059,328 -> 1,060,160 | 62 -> 65 | +640 |
+| g0 (Castle) | 1,807 (from 107) | 809,664 -> 815,232 | 1,148,544 -> 1,112,064 | 113 -> 87 | (diverged) |
+| sz (Sector Z) | 1,790 (from 118) | 859,648 -> 862,912 | 1,163,392 -> 1,167,936 | 126 -> 131 | (diverged) |
+
+Dream Land has no sloped floor line, so its +640 prices the eviction alone.
+On sloped stages the height changes in the last Q12 bit and the match
+diverges (D13); per call the cut is the fdiv, fmul, fadd and three fsubs,
+~2.5K cycles a frame of soft float on Castle by the caller census above.
+
+## Where the tail is (same census, section E)
+
+Castle's 16 over-gate frames of 384 carry a 1.47M-cycle premium each; soft
+float is ~24K of it (fadd + fmul, main-RAM placement). The premium is
+`ndsRendererHardwareResolveOrBindTexture` +133K (7 of 16 frames), lean
+fighter materialization (`ndsFtrLeanMatCorners/MatRun/Materialize/Event/
+MatShade/Pack`) ~+170K, the pose engine (`ndsFtPoseParse/Play/BindEntry`)
+~+68K and the hurtbox kernels (`ndsP2HbRejectPoints/LocalFromDObj/Compose/
+WorldOf`) ~+54K. Soft float is a P50 lever (~70K a frame executed); the P95
+levers are texture binds and lean events.

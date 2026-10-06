@@ -3,6 +3,9 @@
 #include <nds/nds_mp_floor_crossing.h>
 #include <nds/nds_mp_topology.h>
 #include <nds/nds_mpprocess_source.h>
+#include <nds/nds_r2_collision_mtx.h>
+#include <nds/nds_r2_hwmath_unit.h>
+#include <nds/nds_fixed_convert.h>
 
 MPLineGroup gMPCollisionLineGroups[nMPLineKindEnumCount];
 MPVertexInfoContainer *gMPCollisionVertexInfo;
@@ -869,19 +872,43 @@ static f32 ndsMPLineDistanceFC(f32 opx, s32 v1x, s32 v1y, s32 v2x,
         ((f32)v2y - (f32)v1y));
 }
 
-/* The same expression on the vertex cache's floats (ndsMPVertexF32Get). Each
- * (f32)v of an s16 vertex coordinate is exact and the cache holds exactly
- * that value, so every operand -- and so every rounding -- is the integer
- * form's; only the four __aeabi_i2f calls are gone. Exact conversions of
- * integers are equal exactly when their bits are. */
-static f32 ndsMPLineDistanceFCf(f32 opx, f32 v1x, f32 v1y, f32 v2x, f32 v2y)
+/* The floor's height over x, less the point's y, in Q12 (P2-2p8, 2026-10-06;
+ * owner: "Software floating point should not exist, fixed point only"; ruling
+ * D13 re-baselines the digest). The vertices are the map's integers, so the
+ * height v1y + (x - v1x)(v2y - v1y) / (v2x - v1x) is one 64-bit product and a
+ * math-unit divide on the point's Q12 x (rounded toward zero, as the divide
+ * does): the source's three float subtracts, divide, multiply and add, then
+ * the subtract of y, were ~400 ticks a hit (13 hits a frame on Peach's
+ * Castle). The point is taken at Q12 (round to nearest, 2^-12 units); a
+ * coordinate past the Q12 range keeps the float expression. */
+/* ndsMPFloorDistQ12's float form, for a point past the Q12 range. */
+static f32 __attribute__((noinline, cold))
+ndsMPFloorDistFloat(f32 object_x, f32 object_y, s32 v1x, s32 v1y, s32 v2x,
+                    s32 v2y)
 {
-    if (ndsMPFlatSegmentExact(opx, ndsFcmpBits(v1x), ndsFcmpBits(v2x),
-                              ndsFcmpBits(v1y), ndsFcmpBits(v2y)))
+    return ndsMPLineDistanceFC(object_x, v1x, v1y, v2x, v2y) - object_y;
+}
+
+static f32 __attribute__((noinline, target("arm")))
+ndsMPFloorDistQ12(f32 object_x, f32 object_y, s32 v1x, s32 v1y, s32 v2x,
+                  s32 v2y)
+{
+    s32 x;
+    s32 y;
+    s64 h;
+
+    x = ndsR2CollisionF32ToFixed(object_x, 12u);
+    y = ndsR2CollisionF32ToFixed(object_y, 12u);
+    if ((x == NDS_R2_COLLISION_F32_OVERFLOW) ||
+        (y == NDS_R2_COLLISION_F32_OVERFLOW))
     {
-        return v1y;
+        return ndsMPFloorDistFloat(object_x, object_y, v1x, v1y, v2x, v2y);
     }
-    return v1y + (((opx - v1x) / (v2x - v1x)) * (v2y - v1y));
+    h = ((s64)v1y << 12) +
+        ndsR2HwMathDivideFast(((s64)x - ((s64)v1x << 12)) *
+                                  (s64)(v2y - v1y),
+                              (s64)(v2x - v1x));
+    return ndsFixed64ToF32(h - y, 12u);
 }
 
 /* The unit slope of a collision segment, memoized (P2-2p8, 2026-10-05; owner:
@@ -1869,14 +1896,23 @@ sb32 NDS_R2_ITCM_PACK2_CODE mpCollisionGetFCCommonFloor(s32 line_id, Vec3f *obje
             NDS_DIAG(gNdsStageCollisionLoopDivisionGuardCount++);
             continue;
         }
-        floor_y = ndsMPLineDistanceFCf(object_x, fx1, fy1, fx2, fy2);
+        /* A flat segment's height is fy1 exactly (ndsMPFlatSegmentExact):
+         * the source's one subtract is the whole answer. A slope takes the
+         * Q12 height. */
+        floor_y = (ndsFcmpBits(fy1) == ndsFcmpBits(fy2)) ?
+            (fy1 - object_y) :
+            ndsMPFloorDistQ12(object_x, object_y,
+                              ndsMPVertexX(verts, v1_id),
+                              ndsMPVertexY(verts, v1_id),
+                              ndsMPVertexX(verts, v2_id),
+                              ndsMPVertexY(verts, v2_id));
         if (floor_dist != NULL)
         {
-            *floor_dist = floor_y - object_y;
+            *floor_dist = floor_y;
         }
         if (ndsFighterMarioFoxStageMPProcessFloorLoopProofEnabled() != FALSE)
         {
-            f32 signed_dist = floor_y - object_y;
+            f32 signed_dist = floor_y;
 
             if (signed_dist > 0.0F)
             {
