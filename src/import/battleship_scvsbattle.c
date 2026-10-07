@@ -19,6 +19,7 @@
 #include <nds/nds_renderer.h>
 #include <nds/nds_kirby_hat_residency.h>
 #include <nds/nds_startup.h>
+#include <nds/nds_net_session.h>
 #include <reloc_data.h>
 #include <sc/scene.h>
 #include <sys/audio.h>
@@ -661,6 +662,9 @@ void scVSBattleStartScene(void)
     /* The N64 validation overlay is not staged on DS. */
     gSCManagerBackupData.boot = 0;
     ndsSCVSBattleRebudgetSceneArena();
+    /* P3: a wireless match installs its agreed seed before the source's setup
+     * draws its first random number. */
+    ndsNetBattleSceneStart();
     ndsBaseSCVSBattleStartScene();
     ndsRendererHardwareDiscardBattleStaticTextures();
 

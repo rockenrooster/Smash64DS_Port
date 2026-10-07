@@ -227,6 +227,8 @@ static s32 sMenuVsTime;
 static s32 sMenuVsStock;
 static NdsUiKitSurfaceId sMenuVsButtonSurface[NDS_MENU_VS_ENTRIES];
 static u32 sMenuVsArrowsShown;
+/* P3: X toggles hosting; VS START then opens the room (plan section 2). */
+static u32 sMenuVsHostOn;
 
 static u32 ndsMenuShellVsIsTime(void)
 {
@@ -464,6 +466,13 @@ static void ndsMenuShellPopulateVs(void)
 {
     ndsMenuShellVsSyncButtons(NDS_MENU_VS_ENTRIES);
     ndsMenuShellRefreshVs();
+    /* A room left behind (backing out of the lobby) is closed here. */
+    if (ndsNetInSession() != 0u)
+    {
+        ndsNetSessionClose();
+    }
+    ndsNetUiClear();
+    ndsNetUiVsModeHint(sMenuVsHostOn);
 }
 
 /* mnVSModeFuncStartVars: the screen opens on the rules the battle state
@@ -620,6 +629,29 @@ static void ndsMenuShellUpdateVs(u32 held, u32 taps)
         ndsMenuShellVsAdjust(1);
     }
 
+    /* P3 wireless: X toggles hosting, Y opens the room list. */
+    if ((taps & NDS_INPUT_X) != 0u)
+    {
+        sMenuVsHostOn = (sMenuVsHostOn != 0u) ? 0u : 1u;
+        ndsUiKitSfx(NDS_UI_KIT_SFX_VALUE);
+        ndsNetUiVsModeHint(sMenuVsHostOn);
+        return;
+    }
+    if ((taps & NDS_INPUT_Y) != 0u)
+    {
+        ndsUiKitSfx(NDS_UI_KIT_SFX_CONFIRM);
+        if (ndsNetUiJoinModal() != 0)
+        {
+            ndsMenuShellVsSaveRules();
+            ndsMenuShellGoto((u32)nSCKindPlayersVS);
+            return;
+        }
+        /* The modal read the keypad itself: start the edge tracker over. */
+        sMenuHeldPrev = ndsPlatformReadInput();
+        ndsNetUiVsModeHint(sMenuVsHostOn);
+        return;
+    }
+
     if ((taps & (NDS_INPUT_A | NDS_INPUT_START)) != 0u)
     {
         /* mnvsmode.c:1318-1343: only VS START and VS OPTIONS take A; each
@@ -636,6 +668,14 @@ static void ndsMenuShellUpdateVs(u32 held, u32 taps)
         ndsMenuShellVsSyncButtons(NDS_MENU_VS_ENTRIES);
         if (sMenuVsCursor == NDS_MENU_VS_START)
         {
+            /* P3: hosting opens the room before the lobby screen. */
+            if ((sMenuVsHostOn != 0u) && (ndsNetInSession() == 0u) &&
+                (ndsNetHostOpen() != 0))
+            {
+                ndsUiKitSfx(NDS_UI_KIT_SFX_BACK);
+                ndsNetUiLine(19, "  Wireless could not start.");
+                return;
+            }
             ndsMenuShellVsSaveRules();
             /* VS START goes to the CHARACTER SELECT, which is where it goes in
              * the source too (mnvsmode.c's VS START leads to nSCKindPlayersVS,

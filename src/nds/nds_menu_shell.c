@@ -4,6 +4,9 @@
 
 #include "nds_build_config.h"
 #include <nds/nds_scene_harness.h>
+#include <nds/nds_net_session.h>
+#include <nds/nds_net_lobby.h>
+#include <nds/nds_net_ui.h>
 
 #if NDS_P2_MENU_SHELL
 #include "nds_menu_shell_core.c"

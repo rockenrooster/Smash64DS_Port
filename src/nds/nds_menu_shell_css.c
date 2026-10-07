@@ -300,9 +300,17 @@ static u8 sCssFlashShown[4];
  * mnPlayersVSUpdateControllerOrders would report orders[0] = 0 and -1 for the
  * rest, and every branch below that reads a controller order is written from
  * that fact rather than from a general N-cursor model. */
-#define NDS_CSS_CURSOR_SLOT 0
+/* The cursor's own slot: P1 offline; in a wireless room, this console's port
+ * (P3: "a guest who owns P3 is P3 on every console"). */
+static u32 sCssCursorSlot;
+#define NDS_CSS_CURSOR_SLOT ((s32)sCssCursorSlot)
+/* P3: nonzero while this screen is a wireless lobby. */
+static u32 sCssNet;
 
 /* --- Audio seam ---------------------------------------------------------- */
+
+static u32 ndsMenuShellCssNetGuest(void);
+static u32 ndsMenuShellCssNetHumanOther(u32 slot);
 
 static void ndsMenuShellCssCue(u32 id)
 {
@@ -1641,6 +1649,18 @@ static u32 ndsMenuShellCssCheckReady(void)
     {
         return FALSE;
     }
+    if (sCssNet != 0u)
+    {
+        const u32 mask = ndsNetLobbyHumanMask();
+
+        for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
+        {
+            if (((mask >> i) & 1u) != 0u && sCssSelected[i] == 0u)
+            {
+                return FALSE;
+            }
+        }
+    }
     if ((sCssIsTeamBattle != FALSE) && (has_other_team == FALSE))
     {
         return FALSE;
@@ -1784,7 +1804,8 @@ static u32 ndsMenuShellCssCheckGrab(void)
                 return TRUE;
             }
         }
-        else if (sCssPkind[slot] == (u8)nFTPlayerKindCom)
+        else if ((sCssPkind[slot] == (u8)nFTPlayerKindCom) &&
+                 (ndsMenuShellCssNetGuest() == FALSE))
         {
             ndsMenuShellCssGrab(slot);
             return TRUE;
@@ -1875,6 +1896,12 @@ static u32 ndsMenuShellCssCheckKindButton(void)
         {
             continue;
         }
+        /* P3: only the host changes a slot's kind, and never a guest's. */
+        if ((ndsMenuShellCssNetGuest() != FALSE) ||
+            (ndsMenuShellCssNetHumanOther(slot) != FALSE))
+        {
+            return FALSE;
+        }
         next = (u32)sCssPkind[slot] + 1u;
         if (next > (u32)nFTPlayerKindNot)
         {
@@ -1916,6 +1943,13 @@ static u32 ndsMenuShellCssCheckTeamSelect(void)
         {
             continue;
         }
+        /* P3: a player picks their own team; the host also picks for CPUs. */
+        if ((ndsMenuShellCssNetGuest() != FALSE) ?
+                (slot != (u32)NDS_CSS_CURSOR_SLOT) :
+                (ndsMenuShellCssNetHumanOther(slot) != FALSE))
+        {
+            return FALSE;
+        }
         sCssTeam[slot] =
             (sCssTeam[slot] == (u8)nSCBattleTeamIDGreen) ?
                 (u8)nSCBattleTeamIDRed : (u8)(sCssTeam[slot] + 1u);
@@ -1945,6 +1979,12 @@ static u32 ndsMenuShellCssCheckTeamSelect(void)
 static u32 ndsMenuShellCssCheckLevelArrows(void)
 {
     u32 slot;
+
+    /* P3: CPU levels and handicaps are the host's. */
+    if (ndsMenuShellCssNetGuest() != FALSE)
+    {
+        return FALSE;
+    }
 
     for (slot = 0u; slot < (u32)NDS_CSS_SLOTS; slot++)
     {
@@ -2197,6 +2237,12 @@ static u32 ndsMenuShellCssCheckPreviewCostume(void)
 {
     u32 slot;
 
+    /* P3: a guest's appearance is the host's to resolve. */
+    if (ndsMenuShellCssNetGuest() != FALSE)
+    {
+        return FALSE;
+    }
+
     for (slot = 0u; slot < (u32)NDS_CSS_SLOTS; slot++)
     {
         s32 panel = (s32)(slot * 69u);
@@ -2445,6 +2491,215 @@ static void ndsMenuShellCssWalkTourReset(void)
 #endif
 #endif
 
+/* --- P3: the character select as the wireless lobby ------------------------
+ *
+ * Every console runs this screen with its own cursor on its own port. The
+ * host's cursor also owns the CPU slots, the kind buttons, the mode and the
+ * START; a guest's owns its token and its team. Each frame the host folds the
+ * guests' proposals into its slots and publishes all four, and a guest copies
+ * the host's slots except its own and proposes its own. Remote cursors are not
+ * drawn; remote tokens move where their owners carry them. */
+static u32 ndsMenuShellCssNetGuest(void)
+{
+    return ((sCssNet != 0u) && (ndsNetRole() == NDS_NET_ROLE_GUEST)) ? TRUE : FALSE;
+}
+
+static u32 ndsMenuShellCssNetHumanOther(u32 slot)
+{
+    return ((sCssNet != 0u) && (slot != (u32)NDS_CSS_CURSOR_SLOT) &&
+            (((ndsNetLobbyHumanMask() >> slot) & 1u) != 0u)) ? TRUE : FALSE;
+}
+
+static void ndsMenuShellCssNetSlotOut(u32 slot, NdsNetLobbySlot *s)
+{
+    s->pkind = sCssPkind[slot];
+    s->fkind = sCssFkind[slot];
+    s->team = sCssTeam[slot];
+    s->level = sCssLevel[slot];
+    s->handicap = sCssHandicap[slot];
+    s->selected = sCssSelected[slot];
+    s->puck_x = sCssPuckX[slot];
+    s->puck_y = sCssPuckY[slot];
+}
+
+static u32 ndsMenuShellCssNetSlotIn(u32 slot, const NdsNetLobbySlot *s, u32 all)
+{
+    u32 changed = FALSE;
+    const u32 was_selected = sCssSelected[slot];
+
+    if ((all != FALSE) && (sCssPkind[slot] != s->pkind) &&
+        (s->pkind <= (u8)nFTPlayerKindNot))
+    {
+        sCssPkind[slot] = s->pkind;
+        changed = TRUE;
+    }
+    if ((sCssFkind[slot] != s->fkind) &&
+        ((s->fkind == (u8)nFTKindNull) ||
+         (ndsMenuShellCssFighterLocked((u32)s->fkind) == FALSE)))
+    {
+        sCssFkind[slot] = s->fkind;
+        changed = TRUE;
+    }
+    if (sCssSelected[slot] != (s->selected ? 1u : 0u))
+    {
+        sCssSelected[slot] = s->selected ? 1u : 0u;
+        changed = TRUE;
+    }
+    if ((sCssTeam[slot] != s->team) && (s->team <= (u8)nSCBattleTeamIDGreen))
+    {
+        sCssTeam[slot] = s->team;
+        if (sCssIsTeamBattle != FALSE)
+        {
+            ndsMenuShellCssDrawTeamSelect(slot);
+        }
+        changed = TRUE;
+    }
+    if (all != FALSE)
+    {
+        if ((s->level >= 1u) && (s->level <= 9u))
+        {
+            sCssLevel[slot] = s->level;
+        }
+        if ((s->handicap >= 1u) && (s->handicap <= 9u))
+        {
+            sCssHandicap[slot] = s->handicap;
+        }
+    }
+    if ((sCssPuckX[slot] != s->puck_x) || (sCssPuckY[slot] != s->puck_y))
+    {
+        sCssPuckX[slot] = s->puck_x;
+        sCssPuckY[slot] = s->puck_y;
+        changed = TRUE;
+    }
+    if ((was_selected == 0u) && (sCssSelected[slot] != 0u) &&
+        (sCssFkind[slot] != (u8)nFTKindNull))
+    {
+        ndsMenuShellCssAnnounce(slot);
+        ndsMenuShellCssFlashStart(slot);
+    }
+    return changed;
+}
+
+static void ndsMenuShellCssNetSetMode(u32 team_battle)
+{
+    NdsUiKitSurfaceId label;
+
+    sCssIsTeamBattle = (team_battle != 0u) ? 1u : 0u;
+    label = (sCssIsTeamBattle != FALSE) ? NDS_MN_UI_KIT_SURFACE_CSS_MODE_TEAM :
+                                          NDS_MN_UI_KIT_SURFACE_CSS_MODE_FFA;
+    if (ndsUiKitBlitSurfaces(&label, 1u) != FALSE)
+    {
+        gNdsMenuShellCssPanelBlitCount++;
+    }
+    ndsMenuShellCssSyncPanels((u32)NDS_CSS_SLOTS);
+    ndsMenuShellCssSyncTeamSelectAll();
+    ndsMenuShellCssSyncLockedCells();
+}
+
+static void ndsMenuShellCssNetLeave(void)
+{
+    ndsNetSessionClose();
+    sCssNet = 0u;
+    ndsNetUiClear();
+    ndsAudioBgmStopAll();
+    ndsMenuShellGoto((u32)nSCKindVSMode);
+}
+
+/* Returns TRUE when the screen is leaving. */
+static u32 ndsMenuShellCssNetSync(void)
+{
+    NdsNetLobbySlot slots[NDS_CSS_SLOTS];
+    u32 changed = FALSE;
+    u32 i;
+
+    if (sCssNet == 0u)
+    {
+        return FALSE;
+    }
+    if (ndsNetLobbyLost() != 0u)
+    {
+        ndsMenuShellCssNetLeave();
+        return TRUE;
+    }
+    if (ndsNetRole() == NDS_NET_ROLE_HOST)
+    {
+        const u32 mask = ndsNetLobbyHumanMask();
+
+        for (i = 1u; i < (u32)NDS_CSS_SLOTS; i++)
+        {
+            NdsNetLobbySlot proposal;
+
+            if (((mask >> i) & 1u) != 0u)
+            {
+                if (sCssPkind[i] != (u8)nFTPlayerKindMan)
+                {
+                    sCssPkind[i] = (u8)nFTPlayerKindMan;
+                    sCssFkind[i] = (u8)nFTKindNull;
+                    sCssSelected[i] = 0u;
+                    sCssPuckX[i] = (s16)(NDS_CSS_PUCK_HOME_X + 68 * (s32)i);
+                    sCssPuckY[i] = (s16)NDS_CSS_PUCK_HOME_Y;
+                    changed = TRUE;
+                }
+                if (ndsNetLobbyHostTakeProposal(i, &proposal) != 0u)
+                {
+                    changed |= ndsMenuShellCssNetSlotIn(i, &proposal, FALSE);
+                }
+            }
+            else if (sCssPkind[i] == (u8)nFTPlayerKindMan)
+            {
+                /* That player left the room. */
+                sCssPkind[i] = (u8)nFTPlayerKindNot;
+                sCssFkind[i] = (u8)nFTKindNull;
+                sCssSelected[i] = 0u;
+                ndsMenuShellCssCenterPuck(i, (u32)nFTKindNull);
+                changed = TRUE;
+            }
+        }
+        for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
+        {
+            ndsMenuShellCssNetSlotOut(i, &slots[i]);
+        }
+        ndsNetLobbyHostPublish(slots, sCssIsTeamBattle);
+    }
+    else
+    {
+        u32 team_battle;
+        NdsNetLobbySlot mine;
+
+        if (ndsNetLobbyGuestStartReady() != 0u)
+        {
+            ndsNetUiClear();
+            ndsAudioBgmStopAll();
+            ndsMenuShellGoto((u32)nSCKindVSBattle);
+            return TRUE;
+        }
+        if (ndsNetLobbyGuestSnapshot(slots, &team_battle) != 0u)
+        {
+            for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
+            {
+                if (i != (u32)NDS_CSS_CURSOR_SLOT)
+                {
+                    changed |= ndsMenuShellCssNetSlotIn(i, &slots[i], TRUE);
+                }
+            }
+            if ((team_battle != 0u) != (sCssIsTeamBattle != 0u))
+            {
+                ndsMenuShellCssNetSetMode(team_battle);
+                changed = TRUE;
+            }
+        }
+        ndsMenuShellCssNetSlotOut((u32)NDS_CSS_CURSOR_SLOT, &mine);
+        mine.pkind = (u8)nFTPlayerKindMan;
+        ndsNetLobbyGuestPropose(&mine);
+    }
+    if (changed != FALSE)
+    {
+        ndsMenuShellCssPopulate();
+    }
+    ndsNetUiLobbyStatus();
+    return FALSE;
+}
+
 static void ndsMenuShellUpdateCss(u32 held, u32 taps)
 {
     /* ONE panel surface a frame, and BEFORE this frame's input, so a kind
@@ -2455,6 +2710,30 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
     ndsMenuShellCssStepDoors();
     ndsMenuShellCssStepFlashes();
 
+    if (ndsMenuShellCssNetSync() != FALSE)
+    {
+        return;
+    }
+    if ((ndsMenuShellCssNetGuest() != FALSE) &&
+        (ndsNetLobbyPhase() != NDS_NET_PHASE_CSS))
+    {
+        /* The host is choosing the stage: only leaving is allowed. */
+        if ((held & NDS_INPUT_B) != 0u)
+        {
+            if (++sCssBackTics >= (u32)NDS_CSS_BACK_HOLD_TICS)
+            {
+                ndsMenuShellCssNetLeave();
+                return;
+            }
+        }
+        else
+        {
+            sCssBackTics = 0u;
+        }
+        ndsMenuShellCssMove();
+        return;
+    }
+
     /* mnPlayersVSFuncRun's start delay: once START is accepted the screen stops
      * taking input and counts down before the scene changes. */
     if (sCssStartWait != 0u)
@@ -2463,6 +2742,14 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
         if (sCssStartWait == 0u)
         {
             ndsMenuShellCssCommit();
+            if (sCssNet != 0u)
+            {
+                /* P3: the host always picks the stage, so the start
+                 * handshake has one place to run (the stage select). */
+                ndsNetLobbyHostSetPhase(NDS_NET_PHASE_STAGE);
+                ndsMenuShellGoto((u32)nSCKindMaps);
+                return;
+            }
             /* mnPlayersVSFuncRun:4493-4508. The source opens Stage Select when
              * enabled and otherwise rolls a different unlocked ground before
              * entering battle. */
@@ -2568,7 +2855,8 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
                 {
                     /* mnPlayersVSCursorProcUpdate checks game mode, BACK, then
                      * the team selectors in exactly this order (:3356-3367). */
-                    if (ndsMenuShellCssBoxHit(27, 137, 14, 35) != FALSE)
+                    if ((ndsMenuShellCssBoxHit(27, 137, 14, 35) != FALSE) &&
+                        (ndsMenuShellCssNetGuest() == FALSE))
                     {
                         NdsUiKitSurfaceId label;
 
@@ -2601,6 +2889,11 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
                     if (ndsMenuShellCssBoxHit(244, 292, 13, 34) != FALSE)
                     {
                         ndsMenuShellCssCue(NDS_CSS_FGM_SCROLL2);
+                        if (sCssNet != 0u)
+                        {
+                            ndsMenuShellCssNetLeave();
+                            return;
+                        }
                         ndsMenuShellCssBack();
                         return;
                     }
@@ -2628,6 +2921,11 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
         sCssBackTics++;
         if (sCssBackTics >= (u32)NDS_CSS_BACK_HOLD_TICS)
         {
+            if (sCssNet != 0u)
+            {
+                ndsMenuShellCssNetLeave();
+                return;
+            }
             ndsMenuShellCssBack();
             return;
         }
@@ -2686,7 +2984,8 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
         }
 
         if (((taps & NDS_INPUT_START) != 0u) &&
-            (sMenuTics > (u32)NDS_CSS_START_ARM_TICS))
+            (sMenuTics > (u32)NDS_CSS_START_ARM_TICS) &&
+            (ndsMenuShellCssNetGuest() == FALSE))
         {
             if (ready != FALSE)
             {
@@ -2726,7 +3025,19 @@ static void ndsMenuShellCssInit(void)
     ndsMenuShellCssWalkTourReset();
 #endif
 #endif
-    sCssCursorX = NDS_CSS_CURSOR_HOME_X;
+    sCssNet = ndsNetInSession();
+    if (sCssNet != 0u)
+    {
+        ndsNetLobbyMatchOver();
+    }
+    else
+    {
+        ndsNetLockstepDisarm();
+    }
+    ndsNetUiClear();
+    sCssCursorSlot = (sCssNet != 0u) ? ndsNetLobbyLocalPort() : 0u;
+    /* mnPlayersVSMakeCursor seats player p at x 40 + 68p. */
+    sCssCursorX = NDS_CSS_CURSOR_HOME_X + 68 * (s32)sCssCursorSlot;
     sCssCursorY = NDS_CSS_CURSOR_HOME_Y;
     sCssStatus = NDS_CSS_STATUS_POINTER;
     sCssHeld = -1;
@@ -2772,7 +3083,8 @@ static void ndsMenuShellCssInit(void)
          * descriptor calls human arrives as empty -- which is the same
          * correction the source makes, one frame later, in its gate pass. */
         if ((sCssPkind[i] == (u8)nFTPlayerKindMan) &&
-            (i != (u32)NDS_CSS_CURSOR_SLOT))
+            (i != (u32)NDS_CSS_CURSOR_SLOT) &&
+            (ndsMenuShellCssNetHumanOther(i) == FALSE))
         {
             sCssPkind[i] = (u8)nFTPlayerKindNot;
             sCssFkind[i] = (u8)nFTKindNull;
@@ -2788,6 +3100,14 @@ static void ndsMenuShellCssInit(void)
         sCssSelected[i] = (sCssFkind[i] != (u8)nFTKindNull) ? 1u : 0u;
         ndsMenuShellCssCenterPuck(i, (u32)sCssFkind[i]);
         gNdsMenuShellCssCommitSlot[i] = 0u;
+    }
+    /* P3: this console's own port is always a human in a room. */
+    if ((sCssNet != 0u) &&
+        (sCssPkind[NDS_CSS_CURSOR_SLOT] != (u8)nFTPlayerKindMan))
+    {
+        sCssPkind[NDS_CSS_CURSOR_SLOT] = (u8)nFTPlayerKindMan;
+        sCssFkind[NDS_CSS_CURSOR_SLOT] = (u8)nFTKindNull;
+        sCssSelected[NDS_CSS_CURSOR_SLOT] = 0u;
     }
     /* A human slot with no fighter yet holds its own token, so the screen opens
      * with the token already in the cursor's hand (mnplayersvs.c:4604). */

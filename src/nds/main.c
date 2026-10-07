@@ -9,6 +9,7 @@
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_task10_hardware_calibration.h>
 #include <nds/nds_video.h>
+#include <nds/nds_net.h>
 #include <port/coroutine.h>
 #include <sys/controller.h>
 #include <macros.h>
@@ -134,6 +135,9 @@ int main(void)
         ? 0x50415353u
         : (0xFA110000u | (u32)os_test);
 
+#if NDS_NET_LAB_PING
+    ndsNetLabPingRun(NDS_NET_LAB_PING_FRAMES);
+#endif
     syMainLoop();
 #if NDS_BOOT_DIAG_TEXT
     iprintf("Original boot: %s\n",

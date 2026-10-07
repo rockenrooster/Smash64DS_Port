@@ -70,6 +70,18 @@ static void ndsControllerMapPad(u32 keys, OSContPad *pad)
     if (keys & KEY_UP) pad->stick_y = 80;
 }
 
+/* P3: a DS key mask as one source pad (buttons and the binary stick), the
+ * form a net input record carries (src/nds/net/nds_net_session.c). */
+void ndsControllerMapKeys(u32 keys, u16 *button, s8 *stick_x, s8 *stick_y)
+{
+    OSContPad pad;
+
+    ndsControllerMapPad(keys, &pad);
+    *button = pad.button;
+    *stick_x = pad.stick_x;
+    *stick_y = pad.stick_y;
+}
+
 /* The live keypad in source button terms, for scenes that need it without
  * pulling libnds keypad headers into a decomp-heavy translation unit. Reads the
  * LATCHED state -- `ndsPlatformReadInput` already calls `scanKeys()` once per

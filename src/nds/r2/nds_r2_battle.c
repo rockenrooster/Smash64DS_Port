@@ -39,6 +39,7 @@
 
 #include <nds/nds_scene_harness.h>
 #include <nds/nds_r2_battle.h>
+#include <nds/nds_net_session.h>
 #include <port/coroutine.h>
 
 extern volatile u32 gNdsFtPoseEvalTick;
@@ -80,6 +81,9 @@ void ndsR2BattleRun(void)
     u32 i = 0u;
 
     ndsR2HostBattlePrepare();
+    /* P3: a lockstep match runs a batch only once every human's records for
+     * both of its ticks are here, and installs them tick by tick. */
+    ndsNetBattleBegin();
 
     while (i < update_max)
     {
@@ -88,6 +92,7 @@ void ndsR2BattleRun(void)
         u32 stop_after_iteration = 0u;
 
         ndsR2HostBattleIterationBegin();
+        ndsNetBattleGate();
 
         /* Smash 64 slows uniformly under load and never repays a missed retrace
          * with a later logic burst. Run exactly `updates_per_present` unchanged
@@ -97,6 +102,7 @@ void ndsR2BattleRun(void)
              update_in_iteration < updates_per_present;
              update_in_iteration++)
         {
+            ndsNetBattleInstallTick(update_in_iteration);
             if (ndsDtcmHotStackRun(ndsR2BattleUpdateOnHotStack,
                                    (void *)(uintptr_t)update_in_iteration) !=
                 0u)
@@ -126,6 +132,7 @@ void ndsR2BattleRun(void)
         {
             break;
         }
+        ndsNetBattleBatchDone();
         ndsR2HostBattlePresent();
         if (stop_after_iteration != 0u)
         {
@@ -133,6 +140,7 @@ void ndsR2BattleRun(void)
         }
     }
 
+    ndsNetBattleEnd();
     ndsR2HostBattleFinish();
     /* P2-2p6: outside this loop every source tick is a presented one for the
      * fighter pose engine (menu previews, Results), so leave its eval word set. */

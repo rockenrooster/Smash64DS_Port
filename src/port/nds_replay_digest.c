@@ -18,10 +18,10 @@
  * folded last, which catches a changed number or order of random draws even
  * when every visible field still agrees.
  *
- * Instrument only: compiled under NDS_TICK_HUD, never in a published ROM. */
+ * Compiled in every ROM: the measuring ROM folds it every tick (NDS_TICK_HUD),
+ * and a P3 lockstep match folds it once a batch as its sync check
+ * (src/nds/net/nds_net_session.c). Nothing else calls it. */
 #include "nds_scene_harness_config.h"
-
-#if NDS_TICK_HUD
 
 #include <sys/obj.h>
 #include <ft/fighter.h>
@@ -136,5 +136,3 @@ u32 ndsReplayDigestTick(void)
     NDS_DIAG(gNdsReplayDigestTicks++);
     return hash;
 }
-
-#endif /* NDS_TICK_HUD */

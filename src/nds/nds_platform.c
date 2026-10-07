@@ -749,6 +749,14 @@ u32 ndsPlatformReadInput(void)
         held |= KEY_START;
     }
 #endif
+#if NDS_NET_LAB_LOBBY
+    {
+        /* P3 lab: the two-console autopilot (src/nds/net/nds_net_autopilot.c). */
+        extern u32 ndsNetLabAutopilotKeys(void);
+
+        held |= ndsNetLabAutopilotKeys();
+    }
+#endif
     sHeldKeys = held;
     gNdsPlatformHeldKeys = held;
 

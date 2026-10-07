@@ -699,6 +699,19 @@ static void ndsMenuShellUpdateSss(u32 held, u32 taps)
         ndsMenuShellSssCommit();
         ndsMenuShellSssCue(NDS_SSS_FGM_CONFIRM);
         gNdsMenuShellSssConfirmCount++;
+        /* P3: the host sends the descriptor and seed and waits for the room;
+         * if anyone does not answer, everyone goes back to the lobby. */
+        if (ndsNetRole() == NDS_NET_ROLE_HOST)
+        {
+            ndsNetUiLine(21, " Starting the match...");
+            if (ndsNetLobbyHostStartMatch() != 0)
+            {
+                ndsNetUiLine(21, " A player did not answer.");
+                ndsMenuShellGoto((u32)nSCKindPlayersVS);
+                return;
+            }
+            ndsNetUiClear();
+        }
 #if NDS_P2_MENU_WALK
         /* A lap is a completed menu pass into the match, counted where the
          * pass actually ends. P2-1d counted it on the VS screen and P2-1e
@@ -714,6 +727,10 @@ static void ndsMenuShellUpdateSss(u32 held, u32 taps)
     {
         ndsMenuShellSssCommit();
         gNdsMenuShellSssBackCount++;
+        if (ndsNetRole() == NDS_NET_ROLE_HOST)
+        {
+            ndsNetLobbyHostSetPhase(NDS_NET_PHASE_CSS);
+        }
         ndsMenuShellGoto((u32)nSCKindPlayersVS);
         return;
     }

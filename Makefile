@@ -783,6 +783,16 @@ NDS_LAB_FOURCPU_TWO ?=
 # configuration.
 NDS_LAB_FOURCPU_SWEEP ?=
 NDS_LAB_FOURCPU_WORDS ?=
+# P3 lab: radio exchange at boot for the two-instance harness (src/nds/net/nds_net_lab.c).
+NDS_NET_LAB_PING ?= 0
+NDS_NET_LAB_PING_FRAMES ?= 600
+# P3 lab: two consoles agree a fixed two-human match at boot and play it in
+# lockstep; NDS_NET_LAB_INPUT scripts each console's pad.
+NDS_NET_LAB_MATCH ?= 0
+NDS_NET_LAB_INPUT ?= 0
+# P3 lab: drive the real menus through host/join, lobby, stage and rematch
+# on the two-instance harness (src/nds/net/nds_net_autopilot.c).
+NDS_NET_LAB_LOBBY ?= 0
 NDS_LAB_FOURCPU_SWEEP_GKIND ?=
 NDS_LAB_FOURCPU_SWEEP_KINDS ?=
 # LAB ONLY: the lean renderer's root-reuse census (ndsFtrLeanRootCensus,
@@ -3893,7 +3903,7 @@ NDS_BATTLESHIP_IMPORT_OVERLAY_OFILES := \
 	battleship_scstaffroll.o
 
 # BattleShip source files are compiled in place. They remain the source of truth.
-SOURCES := src/nds src/nds/r2 src/port src/import $(BATTLESHIP_SYS)
+SOURCES := src/nds src/nds/r2 src/nds/net src/port src/import $(BATTLESHIP_SYS)
 # Do not add BattleShip's full include root globally: its N64 libc headers
 # intentionally shadow stddef/string/etc. Compatibility headers expose the
 # narrow ABI needed by each imported source slice.
@@ -4708,6 +4718,8 @@ CFILES += battleship_lbfade.c
 ifeq ($(NDS_IMPORT_BATTLESHIP_IFCOMMON),1)
 CFILES += battleship_ifcommon.c
 CFILES += nds_battle_hud.c
+# P3 local multiplayer (include/nds/nds_net.h).
+CFILES += nds_net_link.c nds_net_lab.c nds_net_session.c nds_net_lobby.c nds_net_ui.c nds_net_autopilot.c
 endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_WEAPON_MANAGER),1)
 CFILES += battleship_wpmanager_core.c
@@ -6159,7 +6171,7 @@ NDS_ARM7_ELF := $(CURDIR)/nds-audio-arm7.elf
 NDS_ARM7_SOURCE := $(PROJECT_ROOT)/src/nds/arm7/nds_audio_main.c
 NDS_ARM7_HEADER := $(PROJECT_ROOT)/include/nds/nds_audio_storage.h
 NDS_ARM7_OBJECTS := nds-audio-arm7.o nds-audio-dldi-arm7.o nds-audio-extent-arm7.o \
-	nds-bgm-stream-arm7.o nds-bgm-service-arm7.o
+	nds-bgm-stream-arm7.o nds-bgm-service-arm7.o nds-net-arm7.o
 NDS_ARM7_FLAGS := -march=armv4t -mtune=arm7tdmi -mthumb -g -Os \
 	-Wall -Wextra -ffunction-sections -fdata-sections -DARM7 -D__NDS__ \
 	-I$(PROJECT_ROOT)/include -I$(CALICO)/include
@@ -6176,6 +6188,8 @@ nds-bgm-stream-arm7.o: $(PROJECT_ROOT)/src/nds/nds_bgm_stream.c $(PROJECT_ROOT)/
 	$(CC) $(NDS_ARM7_FLAGS) -MMD -MP -MF nds-bgm-stream-arm7.d -c $< -o $@
 nds-bgm-service-arm7.o: $(PROJECT_ROOT)/src/nds/arm7/nds_audio_bgm_service.c $(PROJECT_ROOT)/include/nds/nds_bgm_ipc.h
 	$(CC) $(NDS_ARM7_FLAGS) -MMD -MP -MF nds-bgm-service-arm7.d -c $< -o $@
+nds-net-arm7.o: $(PROJECT_ROOT)/src/nds/arm7/nds_net_arm7.c $(PROJECT_ROOT)/include/nds/nds_net_link.h
+	$(CC) $(NDS_ARM7_FLAGS) -MMD -MP -MF nds-net-arm7.d -c $< -o $@
 NDS_ARM7_DS7_LD := $(if $(filter 1,$(NDS_P2_ARM9_WRAM)),$(PROJECT_ROOT)/linker/nds_arm7_ds7_arm9wram.ld,$(CALICO)/lib/ds7.ld)
 $(NDS_ARM7_ELF): $(NDS_ARM7_OBJECTS) $(PROJECT_ROOT)/linker/nds_arm7_contract.ld $(NDS_ARM7_DS7_LD)
 	$(CC) $(NDS_ARM7_FLAGS) -specs=$(CALICO)/share/ds7.specs \
@@ -6188,6 +6202,23 @@ native-only-arm7-check: $(NDS_ARM7_ELF)
 	@python "$(PROJECT_ROOT)/scripts/check_native_only_rom.py" --elf "$(NDS_ARM7_ELF)" --objects-list native-arm7-objects.list --build-dir "$(CURDIR)"
 $(OUTPUT).nds: $(NDS_ARM7_ELF)
 $(OUTPUT).nds: | native-only-arm7-check
+
+# P3: the ARM7 radio module (include/nds/nds_net_link.h). It links at the
+# net area base against the resident ARM7 ELF, so only the Mitsumi driver,
+# netbuf and wlan objects come from the archive; the ARM9 copies
+# net/net7.bin into place when a session starts.
+NDS_NET7_ELF := $(CURDIR)/nds-net7.elf
+nds-net7-module.o: $(PROJECT_ROOT)/src/nds/arm7/nds_net7_module.c $(PROJECT_ROOT)/include/nds/nds_net_link.h
+	$(CC) $(NDS_ARM7_FLAGS) -MMD -MP -MF nds-net7-module.d -c $< -o $@
+$(NDS_NET7_ELF): nds-net7-module.o $(NDS_ARM7_ELF) $(PROJECT_ROOT)/linker/nds_arm7_net7.ld
+	$(CC) -march=armv4t -mthumb -nostartfiles -Wl,-Map,nds-net7.map \
+		-Wl,-T,$(PROJECT_ROOT)/linker/nds_arm7_net7.ld -Wl,--just-symbols=$(NDS_ARM7_ELF) \
+		nds-net7-module.o -L$(CALICO)/lib -lcalico_ds7 -lgcc -lc -lgcc -o $@
+$(NITROFS_DIR)/net/net7.bin: $(NDS_NET7_ELF)
+	@mkdir -p $(dir $@)
+	$(OBJCOPY) -O binary $< $@
+$(OUTPUT).nds: $(NITROFS_DIR)/net/net7.bin
+-include nds-net7-module.d
 -include $(NDS_ARM7_OBJECTS:.o=.d)
 
 # P2-3r4. THE NATIVE-OWNER TABLE IMAGES.
@@ -6943,6 +6974,11 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_LOADFRAME_TIMING $(NDS_R2_LOADFRAME_TIMING)'; \
 		echo '#define NDS_R2_BOTH_CPU $(NDS_R2_BOTH_CPU)'; \
 		echo '#define NDS_P2_FOUR_CPU_STRESS $(NDS_P2_FOUR_CPU_STRESS)'; \
+		echo '#define NDS_NET_LAB_PING $(NDS_NET_LAB_PING)'; \
+		echo '#define NDS_NET_LAB_PING_FRAMES $(NDS_NET_LAB_PING_FRAMES)'; \
+		echo '#define NDS_NET_LAB_MATCH $(NDS_NET_LAB_MATCH)'; \
+		echo '#define NDS_NET_LAB_INPUT $(NDS_NET_LAB_INPUT)'; \
+		echo '#define NDS_NET_LAB_LOBBY $(NDS_NET_LAB_LOBBY)'; \
 		echo '#define NDS_P2_FOUR_CPU_ROSTER $(NDS_P2_FOUR_CPU_ROSTER)'; \
 		echo '#define NDS_P2_FOUR_CPU_KIND0 $(NDS_P2_FOUR_CPU_KIND0)'; \
 		echo '#define NDS_P2_FOUR_CPU_KIND1 $(NDS_P2_FOUR_CPU_KIND1)'; \

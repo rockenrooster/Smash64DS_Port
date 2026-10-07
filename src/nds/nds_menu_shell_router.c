@@ -449,7 +449,14 @@ static void ndsMenuShellRun(u32 screen)
     while (sMenuLeaving == FALSE)
     {
         u32 held;
-        u32 taps = ndsMenuShellReadTaps(&held);
+        u32 taps;
+
+        /* P3: a wireless room is serviced on every menu frame. */
+        if (ndsNetInSession() != 0u)
+        {
+            ndsNetLobbyPump();
+        }
+        taps = ndsMenuShellReadTaps(&held);
 
         ndsMenuShellRecordInput(taps);
         ndsMenuShellUpdate(screen, held, taps);
@@ -614,6 +621,15 @@ void ndsMenuShellRunStartup(void)
     /* Deliberately NOT written into the transition ring: the ring pairs a
      * SCREEN with the scene it hands off to, and no screen ran here. An empty
      * first ring slot is the evidence that boot reaches the title directly. */
+#if NDS_NET_LAB_MATCH
+    /* P3 lab: two consoles agree a fixed match and go straight into it. */
+    if (ndsNetLabMatchHandshake() == 0)
+    {
+        ndsSceneManagerRequest((u32)nSCKindVSBattle,
+                               (u32)gSCManagerSceneData.scene_curr);
+        return;
+    }
+#endif
     ndsSceneManagerRequest((u32)nSCKindTitle,
                            (u32)gSCManagerSceneData.scene_curr);
 }

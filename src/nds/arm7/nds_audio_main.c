@@ -212,6 +212,9 @@ int main(void)
     threadStart(&sStorageThread);
     extern void ndsArm7BgmStartService(void);
     ndsArm7BgmStartService();
+    /* P3: forward net PXI words to the radio module once the ARM9 loads it. */
+    extern void ndsNetArm7Init(void);
+    ndsNetArm7Init();
     while (pmMainLoop()) threadWaitForVBlank();
     return 0;
 }
