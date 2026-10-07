@@ -5314,10 +5314,18 @@ static void ndsRendererHardwareEmitIFCommonClouds(void)
         v16 top = ndsRendererHardwareIFCommonScreenY(draw->y_q16);
         v16 bottom = ndsRendererHardwareIFCommonScreenY(
             draw->y_q16 + draw->height_q16);
-        t16 tex_left = (t16)(draw->texture_x << 4);
-        t16 tex_right = (t16)((draw->texture_x + draw->texture_width) << 4);
-        t16 tex_top = (t16)(draw->texture_y << 4);
-        t16 tex_bottom = (t16)((draw->texture_y + draw->texture_height) << 4);
+        /* Half a texel in (owner, 2026-10-06: the GO lamp's 12x9 lettering
+         * read "&8" on the DS): the DS starts each pixel's texture
+         * coordinate at the pixel's edge, so a 1:1 quad sampled every texel
+         * exactly on its boundary, and the edge walk's rounding (the Y map is
+         * 42.67 vertex units a pixel) flipped alternate rows a texel left or
+         * right. Sampling at texel centres is the same 1:1 image, stable. */
+        t16 tex_left = (t16)((draw->texture_x << 4) + 8);
+        t16 tex_right =
+            (t16)(((draw->texture_x + draw->texture_width) << 4) + 8);
+        t16 tex_top = (t16)((draw->texture_y << 4) + 8);
+        t16 tex_bottom =
+            (t16)(((draw->texture_y + draw->texture_height) << 4) + 8);
         /* Opaque A3 texels update depth on DS. Give each later source SObj a
          * one-step-nearer depth so frame, lamps, contour, and Light compose in
          * painter order instead of the first quad masking every successor. */
