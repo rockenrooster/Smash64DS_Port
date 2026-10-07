@@ -11512,6 +11512,54 @@ static u16 ndsRendererHardwareTextureColor(
     return 0u;
 }
 
+/* ndsRendererHardwareTextureColor for one stored value of a 4- or 8-bit CI,
+ * IA or I texel: the same branches with the texel read already done. The
+ * conversion loop's per-value table below calls it once per value. */
+/* The conversion loop's per-value colours (see the resolver). */
+static u16 sNdsRendererHardwareTextureValueLut[256];
+
+static u16 ndsRendererHardwareTextureValueColor(
+    const NDSRendererConfig *config,
+    u32 format,
+    u32 size,
+    const u16 *palette,
+    u32 palette_count,
+    u32 palette_base,
+    u32 value,
+    s32 preserve_transparent_rgb)
+{
+    if (format == NDS_RENDERER_HW_TEXTURE_FMT_CI)
+    {
+        return ndsRendererHardwarePaletteColor(config, palette,
+                                               value + palette_base,
+                                               palette_count,
+                                               preserve_transparent_rgb);
+    }
+    if (format == NDS_RENDERER_HW_TEXTURE_FMT_IA)
+    {
+        if (size == NDS_RENDERER_HW_TEXTURE_SIZ_4B)
+        {
+            u8 intensity = (u8)(((value >> 1) & 0x07u) * 0x24u);
+            u8 alpha = (value & 1u) ? 0xffu : 0u;
+
+            return ndsRendererHardwareConvertIA(
+                intensity, alpha, preserve_transparent_rgb);
+        }
+        {
+            u8 intensity = (u8)((value >> 4) * 0x11u);
+            u8 alpha = (u8)((value & 0x0fu) * 0x11u);
+
+            return ndsRendererHardwareConvertIA(
+                intensity, alpha, preserve_transparent_rgb);
+        }
+    }
+    if (size == NDS_RENDERER_HW_TEXTURE_SIZ_4B)
+    {
+        return ndsRendererHardwareConvertI((u8)(value * 0x11u));
+    }
+    return ndsRendererHardwareConvertI((u8)value);
+}
+
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
 static s32 ndsRendererTextureColorNonWhite(u16 color)
 {
@@ -14305,6 +14353,56 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     }
     else
     {
+        /* Per-value colours (P2-2p8, 2026-10-07). For a 4- or 8-bit CI, IA
+         * or I texel without TEXEL1 or graded coverage, the loop's whole
+         * chain -- the palette or intensity decode, the PRIM/ENV bake and
+         * the opaque rule -- is a function of the stored value alone, so it
+         * runs once a value and the loop reads the value and looks it up.
+         * The same words reach the scratch image; a first-use 64x64 paid the
+         * chain 4,096 times (~60 cycles each, the bulk of a 300-500K-cycle
+         * Saffron first sight). An 8-bit table pays 256 values, so it waits
+         * for images with more texels than that. */
+        u32 value_lut_count = 0u;
+
+        if ((use_texel1_ci4_lut == FALSE) && (use_texel1 == FALSE) &&
+            (graded_coverage == FALSE) &&
+            ((format == NDS_RENDERER_HW_TEXTURE_FMT_CI) ||
+             (format == NDS_RENDERER_HW_TEXTURE_FMT_IA) ||
+             (format == NDS_RENDERER_HW_TEXTURE_FMT_I16)) &&
+            ((size == NDS_RENDERER_HW_TEXTURE_SIZ_4B) ||
+             ((size == NDS_RENDERER_HW_TEXTURE_SIZ_8B) &&
+              ((width * height) > 1024u))))
+        {
+            u32 v;
+
+            value_lut_count =
+                (size == NDS_RENDERER_HW_TEXTURE_SIZ_4B) ? 16u : 256u;
+            for (v = 0u; v < value_lut_count; v++)
+            {
+                u16 color = ndsRendererHardwareTextureValueColor(
+                    config, format, size, tlut_src, tlut_count,
+                    palette_base, v,
+                    (alpha_ignores_texels != FALSE) ? TRUE : FALSE);
+
+                if (prim_env_blend_mode ==
+                    NDS_RENDERER_PRIM_ENV_BLEND_PRIM_RGB_TEXEL0_ALPHA)
+                {
+                    color = ndsRendererHardwarePrimRgbTexel0Alpha(
+                        color, stats->prim_color);
+                }
+                else if (prim_env_blend_mode !=
+                         NDS_RENDERER_PRIM_ENV_BLEND_NONE)
+                {
+                    color = ndsRendererHardwareBlendPrimEnvTexel0(
+                        color, stats->prim_color, stats->env_color);
+                }
+                if (alpha_ignores_texels != FALSE)
+                {
+                    color |= 0x8000u;
+                }
+                sNdsRendererHardwareTextureValueLut[v] = color;
+            }
+        }
         for (y = 0u; y < height; y++)
         {
             u32 source_y = (materialize_t != FALSE) ?
@@ -14322,7 +14420,17 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
                 u32 dst_index = (y * upload_width) + x;
                 u16 color;
 
-                if (use_texel1_ci4_lut != FALSE)
+                if (value_lut_count != 0u)
+                {
+                    color = sNdsRendererHardwareTextureValueLut[
+                        (size == NDS_RENDERER_HW_TEXTURE_SIZ_4B) ?
+                            ndsRendererReadTexturePackedNibble(
+                                config, texels_src, src_index, format, size) :
+                            ndsRendererReadTextureByte(
+                                config, texels_src, src_index, format,
+                                size)];
+                }
+                else if (use_texel1_ci4_lut != FALSE)
                 {
                     u32 index0 = ndsRendererReadTexturePackedNibble(
                         config, texels_src, src_index, format, size);
