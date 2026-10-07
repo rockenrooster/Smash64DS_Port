@@ -15,6 +15,14 @@ P95 ~1,074K, 96% in two VBlanks; lab sweep worst cases Yoshi's Island ~1.36M, Se
 The uncommitted whole-subsystem soft-float passes measured slower and are parked in
 `builds/parked/2026-10-06_softfloat-passes-c15/`. History of the P2 route: `p2/HANDOFF_HISTORY.md`.
 
+**State 2026-10-07 (P95 pass):** clean lab sweep at HEAD (`artifacts/performance/2026-10-07_p95-baseline`):
+gate 1,056K, Castle/Zebes/Hyrule/Dream Land pass; Sector Z, Jungle, Saffron, Mushroom Kingdom 1.08-1.20M over
+seeds 1-4; Yoshi's Island 1.17-1.37M. Yoshi seed 1's overrun is one Meowth Pay Day brawl (frames ~1430-1590:
+up to eight coins against four fighters, +293K ticks a frame over the window before it, about half of it exact
+weapon-vs-hurtbox tests inside the source's own hit_detect_range). Skipping each Yoshi's Island stage layer
+whole prices it at P95 -21K / -11K / -5K / -9K (layers 0-3, `2026-10-07_yoshi-layers`). N64 ground truth for
+visual rows: the vanilla ROM in mupen64plus, cheat-booted into a scene (`p2/BUG_NOTES.md`, Master Hand).
+
 ## Continue, do not restart
 
 With an intact context, execute the cursor's next unfinished action. Do not

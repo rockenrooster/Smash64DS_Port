@@ -1652,6 +1652,26 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   stays identical (6 stages). Paired: Zebes -6.8K, Mushroom Kingdom -2.9K,
   the rest within +-1K. Both ITCM residents were rewritten compact (the
   first build overflowed ITCM by 880 B). Receipt `2026-10-06_s1-fixed`.
+- **10-07: the body's last owners get routes (P95 pass after P3).** Clean lab
+  sweep at HEAD (`2026-10-07_p95-baseline`): Yoshi's Island seed 1 1,368K is
+  one Meowth Pay Day (frames ~1430-1590: up to eight coins against four
+  fighters, +293K ticks a frame over the window before it -- about half exact
+  weapon-vs-hurtbox tests inside the source's own `hit_detect_range`, the rest
+  spread). A gdb body census (every stage-DL general-body call of a match,
+  grouped by list, owner and item/weapon kind; scratchpad `bodyprobe.ps1`,
+  `bodycensus.ps1`) on the five failing stages x seeds 1-4 found: the
+  monsters' weapons (baked roots under a Weapon GObj, drawn since 10-06's
+  weapon trees), the Poke Ball (both roots), both shells, the Starman, the
+  Maxim Tomato and the Bob-omb, each drawn through the body on every frame it
+  lives. Each now records a fast-lane route with the body's admission tested
+  again every draw; the Tomato stays out of the item replay (its owner draws
+  with glVertex, never through the sink). Digest identical on every pair.
+  Yoshi's Island seed 1 P95 1,368K -> 1,327K (338 -> 290 over), Jungle seed
+  3 1,180K -> 1,141K, Mushroom Kingdom / Jungle / Sector Z seed 1-4 -1..-5K
+  (`2026-10-07_weapon-route`, `_item-routes`, `_item-routes2`). What the
+  body still draws after this is ~3-60 calls a match. Pricing whole stage
+  layers on Yoshi's Island (render economy, skip one owner): layers 0-3 P95
+  -21K / -11K / -5K / -9K (`2026-10-07_yoshi-layers`).
 
 ## 7. Found along the way
 
