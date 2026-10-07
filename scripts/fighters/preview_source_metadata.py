@@ -135,6 +135,38 @@ def oler_data(path):
     return b[do:do + ds], len(b)
 
 
+def tail_intern_pointers(fid):
+    """A tail file's own pointers, {slot: target} payload offsets.
+
+    A tail file (Donkey's DkIcon) is packed whole, but its internal pointers --
+    a stock or emblem Sprite's bitmap table, a Bitmap's texels -- are still
+    N64 relocation tokens in the payload: each slot of the internal chain holds
+    (next slot word << 16) | target word. The packs must emit them as fixups.
+    Tail files carry no externs (refused when the metadata is built)."""
+    path = o2r_path_by_id(fid)
+    if path is None:
+        raise ValueError("tail file %d has no O2R" % fid)
+    raw = Path(path).read_bytes()
+    file_id, intern, _extern, count = struct.unpack_from("<IHHI", raw, 0x40)
+    payload, _size = oler_data(path)
+    if payload is None or file_id != fid or count != 0:
+        raise ValueError("tail file %d: unexpected relocation header" % fid)
+    pointers = {}
+    cursor = intern
+    while cursor != 0xFFFF:
+        slot = cursor * 4
+        if slot + 4 > len(payload) or slot in pointers:
+            raise ValueError("tail file %d: invalid relocation chain" % fid)
+        word = struct.unpack_from(">I", payload, slot)[0]
+        target = (word & 0xFFFF) * 4
+        if target >= len(payload):
+            raise ValueError("tail file %d: pointer 0x%x leaves the file" %
+                             (fid, slot))
+        pointers[slot] = target
+        cursor = word >> 16
+    return pointers
+
+
 def parse_submotion_rows(path):
     t = path.read_text(encoding="utf-8", errors="replace")
     m = re.search(r"dFT\w+SubMotionDescs\[\]\s*=\s*\{(.*?)\};", t, re.S)

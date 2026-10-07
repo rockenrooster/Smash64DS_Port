@@ -351,6 +351,18 @@ def build_pack(kind: str, fkind: int, m: dict, raw: bytes,
             if not (0 <= r["target_old"] < model_span_extent):
                 raise PackError(kind + ": model target beyond extent: %r" % (r,))
             emit(slot, sec1_base + model_remap(r["target_new"]))
+    # A tail file is packed whole; its own pointers (the stock and emblem
+    # Sprites' bitmap tables, the Bitmaps' texels) are relocated like Main's.
+    if tails:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import preview_source_metadata as psm
+        for fid, _nbytes in tails:
+            try:
+                pointers = psm.tail_intern_pointers(fid)
+            except ValueError as error:
+                raise PackError(kind + ": " + str(error))
+            for slot, target in pointers.items():
+                emit(tail_base[fid] + slot, tail_base[fid] + target)
 
     # Span table: original offset -> section-relative compact offset.
     spans = []  # (source_offset, data_offset, data_bytes)

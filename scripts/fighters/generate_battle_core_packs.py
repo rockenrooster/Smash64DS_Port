@@ -664,6 +664,17 @@ def _build_one(kind: str, meta: dict, types: est.TypeTable,
                 external_patches.append(
                     (edge["slot_new"], dep, source_target))
 
+    # A tail file is packed whole; its own pointers (the stock and emblem
+    # Sprites' bitmap tables, the Bitmaps' texels) are relocated like Main's.
+    for tail in tail_rows:
+        fid = int(tail["fid"])
+        try:
+            pointers = preview.tail_intern_pointers(fid)
+        except ValueError as error:
+            raise BattlePackError("%s %s" % (fighter, error))
+        for slot, target in pointers.items():
+            emit(tail_base[fid] + slot, tail_base[fid] + target)
+
     # Relocate every pointer word inside retained Model spans directly from the
     # O2R relocation map.  Targets outside the structural closure must be Gfx
     # roots owned by the native renderer; anything else is an incomplete pack.

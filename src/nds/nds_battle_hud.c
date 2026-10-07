@@ -17,28 +17,17 @@
 #define NDS_BATTLE_HUD_PLAYERS 4u
 #define NDS_BATTLE_HUD_DAMAGE_PALETTE_BASE 0u
 #define NDS_BATTLE_HUD_WHITE_PALETTE 4u
-#define NDS_BATTLE_HUD_PORTRAIT_PALETTE_BASE 5u
-/* THE PORTRAIT AND STOCK BANDS USED TO OVERLAP, AND IT WAS ALREADY LIVE.
- * Portraits once occupied BASE..BASE+NDS_BATTLE_HUD_PORTRAITS-1, uploaded once
- * at prepare. At four portraits (5..8) and stock base 8, player 0's stock
- * palette overwrote the FOURTH portrait's -- Donkey's -- so a Donkey HUD
- * portrait drew in whatever colours player 0's stock icon last needed, and
- * every admitted fighter since took one more of the sixteen sub OBJ palettes:
- * Link, the seventh, pushed the four stock palettes to 12..15 and left NO slot
- * for an eighth portrait, let alone the twelve-fighter roster.
- *
- * The budget is per PLAYER, not per KIND: a match shows at most four
- * portraits, so the portrait band is now BASE..BASE+3 and each player's slot
- * is (re)loaded with its fighter's baked palette when that fighter changes,
- * exactly as the stock palettes already are. Every kind's 4bpp tiles stay
- * resident (tiles do not care which palette an OAM entry names), so the split
- * is damage 0..3, white 4, portraits 5..8, stocks 9..12, and 13..15 are free
- * for the rest of the roster. */
+#define NDS_BATTLE_HUD_EMBLEM_PALETTE_BASE 5u
+/* The sixteen sub OBJ palettes are budgeted per PLAYER, never per fighter
+ * kind (a per-kind band once overflowed into the stock palettes): damage 0..3,
+ * white 4, emblems 5..8 (each player's emblem colour by intensity, rebuilt
+ * when that player's emblem changes), stocks 9..12 (the fighter's baked stock
+ * palette) and the score frames from 13. */
 #define NDS_BATTLE_HUD_STOCK_PALETTE_BASE 9u
 _Static_assert(NDS_BATTLE_HUD_STOCK_PALETTE_BASE >=
-                   (NDS_BATTLE_HUD_PORTRAIT_PALETTE_BASE +
+                   (NDS_BATTLE_HUD_EMBLEM_PALETTE_BASE +
                     NDS_BATTLE_HUD_PLAYERS),
-               "HUD stock palettes overlap the portrait band");
+               "HUD stock palettes overlap the emblem band");
 _Static_assert((NDS_BATTLE_HUD_STOCK_PALETTE_BASE +
                 NDS_BATTLE_HUD_PLAYERS) <= 16u,
                "HUD stock palettes run off the sub OBJ palette");
@@ -49,7 +38,8 @@ _Static_assert((NDS_BATTLE_HUD_STOCK_PALETTE_BASE +
 #define NDS_BATTLE_HUD_SOURCE_SCALE(v) (((v) * 4 + 2) / 5)
 #define NDS_BATTLE_HUD_PLAYER_Y NDS_BATTLE_HUD_SOURCE_SCALE(210)
 #define NDS_BATTLE_HUD_STOCK_Y NDS_BATTLE_HUD_SOURCE_SCALE(185)
-#define NDS_BATTLE_HUD_PORTRAIT_Y 124
+/* An emblem (at most 30x27 in the source frame, 24x22 here) in a 32x32 cell. */
+#define NDS_BATTLE_HUD_EMBLEM_CELL 32u
 
 static const s16 sNdsBattleHudPlayerCenterX[NDS_BATTLE_HUD_PLAYERS] = {
     NDS_BATTLE_HUD_SOURCE_SCALE(55),
@@ -70,7 +60,7 @@ static u16 *sNdsBattleHudTimerGfx[NDS_BATTLE_HUD_TIMER_GLYPHS];
 /* Bonus Practice's timer marks, the blob's last cells. */
 static u16 *sNdsBattleHudTimerMarkGfx[NDS_BATTLE_HUD_TIMER_MARKS];
 static u16 *sNdsBattleHudStockDigitGfx[NDS_BATTLE_HUD_STOCK_DIGIT_GLYPHS];
-static u16 *sNdsBattleHudPortraitGfx[NDS_BATTLE_HUD_PORTRAITS];
+static u16 *sNdsBattleHudEmblemGfx[NDS_BATTLE_HUD_PLAYERS];
 static u16 *sNdsBattleHudStockGfx[NDS_BATTLE_HUD_STOCK_OWNERS];
 static u16 *sNdsBattleHudScoreGfx[NDS_BATTLE_HUD_SCORE_FRAMES];
 /* The 1P team rows' own cells, after the score frames in battle_hud.bin: the
@@ -87,9 +77,10 @@ extern volatile u32 gNdsFrameCounter;
 volatile u32 gNdsBattleHudScoreSubmitCount;
 volatile u32 gNdsBattleHudScoreDrawCount;
 volatile u32 gNdsBattleHudScoreFrameMask;
-/* Which baked portrait palette each player's slot currently holds; 0xff is
- * "none", so the first draw after prepare/clear always uploads. */
-static u8 sNdsBattleHudPortraitPaletteOwner[NDS_BATTLE_HUD_PLAYERS];
+/* The emblem each player's cell and palette were baked from; invalid after
+ * prepare/clear, so the first draw always bakes. */
+static NDSBattleHudEmblemState sNdsBattleHudEmblemBaked[NDS_BATTLE_HUD_PLAYERS];
+static u8 sNdsBattleHudEmblemValid[NDS_BATTLE_HUD_PLAYERS];
 static u32 sNdsBattleHudPrepared;
 #if NDS_P2_1P_GAME
 static u32 sNdsBattleHudTeamStockCount;
@@ -302,13 +293,6 @@ static u32 ndsBattleHudPrepare(void)
             NDS_BATTLE_HUD_STOCK_DIGIT_GFX_BYTES);
         if (sNdsBattleHudStockDigitGfx[i] == NULL) goto failed;
     }
-    for (i = 0u; i < NDS_BATTLE_HUD_PORTRAITS; i++)
-    {
-        sNdsBattleHudPortraitGfx[i] = ndsBattleHudAlloc(
-            file, SpriteSize_16x16,
-            NDS_BATTLE_HUD_PORTRAIT_GFX_BYTES);
-        if (sNdsBattleHudPortraitGfx[i] == NULL) goto failed;
-    }
     for (i = 0u; i < NDS_BATTLE_HUD_STOCK_OWNERS; i++)
     {
         sNdsBattleHudStockGfx[i] = ndsBattleHudAlloc(
@@ -338,6 +322,13 @@ static u32 ndsBattleHudPrepare(void)
             file, SpriteSize_16x16, NDS_BATTLE_HUD_TIMER_GFX_BYTES);
         if (sNdsBattleHudTimerMarkGfx[i] == NULL) goto failed;
     }
+    /* Each player's emblem cell, baked at runtime (ndsBattleHudBakeEmblem). */
+    for (i = 0u; i < NDS_BATTLE_HUD_PLAYERS; i++)
+    {
+        sNdsBattleHudEmblemGfx[i] = oamAllocateGfx(
+            &oamSub, SpriteSize_32x32, SpriteColorFormat_16Color);
+        if (sNdsBattleHudEmblemGfx[i] == NULL) goto failed;
+    }
     if (fgetc(file) != EOF || ferror(file)) goto failed;
     fclose(file);
     ndsFsUnlock();
@@ -348,8 +339,7 @@ static u32 ndsBattleHudPrepare(void)
     dmaCopy(kNdsBattleHudWhitePalette[0],
             &SPRITE_PALETTE_SUB[NDS_BATTLE_HUD_WHITE_PALETTE * 16u],
             16u * sizeof(u16));
-    memset(sNdsBattleHudPortraitPaletteOwner, 0xff,
-           sizeof(sNdsBattleHudPortraitPaletteOwner));
+    memset(sNdsBattleHudEmblemValid, 0, sizeof(sNdsBattleHudEmblemValid));
     oamClear(&oamSub, 0, 128);
     oamUpdate(&oamSub);
     sNdsBattleHudStateHash = 0xffffffffu;
@@ -713,37 +703,126 @@ static void ndsBattleHudDrawStock(u32 player, u32 fkind, u32 *next_id)
     }
 }
 
-static void ndsBattleHudDrawPortrait(u32 player, u32 fkind, u32 *next_id)
+/* An I4 texel of the source emblem: TEXSHUF rows (an odd row swaps the
+ * 32-bit halves of each 64-bit word, 8 texels) in the reloc loader's word byte
+ * order, high nibble first -- the I8 tag reader's rules at four bits. */
+static u32 ndsBattleHudEmblemTexel(const NDSBattleHudEmblemState *emblem,
+                                   u32 x, u32 y)
 {
-    u32 owner;
+    const u8 *pixels = (const u8 *)emblem->pixels;
+    const u32 sx = x ^ (((y & 1u) != 0u) ? 8u : 0u);
+    const u8 byte = pixels[(((y * (u32)emblem->stride) + sx) >> 1) ^ 3u];
 
-    if (fkind == (u32)nFTKindMario) owner = 0u;
-    else if (fkind == (u32)nFTKindFox) owner = 1u;
-    else if (fkind == (u32)nFTKindLuigi) owner = 2u;
-    else if (fkind == (u32)nFTKindDonkey) owner = 3u;
-    else if (fkind == (u32)nFTKindCaptain) owner = 4u;
-    else if (fkind == (u32)nFTKindSamus) owner = 5u;
-    else if (fkind == (u32)nFTKindLink) owner = 6u;
-    else if (fkind == (u32)nFTKindPikachu) owner = 7u;
-    else if (fkind == (u32)nFTKindYoshi) owner = 8u;
-    else if (fkind == (u32)nFTKindNess) owner = 9u;
-    else if (fkind == (u32)nFTKindPurin) owner = 10u;
-    else if (fkind == (u32)nFTKindKirby) owner = 11u;
-    else return;
+    return ((sx & 1u) != 0u) ? (u32)(byte & 15u) : (u32)(byte >> 4);
+}
 
-    if (sNdsBattleHudPortraitPaletteOwner[player] != (u8)owner)
+/* The damage meter's emblem SObj (ifCommonPlayerDamageInitInterface,
+ * ifcommon.c:929-951), presented: the sprite box-filtered to the screen's 4/5
+ * into the player's cell, and a palette of its colour by intensity. The
+ * source draws an I sprite with a flat primitive colour and the texel as alpha
+ * (lbCommonPrepSObjAttr, lbcommon.c:2591-2594), so over the lower screen's
+ * black a texel is that colour times its intensity: entry i is colour * i/15,
+ * entry 0 transparent. Once per battle and player. */
+static void ndsBattleHudBakeEmblem(u32 player,
+                                   const NDSBattleHudEmblemState *emblem)
+{
+    u32 cell[(NDS_BATTLE_HUD_EMBLEM_CELL * NDS_BATTLE_HUD_EMBLEM_CELL) / 8u];
+    u8 *bytes = (u8 *)cell;
+    u16 *palette = &SPRITE_PALETTE_SUB[
+        (NDS_BATTLE_HUD_EMBLEM_PALETTE_BASE + player) * 16u];
+    u32 out_w = NDS_BATTLE_HUD_SOURCE_SCALE((u32)emblem->width);
+    u32 out_h = NDS_BATTLE_HUD_SOURCE_SCALE((u32)emblem->height);
+    u32 ox;
+    u32 oy;
+    u32 i;
+
+    if (out_w > NDS_BATTLE_HUD_EMBLEM_CELL) out_w = NDS_BATTLE_HUD_EMBLEM_CELL;
+    if (out_h > NDS_BATTLE_HUD_EMBLEM_CELL) out_h = NDS_BATTLE_HUD_EMBLEM_CELL;
+    memset(cell, 0, sizeof(cell));
+    for (oy = 0u; oy < out_h; oy++)
     {
-        /* Same DMA path as the stock palettes: palette RAM drops byte writes. */
-        dmaCopy(kNdsBattleHudPortraitPalette[owner],
-                &SPRITE_PALETTE_SUB[
-                    (NDS_BATTLE_HUD_PORTRAIT_PALETTE_BASE + player) * 16u],
-                16u * sizeof(u16));
-        sNdsBattleHudPortraitPaletteOwner[player] = (u8)owner;
+        /* Output pixel o covers source [1.25 o, 1.25 (o + 1)): in quarter
+         * pixels, [5 o, 5 o + 5) against texel s's [4 s, 4 s + 4). */
+        const u32 y0 = oy * 5u;
+        const u32 y1 = y0 + 5u;
+
+        for (ox = 0u; ox < out_w; ox++)
+        {
+            const u32 x0 = ox * 5u;
+            const u32 x1 = x0 + 5u;
+            u32 sum = 0u;
+            u32 value;
+            u32 sy;
+
+            for (sy = y0 >> 2; ((sy << 2) < y1) && (sy < emblem->height); sy++)
+            {
+                const u32 wy = ((((sy << 2) + 4u) < y1) ? ((sy << 2) + 4u) : y1) -
+                               (((sy << 2) > y0) ? (sy << 2) : y0);
+                u32 sx;
+
+                for (sx = x0 >> 2; ((sx << 2) < x1) && (sx < emblem->width);
+                     sx++)
+                {
+                    const u32 wx =
+                        ((((sx << 2) + 4u) < x1) ? ((sx << 2) + 4u) : x1) -
+                        (((sx << 2) > x0) ? (sx << 2) : x0);
+
+                    sum += ndsBattleHudEmblemTexel(emblem, sx, sy) * wx * wy;
+                }
+            }
+            value = (sum + 12u) / 25u;
+            if (value != 0u)
+            {
+                const u32 tile = ((oy >> 3) * (NDS_BATTLE_HUD_EMBLEM_CELL >> 3)) +
+                                 (ox >> 3);
+
+                bytes[(tile * 32u) + ((oy & 7u) * 4u) + ((ox & 7u) >> 1)] |=
+                    (u8)(((ox & 1u) != 0u) ? (value << 4) : value);
+            }
+        }
     }
-    ndsBattleHudSetOam(next_id, sNdsBattleHudPlayerCenterX[player] - 8,
-                       NDS_BATTLE_HUD_PORTRAIT_Y, SpriteSize_16x16,
-                       sNdsBattleHudPortraitGfx[owner],
-                       NDS_BATTLE_HUD_PORTRAIT_PALETTE_BASE + player);
+    DC_FlushRange(cell, sizeof(cell));
+    dmaCopy(cell, sNdsBattleHudEmblemGfx[player], sizeof(cell));
+    palette[0] = 0u;
+    for (i = 1u; i < 16u; i++)
+    {
+        /* x / 15 as multiply-shift, exact for x < 2^16 (no Thumb UMULL). */
+        const u32 ir = (((u32)emblem->color_r * i + 7u) * 34953u) >> 19;
+        const u32 ig = (((u32)emblem->color_g * i + 7u) * 34953u) >> 19;
+        const u32 ib = (((u32)emblem->color_b * i + 7u) * 34953u) >> 19;
+
+        palette[i] = RGB15(ir >> 3, ig >> 3, ib >> 3) | BIT(15);
+    }
+}
+
+static u32 ndsBattleHudEmblemSame(const NDSBattleHudEmblemState *a,
+                                  const NDSBattleHudEmblemState *b)
+{
+    return ((a->pixels == b->pixels) && (a->width == b->width) &&
+            (a->height == b->height) && (a->stride == b->stride) &&
+            (a->color_r == b->color_r) && (a->color_g == b->color_g) &&
+            (a->color_b == b->color_b)) ? TRUE : FALSE;
+}
+
+/* After the player's digits, so the emblem sits behind them as the source
+ * draws it first (ifcommon.c:787-788): later OAM entries draw underneath. */
+static void ndsBattleHudDrawEmblem(u32 player,
+                                   const NDSBattleHudEmblemState *emblem,
+                                   u32 *next_id)
+{
+    if ((sNdsBattleHudEmblemValid[player] == 0u) ||
+        (ndsBattleHudEmblemSame(&sNdsBattleHudEmblemBaked[player], emblem) ==
+         FALSE))
+    {
+        ndsBattleHudBakeEmblem(player, emblem);
+        sNdsBattleHudEmblemBaked[player] = *emblem;
+        sNdsBattleHudEmblemValid[player] = 1u;
+    }
+    ndsBattleHudSetOam(next_id,
+                       NDS_BATTLE_HUD_SOURCE_SCALE((s32)emblem->x),
+                       NDS_BATTLE_HUD_SOURCE_SCALE((s32)emblem->y),
+                       SpriteSize_32x32, sNdsBattleHudEmblemGfx[player],
+                       NDS_BATTLE_HUD_EMBLEM_PALETTE_BASE + player);
 }
 
 #if NDS_P2_1P_GAME
@@ -965,6 +1044,8 @@ static void ndsBattleHudDrawTeamStock(u32 count, u32 *next_id)
 void ndsBattleHudRender(void)
 {
     NDSBattleHudDamageState damage_state[NDS_BATTLE_HUD_PLAYERS];
+    NDSBattleHudEmblemState emblem_state[NDS_BATTLE_HUD_PLAYERS];
+    u32 emblem_mask = 0u;
     u32 hash;
     u32 next_id = 0u;
     u32 player;
@@ -987,8 +1068,32 @@ void ndsBattleHudRender(void)
         {
             memset(&damage_state[player], 0, sizeof(damage_state[player]));
         }
+        if (ndsIFCommonGetBattleHudEmblem(player, &emblem_state[player]) !=
+            FALSE)
+        {
+            emblem_mask |= 1u << player;
+        }
     }
     hash = ndsBattleHudFingerprint(damage_state);
+    hash = ndsBattleHudMix(hash, emblem_mask);
+    for (player = 0u; player < NDS_BATTLE_HUD_PLAYERS; player++)
+    {
+        const NDSBattleHudEmblemState *emblem = &emblem_state[player];
+
+        if ((emblem_mask & (1u << player)) == 0u)
+        {
+            continue;
+        }
+        hash = ndsBattleHudMix(hash, (u32)(uintptr_t)emblem->pixels);
+        hash = ndsBattleHudMix(hash, (u32)emblem->width |
+                                     ((u32)emblem->height << 16));
+        hash = ndsBattleHudMix(hash, (u32)(u16)emblem->x |
+                                     ((u32)(u16)emblem->y << 16));
+        hash = ndsBattleHudMix(hash, (u32)emblem->color_r |
+                                     ((u32)emblem->color_g << 8) |
+                                     ((u32)emblem->color_b << 16) |
+                                     ((u32)emblem->stride << 24));
+    }
 #if NDS_P2_1P_GAME
     {
         u32 team_count = gNdsIFCommonHUDTeamStockCount;
@@ -1050,9 +1155,12 @@ void ndsBattleHudRender(void)
         ndsBattleHudDamagePalette(player, &damage_state[player]);
         ndsBattleHudStockPalette(NDS_BATTLE_HUD_STOCK_PALETTE_BASE + player,
                                  fkind, costume);
-        ndsBattleHudDrawPortrait(player, fkind, &next_id);
         ndsBattleHudDrawStock(player, fkind, &next_id);
         ndsBattleHudDrawDamage(player, &damage_state[player], &next_id);
+        if ((emblem_mask & bit) != 0u)
+        {
+            ndsBattleHudDrawEmblem(player, &emblem_state[player], &next_id);
+        }
     }
     ndsBattleHudDrawScores(&next_id);
 #if NDS_P2_1P_GAME
@@ -1076,8 +1184,7 @@ void ndsBattleHudClear(void)
     sNdsBattleHudScoreCount = 0u;
     sNdsBattleHudScoreFrame = 0xffffffffu;
     sNdsBattleHudStateHash = 0xffffffffu;
-    memset(sNdsBattleHudPortraitPaletteOwner, 0xff,
-           sizeof(sNdsBattleHudPortraitPaletteOwner));
+    memset(sNdsBattleHudEmblemValid, 0, sizeof(sNdsBattleHudEmblemValid));
     gNdsBattleHudOamCount = 0u;
     gNdsBattleHudActiveMask = 0u;
 }

@@ -84,6 +84,12 @@ def expected_slots(kind, m, raw_main_len, model_spans, sec_bases, cells):
                 want.setdefault(slot, gen.NULL)
         else:
             want.setdefault(slot, sec1 + remap(r["target_new"]))
+    # A tail file's own pointers (Donkey's DkIcon stock and emblem Sprites,
+    # their Bitmaps) are relocated inside its section, from its O2R chain.
+    for index, tail in enumerate(m.get("tail_files", [])):
+        tail_base = sec_bases[2 + index]
+        for slot, target in srcgen.tail_intern_pointers(int(tail["fid"])).items():
+            want[tail_base + slot] = tail_base + target
     return want
 
 

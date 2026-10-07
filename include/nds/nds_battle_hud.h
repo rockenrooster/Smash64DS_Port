@@ -29,6 +29,24 @@ typedef struct NDSBattleHudDamageState {
     NDSBattleHudDamageCharState chars[NDS_BATTLE_HUD_DAMAGE_CHARS];
 } NDSBattleHudDamageState;
 
+/* A damage meter's emblem: the first SObj ifCommonPlayerDamageInitInterface
+ * makes (ifcommon.c:929-951), the fighter's I4 emblem sprite at its source
+ * frame position, tinted with the colour the source gave it -- the stage's
+ * emblem colour for the player's colour, the team's in Team Battle. `pixels`
+ * are the sprite's texels as loaded: TEXSHUF rows of `stride` texels, in the
+ * reloc loader's word byte order. */
+typedef struct NDSBattleHudEmblemState {
+    const void *pixels;
+    u16 width;
+    u16 height;
+    u16 stride;
+    s16 x;
+    s16 y;
+    u8 color_r;
+    u8 color_g;
+    u8 color_b;
+} NDSBattleHudEmblemState;
+
 /* P2-2 lower-screen presentation sink.
  *
  * BattleShip's imported ifCommon GObjs remain the gameplay/state authority.
@@ -44,6 +62,9 @@ u32 ndsBattleHudSubmitScoreParticle(u32 frame, f32 source_x, f32 source_y, f32 s
  * copy of the source damage-display state for that player. */
 u32 ndsIFCommonGetBattleHudDamageState(u32 player,
                                        NDSBattleHudDamageState *out);
+/* Same TU: FALSE when that player's meter has no emblem to draw (no meter,
+ * the source's hidden placeholder, or a sprite that is not one I4 bitmap). */
+u32 ndsIFCommonGetBattleHudEmblem(u32 player, NDSBattleHudEmblemState *out);
 
 /* The 1P team stock row (sc1PGameTeamStockDisplayProcDisplay), one look per
  * shown icon in source order, published by battleship_ifcommon.c's lower-HUD

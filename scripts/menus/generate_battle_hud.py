@@ -39,20 +39,10 @@ TIMER_MARK_SYMBOLS = [
 STOCK_DIGIT_SYMBOLS = [f"llIFCommonDigits{i}Sprite" for i in range(10)] + [
     "llIFCommonDigitsCrossSprite"
 ]
-PORTRAIT_SYMBOLS = [
-    "llMNPlayersPortraitsMarioSprite",
-    "llMNPlayersPortraitsFoxSprite",
-    "llMNPlayersPortraitsLuigiSprite",
-    "llMNPlayersPortraitsDonkeySprite",
-    "llMNPlayersPortraitsCaptainSprite",
-    "llMNPlayersPortraitsSamusSprite",
-    "llMNPlayersPortraitsLinkSprite",
-    "llMNPlayersPortraitsPikachuSprite",
-    "llMNPlayersPortraitsYoshiSprite",
-    "llMNPlayersPortraitsNessSprite",
-    "llMNPlayersPortraitsPurinSprite",
-    "llMNPlayersPortraitsKirbySprite",
-]
+# No per-fighter portrait cells: the damage meter's emblem is the source's own
+# (ifCommonPlayerDamageInitInterface draws ft_sprites->emblem tinted by the
+# player's colour), baked at runtime from the loaded sprite by
+# nds_battle_hud.c, so every fighter variant and team colour comes for free.
 
 # The checked corpus contains two O2R header revisions.  The original
 # Mario/Fox/Luigi model exports use the legacy 0x58-byte form (data size at
@@ -528,19 +518,6 @@ def bake(repo_root: Path, output: Path, binary_output: Path) -> None:
             intensity_indices(raster, width, height, 16, 16, 0, 0), 16, 16))
         mark_metrics.append((width, height))
 
-    portrait_file = ui.RelocFile(o2r / "reloc_menus" / "MNPlayersPortraits")
-    portrait_gfx = []
-    portrait_palettes = []
-    for symbol in PORTRAIT_SYMBOLS:
-        _, raster = ui.decode_sprite_raster(portrait_file, symbol, offsets[symbol])
-        # 45x43 -> 16x15.  This is the smallest square OBJ cell that keeps a
-        # recognizable portrait while leaving enough sub OBJ budget for the
-        # four-player damage/stock presentation.
-        raster = ui.box_scale(raster, 16, 15)
-        gfx, palette = quantize_portrait(ui, raster, 16, 15)
-        portrait_gfx.append(gfx)
-        portrait_palettes.append(palette)
-
     mario_gfx, mario_palettes = stock_asset(ui, repo_root, MODEL_STOCK["MARIO"])
     fox_gfx, fox_palettes = stock_asset(ui, repo_root, MODEL_STOCK["FOX"])
     luigi_gfx, luigi_palettes = stock_asset(ui, repo_root, MODEL_STOCK["LUIGI"])
@@ -586,7 +563,7 @@ def bake(repo_root: Path, output: Path, binary_output: Path) -> None:
         gfx, palette = quantize_portrait(ui, cell, 64, 32, 64, 32)
         score_gfx.append(gfx)
         score_palettes.append(palette)
-    graphics = glyph_groups + [portrait_gfx, [
+    graphics = glyph_groups + [[
         mario_gfx, fox_gfx, luigi_gfx, donkey_gfx, captain_gfx, samus_gfx,
         link_gfx, pikachu_gfx, yoshi_gfx, ness_gfx, purin_gfx, kirby_gfx], score_gfx,
         [zako_gfx] + yoshi_lane_gfx, mark_rows]
@@ -604,12 +581,10 @@ def bake(repo_root: Path, output: Path, binary_output: Path) -> None:
         "#define NDS_BATTLE_HUD_TIMER_GLYPHS 11u",
         f"#define NDS_BATTLE_HUD_TIMER_MARKS {len(TIMER_MARK_SYMBOLS)}u",
         "#define NDS_BATTLE_HUD_STOCK_DIGIT_GLYPHS 11u",
-        f"#define NDS_BATTLE_HUD_PORTRAITS {len(PORTRAIT_SYMBOLS)}u",
         f"#define NDS_BATTLE_HUD_STOCK_OWNERS {len(MODEL_STOCK)}u",
         "#define NDS_BATTLE_HUD_DAMAGE_GFX_BYTES 512u",
         "#define NDS_BATTLE_HUD_TIMER_GFX_BYTES 128u",
         "#define NDS_BATTLE_HUD_STOCK_DIGIT_GFX_BYTES 128u",
-        "#define NDS_BATTLE_HUD_PORTRAIT_GFX_BYTES 128u",
         "#define NDS_BATTLE_HUD_STOCK_GFX_BYTES 32u",
         f"#define NDS_BATTLE_HUD_BLOB_BYTES {len(payload)}u",
         "#define NDS_BATTLE_HUD_SCORE_FRAMES 2u",
@@ -627,8 +602,6 @@ def bake(repo_root: Path, output: Path, binary_output: Path) -> None:
     lines += c_metric_u8("kNdsBattleHudTimerMarkMetric", mark_metrics)
     lines += [""]
     lines += c_metric_u8("kNdsBattleHudStockDigitMetric", glyph_metrics[2])
-    lines += [""]
-    lines += c_array_u16("kNdsBattleHudPortraitPalette", portrait_palettes)
     lines += [""]
     lines += c_array_u16("kNdsBattleHudMarioStockPalette", mario_palettes)
     lines += [""]

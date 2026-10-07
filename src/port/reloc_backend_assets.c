@@ -1679,6 +1679,35 @@ static const NDSRelocSpriteNormalizeDesc
       G_IM_FMT_CI, G_IM_SIZ_4b },
     { NDS_RELOC_ASSET_FOX_MODEL, 0x7e08u, 30u, 24u, 1u,
       G_IM_FMT_I, G_IM_SIZ_4b },
+    /* Every other fighter's damage-meter emblem, ft_sprites->emblem
+     * (ifcommon.c:931), which the lower HUD bakes from the loaded sprite:
+     * ll<File>FTEmblemSprite (reloc_data_symbols.us.txt) in the file the
+     * fighter's Main names (asset id = file id). Metal Mario has his own;
+     * Giant DK shares Donkey's DkIcon; the Polygons share MasterHandIcon's. */
+    { NDS_RELOC_ASSET_MMARIO_MODEL, 0x2ef8u, 27u, 25u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { 0x13fu /* DkIcon */, 0x02f8u, 30u, 22u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { 0x140u /* SamusModel */, 0xe508u, 27u, 27u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { 0x143u /* LuigiModel */, 0x7ec8u, 27u, 25u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { 0x144u /* LinkModel */, 0x11f28u, 29u, 24u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { 0x148u /* KirbyModel */, 0x1d7d8u, 27u, 25u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { 0x14au /* PurinModel */, 0x7d98u, 24u, 24u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { 0x14cu /* CaptainModel */, 0xc848u, 30u, 20u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { 0x14fu /* NessModel */, 0xc378u, 25u, 25u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { 0x152u /* YoshiModel */, 0xac98u, 22u, 25u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { 0x155u /* PikachuModel */, 0x9be8u, 24u, 24u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MASTER_HAND_ICON, 0x02b8u, 25u, 25u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
     /* The item pickup arrow, relocData file 87's only sprite. Read out of
      * the extracted bank rather than from a decomp .c, because file 87 has
      * no source file -- only 87_IFCommonItem.spritelist, naming one sprite.
@@ -10156,7 +10185,14 @@ static void ndsRelocNormalizeGroundDataBounds(MPGroundData *ground_data)
      * declined Sector Z, Planet Zebes, Hyrule, Saffron City and Mushroom
      * Kingdom while the mask-0 stages admitted (2026-09-07). fog_color,
      * fog_alpha and the four emblem colours are the same shape; the
-     * wallpaper pointer between them is a whole word and is skipped. */
+     * wallpaper pointer between them is a whole word and is skipped.
+     *
+     * `unused` is a fifth emblem colour in all but name: a CPU's damage-meter
+     * emblem reads emblem_colors[GMCOMMON_PLAYERS_MAX] (ifcommon.c:946-950,
+     * color 4 = nSCBattlePlayerColorCP), its first three bytes in N64 order --
+     * 0xDCDCDC00 on Dream Land is light grey. Nothing reads it as an s32, so
+     * it stays in N64 byte order with the colours; native order made the CPU
+     * emblem (0x00, 0xDC, 0xDC), cyan. */
     _Static_assert((offsetof(MPGroundData, layer_mask) % sizeof(u32)) == 0u,
                    "MPGroundData layer_mask must start a word");
     _Static_assert((offsetof(MPGroundData, fog_color) % sizeof(u32)) == 0u,
@@ -10169,7 +10205,7 @@ static void ndsRelocNormalizeGroundDataBounds(MPGroundData *ground_data)
                              (u32)offsetof(MPGroundData, layer_mask) + 4u);
     ndsRelocReverseWordBytes(ground_data,
                              (u32)offsetof(MPGroundData, fog_color),
-                             (u32)offsetof(MPGroundData, unused));
+                             (u32)offsetof(MPGroundData, unused) + 4u);
 }
 
 static void ndsRelocNormalizeGroundMapHeader(NDSRelocLoadedFile *loaded,

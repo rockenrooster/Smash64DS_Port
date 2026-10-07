@@ -764,6 +764,52 @@ u32 ndsIFCommonGetBattleHudDamageState(u32 player,
     return TRUE;
 }
 
+/* ifCommonPlayerDamageInitInterface (:929-951) gives every meter's GObj the
+ * fighter's emblem as its first SObj, placed and tinted, or a hidden
+ * placeholder; ifCommonPlayerDamageProcDisplay draws that SObj every frame
+ * the meter displays, with or without the digits (:787-788). */
+u32 ndsIFCommonGetBattleHudEmblem(u32 player, NDSBattleHudEmblemState *out)
+{
+    GObj *interface_gobj;
+    SObj *sobj;
+    const Bitmap *bitmap;
+    u32 height;
+
+    if ((out == NULL) || (player >= (u32)GMCOMMON_PLAYERS_MAX))
+    {
+        return FALSE;
+    }
+    interface_gobj = sIFCommonPlayerDamageInterface[player].interface_gobj;
+    if (interface_gobj == NULL)
+    {
+        return FALSE;
+    }
+    sobj = SObjGetStruct(interface_gobj);
+    if ((sobj == NULL) || ((sobj->sprite.attr & SP_HIDDEN) != 0u) ||
+        (sobj->sprite.bitmap == NULL) || (sobj->sprite.bmfmt != G_IM_FMT_I) ||
+        (sobj->sprite.bmsiz != G_IM_SIZ_4b) || (sobj->sprite.nbitmaps != 1))
+    {
+        return FALSE;
+    }
+    bitmap = sobj->sprite.bitmap;
+    height = (u32)(u16)sobj->sprite.height;
+    if ((bitmap->actualHeight != 0) && ((u32)(u16)bitmap->actualHeight < height))
+    {
+        height = (u32)(u16)bitmap->actualHeight;
+    }
+    out->pixels = bitmap->buf;
+    out->width = (u16)sobj->sprite.width;
+    out->height = (u16)height;
+    out->stride = (u16)((bitmap->width_img != 0) ? bitmap->width_img :
+                                                   bitmap->width);
+    out->x = (s16)sobj->pos.x;
+    out->y = (s16)sobj->pos.y;
+    out->color_r = sobj->sprite.red;
+    out->color_g = sobj->sprite.green;
+    out->color_b = sobj->sprite.blue;
+    return (out->pixels != NULL) ? TRUE : FALSE;
+}
+
 s32 ndsIFCommonBattleHudInterfaceVisible(void)
 {
     u32 player;

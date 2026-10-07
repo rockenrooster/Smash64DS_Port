@@ -13,20 +13,21 @@ def test_hud_blob_preserves_pixels(tmp_path):
     subprocess.run([sys.executable, str(root / "scripts/menus/generate_battle_hud.py"),
                     "--output", str(header), "--binary-output", str(blob)], check=True)
     data = blob.read_bytes()
-    assert struct.unpack_from("<II", data) == (0x31444842, 12832)
-    assert len(data) == 12840
-    # Before/after byte comparison against the prior five linked Gfx arrays.
-    assert hashlib.sha256(data[8:10376]).hexdigest() == "7d0da7bfe2b26260afb84b74eb0aab9c821ce75d556847e5db4bdc853fc4436e"
-    # The 1P team-row cells (Polygon icon, four Yoshi lanes) only append.
-    assert hashlib.sha256(data[8:12424]).hexdigest() == "1793b9b114dc48df8ed67c85fc8e2a477f4f8fdde4ef4b66a95fd9107abd65d4"
+    assert struct.unpack_from("<II", data) == (0x31444842, 11296)
+    assert len(data) == 11304
+    # The damage, timer and stock-count glyphs, byte for byte as before.
+    assert hashlib.sha256(data[8:8456]).hexdigest() == "779476d753f8ae930310e6f115403622a568b7be1ffa3f308d7619f115b87ff7"
+    # The twelve CSS portrait cells (1,536 B) left for the source's emblem,
+    # baked at runtime; every later cell is the same bytes, 1,536 B earlier.
+    assert hashlib.sha256(data[8456:11304]).hexdigest() == "0a193947e31061a0b3d0c47e4f5fa1f368c9eff933c49e7b7ee326570fb130cb"
     text = header.read_text()
     assert "kNdsBattleHudDamageGfx" not in text
-    assert "NDS_BATTLE_HUD_BLOB_BYTES 12832u" in text
+    assert "NDS_BATTLE_HUD_BLOB_BYTES 11296u" in text
     # Bonus Practice's two timer marks only append (16x16 4bpp cells).
     assert "NDS_BATTLE_HUD_TIMER_MARKS 2u" in text
     assert "kNdsBattleHudScorePalette" in text
     assert "kNdsBattleHudDamageMetric" in text
-    assert "kNdsBattleHudPortraitPalette" in text
+    assert "kNdsBattleHudPortraitPalette" not in text
     assert "NDS_BATTLE_HUD_TEAM_LANES 4u" in text
     assert "kNdsBattleHudYoshiTeamPalette[2][16]" in text
 
