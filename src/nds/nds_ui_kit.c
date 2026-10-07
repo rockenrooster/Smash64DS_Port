@@ -17,6 +17,11 @@
 #include "generated/mn_ui_kit.generated.inc"
 
 #define NDS_UI_KIT_PACK_PATH "nitro:/menus/mn_ui_kit.bin"
+/* P3: the networked character select's 2P-4P player art, whose ids follow
+ * the resident images (ndsUiKitLoadNetPlayerImages). */
+#define NDS_UI_KIT_NET_PACK_PATH "nitro:/menus/mn_ui_kit_net.bin"
+#define NDS_UI_KIT_IMAGE_IDS \
+    (NDS_MN_UI_KIT_IMAGE_COUNT + NDS_MN_UI_KIT_NET_IMAGE_COUNT)
 /* P2-1h. A SECOND file, deliberately: ndsUiKitEnter reads and hashes the whole
  * OBJ pack on every screen entry, so backdrop art living in it would cost the
  * character select the bytes of a title screen it never shows. */
@@ -128,12 +133,19 @@ static u8 sNdsUiKitGlyphs[NDS_MN_UI_KIT_GLYPH_BLOCK_BYTES];
 static u8 sNdsUiKitStaging[NDS_UI_KIT_STAGING_BYTES] __attribute__((aligned(4)));
 static NdsUiKitTextSlot sNdsUiKitText[NDS_UI_KIT_TEXT_SLOTS];
 static NdsUiKitSpriteSlot sNdsUiKitSprites[NDS_UI_KIT_SPRITE_SLOTS];
-static u32 sNdsUiKitImageVram[NDS_MN_UI_KIT_IMAGE_COUNT];
+static u32 sNdsUiKitImageVram[NDS_UI_KIT_IMAGE_IDS];
 static u32 sNdsUiKitTextVramBase;
 static u32 sNdsUiKitTextResident;
 static u32 sNdsUiKitActive;
 static u32 sNdsUiKitImagesResident;
 static u32 sNdsUiKitDirty;
+
+static const NdsUiKitImageMetric *ndsUiKitImageMetric(u32 image)
+{
+    return (image < NDS_MN_UI_KIT_IMAGE_COUNT) ?
+        &kNdsUiKitImageMetrics[image] :
+        &kNdsUiKitNetImageMetrics[image - NDS_MN_UI_KIT_IMAGE_COUNT];
+}
 
 static OamState *ndsUiKitOam(void)
 {
@@ -357,6 +369,12 @@ static s32 ndsUiKitLoadPack(u32 objbytes)
     }
 
     ndsRelocAssetStreamClose(&stream);
+    /* P3's 2P-4P art is never part of the resident load. */
+    for (image = NDS_MN_UI_KIT_IMAGE_COUNT; image < NDS_UI_KIT_IMAGE_IDS;
+         image++)
+    {
+        sNdsUiKitImageVram[image] = 0xffffffffu;
+    }
 
     /* P2-1 closeout: every MAIN-screen menu label now ships as converted
      * source sprite/surface art. Reserving the historical 16 KiB text slab in
@@ -479,6 +497,108 @@ void ndsUiKitExit(void)
     gNdsUiKitVisibleObjectCount = 0u;
     gNdsUiKitEngine = 0xffffffffu;
     gNdsUiKitExitCount++;
+}
+
+/* P3: the 2P-4P player art (cursor tags, tokens and panel tags) the networked
+ * character select draws for the remote humans. Bank E holds the resident
+ * pack with under a kilobyte to spare, so this art is loaded over two images
+ * that screen never draws -- the title emblem and the stage-select cursor,
+ * 16 KiB together. Both stay unusable until the next ndsUiKitEnter reloads
+ * the whole pack. Main engine only; TRUE once the art is drawable. */
+s32 ndsUiKitLoadNetPlayerImages(void)
+{
+    static const u32 kVictims[2] = {
+        NDS_MN_UI_KIT_IMAGE_TITLE_EMBLEM,
+        NDS_MN_UI_KIT_IMAGE_MAP_CURSOR,
+    };
+    NdsRelocAssetStream stream;
+    u32 base[2];
+    u32 hash = 0x811C9DC5u;
+    u32 region = 0u;
+    u32 used = 0u;
+    u32 k;
+
+    if ((sNdsUiKitActive == FALSE) || (sNdsUiKitImagesResident == FALSE))
+    {
+        return FALSE;
+    }
+    if (sNdsUiKitImageVram[NDS_MN_UI_KIT_IMAGE_COUNT] != 0xffffffffu)
+    {
+        return TRUE;
+    }
+    for (k = 0u; k < 2u; k++)
+    {
+        base[k] = sNdsUiKitImageVram[kVictims[k]];
+        if (base[k] == 0xffffffffu)
+        {
+            return FALSE;
+        }
+    }
+    if (ndsRelocAssetStreamOpen(&stream, NDS_UI_KIT_NET_PACK_PATH) == FALSE)
+    {
+        gNdsUiKitPackReadFailCount++;
+        return FALSE;
+    }
+    gNdsUiKitPackOpenCount++;
+    /* From here on the two borrowed images no longer hold their own art. */
+    sNdsUiKitImageVram[kVictims[0]] = 0xffffffffu;
+    sNdsUiKitImageVram[kVictims[1]] = 0xffffffffu;
+    for (k = 0u; k < NDS_MN_UI_KIT_NET_IMAGE_COUNT; k++)
+    {
+        const NdsUiKitImageMetric *metric = &kNdsUiKitNetImageMetrics[k];
+        u32 vram;
+        u32 done = 0u;
+
+        while ((region < 2u) &&
+               (used + metric->bytes >
+                kNdsUiKitImageMetrics[kVictims[region]].bytes))
+        {
+            region++;
+            used = 0u;
+        }
+        if (region >= 2u)
+        {
+            break;
+        }
+        vram = base[region] + used;
+        used += metric->bytes;
+        while (done < metric->bytes)
+        {
+            u32 slice = metric->bytes - done;
+
+            if (slice > NDS_UI_KIT_STAGING_BYTES)
+            {
+                slice = NDS_UI_KIT_STAGING_BYTES;
+            }
+            if (ndsRelocAssetStreamRead(&stream, metric->offset + done,
+                                        sNdsUiKitStaging, slice) == FALSE)
+            {
+                break;
+            }
+            hash = ndsUiKitHashFold(hash, sNdsUiKitStaging, slice);
+            DC_FlushRange(sNdsUiKitStaging, slice);
+            dmaCopyWords(3, sNdsUiKitStaging,
+                         (u8 *)ndsUiKitObjAt(vram) + done, slice);
+            done += slice;
+        }
+        if (done != metric->bytes)
+        {
+            break;
+        }
+        sNdsUiKitImageVram[NDS_MN_UI_KIT_IMAGE_COUNT + k] = vram;
+    }
+    ndsRelocAssetStreamClose(&stream);
+    if ((k != NDS_MN_UI_KIT_NET_IMAGE_COUNT) ||
+        (hash != NDS_MN_UI_KIT_NET_PACK_FNV32))
+    {
+        for (k = NDS_MN_UI_KIT_IMAGE_COUNT; k < NDS_UI_KIT_IMAGE_IDS; k++)
+        {
+            sNdsUiKitImageVram[k] = 0xffffffffu;
+        }
+        gNdsUiKitPackHashMismatchCount++;
+        return FALSE;
+    }
+    return TRUE;
 }
 
 /* --- Text ---------------------------------------------------------------- */
@@ -664,7 +784,7 @@ void ndsUiKitHideText(u32 slot)
 s32 ndsUiKitSetSprite(u32 slot, u32 image, s32 x, s32 y)
 {
     if ((sNdsUiKitActive == FALSE) || (slot >= NDS_UI_KIT_SPRITE_SLOTS) ||
-        (image >= NDS_MN_UI_KIT_IMAGE_COUNT) ||
+        (image >= NDS_UI_KIT_IMAGE_IDS) ||
         (sNdsUiKitImageVram[image] == 0xffffffffu))
     {
         return FALSE;
@@ -2032,7 +2152,7 @@ void ndsUiKitCommit(void)
     for (slot = 0u; slot < NDS_UI_KIT_SPRITE_SLOTS; slot++, id++)
     {
         const NdsUiKitSpriteSlot *state = &sNdsUiKitSprites[slot];
-        const NdsUiKitImageMetric *metric = &kNdsUiKitImageMetrics[state->image];
+        const NdsUiKitImageMetric *metric = ndsUiKitImageMetric(state->image);
 
         if (state->visible == 0u)
         {

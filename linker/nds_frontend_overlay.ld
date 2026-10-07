@@ -16,7 +16,9 @@ SECTIONS {
             .text.ndsMenuShellWalkWantsResultsStart)
         :nds_ui_kit.o (.text.ndsUiKitCommit .text.ndsUiKitOam
             .text.ndsUiKitObjBase .text.ndsUiKitObjAt .text.ndsUiKitSpriteSize
-            .rodata.kNdsUiKitImageMetrics .rodata.ndsUiKitCommit.*)
+            .text.ndsUiKitImageMetric
+            .rodata.kNdsUiKitImageMetrics .rodata.kNdsUiKitNetImageMetrics
+            .rodata.ndsUiKitCommit.*)
         . = ALIGN(4);
     } >main AT>lma9 :main = 0xff
 }

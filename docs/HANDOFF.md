@@ -2,7 +2,7 @@
 
 P2 follows `PROJECT_GOAL.md` and `P2_PLAN.md`; `P2_EXECUTION_BOARD.md` owns focus, decisions, artifacts and the
 **Execution cursor**. This file is a route, not another task or metric ledger.
-**P3 (owner 10-06: multiplayer before the next P95 pass):** `P3_Multiplayer/P3_STATUS.md` -- radio, lockstep, lobby and rematch work on 2 and 4 consoles in the melonDS-mp harness; open items there.
+**P3 (owner 10-06: multiplayer before the next P95 pass):** `P3_Multiplayer/P3_STATUS.md` -- radio, lockstep, the original-style lobby (every cursor, 1P-4P art, costumes, stage select), build identity and rematch work on 2 and 4 consoles in the melonDS-mp harness, 0 desyncs with CPUs and items on all nine VS stages; hardware validation and the open items are listed there. Next: the P95 pass.
 
 ## Current route (2026-09-26)
 

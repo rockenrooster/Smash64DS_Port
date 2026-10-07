@@ -10,10 +10,27 @@
 
 #include <nds/nds_net.h>
 #include <nds/nds_net_link.h>
+#include <nds/nds_platform.h>
 
 #define NDS_NET_LINK_MODULE_PATH "nitro:/net/net7.bin"
 
 static u32 sNdsNetLinkAttached;
+/* Plan section 10's lid policy: a console in a wireless room does not sleep
+ * (the radio would stop under the match), so closing the lid leaves the game
+ * running; the setting the session found is restored when the radio stops. */
+static u32 sNdsNetLinkSleepHeld;
+static bool sNdsNetLinkSleepWas;
+
+#if NDS_NET_LAB_LOBBY
+/* Lab: until this VBlank count the radio neither sends nor delivers (a dropout
+ * the autopilot injects; src/nds/net/nds_net_autopilot.c). */
+volatile u32 gNdsNetLabMuteUntil;
+
+static u32 ndsNetLinkLabMuted(void)
+{
+    return ((s32)(gNdsNetLabMuteUntil - ndsPlatformVBlankCount()) > 0) ? 1u : 0u;
+}
+#endif
 
 volatile u32 gNdsNetLinkLoadResult;
 
@@ -96,11 +113,23 @@ int ndsNetLinkStart(u32 channel)
         return NDS_NET_OK;
     gNdsNetShared->error = 0u;
     ndsNetLinkSend(NDS_NET_CMD_START, channel);
-    return ndsNetLinkWaitState(NDS_NET_STATE_RUNNING, 120u);
+    rc = ndsNetLinkWaitState(NDS_NET_STATE_RUNNING, 120u);
+    if (rc == NDS_NET_OK && sNdsNetLinkSleepHeld == 0u)
+    {
+        sNdsNetLinkSleepWas = pmIsSleepAllowed();
+        pmSetSleepAllowed(false);
+        sNdsNetLinkSleepHeld = 1u;
+    }
+    return rc;
 }
 
 void ndsNetLinkStop(void)
 {
+    if (sNdsNetLinkSleepHeld != 0u)
+    {
+        pmSetSleepAllowed(sNdsNetLinkSleepWas);
+        sNdsNetLinkSleepHeld = 0u;
+    }
     if (sNdsNetLinkAttached == 0u)
         return;
     if (gNdsNetShared->state == NDS_NET_STATE_RUNNING)
@@ -137,6 +166,10 @@ int ndsNetLinkSendPacket(const void *data, u32 len)
         return NDS_NET_ERR_DOWN;
     if (len == 0u || len > NDS_NET_MAX_PAYLOAD)
         return NDS_NET_ERR_SIZE;
+#if NDS_NET_LAB_LOBBY
+    if (ndsNetLinkLabMuted() != 0u)
+        return NDS_NET_OK;
+#endif
     head = sh->tx_head;
     tail = sh->tx_tail;
     if (head >= tail)
@@ -198,6 +231,16 @@ u32 ndsNetLinkRecvPacket(u8 src_mac[6], void *buffer, u32 capacity)
             sh->rx_tail = tail;
             continue;
         }
+#if NDS_NET_LAB_LOBBY
+        if (ndsNetLinkLabMuted() != 0u)
+        {
+            tail += (NDS_NET_RX_HDR_BYTES + len + 3u) & ~3u;
+            if (tail >= NDS_NET_RX_RING_SIZE)
+                tail = 0u;
+            sh->rx_tail = tail;
+            continue;
+        }
+#endif
         if (src_mac != NULL)
             memcpy(src_mac, rec + 4, 6);
         if (buffer != NULL)

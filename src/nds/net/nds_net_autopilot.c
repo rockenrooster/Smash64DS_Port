@@ -18,6 +18,15 @@
 #if NDS_NET_LAB_LOBBY
 
 extern void ndsNetLinkGetUserName(char out[11]);
+extern volatile u32 gNdsNetBatch;
+extern volatile u32 gNdsNetLabMuteUntil;
+extern u32 ndsPlatformVBlankCount(void);
+
+#if NDS_NET_LAB_SWEEP
+#define NDS_NET_AP_MATCHES 10u
+#else
+#define NDS_NET_AP_MATCHES 3u
+#endif
 
 volatile u32 gNdsNetAutopilotRole;     /* 1 host, 2 guest */
 volatile u32 gNdsNetAutopilotMatches;
@@ -28,6 +37,7 @@ static u32 sApScreen = 0xFFFFFFFFu;
 static u32 sApScene = 0xFFFFFFFFu;
 static u32 sApTics;
 static u32 sApJoinTaps;
+static u32 sApDropped;
 
 static u32 ndsNetApWindow(u32 start, u32 len)
 {
@@ -63,7 +73,20 @@ u32 ndsNetLabAutopilotKeys(void)
     sApTics++;
 
     if (scene == (u32)nSCKindVSBattle)
+    {
+#if NDS_NET_LAB_DROP
+        /* The guest's radio drops out for 15 s in the middle of the first
+         * match: both consoles must end it as NO CONTEST and meet again in
+         * the lobby for the second. */
+        if (sApRole == 2u && sApDropped == 0u && gNdsNetAutopilotMatches == 1u &&
+            gNdsNetBatch >= 300u)
+        {
+            sApDropped = 1u;
+            gNdsNetLabMuteUntil = ndsPlatformVBlankCount() + 900u;
+        }
+#endif
         return 0u; /* the lockstep scripts its own pad (NDS_NET_LAB_INPUT) */
+    }
     if (scene == (u32)nSCKindVSResults)
         return (sApTics > 240u && (sApTics % 60u) < 4u) ? KEY_START : 0u;
 
@@ -111,22 +134,43 @@ u32 ndsNetLabAutopilotKeys(void)
     case NDS_MENU_SHELL_SCREEN_CSS:
         gNdsNetAutopilotStep = 4u;
         /* Pick once: after a match the lobby reopens on the same picks. */
-        if (gNdsNetAutopilotMatches == 0u && ndsNetApWindow(30u, 12u))
-            keys |= (sApRole == 1u) ? KEY_RIGHT : 0u;
-        if (gNdsNetAutopilotMatches == 0u && ndsNetApWindow(45u, 25u))
-            keys |= KEY_UP;
-        if (gNdsNetAutopilotMatches == 0u && ndsNetApWindow(90u, 4u))
-            keys |= KEY_A;
-        /* The host asks to start every half second once it has picked; the
-         * screen refuses until every player has. Two matches, then idle. */
-        if (sApRole == 1u && sApTics > 150u && (sApTics % 30u) < 4u &&
-            gNdsNetAutopilotMatches < 3u)
+        if (gNdsNetAutopilotMatches == 0u)
+        {
+            if (ndsNetApWindow(30u, 12u))
+                keys |= (sApRole == 1u) ? KEY_RIGHT : 0u;
+            if (ndsNetApWindow(45u, 25u))
+                keys |= KEY_UP;
+            if (ndsNetApWindow(90u, 4u))
+                keys |= KEY_A;
+#if NDS_NET_LAB_SWEEP
+            /* The guest walks back down to its own preview (the cursor's
+             * seat is inside it, mnplayersvs.c:4604) and asks for the next
+             * costume once: the host resolves it and both show it. */
+            if (sApRole == 2u)
+            {
+                if (ndsNetApWindow(100u, 25u))
+                    keys |= KEY_DOWN;
+                if (ndsNetApWindow(128u, 4u))
+                    keys |= KEY_A;
+            }
+#endif
+        }
+
+        /* The host asks to start every half second once everyone has picked;
+         * the screen refuses until then. */
+        if (sApRole == 1u && sApTics > 300u && (sApTics % 30u) < 4u &&
+            gNdsNetAutopilotMatches < NDS_NET_AP_MATCHES)
             keys |= KEY_START;
         break;
     case NDS_MENU_SHELL_SCREEN_SSS:
         gNdsNetAutopilotStep = 5u;
-        if (sApRole == 1u && ndsNetApWindow(60u, 4u))
-            keys = KEY_A;
+        /* NDS_NET_LAB_SWEEP: the stage comes from the host's descriptor
+         * (ndsNetLabSweepDescriptor), whatever is confirmed here. */
+        if (sApRole == 1u)
+        {
+            if (ndsNetApWindow(60u, 4u))
+                keys = KEY_A;
+        }
         break;
     default:
         break;

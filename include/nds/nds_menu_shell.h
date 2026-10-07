@@ -208,6 +208,8 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
                                sb32 is_selected);
 s32 ndsMNPlayersVSPreviewCycleCostume(u32 slot);
 u32 ndsMNPlayersVSPreviewGetAppearance(u32 slot);
+/* P3: mirror the costume the host resolved (TRUE when the preview changed). */
+sb32 ndsMNPlayersVSPreviewSetCostume(u32 slot, s32 fkind, s32 costume);
 void ndsMNPlayersVSPreviewFrame(void);
 void ndsMNPlayersVSPreviewExit(void);
 

@@ -2374,6 +2374,46 @@ s32 ndsMNPlayersVSPreviewCycleCostume(u32 slot)
     return -1;
 }
 
+/* P3: a guest's character select shows the costume the host resolved for a
+ * slot -- the host runs mnPlayersVSFuncRun's costume rules (the C-button ids,
+ * mnPlayersVSCheckCostumeUsed, the team costumes) for every slot and publishes
+ * the result. Applied only while the preview shows the same fighter, and only
+ * a costume that fighter has (a common or a team id). TRUE when it changed. */
+sb32 ndsMNPlayersVSPreviewSetCostume(u32 slot, s32 fkind, s32 costume)
+{
+    s32 i;
+    sb32 valid = FALSE;
+
+    if ((sNdsPlayersVSPreviewActive == FALSE) ||
+        (slot >= ARRAY_COUNT(sMNPlayersVSSlots)) ||
+        (sMNPlayersVSSlots[slot].player == NULL) ||
+        (sMNPlayersVSSlots[slot].fkind != fkind) || (fkind == nFTKindNull) ||
+        ((s32)sMNPlayersVSSlots[slot].costume == costume))
+    {
+        return FALSE;
+    }
+    for (i = 0; i < 4; i++)
+    {
+        if ((ftParamGetCostumeCommonID(fkind, i) == costume) ||
+            ((i < 3) && (ftParamGetCostumeTeamID(fkind, i) == costume)))
+        {
+            valid = TRUE;
+        }
+    }
+    if (valid == FALSE)
+    {
+        return FALSE;
+    }
+    sMNPlayersVSSlots[slot].costume = costume;
+    sMNPlayersVSSlots[slot].shade = mnPlayersVSGetShade((s32)slot);
+    ftParamInitAllParts(sMNPlayersVSSlots[slot].player, costume,
+                        sMNPlayersVSSlots[slot].shade);
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+    ndsFighterRendererInvalidateMaterialCachesForSlot(slot);
+#endif
+    return TRUE;
+}
+
 u32 ndsMNPlayersVSPreviewGetAppearance(u32 slot)
 {
     if ((sNdsPlayersVSPreviewActive == FALSE) ||

@@ -1,13 +1,16 @@
 /* P3 lobby (include/nds/nds_net_lobby.h). Messages, after the common header
  * (nds_net_internal.h), all fields little-endian and serialized by hand:
  *
- *   LOBBY     host -> all, every 6 frames: revision u16, phase u8, team
+ *   LOBBY     host -> all, every 2 frames: revision u16, phase u8, team
  *             battle u8, human mask u8, accepting u8, host name (10 bytes),
- *             then four 10-byte slots (pkind, fkind, team, level, handicap,
- *             selected, puck x s16, puck y s16). Doubles as the room beacon.
- *   JOIN_REQ  guest -> host: nonce u32, name (10 bytes)
- *   JOIN_ACK  host -> all: target MAC (6), port u8, result u8 (0 = in)
- *   PROPOSE   guest -> host, every 6 frames: port u8, pad, its 10-byte slot
+ *             four 16-byte slots (pkind, fkind, team, level, handicap,
+ *             selected, costume, cursor state, puck x s16, puck y s16, cursor
+ *             x s16, cursor y s16), the host's build id (8 bytes) and its
+ *             stage-select cursor cell (u8). Doubles as the room beacon.
+ *   JOIN_REQ  guest -> host: nonce u32, name (10 bytes), build id (8 bytes)
+ *   JOIN_ACK  host -> all: target MAC (6), port u8, result u8 (0 = in,
+ *             1 = full or closed, 2 = a different build)
+ *   PROPOSE   guest -> host, every 2 frames: port u8, pad, its 16-byte slot
  *   LEAVE     guest -> host: port u8; host -> all with port 0xFF: room closed
  *   START     host -> all: seed u32, delay u8, host port u8, human mask u8,
  *             pad, four transfer-state handicaps, then the descriptor
@@ -15,6 +18,7 @@
  *
  * The transport's sender MAC, never a self-asserted port, identifies a guest:
  * a PROPOSE whose MAC is not that port's member is ignored. */
+#include <stdio.h>
 #include <string.h>
 #include <nds/bios.h>
 #include <nds/interrupts.h>
@@ -32,13 +36,18 @@
 
 #include "nds_net_internal.h"
 
-#define NDS_NET_LOBBY_SEND_EVERY   6u
+/* Snapshots and proposals carry the cursors, so they go out at 30 Hz. */
+#define NDS_NET_LOBBY_SEND_EVERY   2u
 #define NDS_NET_LOBBY_TIMEOUT      240u   /* frames without a word: gone */
 #define NDS_NET_ROOM_EXPIRE        120u
 #define NDS_NET_JOIN_TIMEOUT       180u
 #define NDS_NET_START_TIMEOUT      180u
-#define NDS_NET_SLOT_BYTES         10u
+#define NDS_NET_SLOT_BYTES         16u
 #define NDS_NET_DESC_BYTES         50u
+#define NDS_NET_BUILD_ID_BYTES     8u
+#define NDS_NET_BUILD_ID_PATH      "nitro:/net/build.id"
+#define NDS_NET_LOBBY_BODY_BYTES \
+    (16u + NDS_NET_PORTS * NDS_NET_SLOT_BYTES + NDS_NET_BUILD_ID_BYTES + 1u)
 
 extern void ndsNetLinkGetUserName(char out[NDS_NET_NAME_LEN + 1u]);
 
@@ -47,6 +56,7 @@ typedef struct NdsNetMember
     u8 active;
     u8 has_proposal;
     u8 start_acked;
+    u8 present;          /* proposing from the lobby since the last match */
     u8 mac[6];
     char name[NDS_NET_NAME_LEN + 1u];
     u32 last_heard;
@@ -62,12 +72,21 @@ static u32 sLost;
 static u32 sFrame;
 static u8 sMyMac[6];
 static char sMyName[NDS_NET_NAME_LEN + 1u];
+/* Plan 7.1: the build identity scripts/nds_net_build_id.py writes at ROM
+ * build time (all zero if the file is missing). */
+static u8 sBuildId[NDS_NET_BUILD_ID_BYTES] __attribute__((aligned(4)));
+static u32 sBuildIdRead;
+/* Host: the stage-select cursor cell it publishes; guest: the last heard. */
+static u32 sStageCursor;
 
 /* Host. */
 static NdsNetMember sMembers[NDS_NET_PORTS];
 static NdsNetLobbySlot sHostSlots[NDS_NET_PORTS];
 static u32 sHostTeamBattle;
 static u32 sRevision;
+/* After a match the consoles leave Results at their own pace: no lobby
+ * timeouts until this frame. */
+static u32 sGraceUntil;
 
 /* Guest. */
 static u8 sHostMac[6];
@@ -138,8 +157,12 @@ static void ndsNetSlotWrite(u8 *p, const NdsNetLobbySlot *s)
     p[3] = s->level;
     p[4] = s->handicap;
     p[5] = s->selected;
-    ndsNetPut16(p + 6, (u32)(u16)s->puck_x);
-    ndsNetPut16(p + 8, (u32)(u16)s->puck_y);
+    p[6] = s->costume;
+    p[7] = s->cursor;
+    ndsNetPut16(p + 8, (u32)(u16)s->puck_x);
+    ndsNetPut16(p + 10, (u32)(u16)s->puck_y);
+    ndsNetPut16(p + 12, (u32)(u16)s->cursor_x);
+    ndsNetPut16(p + 14, (u32)(u16)s->cursor_y);
 }
 
 static void ndsNetSlotRead(const u8 *p, NdsNetLobbySlot *s)
@@ -150,8 +173,27 @@ static void ndsNetSlotRead(const u8 *p, NdsNetLobbySlot *s)
     s->level = p[3];
     s->handicap = p[4];
     s->selected = p[5];
-    s->puck_x = (s16)ndsNetGet16(p + 6);
-    s->puck_y = (s16)ndsNetGet16(p + 8);
+    s->costume = p[6];
+    s->cursor = p[7];
+    s->puck_x = (s16)ndsNetGet16(p + 8);
+    s->puck_y = (s16)ndsNetGet16(p + 10);
+    s->cursor_x = (s16)ndsNetGet16(p + 12);
+    s->cursor_y = (s16)ndsNetGet16(p + 14);
+}
+
+static void ndsNetLoadBuildId(void)
+{
+    FILE *file;
+
+    if (sBuildIdRead != 0u)
+        return;
+    sBuildIdRead = 1u;
+    file = fopen(NDS_NET_BUILD_ID_PATH, "rb");
+    if (file == NULL)
+        return;
+    if (fread(sBuildId, 1, NDS_NET_BUILD_ID_BYTES, file) != NDS_NET_BUILD_ID_BYTES)
+        memset(sBuildId, 0, sizeof(sBuildId));
+    fclose(file);
 }
 
 /* --- The match descriptor ------------------------------------------------- */
@@ -256,6 +298,7 @@ static int ndsNetRadioUp(void)
         return -1;
     ndsNetLinkGetMac(sMyMac);
     ndsNetLinkGetUserName(sMyName);
+    ndsNetLoadBuildId();
     return 0;
 }
 
@@ -301,11 +344,16 @@ uint32_t ndsNetJoinRooms(NdsNetRoom *rooms, uint32_t max)
 
 int ndsNetJoinRequest(const NdsNetRoom *room)
 {
-    u8 buf[NDS_NET_HDR_BYTES + 4u + NDS_NET_NAME_LEN];
+    u8 buf[NDS_NET_HDR_BYTES + 4u + NDS_NET_NAME_LEN + NDS_NET_BUILD_ID_BYTES];
     u32 n;
 
     if (room == NULL || room->session == 0u)
         return -1;
+    if (room->same_build == 0u)
+    {
+        sJoinState = 4u;
+        return -3;
+    }
     sJoinSession = room->session;
     memcpy(sHostMac, room->host_mac, 6);
     sJoinNonce = (u32)cpuGetTiming() ^ sFrame;
@@ -316,6 +364,8 @@ int ndsNetJoinRequest(const NdsNetRoom *room)
     n += 4u;
     memcpy(buf + n, sMyName, NDS_NET_NAME_LEN);
     n += NDS_NET_NAME_LEN;
+    memcpy(buf + n, sBuildId, NDS_NET_BUILD_ID_BYTES);
+    n += NDS_NET_BUILD_ID_BYTES;
     ndsNetSend(buf, n);
     return 0;
 }
@@ -326,6 +376,8 @@ int ndsNetJoinPoll(void)
         return 1;
     if (sJoinState == 3u)
         return -1;
+    if (sJoinState == 4u)
+        return -3;
     if (sJoinState == 1u && (sFrame - sJoinSentFrame) > NDS_NET_JOIN_TIMEOUT)
     {
         sJoinState = 0u;
@@ -380,6 +432,13 @@ static void ndsNetHostJoin(const u8 *src, const u8 *body, u32 len)
 
     if (len < 4u + NDS_NET_NAME_LEN)
         return;
+    if (len < 4u + NDS_NET_NAME_LEN + NDS_NET_BUILD_ID_BYTES ||
+        memcmp(body + 4u + NDS_NET_NAME_LEN, sBuildId, NDS_NET_BUILD_ID_BYTES) != 0)
+    {
+        /* Plan 7.1: a different build never joins (it would desync). */
+        result = 2u;
+        goto answer;
+    }
     for (p = 1u; p < NDS_NET_PORTS; p++)
     {
         if (sMembers[p].active != 0u && memcmp(sMembers[p].mac, src, 6) == 0)
@@ -403,12 +462,14 @@ static void ndsNetHostJoin(const u8 *src, const u8 *body, u32 len)
                 memcpy(sMembers[p].name, body + 4, NDS_NET_NAME_LEN);
                 sMembers[p].name[NDS_NET_NAME_LEN] = '\0';
                 sMembers[p].last_heard = sFrame;
+                sMembers[p].present = 1u;
                 gNdsNetLobbyJoins++;
                 ndsNetHostUpdateMask();
                 break;
             }
         }
     }
+answer:
     n = ndsNetHeaderWrite(buf, NDS_NET_KIND_JOIN_ACK, sSession);
     memcpy(buf + n, src, 6);
     n += 6u;
@@ -447,6 +508,9 @@ static void ndsNetRoomSeen(const u8 *src, u32 session, const u8 *body)
     memcpy(sRooms[slot].host_mac, src, 6);
     sRooms[slot].phase = body[2];
     sRooms[slot].humans = (u8)ndsNetPopCount(body[4]);
+    sRooms[slot].same_build =
+        (memcmp(body + 16u + NDS_NET_PORTS * NDS_NET_SLOT_BYTES, sBuildId,
+                NDS_NET_BUILD_ID_BYTES) == 0) ? 1u : 0u;
     memcpy(sRooms[slot].name, body + 6, NDS_NET_NAME_LEN);
     sRooms[slot].name[NDS_NET_NAME_LEN] = '\0';
     sRoomSeen[slot] = sFrame;
@@ -482,6 +546,9 @@ static void ndsNetGuestStart(const u8 *body, u32 len)
     sPhase = NDS_NET_PHASE_MATCH;
     sStartReady = 1u;
     sStartAckLeft = 8u;
+    /* No proposals until this console is back in the lobby: the host counts
+     * a proposing player as present (ready for the next match). */
+    sHaveProposal = 0u;
 }
 
 static void ndsNetLobbyReceive(void)
@@ -500,7 +567,7 @@ static void ndsNetLobbyReceive(void)
         if (ndsNetHeaderRead(buf, len, &kind, &session) == 0u)
             continue;
 
-        if (kind == NDS_NET_KIND_LOBBY && blen >= 16u + NDS_NET_PORTS * NDS_NET_SLOT_BYTES)
+        if (kind == NDS_NET_KIND_LOBBY && blen >= NDS_NET_LOBBY_BODY_BYTES)
         {
             if (sScanning != 0u)
                 ndsNetRoomSeen(src, session, body);
@@ -516,6 +583,7 @@ static void ndsNetLobbyReceive(void)
                 sHostName[NDS_NET_NAME_LEN] = '\0';
                 for (p = 0u; p < NDS_NET_PORTS; p++)
                     ndsNetSlotRead(body + 16 + p * NDS_NET_SLOT_BYTES, &sSnapSlots[p]);
+                sStageCursor = body[NDS_NET_LOBBY_BODY_BYTES - 1u];
                 sSnapFresh = 1u;
                 if (((sHumanMask >> sLocalPort) & 1u) == 0u)
                     sLost = 1u;   /* the host dropped us */
@@ -538,6 +606,7 @@ static void ndsNetLobbyReceive(void)
                 {
                     ndsNetSlotRead(body + 2, &sMembers[p].proposal);
                     sMembers[p].has_proposal = 1u;
+                    sMembers[p].present = 1u;
                     sMembers[p].last_heard = sFrame;
                 }
                 break;
@@ -568,7 +637,11 @@ static void ndsNetLobbyReceive(void)
         if (kind == NDS_NET_KIND_JOIN_ACK && sJoinState == 1u &&
             session == sJoinSession && blen >= 8u && memcmp(body, sMyMac, 6) == 0)
         {
-            if (body[7] == 0u && body[6] < NDS_NET_PORTS)
+            if (body[7] == 2u)
+            {
+                sJoinState = 4u;
+            }
+            else if (body[7] == 0u && body[6] < NDS_NET_PORTS)
             {
                 sRole = NDS_NET_ROLE_GUEST;
                 sSession = session;
@@ -598,7 +671,7 @@ static void ndsNetLobbyReceive(void)
 
 static void ndsNetHostSendLobby(void)
 {
-    u8 buf[NDS_NET_HDR_BYTES + 16u + NDS_NET_PORTS * NDS_NET_SLOT_BYTES];
+    u8 buf[NDS_NET_HDR_BYTES + NDS_NET_LOBBY_BODY_BYTES];
     u32 n = ndsNetHeaderWrite(buf, NDS_NET_KIND_LOBBY, sSession);
     u32 p;
 
@@ -615,6 +688,9 @@ static void ndsNetHostSendLobby(void)
         ndsNetSlotWrite(buf + n, &sHostSlots[p]);
         n += NDS_NET_SLOT_BYTES;
     }
+    memcpy(buf + n, sBuildId, NDS_NET_BUILD_ID_BYTES);
+    n += NDS_NET_BUILD_ID_BYTES;
+    buf[n++] = (u8)sStageCursor;
     ndsNetSend(buf, n);
 }
 
@@ -662,6 +738,7 @@ void ndsNetLobbyPump(void)
         for (p = 1u; p < NDS_NET_PORTS; p++)
         {
             if (sMembers[p].active != 0u && sPhase != NDS_NET_PHASE_MATCH &&
+                (s32)(sFrame - sGraceUntil) > 0 &&
                 (sFrame - sMembers[p].last_heard) > NDS_NET_LOBBY_TIMEOUT)
             {
                 sMembers[p].active = 0u;
@@ -674,7 +751,7 @@ void ndsNetLobbyPump(void)
     }
     else if (sRole == NDS_NET_ROLE_GUEST)
     {
-        if (sPhase != NDS_NET_PHASE_MATCH &&
+        if (sPhase != NDS_NET_PHASE_MATCH && (s32)(sFrame - sGraceUntil) > 0 &&
             (sFrame - sHostLastHeard) > NDS_NET_LOBBY_TIMEOUT)
             sLost = 1u;
         if (sStartAckLeft != 0u)
@@ -682,7 +759,7 @@ void ndsNetLobbyPump(void)
             sStartAckLeft--;
             ndsNetGuestSendStartAck();
         }
-        else if (sHaveProposal != 0u && (sFrame % NDS_NET_LOBBY_SEND_EVERY) == 3u)
+        else if (sHaveProposal != 0u && (sFrame % NDS_NET_LOBBY_SEND_EVERY) == 1u)
         {
             ndsNetGuestSendProposal();
         }
@@ -700,6 +777,24 @@ void ndsNetLobbyHostPublish(const NdsNetLobbySlot slots[4], uint32_t team_battle
         sHostTeamBattle = team_battle;
         sRevision++;
     }
+}
+
+void ndsNetLobbyHostSetStageCursor(uint32_t slot)
+{
+    if (sRole == NDS_NET_ROLE_HOST)
+        sStageCursor = slot;
+}
+
+uint32_t ndsNetLobbyStageCursor(void)
+{
+    return sStageCursor;
+}
+
+uint32_t ndsNetLobbyHostMemberPresent(uint32_t port)
+{
+    if (sRole != NDS_NET_ROLE_HOST || port >= NDS_NET_PORTS)
+        return 0u;
+    return (port == 0u) ? 1u : sMembers[port].present;
 }
 
 uint32_t ndsNetLobbyHostTakeProposal(uint32_t port, NdsNetLobbySlot *slot)
@@ -721,6 +816,54 @@ void ndsNetLobbyHostSetPhase(uint32_t phase)
         ndsNetHostSendLobby();
     }
 }
+
+#if NDS_NET_LAB_SWEEP
+extern s32 ftParamGetCostumeCommonID(s32 fkind, s32 color);
+
+volatile u32 gNdsNetLabSweepMatches;
+
+/* Lab sweep (plan 7.4): the host's descriptor walks the nine VS stages and
+ * the roster, adding two level-9 CPUs (Kirby among them, for copies) and
+ * every item at the highest rate, in one-minute time matches (ties go to
+ * sudden death). The guest receives it like any other descriptor. */
+static void ndsNetLabSweepDescriptor(NdsMatchConfig *cfg)
+{
+    static const u8 kStages[9] = {
+        nGRKindPupupu, nGRKindCastle, nGRKindSector, nGRKindJungle,
+        nGRKindZebes, nGRKindHyrule, nGRKindYoster, nGRKindYamabuki,
+        nGRKindInishie,
+    };
+    static const u8 kRoster[12] = {
+        nFTKindKirby, nFTKindSamus, nFTKindLink, nFTKindYoshi,
+        nFTKindCaptain, nFTKindPikachu, nFTKindPurin, nFTKindNess,
+        nFTKindKirby, nFTKindFox, nFTKindDonkey, nFTKindLuigi,
+    };
+    static const u8 kAllRows[NDS_ITEM_SWITCH_TOGGLE_COUNT] = {
+        1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u,
+    };
+    const u32 m = gNdsNetLabSweepMatches++;
+    u32 i;
+
+    cfg->gkind = kStages[m % 9u];
+    for (i = 2u; i < NDS_NET_PORTS; i++)
+    {
+        NdsMatchFighterConfig *f = &cfg->fighters[i];
+
+        f->pkind = nFTPlayerKindCom;
+        f->fkind = kRoster[(2u * m + i) % 12u];
+        f->level = 9u;
+        f->team = (u8)((i == 2u) ? nSCBattleTeamIDGreen : nSCBattleTeamIDBlue);
+        f->costume = (u8)ftParamGetCostumeCommonID((s32)f->fkind, (s32)i);
+        f->shade = 0u;
+    }
+    cfg->is_team_battle = FALSE;
+    cfg->game_rules = SCBATTLE_GAMERULE_TIME;
+    cfg->time_limit = 1u;
+    cfg->item_toggles = ndsMatchConfigItemTogglesFromRows(kAllRows);
+    cfg->item_appearance_rate = nSCBattleItemSwitchVeryHigh;
+    ndsMatchConfigApply(cfg);
+}
+#endif
 
 int ndsNetLobbyHostStartMatch(void)
 {
@@ -745,6 +888,9 @@ int ndsNetLobbyHostStartMatch(void)
     buf[n + 7] = 0u;
     for (p = 0u; p < NDS_NET_PORTS; p++)
         buf[n + 8 + p] = gSCManagerTransferBattleState.players[p].handicap;
+#if NDS_NET_LAB_SWEEP
+    ndsNetLabSweepDescriptor(&gNdsMatchConfig);
+#endif
     ndsNetDescriptorWrite(buf + n + 12, &gNdsMatchConfig);
     n += 12u + NDS_NET_DESC_BYTES;
 
@@ -804,13 +950,19 @@ void ndsNetLobbyMatchOver(void)
     ndsNetLockstepDisarm();
     sStartReady = 0u;
     sStartAckLeft = 0u;
+    sGraceUntil = sFrame + 60u * 60u;
     if (sRole == NDS_NET_ROLE_HOST)
     {
         u32 p;
 
-        /* Everyone was busy fighting: nobody timed out meanwhile. */
+        /* Everyone was busy fighting: nobody timed out meanwhile, and nobody
+         * counts as ready until they propose from the lobby again. */
         for (p = 1u; p < NDS_NET_PORTS; p++)
+        {
             sMembers[p].last_heard = sFrame;
+            sMembers[p].present = 0u;
+            sMembers[p].has_proposal = 0u;
+        }
         sPhase = NDS_NET_PHASE_CSS;
         sRevision++;
     }

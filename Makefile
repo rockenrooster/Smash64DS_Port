@@ -793,6 +793,11 @@ NDS_NET_LAB_INPUT ?= 0
 # P3 lab: drive the real menus through host/join, lobby, stage and rematch
 # on the two-instance harness (src/nds/net/nds_net_autopilot.c).
 NDS_NET_LAB_LOBBY ?= 0
+# P3 lab: with the autopilot, the guest's radio drops out mid-match.
+NDS_NET_LAB_DROP ?= 0
+# P3 lab: with the autopilot, ten matches whose descriptor the host fills in:
+# each VS stage in turn, two level-9 CPUs, every item at the highest rate.
+NDS_NET_LAB_SWEEP ?= 0
 NDS_LAB_FOURCPU_SWEEP_GKIND ?=
 NDS_LAB_FOURCPU_SWEEP_KINDS ?=
 # LAB ONLY: the lean renderer's root-reuse census (ndsFtrLeanRootCensus,
@@ -4117,6 +4122,8 @@ NDS_BATTLE_STATIC_TEXTURE_ASSET := $(PROJECT_ROOT)/assets/renderer/battle_playab
 # stale pair cannot link.
 NDS_MN_UI_KIT_INC := $(PROJECT_ROOT)/src/nds/generated/mn_ui_kit.generated.inc
 NDS_MN_UI_KIT_ASSET := $(PROJECT_ROOT)/assets/menus/mn_ui_kit.bin
+# P3: the networked character select's 2P-4P player art (its own pack).
+NDS_MN_UI_KIT_NET_ASSET := $(PROJECT_ROOT)/assets/menus/mn_ui_kit_net.bin
 NDS_NATIVE_WALLPAPER_INC := $(PROJECT_ROOT)/src/nds/generated/native_wallpapers.generated.inc
 NDS_NATIVE_WALLPAPER_NAMES := pupupu zebes jungle yoster yamabuki castle sector hyrule inishie last zako metal bonus results
 NDS_NATIVE_WALLPAPER_ASSETS := $(foreach name,$(NDS_NATIVE_WALLPAPER_NAMES),$(PROJECT_ROOT)/assets/wallpapers/native_wallpaper_$(name).bin)
@@ -6026,6 +6033,8 @@ NDS_NITROFS_MN_UI_KIT_FILES := $(NITROFS_DIR)/menus/mn_ui_kit.bin
 # there is no reader, and 177,900 bytes of ROM nothing opens is what keeps the
 # published ROMs byte-identical across this row.
 NDS_NITROFS_MN_UI_KIT_FILES += $(NITROFS_DIR)/menus/mn_surfaces.bin
+# P3: the networked character select's 2P-4P player art (9,984 bytes).
+NDS_NITROFS_MN_UI_KIT_FILES += $(NITROFS_DIR)/menus/mn_ui_kit_net.bin
 endif
 
 # The efcommon payloads only ship with the interpreter that reads them; without
@@ -6218,6 +6227,16 @@ $(NITROFS_DIR)/net/net7.bin: $(NDS_NET7_ELF)
 	@mkdir -p $(dir $@)
 	$(OBJCOPY) -O binary $< $@
 $(OUTPUT).nds: $(NITROFS_DIR)/net/net7.bin
+
+# P3 build identity (plan section 7.1): net/build.id hashes the loadable
+# ARM9 and ARM7 bytes and every other NitroFS file, and consoles refuse a
+# room whose id differs from their own. It has to see the finished NitroFS
+# tree, so it runs in the ROM recipe itself, right before ndstool; this
+# recipe replaces ds_rules' %.nds one and keeps its ndstool line.
+$(OUTPUT).nds:
+	@python "$(PROJECT_ROOT)/scripts/nds_net_build_id.py" --arm9 "$(OUTPUT).elf" --arm7 "$(NDS_ARM7_ELF)" --nitrofs "$(NITROFS_DIR)" --out "$(NITROFS_DIR)/net/build.id"
+	$(SILENTCMD)ndstool -c $@ -9 $(OUTPUT).elf $(_ARM7_ELF) -b $(GAME_ICON) "$(GAME_TITLE);$(GAME_SUBTITLE1);$(GAME_SUBTITLE2)" $(_ADDFILES)
+	$(SILENTMSG) built ... $(notdir $@)
 -include nds-net7-module.d
 -include $(NDS_ARM7_OBJECTS:.o=.d)
 
@@ -6979,6 +6998,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_NET_LAB_MATCH $(NDS_NET_LAB_MATCH)'; \
 		echo '#define NDS_NET_LAB_INPUT $(NDS_NET_LAB_INPUT)'; \
 		echo '#define NDS_NET_LAB_LOBBY $(NDS_NET_LAB_LOBBY)'; \
+		echo '#define NDS_NET_LAB_DROP $(NDS_NET_LAB_DROP)'; \
+		echo '#define NDS_NET_LAB_SWEEP $(NDS_NET_LAB_SWEEP)'; \
 		echo '#define NDS_P2_FOUR_CPU_ROSTER $(NDS_P2_FOUR_CPU_ROSTER)'; \
 		echo '#define NDS_P2_FOUR_CPU_KIND0 $(NDS_P2_FOUR_CPU_KIND0)'; \
 		echo '#define NDS_P2_FOUR_CPU_KIND1 $(NDS_P2_FOUR_CPU_KIND1)'; \
@@ -8456,13 +8477,13 @@ $(NDS_MN_UI_KIT_STAMP): FORCE
 	@printf %s "$(NDS_MN_UI_KIT_FLAGS)" > $@.tmp
 	@if ! cmp -s $@.tmp $@; then mv -f $@.tmp $@; else rm -f $@.tmp; fi
 
-$(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) $(NDS_MN_UI_SURFACE_ASSET) &: \
+$(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) $(NDS_MN_UI_SURFACE_ASSET) $(NDS_MN_UI_KIT_NET_ASSET) &: \
 		$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py \
 		$(NDS_BUILD_CONFIG) \
 		$(NDS_MN_UI_KIT_STAMP) \
 		$(PROJECT_ROOT)/include/reloc_data.h
 	NDS_P2_STAGE_YOSTER=$(NDS_P2_STAGE_YOSTER) NDS_P2_STAGE_CASTLE=$(NDS_P2_STAGE_CASTLE) NDS_P2_STAGE_JUNGLE=$(NDS_P2_STAGE_JUNGLE) NDS_P2_STAGE_ZEBES=$(NDS_P2_STAGE_ZEBES) NDS_P2_STAGE_HYRULE=$(NDS_P2_STAGE_HYRULE) NDS_P2_STAGE_YAMABUKI=$(NDS_P2_STAGE_YAMABUKI) NDS_P2_STAGE_INISHIE=$(NDS_P2_STAGE_INISHIE) NDS_P2_STAGE_SECTOR=$(NDS_P2_STAGE_SECTOR) python "$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py" --repo-root "$(PROJECT_ROOT)"
-	@touch $(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) $(NDS_MN_UI_SURFACE_ASSET)
+	@touch $(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) $(NDS_MN_UI_SURFACE_ASSET) $(NDS_MN_UI_KIT_NET_ASSET)
 
 # P2-2 lower-screen HUD.  Keep every source container the bake reads on the
 # dependency edge so an o2r refresh cannot silently leave a stale C include.
@@ -8532,6 +8553,10 @@ $(NITROFS_DIR)/menus/mn_ui_kit.bin: $(NDS_MN_UI_KIT_ASSET)
 	@cp $< $@
 
 $(NITROFS_DIR)/menus/mn_surfaces.bin: $(NDS_MN_UI_SURFACE_ASSET)
+	@mkdir -p $(dir $@)
+	@cp $< $@
+
+$(NITROFS_DIR)/menus/mn_ui_kit_net.bin: $(NDS_MN_UI_KIT_NET_ASSET)
 	@mkdir -p $(dir $@)
 	@cp $< $@
 

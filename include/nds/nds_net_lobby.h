@@ -32,8 +32,17 @@ typedef struct NdsNetLobbySlot
     uint8_t level;
     uint8_t handicap;
     uint8_t selected;
+    /* In the host's snapshot, the costume the host resolved for the slot; in
+     * a guest's proposal, a count of its costume presses (the host turns each
+     * new one into a costume change by the source's rules). */
+    uint8_t costume;
+    /* The owner's cursor: its state + 1 (pointer, grab, hover), 0 for none.
+     * Cosmetic, like the token position: never part of the match. */
+    uint8_t cursor;
     int16_t puck_x;
     int16_t puck_y;
+    int16_t cursor_x;
+    int16_t cursor_y;
 } NdsNetLobbySlot;
 
 typedef struct NdsNetRoom
@@ -42,6 +51,7 @@ typedef struct NdsNetRoom
     uint8_t host_mac[6];
     uint8_t humans;
     uint8_t phase;
+    uint8_t same_build;   /* the room runs this console's build identity */
     char name[NDS_NET_NAME_LEN + 1u];
 } NdsNetRoom;
 
@@ -50,7 +60,8 @@ int ndsNetHostOpen(void);
 int ndsNetJoinScanOpen(void);
 uint32_t ndsNetJoinRooms(NdsNetRoom *rooms, uint32_t max);
 int ndsNetJoinRequest(const NdsNetRoom *room);
-/* 1 accepted, 0 waiting, negative refused or timed out. */
+/* 1 accepted, 0 waiting, -1 refused (full or closed), -2 no answer,
+ * -3 refused because the room runs a different build. */
 int ndsNetJoinPoll(void);
 void ndsNetSessionClose(void);
 
@@ -70,7 +81,12 @@ void ndsNetLobbyPump(void);
 /* Host. */
 void ndsNetLobbyHostPublish(const NdsNetLobbySlot slots[4], uint32_t team_battle);
 uint32_t ndsNetLobbyHostTakeProposal(uint32_t port, NdsNetLobbySlot *slot);
+/* Whether that player has proposed from the lobby since the last match (a
+ * player still on Results is not ready). */
+uint32_t ndsNetLobbyHostMemberPresent(uint32_t port);
 void ndsNetLobbyHostSetPhase(uint32_t phase);
+/* The stage select's cursor cell, published so guests watch the host choose. */
+void ndsNetLobbyHostSetStageCursor(uint32_t slot);
 /* After the stage is committed into gNdsMatchConfig: send the descriptor and
  * seed until every guest acknowledges, then arm the lockstep. */
 int ndsNetLobbyHostStartMatch(void);
@@ -81,6 +97,8 @@ void ndsNetLobbyGuestPropose(const NdsNetLobbySlot *mine);
 /* 1 once the host's START arrived: the descriptor is applied, the seed set,
  * the lockstep armed, and the battle may be entered. */
 uint32_t ndsNetLobbyGuestStartReady(void);
+/* The host's stage-select cursor cell from the latest snapshot. */
+uint32_t ndsNetLobbyStageCursor(void);
 
 /* After a match: back to the character select. */
 void ndsNetLobbyMatchOver(void);

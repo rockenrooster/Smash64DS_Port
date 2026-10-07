@@ -32,6 +32,7 @@
 #include <PR/os.h>
 #include <ssb_types.h>
 #include <ft/fighter.h>
+#include <sys/malloc.h>
 
 #include <nds/nds_controller.h>
 #include <nds/nds_match_config.h>
@@ -39,6 +40,7 @@
 #include <nds/nds_net_link.h>
 #include <nds/nds_net_session.h>
 #include <nds/nds_platform.h>
+#include <nds/nds_net_ui.h>
 
 #include "nds_net_internal.h"
 
@@ -46,6 +48,12 @@
 #define NDS_NET_INPUT_MAX         24u       /* records per INPUT packet */
 #define NDS_NET_DIGEST_RING       64u       /* batches, power of two */
 #define NDS_NET_STALL_ABORT_VBLANKS (60u * 10u)
+/* The first batch also absorbs the consoles' different battle load times. */
+#define NDS_NET_STALL_ABORT_FIRST   (60u * 30u)
+#define NDS_NET_STALL_NOTICE        20u
+
+extern void syTaskmanSetLoadScene(void);
+extern SYMallocRegion gSYTaskmanGeneralHeap;
 
 extern void syUtilsSetRandomSeed(s32 seed);
 extern u32 ndsReplayDigestTick(void);
@@ -358,6 +366,19 @@ static u32 ndsNetBatchReady(u32 batch)
     return 1u;
 }
 
+/* Ends the match without inventing a result. As the source's pause quit
+ * (ifcommon.c, A+B+R+Z) does, it ends as a reset, which Results shows as NO
+ * CONTEST; the scene exit is requested directly so it works in any phase (the
+ * countdown ignores the interface's Set status). */
+static void ndsNetLockstepAbort(void)
+{
+    gNdsNetAborted++;
+    gNdsNetSessionState = NDS_NET_SESSION_ABORTED;
+    ndsControllerPlaybackSetEnabled(FALSE);
+    gSCManagerSceneData.is_reset = TRUE;
+    syTaskmanSetLoadScene();
+}
+
 void ndsNetBattleGate(void)
 {
     const u32 me = gNdsNetLocalPort;
@@ -365,6 +386,18 @@ void ndsNetBattleGate(void)
 
     if (gNdsNetSessionState != NDS_NET_SESSION_RUNNING)
         return;
+    if (gNdsNetDesyncBatch != 0xFFFFFFFFu)
+    {
+        /* Plan 7.3: a divergence ends the match, naming the first tick whose
+         * digests differ; state is never copied to repair it. */
+        if (gNdsNetDesyncBatch == 0u)
+            ndsNetUiLine(21, " The consoles' setups differ.");
+        else
+            ndsNetUiLine(21, " Out of sync at tick %lu.",
+                         (unsigned long)(2u * gNdsNetDesyncBatch + 1u));
+        ndsNetLockstepAbort();
+        return;
+    }
     /* Produce this console's record for batch + delay, once. */
     if (sNetProducedBatch <= sNetBatch)
     {
@@ -391,16 +424,19 @@ void ndsNetBattleGate(void)
         ndsNetPump();
         if ((waited & 3u) == 0u)
             ndsNetSendInput();
-        if (waited >= NDS_NET_STALL_ABORT_VBLANKS)
+        if (waited == NDS_NET_STALL_NOTICE)
+            ndsNetUiLine(21, " Waiting for the other players...");
+        if (waited >= ((sNetBatch == 0u) ? NDS_NET_STALL_ABORT_FIRST :
+                                           NDS_NET_STALL_ABORT_VBLANKS))
         {
-            /* No progress for ten seconds: end the session rather than
-             * invent input. The battle then runs on neutral pads. */
-            gNdsNetAborted++;
-            gNdsNetSessionState = NDS_NET_SESSION_ABORTED;
-            ndsControllerPlaybackSetEnabled(FALSE);
+            /* No progress: end the match rather than invent input. */
+            ndsNetUiLine(21, " Connection lost.");
+            ndsNetLockstepAbort();
             return;
         }
     }
+    if (waited >= NDS_NET_STALL_NOTICE)
+        ndsNetUiLine(21, "");
     if (waited != 0u)
     {
         gNdsNetStallBatches++;
@@ -434,6 +470,22 @@ void ndsNetBattleInstallTick(uint32_t index)
     }
 }
 
+/* Plan 7.1's setup check: the general heap's size and how much of it setup
+ * used decide the source's GObj latch (ifCommonSetMaxNumGObj, 25 KiB free),
+ * so consoles whose arenas differ must not play on. Folded into the first
+ * batch's digest, a difference ends the match at once like any divergence.
+ * The arena's address is not compared: it still varies with the boot
+ * environment (plan 7.2 item 4). */
+static u32 ndsNetSetupDigest(void)
+{
+    const u32 size = (u32)((uintptr_t)gSYTaskmanGeneralHeap.end -
+                           (uintptr_t)gSYTaskmanGeneralHeap.start);
+    const u32 used = (u32)((uintptr_t)gSYTaskmanGeneralHeap.ptr -
+                           (uintptr_t)gSYTaskmanGeneralHeap.start);
+
+    return (size * 2654435761u) ^ (used * 2246822519u) ^ 0x5E7u;
+}
+
 void ndsNetBattleBatchDone(void)
 {
     u32 slot;
@@ -442,6 +494,8 @@ void ndsNetBattleBatchDone(void)
         return;
     slot = sNetBatch & (NDS_NET_DIGEST_RING - 1u);
     sNetDigests[slot] = ndsReplayDigestTick();
+    if (sNetBatch == 0u)
+        sNetDigests[slot] ^= ndsNetSetupDigest();
     sNetDigestValid[slot] = sNetBatch + 1u;
     sNetLastDigestBatch = sNetBatch;
     {

@@ -666,6 +666,60 @@ static void ndsMenuShellSssCommit(void)
     gNdsMenuShellSssCommitCount++;
 }
 
+/* P3 (plan section 10): a guest watches the host choose. Its cursor follows
+ * the host's, the match starts when the host's START arrives, and the room
+ * returns to the character select when the host does. Holding B for
+ * mnPlayersVSDetectBack's forty tics leaves the room. */
+static u32 sSssNetBackTics;
+
+static void ndsMenuShellSssNetLeave(void)
+{
+    ndsNetSessionClose();
+    ndsNetUiClear();
+    ndsAudioBgmStopAll();
+    ndsMenuShellGoto((u32)nSCKindVSMode);
+}
+
+static void ndsMenuShellSssNetGuest(u32 held)
+{
+    u32 slot;
+
+    if (ndsNetLobbyLost() != 0u)
+    {
+        ndsMenuShellSssNetLeave();
+        return;
+    }
+    if (ndsNetLobbyGuestStartReady() != 0u)
+    {
+        ndsNetUiClear();
+        ndsMenuShellGoto((u32)nSCKindVSBattle);
+        return;
+    }
+    if (ndsNetLobbyPhase() == NDS_NET_PHASE_CSS)
+    {
+        ndsMenuShellGoto((u32)nSCKindPlayersVS);
+        return;
+    }
+    if ((held & NDS_INPUT_B) != 0u)
+    {
+        if (++sSssNetBackTics >= 40u)
+        {
+            ndsMenuShellSssNetLeave();
+            return;
+        }
+    }
+    else
+    {
+        sSssNetBackTics = 0u;
+    }
+    slot = ndsNetLobbyStageCursor();
+    if ((slot < NDS_SSS_SLOTS) && (slot != sSssCursorSlot))
+    {
+        ndsMenuShellSssMoveTo(slot);
+    }
+    ndsNetUiLobbyStatus();
+}
+
 static void ndsMenuShellUpdateSss(u32 held, u32 taps)
 {
     /* ONE surface a frame, and never more (see ndsMenuShellSssSyncSurfaces).
@@ -673,6 +727,17 @@ static void ndsMenuShellUpdateSss(u32 held, u32 taps)
      * gate closes still has its surfaces retired. A frame on which nothing
      * changed compares two bytes and returns. */
     ndsMenuShellSssSyncSurfaces(1u);
+
+    if (ndsNetRole() == NDS_NET_ROLE_GUEST)
+    {
+        ndsMenuShellSssNetGuest(held);
+        return;
+    }
+    if (ndsNetRole() == NDS_NET_ROLE_HOST)
+    {
+        ndsNetLobbyHostSetStageCursor(sSssCursorSlot);
+        ndsNetUiLobbyStatus();
+    }
 
     /* mnMapsFuncRun:1436 gates EVERYTHING on ten tics having passed, which is
      * what stops the A that left the character select from being read again
@@ -800,6 +865,10 @@ static void ndsMenuShellSssInit(void)
         sSssCursorSlot = ndsMenuShellSssSlotOfGkind((u32)nGRKindPupupu);
     }
     sSssScrollWait = 0u;
+    sSssNetBackTics = 0u;
+    ndsNetLobbyHostSetStageCursor(sSssCursorSlot);
+    /* The lobby rows redraw on this screen's first frame. */
+    ndsNetUiLobbyReset();
     /* The screen entry re-blits SSS_SCREEN over BG2, which erases whatever
      * plaque the last visit left there -- so the cached "which plaque is on
      * screen" must be invalidated with it, or a re-entry on the same slot

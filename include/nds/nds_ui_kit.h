@@ -190,6 +190,10 @@ s32 ndsUiKitSetSpriteBlend(u32 slot, u32 image, s32 x, s32 y, u32 alpha,
                            u32 scale2x, u32 priority);
 void ndsUiKitMoveSprite(u32 slot, s32 x, s32 y);
 void ndsUiKitHideSprite(u32 slot);
+/* P3: loads the networked character select's 2P-4P player art
+ * (NDS_MN_UI_KIT_IMAGE_*_2P..4P) over images that screen never draws. TRUE
+ * once drawable; the next ndsUiKitEnter restores the borrowed images. */
+s32 ndsUiKitLoadNetPlayerImages(void);
 
 /* --- Numbers. The font has no digits (see the SFX block above): the source
  * draws every menu number as one digit SPRITE per place, right-aligned, at an

@@ -124,7 +124,9 @@ int ndsNetUiJoinModal(void)
             if (r < 0)
             {
                 joining = 0u;
-                status = (r == -1) ? "The room is full." : "No answer from the room.";
+                status = (r == -1) ? "The room is full." :
+                         (r == -3) ? "That room runs another build." :
+                                     "No answer from the room.";
             }
         }
         else
@@ -135,10 +137,17 @@ int ndsNetUiJoinModal(void)
                 cursor++;
             if ((down & KEY_A) != 0u && n != 0u && rooms[cursor].phase == NDS_NET_PHASE_CSS)
             {
-                if (ndsNetJoinRequest(&rooms[cursor]) == 0)
+                const int r = ndsNetJoinRequest(&rooms[cursor]);
+
+                if (r == 0)
                 {
                     joining = 1u;
                     status = "Joining...";
+                }
+                else if (r == -3)
+                {
+                    /* Plan 7.1: every player runs an identical build. */
+                    status = "That room runs another build.";
                 }
             }
             if ((down & KEY_B) != 0u)
@@ -158,6 +167,7 @@ int ndsNetUiJoinModal(void)
                 if (i < n)
                     ndsNetUiLine(5 + i * 2, " %c %-10s  %u/4 %s", (i == cursor) ? '>' : ' ',
                                  rooms[i].name, (unsigned)rooms[i].humans,
+                                 (rooms[i].same_build == 0u) ? "(other build)" :
                                  (rooms[i].phase == NDS_NET_PHASE_CSS) ? "" : "(playing)");
                 else
                     ndsNetUiLine(5 + i * 2, "");

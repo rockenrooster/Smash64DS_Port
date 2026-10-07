@@ -306,6 +306,16 @@ static u32 sCssCursorSlot;
 #define NDS_CSS_CURSOR_SLOT ((s32)sCssCursorSlot)
 /* P3: nonzero while this screen is a wireless lobby. */
 static u32 sCssNet;
+/* P3: the other humans' cursors as their owners last published them (state
+ * + 1, 0 for none); whether the 2P-4P art is loaded; this guest's costume
+ * presses (a count the host turns into costume changes) and, on the host,
+ * the count last seen from each guest. */
+static u8 sCssNetCursor[NDS_CSS_SLOTS];
+static s16 sCssNetCursorX[NDS_CSS_SLOTS];
+static s16 sCssNetCursorY[NDS_CSS_SLOTS];
+static u8 sCssNetCostumeSeen[NDS_CSS_SLOTS];
+static u8 sCssNetCostumeReq;
+static u32 sCssNetArt;
 
 /* --- Audio seam ---------------------------------------------------------- */
 
@@ -524,6 +534,34 @@ static u32 ndsMenuShellCssBoxHit(s32 x0, s32 x1, s32 y0, s32 y1)
 #define NDS_CSS_SPRITE_COLON0 24u
 #define NDS_CSS_SPRITE_ARROWL0 28u
 #define NDS_CSS_SPRITE_ARROWR0 32u
+/* P3: the other humans' cursors, tag then hand per slot (36 + 2 * slot),
+ * behind this console's own cursor and the tokens. */
+#define NDS_CSS_SPRITE_NET_CURSOR0 36u
+
+/* A human slot's own player art: the 1P..4P cursor tag, token and panel tag
+ * (mnplayersvs.c:1719, :3434, :976). Only the 1P set is resident; the
+ * networked select loads 2P-4P (ndsUiKitLoadNetPlayerImages). */
+#define NDS_CSS_ART_CURSOR 0u
+#define NDS_CSS_ART_PUCK 1u
+#define NDS_CSS_ART_PANEL 2u
+
+static u32 ndsMenuShellCssHumanArt(u32 art, u32 slot)
+{
+    static const u8 kArt[3][4] = {
+        { NDS_MN_UI_KIT_IMAGE_CSS_CURSOR_1P, NDS_MN_UI_KIT_IMAGE_CSS_CURSOR_2P,
+          NDS_MN_UI_KIT_IMAGE_CSS_CURSOR_3P, NDS_MN_UI_KIT_IMAGE_CSS_CURSOR_4P },
+        { NDS_MN_UI_KIT_IMAGE_PUCK_1P, NDS_MN_UI_KIT_IMAGE_PUCK_2P,
+          NDS_MN_UI_KIT_IMAGE_PUCK_3P, NDS_MN_UI_KIT_IMAGE_PUCK_4P },
+        { NDS_MN_UI_KIT_IMAGE_PANEL_1P, NDS_MN_UI_KIT_IMAGE_PANEL_2P,
+          NDS_MN_UI_KIT_IMAGE_PANEL_3P, NDS_MN_UI_KIT_IMAGE_PANEL_4P },
+    };
+
+    if ((sCssNetArt == 0u) || (slot >= 4u))
+    {
+        slot = 0u;
+    }
+    return kArt[art][slot];
+}
 
 /* mnPlayersVSArrowThreadUpdate's own blink (10 tics on, 10 off) and the two
  * values at which an arrow is EJECTED rather than blinked (:2643/:2660). */
@@ -1195,6 +1233,13 @@ static void ndsMenuShellCssPopulate(void)
 {
     u32 i;
 
+    /* P3: the 2P-4P art loads on the first populate of a wireless lobby --
+     * the screen's init runs before the router enters the kit. */
+    if ((sCssNet != 0u) && (sCssNetArt == 0u))
+    {
+        sCssNetArt = (ndsUiKitLoadNetPlayerImages() != FALSE) ? 1u : 0u;
+    }
+
     /* P2-1N (2)+(4): the mode label and BACK ship the source's own sprites
      * (`mnPlayersVSMakeLabels` at (27,24) with the toggle's FFA tint;
      * `llMNPlayersCommonBackButtonSprite` at (244,23)), blitted as baked
@@ -1247,9 +1292,14 @@ static void ndsMenuShellCssPopulate(void)
         }
         else if (sCssPkind[i] == (u8)nFTPlayerKindMan)
         {
+            /* `pos_x[p] + p*69 + 22` with pos_x {8, 5, 5, 5} (:982). */
+            const u32 tag = ndsMenuShellCssHumanArt(NDS_CSS_ART_PANEL, i);
+
             (void)ndsUiKitSetSpriteBlend(
-                NDS_CSS_SPRITE_TAG0 + i, NDS_MN_UI_KIT_IMAGE_PANEL_1P,
-                NDS_CSS_DS(panel + 30), NDS_CSS_DS(131), 15u, 0u, 2u);
+                NDS_CSS_SPRITE_TAG0 + i, tag,
+                NDS_CSS_DS(panel +
+                           ((tag == NDS_MN_UI_KIT_IMAGE_PANEL_1P) ? 30 : 27)),
+                NDS_CSS_DS(131), 15u, 0u, 2u);
         }
         else
         {
@@ -1323,7 +1373,7 @@ static void ndsMenuShellCssPopulate(void)
                 NDS_CSS_SPRITE_PUCK0 + i,
                 (sCssPkind[i] == (u8)nFTPlayerKindCom) ?
                     NDS_MN_UI_KIT_IMAGE_PUCK_CP :
-                    NDS_MN_UI_KIT_IMAGE_PUCK_1P,
+                    ndsMenuShellCssHumanArt(NDS_CSS_ART_PUCK, i),
                 NDS_CSS_DS((s32)sCssPuckX[i]),
                 NDS_CSS_DS((s32)sCssPuckY[i]), 15u, 0u, 0u);
         }
@@ -1372,7 +1422,8 @@ static void ndsMenuShellCssMove(void)
      * below the fighter camera (30), but a hand hidden behind a preview model
      * is unreadable on the DS's smaller panel. */
     (void)ndsUiKitSetSpriteBlend(
-        NDS_CSS_SPRITE_CURSOR_TAG, NDS_MN_UI_KIT_IMAGE_CSS_CURSOR_1P,
+        NDS_CSS_SPRITE_CURSOR_TAG,
+        ndsMenuShellCssHumanArt(NDS_CSS_ART_CURSOR, (u32)NDS_CSS_CURSOR_SLOT),
         NDS_CSS_DS(sCssCursorX + tag_dx), NDS_CSS_DS(sCssCursorY + tag_dy),
         15u, 0u, 0u);
     (void)ndsUiKitSetSpriteBlend(
@@ -1386,6 +1437,36 @@ static void ndsMenuShellCssMove(void)
                                NDS_CSS_DS((s32)sCssPuckX[i]),
                                NDS_CSS_DS((s32)sCssPuckY[i]));
         }
+    }
+    /* P3: every other human's cursor where its owner last put it, with the
+     * same hand states and tag offsets as this console's own. */
+    for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
+    {
+        static const u8 kHand[3] = {
+            NDS_MN_UI_KIT_IMAGE_CSS_CURSOR_POINT,
+            NDS_MN_UI_KIT_IMAGE_CSS_CURSOR_GRAB,
+            NDS_MN_UI_KIT_IMAGE_CSS_CURSOR_HOVER,
+        };
+        static const s8 kTagDx[3] = { 7, 9, 9 };
+        static const s8 kTagDy[3] = { 15, 10, 15 };
+        const u32 state = sCssNetCursor[i];
+        const u32 tag = NDS_CSS_SPRITE_NET_CURSOR0 + 2u * i;
+
+        if ((ndsMenuShellCssNetHumanOther(i) == FALSE) || (state == 0u) ||
+            (state > 3u))
+        {
+            ndsUiKitHideSprite(tag);
+            ndsUiKitHideSprite(tag + 1u);
+            continue;
+        }
+        (void)ndsUiKitSetSpriteBlend(
+            tag, ndsMenuShellCssHumanArt(NDS_CSS_ART_CURSOR, i),
+            NDS_CSS_DS((s32)sCssNetCursorX[i] + kTagDx[state - 1u]),
+            NDS_CSS_DS((s32)sCssNetCursorY[i] + kTagDy[state - 1u]),
+            15u, 0u, 0u);
+        (void)ndsUiKitSetSpriteBlend(
+            tag + 1u, kHand[state - 1u], NDS_CSS_DS((s32)sCssNetCursorX[i]),
+            NDS_CSS_DS((s32)sCssNetCursorY[i]), 15u, 0u, 0u);
     }
 }
 
@@ -1697,12 +1778,17 @@ static void ndsMenuShellCssShowReady(u32 lit)
         {
             gNdsMenuShellCssPanelBlitCount++;
         }
-        ndsUiKitSetSprite(NDS_CSS_SPRITE_READY_PRESS,
-                          NDS_MN_UI_KIT_IMAGE_CSS_READY_PRESS,
-                          NDS_CSS_DS(133), NDS_CSS_DS(219));
-        ndsUiKitSetSprite(NDS_CSS_SPRITE_READY_START,
-                          NDS_MN_UI_KIT_IMAGE_CSS_READY_START,
-                          NDS_CSS_DS(162), NDS_CSS_DS(219));
+        /* P3: only the host's START starts the match, so a guest sees
+         * READY TO FIGHT without the prompt. */
+        if (ndsMenuShellCssNetGuest() == FALSE)
+        {
+            ndsUiKitSetSprite(NDS_CSS_SPRITE_READY_PRESS,
+                              NDS_MN_UI_KIT_IMAGE_CSS_READY_PRESS,
+                              NDS_CSS_DS(133), NDS_CSS_DS(219));
+            ndsUiKitSetSprite(NDS_CSS_SPRITE_READY_START,
+                              NDS_MN_UI_KIT_IMAGE_CSS_READY_START,
+                              NDS_CSS_DS(162), NDS_CSS_DS(219));
+        }
     }
     else
     {
@@ -2237,12 +2323,6 @@ static u32 ndsMenuShellCssCheckPreviewCostume(void)
 {
     u32 slot;
 
-    /* P3: a guest's appearance is the host's to resolve. */
-    if (ndsMenuShellCssNetGuest() != FALSE)
-    {
-        return FALSE;
-    }
-
     for (slot = 0u; slot < (u32)NDS_CSS_SLOTS; slot++)
     {
         s32 panel = (s32)(slot * 69u);
@@ -2256,6 +2336,23 @@ static u32 ndsMenuShellCssCheckPreviewCostume(void)
             (sCssFkind[slot] == (u8)nFTKindNull))
         {
             continue;
+        }
+        /* P3: each human changes only their own costume. A guest's press is
+         * a request the host resolves (ndsMenuShellCssNetSync), and the
+         * host's snapshot brings the result back. */
+        if (ndsMenuShellCssNetHumanOther(slot) != FALSE)
+        {
+            continue;
+        }
+        if (ndsMenuShellCssNetGuest() != FALSE)
+        {
+            if (slot != (u32)NDS_CSS_CURSOR_SLOT)
+            {
+                continue;
+            }
+            sCssNetCostumeReq++;
+            ndsMenuShellCssCue(NDS_CSS_FGM_SCROLL2);
+            return TRUE;
         }
         costume = ndsMNPlayersVSPreviewCycleCostume(slot);
         if (costume < 0)
@@ -2497,8 +2594,11 @@ static void ndsMenuShellCssWalkTourReset(void)
  * host's cursor also owns the CPU slots, the kind buttons, the mode and the
  * START; a guest's owns its token and its team. Each frame the host folds the
  * guests' proposals into its slots and publishes all four, and a guest copies
- * the host's slots except its own and proposes its own. Remote cursors are not
- * drawn; remote tokens move where their owners carry them. */
+ * the host's slots except its own and proposes its own, cursor included:
+ * every other human's cursor and token are drawn where their owner last put
+ * them (plan section 10: cosmetic, never part of the match). A guest's costume
+ * presses travel as a count the host turns into costume changes, and every
+ * console shows the costumes the host resolved. */
 static u32 ndsMenuShellCssNetGuest(void)
 {
     return ((sCssNet != 0u) && (ndsNetRole() == NDS_NET_ROLE_GUEST)) ? TRUE : FALSE;
@@ -2520,6 +2620,19 @@ static void ndsMenuShellCssNetSlotOut(u32 slot, NdsNetLobbySlot *s)
     s->selected = sCssSelected[slot];
     s->puck_x = sCssPuckX[slot];
     s->puck_y = sCssPuckY[slot];
+    s->costume = (u8)ndsMNPlayersVSPreviewGetAppearance(slot);
+    if (slot == (u32)NDS_CSS_CURSOR_SLOT)
+    {
+        s->cursor = (u8)(sCssStatus + 1u);
+        s->cursor_x = (s16)sCssCursorX;
+        s->cursor_y = (s16)sCssCursorY;
+    }
+    else
+    {
+        s->cursor = sCssNetCursor[slot];
+        s->cursor_x = sCssNetCursorX[slot];
+        s->cursor_y = sCssNetCursorY[slot];
+    }
 }
 
 static u32 ndsMenuShellCssNetSlotIn(u32 slot, const NdsNetLobbySlot *s, u32 all)
@@ -2565,11 +2678,18 @@ static u32 ndsMenuShellCssNetSlotIn(u32 slot, const NdsNetLobbySlot *s, u32 all)
             sCssHandicap[slot] = s->handicap;
         }
     }
-    if ((sCssPuckX[slot] != s->puck_x) || (sCssPuckY[slot] != s->puck_y))
+    /* Token and cursor positions are cosmetic and move every frame:
+     * ndsMenuShellCssMove draws them, so they never repopulate the screen. */
+    sCssPuckX[slot] = s->puck_x;
+    sCssPuckY[slot] = s->puck_y;
+    sCssNetCursor[slot] = s->cursor;
+    sCssNetCursorX[slot] = s->cursor_x;
+    sCssNetCursorY[slot] = s->cursor_y;
+    if (all != FALSE)
     {
-        sCssPuckX[slot] = s->puck_x;
-        sCssPuckY[slot] = s->puck_y;
-        changed = TRUE;
+        /* The host resolved this slot's costume by the source's rules. */
+        (void)ndsMNPlayersVSPreviewSetCostume(slot, (s32)s->fkind,
+                                              (s32)s->costume);
     }
     if ((was_selected == 0u) && (sCssSelected[slot] != 0u) &&
         (sCssFkind[slot] != (u8)nFTKindNull))
@@ -2580,7 +2700,7 @@ static u32 ndsMenuShellCssNetSlotIn(u32 slot, const NdsNetLobbySlot *s, u32 all)
     return changed;
 }
 
-static void ndsMenuShellCssNetSetMode(u32 team_battle)
+static void ndsMenuShellCssNetSetTeamBattle(u32 team_battle)
 {
     NdsUiKitSurfaceId label;
 
@@ -2638,16 +2758,40 @@ static u32 ndsMenuShellCssNetSync(void)
                     sCssSelected[i] = 0u;
                     sCssPuckX[i] = (s16)(NDS_CSS_PUCK_HOME_X + 68 * (s32)i);
                     sCssPuckY[i] = (s16)NDS_CSS_PUCK_HOME_Y;
+                    sCssNetCursor[i] = 0u;
+                    sCssNetCostumeSeen[i] = 0u;
                     changed = TRUE;
                 }
                 if (ndsNetLobbyHostTakeProposal(i, &proposal) != 0u)
                 {
+                    u32 presses =
+                        (u8)(proposal.costume - sCssNetCostumeSeen[i]);
+
                     changed |= ndsMenuShellCssNetSlotIn(i, &proposal, FALSE);
+                    /* That guest's costume presses, each the source's own
+                     * costume change (mnPlayersVSFuncRun's C buttons). */
+                    sCssNetCostumeSeen[i] = proposal.costume;
+                    if (presses > 3u)
+                    {
+                        presses = 1u; /* a count from an older visit */
+                    }
+                    while (presses-- != 0u)
+                    {
+                        (void)ndsMNPlayersVSPreviewCycleCostume(i);
+                    }
+                }
+                else if ((ndsNetLobbyHostMemberPresent(i) == 0u) &&
+                         (sCssSelected[i] != 0u))
+                {
+                    /* Still on Results: not ready until they are back. */
+                    sCssSelected[i] = 0u;
+                    changed = TRUE;
                 }
             }
             else if (sCssPkind[i] == (u8)nFTPlayerKindMan)
             {
                 /* That player left the room. */
+                sCssNetCursor[i] = 0u;
                 sCssPkind[i] = (u8)nFTPlayerKindNot;
                 sCssFkind[i] = (u8)nFTKindNull;
                 sCssSelected[i] = 0u;
@@ -2681,15 +2825,22 @@ static u32 ndsMenuShellCssNetSync(void)
                 {
                     changed |= ndsMenuShellCssNetSlotIn(i, &slots[i], TRUE);
                 }
+                else
+                {
+                    /* Its own costume is the host's to resolve as well. */
+                    (void)ndsMNPlayersVSPreviewSetCostume(
+                        i, (s32)slots[i].fkind, (s32)slots[i].costume);
+                }
             }
             if ((team_battle != 0u) != (sCssIsTeamBattle != 0u))
             {
-                ndsMenuShellCssNetSetMode(team_battle);
+                ndsMenuShellCssNetSetTeamBattle(team_battle);
                 changed = TRUE;
             }
         }
         ndsMenuShellCssNetSlotOut((u32)NDS_CSS_CURSOR_SLOT, &mine);
         mine.pkind = (u8)nFTPlayerKindMan;
+        mine.costume = sCssNetCostumeReq;
         ndsNetLobbyGuestPropose(&mine);
     }
     if (changed != FALSE)
@@ -2715,9 +2866,16 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
         return;
     }
     if ((ndsMenuShellCssNetGuest() != FALSE) &&
+        (ndsNetLobbyPhase() == NDS_NET_PHASE_STAGE))
+    {
+        /* The host is choosing the stage: watch it (plan section 10). */
+        ndsMenuShellGoto((u32)nSCKindMaps);
+        return;
+    }
+    if ((ndsMenuShellCssNetGuest() != FALSE) &&
         (ndsNetLobbyPhase() != NDS_NET_PHASE_CSS))
     {
-        /* The host is choosing the stage: only leaving is allowed. */
+        /* The match is starting: only leaving is allowed. */
         if ((held & NDS_INPUT_B) != 0u)
         {
             if (++sCssBackTics >= (u32)NDS_CSS_BACK_HOLD_TICS)
@@ -3026,6 +3184,13 @@ static void ndsMenuShellCssInit(void)
 #endif
 #endif
     sCssNet = ndsNetInSession();
+    sCssNetArt = 0u;
+    sCssNetCostumeReq = 0u;
+    for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
+    {
+        sCssNetCursor[i] = 0u;
+        sCssNetCostumeSeen[i] = 0u;
+    }
     if (sCssNet != 0u)
     {
         ndsNetLobbyMatchOver();
