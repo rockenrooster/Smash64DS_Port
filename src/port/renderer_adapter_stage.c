@@ -7769,6 +7769,14 @@ volatile u32 gNdsStageDLFastLaneFills;
  * the list back to the body, which decides as before. */
 #define NDS_SDL_ROUTE_PIKACHU_THUNDER 0xf1u
 #define NDS_SDL_ROUTE_NESS_PKTHUNDER 0xf0u
+/* P2-2p8 (2026-10-07): a baked root under a Weapon GObj -- the Poke Ball
+ * monsters' weapons (Meowth's coins, Onix's rocks, Blastoise's water,
+ * Beedrill's swarm) and Master Hand's bullets, which draw their DObj trees
+ * through ndsWPDisplayDObjTree. The body's baked branch drew them and recorded
+ * no route, so every coin of a Pay Day paid the whole body (a Yoshi's Island
+ * sweep match: ~4.5 body submits a frame for 150 frames). The ground display's
+ * inputs: no item or effect seeds over the reset persistent stats. */
+#define NDS_SDL_ROUTE_BAKED_WEAPON 0xefu
 /* Yoshi's Island's capsules and boxes thrashed an 8-slot table (1,231 fills
  * for 1,469 hits a match): the owners are few, but a capsule alone draws three
  * roots, and its header and third root shared a slot under an address-bit
@@ -8248,6 +8256,7 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
          ((dobj->mobj != NULL) && (route->route != NDS_SDL_ROUTE_BAKED) &&
           (route->route != NDS_SDL_ROUTE_BAKED_ITEM) &&
           (route->route != NDS_SDL_ROUTE_BAKED_ROOM) &&
+          (route->route != NDS_SDL_ROUTE_BAKED_WEAPON) &&
           (route->route != NDS_SDL_ROUTE_CASTLE_BUMPER) &&
           (route->route != NDS_SDL_ROUTE_FFLOWER_LIVE) &&
           (route->route != NDS_SDL_ROUTE_NBUMPER) &&
@@ -8459,6 +8468,13 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
             return FALSE;
         }
         break;
+    case NDS_SDL_ROUTE_BAKED_WEAPON:
+        if ((owner->id != nGCCommonKindWeapon) ||
+            (sNdsRendererAdapterItemSubmitActive != FALSE))
+        {
+            return FALSE;
+        }
+        break;
 #if NDS_P2_1P_GAME
     case NDS_SDL_ROUTE_BAKED_ROOM:
         if ((sNdsRendererAdapterItemSubmitActive != FALSE) ||
@@ -8661,7 +8677,8 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
     u32 lab_offscreen = cpuGetTiming();
     sb32 lab_culled = ((route_kind == NDS_SDL_ROUTE_BAKED) ||
          (route_kind == NDS_SDL_ROUTE_BAKED_ITEM) ||
-         (route_kind == NDS_SDL_ROUTE_BAKED_ROOM)) &&
+         (route_kind == NDS_SDL_ROUTE_BAKED_ROOM) ||
+         (route_kind == NDS_SDL_ROUTE_BAKED_WEAPON)) &&
         (ndsNativeBakedRootOffscreen((const void *)(uintptr_t)route->root,
                                      &config) != FALSE);
     NDS_DIAG(gNdsLabBakedAcc[0] += cpuGetTiming() - lab_offscreen);
@@ -8670,7 +8687,8 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
 #else
     if (((route_kind == NDS_SDL_ROUTE_BAKED) ||
          (route_kind == NDS_SDL_ROUTE_BAKED_ITEM) ||
-         (route_kind == NDS_SDL_ROUTE_BAKED_ROOM)) &&
+         (route_kind == NDS_SDL_ROUTE_BAKED_ROOM) ||
+         (route_kind == NDS_SDL_ROUTE_BAKED_WEAPON)) &&
         (ndsNativeBakedRootOffscreen((const void *)(uintptr_t)route->root,
                                      &config) != FALSE))
 #endif
@@ -9008,7 +9026,8 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
     }
     else if ((route_kind == NDS_SDL_ROUTE_BAKED) ||
              (route_kind == NDS_SDL_ROUTE_BAKED_ITEM) ||
-             (route_kind == NDS_SDL_ROUTE_BAKED_ROOM))
+             (route_kind == NDS_SDL_ROUTE_BAKED_ROOM) ||
+             (route_kind == NDS_SDL_ROUTE_BAKED_WEAPON))
     {
         /* The body's baked branch: the DObj's MObjs in order are the root's
          * live segment-E materials. */
@@ -14935,6 +14954,15 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                 {
                     ndsStageDLRouteRecord(dl, loaded, (u32)(uintptr_t)baked,
                                           NDS_SDL_ROUTE_BAKED_ITEM);
+                    ndsStageDLRouteSlot(dl)->pad = (u8)baked_slots;
+                }
+                else if ((dobj->parent_gobj->id == nGCCommonKindWeapon) &&
+                         (sNdsRendererAdapterItemSubmitActive == FALSE) &&
+                         (sNdsRendererAdapterEffectSubmitActive == FALSE) &&
+                         (sNdsRendererAdapterStagePersistentActive != FALSE))
+                {
+                    ndsStageDLRouteRecord(dl, loaded, (u32)(uintptr_t)baked,
+                                          NDS_SDL_ROUTE_BAKED_WEAPON);
                     ndsStageDLRouteSlot(dl)->pad = (u8)baked_slots;
                 }
 #if NDS_P2_1P_GAME
