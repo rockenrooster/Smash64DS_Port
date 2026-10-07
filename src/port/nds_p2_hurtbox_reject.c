@@ -785,13 +785,22 @@ static int ndsP2HbLocalLock(NDSR2CfxMtx *dst, int32_t nscale[3],
             {
                 return 0;
             }
-            s = (int32_t)(((int64_t)s * parent[row]) >> 16);
-            if (s <= 0)
+            /* A unit parent scale (most of a lock chain) leaves s as it is
+             * and has the reciprocal 2^16 exactly: no divide. */
+            if (parent[row] == (INT32_C(1) << 16))
             {
-                return 0;
+                inv[row] = INT32_C(1) << 16;
             }
-            inv[row] = (int32_t)NDS_R2_CFX_DIV64((int64_t)1 << 32,
-                                                 parent[row]);
+            else
+            {
+                s = (int32_t)(((int64_t)s * parent[row]) >> 16);
+                if (s <= 0)
+                {
+                    return 0;
+                }
+                inv[row] = (int32_t)NDS_R2_CFX_DIV64((int64_t)1 << 32,
+                                                     parent[row]);
+            }
         }
         nscale[row] = s;
     }

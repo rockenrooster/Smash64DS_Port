@@ -299,6 +299,14 @@ SECTIONS {
 		 * a byte on Castle, Saffron and Yoshi's Island) and of
 		 * syMatrixTraRotRpyRScaF (no particle caller since the Q transform). */
 		*(.text.ndsMPFloorDistQ12)
+		/* Ninth pack (2026-10-07 Saffron / Sector Z over-gate censuses,
+		 * section D), sized for the gate ROM's 464 free bytes: the AI's Q12
+		 * coordinate edge, the shared float -> fixed edge and the contract's
+		 * project-target leaf, 1,300-3,700 non-mem stall cycles a byte, the
+		 * same size in the shipping and gate ELFs. */
+		*(.text.ndsComQ12)
+		*(.text.ndsF32ToFixed)
+		*(.text.ndsFighterDisplayContractProjectTarget)
 		*.itcm.* (.text .stub .text.* .gnu.linkonce.t.*)
 		/* P2-2p8 2026-09-27: calico's thread scheduler and word copy/fill run from
 		 * main RAM. The census rents them under 800 cycles a byte, and

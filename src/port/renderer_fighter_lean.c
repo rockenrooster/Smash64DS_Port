@@ -584,9 +584,14 @@ ndsFtrLeanLockLocal(DObj *dobj, s32 *accum, s32 *cells, u32 *has_local)
     scax_l = vec_x >> 8;
     scay_l = vec_y >> 8;
     scaz_l = vec_z >> 8;
-    scax_inv_l = (s32)ndsR2HwMathDivideFast((s64)1 << 24, inv_x);
-    scay_inv_l = (s32)ndsR2HwMathDivideFast((s64)1 << 24, inv_y);
-    scaz_inv_l = (s32)ndsR2HwMathDivideFast((s64)1 << 24, inv_z);
+    /* A unit parent scale (most of a lock chain) divides exactly to 256:
+     * no hardware divide. */
+    scax_inv_l = (inv_x == (1 << 16)) ? 256 :
+        (s32)ndsR2HwMathDivideFast((s64)1 << 24, inv_x);
+    scay_inv_l = (inv_y == (1 << 16)) ? 256 :
+        (s32)ndsR2HwMathDivideFast((s64)1 << 24, inv_y);
+    scaz_inv_l = (inv_z == (1 << 16)) ? 256 :
+        (s32)ndsR2HwMathDivideFast((s64)1 << 24, inv_z);
 
     /* lbCommonMatrixTraRotScaInv's 3x3, row-major at 16.16. */
     cells[0] = (((((cosy * cosz) >> 14) * scax_l) >> 8) * scax_inv_l) >> 8;
