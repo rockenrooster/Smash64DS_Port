@@ -22,6 +22,10 @@ up to eight coins against four fighters, +293K ticks a frame over the window bef
 weapon-vs-hurtbox tests inside the source's own hit_detect_range). Skipping each Yoshi's Island stage layer
 whole prices it at P95 -21K / -11K / -5K / -9K (layers 0-3, `2026-10-07_yoshi-layers`). N64 ground truth for
 visual rows: the vanilla ROM in mupen64plus, cheat-booted into a scene (`p2/BUG_NOTES.md`, Master Hand).
+Later on 10-07 (`p2/FOUR_FIGHTER_30FPS_ARCHITECTURE.md`, "what the P95 band is made of"): status changes (~60K ticks
+each, ~1 a P95-band frame vs 0.25 at the median, +47..+66K of the band on every stage) and hit detection (21-30% of
+the over-gate premium) are the common owners; both paths are already compact, so the remaining cuts are small.
+Motion reads after GO: 218 a match on Sector Z seed 1 (the done-criterion asks 0).
 
 ## Continue, do not restart
 

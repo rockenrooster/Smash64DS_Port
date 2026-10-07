@@ -1672,6 +1672,40 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   body still draws after this is ~3-60 calls a match. Pricing whole stage
   layers on Yoshi's Island (render economy, skip one owner): layers 0-3 P95
   -21K / -11K / -5K / -9K (`2026-10-07_yoshi-layers`).
+- **10-07 (later): what the P95 band is made of.** A clean lab ROM with the
+  SRC split (`2026-10-07_src-split`; note the clean ROM overwrites SHDT with
+  the particle-LOD calibration, so hit detection reads by subtraction) on the
+  six failing seeds: frames ranked 90-97.5% by WORK carry +178..+232K ticks of
+  SRC over the median band and +63..+135K of draw. Of the SRC premium,
+  interrupts without AI +28..+63K, params +13..+37K, physics +11..+25K, catch
+  +2..+5K, the rest (+68..+142K) hit detection and item/weapon/effect procs.
+  Two owners recur on every stage:
+  - **Status changes.** The sweep ROM's setter columns
+    (`2026-10-07_status-price`): ~700 a match, ~60K ticks each (the whole
+    setter; figatree install ~10K, the new clip's first play ~20K, resets
+    1-3K), 0.9-1.2 a frame in the P95 band against 0.2-0.3 at the median --
+    +47..+66K of the band premium on all six configs. A census split on
+    frames that ran the setter (Sector Z, zprof1007): pose parse +32K cycles
+    a frame, pose play +15.5K, bind +11.8K (CPI 5), the setter body +11.7K
+    (CPI 7.6), the subtree clear +8.6K, motion copies (memmove/memcpy) +15K,
+    spin-polls on in-flight motion reads +7.8K (CPI 16). Motion reads after
+    GO are not zero: Sector Z seed 1 makes 218 direct reads and 439 cache hits
+    a match, but the blocking storage wait is only ~77K ticks a match.
+  - **Hit detection.** Saffron's over-gate premium is 30% hurtbox work
+    (301K cycles a marked frame: rejects 70K, compose 42K, local builds 42K,
+    the walk 35K, damage memo 21K), Sector Z's 21% (161K, its Yoshi tests on
+    the narrow path). Lock fighters now take the box reject (`4a948bb9b1d`,
+    4xYoshi P95 -10..-13K); a memo of joint locals keyed on their transform
+    words lost everywhere (38% hits, P95 +9..+27K), kept as a note in the
+    kernel. The kernel's world slots gave 7.9 KB back to the heap.
+  - First-use texture conversions (6-10 frames a match: items, Saffron's
+    monsters, two common effect files near frame 220) now resolve each stored
+    value once (`6e6a8da755c`); the conversion frames drop 23-156K but sit
+    above P95 anyway (P99 smoothing).
+  The lean kernel compose (the largest symbol, ~52K ticks a frame) is
+  memory-bound: its per-joint DObj parent check and FTParts mode read lead,
+  the compose arithmetic is ~15-20%, so moving the compose to the GX matrix
+  stack would buy ~10K ticks a frame, not half.
 
 ## 7. Found along the way
 
