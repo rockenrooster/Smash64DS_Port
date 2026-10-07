@@ -73,14 +73,51 @@ typedef struct NDSP2HbWorld
      * takes only its own kind's entries. */
     u32 lock;
     int32_t nscale[3];
-    /* 1 = `frame` is this world's narrow-test frame (ndsP2HbDecidePoints):
-     * the cofactor inverse, with the lock walk's 1/nscale when `lock`. Reset
-     * wherever the world is (re)written, like inv_smin_q26. */
-    u32 frame_ok;
-    NDSR2CfxFrame frame;
+    /* Stamped from sNdsP2HbWorldGen each time the world is written: the
+     * narrow-test frame below is valid only for the write it was built
+     * from. */
+    u32 gen;
 } NDSP2HbWorld;
 
 static NDSP2HbWorld sNdsP2HbCache[NDS_P2_HB_CACHE_SLOTS];
+static u32 sNdsP2HbWorldGen;
+
+/* The narrow test's frame (ndsP2HbDecidePoints): the cofactor inverse of a
+ * slot's world, with the lock walk's 1/nscale when the slot is a lock world.
+ * Only the tests the reject cannot settle build one (a few a frame), so it
+ * lives in its own small cache rather than in every world slot (2026-10-07:
+ * it was 76 of each slot's 152 bytes, 9.7 KB of main RAM for the 128 slots).
+ * The key is the slot write it was built from, exactly as the per-slot flag
+ * it replaces was cleared on every write.
+ *
+ * Measured and dropped the same day: a memo of joint locals keyed on the
+ * DObj's nine transform words (68 entries, two ways). A heavy frame's ~100
+ * chain joints cycle through it every tick, so it hit 38% and every lookup
+ * paid its line fills: Saffron P95 +14K / +27K, every seed slower. */
+#define NDS_P2_HB_FRAME_SLOTS 16u
+typedef struct NDSP2HbFrameSlot
+{
+    const NDSP2HbWorld *slot;
+    u32 gen;
+    NDSR2CfxFrame frame;
+} NDSP2HbFrameSlot;
+static NDSP2HbFrameSlot sNdsP2HbFrames[NDS_P2_HB_FRAME_SLOTS];
+
+static inline NDSP2HbFrameSlot *ndsP2HbFrameSlot(const NDSP2HbWorld *slot)
+{
+    return &sNdsP2HbFrames[((u32)(uintptr_t)slot * 0x9E3779B1u) >> 28];
+}
+
+/* Tags a slot whose world was just written. */
+static inline void ndsP2HbTag(NDSP2HbWorld *slot, const DObj *dobj, u32 epoch,
+                              u32 lock)
+{
+    slot->dobj = dobj;
+    slot->epoch = epoch;
+    slot->inv_smin_q26 = 0;
+    slot->lock = lock;
+    slot->gen = ++sNdsP2HbWorldGen;
+}
 
 /* A world of this epoch for a DObj is in the slot its pointer hashes to. A
  * fighter's DObjs are 136 bytes apart, so (ptr >> 4) & 63 put a joint and the
@@ -278,6 +315,7 @@ static int ndsP2HbLocal(NDSR2CfxMtx *dst, const DObj *dobj,
     return ndsP2HbLocalFromDObj(dst, dobj);
 }
 
+
 #if NDS_P2_JOINT_RESIDENT
 /* ndsR2CfxCompose for the resident walk: dst = rhs carried into lhs, the
  * same products with truncating reductions (2^-26 a cell, far under the Q12
@@ -391,6 +429,24 @@ static int32_t ndsP2HbInvSMinOf(const NDSR2CfxMtx *w)
     return inv;
 }
 
+#if NDS_P2_JOINT_RESIDENT
+/* 1/min(nscale) at Q26, rounded up, for a lock joint's accumulated scale at
+ * Q16; the same [1/4, 4] range the row-scale guard above allows (so the box
+ * test's products keep their bounds). 0 = decline. */
+static int32_t ndsP2HbInvMinScaleOf(const int32_t nscale[3])
+{
+    int32_t m = nscale[0];
+
+    if (nscale[1] < m) { m = nscale[1]; }
+    if (nscale[2] < m) { m = nscale[2]; }
+    if ((m < (INT32_C(1) << 14)) || (m > (INT32_C(1) << 18)))
+    {
+        return 0;
+    }
+    return (int32_t)NDS_R2_CFX_DIV64((int64_t)1 << 42, m) + 1;
+}
+#endif
+
 static int ndsP2HbVec(int32_t out[3], const Vec3f *v)
 {
     out[0] = ndsR2CollisionF32ToFixed(v->x, NDS_R2_CFX_POS_BITS);
@@ -436,6 +492,7 @@ typedef struct NDSP2HbDamageMemo
     u32 box_valid;
     u32 box_epoch;
     const FTStruct *box_fp;
+    u32 box_lock; /* 1 = built from the lock walk's world */
     int32_t box_center[3];
     int32_t box_sum_abs[3];
     int32_t box_inv_smin;
@@ -625,11 +682,7 @@ static const NDSR2CfxMtx *ndsP2HbWorldOf(DObj *joint, NDSR2CfxMtx *scratch,
             {
                 return NULL;
             }
-            slot->dobj = cursor;
-            slot->epoch = epoch;
-            slot->inv_smin_q26 = 0;
-            slot->frame_ok = 0u;
-            slot->lock = 0u;
+            ndsP2HbTag(slot, cursor, epoch, 0u);
             acc = &slot->world;
             break;
         }
@@ -660,11 +713,7 @@ static const NDSR2CfxMtx *ndsP2HbWorldOf(DObj *joint, NDSR2CfxMtx *scratch,
         {
             return NULL;
         }
-        slot->dobj = cursor;
-        slot->epoch = epoch;
-        slot->inv_smin_q26 = 0;
-        slot->frame_ok = 0u;
-        slot->lock = 0u;
+        ndsP2HbTag(slot, cursor, epoch, 0u);
         acc = &slot->world;
     }
     *slot_out = slot;
@@ -876,11 +925,7 @@ static const NDSR2CfxMtx *ndsP2HbWorldOfLock(DObj *joint, NDSR2CfxMtx *scratch,
             {
                 return NULL;
             }
-            slot->dobj = cursor;
-            slot->epoch = epoch;
-            slot->inv_smin_q26 = 0;
-            slot->frame_ok = 0u;
-            slot->lock = 1u;
+            ndsP2HbTag(slot, cursor, epoch, 1u);
             acc = &slot->world;
             acc_scale = slot->nscale;
             break;
@@ -915,11 +960,7 @@ static const NDSR2CfxMtx *ndsP2HbWorldOfLock(DObj *joint, NDSR2CfxMtx *scratch,
         {
             slot->nscale[c] = scale[c];
         }
-        slot->dobj = cursor;
-        slot->epoch = epoch;
-        slot->inv_smin_q26 = 0;
-        slot->frame_ok = 0u;
-        slot->lock = 1u;
+        ndsP2HbTag(slot, cursor, epoch, 1u);
         acc = &slot->world;
         acc_scale = slot->nscale;
     }
@@ -1066,6 +1107,7 @@ static int ndsP2HbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
     int64_t ext0[3];
     int32_t radius;
     int32_t inv_smin;
+    u32 lock;
     u32 c;
 
     /* Every step below is a pure function of its inputs (the memos only
@@ -1079,8 +1121,9 @@ static int ndsP2HbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
     {
         return 0;
     }
-    if ((dm->box_valid != 0u) &&
-        (dm->box_epoch == epoch) && (dm->box_fp->is_use_animlocks == FALSE))
+    if ((dm->box_valid != 0u) && (dm->box_epoch == epoch) &&
+        (dm->box_lock ==
+         ((dm->box_fp->is_use_animlocks != FALSE) ? 1u : 0u)))
     {
         am = ndsP2HbAttackPoints(pos_curr, pos_prev, attack_size);
         if (am == NULL)
@@ -1102,34 +1145,77 @@ static int ndsP2HbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
         return 0;
     }
     fp = ftGetStruct(joint->parent_gobj);
-    if ((fp == NULL) || (fp->is_use_animlocks != FALSE))
+    if (fp == NULL)
     {
         return 0;
     }
+    lock = (fp->is_use_animlocks != FALSE) ? 1u : 0u;
+#if !NDS_P2_JOINT_RESIDENT
+    if (lock != 0u)
+    {
+        return 0;
+    }
+#endif
     am = ndsP2HbAttackPoints(pos_curr, pos_prev, attack_size);
     if (am == NULL)
     {
         return 0;
     }
-    w = ndsP2HbWorldOf(joint, &scratch, &slot);
-    if (w == NULL)
+#if NDS_P2_JOINT_RESIDENT
+    if (lock != 0u)
     {
-        return 0;
-    }
-    if ((slot != NULL) && (slot->inv_smin_q26 != 0))
-    {
-        inv_smin = slot->inv_smin_q26;
-    }
-    else
-    {
-        inv_smin = ndsP2HbInvSMinOf(w);
-        if (inv_smin <= 0)
+        /* The lock chain's world (2026-10-07; these tests all went to the
+         * narrow test before). The source divides the radius by the joint's
+         * accumulated scale there, not by the world's row lengths, so the
+         * radius term takes 1/min(nscale) in place of 1/s_min; the box test
+         * itself holds for any world. */
+        int32_t nscale[3];
+
+        w = ndsP2HbWorldOfLock(joint, &scratch, &slot, nscale);
+        if (w == NULL)
         {
             return 0;
         }
-        if (slot != NULL)
+        if ((slot != NULL) && (slot->inv_smin_q26 != 0))
         {
-            slot->inv_smin_q26 = inv_smin;
+            inv_smin = slot->inv_smin_q26;
+        }
+        else
+        {
+            inv_smin = ndsP2HbInvMinScaleOf(nscale);
+            if (inv_smin <= 0)
+            {
+                return 0;
+            }
+            if (slot != NULL)
+            {
+                slot->inv_smin_q26 = inv_smin;
+            }
+        }
+    }
+    else
+#endif
+    {
+        w = ndsP2HbWorldOf(joint, &scratch, &slot);
+        if (w == NULL)
+        {
+            return 0;
+        }
+        if ((slot != NULL) && (slot->inv_smin_q26 != 0))
+        {
+            inv_smin = slot->inv_smin_q26;
+        }
+        else
+        {
+            inv_smin = ndsP2HbInvSMinOf(w);
+            if (inv_smin <= 0)
+            {
+                return 0;
+            }
+            if (slot != NULL)
+            {
+                slot->inv_smin_q26 = inv_smin;
+            }
         }
     }
     ndsR2CfxTransformPoint(center, w, dm->off);
@@ -1156,6 +1242,7 @@ static int ndsP2HbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
     dm->box_valid = 1u;
     dm->box_epoch = epoch;
     dm->box_fp = fp;
+    dm->box_lock = lock;
     dm->box_inv_smin = inv_smin;
     for (c = 0u; c < 3u; c++)
     {
@@ -1167,6 +1254,12 @@ static int ndsP2HbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
                           am->p1) != 0)
     {
         return 1;
+    }
+    /* The local-frame test bounds radius / s_k by the world's row lengths,
+     * which are not a lock joint's divisor. */
+    if (lock != 0u)
+    {
+        return 0;
     }
     if (ndsP2HbRejectLocal(w, dm->off, dm->size, radius, am->p0,
                            am->p1) != 0)
@@ -1220,6 +1313,7 @@ static int ndsP2HbDecidePoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
     const NDSR2CfxMtx *w;
     const FTStruct *fp;
     NDSP2HbWorld *slot;
+    NDSP2HbFrameSlot *fs;
     NDSR2CfxMtx scratch;
     NDSR2CfxFrame frame;
     int result;
@@ -1255,9 +1349,10 @@ static int ndsP2HbDecidePoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
         u32 c;
 
         w = ndsP2HbWorldOfLock(damage->joint, &scratch, &slot, nscale);
-        if ((slot != NULL) && (slot->frame_ok != 0u))
+        fs = (slot != NULL) ? ndsP2HbFrameSlot(slot) : NULL;
+        if ((fs != NULL) && (fs->slot == slot) && (fs->gen == slot->gen))
         {
-            frame = slot->frame;
+            frame = fs->frame;
         }
         else
         {
@@ -1273,10 +1368,11 @@ static int ndsP2HbDecidePoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
                 frame.inv_scale[c] =
                     (int32_t)NDS_R2_CFX_DIV64((int64_t)1 << 42, nscale[c]);
             }
-            if (slot != NULL)
+            if (fs != NULL)
             {
-                slot->frame = frame;
-                slot->frame_ok = 1u;
+                fs->slot = slot;
+                fs->gen = slot->gen;
+                fs->frame = frame;
             }
         }
 #else
@@ -1287,9 +1383,10 @@ static int ndsP2HbDecidePoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
     else
     {
         w = ndsP2HbWorldOf(damage->joint, &scratch, &slot);
-        if ((slot != NULL) && (slot->frame_ok != 0u))
+        fs = (slot != NULL) ? ndsP2HbFrameSlot(slot) : NULL;
+        if ((fs != NULL) && (fs->slot == slot) && (fs->gen == slot->gen))
         {
-            frame = slot->frame;
+            frame = fs->frame;
         }
         else
         {
@@ -1298,10 +1395,11 @@ static int ndsP2HbDecidePoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
                 NDS_DIAG(gNdsP2HbNarrowDeclined++);
                 return -1;
             }
-            if (slot != NULL)
+            if (fs != NULL)
             {
-                slot->frame = frame;
-                slot->frame_ok = 1u;
+                fs->slot = slot;
+                fs->gen = slot->gen;
+                fs->frame = frame;
             }
         }
     }
