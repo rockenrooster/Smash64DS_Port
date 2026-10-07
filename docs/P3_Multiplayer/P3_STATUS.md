@@ -233,6 +233,7 @@ cells on every console (plan 7.1); a guest's own save is never written by it.
 | `gate-radio` | 1 | Plan section 12, P3-0C: the official four-fighter gate ROM built with `NDS_NET_LAB_GATE_RADIO`, measured with the switch off and on (on: the battle opens a room and runs the lockstep as a one-human net match, so every batch pumps the radio, sends its INPUT packet and folds the net digest; 1,961 batches). WORK-H P50 744,576 -> 767,488, P95 1,050,048 -> 1,068,672, two-VBlank share 96.8% -> 96.0%, replay digest identical over all 1,960 frames: the gate stays green with the radio running (`artifacts/performance/2026-10-07_p3-gate-radio`, local) |
 | `soak1`/`soak2` | 2 | `NDS_NET_LAB_SOAK` with the play-1007d digest: the rooms after a guest's Leave desynced -- Jungle at batch 297, Hyrule and Yoshi's Island at batches 0-1 -- while both consoles' setup heap size and use were identical (traced on both): the digest read bytes that depend on each console's history (the stage state union, the weapon pool's `lifetime`), which a Leave makes differ (the two consoles' last match ends on different ticks) |
 | `soak4` | 2 | The same soak with the stage union cleared per scene and weapon `lifetime` out of the digest: 19 rooms and 20 matches in 25 minutes, the roles swapped every room, lobby-only rooms, rematches and four guest Leaves: 30,051 digest compares, 0 desyncs, aborts only the four Leaves; libc heap at each VS Mode entry 1,027,176 B first and 1,042,736-1,044,032 B after (no growth) |
+| `soak5` | 2 | The same soak for 2 h 15 min: 107 rooms (each console host 53-54 times) and 110 matches over all nine VS stages, 26 guest Leaves: about 162,000 digest compares per console, 0 desyncs, aborts only the Leaves; setup heap identical on both consoles every room; libc heap at each VS Mode entry 1,027,176 B first and 1,042,464-1,045,200 B after (flat over two hours) |
 | `teams2` | 2 | Same sweep with the second layout set (the four-stock Stock match pairs the guest with a CPU) and the terminal-digest check: 10 matches plus 2 sudden deaths (one in a Team Battle), 20,719 digest compares, 0 desyncs; the guest took its CPU partner's stock 5 times over the link (`ifCommonPlayerStockStealMakeInterface`, thief 1); in the tenth match the guest held START: it left, the host ended the match as NO CONTEST (1 abort), dropped it from the room (human mask 0x1) and returned to the lobby |
 
 ## Open
@@ -254,5 +255,5 @@ cells on every console (plan 7.1); a guest's own save is never written by it.
   poisoned arenas, storage delays.
 - The net digest folds no AI state (plan 7.3 adds it only if a divergence
   ever escapes the current fields).
-- The 30-minute and 100-cycle lifecycle soaks in full (`NDS_NET_LAB_SOAK`;
-  25-minute runs so far, above).
+- The lifecycle soak ran 2 h 15 min and 107 rooms in the harness (`soak5`,
+  above); the same soak on hardware is part of the release set.

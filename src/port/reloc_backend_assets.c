@@ -17,6 +17,7 @@
 
 #include <nds/arm9/cache.h>
 #include <nds/generated/nds_fighter_production.generated.h>
+#include <nds/nds_p4.h>
 #include <nds/nds_battlepack_anim.h>
 #include <nds/nds_ifcommon_oam.h>
 #include <nds/nds_reloc_assets.h>
@@ -4061,6 +4062,12 @@ static s32 ndsRelocIsFighterAnimID(u32 asset_id)
     {
         return TRUE;
     }
+#if NDS_P4
+    if (ndsP4IsFighterAnim(asset_id) != FALSE)
+    {
+        return TRUE;
+    }
+#endif
 #if NDS_IMPORT_BATTLESHIP_VS_RESULTS
     /* Last, not first (2026-10-02): the demo table is a linear scan with a
      * token resolve per row, and a battle clip's id usually falls inside its
@@ -5449,6 +5456,14 @@ static u32 ndsRelocAssetIDForTokenChain(u32 token)
     if (token == NDS_RELOC_ASSET_MARIO_ANIM_WALK3) return NDS_RELOC_ASSET_MARIO_ANIM_WALK3;
     if (token == NDS_RELOC_ASSET_MARIO_ANIM_WALK_END) return NDS_RELOC_ASSET_MARIO_ANIM_WALK_END;
     if (ndsRelocIsMarioFoxAnimID(token) != FALSE) return token;
+#if NDS_P4
+    /* P4 descriptors carry plain numeric donor IDs (include/nds/nds_p4.h). */
+    if ((token >= 0x854u) && (token < 0x10000u) &&
+        (ndsP4RelocAssetPath(token) != NULL))
+    {
+        return token;
+    }
+#endif
     return NDS_RELOC_ASSET_INVALID;
 }
 
@@ -7430,6 +7445,9 @@ static s32 ndsRelocIsFighterAObj32Asset(u32 asset_id)
             (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_APPEAR2) ||
             (asset_id == NDS_RELOC_ASSET_FOX_ANIM_APPEAR) ||
             (asset_id == NDS_RELOC_ASSET_FOX_ANIM_ARWING) ||
+#if NDS_P4
+            (ndsP4IsFighterAnimEvent32(asset_id) != FALSE) ||
+#endif
             (ndsRelocIsGeneratedP2FighterAObj32Asset(asset_id) != FALSE)) ?
                TRUE : FALSE;
 }
@@ -9181,6 +9199,12 @@ static s32 ndsRelocNormalizeFighterAttributesFile(
         attr_offset = NDS_RELOC_SYMBOL_NNESS_MAIN_ATTRIBUTES;
     }
 #endif
+#if NDS_P4
+    /* P4 donor main files: same FTAttributes layout at the donor's offset. */
+    else if ((attr_offset = ndsP4MainAttributesOffset(loaded->asset_id)) != 0u)
+    {
+    }
+#endif
     else
     {
         return TRUE;
@@ -9363,7 +9387,13 @@ static s32 ndsRelocNormalizeFighterAttributesFile(
             (u32)offsetof(FTAttributes, fog_color) + 4u);
         loaded->format_fixups_applied = TRUE;
     }
-    if (ndsRelocFighterAttributesMatchSource(loaded->asset_id, attr) == FALSE)
+    if (
+#if NDS_P4
+        /* No BattleShip source table describes a donor; the generator's
+         * round-trip check is its source proof. */
+        (ndsP4MainAttributesOffset(loaded->asset_id) == 0u) &&
+#endif
+        (ndsRelocFighterAttributesMatchSource(loaded->asset_id, attr) == FALSE))
     {
         ndsRelocRecordExternalFixupFail(loaded->asset_id);
         return FALSE;

@@ -1039,6 +1039,15 @@ NDS_P2_NMARIO ?= 0
 # P2-3 fighter: NFox stays opt-in until his source specials, articles, native
 # owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
 NDS_P2_NFOX ?= 0
+# P4 (docs/P4/P4_STATUS.md): Smash Remix fighters, generated at build time from
+# the user's own ROM through the staged donor build (scripts/p4). Opt-in until
+# admitted; NDS_P4 follows any enabled content. The staging and export roots are
+# local, ignored build inputs prepared once by scripts/p4/stage_remix.py and
+# scripts/p4/remix_export.py.
+NDS_P4_FALCO ?= 0
+override NDS_P4 := $(if $(filter 1,$(NDS_P4_FALCO)),1,0)
+NDS_P4_STAGING ?= $(PROJECT_ROOT)/builds/p4-staging/remix-5e04fe7
+NDS_P4_EXPORT ?= $(PROJECT_ROOT)/builds/p4-staging/export
 # P2-3 fighter: NDonkey stays opt-in until his source specials, articles, native
 # owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
 NDS_P2_NDONKEY ?= 0
@@ -3942,6 +3951,10 @@ CFLAGS := -std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections \
 # follow-ons). The first 8 errors per TU still print, so real type/return/
 # implicit-declaration failures stay visible; only the tail is cut.
 CFLAGS += -include $(PROJECT_ROOT)/$(BUILD)/nds_build_config.h
+# P4 donor native owners: the build-local image header and runtime program.
+ifeq ($(NDS_P4_FALCO),1)
+CFLAGS += -I$(PROJECT_ROOT)/$(BUILD)/p4/falco/native
+endif
 # P3 build identity (plan 7.1): libnds's inline asserts embed their headers'
 # __FILE__, i.e. the devkitPro install path (C:/devkitPro/libnds/include/...),
 # so the same commit built with the toolchain installed elsewhere had another
@@ -4844,6 +4857,10 @@ CFILES += nds_ui_kit.c
 endif
 ifeq ($(NDS_P2_MENU_SHELL),1)
 CFILES += nds_menu_shell.c
+endif
+CFILES += nds_p4.c
+ifeq ($(NDS_P4_FALCO),1)
+CFILES += nds_p4_falco.c nds_p4_falco_data.c
 endif
 
 export LD := $(CC)
@@ -5976,6 +5993,17 @@ NDS_INISHIE_SCALE_RELOCDATA_FILES := \
 	155.vpk0.bin
 endif
 
+# P4 generated data (rules beside the import overlay's below).
+export NDS_P4_GEN := $(PROJECT_ROOT)/$(BUILD)/p4
+export NDS_NITROFS_P4_FILES :=
+ifeq ($(NDS_P4_FALCO),1)
+export NDS_P4_FALCO_GENERATED := $(NDS_P4_GEN)/falco/nds_p4_falco.generated.c
+export NDS_P4_FALCO_NITROFS_STAMP := $(NDS_P4_GEN)/falco/.nitrofs-staged
+NDS_NITROFS_P4_FILES += $(NDS_P4_FALCO_NITROFS_STAMP) \
+	$(NITROFS_DIR)/fighters/falco_high.bin $(NITROFS_DIR)/fighters/falco_low.bin
+export NDS_P4_FALCO_NATIVE := $(NDS_P4_GEN)/falco/native
+endif
+
 export NDS_NITROFS_RELOC_FILES := \
 	$(foreach file,$(NDS_STARTUP_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_OPENING_ROOM_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
@@ -7044,6 +7072,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_MMARIO $(NDS_P2_MMARIO)'; \
 		echo '#define NDS_P2_NMARIO $(NDS_P2_NMARIO)'; \
 		echo '#define NDS_P2_NFOX $(NDS_P2_NFOX)'; \
+		echo '#define NDS_P4 $(NDS_P4)'; \
+		echo '#define NDS_P4_FALCO $(NDS_P4_FALCO)'; \
 		echo '#define NDS_P2_NDONKEY $(NDS_P2_NDONKEY)'; \
 		echo '#define NDS_P2_NSAMUS $(NDS_P2_NSAMUS)'; \
 		echo '#define NDS_P2_NLUIGI $(NDS_P2_NLUIGI)'; \
@@ -7482,7 +7512,7 @@ endif
 # racing on the named AObj32 files in an incremental build.
 $(NDS_NITROFS_RELOC_FILES): | prune-streamed-ftanim
 
-$(OUTPUT).nds: prune-obsolete-audio prune-streamed-ftanim $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES) $(NDS_NITROFS_PARTICLE_FILES) $(NDS_NITROFS_EFFECT_FILES) $(NDS_NITROFS_FTANIM_FILES) $(NDS_NITROFS_BATTLEPACK_FILES) $(NDS_NITROFS_MN_UI_KIT_FILES) $(NDS_NITROFS_NATIVE_IMAGE_FILES) $(NDS_NITROFS_SHIELD_POSE_FILES) $(NDS_NITROFS_ADMISSION_FILES) $(NDS_BANNER_ICON)
+$(OUTPUT).nds: prune-obsolete-audio prune-streamed-ftanim $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_P4_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES) $(NDS_NITROFS_PARTICLE_FILES) $(NDS_NITROFS_EFFECT_FILES) $(NDS_NITROFS_FTANIM_FILES) $(NDS_NITROFS_BATTLEPACK_FILES) $(NDS_NITROFS_MN_UI_KIT_FILES) $(NDS_NITROFS_NATIVE_IMAGE_FILES) $(NDS_NITROFS_SHIELD_POSE_FILES) $(NDS_NITROFS_ADMISSION_FILES) $(NDS_BANNER_ICON)
 
 # All targets share this packaging boundary, including diagnostics and P1.
 # Audit actual link objects and their textual compiler inputs before ndstool.
@@ -7850,6 +7880,49 @@ $(NDS_BATTLESHIP_IMPORT_OVERLAY_STAMP): \
 		$(NDS_BATTLESHIP_IMPORT_OVERLAY_INPUTS)
 	pwsh -NoProfile -ExecutionPolicy Bypass -File "$(NDS_BATTLESHIP_IMPORT_OVERLAY_GENERATOR)" \
 		-OutputRoot "$(NDS_BATTLESHIP_IMPORT_OVERLAY)"
+
+# P4 Falco (docs/P4/P4_STATUS.md). The export and the generated data derive
+# from the user's ROM, so they live under the ignored build tree; the data TU
+# includes the generated file from NDS_P4_GEN, and the donor O2R containers
+# are staged into NitroFS beside the vanilla reloc files.
+ifeq ($(NDS_P4_FALCO),1)
+$(NDS_P4_EXPORT)/falco/resolved.json: $(NDS_P4_STAGING)/ssb64asm.z64 \
+		$(PROJECT_ROOT)/scripts/p4/remix_export.py $(PROJECT_ROOT)/scripts/p4/remix_rom.py
+	python "$(PROJECT_ROOT)/scripts/p4/remix_export.py" --staging "$(NDS_P4_STAGING)" \
+		--fighter FALCO --out "$(NDS_P4_EXPORT)/falco" --no-o2r
+$(NDS_P4_FALCO_GENERATED): $(NDS_P4_EXPORT)/falco/resolved.json \
+		$(PROJECT_ROOT)/scripts/p4/generate_p4_fighter.py $(PROJECT_ROOT)/scripts/p4/remix_rom.py
+	python "$(PROJECT_ROOT)/scripts/p4/generate_p4_fighter.py" --staging "$(NDS_P4_STAGING)" \
+		--export "$(NDS_P4_EXPORT)/falco" --out "$(NDS_P4_GEN)/falco"
+nds_p4_falco_data.o: $(NDS_P4_FALCO_GENERATED)
+nds_p4_falco_data.o: CFLAGS += -I$(NDS_P4_GEN)/falco
+$(NDS_P4_FALCO_NITROFS_STAMP): $(NDS_P4_FALCO_GENERATED)
+	@mkdir -p $(NITROFS_DIR)/reloc/p4
+	@cp $(NDS_P4_GEN)/falco/o2r/* $(NITROFS_DIR)/reloc/p4/
+	@touch $@
+# Falco's native owner: the existing owner generators, fed by
+# scripts/p4/p4_native_owner.py, emit his runtime program, image header and
+# two image TUs; the images become NitroFS payloads like every P2 owner's.
+$(NDS_P4_FALCO_NATIVE)/.stamp: $(NDS_P4_FALCO_GENERATED) \
+		$(PROJECT_ROOT)/scripts/p4/p4_native_owner.py $(PROJECT_ROOT)/scripts/p4/owners/falco.json \
+		$(PROJECT_ROOT)/scripts/fighters/generate_nds_native_owners.py \
+		$(PROJECT_ROOT)/scripts/fighters/generate_nds_native_owner_images.py
+	python "$(PROJECT_ROOT)/scripts/p4/p4_native_owner.py" --owner falco \
+		--o2r "$(NDS_P4_GEN)/falco/o2r" --attributes 0x474 --emit "$(NDS_P4_FALCO_NATIVE)"
+	@touch $@
+nds_renderer.o battleship_ftmanager.o: $(NDS_P4_FALCO_NATIVE)/.stamp
+$(BUILD)/native_image_falco_high.o: $(NDS_P4_FALCO_NATIVE)/.stamp $(NDS_BUILD_CONFIG)
+	@mkdir -p $(dir $@)
+	$(CC) -c $(CFLAGS) -I $(PROJECT_ROOT)/include -I $(BUILD) -I $(NDS_P4_FALCO_NATIVE) \
+		-o $@ $(NDS_P4_FALCO_NATIVE)/nds_native_fighter_falco_high.image.c
+$(BUILD)/native_image_falco_low.o: $(NDS_P4_FALCO_NATIVE)/.stamp $(NDS_BUILD_CONFIG)
+	@mkdir -p $(dir $@)
+	$(CC) -c $(CFLAGS) -I $(PROJECT_ROOT)/include -I $(BUILD) -I $(NDS_P4_FALCO_NATIVE) \
+		-o $@ $(NDS_P4_FALCO_NATIVE)/nds_native_fighter_falco_low.image.c
+$(NITROFS_DIR)/fighters/falco_%.bin: $(BUILD)/native_image_falco_%.o
+	@mkdir -p $(dir $@)
+	$(OBJCOPY) -O binary --only-section=.fighter_image $< $@
+endif
 
 $(NDS_BATTLESHIP_IMPORT_OVERLAY_OFILES): $(NDS_BATTLESHIP_IMPORT_OVERLAY_STAMP)
 

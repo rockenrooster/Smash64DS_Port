@@ -31,6 +31,9 @@ typedef struct NDSFighterDisplayContract {
     u32 active;
     u32 matrix_ready;
     u32 material_ready;
+#if NDS_P4
+    u32 skip_empty_dl;          /* P4 donor fighter: see SelectDL */
+#endif
 } NDSFighterDisplayContract;
 
 static NDSFighterDisplayContract sNdsFighterDisplayContract;
@@ -429,6 +432,7 @@ sb32 ndsFighterDisplayContractCheckTargetInBounds(f32 pos_x, f32 pos_y)
  * twelve source words are unchanged (once a frame for the game camera, which
  * every caller passes). */
 #include <stdint.h>
+#include <nds/nds_p4.h>
 #include <nds/nds_r2_collision_mtx.h>
 #include <nds/nds_r2_hwmath_unit.h>
 
@@ -615,6 +619,20 @@ void ndsFighterDisplayContractSelectDL(const Gfx *dl)
     {
         return;
     }
+#if NDS_P4
+    /* A Remix donor model can give a joint a list that is only G_ENDDL (its
+     * geometry rides in a neighbouring joint's list). It draws nothing, and
+     * the donor owner (generate_nds_native_owners.py, P4 donor mode) has no
+     * root for it, so it is no event either. The joint's matrix and material
+     * are consumed as an ordinary list would consume them. */
+    if ((sNdsFighterDisplayContract.skip_empty_dl != 0u) &&
+        ((((const u32 *)dl)[0] >> 24) == 0xdfu))
+    {
+        sNdsFighterDisplayContract.matrix_ready = FALSE;
+        sNdsFighterDisplayContract.material_ready = FALSE;
+        return;
+    }
+#endif
     if (sNdsFighterDisplayContract.event_count >=
         NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED)
     {
@@ -1244,6 +1262,10 @@ static void ndsFighterDisplayContractCapture(GObj *fighter_gobj)
     sNdsFighterDisplayContract.light_valid = FALSE;
     sNdsFighterDisplayContract.matrix_ready = FALSE;
     sNdsFighterDisplayContract.material_ready = FALSE;
+#if NDS_P4
+    sNdsFighterDisplayContract.skip_empty_dl =
+        ((fp != NULL) && (fp->nds_p4_content != 0u)) ? TRUE : FALSE;
+#endif
     if (sNdsFighterDisplayCurrentLightValid != 0u)
     {
         sNdsFighterDisplayContract.light = sNdsFighterDisplayCurrentLight;
@@ -3006,6 +3028,14 @@ static sb32 ndsFighterGetNativeOwnerSlot(const FTStruct *fp, u32 *owner_slot)
     {
         return FALSE;
     }
+#if NDS_P4_FALCO
+    /* P4: a donor draws its own model; fkind is its setup parent. */
+    if (fp->nds_p4_content == NDS_P4_CONTENT_FALCO)
+    {
+        *owner_slot = NDS_RENDERER_NATIVE_FIGHTER_OWNER_FALCO;
+        return TRUE;
+    }
+#endif
     if (fp->fkind == nFTKindMario)
     {
         *owner_slot = 0u;
@@ -3286,6 +3316,12 @@ static u32 ndsFighterNativeOwnerModelAssetId(u32 owner_slot)
         return 0x12fu; /* llNFoxModelFileID, BattleShip dFTNFoxData */
     }
 #endif
+#if NDS_P4_FALCO
+    if (owner_slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_FALCO)
+    {
+        return 0x8acu; /* Remix FALCO_CHARACTER, scripts/p4 */
+    }
+#endif
 #if NDS_P2_NDONKEY
     if (owner_slot == 15u)
     {
@@ -3435,6 +3471,12 @@ static NDSRendererProfileOwner ndsFighterNativeOwnerProfileId(u32 owner_slot)
     if (owner_slot == 14u)
     {
         return NDS_RENDERER_PROFILE_OWNER_NFOX;
+    }
+#endif
+#if NDS_P4_FALCO
+    if (owner_slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_FALCO)
+    {
+        return NDS_RENDERER_PROFILE_OWNER_FALCO;
     }
 #endif
 #if NDS_P2_NDONKEY

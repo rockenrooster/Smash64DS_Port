@@ -4493,6 +4493,17 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
         return TRUE;
     }
 #endif
+#if NDS_P4_FALCO
+    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_FALCO)
+    {
+        /* Image-backed: the bake reads and writes the image's own normals. */
+        sNdsNativeFighterActiveDenseNormals =
+            (u32 *)sNdsNativeFighterActiveTables->dense_normals;
+        sNdsNativeFighterActiveDenseNormalsBuilt =
+            &sNdsNativeImageDenseNormalsReady;
+        return TRUE;
+    }
+#endif
 #if NDS_P2_NDONKEY
     if (slot == 15u)
     {
@@ -17205,6 +17216,19 @@ static s32 ndsRendererNativeGetHierarchyTables(
             sizeof(sNdsNativeNFoxJointSchedule[0]);
     }
 #endif
+#if NDS_P4_FALCO
+    else if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_FALCO)
+    {
+        tables->roots = sNdsNativeFalcoRoots;
+        tables->schedule = sNdsNativeFalcoJointSchedule;
+        tables->binding_joints = sNdsNativeFalcoBindingJoints;
+        tables->cross_slots = sNdsNativeFalcoCrossPaletteSlots;
+        tables->root_count = sizeof(sNdsNativeFalcoRoots) /
+            sizeof(sNdsNativeFalcoRoots[0]);
+        tables->joint_count = sizeof(sNdsNativeFalcoJointSchedule) /
+            sizeof(sNdsNativeFalcoJointSchedule[0]);
+    }
+#endif
 #if NDS_P2_NDONKEY
     else if (slot == 15u)
     {
@@ -17644,6 +17668,14 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
         return sNdsNativeNFoxBindingParents;
     }
 #endif
+#if NDS_P4_FALCO
+    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_FALCO)
+    {
+        *count = (u32)(sizeof(sNdsNativeFalcoBindingParents) /
+                       sizeof(sNdsNativeFalcoBindingParents[0]));
+        return sNdsNativeFalcoBindingParents;
+    }
+#endif
 #if NDS_P2_NDONKEY
     if (slot == 15u)
     {
@@ -18015,6 +18047,14 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
         *count = (u32)(sizeof(sNdsNativeNFoxCrossPaletteSlots) /
                        sizeof(sNdsNativeNFoxCrossPaletteSlots[0]));
         return sNdsNativeNFoxCrossPaletteSlots;
+    }
+#endif
+#if NDS_P4_FALCO
+    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_FALCO)
+    {
+        *count = (u32)(sizeof(sNdsNativeFalcoCrossPaletteSlots) /
+                       sizeof(sNdsNativeFalcoCrossPaletteSlots[0]));
+        return sNdsNativeFalcoCrossPaletteSlots;
     }
 #endif
 #if NDS_P2_NDONKEY

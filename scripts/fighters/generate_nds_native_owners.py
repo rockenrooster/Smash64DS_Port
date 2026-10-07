@@ -309,6 +309,16 @@ def _owner_title(owner_name: str) -> str:
 # frozen Mario/Fox export above.  Keep O2R_ASSETS as the qualified P2-2 set --
 # several historical checks deliberately iterate it -- and use this superset
 # only for explicitly requested production-pipeline owners.
+# P4 donor owners (scripts/p4/p4_native_owner.py registers them at run time).
+# Donor models skin across joints the way the source does with DL pairs, but
+# without them: a joint's display list can END with a vertex load that the next
+# joint drawn consumes (its triangles mix those cache slots with its own). The
+# decoder keeps each such load as an ordinary action epoch with zero runs, so no
+# source cache write is dropped, deferred or reordered. A donor joint whose
+# display list is only G_ENDDL draws and loads nothing, exactly like a joint
+# without one, and is decoded as one.
+P4_DONOR_OWNERS: set[str] = set()
+
 P2_O2R_ASSETS = {
     **O2R_ASSETS,
     "luigi": (
@@ -1260,6 +1270,9 @@ def _owner_raw_joint_descriptors(
                 f"{owner_name} JointTree entry {descriptor_index}: "
                 f"display target 0x{display_offset:x} is out of range"
             )
+        if ((owner_name in P4_DONOR_OWNERS) and (display_offset is not None)
+                and (payload[display_offset] == SOURCE_END_DL)):
+            display_offset = None
         if (owner_name in OWNER_DL_PAIR_MODE) and (display_offset is not None):
             # The descriptor targets a dls[2] pair; the joint's own root is
             # the post-matrix slot. The pre-matrix slot is read back by
@@ -1792,6 +1805,19 @@ def _build_source_export_for_owners(
                        commands[command_index][0] in SOURCE_TRIANGLE_OPS):
                     command_index += 1
                 triangle_blocks.append((block_start, command_index))
+            if owner_name in P4_DONOR_OWNERS:
+                tail_cursor = triangle_blocks[-1][1] if triangle_blocks else 0
+                while True:
+                    first_load = next((index for index in range(tail_cursor, len(commands) - 1)
+                                       if commands[index][0] in SOURCE_ACTION_OPS), None)
+                    if first_load is None:
+                        break
+                    load_end = first_load + 1
+                    while load_end < len(commands) - 1 and \
+                            commands[load_end][0] in SOURCE_ACTION_OPS:
+                        load_end += 1
+                    triangle_blocks.append((load_end, load_end))
+                    tail_cursor = load_end
             if not triangle_blocks:
                 raise ValueError(f"{owner_name} root {root_index} has no triangles")
 
@@ -1878,10 +1904,11 @@ def _build_source_export_for_owners(
                             compact |= 0x8000
                         triangles.append(compact)
                         run_mask |= sum(1 << slot for slot in set(indices))
-                runs.append((
-                    run_first, len(triangles) - run_first,
-                    current_class, run_mask,
-                ))
+                if current_class is not None or owner_name not in P4_DONOR_OWNERS:
+                    runs.append((
+                        run_first, len(triangles) - run_first,
+                        current_class, run_mask,
+                    ))
                 epochs.append((
                     before_first, after_first, first_action, first_run,
                     before_count, after_count, before_sync, after_sync,

@@ -338,6 +338,100 @@ def _kirby_hat_type(modelpart_id: int, detail: str) -> str:
     return f"NDSNativeKirbyHat{modelpart_id}{detail.title()}Image"
 
 
+def render_owner_image_types(owner_name: str, detail: str,
+                             context: dict[str, object]) -> list[str]:
+    """One owner+detail's image struct, member counts and member lists.
+
+    Shared by the tracked header (render_header) and P4's build-local
+    header (scripts/p4/p4_native_owner.py), so a donor owner's image ABI is
+    described by the same code as the original cast's."""
+    lines: list[str] = []
+    members = _member_values(context)
+    type_name = _image_type(owner_name, detail)
+    lines += [
+        f"/* {_owner_title(owner_name)} {detail} native-owner image. */",
+        f"typedef struct {type_name}",
+        "{",
+        "    u32 abi_tag[1];",
+    ]
+    for ctype, name, values, guard in members:
+        if guard:
+            lines.append(f"#if {guard}")
+        lines.append(f"    {ctype} {name}[{len(values)}];")
+        if guard:
+            lines.append("#endif")
+    lines += [
+        f"}} {type_name};",
+        "",
+    ]
+    for ctype, name, values, guard in members:
+        macro = (f"NDS_NATIVE_IMAGE_{owner_name.upper()}_"
+                 f"{detail.upper()}_{name.upper()}_COUNT")
+        if guard:
+            lines.append(f"#if {guard}")
+        lines.append(f"#define {macro} {len(values)}u")
+        if guard:
+            lines.append("#endif")
+    lines.append("")
+    # The equivalence list: every member paired with the in-binary array
+    # it is a copy of, generated from the same description that generated
+    # the bytes so there is no hand-written second list to fall out of
+    # step when an array is added.
+    #
+    # A preprocessor directive cannot live inside a macro definition, so a
+    # guarded run of members becomes its OWN macro -- defined empty when
+    # its guard is false -- and the top-level list invokes it in place.
+    base_macro = (f"NDS_NATIVE_IMAGE_{owner_name.upper()}_"
+                  f"{detail.upper()}_MEMBERS")
+    # P2-3f49: dense_normals are BAKED, not copied. At VERIFY time the
+    # bake arrays are still empty (the bake runs lazily on first draw,
+    # after the fighter-creation VERIFY), so a byte compare against them
+    # would always false-mismatch. They ride a sibling macro whose row
+    # names the dense_vertices array the bake reads; the C side re-bakes
+    # from it and compares word for word.
+    normals_macro = f"{base_macro}_DENSE_NORMALS"
+    segments: list[tuple[str, list[str]]] = []
+    normals_rows: list[str] = []
+    for _ctype, name, _values, guard in members:
+        if name == "dense_normals":
+            normals_rows.append(
+                f"    X({type_name}, {name}, "
+                f"{_array_symbol(owner_name, detail, 'dense_vertices')})")
+            continue
+        row = (f"    X({type_name}, {name}, "
+               f"{_array_symbol(owner_name, detail, name)})")
+        if segments and segments[-1][0] == guard:
+            segments[-1][1].append(row)
+        else:
+            segments.append((guard, [row]))
+
+    top: list[str] = []
+    for index, (guard, rows) in enumerate(segments):
+        if not guard:
+            top.extend(rows)
+            continue
+        sub = f"{base_macro}_G{index}"
+        lines.append(f"#if {guard}")
+        lines.append(f"#define {sub}(X) \\")
+        for row_index, row in enumerate(rows):
+            tail = "" if row_index == len(rows) - 1 else " \\"
+            lines.append(row + tail)
+        lines.append("#else")
+        lines.append(f"#define {sub}(X)")
+        lines.append("#endif")
+        top.append(f"    {sub}(X)")
+    lines.append(f"#define {base_macro}(X) \\")
+    for row_index, row in enumerate(top):
+        tail = "" if row_index == len(top) - 1 else " \\"
+        lines.append(row + tail)
+    lines.append("")
+    lines.append(f"#define {normals_macro}(X) \\")
+    for row_index, row in enumerate(normals_rows):
+        tail = "" if row_index == len(normals_rows) - 1 else " \\"
+        lines.append(row + tail)
+    lines.append("")
+    return lines
+
 def render_header(
         contexts: dict[tuple[str, str], dict[str, object]],
         hat_contexts: dict[tuple[int, str], dict[str, object]],
@@ -512,90 +606,7 @@ def render_header(
         "",
     ]
     for (owner_name, detail), context in sorted(contexts.items()):
-        members = _member_values(context)
-        type_name = _image_type(owner_name, detail)
-        lines += [
-            f"/* {_owner_title(owner_name)} {detail} native-owner image. */",
-            f"typedef struct {type_name}",
-            "{",
-            "    u32 abi_tag[1];",
-        ]
-        for ctype, name, values, guard in members:
-            if guard:
-                lines.append(f"#if {guard}")
-            lines.append(f"    {ctype} {name}[{len(values)}];")
-            if guard:
-                lines.append("#endif")
-        lines += [
-            f"}} {type_name};",
-            "",
-        ]
-        for ctype, name, values, guard in members:
-            macro = (f"NDS_NATIVE_IMAGE_{owner_name.upper()}_"
-                     f"{detail.upper()}_{name.upper()}_COUNT")
-            if guard:
-                lines.append(f"#if {guard}")
-            lines.append(f"#define {macro} {len(values)}u")
-            if guard:
-                lines.append("#endif")
-        lines.append("")
-        # The equivalence list: every member paired with the in-binary array
-        # it is a copy of, generated from the same description that generated
-        # the bytes so there is no hand-written second list to fall out of
-        # step when an array is added.
-        #
-        # A preprocessor directive cannot live inside a macro definition, so a
-        # guarded run of members becomes its OWN macro -- defined empty when
-        # its guard is false -- and the top-level list invokes it in place.
-        base_macro = (f"NDS_NATIVE_IMAGE_{owner_name.upper()}_"
-                      f"{detail.upper()}_MEMBERS")
-        # P2-3f49: dense_normals are BAKED, not copied. At VERIFY time the
-        # bake arrays are still empty (the bake runs lazily on first draw,
-        # after the fighter-creation VERIFY), so a byte compare against them
-        # would always false-mismatch. They ride a sibling macro whose row
-        # names the dense_vertices array the bake reads; the C side re-bakes
-        # from it and compares word for word.
-        normals_macro = f"{base_macro}_DENSE_NORMALS"
-        segments: list[tuple[str, list[str]]] = []
-        normals_rows: list[str] = []
-        for _ctype, name, _values, guard in members:
-            if name == "dense_normals":
-                normals_rows.append(
-                    f"    X({type_name}, {name}, "
-                    f"{_array_symbol(owner_name, detail, 'dense_vertices')})")
-                continue
-            row = (f"    X({type_name}, {name}, "
-                   f"{_array_symbol(owner_name, detail, name)})")
-            if segments and segments[-1][0] == guard:
-                segments[-1][1].append(row)
-            else:
-                segments.append((guard, [row]))
-
-        top: list[str] = []
-        for index, (guard, rows) in enumerate(segments):
-            if not guard:
-                top.extend(rows)
-                continue
-            sub = f"{base_macro}_G{index}"
-            lines.append(f"#if {guard}")
-            lines.append(f"#define {sub}(X) \\")
-            for row_index, row in enumerate(rows):
-                tail = "" if row_index == len(rows) - 1 else " \\"
-                lines.append(row + tail)
-            lines.append("#else")
-            lines.append(f"#define {sub}(X)")
-            lines.append("#endif")
-            top.append(f"    {sub}(X)")
-        lines.append(f"#define {base_macro}(X) \\")
-        for row_index, row in enumerate(top):
-            tail = "" if row_index == len(top) - 1 else " \\"
-            lines.append(row + tail)
-        lines.append("")
-        lines.append(f"#define {normals_macro}(X) \\")
-        for row_index, row in enumerate(normals_rows):
-            tail = "" if row_index == len(normals_rows) - 1 else " \\"
-            lines.append(row + tail)
-        lines.append("")
+        lines += render_owner_image_types(owner_name, detail, context)
     lines += [
         "/* Kirby copy hats. Each copy_modelpart_id/detail is its own NitroFS",
         " * image so the copy beat reads only the detail this match executes. */",

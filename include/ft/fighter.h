@@ -3890,6 +3890,9 @@ typedef struct FTStruct {
     u32 nds_init_mask;
     u32 nds_init_floor_project_attempted;
     u32 nds_init_floor_project_result;
+    /* P4 (include/nds/nds_p4.h): 1-based Remix content, 0 = original cast.
+     * fkind stays the donor's setup parent. */
+    u32 nds_p4_content;
 } FTStruct;
 
 typedef struct FTCamera {
@@ -3899,7 +3902,7 @@ typedef struct FTCamera {
 } FTCamera;
 
 #define NDS_FTSTRUCT_SOURCE_SIZE 2896u
-#define NDS_FTSTRUCT_LAYOUT_SIZE 3012u
+#define NDS_FTSTRUCT_LAYOUT_SIZE 3016u
 #define NDS_FTSTRUCT_OFF_NEXT 0u
 #define NDS_FTSTRUCT_OFF_FIGHTER_GOBJ 4u
 #define NDS_FTSTRUCT_OFF_FKIND 8u

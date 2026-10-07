@@ -248,7 +248,59 @@ static void ndsLabTimedAddFigatree(DObj *root_dobj, void *figatree,
 #define ftMainProcUpdateInterrupt battleship_ftMainProcUpdateInterrupt
 #define ftMainProcPhysicsMapDefault battleship_ftMainProcPhysicsMapDefault
 #define ftMainProcPhysicsMapCapture battleship_ftMainProcPhysicsMapCapture
+#if NDS_P4
+/* P4: Remix's custom motion commands (first byte 0xD0+, src/Command.asm) are
+ * executed where Remix executes them -- at the event-kind read of each motion
+ * loop (load_command_ / load_command_2_). In this TU every read of a command
+ * word goes through ftMotionEventCast with FTMotionEventDefault or
+ * FTMotionEventMakeEffect1; every other cast reads an operand word, which may
+ * legitimately begin with 0xD0+ and must stay a plain cast. The two
+ * fast-forward loops are the only enclosing functions whose names are 32 and
+ * 38 bytes long, which is how the cursor knows to use Remix's second table. */
+#include <nds/nds_p4.h>
+#undef ftMotionEventCast
+#define ftMotionEventCast(event, type) NDS_P4_EVCAST_##type(event, type)
+#define NDS_P4_EVCAST_CURSOR(event, type)                                    \
+    ((type *)ndsP4MotionEventCursor(fighter_gobj, (event),                  \
+                                    (sizeof(__func__) == 32u) ||            \
+                                    (sizeof(__func__) == 38u)))
+#define NDS_P4_EVCAST_PLAIN(event, type) ((type *)(event)->p_script)
+#define NDS_P4_EVCAST_FTMotionEventDefault NDS_P4_EVCAST_CURSOR
+#define NDS_P4_EVCAST_FTMotionEventMakeEffect1 NDS_P4_EVCAST_CURSOR
+#define NDS_P4_EVCAST_FTMotionEventGoto2 NDS_P4_EVCAST_PLAIN
+#define NDS_P4_EVCAST_FTMotionEventMakeAttack1 NDS_P4_EVCAST_PLAIN
+#define NDS_P4_EVCAST_FTMotionEventMakeAttack2 NDS_P4_EVCAST_PLAIN
+#define NDS_P4_EVCAST_FTMotionEventMakeAttack3 NDS_P4_EVCAST_PLAIN
+#define NDS_P4_EVCAST_FTMotionEventMakeAttack4 NDS_P4_EVCAST_PLAIN
+#define NDS_P4_EVCAST_FTMotionEventMakeAttack5 NDS_P4_EVCAST_PLAIN
+#define NDS_P4_EVCAST_FTMotionEventMakeEffect2 NDS_P4_EVCAST_PLAIN
+#define NDS_P4_EVCAST_FTMotionEventMakeEffect3 NDS_P4_EVCAST_PLAIN
+#define NDS_P4_EVCAST_FTMotionEventMakeEffect4 NDS_P4_EVCAST_PLAIN
+#define NDS_P4_EVCAST_FTMotionEventMakeRumble NDS_P4_EVCAST_PLAIN
+#define NDS_P4_EVCAST_FTMotionEventParallel2 NDS_P4_EVCAST_PLAIN
+#define NDS_P4_EVCAST_FTMotionEventSetAfterImage NDS_P4_EVCAST_PLAIN
+#define NDS_P4_EVCAST_FTMotionEventSetAttackCollDamage NDS_P4_EVCAST_PLAIN
+#define NDS_P4_EVCAST_FTMotionEventSetAttackCollSize NDS_P4_EVCAST_PLAIN
+#define NDS_P4_EVCAST_FTMotionEventSetAttackCollSound NDS_P4_EVCAST_PLAIN
+#define NDS_P4_EVCAST_FTMotionEventSetAttackOffset1 NDS_P4_EVCAST_PLAIN
+#define NDS_P4_EVCAST_FTMotionEventSetAttackOffset2 NDS_P4_EVCAST_PLAIN
+#define NDS_P4_EVCAST_FTMotionEventSetColAnimID NDS_P4_EVCAST_PLAIN
+#define NDS_P4_EVCAST_FTMotionEventSetDamageCollPartID1 NDS_P4_EVCAST_PLAIN
+#define NDS_P4_EVCAST_FTMotionEventSetDamageCollPartID2 NDS_P4_EVCAST_PLAIN
+#define NDS_P4_EVCAST_FTMotionEventSetDamageCollPartID3 NDS_P4_EVCAST_PLAIN
+#define NDS_P4_EVCAST_FTMotionEventSetDamageCollPartID4 NDS_P4_EVCAST_PLAIN
+#define NDS_P4_EVCAST_FTMotionEventSetDamageThrown2 NDS_P4_EVCAST_PLAIN
+#define NDS_P4_EVCAST_FTMotionEventSetHitStatusPartID NDS_P4_EVCAST_PLAIN
+#define NDS_P4_EVCAST_FTMotionEventSetModelPartID NDS_P4_EVCAST_PLAIN
+#define NDS_P4_EVCAST_FTMotionEventSetTexturePartID NDS_P4_EVCAST_PLAIN
+#define NDS_P4_EVCAST_FTMotionEventSetThrow2 NDS_P4_EVCAST_PLAIN
+#define NDS_P4_EVCAST_FTMotionEventSubroutine2 NDS_P4_EVCAST_PLAIN
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftmain.c"
+#if NDS_P4
+#undef ftMotionEventCast
+#define ftMotionEventCast(event, type) ((type *)(event)->p_script)
+#endif
 #undef ftMainCheckGetUpdateDamage
 #undef ftMainPlayHitSFX
 #undef ftMainUpdateDamageStatFighter
@@ -337,11 +389,23 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
     nds_topology_fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
     nds_topology_word = (nds_topology_fp != NULL) ?
         nds_topology_fp->anim_desc.word : 0xffffffffu;
+#if NDS_P4
+    if (nds_topology_fp != NULL)
+    {
+        ndsP4OnSetStatus(fighter_gobj);
+    }
+#endif
     battleship_ftMainSetStatus(fighter_gobj, status_id, frame_begin,
                                anim_speed, flags);
     if (nds_topology_fp != NULL)
     {
         nds_topology_word |= nds_topology_fp->anim_desc.word;
+#if NDS_P4
+        if (nds_topology_fp->nds_p4_content != 0u)
+        {
+            ndsP4ApplyStatusOverrides(fighter_gobj, status_id);
+        }
+#endif
     }
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP && \
     NDS_TICK_HUD && !NDS_TICK_HUD_SRC_SPLIT

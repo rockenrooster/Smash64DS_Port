@@ -2,6 +2,24 @@
 
 #include <ft/fighter.h>
 
+#if NDS_P4_FALCO
+/* P4 Falco runs this code with fkind == Fox. Falco.asm patches three Fox
+ * constants for him: up_special_delay_ (launch delay 0x16, not 35) and
+ * up_special_velocity_1/2/3_ (98.0, not 115.0). Two of the velocity sites read
+ * FTFOX_FIREFOX_VEL; the grounded one in ftFoxSpecialHiDecideSetStatus is a
+ * literal 115.0F, rewritten by the angle call that immediately follows it. */
+#include <nds/nds_p4.h>
+#include <sys/utils.h> /* declare the real syUtilsArcTan2 before the hook */
+s32 ndsP4FoxFirefoxLaunchDelay(const FTStruct *fp, s32 fox_delay);
+f32 ndsP4FoxFirefoxVel(const FTStruct *fp, f32 fox_vel);
+f32 ndsP4FoxSpecialHiArcTan2(FTStruct *fp, f32 y, f32 x, sb32 is_ground_launch);
+#define FTFOX_FIREFOX_LAUNCH_DELAY ndsP4FoxFirefoxLaunchDelay(fp, 35)
+#define FTFOX_FIREFOX_VEL ndsP4FoxFirefoxVel(fp, 115.0F)
+#define syUtilsArcTan2(y, x)                                                  \
+    ndsP4FoxSpecialHiArcTan2(fp, (y), (x),                                    \
+        sizeof(__func__) == sizeof("ftFoxSpecialHiDecideSetStatus"))
+#endif
+
 #ifndef FTFOX_FIREFOX_LAUNCH_DELAY
 #define FTFOX_FIREFOX_LAUNCH_DELAY 35
 #endif
@@ -54,5 +72,8 @@ void ftFoxSpecialAirHiBoundSetStatus(GObj *fighter_gobj);
 void ftFoxSpecialAirHiEndSwitchStatusGround(GObj *fighter_gobj);
 
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftfox/ftfoxspecialhi.c"
+#if NDS_P4_FALCO
+#undef syUtilsArcTan2
+#endif
 
 #endif

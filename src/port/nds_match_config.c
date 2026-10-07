@@ -26,6 +26,7 @@
 
 #include <ft/fighter.h>
 #include <if/interface.h>
+#include <nds/nds_p4.h>
 #include <nds/nds_match_config.h>
 #include <nds/nds_scene_harness.h>
 #include <sc/scene.h>
@@ -207,6 +208,11 @@ volatile u32 gNdsLabFourCpuCostumes __attribute__((used)) = 0xffffffffu;
  * Ball Pokemon on screen for an owner capture. */
 volatile u32 gNdsLabItemToggles __attribute__((used));
 volatile u32 gNdsLabItemRate __attribute__((used)) = 0xffu;
+#if NDS_P4
+/* Boot-poked P4 content, one byte a slot (0 = the slot's own kind): the slot
+ * becomes that content on its setup parent (include/nds/nds_p4.h). */
+volatile u32 gNdsLabP4Content __attribute__((used));
+#endif
 #endif
 
 void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
@@ -491,6 +497,18 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
             {
                 cfg->fighters[slot].fkind = (FTKind)kind;
             }
+#if NDS_P4
+            {
+                u32 content = (gNdsLabP4Content >> (slot * 8u)) & 0xffu;
+                const NDSP4Fighter *p4 = ndsP4Fighter(content);
+
+                gNdsP4PlayerContent[slot] = (p4 != NULL) ? (u8)content : 0u;
+                if (p4 != NULL)
+                {
+                    cfg->fighters[slot].fkind = (FTKind)p4->parent_kind;
+                }
+            }
+#endif
             if (color > 3u)
             {
                 u32 earlier;

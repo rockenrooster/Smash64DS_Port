@@ -11,7 +11,9 @@ motivated the slice. The converged result section records the landed layout.
   order, types, and nesting through `display_mode`.
 - The source-layout region is frozen at `NDS_FTSTRUCT_SOURCE_SIZE == 2896`.
 - Port-only DS/proof extensions begin after the source region at offset `2896`
-  and the complete port struct is frozen at `sizeof(FTStruct) == 3012`.
+  and the complete port struct is frozen at `sizeof(FTStruct) == 3016`
+  (3012 until P4 appended `nds_p4_content`, the Remix content of a fighter
+  whose `fkind` is its donor's setup parent; `include/nds/nds_p4.h`).
 - Permanent `_Static_assert` guards now cover the shared fighter fields touched
   by imported TUs: `status_id`, `motion_id`, `percent_damage`, `hitlag_tics`,
   `physics`, `coll_data`, `motion_vars`, `input`, `computer`,

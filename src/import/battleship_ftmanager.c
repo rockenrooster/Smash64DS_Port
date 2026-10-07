@@ -28,6 +28,7 @@
 #include <nds/nds_shield_pose.h>
 #include <nds/generated/nds_fighter_production.generated.h>
 #include <nds/generated/nds_native_fighter_image.generated.h>
+#include <nds/nds_p4_native.h>
 
 #ifndef _LIBRARY_H_
 #define _LIBRARY_H_
@@ -107,6 +108,16 @@ static void *ndsFTManagerPoolMalloc(size_t size, u32 align)
 #elif NDS_P2_1P_GAME
 #define syTaskmanMalloc ndsFTManagerHeapMalloc
 #endif
+#if NDS_P4
+/* P4 (include/nds/nds_p4.h): a Remix fighter constructs through its setup
+ * parent's kind, so every dFTManagerDataFiles[fkind] read in this TU goes
+ * through a view that is the source array except while one P4 player's files
+ * or fighter are being built, when the parent's row is that content's FTData. */
+#include <nds/nds_p4.h>
+static FTData **const sNdsP4FtDataReal = dFTManagerDataFiles;
+static FTData **sNdsP4FtDataView = dFTManagerDataFiles;
+#define dFTManagerDataFiles sNdsP4FtDataView
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftmanager.c"
 #if NDS_P2_ARM9_WRAM || NDS_P2_1P_GAME
 #undef syTaskmanMalloc
@@ -176,6 +187,17 @@ void ftManagerAllocFighter(u32 data_flags, s32 allocs_num)
     sNdsFTManagerPoolToWram = 1u;
 #endif
     ndsBaseFTManagerAllocFighter(data_flags, allocs_num);
+#if NDS_P4
+    {
+        s32 i;
+
+        for (i = 0; i < allocs_num; i++)
+        {
+            sFTManagerStructsAllocBuf[i].nds_p4_content = 0u;
+        }
+        ndsP4SetupFileSizes(data_flags);
+    }
+#endif
 #if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS || NDS_P2_1P_GAME
     /* Both VS entries (battle and Sudden Death) come through here before
      * their player loop allocates a figatree heap or makes a fighter. */
@@ -327,8 +349,48 @@ static void ndsFTManagerSetupCompactBattleFilesKind(s32 fkind)
 }
 #endif
 
+#if NDS_P4
+/* A P4 child loads through the source loader (its files are not in the
+ * parent's battle-core or preview packs), with its FTData standing in for the
+ * parent's row; then its menu-motion scripts are rebased onto the motion file
+ * that loader just published. */
+static void ndsP4SetupFilesForParent(s32 fkind)
+{
+    u32 done = 0u;
+    s32 player;
+
+    for (player = 0; player < GMCOMMON_PLAYERS_MAX; player++)
+    {
+        u32 content = gNdsP4PlayerContent[player];
+        const NDSP4Fighter *f = ndsP4Fighter(content);
+        FTData *view[nFTKindEnumCount + 1];
+
+        if ((f == NULL) || (f->parent_kind != fkind) ||
+            ((done & (1u << content)) != 0u))
+        {
+            continue;
+        }
+        done |= 1u << content;
+        memcpy(view, sNdsP4FtDataReal, sizeof(view));
+        view[fkind] = f->data;
+        sNdsP4FtDataView = view;
+        ndsBaseFTManagerSetupFilesAllKind(fkind);
+        sNdsP4FtDataView = sNdsP4FtDataReal;
+        ndsEFManagerRetryDeferredDescs();
+        ndsP4BindMenuScripts(content);
+    }
+}
+#endif
+
 void ftManagerSetupFilesAllKind(s32 fkind)
 {
+#if NDS_P4
+    ndsP4SetupFilesForParent(fkind);
+    if (ndsP4ParentFilesNeeded(fkind) == FALSE)
+    {
+        return;
+    }
+#endif
 #if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
     s32 preview = ndsRelocLoadPreviewFighter(fkind);
     if (preview != FALSE)
@@ -636,6 +698,21 @@ static u32 ndsFTManagerImageSlotForKind(s32 fkind)
     return image_slot;
 }
 
+/* P4: a player's content picks its image before its (parent) kind does. */
+static u32 ndsFTManagerImageSlotForPlayer(s32 player, s32 fkind)
+{
+#if NDS_P4_FALCO
+    if ((player >= 0) && (player < GMCOMMON_PLAYERS_MAX) &&
+        (gNdsP4PlayerContent[player] == NDS_P4_CONTENT_FALCO))
+    {
+        return NDS_NATIVE_IMAGE_SLOT_FALCO;
+    }
+#else
+    (void)player;
+#endif
+    return ndsFTManagerImageSlotForKind(fkind);
+}
+
 #if NDS_P2_1P_GAME
 /* Polygon image pool eviction (nds_renderer_assets.c): does a linked fighter
  * still name this image slot? sc1PGameSpawnEnemyTeamNext makes the next
@@ -652,7 +729,9 @@ u32 ndsFTManagerOwnerImageSlotLive(u32 image_slot)
         FTStruct *fp = ftGetStruct(fighter_gobj);
 
         if ((fp != NULL) &&
-            (ndsFTManagerImageSlotForKind(fp->fkind) == image_slot))
+            (((fp->nds_p4_content != 0u) ?
+                  ndsFTManagerImageSlotForPlayer(fp->player, fp->fkind) :
+                  ndsFTManagerImageSlotForKind(fp->fkind)) == image_slot))
         {
             return TRUE;
         }
@@ -688,9 +767,10 @@ void ndsFTManagerEnsureOwnerImages(FTDesc *desc)
      * display scenes retain both unless their source fixes a single detail. */
     if (desc != NULL)
     {
-        u32 image_slot = ndsFTManagerImageSlotForKind(desc->fkind);
+        u32 image_slot = ndsFTManagerImageSlotForPlayer(desc->player,
+                                                        desc->fkind);
 
-        if (image_slot < NDS_NATIVE_IMAGE_OWNER_SLOTS)
+        if (image_slot < NDS_NATIVE_IMAGE_OWNER_SLOTS_ALL)
         {
             u32 first_detail = 0u;
             /* High-detail VS and Results fighters never select low detail.
@@ -775,10 +855,10 @@ static void ndsFTManagerPreloadVSOwnerImagesLargestFirst(void)
         {
             continue;
         }
-        slot = ndsFTManagerImageSlotForKind(
-            gSCManagerBattleState->players[player].fkind);
+        slot = ndsFTManagerImageSlotForPlayer(
+            player, gSCManagerBattleState->players[player].fkind);
         order[count] = player;
-        bytes[count] = (slot < NDS_NATIVE_IMAGE_OWNER_SLOTS) ?
+        bytes[count] = (slot < NDS_NATIVE_IMAGE_OWNER_SLOTS_ALL) ?
             (ndsRendererNativeOwnerImageSize(slot, 0u) +
              ((ndsFTManagerPreloadDetail(player, high) ==
                (u32)nFTPartsDetailHigh) ?
@@ -941,7 +1021,28 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
          * object allocations below: they take WRAM slots. */
         ndsGcDonateFighterObjs();
 #endif
+#if NDS_P4
+        {
+            FTData *p4 = (desc != NULL) ? ndsP4PlayerData(desc->player) : NULL;
+            FTData *view[nFTKindEnumCount + 1];
+
+            if (p4 != NULL)
+            {
+                memcpy(view, sNdsP4FtDataReal, sizeof(view));
+                view[desc->fkind] = p4;
+                sNdsP4FtDataView = view;
+            }
+            fighter_gobj = ndsBaseFTManagerMakeFighter(desc);
+            sNdsP4FtDataView = sNdsP4FtDataReal;
+            if (fighter_gobj != NULL)
+            {
+                ftGetStruct(fighter_gobj)->nds_p4_content =
+                    (p4 != NULL) ? gNdsP4PlayerContent[desc->player] : 0u;
+            }
+        }
+#else
         fighter_gobj = ndsBaseFTManagerMakeFighter(desc);
+#endif
 
         /* P2-2p8 Phase 1 slice 2b, the admission's creation seam (spec 2.8):
          * note every battle fighter; the last one of the battle runs the
@@ -974,6 +1075,9 @@ void ftManagerDestroyFighter(GObj *fighter_gobj)
     if (fighter_gobj != NULL)
     {
         ndsFtPoseRelease(fighter_gobj);
+#if NDS_P4
+        ftGetStruct(fighter_gobj)->nds_p4_content = 0u;
+#endif
     }
     ndsBaseFTManagerDestroyFighter(fighter_gobj);
 }

@@ -10,6 +10,7 @@
 #include <nds/nds_kirby_hat_residency.h>
 #include <nds/nds_native_stage_blob.h>
 #include <nds/nds_scene_manager.h>
+#include <nds/nds_p4.h>
 #include <sys/vector.h>
 
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
@@ -12435,6 +12436,16 @@ void ftPhysicsApplyGroundVelTransN(GObj *fighter_gobj)
             fp->physics.vel_ground.x = -fp->physics.vel_ground.x;
             fp->physics.vel_ground.z = -fp->physics.vel_ground.z;
         }
+#if NDS_P4
+        /* Remix Command.asm apply_ground_z_/apply_ground_x_: the 0xD3 TOPJOINT
+         * TRANSLATION MULTIPLIER scales both TransN terms before the air
+         * transfer. Only P4 scripts ever set it off 1.0. */
+        if (ndsP4TranslationMultiplier(fp) != 1.0F)
+        {
+            fp->physics.vel_ground.x *= ndsP4TranslationMultiplier(fp);
+            fp->physics.vel_ground.z *= ndsP4TranslationMultiplier(fp);
+        }
+#endif
         ftPhysicsSetGroundVelTransferAir(fighter_gobj);
     }
 }
@@ -12476,6 +12487,15 @@ void ftPhysicsGetAirVelTransN(FTStruct *fp, f32 *vel_x, f32 *vel_y,
         next_z =
             (transn_joint->translate.vec.f.x - fp->anim_vel.x) *
             -fp->lr * topn_joint->scale.vec.f.x;
+#if NDS_P4
+        /* Remix apply_air_z_/_y_/_x_: the same multiplier on all three. */
+        if (ndsP4TranslationMultiplier(fp) != 1.0F)
+        {
+            next_x *= ndsP4TranslationMultiplier(fp);
+            next_y *= ndsP4TranslationMultiplier(fp);
+            next_z *= ndsP4TranslationMultiplier(fp);
+        }
+#endif
     }
     if (vel_x != NULL)
     {

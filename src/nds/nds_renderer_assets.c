@@ -213,6 +213,7 @@ typedef struct NDSNativeRoot
 /* Image members embed PreparedDense, so its complete type must precede this
  * header. Standalone image TUs use the generator's matching definition. */
 #include <nds/generated/nds_native_fighter_image.generated.h>
+#include <nds/nds_p4_native.h>
 
 /* Passive fighter model parts replace one live DObj display list while
  * keeping that joint's matrix binding.  Generated variants therefore carry
@@ -261,6 +262,9 @@ _Static_assert(sizeof(NDSNativeRootVariant) == 20u,
 _Static_assert(sizeof(NDSNativeDirectPolicy) == 12u,
                "native direct policy ABI must stay compact");
 #include "nds_native_fighter_owner.generated.inc"
+#if NDS_P4_FALCO
+#include "nds_p4_native_owner.generated.inc"
+#endif
 #if NDS_P2_KIRBY && NDS_NATIVE_OWNER_IMAGE_KIRBY && \
     !defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
 #error "Kirby owner images require the generated Kirby root programs"
@@ -2548,6 +2552,105 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeNFoxRootLightPreambles, NDS_NATIVE_NFOX_MODEL_DATA_SIZE);
 #endif
 
+#if NDS_P4_FALCO
+#if NDS_NATIVE_OWNER_IMAGE_FALCO
+static NDSNativeFighterRuntimeTables sNdsNativeFalcoFighterHighTables;
+#else
+static const NDSNativeFighterRuntimeTables sNdsNativeFalcoFighterHighTables =
+{
+    sNdsNativeFalcoFighterStateDeltas,
+    NDS_FTR_COUNT(sNdsNativeFalcoFighterStateDeltas),
+    sNdsNativeFalcoFighterStateSequence,
+    NDS_FTR_COUNT(sNdsNativeFalcoFighterStateSequence),
+    sNdsNativeFalcoFighterVertexActions,
+    NDS_FTR_COUNT(sNdsNativeFalcoFighterVertexActions),
+    sNdsNativeFalcoFighterEpochDirectPolicy,
+    sNdsNativeFalcoFighterDenseVertices,
+    NDS_FTR_COUNT(sNdsNativeFalcoFighterDenseVertices),
+    sNdsNativeFalcoFighterDenseNormals,
+    sNdsNativeFalcoFighterPreparedDense,
+    sNdsNativeFalcoFighterActionDenseSpans,
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    sNdsNativeFalcoFighterDenseColorSource,
+#endif
+    sNdsNativeFalcoFighterPackedCorners,
+    NDS_FTR_COUNT(sNdsNativeFalcoFighterPackedCorners),
+    sNdsNativeFalcoFighterRunFirstCorner,
+    NDS_FTR_COUNT(sNdsNativeFalcoFighterRunFirstCorner),
+    sNdsNativeFalcoFighterRunFirstUnique,
+    sNdsNativeFalcoFighterRunUniqueCount,
+    sNdsNativeFalcoFighterRunUniqueDense,
+    sNdsNativeFalcoFighterTriangles,
+    NDS_FTR_COUNT(sNdsNativeFalcoFighterTriangles),
+    sNdsNativeFalcoFighterRuns,
+    NDS_FTR_COUNT(sNdsNativeFalcoFighterRuns),
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+    sNdsNativeFalcoFighterPrimitiveGroupFirst,
+    sNdsNativeFalcoFighterPrimitiveGroupCount,
+    sNdsNativeFalcoFighterPrimitiveGroupType,
+    sNdsNativeFalcoFighterPrimitiveGroupFirstVertex,
+    sNdsNativeFalcoFighterPrimitiveGroupVertexCount,
+    sNdsNativeFalcoFighterPrimitiveVertices,
+#endif
+    sNdsNativeFalcoFighterEpochs,
+    NDS_FTR_COUNT(sNdsNativeFalcoFighterEpochs)
+};
+#endif
+
+#if NDS_NATIVE_OWNER_IMAGE_FALCO
+static NDSNativeFighterRuntimeTables sNdsNativeFalcoFighterLowTables;
+#else
+static const NDSNativeFighterRuntimeTables sNdsNativeFalcoFighterLowTables =
+{
+    sNdsNativeFalcoFighterStateDeltasLow,
+    NDS_FTR_COUNT(sNdsNativeFalcoFighterStateDeltasLow),
+    sNdsNativeFalcoFighterStateSequenceLow,
+    NDS_FTR_COUNT(sNdsNativeFalcoFighterStateSequenceLow),
+    sNdsNativeFalcoFighterVertexActionsLow,
+    NDS_FTR_COUNT(sNdsNativeFalcoFighterVertexActionsLow),
+    sNdsNativeFalcoFighterEpochDirectPolicyLow,
+    sNdsNativeFalcoFighterDenseVerticesLow,
+    NDS_FTR_COUNT(sNdsNativeFalcoFighterDenseVerticesLow),
+    sNdsNativeFalcoFighterDenseNormalsLow,
+    sNdsNativeFalcoFighterPreparedDenseLow,
+    sNdsNativeFalcoFighterActionDenseSpansLow,
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    sNdsNativeFalcoFighterDenseColorSourceLow,
+#endif
+    sNdsNativeFalcoFighterPackedCornersLow,
+    NDS_FTR_COUNT(sNdsNativeFalcoFighterPackedCornersLow),
+    sNdsNativeFalcoFighterRunFirstCornerLow,
+    NDS_FTR_COUNT(sNdsNativeFalcoFighterRunFirstCornerLow),
+    sNdsNativeFalcoFighterRunFirstUniqueLow,
+    sNdsNativeFalcoFighterRunUniqueCountLow,
+    sNdsNativeFalcoFighterRunUniqueDenseLow,
+    sNdsNativeFalcoFighterTrianglesLow,
+    NDS_FTR_COUNT(sNdsNativeFalcoFighterTrianglesLow),
+    sNdsNativeFalcoFighterRunsLow,
+    NDS_FTR_COUNT(sNdsNativeFalcoFighterRunsLow),
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+    sNdsNativeFalcoFighterPrimitiveGroupFirstLow,
+    sNdsNativeFalcoFighterPrimitiveGroupCountLow,
+    sNdsNativeFalcoFighterPrimitiveGroupTypeLow,
+    sNdsNativeFalcoFighterPrimitiveGroupFirstVertexLow,
+    sNdsNativeFalcoFighterPrimitiveGroupVertexCountLow,
+    sNdsNativeFalcoFighterPrimitiveVerticesLow,
+#endif
+    sNdsNativeFalcoFighterEpochsLow,
+    NDS_FTR_COUNT(sNdsNativeFalcoFighterEpochsLow)
+};
+#endif
+
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeFalcoHighOwner, &sNdsNativeFalcoFighterHighTables,
+    sNdsNativeFalcoRoots, sNdsNativeFalcoCrossPaletteSlots,
+    sNdsNativeFalcoRootLightPreambles, NDS_NATIVE_FALCO_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeFalcoLowOwner, &sNdsNativeFalcoFighterLowTables,
+    sNdsNativeFalcoRootsLow, sNdsNativeFalcoCrossPaletteSlotsLow,
+    sNdsNativeFalcoRootLightPreambles, NDS_NATIVE_FALCO_MODEL_DATA_SIZE);
+#endif
+
 #if NDS_P2_NDONKEY
 #if NDS_NATIVE_OWNER_IMAGE_NDONKEY
 static NDSNativeFighterRuntimeTables sNdsNativeNDonkeyFighterHighTables;
@@ -3643,7 +3746,7 @@ typedef struct NDSNativeOwnerImageSlot
 } NDSNativeOwnerImageSlot;
 
 static NDSNativeOwnerImageSlot
-    sNdsNativeOwnerImage[NDS_NATIVE_IMAGE_OWNER_SLOTS][NDS_NATIVE_IMAGE_DETAILS];
+    sNdsNativeOwnerImage[NDS_NATIVE_IMAGE_OWNER_SLOTS_ALL][NDS_NATIVE_IMAGE_DETAILS];
 
 __attribute__((used)) volatile u32 gNdsNativeOwnerImageLoadCount;
 __attribute__((used)) volatile u32 gNdsNativeOwnerImageFailCount;
@@ -3749,6 +3852,7 @@ static const char *ndsRendererNativeOwnerImagePath(u32 owner_slot,
      * ladder that restated the generator's own path identity by hand. */
 #define NDS_NATIVE_OWNER_IMAGE_PATH_ROW(slot, high_path, low_path, high_t, low_t)     if (owner_slot == (slot))                                                         {                                                                                     return (use_low_detail != 0u) ? (low_path) : (high_path);                      }
     NDS_NATIVE_OWNER_IMAGE_ROWS(NDS_NATIVE_OWNER_IMAGE_PATH_ROW)
+    NDS_P4_NATIVE_OWNER_IMAGE_ROWS(NDS_NATIVE_OWNER_IMAGE_PATH_ROW)
 #undef NDS_NATIVE_OWNER_IMAGE_PATH_ROW
     (void)use_low_detail;
     return NULL;
@@ -3760,6 +3864,7 @@ static u32 ndsRendererNativeOwnerImageBytes(u32 owner_slot, u32 use_low_detail)
      * sizeof of the image struct the generator emitted for that owner. */
 #define NDS_NATIVE_OWNER_IMAGE_BYTES_ROW(slot, high_path, low_path, high_t, low_t)     if (owner_slot == (slot))                                                          {                                                                                      return (use_low_detail != 0u) ? (u32)sizeof(low_t) : (u32)sizeof(high_t);       }
     NDS_NATIVE_OWNER_IMAGE_ROWS(NDS_NATIVE_OWNER_IMAGE_BYTES_ROW)
+    NDS_P4_NATIVE_OWNER_IMAGE_ROWS(NDS_NATIVE_OWNER_IMAGE_BYTES_ROW)
 #undef NDS_NATIVE_OWNER_IMAGE_BYTES_ROW
     (void)use_low_detail;
     return 0u;
@@ -4930,6 +5035,24 @@ static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
         return;
     }
 #endif
+#if NDS_P4_FALCO
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_FALCO)
+    {
+        if (use_low_detail != 0u)
+        {
+            NDS_IMG_BIND(sNdsNativeFalcoFighterLowTables,
+                         NDSNativeFalcoLowImage, base,
+                         NDS_NATIVE_IMAGE_FALCO_LOW);
+        }
+        else
+        {
+            NDS_IMG_BIND(sNdsNativeFalcoFighterHighTables,
+                         NDSNativeFalcoHighImage, base,
+                         NDS_NATIVE_IMAGE_FALCO_HIGH);
+        }
+        return;
+    }
+#endif
 #if NDS_NATIVE_OWNER_IMAGE_NDONKEY
     if (owner_slot == NDS_NATIVE_IMAGE_SLOT_NDONKEY)
     {
@@ -5120,7 +5243,7 @@ static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
 /* TRUE only while this scene's heap still holds the bound image. */
 s32 ndsRendererNativeOwnerImageResident(u32 owner_slot, u32 use_low_detail)
 {
-    return ((owner_slot < NDS_NATIVE_IMAGE_OWNER_SLOTS) &&
+    return ((owner_slot < NDS_NATIVE_IMAGE_OWNER_SLOTS_ALL) &&
             (use_low_detail < NDS_NATIVE_IMAGE_DETAILS) &&
             (sNdsNativeOwnerImage[owner_slot][use_low_detail].base != NULL) &&
             (sNdsNativeOwnerImage[owner_slot][use_low_detail].heap_generation ==
@@ -5285,7 +5408,7 @@ s32 ndsRendererNativeEnsureOwnerImage(u32 owner_slot, u32 use_low_detail)
     u32 bytes;
     void *buffer;
 
-    if ((owner_slot >= NDS_NATIVE_IMAGE_OWNER_SLOTS) ||
+    if ((owner_slot >= NDS_NATIVE_IMAGE_OWNER_SLOTS_ALL) ||
         (use_low_detail >= NDS_NATIVE_IMAGE_DETAILS))
     {
         return FALSE;
@@ -5527,7 +5650,7 @@ s32 ndsRendererNativeVerifyOwnerImage(u32 owner_slot, u32 use_low_detail)
     const NDSNativeOwnerImageSlot *slot;
     u32 before;
 
-    if ((owner_slot >= NDS_NATIVE_IMAGE_OWNER_SLOTS) ||
+    if ((owner_slot >= NDS_NATIVE_IMAGE_OWNER_SLOTS_ALL) ||
         (use_low_detail >= NDS_NATIVE_IMAGE_DETAILS))
     {
         return FALSE;
@@ -5574,7 +5697,7 @@ void ndsRendererNativeReleaseOwnerImagesInRange(const void *base, size_t size)
     {
         return;
     }
-    for (owner_slot = 0u; owner_slot < NDS_NATIVE_IMAGE_OWNER_SLOTS;
+    for (owner_slot = 0u; owner_slot < NDS_NATIVE_IMAGE_OWNER_SLOTS_ALL;
          owner_slot++)
     {
         for (detail = 0u; detail < NDS_NATIVE_IMAGE_DETAILS; detail++)
@@ -5711,6 +5834,13 @@ ndsRendererNativeFighterCanonicalOwnerForDetail(u32 slot, u32 use_low_detail)
     {
         return (use_low_detail != 0u) ?
             &sNdsNativeNFoxLowOwner : &sNdsNativeNFoxHighOwner;
+    }
+#endif
+#if NDS_P4_FALCO
+    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_FALCO)
+    {
+        return (use_low_detail != 0u) ?
+            &sNdsNativeFalcoLowOwner : &sNdsNativeFalcoHighOwner;
     }
 #endif
 #if NDS_P2_NDONKEY

@@ -599,6 +599,9 @@ typedef enum NDSRendererProfileOwner
 #if NDS_P2_1P_GAME
     NDS_RENDERER_PROFILE_OWNER_BOSS,
 #endif
+#if NDS_P4_FALCO
+    NDS_RENDERER_PROFILE_OWNER_FALCO,
+#endif
 #if NDS_TASK49_GX_DIFFER
     /* Task49/M1 effect-stream owner.  This diagnostic owner must not enlarge
      * the production owner enum: several hot arrays and compact owner maps use
@@ -689,6 +692,12 @@ typedef enum NDSRendererProfileOwner
 #define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 3u
 #else
 #define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 2u
+#endif
+/* P4 donor owners take the slots after Master Hand's (include/nds/nds_p4_native.h). */
+#if NDS_P4_FALCO
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_FALCO 25u
+#undef NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 26u
 #endif
 #if NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS || \
     (NDS_TASK36_HW_COMPOSE == 2) || NDS_TASK49_GX_DIFFER

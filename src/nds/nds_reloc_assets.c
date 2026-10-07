@@ -27,6 +27,11 @@ void ndsFsUnlock(void)
 #include <nds/generated/nds_fighter_production.generated.h>
 #include <nds/nds_reloc_assets.h>
 
+#if NDS_P4
+/* src/port/nds_p4.c; declared here so this loader stays off ft/fighter.h. */
+const char *ndsP4RelocAssetPath(u32 file_id);
+#endif
+
 /* Keep this loader TU independent of the very broad startup header; the
  * published prototype lives there for normal consumers. */
 extern void ndsTaskmanSampleLibcHeapNow(void);
@@ -838,6 +843,24 @@ static const NDSRelocAssetEntry *ndsRelocAssetFindEntry(u32 asset_id)
     }
 #endif
 
+#if NDS_P4
+    /* P4 donor files and synthesized motion files (include/nds/nds_p4.h):
+     * donor IDs start above the vanilla table (0x854), DS-synthesized ones at
+     * 0x1600, both far below the port's 0x10000 synthetic assets. */
+    if ((asset_id >= 0x854u) && (asset_id < 0x10000u))
+    {
+        static NDSRelocAssetEntry p4_entry;
+        const char *p4_path = ndsP4RelocAssetPath(asset_id);
+
+        if (p4_path != NULL)
+        {
+            p4_entry.asset_id = asset_id;
+            p4_entry.file_id = asset_id;
+            p4_entry.path = p4_path;
+            return &p4_entry;
+        }
+    }
+#endif
     for (i = 0; i < (sizeof(sNdsRelocAssets) / sizeof(sNdsRelocAssets[0])); i++)
     {
         if (sNdsRelocAssets[i].asset_id == asset_id)
