@@ -7323,6 +7323,53 @@ The battle's Appear runs frame for frame to GO (probe above: anim frame 599
 on the tick before GO, Wait from GO). Asked the owner whether the card should
 get an idle loop anyway, which N64 does not do.
 
+Correction (2026-10-07): the probes above read the DObjs, which were right;
+what the port drew was not the DObjs. See the next section.
+
+## M1 Master Hand's battle fly-in froze its body (owner playtest, 2026-10-07) -- FIXED
+
+Owner row: "During master hand intro (pre fight), battle fly-in DOES NOT MATCH
+N64 AT ALL. Battle fly in should be the current fly-in PLUS the idle animation
+after match start."
+
+N64 reference, this time from the game itself: the vanilla US ROM in
+mupen64plus 2.5 (`D:\Games\N64`), booted straight into the boss intro by a
+GameShark entry on `gSCManagerSceneData` (0x800A4AD0: scene_curr 0x34 =
+1PGame, player 0, Mario, spgame_stage 0x0D) with `--testshots` every 10 VI
+(scratchpad `n64/run_n64.ps1`, `n64/setup_n64.py`). Same choreography and
+timing as the port (slam at VI ~900, GO at VI ~970; the port's slam at anim
+frame ~541, GO at 600), but on N64 the fingers articulate the whole way and
+after the slam the hand turns side-on and glides to the right of the stage;
+the port's hand kept one pose and ended face-on, standing on the stage.
+
+Not the animation: an independent evaluator of relocData 2131 (the Appear
+AnimJoint, decomp `assets/us/relocData/2131.bin`) running sys/objanim.c's
+parser and player in f32 (scratchpad `aj32eval.py`) ends every joint's script
+at frame 600 and reproduces the port's DObjs (TransN ends at (900, 0, 0);
+joint 4, the hand's root, turns to yaw -90 degrees with translate
+(300, 150, 0) from frame ~511).
+
+Cause: every body joint's FTParts sat at `transform_update_mode` 1 with its
+cached local (`unk_dobjtrans_0x10`) frozen at the Appear's FIRST frame (joint
+4: yaw 0, translate (0, 150, -300)) for the whole motion. The source clears
+mode 1 on every joint every tick (ftparam.c:2300,
+`ftParamsUpdateFighterPartsTransform`); the port's version keeps body locals
+when `ndsFtPoseBodyChangedThisTick` reports a 30 Hz pose hold. An event32
+(`is_anim_joint`) motion never runs the pose engine -- the generic player
+animates it every tick -- so `body_evaluated` was whatever the boss's last
+figatree tick left: a held tick, FALSE, for the whole intro. The lean fighter
+kernel draws a mode-1 joint from its cached local instead of its TRS (and the
+collision path reads the same latch), so the hand was the frame-1 pose carried
+around by TopN.
+
+Fix (src/port/reloc_backend_compat_shims.c): the hold shortcut applies only to
+a motion the pose engine plays (`!fp->anim_desc.flags.is_anim_joint`). Every
+event32 fighter motion had the same exposure whenever its first tick followed
+a held one: the Appear entries and the shield pose (ftcommonguard1.c sets
+`is_anim_joint`). Walk ROM `walk-1007a` against the N64 shots: the poses now
+match frame for frame through GO (`artifacts/visibility/2026-10-07_mhseq`
+`mhfix1`, local and ROM-derived; probes `mhj5.ps1`, `mhj4.ps1`, `mhcam.ps1`).
+
 ## Hit VFX at wrong locations (owner playtest, 2026-10-06, walk-1006b) -- FIXED
 
 Owner: "during match, hit VFX play at wrong locations" -- the pink impact

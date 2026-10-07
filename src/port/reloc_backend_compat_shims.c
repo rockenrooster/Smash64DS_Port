@@ -3362,9 +3362,20 @@ ftParamsUpdateFighterPartsTransform(DObj *joint)
          * descendant WORLD transform. Keep the body-local matrices the source
          * collision path already materialised; reset the four changed locals
          * directly, then run the existing flat world-cache clear without its
-         * per-body mode load/branch/write. */
+         * per-body mode load/branch/write.
+         *
+         * Only while the pose engine plays the motion. An event32
+         * (is_anim_joint) motion -- every Appear entry, Master Hand's whole
+         * intro, the shield pose -- is played by the generic player on every
+         * tick and never runs the engine, so the engine's body_evaluated is
+         * whatever its last figatree tick left. When that was a held tick, the
+         * body's transform_update_mode 1 latches (ftparam.c:2300 clears them
+         * every tick) survived the whole motion: the renderer and the
+         * collision path drew and tested the motion's first frame until it
+         * ended -- Master Hand's fingers never moved before GO and his hand
+         * never turned side-on (owner playtest, 2026-10-07). */
         fp = ftGetStruct(fighter_gobj);
-        if (fp != NULL)
+        if ((fp != NULL) && (!fp->anim_desc.flags.is_anim_joint))
         {
             for (joint_id = 0u;
                  joint_id < (u32)nFTPartsJointCommonStart;
