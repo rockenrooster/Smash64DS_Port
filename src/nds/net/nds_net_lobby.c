@@ -34,6 +34,7 @@
 #include <nds/nds_net_link.h>
 #include <nds/nds_net_lobby.h>
 #include <nds/nds_net_session.h>
+#include <nds/nds_net_ui.h>
 
 #include "nds_net_internal.h"
 
@@ -42,7 +43,13 @@
 #define NDS_NET_LOBBY_TIMEOUT      240u   /* frames without a word: gone */
 #define NDS_NET_ROOM_EXPIRE        120u
 #define NDS_NET_JOIN_TIMEOUT       180u
-#define NDS_NET_START_TIMEOUT      180u
+/* The match start is two-phase (ndsNetLobbyHostStartMatch): the host offers
+ * START until every guest ACKs it, then commits with GO, or withdraws with
+ * CANCEL. A guest that ACKed waits for the verdict; it never enters a match
+ * the host has abandoned. */
+#define NDS_NET_START_TIMEOUT      300u   /* host: offer window, frames */
+#define NDS_NET_START_VERDICT_SENDS 12u   /* GO / CANCEL repeats, one a frame */
+#define NDS_NET_START_PENDING_TIMEOUT 1200u /* guest: no verdict in 20 s */
 #define NDS_NET_SLOT_BYTES         16u
 #define NDS_NET_DESC_BYTES         50u
 #define NDS_NET_BUILD_ID_BYTES     8u
@@ -115,6 +122,13 @@ static NdsNetLobbySlot sMyProposal;
 static u32 sHaveProposal;
 static u32 sStartReady;
 static u32 sStartAckLeft;
+/* Guest: START accepted and ACKed, waiting for the host's GO or CANCEL. */
+static u32 sStartPending;
+static u32 sStartPendingFrame;
+/* The start round: the START's seed, echoed by every ACK, GO and CANCEL, so a
+ * message from a withdrawn round never decides the next one (host: the round
+ * on offer; guest: the round it accepted). */
+static u32 sStartRound;
 
 /* Scanning / joining. */
 static u32 sScanning;
@@ -129,6 +143,9 @@ volatile u32 gNdsNetLobbyJoins;
 volatile u32 gNdsNetLobbyDrops;
 volatile u32 gNdsNetLobbyStarts;
 volatile u32 gNdsNetLobbyStartFailures;
+/* Guest: starts withdrawn by the host (CANCEL, or the room back in the lobby)
+ * or unanswered for NDS_NET_START_PENDING_TIMEOUT. */
+volatile u32 gNdsNetLobbyStartCancels;
 
 uint32_t ndsNetRole(void) { return sRole; }
 uint32_t ndsNetInSession(void) { return (sRole != NDS_NET_ROLE_NONE) ? 1u : 0u; }
@@ -314,6 +331,7 @@ static void ndsNetLobbyReset(void)
     sJoinState = 0u;
     sStartReady = 0u;
     sStartAckLeft = 0u;
+    sStartPending = 0u;
     sSnapFresh = 0u;
     sHaveProposal = 0u;
     sRevision = 0u;
@@ -560,12 +578,13 @@ static void ndsNetGuestStart(const u8 *body, u32 len)
 
     if (len < 8u + 4u + NDS_NET_DESC_BYTES)
         return;
-    if (sStartReady != 0u)
+    seed = ndsNetGet32(body);
+    if ((sStartReady != 0u) ||
+        ((sStartPending != 0u) && (seed == sStartRound)))
     {
         sStartAckLeft = 8u;   /* the host has not heard us yet */
         return;
     }
-    seed = ndsNetGet32(body);
     host_port = body[5];
     mask = body[6];
     if (((mask >> sLocalPort) & 1u) == 0u)
@@ -578,11 +597,58 @@ static void ndsNetGuestStart(const u8 *body, u32 len)
     ndsNetLockstepConfigure(sSession, sLocalPort, host_port, mask);
     ndsNetLockstepSetSeed(seed);
     sPhase = NDS_NET_PHASE_MATCH;
-    sStartReady = 1u;
+    /* Accepted, not yet committed: the host may still withdraw the start if
+     * another guest (or this one's ACKs) never reaches it. */
+    sStartPending = 1u;
+    sStartPendingFrame = sFrame;
+    sStartRound = seed;
     sStartAckLeft = 8u;
+    ndsNetUiLine(21, " Starting the match...");
+#if NDS_NET_LAB_LOBBY && NDS_NET_LAB_STARTLOSS
+    {
+        /* Lab: this console's radio goes deaf as it accepts the round, so
+         * its ACKs and the host's verdict can be lost (Makefile). */
+        extern volatile u32 gNdsNetLabMuteUntil;
+        extern u32 ndsPlatformVBlankCount(void);
+        static u32 sLabStartLossRounds;
+
+        /* Each round's dropout is half the last: the first outlasts the
+         * host's offer (the start is withdrawn), later ones end inside it
+         * (the late ACKs still start the match). */
+        if (sLabStartLossRounds < (u32)NDS_NET_LAB_STARTLOSS_ROUNDS)
+        {
+            gNdsNetLabMuteUntil = ndsPlatformVBlankCount() +
+                ((u32)NDS_NET_LAB_STARTLOSS >> sLabStartLossRounds);
+            sLabStartLossRounds++;
+        }
+    }
+#endif
     /* No proposals until this console is back in the lobby: the host counts
      * a proposing player as present (ready for the next match). */
     sHaveProposal = 0u;
+}
+
+/* The host's verdict on a pending start. */
+static void ndsNetGuestStartGo(void)
+{
+    if (sStartPending == 0u)
+        return;
+    sStartPending = 0u;
+    sStartReady = 1u;
+}
+
+static void ndsNetGuestStartCancel(void)
+{
+    if (sStartPending == 0u)
+        return;
+    sStartPending = 0u;
+    sStartReady = 0u;
+    sStartAckLeft = 0u;
+    sPhase = NDS_NET_PHASE_CSS;
+    sHostLastHeard = sFrame;
+    ndsNetLockstepDisarm();
+    gNdsNetLobbyStartCancels++;
+    ndsNetUiLine(21, " A player did not answer.");
 }
 
 static void ndsNetLobbyReceive(void)
@@ -614,6 +680,10 @@ static void ndsNetLobbyReceive(void)
 
                 sHostLastHeard = sFrame;
                 sPhase = body[2] & 3u;
+                /* The host only snapshots from the lobby: a pending start
+                 * it is no longer running was withdrawn. */
+                if ((sStartPending != 0u) && (sPhase != NDS_NET_PHASE_MATCH))
+                    ndsNetGuestStartCancel();
                 sSnapTeamBattle = body[3];
                 sHumanMask = body[4];
                 memcpy(sHostName, body + 6, NDS_NET_NAME_LEN);
@@ -668,11 +738,14 @@ static void ndsNetLobbyReceive(void)
                 }
                 break;
             case NDS_NET_KIND_START_ACK:
-                p = (blen >= 1u) ? body[0] : NDS_NET_PORTS;
+                p = (blen >= 6u) ? body[0] : NDS_NET_PORTS;
                 if (p > 0u && p < NDS_NET_PORTS && sMembers[p].active != 0u &&
                     memcmp(sMembers[p].mac, src, 6) == 0)
                 {
-                    sMembers[p].start_acked = 1u;
+                    /* An ACK of a withdrawn round still proves the member is
+                     * there; only the round on offer counts as an answer. */
+                    if (ndsNetGet32(body + 2) == sStartRound)
+                        sMembers[p].start_acked = 1u;
                     sMembers[p].last_heard = sFrame;
                 }
                 break;
@@ -708,6 +781,15 @@ static void ndsNetLobbyReceive(void)
         {
             if (kind == NDS_NET_KIND_START)
                 ndsNetGuestStart(body, blen);
+            else if (kind == NDS_NET_KIND_START_GO && blen >= 4u &&
+                     ndsNetGet32(body) == sStartRound)
+                ndsNetGuestStartGo();
+            else if (kind == NDS_NET_KIND_START_CANCEL && blen >= 4u &&
+                     ndsNetGet32(body) == sStartRound)
+                ndsNetGuestStartCancel();
+            else if (kind == NDS_NET_KIND_INPUT &&
+                     memcmp(src, sHostMac, 6) == 0)
+                ndsNetGuestStartGo(); /* the host is already playing */
             else if (kind == NDS_NET_KIND_LEAVE && blen >= 1u && body[0] == 0xFFu)
                 sLost = 1u;
         }
@@ -778,11 +860,13 @@ static void ndsNetGuestSendProposal(void)
 
 static void ndsNetGuestSendStartAck(void)
 {
-    u8 buf[NDS_NET_HDR_BYTES + 2u];
+    u8 buf[NDS_NET_HDR_BYTES + 6u];
     u32 n = ndsNetHeaderWrite(buf, NDS_NET_KIND_START_ACK, sSession);
 
     buf[n++] = (u8)sLocalPort;
     buf[n++] = 0u;
+    ndsNetPut32(buf + n, sStartRound);
+    n += 4u;
     ndsNetSend(buf, n);
 }
 
@@ -824,7 +908,18 @@ void ndsNetLobbyPump(void)
         if (sPhase != NDS_NET_PHASE_MATCH && (s32)(sFrame - sGraceUntil) > 0 &&
             (sFrame - sHostLastHeard) > NDS_NET_LOBBY_TIMEOUT)
             sLost = 1u;
-        if (sStartAckLeft != 0u)
+        if (sStartPending != 0u)
+        {
+            if ((sFrame - sStartPendingFrame) > NDS_NET_START_PENDING_TIMEOUT)
+                ndsNetGuestStartCancel();
+            else if (sStartAckLeft != 0u || (sFrame & 1u) == 0u)
+            {
+                if (sStartAckLeft != 0u)
+                    sStartAckLeft--;
+                ndsNetGuestSendStartAck();
+            }
+        }
+        else if (sStartAckLeft != 0u)
         {
             sStartAckLeft--;
             ndsNetGuestSendStartAck();
@@ -1037,6 +1132,7 @@ int ndsNetLobbyHostStartMatch(void)
         return -1;
     for (p = 1u; p < NDS_NET_PORTS; p++)
         sMembers[p].start_acked = 0u;
+    sStartRound = seed;
     sPhase = NDS_NET_PHASE_MATCH;
     memset(buf, 0, sizeof(buf));
     n = ndsNetHeaderWrite(buf, NDS_NET_KIND_START, sSession);
@@ -1067,6 +1163,19 @@ int ndsNetLobbyHostStartMatch(void)
         }
         if (waiting == 0u)
             break;
+        swiWaitForVBlank();
+    }
+    /* The verdict, repeated: a guest that misses every GO still sees this
+     * console's first lockstep packet; one that misses every CANCEL sees the
+     * next lobby snapshot. */
+    n = ndsNetHeaderWrite(buf, (waiting != 0u) ? NDS_NET_KIND_START_CANCEL :
+                                                 NDS_NET_KIND_START_GO, sSession);
+    ndsNetPut32(buf + n, seed);
+    n += 4u;
+    for (f = 0u; f < NDS_NET_START_VERDICT_SENDS; f++)
+    {
+        ndsNetSend(buf, n);
+        sFrame++;
         swiWaitForVBlank();
     }
     if (waiting != 0u)
@@ -1109,6 +1218,7 @@ void ndsNetLobbyMatchOver(void)
     ndsNetLockstepDisarm();
     sStartReady = 0u;
     sStartAckLeft = 0u;
+    sStartPending = 0u;
     sGraceUntil = sFrame + 60u * 60u;
     if (sRole == NDS_NET_ROLE_HOST)
     {

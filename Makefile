@@ -789,6 +789,13 @@ NDS_NET_LAB_LEAVE ?= 0
 # every room (host rotation), and the rooms cycle through lobby-only visits,
 # matches, rematches and a guest's Leave, with a libc heap sample per room.
 NDS_NET_LAB_SOAK ?= 0
+# P3 lab: with the autopilot, a guest's radio goes deaf for this many frames
+# the moment it accepts a START (halved each round, for its first
+# NDS_NET_LAB_STARTLOSS_ROUNDS rounds), as a burst of packet loss would on
+# hardware: the two-phase start must leave both consoles in the lobby or both
+# in the match. 0 = off.
+NDS_NET_LAB_STARTLOSS ?= 0
+NDS_NET_LAB_STARTLOSS_ROUNDS ?= 2
 # P3 lab (plan section 12, P3-0C): the four-fighter gate with the radio
 # running. Compiles gNdsNetLabGateRadio; set to 1 at boot, the battle opens a
 # room and runs the lockstep as a one-human net match, so the same ROM
@@ -7034,6 +7041,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_NET_LAB_TEAMS $(NDS_NET_LAB_TEAMS)'; \
 		echo '#define NDS_NET_LAB_LEAVE $(NDS_NET_LAB_LEAVE)'; \
 		echo '#define NDS_NET_LAB_SOAK $(NDS_NET_LAB_SOAK)'; \
+		echo '#define NDS_NET_LAB_STARTLOSS $(NDS_NET_LAB_STARTLOSS)'; \
+		echo '#define NDS_NET_LAB_STARTLOSS_ROUNDS $(NDS_NET_LAB_STARTLOSS_ROUNDS)'; \
 		echo '#define NDS_NET_LAB_GATE_RADIO $(NDS_NET_LAB_GATE_RADIO)'; \
 		echo '#define NDS_P2_FOUR_CPU_ROSTER $(NDS_P2_FOUR_CPU_ROSTER)'; \
 		echo '#define NDS_P2_FOUR_CPU_KIND0 $(NDS_P2_FOUR_CPU_KIND0)'; \

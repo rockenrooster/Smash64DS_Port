@@ -135,9 +135,19 @@ pack (`menus/mn_ui_kit_net.bin`) and loads over two images the character
 select never draws, because the OBJ bank has under 1 KB free.
 
 When everyone has picked, the host's START goes to the stage select; guests
-follow and watch the host's cursor. The host's confirm sends the descriptor
-(`NdsMatchConfig`, transfer-state handicaps) and the seed; every guest
-acknowledges, then every console enters the same battle. Results return
+follow and watch the host's cursor. The host's confirm starts the match in two
+phases. It offers START (the descriptor, `NdsMatchConfig` and transfer-state
+handicaps, and the seed, which names the round) until every guest ACKs that
+round, for up to 5 s, then sends its verdict a dozen times: GO, and every
+console enters the same battle, or CANCEL, and everyone stays in the lobby
+("A player did not answer."). A guest that accepted a round keeps ACKing it
+and waits in the lobby for the verdict; the host's first lockstep packet counts
+as GO, its next lobby snapshot as CANCEL, and 20 s of silence cancels too. An
+ACK, GO or CANCEL of a withdrawn round decides nothing. Until 2026-10-07 the
+guest went to battle on START itself, after one or two ACKs, so a burst of
+loss over those ACKs left the host back in the lobby and the guest alone in a
+match that ended NO CONTEST (owner, hardware: Yoshi vs Kirby, Sector Z).
+Results return
 everyone to the lobby for a rematch; a player still on Results is not ready
 until they are back. The lower screen lists every player by firmware name
 with "ready" once their token is down, and one line of the host's rules (rule,
@@ -233,6 +243,7 @@ cells on every console (plan 7.1); a guest's own save is never written by it.
 | `gate-radio` | 1 | Plan section 12, P3-0C: the official four-fighter gate ROM built with `NDS_NET_LAB_GATE_RADIO`, measured with the switch off and on (on: the battle opens a room and runs the lockstep as a one-human net match, so every batch pumps the radio, sends its INPUT packet and folds the net digest; 1,961 batches). WORK-H P50 744,576 -> 767,488, P95 1,050,048 -> 1,068,672, two-VBlank share 96.8% -> 96.0%, replay digest identical over all 1,960 frames: the gate stays green with the radio running (`artifacts/performance/2026-10-07_p3-gate-radio`, local) |
 | `soak1`/`soak2` | 2 | `NDS_NET_LAB_SOAK` with the play-1007d digest: the rooms after a guest's Leave desynced -- Jungle at batch 297, Hyrule and Yoshi's Island at batches 0-1 -- while both consoles' setup heap size and use were identical (traced on both): the digest read bytes that depend on each console's history (the stage state union, the weapon pool's `lifetime`), which a Leave makes differ (the two consoles' last match ends on different ticks) |
 | `soak4` | 2 | The same soak with the stage union cleared per scene and weapon `lifetime` out of the digest: 19 rooms and 20 matches in 25 minutes, the roles swapped every room, lobby-only rooms, rematches and four guest Leaves: 30,051 digest compares, 0 desyncs, aborts only the four Leaves; libc heap at each VS Mode entry 1,027,176 B first and 1,042,736-1,044,032 B after (no growth) |
+| `race` | 2 | The owner's start race, reproduced: the guest's radio deaf for 6 s as it accepts START (lab `NDS_NET_LAB_STARTLOSS`; first by a gdb write) -- before the fix the host gave up after 3 s and went back to the lobby (1 start failure) while the guest entered the battle alone and aborted ("Connection lost", NO CONTEST). After it: a 6 s dropout withdraws the round on both consoles (host 1 failure, guest 1 cancel, nobody in battle), a 3 s dropout still starts the match from the late ACKs; then 2-3 matches, 0 aborts, 0 desyncs. A 5.5-minute soak without loss: 5 matches, 0 failures or cancels, 0 desyncs, the one abort the scheduled Leave |
 | `soak5` | 2 | The same soak for 2 h 15 min: 107 rooms (each console host 53-54 times) and 110 matches over all nine VS stages, 26 guest Leaves: about 162,000 digest compares per console, 0 desyncs, aborts only the Leaves; setup heap identical on both consoles every room; libc heap at each VS Mode entry 1,027,176 B first and 1,042,464-1,045,200 B after (flat over two hours) |
 | `teams2` | 2 | Same sweep with the second layout set (the four-stock Stock match pairs the guest with a CPU) and the terminal-digest check: 10 matches plus 2 sudden deaths (one in a Team Battle), 20,719 digest compares, 0 desyncs; the guest took its CPU partner's stock 5 times over the link (`ifCommonPlayerStockStealMakeInterface`, thief 1); in the tenth match the guest held START: it left, the host ended the match as NO CONTEST (1 abort), dropped it from the room (human mask 0x1) and returned to the lobby |
 

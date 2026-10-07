@@ -18,6 +18,8 @@
 #define NDS_NET_KIND_JOIN_ACK     7u  /* host -> all, addressed by MAC */
 #define NDS_NET_KIND_PROPOSE      8u  /* guest -> host: its own slot */
 #define NDS_NET_KIND_LEAVE        9u  /* guest leaves, or host closes the room */
+#define NDS_NET_KIND_START_GO     10u /* host -> all: every guest ACKed; play */
+#define NDS_NET_KIND_START_CANCEL 11u /* host -> all: a guest never ACKed */
 
 static inline uint32_t ndsNetGet32(const uint8_t *p)
 {
