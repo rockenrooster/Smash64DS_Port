@@ -7788,6 +7788,9 @@ volatile u32 gNdsStageDLFastLaneFills;
 #define NDS_SDL_ROUTE_MBALL 0xeeu
 #define NDS_SDL_ROUTE_SHELL 0xedu
 #define NDS_SDL_ROUTE_STAR 0xecu
+/* The seed-3 census: the Bob-omb (Sector Z 151, Yoshi's Island 47; one
+ * CURRENT_IMAGE MObj). */
+#define NDS_SDL_ROUTE_BOMBHEI 0xebu
 /* Yoshi's Island's capsules and boxes thrashed an 8-slot table (1,231 fills
  * for 1,469 hits a match): the owners are few, but a capsule alone draws three
  * roots, and its header and third root shared a slot under an address-bit
@@ -7828,6 +7831,7 @@ enum
     nNDSStageDLItemHarisen,
     nNDSStageDLItemHeart,
     nNDSStageDLItemFFlower,
+    nNDSStageDLItemTomato,
 #if NDS_P2_STAGE_YAMABUKI
     nNDSStageDLItemMarumine,
     nNDSStageDLItemGLucky,
@@ -7884,6 +7888,12 @@ static const NDSStageDLItemRoute sNdsStageDLItemRoutes[nNDSStageDLItemRouteCount
     [nNDSStageDLItemFFlower] = { NULL, ndsStageDLSubmitFFlowerBranch,
         &gNdsItemFFlowerDrawCount, &gNdsItemFFlowerSubmitFailCount,
         nITKindFFlower },
+    /* 2026-10-07: Jungle's seed-2 sweep match drew the Maxim Tomato through
+     * the body 276 times (no MObj; the body's list proofs ran once, at the
+     * draw that recorded the route). */
+    [nNDSStageDLItemTomato] = { ndsRendererSubmitNativeItemTomato, NULL,
+        &gNdsItemTomatoDrawCount, &gNdsItemTomatoSubmitFailCount,
+        nITKindTomato },
 #if NDS_P2_STAGE_YAMABUKI
     [nNDSStageDLItemMarumine] = { ndsRendererSubmitNativeYamabukiMarumine,
         NULL, &gNdsYamabukiMarumineDrawCount,
@@ -8105,6 +8115,12 @@ static inline sb32 ndsItemReplayRouteOk(u32 route_kind)
     {
         return FALSE;
     }
+    /* The Maxim Tomato's owner draws its quad with glVertex itself, never
+     * through the sink: a recording would hold zero emits. */
+    if (route_kind == (NDS_SDL_ROUTE_ITEM + nNDSStageDLItemTomato))
+    {
+        return FALSE;
+    }
 #if NDS_P2_STAGE_YAMABUKI
     if ((route_kind == (NDS_SDL_ROUTE_ITEM + nNDSStageDLItemMarumine)) ||
         (route_kind == (NDS_SDL_ROUTE_ITEM + nNDSStageDLItemGLucky)) ||
@@ -8273,6 +8289,7 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
           (route->route != NDS_SDL_ROUTE_MBALL) &&
           (route->route != NDS_SDL_ROUTE_SHELL) &&
           (route->route != NDS_SDL_ROUTE_STAR) &&
+          (route->route != NDS_SDL_ROUTE_BOMBHEI) &&
           (route->route != NDS_SDL_ROUTE_CASTLE_BUMPER) &&
           (route->route != NDS_SDL_ROUTE_FFLOWER_LIVE) &&
           (route->route != NDS_SDL_ROUTE_NBUMPER) &&
@@ -8611,6 +8628,28 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
                  (NDS_RENDERER_NATIVE_MATERIAL_PALETTE_IMAGE |
                   NDS_RENDERER_NATIVE_MATERIAL_PALETTE_TLUT |
                   NDS_RENDERER_NATIVE_MATERIAL_CURRENT_IMAGE)))
+        {
+            return FALSE;
+        }
+        break;
+    }
+    case NDS_SDL_ROUTE_BOMBHEI:
+    {
+        ITStruct *ip;
+
+        if ((owner->id != nGCCommonKindItem) ||
+            (sNdsRendererAdapterItemSubmitActive == FALSE) ||
+            (dobj->mobj == NULL) || (dobj->mobj->next != NULL) ||
+            (route->data_size < NDS_NATIVE_ITEM_BOMBHEI_FILE_END))
+        {
+            return FALSE;
+        }
+        ip = itGetStruct(owner);
+        if ((ip == NULL) || (ip->kind != nITKindBombHei) ||
+            (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                 dobj->mobj, &item_route_material, FALSE, NULL, NULL) == FALSE) ||
+            (item_route_material.effects !=
+                 NDS_RENDERER_NATIVE_MATERIAL_CURRENT_IMAGE))
         {
             return FALSE;
         }
@@ -9128,6 +9167,21 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
             {
                 NDS_DIAG(gNdsItemRShellSubmitFailCount++);
             }
+        }
+    }
+    else if (route_kind == NDS_SDL_ROUTE_BOMBHEI)
+    {
+        ndsStageDLFastItemSeeds(render_stats);
+        handled = ndsRendererSubmitNativeItemBombHei(
+            loaded->data, loaded->data_size, &item_route_material, &config,
+            render_stats);
+        if (handled != FALSE)
+        {
+            NDS_DIAG(gNdsItemBombHeiDrawCount++);
+        }
+        else
+        {
+            NDS_DIAG(gNdsItemBombHeiSubmitFailCount++);
         }
     }
     else if (route_kind == NDS_SDL_ROUTE_STAR)
@@ -14699,6 +14753,14 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         if (item_bombhei_native_handled != FALSE)
         {
             NDS_DIAG(gNdsItemBombHeiDrawCount++);
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            if ((sNdsRendererAdapterEffectSubmitActive == FALSE) &&
+                (sNdsRendererAdapterStagePersistentActive != FALSE))
+            {
+                ndsStageDLRouteRecord(dl, loaded, NDS_NATIVE_ITEM_BOMBHEI_ROOT,
+                                      NDS_SDL_ROUTE_BOMBHEI);
+            }
+#endif
         }
         else
         {
@@ -15213,6 +15275,10 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         if (item_tomato_native_handled != FALSE)
         {
             NDS_DIAG(gNdsItemTomatoDrawCount++);
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            ndsStageDLRouteRecord(dl, loaded, 0u,
+                                  NDS_SDL_ROUTE_ITEM + nNDSStageDLItemTomato);
+#endif
         }
         else
         {
