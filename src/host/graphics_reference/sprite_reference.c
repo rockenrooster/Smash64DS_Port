@@ -222,7 +222,6 @@ extern void dmaCopyHalfWords(int channel, const void *src, void *dst,
 extern SCCommonData gSCManagerSceneData;
 extern SCBattleState *gSCManagerBattleState;
 extern volatile u32 gNdsSceneManagerCurrIsBattle;
-extern volatile u32 gNdsSObjWallpaperStretchAllStages;
 extern volatile u32 gNdsStartupLogoDrawBlocker;
 extern volatile u32 gNdsStartupLogoDrawWidth;
 extern volatile u32 gNdsStartupLogoDrawHeight;
@@ -542,9 +541,7 @@ static void ndsSObjApplyDreamLandWallpaperStretch(
     if ((origin_x == NULL) || (origin_y == NULL) ||
         (scale_x_q16 == NULL) || (scale_y_q16 == NULL) ||
         (gNdsSceneManagerCurrIsBattle == 0u) ||
-        (gSCManagerBattleState == NULL) ||
-        ((gNdsSObjWallpaperStretchAllStages == 0u) &&
-         (gSCManagerBattleState->gkind != nGRKindPupupu)))
+        (gSCManagerBattleState == NULL))
     {
         return;
     }

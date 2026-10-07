@@ -11,24 +11,14 @@
  * loaders nest (extern tree -> zeroed heap load). */
 static RMutex sNdsFsMutex;
 
-/* Bisect bit (gdb): 0 skips the lock entirely. */
-volatile u32 gNdsFsLockEnabled
-    __attribute__((section(".data"), aligned(32))) = 1u;
-
 void ndsFsLock(void)
 {
-    if (gNdsFsLockEnabled != 0u)
-    {
-        rmutexLock(&sNdsFsMutex);
-    }
+    rmutexLock(&sNdsFsMutex);
 }
 
 void ndsFsUnlock(void)
 {
-    if (gNdsFsLockEnabled != 0u)
-    {
-        rmutexUnlock(&sNdsFsMutex);
-    }
+    rmutexUnlock(&sNdsFsMutex);
 }
 #include <stdio.h>
 #include <errno.h>

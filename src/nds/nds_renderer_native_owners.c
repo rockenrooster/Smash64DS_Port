@@ -1414,11 +1414,6 @@ typedef struct NDSNativeStageEmitShortfallSnapshot
 } NDSNativeStageEmitShortfallSnapshot;
 static NDSNativeStageEmitShortfallSnapshot sNdsNativeStageEmitShortfallSnapshot;
 volatile u32 gNdsNativeStagePrepareRunFailStep;
-/* Route bit for a ONE-binary A/B (gdb `set variable`): 1 restores the literal
- * shift of 1 the PROJECTED_RANGE matrix used before 2026-09-07, which drew
- * Hyrule's shift-2/3 runs at a quarter size (and cheaply); 0 ships. */
-volatile u32 gNdsNativeStageRangeShiftLegacy
-    __attribute__((section(".data"), aligned(32))) = 0u;
 volatile u32 gNdsNativeStagePrepareRunFailRun;
 /* Step 1 operands: live/expected combine w0, w1, othermode h, l, geometry. */
 volatile u32 gNdsNativeStagePrepareRunPolicy[10];
@@ -2970,10 +2965,8 @@ ndsRendererNativeStageBeginRun(
          * Hyrule's shift-2/3 runs shed two or three, so that geometry drew at
          * a half or a quarter of its size (owner, 2026-09-07). The rigid
          * Task36 arm above already passes the run's shift. */
-        u32 coordinate_shift =
-            ((gNdsNativeStageRangeShiftLegacy == 0u) &&
-             (run->coordinate_shift != 0u)) ?
-                (u32)run->coordinate_shift : 1u;
+        u32 coordinate_shift = (run->coordinate_shift != 0u) ?
+            (u32)run->coordinate_shift : 1u;
 
         if (ndsRendererBuildShiftedRawHardwareMatrix(
                 &sNdsNativeStageOwnerExecution.binding_composed[

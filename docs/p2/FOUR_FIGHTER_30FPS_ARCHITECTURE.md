@@ -1706,6 +1706,27 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   memory-bound: its per-joint DObj parent check and FTParts mode read lead,
   the compose arithmetic is ~15-20%, so moving the compose to the GX matrix
   stack would buy ~10K ticks a frame, not half.
+- **10-07 (late): where the band stands after P3, and old machinery batch 6.**
+  Clean lab ROM at `38ab8cd478f` (`2026-10-07_micro1`), WORK-H P95 against
+  1,120K: Yoshi's Island s2 1,191K, Saffron s2 1,175K, Sector Z s1 1,153K,
+  Mushroom Kingdom s4 1,139K, Saffron s1 1,128K, Jungle s3 1,124K; four
+  Yoshis on Sector Z 1,078K passes. Yoshi s2 runs 172 frames over the gate,
+  28 of them in one window (frames 780-839: Samus's and Link's specials, a
+  Beam Sword lying on the stage), SRC +125K and MISC +90K over the median
+  there. A general-body census of Yoshi s2 and Saffron s2 on the current ROM
+  finds 94 and 42 body calls a match (82 of Yoshi's are Link's bombs), so
+  more fast-lane routes are no longer a lever. The P3 gate check with the
+  radio running: P95 1,050,048 -> 1,068,672 (P3_STATUS.md, `gate-radio`).
+  Old machinery batch 6 deletes six switch words, each keeping the branch
+  that ships: the pre-09-07 XObj order (`gNdsRendererAdapterXObjOrderLegacy`),
+  the pre-09-07 stage range shift (`gNdsNativeStageRangeShiftLegacy`), the
+  Dream Land-only wallpaper stretch (`gNdsSObjWallpaperStretchAllStages`), the
+  FS lock bisect bit (`gNdsFsLockEnabled`), the eight-entry immediate particle
+  palette round robin (`gNdsParticleEnvVariantDeferred`) and the slice-51
+  battle-pack dispatch falsifier (`gNdsBattlePackDispatch`, with its make
+  knob). Left: runtime fail-safes that are not machinery
+  (`gNdsFtAnimTrackDispatch` drops to the generic parser on an oracle
+  mismatch), lab verifiers, and words whose other branch is a config default.
 
 ## 7. Found along the way
 

@@ -7601,3 +7601,30 @@ untouched. The same shape ({ 41, TraRotRpyR } from flagged descs) is any
 item set up through `gcSetupCustomDObjsWithMObj` with Null kinds whose make
 function adds TraRotRpyR, so spinning items of that shape draw on their path
 too.
+
+## FD wallpaper: Final Destination's shooting stars and boss-phase backgrounds never draw (found 2026-10-07) -- LOGGED for later (owner)
+
+Seen in the Master Hand N64-vs-DS MP4: on the N64 the stage background carries
+coloured shooting stars (sc1pgameboss.c, `dSC1PGameBossCometEnvColorR/G/B`)
+and, as the boss takes damage, the background phases change
+(`sc1PGameBossSetChangeWallpaper` / `sc1PGameBossAdvanceWallpaper`); on the DS
+only the static native wallpaper shows.
+
+The source TU is imported whole (src/import/battleship_sc1pgameboss.c), so
+about 24 wallpaper GObjs (link `nGCCommonLinkIDWallpaperEffect`, 4-8 animated
+DObjs each, drawn by two boss cameras on display link 5) are created and
+animated every frame -- about 40K ticks a frame of animation already paid
+(battleship_sys_objanim.c `ndsGcPlayAnimAllFixedCubic`) -- but nothing draws
+them: their display procs (`SC1PGameBossWallpaper0-3ProcDisplay`) reach the
+port's `gcDrawDObjTreeDLLinksForGObj`, which only records, and the battle
+draw interception (reloc_backend_movement.c
+`ndsStageGCDrawAllLoopRecordDObjDraw`) has no owner for their GObj kind.
+
+A fix needs a native owner that batches the ~100-200 effect DObjs (a generic
+tree walk costs 25-45K a draw), consumes each display proc's prim/env colour
+and alpha, and puts the effects behind the stage in the single 3D layer (their
+own camera has a different projection, so their depth needs forcing to the
+far end). Feasibility probe (scratchpad `fdprobe.ps1`, walk-1007a, 10 frames
+after GO): link 13 holds 27 GObjs, 24 of them boss wallpaper effects (GObj id
+1023, display link 5, one display proc, alpha word 255) -- the comets of
+wallpaper phase 0.

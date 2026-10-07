@@ -7034,10 +7034,8 @@ fail:
  * scheduled-VBlank wait), when the frame it replaces has stopped rendering
  * and the next has not started. 16 entries: the burst's 44 distinct keys bake
  * 56 times and no frame runs out (the trace replay, 2026-10-05). 1,024 bytes
- * of palette RAM. Same-ROM A/B word gNdsParticleEnvVariantDeferred (0 = the
- * eight-entry immediate round robin). */
+ * of palette RAM. */
 #define NDS_PARTICLE_ENV_VARIANT_COUNT 16u
-#define NDS_PARTICLE_ENV_VARIANT_IMMEDIATE_COUNT 8u
 #define NDS_PARTICLE_ENV_VARIANT_WHITE 0x7FFFu
 typedef struct NDSParticleEnvVariant
 {
@@ -7060,9 +7058,6 @@ typedef struct NDSParticleEnvVariant
 } NDSParticleEnvVariant;
 static NDSParticleEnvVariant
     sNdsParticleEnvVariants[NDS_PARTICLE_ENV_VARIANT_COUNT];
-static u32 sNdsParticleEnvVariantNext;
-volatile u32 gNdsParticleEnvVariantDeferred
-    __attribute__((used, section(".data"))) = 1u;
 /* One epoch per presented frame; entries start at 0, never the current one. */
 static u32 sNdsParticleEnvVariantEpoch = 1u;
 static u32 sNdsParticleEnvVariantPending;
@@ -7186,7 +7181,6 @@ static u32 ndsRendererParticleEnvVariant(u32 atlas_name, u32 prim_bgr555,
     u32 r5;
     u32 g5;
     u32 b5;
-    u32 deferred;
     u16 *bake;
     NDSParticleEnvVariant *variant;
     int name = 0;
@@ -7211,24 +7205,10 @@ static u32 ndsRendererParticleEnvVariant(u32 atlas_name, u32 prim_bgr555,
             return (u32)sNdsParticleEnvVariants[slot].name;
         }
     }
-    deferred = gNdsParticleEnvVariantDeferred;
-    if (deferred != 0u)
+    slot = ndsRendererParticleEnvVariantVictim();
+    if (slot >= NDS_PARTICLE_ENV_VARIANT_COUNT)
     {
-        slot = ndsRendererParticleEnvVariantVictim();
-        if (slot >= NDS_PARTICLE_ENV_VARIANT_COUNT)
-        {
-            return 0u;
-        }
-    }
-    else
-    {
-        slot = sNdsParticleEnvVariantNext;
-        sNdsParticleEnvVariantNext++;
-        if (sNdsParticleEnvVariantNext >=
-            NDS_PARTICLE_ENV_VARIANT_IMMEDIATE_COUNT)
-        {
-            sNdsParticleEnvVariantNext = 0u;
-        }
+        return 0u;
     }
     variant = &sNdsParticleEnvVariants[slot];
     /* A miss rewrites the tables below (bake, base palette, failures). */
@@ -7250,7 +7230,7 @@ static u32 ndsRendererParticleEnvVariant(u32 atlas_name, u32 prim_bgr555,
                 (sheet * NDS_PARTICLE_QUAD_PALETTE_ENTRIES) + entry],
             prim_word, env_key);
     }
-    if ((deferred != 0u) && (variant->valid != 0u))
+    if (variant->valid != 0u)
     {
         /* Queued: the palette changes at the VBlank that swaps this frame
          * in. No GL call, so an open packet keeps its material state. */
@@ -7342,7 +7322,7 @@ static u32 ndsRendererParticleEnvVariant(u32 atlas_name, u32 prim_bgr555,
         ndsRendererHardwareFencedGlDeleteTextures(1, &variant->name);
         variant->name = 0;
         variant->valid = FALSE;
-        variant->refused = deferred;
+        variant->refused = 1u;
         sNdsRendererHardwareBoundTextureName = 0u;
         return 0u;
     }
@@ -7358,7 +7338,7 @@ static u32 ndsRendererParticleEnvVariant(u32 atlas_name, u32 prim_bgr555,
             ndsRendererHardwareFencedGlDeleteTextures(1, &variant->name);
             variant->name = 0;
             variant->valid = FALSE;
-            variant->refused = deferred;
+            variant->refused = 1u;
             sNdsRendererHardwareBoundTextureName = 0u;
             return 0u;
         }
@@ -7490,7 +7470,6 @@ static void ndsRendererParticleEnvVariantDiscard(void)
 #endif
         }
     }
-    sNdsParticleEnvVariantNext = 0u;
 #if NDS_R2_WHISPY_NATIVE_AOT
     sNdsRendererParticlePacketStateDirty = TRUE;
 #endif

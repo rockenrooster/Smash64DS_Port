@@ -3952,11 +3952,6 @@ static sb32 ndsRendererAdapterIsMvpRecalcKind(u32 kind)
         TRUE : FALSE;
 }
 
-/* Bisect bit (gdb): 1 restores the pre-2026-09-07 later-XObj-after order.
- */
-volatile u32 gNdsRendererAdapterXObjOrderLegacy
-    __attribute__((section(".data"), aligned(32))) = 0u;
-
 /* A source MVP-recalc XObj (kinds 41-50: gcPrepDObjMatrix emits gSPMvpRecalc
  * and rewrites rows 0-2 of the MVP, objdisplay.c:800) followed in the same
  * DObj by an ordinary transform XObj has no effect in the source: the later
@@ -4000,7 +3995,6 @@ ndsRendererAdapterBuildDObjLocalMatrix(
     NDSRendererMatrix20p12 incoming;
     u32 valid = FALSE;
     u32 has_mvp_recalc_rpy_0x47 = FALSE;
-    u32 preserve_joint_world_translation = FALSE;
     u32 i;
 
     if ((dobj == NULL) || (out == NULL))
@@ -4036,11 +4030,6 @@ ndsRendererAdapterBuildDObjLocalMatrix(
                     dobj, dobj->xobjs[i], out) != FALSE)
             {
                 valid = TRUE;
-                if (dobj->xobjs[i]->kind ==
-                    NDS_RENDERER_ADAPTER_JOINT_ATTACH_TRA_MTX_KIND)
-                {
-                    preserve_joint_world_translation = TRUE;
-                }
 #if NDS_TASK68_FALLBACK_CENSUS
                 if (dobj->xobjs[i]->kind ==
                     NDS_RENDERER_ADAPTER_JOINT_ATTACH_TRA_MTX_KIND)
@@ -4070,20 +4059,7 @@ ndsRendererAdapterBuildDObjLocalMatrix(
              * grjungle.c:14), rotated around the stage origin because its
              * RotRpyR was multiplied AFTER the kind-40 placement (owner,
              * 2026-09-07). One-XObj DObjs never reach this arm. */
-            if ((gNdsRendererAdapterXObjOrderLegacy != 0u) &&
-                (preserve_joint_world_translation == FALSE))
-            {
-                ndsRendererMtxMul20p12(out, &incoming, out);
-            }
-            else
-            {
-                ndsRendererAdapterMulBefore(out, &incoming, &valid);
-            }
-            if (dobj->xobjs[i]->kind ==
-                NDS_RENDERER_ADAPTER_JOINT_ATTACH_TRA_MTX_KIND)
-            {
-                preserve_joint_world_translation = TRUE;
-            }
+            ndsRendererAdapterMulBefore(out, &incoming, &valid);
         }
     }
 
