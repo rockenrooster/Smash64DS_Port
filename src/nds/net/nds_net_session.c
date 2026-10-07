@@ -39,8 +39,11 @@
 #include <PR/os.h>
 #include <ssb_types.h>
 #include <ft/fighter.h>
+#include <gr/ground.h>
+#include <it/item.h>
 #include <sc/scene.h>
 #include <sys/malloc.h>
+#include <wp/weapon.h>
 
 #include <nds/nds_controller.h>
 #include <nds/nds_match_config.h>
@@ -110,6 +113,9 @@ static u32 sNetBatch;
 static u32 sNetProducedBatch;
 /* VBlank count + 1 since a guest started holding START, 0 when released. */
 static u32 sNetLeaveHeldSince;
+#if NDS_NET_LAB_SOAK
+extern u32 ndsNetLabAutopilotSoakLeave(void);
+#endif
 #if NDS_NET_LAB_LEAVE
 static u32 sNetLabLeaveDone;
 static u32 sNetLabBattles;     /* battle scenes this console has entered */
@@ -462,6 +468,11 @@ static u32 ndsNetLeaveKeys(void)
         sNetBatch >= 600u)
         keys |= KEY_START;
 #endif
+#if NDS_NET_LAB_SOAK
+    /* Lab soak: the guest of every fourth room leaves its first match. */
+    if (ndsNetLabAutopilotSoakLeave() != 0u && sNetBatch >= 600u)
+        keys |= KEY_START;
+#endif
     return keys;
 }
 
@@ -657,17 +668,207 @@ static u32 ndsNetMix(u32 hash, u32 value)
     return hash ^ (hash >> 15);
 }
 
+static u32 ndsNetMixF32(u32 hash, f32 value)
+{
+    union
+    {
+        f32 f;
+        u32 u;
+    } bits;
+
+    bits.f = value;
+    return ndsNetMix(hash, bits.u);
+}
+
+static u32 ndsNetMixVec3(u32 hash, const Vec3f *v)
+{
+    hash = ndsNetMixF32(hash, v->x);
+    hash = ndsNetMixF32(hash, v->y);
+    return ndsNetMixF32(hash, v->z);
+}
+
+/* Plan 7.3's wider coverage folds values only, never a pointer: the arena's
+ * address may differ between consoles (plan 7.2 item 4). The stage: every
+ * moving collision object's transform and speed (what mpcollision reads), and
+ * the hazard state each venue's ground update keys on -- Whispy's wind, the
+ * clouds, the bumper, the barrel, the acid, the tornado, the Pokemon door,
+ * the Arwing, the scales, the POW block. Cosmetic timers stay out. */
+static u32 ndsNetDigestStage(u32 hash)
+{
+    const GRStruct *gr = &gGRCommonStruct;
+    s32 i;
+
+    if (gMPCollisionYakumonoDObjs != NULL)
+    {
+        for (i = 0; (i < gMPCollisionYakumonosNum) &&
+                    (i < NDS_MP_YAKUMONO_DOBJ_SLOTS); i++)
+        {
+            const DObj *dobj = gMPCollisionYakumonoDObjs->dobjs[i];
+
+            if (dobj != NULL)
+                hash = ndsNetMixVec3(hash, &dobj->translate.vec.f);
+            if (gMPCollisionSpeeds != NULL)
+                hash = ndsNetMixVec3(hash, &gMPCollisionSpeeds[i]);
+        }
+    }
+    switch (gSCManagerBattleState->gkind)
+    {
+    case nGRKindPupupu:
+        hash = ndsNetMix(hash, (u32)gr->pupupu.whispy_wind_wait |
+                               ((u32)gr->pupupu.whispy_wind_duration << 16));
+        hash = ndsNetMix(hash, (u32)gr->pupupu.whispy_status |
+                               ((u32)(u8)gr->pupupu.lr_players << 8));
+        break;
+    case nGRKindYoster:
+        for (i = 0; i < 3; i++)
+        {
+            const GRYosterCloud *cloud = &gr->yoster.clouds[i];
+
+            hash = ndsNetMixF32(hash, cloud->altitude);
+            hash = ndsNetMixF32(hash, cloud->pressure);
+            hash = ndsNetMix(hash, (u32)cloud->status |
+                                   ((u32)cloud->is_cloud_line_active << 8) |
+                                   ((u32)cloud->evaporate_wait << 16) |
+                                   ((u32)(u8)cloud->pressure_timer << 24));
+        }
+        break;
+    case nGRKindCastle:
+        hash = ndsNetMixVec3(hash, &gr->castle.bumper_pos);
+        break;
+    case nGRKindJungle:
+        hash = ndsNetMix(hash, (u32)gr->jungle.tarucann_status |
+                               ((u32)gr->jungle.tarucann_wait << 16));
+        hash = ndsNetMixF32(hash, gr->jungle.tarucann_rotate_step);
+        break;
+    case nGRKindZebes:
+        hash = ndsNetMixF32(hash, gr->zebes.acid_level_curr);
+        hash = ndsNetMixF32(hash, gr->zebes.acid_level_step);
+        hash = ndsNetMix(hash, (u32)gr->zebes.acid_level_wait |
+                               ((u32)gr->zebes.acid_status << 16) |
+                               ((u32)gr->zebes.acid_attr_id << 24));
+        break;
+    case nGRKindHyrule:
+        hash = ndsNetMixF32(hash, gr->hyrule.twister_vel);
+        hash = ndsNetMix(hash, (u32)gr->hyrule.twister_wait |
+                               ((u32)gr->hyrule.twister_speed_wait << 16));
+        hash = ndsNetMix(hash, (u32)gr->hyrule.twister_turn_wait |
+                               ((u32)gr->hyrule.twister_line_id << 16));
+        hash = ndsNetMix(hash, (u32)gr->hyrule.twister_status);
+        break;
+    case nGRKindYamabuki:
+        hash = ndsNetMix(hash, (u32)gr->yamabuki.gate_status |
+                               ((u32)gr->yamabuki.gate_noentry << 8) |
+                               ((u32)gr->yamabuki.monster_id_prev << 16));
+        hash = ndsNetMix(hash, (u32)gr->yamabuki.monster_wait |
+                               ((u32)gr->yamabuki.gate_wait << 16));
+        break;
+    case nGRKindSector:
+        hash = ndsNetMixF32(hash, gr->sector.arwing_target_x);
+        hash = ndsNetMix(hash, (u32)gr->sector.arwing_appear_timer |
+                               ((u32)gr->sector.arwing_state_timer << 16));
+        hash = ndsNetMix(hash, (u32)gr->sector.arwing_status |
+                               ((u32)(u8)gr->sector.arwing_flight_pattern << 8) |
+                               ((u32)gr->sector.arwing_laser_ammo << 16) |
+                               ((u32)gr->sector.arwing_laser_count << 24));
+        hash = ndsNetMix(hash, (u32)gr->sector.arwing_laser_timer);
+        break;
+    case nGRKindInishie:
+        hash = ndsNetMixF32(hash, gr->inishie.splat_alt);
+        hash = ndsNetMix(hash, (u32)gr->inishie.splat_wait |
+                               ((u32)gr->inishie.splat_status << 16) |
+                               ((u32)gr->inishie.pblock_status << 24));
+        hash = ndsNetMix(hash, (u32)gr->inishie.pblock_appear_wait);
+        break;
+    default:
+        break;
+    }
+    return hash;
+}
+
+/* The item fields the source's rules read beyond the replay digest's kind and
+ * position: owner, team, facing, ground state, damage taken, lifetime, ammo,
+ * hold/throw/pickup state and velocity. */
+static u32 ndsNetDigestItems(u32 hash)
+{
+    GObj *gobj;
+
+    for (gobj = gGCCommonLinks[nGCCommonLinkIDItem]; gobj != NULL;
+         gobj = gobj->link_next)
+    {
+        const ITStruct *ip = (const ITStruct *)gobj->user_data.p;
+
+        if (ip == NULL)
+            continue;
+        hash = ndsNetMix(hash, (u32)ip->player | ((u32)ip->team << 8) |
+                               ((u32)(ip->ga != 0) << 16) |
+                               ((ip->owner_gobj != NULL) ? (1u << 17) : 0u));
+        hash = ndsNetMix(hash, (u32)ip->percent_damage);
+        hash = ndsNetMix(hash, (u32)ip->lifetime);
+        hash = ndsNetMix(hash, (u32)ip->lr);
+        hash = ndsNetMix(hash, ip->hitlag_tics);
+        hash = ndsNetMix(hash, (u32)ip->multi | ((u32)ip->attach_line_id << 16));
+        hash = ndsNetMix(hash, (u32)ip->is_hold | ((u32)ip->is_thrown << 1) |
+                               ((u32)ip->is_allow_pickup << 2) |
+                               ((u32)ip->is_attach_surface << 3) |
+                               ((u32)ip->times_landed << 4) |
+                               ((u32)ip->times_thrown << 6) |
+                               ((u32)ip->pickup_wait << 9));
+        hash = ndsNetMixVec3(hash, &ip->physics.vel_air);
+        hash = ndsNetMixF32(hash, ip->physics.vel_ground);
+    }
+    return hash;
+}
+
+/* Weapons likewise: owner, team, facing, ground state, damage and velocity --
+ * only fields wpManagerMakeWeapon sets for every weapon. The weapon structs
+ * come from a pool that is never cleared, and `lifetime` is set only by the
+ * kinds that use it, so for the others it holds the slot's previous owner's
+ * count, which differs between consoles with different histories. */
+static u32 ndsNetDigestWeapons(u32 hash)
+{
+    GObj *gobj;
+
+    for (gobj = gGCCommonLinks[nGCCommonLinkIDWeapon]; gobj != NULL;
+         gobj = gobj->link_next)
+    {
+        const WPStruct *wp = (const WPStruct *)gobj->user_data.p;
+
+        if (wp == NULL)
+            continue;
+        hash = ndsNetMix(hash, (u32)wp->player | ((u32)wp->team << 8) |
+                               ((u32)(wp->ga != 0) << 16));
+        hash = ndsNetMix(hash, (u32)wp->lr);
+        hash = ndsNetMix(hash, (u32)wp->hit_normal_damage);
+        hash = ndsNetMixVec3(hash, &wp->physics.vel_air);
+        hash = ndsNetMixF32(hash, wp->physics.vel_ground);
+    }
+    return hash;
+}
+
 /* Plan 7.3's net digest: the replay digest plus the battle state that the
  * match's end and Results read -- game status, the timer, and each player's
  * stocks, place, KOs, falls, self-destructs, damage tallies, combo counts and
  * stale-move queue (stale moves scale damage). Net matches only: the replay
  * digest itself, and every gate that compares it, is unchanged. */
+#if NDS_NET_LAB_SOAK
+/* Lab: each batch's net digest after each of its parts in turn -- the replay
+ * digest, then the battle state, the stage, the items, the weapons -- so a
+ * mismatch names the first part that differs (gdb reads both consoles). */
+volatile u32 gNdsNetLabParts[NDS_NET_DIGEST_RING][5];
+#define NDS_NET_LAB_PART(k, h) \
+    (gNdsNetLabParts[sNetBatch & (NDS_NET_DIGEST_RING - 1u)][k] = (h))
+#else
+#define NDS_NET_LAB_PART(k, h) ((void)0)
+#endif
+
 static u32 ndsNetDigest(void)
 {
     const SCBattleState *bs = gSCManagerBattleState;
     u32 hash = ndsReplayDigestTick();
     u32 p;
     u32 i;
+
+    NDS_NET_LAB_PART(0u, hash);
 
     hash = ndsNetMix(hash, bs->game_status);
     hash = ndsNetMix(hash, bs->time_remain);
@@ -699,6 +900,13 @@ static u32 ndsNetDigest(void)
                                    ((u32)pl->stale_info[i].motion_count << 16));
         }
     }
+    NDS_NET_LAB_PART(1u, hash);
+    hash = ndsNetDigestStage(hash);
+    NDS_NET_LAB_PART(2u, hash);
+    hash = ndsNetDigestItems(hash);
+    NDS_NET_LAB_PART(3u, hash);
+    hash = ndsNetDigestWeapons(hash);
+    NDS_NET_LAB_PART(4u, hash);
     return hash;
 }
 

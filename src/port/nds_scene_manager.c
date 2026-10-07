@@ -1,5 +1,7 @@
 /* P2-1b -- the port-owned scene seam. Contract and reasoning: include/nds/nds_scene_manager.h. */
 
+#include <string.h>
+#include <gr/ground.h>
 #include <nds/nds_os.h>
 #include <nds/nds_platform.h>
 #include <nds/nds_scene_manager.h>
@@ -273,6 +275,22 @@ void ndsSceneManagerEnter(const void *arena_start, u32 arena_size)
     const NdsSceneDesc *desc = ndsSceneManagerFind(kind);
 
     sNdsSceneManagerDepth++;
+
+    /* The stage state union is scene-scoped: each stage's InitAll sets the
+     * fields it starts with and leaves others for later (Hyrule's twister
+     * velocity and waits are first written when it moves, grhyrule.c:168).
+     * The original loads each stage as an overlay; the DS links them all for
+     * the whole run, so those fields kept the previous scene's bytes, and two
+     * consoles whose last matches had ended on different ticks (a guest that
+     * left mid-match) entered the next match with different stage state (P3
+     * soak, 2026-10-07). Every scene starts it zeroed, as a first boot does;
+     * nothing writes it before this (the Inishie ground-data setup and every
+     * InitAll run later in the scene's start). Never under a running battle,
+     * should a nested start ever appear. */
+    if (gNdsSceneManagerCurrIsBattle == 0u)
+    {
+        memset(&gGRCommonStruct, 0, sizeof(gGRCommonStruct));
+    }
 
     if (desc == NULL)
     {

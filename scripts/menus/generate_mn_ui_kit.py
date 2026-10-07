@@ -4419,6 +4419,41 @@ NET_START_SURFACE_SPECS = tuple(
                             ("SEL", VS_TAB_SEL)))
 
 
+# P3 (owner, 2026-10-07): a caption under VS Options says what VS START's
+# wireless value means. White in the same menu font and size as the value
+# word, with a black drop shadow for the lighter parts of the collage, in two
+# lines that continue the buttons' staircase (each tab starts 23 px left of the
+# one above: 120, 97, 74, 51, so 28), which keeps the longest line off the
+# gold paper. The three captions share one box over the baked backdrop, so a
+# change re-blits exactly.
+NET_HINT_LINES = {
+    "OFF": ("WIRELESS", "MULTIPLAYER OFF"),
+    "HOST": ("HOSTING WIRELESS", "MULTIPLAYER ROOM"),
+    "JOIN": ("JOINING WIRELESS", "MULTIPLAYER ROOM"),
+}
+NET_HINT_X = 28
+NET_HINT_Y = 184
+NET_HINT_STEP = 12
+NET_HINT_SHADOW = 2
+NET_HINT_BOX = (26, 182, 172, 28)
+
+
+def net_hint(word: str) -> SurfaceSpec:
+    parts = []
+    for row, text in enumerate(NET_HINT_LINES[word]):
+        y = NET_HINT_Y + (row * NET_HINT_STEP)
+        parts.append(Placement("MNCommonFonts", "", NET_HINT_X + NET_HINT_SHADOW,
+                               y + NET_HINT_SHADOW, False, (0x00, 0x00, 0x00),
+                               text=text, text_scale=2))
+        parts.append(Placement("MNCommonFonts", "", NET_HINT_X, y, False,
+                               (0xFF, 0xFF, 0xFF), text=text, text_scale=2))
+    return SurfaceSpec(f"VS_NET_HINT_{word}", tuple(parts), MENU_FIELD,
+                       under=VS_BACKGROUND, box=NET_HINT_BOX)
+
+
+NET_HINT_SURFACE_SPECS = tuple(net_hint(_word) for _word in NET_START_WORDS)
+
+
 
 # ---------------------------------------------------------------------------
 # P2-1i -- the title screen's own background: `mnTitleMakeFire`.
@@ -5066,9 +5101,12 @@ def main(argv: list[str] | None = None) -> int:
     # The Bonus Practice selects' art is newer still, so it converts last.
     surfaces.extend(convert_surface(cache, offsets, repo_root, spec)
                     for spec in BONUS_CSS_SURFACE_SPECS)
-    # The wireless VS START states are newest of all.
+    # The wireless VS START states are newer still.
     surfaces.extend(convert_surface(cache, offsets, repo_root, spec)
                     for spec in NET_START_SURFACE_SPECS)
+    # Their captions are newest of all.
+    surfaces.extend(convert_surface(cache, offsets, repo_root, spec)
+                    for spec in NET_HINT_SURFACE_SPECS)
     check_title_anim_block(surfaces)
     check_bonus_css_shared_states(surfaces)
 

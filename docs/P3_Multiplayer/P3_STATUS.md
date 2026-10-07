@@ -38,6 +38,8 @@ drain reads only data frames, into one static buffer, hands each straight to
 the RX ring, skips every other frame in place, and never allocates or waits;
 the pool now serves TX only. `src/nds/arm7/calico_mwl_common.h` is Calico
 1.2.0's internal driver header, vendored unmodified for the state layout.
+On the same two consoles the new drain played through (owner, 2026-10-07,
+play-1007c: "works much better now").
 
 The module (code + BSS, 14 KB; 21 KB with Calico's drain and RX pool) lives in the homebrew bootstub area at
 `0x02FF4000`; the packet rings are at `0x02FFA000`. That area is uncached on the
@@ -62,7 +64,24 @@ After every batch the net digest is folded and compared with each peer's: the
 replay digest (`src/port/nds_replay_digest.c`, in every ROM) plus what the
 match's end and Results read from the battle state -- game status, the timer,
 and each player's stocks, place, KOs, falls, self-destructs, damage tallies,
-combo counts and stale-move queue. Only net matches fold the extra fields, so
+combo counts and stale-move queue -- and plan 7.3's wider coverage: the
+stage's moving collision (every yakumono transform and speed, which
+mpcollision reads) and the hazard state each venue's ground update keys on
+(Whispy's wind, the clouds, the bumper, the barrel, the acid, the tornado, the
+Pokemon door, the Arwing, the scales, the POW block), and the item and weapon
+fields the rules read beyond kind and position (owner, team, facing, ground
+state, damage, velocity; for items also lifetime, ammo and hold/throw/pickup
+state). It folds values only, never a pointer, since the arena's address may
+differ between consoles; cosmetic timers stay out. Every folded field must be
+set for every instance before it is read: the item structs are cleared at
+creation, the weapon structs come from a pool that is never cleared (so a
+weapon's `lifetime`, which only some kinds set, is not folded), and the stage
+state union is cleared at every scene entry (`ndsSceneManagerEnter`): a
+stage's InitAll sets only the fields it starts with (Hyrule's twister speed
+and waits are first written when it moves), and the DS links every stage for
+the whole run, so the rest kept the previous scene's bytes -- which differ
+between two consoles whose last match ended on different ticks, as it does
+when a guest leaves. Only net matches fold the extra fields, so
 the replay digest every performance gate compares is unchanged. The first
 batch's digest also carries the general heap's size and how much of it setup
 used (they decide the source's GObj latch), so consoles whose arenas differ
@@ -99,8 +118,12 @@ the console looks for a room and joins the first open one running its own
 build (another build's room is never asked, and a room that refuses -- full,
 or no answer -- is skipped); B gives up. The words are set in the source's own
 menu font (MNCommonFonts) at twice its size, baked into the button's states
-(`generate_mn_ui_kit.py` NET_START_SURFACE_SPECS). The character select is the
-lobby. Each console's cursor sits on its own port, and every other human's
+(`generate_mn_ui_kit.py` NET_START_SURFACE_SPECS). A caption under VS Options
+says what the value means (owner, 2026-10-07): "WIRELESS / MULTIPLAYER OFF",
+"HOSTING WIRELESS / MULTIPLAYER ROOM", "JOINING WIRELESS / MULTIPLAYER ROOM",
+white with a black drop shadow in the same font and size, two lines that
+continue the buttons' staircase (NET_HINT_SURFACE_SPECS; the menu re-blits it
+the frame after VS START's own state). The character select is the lobby. Each console's cursor sits on its own port, and every other human's
 cursor (hand state and player tag) and token are drawn where their owner last
 put them; the host publishes all four slots and each guest proposes its own,
 30 times a second. The host owns CPU slots, kinds, mode, levels and START;
@@ -172,6 +195,15 @@ cells on every console (plan 7.1); a guest's own save is never written by it.
   Stock with team attack on, where the guest's scripted START steals; three
   teams; both humans against the CPUs) and a free-for-all, and
   `NDS_NET_LAB_LEAVE=N` makes the guest hold START (Leave) in its Nth battle.
+  `NDS_NET_LAB_SOAK=1` (with the sweep) plays rooms without end: the two
+  consoles swap host and guest every room (host rotation), and the rooms cycle
+  through a lobby-only visit (join, pick, the host closes), one match, a match
+  and a rematch, and one where the guest leaves mid-match; the host closes
+  every room by holding B. Every VS Mode entry samples the libc heap
+  (`gNdsNetSoakHeapFirst/Last/Max`), so a per-room leak shows as growth, and
+  each batch's net digest is kept after each of its parts (replay digest,
+  battle state, stage, items, weapons: `gNdsNetLabParts`), so a mismatch
+  names the first part that differs.
 
 ## Evidence (2026-10-06, melonDS-mp, lab autopilot)
 
@@ -193,23 +225,23 @@ cells on every console (plan 7.1); a guest's own save is never written by it.
 | `teams1` | 2 | 10 matches, every item at Very High: 7 Team Battle (each human with a CPU partner, team attack off; both humans against the CPUs in Stock with team attack on; three teams) and 3 FFA (one sudden death): 19,077 digest compares, 0 desyncs, 0 aborts, 10 starts / 0 failures. The guest's battle state matches the descriptor in every match (teams, colours 0/1/3/CP 4, team costumes); identical team Results on both consoles ("GREEN WINS!") |
 | `repro1` | 2 | The owner's failing setup in the harness (Kirby against Yoshi on Hyrule, two humans, two-minute time, every item at Medium) with the scripted pad widened to every mapped control (grab, shield, taunt, all specials): 8 matches, 26,285 digest compares, 0 desyncs, 0 conflicts, 0 bad packets -- the game stays in step; the hardware failure was the radio driver (above) |
 | `radio1` | 2 | Calico's drain replaced, the native VS START host/join: host chose HOST and the guest JOIN, the lobby and two matches ran, 4,431-4,495 digest compares, 0 desyncs; each radio about 5,050 frames sent and 5,000-5,100 received, 0 ring-full, 0 TX buffer stalls |
+| `soak1`/`soak2` | 2 | `NDS_NET_LAB_SOAK` with the play-1007d digest: the rooms after a guest's Leave desynced -- Jungle at batch 297, Hyrule and Yoshi's Island at batches 0-1 -- while both consoles' setup heap size and use were identical (traced on both): the digest read bytes that depend on each console's history (the stage state union, the weapon pool's `lifetime`), which a Leave makes differ (the two consoles' last match ends on different ticks) |
+| `soak4` | 2 | The same soak with the stage union cleared per scene and weapon `lifetime` out of the digest: 11 rooms in 25 minutes, the roles swapped every room, two lobby-only rooms, a rematch and two guest Leaves: 17,700 digest compares, 0 desyncs, aborts only the two Leaves; libc heap at each VS Mode entry 1,027,176 B first and 1,042,736-1,044,032 B after (no growth) |
 | `teams2` | 2 | Same sweep with the second layout set (the four-stock Stock match pairs the guest with a CPU) and the terminal-digest check: 10 matches plus 2 sudden deaths (one in a Team Battle), 20,719 digest compares, 0 desyncs; the guest took its CPU partner's stock 5 times over the link (`ifCommonPlayerStockStealMakeInterface`, thief 1); in the tenth match the guest held START: it left, the host ended the match as NO CONTEST (1 abort), dropped it from the room (human mask 0x1) and returned to the lobby |
 
 ## Open
 
-- Hardware validation on DS and DS Lite: the harness proves the protocol, not
-  real radio timing. Four physical consoles, host rotation and a long soak are
-  the release set (plan section 12).
+- Hardware validation: an original DS and a DS Lite play through (owner,
+  play-1007c). Four physical consoles, host rotation and a long soak on
+  hardware are the rest of the release set (plan section 12).
 - Pinning the arena to a fixed start and size for net matches (plan 7.2 item
   4); the setup check compares size and use, not the address.
 - Reproducible builds, so players who build the same commit from their own
   N64 ROM get the same build identity (no absolute paths in the binary).
 - Perturbation runs (plan 7.4): different boot environments, menu histories,
   poisoned arenas, storage delays.
-- The net digest does not fold stage ground and hazard state, AI state, or
-  item and weapon fields beyond kind and position (plan 7.3): the ground
-  structs hold arena pointers, which differ between consoles until the arena
-  is pinned.
-- Host rotation (every console taking a host turn), the 30-minute and
-  100-cycle lifecycle soaks, and the four-fighter gate measured with the radio
-  running (plan section 12).
+- The net digest folds no AI state (plan 7.3 adds it only if a divergence
+  ever escapes the current fields).
+- The 30-minute and 100-cycle lifecycle soaks in full (`NDS_NET_LAB_SOAK`;
+  25-minute runs so far, below), and the four-fighter gate measured with the
+  radio running (plan section 12).

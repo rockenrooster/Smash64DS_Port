@@ -225,7 +225,8 @@ static u32 sMenuVsSelected = NDS_MENU_VS_ENTRIES;
 static u32 sMenuVsRule;
 static s32 sMenuVsTime;
 static s32 sMenuVsStock;
-static NdsUiKitSurfaceId sMenuVsButtonSurface[NDS_MENU_VS_ENTRIES];
+/* What each button shows, and last the wireless caption's state. */
+static NdsUiKitSurfaceId sMenuVsButtonSurface[NDS_MENU_VS_ENTRIES + 1u];
 static u32 sMenuVsArrowsShown;
 
 /* P3 (plan section 2): VS START carries the wireless choice as its value, the
@@ -287,6 +288,19 @@ static NdsUiKitSurfaceId ndsMenuShellVsStartSurface(u32 lit, u32 selected)
     };
 
     return kStart[sMenuVsNet][(selected != FALSE) ? 2u : ((lit != FALSE) ? 1u : 0u)];
+}
+
+/* The caption under VS Options that says what the wireless value means
+ * (generate_mn_ui_kit.py NET_HINT_SURFACE_SPECS). */
+static NdsUiKitSurfaceId ndsMenuShellVsHintSurface(void)
+{
+    static const NdsUiKitSurfaceId kHint[NDS_MENU_VS_NET_VALUES] = {
+        NDS_MN_UI_KIT_SURFACE_VS_NET_HINT_OFF,
+        NDS_MN_UI_KIT_SURFACE_VS_NET_HINT_HOST,
+        NDS_MN_UI_KIT_SURFACE_VS_NET_HINT_JOIN,
+    };
+
+    return kHint[sMenuVsNet];
 }
 
 static NdsUiKitSurfaceId ndsMenuShellVsWantSurface(u32 button)
@@ -361,18 +375,22 @@ static NdsUiKitSurfaceId ndsMenuShellVsWantSurface(u32 button)
  * the following frame. */
 static void ndsMenuShellVsSyncButtons(u32 budget)
 {
-    NdsUiKitSurfaceId list[NDS_MENU_VS_ENTRIES];
-    NdsUiKitSurfaceId wanted[NDS_MENU_VS_ENTRIES];
-    u32 index[NDS_MENU_VS_ENTRIES];
+    /* The four buttons, then the wireless caption (slot NDS_MENU_VS_ENTRIES)
+     * under the same per-frame budget: a value change re-blits VS START on
+     * one frame and its caption on the next. */
+    NdsUiKitSurfaceId list[NDS_MENU_VS_ENTRIES + 1u];
+    NdsUiKitSurfaceId wanted;
+    u32 index[NDS_MENU_VS_ENTRIES + 1u];
     u32 count = 0u;
     u32 i;
 
-    for (i = 0u; i < NDS_MENU_VS_ENTRIES; i++)
+    for (i = 0u; i < (NDS_MENU_VS_ENTRIES + 1u); i++)
     {
-        wanted[i] = ndsMenuShellVsWantSurface(i);
-        if ((wanted[i] != sMenuVsButtonSurface[i]) && (count < budget))
+        wanted = (i < NDS_MENU_VS_ENTRIES) ? ndsMenuShellVsWantSurface(i) :
+                                             ndsMenuShellVsHintSurface();
+        if ((wanted != sMenuVsButtonSurface[i]) && (count < budget))
         {
-            list[count] = wanted[i];
+            list[count] = wanted;
             index[count] = i;
             count++;
         }
@@ -509,10 +527,11 @@ static void ndsMenuShellRefreshVs(void)
 }
 
 /* Screen ENTRY. This one runs on a load frame -- ndsMenuShellRun calls it once
- * after the backdrop, before the loop -- so it may write all four buttons. */
+ * after the backdrop, before the loop -- so it may write all four buttons
+ * and the wireless caption. */
 static void ndsMenuShellPopulateVs(void)
 {
-    ndsMenuShellVsSyncButtons(NDS_MENU_VS_ENTRIES);
+    ndsMenuShellVsSyncButtons(NDS_MENU_VS_ENTRIES + 1u);
     ndsMenuShellRefreshVs();
     /* A room left behind (backing out of the lobby) is closed here. */
     if (ndsNetInSession() != 0u)
@@ -529,10 +548,11 @@ static void ndsMenuShellVsLoadRules(void)
 {
     u32 i;
 
-    for (i = 0u; i < NDS_MENU_VS_ENTRIES; i++)
+    for (i = 0u; i < (NDS_MENU_VS_ENTRIES + 1u); i++)
     {
-        /* Nothing is on the screen yet, so every button differs from what the
-         * freshly cleared BG2 shows and all four blit on the entry frame. */
+        /* Nothing is on the screen yet, so every button (and the caption)
+         * differs from what the freshly cleared BG2 shows and all of them
+         * blit on the entry frame. */
         sMenuVsButtonSurface[i] = NDS_MENU_VS_SURFACE_NONE;
     }
     sMenuVsArrowsShown = TRUE;

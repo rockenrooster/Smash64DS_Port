@@ -804,6 +804,10 @@ NDS_NET_LAB_TEAMS ?= 0
 # P3 lab: with the autopilot, NDS_NET_LAB_LEAVE=N makes the guest hold START
 # (its Leave command) from batch 600 of its Nth battle.
 NDS_NET_LAB_LEAVE ?= 0
+# P3 lab: with the autopilot and the sweep, rooms without end: the roles swap
+# every room (host rotation), and the rooms cycle through lobby-only visits,
+# matches, rematches and a guest's Leave, with a libc heap sample per room.
+NDS_NET_LAB_SOAK ?= 0
 NDS_LAB_FOURCPU_SWEEP_GKIND ?=
 NDS_LAB_FOURCPU_SWEEP_KINDS ?=
 # LAB ONLY: the lean renderer's root-reuse census (ndsFtrLeanRootCensus,
@@ -7013,6 +7017,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_NET_LAB_SWEEP $(NDS_NET_LAB_SWEEP)'; \
 		echo '#define NDS_NET_LAB_TEAMS $(NDS_NET_LAB_TEAMS)'; \
 		echo '#define NDS_NET_LAB_LEAVE $(NDS_NET_LAB_LEAVE)'; \
+		echo '#define NDS_NET_LAB_SOAK $(NDS_NET_LAB_SOAK)'; \
 		echo '#define NDS_P2_FOUR_CPU_ROSTER $(NDS_P2_FOUR_CPU_ROSTER)'; \
 		echo '#define NDS_P2_FOUR_CPU_KIND0 $(NDS_P2_FOUR_CPU_KIND0)'; \
 		echo '#define NDS_P2_FOUR_CPU_KIND1 $(NDS_P2_FOUR_CPU_KIND1)'; \
