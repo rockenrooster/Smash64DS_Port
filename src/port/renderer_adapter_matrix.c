@@ -3957,6 +3957,40 @@ static sb32 ndsRendererAdapterIsMvpRecalcKind(u32 kind)
 volatile u32 gNdsRendererAdapterXObjOrderLegacy
     __attribute__((section(".data"), aligned(32))) = 0u;
 
+/* A source MVP-recalc XObj (kinds 41-50: gcPrepDObjMatrix emits gSPMvpRecalc
+ * and rewrites rows 0-2 of the MVP, objdisplay.c:800) followed in the same
+ * DObj by an ordinary transform XObj has no effect in the source: the later
+ * XObj's gSPMatrix(MUL | MODELVIEW) makes the RSP recompute the MVP from the
+ * modelview stack, which discards the rewrite. The Poke Ball's root is the
+ * measured case: its DObjDesc carries flags with Null transform kinds, so
+ * gcDecideDObj3TransformsKind gives it RecalcRotPyrR (objanim.c:2318) before
+ * itMBallMakeItem adds TraRotRpyR (itmball.c:494) -- { 41, 27 }. Built as a
+ * local rotation ahead of the TraRotRpyR, it rotated the ball's world
+ * translation about the stage origin by its spin, so a thrown or dropped ball
+ * flew off along an arc while the game held it on its real path (owner,
+ * BUGS.md Items; 2026-10-07 lab probe: at spin 0.754 a ball at (1186, 200)
+ * drew at (727, 958)). */
+static sb32 ndsRendererAdapterRecalcXObjSuperseded(const DObj *dobj, u32 index)
+{
+    const u32 kind = dobj->xobjs[index]->kind;
+    u32 j;
+
+    if ((kind < nGCMatrixKindRecalcRotPyrR) || (kind > nGCMatrixKind50))
+    {
+        return FALSE;
+    }
+    for (j = index + 1u; j < dobj->xobjs_num; j++)
+    {
+        if ((dobj->xobjs[j] != NULL) &&
+            (dobj->xobjs[j]->kind >= nGCMatrixKindTra) &&
+            (dobj->xobjs[j]->kind <= nGCMatrixKindSca))
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
 /* P2-2p8 2026-09-27 ITCM swap: out (noinline, so no ITCM caller pulls it
  * back in) for ndsStageGxDraw; census rent under ~1,300 cycles a byte. */
 static sb32 __attribute__((noinline))
@@ -3983,7 +4017,8 @@ ndsRendererAdapterBuildDObjLocalMatrix(
             has_mvp_recalc_rpy_0x47 = TRUE;
             continue;
         }
-        if (dobj->xobjs[i] == NULL)
+        if ((dobj->xobjs[i] == NULL) ||
+            (ndsRendererAdapterRecalcXObjSuperseded(dobj, i) != FALSE))
         {
             continue;
         }

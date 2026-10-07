@@ -7568,3 +7568,36 @@ Fix: right after GO, once the entry-only textures are retired
 and fills the missing ones. Lab q49 gate: 25 prepared (the one start-time
 refusal remains counted), and the forced-Blastoise match that recorded 27
 failures records none.
+
+## Poke Ball flew off its path when thrown or dropped (owner row "Pokeball fall/throw physics are corrupted", 2026-10-07) -- FIXED (pending playtest)
+
+The physics were the source's: a lab four-CPU match (Poke Balls only, Dream
+Land; scratchpad `pbprobe.ps1`) logged every airborne frame, and the ball's
+DObj position and velocity followed `itMBallThrownProcUpdate` /
+`itMBallFallProcUpdate` exactly (gravity 1.5 a tick, the source's terminal
+velocity, landing and opening on the floor line). What was wrong was where it
+DREW: the captures showed a thrown ball climbing away up and to the left
+while its logic rose 90 units and fell back to the right.
+
+Cause, from the matrix handed to the closed ball's billboard (gdb at
+`ndsRendererAdapterApplyMvpRecalc`, kind 0x46, `pbdraw.ps1`): the world
+translation was the ball's position rotated about the stage origin by its
+spin -- at spin 0.754 rad a ball at (1185.7, 200.3) drew at (727.2, 957.7) --
+and the rotation was twice the spin. The ball's root DObj carries two XObjs,
+{ 41, 27 }: its DObjDesc has flag bits with Null transform kinds, so
+`gcDecideDObj3TransformsKind` gives it `nGCMatrixKindRecalcRotPyrR`
+(objanim.c:2318), and `itMBallMakeItem` then adds `TraRotRpyR` (itmball.c:494).
+In the source, kind 41 rewrites rows 0-2 of the MVP (objdisplay.c:800) and the
+following XObj's `gSPMatrix(MUL | MODELVIEW)` makes the RSP recompute the MVP,
+so it has no effect; the port built kind 41 as a local rotation
+(`ndsRendererAdapterBuildRecalcLocalMtx`) and composed the TraRotRpyR before
+it.
+
+Fix (src/port/renderer_adapter_matrix.c,
+`ndsRendererAdapterRecalcXObjSuperseded`): a recalc XObj (kinds 41-50) that a
+later plain transform XObj (Tra..Sca) follows in the same DObj contributes
+nothing to the local, as in the source. Rendering only: the replay digest is
+untouched. The same shape ({ 41, TraRotRpyR } from flagged descs) is any
+item set up through `gcSetupCustomDObjsWithMObj` with Null kinds whose make
+function adds TraRotRpyR, so spinning items of that shape draw on their path
+too.

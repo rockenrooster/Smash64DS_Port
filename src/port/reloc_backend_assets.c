@@ -1684,7 +1684,7 @@ static const NDSRelocSpriteNormalizeDesc
      * ll<File>FTEmblemSprite (reloc_data_symbols.us.txt) in the file the
      * fighter's Main names (asset id = file id). Metal Mario has his own;
      * Giant DK shares Donkey's DkIcon; the Polygons share MasterHandIcon's. */
-    { NDS_RELOC_ASSET_MMARIO_MODEL, 0x2ef8u, 27u, 25u, 1u,
+    { 0x12cu /* MMarioModel */, 0x2ef8u, 27u, 25u, 1u,
       G_IM_FMT_I, G_IM_SIZ_4b },
     { 0x13fu /* DkIcon */, 0x02f8u, 30u, 22u, 1u,
       G_IM_FMT_I, G_IM_SIZ_4b },
