@@ -39,7 +39,7 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
     extern const NDSP4SpriteDesc gNdsP4##T##Sprites[]; \
     extern const u32 gNdsP4##T##SpriteCount; \
     extern const NDSP4Present gNdsP4##T##Present;
-#define NDS_P4_ROW(T, title, parent, on_status_hook) \
+#define NDS_P4_ROW(T, title, parent, on_status_hook, recover_hook) \
     { \
         .name = (title), .parent_kind = (parent), \
         .data = &gNdsP4##T##Data, \
@@ -50,6 +50,7 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
         .file_size = &gNdsP4##T##FileSize, \
         .anims = gNdsP4##T##Anims, .anim_count = &gNdsP4##T##AnimCount, \
         .on_status = (on_status_hook), \
+        .computer_recover = (recover_hook), \
         .stock_gfx = gNdsP4##T##StockGfx, \
         .stock_palettes = gNdsP4##T##StockPalettes, \
         .stock_palette_count = &gNdsP4##T##StockPaletteCount, \
@@ -61,12 +62,14 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
 #if NDS_P4_FALCO
 NDS_P4_DECLARE(Falco)
 void ndsP4FalcoOnStatus(GObj *fighter_gobj, s32 status_id);
+void ndsP4FalcoComputerRecover(FTStruct *fp);
 #endif
 
 static const NDSP4Fighter sNdsP4Fighters[NDS_P4_CONTENT_LIMIT] = {
 #if NDS_P4_FALCO
     [NDS_P4_CONTENT_FALCO] =
-        NDS_P4_ROW(Falco, "Falco", nFTKindFox, ndsP4FalcoOnStatus),
+        NDS_P4_ROW(Falco, "Falco", nFTKindFox, ndsP4FalcoOnStatus,
+                   ndsP4FalcoComputerRecover),
 #endif
 };
 
@@ -209,6 +212,16 @@ void ndsP4SetupFileSizes(u32 data_flags)
                 parent->file_anim_size = f->data->file_anim_size;
             }
         }
+    }
+}
+
+void ndsP4ComputerRecover(FTStruct *fp)
+{
+    const NDSP4Fighter *f = ndsP4Fighter(ndsP4Content(fp));
+
+    if ((f != NULL) && (f->computer_recover != NULL))
+    {
+        f->computer_recover(fp);
     }
 }
 

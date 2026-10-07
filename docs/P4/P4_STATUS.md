@@ -217,17 +217,36 @@ Presentation, all generated per content from the donor's own rows:
   cues (`gNdsAudioFgmP4Result`, `gNdsAudioFgmP4Count`).
   In a four-Falco lab match (1,500 frames): the pack loaded with 15 cues,
   69 plays of donor cues, 0 FGM misses, 0 play failures.
+- **Victory music**: a content whose `winner_bgm` is a Remix song (id at or
+  above the vanilla 0x2F) gets it rendered by the vanilla BGM renderer
+  (`render-audio-bgm.py --sequence-file`) from the donor's compressed
+  sequence (bass.out: "Added MIDI_<NAME>(<path>)", "MIDI_<NAME>_ID") on the
+  vanilla sequence bank, and `nds_audio_bgm.c` appends its track row in P4
+  builds (`nds_p4_bgm.generated.inc`). Falco's FALCO_VICTORY (0x45) uses
+  programs 5-31, all vanilla instruments: 170 notes, 8.4 s, 92 KB. In a
+  four-Falco lab match the Results screen plays it (track 0x45, streaming, 0
+  BGM errors).
+- **Costumes**: the alternates draw through the native owner like the
+  original cast's (four Falcos in four costumes, lab capture `p4cos1`);
+  shields keep the port's colour, as vanilla does (Remix's costume-matched
+  shields are its own option).
 
-AI is the parent's: a CPU Falco runs Fox's vanilla AI, as every P4 fighter
-runs its parent's (Remix's `define_character` starts from the same rows).
-Remix's own CPU additions -- attack prevention, Falco's Phantasm ledge
-recovery, the copied attack behaviours -- are Remix-wide AI enhancements the
-port carries for no fighter.
+- **CPU**: a CPU Falco runs Fox's AI (Remix's `define_character` starts from
+  the parent's rows) plus his `recovery_logic` row: Remix calls it after the
+  recover objective walks (AI.asm custom_recovery_logic in
+  `ftComputerFollowObjectiveRecover`), and the port's copy of that function
+  makes the same call (`ndsP4ComputerRecover`, by content). Falco's
+  (Falco.asm): in the air Phantasm hold B; otherwise, with the nearer ledge
+  under 2000 units away in X, the fighter below it and the ledge-grab box
+  reaching it, one time in eight target the ledge and Phantasm toward it --
+  Remix's added NSP_TOWARDS input routine is the vanilla "neutral special
+  toward the target" script (9). Four CPU Falcos (lab, 1,700 frames): 1,244
+  hook calls, 10 Phantasms toward a ledge, each held through with B. His other rows,
+  `ai_attack_prevent` (a FOX_USP check), `ai_behaviour` and `ai_long_range`,
+  are still Fox's.
 
-Open for Falco: the 3D preview on the select screen (a Remix selection has no
-compact preview pack yet; its panel stays empty, counted in
-`gNdsPlayersVSPreviewP4Unsupported`), the victory BGM 0x45 (Remix's
-FALCO_VICTORY sequence; the DS streams only the vanilla tracks, so it counts
-as an unsupported BGM), Kirby's copy (Kirby takes the parent's copy, Fox's
-blaster and hat; Remix gives him Falco's hat 0x12 from its extended Kirby
-file), costumes and shield colours, runtime witnesses on the card.
+Open for Falco: the CPU rows still Fox's (above), the 3D preview on the select screen
+(a Remix selection has no compact preview pack yet; its panel stays empty,
+counted in `gNdsPlayersVSPreviewP4Unsupported`), Kirby's copy (Kirby takes
+the parent's copy, Fox's blaster and hat; Remix gives him Falco's hat 0x12
+from its extended Kirby file), runtime witnesses on the card.

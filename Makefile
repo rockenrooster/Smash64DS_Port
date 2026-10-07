@@ -3971,7 +3971,7 @@ CFLAGS += -I$(PROJECT_ROOT)/$(BUILD)/p4/falco/native
 endif
 # P4 character select tables (scripts/p4/p4_css.py).
 ifeq ($(NDS_P4),1)
-CFLAGS += -I$(PROJECT_ROOT)/$(BUILD)/p4/css
+CFLAGS += -I$(PROJECT_ROOT)/$(BUILD)/p4/css -I$(PROJECT_ROOT)/$(BUILD)/p4/audio
 endif
 # P3 build identity (plan 7.1): libnds's inline asserts embed their headers'
 # __FILE__, i.e. the devkitPro install path (C:/devkitPro/libnds/include/...),
@@ -6028,7 +6028,8 @@ endif
 # The contents' Remix sounds as a second FGM pack (scripts/p4/p4_audio.py).
 ifeq ($(NDS_P4),1)
 export NDS_P4_AUDIO_DIR := $(NDS_P4_GEN)/audio
-NDS_NITROFS_P4_FILES += $(NITROFS_DIR)/p4/audio/fgm_p4.bin
+export NDS_P4_EXPORT_FILES := $(if $(filter 1,$(NDS_P4_FALCO)),$(NDS_P4_EXPORT)/falco/resolved.json)
+NDS_NITROFS_P4_FILES += $(NDS_P4_AUDIO_DIR)/.nitrofs-staged
 endif
 
 export NDS_NITROFS_RELOC_FILES := \
@@ -7953,15 +7954,22 @@ $(NDS_P4_CSS_DIR)/css.json $(NDS_P4_CSS_DIR)/nds_p4_css.generated.inc &: \
 	python "$(PROJECT_ROOT)/scripts/p4/p4_css.py" --staging "$(NDS_P4_STAGING)" \
 		--out "$(NDS_P4_CSS_DIR)" --contents "$(NDS_P4_CONTENTS)"
 nds_menu_shell.o: $(NDS_P4_CSS_DIR)/nds_p4_css.generated.inc
-$(NDS_P4_AUDIO_DIR)/fgm_p4.bin: $(NDS_P4_STAGING)/ssb64asm.z64 \
-		$(PROJECT_ROOT)/scripts/p4/p4_audio.py \
+# The sound pack, the victory songs and their BGM rows come from one run.
+$(NDS_P4_AUDIO_DIR)/fgm_p4.bin $(NDS_P4_AUDIO_DIR)/nds_p4_bgm.generated.inc &: \
+		$(NDS_P4_STAGING)/ssb64asm.z64 $(PROJECT_ROOT)/scripts/p4/p4_audio.py \
 		$(PROJECT_ROOT)/scripts/sfx/render-audio-fgm-phase-pack.py \
-		$(PROJECT_ROOT)/scripts/sfx/vadpcm_decode.py $(NDS_BUILD_CONFIG)
+		$(PROJECT_ROOT)/scripts/sfx/bgm/render-audio-bgm.py \
+		$(PROJECT_ROOT)/scripts/sfx/vadpcm_decode.py \
+		$(NDS_P4_EXPORT_FILES) \
+		$(NDS_BUILD_CONFIG)
 	python "$(PROJECT_ROOT)/scripts/p4/p4_audio.py" --staging "$(NDS_P4_STAGING)" \
-		$(foreach content,$(NDS_P4_CONTENTS),--content $(content)) --out "$(NDS_P4_AUDIO_DIR)"
-$(NITROFS_DIR)/p4/audio/fgm_p4.bin: $(NDS_P4_AUDIO_DIR)/fgm_p4.bin
-	@mkdir -p $(dir $@)
-	@cp $< $@
+		$(foreach content,$(NDS_P4_CONTENTS),--content $(content)) --out "$(NDS_P4_AUDIO_DIR)" \
+		--export-root "$(NDS_P4_EXPORT)"
+$(NDS_P4_AUDIO_DIR)/.nitrofs-staged: $(NDS_P4_AUDIO_DIR)/fgm_p4.bin
+	@mkdir -p $(NITROFS_DIR)/p4/audio
+	@cp $(NDS_P4_AUDIO_DIR)/*.bin $(NITROFS_DIR)/p4/audio/
+	@touch $@
+nds_audio_bgm.o: $(NDS_P4_AUDIO_DIR)/nds_p4_bgm.generated.inc
 endif
 ifeq ($(NDS_P4_FALCO),1)
 $(BUILD)/native_image_falco_high.o: $(NDS_P4_FALCO_NATIVE)/.stamp $(NDS_BUILD_CONFIG)

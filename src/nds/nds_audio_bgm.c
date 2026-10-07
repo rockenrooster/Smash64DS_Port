@@ -821,6 +821,10 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         TRUE
     }
 #endif
+#if NDS_P4
+    /* The P4 contents' Remix songs (scripts/p4/p4_audio.py). */
+#include "nds_p4_bgm.generated.inc"
+#endif
 };
 
 volatile u32 gNdsAudioBgmResult;

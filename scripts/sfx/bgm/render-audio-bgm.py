@@ -1181,6 +1181,9 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo", type=Path, default=_paths.REPO_ROOT)
     parser.add_argument("--sequence-index", type=int, default=SEQ_INDEX_PUPUPU)
+    # A compressed sequence from a file instead of S1_music_sbk (a Smash Remix
+    # song, scripts/p4/p4_audio.py), on the same bank.
+    parser.add_argument("--sequence-file", type=Path)
     parser.add_argument(
         "--output",
         type=Path,
@@ -1203,7 +1206,11 @@ def main() -> int:
     ctl = read_o2r_payload(audio_root / BGM_SEQUENCE_BANK_CTL)
     tbl = read_o2r_payload(audio_root / BGM_SEQUENCE_BANK_TBL)
 
-    seq = read_seq(sbk, args.sequence_index)
+    if args.sequence_file is not None:
+        seq = args.sequence_file.read_bytes()
+        args.sequence_index = None
+    else:
+        seq = read_seq(sbk, args.sequence_index)
     legacy_direct_resample = args.sequence_index in LEGACY_DIRECT_RESAMPLE_SEQUENCES
     mix_sample_rate = (
         OUTPUT_SAMPLE_RATE if legacy_direct_resample else SOURCE_BANK_SAMPLE_RATE)
@@ -1277,6 +1284,8 @@ def main() -> int:
 
     metadata = {
         "source": (
+            f"{args.sequence_file.name} + {BGM_SEQUENCE_BANK_SOURCE}"
+            if args.sequence_file is not None else
             "BattleShip_o2r/audio/S1_music_sbk sequence "
             f"{args.sequence_index} + {BGM_SEQUENCE_BANK_SOURCE}"
         ),

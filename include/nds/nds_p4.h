@@ -85,6 +85,8 @@ typedef struct NDSP4Fighter
     const u32 *anim_count;
     /* Optional: after the status callbacks are applied (donor init hooks). */
     void (*on_status)(GObj *fighter_gobj, s32 status_id);
+    /* Optional: the content's CPU recovery_logic row (Remix AI.asm). */
+    void (*computer_recover)(FTStruct *fp);
     /* HUD: stock icon (8x8 OBJ4 cell, 32 B) and its costume LUTs. */
     const u8 *stock_gfx;
     const u16 (*stock_palettes)[16];
@@ -129,6 +131,9 @@ void ndsP4SetupFileSizes(u32 data_flags);
 void ndsP4ApplyStatusOverrides(GObj *fighter_gobj, s32 status_id);
 /* ftMainSetStatus prologue: Remix change_action_ resets. */
 void ndsP4OnSetStatus(GObj *fighter_gobj);
+/* ftComputerFollowObjectiveRecover, after its walk: the content's CPU
+ * recovery_logic (Remix AI.asm custom_recovery_logic). */
+void ndsP4ComputerRecover(FTStruct *fp);
 /* After a content's motion file loads: bind menu-motion script pointers. */
 void ndsP4BindMenuScripts(u32 content);
 /* NitroFS path for a P4 file id, or NULL. */

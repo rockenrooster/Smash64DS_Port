@@ -37,6 +37,16 @@ volatile u32 gNdsBattlePlayableFoxCpuEnabled = 0u;
 #pragma weak ftComputerCheckEvadeDistance
 #pragma weak ftComputerCheckDetectTarget
 
+#if NDS_P4
+/* P4: Remix hooks the recover objective after its walk (AI.asm
+ * custom_recovery_logic). The definition `(FTStruct *fp)` pastes to the
+ * base name, the decomp's call `(fp)` to the port's copy below, which adds
+ * that call. */
+#define NDS_P4_RECOVER_FTStruct ndsBaseFTComputerFollowObjectiveRecover(FTStruct
+#define NDS_P4_RECOVER_fp ndsP4FTComputerFollowObjectiveRecover(fp
+#define ftComputerFollowObjectiveRecover(arg) NDS_P4_RECOVER_##arg)
+static void ndsP4FTComputerFollowObjectiveRecover(FTStruct *fp);
+#endif
 #define ftComputerSetupAll ndsBaseFTComputerSetupAll
 #define ftComputerProcessAll ndsBaseFTComputerProcessAll
 #define ftComputerSetFighterDamageDetectSize \
@@ -44,6 +54,47 @@ volatile u32 gNdsBattlePlayableFoxCpuEnabled = 0u;
 
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcomputer.c"
 
+#if NDS_P4
+#undef ftComputerFollowObjectiveRecover
+#include <nds/nds_p4.h>
+
+/* ftcomputer.c:6535, unchanged, with Remix's recovery_logic call after the
+ * walk (AI.asm custom_recovery_logic, at 0x80137FBC). */
+static void ndsP4FTComputerFollowObjectiveRecover(FTStruct *fp)
+{
+    FTComputer *com = &fp->computer;
+
+    if (ftComputerCheckTryCancelSpecialN(fp) == FALSE)
+    {
+        func_ovl3_80134964(fp);
+
+#if defined(REGION_US)
+        if (fp->fkind == nFTKindPikachu)
+        {
+            switch (fp->status_id)
+            {
+            case nFTPikachuStatusSpecialAirHiStart:
+                com->target_pos.x = fp->joints[nFTPartsJointTopN]->translate.vec.f.x;
+                com->target_pos.y = fp->joints[nFTPartsJointTopN]->translate.vec.f.y + 1100.0F;
+                break;
+            case nFTPikachuStatusSpecialAirHi:
+                com->target_pos.x = 0.0F;
+                com->target_pos.y = fp->joints[nFTPartsJointTopN]->translate.vec.f.y;
+                break;
+            }
+        }
+#endif
+
+        ftComputerFollowObjectiveWalk(fp);
+        ndsP4ComputerRecover(fp);
+    }
+}
+
+void ftComputerFollowObjectiveRecover(FTStruct *fp)
+{
+    ndsP4FTComputerFollowObjectiveRecover(fp);
+}
+#endif
 #undef ftComputerSetupAll
 #undef ftComputerProcessAll
 #undef ftComputerSetFighterDamageDetectSize

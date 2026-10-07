@@ -13,10 +13,13 @@
  *   attributes + 0x58              attr->gravity
  */
 #include <nds/nds_p4.h>
+#include <ft/ftcomputer.h>
 
 #if NDS_P4_FALCO
 
 sb32 ftMarioSpecialHiProcPass(GObj *fighter_gobj);
+void ftComputerSetCommandImmediate(FTStruct *fp, s32 index);
+s32 syUtilsRandIntRange(s32 range);
 
 /* Phantasm.asm constants. Each is a `lui` upper half; LANDING keeps the
  * low half of the Mario Super Jump routine it was copied from
@@ -192,6 +195,55 @@ void ndsP4FalcoOnStatus(GObj *fighter_gobj, s32 status_id)
     {
         fp->motion_vars.flags.flag2 = PHANTASM_INITIAL_SETUP;
     }
+}
+
+/* Falco.asm recovery_logic, the CPU's: run after the recover objective's
+ * walk (AI.asm custom_recovery_logic). In the air Phantasm it holds B (the
+ * long version). Otherwise, with the nearer ledge under 2000 units away in
+ * X, the fighter below it and the ledge-grab box reaching it, one time in
+ * eight it targets the ledge and Phantasms toward it. Remix adds a CPU input
+ * routine for that (AI.asm NSP_TOWARDS: B with the stick toward the target);
+ * the vanilla routine for "neutral special toward the target"
+ * (nFTComputerInputStickSmashAutoXButtonB, ftcomputer.c script 9) gives the
+ * same inputs. Offsets: 0x24 status_id, 0x78 coll_data.p_translate,
+ * 0x1CC+0x4C/0x54 computer.cliff_left_pos/cliff_right_pos, 0x9C8 attr,
+ * attributes + 0xB0 cliffcatch_coll.y, 0x1C6 input.cp. */
+void ndsP4FalcoComputerRecover(FTStruct *fp)
+{
+    FTComputer *com = &fp->computer;
+    const Vec3f *pos = fp->coll_data.p_translate;
+    f32 ledge_x;
+    f32 ledge_y;
+
+    if (fp->status_id == nFTFoxStatusSpecialAirN)
+    {
+        fp->input.cp.button_inputs |= B_BUTTON;
+        return;
+    }
+    if (ABSF(com->cliff_left_pos.x - pos->x) <=
+        ABSF(com->cliff_right_pos.x - pos->x))
+    {
+        ledge_x = com->cliff_left_pos.x;
+        ledge_y = com->cliff_left_pos.y;
+    }
+    else
+    {
+        ledge_x = com->cliff_right_pos.x;
+        ledge_y = com->cliff_right_pos.y;
+    }
+    if ((2000.0F <= ABSF(ledge_x - pos->x)) ||
+        ((pos->y + fp->attr->cliffcatch_coll.y) <= ledge_y) ||
+        !(pos->y <= ledge_y))
+    {
+        return;
+    }
+    if (syUtilsRandIntRange(8) != 0)
+    {
+        return;
+    }
+    com->target_pos.x = ledge_x;
+    com->target_pos.y = ledge_y;
+    ftComputerSetCommandImmediate(fp, nFTComputerInputStickSmashAutoXButtonB);
 }
 
 /* Falco.asm up_special_delay_ / up_special_velocity_1/2/3_. */
