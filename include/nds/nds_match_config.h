@@ -75,6 +75,8 @@ typedef struct NdsMatchFighterConfig {
     u8 color;
     s8 stock_count;    /* 1P only, see above; ignored on the VS path */
     ub8 is_spgame_enemy; /* 1P only, TRUE for ladder enemies, see above */
+    u8 p4_content;     /* P4 Remix content on `fkind` (its setup parent), 0
+                        * for the original cast (include/nds/nds_p4.h) */
     s32 copy_kind;     /* 1P only, Kirby copy power (nFTKind*), see above;
                         * NDS_MATCH_NO_COPY_KIND on the VS path */
 } NdsMatchFighterConfig;

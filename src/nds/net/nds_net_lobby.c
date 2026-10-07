@@ -276,7 +276,12 @@ static void ndsNetDescriptorWrite(u8 *p, const NdsMatchConfig *cfg)
     p[9] = (u8)((cfg->is_team_battle ? 1u : 0u) | (cfg->is_team_attack ? 2u : 0u) |
                 (cfg->is_stage_select ? 4u : 0u) | (cfg->is_reset_players ? 8u : 0u));
     ndsNetPut32(p + 10, cfg->item_toggles);
-    /* 32 + 14 = 46 bytes; NDS_NET_DESC_BYTES leaves room to grow. */
+    /* P4: each port's Remix content (0 = the original cast on fkind). */
+    for (i = 0u; i < NDS_NET_PORTS; i++)
+    {
+        p[14 + i] = cfg->fighters[i].p4_content;
+    }
+    /* 32 + 14 + 4 = 50 bytes; NDS_NET_DESC_BYTES leaves room to grow. */
 }
 
 static void ndsNetDescriptorRead(const u8 *p, NdsMatchConfig *cfg)
@@ -315,6 +320,10 @@ static void ndsNetDescriptorRead(const u8 *p, NdsMatchConfig *cfg)
     cfg->is_stage_select = (p[9] & 4u) ? TRUE : FALSE;
     cfg->is_reset_players = (p[9] & 8u) ? TRUE : FALSE;
     cfg->item_toggles = ndsNetGet32(p + 10);
+    for (i = 0u; i < NDS_NET_PORTS; i++)
+    {
+        cfg->fighters[i].p4_content = p[14 + i];
+    }
 }
 
 /* --- Session lifecycle ---------------------------------------------------- */

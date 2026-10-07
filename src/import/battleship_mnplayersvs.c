@@ -1967,9 +1967,32 @@ static void ndsMNPlayersVSPreviewRebuildChangedKind(u32 slot, s32 pkind,
     }
 }
 
+/* P4: the Remix content each slot's next sync asks for (0 = the original on
+ * that kind). A Remix selection has no compact preview pack yet
+ * (scripts/fighters/generate_preview_core_packs.py builds the twelve from
+ * decomp metadata), so its panel shows no 3D fighter rather than its parent's:
+ * counted in gNdsPlayersVSPreviewP4Unsupported, and docs/P4/P4_STATUS.md
+ * carries the gap. */
+static u8 sNdsPlayersVSPreviewContent[GMCOMMON_PLAYERS_MAX];
+__attribute__((used)) volatile u32 gNdsPlayersVSPreviewP4Unsupported;
+
+void ndsMNPlayersVSPreviewSetContent(u32 slot, u32 content)
+{
+    if (slot < GMCOMMON_PLAYERS_MAX)
+    {
+        sNdsPlayersVSPreviewContent[slot] = (u8)content;
+    }
+}
+
 void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
                                sb32 is_selected)
 {
+    if ((slot < GMCOMMON_PLAYERS_MAX) &&
+        (sNdsPlayersVSPreviewContent[slot] != 0u) && (fkind != nFTKindNull))
+    {
+        gNdsPlayersVSPreviewP4Unsupported++;
+        fkind = nFTKindNull;
+    }
     s32 old_pkind;
     s32 old_fkind;
     sb32 old_selected;

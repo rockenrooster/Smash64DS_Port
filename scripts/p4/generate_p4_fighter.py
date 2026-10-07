@@ -68,6 +68,103 @@ FIGHTERS = {
 }
 
 THROW_DATA_BYTES = 28  # FTThrowHitDesc, the larger of the two SetThrow targets
+SPRITE_BYTES = 68      # libultra Sprite (include/PR/sp.h)
+
+
+def load_battle_hud(repo_root: Path):
+    """scripts/menus/generate_battle_hud.py and its UI decoder, for the stock bake."""
+    import importlib.util
+    path = repo_root / "scripts" / "menus" / "generate_battle_hud.py"
+    spec = importlib.util.spec_from_file_location("p4_generate_battle_hud", path)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = mod
+    spec.loader.exec_module(mod)
+    return mod, mod.load_ui_generator(repo_root)
+
+
+def ft_sprites(rom: R.Rom, main_id: int, attr_off: int, sprites_field: int) -> dict:
+    """The fighter's FTSprites (stock icon, its costume LUTs, series emblem) as
+    file references, read through the main file's relocations."""
+    slots = rom.reloc_slots(main_id)
+    ref = slots.get(attr_off + sprites_field)
+    if ref is None or ref[0] != "intern":
+        raise GenError(f"{main_id:#x}: FTAttributes.sprites is not an internal pointer")
+    base = ref[1]
+
+    def target(off: int) -> tuple[int, int]:
+        r = slots.get(off)
+        if r is None:
+            raise GenError(f"{main_id:#x}+{off:#x}: FTSprites field is not a pointer")
+        return (main_id, r[1]) if r[0] == "intern" else (r[1], r[2])
+
+    stock, emblem = target(base), target(base + 8)
+    luts_ref = slots.get(base + 4)
+    if luts_ref is None or luts_ref[0] != "intern":
+        raise GenError(f"{main_id:#x}: stock_luts is not an internal array")
+    luts = []
+    off = luts_ref[1]
+    # The LUT pointer array runs up to the FTSprites struct that follows it.
+    while off < base and off in slots:
+        luts.append(target(off))
+        off += 4
+    if not luts or any(f != stock[0] for f, _ in luts):
+        raise GenError(f"{main_id:#x}: stock LUTs must share the stock sprite's file")
+    return {"stock": stock, "emblem": emblem, "luts": luts}
+
+
+def present_rows(rom: R.Rom, tables: dict) -> dict:
+    """Results/menu presentation from the donor's kind-table rows
+    (resultsscreen.asm add_to_results_screen, Character.asm menu tables)."""
+    def word(name: str) -> int:
+        return int(tables[name]["value"], 16)
+
+    def f32(name: str) -> float:
+        return struct.unpack(">f", struct.pack(">I", word(name)))[0]
+
+    name_ptr = word("str_winner_ptr")
+    raw = rom.read_ram(name_ptr, 32)
+    if b"\x00" not in raw:
+        raise GenError("results name string is not terminated in 32 bytes")
+    name = raw.split(b"\x00", 1)[0].decode("ascii")
+    # winner_bgm is a three-instruction routine: or a0,r0,r0; jal play_bgm;
+    # ori a1,r0,<bgm>. Accept exactly that shape.
+    routine = struct.unpack(">3I", rom.read_ram(word("winner_bgm"), 12))
+    if routine[0] != 0x00002025 or (routine[1] >> 26) != 0x03 or (routine[2] >> 16) != 0x3405:
+        raise GenError(f"winner_bgm routine {[hex(w) for w in routine]} is not add_victory_bgm")
+    return {
+        "results_name": name, "results_name_x": f32("str_winner_lx"),
+        "results_name_scale": f32("str_winner_scale"), "results_wins_x": f32("str_wins_lx"),
+        "announce_fgm": word("winner_fgm"), "victory_bgm": routine[2] & 0xFFFF,
+        "crowd_chant_fgm": word("crowd_chant_fgm"), "menu_zoom": f32("menu_zoom"),
+        "default_costumes": bytes.fromhex(tables["default_costume"]["value"]),
+    }
+
+
+def c_float(v: float) -> str:
+    text = repr(float(v))
+    return text + ("F" if ("e" in text or "." in text) else ".0F")
+
+
+def sprite_row(rom: R.Rom, fid: int, off: int) -> dict:
+    data = rom.file_bytes(fid)
+    if off + SPRITE_BYTES > len(data):
+        raise GenError(f"{fid:#x}+{off:#x}: Sprite out of range")
+    width, height = struct.unpack_from(">hh", data, off + 4)
+    return {"file_id": fid, "offset": off, "width": width, "height": height,
+            "bitmaps": struct.unpack_from(">h", data, off + 40)[0],
+            "fmt": data[off + 48], "siz": data[off + 49]}
+
+
+def stock_texture(rom: R.Rom, fid: int, sprite_off: int) -> int:
+    """Sprite.bitmap -> Bitmap.buf, both internal pointers in the sprite's file."""
+    slots = rom.reloc_slots(fid)
+    bm = slots.get(sprite_off + 52)
+    if bm is None or bm[0] != "intern":
+        raise GenError(f"{fid:#x}+{sprite_off:#x}: stock bitmap is not internal")
+    buf = slots.get(bm[1] + 8)
+    if buf is None or buf[0] != "intern":
+        raise GenError(f"{fid:#x}+{sprite_off:#x}: stock texture is not internal")
+    return buf[1]
 
 
 class GenError(SystemExit):
@@ -333,6 +430,27 @@ def main() -> int:
     (o2r_out / f"{synth_id:04x}").write_bytes(motion_o2r)
     shipped[synth_id] = hashlib.sha256(motion_o2r).hexdigest()
 
+    # HUD presentation: the stock icon baked exactly as the legacy roster's
+    # (generate_battle_hud.stock_asset), and the FTSprites sprites the reloc
+    # loader normalizes so the emblem bake reads real header fields.
+    repo_root = Path(__file__).resolve().parents[2]
+    import ft_layout  # noqa: E402
+    fs = ft_sprites(rom, file_ids[0], desc["o_attributes"],
+                    ft_layout.layout()["FTAttributes.sprites"])
+    stock_fid, stock_off = fs["stock"]
+    if stock_fid not in shipped:
+        raise GenError(f"stock sprite file {stock_fid:#x} is not a donor file this build ships")
+    hud, ui = load_battle_hud(repo_root)
+    stock_gfx, stock_palettes = hud.stock_asset(ui, repo_root, {
+        "file": f"{stock_fid:04x}", "path": o2r_out / f"{stock_fid:04x}",
+        "sprite": stock_off, "texture": stock_texture(rom, stock_fid, stock_off),
+        "palettes": [o for _, o in fs["luts"]]})
+    sprite_rows = [sprite_row(rom, *fs["stock"]), sprite_row(rom, *fs["emblem"])]
+    present = present_rows(rom, resolved["kind_tables"])
+    for row in sprite_rows:
+        if row["file_id"] not in shipped:
+            raise GenError(f"sprite file {row['file_id']:#x} is not a donor file this build ships")
+
     def script_offset(value: int) -> int:
         if value == NO_SCRIPT:
             return NO_SCRIPT
@@ -351,7 +469,8 @@ def main() -> int:
     menus = []
     for m in resolved["menu_motions"]:
         s = m["script"]
-        if s != NO_SCRIPT and not (s >= R.REMIX_CODE_RAM):
+        if s != NO_SCRIPT and not (s >= R.REMIX_CODE_RAM or
+                                   R.MENU_OVERLAY_RAM[0] <= s < R.MENU_OVERLAY_RAM[1]):
             raise GenError(f"menu motion {m['index']}: vanilla script pointer {s:#x} needs a symbol")
         menus.append((m["anim_file_id"], script_offset(s), m["anim_flags"]))
 
@@ -475,7 +594,34 @@ def main() -> int:
               "    " + ", ".join(f"{a | (0x8000 if ev else 0):#06x}" for a, ev in anims) + ",",
               "};", f"const u32 g{ident}AnimCount = {len(anims)};", "",
               "/* FTFileSize: main closure, largest main-motion and menu-motion figatree. */",
-              f"const FTFileSize g{ident}FileSize = {{ {sizes[0]}u, {sizes[1]}u, {sizes[2]}u }};", ""]
+              f"const FTFileSize g{ident}FileSize = {{ {sizes[0]}u, {sizes[1]}u, {sizes[2]}u }};", "",
+              "/* HUD: the stock icon as one 8x8 OBJ4 cell and its costume LUTs",
+              " * (scripts/menus/generate_battle_hud.py stock_asset). */",
+              f"const u8 g{ident}StockGfx[{len(stock_gfx)}] = {{"]
+    for k in range(0, len(stock_gfx), 16):
+        lines.append("    " + ", ".join(f"0x{b:02x}" for b in stock_gfx[k:k + 16]) + ",")
+    lines += ["};", f"const u16 g{ident}StockPalettes[{len(stock_palettes)}][16] = {{"]
+    for pal in stock_palettes:
+        lines.append("    { " + ", ".join(f"0x{v:04x}" for v in pal) + " },")
+    lines += ["};", f"const u32 g{ident}StockPaletteCount = {len(stock_palettes)};", "",
+              "/* FTSprites sprites the reloc loader normalizes (stock icon, emblem). */",
+              f"const NDSP4SpriteDesc g{ident}Sprites[] = {{"]
+    for row in sprite_rows:
+        lines.append(f"    {{ {row['file_id']:#x}, {row['bitmaps']}, {row['offset']:#x}, "
+                     f"{row['width']}, {row['height']}, {row['fmt']}, {row['siz']} }},")
+    lines += ["};", f"const u32 g{ident}SpriteCount = {len(sprite_rows)};", "",
+              "/* Results/menu presentation (resultsscreen.asm, Character.asm rows). */",
+              f"const NDSP4Present g{ident}Present = {{",
+              f"    .results_name = \"{present['results_name']}\",",
+              f"    .results_name_x = {c_float(present['results_name_x'])},",
+              f"    .results_name_scale = {c_float(present['results_name_scale'])},",
+              f"    .results_wins_x = {c_float(present['results_wins_x'])},",
+              f"    .announce_fgm = {present['announce_fgm']:#x},",
+              f"    .victory_bgm = {present['victory_bgm']:#x},",
+              f"    .crowd_chant_fgm = {present['crowd_chant_fgm']:#x},",
+              f"    .menu_zoom = {c_float(present['menu_zoom'])},",
+              "    .default_costumes = { " + ", ".join(str(b) for b in present["default_costumes"]) + " },",
+              "};", ""]
     src = "\n".join(lines)
     (args.out / f"nds_p4_{name}.generated.c").write_text(src, encoding="utf-8", newline="\n")
 

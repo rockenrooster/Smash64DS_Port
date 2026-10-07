@@ -40,6 +40,14 @@
 #define NDS_AUDIO_FGM_EVENT_RESTART_SAMPLE (1u << 0)
 #define NDS_AUDIO_FGM_FLAG_LOOP (1u << 0)
 #define NDS_AUDIO_FGM_FLAG_PAUSE_WITH_GAME (1u << 1)
+#if NDS_P4
+/* P4: the Remix contents' sounds (scripts/p4/p4_audio.py), a second pack in
+ * the vanilla layout under its own magic. Its entries carry this runtime
+ * flag, so their bodies are read from that file. */
+#define NDS_AUDIO_FGM_P4_ROM_PATH "p4/audio/fgm_p4.bin"
+#define NDS_AUDIO_FGM_P4_ENTRY_MAX 64u
+#define NDS_AUDIO_FGM_FLAG_P4 (1u << 15)
+#endif
 #define NDS_AUDIO_FGM_SAMUS_CHARGE_FIRST nSYAudioFGMSamusSpecialNCharge0
 #define NDS_AUDIO_FGM_SAMUS_CHARGE_LAST nSYAudioFGMSamusSpecialNCharge6
 #define NDS_AUDIO_FGM_SAMUS_CHARGE_AUX_ID 673u
@@ -1156,6 +1164,30 @@ static void ndsAudioFgmBuildIdMap(void)
     sNdsAudioFgmIdMapReady = 1u;
 }
 
+#if NDS_P4
+static NDSAudioFgmPackEntry sNdsAudioFgmP4Entries[NDS_AUDIO_FGM_P4_ENTRY_MAX];
+static u32 sNdsAudioFgmP4Count;
+static u16 sNdsAudioFgmP4FileId;
+/* 1 = loaded; 2 no ROM, 3 no file, 4 short header, 5 bad header,
+ * 6 bad entry. */
+volatile u32 gNdsAudioFgmP4Result;
+volatile u32 gNdsAudioFgmP4Count;
+
+static NDSAudioFgmPackEntry *ndsAudioFgmFindP4Entry(u16 id)
+{
+    u32 i;
+
+    for (i = 0u; i < sNdsAudioFgmP4Count; i++)
+    {
+        if (sNdsAudioFgmP4Entries[i].id == id)
+        {
+            return &sNdsAudioFgmP4Entries[i];
+        }
+    }
+    return NULL;
+}
+#endif
+
 static NDSAudioFgmPackEntry *ndsAudioFgmFindEntry(u16 id)
 {
     u32 i;
@@ -1163,16 +1195,26 @@ static NDSAudioFgmPackEntry *ndsAudioFgmFindEntry(u16 id)
     if ((sNdsAudioFgmIdMapReady != 0u) && (id < NDS_AUDIO_FGM_ID_MAP_COUNT))
     {
         i = sNdsAudioFgmIdMap[id];
-        return (i != 0u) ? &sNdsAudioFgmEntries[i - 1u] : NULL;
-    }
-    for (i = 0u; i < NDS_AUDIO_FGM_ENTRY_COUNT; i++)
-    {
-        if (sNdsAudioFgmEntries[i].id == id)
+        if (i != 0u)
         {
-            return &sNdsAudioFgmEntries[i];
+            return &sNdsAudioFgmEntries[i - 1u];
         }
     }
+    else
+    {
+        for (i = 0u; i < NDS_AUDIO_FGM_ENTRY_COUNT; i++)
+        {
+            if (sNdsAudioFgmEntries[i].id == id)
+            {
+                return &sNdsAudioFgmEntries[i];
+            }
+        }
+    }
+#if NDS_P4
+    return ndsAudioFgmFindP4Entry(id);
+#else
     return NULL;
+#endif
 }
 
 static void ndsAudioFgmCacheReset(void)
@@ -1246,6 +1288,21 @@ static s32 ndsAudioFgmReadRange(u32 offset, void *dst, u32 bytes)
     return TRUE;
 }
 
+/* An entry's IMA body, from the pack that holds it. */
+static s32 ndsAudioFgmReadEntryBody(const NDSAudioFgmPackEntry *entry, void *dst)
+{
+#if NDS_P4
+    if ((entry->flags & NDS_AUDIO_FGM_FLAG_P4) != 0u)
+    {
+        return ((sNdsAudioFgmRomReady != FALSE) &&
+                (nitroromReadFile(sNdsAudioFgmRom, sNdsAudioFgmP4FileId,
+                                  entry->data_offset, dst,
+                                  entry->data_bytes) != false)) ? TRUE : FALSE;
+    }
+#endif
+    return ndsAudioFgmReadRange(entry->data_offset, dst, entry->data_bytes);
+}
+
 /* Queue the ARM7 read of `entry` into `slot` (32 KiB per part, line-rounded:
  * every capacity is a multiple of 1 KiB). FALSE sends nothing, and the caller
  * falls back to the synchronous read. */
@@ -1268,6 +1325,13 @@ static s32 ndsAudioFgmFillAsync(u32 index, const NDSAudioFgmPackEntry *entry)
     }
     rom_offset = nitroromGetFileOffset(sNdsAudioFgmRom, sNdsAudioFgmRomFileId) +
                  entry->data_offset;
+#if NDS_P4
+    if ((entry->flags & NDS_AUDIO_FGM_FLAG_P4) != 0u)
+    {
+        rom_offset = nitroromGetFileOffset(sNdsAudioFgmRom, sNdsAudioFgmP4FileId) +
+                     entry->data_offset;
+    }
+#endif
     while (done < bytes)
     {
         u32 chunk = bytes - done;
@@ -1519,9 +1583,8 @@ static s32 ndsAudioFgmCacheAcquire(const NDSAudioFgmPackEntry *entry)
         }
     }
     if ((best < 0) ||
-        (ndsAudioFgmReadRange(entry->data_offset,
-                              sNdsAudioFgmCacheSlots[best].data,
-                              entry->data_bytes) == FALSE))
+        (ndsAudioFgmReadEntryBody(entry, sNdsAudioFgmCacheSlots[best].data) ==
+         FALSE))
     {
         gNdsAudioFgmReadFailCount++;
         return -1;
@@ -2203,6 +2266,76 @@ void ndsAudioFgmDiagnosticsReset(void)
     gNdsAudioFgmStdioRangeReadCount = 0u;
 }
 
+#if NDS_P4
+/* The P4 pack's header and entries (its bodies stay in NitroFS like the
+ * vanilla pack's). No P4 file, or a bad one, leaves the donor cues
+ * missing (counted as unsupported) and the vanilla cues untouched. */
+static void ndsAudioFgmLoadP4Pack(void)
+{
+    u8 header[NDS_AUDIO_FGM_PACK_HEADER_BYTES];
+    int file_id;
+    u32 bytes;
+    u32 count;
+    u32 i;
+
+    sNdsAudioFgmP4Count = 0u;
+    gNdsAudioFgmP4Count = 0u;
+    if (sNdsAudioFgmRomReady == FALSE)
+    {
+        gNdsAudioFgmP4Result = 2u;
+        return;
+    }
+    file_id = nitroromResolvePath(sNdsAudioFgmRom, NITROROM_ROOT_DIR,
+                                  NDS_AUDIO_FGM_P4_ROM_PATH);
+    if ((file_id < 0) || (file_id >= (s32)NITROROM_ROOT_DIR))
+    {
+        gNdsAudioFgmP4Result = 3u;
+        return;
+    }
+    bytes = nitroromGetFileSize(sNdsAudioFgmRom, (u16)file_id);
+    if ((bytes < sizeof(header)) ||
+        (nitroromReadFile(sNdsAudioFgmRom, (u16)file_id, 0u, header,
+                          sizeof(header)) == false))
+    {
+        gNdsAudioFgmP4Result = 4u;
+        return;
+    }
+    count = ndsAudioFgmReadLe16(&header[6]);
+    if ((memcmp(header, "FGP4", 4) != 0) ||
+        (ndsAudioFgmReadLe16(&header[4]) != 1u) ||
+        (count > NDS_AUDIO_FGM_P4_ENTRY_MAX) ||
+        (ndsAudioFgmReadLe32(&header[8]) != bytes) ||
+        (nitroromReadFile(sNdsAudioFgmRom, (u16)file_id, sizeof(header),
+                          sNdsAudioFgmP4Entries,
+                          count * NDS_AUDIO_FGM_PACK_ENTRY_BYTES) == false))
+    {
+        gNdsAudioFgmP4Result = 5u;
+        return;
+    }
+    for (i = 0u; i < count; i++)
+    {
+        NDSAudioFgmPackEntry *entry = &sNdsAudioFgmP4Entries[i];
+
+        if ((entry->data_bytes == 0u) || (entry->frequency == 0u) ||
+            ((entry->data_offset & 31u) != 0u) ||
+            (entry->data_offset > bytes) ||
+            (entry->data_bytes > bytes - entry->data_offset) ||
+            (entry->envelope_count != 0u) ||
+            ((entry->flags & ~NDS_AUDIO_FGM_FLAG_PAUSE_WITH_GAME) != 0u) ||
+            (ndsAudioFgmFindEntry(entry->id) != NULL))
+        {
+            gNdsAudioFgmP4Result = 6u;
+            return;
+        }
+        entry->flags |= NDS_AUDIO_FGM_FLAG_P4;
+    }
+    sNdsAudioFgmP4FileId = (u16)file_id;
+    sNdsAudioFgmP4Count = count;
+    gNdsAudioFgmP4Count = count;
+    gNdsAudioFgmP4Result = 1u;
+}
+#endif
+
 void ndsAudioFgmLoadFenced(void)
 {
     FILE *file;
@@ -2340,6 +2473,9 @@ void ndsAudioFgmLoadFenced(void)
     sNdsAudioFgmFile = file;
     ndsAudioFgmDirectRouteInit();
     ndsAudioFgmBuildIdMap();
+#if NDS_P4
+    ndsAudioFgmLoadP4Pack();
+#endif
     gNdsAudioFgmLoaded = 1u;
     gNdsAudioFgmResidentBytes = NDS_AUDIO_FGM_CACHE_BYTES +
                                 sizeof(sNdsAudioFgmEntries);

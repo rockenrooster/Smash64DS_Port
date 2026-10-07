@@ -338,8 +338,11 @@ def read_o2r_payload(path: Path) -> bytes:
 
 
 def stock_asset(ui, repo_root: Path, spec: dict):
-    path = (repo_root / "decomp" / "BattleShip-main" / "BattleShip_o2r" /
-            spec.get("dir", "reloc_fighters_main") / spec["file"])
+    # `path` names a container outside the BattleShip corpus (a P4 donor file
+    # generated under the build tree, scripts/p4/generate_p4_fighter.py).
+    path = spec.get("path") or (
+        repo_root / "decomp" / "BattleShip-main" / "BattleShip_o2r" /
+        spec.get("dir", "reloc_fighters_main") / spec["file"])
     payload = read_o2r_payload(path)
     sprite = spec["sprite"]
     src_h = spec.get("height", 10)

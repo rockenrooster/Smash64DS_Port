@@ -3969,6 +3969,10 @@ CFLAGS += -include $(PROJECT_ROOT)/$(BUILD)/nds_build_config.h
 ifeq ($(NDS_P4_FALCO),1)
 CFLAGS += -I$(PROJECT_ROOT)/$(BUILD)/p4/falco/native
 endif
+# P4 character select tables (scripts/p4/p4_css.py).
+ifeq ($(NDS_P4),1)
+CFLAGS += -I$(PROJECT_ROOT)/$(BUILD)/p4/css
+endif
 # P3 build identity (plan 7.1): libnds's inline asserts embed their headers'
 # __FILE__, i.e. the devkitPro install path (C:/devkitPro/libnds/include/...),
 # so the same commit built with the toolchain installed elsewhere had another
@@ -6010,12 +6014,21 @@ endif
 # P4 generated data (rules beside the import overlay's below).
 export NDS_P4_GEN := $(PROJECT_ROOT)/$(BUILD)/p4
 export NDS_NITROFS_P4_FILES :=
+# The 30-cell character select (scripts/p4/p4_css.py) names the compiled
+# contents by their Remix names.
+export NDS_P4_CSS_DIR := $(NDS_P4_GEN)/css
+export NDS_P4_CONTENTS := $(if $(filter 1,$(NDS_P4_FALCO)),FALCO)
 ifeq ($(NDS_P4_FALCO),1)
 export NDS_P4_FALCO_GENERATED := $(NDS_P4_GEN)/falco/nds_p4_falco.generated.c
 export NDS_P4_FALCO_NITROFS_STAMP := $(NDS_P4_GEN)/falco/.nitrofs-staged
 NDS_NITROFS_P4_FILES += $(NDS_P4_FALCO_NITROFS_STAMP) \
 	$(NITROFS_DIR)/fighters/falco_high.bin $(NITROFS_DIR)/fighters/falco_low.bin
 export NDS_P4_FALCO_NATIVE := $(NDS_P4_GEN)/falco/native
+endif
+# The contents' Remix sounds as a second FGM pack (scripts/p4/p4_audio.py).
+ifeq ($(NDS_P4),1)
+export NDS_P4_AUDIO_DIR := $(NDS_P4_GEN)/audio
+NDS_NITROFS_P4_FILES += $(NITROFS_DIR)/p4/audio/fgm_p4.bin
 endif
 
 export NDS_NITROFS_RELOC_FILES := \
@@ -7909,7 +7922,8 @@ $(NDS_P4_EXPORT)/falco/resolved.json: $(NDS_P4_STAGING)/ssb64asm.z64 \
 	python "$(PROJECT_ROOT)/scripts/p4/remix_export.py" --staging "$(NDS_P4_STAGING)" \
 		--fighter FALCO --out "$(NDS_P4_EXPORT)/falco" --no-o2r
 $(NDS_P4_FALCO_GENERATED): $(NDS_P4_EXPORT)/falco/resolved.json \
-		$(PROJECT_ROOT)/scripts/p4/generate_p4_fighter.py $(PROJECT_ROOT)/scripts/p4/remix_rom.py
+		$(PROJECT_ROOT)/scripts/p4/generate_p4_fighter.py $(PROJECT_ROOT)/scripts/p4/remix_rom.py \
+		$(PROJECT_ROOT)/scripts/p4/ft_layout.py $(PROJECT_ROOT)/scripts/menus/generate_battle_hud.py
 	python "$(PROJECT_ROOT)/scripts/p4/generate_p4_fighter.py" --staging "$(NDS_P4_STAGING)" \
 		--export "$(NDS_P4_EXPORT)/falco" --out "$(NDS_P4_GEN)/falco"
 nds_p4_falco_data.o: $(NDS_P4_FALCO_GENERATED)
@@ -7929,6 +7943,27 @@ $(NDS_P4_FALCO_NATIVE)/.stamp: $(NDS_P4_FALCO_GENERATED) \
 		--o2r "$(NDS_P4_GEN)/falco/o2r" --attributes 0x474 --emit "$(NDS_P4_FALCO_NATIVE)"
 	@touch $@
 nds_renderer.o battleship_ftmanager.o: $(NDS_P4_FALCO_NATIVE)/.stamp
+endif
+# P4 character select: Remix's grid, its donor portrait/name/emblem files for
+# the UI kit bake, and the runtime tables nds_menu_shell_css.c includes.
+ifeq ($(NDS_P4),1)
+$(NDS_P4_CSS_DIR)/css.json $(NDS_P4_CSS_DIR)/nds_p4_css.generated.inc &: \
+		$(NDS_P4_STAGING)/ssb64asm.z64 $(PROJECT_ROOT)/scripts/p4/p4_css.py \
+		$(PROJECT_ROOT)/scripts/p4/remix_rom.py $(NDS_BUILD_CONFIG)
+	python "$(PROJECT_ROOT)/scripts/p4/p4_css.py" --staging "$(NDS_P4_STAGING)" \
+		--out "$(NDS_P4_CSS_DIR)" --contents "$(NDS_P4_CONTENTS)"
+nds_menu_shell.o: $(NDS_P4_CSS_DIR)/nds_p4_css.generated.inc
+$(NDS_P4_AUDIO_DIR)/fgm_p4.bin: $(NDS_P4_STAGING)/ssb64asm.z64 \
+		$(PROJECT_ROOT)/scripts/p4/p4_audio.py \
+		$(PROJECT_ROOT)/scripts/sfx/render-audio-fgm-phase-pack.py \
+		$(PROJECT_ROOT)/scripts/sfx/vadpcm_decode.py $(NDS_BUILD_CONFIG)
+	python "$(PROJECT_ROOT)/scripts/p4/p4_audio.py" --staging "$(NDS_P4_STAGING)" \
+		$(foreach content,$(NDS_P4_CONTENTS),--content $(content)) --out "$(NDS_P4_AUDIO_DIR)"
+$(NITROFS_DIR)/p4/audio/fgm_p4.bin: $(NDS_P4_AUDIO_DIR)/fgm_p4.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+endif
+ifeq ($(NDS_P4_FALCO),1)
 $(BUILD)/native_image_falco_high.o: $(NDS_P4_FALCO_NATIVE)/.stamp $(NDS_BUILD_CONFIG)
 	@mkdir -p $(dir $@)
 	$(CC) -c $(CFLAGS) -I $(PROJECT_ROOT)/include -I $(BUILD) -I $(NDS_P4_FALCO_NATIVE) \
@@ -8568,6 +8603,12 @@ $(NITROFS_DIR)/renderer/battle_playable_static_textures.rgb5a1.bin: $(NDS_BATTLE
 # change, so the bake is keyed on what actually varies rather than on a
 # timestamp that another build controls.
 NDS_MN_UI_KIT_FLAGS := $(NDS_P2_STAGE_YOSTER)$(NDS_P2_STAGE_CASTLE)$(NDS_P2_STAGE_JUNGLE)$(NDS_P2_STAGE_ZEBES)$(NDS_P2_STAGE_HYRULE)$(NDS_P2_STAGE_YAMABUKI)$(NDS_P2_STAGE_INISHIE)$(NDS_P2_STAGE_SECTOR)
+# P4 bakes the VS character select on the Remix grid, with gate art for each
+# compiled content (NDS_P4_CSS below).
+ifeq ($(NDS_P4),1)
+NDS_MN_UI_KIT_FLAGS := $(NDS_MN_UI_KIT_FLAGS)P4$(NDS_P4_CONTENTS)
+NDS_MN_UI_KIT_P4_CSS := $(NDS_P4_CSS_DIR)/css.json
+endif
 NDS_MN_UI_KIT_STAMP := $(PROJECT_ROOT)/src/nds/generated/mn_ui_kit.flags.stamp
 
 $(NDS_MN_UI_KIT_STAMP): FORCE
@@ -8579,8 +8620,9 @@ $(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) $(NDS_MN_UI_SURFACE_ASSET) $(NDS_MN_
 		$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py \
 		$(NDS_BUILD_CONFIG) \
 		$(NDS_MN_UI_KIT_STAMP) \
+		$(NDS_MN_UI_KIT_P4_CSS) \
 		$(PROJECT_ROOT)/include/reloc_data.h
-	NDS_P2_STAGE_YOSTER=$(NDS_P2_STAGE_YOSTER) NDS_P2_STAGE_CASTLE=$(NDS_P2_STAGE_CASTLE) NDS_P2_STAGE_JUNGLE=$(NDS_P2_STAGE_JUNGLE) NDS_P2_STAGE_ZEBES=$(NDS_P2_STAGE_ZEBES) NDS_P2_STAGE_HYRULE=$(NDS_P2_STAGE_HYRULE) NDS_P2_STAGE_YAMABUKI=$(NDS_P2_STAGE_YAMABUKI) NDS_P2_STAGE_INISHIE=$(NDS_P2_STAGE_INISHIE) NDS_P2_STAGE_SECTOR=$(NDS_P2_STAGE_SECTOR) python "$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py" --repo-root "$(PROJECT_ROOT)"
+	NDS_P4_CSS=$(NDS_MN_UI_KIT_P4_CSS) NDS_P2_STAGE_YOSTER=$(NDS_P2_STAGE_YOSTER) NDS_P2_STAGE_CASTLE=$(NDS_P2_STAGE_CASTLE) NDS_P2_STAGE_JUNGLE=$(NDS_P2_STAGE_JUNGLE) NDS_P2_STAGE_ZEBES=$(NDS_P2_STAGE_ZEBES) NDS_P2_STAGE_HYRULE=$(NDS_P2_STAGE_HYRULE) NDS_P2_STAGE_YAMABUKI=$(NDS_P2_STAGE_YAMABUKI) NDS_P2_STAGE_INISHIE=$(NDS_P2_STAGE_INISHIE) NDS_P2_STAGE_SECTOR=$(NDS_P2_STAGE_SECTOR) python "$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py" --repo-root "$(PROJECT_ROOT)"
 	@touch $(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) $(NDS_MN_UI_SURFACE_ASSET) $(NDS_MN_UI_KIT_NET_ASSET)
 
 # P2-2 lower-screen HUD.  Keep every source container the bake reads on the

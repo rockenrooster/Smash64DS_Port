@@ -10437,6 +10437,82 @@ static s32 ndsRelocNormalizeSpriteBitmapTable(NDSRelocLoadedFile *loaded,
     return TRUE;
 }
 
+/* One manifest row against a loaded file: TRUE when it does not apply or
+ * was normalized (or already native), FALSE on a refused signature. */
+static s32 ndsRelocNormalizeSpriteDesc(
+    NDSRelocLoadedFile *loaded, const NDSRelocSpriteNormalizeDesc *desc)
+{
+    Sprite *sprite;
+    u32 display_list_words;
+    u32 sprite_offset = desc->offset;
+
+    if (desc->asset_id != loaded->asset_id)
+    {
+        return TRUE;
+    }
+#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+    if ((loaded->reserved[0] != 0u) &&
+        (ndsPreviewFileOffset(loaded, desc->offset, sizeof(Sprite),
+                              &sprite_offset) == FALSE))
+    {
+        return TRUE; /* This descriptor belongs to an omitted source span. */
+    }
+#endif
+    if (ndsRelocRangeInLoadedFile(loaded, sprite_offset,
+                                  sizeof(Sprite)) == FALSE)
+    {
+        return FALSE;
+    }
+
+    sprite = (Sprite *)((u8 *)loaded->data + sprite_offset);
+    /* libultra generates one sprite's display list as a fixed 24-word frame
+     * plus 12 words per bitmap, so `ndisplist` is DERIVABLE and does not need
+     * a per-offset table. This used to be `36` with three hardcoded
+     * exceptions (84 for 0x4d78, 96 for 0xa730, 48 for 0xc370); read out of
+     * the extracted asset, all six known sprites fit `12n + 24` exactly --
+     * 1 bitmap 36, 2 -> 48, 3 -> 60, 4 -> 72, 5 -> 84, 6 -> 96. Keeping the
+     * table would have meant a fourth, fifth and sixth exception for the
+     * GAME SET / TIME UP letters below, each of which is a 2-, 3- or
+     * 4-bitmap sprite. The check this feeds is still fail-closed: a sprite
+     * whose raw `ndisplist` disagrees with the formula is refused, not
+     * normalized. */
+    display_list_words = (12u * desc->bitmap_count) + 24u;
+    if (((u32)(u16)sprite->width == desc->width) &&
+        ((u32)(u16)sprite->height == desc->height) &&
+        ((u32)(u16)sprite->nbitmaps == desc->bitmap_count) &&
+        (sprite->bmfmt == desc->bmfmt) &&
+        (sprite->bmsiz == desc->bmsiz))
+    {
+        return TRUE;
+    }
+
+    /* The blanket u32 endian pass exchanges each adjacent halfword.
+     * Validate that exact raw signature, including libultra's 36-word
+     * generated display list, before touching a known manifest entry. */
+    if (((u32)(u16)sprite->width != desc->height) ||
+        ((u32)(u16)sprite->height != desc->width) ||
+        ((u32)(u16)sprite->nbitmaps != display_list_words) ||
+        ((u32)(u16)sprite->ndisplist != desc->bitmap_count) ||
+        (ndsRelocPointerRangeInLoadedFile(
+            loaded, sprite->bitmap,
+            sizeof(Bitmap) * desc->bitmap_count) == FALSE))
+    {
+        return FALSE;
+    }
+
+    ndsRelocNormalizeSpriteHeaderFields(sprite, desc->bmfmt,
+                                        desc->bmsiz);
+    if (((u32)(u16)sprite->width != desc->width) ||
+        ((u32)(u16)sprite->height != desc->height) ||
+        ((u32)(u16)sprite->nbitmaps != desc->bitmap_count) ||
+        (ndsRelocNormalizeSpriteBitmapTable(
+            loaded, sprite, desc->bitmap_count) == FALSE))
+    {
+        return FALSE;
+    }
+    return TRUE;
+}
+
 static s32 ndsRelocNormalizeBattleInterfaceSprites(
     NDSRelocLoadedFile *loaded)
 {
@@ -10449,77 +10525,47 @@ static s32 ndsRelocNormalizeBattleInterfaceSprites(
 
     for (i = 0; i < ARRAY_COUNT(sNdsBattleInterfaceSpriteDescs); i++)
     {
-        const NDSRelocSpriteNormalizeDesc *desc =
-            &sNdsBattleInterfaceSpriteDescs[i];
-        Sprite *sprite;
-        u32 display_list_words;
-        u32 sprite_offset = desc->offset;
-
-        if (desc->asset_id != loaded->asset_id)
-        {
-            continue;
-        }
-#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
-        if ((loaded->reserved[0] != 0u) &&
-            (ndsPreviewFileOffset(loaded, desc->offset, sizeof(Sprite),
-                                  &sprite_offset) == FALSE))
-        {
-            continue; /* This descriptor belongs to an omitted source span. */
-        }
-#endif
-        if (ndsRelocRangeInLoadedFile(loaded, sprite_offset,
-                                      sizeof(Sprite)) == FALSE)
-        {
-            return FALSE;
-        }
-
-        sprite = (Sprite *)((u8 *)loaded->data + sprite_offset);
-        /* libultra generates one sprite's display list as a fixed 24-word frame
-         * plus 12 words per bitmap, so `ndisplist` is DERIVABLE and does not need
-         * a per-offset table. This used to be `36` with three hardcoded
-         * exceptions (84 for 0x4d78, 96 for 0xa730, 48 for 0xc370); read out of
-         * the extracted asset, all six known sprites fit `12n + 24` exactly --
-         * 1 bitmap 36, 2 -> 48, 3 -> 60, 4 -> 72, 5 -> 84, 6 -> 96. Keeping the
-         * table would have meant a fourth, fifth and sixth exception for the
-         * GAME SET / TIME UP letters below, each of which is a 2-, 3- or
-         * 4-bitmap sprite. The check this feeds is still fail-closed: a sprite
-         * whose raw `ndisplist` disagrees with the formula is refused, not
-         * normalized. */
-        display_list_words = (12u * desc->bitmap_count) + 24u;
-        if (((u32)(u16)sprite->width == desc->width) &&
-            ((u32)(u16)sprite->height == desc->height) &&
-            ((u32)(u16)sprite->nbitmaps == desc->bitmap_count) &&
-            (sprite->bmfmt == desc->bmfmt) &&
-            (sprite->bmsiz == desc->bmsiz))
-        {
-            continue;
-        }
-
-        /* The blanket u32 endian pass exchanges each adjacent halfword.
-         * Validate that exact raw signature, including libultra's 36-word
-         * generated display list, before touching a known manifest entry. */
-        if (((u32)(u16)sprite->width != desc->height) ||
-            ((u32)(u16)sprite->height != desc->width) ||
-            ((u32)(u16)sprite->nbitmaps != display_list_words) ||
-            ((u32)(u16)sprite->ndisplist != desc->bitmap_count) ||
-            (ndsRelocPointerRangeInLoadedFile(
-                loaded, sprite->bitmap,
-                sizeof(Bitmap) * desc->bitmap_count) == FALSE))
-        {
-            return FALSE;
-        }
-
-        ndsRelocNormalizeSpriteHeaderFields(sprite, desc->bmfmt,
-                                            desc->bmsiz);
-        if (((u32)(u16)sprite->width != desc->width) ||
-            ((u32)(u16)sprite->height != desc->height) ||
-            ((u32)(u16)sprite->nbitmaps != desc->bitmap_count) ||
-            (ndsRelocNormalizeSpriteBitmapTable(
-                loaded, sprite, desc->bitmap_count) == FALSE))
+        if (ndsRelocNormalizeSpriteDesc(
+                loaded, &sNdsBattleInterfaceSpriteDescs[i]) == FALSE)
         {
             return FALSE;
         }
     }
+#if NDS_P4
+    /* Each P4 content's FTSprites sprites (stock icon, emblem), generated
+     * by scripts/p4/generate_p4_fighter.py from its donor files. */
+    if (loaded->asset_id >= 0x854u)
+    {
+        u32 c;
+
+        for (c = 1u; c < NDS_P4_CONTENT_LIMIT; c++)
+        {
+            const NDSP4Fighter *p4 = ndsP4Fighter(c);
+
+            if (p4 == NULL)
+            {
+                continue;
+            }
+            for (i = 0u; i < *p4->sprite_count; i++)
+            {
+                const NDSP4SpriteDesc *row = &p4->sprites[i];
+                NDSRelocSpriteNormalizeDesc desc;
+
+                desc.asset_id = row->file_id;
+                desc.offset = row->offset;
+                desc.width = row->width;
+                desc.height = row->height;
+                desc.bitmap_count = row->bitmap_count;
+                desc.bmfmt = row->bmfmt;
+                desc.bmsiz = row->bmsiz;
+                if (ndsRelocNormalizeSpriteDesc(loaded, &desc) == FALSE)
+                {
+                    return FALSE;
+                }
+            }
+        }
+    }
+#endif
     if (loaded->asset_id == NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS)
     {
 #if !NDS_HARNESS_FAST_PRESENT_ON_REQUEST

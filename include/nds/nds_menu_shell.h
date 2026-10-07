@@ -206,6 +206,9 @@ void ndsMNPlayersVSPreviewSyncRules(sb32 is_team_battle, const u8 *teams,
                                     u32 team_count);
 void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
                                sb32 is_selected);
+/* P4: the Remix content the slot's next sync shows on its kind (0 = the
+ * original); a content change rebuilds the preview like a kind change. */
+void ndsMNPlayersVSPreviewSetContent(u32 slot, u32 content);
 s32 ndsMNPlayersVSPreviewCycleCostume(u32 slot);
 u32 ndsMNPlayersVSPreviewGetAppearance(u32 slot);
 /* P3: mirror the costume the host resolved (TRUE when the preview changed). */

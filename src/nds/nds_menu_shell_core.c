@@ -27,6 +27,7 @@
 #include <nds/nds_scene.h>
 #include <nds/nds_scene_manager.h>
 #include <nds/nds_ui_kit.h>
+#include <nds/nds_p4.h>
 
 #include "generated/mn_ui_kit.generated.inc"
 

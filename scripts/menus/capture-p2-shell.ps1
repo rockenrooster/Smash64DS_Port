@@ -62,7 +62,11 @@ param(
     # Added 2026-08-24 for the entry pipe: its body is only on screen for the
     # first few frames after ftCommonAppearSetStatus, and fighter-entry-1's own
     # Presents = 8 lands after it has already left.
-    [ValidateRange(-1, 32)][int]$OverridePresents = -1
+    [ValidateRange(-1, 32)][int]$OverridePresents = -1,
+    # `name = value` gdb assignments made at the same post-init stop as
+    # -StageKind, before the walk starts: e.g. the character-select walk's own
+    # target, 'gNdsMenuShellCssWalkTargetKind = 0x41' (a P4 selection id).
+    [string[]]$BootSets = @()
 )
 
 # P2-1g visibility, and the phase-level successor to
@@ -321,6 +325,14 @@ try {
             'continue',
             ('set variable gNdsMenuShellSssWalkTargetGkind = ' + $StageKind)
         )
+    }
+    if ($BootSets.Count -gt 0) {
+        if ($StageKind -lt 0) {
+            $commands += @('tbreak ndsSceneManagerEnter', 'continue')
+        }
+        foreach ($set in $BootSets) {
+            $commands += ('set variable ' + $set)
+        }
     }
     foreach ($state in $states) {
         $statePresents = if ($OverridePresents -ge 0) {

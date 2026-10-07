@@ -11,6 +11,7 @@
 #include <mn/menu.h>
 #include <nds/nds_controller.h>
 #include <nds/nds_match_config.h>
+#include <nds/nds_p4.h>
 #include <nds/nds_platform.h>
 #include <nds/nds_renderer.h>
 #include <nds/nds_results_oam.h>
@@ -174,6 +175,36 @@ void ndsMNVSResultsSetLoadScene(void);
 #define mnVSResultsEmblemProcUpdate(gobj) \
     ndsBaseMNVSResultsEmblemProcUpdate(gobj)
 
+#if NDS_P4
+/* P4: a Remix winner's own name, "WINS!" position, announcer call and
+ * victory music (resultsscreen.asm add_to_results_screen), and no VS record
+ * under its parent's kind. These four functions take no arguments and are
+ * only CALLED inside the source, so the seam splits on the argument text: the
+ * definition `f(void)` pastes to NDS_P4_RESULTS_<f>void, the base name, while
+ * a call `f()` pastes to NDS_P4_RESULTS_<f>, the port wrapper below. */
+#define NDS_P4_RESULTS_SPLIT(prefix, ...) prefix##__VA_ARGS__
+#define mnVSResultsAnnounceWinner(...) \
+    NDS_P4_RESULTS_SPLIT(NDS_P4_RESULTS_ANNOUNCE_, __VA_ARGS__)
+#define NDS_P4_RESULTS_ANNOUNCE_void ndsBaseMNVSResultsAnnounceWinner(void)
+#define NDS_P4_RESULTS_ANNOUNCE_ ndsP4MNVSResultsAnnounceWinner()
+#define mnVSResultMakeFighterName(...) \
+    NDS_P4_RESULTS_SPLIT(NDS_P4_RESULTS_NAME_, __VA_ARGS__)
+#define NDS_P4_RESULTS_NAME_void ndsBaseMNVSResultMakeFighterName(void)
+#define NDS_P4_RESULTS_NAME_ ndsP4MNVSResultMakeFighterName()
+#define mnVSResultsPlayWinBGM(...) \
+    NDS_P4_RESULTS_SPLIT(NDS_P4_RESULTS_BGM_, __VA_ARGS__)
+#define NDS_P4_RESULTS_BGM_void ndsBaseMNVSResultsPlayWinBGM(void)
+#define NDS_P4_RESULTS_BGM_ ndsP4MNVSResultsPlayWinBGM()
+#define mnVSResultsSaveBackup(...) \
+    NDS_P4_RESULTS_SPLIT(NDS_P4_RESULTS_SAVE_, __VA_ARGS__)
+#define NDS_P4_RESULTS_SAVE_void ndsBaseMNVSResultsSaveBackup(void)
+#define NDS_P4_RESULTS_SAVE_ ndsP4MNVSResultsSaveBackup()
+void ndsP4MNVSResultsAnnounceWinner(void);
+void ndsP4MNVSResultMakeFighterName(void);
+void ndsP4MNVSResultsPlayWinBGM(void);
+void ndsP4MNVSResultsSaveBackup(void);
+#endif
+
 void ndsBaseMNVSResultsStartScene(void);
 
 /* Weak, so the call in mnVSResultsSetPlayerTagPosition resolves to the
@@ -194,6 +225,92 @@ s32 mnVSResultsGetSpot(s32 player) __attribute__((weak));
 #undef mnVSResultsBarProcDisplay
 #undef mnVSResultsLabelProcDisplay
 #undef mnVSResultsEmblemProcUpdate
+
+#if NDS_P4
+#undef mnVSResultsAnnounceWinner
+#undef mnVSResultMakeFighterName
+#undef mnVSResultsPlayWinBGM
+#undef mnVSResultsSaveBackup
+
+/* The winner's P4 presentation, or NULL for the original cast and teams. */
+static const NDSP4Present *ndsP4MNVSResultsWinnerPresent(void)
+{
+    const NDSP4Fighter *p4;
+
+    if ((sMNVSResultsKind == nMNVSResultsKindNoContest) ||
+        (sMNVSResultsIsTeamBattle != FALSE))
+    {
+        return NULL;
+    }
+    p4 = ndsP4Fighter(gNdsP4PlayerContent[mnVSResultsGetWinPlayer()]);
+    return (p4 != NULL) ? p4->present : NULL;
+}
+
+void ndsP4MNVSResultsAnnounceWinner(void)
+{
+    const NDSP4Present *p4 = ndsP4MNVSResultsWinnerPresent();
+
+    /* mnvsresults.c:328-330: tic 210 is the FFA winner's name call. */
+    if ((p4 != NULL) && (sMNVSResultsTotalTimeTics == 210))
+    {
+        func_800269C0_275C0(p4->announce_fgm);
+        return;
+    }
+    ndsBaseMNVSResultsAnnounceWinner();
+}
+
+void ndsP4MNVSResultMakeFighterName(void)
+{
+    const NDSP4Present *p4 = ndsP4MNVSResultsWinnerPresent();
+    char wins[] = "W1I1N1S1!";
+
+    if (p4 == NULL)
+    {
+        ndsBaseMNVSResultMakeFighterName();
+        return;
+    }
+    /* mnVSResultMakeFighterName and mnVSResultsMakeWinnerText's FFA arm
+     * (mnvsresults.c:1371, :1278) with the donor's own rows. */
+    mnVSResultsMakeString(p4->results_name, p4->results_name_x, 180.0F, 0,
+                          p4->results_name_scale);
+    mnVSResultsMakeString(wins, p4->results_wins_x, 180.0F, 3, 1.0F);
+}
+
+void ndsP4MNVSResultsPlayWinBGM(void)
+{
+    const NDSP4Present *p4 = ndsP4MNVSResultsWinnerPresent();
+
+    if (p4 == NULL)
+    {
+        ndsBaseMNVSResultsPlayWinBGM();
+        return;
+    }
+    syAudioPlayBGM(0, p4->victory_bgm);
+}
+
+void ndsP4MNVSResultsSaveBackup(void)
+{
+    u8 pkind[GMCOMMON_PLAYERS_MAX];
+    s32 i;
+
+    /* VS records are kept per original kind; a P4 fighter has no record row
+     * until the records tier (docs/P4/P4_STATUS.md), so it neither records
+     * under its parent's kind nor appears as an opponent in anyone's row. */
+    for (i = 0; i < GMCOMMON_PLAYERS_MAX; i++)
+    {
+        pkind[i] = gSCManagerTransferBattleState.players[i].pkind;
+        if (ndsP4Fighter(gNdsP4PlayerContent[i]) != NULL)
+        {
+            gSCManagerTransferBattleState.players[i].pkind = nFTPlayerKindNot;
+        }
+    }
+    ndsBaseMNVSResultsSaveBackup();
+    for (i = 0; i < GMCOMMON_PLAYERS_MAX; i++)
+    {
+        gSCManagerTransferBattleState.players[i].pkind = pkind[i];
+    }
+}
+#endif
 
 /* R01-B. The emblem GObj's identity, published for
  * `ndsResultsEmblemRecordCapturedDisplay` (reloc_backend_movement.c).

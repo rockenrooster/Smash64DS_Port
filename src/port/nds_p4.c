@@ -22,27 +22,51 @@ f32 gNdsP4TranslationMultiplier[GMCOMMON_PLAYERS_MAX] = { 1.0F, 1.0F, 1.0F, 1.0F
 __attribute__((used)) volatile u32 gNdsP4UnportedMotionEvents;
 __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
 
+/* Each content's generated TU (scripts/p4/generate_p4_fighter.py) defines
+ * the same family of symbols under its title; one row per content. */
+#define NDS_P4_DECLARE(T) \
+    extern FTData gNdsP4##T##Data; \
+    extern const NDSP4StatusOverride gNdsP4##T##StatusOverrides[]; \
+    extern const u32 gNdsP4##T##StatusOverrideCount; \
+    extern const NDSP4RelocAsset gNdsP4##T##RelocAssets[]; \
+    extern const u32 gNdsP4##T##RelocAssetCount; \
+    extern const FTFileSize gNdsP4##T##FileSize; \
+    extern const u16 gNdsP4##T##Anims[]; \
+    extern const u32 gNdsP4##T##AnimCount; \
+    extern const u8 gNdsP4##T##StockGfx[]; \
+    extern const u16 gNdsP4##T##StockPalettes[][16]; \
+    extern const u32 gNdsP4##T##StockPaletteCount; \
+    extern const NDSP4SpriteDesc gNdsP4##T##Sprites[]; \
+    extern const u32 gNdsP4##T##SpriteCount; \
+    extern const NDSP4Present gNdsP4##T##Present;
+#define NDS_P4_ROW(T, title, parent, on_status_hook) \
+    { \
+        .name = (title), .parent_kind = (parent), \
+        .data = &gNdsP4##T##Data, \
+        .overrides = gNdsP4##T##StatusOverrides, \
+        .override_count = &gNdsP4##T##StatusOverrideCount, \
+        .assets = gNdsP4##T##RelocAssets, \
+        .asset_count = &gNdsP4##T##RelocAssetCount, \
+        .file_size = &gNdsP4##T##FileSize, \
+        .anims = gNdsP4##T##Anims, .anim_count = &gNdsP4##T##AnimCount, \
+        .on_status = (on_status_hook), \
+        .stock_gfx = gNdsP4##T##StockGfx, \
+        .stock_palettes = gNdsP4##T##StockPalettes, \
+        .stock_palette_count = &gNdsP4##T##StockPaletteCount, \
+        .sprites = gNdsP4##T##Sprites, \
+        .sprite_count = &gNdsP4##T##SpriteCount, \
+        .present = &gNdsP4##T##Present, \
+    }
+
 #if NDS_P4_FALCO
-extern FTData gNdsP4FalcoData;
-extern const NDSP4StatusOverride gNdsP4FalcoStatusOverrides[];
-extern const u32 gNdsP4FalcoStatusOverrideCount;
-extern const NDSP4RelocAsset gNdsP4FalcoRelocAssets[];
-extern const u32 gNdsP4FalcoRelocAssetCount;
-extern const FTFileSize gNdsP4FalcoFileSize;
-extern const u16 gNdsP4FalcoAnims[];
-extern const u32 gNdsP4FalcoAnimCount;
+NDS_P4_DECLARE(Falco)
 void ndsP4FalcoOnStatus(GObj *fighter_gobj, s32 status_id);
 #endif
 
 static const NDSP4Fighter sNdsP4Fighters[NDS_P4_CONTENT_LIMIT] = {
 #if NDS_P4_FALCO
-    [NDS_P4_CONTENT_FALCO] = {
-        "Falco", nFTKindFox, &gNdsP4FalcoData,
-        gNdsP4FalcoStatusOverrides, &gNdsP4FalcoStatusOverrideCount,
-        gNdsP4FalcoRelocAssets, &gNdsP4FalcoRelocAssetCount,
-        &gNdsP4FalcoFileSize, gNdsP4FalcoAnims, &gNdsP4FalcoAnimCount,
-        ndsP4FalcoOnStatus,
-    },
+    [NDS_P4_CONTENT_FALCO] =
+        NDS_P4_ROW(Falco, "Falco", nFTKindFox, ndsP4FalcoOnStatus),
 #endif
 };
 
@@ -61,6 +85,22 @@ const NDSP4Fighter *ndsP4Fighter(u32 content)
     return &sNdsP4Fighters[content];
 }
 
+u32 ndsP4PlayerContent(u32 player)
+{
+    GObj *gobj;
+
+    if ((player >= GMCOMMON_PLAYERS_MAX) || (gSCManagerBattleState == NULL))
+    {
+        return 0u;
+    }
+    gobj = gSCManagerBattleState->players[player].fighter_gobj;
+    if ((gobj == NULL) || (gobj->user_data.p == NULL))
+    {
+        return 0u;
+    }
+    return ((FTStruct *)gobj->user_data.p)->nds_p4_content;
+}
+
 FTData *ndsP4PlayerData(s32 player)
 {
     const NDSP4Fighter *f;
@@ -75,18 +115,32 @@ FTData *ndsP4PlayerData(s32 player)
 
 sb32 ndsP4ParentFilesNeeded(s32 fkind)
 {
+    const SCBattleState *state;
     s32 player;
     sb32 child = FALSE;
 
-    if ((gSCManagerSceneData.scene_curr != nSCKindVSBattle) ||
-        (gSCManagerBattleState == NULL))
+    /* The two scenes whose fighters are exactly the match's players: the
+     * battle, and the Results podium built from the transfer state. */
+    if (gSCManagerSceneData.scene_curr == nSCKindVSBattle)
+    {
+        state = gSCManagerBattleState;
+    }
+    else if (gSCManagerSceneData.scene_curr == nSCKindVSResults)
+    {
+        state = &gSCManagerTransferBattleState;
+    }
+    else
+    {
+        return TRUE;
+    }
+    if (state == NULL)
     {
         return TRUE;
     }
     for (player = 0; player < GMCOMMON_PLAYERS_MAX; player++)
     {
-        if ((gSCManagerBattleState->players[player].pkind == nFTPlayerKindNot) ||
-            (gSCManagerBattleState->players[player].fkind != fkind))
+        if ((state->players[player].pkind == nFTPlayerKindNot) ||
+            (state->players[player].fkind != fkind))
         {
             continue;
         }

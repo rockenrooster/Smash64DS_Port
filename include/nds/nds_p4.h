@@ -44,6 +44,33 @@ typedef struct NDSP4RelocAsset
     const char *path;
 } NDSP4RelocAsset;
 
+/* A Sprite in a content file whose header the reloc loader normalizes
+ * (reloc_backend_assets.c, the battle-interface sprite manifest). */
+typedef struct NDSP4SpriteDesc
+{
+    u16 file_id;
+    u16 bitmap_count;
+    u32 offset;
+    u16 width;
+    u16 height;
+    u8 bmfmt;
+    u8 bmsiz;
+} NDSP4SpriteDesc;
+
+/* Results and menu presentation, from the donor's kind-table rows. */
+typedef struct NDSP4Present
+{
+    const char *results_name; /* mnVSResultsMakeString text (digits = spacing) */
+    f32 results_name_x;
+    f32 results_name_scale;
+    f32 results_wins_x;       /* "WINS!" left x */
+    u16 announce_fgm;         /* winner_fgm: the announcer's name call */
+    u16 victory_bgm;          /* winner_bgm */
+    u16 crowd_chant_fgm;
+    f32 menu_zoom;
+    u8 default_costumes[8];
+} NDSP4Present;
+
 typedef struct NDSP4Fighter
 {
     const char *name;
@@ -58,7 +85,24 @@ typedef struct NDSP4Fighter
     const u32 *anim_count;
     /* Optional: after the status callbacks are applied (donor init hooks). */
     void (*on_status)(GObj *fighter_gobj, s32 status_id);
+    /* HUD: stock icon (8x8 OBJ4 cell, 32 B) and its costume LUTs. */
+    const u8 *stock_gfx;
+    const u16 (*stock_palettes)[16];
+    const u32 *stock_palette_count;
+    const NDSP4SpriteDesc *sprites;
+    const u32 *sprite_count;
+    const NDSP4Present *present;
 } NDSP4Fighter;
+
+/* Character-select selection ids: an original's fkind, or NDS_P4_SEL_BASE +
+ * content for a Remix selection (above every FTKind and nFTKindNull). */
+#define NDS_P4_SEL_BASE 0x40u
+static inline u32 ndsP4SelContent(u32 sel)
+{
+    return ((sel > NDS_P4_SEL_BASE) &&
+            (sel < (NDS_P4_SEL_BASE + NDS_P4_CONTENT_LIMIT))) ?
+        (sel - NDS_P4_SEL_BASE) : 0u;
+}
 
 /* Content selected for each battle player, written by the character select
  * (or a lab descriptor) next to gSCManagerBattleState->players[].fkind, which
@@ -72,6 +116,8 @@ static inline u32 ndsP4Content(const FTStruct *fp)
 {
     return (fp != NULL) ? fp->nds_p4_content : 0u;
 }
+/* The content of a battle player's live fighter (0 = original cast or none). */
+u32 ndsP4PlayerContent(u32 player);
 /* The FTData a P4 player constructs from, or NULL for the original cast. */
 FTData *ndsP4PlayerData(s32 player);
 /* ftManagerSetupFilesAllKind: TRUE when some live selection still needs the
@@ -123,6 +169,11 @@ static inline f32 ndsP4TranslationMultiplier(const FTStruct *fp)
 static inline u32 ndsP4Content(const FTStruct *fp)
 {
     (void)fp;
+    return 0u;
+}
+static inline u32 ndsP4PlayerContent(u32 player)
+{
+    (void)player;
     return 0u;
 }
 

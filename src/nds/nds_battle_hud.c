@@ -11,6 +11,7 @@
 #include <nds/nds_startup.h>
 #include <nds/nds_renderer.h>
 #include <nds/nds_reloc_assets.h>
+#include <nds/nds_p4.h>
 
 #include "generated/battle_hud.generated.inc"
 
@@ -62,6 +63,10 @@ static u16 *sNdsBattleHudTimerMarkGfx[NDS_BATTLE_HUD_TIMER_MARKS];
 static u16 *sNdsBattleHudStockDigitGfx[NDS_BATTLE_HUD_STOCK_DIGIT_GLYPHS];
 static u16 *sNdsBattleHudEmblemGfx[NDS_BATTLE_HUD_PLAYERS];
 static u16 *sNdsBattleHudStockGfx[NDS_BATTLE_HUD_STOCK_OWNERS];
+#if NDS_P4
+/* Each compiled P4 content's stock icon, from its generated data. */
+static u16 *sNdsBattleHudP4StockGfx[NDS_P4_CONTENT_LIMIT];
+#endif
 static u16 *sNdsBattleHudScoreGfx[NDS_BATTLE_HUD_SCORE_FRAMES];
 /* The 1P team rows' own cells, after the score frames in battle_hud.bin: the
  * Polygon Team's stock icon and Yoshi's icon once per team-palette lane
@@ -203,6 +208,7 @@ static u32 ndsBattleHudFingerprint(
         hash = ndsBattleHudMix(hash, ndsBattleHudStock(player));
         hash = ndsBattleHudMix(hash, ndsBattleHudFkind(player));
         hash = ndsBattleHudMix(hash, ndsBattleHudCostume(player));
+        hash = ndsBattleHudMix(hash, ndsP4PlayerContent(player));
         hash = ndsBattleHudMix(hash,
                                ndsBattleHudFloatBits(damage_state[player].scale));
         hash = ndsBattleHudMix(hash, (u32)damage_state[player].damage);
@@ -322,6 +328,24 @@ static u32 ndsBattleHudPrepare(void)
             file, SpriteSize_16x16, NDS_BATTLE_HUD_TIMER_GFX_BYTES);
         if (sNdsBattleHudTimerMarkGfx[i] == NULL) goto failed;
     }
+#if NDS_P4
+    for (i = 1u; i < NDS_P4_CONTENT_LIMIT; i++)
+    {
+        const NDSP4Fighter *p4 = ndsP4Fighter(i);
+
+        sNdsBattleHudP4StockGfx[i] = NULL;
+        if (p4 == NULL)
+        {
+            continue;
+        }
+        sNdsBattleHudP4StockGfx[i] = oamAllocateGfx(
+            &oamSub, SpriteSize_8x8, SpriteColorFormat_16Color);
+        if (sNdsBattleHudP4StockGfx[i] == NULL) goto failed;
+        DC_FlushRange(p4->stock_gfx, NDS_BATTLE_HUD_STOCK_GFX_BYTES);
+        dmaCopy(p4->stock_gfx, sNdsBattleHudP4StockGfx[i],
+                NDS_BATTLE_HUD_STOCK_GFX_BYTES);
+    }
+#endif
     /* Each player's emblem cell, baked at runtime (ndsBattleHudBakeEmblem). */
     for (i = 0u; i < NDS_BATTLE_HUD_PLAYERS; i++)
     {
@@ -459,6 +483,26 @@ static void ndsBattleHudStockPalette(u32 palette, u32 fkind, u32 costume)
     }
     dmaCopy(source, &SPRITE_PALETTE_SUB[palette * 16u], 16u * sizeof(u16));
 }
+
+#if NDS_P4
+/* A P4 player's stock LUT from its content's generated palettes. */
+static sb32 ndsBattleHudP4StockPalette(u32 palette, u32 content, u32 costume)
+{
+    const NDSP4Fighter *p4 = ndsP4Fighter(content);
+
+    if (p4 == NULL)
+    {
+        return FALSE;
+    }
+    if (costume >= *p4->stock_palette_count)
+    {
+        costume = 0u;
+    }
+    dmaCopy(p4->stock_palettes[costume], &SPRITE_PALETTE_SUB[palette * 16u],
+            16u * sizeof(u16));
+    return TRUE;
+}
+#endif
 
 static void ndsBattleHudSetOam(u32 *next_id, s32 x, s32 y,
                                SpriteSize size, u16 *gfx, u32 palette)
@@ -637,17 +681,29 @@ static u32 ndsBattleHudStockOwner(u32 fkind)
     return 0xffu;
 }
 
-static void ndsBattleHudDrawStock(u32 player, u32 fkind, u32 *next_id)
+static void ndsBattleHudDrawStock(u32 player, u32 fkind, u32 content,
+                                  u32 *next_id)
 {
     u32 stock = ndsBattleHudStock(player);
     u32 owner = ndsBattleHudStockOwner(fkind);
     u32 palette = NDS_BATTLE_HUD_STOCK_PALETTE_BASE + player;
+    u16 *icon;
     u32 i;
 
     if (owner == 0xffu)
     {
         return;
     }
+    icon = sNdsBattleHudStockGfx[owner];
+#if NDS_P4
+    if ((content != 0u) && (content < NDS_P4_CONTENT_LIMIT) &&
+        (sNdsBattleHudP4StockGfx[content] != NULL))
+    {
+        icon = sNdsBattleHudP4StockGfx[content];
+    }
+#else
+    (void)content;
+#endif
 
     if (stock == 0x7fu)
     {
@@ -662,7 +718,7 @@ static void ndsBattleHudDrawStock(u32 player, u32 fkind, u32 *next_id)
                     ((s32)NDS_BATTLE_HUD_STOCK_CONTENT_W / 2);
 
             ndsBattleHudSetOam(next_id, x, NDS_BATTLE_HUD_STOCK_Y,
-                               SpriteSize_8x8, sNdsBattleHudStockGfx[owner],
+                               SpriteSize_8x8, icon,
                                palette);
         }
     }
@@ -679,7 +735,7 @@ static void ndsBattleHudDrawStock(u32 player, u32 fkind, u32 *next_id)
         x = center + NDS_BATTLE_HUD_SOURCE_SCALE(4 - 22) -
             ((s32)NDS_BATTLE_HUD_STOCK_CONTENT_W / 2);
         ndsBattleHudSetOam(next_id, x, NDS_BATTLE_HUD_STOCK_Y,
-                           SpriteSize_8x8, sNdsBattleHudStockGfx[owner], palette);
+                           SpriteSize_8x8, icon, palette);
         x = center + NDS_BATTLE_HUD_SOURCE_SCALE(4 - 10) -
             ((s32)kNdsBattleHudStockDigitMetric[10][0] / 2);
         ndsBattleHudSetOam(next_id, x,
@@ -1145,6 +1201,7 @@ void ndsBattleHudRender(void)
         u32 bit = 1u << player;
         u32 fkind;
         u32 costume;
+        u32 content;
 
         if ((gNdsIFCommonHUDActivePlayerMask & bit) == 0u)
         {
@@ -1152,10 +1209,18 @@ void ndsBattleHudRender(void)
         }
         fkind = ndsBattleHudFkind(player);
         costume = ndsBattleHudCostume(player);
+        content = ndsP4PlayerContent(player);
         ndsBattleHudDamagePalette(player, &damage_state[player]);
-        ndsBattleHudStockPalette(NDS_BATTLE_HUD_STOCK_PALETTE_BASE + player,
-                                 fkind, costume);
-        ndsBattleHudDrawStock(player, fkind, &next_id);
+#if NDS_P4
+        if (ndsBattleHudP4StockPalette(
+                NDS_BATTLE_HUD_STOCK_PALETTE_BASE + player, content,
+                costume) == FALSE)
+#endif
+        {
+            ndsBattleHudStockPalette(
+                NDS_BATTLE_HUD_STOCK_PALETTE_BASE + player, fkind, costume);
+        }
+        ndsBattleHudDrawStock(player, fkind, content, &next_id);
         ndsBattleHudDrawDamage(player, &damage_state[player], &next_id);
         if ((emblem_mask & bit) != 0u)
         {

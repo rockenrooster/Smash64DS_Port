@@ -259,6 +259,7 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
         cfg->fighters[i].stock_count = 0;
         cfg->fighters[i].is_spgame_enemy = FALSE;
         cfg->fighters[i].copy_kind = NDS_MATCH_NO_COPY_KIND;
+        cfg->fighters[i].p4_content = 0u;
     }
 
     cfg->fighters[0].fkind = nFTKindMario;
@@ -502,7 +503,8 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
                 u32 content = (gNdsLabP4Content >> (slot * 8u)) & 0xffu;
                 const NDSP4Fighter *p4 = ndsP4Fighter(content);
 
-                gNdsP4PlayerContent[slot] = (p4 != NULL) ? (u8)content : 0u;
+                cfg->fighters[slot].p4_content =
+                    (p4 != NULL) ? (u8)content : 0u;
                 if (p4 != NULL)
                 {
                     cfg->fighters[slot].fkind = (FTKind)p4->parent_kind;
@@ -768,6 +770,20 @@ void ndsMatchConfigApply(const NdsMatchConfig *cfg)
         player->pkind = slot->pkind;
         player->costume = slot->costume;
         player->shade = slot->shade;
+#if NDS_P4
+        /* The battle state holds the setup parent's kind; the content rides
+         * beside it (include/nds/nds_p4.h). VS only: the 1P tier keeps the
+         * original cast. */
+        {
+            const NDSP4Fighter *p4 = ndsP4Fighter(slot->p4_content);
+
+            gNdsP4PlayerContent[i] =
+                ((cfg->game_type == NDS_MATCH_NO_GAME_TYPE) && (p4 != NULL) &&
+                 (slot->pkind != nFTPlayerKindNot) &&
+                 ((s32)slot->fkind == p4->parent_kind)) ?
+                    slot->p4_content : 0u;
+        }
+#endif
         if (slot->pkind == nFTPlayerKindMan)
         {
             player->color = (cfg->is_team_battle == FALSE) ? (u8)i :

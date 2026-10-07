@@ -63,6 +63,32 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 
+# P4 (docs/P4/P4_STATUS.md): a build with Remix contents bakes the VS character
+# select on Smash Remix's 30-cell grid. scripts/p4/p4_css.py writes the spec --
+# and the donor's portrait, name and emblem containers -- into the build tree,
+# and the Makefile names it in NDS_P4_CSS; without it every surface is the
+# vanilla bake, byte for byte.
+P4_CSS: dict | None = None
+if os.environ.get("NDS_P4_CSS"):
+    import json as _json
+    P4_CSS = _json.loads(Path(os.environ["NDS_P4_CSS"]).read_text(encoding="utf-8"))
+# Offsets of the donor sprites the P4 placements name, merged into the reloc
+# offset table in main().
+P4_OFFSETS: dict[str, int] = {}
+
+
+# The tokens shrink with the portraits on the P4 grid (CharacterSelect.asm
+# adjust_created_token_: the token's scale is PORTRAIT_SCALE, 0.8125).
+PUCK_SCALE = (13, 20) if P4_CSS is not None else (4, 5)
+
+
+def p4_sprite(kind: str, offset: int) -> tuple[str, str]:
+    """(o2r, symbol) of a sprite at `offset` in one of the spec's donor files."""
+    symbol = f"p4:{kind}@{offset:#x}"
+    P4_OFFSETS[symbol] = offset
+    return "p4:" + P4_CSS["files"][kind], symbol
+
+
 _STAGE_FLAG_NAMES = (
     "NDS_P2_STAGE_YOSTER",
     "NDS_P2_STAGE_CASTLE",
@@ -515,6 +541,8 @@ O2R_DIRS = ("reloc_menus", "reloc_fighters_common", "reloc_stages",
 
 
 def o2r_path(repo_root: Path, name: str) -> Path:
+    if name.startswith("p4:"):
+        return Path(name[3:])
     base = repo_root / "decomp" / "BattleShip-main" / "BattleShip_o2r"
     for folder in O2R_DIRS:
         candidate = base / folder / name
@@ -1755,8 +1783,8 @@ IMAGE_SOURCES = [
     # (mnplayersvs.c:3434).  P2-2 is single-console VS -- one local human plus
     # up to three CPUs -- so 1P and CP are still the only reachable token art.
     # P3 wireless is what makes 2P/3P/4P reachable.
-    ("MNPlayersCommon", "llMNPlayersCommon1PPuckSprite", "PUCK_1P", (4, 5)),
-    ("MNPlayersCommon", "llMNPlayersCommonCPPuckSprite", "PUCK_CP", (4, 5)),
+    ("MNPlayersCommon", "llMNPlayersCommon1PPuckSprite", "PUCK_1P", PUCK_SCALE),
+    ("MNPlayersCommon", "llMNPlayersCommonCPPuckSprite", "PUCK_CP", PUCK_SCALE),
     # THE PLAYER-KIND BUTTON.  mnPlayersVSMakePlayerKindSelect indexes these
     # three by pkind (mnplayersvs.c:934), so the block order is
     # Man/Com/Not exactly as nFTPlayerKind* is ordered.
@@ -2518,6 +2546,40 @@ def css_portrait_pos(portrait: int) -> tuple[int, int]:
 
 
 def css_screen_parts(flash_portrait: int | None = None) -> tuple[Placement, ...]:
+    """The VS character select's base: Remix's 30-cell grid in a P4 build
+    (`flash_portrait` is then a cell index), else the vanilla twelve."""
+    if P4_CSS is not None:
+        return p4_css_screen_parts(flash_portrait)
+    return css_screen_parts_vanilla(flash_portrait)
+
+
+# P4: CharacterSelect.asm draw_portraits_ -- each cell's 32x32 portrait from
+# CHARACTER_PORTRAITS at (39 + 24 * column, 44 + 24 * row) and scale 0.8125,
+# in cell order, so a cell's right/bottom two pixels lie under its
+# neighbour's; a flashing cell draws the white portrait that follows its own
+# (portrait + 0x860). A selection this build does not compile draws the NONE
+# plate (the question mark), exactly as Remix draws an unavailable slot.
+def p4_cell_box(cell: dict) -> tuple[int, int, int, int]:
+    grid = P4_CSS["grid"]
+    full = (32 * grid["scale_num"]) // grid["scale_den"]
+    width = full if cell["col"] == grid["columns"] - 1 else grid["pitch"]
+    height = full if cell["row"] == grid["rows"] - 1 else grid["pitch"]
+    return (cell["x"], cell["y"], width, height)
+
+
+def p4_css_screen_parts(flash_cell: int | None = None) -> tuple[Placement, ...]:
+    grid = P4_CSS["grid"]
+    parts = [STONE_FULL_BLEED]
+    for cell in P4_CSS["cells"]:
+        offset = cell["flash"] if cell["cell"] == flash_cell else cell["portrait"]
+        o2r, symbol = p4_sprite("portraits", offset)
+        parts.append(Placement(o2r, symbol, cell["x"], cell["y"], False,
+                               scale=(grid["scale_num"] * 4,
+                                      grid["scale_den"] * 5)))
+    return tuple(parts)
+
+
+def css_screen_parts_vanilla(flash_portrait: int | None = None) -> tuple[Placement, ...]:
     parts = [
         # mnPlayersVSMakeWallpaper, :1370, full-bleed per the P2-1k ruling.
         STONE_FULL_BLEED,
@@ -2756,8 +2818,8 @@ def css_locked_surface(fkind: int, portrait: int, token: str) -> SurfaceSpec:
                    "llMNPlayersPortraitsPortraitQuestionMarkSprite", x, y,
                    False, (0xC4, 0xB9, 0xA9),
                    env=(0x5B, 0x41, 0x33))),
-        None, under=css_screen_parts(), box=(x, y, CSS_PORTRAIT_W,
-                                             CSS_PORTRAIT_H))
+        None, under=css_screen_parts_vanilla(), box=(x, y, CSS_PORTRAIT_W,
+                                                     CSS_PORTRAIT_H))
 
 
 for _fkind, _portrait, _token in CSS_LOCKED_CELLS:
@@ -2852,6 +2914,14 @@ CSS_FIGHTER_TOKEN = ("MARIO", "FOX", "LUIGI", "DONKEY", "CAPTAIN", "SAMUS", "LIN
                      "NESS",
                      "PURIN",
                      "KIRBY")
+# P4: each compiled Remix selection's series emblem and name, from the donor's
+# extended FTEmblemSprites (0x14) and MNPlayersCommon (0x11), at the same draw
+# sites (add_to_css: logo, name_texture). Entries are (o2r, symbol) pairs.
+if P4_CSS is not None:
+    for _p4 in P4_CSS["fighters"]:
+        CSS_EMBLEM_SYMBOL += (p4_sprite("logos", _p4["logo_sprite"]),)
+        CSS_NAME_SYMBOL += (p4_sprite("names", _p4["name_sprite"]),)
+        CSS_FIGHTER_TOKEN += (_p4["token"],)
 CSS_TINT_MAN = (0x1E, 0x1E, 0x1E)
 CSS_TINT_COM = (0x44, 0x44, 0x44)
 # (token suffix, gate LUT, doors shut, fighter index or None, emblem tint,
@@ -2893,11 +2963,16 @@ def css_gate(player: int, state: str, lut: str, shut: bool,
                                "llMNPlayersCommonSmashLogoCardRightSprite",
                                start + 47, 126, False))
     if fighter is not None:
-        parts.append(Placement("FTEmblemSprites", CSS_EMBLEM_SYMBOL[fighter],
+        emblem = CSS_EMBLEM_SYMBOL[fighter]
+        if not isinstance(emblem, tuple):
+            emblem = ("FTEmblemSprites", emblem)
+        parts.append(Placement(emblem[0], emblem[1],
                                start + 24, 143, False, tint))
         if with_name:
-            parts.append(Placement("MNPlayersCommon",
-                                    CSS_NAME_SYMBOL[fighter],
+            name = CSS_NAME_SYMBOL[fighter]
+            if not isinstance(name, tuple):
+                name = ("MNPlayersCommon", name)
+            parts.append(Placement(name[0], name[1],
                                     start + 22, 201, False))
     if team_label is not None:
         # mnPlayersVSMakeTeamSelect, mnplayersvs.c:487: RED/BLUE/GREEN is a
@@ -3008,7 +3083,8 @@ SURFACE_SOURCES.append(SurfaceSpec(
 # rectangles for both flash states and both READY states.  Multiple players can
 # select the same mirror fighter; runtime ORs their visible flash GObjs per
 # portrait and chooses one of these four exact outcomes.
-for _token, _portrait in (("MARIO", 1), ("FOX", 9), ("LUIGI", 0), ("LINK", 3)):
+for _token, _portrait in (() if P4_CSS is not None else
+                          (("MARIO", 1), ("FOX", 9), ("LUIGI", 0), ("LINK", 3))):
     _x, _y = css_portrait_pos(_portrait)
     _box = (_x + 1, _y + 1, 43, 41)
     for _ready in (0, 1):
@@ -3018,6 +3094,21 @@ for _token, _portrait in (("MARIO", 1), ("FOX", 9), ("LUIGI", 0), ("LINK", 3)):
             SURFACE_SOURCES.append(SurfaceSpec(
                 f"CSS_FLASH_{_token}_{'ON' if _on else 'OFF'}_READY{_ready}",
                 (), None, under=_under, box=_box))
+
+# P4: the same four outcomes per grid cell, in cell order (the runtime indexes
+# CSS_FLASH_CELL00_OFF_READY0 + cell * 4 + ready * 2 + on).
+if P4_CSS is not None:
+    for _cell in P4_CSS["cells"]:
+        _box = p4_cell_box(_cell)
+        for _ready in (0, 1):
+            _ready_parts = CSS_READY_PARTS if _ready else ()
+            for _on in (0, 1):
+                _under = (css_screen_parts(_cell["cell"] if _on else None) +
+                          _ready_parts)
+                SURFACE_SOURCES.append(SurfaceSpec(
+                    f"CSS_FLASH_CELL{_cell['cell']:02d}_"
+                    f"{'ON' if _on else 'OFF'}_READY{_ready}",
+                    (), None, under=_under, box=_box))
 
 # The screen-coverage audit normally derives a surface's source ownership from
 # `SurfaceSpec.parts`.  These flash surfaces are the one deliberate exception:
@@ -3661,9 +3752,9 @@ NET_IMAGE_SOURCES = [
      "CSS_CURSOR_3P", (4, 5), (0xCA, 0x94, 0x08), None, (0x62, 0x3C, 0x00)),
     ("MNPlayersCommon", "llMNPlayersCommon4PTextGradientSprite",
      "CSS_CURSOR_4P", (4, 5), (0x00, 0x91, 0x00), None, (0x00, 0x4F, 0x00)),
-    ("MNPlayersCommon", "llMNPlayersCommon2PPuckSprite", "PUCK_2P", (4, 5)),
-    ("MNPlayersCommon", "llMNPlayersCommon3PPuckSprite", "PUCK_3P", (4, 5)),
-    ("MNPlayersCommon", "llMNPlayersCommon4PPuckSprite", "PUCK_4P", (4, 5)),
+    ("MNPlayersCommon", "llMNPlayersCommon2PPuckSprite", "PUCK_2P", PUCK_SCALE),
+    ("MNPlayersCommon", "llMNPlayersCommon3PPuckSprite", "PUCK_3P", PUCK_SCALE),
+    ("MNPlayersCommon", "llMNPlayersCommon4PPuckSprite", "PUCK_4P", PUCK_SCALE),
     # 3/4 like PANEL_CP, and for the same cell fact: these tags are 43 source
     # px wide, so 4/5 lands them in a 64x32 cell (4,096 B each) and the set
     # would not fit the 16 KiB it borrows; 3/4 is a 32x16 cell (1,024 B).
@@ -4811,8 +4902,12 @@ def check_bonus_css_shared_states(surfaces: list[Surface]) -> None:
     bonus = by_token["BONUS_CSS_SCREEN"]
     shared = [("ONEP_CSS_SCREEN", "ONEP_READY_ON"),
               ("ONEP_CSS_SCREEN", "ONEP_READY_OFF")]
-    shared += [("CSS_SCREEN", f"CSS_LOCKED_{token}")
-               for _fkind, _portrait, token in CSS_LOCKED_CELLS]
+    # A P4 build's CSS_SCREEN is the 30-cell grid; the locked-newcomer states
+    # are still composited over the vanilla twelve (css_locked_surface), which
+    # this same check proves equal to the bonus base in every vanilla build.
+    if P4_CSS is None:
+        shared += [("CSS_SCREEN", f"CSS_LOCKED_{token}")
+                   for _fkind, _portrait, token in CSS_LOCKED_CELLS]
 
     def texel(surface: Surface, x: int, y: int) -> int:
         sx = x - surface.dst_x
@@ -5006,6 +5101,7 @@ def main(argv: list[str] | None = None) -> int:
         _prime_check_stage_flags(repo_root)
     _refresh_stage_dependent_sources()
     offsets = load_reloc_offsets(repo_root)
+    offsets.update(P4_OFFSETS)
 
     if args.list_images:
         fileobj = RelocFile(o2r_path(repo_root, args.o2r_file))

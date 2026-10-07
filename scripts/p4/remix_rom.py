@@ -35,8 +35,12 @@ REMIX_CODE_RAM = 0x80400000
 # The vanilla fighter overlay that holds FTData, motion-desc and status-desc
 # tables maps RAM to ROM by this constant (Character.asm: `- 0x80084800`).
 FT_OVERLAY_RAM_MINUS_ROM = 0x80084800
-# The vanilla menu-motion arrays use this one (`- 0x80288A20`).
+# The vanilla menu-motion arrays use this one (`- 0x80288A20`): overlay 1
+# (sc/scsubsys), ROM 0x1079C0-0x109FB0 at VRAM 0x803903E0
+# (smashbrothers.us.yaml), which also holds the menu motions' scripts
+# (D_ovl1_*) that Remix menu motions can point at directly.
 MENU_OVERLAY_RAM_MINUS_ROM = 0x80288A20
+MENU_OVERLAY_RAM = (0x803903E0, 0x803929D0)
 
 O2R_HEADER = (
     b"\x00\x00\x00\x00" + b"OLER" + b"\x00\x00\x00\x00"
@@ -231,6 +235,8 @@ class Rom:
         """Read Remix-region or fighter-overlay RAM addresses from the image."""
         if ram >= REMIX_CODE_RAM:
             off = self.remix_rom_offset(ram)
+        elif MENU_OVERLAY_RAM[0] <= ram < MENU_OVERLAY_RAM[1]:
+            off = ram - MENU_OVERLAY_RAM_MINUS_ROM
         else:
             off = ram - FT_OVERLAY_RAM_MINUS_ROM
         return self.data[off:off + size]
