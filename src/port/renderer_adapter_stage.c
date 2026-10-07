@@ -7777,6 +7777,17 @@ volatile u32 gNdsStageDLFastLaneFills;
  * sweep match: ~4.5 body submits a frame for 150 frames). The ground display's
  * inputs: no item or effect seeds over the reset persistent stats. */
 #define NDS_SDL_ROUTE_BAKED_WEAPON 0xefu
+/* P2-2p8 (2026-10-07), a body-submit census of the failing stages' sweep
+ * matches (clean ROM, frames 100-1,900): the Poke Ball (Yoshi's Island, 998
+ * body submits), the Red and Green Shells (Mushroom Kingdom 354, Yoshi's
+ * Island 93) and the Starman (Jungle 170) drew through the body on every
+ * frame they live. Each admission is the body's own, tested again on every
+ * draw: the item submit, an Item GObj of the owner's kind, the MObj count and
+ * the live snapshots' effects. The two shells share one root, so the route
+ * re-reads the kind and takes that shell's owner. */
+#define NDS_SDL_ROUTE_MBALL 0xeeu
+#define NDS_SDL_ROUTE_SHELL 0xedu
+#define NDS_SDL_ROUTE_STAR 0xecu
 /* Yoshi's Island's capsules and boxes thrashed an 8-slot table (1,231 fills
  * for 1,469 hits a match): the owners are few, but a capsule alone draws three
  * roots, and its header and third root shared a slot under an address-bit
@@ -8200,8 +8211,10 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
     NDSRendererNativeMaterial bumper_material;
 #endif
 #if NDS_P2_ITEM_CORE
-    /* The Fire Flower's or the N Bumper's live snapshot. */
+    /* The Fire Flower's or the N Bumper's live snapshot (the Starman's
+     * first; item_route_material1 its second). */
     NDSRendererNativeMaterial item_route_material;
+    NDSRendererNativeMaterial item_route_material1;
 #endif
 #if NDS_P2_STAGE_SECTOR
     const u8 *laser_tex_base = NULL;
@@ -8257,6 +8270,9 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
           (route->route != NDS_SDL_ROUTE_BAKED_ITEM) &&
           (route->route != NDS_SDL_ROUTE_BAKED_ROOM) &&
           (route->route != NDS_SDL_ROUTE_BAKED_WEAPON) &&
+          (route->route != NDS_SDL_ROUTE_MBALL) &&
+          (route->route != NDS_SDL_ROUTE_SHELL) &&
+          (route->route != NDS_SDL_ROUTE_STAR) &&
           (route->route != NDS_SDL_ROUTE_CASTLE_BUMPER) &&
           (route->route != NDS_SDL_ROUTE_FFLOWER_LIVE) &&
           (route->route != NDS_SDL_ROUTE_NBUMPER) &&
@@ -8531,6 +8547,97 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
             (ndsRendererAdapterBuildNativeMaterialSnapshot(
                  dobj->mobj, &item_route_material, FALSE, NULL, NULL) == FALSE) ||
             (item_route_material.effects !=
+                 NDS_RENDERER_NATIVE_MATERIAL_PALETTE_IMAGE))
+        {
+            return FALSE;
+        }
+        break;
+    }
+    case NDS_SDL_ROUTE_MBALL:
+    {
+        /* The body's two Poke Ball roots: the baked one without an MObj, the
+         * live one with one CURRENT_IMAGE snapshot. */
+        ITStruct *ip;
+
+        if ((owner->id != nGCCommonKindItem) ||
+            (sNdsRendererAdapterItemSubmitActive == FALSE) ||
+            (route->data_size < NDS_NATIVE_ITEM_MBALL_FILE_END))
+        {
+            return FALSE;
+        }
+        ip = itGetStruct(owner);
+        if ((ip == NULL) || (ip->kind != nITKindMBall))
+        {
+            return FALSE;
+        }
+        if (route->root == NDS_NATIVE_ITEM_MBALL_BAKED_ROOT)
+        {
+            if (dobj->mobj != NULL)
+            {
+                return FALSE;
+            }
+        }
+        else if ((route->root != NDS_NATIVE_ITEM_MBALL_LIVE_ROOT) ||
+                 (dobj->mobj == NULL) || (dobj->mobj->next != NULL) ||
+                 (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                      dobj->mobj, &item_route_material, FALSE, NULL, NULL) ==
+                  FALSE) ||
+                 (item_route_material.effects !=
+                      NDS_RENDERER_NATIVE_MATERIAL_CURRENT_IMAGE))
+        {
+            return FALSE;
+        }
+        break;
+    }
+    case NDS_SDL_ROUTE_SHELL:
+    {
+        ITStruct *ip;
+
+        if ((owner->id != nGCCommonKindItem) ||
+            (sNdsRendererAdapterItemSubmitActive == FALSE) ||
+            (dobj->mobj == NULL) || (dobj->mobj->next != NULL))
+        {
+            return FALSE;
+        }
+        ip = itGetStruct(owner);
+        if ((ip == NULL) ||
+            ((ip->kind == nITKindGShell) ?
+                 (route->data_size < NDS_NATIVE_ITEM_GSHELL_FILE_END) :
+             (ip->kind == nITKindRShell) ?
+                 (route->data_size < NDS_NATIVE_ITEM_RSHELL_FILE_END) : TRUE) ||
+            (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                 dobj->mobj, &item_route_material, FALSE, NULL, NULL) == FALSE) ||
+            (item_route_material.effects !=
+                 (NDS_RENDERER_NATIVE_MATERIAL_PALETTE_IMAGE |
+                  NDS_RENDERER_NATIVE_MATERIAL_PALETTE_TLUT |
+                  NDS_RENDERER_NATIVE_MATERIAL_CURRENT_IMAGE)))
+        {
+            return FALSE;
+        }
+        break;
+    }
+    case NDS_SDL_ROUTE_STAR:
+    {
+        ITStruct *ip;
+
+        if ((owner->id != nGCCommonKindItem) ||
+            (sNdsRendererAdapterItemSubmitActive == FALSE) ||
+            (dobj->mobj == NULL) || (dobj->mobj->next == NULL) ||
+            (dobj->mobj->next->next != NULL) ||
+            (route->data_size < NDS_NATIVE_ITEM_STAR_FILE_END))
+        {
+            return FALSE;
+        }
+        ip = itGetStruct(owner);
+        if ((ip == NULL) || (ip->kind != nITKindStar) ||
+            (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                 dobj->mobj, &item_route_material, FALSE, NULL, NULL) == FALSE) ||
+            (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                 dobj->mobj->next, &item_route_material1, FALSE, NULL,
+                 NULL) == FALSE) ||
+            (item_route_material.effects !=
+                 NDS_RENDERER_NATIVE_MATERIAL_PALETTE_IMAGE) ||
+            (item_route_material1.effects !=
                  NDS_RENDERER_NATIVE_MATERIAL_PALETTE_IMAGE))
         {
             return FALSE;
@@ -8972,6 +9079,70 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
         else
         {
             NDS_DIAG(gNdsItemFFlowerSubmitFailCount++);
+        }
+    }
+    else if (route_kind == NDS_SDL_ROUTE_MBALL)
+    {
+        ndsStageDLFastItemSeeds(render_stats);
+        handled = ndsRendererSubmitNativeItemMBall(
+            route->root, loaded->data, loaded->data_size,
+            (route->root == NDS_NATIVE_ITEM_MBALL_LIVE_ROOT) ?
+                &item_route_material : NULL,
+            &config, render_stats);
+        if (handled != FALSE)
+        {
+            NDS_DIAG(gNdsItemMBallDrawCount++);
+        }
+        else
+        {
+            NDS_DIAG(gNdsItemMBallSubmitFailCount++);
+        }
+    }
+    else if (route_kind == NDS_SDL_ROUTE_SHELL)
+    {
+        ndsStageDLFastItemSeeds(render_stats);
+        if (itGetStruct(owner)->kind == nITKindGShell)
+        {
+            handled = ndsRendererSubmitNativeItemGShell(
+                loaded->data, loaded->data_size, &item_route_material,
+                &config, render_stats);
+            if (handled != FALSE)
+            {
+                NDS_DIAG(gNdsItemGShellDrawCount++);
+            }
+            else
+            {
+                NDS_DIAG(gNdsItemGShellSubmitFailCount++);
+            }
+        }
+        else
+        {
+            handled = ndsRendererSubmitNativeItemRShell(
+                loaded->data, loaded->data_size, &item_route_material,
+                &config, render_stats);
+            if (handled != FALSE)
+            {
+                NDS_DIAG(gNdsItemRShellDrawCount++);
+            }
+            else
+            {
+                NDS_DIAG(gNdsItemRShellSubmitFailCount++);
+            }
+        }
+    }
+    else if (route_kind == NDS_SDL_ROUTE_STAR)
+    {
+        ndsStageDLFastItemSeeds(render_stats);
+        handled = ndsRendererSubmitNativeItemStar(
+            loaded->data, loaded->data_size, &item_route_material,
+            &item_route_material1, &config, render_stats);
+        if (handled != FALSE)
+        {
+            NDS_DIAG(gNdsItemStarDrawCount++);
+        }
+        else
+        {
+            NDS_DIAG(gNdsItemStarSubmitFailCount++);
         }
     }
 #if NDS_P2_STAGE_YAMABUKI
@@ -14196,6 +14367,13 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         if (item_star_native_handled != FALSE)
         {
             NDS_DIAG(gNdsItemStarDrawCount++);
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            if ((sNdsRendererAdapterEffectSubmitActive == FALSE) &&
+                (sNdsRendererAdapterStagePersistentActive != FALSE))
+            {
+                ndsStageDLRouteRecord(dl, loaded, 0u, NDS_SDL_ROUTE_STAR);
+            }
+#endif
         }
         else
         {
@@ -14300,6 +14478,15 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             {
                 NDS_DIAG(gNdsEntryMBallThrownDrawCount++);
             }
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            else if ((sNdsRendererAdapterItemSubmitActive != FALSE) &&
+                     (sNdsRendererAdapterEffectSubmitActive == FALSE) &&
+                     (sNdsRendererAdapterStagePersistentActive != FALSE))
+            {
+                ndsStageDLRouteRecord(dl, loaded, item_mball_root,
+                                      NDS_SDL_ROUTE_MBALL);
+            }
+#endif
         }
         else
         {
@@ -14368,6 +14555,14 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         if (item_gshell_native_handled != FALSE)
         {
             NDS_DIAG(gNdsItemGShellDrawCount++);
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            if ((sNdsRendererAdapterEffectSubmitActive == FALSE) &&
+                (sNdsRendererAdapterStagePersistentActive != FALSE))
+            {
+                ndsStageDLRouteRecord(dl, loaded, NDS_NATIVE_ITEM_GSHELL_ROOT,
+                                      NDS_SDL_ROUTE_SHELL);
+            }
+#endif
         }
         else
         {
@@ -14398,6 +14593,14 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         if (item_rshell_native_handled != FALSE)
         {
             NDS_DIAG(gNdsItemRShellDrawCount++);
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            if ((sNdsRendererAdapterEffectSubmitActive == FALSE) &&
+                (sNdsRendererAdapterStagePersistentActive != FALSE))
+            {
+                ndsStageDLRouteRecord(dl, loaded, NDS_NATIVE_ITEM_RSHELL_ROOT,
+                                      NDS_SDL_ROUTE_SHELL);
+            }
+#endif
         }
         else
         {
