@@ -131,8 +131,14 @@ int main(void) {
     command(NDS_BGM_RESET,6);assert(!report->error_stops&&!report->reads);
     fail_read=1;command(NDS_BGM_PLAY,7<<6);assert(sState==NDS_BGM_FAILED&&report->read_errors==1);fail_read=0;
     command(NDS_BGM_RESET,8);
-    for(unsigned i=0;i<16;++i)ndsBgmCommandHandler(NULL,ndsBgmCommand(NDS_BGM_VOLUME,i));
-    ndsBgmCommandHandler(NULL,ndsBgmCommand(NDS_BGM_STOP,9));
+    // A volume run (the source's countdown sets it every tick) queues one
+    // doorbell; the worker applies the latest value, and a STOP still fits.
+    for(unsigned i=0;i<40;++i)ndsBgmCommandHandler(NULL,ndsBgmCommand(NDS_BGM_VOLUME,0x7800-i*0x100));
+    ndsBgmCommandHandler(NULL,ndsBgmCommand(NDS_BGM_STOP,9));pump();
+    assert(hardware_volume[0]==85&&hardware_volume[1]==85&&!report->event_drops);
+    assert(last_reply==ndsBgmCommand(NDS_BGM_STOP,9)&&!sVolumeQueued);
+    for(unsigned i=0;i<16;++i)ndsBgmCommandHandler(NULL,ndsBgmCommand(NDS_BGM_PLAY,((10+i)<<6)|1));
+    ndsBgmCommandHandler(NULL,ndsBgmCommand(NDS_BGM_STOP,30));
     assert(report->event_drops==1&&last_reply==NDS_BGM_REPLY_ERROR&&sState==NDS_BGM_FAILED);
     assert(!irq_depth);
 #ifdef _WIN32

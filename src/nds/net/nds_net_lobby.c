@@ -986,9 +986,10 @@ void ndsNetLobbyHostSetPhase(uint32_t phase)
 extern s32 ftParamGetCostumeCommonID(s32 fkind, s32 color);
 
 volatile u32 gNdsNetLabSweepMatches;
-/* Poked nonzero by a harness to replay one reported match instead of the
- * sweep (ndsNetLabSweepDescriptor). */
-volatile u32 gNdsNetLabSweepRepro;
+/* Nonzero replays one reported setup instead of the sweep
+ * (ndsNetLabSweepDescriptor): built in (NDS_NET_LAB_SWEEP_REPRO) or poked by
+ * a harness. */
+volatile u32 gNdsNetLabSweepRepro = NDS_NET_LAB_SWEEP_REPRO;
 
 #if NDS_NET_LAB_TEAMS
 extern s32 ftParamGetCostumeTeamID(s32 fkind, s32 color);
@@ -1070,16 +1071,22 @@ static void ndsNetLabSweepDescriptor(NdsMatchConfig *cfg)
 
     if (gNdsNetLabSweepRepro != 0u)
     {
-        /* A gdb-poked repro: Kirby (host) against Yoshi (guest) on Hyrule,
-         * two humans and no CPUs, two-minute time, every item at Medium. */
-        cfg->gkind = nGRKindHyrule;
+        /* Reported two-human setups, no CPUs, every item on. 1: Kirby (host)
+         * against Yoshi (guest) on Hyrule, two-minute time, items at Medium.
+         * 2 (owner, 2026-10-07: a freeze in some match): Donkey Kong (host)
+         * against Luigi (guest), each VS stage in turn, one-minute time,
+         * items at the highest rate. */
+        const u32 dk = (gNdsNetLabSweepRepro == 2u) ? 1u : 0u;
+
+        cfg->gkind = (dk != 0u) ? kStages[m % 9u] : nGRKindHyrule;
         for (i = 0u; i < NDS_NET_PORTS; i++)
         {
             NdsMatchFighterConfig *f = &cfg->fighters[i];
 
             f->pkind = (i < 2u) ? nFTPlayerKindMan : nFTPlayerKindNot;
-            f->fkind = (i == 0u) ? nFTKindKirby :
-                       (i == 1u) ? nFTKindYoshi : nFTKindNull;
+            f->fkind = (i == 0u) ? ((dk != 0u) ? nFTKindDonkey : nFTKindKirby) :
+                       (i == 1u) ? ((dk != 0u) ? nFTKindLuigi : nFTKindYoshi) :
+                       nFTKindNull;
             f->team = (u8)i;
             f->costume = (i < 2u) ?
                 (u8)ftParamGetCostumeCommonID((s32)f->fkind, (s32)i) : 0u;
@@ -1088,9 +1095,10 @@ static void ndsNetLabSweepDescriptor(NdsMatchConfig *cfg)
         cfg->is_team_battle = FALSE;
         cfg->is_team_attack = FALSE;
         cfg->game_rules = SCBATTLE_GAMERULE_TIME;
-        cfg->time_limit = 2u;
+        cfg->time_limit = (dk != 0u) ? 1u : 2u;
         cfg->item_toggles = ndsMatchConfigItemTogglesFromRows(kAllRows);
-        cfg->item_appearance_rate = nSCBattleItemSwitchMiddle;
+        cfg->item_appearance_rate = (dk != 0u) ? nSCBattleItemSwitchVeryHigh :
+                                                 nSCBattleItemSwitchMiddle;
         ndsMatchConfigApply(cfg);
         return;
     }

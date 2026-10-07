@@ -45,23 +45,41 @@ contain the watchdog, exception handler, IRQ snapshot, and breadcrumb symbols;
 the `off` ELF must contain no `ndsFreezeDiagnostics` or
 `gNdsFreezeDiagnostics` symbol. Neither target publishes into the project root.
 
-The retained bottom-screen `STALL` fields are:
+The bottom-screen `FREEZE REPORT: BATTLE STALL` fields (2026-10-07 layout):
 
 | Field | Meaning |
 | --- | --- |
-| `PC`, `LR` | Interrupted ARM9 program counter and task link register captured before Calico IRQ dispatch. |
-| `CLASS` | Breadcrumb-based discriminator: `FGM COMMAND`, `GX/PRESENT`, `HIT/DAMAGE`, or `UNKNOWN`. |
-| `HB`, `LAST` | Last completed-frame heartbeat and latest four-character breadcrumb. |
-| `GX`, `POLY`, `VERT`, `SWAP` | GX status, polygon/vertex RAM use, and whether flush/VBlank presentation was pending. |
-| `IPC`, `SYNC` | ARM9 IPC FIFO control and IPC synchronization registers. |
-| `FGM ENTER`, `FGM RETURN`, `ID`, `CH`, `MASK` | Real `soundPlaySample` call/return counts and latest FGM/channel ownership state. These are command-return diagnostics, not a fabricated ARM7 ACK protocol. |
-| `FRAME`, `LOGIC` | Presented and source-update frame counters. |
-| `B0`-`B7` | The fixed breadcrumb ring, newest slot identified by the write counter. |
+| `PC`, `LR` | Interrupted ARM9 program counter and task link register captured before Calico IRQ dispatch (the idle loop when the game thread is blocked). |
+| `MAIN s PC LR`, `SP` | The game thread's Calico status (2 running, 3 waiting, 4 waiting on a mutex) and, when it is not the interrupted thread, its saved PC/LR/SP. |
+| `STK` | Up to six return addresses from the game thread's saved stack (Thumb words in main RAM, any word in ITCM); `arm-none-eabi-addr2line -fe smash64ds.elf` names them. |
+| `HB` | Heartbeat: presented battle frames plus lockstep wait VBlanks since the battle's first frame. |
+| `BGM H ES ER RC RF` | `gNdsAudioBgmArm7Failure` (a BGM halt reason), ARM7 error stops, the last `NDS_BGM_ERROR_*`, restarts after an error, refused waited commands. |
+| `BGM SEQ` | The ARM7 BGM report sequence, read live: it moves while the ARM7 still streams. |
+| `STO`, `F` | ARM9 storage requests and failures. |
+| `NET s B STALL` | Net session state, lockstep batch, longest wait (VBlanks). |
+| `PKT TX RX` | INPUT packets this console sent and received. |
+| `RADIO TX RX`, `NOBUF`, `RXFULL` | The ARM7 radio module's frames sent and received (live), TX buffer stalls and RX ring overflows. |
+| `IPC`, `GX`, `FGM` | IPC FIFO control, GX status at the trip, FGM calls not yet returned. |
+| `FRAME`, `UPD` | Presented and source-update frame counters at the trip. |
+| breadcrumbs | The last eight breadcrumbs, newest first, as their four letters (`NETW` = a lockstep wait). |
 
-The watchdog samples at 1 Hz and reports after two unchanged, armed heartbeat
-samples. It deliberately leaves the stall in place so the report remains
-photographable. `NDS_FREEZE_DIAGNOSTICS=0` preprocesses all hot-path call sites
-to no-ops and does not link the diagnostic implementation.
+The watchdog samples at 1 Hz, arms at a battle's first presented frame and
+disarms when the battle loop ends (`ndsR2BattleRun`); the lockstep's wait
+beats the heartbeat (`ndsFreezeDiagnosticsNetWait`). It reports after three
+unchanged samples, redraws the report every second while the game stays
+stuck (so the live rows show whether the ARM7 runs), and never halts: a frame
+that finishes marks the report `RESUMED`. Playtest ROMs for hardware freezes
+build the shipping target with `NDS_FREEZE_DIAGNOSTICS=1`; those builds also
+print the radio's counters on lower-screen line 20 while the lockstep waits.
+`NDS_FREEZE_DIAGNOSTICS=0` preprocesses all hot-path call sites to no-ops and
+does not link the diagnostic implementation.
+
+Until 2026-10-07 the report never reached the screen, though its counters and
+gdb markers worked: it took libnds's console template (`consoleGetDefault()`,
+whose map pointer is NULL) instead of the live console, and shifted the
+console palette, which `consoleInit` stores already shifted, a second time.
+Check a report change on the screen, not only through gdb
+(`NDS_NET_LAB_HANG` gives a frozen guest to photograph).
 
 For the Down-Air reproduction, the existing verifier can select the intrinsic
 diagnostic build while retaining its verifier-only human-P2 Fox route:

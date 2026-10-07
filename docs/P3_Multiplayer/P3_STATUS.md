@@ -185,6 +185,45 @@ cells on every console (plan 7.1); a guest's own save is never written by it.
   source reads one past `emblem_colors` from the ground data's `unused` word
   (0xDCDCDC, light grey), read in native byte order as cyan.
 
+### Freezes on hardware (owner, 2026-10-07, play-1007e)
+
+"Sometimes a freeze occurs during a 2P match" (Donkey Kong against Luigi,
+several stages, items on; the link also dropped and recovered by itself).
+Nothing in the lockstep waits without a bound (a stall ends the match after
+10 s), so a console that stays frozen is stuck outside it. Two things changed:
+
+- **No halt on a music error.** Since the ARM7 took over BGM streaming (A8),
+  the ARM9 halted the game for good whenever the ARM7 reported a stream error
+  stop -- an underrun (a refill not ready by the seam), a failed storage read,
+  or a full command queue -- and when the ARM7 refused a STOP or RESET
+  (`ndsAudioBgmControlHalt` 5 and 4). Any of those freezes the picture and
+  silences the music, and the radio adds load and SD traffic the offline game
+  never had. The ARM9 now restarts the track instead (a new generation from
+  the top, at most 16 times per play; `gNdsAudioBgmRecoveries`,
+  `gNdsAudioBgmLastError`), and a refused STOP or RESET is counted
+  (`gNdsAudioBgmCommandRefusals`); only an INIT the ARM7 rejects still halts.
+  The source sets the BGM volume every tick of a timed match's last five
+  seconds (`ifCommonTimerFuncRun`), 300 posts that each took a mailbox slot on
+  the ARM7, and a full mailbox failed the stream: the ARM9 now posts only a
+  change of the ARM7's 128-step channel volume, and the ARM7 treats VOLUME as a
+  doorbell (the handler keeps the latest value, at most one VOLUME message
+  waits). `scripts/sfx/test_bgm_service.py` covers a 40-post volume run and the
+  queue-full failure.
+- **A freeze report.** Playtest builds with `NDS_FREEZE_DIAGNOSTICS=1` arm a
+  1 Hz watchdog on battle frames (from the first presented frame to the
+  battle's end; the lockstep's wait for another console counts as progress).
+  After 3-4 s without a finished frame it draws a report on the lower screen
+  and keeps redrawing it every second: the interrupted PC/LR, the game
+  thread's state and saved PC/LR/SP with up to six return addresses from its
+  stack, the BGM halt/error/recovery counters, the ARM7's live BGM report
+  sequence, storage requests, the net session state, batch and packets, the
+  radio's frames sent and received, and the last eight breadcrumbs. It never
+  halts the game: a frame that finishes marks the report RESUMED. The same
+  builds print the radio's counters on line 20 while the lockstep waits, so a
+  photo of each console during a dropout shows which side stopped sending or
+  receiving. Lab: `NDS_NET_LAB_HANG=1|2` freezes the guest at batch 600 (a
+  spin, or the game thread blocked on a mailbox) to check the report.
+
 ## Testing
 
 - `melonDS-mp`: an export of the owner's melonDS-Accurate `master` (the build
@@ -205,6 +244,10 @@ cells on every console (plan 7.1); a guest's own save is never written by it.
   Stock with team attack on, where the guest's scripted START steals; three
   teams; both humans against the CPUs) and a free-for-all, and
   `NDS_NET_LAB_LEAVE=N` makes the guest hold START (Leave) in its Nth battle.
+  `NDS_NET_LAB_SWEEP_REPRO=N` replays a reported setup instead of the sweep
+  (2: Donkey Kong host against Luigi guest, each VS stage in turn, every
+  item at Very High), and `NDS_NET_LAB_HANG=1|2` freezes the guest at batch
+  600 for the freeze report.
   `NDS_NET_LAB_SOAK=1` (with the sweep) plays rooms without end: the two
   consoles swap host and guest every room (host rotation), and the rooms cycle
   through a lobby-only visit (join, pick, the host closes), one match, a match
@@ -246,6 +289,7 @@ cells on every console (plan 7.1); a guest's own save is never written by it.
 | `race` | 2 | The owner's start race, reproduced: the guest's radio deaf for 6 s as it accepts START (lab `NDS_NET_LAB_STARTLOSS`; first by a gdb write) -- before the fix the host gave up after 3 s and went back to the lobby (1 start failure) while the guest entered the battle alone and aborted ("Connection lost", NO CONTEST). After it: a 6 s dropout withdraws the round on both consoles (host 1 failure, guest 1 cancel, nobody in battle), a 3 s dropout still starts the match from the late ACKs; then 2-3 matches, 0 aborts, 0 desyncs. A 5.5-minute soak without loss: 5 matches, 0 failures or cancels, 0 desyncs, the one abort the scheduled Leave |
 | `soak5` | 2 | The same soak for 2 h 15 min: 107 rooms (each console host 53-54 times) and 110 matches over all nine VS stages, 26 guest Leaves: about 162,000 digest compares per console, 0 desyncs, aborts only the Leaves; setup heap identical on both consoles every room; libc heap at each VS Mode entry 1,027,176 B first and 1,042,464-1,045,200 B after (flat over two hours) |
 | `teams2` | 2 | Same sweep with the second layout set (the four-stock Stock match pairs the guest with a CPU) and the terminal-digest check: 10 matches plus 2 sudden deaths (one in a Team Battle), 20,719 digest compares, 0 desyncs; the guest took its CPU partner's stock 5 times over the link (`ifCommonPlayerStockStealMakeInterface`, thief 1); in the tenth match the guest held START: it left, the host ended the match as NO CONTEST (1 abort), dropped it from the room (human mask 0x1) and returned to the lobby |
+| `frzr` | 2 | Freeze report: the guest's game thread blocked at batch 600 (`NDS_NET_LAB_HANG=2`, DK against Luigi on Dream Land). The host waited 10 s, ended the match ("Connection lost", 1 abort) and went back to the lobby; the guest's lower screen showed the report 3-4 s after its last frame: game thread waiting (status 3), first stacked return `ndsNetBattleGate` (the blocked call), then `ndsR2HostBattlePresent`, `ndsR2BattleRun`, `syTaskmanRunTask`; BGM SEQ 0x68E then 0xA1C a few seconds later (the ARM7 still streaming), RX ring overflows climbing (nobody drained the frozen console's ring). Breakpoints on the trip marker and the renderer confirmed one trip and a redraw each second |
 
 ## Open
 

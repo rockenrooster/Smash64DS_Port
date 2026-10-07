@@ -911,12 +911,24 @@ static volatile NdsBgmReport sBgmReport;
 static NdsBgmInit sBgmInit;
 static Mutex sBgmCommandMutex;
 static u32 sBgmInitialized, sBgmGeneration, sBgmPendingPlaying, sBgmLastSequence;
+/* Stream-error recovery (ndsBgmObserve): the track index the current play
+ * asked for, the ARM7 error stops already handled, and the restarts this
+ * play has used. */
+static u32 sBgmCurrentIndex, sBgmErrorStopsSeen, sBgmRestarts;
+#define NDS_BGM_RESTART_LIMIT 16u
+/* The channel volume step (0..127) last posted to the ARM7; ~0 = none. */
+static u32 sBgmPostedVolumeStep = 0xFFFFFFFFu;
 static s32 sNdsAudioBgmNaturalStopArmed;
 static u32 sNdsAudioBgmFadeFramesLeft, sNdsAudioBgmFadeTarget, sNdsAudioBgmFadeDenom;
 static s32 sNdsAudioBgmFadeStep, sNdsAudioBgmFadeRem, sNdsAudioBgmFadeError;
 volatile u32 gNdsAudioBgmArm7Commands;
 volatile u32 gNdsAudioBgmArm7Ready;
 volatile u32 gNdsAudioBgmArm7Failure;
+/* Stream errors the ARM7 reported that the music restarted from, the last
+ * one's NDS_BGM_ERROR_* code, and waited commands the ARM7 refused. */
+volatile u32 gNdsAudioBgmRecoveries;
+volatile u32 gNdsAudioBgmLastError;
+volatile u32 gNdsAudioBgmCommandRefusals;
 
 _Static_assert(sizeof(sBgmSpecs)/sizeof(sBgmSpecs[0]) <= NDS_BGM_MAX_TRACKS, "BGM index encoding");
 /* The FGM picker (ndsAudioFgmPlaySample) never hands out the stream's two
@@ -929,6 +941,13 @@ void __attribute__((noinline, used, noreturn)) ndsAudioBgmControlHalt(u32 reason
     gNdsAudioBgmArm7Failure = reason;
     DC_FlushAll();
     for (;;) { __asm__ volatile("" ::: "memory"); }
+}
+
+/* The ARM7's channel volume for a source volume: one of 128 steps
+ * (nds_audio_bgm_service.c, ndsBgmHardwareVolume). */
+static u32 ndsBgmVolumeStep(u32 volume)
+{
+    return volume >= 0x7800u ? 127u : volume * 127u / 0x7800u;
 }
 
 static u32 ndsBgmNextGeneration(void)
@@ -945,8 +964,14 @@ static void ndsBgmPost(u32 operation, u32 argument, u32 wait)
     gNdsAudioBgmArm7Commands++;
     if (wait)
     {
+        /* A refusal means the ARM7's queue was full (it has stopped the
+         * stream already, which a STOP or RESET wanted anyway) or INIT's
+         * tables were bad; only a service that never started is fatal. */
         if (pxiSendAndReceive((PxiChannel)NDS_BGM_IPC_CHANNEL, message) != message)
-            ndsAudioBgmControlHalt(4u);
+        {
+            if (operation == NDS_BGM_INIT) ndsAudioBgmControlHalt(4u);
+            gNdsAudioBgmCommandRefusals++;
+        }
     }
     else pxiSend((PxiChannel)NDS_BGM_IPC_CHANNEL, message);
     mutexUnlock(&sBgmCommandMutex);
@@ -982,6 +1007,7 @@ static void ndsBgmInitialize(void)
     DC_FlushRange(&sBgmInit, sizeof(sBgmInit));
     pxiWaitRemote((PxiChannel)NDS_BGM_IPC_CHANNEL);
     ndsBgmPost(NDS_BGM_INIT, (u32)(uintptr_t)&sBgmInit >> 5, TRUE);
+    sBgmPostedVolumeStep = ndsBgmVolumeStep(sBgmInit.volume);
     sBgmInitialized = 1u;
     gNdsAudioBgmArm7Ready = 1u;
 }
@@ -1026,7 +1052,28 @@ static void ndsBgmObserve(void)
     gNdsAudioBgmPlayFailCount = snapshot.bad_commands;
     gNdsAudioBgmNaturalStopCount = snapshot.natural_stops;
     gNdsAudioBgmLastNaturalStopTrackID = snapshot.last_natural_track;
-    if (snapshot.error_stops) ndsAudioBgmControlHalt(5u);
+    if (snapshot.error_stops < sBgmErrorStopsSeen)
+    {
+        sBgmErrorStopsSeen = snapshot.error_stops; /* the ARM7 counters were reset */
+    }
+    else if (snapshot.error_stops != sBgmErrorStopsSeen)
+    {
+        /* An ARM7 stream error (an underrun, a failed read, a full queue)
+         * stopped the track. This used to halt the game, and an owner
+         * playtest froze mid-match on hardware (2026-10-07); the music
+         * restarts instead, from the top, a bounded number of times per
+         * play. */
+        sBgmErrorStopsSeen = snapshot.error_stops;
+        gNdsAudioBgmLastError = snapshot.error;
+        if (((snapshot.control & NDS_BGM_GENERATION_MASK) == sBgmGeneration) &&
+            sBgmPendingPlaying && (sBgmRestarts < NDS_BGM_RESTART_LIMIT))
+        {
+            sBgmRestarts++;
+            gNdsAudioBgmRecoveries++;
+            ndsBgmPost(NDS_BGM_PLAY, (ndsBgmNextGeneration() << 6) | sBgmCurrentIndex, FALSE);
+            gNdsAudioBgmPlaying = 1u;
+        }
+    }
     if (snapshot.seam_misses && !gNdsAudioBgmFirstMissFrame)
     {
         gNdsAudioBgmFirstMissFrame = gNdsRendererProfileFrameCount + 1u;
@@ -1065,10 +1112,18 @@ static void ndsBgmObserve(void)
 #endif
 }
 
+/* The ARM7 report's sequence as it is in RAM now (the freeze report shows
+ * whether the ARM7 still publishes). */
+u32 ndsAudioBgmReportSequence(void)
+{
+    DC_InvalidateRange((void *)&sBgmReport, 32u);
+    return sBgmReport.sequence;
+}
+
 void ndsAudioBgmDiagnosticsReset(void)
 {
     if (sBgmInitialized) ndsBgmPost(NDS_BGM_RESET, ndsBgmNextGeneration(), TRUE);
-    sBgmPendingPlaying = sBgmLastSequence = 0u;
+    sBgmPendingPlaying = sBgmLastSequence = sBgmErrorStopsSeen = 0u;
     sNdsAudioBgmNaturalStopArmed = FALSE;
     sNdsAudioBgmFadeFramesLeft = sNdsAudioBgmFadeTarget = sNdsAudioBgmFadeDenom = 0u;
     sNdsAudioBgmFadeStep = sNdsAudioBgmFadeRem = sNdsAudioBgmFadeError = 0;
@@ -1142,7 +1197,11 @@ void ndsAudioBgmDiagnosticsReset(void)
     gNdsAudioBgmWorkerWakeCount = 0u;
     gNdsAudioBgmErrorStopCount = 0u;
     gNdsAudioBgmErrorCleanupFailCount = 0u;
-    if (sBgmInitialized) ndsBgmPost(NDS_BGM_VOLUME, 0x7800u, FALSE);
+    if (sBgmInitialized)
+    {
+        ndsBgmPost(NDS_BGM_VOLUME, 0x7800u, FALSE);
+        sBgmPostedVolumeStep = ndsBgmVolumeStep(0x7800u);
+    }
 }
 
 void ndsAudioBgmPlay(s32 player, s32 bgm_id)
@@ -1190,6 +1249,8 @@ void ndsAudioBgmPlay(s32 player, s32 bgm_id)
     ndsAudioFgmSoundEnable();
     ndsBgmInitialize();
     u32 generation = ndsBgmNextGeneration();
+    sBgmCurrentIndex = index;
+    sBgmRestarts = 0u;
     sBgmPendingPlaying = 1u;
     gNdsAudioBgmPlaying = 1u;
     gNdsAudioBgmFileOpen = 1u;
@@ -1221,8 +1282,17 @@ s32 ndsAudioBgmIsPlaying(void) { ndsBgmObserve(); return gNdsAudioBgmPlaying != 
 
 static void ndsAudioBgmApplyVolume(u32 volume)
 {
+    u32 step;
+
     if (volume > 0x7800u) volume = 0x7800u;
-    if (sBgmInitialized) ndsBgmPost(NDS_BGM_VOLUME, volume, FALSE);
+    if (!sBgmInitialized) return; /* INIT carries gNdsAudioBgmVolume */
+    /* A timed match's last five seconds set the volume every tick
+     * (ifcommon.c, ifCommonTimerFuncRun); the ARM7 plays one of 128 steps,
+     * so only a new step is posted. */
+    step = ndsBgmVolumeStep(volume);
+    if (step == sBgmPostedVolumeStep) return;
+    sBgmPostedVolumeStep = step;
+    ndsBgmPost(NDS_BGM_VOLUME, volume, FALSE);
 }
 
 void ndsAudioBgmSetVolume(s32 player, u32 vol)

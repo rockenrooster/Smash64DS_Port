@@ -21,7 +21,8 @@ enum NDSFreezeDiagnosticsBreadcrumb {
     NDS_FREEZE_BREADCRUMB_DRAW_START = 0x44524157u,   /* DRAW */
     NDS_FREEZE_BREADCRUMB_FLUSH = 0x464c5553u,        /* FLUS */
     NDS_FREEZE_BREADCRUMB_VBLANK_WAIT = 0x56424c4bu,  /* VBLK */
-    NDS_FREEZE_BREADCRUMB_PRESENT_DONE = 0x50524553u   /* PRES */
+    NDS_FREEZE_BREADCRUMB_PRESENT_DONE = 0x50524553u,  /* PRES */
+    NDS_FREEZE_BREADCRUMB_NET_WAIT = 0x4e455457u       /* NETW */
 };
 
 void ndsFreezeDiagnosticsInit(void);
@@ -32,6 +33,10 @@ void ndsFreezeDiagnosticsFlush(void);
 void ndsFreezeDiagnosticsVBlankWait(void);
 void ndsFreezeDiagnosticsHeartbeat(void);
 void ndsFreezeDiagnosticsStallMarker(void);
+/* Battle exit: the watchdog sleeps until the next battle's first frame. */
+void ndsFreezeDiagnosticsDisarm(void);
+/* One VBlank of the lockstep waiting for another console: alive. */
+void ndsFreezeDiagnosticsNetWait(void);
 
 extern volatile u32 gNdsFreezeDiagnosticsHeartbeat;
 extern volatile u32 gNdsFreezeDiagnosticsLastBreadcrumb;
@@ -68,6 +73,8 @@ extern volatile u32 gNdsFreezeDiagnosticsReportLogicFrames;
     ndsFreezeDiagnosticsVBlankWait()
 #define NDS_FREEZE_DIAGNOSTICS_HEARTBEAT() \
     ndsFreezeDiagnosticsHeartbeat()
+#define NDS_FREEZE_DIAGNOSTICS_DISARM() ndsFreezeDiagnosticsDisarm()
+#define NDS_FREEZE_DIAGNOSTICS_NET_WAIT() ndsFreezeDiagnosticsNetWait()
 
 #else
 
@@ -78,6 +85,8 @@ extern volatile u32 gNdsFreezeDiagnosticsReportLogicFrames;
 #define NDS_FREEZE_DIAGNOSTICS_FLUSH() ((void)0)
 #define NDS_FREEZE_DIAGNOSTICS_VBLANK_WAIT() ((void)0)
 #define NDS_FREEZE_DIAGNOSTICS_HEARTBEAT() ((void)0)
+#define NDS_FREEZE_DIAGNOSTICS_DISARM() ((void)0)
+#define NDS_FREEZE_DIAGNOSTICS_NET_WAIT() ((void)0)
 
 #endif
 

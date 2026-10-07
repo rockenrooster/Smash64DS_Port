@@ -782,9 +782,16 @@ NDS_NET_LAB_SWEEP ?= 0
 # P3 lab: with the sweep, the matches cycle through Team Battle layouts (one
 # in Stock, where a guest's START takes a teammate's stock) and a free-for-all.
 NDS_NET_LAB_TEAMS ?= 0
+# P3 lab: with the sweep, NDS_NET_LAB_SWEEP_REPRO=N replays reported setup N
+# instead (nds_net_lobby.c, ndsNetLabSweepDescriptor). 0 = the sweep.
+NDS_NET_LAB_SWEEP_REPRO ?= 0
 # P3 lab: with the autopilot, NDS_NET_LAB_LEAVE=N makes the guest hold START
 # (its Leave command) from batch 600 of its Nth battle.
 NDS_NET_LAB_LEAVE ?= 0
+# P3 lab: with the autopilot, the guest's game freezes at batch 600 of its
+# first match, to exercise the freeze report (NDS_FREEZE_DIAGNOSTICS=1):
+# 1 = a spin, 2 = the game thread blocked on a mailbox. 0 = off.
+NDS_NET_LAB_HANG ?= 0
 # P3 lab: with the autopilot and the sweep, rooms without end: the roles swap
 # every room (host rotation), and the rooms cycle through lobby-only visits,
 # matches, rematches and a guest's Leave, with a libc heap sample per room.
@@ -7039,7 +7046,9 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_NET_LAB_DROP $(NDS_NET_LAB_DROP)'; \
 		echo '#define NDS_NET_LAB_SWEEP $(NDS_NET_LAB_SWEEP)'; \
 		echo '#define NDS_NET_LAB_TEAMS $(NDS_NET_LAB_TEAMS)'; \
+		echo '#define NDS_NET_LAB_SWEEP_REPRO $(NDS_NET_LAB_SWEEP_REPRO)'; \
 		echo '#define NDS_NET_LAB_LEAVE $(NDS_NET_LAB_LEAVE)'; \
+		echo '#define NDS_NET_LAB_HANG $(NDS_NET_LAB_HANG)'; \
 		echo '#define NDS_NET_LAB_SOAK $(NDS_NET_LAB_SOAK)'; \
 		echo '#define NDS_NET_LAB_STARTLOSS $(NDS_NET_LAB_STARTLOSS)'; \
 		echo '#define NDS_NET_LAB_STARTLOSS_ROUNDS $(NDS_NET_LAB_STARTLOSS_ROUNDS)'; \

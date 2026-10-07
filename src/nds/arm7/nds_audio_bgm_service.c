@@ -32,6 +32,10 @@ static volatile uint32_t sState, sGeneration, sCurrent, sReady, sPending;
 static uint64_t sPlayedSamples;
 static uint64_t sStartTick;
 static uint32_t sVolume = 0x7800u;
+/* VOLUME is a doorbell: the PXI handler keeps the latest value and lets at
+ * most one VOLUME message wait in the mailbox, so a run of volume changes
+ * can never fill it (a full mailbox fails the stream). */
+static volatile uint32_t sVolumeLatest, sVolumeQueued;
 
 static void ndsBgmPublish(void)
 {
@@ -299,6 +303,12 @@ static int ndsBgmWorker(void *unused)
             pxiReply((PxiChannel)NDS_BGM_IPC_CHANNEL, reply);
             break;
         case NDS_BGM_VOLUME:
+        {
+            IrqState lock = irqLock();
+            argument = sVolumeLatest;
+            sVolumeQueued = 0u;
+            irqUnlock(lock);
+        }
             if (argument > 0x7800u) argument = 0x7800u;
             sVolume = argument;
             soundChSetVolume(BGM_CHANNEL, ndsBgmHardwareVolume(), SoundVolDiv_1);
@@ -317,6 +327,13 @@ static int ndsBgmWorker(void *unused)
 static void ndsBgmCommandHandler(void *unused, uint32_t message)
 {
     (void)unused;
+    if ((message >> 23) == NDS_BGM_VOLUME)
+    {
+        sVolumeLatest = message & 0x7fffffu;
+        if (!sVolumeQueued && mailboxTrySend(&sBgmMailbox, message))
+            sVolumeQueued = 1u;
+        return;
+    }
     if (!mailboxTrySend(&sBgmMailbox, message))
     {
         sStats.event_drops++;

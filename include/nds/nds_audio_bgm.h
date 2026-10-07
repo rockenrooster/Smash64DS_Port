@@ -734,6 +734,10 @@ extern volatile u32 gNdsAudioBgmSeamMissCount;
 extern volatile u32 gNdsAudioBgmTimerEventDropCount;
 extern volatile u32 gNdsAudioBgmWorkerWakeCount;
 extern volatile u32 gNdsAudioBgmErrorStopCount;
+extern volatile u32 gNdsAudioBgmRecoveries;
+extern volatile u32 gNdsAudioBgmLastError;
+extern volatile u32 gNdsAudioBgmCommandRefusals;
+extern volatile u32 gNdsAudioBgmArm7Failure;
 extern volatile u32 gNdsAudioBgmErrorCleanupFailCount;
 
 #endif

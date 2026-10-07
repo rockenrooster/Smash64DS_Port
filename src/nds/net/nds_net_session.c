@@ -51,7 +51,11 @@
 #include <nds/nds_net_link.h>
 #include <nds/nds_net_lobby.h>
 #include <nds/nds_net_session.h>
+#include <nds/nds_freeze_diagnostics.h>
 #include <nds/nds_platform.h>
+#if NDS_NET_LAB_HANG
+#include <calico/system/mailbox.h>
+#endif
 #include <nds/nds_net_ui.h>
 
 #include "nds_net_internal.h"
@@ -570,6 +574,22 @@ void ndsNetBattleGate(void)
             return;
         }
     }
+#if NDS_NET_LAB_HANG
+    /* Lab: the guest freezes mid-match (NDS_NET_LAB_HANG). */
+    if (gNdsNetLocalPort != sNetHostPort && sNetBatch == 600u)
+    {
+        if (NDS_NET_LAB_HANG == 2)
+        {
+            static Mailbox sHang;
+            static u32 sHangSlot;
+
+            mailboxPrepare(&sHang, &sHangSlot, 1u);
+            (void)mailboxRecv(&sHang);
+        }
+        for (;;)
+            __asm__ volatile("" ::: "memory");
+    }
+#endif
     ndsNetPump();
     if (gNdsNetSessionState != NDS_NET_SESSION_RUNNING)
         return; /* a player left */
@@ -577,6 +597,7 @@ void ndsNetBattleGate(void)
     while (ndsNetBatchReady(sNetBatch) == 0u)
     {
         swiWaitForVBlank();
+        NDS_FREEZE_DIAGNOSTICS_NET_WAIT();
         waited++;
         ndsNetPump();
         if (gNdsNetSessionState != NDS_NET_SESSION_RUNNING)
@@ -594,6 +615,18 @@ void ndsNetBattleGate(void)
         }
         if (waited == NDS_NET_STALL_NOTICE)
             ndsNetUiLine(21, " Waiting for the other players...");
+#if NDS_FREEZE_DIAGNOSTICS
+        /* Diagnostic playtests: the radio's own counters (frames sent and
+         * received, TX buffer stalls, RX ring overflows) and the batch it
+         * waits on, refreshed twice a second while it waits. */
+        if (waited >= NDS_NET_STALL_NOTICE && ((waited - NDS_NET_STALL_NOTICE) % 30u) == 0u)
+            ndsNetUiLine(20, " T%lu R%lu N%lu F%lu B%lu",
+                         (unsigned long)ndsNetLinkStat(NDS_NET_STAT_TX_SENT),
+                         (unsigned long)ndsNetLinkStat(NDS_NET_STAT_RX_FRAMES),
+                         (unsigned long)ndsNetLinkStat(NDS_NET_STAT_TX_NO_BUFFER),
+                         (unsigned long)ndsNetLinkStat(NDS_NET_STAT_RX_RING_FULL),
+                         (unsigned long)sNetBatch);
+#endif
         if (waited >= ((sNetBatch == 0u) ? NDS_NET_STALL_ABORT_FIRST :
                                            NDS_NET_STALL_ABORT_VBLANKS))
         {
@@ -604,7 +637,12 @@ void ndsNetBattleGate(void)
         }
     }
     if (waited >= NDS_NET_STALL_NOTICE)
+    {
         ndsNetUiLine(21, "");
+#if NDS_FREEZE_DIAGNOSTICS
+        ndsNetUiLine(20, "");
+#endif
+    }
     if (waited != 0u)
     {
         gNdsNetStallBatches++;

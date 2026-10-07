@@ -39,6 +39,7 @@
 
 #include <nds/nds_scene_harness.h>
 #include <nds/nds_r2_battle.h>
+#include <nds/nds_freeze_diagnostics.h>
 #include <nds/nds_net_session.h>
 #include <port/coroutine.h>
 
@@ -141,6 +142,9 @@ void ndsR2BattleRun(void)
     }
 
     ndsNetBattleEnd();
+    /* The freeze watchdog watches battle frames only (Results and the menus
+     * load between frames for seconds). */
+    NDS_FREEZE_DIAGNOSTICS_DISARM();
     ndsR2HostBattleFinish();
     /* P2-2p6: outside this loop every source tick is a presented one for the
      * fighter pose engine (menu previews, Results), so leave its eval word set. */
