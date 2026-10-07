@@ -10,11 +10,11 @@ records what exists, how it is tested and what is still open. Started
 | --- | --- | --- |
 | Radio (transport T1) | `src/nds/arm7/nds_net7_module.c`, `nds_net_arm7.c`, `linker/nds_arm7_net7.ld`, `include/nds/nds_net_link.h` | Works in the two- and four-instance harness: 0 loss over 380 exchanged packets |
 | ARM9 link layer | `src/nds/net/nds_net_link.c` | Loads the radio module, starts/stops it, moves packets through the rings; no sleep while the radio is up |
-| Lockstep | `src/nds/net/nds_net_session.c`, seams in `src/nds/r2/nds_r2_battle.c` | Whole matches with 0 desyncs: 4 consoles (4 humans), and 2 consoles with 2 CPUs and every item on all nine VS stages (evidence below) |
-| Sync check | `src/nds/net/nds_net_session.c`, `src/port/nds_replay_digest.c` | Batch digests compared; a difference, a setup difference or 10 s without progress ends the match as NO CONTEST with a reason |
+| Lockstep | `src/nds/net/nds_net_session.c`, seams in `src/nds/r2/nds_r2_battle.c` | Whole matches with 0 desyncs: 4 consoles (4 humans), 2 consoles with 2 CPUs and every item on all nine VS stages, and Team Battle in every layout (evidence below) |
+| Sync check | `src/nds/net/nds_net_session.c`, `src/port/nds_replay_digest.c` | Batch digests compared (the replay digest plus the battle state's results fields); the terminal tick's digest is compared before Results; a difference, a setup difference or 10 s without progress ends the match as NO CONTEST with a reason |
 | Build identity | `scripts/nds_net_build_id.py`, the ROM recipe in `Makefile`, `nds_net_lobby.c` | `net/build.id` (8 bytes of SHA-256 over the ARM9/ARM7 load images and NitroFS); rooms of another build are listed but refused |
-| Lobby protocol | `src/nds/net/nds_net_lobby.c`, `include/nds/nds_net_lobby.h` | Rooms, join, 30 Hz snapshots and proposals (cursors included), start handshake, rematch |
-| Lobby UI | VS Mode (X host, Y join), `src/nds/net/nds_net_ui.c` (lower screen), the character select (`nds_menu_shell_css.c`) and stage select (`nds_menu_shell_sss.c`) | Every human's cursor, token and 1P-4P art on every console; costumes; guests watch the stage select |
+| Lobby protocol | `src/nds/net/nds_net_lobby.c`, `include/nds/nds_net_lobby.h` | Rooms, join, 30 Hz snapshots (slots, cursors, the host's unlock mask, rules and every player's name) and proposals, start handshake, rematch, leaving a room or a running match |
+| Lobby UI | VS Mode's VS START value (OFF/HOST/JOIN, `nds_menu_shell_mode_vs.c`), `src/nds/net/nds_net_ui.c` (lower screen), the character select (`nds_menu_shell_css.c`) and stage select (`nds_menu_shell_sss.c`) | Every human's cursor, token and 1P-4P art on every console; costumes and teams; every player's name and ready state and the host's rules on the lower screen; guests watch the stage select |
 
 ### Radio
 
@@ -24,7 +24,22 @@ point. Every console broadcasts data frames marked FromDS, which that mode's
 receive filter accepts, and the module marks the station associated so the
 driver delivers them. One radio hop between any two consoles.
 
-The module (code + BSS, 21 KB) lives in the homebrew bootstub area at
+The module replaces Calico's receive drain (`src/nds/arm7/nds_net7_mwl_rx.c`,
+which defines all four of `mwl_rx.o`'s public functions so the library's copy
+is never linked). Calico's drain allocated a pool buffer for every data and
+management frame and queued it for a later task on the same thread, retrying
+forever when the pool ran dry; only those later tasks free buffers, so a burst
+larger than the pool deadlocked the radio thread, and any broadcast
+deauthentication from a nearby access point reset the forced association.
+Both need real-world radio traffic and never happen in melonDS: on an
+original DS and a DS Lite the link went silent about 90 s into a match and the
+match ended as "Connection lost" (owner, 2026-10-07, play-1007b). The new
+drain reads only data frames, into one static buffer, hands each straight to
+the RX ring, skips every other frame in place, and never allocates or waits;
+the pool now serves TX only. `src/nds/arm7/calico_mwl_common.h` is Calico
+1.2.0's internal driver header, vendored unmodified for the state layout.
+
+The module (code + BSS, 14 KB; 21 KB with Calico's drain and RX pool) lives in the homebrew bootstub area at
 `0x02FF4000`; the packet rings are at `0x02FFA000`. That area is uncached on the
 ARM9 and above the ARM9 heap, so the arena is unchanged. The ARM9 loads
 `net/net7.bin` from NitroFS only when a session starts, so offline play never
@@ -43,24 +58,48 @@ input pipeline derives the edges. Only the host's START reaches the game, so
 only the host can pause. The seed is installed at the VS battle scene start,
 before its setup draws a random number.
 
-After every batch the replay digest (`src/port/nds_replay_digest.c`, in every
-ROM) is folded and compared with each peer's. The first batch's digest also
-carries the general heap's size and how much of it setup used (they decide the
-source's GObj latch), so consoles whose arenas differ stop at once. A
-difference ends the match within a few batches, naming the first tick ("Out
-of sync at tick N" or "The consoles' setups differ"). Ten seconds without
-progress (thirty for the first batch, which absorbs load-time differences)
-ends it as "Connection lost". Each ending is the source's reset: Results shows
-NO CONTEST and everyone returns to the lobby.
+After every batch the net digest is folded and compared with each peer's: the
+replay digest (`src/port/nds_replay_digest.c`, in every ROM) plus what the
+match's end and Results read from the battle state -- game status, the timer,
+and each player's stocks, place, KOs, falls, self-destructs, damage tallies,
+combo counts and stale-move queue. Only net matches fold the extra fields, so
+the replay digest every performance gate compares is unchanged. The first
+batch's digest also carries the general heap's size and how much of it setup
+used (they decide the source's GObj latch), so consoles whose arenas differ
+stop at once. A difference ends the match within a few batches, naming the
+first tick ("Out of sync at tick N" or "The consoles' setups differ"). Ten
+seconds without progress (thirty for the first batch, which absorbs load-time
+differences) ends it as "Connection lost". When the battle ends, every console
+compares its terminal tick's digest with every peer's before Results publish a
+winner (plan 7.3); a difference, or a peer that never sends one within three
+seconds, ends it the same way. Each ending is the source's reset: Results
+shows NO CONTEST and everyone returns to the lobby.
+
+START pauses for the host alone, with one exception the source makes itself:
+a fighter KO'd in a team Stock match takes a stock from a teammate with START
+(`ftCommonSleepProcUpdate`, ftcommonsleep.c:77), and the source's pause
+trigger passes that port over (ifcommon.c:2920). A guest's START is installed
+exactly then (`ndsNetStartIsStockSteal`); the trigger runs before the tick's
+fighters, so the state read at install is the state it reads. Otherwise a
+guest's START is its Leave command: holding it for two seconds leaves the
+match (the lower screen says so on the first press). Its LEAVE, like the host
+closing the room, ends the match for everyone as NO CONTEST; the host drops
+that player from the room and the leaver's console closes its session.
 
 A console in a wireless room does not sleep: closing the lid leaves the game
 running (`pmSetSleepAllowed`, restored when the radio stops).
 
 ### Lobby
 
-VS Mode: X toggles hosting, and VS START then opens a room. Y lists nearby
-rooms; A joins one. A room running another build shows "(other build)" and
-refuses the join, as does the host (plan 7.1). The character select is the
+VS Mode: the VS START button carries a value word, the way the rule button
+carries TIME/STOCK -- OFF, HOST or JOIN, changed with left/right (with the same
+blinking arrows) and confirmed with A/START. OFF is the ordinary VS START; HOST
+opens a room and goes to the character select; JOIN holds the tab white while
+the console looks for a room and joins the first open one running its own
+build (another build's room is never asked, and a room that refuses -- full,
+or no answer -- is skipped); B gives up. The words are set in the source's own
+menu font (MNCommonFonts) at twice its size, baked into the button's states
+(`generate_mn_ui_kit.py` NET_START_SURFACE_SPECS). The character select is the
 lobby. Each console's cursor sits on its own port, and every other human's
 cursor (hand state and player tag) and token are drawn where their owner last
 put them; the host publishes all four slots and each guest proposes its own,
@@ -77,7 +116,41 @@ follow and watch the host's cursor. The host's confirm sends the descriptor
 (`NdsMatchConfig`, transfer-state handicaps) and the seed; every guest
 acknowledges, then every console enters the same battle. Results return
 everyone to the lobby for a rematch; a player still on Results is not ready
-until they are back. Players appear on the lower screen by firmware name.
+until they are back. The lower screen lists every player by firmware name
+with "ready" once their token is down, and one line of the host's rules (rule,
+time or stocks, item rate, team attack): the character select has no rule
+panel of its own, and a guest never sees the host's VS menu. The host's save
+unlock mask travels in every snapshot, so the stage select locks the same
+cells on every console (plan 7.1); a guest's own save is never written by it.
+
+### Team Battle, rules and items (audit against the source, 2026-10-07)
+
+- Commit: `ndsMatchConfigApply` (`src/port/nds_match_config.c`) is
+  `mnPlayersVSSetSceneData` (mnplayersvs.c:4379-4423) field for field: `player`
+  is the team in Team Battle, `color` is `dIFCommonPlayerTeamColorIDs[team]`
+  (Red 0, Blue 1, Green 3), `tag` is the port for humans and CP for CPUs. The
+  descriptor carries all of it, plus team attack, item switch and rate,
+  damage ratio, handicaps, time and stocks; a guest's own VS options never
+  reach the match.
+- Lobby rules: a player picks their own team, the host also picks for CPUs;
+  the host resolves team costumes and shades with the source's own helpers
+  (`ftParamGetCostumeTeamID`, `mnPlayersVSGetShade`); READY is refused while
+  every picked fighter is on one team (`mnPlayersVSCheckReady`).
+- Battle: friendly fire and team hit checks are the imported source
+  (`ftmain.c`, `itprocess.c`, `wpprocess.c`, `ftcomputer.c`); the port's
+  wrappers call it. Team Stock's stock steal works over the link (above).
+- Presentation: player tags take the player's colour (`players[].color`,
+  `nds_ifcommon_oam.c`), costumes the team costume, Results the source's team
+  screen ("GREEN WINS!"). The lower HUD's damage-meter badge is the source's
+  emblem (`ft_sprites->emblem`, ifcommon.c:929-951) tinted with the stage's
+  emblem colour for the player's colour -- the team's in Team Battle -- behind
+  the digits (`nds_battle_hud.c`, baked from the loaded sprite once per
+  battle). It replaced a 16x15 CSS portrait the P2 HUD drew there. Two port
+  bugs surfaced on the way: only Mario's and Fox's emblem sprites were
+  byte-normalized (the other ten fighters, Metal Mario, the Donkey Kong icon
+  and the Polygons' Master Hand icon are now), and a CPU's colour, which the
+  source reads one past `emblem_colors` from the ground data's `unused` word
+  (0xDCDCDC, light grey), read in native byte order as cyan.
 
 ## Testing
 
@@ -93,7 +166,12 @@ until they are back. Players appear on the lower screen by firmware name.
   mutes the guest's radio for 15 s in the first match, and
   `NDS_NET_LAB_SWEEP=1` runs ten matches whose descriptor the host fills in:
   the nine VS stages in turn, two level-9 CPUs (Kirby among them), every item
-  at the highest rate, one-minute time matches.
+  at the highest rate, one-minute time matches. With the sweep,
+  `NDS_NET_LAB_TEAMS=1` cycles the matches through four Team Battle layouts
+  (each human with a CPU partner, team attack off; the same in four-stock
+  Stock with team attack on, where the guest's scripted START steals; three
+  teams; both humans against the CPUs) and a free-for-all, and
+  `NDS_NET_LAB_LEAVE=N` makes the guest hold START (Leave) in its Nth battle.
 
 ## Evidence (2026-10-06, melonDS-mp, lab autopilot)
 
@@ -108,6 +186,15 @@ until they are back. Players appear on the lower screen by firmware name.
 | `sweep2` | 2 | 9 matches in 12.7 min: all nine VS stages in turn, 2 humans + 2 level-9 CPUs (Kirby in two), every item at Very High, 1-minute time: 19,486 / 19,536 digest compares, 0 desyncs, 0 aborts, 0 record conflicts, 0 bad packets, 9 starts / 0 failures; mid-match captures show identical damage on both consoles |
 | `css2` | 2 | Real-time lobby captures: 1P/2P tokens, panel tags and both cursors on both consoles; the guest's costume press reaches the host (DK costume 1 in both previews and both descriptors); PRESS START only on the host; the guest watches the host's stage-select cursor |
 
+## Evidence (2026-10-07, team audit)
+
+| Run | Consoles | Result |
+| --- | --- | --- |
+| `teams1` | 2 | 10 matches, every item at Very High: 7 Team Battle (each human with a CPU partner, team attack off; both humans against the CPUs in Stock with team attack on; three teams) and 3 FFA (one sudden death): 19,077 digest compares, 0 desyncs, 0 aborts, 10 starts / 0 failures. The guest's battle state matches the descriptor in every match (teams, colours 0/1/3/CP 4, team costumes); identical team Results on both consoles ("GREEN WINS!") |
+| `repro1` | 2 | The owner's failing setup in the harness (Kirby against Yoshi on Hyrule, two humans, two-minute time, every item at Medium) with the scripted pad widened to every mapped control (grab, shield, taunt, all specials): 8 matches, 26,285 digest compares, 0 desyncs, 0 conflicts, 0 bad packets -- the game stays in step; the hardware failure was the radio driver (above) |
+| `radio1` | 2 | Calico's drain replaced, the native VS START host/join: host chose HOST and the guest JOIN, the lobby and two matches ran, 4,431-4,495 digest compares, 0 desyncs; each radio about 5,050 frames sent and 5,000-5,100 received, 0 ring-full, 0 TX buffer stalls |
+| `teams2` | 2 | Same sweep with the second layout set (the four-stock Stock match pairs the guest with a CPU) and the terminal-digest check: 10 matches plus 2 sudden deaths (one in a Team Battle), 20,719 digest compares, 0 desyncs; the guest took its CPU partner's stock 5 times over the link (`ifCommonPlayerStockStealMakeInterface`, thief 1); in the tenth match the guest held START: it left, the host ended the match as NO CONTEST (1 abort), dropped it from the room (human mask 0x1) and returned to the lobby |
+
 ## Open
 
 - Hardware validation on DS and DS Lite: the harness proves the protocol, not
@@ -119,5 +206,10 @@ until they are back. Players appear on the lower screen by firmware name.
   N64 ROM get the same build identity (no absolute paths in the binary).
 - Perturbation runs (plan 7.4): different boot environments, menu histories,
   poisoned arenas, storage delays.
-- The host's unlock masks do not travel yet; a guest's own unlocks lock its
-  stage-select cells (only the host chooses, so this affects the view only).
+- The net digest does not fold stage ground and hazard state, AI state, or
+  item and weapon fields beyond kind and position (plan 7.3): the ground
+  structs hold arena pointers, which differ between consoles until the arena
+  is pinned.
+- Host rotation (every console taking a host turn), the 30-minute and
+  100-cycle lifecycle soaks, and the four-fighter gate measured with the radio
+  running (plan section 12).

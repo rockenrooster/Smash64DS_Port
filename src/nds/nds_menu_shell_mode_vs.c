@@ -227,8 +227,28 @@ static s32 sMenuVsTime;
 static s32 sMenuVsStock;
 static NdsUiKitSurfaceId sMenuVsButtonSurface[NDS_MENU_VS_ENTRIES];
 static u32 sMenuVsArrowsShown;
-/* P3: X toggles hosting; VS START then opens the room (plan section 2). */
-static u32 sMenuVsHostOn;
+
+/* P3 (plan section 2): VS START carries the wireless choice as its value, the
+ * way the rule button carries TIME/STOCK -- OFF, HOST or JOIN, changed with
+ * left/right (with the same blinking arrows) and confirmed with A/START. OFF
+ * is the ordinary VS START; HOST opens a room and goes to the character
+ * select, which is the lobby; JOIN keeps the tab white while this console
+ * looks for a room and joins the first open one running its own build. B
+ * gives up the search. The choice lasts for the session. */
+#define NDS_MENU_VS_NET_OFF 0u
+#define NDS_MENU_VS_NET_HOST 1u
+#define NDS_MENU_VS_NET_JOIN 2u
+#define NDS_MENU_VS_NET_VALUES 3u
+/* Searching: 1 looking for a room, 2 waiting for the room's answer. */
+#define NDS_MENU_VS_JOIN_IDLE 0u
+#define NDS_MENU_VS_JOIN_SEARCH 1u
+#define NDS_MENU_VS_JOIN_ASKED 2u
+static u32 sMenuVsNet;
+static u32 sMenuVsJoin;
+/* Rooms that refused this search (full, another build, no answer). */
+static u32 sMenuVsJoinRefused[NDS_NET_MAX_ROOMS];
+static u32 sMenuVsJoinRefusedCount;
+static u32 sMenuVsJoinSession;
 
 static u32 ndsMenuShellVsIsTime(void)
 {
@@ -250,22 +270,39 @@ static s32 ndsMenuShellVsValue(void)
  * source's own branches: the rule button carries its VALUE word and the
  * time/stock button its PERIOD word, both of which change with the rule
  * (mnvsmode.c:337/:679), so those two buttons have a TIME and a STOCK bake. */
+/* VS START's tab with its wireless value word, in the not-lit, lit and
+ * pressed (white) states (generate_mn_ui_kit.py NET_START_SURFACE_SPECS). */
+static NdsUiKitSurfaceId ndsMenuShellVsStartSurface(u32 lit, u32 selected)
+{
+    static const NdsUiKitSurfaceId kStart[NDS_MENU_VS_NET_VALUES][3] = {
+        { NDS_MN_UI_KIT_SURFACE_VS_BTN_START_NET_OFF_NOT,
+          NDS_MN_UI_KIT_SURFACE_VS_BTN_START_NET_OFF_HI,
+          NDS_MN_UI_KIT_SURFACE_VS_BTN_START_NET_OFF_SEL },
+        { NDS_MN_UI_KIT_SURFACE_VS_BTN_START_NET_HOST_NOT,
+          NDS_MN_UI_KIT_SURFACE_VS_BTN_START_NET_HOST_HI,
+          NDS_MN_UI_KIT_SURFACE_VS_BTN_START_NET_HOST_SEL },
+        { NDS_MN_UI_KIT_SURFACE_VS_BTN_START_NET_JOIN_NOT,
+          NDS_MN_UI_KIT_SURFACE_VS_BTN_START_NET_JOIN_HI,
+          NDS_MN_UI_KIT_SURFACE_VS_BTN_START_NET_JOIN_SEL },
+    };
+
+    return kStart[sMenuVsNet][(selected != FALSE) ? 2u : ((lit != FALSE) ? 1u : 0u)];
+}
+
 static NdsUiKitSurfaceId ndsMenuShellVsWantSurface(u32 button)
 {
     u32 lit = (sMenuVsCursor == button) ? TRUE : FALSE;
 
     if (sMenuVsSelected == button)
     {
-        return (NdsUiKitSurfaceId)((button == NDS_MENU_VS_START) ?
-            NDS_MN_UI_KIT_SURFACE_VS_BTN_START_SEL :
-            NDS_MN_UI_KIT_SURFACE_VS_BTN_OPTIONS_SEL);
+        return (button == NDS_MENU_VS_START) ?
+            ndsMenuShellVsStartSurface(lit, TRUE) :
+            (NdsUiKitSurfaceId)NDS_MN_UI_KIT_SURFACE_VS_BTN_OPTIONS_SEL;
     }
     switch (button)
     {
     case NDS_MENU_VS_START:
-        return (NdsUiKitSurfaceId)((lit != FALSE) ?
-            NDS_MN_UI_KIT_SURFACE_VS_BTN_START_HI :
-            NDS_MN_UI_KIT_SURFACE_VS_BTN_START_NOT);
+        return ndsMenuShellVsStartSurface(lit, FALSE);
     case NDS_MENU_VS_RULE:
         if (sMenuVsRule == NDS_MENU_RULE_TIME)
         {
@@ -397,6 +434,7 @@ static void ndsMenuShellVsDrawValue(void)
 static void ndsMenuShellVsDrawArrows(void)
 {
     s32 x_left;
+    s32 x_right;
     s32 y;
     u32 show_left;
     u32 show_right;
@@ -404,6 +442,7 @@ static void ndsMenuShellVsDrawArrows(void)
     if (sMenuVsCursor == NDS_MENU_VS_RULE)
     {
         x_left = 165;
+        x_right = 250;
         y = 70;
         show_left = (sMenuVsRule == NDS_MENU_RULE_TIME) ? FALSE : TRUE;
         show_right = (sMenuVsRule == NDS_MENU_RULE_STOCK_TEAM) ? FALSE : TRUE;
@@ -411,7 +450,18 @@ static void ndsMenuShellVsDrawArrows(void)
     else if (sMenuVsCursor == NDS_MENU_VS_VALUE)
     {
         x_left = (ndsMenuShellVsIsTime() != FALSE) ? 155 : 165;
+        x_right = 230;
         y = 109;
+        show_left = TRUE;
+        show_right = TRUE;
+    }
+    else if ((sMenuVsCursor == NDS_MENU_VS_START) &&
+             (sMenuVsJoin == NDS_MENU_VS_JOIN_IDLE))
+    {
+        /* Either side of the wireless value word; the choice wraps. */
+        x_left = 227;
+        x_right = 288;
+        y = 42;
         show_left = TRUE;
         show_right = TRUE;
     }
@@ -441,9 +491,7 @@ static void ndsMenuShellVsDrawArrows(void)
     {
         ndsUiKitSetSprite(NDS_MENU_SPRITE_ARROW_R,
                           NDS_MN_UI_KIT_IMAGE_VS_ARROW_R,
-                          NDS_MENU_VS_DS((sMenuVsCursor ==
-                                          NDS_MENU_VS_RULE) ? 250 : 230),
-                          NDS_MENU_VS_DS(y));
+                          NDS_MENU_VS_DS(x_right), NDS_MENU_VS_DS(y));
     }
     else
     {
@@ -471,8 +519,8 @@ static void ndsMenuShellPopulateVs(void)
     {
         ndsNetSessionClose();
     }
+    sMenuVsJoin = NDS_MENU_VS_JOIN_IDLE;
     ndsNetUiClear();
-    ndsNetUiVsModeHint(sMenuVsHostOn);
 }
 
 /* mnVSModeFuncStartVars: the screen opens on the rules the battle state
@@ -530,6 +578,15 @@ static void ndsMenuShellVsSaveRules(void)
 
 static void ndsMenuShellVsAdjust(s32 direction)
 {
+    if (sMenuVsCursor == NDS_MENU_VS_START)
+    {
+        sMenuVsNet = (direction < 0) ?
+            ((sMenuVsNet + NDS_MENU_VS_NET_VALUES - 1u) % NDS_MENU_VS_NET_VALUES) :
+            ((sMenuVsNet + 1u) % NDS_MENU_VS_NET_VALUES);
+        ndsUiKitSfx(NDS_UI_KIT_SFX_VALUE);
+        ndsMenuShellRefreshVs();
+        return;
+    }
     if (sMenuVsCursor == NDS_MENU_VS_RULE)
     {
         /* Clamped, not wrapped -- the source's own shape. */
@@ -583,6 +640,75 @@ static void ndsMenuShellVsAdjust(s32 direction)
     ndsMenuShellRefreshVs();
 }
 
+/* One frame of JOIN's search. The tab stays white (selected) the whole time;
+ * the first open room running this console's build is asked, and a refusal
+ * (full, another build, no answer) moves on to the next. B gives up. */
+static void ndsMenuShellVsJoinStep(u32 taps)
+{
+    NdsNetRoom rooms[NDS_NET_MAX_ROOMS];
+    u32 count;
+    u32 i;
+
+    if ((taps & NDS_INPUT_B) != 0u)
+    {
+        ndsNetSessionClose();
+        sMenuVsJoin = NDS_MENU_VS_JOIN_IDLE;
+        sMenuVsSelected = NDS_MENU_VS_ENTRIES;
+        ndsMenuShellRefreshVs();
+        return;
+    }
+    ndsNetLobbyPump();
+    if (sMenuVsJoin == NDS_MENU_VS_JOIN_ASKED)
+    {
+        const int answer = ndsNetJoinPoll();
+
+        if (answer > 0)
+        {
+            sMenuVsJoin = NDS_MENU_VS_JOIN_IDLE;
+            ndsMenuShellVsSaveRules();
+            ndsMenuShellGoto((u32)nSCKindPlayersVS);
+            return;
+        }
+        if (answer < 0)
+        {
+            if (sMenuVsJoinRefusedCount < NDS_NET_MAX_ROOMS)
+            {
+                sMenuVsJoinRefused[sMenuVsJoinRefusedCount++] =
+                    sMenuVsJoinSession;
+            }
+            ndsUiKitSfx(NDS_UI_KIT_SFX_BACK);
+            sMenuVsJoin = NDS_MENU_VS_JOIN_SEARCH;
+        }
+        return;
+    }
+    count = ndsNetJoinRooms(rooms, NDS_NET_MAX_ROOMS);
+    for (i = 0u; i < count; i++)
+    {
+        u32 j;
+        u32 refused = FALSE;
+
+        for (j = 0u; j < sMenuVsJoinRefusedCount; j++)
+        {
+            if (sMenuVsJoinRefused[j] == rooms[i].session)
+            {
+                refused = TRUE;
+            }
+        }
+        if ((refused != FALSE) || (rooms[i].same_build == 0u) ||
+            (rooms[i].phase != NDS_NET_PHASE_CSS) ||
+            (rooms[i].humans >= NDS_NET_PORTS))
+        {
+            continue;
+        }
+        if (ndsNetJoinRequest(&rooms[i]) == 0)
+        {
+            sMenuVsJoinSession = rooms[i].session;
+            sMenuVsJoin = NDS_MENU_VS_JOIN_ASKED;
+        }
+        return;
+    }
+}
+
 static void ndsMenuShellUpdateVs(u32 held, u32 taps)
 {
     u32 moved = FALSE;
@@ -602,6 +728,13 @@ static void ndsMenuShellUpdateVs(u32 held, u32 taps)
     {
         sMenuVsArrowsShown = shown;
         ndsMenuShellVsDrawArrows();
+    }
+
+    /* JOIN is searching: the rest of the menu waits for it. */
+    if (sMenuVsJoin != NDS_MENU_VS_JOIN_IDLE)
+    {
+        ndsMenuShellVsJoinStep(taps);
+        return;
     }
 
     if (ndsMenuShellDirection(held, taps, NDS_INPUT_UP) != FALSE)
@@ -629,29 +762,6 @@ static void ndsMenuShellUpdateVs(u32 held, u32 taps)
         ndsMenuShellVsAdjust(1);
     }
 
-    /* P3 wireless: X toggles hosting, Y opens the room list. */
-    if ((taps & NDS_INPUT_X) != 0u)
-    {
-        sMenuVsHostOn = (sMenuVsHostOn != 0u) ? 0u : 1u;
-        ndsUiKitSfx(NDS_UI_KIT_SFX_VALUE);
-        ndsNetUiVsModeHint(sMenuVsHostOn);
-        return;
-    }
-    if ((taps & NDS_INPUT_Y) != 0u)
-    {
-        ndsUiKitSfx(NDS_UI_KIT_SFX_CONFIRM);
-        if (ndsNetUiJoinModal() != 0)
-        {
-            ndsMenuShellVsSaveRules();
-            ndsMenuShellGoto((u32)nSCKindPlayersVS);
-            return;
-        }
-        /* The modal read the keypad itself: start the edge tracker over. */
-        sMenuHeldPrev = ndsPlatformReadInput();
-        ndsNetUiVsModeHint(sMenuVsHostOn);
-        return;
-    }
-
     if ((taps & (NDS_INPUT_A | NDS_INPUT_START)) != 0u)
     {
         /* mnvsmode.c:1318-1343: only VS START and VS OPTIONS take A; each
@@ -668,12 +778,26 @@ static void ndsMenuShellUpdateVs(u32 held, u32 taps)
         ndsMenuShellVsSyncButtons(NDS_MENU_VS_ENTRIES);
         if (sMenuVsCursor == NDS_MENU_VS_START)
         {
-            /* P3: hosting opens the room before the lobby screen. */
-            if ((sMenuVsHostOn != 0u) && (ndsNetInSession() == 0u) &&
-                (ndsNetHostOpen() != 0))
+            /* P3: JOIN searches from here (ndsMenuShellVsJoinStep), with the
+             * tab held white; HOST opens the room before the lobby screen. */
+            if (sMenuVsNet == NDS_MENU_VS_NET_JOIN)
+            {
+                if (ndsNetJoinScanOpen() != 0)
+                {
+                    ndsUiKitSfx(NDS_UI_KIT_SFX_BACK);
+                    sMenuVsSelected = NDS_MENU_VS_ENTRIES;
+                    return;
+                }
+                sMenuVsJoinRefusedCount = 0u;
+                sMenuVsJoin = NDS_MENU_VS_JOIN_SEARCH;
+                ndsMenuShellRefreshVs();
+                return;
+            }
+            if ((sMenuVsNet == NDS_MENU_VS_NET_HOST) &&
+                (ndsNetInSession() == 0u) && (ndsNetHostOpen() != 0))
             {
                 ndsUiKitSfx(NDS_UI_KIT_SFX_BACK);
-                ndsNetUiLine(19, "  Wireless could not start.");
+                sMenuVsSelected = NDS_MENU_VS_ENTRIES;
                 return;
             }
             ndsMenuShellVsSaveRules();

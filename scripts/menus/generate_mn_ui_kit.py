@@ -1092,6 +1092,49 @@ class Placement:
     # A CI sprite drawn through a DIFFERENT palette, by its reloc symbol.  The
     # player panel is one card sprite and eight palettes (see `lut_override`).
     lut_symbol: str | None = None
+    # P3: a WORD set in the source's own menu font (MNCommonFonts, the stage
+    # select's name font) rather than a sprite, with `symbol` left empty, for
+    # the wireless labels the source never had.  `text_scale` is the integer
+    # pixel replication applied to the 5-row glyphs before the frame's 4/5.
+    text: str | None = None
+    text_scale: int = 1
+
+
+# The menu font's glyphs by character, filled once convert_font has run.
+TEXT_GLYPHS: dict[str, "Glyph"] = {}
+
+
+def text_raster(part: Placement) -> list[list[tuple[int, int, int, int]]]:
+    """A Placement.text word as RGBA: the I4 glyphs' intensity is the alpha
+    and the tint the colour (an I sprite through spDraw's PRIMITIVE combiner),
+    one blank column between glyphs and four for a space, replicated
+    `text_scale` times on both axes."""
+    if not TEXT_GLYPHS:
+        raise ConvertError("text placement before the font was converted")
+    tint = part.tint if part.tint is not None else (0, 0, 0)
+    columns: list[list[int]] = []
+    height = max(glyph.height for glyph in TEXT_GLYPHS.values())
+    for index, char in enumerate(part.text):
+        if char == " ":
+            columns.extend([[0] * height for _ in range(4)])
+            continue
+        glyph = TEXT_GLYPHS.get(char)
+        if glyph is None:
+            raise ConvertError(f"{part.text!r}: no menu-font glyph for {char!r}")
+        if index != 0:
+            columns.append([0] * height)
+        for x in range(glyph.width):
+            columns.append([glyph.pixels[y][x] if y < glyph.height else 0
+                            for y in range(height)])
+    scale = max(1, part.text_scale)
+    rows = []
+    for y in range(height * scale):
+        row = []
+        for column in columns:
+            value = column[y // scale]
+            row.extend([(tint[0], tint[1], tint[2], value)] * scale)
+        rows.append(row)
+    return rows
 
 
 def place_raster(fileobj: RelocFile | None, part: Placement, offset: int,
@@ -1110,6 +1153,8 @@ def place_raster(fileobj: RelocFile | None, part: Placement, offset: int,
         red, green, blue, alpha = part.fill
         combined = [[(red, green, blue, alpha)] * part.size[0]
                     for _ in range(part.size[1])]
+    elif part.text is not None:
+        combined = text_raster(part)
     else:
         period_s = part.period[0] if part.period is not None else None
         sprite, raster = decode_sprite_raster(fileobj, part.symbol, offset,
@@ -1273,7 +1318,7 @@ def convert_surface(cache: dict[str, RelocFile], offsets: dict[str, int],
     def place_all(parts: tuple[Placement, ...]) -> list:
         out = []
         for part in parts:
-            if part.fill is not None:
+            if (part.fill is not None) or (part.text is not None):
                 out.append(place_raster(None, part, 0))
                 continue
             if part.symbol not in offsets:
@@ -4343,6 +4388,37 @@ BONUS_CSS_SURFACE_SPECS = (
 )
 
 
+# P3: VS START carries the wireless choice as a value word inside its own tab,
+# the way the rule button carries TIME/STOCK: OFF, HOST or JOIN, chosen with
+# left/right and confirmed with A. The source has no art for the words, so they
+# are set in its own menu font (MNCommonFonts) at twice its size, black like
+# the button's label; the label moves left to leave them room inside the tab.
+# Every state shares one box (the tab's own), so a re-blit overwrites exactly.
+NET_START_WORDS = ("OFF", "HOST", "JOIN")
+NET_START_LABEL_X = 124
+NET_START_WORD_X = 238
+NET_START_WORD_Y = 40
+NET_START_BOX = (120, 31, 16 + (VS_BUTTON_SPAN * 8) + 17, 29)
+
+
+def net_start_button(word: str, suffix: str, state) -> SurfaceSpec:
+    spec = vs_button(f"VS_BTN_START_NET_{word}_{suffix}", 120, 31, state,
+                     (vs_text("MNVSMode", "llMNVSModeVSStartTextSprite",
+                              NET_START_LABEL_X, 36),
+                      Placement("MNCommonFonts", "", NET_START_WORD_X,
+                                NET_START_WORD_Y, False, (0x00, 0x00, 0x00),
+                                text=word, text_scale=2)))
+    return SurfaceSpec(spec.token, spec.parts, spec.background,
+                       under=spec.under, box=NET_START_BOX)
+
+
+NET_START_SURFACE_SPECS = tuple(
+    net_start_button(_word, _suffix, _state)
+    for _word in NET_START_WORDS
+    for _suffix, _state in (("NOT", VS_TAB_NOT), ("HI", VS_TAB_HI),
+                            ("SEL", VS_TAB_SEL)))
+
+
 
 # ---------------------------------------------------------------------------
 # P2-1i -- the title screen's own background: `mnTitleMakeFire`.
@@ -4916,6 +4992,13 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     glyphs = convert_font(repo_root, offsets)
+    TEXT_GLYPHS.clear()
+    for glyph in glyphs:
+        if glyph.name.startswith("Letter"):
+            TEXT_GLYPHS[glyph.name[len("Letter"):]] = glyph
+    TEXT_GLYPHS["'"] = next(g for g in glyphs if g.name == "SymbolApostrophe")
+    TEXT_GLYPHS["%"] = next(g for g in glyphs if g.name == "SymbolPercent")
+    TEXT_GLYPHS["."] = next(g for g in glyphs if g.name == "SymbolPeriod")
 
     images: list[Image] = []
     cache: dict[str, RelocFile] = {}
@@ -4983,6 +5066,9 @@ def main(argv: list[str] | None = None) -> int:
     # The Bonus Practice selects' art is newer still, so it converts last.
     surfaces.extend(convert_surface(cache, offsets, repo_root, spec)
                     for spec in BONUS_CSS_SURFACE_SPECS)
+    # The wireless VS START states are newest of all.
+    surfaces.extend(convert_surface(cache, offsets, repo_root, spec)
+                    for spec in NET_START_SURFACE_SPECS)
     check_title_anim_block(surfaces)
     check_bonus_css_shared_states(surfaces)
 

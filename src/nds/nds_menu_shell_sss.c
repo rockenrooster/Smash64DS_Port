@@ -426,11 +426,13 @@ static u32 ndsMenuShellSssGroundLocked(u32 gkind)
      * (scmanager.c:313), so Inishie starts locked; the bit is earned only
      * through mnMessageApplyUnlock (mnmessage.c:284-301) via the 1P and VS
      * paths (sc1pmanager.c:556, mnvsresults.c:3286). Harness builds bypass
-     * this -- same dev-open gate as the character select. */
+     * this -- same dev-open gate as the character select. In a wireless room
+     * the host's save decides, on every console (plan 7.1). */
     if ((gkind == (u32)nGRKindInishie) &&
         (gNdsSceneHarnessMode == (u32)NDS_DEV_SCENE_HARNESS_NORMAL) &&
-        ((gSCManagerBackupData.unlock_mask & LBBACKUP_UNLOCK_MASK_INISHIE) ==
-         0u))
+        ((((ndsNetInSession() != 0u) ? ndsNetLobbyUnlockMask() :
+                                       (u32)gSCManagerBackupData.unlock_mask) &
+          LBBACKUP_UNLOCK_MASK_INISHIE) == 0u))
     {
         return TRUE;
     }

@@ -20,9 +20,16 @@
  * batch b + NDS_NET_DELAY_BATCHES (the first batches are neutral on every
  * console), broadcasts, then waits until it holds both ticks of b for every
  * human port. Waiting runs no gameplay: the last frame stays on screen and the
- * radio keeps being serviced. After the batch's second tick the replay digest
- * is folded and carried by the next INPUT packet; a different digest from a
- * peer for the same batch is a desync (gNdsNetDesyncBatch). */
+ * radio keeps being serviced. After the batch's second tick the net digest
+ * (the replay digest plus the battle state's results fields, ndsNetDigest) is
+ * folded and carried by the next INPUT packet; a different digest from a peer
+ * for the same batch is a desync (gNdsNetDesyncBatch). When the battle ends,
+ * every console compares its terminal tick's digest with every peer's before
+ * Results publish a winner (ndsNetBattleEnd).
+ *
+ * LEAVING. A guest leaves a running match by holding START (START is the
+ * host's alone otherwise, plan section 10); its LEAVE, like the host closing
+ * the room, ends the match for everyone as NO CONTEST. */
 #include <string.h>
 #include <nds/bios.h>
 #include <nds/interrupts.h>
@@ -32,12 +39,14 @@
 #include <PR/os.h>
 #include <ssb_types.h>
 #include <ft/fighter.h>
+#include <sc/scene.h>
 #include <sys/malloc.h>
 
 #include <nds/nds_controller.h>
 #include <nds/nds_match_config.h>
 #include <nds/nds_net.h>
 #include <nds/nds_net_link.h>
+#include <nds/nds_net_lobby.h>
 #include <nds/nds_net_session.h>
 #include <nds/nds_platform.h>
 #include <nds/nds_net_ui.h>
@@ -51,6 +60,12 @@
 /* The first batch also absorbs the consoles' different battle load times. */
 #define NDS_NET_STALL_ABORT_FIRST   (60u * 30u)
 #define NDS_NET_STALL_NOTICE        20u
+/* A guest leaves a running match by holding START this long. */
+#define NDS_NET_LEAVE_HOLD_VBLANKS  (60u * 2u)
+/* Battle end: how long to wait for the peers' terminal digests, and how long
+ * to keep sending ours once every peer's has been compared. */
+#define NDS_NET_TERMINAL_WAIT       (60u * 3u)
+#define NDS_NET_TERMINAL_LINGER     12u
 
 extern void syTaskmanSetLoadScene(void);
 extern SYMallocRegion gSYTaskmanGeneralHeap;
@@ -58,6 +73,7 @@ extern SYMallocRegion gSYTaskmanGeneralHeap;
 extern void syUtilsSetRandomSeed(s32 seed);
 extern u32 ndsReplayDigestTick(void);
 extern void ndsControllerMapKeys(u32 keys, u16 *button, s8 *stick_x, s8 *stick_y);
+extern sb32 ftCommonSleepCheckIgnorePauseMenu(GObj *fighter_gobj);
 
 volatile u32 gNdsNetSessionState;
 volatile u32 gNdsNetLocalPort;
@@ -88,8 +104,16 @@ static u32 sNetDigestValid[NDS_NET_DIGEST_RING];          /* batch + 1 */
 static u32 sNetPeerDigests[NDS_NET_PORTS][NDS_NET_DIGEST_RING];
 static u32 sNetPeerDigestValid[NDS_NET_PORTS][NDS_NET_DIGEST_RING];
 static u32 sNetLastDigestBatch = 0xFFFFFFFFu;
+/* Per port: the last batch whose digest was compared with ours, + 1. */
+static u32 sNetCompared[NDS_NET_PORTS];
 static u32 sNetBatch;
 static u32 sNetProducedBatch;
+/* VBlank count + 1 since a guest started holding START, 0 when released. */
+static u32 sNetLeaveHeldSince;
+#if NDS_NET_LAB_LEAVE
+static u32 sNetLabLeaveDone;
+static u32 sNetLabBattles;     /* battle scenes this console has entered */
+#endif
 
 static u32 ndsNetHeader(u8 *buf, u32 kind)
 {
@@ -182,6 +206,7 @@ static void ndsNetCompareDigest(u32 port, u32 batch)
         sNetPeerDigestValid[port][slot] != batch + 1u)
         return;
     gNdsNetDigestCompares++;
+    sNetCompared[port] = batch + 1u;
     if (sNetDigests[slot] != sNetPeerDigests[port][slot])
     {
         gNdsNetDesyncs++;
@@ -236,6 +261,31 @@ static void ndsNetHandleInput(const u8 *buf, u32 len)
     }
 }
 
+static void ndsNetLockstepAbort(void);
+
+/* A LEAVE during a match -- a guest holding START, or the host closing the
+ * room -- ends it for everyone: the leaver's records stop, and the source
+ * cannot play on without them. It ends as NO CONTEST like any abort, and the
+ * lobby drops the player. */
+static void ndsNetHandleLeave(const u8 *src, u32 port)
+{
+    const u32 who = (port == 0xFFu) ? sNetHostPort : port;
+    char name[NDS_NET_NAME_LEN + 1u];
+
+    if (gNdsNetSessionState != NDS_NET_SESSION_RUNNING || who >= NDS_NET_PORTS ||
+        who == gNdsNetLocalPort || ((gNdsNetHumanMask >> who) & 1u) == 0u)
+        return;
+    strncpy(name, ndsNetLobbyMemberName(who), NDS_NET_NAME_LEN);
+    name[NDS_NET_NAME_LEN] = '\0';
+    if (ndsNetLobbyMemberLeft(src, port) == 0u)
+        return;
+    if (name[0] != '\0')
+        ndsNetUiLine(21, " %s left the match.", name);
+    else
+        ndsNetUiLine(21, " Player %lu left the match.", (unsigned long)(who + 1u));
+    ndsNetLockstepAbort();
+}
+
 static void ndsNetPump(void)
 {
     u8 buf[NDS_NET_MAX_PAYLOAD + 2u];
@@ -256,6 +306,8 @@ static void ndsNetPump(void)
         gNdsNetPacketsRecv++;
         if (kind == NDS_NET_KIND_INPUT)
             ndsNetHandleInput(buf, len);
+        else if (kind == NDS_NET_KIND_LEAVE && len > NDS_NET_HDR_BYTES)
+            ndsNetHandleLeave(src, buf[NDS_NET_HDR_BYTES]);
     }
 }
 
@@ -264,17 +316,32 @@ static void ndsNetPump(void)
  * real, different input. A new action every six batches. */
 static u32 ndsNetLocalKeys(u32 batch)
 {
+    /* Every source control the pad maps: moves, jumps, attacks, specials in
+     * all four directions, shield (R), grab and shield (L = Z), and the
+     * taunt (SELECT = L), so grabs, throws and Kirby's inhale/copy run too. */
     static const u32 kActions[] = {
         0u, KEY_LEFT, KEY_RIGHT, KEY_A, KEY_B, KEY_X, KEY_LEFT | KEY_A,
         KEY_RIGHT | KEY_B, KEY_R, KEY_DOWN | KEY_A, KEY_UP | KEY_B, KEY_RIGHT,
         KEY_LEFT | KEY_X, KEY_DOWN, KEY_UP | KEY_A, KEY_RIGHT | KEY_A,
+        KEY_L, KEY_L | KEY_RIGHT, KEY_R | KEY_A, KEY_DOWN | KEY_B,
+        KEY_SELECT, KEY_LEFT | KEY_B, KEY_B, KEY_RIGHT | KEY_L,
+        KEY_L | KEY_LEFT, KEY_X | KEY_A, KEY_DOWN | KEY_R, KEY_L | KEY_DOWN,
+        KEY_B, KEY_RIGHT | KEY_X, KEY_L | KEY_UP, KEY_A,
     };
     u32 h = ((batch / 6u) * 2654435761u) ^ (gNdsNetLocalPort * 0x9E3779B9u);
+    u32 keys;
 
     h ^= h >> 15;
     h *= 0x2C1B3C6Du;
     h ^= h >> 12;
-    return kActions[h & 15u];
+    keys = kActions[h & 31u];
+#if NDS_NET_LAB_TEAMS
+    /* Guests press START every two seconds: it reaches the game only as a
+     * team Stock steal (ndsNetStartIsStockSteal), never as a pause. */
+    if ((gNdsNetLocalPort != 0u) && ((batch % 60u) < 2u))
+        keys |= KEY_START;
+#endif
+    return keys;
 }
 #else
 static u32 ndsNetLocalKeys(u32 batch)
@@ -335,6 +402,11 @@ void ndsNetBattleBegin(void)
     memset(sNetRecords, 0, sizeof(sNetRecords));
     memset(sNetDigestValid, 0, sizeof(sNetDigestValid));
     memset(sNetPeerDigestValid, 0, sizeof(sNetPeerDigestValid));
+    memset(sNetCompared, 0, sizeof(sNetCompared));
+    sNetLeaveHeldSince = 0u;
+#if NDS_NET_LAB_LEAVE
+    sNetLabBattles++;
+#endif
     sNetLastDigestBatch = 0xFFFFFFFFu;
     sNetBatch = 0u;
     sNetProducedBatch = 0u;
@@ -379,6 +451,58 @@ static void ndsNetLockstepAbort(void)
     syTaskmanSetLoadScene();
 }
 
+/* The keys a guest's Leave hold reads: the live pad. */
+static u32 ndsNetLeaveKeys(void)
+{
+    u32 keys = ndsPlatformHeldKeys();
+
+#if NDS_NET_LAB_LEAVE
+    /* Lab: the guest holds START from batch 600 of its Nth battle. */
+    if (sNetLabLeaveDone == 0u && sNetLabBattles >= (u32)NDS_NET_LAB_LEAVE &&
+        sNetBatch >= 600u)
+        keys |= KEY_START;
+#endif
+    return keys;
+}
+
+/* Plan section 10: START pauses for the host alone, so a guest's held START
+ * is its Leave command; its first press says so on the lower screen. */
+static u32 ndsNetGuestHoldsLeave(void)
+{
+    const u32 now = ndsPlatformVBlankCount() + 1u;
+
+    if (gNdsNetLocalPort == sNetHostPort)
+        return 0u;
+    if ((ndsNetLeaveKeys() & KEY_START) == 0u)
+    {
+        if (sNetLeaveHeldSince != 0u)
+        {
+            sNetLeaveHeldSince = 0u;
+            ndsNetUiLine(22, "");
+        }
+        return 0u;
+    }
+    if (sNetLeaveHeldSince == 0u)
+    {
+        sNetLeaveHeldSince = now;
+        ndsNetUiLine(22, " Hold START to leave the match.");
+    }
+    return ((now - sNetLeaveHeldSince) >= NDS_NET_LEAVE_HOLD_VBLANKS) ? 1u : 0u;
+}
+
+static void ndsNetLeaveMatch(void)
+{
+    sNetLeaveHeldSince = 0u;
+#if NDS_NET_LAB_LEAVE
+    sNetLabLeaveDone = 1u;
+#endif
+    ndsNetUiLine(22, "");
+    ndsNetUiLine(21, " You left the match.");
+    ndsNetLockstepAbort();
+    /* LEAVE to the room, then the radio stops: this console is out of it. */
+    ndsNetSessionClose();
+}
+
 void ndsNetBattleGate(void)
 {
     const u32 me = gNdsNetLocalPort;
@@ -414,16 +538,34 @@ void ndsNetBattleGate(void)
         ndsNetStoreRecord(me, tick, value);
         ndsNetStoreRecord(me, tick + 1u, value);
         sNetProducedBatch = sNetBatch + 1u;
+        if (ndsNetGuestHoldsLeave() != 0u)
+        {
+            ndsNetLeaveMatch();
+            return;
+        }
     }
     ndsNetPump();
+    if (gNdsNetSessionState != NDS_NET_SESSION_RUNNING)
+        return; /* a player left */
     ndsNetSendInput();
     while (ndsNetBatchReady(sNetBatch) == 0u)
     {
         swiWaitForVBlank();
         waited++;
         ndsNetPump();
+        if (gNdsNetSessionState != NDS_NET_SESSION_RUNNING)
+            return;
         if ((waited & 3u) == 0u)
+        {
             ndsNetSendInput();
+            /* A guest may leave while waiting, too. */
+            (void)ndsPlatformReadInput();
+            if (ndsNetGuestHoldsLeave() != 0u)
+            {
+                ndsNetLeaveMatch();
+                return;
+            }
+        }
         if (waited == NDS_NET_STALL_NOTICE)
             ndsNetUiLine(21, " Waiting for the other players...");
         if (waited >= ((sNetBatch == 0u) ? NDS_NET_STALL_ABORT_FIRST :
@@ -446,6 +588,26 @@ void ndsNetBattleGate(void)
     }
 }
 
+/* A KO'd fighter in a team Stock match takes a stock from a teammate with
+ * START (ftCommonSleepProcUpdate, ftcommonsleep.c:77), and the source's
+ * pause trigger skips exactly that fighter (ifcommon.c:2920), so that START
+ * is a steal, never a pause, and passes on any port. The trigger runs ahead of
+ * the tick's fighters (ifCommonBattleGoUpdateInterface, before its gcRunAll),
+ * so the state read here, before the tick, is the state it reads. */
+static u32 ndsNetStartIsStockSteal(u32 p)
+{
+    GObj *fighter_gobj;
+
+    if (gSCManagerBattleState->game_status != nSCBattleGameStatusGo)
+        return FALSE;
+    fighter_gobj = gSCManagerBattleState->players[p].fighter_gobj;
+    if (fighter_gobj == NULL)
+        return FALSE;
+    return ((ftGetStruct(fighter_gobj)->status_id == nFTCommonStatusSleep) &&
+            (ftCommonSleepCheckIgnorePauseMenu(fighter_gobj) != FALSE)) ?
+        TRUE : FALSE;
+}
+
 void ndsNetBattleInstallTick(uint32_t index)
 {
     const u32 tick = 2u * sNetBatch + index;
@@ -463,8 +625,10 @@ void ndsNetBattleInstallTick(uint32_t index)
         value = sNetRecords[p][tick & (NDS_NET_RING_TICKS - 1u)];
         button = (u16)value;
         /* Host-only pause (plan section 10): START from any other port is
-         * dropped identically on every console. */
-        if (p != sNetHostPort)
+         * dropped identically on every console, except where the source's
+         * pause trigger passes that port over (ndsNetStartIsStockSteal). */
+        if ((p != sNetHostPort) && ((button & START_BUTTON) != 0u) &&
+            (ndsNetStartIsStockSteal(p) == FALSE))
             button &= (u16)~START_BUTTON;
         ndsControllerPlaybackSetPad(p, button, (s8)(value >> 16), (s8)(value >> 24));
     }
@@ -486,6 +650,58 @@ static u32 ndsNetSetupDigest(void)
     return (size * 2654435761u) ^ (used * 2246822519u) ^ 0x5E7u;
 }
 
+static u32 ndsNetMix(u32 hash, u32 value)
+{
+    hash ^= value;
+    hash *= 16777619u;
+    return hash ^ (hash >> 15);
+}
+
+/* Plan 7.3's net digest: the replay digest plus the battle state that the
+ * match's end and Results read -- game status, the timer, and each player's
+ * stocks, place, KOs, falls, self-destructs, damage tallies, combo counts and
+ * stale-move queue (stale moves scale damage). Net matches only: the replay
+ * digest itself, and every gate that compares it, is unchanged. */
+static u32 ndsNetDigest(void)
+{
+    const SCBattleState *bs = gSCManagerBattleState;
+    u32 hash = ndsReplayDigestTick();
+    u32 p;
+    u32 i;
+
+    hash = ndsNetMix(hash, bs->game_status);
+    hash = ndsNetMix(hash, bs->time_remain);
+    hash = ndsNetMix(hash, bs->time_passed);
+    for (p = 0u; p < NDS_NET_PORTS; p++)
+    {
+        const SCPlayerData *pl = &bs->players[p];
+
+        if (pl->pkind == nFTPlayerKindNot)
+            continue;
+        hash = ndsNetMix(hash, (u32)(u8)pl->stock_count | ((u32)pl->place << 8));
+        hash = ndsNetMix(hash, (u32)pl->falls);
+        hash = ndsNetMix(hash, (u32)pl->score);
+        hash = ndsNetMix(hash, (u32)pl->total_selfdestructs);
+        hash = ndsNetMix(hash, (u32)pl->total_damage_given);
+        hash = ndsNetMix(hash, (u32)pl->total_damage_all);
+        hash = ndsNetMix(hash, (u32)pl->stock_damage_all);
+        hash = ndsNetMix(hash, (u32)pl->combo_damage_foe);
+        hash = ndsNetMix(hash, (u32)pl->combo_count_foe);
+        for (i = 0u; i < NDS_NET_PORTS; i++)
+        {
+            hash = ndsNetMix(hash, (u32)pl->total_kos_players[i]);
+            hash = ndsNetMix(hash, (u32)pl->total_damage_players[i]);
+        }
+        hash = ndsNetMix(hash, pl->stale_id);
+        for (i = 0u; i < 5u; i++)
+        {
+            hash = ndsNetMix(hash, (u32)pl->stale_info[i].attack_id |
+                                   ((u32)pl->stale_info[i].motion_count << 16));
+        }
+    }
+    return hash;
+}
+
 void ndsNetBattleBatchDone(void)
 {
     u32 slot;
@@ -493,7 +709,7 @@ void ndsNetBattleBatchDone(void)
     if (gNdsNetSessionState != NDS_NET_SESSION_RUNNING)
         return;
     slot = sNetBatch & (NDS_NET_DIGEST_RING - 1u);
-    sNetDigests[slot] = ndsReplayDigestTick();
+    sNetDigests[slot] = ndsNetDigest();
     if (sNetBatch == 0u)
         sNetDigests[slot] ^= ndsNetSetupDigest();
     sNetDigestValid[slot] = sNetBatch + 1u;
@@ -513,12 +729,58 @@ void ndsNetBattleBatchDone(void)
 
 void ndsNetBattleEnd(void)
 {
+    const u32 slot = sNetBatch & (NDS_NET_DIGEST_RING - 1u);
+    u32 waited;
+    u32 linger = 0u;
+    u32 p;
+
     if (gNdsNetSessionState != NDS_NET_SESSION_RUNNING)
         return;
-    /* Tell the peers our final records and digest. The lockstep stays armed:
-     * sudden death is another battle scene of the same match. The live keypad
-     * comes back for Results; the lobby disarms after the match. */
-    ndsNetSendInput();
+    /* Plan 7.3: Results come from the simulation every console ran, so the
+     * terminal tick's digest is compared with every peer's before they
+     * publish a winner. The scene ended inside batch sNetBatch on every
+     * console alike (the loop leaves before that batch's BatchDone). Once
+     * every peer's has been compared, this console keeps sending its own a
+     * little longer for a peer still waiting. A difference, or a peer that
+     * never sends one, ends the match as NO CONTEST like any divergence. */
+    sNetDigests[slot] = ndsNetDigest();
+    sNetDigestValid[slot] = sNetBatch + 1u;
+    sNetLastDigestBatch = sNetBatch;
+    for (waited = 0u; (waited < NDS_NET_TERMINAL_WAIT) &&
+                      (linger < NDS_NET_TERMINAL_LINGER); waited++)
+    {
+        u32 pending = 0u;
+
+        ndsNetPump();
+        if (gNdsNetSessionState != NDS_NET_SESSION_RUNNING)
+            return; /* a player left */
+        for (p = 0u; p < NDS_NET_PORTS; p++)
+        {
+            if ((p == gNdsNetLocalPort) || (((gNdsNetHumanMask >> p) & 1u) == 0u))
+                continue;
+            ndsNetCompareDigest(p, sNetBatch);
+            if (sNetCompared[p] != sNetBatch + 1u)
+                pending++;
+        }
+        if ((waited & 1u) == 0u)
+            ndsNetSendInput();
+        if (pending == 0u)
+            linger++;
+        swiWaitForVBlank();
+    }
+    if ((gNdsNetDesyncBatch != 0xFFFFFFFFu) || (linger == 0u))
+    {
+        if (gNdsNetDesyncBatch != 0xFFFFFFFFu)
+            ndsNetUiLine(21, " Out of sync at tick %lu.",
+                         (unsigned long)(2u * gNdsNetDesyncBatch + 1u));
+        else
+            ndsNetUiLine(21, " Connection lost.");
+        ndsNetLockstepAbort();
+        return;
+    }
+    /* The lockstep stays armed: sudden death is another battle scene of the
+     * same match. The live keypad comes back for Results; the lobby disarms
+     * after the match. */
     ndsControllerPlaybackSetEnabled(FALSE);
 }
 

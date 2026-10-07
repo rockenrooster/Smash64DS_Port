@@ -27,6 +27,13 @@ extern u32 ndsPlatformVBlankCount(void);
 #else
 #define NDS_NET_AP_MATCHES 3u
 #endif
+/* When the fighter picks start on the first visit to the character select:
+ * after the Team Battle walk when there is one. */
+#if NDS_NET_LAB_TEAMS
+#define NDS_NET_AP_PICK_AT 200u
+#else
+#define NDS_NET_AP_PICK_AT 0u
+#endif
 
 volatile u32 gNdsNetAutopilotRole;     /* 1 host, 2 guest */
 volatile u32 gNdsNetAutopilotMatches;
@@ -36,7 +43,6 @@ static u32 sApRole;
 static u32 sApScreen = 0xFFFFFFFFu;
 static u32 sApScene = 0xFFFFFFFFu;
 static u32 sApTics;
-static u32 sApJoinTaps;
 static u32 sApDropped;
 
 static u32 ndsNetApWindow(u32 start, u32 len)
@@ -68,7 +74,6 @@ u32 ndsNetLabAutopilotKeys(void)
         sApScene = scene;
         sApScreen = screen;
         sApTics = 0u;
-        sApJoinTaps = 0u;
     }
     sApTics++;
 
@@ -106,29 +111,22 @@ u32 ndsNetLabAutopilotKeys(void)
         break;
     case NDS_MENU_SHELL_SCREEN_VSMODE:
         gNdsNetAutopilotStep = 3u;
+        /* VS START's wireless value: one step right is HOST, one step left
+         * (it wraps) JOIN; A confirms, and JOIN then finds the room itself.
+         * The guest waits a little longer so the host's room is up. */
         if (sApRole == 1u)
         {
-            if (ndsNetApWindow(40u, 4u))
-                keys = KEY_X;
+            if (ndsNetApWindow(40u, 1u))
+                keys = KEY_RIGHT;
             if (ndsNetApWindow(80u, 4u))
                 keys = KEY_A;
         }
         else
         {
-            /* Y opens the room list (a modal inside this screen); A joins once
-             * a room shows up. */
-            if (ndsNetApWindow(60u, 4u))
-                keys = KEY_Y;
-            if (sApTics > 120u && (sApTics % 40u) < 4u && sApJoinTaps < 400u)
-            {
-                NdsNetRoom rooms[NDS_NET_MAX_ROOMS];
-
-                if (ndsNetJoinRooms(rooms, NDS_NET_MAX_ROOMS) != 0u)
-                {
-                    keys = KEY_A;
-                    sApJoinTaps++;
-                }
-            }
+            if (ndsNetApWindow(40u, 1u))
+                keys = KEY_LEFT;
+            if (ndsNetApWindow(120u, 4u))
+                keys = KEY_A;
         }
         break;
     case NDS_MENU_SHELL_SCREEN_CSS:
@@ -136,11 +134,42 @@ u32 ndsNetLabAutopilotKeys(void)
         /* Pick once: after a match the lobby reopens on the same picks. */
         if (gNdsNetAutopilotMatches == 0u)
         {
-            if (ndsNetApWindow(30u, 12u))
+#if NDS_NET_LAB_TEAMS
+            /* Team Battle through the real screen before anyone picks. The
+             * cursor moves 4 px a frame and hits with its (+20, +3) hotspot:
+             * from its seat (40, 170) the host walks 36 frames up onto the
+             * mode label (27..137, 14..35) and presses A (mnplayersvs.c:3356);
+             * the guest, from (108, 170), one step left and 10 up onto its
+             * own team button (103..127, 131..141, :1985) and presses A; both
+             * walk back to their seats. */
+            if (sApRole == 1u)
+            {
+                if (ndsNetApWindow(10u, 36u))
+                    keys |= KEY_UP;
+                if (ndsNetApWindow(50u, 4u))
+                    keys |= KEY_A;
+                if (ndsNetApWindow(60u, 36u))
+                    keys |= KEY_DOWN;
+            }
+            else
+            {
+                if (ndsNetApWindow(120u, 1u))
+                    keys |= KEY_LEFT;
+                if (ndsNetApWindow(121u, 10u))
+                    keys |= KEY_UP;
+                if (ndsNetApWindow(140u, 4u))
+                    keys |= KEY_A;
+                if (ndsNetApWindow(150u, 10u))
+                    keys |= KEY_DOWN;
+                if (ndsNetApWindow(165u, 1u))
+                    keys |= KEY_RIGHT;
+            }
+#endif
+            if (ndsNetApWindow(NDS_NET_AP_PICK_AT + 30u, 12u))
                 keys |= (sApRole == 1u) ? KEY_RIGHT : 0u;
-            if (ndsNetApWindow(45u, 25u))
+            if (ndsNetApWindow(NDS_NET_AP_PICK_AT + 45u, 25u))
                 keys |= KEY_UP;
-            if (ndsNetApWindow(90u, 4u))
+            if (ndsNetApWindow(NDS_NET_AP_PICK_AT + 90u, 4u))
                 keys |= KEY_A;
 #if NDS_NET_LAB_SWEEP
             /* The guest walks back down to its own preview (the cursor's
@@ -148,9 +177,9 @@ u32 ndsNetLabAutopilotKeys(void)
              * costume once: the host resolves it and both show it. */
             if (sApRole == 2u)
             {
-                if (ndsNetApWindow(100u, 25u))
+                if (ndsNetApWindow(NDS_NET_AP_PICK_AT + 100u, 25u))
                     keys |= KEY_DOWN;
-                if (ndsNetApWindow(128u, 4u))
+                if (ndsNetApWindow(NDS_NET_AP_PICK_AT + 128u, 4u))
                     keys |= KEY_A;
             }
 #endif
@@ -158,8 +187,8 @@ u32 ndsNetLabAutopilotKeys(void)
 
         /* The host asks to start every half second once everyone has picked;
          * the screen refuses until then. */
-        if (sApRole == 1u && sApTics > 300u && (sApTics % 30u) < 4u &&
-            gNdsNetAutopilotMatches < NDS_NET_AP_MATCHES)
+        if (sApRole == 1u && sApTics > NDS_NET_AP_PICK_AT + 300u &&
+            (sApTics % 30u) < 4u && gNdsNetAutopilotMatches < NDS_NET_AP_MATCHES)
             keys |= KEY_START;
         break;
     case NDS_MENU_SHELL_SCREEN_SSS:

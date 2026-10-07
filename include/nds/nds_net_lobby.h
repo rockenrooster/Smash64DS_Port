@@ -74,6 +74,9 @@ uint32_t ndsNetLobbyPhase(void);
  * dropped); the caller closes the session and leaves the lobby screens. */
 uint32_t ndsNetLobbyLost(void);
 const char *ndsNetLobbyMemberName(uint32_t port);
+/* The ports whose player has picked (their token is down), from the slots the
+ * host last published or this guest last heard. */
+uint32_t ndsNetLobbyReadyMask(void);
 
 /* Every menu frame while in a session: receive, time out, publish. */
 void ndsNetLobbyPump(void);
@@ -102,5 +105,23 @@ uint32_t ndsNetLobbyStageCursor(void);
 
 /* After a match: back to the character select. */
 void ndsNetLobbyMatchOver(void);
+
+/* One lower-screen line of the rules the host's VS menu set (the character
+ * select has no rule panel, and a guest never saw the host's VS menu): the
+ * host's own, or a guest's copy from the latest snapshot. The match takes its
+ * rules from the descriptor, never from this. */
+#define NDS_NET_RULES_TEXT_LEN 32u
+void ndsNetLobbyRulesText(char out[NDS_NET_RULES_TEXT_LEN + 1u]);
+
+/* The save unlock mask that governs the room (plan 7.1): the host's, which a
+ * guest has from the snapshot. It gates the stage select on every console and
+ * is never written to a guest's save. */
+uint32_t ndsNetLobbyUnlockMask(void);
+
+/* A LEAVE the session layer read during a match (port, or 0xFF for the host
+ * closing the room). The host drops that member if the radio address is its
+ * own; a guest marks the room lost when the host closed it. Returns 1 when the
+ * LEAVE is genuine. */
+uint32_t ndsNetLobbyMemberLeft(const uint8_t mac[6], uint32_t port);
 
 #endif

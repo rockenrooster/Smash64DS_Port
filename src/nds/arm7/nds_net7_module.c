@@ -9,8 +9,9 @@
  *
  * One thread owns the radio. The resident PXI handler forwards every ARM9 word
  * to it through post(); START brings the driver up, STOP shuts it down, KICK
- * drains the TX ring. Received frames arrive on the driver's own thread through
- * the data callback and are copied into the RX ring. */
+ * drains the TX ring. Received frames are read on the driver's own thread by
+ * this module's RX drain (nds_net7_mwl_rx.c, which replaces Calico's) and are
+ * copied into the RX ring. */
 #include <calico.h>
 #include <calico/dev/mwl.h>
 #include <calico/dev/netbuf.h>
@@ -20,15 +21,11 @@
 #include <nds/nds_net_link.h>
 
 /* Calico 1.2.0 internals (source/nds/netbuf.c, source/dev/mwl/common.h). The
- * driver hands data frames to its callback only while the station is
- * associated (MwlState.status == Class3, bits 2..3 of the halfword at offset
- * 4); there is no access point here, so the module sets that state itself
- * once the driver is started. */
+ * driver takes data frames only while the station is associated
+ * (MwlState.status == Class3); there is no access point here, so the module
+ * sets that state itself once the driver is started. */
+#include "calico_mwl_common.h"
 extern void _netbufPrvInitPools(void *start, const u16 *tx_counts, const u16 *rx_counts);
-extern u32 s_mwlState[];
-#define NDS_NET7_MWL_FLAGS ((volatile u16 *)((u8 *)s_mwlState + 4))
-#define NDS_NET7_MWL_STATUS_SHIFT 2u
-#define NDS_NET7_MWL_STATUS_MASK (3u << NDS_NET7_MWL_STATUS_SHIFT)
 
 void ndsNet7Attach(void);
 void ndsNet7Post(u32 word);
@@ -58,12 +55,11 @@ static bool sNet7TxBlocked;
 static const u8 kNdsNet7Bssid[6] = NDS_NET_BSSID_INIT;
 
 /* Packet buffers: the driver's subpools are 128/256/512/1024/2048 bytes.
- * Frames are at most 24 + NDS_NET_MAX_PAYLOAD = 256 bytes; the 512-byte RX
- * buffers are a margin for anything larger that carries the game BSSID (the
- * driver waits forever for a buffer that fits a data frame). */
+ * Frames are at most 24 + NDS_NET_MAX_PAYLOAD = 256 bytes. Only TX uses the
+ * pool: the RX drain reads into its own static buffer and never allocates. */
 static const u16 kNdsNet7TxCounts[5] = { 0, 6, 0, 0, 0 };
-static const u16 kNdsNet7RxCounts[5] = { 0, 10, 2, 0, 0 };
-#define NDS_NET7_POOL_BYTES (16u * (sizeof(NetBuf) + 256u) + 2u * (sizeof(NetBuf) + 512u))
+static const u16 kNdsNet7RxCounts[5] = { 0, 0, 0, 0, 0 };
+#define NDS_NET7_POOL_BYTES (6u * (sizeof(NetBuf) + 256u))
 alignas(4) static u8 sNet7PoolMem[NDS_NET7_POOL_BYTES];
 
 static inline void ndsNet7Barrier(void)
@@ -124,10 +120,11 @@ static bool ndsNet7RxPush(const u8 *src, const u8 *data, u32 len)
     return true;
 }
 
-static void ndsNet7Rx(NetBuf *nb)
+/* One received data frame (802.11 header + payload), from the RX drain on the
+ * driver's thread: a game frame from another console goes into the ring. */
+void ndsNet7RxFrame(const void *frame, u32 len)
 {
-    const WlanMacHdr *hdr = (const WlanMacHdr *)netbufGet(nb);
-    const u32 len = nb->len;
+    const WlanMacHdr *hdr = (const WlanMacHdr *)frame;
 
     if (len > sizeof(WlanMacHdr) && len <= sizeof(WlanMacHdr) + NDS_NET_MAX_PAYLOAD &&
         hdr->fc.type == WlanFrameType_Data && hdr->fc.from_ds && !hdr->fc.to_ds &&
@@ -143,7 +140,13 @@ static void ndsNet7Rx(NetBuf *nb)
     {
         ndsNet7Stat(NDS_NET_STAT_RX_FOREIGN);
     }
-    netbufFree(nb);
+}
+
+/* Any other frame the MAC passed (another station's management traffic, a
+ * beacon, a control frame): skipped unread. */
+void ndsNet7RxSkipped(void)
+{
+    ndsNet7Stat(NDS_NET_STAT_RX_FOREIGN);
 }
 
 /* --- TX: ARM9 ring -> driver ------------------------------------------- */
@@ -264,12 +267,10 @@ static void ndsNet7RadioStart(u32 channel)
     mwlDevSetBssid(kNdsNet7Bssid);
     cb = mwlMlmeGetCallbacks();
     memset(cb, 0, sizeof(*cb));
-    cb->maData = ndsNet7Rx;
     mwlDevStart();
 
     st = armIrqLockByPsr();
-    *NDS_NET7_MWL_FLAGS = (u16)((*NDS_NET7_MWL_FLAGS & ~NDS_NET7_MWL_STATUS_MASK) |
-                                ((u16)MwlStatus_Class3 << NDS_NET7_MWL_STATUS_SHIFT));
+    s_mwlState.status = MwlStatus_Class3;
     armIrqUnlockByPsr(st);
 
     sNet7RadioOn = true;

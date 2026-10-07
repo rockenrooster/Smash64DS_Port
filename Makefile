@@ -798,6 +798,12 @@ NDS_NET_LAB_DROP ?= 0
 # P3 lab: with the autopilot, ten matches whose descriptor the host fills in:
 # each VS stage in turn, two level-9 CPUs, every item at the highest rate.
 NDS_NET_LAB_SWEEP ?= 0
+# P3 lab: with the sweep, the matches cycle through Team Battle layouts (one
+# in Stock, where a guest's START takes a teammate's stock) and a free-for-all.
+NDS_NET_LAB_TEAMS ?= 0
+# P3 lab: with the autopilot, NDS_NET_LAB_LEAVE=N makes the guest hold START
+# (its Leave command) from batch 600 of its Nth battle.
+NDS_NET_LAB_LEAVE ?= 0
 NDS_LAB_FOURCPU_SWEEP_GKIND ?=
 NDS_LAB_FOURCPU_SWEEP_KINDS ?=
 # LAB ONLY: the lean renderer's root-reuse census (ndsFtrLeanRootCensus,
@@ -6217,12 +6223,16 @@ $(OUTPUT).nds: | native-only-arm7-check
 # netbuf and wlan objects come from the archive; the ARM9 copies
 # net/net7.bin into place when a session starts.
 NDS_NET7_ELF := $(CURDIR)/nds-net7.elf
-nds-net7-module.o: $(PROJECT_ROOT)/src/nds/arm7/nds_net7_module.c $(PROJECT_ROOT)/include/nds/nds_net_link.h
+nds-net7-module.o: $(PROJECT_ROOT)/src/nds/arm7/nds_net7_module.c $(PROJECT_ROOT)/src/nds/arm7/calico_mwl_common.h $(PROJECT_ROOT)/include/nds/nds_net_link.h
 	$(CC) $(NDS_ARM7_FLAGS) -MMD -MP -MF nds-net7-module.d -c $< -o $@
-$(NDS_NET7_ELF): nds-net7-module.o $(NDS_ARM7_ELF) $(PROJECT_ROOT)/linker/nds_arm7_net7.ld
+# The module's own RX drain replaces Calico's mwl_rx.o (it defines all four of
+# that object's public functions, so the archive member is never pulled).
+nds-net7-mwl-rx.o: $(PROJECT_ROOT)/src/nds/arm7/nds_net7_mwl_rx.c $(PROJECT_ROOT)/src/nds/arm7/calico_mwl_common.h $(PROJECT_ROOT)/include/nds/nds_net_link.h
+	$(CC) $(NDS_ARM7_FLAGS) -MMD -MP -MF nds-net7-mwl-rx.d -c $< -o $@
+$(NDS_NET7_ELF): nds-net7-module.o nds-net7-mwl-rx.o $(NDS_ARM7_ELF) $(PROJECT_ROOT)/linker/nds_arm7_net7.ld
 	$(CC) -march=armv4t -mthumb -nostartfiles -Wl,-Map,nds-net7.map \
 		-Wl,-T,$(PROJECT_ROOT)/linker/nds_arm7_net7.ld -Wl,--just-symbols=$(NDS_ARM7_ELF) \
-		nds-net7-module.o -L$(CALICO)/lib -lcalico_ds7 -lgcc -lc -lgcc -o $@
+		nds-net7-module.o nds-net7-mwl-rx.o -L$(CALICO)/lib -lcalico_ds7 -lgcc -lc -lgcc -o $@
 $(NITROFS_DIR)/net/net7.bin: $(NDS_NET7_ELF)
 	@mkdir -p $(dir $@)
 	$(OBJCOPY) -O binary $< $@
@@ -6238,6 +6248,7 @@ $(OUTPUT).nds:
 	$(SILENTCMD)ndstool -c $@ -9 $(OUTPUT).elf $(_ARM7_ELF) -b $(GAME_ICON) "$(GAME_TITLE);$(GAME_SUBTITLE1);$(GAME_SUBTITLE2)" $(_ADDFILES)
 	$(SILENTMSG) built ... $(notdir $@)
 -include nds-net7-module.d
+-include nds-net7-mwl-rx.d
 -include $(NDS_ARM7_OBJECTS:.o=.d)
 
 # P2-3r4. THE NATIVE-OWNER TABLE IMAGES.
@@ -7000,6 +7011,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_NET_LAB_LOBBY $(NDS_NET_LAB_LOBBY)'; \
 		echo '#define NDS_NET_LAB_DROP $(NDS_NET_LAB_DROP)'; \
 		echo '#define NDS_NET_LAB_SWEEP $(NDS_NET_LAB_SWEEP)'; \
+		echo '#define NDS_NET_LAB_TEAMS $(NDS_NET_LAB_TEAMS)'; \
+		echo '#define NDS_NET_LAB_LEAVE $(NDS_NET_LAB_LEAVE)'; \
 		echo '#define NDS_P2_FOUR_CPU_ROSTER $(NDS_P2_FOUR_CPU_ROSTER)'; \
 		echo '#define NDS_P2_FOUR_CPU_KIND0 $(NDS_P2_FOUR_CPU_KIND0)'; \
 		echo '#define NDS_P2_FOUR_CPU_KIND1 $(NDS_P2_FOUR_CPU_KIND1)'; \

@@ -27,6 +27,7 @@
 #include <PR/os.h>
 #include <ssb_types.h>
 #include <ft/fighter.h>
+#include <sc/scene.h>
 
 #include <nds/nds_match_config.h>
 #include <nds/nds_net.h>
@@ -46,8 +47,19 @@
 #define NDS_NET_DESC_BYTES         50u
 #define NDS_NET_BUILD_ID_BYTES     8u
 #define NDS_NET_BUILD_ID_PATH      "nitro:/net/build.id"
+/* After the slots and the build identity: the host's stage-select cursor
+ * cell, its save's unlock mask (plan 7.1: the host's unlocks govern the room),
+ * the rules its VS menu set (ndsNetLobbyRulesText), and the guests' names
+ * (ports 1-3; the host's own is in the header), so every console lists every
+ * player. */
+#define NDS_NET_LOBBY_STAGE_AT \
+    (16u + NDS_NET_PORTS * NDS_NET_SLOT_BYTES + NDS_NET_BUILD_ID_BYTES)
+#define NDS_NET_LOBBY_RULES_AT (NDS_NET_LOBBY_STAGE_AT + 2u)
+#define NDS_NET_LOBBY_RULES_BYTES 5u
+#define NDS_NET_LOBBY_NAMES_AT \
+    (NDS_NET_LOBBY_RULES_AT + NDS_NET_LOBBY_RULES_BYTES)
 #define NDS_NET_LOBBY_BODY_BYTES \
-    (16u + NDS_NET_PORTS * NDS_NET_SLOT_BYTES + NDS_NET_BUILD_ID_BYTES + 1u)
+    (NDS_NET_LOBBY_NAMES_AT + (NDS_NET_PORTS - 1u) * NDS_NET_NAME_LEN)
 
 extern void ndsNetLinkGetUserName(char out[NDS_NET_NAME_LEN + 1u]);
 
@@ -94,6 +106,10 @@ static u32 sHostLastHeard;
 static NdsNetLobbySlot sSnapSlots[NDS_NET_PORTS];
 static u32 sSnapTeamBattle;
 static u32 sSnapFresh;
+/* The host's save unlock mask and rules from the latest snapshot. */
+static u32 sHostUnlockMask;
+static u8 sHostRules[NDS_NET_LOBBY_RULES_BYTES];
+static char sSnapNames[NDS_NET_PORTS][NDS_NET_NAME_LEN + 1u];
 static char sHostName[NDS_NET_NAME_LEN + 1u];
 static NdsNetLobbySlot sMyProposal;
 static u32 sHaveProposal;
@@ -129,7 +145,22 @@ const char *ndsNetLobbyMemberName(uint32_t port)
         return (sMembers[port].active != 0u) ? sMembers[port].name : "";
     if (port == 0u)
         return sHostName;
-    return (port == sLocalPort) ? sMyName : "";
+    return (port == sLocalPort) ? sMyName : sSnapNames[port];
+}
+
+uint32_t ndsNetLobbyReadyMask(void)
+{
+    const NdsNetLobbySlot *slots =
+        (sRole == NDS_NET_ROLE_HOST) ? sHostSlots : sSnapSlots;
+    uint32_t mask = 0u;
+    u32 p;
+
+    for (p = 0u; p < NDS_NET_PORTS; p++)
+    {
+        if (slots[p].selected != 0u)
+            mask |= 1u << p;
+    }
+    return mask;
 }
 
 static u32 ndsNetPopCount(u32 v)
@@ -290,6 +321,9 @@ static void ndsNetLobbyReset(void)
     memset(sRooms, 0, sizeof(sRooms));
     memset(sRoomSeen, 0, sizeof(sRoomSeen));
     memset(sHostName, 0, sizeof(sHostName));
+    sHostUnlockMask = 0u;
+    memset(sHostRules, 0, sizeof(sHostRules));
+    memset(sSnapNames, 0, sizeof(sSnapNames));
 }
 
 static int ndsNetRadioUp(void)
@@ -567,11 +601,14 @@ static void ndsNetLobbyReceive(void)
         if (ndsNetHeaderRead(buf, len, &kind, &session) == 0u)
             continue;
 
-        if (kind == NDS_NET_KIND_LOBBY && blen >= NDS_NET_LOBBY_BODY_BYTES)
+        /* Any snapshot long enough for the build identity lists the room
+         * (another build's shows as such); only a full one updates a guest. */
+        if (kind == NDS_NET_KIND_LOBBY && blen >= NDS_NET_LOBBY_STAGE_AT)
         {
             if (sScanning != 0u)
                 ndsNetRoomSeen(src, session, body);
-            if (sRole == NDS_NET_ROLE_GUEST && session == sSession)
+            if (sRole == NDS_NET_ROLE_GUEST && session == sSession &&
+                blen >= NDS_NET_LOBBY_BODY_BYTES)
             {
                 u32 p;
 
@@ -583,7 +620,17 @@ static void ndsNetLobbyReceive(void)
                 sHostName[NDS_NET_NAME_LEN] = '\0';
                 for (p = 0u; p < NDS_NET_PORTS; p++)
                     ndsNetSlotRead(body + 16 + p * NDS_NET_SLOT_BYTES, &sSnapSlots[p]);
-                sStageCursor = body[NDS_NET_LOBBY_BODY_BYTES - 1u];
+                sStageCursor = body[NDS_NET_LOBBY_STAGE_AT];
+                sHostUnlockMask = body[NDS_NET_LOBBY_STAGE_AT + 1u];
+                memcpy(sHostRules, body + NDS_NET_LOBBY_RULES_AT,
+                       NDS_NET_LOBBY_RULES_BYTES);
+                for (p = 1u; p < NDS_NET_PORTS; p++)
+                {
+                    memcpy(sSnapNames[p], body + NDS_NET_LOBBY_NAMES_AT +
+                                              (p - 1u) * NDS_NET_NAME_LEN,
+                           NDS_NET_NAME_LEN);
+                    sSnapNames[p][NDS_NET_NAME_LEN] = '\0';
+                }
                 sSnapFresh = 1u;
                 if (((sHumanMask >> sLocalPort) & 1u) == 0u)
                     sLost = 1u;   /* the host dropped us */
@@ -669,6 +716,18 @@ static void ndsNetLobbyReceive(void)
 
 /* --- Send ---------------------------------------------------------------- */
 
+/* The rules the host's VS menu committed to gNdsMatchConfig: rule, time,
+ * stocks, item rate, and whether any item and team attack are on. */
+static void ndsNetRulesWrite(u8 *p)
+{
+    p[0] = gNdsMatchConfig.game_rules;
+    p[1] = gNdsMatchConfig.time_limit;
+    p[2] = gNdsMatchConfig.stocks;
+    p[3] = gNdsMatchConfig.item_appearance_rate;
+    p[4] = (u8)(((gNdsMatchConfig.item_toggles != 0u) ? 1u : 0u) |
+                ((gNdsMatchConfig.is_team_attack != FALSE) ? 2u : 0u));
+}
+
 static void ndsNetHostSendLobby(void)
 {
     u8 buf[NDS_NET_HDR_BYTES + NDS_NET_LOBBY_BODY_BYTES];
@@ -691,6 +750,17 @@ static void ndsNetHostSendLobby(void)
     memcpy(buf + n, sBuildId, NDS_NET_BUILD_ID_BYTES);
     n += NDS_NET_BUILD_ID_BYTES;
     buf[n++] = (u8)sStageCursor;
+    buf[n++] = gSCManagerBackupData.unlock_mask;
+    ndsNetRulesWrite(buf + n);
+    n += NDS_NET_LOBBY_RULES_BYTES;
+    for (p = 1u; p < NDS_NET_PORTS; p++)
+    {
+        if (sMembers[p].active != 0u)
+            memcpy(buf + n, sMembers[p].name, NDS_NET_NAME_LEN);
+        else
+            memset(buf + n, 0, NDS_NET_NAME_LEN);
+        n += NDS_NET_NAME_LEN;
+    }
     ndsNetSend(buf, n);
 }
 
@@ -821,6 +891,65 @@ void ndsNetLobbyHostSetPhase(uint32_t phase)
 extern s32 ftParamGetCostumeCommonID(s32 fkind, s32 color);
 
 volatile u32 gNdsNetLabSweepMatches;
+/* Poked nonzero by a harness to replay one reported match instead of the
+ * sweep (ndsNetLabSweepDescriptor). */
+volatile u32 gNdsNetLabSweepRepro;
+
+#if NDS_NET_LAB_TEAMS
+extern s32 ftParamGetCostumeTeamID(s32 fkind, s32 color);
+
+/* Lab teams: the sweep's matches cycle through four Team Battle layouts and
+ * a free-for-all. Each human with a CPU partner (team attack off); the same
+ * in four-stock Stock with team attack on, where the guest's scripted START
+ * takes a stock from its CPU partner once its own fighter is out
+ * (ftCommonSleepProcUpdate); three teams; both humans against the CPUs.
+ * Costume and shade follow the character select's team rules
+ * (mnplayersvs.c:1859-1860): the team costume, and the lowest shade no other
+ * same-fighter teammate holds, in port order. */
+static void ndsNetLabTeamsDescriptor(NdsMatchConfig *cfg, u32 m)
+{
+    static const u8 kTeams[4][NDS_NET_PORTS] = {
+        { nSCBattleTeamIDRed, nSCBattleTeamIDBlue,
+          nSCBattleTeamIDRed, nSCBattleTeamIDBlue },
+        { nSCBattleTeamIDRed, nSCBattleTeamIDBlue,
+          nSCBattleTeamIDBlue, nSCBattleTeamIDRed },
+        { nSCBattleTeamIDRed, nSCBattleTeamIDBlue,
+          nSCBattleTeamIDGreen, nSCBattleTeamIDGreen },
+        { nSCBattleTeamIDRed, nSCBattleTeamIDRed,
+          nSCBattleTeamIDBlue, nSCBattleTeamIDBlue },
+    };
+    const u32 v = m % 5u;
+    u32 i;
+    u32 j;
+
+    if (v == 4u)
+        return;
+    cfg->is_team_battle = TRUE;
+    cfg->is_team_attack = (v != 0u) ? TRUE : FALSE;
+    if (v == 1u)
+    {
+        cfg->game_rules = SCBATTLE_GAMERULE_STOCK;
+        cfg->stocks = 3u;
+    }
+    for (i = 0u; i < NDS_NET_PORTS; i++)
+    {
+        NdsMatchFighterConfig *f = &cfg->fighters[i];
+        u32 used = 0u;
+
+        f->team = kTeams[v][i];
+        f->costume = (u8)ftParamGetCostumeTeamID((s32)f->fkind, (s32)f->team);
+        for (j = 0u; j < i; j++)
+        {
+            if ((cfg->fighters[j].fkind == f->fkind) &&
+                (cfg->fighters[j].team == f->team))
+                used |= 1u << cfg->fighters[j].shade;
+        }
+        f->shade = 0u;
+        while (((used >> f->shade) & 1u) != 0u)
+            f->shade++;
+    }
+}
+#endif
 
 /* Lab sweep (plan 7.4): the host's descriptor walks the nine VS stages and
  * the roster, adding two level-9 CPUs (Kirby among them, for copies) and
@@ -844,6 +973,32 @@ static void ndsNetLabSweepDescriptor(NdsMatchConfig *cfg)
     const u32 m = gNdsNetLabSweepMatches++;
     u32 i;
 
+    if (gNdsNetLabSweepRepro != 0u)
+    {
+        /* A gdb-poked repro: Kirby (host) against Yoshi (guest) on Hyrule,
+         * two humans and no CPUs, two-minute time, every item at Medium. */
+        cfg->gkind = nGRKindHyrule;
+        for (i = 0u; i < NDS_NET_PORTS; i++)
+        {
+            NdsMatchFighterConfig *f = &cfg->fighters[i];
+
+            f->pkind = (i < 2u) ? nFTPlayerKindMan : nFTPlayerKindNot;
+            f->fkind = (i == 0u) ? nFTKindKirby :
+                       (i == 1u) ? nFTKindYoshi : nFTKindNull;
+            f->team = (u8)i;
+            f->costume = (i < 2u) ?
+                (u8)ftParamGetCostumeCommonID((s32)f->fkind, (s32)i) : 0u;
+            f->shade = 0u;
+        }
+        cfg->is_team_battle = FALSE;
+        cfg->is_team_attack = FALSE;
+        cfg->game_rules = SCBATTLE_GAMERULE_TIME;
+        cfg->time_limit = 2u;
+        cfg->item_toggles = ndsMatchConfigItemTogglesFromRows(kAllRows);
+        cfg->item_appearance_rate = nSCBattleItemSwitchMiddle;
+        ndsMatchConfigApply(cfg);
+        return;
+    }
     cfg->gkind = kStages[m % 9u];
     for (i = 2u; i < NDS_NET_PORTS; i++)
     {
@@ -857,10 +1012,14 @@ static void ndsNetLabSweepDescriptor(NdsMatchConfig *cfg)
         f->shade = 0u;
     }
     cfg->is_team_battle = FALSE;
+    cfg->is_team_attack = FALSE;
     cfg->game_rules = SCBATTLE_GAMERULE_TIME;
     cfg->time_limit = 1u;
     cfg->item_toggles = ndsMatchConfigItemTogglesFromRows(kAllRows);
     cfg->item_appearance_rate = nSCBattleItemSwitchVeryHigh;
+#if NDS_NET_LAB_TEAMS
+    ndsNetLabTeamsDescriptor(cfg, m);
+#endif
     ndsMatchConfigApply(cfg);
 }
 #endif
@@ -971,4 +1130,68 @@ void ndsNetLobbyMatchOver(void)
         sHostLastHeard = sFrame;
         sPhase = NDS_NET_PHASE_CSS;
     }
+}
+
+uint32_t ndsNetLobbyUnlockMask(void)
+{
+    return (sRole == NDS_NET_ROLE_GUEST) ? sHostUnlockMask :
+        (u32)gSCManagerBackupData.unlock_mask;
+}
+
+void ndsNetLobbyRulesText(char out[NDS_NET_RULES_TEXT_LEN + 1u])
+{
+    static const char *const kRates[] = {
+        "off", "very low", "low", "medium", "high", "very high",
+    };
+    u8 rules[NDS_NET_LOBBY_RULES_BYTES];
+    const char *items;
+    char rule[16];
+
+    if (sRole == NDS_NET_ROLE_GUEST)
+        memcpy(rules, sHostRules, sizeof(rules));
+    else
+        ndsNetRulesWrite(rules);
+    if ((rules[0] & (SCBATTLE_GAMERULE_TIME | SCBATTLE_GAMERULE_STOCK)) == 0u)
+    {
+        out[0] = '\0'; /* no snapshot yet */
+        return;
+    }
+    items =(((rules[4] & 1u) == 0u) || (rules[3] == 0u) ||
+             (rules[3] >= (u8)nSCBattleItemSwitchEnumCount)) ?
+        "off" : kRates[rules[3]];
+    if ((rules[0] & SCBATTLE_GAMERULE_STOCK) != 0u)
+        sniprintf(rule, sizeof(rule), "Stock %u", (unsigned)rules[2] + 1u);
+    else if (rules[1] == SCBATTLE_TIMELIMIT_INFINITE)
+        sniprintf(rule, sizeof(rule), "No time limit");
+    else
+        sniprintf(rule, sizeof(rule), "Time %u:00", (unsigned)rules[1]);
+    sniprintf(out, NDS_NET_RULES_TEXT_LEN + 1u, " %s, items %s%s", rule, items,
+              ((rules[4] & 2u) != 0u) ? ", TA" : "");
+}
+
+uint32_t ndsNetLobbyMemberLeft(const uint8_t mac[6], uint32_t port)
+{
+    if (sRole == NDS_NET_ROLE_HOST)
+    {
+        if (port == 0u || port >= NDS_NET_PORTS || sMembers[port].active == 0u ||
+            memcmp(sMembers[port].mac, mac, 6) != 0)
+            return 0u;
+        sMembers[port].active = 0u;
+        gNdsNetLobbyDrops++;
+        ndsNetHostUpdateMask();
+        return 1u;
+    }
+    if (sRole == NDS_NET_ROLE_GUEST)
+    {
+        if (port == 0xFFu)
+        {
+            if (memcmp(sHostMac, mac, 6) != 0)
+                return 0u;
+            sLost = 1u;
+            return 1u;
+        }
+        /* Another guest: the host drops it and publishes the new room. */
+        return (port < NDS_NET_PORTS && port != sLocalPort) ? 1u : 0u;
+    }
+    return 0u;
 }
