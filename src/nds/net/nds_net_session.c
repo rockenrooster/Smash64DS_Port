@@ -398,11 +398,26 @@ void ndsNetLockstepConfigure(uint32_t session, uint32_t local_port,
 
 /* --- Battle loop seams ---------------------------------------------------- */
 
+#if NDS_NET_LAB_GATE_RADIO
+/* Lab (plan section 12, P3-0C): the four-fighter gate with the radio running.
+ * Set to 1 at boot (the sampler's -BootSetGlobals), the battle opens a room
+ * and runs the lockstep with this console as its only human, so every batch
+ * pumps the radio, sends its INPUT packet and folds the net digest as a net
+ * match does; left 0, the same ROM measures without the radio. */
+volatile u32 gNdsNetLabGateRadio;
+#endif
+
 void ndsNetBattleBegin(void)
 {
     u32 p;
     u32 t;
 
+#if NDS_NET_LAB_GATE_RADIO
+    if ((gNdsNetLabGateRadio != 0u) &&
+        (gNdsNetSessionState != NDS_NET_SESSION_RUNNING) &&
+        (ndsNetHostOpen() == 0))
+        ndsNetLockstepConfigure(1u, 0u, 0u, 1u);
+#endif
     if (gNdsNetSessionState != NDS_NET_SESSION_RUNNING)
         return;
     memset(sNetRecords, 0, sizeof(sNetRecords));

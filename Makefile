@@ -808,6 +808,11 @@ NDS_NET_LAB_LEAVE ?= 0
 # every room (host rotation), and the rooms cycle through lobby-only visits,
 # matches, rematches and a guest's Leave, with a libc heap sample per room.
 NDS_NET_LAB_SOAK ?= 0
+# P3 lab (plan section 12, P3-0C): the four-fighter gate with the radio
+# running. Compiles gNdsNetLabGateRadio; set to 1 at boot, the battle opens a
+# room and runs the lockstep as a one-human net match, so the same ROM
+# measures with and without the radio.
+NDS_NET_LAB_GATE_RADIO ?= 0
 NDS_LAB_FOURCPU_SWEEP_GKIND ?=
 NDS_LAB_FOURCPU_SWEEP_KINDS ?=
 # LAB ONLY: the lean renderer's root-reuse census (ndsFtrLeanRootCensus,
@@ -3960,6 +3965,13 @@ CFLAGS := -std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections \
 # follow-ons). The first 8 errors per TU still print, so real type/return/
 # implicit-declaration failures stay visible; only the tail is cut.
 CFLAGS += -include $(PROJECT_ROOT)/$(BUILD)/nds_build_config.h
+# P3 build identity (plan 7.1): libnds's inline asserts embed their headers'
+# __FILE__, i.e. the devkitPro install path (C:/devkitPro/libnds/include/...),
+# so the same commit built with the toolchain installed elsewhere had another
+# identity. Map the prefix so it does not.
+ifneq ($(strip $(DEVKITPRO)),)
+CFLAGS += -ffile-prefix-map=$(DEVKITPRO)=devkitPro
+endif
 ifeq ($(NDS_DEV_SCENE_HARNESS),normal)
 NDS_DEV_SCENE_HARNESS_ID := 0
 else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_playable)
@@ -7018,6 +7030,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_NET_LAB_TEAMS $(NDS_NET_LAB_TEAMS)'; \
 		echo '#define NDS_NET_LAB_LEAVE $(NDS_NET_LAB_LEAVE)'; \
 		echo '#define NDS_NET_LAB_SOAK $(NDS_NET_LAB_SOAK)'; \
+		echo '#define NDS_NET_LAB_GATE_RADIO $(NDS_NET_LAB_GATE_RADIO)'; \
 		echo '#define NDS_P2_FOUR_CPU_ROSTER $(NDS_P2_FOUR_CPU_ROSTER)'; \
 		echo '#define NDS_P2_FOUR_CPU_KIND0 $(NDS_P2_FOUR_CPU_KIND0)'; \
 		echo '#define NDS_P2_FOUR_CPU_KIND1 $(NDS_P2_FOUR_CPU_KIND1)'; \

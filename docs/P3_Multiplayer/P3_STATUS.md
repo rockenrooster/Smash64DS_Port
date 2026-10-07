@@ -204,6 +204,11 @@ cells on every console (plan 7.1); a guest's own save is never written by it.
   each batch's net digest is kept after each of its parts (replay digest,
   battle state, stage, items, weapons: `gNdsNetLabParts`), so a mismatch
   names the first part that differs.
+- Gate ROM: `NDS_NET_LAB_GATE_RADIO=1` compiles `gNdsNetLabGateRadio`; set
+  to 1 at boot (`sample-tick-hud-buckets.ps1 -BootSetGlobals`), the
+  four-fighter gate battle opens a room and runs the lockstep with the console
+  as its only human, so the same ROM measures the gate with and without the
+  radio.
 
 ## Evidence (2026-10-06, melonDS-mp, lab autopilot)
 
@@ -225,8 +230,9 @@ cells on every console (plan 7.1); a guest's own save is never written by it.
 | `teams1` | 2 | 10 matches, every item at Very High: 7 Team Battle (each human with a CPU partner, team attack off; both humans against the CPUs in Stock with team attack on; three teams) and 3 FFA (one sudden death): 19,077 digest compares, 0 desyncs, 0 aborts, 10 starts / 0 failures. The guest's battle state matches the descriptor in every match (teams, colours 0/1/3/CP 4, team costumes); identical team Results on both consoles ("GREEN WINS!") |
 | `repro1` | 2 | The owner's failing setup in the harness (Kirby against Yoshi on Hyrule, two humans, two-minute time, every item at Medium) with the scripted pad widened to every mapped control (grab, shield, taunt, all specials): 8 matches, 26,285 digest compares, 0 desyncs, 0 conflicts, 0 bad packets -- the game stays in step; the hardware failure was the radio driver (above) |
 | `radio1` | 2 | Calico's drain replaced, the native VS START host/join: host chose HOST and the guest JOIN, the lobby and two matches ran, 4,431-4,495 digest compares, 0 desyncs; each radio about 5,050 frames sent and 5,000-5,100 received, 0 ring-full, 0 TX buffer stalls |
+| `gate-radio` | 1 | Plan section 12, P3-0C: the official four-fighter gate ROM built with `NDS_NET_LAB_GATE_RADIO`, measured with the switch off and on (on: the battle opens a room and runs the lockstep as a one-human net match, so every batch pumps the radio, sends its INPUT packet and folds the net digest; 1,961 batches). WORK-H P50 744,576 -> 767,488, P95 1,050,048 -> 1,068,672, two-VBlank share 96.8% -> 96.0%, replay digest identical over all 1,960 frames: the gate stays green with the radio running (`artifacts/performance/2026-10-07_p3-gate-radio`, local) |
 | `soak1`/`soak2` | 2 | `NDS_NET_LAB_SOAK` with the play-1007d digest: the rooms after a guest's Leave desynced -- Jungle at batch 297, Hyrule and Yoshi's Island at batches 0-1 -- while both consoles' setup heap size and use were identical (traced on both): the digest read bytes that depend on each console's history (the stage state union, the weapon pool's `lifetime`), which a Leave makes differ (the two consoles' last match ends on different ticks) |
-| `soak4` | 2 | The same soak with the stage union cleared per scene and weapon `lifetime` out of the digest: 11 rooms in 25 minutes, the roles swapped every room, two lobby-only rooms, a rematch and two guest Leaves: 17,700 digest compares, 0 desyncs, aborts only the two Leaves; libc heap at each VS Mode entry 1,027,176 B first and 1,042,736-1,044,032 B after (no growth) |
+| `soak4` | 2 | The same soak with the stage union cleared per scene and weapon `lifetime` out of the digest: 19 rooms and 20 matches in 25 minutes, the roles swapped every room, lobby-only rooms, rematches and four guest Leaves: 30,051 digest compares, 0 desyncs, aborts only the four Leaves; libc heap at each VS Mode entry 1,027,176 B first and 1,042,736-1,044,032 B after (no growth) |
 | `teams2` | 2 | Same sweep with the second layout set (the four-stock Stock match pairs the guest with a CPU) and the terminal-digest check: 10 matches plus 2 sudden deaths (one in a Team Battle), 20,719 digest compares, 0 desyncs; the guest took its CPU partner's stock 5 times over the link (`ifCommonPlayerStockStealMakeInterface`, thief 1); in the tenth match the guest held START: it left, the host ended the match as NO CONTEST (1 abort), dropped it from the room (human mask 0x1) and returned to the lobby |
 
 ## Open
@@ -237,11 +243,16 @@ cells on every console (plan 7.1); a guest's own save is never written by it.
 - Pinning the arena to a fixed start and size for net matches (plan 7.2 item
   4); the setup check compares size and use, not the address.
 - Reproducible builds, so players who build the same commit from their own
-  N64 ROM get the same build identity (no absolute paths in the binary).
+  N64 ROM get the same build identity. The binary holds no repository path,
+  but libnds's inline asserts embedded the devkitPro install path
+  (`C:/devkitPro/libnds/include/nds/arm9/sprite.h`, `background.h`,
+  `videoGL.h`), so a toolchain installed elsewhere gave another identity: the
+  compiler now maps that prefix to `devkitPro` (`-ffile-prefix-map`). A
+  second build of the same commit on another machine is still to be
+  compared.
 - Perturbation runs (plan 7.4): different boot environments, menu histories,
   poisoned arenas, storage delays.
 - The net digest folds no AI state (plan 7.3 adds it only if a divergence
   ever escapes the current fields).
 - The 30-minute and 100-cycle lifecycle soaks in full (`NDS_NET_LAB_SOAK`;
-  25-minute runs so far, below), and the four-fighter gate measured with the
-  radio running (plan section 12).
+  25-minute runs so far, above).
