@@ -24,6 +24,9 @@
 #include <it/item.h>
 #include <sc/scene.h>
 #include <sys/objdef.h>
+#if NDS_P4
+#include <nds/nds_p4.h>
+#endif
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
@@ -152,6 +155,11 @@ void ftCommonLightGetProcDamage(GObj *fighter_gobj)
             switch (ip->kind)
             {
             case nITKindTomato:
+#if NDS_P4
+                /* Remix hooks this heal's call on a character id (Crash's
+                 * eat sound). */
+                ndsP4OnEatTomato(fp);
+#endif
                 ftParamSetHealDamage(fp, ITTOMATO_DAMAGE_HEAL);
                 itMainDestroyItem(item_gobj);
 

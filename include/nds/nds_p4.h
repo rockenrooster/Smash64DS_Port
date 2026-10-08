@@ -195,6 +195,17 @@ typedef struct NDSP4Overrides
     /* ftCommonFallSpecialSetStatus' status: the content's in place of
      * FallSpecial (Peach's parasol fall, PeachUSP.fall_special_patch_). */
     s32 (*fall_special_status)(FTStruct *fp, s32 status_id);
+    /* ftMainProcPhysicsMap's head (Remix's Size.asm copies the attributes'
+     * collision box every frame; Crash's dig changes his). */
+    void (*before_physics_map)(GObj *fighter_gobj);
+    /* ftMainSearchFighterCatch: FALSE keeps that hurtbox of the victim from
+     * being grabbed (Crash's dig, Hitbox.asm force_grab_immunity_). */
+    sb32 (*grabbable)(FTStruct *victim_fp, s32 damage_coll_id);
+    /* The aerial start's down-air hit routine, in place of the source's
+     * (Link's rehit case; Crash.asm dair_bounce_). */
+    void (*attack_air_lw_hit)(GObj *fighter_gobj);
+    /* ftCommonLightGetProcDamage's Maxim Tomato (Crash.asm crash_eat_sfx). */
+    void (*on_eat_tomato)(FTStruct *fp);
 } NDSP4Overrides;
 
 /* A Remix CPU input routine (AI.asm add_cpu_input_routine) as assembled:
@@ -537,6 +548,26 @@ void ndsP4OnLanding(FTStruct *fp, sb32 cliff);
  * fall_special_status. */
 void ndsP4FallSpecialSetStatus(GObj *fighter_gobj, s32 status_id, f32 frame_begin,
                                f32 anim_speed, u32 flags);
+/* ftMainProcPhysicsMap's head (battleship_ftmain.c): the content's
+ * before_physics_map. */
+void ndsP4BeforePhysicsMapSlow(GObj *fighter_gobj);
+static inline void ndsP4BeforePhysicsMap(GObj *fighter_gobj)
+{
+    if (__builtin_expect(ftGetStruct(fighter_gobj)->nds_p4_content != 0u, 0))
+    {
+        ndsP4BeforePhysicsMapSlow(fighter_gobj);
+    }
+}
+/* ftMainSearchFighterCatch's hurtbox test (battleship_ftmain.c): FALSE when
+ * the victim's content keeps that hurtbox from a grab, else the source's
+ * collision test. */
+sb32 ndsP4CatchDamageCollide(FTStruct *victim_fp, FTAttackColl *attack_coll,
+                             FTDamageColl *damage_coll);
+/* ftCommonAttackAirCheckInterruptCommon's aerial start, before its events
+ * (battleship_ftcommon_attackair.c): a content's down-air hit routine. */
+void ndsP4AttackAirStart(GObj *fighter_gobj);
+/* ftCommonLightGetProcDamage's Maxim Tomato: the content's on_eat_tomato. */
+void ndsP4OnEatTomato(FTStruct *fp);
 /* The content's match tables, read into this scene's heap at its first use
  * (FTData.mainmotion points into them from then on); halts on a missing or
  * malformed file, a build defect. */

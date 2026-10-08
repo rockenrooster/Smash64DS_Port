@@ -1236,6 +1236,63 @@ void ndsP4OnLanding(FTStruct *fp, sb32 cliff)
     }
 }
 
+void ndsP4BeforePhysicsMapSlow(GObj *fighter_gobj)
+{
+    const NDSP4Overrides *o = ndsP4Overrides(ftGetStruct(fighter_gobj));
+
+    if ((o != NULL) && (o->before_physics_map != NULL))
+    {
+        o->before_physics_map(fighter_gobj);
+    }
+}
+
+sb32 ndsP4CatchDamageCollide(FTStruct *victim_fp, FTAttackColl *attack_coll,
+                             FTDamageColl *damage_coll)
+{
+    if (victim_fp->nds_p4_content != 0u)
+    {
+        const NDSP4Overrides *o = ndsP4Overrides(victim_fp);
+
+        if ((o != NULL) && (o->grabbable != NULL) &&
+            (o->grabbable(victim_fp, (s32)(damage_coll - victim_fp->damage_colls)) == FALSE))
+        {
+            return FALSE;
+        }
+    }
+    return gmCollisionCheckFighterAttackDamageCollide(attack_coll, damage_coll);
+}
+
+void ndsP4AttackAirStart(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    const NDSP4Overrides *o;
+
+    if ((fp->nds_p4_content == 0u) || (fp->status_id != nFTCommonStatusAttackAirLw))
+    {
+        return;
+    }
+    o = ndsP4Overrides(fp);
+    if ((o != NULL) && (o->attack_air_lw_hit != NULL))
+    {
+        fp->proc_hit = o->attack_air_lw_hit;
+    }
+}
+
+void ndsP4OnEatTomato(FTStruct *fp)
+{
+    const NDSP4Overrides *o;
+
+    if (fp->nds_p4_content == 0u)
+    {
+        return;
+    }
+    o = ndsP4Overrides(fp);
+    if ((o != NULL) && (o->on_eat_tomato != NULL))
+    {
+        o->on_eat_tomato(fp);
+    }
+}
+
 void ndsP4FallSpecialSetStatus(GObj *fighter_gobj, s32 status_id, f32 frame_begin,
                                f32 anim_speed, u32 flags)
 {

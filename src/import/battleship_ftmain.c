@@ -349,6 +349,23 @@ static inline void ndsP4FTMainSetHitInteractStats(FTStruct *fp, u32 attack_group
 #define NDS_P4_HIT_INTERACT_this_fp ndsP4FTMainSetHitInteractStats(this_fp
 #define NDS_P4_HIT_INTERACT_other_fp ndsP4FTMainSetHitInteractStats(other_fp
 #define NDS_P4_HIT_INTERACT_attacker_fp ndsP4FTMainSetHitInteractStats(attacker_fp
+/* P4: Remix's Size.asm copies the attributes' collision box into the
+ * fighter at ftMainProcPhysicsMap's head (ndsP4BeforePhysicsMap); the
+ * definition and its two calls are told apart the same way. */
+#define ftMainProcPhysicsMap(g_) NDS_P4_PHYSICS_MAP_##g_)
+#define NDS_P4_PHYSICS_MAP_GObj ftMainProcPhysicsMap(GObj
+#define NDS_P4_PHYSICS_MAP_fighter_gobj \
+    ndsP4BeforePhysicsMap(fighter_gobj), ftMainProcPhysicsMap(fighter_gobj
+/* P4: Remix's force_grab_immunity_ (Hitbox.asm) answers the grab search's
+ * hurtbox test, the call whose attack is `attack_coll`; the hit search's
+ * (`other_attack_coll`) and any prototype stay the source's. */
+#define gmCollisionCheckFighterAttackDamageCollide(a_, ...) \
+    NDS_P4_DAMAGE_COLLIDE_##a_, __VA_ARGS__)
+#define NDS_P4_DAMAGE_COLLIDE_FTAttackColl \
+    gmCollisionCheckFighterAttackDamageCollide(FTAttackColl
+#define NDS_P4_DAMAGE_COLLIDE_other_attack_coll \
+    gmCollisionCheckFighterAttackDamageCollide(other_attack_coll
+#define NDS_P4_DAMAGE_COLLIDE_attack_coll ndsP4CatchDamageCollide(other_fp, attack_coll
 #endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftmain.c"
 #if NDS_P4
@@ -359,6 +376,13 @@ static inline void ndsP4FTMainSetHitInteractStats(FTStruct *fp, u32 attack_group
 #undef NDS_P4_HIT_INTERACT_this_fp
 #undef NDS_P4_HIT_INTERACT_other_fp
 #undef NDS_P4_HIT_INTERACT_attacker_fp
+#undef ftMainProcPhysicsMap
+#undef NDS_P4_PHYSICS_MAP_GObj
+#undef NDS_P4_PHYSICS_MAP_fighter_gobj
+#undef gmCollisionCheckFighterAttackDamageCollide
+#undef NDS_P4_DAMAGE_COLLIDE_FTAttackColl
+#undef NDS_P4_DAMAGE_COLLIDE_other_attack_coll
+#undef NDS_P4_DAMAGE_COLLIDE_attack_coll
 #undef ftParamsUpdateFighterPartsTransformAll
 #undef ftMotionEventCast
 #define ftMotionEventCast(event, type) ((type *)(event)->p_script)
