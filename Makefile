@@ -7954,6 +7954,10 @@ $$(NDS_P4_GEN)/$(1)/preview.fpc: $$(NDS_P4_GEN)/$(1)/nds_p4_$(1).generated.c \
 		$$(PROJECT_ROOT)/scripts/p4/ft_layout.py $$(PROJECT_ROOT)/include/nds/nds_preview_pack.h
 	python "$$(PROJECT_ROOT)/scripts/p4/p4_preview_pack.py" --o2r "$$(NDS_P4_GEN)/$(1)/o2r" \
 		--content $(1) --export-root "$$(NDS_P4_EXPORT)" --out "$$@"
+$$(NDS_P4_GEN)/$(1)/articles.json: $$(NDS_P4_GEN)/$(1)/nds_p4_$(1).generated.c \
+		$$(PROJECT_ROOT)/scripts/p4/p4_articles.py $$(PROJECT_ROOT)/scripts/p4/contents.json
+	python "$$(PROJECT_ROOT)/scripts/p4/p4_articles.py" --o2r "$$(NDS_P4_GEN)/$(1)/o2r" \
+		--export "$$(NDS_P4_EXPORT)/$(1)" --content $(1) --out "$$@"
 $$(NITROFS_DIR)/fighters/preview/$(5).fpc: $$(NDS_P4_GEN)/$(1)/preview.fpc
 	@mkdir -p $$(dir $$@)
 	@cp $$< $$@
@@ -8012,6 +8016,15 @@ $(NDS_P4_NATIVE)/.stamp: \
 		--contents "$(NDS_P4_ENABLED)" --gen-root "$(NDS_P4_GEN)" --emit "$(NDS_P4_NATIVE)"
 	@touch $@
 nds_renderer.o battleship_ftmanager.o battleship_mnplayersvs.o: $(NDS_P4_NATIVE)/.stamp
+# P4 S6: the entry-effect packet with every enabled content's article roots
+# appended (scripts/p4/p4_articles.py); nds_renderer_assets.c includes it in
+# place of the tracked one.
+NDS_P4_ENTRY_EFFECT_INC := $(NDS_P4_GEN)/nds_p4_entry_effects.generated.inc
+$(NDS_P4_ENTRY_EFFECT_INC): $(NDS_ENTRY_EFFECT_INC) \
+		$(foreach name,$(NDS_P4_ENABLED),$(NDS_P4_GEN)/$(name)/articles.json)
+	python "$(PROJECT_ROOT)/scripts/3d_vfx/generate_nds_entry_effects.py" --p4 \
+		$(foreach name,$(NDS_P4_ENABLED),"$(NDS_P4_GEN)/$(name)/articles.json") --out "$@"
+nds_renderer.o: $(NDS_P4_ENTRY_EFFECT_INC)
 endif
 # P4 character select: Remix's grid, its donor portrait/name/emblem files for
 # the UI kit bake, and the runtime tables nds_menu_shell_css.c includes.

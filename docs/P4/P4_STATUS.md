@@ -479,6 +479,25 @@ into the global reservation.
   Captain) is read by no parent code, but loading it wrote through a NULL
   slot pointer at fighter setup; lab builds drop it, shipping builds need the
   content's own storage.
+- **Own special files and articles (S6).** A slot listed in the generator's
+  `OWN_SPECIAL_FILES` loads into the content's own storage
+  (`gNdsP4<Title>Special<n>`) once every reader that runs for the content is
+  ported: Remix's hooks on the character id become `gNdsP4<Title>Overrides`
+  (the parent's effect makers the content replaces: Fox's reflector and
+  Arwing entry for Wolf), and the content's own weapons and effects live in
+  `nds_p4_<name>.c` (Wolf's blaster shot, slash, reflector and Wolfen).
+  `scripts/p4/p4_articles.py` resolves each article Remix describes (a
+  DObjDesc tree and its DObjDLLinks, a display list with a TEXID material,
+  a weapon's attributes, a model part outside the model file) to
+  display-list roots in the content's files; `generate_nds_entry_effects.py
+  --p4` appends them after the original roots into the build's packet
+  (`nds_p4_entry_effects.generated.inc`, never tracked), compiling an
+  article's lists in the RDP's head order so state carries as it does on the
+  N64, CI8 included. The renderer admits a root as its content file plus
+  offset (effect and weapon GObjs only), selects a TEXID frame from the live
+  MObj, draws a state-only list as nothing, prepares a content's textures
+  only in a match that has it, and draws a held gun from another file beside
+  the body at Fox's hold joint (Wolf's).
 - **Remix files that relocate past their end.** Peach's turnip graphics
   (0x1418, 0x1260 bytes) has two slots aimed past the file; the N64 applies
   them unchecked. The DS loader failed the file, which failed her special2,
@@ -565,7 +584,7 @@ skip ("p4g"). 0 native failures in every run.
 |---|---|---|---|
 | Falco | clean | 0 | generated CPU rows replace his hand table |
 | Ganondorf | clean | 0 | |
-| Wolf | clean | 111 | his gun's display list lives in a donor file (0xB47), which the draw plan does not own; Fox's gun sidecar knows only Fox's file. With his first ported routines (Fire Wolf, the reflector's gravity, the blaster's landing; "p4i") the run is clean again with 35 declines, all the gun |
+| Wolf | clean | 0 | all 11 donor routines ported and his own special files loaded (S6, "p4l", 1,500 frames): the Wolfen, blaster shot, slash and held gun draw natively from his files (the Wolfen's 10 drawn roots 240 draws each, shot 208, slash 12, gun 162); 0 native failures, 0 lab stand-ins. Before S6 his gun's list (0xB47) declined 35-111 times a run |
 | Bowser | clean | 0 | |
 | Marth | clean | 0 | 0xD9 SET ENV COLOR (8 per run) is the one unported command |
 | Roy | clean | 0 | 0xD9 as Marth |
@@ -586,8 +605,8 @@ skip ("p4g"). 0 native failures in every run.
 | S2 build throughput | not started; lab and menu builds still rewrite the shared linker script under a mutex |
 | S3 table seams | 19 of 33 (Falco's 12, entry_action/entry_script, the six special-move starters) |
 | S4 motion commands | 11 of the roster's 12: all but 0xD9 SET ENV COLOR, which needs the renderer's per-fighter environment colour (Banjo, Marth, Roy) |
-| S5 routine work lists | generated for all 14 (`scripts/p4/routine_worklist.py --lab <lab build>` into a build directory): 296 donor routines with Remix scope, file and line, size and users (Banjo 33, Bowser 10, Crash 29, Dedede 37, Lanky 29, Marth 18, Peach 22, Roy 21, Sheik 34, Sonic 29, Wario 23, Wolf 11; Falco and Ganondorf none), plus each content's id tests in Remix's shared code (17-39); the classes (behaviour, presentation, 1P, toggle) are still read by hand. Ported: Wolf 10 of 11 (`src/port/nds_p4_wolf.c`: WolfUSP, WolfDSP physics, WolfNSP air collision); WolfNSP.main and the slash flame wait on his own special files (S6) |
-| S6 articles | first source scan only |
+| S5 routine work lists | generated for all 14 (`scripts/p4/routine_worklist.py --lab <lab build>` into a build directory): 296 donor routines with Remix scope, file and line, size and users (Banjo 33, Bowser 10, Crash 29, Dedede 37, Lanky 29, Marth 18, Peach 22, Roy 21, Sheik 34, Sonic 29, Wario 23, Wolf 11; Falco and Ganondorf none), plus each content's id tests in Remix's shared code (17-39); the classes (behaviour, presentation, 1P, toggle) are still read by hand. Ported: Wolf 11 of 11 (`src/port/nds_p4_wolf.c`: WolfUSP, WolfDSP, WolfNSP with his own shot, the slash, reflector and Wolfen on his own files) |
+| S6 articles | the path exists, Wolf proves it: own special-file storage (`OWN_SPECIAL_FILES`), the parent's effect makers a content replaces (`gNdsP4<Title>Overrides`), `scripts/p4/p4_articles.py` roots compiled by `generate_nds_entry_effects.py --p4` into the build's packet, native admission, TEXID frames, state-only lists, per-match texture preparation and the held-gun sidecar ("Own special files and articles" above). Next: Bowser's flame and Clown Copter; item articles (Peach, Wario) need native item kinds |
 | S7 generated CPU rows | done for the data: attack lists, ai_long_range and the Remix input routines they name are generated for all 14 (Falco's generated list equals his hand table row for row); attack-prevent, recovery and post-process stay hand-ported per fighter (Falco's only) |
 | S8 Kirby copies | not started |
 | S9 select-screen preview | done for Falco on the menu ROM; pack facts come from the export (`p4_preview_pack.py --content`); the all-content ROM cannot hold P4 menu clips in the select's global reservation (see above) |

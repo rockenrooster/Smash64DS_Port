@@ -6700,6 +6700,13 @@ ndsRendererAdapterEntryEffectAccumulate(const NDSRendererStats *stats)
 }
 #endif
 
+#if NDS_P4 && NDS_RENDERER_HW_TRIANGLES
+/* nds_renderer_native_common.c: a P4 content article root's admission
+ * (scripts/p4/p4_articles.py rows in the build's entry-effect packet). */
+sb32 ndsRendererEntryEffectP4Admit(const void *dl, u32 *owner_asset_id,
+                                   u32 *root_offset, u32 *variant_count);
+#endif
+
 static sb32 ndsRendererAdapterTryNativeEntryEffect(
     DObj *dobj, const Gfx *dl, GObj *camera_gobj, u32 initial_geometry_mode)
 {
@@ -6734,6 +6741,9 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
     u32 native_material_count = 0u;
     NDSRendererNativeMaterial common_effect_material;
     u32 native_texture_variant = 0xffffffffu;
+#if NDS_P4
+    u32 p4_variant_count = 0u;
+#endif
 
     if ((dobj == NULL) || (dl == NULL))
     {
@@ -7173,6 +7183,21 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
             }
         }
     }
+#if NDS_P4
+    /* A P4 content's own effects and weapons (Wolf's reflector, Wolfen,
+     * slash and blaster): exact content file plus exact generated root, as
+     * every arm above. Only effect and weapon GObjs ask, so stage lists never
+     * pay the row walk. */
+    if ((candidate == FALSE) && (dobj->parent_gobj != NULL) &&
+        ((dobj->parent_gobj->id == nGCCommonKindEffect) ||
+         (dobj->parent_gobj->id == nGCCommonKindWeapon)) &&
+        (ndsRendererEntryEffectP4Admit(dl, &owner_asset_id, &root_offset,
+                                       &p4_variant_count) != FALSE))
+    {
+        base = (const u8 *)dl - root_offset;
+        candidate = TRUE;
+    }
+#endif
     if (candidate == FALSE)
     {
         return FALSE;
@@ -7203,6 +7228,35 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
             (common_effect_material.effects != expected_effects) ||
             (texture_id_curr < 0) || (texture_id_curr > texture_id_max) ||
             (texture_id_next < 0) || (texture_id_next > texture_id_max))
+        {
+            NDS_DIAG(gNdsEntryEffectNativeFallbackCount++);
+            return FALSE;
+        }
+        native_materials = &common_effect_material;
+        native_material_count = 1u;
+        native_texture_variant = (u32)texture_id_curr;
+    }
+#endif
+#if NDS_P4
+    if (p4_variant_count != 0u)
+    {
+        /* A P4 TEXID root (Falcon Punch's shape): one live MObj whose
+         * MatAnim switches only TEXID among the preconverted frames; with
+         * MOBJ_FLAG_PALETTE the generator baked palette 0, which is all the
+         * makers ever select. Anything else declines, counted. */
+        MObj *mobj = dobj->mobj;
+        s32 texture_id_curr = -1;
+        s32 texture_id_next = -1;
+
+        bzero(&common_effect_material, sizeof(common_effect_material));
+        if ((mobj == NULL) || (mobj->next != NULL) ||
+            (((mobj->sub.flags & MOBJ_FLAG_PALETTE) != 0u) &&
+             (mobj->palette_id != 0.0F)) ||
+            (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                 mobj, &common_effect_material, FALSE,
+                 &texture_id_curr, &texture_id_next) == FALSE) ||
+            (texture_id_curr < 0) ||
+            ((u32)texture_id_curr >= p4_variant_count))
         {
             NDS_DIAG(gNdsEntryEffectNativeFallbackCount++);
             return FALSE;
@@ -7461,6 +7515,47 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
     return FALSE;
 #endif
 }
+
+#if NDS_P4 && NDS_RENDERER_HW_TRIANGLES
+/* A P4 content's model part drawn beside its body (Wolf's gun): its
+ * generated root at the hold joint's matrices, with the fighter display's
+ * reset geometry mode (the list sets its own lighting). A refusal is
+ * counted as every native failure is. */
+static sb32 ndsRendererAdapterSubmitP4SidecarRoot(
+    DObj *joint, u32 owner_asset_id, u32 root_offset,
+    const NDSRendererMatrix20p12 *projection,
+    const NDSRendererMatrix20p12 *modelview)
+{
+    NDSRendererConfig config;
+    NDSRendererStats stats;
+
+    if (joint == NULL)
+    {
+        return FALSE;
+    }
+    ndsRendererAdapterEntryEffectSeedStats(joint, &stats);
+    memset(&config, 0, sizeof(config));
+    config.max_depth = 4u;
+    config.max_commands = 1u;
+    config.max_list_commands = 1u;
+    config.initial_projection = projection;
+    config.initial_modelview = modelview;
+    config.initial_geometry_mode = NDS_RENDERER_GEOM_RESET_MODE;
+    config.texture_data_layout = NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
+    if (ndsRendererSubmitNativeEntryEffect(
+            owner_asset_id, root_offset, NULL, 0u, 0xffffffffu,
+            &config, &stats) == FALSE)
+    {
+        NDS_DIAG(gNdsEntryEffectNativeFallbackCount++);
+        ndsRendererRecordNativeFailure(NDS_NATIVE_FAILURE_STAGE,
+            (u32)gSCManagerSceneData.scene_curr, owner_asset_id, 0u,
+            root_offset, 0u, NDS_NATIVE_FAILURE_REJECTED_PROGRAM);
+        return FALSE;
+    }
+    ndsRendererAdapterEntryEffectAccumulate(&stats);
+    return TRUE;
+}
+#endif
 
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PIKACHU
 static sb32 ndsRendererAdapterPikachuThunder(NDSRelocLoadedFile *loaded,

@@ -2175,16 +2175,7 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp)
      * gun waits for this list's DMA itself. */
     if (ndsFighterHoldsFoxGunSource(fp) != FALSE)
     {
-        NDSRendererMatrix20p12 sidecar_world;
-
-        if (ndsRendererAdapterBuildFoxGunJointMtx(
-                fp,
-                (gGCCurrentCamera != NULL) ?
-                    CObjGetStruct(gGCCurrentCamera) : NULL,
-                &sidecar_world) != FALSE)
-        {
-            (void)ndsRendererSubmitFoxGun(&sidecar_world);
-        }
+        ndsFighterDrawFoxGunSidecar(fp);
     }
 #endif
     ndsRendererProfileSetOwner(NDS_RENDERER_PROFILE_OWNER_NONE);

@@ -21,6 +21,10 @@
 /* sqrtf, for the shield quad's guard scale. float only -- a double here would
  * be a defect on ARM9. */
 #include <math.h>
+#include <nds/nds_p4_contents.h>
+#if NDS_P4
+#include <nds/nds_p4.h>
+#endif
 
 #include "battleship_efmanager_symbols.h"
 
@@ -2634,6 +2638,16 @@ void efManagerInitEffects(void)
  * down-B is what tests it live; keep this call and that counter together. */
 GObj *efManagerFoxReflectorMakeEffect(GObj *fighter_gobj)
 {
+#if NDS_P4
+    /* A content with its own reflector file (Wolf) builds its own effect,
+     * as Remix's hook on the character id does. */
+    const NDSP4Overrides *p4 = ndsP4Overrides(ftGetStruct(fighter_gobj));
+
+    if ((p4 != NULL) && (p4->fox_reflector != NULL))
+    {
+        return p4->fox_reflector(fighter_gobj);
+    }
+#endif
     ndsEFManagerRetryDeferredDescs();
     return ndsBaseEFManagerFoxReflectorMakeEffect(fighter_gobj);
 }

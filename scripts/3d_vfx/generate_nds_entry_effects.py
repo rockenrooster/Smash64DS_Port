@@ -553,10 +553,15 @@ def resolve_geometry_any(state: static.DisplayState):
     if fmt == FMT_CI and size != SIZ_4B:
         if state.tlut_count <= 16:
             size = SIZ_4B
+        elif state.tlut_count <= 256 and size == SIZ_8B:
+            # CI8: P4's Wolf gun (WOLF_WEAPON) is the one user; converted
+            # locally below, never through the static CI4 lane.
+            pass
         else:
             raise SystemExit("entry CI texture is no longer CI4")
     if (fmt, size) not in (
         (FMT_CI, SIZ_4B),
+        (FMT_CI, SIZ_8B),
         (FMT_IA, SIZ_8B),
         (FMT_IA, SIZ_16B),
         (FMT_RGBA, SIZ_16B),
@@ -675,6 +680,36 @@ def convert_texture(state: static.DisplayState, resources: dict[int, census.O2RR
     ) = resolve_geometry_any(state)
     image = resources[load.image.asset_id]
     key = texture_key(state)
+
+    if fmt == FMT_CI and size == SIZ_8B:
+        # CI8, read as the CI4 lane reads its nibbles: index bytes in raster
+        # order, big-endian RGBA5551 TLUT entries. Repacked to PAL16 when it
+        # uses 16 colours or fewer, else kept as DS RGBA.
+        if state.tlut_image is None or state.tlut_image.asset_id != load.image.asset_id:
+            raise SystemExit("entry CI8 texture/TLUT crossed assets")
+        canonical = bytearray(upload_width * upload_height * 2)
+        for y in range(height):
+            for x in range(width):
+                sx, sy, source_width, _w, _h = source_coords(state, x, y)
+                physical = load.image.offset + sy * source_width + sx
+                if physical >= len(image.payload):
+                    raise SystemExit("entry CI8 texel escaped source asset")
+                ci = image.payload[physical]
+                if ci >= state.tlut_count:
+                    raise SystemExit(f"entry CI8 texel samples unloaded palette index {ci}")
+                poff = state.tlut_image.offset + ci * 2
+                if poff + 2 > len(image.payload):
+                    raise SystemExit("entry CI8 TLUT entry escaped source asset")
+                n64 = struct.unpack_from(">H", image.payload, poff)[0]
+                struct.pack_into("<H", canonical, (y * upload_width + x) * 2,
+                                 static.n64_rgba5551_to_ds(n64))
+        ds_format, packed, palette = static.repack_paletted(bytes(canonical))
+        if ds_format == static.DS_FORMAT_PAL16:
+            palette = tuple(palette) + (0,) * (16 - len(palette))
+            return Texture(key, TEX_PAL16, packed, palette)
+        if ds_format == static.DS_FORMAT_RGBA:
+            return Texture(key, TEX_RGBA, packed, ())
+        raise SystemExit("entry CI8 texture converted to an unsupported DS format")
 
     if fmt == FMT_CI:
         if state.tlut_image is None or state.tlut_image.asset_id != load.image.asset_id:
@@ -901,11 +936,15 @@ class Compiler:
             self, resource: census.O2RResource,
             resources: dict[int, census.O2RResource],
             material_images: dict[int, tuple[census.PointerRef, int, int, int]] | None = None,
-            material_texture_sizes: dict[int, tuple[int, int]] | None = None):
+            material_texture_sizes: dict[int, tuple[int, int]] | None = None,
+            material_tluts: dict[int, tuple[census.PointerRef, int]] | None = None):
         self.resource = resource
         self.resources = resources
         self.material_images = material_images or {}
         self.material_texture_sizes = material_texture_sizes or {}
+        # A material whose MObj has MOBJ_FLAG_PALETTE loads its TLUT in the
+        # segment-E branch (palettes[palette_id]); P4's Wolf blaster is one.
+        self.material_tluts = material_tluts or {}
         self.display = static.DisplayState()
         self.vertex_cache: dict[int, Vertex] = {}
         self.vertex_matrix_root: dict[int, int] = {}
@@ -1011,6 +1050,9 @@ class Compiler:
                         self.display.image_format = fmt
                         self.display.image_size = size
                         self.display.image_width = width
+                    material_tlut = self.material_tluts.get(self.material_slot)
+                    if material_tlut is not None:
+                        self.display.tlut_image, self.display.tlut_count = material_tlut
                     material_texture_size = self.material_texture_sizes.get(
                         self.material_slot)
                     if material_texture_size is not None:
@@ -1172,6 +1214,101 @@ class Compiler:
         raise SystemExit(f"entry display-list guard expired at 0x{start:x}")
 
 
+@dataclass
+class P4Root:
+    """One P4 content article root (scripts/p4/p4_articles.py), compiled. A
+    TEXID material compiles once per source image; `variants` holds the
+    other frames' compilers, which contribute textures only."""
+    row: dict
+    content_id: int
+    compiler: Compiler
+    variants: list[Compiler]
+
+
+P4_CONTENTS = ROOT / "scripts" / "p4" / "contents.json"
+
+
+def load_p4_rows(paths: list[Path], resources: dict[int, census.O2RResource]) -> list[dict]:
+    """--p4: each content's articles.json; its files are the content's O2R
+    exports in the o2r directory beside it."""
+    import json
+
+    ids = {row["name"]: row["id"] for row in
+           json.loads(P4_CONTENTS.read_text(encoding="utf-8"))["contents"]}
+    rows = []
+    for path in paths:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        for row in data["roots"]:
+            fid = row["file_id"]
+            if fid not in resources:
+                o2r = (path.parent / "o2r" / f"{fid:04x}").resolve()
+                resources[fid] = census.load_o2r(
+                    ROOT, census.InputSpec(str(o2r), census.sha256(o2r.read_bytes()), fid))
+            rows.append(dict(row, content=data["content"], content_id=ids[data["content"]]))
+    return rows
+
+
+def compile_p4(rows: list[dict], resources: dict[int, census.O2RResource],
+               root_base: int) -> list[P4Root]:
+    compiled: list[P4Root | None] = [None] * len(rows)
+    # An article's material-free lists share one compiler, walked in the
+    # RDP's order: every list of display-list head 0 in tree order, then
+    # head 1's (gcDrawDObjTreeDLLinks files a DObjDLLink's list into the
+    # head its list_id names), so RSP/RDP state carries between them as the
+    # source's does. The Wolfen's head-0 lists only load state; they compile
+    # to rootless entries the runtime draws as nothing, as the source does.
+    articles: dict[tuple, list[int]] = {}
+    for index, row in enumerate(rows):
+        if row["texid"] is None:
+            articles.setdefault((row["content"], row["article"], row["file_id"]), []).append(index)
+    for (_content, _article, file_id), indices in articles.items():
+        compiler = Compiler(resources[file_id], resources)
+        for index in sorted(indices, key=lambda i: (rows[i].get("head", 0), i)):
+            compiler.material_slot = MATERIAL_NONE
+            compiler.walk(rows[index]["offset"], root_base + index, ())
+        for index in indices:
+            compiled[index] = P4Root(rows[index], rows[index]["content_id"], compiler, [])
+    for index, row in enumerate(rows):
+        resource = resources[row["file_id"]]
+        texid = row["texid"]
+        if texid is None:
+            continue
+        # The MObj's segment-E branch supplies the TEXID image (and with
+        # MOBJ_FLAG_PALETTE its TLUT, palettes[0]: the makers set palette_id
+        # 0); the root list owns load, tile and combine. Seed each frame the
+        # way Falcon Punch's is (block format and size; the width is unused
+        # by block loads).
+        tluts = {}
+        if texid["palette"] is not None:
+            tluts = {0: (census.PointerRef(resource.file_id, texid["palette"]),
+                         16 if texid["block_siz"] == SIZ_4B else 256)}
+        sizes = ({0: (texid["width"], texid["height"])}
+                 if texid["flags"] & 0x20 else None)
+        frames = []
+        for image in texid["images"]:
+            compiler = Compiler(
+                resource, resources,
+                material_images={0: (census.PointerRef(resource.file_id, image),
+                                     texid["block_fmt"], texid["block_siz"], 32)},
+                material_texture_sizes=sizes, material_tluts=tluts)
+            compiler.compile_roots((row["offset"],), root_base + index)
+            if len(compiler.textures) != 1:
+                raise SystemExit(f"P4 {row['content']} {row['article']}: a TEXID frame "
+                                 f"compiled {len(compiler.textures)} textures, expected 1")
+            frames.append(compiler)
+        first = frames[0]
+        for alt in frames[1:]:
+            for primary_group, alt_group in zip(first.groups, alt.groups):
+                if (primary_group.corners != alt_group.corners or
+                        primary_group.matrix_roots != alt_group.matrix_roots or
+                        replace(primary_group.state, texture_key=None) !=
+                        replace(alt_group.state, texture_key=None)):
+                    raise SystemExit(f"P4 {row['content']} {row['article']}: TEXID frames "
+                                     "changed immutable geometry/state")
+        compiled[index] = P4Root(row, row["content_id"], first, frames[1:])
+    return [p4_root for p4_root in compiled if p4_root is not None]
+
+
 def c_bytes(name: str, data: bytes, per_line: int = 16) -> list[str]:
     # svcLZ77UncompWram reads the four-byte LZ10 header as a word.  The linker
     # otherwise packs these byte arrays back-to-back and may place one at an
@@ -1288,9 +1425,11 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
          falcon_punch: Compiler | None = None,
          falcon_punch_alt1_texture: Compiler | None = None,
          falcon_punch_alt2_texture: Compiler | None = None,
-         yoshi_egg: Compiler | None = None) -> str:
+         yoshi_egg: Compiler | None = None,
+         p4: list[P4Root] | None = None) -> str:
     extra_groups: list[Group] = []
     extra_compilers: list[Compiler] = []
+    p4 = p4 or []
     if shield is not None:
         extra_groups += shield.groups
         extra_compilers.append(shield)
@@ -1337,6 +1476,18 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
     if yoshi_egg is not None:
         extra_groups += yoshi_egg.groups
         extra_compilers.append(yoshi_egg)
+    # P4 articles append last, so every original root ordinal stays put;
+    # a TEXID root's other frames add textures only. An article's
+    # material-free lists share one compiler: add its groups once, in root
+    # order, so each root's groups stay one contiguous run.
+    seen_p4_compilers: set[int] = set()
+    for p4_root in p4:
+        if id(p4_root.compiler) not in seen_p4_compilers:
+            seen_p4_compilers.add(id(p4_root.compiler))
+            extra_groups += sorted(p4_root.compiler.groups,
+                                   key=lambda group: group.state.root_index)
+            extra_compilers.append(p4_root.compiler)
+        extra_compilers.extend(p4_root.variants)
     groups = (mario.groups + fox.groups + donkey.groups + samus.groups +
               captain.groups + link_special2.groups + link_model.groups +
               link_special3.groups + extra_groups)
@@ -1399,14 +1550,23 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
         len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS) +
         len(SAMUS_ROOTS) + len(CAPTAIN_ROOTS) + len(LINK_ENTRY_ROOTS)
     )
+    # A P4 content's entry craft (Wolf's Wolfen) is an entry lifetime too.
+    p4_entry_root_indices = {
+        group.state.root_index for p4_root in p4 if p4_root.row["entry"]
+        for group in p4_root.compiler.groups
+    }
+
+    def is_entry_root(index: int) -> bool:
+        return index < entry_root_count or index in p4_entry_root_indices
+
     entry_texture_keys = {
         group.state.texture_key for group in groups
-        if group.state.root_index < entry_root_count and
+        if is_entry_root(group.state.root_index) and
         group.state.texture_key is not None
     }
     persistent_texture_keys = {
         group.state.texture_key for group in groups
-        if group.state.root_index >= entry_root_count and
+        if not is_entry_root(group.state.root_index) and
         group.state.texture_key is not None
     }
     startup_only_texture_keys = entry_texture_keys - persistent_texture_keys
@@ -1462,6 +1622,8 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
         roots += list(FALCON_PUNCH_ROOTS)
     if yoshi_egg is not None:
         roots += list(YOSHI_EGG_ROOTS)
+    p4_root_first = len(roots)
+    roots += [p4_root.row["offset"] for p4_root in p4]
     root_groups: list[list[int]] = [[] for _ in roots]
     flat_vertices: list[Vertex] = []
     matrix_overrides: list[tuple[int, int]] = []
@@ -1532,7 +1694,7 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
             "widen its generated u16 corner index"
         )
     for name, values in (("s", s_values), ("t", t_values)):
-        if len(values) > 256:
+        if len(values) > (65536 if p4 else 256):
             raise SystemExit(
                 f"entry {name} dictionary grew to {len(values)} entries; "
                 "widen its generated corner index before adding more content"
@@ -1673,6 +1835,18 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
         f"#define NDS_ENTRY_EFFECT_FALCON_PUNCH_TEXTURE2_SLOT {(falcon_punch_texture_slots[2] if falcon_punch_texture_slots is not None else 0)}u",
         "",
     ]
+    if p4:
+        # Remix's own files come after the original's 0x000-0x853, so a P4
+        # root never shares an asset with an original root.
+        p4_asset_min = min(p4_root.row["file_id"] for p4_root in p4)
+        if p4_asset_min <= 0x853:
+            raise SystemExit(f"P4 article asset 0x{p4_asset_min:x} is an original file id")
+        lines += [
+            f"#define NDS_ENTRY_EFFECT_P4_ROOT_FIRST {p4_root_first}u",
+            f"#define NDS_ENTRY_EFFECT_P4_ROOT_COUNT {len(p4)}u",
+            f"#define NDS_ENTRY_EFFECT_P4_ASSET_MIN 0x{p4_asset_min:04x}u",
+            "",
+        ]
     lines.append("static const NDSEntryEffectPosition sNdsEntryEffectPositions[NDS_ENTRY_EFFECT_POSITION_COUNT] = {")
     for x, y, z in positions:
         lines.append(f"    {{ {x}, {y}, {z} }},")
@@ -1693,10 +1867,17 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
         lines.append(f"    {{ {r}u, {g}u, {b}u, {a}u }},")
     lines.append("};")
     lines.append("")
+    # The texcoord dictionaries index as u8 unless a P4 packet outgrows them
+    # (Wolf's Wolfen alone adds ~60 S values); the runtime reads the type
+    # through NDS_ENTRY_EFFECT_UV_INDEX_T (u8 unless defined here).
+    uv_index_type = "u8" if max(len(s_values), len(t_values)) <= 256 else "u16"
+    if uv_index_type != "u8":
+        lines.append(f"#define NDS_ENTRY_EFFECT_UV_INDEX_T {uv_index_type}")
+        lines.append("")
     for name, values, index_type in (
         ("Position", corner_position, "u16"),
-        ("S", corner_s, "u8"),
-        ("T", corner_t, "u8"),
+        ("S", corner_s, uv_index_type),
+        ("T", corner_t, uv_index_type),
         ("Color", corner_color, "u16"),
     ):
         lines.append(
@@ -1850,15 +2031,99 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
         )
     lines.append("};")
     lines.append("")
+    if p4:
+        lines += emit_p4_tables(p4, texture_keys, texture_slot, p4_root_first, groups)
     return "\n".join(lines) + "\n"
+
+
+def emit_p4_tables(p4: list[P4Root], texture_keys: list, texture_slot: dict,
+                   p4_root_first: int, groups: list) -> list[str]:
+    """The P4 rows the runtime reads beside the shared tables: each article
+    root's admission (content special-file slot, asset, TEXID frames) and
+    which textures only one content's roots use."""
+    storages = sorted({p4_root.row["storage"] for p4_root in p4
+                       if p4_root.row["storage"] is not None})
+    lines = [
+        "/* P4 content article roots (scripts/p4/p4_articles.py), after every",
+        " * original root. The runtime admits a list as *storage + its root's",
+        " * source_offset; a TEXID root draws variant_slots[texture_id_curr].",
+        " * A model-part sidecar (storage NULL, its joint in sidecar_joint) is",
+        " * drawn by the fighter renderer beside the body, never admitted. */",
+    ]
+    lines += [f"extern void *{name};" for name in storages]
+    lines += [
+        "typedef struct NDSEntryEffectP4Root",
+        "{",
+        "    void **storage;",
+        "    u16 asset_id;",
+        "    u8 content;",
+        "    u8 variant_count;",
+        "    u16 mobj_flags;",
+        "    u8 sidecar_joint;",
+        "    u8 reserved;",
+        "    u8 variant_slots[4];",
+        "} NDSEntryEffectP4Root;",
+        "static const NDSEntryEffectP4Root "
+        "sNdsEntryEffectP4Roots[NDS_ENTRY_EFFECT_P4_ROOT_COUNT] = {",
+    ]
+    key_contents: dict = {}
+    for group in groups:
+        if group.state.texture_key is None:
+            continue
+        index = group.state.root_index
+        content = p4[index - p4_root_first].content_id if index >= p4_root_first else 0
+        key_contents.setdefault(group.state.texture_key, set()).add(content)
+    for p4_root in p4:
+        slots = []
+        if p4_root.row["texid"] is not None:
+            for compiler in [p4_root.compiler] + p4_root.variants:
+                (key,) = tuple(compiler.textures)
+                slots.append(texture_slot[key])
+                key_contents.setdefault(key, set()).add(p4_root.content_id)
+        if len(slots) > 4:
+            raise SystemExit(f"P4 {p4_root.row['content']} {p4_root.row['article']}: "
+                             f"{len(slots)} TEXID frames, the runtime row holds 4")
+        flags = p4_root.row["texid"]["flags"] if p4_root.row["texid"] is not None else 0
+        padded = slots + [0] * (4 - len(slots))
+        storage = p4_root.row["storage"]
+        sidecar = p4_root.row.get("sidecar_joint")
+        lines.append(
+            f"    {{ {('&' + storage) if storage else 'NULL'}, 0x{p4_root.row['file_id']:04x}u, "
+            f"{p4_root.content_id}u, {len(slots)}u, 0x{flags:04x}u, "
+            f"{0xFF if sidecar is None else sidecar}u, 0u, "
+            f"{{ {', '.join(f'{s}u' for s in padded)} }} }}, "
+            f"/* {p4_root.row['content']} {p4_root.row['article']} +0x{p4_root.row['offset']:x} */")
+    lines += ["};", "",
+              "/* Textures only one P4 content's roots use: prepared only when it is",
+              " * in the match (0: always). */",
+              "static const u8 sNdsEntryEffectTextureP4Content[NDS_ENTRY_EFFECT_TEXTURE_COUNT] = {"]
+    owners = []
+    for key in texture_keys:
+        contents = key_contents.get(key, {0})
+        owners.append(next(iter(contents)) if len(contents) == 1 else 0)
+    for i in range(0, len(owners), 24):
+        lines.append("    " + ", ".join(f"{o}u" for o in owners[i:i + 24]) + ",")
+    lines += ["};", ""]
+    return lines
 
 
 def main() -> None:
     check_only = False
-    if len(sys.argv) == 2 and sys.argv[1] == "--check":
+    p4_paths: list[Path] = []
+    p4_out: Path | None = None
+    argv = sys.argv[1:]
+    if argv == ["--check"]:
         check_only = True
-    elif len(sys.argv) != 1:
-        raise SystemExit("usage: generate_nds_entry_effects.py [--check]")
+    elif argv and argv[0] == "--p4":
+        # P4 builds: every enabled content's articles.json (p4_articles.py),
+        # appended after the original roots into a build-directory packet
+        # that replaces the tracked one (nds_renderer_assets.c).
+        if "--out" not in argv or argv.index("--out") != len(argv) - 2:
+            raise SystemExit("usage: generate_nds_entry_effects.py --p4 ARTICLES... --out PATH")
+        p4_paths = [Path(p) for p in argv[1:argv.index("--out")]]
+        p4_out = Path(argv[-1])
+    elif argv:
+        raise SystemExit("usage: generate_nds_entry_effects.py [--check | --p4 ARTICLES... --out PATH]")
     resources = {
         spec.file_id: census.load_o2r(ROOT, spec)
         for spec in (
@@ -2043,13 +2308,23 @@ def main() -> None:
     yoshi_egg.compile_roots(YOSHI_EGG_ROOTS, yoshi_egg_base)
     if len(yoshi_egg.groups) < 1:
         raise SystemExit("Yoshi egg root 0xa860 compiled to no geometry")
+    p4_roots: list[P4Root] = []
+    if p4_paths:
+        p4_rows = load_p4_rows(p4_paths, resources)
+        p4_roots = compile_p4(p4_rows, resources, yoshi_egg_base + len(YOSHI_EGG_ROOTS))
     generated = emit(mario, fox, donkey, samus, captain, link_special2,
                      link_model, link_special3, shield, reflector, catch,
                      ko, reflectbreak, mballrays, kirby_cutter,
                      kirby_cutter_weapon, samus_grapple, samus_grapple_alt,
                      falcon_kick, falcon_kick_alt, falcon_punch,
                      falcon_punch_variants[1], falcon_punch_variants[2],
-                     yoshi_egg)
+                     yoshi_egg, p4=p4_roots)
+    if p4_out is not None:
+        p4_out.write_text(generated, encoding="ascii", newline="\n")
+        p4_compilers = {id(r.compiler): r.compiler for r in p4_roots}
+        print(f"wrote {p4_out}: {len(p4_roots)} P4 roots, "
+              f"{sum(len(c.groups) for c in p4_compilers.values())} groups")
+        return
     if check_only:
         if (not OUTPUT.exists()) or OUTPUT.read_text(encoding="ascii") != generated:
             raise SystemExit(

@@ -1515,12 +1515,40 @@ static sb32 ndsFighterHoldsFoxGunSource(const FTStruct *fp)
     return FALSE;
 }
 
+#if NDS_P4 && NDS_RENDERER_HW_TRIANGLES
+/* nds_renderer_native_common.c: a content's joint-17 model part that lives
+ * outside its model file (Wolf's gun in WOLF_WEAPON), drawn as a P4 root. */
+sb32 ndsRendererEntryEffectP4Sidecar(u32 content, u32 joint,
+                                     u32 *owner_asset_id, u32 *root_offset);
+#endif
+
+/* The file the held pistol's list comes from: Fox's file 315, or a P4
+ * content's own gun file (Wolf's runs Fox's code with his own gun). */
+static u32 ndsFighterFoxGunSourceAsset(const FTStruct *fp)
+{
+#if NDS_P4 && NDS_RENDERER_HW_TRIANGLES
+    u32 asset;
+    u32 offset;
+
+    if ((fp->nds_p4_content != 0u) &&
+        (ndsRendererEntryEffectP4Sidecar(fp->nds_p4_content,
+                                         NDS_FOX_GUN_HOLD_JOINT,
+                                         &asset, &offset) != FALSE))
+    {
+        return asset;
+    }
+#endif
+    (void)fp;
+    return NDS_FOX_GUN_SOURCE_ASSET_ID;
+}
+
 static void ndsFighterCollectStripFoxGunSidecar(
     const FTStruct *fp, NDSFighterDLAllDrawCollection *collection)
 {
     DObj *gun_joint;
     u32 read_index;
     u32 write_index = 0u;
+    u32 gun_asset;
 
     if ((fp == NULL) || (collection == NULL) ||
         (ndsFighterHoldsFoxGunSource(fp) == FALSE) ||
@@ -1535,6 +1563,7 @@ static void ndsFighterCollectStripFoxGunSidecar(
     {
         return;
     }
+    gun_asset = ndsFighterFoxGunSourceAsset(fp);
 
     for (read_index = 0u; read_index < collection->selected_count; read_index++)
     {
@@ -1547,7 +1576,7 @@ static void ndsFighterCollectStripFoxGunSidecar(
             ndsRelocFindLoadedFileContaining(dl, sizeof(*dl)) : NULL;
         sb32 is_source_gun =
             (dobj == gun_joint) && (loaded != NULL) &&
-            (loaded->asset_id == NDS_FOX_GUN_SOURCE_ASSET_ID);
+            (loaded->asset_id == gun_asset);
 
         if (is_source_gun != FALSE)
         {
@@ -1569,6 +1598,44 @@ static void ndsFighterCollectStripFoxGunSidecar(
         write_index++;
     }
     collection->selected_count = write_index;
+}
+#endif
+
+#if NDS_R2_FOX_GUN_OVERLAY
+/* The held pistol beside the body, after either body path: Fox's baked
+ * file-315 mesh at joint 17, or, for a P4 content with its own gun (Wolf),
+ * that gun's generated root at the same joint. Each builder gates on the
+ * gameplay owner and the live joint-17 model part. */
+static void ndsFighterDrawFoxGunSidecar(FTStruct *fp)
+{
+    CObj *cobj = (gGCCurrentCamera != NULL) ?
+        CObjGetStruct(gGCCurrentCamera) : NULL;
+    NDSRendererMatrix20p12 sidecar_world;
+#if NDS_P4 && NDS_RENDERER_HW_TRIANGLES
+    u32 asset;
+    u32 offset;
+
+    if ((fp->nds_p4_content != 0u) &&
+        (ndsRendererEntryEffectP4Sidecar(fp->nds_p4_content,
+                                         NDS_FOX_GUN_HOLD_JOINT,
+                                         &asset, &offset) != FALSE))
+    {
+        NDSRendererMatrix20p12 projection;
+
+        if (ndsRendererAdapterBuildFoxGunJointMatrices(
+                fp, cobj, &projection, &sidecar_world) != FALSE)
+        {
+            (void)ndsRendererAdapterSubmitP4SidecarRoot(
+                fp->joints[NDS_FOX_GUN_HOLD_JOINT], asset, offset,
+                &projection, &sidecar_world);
+        }
+        return;
+    }
+#endif
+    if (ndsRendererAdapterBuildFoxGunJointMtx(fp, cobj, &sidecar_world) != FALSE)
+    {
+        (void)ndsRendererSubmitFoxGun(&sidecar_world);
+    }
 }
 #endif
 
@@ -5252,16 +5319,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
      * so this is a no-op unless Neutral-B has actually exposed joint 17. */
     if (native_owner_failed == FALSE)
     {
-        NDSRendererMatrix20p12 sidecar_world;
-
-        if (ndsRendererAdapterBuildFoxGunJointMtx(
-                fp,
-                (gGCCurrentCamera != NULL) ?
-                    CObjGetStruct(gGCCurrentCamera) : NULL,
-                &sidecar_world) != FALSE)
-        {
-            (void)ndsRendererSubmitFoxGun(&sidecar_world);
-        }
+        ndsFighterDrawFoxGunSidecar(fp);
     }
 #endif
 

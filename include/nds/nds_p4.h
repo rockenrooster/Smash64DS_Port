@@ -95,6 +95,21 @@ enum
     NDS_P4_COMPUTER_LONG_RANGE_PROJECTILE
 };
 
+/* P4: the parent's routines a content replaces, where Remix hooks the
+ * parent's code on the content's character id. The effect makers (S6) build
+ * the content's own effect from its own special files (the generator's
+ * OWN_SPECIAL_FILES, g<Ident>Special<n>) in place of the parent's desc, file
+ * and offsets. NULL keeps the parent's routine. Defined in
+ * src/port/nds_p4_<name>.c as gNdsP4<Title>Overrides, weak, so a content
+ * without one gets NULL. */
+typedef struct NDSP4Overrides
+{
+    /* efManagerFoxReflectorMakeEffect (Fox's reflector statuses). */
+    GObj *(*fox_reflector)(GObj *fighter_gobj);
+    /* efManagerFoxEntryArwingMakeEffect (ftCommonAppearSetStatus). */
+    GObj *(*fox_entry_arwing)(FTStruct *fp, Vec3f *pos, s32 lr);
+} NDSP4Overrides;
+
 /* A Remix CPU input routine (AI.asm add_cpu_input_routine) as assembled:
  * its id and its bytes in the content's ComputerScriptBytes. */
 typedef struct NDSP4ComputerScript
@@ -227,6 +242,8 @@ typedef struct NDSP4Fighter
     const NDSP4ComputerScript *computer_scripts;
     const u32 *computer_script_count;
     const u8 *computer_script_bytes;
+    /* Optional: the parent's routines it replaces (Remix's id hooks). */
+    const NDSP4Overrides *overrides;
 } NDSP4Fighter;
 
 /* Character-select selection ids: an original's fkind, or NDS_P4_SEL_BASE +
@@ -251,6 +268,15 @@ static inline u32 ndsP4Content(const FTStruct *fp)
 {
     return (fp != NULL) ? fp->nds_p4_content : 0u;
 }
+/* Each compiled content's id by name (NDS_P4_ID_WOLF), for a content's own
+ * routines where Remix tests its character id (Character.id.WOLF). */
+enum
+{
+#define NDS_P4_ID_ROW(id_, T_, N_, n_, parent_, model_, main_) NDS_P4_ID_##N_ = (id_),
+    NDS_P4_CONTENT_ROWS(NDS_P4_ID_ROW)
+#undef NDS_P4_ID_ROW
+    NDS_P4_ID_NONE = 0
+};
 /* The content of a battle player's live fighter (0 = original cast or none). */
 u32 ndsP4PlayerContent(u32 player);
 /* The content a player's fighter is made with in the current scene: the
@@ -282,6 +308,8 @@ FTStatusDesc *ndsP4SpecialStatusDescs(const FTStruct *fp,
 void ndsP4AfterSetStatus(GObj *fighter_gobj, s32 status_id);
 /* ftCommonAppearSetStatus: the content's entry row, or NULL. */
 const NDSP4Entry *ndsP4Entry(const FTStruct *fp);
+/* The content's effect makers (S6), or NULL. */
+const NDSP4Overrides *ndsP4Overrides(const FTStruct *fp);
 /* ftCommonSpecial*CheckInterruptCommon: run `check` with the content's
  * special-move starters lent to the source tables' rows for its kind
  * (tables[i][fkind] takes starter slots[i]), then restore them. */

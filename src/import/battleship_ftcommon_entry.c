@@ -488,8 +488,22 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
     }
     else if (fp->fkind == nFTKindFox)
     {
+#if NDS_P4
+        /* Remix's wolfen_entry hooks: a content with its own entry files
+         * flies in on its own craft. */
+        const NDSP4Overrides *p4_overrides = ndsP4Overrides(fp);
+#endif
+
         status_id = (entry_id == 0) ? nFTFoxStatusAppearR :
                                       nFTFoxStatusAppearL;
+#if NDS_P4
+        if ((p4_overrides != NULL) && (p4_overrides->fox_entry_arwing != NULL))
+        {
+            p4_overrides->fox_entry_arwing(
+                fp, &fp->entry_pos, fp->status_vars.common.entry.lr);
+        }
+        else
+#endif
         efManagerFoxEntryArwingMakeEffect(
             &fp->entry_pos, fp->status_vars.common.entry.lr);
     }

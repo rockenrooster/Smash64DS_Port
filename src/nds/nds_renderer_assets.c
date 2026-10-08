@@ -672,7 +672,18 @@ typedef struct NDSEntryEffectTexture
 #define NDS_ENTRY_EFFECT_COMPRESSION_RAW 0u
 #define NDS_ENTRY_EFFECT_COMPRESSION_LZ10 1u
 
+#if NDS_P4
+/* P4 builds: the same packet with every enabled content's article roots
+ * appended (scripts/p4/p4_articles.py, generated into the build's p4
+ * directory by generate_nds_entry_effects.py --p4). */
+#include "nds_p4_entry_effects.generated.inc"
+#else
 #include "nds_entry_effects.generated.inc"
+#endif
+/* The texcoord dictionaries' corner index: u8 unless a packet outgrew it. */
+#ifndef NDS_ENTRY_EFFECT_UV_INDEX_T
+#define NDS_ENTRY_EFFECT_UV_INDEX_T u8
+#endif
 
 /* The source RSP vertex cache is transformed at gSPVertex load time, not at
  * triangle emission time. Mario's pipe body reuses six cache slots loaded by

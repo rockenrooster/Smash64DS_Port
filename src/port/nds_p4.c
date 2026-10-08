@@ -46,8 +46,17 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
     extern const NDSP4Present gNdsP4##T##Present; \
     extern const NDSP4SwordTrail gNdsP4##T##SwordTrails[]; \
     extern const u32 gNdsP4##T##SwordTrailCount; \
-    extern const NDSP4Entry gNdsP4##T##Entry;     extern const NDSP4SpecialStart gNdsP4##T##SpecialStarts[];     extern const u16 gNdsP4##T##LabSkipFiles[];     extern const u32 gNdsP4##T##LabSkipFileCount;     extern const FTComputerAttack gNdsP4##T##ComputerAttacks[];     extern const u32 gNdsP4##T##ComputerAttackCount;     extern const u8 gNdsP4##T##ComputerLongRange;     extern const NDSP4ComputerScript gNdsP4##T##ComputerScripts[];     extern const u32 gNdsP4##T##ComputerScriptCount;     extern const u8 gNdsP4##T##ComputerScriptBytes[];
-#define NDS_P4_ROW(T, title, parent, on_status_hook, computer_rows) \
+    extern const NDSP4Entry gNdsP4##T##Entry; \
+    extern const NDSP4SpecialStart gNdsP4##T##SpecialStarts[]; \
+    extern const u16 gNdsP4##T##LabSkipFiles[]; \
+    extern const u32 gNdsP4##T##LabSkipFileCount; \
+    extern const FTComputerAttack gNdsP4##T##ComputerAttacks[]; \
+    extern const u32 gNdsP4##T##ComputerAttackCount; \
+    extern const u8 gNdsP4##T##ComputerLongRange; \
+    extern const NDSP4ComputerScript gNdsP4##T##ComputerScripts[]; \
+    extern const u32 gNdsP4##T##ComputerScriptCount; \
+    extern const u8 gNdsP4##T##ComputerScriptBytes[];
+#define NDS_P4_ROW(T, title, parent, on_status_hook, computer_rows, override_rows) \
     { \
         .name = (title), .parent_kind = (parent), \
         .data = &gNdsP4##T##Data, \
@@ -68,25 +77,37 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
         .present = &gNdsP4##T##Present, \
         .sword_trails = gNdsP4##T##SwordTrails, \
         .sword_trail_count = &gNdsP4##T##SwordTrailCount, \
-        .entry = &gNdsP4##T##Entry,         .special_starts = gNdsP4##T##SpecialStarts,         .lab_skip_files = gNdsP4##T##LabSkipFiles,         .lab_skip_file_count = &gNdsP4##T##LabSkipFileCount,         .computer_attacks = gNdsP4##T##ComputerAttacks,         .computer_attack_count = &gNdsP4##T##ComputerAttackCount,         .computer_long_range = &gNdsP4##T##ComputerLongRange,         .computer_scripts = gNdsP4##T##ComputerScripts,         .computer_script_count = &gNdsP4##T##ComputerScriptCount,         .computer_script_bytes = gNdsP4##T##ComputerScriptBytes, \
+        .entry = &gNdsP4##T##Entry, \
+        .special_starts = gNdsP4##T##SpecialStarts, \
+        .lab_skip_files = gNdsP4##T##LabSkipFiles, \
+        .lab_skip_file_count = &gNdsP4##T##LabSkipFileCount, \
+        .computer_attacks = gNdsP4##T##ComputerAttacks, \
+        .computer_attack_count = &gNdsP4##T##ComputerAttackCount, \
+        .computer_long_range = &gNdsP4##T##ComputerLongRange, \
+        .computer_scripts = gNdsP4##T##ComputerScripts, \
+        .computer_script_count = &gNdsP4##T##ComputerScriptCount, \
+        .computer_script_bytes = gNdsP4##T##ComputerScriptBytes, \
+        .overrides = (override_rows), \
     }
 
 /* Every compiled content (nds_p4_contents.h). Its native hooks live in
  * src/port/nds_p4_<name>.c when it has any: ndsP4<Title>OnStatus (donor init
- * hooks after the status callbacks) and gNdsP4<Title>Computer (CPU rows).
- * Both are weak, so a content without them gets NULL. */
+ * hooks after the status callbacks), gNdsP4<Title>Computer (CPU routines)
+ * and gNdsP4<Title>Overrides (the parent's routines it replaces). All
+ * are weak, so a content without them gets NULL. */
 #define NDS_P4_DECLARE_ROW(id_, T_, N_, n_, parent_, model_, main_) \
     NDS_P4_DECLARE(T_) \
     void ndsP4##T_##OnStatus(GObj *fighter_gobj, s32 status_id) \
         __attribute__((weak)); \
-    extern const NDSP4Computer gNdsP4##T_##Computer __attribute__((weak));
+    extern const NDSP4Computer gNdsP4##T_##Computer __attribute__((weak)); \
+    extern const NDSP4Overrides gNdsP4##T_##Overrides __attribute__((weak));
 NDS_P4_CONTENT_ROWS(NDS_P4_DECLARE_ROW)
 #undef NDS_P4_DECLARE_ROW
 
 static const NDSP4Fighter sNdsP4Fighters[NDS_P4_CONTENT_LIMIT] = {
 #define NDS_P4_FIGHTER_ROW(id_, T_, N_, n_, parent_, model_, main_) \
     [(id_)] = NDS_P4_ROW(T_, #T_, parent_, ndsP4##T_##OnStatus, \
-                         &gNdsP4##T_##Computer),
+                         &gNdsP4##T_##Computer, &gNdsP4##T_##Overrides),
     NDS_P4_CONTENT_ROWS(NDS_P4_FIGHTER_ROW)
 #undef NDS_P4_FIGHTER_ROW
 };
@@ -599,6 +620,13 @@ const NDSP4Entry *ndsP4Entry(const FTStruct *fp)
     const NDSP4Fighter *f = ndsP4Fighter(ndsP4Content(fp));
 
     return (f != NULL) ? f->entry : NULL;
+}
+
+const NDSP4Overrides *ndsP4Overrides(const FTStruct *fp)
+{
+    const NDSP4Fighter *f = ndsP4Fighter(ndsP4Content(fp));
+
+    return (f != NULL) ? f->overrides : NULL;
 }
 
 /* Lab stand-ins for unported special-move starters, counted. */

@@ -2,9 +2,15 @@
  * P4 Wolf: native ports of the donor's special routines. Source:
  * JSsixtyfour/smashremix 5e04fe7, src/Wolf/WolfSpecial.asm, read as
  * assembled (scripts/p4/mipsdis.py). Wolf runs Fox's status code
- * (fp->fkind == nFTKindFox). Still on lab stand-ins: WolfNSP.main, which
- * makes his own shot, and WolfUSP's slash effect (S6 articles: both live
- * in his own special files).
+ * (fp->fkind == nFTKindFox).
+ *
+ * His articles live in his own special files (Remix define_character WOLF
+ * files 6-9, loaded into gNdsP4WolfSpecial1-4 by the generator's
+ * OWN_SPECIAL_FILES): his shot's attributes (special 1, 0xB5A) and its
+ * graphic plus the Fire Wolf slash (special 4, 0xB5B), his reflector
+ * (special 2, 0xB76) and the Wolfen (special 3, 0xB77). Remix points Fox's
+ * reflector and Arwing makers at them on his character id (Wolf.asm); here
+ * that is gNdsP4WolfOverrides.
  *
  * Player-struct offsets in the donor map to BattleShip fields as:
  *   0x17C/0x180/0x184 temp variables 1-3  motion_vars.flags.flag0/1/2
@@ -22,20 +28,434 @@
 
 #if NDS_P4_WOLF
 
+#include <ef/effect.h>
+#include <wp/weapon.h>
+
 sb32 ftMarioSpecialHiProcPass(GObj *fighter_gobj);
 void ftFoxSpecialHiHoldInitStatusVars(GObj *fighter_gobj);
 void ftCaptainSpecialHiProcInterrupt(GObj *fighter_gobj);
+void gcDrawDObjDLHead1(GObj *gobj);
+void gcDrawDObjTreeForGObj(GObj *gobj);
+void gcDrawDObjTreeDLLinksForGObj(GObj *gobj);
+void gcAddAnimJointAll(GObj *gobj, AObjEvent32 **anim_joints, f32 anim_frame);
+void gcAddDObjAnimJoint(DObj *dobj, AObjEvent32 *anim_joint, f32 anim_frame);
+void gcPlayAnimAll(GObj *gobj);
+void lbCommonAddDObjAnimJointAll(DObj *root_dobj, AObjEvent32 **anim_joints, f32 anim_frame);
+sb32 itLGunWeaponAmmoProcMap(GObj *weapon_gobj);
+sb32 itLGunWeaponAmmoProcHit(GObj *weapon_gobj);
+extern Vec3f *syVectorRotateAbout3D(Vec3f *dst, Vec3f *dir, f32 angle);
 
-/* Remix's slash (captainshared.asm slash_anim_struct_WOLF) is Falcon
- * Punch's effect description on Wolf's own projectile-graphic file (his
- * special 4, 0xB5B, at offsets Remix appended). Lab builds load Fox's
- * file in that slot, so until Wolf's own special files land (S6) the
- * effect is a counted stand-in: the move runs without its flame. */
+#ifndef lbRelocGetFileData
+#define lbRelocGetFileData(type, file, offset) \
+    ((type)((uintptr_t)(file) + (intptr_t)(offset)))
+#endif
+#ifndef DObjGetStruct
+#define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
+#endif
+
+/* His own special files (generated, OWN_SPECIAL_FILES). */
+extern void *gNdsP4WolfSpecial1;
+extern void *gNdsP4WolfSpecial2;
+extern void *gNdsP4WolfSpecial3;
+extern void *gNdsP4WolfSpecial4;
+
+/* Makers that found a file or a model joint missing: counted, never a
+ * fault (a lab probe reads them). */
+__attribute__((used)) volatile u32 gNdsP4WolfArticleMisses;
+
+/* ---- Fire Wolf's slash (WolfUSP main_2) ----
+ *
+ * captainshared.asm slash_anim_struct_WOLF: Falcon Punch's effect on his
+ * projectile-graphic file at the offsets Remix appended (display list
+ * 0x8F0, MObjSub 0xA90, MatAnimJoint 0xABC), held on joint 16, the bone
+ * get_punch_bone_ gives Wolf. Its display is Remix's Size wrapper of
+ * lbCommonDObjScaleXProcDisplay at scale 1; the port's definition of that
+ * routine is empty, so the single DObj goes through display-list head 1 as
+ * the Captain bridge in battleship_efmanager.c sends Falcon Punch. */
+static EFDesc sNdsP4WolfSlashEffectDesc = {
+    EFFECT_FLAG_USERDATA,                       /* 0x020F0000 */
+    15,
+    &gNdsP4WolfSpecial4,
+    { 0x50, nGCMatrixKindRotRpyR, 0x00 },       /* 0x501C0000 */
+    { nGCMatrixKindNull, nGCMatrixKindNull, 0x00 },
+    efManagerNoEjectProcUpdate,
+    gcDrawDObjDLHead1,
+    0x08F0, 0x0A90, 0x0000, 0x0ABC
+};
+
+#define WOLF_SLASH_JOINT 16
+
 static GObj *ndsP4WolfSlashMakeEffect(GObj *fighter_gobj)
 {
-    (void)fighter_gobj;
-    gNdsP4LabSpecialStandIns++;
-    return NULL;
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    GObj *effect_gobj;
+    EFStruct *ep;
+    DObj *dobj;
+
+    if ((gNdsP4WolfSpecial4 == NULL) || (fp->joints[WOLF_SLASH_JOINT] == NULL))
+    {
+        gNdsP4WolfArticleMisses++;
+        return NULL;
+    }
+    effect_gobj = efManagerMakeEffectForce(&sNdsP4WolfSlashEffectDesc);
+
+    if (effect_gobj == NULL)
+    {
+        return NULL;
+    }
+    ep = efGetStruct(effect_gobj);
+    ep->fighter_gobj = fighter_gobj;
+
+    dobj = DObjGetStruct(effect_gobj);
+    dobj->user_data.p = fp->joints[WOLF_SLASH_JOINT];
+    dobj->rotate.vec.f.y = fp->lr * F_CLC_DTOR32(-90.0F);
+
+    return effect_gobj;
+}
+
+/* ---- Reflector (Wolf.asm wolf_reflect_graphic_struct) ----
+ *
+ * Fox's reflector effect on his reflector file: DObjDesc 0x288 and the
+ * start, loop, hit and end AnimJoints of wolf_reflector_struct, which
+ * Remix's copy of Fox's update reads in place of
+ * dEFManagerFoxReflectorAnimJointOffsets. */
+static const intptr_t sNdsP4WolfReflectorAnimJoints[4] = {
+    0x041C, 0x04C4, 0x05E8, 0x06FC
+};
+
+static void ndsP4WolfReflectorSetAnimID(GObj *effect_gobj, s32 anim_id)
+{
+    EFStruct *ep = efGetStruct(effect_gobj);
+
+    ep->effect_vars.reflector.index = anim_id;
+
+    gcAddAnimJointAll(effect_gobj,
+        lbRelocGetFileData(AObjEvent32**, gNdsP4WolfSpecial2,
+                           sNdsP4WolfReflectorAnimJoints[anim_id]), 0.0F);
+    gcPlayAnimAll(effect_gobj);
+}
+
+/* wolf_reflector_graphic_routine: efManagerFoxReflectorProcUpdate with the
+ * table above. */
+static void ndsP4WolfReflectorProcUpdate(GObj *effect_gobj)
+{
+    EFStruct *ep = efGetStruct(effect_gobj);
+
+    gcPlayAnimAll(effect_gobj);
+
+    if (effect_gobj->anim_frame <= 0.0F)
+    {
+        switch (ep->effect_vars.reflector.index)
+        {
+        case 1:
+            break;
+
+        case 0:
+        case 2:
+            ndsP4WolfReflectorSetAnimID(effect_gobj, 1);
+            break;
+
+        case 3:
+            efManagerSetPrevStructAlloc(ep);
+            gcEjectGObj(effect_gobj);
+            return;
+        }
+    }
+    if (ep->effect_vars.reflector.status != 4)
+    {
+        ndsP4WolfReflectorSetAnimID(effect_gobj, ep->effect_vars.reflector.status);
+
+        ep->effect_vars.reflector.status = 4;
+    }
+}
+
+static EFDesc sNdsP4WolfReflectorEffectDesc = {
+    0x4 | EFFECT_FLAG_USERDATA,                 /* 0x060F0000 */
+    15,
+    &gNdsP4WolfSpecial2,
+    { 0x4F, nGCMatrixKindNull, 0x00 },          /* Fox's transforms */
+    { nGCMatrixKindTra, 0x2C, 0x00 },
+    ndsP4WolfReflectorProcUpdate,
+    gcDrawDObjTreeForGObj,                      /* 0x80014038 */
+    0x0288, 0x0000, 0x041C, 0x0000
+};
+
+/* efManagerFoxReflectorMakeEffect with Wolf's description. */
+static GObj *ndsP4WolfReflectorMakeEffect(GObj *fighter_gobj)
+{
+    GObj *effect_gobj;
+    EFStruct *ep;
+
+    if (gNdsP4WolfSpecial2 == NULL)
+    {
+        gNdsP4WolfArticleMisses++;
+        return NULL;
+    }
+    effect_gobj = efManagerMakeEffectForce(&sNdsP4WolfReflectorEffectDesc);
+
+    if (effect_gobj == NULL)
+    {
+        return NULL;
+    }
+    ep = efGetStruct(effect_gobj);
+
+    ep->fighter_gobj = fighter_gobj;
+
+    DObjGetStruct(effect_gobj)->user_data.p =
+        ftGetStruct(fighter_gobj)->joints[nFTPartsJointTopN];
+
+    ep->effect_vars.reflector.index = 0;
+    ep->effect_vars.reflector.status = 4;
+
+    return effect_gobj;
+}
+
+/* ---- Wolfen entry (Wolf.asm wolfen_entry, _2, _3) ----
+ *
+ * Fox's Arwing maker on the Wolfen file (entry_anim_struct_WOLF, DObjDesc
+ * 0x2610), the craft's animated child from it at 0x284C, and the fly-in
+ * from his reflector file: 0xF74 facing right, 0xB24 facing left. The
+ * update is Remix's Size wrapper of Fox's, at scale 1. */
+static EFDesc sNdsP4WolfEntryWolfenEffectDesc = {
+    0x4 | EFFECT_FLAG_USERDATA | 0x1,           /* 0x070A0000 */
+    10,
+    &gNdsP4WolfSpecial3,
+    { nGCMatrixKindTraRotRpyR, nGCMatrixKindNull, 0x00 },
+    { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0x00 },
+    efManagerFoxEntryArwingProcUpdate,
+    gcDrawDObjTreeDLLinksForGObj,
+    0x2610, 0x0000, 0x0000, 0x0000
+};
+
+static GObj *ndsP4WolfEntryWolfenMakeEffect(FTStruct *fp, Vec3f *pos, s32 lr)
+{
+    GObj *effect_gobj;
+    DObj *dobj;
+    DObj *what;
+    s32 i;
+
+    (void)fp;
+    if ((gNdsP4WolfSpecial3 == NULL) || (gNdsP4WolfSpecial2 == NULL))
+    {
+        gNdsP4WolfArticleMisses++;
+        return NULL;
+    }
+    effect_gobj = efManagerMakeEffectNoForce(&sNdsP4WolfEntryWolfenEffectDesc);
+
+    if (effect_gobj == NULL)
+    {
+        return NULL;
+    }
+    dobj = DObjGetStruct(effect_gobj);
+
+    /* Fox's walk to the craft's animated part, which the Wolfen tree
+     * keeps: child, child, child, six siblings on, child. */
+    what = dobj->child;
+    for (i = 0; (what != NULL) && (i < 2); i++)
+    {
+        what = what->child;
+    }
+    for (i = 0; (what != NULL) && (i < 6); i++)
+    {
+        what = what->sib_next;
+    }
+    what = (what != NULL) ? what->child : NULL;
+
+    if (what != NULL)
+    {
+        gcAddXObjForDObjFixed(what, 0x2C, 0);
+        gcAddDObjAnimJoint(what,
+            lbRelocGetFileData(AObjEvent32*, gNdsP4WolfSpecial3, 0x284C), 0.0F);
+    }
+    else gNdsP4WolfArticleMisses++;
+
+    lbCommonAddDObjAnimJointAll(dobj->child,
+        lbRelocGetFileData(AObjEvent32**, gNdsP4WolfSpecial2,
+                           (lr == +1) ? 0x0F74 : 0x0B24), 0.0F);
+
+    gcPlayAnimAll(effect_gobj);
+
+    dobj->translate.vec.f = *pos;
+
+    efManagerSortZNeg(dobj->child);
+
+    return effect_gobj;
+}
+
+const NDSP4Overrides gNdsP4WolfOverrides = {
+    .fox_reflector = ndsP4WolfReflectorMakeEffect,
+    .fox_entry_arwing = ndsP4WolfEntryWolfenMakeEffect,
+};
+
+/* ---- Blaster (WolfNSP.main) ----
+ *
+ * His own weapon (_blaster_projectile_struct): a single DObj from his shot
+ * attributes (special 1 + 0), Ray Gun ammo's map and hit routines, Master
+ * Hand's bullet bounce off shields, and Remix's update and reflect
+ * routines below. Remix gives it weapon kind 0 (Mario's fireball), which
+ * no game code reads; the DS renderer keys its native weapon owners on
+ * the kind, so his shot takes a P4 kind past the source's 0x1F. */
+#define WOLF_BLASTER_KIND (nWPKindMonsterEnd + 1)
+#define WOLF_BLASTER_JOINT 16
+#define WOLF_BLASTER_LIFETIME 100
+#define WOLF_BLASTER_SPEED_MAX 200.0F
+#define WOLF_BLASTER_SPEED 22.0F
+#define WOLF_BLASTER_ACCEL 1.03125F             /* lui 0x3F84 */
+#define WOLF_BLASTER_ANGLE_GROUND 0.0F
+#define WOLF_BLASTER_ANGLE_AIR 0.0F
+#define WOLF_BLASTER_REFLECT_SCALE 1.5707964F   /* 0x3FC90FDB */
+
+/* Remix keeps the speed cap's multiplier in the weapon's first state word
+ * (its "free space" at WPStruct + 0x29C): 1, or pi/2 once Wolf reflects
+ * it. */
+static f32 *ndsP4WolfBlasterCapScale(WPStruct *wp)
+{
+    return (f32 *)(void *)&wp->weapon_vars;
+}
+
+/* blaster_duration (update): speed up 1/32 a frame to the cap either way,
+ * and stretch the shot with its speed. No lifetime count, as in the donor:
+ * the shot lasts until it hits something or leaves the stage. */
+static sb32 ndsP4WolfBlasterProcUpdate(GObj *weapon_gobj)
+{
+    WPStruct *wp = wpGetStruct(weapon_gobj);
+    DObj *dobj = DObjGetStruct(weapon_gobj);
+    f32 vel = wp->physics.vel_air.x * WOLF_BLASTER_ACCEL;
+    f32 cap = WOLF_BLASTER_SPEED_MAX * *ndsP4WolfBlasterCapScale(wp);
+    f32 scale_x;
+
+    if (vel > cap)
+    {
+        vel = cap;
+    }
+    else if (vel <= -cap)
+    {
+        vel = -cap;
+    }
+    wp->physics.vel_air.x = vel;
+
+    scale_x = ((ABSF(vel) + (3.0F * WOLF_BLASTER_SPEED)) * 0.25F) / WOLF_BLASTER_SPEED;
+    dobj->scale.vec.f.x = scale_x;
+    dobj->scale.vec.f.y = 1.0F / ((scale_x * 0.5F) + 0.5F);
+
+    return FALSE;
+}
+
+/* wpBossBulletProcHop (shield bounce), which Remix's desc names. */
+static sb32 ndsP4WolfBlasterProcHop(GObj *weapon_gobj)
+{
+    WPStruct *wp = wpGetStruct(weapon_gobj);
+
+    syVectorRotateAbout3D(&wp->physics.vel_air, &wp->shield_collide_dir,
+                          wp->shield_collide_angle * 2);
+    wpMainReflectorRotateWeaponModel(weapon_gobj);
+
+    return FALSE;
+}
+
+/* blaster_reflection: a shot Wolf reflects gets a higher cap and pi/2 its
+ * speed; anyone's reflection renews its 100 frames and turns it. */
+static sb32 ndsP4WolfBlasterProcReflector(GObj *weapon_gobj)
+{
+    WPStruct *wp = wpGetStruct(weapon_gobj);
+    FTStruct *fp = ftGetStruct(wp->owner_gobj);
+    f32 scale = (ndsP4Content(fp) == NDS_P4_ID_WOLF) ?
+                WOLF_BLASTER_REFLECT_SCALE : 1.0F;
+
+    *ndsP4WolfBlasterCapScale(wp) = scale;
+    wp->lifetime = WOLF_BLASTER_LIFETIME;
+    wp->physics.vel_air.x *= scale;
+
+    wpMainReflectorSetLR(wp, fp);
+
+    /* The donor's _branch/_left: DObj + 0x34 = +-pi/2 by the new heading,
+     * which is wpMainVelSetModelPitch. */
+    wpMainVelSetModelPitch(weapon_gobj);
+
+    return FALSE;
+}
+
+static WPDesc sNdsP4WolfBlasterWeaponDesc = {
+    0x00,
+    WOLF_BLASTER_KIND,
+    &gNdsP4WolfSpecial1,
+    0x0,
+    { nGCMatrixKindTraRotRpyRSca, 0x48, 0 },    /* 0x12480000 */
+    ndsP4WolfBlasterProcUpdate,
+    itLGunWeaponAmmoProcMap,
+    itLGunWeaponAmmoProcHit,
+    itLGunWeaponAmmoProcHit,
+    ndsP4WolfBlasterProcHop,
+    itLGunWeaponAmmoProcHit,
+    ndsP4WolfBlasterProcReflector,
+    itLGunWeaponAmmoProcHit
+};
+
+/* projectile_stage_setting: the shot from the hand, level, at 22 units a
+ * frame in his facing. */
+static GObj *ndsP4WolfBlasterMakeWeapon(GObj *fighter_gobj, Vec3f *pos)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    GObj *weapon_gobj;
+    WPStruct *wp;
+    f32 angle;
+
+    if (gNdsP4WolfSpecial1 == NULL)
+    {
+        gNdsP4WolfArticleMisses++;
+        return NULL;
+    }
+    weapon_gobj = wpManagerMakeWeapon(fighter_gobj, &sNdsP4WolfBlasterWeaponDesc,
+                                      pos, WEAPON_FLAG_COLLPROJECT | WEAPON_FLAG_PARENT_FIGHTER);
+    if (weapon_gobj == NULL)
+    {
+        return NULL;
+    }
+    wp = wpGetStruct(weapon_gobj);
+
+    *ndsP4WolfBlasterCapScale(wp) = 1.0F;
+    wp->lifetime = WOLF_BLASTER_LIFETIME;
+
+    angle = (fp->ga == nMPKineticsAir) ? WOLF_BLASTER_ANGLE_AIR : WOLF_BLASTER_ANGLE_GROUND;
+
+    wp->physics.vel_air.z = 0.0F;
+    wp->physics.vel_air.x = cosf(angle) * WOLF_BLASTER_SPEED * fp->lr;
+    wp->physics.vel_air.y = sinf(angle) * WOLF_BLASTER_SPEED;
+
+    /* The fireball struct's palette index (0), as Mario's maker sets it. */
+    if (DObjGetStruct(weapon_gobj)->mobj != NULL)
+    {
+        DObjGetStruct(weapon_gobj)->mobj->palette_id = 0.0F;
+    }
+    wpMainVelSetModelPitch(weapon_gobj);
+
+    return weapon_gobj;
+}
+
+/* WolfNSP.main (0xE1/0xE2 update): one shot from joint 16 when the script
+ * sets temp variable 1, then wait or fall at the animation's end. */
+void ndsP4WolfNSPMain(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if (fp->motion_vars.flags.flag0 != 0)
+    {
+        Vec3f pos;
+
+        fp->motion_vars.flags.flag0 = 0;
+        pos.x = pos.y = pos.z = 0.0F;
+
+        if (fp->joints[WOLF_BLASTER_JOINT] != NULL)
+        {
+            gmCollisionGetFighterPartsWorldPosition(fp->joints[WOLF_BLASTER_JOINT], &pos);
+            ndsP4WolfBlasterMakeWeapon(fighter_gobj, &pos);
+        }
+        else gNdsP4WolfArticleMisses++;
+    }
+    if (fighter_gobj->anim_frame <= 0.0F)
+    {
+        mpCommonSetFighterWaitOrFall(fighter_gobj);
+    }
 }
 
 /* WolfUSP constants, as assembled. Each is a `lui` upper half; the landing
@@ -271,8 +691,8 @@ void ndsP4WolfUSPMap(GObj *fighter_gobj)
     else mpCommonSetFighterFallOnEdgeBreak(fighter_gobj);
 }
 
-/* WolfUSP.main_2 (0xE6/0xE8 update): Fox's Fire Fox end with Falcon Punch's
- * flame while temp variable 1 is 0 (stopped when the script sets it to 2),
+/* WolfUSP.main_2 (0xE6/0xE8 update): Fox's Fire Fox end with the slash
+ * made while temp variable 1 is 0 (stopped when the script sets it to 2),
  * Wolf's landing lag, and the interrupt flag taken from temp variable 1.
  * The donor's Pokemon Stadium announcer call is outside the port. */
 void ndsP4WolfUSPMain2(GObj *fighter_gobj)
@@ -282,10 +702,8 @@ void ndsP4WolfUSPMain2(GObj *fighter_gobj)
 
     if (flag0 == 0)
     {
-        if (ndsP4WolfSlashMakeEffect(fighter_gobj) != NULL)
-        {
-            fp->is_effect_attach = TRUE;
-        }
+        ndsP4WolfSlashMakeEffect(fighter_gobj);
+        fp->is_effect_attach = TRUE;
         /* `sb 1, 0x17C`: the big-endian high byte of the word. */
         fp->motion_vars.flags.flag0 = (flag0 & 0x00FFFFFFu) | 0x01000000u;
     }

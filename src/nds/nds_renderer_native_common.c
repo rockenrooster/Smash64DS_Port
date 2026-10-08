@@ -4931,6 +4931,75 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
     return TRUE;
 }
 
+#ifdef NDS_ENTRY_EFFECT_P4_ROOT_COUNT
+/* The battle's players' contents (character select or a lab descriptor). */
+extern u8 gNdsP4PlayerContent[];
+
+static sb32 ndsRendererEntryEffectP4ContentInMatch(u32 content)
+{
+    u32 player;
+
+    for (player = 0u; player < 4u; player++)
+    {
+        if ((u32)gNdsP4PlayerContent[player] == content)
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+/* Renderer adapter: a P4 article root is the display list at its content's
+ * special file plus the root's offset (the file moves per load, the offset
+ * never does). Fills the root's asset, offset and TEXID frame count (0: no
+ * live material). */
+sb32 ndsRendererEntryEffectP4Admit(const void *dl, u32 *owner_asset_id,
+                                   u32 *root_offset, u32 *variant_count)
+{
+    u32 p;
+
+    for (p = 0u; p < NDS_ENTRY_EFFECT_P4_ROOT_COUNT; p++)
+    {
+        const NDSEntryEffectP4Root *row = &sNdsEntryEffectP4Roots[p];
+        const u8 *file = (row->storage != NULL) ?
+            (const u8 *)*row->storage : NULL;
+        u32 offset =
+            sNdsEntryEffectRoots[NDS_ENTRY_EFFECT_P4_ROOT_FIRST + p].source_offset;
+
+        if ((file != NULL) && ((const u8 *)dl == file + offset))
+        {
+            *owner_asset_id = row->asset_id;
+            *root_offset = offset;
+            *variant_count = row->variant_count;
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+/* Fighter renderer: a content's model part drawn beside the body (Wolf's
+ * gun, joint 17), whose list lives outside the content's model file. */
+sb32 ndsRendererEntryEffectP4Sidecar(u32 content, u32 joint,
+                                     u32 *owner_asset_id, u32 *root_offset)
+{
+    u32 p;
+
+    for (p = 0u; p < NDS_ENTRY_EFFECT_P4_ROOT_COUNT; p++)
+    {
+        const NDSEntryEffectP4Root *row = &sNdsEntryEffectP4Roots[p];
+
+        if (((u32)row->content == content) && ((u32)row->sidecar_joint == joint))
+        {
+            *owner_asset_id = row->asset_id;
+            *root_offset = sNdsEntryEffectRoots[
+                NDS_ENTRY_EFFECT_P4_ROOT_FIRST + p].source_offset;
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+#endif
+
 static const NDSEntryEffectRoot *ndsRendererEntryEffectRoot(
     u32 owner_asset_id, u32 root_offset)
 {
@@ -4974,6 +5043,27 @@ static const NDSEntryEffectRoot *ndsRendererEntryEffectRoot(
             &sNdsEntryEffectRoots[NDS_ENTRY_EFFECT_YOSHI_EGG_ROOT_FIRST];
         return (root->source_offset == root_offset) ? root : NULL;
     }
+#ifdef NDS_ENTRY_EFFECT_P4_ROOT_COUNT
+    /* P4 content article roots, appended after every original root; their
+     * assets are Remix's own files, past every original id. */
+    if (owner_asset_id >= NDS_ENTRY_EFFECT_P4_ASSET_MIN)
+    {
+        u32 p;
+
+        for (p = 0u; p < NDS_ENTRY_EFFECT_P4_ROOT_COUNT; p++)
+        {
+            const NDSEntryEffectRoot *root =
+                &sNdsEntryEffectRoots[NDS_ENTRY_EFFECT_P4_ROOT_FIRST + p];
+
+            if ((sNdsEntryEffectP4Roots[p].asset_id == owner_asset_id) &&
+                (root->source_offset == root_offset))
+            {
+                return root;
+            }
+        }
+        return NULL;
+    }
+#endif
     u32 first = (owner_asset_id == 356u) ? 0u :
                 (owner_asset_id == 161u) ? NDS_ENTRY_EFFECT_FOX_ROOT_FIRST :
                 (owner_asset_id == 355u) ? NDS_ENTRY_EFFECT_DONKEY_ROOT_FIRST :
@@ -5012,7 +5102,10 @@ static const NDSEntryEffectRoot *ndsRendererEntryEffectRoot(
                    NDS_ENTRY_EFFECT_KIRBY_CUTTER_ROOT_FIRST :
                (owner_asset_id == 348u) ?
                    NDS_ENTRY_EFFECT_KIRBY_CUTTER_WEAPON_ROOT_FIRST :
-               (owner_asset_id == 328u) ? NDS_ENTRY_EFFECT_ROOT_COUNT : first;
+               /* The tail after KirbyModel's range is the explicit roots
+                * above (and P4's): never scanned by offset. */
+               (owner_asset_id == 328u) ?
+                   NDS_ENTRY_EFFECT_SAMUS_GRAPPLE_ROOT_FIRST : first;
     u32 i;
 
     for (i = first; i < last; i++)
@@ -6054,6 +6147,16 @@ s32 ndsRendererSubmitNativeEntryEffect(
         NDS_ENTRY_EFFECT_REJECT();
     }
     root = ndsRendererEntryEffectRoot(owner_asset_id, root_offset);
+#ifdef NDS_ENTRY_EFFECT_P4_ROOT_COUNT
+    /* A P4 list that only loads state (the Wolfen's head-0 lists): the
+     * generator walked it for the state its head carries on; it draws
+     * nothing, as on the N64. */
+    if ((root != NULL) && (root->group_count == 0u) &&
+        (root >= &sNdsEntryEffectRoots[NDS_ENTRY_EFFECT_P4_ROOT_FIRST]))
+    {
+        return TRUE;
+    }
+#endif
     if ((root == NULL) || (root->group_count == 0u) ||
         ((u32)root->first_group + root->group_count >
          NDS_ENTRY_EFFECT_GROUP_COUNT))
@@ -6405,6 +6508,35 @@ s32 ndsRendererSubmitNativeEntryEffect(
             NDS_ENTRY_EFFECT_REJECT();
         }
     }
+
+#ifdef NDS_ENTRY_EFFECT_P4_ROOT_COUNT
+    /* A P4 article root with a TEXID material (Wolf's slash and blaster):
+     * one live MObj whose segment-E branch supplies only the current image
+     * and, with MOBJ_FLAG_PALETTE, the palette-0 TLUT the generator baked.
+     * MatAnim changes only TEXID, and every frame is preconverted. */
+    if ((root_index >= NDS_ENTRY_EFFECT_P4_ROOT_FIRST) &&
+        (sNdsEntryEffectP4Roots[root_index - NDS_ENTRY_EFFECT_P4_ROOT_FIRST]
+             .variant_count != 0u))
+    {
+        const NDSEntryEffectP4Root *p4_root =
+            &sNdsEntryEffectP4Roots[root_index - NDS_ENTRY_EFFECT_P4_ROOT_FIRST];
+        const u32 allowed_effects =
+            NDS_RENDERER_NATIVE_MATERIAL_CURRENT_IMAGE |
+            NDS_RENDERER_NATIVE_MATERIAL_PALETTE_IMAGE |
+            NDS_RENDERER_NATIVE_MATERIAL_PALETTE_TLUT;
+
+        if ((materials == NULL) || (material_count != 1u) ||
+            ((materials[0].effects & ~allowed_effects) != 0u) ||
+            ((materials[0].effects &
+              NDS_RENDERER_NATIVE_MATERIAL_CURRENT_IMAGE) == 0u) ||
+            (live_texture_variant >= (u32)p4_root->variant_count) ||
+            (sNdsRendererEntryEffectTextureName[
+                 p4_root->variant_slots[live_texture_variant]] == 0u))
+        {
+            NDS_ENTRY_EFFECT_REJECT();
+        }
+    }
+#endif
 
     /* LinkModel+0x11680 is a deliberately closed dynamic-material owner.
      * BattleShip builds segment 0xE from exactly nine MObjs and every one has
@@ -6911,6 +7043,18 @@ s32 ndsRendererSubmitNativeEntryEffect(
                         NDS_ENTRY_EFFECT_FALCON_PUNCH_TEXTURE2_SLOT);
                 texture_name = sNdsRendererEntryEffectTextureName[slot];
             }
+#ifdef NDS_ENTRY_EFFECT_P4_ROOT_COUNT
+            else if ((root_index >= NDS_ENTRY_EFFECT_P4_ROOT_FIRST) &&
+                     (sNdsEntryEffectP4Roots[root_index -
+                          NDS_ENTRY_EFFECT_P4_ROOT_FIRST].variant_count != 0u))
+            {
+                /* Admitted above: the variant is in range and resident. */
+                texture_name = sNdsRendererEntryEffectTextureName[
+                    sNdsEntryEffectP4Roots[root_index -
+                        NDS_ENTRY_EFFECT_P4_ROOT_FIRST]
+                        .variant_slots[live_texture_variant]];
+            }
+#endif
             tile.set_seen = TRUE;
             tile.width = texture->width;
             tile.height = texture->height;
@@ -7612,6 +7756,16 @@ s32 ndsRendererHardwarePrepareEntryEffectTextures(void)
         {
             continue;
         }
+#ifdef NDS_ENTRY_EFFECT_P4_ROOT_COUNT
+        /* A P4 content's own article textures cost VRAM only in a match
+         * that has the content. */
+        if ((sNdsEntryEffectTextureP4Content[i] != 0u) &&
+            (ndsRendererEntryEffectP4ContentInMatch(
+                 sNdsEntryEffectTextureP4Content[i]) == FALSE))
+        {
+            continue;
+        }
+#endif
         if ((texture->texels == NULL) ||
             (texture->width == 0u) || (texture->height == 0u))
         {
@@ -7767,8 +7921,8 @@ ndsRendererEntryEffectFastCornerLoop(u32 first, u32 count, u32 lit,
     const u32 shift = 12u - NDS_RENDERER_HW_WORLD_UNIT_SHIFT;
     const u16 *position_index = &sNdsEntryEffectCornerPosition[first];
     const u16 *color_index = &sNdsEntryEffectCornerColor[first];
-    const u8 *s_index = &sNdsEntryEffectCornerS[first];
-    const u8 *t_index = &sNdsEntryEffectCornerT[first];
+    const NDS_ENTRY_EFFECT_UV_INDEX_T *s_index = &sNdsEntryEffectCornerS[first];
+    const NDS_ENTRY_EFFECT_UV_INDEX_T *t_index = &sNdsEntryEffectCornerT[first];
     const u16 *end = position_index + count;
 
     while (position_index != end)

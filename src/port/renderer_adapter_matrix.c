@@ -6966,6 +6966,58 @@ static sb32 ndsRendererAdapterBuildFoxGunJointMtx(
     return ndsRendererAdapterComposeNativeRootMatrix(
         &world, &camera_projection, out);
 }
+
+#if NDS_P4
+/* A P4 content's held gun (Wolf's), drawn as a generated entry-effect root:
+ * the same joint-17 world matrix as above, handed over as the modelview
+ * (world x camera) and the camera projection the root's submit lights and
+ * projects with, rather than one composed matrix. */
+static sb32 ndsRendererAdapterBuildFoxGunJointMatrices(
+    FTStruct *fp, CObj *cobj, NDSRendererMatrix20p12 *projection,
+    NDSRendererMatrix20p12 *modelview)
+{
+    DObj *joint;
+    FTParts *parts;
+    Mtx mtx;
+    NDSRendererMatrix20p12 camera_modelview;
+    u32 camera_projection_valid = FALSE;
+    u32 camera_modelview_valid = FALSE;
+
+    if ((fp == NULL) || (projection == NULL) || (modelview == NULL) ||
+        (ndsRendererAdapterFoxGunGameplayOwner(fp) == FALSE) ||
+        (fp->modelpart_status[NDS_FOX_GUN_HOLD_JOINT -
+                              nFTPartsJointCommonStart].modelpart_id_curr < 0))
+    {
+        return FALSE;
+    }
+    joint = fp->joints[NDS_FOX_GUN_HOLD_JOINT];
+    if ((joint == NULL) || (joint == DOBJ_PARENT_NULL) ||
+        (joint->parent_gobj == NULL))
+    {
+        return FALSE;
+    }
+    parts = ftGetParts(joint);
+    if (parts == NULL)
+    {
+        return FALSE;
+    }
+    func_ovl2_800EDBA4(joint);
+    if (ndsRendererAdapterF2LFixedWExact(&parts->mtx_translate, &mtx) == FALSE)
+    {
+        syMatrixF2LFixedW(&parts->mtx_translate, &mtx);
+    }
+    ndsRendererAdapterMtxFromN64(&mtx, modelview);
+    ndsRendererAdapterGetFrameCameraMatrices(
+        cobj, projection, &camera_projection_valid,
+        &camera_modelview, &camera_modelview_valid,
+        NULL, NULL, NULL);
+    if (camera_modelview_valid != FALSE)
+    {
+        ndsRendererMtxMulAffine20p12(modelview, &camera_modelview, modelview);
+    }
+    return (camera_projection_valid != FALSE) ? TRUE : FALSE;
+}
+#endif
 #endif
 
 /* A world-space list's matrix: a translation to `origin` (world units),
