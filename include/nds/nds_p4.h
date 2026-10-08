@@ -340,6 +340,9 @@ typedef struct NDSP4Fighter
     /* Lab builds: donor special files a stand-in replaces (never loaded). */
     const u16 *lab_skip_files;
     const u32 *lab_skip_file_count;
+    /* Lab builds: special slots (bit 0 = special1) whose stand-in, the
+     * parent's file, loads whole; 0 when shipping. */
+    const u8 *open_special_mask;
     /* CPU rows from the export: NDS_P4_COMPUTER_LONG_RANGE_*. The attack
      * list and the Remix input routines it names are in the content's
      * match tables (NDSP4TablesHeader). */

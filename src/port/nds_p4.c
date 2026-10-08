@@ -62,6 +62,7 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
     extern const f32 gNdsP4##T##YoshiEgg[]; \
     extern const u16 gNdsP4##T##LabSkipFiles[]; \
     extern const u32 gNdsP4##T##LabSkipFileCount; \
+    extern const u8 gNdsP4##T##OpenSpecialMask; \
     extern const u8 gNdsP4##T##ComputerLongRange; \
     extern const u8 gNdsP4##T##ComputerReflect; \
     extern const NDSP4BakedRef gNdsP4##T##BakedRefs[]; \
@@ -94,6 +95,7 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
         .yoshi_egg = gNdsP4##T##YoshiEgg, \
         .lab_skip_files = gNdsP4##T##LabSkipFiles, \
         .lab_skip_file_count = &gNdsP4##T##LabSkipFileCount, \
+        .open_special_mask = &gNdsP4##T##OpenSpecialMask, \
         .computer_long_range = &gNdsP4##T##ComputerLongRange, \
         .computer_reflect = &gNdsP4##T##ComputerReflect, \
         .baked_refs = gNdsP4##T##BakedRefs, \

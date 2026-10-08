@@ -737,6 +737,12 @@ def main() -> int:
     # them), so they are neither sized nor loaded; the words read NULL
     # (nds_p4.c ndsP4LabSkipsDependency). Sonic's are 172 KB.
     lab_skip = sorted({int(s["routine"], 16) for s in special_standins} - {0})
+    # The parent's file standing in for one: outside the content's closure,
+    # so the runtime loads it whole (ndsP4LoadOpenSpecialFiles).
+    open_special_mask = 0
+    for s in special_standins:
+        if int(s["fallback"], 16) != 0:
+            open_special_mask |= 1 << (int(s["slot"][len("special"):]) - 1)
 
     synth_id = SYNTH_FILE_BASE + spec["kind_index"] * 0x10
     if rom.file_bytes(parent_motion) != vanilla.file_bytes(parent_motion):
@@ -1169,7 +1175,11 @@ def main() -> int:
               "/* Lab builds: donor special files a stand-in replaces, never loaded. */",
               f"const u16 g{ident}LabSkipFiles[{max(len(lab_skip), 1)}] = {{ "
               + (", ".join(f"{f:#x}" for f in lab_skip) or "0") + " };",
-              f"const u32 g{ident}LabSkipFileCount = {len(lab_skip)};", "",
+              f"const u32 g{ident}LabSkipFileCount = {len(lab_skip)};",
+              "/* Lab builds: special slots whose stand-in (the parent's file, outside",
+              " * the content's closure) loads whole; any other slot outside it reads",
+              " * NULL, as Remix's status-buffer lookup does. */",
+              f"const u8 g{ident}OpenSpecialMask = {open_special_mask:#04x};", "",
               "/* CPU rows (S7): ai_long_range; the attack list and the Remix input",
               " * routines it names are in the content's tables (ndsP4LoadTables). */",
               f"const u8 g{ident}ComputerLongRange = {computer_long_range};",

@@ -369,10 +369,15 @@ static void ndsP4PublishParentMotion(const NDSP4Fighter *f);
 
 /* The source loader takes the special files from the main file's extern
  * closure (lbRelocGetStatusBufferFile). A content's FTData can name one
- * outside it: a lab build's stand-in, the parent's file in place of a donor
- * file of another layout (generate_p4_fighter.py). Load such a file whole. */
+ * outside it. A lab build's stand-in -- the parent's file in place of a
+ * donor file of another layout (generate_p4_fighter.py) -- loads whole.
+ * Any other such slot reads NULL unless another fighter of the match loaded
+ * the file, as in Remix: Banjo names Captain's Falcon Kick and car file
+ * (26 KB), which nothing of his reads and which his closure never loads. */
 static void ndsP4LoadOpenSpecialFiles(u32 content, FTData *data)
 {
+    const NDSP4Fighter *f = ndsP4Fighter(content);
+    u32 open = ((f != NULL) && (f->open_special_mask != NULL)) ? *f->open_special_mask : 0u;
     u32 ids[4];
     void **slots[4];
     u32 i;
@@ -390,7 +395,8 @@ static void ndsP4LoadOpenSpecialFiles(u32 content, FTData *data)
         const void *id = (const void *)(uintptr_t)ids[i];
 
         sNdsP4OpenSpecialFiles[content][i] = NULL;
-        if ((ids[i] != 0u) && (slots[i] != NULL) && (*slots[i] == NULL))
+        if (((open & (1u << i)) != 0u) && (ids[i] != 0u) &&
+            (slots[i] != NULL) && (*slots[i] == NULL))
         {
             *slots[i] = lbRelocGetExternHeapFile(
                 id, syTaskmanMalloc(lbRelocGetFileSize(id), 0x10));
