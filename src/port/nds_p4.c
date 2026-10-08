@@ -194,6 +194,17 @@ u32 ndsP4MatchContent(s32 player)
     }
 }
 
+sb32 ndsP4ContentLowDetailOnly(s32 player)
+{
+    if ((gSCManagerSceneData.scene_curr != nSCKindVSBattle) ||
+        (ndsP4MatchContent(player) == 0u))
+    {
+        return FALSE;
+    }
+    return ((gSCManagerBattleState->pl_count + gSCManagerBattleState->cp_count) >= 3) ?
+        TRUE : FALSE;
+}
+
 u32 ndsP4MakeContent(s32 player, s32 fkind)
 {
     const NDSP4Fighter *f;

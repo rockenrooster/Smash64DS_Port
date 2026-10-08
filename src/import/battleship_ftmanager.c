@@ -992,6 +992,17 @@ void ndsFTManagerEnsureOwnerImages(FTDesc *desc)
                  (desc->detail == nFTPartsDetailHigh)) ? 0u : 1u;
             u32 detail;
 
+#if NDS_P4
+            /* Owner 2026-10-08 (S15): a content in a battle of three or
+             * four fighters keeps its low-detail model in the close-ups
+             * too (ftParamSetModelPartDetailAll), so only that image. */
+            if ((desc->pkind != nFTPlayerKindDemo) &&
+                (ndsP4ContentLowDetailOnly(desc->player) != FALSE))
+            {
+                first_detail = last_detail = 1u;
+            }
+#endif
+
 #if NDS_P2_1P_GAME
             /* These source display scenes keep each actor's chosen detail.
              * CSS uses HIGH; the intro explicitly chooses LOW for some team
@@ -1075,6 +1086,13 @@ static void ndsFTManagerPreloadVSOwnerImagesLargestFirst(void)
                (u32)nFTPartsDetailHigh) ?
                   0u : ndsRendererNativeOwnerImageSize(slot, 1u))) :
             0u;
+#if NDS_P4
+        if ((slot < NDS_NATIVE_IMAGE_OWNER_SLOTS_ALL) &&
+            (ndsP4ContentLowDetailOnly(player) != FALSE))
+        {
+            bytes[count] = ndsRendererNativeOwnerImageSize(slot, 1u);
+        }
+#endif
         count++;
     }
     /* Insertion sort, descending; equal sizes keep port order. */
@@ -1099,6 +1117,10 @@ static void ndsFTManagerPreloadVSOwnerImagesLargestFirst(void)
 
         desc.fkind = gSCManagerBattleState->players[order[i]].fkind;
         desc.pkind = gSCManagerBattleState->players[order[i]].pkind;
+        /* The player names a P4 content's image (ndsFTManagerImageSlot-
+         * ForPlayer); left at the default, a content outside port 0 would
+         * preload its parent's images instead. */
+        desc.player = order[i];
         desc.detail = (u8)ndsFTManagerPreloadDetail(order[i], high);
         ndsFTManagerEnsureOwnerImages(&desc);
     }

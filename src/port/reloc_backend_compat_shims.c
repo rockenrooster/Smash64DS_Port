@@ -6996,6 +6996,17 @@ void ftParamSetModelPartDetailAll(GObj *fighter_gobj, u8 detail)
     FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
     s32 i;
 
+#if NDS_P4
+    /* Owner 2026-10-08 (S15): the KO and pause close-ups keep a content's
+     * low-detail model in a battle of three or four fighters (its high
+     * image is not admitted there). */
+    if ((fp != NULL) && (fp->nds_p4_content != 0u) &&
+        (detail == nFTPartsDetailHigh) &&
+        (ndsP4ContentLowDetailOnly(fp->player) != FALSE))
+    {
+        detail = nFTPartsDetailLow;
+    }
+#endif
     if ((fp == NULL) || (detail == fp->detail_curr))
     {
         return;

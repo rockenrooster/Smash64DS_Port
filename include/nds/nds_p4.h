@@ -511,6 +511,11 @@ const NDSP4Computer *ndsP4Computer(const FTStruct *fp);
 const FTComputerAttack *ndsP4ComputerAttacks(const FTStruct *fp);
 /* NDS_P4_COMPUTER_LONG_RANGE_*; PARENT for the original cast. */
 u32 ndsP4ComputerLongRange(const FTStruct *fp);
+/* Owner 2026-10-08 (S15 memory): a content in a battle of three or four
+ * fighters draws its low-detail model everywhere, the source's KO and pause
+ * close-ups included, and its high-detail owner image is never admitted.
+ * TRUE when the player is such a content. */
+sb32 ndsP4ContentLowDetailOnly(s32 player);
 /* NDS_P4_COMPUTER_REFLECT_* bits; 0 for the original cast. */
 u32 ndsP4ComputerReflect(const FTStruct *fp);
 /* The fighter as the CPU reflect checks see it: Fox for a content with
