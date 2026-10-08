@@ -2,6 +2,10 @@
 
 Owner of the live P4 state. Plans live beside it ([master](New_Characters.md),
 [handoff](IMPLEMENTATION_HANDOFF.md), [shared plans](shared/), [cards](characters/)).
+The master plan's Revision 3 (2026-10-07, owner-requested rewrite for
+implementation speed) orders the work as Board 1 (shared machinery S1-S12)
+and Board 2 (fighter waves by measured cost); item status is tracked here
+under those ids.
 
 ## P4.0 source admission (Falco checkpoint)
 
@@ -264,8 +268,25 @@ Presentation, all generated per content from the donor's own rows:
   dash attacks. The Fire Bird landing and the Phantasm drop did not occur
   on that stage.
 
-Open for Falco: the 3D preview on the select screen
-(a Remix selection has no compact preview pack yet; its panel stays empty,
-counted in `gNdsPlayersVSPreviewP4Unsupported`), Kirby's copy (Kirby takes
-the parent's copy, Fox's blaster and hat; Remix gives him Falco's hat 0x12
-from its extended Kirby file), runtime witnesses on the card.
+Open for Falco: the 3D preview on the select screen (S9, in progress),
+Kirby's copy (S8: Kirby takes the parent's copy, Fox's blaster and hat;
+Remix gives Kirby Falco's Phantasm as statuses 0xEB/0xEC with Kirby's own
+FALCO_NSP animations and scripts, and hat 0x12 from its extended Kirby file),
+the acceptance probe's witness block (S10).
+
+## Board 1 status (master plan Revision 3)
+
+| Item | State |
+|---|---|
+| S1 content list | not started; Falco is wired by hand in shared renderer, Makefile and P4 files |
+| S2 build throughput | not started; lab and menu builds still rewrite the shared linker script under a mutex |
+| S3 table seams | 12 of 33 (Falco's) |
+| S4 motion commands | 2 of the roster's 12 (FSM, TopN) |
+| S5 routine work lists | counts measured (master plan table); per-routine lists not generated |
+| S6 articles | first source scan only |
+| S7 generated CPU rows | Falco's rows read by hand from the assembled tables |
+| S8 Kirby copies | not started |
+| S9 select-screen preview | pack generator, loader, residency and CSS wiring written for Falco; anim-cache reservation under test; uncommitted |
+| S10 acceptance probe | lab probes exist per topic (`gNdsLabP4Content`); no single command |
+| S11 whole-roster generation | not started; all 14 export cleanly |
+| S12 EXTRA export | not started; EXTRA's nested Remix gitlink not initialized |

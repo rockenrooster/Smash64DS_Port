@@ -2,7 +2,7 @@
 
 **Status:** planned; source slices inspected, no DS implementation or performance pass claimed.  
 **Source:** `JSsixtyfour/smashremix` at `5e04fe7fcd023cd43c71f25f89bb6e810d254d55`.  
-**Default production wave:** 2. Parent: [master](../New_Characters.md).
+**Default production wave:** 4 (Revision 3). Parent: [master](../New_Characters.md).
 
 ## Source observations that determine this plan
 

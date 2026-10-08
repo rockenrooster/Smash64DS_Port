@@ -1,18 +1,22 @@
-# First implementation checkpoint — Falco source admission
+# Implementation handoff — where P4 work resumes
 
-Parent: [master](New_Characters.md). This is a task brief, not a new execution board.
+Parent: [master plan, Revision 3](New_Characters.md). Live state:
+[P4_STATUS.md](P4_STATUS.md). This is a pointer, not a second board.
 
-**Goal:** produce a reproducible resolved Falco input and demonstrate the source-adapter seam into the existing DS generators. Do not yet claim a finished fighter, and do not port eighteen sets of specials in parallel.
+The first checkpoint (P4.0, Falco source admission) is complete: the donor
+build recipe and hashes, the resolved export and event graph, the lowering
+into the DS pipeline, the identity seam, the 14-fighter risk census and the
+fixtures are recorded in P4_STATUS sections 1-6.
 
-Read PROJECT_GOAL.md, AGENTS.md, the existing fighter production/native-owner/pack tooling and all referenced Falco/Remix sources before changes. Initialize and verify the source-lock gitlinks recursively without advancing them. Treat decomp/ as read-only; donor build experiments run in disposable staging.
+Resume in this order (master plan, Board 1 then Board 2):
 
-Deliver the following to the existing project board with evidence:
+1. S1 content list, S2 build throughput, S11 whole-roster generation.
+2. S3 table seams, S4 motion commands, S5 routine work lists, S7 generated
+   CPU rows, proven by Wave 1 (Ganondorf, Metal Mario).
+3. Close Falco: S9 select-screen preview, S8 Kirby copy, S10 acceptance probe.
+4. Waves 2-6, one fighter at a time against the per-fighter checklist; the
+   full worst-case search at the end of each wave.
 
-1. The concrete donor build/export recipe, pinned environment and canonical output hashes, with no dependency on a global installed-current tool version. Identify which output supplies assets and which supplies effective action/script tables.
-2. Falco's effective action table, callbacks and script-control-flow inventory, including inherited Fox entries, no-script sentinels, appended throw/loop commands and USP_GROUND_MOVE fall-through. Unknown IDs/opcodes/callbacks remain explicit failures.
-3. A source-qualified resource and semantic-object inventory that can feed the existing DS production contract, not a separate hand-maintained runtime loader table. Record binary schema coverage and native generation gaps.
-4. A legacy roster-ID/mask/table/save/capture census that identifies the smallest safe expansion seam. Preserve existing fighter/boss/variant identities and the current regression configuration.
-5. Bounded Bowser topology and Meta Knight EXTRA source/asset canary reports, plus source/dependency risk rows for the other candidates. Unknown DS sizes remain unknown; no hard-coded guessed budget may be called passed.
-6. Import fixtures and negative controls: Falco loop/fall-through/throw pointers, a missing inherited resource, wrong source pin, unsupported command and unclassified semantic atom. Build unchanged/current DS regressions when the local environment permits, and report actual results only.
-
-Stop this checkpoint with a reviewed adapter design and successful resolved-data proof. Continue to full Falco behavior/native/audio/UI/AI/copy completion only through its character card and shared gates. Do not build a general MIPS interpreter, runtime mod loader or speculative code-overlay subsystem to accomplish this task.
+Standing rules: `decomp/` is read-only; donor builds run in ignored staging;
+ROM-derived output stays under `builds/`; generated files are never
+hand-edited; no runtime MIPS interpreter, mod loader or code paging.

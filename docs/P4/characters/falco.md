@@ -1,8 +1,8 @@
 # Falco — P4 character subplan
 
-**Status:** planned; source slices inspected, no DS implementation or performance pass claimed.  
+**Status:** import-qualified; behavior, native owner, HUD, Results, select cell, sounds, victory music and CPU run in the lab ([P4_STATUS](../P4_STATUS.md)). Open: select-screen 3D preview, Kirby copy (Phantasm, hat 0x12), the acceptance probe's witness block.  
 **Source:** `JSsixtyfour/smashremix` at `5e04fe7fcd023cd43c71f25f89bb6e810d254d55`.  
-**Default production wave:** 1. Parent: [master](../New_Characters.md).
+**Default production wave:** 1 (Revision 3). Parent: [master](../New_Characters.md).
 
 ## Source observations that determine this plan
 
@@ -41,6 +41,6 @@ These supplement, rather than replace, the [shared completeness and verification
 
 ## Scheduling and next deliverable
 
-P4.1 end-to-end prover. Do not open the full roster implementation until this slice closes.
+P4.1 end-to-end prover. Revision 3 of the master plan replaces the rule that the roster waits for this slice: every exported fighter is generated in the lab from the start (S11), and Falco closes through S8 (Kirby copy), S9 (preview) and S10 (probe).
 
 The first output is a source-qualified action/callback/resource inventory with unresolved entries explicit. Record artifact hashes and actual measurements when available; never put zero in an unknown budget field. Shared mechanisms belong in the existing DS owning subsystem or generator; this card does not authorize a character-specific parallel asset loader.

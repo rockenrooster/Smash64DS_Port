@@ -2,7 +2,7 @@
 
 **Status:** planned; source slices inspected, no DS implementation or performance pass claimed.  
 **Source:** `joaorb64/smashremix-plus-extra` at `96621afea26a83305abaf81add07dcf5a9c5fe3e`.  
-**Default production wave:** 6. Parent: [master](../New_Characters.md).
+**Default production wave:** 6 (Revision 3). Parent: [master](../New_Characters.md).
 
 ## Source observations that determine this plan
 
