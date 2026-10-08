@@ -8964,11 +8964,11 @@ ndsRendererFlushWhispyNativePacket(void)
         return;
     }
     DC_FlushRange(packet->words, word_count * sizeof(u32));
-    while ((DMA_CR(0) & DMA_BUSY) != 0u) { }
+    NDS_GX_DMA0_WAIT(7u);
     DMA_SRC(0) = (u32)packet->words;
     DMA_DEST(0) = (u32)&GFX_FIFO;
     DMA_CR(0) = DMA_FIFO | word_count;
-    while ((DMA_CR(0) & DMA_BUSY) != 0u) { }
+    NDS_GX_DMA0_WAIT(8u);
 
     if (packet->final_texture_name != 0u)
     {

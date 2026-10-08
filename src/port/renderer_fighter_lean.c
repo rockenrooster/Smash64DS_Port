@@ -19,6 +19,7 @@
  * drawing. See include/nds/renderer_fighter_lean.h. */
 
 #include <nds/renderer_fighter_lean.h>
+#include <nds/nds_gx_dma.h>
 #include <nds/generated/nds_fighter_admission.generated.h>
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_r2_collision_mtx.h>
@@ -1949,7 +1950,7 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp)
              * streaming before this kernel reads a DObj. */
             u32 q0 = cpuGetTiming();
 
-            while ((DMA_CR(0) & DMA_BUSY) != 0u) { }
+            NDS_GX_DMA0_WAIT(9u);
             gNdsFtrLeanAttr.quiet_wait_ticks[row] += cpuGetTiming() - q0;
             gNdsFtrLeanAttr.quiet_draws[row]++;
         }

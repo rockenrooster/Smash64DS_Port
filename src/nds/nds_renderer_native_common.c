@@ -2570,11 +2570,11 @@ static void ndsRendererRebirthHaloSubmitPackedGroup(u32 group_index)
 {
     const NDSRebirthHaloPacket *packet = &sNdsRebirthHaloPackets[group_index];
 #if NDS_R2_REBIRTH_HALO_PACKED_FIFO == 2
-    while ((DMA_CR(0) & DMA_BUSY) != 0u) { }
+    NDS_GX_DMA0_WAIT(2u);
     DMA_SRC(0) = (u32)packet->words;
     DMA_DEST(0) = (u32)&GFX_FIFO;
     DMA_CR(0) = DMA_FIFO | packet->word_count;
-    while ((DMA_CR(0) & DMA_BUSY) != 0u) { }
+    NDS_GX_DMA0_WAIT(3u);
 #else
     u32 word;
     for (word = 0u; word < (u32)packet->word_count; word++)
@@ -8133,9 +8133,7 @@ static void __attribute__((noinline)) ndsRendererEntryEffectPacketReplay(
     const u32 *delta = packet->delta;
 
     ndsRendererHardwareEndBatch();
-    while ((DMA_CR(0) & DMA_BUSY) != 0u)
-    {
-    }
+    NDS_GX_DMA0_WAIT(4u);
     if (packet->lit == 0u)
     {
         if (packet->count != 0u)
@@ -8153,9 +8151,7 @@ static void __attribute__((noinline)) ndsRendererEntryEffectPacketReplay(
         {
             ndsRendererHardwarePrepareLitDirection(stats, modelview, direction);
         }
-        while ((DMA_CR(0) & DMA_BUSY) != 0u)
-        {
-        }
+        NDS_GX_DMA0_WAIT(5u);
         ndsRendererEntryEffectLoadLitMatrices(modelview, direction);
         if (packet->count > packet->split)
         {
@@ -15719,7 +15715,7 @@ ndsFtrLeanPacketSubmit(u32 battle_slot)
         u32 wait_start = cpuGetTiming();
         u32 waited;
 
-        while ((DMA_CR(0) & DMA_BUSY) != 0u) { }
+        ndsGxDma0WaitSlow(6u);
         waited = cpuGetTiming() - wait_start;
         NDS_FTR_LEAN_CTR(gNdsFtrLean.dma_wait_ticks += waited);
         NDS_FTR_LEAN_CTR(gNdsFtrLean.dma_wait_spins++);

@@ -15,6 +15,7 @@
 #include <nds/nds_r2_hwmath_unit.h>
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_renderer.h>
+#include <nds/nds_gx_dma.h>
 #include <nds/nds_startup.h>
 #include <nds/nds_task37_itcm.h>
 #include <nds/nds_task49_gx_differ.h>
@@ -3497,6 +3498,50 @@ typedef struct NDSFighterPacket
  * the stage owner prepare, the particle/effect/gun/halo/entry-effect submits,
  * the generic display-list executor and the end-of-frame flush); a writer
  * that bypasses them would interleave its words with the DMA's. */
+/* P3 freeze report (owner hardware, 2026-10-07): a DMA0 geometry-FIFO
+ * transfer that never finished -- the geometry engine stopped draining with
+ * 148 commands queued and its busy bit set -- left the next FIFO writer
+ * spinning on DMA0 for good (ndsFighterPacketDmaWait under the stage
+ * commit). Every DMA0 wait in the renderer goes through NDS_GX_DMA0_WAIT:
+ * unchanged while transfers complete; after four frames the stall is
+ * recorded (the registers the freeze report prints) and cleared -- DMA0
+ * stopped, the command FIFO cleared as libnds glInit clears it (GXSTAT bit
+ * 29), a matrix stack error acknowledged (bit 15) -- so a frame's 3D is lost
+ * instead of the console. */
+volatile u32 gNdsGxStallCount;
+volatile u32 gNdsGxStallSite;
+volatile u32 gNdsGxStallGxstat;
+volatile u32 gNdsGxStallDmaCnt;
+volatile u32 gNdsGxStallPowcnt;
+volatile u32 gNdsGxStallDisp3dcnt;
+volatile u32 gNdsGxStallDispcnt;
+volatile u32 gNdsGxStallVcount;
+#define NDS_GX_DMA0_STALL_TICKS ticksFromUsec(67000u)
+
+void __attribute__((noinline, cold)) ndsGxDma0WaitSlow(u32 site)
+{
+    const u32 start = (u32)tickGetCount();
+
+    while ((DMA_CR(0) & DMA_BUSY) != 0u)
+    {
+        if (((u32)tickGetCount() - start) >= NDS_GX_DMA0_STALL_TICKS)
+        {
+            gNdsGxStallGxstat = GFX_STATUS;
+            gNdsGxStallDmaCnt = DMA_CR(0);
+            gNdsGxStallPowcnt = REG_POWERCNT;
+            gNdsGxStallDisp3dcnt = GFX_CONTROL;
+            gNdsGxStallDispcnt = REG_DISPCNT;
+            gNdsGxStallVcount = REG_VCOUNT;
+            gNdsGxStallSite = site;
+            gNdsGxStallCount++;
+            DMA_CR(0) = 0u;
+            GFX_STATUS |= (1u << 29);
+            GFX_STATUS |= (1u << 15);
+            return;
+        }
+    }
+}
+
 static u32 sNdsFighterPacketDmaPending;
 static inline void ndsFighterPacketDmaWait(void)
 {
@@ -3508,7 +3553,7 @@ static inline void ndsFighterPacketDmaWait(void)
         {
             u32 wait_start = cpuGetTiming();
 
-            while ((DMA_CR(0) & DMA_BUSY) != 0u) { }
+            ndsGxDma0WaitSlow(1u);
             NDS_FTR_LEAN_CTR(gNdsFtrLean.packet_dma_waits++);
             NDS_FTR_LEAN_CTR(gNdsFtrLean.packet_dma_wait_ticks +=
                                  cpuGetTiming() - wait_start);

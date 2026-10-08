@@ -224,6 +224,50 @@ Nothing in the lockstep waits without a bound (a stall ends the match after
   receiving. Lab: `NDS_NET_LAB_HANG=1|2` freezes the guest at batch 600 (a
   spin, or the game thread blocked on a mailbox) to check the report.
 
+### Second report set (owner, 2026-10-07 evening, play-1007g)
+
+Three photographs, three different faults (addresses resolved against the
+play-1007g ELF):
+
+- **Mushroom Kingdom: data abort in `EFGroundActorProcUpdate`** (fault address
+  0xC3960240, four fighters, a Motion-Sensor Bomb going off at the time).
+  Not a P3 fault: `dEFGroundDatas` has rows for the first eight stages only,
+  and `efGroundMakeAppearActor` reads row 8 for Mushroom Kingdom. On the N64
+  that row is the next table's first entries (`dEFGroundCastleParams`, right
+  after the array): `effect_params` NULL, so no ground actor. In the port's
+  layout the next object is `dEFGroundYamabukiEffectDescs`, whose second
+  word (-300.0F) passed the NULL test; the actor built from it faulted at its
+  first spawn, 100-266 s into any Mushroom Kingdom match (the soaks' one-minute
+  matches never got there; the bomb was a coincidence). Fixed:
+  `battleship_efground.c` declines the actor for a stage without a row, the
+  N64's outcome.
+- **Battle stall in the stage commit's DMA0 wait.** The game thread spun in
+  `ndsFighterPacketDmaWait` (`ndsRendererCommitNativeStageSegment`): DMA0 was
+  feeding the geometry FIFO and the geometry engine had stopped draining it
+  (GXSTAT 0x08944200: 148 commands queued, busy, matrix stack busy), so the
+  transfer never finished. Cause not known. Every DMA0 wait in the renderer
+  is now bounded (`NDS_GX_DMA0_WAIT`, `ndsGxDma0WaitSlow`): after four frames
+  the stall is recorded and cleared (DMA0 stopped, the command FIFO cleared as
+  libnds `glInit` clears it, a matrix stack error acknowledged), so a frame's
+  3D is lost instead of the console. The report's rows 19 and 21 show the
+  count, GXSTAT, DMA0CNT, POWCNT1, DISP3DCNT, DISPCNT, VCOUNT and the site.
+- **Battle stall waiting for a card read.** A status change loading an
+  animation clip (`ndsR2AnimDirectReadEntry` -> `ndsAudioStorageReadCard`)
+  blocked in `pxiSendAndReceive` with both PXI FIFOs empty: the ARM7 had taken
+  the request and never answered, either because its storage mailbox dropped
+  it or because the storage thread (priority 24, below the radio's 17 and 18)
+  stalled. `pxiEndReceive` has no timeout, and Calico's PXI mailbox handler
+  drops a word that finds the mailbox full (it ignores `mailboxTrySend`'s
+  result). Synchronous reads now go out as `READ_CARD_ASYNC` (the ARM7 writes
+  the answer into the request line), on four lines in rotation, polled and
+  sent again after half a second, three times at most
+  (`gNdsAudioStorageResends`). The ARM7 storage mailbox grew from 20 to 32
+  messages: the most the ARM9 can have in flight is 22 (the read and its
+  resends 4, FGM fills 16, the motion prefetch 2). The ARM7 service writes a
+  health line the ARM9 owns (requests taken and answered, the most queued, its
+  main loop's VBlanks), shown on the report's row 14 with the resends. A resend
+  fixes a dropped request; a stalled service shows in the health line.
+
 ## Testing
 
 - `melonDS-mp`: an export of the owner's melonDS-Accurate `master` (the build

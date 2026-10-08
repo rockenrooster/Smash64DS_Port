@@ -140,5 +140,20 @@ static void ndsEFGroundResolveOffsets(void)
 void efGroundMakeAppearActor(void)
 {
     ndsEFGroundResolveOffsets();
+    /* Mushroom Kingdom (nGRKindInishie, 8) is inside the source's
+     * `gkind <= nGRKindBattleEnd` test but dEFGroundDatas has rows for the
+     * first eight stages only, so the source reads one row past the array. On
+     * the N64 that row is dEFGroundCastleParams' first two entries (0x8012F8C0,
+     * right after the array at 0x8012F840): params_num 0, effect_params NULL
+     * (the first entry's `lr`), and the source declines the actor. In the
+     * port's layout the next object is dEFGroundYamabukiEffectDescs, whose
+     * second word (-300.0F) passed the NULL test; the actor built from it
+     * faulted at its first spawn, 100-266 s into the match (owner photo,
+     * 2026-10-07: data abort in EFGroundActorProcUpdate at 0xC3960240). */
+    if ((gSCManagerBattleState != NULL) &&
+        ((u32)gSCManagerBattleState->gkind >= ARRAY_COUNT(dEFGroundDatas)))
+    {
+        return;
+    }
     ndsBaseEFGroundMakeAppearActor();
 }

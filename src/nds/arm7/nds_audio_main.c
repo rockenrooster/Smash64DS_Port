@@ -7,9 +7,12 @@ _Static_assert(PxiChannel_User0 == NDS_AUDIO_STORAGE_CHANNEL,
 
 static Thread sStorageThread;
 static Mailbox sStorageMailbox;
-/* One synchronous request plus the ARM9's asynchronous FGM fills (at most two
- * parts for each of eight cache slots). */
-#define NDS_ARM7_STORAGE_MESSAGES 20u
+/* The most the ARM9 has in flight: a synchronous read and its three resends
+ * (nds_audio_storage.c), the asynchronous FGM fills (two parts for each of
+ * eight cache slots) and the motion prefetch's two reads -- 22. Calico's PXI
+ * mailbox handler drops a message that finds the mailbox full, so there is
+ * room to spare. */
+#define NDS_ARM7_STORAGE_MESSAGES 32u
 static uint32_t sStorageMessages[NDS_ARM7_STORAGE_MESSAGES];
 static uint8_t sStorageStack[2048] __attribute__((aligned(8)));
 static int sCardOpen;
@@ -17,6 +20,7 @@ static uint32_t sRomBytes;
 static uint32_t sMediaGeneration;
 static Mutex sMediaMutex;
 static NdsAudioStorageMap sFileMap;
+static volatile NdsAudioStorageHealth *sHealth;
 static uint8_t sSectorBuffer[512] __attribute__((aligned(4)));
 extern bool ndsAudioDldiInstall(void);
 extern volatile uint32_t gNdsArm7DldiSerialized;
@@ -31,7 +35,9 @@ static bool ndsAudioStorageOpenMap(const NdsAudioStorageMap *map)
     if (sCardOpen || map->abi != NDS_AUDIO_STORAGE_ABI || map->device > BlkDevice_TwlNandAes ||
         map->rom_bytes < 512u ||
         map->rom_bytes > ndsAudioStorageCardCapacity(g_envAppNdsHeader->device_capacity) ||
-        map->reserved[0] || map->reserved[1] || map->reserved[2] ||
+        (map->reserved[0] && ((map->reserved[0] & 31u) ||
+            !ndsAudioStorageMainRange(map->reserved[0], sizeof(NdsAudioStorageHealth)))) ||
+        map->reserved[1] || map->reserved[2] ||
         !map->extent_count || map->extent_count > UINT32_MAX / sizeof(NdsAudioExtent) ||
         (map->extents & 31u) ||
         !ndsAudioStorageMainRange(map->extents, map->extent_count * sizeof(NdsAudioExtent)) ||
@@ -41,6 +47,7 @@ static bool ndsAudioStorageOpenMap(const NdsAudioStorageMap *map)
         return false;
     sFileMap = *map;
     sRomBytes = map->rom_bytes;
+    sHealth = (volatile NdsAudioStorageHealth *)(uintptr_t)map->reserved[0];
     return true;
 }
 
@@ -107,8 +114,18 @@ static int ndsAudioStorageThread(void *unused)
         uint32_t address = message << 5;
         uint32_t status = NDS_AUDIO_STORAGE_BAD_REQUEST;
         uint32_t sequence = 0u;
+        volatile NdsAudioStorageHealth *health = sHealth;
 
         gNdsArm7StorageRequests++;
+        if (health != NULL)
+        {
+            /* The message just taken plus the ones still queued. */
+            uint32_t pending = (uint32_t)sStorageMailbox.pending_slots + 1u;
+
+            health->received++;
+            health->current = message;
+            if (pending > health->pending_max) health->pending_max = pending;
+        }
         if ((message <= (UINT32_MAX >> 5)) &&
             ndsAudioStorageMainRange(address, sizeof(NdsAudioStorageRequest)))
         {
@@ -175,10 +192,12 @@ static int ndsAudioStorageThread(void *unused)
              * the poller never spins on a line nobody will write. */
             ((volatile NdsAudioStorageRequest *)(uintptr_t)address)->reserved[1] =
                 NDS_AUDIO_STORAGE_ASYNC_DONE | ndsAudioStorageReply(sequence, status);
+            if (health != NULL) { health->completed++; health->current = 0u; }
             continue;
         }
         pxiReply((PxiChannel)NDS_AUDIO_STORAGE_CHANNEL,
                  ndsAudioStorageReply(sequence, status));
+        if (health != NULL) { health->completed++; health->current = 0u; }
     }
     return 0;
 }
@@ -215,6 +234,10 @@ int main(void)
     /* P3: forward net PXI words to the radio module once the ARM9 loads it. */
     extern void ndsNetArm7Init(void);
     ndsNetArm7Init();
-    while (pmMainLoop()) threadWaitForVBlank();
+    while (pmMainLoop())
+    {
+        threadWaitForVBlank();
+        if (sHealth != NULL) sHealth->vblanks++;
+    }
     return 0;
 }

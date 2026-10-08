@@ -16019,7 +16019,8 @@ static const NDSR2AnimCacheEntry *ndsR2AnimDirectReadEntry(u32 asset_id)
  * read covering them (ndsR2AnimPrefetchRetire: the ring allocation, the
  * elastic give-back, the arena drop) and the heap reset waits for all of them
  * (ndsR2AnimPrefetchDrain, battleship_sys_malloc.c). Two requests at most in
- * flight: the ARM7 mailbox holds 20 (FGM fills use 16, one sync read). Same-ROM
+ * flight: the ARM7 mailbox holds 32 (FGM fills use 16, a sync read and its
+ * resends 4). Same-ROM
  * A/B word gNdsR2AnimPrefetch. */
 #include <nds/nds_audio_storage.h>
 #include <nds/generated/nds_clip_successors.generated.h>

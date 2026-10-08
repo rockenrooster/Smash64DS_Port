@@ -4,6 +4,7 @@
 
 #include <nds/nds_audio_bgm.h>
 #include <nds/nds_audio_fgm.h>
+#include <nds/nds_audio_storage.h>
 #include <nds/nds_freeze_diagnostics.h>
 #include <nds/nds_startup.h>
 
@@ -78,6 +79,20 @@ extern volatile uint32_t gNdsAudioStorageRequests __attribute__((weak));
 extern volatile uint32_t gNdsAudioStorageFailures __attribute__((weak));
 extern u32 ndsNetLinkStat(u32 index) __attribute__((weak));
 extern u32 ndsAudioBgmReportSequence(void) __attribute__((weak));
+/* The ARM7 storage service's health line and the ARM9's resends
+ * (nds_audio_storage.c); the last DMA0 / geometry-FIFO stall the renderer
+ * cleared (ndsGxDma0WaitSlow). */
+extern const NdsAudioStorageHealth *ndsAudioStorageHealth(void)
+    __attribute__((weak));
+extern volatile uint32_t gNdsAudioStorageResends __attribute__((weak));
+extern volatile u32 gNdsGxStallCount __attribute__((weak));
+extern volatile u32 gNdsGxStallSite __attribute__((weak));
+extern volatile u32 gNdsGxStallGxstat __attribute__((weak));
+extern volatile u32 gNdsGxStallDmaCnt __attribute__((weak));
+extern volatile u32 gNdsGxStallPowcnt __attribute__((weak));
+extern volatile u32 gNdsGxStallDisp3dcnt __attribute__((weak));
+extern volatile u32 gNdsGxStallDispcnt __attribute__((weak));
+extern volatile u32 gNdsGxStallVcount __attribute__((weak));
 
 static u16 ndsFreezeDiagnosticsCharacterTile(char value)
 {
@@ -320,7 +335,45 @@ static void ndsFreezeDiagnosticsRenderStall(u32 resumed)
         ndsFreezeDiagnosticsPutFourCC(15u + row / 4u, (row % 4u) * 6u,
                                       gNdsFreezeDiagnosticsBreadcrumbs[index]);
     }
+    /* Row 14: the ARM7 storage service -- requests taken and answered, the
+     * most it saw queued, its main loop's VBlanks (stops when the ARM7 is
+     * starved) -- and the ARM9's resends of unanswered reads. */
+    if (ndsAudioStorageHealth != NULL)
+    {
+        const NdsAudioStorageHealth *health = ndsAudioStorageHealth();
+
+        ndsFreezeDiagnosticsPutText(14u, 0u, "A7 R");
+        ndsFreezeDiagnosticsPutHex(14u, 4u, health->received, 4u);
+        ndsFreezeDiagnosticsPutText(14u, 9u, "C");
+        ndsFreezeDiagnosticsPutHex(14u, 10u, health->completed, 4u);
+        ndsFreezeDiagnosticsPutText(14u, 15u, "Q");
+        ndsFreezeDiagnosticsPutHex(14u, 16u, health->pending_max, 2u);
+        ndsFreezeDiagnosticsPutText(14u, 19u, "V");
+        ndsFreezeDiagnosticsPutHex(14u, 20u, health->vblanks, 4u);
+        ndsFreezeDiagnosticsPutText(14u, 25u, "RS");
+        ndsFreezeDiagnosticsPutHex(14u, 27u,
+            ndsFreezeDiagnosticsWeak(&gNdsAudioStorageResends), 2u);
+    }
     ndsFreezeDiagnosticsPutText(18u, 0u, "Please photo this screen.");
+    /* Rows 19 and 21: the last geometry-FIFO stall the renderer cleared --
+     * how many, GXSTAT, DMA0CNT, POWCNT1, DISP3DCNT, DISPCNT, VCOUNT and
+     * the waiting site. */
+    ndsFreezeDiagnosticsPutText(19u, 0u, "GXST");
+    ndsFreezeDiagnosticsPutHex(19u, 4u, ndsFreezeDiagnosticsWeak(&gNdsGxStallCount), 2u);
+    ndsFreezeDiagnosticsPutText(19u, 7u, "G");
+    ndsFreezeDiagnosticsPutHex(19u, 8u, ndsFreezeDiagnosticsWeak(&gNdsGxStallGxstat), 8u);
+    ndsFreezeDiagnosticsPutText(19u, 17u, "D");
+    ndsFreezeDiagnosticsPutHex(19u, 18u, ndsFreezeDiagnosticsWeak(&gNdsGxStallDmaCnt), 8u);
+    ndsFreezeDiagnosticsPutText(21u, 0u, "PW");
+    ndsFreezeDiagnosticsPutHex(21u, 2u, ndsFreezeDiagnosticsWeak(&gNdsGxStallPowcnt), 4u);
+    ndsFreezeDiagnosticsPutText(21u, 7u, "3D");
+    ndsFreezeDiagnosticsPutHex(21u, 9u, ndsFreezeDiagnosticsWeak(&gNdsGxStallDisp3dcnt), 4u);
+    ndsFreezeDiagnosticsPutText(21u, 14u, "DC");
+    ndsFreezeDiagnosticsPutHex(21u, 16u, ndsFreezeDiagnosticsWeak(&gNdsGxStallDispcnt), 8u);
+    ndsFreezeDiagnosticsPutText(21u, 25u, "V");
+    ndsFreezeDiagnosticsPutHex(21u, 26u, ndsFreezeDiagnosticsWeak(&gNdsGxStallVcount), 3u);
+    ndsFreezeDiagnosticsPutText(21u, 30u, "S");
+    ndsFreezeDiagnosticsPutHex(21u, 31u, ndsFreezeDiagnosticsWeak(&gNdsGxStallSite), 1u);
 }
 
 static void ndsFreezeDiagnosticsRenderException(ExcptContext *context,

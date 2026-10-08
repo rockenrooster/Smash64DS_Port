@@ -53,6 +53,23 @@ typedef struct NdsAudioStorageMap {
     uint32_t reserved[3];
 } __attribute__((aligned(32))) NdsAudioStorageMap;
 
+/* The ARM7 service's health, one ARM9-owned line the ARM7 writes as it
+ * works, read by the P3 freeze report: requests taken from the mailbox and
+ * answered, the request line being served (address >> 5, 0 = idle), the
+ * most mailbox messages seen waiting, and the ARM7 main loop's VBlanks
+ * (the lowest-priority ARM7 thread: it stops when anything starves it).
+ * Its address rides in the map's reserved[0] (OPEN_MAP); 0 = none. */
+typedef struct NdsAudioStorageHealth {
+    uint32_t received;
+    uint32_t completed;
+    uint32_t current;
+    uint32_t pending_max;
+    uint32_t vblanks;
+    uint32_t reserved[3];
+} __attribute__((aligned(32))) NdsAudioStorageHealth;
+
+_Static_assert(sizeof(NdsAudioStorageHealth) == 32u,
+               "storage health must own exactly one cache line");
 _Static_assert(sizeof(NdsAudioStorageRequest) == 32u,
                "storage request must own exactly one cache line");
 _Static_assert(sizeof(NdsAudioStorageMap) == 32u,

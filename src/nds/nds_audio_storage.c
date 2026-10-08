@@ -25,6 +25,17 @@ static NdsAudioStorageMap sRomMap;
 static Mutex sStorageMutex;
 static Mutex sRomInitMutex;
 static NdsAudioStorageRequest sStorageRequest;
+/* Synchronous reads go out as READ_CARD_ASYNC through these lines, in
+ * rotation, so a late answer to an abandoned send lands in a line nobody is
+ * polling. */
+#define NDS_STORAGE_SYNC_LINES 4u
+static NdsAudioStorageRequest sStorageSyncLines[NDS_STORAGE_SYNC_LINES];
+static uint32_t sStorageSyncLine;
+static NdsAudioStorageHealth sStorageHealth;
+/* A read the ARM7 has not answered after this long is sent again. */
+#define NDS_STORAGE_RESEND_TICKS ticksFromUsec(500000u)
+volatile uint32_t gNdsAudioStorageResends;
+volatile uint32_t gNdsAudioStorageStaleReplies;
 static uint8_t sStorageBounce[512] __attribute__((aligned(32)));
 /* NitroROM path resolution walks the FNT in tiny slices, each an ARM7 round
  * trip: VS Results' tic 120 made 424 of them (2,624,640 waited ticks) and No
@@ -175,8 +186,11 @@ static int ndsAudioStorageBuildMap(const char *path)
     sRomMap = (NdsAudioStorageMap){
         .abi = NDS_AUDIO_STORAGE_ABI, .device = sRomDisc->io_type,
         .rom_bytes = sRomBytes, .extent_count = count,
-        .extents = (uint32_t)(uintptr_t)extents
+        .extents = (uint32_t)(uintptr_t)extents,
+        .reserved = { (uint32_t)(uintptr_t)&sStorageHealth, 0u, 0u }
     };
+    memset(&sStorageHealth, 0, sizeof(sStorageHealth));
+    DC_FlushRange(&sStorageHealth, sizeof(sStorageHealth));
     DC_FlushRange(extents, bytes);
     gNdsAudioStorageMapDevice = sRomMap.device;
     gNdsAudioStorageMapVolumeSector = sRomVolumeSector;
@@ -186,11 +200,128 @@ static int ndsAudioStorageBuildMap(const char *path)
     return 0;
 }
 
+/* The freeze report's view of the ARM7 service (nds_freeze_diagnostics.c). */
+const NdsAudioStorageHealth *ndsAudioStorageHealth(void)
+{
+    DC_InvalidateRange(&sStorageHealth, sizeof(sStorageHealth));
+    return &sStorageHealth;
+}
+
+static uint32_t ndsAudioStorageNextSequence(void)
+{
+    uint32_t sequence = (sStorageSequence + 1u) & 0xffffu;
+
+    if (sequence == 0u) sequence = 1u;
+    sStorageSequence = sequence;
+    return sequence;
+}
+
+/* P3 freeze report (owner hardware, 2026-10-07): a synchronous card read
+ * sent with pxiSendAndReceive was never answered -- the game thread waited in
+ * pxiEndReceive with both PXI FIFOs empty, so the ARM7 had taken the word
+ * and never replied (its storage mailbox dropping it when full, or the
+ * service stalled behind higher-priority radio threads). pxiEndReceive has
+ * no timeout. A read now goes out as READ_CARD_ASYNC, whose answer the ARM7
+ * writes into the request line, and the game thread polls that line; a read
+ * not answered within half a second is sent again on the next line, three
+ * times at most (gNdsAudioStorageResends), and the last send is waited for.
+ * The ARM7 answers in order, so no earlier send can land after the one that
+ * returns. A dropped request is answered by its resend; a stalled service
+ * keeps the report counting, which tells the two apart. */
+static int ndsAudioStorageReadSync(uint32_t offset, void *destination,
+                                   uint32_t bytes)
+{
+    uint32_t wait_start = (uint32_t)tickGetCount();
+    uint32_t waited;
+    uint32_t sequence;
+    uint32_t done;
+    uint32_t attempt;
+
+    if (bytes != 0u)
+    {
+        DC_FlushRange(destination, bytes);
+    }
+    gNdsAudioStorageRequests++;
+    for (attempt = 0u;; attempt++)
+    {
+        NdsAudioStorageRequest *line =
+            &sStorageSyncLines[sStorageSyncLine++ % NDS_STORAGE_SYNC_LINES];
+        uint32_t sent;
+
+        sequence = ndsAudioStorageNextSequence();
+        *line = (NdsAudioStorageRequest){
+            .abi = NDS_AUDIO_STORAGE_ABI,
+            .operation = NDS_AUDIO_STORAGE_READ_CARD_ASYNC,
+            .sequence = sequence, .offset = offset,
+            .destination = (uint32_t)(uintptr_t)destination, .bytes = bytes
+        };
+        DC_FlushRange(line, sizeof(*line));
+        pxiSend((PxiChannel)NDS_AUDIO_STORAGE_CHANNEL,
+                (uint32_t)(uintptr_t)line >> 5);
+        sent = (uint32_t)tickGetCount();
+        done = 0u;
+        for (;;)
+        {
+            uint32_t word;
+
+            DC_InvalidateRange(line, sizeof(*line));
+            word = ((volatile NdsAudioStorageRequest *)line)->reserved[1];
+            if ((word & NDS_AUDIO_STORAGE_ASYNC_DONE) != 0u)
+            {
+                if (((word >> 8) & 0xffffu) == sequence)
+                {
+                    done = word;
+                    break;
+                }
+                /* A late answer to this line's earlier send: ours, if it
+                 * comes, overwrites it. */
+                gNdsAudioStorageStaleReplies++;
+            }
+            if (((attempt + 1u) < NDS_STORAGE_SYNC_LINES) &&
+                (((uint32_t)tickGetCount() - sent) >= NDS_STORAGE_RESEND_TICKS))
+            {
+                break;
+            }
+        }
+        if ((done == (NDS_AUDIO_STORAGE_ASYNC_DONE |
+                      ndsAudioStorageReply(sequence, NDS_AUDIO_STORAGE_OK))) ||
+            ((done != 0u) && (attempt >= 2u)))
+        {
+            /* Answered, or refused three times running (a real error). */
+            break;
+        }
+        gNdsAudioStorageResends++;
+    }
+    waited = (uint32_t)tickGetCount() - wait_start;
+    gNdsAudioStorageWaitTicks64 += waited;
+    if (waited > gNdsAudioStorageWaitMaxTicks64)
+    {
+        gNdsAudioStorageWaitMaxTicks64 = waited;
+        gNdsAudioStorageWaitMaxFrame = gNdsFrameCounter;
+        gNdsAudioStorageWaitMaxOffset = offset;
+        gNdsAudioStorageWaitMaxBytes = bytes;
+    }
+    if (bytes != 0u) DC_InvalidateRange(destination, bytes);
+    if (done != (NDS_AUDIO_STORAGE_ASYNC_DONE |
+                 ndsAudioStorageReply(sequence, NDS_AUDIO_STORAGE_OK)))
+    {
+        gNdsAudioStorageFailures++;
+        return 0;
+    }
+    return 1;
+}
+
 static int ndsAudioStorageCall(uint32_t operation, uint32_t offset,
                                void *destination, uint32_t bytes)
 {
     uint32_t reply;
-    uint32_t sequence = (sStorageSequence + 1u) & 0xffffu;
+    uint32_t sequence;
+
+    if (operation == NDS_AUDIO_STORAGE_READ_CARD)
+    {
+        return ndsAudioStorageReadSync(offset, destination, bytes);
+    }
+    sequence = (sStorageSequence + 1u) & 0xffffu;
     if (sequence == 0u) sequence = 1u;
     sStorageSequence = sequence;
     sStorageRequest = (NdsAudioStorageRequest){
