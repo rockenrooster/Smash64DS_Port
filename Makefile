@@ -6041,7 +6041,8 @@ export NDS_P4_CONTENTS_HEADER := $(NDS_P4_GEN)/nds_p4_contents.generated.h
 NDS_NITROFS_P4_FILES += $(foreach row,$(NDS_P4_ENABLED_ROWS), \
 	$(NITROFS_DIR)/fighters/$(call nds_p4_field,$(row),1)_high.bin \
 	$(NITROFS_DIR)/fighters/$(call nds_p4_field,$(row),1)_low.bin \
-	$(NITROFS_DIR)/fighters/preview/$(shell echo $$((64 + $(call nds_p4_field,$(row),4)))).fpc)
+	$(NITROFS_DIR)/fighters/preview/$(shell echo $$((64 + $(call nds_p4_field,$(row),4)))).fpc \
+	$(NITROFS_DIR)/p4/$(call nds_p4_field,$(row),1).tab)
 # The contents' Remix sounds as a second FGM pack (scripts/p4/p4_audio.py).
 ifeq ($(NDS_P4),1)
 export NDS_P4_AUDIO_DIR := $(NDS_P4_GEN)/audio
@@ -7963,6 +7964,17 @@ $$(NDS_P4_GEN)/$(1)/articles.json: $$(NDS_P4_GEN)/$(1)/nds_p4_$(1).generated.c \
 $$(NITROFS_DIR)/fighters/preview/$(5).fpc: $$(NDS_P4_GEN)/$(1)/preview.fpc
 	@mkdir -p $$(dir $$@)
 	@cp $$< $$@
+# The content's match tables (motion descriptors, CPU rows): compiled alone and
+# lifted from .p4_tables into NitroFS, read into a scene's heap only for the
+# contents it makes fighters of (nds_p4.h NDSP4TablesHeader).
+$$(BUILD)/p4_tables_$(1).o: $$(NDS_P4_GEN)/$(1)/nds_p4_$(1).generated.c \
+		$$(NDS_BUILD_CONFIG) $$(NDS_P4_CONTENTS_HEADER) $$(PROJECT_ROOT)/include/nds/nds_p4.h
+	@mkdir -p $$(dir $$@)
+	$$(CC) -c $$(CFLAGS) -I $$(PROJECT_ROOT)/include -I $$(BUILD) -I $$(NDS_P4_GEN) \
+		-o $$@ $$(NDS_P4_GEN)/$(1)/nds_p4_$(1).tables.c
+$$(NITROFS_DIR)/p4/$(1).tab: $$(BUILD)/p4_tables_$(1).o
+	@mkdir -p $$(dir $$@)
+	$$(OBJCOPY) -O binary --only-section=.p4_tables $$< $$@
 $$(BUILD)/native_image_$(1)_%.o: $$(NDS_P4_NATIVE)/.stamp $$(NDS_BUILD_CONFIG)
 	@mkdir -p $$(dir $$@)
 	$$(CC) -c $$(CFLAGS) -I $$(PROJECT_ROOT)/include -I $$(BUILD) -I $$(NDS_P4_NATIVE) \

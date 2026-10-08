@@ -428,6 +428,7 @@ static void ndsP4SetupFilesForParent(s32 fkind)
             f->data->particles_texture_lo = parent->particles_texture_lo;
             f->data->particles_texture_hi = parent->particles_texture_hi;
         }
+        (void)ndsP4LoadTables(content);
         memcpy(view, sNdsP4FtDataReal, sizeof(view));
         view[fkind] = f->data;
         sNdsP4FtDataView = view;
@@ -1195,6 +1196,13 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
 
             if (p4 != NULL)
             {
+                /* A demo fighter (select screen, Results) runs opening
+                 * statuses on the menu motions; every other one reads
+                 * FTData.mainmotion, the content's match tables. */
+                if (desc->pkind != nFTPlayerKindDemo)
+                {
+                    (void)ndsP4LoadTables(content);
+                }
                 memcpy(view, sNdsP4FtDataReal, sizeof(view));
                 view[desc->fkind] = p4;
                 sNdsP4FtDataView = view;

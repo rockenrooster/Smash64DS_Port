@@ -233,6 +233,28 @@ typedef struct NDSP4Jab
     u16 rapid_end;           /* rapid_jab_ending_action */
 } NDSP4Jab;
 
+/* A content's match tables (generate_p4_fighter.py, nds_p4_<name>.tables.c):
+ * its motion descriptors, CPU attack list and the Remix input routines the
+ * list names, objcopied into nitro:/p4/<name>.tab and read into the scene
+ * heap for the contents a scene makes fighters of (ndsP4LoadTables), so the
+ * fourteen contents' tables stop costing every scene's arena. Offsets are
+ * from the header; nothing inside is a pointer. */
+#define NDS_P4_TABLES_MAGIC 0x31543450u /* "P4T1" */
+#define NDS_P4_TABLES_VERSION 1u
+typedef struct NDSP4TablesHeader
+{
+    u32 magic;
+    u32 version;
+    u32 bytes;
+    u32 motion_off;       /* FTMotionDesc[motion_count]: FTData.mainmotion */
+    u32 motion_count;
+    u32 attack_off;       /* FTComputerAttack[attack_count]; 0: the parent's */
+    u32 attack_count;
+    u32 script_off;       /* NDSP4ComputerScript[script_count] */
+    u32 script_count;
+    u32 script_bytes_off;
+} NDSP4TablesHeader;
+
 typedef struct NDSP4Fighter
 {
     const char *name;
@@ -272,14 +294,10 @@ typedef struct NDSP4Fighter
     /* Lab builds: donor special files a stand-in replaces (never loaded). */
     const u16 *lab_skip_files;
     const u32 *lab_skip_file_count;
-    /* CPU rows from the export: the attack list (count 0: the parent's),
-     * NDS_P4_COMPUTER_LONG_RANGE_*, the Remix input routines it names. */
-    const FTComputerAttack *computer_attacks;
-    const u32 *computer_attack_count;
+    /* CPU rows from the export: NDS_P4_COMPUTER_LONG_RANGE_*. The attack
+     * list and the Remix input routines it names are in the content's
+     * match tables (NDSP4TablesHeader). */
     const u8 *computer_long_range;
-    const NDSP4ComputerScript *computer_scripts;
-    const u32 *computer_script_count;
-    const u8 *computer_script_bytes;
     /* Optional: the parent's routines it replaces (Remix's id hooks). */
     const NDSP4Overrides *overrides;
 } NDSP4Fighter;
@@ -383,6 +401,10 @@ static inline void ndsP4AfterProcMap(GObj *fighter_gobj)
 /* ftManagerDestroyFighterWeapons in the dead statuses: the content's on_dead
  * after the source's. */
 void ndsP4OnDead(GObj *fighter_gobj);
+/* The content's match tables, read into this scene's heap at its first use
+ * (FTData.mainmotion points into them from then on); halts on a missing or
+ * malformed file, a build defect. */
+const NDSP4TablesHeader *ndsP4LoadTables(u32 content);
 /* The content's jab rows (all DISABLED for none). */
 const NDSP4Jab *ndsP4JabRows(const FTStruct *fp);
 /* The content's yoshi_egg row (7 words), or NULL for the original cast. */

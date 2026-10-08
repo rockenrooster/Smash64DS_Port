@@ -9,11 +9,15 @@
 
 #include <math.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <string.h>
+#include <nds/nds_reloc_assets.h>
+#include <nds/nds_startup.h>
 #include <macros.h>
 #include <sc/scene.h>
 #include <sys/objman.h>
 #include <sys/audio.h>
+#include <sys/taskman.h>
 
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
 
@@ -54,12 +58,7 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
     extern const NDSP4SpecialStart gNdsP4##T##SpecialStarts[];     extern const NDSP4Jab gNdsP4##T##Jab;     extern const f32 gNdsP4##T##YoshiEgg[]; \
     extern const u16 gNdsP4##T##LabSkipFiles[]; \
     extern const u32 gNdsP4##T##LabSkipFileCount; \
-    extern const FTComputerAttack gNdsP4##T##ComputerAttacks[]; \
-    extern const u32 gNdsP4##T##ComputerAttackCount; \
-    extern const u8 gNdsP4##T##ComputerLongRange; \
-    extern const NDSP4ComputerScript gNdsP4##T##ComputerScripts[]; \
-    extern const u32 gNdsP4##T##ComputerScriptCount; \
-    extern const u8 gNdsP4##T##ComputerScriptBytes[];
+    extern const u8 gNdsP4##T##ComputerLongRange;
 #define NDS_P4_ROW(T, title, parent, on_status_hook, computer_rows, override_rows) \
     { \
         .name = (title), .parent_kind = (parent), \
@@ -85,12 +84,7 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
         .special_starts = gNdsP4##T##SpecialStarts,         .jab = &gNdsP4##T##Jab,         .yoshi_egg = gNdsP4##T##YoshiEgg, \
         .lab_skip_files = gNdsP4##T##LabSkipFiles, \
         .lab_skip_file_count = &gNdsP4##T##LabSkipFileCount, \
-        .computer_attacks = gNdsP4##T##ComputerAttacks, \
-        .computer_attack_count = &gNdsP4##T##ComputerAttackCount, \
         .computer_long_range = &gNdsP4##T##ComputerLongRange, \
-        .computer_scripts = gNdsP4##T##ComputerScripts, \
-        .computer_script_count = &gNdsP4##T##ComputerScriptCount, \
-        .computer_script_bytes = gNdsP4##T##ComputerScriptBytes, \
         .overrides = (override_rows), \
     }
 
@@ -120,6 +114,19 @@ static const NDSP4Fighter sNdsP4Fighters[NDS_P4_CONTENT_LIMIT] = {
  * take motion_desc->offset as the script itself); the generator emits them as
  * offsets into the content's motion file, rebased here per load. */
 static void *sNdsP4MenuScriptBase[NDS_P4_CONTENT_LIMIT];
+
+/* Each content's match tables (ndsP4LoadTables) and the heap generation
+ * they were read in: a later scene's heap is a new one. */
+static const NDSP4TablesHeader *sNdsP4Tables[NDS_P4_CONTENT_LIMIT];
+static u32 sNdsP4TablesGeneration[NDS_P4_CONTENT_LIMIT];
+static const char *const sNdsP4TableNames[NDS_P4_CONTENT_LIMIT] = {
+#define NDS_P4_TABLE_NAME_ROW(id_, T_, N_, n_, parent_, model_, main_) [(id_)] = #n_,
+    NDS_P4_CONTENT_ROWS(NDS_P4_TABLE_NAME_ROW)
+#undef NDS_P4_TABLE_NAME_ROW
+};
+/* The content whose tables failed to load (a halt follows), for probes. */
+__attribute__((used)) volatile u32 gNdsP4TablesFailure;
+static const NDSP4TablesHeader *ndsP4FighterTables(const FTStruct *fp);
 
 const NDSP4Fighter *ndsP4Fighter(u32 content)
 {
@@ -242,6 +249,9 @@ void ndsP4SetupFileSizes(u32 data_flags)
             continue;
         }
         *f->data->p_file_main = NULL;
+        /* A new scene: its tables are read again at first use. */
+        f->data->mainmotion = NULL;
+        sNdsP4Tables[c] = NULL;
         f->data->file_main_size = f->file_size->main;
         if ((data_flags & FTDATA_FLAG_MAINMOTION) &&
             (f->file_size->mainmotion_largest_anim > largest))
@@ -327,18 +337,22 @@ static const struct
 /* The content's generated routine for a Remix input id, or NULL. */
 static const u8 *ndsP4ComputerOwnScript(const FTStruct *fp, s32 index)
 {
-    const NDSP4Fighter *f = ndsP4Fighter(ndsP4Content(fp));
+    const NDSP4TablesHeader *t = ndsP4FighterTables(fp);
+    const NDSP4ComputerScript *scripts;
+    const u8 *bytes;
     u32 i;
 
-    if (f == NULL)
+    if (t == NULL)
     {
         return NULL;
     }
-    for (i = 0u; i < *f->computer_script_count; i++)
+    scripts = (const NDSP4ComputerScript *)(const void *)((const u8 *)t + t->script_off);
+    bytes = (const u8 *)t + t->script_bytes_off;
+    for (i = 0u; i < t->script_count; i++)
     {
-        if (f->computer_scripts[i].input == (u32)index)
+        if (scripts[i].input == (u32)index)
         {
-            return &f->computer_script_bytes[f->computer_scripts[i].offset];
+            return &bytes[scripts[i].offset];
         }
     }
     return NULL;
@@ -365,10 +379,10 @@ static const u8 *ndsP4ComputerScript(const FTStruct *fp, s32 index)
 
 const FTComputerAttack *ndsP4ComputerAttacks(const FTStruct *fp)
 {
-    const NDSP4Fighter *f = ndsP4Fighter(ndsP4Content(fp));
+    const NDSP4TablesHeader *t = ndsP4FighterTables(fp);
 
-    return ((f != NULL) && (*f->computer_attack_count != 0u)) ?
-        f->computer_attacks : NULL;
+    return ((t != NULL) && (t->attack_count != 0u)) ?
+        (const FTComputerAttack *)(const void *)((const u8 *)t + t->attack_off) : NULL;
 }
 
 u32 ndsP4ComputerLongRange(const FTStruct *fp)
@@ -933,6 +947,85 @@ const NDSP4Overrides *ndsP4Overrides(const FTStruct *fp)
     const NDSP4Fighter *f = ndsP4Fighter(ndsP4Content(fp));
 
     return (f != NULL) ? f->overrides : NULL;
+}
+
+static void ndsP4TablesHalt(u32 content)
+{
+    gNdsP4TablesFailure = content;
+    for (;;)
+    {
+    }
+}
+
+const NDSP4TablesHeader *ndsP4LoadTables(u32 content)
+{
+    const NDSP4Fighter *f = ndsP4Fighter(content);
+    NDSP4TablesHeader *t;
+    char path[48];
+    FILE *file;
+    long bytes;
+
+    if (f == NULL)
+    {
+        return NULL;
+    }
+    if ((sNdsP4Tables[content] != NULL) &&
+        (sNdsP4TablesGeneration[content] == gNdsTaskmanHeapGeneration))
+    {
+        return sNdsP4Tables[content];
+    }
+    snprintf(path, sizeof(path), "nitro:/p4/%s.tab", sNdsP4TableNames[content]);
+    ndsFsLock();
+    file = fopen(path, "rb");
+    if ((file == NULL) || (fseek(file, 0, SEEK_END) != 0) ||
+        ((bytes = ftell(file)) < (long)sizeof(NDSP4TablesHeader)) ||
+        (fseek(file, 0, SEEK_SET) != 0))
+    {
+        if (file != NULL)
+        {
+            fclose(file);
+        }
+        ndsFsUnlock();
+        ndsP4TablesHalt(content);
+    }
+    t = syTaskmanMalloc((size_t)bytes, 4);
+    if (fread(t, 1u, (size_t)bytes, file) != (size_t)bytes)
+    {
+        fclose(file);
+        ndsFsUnlock();
+        ndsP4TablesHalt(content);
+    }
+    fclose(file);
+    ndsFsUnlock();
+    if ((t->magic != NDS_P4_TABLES_MAGIC) || (t->version != NDS_P4_TABLES_VERSION) ||
+        (t->bytes != (u32)bytes) ||
+        (t->motion_off + (t->motion_count * sizeof(FTMotionDesc)) > t->bytes) ||
+        ((s32)t->motion_count != f->data->mainmotion_array_count) ||
+        (t->attack_off + (t->attack_count * sizeof(FTComputerAttack)) > t->bytes) ||
+        (t->script_off + (t->script_count * sizeof(NDSP4ComputerScript)) > t->bytes) ||
+        (t->script_bytes_off > t->bytes))
+    {
+        ndsP4TablesHalt(content);
+    }
+    sNdsP4Tables[content] = t;
+    sNdsP4TablesGeneration[content] = gNdsTaskmanHeapGeneration;
+    f->data->mainmotion = (FTMotionDescArray *)(void *)((u8 *)t + t->motion_off);
+
+    return t;
+}
+
+/* The loaded tables of a fighter's content, NULL before its first use. */
+static const NDSP4TablesHeader *ndsP4FighterTables(const FTStruct *fp)
+{
+    u32 content = ndsP4Content(fp);
+
+    if ((content == 0u) || (content >= NDS_P4_CONTENT_LIMIT) ||
+        (sNdsP4Tables[content] == NULL) ||
+        (sNdsP4TablesGeneration[content] != gNdsTaskmanHeapGeneration))
+    {
+        return NULL;
+    }
+    return sNdsP4Tables[content];
 }
 
 const f32 *ndsP4YoshiEggRow(const FTStruct *fp)
