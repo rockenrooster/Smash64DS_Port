@@ -9546,6 +9546,12 @@ static NDSRelocLoadedFile *ndsRelocEnsureLoadedAsset(u32 asset_id)
 
 static s32 ndsRelocNativeEntryOwnsDependency(u32 owner_asset, u32 dep_asset)
 {
+#if NDS_P4
+    if (ndsP4LabSkipsDependency(owner_asset, dep_asset) != FALSE)
+    {
+        return TRUE;
+    }
+#endif
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
     return ((gNdsSceneManagerCurrIsBattle != 0u) &&
             (owner_asset == NDS_RELOC_ASSET_FOX_SPECIAL3) &&
@@ -9565,6 +9571,19 @@ static s32 ndsRelocResolveNativeEntryExternalFixup(
     {
         return 0;
     }
+#if NDS_P4
+    /* Lab builds: a donor special file a stand-in replaces is never loaded;
+     * the main's header words that named it read NULL, like the slots
+     * aimed past a file (gNdsP4RelocOutOfRangeSlots). */
+    if (ndsP4LabSkipsDependency(owner_asset, dep_asset) != FALSE)
+    {
+        (void)slot_offset;
+        (void)target_offset;
+        gNdsP4RelocOutOfRangeSlots++;
+        *resolved = NULL;
+        return 1;
+    }
+#endif
     /* The three SETTIMG pointers all name bank 109's texture at 0x19f8.
      * The native Arwing packet already contains its converted pixels. Keep
      * FoxSpecial3's live DObjDesc/AnimJoint, but do not load the 47,120-byte

@@ -273,7 +273,11 @@ static void ndsLabTimedAddFigatree(DObj *root_dobj, void *figatree,
 #define NDS_P4_EVCAST_FTMotionEventDefault NDS_P4_EVCAST_CURSOR
 #define NDS_P4_EVCAST_FTMotionEventMakeEffect1 NDS_P4_EVCAST_CURSOR
 #define NDS_P4_EVCAST_FTMotionEventGoto2 NDS_P4_EVCAST_PLAIN
-#define NDS_P4_EVCAST_FTMotionEventMakeAttack1 NDS_P4_EVCAST_PLAIN
+/* Remix clears a hitbox's direction and sound overrides when the source
+ * makes it (create_hitbox_): every read of the make-hitbox event is in
+ * ftMainParseMotionEvent's handler, where fp is the maker. */
+#define NDS_P4_EVCAST_FTMotionEventMakeAttack1(event, type) \
+    ((type *)ndsP4MakeAttackCursor(fp, (event)))
 #define NDS_P4_EVCAST_FTMotionEventMakeAttack2 NDS_P4_EVCAST_PLAIN
 #define NDS_P4_EVCAST_FTMotionEventMakeAttack3 NDS_P4_EVCAST_PLAIN
 #define NDS_P4_EVCAST_FTMotionEventMakeAttack4 NDS_P4_EVCAST_PLAIN
@@ -304,9 +308,21 @@ static void ndsLabTimedAddFigatree(DObj *root_dobj, void *figatree,
  * wrapper below can lend a P4 fighter's row its content's table for one
  * ftMainSetStatus call. ftMainSetStatus is its only reader. */
 #define dFTMainSpecialStatusDescs gNdsFTMainSpecialStatusDescsView
+/* P4 S4: Remix's hitbox overrides (Command.asm 0xD2, 0xD8). This TU's only
+ * hit sound is ftMainPlayHitSFX's (fp the attacker), and every
+ * ftParamUpdate1PGameDamageStats call follows the victim's damage_lr in
+ * ftMainProcessHitCollisionStatsMain, with that hit's hitlog in scope. */
+#define lbCommonMakePositionFGM(fgm_id, pos_x) \
+    ndsP4MakeHitPositionFGM(fp, attack_coll, (fgm_id), (pos_x))
+#define ftParamUpdate1PGameDamageStats(fp_, player_, class_, kind_, flags_, \
+                                       count_) \
+    ndsP4UpdateHitDamageStats(hitlog, (fp_), (player_), (class_), (kind_), \
+                              (flags_), (count_))
 #endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftmain.c"
 #if NDS_P4
+#undef lbCommonMakePositionFGM
+#undef ftParamUpdate1PGameDamageStats
 #undef ftMotionEventCast
 #define ftMotionEventCast(event, type) ((type *)(event)->p_script)
 #undef dFTMainSpecialStatusDescs

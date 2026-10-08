@@ -146,28 +146,88 @@ void ftComputerUpdateInputs(FTStruct *this_fp)
     ndsP4FTComputerUpdateInputs(this_fp);
 }
 
-/* func_ovl3_80138AA8, the long-range special. Remix sends a content whose
- * ai_long_range is NONE from the fkind jump table to its FALSE return
- * (0x80138ECC), after the source's lead-in: that keeps its two random
- * draws (the reaction delay and the reflector-target roll). */
+/* func_ovl3_80138AA8, the long-range special. Remix's ai_long_range row
+ * sends a content to one of two cases of the source's fkind switch, after
+ * the source's lead-in (its two random draws: the reaction delay and the
+ * reflector-target roll): 0x80138ECC returns FALSE, 0x80138D24 is the
+ * projectile users' walk and shoot, the source's case copied below. A
+ * content keeping its parent's case runs the source. */
 static sb32 ndsP4FTComputerLongRange(FTStruct *this_fp, sb32 is_delay)
 {
-    const NDSP4Computer *c = ndsP4Computer(this_fp);
+    u32 mode = ndsP4ComputerLongRange(this_fp);
     FTComputer *com = &this_fp->computer;
+    FTStruct *target_fp = com->target_user;
+    Vec3f pos;
+    Vec3f ga_last;
+    s32 stand_line_id;
+    s32 fkind;
 
-    if ((c == NULL) || (c->long_range_none == FALSE))
+    if (mode == NDS_P4_COMPUTER_LONG_RANGE_PARENT)
     {
         return ndsBaseFTComputerLongRange(this_fp, is_delay);
     }
-    if (DISTANCE(this_fp->joints[nFTPartsJointTopN]->translate.vec.f.y, com->target_pos.y) < 400.0F)
+    if (DISTANCE(this_fp->joints[nFTPartsJointTopN]->translate.vec.f.y, com->target_pos.y) >= 400.0F)
     {
-        if (com->unk_ftcom_0x35 == 0)
-        {
-            com->unk_ftcom_0x35 = 2.0F * (syUtilsRandFloat() * (FTCOMPUTER_LEVEL_MAX - this_fp->level));
-        }
-        syUtilsRandFloat();
+        return FALSE;
     }
-    return FALSE;
+    if (com->unk_ftcom_0x35 == 0)
+    {
+        com->unk_ftcom_0x35 = 2.0F * (syUtilsRandFloat() * (FTCOMPUTER_LEVEL_MAX - this_fp->level));
+    }
+    if ((syUtilsRandFloat() < ((this_fp->level - 1) / 9.0F)) && (target_fp != NULL))
+    {
+        if ((target_fp->fkind == nFTKindNess) || (target_fp->fkind == nFTKindFox))
+        {
+            return FALSE;
+        }
+    }
+    if (mode == NDS_P4_COMPUTER_LONG_RANGE_NONE)
+    {
+        return FALSE;
+    }
+    fkind = (this_fp->fkind == nFTKindKirby) ? this_fp->passive_vars.kirby.copy_id : this_fp->fkind;
+
+    if ((fkind == nFTKindSamus) &&
+        ((this_fp->status_id == nFTSamusStatusSpecialNStart) ||
+         (this_fp->status_id == nFTSamusStatusSpecialAirNStart) ||
+         (this_fp->status_id == nFTSamusStatusSpecialNLoop) ||
+         (this_fp->status_id == nFTSamusStatusSpecialAirNEnd)))
+    {
+        return FALSE;
+    }
+    com->unk_ftcom_0x35++;
+
+    if (com->unk_ftcom_0x35 >= 5)
+    {
+        ftComputerFollowObjectiveWalk(this_fp);
+        return TRUE;
+    }
+    pos = this_fp->joints[nFTPartsJointTopN]->translate.vec.f;
+    pos.x = com->target_pos.x;
+    pos.y = com->target_pos.y;
+
+    if (com->target_pos.x < this_fp->joints[nFTPartsJointTopN]->translate.vec.f.x)
+    {
+        if ((mpCollisionCheckRWallLineCollisionSame(&this_fp->joints[nFTPartsJointTopN]->translate.vec.f, &pos, &ga_last, &stand_line_id, NULL, NULL) != FALSE) ||
+            (mpCollisionCheckFloorLineCollisionSame(&this_fp->joints[nFTPartsJointTopN]->translate.vec.f, &pos, &ga_last, &stand_line_id, NULL, NULL) != FALSE) ||
+            (mpCollisionCheckCeilLineCollisionSame(&this_fp->joints[nFTPartsJointTopN]->translate.vec.f, &pos, &ga_last, &stand_line_id, NULL, NULL) != FALSE))
+        {
+            return FALSE;
+        }
+    }
+    else if ((mpCollisionCheckLWallLineCollisionSame(&this_fp->joints[nFTPartsJointTopN]->translate.vec.f, &pos, &ga_last, &stand_line_id, NULL, NULL) != FALSE) ||
+             (mpCollisionCheckFloorLineCollisionSame(&this_fp->joints[nFTPartsJointTopN]->translate.vec.f, &pos, &ga_last, &stand_line_id, NULL, NULL) != FALSE) ||
+             (mpCollisionCheckCeilLineCollisionSame(&this_fp->joints[nFTPartsJointTopN]->translate.vec.f, &pos, &ga_last, &stand_line_id, NULL, NULL) != FALSE))
+    {
+        return FALSE;
+    }
+    if (is_delay == FALSE)
+    {
+        ftComputerSetCommandWaitLong(this_fp, nFTComputerInputStickSmashAutoXButtonB);
+    }
+    else ftComputerSetCommandWaitLong(this_fp, nFTComputerInputStickTiltAutoXNYD5SmashAutoXButtonB);
+
+    return TRUE;
 }
 
 sb32 func_ovl3_80138AA8(FTStruct *this_fp, sb32 is_delay)

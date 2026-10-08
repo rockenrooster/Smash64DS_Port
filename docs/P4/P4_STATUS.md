@@ -373,6 +373,34 @@ into the global reservation.
   keeps the parent file's bytes at their offsets, so the command runs as is
   (`ndsP4RunRemixMotionEvents`); the generator checks the target lies in
   the file. Marth, Roy, Crash, Lanky, Banjo, Sonic and Dedede use it.
+- **The other motion commands (S4).** `ndsP4RunRemixMotionEvents` runs
+  every command the roster uses but 0xD9 SET ENV COLOR, each on the field
+  the N64 offset in `Command.asm` names: 0xD1 armour is
+  `knockback_resist_status` (Yoshi's double-jump field, Ganondorf), 0xD4
+  `vel_air.y`, 0xD5 `is_fastfall` (Banjo), 0xD7 jumps used and ground/air
+  (Wario), 0xDA the facing (Marth, Roy). 0xD6 RANDOM SFX draws two
+  `syUtilsRandIntRange` numbers in Remix's order and reads its id table from
+  the synthesized motion file, word-swapped like the rest of it (Lanky,
+  Marth); 0xDC L VOICE is unused. 0xD2 and 0xD8 keep a launch direction and
+  a hit sound per port and hitbox (Sonic, Wario, Banjo; Marth, Roy, Peach):
+  ftmain's make-hitbox reads clear that hitbox's pair, as Remix's
+  `create_hitbox_` does (the clear-all reset changes nothing a made hitbox
+  reads); ftMainPlayHitSFX's sound call and the stats call after the
+  victim's `damage_lr` in ftMainProcessHitCollisionStatsMain go through
+  `ndsP4MakeHitPositionFGM` and `ndsP4UpdateHitDamageStats`, Remix's
+  `apply_fgm_` and `apply_direction_`. The fast-forward loops skip 0xD4,
+  0xD5, 0xD6, 0xDA and 0xDC like Remix's second table.
+- **CPU rows (S7).** The generator reads each content's attack list where
+  `ai_behaviour` points (rows of the source's `FTComputerAttack`, grounded
+  then aerial, each list ending in -1), the Remix input routines those rows
+  name from `AI.command_table` (ids from 0x31; each routine's bytes up to
+  its last END before the padding: Falco's match the hand-copied arrays),
+  and `ai_long_range`, which is one of two cases of the source's fkind
+  switch in `func_ovl3_80138AA8`: none, or the projectile users' walk and
+  shoot. Banjo, Dedede and Sheik take the projectile case under Captain,
+  whose own is none, so `battleship_ftcomputer.c` carries that case's
+  body after the source's lead-in. `NDSP4Computer` keeps only the
+  hand-ported routines (attack-prevent, recovery, post-process).
 - **Generation.** All 14 generate with `NDS_P4_LAB_FALLBACK=1`: a status
   with a donor routine that has no port runs a plain end-of-motion set in
   all four slots, and each such routine is listed in the manifest. The
@@ -513,28 +541,42 @@ into the global reservation.
   exhausted that 7.7 KB (an allocator halt at frame 330, before the
   special-move seam changed his CPU's choices). The fix is the original
   cast's: compact packs that keep only what the native owner and the pose
-  engine read, and a generated shield-pose package per content.
+  engine read, and a generated shield-pose package per content. Lab builds
+  no longer load the donor special files a stand-in replaces (only the main
+  file's header words name them; the generator checks): Sonic's closure
+  drops to 144 KB, Wolf's to 78 KB. Compacting the model alone saves less
+  than it did for the original cast: a content's high-detail preview pack
+  keeps 20-125 KB of textures and structure (Banjo 143 KB, Crash 123 KB,
+  Lanky and Bowser 89 KB, Falco 28 KB), where the original cast's battle
+  packs, both details, are 16-41 KB. Texture VRAM is banks A and B, 256 KB
+  for the stage, fighters and effects together. With the lab skip, two
+  Sonics beside Mario and Captain play 1,200 frames (heap low-water
+  15,584, under the 25,600 floor); two Banjos beside Mario and Fox still
+  never reach the match (his 52 KB animation heap per fighter). The heavy
+  contents need compact packs and smaller animation heaps first; texture
+  reduction or a per-match budget would be an owner decision.
 
 Four-CPU mirrors, lab ROM with all fourteen (`NDS_P4_LAB_FALLBACK=1`, lab
-stage, 1,200 frames, exception vectors trapped). "p4e" is the build with
-the special-move seam; the others ran before it.
+stage, 1,200 frames, exception vectors trapped), on the build with the
+special-move seam, the S4 commands, generated CPU rows and the lab file
+skip ("p4g"). 0 native failures in every run.
 
 | Content | Result | Lab declines | Notes |
 |---|---|---|---|
-| Falco | clean (p4c) | 0 | |
-| Ganondorf | clean, 1,500 frames (p4c) | 0 | |
-| Wolf | clean (p4e) | 215 | his blaster's display list lives in a donor special file (0xB47), which the draw plan does not own; Fox's gun sidecar knows only Fox's file |
-| Bowser | clean (p4c) | 0 | |
-| Marth | clean (p4d) | 0 | 24 unported commands (D6, D8, D9, DA) |
-| Roy | clean (p4c) | 0 | |
-| Wario | clean (p4c) | 0 | |
-| Peach | clean (p4e) | 299, low detail | a motion's hidden-part joint adds a root the owner lacks (17 against 16), the original cast's root-program case |
-| Crash | 420 frames (p4e) | 0 | heap 7.7 KB free (S15) |
-| Lanky | clean (p4e) | 0 | 9 unported commands (D6) |
-| Sheik | clean (p4e) | 0 | |
-| Banjo | loads after the 208-id fix; the mirror overflows the heap (S15) | | |
-| Sonic | the mirror overflows the heap at fighter setup (S15) | | |
-| Dedede | clean (p4e) | 0 | |
+| Falco | clean | 0 | generated CPU rows replace his hand table |
+| Ganondorf | clean | 0 | |
+| Wolf | clean | 111 | his gun's display list lives in a donor file (0xB47), which the draw plan does not own; Fox's gun sidecar knows only Fox's file. With his first ported routines (Fire Wolf, the reflector's gravity, the blaster's landing; "p4i") the run is clean again with 35 declines, all the gun |
+| Bowser | clean | 0 | |
+| Marth | clean | 0 | 0xD9 SET ENV COLOR (8 per run) is the one unported command |
+| Roy | clean | 0 | 0xD9 as Marth |
+| Wario | clean | 0 | |
+| Peach | clean | 325, low detail | a motion's hidden-part joint adds a root the owner lacks (17 against 16), the original cast's root-program case |
+| Crash | clean | 0 | fits since the lab skip |
+| Lanky | clean | 0 | |
+| Sheik | clean | 0 | |
+| Banjo | the mirror's fourth 52 KB animation heap overflows (S15) | | his main loads since the 208-id fix |
+| Sonic | clean | 0 | fits since the lab skip (closure 329 KB to 144 KB) |
+| Dedede | clean | 0 | |
 
 ## Board 1 status (master plan Revision 3)
 
@@ -543,10 +585,10 @@ the special-move seam; the others ran before it.
 | S1 content list | done: registry, Makefile templates, one native-owner emit, `NDS_P4_CONTENT_ROWS` in every shared site; Falco unchanged (lab: 0 declines, menu ROM preview) |
 | S2 build throughput | not started; lab and menu builds still rewrite the shared linker script under a mutex |
 | S3 table seams | 19 of 33 (Falco's 12, entry_action/entry_script, the six special-move starters) |
-| S4 motion commands | 3 of the roster's 12 (FSM, TopN, GO TO MOVESET FILE) |
-| S5 routine work lists | counts measured (master plan table); per-routine lists not generated |
+| S4 motion commands | 11 of the roster's 12: all but 0xD9 SET ENV COLOR, which needs the renderer's per-fighter environment colour (Banjo, Marth, Roy) |
+| S5 routine work lists | generated for all 14 (`scripts/p4/routine_worklist.py --lab <lab build>` into a build directory): 296 donor routines with Remix scope, file and line, size and users (Banjo 33, Bowser 10, Crash 29, Dedede 37, Lanky 29, Marth 18, Peach 22, Roy 21, Sheik 34, Sonic 29, Wario 23, Wolf 11; Falco and Ganondorf none), plus each content's id tests in Remix's shared code (17-39); the classes (behaviour, presentation, 1P, toggle) are still read by hand. Ported: Wolf 10 of 11 (`src/port/nds_p4_wolf.c`: WolfUSP, WolfDSP physics, WolfNSP air collision); WolfNSP.main and the slash flame wait on his own special files (S6) |
 | S6 articles | first source scan only |
-| S7 generated CPU rows | Falco's rows read by hand from the assembled tables |
+| S7 generated CPU rows | done for the data: attack lists, ai_long_range and the Remix input routines they name are generated for all 14 (Falco's generated list equals his hand table row for row); attack-prevent, recovery and post-process stay hand-ported per fighter (Falco's only) |
 | S8 Kirby copies | not started |
 | S9 select-screen preview | done for Falco on the menu ROM; pack facts come from the export (`p4_preview_pack.py --content`); the all-content ROM cannot hold P4 menu clips in the select's global reservation (see above) |
 | S10 acceptance probe | lab probes exist per topic (`gNdsLabP4Content`); no single command |

@@ -44,6 +44,17 @@ CALLBACK_PORTS = {
     "Phantasm.air_subroutine_": "ndsP4FalcoPhantasmAirInterrupt",
     "Phantasm.air_physics_": "ndsP4FalcoPhantasmAirPhysics",
     "Phantasm.air_collision_": "ndsP4FalcoPhantasmAirMap",
+    # src/port/nds_p4_wolf.c
+    "WolfUSP.initial_ground": "ndsP4WolfUSPInitialGround",
+    "WolfUSP.initial_air": "ndsP4WolfUSPInitialAir",
+    "WolfUSP.main_ground": "ndsP4WolfUSPMainGround",
+    "WolfUSP.main_air": "ndsP4WolfUSPMainAir",
+    "WolfUSP.change_direction_": "ndsP4WolfUSPChangeDirection",
+    "WolfUSP.physics_": "ndsP4WolfUSPPhysics",
+    "WolfUSP.collision_": "ndsP4WolfUSPMap",
+    "WolfUSP.main_2": "ndsP4WolfUSPMain2",
+    "WolfDSP.physics_": "ndsP4WolfDSPPhysics",
+    "WolfNSP.air_collision_": "ndsP4WolfNSPAirMap",
 }
 
 # Vanilla file IDs that Remix rewrote with equivalent bytes, so the DS keeps
@@ -70,6 +81,15 @@ MAX_EXTERN_IDS = 208
 
 # Remix's special-move starter tables, in NDS_P4_SPECIAL_* order (nds_p4.h).
 SPECIAL_START_TABLES = ("ground_nsp", "air_nsp", "ground_usp", "air_usp", "ground_dsp", "air_dsp")
+
+# CPU rows: FTComputerAttack as assembled (input, hit start, hit end, detect
+# x near/far, y near/far), Remix's input routine ids past the source's 0x31
+# scripts, and the two ai_long_range cases of the source's fkind switch in
+# func_ovl3_80138AA8 (no long-range special; the projectile users').
+CPU_ATTACK_ROW = ">iiiffff"
+CPU_INPUT_BASE = 0x31
+AI_LONG_RANGE_NONE = 0x80138ECC
+AI_LONG_RANGE_PROJECTILE = 0x80138D24
 
 
 def parent_storage(parent: str) -> dict:
@@ -514,6 +534,12 @@ def main() -> int:
                                  "fallback": f"{parent_ids[i]:#x}"})
         file_ids[i] = parent_ids[i]
 
+    # Lab builds: the donor files those stand-ins replace are pulled into the
+    # main closure only by its header words (checked: no other file names
+    # them), so they are neither sized nor loaded; the words read NULL
+    # (nds_p4.c ndsP4LabSkipsDependency). Sonic's are 172 KB.
+    lab_skip = sorted({int(s["routine"], 16) for s in special_standins} - {0})
+
     synth_id = SYNTH_FILE_BASE + spec["kind_index"] * 0x10
     if rom.file_bytes(parent_motion) != vanilla.file_bytes(parent_motion):
         raise GenError(f"parent motion {parent_motion:#x} differs from vanilla")
@@ -696,7 +722,8 @@ def main() -> int:
         else:
             nm = decomp_names.get(value)
         if nm in CALLBACK_PORTS:
-            special_starts.append(CALLBACK_PORTS[nm])
+            special_starts.append("ndsP4Proc_" + CALLBACK_PORTS[nm])
+            proto_extra.add(CALLBACK_PORTS[nm])
         elif nm and "." not in nm:
             special_starts.append("ndsP4Proc_" + nm)
             proto_extra.add(nm)
@@ -706,6 +733,55 @@ def main() -> int:
                                   "routine": nm or f"{value:#010x}", "fallback": "no special"})
         else:
             raise GenError(f"{table} {value:#010x} ({nm}) has no DS port")
+
+    # CPU rows (S7, nds_p4.h NDSP4Fighter.computer_*). ai_behaviour points at
+    # the content's attack list (grounded rows, END, aerial rows, END), read
+    # as assembled; the Remix input routines it names (ids from 0x31) come
+    # from AI.command_table, each up to its last END before the padding.
+    # ai_long_range is one of two cases of the source's fkind switch: no
+    # long-range special, or the projectile users' walk-and-shoot.
+    computer_attacks = []
+    if not tables["ai_behaviour"]["same_as_parent"]:
+        at = int(tables["ai_behaviour"]["value"], 16)
+        ends = 0
+        while ends < 2:
+            row = struct.unpack(CPU_ATTACK_ROW, rom.read_ram(at, 0x1C))
+            at += 0x1C
+            computer_attacks.append(row)
+            ends += row[0] == -1
+            if len(computer_attacks) > 64:
+                raise GenError("ai_behaviour: no second END within 64 rows")
+    long_range = int(tables["ai_long_range"]["value"], 16)
+    if tables["ai_long_range"]["same_as_parent"]:
+        computer_long_range = "NDS_P4_COMPUTER_LONG_RANGE_PARENT"
+    elif long_range == AI_LONG_RANGE_NONE:
+        computer_long_range = "NDS_P4_COMPUTER_LONG_RANGE_NONE"
+    elif long_range == AI_LONG_RANGE_PROJECTILE:
+        computer_long_range = "NDS_P4_COMPUTER_LONG_RANGE_PROJECTILE"
+    else:
+        raise GenError(f"ai_long_range {long_range:#010x} is neither source case")
+    computer_scripts = []
+    remix_inputs = sorted({r[0] for r in computer_attacks if r[0] >= CPU_INPUT_BASE})
+    if remix_inputs:
+        sym, by_addr = R.load_symbols(args.staging / "logfile.log")
+        command_table = sym["AI.command_table"]
+        starts = sorted(a for a in by_addr if a >= R.REMIX_CODE_RAM)
+        for inp in remix_inputs:
+            ptr = rom.u32_ram(command_table + 4 * inp)
+            if ptr == 0:
+                raise GenError(f"CPU input routine {inp:#x} is not in AI.command_table")
+            end = min((a for a in starts if a > ptr), default=ptr + 0x100)
+            body = rom.read_ram(ptr, end - ptr)
+            if b"\xff" not in body:
+                raise GenError(f"CPU input routine {inp:#x} has no END")
+            computer_scripts.append((inp, body[:body.rindex(b"\xff") + 1]))
+
+    for fid in shipped:
+        if fid in lab_skip or fid in (file_ids[0], synth_id):
+            continue
+        named = set(rom.extern_ids(fid)) & set(lab_skip)
+        if named:
+            raise GenError(f"file {fid:#x} names skipped donor files {sorted(named)}")
 
     # ftManagerSetupFileSize's three answers, computed the way
     # generate_fighter_production_manifest.extern_alloc_size does for the
@@ -724,6 +800,8 @@ def main() -> int:
                 deps = [synth_id if d == parent_motion and fid == file_ids[0] else d for d in deps]
             total = (size + 0xF) & ~0xF
             for d in deps:
+                if d in lab_skip:
+                    continue
                 total = (total + 0xF) & ~0xF
                 total += visit(d)
             return total
@@ -869,7 +947,30 @@ def main() -> int:
               f"{entry_effect}, {entry_lab_fallback}, {{ 0, 0 }} }};", "",
               "/* Special-move starters (NDS_P4_SPECIAL_*); NULL keeps the source table's. */",
               f"const NDSP4SpecialStart g{ident}SpecialStarts[NDS_P4_SPECIAL_COUNT] = {{",
-              "    " + ", ".join(special_starts), "};", ""]
+              "    " + ", ".join(special_starts), "};", "",
+              "/* Lab builds: donor special files a stand-in replaces, never loaded. */",
+              f"const u16 g{ident}LabSkipFiles[{max(len(lab_skip), 1)}] = {{ "
+              + (", ".join(f"{f:#x}" for f in lab_skip) or "0") + " };",
+              f"const u32 g{ident}LabSkipFileCount = {len(lab_skip)};", "",
+              "/* CPU rows (S7): the attack list as assembled (count 0: the parent's),",
+              " * the ai_long_range case and the Remix input routines the list names. */",
+              f"const FTComputerAttack g{ident}ComputerAttacks[{max(len(computer_attacks), 1)}] = {{"]
+    for inp, start, end, x0, x1, y0, y1 in (computer_attacks or [(-1, 0, 0, 0.0, 0.0, 0.0, 0.0)]):
+        lines.append(f"    {{ {inp}, {start}, {end}, {c_float(x0)}, {c_float(x1)}, "
+                     f"{c_float(y0)}, {c_float(y1)} }},")
+    script_bytes = b"".join(body for _, body in computer_scripts)
+    offset = 0
+    lines += ["};", f"const u32 g{ident}ComputerAttackCount = {len(computer_attacks)};",
+              f"const u8 g{ident}ComputerLongRange = {computer_long_range};",
+              f"const NDSP4ComputerScript g{ident}ComputerScripts[{max(len(computer_scripts), 1)}] = {{"]
+    for inp, body in (computer_scripts or [(0, b"")]):
+        lines.append(f"    {{ {inp:#x}, {offset}, {len(body)}, 0 }},")
+        offset += len(body)
+    lines += ["};", f"const u32 g{ident}ComputerScriptCount = {len(computer_scripts)};",
+              f"const u8 g{ident}ComputerScriptBytes[{max(len(script_bytes), 1)}] = {{"]
+    for k in range(0, max(len(script_bytes), 1), 16):
+        lines.append("    " + ", ".join(f"0x{b:02x}" for b in (script_bytes or b"\xff")[k:k + 16]) + ",")
+    lines += ["};", ""]
     src = "\n".join(lines)
     (args.out / f"nds_p4_{name}.generated.c").write_text(src, encoding="utf-8", newline="\n")
 
@@ -886,6 +987,7 @@ def main() -> int:
         "status_changes": [{"status": hex(r["status"]), "procs": r["procs"]} for r in specials
                            if any(p != "NDS_P4_PROC_INHERIT" for p in r["procs"])],
         "lab_fallbacks": lab_fallbacks,
+        "lab_skipped_files": [f"{f:#x}" for f in lab_skip],
         "file_size": {"main": sizes[0], "mainmotion_largest_anim": sizes[1],
                       "submotion_largest_anim": sizes[2]},
         "deviations": deviations,

@@ -70,23 +70,40 @@ typedef struct NDSP4Present
     u8 default_costumes[8];
 } NDSP4Present;
 
-/* A content's CPU rows: Remix's per-character tables (Character.asm)
- * that AI.asm runs. A NULL field keeps the parent's vanilla path. */
+/* A content's hand-ported CPU routines: Remix code AI.asm runs from the
+ * per-character tables (Character.asm). A NULL field keeps the parent's
+ * vanilla path. The data rows (attack list, long range, input routines)
+ * are generated: NDSP4Fighter.computer_*. */
 typedef struct NDSP4Computer
 {
-    /* ai_behaviour: the attack list (grounded rows, END, aerial rows, END)
-     * ftComputerCheckDetectTarget reads instead of dFTComputerAttackList. */
-    const FTComputerAttack *attacks;
     /* ai_attack_prevent: per detected attack, in place of the parent's
      * fkind switch (the jump table at 0x801334E4); NDS_P4_COMPUTER_*. */
     s32 (*prevent)(FTStruct *fp, s32 input_kind);
-    /* ai_long_range NONE: no special from long range (0x80138ECC). */
-    sb32 long_range_none;
     /* recovery_logic: after the recover objective's walk. */
     void (*recover)(FTStruct *fp);
     /* cpu_post_process: after the objective, before the inputs run. */
     void (*post_process)(FTStruct *fp);
 } NDSP4Computer;
+
+/* ai_long_range: the parent's own case, or one of the two cases of the
+ * source's fkind switch in func_ovl3_80138AA8 (0x80138ECC no long-range
+ * special; 0x80138D24 the projectile users' walk-and-shoot). */
+enum
+{
+    NDS_P4_COMPUTER_LONG_RANGE_PARENT,
+    NDS_P4_COMPUTER_LONG_RANGE_NONE,
+    NDS_P4_COMPUTER_LONG_RANGE_PROJECTILE
+};
+
+/* A Remix CPU input routine (AI.asm add_cpu_input_routine) as assembled:
+ * its id and its bytes in the content's ComputerScriptBytes. */
+typedef struct NDSP4ComputerScript
+{
+    u16 input;
+    u16 offset;
+    u16 length;
+    u16 reserved;
+} NDSP4ComputerScript;
 
 /* ai_attack_prevent results: keep the attack, run the ledge-ground test
  * the parent switch sets for recovery specials (is_attempt_cliffcatch),
@@ -199,6 +216,17 @@ typedef struct NDSP4Fighter
     const u32 *sword_trail_count;
     const NDSP4Entry *entry;
     const NDSP4SpecialStart *special_starts; /* NDS_P4_SPECIAL_COUNT rows */
+    /* Lab builds: donor special files a stand-in replaces (never loaded). */
+    const u16 *lab_skip_files;
+    const u32 *lab_skip_file_count;
+    /* CPU rows from the export: the attack list (count 0: the parent's),
+     * NDS_P4_COMPUTER_LONG_RANGE_*, the Remix input routines it names. */
+    const FTComputerAttack *computer_attacks;
+    const u32 *computer_attack_count;
+    const u8 *computer_long_range;
+    const NDSP4ComputerScript *computer_scripts;
+    const u32 *computer_script_count;
+    const u8 *computer_script_bytes;
 } NDSP4Fighter;
 
 /* Character-select selection ids: an original's fkind, or NDS_P4_SEL_BASE +
@@ -260,13 +288,19 @@ const NDSP4Entry *ndsP4Entry(const FTStruct *fp);
 sb32 ndsP4CheckSpecialLent(GObj *fighter_gobj, sb32 (*check)(GObj *),
                            NDSP4SpecialStart *const *tables,
                            const u8 *slots, u32 count);
-/* Lab builds: the starter of an unported donor special (starts nothing). */
+/* Lab builds: the starter of an unported donor special (starts nothing).
+ * The count also takes per-fighter stand-ins inside ported routines. */
 void ndsP4LabSpecialStandIn(GObj *fighter_gobj);
+extern volatile u32 gNdsP4LabSpecialStandIns;
 /* ftMainSetStatus prologue: Remix change_action_ resets. */
 void ndsP4OnSetStatus(GObj *fighter_gobj);
-/* CPU (src/import/battleship_ftcomputer*.c). The content's rows, or NULL
- * for the original cast. */
+/* CPU (src/import/battleship_ftcomputer*.c). The content's hand-ported
+ * routines, or NULL for the original cast. */
 const NDSP4Computer *ndsP4Computer(const FTStruct *fp);
+/* The content's generated attack list, or NULL (the parent's). */
+const FTComputerAttack *ndsP4ComputerAttacks(const FTStruct *fp);
+/* NDS_P4_COMPUTER_LONG_RANGE_*; PARENT for the original cast. */
+u32 ndsP4ComputerLongRange(const FTStruct *fp);
 /* ftComputerFollowObjectiveRecover, after its walk: the content's CPU
  * recovery_logic (Remix AI.asm custom_recovery_logic). */
 void ndsP4ComputerRecover(FTStruct *fp);
@@ -284,6 +318,10 @@ s32 ndsP4ComputerStickX(const FTStruct *fp);
 void ndsP4BindMenuScripts(u32 content);
 /* NitroFS path for a P4 file id, or NULL. */
 const char *ndsP4RelocAssetPath(u32 file_id);
+/* Lab builds: a P4 file's dependency on a donor special file that a lab
+ * stand-in replaces. The loader neither sizes nor loads it and leaves the
+ * slots naming it NULL (the main's header words, its only readers). */
+sb32 ndsP4LabSkipsDependency(u32 owner_asset, u32 dep_asset);
 /* Reloc normalizer seams: a content's own animation files, and the
  * FTAttributes offset when asset_id is a content's main file (else 0). */
 sb32 ndsP4IsFighterAnim(u32 asset_id);
@@ -307,6 +345,36 @@ static inline void *ndsP4MotionEventCursor(GObj *fighter_gobj,
     }
     return ndsP4RunRemixMotionEvents(fighter_gobj, ms, forward);
 }
+
+/* Remix hitbox overrides (Command.asm 0xD2 OVERRIDE HITBOX DIRECTION, 0xD8
+ * SET HITBOX FGM), per port and hitbox. Remix clears a hitbox's pair when the
+ * source makes that hitbox (create_hitbox_) and all four when it clears them
+ * all (end_hitbox_). Only a hitbox the source made reads its pair, so the
+ * make-time clear alone gives the same reads; attack_id 4 or more clears
+ * all. Contents only. */
+void ndsP4ResetHitboxOverrides(const FTStruct *fp, u32 attack_id);
+/* ftMainParseMotionEvent's make-hitbox reads (battleship_ftmain.c): the
+ * hitbox id is bits 23-25 of the event's first word. */
+static inline void *ndsP4MakeAttackCursor(const FTStruct *fp,
+                                          FTMotionScript *ms)
+{
+    if (__builtin_expect(ndsP4Content(fp) != 0u, 0))
+    {
+        ndsP4ResetHitboxOverrides(fp, (*(const u32 *)ms->p_script >> 23) & 7u);
+    }
+    return ms->p_script;
+}
+/* ftMainPlayHitSFX's sound (apply_fgm_): the attacker's override for that
+ * hitbox replaces the source's, or with bit 15 plays after it. */
+void ndsP4MakeHitPositionFGM(FTStruct *attacker_fp, FTAttackColl *attack_coll,
+                             u16 fgm_id, f32 pos_x);
+/* ftMainProcessHitCollisionStatsMain, once the victim's damage_lr is set
+ * (apply_direction_, fighter hits only): forward launches away from the
+ * attacker's facing, backward along it; then the source's stats call. */
+void ndsP4UpdateHitDamageStats(const FTHitLog *hitlog, FTStruct *fp,
+                               s32 damage_player, s32 damage_object_class,
+                               s32 damage_object_kind, u16 flags,
+                               u16 damage_stat_count);
 
 /* The fighter's SwordTrail.asm row for a SET AFTERIMAGE id >= 2, or NULL
  * (not its trail: the source then records and draws nothing). */

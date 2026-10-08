@@ -292,8 +292,11 @@ ftComputerCheckDetectTarget(FTStruct *this_fp, f32 detect_range_base)
 #if NDS_P4
     /* P4: the content's attack list (Remix ai_behaviour). */
     p4_com = ndsP4Computer(this_fp);
-    comattack = ((p4_com != NULL) && (p4_com->attacks != NULL)) ?
-        (FTComputerAttack *)p4_com->attacks : dFTComputerAttackList[this_fp->fkind];
+    comattack = (FTComputerAttack *)ndsP4ComputerAttacks(this_fp);
+    if (comattack == NULL)
+    {
+        comattack = dFTComputerAttackList[this_fp->fkind];
+    }
 #else
     comattack = dFTComputerAttackList[this_fp->fkind];
 #endif

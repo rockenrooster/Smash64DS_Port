@@ -10,6 +10,7 @@
 #include <string.h>
 #include <sc/scene.h>
 #include <sys/objman.h>
+#include <sys/audio.h>
 
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
 
@@ -45,7 +46,7 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
     extern const NDSP4Present gNdsP4##T##Present; \
     extern const NDSP4SwordTrail gNdsP4##T##SwordTrails[]; \
     extern const u32 gNdsP4##T##SwordTrailCount; \
-    extern const NDSP4Entry gNdsP4##T##Entry;     extern const NDSP4SpecialStart gNdsP4##T##SpecialStarts[];
+    extern const NDSP4Entry gNdsP4##T##Entry;     extern const NDSP4SpecialStart gNdsP4##T##SpecialStarts[];     extern const u16 gNdsP4##T##LabSkipFiles[];     extern const u32 gNdsP4##T##LabSkipFileCount;     extern const FTComputerAttack gNdsP4##T##ComputerAttacks[];     extern const u32 gNdsP4##T##ComputerAttackCount;     extern const u8 gNdsP4##T##ComputerLongRange;     extern const NDSP4ComputerScript gNdsP4##T##ComputerScripts[];     extern const u32 gNdsP4##T##ComputerScriptCount;     extern const u8 gNdsP4##T##ComputerScriptBytes[];
 #define NDS_P4_ROW(T, title, parent, on_status_hook, computer_rows) \
     { \
         .name = (title), .parent_kind = (parent), \
@@ -67,7 +68,7 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
         .present = &gNdsP4##T##Present, \
         .sword_trails = gNdsP4##T##SwordTrails, \
         .sword_trail_count = &gNdsP4##T##SwordTrailCount, \
-        .entry = &gNdsP4##T##Entry,         .special_starts = gNdsP4##T##SpecialStarts, \
+        .entry = &gNdsP4##T##Entry,         .special_starts = gNdsP4##T##SpecialStarts,         .lab_skip_files = gNdsP4##T##LabSkipFiles,         .lab_skip_file_count = &gNdsP4##T##LabSkipFileCount,         .computer_attacks = gNdsP4##T##ComputerAttacks,         .computer_attack_count = &gNdsP4##T##ComputerAttackCount,         .computer_long_range = &gNdsP4##T##ComputerLongRange,         .computer_scripts = gNdsP4##T##ComputerScripts,         .computer_script_count = &gNdsP4##T##ComputerScriptCount,         .computer_script_bytes = gNdsP4##T##ComputerScriptBytes, \
     }
 
 /* Every compiled content (nds_p4_contents.h). Its native hooks live in
@@ -278,49 +279,92 @@ void ndsP4ComputerRecover(FTStruct *fp)
     }
 }
 
-/* Remix's added input routines (AI.asm), as assembled (Remix 5e04fe7).
- * Their macros spell some steps oddly -- UNPRESS_A() is a Z release and
- * UNPRESS_Z() a move-toward-target step before one, MULTI_SHINE's "press
- * B" presses A, then B -- and the bytes are what Remix's CPUs run. */
+/* Remix's added input routines (AI.asm add_cpu_input_routine), as
+ * assembled: each content's attack list names its own (generated,
+ * ComputerScriptBytes). These two are the ones hand-ported code issues
+ * outside a list: Falco's recovery steers with NSP_TOWARDS, and NULL drops
+ * a command. Their macros spell some steps oddly -- UNPRESS_A() is a Z
+ * release and UNPRESS_Z() a move-toward-target step before one -- and the
+ * bytes are what Remix's CPUs run. */
 static const struct
 {
-    u8 multi_shine[19];
     u8 nsp_towards[13];
-    u8 fair[13];
-    u8 bair[13];
-    u8 dash_attack[13];
     u8 null_routine[1];
 } sNdsP4ComputerScripts = {
-    { 0xA0, 0x00, 0xB1, 0x00, 0xA0, 0x7F, 0xB1, 0x00, 0xA0, 0x00, 0xB1, 0x35,
-      0xA0, 0x00, 0xB0, 0xB0, 0x02, 0x21, 0xFF },
     { 0xC0, 0x50, 0x50, 0x30, 0xB0, 0x00, 0xA0, 0x7F, 0x21, 0xA0, 0x00, 0x30,
-      0xFF },
-    { 0xC0, 0x50, 0x50, 0x30, 0xB0, 0x00, 0xA0, 0x83, 0x01, 0xA0, 0x7F, 0x10,
-      0xFF },
-    { 0xC0, 0x50, 0x50, 0x30, 0xB0, 0x00, 0xA0, 0x84, 0x01, 0xA0, 0x7F, 0x10,
-      0xFF },
-    { 0xC0, 0x50, 0x50, 0x30, 0xB0, 0x00, 0xA5, 0x7F, 0x01, 0xB0, 0x00, 0x10,
       0xFF },
     { 0xFF },
 };
 
-static const u8 *ndsP4ComputerScript(s32 index)
+/* The content's generated routine for a Remix input id, or NULL. */
+static const u8 *ndsP4ComputerOwnScript(const FTStruct *fp, s32 index)
 {
-    switch (index)
+    const NDSP4Fighter *f = ndsP4Fighter(ndsP4Content(fp));
+    u32 i;
+
+    if (f == NULL)
     {
-    case nNDSP4ComputerInputMultiShine:
-        return sNdsP4ComputerScripts.multi_shine;
-    case nNDSP4ComputerInputNSPTowards:
-        return sNdsP4ComputerScripts.nsp_towards;
-    case nNDSP4ComputerInputFair:
-        return sNdsP4ComputerScripts.fair;
-    case nNDSP4ComputerInputBair:
-        return sNdsP4ComputerScripts.bair;
-    case nNDSP4ComputerInputDashAttack:
-        return sNdsP4ComputerScripts.dash_attack;
-    default:
-        return sNdsP4ComputerScripts.null_routine;
+        return NULL;
     }
+    for (i = 0u; i < *f->computer_script_count; i++)
+    {
+        if (f->computer_scripts[i].input == (u32)index)
+        {
+            return &f->computer_script_bytes[f->computer_scripts[i].offset];
+        }
+    }
+    return NULL;
+}
+
+static const u8 *ndsP4ComputerScript(const FTStruct *fp, s32 index)
+{
+    const u8 *own = ndsP4ComputerOwnScript(fp, index);
+
+    if (own != NULL)
+    {
+        return own;
+    }
+    return (index == nNDSP4ComputerInputNSPTowards) ?
+        sNdsP4ComputerScripts.nsp_towards : sNdsP4ComputerScripts.null_routine;
+}
+
+/* Whether a command pointer runs a Remix routine (vanilla scripts keep
+ * their raw stick values). */
+static sb32 ndsP4ComputerIsRemixScript(const FTStruct *fp, const u8 *p)
+{
+    const NDSP4Fighter *f = ndsP4Fighter(ndsP4Content(fp));
+
+    if ((p >= (const u8 *)&sNdsP4ComputerScripts) &&
+        (p < (const u8 *)(&sNdsP4ComputerScripts + 1)))
+    {
+        return TRUE;
+    }
+    if ((f != NULL) && (*f->computer_script_count != 0u))
+    {
+        const NDSP4ComputerScript *last =
+            &f->computer_scripts[*f->computer_script_count - 1u];
+
+        return ((p >= f->computer_script_bytes) &&
+                (p < &f->computer_script_bytes[last->offset + last->length])) ?
+                   TRUE : FALSE;
+    }
+    return FALSE;
+}
+
+const FTComputerAttack *ndsP4ComputerAttacks(const FTStruct *fp)
+{
+    const NDSP4Fighter *f = ndsP4Fighter(ndsP4Content(fp));
+
+    return ((f != NULL) && (*f->computer_attack_count != 0u)) ?
+        f->computer_attacks : NULL;
+}
+
+u32 ndsP4ComputerLongRange(const FTStruct *fp)
+{
+    const NDSP4Fighter *f = ndsP4Fighter(ndsP4Content(fp));
+
+    return (f != NULL) ? *f->computer_long_range :
+                         NDS_P4_COMPUTER_LONG_RANGE_PARENT;
 }
 
 /* Remix extends the command table past the vanilla 0x31 (AI.asm
@@ -334,7 +378,7 @@ void ndsP4ComputerSetCommandWaitShort(FTStruct *fp, s32 index)
         return;
     }
     ftComputerSetCommandWaitShort(fp, nFTComputerInputStickN);
-    fp->computer.p_command = (u8 *)ndsP4ComputerScript(index);
+    fp->computer.p_command = (u8 *)ndsP4ComputerScript(fp, index);
 }
 
 void ndsP4ComputerSetCommandImmediate(FTStruct *fp, s32 index)
@@ -345,7 +389,7 @@ void ndsP4ComputerSetCommandImmediate(FTStruct *fp, s32 index)
         return;
     }
     ftComputerSetCommandImmediate(fp, nFTComputerInputStickN);
-    fp->computer.p_command = (u8 *)ndsP4ComputerScript(index);
+    fp->computer.p_command = (u8 *)ndsP4ComputerScript(fp, index);
 }
 
 /* AI.asm extend_stick_x_commands: in a stick-X step, 0x81/0x82 point the
@@ -361,9 +405,7 @@ s32 ndsP4ComputerStickX(const FTStruct *fp)
     const u8 *p = com->p_command;
     u32 value = 0u;
 
-    if ((com->input_wait != 1) ||
-        (p < (const u8 *)&sNdsP4ComputerScripts) ||
-        (p >= (const u8 *)(&sNdsP4ComputerScripts + 1)))
+    if ((com->input_wait != 1) || (ndsP4ComputerIsRemixScript(fp, p) == FALSE))
     {
         return NDS_P4_COMPUTER_STICK_KEEP;
     }
@@ -434,7 +476,9 @@ void ndsP4ComputerPostProcess(FTStruct *fp)
     {
         return;
     }
-    if ((fp->computer.p_command == sNdsP4ComputerScripts.dash_attack) &&
+    if ((fp->computer.p_command != NULL) &&
+        (fp->computer.p_command ==
+         ndsP4ComputerOwnScript(fp, nNDSP4ComputerInputDashAttack)) &&
         (fp->status_id != nFTCommonStatusWait) &&
         (fp->status_id != nFTCommonStatusRun))
     {
@@ -662,6 +706,34 @@ const char *ndsP4RelocAssetPath(u32 file_id)
     return NULL;
 }
 
+sb32 ndsP4LabSkipsDependency(u32 owner_asset, u32 dep_asset)
+{
+    u32 c;
+
+    if (ndsP4RelocAssetPath(owner_asset) == NULL)
+    {
+        return FALSE;
+    }
+    for (c = 1u; c < NDS_P4_CONTENT_LIMIT; c++)
+    {
+        const NDSP4Fighter *f = ndsP4Fighter(c);
+        u32 i;
+
+        if (f == NULL)
+        {
+            continue;
+        }
+        for (i = 0u; i < *f->lab_skip_file_count; i++)
+        {
+            if (f->lab_skip_files[i] == dep_asset)
+            {
+                return TRUE;
+            }
+        }
+    }
+    return FALSE;
+}
+
 static u32 ndsP4FindAnim(u32 asset_id)
 {
     u32 c;
@@ -754,6 +826,95 @@ static void ndsP4RemixFrameSpeed(GObj *fighter_gobj, u32 word)
     }
 }
 
+/* Remix hitbox overrides by port and hitbox: a launch direction (0 none,
+ * NDS_P4_HITBOX_FORWARD, NDS_P4_HITBOX_BACKWARD) and a hit sound (-1 none;
+ * bit 15 set plays it after the source's). */
+#define NDS_P4_HITBOX_FORWARD 1u
+#define NDS_P4_HITBOX_BACKWARD 2u
+static u8 sNdsP4HitboxDir[GMCOMMON_PLAYERS_MAX][4];
+static u16 sNdsP4HitboxFgm[GMCOMMON_PLAYERS_MAX][4] = {
+    { 0xFFFFu, 0xFFFFu, 0xFFFFu, 0xFFFFu }, { 0xFFFFu, 0xFFFFu, 0xFFFFu, 0xFFFFu },
+    { 0xFFFFu, 0xFFFFu, 0xFFFFu, 0xFFFFu }, { 0xFFFFu, 0xFFFFu, 0xFFFFu, 0xFFFFu }
+};
+
+/* Defined in the decomp's lb and sys code (no DS header declares them). */
+void *lbCommonMakePositionFGM(u16 fgm, f32 pos);
+s32 syUtilsRandIntRange(s32 range);
+
+void ndsP4ResetHitboxOverrides(const FTStruct *fp, u32 attack_id)
+{
+    u32 port = fp->player & 3u;
+    u32 i;
+
+    for (i = 0u; i < 4u; i++)
+    {
+        if ((attack_id >= 4u) || (i == attack_id))
+        {
+            sNdsP4HitboxDir[port][i] = 0u;
+            sNdsP4HitboxFgm[port][i] = 0xFFFFu;
+        }
+    }
+}
+
+void ndsP4MakeHitPositionFGM(FTStruct *attacker_fp, FTAttackColl *attack_coll,
+                             u16 fgm_id, f32 pos_x)
+{
+    u32 hitbox = (u32)(attack_coll - attacker_fp->attack_colls);
+    u16 own = 0xFFFFu;
+
+    if ((ndsP4Content(attacker_fp) != 0u) && (hitbox < 4u))
+    {
+        own = sNdsP4HitboxFgm[attacker_fp->player & 3u][hitbox];
+    }
+    if ((own == 0xFFFFu) || ((own & 0x8000u) != 0u))
+    {
+        lbCommonMakePositionFGM(fgm_id, pos_x);
+    }
+    if (own != 0xFFFFu)
+    {
+        lbCommonMakePositionFGM(own & 0x7FFFu, pos_x);
+    }
+}
+
+void ndsP4UpdateHitDamageStats(const FTHitLog *hitlog, FTStruct *fp,
+                               s32 damage_player, s32 damage_object_class,
+                               s32 damage_object_kind, u16 flags,
+                               u16 damage_stat_count)
+{
+    if (hitlog->attacker_object_class == nFTHitLogObjectFighter)
+    {
+        const FTStruct *attacker_fp = ftGetStruct(hitlog->attacker_gobj);
+        u32 hitbox = (u32)((const FTAttackColl *)hitlog->attack_coll -
+                           attacker_fp->attack_colls);
+
+        if ((ndsP4Content(attacker_fp) != 0u) && (hitbox < 4u))
+        {
+            u32 dir = sNdsP4HitboxDir[attacker_fp->player & 3u][hitbox];
+
+            if (dir == NDS_P4_HITBOX_BACKWARD)
+            {
+                fp->damage_lr = attacker_fp->lr;
+            }
+            else if (dir == NDS_P4_HITBOX_FORWARD)
+            {
+                fp->damage_lr = -attacker_fp->lr;
+            }
+        }
+    }
+    ftParamUpdate1PGameDamageStats(fp, damage_player, damage_object_class,
+                                   damage_object_kind, flags,
+                                   damage_stat_count);
+}
+
+/* The u16 at a byte address in a file the loader word-swapped. */
+static u16 ndsP4ReadSwappedU16(const void *ptr)
+{
+    uintptr_t at = (uintptr_t)ptr;
+    u32 word = *(const u32 *)(at & ~(uintptr_t)3u);
+
+    return (u16)(((at & 2u) != 0u) ? word : (word >> 16));
+}
+
 u32 *ndsP4RunRemixMotionEvents(GObj *fighter_gobj, FTMotionScript *ms,
                                sb32 forward)
 {
@@ -771,21 +932,85 @@ u32 *ndsP4RunRemixMotionEvents(GObj *fighter_gobj, FTMotionScript *ms,
         case 0xD0:
             ndsP4RemixFrameSpeed(fighter_gobj, word);
             break;
+        case 0xD1:
+            /* SET ARMOUR (armour_), both tables: knockback-based armour,
+             * the field Yoshi's double jump sets. */
+            fp->knockback_resist_status = ndsP4HalfFloat(word);
+            break;
+        case 0xD2:
+            /* OVERRIDE HITBOX DIRECTION, both tables: byte 2 the hitbox,
+             * byte 3 the direction. */
+            if (((word >> 8) & 0xFFu) < 4u)
+            {
+                sNdsP4HitboxDir[fp->player & 3u][(word >> 8) & 0xFFu] =
+                    (u8)word;
+            }
+            break;
         case 0xD3:
             gNdsP4TranslationMultiplier[fp->player & 3u] = ndsP4HalfFloat(word);
             break;
-        case 0xDB:
-            /* GO TO MOVESET FILE (jump_to_moveset_file_), in both tables: the
-             * script continues at an offset into the fighter's loaded main
-             * motion file. The synthesized motion file keeps that file's
-             * bytes at their own offsets. */
-            p = (u32 *)((uintptr_t)*fp->data->p_file_mainmotion +
-                        (word & 0xFFFFu));
-            ms->p_script = p;
-            continue;
-        case 0xD6: /* RANDOM SFX */
-        case 0xD9: /* SET ENV COLOR */
-        case 0xDC: /* L VOICE SFX */
+        case 0xD4:
+            /* SET Y VELOCITY; the fast-forward table skips it. */
+            if (forward == FALSE)
+            {
+                fp->physics.vel_air.y = ndsP4HalfFloat(word);
+            }
+            break;
+        case 0xD5:
+            /* FAST FALL; the fast-forward table skips it. */
+            if (forward == FALSE)
+            {
+                fp->is_fastfall = ((word & 0xFFu) != 0u) ? TRUE : FALSE;
+            }
+            break;
+        case 0xD6:
+            /* RANDOM SFX (play_sfx_random_), 8 bytes: byte 1 the chance in
+             * 100, byte 2 sound (0) or voice (1), byte 3 the table size; the
+             * second word points at the table of u16 sound ids. The
+             * fast-forward table skips it. */
+            length = 8u;
+            if ((forward == FALSE) && (fp->is_muted == FALSE) &&
+                ((u32)syUtilsRandIntRange(100) < ((word >> 16) & 0xFFu)))
+            {
+                const u8 *table = (const u8 *)(uintptr_t)p[1];
+                u16 fgm_id = ndsP4ReadSwappedU16(
+                    table + 2 * syUtilsRandIntRange((s32)(word & 0xFFu)));
+
+                if (((word >> 8) & 0xFFu) == 1u)
+                {
+                    ftParamPlayVoice(fp, fgm_id);
+                }
+                else
+                {
+                    func_800269C0_275C0(fgm_id);
+                }
+            }
+            break;
+        case 0xD7:
+            /* SET KINETIC STATE, both tables: aerial (byte 3 != 0) also
+             * counts one jump used. */
+            fp->jumps_used = ((word & 0xFFu) != 0u) ? 1u : 0u;
+            fp->ga = ((word & 0xFFu) != 0u) ? nMPKineticsAir : nMPKineticsGround;
+            break;
+        case 0xD8:
+            /* SET HITBOX FGM, both tables: byte 1's high nibble sets all four
+             * hitboxes, else its low nibble names one; halfword 1 the id. */
+            if (((word >> 20) & 0xFu) != 0u)
+            {
+                u32 i;
+
+                for (i = 0u; i < 4u; i++)
+                {
+                    sNdsP4HitboxFgm[fp->player & 3u][i] = (u16)word;
+                }
+            }
+            else if (((word >> 16) & 0xFu) < 4u)
+            {
+                sNdsP4HitboxFgm[fp->player & 3u][(word >> 16) & 0xFu] =
+                    (u16)word;
+            }
+            break;
+        case 0xD9: /* SET ENV COLOR: the fighter's draw colour, not ported */
             length = 8u;
             if (forward == FALSE)
             {
@@ -793,23 +1018,27 @@ u32 *ndsP4RunRemixMotionEvents(GObj *fighter_gobj, FTMotionScript *ms,
                 gNdsP4UnportedMotionEventLast = word;
             }
             break;
-        case 0xD4: /* SET Y VELOCITY */
-        case 0xD5: /* FAST FALL */
-        case 0xDA: /* SWITCH DIRECTION */
+        case 0xDA:
+            /* SWITCH DIRECTION; the fast-forward table skips it. */
             if (forward == FALSE)
             {
-                gNdsP4UnportedMotionEvents++;
-                gNdsP4UnportedMotionEventLast = word;
+                fp->lr = -fp->lr;
+            }
+            break;
+        case 0xDC:
+            /* L VOICE SFX, 8 bytes: the voice in halfword 1, or the one in
+             * the second word's low half while the taunt button is held. The
+             * fast-forward table skips it. */
+            length = 8u;
+            if (forward == FALSE)
+            {
+                ftParamPlayVoice(fp, ((fp->input.pl.button_hold &
+                                       fp->input.button_mask_l) != 0u) ?
+                                         (u16)p[1] : (u16)word);
             }
             break;
         default:
-            /* D1 armour, D2 hitbox direction, D7 kinetic and D8 hitbox FGM
-             * run in both tables; E0+ are donor no-ops. */
-            if (op <= 0xDCu)
-            {
-                gNdsP4UnportedMotionEvents++;
-                gNdsP4UnportedMotionEventLast = word;
-            }
+            /* E0+ are donor no-ops. */
             break;
         }
         p = (u32 *)((uintptr_t)p + length);

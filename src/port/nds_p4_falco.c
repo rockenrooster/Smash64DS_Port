@@ -246,33 +246,6 @@ void ndsP4FalcoComputerRecover(FTStruct *fp)
     ndsP4ComputerSetCommandImmediate(fp, nNDSP4ComputerInputNSPTowards);
 }
 
-/* Falco/AI/Attacks.asm CPU_ATTACKS (ai_behaviour), as assembled: input,
- * hitbox start frame, (unused end), detect x near/far, y near/far. */
-_Static_assert(nFTComputerInputStickSmashLwButtonA == 0x22, "CPU input ids");
-static const FTComputerAttack sNdsP4FalcoComputerAttacks[] = {
-    { nNDSP4ComputerInputMultiShine, 1, 0, -90.0F, 90.0F, 160.0F, 340.0F },
-    { nFTComputerInputStickNButtonA, 3, 0, 244.0F, 562.0F, 204.0F, 316.0F },
-    { nFTComputerInputStickTiltAutoXButtonA, 6, 0, 170.0F, 606.0F, 205.0F, 336.0F },
-    { nFTComputerInputStickTiltHiButtonA, 6, 0, -218.0F, 257.0F, 176.0F, 701.0F },
-    { nFTComputerInputStickTiltLwButtonA, 6, 0, 25.0F, 447.0F, -37.0F, 123.0F },
-    { nFTComputerInputStickSmashAutoXNYButtonA, 14, 0, 380.0F, 826.0F, 100.0F, 384.0F },
-    { nFTComputerInputStickSmashHiButtonA, 6, 0, -345.0F, 367.0F, 139.0F, 760.0F },
-    { nFTComputerInputStickSmashLwButtonA, 6, 0, -414.0F, 420.0F, -31.0F, 120.0F },
-    { nFTComputerInputStickSmashAutoXButtonB, 20, 0, 600.0F, 1976.0F, 151.0F, 266.0F },
-    { nFTComputerInputStickNButtonZButtonA, 6, 0, 273.0F, 413.0F, 180.0F, 320.0F },
-    { nNDSP4ComputerInputDashAttack, 5, 0, 297.0F, 1156.0F, -78.0F, 313.0F },
-    { -1, 0, 0, 0.0F, 0.0F, 0.0F, 0.0F },
-    { nFTComputerInputStickNButtonA, 4, 0, -53.0F, 279.0F, 107.0F, 371.0F },
-    { nFTComputerInputStickSmashLwButtonA, 4, 0, -54.0F, 193.0F, 3.0F, 260.0F },
-    { nFTComputerInputStickSmashHiButtonA, 6, 0, -82.0F, 179.0F, 172.0F, 633.0F },
-    { nNDSP4ComputerInputFair, 6, 0, 51.0F, 347.0F, 138.0F, 383.0F },
-    { nNDSP4ComputerInputBair, 6, 0, -373.0F, 257.0F, 109.0F, 351.0F },
-    { nFTComputerInputStickNButtonA, 8, 0, -53.0F, 279.0F, 107.0F, 371.0F },
-    { nNDSP4ComputerInputBair, 10, 0, -373.0F, 257.0F, 109.0F, 351.0F },
-    { nFTComputerInputStickSmashAutoXButtonB, 20, 0, 350.0F, 1842.0F, 145.0F, 260.0F },
-    { -1, 0, 0, 0.0F, 0.0F, 0.0F, 0.0F },
-};
-
 /* AI.asm PREVENT_ATTACK.ROUTINE.FALCO_NSP (ai_attack_prevent): an aerial
  * Phantasm gets the ledge-ground test; up special goes to FOX_USP, which
  * skips it at level 10 only. Offsets: 0x14C ga, 0x13 level. */
@@ -335,12 +308,10 @@ static void ndsP4FalcoComputerPostProcess(FTStruct *fp)
     }
 }
 
-/* Falco's CPU rows; ai_long_range is NONE (Fox's is the long-range
- * laser, NSP_SHOOT). */
+/* Falco's hand-ported CPU routines. His attack list, ai_long_range (NONE;
+ * Fox's is the long-range laser) and input routines are generated. */
 const NDSP4Computer gNdsP4FalcoComputer = {
-    .attacks = sNdsP4FalcoComputerAttacks,
     .prevent = ndsP4FalcoComputerPrevent,
-    .long_range_none = TRUE,
     .recover = ndsP4FalcoComputerRecover,
     .post_process = ndsP4FalcoComputerPostProcess,
 };
