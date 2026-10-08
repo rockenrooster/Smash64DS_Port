@@ -621,7 +621,14 @@ ftComputerCheckDetectTarget(FTStruct *this_fp, f32 detect_range_base)
                         {
                             if (user_data != NULL)
                             {
+#if NDS_P4
+                                /* Remix reads Character.fighter_reflect at
+                                 * the target's id (Reflect.asm AI
+                                 * extend_reflect_absorb_character_check_). */
+                                if (ndsP4ComputerTargetReflects((FTStruct *)user_data) != FALSE)
+#else
                                 if ((((FTStruct*)user_data)->fkind == nFTKindNess) || (((FTStruct*)user_data)->fkind == nFTKindFox))
+#endif
                                 {
                                     fkind = (this_fp->fkind == nFTKindKirby) ? this_fp->passive_vars.kirby.copy_id : this_fp->fkind;
 

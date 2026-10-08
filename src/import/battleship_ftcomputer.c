@@ -73,6 +73,23 @@ static sb32 ndsP4FTComputerLongRange(FTStruct *fp, sb32 is_delay);
 #define NDS_P4_WALK_this_fp ndsP4FTComputerFollowObjectiveWalk(this_fp
 #define ftComputerFollowObjectiveWalk(arg) NDS_P4_WALK_##arg)
 static void ndsP4FTComputerFollowObjectiveWalk(FTStruct *fp);
+/* Remix's reflect AI (nds_p4.h NDS_P4_COMPUTER_REFLECT_*): the recover
+ * objective's jump range, the incoming-attack scan, the default objective's
+ * reflector hold and the item objective's reflector-target test all compare
+ * the fighter's own id, which for a content is not its parent's. */
+#define NDS_P4_JUMP_RANGE_FTStruct ndsBaseFTComputerRecoverJumpRange(FTStruct
+#define NDS_P4_JUMP_RANGE_fp ndsP4FTComputerRecoverJumpRange(fp
+#define func_ovl3_801346D4(arg) NDS_P4_JUMP_RANGE_##arg)
+static void ndsP4FTComputerRecoverJumpRange(FTStruct *fp);
+#define NDS_P4_HAZARD_FTStruct ndsBaseFTComputerCheckHazard(FTStruct
+#define NDS_P4_HAZARD_fp ndsP4FTComputerCheckHazard(fp
+#define func_ovl3_80135B78(arg) NDS_P4_HAZARD_##arg)
+static sb32 ndsP4FTComputerCheckHazard(FTStruct *fp);
+#define NDS_P4_USE_ITEM_FTStruct ndsBaseFTComputerFollowObjectiveUseItem(FTStruct
+#define NDS_P4_USE_ITEM_fp ndsP4FTComputerFollowObjectiveUseItem(fp
+#define ftComputerFollowObjectiveUseItem(arg) NDS_P4_USE_ITEM_##arg)
+static void ndsP4FTComputerFollowObjectiveUseItem(FTStruct *fp);
+#define ftComputerProcDefault ndsBaseFTComputerProcDefault
 #endif
 #define ftComputerSetupAll ndsBaseFTComputerSetupAll
 #define ftComputerProcessAll ndsBaseFTComputerProcessAll
@@ -87,6 +104,10 @@ static void ndsP4FTComputerFollowObjectiveWalk(FTStruct *fp);
 #undef ftComputerProcessObjective
 #undef ftComputerUpdateInputs
 #undef func_ovl3_80138AA8
+#undef func_ovl3_801346D4
+#undef func_ovl3_80135B78
+#undef ftComputerFollowObjectiveUseItem
+#undef ftComputerProcDefault
 #include <nds/nds_p4.h>
 
 /* ftcomputer.c:4960 for a P4 content. Its fkind reads are three compares
@@ -110,6 +131,201 @@ static void ndsP4FTComputerFollowObjectiveWalk(FTStruct *fp)
 void ftComputerFollowObjectiveWalk(FTStruct *fp)
 {
     ndsP4FTComputerFollowObjectiveWalk(fp);
+}
+
+/* ftcomputer.c:4701, the recover objective's jump range: its fkind reads
+ * are compares Remix leaves on the fighter's own id (Fox, DK and Giant DK
+ * halve the range, Ness flips it, Metal Mario and Giant DK zero it) and it
+ * calls nothing, so a content runs it with its fkind out of range. */
+static void ndsP4FTComputerRecoverJumpRange(FTStruct *fp)
+{
+    if (fp->nds_p4_content != 0u)
+    {
+        s32 fkind = fp->fkind;
+
+        fp->fkind = NDS_P4_FOREIGN_FKIND;
+        ndsBaseFTComputerRecoverJumpRange(fp);
+        fp->fkind = fkind;
+        return;
+    }
+    ndsBaseFTComputerRecoverJumpRange(fp);
+}
+
+void func_ovl3_801346D4(FTStruct *fp)
+{
+    ndsP4FTComputerRecoverJumpRange(fp);
+}
+
+/* ftcomputer.c:5308, the incoming-attack scan: Fox and Ness flag the
+ * counterattack's reflect (is_opponent_ra). Remix sends its reflectors' ids
+ * Fox's way (extend_projectile_reflect_initial_) and any other content's
+ * to the plain case; the scan calls nothing that reads fkind. Its item half
+ * reads Character.fighter_reflect instead (extend_item_reflect_initial_),
+ * which differs for Dedede alone: Remix flags his item hazards, which the
+ * counterattack clears without an input (apply_reflect_input_ has no case
+ * for him) and which keeps func_ovl3_801361BC from arming his item shield;
+ * this port arms it. */
+static sb32 ndsP4FTComputerCheckHazard(FTStruct *fp)
+{
+    if (fp->nds_p4_content != 0u)
+    {
+        s32 fkind = fp->fkind;
+        sb32 result;
+
+        fp->fkind = ndsP4ComputerReflectKind(fp);
+        result = ndsBaseFTComputerCheckHazard(fp);
+        fp->fkind = fkind;
+        return result;
+    }
+    return ndsBaseFTComputerCheckHazard(fp);
+}
+
+sb32 func_ovl3_80135B78(FTStruct *fp)
+{
+    return ndsP4FTComputerCheckHazard(fp);
+}
+
+/* ftcomputer.c:6627, the item objective: a level-5 CPU throws a shooting
+ * item at Fox or Ness rather than fire it, a test of the target's id that
+ * Remix leaves unpatched, so no content target meets it. The objective
+ * reads no fighter's fkind but that target's (its walk and target search
+ * read only its own, and a content's own runs out of range there anyway),
+ * so every content in the match is out of range while it runs. */
+static void ndsP4FTComputerFollowObjectiveUseItem(FTStruct *fp)
+{
+    s32 kinds[GMCOMMON_PLAYERS_MAX];
+    FTStruct *contents[GMCOMMON_PLAYERS_MAX];
+    u32 count = 0u;
+    GObj *gobj;
+    u32 i;
+
+    for (gobj = gGCCommonLinks[nGCCommonLinkIDFighter];
+         (gobj != NULL) && (count < GMCOMMON_PLAYERS_MAX); gobj = gobj->link_next)
+    {
+        FTStruct *other_fp = ftGetStruct(gobj);
+
+        if (other_fp->nds_p4_content != 0u)
+        {
+            contents[count] = other_fp;
+            kinds[count++] = other_fp->fkind;
+            other_fp->fkind = NDS_P4_FOREIGN_FKIND;
+        }
+    }
+    ndsBaseFTComputerFollowObjectiveUseItem(fp);
+    for (i = 0u; i < count; i++)
+    {
+        contents[i]->fkind = kinds[i];
+    }
+}
+
+void ftComputerFollowObjectiveUseItem(FTStruct *fp)
+{
+    ndsP4FTComputerFollowObjectiveUseItem(fp);
+}
+
+/* ftcomputer.c:6274, the default objective, for a P4 content: the
+ * source's, but the reflector hold (a Fox or Ness CPU in its down-special
+ * releases B) takes Remix's view of the fighter (maintain_reflect_input_:
+ * Fox's branch for its reflectors, none for any other content), so Peach
+ * and Sonic, whose own down-specials occupy Fox's status ids, keep B held.
+ * ftComputerProcessObjective installs it per frame (the behavior step
+ * reassigns the source's). */
+static s32 ndsP4FTComputerProcDefault(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    FTComputer *com = &fp->computer;
+    s32 process_result = ftComputerGetObjectiveStatus(fighter_gobj);
+
+    if ((process_result == 0) || (process_result == 1))
+    {
+        return process_result;
+    }
+    if (ftComputerCheckEvadeDistance(fp) != FALSE)
+    {
+        com->objective = nFTComputerObjectiveEvade;
+        return TRUE;
+    }
+    if ((fp->fkind != nFTKindMMario) && (fp->fkind != nFTKindGDonkey))
+    {
+        if (func_ovl3_80135B78(fp) != FALSE)
+        {
+            com->objective = nFTComputerObjectiveCounterAttack;
+            return TRUE;
+        }
+    }
+    switch (ndsP4ComputerReflectKind(fp))
+    {
+    case nFTKindFox:
+    case nFTKindNFox:
+        if ((fp->status_id >= nFTFoxStatusSpecialLwScopeStart) && (fp->status_id <= nFTFoxStatusSpecialLwScopeEnd))
+        {
+            ftComputerSetCommandWaitShort(fp, nFTComputerInputStickNButtonBRelease);
+            return FALSE;
+        }
+        break;
+
+    case nFTKindNess:
+    case nFTKindNNess:
+        if ((fp->status_id >= nFTNessStatusSpecialLwScopeStart) && (fp->status_id <= nFTNessStatusSpecialLwScopeEnd))
+        {
+            ftComputerSetCommandWaitShort(fp, nFTComputerInputStickNButtonBRelease);
+            return FALSE;
+        }
+        break;
+    }
+    if ((fp->status_id >= nFTCommonStatusGuardStart) && (fp->status_id <= nFTCommonStatusGuardEnd))
+    {
+        ftComputerSetCommandWaitShort(fp, 0x24);
+        return FALSE;
+    }
+    else ftComputerCheckFindTarget(fp);
+
+    if (com->target_dist < 350.0F)
+    {
+        com->objective = nFTComputerObjectiveAttack;
+        return TRUE;
+    }
+    else if (ftComputerCheckFindItem(fp) != FALSE)
+    {
+        if (com->target_dist < (400.0F * (fp->level + 3)))
+        {
+            s32 track_wait = (gSCManagerBattleState->game_type == nSCBattleGameType1PGame) ? (-fp->level * 35) + 315 : (-fp->level * 25) + 225;
+
+            com->item_track_wait++;
+
+            if (track_wait < com->item_track_wait)
+            {
+                com->objective = nFTComputerObjectiveTrackItem;
+                return TRUE;
+            }
+        }
+    }
+    else com->item_track_wait = 0;
+
+    if (fp->item_gobj != NULL)
+    {
+        ITStruct *ip = itGetStruct(fp->item_gobj);
+
+        switch (ip->type)
+        {
+        case nITTypeDamage:
+        case nITTypeShoot:
+        case nITTypeThrow:
+            com->objective = nFTComputerObjectiveUseItem;
+            return TRUE;
+
+        default:
+            com->objective = nFTComputerObjectiveAttack;
+            return TRUE;
+        }
+    }
+    else com->objective = com->objective_base;
+    return TRUE;
+}
+
+s32 ftComputerProcDefault(GObj *fighter_gobj)
+{
+    return ndsBaseFTComputerProcDefault(fighter_gobj);
 }
 
 /* ftcomputer.c:6535, unchanged, with Remix's recovery_logic call after the
@@ -154,6 +370,11 @@ void ftComputerFollowObjectiveRecover(FTStruct *fp)
  * inputs). */
 static void ndsP4FTComputerProcessObjective(FTStruct *fp)
 {
+    if ((fp->nds_p4_content != 0u) &&
+        (fp->computer.proc_com == ndsBaseFTComputerProcDefault))
+    {
+        fp->computer.proc_com = ndsP4FTComputerProcDefault;
+    }
     ndsBaseFTComputerProcessObjective(fp);
     ndsP4ComputerPostProcess(fp);
 }
@@ -196,6 +417,20 @@ static sb32 ndsP4FTComputerLongRange(FTStruct *this_fp, sb32 is_delay)
 
     if (mode == NDS_P4_COMPUTER_LONG_RANGE_PARENT)
     {
+        /* The source's reflector-target roll tests the target for Fox and
+         * Ness; Remix's (improve_remix_charged_NSP_2) names Fox's reflector
+         * users among the contents, so a content target is seen as its
+         * reflect kind while the source runs. */
+        if ((target_fp != NULL) && (target_fp->nds_p4_content != 0u))
+        {
+            s32 target_fkind = target_fp->fkind;
+            sb32 result;
+
+            target_fp->fkind = ndsP4ComputerReflectKind(target_fp);
+            result = ndsBaseFTComputerLongRange(this_fp, is_delay);
+            target_fp->fkind = target_fkind;
+            return result;
+        }
         return ndsBaseFTComputerLongRange(this_fp, is_delay);
     }
     if (DISTANCE(this_fp->joints[nFTPartsJointTopN]->translate.vec.f.y, com->target_pos.y) >= 400.0F)
@@ -208,9 +443,22 @@ static sb32 ndsP4FTComputerLongRange(FTStruct *this_fp, sb32 is_delay)
     }
     if ((syUtilsRandFloat() < ((this_fp->level - 1) / 9.0F)) && (target_fp != NULL))
     {
-        if ((target_fp->fkind == nFTKindNess) || (target_fp->fkind == nFTKindFox))
+        /* improve_remix_charged_NSP_2: Fox's reflector users hold the shot;
+         * Ness's absorbers too, unless the shooter is Sheik. */
+        s32 target_kind = ndsP4ComputerReflectKind(target_fp);
+
+        if (target_kind == nFTKindFox)
         {
             return FALSE;
+        }
+        if (target_kind == nFTKindNess)
+        {
+#if NDS_P4_SHEIK
+            if (ndsP4Content(this_fp) != NDS_P4_CONTENT_SHEIK)
+#endif
+            {
+                return FALSE;
+            }
         }
     }
     if (mode == NDS_P4_COMPUTER_LONG_RANGE_NONE)

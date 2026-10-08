@@ -132,6 +132,74 @@ JAB3_TIMER_END = 0x8014EBA4   # ftCommonAttack12SetStatus past its switch
 JAB3_ACTION_END = 0x8014EC30  # ftCommonAttack13SetStatus past its switch
 
 
+# The three Remix reflect AI hooks that branch Fox's way for its reflector
+# characters (Reflect.asm AI scope); each routine compares the character id
+# against a chain of `lli at, id; beq at, v0, <label>`.
+REFLECT_FOX_HOOKS = ("Reflect.AI.extend_projectile_reflect_initial_",
+                     "Reflect.AI.maintain_reflect_input_",
+                     "Reflect.AI.apply_reflect_input_")
+
+
+def reflect_fox_ids(rom: R.Rom, sym: dict, hook: str) -> set[int]:
+    """Character ids `hook` sends to its _fox_reflect label: the immediate of
+    the `ori at, zero, id` before each `beq at, v0` / `beq v0, at` there."""
+    start, normal, fox = (sym[hook], sym[f"{hook}._normal"], sym[f"{hook}._fox_reflect"])
+    ids: set[int] = set()
+    at_value = None
+    for pc in range(start, normal, 4):
+        w = rom.u32_ram(pc)
+        op, rs, rt = w >> 26, (w >> 21) & 31, (w >> 16) & 31
+        if op == 0x0D and rs == 0 and rt == 1:  # ori at, zero, imm (lli)
+            at_value = w & 0xFFFF
+        elif op == 0x04 and {rs, rt} == {1, 2}:  # beq at, v0
+            target = pc + 4 + (((w & 0xFFFF) ^ 0x8000) - 0x8000) * 4
+            if target == fox and at_value is not None:
+                ids.add(at_value)
+    if not ids:
+        raise GenError(f"{hook}: no Fox-branch character ids decoded")
+    return ids
+
+
+def computer_reflect(rom: R.Rom, sym: dict, remix_id: int) -> str:
+    """The content's NDS_P4_COMPUTER_REFLECT_* bits: Character.fighter_reflect
+    at its id (a reflector: CPUs hold their projectiles against it, and its own
+    CPU flags item hazards), and whether the reflect AI hooks take Fox's branch
+    for it (all three agree)."""
+    bits = []
+    if rom.read_ram(sym["Character.fighter_reflect.table"] + remix_id, 1)[0] != 0:
+        bits.append("NDS_P4_COMPUTER_REFLECT_TABLE")
+    fox = [remix_id in reflect_fox_ids(rom, sym, hook) for hook in REFLECT_FOX_HOOKS]
+    if any(fox) != all(fox):
+        raise GenError(f"reflect AI hooks disagree on Fox's branch for id {remix_id}: {fox}")
+    if all(fox):
+        bits.append("NDS_P4_COMPUTER_REFLECT_FOX")
+    return " | ".join(bits) or "0"
+
+
+def baked_refs(rom: R.Rom, name: str, file_ids: list[int], own: set[int]) -> list[tuple]:
+    """(file, dependency, slot, target) for each pointer an entry article's
+    file holds into a file outside the content's own: each must be a
+    G_SETTIMG image, which the native entry packet carries
+    (generate_nds_entry_effects.py --p4 compiles the article with every
+    file's images), so the match never loads the dependency for it."""
+    import p4_articles  # noqa: E402
+
+    rows = []
+    for article in p4_articles.ARTICLES.get(name, ()):
+        if not article.get("entry") or "special" not in article:
+            continue
+        fid = file_ids[4 + article["special"]]
+        data = rom.file_bytes(fid)
+        for slot, ref in sorted(rom.reloc_slots(fid).items()):
+            if ref[0] != "extern" or ref[1] in own:
+                continue
+            if slot < 4 or data[slot - 4] != 0xFD:
+                raise GenError(f"{article['name']} {fid:#x}: pointer {slot:#x} into {ref[1]:#x} "
+                               "is not a G_SETTIMG image")
+            rows.append((fid, ref[1], slot, ref[2]))
+    return rows
+
+
 def jab_rows(rom: R.Rom, sym: dict, tables: dict) -> str:
     """The content's NDSP4Jab initializer from its eight jab table rows."""
     def rows(table: str) -> tuple[int, dict[int, str]]:
@@ -900,6 +968,8 @@ def main() -> int:
         computer_long_range = "NDS_P4_COMPUTER_LONG_RANGE_PROJECTILE"
     else:
         raise GenError(f"ai_long_range {long_range:#010x} is neither source case")
+    reflect = computer_reflect(rom, R.load_symbols(args.staging / "logfile.log")[0],
+                               resolved["remix_kind_id"])
     computer_scripts = []
     remix_inputs = sorted({r[0] for r in computer_attacks if r[0] >= CPU_INPUT_BASE})
     if remix_inputs:
@@ -1102,7 +1172,33 @@ def main() -> int:
               f"const u32 g{ident}LabSkipFileCount = {len(lab_skip)};", "",
               "/* CPU rows (S7): ai_long_range; the attack list and the Remix input",
               " * routines it names are in the content's tables (ndsP4LoadTables). */",
-              f"const u8 g{ident}ComputerLongRange = {computer_long_range};", ""]
+              f"const u8 g{ident}ComputerLongRange = {computer_long_range};",
+              "/* Remix's reflect AI (Reflect.asm): its fighter_reflect row and Fox's",
+              " * branch in the three reflect hooks (NDS_P4_COMPUTER_REFLECT_*). */",
+              f"const u8 g{ident}ComputerReflect = {reflect};", ""]
+    # S15: the native guard-pose package (scripts/p4/p4_shield_pose.py),
+    # written beside the generated source for nitro:/fighters/shield_pose/.
+    import p4_shield_pose  # noqa: E402
+
+    try:
+        guard_blob, guard = p4_shield_pose.build(o2r_out, file_ids[0], desc["o_attributes"],
+                                                 resolved["parent_kind_id"])
+    except p4_shield_pose.ShieldPoseError as error:
+        raise GenError(f"guard pose: {error}")
+    (args.out / "shield_pose.bin").write_bytes(guard_blob or b"")
+    lines += ["/* Native guard-pose package (S15, nds_p4.h NDSP4ShieldPose): its own",
+              " * blob, the parent's package (alias_fkind), or neither (the raw file). */",
+              f"const NDSP4ShieldPose g{ident}ShieldPose = {{ {guard['blob_bytes']}, "
+              f"{guard['main_asset']:#x}, {guard['shield_asset']:#x}, {guard['dobj_offset']:#x},",
+              "    { " + ", ".join(f"{t:#x}" for t in guard["table_offsets"]) + " },",
+              "    { " + ", ".join(f"{t:#x}" for t in guard["main_fixup_slots"]) + " },",
+              f"    {guard['alias_fkind']}, {guard['base_count']}, {guard['scratch_words']} }};", ""]
+    baked = baked_refs(rom, name, file_ids, own | {synth_id})
+    lines += ["/* Entry-article texture pointers its native entry packets carry",
+              " * (NDSP4BakedRef): resolved NULL, the dependency never loaded for them. */",
+              f"const NDSP4BakedRef g{ident}BakedRefs[{max(len(baked), 1)}] = {{"]
+    lines += [f"    {{ {o:#x}, {d:#x}, {s:#x}, {t:#x} }}," for o, d, s, t in baked] or ["    { 0, 0, 0, 0 },"]
+    lines += ["};", f"const u32 g{ident}BakedRefCount = {len(baked)};", ""]
     attack_rows = [f"        {{ {inp}, {start}, {end}, {c_float(x0)}, {c_float(x1)}, "
                    f"{c_float(y0)}, {c_float(y1)} }},"
                    for inp, start, end, x0, x1, y0, y1 in

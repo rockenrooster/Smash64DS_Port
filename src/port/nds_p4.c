@@ -9,9 +9,11 @@
 
 #include <math.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <nds/nds_reloc_assets.h>
+#include <nds/nds_scene_manager.h>
 #include <nds/nds_startup.h>
 #include <macros.h>
 #include <sc/scene.h>
@@ -55,10 +57,16 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
     extern const NDSP4SwordTrail gNdsP4##T##SwordTrails[]; \
     extern const u32 gNdsP4##T##SwordTrailCount; \
     extern const NDSP4Entry gNdsP4##T##Entry; \
-    extern const NDSP4SpecialStart gNdsP4##T##SpecialStarts[];     extern const NDSP4Jab gNdsP4##T##Jab;     extern const f32 gNdsP4##T##YoshiEgg[]; \
+    extern const NDSP4SpecialStart gNdsP4##T##SpecialStarts[]; \
+    extern const NDSP4Jab gNdsP4##T##Jab; \
+    extern const f32 gNdsP4##T##YoshiEgg[]; \
     extern const u16 gNdsP4##T##LabSkipFiles[]; \
     extern const u32 gNdsP4##T##LabSkipFileCount; \
-    extern const u8 gNdsP4##T##ComputerLongRange;
+    extern const u8 gNdsP4##T##ComputerLongRange; \
+    extern const u8 gNdsP4##T##ComputerReflect; \
+    extern const NDSP4BakedRef gNdsP4##T##BakedRefs[]; \
+    extern const u32 gNdsP4##T##BakedRefCount; \
+    extern const NDSP4ShieldPose gNdsP4##T##ShieldPose;
 #define NDS_P4_ROW(T, title, parent, on_status_hook, computer_rows, override_rows) \
     { \
         .name = (title), .parent_kind = (parent), \
@@ -81,10 +89,16 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
         .sword_trails = gNdsP4##T##SwordTrails, \
         .sword_trail_count = &gNdsP4##T##SwordTrailCount, \
         .entry = &gNdsP4##T##Entry, \
-        .special_starts = gNdsP4##T##SpecialStarts,         .jab = &gNdsP4##T##Jab,         .yoshi_egg = gNdsP4##T##YoshiEgg, \
+        .special_starts = gNdsP4##T##SpecialStarts, \
+        .jab = &gNdsP4##T##Jab, \
+        .yoshi_egg = gNdsP4##T##YoshiEgg, \
         .lab_skip_files = gNdsP4##T##LabSkipFiles, \
         .lab_skip_file_count = &gNdsP4##T##LabSkipFileCount, \
         .computer_long_range = &gNdsP4##T##ComputerLongRange, \
+        .computer_reflect = &gNdsP4##T##ComputerReflect, \
+        .baked_refs = gNdsP4##T##BakedRefs, \
+        .baked_ref_count = &gNdsP4##T##BakedRefCount, \
+        .shield_pose = &gNdsP4##T##ShieldPose, \
         .overrides = (override_rows), \
     }
 
@@ -391,6 +405,33 @@ u32 ndsP4ComputerLongRange(const FTStruct *fp)
 
     return (f != NULL) ? *f->computer_long_range :
                          NDS_P4_COMPUTER_LONG_RANGE_PARENT;
+}
+
+u32 ndsP4ComputerReflect(const FTStruct *fp)
+{
+    const NDSP4Fighter *f = ndsP4Fighter(ndsP4Content(fp));
+
+    return (f != NULL) ? *f->computer_reflect : 0u;
+}
+
+s32 ndsP4ComputerReflectKind(const FTStruct *fp)
+{
+    if (ndsP4Content(fp) == 0u)
+    {
+        return fp->fkind;
+    }
+    return ((ndsP4ComputerReflect(fp) & NDS_P4_COMPUTER_REFLECT_FOX) != 0u) ?
+        nFTKindFox : NDS_P4_FOREIGN_FKIND;
+}
+
+sb32 ndsP4ComputerTargetReflects(const FTStruct *fp)
+{
+    if (ndsP4Content(fp) != 0u)
+    {
+        return ((ndsP4ComputerReflect(fp) & NDS_P4_COMPUTER_REFLECT_TABLE) != 0u) ?
+            TRUE : FALSE;
+    }
+    return ((fp->fkind == nFTKindNess) || (fp->fkind == nFTKindFox)) ? TRUE : FALSE;
 }
 
 /* Remix extends the command table past the vanilla 0x31 (AI.asm
@@ -1245,6 +1286,52 @@ sb32 ndsP4LabSkipsDependency(u32 owner_asset, u32 dep_asset)
         }
     }
     return FALSE;
+}
+
+/* The content's baked texture pointer from owner into dep at slot (any slot
+ * when slot is UINT32_MAX), or NULL. Battle only: the entry articles that
+ * carry the pixels draw in matches. */
+static const NDSP4BakedRef *ndsP4FindBakedRef(u32 owner_asset, u32 dep_asset, u32 slot)
+{
+    u32 c;
+
+    if (gNdsSceneManagerCurrIsBattle == 0u)
+    {
+        return NULL;
+    }
+    for (c = 1u; c < NDS_P4_CONTENT_LIMIT; c++)
+    {
+        const NDSP4Fighter *f = ndsP4Fighter(c);
+        u32 i;
+
+        if (f == NULL)
+        {
+            continue;
+        }
+        for (i = 0u; i < *f->baked_ref_count; i++)
+        {
+            const NDSP4BakedRef *r = &f->baked_refs[i];
+
+            if ((r->owner == owner_asset) && (r->dep == dep_asset) &&
+                ((slot == UINT32_MAX) || (r->slot == slot)))
+            {
+                return r;
+            }
+        }
+    }
+    return NULL;
+}
+
+sb32 ndsP4NativeOwnsDependency(u32 owner_asset, u32 dep_asset)
+{
+    return (ndsP4FindBakedRef(owner_asset, dep_asset, UINT32_MAX) != NULL) ? TRUE : FALSE;
+}
+
+sb32 ndsP4NativeBakedRef(u32 owner_asset, u32 dep_asset, u32 slot, u32 target)
+{
+    const NDSP4BakedRef *r = ndsP4FindBakedRef(owner_asset, dep_asset, slot);
+
+    return ((r != NULL) && (r->target == target)) ? TRUE : FALSE;
 }
 
 static u32 ndsP4FindAnim(u32 asset_id)

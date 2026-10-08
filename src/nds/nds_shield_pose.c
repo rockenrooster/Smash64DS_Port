@@ -15,6 +15,10 @@
 #include <nds/nds_startup.h>
 #include <sys/obj.h>
 #include <sys/taskman.h>
+#include <nds/nds_p4_contents.h>
+#if NDS_P4
+#include <nds/nds_p4.h>
+#endif
 
 __attribute__((used)) volatile u32 gNdsShieldPoseNativeFixupCount;
 __attribute__((used)) volatile u32 gNdsShieldPoseNativeFixupRejectCount;
@@ -107,9 +111,81 @@ static const NDSShieldPoseAssetDesc sNdsShieldPoseAssets[] = {
 _Static_assert(ARRAY_COUNT(sNdsShieldPoseAssets) == NDS_SHIELD_POSE_ASSET_COUNT,
                "ShieldPose descriptor count drifted");
 
+#if NDS_P4
+/* P4 S15: a content's own package (scripts/p4/p4_shield_pose.py) is package
+ * NDS_SHIELD_POSE_ASSET_COUNT + content - 1, its descriptor built from the
+ * content's NDSP4ShieldPose row. Its limits are the content packages' (a
+ * Remix guard script can need more words than the stack scratch holds: it
+ * then decodes into a scratch of its own, allocated with the package). */
+#define NDS_SHIELD_POSE_P4_PACKAGES ((u32)NDS_P4_CONTENT_LIMIT - 1u)
+static NDSShieldPoseAssetDesc sNdsShieldPoseP4Descs[NDS_P4_CONTENT_LIMIT];
+static AObjEvent32 *sNdsShieldPoseP4Scratch[NDS_P4_CONTENT_LIMIT];
+/* A content package's base rows (its dobj_lookup), decoded once at load into
+ * the heap beside the blob: the shared scratch below lives in DTCM, sized for
+ * the original cast (a content has up to NDS_P4_SHIELD_POSE_MAX_BASE_COUNT). */
+static DObjDesc *sNdsShieldPoseP4Base[NDS_P4_CONTENT_LIMIT];
+#else
+#define NDS_SHIELD_POSE_P4_PACKAGES 0u
+#endif
+#define NDS_SHIELD_POSE_BASE_LIMIT NDS_SHIELD_POSE_MAX_BASE_COUNT
+#define NDS_SHIELD_POSE_PACKAGES (NDS_SHIELD_POSE_ASSET_COUNT + NDS_SHIELD_POSE_P4_PACKAGES)
+/* scripts/p4/p4_shield_pose.py: the value token past a package's dictionary
+ * that carries an s32, and the longest guard script it accepts. */
+#define NDS_SHIELD_POSE_VALUE_WIDE_ESCAPE 253u
+#define NDS_SHIELD_POSE_MAX_COMMANDS 256u
+
+/* The package's descriptor, or NULL. */
+static const NDSShieldPoseAssetDesc *ndsShieldPoseDesc(u32 package)
+{
+    if (package < NDS_SHIELD_POSE_ASSET_COUNT)
+    {
+        return &sNdsShieldPoseAssets[package];
+    }
+#if NDS_P4
+    if (package < NDS_SHIELD_POSE_PACKAGES)
+    {
+        u32 content = package - NDS_SHIELD_POSE_ASSET_COUNT + 1u;
+        const NDSP4Fighter *f = ndsP4Fighter(content);
+        NDSShieldPoseAssetDesc *d = &sNdsShieldPoseP4Descs[content];
+        const NDSP4ShieldPose *row;
+        u32 i;
+
+        if (f == NULL)
+        {
+            return NULL;
+        }
+        row = f->shield_pose;
+        if (row->blob_bytes == 0u)
+        {
+            return NULL;
+        }
+        d->fkind = (s16)(NDS_P4_SEL_BASE + content);
+        d->main_asset = row->main_asset;
+        d->shield_asset = row->shield_asset;
+        d->blob_bytes = row->blob_bytes;
+        d->dobj_offset = row->dobj_offset;
+        for (i = 0u; i < 8u; i++)
+        {
+            d->table_offsets[i] = row->table_offsets[i];
+        }
+        for (i = 0u; i < 9u; i++)
+        {
+            d->main_fixup_slots[i] = row->main_fixup_slots[i];
+        }
+        return d;
+    }
+#endif
+    return NULL;
+}
+
 typedef struct NDSShieldPoseView
 {
     const NDSShieldPoseBlobHeader *h;
+    /* The package's own decode scratch (P4), or NULL for the stack's. */
+    AObjEvent32 *scratch;
+    /* Its dobj_lookup rows: the shared scratch, or a content package's own
+     * (decoded once at load). */
+    DObjDesc *base;
     const u16 *command_keys;
     const u8 *command_ops;
     const u16 *command_flags;
@@ -124,6 +200,8 @@ typedef struct NDSShieldPoseView
     const u8 *base_data;
 } NDSShieldPoseView;
 
+static s32 NDS_SHIELD_POSE_HOT_CODE ndsShieldPoseDecodeBaseRow(
+    const NDSShieldPoseView *view, u32 row, DObjDesc *dst);
 extern DObj *lbCommonGetTreeDObjNextFromRoot(DObj *dobj, DObj *root);
 extern void ftMainPlayAnimEventsAll(GObj *fighter_gobj);
 extern void ndsBaseGcAddDObjAnimJoint(DObj *dobj, AObjEvent32 *anim_joint,
@@ -132,9 +210,9 @@ extern void ndsBaseGcAddDObjAnimJoint(DObj *dobj, AObjEvent32 *anim_joint,
 /* Source guard only reads translate/rotate through dobj_lookup.  This 32-row
  * maximum is shared because guard evaluation is synchronous; script scratch is
  * stack-local so it never consumes the taskman arena or static BSS. */
-static DObjDesc sNdsShieldPoseDObjScratch[NDS_SHIELD_POSE_MAX_BASE_COUNT]
+static DObjDesc sNdsShieldPoseDObjScratch[NDS_SHIELD_POSE_BASE_LIMIT]
     __attribute__((section(".sbss.shield_pose")));
-static void *sNdsShieldPoseLoaded[NDS_SHIELD_POSE_ASSET_COUNT];
+static void *sNdsShieldPoseLoaded[NDS_SHIELD_POSE_PACKAGES];
 static u32 sNdsShieldPoseLoadedGeneration;
 
 static GObj *sNdsShieldPoseBatchGObj;
@@ -161,10 +239,17 @@ static void ndsShieldPoseResetGeneration(void)
     {
         return;
     }
-    for (i = 0u; i < NDS_SHIELD_POSE_ASSET_COUNT; i++)
+    for (i = 0u; i < NDS_SHIELD_POSE_PACKAGES; i++)
     {
         sNdsShieldPoseLoaded[i] = NULL;
     }
+#if NDS_P4
+    for (i = 0u; i < (u32)NDS_P4_CONTENT_LIMIT; i++)
+    {
+        sNdsShieldPoseP4Scratch[i] = NULL;
+        sNdsShieldPoseP4Base[i] = NULL;
+    }
+#endif
     sNdsShieldPoseLoadedGeneration = gNdsTaskmanHeapGeneration;
     gNdsShieldPoseResidentBytes = 0u;
 }
@@ -176,19 +261,42 @@ static s32 NDS_SHIELD_POSE_CODE ndsShieldPoseValidateBlob(
     const NDSShieldPoseBlobHeader *h;
     const u8 *base = data;
 
-    if ((package >= NDS_SHIELD_POSE_ASSET_COUNT) ||
-        (data == NULL) || (view == NULL))
+    desc = ndsShieldPoseDesc(package);
+    if ((desc == NULL) || (data == NULL) || (view == NULL))
     {
         return FALSE;
     }
-    desc = &sNdsShieldPoseAssets[package];
     h = (const NDSShieldPoseBlobHeader *)data;
+    view->scratch = NULL;
+    view->base = sNdsShieldPoseDObjScratch;
+#if NDS_P4
+    if (package >= NDS_SHIELD_POSE_ASSET_COUNT)
+    {
+        u32 content = package - NDS_SHIELD_POSE_ASSET_COUNT + 1u;
+
+        view->scratch = sNdsShieldPoseP4Scratch[content];
+        view->base = sNdsShieldPoseP4Base[content];
+        if (((h->scratch_words > NDS_SHIELD_POSE_MAX_SCRATCH_WORDS) &&
+             ((view->scratch == NULL) ||
+              (h->scratch_words > NDS_P4_SHIELD_POSE_MAX_SCRATCH_WORDS))) ||
+            (view->base == NULL) ||
+            (h->base_count > NDS_P4_SHIELD_POSE_MAX_BASE_COUNT) ||
+            (h->base_count != ndsP4Fighter(content)->shield_pose->base_count))
+        {
+            return FALSE;
+        }
+    }
+    else
+#endif
+    if ((h->scratch_words > NDS_SHIELD_POSE_MAX_SCRATCH_WORDS) ||
+        (h->base_count > NDS_SHIELD_POSE_MAX_BASE_COUNT))
+    {
+        return FALSE;
+    }
     if ((h->magic != NDS_SHIELD_POSE_BLOB_MAGIC) ||
         (h->version != NDS_SHIELD_POSE_BLOB_VERSION) ||
         (h->header_bytes != NDS_SHIELD_POSE_BLOB_HEADER_BYTES) ||
         (h->total_bytes != desc->blob_bytes) ||
-        (h->base_count > NDS_SHIELD_POSE_MAX_BASE_COUNT) ||
-        (h->scratch_words > NDS_SHIELD_POSE_MAX_SCRATCH_WORDS) ||
         (h->handle_count != (u16)(h->joint_count * 8u)) ||
         (h->base_offset_count != h->base_count) ||
         (ndsShieldPoseSpanFits(h, h->command_keys_offset,
@@ -242,7 +350,8 @@ static void *NDS_SHIELD_POSE_CODE ndsShieldPoseLoad(u32 package)
     void *data;
     const u32 digit_at = sizeof("nitro:/fighters/shield_pose/") - 1u;
 
-    if (package >= NDS_SHIELD_POSE_ASSET_COUNT)
+    desc = ndsShieldPoseDesc(package);
+    if (desc == NULL)
     {
         return NULL;
     }
@@ -251,7 +360,25 @@ static void *NDS_SHIELD_POSE_CODE ndsShieldPoseLoad(u32 package)
     {
         return sNdsShieldPoseLoaded[package];
     }
-    desc = &sNdsShieldPoseAssets[package];
+#if NDS_P4
+    if (package >= NDS_SHIELD_POSE_ASSET_COUNT)
+    {
+        u32 content = package - NDS_SHIELD_POSE_ASSET_COUNT + 1u;
+        u32 words = ndsP4Fighter(content)->shield_pose->scratch_words;
+
+        if ((words > NDS_SHIELD_POSE_MAX_SCRATCH_WORDS) &&
+            (sNdsShieldPoseP4Scratch[content] == NULL))
+        {
+            sNdsShieldPoseP4Scratch[content] =
+                syTaskmanMalloc(words * sizeof(AObjEvent32), 4u);
+        }
+        if (sNdsShieldPoseP4Base[content] == NULL)
+        {
+            sNdsShieldPoseP4Base[content] = syTaskmanMalloc(
+                ndsP4Fighter(content)->shield_pose->base_count * sizeof(DObjDesc), 4u);
+        }
+    }
+#endif
     data = syTaskmanMalloc(desc->blob_bytes, 4u);
     if (data == NULL)
     {
@@ -265,6 +392,20 @@ static void *NDS_SHIELD_POSE_CODE ndsShieldPoseLoad(u32 package)
     {
         gNdsShieldPoseLoadFailCount++;
         return NULL;
+    }
+    if (view.base != sNdsShieldPoseDObjScratch)
+    {
+        u32 row;
+
+        for (row = 0u; row < view.h->base_count; row++)
+        {
+            if ((view.base_offsets[row] >= view.h->base_data_bytes) ||
+                (ndsShieldPoseDecodeBaseRow(&view, row, &view.base[row]) == FALSE))
+            {
+                gNdsShieldPoseLoadFailCount++;
+                return NULL;
+            }
+        }
     }
     sNdsShieldPoseLoaded[package] = data;
     gNdsShieldPoseLoadCount++;
@@ -351,6 +492,43 @@ static s32 ndsShieldPosePolygonMainPackage(u32 owner_asset, u32 dep_asset)
     return -1;
 }
 
+#if NDS_P4
+/* A content's package: its own, or the parent's it aliases; -1 keeps the
+ * raw file. */
+static s32 ndsShieldPosePackageForContent(u32 content)
+{
+    const NDSP4Fighter *f = ndsP4Fighter(content);
+
+    if (f == NULL)
+    {
+        return -1;
+    }
+    if (f->shield_pose->blob_bytes != 0u)
+    {
+        return (s32)(NDS_SHIELD_POSE_ASSET_COUNT + content - 1u);
+    }
+    return (f->shield_pose->alias_fkind >= 0) ?
+        ndsShieldPosePackageForBaseFKind(f->shield_pose->alias_fkind) : -1;
+}
+#endif
+
+/* The package a fighter guards with (a content's by its content, not its
+ * parent's kind). */
+static s32 ndsShieldPosePackageForFighter(const FTStruct *fp)
+{
+    if (fp == NULL)
+    {
+        return -1;
+    }
+#if NDS_P4
+    if (fp->nds_p4_content != 0u)
+    {
+        return ndsShieldPosePackageForContent(fp->nds_p4_content);
+    }
+#endif
+    return ndsShieldPosePackageForFKind(fp->fkind);
+}
+
 static s32 ndsShieldPosePackageForAssets(u32 owner_asset, u32 dep_asset)
 {
     u32 i;
@@ -363,6 +541,18 @@ static s32 ndsShieldPosePackageForAssets(u32 owner_asset, u32 dep_asset)
             return (s32)i;
         }
     }
+#if NDS_P4
+    for (i = 1u; i < (u32)NDS_P4_CONTENT_LIMIT; i++)
+    {
+        const NDSP4Fighter *f = ndsP4Fighter(i);
+
+        if ((f != NULL) && (f->shield_pose->main_asset == owner_asset) &&
+            (f->shield_pose->shield_asset == dep_asset))
+        {
+            return ndsShieldPosePackageForContent(i);
+        }
+    }
+#endif
     return ndsShieldPosePolygonMainPackage(owner_asset, dep_asset);
 }
 
@@ -385,12 +575,32 @@ s32 NDS_SHIELD_POSE_CODE ndsShieldPosePatchCompactMain(
     s32 fkind, void *main_data, u32 main_bytes)
 {
     s32 package = ndsShieldPosePackageForFKind(fkind);
-    const NDSShieldPoseAssetDesc *desc;
+    const u16 *slots;
     NDSShieldPoseView view;
     void *resolved[9];
     u8 *base = main_data;
     u32 i;
 
+#if NDS_P4
+    /* A content's pack kind (NDS_P4_SEL_BASE + content): its package, and
+     * the guard slots of its own Main (an aliased package's descriptor
+     * names the parent's). */
+    if ((u32)fkind > NDS_P4_SEL_BASE)
+    {
+        const NDSP4Fighter *f = ndsP4Fighter((u32)fkind - NDS_P4_SEL_BASE);
+
+        if (f == NULL)
+        {
+            return 0;
+        }
+        package = ndsShieldPosePackageForContent((u32)fkind - NDS_P4_SEL_BASE);
+        slots = f->shield_pose->main_fixup_slots;
+    }
+    else
+#endif
+    {
+        slots = (package >= 0) ? ndsShieldPoseDesc((u32)package)->main_fixup_slots : NULL;
+    }
     if (package < 0)
     {
         return 0;
@@ -401,8 +611,7 @@ s32 NDS_SHIELD_POSE_CODE ndsShieldPosePatchCompactMain(
         gNdsShieldPoseNativeFixupRejectCount++;
         return -1;
     }
-    desc = &sNdsShieldPoseAssets[package];
-    resolved[0] = sNdsShieldPoseDObjScratch;
+    resolved[0] = view.base;
     for (i = 1u; i < ARRAY_COUNT(resolved); i++)
     {
         resolved[i] = (void *)&view.handles[(i - 1u) * view.h->joint_count];
@@ -415,7 +624,7 @@ s32 NDS_SHIELD_POSE_CODE ndsShieldPosePatchCompactMain(
      * FPC/header pair fails closed rather than becoming a mixed representation. */
     for (i = 0u; i < ARRAY_COUNT(resolved); i++)
     {
-        u32 slot = desc->main_fixup_slots[i];
+        u32 slot = slots[i];
 
         if ((slot > main_bytes) || (sizeof(void *) > (main_bytes - slot)) ||
             (*(void **)(base + slot) != NULL))
@@ -426,7 +635,7 @@ s32 NDS_SHIELD_POSE_CODE ndsShieldPosePatchCompactMain(
     }
     for (i = 0u; i < ARRAY_COUNT(resolved); i++)
     {
-        *(void **)(base + desc->main_fixup_slots[i]) = resolved[i];
+        *(void **)(base + slots[i]) = resolved[i];
     }
     gNdsShieldPoseNativeFixupCount += ARRAY_COUNT(resolved);
     return 1;
@@ -452,7 +661,7 @@ static s32 NDS_SHIELD_POSE_CODE ndsShieldPoseNativeSelected(
     expected = (const void *)&view->handles[sector * view->h->joint_count];
     return (((const void *)fp->attr->shield_anim_joints[sector] == expected) &&
             ((const void *)fp->attr->dobj_lookup ==
-             (const void *)sNdsShieldPoseDObjScratch)) ? TRUE : FALSE;
+             (const void *)view->base)) ? TRUE : FALSE;
 }
 
 NDS_SHIELD_POSE_HOT_INLINE s32 ndsShieldPoseReadValue(
@@ -479,7 +688,18 @@ NDS_SHIELD_POSE_HOT_INLINE s32 ndsShieldPoseReadValue(
             *out = (s32)view->value_large[index];
             return TRUE;
         }
-        return FALSE;
+        /* Past the dictionary: a content package's value beyond Q6's s16
+         * range (Marth's and Roy's guard poses) follows as an s32. The
+         * original cast's packages never emit a token here. */
+        if ((token != NDS_SHIELD_POSE_VALUE_WIDE_ESCAPE) ||
+            ((size_t)(end - *cursor) < 4u))
+        {
+            return FALSE;
+        }
+        *out = (s32)((u32)(*cursor)[0] | ((u32)(*cursor)[1] << 8) |
+                     ((u32)(*cursor)[2] << 16) | ((u32)(*cursor)[3] << 24));
+        *cursor += 4;
+        return TRUE;
     }
     if ((token != NDS_SHIELD_POSE_VALUE_ESCAPE) ||
         ((size_t)(end - *cursor) < 2u))
@@ -546,7 +766,7 @@ static s32 NDS_SHIELD_POSE_HOT_CODE ndsShieldPoseUnpackScript(
         return FALSE;
     }
     command_at = view->template_first[template_id];
-    for (guard = 0u; guard < 64u; guard++, command_at++)
+    for (guard = 0u; guard < NDS_SHIELD_POSE_MAX_COMMANDS; guard++, command_at++)
     {
         u32 command_index;
         u32 key;
@@ -632,7 +852,8 @@ static s32 NDS_SHIELD_POSE_HOT_CODE ndsShieldPoseUnpackScript(
 static s32 NDS_SHIELD_POSE_CODE ndsShieldPoseApplyScript(
     const NDSShieldPoseView *view, DObj *dobj, u16 handle, f32 angle)
 {
-    AObjEvent32 scratch[NDS_SHIELD_POSE_MAX_SCRATCH_WORDS];
+    AObjEvent32 stack_scratch[NDS_SHIELD_POSE_MAX_SCRATCH_WORDS];
+    AObjEvent32 *scratch = (view->scratch != NULL) ? view->scratch : stack_scratch;
 
     if ((dobj == NULL) ||
         (ndsShieldPoseUnpackScript(view, handle, scratch) == FALSE))
@@ -652,18 +873,13 @@ static s32 NDS_SHIELD_POSE_CODE ndsShieldPoseApplyScript(
  * (~3.8K ticks an all-joint apply); a row that already holds this blob's
  * values, decoded in this heap generation, is left as it is. Only
  * ndsShieldPoseRefreshBaseRow writes the scratch. */
-static const void *sNdsShieldPoseScratchOwner[NDS_SHIELD_POSE_MAX_BASE_COUNT];
+static const void *sNdsShieldPoseScratchOwner[NDS_SHIELD_POSE_BASE_LIMIT];
 static u32 sNdsShieldPoseScratchGeneration;
 __attribute__((used)) volatile u32 gNdsShieldPoseBaseMemoHits;
 
 static s32 NDS_SHIELD_POSE_HOT_CODE ndsShieldPoseRefreshBaseRow(
     const NDSShieldPoseView *view, u32 row)
 {
-    const u8 *src;
-    const u8 *end = view->base_data + view->h->base_data_bytes;
-    DObjDesc *dst;
-    f32 *out;
-    u32 mask;
     u32 i;
 
     if ((row >= view->h->base_count) ||
@@ -671,9 +887,14 @@ static s32 NDS_SHIELD_POSE_HOT_CODE ndsShieldPoseRefreshBaseRow(
     {
         return FALSE;
     }
+    if (view->base != sNdsShieldPoseDObjScratch)
+    {
+        /* A content package's own rows, decoded once when it loaded. */
+        return TRUE;
+    }
     if (sNdsShieldPoseScratchGeneration != gNdsTaskmanHeapGeneration)
     {
-        for (i = 0u; i < NDS_SHIELD_POSE_MAX_BASE_COUNT; i++)
+        for (i = 0u; i < NDS_SHIELD_POSE_BASE_LIMIT; i++)
         {
             sNdsShieldPoseScratchOwner[i] = NULL;
         }
@@ -685,12 +906,30 @@ static s32 NDS_SHIELD_POSE_HOT_CODE ndsShieldPoseRefreshBaseRow(
         return TRUE;
     }
     sNdsShieldPoseScratchOwner[row] = NULL;
+    if (ndsShieldPoseDecodeBaseRow(view, row, &sNdsShieldPoseDObjScratch[row]) == FALSE)
+    {
+        return FALSE;
+    }
+    sNdsShieldPoseScratchOwner[row] = (const void *)view->h;
+    return TRUE;
+}
+
+/* One dobj_lookup row: its translate and rotate from the package, unit
+ * scale, no list. */
+static s32 NDS_SHIELD_POSE_HOT_CODE ndsShieldPoseDecodeBaseRow(
+    const NDSShieldPoseView *view, u32 row, DObjDesc *dst)
+{
+    const u8 *src;
+    const u8 *end = view->base_data + view->h->base_data_bytes;
+    f32 *out;
+    u32 mask;
+    u32 i;
+
     src = view->base_data + view->base_offsets[row];
     if (src >= end)
     {
         return FALSE;
     }
-    dst = &sNdsShieldPoseDObjScratch[row];
     out = &dst->translate.x;
     mask = *src++;
     dst->id = (s32)row;
@@ -713,7 +952,6 @@ static s32 NDS_SHIELD_POSE_HOT_CODE ndsShieldPoseRefreshBaseRow(
                              : NDS_SHIELD_POSE_BASE_ROT_FRAC);
     }
     dst->scale.x = dst->scale.y = dst->scale.z = 1.0F;
-    sNdsShieldPoseScratchOwner[row] = (const void *)view->h;
     return TRUE;
 }
 
@@ -754,10 +992,10 @@ s32 ndsShieldPoseResolveExternalFixup(u32 owner_asset, u32 dep_asset,
         return (ndsShieldPosePolygonMainPackage(owner_asset, dep_asset) >= 0)
                    ? 0 : -1;
     }
-    desc = &sNdsShieldPoseAssets[package];
+    desc = ndsShieldPoseDesc((u32)package);
     if (target_offset == desc->dobj_offset)
     {
-        *resolved = sNdsShieldPoseDObjScratch;
+        *resolved = view.base;
         gNdsShieldPoseNativeFixupCount++;
         return 1;
     }
@@ -789,7 +1027,7 @@ s32 ndsShieldPoseTryApplySingle(DObj *dobj, f32 angle)
         return 0;
     }
     fp = ftGetStruct(dobj->parent_gobj);
-    package = (fp != NULL) ? ndsShieldPosePackageForFKind(fp->fkind) : -1;
+    package = ndsShieldPosePackageForFighter(fp);
     if (package < 0)
     {
         return 0;
@@ -841,7 +1079,7 @@ s32 ndsShieldPoseTryApplyAll(DObj *root_dobj, f32 angle)
         return 0;
     }
     fp = ftGetStruct(root_dobj->parent_gobj);
-    package = (fp != NULL) ? ndsShieldPosePackageForFKind(fp->fkind) : -1;
+    package = ndsShieldPosePackageForFighter(fp);
     if (package < 0)
     {
         return 0;

@@ -6043,6 +6043,7 @@ NDS_NITROFS_P4_FILES += $(foreach row,$(NDS_P4_ENABLED_ROWS), \
 	$(NITROFS_DIR)/fighters/$(call nds_p4_field,$(row),1)_low.bin \
 	$(NITROFS_DIR)/fighters/preview/$(shell echo $$((64 + $(call nds_p4_field,$(row),4)))).fpc \
 	$(NITROFS_DIR)/fighters/preview/$(shell echo $$((64 + $(call nds_p4_field,$(row),4)))).ext \
+	$(NITROFS_DIR)/fighters/shield_pose/$(shell echo $$((64 + $(call nds_p4_field,$(row),4)))).bin \
 	$(NITROFS_DIR)/p4/$(call nds_p4_field,$(row),1).tab)
 # The contents' Remix sounds as a second FGM pack (scripts/p4/p4_audio.py).
 ifeq ($(NDS_P4),1)
@@ -7948,7 +7949,9 @@ $$(NDS_P4_EXPORT)/$(1)/resolved.json: $$(NDS_P4_STAGING)/ssb64asm.z64 \
 $$(NDS_P4_GEN)/$(1)/nds_p4_$(1).generated.c: $$(NDS_P4_EXPORT)/$(1)/resolved.json \
 		$$(PROJECT_ROOT)/scripts/p4/generate_p4_fighter.py $$(PROJECT_ROOT)/scripts/p4/remix_rom.py \
 		$$(PROJECT_ROOT)/scripts/p4/ft_layout.py $$(PROJECT_ROOT)/scripts/menus/generate_battle_hud.py \
-		$$(PROJECT_ROOT)/scripts/p4/contents.json $$(NDS_P4_LAB_FALLBACK_STAMP)
+		$$(PROJECT_ROOT)/scripts/p4/contents.json $$(NDS_P4_LAB_FALLBACK_STAMP) \
+		$$(PROJECT_ROOT)/scripts/p4/p4_shield_pose.py $$(PROJECT_ROOT)/scripts/p4/p4_articles.py \
+		$$(PROJECT_ROOT)/scripts/fighters/generate_nds_shield_pose_pack.py
 	python "$$(PROJECT_ROOT)/scripts/p4/generate_p4_fighter.py" --staging "$$(NDS_P4_STAGING)" \
 		--export "$$(NDS_P4_EXPORT)/$(1)" --out "$$(NDS_P4_GEN)/$(1)" \
 		$$(if $$(filter 1,$$(NDS_P4_LAB_FALLBACK)),--lab-fallback)
@@ -7969,6 +7972,12 @@ $$(NITROFS_DIR)/fighters/preview/$(5).fpc: $$(NDS_P4_GEN)/$(1)/preview.fpc
 	@mkdir -p $$(dir $$@)
 	@cp $$< $$@
 $$(NITROFS_DIR)/fighters/preview/$(5).ext: $$(NDS_P4_GEN)/$(1)/preview.ext
+	@mkdir -p $$(dir $$@)
+	@cp $$< $$@
+# The native guard-pose package (empty when the content has none of its own),
+# written with the generated source (scripts/p4/p4_shield_pose.py).
+$$(NDS_P4_GEN)/$(1)/shield_pose.bin: $$(NDS_P4_GEN)/$(1)/nds_p4_$(1).generated.c ; @:
+$$(NITROFS_DIR)/fighters/shield_pose/$(5).bin: $$(NDS_P4_GEN)/$(1)/shield_pose.bin
 	@mkdir -p $$(dir $$@)
 	@cp $$< $$@
 # The content's match tables (motion descriptors, CPU rows): compiled alone and

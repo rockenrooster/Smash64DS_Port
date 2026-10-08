@@ -1164,6 +1164,14 @@ s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
         {
             continue;
         }
+        /* The content's native guard-pose package serves its nine guard
+         * pointers (patched below); the raw ShieldPose file never loads. */
+        if ((fkind >= 12) &&
+            (ndsShieldPoseServesDependency(main_loaded->asset_id,
+                                           rows[i].dep_asset) != FALSE))
+        {
+            continue;
+        }
 #endif
         dep = ndsRelocFindLoadedFileByAsset(rows[i].dep_asset);
         was_loaded = (dep != NULL) ? TRUE : FALSE;
@@ -1194,6 +1202,14 @@ s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
                                    (u8 *)dep->data + dep_offset);
         gNdsBattleCoreExternPatchCount++;
     }
+#if NDS_P4
+    if ((fkind >= 12) &&
+        (ndsShieldPosePatchCompactMain(fkind, main_loaded->data,
+                                       main_loaded->data_size) < 0))
+    {
+        ndsBattleCoreExternHalt(fkind);
+    }
+#endif
     return TRUE;
 }
 #endif

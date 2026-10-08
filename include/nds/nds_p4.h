@@ -92,6 +92,52 @@ enum
     NDS_P4_COMPUTER_LONG_RANGE_PROJECTILE
 };
 
+/* Remix's reflect AI (Reflect.asm, AI.asm), per content: TABLE is its
+ * Character.fighter_reflect row (CPUs hold their projectiles against a
+ * reflector, and its own CPU flags item hazards to reflect); FOX is Fox's
+ * branch in the reflect hooks (extend_projectile_reflect_initial_,
+ * maintain_reflect_input_, apply_reflect_input_) and in the long-range
+ * special's reflector-target roll (improve_remix_charged_NSP_2). Remix
+ * compares the content's own id everywhere else, so the parent's id
+ * compares at those sites see a foreign kind (generate_p4_fighter.py). */
+#define NDS_P4_COMPUTER_REFLECT_TABLE 0x01u
+#define NDS_P4_COMPUTER_REFLECT_FOX 0x02u
+
+/* A texture pointer in one of the content's own files whose image the
+ * native entry packet already carries (scripts/3d_vfx/
+ * generate_nds_entry_effects.py --p4): the loader resolves it to NULL and
+ * never loads `dep` for it, as for Fox's Arwing (reloc_backend_assets.c
+ * ndsRelocResolveNativeEntryExternalFixup). */
+typedef struct NDSP4BakedRef
+{
+    u16 owner;
+    u16 dep;
+    u32 slot;
+    u32 target;
+} NDSP4BakedRef;
+
+/* A content's native guard-pose package (scripts/p4/p4_shield_pose.py,
+ * src/nds/nds_shield_pose.c): its own NSP1 blob at
+ * nitro:/fighters/shield_pose/<NDS_P4_SEL_BASE + content>.bin, or its
+ * parent's package when it guards with the parent's vanilla file at the
+ * same nine targets (alias_fkind), or neither (blob_bytes 0, alias -1: the
+ * raw file stays). main_fixup_slots are the content Main's nine guard
+ * pointers: dobj_lookup, then shield_anim_joints[0..7]. */
+#define NDS_P4_SHIELD_POSE_MAX_BASE_COUNT 40u
+#define NDS_P4_SHIELD_POSE_MAX_SCRATCH_WORDS 512u
+typedef struct NDSP4ShieldPose
+{
+    u16 blob_bytes;
+    u16 main_asset;
+    u16 shield_asset;
+    u16 dobj_offset;
+    u16 table_offsets[8];
+    u16 main_fixup_slots[9];
+    s8 alias_fkind;
+    u8 base_count;
+    u16 scratch_words;
+} NDSP4ShieldPose;
+
 /* P4: the parent's routines a content replaces, where Remix hooks the
  * parent's code on the content's character id. The effect makers (S6) build
  * the content's own effect from its own special files (the generator's
@@ -298,6 +344,13 @@ typedef struct NDSP4Fighter
      * list and the Remix input routines it names are in the content's
      * match tables (NDSP4TablesHeader). */
     const u8 *computer_long_range;
+    /* NDS_P4_COMPUTER_REFLECT_* bits. */
+    const u8 *computer_reflect;
+    /* Entry-article texture pointers its native packets carry. */
+    const NDSP4BakedRef *baked_refs;
+    const u32 *baked_ref_count;
+    /* Its guard-pose package (NDSP4ShieldPose). */
+    const NDSP4ShieldPose *shield_pose;
     /* Optional: the parent's routines it replaces (Remix's id hooks). */
     const NDSP4Overrides *overrides;
 } NDSP4Fighter;
@@ -458,6 +511,14 @@ const NDSP4Computer *ndsP4Computer(const FTStruct *fp);
 const FTComputerAttack *ndsP4ComputerAttacks(const FTStruct *fp);
 /* NDS_P4_COMPUTER_LONG_RANGE_*; PARENT for the original cast. */
 u32 ndsP4ComputerLongRange(const FTStruct *fp);
+/* NDS_P4_COMPUTER_REFLECT_* bits; 0 for the original cast. */
+u32 ndsP4ComputerReflect(const FTStruct *fp);
+/* The fighter as the CPU reflect checks see it: Fox for a content with
+ * Fox's branch, NDS_P4_FOREIGN_FKIND for any other content, else its kind. */
+s32 ndsP4ComputerReflectKind(const FTStruct *fp);
+/* ftComputerCheckDetectTarget's reflector test on the target (Remix's
+ * fighter_reflect row: Fox and Ness for the original cast). */
+sb32 ndsP4ComputerTargetReflects(const FTStruct *fp);
 /* ftComputerFollowObjectiveRecover, after its walk: the content's CPU
  * recovery_logic (Remix AI.asm custom_recovery_logic). */
 void ndsP4ComputerRecover(FTStruct *fp);
@@ -479,6 +540,11 @@ const char *ndsP4RelocAssetPath(u32 file_id);
  * stand-in replaces. The loader neither sizes nor loads it and leaves the
  * slots naming it NULL (the main's header words, its only readers). */
 sb32 ndsP4LabSkipsDependency(u32 owner_asset, u32 dep_asset);
+/* A content file's dependency named only by texture pointers its native
+ * entry packets carry (NDSP4BakedRef): never loaded in a match. */
+sb32 ndsP4NativeOwnsDependency(u32 owner_asset, u32 dep_asset);
+/* One such pointer: TRUE resolves it to NULL. */
+sb32 ndsP4NativeBakedRef(u32 owner_asset, u32 dep_asset, u32 slot, u32 target);
 /* Reloc normalizer seams: a content's own animation files, and the
  * FTAttributes offset when asset_id is a content's main file (else 0). */
 sb32 ndsP4IsFighterAnim(u32 asset_id);

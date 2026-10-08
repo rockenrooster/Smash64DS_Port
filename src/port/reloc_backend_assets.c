@@ -9553,6 +9553,14 @@ static s32 ndsRelocNativeEntryOwnsDependency(u32 owner_asset, u32 dep_asset)
     }
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_P4
+    /* A content's entry article whose images its native packets carry (the
+     * Wolfen's four texture pointers into bank 109, Fox's Arwing's case). */
+    if (ndsP4NativeOwnsDependency(owner_asset, dep_asset) != FALSE)
+    {
+        return TRUE;
+    }
+#endif
     return ((gNdsSceneManagerCurrIsBattle != 0u) &&
             (owner_asset == NDS_RELOC_ASSET_FOX_SPECIAL3) &&
             (dep_asset == NDS_RELOC_ASSET_EXTERN_DATA_BANK_109)) ? TRUE : FALSE;
@@ -9580,6 +9588,16 @@ static s32 ndsRelocResolveNativeEntryExternalFixup(
         (void)slot_offset;
         (void)target_offset;
         gNdsP4RelocOutOfRangeSlots++;
+        *resolved = NULL;
+        return 1;
+    }
+    if (ndsP4NativeOwnsDependency(owner_asset, dep_asset) != FALSE)
+    {
+        if (ndsP4NativeBakedRef(owner_asset, dep_asset, slot_offset,
+                                target_offset) == FALSE)
+        {
+            return -1;
+        }
         *resolved = NULL;
         return 1;
     }
