@@ -14,6 +14,7 @@
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
 
 DObj *gcGetTreeDObjNext(DObj *dobj);
+void func_ovl2_800EDBA4(DObj *main_dobj);
 void ftComputerSetCommandWaitShort(FTStruct *fp, s32 index);
 void ftComputerSetCommandImmediate(FTStruct *fp, s32 index);
 void gcSetAnimSpeed(GObj *gobj, f32 anim_speed);
@@ -40,7 +41,9 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
     extern const u32 gNdsP4##T##StockPaletteCount; \
     extern const NDSP4SpriteDesc gNdsP4##T##Sprites[]; \
     extern const u32 gNdsP4##T##SpriteCount; \
-    extern const NDSP4Present gNdsP4##T##Present;
+    extern const NDSP4Present gNdsP4##T##Present; \
+    extern const NDSP4SwordTrail gNdsP4##T##SwordTrails[]; \
+    extern const u32 gNdsP4##T##SwordTrailCount;
 #define NDS_P4_ROW(T, title, parent, on_status_hook, computer_rows) \
     { \
         .name = (title), .parent_kind = (parent), \
@@ -59,6 +62,8 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
         .sprites = gNdsP4##T##Sprites, \
         .sprite_count = &gNdsP4##T##SpriteCount, \
         .present = &gNdsP4##T##Present, \
+        .sword_trails = gNdsP4##T##SwordTrails, \
+        .sword_trail_count = &gNdsP4##T##SwordTrailCount, \
     }
 
 #if NDS_P4_FALCO
@@ -428,6 +433,67 @@ void ndsP4ComputerPostProcess(FTStruct *fp)
     if (c->post_process != NULL)
     {
         c->post_process(fp);
+    }
+}
+
+const NDSP4SwordTrail *ndsP4SwordTrail(const FTStruct *fp, u32 id)
+{
+    const NDSP4Fighter *f = ndsP4Fighter(ndsP4Content(fp));
+    u32 i;
+
+    if (f == NULL)
+    {
+        return NULL;
+    }
+    for (i = 0u; i < *f->sword_trail_count; i++)
+    {
+        if (f->sword_trails[i].id == id)
+        {
+            return &f->sword_trails[i];
+        }
+    }
+    return NULL;
+}
+
+void ndsP4UpdateSwordTrail(FTStruct *fp)
+{
+    const NDSP4SwordTrail *row =
+        ndsP4SwordTrail(fp, (u32)fp->afterimage.is_itemswing);
+    FTAfterImage *desc;
+    FTParts *parts;
+    DObj *joint;
+
+    if (row == NULL)
+    {
+        return;
+    }
+    /* initial_setup_: the row's model part instead of Link's joint 11, then
+     * the source's Link-sword step (ftmain.c, ftMainProcParams' afterimage
+     * switch); axis_setup_: the row's matrix row instead of Z. */
+    joint = fp->joints[row->model_part + nFTPartsJointCommonStart];
+    if ((joint == NULL) || (row->axis > 2u))
+    {
+        return;
+    }
+    parts = joint->user_data.p;
+    func_ovl2_800EDBA4(joint);
+    desc = &fp->afterimage.desc[fp->afterimage.desc_id];
+    desc->translate_x = parts->mtx_translate[3][0];
+    desc->translate_y = parts->mtx_translate[3][1];
+    desc->translate_z = parts->mtx_translate[3][2];
+    desc->vec.x = parts->mtx_translate[row->axis][0];
+    desc->vec.y = parts->mtx_translate[row->axis][1];
+    desc->vec.z = parts->mtx_translate[row->axis][2];
+
+    if (fp->afterimage.desc_id == 2)
+    {
+        fp->afterimage.desc_id = 0;
+    }
+    else fp->afterimage.desc_id++;
+
+    if (fp->afterimage.drawstatus <= 2)
+    {
+        fp->afterimage.drawstatus++;
     }
 }
 

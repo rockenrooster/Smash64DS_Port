@@ -622,6 +622,21 @@ def main() -> int:
               f"    .menu_zoom = {c_float(present['menu_zoom'])},",
               "    .default_costumes = { " + ", ".join(str(b) for b in present["default_costumes"]) + " },",
               "};", ""]
+    # SwordTrail.asm rows whose character is this content (the SET AFTERIMAGE
+    # id is the row's table index). An exporter without the table is an error,
+    # not an empty list: the content's trails would silently not draw.
+    if "sword_trails" not in resolved:
+        raise SystemExit("export has no sword_trails table (re-run remix_export.py)")
+    trails = [t for t in resolved["sword_trails"] if t["character"] == resolved["remix_kind_id"]]
+    lines += ["/* Remix sword trails (SwordTrail.asm add_sword_trail rows for this character). */",
+              f"const NDSP4SwordTrail g{ident}SwordTrails[{max(len(trails), 1)}] = {{"]
+    for t in trails:
+        if t["id"] > 0xFF or t["model_part"] > 0xFF or t["axis"] > 2:
+            raise SystemExit(f"sword trail {t['id']}: unsupported row {t}")
+        lines.append(f"    {{ {t['id']}, {t['model_part']}, {t['axis']}, 0, "
+                     f"{t['colour_1']:#010x}u, {t['colour_2']:#010x}u, "
+                     f"{c_float(t['start'])}, {c_float(t['end'])} }},")
+    lines += ["};", f"const u32 g{ident}SwordTrailCount = {len(trails)};", ""]
     src = "\n".join(lines)
     (args.out / f"nds_p4_{name}.generated.c").write_text(src, encoding="utf-8", newline="\n")
 

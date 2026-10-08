@@ -5585,6 +5585,230 @@ static unsigned int ndsFtrLeanRunOnHotStack(void *arg)
 }
 #endif
 
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+/* THE AFTERIMAGE TRAIL. ftDisplayMainDrawAll draws it after the fighter
+ * (ftDisplayMainDrawAfterImage) into the translucent list, but here the whole
+ * source display runs inside the contract capture, whose lists are dropped,
+ * so the trail never drew: Link's sword trail, the Beam Sword swing and every
+ * Remix sword trail were missing. This is the source routine's vertex build
+ * (ftdisplaymain.c:398-588) with its own integer and s16 conversions, and the
+ * strip is submitted natively right after the fighter
+ * (ndsRendererSubmitAfterImage). The source routine is skipped in the
+ * capture (battleship_ftdisplaymain.c). Remix's SwordTrail.asm draw_trail_
+ * enters the same loop with its row's start, end and colours. */
+extern SYColorRGBA dFTDisplayMainDefaultAfterImageColor1;
+extern SYColorRGBA dFTDisplayMainDefaultAfterImageColor2;
+extern SYColorRGBA dFTDisplayMainItemAfterImageColor1;
+extern SYColorRGBA dFTDisplayMainItemAfterImageColor2;
+
+/* Three edges, and at most six interpolated edges between two of them (a
+ * turn of at most 180 degrees in 30 degree steps): 15 edges, 30 vertices. */
+#define NDS_AFTERIMAGE_MAX_VERTICES 32u
+
+static void ndsFighterDrawAfterImage(FTStruct *fp)
+{
+    s16 xyz[NDS_AFTERIMAGE_MAX_VERTICES][3];
+    u8 rgba[NDS_AFTERIMAGE_MAX_VERTICES][4];
+    u8 color1[3];
+    u8 color2[3];
+    f32 var_f20;
+    f32 var_f22;
+    f32 rotate;
+    s32 add_alpha = 0;
+    s32 base_alpha = 0xFF;
+    s32 i, j, index, next_index = 0;
+    s32 alpha;
+    u32 count = 0u;
+    u32 v;
+    s16 origin[3];
+    NDSRendererMatrix20p12 composed;
+
+#define NDS_AFTERIMAGE_RGB(dst_, src_) \
+    ((dst_)[0] = (src_).r, (dst_)[1] = (src_).g, (dst_)[2] = (src_).b)
+    switch (fp->afterimage.is_itemswing)
+    {
+    case FALSE:
+        var_f20 = 50.0F;
+        var_f22 = 250.0F;
+        NDS_AFTERIMAGE_RGB(color1, dFTDisplayMainDefaultAfterImageColor1);
+        NDS_AFTERIMAGE_RGB(color2, dFTDisplayMainDefaultAfterImageColor2);
+        break;
+
+    case TRUE:
+        var_f20 = 80.0F;
+        var_f22 = 580.0F;
+        NDS_AFTERIMAGE_RGB(color1, dFTDisplayMainItemAfterImageColor1);
+        NDS_AFTERIMAGE_RGB(color2, dFTDisplayMainItemAfterImageColor2);
+        break;
+
+    default:
+#if NDS_P4
+    {
+        const NDSP4SwordTrail *row =
+            ndsP4SwordTrail(fp, (u32)fp->afterimage.is_itemswing);
+
+        if (row == NULL)
+        {
+            return;
+        }
+        var_f20 = row->start;
+        var_f22 = row->end;
+        color1[0] = (u8)(row->colour_1 >> 24);
+        color1[1] = (u8)(row->colour_1 >> 16);
+        color1[2] = (u8)(row->colour_1 >> 8);
+        color2[0] = (u8)(row->colour_2 >> 24);
+        color2[1] = (u8)(row->colour_2 >> 16);
+        color2[2] = (u8)(row->colour_2 >> 8);
+        break;
+    }
+#else
+        return;
+#endif
+    }
+#undef NDS_AFTERIMAGE_RGB
+    rotate = F_CLC_DTOR32(30.0F);
+
+    index = fp->afterimage.desc_id;
+    if (index != 0)
+    {
+        index = index - 1;
+    }
+    else index = ARRAY_COUNT(fp->afterimage.desc) - 1;
+
+#define NDS_AFTERIMAGE_EMIT(x_, y_, z_, rgb_, a_) do { \
+    xyz[count][0] = (x_); xyz[count][1] = (y_); xyz[count][2] = (z_); \
+    rgba[count][0] = (rgb_)[0]; rgba[count][1] = (rgb_)[1]; \
+    rgba[count][2] = (rgb_)[2]; rgba[count][3] = (u8)(a_); count++; \
+} while (0)
+    for (i = fp->afterimage.drawstatus - 1; i >= 0; index = next_index, i--)
+    {
+        FTAfterImage *afterimage = &fp->afterimage.desc[index];
+
+        if ((count + 2u) > NDS_AFTERIMAGE_MAX_VERTICES)
+        {
+            break;
+        }
+        alpha = (((base_alpha - add_alpha) / (fp->afterimage.drawstatus - 1)) * i) + add_alpha;
+        NDS_AFTERIMAGE_EMIT(
+            (s16)(afterimage->translate_x + (afterimage->vec.x * var_f20)),
+            (s16)(afterimage->translate_y + (afterimage->vec.y * var_f20)),
+            (s16)(afterimage->translate_z + (afterimage->vec.z * var_f20)),
+            color1, alpha);
+        NDS_AFTERIMAGE_EMIT(
+            (s16)(afterimage->translate_x + (afterimage->vec.x * var_f22)),
+            (s16)(afterimage->translate_y + (afterimage->vec.y * var_f22)),
+            (s16)(afterimage->translate_z + (afterimage->vec.z * var_f22)),
+            color2, alpha);
+
+        if (i != 0)
+        {
+            FTAfterImage *next_afterimage;
+            Vec3f spC8;
+
+            if (index != 0)
+            {
+                next_index = index - 1;
+            }
+            else next_index = ARRAY_COUNT(fp->afterimage.desc) - 1;
+
+            next_afterimage = &fp->afterimage.desc[next_index];
+
+            if (syVectorNormCross3D(&afterimage->vec, &next_afterimage->vec, &spC8) != NULL)
+            {
+                f32 f_angle_diff = syVectorAngleDiff3D(&afterimage->vec, &next_afterimage->vec);
+                s32 target_angle = f_angle_diff / rotate;
+
+                if (target_angle != 0)
+                {
+                    s16 n_ai_x, n_ai_y, n_ai_z;
+                    s16 vtx_x, vtx_y, vtx_z;
+                    s32 alphainc;
+                    f32 scale;
+                    Vec3f spAC;
+
+                    target_angle++;
+
+                    scale = 1.0F / (target_angle);
+
+                    n_ai_x = afterimage->translate_x;
+                    n_ai_y = afterimage->translate_y;
+                    n_ai_z = afterimage->translate_z;
+
+                    f_angle_diff *= scale;
+
+                    vtx_x = ((next_afterimage->translate_x - n_ai_x) * scale);
+                    vtx_y = ((next_afterimage->translate_y - n_ai_y) * scale);
+                    vtx_z = ((next_afterimage->translate_z - n_ai_z) * scale);
+
+                    spAC = afterimage->vec;
+
+                    alphainc = (((((base_alpha - add_alpha) / (fp->afterimage.drawstatus - 1)) * (i - 1)) + add_alpha) - alpha) * scale;
+
+                    for (j = 0; j < target_angle - 1; j++)
+                    {
+                        if ((count + 2u) > NDS_AFTERIMAGE_MAX_VERTICES)
+                        {
+                            break;
+                        }
+                        n_ai_x += vtx_x;
+                        n_ai_y += vtx_y;
+                        n_ai_z += vtx_z;
+
+                        syVectorRotateAbout3D(&spAC, &spC8, f_angle_diff);
+
+                        alpha += alphainc;
+
+                        NDS_AFTERIMAGE_EMIT(
+                            (s16)(n_ai_x + (spAC.x * var_f20)),
+                            (s16)(n_ai_y + (spAC.y * var_f20)),
+                            (s16)(n_ai_z + (spAC.z * var_f20)),
+                            color1, alpha);
+                        NDS_AFTERIMAGE_EMIT(
+                            (s16)(n_ai_x + (spAC.x * var_f22)),
+                            (s16)(n_ai_y + (spAC.y * var_f22)),
+                            (s16)(n_ai_z + (spAC.z * var_f22)),
+                            color2, alpha);
+                    }
+                }
+            }
+        }
+    }
+#undef NDS_AFTERIMAGE_EMIT
+    if (count < 4u)
+    {
+        return;
+    }
+    origin[0] = xyz[0][0];
+    origin[1] = xyz[0][1];
+    origin[2] = xyz[0][2];
+    for (v = 0u; v < count; v++)
+    {
+        u32 axis;
+
+        for (axis = 0u; axis < 3u; axis++)
+        {
+            s32 d = (s32)xyz[v][axis] - (s32)origin[axis];
+
+            if ((d > NDS_RENDERER_AFTERIMAGE_VERTEX_LIMIT) ||
+                (d < -NDS_RENDERER_AFTERIMAGE_VERTEX_LIMIT))
+            {
+                gNdsRendererAfterImageRejectCount++;
+                return;
+            }
+            xyz[v][axis] = (s16)d;
+        }
+    }
+    if (ndsRendererAdapterBuildWorldOriginMtx(
+            (gGCCurrentCamera != NULL) ? CObjGetStruct(gGCCurrentCamera) : NULL,
+            origin, &composed) == FALSE)
+    {
+        return;
+    }
+    (void)ndsRendererSubmitAfterImage(&composed, (const s16 (*)[3])xyz,
+                                      (const u8 (*)[4])rgba, count);
+}
+#endif
+
 void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
 {
 #if NDS_RENDERER_HW_TRIANGLES
@@ -5769,6 +5993,13 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
     }
 #else
     ndsFighterMarioFoxDLAllDrawForSlot((u32)fp->nds_slot, fp, NULL, 0u);
+#endif
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    /* ftDisplayMainDrawAll's tail: the afterimage after the fighter. */
+    if (fp->afterimage.drawstatus >= 2)
+    {
+        ndsFighterDrawAfterImage(fp);
+    }
 #endif
 #if NDS_R2_FIGHTER_NO_ORACLE && (NDS_RENDERER_PROFILE_LEVEL < 2)
     ndsRendererHardwareSetNoOracle(saved_no_oracle);

@@ -2052,6 +2052,21 @@ extern volatile u32 gNdsRendererFoxGunBytes;
 extern volatile u32 gNdsRendererFoxGunDrawCount;
 extern volatile u32 gNdsRendererFoxGunTriangleCount;
 #endif
+/* A fighter's afterimage trail (ftDisplayMainDrawAfterImage's strip: Link's
+ * sword, the Beam Sword swing, Remix sword trails), submitted natively right
+ * after the fighter. `xyz` are positions relative to the origin `composed`
+ * translates to, `rgba` the source vertex colours; vertex pairs 2k/2k+1 are
+ * the strip's edges and each quad between two pairs is one polygon group at
+ * the mean of its edges' alpha (DS polygons have one alpha). Returns FALSE
+ * (nothing drawn) for a vertex outside a v16. */
+s32 ndsRendererSubmitAfterImage(const NDSRendererMatrix20p12 *composed,
+                                const s16 (*xyz)[3], const u8 (*rgba)[4],
+                                u32 count);
+/* |relative coordinate| that still fits a v16 at the world-unit encoding
+ * (x16: 12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT). */
+#define NDS_RENDERER_AFTERIMAGE_VERTEX_LIMIT 2047
+extern volatile u32 gNdsRendererAfterImageDrawCount;
+extern volatile u32 gNdsRendererAfterImageRejectCount;
 void ndsRendererEndParticleQuads(void);
 /* Nonzero for a particle pass whose source display sets a no-Z render mode
  * (efDisplayZPerspCLDProcDisplay's G_RM_CLD_SURF, efDisplayZPerspXLU's

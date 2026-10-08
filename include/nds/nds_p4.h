@@ -114,6 +114,25 @@ enum
     nNDSP4ComputerInputNull = 0x4C
 };
 
+/* Remix SwordTrail.asm: a trail the SET AFTERIMAGE motion command selects
+ * with is_itemswing >= 2 (0 and 1 are the vanilla Link-sword and item-swing
+ * trails). It follows model part `model_part` (joint model_part +
+ * nFTPartsJointCommonStart) along that joint's matrix row `axis` (0 X, 1 Y,
+ * 2 Z) from `start` to `end`, base colour `colour_1` to tip colour
+ * `colour_2` (RGBA32, alpha unused). A content lists the rows whose
+ * character is its own. */
+typedef struct NDSP4SwordTrail
+{
+    u8 id;
+    u8 model_part;
+    u8 axis;
+    u8 reserved;
+    u32 colour_1;
+    u32 colour_2;
+    f32 start;
+    f32 end;
+} NDSP4SwordTrail;
+
 typedef struct NDSP4Fighter
 {
     const char *name;
@@ -137,6 +156,8 @@ typedef struct NDSP4Fighter
     const NDSP4SpriteDesc *sprites;
     const u32 *sprite_count;
     const NDSP4Present *present;
+    const NDSP4SwordTrail *sword_trails;
+    const u32 *sword_trail_count;
 } NDSP4Fighter;
 
 /* Character-select selection ids: an original's fkind, or NDS_P4_SEL_BASE +
@@ -230,6 +251,15 @@ static inline void *ndsP4MotionEventCursor(GObj *fighter_gobj,
     }
     return ndsP4RunRemixMotionEvents(fighter_gobj, ms, forward);
 }
+
+/* The fighter's SwordTrail.asm row for a SET AFTERIMAGE id >= 2, or NULL
+ * (not its trail: the source then records and draws nothing). */
+const NDSP4SwordTrail *ndsP4SwordTrail(const FTStruct *fp, u32 id);
+/* ftMainProcParams' afterimage step for a Remix trail (SwordTrail.asm
+ * initial_setup_ and axis_setup_): the source's Link-sword step on the row's
+ * joint and axis. The caller applies the source's gate (no hitlag at the
+ * proc's start, drawstatus not -1). */
+void ndsP4UpdateSwordTrail(FTStruct *fp);
 
 /* Remix TOPJOINT TRANSLATION MULTIPLIER (0xD3), per player port. */
 extern f32 gNdsP4TranslationMultiplier[GMCOMMON_PLAYERS_MAX];

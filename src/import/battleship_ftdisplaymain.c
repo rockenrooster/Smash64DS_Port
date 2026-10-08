@@ -153,7 +153,22 @@ extern void func_ovl2_800EB924(CObj *cobj, Mtx44f matrix, Vec3f *pos,
 #define func_ovl2_800EB924 ndsFighterDisplayContractProjectTarget
 
 #define ftDisplayMainProcDisplay ndsBaseFTDisplayMainProcDisplay
+/* The afterimage trail is drawn natively after the fighter
+ * (ndsFighterDrawAfterImage, renderer_adapter_fighter.c), and this display
+ * runs inside the contract capture, whose lists are dropped. The definition's
+ * argument text (`FTStruct *fp`) keeps the source body under a base name; the
+ * two calls in ftDisplayMainDrawAll (`fp`) skip it. */
+static inline void ndsFTDisplayMainSkipAfterImage(FTStruct *fp)
+{
+    (void)fp;
+}
+#define ftDisplayMainDrawAfterImage(first) NDS_AFTERIMAGE_##first)
+#define NDS_AFTERIMAGE_FTStruct ndsBaseFTDisplayMainDrawAfterImage(FTStruct
+#define NDS_AFTERIMAGE_fp ndsFTDisplayMainSkipAfterImage(fp
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftdisplaymain.c"
+#undef ftDisplayMainDrawAfterImage
+#undef NDS_AFTERIMAGE_FTStruct
+#undef NDS_AFTERIMAGE_fp
 #undef ftDisplayMainProcDisplay
 #undef mpCollisionSetLightColorGetAlpha
 #undef scSubsysFighterDrawLightColorGetAlpha

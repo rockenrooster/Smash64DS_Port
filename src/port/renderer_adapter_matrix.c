@@ -6968,6 +6968,48 @@ static sb32 ndsRendererAdapterBuildFoxGunJointMtx(
 }
 #endif
 
+/* A world-space list's matrix: a translation to `origin` (world units),
+ * times the frame camera, times the projection -- the fighter-root compose
+ * above with a translation for the joint matrix. The list's vertices are
+ * world positions minus `origin`, so they stay inside a v16. The afterimage
+ * trail (ndsFighterDrawAfterImage) is its one user. */
+static sb32 ndsRendererAdapterBuildWorldOriginMtx(
+    CObj *cobj, const s16 origin[3], NDSRendererMatrix20p12 *out)
+{
+    NDSRendererMatrix20p12 world;
+    NDSRendererMatrix20p12 camera_projection;
+    NDSRendererMatrix20p12 camera_modelview;
+    u32 camera_projection_valid = FALSE;
+    u32 camera_modelview_valid = FALSE;
+    u32 row;
+
+    if ((origin == NULL) || (out == NULL))
+    {
+        return FALSE;
+    }
+    memset(&world, 0, sizeof(world));
+    for (row = 0u; row < 4u; row++)
+    {
+        world.m[row][row] = 1 << 12;
+    }
+    world.m[3][0] = (s32)origin[0] * (1 << 12);
+    world.m[3][1] = (s32)origin[1] * (1 << 12);
+    world.m[3][2] = (s32)origin[2] * (1 << 12);
+    ndsRendererAdapterGetFrameCameraMatrices(
+        cobj, &camera_projection, &camera_projection_valid,
+        &camera_modelview, &camera_modelview_valid, NULL, NULL, NULL);
+    if (camera_modelview_valid != FALSE)
+    {
+        ndsRendererMtxMulAffine20p12(&world, &camera_modelview, &world);
+    }
+    if (camera_projection_valid == FALSE)
+    {
+        return FALSE;
+    }
+    return ndsRendererAdapterComposeNativeRootMatrix(
+        &world, &camera_projection, out);
+}
+
 
 #if NDS_R2_FIGHTER_SHUFFLE_FOLD
 /* R2-03 E32. The hitlag shuffle used to switch the whole native fighter owner

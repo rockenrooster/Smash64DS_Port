@@ -233,7 +233,12 @@ static void ndsLabTimedAddFigatree(DObj *root_dobj, void *figatree,
 #define ftMainSearchHitWeapon battleship_ftMainSearchHitWeapon
 #define ftMainSearchGroundHit battleship_ftMainSearchGroundHit
 #define ftMainProcSearchHitAll battleship_ftMainProcSearchHitAll
+#if NDS_P4
+/* P4 wraps the source proc (Remix sword trails, below the include). */
+#define ftMainProcParams ndsBaseFTMainProcParams
+#else
 #define ftMainProcParams battleship_ftMainProcParams
+#endif
 #define ftMainRunUpdateColAnim battleship_ftMainRunUpdateColAnim
 #define ftMainPlayAnimEventsAll battleship_ftMainPlayAnimEventsAll
 #define ftMainSetStatus battleship_ftMainSetStatus
@@ -345,6 +350,27 @@ static void ndsLabTimedAddFigatree(DObj *root_dobj, void *figatree,
 #undef ftParamSetHitStatusAll
 #undef ftParamResetFighterDamageCollsAll
 #undef ftParamMoveDLLink
+#endif
+
+#if NDS_P4
+/* Remix SwordTrail.asm: SET AFTERIMAGE with is_itemswing >= 2 picks a Remix
+ * trail row. The source's afterimage switch, the last statement of
+ * ftMainProcParams, has cases for the vanilla 0 and 1 only; Remix's
+ * initial_setup_ sends a row matching the fighter through the Link-sword
+ * step on the row's joint and axis. Same gate: no hitlag when the proc
+ * began, drawstatus not -1. */
+void battleship_ftMainProcParams(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    u32 hitlag_tics = fp->hitlag_tics;
+
+    ndsBaseFTMainProcParams(fighter_gobj);
+    if ((hitlag_tics == 0u) && (fp->afterimage.drawstatus != -1) &&
+        (fp->afterimage.is_itemswing >= 2))
+    {
+        ndsP4UpdateSwordTrail(fp);
+    }
+}
 #endif
 
 void ftMainPlayAnimEventsAll(GObj *fighter_gobj)

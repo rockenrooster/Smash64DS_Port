@@ -291,10 +291,46 @@ Presentation, all generated per content from the donor's own rows:
   dash attacks. The Fire Bird landing and the Phantasm drop did not occur
   on that stage.
 
-Open for Falco: Phantasm's sword trail (S13), Kirby's copy (S8: Kirby takes the parent's copy, Fox's blaster and hat;
-Remix gives Kirby Falco's Phantasm as statuses 0xEB/0xEC with Kirby's own
-FALCO_NSP animations and scripts, and hat 0x12 from its extended Kirby file),
-the acceptance probe's witness block (S10).
+- **Sword trails** (S13): Remix's SwordTrail.asm rows extend the vanilla
+  afterimage. SET AFTERIMAGE's `is_itemswing` 0 is Link's sword, 1 the Beam
+  Sword swing, and 2 on index Remix's `sword_trail_table`. The export reads
+  that table (`sword_trails`: character, model part, axis, two colours,
+  start and end). The generator emits each content's rows
+  (`NDSP4SwordTrail`). Falco's ground and air Phantasm scripts set ids 15
+  and 14 (model parts 1 and 0, the Y axis, cyan, -150..250).
+  - The update: ftMainProcParams' afterimage switch has the vanilla cases
+    only. The P4 wrapper (`battleship_ftmain.c`) runs the Link-sword step on
+    the row's joint (model part + 4) and matrix row (`ndsP4UpdateSwordTrail`),
+    under the source's gate.
+  - The draw: no afterimage drew at all before this, Link's sword and the
+    Beam Sword included. The whole fighter display runs inside the contract
+    capture, whose lists are dropped. `ndsFighterDrawAfterImage`
+    (`renderer_adapter_fighter.c`) is the source routine's vertex build with
+    its own conversions. It is submitted natively after the fighter
+    (`ndsRendererSubmitAfterImage`) on the camera with a translation to the
+    first vertex, as the Fox gun overlay composes. The source routine is
+    skipped in the capture.
+  - DS approximation: one alpha per polygon, so each quad takes the mean of
+    its two edges. The strip folding over itself blends once, not twice.
+  - Lab, Dream Land, 1,200 frames: four Falcos made 27 row updates and 11
+    trail draws; four Links made 278 sword-trail draws; 0 rejects. Captures
+    are local: `artifacts/visibility/2026-10-07_trail-trail2.png` (Falco)
+    and `trail-trail4.png` (Link).
+
+Open for Falco: Kirby's copy (S8: Kirby takes the parent's copy, Fox's
+blaster and hat; Remix gives Kirby Falco's Phantasm as statuses 0xEB/0xEC
+with Kirby's own FALCO_NSP animations and scripts, kirby_falco_trail, and hat
+0x12 from its extended Kirby file), the acceptance probe's witness block
+(S10).
+
+All-content memory on the VS select (2026-10-07). The select reserves every
+compiled kind's menu clips before its previews load: 52,000 B for the twelve,
+88,992 B with Falco. It then keeps 104 KiB free (`NDS_R2_ANIM_CACHE_CSS_KEEP_FREE`:
+the four slots' figatree heaps, the surface cache and four previews' objects).
+The all-content walk ROM reaches that reservation with 176,352 B free. So a P4 build with the full original content
+cannot hold even Falco's clips there. The fix belongs to S9: load a content's
+menu clips with its preview transaction, into its slot block, instead of
+into the global reservation.
 
 ## Board 1 status (master plan Revision 3)
 
@@ -308,8 +344,8 @@ the acceptance probe's witness block (S10).
 | S6 articles | first source scan only |
 | S7 generated CPU rows | Falco's rows read by hand from the assembled tables |
 | S8 Kirby copies | not started |
-| S9 select-screen preview | done for Falco; pack flags still per-fighter Makefile lines (folds into S1) |
+| S9 select-screen preview | done for Falco on the menu ROM; pack flags still per-fighter Makefile lines (folds into S1); the all-content ROM cannot hold P4 menu clips in the select's global reservation (see above) |
 | S10 acceptance probe | lab probes exist per topic (`gNdsLabP4Content`); no single command |
 | S11 whole-roster generation | not started; all 14 export cleanly |
 | S12 EXTRA export | not started; EXTRA's nested Remix gitlink not initialized |
-| S13 sword trails | not started; Falco's Phantasm draws without Remix's cyan trail |
+| S13 sword trails | done: Remix rows exported and generated, update and native draw; vanilla Link and Beam Sword trails drawn too |

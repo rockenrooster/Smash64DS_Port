@@ -10736,6 +10736,91 @@ s32 ndsRendererSubmitFoxGun(const NDSRendererMatrix20p12 *composed)
 }
 #endif /* NDS_R2_FOX_GUN_OVERLAY */
 
+/* The afterimage trail (nds_renderer.h). The source strip
+ * (ftdisplaymain.c:589-596) is one gSPVertex of `count` shaded vertices and
+ * the triangles (i, i+1, i+2), (i+1, i+3, i+2) for each pair step, drawn on
+ * the translucent list with combine G_CC_SHADE and culling and lighting off
+ * (dFTDisplayMainAfterImageVertexDL). The DS keeps the shade colour per
+ * vertex but has one alpha per polygon, so each quad is its own group at the
+ * mean of its two edges' alpha; a quad whose alpha rounds to 0 is skipped
+ * (DS alpha 0 draws wireframe). One polygon ID for the whole trail: where
+ * the strip folds over itself the DS blends it once, the N64 twice. */
+volatile u32 gNdsRendererAfterImageDrawCount;
+volatile u32 gNdsRendererAfterImageRejectCount;
+static void ndsRendererLoadHardwareRawComposedMatrix(
+    const NDSRendererMatrix20p12 *composed, u32 generation);
+
+#define NDS_AFTERIMAGE_POLY_ID 3u
+#define NDS_AFTERIMAGE_VERTEX_SCALE (1 << (12u - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))
+_Static_assert(NDS_RENDERER_AFTERIMAGE_VERTEX_LIMIT * NDS_AFTERIMAGE_VERTEX_SCALE <= 32767,
+               "afterimage vertices must fit a v16");
+#define NDS_AFTERIMAGE_VERTEX_LIMIT NDS_RENDERER_AFTERIMAGE_VERTEX_LIMIT
+
+s32 ndsRendererSubmitAfterImage(const NDSRendererMatrix20p12 *composed,
+                                const s16 (*xyz)[3], const u8 (*rgba)[4],
+                                u32 count)
+{
+    NDS_FIGHTER_PACKET_DMA_WAIT();
+    u32 i;
+
+    if ((composed == NULL) || (xyz == NULL) || (rgba == NULL) || (count < 4u))
+    {
+        return FALSE;
+    }
+    for (i = 0u; i < count; i++)
+    {
+        u32 axis;
+
+        for (axis = 0u; axis < 3u; axis++)
+        {
+            if ((xyz[i][axis] > NDS_AFTERIMAGE_VERTEX_LIMIT) ||
+                (xyz[i][axis] < -NDS_AFTERIMAGE_VERTEX_LIMIT))
+            {
+                gNdsRendererAfterImageRejectCount++;
+                return FALSE;
+            }
+        }
+    }
+#if NDS_R2_WHISPY_NATIVE_AOT
+    ndsRendererFlushWhispyNativePacket();
+#endif
+    ndsRendererEndParticleQuads();
+    ndsRendererHardwareEndBatch();
+    ndsRendererLoadHardwareRawComposedMatrix(
+        composed, ndsRendererNextMatrixGeneration());
+    /* The interpreted renderer's untextured contract, as the Fox blaster's. */
+    glEnable(GL_TEXTURE_2D);
+    ndsRendererHardwareBindNoTexture(NULL);
+    for (i = 0u; (i + 3u) < count; i += 2u)
+    {
+        static const u8 kCorner[6] = { 0u, 1u, 2u, 1u, 3u, 2u };
+        u32 alpha = (((u32)rgba[i][3] + (u32)rgba[i + 2u][3]) / 2u) >> 3;
+        u32 corner;
+
+        if (alpha == 0u)
+        {
+            continue;
+        }
+        ndsRendererHardwareSetPolyFmt(POLY_ALPHA(alpha) | POLY_CULL_NONE |
+                                      POLY_ID(NDS_AFTERIMAGE_POLY_ID));
+        glBegin(GL_TRIANGLES);
+        for (corner = 0u; corner < 6u; corner++)
+        {
+            u32 v = i + kCorner[corner];
+
+            glColor(RGB15(rgba[v][0] >> 3, rgba[v][1] >> 3, rgba[v][2] >> 3));
+            glVertex3v16((v16)(xyz[v][0] * NDS_AFTERIMAGE_VERTEX_SCALE),
+                         (v16)(xyz[v][1] * NDS_AFTERIMAGE_VERTEX_SCALE),
+                         (v16)(xyz[v][2] * NDS_AFTERIMAGE_VERTEX_SCALE));
+        }
+        ndsRendererHardwareEndBatch();
+    }
+    sNdsRendererHardwareMatrixLoaded = FALSE;
+    sNdsRendererHardwareMatrixMode = NDS_RENDERER_HW_MATRIX_MODE_NONE;
+    gNdsRendererAfterImageDrawCount++;
+    return TRUE;
+}
+
 /* DEBUG-ONLY world-space collision-diamond, for tuning the fireball's
  * stage-collision box. The DS geometry engine has no line primitive, so the
  * diamond is drawn as two filled translucent triangles (a flat diamond shape)

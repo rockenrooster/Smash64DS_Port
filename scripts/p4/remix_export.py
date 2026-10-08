@@ -207,6 +207,29 @@ class Exporter:
             return names[0] if names else None
         return self.decomp_sym.get(addr)
 
+    # -- sword trails ---------------------------------------------------------
+    def sword_trails(self) -> list[dict]:
+        """SwordTrail.asm's table, indexed by the SET AFTERIMAGE command's
+        is_itemswing value: 0 and 1 are the vanilla trails (empty slots); 2 on
+        are Remix's add_sword_trail rows (struct: u16 character, 0xFFFF any;
+        u8 model part; u8 axis; RGBA32 base and tip colours; f32 start and end
+        positions along the axis)."""
+        table = self.sym["SwordTrail.sword_trail_table"]
+        following = min(a for a in self.sym_by_addr if a > table)
+        rows = []
+        for trail_id in range((following - table) // 4):
+            ptr = self.rom.u32_ram(table + trail_id * 4)
+            if ptr == 0:
+                continue
+            ch, part, axis, c1, c2, start, end = struct.unpack(
+                ">HBBIIff", self.rom.read_ram(ptr, 20))
+            if axis > 2:
+                self.fail.add(f"sword trail {trail_id}: axis {axis}")
+            rows.append({"id": trail_id, "character": ch, "model_part": part,
+                         "axis": axis, "colour_1": c1, "colour_2": c2,
+                         "start": start, "end": end})
+        return rows
+
     # -- descriptors ----------------------------------------------------------
     def read_struct(self, ram: int) -> dict:
         raw = self.rom.read_ram(ram, 0x78)
@@ -546,6 +569,8 @@ def main() -> int:
             # vanilla asset the DS build already ships for that ID.
             row["vanilla_identical"] = ex.rom.o2r(f) == vanilla_rom.o2r(f)
         resolved["file_closure"].append(row)
+
+    resolved["sword_trails"] = ex.sword_trails()
 
     staging = args.staging
     resolved["provenance"] = {
