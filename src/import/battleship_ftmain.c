@@ -230,7 +230,19 @@ static void ndsLabTimedAddFigatree(DObj *root_dobj, void *figatree,
 #define ftMainSearchFighterCatch battleship_ftMainSearchFighterCatch
 #define ftMainProcSearchCatch battleship_ftMainProcSearchCatch
 #define ftMainSearchHitItem battleship_ftMainSearchHitItem
+#if NDS_P4
+/* P4: Remix's override_reflectability_ (Reflect.asm) lets a custom absorber
+ * take weapons the source never reflects. The definition (first argument's
+ * type) keeps the source body; the hit search's call goes through
+ * ndsP4SearchHitWeapon below the include. */
+/* Out of line: the hit search that calls it is ITCM code (nds_hot_text.ld). */
+static void ndsP4SearchHitWeapon(GObj *fighter_gobj) __attribute__((noinline));
+#define ftMainSearchHitWeapon(g_) NDS_P4_SEARCH_WEAPON_##g_)
+#define NDS_P4_SEARCH_WEAPON_GObj battleship_ftMainSearchHitWeapon(GObj
+#define NDS_P4_SEARCH_WEAPON_fighter_gobj ndsP4SearchHitWeapon(fighter_gobj
+#else
 #define ftMainSearchHitWeapon battleship_ftMainSearchHitWeapon
+#endif
 #define ftMainSearchGroundHit battleship_ftMainSearchGroundHit
 #define ftMainProcSearchHitAll battleship_ftMainProcSearchHitAll
 #if NDS_P4
@@ -383,6 +395,8 @@ static inline void ndsP4FTMainSetHitInteractStats(FTStruct *fp, u32 attack_group
 #undef NDS_P4_DAMAGE_COLLIDE_FTAttackColl
 #undef NDS_P4_DAMAGE_COLLIDE_other_attack_coll
 #undef NDS_P4_DAMAGE_COLLIDE_attack_coll
+#undef NDS_P4_SEARCH_WEAPON_GObj
+#undef NDS_P4_SEARCH_WEAPON_fighter_gobj
 #undef ftParamsUpdateFighterPartsTransformAll
 #undef ftMotionEventCast
 #define ftMotionEventCast(event, type) ((type *)(event)->p_script)
@@ -441,12 +455,69 @@ static inline void ndsP4FTMainSetHitInteractStats(FTStruct *fp, u32 attack_group
  * initial_setup_ sends a row matching the fighter through the Link-sword
  * step on the row's joint and axis. Same gate: no hitlag when the proc
  * began, drawstatus not -1. */
+static sb32 ndsP4CustomReflectKind(const FTStruct *fp)
+{
+    return ((fp->nds_p4_content != 0u) && (fp->special_coll != NULL) &&
+            ((fp->special_coll->kind & 0xFFFF) == NDS_P4_SPECIAL_COLL_CUSTOM)) ? TRUE : FALSE;
+}
+
+/* Remix's override_reflectability_ (Reflect.asm): a custom absorber also
+ * takes Samus's bomb and Pikachu's thunder, which the source never
+ * reflects, so for its search they read reflectable. The clash test ahead
+ * of the reflect test reads the same flag; an absorbing inhale has no
+ * attack of its own to clash with. */
+#define NDS_P4_FORCED_REFLECT_MAX 16
+static void ndsP4SearchHitWeapon(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    WPAttackColl *forced[NDS_P4_FORCED_REFLECT_MAX];
+    GObj *weapon_gobj;
+    s32 count = 0;
+    s32 i;
+
+    if ((fp->is_reflect) && (ndsP4CustomReflectKind(fp) != FALSE))
+    {
+        for (weapon_gobj = gGCCommonLinks[nGCCommonLinkIDWeapon]; weapon_gobj != NULL;
+             weapon_gobj = weapon_gobj->link_next)
+        {
+            WPStruct *wp = wpGetStruct(weapon_gobj);
+
+            if (((wp->kind == nWPKindSamusBomb) || (wp->kind == nWPKindThunderHead) ||
+                 (wp->kind == nWPKindThunderTrail)) &&
+                !(wp->attack_coll.can_reflect) && (count < NDS_P4_FORCED_REFLECT_MAX))
+            {
+                wp->attack_coll.can_reflect = TRUE;
+                forced[count++] = &wp->attack_coll;
+            }
+        }
+    }
+    battleship_ftMainSearchHitWeapon(fighter_gobj);
+
+    for (i = 0; i < count; i++)
+    {
+        forced[i]->can_reflect = FALSE;
+    }
+}
+
 void battleship_ftMainProcParams(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
     u32 hitlag_tics = fp->hitlag_tics;
+    /* Remix's extend_reflect_types: the reflect switch's default, a custom
+     * special_coll, runs its custom routine (Dedede's absorb_initial_). The
+     * branch is decided on the fields the source's chain reads before it
+     * clears them; the routine runs after the source's tail, which only
+     * clears the hit fields and steps sword afterimages. */
+    sb32 is_custom_reflect = ((fp->damage_knockback == 0.0F) && (fp->shield_damage == 0) &&
+                              (fp->attack_shield_push == 0) && (fp->attack_damage == 0) &&
+                              (fp->reflect_damage == 0) && (fp->reflect_lr != 0) &&
+                              (ndsP4CustomReflectKind(fp) != FALSE)) ? TRUE : FALSE;
 
     ndsBaseFTMainProcParams(fighter_gobj);
+    if (is_custom_reflect != FALSE)
+    {
+        ndsP4OnCustomReflect(fighter_gobj);
+    }
     if ((hitlag_tics == 0u) && (fp->afterimage.drawstatus != -1) &&
         (fp->afterimage.is_itemswing >= 2))
     {

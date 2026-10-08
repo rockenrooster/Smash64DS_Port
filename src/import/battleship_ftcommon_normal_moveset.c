@@ -222,6 +222,22 @@ sb32 ndsBaseFTCommonJumpAerialCheckInterruptCommon(GObj *fighter_gobj);
  * where the aerial check ends (ndsP4AirJumpCheck). */
 #define ftCommonAttackAirCheckInterruptCommon(g_) \
     (ftCommonAttackAirCheckInterruptCommon(g_) || ndsP4AirJumpCheck(g_))
+/* P4: Remix's jump_fix_1-5 (jigglypuffkirbyshared.asm) take Dedede's id
+ * down Kirby's multi-jump branches of the jump check, the multi-jump status
+ * and the aerial physics, with his own heights. A content keeps its
+ * parent's kind, so these three source bodies (and the interrupt, the
+ * check's one caller in this file) are renamed; the routines under the
+ * port's names below run them, or the Kirby branch for a content whose
+ * overrides carry multi_jump_vel. */
+#undef ftCommonJumpAerialProcInterrupt
+#define ftCommonJumpAerialProcInterrupt ndsSrcFTCommonJumpAerialProcInterrupt
+#undef ftCommonJumpAerialProcPhysics
+#define ftCommonJumpAerialProcPhysics ndsSrcFTCommonJumpAerialProcPhysics
+#undef ftCommonJumpAerialCheckInterruptCommon
+#define ftCommonJumpAerialCheckInterruptCommon ndsSrcFTCommonJumpAerialCheckInterruptCommon
+void ndsSrcFTCommonJumpAerialProcInterrupt(GObj *fighter_gobj);
+void ndsSrcFTCommonJumpAerialProcPhysics(GObj *fighter_gobj);
+sb32 ndsSrcFTCommonJumpAerialCheckInterruptCommon(GObj *fighter_gobj);
 #endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonjumpaerial.c"
 #if NDS_P4
@@ -240,3 +256,128 @@ sb32 ndsBaseFTCommonJumpAerialCheckInterruptCommon(GObj *fighter_gobj);
 #undef ftCommonJumpAerialMultiCheckJumpButtonHold
 #undef ftCommonJumpAerialMultiGetJumpInputType
 #undef ftCommonJumpAerialCheckInterruptCommon
+
+#if NDS_P4
+/* ftCommonJumpAerialMultiSetStatus' Kirby case (decomp 0x8013FF38) with the
+ * content's heights (jump_fix_1 and jump_fix_2). Remix's Size.asm patch on
+ * the first jump's height (adjust_jumping_height_multiplier_kirby) leaves
+ * the player's port times 4 in the stick buffer where the source writes its
+ * maximum. */
+static void ndsP4FTCommonJumpAerialMultiSetStatus(GObj *fighter_gobj, s32 input_source,
+                                                  const f32 *vel)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    FTAttributes *attr = fp->attr;
+    s32 stick_range_x;
+    s32 stick_range_y = I_CONTROLLER_RANGE_MAX;
+
+    (void)input_source;
+
+    ftMainSetStatus(fighter_gobj, fp->jumps_used + nFTKirbyStatusJumpAerialF1 - 1, 0.0F, 1.0F,
+                    FTSTATUS_PRESERVE_PLAYERTAG);
+
+    stick_range_x = fp->input.pl.stick_range.x;
+
+    fp->physics.vel_air.x = stick_range_x * attr->jumpaerial_vel_x;
+
+    if (fp->jumps_used == 1)
+    {
+        fp->physics.vel_air.y = (((stick_range_y * attr->jump_height_mul) + attr->jump_height_base) * attr->jumpaerial_height);
+
+        fp->tap_stick_y = fp->player * 4;
+    }
+    else fp->physics.vel_air.y = vel[fp->jumps_used - 2] * (stick_range_y / F_CONTROLLER_RANGE_MAX);
+
+    fp->jumps_used++;
+
+    fp->motion_vars.flags.flag1 = 0;
+
+    fp->is_special_interrupt = TRUE;
+
+    if ((fp->input.pl.stick_range.x * fp->lr) < FTCOMMON_JUMPAERIAL_TURN_STICK_RANGE_MIN)
+    {
+        fp->status_vars.common.jumpaerial.turn_tics = FTCOMMON_JUMPAERIAL_TURN_FRAMES;
+    }
+    else fp->status_vars.common.jumpaerial.turn_tics = 0;
+
+    ndsBaseFTCommonJumpAerialUpdateModelYaw(fp);
+}
+
+/* ftCommonJumpAerialCheckInterruptCommon (decomp 0x8014019C): its Kirby
+ * branch for a multi-jump content (jump_fix_3 and jump_fix_5). */
+sb32 ndsBaseFTCommonJumpAerialCheckInterruptCommon(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    const f32 *vel = ndsP4MultiJumpVelocities(fp);
+    s32 input_source;
+
+    if (vel == NULL)
+    {
+        return ndsSrcFTCommonJumpAerialCheckInterruptCommon(fighter_gobj);
+    }
+    if (ftHammerCheckHoldHammer(fighter_gobj) != FALSE)
+    {
+        return FALSE;
+    }
+    if (fp->jumps_used < fp->attr->jumps_max)
+    {
+        if (fp->jumps_used == 1)
+        {
+            input_source = ftCommonKneeBendGetInputTypeCommon(fp);
+
+            if (input_source != FTCOMMON_JUMPAERIAL_INPUT_TYPE_NONE)
+            {
+                ndsP4FTCommonJumpAerialMultiSetStatus(fighter_gobj, input_source, vel);
+
+                return TRUE;
+            }
+        }
+        else if ((fp->status_id < nFTKirbyStatusJumpAerialF1) || (fp->status_id > nFTKirbyStatusJumpAerialF5) || (fp->motion_vars.flags.flag1 != 0))
+        {
+            input_source = ndsBaseFTCommonJumpAerialMultiGetJumpInputType(fp);
+
+            if (input_source != FTCOMMON_JUMPAERIAL_INPUT_TYPE_NONE)
+            {
+                ndsP4FTCommonJumpAerialMultiSetStatus(fighter_gobj, input_source, vel);
+
+                return TRUE;
+            }
+        }
+    }
+    return FALSE;
+}
+
+/* ftCommonJumpAerialProcInterrupt (decomp 0x8013FB2C), as compiled above
+ * (with Peach's float check), calling the check above. */
+void ndsBaseFTCommonJumpAerialProcInterrupt(GObj *fighter_gobj)
+{
+    if ((ftCommonSpecialAirCheckInterruptCommon(fighter_gobj) == FALSE) &&
+        ((ftCommonAttackAirCheckInterruptCommon(fighter_gobj) || ndsP4AirJumpCheck(fighter_gobj)) == FALSE))
+    {
+        ndsBaseFTCommonJumpAerialCheckInterruptCommon(fighter_gobj);
+    }
+}
+
+/* ftCommonJumpAerialProcPhysics (decomp 0x8013FC4C): its Kirby case for a
+ * multi-jump content (jump_fix_4). */
+void ndsBaseFTCommonJumpAerialProcPhysics(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    FTAttributes *attr = fp->attr;
+
+    if (ndsP4MultiJumpVelocities(fp) == NULL)
+    {
+        ndsSrcFTCommonJumpAerialProcPhysics(fighter_gobj);
+        return;
+    }
+    ftPhysicsCheckSetFastFall(fp);
+
+    (fp->is_fastfall) ? ftPhysicsApplyFastFall(fp, attr) : ftPhysicsApplyGravityDefault(fp, attr);
+
+    if (ftPhysicsCheckClampAirVelXDecMax(fp, attr) == FALSE)
+    {
+        ftPhysicsClampAirVelXStickRange(fp, FTPHYSICS_AIRDRIFT_CLAMP_RANGE_MIN, attr->air_accel * FTKIRBY_JUMPAERIAL_VEL_MUL, attr->air_speed_max_x * FTKIRBY_JUMPAERIAL_VEL_MUL);
+    }
+    ftPhysicsApplyAirVelXFriction(fp, attr);
+}
+#endif

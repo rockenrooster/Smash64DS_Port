@@ -2349,7 +2349,119 @@ sb32 itMainCommonProcReflector(GObj *item_gobj)
 
 /* Generic source-owned runtime. These contain no per-item registry tables. */
 #include "../../decomp/BattleShip-main/decomp/src/it/itmap.c"
+#include <nds/nds_p4_contents.h>
+#if NDS_P4
+#include <nds/nds_p4.h>
+/* P4: the hit-collision proc an item registers is the dispatcher after the
+ * include; the definition, told apart by its parentheses, is the source
+ * body. */
+#define itProcessProcHitCollisions(g_) ndsBaseItProcessProcHitCollisions(g_)
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/it/itprocess.c"
+#if NDS_P4
+#undef itProcessProcHitCollisions
+
+/* itProcessProcHitCollisions (decomp itprocess.c:1012) for an item a custom
+ * absorber caught (Remix's override_item_reflect_routine_, any index past
+ * the Franklin Badge's): in place of the reflect, its owner unchanged, the
+ * item's blast-zone routine runs and it is destroyed. */
+static void ndsP4ItProcessProcHitCollisionsAbsorbed(GObj *item_gobj)
+{
+    ITStruct *ip = itGetStruct(item_gobj);
+
+    if (ip->damage_queue != 0)
+    {
+        ip->percent_damage += ip->damage_queue;
+
+        if (ip->percent_damage > GMCOMMON_PERCENT_DAMAGE_MAX)
+        {
+            ip->percent_damage = GMCOMMON_PERCENT_DAMAGE_MAX;
+        }
+        ip->damage_lag = ip->damage_queue;
+
+        if (ip->proc_damage != NULL)
+        {
+            if (ip->proc_damage(item_gobj) != FALSE)
+            {
+                itMainDestroyItem(item_gobj);
+                return;
+            }
+        }
+    }
+    if ((ip->hit_normal_damage != 0) || (ip->hit_refresh_damage != 0))
+    {
+        if (ip->proc_hit != NULL)
+        {
+            if (ip->proc_hit(item_gobj) != FALSE)
+            {
+                itMainDestroyItem(item_gobj);
+                return;
+            }
+        }
+    }
+    if (ip->hit_shield_damage != 0)
+    {
+        if ((ip->attack_coll.can_hop) && (ip->ga == nMPKineticsAir))
+        {
+            if (ip->shield_collide_angle < ITEM_HOP_ANGLE_DEFAULT)
+            {
+                ip->shield_collide_angle -= F_CST_DTOR32(90.0F);
+
+                if (ip->shield_collide_angle < 0.0F)
+                {
+                    ip->shield_collide_angle = 0.0F;
+                }
+                if (ip->proc_hop != NULL)
+                {
+                    if (ip->proc_hop(item_gobj) != FALSE)
+                    {
+                        itMainDestroyItem(item_gobj);
+                        return;
+                    }
+                }
+                goto next_check;
+            }
+        }
+        if (ip->proc_shield != NULL)
+        {
+            if (ip->proc_shield(item_gobj) != FALSE)
+            {
+                itMainDestroyItem(item_gobj);
+                return;
+            }
+        }
+    }
+next_check:
+    if (ip->hit_attack_damage != 0)
+    {
+        if (ip->proc_setoff != NULL)
+        {
+            if (ip->proc_setoff(item_gobj) != FALSE)
+            {
+                itMainDestroyItem(item_gobj);
+                return;
+            }
+        }
+    }
+    if (ip->proc_dead != NULL)
+    {
+        (void)ip->proc_dead(item_gobj);
+    }
+    itMainDestroyItem(item_gobj);
+}
+
+void itProcessProcHitCollisions(GObj *item_gobj)
+{
+    ITStruct *ip = itGetStruct(item_gobj);
+
+    if ((ip->reflect_gobj != NULL) && (ndsP4CustomAbsorber(ip->reflect_gobj) != FALSE))
+    {
+        ndsP4ItProcessProcHitCollisionsAbsorbed(item_gobj);
+        return;
+    }
+    ndsBaseItProcessProcHitCollisions(item_gobj);
+}
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/it/itvisuals.c"
 
 #endif /* NDS_P2_ITEM_CORE */

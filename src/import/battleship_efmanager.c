@@ -214,7 +214,35 @@ uintptr_t lEFCommonParticleTextureBankHi;
 #undef EFFECT_ALLOC_NUM
 #define EFFECT_ALLOC_NUM NDS_R2_EFFECT_POOL
 
+#if NDS_P4
+/* P4: the inhale wind's per-frame proc is told apart from its registration
+ * by the call's parentheses: the definition becomes the base, and the maker
+ * registers the wrapper below, which holds a content's own distance ahead
+ * (Dedede.dedede_gfx_). The spat star reads the port's copy of Kirby's copy
+ * table, his file or not in the match. */
+void efManagerKirbyInhaleWindProcUpdate(GObj *effect_gobj);
+#define efManagerKirbyInhaleWindProcUpdate(g_) ndsBaseEFManagerKirbyInhaleWindProcUpdate(g_)
+#define gFTDataKirbyMainMotion ndsP4KirbyCopyFile()
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ef/efmanager.c"
+#if NDS_P4
+#undef efManagerKirbyInhaleWindProcUpdate
+#undef gFTDataKirbyMainMotion
+
+/* efManagerKirbyInhaleWindProcUpdate (decomp efmanager.c:6077) with the
+ * content's distance ahead in place of Kirby's 800. */
+void efManagerKirbyInhaleWindProcUpdate(GObj *effect_gobj)
+{
+    EFStruct *ep = efGetStruct(effect_gobj);
+    LBTransform *xf = ep->xf;
+
+    xf->translate = DObjGetStruct(ep->fighter_gobj)->translate.vec.f;
+
+    xf->translate.x += ftGetStruct(ep->fighter_gobj)->lr *
+                       ndsP4KirbyInhaleWindX(ep->fighter_gobj, 800.0F);
+    xf->translate.y += 230.0F;
+}
+#endif
 
 #undef efManagerInitEffects
 #undef efManagerDamageNormalLightMakeEffect

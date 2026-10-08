@@ -214,7 +214,33 @@ typedef struct NDSP4Overrides
      * aerial special from starting (Sonic's spent spring,
      * SonicUSP.action_check_patch_). */
     sb32 (*air_special_block)(FTStruct *fp);
+    /* Non-NULL: the aerial jumps take Kirby's multi-jump branches with these
+     * JumpAerialF2..F5 heights in place of his (jigglypuffkirbyshared.asm
+     * jump_fix_1-5 on Dedede's id, Dedede.jump_multiplier_table). */
+    const f32 *multi_jump_vel;
+    /* ftManagerInitFighter's kind switch: Remix's initial_script routine
+     * (spawn and rebirth; Dedede.initial_script_). */
+    void (*on_init)(FTStruct *fp);
+    /* ftkirbyspecialn.c's status changes: the content's status for each of
+     * Kirby's inhale statuses (Remix's DededeNSP hooks). */
+    s32 (*kirby_inhale_status)(s32 status_id);
+    /* ftCommonCaptureWaitKirbySetStatus' breakout wait when this content
+     * holds the victim (Dedede.custom_initial_absorbed_timer_). */
+    s32 (*kirby_capture_wait)(FTStruct *victim_fp, s32 breakout_wait);
+    /* efManagerKirbyInhaleWindProcUpdate's distance ahead of the fighter,
+     * 0 for Kirby's (Dedede.dedede_gfx_). */
+    f32 kirby_inhale_wind_x;
+    /* ftMainProcParams' reflect switch, a special_coll of Remix's custom
+     * kind (Reflect.asm extend_reflect_types, custom_reflect_table). */
+    void (*on_custom_reflect)(GObj *fighter_gobj);
 } NDSP4Overrides;
+
+/* Remix's custom reflect kind (Reflect.asm reflect_type.CUSTOM): the low
+ * half of FTSpecialColl.kind (the N64's second halfword), the routine index
+ * in the high half; index 0 is the Franklin Badge's plain reflect. */
+#define NDS_P4_SPECIAL_COLL_CUSTOM 3
+#define NDS_P4_SPECIAL_COLL_CUSTOM_KIND(index_) \
+    (((s32)(index_) << 16) | NDS_P4_SPECIAL_COLL_CUSTOM)
 
 /* A Remix CPU input routine (AI.asm add_cpu_input_routine) as assembled:
  * its id and its bytes in the content's ComputerScriptBytes. */
@@ -361,6 +387,17 @@ typedef struct NDSP4KindCases
     u8 pad[2];
 } NDSP4KindCases;
 
+/* Remix's kirby_inhale_struct row for this fighter (Character.asm): the power
+ * and hat an inhaling Kirby takes (Remix character ids, S8), and the star he
+ * spits it out as, its scale and damage. */
+typedef struct NDSP4KirbyInhale
+{
+    s16 copy_id;
+    s16 hat_id;
+    f32 star_scale;
+    s32 star_damage;
+} NDSP4KirbyInhale;
+
 typedef struct NDSP4Fighter
 {
     const char *name;
@@ -404,6 +441,7 @@ typedef struct NDSP4Fighter
      * parent's file, loads whole; 0 when shipping. */
     const u8 *open_special_mask;
     const NDSP4KindCases *kind_cases;
+    const NDSP4KirbyInhale *kirby_inhale;
     /* CPU rows from the export: NDS_P4_COMPUTER_LONG_RANGE_*. The attack
      * list and the Remix input routines it names are in the content's
      * match tables (NDSP4TablesHeader). */
@@ -582,6 +620,36 @@ s32 ndsP4DamageStatus(GObj *fighter_gobj, s32 status_id, s32 *status_id_after);
 /* ftCommonSpecialAirCheckInterruptCommon's head: the content's
  * air_special_block (battleship_special_common.c). */
 sb32 ndsP4AirSpecialBlocked(GObj *fighter_gobj);
+/* The content's multi_jump_vel (battleship_ftcommon_normal_moveset.c), NULL
+ * for every other fighter. */
+const f32 *ndsP4MultiJumpVelocities(const FTStruct *fp);
+/* ftManagerInitFighter's kind switch, for a content: its on_init
+ * (battleship_ftmanager.c at spawn, battleship_ftcommon_rebirth.c). */
+void ndsP4OnInitFighter(GObj *fighter_gobj);
+/* ftkirbyspecialn.c's status changes (battleship_kirby.c): the content's
+ * kirby_inhale_status. */
+s32 ndsP4KirbyInhaleStatus(GObj *fighter_gobj, s32 status_id);
+/* Kirby's copy table, the rows of his main motion file's
+ * (relocData/228_KirbyMainMotion.c), for the inhale code a content runs
+ * without Kirby's file in the match (battleship_kirby.c,
+ * battleship_ftcommon_capturekirby.c, battleship_efmanager.c). */
+void *ndsP4KirbyCopyFile(void);
+/* ftCommonCaptureWaitKirbySetStatus' breakout wait: the holder content's
+ * kirby_capture_wait (battleship_ftcommon_capturekirby.c). */
+s32 ndsP4KirbyCaptureWait(FTStruct *victim_fp, s32 breakout_wait);
+/* Remix's kirby_inhale_struct star damage of a content victim, -1 for an
+ * original fighter (the copy table's row stands). */
+s32 ndsP4KirbyStarDamage(const FTStruct *victim_fp);
+/* efManagerKirbyInhaleWindProcUpdate's distance ahead (battleship_efmanager.c). */
+f32 ndsP4KirbyInhaleWindX(GObj *fighter_gobj, f32 source_x);
+/* TRUE when the fighter's special_coll is Remix's custom kind past the
+ * Franklin Badge's index: the absorbers (Dedede's inhale), whose catch
+ * destroys a weapon or item in place of reflecting it
+ * (battleship_wpmanager_core.c, battleship_item_link_core.c). */
+sb32 ndsP4CustomAbsorber(GObj *fighter_gobj);
+/* ftMainProcParams' reflect switch for a custom special_coll: the content's
+ * on_custom_reflect (battleship_ftmain.c). */
+void ndsP4OnCustomReflect(GObj *fighter_gobj);
 /* gcEjectGObj's head: Sonic's homing target let go (battleship_sys_objman.c,
  * src/port/nds_p4_sonic.c). */
 void ndsP4SonicOnEjectGObj(GObj *gobj);

@@ -22,7 +22,23 @@
 
 #include "battleship_kirby_common.h"
 
+#include <nds/nds_p4_contents.h>
+#if NDS_P4
+#include <nds/nds_p4.h>
+/* P4: a content's inhale runs this file on its own statuses (Remix's
+ * DededeNSP hooks patch each status change here for Dedede's id): every
+ * status this file sets goes through the content's kirby_inhale_status. The
+ * copy table is read from the port's copy of Kirby's rows, his file or not
+ * in the match (the original fighters' rows are the same). */
+#define ftMainSetStatus(g_, s_, f_, a_, fl_) \
+    ftMainSetStatus((g_), ndsP4KirbyInhaleStatus((g_), (s_)), (f_), (a_), (fl_))
+#define gFTDataKirbyMainMotion ndsP4KirbyCopyFile()
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftkirby/ftkirbyspecialn.c"
+#if NDS_P4
+#undef ftMainSetStatus
+#undef gFTDataKirbyMainMotion
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftkirby/ftkirbyspecialhi.c"
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftkirby/ftkirbyspeciallw.c"
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftkirby/ftkirbythrowf.c"

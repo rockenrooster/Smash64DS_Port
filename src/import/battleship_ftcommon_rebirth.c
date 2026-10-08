@@ -23,4 +23,14 @@ sb32 ftCommonGroundCheckInterrupt(GObj *fighter_gobj);
 void ftCommonRebirthStandSetStatus(GObj *fighter_gobj);
 void ftCommonRebirthWaitSetStatus(GObj *fighter_gobj);
 
+#include <nds/nds_p4_contents.h>
+#if NDS_P4
+#include <nds/nds_p4.h>
+/* P4: a content's Remix initial_script runs in ftManagerInitFighter's kind
+ * switch on every stock (Dedede.initial_script_). */
+#define ftManagerInitFighter(g_, d_) (ftManagerInitFighter((g_), (d_)), ndsP4OnInitFighter(g_))
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonrebirth.c"
+#if NDS_P4
+#undef ftManagerInitFighter
+#endif

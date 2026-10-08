@@ -1287,6 +1287,9 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
             {
                 ftGetStruct(fighter_gobj)->nds_p4_content =
                     (p4 != NULL) ? content : 0u;
+                /* ftManagerInitFighter ran inside, before the content was
+                 * known: its kind switch's Remix routine runs now. */
+                ndsP4OnInitFighter(fighter_gobj);
             }
         }
 #else

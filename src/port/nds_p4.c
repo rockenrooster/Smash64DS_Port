@@ -64,6 +64,7 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
     extern const u32 gNdsP4##T##LabSkipFileCount; \
     extern const u8 gNdsP4##T##OpenSpecialMask; \
     extern const NDSP4KindCases gNdsP4##T##KindCases; \
+    extern const NDSP4KirbyInhale gNdsP4##T##KirbyInhale; \
     extern const u8 gNdsP4##T##ComputerLongRange; \
     extern const u8 gNdsP4##T##ComputerReflect; \
     extern const NDSP4BakedRef gNdsP4##T##BakedRefs[]; \
@@ -98,6 +99,7 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
         .lab_skip_file_count = &gNdsP4##T##LabSkipFileCount, \
         .open_special_mask = &gNdsP4##T##OpenSpecialMask, \
         .kind_cases = &gNdsP4##T##KindCases, \
+        .kirby_inhale = &gNdsP4##T##KirbyInhale, \
         .computer_long_range = &gNdsP4##T##ComputerLongRange, \
         .computer_reflect = &gNdsP4##T##ComputerReflect, \
         .baked_refs = gNdsP4##T##BakedRefs, \
@@ -1306,6 +1308,157 @@ sb32 ndsP4AirSpecialBlocked(GObj *fighter_gobj)
     }
     o = ndsP4Overrides(fp);
     return ((o != NULL) && (o->air_special_block != NULL)) ? o->air_special_block(fp) : FALSE;
+}
+
+const f32 *ndsP4MultiJumpVelocities(const FTStruct *fp)
+{
+    const NDSP4Overrides *o;
+
+    if (fp->nds_p4_content == 0u)
+    {
+        return NULL;
+    }
+    o = ndsP4Overrides(fp);
+    return (o != NULL) ? o->multi_jump_vel : NULL;
+}
+
+void ndsP4OnInitFighter(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    const NDSP4Overrides *o;
+
+    if (fp->nds_p4_content == 0u)
+    {
+        return;
+    }
+    o = ndsP4Overrides(fp);
+    if ((o != NULL) && (o->on_init != NULL))
+    {
+        o->on_init(fp);
+    }
+}
+
+s32 ndsP4KirbyInhaleStatus(GObj *fighter_gobj, s32 status_id)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    const NDSP4Overrides *o;
+
+    if (fp->nds_p4_content == 0u)
+    {
+        return status_id;
+    }
+    o = ndsP4Overrides(fp);
+    return ((o != NULL) && (o->kirby_inhale_status != NULL)) ? o->kirby_inhale_status(status_id)
+                                                             : status_id;
+}
+
+/* relocData/228_KirbyMainMotion.c's FTKirbyCopy[27], the table Kirby's
+ * inhale reads from his main motion file; Remix's kirby_inhale_struct holds
+ * the same rows for the original fighters. The inhale a content runs reads
+ * it here, Kirby's file or not in the match (a pointer no loaded file owns,
+ * so lbRelocGetFileData answers it as is). */
+static const FTKirbyCopy sNdsP4KirbyCopyTable[27] = {
+    { nFTKindMario, 12, 1.5F, 17 },
+    { nFTKindFox, 7, 1.5F, 17 },
+    { nFTKindDonkey, 4, 2.0F, 30 },
+    { nFTKindSamus, 8, 1.6F, 17 },
+    { nFTKindLuigi, 11, 1.6F, 17 },
+    { nFTKindLink, 10, 1.5F, 17 },
+    { nFTKindYoshi, 5, 1.7F, 25 },
+    { nFTKindCaptain, 9, 1.7F, 17 },
+    { nFTKindKirby, 0, 1.6F, 17 },
+    { nFTKindPikachu, 6, 1.5F, 17 },
+    { nFTKindPurin, 3, 1.6F, 17 },
+    { nFTKindNess, 13, 1.6F, 17 },
+    { nFTKindKirby, 0, 1.0F, 17 },
+    { nFTKindKirby, 0, 1.5F, 17 },
+    { nFTKindKirby, 0, 1.5F, 17 },
+    { nFTKindKirby, 0, 1.5F, 17 },
+    { nFTKindKirby, 0, 2.0F, 30 },
+    { nFTKindKirby, 0, 1.6F, 17 },
+    { nFTKindKirby, 0, 1.6F, 17 },
+    { nFTKindKirby, 0, 1.5F, 17 },
+    { nFTKindKirby, 0, 1.7F, 17 },
+    { nFTKindKirby, 0, 1.7F, 17 },
+    { nFTKindKirby, 0, 1.6F, 17 },
+    { nFTKindKirby, 0, 1.5F, 17 },
+    { nFTKindKirby, 0, 1.6F, 17 },
+    { nFTKindKirby, 0, 1.6F, 17 },
+    { nFTKindDonkey, 4, 2.0F, 50 },
+};
+
+void *ndsP4KirbyCopyFile(void)
+{
+    return (void *)sNdsP4KirbyCopyTable;
+}
+
+s32 ndsP4KirbyCaptureWait(FTStruct *victim_fp, s32 breakout_wait)
+{
+    FTStruct *holder_fp;
+    const NDSP4Overrides *o;
+
+    if ((victim_fp->status_id != nFTCommonStatusCaptureWaitKirby) ||
+        (victim_fp->capture_gobj == NULL))
+    {
+        return breakout_wait;
+    }
+    holder_fp = ftGetStruct(victim_fp->capture_gobj);
+    if (holder_fp->nds_p4_content == 0u)
+    {
+        return breakout_wait;
+    }
+    o = ndsP4Overrides(holder_fp);
+    return ((o != NULL) && (o->kirby_capture_wait != NULL)) ?
+        o->kirby_capture_wait(victim_fp, breakout_wait) : breakout_wait;
+}
+
+s32 ndsP4KirbyStarDamage(const FTStruct *victim_fp)
+{
+    const NDSP4Fighter *f = ndsP4Fighter(ndsP4Content(victim_fp));
+
+    return ((f != NULL) && (f->kirby_inhale != NULL)) ? f->kirby_inhale->star_damage : -1;
+}
+
+f32 ndsP4KirbyInhaleWindX(GObj *fighter_gobj, f32 source_x)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    const NDSP4Overrides *o;
+
+    if (fp->nds_p4_content == 0u)
+    {
+        return source_x;
+    }
+    o = ndsP4Overrides(fp);
+    return ((o != NULL) && (o->kirby_inhale_wind_x != 0.0F)) ? o->kirby_inhale_wind_x : source_x;
+}
+
+sb32 ndsP4CustomAbsorber(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    s32 kind;
+
+    if ((fp->nds_p4_content == 0u) || (fp->special_coll == NULL))
+    {
+        return FALSE;
+    }
+    kind = fp->special_coll->kind;
+    return (((kind & 0xFFFF) == NDS_P4_SPECIAL_COLL_CUSTOM) && ((kind >> 16) != 0)) ? TRUE : FALSE;
+}
+
+void ndsP4OnCustomReflect(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    const NDSP4Overrides *o;
+
+    if (fp->nds_p4_content == 0u)
+    {
+        return;
+    }
+    o = ndsP4Overrides(fp);
+    if ((o != NULL) && (o->on_custom_reflect != NULL))
+    {
+        o->on_custom_reflect(fighter_gobj);
+    }
 }
 
 void ndsP4OnEatTomato(FTStruct *fp)

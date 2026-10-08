@@ -75,7 +75,20 @@ void ndsBaseFTCommonCaptureApplyCaptureKnockback(GObj *fighter_gobj,
 #define ftCommonCaptureApplyCatchKnockback ndsBaseFTCommonCaptureApplyCatchKnockback
 #define ftCommonCaptureApplyCaptureKnockback ndsBaseFTCommonCaptureApplyCaptureKnockback
 
+#if NDS_P4
+/* P4: a content holding the victim sets its own breakout wait (Dedede's
+ * custom_initial_absorbed_timer_ in ftCommonCaptureWaitKirbySetStatus), and
+ * the star's damage reads the port's copy of Kirby's copy table, his file or
+ * not in the match. */
+#define ftCommonCaptureTrappedInitBreakoutVars(fp_, wait_) \
+    ftCommonCaptureTrappedInitBreakoutVars((fp_), ndsP4KirbyCaptureWait((fp_), (wait_)))
+#define gFTDataKirbyMainMotion ndsP4KirbyCopyFile()
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommoncapturekirby.c"
+#if NDS_P4
+#undef ftCommonCaptureTrappedInitBreakoutVars
+#undef gFTDataKirbyMainMotion
+#endif
 /* P4: as battleship_ftcommon_catch.c's copy (yoshi_grab_fix_2). */
 #if NDS_P4
 #define nFTKindYoshi NDS_P4_PARENT_KIND(capture_fp, nFTKindYoshi)

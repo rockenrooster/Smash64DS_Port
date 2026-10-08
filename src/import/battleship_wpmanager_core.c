@@ -280,7 +280,179 @@ void mpCommonRunWeaponCollisionDefault(
 #undef wpManagerAllocWeapons
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpmain.c"
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpmap.c"
+#include <nds/nds_p4_contents.h>
+#if NDS_P4
+#include <nds/nds_p4.h>
+/* P4: the hit-collision proc a weapon registers (below) is the dispatcher
+ * after the include; the definition, told apart by its parentheses, is the
+ * source body. */
+#define wpProcessProcHitCollisions(g_) ndsBaseWpProcessProcHitCollisions(g_)
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpprocess.c"
+#if NDS_P4
+#undef wpProcessProcHitCollisions
+
+GObj *efManagerQuakeMakeEffect(s32 magnitude);
+struct LBParticle *efManagerImpactShockMakeEffect(Vec3f *pos, s32 size);
+void wpPikachuThunderHeadSetDestroy(GObj *weapon_gobj, sb32 is_destroy);
+
+/* Remix's pikachu_thunder_absorb_ (Reflect.asm): the thunder's trail caught
+ * by an absorber takes its head with it, the hit's quake and shock; the
+ * trail itself stays. Pikachu's weapons are built with Pikachu or Kirby
+ * (Dedede's builds have Kirby); without them no thunder exists. */
+static void ndsP4WpAbsorbThunderTrail(GObj *weapon_gobj)
+{
+#if NDS_P2_PIKACHU || NDS_P2_KIRBY
+    WPStruct *wp = wpGetStruct(weapon_gobj);
+    GObj *other_gobj;
+
+    for (other_gobj = gGCCommonLinks[nGCCommonLinkIDWeapon]; other_gobj != NULL;
+         other_gobj = other_gobj->link_next)
+    {
+        WPStruct *other_wp;
+
+        if (other_gobj == weapon_gobj)
+        {
+            continue;
+        }
+        other_wp = wpGetStruct(other_gobj);
+
+        if ((other_wp->group_id != wp->group_id) || (other_wp->kind != nWPKindThunderHead))
+        {
+            continue;
+        }
+        wpPikachuThunderHeadSetDestroy(other_gobj, TRUE);
+        (void)efManagerQuakeMakeEffect(1);
+        (void)efManagerImpactShockMakeEffect(&DObjGetStruct(other_gobj)->translate.vec.f, 23);
+        /* Remix ejects the head's GObj alone, keeping its weapon struct out
+         * of the pool for the rest of the match; the port's pool is a third
+         * of the N64's, so the head goes back through the weapon destroy. */
+        wpMainDestroyWeapon(other_gobj);
+        break;
+    }
+#else
+    (void)weapon_gobj;
+#endif
+}
+
+/* wpProcessProcHitCollisions (decomp wpprocess.c:463) for a weapon a custom
+ * absorber caught (Remix's override_projectile_reflect_routine_, the
+ * Marina path Dedede's index takes): in place of the reflect, its owner
+ * unchanged, the weapon's absorb routine and, unless that destroys it, its
+ * blast-zone routine run, and it is destroyed; Pikachu's thunder trail
+ * instead takes its head and runs on. */
+static void ndsP4WpProcessProcHitCollisionsAbsorbed(GObj *weapon_gobj)
+{
+    WPStruct *wp = wpGetStruct(weapon_gobj);
+
+    if ((wp->hit_normal_damage != 0) || (wp->hit_refresh_damage != 0))
+    {
+        if (wp->proc_hit != NULL)
+        {
+            if (wp->proc_hit(weapon_gobj) != FALSE)
+            {
+                wpMainDestroyWeapon(weapon_gobj);
+                return;
+            }
+        }
+    }
+    if (wp->hit_shield_damage != 0)
+    {
+        if ((wp->attack_coll.can_hop) && (wp->ga == nMPKineticsAir))
+        {
+            if (wp->shield_collide_angle < WEAPON_HOP_ANGLE_DEFAULT)
+            {
+                wp->shield_collide_angle -= F_CST_DTOR32(90.0F);
+
+                if (wp->shield_collide_angle < 0.0F)
+                {
+                    wp->shield_collide_angle = 0.0F;
+                }
+                if (wp->proc_hop != NULL)
+                {
+                    if (wp->proc_hop(weapon_gobj) != FALSE)
+                    {
+                        wpMainDestroyWeapon(weapon_gobj);
+                        return;
+                    }
+                }
+                goto next_check;
+            }
+        }
+        if (wp->proc_shield != NULL)
+        {
+            if (wp->proc_shield(weapon_gobj) != FALSE)
+            {
+                wpMainDestroyWeapon(weapon_gobj);
+                return;
+            }
+        }
+    }
+next_check:
+    if (wp->hit_attack_damage != 0)
+    {
+        if (wp->proc_setoff != NULL)
+        {
+            if (wp->proc_setoff(weapon_gobj) != FALSE)
+            {
+                wpMainDestroyWeapon(weapon_gobj);
+                return;
+            }
+        }
+    }
+    if (wp->kind != nWPKindThunderTrail)
+    {
+        if ((wp->proc_absorb == NULL) || (wp->proc_absorb(weapon_gobj) == FALSE))
+        {
+            if (wp->proc_dead != NULL)
+            {
+                (void)wp->proc_dead(weapon_gobj);
+            }
+        }
+        wpMainDestroyWeapon(weapon_gobj);
+        return;
+    }
+    ndsP4WpAbsorbThunderTrail(weapon_gobj);
+
+    if (!(wp->is_static_damage))
+    {
+        wp->attack_coll.damage = (wp->attack_coll.damage * WEAPON_REFLECT_MUL_DEFAULT) + WEAPON_REFLECT_ADD_DEFAULT;
+
+        if (wp->attack_coll.damage > WEAPON_REFLECT_TIME_DEFAULT)
+        {
+            wp->attack_coll.damage = WEAPON_REFLECT_TIME_DEFAULT;
+        }
+    }
+    if (wp->absorb_gobj != NULL)
+    {
+        if (wp->proc_absorb != NULL)
+        {
+            if (wp->proc_absorb(weapon_gobj) != FALSE)
+            {
+                wpMainDestroyWeapon(weapon_gobj);
+                return;
+            }
+        }
+    }
+    wp->hit_normal_damage = 0;
+    wp->hit_refresh_damage = 0;
+    wp->hit_attack_damage = 0;
+    wp->hit_shield_damage = 0;
+    wp->reflect_gobj = NULL;
+}
+
+void wpProcessProcHitCollisions(GObj *weapon_gobj)
+{
+    WPStruct *wp = wpGetStruct(weapon_gobj);
+
+    if ((wp->reflect_gobj != NULL) && (ndsP4CustomAbsorber(wp->reflect_gobj) != FALSE))
+    {
+        ndsP4WpProcessProcHitCollisionsAbsorbed(weapon_gobj);
+        return;
+    }
+    ndsBaseWpProcessProcHitCollisions(weapon_gobj);
+}
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpdisplay.c"
 
 __attribute__((used)) volatile u32 gNdsWeaponPoolRefusalCount;

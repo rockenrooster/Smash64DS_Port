@@ -300,6 +300,44 @@ CALLBACK_PORTS = {
     "SonicDSP.air_move_collision_": "ndsP4SonicDSPMoveAirMap",
     "SonicDSP.ground_end_collision_": "ndsP4SonicDSPEndGroundMap",
     "SonicDSP.air_end_collision_": "ndsP4SonicDSPEndAirMap",
+    # src/port/nds_p4_dedede.c
+    "DededeUSP.begin_initial_": "ndsP4DededeUSPInitial",
+    "DededeUSP.begin_main_": "ndsP4DededeUSPBeginMain",
+    "DededeUSP.begin_physics_": "ndsP4DededeUSPBeginPhysics",
+    "DededeUSP.begin_collision_": "ndsP4DededeUSPBeginMap",
+    "DededeUSP.move_cancel_": "ndsP4DededeUSPMoveInterrupt",
+    "DededeUSP.move_physics_": "ndsP4DededeUSPMovePhysics",
+    "DededeUSP.move_collision_": "ndsP4DededeUSPMoveMap",
+    "DededeUSP.landing_main_": "ndsP4DededeUSPLandingMain",
+    "DededeUSP.cancel_main_": "ndsP4DededeUSPCancelMain",
+    "DededeUSP.cancel_collision_": "ndsP4DededeUSPCancelMap",
+    "DededeUSP.ceiling_bonk_main_": "ndsP4DededeUSPCeilingBonkMain",
+    "DededeUSP.ceiling_bonk_collision_": "ndsP4DededeUSPCeilingBonkMap",
+    "DededeNSP.ground_begin_initial_": "ndsP4DededeNSPGroundInitial",
+    "DededeNSP.air_begin_initial_": "ndsP4DededeNSPAirInitial",
+    "DededeNSP.ground_begin_main_": "ndsP4DededeNSPGroundBeginMain",
+    "DededeNSP.air_begin_main_": "ndsP4DededeNSPAirBeginMain",
+    "DededeNSP.inhale_loop_ground_to_air_check_": "ndsP4DededeNSPLoopGroundMap",
+    "DededeNSP.inhale_loop_air_to_ground_check_": "ndsP4DededeNSPLoopAirMap",
+    "DededeNSP.ground_idle_interrupt_": "ndsP4DededeNSPIdleInterrupt",
+    "DededeNSP.ground_spit_main_": "ndsP4DededeNSPGroundSpitMain",
+    "DededeNSP.air_spit_main_": "ndsP4DededeNSPAirSpitMain",
+    "DededeNSP.air_fall_interrupt_": "ndsP4DededeNSPFallInterrupt",
+    "DededeNSP.ground_walk_interrupt_": "ndsP4DededeNSPWalkInterrupt",
+    "DededeNSP.ground_walk_collision_": "ndsP4DededeNSPWalkMap",
+    "DededeDSP.ground_begin_initial_": "ndsP4DededeDSPGroundInitial",
+    "DededeDSP.air_begin_initial_": "ndsP4DededeDSPAirInitial",
+    "DededeDSP.begin_main_": "ndsP4DededeDSPBeginMain",
+    "DededeDSP.ground_begin_collision_": "ndsP4DededeDSPBeginGroundMap",
+    "DededeDSP.air_begin_collision_": "ndsP4DededeDSPBeginAirMap",
+    "DededeDSP.charge_main_": "ndsP4DededeDSPChargeMain",
+    "DededeDSP.ground_charge_interrupt_": "ndsP4DededeDSPGroundChargeInterrupt",
+    "DededeDSP.air_charge_interrupt_": "ndsP4DededeDSPAirChargeInterrupt",
+    "DededeDSP.ground_charge_collision_": "ndsP4DededeDSPChargeGroundMap",
+    "DededeDSP.air_charge_collision_": "ndsP4DededeDSPChargeAirMap",
+    "DededeDSP.shoot_main_": "ndsP4DededeDSPShootMain",
+    "DededeDSP.ground_shoot_collision_": "ndsP4DededeDSPShootGroundMap",
+    "DededeDSP.air_shoot_collision_": "ndsP4DededeDSPShootAirMap",
 }
 
 # P4: entry_script cases of another kind a content's port carries
@@ -1252,6 +1290,11 @@ def main() -> int:
     cases, case_fallbacks = kind_cases(rom, R.load_symbols(args.staging / "logfile.log")[0],
                                        resolved["remix_kind_id"], tables, args.lab_fallback)
     lab_fallbacks.extend(case_fallbacks)
+    # kirby_inhale_struct (Character.asm, 0xC per Remix id, written in place
+    # for each define_character and its patches): the power, hat and star
+    # an inhale takes this fighter as.
+    inhale_base = R.load_symbols(args.staging / "logfile.log")[0]["Character.kirby_inhale_struct.table"]
+    inhale = struct.unpack(">hhfi", rom.read_ram(inhale_base + 0xC * resolved["remix_kind_id"], 0xC))
     computer_scripts = []
     remix_inputs = sorted({r[0] for r in computer_attacks if r[0] >= CPU_INPUT_BASE})
     if remix_inputs:
@@ -1459,6 +1502,10 @@ def main() -> int:
               "/* Kind-table cases (S3, nds_p4.h NDSP4KindCases): grounded_script's",
               " * landing case and pipe_turn. */",
               f"const NDSP4KindCases g{ident}KindCases = {cases};", "",
+              "/* Remix's kirby_inhale_struct row (nds_p4.h NDSP4KirbyInhale): copy and",
+              " * hat ids, star scale and damage. */",
+              f"const NDSP4KirbyInhale g{ident}KirbyInhale = {{ {inhale[0]}, {inhale[1]}, "
+              f"{c_float(inhale[2])}, {inhale[3]} }};", "",
               "/* CPU rows (S7): ai_long_range; the attack list and the Remix input",
               " * routines it names are in the content's tables (ndsP4LoadTables). */",
               f"const u8 g{ident}ComputerLongRange = {computer_long_range};",
