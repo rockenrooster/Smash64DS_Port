@@ -1124,6 +1124,12 @@ static u32 ndsMenuShellCssGateState(u32 slot)
  * rewound under this block, and the next card copy landed in a preview pack
  * -- a wandering-PC abort a few frames later. */
 #define NDS_CSS_UNDERLAY_BYTES 7844u
+/* The underlay is a cache, so it takes only bytes the select's preview
+ * fighters will not need after it: their objects took 25,880 B with two
+ * previews (all-content walk ROM, 2026-10-07), about 40 KiB with four. On
+ * the all-content image this declines and the doors take the streamed blit
+ * (reloc_backend_assets.c, NDS_R2_ANIM_CACHE_CSS_KEEP_FREE). */
+#define NDS_CSS_UNDERLAY_KEEP_FREE (48u * 1024u)
 extern volatile u32 gNdsTaskmanHeapGeneration;
 sb32 ndsSyMallocWouldFit(const struct SYMallocRegion *bp, size_t size,
                          u32 alignment);
@@ -1143,7 +1149,8 @@ static void ndsMenuShellCssUnderlayReserve(void)
         sCssUnderlaySurface[i] = 0xffffffffu;
     }
     if (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap,
-                            NDS_CSS_UNDERLAY_BYTES * (u32)NDS_CSS_SLOTS,
+                            NDS_CSS_UNDERLAY_BYTES * (u32)NDS_CSS_SLOTS +
+                                NDS_CSS_UNDERLAY_KEEP_FREE,
                             4u) == FALSE)
     {
         NDS_DIAG(gNdsMenuShellCssUnderlayDeclineCount++);

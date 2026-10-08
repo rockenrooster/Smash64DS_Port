@@ -15214,7 +15214,22 @@ static u32 ndsR2AnimCacheSetupBytes(void)
     return total;
 }
 
-static sb32 ndsR2AnimCacheArenaEnsureSetup(void)
+/* THE VS SELECT'S OWN RESERVE. The 128 KiB above protects a match's later
+ * growth (countdown threads, item actors); the select has none of that.
+ * Measured 2026-10-07 on the all-content walk ROM. This reservation found
+ * 176,352 B free against 52,000 + 128 KiB, so it declined and every preview
+ * was off (owner report on play-1007i: the code had grown 3.3 KB). What the
+ * select must still allocate after it:
+ *   - the four slots' figatree heaps, 4 x 11,792 B;
+ *   - the UI surface cache, 9,768 B;
+ *   - the preview fighters' objects, 25,880 B for two previews (about 40 KiB
+ *     for four).
+ * That is about 97 KiB, inside 104 KiB. The door underlay (31,376 B,
+ * nds_menu_shell_css.c) is a cache with a streamed fallback and now keeps
+ * 48 KiB free behind itself. The lean pool sizes itself to what is left. */
+#define NDS_R2_ANIM_CACHE_CSS_KEEP_FREE (104u * 1024u)
+
+static sb32 ndsR2AnimCacheArenaEnsureSetupWith(u32 keep_free)
 {
     void *block;
     u32 bytes;
@@ -15231,8 +15246,7 @@ static sb32 ndsR2AnimCacheArenaEnsureSetup(void)
     bytes = ndsR2AnimCacheSetupBytes();
     if ((bytes == 0u) ||
         (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap,
-                            (size_t)bytes +
-                                NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE,
+                            (size_t)bytes + keep_free,
                             NDS_RELOC_ALIGN_BYTES) == FALSE))
     {
         gNdsR2AnimCacheArenaReserveFailCount++;
@@ -15257,9 +15271,14 @@ static sb32 ndsR2AnimCacheArenaEnsureSetup(void)
     return TRUE;
 }
 
+static sb32 ndsR2AnimCacheArenaEnsureSetup(void)
+{
+    return ndsR2AnimCacheArenaEnsureSetupWith(NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE);
+}
+
 s32 ndsR2AnimCacheReserveCSSWorkingSet(void)
 {
-    return ndsR2AnimCacheArenaEnsureSetup();
+    return ndsR2AnimCacheArenaEnsureSetupWith(NDS_R2_ANIM_CACHE_CSS_KEEP_FREE);
 }
 
 /* Bump allocation from the cache's own arena. Returns NULL on overflow, which is
