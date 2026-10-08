@@ -163,8 +163,21 @@ static inline u32 ndsP4Content(const FTStruct *fp)
 }
 /* The content of a battle player's live fighter (0 = original cast or none). */
 u32 ndsP4PlayerContent(u32 player);
-/* The FTData a P4 player constructs from, or NULL for the original cast. */
-FTData *ndsP4PlayerData(s32 player);
+/* The content a player's fighter is made with in the current scene: the
+ * match's selection in the VS battle and its Results, the slot's hovered
+ * selection on the VS character select, none anywhere else (a finished
+ * match's selection must not reach the menus or the 1P modes). Only a
+ * content whose parent is `fkind` counts. */
+u32 ndsP4MakeContent(s32 player, s32 fkind);
+/* The match's selection: in the VS battle and its Results only. */
+u32 ndsP4MatchContent(s32 player);
+/* VS character select: the content a slot's preview shows (0 = none). */
+void ndsP4SetPreviewContent(u32 slot, u32 content);
+/* The VS character select's P4 preview files: the content's preview pack
+ * (kind NDS_P4_SEL_BASE + content, scripts/p4/p4_preview_pack.py) into its
+ * FTData, then its motion file, which holds the menu motions' scripts
+ * (battleship_ftmanager.c). */
+sb32 ndsFTManagerSetupPreviewFilesP4(u32 content);
 /* ftManagerSetupFilesAllKind: TRUE when some live selection still needs the
  * parent's own files (not only P4 children that reuse its code). */
 sb32 ndsP4ParentFilesNeeded(s32 fkind);

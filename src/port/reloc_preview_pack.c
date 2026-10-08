@@ -39,7 +39,44 @@ typedef struct NDSPreviewResident {
 #endif
 } NDSPreviewResident;
 
-static NDSPreviewResident sNdsPreviewResidents[12];
+/* A pack kind is an original's fkind (0-11) or, in P4 builds, a Remix
+ * content's NDS_P4_SEL_BASE + content (scripts/p4/p4_preview_pack.py): the
+ * VS character select's preview of that content. Its resident row follows
+ * the twelve, and its FTData is the content's own. */
+#if NDS_P4
+#define NDS_PREVIEW_P4_KINDS (NDS_P4_CONTENT_LIMIT - 1u)
+#else
+#define NDS_PREVIEW_P4_KINDS 0u
+#endif
+static NDSPreviewResident sNdsPreviewResidents[12u + NDS_PREVIEW_P4_KINDS];
+
+static s32 ndsPreviewKindIndex(s32 kind)
+{
+    if ((kind >= 0) && (kind < 12))
+    {
+        return kind;
+    }
+#if NDS_P4
+    if ((kind > 0) && (ndsP4Fighter(ndsP4SelContent((u32)kind)) != NULL))
+    {
+        return 12 + (s32)ndsP4SelContent((u32)kind) - 1;
+    }
+#endif
+    return -1;
+}
+
+static FTData *ndsPreviewKindData(s32 kind)
+{
+#if NDS_P4
+    if (kind >= 12)
+    {
+        const NDSP4Fighter *f = ndsP4Fighter(ndsP4SelContent((u32)kind));
+
+        return (f != NULL) ? f->data : NULL;
+    }
+#endif
+    return dFTManagerDataFiles[kind];
+}
 volatile u32 gNdsPreviewPackLoadCount;
 volatile u32 gNdsPreviewPackDataBytes;
 volatile u32 gNdsPreviewPackFailure;
@@ -97,12 +134,12 @@ static const NDSPreviewPackSection *ndsPreviewSection(
         return NULL;
     }
     kind = loaded->reserved[0] - 1u;
-    if ((kind >= ARRAY_COUNT(sNdsPreviewResidents)) ||
+    if ((ndsPreviewKindIndex((s32)kind) < 0) ||
         (loaded->reserved[1] >= NDS_PREVIEW_PACK_MAX_SECTIONS))
     {
         return NULL;
     }
-    resident = &sNdsPreviewResidents[kind];
+    resident = &sNdsPreviewResidents[ndsPreviewKindIndex((s32)kind)];
     if ((resident->generation != sNdsRelocSceneGeneration) ||
         (loaded->owner_generation != sNdsRelocSceneGeneration))
     {
@@ -500,7 +537,7 @@ void *ndsRelocPreviewFighterLoadBegin(s32 fkind)
          && (ndsRelocUseBattleCoreFighterData() == FALSE)
 #endif
         ) ||
-        ((u32)fkind >= ARRAY_COUNT(sNdsPreviewResidents))) { return NULL; }
+        (ndsPreviewKindIndex(fkind) < 0)) { return NULL; }
 #if NDS_P2_1P_GAME
     /* Giant DK's stage. GDonkeyMain's extern tree names DonkeyModel, and the
      * relocator resolves those externs by SOURCE offset. A compact DK pack
@@ -515,7 +552,7 @@ void *ndsRelocPreviewFighterLoadBegin(s32 fkind)
         return NULL;
     }
 #endif
-    fighter = dFTManagerDataFiles[fkind];
+    fighter = ndsPreviewKindData(fkind);
     if ((fighter == NULL) || (fighter->p_file_main == NULL) ||
         (fighter->p_file_model == NULL)) { ndsPreviewPackLoadHalt(1u, fkind); }
 
@@ -558,7 +595,7 @@ void *ndsRelocPreviewFighterLoadBegin(s32 fkind)
     /* The roster index is two decimal digits. Pulling in snprintf here
      * retained newlib's floating-point formatter for this integer-only path. */
 #if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
-    if (ndsRelocUseBattleCoreFighterData() != FALSE)
+    if ((ndsRelocUseBattleCoreFighterData() != FALSE) && (fkind < 12))
     {
         path = battle_path;
         digit_at = sizeof("nitro:/fighters/battle/") - 1u;
@@ -798,7 +835,7 @@ s32 ndsRelocPreviewFighterLoadStep(void *handle, u32 byte_budget, u32 *out_bytes
          * readable, so it happens here and not one step earlier: a transaction
          * cancelled before REGISTER leaves no resident and no loaded-file row
          * behind at all. */
-        resident = &sNdsPreviewResidents[fkind];
+        resident = &sNdsPreviewResidents[ndsPreviewKindIndex(fkind)];
         resident->model_source_bytes = load->model_source_bytes;
 #if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
         resident->foreign_images = NULL;
@@ -901,7 +938,7 @@ s32 ndsRelocPreviewFighterLoadStep(void *handle, u32 byte_budget, u32 *out_bytes
  * whole closure already relocated, registered and normalized. */
 static s32 ndsPreviewPackLoadPublish(NDSPreviewPackLoad *load)
 {
-    FTData *fighter = dFTManagerDataFiles[load->fkind];
+    FTData *fighter = ndsPreviewKindData(load->fkind);
     s32 fkind = load->fkind;
     u32 allocation = load->allocation;
     u8 *data = load->data;
@@ -1019,7 +1056,7 @@ s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
     const u32 digit_at = sizeof("nitro:/fighters/battle/") - 1u;
     u32 i;
 
-    if (((u32)fkind >= ARRAY_COUNT(sNdsPreviewResidents)) ||
+    if (((u32)fkind >= 12u) ||
         (ndsRelocUseBattleCoreFighterData() == FALSE))
     {
         return FALSE;
@@ -1144,7 +1181,7 @@ void ndsRelocReleasePreviewFighter(s32 fkind)
     u32 i = 0u;
     u8 owner;
 
-    if ((fkind < 0) || ((u32)fkind >= ARRAY_COUNT(sNdsPreviewResidents)))
+    if (ndsPreviewKindIndex(fkind) < 0)
     {
         return;
     }
@@ -1210,8 +1247,8 @@ void ndsRelocReleasePreviewFighter(s32 fkind)
         }
         i++;
     }
-    memset(&sNdsPreviewResidents[fkind], 0,
-           sizeof(sNdsPreviewResidents[fkind]));
+    memset(&sNdsPreviewResidents[ndsPreviewKindIndex(fkind)], 0,
+           sizeof(sNdsPreviewResidents[0]));
     sNdsRelocRelativeOffsetsMemo = NULL;
     sNdsRelocRelativeOffsetsMemoBase = NULL;
 }

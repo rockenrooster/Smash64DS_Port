@@ -6022,7 +6022,8 @@ ifeq ($(NDS_P4_FALCO),1)
 export NDS_P4_FALCO_GENERATED := $(NDS_P4_GEN)/falco/nds_p4_falco.generated.c
 export NDS_P4_FALCO_NITROFS_STAMP := $(NDS_P4_GEN)/falco/.nitrofs-staged
 NDS_NITROFS_P4_FILES += $(NDS_P4_FALCO_NITROFS_STAMP) \
-	$(NITROFS_DIR)/fighters/falco_high.bin $(NITROFS_DIR)/fighters/falco_low.bin
+	$(NITROFS_DIR)/fighters/falco_high.bin $(NITROFS_DIR)/fighters/falco_low.bin \
+	$(NITROFS_DIR)/fighters/preview/65.fpc
 export NDS_P4_FALCO_NATIVE := $(NDS_P4_GEN)/falco/native
 endif
 # The contents' Remix sounds as a second FGM pack (scripts/p4/p4_audio.py).
@@ -7943,7 +7944,17 @@ $(NDS_P4_FALCO_NATIVE)/.stamp: $(NDS_P4_FALCO_GENERATED) \
 	python "$(PROJECT_ROOT)/scripts/p4/p4_native_owner.py" --owner falco \
 		--o2r "$(NDS_P4_GEN)/falco/o2r" --attributes 0x474 --emit "$(NDS_P4_FALCO_NATIVE)"
 	@touch $@
-nds_renderer.o battleship_ftmanager.o: $(NDS_P4_FALCO_NATIVE)/.stamp
+nds_renderer.o battleship_ftmanager.o battleship_mnplayersvs.o: $(NDS_P4_FALCO_NATIVE)/.stamp
+# Falco's character-select preview pack (scripts/p4/p4_preview_pack.py), kind
+# NDS_P4_SEL_BASE + content = 0x41: Main whole, Model without its geometry.
+$(NDS_P4_GEN)/falco/preview.fpc: $(NDS_P4_FALCO_GENERATED) \
+		$(PROJECT_ROOT)/scripts/p4/p4_preview_pack.py $(PROJECT_ROOT)/scripts/p4/p4_native_owner.py \
+		$(PROJECT_ROOT)/scripts/p4/ft_layout.py $(PROJECT_ROOT)/include/nds/nds_preview_pack.h
+	python "$(PROJECT_ROOT)/scripts/p4/p4_preview_pack.py" --o2r "$(NDS_P4_GEN)/falco/o2r" \
+		--main 0x8ab --model 0x8ac --attributes 0x474 --kind 0x41 --out "$@"
+$(NITROFS_DIR)/fighters/preview/65.fpc: $(NDS_P4_GEN)/falco/preview.fpc
+	@mkdir -p $(dir $@)
+	@cp $< $@
 endif
 # P4 character select: Remix's grid, its donor portrait/name/emblem files for
 # the UI kit bake, and the runtime tables nds_menu_shell_css.c includes.

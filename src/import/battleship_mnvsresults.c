@@ -199,6 +199,16 @@ void ndsMNVSResultsSetLoadScene(void);
     NDS_P4_RESULTS_SPLIT(NDS_P4_RESULTS_SAVE_, __VA_ARGS__)
 #define NDS_P4_RESULTS_SAVE_void ndsBaseMNVSResultsSaveBackup(void)
 #define NDS_P4_RESULTS_SAVE_ ndsP4MNVSResultsSaveBackup()
+/* The fighter scale (0x801338EC) is patched by Remix's menu_zoom row: the
+ * definition's first argument text `GObj` pastes to the base name, the
+ * call's `sMNVSResultsFighterGObjs` to the port wrapper. */
+#define mnVSResultsSetFighterScale(first, ...) \
+    NDS_P4_RESULTS_SCALE_##first, __VA_ARGS__)
+#define NDS_P4_RESULTS_SCALE_GObj ndsBaseMNVSResultsSetFighterScale(GObj
+#define NDS_P4_RESULTS_SCALE_sMNVSResultsFighterGObjs \
+    ndsP4MNVSResultsSetFighterScale(sMNVSResultsFighterGObjs
+void ndsP4MNVSResultsSetFighterScale(GObj *fighter_gobj, s32 player, s32 fkind,
+                                     s32 place);
 void ndsP4MNVSResultsAnnounceWinner(void);
 void ndsP4MNVSResultMakeFighterName(void);
 void ndsP4MNVSResultsPlayWinBGM(void);
@@ -231,6 +241,23 @@ s32 mnVSResultsGetSpot(s32 player) __attribute__((weak));
 #undef mnVSResultMakeFighterName
 #undef mnVSResultsPlayWinBGM
 #undef mnVSResultsSaveBackup
+#undef mnVSResultsSetFighterScale
+
+void ndsP4MNVSResultsSetFighterScale(GObj *fighter_gobj, s32 player, s32 fkind,
+                                     s32 place)
+{
+    const NDSP4Fighter *p4;
+
+    ndsBaseMNVSResultsSetFighterScale(fighter_gobj, player, fkind, place);
+    p4 = (fighter_gobj != NULL) ?
+        ndsP4Fighter(ndsP4Content(ftGetStruct(fighter_gobj))) : NULL;
+    if ((p4 != NULL) && (p4->present != NULL))
+    {
+        DObjGetStruct(fighter_gobj)->scale.vec.f.x = p4->present->menu_zoom;
+        DObjGetStruct(fighter_gobj)->scale.vec.f.y = p4->present->menu_zoom;
+        DObjGetStruct(fighter_gobj)->scale.vec.f.z = p4->present->menu_zoom;
+    }
+}
 
 /* The winner's P4 presentation, or NULL for the original cast and teams. */
 static const NDSP4Present *ndsP4MNVSResultsWinnerPresent(void)

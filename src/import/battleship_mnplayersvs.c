@@ -21,6 +21,8 @@
 #include <nds/nds_menu_shell.h>
 #include <nds/nds_platform.h>
 #include <nds/nds_startup.h>
+#include <nds/nds_p4.h>
+#include <nds/nds_p4_native.h>
 #include <sc/scene.h>
 #include <sys/controller.h>
 #include <sys/obj.h>
@@ -94,6 +96,80 @@ void ndsBaseMNPlayersVSStartScene(void);
 static GObj *sNdsPlayersVSMainGObj;
 static sb32 sNdsPlayersVSPreviewActive;
 static sb32 sNdsPlayersVSPreviewRulesReady;
+
+/* P4 (include/nds/nds_p4.h): a Remix selection's preview is its own
+ * residency kind, NDS_P4_SEL_BASE + content (above every FTKind), so its
+ * pack, owner images, failure bits and block never alias its parent's;
+ * the source slot keeps the parent's kind. Every residency routine below
+ * takes a preview kind; these map one back. Originals map to themselves. */
+static u32 ndsCssPreviewKindContent(s32 kind)
+{
+#if NDS_P4
+    return (ndsP4Fighter(ndsP4SelContent((u32)kind)) != NULL) ?
+        ndsP4SelContent((u32)kind) : 0u;
+#else
+    (void)kind;
+    return 0u;
+#endif
+}
+
+static sb32 ndsCssPreviewKindValid(s32 kind)
+{
+    return (((kind >= nFTKindPlayableStart) &&
+             (kind <= nFTKindPlayableEnd)) ||
+            (ndsCssPreviewKindContent(kind) != 0u)) ? TRUE : FALSE;
+}
+
+/* One bit per preview kind for the failure/ready masks: the twelve, then
+ * the contents. */
+static u32 ndsCssPreviewKindBit(s32 kind)
+{
+    u32 content = ndsCssPreviewKindContent(kind);
+
+    return (content != 0u) ? (1u << (nFTKindPlayableEnd + content)) :
+                             (1u << kind);
+}
+
+static s32 ndsCssPreviewKindParent(s32 kind)
+{
+#if NDS_P4
+    const NDSP4Fighter *f = ndsP4Fighter(ndsCssPreviewKindContent(kind));
+
+    if (f != NULL)
+    {
+        return f->parent_kind;
+    }
+#endif
+    return kind;
+}
+
+static FTData *ndsCssPreviewKindData(s32 kind)
+{
+#if NDS_P4
+    const NDSP4Fighter *f = ndsP4Fighter(ndsCssPreviewKindContent(kind));
+
+    if (f != NULL)
+    {
+        return f->data;
+    }
+#endif
+    return dFTManagerDataFiles[kind];
+}
+
+/* The preview kind each slot shows (nFTKindNull when empty). The source
+ * slot's fkind is its parent. */
+static s32 sNdsPlayersVSPreviewShownKind[GMCOMMON_PLAYERS_MAX];
+
+static void ndsCssPreviewSetShown(u32 slot, s32 kind)
+{
+    sNdsPlayersVSPreviewShownKind[slot] = kind;
+    sMNPlayersVSSlots[slot].fkind =
+        (kind == nFTKindNull) ? nFTKindNull : ndsCssPreviewKindParent(kind);
+#if NDS_P4
+    ndsP4SetPreviewContent(slot, (kind == nFTKindNull) ? 0u :
+                                 ndsCssPreviewKindContent(kind));
+#endif
+}
 
 /* VS preview residency. Native production reuses 1P CSS's compact Main/Model
  * FPC1 packs. Each compact block also owns that preview's two native owner
@@ -376,18 +452,18 @@ static void ndsMNPlayersVSPreviewValidatePermanentFailures(void)
 static sb32 ndsMNPlayersVSPreviewIsPermanentFailure(s32 fkind)
 {
     ndsMNPlayersVSPreviewValidatePermanentFailures();
-    return ((fkind >= nFTKindPlayableStart) &&
-            (fkind <= nFTKindPlayableEnd) &&
-            ((sNdsPlayersVSPreviewPermanentFailMask & (1u << fkind)) != 0u)) ?
+    return ((ndsCssPreviewKindValid(fkind) != FALSE) &&
+            ((sNdsPlayersVSPreviewPermanentFailMask &
+              ndsCssPreviewKindBit(fkind)) != 0u)) ?
         TRUE : FALSE;
 }
 
 static void ndsMNPlayersVSPreviewMarkPermanentFailure(s32 fkind)
 {
     ndsMNPlayersVSPreviewValidatePermanentFailures();
-    if ((fkind >= nFTKindPlayableStart) && (fkind <= nFTKindPlayableEnd))
+    if (ndsCssPreviewKindValid(fkind) != FALSE)
     {
-        sNdsPlayersVSPreviewPermanentFailMask |= 1u << fkind;
+        sNdsPlayersVSPreviewPermanentFailMask |= ndsCssPreviewKindBit(fkind);
     }
 }
 
@@ -433,6 +509,10 @@ static sb32 ndsMNPlayersVSPreviewOwnerImageSlot(s32 fkind, u32 *out_slot)
 #if NDS_P2_KIRBY
     NDS_CSS_OWNER_IMAGE_SLOT(nFTKindKirby, NDS_NATIVE_IMAGE_SLOT_KIRBY)
 #endif
+#if NDS_P4_FALCO
+    NDS_CSS_OWNER_IMAGE_SLOT(NDS_P4_SEL_BASE + NDS_P4_CONTENT_FALCO,
+                             NDS_NATIVE_IMAGE_SLOT_FALCO)
+#endif
 #undef NDS_CSS_OWNER_IMAGE_SLOT
     (void)out_slot;
     return FALSE;
@@ -451,7 +531,7 @@ static sb32 ndsMNPlayersVSPreviewEnsureOwnerImage(s32 fkind, u32 detail)
     }
     if (ndsRendererNativeEnsureOwnerImage(slot, detail) == FALSE)
     {
-        gNdsPlayersVSPreviewResidentOwnerFailMask |= 1u << fkind;
+        gNdsPlayersVSPreviewResidentOwnerFailMask |= ndsCssPreviewKindBit(fkind);
         return FALSE;
     }
     return TRUE;
@@ -483,13 +563,13 @@ static sb32 ndsMNPlayersVSPreviewPrepareResidentStage(
     const void *initial_anim_file;
     u32 kind_bit;
 
-    if ((fkind < nFTKindPlayableStart) || (fkind > nFTKindPlayableEnd))
+    if (ndsCssPreviewKindValid(fkind) == FALSE)
     {
         return FALSE;
     }
-    kind_bit = 1u << fkind;
+    kind_bit = ndsCssPreviewKindBit(fkind);
     gNdsPlayersVSPreviewResidentPrepareMask |= kind_bit;
-    data = dFTManagerDataFiles[fkind];
+    data = ndsCssPreviewKindData(fkind);
     /* This is the source manager's own residency invariant:
      * ftManagerSetupFilesAllKind only tests p_file_main, and when it is absent
      * loads main plus the model/motion/special status-buffer closure together. */
@@ -548,7 +628,8 @@ static sb32 ndsMNPlayersVSPreviewPrepareResidentStage(
      * selection. Heap NULL probes residency without copying; a non-resident
      * row falls back to the same cache preload as row 0. */
     {
-        s32 selected_status = mnPlayersVSGetStatusSelected(fkind);
+        s32 selected_status =
+            mnPlayersVSGetStatusSelected(ndsCssPreviewKindParent(fkind));
         s32 selected_row = selected_status - nFTDemoStatusNull;
         const void *selected_anim_file;
 
@@ -673,6 +754,13 @@ static u32 ndsMNPlayersVSPreviewOwnerImageBytes(s32 fkind, u32 use_low_detail)
                                         (u32)sizeof(NDSNativeKirbyHighImage);
     }
 #endif
+#if NDS_P4_FALCO
+    if (fkind == (s32)(NDS_P4_SEL_BASE + NDS_P4_CONTENT_FALCO))
+    {
+        return (use_low_detail != 0u) ? (u32)sizeof(NDSNativeFalcoLowImage) :
+                                        (u32)sizeof(NDSNativeFalcoHighImage);
+    }
+#endif
     (void)fkind;
     (void)use_low_detail;
     return 0u;
@@ -767,11 +855,11 @@ void ndsMNPlayersClearPreviewFighterFiles(s32 fkind)
 {
     FTData *data;
 
-    if ((fkind < nFTKindPlayableStart) || (fkind > nFTKindPlayableEnd))
+    if (ndsCssPreviewKindValid(fkind) == FALSE)
     {
         return;
     }
-    data = dFTManagerDataFiles[fkind];
+    data = ndsCssPreviewKindData(fkind);
     if (data == NULL)
     {
         return;
@@ -1047,8 +1135,7 @@ static sb32 ndsMNPlayersVSPreviewRetireResidentBlock(
     s32 fkind;
 
     if ((block == NULL) || (block->refs != 0u) ||
-        (block->fkind < nFTKindPlayableStart) ||
-        (block->fkind > nFTKindPlayableEnd))
+        (ndsCssPreviewKindValid(block->fkind) == FALSE))
     {
         return FALSE;
     }
@@ -1072,7 +1159,7 @@ static sb32 ndsMNPlayersVSPreviewRetireResidentBlock(
     ndsRelocReleaseHeapRange(block->base, NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
     syMallocReset(&block->arena);
     block->fkind = nFTKindNull;
-    gNdsPlayersVSPreviewResidentReadyMask &= ~(1u << fkind);
+    gNdsPlayersVSPreviewResidentReadyMask &= ~ndsCssPreviewKindBit(fkind);
     gNdsPlayersVSPreviewReleaseRetireCount++;
     if (reason == nNDSPlayersVSResidentRetireExit)
     {
@@ -1149,7 +1236,7 @@ ndsMNPlayersVSPreviewServiceCompactLoad(NDSPlayersVSResidentBlock *block,
             return nNDSPlayersVSResidentAcquireRetry;
         }
         sNdsPlayersVSPreviewResidencyActionBudget--;
-        data = dFTManagerDataFiles[fkind];
+        data = ndsCssPreviewKindData(fkind);
         gNdsPlayersVSPreviewAcquireLoadCount++;
         syMallocReset(&block->arena);
         previous = ndsTaskmanSwapMallocRegion(&block->arena);
@@ -1305,7 +1392,15 @@ ndsMNPlayersVSPreviewServiceCompactLoad(NDSPlayersVSResidentBlock *block,
              * staged closure is published here, the particle bank is created
              * by the source's own guarded path, and the block is proven to
              * still have room for both native owner images. */
-            data = dFTManagerDataFiles[fkind];
+            data = ndsCssPreviewKindData(fkind);
+#if NDS_P4
+            if ((data != NULL) && (ndsCssPreviewKindContent(fkind) != 0u))
+            {
+                (void)ndsFTManagerSetupPreviewFilesP4(
+                    ndsCssPreviewKindContent(fkind));
+            }
+            else
+#endif
             if (data != NULL)
             {
                 ftManagerSetupFilesAllKind(fkind);
@@ -1377,7 +1472,11 @@ ndsMNPlayersVSPreviewAcquireResidentKind(s32 fkind)
 #endif
     u32 i;
 
-    if ((fkind < nFTKindPlayableStart) || (fkind > nFTKindPlayableEnd) ||
+    if ((ndsCssPreviewKindValid(fkind) == FALSE) ||
+#if !NDS_PLAYERS_VS_COMPACT_PREVIEW
+        /* The raw-tree form loads source closures: originals only. */
+        (ndsCssPreviewKindContent(fkind) != 0u) ||
+#endif
         (sNdsPlayersVSResidentPoolsReady == FALSE))
     {
         gNdsPlayersVSPreviewAcquireFailCount++;
@@ -1593,7 +1692,7 @@ static sb32 ndsMNPlayersVSPreviewKindIsWarm(s32 fkind)
 {
     u32 i;
 
-    if ((fkind < nFTKindPlayableStart) || (fkind > nFTKindPlayableEnd))
+    if (ndsCssPreviewKindValid(fkind) == FALSE)
     {
         return FALSE;
     }
@@ -1652,7 +1751,7 @@ static sb32 ndsMNPlayersVSPreviewReleaseResidentKind(s32 fkind)
 {
     u32 i;
 
-    if ((fkind < nFTKindPlayableStart) || (fkind > nFTKindPlayableEnd))
+    if (ndsCssPreviewKindValid(fkind) == FALSE)
     {
         return FALSE;
     }
@@ -1711,6 +1810,21 @@ static void ndsMNPlayersVSPreviewApplyOuterSlotInset(u32 slot,
         x -= NDS_CSS_OUTER_PREVIEW_INSET;
     }
     root->translate.vec.f.x = x;
+#if NDS_P4
+    /* Remix's menu_zoom row stands in for dSCSubsysFighterScales
+     * (Character.asm menu_zoom_patches, mnPlayersVSMakeFighter). */
+    {
+        const NDSP4Fighter *f = ndsP4Fighter(
+            ndsCssPreviewKindContent(sNdsPlayersVSPreviewShownKind[slot]));
+
+        if ((f != NULL) && (f->present != NULL))
+        {
+            root->scale.vec.f.x = f->present->menu_zoom;
+            root->scale.vec.f.y = f->present->menu_zoom;
+            root->scale.vec.f.z = f->present->menu_zoom;
+        }
+    }
+#endif
 }
 
 /* P2-1N Stage D: the native shell owns the 2D CSS, but its fighter previews
@@ -1796,6 +1910,10 @@ void ndsMNPlayersVSPreviewInit(void)
         sMNPlayersVSSlots[i].is_status_selected = FALSE;
         sNdsPlayersVSReleasedRotationY[i] = 0.0F;
         sNdsPlayersVSPreviewPending[i].fkind = nFTKindNull;
+        sNdsPlayersVSPreviewShownKind[i] = nFTKindNull;
+#if NDS_P4
+        ndsP4SetPreviewContent((u32)i, 0u);
+#endif
         sNdsPlayersVSPreviewPending[i].stable_tics = 0u;
         sNdsPlayersVSPreviewPending[i].seen_request = FALSE;
         sNdsPlayersVSPreviewPending[i].acquire_pending = FALSE;
@@ -1935,7 +2053,7 @@ static void ndsMNPlayersVSPreviewRebuildChangedKind(u32 slot, s32 pkind,
     u32 payload_delta;
 
     sMNPlayersVSSlots[slot].pkind = pkind;
-    sMNPlayersVSSlots[slot].fkind = fkind;
+    ndsCssPreviewSetShown(slot, fkind);
     sMNPlayersVSSlots[slot].is_selected = is_selected;
     sMNPlayersVSSlots[slot].is_fighter_selected = is_selected;
 
@@ -1968,13 +2086,9 @@ static void ndsMNPlayersVSPreviewRebuildChangedKind(u32 slot, s32 pkind,
 }
 
 /* P4: the Remix content each slot's next sync asks for (0 = the original on
- * that kind). A Remix selection has no compact preview pack yet
- * (scripts/fighters/generate_preview_core_packs.py builds the twelve from
- * decomp metadata), so its panel shows no 3D fighter rather than its parent's:
- * counted in gNdsPlayersVSPreviewP4Unsupported, and docs/P4/P4_STATUS.md
- * carries the gap. */
+ * that kind). Sync previews it as its own kind, from the content's pack
+ * (scripts/p4/p4_preview_pack.py). */
 static u8 sNdsPlayersVSPreviewContent[GMCOMMON_PLAYERS_MAX];
-__attribute__((used)) volatile u32 gNdsPlayersVSPreviewP4Unsupported;
 
 void ndsMNPlayersVSPreviewSetContent(u32 slot, u32 content)
 {
@@ -1987,12 +2101,6 @@ void ndsMNPlayersVSPreviewSetContent(u32 slot, u32 content)
 void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
                                sb32 is_selected)
 {
-    if ((slot < GMCOMMON_PLAYERS_MAX) &&
-        (sNdsPlayersVSPreviewContent[slot] != 0u) && (fkind != nFTKindNull))
-    {
-        gNdsPlayersVSPreviewP4Unsupported++;
-        fkind = nFTKindNull;
-    }
     s32 old_pkind;
     s32 old_fkind;
     sb32 old_selected;
@@ -2057,9 +2165,22 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
         fkind = nFTKindNull;
         is_selected = FALSE;
     }
+#if NDS_P4
+    /* A Remix selection on its parent's kind previews as its own kind; from
+     * here on `fkind` is the preview kind. */
+    if ((fkind != nFTKindNull) && (sNdsPlayersVSPreviewContent[slot] != 0u))
+    {
+        const NDSP4Fighter *p4 = ndsP4Fighter(sNdsPlayersVSPreviewContent[slot]);
+
+        if ((p4 != NULL) && (p4->parent_kind == fkind))
+        {
+            fkind = (s32)(NDS_P4_SEL_BASE + sNdsPlayersVSPreviewContent[slot]);
+        }
+    }
+#endif
 
     old_pkind = sMNPlayersVSSlots[slot].pkind;
-    old_fkind = sMNPlayersVSSlots[slot].fkind;
+    old_fkind = sNdsPlayersVSPreviewShownKind[slot];
     old_selected = sMNPlayersVSSlots[slot].is_fighter_selected;
     fighter_gobj = sMNPlayersVSSlots[slot].player;
     pending = &sNdsPlayersVSPreviewPending[slot];
@@ -2090,7 +2211,7 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
         pending->acquire_pending = FALSE;
         pending->request_updates = 0u;
         sMNPlayersVSSlots[slot].pkind = pkind;
-        sMNPlayersVSSlots[slot].fkind = nFTKindNull;
+        ndsCssPreviewSetShown(slot, nFTKindNull);
         sMNPlayersVSSlots[slot].is_selected = FALSE;
         sMNPlayersVSSlots[slot].is_fighter_selected = FALSE;
         return;
@@ -2125,7 +2246,7 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
             if (acquire_result != nNDSPlayersVSResidentAcquireReady)
             {
                 sMNPlayersVSSlots[slot].pkind = pkind;
-                sMNPlayersVSSlots[slot].fkind = nFTKindNull;
+                ndsCssPreviewSetShown(slot, nFTKindNull);
                 sMNPlayersVSSlots[slot].is_selected = FALSE;
                 sMNPlayersVSSlots[slot].is_fighter_selected = FALSE;
                 return;
@@ -2163,7 +2284,7 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
         pending->stable_tics = 0u;
 
         sMNPlayersVSSlots[slot].pkind = pkind;
-        sMNPlayersVSSlots[slot].fkind = fkind;
+        ndsCssPreviewSetShown(slot, fkind);
         sMNPlayersVSSlots[slot].is_selected = is_selected;
         sMNPlayersVSSlots[slot].is_fighter_selected = is_selected;
 
@@ -2264,8 +2385,7 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
         ftManagerDestroyFighter(fighter_gobj);
         sMNPlayersVSSlots[slot].player = NULL;
     }
-    if ((old_fkind >= nFTKindPlayableStart) &&
-        (old_fkind <= nFTKindPlayableEnd))
+    if (ndsCssPreviewKindValid(old_fkind) != FALSE)
     {
         gNdsPlayersVSPreviewReleaseCount++;
         if (ndsMNPlayersVSPreviewReleaseResidentKind(old_fkind) != FALSE)
@@ -2275,7 +2395,7 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
     }
 
     sMNPlayersVSSlots[slot].pkind = pkind;
-    sMNPlayersVSSlots[slot].fkind = nFTKindNull;
+    ndsCssPreviewSetShown(slot, nFTKindNull);
     sMNPlayersVSSlots[slot].is_selected = FALSE;
     sMNPlayersVSSlots[slot].is_fighter_selected = FALSE;
     pending->fkind = fkind;
@@ -2561,7 +2681,7 @@ void ndsMNPlayersVSPreviewExit(void)
     for (slot = 0u; slot < ARRAY_COUNT(sMNPlayersVSSlots); slot++)
     {
         GObj *fighter_gobj = sMNPlayersVSSlots[slot].player;
-        s32 fkind = sMNPlayersVSSlots[slot].fkind;
+        s32 fkind = sNdsPlayersVSPreviewShownKind[slot];
 
         ndsFighterManagerRegisterDisplayFighter(NULL, slot);
         if (fighter_gobj != NULL)
@@ -2569,7 +2689,7 @@ void ndsMNPlayersVSPreviewExit(void)
             ftManagerDestroyFighter(fighter_gobj);
         }
         sMNPlayersVSSlots[slot].player = NULL;
-        sMNPlayersVSSlots[slot].fkind = nFTKindNull;
+        ndsCssPreviewSetShown(slot, nFTKindNull);
         ndsMNPlayersVSPreviewReleaseResidentKind(fkind);
     }
     /* Zero-ref closures deliberately survive live browsing. The scene boundary

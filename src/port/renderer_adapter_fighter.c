@@ -624,9 +624,13 @@ void ndsFighterDisplayContractSelectDL(const Gfx *dl)
      * geometry rides in a neighbouring joint's list). It draws nothing, and
      * the donor owner (generate_nds_native_owners.py, P4 donor mode) has no
      * root for it, so it is no event either. The joint's matrix and material
-     * are consumed as an ordinary list would consume them. */
+     * are consumed as an ordinary list would consume them. The list is
+     * ENDDL plus 0; a character-select preview pack's root cell is ENDDL plus
+     * the root's nonzero original offset (scripts/p4/p4_preview_pack.py), and
+     * must stay an event. */
     if ((sNdsFighterDisplayContract.skip_empty_dl != 0u) &&
-        ((((const u32 *)dl)[0] >> 24) == 0xdfu))
+        ((((const u32 *)dl)[0] >> 24) == 0xdfu) &&
+        (((const u32 *)dl)[1] == 0u))
     {
         sNdsFighterDisplayContract.matrix_ready = FALSE;
         sNdsFighterDisplayContract.material_ready = FALSE;

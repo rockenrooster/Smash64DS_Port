@@ -106,16 +106,45 @@ u32 ndsP4PlayerContent(u32 player)
     return ((FTStruct *)gobj->user_data.p)->nds_p4_content;
 }
 
-FTData *ndsP4PlayerData(s32 player)
+static u8 sNdsP4PreviewContent[GMCOMMON_PLAYERS_MAX];
+
+void ndsP4SetPreviewContent(u32 slot, u32 content)
+{
+    if (slot < GMCOMMON_PLAYERS_MAX)
+    {
+        sNdsP4PreviewContent[slot] = (u8)content;
+    }
+}
+
+u32 ndsP4MatchContent(s32 player)
+{
+    if ((player < 0) || (player >= GMCOMMON_PLAYERS_MAX))
+    {
+        return 0u;
+    }
+    switch (gSCManagerSceneData.scene_curr)
+    {
+    case nSCKindVSBattle:
+    case nSCKindVSResults:
+        return gNdsP4PlayerContent[player];
+    default:
+        return 0u;
+    }
+}
+
+u32 ndsP4MakeContent(s32 player, s32 fkind)
 {
     const NDSP4Fighter *f;
+    u32 content;
 
     if ((player < 0) || (player >= GMCOMMON_PLAYERS_MAX))
     {
-        return NULL;
+        return 0u;
     }
-    f = ndsP4Fighter(gNdsP4PlayerContent[player]);
-    return (f != NULL) ? f->data : NULL;
+    content = (gSCManagerSceneData.scene_curr == nSCKindPlayersVS) ?
+        sNdsP4PreviewContent[player] : ndsP4MatchContent(player);
+    f = ndsP4Fighter(content);
+    return ((f != NULL) && (f->parent_kind == fkind)) ? content : 0u;
 }
 
 sb32 ndsP4ParentFilesNeeded(s32 fkind)
@@ -200,7 +229,7 @@ void ndsP4SetupFileSizes(u32 data_flags)
 
         for (player = 0; player < GMCOMMON_PLAYERS_MAX; player++)
         {
-            const NDSP4Fighter *f = ndsP4Fighter(gNdsP4PlayerContent[player]);
+            const NDSP4Fighter *f = ndsP4Fighter(ndsP4MatchContent(player));
             FTData *parent;
 
             if ((f == NULL) ||

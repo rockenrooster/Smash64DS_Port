@@ -24,6 +24,7 @@
 #include <nds/nds_effects.h>
 #include <nds/nds_renderer.h>
 #include <nds/nds_preview_pack.h>
+#include <nds/nds_reloc_assets.h>
 #include <nds/nds_scene_manager.h>
 #include <nds/nds_shield_pose.h>
 #include <nds/generated/nds_fighter_production.generated.h>
@@ -361,7 +362,7 @@ static void ndsP4SetupFilesForParent(s32 fkind)
 
     for (player = 0; player < GMCOMMON_PLAYERS_MAX; player++)
     {
-        u32 content = gNdsP4PlayerContent[player];
+        u32 content = ndsP4MatchContent(player);
         const NDSP4Fighter *f = ndsP4Fighter(content);
         FTData *view[nFTKindEnumCount + 1];
 
@@ -379,6 +380,44 @@ static void ndsP4SetupFilesForParent(s32 fkind)
         ndsEFManagerRetryDeferredDescs();
         ndsP4BindMenuScripts(content);
     }
+}
+#endif
+
+#if NDS_P4
+/* ndsMNPlayersVS's P4 preview commit: the staged pack publishes Main and
+ * Model into the content's FTData (reloc_preview_pack.c); the motion file
+ * loads whole into the same block, because the menu motions' scripts live
+ * in it (generate_p4_fighter.py), and the scripts are rebased onto it. The
+ * content's FTData names no particle bank: the parent's bank is shared. */
+sb32 ndsFTManagerSetupPreviewFilesP4(u32 content)
+{
+    const NDSP4Fighter *f = ndsP4Fighter(content);
+    FTData *data;
+
+    if ((f == NULL) ||
+        (ndsRelocLoadPreviewFighter((s32)(NDS_P4_SEL_BASE + content)) == FALSE))
+    {
+        return FALSE;
+    }
+    data = f->data;
+    if ((data->file_mainmotion_id != 0) && (data->p_file_mainmotion != NULL))
+    {
+        /* P4 descriptors carry plain numeric file ids, which are their asset
+         * ids (ndsRelocAssetIDForTokenChain). */
+        if (ndsRelocLoadExternTreeAssetID(
+                (u32)(uintptr_t)data->file_mainmotion_id) == FALSE)
+        {
+            return FALSE;
+        }
+        *data->p_file_mainmotion =
+            lbRelocGetStatusBufferFile((const void *)(uintptr_t)data->file_mainmotion_id);
+        if (*data->p_file_mainmotion == NULL)
+        {
+            return FALSE;
+        }
+        ndsP4BindMenuScripts(content);
+    }
+    return TRUE;
 }
 #endif
 
@@ -702,8 +741,7 @@ static u32 ndsFTManagerImageSlotForKind(s32 fkind)
 static u32 ndsFTManagerImageSlotForPlayer(s32 player, s32 fkind)
 {
 #if NDS_P4_FALCO
-    if ((player >= 0) && (player < GMCOMMON_PLAYERS_MAX) &&
-        (gNdsP4PlayerContent[player] == NDS_P4_CONTENT_FALCO))
+    if (ndsP4MakeContent(player, fkind) == NDS_P4_CONTENT_FALCO)
     {
         return NDS_NATIVE_IMAGE_SLOT_FALCO;
     }
@@ -1023,7 +1061,10 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
 #endif
 #if NDS_P4
         {
-            FTData *p4 = (desc != NULL) ? ndsP4PlayerData(desc->player) : NULL;
+            u32 content = (desc != NULL) ?
+                ndsP4MakeContent(desc->player, desc->fkind) : 0u;
+            const NDSP4Fighter *f = ndsP4Fighter(content);
+            FTData *p4 = (f != NULL) ? f->data : NULL;
             FTData *view[nFTKindEnumCount + 1];
 
             if (p4 != NULL)
@@ -1037,7 +1078,7 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
             if (fighter_gobj != NULL)
             {
                 ftGetStruct(fighter_gobj)->nds_p4_content =
-                    (p4 != NULL) ? gNdsP4PlayerContent[desc->player] : 0u;
+                    (p4 != NULL) ? content : 0u;
             }
         }
 #else
