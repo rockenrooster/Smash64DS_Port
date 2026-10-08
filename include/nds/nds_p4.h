@@ -210,6 +210,10 @@ typedef struct NDSP4Overrides
      * and, for an electric hit, the one it leads to after (Lanky's balloon
      * damage, LankyUSP.damage_patch_). */
     s32 (*damage_status)(FTStruct *fp, s32 status_id, s32 *status_id_after);
+    /* ftCommonSpecialAirCheckInterruptCommon's head: TRUE keeps every
+     * aerial special from starting (Sonic's spent spring,
+     * SonicUSP.action_check_patch_). */
+    sb32 (*air_special_block)(FTStruct *fp);
 } NDSP4Overrides;
 
 /* A Remix CPU input routine (AI.asm add_cpu_input_routine) as assembled:
@@ -575,6 +579,12 @@ void ndsP4OnEatTomato(FTStruct *fp);
 /* ftCommonDamageInitDamageVars' status change through the content's
  * damage_status (battleship_ftcommon_damage.c). */
 s32 ndsP4DamageStatus(GObj *fighter_gobj, s32 status_id, s32 *status_id_after);
+/* ftCommonSpecialAirCheckInterruptCommon's head: the content's
+ * air_special_block (battleship_special_common.c). */
+sb32 ndsP4AirSpecialBlocked(GObj *fighter_gobj);
+/* gcEjectGObj's head: Sonic's homing target let go (battleship_sys_objman.c,
+ * src/port/nds_p4_sonic.c). */
+void ndsP4SonicOnEjectGObj(GObj *gobj);
 /* The content's match tables, read into this scene's heap at its first use
  * (FTData.mainmotion points into them from then on); halts on a missing or
  * malformed file, a build defect. */

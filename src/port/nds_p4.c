@@ -1295,6 +1295,19 @@ s32 ndsP4DamageStatus(GObj *fighter_gobj, s32 status_id, s32 *status_id_after)
     return status_id;
 }
 
+sb32 ndsP4AirSpecialBlocked(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    const NDSP4Overrides *o;
+
+    if (fp->nds_p4_content == 0u)
+    {
+        return FALSE;
+    }
+    o = ndsP4Overrides(fp);
+    return ((o != NULL) && (o->air_special_block != NULL)) ? o->air_special_block(fp) : FALSE;
+}
+
 void ndsP4OnEatTomato(FTStruct *fp)
 {
     const NDSP4Overrides *o;

@@ -24,6 +24,12 @@
 #define gcRunAll ndsBaseGcRunAll
 #define gcSetupObjman ndsBaseGcSetupObjman
 #define gcMakeGObjSPAfter ndsBaseGcMakeGObjSPAfter
+#if NDS_P4_SONIC
+/* P4 Sonic: Remix's destroyed_target_fix_ at gcEjectGObj's head (the
+ * wrapper below). The source's two deferred ejects inside this file call
+ * the body directly; the request that deferred them came through here. */
+#define gcEjectGObj ndsBaseGcEjectGObj
+#endif
 /* Campaign 01 re-knapsack, 2026-08-17. 120 bytes carrying 2,513 I-cache-fill
  * tk/fr on the gate's own rank-80 frames -- 20.9 per byte, the densest
  * placeable candidate on the v4-c238 census. The attribute rides a declaration
@@ -45,6 +51,17 @@ GObjProcess *gcRunGObjProcess(GObjProcess *gobjproc) NDS_R2_ITCM_PACK2_CODE;
 #undef gcRunAll
 #undef gcSetupObjman
 #undef gcMakeGObjSPAfter
+
+#if NDS_P4_SONIC
+#undef gcEjectGObj
+void ndsP4SonicOnEjectGObj(GObj *gobj);
+
+void gcEjectGObj(GObj *gobj)
+{
+    ndsP4SonicOnEjectGObj(gobj);
+    ndsBaseGcEjectGObj(gobj);
+}
+#endif
 
 extern void ndsBaseGcSetupObjman(GCSetup *setup);
 

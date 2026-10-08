@@ -129,6 +129,10 @@ sb32 ftCommonSpecialAirCheckInterruptCommon(GObj *fighter_gobj)
         NDS_P4_SPECIAL_AIR_N, NDS_P4_SPECIAL_AIR_HI, NDS_P4_SPECIAL_AIR_LW
     };
 
+    if (ndsP4AirSpecialBlocked(fighter_gobj) != FALSE)
+    {
+        return FALSE;
+    }
     return ndsP4CheckSpecialLent(fighter_gobj,
                                  ndsP4SourceFTCommonSpecialAirCheckInterruptCommon,
                                  tables, slots, ARRAY_COUNT(slots));
