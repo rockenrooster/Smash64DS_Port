@@ -165,6 +165,9 @@ typedef struct NDSP4Overrides
     void (*on_dead)(GObj *fighter_gobj);
     /* ftYoshiSpecialLwLandingProcUpdate makes no stars (Bowser). */
     u8 no_yoshi_lw_stars;
+    /* ftParamUpdateDamage's head: the damage the hit deals (Marth's
+     * counter takes it to 0 and marks the hit). */
+    s32 (*update_damage)(FTStruct *fp, s32 damage);
 } NDSP4Overrides;
 
 /* A Remix CPU input routine (AI.asm add_cpu_input_routine) as assembled:

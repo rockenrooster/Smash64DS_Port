@@ -8095,7 +8095,18 @@ void ftParamUpdateDamage(FTStruct *fp, s32 damage)
 {
     if (fp != NULL)
     {
-        s32 percent_before = fp->percent_damage;
+        s32 percent_before;
+#if NDS_P4
+        /* Remix hooks this function's head on a character id (Marth's
+         * counter, MarthDSP.detection_patch_). */
+        const NDSP4Overrides *p4 = ndsP4Overrides(fp);
+
+        if ((p4 != NULL) && (p4->update_damage != NULL))
+        {
+            damage = p4->update_damage(fp, damage);
+        }
+#endif
+        percent_before = fp->percent_damage;
         if (((gNdsFighterNaturalMovesetPhase == 13u) ||
              (gNdsFighterNaturalMovesetPhase == 14u)) &&
             (gNdsFighterNaturalMovesetThrowDamageAfter == 0u) &&
