@@ -1068,6 +1068,11 @@ DIRECT_POLICY_FAMILIES = (
 # words because it never reads this IR.
 DIRECT_POLICY_COMBINE_ALIASES = {
     (0xfc121605, 0xff17ffff): (0xfc127e05, 0xff17f3ff),
+    # Smash Remix models (P4: Ganondorf, Roy, Wario, Crash, Sheik) set the
+    # same pair with cycle-0 alpha TEXEL0a*SHADEa (mA0 = SHADE, decoded per
+    # GCCc0w0). Family 0's alpha is TEXEL0a alone, so the two agree exactly
+    # under the same per-triangle SHADEa == 1 proof.
+    (0xfc121805, 0xff17ffff): (0xfc127e05, 0xff17f3ff),
     # Boss's hand epochs set cycle-0 alpha D to SHADE where family 2 has 1
     # (0xff1679ff vs 0xff167dff; every other mux field identical, decoded
     # against decomp gbi.h GCCc0w1/GCCc1w1). Cycle-1 alpha multiplies cycle-0
@@ -1834,6 +1839,36 @@ def _build_source_export_for_owners(
                     raise ValueError(
                         f"{owner_name} root {root_index}: malformed action span"
                     )
+                # Smash Remix models (P4: Peach, Bowser) call two material
+                # lists in one span: a palette MObj, then the texture MObj.
+                # Every call but the last closes a material-only epoch (no
+                # actions, no runs, anchored at its call), so the runtime
+                # applies both lists, and the state between, in source order.
+                if owner_name in P4_DONOR_OWNERS:
+                    calls = [
+                        index for index in range(cursor, action_indices[0])
+                        if commands[index][0] == SOURCE_MATERIAL_DL and
+                        (commands[index][2] >> 24) == SOURCE_SEGMENT_E
+                    ]
+                    for call in calls[:-1]:
+                        control = [
+                            (index, *commands[index])
+                            for index in range(cursor, call + 1)
+                        ]
+                        combine_aliased = _combine_alias_state(
+                            control, combine_aliased)
+                        before, after, before_sync, after_sync, material = \
+                            _decode_control(owner_name, root_index, control,
+                                            image_refs)
+                        before_first, before_count = _append_state_span(
+                            before, states, state_lookup, sequence
+                        )
+                        epochs.append((
+                            before_first, 0xffff, len(actions), len(runs),
+                            before_count, 0, before_sync, after_sync,
+                            0, 0, material, call,
+                        ))
+                        cursor = call + 1
                 control = [
                     (index, *commands[index])
                     for index in range(cursor, action_indices[0])
@@ -1879,7 +1914,12 @@ def _build_source_export_for_owners(
                     for half, indices in enumerate(
                             stage_manifest.decode_triangles(op, w0, w1)):
                         bindings = {slots[slot] for slot in indices}
-                        if None in bindings or logical_binding not in bindings:
+                        # Smash Remix models (P4) also draw triangles whose
+                        # three vertices an earlier joint loaded; they are
+                        # cross triangles with no current-joint corner.
+                        if None in bindings or (
+                                logical_binding not in bindings and
+                                owner_name not in P4_DONOR_OWNERS):
                             raise ValueError(
                                 f"{owner_name} root {root_index} command {index}: "
                                 "triangle uses an invalid binding"
@@ -3637,7 +3677,7 @@ def build_p2_owner_model_inventory(
             vertex, runs, dense_vertices, dense_color_sources,
             dense_corners, action_dense_first, run_first_corner,
             run_owners, run_root_bindings, run_binding_sets,
-            [cross_slots], detail, (owner_name,),
+            [cross_slots], detail, (owner_name,), canonical_only=True,
         )
 
         observed_cross_bindings: set[int] = set()
@@ -3650,7 +3690,12 @@ def build_p2_owner_model_inventory(
             binding for binding, _slot
             in owner_cross_binding_slots(owner_name, detail)
         }
-        if observed_cross_bindings != expected_cross_bindings:
+        # This inventory decodes canonical roots only; a P4 donor's pins also
+        # carry the bindings its model-part variants cross (see
+        # build_direct_dense_tables).
+        if (observed_cross_bindings != expected_cross_bindings and
+                not (owner_name in P4_DONOR_OWNERS and
+                     observed_cross_bindings < expected_cross_bindings)):
             raise ValueError(
                 f"{owner_name} {detail} cross bindings "
                 f"{sorted(observed_cross_bindings)} != "
@@ -3945,6 +3990,7 @@ def decode_epoch_light_color_state(
     preambles = []
     prefix_command_count = 0
     intra_root_command_count = 0
+    tail_light_roots = []
     for root_index, root in enumerate(roots):
         if root[7] != 0:
             raise ValueError(
@@ -3988,12 +4034,29 @@ def decode_epoch_light_color_state(
         else:
             prefix_offsets = [w0 & 0xffff for _index, w0, _w1
                               in prefix_lights]
-            if prefix_offsets != [0x00, 0x04, 0x18, 0x1c]:
+            layout = [0x00, 0x04, 0x18, 0x1c]
+            if (len(prefix_offsets) % 4 != 0 or
+                    prefix_offsets != layout * (len(prefix_offsets) // 4)):
                 raise ValueError(
-                    f"{owner_name} root {root_index}: light prefix is not "
+                    f"{owner_name} root {root_index}: light prefix "
+                    f"{[hex(o) for o in prefix_offsets]} is not "
                     "the compact two-pair layout"
                 )
-            preambles.append((prefix_lights[0][2], prefix_lights[2][2]))
+            # Smash Remix models (P4) set the layout twice before the first
+            # triangle. The RSP lights a vertex when G_VTX loads it, so a
+            # layout replaced before any vertex load lights nothing and the
+            # last one is the root's light state.
+            last = prefix_lights[-4:]
+            for command_index in range(prefix_lights[0][0], last[0][0]):
+                w0 = struct.unpack_from(
+                    ">I", payload, root[0] + command_index * 8)[0]
+                if (w0 >> 24) in SOURCE_ACTION_OPS:
+                    raise ValueError(
+                        f"{owner_name} root {root_index}: command "
+                        f"{command_index} loads vertices under a replaced "
+                        "light layout"
+                    )
+            preambles.append((last[0][2], last[2][2]))
         prefix_command_count += len(prefix_lights)
 
         previous_triangle = -1
@@ -4009,7 +4072,11 @@ def decode_epoch_light_color_state(
                 )
             material_calls = []
             epoch_lights = []
-            for command_index in range(previous_triangle + 1, first_triangle):
+            # A material-only epoch (P4 donors: no actions, no runs) is
+            # anchored at its own material call, which its span includes.
+            span_end = (first_triangle + 1
+                        if epoch[8] == 0 and epoch[9] == 0 else first_triangle)
+            for command_index in range(previous_triangle + 1, span_end):
                 w0, w1 = struct.unpack_from(
                     ">II", payload, root[0] + command_index * 8
                 )
@@ -4054,15 +4121,27 @@ def decode_epoch_light_color_state(
         tail_lights = [index for index, _w0, _w1 in light_commands
                        if index > previous_triangle]
         if tail_lights:
-            raise ValueError(
-                f"{owner_name} root {root_index}: light commands after the "
-                f"final triangle epoch at {tail_lights}"
-            )
+            # Smash Remix model parts (P4: Crash, Sheik, Banjo, Dedede) re-set
+            # the light pair after their last triangle. Dead when every root
+            # opens with its own prefix layout (checked below); otherwise the
+            # next root would light under it.
+            if owner_name not in P4_DONOR_OWNERS:
+                raise ValueError(
+                    f"{owner_name} root {root_index}: light commands after the "
+                    f"final triangle epoch at {tail_lights}"
+                )
+            tail_light_roots.append(root_index)
+            consumed_lights += len(tail_lights)
         if consumed_lights != len(light_commands):
             raise ValueError(
                 f"{owner_name} root {root_index}: recovered "
                 f"{consumed_lights}/{len(light_commands)} light commands"
             )
+    if tail_light_roots and any(preamble is None for preamble in preambles):
+        raise ValueError(
+            f"{owner_name} roots {tail_light_roots}: light commands after the "
+            "final triangle reach a root with no light prefix"
+        )
     return (result, preambles, prefix_command_count,
             intra_root_command_count)
 
@@ -4715,6 +4794,12 @@ def build_dense_geometry(
                                 f"do not match root binding {root_binding}"
                             )
                     elif submit_class == 1:
+                        # A P4 donor's cross run may have no current-binding
+                        # corner; it still restores the current binding's
+                        # slot when it ends, so that binding stays in its set.
+                        if (owner_name in P4_DONOR_OWNERS and
+                                bindings and root_binding not in bindings):
+                            bindings.add(root_binding)
                         if root_binding not in bindings or len(bindings) < 2:
                             raise ValueError(
                                 f"cross run {run_index}: bindings "
@@ -4770,7 +4855,9 @@ def build_direct_dense_tables(
         action_dense_first, run_first_corner, run_owners,
         run_root_bindings, run_binding_sets, owner_cross_slots,
         detail: str = "high", owner_names: tuple[str, ...] | None = None,
-        validate_cross_census: bool = True):
+        validate_cross_census: bool = True, canonical_only: bool = False):
+    """`canonical_only`: the tables hold an owner's canonical roots without
+    its model-part variants; a P4 donor's pins describe the full owner."""
     if owner_names is None:
         # P2-2's frozen program is Mario/Fox.  P2-3 callers pass their explicit
         # ordered owner set so adding a fighter cannot silently change this
@@ -4903,13 +4990,20 @@ def build_direct_dense_tables(
                 binding
                 for binding, _ in owner_cross_binding_slots(owner_name, detail)
             }
-            if observed_cross_bindings[owner_index] != expected:
+            observed = observed_cross_bindings[owner_index]
+            # A P4 donor's model-part variants can cross a binding no canonical
+            # run crosses and add restores; the canonical-only pass then sees a
+            # subset, and the pins (slots and restores) describe the full owner.
+            partial = (owner_name in P4_DONOR_OWNERS and canonical_only and
+                       observed <= expected)
+            if observed != expected and not partial:
                 raise ValueError(
                     f"{owner_name} cross-binding census changed: "
                     f"{sorted(observed_cross_bindings[owner_index])}"
                 )
             expected_restore_count = gx_plan_counts[owner_name][4]
-            if owner_restore_counts[owner_index] != expected_restore_count:
+            if (not partial and
+                    owner_restore_counts[owner_index] != expected_restore_count):
                 raise ValueError(
                     f"{owner_name} {detail} GX restore count "
                     f"{owner_restore_counts[owner_index]} != "

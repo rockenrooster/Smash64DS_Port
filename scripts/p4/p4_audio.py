@@ -25,7 +25,8 @@ IMA bodies on 32-byte boundaries -- and ``fgm_p4.json`` with each cue's
 derivation.
 
     python scripts/p4/p4_audio.py --staging builds/p4-staging/remix-5e04fe7 \
-        --content FALCO --out builds/<build>/p4/audio
+        --content FALCO [--content WOLF ...] --out builds/<build>/p4/audio \
+        --export-root builds/p4-staging/export
 """
 from __future__ import annotations
 
@@ -53,13 +54,23 @@ EXTRACT_FGM = ROOT / "decomp" / "BattleShip-main" / "decomp" / "tools" / "extrac
 PACK_MAGIC = b"FGP4"
 PACK_VERSION = 1
 FLAG_PAUSE_WITH_GAME = 1 << 1
+# A Remix cue may exceed the vanilla pack's single-cue bound (Ganondorf's
+# victory laugh is 88 KB of IMA). The runtime places any cue its 160 KiB
+# arena can hold; one above two 32 KiB async reads is read synchronously
+# (nds_audio_fgm.c ndsAudioFgmFillAsync's fallback).
+P4_MAX_CUE_IMA_BYTES = 96 * 1024
 
 # FGM.asm: rate bytes and template types.
 SAMPLE_RATES = {0x20: "SAMPLE_RATE_16000", 0x60: "SAMPLE_RATE_32000"}
 FGM_TYPES = {"FGM_TYPE_VOICE": 0, "FGM_TYPE_CHANT": 1, "FGM_TYPE_SLEEP": 2}
 
-# The content name in FGM.asm paths ("Falco/sounds/66") per P4 content.
-CONTENT_DIRS = {"FALCO": "Falco"}
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import p4_contents  # noqa: E402
+
+# Per Remix name: the content's directory in FGM.asm paths ("Falco/sounds/66"),
+# which is its registry title, and its export directory (its registry name).
+CONTENT_DIRS = {row["remix"]: row["title"] for row in p4_contents.load_registry()}
+EXPORT_DIRS = {row["remix"]: row["name"] for row in p4_contents.load_registry()}
 
 
 def load_module(path: Path, name: str):
@@ -72,11 +83,13 @@ def load_module(path: Path, name: str):
     return module
 
 
-def fgm_ids(bass_out: str) -> dict[str, int]:
-    """bass.out's "Added <name>" / "FGM_ID: 0x..." pairs."""
-    ids = {}
+def fgm_ids(bass_out: str) -> dict[str, list[int]]:
+    """bass.out's "Added <name>" / "FGM_ID: 0x..." pairs, per name in
+    declaration order: one name can be added more than once (Ganondorf's
+    ten PLACEHOLDER sounds), each time with its own id."""
+    ids: dict[str, list[int]] = {}
     for match in re.finditer(r"Added (\S+)\s*\nFGM_ID: 0x([0-9A-Fa-f]+)", bass_out):
-        ids[match.group(1)] = int(match.group(2), 16)
+        ids.setdefault(match.group(1), []).append(int(match.group(2), 16))
     return ids
 
 
@@ -174,24 +187,31 @@ def last(program: list[list], op: str, default=None):
     return value
 
 
-def build(staging: Path, content: str, out_dir: Path) -> dict:
+def build(staging: Path, contents: list[str], out_dir: Path) -> dict:
+    """One pack with every listed content's cues (each FGM id once)."""
     renderer = load_module(RENDERER, "fgm_phase_pack_renderer")
     extract = load_module(EXTRACT_FGM, "extract_fgm")
     sys.path.insert(0, str(ROOT / "scripts" / "sfx"))
     import vadpcm_decode  # noqa: E402
 
-    content_dir = CONTENT_DIRS[content]
     ids = fgm_ids((staging / "bass.out").read_text(encoding="utf-8", errors="replace"))
-    rows = add_sound_rows((staging / "src" / "FGM.asm").read_text(encoding="utf-8"),
-                          content_dir)
-    if not rows:
-        raise ValueError(f"{content}: no add_sound rows in FGM.asm")
+    fgm_asm = (staging / "src" / "FGM.asm").read_text(encoding="utf-8")
+    rows = []
+    for content in contents:
+        content_rows = add_sound_rows(fgm_asm, CONTENT_DIRS[content])
+        if not content_rows:
+            raise ValueError(f"{content}: no add_sound rows in FGM.asm")
+        rows += content_rows
     tick_us = renderer.FGM_TIMER_MICROSECONDS
     records = []
+    uses: dict[str, int] = {}
     for row in rows:
-        fgm_id = ids.get(row["name"])
-        if fgm_id is None:
+        use = uses.get(row["name"], 0)
+        uses[row["name"]] = use + 1
+        named = ids.get(row["name"], [])
+        if use >= len(named):
             raise ValueError(f"{row['name']}: no FGM_ID in bass.out")
+        fgm_id = named[use]
         aifc = read_aifc(staging / "src" / f"{row['name']}.aifc")
         # FGM.asm: an explicit length, else the file's FORM size / 177.
         length = row["length"] if row["length"] != -1 else aifc["form_size"] // 177
@@ -231,8 +251,8 @@ def build(staging: Path, content: str, out_dir: Path) -> dict:
             ima = renderer.ima_encode_lookahead(runtime_pcm)
             decoded = renderer.ima_decode(ima, len(runtime_pcm))
             metrics = renderer.audio_metrics(runtime_pcm, decoded)
-        if len(ima) > renderer.MAX_CUE_IMA_BYTES:
-            raise ValueError(f"{row['name']}: {len(ima)} B IMA exceeds a cache slot")
+        if len(ima) > P4_MAX_CUE_IMA_BYTES:
+            raise ValueError(f"{row['name']}: {len(ima)} B IMA exceeds the P4 cue bound")
         records.append({
             "id": fgm_id,
             "name": row["name"],
@@ -252,6 +272,8 @@ def build(staging: Path, content: str, out_dir: Path) -> dict:
         })
 
     records.sort(key=lambda r: r["id"])
+    if len({r["id"] for r in records}) != len(records):
+        raise ValueError("two contents add the same FGM id")
     header_bytes = renderer.PACK_HEADER.size
     entry_bytes = renderer.PACK_ENTRY.size
     cursor = (header_bytes + entry_bytes * len(records) + 31) & ~31
@@ -274,8 +296,13 @@ def build(staging: Path, content: str, out_dir: Path) -> dict:
         raise AssertionError("P4 FGM pack size accounting mismatch")
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "fgm_p4.bin").write_bytes(pack)
+    # The runtime's entry table is sized by this build's pack.
+    (out_dir / "nds_p4_fgm.generated.h").write_text(
+        "/* Generated by scripts/p4/p4_audio.py: the P4 sound pack's entry count. */\n"
+        f"#define NDS_P4_FGM_ENTRY_COUNT {len(records)}u\n",
+        encoding="utf-8", newline="\n")
     manifest = {
-        "format": "FGP4", "version": PACK_VERSION, "content": content,
+        "format": "FGP4", "version": PACK_VERSION, "contents": contents,
         "pack_bytes": len(pack), "pack_sha256": hashlib.sha256(pack).hexdigest(),
         "entries": [{k: v for k, v in r.items() if k != "ima"} for r in records],
     }
@@ -360,18 +387,19 @@ def main() -> int:
     parser.add_argument("--export-root", type=Path, required=True,
                         help="remix_export.py output root (<content>/resolved.json)")
     args = parser.parse_args()
-    if len(args.content) != 1:
-        raise SystemExit("one content per pack for now")
-    manifest = build(args.staging, args.content[0], args.out)
+    manifest = build(args.staging, args.content, args.out)
     tracks = []
     for content in args.content:
-        tracks += build_bgm(args.staging, content,
-                            args.export_root / CONTENT_DIRS[content].lower(), args.out)
+        # Contents may share a victory song: one track a song.
+        for track in build_bgm(args.staging, content,
+                               args.export_root / EXPORT_DIRS[content], args.out):
+            if all(t["id"] != track["id"] for t in tracks):
+                tracks.append(track)
     write_bgm_rows(tracks, args.out)
     for t in tracks:
         print(f"  bgm {t['id']:#x} {t['source']}: {t['asset_bytes']} B, "
               f"{t['packet_count']} packets, looping {t['looping']}")
-    print(f"p4 audio: {manifest['content']} {len(manifest['entries'])} cues, "
+    print(f"p4 audio: {' '.join(manifest['contents'])} {len(manifest['entries'])} cues, "
           f"{manifest['pack_bytes']} bytes")
     for entry in manifest["entries"]:
         print(f"  {entry['id']:#05x} {entry['name']:<26} {entry['type']:<15} "

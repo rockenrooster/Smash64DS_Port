@@ -43,8 +43,27 @@ def load_donor(name: str, export_root: Path) -> dict:
 
     facts = p4_contents.export_facts(export_root, name)
     DONORS[name] = {"main": facts["main"], "model": facts["model"],
-                    "attributes": facts["attributes"]}
+                    "attributes": facts["attributes"],
+                    "script_parts": script_model_parts(export_root / name / "events.json")}
     return DONORS[name]
+
+
+def script_model_parts(events_path: Path) -> set[tuple[int, int]]:
+    """(joint, model part) pairs the donor's own motion scripts set."""
+    parts: set[tuple[int, int]] = set()
+    if not events_path.exists():
+        return parts
+    events = json.loads(events_path.read_text(encoding="utf-8"))
+    for block in events["blocks"].values():
+        for command in block["commands"]:
+            if command["op"] != "SetModelPartID":
+                continue
+            word = command["words"][0]
+            part = word & 0x7FFFF
+            if part & 0x40000:
+                part -= 0x80000
+            parts.add(((word >> 19) & 0x7F, part))
+    return parts
 
 
 class O2RFile:
@@ -84,6 +103,12 @@ def donor_tables(o2r_dir: Path, main_id: int, model_id: int, attr_offset: int) -
     if container is None or setup is None or container[0] != "intern" or setup[0] != "intern":
         raise SystemExit("donor main: commonparts/setup_parts are not internal pointers")
     trees = []
+    # FTCommonPart.flags bit 0: each DObjDesc.dl is a `Gfx *dls[2]` pair
+    # (ftdisplaymain.c), Yoshi's form, which Bowser keeps.
+    flags = {main.data[container[2] + detail * lay["sizeof(FTCommonPart)"] +
+                       lay["FTCommonPart.flags"]] & 1 for detail in range(2)}
+    if len(flags) != 1:
+        raise SystemExit("donor main: the two details disagree on the DL pair form")
     for detail in range(2):
         ref = main.ptr(container[2] + detail * lay["sizeof(FTCommonPart)"] + lay["FTCommonPart.dobjdesc"])
         if ref is None or ref[0] != "extern" or ref[1] != model_id:
@@ -98,7 +123,78 @@ def donor_tables(o2r_dir: Path, main_id: int, model_id: int, attr_offset: int) -
                 raise SystemExit("donor JointTree has no depth-18 sentinel")
         trees.append((ref[2], count))
     mask = (main.u32(setup[2]), main.u32(setup[2] + 4))
-    return {"trees": trees, "setup": mask}
+    return {"trees": trees, "setup": mask, "dl_pairs": flags == {1}}
+
+
+# name -> detail -> [(binding, offset, joint, part, vertices, scripted)] for
+# every variant donor_variants found, dropped ones included (learn's choice).
+VARIANT_INFO: dict[str, dict[str, list[tuple]]] = {}
+
+
+def _display_vertices(payload: bytes, offset: int) -> int:
+    """Vertices a display list loads (G_VTX counts up to its G_ENDDL)."""
+    total = 0
+    for at in range(offset, len(payload) - 7, 8):
+        op = payload[at]
+        if op == 0x01:
+            total += (struct.unpack_from(">I", payload, at)[0] >> 12) & 0xFF
+        elif op == 0xDF:
+            break
+    return total
+
+
+def donor_variants(name: str, o2r_dir: Path, main_id: int, model_id: int,
+                   attr_offset: int, dropped: dict | None = None) -> dict:
+    """Every alternate model part a donor's joints carry, per detail, as
+    (logical binding, display offset) rows for P2_MODEL_PART_ROOT_VARIANTS.
+
+    ftParamSetModelPartID writes modelparts[joint - 4][part][detail].dl into
+    the live DObj, and a P4 fighter's parts are set by its own scripts and by
+    its parent's code (Bowser's jaw by Yoshi's specials), so the owner carries
+    every part, not only the ones a script names. A joint's FTModelPartDesc
+    runs from its row to the next descriptor (or the container itself)."""
+    lay = ft_layout.layout()
+    main = O2RFile(o2r_dir / f"{main_id:04x}")
+    container = main.ptr(attr_offset + lay["FTAttributes.modelparts_container"])
+    if container is None:
+        return {}
+    payload = O.load_o2r_payload(REPO, name)
+    scripted = DONORS[name].get("script_parts", set())
+    dropped = dropped or {}
+    result = {}
+    VARIANT_INFO[name] = {}
+    for detail in ("high", "low"):
+        descriptors = O._owner_joint_descriptors(payload, name, detail)[:-1]
+        selected = O._owner_selected_descriptor_indices(name, len(descriptors))
+        roots = [i for i in selected if descriptors[i][1] is not None]
+        rows_by_joint = {}
+        for index in range(min(len(descriptors), 37 - 4)):
+            ref = main.ptr(container[2] + 4 * index)
+            if ref is not None and ref[0] == "intern":
+                rows_by_joint[index] = ref[2]
+        starts = sorted(set(rows_by_joint.values()) | {container[2]})
+        info = []
+        for binding, index in enumerate(roots):
+            base = rows_by_joint.get(index)
+            if base is None:
+                continue
+            bound = min([s for s in starts if s > base], default=len(main.data))
+            part = 1
+            while base + (part + 1) * 2 * 20 <= bound:
+                ref = main.ptr(base + (part * 2 + (detail == "low")) * 20)
+                if (ref is not None and ref[0] == "extern" and ref[1] == model_id and
+                        ref[2] != descriptors[index][1] and
+                        all(row[1] != ref[2] or row[0] != binding for row in info)):
+                    info.append((binding, ref[2], index + 4, part,
+                                 _display_vertices(payload, ref[2]),
+                                 (index + 4, part) in scripted))
+                part += 1
+        VARIANT_INFO[name][detail] = info
+        rows = tuple((row[0], row[1]) for row in info
+                     if row[1] not in set(dropped.get(detail, ())))
+        if rows:
+            result[detail] = rows
+    return result
 
 
 def _o2r_rel(repo: Path, path: Path) -> Path:
@@ -115,6 +211,8 @@ def register(name: str, o2r_dir: Path, attr_offset: int, pins: dict | None) -> d
     sha = hashlib.sha256(model_path.read_bytes()).hexdigest()
     tables = donor_tables(o2r_dir, spec["main"], spec["model"], attr_offset)
     O.P4_DONOR_OWNERS.add(name)
+    if tables["dl_pairs"]:
+        O.OWNER_DL_PAIR_MODE = O.OWNER_DL_PAIR_MODE | {name}
     O.P2_O2R_ASSETS[name] = (_o2r_rel(REPO, model_path), spec["model"], sha)
     O.OWNER_JOINT_TREES[name] = tuple(tables["trees"][0])
     O.OWNER_JOINT_TREES_LOW[name] = tuple(tables["trees"][1])
@@ -128,6 +226,12 @@ def register(name: str, o2r_dir: Path, attr_offset: int, pins: dict | None) -> d
     for detail in ("high", "low"):
         O.DETAIL_GX_PLAN_COUNTS[detail][name] = tuple(pins.get(f"gx_{detail}", (1, 0, 0, 0, 0)))
     O.P2_OWNER_MODEL_CENSUS[name] = {d: tuple(pins.get(f"census_{d}", ())) for d in ("high", "low")}
+    variants = donor_variants(name, o2r_dir, spec["main"], spec["model"], attr_offset,
+                              pins.get("variants_dropped"))
+    if variants:
+        O.P2_MODEL_PART_ROOT_VARIANTS[name] = variants
+    else:
+        O.P2_MODEL_PART_ROOT_VARIANTS.pop(name, None)
     return tables
 
 
@@ -173,16 +277,27 @@ def learn(name: str, o2r_dir: Path, attr_offset: int) -> dict:
         (r"packet store/restore (\d+)/(\d+) !=", None),
         (r"(high|low) (?:native-model|runtime context) census \(([^)]*)\) !=",
          lambda m: pins.__setitem__(f"census_{m[1]}", [int(x) for x in m[2].split(",")])),
+        # A model-part variant's cross run names a binding no canonical run
+        # crosses: it takes the next physical slot.
+        (r"(high|low) (?:current )?binding (\d+) has no (?:restorable )?GX palette slot",
+         lambda m: _add_cross(pins, m[1], int(m[2]))),
     )
-    for _attempt in range(16):
+    building = ["high"]
+    for _attempt in range(40):
         register(name, o2r_dir, attr_offset, pins)
         try:
             for detail in ("high", "low"):
+                building[0] = detail
                 O.build_p2_owner_runtime_context(REPO, name, detail)
             O.build_p2_owner_model_inventory(REPO, name)
+            if pins.get("cross_low") == pins["cross_high"]:
+                del pins["cross_low"]
             return pins
         except ValueError as error:
             text = str(error)
+            if re.search(r"dense IDs exceed the 11-bit direct ABI", text):
+                _drop_variant(name, pins, building[0])
+                continue
             for pattern, apply in patterns:
                 m = re.search(pattern, text)
                 if m:
@@ -196,6 +311,19 @@ def learn(name: str, o2r_dir: Path, attr_offset: int) -> dict:
     raise SystemExit("learn: pins did not converge")
 
 
+def _drop_variant(name: str, pins: dict, detail: str) -> None:
+    """The owner's dense vertices exceed the packed corner's 11-bit ID: leave
+    out the largest model-part variant no donor script sets (then the largest
+    left). A dropped part declines when the parent's code sets it; the pins
+    name every one."""
+    dropped = pins.setdefault("variants_dropped", {}).setdefault(detail, [])
+    kept = [row for row in VARIANT_INFO[name][detail] if row[1] not in dropped]
+    if not kept:
+        raise SystemExit(f"learn: {name} {detail} exceeds the dense ID ABI without variants")
+    victim = max(kept, key=lambda row: (not row[5], row[4]))
+    dropped.append(victim[1])
+
+
 def _set_gx(pins: dict, push: int, pop: int) -> None:
     pins["gx"][1:3] = [push, pop]
     for detail in ("high", "low"):
@@ -204,6 +332,40 @@ def _set_gx(pins: dict, push: int, pop: int) -> None:
 
 def _set_detail(pins: dict, detail: str, index: int, value: int) -> None:
     pins[f"gx_{detail}"][index] = value
+
+
+# The GX matrix stack's last physical slot: 0..15 are the camera seed and the
+# hierarchy stack, so cross bindings own 16..30.
+CROSS_SLOT_LAST = 30
+
+
+def _add_cross(pins: dict, detail: str, binding: int) -> None:
+    if "cross_low" not in pins:
+        pins["cross_low"] = [list(row) for row in pins["cross_high"]]
+    rows = pins[f"cross_{detail}"]
+    if any(b == binding for b, _slot in rows):
+        raise SystemExit(f"learn: {detail} binding {binding} already has a GX slot")
+    if CROSS_SLOT_FIRST + len(rows) > CROSS_SLOT_LAST:
+        raise SystemExit(f"learn: {detail} cross bindings exceed the GX palette")
+    rows.append([binding, CROSS_SLOT_FIRST + len(rows)])
+
+
+def _merge_light_preambles(name: str, high: dict, low: dict) -> None:
+    """Both details' owners share the one root-light preamble table the high
+    pass emits, so it is the union of both, with the low roots re-indexed into
+    it (generate_nds_native_owners.py does the same for the original cast:
+    Captain's low model has a preamble his high model lacks, as Wario's has)."""
+    merged = list(high["light_preambles"])
+    for preamble in low["light_preambles"]:
+        if preamble not in merged:
+            merged.append(preamble)
+    if len(merged) > 0xFF:
+        raise SystemExit(f"{name}: merged root-light preamble index exceeds u8")
+    remap = [merged.index(preamble) for preamble in low["light_preambles"]]
+    low["light_preamble_indices"] = [remap[i] for i in low["light_preamble_indices"]]
+    high["light_preambles"] = merged
+    low["light_preambles"] = merged
+    low["high_light_preambles"] = merged
 
 
 def emit(out_dir: Path, owners: dict[str, tuple[Path, int]]) -> dict[str, list[Path]]:
@@ -239,6 +401,7 @@ def emit(out_dir: Path, owners: dict[str, tuple[Path, int]]) -> dict[str, list[P
         register(name, o2r_dir, attr, load_pins(name))
         guard = f"NDS_P4_{name.upper()}"
         contexts = {d: O.build_p2_owner_runtime_context(REPO, name, d) for d in ("high", "low")}
+        _merge_light_preambles(name, contexts["high"], contexts["low"])
         header += [f"#if {guard}",
                    f"#define NDS_NATIVE_IMAGE_SLOT_{name.upper()} (NDS_NATIVE_IMAGE_OWNER_SLOTS + {index}u)",
                    f"#define NDS_NATIVE_OWNER_IMAGE_{name.upper()} 1"]
@@ -258,6 +421,13 @@ def emit(out_dir: Path, owners: dict[str, tuple[Path, int]]) -> dict[str, list[P
         inc += [f"#if {guard}", f"/* P4: donor-derived {O._owner_title(name)} runtime owner. */", ""]
         for detail in ("high", "low"):
             inc += O.render_p2_owner_runtime_program(contexts[detail])
+        # The model-part variants the program emitted (donor_variants), by
+        # name for the renderer's resolver; NULL and 0 when it has none.
+        for detail, suffix in (("high", ""), ("low", "Low")):
+            count = len(O._p2_owner_variant_specs(name, detail))
+            macro = f"NDS_P4_NATIVE_{name.upper()}_ROOT_VARIANTS{'_LOW' if detail == 'low' else ''}"
+            array = f"sNdsNative{O._owner_title(name)}RootVariants{suffix}" if count else "NULL"
+            inc += [f"#define {macro} {array}", f"#define {macro}_COUNT {count}u"]
         inc += [f"#endif  /* {guard} */", ""]
         files = []
         for detail in ("high", "low"):

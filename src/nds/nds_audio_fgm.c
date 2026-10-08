@@ -45,7 +45,9 @@
  * the vanilla layout under its own magic. Its entries carry this runtime
  * flag, so their bodies are read from that file. */
 #define NDS_AUDIO_FGM_P4_ROM_PATH "p4/audio/fgm_p4.bin"
-#define NDS_AUDIO_FGM_P4_ENTRY_MAX 64u
+/* The build's pack decides the table: every enabled content's cues. */
+#include <nds_p4_fgm.generated.h>
+#define NDS_AUDIO_FGM_P4_ENTRY_MAX NDS_P4_FGM_ENTRY_COUNT
 #define NDS_AUDIO_FGM_FLAG_P4 (1u << 15)
 #endif
 #define NDS_AUDIO_FGM_SAMUS_CHARGE_FIRST nSYAudioFGMSamusSpecialNCharge0
@@ -1173,18 +1175,27 @@ static u16 sNdsAudioFgmP4FileId;
 volatile u32 gNdsAudioFgmP4Result;
 volatile u32 gNdsAudioFgmP4Count;
 
+/* The pack lists its entries by ascending id (checked at load). */
 static NDSAudioFgmPackEntry *ndsAudioFgmFindP4Entry(u16 id)
 {
-    u32 i;
+    u32 lo = 0u;
+    u32 hi = sNdsAudioFgmP4Count;
 
-    for (i = 0u; i < sNdsAudioFgmP4Count; i++)
+    while (lo < hi)
     {
-        if (sNdsAudioFgmP4Entries[i].id == id)
+        u32 mid = (lo + hi) >> 1;
+
+        if (sNdsAudioFgmP4Entries[mid].id < id)
         {
-            return &sNdsAudioFgmP4Entries[i];
+            lo = mid + 1u;
+        }
+        else
+        {
+            hi = mid;
         }
     }
-    return NULL;
+    return ((lo < sNdsAudioFgmP4Count) && (sNdsAudioFgmP4Entries[lo].id == id)) ?
+        &sNdsAudioFgmP4Entries[lo] : NULL;
 }
 #endif
 
@@ -2322,7 +2333,8 @@ static void ndsAudioFgmLoadP4Pack(void)
             (entry->data_bytes > bytes - entry->data_offset) ||
             (entry->envelope_count != 0u) ||
             ((entry->flags & ~NDS_AUDIO_FGM_FLAG_PAUSE_WITH_GAME) != 0u) ||
-            (ndsAudioFgmFindEntry(entry->id) != NULL))
+            (ndsAudioFgmFindEntry(entry->id) != NULL) ||
+            ((i != 0u) && (entry->id <= sNdsAudioFgmP4Entries[i - 1u].id)))
         {
             gNdsAudioFgmP4Result = 6u;
             return;

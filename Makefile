@@ -1068,6 +1068,10 @@ NDS_P4_ENABLED := $(foreach row,$(NDS_P4_ENABLED_ROWS),$(call nds_p4_field,$(row
 override NDS_P4 := $(if $(NDS_P4_ENABLED),1,0)
 NDS_P4_STAGING ?= $(PROJECT_ROOT)/builds/p4-staging/remix-5e04fe7
 NDS_P4_EXPORT ?= $(PROJECT_ROOT)/builds/p4-staging/export
+# Lab builds only: a donor status routine with no DS port yet runs a stand-in
+# (generate_p4_fighter.py --lab-fallback, listed in each manifest) instead of
+# failing the generator, so every content can be built and probed early.
+NDS_P4_LAB_FALLBACK ?= 0
 # P2-3 fighter: NDonkey stays opt-in until his source specials, articles, native
 # owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
 NDS_P2_NDONKEY ?= 0
@@ -6033,7 +6037,6 @@ export NDS_P4_CONTENTS := $(foreach row,$(NDS_P4_ENABLED_ROWS),$(call nds_p4_fie
 export NDS_P4_NATIVE := $(NDS_P4_GEN)/native
 export NDS_P4_CONTENTS_HEADER := $(NDS_P4_GEN)/nds_p4_contents.generated.h
 NDS_NITROFS_P4_FILES += $(foreach row,$(NDS_P4_ENABLED_ROWS), \
-	$(NDS_P4_GEN)/$(call nds_p4_field,$(row),1)/.nitrofs-staged \
 	$(NITROFS_DIR)/fighters/$(call nds_p4_field,$(row),1)_high.bin \
 	$(NITROFS_DIR)/fighters/$(call nds_p4_field,$(row),1)_low.bin \
 	$(NITROFS_DIR)/fighters/preview/$(shell echo $$((64 + $(call nds_p4_field,$(row),4)))).fpc)
@@ -6042,6 +6045,7 @@ ifeq ($(NDS_P4),1)
 export NDS_P4_AUDIO_DIR := $(NDS_P4_GEN)/audio
 export NDS_P4_EXPORT_FILES := $(foreach name,$(NDS_P4_ENABLED),$(NDS_P4_EXPORT)/$(name)/resolved.json)
 NDS_NITROFS_P4_FILES += $(NDS_P4_AUDIO_DIR)/.nitrofs-staged
+NDS_NITROFS_P4_FILES += $(NDS_P4_GEN)/.nitrofs-staged
 endif
 
 export NDS_NITROFS_RELOC_FILES := \
@@ -7929,9 +7933,9 @@ $(NDS_BATTLESHIP_IMPORT_OVERLAY_STAMP): \
 # from the user's ROM, so they live under the ignored build tree. One rule set
 # per enabled content -- $(1) name, $(2) NAME, $(3) Remix name, $(4) id,
 # $(5) preview kind (NDS_P4_SEL_BASE + id) -- from scripts/p4/contents.json:
-# the export, the generated data, the O2R containers staged into NitroFS
-# beside the vanilla reloc files, the character-select preview pack and the
-# two native images (NitroFS payloads like every P2 owner's).
+# the export, the generated data, the character-select preview pack and the
+# two native images (NitroFS payloads like every P2 owner's). The O2R
+# containers are staged into NitroFS for all contents at once (below).
 define NDS_P4_CONTENT_RULES
 $$(NDS_P4_EXPORT)/$(1)/resolved.json: $$(NDS_P4_STAGING)/ssb64asm.z64 \
 		$$(PROJECT_ROOT)/scripts/p4/remix_export.py $$(PROJECT_ROOT)/scripts/p4/remix_rom.py
@@ -7939,13 +7943,11 @@ $$(NDS_P4_EXPORT)/$(1)/resolved.json: $$(NDS_P4_STAGING)/ssb64asm.z64 \
 		--fighter $(3) --out "$$(NDS_P4_EXPORT)/$(1)" --no-o2r
 $$(NDS_P4_GEN)/$(1)/nds_p4_$(1).generated.c: $$(NDS_P4_EXPORT)/$(1)/resolved.json \
 		$$(PROJECT_ROOT)/scripts/p4/generate_p4_fighter.py $$(PROJECT_ROOT)/scripts/p4/remix_rom.py \
-		$$(PROJECT_ROOT)/scripts/p4/ft_layout.py $$(PROJECT_ROOT)/scripts/menus/generate_battle_hud.py
+		$$(PROJECT_ROOT)/scripts/p4/ft_layout.py $$(PROJECT_ROOT)/scripts/menus/generate_battle_hud.py \
+		$$(PROJECT_ROOT)/scripts/p4/contents.json $$(NDS_P4_LAB_FALLBACK_STAMP)
 	python "$$(PROJECT_ROOT)/scripts/p4/generate_p4_fighter.py" --staging "$$(NDS_P4_STAGING)" \
-		--export "$$(NDS_P4_EXPORT)/$(1)" --out "$$(NDS_P4_GEN)/$(1)"
-$$(NDS_P4_GEN)/$(1)/.nitrofs-staged: $$(NDS_P4_GEN)/$(1)/nds_p4_$(1).generated.c
-	@mkdir -p $$(NITROFS_DIR)/reloc/p4
-	@cp $$(NDS_P4_GEN)/$(1)/o2r/* $$(NITROFS_DIR)/reloc/p4/
-	@touch $$@
+		--export "$$(NDS_P4_EXPORT)/$(1)" --out "$$(NDS_P4_GEN)/$(1)" \
+		$$(if $$(filter 1,$$(NDS_P4_LAB_FALLBACK)),--lab-fallback)
 $$(NDS_P4_GEN)/$(1)/preview.fpc: $$(NDS_P4_GEN)/$(1)/nds_p4_$(1).generated.c \
 		$$(PROJECT_ROOT)/scripts/p4/p4_preview_pack.py $$(PROJECT_ROOT)/scripts/p4/p4_native_owner.py \
 		$$(PROJECT_ROOT)/scripts/p4/p4_contents.py $$(PROJECT_ROOT)/scripts/p4/contents.json \
@@ -7964,7 +7966,29 @@ $$(NITROFS_DIR)/fighters/$(1)_%.bin: $$(BUILD)/native_image_$(1)_%.o
 	$$(OBJCOPY) -O binary --only-section=.fighter_image $$< $$@
 endef
 ifeq ($(NDS_P4),1)
+# The generated data follow NDS_P4_LAB_FALLBACK: this file holds its value and
+# is rewritten only when it changes.
+NDS_P4_LAB_FALLBACK_STAMP := $(NDS_P4_GEN)/.lab-fallback
+$(NDS_P4_LAB_FALLBACK_STAMP): FORCE
+	@mkdir -p $(dir $@); v='$(NDS_P4_LAB_FALLBACK)'; \
+	[ "$$(cat $@ 2>/dev/null)" = "$$v" ] || echo "$$v" > $@
 $(foreach row,$(NDS_P4_ENABLED_ROWS),$(eval $(call NDS_P4_CONTENT_RULES,$(call nds_p4_field,$(row),1),$(call nds_p4_field,$(row),2),$(call nds_p4_field,$(row),3),$(call nds_p4_field,$(row),4),$(shell echo $$((64 + $(call nds_p4_field,$(row),4)))))))
+# Every content's O2R containers, staged into NitroFS beside the vanilla reloc
+# files in one recipe: contents share files (Marth's and Roy's), and two
+# parallel copies of one file race. A file two contents ship must match.
+$(NDS_P4_GEN)/.nitrofs-staged: \
+		$(foreach name,$(NDS_P4_ENABLED),$(NDS_P4_GEN)/$(name)/nds_p4_$(name).generated.c)
+	@mkdir -p $(NITROFS_DIR)/reloc/p4
+	@seen=""; for name in $(NDS_P4_ENABLED); do \
+		for f in $(NDS_P4_GEN)/$$name/o2r/*; do \
+			id=$${f##*/}; t=$(NITROFS_DIR)/reloc/p4/$$id; \
+			case " $$seen " in \
+			*" $$id "*) cmp -s "$$f" "$$t" || { echo "P4 file $$id differs between contents"; exit 1; } ;; \
+			*) cp -f "$$f" "$$t" || exit 1; seen="$$seen $$id" ;; \
+			esac; \
+		done; \
+	done
+	@touch $@
 # The content list and the data aggregate (scripts/p4/p4_contents.py),
 # rewritten only when they change: every TU sees the list through nds_p4.h.
 $(NDS_P4_CONTENTS_HEADER) $(NDS_P4_GEN)/nds_p4_contents_data.generated.inc &: \
@@ -7998,8 +8022,10 @@ $(NDS_P4_CSS_DIR)/css.json $(NDS_P4_CSS_DIR)/nds_p4_css.generated.inc &: \
 	python "$(PROJECT_ROOT)/scripts/p4/p4_css.py" --staging "$(NDS_P4_STAGING)" \
 		--out "$(NDS_P4_CSS_DIR)" --contents "$(NDS_P4_CONTENTS)"
 nds_menu_shell.o: $(NDS_P4_CSS_DIR)/nds_p4_css.generated.inc
-# The sound pack, the victory songs and their BGM rows come from one run.
-$(NDS_P4_AUDIO_DIR)/fgm_p4.bin $(NDS_P4_AUDIO_DIR)/nds_p4_bgm.generated.inc &: \
+# The sound pack, its entry count, the victory songs and their BGM rows come
+# from one run.
+$(NDS_P4_AUDIO_DIR)/fgm_p4.bin $(NDS_P4_AUDIO_DIR)/nds_p4_bgm.generated.inc \
+		$(NDS_P4_AUDIO_DIR)/nds_p4_fgm.generated.h &: \
 		$(NDS_P4_STAGING)/ssb64asm.z64 $(PROJECT_ROOT)/scripts/p4/p4_audio.py \
 		$(PROJECT_ROOT)/scripts/sfx/render-audio-fgm-phase-pack.py \
 		$(PROJECT_ROOT)/scripts/sfx/bgm/render-audio-bgm.py \
@@ -8014,6 +8040,7 @@ $(NDS_P4_AUDIO_DIR)/.nitrofs-staged: $(NDS_P4_AUDIO_DIR)/fgm_p4.bin
 	@cp $(NDS_P4_AUDIO_DIR)/*.bin $(NITROFS_DIR)/p4/audio/
 	@touch $@
 nds_audio_bgm.o: $(NDS_P4_AUDIO_DIR)/nds_p4_bgm.generated.inc
+nds_audio_fgm.o: $(NDS_P4_AUDIO_DIR)/nds_p4_fgm.generated.h
 endif
 $(NDS_BATTLESHIP_IMPORT_OVERLAY_OFILES): $(NDS_BATTLESHIP_IMPORT_OVERLAY_STAMP)
 

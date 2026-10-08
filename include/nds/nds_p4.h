@@ -31,11 +31,11 @@ enum
     NDS_P4_CONTENT_LIMIT = NDS_P4_CONTENT_MAX_ID + 1
 };
 
-typedef struct NDSP4StatusOverride
-{
-    u32 status_id;
-    void (*procs[4])(GObj *); /* update, interrupt, physics, map */
-} NDSP4StatusOverride;
+/* A special-status callback slot the content keeps from its parent. The
+ * generator never names a parent routine; the slot takes the parent's
+ * routine for the same status the first time the table is used
+ * (ndsP4SpecialStatusDescs). */
+#define NDS_P4_PROC_INHERIT ((void (*)(GObj *))1)
 
 typedef struct NDSP4RelocAsset
 {
@@ -131,13 +131,54 @@ typedef struct NDSP4SwordTrail
     f32 end;
 } NDSP4SwordTrail;
 
+/* Remix's entry_action and entry_script rows (Character.asm): the appear
+ * statuses for entering facing right and left, and the entry effect. Remix
+ * repoints a fighter's entry_script at another kind's case of the source's
+ * switch (ftCommonAppearSetStatus) or past it (no effect), and patches the
+ * shared makers to read its own files. Only two forms need no port: no
+ * effect, and the parent's own case when the content's special files are the
+ * parent's or same-layout copies of them. */
+enum
+{
+    NDS_P4_ENTRY_NONE,   /* entry_script skips the switch */
+    NDS_P4_ENTRY_PARENT  /* the parent's case, on parent-layout files */
+};
+typedef struct NDSP4Entry
+{
+    s32 appear_status[2]; /* entry_action: facing right, facing left */
+    u8 effect;            /* NDS_P4_ENTRY_* */
+    u8 lab_fallback;      /* lab builds: an unported effect, run as NONE */
+    u8 reserved[2];
+} NDSP4Entry;
+
+/* Special-move starters: Remix's ground_nsp ... air_dsp tables, which
+ * replace the source's dFTCommonSpecial*StatusList rows by kind. A content's
+ * row is NULL where it equals the parent's; lab builds start nothing for a
+ * donor routine with no port (ndsP4LabSpecialStandIn). */
+enum
+{
+    NDS_P4_SPECIAL_GROUND_N,
+    NDS_P4_SPECIAL_AIR_N,
+    NDS_P4_SPECIAL_GROUND_HI,
+    NDS_P4_SPECIAL_AIR_HI,
+    NDS_P4_SPECIAL_GROUND_LW,
+    NDS_P4_SPECIAL_AIR_LW,
+    NDS_P4_SPECIAL_COUNT
+};
+typedef void (*NDSP4SpecialStart)(GObj *fighter_gobj);
+
 typedef struct NDSP4Fighter
 {
     const char *name;
     s32 parent_kind;
     FTData *data;
-    const NDSP4StatusOverride *overrides;
-    const u32 *override_count;
+    /* Special statuses from nFTCommonStatusSpecialStart: Remix's action
+     * array, statuses its add_new_action appended included. ftMainSetStatus
+     * reads it in place of the parent's table. */
+    FTStatusDesc *special_statuses;
+    const u32 *special_status_count;
+    /* Lab builds: donor routines that run a stand-in (0 when shipping). */
+    const u32 *lab_fallback_count;
     const NDSP4RelocAsset *assets;
     const u32 *asset_count;
     const FTFileSize *file_size;
@@ -156,6 +197,8 @@ typedef struct NDSP4Fighter
     const NDSP4Present *present;
     const NDSP4SwordTrail *sword_trails;
     const u32 *sword_trail_count;
+    const NDSP4Entry *entry;
+    const NDSP4SpecialStart *special_starts; /* NDS_P4_SPECIAL_COUNT rows */
 } NDSP4Fighter;
 
 /* Character-select selection ids: an original's fkind, or NDS_P4_SEL_BASE +
@@ -202,8 +245,23 @@ sb32 ndsFTManagerSetupPreviewFilesP4(u32 content);
 sb32 ndsP4ParentFilesNeeded(s32 fkind);
 /* ftManagerAllocFighter: publish each registered content's file sizes. */
 void ndsP4SetupFileSizes(u32 data_flags);
-/* ftMainSetStatus epilogue: apply the content's replaced status callbacks. */
-void ndsP4ApplyStatusOverrides(GObj *fighter_gobj, s32 status_id);
+/* ftMainSetStatus: the special status table the source reads for this
+ * fighter. The content's, its inherited slots filled from `parent` (the
+ * parent's own table) at first use; NULL for the original cast. */
+FTStatusDesc *ndsP4SpecialStatusDescs(const FTStruct *fp,
+                                      const FTStatusDesc *parent);
+/* ftMainSetStatus epilogue: the content's on_status hook. */
+void ndsP4AfterSetStatus(GObj *fighter_gobj, s32 status_id);
+/* ftCommonAppearSetStatus: the content's entry row, or NULL. */
+const NDSP4Entry *ndsP4Entry(const FTStruct *fp);
+/* ftCommonSpecial*CheckInterruptCommon: run `check` with the content's
+ * special-move starters lent to the source tables' rows for its kind
+ * (tables[i][fkind] takes starter slots[i]), then restore them. */
+sb32 ndsP4CheckSpecialLent(GObj *fighter_gobj, sb32 (*check)(GObj *),
+                           NDSP4SpecialStart *const *tables,
+                           const u8 *slots, u32 count);
+/* Lab builds: the starter of an unported donor special (starts nothing). */
+void ndsP4LabSpecialStandIn(GObj *fighter_gobj);
 /* ftMainSetStatus prologue: Remix change_action_ resets. */
 void ndsP4OnSetStatus(GObj *fighter_gobj);
 /* CPU (src/import/battleship_ftcomputer*.c). The content's rows, or NULL

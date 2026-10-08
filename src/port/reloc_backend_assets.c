@@ -456,8 +456,13 @@ _Static_assert(NDS_RELOC_ASSET_FOX_ANIM_LAST == NDS_K0_FOX_ANIM_LAST,
  * it lets the loader cover the full source roster without turning every loaded
  * file record into a u32-padded dependency table.  An offline census of the US
  * fighter mains puts the maximum at KirbyMain's 144 ids (DonkeyMain is 81;
- * Mario/Fox/Luigi are 48/51/62). */
+ * Mario/Fox/Luigi are 48/51/62). P4 builds: Banjo's main has 208, the Remix
+ * roster's maximum (generate_p4_fighter.py MAX_EXTERN_IDS checks every file). */
+#if NDS_P4
+#define NDS_RELOC_EXTERN_FILE_ID_CAPACITY 208u
+#else
 #define NDS_RELOC_EXTERN_FILE_ID_CAPACITY 144u
+#endif
 
 #define NDS_RELOC_SYMBOL_MVCOMMON_BACKGROUND_MOBJ 0x042f8u
 #define NDS_RELOC_SYMBOL_MVCOMMON_BACKGROUND_DOBJ 0x07e98u
@@ -7301,6 +7306,11 @@ static u32 sNdsRelocSlotCaptureCap;
 static u32 sNdsRelocSlotCaptureCount;
 static u32 sNdsRelocSlotCaptureOverflow;
 
+#if NDS_P4
+/* P4 file slots whose relocation names a target past the file's end. */
+__attribute__((used)) volatile u32 gNdsP4RelocOutOfRangeSlots;
+#endif
+
 static s32 ndsRelocApplyInternalPointerFixups(NDSRelocLoadedFile *loaded)
 {
     u16 reloc_intern;
@@ -7345,6 +7355,21 @@ static s32 ndsRelocApplyInternalPointerFixups(NDSRelocLoadedFile *loaded)
 
         if (target_offset >= loaded->data_size)
         {
+#if NDS_P4
+            /* A Smash Remix file can name a target past its own end: Peach's
+             * turnip graphics (0x1418, 0x1260 bytes) has two slots aimed at
+             * 0x24C0 and 0x26C8. The N64 relocates without a bound and
+             * nothing reads them; failing here failed her whole main file's
+             * closure. A P4 file's chain goes on, the slot left NULL. */
+            if (ndsP4RelocAssetPath(loaded->asset_id) != NULL)
+            {
+                gNdsP4RelocOutOfRangeSlots++;
+                ndsRelocWriteNativePointer(slot, NULL);
+                fixed_count++;
+                reloc_intern = next_reloc;
+                continue;
+            }
+#endif
             gNdsOpeningRoomRelocPointerFixupFailCount++;
             return FALSE;
         }
@@ -9663,6 +9688,20 @@ static s32 ndsRelocApplyExternalPointerFixups(NDSRelocLoadedFile *loaded)
         }
 
         dep = ndsRelocEnsureLoadedAsset(dep_asset_id);
+#if NDS_P4
+        /* Remix kept the parent's header offsets into small donor files:
+         * the N64 relocates such a slot unchecked, so treat it like the
+         * internal case above (a NULL that nothing reads). */
+        if ((dep != NULL) && (target_offset >= dep->data_size) &&
+            (ndsP4RelocAssetPath(loaded->asset_id) != NULL))
+        {
+            gNdsP4RelocOutOfRangeSlots++;
+            ndsRelocWriteNativePointer((u8 *)loaded->data + slot_offset, NULL);
+            loaded->external_fixup_count++;
+            reloc_extern = next_reloc;
+            continue;
+        }
+#endif
         if ((dep == NULL) || (target_offset >= dep->data_size))
         {
             loaded->external_fixup_fail_count++;
@@ -10458,8 +10497,11 @@ static s32 ndsRelocNormalizeSpriteDesc(
         return TRUE; /* This descriptor belongs to an omitted source span. */
     }
 #endif
+    /* Through Sprite.rsp_dl_next: nothing here reads or swaps frac_s/frac_t,
+     * and Smash Remix packs some emblem Sprites at the very end of a file
+     * without that last word (Ganondorf's model 0x8B0: 64 of 68 bytes). */
     if (ndsRelocRangeInLoadedFile(loaded, sprite_offset,
-                                  sizeof(Sprite)) == FALSE)
+                                  offsetof(Sprite, frac_s)) == FALSE)
     {
         return FALSE;
     }

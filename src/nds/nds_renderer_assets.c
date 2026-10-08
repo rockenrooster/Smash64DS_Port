@@ -6498,6 +6498,23 @@ static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
             NDS_FTR_COUNT(sNdsNativeKirbyRootVariants);
     }
 #endif
+#if NDS_P4
+    /* A P4 owner carries every alternate model part its donor's joints have
+     * (scripts/p4/p4_native_owner.py donor_variants): its own scripts and
+     * its parent's code both set them. */
+#define NDS_P4_OWNER_VARIANTS(id_, T_, N_, n_, parent_, model_, main_)         \
+    if (slot == NDS_P4_RENDERER_OWNER_SLOT(id_))                                \
+    {                                                                           \
+        variants = (use_low_detail != 0u) ?                                     \
+            NDS_P4_NATIVE_##N_##_ROOT_VARIANTS_LOW :                            \
+            NDS_P4_NATIVE_##N_##_ROOT_VARIANTS;                                 \
+        variant_count = (use_low_detail != 0u) ?                                \
+            NDS_P4_NATIVE_##N_##_ROOT_VARIANTS_LOW_COUNT :                      \
+            NDS_P4_NATIVE_##N_##_ROOT_VARIANTS_COUNT;                           \
+    }
+    NDS_P4_CONTENT_ROWS(NDS_P4_OWNER_VARIANTS)
+#undef NDS_P4_OWNER_VARIANTS
+#endif
     for (i = 0u; i < variant_count; i++)
     {
         if ((variants[i].binding == binding) &&

@@ -7,6 +7,9 @@
 #if NDS_P2_1P_GAME
 #include <ft/ftchar/ftboss/ftboss.h>
 #endif
+#if NDS_P4
+#include <nds/nds_p4.h>
+#endif
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
@@ -430,6 +433,9 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
     FTStruct *fp = ftGetStruct(fighter_gobj);
     s32 status_id;
     s32 entry_id;
+#if NDS_P4
+    const NDSP4Entry *p4_entry = ndsP4Entry(fp);
+#endif
 
     /* Effects are initialized before fighter-special files in VSBattle. The DS
      * effect resolver defers those descriptors, so retry at the same seam
@@ -443,6 +449,16 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
     fp->lr = 0;
     fp->status_vars.common.entry.floor_line_id = fp->coll_data.floor_line_id;
 
+#if NDS_P4
+    /* A P4 content takes Remix's entry rows (nds_p4.h NDSP4Entry): no
+     * effect, or its parent's case below, which then runs on the parent's own
+     * special files; the appear status is the content's either way. */
+    if ((p4_entry != NULL) && (p4_entry->effect == NDS_P4_ENTRY_NONE))
+    {
+        status_id = p4_entry->appear_status[entry_id];
+    }
+    else
+#endif
     if ((fp->fkind == nFTKindMario)
 #if NDS_P2_LUIGI
         /* BattleShip ftcommonentry.c:20 and :192-196. Luigi's row of
@@ -675,6 +691,12 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
         status_id = nFTCommonStatusEntryNull;
     }
 
+#if NDS_P4
+    if (p4_entry != NULL)
+    {
+        status_id = p4_entry->appear_status[entry_id];
+    }
+#endif
     mpCommonSetFighterAir(fp);
     ftMainSetStatus(fighter_gobj, status_id, 0.0F, 1.0F,
                     FTSTATUS_PRESERVE_NONE);
@@ -686,7 +708,12 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
     fp->motion_vars.flags.flag0 = 0;
 #if NDS_P2_CAPTAIN
     if ((fp->fkind == nFTKindCaptain) &&
-        (fp->status_vars.common.entry.lr == -1))
+        (fp->status_vars.common.entry.lr == -1)
+#if NDS_P4
+        /* Remix tests the character id here: never a content's. */
+        && (p4_entry == NULL)
+#endif
+        )
     {
         ftParamMoveDLLink(fighter_gobj, 1);
     }

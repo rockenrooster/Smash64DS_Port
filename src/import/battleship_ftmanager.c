@@ -45,6 +45,10 @@
 #define ftManagerDestroyFighter ndsBaseFTManagerDestroyFighter
 #define ftManagerAllocFigatreeHeapKind ndsBaseFTManagerAllocFigatreeHeapKind
 #define ftManagerAllocFighter ndsBaseFTManagerAllocFighter
+#if NDS_P4
+#define ftManagerSetupFilesPlayablesAll ndsBaseFTManagerSetupFilesPlayablesAll
+void ndsBaseFTManagerSetupFilesPlayablesAll(void);
+#endif
 
 void ndsBaseFTManagerSetupFileSize(void);
 void ndsBaseFTManagerSetupFilesAllKind(s32 fkind);
@@ -130,6 +134,9 @@ static FTData **sNdsP4FtDataView = dFTManagerDataFiles;
 #undef ftManagerDestroyFighter
 #undef ftManagerAllocFigatreeHeapKind
 #undef ftManagerAllocFighter
+#if NDS_P4
+#undef ftManagerSetupFilesPlayablesAll
+#endif
 
 /* SIZE THE FIGHTER POOLS BY THE FIGHTERS THIS BATTLE CAN HOLD.
  *
@@ -355,6 +362,43 @@ static void ndsFTManagerSetupCompactBattleFilesKind(s32 fkind)
  * parent's battle-core or preview packs), with its FTData standing in for the
  * parent's row; then its menu-motion scripts are rebased onto the motion file
  * that loader just published. */
+/* Special files a content loaded whole (below), by content and slot, for
+ * ftManagerSetupFilesPlayablesAll's re-publish. */
+static void *sNdsP4OpenSpecialFiles[NDS_P4_CONTENT_LIMIT][4];
+static void ndsP4PublishParentMotion(const NDSP4Fighter *f);
+
+/* The source loader takes the special files from the main file's extern
+ * closure (lbRelocGetStatusBufferFile). A content's FTData can name one
+ * outside it: a lab build's stand-in, the parent's file in place of a donor
+ * file of another layout (generate_p4_fighter.py). Load such a file whole. */
+static void ndsP4LoadOpenSpecialFiles(u32 content, FTData *data)
+{
+    u32 ids[4];
+    void **slots[4];
+    u32 i;
+
+    ids[0] = data->file_special1_id;
+    ids[1] = data->file_special2_id;
+    ids[2] = data->file_special3_id;
+    ids[3] = data->file_special4_id;
+    slots[0] = data->p_file_special1;
+    slots[1] = data->p_file_special2;
+    slots[2] = data->p_file_special3;
+    slots[3] = data->p_file_special4;
+    for (i = 0u; i < 4u; i++)
+    {
+        const void *id = (const void *)(uintptr_t)ids[i];
+
+        sNdsP4OpenSpecialFiles[content][i] = NULL;
+        if ((ids[i] != 0u) && (slots[i] != NULL) && (*slots[i] == NULL))
+        {
+            *slots[i] = lbRelocGetExternHeapFile(
+                id, syTaskmanMalloc(lbRelocGetFileSize(id), 0x10));
+            sNdsP4OpenSpecialFiles[content][i] = *slots[i];
+        }
+    }
+}
+
 static void ndsP4SetupFilesForParent(s32 fkind)
 {
     u32 done = 0u;
@@ -372,14 +416,91 @@ static void ndsP4SetupFilesForParent(s32 fkind)
             continue;
         }
         done |= 1u << content;
+        /* The content shares its parent's particle bank global and names no
+         * bank of its own: take the parent's, so a match of only children
+         * still loads it (efParticleGetLoadBankID reuses a loaded bank). */
+        if (f->data->particles_script_lo == 0u)
+        {
+            const FTData *parent = sNdsP4FtDataReal[fkind];
+
+            f->data->particles_script_lo = parent->particles_script_lo;
+            f->data->particles_script_hi = parent->particles_script_hi;
+            f->data->particles_texture_lo = parent->particles_texture_lo;
+            f->data->particles_texture_hi = parent->particles_texture_hi;
+        }
         memcpy(view, sNdsP4FtDataReal, sizeof(view));
         view[fkind] = f->data;
         sNdsP4FtDataView = view;
         ndsBaseFTManagerSetupFilesAllKind(fkind);
         sNdsP4FtDataView = sNdsP4FtDataReal;
+        ndsP4LoadOpenSpecialFiles(content, f->data);
+        ndsP4PublishParentMotion(f);
         ndsEFManagerRetryDeferredDescs();
         ndsP4BindMenuScripts(content);
     }
+}
+
+/* A Remix fighter loads its parent's motion file by the parent's own id, so
+ * the source's status-buffer resolution gives the parent's MainMotion global
+ * that file too, and the parent's code reads it there (Captain's Falcon Dive
+ * takes its victim offsets from it). A content's motion file is synthesized
+ * from the parent's, its bytes at their own offsets (generate_p4_fighter.py),
+ * so it stands in when the parent loaded none of its own. */
+static void ndsP4PublishParentMotion(const NDSP4Fighter *f)
+{
+    const FTData *parent = sNdsP4FtDataReal[f->parent_kind];
+
+    if ((parent->p_file_mainmotion != NULL) &&
+        (*parent->p_file_mainmotion == NULL) &&
+        (f->data->p_file_mainmotion != NULL))
+    {
+        *parent->p_file_mainmotion = *f->data->p_file_mainmotion;
+    }
+}
+
+/* The source re-reads every playable kind's file globals from the status
+ * buffer after the fighters are made. A parent whose players are all P4
+ * children loaded none of its own, so its globals -- which its children's
+ * special files share -- read NULL afterwards (Ganondorf's Falcon Kick then
+ * built its effect from no file). Publish each live content's files again. */
+void ftManagerSetupFilesPlayablesAll(void)
+{
+    u32 done = 0u;
+    s32 player;
+
+    ndsBaseFTManagerSetupFilesPlayablesAll();
+    for (player = 0; player < GMCOMMON_PLAYERS_MAX; player++)
+    {
+        u32 content = ndsP4MatchContent(player);
+        const NDSP4Fighter *f = ndsP4Fighter(content);
+        FTData *view[nFTKindEnumCount + 1];
+        void **slots[4];
+        u32 i;
+
+        if ((f == NULL) || ((done & (1u << content)) != 0u))
+        {
+            continue;
+        }
+        done |= 1u << content;
+        memcpy(view, sNdsP4FtDataReal, sizeof(view));
+        view[f->parent_kind] = f->data;
+        sNdsP4FtDataView = view;
+        ftManagerSetupFilesKind(f->parent_kind);
+        sNdsP4FtDataView = sNdsP4FtDataReal;
+        slots[0] = f->data->p_file_special1;
+        slots[1] = f->data->p_file_special2;
+        slots[2] = f->data->p_file_special3;
+        slots[3] = f->data->p_file_special4;
+        for (i = 0u; i < 4u; i++)
+        {
+            if ((slots[i] != NULL) && (sNdsP4OpenSpecialFiles[content][i] != NULL))
+            {
+                *slots[i] = sNdsP4OpenSpecialFiles[content][i];
+            }
+        }
+        ndsP4PublishParentMotion(f);
+    }
+    ndsEFManagerRetryDeferredDescs();
 }
 #endif
 

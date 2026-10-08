@@ -1128,7 +1128,7 @@ static intptr_t ndsEFManagerResolveOffset(intptr_t value)
  * Fox's reflector (&gFTDataFoxSpecial2) were both in that hole. Returning 0 has
  * to mean "no such file", not "a file I decline to check", or the fail-closed
  * path below is decoration. */
-static size_t ndsEFManagerFileSpan(void **file_head)
+static size_t ndsEFManagerFileSpanSource(void **file_head)
 {
     if (file_head == &gEFManagerFiles[0])
     {
@@ -1307,6 +1307,34 @@ static size_t ndsEFManagerFileSpan(void **file_head)
     }
 #endif
     return 0u;
+}
+
+#if NDS_P4
+#include <nds/nds_reloc_assets.h>
+#endif
+
+static size_t ndsEFManagerFileSpan(void **file_head)
+{
+    size_t span = ndsEFManagerFileSpanSource(file_head);
+
+#if NDS_P4
+    /* A P4 content's special files load into its parent's globals: when the
+     * slot holds a file other than the parent's own (Ganondorf's re-skinned
+     * Falcon Kick file in Captain's Special2), the span is that file's. */
+    if ((span == 0u) && (file_head != NULL) && (*file_head != NULL))
+    {
+        u32 asset = 0u;
+        u32 offset = 0u;
+
+        if ((ndsRelocGetLoadedPointerProvenance(*file_head, &asset,
+                                                &offset) != FALSE) &&
+            (offset == 0u))
+        {
+            span = ndsRelocGetLoadedFileSize((const void *)(uintptr_t)asset);
+        }
+    }
+#endif
+    return span;
 }
 
 /* EFDesc offsets are SOURCE-file offsets. Compact fighter packs keep only the

@@ -353,20 +353,205 @@ cannot hold even Falco's clips there. The fix belongs to S9: load a content's
 menu clips with its preview transaction, into its slot block, instead of
 into the global reservation.
 
+## Whole roster in the lab (S11, S14; 2026-10-07)
+
+- **Own action arrays (S14).** The generator emits each content's whole
+  special-status table from Remix's action array: motion, motion attack,
+  status flags and the four callbacks, appended statuses included. A
+  callback the content keeps from its parent is `NDS_P4_PROC_INHERIT`,
+  filled from the parent's own table the first time the table is used, so
+  the generated file never names a parent routine. `battleship_ftmain.c`
+  renames the source's per-kind table to a view
+  (`gNdsFTMainSpecialStatusDescsView`); for one `ftMainSetStatus` call the
+  fighter's row holds its content's table (or, inside another fighter's
+  call, the source table) and is put back after. This replaces the list of
+  status overrides. Falco, four CPUs, 1,800 frames: 0 skipped draws, 0
+  declines, trails drawn, his Phantasm callbacks ran from the table (266
+  air-physics calls), inherited slots resolve to Fox's routines.
+- **GO TO MOVESET FILE (S4).** Remix's 0xDB continues a script at an offset
+  into the fighter's loaded main motion file. The synthesized motion file
+  keeps the parent file's bytes at their offsets, so the command runs as is
+  (`ndsP4RunRemixMotionEvents`); the generator checks the target lies in
+  the file. Marth, Roy, Crash, Lanky, Banjo, Sonic and Dedede use it.
+- **Generation.** All 14 generate with `NDS_P4_LAB_FALLBACK=1`: a status
+  with a donor routine that has no port runs a plain end-of-motion set in
+  all four slots, and each such routine is listed in the manifest. The
+  parent's routines were tried first and are unsafe on a donor's script:
+  Captain's Falcon Dive procs on Marth's Dolphin Slash caught a fighter the
+  script never gave throw data (fault at the release), and Mario's Super
+  Jump Punch interrupt faulted under Lanky. Unported routine slots: Falco 0,
+  Ganondorf 0, Bowser 9, Wario 20, Wolf 22, Peach 24, Sonic 31, Crash 32,
+  Banjo 36, Sheik 37, Dedede 39, Lanky 42, Marth 44, Roy 52.
+- **Native owners.** Every content now has owner pins
+  (`scripts/p4/owners/<name>.json`). Remix models needed five additions to
+  the owner generator, each limited to what the source does:
+  - combiner `FC121805/FF17FFFF` (TEXEL0*SHADE with TEXEL0a*SHADEa alpha) is
+    an alias of family 0 under the per-triangle SHADEa == 1 proof Pikachu's
+    alias uses (Ganondorf, Roy, Wario, Crash, Sheik);
+  - the light pair set twice before the first vertex load: the RSP lights
+    at G_VTX, so the replaced layout lights nothing (Marth, Lanky, Banjo,
+    Dedede, Ganondorf);
+  - triangles whose three vertices an earlier joint loaded: cross runs with
+    no current-joint corner, which still restore the current slot (Wolf,
+    Sonic);
+  - Bowser's model keeps Yoshi's `Gfx *dls[2]` pair form (FTCommonPart flag
+    bit 0), now read from the donor's main file;
+  - two material lists in one span (a palette MObj, then the texture MObj:
+    Peach, Bowser): every call but the last closes a material-only epoch,
+    so both apply in source order with the runtime's existing epoch format;
+  - every alternate model part a donor's joints carry is a root variant
+    (`donor_variants`): a P4 fighter's parts are set by its own scripts and by
+    its parent's code (Yoshi's specials open Bowser's jaw), so the owner
+    cannot list only the parts a script names. The renderer resolves them
+    per content (`NDS_P4_NATIVE_<NAME>_ROOT_VARIANTS`). Without them every
+    model-part swap declined the draw (Bowser: 36 per 1,200 frames). Learn
+    gives a variant-only cross binding the next GX slot, and checks restores
+    on the full owner, not the canonical-only inventory. Crash's owner
+    exceeds the packed corner's 11-bit dense ID with all of his: learn
+    leaves out the largest parts no script of his sets (two, in his pins);
+  - Remix part lists that re-set the light pair after their last triangle
+    (Crash, Sheik, Banjo, Dedede): dead, since every root opens with its own
+    prefix (checked);
+  - one root-light preamble table per owner, the union of both details,
+    as the original cast's emission already does. Wario's low model has a
+    preamble his high one lacks, so every low draw declined (4,202 in 1,200
+    frames).
+- **Sounds.** `p4_audio.py` packs every enabled content's cues in one pack
+  (325 cues, 2.8 MB, 13 victory songs; Roy shares Marth's). A name Remix
+  adds several times (Ganondorf's ten placeholders) takes its ids in
+  declaration order. The runtime's P4 table is sized by the build's pack and
+  searched by id. Ganondorf's victory laugh (88 KB) exceeds two async reads
+  and is read synchronously.
+- **Select screen and previews.** The CSS generator and the preview packs
+  read the registry; Bowser's pack keeps his pair arrays as data.
+- **Entry (an S3 seam).** Remix's `entry_action` and `entry_script` rows
+  pick each fighter's appear statuses and which case of the fkind switch in
+  `ftCommonAppearSetStatus` runs: another kind's case (Bowser takes the
+  Blue Falcon case for his Clown Copter, Crash Samus's), none (Ganondorf),
+  or a Remix routine (Marth). Remix then patches the shared makers to read
+  the fighter's own files (Wolf's Wolfen inside Fox's Arwing maker). The
+  generator emits `NDSP4Entry`: the content's appear statuses, and either no
+  effect or the parent's own case when the content ships the parent's
+  special files (Falco). Anything else needs a port; lab builds enter with
+  no effect and list it. Before this, Ganondorf's and Wolf's matches hung
+  at the first appear: the parent's maker read the donor's files at the
+  parent's offsets.
+- **Special files.** A content's special files 1-4 load into its parent's
+  globals, which the parent's code reads at the parent's offsets. That is
+  exact when the donor's file has the parent's layout: Remix points the
+  parent's readers at a re-skinned copy (Ganondorf's Falcon Kick reads his
+  own file at Captain's offsets, `captainshared.asm kick_anim_struct`), and
+  for a slot the parent has no file in. Every other differing file (Wolf's
+  four, Bowser's, Marth's, Crash's ...) needs its own storage and ported
+  readers (S5): lab builds load the parent's file there and list it,
+  shipping builds refuse. The source loader takes specials from the main
+  file's extern closure, so a stand-in is loaded whole
+  (`ndsP4LoadOpenSpecialFiles`). A donor file in a slot the parent has no
+  storage for (Sheik's special1, Banjo's special4, Dedede's special1 under
+  Captain) is read by no parent code, but loading it wrote through a NULL
+  slot pointer at fighter setup; lab builds drop it, shipping builds need the
+  content's own storage.
+- **Remix files that relocate past their end.** Peach's turnip graphics
+  (0x1418, 0x1260 bytes) has two slots aimed past the file; the N64 applies
+  them unchecked. The DS loader failed the file, which failed her special2,
+  which left her whole main file unrelocated (frame-0 fault in the parts
+  setup). A P4 file's chain now goes on with such a slot left NULL
+  (`gNdsP4RelocOutOfRangeSlots`), internal and external alike: Peach's,
+  Sheik's, Banjo's and Dedede's main files open with header words that
+  Remix left at the parent's offsets into small donor special files
+  (Sheik's +0x4 aims at 0x760 in a 0x40-byte file), which nothing reads.
+- **Banjo's main file has 208 external file ids**; the loader's table held
+  144 (KirbyMain, the original cast's largest), so the whole file was
+  refused. P4 builds size it 208, and the generator fails any file past it
+  (`MAX_EXTERN_IDS`).
+- **Special-move starters (an S3 seam, six tables).** Remix's `ground_nsp`,
+  `air_nsp`, `ground_usp`, `air_usp`, `ground_dsp` and `air_dsp` replace
+  the source's `dFTCommonSpecial*StatusList` rows by kind. The four source
+  checks (`ftCommonSpecialN/Hi/Lw/AirCheckInterruptCommon`) now run with the
+  content's rows lent into those tables at its kind's index, then put back
+  (`ndsP4CheckSpecialLent`). A row equal to the parent's keeps the source
+  entry; a vanilla routine is named; a donor routine with no port starts
+  nothing in lab builds (`ndsP4LabSpecialStandIn`, counted and listed) and
+  fails the generator otherwise. Before this the parent's starter entered
+  the parent's status on the donor's row, which for a donor that never uses
+  it is dead: Lanky's 0xE1 has no motion, so Mario's Super Jump Punch
+  interrupt read a TransN joint the motion never made (fault at frame 493).
+  Falco and Ganondorf keep all six of their parents' rows, Wolf changes
+  his up specials, Bowser three rows, the other ten all six.
+- **Shared parent globals after the fighters are made.** The source's
+  `ftManagerSetupFilesPlayablesAll` re-reads every playable kind's file
+  globals from the status buffer. A parent whose players are all P4
+  children loaded none of its own files, so the globals its children share
+  read NULL afterwards: four Ganondorfs faulted at frame 365 when the
+  aerial Falcon Kick built its effect from no file (a NULL effect DObj;
+  found with the lab exception recipe). The P4 wrapper publishes each live
+  content's files again. The effect resolver also sized a descriptor's file
+  by the parent's file id, which a content's same-layout copy is not, so the
+  Kick's descriptor stayed deferred; it now falls back to the loaded file's
+  own size (`ndsEFManagerFileSpan`).
+- **The parent's motion file.** All fourteen load their parent's motion file
+  (Ganondorf: 0xEB, Captain's), and Remix loads it by that id, so the
+  source's status-buffer pass hands the parent's MainMotion global the same
+  file, where the parent's code reads it: Captain's Falcon Dive takes its
+  victim offsets from there (`ftCommonCaptureCaptainUpdatePositions`). The
+  synthesized motion file keeps those bytes at their offsets, so it stands
+  in for the parent's when the parent loaded none
+  (`ndsP4PublishParentMotion`); the generator asserts the donor's motion file
+  is its parent's. Before this, four Ganondorfs faulted at frame 384 on the
+  first Dark Dive grab. A content also takes its parent's particle-bank
+  fields, so a children-only match loads the bank it shares. Mixed matches
+  (a parent and its child, or two children of one parent) still share one
+  set of globals: S5.
+- **Memory (open, S15).** A content loads its Remix files whole: Sonic's
+  main closure is 329 KB, Crash's 208 KB, Falco's 86 KB. In a four-CPU
+  mirror on the lab stage the files take 840 KB of the general heap for
+  Sonic (Falco 582 KB) and each fighter then takes 33-49 KB more (largest
+  animation, DObjs), so the fourth Sonic overflowed the heap while its parts
+  were made and Crash was left 7.7 KB. A Remix fighter's own shield-pose
+  file also takes the source Event32 path, nine AObjs per joint, where the
+  original cast uses native shield-pose packages: four Crashes shielding
+  exhausted that 7.7 KB (an allocator halt at frame 330, before the
+  special-move seam changed his CPU's choices). The fix is the original
+  cast's: compact packs that keep only what the native owner and the pose
+  engine read, and a generated shield-pose package per content.
+
+Four-CPU mirrors, lab ROM with all fourteen (`NDS_P4_LAB_FALLBACK=1`, lab
+stage, 1,200 frames, exception vectors trapped). "p4e" is the build with
+the special-move seam; the others ran before it.
+
+| Content | Result | Lab declines | Notes |
+|---|---|---|---|
+| Falco | clean (p4c) | 0 | |
+| Ganondorf | clean, 1,500 frames (p4c) | 0 | |
+| Wolf | clean (p4e) | 215 | his blaster's display list lives in a donor special file (0xB47), which the draw plan does not own; Fox's gun sidecar knows only Fox's file |
+| Bowser | clean (p4c) | 0 | |
+| Marth | clean (p4d) | 0 | 24 unported commands (D6, D8, D9, DA) |
+| Roy | clean (p4c) | 0 | |
+| Wario | clean (p4c) | 0 | |
+| Peach | clean (p4e) | 299, low detail | a motion's hidden-part joint adds a root the owner lacks (17 against 16), the original cast's root-program case |
+| Crash | 420 frames (p4e) | 0 | heap 7.7 KB free (S15) |
+| Lanky | clean (p4e) | 0 | 9 unported commands (D6) |
+| Sheik | clean (p4e) | 0 | |
+| Banjo | loads after the 208-id fix; the mirror overflows the heap (S15) | | |
+| Sonic | the mirror overflows the heap at fighter setup (S15) | | |
+| Dedede | clean (p4e) | 0 | |
+
 ## Board 1 status (master plan Revision 3)
 
 | Item | State |
 |---|---|
 | S1 content list | done: registry, Makefile templates, one native-owner emit, `NDS_P4_CONTENT_ROWS` in every shared site; Falco unchanged (lab: 0 declines, menu ROM preview) |
 | S2 build throughput | not started; lab and menu builds still rewrite the shared linker script under a mutex |
-| S3 table seams | 12 of 33 (Falco's) |
-| S4 motion commands | 2 of the roster's 12 (FSM, TopN) |
+| S3 table seams | 19 of 33 (Falco's 12, entry_action/entry_script, the six special-move starters) |
+| S4 motion commands | 3 of the roster's 12 (FSM, TopN, GO TO MOVESET FILE) |
 | S5 routine work lists | counts measured (master plan table); per-routine lists not generated |
 | S6 articles | first source scan only |
 | S7 generated CPU rows | Falco's rows read by hand from the assembled tables |
 | S8 Kirby copies | not started |
 | S9 select-screen preview | done for Falco on the menu ROM; pack facts come from the export (`p4_preview_pack.py --content`); the all-content ROM cannot hold P4 menu clips in the select's global reservation (see above) |
 | S10 acceptance probe | lab probes exist per topic (`gNdsLabP4Content`); no single command |
-| S11 whole-roster generation | not started; all 14 export cleanly |
+| S11 whole-roster generation | all 14 generate, learn owner pins and build into one lab ROM (`NDS_P4_LAB_FALLBACK=1`); four-CPU mirror results in "Whole roster in the lab" |
 | S12 EXTRA export | not started; EXTRA's nested Remix gitlink not initialized |
 | S13 sword trails | done: Remix rows exported and generated, update and native draw; vanilla Link and Beam Sword trails drawn too |
+| S14 own action arrays | done: content special-status tables (Falco verified unchanged; Ganondorf 0 stand-ins) |
+| S15 P4 memory | open: Sonic's four-CPU mirror overflows the heap at fighter setup, Crash's leaves 7.7 KB ("Memory" above) |

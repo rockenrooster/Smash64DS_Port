@@ -76,8 +76,12 @@ def in_ranges(x: int, ranges) -> bool:
     return any(a <= x < b for a, b in ranges)
 
 
-def dl_roots(main: P.O2RFile, model: P.O2RFile, model_id: int, attr: int, trees) -> set[int]:
-    """Model offsets of every display list the fighter's structures name."""
+def dl_roots(main: P.O2RFile, model: P.O2RFile, model_id: int, attr: int, trees,
+             dl_pairs: bool = False) -> set[int]:
+    """Model offsets of every display list the fighter's structures name.
+    With `dl_pairs` (FTCommonPart.flags bit 0, Yoshi's form: Bowser) a
+    JointTree entry names a `Gfx *dls[2]` pair, which stays in the pack as
+    data; its two lists are the roots."""
     lay = ft_layout.layout()
     roots: set[int] = set()
 
@@ -95,7 +99,16 @@ def dl_roots(main: P.O2RFile, model: P.O2RFile, model_id: int, attr: int, trees)
             if ref is not None:
                 if ref[0] != "intern":
                     raise PackError(f"JointTree desc {i}: display list outside the model")
-                roots.add(ref[2])
+                if not dl_pairs:
+                    roots.add(ref[2])
+                    continue
+                for k in range(2):
+                    dl = model.ptr(ref[2] + 4 * k)
+                    if dl is None:
+                        continue
+                    if dl[0] != "intern":
+                        raise PackError(f"JointTree desc {i}: pair list outside the model")
+                    roots.add(dl[2])
     container = main.ptr(attr + lay["FTAttributes.modelparts_container"])
     if container is not None:
         if container[0] != "intern":
@@ -169,8 +182,8 @@ def walk_geometry(model: P.O2RFile, roots: set[int]):
 def build(o2r_dir: Path, main_id: int, model_id: int, attr: int, kind: int):
     main = P.O2RFile(o2r_dir / f"{main_id:04x}")
     model = P.O2RFile(o2r_dir / f"{model_id:04x}")
-    trees = P.donor_tables(o2r_dir, main_id, model_id, attr)["trees"]
-    roots = dl_roots(main, model, model_id, attr, trees)
+    tables = P.donor_tables(o2r_dir, main_id, model_id, attr)
+    roots = dl_roots(main, model, model_id, attr, tables["trees"], tables["dl_pairs"])
     dls, vtxs = walk_geometry(model, roots)
     pruned = merge(dls + vtxs)
     kept = []

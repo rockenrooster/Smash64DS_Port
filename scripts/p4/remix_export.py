@@ -317,6 +317,11 @@ class Exporter:
                 k = sid - SHARED_ACTION_COUNT
                 p = parent_specials[k] if k < len(parent_specials) else None
                 row["inherited"] = {f: (p is not None and p[f] == d[f]) for f in d}
+                # The parent's callbacks for this status (None past the
+                # parent's table: a Remix add_new_action status).
+                row["parent_procs"] = None if p is None else [
+                    self.name_code(p[proc]) if p[proc] else None
+                    for proc in ("proc_update", "proc_interrupt", "proc_physics", "proc_map")]
             for proc in ("proc_update", "proc_interrupt", "proc_physics", "proc_map"):
                 addr = d[proc]
                 if addr:
@@ -408,6 +413,10 @@ class EventDecoder:
                 return ("file", fid, slot[1])
             return ("file", slot[1], slot[2])
         value = self._word(loc)
+        # A vanilla menu script in overlay 1 (read_ram maps it) jumps within
+        # overlay 1 (Bowser's 0x80391BC4 to 0x80391C90).
+        if value is not None and R.MENU_OVERLAY_RAM[0] <= value < R.MENU_OVERLAY_RAM[1]:
+            return ("ram", value)
         if value is None or value < R.REMIX_CODE_RAM:
             self.fail.add(f"{owner}: pointer {value!r} at {self.key(loc)} outside the Remix region")
             return None

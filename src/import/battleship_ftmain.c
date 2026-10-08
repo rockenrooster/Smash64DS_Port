@@ -300,11 +300,16 @@ static void ndsLabTimedAddFigatree(DObj *root_dobj, void *figatree,
 #define NDS_P4_EVCAST_FTMotionEventSetTexturePartID NDS_P4_EVCAST_PLAIN
 #define NDS_P4_EVCAST_FTMotionEventSetThrow2 NDS_P4_EVCAST_PLAIN
 #define NDS_P4_EVCAST_FTMotionEventSubroutine2 NDS_P4_EVCAST_PLAIN
+/* P4 S14: the source's per-kind special status table, renamed so the
+ * wrapper below can lend a P4 fighter's row its content's table for one
+ * ftMainSetStatus call. ftMainSetStatus is its only reader. */
+#define dFTMainSpecialStatusDescs gNdsFTMainSpecialStatusDescsView
 #endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftmain.c"
 #if NDS_P4
 #undef ftMotionEventCast
 #define ftMotionEventCast(event, type) ((type *)(event)->p_script)
+#undef dFTMainSpecialStatusDescs
 #endif
 #undef ftMainCheckGetUpdateDamage
 #undef ftMainPlayHitSFX
@@ -371,6 +376,54 @@ void battleship_ftMainProcParams(GObj *fighter_gobj)
         ndsP4UpdateSwordTrail(fp);
     }
 }
+
+/* Remix's define_character gives a fighter its own action array: the
+ * parent's, with the statuses it changes and appends. The source reads the
+ * special statuses (0xDC on) from the view's fkind row, which a P4 fighter
+ * shares with its parent, so for one ftMainSetStatus call the row holds the
+ * fighter's table -- its content's, or the source table when an original
+ * fighter's status is set inside a P4 fighter's call -- and is put back
+ * after. Outside the setter the view is the source table; the first call
+ * keeps a copy of it, which is what an inherited slot reads. */
+static FTStatusDesc *sNdsFTMainSourceSpecialStatusDescs[
+    ARRAY_COUNT(gNdsFTMainSpecialStatusDescsView)];
+static sb32 sNdsFTMainSourceSpecialStatusKept;
+
+static FTStatusDesc **ndsFTMainLendSpecialStatusDescs(FTStruct *fp,
+                                                      FTStatusDesc **saved)
+{
+    FTStatusDesc **row;
+    FTStatusDesc *table;
+    u32 i;
+
+    if (sNdsFTMainSourceSpecialStatusKept == FALSE)
+    {
+        for (i = 0u; i < ARRAY_COUNT(gNdsFTMainSpecialStatusDescsView); i++)
+        {
+            sNdsFTMainSourceSpecialStatusDescs[i] =
+                gNdsFTMainSpecialStatusDescsView[i];
+        }
+        sNdsFTMainSourceSpecialStatusKept = TRUE;
+    }
+    if ((u32)fp->fkind >= ARRAY_COUNT(gNdsFTMainSpecialStatusDescsView))
+    {
+        return NULL;
+    }
+    row = &gNdsFTMainSpecialStatusDescsView[fp->fkind];
+    table = ndsP4SpecialStatusDescs(fp,
+                                    sNdsFTMainSourceSpecialStatusDescs[fp->fkind]);
+    if (table == NULL)
+    {
+        table = sNdsFTMainSourceSpecialStatusDescs[fp->fkind];
+    }
+    if (*row == table)
+    {
+        return NULL;
+    }
+    *saved = *row;
+    *row = table;
+    return row;
+}
 #endif
 
 void ftMainPlayAnimEventsAll(GObj *fighter_gobj)
@@ -403,6 +456,10 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
 #endif
     FTStruct *nds_topology_fp;
     u32 nds_topology_word;
+#if NDS_P4
+    FTStatusDesc **nds_p4_row = NULL;
+    FTStatusDesc *nds_p4_saved = NULL;
+#endif
 
     if (ndsDiagnosticsHandleImportedFTMainSetStatusBefore(fighter_gobj,
             status_id, frame_begin, anim_speed, flags) != FALSE)
@@ -419,17 +476,25 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
     if (nds_topology_fp != NULL)
     {
         ndsP4OnSetStatus(fighter_gobj);
+        nds_p4_row = ndsFTMainLendSpecialStatusDescs(nds_topology_fp,
+                                                     &nds_p4_saved);
     }
 #endif
     battleship_ftMainSetStatus(fighter_gobj, status_id, frame_begin,
                                anim_speed, flags);
+#if NDS_P4
+    if (nds_p4_row != NULL)
+    {
+        *nds_p4_row = nds_p4_saved;
+    }
+#endif
     if (nds_topology_fp != NULL)
     {
         nds_topology_word |= nds_topology_fp->anim_desc.word;
 #if NDS_P4
         if (nds_topology_fp->nds_p4_content != 0u)
         {
-            ndsP4ApplyStatusOverrides(fighter_gobj, status_id);
+            ndsP4AfterSetStatus(fighter_gobj, status_id);
         }
 #endif
     }

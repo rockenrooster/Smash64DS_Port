@@ -48,10 +48,13 @@ LAYOUT = (
 # Original cast: Remix constant name -> fkind.
 ORIGINALS = {"MARIO": 0, "FOX": 1, "DONKEY": 2, "SAMUS": 3, "LUIGI": 4, "LINK": 5,
              "YOSHI": 6, "CAPTAIN": 7, "KIRBY": 8, "PIKACHU": 9, "JIGGLYPUFF": 10, "NESS": 11}
-# P4 selections: Remix constant name -> DS content id (include/nds/nds_p4.h).
-# Content ids follow the production waves; a selection without a compiled
-# content draws its portrait locked.
-CONTENT = {"FALCO": 1}
+# P4 selections: Remix constant name -> DS content id, from the content
+# registry (scripts/p4/contents.json); a selection without a compiled content
+# draws its portrait locked.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import p4_contents  # noqa: E402
+
+CONTENT = {row["remix"]: row["id"] for row in p4_contents.load_registry()}
 # EXTRA-tree selections (Meta Knight, MRGAW, Snake) have no portrait in the main
 # tree's file 0xA05 until the EXTRA staging lands; they draw the NONE plate.
 EXTRA_TREE = {"METAKNIGHT", "MRGAW", "SNAKE"}
@@ -145,7 +148,7 @@ def main() -> int:
     ap.add_argument("--staging", type=Path, required=True)
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--contents", default="",
-                    help="comma-separated Remix names of the contents this build compiles (e.g. FALCO)")
+                    help="Remix names of the contents this build compiles, comma or space separated (e.g. FALCO)")
     args = ap.parse_args()
 
     src = args.staging / "src"
@@ -157,7 +160,7 @@ def main() -> int:
     logo_pos = asm_scope_constants(css_text, "position")
     rows = add_to_css_rows(css_text)
     announce = announcer_ids(fgm_text)
-    built = {c.strip().upper() for c in args.contents.split(",") if c.strip()}
+    built = {c.upper() for c in re.split(r"[,\s]+", args.contents) if c}
     unknown = built - set(CONTENT)
     if unknown:
         raise CssError(f"no content id for {sorted(unknown)}")

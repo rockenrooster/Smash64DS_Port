@@ -29,8 +29,9 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
  * the same family of symbols under its title; one row per content. */
 #define NDS_P4_DECLARE(T) \
     extern FTData gNdsP4##T##Data; \
-    extern const NDSP4StatusOverride gNdsP4##T##StatusOverrides[]; \
-    extern const u32 gNdsP4##T##StatusOverrideCount; \
+    extern FTStatusDesc gNdsP4##T##SpecialStatusDescs[]; \
+    extern const u32 gNdsP4##T##SpecialStatusCount; \
+    extern const u32 gNdsP4##T##LabFallbackCount; \
     extern const NDSP4RelocAsset gNdsP4##T##RelocAssets[]; \
     extern const u32 gNdsP4##T##RelocAssetCount; \
     extern const FTFileSize gNdsP4##T##FileSize; \
@@ -43,13 +44,15 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
     extern const u32 gNdsP4##T##SpriteCount; \
     extern const NDSP4Present gNdsP4##T##Present; \
     extern const NDSP4SwordTrail gNdsP4##T##SwordTrails[]; \
-    extern const u32 gNdsP4##T##SwordTrailCount;
+    extern const u32 gNdsP4##T##SwordTrailCount; \
+    extern const NDSP4Entry gNdsP4##T##Entry;     extern const NDSP4SpecialStart gNdsP4##T##SpecialStarts[];
 #define NDS_P4_ROW(T, title, parent, on_status_hook, computer_rows) \
     { \
         .name = (title), .parent_kind = (parent), \
         .data = &gNdsP4##T##Data, \
-        .overrides = gNdsP4##T##StatusOverrides, \
-        .override_count = &gNdsP4##T##StatusOverrideCount, \
+        .special_statuses = gNdsP4##T##SpecialStatusDescs, \
+        .special_status_count = &gNdsP4##T##SpecialStatusCount, \
+        .lab_fallback_count = &gNdsP4##T##LabFallbackCount, \
         .assets = gNdsP4##T##RelocAssets, \
         .asset_count = &gNdsP4##T##RelocAssetCount, \
         .file_size = &gNdsP4##T##FileSize, \
@@ -64,6 +67,7 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
         .present = &gNdsP4##T##Present, \
         .sword_trails = gNdsP4##T##SwordTrails, \
         .sword_trail_count = &gNdsP4##T##SwordTrailCount, \
+        .entry = &gNdsP4##T##Entry,         .special_starts = gNdsP4##T##SpecialStarts, \
     }
 
 /* Every compiled content (nds_p4_contents.h). Its native hooks live in
@@ -512,30 +516,92 @@ void ndsP4OnSetStatus(GObj *fighter_gobj)
     gNdsP4TranslationMultiplier[fp->player & 3u] = 1.0F;
 }
 
-void ndsP4ApplyStatusOverrides(GObj *fighter_gobj, s32 status_id)
+static u8 sNdsP4SpecialStatusResolved[NDS_P4_CONTENT_LIMIT];
+
+FTStatusDesc *ndsP4SpecialStatusDescs(const FTStruct *fp,
+                                      const FTStatusDesc *parent)
 {
-    FTStruct *fp = ftGetStruct(fighter_gobj);
-    const NDSP4Fighter *f = ndsP4Fighter(fp->nds_p4_content);
+    u32 content = ndsP4Content(fp);
+    const NDSP4Fighter *f = ndsP4Fighter(content);
     u32 i;
 
     if (f == NULL)
     {
-        return;
+        return NULL;
     }
-    for (i = 0u; i < *f->override_count; i++)
+    if (sNdsP4SpecialStatusResolved[content] == 0u)
     {
-        const NDSP4StatusOverride *o = &f->overrides[i];
-
-        if (o->status_id == (u32)status_id)
+        /* Only statuses the parent has carry the marker: an appended status
+         * names every routine. */
+        for (i = 0u; i < *f->special_status_count; i++)
         {
-            fp->proc_update = o->procs[0];
-            fp->proc_interrupt = o->procs[1];
-            fp->proc_physics = o->procs[2];
-            fp->proc_map = o->procs[3];
-            break;
+            FTStatusDesc *row = &f->special_statuses[i];
+
+#define NDS_P4_RESOLVE_PROC(proc_) \
+            if (row->proc_ == NDS_P4_PROC_INHERIT) row->proc_ = parent[i].proc_
+            NDS_P4_RESOLVE_PROC(proc_update);
+            NDS_P4_RESOLVE_PROC(proc_interrupt);
+            NDS_P4_RESOLVE_PROC(proc_physics);
+            NDS_P4_RESOLVE_PROC(proc_map);
+#undef NDS_P4_RESOLVE_PROC
+        }
+        sNdsP4SpecialStatusResolved[content] = 1u;
+    }
+    return f->special_statuses;
+}
+
+const NDSP4Entry *ndsP4Entry(const FTStruct *fp)
+{
+    const NDSP4Fighter *f = ndsP4Fighter(ndsP4Content(fp));
+
+    return (f != NULL) ? f->entry : NULL;
+}
+
+/* Lab stand-ins for unported special-move starters, counted. */
+__attribute__((used)) volatile u32 gNdsP4LabSpecialStandIns;
+
+void ndsP4LabSpecialStandIn(GObj *fighter_gobj)
+{
+    (void)fighter_gobj;
+    gNdsP4LabSpecialStandIns++;
+}
+
+sb32 ndsP4CheckSpecialLent(GObj *fighter_gobj, sb32 (*check)(GObj *),
+                           NDSP4SpecialStart *const *tables,
+                           const u8 *slots, u32 count)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    const NDSP4Fighter *f = ndsP4Fighter(ndsP4Content(fp));
+    NDSP4SpecialStart saved[3];
+    sb32 result;
+    u32 i;
+
+    if ((f == NULL) || (count > (u32)ARRAY_COUNT(saved)))
+    {
+        return check(fighter_gobj);
+    }
+    for (i = 0; i < count; i++)
+    {
+        saved[i] = tables[i][fp->fkind];
+        if (f->special_starts[slots[i]] != NULL)
+        {
+            tables[i][fp->fkind] = f->special_starts[slots[i]];
         }
     }
-    if (f->on_status != NULL)
+    result = check(fighter_gobj);
+    for (i = 0; i < count; i++)
+    {
+        tables[i][fp->fkind] = saved[i];
+    }
+    return result;
+}
+
+void ndsP4AfterSetStatus(GObj *fighter_gobj, s32 status_id)
+{
+    const NDSP4Fighter *f =
+        ndsP4Fighter(ftGetStruct(fighter_gobj)->nds_p4_content);
+
+    if ((f != NULL) && (f->on_status != NULL))
     {
         f->on_status(fighter_gobj, status_id);
     }
@@ -708,6 +774,15 @@ u32 *ndsP4RunRemixMotionEvents(GObj *fighter_gobj, FTMotionScript *ms,
         case 0xD3:
             gNdsP4TranslationMultiplier[fp->player & 3u] = ndsP4HalfFloat(word);
             break;
+        case 0xDB:
+            /* GO TO MOVESET FILE (jump_to_moveset_file_), in both tables: the
+             * script continues at an offset into the fighter's loaded main
+             * motion file. The synthesized motion file keeps that file's
+             * bytes at their own offsets. */
+            p = (u32 *)((uintptr_t)*fp->data->p_file_mainmotion +
+                        (word & 0xFFFFu));
+            ms->p_script = p;
+            continue;
         case 0xD6: /* RANDOM SFX */
         case 0xD9: /* SET ENV COLOR */
         case 0xDC: /* L VOICE SFX */
@@ -728,8 +803,8 @@ u32 *ndsP4RunRemixMotionEvents(GObj *fighter_gobj, FTMotionScript *ms,
             }
             break;
         default:
-            /* D1 armour, D2 hitbox direction, D7 kinetic, D8 hitbox FGM and
-             * DB moveset-file goto run in both tables; E0+ are donor no-ops. */
+            /* D1 armour, D2 hitbox direction, D7 kinetic and D8 hitbox FGM
+             * run in both tables; E0+ are donor no-ops. */
             if (op <= 0xDCu)
             {
                 gNdsP4UnportedMotionEvents++;

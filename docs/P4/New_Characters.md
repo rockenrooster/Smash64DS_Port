@@ -110,11 +110,14 @@ Status lives in P4_STATUS.
 | S11 | **Whole-roster generation.** Every exported fighter is generated and compiled into the lab ROM from day one. Unported routines fall back to the parent's in lab builds only, and each fallback is counted. Pipeline breakage (owner topology, files, scripts, tables) then shows up roster-wide at once, not one fighter at a time. Ship builds compile only accepted fighters. | All 14 load and stand in a lab match with 0 native failures. |
 | S12 | **EXTRA export.** Initialize the EXTRA tree's nested Remix gitlink at its pin, extend `stage_remix.py`/`remix_export.py` to EXTRA, and add Meta Knight, MRGAW and Snake to the table. | The three export with 0 failures and their rows are filled. |
 | S13 | **Sword trails** (Remix `SwordTrail.asm`): a two-colour strip between two points on a model part, drawn natively. Users: Falco's Phantasm (2 trails), Kirby's copied Phantasm, Marth (4), Roy (5) and Dedede's hammer. Falco proves it. | Falco's Phantasm shows its cyan trail; the trail table is generated for every user. |
+| S14 | **Own action arrays.** Remix's `define_character` gives each fighter a copy of its parent's action array, with changed rows and appended statuses. Appended: Wario 2, Marth 8, Roy 10, Sheik 5, Dedede 22, Sonic 18, Banjo 5, Crash 9, Lanky 21. Changed rows: 3 to 33 per fighter. The generator emits the whole special-status table (motion, flags, callbacks). A callback kept from the parent is a marker, filled from the parent's own table at first use. `ftMainSetStatus` reads the table through a per-call view of `dFTMainSpecialStatusDescs`. This replaces the old list of status overrides. | Falco's table replaces his overrides with no behaviour change. All 14 tables generate. |
+| S15 | **P4 memory.** A content loads its Remix files whole (Sonic's main closure 329 KB, Falco's 86 KB), and its own shield-pose file runs the source Event32 path (nine AObjs per joint). Give contents the original cast's treatment: compact packs holding only what the native owner and the pose engine read, and a generated shield-pose package per content. | Every content's four-CPU mirror loads and plays with heap low-water at or above 25,600. |
 
 Order inside Board 1: S1, S2 and S11 first. They make every later step
 cheaper, and S11 surfaces the real failures early. Then S3, S4, S5 and S7,
 proven by Wave 1's consumers. S8, S9 and S13 close Falco. S6 lands with
-Wave 2.
+Wave 2. S15 lands before Wave 4, whose fighters (with Wave 5's) need it
+to fill a four-CPU match.
 S12 can run whenever a build is in progress.
 
 ## Board 2 — fighters, by measured cost

@@ -34,6 +34,9 @@ import remix_rom as R  # noqa: E402
 NO_SCRIPT = 0x80000000
 # DS-synthesized files live above the donor's largest ID (Remix: 5455 files).
 SYNTH_FILE_BASE = 0x1600
+# ftCommonAppearSetStatus (0x8013DBE0): the address past its fkind switch, the
+# entry_script value Remix uses for "no entry effect" (Ganondorf).
+ENTRY_SCRIPT_NONE = 0x8013DD68
 
 # Hand-ported native callbacks for donor routines (src/port/nds_p4_*.c).
 CALLBACK_PORTS = {
@@ -43,32 +46,86 @@ CALLBACK_PORTS = {
     "Phantasm.air_collision_": "ndsP4FalcoPhantasmAirMap",
 }
 
-# Per-fighter DS facts that are not in the donor tables: the parent's file
-# storage that parent callbacks read through globals (Fox code reaches its
-# special files via gFTDataFoxSpecial*), and donor file substitutions proven
-# equivalent (see manifest "deviations").
-FIGHTERS = {
-    "FALCO": {
-        "name": "falco", "title": "Falco", "kind_index": 0,
-        "parent_kind": "nFTKindFox", "parent_data": "dFTFoxData",
-        "shared_storage": {
-            "p_file_shieldpose": None,
-            "p_file_special1": "gFTDataFoxSpecial1",
-            "p_file_special2": "gFTDataFoxSpecial2",
-            "p_file_special3": "gFTDataFoxSpecial3",
-            "p_file_special4": "gFTDataFoxSpecial4",
-        },
-        "particle": "gFTDataFoxParticleBankID",
-        # Remix rewrote FoxSpecial3 (0xA1) for every Arwing user: three
-        # external references to ExternDataBank109+0x19F8 became one internal
-        # copy appended at 0x2F80. Same bytes, no new dependency; the DS keeps
-        # the vanilla file the parent already ships.
-        "equivalent_files": {0xA1: "remix copies ExternDataBank109+0x19F8 inline; vanilla bytes equivalent"},
-    },
+# Vanilla file IDs that Remix rewrote with equivalent bytes, so the DS keeps
+# the vanilla file the parent already ships (manifest "deviations").
+EQUIVALENT_FILES = {
+    # Remix rewrote FoxSpecial3 for every Arwing user: three external
+    # references to ExternDataBank109+0x19F8 became one internal copy appended
+    # at 0x2F80. Same bytes, no new dependency.
+    0xA1: "remix copies ExternDataBank109+0x19F8 inline; vanilla bytes equivalent",
 }
+
+# Remix define_character parents -> the decomp's fighter names.
+PARENT_DECOMP = {
+    "MARIO": "Mario", "FOX": "Fox", "DONKEY": "Donkey", "SAMUS": "Samus",
+    "LUIGI": "Luigi", "LINK": "Link", "YOSHI": "Yoshi", "CAPTAIN": "Captain",
+    "KIRBY": "Kirby", "PIKACHU": "Pikachu", "JIGGLY": "Purin", "NESS": "Ness",
+}
+DECOMP_FTDATA = Path(__file__).resolve().parents[2] / "decomp" / "BattleShip-main" / "decomp" / "src" / "ft" / "ftdata.c"
+DECOMP_SYMBOLS = Path(__file__).resolve().parents[2] / "decomp" / "BattleShip-main" / "decomp" / "symbols" / "symbols_us.txt"
+
+# The DS loader's per-file extern id table (reloc_backend_assets.c
+# NDS_RELOC_EXTERN_FILE_ID_CAPACITY in P4 builds): Banjo's main has 208.
+MAX_EXTERN_IDS = 208
+
+# Remix's special-move starter tables, in NDS_P4_SPECIAL_* order (nds_p4.h).
+SPECIAL_START_TABLES = ("ground_nsp", "air_nsp", "ground_usp", "air_usp", "ground_dsp", "air_dsp")
+
+
+def parent_storage(parent: str) -> dict:
+    """The parent's FTData pointer block (decomp ft/ftdata.c): the globals its
+    code reads its shield-pose and special files through, and its particle
+    bank. A P4 content keeps the parent's code, so its FTData names the same
+    globals."""
+    import re
+
+    title = PARENT_DECOMP.get(parent)
+    if title is None:
+        raise GenError(f"parent {parent} has no decomp FTData")
+    text = DECOMP_FTDATA.read_text(encoding="utf-8")
+    m = re.search(r"FTData dFT%sData =\s*\{(.*?)\};" % title, text, re.S)
+    if m is None:
+        raise GenError(f"dFT{title}Data not found in {DECOMP_FTDATA}")
+    body = re.sub(r"//[^\n]*", "", m.group(1))
+    entries = [e.strip() for e in body.split(",")]
+
+    def ref(index: int) -> str | None:
+        e = entries[index]
+        if e in ("0", "0x00000000", "NULL"):
+            return None
+        if not e.startswith("&"):
+            raise GenError(f"dFT{title}Data[{index}] = {e!r} is not a reference")
+        return e[1:]
+
+    # 9 file IDs and the main size, then p_file_main, mainmotion, submotion,
+    # model, shieldpose, special1..4 and the particle bank (ftdata.c rows).
+    return {
+        "shared_storage": {
+            "p_file_shieldpose": ref(14),
+            "p_file_special1": ref(15), "p_file_special2": ref(16),
+            "p_file_special3": ref(17), "p_file_special4": ref(18),
+        },
+        "particle": ref(19),
+    }
+
+
+def fighter_spec(remix: str, parent: str) -> dict:
+    """A content's DS facts: its registry row (scripts/p4/contents.json) and its
+    parent's storage."""
+    import p4_contents  # noqa: E402
+
+    for row in p4_contents.load_registry():
+        if row["remix"] == remix:
+            spec = {"name": row["name"], "title": row["title"], "kind_index": row["id"] - 1}
+            spec.update(parent_storage(parent))
+            if spec["particle"] is None:
+                raise GenError(f"parent {parent} has no particle bank global")
+            return spec
+    raise GenError(f"{remix}: not in scripts/p4/contents.json")
 
 THROW_DATA_BYTES = 28  # FTThrowHitDesc, the larger of the two SetThrow targets
 SPRITE_BYTES = 68      # libultra Sprite (include/PR/sp.h)
+SPRITE_READ_BYTES = 56  # through Sprite.bitmap, the last field read
 
 
 def load_battle_hud(repo_root: Path):
@@ -147,7 +204,11 @@ def c_float(v: float) -> str:
 
 def sprite_row(rom: R.Rom, fid: int, off: int) -> dict:
     data = rom.file_bytes(fid)
-    if off + SPRITE_BYTES > len(data):
+    # Remix packs some emblem Sprites at the very end of a file with the
+    # struct's last word (frac_t, unread here) cut off (Ganondorf's model
+    # 0x8B0: 64 of 68 bytes). What this reads and the loader normalizes
+    # ends at the bitmap pointer.
+    if off + SPRITE_READ_BYTES > len(data):
         raise GenError(f"{fid:#x}+{off:#x}: Sprite out of range")
     width, height = struct.unpack_from(">hh", data, off + 4)
     return {"file_id": fid, "offset": off, "width": width, "height": height,
@@ -268,7 +329,11 @@ class MotionSynth:
                                      "SetDamageThrown", "RemixRandomSFX"):
                         raise GenError(f"{cmd['at']}: unresolved pointer")
                     if cmd["op"] == "RemixGotoMovesetFile":
-                        raise GenError(f"{cmd['at']}: GO_TO_FILE needs a DS lowering")
+                        # Run as is (nds_p4.c): Remix adds the 16-bit offset
+                        # to the loaded motion file, and the synthesized file
+                        # keeps that file's bytes at their offsets.
+                        if (cmd["words"][0] & 0xFFFF) + 4 > self.base_len:
+                            raise GenError(f"{cmd['at']}: GO_TO_FILE target outside the motion file")
                     continue
                 slot_off = self.map_ram(at[1] + 4)
                 intern[slot_off] = self.map_loc(parse_key(target))
@@ -387,20 +452,67 @@ def main() -> int:
     ap.add_argument("--staging", type=Path, required=True)
     ap.add_argument("--export", type=Path, required=True, help="remix_export.py --out directory")
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument("--lab-fallback", action="store_true",
+                    help="lab builds only: a status with an unported donor routine runs a "
+                         "plain end-of-motion set (listed)")
     args = ap.parse_args()
 
     resolved = json.loads((args.export / "resolved.json").read_text(encoding="utf-8"))
     events = json.loads((args.export / "events.json").read_text(encoding="utf-8"))
     fighter = resolved["fighter"]
-    spec = FIGHTERS.get(fighter)
-    if spec is None:
-        raise GenError(f"{fighter}: no DS fighter spec")
+    spec = fighter_spec(fighter, resolved["parent"])
     rom = R.Rom(args.staging / "ssb64asm.z64")
     vanilla = R.Rom(args.staging / "roms" / "ssb.rom")
     name, title = spec["name"], spec["title"]
     desc = resolved["descriptor"]
     file_ids = list(desc["file_ids"])
     parent_motion = file_ids[1]
+    # The runtime lets the synthesized motion file stand in for the parent's
+    # own (battleship_ftmanager.c ndsP4PublishParentMotion), as Remix's load of
+    # the parent's motion file by its id does.
+    if parent_motion != resolved["parent_descriptor"]["file_ids"][1]:
+        raise GenError(f"motion file {parent_motion:#x} is not the parent's")
+    # Special files 1-4 load into the parent's globals (parent_storage), which
+    # the parent's code reads at the parent's offsets. Remix gives a fighter
+    # its own file pointers and patches those readers (Wolf's Wolfen inside
+    # Fox's Arwing entry). Until a content has that, a lab build loads the
+    # parent's files there, and a shipping build refuses.
+    # Exact without a port: the same layout as the parent's file (Remix points
+    # the parent's readers at the donor's re-skinned copy: Ganondorf's Falcon
+    # Kick reads his own file at Captain's offsets), or a slot the parent
+    # has no file in (no parent code reads it).
+    parent_ids = resolved["parent_descriptor"]["file_ids"]
+    special_standins = []
+
+    def file_layout(fid: int) -> tuple:
+        return (len(rom.file_bytes(fid)),
+                tuple(sorted((off, t[0]) for off, t in rom.reloc_slots(fid).items())))
+
+    for i in range(5, 9):
+        if file_ids[i] == parent_ids[i]:
+            continue
+        if parent_ids[i] == 0:
+            # No parent code reads this slot, but the content's FTData would
+            # load it through the parent's storage, and the parent has none
+            # (Sheik's special1 under Captain). Only the donor's own
+            # routines read it: they need its storage when ported.
+            if spec["shared_storage"][f"p_file_special{i - 4}"] is None:
+                if not args.lab_fallback:
+                    raise GenError(f"special file {i - 4} {file_ids[i]:#x}: the parent has no "
+                                   "storage for it; needs the content's own")
+                special_standins.append({"status": "files", "slot": f"special{i - 4}",
+                                         "routine": f"{file_ids[i]:#x}", "fallback": "0x0"})
+                file_ids[i] = 0
+            continue
+        if file_ids[i] != 0 and file_layout(file_ids[i]) == file_layout(parent_ids[i]):
+            continue
+        if not args.lab_fallback:
+            raise GenError(f"special file {i - 4} {file_ids[i]:#x} differs from the parent's "
+                           f"{parent_ids[i]:#x}: needs its own storage and ported readers")
+        special_standins.append({"status": "files", "slot": f"special{i - 4}",
+                                 "routine": f"{file_ids[i]:#x}",
+                                 "fallback": f"{parent_ids[i]:#x}"})
+        file_ids[i] = parent_ids[i]
 
     synth_id = SYNTH_FILE_BASE + spec["kind_index"] * 0x10
     if rom.file_bytes(parent_motion) != vanilla.file_bytes(parent_motion):
@@ -416,7 +528,7 @@ def main() -> int:
         fid = row["file_id"]
         if row["vanilla_id"]:
             if not row["vanilla_identical"]:
-                why = spec["equivalent_files"].get(fid)
+                why = EQUIVALENT_FILES.get(fid)
                 if why is None:
                     raise GenError(f"vanilla ID {fid:#x} carries donor bytes with no classification")
                 deviations.append({"file_id": fid, "class": "equivalent", "why": why})
@@ -425,6 +537,9 @@ def main() -> int:
         # The main file's references into the parent motion file resolve to the
         # same offsets in the synthesized copy, so the parent file never loads.
         blob = retarget_o2r_externs(blob, {parent_motion: synth_id})
+        if len(rom.extern_ids(fid)) > MAX_EXTERN_IDS:
+            raise GenError(f"file {fid:#x}: {len(rom.extern_ids(fid))} extern ids, the DS loader holds "
+                           f"{MAX_EXTERN_IDS} (NDS_RELOC_EXTERN_FILE_ID_CAPACITY)")
         (o2r_out / f"{fid:04x}").write_bytes(blob)
         shipped[fid] = hashlib.sha256(blob).hexdigest()
     (o2r_out / f"{synth_id:04x}").write_bytes(motion_o2r)
@@ -474,25 +589,123 @@ def main() -> int:
             raise GenError(f"menu motion {m['index']}: vanilla script pointer {s:#x} needs a symbol")
         menus.append((m["anim_file_id"], script_offset(s), m["anim_flags"]))
 
-    overrides = []
+    # The special status table (0xDC on): Remix's action array, statuses its
+    # add_new_action appended included. A slot whose callback is the parent's
+    # is inherited at run time from the parent's own table (ndsP4SpecialStatusDescs),
+    # so this file never names a parent routine; a slot Remix changed names a
+    # vanilla routine or a hand port (CALLBACK_PORTS). In --lab-fallback builds
+    # a status with a donor routine that has no port runs a plain
+    # end-of-motion set in all four slots, and each such routine is listed in
+    # the manifest; shipping builds fail instead.
+    slots = ("proc_update", "proc_interrupt", "proc_physics", "proc_map")
+    specials = []
+    lab_fallbacks = list(special_standins)
     for s in resolved["statuses"]:
         inh = s.get("inherited")
-        if not inh or all(inh.values()):
-            continue
-        if not all(inh.get(k, True) for k in ("motion_id", "attack_id", "sflags")):
-            raise GenError(f"status {s['status_id']:#x}: descriptor (not only callbacks) differs")
+        if inh is None:
+            continue  # the common statuses: the shared table
+        sid = s["status_id"]
+        parent_procs = s.get("parent_procs")
+        h = s["sflags"]
+        air = (h >> 11) & 1
         procs = []
-        for proc in ("proc_update", "proc_interrupt", "proc_physics", "proc_map"):
+        unported = []
+        for i, proc in enumerate(slots):
             nm = s.get(proc + "_name")
-            if s[proc] == 0:
+            if parent_procs is not None and inh.get(proc, False):
+                procs.append("NDS_P4_PROC_INHERIT")
+            elif s[proc] == 0:
                 procs.append("NULL")
             elif nm in CALLBACK_PORTS:
                 procs.append(CALLBACK_PORTS[nm])
             elif nm and "." not in nm:
                 procs.append(nm)
+            elif args.lab_fallback:
+                unported.append((proc, nm))
+                procs.append(None)
             else:
-                raise GenError(f"status {s['status_id']:#x} {proc}: {nm!r} has no DS port")
-        overrides.append((s["status_id"], procs))
+                raise GenError(f"status {sid:#x} {proc}: {nm!r} has no DS port")
+        if unported:
+            # A status with an unported routine runs a plain end-of-motion set
+            # in all four slots: the parent's routines expect the parent's own
+            # script (Captain's Falcon Dive procs on Marth's Dolphin Slash
+            # caught a fighter the script never gave throw data, and the
+            # release faulted), and mixing them with stand-ins is no better.
+            procs = list(("ftAnimEndSetFall", "NULL", "ftPhysicsApplyAirVelDriftFastFall",
+                          "mpCommonProcFighterWaitOrLanding") if air else
+                         ("ftAnimEndSetWait", "NULL", "ftPhysicsApplyGroundVelFriction",
+                          "mpCommonSetFighterFallOnEdgeBreak"))
+            for proc, nm in unported:
+                lab_fallbacks.append({"status": hex(sid), "slot": proc, "routine": nm,
+                                      "fallback": "end-of-motion set"})
+        specials.append({"status": sid, "name": s.get("name"), "motion_id": s["motion_id"],
+                         "attack_id": s["attack_id"], "unused": (h >> 13) & 7,
+                         "is_smash_attack": (h >> 12) & 1, "ga": air,
+                         "is_projectile": (h >> 10) & 1, "stat_attack_id": h & 0x3FF,
+                         "procs": procs})
+    if [r["status"] for r in specials] != list(range(0xDC, 0xDC + len(specials))):
+        raise GenError("special statuses are not contiguous from 0xDC")
+
+    # The entry rows (nds_p4.h NDSP4Entry). entry_script names a case of the
+    # source's switch in ftCommonAppearSetStatus, or the address past it (no
+    # effect), or a Remix routine; Remix patches the shared makers to read the
+    # fighter's own files. Exact without a port: no effect, or the parent's
+    # case on the parent's special files or same-layout copies of them.
+    tables = resolved["kind_tables"]
+    action = bytes.fromhex(tables["entry_action"]["value"])
+    appear = struct.unpack(">ii", action)
+    script = int(tables["entry_script"]["value"], 16)
+    parent_script = int(tables["entry_script"]["parent_value"], 16)
+    entry_lab_fallback = 0
+    if script == ENTRY_SCRIPT_NONE:
+        entry_effect = "NDS_P4_ENTRY_NONE"
+    elif script == parent_script:
+        # Every special slot the parent's code reads now holds the
+        # parent's file or a same-layout copy (the stand-ins above).
+        entry_effect = "NDS_P4_ENTRY_PARENT"
+    elif args.lab_fallback:
+        entry_effect = "NDS_P4_ENTRY_NONE"
+        entry_lab_fallback = 1
+        lab_fallbacks.append({"status": "entry", "slot": "entry_script",
+                              "routine": f"{script:#010x}", "fallback": "NDS_P4_ENTRY_NONE"})
+    else:
+        raise GenError(f"entry_script {script:#010x} (parent {parent_script:#010x}) needs a port")
+
+    # The special-move starters (nds_p4.h NDS_P4_SPECIAL_*): Remix's per-kind
+    # tables that replace dFTCommonSpecial*StatusList. A row equal to the
+    # parent's stays NULL (the source table's own entry); a changed row names
+    # a vanilla routine or a hand port. In --lab-fallback builds a donor
+    # routine with no port starts nothing (ndsP4LabSpecialStandIn): the
+    # parent's starter would enter a parent status the donor may never use,
+    # with its dead row (Lanky's 0xE1 has no motion, so Mario's Super Jump
+    # Punch read a TransN joint that was never made).
+    remix_names = None
+    decomp_names = None
+    special_starts = []
+    proto_extra = set()
+    for table in SPECIAL_START_TABLES:
+        value = int(tables[table]["value"], 16)
+        if value == int(tables[table]["parent_value"], 16):
+            special_starts.append("NULL")
+            continue
+        if remix_names is None:
+            _, remix_names = R.load_symbols(args.staging / "logfile.log")
+            decomp_names = R.load_decomp_symbols(DECOMP_SYMBOLS)
+        if value >= R.REMIX_CODE_RAM:
+            nm = (remix_names.get(value) or [None])[0]
+        else:
+            nm = decomp_names.get(value)
+        if nm in CALLBACK_PORTS:
+            special_starts.append(CALLBACK_PORTS[nm])
+        elif nm and "." not in nm:
+            special_starts.append("ndsP4Proc_" + nm)
+            proto_extra.add(nm)
+        elif args.lab_fallback:
+            special_starts.append("ndsP4LabSpecialStandIn")
+            lab_fallbacks.append({"status": "special", "slot": table,
+                                  "routine": nm or f"{value:#010x}", "fallback": "no special"})
+        else:
+            raise GenError(f"{table} {value:#010x} ({nm}) has no DS port")
 
     # ftManagerSetupFileSize's three answers, computed the way
     # generate_fighter_production_manifest.extern_alloc_size does for the
@@ -544,9 +757,13 @@ def main() -> int:
         "#include <nds/nds_p4.h>",
         "",
     ]
-    proto = sorted({p for _, procs in overrides for p in procs if p != "NULL"})
+    proto = sorted(proto_extra | {p for r in specials for p in r["procs"]
+                    if p not in ("NULL", "NDS_P4_PROC_INHERIT")})
+    # Each routine through an alias of its own symbol: a vanilla routine a
+    # status slot holds may return a value (mpCommonCheckFighterLanding is
+    # sb32), and a second prototype would conflict with its header's.
     for p in proto:
-        lines.append(f"void {p}(GObj *fighter_gobj);")
+        lines.append(f'void ndsP4Proc_{p}(GObj *fighter_gobj) __asm__("{p}");')
     lines += [
         "",
         f"static FTMotionDesc s{ident}MotionDescs[{len(rows)}] = {{",
@@ -574,17 +791,27 @@ def main() -> int:
     lines.append(f"    &s{ident}Main, &s{ident}MainMotion, NULL, &s{ident}Model,")
     sp = store["p_file_shieldpose"]
     lines.append(f"    {('&' + sp) if sp else 'NULL'},")
-    lines.append("    " + ", ".join(f"&{store[k]}" for k in
+    lines.append("    " + ", ".join((f"&{store[k]}" if store[k] else "NULL") for k in
                                      ("p_file_special1", "p_file_special2", "p_file_special3", "p_file_special4")) + ",")
     lines.append(f"    &{spec['particle']}, 0, 0, 0, 0,")
     lines.append(f"    {desc['o_attributes']:#x},")
     lines.append(f"    (FTMotionDescArray *)s{ident}MotionDescs,")
     lines.append(f"    (FTMotionDescArray *)s{ident}SubMotionDescs,")
     lines.append(f"    {len(rows)}, &s{ident}SubMotionCount, 0")
-    lines += ["};", "", f"const NDSP4StatusOverride g{ident}StatusOverrides[] = {{"]
-    for sid, procs in overrides:
-        lines.append(f"    {{ {sid:#x}, {{ {', '.join(procs)} }} }},")
-    lines += ["};", f"const u32 g{ident}StatusOverrideCount = {len(overrides)};", "",
+    lines += ["};", "",
+              "/* Special statuses from 0xDC, Remix's action array: motion, motion attack,",
+              " * status flags (unused, smash, ground/air, projectile, status attack) and",
+              " * callbacks; NDS_P4_PROC_INHERIT takes the parent's at first use. */",
+              f"FTStatusDesc g{ident}SpecialStatusDescs[{len(specials)}] = {{"]
+    for r in specials:
+        lines.append(f"    /* {r['status']:#x} {r['name'] or ''} */")
+        lines.append(f"    {{ {{ {r['motion_id']}, {r['attack_id']} }}, "
+                     f"{{ {{ {r['unused']}, {r['is_smash_attack']}, {r['ga']}, "
+                     f"{r['is_projectile']}, {r['stat_attack_id']} }} }}, "
+                     f"{', '.join(p if p in ('NULL', 'NDS_P4_PROC_INHERIT') else 'ndsP4Proc_' + p for p in r['procs'])} }},")
+    lines += ["};", f"const u32 g{ident}SpecialStatusCount = {len(specials)};",
+              f"/* Donor routines this lab build runs as fallbacks (manifest lab_fallbacks). */",
+              f"const u32 g{ident}LabFallbackCount = {len(lab_fallbacks)};", "",
               f"const NDSP4RelocAsset g{ident}RelocAssets[] = {{"]
     for fid in sorted(shipped):
         lines.append(f"    {{ {fid:#x}, \"nitro:/reloc/p4/{fid:04x}\" }},")
@@ -636,7 +863,13 @@ def main() -> int:
         lines.append(f"    {{ {t['id']}, {t['model_part']}, {t['axis']}, 0, "
                      f"{t['colour_1']:#010x}u, {t['colour_2']:#010x}u, "
                      f"{c_float(t['start'])}, {c_float(t['end'])} }},")
-    lines += ["};", f"const u32 g{ident}SwordTrailCount = {len(trails)};", ""]
+    lines += ["};", f"const u32 g{ident}SwordTrailCount = {len(trails)};", "",
+              "/* Entry rows: appear statuses (right, left), effect, lab stand-in. */",
+              f"const NDSP4Entry g{ident}Entry = {{ {{ {appear[0]:#x}, {appear[1]:#x} }}, "
+              f"{entry_effect}, {entry_lab_fallback}, {{ 0, 0 }} }};", "",
+              "/* Special-move starters (NDS_P4_SPECIAL_*); NULL keeps the source table's. */",
+              f"const NDSP4SpecialStart g{ident}SpecialStarts[NDS_P4_SPECIAL_COUNT] = {{",
+              "    " + ", ".join(special_starts), "};", ""]
     src = "\n".join(lines)
     (args.out / f"nds_p4_{name}.generated.c").write_text(src, encoding="utf-8", newline="\n")
 
@@ -649,13 +882,17 @@ def main() -> int:
                                "intern_slots": synth.intern_count,
                                "remix_intervals": [[hex(a), hex(b)] for a, b in synth.intervals]},
         "shipped_o2r_sha256": {f"{k:#x}": v for k, v in sorted(shipped.items())},
-        "status_overrides": [{"status": hex(s), "procs": p} for s, p in overrides],
+        "special_statuses": len(specials),
+        "status_changes": [{"status": hex(r["status"]), "procs": r["procs"]} for r in specials
+                           if any(p != "NDS_P4_PROC_INHERIT" for p in r["procs"])],
+        "lab_fallbacks": lab_fallbacks,
         "file_size": {"main": sizes[0], "mainmotion_largest_anim": sizes[1],
                       "submotion_largest_anim": sizes[2]},
         "deviations": deviations,
     }
     (args.out / "manifest.json").write_text(json.dumps(manifest, indent=1), encoding="utf-8")
-    print(json.dumps({k: manifest[k] for k in ("synthesized_motion", "status_overrides", "deviations")}, indent=1))
+    print(json.dumps({k: manifest[k] for k in ("synthesized_motion", "special_statuses",
+                                                "lab_fallbacks", "deviations")}, indent=1))
     return 0
 
 

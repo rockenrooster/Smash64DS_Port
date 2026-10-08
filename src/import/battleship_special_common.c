@@ -92,16 +92,73 @@ NDS_SPECIAL_COMMON_WEAK_STATUS(ftNessSpecialAirLwStartSetStatus)
 void ftKirbySpecialNSetStatusSelect(GObj *fighter_gobj);
 void ftKirbySpecialAirNSetStatusSelect(GObj *fighter_gobj);
 
+#if NDS_P4
+/* Remix's special-move starter tables (S3): the source checks run with the
+ * content's rows lent to its kind's entries (ndsP4CheckSpecialLent). */
+#include <nds/nds_p4.h>
+#define ftCommonSpecialNCheckInterruptCommon \
+    ndsP4SourceFTCommonSpecialNCheckInterruptCommon
+#define ftCommonSpecialAirCheckInterruptCommon \
+    ndsP4SourceFTCommonSpecialAirCheckInterruptCommon
+sb32 ndsP4SourceFTCommonSpecialNCheckInterruptCommon(GObj *fighter_gobj);
+sb32 ndsP4SourceFTCommonSpecialAirCheckInterruptCommon(GObj *fighter_gobj);
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonspecialn.c"
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonspecialair.c"
+#if NDS_P4
+#undef ftCommonSpecialNCheckInterruptCommon
+#undef ftCommonSpecialAirCheckInterruptCommon
+
+sb32 ftCommonSpecialNCheckInterruptCommon(GObj *fighter_gobj)
+{
+    static NDSP4SpecialStart *const tables[] = { dFTCommonSpecialNStatusList };
+    static const u8 slots[] = { NDS_P4_SPECIAL_GROUND_N };
+
+    return ndsP4CheckSpecialLent(fighter_gobj,
+                                 ndsP4SourceFTCommonSpecialNCheckInterruptCommon,
+                                 tables, slots, ARRAY_COUNT(slots));
+}
+
+sb32 ftCommonSpecialAirCheckInterruptCommon(GObj *fighter_gobj)
+{
+    static NDSP4SpecialStart *const tables[] = {
+        dFTCommonSpecialAirNStatusList, dFTCommonSpecialAirHiStatusList,
+        dFTCommonSpecialAirLwStatusList
+    };
+    static const u8 slots[] = {
+        NDS_P4_SPECIAL_AIR_N, NDS_P4_SPECIAL_AIR_HI, NDS_P4_SPECIAL_AIR_LW
+    };
+
+    return ndsP4CheckSpecialLent(fighter_gobj,
+                                 ndsP4SourceFTCommonSpecialAirCheckInterruptCommon,
+                                 tables, slots, ARRAY_COUNT(slots));
+}
+#endif
 
 #if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
     NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI
+#if NDS_P4
+#define ftCommonSpecialHiCheckInterruptCommon \
+    ndsP4SourceFTCommonSpecialHiCheckInterruptCommon
+sb32 ndsP4SourceFTCommonSpecialHiCheckInterruptCommon(GObj *fighter_gobj);
+#else
 #define ftCommonSpecialHiCheckInterruptCommon \
     ndsBaseFTCommonSpecialHiCheckInterruptCommon
+#endif
 sb32 ndsBaseFTCommonSpecialHiCheckInterruptCommon(GObj *fighter_gobj);
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonspecialhi.c"
 #undef ftCommonSpecialHiCheckInterruptCommon
+#if NDS_P4
+sb32 ndsBaseFTCommonSpecialHiCheckInterruptCommon(GObj *fighter_gobj)
+{
+    static NDSP4SpecialStart *const tables[] = { dFTCommonSpecialHiStatusList };
+    static const u8 slots[] = { NDS_P4_SPECIAL_GROUND_HI };
+
+    return ndsP4CheckSpecialLent(fighter_gobj,
+                                 ndsP4SourceFTCommonSpecialHiCheckInterruptCommon,
+                                 tables, slots, ARRAY_COUNT(slots));
+}
+#endif
 #endif
 
 #endif

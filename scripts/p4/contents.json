@@ -1,6 +1,19 @@
 {
  "comment": "P4 content registry (docs/P4/New_Characters.md, S1). One row per Smash Remix fighter the port can build. `id` is the content's stable identity: it is saved in match configs, sent in the P3 descriptor and sits in the character-select id NDS_P4_SEL_BASE + id, so it never changes once assigned. `name` names the build directories, the NitroFS files and the Makefile flag NDS_P4_<NAME>; `remix` is the donor's define_character name; `title` builds the C symbol names (gNdsP4<Title>...). Everything else (parent, files, attributes) comes from the export.",
  "contents": [
-  {"id": 1, "name": "falco", "remix": "FALCO", "title": "Falco"}
+  {"id": 1, "name": "falco", "remix": "FALCO", "title": "Falco"},
+  {"id": 2, "name": "ganondorf", "remix": "GND", "title": "Ganondorf"},
+  {"id": 3, "name": "wolf", "remix": "WOLF", "title": "Wolf"},
+  {"id": 4, "name": "bowser", "remix": "BOWSER", "title": "Bowser"},
+  {"id": 5, "name": "marth", "remix": "MARTH", "title": "Marth"},
+  {"id": 6, "name": "roy", "remix": "ROY", "title": "Roy"},
+  {"id": 7, "name": "wario", "remix": "WARIO", "title": "Wario"},
+  {"id": 8, "name": "peach", "remix": "PEACH", "title": "Peach"},
+  {"id": 9, "name": "crash", "remix": "CRASH", "title": "Crash"},
+  {"id": 10, "name": "lanky", "remix": "LANKY", "title": "Lanky"},
+  {"id": 11, "name": "sheik", "remix": "SHEIK", "title": "Sheik"},
+  {"id": 12, "name": "banjo", "remix": "BANJO", "title": "Banjo"},
+  {"id": 13, "name": "sonic", "remix": "SONIC", "title": "Sonic"},
+  {"id": 14, "name": "dedede", "remix": "DEDEDE", "title": "Dedede"}
  ]
 }
