@@ -399,6 +399,49 @@ static void ndsP4LoadOpenSpecialFiles(u32 content, FTData *data)
     }
 }
 
+/* S15: a content's match loads its select-screen pack -- Main whole, the
+ * model without the display lists its native owner image draws -- in place
+ * of the source loader's whole files (ftManagerSetupFilesMainKind), restores
+ * the Main pointers into its other files from the pack's manifest (loading
+ * those files), and then publishes the file globals through the source's
+ * ftManagerSetupFilesKind, as the original cast's battle packs do. Runs
+ * under the parent's FTData view. FALSE: this scene has no pack path, and
+ * the source loader runs instead. */
+static sb32 ndsP4SetupPackFiles(u32 content, s32 fkind)
+{
+#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+    FTData *data = dFTManagerDataFiles[fkind];
+    s32 kind = (s32)(NDS_P4_SEL_BASE + content);
+    s32 preview;
+
+    if (ndsRelocUseBattleCoreFighterData() == FALSE)
+    {
+        return FALSE;
+    }
+    preview = ndsRelocLoadPreviewFighter(kind);
+    if (preview == FALSE)
+    {
+        return FALSE;
+    }
+    if (preview == 2)
+    {
+        (void)ndsRelocPatchCompactBattleMainExterns(kind);
+        if (data->particles_script_lo != 0)
+        {
+            *data->p_particle = efParticleGetLoadBankID(
+                data->particles_script_lo, data->particles_script_hi,
+                data->particles_texture_lo, data->particles_texture_hi);
+        }
+        ftManagerSetupFilesKind(fkind);
+    }
+    return TRUE;
+#else
+    (void)content;
+    (void)fkind;
+    return FALSE;
+#endif
+}
+
 static void ndsP4SetupFilesForParent(s32 fkind)
 {
     u32 done = 0u;
@@ -432,7 +475,10 @@ static void ndsP4SetupFilesForParent(s32 fkind)
         memcpy(view, sNdsP4FtDataReal, sizeof(view));
         view[fkind] = f->data;
         sNdsP4FtDataView = view;
-        ndsBaseFTManagerSetupFilesAllKind(fkind);
+        if (ndsP4SetupPackFiles(content, fkind) == FALSE)
+        {
+            ndsBaseFTManagerSetupFilesAllKind(fkind);
+        }
         sNdsP4FtDataView = sNdsP4FtDataReal;
         ndsP4LoadOpenSpecialFiles(content, f->data);
         ndsP4PublishParentMotion(f);

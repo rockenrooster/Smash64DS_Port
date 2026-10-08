@@ -19,6 +19,13 @@ cell keeps the source bytes, ENDDL plus 0, which is what the fighter display
 contract skips for a P4 fighter (ndsFighterDisplayContractSelectDL); every
 other cell carries a nonzero original offset.
 
+The same pack loads a content's fighters in a match (S15), so it also prunes
+every alternate model part the native owner image carries (part 1 up; the
+variants its pins drop keep their lists), and writes the battle manifest
+beside it (<kind>.ext, reloc_preview_pack.c's BEX1 rows): each Main pointer
+left NULL as (slot, file, offset), which the match restores once those files
+are loaded. No other file of the content may point into pruned model bytes.
+
 The pack kind is NDS_P4_SEL_BASE + content (src/port/reloc_preview_pack.c),
 written to fighters/preview/<kind>.fpc; the layout follows
 include/nds/nds_preview_pack.h.
@@ -44,6 +51,9 @@ ALIGN = 16
 SEL_BASE = 0x40  # include/nds/nds_p4.h NDS_P4_SEL_BASE
 MODELPARTS_ENTRIES = 37 - 4  # nFTPartsJointNumMax - nFTPartsJointCommonStart
 FTMODELPART_DESC_PARTS = 2   # FTModelPartDesc.modelparts[1][2]
+EXT_MAGIC = 0x31584542  # BEX1: reloc_preview_pack.c NDS_BATTLE_EXTERN_MAGIC
+EXT_VERSION = 2
+EXT_MAX = 24            # NDS_BATTLE_EXTERN_MAX
 
 
 class PackError(Exception):
@@ -179,13 +189,41 @@ def walk_geometry(model: P.O2RFile, roots: set[int]):
     return merge(blocks), merge(vtx)
 
 
-def build(o2r_dir: Path, main_id: int, model_id: int, attr: int, kind: int):
+def variant_roots(name: str, o2r_dir: Path, attr: int) -> set[int]:
+    """Model offsets of the alternate model-part lists (part 1 up) the native
+    owner image carries for `name`: P2_MODEL_PART_ROOT_VARIANTS as the owner
+    generator registers it, less the variants its pins drop (those keep their
+    source lists in the pack)."""
+    pins = P.load_pins(name)
+    if pins is None:
+        raise PackError(f"no native owner pins for {name} (scripts/p4/owners)")
+    P.register(name, o2r_dir, attr, pins)
+    rows = P.O.P2_MODEL_PART_ROOT_VARIANTS.get(name, {})
+    return {offset for detail in rows.values() for _binding, offset in detail}
+
+
+def build(o2r_dir: Path, main_id: int, model_id: int, attr: int, kind: int,
+          extra_roots: set[int] = frozenset()):
     main = P.O2RFile(o2r_dir / f"{main_id:04x}")
     model = P.O2RFile(o2r_dir / f"{model_id:04x}")
     tables = P.donor_tables(o2r_dir, main_id, model_id, attr)
     roots = dl_roots(main, model, model_id, attr, tables["trees"], tables["dl_pairs"])
+    roots |= set(extra_roots)
     dls, vtxs = walk_geometry(model, roots)
     pruned = merge(dls + vtxs)
+    # The content's other files resolve their pointers into the model by
+    # source offset through the pack's spans: none may name pruned bytes.
+    for path in sorted(o2r_dir.iterdir()):
+        try:
+            fid = int(path.name, 16)
+        except ValueError:
+            continue
+        if fid in (main_id, model_id):
+            continue
+        for slot, (kind_, target_fid, target) in P.O2RFile(path).slots.items():
+            if kind_ == "extern" and target_fid == model_id and in_ranges(target, pruned):
+                raise PackError(f"file {fid:#x} slot {slot:#x} points into pruned model "
+                                f"bytes at {target:#x}")
     kept = []
     cur = 0
     for a, b in pruned:
@@ -291,14 +329,31 @@ def build(o2r_dir: Path, main_id: int, model_id: int, attr: int, kind: int):
     blob = (header + b"".join(struct.pack("<8I", *s) for s in sections)
             + bytes(data) + fixup_bytes + span_bytes)
     assert len(blob) == file_bytes
+
+    # The battle manifest (reloc_preview_pack.c, BEX1): every Main pointer
+    # the pack left NULL, as (Main slot, file, offset in that file), which a
+    # match restores after loading those files. No foreign image bank.
+    externs = []
+    for _sec, slot, cls, _fid in pairs:
+        if cls != "null":
+            continue
+        _kind, fid, target = main.slots[slot]
+        if max(slot, fid, target) > 0xFFFF:
+            raise PackError(f"main slot {slot:#x} -> {fid:#x}+{target:#x} exceeds a manifest row")
+        externs.append((slot, fid, target))
+    if len(externs) > EXT_MAX:
+        raise PackError(f"{len(externs)} Main externs exceed the manifest's {EXT_MAX}")
+    ext = (struct.pack("<IHHIIII", EXT_MAGIC, EXT_VERSION, len(externs), 0, 0, fnv1a32(b""), 0)
+           + b"".join(struct.pack("<3H", *row) for row in externs))
     meta = {
         "kind": kind, "main_bytes": main_len, "model_bytes": len(model.data),
         "model_kept_bytes": kept_bytes, "geometry_bytes": sum(b - a for a, b in pruned),
-        "display_lists": len(dls), "roots": len(roots), "root_cells": len(cells),
+        "display_lists": len(dls), "roots": len(roots), "variant_roots": len(set(extra_roots)),
+        "root_cells": len(cells),
         "fixups": len(fixups), "null_fixups": {f"{k:#x}": v for k, v in sorted(nulls.items())},
-        "file_bytes": file_bytes,
+        "file_bytes": file_bytes, "manifest_rows": len(externs),
     }
-    return blob, meta
+    return blob, meta, ext
 
 
 def main() -> int:
@@ -325,12 +380,21 @@ def main() -> int:
     if None in (args.main, args.model, args.attributes, args.kind):
         ap.error("give --content and --export-root, or --main/--model/--attributes/--kind")
     try:
-        blob, meta = build(args.o2r, args.main, args.model, args.attributes, args.kind)
+        # A registered content's pack also prunes the variant lists its
+        # native owner image draws (a match sets them; the select screen
+        # never does, so the pack serves both).
+        extra = set()
+        if args.content is not None:
+            P.load_donor(args.content, args.export_root)
+            extra = variant_roots(args.content, args.o2r, args.attributes)
+        blob, meta, ext = build(args.o2r, args.main, args.model, args.attributes, args.kind,
+                                extra)
     except PackError as error:
         print(f"p4_preview_pack: {error}", file=sys.stderr)
         return 1
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_bytes(blob)
+    args.out.with_suffix(".ext").write_bytes(ext)
     args.out.with_suffix(".json").write_text(json.dumps(meta, indent=1) + "\n",
                                              encoding="utf-8", newline="\n")
     print(json.dumps(meta))

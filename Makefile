@@ -6042,6 +6042,7 @@ NDS_NITROFS_P4_FILES += $(foreach row,$(NDS_P4_ENABLED_ROWS), \
 	$(NITROFS_DIR)/fighters/$(call nds_p4_field,$(row),1)_high.bin \
 	$(NITROFS_DIR)/fighters/$(call nds_p4_field,$(row),1)_low.bin \
 	$(NITROFS_DIR)/fighters/preview/$(shell echo $$((64 + $(call nds_p4_field,$(row),4)))).fpc \
+	$(NITROFS_DIR)/fighters/preview/$(shell echo $$((64 + $(call nds_p4_field,$(row),4)))).ext \
 	$(NITROFS_DIR)/p4/$(call nds_p4_field,$(row),1).tab)
 # The contents' Remix sounds as a second FGM pack (scripts/p4/p4_audio.py).
 ifeq ($(NDS_P4),1)
@@ -7954,14 +7955,20 @@ $$(NDS_P4_GEN)/$(1)/nds_p4_$(1).generated.c: $$(NDS_P4_EXPORT)/$(1)/resolved.jso
 $$(NDS_P4_GEN)/$(1)/preview.fpc: $$(NDS_P4_GEN)/$(1)/nds_p4_$(1).generated.c \
 		$$(PROJECT_ROOT)/scripts/p4/p4_preview_pack.py $$(PROJECT_ROOT)/scripts/p4/p4_native_owner.py \
 		$$(PROJECT_ROOT)/scripts/p4/p4_contents.py $$(PROJECT_ROOT)/scripts/p4/contents.json \
-		$$(PROJECT_ROOT)/scripts/p4/ft_layout.py $$(PROJECT_ROOT)/include/nds/nds_preview_pack.h
+		$$(PROJECT_ROOT)/scripts/p4/ft_layout.py $$(PROJECT_ROOT)/include/nds/nds_preview_pack.h \
+		$$(PROJECT_ROOT)/scripts/p4/owners/$(1).json
 	python "$$(PROJECT_ROOT)/scripts/p4/p4_preview_pack.py" --o2r "$$(NDS_P4_GEN)/$(1)/o2r" \
 		--content $(1) --export-root "$$(NDS_P4_EXPORT)" --out "$$@"
+# Written with the pack: the Main pointers a match restores (BEX1 rows).
+$$(NDS_P4_GEN)/$(1)/preview.ext: $$(NDS_P4_GEN)/$(1)/preview.fpc ; @:
 $$(NDS_P4_GEN)/$(1)/articles.json: $$(NDS_P4_GEN)/$(1)/nds_p4_$(1).generated.c \
 		$$(PROJECT_ROOT)/scripts/p4/p4_articles.py $$(PROJECT_ROOT)/scripts/p4/contents.json
 	python "$$(PROJECT_ROOT)/scripts/p4/p4_articles.py" --o2r "$$(NDS_P4_GEN)/$(1)/o2r" \
 		--export "$$(NDS_P4_EXPORT)/$(1)" --content $(1) --out "$$@"
 $$(NITROFS_DIR)/fighters/preview/$(5).fpc: $$(NDS_P4_GEN)/$(1)/preview.fpc
+	@mkdir -p $$(dir $$@)
+	@cp $$< $$@
+$$(NITROFS_DIR)/fighters/preview/$(5).ext: $$(NDS_P4_GEN)/$(1)/preview.ext
 	@mkdir -p $$(dir $$@)
 	@cp $$< $$@
 # The content's match tables (motion descriptors, CPU rows): compiled alone and

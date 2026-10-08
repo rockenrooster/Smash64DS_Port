@@ -1052,16 +1052,29 @@ s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
     u64 expected_bytes;
     u32 allocation;
     FTData *fighter;
-    char path[] = "nitro:/fighters/battle/00.ext";
-    const u32 digit_at = sizeof("nitro:/fighters/battle/") - 1u;
+    char battle_path[] = "nitro:/fighters/battle/00.ext";
+    char *path = battle_path;
+    u32 digit_at = sizeof("nitro:/fighters/battle/") - 1u;
+#if NDS_P4
+    /* A P4 content's match loads its select-screen pack, whose manifest sits
+     * beside it (scripts/p4/p4_preview_pack.py). */
+    char preview_path[] = "nitro:/fighters/preview/00.ext";
+#endif
     u32 i;
 
-    if (((u32)fkind >= 12u) ||
+    if ((ndsPreviewKindIndex(fkind) < 0) ||
         (ndsRelocUseBattleCoreFighterData() == FALSE))
     {
         return FALSE;
     }
-    fighter = dFTManagerDataFiles[fkind];
+#if NDS_P4
+    if (fkind >= 12)
+    {
+        path = preview_path;
+        digit_at = sizeof("nitro:/fighters/preview/") - 1u;
+    }
+#endif
+    fighter = ndsPreviewKindData(fkind);
     if ((fighter == NULL) || (fighter->p_file_main == NULL) ||
         (*fighter->p_file_main == NULL))
     {
@@ -1124,7 +1137,7 @@ s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
             ndsRelocWriteNative32(foreign_data + i, ndsRelocReadBe32(foreign_data + i));
         }
     }
-    resident = &sNdsPreviewResidents[fkind];
+    resident = &sNdsPreviewResidents[ndsPreviewKindIndex(fkind)];
     resident->foreign_images = foreign_images;
     resident->foreign_count = header.foreign_count;
     gNdsBattleCoreForeignImageBytes += allocation;
@@ -1143,6 +1156,15 @@ s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
         {
             ndsBattleCoreExternHalt(fkind);
         }
+#if NDS_P4
+        /* A lab build's stand-in replaces the donor file: the source loader
+         * would not load it either (ndsRelocNativeEntryOwnsDependency). */
+        if ((fkind >= 12) &&
+            (ndsP4LabSkipsDependency(main_loaded->asset_id, rows[i].dep_asset) != FALSE))
+        {
+            continue;
+        }
+#endif
         dep = ndsRelocFindLoadedFileByAsset(rows[i].dep_asset);
         was_loaded = (dep != NULL) ? TRUE : FALSE;
         dep = ndsRelocEnsureLoadedAsset(rows[i].dep_asset);
