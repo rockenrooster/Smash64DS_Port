@@ -5761,9 +5761,12 @@ void ftPhysicsCheckSetFastFall(FTStruct *fp)
     {
         fp->is_fastfall = TRUE;
         fp->tap_stick_y = FTINPUT_STICKBUFFER_TICS_MAX;
-        /* ponytail: colanim runtime is still deferred; this keeps the hook. */
-        (void)ftParamCheckSetFighterColAnimID(fp->fighter_gobj,
-                                              nGMColAnimFighterFastFall, 0);
+        /* The source runs the new colanim's first frame at once. */
+        if (ftParamCheckSetFighterColAnimID(fp->fighter_gobj,
+                                            nGMColAnimFighterFastFall, 0) != FALSE)
+        {
+            ftMainRunUpdateColAnim(fp->fighter_gobj);
+        }
     }
 }
 
@@ -5853,16 +5856,42 @@ void ftPhysicsApplyAirVelFriction(GObj *fighter_gobj)
     {
         return;
     }
-    ftPhysicsApplyGravityDefault(fp, attr);
+    /* The source keeps a fast fall here (ftphysics.c 0x800D91EC). */
+    if (fp->is_fastfall != FALSE)
+    {
+        ftPhysicsApplyFastFall(fp, attr);
+    }
+    else ftPhysicsApplyGravityDefault(fp, attr);
+
     if (ftPhysicsCheckClampAirVelXDecMax(fp, attr) == FALSE)
     {
         ftPhysicsApplyAirVelXFriction(fp, attr);
     }
 }
 
+/* The source's 0x800D90E0: the drift without the fast-fall check, so an
+ * aerial attack or an item throw keeps a fast fall it started with but
+ * cannot start one (only ftPhysicsApplyAirVelDriftFastFall does). */
 void ftPhysicsApplyAirVelDrift(GObj *fighter_gobj)
 {
-    ftPhysicsApplyAirVelDriftFastFall(fighter_gobj);
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    FTAttributes *attr = (fp != NULL) ? fp->attr : NULL;
+
+    if ((fp == NULL) || (attr == NULL))
+    {
+        return;
+    }
+    if (fp->is_fastfall != FALSE)
+    {
+        ftPhysicsApplyFastFall(fp, attr);
+    }
+    else ftPhysicsApplyGravityDefault(fp, attr);
+
+    if (ftPhysicsCheckClampAirVelXDecMax(fp, attr) == FALSE)
+    {
+        ftPhysicsClampAirVelXStickDefault(fp, attr);
+        ftPhysicsApplyAirVelXFriction(fp, attr);
+    }
 }
 
 void mpCommonSetFighterGround(FTStruct *fp)
