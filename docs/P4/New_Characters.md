@@ -166,7 +166,11 @@ The full worst-case search runs at the end of each wave, not per fighter.
 
 - Iterate on the lab ROM. Build the menu and playable ROMs (S2 builds all
   three at once) at each fighter checkpoint, and always before handing a ROM
-  to the owner. Character-select bugs only show on the menu ROM.
+  to the owner. Character-select bugs only show on a menu ROM. The memory
+  check must use the all-content walk ROM (`TARGET=smash64ds
+  NDS_P2_MENU_WALK=1`, same flags as the playable ROM). The lab-config menu
+  ROM has ~245 KB more free and hid a 2026-10-07 regression where every
+  preview went dark.
 - Generated output is never hand-edited. Per-fighter facts go in the pins
   JSON or the fighter's C file. Rules go in the generators.
 - Port routines by reading the Remix asm next to the BattleShip source of the
