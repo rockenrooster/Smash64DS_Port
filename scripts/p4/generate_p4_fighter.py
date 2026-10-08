@@ -1036,9 +1036,11 @@ def main() -> int:
     lines += ["};", f"const u32 g{ident}SpecialStatusCount = {len(specials)};",
               f"/* Donor routines this lab build runs as fallbacks (manifest lab_fallbacks). */",
               f"const u32 g{ident}LabFallbackCount = {len(lab_fallbacks)};", "",
-              f"const NDSP4RelocAsset g{ident}RelocAssets[] = {{"]
-    for fid in sorted(shipped):
-        lines.append(f"    {{ {fid:#x}, \"nitro:/reloc/p4/{fid:04x}\" }},")
+              "/* The content's files in NitroFS, nitro:/reloc/p4/<id> (ndsP4RelocAssetPath). */",
+              f"const u16 g{ident}RelocAssets[] = {{"]
+    ids = [f"{fid:#06x}" for fid in sorted(shipped)]
+    for i in range(0, len(ids), 12):
+        lines.append("    " + ", ".join(ids[i:i + 12]) + ",")
     lines += ["};", f"const u32 g{ident}RelocAssetCount = {len(shipped)};", "",
               "/* The content's own animation files; bit 15 marks AObjEvent32 (FTANIM_FLAG_ANIMJOINT). */",
               f"const u16 g{ident}Anims[] = {{",

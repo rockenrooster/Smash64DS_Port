@@ -37,12 +37,6 @@ enum
  * (ndsP4SpecialStatusDescs). */
 #define NDS_P4_PROC_INHERIT ((void (*)(GObj *))1)
 
-typedef struct NDSP4RelocAsset
-{
-    u32 file_id;
-    const char *path;
-} NDSP4RelocAsset;
-
 /* A Sprite in a content file whose header the reloc loader normalizes
  * (reloc_backend_assets.c, the battle-interface sprite manifest). */
 typedef struct NDSP4SpriteDesc
@@ -251,7 +245,8 @@ typedef struct NDSP4Fighter
     const u32 *special_status_count;
     /* Lab builds: donor routines that run a stand-in (0 when shipping). */
     const u32 *lab_fallback_count;
-    const NDSP4RelocAsset *assets;
+    /* The content's files in NitroFS (nitro:/reloc/p4/<id>), ascending. */
+    const u16 *assets;
     const u32 *asset_count;
     const FTFileSize *file_size;
     const u16 *anims; /* own animation files, bit 15 = AObjEvent32 */

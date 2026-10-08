@@ -37,7 +37,7 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
     extern FTStatusDesc gNdsP4##T##SpecialStatusDescs[]; \
     extern const u32 gNdsP4##T##SpecialStatusCount; \
     extern const u32 gNdsP4##T##LabFallbackCount; \
-    extern const NDSP4RelocAsset gNdsP4##T##RelocAssets[]; \
+    extern const u16 gNdsP4##T##RelocAssets[]; \
     extern const u32 gNdsP4##T##RelocAssetCount; \
     extern const FTFileSize gNdsP4##T##FileSize; \
     extern const u16 gNdsP4##T##Anims[]; \
@@ -1086,10 +1086,20 @@ void ndsP4BindMenuScripts(u32 content)
     sNdsP4MenuScriptBase[content] = (void *)new_base;
 }
 
+/* A content file's NitroFS path, nitro:/reloc/p4/<id as 4 hex digits>; NULL
+ * for a file no content has. One buffer, rewritten by each lookup: the
+ * reloc loader's caller (ndsRelocAssetFind) keeps it in its own single
+ * static entry, which has the same lifetime. */
 const char *ndsP4RelocAssetPath(u32 file_id)
 {
+    static char path[] = "nitro:/reloc/p4/0000";
+    static const char hex[] = "0123456789abcdef";
     u32 c;
 
+    if (file_id > 0xFFFFu)
+    {
+        return NULL;
+    }
     for (c = 1u; c < NDS_P4_CONTENT_LIMIT; c++)
     {
         const NDSP4Fighter *f = ndsP4Fighter(c);
@@ -1101,9 +1111,15 @@ const char *ndsP4RelocAssetPath(u32 file_id)
         }
         for (i = 0u; i < *f->asset_count; i++)
         {
-            if (f->assets[i].file_id == file_id)
+            if (f->assets[i] == file_id)
             {
-                return f->assets[i].path;
+                u32 at = sizeof(path) - 5u;
+
+                path[at + 0u] = hex[(file_id >> 12) & 0xFu];
+                path[at + 1u] = hex[(file_id >> 8) & 0xFu];
+                path[at + 2u] = hex[(file_id >> 4) & 0xFu];
+                path[at + 3u] = hex[file_id & 0xFu];
+                return path;
             }
         }
     }
