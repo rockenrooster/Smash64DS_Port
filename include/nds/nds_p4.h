@@ -206,6 +206,10 @@ typedef struct NDSP4Overrides
     void (*attack_air_lw_hit)(GObj *fighter_gobj);
     /* ftCommonLightGetProcDamage's Maxim Tomato (Crash.asm crash_eat_sfx). */
     void (*on_eat_tomato)(FTStruct *fp);
+    /* ftCommonDamageInitDamageVars' status change: the status the hit sets
+     * and, for an electric hit, the one it leads to after (Lanky's balloon
+     * damage, LankyUSP.damage_patch_). */
+    s32 (*damage_status)(FTStruct *fp, s32 status_id, s32 *status_id_after);
 } NDSP4Overrides;
 
 /* A Remix CPU input routine (AI.asm add_cpu_input_routine) as assembled:
@@ -568,6 +572,9 @@ sb32 ndsP4CatchDamageCollide(FTStruct *victim_fp, FTAttackColl *attack_coll,
 void ndsP4AttackAirStart(GObj *fighter_gobj);
 /* ftCommonLightGetProcDamage's Maxim Tomato: the content's on_eat_tomato. */
 void ndsP4OnEatTomato(FTStruct *fp);
+/* ftCommonDamageInitDamageVars' status change through the content's
+ * damage_status (battleship_ftcommon_damage.c). */
+s32 ndsP4DamageStatus(GObj *fighter_gobj, s32 status_id, s32 *status_id_after);
 /* The content's match tables, read into this scene's heap at its first use
  * (FTData.mainmotion points into them from then on); halts on a missing or
  * malformed file, a build defect. */

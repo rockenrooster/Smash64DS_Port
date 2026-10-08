@@ -1278,6 +1278,23 @@ void ndsP4AttackAirStart(GObj *fighter_gobj)
     }
 }
 
+s32 ndsP4DamageStatus(GObj *fighter_gobj, s32 status_id, s32 *status_id_after)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    const NDSP4Overrides *o;
+
+    if (fp->nds_p4_content == 0u)
+    {
+        return status_id;
+    }
+    o = ndsP4Overrides(fp);
+    if ((o != NULL) && (o->damage_status != NULL))
+    {
+        return o->damage_status(fp, status_id, status_id_after);
+    }
+    return status_id;
+}
+
 void ndsP4OnEatTomato(FTStruct *fp)
 {
     const NDSP4Overrides *o;

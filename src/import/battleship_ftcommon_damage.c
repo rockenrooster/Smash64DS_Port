@@ -138,7 +138,23 @@ void ndsBaseFTCommonDamageUpdateCatchResist(GObj *fighter_gobj);
 void ndsBaseFTCommonDamageFlyRollUpdateModelPitch(GObj *fighter_gobj);
 void ndsBaseFTCommonDamageSetDamageColAnim(GObj *fighter_gobj);
 
+#if NDS_P4
+#include <nds/nds_p4.h>
+/* P4: Remix's damage_patch_ (LankySpecial.asm) picks the status
+ * ftCommonDamageInitDamageVars sets, and for an electric hit the one it
+ * leads to (status_id_var). That call's first argument is `this_gobj`; the
+ * file's other status change (`fighter_gobj`) stays the source's. */
+#define ftMainSetStatus(g_, s_, f_, a_, p_) NDS_P4_DAMAGE_SET_STATUS_##g_(s_), f_, a_, p_)
+#define NDS_P4_DAMAGE_SET_STATUS_fighter_gobj(s_) ftMainSetStatus(fighter_gobj, s_
+#define NDS_P4_DAMAGE_SET_STATUS_this_gobj(s_) \
+    ftMainSetStatus(this_gobj, ndsP4DamageStatus(this_gobj, s_, &status_id_var)
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommondamage.c"
+#if NDS_P4
+#undef ftMainSetStatus
+#undef NDS_P4_DAMAGE_SET_STATUS_fighter_gobj
+#undef NDS_P4_DAMAGE_SET_STATUS_this_gobj
+#endif
 
 #undef dFTCommonDamageStatusGroundIDs
 #undef dFTCommonDamageStatusAirIDs
