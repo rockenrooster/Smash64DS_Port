@@ -3,7 +3,7 @@
 Owner of the live P4 state. Plans live beside it ([master](New_Characters.md),
 [handoff](IMPLEMENTATION_HANDOFF.md), [shared plans](shared/), [cards](characters/)).
 The master plan's Revision 3 (2026-10-07, owner-requested rewrite for
-implementation speed) orders the work as Board 1 (shared machinery S1-S12)
+implementation speed) orders the work as Board 1 (shared machinery S1-S13)
 and Board 2 (fighter waves by measured cost); item status is tracked here
 under those ids.
 
@@ -290,3 +290,4 @@ the acceptance probe's witness block (S10).
 | S10 acceptance probe | lab probes exist per topic (`gNdsLabP4Content`); no single command |
 | S11 whole-roster generation | not started; all 14 export cleanly |
 | S12 EXTRA export | not started; EXTRA's nested Remix gitlink not initialized |
+| S13 sword trails | not started; Falco's Phantasm draws without Remix's cyan trail |
