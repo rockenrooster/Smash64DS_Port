@@ -2399,6 +2399,11 @@ void ftMainSetHitInteractStats(FTStruct *fp, u32 attack_group_id,
                                u32 victim_group_id,
                                sb32 ignore_damage_or_hit)
 {
+#if NDS_P4
+    /* The source's own calls take the hook in battleship_ftmain.c; this
+     * wrapper serves the other units (an item's hurtbox, itprocess.c). */
+    ndsP4OnHitInteract(fp, attack_type);
+#endif
     battleship_ftMainSetHitInteractStats(fp, attack_group_id, victim_gobj,
                                          attack_type, victim_group_id,
                                          ignore_damage_or_hit);

@@ -1143,6 +1143,16 @@ void ndsP4OnDead(GObj *fighter_gobj)
     }
 }
 
+void ndsP4OnHitInteractSlow(FTStruct *fp, s32 attack_type)
+{
+    const NDSP4Overrides *o = ndsP4Overrides(fp);
+
+    if ((o != NULL) && (o->on_hit_interact != NULL))
+    {
+        o->on_hit_interact(fp, attack_type);
+    }
+}
+
 #if NDS_P2_YOSHI
 GObj *wpYoshiStarMakeStars(GObj *fighter_gobj, Vec3f *pos);
 

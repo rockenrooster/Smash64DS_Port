@@ -168,6 +168,9 @@ typedef struct NDSP4Overrides
     /* ftParamUpdateDamage's head: the damage the hit deals (Marth's
      * counter takes it to 0 and marks the hit). */
     s32 (*update_damage)(FTStruct *fp, s32 damage);
+    /* ftMainSetHitInteractStats's head, fp the attacker (Wario.asm
+     * body_slam_recoil_: Wario's Body Slam, Sheik's and Banjo's recoils). */
+    void (*on_hit_interact)(FTStruct *fp, s32 attack_type);
 } NDSP4Overrides;
 
 /* A Remix CPU input routine (AI.asm add_cpu_input_routine) as assembled:
@@ -472,6 +475,16 @@ static inline void ndsP4AfterProcMap(GObj *fighter_gobj)
 /* ftManagerDestroyFighterWeapons in the dead statuses: the content's on_dead
  * after the source's. */
 void ndsP4OnDead(GObj *fighter_gobj);
+/* ftMainSetHitInteractStats's head (its source calls and the port's
+ * wrapper): the attacking content's on_hit_interact. */
+void ndsP4OnHitInteractSlow(FTStruct *fp, s32 attack_type);
+static inline void ndsP4OnHitInteract(FTStruct *fp, s32 attack_type)
+{
+    if (__builtin_expect(fp->nds_p4_content != 0u, 0))
+    {
+        ndsP4OnHitInteractSlow(fp, attack_type);
+    }
+}
 /* The content's match tables, read into this scene's heap at its first use
  * (FTData.mainmotion points into them from then on); halts on a missing or
  * malformed file, a build defect. */

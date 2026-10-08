@@ -323,11 +323,42 @@ static void ndsLabTimedAddFigatree(DObj *root_dobj, void *figatree,
  * part transforms, its one call in this TU. */
 #define ftParamsUpdateFighterPartsTransformAll(topn_) \
     (ndsP4AfterProcMap(fighter_gobj), ftParamsUpdateFighterPartsTransformAll(topn_))
+/* P4 S5: Remix hooks ftMainSetHitInteractStats's head (Wario.asm
+ * body_slam_recoil_). The source defines the function and calls it in this
+ * TU, so the name is told apart by its first argument's first token: the
+ * definition's (and a prototype's) is the type, the calls' are the attacker
+ * variables named here, and those go through the hook first. A call site
+ * with any other first argument does not compile. */
+void battleship_ftMainSetHitInteractStats(FTStruct *fp, u32 attack_group_id,
+                                          GObj *victim_gobj, s32 attack_type,
+                                          u32 victim_group_id,
+                                          sb32 ignore_damage_or_hit);
+static inline void ndsP4FTMainSetHitInteractStats(FTStruct *fp, u32 attack_group_id,
+                                                  GObj *victim_gobj, s32 attack_type,
+                                                  u32 victim_group_id,
+                                                  sb32 ignore_damage_or_hit)
+{
+    ndsP4OnHitInteract(fp, attack_type);
+    battleship_ftMainSetHitInteractStats(fp, attack_group_id, victim_gobj, attack_type,
+                                         victim_group_id, ignore_damage_or_hit);
+}
+#undef ftMainSetHitInteractStats
+#define ftMainSetHitInteractStats(fp_, ...) NDS_P4_HIT_INTERACT_##fp_, __VA_ARGS__)
+#define NDS_P4_HIT_INTERACT_FTStruct battleship_ftMainSetHitInteractStats(FTStruct
+#define NDS_P4_HIT_INTERACT_fp ndsP4FTMainSetHitInteractStats(fp
+#define NDS_P4_HIT_INTERACT_this_fp ndsP4FTMainSetHitInteractStats(this_fp
+#define NDS_P4_HIT_INTERACT_other_fp ndsP4FTMainSetHitInteractStats(other_fp
+#define NDS_P4_HIT_INTERACT_attacker_fp ndsP4FTMainSetHitInteractStats(attacker_fp
 #endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftmain.c"
 #if NDS_P4
 #undef lbCommonMakePositionFGM
 #undef ftParamUpdate1PGameDamageStats
+#undef NDS_P4_HIT_INTERACT_FTStruct
+#undef NDS_P4_HIT_INTERACT_fp
+#undef NDS_P4_HIT_INTERACT_this_fp
+#undef NDS_P4_HIT_INTERACT_other_fp
+#undef NDS_P4_HIT_INTERACT_attacker_fp
 #undef ftParamsUpdateFighterPartsTransformAll
 #undef ftMotionEventCast
 #define ftMotionEventCast(event, type) ((type *)(event)->p_script)
