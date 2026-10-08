@@ -120,6 +120,27 @@ CALLBACK_PORTS = {
     "WarioDSP.air_move_": "ndsP4WarioDSPAirMove",
     "WarioDSP.physics_": "ndsP4WarioDSPPhysics",
     "WarioDSP.collision_": "ndsP4WarioDSPMap",
+    # src/port/nds_p4_peach.c (PeachDSP, the turnip pull, waits for the
+    # turnip item: S6)
+    "PeachFloat.main_": "ndsP4PeachFloatMain",
+    "PeachFloat.interrupt_": "ndsP4PeachFloatInterrupt",
+    "PeachNSP.ground_initial_": "ndsP4PeachNSPGroundInitial",
+    "PeachNSP.air_initial_": "ndsP4PeachNSPAirInitial",
+    "PeachNSP.ground_physics_": "ndsP4PeachNSPGroundPhysics",
+    "PeachNSP.air_physics_": "ndsP4PeachNSPAirPhysics",
+    "PeachNSP.ground_collision_": "ndsP4PeachNSPGroundMap",
+    "PeachNSP.air_collision_": "ndsP4PeachNSPAirMap",
+    "PeachUSP.air_initial_": "ndsP4PeachUSPAirInitial",
+    "PeachUSP.ground_initial_": "ndsP4PeachUSPGroundInitial",
+    "PeachUSP.main_": "ndsP4PeachUSPMain",
+    "PeachUSP.open_main_": "ndsP4PeachUSPOpenMain",
+    "PeachUSP.close_main_": "ndsP4PeachUSPCloseMain",
+    "PeachUSP.change_direction_": "ndsP4PeachUSPChangeDirection",
+    "PeachUSP.float_interrupt_": "ndsP4PeachUSPFloatInterrupt",
+    "PeachUSP.fall_interrupt_": "ndsP4PeachUSPFallInterrupt",
+    "PeachUSP.physics_": "ndsP4PeachUSPPhysics",
+    "PeachUSP.float_physics_": "ndsP4PeachUSPFloatPhysics",
+    "PeachUSP.collision_": "ndsP4PeachUSPMap",
 }
 
 # P4: entry_script cases of another kind a content's port carries
@@ -218,6 +239,11 @@ def reflect_fox_ids(rom: R.Rom, sym: dict, hook: str) -> set[int]:
 # the default, no case).
 GROUNDED_CASE_KINDS = {"Mario": 0, "Samus": 3, "Luigi": 4, "Captain": 7, "Purin": 10}
 
+# Remix grounded_script routines a content's port runs instead
+# (NDSP4Overrides.on_landing): each ends the switch as the default does, so
+# the content takes the default case beside its hook.
+GROUNDED_PORTS = {"Peach.grounded_script_"}
+
 
 def kind_cases(rom: R.Rom, sym: dict, remix_id: int, tables: dict,
                lab_fallback: bool) -> tuple[str, list[dict]]:
@@ -235,6 +261,8 @@ def kind_cases(rom: R.Rom, sym: dict, remix_id: int, tables: dict,
         grounded = "NDS_P4_FOREIGN_FKIND"
     elif value in by_value:
         grounded = f"nFTKind{by_value[value]}"
+    elif any(sym.get(name) == value for name in GROUNDED_PORTS):
+        grounded = "NDS_P4_FOREIGN_FKIND"
     elif lab_fallback:
         grounded = "NDS_P4_FOREIGN_FKIND"
         fallbacks.append({"status": "grounded_script", "slot": "landing",

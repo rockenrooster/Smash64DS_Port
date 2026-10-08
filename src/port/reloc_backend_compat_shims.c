@@ -5418,6 +5418,13 @@ void ftPhysicsApplyGravityClampTVel(FTStruct *fp, f32 gravity, f32 tvel)
     {
         return;
     }
+#if NDS_P4
+    /* Remix's head of this function (PeachFloat.handle_physics_). */
+    if (ndsP4Gravity(fp) != FALSE)
+    {
+        return;
+    }
+#endif
     fp->physics.vel_air.y -= gravity;
     if (fp->physics.vel_air.y < -tvel)
     {
@@ -5977,6 +5984,13 @@ extern void ftPublicPlayCliffReact(GObj *fighter_gobj, f32 knockback);
  * never ran; the cue being silent while this counts is a different fault. */
 volatile u32 gNdsFtPublicCliffReactCount;
 
+#if NDS_P4
+/* TRUE while the cliff-catch seam (ndsMPCommonRunFighterCliffFloorCeil-
+ * Collisions) runs the landing params: Remix's ledge_flag (Peach.asm
+ * ledge_patch_), which her grounded_script reads. */
+static sb32 sNdsP4CliffLanding;
+#endif
+
 void mpCommonSetFighterLandingParams(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
@@ -6060,6 +6074,11 @@ void mpCommonSetFighterLandingParams(GObj *fighter_gobj)
     default:
         break;
     }
+#if NDS_P4
+    /* A content's own grounded_script routine, which Remix's row runs in
+     * place of a case (Peach's); the cliff seam marks a ledge catch. */
+    ndsP4OnLanding(fp, sNdsP4CliffLanding);
+#endif
     if ((ndsFighterMarioFoxStageMPCliffCatchFloorLoopProofEnabled() !=
             FALSE) &&
         (sNdsStageMPCliffCatchFloorLoopMapActive != FALSE))
@@ -6662,6 +6681,10 @@ void ftParamStopVoiceRunProcDamage(GObj *fighter_gobj)
     {
         gNdsStageMPPassiveLoopCaptureVoiceStopCount++;
     }
+#if NDS_P4
+    /* Remix's head of this function (PeachFloat.end_float_on_hit_). */
+    ndsP4OnDamage(fp);
+#endif
     ndsFtParamStopVoice(fp);
     if (fp->proc_damage != NULL)
     {
@@ -11798,7 +11821,13 @@ static sb32 ndsMPCommonRunFighterCliffFloorCeilCollisions(
         }
         cliffcatch_gobj = cliffcatch_gobj->link_next;
     }
+#if NDS_P4
+    sNdsP4CliffLanding = TRUE;
+#endif
     mpCommonSetFighterLandingParams(fighter_gobj);
+#if NDS_P4
+    sNdsP4CliffLanding = FALSE;
+#endif
     coll_data->is_coll_end = TRUE;
     return TRUE;
 }

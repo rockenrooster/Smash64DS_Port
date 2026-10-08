@@ -22,7 +22,18 @@ void ndsBaseFTCommonJumpGetJumpForceButton(s32 stick_range_x,
                                            sb32 is_shorthop);
 void ndsBaseFTCommonJumpSetStatus(GObj *fighter_gobj);
 
+#if NDS_P4
+#include <nds/nds_p4.h>
+/* P4: Remix's check_float_ (PeachSpecial.asm) runs in place of this
+ * interrupt's jump check, after the aerial check: it is tried where the
+ * aerial check ends (ndsP4AirJumpCheck). */
+#define ftCommonAttackAirCheckInterruptCommon(g_) \
+    (ftCommonAttackAirCheckInterruptCommon(g_) || ndsP4AirJumpCheck(g_))
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonjump.c"
+#if NDS_P4
+#undef ftCommonAttackAirCheckInterruptCommon
+#endif
 
 #undef ftCommonJumpProcInterrupt
 #undef ftCommonJumpGetJumpForceButton

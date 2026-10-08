@@ -217,10 +217,16 @@ sb32 ndsBaseFTCommonJumpAerialCheckInterruptCommon(GObj *fighter_gobj);
  * NDS_P4_PARENT_KIND). */
 #if NDS_P4
 #define nFTKindYoshi NDS_P4_PARENT_KIND(fp, nFTKindYoshi)
+/* P4: Remix's check_float_ (PeachSpecial.asm) runs in place of the
+ * JumpAerial interrupt's jump check, after the aerial check: it is tried
+ * where the aerial check ends (ndsP4AirJumpCheck). */
+#define ftCommonAttackAirCheckInterruptCommon(g_) \
+    (ftCommonAttackAirCheckInterruptCommon(g_) || ndsP4AirJumpCheck(g_))
 #endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonjumpaerial.c"
 #if NDS_P4
 #undef nFTKindYoshi
+#undef ftCommonAttackAirCheckInterruptCommon
 #endif
 
 #undef ftCommonJumpAerialUpdateModelYaw

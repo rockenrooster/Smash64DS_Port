@@ -171,6 +171,30 @@ typedef struct NDSP4Overrides
     /* ftMainSetHitInteractStats's head, fp the attacker (Wario.asm
      * body_slam_recoil_: Wario's Body Slam, Sheik's and Banjo's recoils). */
     void (*on_hit_interact)(FTStruct *fp, s32 attack_type);
+    /* ftPhysicsApplyGravityClampTVel's head: TRUE when the content holds
+     * the fighter this frame, no gravity (Peach's float,
+     * PeachFloat.handle_physics_). */
+    sb32 (*gravity)(FTStruct *fp);
+    /* The Jump, JumpAerial, Fall and Pass interrupts, between the aerial
+     * check and the jump check: TRUE when the content changed the status
+     * (Peach's float start, PeachFloat.check_float_). */
+    sb32 (*air_jump_check)(GObj *fighter_gobj);
+    /* ftCommonFallSetStatus' status change: TRUE when the content set its
+     * own status instead (Peach floats on, PeachFloat.fall_override_). */
+    sb32 (*fall_status)(GObj *fighter_gobj);
+    /* ftCommonAttackAirCheckInterruptCommon: TRUE keeps a held item from
+     * being thrown (Peach while floating, PeachFloat.prevent_item_throw_). */
+    sb32 (*air_item_throw_block)(FTStruct *fp);
+    /* ftParamStopVoiceRunProcDamage's head (Peach's float ends,
+     * PeachFloat.end_float_on_hit_). */
+    void (*on_damage)(FTStruct *fp);
+    /* mpCommonSetFighterLandingParams after its kind case: the routine
+     * Remix's grounded_script row names in place of a case; cliff is TRUE
+     * for a ledge catch (Peach.grounded_script_ and ledge_patch_). */
+    void (*on_landing)(FTStruct *fp, sb32 cliff);
+    /* ftCommonFallSpecialSetStatus' status: the content's in place of
+     * FallSpecial (Peach's parasol fall, PeachUSP.fall_special_patch_). */
+    s32 (*fall_special_status)(FTStruct *fp, s32 status_id);
 } NDSP4Overrides;
 
 /* A Remix CPU input routine (AI.asm add_cpu_input_routine) as assembled:
@@ -485,6 +509,34 @@ static inline void ndsP4OnHitInteract(FTStruct *fp, s32 attack_type)
         ndsP4OnHitInteractSlow(fp, attack_type);
     }
 }
+/* The content's gravity hook (ftPhysicsApplyGravityClampTVel): TRUE skips
+ * the source's gravity this frame. */
+sb32 ndsP4GravitySlow(FTStruct *fp);
+static inline sb32 ndsP4Gravity(FTStruct *fp)
+{
+    if (__builtin_expect(fp->nds_p4_content != 0u, 0))
+    {
+        return ndsP4GravitySlow(fp);
+    }
+    return FALSE;
+}
+/* The content's air_jump_check (battleship_ftcommon_jump.c, _fall.c,
+ * _pass.c and the JumpAerial import): TRUE when it changed the status. */
+sb32 ndsP4AirJumpCheck(GObj *fighter_gobj);
+/* ftCommonFallSetStatus' status change through the content's fall_status. */
+void ndsP4FallSetStatus(GObj *fighter_gobj, s32 status_id, f32 frame_begin,
+                        f32 anim_speed, u32 flags);
+/* ftCommonAttackAirCheckInterruptCommon's item-throw test: FALSE while the
+ * content blocks it, else the source's. */
+sb32 ndsP4AirLightThrowCheck(FTStruct *fp);
+/* ftParamStopVoiceRunProcDamage's head: the content's on_damage. */
+void ndsP4OnDamage(FTStruct *fp);
+/* mpCommonSetFighterLandingParams: the content's on_landing. */
+void ndsP4OnLanding(FTStruct *fp, sb32 cliff);
+/* ftCommonFallSpecialSetStatus' status through the content's
+ * fall_special_status. */
+void ndsP4FallSpecialSetStatus(GObj *fighter_gobj, s32 status_id, f32 frame_begin,
+                               f32 anim_speed, u32 flags);
 /* The content's match tables, read into this scene's heap at its first use
  * (FTData.mainmotion points into them from then on); halts on a missing or
  * malformed file, a build defect. */

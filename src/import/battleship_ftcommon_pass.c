@@ -57,7 +57,18 @@ void ndsBaseFTCommonSquatRvProcInterrupt(GObj *fighter_gobj);
 void ndsBaseFTCommonSquatRvSetStatus(GObj *fighter_gobj);
 sb32 ndsBaseFTCommonSquatRvCheckInterruptSquatWait(GObj *fighter_gobj);
 
+#if NDS_P4
+#include <nds/nds_p4.h>
+/* P4: Remix's check_float_ (PeachSpecial.asm) runs in place of this
+ * interrupt's jump check, after the aerial check: it is tried where the
+ * aerial check ends (ndsP4AirJumpCheck). */
+#define ftCommonAttackAirCheckInterruptCommon(g_) \
+    (ftCommonAttackAirCheckInterruptCommon(g_) || ndsP4AirJumpCheck(g_))
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonpass.c"
+#if NDS_P4
+#undef ftCommonAttackAirCheckInterruptCommon
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonsquat.c"
 
 #undef ftCommonPassProcInterrupt

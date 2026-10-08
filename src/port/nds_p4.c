@@ -1153,6 +1153,106 @@ void ndsP4OnHitInteractSlow(FTStruct *fp, s32 attack_type)
     }
 }
 
+sb32 ndsP4GravitySlow(FTStruct *fp)
+{
+    const NDSP4Overrides *o = ndsP4Overrides(fp);
+
+    return ((o != NULL) && (o->gravity != NULL)) ? o->gravity(fp) : FALSE;
+}
+
+sb32 ndsP4AirJumpCheck(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    const NDSP4Overrides *o;
+
+    if (fp->nds_p4_content == 0u)
+    {
+        return FALSE;
+    }
+    o = ndsP4Overrides(fp);
+    return ((o != NULL) && (o->air_jump_check != NULL)) ? o->air_jump_check(fighter_gobj)
+                                                        : FALSE;
+}
+
+void ndsP4FallSetStatus(GObj *fighter_gobj, s32 status_id, f32 frame_begin,
+                        f32 anim_speed, u32 flags)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if (fp->nds_p4_content != 0u)
+    {
+        const NDSP4Overrides *o = ndsP4Overrides(fp);
+
+        if ((o != NULL) && (o->fall_status != NULL) && (o->fall_status(fighter_gobj) != FALSE))
+        {
+            return;
+        }
+    }
+    ftMainSetStatus(fighter_gobj, status_id, frame_begin, anim_speed, flags);
+}
+
+sb32 ndsP4AirLightThrowCheck(FTStruct *fp)
+{
+    if (fp->nds_p4_content != 0u)
+    {
+        const NDSP4Overrides *o = ndsP4Overrides(fp);
+
+        if ((o != NULL) && (o->air_item_throw_block != NULL) &&
+            (o->air_item_throw_block(fp) != FALSE))
+        {
+            return FALSE;
+        }
+    }
+    return ftCommonLightThrowCheckItemTypeThrow(fp);
+}
+
+void ndsP4OnDamage(FTStruct *fp)
+{
+    const NDSP4Overrides *o;
+
+    if (fp->nds_p4_content == 0u)
+    {
+        return;
+    }
+    o = ndsP4Overrides(fp);
+    if ((o != NULL) && (o->on_damage != NULL))
+    {
+        o->on_damage(fp);
+    }
+}
+
+void ndsP4OnLanding(FTStruct *fp, sb32 cliff)
+{
+    const NDSP4Overrides *o;
+
+    if (fp->nds_p4_content == 0u)
+    {
+        return;
+    }
+    o = ndsP4Overrides(fp);
+    if ((o != NULL) && (o->on_landing != NULL))
+    {
+        o->on_landing(fp, cliff);
+    }
+}
+
+void ndsP4FallSpecialSetStatus(GObj *fighter_gobj, s32 status_id, f32 frame_begin,
+                               f32 anim_speed, u32 flags)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if (fp->nds_p4_content != 0u)
+    {
+        const NDSP4Overrides *o = ndsP4Overrides(fp);
+
+        if ((o != NULL) && (o->fall_special_status != NULL))
+        {
+            status_id = o->fall_special_status(fp, status_id);
+        }
+    }
+    ftMainSetStatus(fighter_gobj, status_id, frame_begin, anim_speed, flags);
+}
+
 #if NDS_P2_YOSHI
 GObj *wpYoshiStarMakeStars(GObj *fighter_gobj, Vec3f *pos);
 
