@@ -7,7 +7,10 @@
 
 #if NDS_P4
 
+#include <math.h>
+#include <stddef.h>
 #include <string.h>
+#include <macros.h>
 #include <sc/scene.h>
 #include <sys/objman.h>
 #include <sys/audio.h>
@@ -18,6 +21,7 @@ DObj *gcGetTreeDObjNext(DObj *dobj);
 void func_ovl2_800EDBA4(DObj *main_dobj);
 void ftComputerSetCommandWaitShort(FTStruct *fp, s32 index);
 void ftComputerSetCommandImmediate(FTStruct *fp, s32 index);
+void ftComputerSetControlPKThunder(FTStruct *fp);
 void gcSetAnimSpeed(GObj *gobj, f32 anim_speed);
 
 u8 gNdsP4PlayerContent[GMCOMMON_PLAYERS_MAX];
@@ -47,7 +51,7 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
     extern const NDSP4SwordTrail gNdsP4##T##SwordTrails[]; \
     extern const u32 gNdsP4##T##SwordTrailCount; \
     extern const NDSP4Entry gNdsP4##T##Entry; \
-    extern const NDSP4SpecialStart gNdsP4##T##SpecialStarts[]; \
+    extern const NDSP4SpecialStart gNdsP4##T##SpecialStarts[];     extern const NDSP4Jab gNdsP4##T##Jab;     extern const f32 gNdsP4##T##YoshiEgg[]; \
     extern const u16 gNdsP4##T##LabSkipFiles[]; \
     extern const u32 gNdsP4##T##LabSkipFileCount; \
     extern const FTComputerAttack gNdsP4##T##ComputerAttacks[]; \
@@ -78,7 +82,7 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
         .sword_trails = gNdsP4##T##SwordTrails, \
         .sword_trail_count = &gNdsP4##T##SwordTrailCount, \
         .entry = &gNdsP4##T##Entry, \
-        .special_starts = gNdsP4##T##SpecialStarts, \
+        .special_starts = gNdsP4##T##SpecialStarts,         .jab = &gNdsP4##T##Jab,         .yoshi_egg = gNdsP4##T##YoshiEgg, \
         .lab_skip_files = gNdsP4##T##LabSkipFiles, \
         .lab_skip_file_count = &gNdsP4##T##LabSkipFileCount, \
         .computer_attacks = gNdsP4##T##ComputerAttacks, \
@@ -302,19 +306,22 @@ void ndsP4ComputerRecover(FTStruct *fp)
 
 /* Remix's added input routines (AI.asm add_cpu_input_routine), as
  * assembled: each content's attack list names its own (generated,
- * ComputerScriptBytes). These two are the ones hand-ported code issues
- * outside a list: Falco's recovery steers with NSP_TOWARDS, and NULL drops
- * a command. Their macros spell some steps oddly -- UNPRESS_A() is a Z
+ * ComputerScriptBytes). These are the ones hand-ported code issues outside
+ * a list: Falco's recovery steers with NSP_TOWARDS, NULL drops a command,
+ * and Bowser's Whirling Fortress steers with POINT_STICK_TO_TARGET (custom
+ * command 3). Their macros spell some steps oddly -- UNPRESS_A() is a Z
  * release and UNPRESS_Z() a move-toward-target step before one -- and the
  * bytes are what Remix's CPUs run. */
 static const struct
 {
     u8 nsp_towards[13];
     u8 null_routine[1];
+    u8 point_stick_to_target[3];
 } sNdsP4ComputerScripts = {
     { 0xC0, 0x50, 0x50, 0x30, 0xB0, 0x00, 0xA0, 0x7F, 0x21, 0xA0, 0x00, 0x30,
       0xFF },
     { 0xFF },
+    { 0xFE, 0x03, 0xFF },
 };
 
 /* The content's generated routine for a Remix input id, or NULL. */
@@ -345,31 +352,15 @@ static const u8 *ndsP4ComputerScript(const FTStruct *fp, s32 index)
     {
         return own;
     }
-    return (index == nNDSP4ComputerInputNSPTowards) ?
-        sNdsP4ComputerScripts.nsp_towards : sNdsP4ComputerScripts.null_routine;
-}
-
-/* Whether a command pointer runs a Remix routine (vanilla scripts keep
- * their raw stick values). */
-static sb32 ndsP4ComputerIsRemixScript(const FTStruct *fp, const u8 *p)
-{
-    const NDSP4Fighter *f = ndsP4Fighter(ndsP4Content(fp));
-
-    if ((p >= (const u8 *)&sNdsP4ComputerScripts) &&
-        (p < (const u8 *)(&sNdsP4ComputerScripts + 1)))
+    switch (index)
     {
-        return TRUE;
+    case nNDSP4ComputerInputNSPTowards:
+        return sNdsP4ComputerScripts.nsp_towards;
+    case nNDSP4ComputerInputPointStickToTarget:
+        return sNdsP4ComputerScripts.point_stick_to_target;
+    default:
+        return sNdsP4ComputerScripts.null_routine;
     }
-    if ((f != NULL) && (*f->computer_script_count != 0u))
-    {
-        const NDSP4ComputerScript *last =
-            &f->computer_scripts[*f->computer_script_count - 1u];
-
-        return ((p >= f->computer_script_bytes) &&
-                (p < &f->computer_script_bytes[last->offset + last->length])) ?
-                   TRUE : FALSE;
-    }
-    return FALSE;
 }
 
 const FTComputerAttack *ndsP4ComputerAttacks(const FTStruct *fp)
@@ -413,76 +404,391 @@ void ndsP4ComputerSetCommandImmediate(FTStruct *fp, s32 index)
     fp->computer.p_command = (u8 *)ndsP4ComputerScript(fp, index);
 }
 
-/* AI.asm extend_stick_x_commands: in a stick-X step, 0x81/0x82 point the
- * stick away from the target at 80/40 and 0x83/0x84 forward/back from the
- * facing at 80. Only Remix routines use them (vanilla scripts keep their
- * raw values), so this decodes the run a Remix routine executes this tick
- * (the interpreter runs when input_wait counts 1 -> 0) and returns the
- * stick X it ends on when the run's last X write is one of these; the
- * caller stores it after the run. Nothing in a run reads the stick. */
-s32 ndsP4ComputerStickX(const FTStruct *fp)
+/* Remix's CPU custom commands (AI.asm CUSTOM_COMMANDS): the opcode, then the
+ * routine's index. */
+#define NDS_P4_COMPUTER_COMMAND_CUSTOM 0xFE
+enum
 {
-    const FTComputer *com = &fp->computer;
-    const u8 *p = com->p_command;
-    u32 value = 0u;
+    NDS_P4_COMPUTER_CUSTOM_JUMPSQUAT_WAIT,
+    NDS_P4_COMPUTER_CUSTOM_PRESS_C,
+    NDS_P4_COMPUTER_CUSTOM_UNPRESS_C,
+    NDS_P4_COMPUTER_CUSTOM_STICK_TO_TARGET,
+    NDS_P4_COMPUTER_CUSTOM_TURNAROUND_WAIT
+};
+_Static_assert((nFTCommonStatusTurn == 0x12) && (nFTCommonStatusTurnRun == 0x13) &&
+               (nFTCommonStatusKneeBend == 0x14), "Remix Action.Turn/TurnRun/JumpSquat");
+_Static_assert((offsetof(FTStruct, input.cp.button_inputs) == 0x1C6) &&
+               (offsetof(FTStruct, input.cp.stick_range) == 0x1C8),
+               "Remix CPU button and stick offsets");
 
-    if ((com->input_wait != 1) || (ndsP4ComputerIsRemixScript(fp, p) == FALSE))
+/* ftcomputer.c:3410 ftComputerUpdateInputs as a content's CPU runs it on the
+ * N64: with Remix's two extensions, the stick-X values 0x81-0x84 (AI.asm
+ * extend_stick_x_commands: away from the target at 80/40, forward/back from
+ * the facing at 80) and the 0xFE custom commands (CUSTOM_COMMANDS: wait out
+ * the jump squat or a turn, press or release C, point the stick at the
+ * target), and with the Fox up-special test taking the content only where
+ * Remix's usp_check_ does. The source's scripts carry neither extension, so
+ * they run here exactly as in the source's interpreter. */
+static void ndsP4ComputerRunScript(FTStruct *this_fp)
+{
+    FTComputer *com = &this_fp->computer;
+    const NDSP4Computer *rows = ndsP4Computer(this_fp);
+    sb32 is_fox_usp = (rows != NULL) && (rows->fox_usp_check != FALSE);
+    u8 *p_command;
+    u8 command;
+    s8 var_t1 = 0;
+    s16 stick_range_y;
+    s16 stick_range_x;
+    f32 dist_x;
+    f32 dist_y;
+
+    if (com->input_wait == 0)
     {
-        return NDS_P4_COMPUTER_STICK_KEEP;
+        return;
     }
-    for (;;)
+    com->input_wait--;
+
+    if (com->input_wait == 0)
     {
-        u32 command = *p++;
-        u32 wait = 0u;
+        p_command = com->p_command;
 
-        if (command < FTCOMPUTER_COMMAND_DEFAULT_MAX)
+        while (com->input_wait == 0)
         {
-            wait = command & FTCOMPUTER_COMMAND_TIMER_MASK;
+            command = *p_command++;
 
-            switch (command & FTCOMPUTER_COMMAND_OPCODE_MASK)
+            if (command < FTCOMPUTER_COMMAND_DEFAULT_MAX)
             {
-            case FTCOMPUTER_COMMAND_STICK_X_TILT:
-                value = *p++;
+                com->input_wait = command & FTCOMPUTER_COMMAND_TIMER_MASK;
+
+                switch (command & FTCOMPUTER_COMMAND_OPCODE_MASK)
+                {
+                case FTCOMPUTER_COMMAND_BUTTON_A_PRESS:
+                    this_fp->input.cp.button_inputs |= A_BUTTON;
+                    break;
+
+                case FTCOMPUTER_COMMAND_BUTTON_A_RELEASE:
+                    this_fp->input.cp.button_inputs &= ~A_BUTTON;
+                    break;
+
+                case FTCOMPUTER_COMMAND_BUTTON_B_PRESS:
+                    this_fp->input.cp.button_inputs |= B_BUTTON;
+                    break;
+
+                case FTCOMPUTER_COMMAND_BUTTON_B_RELEASE:
+                    this_fp->input.cp.button_inputs &= ~B_BUTTON;
+                    break;
+
+                case FTCOMPUTER_COMMAND_BUTTON_Z_PRESS:
+                    this_fp->input.cp.button_inputs |= Z_TRIG;
+                    break;
+
+                case FTCOMPUTER_COMMAND_BUTTON_Z_RELEASE:
+                    this_fp->input.cp.button_inputs &= ~Z_TRIG;
+                    break;
+
+                case FTCOMPUTER_COMMAND_BUTTON_L_PRESS:
+                    this_fp->input.cp.button_inputs |= L_TRIG;
+                    break;
+
+                case FTCOMPUTER_COMMAND_BUTTON_L_RELEASE:
+                    this_fp->input.cp.button_inputs &= ~L_TRIG;
+                    break;
+
+                case FTCOMPUTER_COMMAND_BUTTON_START_PRESS:
+                    this_fp->input.cp.button_inputs |= START_BUTTON;
+                    break;
+
+                case FTCOMPUTER_COMMAND_BUTTON_START_RELEASE:
+                    this_fp->input.cp.button_inputs &= ~START_BUTTON;
+                    break;
+
+                case FTCOMPUTER_COMMAND_STICK_X_TILT:
+                    switch (*p_command)
+                    {
+                    default:
+                        this_fp->input.cp.stick_range.x = *p_command++;
+                        break;
+
+                    case FTCOMPUTER_STICK_AUTOFULL:
+                        this_fp->input.cp.stick_range.x = (this_fp->joints[nFTPartsJointTopN]->translate.vec.f.x < com->target_pos.x) ? (I_CONTROLLER_RANGE_MAX) : -(I_CONTROLLER_RANGE_MAX);
+                        p_command++;
+                        break;
+
+                    case FTCOMPUTER_STICK_AUTOHALF:
+                        this_fp->input.cp.stick_range.x = (this_fp->joints[nFTPartsJointTopN]->translate.vec.f.x < com->target_pos.x) ? (I_CONTROLLER_RANGE_MAX / 2) : -(I_CONTROLLER_RANGE_MAX / 2);
+                        p_command++;
+                        break;
+
+                    /* extend_stick_x_commands. */
+                    case 0x81:
+                        this_fp->input.cp.stick_range.x = (this_fp->joints[nFTPartsJointTopN]->translate.vec.f.x < com->target_pos.x) ? -(I_CONTROLLER_RANGE_MAX) : (I_CONTROLLER_RANGE_MAX);
+                        p_command++;
+                        break;
+
+                    case 0x82:
+                        this_fp->input.cp.stick_range.x = (this_fp->joints[nFTPartsJointTopN]->translate.vec.f.x < com->target_pos.x) ? -(I_CONTROLLER_RANGE_MAX / 2) : (I_CONTROLLER_RANGE_MAX / 2);
+                        p_command++;
+                        break;
+
+                    case 0x83:
+                        this_fp->input.cp.stick_range.x = (this_fp->lr >= 0) ? (I_CONTROLLER_RANGE_MAX) : -(I_CONTROLLER_RANGE_MAX);
+                        p_command++;
+                        break;
+
+                    case 0x84:
+                        this_fp->input.cp.stick_range.x = (this_fp->lr >= 0) ? -(I_CONTROLLER_RANGE_MAX) : (I_CONTROLLER_RANGE_MAX);
+                        p_command++;
+                        break;
+                    }
+                    break;
+
+                case FTCOMPUTER_COMMAND_STICK_Y_TILT:
+                    switch (*p_command)
+                    {
+                    default:
+                        this_fp->input.cp.stick_range.y = *p_command++;
+                        break;
+
+                    case FTCOMPUTER_STICK_AUTOFULL:
+                        this_fp->input.cp.stick_range.y = (this_fp->joints[nFTPartsJointTopN]->translate.vec.f.y < com->target_pos.y) ? (I_CONTROLLER_RANGE_MAX) : -(I_CONTROLLER_RANGE_MAX);
+                        p_command++;
+                        break;
+
+                    case FTCOMPUTER_STICK_AUTOHALF:
+                        this_fp->input.cp.stick_range.y = (this_fp->joints[nFTPartsJointTopN]->translate.vec.f.y < com->target_pos.y) ? (I_CONTROLLER_RANGE_MAX / 2) : -(I_CONTROLLER_RANGE_MAX / 2);
+                        p_command++;
+                        break;
+                    }
+                    break;
+
+                case FTCOMPUTER_COMMAND_MOVEAUTO:
+                    dist_x = com->target_pos.x - this_fp->joints[nFTPartsJointTopN]->translate.vec.f.x;
+                    dist_y = com->target_pos.y - this_fp->joints[nFTPartsJointTopN]->translate.vec.f.y;
+
+                    if ((this_fp->ga == nMPKineticsGround) && (this_fp->level < 5))
+                    {
+                        stick_range_x = (ABSF(dist_x) > 100.0F) ? (I_CONTROLLER_RANGE_MAX / 2) : 0;
+                    }
+                    else if (this_fp->ga == nMPKineticsGround)
+                    {
+                        if ((com->dash_predict * 1.5F) < ABSF(dist_x))
+                        {
+                            stick_range_x = (I_CONTROLLER_RANGE_MAX);
+                        }
+                        else
+                        {
+                            if (com->dash_predict < ABSF(dist_x))
+                            {
+                                stick_range_x = ((2.0F * ((ABSF(dist_x) - com->dash_predict) / com->dash_predict) * (F_CONTROLLER_RANGE_MAX / 2)) + (F_CONTROLLER_RANGE_MAX / 2));
+                            }
+                            else
+                            {
+                                stick_range_x = (ABSF(dist_x) > 100.0F) ? (I_CONTROLLER_RANGE_MAX / 2) : 0;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        stick_range_x = ((ABSF(dist_x) > 100.0F) || ((this_fp->lr * dist_x) < 0.0F)) ? (I_CONTROLLER_RANGE_MAX) : (I_CONTROLLER_RANGE_MAX / 4);
+                    }
+                    stick_range_y = I_CONTROLLER_RANGE_MAX;
+
+                    if (this_fp->ga == nMPKineticsGround)
+                    {
+                        if (this_fp->status_id != nFTCommonStatusKneeBend)
+                        {
+                            if (com->target_line_id == this_fp->coll_data.floor_line_id)
+                            {
+                                stick_range_y = dist_y = 0.0F;
+                            }
+                            if
+                            (
+                                (com->ftcom_flags_0x4A_b1) &&
+                                (
+                                    (ftGetComTargetFighter(com)->status_id == nFTCommonStatusCliffCatch) ||
+                                    (ftGetComTargetFighter(com)->status_id == nFTCommonStatusCliffWait)
+                                )
+                            )
+                            {
+                                stick_range_y = dist_y = 0.0F;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        /* The source's Fox test, as usp_check_ makes it. */
+                        if
+                        (
+                            (
+                                (is_fox_usp == FALSE) ||
+                                (
+                                    (this_fp->status_id != nFTFoxStatusSpecialHiStart) &&
+                                    (this_fp->status_id != nFTFoxStatusSpecialAirHiStart) &&
+                                    (this_fp->status_id != nFTFoxStatusSpecialHiHold) &&
+                                    (this_fp->status_id != nFTFoxStatusSpecialAirHiHold)
+                                )
+                            )
+                            &&
+                            (dist_y < 0)
+                        )
+                        {
+                            stick_range_y = dist_y = 0.0F;
+                        }
+                        switch (com->behavior)
+                        {
+                        case nFTComputerBehaviorYoshiTeam:
+                            if (this_fp->joints[nFTPartsJointTopN]->translate.vec.f.y < 0)
+                            {
+                                stick_range_y = dist_y = 0.0F;
+                            }
+                            break;
+
+                        case nFTComputerBehaviorKirbyTeam:
+                        case nFTComputerBehaviorPolyTeam:
+                            if (this_fp->joints[nFTPartsJointTopN]->translate.vec.f.y < -300.0F)
+                            {
+                                stick_range_y = dist_y = 0.0F;
+                            }
+                            break;
+                        }
+                    }
+                    if ((dist_x != 0.0F) && (dist_y != 0.0F))
+                    {
+                        if (ABSF(dist_y) < ABSF(dist_x))
+                        {
+                            this_fp->input.cp.stick_range.x = (dist_x > 0.0F) ? stick_range_x : -stick_range_x;
+
+                            this_fp->input.cp.stick_range.y = (ABSF((dist_y / dist_x)) * ((dist_y > 0.0F) ? stick_range_y : -stick_range_y));
+                        }
+                        else
+                        {
+                            this_fp->input.cp.stick_range.x = (ABSF((dist_x / dist_y)) * ((dist_x > 0.0F) ? stick_range_x : -stick_range_x));
+
+                            this_fp->input.cp.stick_range.y = (dist_y > 0.0F) ? stick_range_y : -stick_range_y;
+                        }
+                    }
+                    else if (dist_x != 0.0F)
+                    {
+                        this_fp->input.cp.stick_range.x = (dist_x > 0.0F) ? stick_range_x : -stick_range_x;
+
+                        this_fp->input.cp.stick_range.y = (ABSF((dist_y / dist_x)) * ((dist_y > 0.0F) ? stick_range_y : -stick_range_y));
+                    }
+                    else if (dist_y != 0.0F)
+                    {
+                        this_fp->input.cp.stick_range.x = (ABSF((dist_x / dist_y)) * ((dist_x > 0.0F) ? stick_range_x : -stick_range_x));
+
+                        this_fp->input.cp.stick_range.y = (dist_y > 0.0F) ? stick_range_y : -stick_range_y;
+                    }
+                    else
+                    {
+                        this_fp->input.cp.stick_range.x = this_fp->input.cp.stick_range.y = 0;
+                    }
+                    break;
+
+                case FTCOMPUTER_COMMAND_STICK_X_VAR:
+                    this_fp->input.cp.stick_range.x = var_t1;
+                    break;
+
+                case FTCOMPUTER_COMMAND_STICK_Y_VAR:
+                    this_fp->input.cp.stick_range.y = var_t1;
+                    break;
+                }
+            }
+            else switch (command)
+            {
+            case FTCOMPUTER_COMMAND_DEFAULT_MAX + 0:
+                com->input_wait = *p_command++;
                 break;
-            case FTCOMPUTER_COMMAND_STICK_Y_TILT:
-                p++;
+
+            case FTCOMPUTER_COMMAND_DEFAULT_MAX + 1:
+                var_t1 = 1;
                 break;
-            case FTCOMPUTER_COMMAND_MOVEAUTO:
-            case FTCOMPUTER_COMMAND_STICK_X_VAR:
-                value = 0u;
+
+            case FTCOMPUTER_COMMAND_DEFAULT_MAX + 2:
+                com->input_wait = var_t1;
                 break;
+
+            case FTCOMPUTER_COMMAND_DEFAULT_MAX + 3:
+                ftComputerSetControlPKThunder(this_fp);
+                break;
+
+            case NDS_P4_COMPUTER_COMMAND_CUSTOM:
+                switch (*p_command++)
+                {
+                /* Hold this command until the jump squat (a turn) ends:
+                 * one tick, then read it again. */
+                case NDS_P4_COMPUTER_CUSTOM_JUMPSQUAT_WAIT:
+                    if (this_fp->status_id == nFTCommonStatusKneeBend)
+                    {
+                        com->input_wait = 1;
+                        p_command -= 2;
+                    }
+                    break;
+
+                case NDS_P4_COMPUTER_CUSTOM_TURNAROUND_WAIT:
+                    if ((this_fp->status_id == nFTCommonStatusTurn) ||
+                        (this_fp->status_id == nFTCommonStatusTurnRun))
+                    {
+                        com->input_wait = 1;
+                        p_command -= 2;
+                    }
+                    break;
+
+                /* R_CBUTTONS; the release clears all four C buttons. */
+                case NDS_P4_COMPUTER_CUSTOM_PRESS_C:
+                    this_fp->input.cp.button_inputs |= 0x0001;
+                    break;
+
+                case NDS_P4_COMPUTER_CUSTOM_UNPRESS_C:
+                    this_fp->input.cp.button_inputs &= 0xFFF0;
+                    break;
+
+                /* The stick at full range toward the target, rounded to
+                 * nearest as the routine's cvt.w.s does. */
+                case NDS_P4_COMPUTER_CUSTOM_STICK_TO_TARGET:
+                {
+                    const Vec3f *pos = this_fp->coll_data.p_translate;
+                    f32 dx = com->target_pos.x - pos->x;
+                    f32 dy = com->target_pos.y - pos->y;
+                    f32 d2 = (dx * dx) + (dy * dy);
+                    f32 magnitude = (d2 != 0.0F) ? sqrtf(d2) : 0.0F;
+
+                    if (magnitude == 0.0F)
+                    {
+                        this_fp->input.cp.stick_range.x = 0;
+                        this_fp->input.cp.stick_range.y = 0;
+                    }
+                    else
+                    {
+                        f32 scale = F_CONTROLLER_RANGE_MAX / magnitude;
+
+                        this_fp->input.cp.stick_range.x = (s32)rintf(dx * scale);
+                        this_fp->input.cp.stick_range.y = (s32)rintf(dy * scale);
+                    }
+                    break;
+                }
+                }
+                break;
+
+            case FTCOMPUTER_COMMAND_END:
+                com->input_wait = 0;
+                com->p_command = NULL;
+                return;
             }
         }
-        else if (command == FTCOMPUTER_COMMAND_DEFAULT_MAX)
-        {
-            wait = *p++;
-        }
-        else if (command == FTCOMPUTER_COMMAND_END)
-        {
-            break;
-        }
-        if (wait != 0u)
-        {
-            break;
-        }
+        com->p_command = p_command;
     }
-    switch (value)
-    {
-    case 0x81:
-    case 0x82:
-    {
-        s32 range = (value == 0x81) ? 80 : 40;
+}
 
-        return (fp->joints[nFTPartsJointTopN]->translate.vec.f.x <
-                com->target_pos.x) ? -range : range;
+sb32 ndsP4ComputerRunInputs(FTStruct *this_fp)
+{
+    if (this_fp->nds_p4_content == 0u)
+    {
+        return FALSE;
     }
-    case 0x83:
-        return (fp->lr >= 0) ? 80 : -80;
-    case 0x84:
-        return (fp->lr >= 0) ? -80 : 80;
-    default:
-        return NDS_P4_COMPUTER_STICK_KEEP;
-    }
+    ndsP4ComputerRunScript(this_fp);
+
+    return TRUE;
 }
 
 /* AI.asm cpu_post_process (0x8013A884): its checks for every CPU, then the
@@ -627,6 +933,21 @@ const NDSP4Overrides *ndsP4Overrides(const FTStruct *fp)
     const NDSP4Fighter *f = ndsP4Fighter(ndsP4Content(fp));
 
     return (f != NULL) ? f->overrides : NULL;
+}
+
+const f32 *ndsP4YoshiEggRow(const FTStruct *fp)
+{
+    const NDSP4Fighter *f = ndsP4Fighter(ndsP4Content(fp));
+
+    return (f != NULL) ? f->yoshi_egg : NULL;
+}
+
+const NDSP4Jab *ndsP4JabRows(const FTStruct *fp)
+{
+    static const NDSP4Jab none;
+    const NDSP4Fighter *f = ndsP4Fighter(ndsP4Content(fp));
+
+    return ((f != NULL) && (f->jab != NULL)) ? f->jab : &none;
 }
 
 void ndsP4AfterProcMapSlow(GObj *fighter_gobj)

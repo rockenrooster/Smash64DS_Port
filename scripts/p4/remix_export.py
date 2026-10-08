@@ -173,6 +173,9 @@ def parse_table_sizes(src: Path) -> dict[str, int]:
         sizes[t] = 4
     for t in re.findall(r"add_to_(?:jab_3|rapid_jab)_table\((\w+),", body):
         sizes[t] = 4
+    # jab_3 and rapid_jab (ENABLED/DISABLED by parent) are written in place.
+    for t in re.findall(r"origin\s+(\w+)\.TABLE_ORIGIN\s*\+\s*\(id\.\{name\}\s*\*\s*0x4\)", body):
+        sizes.setdefault(t, 4)
     return sizes
 
 

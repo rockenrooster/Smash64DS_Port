@@ -522,6 +522,44 @@ into the global reservation.
   0x80131B00) through overlay 2's RAM-ROM constant, 0xDC0 bytes off, and the
   decomp symbols of the menu overlays that share that VRAM cut battle
   functions short; both are fixed.
+- **Jab tables (an S3 seam).** Remix replaced the source's kind tests for
+  the third jab and the rapid jab with tables indexed by the character id
+  (Character.asm `jab_3`, `jab_3_timer`, `jab_3_action`, `rapid_jab` and
+  the rapid jab's begin, loop, ending and press-count rows) and left the
+  rest alone: the third-jab test in `ftCommonAttack1CheckInterruptCommon`,
+  the Captain tests in the Attack12/13 updates, the Pikachu and Kirby tests.
+  The generator reads each content's eight rows into `NDSP4Jab` (Lanky's
+  42-frame window, Bowser's, Banjo's and Dedede's own third-jab statuses,
+  Sheik's rapid jab on Fox's rows). A content runs the two files' P4 copy
+  (`src/import/battleship_ftcommon_jab_p4.c`): the files compiled again with
+  every kind they test redefined past the real kinds, so the raw tests fail
+  as the content's id does, and with the seven tabled functions replaced by
+  versions that read the rows; the source's copies send a content there. A
+  DISABLED row whose N64 path reads a stale register or stack word for the
+  status (a third jab with no action row: Wario, Crash, Marth, Roy; a rapid
+  jab with no count row: Marth, Roy, Peach) starts nothing. Lab check
+  ("p4q", four Bowsers with every slot's A forced on alternate ticks,
+  `gNdsLabForceInputSlots`): 89 first jabs, 85 second, 81 third (0xE9), 0
+  native failures.
+- **Remix's CPU commands.** A content's CPU runs every input script through
+  the port's copy of the source interpreter (`ndsP4ComputerRunInputs`),
+  which adds Remix's extensions: the stick-X values 0x81-0x84 (away from
+  the target, forward and back from the facing; this replaces the earlier
+  pre-decode of a run's last stick write) and the 0xFE custom commands
+  (wait out the jump squat or a turn, press or release C, point the stick
+  at the target). The source's interpreter read 0xFE as a no-op and the
+  index after it as a command (index 1 is an A press), so Bowser's
+  short-hop Fire Breath, Crash's and Sonic's routines misfired. The
+  interpreter's Fox up-special test takes a content only where Remix's
+  `usp_check_` does (Falco, `NDSP4Computer.fox_usp_check`). Lab ("p4q",
+  four Bowsers): 4 C presses and 242 stick-to-target steps.
+- **yoshi_egg (an S3 seam).** The egg Yoshi lays around a fighter is the
+  fighter's row (`dFTCommonYoshiEggDamageCollDescs` by id): Bowser's and
+  Dedede's are larger. A content's row is generated and lent at its kind's
+  index around the egg's effect maker and its hurtbox setup
+  (`battleship_ftcommon_captureyoshi.c`). Lab ("p4q", Yoshi with B forced
+  every 30 ticks against three Bowsers): the eggs' hurtboxes are Bowser's
+  245 at offset 230, not Yoshi's 210 at 175.
 - **Remix files that relocate past their end.** Peach's turnip graphics
   (0x1418, 0x1260 bytes) has two slots aimed past the file; the N64 applies
   them unchecked. The DS loader failed the file, which failed her special2,
@@ -609,7 +647,7 @@ skip ("p4g"). 0 native failures in every run.
 | Falco | clean | 0 | generated CPU rows replace his hand table |
 | Ganondorf | clean | 0 | |
 | Wolf | clean | 0 | all 11 donor routines ported and his own special files loaded (S6, "p4l", 1,500 frames): the Wolfen, blaster shot, slash and held gun draw natively from his files (the Wolfen's 10 drawn roots 240 draws each, shot 208, slash 12, gun 162); 0 native failures, 0 lab stand-ins. Before S6 his gun's list (0xB47) declined 35-111 times a run |
-| Bowser | clean | 0 | all 10 donor routines ported (`src/port/nds_p4_bowser.c`: Whirling Fortress, Bowser Bomb's air physics, Fire Breath on the Fire Flower's flame with his ammo and its recharge, the forward throw's airborne slam, the Clown Copter entry on his own special2) and the Yoshi-only source branches he skips ("Parent-kind compares"; "p4o", 1,500 frames): 0 native failures, the copter's 10 drawn roots 248 draws each, 12 common shields and no egg shield, no Yoshi double jump, heap 69 KB free. Open: jab 3 (status 0xE9, an S3 seam) |
+| Bowser | clean | 0 | all 10 donor routines ported (`src/port/nds_p4_bowser.c`: Whirling Fortress, Bowser Bomb's air physics, Fire Breath on the Fire Flower's flame with his ammo and its recharge, the forward throw's airborne slam, the Clown Copter entry on his own special2) and the Yoshi-only source branches he skips ("Parent-kind compares"; "p4o", 1,500 frames): 0 native failures, the copter's 10 drawn roots 248 draws each, 12 common shields and no egg shield, no Yoshi double jump, heap 69 KB free. His third jab (0xE9) through the jab tables; his CPU rows (BOWSER_USP_DSP ledge test, Whirling Fortress steered at the target, short-hop Fire Breath) and his Yoshi egg (245) |
 | Marth | clean | 0 | 0xD9 SET ENV COLOR (8 per run) is the one unported command |
 | Roy | clean | 0 | 0xD9 as Marth |
 | Wario | clean | 0 | |
@@ -627,11 +665,11 @@ skip ("p4g"). 0 native failures in every run.
 |---|---|
 | S1 content list | done: registry, Makefile templates, one native-owner emit, `NDS_P4_CONTENT_ROWS` in every shared site; Falco unchanged (lab: 0 declines, menu ROM preview) |
 | S2 build throughput | not started; lab and menu builds still rewrite the shared linker script under a mutex |
-| S3 table seams | 19 of 33 (Falco's 12, entry_action/entry_script, the six special-move starters) |
+| S3 table seams | 19 of 33 (Falco's 12, entry_action/entry_script, the six special-move starters) plus the jab tables (jab_3, jab_3_timer, jab_3_action, rapid_jab and its four rows, "Jab tables" above) and yoshi_egg |
 | S4 motion commands | 11 of the roster's 12: all but 0xD9 SET ENV COLOR, which needs the renderer's per-fighter environment colour (Banjo, Marth, Roy) |
 | S5 routine work lists | generated for all 14 (`scripts/p4/routine_worklist.py --lab <lab build>` into a build directory): 296 donor routines with Remix scope, file and line, size and users (Banjo 33, Bowser 10, Crash 29, Dedede 37, Lanky 29, Marth 18, Peach 22, Roy 21, Sheik 34, Sonic 29, Wario 23, Wolf 11; Falco and Ganondorf none), plus each content's id tests in Remix's shared code (17-39); the classes (behaviour, presentation, 1P, toggle) are still read by hand. Ported: Wolf 11 of 11 (`src/port/nds_p4_wolf.c`: WolfUSP, WolfDSP, WolfNSP with his own shot, the slash, reflector and Wolfen on his own files), Bowser 10 of 10 (`src/port/nds_p4_bowser.c`) |
 | S6 articles | the path exists, Wolf proves it: own special-file storage (`OWN_SPECIAL_FILES`), the parent's effect makers a content replaces (`gNdsP4<Title>Overrides`), `scripts/p4/p4_articles.py` roots compiled by `generate_nds_entry_effects.py --p4` into the build's packet, native admission, TEXID frames, state-only lists, per-match texture preparation and the held-gun sidecar ("Own special files and articles" above). Bowser's Clown Copter draws from his own special2 (his flame is the Fire Flower's weapon). Next: item articles (Peach, Wario) need native item kinds |
-| S7 generated CPU rows | done for the data: attack lists, ai_long_range and the Remix input routines they name are generated for all 14 (Falco's generated list equals his hand table row for row); attack-prevent, recovery and post-process stay hand-ported per fighter (Falco's only) |
+| S7 generated CPU rows | done for the data: attack lists, ai_long_range and the Remix input routines they name are generated for all 14 (Falco's generated list equals his hand table row for row); attack-prevent, recovery and post-process stay hand-ported per fighter (Falco's; Bowser's prevent and post-process); every content's CPU runs Remix's interpreter extensions ("Remix's CPU commands" above) |
 | S8 Kirby copies | not started |
 | S9 select-screen preview | done for Falco on the menu ROM; pack facts come from the export (`p4_preview_pack.py --content`); the all-content ROM cannot hold P4 menu clips in the select's global reservation (see above) |
 | S10 acceptance probe | lab probes exist per topic (`gNdsLabP4Content`); no single command |
@@ -639,4 +677,4 @@ skip ("p4g"). 0 native failures in every run.
 | S12 EXTRA export | not started; EXTRA's nested Remix gitlink not initialized |
 | S13 sword trails | done: Remix rows exported and generated, update and native draw; vanilla Link and Beam Sword trails drawn too |
 | S14 own action arrays | done: content special-status tables (Falco verified unchanged; Ganondorf 0 stand-ins) |
-| S15 P4 memory | open: Sonic's four-CPU mirror overflows the heap at fighter setup, Crash's leaves 7.7 KB ("Memory" above) |
+| S15 P4 memory | open, and it blocks mixed matches: one content with three of the original cast overflows the heap at battle start ("p4q": Bowser with Samus, Link and Kirby leaves 29.7 KB for Kirby's 35.5 KB load, `ndsSyMallocOverflowHalt`; the four originals alone leave 44.7 KB), and so does any two-content mix; mirrors fit. Sonic's four-CPU mirror overflows the heap at fighter setup, Crash's leaves 7.7 KB ("Memory" above) |

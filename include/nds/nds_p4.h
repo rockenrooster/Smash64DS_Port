@@ -83,6 +83,9 @@ typedef struct NDSP4Computer
     void (*recover)(FTStruct *fp);
     /* cpu_post_process: after the objective, before the inputs run. */
     void (*post_process)(FTStruct *fp);
+    /* AI.asm usp_check_: the input interpreter's Fox up-special test
+     * (ftcomputer.c:3575) takes this content, as it takes Fox (Falco). */
+    u8 fox_usp_check;
 } NDSP4Computer;
 
 /* ai_long_range: the parent's own case, or one of the two cases of the
@@ -155,6 +158,7 @@ enum
     nNDSP4ComputerInputFair = 0x43,
     nNDSP4ComputerInputBair = 0x44,
     nNDSP4ComputerInputDashAttack = 0x47,
+    nNDSP4ComputerInputPointStickToTarget = 0x49,
     nNDSP4ComputerInputNull = 0x4C
 };
 
@@ -214,6 +218,27 @@ enum
 };
 typedef void (*NDSP4SpecialStart)(GObj *fighter_gobj);
 
+/* Jab rows: Remix's jab_3, jab_3_timer, jab_3_action, rapid_jab and the
+ * rapid jab's four action rows, which replace the source's kind tests in
+ * ftcommonattack1.c and ftcommonattack100.c. A content runs those files'
+ * P4 copy (battleship_ftcommon_jab_p4.c), which reads these in place of
+ * the kind tests Remix tabled and fails the others, as its own id does. A
+ * zero row is DISABLED: the switch's end, where the N64 reads a stale
+ * register for the status. */
+typedef struct NDSP4Jab
+{
+    f32 jab3_followup;       /* jab_3_timer: frames left for the third jab */
+    u16 jab3_status;         /* jab_3_action */
+    u8 jab3;                 /* jab_3: ENABLED */
+    u8 rapid;                /* rapid_jab: ENABLED */
+    u16 rapid_count_status;  /* rapid_jab_unknown: the status A presses count in */
+    u8 rapid_inputs;         /* ... and how many start the rapid jab */
+    u8 reserved;
+    u16 rapid_start;         /* rapid_jab_begin_action */
+    u16 rapid_loop;          /* rapid_jab_loop_action */
+    u16 rapid_end;           /* rapid_jab_ending_action */
+} NDSP4Jab;
+
 typedef struct NDSP4Fighter
 {
     const char *name;
@@ -246,6 +271,9 @@ typedef struct NDSP4Fighter
     const u32 *sword_trail_count;
     const NDSP4Entry *entry;
     const NDSP4SpecialStart *special_starts; /* NDS_P4_SPECIAL_COUNT rows */
+    const NDSP4Jab *jab;
+    /* yoshi_egg: the egg Yoshi lays around it, an ftCommonYoshiEggDesc. */
+    const f32 *yoshi_egg;
     /* Lab builds: donor special files a stand-in replaces (never loaded). */
     const u16 *lab_skip_files;
     const u32 *lab_skip_file_count;
@@ -360,6 +388,34 @@ static inline void ndsP4AfterProcMap(GObj *fighter_gobj)
 /* ftManagerDestroyFighterWeapons in the dead statuses: the content's on_dead
  * after the source's. */
 void ndsP4OnDead(GObj *fighter_gobj);
+/* The content's jab rows (all DISABLED for none). */
+const NDSP4Jab *ndsP4JabRows(const FTStruct *fp);
+/* The content's yoshi_egg row (7 words), or NULL for the original cast. */
+const f32 *ndsP4YoshiEggRow(const FTStruct *fp);
+/* The jab and rapid-jab files' P4 copy (battleship_ftcommon_jab_p4.c): the
+ * source's entry points for a content; the source's copies send it here. */
+void ndsP4JabAttack11ProcUpdate(GObj *fighter_gobj);
+void ndsP4JabAttack12ProcUpdate(GObj *fighter_gobj);
+void ndsP4JabAttack13ProcUpdate(GObj *fighter_gobj);
+void ndsP4JabAttack11ProcInterrupt(GObj *fighter_gobj);
+void ndsP4JabAttack12ProcInterrupt(GObj *fighter_gobj);
+void ndsP4JabAttack13ProcInterrupt(GObj *fighter_gobj);
+void ndsP4JabAttack11ProcStatus(GObj *fighter_gobj);
+void ndsP4JabAttack11SetStatus(GObj *fighter_gobj);
+void ndsP4JabAttack12SetStatus(GObj *fighter_gobj);
+void ndsP4JabAttack13SetStatus(GObj *fighter_gobj);
+sb32 ndsP4JabAttack1CheckInterruptCommon(GObj *fighter_gobj);
+sb32 ndsP4JabAttack11CheckGoto(GObj *fighter_gobj);
+sb32 ndsP4JabAttack12CheckGoto(GObj *fighter_gobj);
+sb32 ndsP4JabAttack13CheckGoto(GObj *fighter_gobj);
+void ndsP4JabAttack100StartProcUpdate(GObj *fighter_gobj);
+void ndsP4JabAttack100StartSetStatus(GObj *fighter_gobj);
+void ndsP4JabAttack100LoopKirbyUpdateEffect(FTStruct *fp);
+void ndsP4JabAttack100LoopProcUpdate(GObj *fighter_gobj);
+void ndsP4JabAttack100LoopProcInterrupt(GObj *fighter_gobj);
+void ndsP4JabAttack100LoopSetStatus(GObj *fighter_gobj);
+void ndsP4JabAttack100EndSetStatus(GObj *fighter_gobj);
+sb32 ndsP4JabAttack100StartCheckInterruptCommon(GObj *fighter_gobj);
 /* ftYoshiSpecialLwLandingProcUpdate's stars, unless the content has none. */
 GObj *ndsP4YoshiStarMakeStars(GObj *fighter_gobj, Vec3f *pos);
 /* ftCommonThrowSetStatus's one ftMainSetStatus (battleship_ftcommon_catch.c):
@@ -393,11 +449,11 @@ void ndsP4ComputerPostProcess(FTStruct *fp);
 /* ftComputerSetCommand* that also takes Remix's input routine ids. */
 void ndsP4ComputerSetCommandWaitShort(FTStruct *fp, s32 index);
 void ndsP4ComputerSetCommandImmediate(FTStruct *fp, s32 index);
-/* Before ftComputerUpdateInputs: the stick X a Remix routine's run this
- * tick ends on, for Remix's directional values (AI.asm
- * extend_stick_x_commands), else NDS_P4_COMPUTER_STICK_KEEP. */
-#define NDS_P4_COMPUTER_STICK_KEEP 0x100
-s32 ndsP4ComputerStickX(const FTStruct *fp);
+/* ftComputerUpdateInputs for a P4 content: the source's interpreter with
+ * Remix's stick-X values and custom commands, run on every script the
+ * content's CPU issues; FALSE (the original cast) leaves the tick to the
+ * source's. */
+sb32 ndsP4ComputerRunInputs(FTStruct *this_fp);
 /* After a content's motion file loads: bind menu-motion script pointers. */
 void ndsP4BindMenuScripts(u32 content);
 /* NitroFS path for a P4 file id, or NULL. */

@@ -163,17 +163,13 @@ void ftComputerProcessObjective(FTStruct *fp)
     ndsP4FTComputerProcessObjective(fp);
 }
 
-/* The input interpreter; a Remix routine's directional stick X is stored
- * after its run (ndsP4ComputerStickX). */
+/* The input interpreter; a P4 content runs the port's copy with Remix's
+ * extensions (ndsP4ComputerRunInputs). */
 static void ndsP4FTComputerUpdateInputs(FTStruct *fp)
 {
-    s32 stick_x = ndsP4ComputerStickX(fp);
-
-    ndsBaseFTComputerUpdateInputs(fp);
-
-    if (stick_x != NDS_P4_COMPUTER_STICK_KEEP)
+    if (ndsP4ComputerRunInputs(fp) == FALSE)
     {
-        fp->input.cp.stick_range.x = stick_x;
+        ndsBaseFTComputerUpdateInputs(fp);
     }
 }
 

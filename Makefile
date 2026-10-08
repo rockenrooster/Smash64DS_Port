@@ -4893,6 +4893,8 @@ CFILES += nds_p4.c
 ifeq ($(NDS_P4),1)
 CFILES += nds_p4_data.c \
 	$(foreach name,$(NDS_P4_ENABLED),$(if $(wildcard $(PROJECT_ROOT)/src/port/nds_p4_$(name).c),nds_p4_$(name).c))
+# The jab and rapid-jab files' copy a content runs (Remix's jab tables).
+CFILES += battleship_ftcommon_jab_p4.c
 endif
 
 export LD := $(CC)

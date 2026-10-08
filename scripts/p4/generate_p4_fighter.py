@@ -114,6 +114,98 @@ MAX_EXTERN_IDS = 208
 # Remix's special-move starter tables, in NDS_P4_SPECIAL_* order (nds_p4.h).
 SPECIAL_START_TABLES = ("ground_nsp", "air_nsp", "ground_usp", "air_usp", "ground_dsp", "air_dsp")
 
+# The source's jab switches as Remix's tables hold them (Character.asm
+# move_jab_3_table, move_rapid_jab_table; nds_p4.h NDSP4Jab): a row is the
+# address of a vanilla kind's case, the switch's end (DISABLED, the row of a
+# kind with no case), or a Remix routine. The C value of each kind's case is
+# the source's (ftcommonattack1.c, ftcommonattack100.c).
+JAB_KIND_IDS = {"Mario": 0, "Fox": 1, "Luigi": 4, "Link": 5, "Captain": 7,
+                "Kirby": 8, "Purin": 10, "Ness": 11}
+JAB3_ACTIONS = {"Mario": "nFTMarioStatusAttack13", "Luigi": "nFTMarioStatusAttack13",
+                "Captain": "nFTCaptainStatusAttack13", "Link": "nFTLinkStatusAttack13",
+                "Ness": "nFTNessStatusAttack13"}
+RAPID_COUNTS = {"Fox": (4, "nFTCommonStatusAttack12"), "Link": (5, "nFTCommonStatusAttack12"),
+                "Kirby": (4, "nFTCommonStatusAttack12"), "Purin": (4, "nFTCommonStatusAttack12"),
+                "Captain": (6, "nFTCaptainStatusAttack13")}
+RAPID_KINDS = ("Fox", "Link", "Kirby", "Purin", "Captain")
+JAB3_TIMER_END = 0x8014EBA4   # ftCommonAttack12SetStatus past its switch
+JAB3_ACTION_END = 0x8014EC30  # ftCommonAttack13SetStatus past its switch
+
+
+def jab_rows(rom: R.Rom, sym: dict, tables: dict) -> str:
+    """The content's NDSP4Jab initializer from its eight jab table rows."""
+    def rows(table: str) -> tuple[int, dict[int, str]]:
+        base = sym[f"Character.{table}.table"]
+        by_value: dict[int, str] = {}
+        for kind, k in JAB_KIND_IDS.items():
+            by_value.setdefault(rom.u32_ram(base + 4 * k), kind)
+        return int(tables[table]["value"], 16), by_value
+
+    def words(at: int, n: int) -> list[int]:
+        return [rom.u32_ram(at + 4 * i) for i in range(n)]
+
+    def jump(target: int) -> int:
+        return 0x08000000 | ((target >> 2) & 0x3FFFFFF)
+
+    value, kinds = rows("jab_3")
+    if kinds.get(value) not in ("Mario", "Fox"):
+        raise GenError(f"jab_3 {value:#010x} is neither ENABLED nor DISABLED")
+    jab3 = int(kinds[value] == "Mario")
+
+    value, kinds = rows("jab_3_timer")
+    kind = kinds.get(value)
+    if kind == "Fox":
+        followup = 0.0
+    elif kind in ("Mario", "Luigi", "Captain", "Link", "Ness"):
+        followup = 24.0  # FTCOMMON_ATTACK1_FOLLOWUP_FRAMES_DEFAULT
+    else:
+        # lui at, HI; mtc1 at, fN; j end; swc1 fN, 0x150(v1) (Lanky's 42).
+        w = words(value, 4)
+        if not ((w[0] >> 16) == 0x3C01 and (w[1] & 0xFFFF07FF) == 0x44810000 and
+                w[2] == jump(JAB3_TIMER_END) and (w[3] & 0xFFE0FFFF) == 0xE4600150):
+            raise GenError(f"jab_3_timer {value:#010x} is not a timer store")
+        followup = struct.unpack(">f", struct.pack(">I", (w[0] & 0xFFFF) << 16))[0]
+
+    value, kinds = rows("jab_3_action")
+    kind = kinds.get(value)
+    if kind == "Fox":
+        jab3_status = "0"
+    elif kind in JAB3_ACTIONS:
+        jab3_status = JAB3_ACTIONS[kind]
+    else:
+        # ori t7, r0, ACTION; j end; sw t7, 0x20(sp) (Bowser's, Banjo's, Dedede's).
+        w = words(value, 3)
+        if not ((w[0] >> 16) == 0x340F and w[1] == jump(JAB3_ACTION_END) and w[2] == 0xAFAF0020):
+            raise GenError(f"jab_3_action {value:#010x} is not an action store")
+        jab3_status = f"{w[0] & 0xFFFF:#x}"
+
+    value, kinds = rows("rapid_jab")
+    if kinds.get(value) not in ("Fox", "Mario"):
+        raise GenError(f"rapid_jab {value:#010x} is neither ENABLED nor DISABLED")
+    rapid = int(kinds[value] == "Fox")
+
+    value, kinds = rows("rapid_jab_unknown")
+    kind = kinds.get(value)
+    if kind == "Mario":
+        rapid_inputs, rapid_status = 0, "0"
+    elif kind in RAPID_COUNTS:
+        rapid_inputs, rapid_status = RAPID_COUNTS[kind]
+    else:
+        raise GenError(f"rapid_jab_unknown {value:#010x} needs a port")
+    steps = []
+    for table, step in (("rapid_jab_begin_action", "Start"), ("rapid_jab_loop_action", "Loop"),
+                        ("rapid_jab_ending_action", "End")):
+        value, kinds = rows(table)
+        kind = kinds.get(value)
+        if kind == "Mario":
+            steps.append("0")
+        elif kind in RAPID_KINDS:
+            steps.append(f"nFT{kind}StatusAttack100{step}")
+        else:
+            raise GenError(f"{table} {value:#010x} needs a port")
+    return (f"{{ {c_float(followup)}, {jab3_status}, {jab3}, {rapid}, {rapid_status}, "
+            f"{rapid_inputs}, 0, {', '.join(steps)} }}")
+
 # CPU rows: FTComputerAttack as assembled (input, hit start, hit end, detect
 # x near/far, y near/far), Remix's input routine ids past the source's 0x31
 # scripts, and the two ai_long_range cases of the source's fkind switch in
@@ -776,6 +868,12 @@ def main() -> int:
         else:
             raise GenError(f"{table} {value:#010x} ({nm}) has no DS port")
 
+    # The jab and rapid-jab rows (S3, nds_p4.h NDSP4Jab).
+    jab = jab_rows(rom, R.load_symbols(args.staging / "logfile.log")[0], tables)
+    # yoshi_egg (S3): the egg Yoshi lays around this fighter, its
+    # ftCommonYoshiEggDesc (effect size, hurtbox offset and size).
+    egg = struct.unpack(">7f", bytes.fromhex(tables["yoshi_egg"]["value"]))
+
     # CPU rows (S7, nds_p4.h NDSP4Fighter.computer_*). ai_behaviour points at
     # the content's attack list (grounded rows, END, aerial rows, END), read
     # as assembled; the Remix input routines it names (ids from 0x31) come
@@ -996,6 +1094,11 @@ def main() -> int:
               "/* Special-move starters (NDS_P4_SPECIAL_*); NULL keeps the source table's. */",
               f"const NDSP4SpecialStart g{ident}SpecialStarts[NDS_P4_SPECIAL_COUNT] = {{",
               "    " + ", ".join(special_starts), "};", "",
+              "/* Jab rows (S3, nds_p4.h NDSP4Jab): Remix's jab_3, jab_3_timer, jab_3_action,",
+              " * rapid_jab and its rows in place of the source's kind tests. */",
+              f"const NDSP4Jab g{ident}Jab = {jab};", "",
+              "/* yoshi_egg: effect size, hurtbox offset and size (ftCommonYoshiEggDesc). */",
+              f"const f32 g{ident}YoshiEgg[7] = {{ " + ", ".join(c_float(v) for v in egg) + " };", "",
               "/* Lab builds: donor special files a stand-in replaces, never loaded. */",
               f"const u16 g{ident}LabSkipFiles[{max(len(lab_skip), 1)}] = {{ "
               + (", ".join(f"{f:#x}" for f in lab_skip) or "0") + " };",

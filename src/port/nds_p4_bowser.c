@@ -26,6 +26,7 @@
 #if NDS_P4_BOWSER
 
 #include <ef/effect.h>
+#include <ft/ftcomputer.h>
 #include <gm/gmsound.h>
 #include <it/item.h>
 #include <sys/audio.h>
@@ -56,6 +57,7 @@ extern void *gNdsP4BowserSpecial2;
 __attribute__((used)) volatile u32 gNdsP4BowserArticleMisses;
 
 /* Remix's status ids (his action array). */
+#define BOWSER_STATUS_USP 0xDE
 #define BOWSER_STATUS_USP_AIR 0xDF
 #define BOWSER_STATUS_NSP 0xE4
 #define BOWSER_STATUS_FTHROW 0xE5
@@ -562,6 +564,43 @@ const NDSP4Overrides gNdsP4BowserOverrides = {
     .after_proc_map = ndsP4BowserAfterProcMap,
     .on_dead = ndsP4BowserOnDead,
     .no_yoshi_lw_stars = TRUE,
+};
+
+/* AI.asm PREVENT_ATTACK.ROUTINE.BOWSER_USP_DSP, his ai_attack_prevent row
+ * (Bowser/AI/Attacks.asm): a grounded up or down special (USPG 0x0D, DSPG
+ * 0x1B) gets the ledge-ground test. */
+_Static_assert((nFTComputerInputStickSmashHiButtonB == 0x0D) &&
+               (nFTComputerInputStickSmashLwButtonB == 0x1B), "AI.ATTACK_TABLE USPG/DSPG");
+static s32 ndsP4BowserComputerPrevent(FTStruct *fp, s32 input_kind)
+{
+    (void)fp;
+
+    switch (input_kind)
+    {
+    case nFTComputerInputStickSmashHiButtonB:
+    case nFTComputerInputStickSmashLwButtonB:
+        return NDS_P4_COMPUTER_CHECK_GROUND;
+    default:
+        return NDS_P4_COMPUTER_ALLOW;
+    }
+}
+
+/* Bowser/AI/Attacks.asm cpu_post_process: in grounded Whirling Fortress the
+ * stick points at the target (POINT_STICK_TO_TARGET, 0x80132758
+ * ftComputerSetCommandImmediate). */
+static void ndsP4BowserComputerPostProcess(FTStruct *fp)
+{
+    if (fp->status_id == BOWSER_STATUS_USP)
+    {
+        ndsP4ComputerSetCommandImmediate(fp, nNDSP4ComputerInputPointStickToTarget);
+    }
+}
+
+/* His attack list, the short-hop Fire Breath routine it names and
+ * ai_long_range are generated; Remix gives him no recovery_logic row. */
+const NDSP4Computer gNdsP4BowserComputer = {
+    .prevent = ndsP4BowserComputerPrevent,
+    .post_process = ndsP4BowserComputerPostProcess,
 };
 
 #endif /* NDS_P4_BOWSER */

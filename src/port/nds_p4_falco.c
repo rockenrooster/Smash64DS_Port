@@ -314,6 +314,7 @@ const NDSP4Computer gNdsP4FalcoComputer = {
     .prevent = ndsP4FalcoComputerPrevent,
     .recover = ndsP4FalcoComputerRecover,
     .post_process = ndsP4FalcoComputerPostProcess,
+    .fox_usp_check = TRUE,
 };
 
 /* Falco.asm up_special_delay_ / up_special_velocity_1/2/3_. */

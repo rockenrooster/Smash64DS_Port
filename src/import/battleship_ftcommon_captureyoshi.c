@@ -17,7 +17,12 @@
 #include <gm/gmsound.h>
 #include <it/item.h>
 #include <macros.h>
+#include <string.h>
 #include <sys/audio.h>
+#include <nds/nds_p4_contents.h>
+#if NDS_P4
+#include <nds/nds_p4.h>
+#endif
 
 /* BattleShip ftcommon.h:294-312, REGION_US arm. Restated beside the code that
  * consumes them rather than pulling the broad decomp header into the ABI. */
@@ -106,4 +111,71 @@ void ftKirbySpecialNApplyCaptureDamage(GObj *kirby_gobj, GObj *victim_gobj,
 }
 #endif
 
+#if NDS_P4
+/* P4: Remix's yoshi_egg rows. The egg Yoshi lays around Bowser or Dedede is
+ * their own size; the source reads dFTCommonYoshiEggDamageCollDescs at the
+ * victim's kind in the egg's effect maker and its hurtbox setup, so a
+ * content's row is lent at that index for each of the two calls. */
+static GObj *ndsP4YoshiEggLayMakeEffect(GObj *fighter_gobj);
+static void ndsP4YoshiEggSetDamageCollCollisions(GObj *fighter_gobj);
+#define efManagerYoshiEggLayMakeEffect(gobj_) ndsP4YoshiEggLayMakeEffect(gobj_)
+#define NDS_P4_EGG_COLL_GObj ndsSourceFTCommonYoshiEggSetDamageCollCollisions(GObj
+#define NDS_P4_EGG_COLL_fighter_gobj ndsP4YoshiEggSetDamageCollCollisions(fighter_gobj
+#define ftCommonYoshiEggSetDamageCollCollisions(arg_) NDS_P4_EGG_COLL_##arg_)
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommoncaptureyoshi.c"
+#if NDS_P4
+#undef efManagerYoshiEggLayMakeEffect
+#undef ftCommonYoshiEggSetDamageCollCollisions
+
+_Static_assert(sizeof(ftCommonYoshiEggDesc) == 7 * sizeof(f32),
+               "yoshi_egg row is the source's 0x1C-byte desc");
+
+/* Puts the content's row in at its kind, keeping the source's in *saved. */
+static sb32 ndsP4YoshiEggLend(FTStruct *fp, ftCommonYoshiEggDesc *saved)
+{
+    const f32 *row = ndsP4YoshiEggRow(fp);
+
+    if (row == NULL)
+    {
+        return FALSE;
+    }
+    *saved = dFTCommonYoshiEggDamageCollDescs[fp->fkind];
+    memcpy(&dFTCommonYoshiEggDamageCollDescs[fp->fkind], row, sizeof(*saved));
+
+    return TRUE;
+}
+
+static GObj *ndsP4YoshiEggLayMakeEffect(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    ftCommonYoshiEggDesc saved;
+    sb32 is_lent = ndsP4YoshiEggLend(fp, &saved);
+    GObj *effect_gobj = efManagerYoshiEggLayMakeEffect(fighter_gobj);
+
+    if (is_lent != FALSE)
+    {
+        dFTCommonYoshiEggDamageCollDescs[fp->fkind] = saved;
+    }
+    return effect_gobj;
+}
+
+static void ndsP4YoshiEggSetDamageCollCollisions(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    ftCommonYoshiEggDesc saved;
+    sb32 is_lent = ndsP4YoshiEggLend(fp, &saved);
+
+    ndsSourceFTCommonYoshiEggSetDamageCollCollisions(fighter_gobj);
+
+    if (is_lent != FALSE)
+    {
+        dFTCommonYoshiEggDamageCollDescs[fp->fkind] = saved;
+    }
+}
+
+void ftCommonYoshiEggSetDamageCollCollisions(GObj *fighter_gobj)
+{
+    ndsP4YoshiEggSetDamageCollCollisions(fighter_gobj);
+}
+#endif
