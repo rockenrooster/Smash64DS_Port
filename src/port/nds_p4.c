@@ -14,6 +14,8 @@
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
 
 DObj *gcGetTreeDObjNext(DObj *dobj);
+void ftComputerSetCommandWaitShort(FTStruct *fp, s32 index);
+void ftComputerSetCommandImmediate(FTStruct *fp, s32 index);
 void gcSetAnimSpeed(GObj *gobj, f32 anim_speed);
 
 u8 gNdsP4PlayerContent[GMCOMMON_PLAYERS_MAX];
@@ -39,7 +41,7 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
     extern const NDSP4SpriteDesc gNdsP4##T##Sprites[]; \
     extern const u32 gNdsP4##T##SpriteCount; \
     extern const NDSP4Present gNdsP4##T##Present;
-#define NDS_P4_ROW(T, title, parent, on_status_hook, recover_hook) \
+#define NDS_P4_ROW(T, title, parent, on_status_hook, computer_rows) \
     { \
         .name = (title), .parent_kind = (parent), \
         .data = &gNdsP4##T##Data, \
@@ -50,7 +52,7 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
         .file_size = &gNdsP4##T##FileSize, \
         .anims = gNdsP4##T##Anims, .anim_count = &gNdsP4##T##AnimCount, \
         .on_status = (on_status_hook), \
-        .computer_recover = (recover_hook), \
+        .computer = (computer_rows), \
         .stock_gfx = gNdsP4##T##StockGfx, \
         .stock_palettes = gNdsP4##T##StockPalettes, \
         .stock_palette_count = &gNdsP4##T##StockPaletteCount, \
@@ -62,14 +64,14 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
 #if NDS_P4_FALCO
 NDS_P4_DECLARE(Falco)
 void ndsP4FalcoOnStatus(GObj *fighter_gobj, s32 status_id);
-void ndsP4FalcoComputerRecover(FTStruct *fp);
+extern const NDSP4Computer gNdsP4FalcoComputer;
 #endif
 
 static const NDSP4Fighter sNdsP4Fighters[NDS_P4_CONTENT_LIMIT] = {
 #if NDS_P4_FALCO
     [NDS_P4_CONTENT_FALCO] =
         NDS_P4_ROW(Falco, "Falco", nFTKindFox, ndsP4FalcoOnStatus,
-                   ndsP4FalcoComputerRecover),
+                   &gNdsP4FalcoComputer),
 #endif
 };
 
@@ -215,13 +217,188 @@ void ndsP4SetupFileSizes(u32 data_flags)
     }
 }
 
-void ndsP4ComputerRecover(FTStruct *fp)
+const NDSP4Computer *ndsP4Computer(const FTStruct *fp)
 {
     const NDSP4Fighter *f = ndsP4Fighter(ndsP4Content(fp));
 
-    if ((f != NULL) && (f->computer_recover != NULL))
+    return (f != NULL) ? f->computer : NULL;
+}
+
+void ndsP4ComputerRecover(FTStruct *fp)
+{
+    const NDSP4Computer *c = ndsP4Computer(fp);
+
+    if ((c != NULL) && (c->recover != NULL))
     {
-        f->computer_recover(fp);
+        c->recover(fp);
+    }
+}
+
+/* Remix's added input routines (AI.asm), as assembled (Remix 5e04fe7).
+ * Their macros spell some steps oddly -- UNPRESS_A() is a Z release and
+ * UNPRESS_Z() a move-toward-target step before one, MULTI_SHINE's "press
+ * B" presses A, then B -- and the bytes are what Remix's CPUs run. */
+static const struct
+{
+    u8 multi_shine[19];
+    u8 nsp_towards[13];
+    u8 fair[13];
+    u8 bair[13];
+    u8 dash_attack[13];
+    u8 null_routine[1];
+} sNdsP4ComputerScripts = {
+    { 0xA0, 0x00, 0xB1, 0x00, 0xA0, 0x7F, 0xB1, 0x00, 0xA0, 0x00, 0xB1, 0x35,
+      0xA0, 0x00, 0xB0, 0xB0, 0x02, 0x21, 0xFF },
+    { 0xC0, 0x50, 0x50, 0x30, 0xB0, 0x00, 0xA0, 0x7F, 0x21, 0xA0, 0x00, 0x30,
+      0xFF },
+    { 0xC0, 0x50, 0x50, 0x30, 0xB0, 0x00, 0xA0, 0x83, 0x01, 0xA0, 0x7F, 0x10,
+      0xFF },
+    { 0xC0, 0x50, 0x50, 0x30, 0xB0, 0x00, 0xA0, 0x84, 0x01, 0xA0, 0x7F, 0x10,
+      0xFF },
+    { 0xC0, 0x50, 0x50, 0x30, 0xB0, 0x00, 0xA5, 0x7F, 0x01, 0xB0, 0x00, 0x10,
+      0xFF },
+    { 0xFF },
+};
+
+static const u8 *ndsP4ComputerScript(s32 index)
+{
+    switch (index)
+    {
+    case nNDSP4ComputerInputMultiShine:
+        return sNdsP4ComputerScripts.multi_shine;
+    case nNDSP4ComputerInputNSPTowards:
+        return sNdsP4ComputerScripts.nsp_towards;
+    case nNDSP4ComputerInputFair:
+        return sNdsP4ComputerScripts.fair;
+    case nNDSP4ComputerInputBair:
+        return sNdsP4ComputerScripts.bair;
+    case nNDSP4ComputerInputDashAttack:
+        return sNdsP4ComputerScripts.dash_attack;
+    default:
+        return sNdsP4ComputerScripts.null_routine;
+    }
+}
+
+/* Remix extends the command table past the vanilla 0x31 (AI.asm
+ * extend_commands_1/3); the vanilla setter keeps its wait and its random
+ * draws, and the routine replaces the vanilla script it set. */
+void ndsP4ComputerSetCommandWaitShort(FTStruct *fp, s32 index)
+{
+    if (index < NDS_P4_COMPUTER_INPUT_BASE)
+    {
+        ftComputerSetCommandWaitShort(fp, index);
+        return;
+    }
+    ftComputerSetCommandWaitShort(fp, nFTComputerInputStickN);
+    fp->computer.p_command = (u8 *)ndsP4ComputerScript(index);
+}
+
+void ndsP4ComputerSetCommandImmediate(FTStruct *fp, s32 index)
+{
+    if (index < NDS_P4_COMPUTER_INPUT_BASE)
+    {
+        ftComputerSetCommandImmediate(fp, index);
+        return;
+    }
+    ftComputerSetCommandImmediate(fp, nFTComputerInputStickN);
+    fp->computer.p_command = (u8 *)ndsP4ComputerScript(index);
+}
+
+/* AI.asm extend_stick_x_commands: in a stick-X step, 0x81/0x82 point the
+ * stick away from the target at 80/40 and 0x83/0x84 forward/back from the
+ * facing at 80. Only Remix routines use them (vanilla scripts keep their
+ * raw values), so this decodes the run a Remix routine executes this tick
+ * (the interpreter runs when input_wait counts 1 -> 0) and returns the
+ * stick X it ends on when the run's last X write is one of these; the
+ * caller stores it after the run. Nothing in a run reads the stick. */
+s32 ndsP4ComputerStickX(const FTStruct *fp)
+{
+    const FTComputer *com = &fp->computer;
+    const u8 *p = com->p_command;
+    u32 value = 0u;
+
+    if ((com->input_wait != 1) ||
+        (p < (const u8 *)&sNdsP4ComputerScripts) ||
+        (p >= (const u8 *)(&sNdsP4ComputerScripts + 1)))
+    {
+        return NDS_P4_COMPUTER_STICK_KEEP;
+    }
+    for (;;)
+    {
+        u32 command = *p++;
+        u32 wait = 0u;
+
+        if (command < FTCOMPUTER_COMMAND_DEFAULT_MAX)
+        {
+            wait = command & FTCOMPUTER_COMMAND_TIMER_MASK;
+
+            switch (command & FTCOMPUTER_COMMAND_OPCODE_MASK)
+            {
+            case FTCOMPUTER_COMMAND_STICK_X_TILT:
+                value = *p++;
+                break;
+            case FTCOMPUTER_COMMAND_STICK_Y_TILT:
+                p++;
+                break;
+            case FTCOMPUTER_COMMAND_MOVEAUTO:
+            case FTCOMPUTER_COMMAND_STICK_X_VAR:
+                value = 0u;
+                break;
+            }
+        }
+        else if (command == FTCOMPUTER_COMMAND_DEFAULT_MAX)
+        {
+            wait = *p++;
+        }
+        else if (command == FTCOMPUTER_COMMAND_END)
+        {
+            break;
+        }
+        if (wait != 0u)
+        {
+            break;
+        }
+    }
+    switch (value)
+    {
+    case 0x81:
+    case 0x82:
+    {
+        s32 range = (value == 0x81) ? 80 : 40;
+
+        return (fp->joints[nFTPartsJointTopN]->translate.vec.f.x <
+                com->target_pos.x) ? -range : range;
+    }
+    case 0x83:
+        return (fp->lr >= 0) ? 80 : -80;
+    case 0x84:
+        return (fp->lr >= 0) ? -80 : 80;
+    default:
+        return NDS_P4_COMPUTER_STICK_KEEP;
+    }
+}
+
+/* AI.asm cpu_post_process (0x8013A884): its checks for every CPU, then the
+ * character's row. Of the shared checks, only "a dash attack that cannot
+ * start here is dropped" applies below level 10 without Remix's improved-AI
+ * toggle, and only Remix routines issue a dash attack. */
+void ndsP4ComputerPostProcess(FTStruct *fp)
+{
+    const NDSP4Computer *c = ndsP4Computer(fp);
+
+    if (c == NULL)
+    {
+        return;
+    }
+    if ((fp->computer.p_command == sNdsP4ComputerScripts.dash_attack) &&
+        (fp->status_id != nFTCommonStatusWait) &&
+        (fp->status_id != nFTCommonStatusRun))
+    {
+        ndsP4ComputerSetCommandImmediate(fp, nNDSP4ComputerInputNull);
+    }
+    if (c->post_process != NULL)
+    {
+        c->post_process(fp);
     }
 }
 

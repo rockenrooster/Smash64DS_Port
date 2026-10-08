@@ -231,21 +231,40 @@ Presentation, all generated per content from the donor's own rows:
   shields keep the port's colour, as vanilla does (Remix's costume-matched
   shields are its own option).
 
-- **CPU**: a CPU Falco runs Fox's AI (Remix's `define_character` starts from
-  the parent's rows) plus his `recovery_logic` row: Remix calls it after the
-  recover objective walks (AI.asm custom_recovery_logic in
-  `ftComputerFollowObjectiveRecover`), and the port's copy of that function
-  makes the same call (`ndsP4ComputerRecover`, by content). Falco's
-  (Falco.asm): in the air Phantasm hold B; otherwise, with the nearer ledge
-  under 2000 units away in X, the fighter below it and the ledge-grab box
-  reaching it, one time in eight target the ledge and Phantasm toward it --
-  Remix's added NSP_TOWARDS input routine is the vanilla "neutral special
-  toward the target" script (9). Four CPU Falcos (lab, 1,700 frames): 1,244
-  hook calls, 10 Phantasms toward a ledge, each held through with B. His other rows,
-  `ai_attack_prevent` (a FOX_USP check), `ai_behaviour` and `ai_long_range`,
-  are still Fox's.
+- **CPU**: Falco's five CPU rows are ported (`NDSP4Computer` in
+  `include/nds/nds_p4.h`; a NULL row keeps the parent's vanilla path).
+  `ai_behaviour`: his attack list (Falco/AI/Attacks.asm CPU_ATTACKS, read
+  back from the assembled table) replaces Fox's in
+  `ftComputerCheckDetectTarget` (`battleship_ftcomputer_fixed.c`).
+  `ai_attack_prevent` FALCO_NSP: an aerial Phantasm gets the ledge-ground
+  test the parent switch gives recovery specials; up special goes to
+  FOX_USP, which acts at level 10 only. `ai_long_range` NONE: no long-range
+  laser (Fox's row is NSP_SHOOT); the source's lead-in and its two random
+  draws still run. `recovery_logic` (Falco.asm), after the recover
+  objective's walk: in the air Phantasm hold B; otherwise, with the nearer
+  ledge under 2000 units away in X, the fighter below it and the ledge-grab
+  box reaching it, one time in eight target the ledge and Phantasm toward
+  it with Remix's NSP_TOWARDS routine (it releases Z and B first and ends a
+  tick sooner than vanilla script 9, which the first port used).
+  `cpu_post_process`, after the objective: in Fire Bird over ground, drop
+  the command and hold the stick down to land; drop a Phantasm issued over
+  ground when no ground lies 2000 units ahead toward the target; before it,
+  AI.asm's shared check drops a dash attack that cannot start (not standing
+  or running). Remix's added input routines keep their ids and assembled
+  bytes (MULTI_SHINE 0x3A, NSP_TOWARDS 0x42, FAIR 0x43, BAIR 0x44,
+  DASH_ATTACK 0x47, NULL 0x4C, `src/port/nds_p4.c`); FAIR/BAIR's
+  forward/back stick values (AI.asm extend_stick_x_commands) are resolved
+  for Remix routines only, after the run that sets them. Remix's level-10
+  rows and its improved-AI toggle are not ported (the port's CPUs stop at
+  level 9). Four CPU Falcos (lab, Dream Land, 1,900 frames): the attack
+  list picked dash attack 65 times, back air 51, forward air 9, multi-shine
+  1; every forward/back air stick matched the facing (60 runs); 183
+  long-range lead-ins returned without a laser; 826 aerial Phantasm picks
+  took the ground test; 5 recovery Phantasms; the shared check dropped 64
+  dash attacks. The Fire Bird landing and the Phantasm drop did not occur
+  on that stage.
 
-Open for Falco: the CPU rows still Fox's (above), the 3D preview on the select screen
+Open for Falco: the 3D preview on the select screen
 (a Remix selection has no compact preview pack yet; its panel stays empty,
 counted in `gNdsPlayersVSPreviewP4Unsupported`), Kirby's copy (Kirby takes
 the parent's copy, Fox's blaster and hat; Remix gives him Falco's hat 0x12

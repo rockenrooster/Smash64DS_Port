@@ -24,6 +24,7 @@
 #include <nds/nds_fcmp.h>
 #include <nds/nds_r2_collision_mtx.h>
 #include <nds/nds_r2_hwmath_unit.h>
+#include <nds/nds_p4.h>
 
 extern sb32 func_ovl2_800F8FFC(Vec3f *position);
 extern FTComputerAttack *dFTComputerAttackList[];
@@ -245,6 +246,9 @@ ftComputerCheckDetectTarget(FTStruct *this_fp, f32 detect_range_base)
     int64_t predict_adjust_y;
     s32 fkind;
     sb32 target_falls = FALSE;
+#if NDS_P4
+    const NDSP4Computer *p4_com;
+#endif
 
     if (gSCManagerBattleState->gkind == nGRKindInishie)
     {
@@ -285,7 +289,14 @@ ftComputerCheckDetectTarget(FTStruct *this_fp, f32 detect_range_base)
      * prediction (inputs_q12, below): most calls skip every attack first. */
     inputs_q12 = FALSE;
 
+#if NDS_P4
+    /* P4: the content's attack list (Remix ai_behaviour). */
+    p4_com = ndsP4Computer(this_fp);
+    comattack = ((p4_com != NULL) && (p4_com->attacks != NULL)) ?
+        (FTComputerAttack *)p4_com->attacks : dFTComputerAttackList[this_fp->fkind];
+#else
     comattack = dFTComputerAttackList[this_fp->fkind];
+#endif
 
     if (this_fp->ga != nMPKineticsGround)
     {
@@ -362,6 +373,21 @@ ftComputerCheckDetectTarget(FTStruct *this_fp, f32 detect_range_base)
                     break;
                 }
             }
+#if NDS_P4
+            /* P4: the content's guard replaces the parent's switch (Remix
+             * ai_attack_prevent, the jump table at 0x801334E4). */
+            if ((p4_com != NULL) && (p4_com->prevent != NULL))
+            {
+                s32 rule = p4_com->prevent(this_fp, comattack->input_kind);
+
+                if (rule == NDS_P4_COMPUTER_SKIP)
+                {
+                    goto l_continue;
+                }
+                is_attempt_cliffcatch = (rule == NDS_P4_COMPUTER_CHECK_GROUND);
+            }
+            else
+#endif
             switch (this_fp->fkind)
             {
             case nFTKindMario:
@@ -790,7 +816,11 @@ ftComputerCheckDetectTarget(FTStruct *this_fp, f32 detect_range_base)
                 }
                 else com->input_repeat_count = 0;
 
+#if NDS_P4
+                ndsP4ComputerSetCommandWaitShort(this_fp, input_kinds[i]);
+#else
                 ftComputerSetCommandWaitShort(this_fp, input_kinds[i]);
+#endif
 
                 com->input_kind = input_kinds[i];
 

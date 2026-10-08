@@ -18,8 +18,9 @@
 #if NDS_P4_FALCO
 
 sb32 ftMarioSpecialHiProcPass(GObj *fighter_gobj);
-void ftComputerSetCommandImmediate(FTStruct *fp, s32 index);
 s32 syUtilsRandIntRange(s32 range);
+extern u8 *dFTComputerPlayerInputScripts[];
+extern sb32 func_ovl2_800F8FFC(Vec3f *position);
 
 /* Phantasm.asm constants. Each is a `lui` upper half; LANDING keeps the
  * low half of the Mario Super Jump routine it was copied from
@@ -201,11 +202,10 @@ void ndsP4FalcoOnStatus(GObj *fighter_gobj, s32 status_id)
  * walk (AI.asm custom_recovery_logic). In the air Phantasm it holds B (the
  * long version). Otherwise, with the nearer ledge under 2000 units away in
  * X, the fighter below it and the ledge-grab box reaching it, one time in
- * eight it targets the ledge and Phantasms toward it. Remix adds a CPU input
- * routine for that (AI.asm NSP_TOWARDS: B with the stick toward the target);
- * the vanilla routine for "neutral special toward the target"
- * (nFTComputerInputStickSmashAutoXButtonB, ftcomputer.c script 9) gives the
- * same inputs. Offsets: 0x24 status_id, 0x78 coll_data.p_translate,
+ * eight it targets the ledge and Phantasms toward it with Remix's
+ * NSP_TOWARDS routine (B with the stick toward the target; unlike vanilla
+ * script 9 it releases Z and B first and ends a tick sooner). Offsets:
+ * 0x24 status_id, 0x78 coll_data.p_translate,
  * 0x1CC+0x4C/0x54 computer.cliff_left_pos/cliff_right_pos, 0x9C8 attr,
  * attributes + 0xB0 cliffcatch_coll.y, 0x1C6 input.cp. */
 void ndsP4FalcoComputerRecover(FTStruct *fp)
@@ -243,8 +243,107 @@ void ndsP4FalcoComputerRecover(FTStruct *fp)
     }
     com->target_pos.x = ledge_x;
     com->target_pos.y = ledge_y;
-    ftComputerSetCommandImmediate(fp, nFTComputerInputStickSmashAutoXButtonB);
+    ndsP4ComputerSetCommandImmediate(fp, nNDSP4ComputerInputNSPTowards);
 }
+
+/* Falco/AI/Attacks.asm CPU_ATTACKS (ai_behaviour), as assembled: input,
+ * hitbox start frame, (unused end), detect x near/far, y near/far. */
+_Static_assert(nFTComputerInputStickSmashLwButtonA == 0x22, "CPU input ids");
+static const FTComputerAttack sNdsP4FalcoComputerAttacks[] = {
+    { nNDSP4ComputerInputMultiShine, 1, 0, -90.0F, 90.0F, 160.0F, 340.0F },
+    { nFTComputerInputStickNButtonA, 3, 0, 244.0F, 562.0F, 204.0F, 316.0F },
+    { nFTComputerInputStickTiltAutoXButtonA, 6, 0, 170.0F, 606.0F, 205.0F, 336.0F },
+    { nFTComputerInputStickTiltHiButtonA, 6, 0, -218.0F, 257.0F, 176.0F, 701.0F },
+    { nFTComputerInputStickTiltLwButtonA, 6, 0, 25.0F, 447.0F, -37.0F, 123.0F },
+    { nFTComputerInputStickSmashAutoXNYButtonA, 14, 0, 380.0F, 826.0F, 100.0F, 384.0F },
+    { nFTComputerInputStickSmashHiButtonA, 6, 0, -345.0F, 367.0F, 139.0F, 760.0F },
+    { nFTComputerInputStickSmashLwButtonA, 6, 0, -414.0F, 420.0F, -31.0F, 120.0F },
+    { nFTComputerInputStickSmashAutoXButtonB, 20, 0, 600.0F, 1976.0F, 151.0F, 266.0F },
+    { nFTComputerInputStickNButtonZButtonA, 6, 0, 273.0F, 413.0F, 180.0F, 320.0F },
+    { nNDSP4ComputerInputDashAttack, 5, 0, 297.0F, 1156.0F, -78.0F, 313.0F },
+    { -1, 0, 0, 0.0F, 0.0F, 0.0F, 0.0F },
+    { nFTComputerInputStickNButtonA, 4, 0, -53.0F, 279.0F, 107.0F, 371.0F },
+    { nFTComputerInputStickSmashLwButtonA, 4, 0, -54.0F, 193.0F, 3.0F, 260.0F },
+    { nFTComputerInputStickSmashHiButtonA, 6, 0, -82.0F, 179.0F, 172.0F, 633.0F },
+    { nNDSP4ComputerInputFair, 6, 0, 51.0F, 347.0F, 138.0F, 383.0F },
+    { nNDSP4ComputerInputBair, 6, 0, -373.0F, 257.0F, 109.0F, 351.0F },
+    { nFTComputerInputStickNButtonA, 8, 0, -53.0F, 279.0F, 107.0F, 371.0F },
+    { nNDSP4ComputerInputBair, 10, 0, -373.0F, 257.0F, 109.0F, 351.0F },
+    { nFTComputerInputStickSmashAutoXButtonB, 20, 0, 350.0F, 1842.0F, 145.0F, 260.0F },
+    { -1, 0, 0, 0.0F, 0.0F, 0.0F, 0.0F },
+};
+
+/* AI.asm PREVENT_ATTACK.ROUTINE.FALCO_NSP (ai_attack_prevent): an aerial
+ * Phantasm gets the ledge-ground test; up special goes to FOX_USP, which
+ * skips it at level 10 only. Offsets: 0x14C ga, 0x13 level. */
+static s32 ndsP4FalcoComputerPrevent(FTStruct *fp, s32 input_kind)
+{
+    switch (input_kind)
+    {
+    case nFTComputerInputStickSmashAutoXButtonB:
+        return (fp->ga != nMPKineticsGround) ? NDS_P4_COMPUTER_CHECK_GROUND :
+                                                NDS_P4_COMPUTER_ALLOW;
+    case nFTComputerInputStickSmashHiButtonB:
+        return (fp->level >= 10) ? NDS_P4_COMPUTER_SKIP : NDS_P4_COMPUTER_ALLOW;
+    default:
+        return NDS_P4_COMPUTER_ALLOW;
+    }
+}
+
+/* Falco/AI/Attacks.asm cpu_post_process. In Fire Bird (Falco.Action
+ * 0xE3-0xE8, Fox's up special statuses) over ground, drop the command and
+ * hold the stick down (-80) to land. Otherwise an issued Phantasm (the
+ * attack list's NSPA, vanilla script 9) from over ground is dropped when
+ * no ground lies 2000 units ahead toward the target (0x800F8FFC).
+ * Offsets: 0xEC coll_data.floor_line_id (-1 = none below), 0x1D4
+ * computer.p_command, 0x1CC+0x60 computer.target_pos.x, 0x1C8/0x1C9
+ * input.cp.stick_range. */
+_Static_assert((nFTFoxStatusSpecialHiStart == 0xE3) &&
+               (nFTFoxStatusSpecialAirHi == 0xE8), "Fire Bird statuses");
+_Static_assert((nFTCommonStatusWait == 0x0A) && (nFTCommonStatusRun == 0x10),
+               "Remix Action.Idle/Run");
+static void ndsP4FalcoComputerPostProcess(FTStruct *fp)
+{
+    switch (fp->status_id)
+    {
+    case nFTFoxStatusSpecialHiStart:
+    case nFTFoxStatusSpecialAirHiStart:
+    case nFTFoxStatusSpecialHiHold:
+    case nFTFoxStatusSpecialAirHiHold:
+    case nFTFoxStatusSpecialHi:
+    case nFTFoxStatusSpecialAirHi:
+        if (fp->coll_data.floor_line_id != -1)
+        {
+            ndsP4ComputerSetCommandImmediate(fp, nNDSP4ComputerInputNull);
+            fp->input.cp.stick_range.y = -80;
+            fp->input.cp.stick_range.x = 0;
+        }
+        return;
+    }
+    if ((fp->computer.p_command ==
+         dFTComputerPlayerInputScripts[nFTComputerInputStickSmashAutoXButtonB]) &&
+        (fp->coll_data.floor_line_id != -1))
+    {
+        Vec3f ahead = *fp->coll_data.p_translate;
+
+        ahead.x += ((ahead.x - fp->computer.target_pos.x) < 0.0F) ? 2000.0F :
+                                                                  -2000.0F;
+        if (func_ovl2_800F8FFC(&ahead) == FALSE)
+        {
+            ndsP4ComputerSetCommandImmediate(fp, nNDSP4ComputerInputNull);
+        }
+    }
+}
+
+/* Falco's CPU rows; ai_long_range is NONE (Fox's is the long-range
+ * laser, NSP_SHOOT). */
+const NDSP4Computer gNdsP4FalcoComputer = {
+    .attacks = sNdsP4FalcoComputerAttacks,
+    .prevent = ndsP4FalcoComputerPrevent,
+    .long_range_none = TRUE,
+    .recover = ndsP4FalcoComputerRecover,
+    .post_process = ndsP4FalcoComputerPostProcess,
+};
 
 /* Falco.asm up_special_delay_ / up_special_velocity_1/2/3_. */
 s32 ndsP4FoxFirefoxLaunchDelay(const FTStruct *fp, s32 fox_delay)

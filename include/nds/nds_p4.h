@@ -16,6 +16,7 @@
 
 #include <PR/ultratypes.h>
 #include <ft/fighter.h>
+#include <ft/ftcomputer.h>
 #include <nds_build_config.h>
 
 #ifndef NDS_P4
@@ -71,6 +72,48 @@ typedef struct NDSP4Present
     u8 default_costumes[8];
 } NDSP4Present;
 
+/* A content's CPU rows: Remix's per-character tables (Character.asm)
+ * that AI.asm runs. A NULL field keeps the parent's vanilla path. */
+typedef struct NDSP4Computer
+{
+    /* ai_behaviour: the attack list (grounded rows, END, aerial rows, END)
+     * ftComputerCheckDetectTarget reads instead of dFTComputerAttackList. */
+    const FTComputerAttack *attacks;
+    /* ai_attack_prevent: per detected attack, in place of the parent's
+     * fkind switch (the jump table at 0x801334E4); NDS_P4_COMPUTER_*. */
+    s32 (*prevent)(FTStruct *fp, s32 input_kind);
+    /* ai_long_range NONE: no special from long range (0x80138ECC). */
+    sb32 long_range_none;
+    /* recovery_logic: after the recover objective's walk. */
+    void (*recover)(FTStruct *fp);
+    /* cpu_post_process: after the objective, before the inputs run. */
+    void (*post_process)(FTStruct *fp);
+} NDSP4Computer;
+
+/* ai_attack_prevent results: keep the attack, run the ledge-ground test
+ * the parent switch sets for recovery specials (is_attempt_cliffcatch),
+ * or skip the attack (0x80133A14). */
+enum
+{
+    NDS_P4_COMPUTER_ALLOW,
+    NDS_P4_COMPUTER_CHECK_GROUND,
+    NDS_P4_COMPUTER_SKIP
+};
+
+/* Remix's added CPU input routines (AI.asm add_cpu_input_routine) keep
+ * Remix's ids, past the vanilla table's 0x31 (bass log "CPU input routine
+ * added"). */
+#define NDS_P4_COMPUTER_INPUT_BASE 0x31
+enum
+{
+    nNDSP4ComputerInputMultiShine = 0x3A,
+    nNDSP4ComputerInputNSPTowards = 0x42,
+    nNDSP4ComputerInputFair = 0x43,
+    nNDSP4ComputerInputBair = 0x44,
+    nNDSP4ComputerInputDashAttack = 0x47,
+    nNDSP4ComputerInputNull = 0x4C
+};
+
 typedef struct NDSP4Fighter
 {
     const char *name;
@@ -85,8 +128,8 @@ typedef struct NDSP4Fighter
     const u32 *anim_count;
     /* Optional: after the status callbacks are applied (donor init hooks). */
     void (*on_status)(GObj *fighter_gobj, s32 status_id);
-    /* Optional: the content's CPU recovery_logic row (Remix AI.asm). */
-    void (*computer_recover)(FTStruct *fp);
+    /* Optional: the content's CPU rows. */
+    const NDSP4Computer *computer;
     /* HUD: stock icon (8x8 OBJ4 cell, 32 B) and its costume LUTs. */
     const u8 *stock_gfx;
     const u16 (*stock_palettes)[16];
@@ -131,9 +174,22 @@ void ndsP4SetupFileSizes(u32 data_flags);
 void ndsP4ApplyStatusOverrides(GObj *fighter_gobj, s32 status_id);
 /* ftMainSetStatus prologue: Remix change_action_ resets. */
 void ndsP4OnSetStatus(GObj *fighter_gobj);
+/* CPU (src/import/battleship_ftcomputer*.c). The content's rows, or NULL
+ * for the original cast. */
+const NDSP4Computer *ndsP4Computer(const FTStruct *fp);
 /* ftComputerFollowObjectiveRecover, after its walk: the content's CPU
  * recovery_logic (Remix AI.asm custom_recovery_logic). */
 void ndsP4ComputerRecover(FTStruct *fp);
+/* ftComputerProcessAll, after the objective (AI.asm cpu_post_process). */
+void ndsP4ComputerPostProcess(FTStruct *fp);
+/* ftComputerSetCommand* that also takes Remix's input routine ids. */
+void ndsP4ComputerSetCommandWaitShort(FTStruct *fp, s32 index);
+void ndsP4ComputerSetCommandImmediate(FTStruct *fp, s32 index);
+/* Before ftComputerUpdateInputs: the stick X a Remix routine's run this
+ * tick ends on, for Remix's directional values (AI.asm
+ * extend_stick_x_commands), else NDS_P4_COMPUTER_STICK_KEEP. */
+#define NDS_P4_COMPUTER_STICK_KEEP 0x100
+s32 ndsP4ComputerStickX(const FTStruct *fp);
 /* After a content's motion file loads: bind menu-motion script pointers. */
 void ndsP4BindMenuScripts(u32 content);
 /* NitroFS path for a P4 file id, or NULL. */

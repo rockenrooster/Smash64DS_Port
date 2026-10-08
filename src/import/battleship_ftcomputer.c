@@ -46,6 +46,21 @@ volatile u32 gNdsBattlePlayableFoxCpuEnabled = 0u;
 #define NDS_P4_RECOVER_fp ndsP4FTComputerFollowObjectiveRecover(fp
 #define ftComputerFollowObjectiveRecover(arg) NDS_P4_RECOVER_##arg)
 static void ndsP4FTComputerFollowObjectiveRecover(FTStruct *fp);
+/* The same seam for the objective step (Remix runs cpu_post_process after
+ * it), the input interpreter (Remix's stick-X values) and the long-range
+ * special (Remix's ai_long_range row). */
+#define NDS_P4_OBJECTIVE_FTStruct ndsBaseFTComputerProcessObjective(FTStruct
+#define NDS_P4_OBJECTIVE_fp ndsP4FTComputerProcessObjective(fp
+#define ftComputerProcessObjective(arg) NDS_P4_OBJECTIVE_##arg)
+static void ndsP4FTComputerProcessObjective(FTStruct *fp);
+#define NDS_P4_INPUTS_FTStruct ndsBaseFTComputerUpdateInputs(FTStruct
+#define NDS_P4_INPUTS_fp ndsP4FTComputerUpdateInputs(fp
+#define ftComputerUpdateInputs(arg) NDS_P4_INPUTS_##arg)
+static void ndsP4FTComputerUpdateInputs(FTStruct *fp);
+#define NDS_P4_LONG_RANGE_FTStruct ndsBaseFTComputerLongRange(FTStruct
+#define NDS_P4_LONG_RANGE_fp ndsP4FTComputerLongRange(fp
+#define func_ovl3_80138AA8(arg, ...) NDS_P4_LONG_RANGE_##arg, __VA_ARGS__)
+static sb32 ndsP4FTComputerLongRange(FTStruct *fp, sb32 is_delay);
 #endif
 #define ftComputerSetupAll ndsBaseFTComputerSetupAll
 #define ftComputerProcessAll ndsBaseFTComputerProcessAll
@@ -56,6 +71,9 @@ static void ndsP4FTComputerFollowObjectiveRecover(FTStruct *fp);
 
 #if NDS_P4
 #undef ftComputerFollowObjectiveRecover
+#undef ftComputerProcessObjective
+#undef ftComputerUpdateInputs
+#undef func_ovl3_80138AA8
 #include <nds/nds_p4.h>
 
 /* ftcomputer.c:6535, unchanged, with Remix's recovery_logic call after the
@@ -93,6 +111,68 @@ static void ndsP4FTComputerFollowObjectiveRecover(FTStruct *fp)
 void ftComputerFollowObjectiveRecover(FTStruct *fp)
 {
     ndsP4FTComputerFollowObjectiveRecover(fp);
+}
+
+/* ftComputerProcessAll's objective step, then Remix's cpu_post_process
+ * (AI.asm; patched in at 0x8013A884, between the objective and the
+ * inputs). */
+static void ndsP4FTComputerProcessObjective(FTStruct *fp)
+{
+    ndsBaseFTComputerProcessObjective(fp);
+    ndsP4ComputerPostProcess(fp);
+}
+
+void ftComputerProcessObjective(FTStruct *fp)
+{
+    ndsP4FTComputerProcessObjective(fp);
+}
+
+/* The input interpreter; a Remix routine's directional stick X is stored
+ * after its run (ndsP4ComputerStickX). */
+static void ndsP4FTComputerUpdateInputs(FTStruct *fp)
+{
+    s32 stick_x = ndsP4ComputerStickX(fp);
+
+    ndsBaseFTComputerUpdateInputs(fp);
+
+    if (stick_x != NDS_P4_COMPUTER_STICK_KEEP)
+    {
+        fp->input.cp.stick_range.x = stick_x;
+    }
+}
+
+void ftComputerUpdateInputs(FTStruct *this_fp)
+{
+    ndsP4FTComputerUpdateInputs(this_fp);
+}
+
+/* func_ovl3_80138AA8, the long-range special. Remix sends a content whose
+ * ai_long_range is NONE from the fkind jump table to its FALSE return
+ * (0x80138ECC), after the source's lead-in: that keeps its two random
+ * draws (the reaction delay and the reflector-target roll). */
+static sb32 ndsP4FTComputerLongRange(FTStruct *this_fp, sb32 is_delay)
+{
+    const NDSP4Computer *c = ndsP4Computer(this_fp);
+    FTComputer *com = &this_fp->computer;
+
+    if ((c == NULL) || (c->long_range_none == FALSE))
+    {
+        return ndsBaseFTComputerLongRange(this_fp, is_delay);
+    }
+    if (DISTANCE(this_fp->joints[nFTPartsJointTopN]->translate.vec.f.y, com->target_pos.y) < 400.0F)
+    {
+        if (com->unk_ftcom_0x35 == 0)
+        {
+            com->unk_ftcom_0x35 = 2.0F * (syUtilsRandFloat() * (FTCOMPUTER_LEVEL_MAX - this_fp->level));
+        }
+        syUtilsRandFloat();
+    }
+    return FALSE;
+}
+
+sb32 func_ovl3_80138AA8(FTStruct *this_fp, sb32 is_delay)
+{
+    return ndsP4FTComputerLongRange(this_fp, is_delay);
 }
 #endif
 #undef ftComputerSetupAll
