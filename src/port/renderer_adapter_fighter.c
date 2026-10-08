@@ -3032,11 +3032,12 @@ static sb32 ndsFighterGetNativeOwnerSlot(const FTStruct *fp, u32 *owner_slot)
     {
         return FALSE;
     }
-#if NDS_P4_FALCO
+#if NDS_P4
     /* P4: a donor draws its own model; fkind is its setup parent. */
-    if (fp->nds_p4_content == NDS_P4_CONTENT_FALCO)
+    if ((fp->nds_p4_content != 0u) &&
+        ((u32)fp->nds_p4_content <= NDS_P4_CONTENT_MAX_ID))
     {
-        *owner_slot = NDS_RENDERER_NATIVE_FIGHTER_OWNER_FALCO;
+        *owner_slot = NDS_P4_RENDERER_OWNER_SLOT(fp->nds_p4_content);
         return TRUE;
     }
 #endif
@@ -3320,11 +3321,15 @@ static u32 ndsFighterNativeOwnerModelAssetId(u32 owner_slot)
         return 0x12fu; /* llNFoxModelFileID, BattleShip dFTNFoxData */
     }
 #endif
-#if NDS_P4_FALCO
-    if (owner_slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_FALCO)
-    {
-        return 0x8acu; /* Remix FALCO_CHARACTER, scripts/p4 */
+#if NDS_P4
+    /* A P4 content's own model file (its export, nds_p4_contents.h). */
+#define NDS_P4_OWNER_MODEL_FILE(id_, T_, N_, n_, parent_, model_, main_)       \
+    if (owner_slot == NDS_P4_RENDERER_OWNER_SLOT(id_))                          \
+    {                                                                           \
+        return (model_);                                                        \
     }
+    NDS_P4_CONTENT_ROWS(NDS_P4_OWNER_MODEL_FILE)
+#undef NDS_P4_OWNER_MODEL_FILE
 #endif
 #if NDS_P2_NDONKEY
     if (owner_slot == 15u)
@@ -3477,11 +3482,14 @@ static NDSRendererProfileOwner ndsFighterNativeOwnerProfileId(u32 owner_slot)
         return NDS_RENDERER_PROFILE_OWNER_NFOX;
     }
 #endif
-#if NDS_P4_FALCO
-    if (owner_slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_FALCO)
-    {
-        return NDS_RENDERER_PROFILE_OWNER_FALCO;
+#if NDS_P4
+#define NDS_P4_OWNER_PROFILE(id_, T_, N_, n_, parent_, model_, main_)          \
+    if (owner_slot == NDS_P4_RENDERER_OWNER_SLOT(id_))                          \
+    {                                                                           \
+        return NDS_RENDERER_PROFILE_OWNER_##N_;                                 \
     }
+    NDS_P4_CONTENT_ROWS(NDS_P4_OWNER_PROFILE)
+#undef NDS_P4_OWNER_PROFILE
 #endif
 #if NDS_P2_NDONKEY
     if (owner_slot == 15u)

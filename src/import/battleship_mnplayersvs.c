@@ -509,9 +509,12 @@ static sb32 ndsMNPlayersVSPreviewOwnerImageSlot(s32 fkind, u32 *out_slot)
 #if NDS_P2_KIRBY
     NDS_CSS_OWNER_IMAGE_SLOT(nFTKindKirby, NDS_NATIVE_IMAGE_SLOT_KIRBY)
 #endif
-#if NDS_P4_FALCO
-    NDS_CSS_OWNER_IMAGE_SLOT(NDS_P4_SEL_BASE + NDS_P4_CONTENT_FALCO,
-                             NDS_NATIVE_IMAGE_SLOT_FALCO)
+#if NDS_P4
+#define NDS_CSS_P4_OWNER_IMAGE_SLOT(id_, T_, N_, n_, parent_, model_, main_)   \
+    NDS_CSS_OWNER_IMAGE_SLOT((s32)(NDS_P4_SEL_BASE + (id_)),                    \
+                             NDS_NATIVE_IMAGE_SLOT_##N_)
+    NDS_P4_CONTENT_ROWS(NDS_CSS_P4_OWNER_IMAGE_SLOT)
+#undef NDS_CSS_P4_OWNER_IMAGE_SLOT
 #endif
 #undef NDS_CSS_OWNER_IMAGE_SLOT
     (void)out_slot;
@@ -754,12 +757,16 @@ static u32 ndsMNPlayersVSPreviewOwnerImageBytes(s32 fkind, u32 use_low_detail)
                                         (u32)sizeof(NDSNativeKirbyHighImage);
     }
 #endif
-#if NDS_P4_FALCO
-    if (fkind == (s32)(NDS_P4_SEL_BASE + NDS_P4_CONTENT_FALCO))
-    {
-        return (use_low_detail != 0u) ? (u32)sizeof(NDSNativeFalcoLowImage) :
-                                        (u32)sizeof(NDSNativeFalcoHighImage);
+#if NDS_P4
+#define NDS_CSS_P4_OWNER_IMAGE_BYTES(id_, T_, N_, n_, parent_, model_, main_)  \
+    if (fkind == (s32)(NDS_P4_SEL_BASE + (id_)))                                \
+    {                                                                           \
+        return (use_low_detail != 0u) ?                                         \
+            (u32)sizeof(NDSNative##T_##LowImage) :                              \
+            (u32)sizeof(NDSNative##T_##HighImage);                              \
     }
+    NDS_P4_CONTENT_ROWS(NDS_CSS_P4_OWNER_IMAGE_BYTES)
+#undef NDS_CSS_P4_OWNER_IMAGE_BYTES
 #endif
     (void)fkind;
     (void)use_low_detail;

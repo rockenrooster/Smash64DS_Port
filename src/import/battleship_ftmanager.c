@@ -740,11 +740,16 @@ static u32 ndsFTManagerImageSlotForKind(s32 fkind)
 /* P4: a player's content picks its image before its (parent) kind does. */
 static u32 ndsFTManagerImageSlotForPlayer(s32 player, s32 fkind)
 {
-#if NDS_P4_FALCO
-    if (ndsP4MakeContent(player, fkind) == NDS_P4_CONTENT_FALCO)
-    {
-        return NDS_NATIVE_IMAGE_SLOT_FALCO;
+#if NDS_P4
+    u32 content = ndsP4MakeContent(player, fkind);
+
+#define NDS_P4_FTMANAGER_IMAGE_SLOT(id_, T_, N_, n_, parent_, model_, main_)   \
+    if (content == (id_))                                                       \
+    {                                                                           \
+        return NDS_NATIVE_IMAGE_SLOT_##N_;                                      \
     }
+    NDS_P4_CONTENT_ROWS(NDS_P4_FTMANAGER_IMAGE_SLOT)
+#undef NDS_P4_FTMANAGER_IMAGE_SLOT
 #else
     (void)player;
 #endif

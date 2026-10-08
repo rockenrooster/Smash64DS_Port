@@ -4493,10 +4493,12 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
         return TRUE;
     }
 #endif
-#if NDS_P4_FALCO
-    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_FALCO)
+#if NDS_P4
+    if ((slot > NDS_P4_RENDERER_OWNER_BASE) &&
+        (slot <= NDS_P4_RENDERER_OWNER_SLOT(NDS_P4_CONTENT_MAX_ID)))
     {
-        /* Image-backed: the bake reads and writes the image's own normals. */
+        /* P4 donor owners are image-backed: the bake reads and writes the
+         * image's own normals. */
         sNdsNativeFighterActiveDenseNormals =
             (u32 *)sNdsNativeFighterActiveTables->dense_normals;
         sNdsNativeFighterActiveDenseNormalsBuilt =
@@ -17212,18 +17214,21 @@ static s32 ndsRendererNativeGetHierarchyTables(
             sizeof(sNdsNativeNFoxJointSchedule[0]);
     }
 #endif
-#if NDS_P4_FALCO
-    else if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_FALCO)
-    {
-        tables->roots = sNdsNativeFalcoRoots;
-        tables->schedule = sNdsNativeFalcoJointSchedule;
-        tables->binding_joints = sNdsNativeFalcoBindingJoints;
-        tables->cross_slots = sNdsNativeFalcoCrossPaletteSlots;
-        tables->root_count = sizeof(sNdsNativeFalcoRoots) /
-            sizeof(sNdsNativeFalcoRoots[0]);
-        tables->joint_count = sizeof(sNdsNativeFalcoJointSchedule) /
-            sizeof(sNdsNativeFalcoJointSchedule[0]);
+#if NDS_P4
+#define NDS_P4_OWNER_HIERARCHY(id_, T_, N_, n_, parent_, model_, main_)        \
+    else if (slot == NDS_P4_RENDERER_OWNER_SLOT(id_))                           \
+    {                                                                           \
+        tables->roots = sNdsNative##T_##Roots;                                  \
+        tables->schedule = sNdsNative##T_##JointSchedule;                       \
+        tables->binding_joints = sNdsNative##T_##BindingJoints;                 \
+        tables->cross_slots = sNdsNative##T_##CrossPaletteSlots;                \
+        tables->root_count = sizeof(sNdsNative##T_##Roots) /                    \
+            sizeof(sNdsNative##T_##Roots[0]);                                   \
+        tables->joint_count = sizeof(sNdsNative##T_##JointSchedule) /           \
+            sizeof(sNdsNative##T_##JointSchedule[0]);                           \
     }
+    NDS_P4_CONTENT_ROWS(NDS_P4_OWNER_HIERARCHY)
+#undef NDS_P4_OWNER_HIERARCHY
 #endif
 #if NDS_P2_NDONKEY
     else if (slot == 15u)
@@ -17664,13 +17669,16 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
         return sNdsNativeNFoxBindingParents;
     }
 #endif
-#if NDS_P4_FALCO
-    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_FALCO)
-    {
-        *count = (u32)(sizeof(sNdsNativeFalcoBindingParents) /
-                       sizeof(sNdsNativeFalcoBindingParents[0]));
-        return sNdsNativeFalcoBindingParents;
+#if NDS_P4
+#define NDS_P4_OWNER_PARENTS(id_, T_, N_, n_, parent_, model_, main_)          \
+    if (slot == NDS_P4_RENDERER_OWNER_SLOT(id_))                                \
+    {                                                                           \
+        *count = (u32)(sizeof(sNdsNative##T_##BindingParents) /                 \
+                       sizeof(sNdsNative##T_##BindingParents[0]));              \
+        return sNdsNative##T_##BindingParents;                                  \
     }
+    NDS_P4_CONTENT_ROWS(NDS_P4_OWNER_PARENTS)
+#undef NDS_P4_OWNER_PARENTS
 #endif
 #if NDS_P2_NDONKEY
     if (slot == 15u)
@@ -18045,13 +18053,16 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
         return sNdsNativeNFoxCrossPaletteSlots;
     }
 #endif
-#if NDS_P4_FALCO
-    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_FALCO)
-    {
-        *count = (u32)(sizeof(sNdsNativeFalcoCrossPaletteSlots) /
-                       sizeof(sNdsNativeFalcoCrossPaletteSlots[0]));
-        return sNdsNativeFalcoCrossPaletteSlots;
+#if NDS_P4
+#define NDS_P4_OWNER_CROSS(id_, T_, N_, n_, parent_, model_, main_)            \
+    if (slot == NDS_P4_RENDERER_OWNER_SLOT(id_))                                \
+    {                                                                           \
+        *count = (u32)(sizeof(sNdsNative##T_##CrossPaletteSlots) /              \
+                       sizeof(sNdsNative##T_##CrossPaletteSlots[0]));           \
+        return sNdsNative##T_##CrossPaletteSlots;                               \
     }
+    NDS_P4_CONTENT_ROWS(NDS_P4_OWNER_CROSS)
+#undef NDS_P4_OWNER_CROSS
 #endif
 #if NDS_P2_NDONKEY
     if (slot == 15u)

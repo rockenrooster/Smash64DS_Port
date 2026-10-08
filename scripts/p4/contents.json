@@ -1,0 +1,6 @@
+{
+ "comment": "P4 content registry (docs/P4/New_Characters.md, S1). One row per Smash Remix fighter the port can build. `id` is the content's stable identity: it is saved in match configs, sent in the P3 descriptor and sits in the character-select id NDS_P4_SEL_BASE + id, so it never changes once assigned. `name` names the build directories, the NitroFS files and the Makefile flag NDS_P4_<NAME>; `remix` is the donor's define_character name; `title` builds the C symbol names (gNdsP4<Title>...). Everything else (parent, files, attributes) comes from the export.",
+ "contents": [
+  {"id": 1, "name": "falco", "remix": "FALCO", "title": "Falco"}
+ ]
+}

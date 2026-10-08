@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <PR/gbi.h>
+#include <nds/nds_p4_contents.h>
 
 #ifndef NDS_RENDERER_PROFILE_LEVEL
 #define NDS_RENDERER_PROFILE_LEVEL 2
@@ -599,9 +600,11 @@ typedef enum NDSRendererProfileOwner
 #if NDS_P2_1P_GAME
     NDS_RENDERER_PROFILE_OWNER_BOSS,
 #endif
-#if NDS_P4_FALCO
-    NDS_RENDERER_PROFILE_OWNER_FALCO,
-#endif
+    /* P4: one profile owner per compiled content (nds_p4_contents.h). */
+#define NDS_P4_PROFILE_OWNER_ENTRY(id_, T_, N_, n_, parent_, model_, main_) \
+    NDS_RENDERER_PROFILE_OWNER_##N_,
+    NDS_P4_CONTENT_ROWS(NDS_P4_PROFILE_OWNER_ENTRY)
+#undef NDS_P4_PROFILE_OWNER_ENTRY
 #if NDS_TASK49_GX_DIFFER
     /* Task49/M1 effect-stream owner.  This diagnostic owner must not enlarge
      * the production owner enum: several hot arrays and compact owner maps use
@@ -693,11 +696,12 @@ typedef enum NDSRendererProfileOwner
 #else
 #define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 2u
 #endif
-/* P4 donor owners take the slots after Master Hand's (include/nds/nds_p4_native.h). */
-#if NDS_P4_FALCO
-#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_FALCO 25u
+/* P4 donor owners take the slots after Master Hand's: content id i owns
+ * NDS_P4_RENDERER_OWNER_SLOT(i) (nds_p4_contents.h). */
+#if NDS_P4
 #undef NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT
-#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 26u
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT \
+    (NDS_P4_RENDERER_OWNER_BASE + 1u + NDS_P4_CONTENT_MAX_ID)
 #endif
 #if NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS || \
     (NDS_TASK36_HW_COMPOSE == 2) || NDS_TASK49_GX_DIFFER

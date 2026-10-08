@@ -41,6 +41,7 @@ VERSION = 2
 NULL = 0xFFFFFFFF
 ENDDL = 0xDF000000
 ALIGN = 16
+SEL_BASE = 0x40  # include/nds/nds_p4.h NDS_P4_SEL_BASE
 MODELPARTS_ENTRIES = 37 - 4  # nFTPartsJointNumMax - nFTPartsJointCommonStart
 FTMODELPART_DESC_PARTS = 2   # FTModelPartDesc.modelparts[1][2]
 
@@ -290,13 +291,26 @@ def build(o2r_dir: Path, main_id: int, model_id: int, attr: int, kind: int):
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--o2r", type=Path, required=True, help="the content's generated o2r/ directory")
-    ap.add_argument("--main", type=lambda v: int(v, 0), required=True)
-    ap.add_argument("--model", type=lambda v: int(v, 0), required=True)
-    ap.add_argument("--attributes", type=lambda v: int(v, 0), required=True)
-    ap.add_argument("--kind", type=lambda v: int(v, 0), required=True,
-                    help="NDS_P4_SEL_BASE + content")
+    ap.add_argument("--content", help="the content's registry name; main, model, attributes "
+                    "and kind then come from --export-root and scripts/p4/contents.json")
+    ap.add_argument("--export-root", type=Path)
+    ap.add_argument("--main", type=lambda v: int(v, 0))
+    ap.add_argument("--model", type=lambda v: int(v, 0))
+    ap.add_argument("--attributes", type=lambda v: int(v, 0))
+    ap.add_argument("--kind", type=lambda v: int(v, 0), help="NDS_P4_SEL_BASE + content")
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
+    if args.content is not None:
+        import p4_contents  # noqa: E402
+
+        if args.export_root is None:
+            ap.error("--content needs --export-root")
+        row = p4_contents.enabled_rows([args.content])[0]
+        facts = p4_contents.export_facts(args.export_root, args.content)
+        args.main, args.model, args.attributes = facts["main"], facts["model"], facts["attributes"]
+        args.kind = SEL_BASE + row["id"]
+    if None in (args.main, args.model, args.attributes, args.kind):
+        ap.error("give --content and --export-root, or --main/--model/--attributes/--kind")
     try:
         blob, meta = build(args.o2r, args.main, args.model, args.attributes, args.kind)
     except PackError as error:

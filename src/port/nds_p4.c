@@ -66,18 +66,24 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
         .sword_trail_count = &gNdsP4##T##SwordTrailCount, \
     }
 
-#if NDS_P4_FALCO
-NDS_P4_DECLARE(Falco)
-void ndsP4FalcoOnStatus(GObj *fighter_gobj, s32 status_id);
-extern const NDSP4Computer gNdsP4FalcoComputer;
-#endif
+/* Every compiled content (nds_p4_contents.h). Its native hooks live in
+ * src/port/nds_p4_<name>.c when it has any: ndsP4<Title>OnStatus (donor init
+ * hooks after the status callbacks) and gNdsP4<Title>Computer (CPU rows).
+ * Both are weak, so a content without them gets NULL. */
+#define NDS_P4_DECLARE_ROW(id_, T_, N_, n_, parent_, model_, main_) \
+    NDS_P4_DECLARE(T_) \
+    void ndsP4##T_##OnStatus(GObj *fighter_gobj, s32 status_id) \
+        __attribute__((weak)); \
+    extern const NDSP4Computer gNdsP4##T_##Computer __attribute__((weak));
+NDS_P4_CONTENT_ROWS(NDS_P4_DECLARE_ROW)
+#undef NDS_P4_DECLARE_ROW
 
 static const NDSP4Fighter sNdsP4Fighters[NDS_P4_CONTENT_LIMIT] = {
-#if NDS_P4_FALCO
-    [NDS_P4_CONTENT_FALCO] =
-        NDS_P4_ROW(Falco, "Falco", nFTKindFox, ndsP4FalcoOnStatus,
-                   &gNdsP4FalcoComputer),
-#endif
+#define NDS_P4_FIGHTER_ROW(id_, T_, N_, n_, parent_, model_, main_) \
+    [(id_)] = NDS_P4_ROW(T_, #T_, parent_, ndsP4##T_##OnStatus, \
+                         &gNdsP4##T_##Computer),
+    NDS_P4_CONTENT_ROWS(NDS_P4_FIGHTER_ROW)
+#undef NDS_P4_FIGHTER_ROW
 };
 
 /* Menu-motion scripts are absolute pointers in the source (opening statuses

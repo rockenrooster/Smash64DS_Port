@@ -150,6 +150,27 @@ Build: `NDS_P4_FALCO=1` (with a local staging and export; the Makefile runs the
 export and generator into `$(BUILD)/p4`). Lab: `gNdsLabP4Content` (one byte a
 slot) puts a content on its parent in the four-CPU sweep ROM.
 
+Content list (S1). `scripts/p4/contents.json` is the registry: id, name,
+Remix name, title. The id is stable: it is saved, sent in the P3 descriptor
+and sits in the selection id 0x40 + id. Adding a fighter takes four things:
+- a registry row;
+- `NDS_P4_<NAME>=1` on the build;
+- its owner pins (`scripts/p4/owners/<name>.json`, `p4_native_owner.py --learn`);
+- its native code in `src/port/nds_p4_<name>.c`, only if it has any.
+
+No shared file names a fighter. The Makefile reads the registry and runs one
+rule template per enabled content: export, generator, NitroFS staging, preview
+pack and native images. The native-owner generator runs once for all of them.
+`scripts/p4/p4_contents.py` writes `NDS_P4_CONTENT_ROWS(X)`, which these
+shared sites expand:
+- the content enum and fighter rows (`nds_p4.c`; per-content hooks are weak);
+- the renderer's owner slots and profile owners (`nds_renderer.h`);
+- the owner tables, binds and lookups (`nds_renderer_assets.c`,
+  `nds_renderer_native_common.c`, `renderer_adapter_fighter.c`);
+- the select's owner images and the battle image slots.
+
+All contents' data share one TU (`nds_p4_data.c`).
+
 Native ports (`src/port/nds_p4_falco.c`): Phantasm ground/air interrupt, air
 physics and air map; the INITIAL_SETUP seed; Fire Bird launch delay and speed.
 Phantasm's landing lag is 0x3EB35C29 (the copied Mario routine keeps its
@@ -336,7 +357,7 @@ into the global reservation.
 
 | Item | State |
 |---|---|
-| S1 content list | not started; Falco is wired by hand in shared renderer, Makefile and P4 files |
+| S1 content list | done: registry, Makefile templates, one native-owner emit, `NDS_P4_CONTENT_ROWS` in every shared site; Falco unchanged (lab: 0 declines, menu ROM preview) |
 | S2 build throughput | not started; lab and menu builds still rewrite the shared linker script under a mutex |
 | S3 table seams | 12 of 33 (Falco's) |
 | S4 motion commands | 2 of the roster's 12 (FSM, TopN) |
@@ -344,7 +365,7 @@ into the global reservation.
 | S6 articles | first source scan only |
 | S7 generated CPU rows | Falco's rows read by hand from the assembled tables |
 | S8 Kirby copies | not started |
-| S9 select-screen preview | done for Falco on the menu ROM; pack flags still per-fighter Makefile lines (folds into S1); the all-content ROM cannot hold P4 menu clips in the select's global reservation (see above) |
+| S9 select-screen preview | done for Falco on the menu ROM; pack facts come from the export (`p4_preview_pack.py --content`); the all-content ROM cannot hold P4 menu clips in the select's global reservation (see above) |
 | S10 acceptance probe | lab probes exist per topic (`gNdsLabP4Content`); no single command |
 | S11 whole-roster generation | not started; all 14 export cleanly |
 | S12 EXTRA export | not started; EXTRA's nested Remix gitlink not initialized |

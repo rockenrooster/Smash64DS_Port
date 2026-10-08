@@ -262,7 +262,7 @@ _Static_assert(sizeof(NDSNativeRootVariant) == 20u,
 _Static_assert(sizeof(NDSNativeDirectPolicy) == 12u,
                "native direct policy ABI must stay compact");
 #include "nds_native_fighter_owner.generated.inc"
-#if NDS_P4_FALCO
+#if NDS_P4
 #include "nds_p4_native_owner.generated.inc"
 #endif
 #if NDS_P2_KIRBY && NDS_NATIVE_OWNER_IMAGE_KIRBY && \
@@ -2552,103 +2552,24 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeNFoxRootLightPreambles, NDS_NATIVE_NFOX_MODEL_DATA_SIZE);
 #endif
 
-#if NDS_P4_FALCO
-#if NDS_NATIVE_OWNER_IMAGE_FALCO
-static NDSNativeFighterRuntimeTables sNdsNativeFalcoFighterHighTables;
-#else
-static const NDSNativeFighterRuntimeTables sNdsNativeFalcoFighterHighTables =
-{
-    sNdsNativeFalcoFighterStateDeltas,
-    NDS_FTR_COUNT(sNdsNativeFalcoFighterStateDeltas),
-    sNdsNativeFalcoFighterStateSequence,
-    NDS_FTR_COUNT(sNdsNativeFalcoFighterStateSequence),
-    sNdsNativeFalcoFighterVertexActions,
-    NDS_FTR_COUNT(sNdsNativeFalcoFighterVertexActions),
-    sNdsNativeFalcoFighterEpochDirectPolicy,
-    sNdsNativeFalcoFighterDenseVertices,
-    NDS_FTR_COUNT(sNdsNativeFalcoFighterDenseVertices),
-    sNdsNativeFalcoFighterDenseNormals,
-    sNdsNativeFalcoFighterPreparedDense,
-    sNdsNativeFalcoFighterActionDenseSpans,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeFalcoFighterDenseColorSource,
-#endif
-    sNdsNativeFalcoFighterPackedCorners,
-    NDS_FTR_COUNT(sNdsNativeFalcoFighterPackedCorners),
-    sNdsNativeFalcoFighterRunFirstCorner,
-    NDS_FTR_COUNT(sNdsNativeFalcoFighterRunFirstCorner),
-    sNdsNativeFalcoFighterRunFirstUnique,
-    sNdsNativeFalcoFighterRunUniqueCount,
-    sNdsNativeFalcoFighterRunUniqueDense,
-    sNdsNativeFalcoFighterTriangles,
-    NDS_FTR_COUNT(sNdsNativeFalcoFighterTriangles),
-    sNdsNativeFalcoFighterRuns,
-    NDS_FTR_COUNT(sNdsNativeFalcoFighterRuns),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
-    sNdsNativeFalcoFighterPrimitiveGroupFirst,
-    sNdsNativeFalcoFighterPrimitiveGroupCount,
-    sNdsNativeFalcoFighterPrimitiveGroupType,
-    sNdsNativeFalcoFighterPrimitiveGroupFirstVertex,
-    sNdsNativeFalcoFighterPrimitiveGroupVertexCount,
-    sNdsNativeFalcoFighterPrimitiveVertices,
-#endif
-    sNdsNativeFalcoFighterEpochs,
-    NDS_FTR_COUNT(sNdsNativeFalcoFighterEpochs)
-};
-#endif
-
-#if NDS_NATIVE_OWNER_IMAGE_FALCO
-static NDSNativeFighterRuntimeTables sNdsNativeFalcoFighterLowTables;
-#else
-static const NDSNativeFighterRuntimeTables sNdsNativeFalcoFighterLowTables =
-{
-    sNdsNativeFalcoFighterStateDeltasLow,
-    NDS_FTR_COUNT(sNdsNativeFalcoFighterStateDeltasLow),
-    sNdsNativeFalcoFighterStateSequenceLow,
-    NDS_FTR_COUNT(sNdsNativeFalcoFighterStateSequenceLow),
-    sNdsNativeFalcoFighterVertexActionsLow,
-    NDS_FTR_COUNT(sNdsNativeFalcoFighterVertexActionsLow),
-    sNdsNativeFalcoFighterEpochDirectPolicyLow,
-    sNdsNativeFalcoFighterDenseVerticesLow,
-    NDS_FTR_COUNT(sNdsNativeFalcoFighterDenseVerticesLow),
-    sNdsNativeFalcoFighterDenseNormalsLow,
-    sNdsNativeFalcoFighterPreparedDenseLow,
-    sNdsNativeFalcoFighterActionDenseSpansLow,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeFalcoFighterDenseColorSourceLow,
-#endif
-    sNdsNativeFalcoFighterPackedCornersLow,
-    NDS_FTR_COUNT(sNdsNativeFalcoFighterPackedCornersLow),
-    sNdsNativeFalcoFighterRunFirstCornerLow,
-    NDS_FTR_COUNT(sNdsNativeFalcoFighterRunFirstCornerLow),
-    sNdsNativeFalcoFighterRunFirstUniqueLow,
-    sNdsNativeFalcoFighterRunUniqueCountLow,
-    sNdsNativeFalcoFighterRunUniqueDenseLow,
-    sNdsNativeFalcoFighterTrianglesLow,
-    NDS_FTR_COUNT(sNdsNativeFalcoFighterTrianglesLow),
-    sNdsNativeFalcoFighterRunsLow,
-    NDS_FTR_COUNT(sNdsNativeFalcoFighterRunsLow),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
-    sNdsNativeFalcoFighterPrimitiveGroupFirstLow,
-    sNdsNativeFalcoFighterPrimitiveGroupCountLow,
-    sNdsNativeFalcoFighterPrimitiveGroupTypeLow,
-    sNdsNativeFalcoFighterPrimitiveGroupFirstVertexLow,
-    sNdsNativeFalcoFighterPrimitiveGroupVertexCountLow,
-    sNdsNativeFalcoFighterPrimitiveVerticesLow,
-#endif
-    sNdsNativeFalcoFighterEpochsLow,
-    NDS_FTR_COUNT(sNdsNativeFalcoFighterEpochsLow)
-};
-#endif
-
-NDS_FTR_OWNER_RUNTIME(
-    sNdsNativeFalcoHighOwner, &sNdsNativeFalcoFighterHighTables,
-    sNdsNativeFalcoRoots, sNdsNativeFalcoCrossPaletteSlots,
-    sNdsNativeFalcoRootLightPreambles, NDS_NATIVE_FALCO_MODEL_DATA_SIZE);
-NDS_FTR_OWNER_RUNTIME(
-    sNdsNativeFalcoLowOwner, &sNdsNativeFalcoFighterLowTables,
-    sNdsNativeFalcoRootsLow, sNdsNativeFalcoCrossPaletteSlotsLow,
-    sNdsNativeFalcoRootLightPreambles, NDS_NATIVE_FALCO_MODEL_DATA_SIZE);
+#if NDS_P4
+/* P4 donor owners (nds_p4_contents.h): image-backed, so each content's two
+ * tables structs are bound to its loaded image (ndsRendererNativeBindOwnerImage)
+ * and its runtime owners name the generated roots, cross-palette slots and
+ * light preambles (nds_p4_native_owner.generated.inc). */
+#define NDS_P4_OWNER_RUNTIME(id_, T_, N_, n_, parent_, model_, main_)          \
+    static NDSNativeFighterRuntimeTables sNdsNative##T_##FighterHighTables;      \
+    static NDSNativeFighterRuntimeTables sNdsNative##T_##FighterLowTables;       \
+    NDS_FTR_OWNER_RUNTIME(                                                       \
+        sNdsNative##T_##HighOwner, &sNdsNative##T_##FighterHighTables,           \
+        sNdsNative##T_##Roots, sNdsNative##T_##CrossPaletteSlots,                \
+        sNdsNative##T_##RootLightPreambles, NDS_NATIVE_##N_##_MODEL_DATA_SIZE);  \
+    NDS_FTR_OWNER_RUNTIME(                                                       \
+        sNdsNative##T_##LowOwner, &sNdsNative##T_##FighterLowTables,             \
+        sNdsNative##T_##RootsLow, sNdsNative##T_##CrossPaletteSlotsLow,          \
+        sNdsNative##T_##RootLightPreambles, NDS_NATIVE_##N_##_MODEL_DATA_SIZE);
+NDS_P4_CONTENT_ROWS(NDS_P4_OWNER_RUNTIME)
+#undef NDS_P4_OWNER_RUNTIME
 #endif
 
 #if NDS_P2_NDONKEY
@@ -5035,23 +4956,26 @@ static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
         return;
     }
 #endif
-#if NDS_P4_FALCO
-    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_FALCO)
-    {
-        if (use_low_detail != 0u)
-        {
-            NDS_IMG_BIND(sNdsNativeFalcoFighterLowTables,
-                         NDSNativeFalcoLowImage, base,
-                         NDS_NATIVE_IMAGE_FALCO_LOW);
-        }
-        else
-        {
-            NDS_IMG_BIND(sNdsNativeFalcoFighterHighTables,
-                         NDSNativeFalcoHighImage, base,
-                         NDS_NATIVE_IMAGE_FALCO_HIGH);
-        }
-        return;
+#if NDS_P4
+#define NDS_P4_OWNER_BIND(id_, T_, N_, n_, parent_, model_, main_)             \
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_##N_)                               \
+    {                                                                           \
+        if (use_low_detail != 0u)                                               \
+        {                                                                       \
+            NDS_IMG_BIND(sNdsNative##T_##FighterLowTables,                      \
+                         NDSNative##T_##LowImage, base,                         \
+                         NDS_NATIVE_IMAGE_##N_##_LOW);                          \
+        }                                                                       \
+        else                                                                    \
+        {                                                                       \
+            NDS_IMG_BIND(sNdsNative##T_##FighterHighTables,                     \
+                         NDSNative##T_##HighImage, base,                        \
+                         NDS_NATIVE_IMAGE_##N_##_HIGH);                         \
+        }                                                                       \
+        return;                                                                 \
     }
+    NDS_P4_CONTENT_ROWS(NDS_P4_OWNER_BIND)
+#undef NDS_P4_OWNER_BIND
 #endif
 #if NDS_NATIVE_OWNER_IMAGE_NDONKEY
     if (owner_slot == NDS_NATIVE_IMAGE_SLOT_NDONKEY)
@@ -5836,12 +5760,15 @@ ndsRendererNativeFighterCanonicalOwnerForDetail(u32 slot, u32 use_low_detail)
             &sNdsNativeNFoxLowOwner : &sNdsNativeNFoxHighOwner;
     }
 #endif
-#if NDS_P4_FALCO
-    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_FALCO)
-    {
-        return (use_low_detail != 0u) ?
-            &sNdsNativeFalcoLowOwner : &sNdsNativeFalcoHighOwner;
+#if NDS_P4
+#define NDS_P4_OWNER_LOOKUP(id_, T_, N_, n_, parent_, model_, main_)           \
+    if (slot == NDS_P4_RENDERER_OWNER_SLOT(id_))                                \
+    {                                                                           \
+        return (use_low_detail != 0u) ?                                         \
+            &sNdsNative##T_##LowOwner : &sNdsNative##T_##HighOwner;             \
     }
+    NDS_P4_CONTENT_ROWS(NDS_P4_OWNER_LOOKUP)
+#undef NDS_P4_OWNER_LOOKUP
 #endif
 #if NDS_P2_NDONKEY
     if (slot == 15u)

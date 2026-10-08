@@ -19,18 +19,16 @@
 #include <ft/ftcomputer.h>
 #include <nds_build_config.h>
 
-#ifndef NDS_P4
-#define NDS_P4 0
-#endif
-#ifndef NDS_P4_FALCO
-#define NDS_P4_FALCO 0
-#endif
+#include <nds/nds_p4_contents.h>
 
 enum
 {
     NDS_P4_CONTENT_NONE = 0,
-    NDS_P4_CONTENT_FALCO = 1,
-    NDS_P4_CONTENT_LIMIT
+#define NDS_P4_CONTENT_ENUM(id_, T_, N_, n_, parent_, model_, main_) \
+    NDS_P4_CONTENT_##N_ = (id_),
+    NDS_P4_CONTENT_ROWS(NDS_P4_CONTENT_ENUM)
+#undef NDS_P4_CONTENT_ENUM
+    NDS_P4_CONTENT_LIMIT = NDS_P4_CONTENT_MAX_ID + 1
 };
 
 typedef struct NDSP4StatusOverride
