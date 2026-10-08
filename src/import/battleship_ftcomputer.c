@@ -61,6 +61,18 @@ static void ndsP4FTComputerUpdateInputs(FTStruct *fp);
 #define NDS_P4_LONG_RANGE_fp ndsP4FTComputerLongRange(fp
 #define func_ovl3_80138AA8(arg, ...) NDS_P4_LONG_RANGE_##arg, __VA_ARGS__)
 static sb32 ndsP4FTComputerLongRange(FTStruct *fp, sb32 is_delay);
+/* The objective walk's recover branch skips the double-jump up special for
+ * Yoshi and Jigglypuff (ftcomputer.c:5133), a compare Remix extends to J
+ * Yoshi and Marina only (yoshishared.asm yoshi_cpu_fix_1), so a content
+ * aliasing Yoshi (Bowser) recovers with it. The file also has a
+ * `case nFTKindYoshi:` (4116), which an NDS_P4_PARENT_KIND view cannot
+ * reach, so the port's copy runs the walk with the content's fkind out of
+ * range instead. */
+#define NDS_P4_WALK_FTStruct ndsBaseFTComputerFollowObjectiveWalk(FTStruct
+#define NDS_P4_WALK_fp ndsP4FTComputerFollowObjectiveWalk(fp
+#define NDS_P4_WALK_this_fp ndsP4FTComputerFollowObjectiveWalk(this_fp
+#define ftComputerFollowObjectiveWalk(arg) NDS_P4_WALK_##arg)
+static void ndsP4FTComputerFollowObjectiveWalk(FTStruct *fp);
 #endif
 #define ftComputerSetupAll ndsBaseFTComputerSetupAll
 #define ftComputerProcessAll ndsBaseFTComputerProcessAll
@@ -70,11 +82,35 @@ static sb32 ndsP4FTComputerLongRange(FTStruct *fp, sb32 is_delay);
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcomputer.c"
 
 #if NDS_P4
+#undef ftComputerFollowObjectiveWalk
 #undef ftComputerFollowObjectiveRecover
 #undef ftComputerProcessObjective
 #undef ftComputerUpdateInputs
 #undef func_ovl3_80138AA8
 #include <nds/nds_p4.h>
+
+/* ftcomputer.c:4960 for a P4 content. Its fkind reads are three compares
+ * (Kirby/Jigglypuff 5026, Yoshi/Jigglypuff 5133, Giant DK 5145) and its
+ * callees read none, so it runs with the content's fkind past every vanilla
+ * kind, as the content's own id is on the N64. */
+static void ndsP4FTComputerFollowObjectiveWalk(FTStruct *fp)
+{
+    if (fp->nds_p4_content != 0u)
+    {
+        s32 fkind = fp->fkind;
+
+        fp->fkind = NDS_P4_FOREIGN_FKIND;
+        ndsBaseFTComputerFollowObjectiveWalk(fp);
+        fp->fkind = fkind;
+        return;
+    }
+    ndsBaseFTComputerFollowObjectiveWalk(fp);
+}
+
+void ftComputerFollowObjectiveWalk(FTStruct *fp)
+{
+    ndsP4FTComputerFollowObjectiveWalk(fp);
+}
 
 /* ftcomputer.c:6535, unchanged, with Remix's recovery_logic call after the
  * walk (AI.asm custom_recovery_logic, at 0x80137FBC). */

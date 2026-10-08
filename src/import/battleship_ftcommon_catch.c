@@ -6,6 +6,10 @@
 #include <gr/ground.h>
 #include <it/item.h>
 #include <sys/obj.h>
+#include <nds/nds_p4_contents.h>
+#if NDS_P4
+#include <nds/nds_p4.h>
+#endif
 
 GObj *efManagerCatchSwirlMakeEffect(Vec3f *pos);
 GObj *efManagerSamusGrappleBeamGlowMakeEffect(GObj *fighter_gobj);
@@ -71,7 +75,18 @@ void ndsBaseFTCommonCatchPullProcCatch(GObj *fighter_gobj);
 void ndsBaseFTCommonCatchWaitProcInterrupt(GObj *fighter_gobj);
 void ndsBaseFTCommonCatchWaitSetStatus(GObj *fighter_gobj);
 
+/* P4: Yoshi's catch shows his tongue part, and his capture and throws hide
+ * the swallowed victim. Remix extends these compares to J Yoshi (and the
+ * Piano's throw) only, yoshi_grab_fix_1/2 and yoshi_throw_fix_1, so a
+ * content aliasing Yoshi (Bowser) grabs like everyone else (nds_p4.h
+ * NDS_P4_PARENT_KIND). */
+#if NDS_P4
+#define nFTKindYoshi NDS_P4_PARENT_KIND(fp, nFTKindYoshi)
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommoncatch2.c"
+#if NDS_P4
+#undef nFTKindYoshi
+#endif
 
 #undef ftCommonCatchPullProcUpdate
 #undef ftCommonCatchPullProcCatch
@@ -98,7 +113,13 @@ void ndsBaseFTCommonCapturePulledProcMap(GObj *fighter_gobj);
 void ndsBaseFTCommonCapturePulledProcCapture(GObj *fighter_gobj,
                                              GObj *capture_gobj);
 
+#if NDS_P4
+#define nFTKindYoshi NDS_P4_PARENT_KIND(capture_fp, nFTKindYoshi)
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommoncapturewait.c"
+#if NDS_P4
+#undef nFTKindYoshi
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommoncapturepulled.c"
 
 #undef ftCommonCaptureWaitProcMap
@@ -151,8 +172,24 @@ void ndsBaseFTCommonThrowProcUpdate(GObj *fighter_gobj);
 void ndsBaseFTCommonThrowSetStatus(GObj *fighter_gobj, sb32 is_throwf);
 sb32 ndsBaseFTCommonThrowCheckInterruptCatchWait(GObj *fighter_gobj);
 
+#if NDS_P4
+#define nFTKindYoshi NDS_P4_PARENT_KIND(capture_fp, nFTKindYoshi)
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonthrown1.c"
+#if NDS_P4
+#undef nFTKindYoshi
+#endif
+#if NDS_P4
+/* P4: a content whose forward throw Remix sends down Kirby's branch
+ * (jigglypuffkirbyshared.asm kirby_fthrow_1_fix, Bowser). The file's one
+ * ftMainSetStatus is ftCommonThrowSetStatus's. */
+#define ftMainSetStatus(gobj_, status_, frame_, speed_, flags_) \
+    ndsP4ThrowMainSetStatus((gobj_), (status_), (frame_), (speed_), (flags_))
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonthrow.c"
+#if NDS_P4
+#undef ftMainSetStatus
+#endif
 
 #undef ftCommonThrownProcUpdate
 #undef ftCommonThrownProcPhysics

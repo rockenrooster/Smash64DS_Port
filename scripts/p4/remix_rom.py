@@ -41,6 +41,12 @@ FT_OVERLAY_RAM_MINUS_ROM = 0x80084800
 # (D_ovl1_*) that Remix menu motions can point at directly.
 MENU_OVERLAY_RAM_MINUS_ROM = 0x80288A20
 MENU_OVERLAY_RAM = (0x803903E0, 0x803929D0)
+# Overlay 3 (ft/ftcomputer, ft/ftcommon/*, ft/ftmain, wp/, it/, ef/ in
+# battle) follows overlay 2 in VRAM but not at its RAM-ROM distance: ROM
+# 0x0AC540-0x1079C0 at VRAM 0x80131B00 (smashbrothers.us.yaml). Reading it
+# through the fighter overlay's constant lands 0xDC0 bytes off.
+OVL3_RAM_MINUS_ROM = 0x800855C0
+OVL3_RAM = (0x80131B00, 0x8018CF80)
 
 O2R_HEADER = (
     b"\x00\x00\x00\x00" + b"OLER" + b"\x00\x00\x00\x00"
@@ -237,6 +243,8 @@ class Rom:
             off = self.remix_rom_offset(ram)
         elif MENU_OVERLAY_RAM[0] <= ram < MENU_OVERLAY_RAM[1]:
             off = ram - MENU_OVERLAY_RAM_MINUS_ROM
+        elif OVL3_RAM[0] <= ram < OVL3_RAM[1]:
+            off = ram - OVL3_RAM_MINUS_ROM
         else:
             off = ram - FT_OVERLAY_RAM_MINUS_ROM
         return self.data[off:off + size]

@@ -4,6 +4,10 @@
 #include <if/interface.h>
 #include <it/item.h>
 #include <sc/scene.h>
+#include <nds/nds_p4_contents.h>
+#if NDS_P4
+#include <nds/nds_p4.h>
+#endif
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
@@ -41,7 +45,17 @@ void ftParamTryUpdateItemMusic(void);
 
 sb32 ndsBaseFTCommonDeadCheckInterruptCommon(GObj *fighter_gobj);
 
+#if NDS_P4
+/* P4: Remix's refills on a fall (jigglypuffkirbyshared.asm kirby_blast_fix_1
+ * gives Bowser his 20 flames back) run after the source's weapon cleanup, the
+ * file's one call. */
+#define ftManagerDestroyFighterWeapons(gobj_) \
+    (ftManagerDestroyFighterWeapons(gobj_), ndsP4OnDead(gobj_))
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommondead.c"
+#if NDS_P4
+#undef ftManagerDestroyFighterWeapons
+#endif
 
 #undef ftCommonDeadCheckInterruptCommon
 

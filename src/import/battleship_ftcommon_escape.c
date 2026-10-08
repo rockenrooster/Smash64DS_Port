@@ -3,7 +3,11 @@
  * Public symbols are remapped so the port backend can gate original Escape.
  */
 #include <ft/fighter.h>
+#include <nds/nds_p4_contents.h>
 #include <sys/obj.h>
+#if NDS_P4
+#include <nds/nds_p4.h>
+#endif
 
 sb32 ftCommonGuardCheckInterruptEscape(GObj *fighter_gobj);
 sb32 ftCommonLightThrowCheckInterruptEscape(GObj *fighter_gobj);
@@ -28,7 +32,15 @@ void ndsBaseFTCommonEscapeSetStatus(GObj *fighter_gobj, s32 status_id,
 s32 ndsBaseFTCommonEscapeGetStatus(FTStruct *fp);
 sb32 ndsBaseFTCommonEscapeCheckInterruptGuard(GObj *fighter_gobj);
 
+/* P4: only Yoshi rolls straight into his shield (Remix: J Yoshi too,
+ * yoshi_shield_fix_7; nds_p4.h NDS_P4_PARENT_KIND). */
+#if NDS_P4
+#define nFTKindYoshi NDS_P4_PARENT_KIND(fp, nFTKindYoshi)
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonescape.c"
+#if NDS_P4
+#undef nFTKindYoshi
+#endif
 
 #undef ftCommonEscapeProcUpdate
 #undef ftCommonEscapeProcInterrupt

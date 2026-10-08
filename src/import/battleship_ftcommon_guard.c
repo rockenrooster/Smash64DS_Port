@@ -11,8 +11,12 @@
 #include <gm/gmsound.h>
 #include <macros.h>
 #include <nds/nds_shield_pose.h>
+#include <nds/nds_p4_contents.h>
 #include <sys/audio.h>
 #include <sys/obj.h>
+#if NDS_P4
+#include <nds/nds_p4.h>
+#endif
 
 #ifndef AOBJ_ANIM_NULL
 #define AOBJ_ANIM_NULL 0.0F
@@ -148,8 +152,17 @@ void ndsBaseFTCommonGuardSetStatus(GObj *fighter_gobj);
 void ndsBaseFTCommonGuardOffProcUpdate(GObj *fighter_gobj);
 void ndsBaseFTCommonGuardOffSetStatus(GObj *fighter_gobj);
 
+/* P4: Yoshi's egg shield. Remix extends these compares to J Yoshi only
+ * (yoshishared.asm yoshi_shield_fix_1-8), so a content aliasing Yoshi
+ * (Bowser) guards with the common shield (nds_p4.h NDS_P4_PARENT_KIND). */
+#if NDS_P4
+#define nFTKindYoshi NDS_P4_PARENT_KIND(fp, nFTKindYoshi)
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonguard1.c"
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonguard2.c"
+#if NDS_P4
+#undef nFTKindYoshi
+#endif
 
 #undef gcAddDObjAnimJoint
 #undef lbCommonAddDObjAnimJointAll

@@ -8986,8 +8986,11 @@ void *ftParamMakeEffect(GObj *fighter_gobj, s32 effect_id, s32 joint_id,
             /* BattleShip ftparam.c:2100-2105. RollF/RollB request the egg that
              * deliberately replaces Yoshi's hidden body. Keep the source
              * maker as the owner; the compat switch previously dropped this
-             * kind entirely, which let the linker collect the constructor. */
-            if ((fp != NULL) && (fp->fkind == nFTKindYoshi))
+             * kind entirely, which let the linker collect the constructor.
+             * A P4 content aliasing Yoshi makes none (Remix's
+             * yoshi_shield_fix_5 adds J Yoshi only). */
+            if ((fp != NULL) &&
+                (fp->fkind == NDS_P4_PARENT_KIND(fp, nFTKindYoshi)))
             {
                 (void)efManagerYoshiEggEscapeMakeEffect(fighter_gobj);
             }

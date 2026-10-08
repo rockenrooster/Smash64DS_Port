@@ -11,6 +11,10 @@
 #include <it/item.h>
 #include <reloc_data.h>
 #include <sys/obj.h>
+#include <nds/nds_p4_contents.h>
+#if NDS_P4
+#include <nds/nds_p4.h>
+#endif
 
 sb32 itMainCheckShootNoAmmo(GObj *item_gobj);
 #if !NDS_P2_ITEM_CORE
@@ -207,7 +211,17 @@ sb32 ndsBaseFTCommonJumpAerialMultiCheckJumpButtonHold(FTStruct *fp);
 s32 ndsBaseFTCommonJumpAerialMultiGetJumpInputType(FTStruct *fp);
 sb32 ndsBaseFTCommonJumpAerialCheckInterruptCommon(GObj *fighter_gobj);
 
+/* P4: Yoshi's double jump (its physics, armour and turn). Remix extends the
+ * compares to J Yoshi only (yoshi_dj_fix_1, joshi_armor), so a content
+ * aliasing Yoshi (Bowser) jumps like everyone else (nds_p4.h
+ * NDS_P4_PARENT_KIND). */
+#if NDS_P4
+#define nFTKindYoshi NDS_P4_PARENT_KIND(fp, nFTKindYoshi)
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonjumpaerial.c"
+#if NDS_P4
+#undef nFTKindYoshi
+#endif
 
 #undef ftCommonJumpAerialUpdateModelYaw
 #undef ftCommonJumpAerialProcUpdate

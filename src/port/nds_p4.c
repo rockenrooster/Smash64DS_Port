@@ -629,6 +629,61 @@ const NDSP4Overrides *ndsP4Overrides(const FTStruct *fp)
     return (f != NULL) ? f->overrides : NULL;
 }
 
+void ndsP4AfterProcMapSlow(GObj *fighter_gobj)
+{
+    const NDSP4Overrides *o = ndsP4Overrides(ftGetStruct(fighter_gobj));
+
+    if ((o != NULL) && (o->after_proc_map != NULL))
+    {
+        o->after_proc_map(fighter_gobj);
+    }
+}
+
+void ndsP4OnDead(GObj *fighter_gobj)
+{
+    const NDSP4Overrides *o = ndsP4Overrides(ftGetStruct(fighter_gobj));
+
+    if ((o != NULL) && (o->on_dead != NULL))
+    {
+        o->on_dead(fighter_gobj);
+    }
+}
+
+#if NDS_P2_YOSHI
+GObj *wpYoshiStarMakeStars(GObj *fighter_gobj, Vec3f *pos);
+
+GObj *ndsP4YoshiStarMakeStars(GObj *fighter_gobj, Vec3f *pos)
+{
+    const NDSP4Overrides *o = ndsP4Overrides(ftGetStruct(fighter_gobj));
+
+    if ((o != NULL) && (o->no_yoshi_lw_stars != 0u))
+    {
+        return NULL;
+    }
+    return wpYoshiStarMakeStars(fighter_gobj, pos);
+}
+#endif
+
+void ndsP4ThrowMainSetStatus(GObj *fighter_gobj, s32 status_id, f32 frame_begin,
+                             f32 anim_speed, u32 flags)
+{
+    if (status_id == nFTCommonStatusThrowF)
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+        const NDSP4Overrides *o = ndsP4Overrides(fp);
+
+        /* jigglypuffkirbyshared.asm kirby_fthrow_1_fix: the content takes
+         * Kirby's branch, which sets the fighter airborne before the status
+         * and names its own; nothing between the two reads the kinetics. */
+        if ((o != NULL) && (o->throw_f_kirby_status != 0))
+        {
+            mpCommonSetFighterAir(fp);
+            status_id = o->throw_f_kirby_status;
+        }
+    }
+    ftMainSetStatus(fighter_gobj, status_id, frame_begin, anim_speed, flags);
+}
+
 /* Lab stand-ins for unported special-move starters, counted. */
 __attribute__((used)) volatile u32 gNdsP4LabSpecialStandIns;
 

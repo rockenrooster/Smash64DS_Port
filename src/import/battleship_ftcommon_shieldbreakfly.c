@@ -3,6 +3,10 @@
 #include <gm/gmsound.h>
 #include <sc/scene.h>
 #include <sys/audio.h>
+#include <nds/nds_p4_contents.h>
+#if NDS_P4
+#include <nds/nds_p4.h>
+#endif
 
 /* BattleShip's common-function header is intentionally not part of the port
  * ABI mirror, so declare the cross-TU links this source file reaches. */
@@ -50,7 +54,16 @@ __attribute__((weak)) GObj *efManagerReflectBreakMakeEffect(Vec3f *pos, s32 lr)
     return NULL;
 }
 
+/* P4: Yoshi's shield break bursts his egg; Remix leaves the compare alone,
+ * so a content aliasing Yoshi (Bowser) breaks the common shield (nds_p4.h
+ * NDS_P4_PARENT_KIND). */
+#if NDS_P4
+#define nFTKindYoshi NDS_P4_PARENT_KIND(fp, nFTKindYoshi)
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonshieldbreakfly.c"
+#if NDS_P4
+#undef nFTKindYoshi
+#endif
 
 #undef ftCommonShieldBreakFlyCommonSetStatus
 #undef ftCommonShieldBreakFlyReflectorSetStatus

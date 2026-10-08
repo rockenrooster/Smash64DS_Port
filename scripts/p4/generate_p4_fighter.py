@@ -56,6 +56,23 @@ CALLBACK_PORTS = {
     "WolfDSP.physics_": "ndsP4WolfDSPPhysics",
     "WolfNSP.air_collision_": "ndsP4WolfNSPAirMap",
     "WolfNSP.main": "ndsP4WolfNSPMain",
+    # src/port/nds_p4_bowser.c
+    "BowserUSP.air_initial_": "ndsP4BowserUSPAirInitial",
+    "BowserUSP.ground_physics_": "ndsP4BowserUSPGroundPhysics",
+    "BowserUSP.air_physics_": "ndsP4BowserUSPAirPhysics",
+    "BowserDSP.air_physics_": "ndsP4BowserDSPAirPhysics",
+    "BowserNSP.ground_initial_": "ndsP4BowserNSPGroundInitial",
+    "BowserNSP.air_initial_": "ndsP4BowserNSPAirInitial",
+    "BowserNSP.main_": "ndsP4BowserNSPMain",
+    "BowserNSP.air_collision_": "ndsP4BowserNSPAirMap",
+    "BowserFThrow.main_": "ndsP4BowserFThrowMain",
+    "BowserFThrow.collision_": "ndsP4BowserFThrowMap",
+}
+
+# P4: entry_script cases of another kind a content's port carries
+# (NDS_P4_ENTRY_PORT): Bowser's Clown Copter in the Falcon Flyer's case.
+ENTRY_PORTS = {
+    "bowser": 0x8013DD14,
 }
 
 # P4 S6: special-file slots (1-4) a content loads into its own storage,
@@ -67,6 +84,9 @@ OWN_SPECIAL_FILES = {
     # WolfNSP's shot (1, its graphic 4), the reflector (2), the Wolfen (3)
     # and the Fire Wolf slash (4).
     "wolf": (1, 2, 3, 4),
+    # The Clown Copter (2), read only by Yoshi's entry egg, which his
+    # Falcon Flyer case never runs.
+    "bowser": (2,),
 }
 
 # Vanilla file IDs that Remix rewrote with equivalent bytes, so the DS keeps
@@ -707,6 +727,10 @@ def main() -> int:
         # Every special slot the parent's code reads now holds the
         # parent's file or a same-layout copy (the stand-ins above).
         entry_effect = "NDS_P4_ENTRY_PARENT"
+    elif ENTRY_PORTS.get(name) == script:
+        # Another kind's case, ported on the content's own files
+        # (NDSP4Overrides.entry_case in src/port/nds_p4_<name>.c).
+        entry_effect = "NDS_P4_ENTRY_PORT"
     elif args.lab_fallback:
         entry_effect = "NDS_P4_ENTRY_NONE"
         entry_lab_fallback = 1

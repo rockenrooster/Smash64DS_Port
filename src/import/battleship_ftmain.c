@@ -318,11 +318,17 @@ static void ndsLabTimedAddFigatree(DObj *root_dobj, void *figatree,
                                        count_) \
     ndsP4UpdateHitDamageStats(hitlog, (fp_), (player_), (class_), (kind_), \
                               (flags_), (count_))
+/* P4: Remix's per-frame hooks after the map proc (Bowser's flame recharge,
+ * bowser.asm bowser_nsp_recharge) run where ftMainProcPhysicsMap updates the
+ * part transforms, its one call in this TU. */
+#define ftParamsUpdateFighterPartsTransformAll(topn_) \
+    (ndsP4AfterProcMap(fighter_gobj), ftParamsUpdateFighterPartsTransformAll(topn_))
 #endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftmain.c"
 #if NDS_P4
 #undef lbCommonMakePositionFGM
 #undef ftParamUpdate1PGameDamageStats
+#undef ftParamsUpdateFighterPartsTransformAll
 #undef ftMotionEventCast
 #define ftMotionEventCast(event, type) ((type *)(event)->p_script)
 #undef dFTMainSpecialStatusDescs

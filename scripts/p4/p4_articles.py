@@ -50,6 +50,13 @@ ARTICLES = {
         # pistol is (renderer_adapter_fighter.c's gun sidecar).
         {"name": "gun", "modelpart_joint": 17, "modelpart": 0},
     ),
+    "bowser": (
+        # captainshared.asm entry_anim_struct_BOWSER: the Falcon Flyer's
+        # description on his Clown Copter file, DObjDesc 0x1E80, drawn
+        # through DObjDLLinks; entry lifetime.
+        {"name": "clown_copter", "special": 2, "dobjdesc": 0x1E80, "dllinks": True,
+         "entry": True},
+    ),
 }
 
 MOBJ_FLAG_PALETTE = 0x0004  # segment E loads the TLUT from palettes[palette_id]

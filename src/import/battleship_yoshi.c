@@ -100,4 +100,14 @@ sb32 mpCommonCheckFighterCeilHeavy(GObj *fighter_gobj);
 
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftyoshi/ftyoshispecialn.c"
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftyoshi/ftyoshispecialhi.c"
+#include <nds/nds_p4_contents.h>
+#if NDS_P4
+#include <nds/nds_p4.h>
+/* P4: BowserSpecial.asm skip_projectile_ (Bowser's landing makes no stars).
+ * The file's one call is ftYoshiSpecialLwLandingProcUpdate's. */
+#define wpYoshiStarMakeStars(gobj_, pos_) ndsP4YoshiStarMakeStars((gobj_), (pos_))
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftyoshi/ftyoshispeciallw.c"
+#if NDS_P4
+#undef wpYoshiStarMakeStars
+#endif

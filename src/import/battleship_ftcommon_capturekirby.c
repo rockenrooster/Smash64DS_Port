@@ -18,6 +18,10 @@
 #include <macros.h>
 #include <mp/map.h>
 #include <sys/audio.h>
+#include <nds/nds_p4_contents.h>
+#if NDS_P4
+#include <nds/nds_p4.h>
+#endif
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
@@ -72,4 +76,11 @@ void ndsBaseFTCommonCaptureApplyCaptureKnockback(GObj *fighter_gobj,
 #define ftCommonCaptureApplyCaptureKnockback ndsBaseFTCommonCaptureApplyCaptureKnockback
 
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommoncapturekirby.c"
+/* P4: as battleship_ftcommon_catch.c's copy (yoshi_grab_fix_2). */
+#if NDS_P4
+#define nFTKindYoshi NDS_P4_PARENT_KIND(capture_fp, nFTKindYoshi)
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommoncapturewait.c"
+#if NDS_P4
+#undef nFTKindYoshi
+#endif

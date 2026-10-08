@@ -498,6 +498,30 @@ into the global reservation.
   MObj, draws a state-only list as nothing, prepares a content's textures
   only in a match that has it, and draws a held gun from another file beside
   the body at Fox's hold joint (Wolf's).
+- **Parent-kind compares.** A content carries its parent's fkind, so every
+  source compare with the parent's kind (`fkind == nFTKindYoshi`) that Remix
+  leaves alone takes the parent's branch on the DS, where the Remix
+  fighter's own id took the other one on the N64: Bowser raised Yoshi's egg
+  shield, hid the fighters he grabbed and threw, jumped with Yoshi's
+  double-jump armour, burst an egg on shield break, and as a CPU never used
+  his up special to recover. `scripts/p4/parent_checks.py --staging <remix
+  staging>` lists, per parent, each such compare in battle code, whether its
+  branch instruction is still the original in Remix's build ("raw") or
+  jumps to a Remix hook, and the character ids the hook's source names
+  (Remix's YoshiShared hooks add J Yoshi only). Tables Remix builds with
+  `add_to_table(..., id.{parent})` do give a content its parent's row: its
+  CPU attack-prevent row is Yoshi's, as the DS already had. The fix is per
+  decomp include: the wrapper redefines the parent's constant as
+  `NDS_P4_PARENT_KIND(fp, nFTKindYoshi)` (nds_p4.h), so a content compares
+  unequal, around the guard, escape, catch, capture, thrown, aerial-jump and
+  shield-break files. ftcomputer.c also holds a `case nFTKindYoshi:` such a
+  view cannot reach, so the objective walk runs for a content with its fkind
+  past every vanilla kind (`NDS_P4_FOREIGN_FKIND`); its fkind reads are
+  three compares and its callees read none. Before writing the tool,
+  `remix_rom.read_ram` read overlay 3 (ft/ftcommon, ft/ftcomputer: VRAM
+  0x80131B00) through overlay 2's RAM-ROM constant, 0xDC0 bytes off, and the
+  decomp symbols of the menu overlays that share that VRAM cut battle
+  functions short; both are fixed.
 - **Remix files that relocate past their end.** Peach's turnip graphics
   (0x1418, 0x1260 bytes) has two slots aimed past the file; the N64 applies
   them unchecked. The DS loader failed the file, which failed her special2,
@@ -585,7 +609,7 @@ skip ("p4g"). 0 native failures in every run.
 | Falco | clean | 0 | generated CPU rows replace his hand table |
 | Ganondorf | clean | 0 | |
 | Wolf | clean | 0 | all 11 donor routines ported and his own special files loaded (S6, "p4l", 1,500 frames): the Wolfen, blaster shot, slash and held gun draw natively from his files (the Wolfen's 10 drawn roots 240 draws each, shot 208, slash 12, gun 162); 0 native failures, 0 lab stand-ins. Before S6 his gun's list (0xB47) declined 35-111 times a run |
-| Bowser | clean | 0 | |
+| Bowser | clean | 0 | all 10 donor routines ported (`src/port/nds_p4_bowser.c`: Whirling Fortress, Bowser Bomb's air physics, Fire Breath on the Fire Flower's flame with his ammo and its recharge, the forward throw's airborne slam, the Clown Copter entry on his own special2) and the Yoshi-only source branches he skips ("Parent-kind compares"; "p4o", 1,500 frames): 0 native failures, the copter's 10 drawn roots 248 draws each, 12 common shields and no egg shield, no Yoshi double jump, heap 69 KB free. Open: jab 3 (status 0xE9, an S3 seam) |
 | Marth | clean | 0 | 0xD9 SET ENV COLOR (8 per run) is the one unported command |
 | Roy | clean | 0 | 0xD9 as Marth |
 | Wario | clean | 0 | |
@@ -605,8 +629,8 @@ skip ("p4g"). 0 native failures in every run.
 | S2 build throughput | not started; lab and menu builds still rewrite the shared linker script under a mutex |
 | S3 table seams | 19 of 33 (Falco's 12, entry_action/entry_script, the six special-move starters) |
 | S4 motion commands | 11 of the roster's 12: all but 0xD9 SET ENV COLOR, which needs the renderer's per-fighter environment colour (Banjo, Marth, Roy) |
-| S5 routine work lists | generated for all 14 (`scripts/p4/routine_worklist.py --lab <lab build>` into a build directory): 296 donor routines with Remix scope, file and line, size and users (Banjo 33, Bowser 10, Crash 29, Dedede 37, Lanky 29, Marth 18, Peach 22, Roy 21, Sheik 34, Sonic 29, Wario 23, Wolf 11; Falco and Ganondorf none), plus each content's id tests in Remix's shared code (17-39); the classes (behaviour, presentation, 1P, toggle) are still read by hand. Ported: Wolf 11 of 11 (`src/port/nds_p4_wolf.c`: WolfUSP, WolfDSP, WolfNSP with his own shot, the slash, reflector and Wolfen on his own files) |
-| S6 articles | the path exists, Wolf proves it: own special-file storage (`OWN_SPECIAL_FILES`), the parent's effect makers a content replaces (`gNdsP4<Title>Overrides`), `scripts/p4/p4_articles.py` roots compiled by `generate_nds_entry_effects.py --p4` into the build's packet, native admission, TEXID frames, state-only lists, per-match texture preparation and the held-gun sidecar ("Own special files and articles" above). Next: Bowser's flame and Clown Copter; item articles (Peach, Wario) need native item kinds |
+| S5 routine work lists | generated for all 14 (`scripts/p4/routine_worklist.py --lab <lab build>` into a build directory): 296 donor routines with Remix scope, file and line, size and users (Banjo 33, Bowser 10, Crash 29, Dedede 37, Lanky 29, Marth 18, Peach 22, Roy 21, Sheik 34, Sonic 29, Wario 23, Wolf 11; Falco and Ganondorf none), plus each content's id tests in Remix's shared code (17-39); the classes (behaviour, presentation, 1P, toggle) are still read by hand. Ported: Wolf 11 of 11 (`src/port/nds_p4_wolf.c`: WolfUSP, WolfDSP, WolfNSP with his own shot, the slash, reflector and Wolfen on his own files), Bowser 10 of 10 (`src/port/nds_p4_bowser.c`) |
+| S6 articles | the path exists, Wolf proves it: own special-file storage (`OWN_SPECIAL_FILES`), the parent's effect makers a content replaces (`gNdsP4<Title>Overrides`), `scripts/p4/p4_articles.py` roots compiled by `generate_nds_entry_effects.py --p4` into the build's packet, native admission, TEXID frames, state-only lists, per-match texture preparation and the held-gun sidecar ("Own special files and articles" above). Bowser's Clown Copter draws from his own special2 (his flame is the Fire Flower's weapon). Next: item articles (Peach, Wario) need native item kinds |
 | S7 generated CPU rows | done for the data: attack lists, ai_long_range and the Remix input routines they name are generated for all 14 (Falco's generated list equals his hand table row for row); attack-prevent, recovery and post-process stay hand-ported per fighter (Falco's only) |
 | S8 Kirby copies | not started |
 | S9 select-screen preview | done for Falco on the menu ROM; pack facts come from the export (`p4_preview_pack.py --content`); the all-content ROM cannot hold P4 menu clips in the select's global reservation (see above) |

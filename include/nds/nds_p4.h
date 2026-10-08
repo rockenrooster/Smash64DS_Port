@@ -108,6 +108,20 @@ typedef struct NDSP4Overrides
     GObj *(*fox_reflector)(GObj *fighter_gobj);
     /* efManagerFoxEntryArwingMakeEffect (ftCommonAppearSetStatus). */
     GObj *(*fox_entry_arwing)(FTStruct *fp, Vec3f *pos, s32 lr);
+    /* NDS_P4_ENTRY_PORT: the ftCommonAppearSetStatus case the content's
+     * entry_script names, on its own files (Bowser's Clown Copter in the
+     * Falcon Flyer's case). */
+    void (*entry_case)(FTStruct *fp);
+    /* ftCommonThrowSetStatus's forward throw takes Kirby's path, airborne,
+     * with this status (Bowser's 0xE5; 0: the parent's ground throw). */
+    s32 throw_f_kirby_status;
+    /* ftMainProcPhysicsMap, after the map proc, every frame (Bowser's flame
+     * recharge). */
+    void (*after_proc_map)(GObj *fighter_gobj);
+    /* ftManagerDestroyFighterWeapons, on every fall (Bowser's refill). */
+    void (*on_dead)(GObj *fighter_gobj);
+    /* ftYoshiSpecialLwLandingProcUpdate makes no stars (Bowser). */
+    u8 no_yoshi_lw_stars;
 } NDSP4Overrides;
 
 /* A Remix CPU input routine (AI.asm add_cpu_input_routine) as assembled:
@@ -173,7 +187,8 @@ typedef struct NDSP4SwordTrail
 enum
 {
     NDS_P4_ENTRY_NONE,   /* entry_script skips the switch */
-    NDS_P4_ENTRY_PARENT  /* the parent's case, on parent-layout files */
+    NDS_P4_ENTRY_PARENT, /* the parent's case, on parent-layout files */
+    NDS_P4_ENTRY_PORT    /* another kind's case, ported: NDSP4Overrides.entry_case */
 };
 typedef struct NDSP4Entry
 {
@@ -261,6 +276,28 @@ static inline u32 ndsP4SelContent(u32 sel)
  * holds the parent kind. */
 extern u8 gNdsP4PlayerContent[GMCOMMON_PLAYERS_MAX];
 
+/* A vanilla `x->fkind == nFTKind<Parent>` compare that Remix leaves alone
+ * sees a Remix fighter's own character id on the N64, so the fighter takes
+ * the other branch (Bowser guards with the common shield, and his grab and
+ * throws leave the victim visible). A content carries its parent's fkind
+ * here, so around a decomp include whose every use of the parent's constant
+ * is such a compare on one fighter variable, the wrapper redefines it:
+ *
+ *     #define nFTKindYoshi NDS_P4_PARENT_KIND(fp, nFTKindYoshi)
+ *
+ * and a content compares unequal (the constant inside the expansion is not
+ * expanded again). scripts/p4/parent_checks.py lists the compares and the
+ * contents Remix's hooks on them name. */
+#if NDS_P4
+/* An fkind past every vanilla kind (FTKind ends at nFTKindGDonkey), as a
+ * Remix fighter's own id is to the original code. */
+#define NDS_P4_FOREIGN_FKIND 0x7F
+#define NDS_P4_PARENT_KIND(fp_, kind_) \
+    (((fp_)->nds_p4_content != 0u) ? NDS_P4_FOREIGN_FKIND : (s32)(kind_))
+#else
+#define NDS_P4_PARENT_KIND(fp_, kind_) (kind_)
+#endif
+
 #if NDS_P4
 
 const NDSP4Fighter *ndsP4Fighter(u32 content);
@@ -310,6 +347,25 @@ void ndsP4AfterSetStatus(GObj *fighter_gobj, s32 status_id);
 const NDSP4Entry *ndsP4Entry(const FTStruct *fp);
 /* The content's effect makers (S6), or NULL. */
 const NDSP4Overrides *ndsP4Overrides(const FTStruct *fp);
+/* ftMainProcPhysicsMap after the map proc (battleship_ftmain.c): the
+ * content's after_proc_map, at the cost of one load for everyone else. */
+void ndsP4AfterProcMapSlow(GObj *fighter_gobj);
+static inline void ndsP4AfterProcMap(GObj *fighter_gobj)
+{
+    if (__builtin_expect(ftGetStruct(fighter_gobj)->nds_p4_content != 0u, 0))
+    {
+        ndsP4AfterProcMapSlow(fighter_gobj);
+    }
+}
+/* ftManagerDestroyFighterWeapons in the dead statuses: the content's on_dead
+ * after the source's. */
+void ndsP4OnDead(GObj *fighter_gobj);
+/* ftYoshiSpecialLwLandingProcUpdate's stars, unless the content has none. */
+GObj *ndsP4YoshiStarMakeStars(GObj *fighter_gobj, Vec3f *pos);
+/* ftCommonThrowSetStatus's one ftMainSetStatus (battleship_ftcommon_catch.c):
+ * a content's forward throw on Kirby's airborne path. */
+void ndsP4ThrowMainSetStatus(GObj *fighter_gobj, s32 status_id, f32 frame_begin,
+                             f32 anim_speed, u32 flags);
 /* ftCommonSpecial*CheckInterruptCommon: run `check` with the content's
  * special-move starters lent to the source tables' rows for its kind
  * (tables[i][fkind] takes starter slots[i]), then restore them. */

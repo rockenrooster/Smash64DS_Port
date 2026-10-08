@@ -457,6 +457,18 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
     {
         status_id = p4_entry->appear_status[entry_id];
     }
+    else if ((p4_entry != NULL) && (p4_entry->effect == NDS_P4_ENTRY_PORT))
+    {
+        /* Another kind's case, on the content's own files (Bowser's Clown
+         * Copter in the Falcon Flyer's). */
+        const NDSP4Overrides *p4_port = ndsP4Overrides(fp);
+
+        status_id = p4_entry->appear_status[entry_id];
+        if ((p4_port != NULL) && (p4_port->entry_case != NULL))
+        {
+            p4_port->entry_case(fp);
+        }
+    }
     else
 #endif
     if ((fp->fkind == nFTKindMario)
