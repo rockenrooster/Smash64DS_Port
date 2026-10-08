@@ -160,6 +160,38 @@ def reflect_fox_ids(rom: R.Rom, sym: dict, hook: str) -> set[int]:
     return ids
 
 
+# mpCommonSetFighterLandingParams' fkind switch, which Remix turned into the
+# grounded_script jump table: the kinds with a case of their own (Fox's row is
+# the default, no case).
+GROUNDED_CASE_KINDS = {"Mario": 0, "Samus": 3, "Luigi": 4, "Captain": 7, "Purin": 10}
+
+
+def kind_cases(rom: R.Rom, sym: dict, remix_id: int, tables: dict,
+               lab_fallback: bool) -> tuple[str, list[dict]]:
+    """The content's NDSP4KindCases initializer: the source kind whose case
+    of the landing switch Remix's grounded_script row runs (the default is
+    NDS_P4_FOREIGN_FKIND), and its pipe_turn byte (Mario's turn in the Dokan
+    statuses, marioshared.asm). A Remix routine in the row has no port yet:
+    a lab build runs the default and lists it."""
+    base = sym["Character.grounded_script.table"]
+    by_value = {rom.u32_ram(base + 4 * k): kind for kind, k in GROUNDED_CASE_KINDS.items()}
+    default = rom.u32_ram(base + 4 * 1)
+    value = int(tables["grounded_script"]["value"], 16)
+    fallbacks = []
+    if value == default:
+        grounded = "NDS_P4_FOREIGN_FKIND"
+    elif value in by_value:
+        grounded = f"nFTKind{by_value[value]}"
+    elif lab_fallback:
+        grounded = "NDS_P4_FOREIGN_FKIND"
+        fallbacks.append({"status": "grounded_script", "slot": "landing",
+                          "routine": f"{value:#010x}", "fallback": "default"})
+    else:
+        raise GenError(f"grounded_script {value:#010x} is a Remix routine with no DS port")
+    pipe = rom.read_ram(sym["Character.pipe_turn.table"] + remix_id, 1)[0] != 0
+    return f"{{ {grounded}, {int(pipe)}, {{ 0, 0 }} }}", fallbacks
+
+
 def computer_reflect(rom: R.Rom, sym: dict, remix_id: int) -> str:
     """The content's NDS_P4_COMPUTER_REFLECT_* bits: Character.fighter_reflect
     at its id (a reflector: CPUs hold their projectiles against it, and its own
@@ -976,6 +1008,10 @@ def main() -> int:
         raise GenError(f"ai_long_range {long_range:#010x} is neither source case")
     reflect = computer_reflect(rom, R.load_symbols(args.staging / "logfile.log")[0],
                                resolved["remix_kind_id"])
+    # S3: the landing switch's case (grounded_script) and the pipe turn.
+    cases, case_fallbacks = kind_cases(rom, R.load_symbols(args.staging / "logfile.log")[0],
+                                       resolved["remix_kind_id"], tables, args.lab_fallback)
+    lab_fallbacks.extend(case_fallbacks)
     computer_scripts = []
     remix_inputs = sorted({r[0] for r in computer_attacks if r[0] >= CPU_INPUT_BASE})
     if remix_inputs:
@@ -1180,6 +1216,9 @@ def main() -> int:
               " * the content's closure) loads whole; any other slot outside it reads",
               " * NULL, as Remix's status-buffer lookup does. */",
               f"const u8 g{ident}OpenSpecialMask = {open_special_mask:#04x};", "",
+              "/* Kind-table cases (S3, nds_p4.h NDSP4KindCases): grounded_script's",
+              " * landing case and pipe_turn. */",
+              f"const NDSP4KindCases g{ident}KindCases = {cases};", "",
               "/* CPU rows (S7): ai_long_range; the attack list and the Remix input",
               " * routines it names are in the content's tables (ndsP4LoadTables). */",
               f"const u8 g{ident}ComputerLongRange = {computer_long_range};",

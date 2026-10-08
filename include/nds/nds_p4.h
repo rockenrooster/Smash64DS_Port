@@ -301,6 +301,17 @@ typedef struct NDSP4TablesHeader
     u32 script_bytes_off;
 } NDSP4TablesHeader;
 
+/* Remix's per-kind jump tables whose rows name a case of a source fkind
+ * switch (S3): mpCommonSetFighterLandingParams' (grounded_script) as the
+ * vanilla kind whose case runs, NDS_P4_FOREIGN_FKIND for none; and
+ * pipe_turn, Mario's turn in the Dokan statuses (marioshared.asm). */
+typedef struct NDSP4KindCases
+{
+    s8 grounded;
+    u8 pipe_turn;
+    u8 pad[2];
+} NDSP4KindCases;
+
 typedef struct NDSP4Fighter
 {
     const char *name;
@@ -343,6 +354,7 @@ typedef struct NDSP4Fighter
     /* Lab builds: special slots (bit 0 = special1) whose stand-in, the
      * parent's file, loads whole; 0 when shipping. */
     const u8 *open_special_mask;
+    const NDSP4KindCases *kind_cases;
     /* CPU rows from the export: NDS_P4_COMPUTER_LONG_RANGE_*. The attack
      * list and the Remix input routines it names are in the content's
      * match tables (NDSP4TablesHeader). */
@@ -519,6 +531,19 @@ u32 ndsP4ComputerLongRange(const FTStruct *fp);
  * close-ups included, and its high-detail owner image is never admitted.
  * TRUE when the player is such a content. */
 sb32 ndsP4ContentLowDetailOnly(s32 player);
+/* S3 kind-table cases (NDSP4KindCases). The kind whose case of
+ * mpCommonSetFighterLandingParams' switch runs for the fighter (its own for
+ * the original cast), and, for a content, the kind the Dokan statuses'
+ * Mario compares see: its own when Remix's pipe_turn names it, else
+ * NDS_P4_FOREIGN_FKIND. */
+s32 ndsP4GroundedKind(const FTStruct *fp);
+s32 ndsP4PipeTurnKind(const FTStruct *fp);
+#define NDS_P4_PIPE_TURN_KIND(fp_, kind_) \
+    (((fp_)->nds_p4_content != 0u) ? ndsP4PipeTurnKind(fp_) : (s32)(kind_))
+/* TRUE in a VS battle of three or four fighters: every content there draws
+ * only its low detail, so it loads its low-detail battle pack
+ * (fighters/battle/<kind>.fpc, p4_preview_pack.py --battle-out). */
+sb32 ndsP4LowDetailBattle(void);
 /* NDS_P4_COMPUTER_REFLECT_* bits; 0 for the original cast. */
 u32 ndsP4ComputerReflect(const FTStruct *fp);
 /* The fighter as the CPU reflect checks see it: Fox for a content with

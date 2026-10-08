@@ -6043,6 +6043,7 @@ NDS_NITROFS_P4_FILES += $(foreach row,$(NDS_P4_ENABLED_ROWS), \
 	$(NITROFS_DIR)/fighters/$(call nds_p4_field,$(row),1)_low.bin \
 	$(NITROFS_DIR)/fighters/preview/$(shell echo $$((64 + $(call nds_p4_field,$(row),4)))).fpc \
 	$(NITROFS_DIR)/fighters/preview/$(shell echo $$((64 + $(call nds_p4_field,$(row),4)))).ext \
+	$(NITROFS_DIR)/fighters/battle/$(shell echo $$((64 + $(call nds_p4_field,$(row),4)))).fpc \
 	$(NITROFS_DIR)/fighters/shield_pose/$(shell echo $$((64 + $(call nds_p4_field,$(row),4)))).bin \
 	$(NITROFS_DIR)/p4/$(call nds_p4_field,$(row),1).tab)
 # The contents' Remix sounds as a second FGM pack (scripts/p4/p4_audio.py).
@@ -7961,9 +7962,12 @@ $$(NDS_P4_GEN)/$(1)/preview.fpc: $$(NDS_P4_GEN)/$(1)/nds_p4_$(1).generated.c \
 		$$(PROJECT_ROOT)/scripts/p4/ft_layout.py $$(PROJECT_ROOT)/include/nds/nds_preview_pack.h \
 		$$(PROJECT_ROOT)/scripts/p4/owners/$(1).json
 	python "$$(PROJECT_ROOT)/scripts/p4/p4_preview_pack.py" --o2r "$$(NDS_P4_GEN)/$(1)/o2r" \
-		--content $(1) --export-root "$$(NDS_P4_EXPORT)" --out "$$@"
-# Written with the pack: the Main pointers a match restores (BEX1 rows).
+		--content $(1) --export-root "$$(NDS_P4_EXPORT)" --out "$$@" \
+		--battle-out "$$(NDS_P4_GEN)/$(1)/battle.fpc"
+# Written with the pack: the Main pointers a match restores (BEX1 rows), and
+# the low-detail pack a battle of three or four fighters loads.
 $$(NDS_P4_GEN)/$(1)/preview.ext: $$(NDS_P4_GEN)/$(1)/preview.fpc ; @:
+$$(NDS_P4_GEN)/$(1)/battle.fpc: $$(NDS_P4_GEN)/$(1)/preview.fpc ; @:
 $$(NDS_P4_GEN)/$(1)/articles.json: $$(NDS_P4_GEN)/$(1)/nds_p4_$(1).generated.c \
 		$$(PROJECT_ROOT)/scripts/p4/p4_articles.py $$(PROJECT_ROOT)/scripts/p4/contents.json
 	python "$$(PROJECT_ROOT)/scripts/p4/p4_articles.py" --o2r "$$(NDS_P4_GEN)/$(1)/o2r" \
@@ -7972,6 +7976,9 @@ $$(NITROFS_DIR)/fighters/preview/$(5).fpc: $$(NDS_P4_GEN)/$(1)/preview.fpc
 	@mkdir -p $$(dir $$@)
 	@cp $$< $$@
 $$(NITROFS_DIR)/fighters/preview/$(5).ext: $$(NDS_P4_GEN)/$(1)/preview.ext
+	@mkdir -p $$(dir $$@)
+	@cp $$< $$@
+$$(NITROFS_DIR)/fighters/battle/$(5).fpc: $$(NDS_P4_GEN)/$(1)/battle.fpc
 	@mkdir -p $$(dir $$@)
 	@cp $$< $$@
 # The native guard-pose package (empty when the content has none of its own),

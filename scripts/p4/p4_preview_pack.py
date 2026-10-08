@@ -221,8 +221,157 @@ def variant_roots(main: P.O2RFile, model_id: int, attr: int, trees) -> set[int]:
     return roots
 
 
+def high_only_spans(main: P.O2RFile, model: P.O2RFile, model_id: int, attr: int,
+                    trees, pruned, other_targets: set[int]):
+    """Kept model ranges only the high detail reads, for the battle pack a
+    match of three or four fighters loads: there a content draws its
+    low-detail model in the close-ups too (nds_p4.c
+    ndsP4ContentLowDetailOnly). The low detail takes a joint whose low
+    DObjDesc names no list from the high rows (lbCommonSetupFighterPartsDObjs,
+    ftParamSetModelPartDetailAll, the hidden parts), so those joints' high
+    rows stay, and both JointTrees and the per-joint arrays stay whole (they
+    are indexed by joint). A region runs from its pointer target to the next
+    one; it is pruned when only the other joints' high rows and the high
+    model-part rows reach it. Returns the ranges and the slots (Main and
+    model offsets, as ("main"|"model", slot)) that point into them, which
+    the pack writes NULL."""
+    import bisect
+
+    lay = ft_layout.layout()
+    D = P.DOBJ_DESC_SIZE
+
+    def main_target(slot):
+        ref = main.ptr(slot)
+        return ref[2] if (ref is not None and ref[0] == "extern" and ref[1] == model_id) else None
+
+    def model_target(slot):
+        ref = model.ptr(slot)
+        return ref[2] if (ref is not None and ref[0] == "intern") else None
+
+    container = main.ptr(attr + lay["FTAttributes.commonparts_container"])[2]
+    parts = [container + d * lay["sizeof(FTCommonPart)"] for d in range(2)]
+    low_tree, low_count = trees[1]
+    fallback = {i for i in range(low_count - 1) if model.ptr(low_tree + i * D + 4) is None}
+    keep: set[int] = set()      # roots the low detail (or anything else) reads
+    high: dict[int, list] = {}  # high-only candidate target -> the slots naming it
+    leaves: set[int] = set()    # indexed arrays: kept, walked entry by entry
+
+    def candidate(target, where):
+        high.setdefault(target, []).append(where)
+
+    for d in range(2):
+        tree, count = trees[d]
+        leaves.add(tree)
+        for i in range(count - 1):
+            t = model_target(tree + i * D + 4)
+            if t is None:
+                continue
+            if d == 1 or i in fallback:
+                keep.add(t)
+            else:
+                candidate(t, ("model", tree + i * D + 4))
+        for field in ("p_mobjsubs", "p_costume_matanim_joints"):
+            array = main_target(parts[d] + lay[f"FTCommonPart.{field}"])
+            if array is None:
+                continue
+            leaves.add(array)
+            for i in range(count - 1):
+                t = model_target(array + 4 * i)
+                if t is None:
+                    continue
+                if d == 1 or i in fallback:
+                    keep.add(t)
+                else:
+                    candidate(t, ("model", array + 4 * i))
+    # The high arrays may be the low ones: every entry is then the low's.
+    for d in range(2):
+        for field in ("p_mobjsubs", "p_costume_matanim_joints"):
+            a0 = main_target(parts[0] + lay[f"FTCommonPart.{field}"])
+            if (a0 is not None) and (a0 == main_target(parts[1] + lay[f"FTCommonPart.{field}"])):
+                for i in range(trees[0][1] - 1):
+                    t = model_target(a0 + 4 * i)
+                    if t is not None:
+                        keep.add(t)
+    # Model-part rows: modelparts[part][detail], detail 0 the high one.
+    rows_slots = set()
+    mp = main.ptr(attr + lay["FTAttributes.modelparts_container"])
+    size = lay["sizeof(FTModelPart)"]
+    if mp is not None and mp[0] == "intern":
+        rows = {}
+        for index in range(min(MODELPARTS_ENTRIES, (trees[0][1] - 1) - 4)):
+            ref = main.ptr(mp[2] + 4 * index)
+            if ref is not None and ref[0] == "intern":
+                rows[index] = ref[2]
+        starts = sorted(set(rows.values()) | {mp[2]})
+        for base in rows.values():
+            bound = min([s for s in starts if s > base], default=len(main.data))
+            k = 0
+            while base + (k + 1) * size <= bound:
+                for field in ("mobjsubs", "costume_matanim_joints", "main_matanim_joints"):
+                    slot = base + k * size + lay[f"FTModelPart.{field}"]
+                    rows_slots.add(slot)
+                    t = main_target(slot)
+                    if t is None:
+                        continue
+                    if k & 1:
+                        keep.add(t)
+                    else:
+                        candidate(t, ("main", slot))
+                k += 1
+    # Everything else Main or another file names in the model is kept.
+    skip = {parts[d] + lay[f"FTCommonPart.{f}"] for d in range(2)
+            for f in ("dobjdesc", "p_mobjsubs", "p_costume_matanim_joints")} | rows_slots
+    for slot, (kind_, fid, target) in main.slots.items():
+        if kind_ == "extern" and fid == model_id and slot not in skip:
+            keep.add(target)
+    keep |= other_targets
+
+    targets = sorted({v[2] for v in model.slots.values() if v[0] == "intern"}
+                     | keep | set(high) | leaves | {0})
+    ends = dict(zip(targets, targets[1:] + [len(model.data)]))
+    slots = sorted(model.slots)
+
+    def closure(roots):
+        seen: set[int] = set()
+        stack = list(roots)
+        while stack:
+            t = stack.pop()
+            if t in seen or t not in ends:
+                continue
+            seen.add(t)
+            if t in leaves:
+                continue
+            i = bisect.bisect_left(slots, t)
+            while i < len(slots) and slots[i] < ends[t]:
+                ref = model.slots[slots[i]]
+                if ref[0] == "intern":
+                    stack.append(ref[2])
+                i += 1
+        return seen
+
+    kept_regions = closure(keep | leaves)
+    high_regions = closure(set(high)) - kept_regions
+    spans = merge([(t, ends[t]) for t in high_regions])
+    # Slots outside the pruned ranges that name a pruned region: only the
+    # candidates' own slots may (closure keeps everything else).
+    nulls = []
+    for slot in slots:
+        ref = model.slots[slot]
+        if ref[0] != "intern" or not in_ranges(ref[2], spans):
+            continue
+        if in_ranges(slot, spans) or in_ranges(slot, pruned):
+            continue
+        if ("model", slot) not in [w for ws in high.values() for w in ws]:
+            raise PackError(f"model slot {slot:#x} names high-only bytes at {ref[2]:#x}")
+        nulls.append(("model", slot))
+    for t, ws in high.items():
+        if t in high_regions:
+            nulls.extend(w for w in ws if w[0] == "main")
+    return spans, set(nulls)
+
+
 def build(o2r_dir: Path, main_id: int, model_id: int, attr: int, kind: int,
-          extra_roots: set[int] = frozenset()):
+          extra_roots: set[int] = frozenset(), low_only: bool = False):
     main = P.O2RFile(o2r_dir / f"{main_id:04x}")
     model = P.O2RFile(o2r_dir / f"{model_id:04x}")
     tables = P.donor_tables(o2r_dir, main_id, model_id, attr)
@@ -231,8 +380,8 @@ def build(o2r_dir: Path, main_id: int, model_id: int, attr: int, kind: int,
     roots |= variants | set(extra_roots)
     dls, vtxs = walk_geometry(model, roots)
     pruned = merge(dls + vtxs)
-    # The content's other files resolve their pointers into the model by
-    # source offset through the pack's spans: none may name pruned bytes.
+    other_targets = set()
+    others = []
     for path in sorted(o2r_dir.iterdir()):
         try:
             fid = int(path.name, 16)
@@ -241,9 +390,24 @@ def build(o2r_dir: Path, main_id: int, model_id: int, attr: int, kind: int,
         if fid in (main_id, model_id):
             continue
         for slot, (kind_, target_fid, target) in P.O2RFile(path).slots.items():
-            if kind_ == "extern" and target_fid == model_id and in_ranges(target, pruned):
-                raise PackError(f"file {fid:#x} slot {slot:#x} points into pruned model "
-                                f"bytes at {target:#x}")
+            if kind_ == "extern" and target_fid == model_id:
+                other_targets.add(target)
+                others.append((fid, slot, target))
+    # The low-detail battle pack also drops what only the high detail reads;
+    # the slots naming it read NULL ("drop": no manifest row restores them).
+    drops = set()
+    high_bytes = 0
+    if low_only:
+        spans, drops = high_only_spans(main, model, model_id, attr, tables["trees"],
+                                       pruned, other_targets)
+        high_bytes = sum(b - a for a, b in spans)
+        pruned = merge(pruned + spans)
+    # The content's other files resolve their pointers into the model by
+    # source offset through the pack's spans: none may name pruned bytes.
+    for fid, slot, target in others:
+        if in_ranges(target, pruned):
+            raise PackError(f"file {fid:#x} slot {slot:#x} points into pruned model "
+                            f"bytes at {target:#x}")
     kept = []
     cur = 0
     for a, b in pruned:
@@ -284,6 +448,8 @@ def build(o2r_dir: Path, main_id: int, model_id: int, attr: int, kind: int,
     for slot, (kind_, fid, target) in sorted(main.slots.items()):
         if kind_ == "intern":
             pairs.append((0, slot, "main", target))
+        elif ("main", slot) in drops:
+            pairs.append((0, slot, "drop", target))
         elif fid == model_id:
             pairs.append((0, slot) + model_class(target, f"main slot {slot:#x}"))
         else:
@@ -293,6 +459,9 @@ def build(o2r_dir: Path, main_id: int, model_id: int, attr: int, kind: int,
             continue
         if kind_ != "intern":
             raise PackError(f"model slot {slot:#x} points into file {fid:#x}")
+        if ("model", slot) in drops:
+            pairs.append((1, slot, "drop", target))
+            continue
         pairs.append((1, slot) + model_class(target, f"model slot {slot:#x}"))
     cells = sorted({t for _, _, c, t in pairs if c == "root"})
     cell_index = {t: i for i, t in enumerate(cells)}
@@ -325,6 +494,8 @@ def build(o2r_dir: Path, main_id: int, model_id: int, attr: int, kind: int,
             fixups.append((slot_data, sec1_off + remap(target)))
         elif cls == "root":
             fixups.append((slot_data, sec1_off + kept_bytes + 8 * cell_index[target]))
+        elif cls == "drop":
+            fixups.append((slot_data, NULL))
         else:
             fixups.append((slot_data, NULL))
             nulls[target] = nulls.get(target, 0) + 1
@@ -372,6 +543,8 @@ def build(o2r_dir: Path, main_id: int, model_id: int, attr: int, kind: int,
         "root_cells": len(cells),
         "fixups": len(fixups), "null_fixups": {f"{k:#x}": v for k, v in sorted(nulls.items())},
         "file_bytes": file_bytes, "manifest_rows": len(externs),
+        "low_only": low_only, "high_only_bytes": high_bytes,
+        "dropped_slots": sum(1 for p in pairs if p[2] == "drop"),
     }
     return blob, meta, ext
 
@@ -387,6 +560,8 @@ def main() -> int:
     ap.add_argument("--attributes", type=lambda v: int(v, 0))
     ap.add_argument("--kind", type=lambda v: int(v, 0), help="NDS_P4_SEL_BASE + content")
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument("--battle-out", type=Path,
+                    help="also write the low-detail battle pack (matches of three or four)")
     args = ap.parse_args()
     if args.content is not None:
         import p4_contents  # noqa: E402
@@ -401,6 +576,12 @@ def main() -> int:
         ap.error("give --content and --export-root, or --main/--model/--attributes/--kind")
     try:
         blob, meta, ext = build(args.o2r, args.main, args.model, args.attributes, args.kind)
+        if args.battle_out is not None:
+            low, low_meta, low_ext = build(args.o2r, args.main, args.model, args.attributes,
+                                           args.kind, low_only=True)
+            # Main is the same file: one manifest serves both packs.
+            if low_ext != ext:
+                raise PackError("the low-detail pack's manifest differs from the preview's")
     except PackError as error:
         print(f"p4_preview_pack: {error}", file=sys.stderr)
         return 1
@@ -410,6 +591,12 @@ def main() -> int:
     args.out.with_suffix(".json").write_text(json.dumps(meta, indent=1) + "\n",
                                              encoding="utf-8", newline="\n")
     print(json.dumps(meta))
+    if args.battle_out is not None:
+        args.battle_out.parent.mkdir(parents=True, exist_ok=True)
+        args.battle_out.write_bytes(low)
+        args.battle_out.with_suffix(".json").write_text(json.dumps(low_meta, indent=1) + "\n",
+                                                        encoding="utf-8", newline="\n")
+        print(json.dumps(low_meta))
     return 0
 
 

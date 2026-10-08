@@ -60,6 +60,17 @@ static inline void grInishiePakkunSetWaitFighter(void)
 }
 #endif
 
+#if NDS_P4
+#include <nds/nds_p4.h>
+/* Remix's pipe_turn (marioshared.asm pipe_turn_enter/_exit): a content turns
+ * like Mario in a pipe only when its row names it (Wario does; Crash and
+ * Lanky, Mario's other children, take the default turn). The file's Mario
+ * compares are both on `fp`. */
+#define nFTKindMario NDS_P4_PIPE_TURN_KIND(fp, nFTKindMario)
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommondokan.c"
+#if NDS_P4
+#undef nFTKindMario
+#endif
 
 #undef ftCommonDokanStartCheckInterruptCommon

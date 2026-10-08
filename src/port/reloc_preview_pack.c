@@ -601,6 +601,17 @@ void *ndsRelocPreviewFighterLoadBegin(s32 fkind)
         digit_at = sizeof("nitro:/fighters/battle/") - 1u;
         is_battle_pack = TRUE;
     }
+#if NDS_P4
+    /* S15: a content in a battle of three or four fighters draws only its
+     * low detail, close-ups included, so it loads the pack without the data
+     * only the high detail reads (p4_preview_pack.py --battle-out). Its Main
+     * is the select pack's: the same manifest restores its externs. */
+    else if ((fkind >= 12) && (ndsP4LowDetailBattle() != FALSE))
+    {
+        path = battle_path;
+        digit_at = sizeof("nitro:/fighters/battle/") - 1u;
+    }
+#endif
 #endif
     path[digit_at] = '0' + (u32)fkind / 10u;
     path[digit_at + 1u] = '0' + (u32)fkind % 10u;

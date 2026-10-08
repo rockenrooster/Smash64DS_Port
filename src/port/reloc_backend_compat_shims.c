@@ -5967,9 +5967,14 @@ void mpCommonSetFighterLandingParams(GObj *fighter_gobj)
      * makes this the "sent flying and saved it" gasp rather than a landing sound.
      *
      * The joint NULL check is a port addition; source dereferences it unguarded.
-     * The switch on fp->fkind below is still deliberately not ported: do not
-     * clear another fighter's passive union through Mario's member while
-     * landing. */
+     *
+     * The fkind switch below is the source's whole (mpcommon.c:441-468). It
+     * held only Mario's case: Luigi's cyclone never rose again after its first
+     * aerial use (is_expend_tornado), and Samus's aerial charge shot lost
+     * lift for the rest of the stock (charge_recoil). Samus's case returns in
+     * the source; nothing of the source's follows, so it breaks here and the
+     * proof counters below still run. A P4 content takes the case Remix's
+     * grounded_script row names (ndsP4GroundedKind). */
     if (fp->public_knockback != 0.0F)
     {
         if ((fp->public_knockback >= 100.0F) &&
@@ -5986,12 +5991,36 @@ void mpCommonSetFighterLandingParams(GObj *fighter_gobj)
         }
     }
     fp->public_knockback = 0.0F;
+#if NDS_P4
+    switch (ndsP4GroundedKind(fp))
+#else
     switch (fp->fkind)
+#endif
     {
     case nFTKindMario:
     case nFTKindMMario:
     case nFTKindNMario:
         fp->passive_vars.mario.is_expend_tornado = FALSE;
+        break;
+
+    case nFTKindSamus:
+    case nFTKindNSamus:
+        fp->passive_vars.samus.charge_recoil = 0;
+        break;
+
+    case nFTKindLuigi:
+    case nFTKindNLuigi:
+        fp->passive_vars.mario.is_expend_tornado = FALSE;
+        break;
+
+    case nFTKindCaptain:
+    case nFTKindNCaptain:
+        fp->passive_vars.captain.falcon_punch_unk = FALSE;
+        break;
+
+    case nFTKindPurin:
+    case nFTKindNPurin:
+        fp->passive_vars.purin.unk_0x0 = FALSE;
         break;
 
     default:

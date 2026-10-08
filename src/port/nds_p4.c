@@ -63,6 +63,7 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
     extern const u16 gNdsP4##T##LabSkipFiles[]; \
     extern const u32 gNdsP4##T##LabSkipFileCount; \
     extern const u8 gNdsP4##T##OpenSpecialMask; \
+    extern const NDSP4KindCases gNdsP4##T##KindCases; \
     extern const u8 gNdsP4##T##ComputerLongRange; \
     extern const u8 gNdsP4##T##ComputerReflect; \
     extern const NDSP4BakedRef gNdsP4##T##BakedRefs[]; \
@@ -96,6 +97,7 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
         .lab_skip_files = gNdsP4##T##LabSkipFiles, \
         .lab_skip_file_count = &gNdsP4##T##LabSkipFileCount, \
         .open_special_mask = &gNdsP4##T##OpenSpecialMask, \
+        .kind_cases = &gNdsP4##T##KindCases, \
         .computer_long_range = &gNdsP4##T##ComputerLongRange, \
         .computer_reflect = &gNdsP4##T##ComputerReflect, \
         .baked_refs = gNdsP4##T##BakedRefs, \
@@ -196,15 +198,39 @@ u32 ndsP4MatchContent(s32 player)
     }
 }
 
-sb32 ndsP4ContentLowDetailOnly(s32 player)
+s32 ndsP4GroundedKind(const FTStruct *fp)
 {
-    if ((gSCManagerSceneData.scene_curr != nSCKindVSBattle) ||
-        (ndsP4MatchContent(player) == 0u))
+    const NDSP4Fighter *f = ndsP4Fighter(ndsP4Content(fp));
+
+    return ((f != NULL) && (f->kind_cases != NULL)) ?
+        (s32)f->kind_cases->grounded : (s32)fp->fkind;
+}
+
+s32 ndsP4PipeTurnKind(const FTStruct *fp)
+{
+    const NDSP4Fighter *f = ndsP4Fighter(ndsP4Content(fp));
+
+    return ((f != NULL) && (f->kind_cases != NULL) && (f->kind_cases->pipe_turn != 0u)) ?
+        (s32)fp->fkind : NDS_P4_FOREIGN_FKIND;
+}
+
+sb32 ndsP4LowDetailBattle(void)
+{
+    if (gSCManagerSceneData.scene_curr != nSCKindVSBattle)
     {
         return FALSE;
     }
     return ((gSCManagerBattleState->pl_count + gSCManagerBattleState->cp_count) >= 3) ?
         TRUE : FALSE;
+}
+
+sb32 ndsP4ContentLowDetailOnly(s32 player)
+{
+    if (ndsP4MatchContent(player) == 0u)
+    {
+        return FALSE;
+    }
+    return ndsP4LowDetailBattle();
 }
 
 u32 ndsP4MakeContent(s32 player, s32 fkind)
