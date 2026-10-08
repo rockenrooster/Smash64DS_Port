@@ -20,8 +20,9 @@ contract skips for a P4 fighter (ndsFighterDisplayContractSelectDL); every
 other cell carries a nonzero original offset.
 
 The same pack loads a content's fighters in a match (S15), so it also prunes
-every alternate model part the native owner image carries (part 1 up; the
-variants its pins drop keep their lists), and writes the battle manifest
+every alternate model part (part 1 up: the native owner image draws the ones
+it carries, and any other declines the native draw with or without its
+source list), and writes the battle manifest
 beside it (<kind>.ext, reloc_preview_pack.c's BEX1 rows): each Main pointer
 left NULL as (slot, file, offset), which the match restores once those files
 are loaded. No other file of the content may point into pruned model bytes.
@@ -189,17 +190,35 @@ def walk_geometry(model: P.O2RFile, roots: set[int]):
     return merge(blocks), merge(vtx)
 
 
-def variant_roots(name: str, o2r_dir: Path, attr: int) -> set[int]:
-    """Model offsets of the alternate model-part lists (part 1 up) the native
-    owner image carries for `name`: P2_MODEL_PART_ROOT_VARIANTS as the owner
-    generator registers it, less the variants its pins drop (those keep their
-    source lists in the pack)."""
-    pins = P.load_pins(name)
-    if pins is None:
-        raise PackError(f"no native owner pins for {name} (scripts/p4/owners)")
-    P.register(name, o2r_dir, attr, pins)
-    rows = P.O.P2_MODEL_PART_ROOT_VARIANTS.get(name, {})
-    return {offset for detail in rows.values() for _binding, offset in detail}
+def variant_roots(main: P.O2RFile, model_id: int, attr: int, trees) -> set[int]:
+    """Model offsets of every alternate model-part list (part 1 up, both
+    details) in the fighter's modelparts table. The native owner image draws
+    the ones it carries (P2_MODEL_PART_ROOT_VARIANTS); the others -- the
+    variants its pins drop, and Banjo's parts on joints without a list of
+    their own -- decline the fighter's native draw whether the slot names
+    a source list or a root cell, as no ROM draws a source list here, so
+    their bytes are pruned with the rest."""
+    lay = ft_layout.layout()
+    container = main.ptr(attr + lay["FTAttributes.modelparts_container"])
+    roots: set[int] = set()
+    if container is None or container[0] != "intern":
+        return roots
+    rows = {}
+    for index in range(min(MODELPARTS_ENTRIES, (trees[0][1] - 1) - 4)):
+        ref = main.ptr(container[2] + 4 * index)
+        if ref is not None and ref[0] == "intern":
+            rows[index] = ref[2]
+    starts = sorted(set(rows.values()) | {container[2]})
+    size = lay["sizeof(FTModelPart)"]
+    for base in rows.values():
+        bound = min([s for s in starts if s > base], default=len(main.data))
+        k = FTMODELPART_DESC_PARTS  # part 0's two details are dl_roots'
+        while base + (k + 1) * size <= bound:
+            ref = main.ptr(base + k * size + lay["FTModelPart.dl"])
+            if ref is not None and ref[0] == "extern" and ref[1] == model_id:
+                roots.add(ref[2])
+            k += 1
+    return roots
 
 
 def build(o2r_dir: Path, main_id: int, model_id: int, attr: int, kind: int,
@@ -208,7 +227,8 @@ def build(o2r_dir: Path, main_id: int, model_id: int, attr: int, kind: int,
     model = P.O2RFile(o2r_dir / f"{model_id:04x}")
     tables = P.donor_tables(o2r_dir, main_id, model_id, attr)
     roots = dl_roots(main, model, model_id, attr, tables["trees"], tables["dl_pairs"])
-    roots |= set(extra_roots)
+    variants = variant_roots(main, model_id, attr, tables["trees"])
+    roots |= variants | set(extra_roots)
     dls, vtxs = walk_geometry(model, roots)
     pruned = merge(dls + vtxs)
     # The content's other files resolve their pointers into the model by
@@ -348,7 +368,7 @@ def build(o2r_dir: Path, main_id: int, model_id: int, attr: int, kind: int,
     meta = {
         "kind": kind, "main_bytes": main_len, "model_bytes": len(model.data),
         "model_kept_bytes": kept_bytes, "geometry_bytes": sum(b - a for a, b in pruned),
-        "display_lists": len(dls), "roots": len(roots), "variant_roots": len(set(extra_roots)),
+        "display_lists": len(dls), "roots": len(roots), "variant_roots": len(variants),
         "root_cells": len(cells),
         "fixups": len(fixups), "null_fixups": {f"{k:#x}": v for k, v in sorted(nulls.items())},
         "file_bytes": file_bytes, "manifest_rows": len(externs),
@@ -380,15 +400,7 @@ def main() -> int:
     if None in (args.main, args.model, args.attributes, args.kind):
         ap.error("give --content and --export-root, or --main/--model/--attributes/--kind")
     try:
-        # A registered content's pack also prunes the variant lists its
-        # native owner image draws (a match sets them; the select screen
-        # never does, so the pack serves both).
-        extra = set()
-        if args.content is not None:
-            P.load_donor(args.content, args.export_root)
-            extra = variant_roots(args.content, args.o2r, args.attributes)
-        blob, meta, ext = build(args.o2r, args.main, args.model, args.attributes, args.kind,
-                                extra)
+        blob, meta, ext = build(args.o2r, args.main, args.model, args.attributes, args.kind)
     except PackError as error:
         print(f"p4_preview_pack: {error}", file=sys.stderr)
         return 1
