@@ -2187,10 +2187,14 @@ sb32 ftParamCheckSetSkeletonColAnimID(GObj *fighter_gobj, s32 damage_level)
 
         /* The body image is resident only when the match has an electric
          * attacker; an unexpected source still gets the flash, never a
-         * rejected fighter draw. */
+         * rejected fighter draw. A P4 content has its parent's kind (Wolf,
+         * Peach and Sonic are Fox, Crash and Lanky Mario) but no electric
+         * body of its own: it takes the common family, as the rest of the
+         * cast does. */
         result = ftParamCheckSetFighterColAnimID(
             fighter_gobj,
-            ((ndsFTManagerSkeletonReady(fp->fkind) != FALSE) ?
+            ((fp->nds_p4_content == 0u) &&
+             (ndsFTManagerSkeletonReady(fp->fkind) != FALSE) ?
                  nGMColAnimFighterDamageElectricSkeletonStart :
                  nGMColAnimFighterDamageElectricCommonStart) + damage_level,
             0);

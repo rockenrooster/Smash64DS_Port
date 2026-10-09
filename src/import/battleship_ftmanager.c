@@ -227,11 +227,63 @@ void ftManagerAllocFighter(u32 data_flags, s32 allocs_num)
 void *ndsBattleIdleScratchAlloc(size_t size, u32 alignment);
 void *ndsBaseFTManagerAllocFigatreeHeapKind(s32 fkind);
 
+#if NDS_P4
+/* The player whose heap this call sizes. A scene builds its players in order,
+ * each heap just before its fighter (scvsbattle.c's loop): the first player
+ * of this scene not yet given one, if it plays `fkind`. -1 otherwise. */
+static s32 ndsFTManagerHeapPlayer(s32 fkind)
+{
+    extern volatile u32 gNdsTaskmanHeapGeneration;
+    static u32 done_mask;
+    static u32 done_generation;
+    s32 player;
+
+    if ((gSCManagerBattleState == NULL) ||
+        (done_generation != gNdsTaskmanHeapGeneration))
+    {
+        done_mask = 0u;
+        done_generation = gNdsTaskmanHeapGeneration;
+    }
+    if (gSCManagerBattleState == NULL)
+    {
+        return -1;
+    }
+    for (player = 0; player < GMCOMMON_PLAYERS_MAX; player++)
+    {
+        if ((gSCManagerBattleState->players[player].pkind == nFTPlayerKindNot) ||
+            ((done_mask & (1u << player)) != 0u))
+        {
+            continue;
+        }
+        done_mask |= 1u << player;
+        return (gSCManagerBattleState->players[player].fkind == fkind) ?
+            player : -1;
+    }
+    return -1;
+}
+#endif
+
 void *ftManagerAllocFigatreeHeapKind(s32 fkind)
 {
     FTData *data = dFTManagerDataFiles[fkind];
-    void *heap = ndsBattleIdleScratchAlloc(data->file_anim_size, 0x10u);
+    void *heap;
+#if NDS_P4
+    /* A P4 player constructs through its parent's kind, whose row the scene
+     * raised to its largest selected child (nds_p4.c ndsP4SetupFileSizes):
+     * Dedede beside Banjo took Banjo's 29 KB heap. The heap only ever holds
+     * this player's own animations, so it takes its content's size. */
+    s32 player = ndsFTManagerHeapPlayer(fkind);
+    const NDSP4Fighter *f = (player >= 0) ?
+        ndsP4Fighter(ndsP4MatchContent(player)) : NULL;
 
+    if ((f != NULL) && (f->data->file_anim_size != 0u))
+    {
+        heap = ndsBattleIdleScratchAlloc(f->data->file_anim_size, 0x10u);
+        return (heap != NULL) ? heap :
+            syTaskmanMalloc(f->data->file_anim_size, 0x10u);
+    }
+#endif
+    heap = ndsBattleIdleScratchAlloc(data->file_anim_size, 0x10u);
     return (heap != NULL) ? heap : ndsBaseFTManagerAllocFigatreeHeapKind(fkind);
 }
 

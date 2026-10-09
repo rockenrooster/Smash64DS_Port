@@ -56,6 +56,8 @@ EXT_MAGIC = 0x31584542  # BEX1: reloc_preview_pack.c NDS_BATTLE_EXTERN_MAGIC
 EXT_VERSION = 2
 EXT_MAX = 24            # NDS_BATTLE_EXTERN_MAX
 EXT_LOAD_ONLY = 0xFFFF  # NDS_BATTLE_EXTERN_LOAD_ONLY: load the file, patch nothing
+HALF_MAGIC = 0x31545248  # HRT1: reloc_preview_pack.c NDS_PREVIEW_HALF_MAGIC
+HALF_MAX_BYTES = 4096    # NDS_PREVIEW_HALF_MAX_BYTES: one full-size frame of scratch
 
 
 class PackError(Exception):
@@ -373,6 +375,106 @@ def high_only_spans(main: P.O2RFile, model: P.O2RFile, model_id: int, attr: int,
     return spans, set(nulls)
 
 
+def half_res_frames(main: P.O2RFile, model: P.O2RFile, model_id: int, attr: int,
+                    trees, pruned, other_targets: set[int]) -> dict[int, tuple]:
+    """The material frames a battle pack stores at half resolution (owner,
+    2026-10-08: half-res textures for a content in a three- or four-fighter
+    battle). A frame is an MObjSub sprite -- a texture-animation image, the
+    bulk of a content's kept model bytes -- whose MObjSub gives its size
+    (`unk0C` x `unk0E` texels at its block size); the frame's region must hold
+    exactly that image. Returns image offset -> (width, height, block siz),
+    leaving out any image two MObjSubs size differently."""
+    lay = ft_layout.layout()
+    targets = sorted({v[2] for v in model.slots.values() if v[0] == "intern"}
+                     | {t for (k, f, t) in main.slots.values() if k == "extern" and f == model_id}
+                     | set(other_targets) | {a for a, _ in pruned} | {b for _, b in pruned} | {0})
+    ends = dict(zip(targets, targets[1:] + [len(model.data)]))
+
+    def model_list(off):
+        found = []
+        for k in range(32):
+            ref = model.ptr(off + 4 * k)
+            if ref is None or ref[0] != "intern":
+                break
+            found.append(ref[2])
+        return found
+
+    subs: set[int] = set()
+    count = trees[0][1] - 1
+    container = main.ptr(attr + lay["FTAttributes.commonparts_container"])
+    for d in range(2):
+        part = container[2] + d * lay["sizeof(FTCommonPart)"]
+        ref = main.ptr(part + lay["FTCommonPart.p_mobjsubs"])
+        if ref is None or ref[0] != "extern" or ref[1] != model_id:
+            continue
+        for j in range(count):
+            lst = model.ptr(ref[2] + 4 * j)
+            if lst is not None and lst[0] == "intern":
+                subs.update(model_list(lst[2]))
+    mp = main.ptr(attr + lay["FTAttributes.modelparts_container"])
+    size = lay["sizeof(FTModelPart)"]
+    if mp is not None and mp[0] == "intern":
+        rows = {}
+        for index in range(min(MODELPARTS_ENTRIES, count)):
+            ref = main.ptr(mp[2] + 4 * index)
+            if ref is not None and ref[0] == "intern":
+                rows[index] = ref[2]
+        starts = sorted(set(rows.values()) | {mp[2]})
+        for base in rows.values():
+            bound = min([s for s in starts if s > base], default=len(main.data))
+            k = 0
+            while base + (k + 1) * size <= bound:
+                ref = main.ptr(base + k * size + lay["FTModelPart.mobjsubs"])
+                if ref is not None and ref[0] == "extern" and ref[1] == model_id:
+                    subs.update(model_list(ref[2]))
+                k += 1
+
+    frames: dict[int, tuple] = {}
+    conflicts: set[int] = set()
+    for sub in sorted(subs):
+        if sub + 0x34 > len(model.data):
+            continue
+        w, h = struct.unpack_from(">HH", model.data, sub + 0x0C)
+        bsiz = model.data[sub + 0x33]
+        if bsiz > 2 or w < 8 or h < 8 or (w | h) & 1:
+            continue
+        need = (w * h * (4, 8, 16)[bsiz]) // 8
+        if need > HALF_MAX_BYTES:
+            continue
+        sprites = model.ptr(sub + 4)
+        if sprites is None or sprites[0] != "intern":
+            continue
+        # The sprite array is followed by other pointers (the palettes): a
+        # frame is an entry whose region is exactly one image.
+        for t in model_list(sprites[2]):
+            if t not in ends or in_ranges(t, pruned) or not need <= ends[t] - t < need + 16:
+                break
+            if t in frames and frames[t] != (w, h, bsiz):
+                conflicts.add(t)
+            frames[t] = (w, h, bsiz)
+    for t in conflicts:
+        frames.pop(t, None)
+    return frames
+
+
+def half_image(data: bytes, w: int, h: int, bsiz: int) -> bytes:
+    """Every other texel of every other row (the runtime repeats each)."""
+    if bsiz == 0:
+        nibbles = []
+        for y in range(0, h, 2):
+            for x in range(0, w, 2):
+                i = y * w + x
+                nibbles.append((data[i >> 1] >> 4) if (i & 1) == 0 else (data[i >> 1] & 0xF))
+        return bytes((nibbles[i] << 4) | nibbles[i + 1] for i in range(0, len(nibbles), 2))
+    bpp = (1, 2)[bsiz - 1]
+    out = bytearray()
+    for y in range(0, h, 2):
+        for x in range(0, w, 2):
+            i = (y * w + x) * bpp
+            out += data[i:i + bpp]
+    return bytes(out)
+
+
 def build(o2r_dir: Path, main_id: int, model_id: int, attr: int, kind: int,
           extra_roots: set[int] = frozenset(), low_only: bool = False):
     main = P.O2RFile(o2r_dir / f"{main_id:04x}")
@@ -405,6 +507,20 @@ def build(o2r_dir: Path, main_id: int, model_id: int, attr: int, kind: int,
                                        pruned, other_targets)
         high_bytes = sum(b - a for a, b in spans)
         pruned = merge(pruned + spans)
+    # The battle pack's material frames at half resolution: each frame keeps
+    # its first quarter, the half image, and the rest of its region goes.
+    model_bytes = bytearray(model.data)
+    half = {}
+    if low_only:
+        half = half_res_frames(main, model, model_id, attr, tables["trees"], pruned,
+                               other_targets)
+        tails = []
+        for t, (w, h, bsiz) in sorted(half.items()):
+            end = t + (w * h * (4, 8, 16)[bsiz]) // 8
+            small = half_image(bytes(model.data[t:end]), w, h, bsiz)
+            model_bytes[t:t + len(small)] = small
+            tails.append((t + align_up(len(small), 4), align_up(end, 4)))
+        pruned = merge(pruned + [(a, b) for a, b in tails if b > a])
     # The content's other files resolve their pointers into the model by
     # source offset through the pack's spans: none may name pruned bytes.
     for fid, slot, target in others:
@@ -470,7 +586,7 @@ def build(o2r_dir: Path, main_id: int, model_id: int, attr: int, kind: int,
     cell_index = {t: i for i, t in enumerate(cells)}
 
     main_body = bytes(main.data)
-    model_body = b"".join(bytes(model.data[a:b]) for a, b in kept)
+    model_body = b"".join(bytes(model_bytes[a:b]) for a, b in kept)
     def cell(target: int) -> bytes:
         if struct.unpack_from(">I", model.data, target)[0] >> 24 == 0xDF:
             return struct.pack(">2I", ENDDL, 0)  # a bare G_ENDDL list
@@ -480,10 +596,30 @@ def build(o2r_dir: Path, main_id: int, model_id: int, attr: int, kind: int,
 
     roots_body = b"".join(cell(t) for t in cells)
     sec1_off = align_up(main_len, ALIGN)
-    data = bytearray(sec1_off + kept_bytes + len(roots_body))
+    # The half-resolution table and the runtime's two frames of scratch sit
+    # between the model's kept bytes and its root cells; the header's
+    # reserved_tail names the table (reloc_preview_pack.c
+    # ndsRelocPreviewHalfResSource).
+    half_body = b""
+    half_rows = []
+    if half:
+        half_rows = sorted((sec1_off + remap(t), w, h, bsiz) for t, (w, h, bsiz) in half.items())
+        scratch = align_up(max((w * h * (4, 8, 16)[b]) // 8 for _o, w, h, b in half_rows), 4)
+        table_off = sec1_off + kept_bytes
+        head = 16 + 12 * len(half_rows)
+        # Big-endian words, as every pack section: the loader swaps each word
+        # to native order, so the table reads as u32s and the half images
+        # keep the word-swapped layout every model texture has in RAM.
+        half_body = (struct.pack(">4I", HALF_MAGIC, len(half_rows), table_off + head, scratch)
+                     + b"".join(struct.pack(">3I", o, (w << 16) | h, b)
+                                for o, w, h, b in half_rows)
+                     + bytes(2 * scratch))
+    roots_off = kept_bytes + len(half_body)
+    data = bytearray(sec1_off + roots_off + len(roots_body))
     data[0:main_len] = main_body
     data[sec1_off:sec1_off + kept_bytes] = model_body
-    data[sec1_off + kept_bytes:] = roots_body
+    data[sec1_off + kept_bytes:sec1_off + roots_off] = half_body
+    data[sec1_off + roots_off:] = roots_body
 
     fixups = []
     nulls = {}
@@ -496,7 +632,7 @@ def build(o2r_dir: Path, main_id: int, model_id: int, attr: int, kind: int,
         elif cls == "kept":
             fixups.append((slot_data, sec1_off + remap(target)))
         elif cls == "root":
-            fixups.append((slot_data, sec1_off + kept_bytes + 8 * cell_index[target]))
+            fixups.append((slot_data, sec1_off + roots_off + 8 * cell_index[target]))
         elif cls == "drop":
             fixups.append((slot_data, NULL))
         else:
@@ -510,8 +646,8 @@ def build(o2r_dir: Path, main_id: int, model_id: int, attr: int, kind: int,
         spans.append((a, model_rel[(a, b)], b - a))
     sections = [
         (main_id, 0, main_len, main_len, 0, 1, 0, 0),
-        (model_id, sec1_off, kept_bytes + len(roots_body), len(model.data),
-         1, len(kept), kept_bytes, len(cells)),
+        (model_id, sec1_off, roots_off + len(roots_body), len(model.data),
+         1, len(kept), roots_off, len(cells)),
     ]
     fixup_bytes = b"".join(struct.pack("<2I", s, t) for s, t in fixups)
     span_bytes = b"".join(struct.pack("<3I", *s) for s in spans)
@@ -519,7 +655,7 @@ def build(o2r_dir: Path, main_id: int, model_id: int, attr: int, kind: int,
     header = struct.pack(
         "<16I", MAGIC, VERSION, file_bytes, kind, len(sections), len(fixups), len(spans), 0,
         len(data), fnv1a32(bytes(data)), fnv1a32(fixup_bytes), fnv1a32(span_bytes),
-        main_id, model_id, len(model.data), 0)
+        main_id, model_id, len(model.data), (sec1_off + kept_bytes) if half_body else 0)
     blob = (header + b"".join(struct.pack("<8I", *s) for s in sections)
             + bytes(data) + fixup_bytes + span_bytes)
     assert len(blob) == file_bytes
@@ -562,6 +698,10 @@ def build(o2r_dir: Path, main_id: int, model_id: int, attr: int, kind: int,
         "file_bytes": file_bytes, "manifest_rows": len(externs), "dangling_externs": dangling,
         "low_only": low_only, "high_only_bytes": high_bytes,
         "dropped_slots": sum(1 for p in pairs if p[2] == "drop"),
+        "half_frames": len(half_rows),
+        "half_saved_bytes": sum((w * h * (4, 8, 16)[b]) // 8
+                                - align_up(((w // 2) * (h // 2) * (4, 8, 16)[b]) // 8, 4)
+                                for _o, w, h, b in half_rows) - len(half_body),
     }
     return blob, meta, ext
 

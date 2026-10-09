@@ -1744,6 +1744,15 @@ def _build_source_export_for_owners(
     states, sequence, actions, triangles, runs, epochs = [], [], [], [], [], []
     state_lookup = {}
     owner_roots = {}
+    # Smash Remix models (P4) load vertex blocks wider than the triangles
+    # after them use: about half of a content's loaded vertices are never a
+    # corner (Banjo LOW: 1,235 of 2,522), nearly all at a block's two ends.
+    # Every loaded vertex becomes a dense vertex of the owner image (dense,
+    # normal and prepared rows, 26 bytes), so a P4 load is trimmed below to
+    # the span its corners and MODIFYVTX reads use. (row, block offset) of
+    # every vertex a P4 corner or MODIFYVTX reads, and the P4 load rows:
+    p4_vertex_reads = set()
+    p4_load_rows = []
     # (action row, binding) for vertex loads a welded joint's pre-matrix DL
     # performs under its parent's matrix; empty for every other owner, so
     # their export dicts gain one empty table and nothing else moves.
@@ -1761,6 +1770,9 @@ def _build_source_export_for_owners(
         roots = []
         slots = [None] * VERTEX_CACHE_SIZE
         slot_offsets = [None] * VERTEX_CACHE_SIZE
+        # (load row, block offset) holding each cache slot, for the P4 trim.
+        slot_loads = [None] * VERTEX_CACHE_SIZE
+        trim_loads = owner_name in P4_DONOR_OWNERS
         combine_aliased = False
         if root_specs_by_owner is not None and owner_name in root_specs_by_owner:
             own_specs = root_specs_by_owner[owner_name]
@@ -1909,6 +1921,16 @@ def _build_source_export_for_owners(
                             (row, parent_binding)
                             for row in range(action_first, len(actions))
                         )
+                    if trim_loads:
+                        for row in range(action_first, len(actions)):
+                            kind, _, slot, count = actions[row][:4]
+                            if kind == 0:
+                                p4_load_rows.append(row)
+                                for k in range(count):
+                                    slot_loads[slot + k] = (row, k)
+                            elif slot_loads[slot] is not None:
+                                # MODIFYVTX copies the loaded vertex.
+                                p4_vertex_reads.add(slot_loads[slot])
                 for action in actions[first_action:]:
                     if action[0] == 0:
                         for k in range(action[3]):
@@ -1939,6 +1961,9 @@ def _build_source_export_for_owners(
                                 payload, owner_name, root_index, index,
                                 slot_offsets, indices
                             )
+                        if trim_loads:
+                            p4_vertex_reads.update(
+                                slot_loads[slot] for slot in indices)
                         submit_class = 0 if bindings == {logical_binding} else 1
                         if current_class is not None and \
                                 submit_class != current_class:
@@ -1987,6 +2012,19 @@ def _build_source_export_for_owners(
                 len(epochs) - first_epoch, tail_count, tail_sync, 0,
             ))
         owner_roots.setdefault(owner_name, []).extend(roots)
+
+    # The trim keeps every row (epochs, bindings and cross references index
+    # them) and every vertex between a load's first and last read one; a load
+    # nothing reads keeps its first vertex. A trimmed-off vertex was never a
+    # corner, so no slot a triangle reads changes contents.
+    for row in p4_load_rows:
+        kind, command_index, index, count, source_offset, s, t = actions[row]
+        reads = [k for k in range(count) if (row, k) in p4_vertex_reads]
+        first, last = (reads[0], reads[-1]) if reads else (0, 0)
+        actions[row] = (
+            kind, command_index, index + first, last - first + 1,
+            source_offset + first * SOURCE_VERTEX_SIZE, s, t,
+        )
 
     data = {
         "state": _pack_rows(STATE_DELTA_FORMAT, states),

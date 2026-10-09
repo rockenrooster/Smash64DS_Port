@@ -2114,6 +2114,12 @@ static u16 ndsRendererHardwarePackedVertexColor(
         color, material_color, use_material_color, color_modulate);
 }
 
+#if NDS_P4
+/* reloc_preview_pack.c: a P4 battle pack's half-resolution material frame,
+ * repeated to its full size in the pack's scratch; anything else unchanged. */
+const void *ndsRelocPreviewHalfResSource(const void *ptr);
+#endif
+
 static const void *ndsRendererResolveTextureDataPointer(
     const NDSRendererConfig *config, const void *ptr, size_t bytes)
 {
@@ -2123,14 +2129,17 @@ static const void *ndsRendererResolveTextureDataPointer(
     }
     if ((config != NULL) && (config->resolve_data != NULL))
     {
-        return config->resolve_data(ptr, bytes, config->user);
+        ptr = config->resolve_data(ptr, bytes, config->user);
     }
-    if ((config != NULL) && (config->validate_range != NULL) &&
-        (config->validate_range((const Gfx *)ptr, bytes, config->user) ==
-         FALSE))
+    else if ((config != NULL) && (config->validate_range != NULL) &&
+             (config->validate_range((const Gfx *)ptr, bytes, config->user) ==
+              FALSE))
     {
         return NULL;
     }
+#if NDS_P4
+    ptr = ndsRelocPreviewHalfResSource(ptr);
+#endif
     return ptr;
 }
 

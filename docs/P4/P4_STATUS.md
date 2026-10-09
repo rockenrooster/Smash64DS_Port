@@ -728,7 +728,9 @@ past 2,047 now keeps a span's whole first id and a raw run's whole corner id
 (`NDS_NATIVE_DENSE_WIDE`); cross-run corners keep 11 bits beside their GX
 slot, and the generator numbers the action blocks they read first
 (`_wide_dense_cross_first`). No variant is dropped now. Banjo's low image
-grows to about 86 KB.
+grows to about 86 KB. The load trim below brought every owner back under
+2,048 (Banjo high 1,575), so no current owner takes the wide form; it stays
+for a larger model.
 
 **Shade sites.** A lean packet holds one shade site per lit epoch; Banjo's
 high owner has 70 epochs and Crash's 67, past the packet's 64, which declined
@@ -750,11 +752,52 @@ or four; four of the heaviest contents fewer. P4 animation files are
 compacted at generation (`scripts/p4/p4_anim_compact.py`: event16 keys
 re-fit within 2 units, event32 converted, 77c19d0ea07; the image -88 KB).
 
-Open: four of the heaviest contents in one match still run out of memory at
-the countdown (Banjo, Crash, Peach and Dedede: the general heap 532 B short
-at `ifCommonCountdownMakeInterface`); a match with Banjo records 26 native
-failures on Fox's blaster shot (FoxSpecial4 root 0x40, stage domain), which
-the original-cast match does not.
+**Battle memory.** Four of the heaviest contents (Banjo, Crash, Peach and
+Dedede) ran out of memory at the countdown, then mid-match once that was
+fixed. The ledger of the match's allocations put the four owner images
+first (84 + 66 + 44 + 34 KB, against 11-24 KB for an original fighter's low
+image). Four changes:
+
+- Vertex-load trim (`generate_nds_native_owners.py`
+  `_build_source_export_for_owners`). Remix display lists load vertex blocks
+  wider than the triangles after them use: about half of every content's
+  loaded vertices were never a corner (Banjo low 1,235 of 2,522, Crash 1,039
+  of 2,020), nearly all at a block's two ends, and each loaded vertex is a
+  dense vertex of the image (dense, normal and prepared rows, 26 bytes). A P4
+  load now covers only the span between the first and last vertex a corner or
+  a MODIFYVTX reads; rows stay, so epochs and bindings do not move. Low
+  images: Banjo 84,464 -> 52,768, Crash 66,180 -> 40,440, Dedede 43,952 ->
+  26,920, Peach 33,972 -> 26,824, Lanky 43,532 -> 31,700, Sheik 38,128 ->
+  24,192; the census pins' dense counts moved, nothing else. The original
+  cast's images are byte-identical.
+- Each P4 player's animation heap takes its own content's largest motion
+  (`battleship_ftmanager.c` `ftManagerAllocFigatreeHeapKind`); the parent
+  kind's row was raised to its largest selected child, so Dedede beside
+  Banjo took Banjo's 29 KB.
+- The animation cache's match sizing skips P4 players
+  (`ndsR2AnimCacheMatchFighterBytes`): it charged the parent's Main, which a
+  content never loads, and its size walk loaded the parent's guard-pose
+  package (3.3 KB).
+- Half-resolution material frames in the low battle pack
+  (`p4_preview_pack.py half_res_frames`, owner 2026-10-08): each MObj texture
+  frame keeps a half-size image and the runtime repeats it to full size in
+  one of two scratch frames when the texture converter asks
+  (`ndsRelocPreviewHalfResSource`). Crash -8,472 B, Bowser -11,544, Dedede
+  -5,032, Lanky -3,052, Peach -2,680. The select's previews load the same
+  pack; side by side with play-1009j they look the same.
+
+A P4 content hit by an electric attack takes the common electric flash
+(`ftParamCheckSetSkeletonColAnimID`): its parent's skeleton body is a
+different model.
+
+play-1009m, Banjo, Crash, Peach and Dedede, 900 frames: heap low-water
+34,396, no overflow, no native failure, no declined or skipped draw.
+
+Open: the select shows two previews for those four (its two regions hold
+about 290 KB; the four blocks and their animation heaps want about 450 KB);
+a match with Banjo records 26 native failures on Fox's blaster shot
+(FoxSpecial4 root 0x40, stage domain), which the original-cast match does
+not.
 
 ## Board 1 status (master plan Revision 3)
 

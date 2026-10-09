@@ -14788,6 +14788,17 @@ static u32 ndsR2AnimCacheMatchFighterBytes(void)
         {
             continue;
         }
+#if NDS_P4
+        /* A P4 player's kind is its parent's (Banjo and Dedede are Captain):
+         * its own pack is loaded at setup, and the parent's Main never is.
+         * Sizing the parent's tree here charged a match for a file it does
+         * not load, and the size walk loaded the parent's guard-pose
+         * package as a side effect -- 3.3 KB in the match's last 2 KB. */
+        if (ndsP4MatchContent(i) != 0u)
+        {
+            continue;
+        }
+#endif
         if ((seen & (1u << fkind)) != 0u)
         {
             continue;

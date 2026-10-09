@@ -25,9 +25,33 @@ typedef struct NDSBattleForeignImageRow {
 _Static_assert(sizeof(NDSBattleForeignImageRow) == 16u, "foreign image row ABI");
 #endif
 
+/* A P4 battle pack's half-resolution material frames (owner, 2026-10-08:
+ * half-res textures for a content in a three- or four-fighter battle;
+ * scripts/p4/p4_preview_pack.py half_res_frames). The table and two frames
+ * of scratch sit in the model section before its root cells; the header's
+ * reserved_tail names the table. Rows are data offsets ascending. */
+#define NDS_PREVIEW_HALF_MAGIC 0x31545248u /* HRT1 */
+#define NDS_PREVIEW_HALF_MAX_BYTES 4096u
+typedef struct NDSPreviewHalfHeader {
+    u32 magic;
+    u32 count;
+    u32 scratch_offset;
+    u32 scratch_bytes;
+} NDSPreviewHalfHeader;
+typedef struct NDSPreviewHalfRow {
+    u32 data_offset;
+    u32 size;   /* width << 16 | height, texels */
+    u32 siz;    /* G_IM_SIZ_4b/8b/16b */
+} NDSPreviewHalfRow;
+_Static_assert(sizeof(NDSPreviewHalfHeader) == 16u, "half table header ABI");
+_Static_assert(sizeof(NDSPreviewHalfRow) == 12u, "half table row ABI");
+
 typedef struct NDSPreviewResident {
     u32 generation;
     u32 model_source_bytes;
+    /* The pack's data and its half-resolution table, or NULL. */
+    u8 *half_base;
+    const NDSPreviewHalfHeader *half;
     /* Bit i: section i's spans ascend by source offset without overlap
      * (checked at REGISTER), so a lookup may binary-search them. */
     u32 sorted_sections;
@@ -127,6 +151,9 @@ static s32 ndsPreviewRange(u32 offset, u32 bytes, u32 total)
 {
     return (offset <= total) && (bytes <= total - offset);
 }
+
+typedef struct NDSPreviewPackLoad NDSPreviewPackLoad;
+static const NDSPreviewHalfHeader *ndsPreviewHalfTable(const NDSPreviewPackLoad *load);
 
 static const NDSPreviewPackSection *ndsPreviewSection(
     const NDSRelocLoadedFile *loaded, const NDSPreviewResident **out_resident)
@@ -288,6 +315,113 @@ static u32 ndsRelocSceneShowsPreviewFighter(void)
     return ((scene == nSCKind1PGamePlayers) || (scene == nSCKindPlayersVS) ||
             (scene == nSCKind1PBonus1Players) ||
             (scene == nSCKind1PBonus2Players)) ? TRUE : FALSE;
+}
+
+/* Pack bytes are words swapped to native order at load (NDS_FPC_STATE_READ),
+ * so a texture's byte i sits at i ^ 3: the layout the texture converter
+ * reads (NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED). */
+static void ndsPreviewHalfUpsample(u8 *dst, const u8 *src, u32 w, u32 h,
+                                   u32 siz)
+{
+    u32 half_w = w >> 1;
+    u32 x;
+    u32 y;
+
+    if (siz == 0u)
+    {
+        /* 4-bit: an even destination texel and the next share one byte and
+         * one source texel. */
+        for (y = 0u; y < h; y++)
+        {
+            u32 row = (y >> 1) * half_w;
+
+            for (x = 0u; x < w; x += 2u)
+            {
+                u32 si = row + (x >> 1);
+                u32 sb = src[(si >> 1) ^ 3u];
+                u32 v = ((si & 1u) != 0u) ? (sb & 0xfu) : (sb >> 4);
+
+                dst[((y * w + x) >> 1) ^ 3u] = (u8)((v << 4) | v);
+            }
+        }
+        return;
+    }
+    {
+        u32 bpp = (siz == 1u) ? 1u : 2u;
+
+        for (y = 0u; y < h; y++)
+        {
+            u32 row = (y >> 1) * half_w;
+
+            for (x = 0u; x < w; x++)
+            {
+                u32 si = (row + (x >> 1)) * bpp;
+                u32 di = (y * w + x) * bpp;
+                u32 b;
+
+                for (b = 0u; b < bpp; b++)
+                {
+                    dst[(di + b) ^ 3u] = src[(si + b) ^ 3u];
+                }
+            }
+        }
+    }
+}
+
+/* The texture converter's source for `ptr`: a P4 battle pack's half-resolution
+ * material frame comes back repeated to its full size in one of the pack's
+ * two scratch frames (alternating, for a texel-0/texel-1 pair); anything else
+ * is `ptr`. Only a conversion (a texture-cache miss) asks. */
+const void *ndsRelocPreviewHalfResSource(const void *ptr)
+{
+    static u32 toggle;
+    NDSRelocLoadedFile *loaded;
+    const NDSPreviewResident *resident;
+    const NDSPreviewHalfRow *rows;
+    u32 offset;
+    u32 lo;
+    u32 hi;
+
+    if (ptr == NULL)
+    {
+        return ptr;
+    }
+    loaded = ndsRelocFindLoadedFileContaining(ptr, 1u);
+    if ((loaded == NULL) || (ndsPreviewSection(loaded, &resident) == NULL) ||
+        (resident->half == NULL))
+    {
+        return ptr;
+    }
+    offset = (u32)((const u8 *)ptr - resident->half_base);
+    rows = (const NDSPreviewHalfRow *)(resident->half + 1);
+    lo = 0u;
+    hi = resident->half->count;
+    while (lo < hi)
+    {
+        u32 mid = (lo + hi) >> 1;
+
+        if (rows[mid].data_offset < offset)
+        {
+            lo = mid + 1u;
+        }
+        else
+        {
+            hi = mid;
+        }
+    }
+    if ((lo >= resident->half->count) || (rows[lo].data_offset != offset))
+    {
+        return ptr;
+    }
+    {
+        u8 *dst = resident->half_base + resident->half->scratch_offset +
+            ((toggle & 1u) * resident->half->scratch_bytes);
+
+        toggle++;
+        ndsPreviewHalfUpsample(dst, (const u8 *)ptr, rows[lo].size >> 16,
+                               rows[lo].size & 0xffffu, rows[lo].siz);
+        return dst;
+    }
 }
 
 const void *ndsRelocNativeAssetAddress(const void *base, u32 offset)
@@ -467,7 +601,7 @@ enum {
  * scene heap floor. */
 #define NDS_FPC_LOAD_SLOTS 5u
 
-typedef struct NDSPreviewPackLoad {
+struct NDSPreviewPackLoad {
     FILE *file;
     u8 *data;
     NDSPreviewPackSection *sections;
@@ -480,6 +614,7 @@ typedef struct NDSPreviewPackLoad {
     u32 fixup_hash;
     u32 span_hash;
     u32 model_source_bytes;
+    u32 half_offset;
     u32 cursor;
     u32 hash;
     u32 generation;
@@ -487,9 +622,60 @@ typedef struct NDSPreviewPackLoad {
     u8 section_count;
     u8 is_battle_pack;
     u8 state;
-} NDSPreviewPackLoad;
+};
 
 static NDSPreviewPackLoad sNdsPreviewPackLoads[NDS_FPC_LOAD_SLOTS];
+
+/* The loaded pack's half-resolution table, checked once at REGISTER: rows
+ * ascending, each half image and the two frames of scratch inside the data.
+ * NULL when the pack has none (or a malformed one, which then draws its
+ * frames as stored rather than reading past them). */
+static const NDSPreviewHalfHeader *ndsPreviewHalfTable(const NDSPreviewPackLoad *load)
+{
+    const NDSPreviewHalfHeader *half;
+    const NDSPreviewHalfRow *rows;
+    u32 previous = 0u;
+    u32 i;
+
+    if ((load == NULL) || (load->half_offset == 0u) ||
+        !ndsPreviewRange(load->half_offset, sizeof(*half), load->data_bytes))
+    {
+        return NULL;
+    }
+    half = (const NDSPreviewHalfHeader *)(load->data + load->half_offset);
+    if ((half->magic != NDS_PREVIEW_HALF_MAGIC) || (half->count == 0u) ||
+        (half->scratch_bytes == 0u) ||
+        (half->scratch_bytes > NDS_PREVIEW_HALF_MAX_BYTES) ||
+        ((half->scratch_offset | half->scratch_bytes) & 3u) ||
+        !ndsPreviewRange(load->half_offset + sizeof(*half),
+                         half->count * sizeof(*rows), load->data_bytes) ||
+        !ndsPreviewRange(half->scratch_offset, 2u * half->scratch_bytes,
+                         load->data_bytes))
+    {
+        return NULL;
+    }
+    rows = (const NDSPreviewHalfRow *)(half + 1);
+    for (i = 0u; i < half->count; i++)
+    {
+        u32 w = rows[i].size >> 16;
+        u32 h = rows[i].size & 0xffffu;
+        u32 full;
+
+        if ((rows[i].siz > 2u) || (w < 8u) || (h < 8u) || ((w | h) & 1u) ||
+            ((i != 0u) && (rows[i].data_offset <= previous)))
+        {
+            return NULL;
+        }
+        full = (w * h * (4u << rows[i].siz)) / 8u;
+        if ((full > half->scratch_bytes) ||
+            !ndsPreviewRange(rows[i].data_offset, full / 4u, load->data_bytes))
+        {
+            return NULL;
+        }
+        previous = rows[i].data_offset;
+    }
+    return half;
+}
 volatile u32 gNdsPreviewPackStepCount;
 volatile u32 gNdsPreviewPackStepByteMax;
 volatile u32 gNdsPreviewPackStageCommitCount;
@@ -690,7 +876,9 @@ void *ndsRelocPreviewFighterLoadBegin(s32 fkind)
         (header.main_asset_id != ndsRelocAssetIDForToken((u32)fighter->file_main_id)) ||
         (header.model_asset_id != ndsRelocAssetIDForToken((u32)fighter->file_model_id)) ||
         (header.file_bytes != (u32)file_size) || (expected_size != (u32)file_size) ||
-        (header.model_source_bytes == 0u) || (header.reserved | header.reserved_tail) ||
+        (header.model_source_bytes == 0u) || (header.reserved != 0u) ||
+        ((header.reserved_tail & 3u) != 0u) ||
+        (header.reserved_tail >= header.data_bytes) ||
         (header.data_bytes & 3u) ||
         (sNdsRelocLoadedFileCount + header.section_count > NDS_RELOC_LOADED_FILE_CAPACITY) ||
         (fread(sections, sizeof(sections[0]), header.section_count, file) != header.section_count) ||
@@ -718,6 +906,7 @@ void *ndsRelocPreviewFighterLoadBegin(s32 fkind)
     load->fixup_hash = header.fixup_hash;
     load->span_hash = header.span_hash;
     load->model_source_bytes = header.model_source_bytes;
+    load->half_offset = header.reserved_tail;
     load->section_count = (u8)header.section_count;
     load->is_battle_pack = (u8)((is_battle_pack != FALSE) ? 1u : 0u);
     load->sections = (NDSPreviewPackSection *)(load->data + header.data_bytes);
@@ -910,6 +1099,8 @@ s32 ndsRelocPreviewFighterLoadStep(void *handle, u32 byte_budget, u32 *out_bytes
 #endif
         resident->sections = load->sections;
         resident->spans = load->spans;
+        resident->half_base = load->data;
+        resident->half = ndsPreviewHalfTable(load);
         resident->generation = sNdsRelocSceneGeneration;
         resident->sorted_sections = 0u;
         for (i = 0u; i < load->section_count; i++)
