@@ -823,6 +823,11 @@
       "reason": "The source caller runs this target only for fighter kind Boss (Master Hand, the 1P Game final stage). VS CSS cannot select Boss, so no VS fighter takes this branch; the 1P Game retains the frontend for the whole nested battle."
     },
     {
+      "source_symbol": "ndsBaseFTMainProcParams",
+      "target_symbol": "ftBossCommonUpdateDamageStats",
+      "reason": "P4 builds compile the source ftMainProcParams under this name (battleship_ftmain.c), wrapped by battleship_ftMainProcParams. It runs this target only for fighter kind Boss, which VS CSS cannot select; the 1P Game retains the frontend for the whole nested battle."
+    },
+    {
       "source_symbol": "ftManagerInitFighter",
       "target_symbol": "ftBossCommonSetDefaultLineID",
       "reason": "The source caller runs this target only for fighter kind Boss (Master Hand, the 1P Game final stage). VS CSS cannot select Boss, so no VS fighter takes this branch; the 1P Game retains the frontend for the whole nested battle."
@@ -836,6 +841,11 @@
       "source_symbol": "dFTMainSpecialStatusDescs",
       "target_symbol": "dFTBossSpecialStatusDescs",
       "reason": "dFTMainSpecialStatusDescs is read only as [fp->fkind] by ftMainSetStatus (ftmain.c:4566). The Boss row is used only by a Boss fighter, which VS cannot construct. The read-only table moved with its overlay procs."
+    },
+    {
+      "source_symbol": "gNdsFTMainSpecialStatusDescsView",
+      "target_symbol": "dFTBossSpecialStatusDescs",
+      "reason": "P4 builds rename dFTMainSpecialStatusDescs to this writable view (battleship_ftmain.c), which ftMainSetStatus lends a P4 fighter's table through for one call. It is read only as [fp->fkind]; the Boss row is used only by a Boss fighter, which VS cannot construct."
     },
     {
       "source_symbol": "battleship_item_link_core.c::sNdsITManagerProcMakeList",
