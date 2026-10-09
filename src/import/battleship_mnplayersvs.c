@@ -908,6 +908,27 @@ static sb32 ndsMNPlayersVSPreviewInitResidentPools(void)
     if ((sNdsPlayersVSResidentPoolGeneration != gNdsTaskmanHeapGeneration) ||
         (sNdsPlayersVSSharedResidentBase == NULL))
     {
+        /* The whole set or none of it, asked first: syTaskmanMalloc halts on
+         * overflow, so the NULL checks below never see a short heap. The
+         * all-content image with every P4 fighter reached this point with
+         * room for the shared arena and two slot arenas (2026-10-08: the
+         * third halted with 56,544 B left) and the select never appeared. A
+         * short heap now switches the previews off (stage 1) and the select
+         * loads without them. */
+        if (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap,
+                                NDS_PLAYERS_VS_SHARED_RESIDENT_BYTES +
+                                (NDS_PLAYERS_VS_RESIDENT_BLOCKS *
+                                 NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES) + 0x10u,
+                                0x10u) == FALSE)
+        {
+            sNdsPlayersVSSharedResidentBase = NULL;
+            for (i = 0u; i < NDS_PLAYERS_VS_RESIDENT_BLOCKS; i++)
+            {
+                sNdsPlayersVSResidentBlocks[i].base = NULL;
+            }
+            sNdsPlayersVSResidentPoolGeneration = gNdsTaskmanHeapGeneration;
+            return ndsMNPlayersVSPreviewPoolFail(1u);
+        }
         sNdsPlayersVSSharedResidentBase =
             syTaskmanMalloc(NDS_PLAYERS_VS_SHARED_RESIDENT_BYTES, 0x10u);
         for (i = 0u; i < NDS_PLAYERS_VS_RESIDENT_BLOCKS; i++)

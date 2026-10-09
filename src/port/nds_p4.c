@@ -1056,7 +1056,9 @@ const NDSP4TablesHeader *ndsP4LoadTables(u32 content)
     {
         return sNdsP4Tables[content];
     }
-    snprintf(path, sizeof(path), "nitro:/p4/%s.tab", sNdsP4TableNames[content]);
+    /* sniprintf: snprintf links newlib's floating-point formatter (about
+     * 18 KB of resident code) for this one string. */
+    sniprintf(path, sizeof(path), "nitro:/p4/%s.tab", sNdsP4TableNames[content]);
     ndsFsLock();
     file = fopen(path, "rb");
     if ((file == NULL) || (fseek(file, 0, SEEK_END) != 0) ||
