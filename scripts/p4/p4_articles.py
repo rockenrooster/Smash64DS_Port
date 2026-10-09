@@ -57,6 +57,30 @@ ARTICLES = {
         {"name": "clown_copter", "special": 2, "dobjdesc": 0x1E80, "dllinks": True,
          "entry": True},
     ),
+    "sheik": (
+        # SheikSpecial.asm needle_projectile_struct: WPAttributes at 0 of
+        # Sheik file 6.
+        {"name": "needle", "special": 1, "wpattributes": 0x0},
+    ),
+    "banjo": (
+        # BanjoSpecial.asm forward_egg_projectile_struct and
+        # backward_egg_projectile_struct: one WPAttributes at 0 of Banjo
+        # file 9.
+        {"name": "egg", "special": 4, "wpattributes": 0x0},
+    ),
+    "lanky": (
+        # LankySpecial.asm grape_projectile_struct: WPAttributes at 0 of
+        # Lanky file 6 (its graphic in file 8).
+        {"name": "grape", "special": 1, "wpattributes": 0x0},
+    ),
+    "sonic": (
+        # SonicSpecial.asm spring_projectile_struct: WPAttributes at 0 of
+        # Sonic file 6 (its graphic in file 9). Its MObj's TEXID and
+        # palette_id move together: 0 open, 1 coiled (2 and 3 are Classic
+        # Sonic's, not on the DS).
+        {"name": "spring", "special": 1, "wpattributes": 0x0, "texid_frames": 2,
+         "palette_per_frame": True},
+    ),
 }
 
 MOBJ_FLAG_PALETTE = 0x0004  # segment E loads the TLUT from palettes[palette_id]
@@ -138,9 +162,8 @@ def modelpart_list(main: census.O2RResource, o_attributes: int, joint: int,
     return dl
 
 
-def texid_images(res: census.O2RResource, table: int) -> dict:
-    """A one-DObj MObjSub*** table whose one MObjSub's sprites MatAnim cycles:
-    its images (the consecutive non-NULL sprites) and their format."""
+def single_mobjsub(res: census.O2RResource, table: int) -> int:
+    """The one MObjSub of a one-DObj MObjSub*** table."""
     # Only the first DObj's list is read: these articles are one DObj, and
     # the word after the table is often other data (the blaster's palette
     # array).
@@ -150,6 +173,40 @@ def texid_images(res: census.O2RResource, table: int) -> dict:
     sub = res.pointer_at(lst.offset)
     if sub is None or sub.asset_id != res.file_id or res.pointer_at(lst.offset + 4) is not None:
         raise ArticleError(f"{res.file_id:#x}+{lst.offset:#x}: not a single-MObjSub list")
+    return sub.offset
+
+
+def mobjsub_palettes(res: census.O2RResource, sub: int, count: int) -> list[int]:
+    """The first `count` entries of a MObjSub's palette array."""
+    palettes = res.pointer_at(sub + 0x2C)
+    found = []
+    for i in range(count):
+        entry = res.pointer_at(palettes.offset + i * 4) if palettes is not None else None
+        if entry is None or entry.asset_id != res.file_id:
+            raise ArticleError(f"{res.file_id:#x}+{sub:#x}: palette {i} did not resolve")
+        found.append(entry.offset)
+    return found
+
+
+def material_palette(res: census.O2RResource, table: int) -> dict | None:
+    """A sprite-less MObjSub's TLUT: its list loads its own image and takes
+    palettes[palette_id] from the MObj's segment-E branch (the eggs and the
+    grape; their makers set palette_id 0)."""
+    sub = single_mobjsub(res, table)
+    flags = struct.unpack_from(">H", res.payload, sub + 0x30)[0]
+    if not flags & MOBJ_FLAG_PALETTE:
+        return None
+    (offset,) = mobjsub_palettes(res, sub, 1)
+    return {"offset": offset, "count": 16 if res.payload[sub + 0x33] == 0 else 256}
+
+
+def texid_images(res: census.O2RResource, table: int, frames: int | None = None,
+                 palette_per_frame: bool = False) -> dict:
+    """A one-DObj MObjSub*** table whose one MObjSub's sprites MatAnim cycles:
+    its images (the consecutive non-NULL sprites, the first `frames` of
+    them) and their format. palette_per_frame: the article sets palette_id
+    to the TEXID (Sonic's spring), so frame i is drawn with palette i."""
+    sub = census.PointerRef(res.file_id, single_mobjsub(res, table))
     # MObjSub (sys/objtypes.h): the segment-E image's fmt/siz at +2/+3, the
     # render tile's size at +0x0C/+0x0E (flag 0x20), palettes at +0x2C,
     # flags at +0x30, the texel block's format and size at +0x32/+0x33.
@@ -165,6 +222,10 @@ def texid_images(res: census.O2RResource, table: int) -> dict:
             raise ArticleError(f"{res.file_id:#x}+{sub.offset:#x}: palette 0 did not resolve")
         palette = first.offset
     sprites = res.pointer_at(sub.offset + 4)
+    if sprites is None and res.payload[sub.offset + 4:sub.offset + 8] == b"\0\0\0\0":
+        # No sprites: the list loads its own images (Sheik's needle), so
+        # there is no TEXID frame to select.
+        return None
     if sprites is None or sprites.asset_id != res.file_id:
         raise ArticleError(f"{res.file_id:#x}+{sub.offset:#x}: MObjSub sprites did not resolve")
     images = []
@@ -177,9 +238,21 @@ def texid_images(res: census.O2RResource, table: int) -> dict:
         images.append(image.offset)
     if not images:
         raise ArticleError(f"{res.file_id:#x}+{sub.offset:#x}: MObjSub has no sprites")
+    if frames is not None:
+        if len(images) < frames:
+            raise ArticleError(f"{res.file_id:#x}+{sub.offset:#x}: {len(images)} sprites, "
+                               f"wanted {frames}")
+        images = images[:frames]
+    palettes = None
+    if palette_per_frame:
+        if palette is None:
+            raise ArticleError(f"{res.file_id:#x}+{sub.offset:#x}: per-frame palettes "
+                               "without MOBJ_FLAG_PALETTE")
+        palettes = mobjsub_palettes(res, sub.offset, len(images))
     return {"mobjsub_table": table, "mobjsub": sub.offset, "flags": flags,
             "images": images, "fmt": fmt, "siz": siz, "width": width, "height": height,
-            "block_fmt": block_fmt, "block_siz": block_siz, "palette": palette}
+            "block_fmt": block_fmt, "block_siz": block_siz, "palette": palette,
+            "palettes": palettes}
 
 
 def resolve(content: str, title: str, o2r: Path, descriptor: dict) -> list[dict]:
@@ -191,19 +264,30 @@ def resolve(content: str, title: str, o2r: Path, descriptor: dict) -> list[dict]
             resources[fid] = load(o2r / f"{fid:04x}", fid)
         return resources[fid]
 
-    storage = {file_ids[FILE_SLOTS[n]]: f"gNdsP4{title}Special{n}" for n in FILE_SLOTS}
+    # Only the special files its articles name are the content's own
+    # storage (generate_p4_fighter.py OWN_SPECIAL_FILES); a root elsewhere is
+    # admitted through the pointer that names it.
+    own = {article["special"] for article in ARTICLES.get(content, ()) if "special" in article}
+    storage = {file_ids[FILE_SLOTS[n]]: f"gNdsP4{title}Special{n}" for n in sorted(own)}
     roots = []
 
     def add(article: dict, res: census.O2RResource, offset: int, texid: dict | None,
-            head: int = 0) -> None:
+            head: int = 0, via: tuple | None = None, palette: dict | None = None) -> None:
+        """via: (special file, offset) of the pointer that names the root,
+        for a root in a file the special file depends on (Sheik's needle
+        graphic): the runtime admits the list that pointer holds. palette: a
+        sprite-less material's TLUT (material_palette)."""
         sidecar = article.get("modelpart_joint")
-        if sidecar is None and res.file_id not in storage:
+        holder = res.file_id if via is None else via[0]
+        if sidecar is None and holder not in storage:
             raise ArticleError(f"{content} {article['name']}: root in {res.file_id:#x}, "
                                "not one of its special files")
         roots.append({"article": article["name"], "file_id": res.file_id,
-                      "storage": None if sidecar is not None else storage[res.file_id],
+                      "storage": None if sidecar is not None else storage[holder],
+                      "via": 0 if via is None else via[1] + 1,
                       "offset": offset, "entry": bool(article.get("entry")),
-                      "texid": texid, "head": head, "sidecar_joint": sidecar})
+                      "texid": texid, "palette": palette, "head": head,
+                      "sidecar_joint": sidecar})
 
     for article in ARTICLES.get(content, ()):
         if "modelpart_joint" in article:
@@ -227,13 +311,17 @@ def resolve(content: str, title: str, o2r: Path, descriptor: dict) -> list[dict]
             if data is None:
                 raise ArticleError(f"{content} {article['name']}: attributes name no display list")
             target = res_of(data.asset_id)
-            texid = None
+            texid = palette = None
             mobjsubs = res.pointer_at(at + 4)
             if mobjsubs is not None:
                 if mobjsubs.asset_id != data.asset_id:
                     raise ArticleError(f"{content} {article['name']}: materials in another file")
-                texid = texid_images(target, mobjsubs.offset)
-            add(article, target, data.offset, texid)
+                texid = texid_images(target, mobjsubs.offset, article.get("texid_frames"),
+                                     bool(article.get("palette_per_frame")))
+                if texid is None:
+                    palette = material_palette(target, mobjsubs.offset)
+            via = (res.file_id, at) if target.file_id not in storage else None
+            add(article, target, data.offset, texid, via=via, palette=palette)
         else:
             raise ArticleError(f"{content} {article['name']}: no source structure")
     return roots

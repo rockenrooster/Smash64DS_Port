@@ -3823,45 +3823,100 @@ u32 ndsRendererNativeOwnerImageSize(u32 owner_slot, u32 use_low_detail)
  * image and keep their static arrays; every other owner reaches its tables
  * only after ndsRendererNativeEnsureOwnerImage has bound this struct. */
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_IMG_PRIM(image_, member_) ((image_)->member_##_m1)
+#define NDS_IMG_PRIM_OFF(type_, member_) offsetof(type_, member_##_m1)
 #elif NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_IMG_PRIM(image_, member_) ((image_)->member_##_m2)
+#define NDS_IMG_PRIM_OFF(type_, member_) offsetof(type_, member_##_m2)
 #endif
+
+/* One owner image's members as offsets into it, in the runtime tables'
+ * order, with the generated counts: the binding is a constant per owner and
+ * detail. It used to be the field-by-field assignments themselves, inlined at
+ * every bind site, about 30 KB of resident code across the original cast's
+ * and the P4 fighters' images. */
+typedef struct NDSImgBindDesc
+{
+    u32 state_deltas;
+    u32 state_sequence;
+    u32 vertex_actions;
+    u32 epoch_direct_policy;
+    u32 dense_vertices;
+    u32 dense_normals;
+    u32 prepared_dense;
+    u32 action_dense_spans;
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u32 dense_color_source;
+#endif
+#if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
+    u32 packed_corners;
+#endif
+    u32 run_first_unique;
+    u32 run_unique_count;
+    u32 run_unique_dense;
+    u32 triangles;
+    u32 runs;
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+    u32 primitive_group_first;
+    u32 primitive_group_count;
+    u32 primitive_group_type;
+    u32 primitive_group_first_vertex;
+    u32 primitive_group_vertex_count;
+    u32 primitive_vertices;
+#endif
+    u32 epochs;
+    u32 state_delta_count;
+    u32 state_sequence_count;
+    u32 vertex_action_count;
+    u32 dense_count;
+#if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
+    u32 packed_corner_count;
+#endif
+    u32 triangle_count;
+    u32 run_count;
+    u32 epoch_count;
+} NDSImgBindDesc;
 
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-#define NDS_IMG_BIND_COLOR(tables_, img_)                                      \
-    (tables_).dense_color_source = (img_)->dense_color_source;
+#define NDS_IMG_DESC_COLOR(type_) offsetof(type_, dense_color_source),
 #else
-#define NDS_IMG_BIND_COLOR(tables_, img_)
+#define NDS_IMG_DESC_COLOR(type_)
 #endif
-
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
-#define NDS_IMG_BIND_PRIMITIVES(tables_, img_)                                 \
-    (tables_).primitive_group_first =                                          \
-        NDS_IMG_PRIM(img_, primitive_group_first);                             \
-    (tables_).primitive_group_count =                                          \
-        NDS_IMG_PRIM(img_, primitive_group_count);                             \
-    (tables_).primitive_group_type =                                           \
-        NDS_IMG_PRIM(img_, primitive_group_type);                              \
-    (tables_).primitive_group_first_vertex =                                   \
-        NDS_IMG_PRIM(img_, primitive_group_first_vertex);                      \
-    (tables_).primitive_group_vertex_count =                                   \
-        NDS_IMG_PRIM(img_, primitive_group_vertex_count);                      \
-    (tables_).primitive_vertices =                                             \
-        NDS_IMG_PRIM(img_, primitive_vertices);
-#else
-#define NDS_IMG_BIND_PRIMITIVES(tables_, img_)
-#endif
-
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-#define NDS_IMG_BIND_PACKED_CORNERS(tables_, img_, prefix_)                    \
-    (tables_).packed_corners = (img_)->packed_corners;                         \
-    (tables_).packed_corner_count = prefix_##_PACKED_CORNERS_COUNT;
+#define NDS_IMG_DESC_CORNERS(type_) offsetof(type_, packed_corners),
+#define NDS_IMG_DESC_CORNER_COUNT(prefix_) prefix_##_PACKED_CORNERS_COUNT,
 #else
-#define NDS_IMG_BIND_PACKED_CORNERS(tables_, img_, prefix_)                    \
-    (tables_).packed_corners = NULL;                                           \
-    (tables_).packed_corner_count = 0u;
+#define NDS_IMG_DESC_CORNERS(type_)
+#define NDS_IMG_DESC_CORNER_COUNT(prefix_)
 #endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+#define NDS_IMG_DESC_PRIMITIVES(type_)                                         \
+    NDS_IMG_PRIM_OFF(type_, primitive_group_first),                            \
+    NDS_IMG_PRIM_OFF(type_, primitive_group_count),                            \
+    NDS_IMG_PRIM_OFF(type_, primitive_group_type),                             \
+    NDS_IMG_PRIM_OFF(type_, primitive_group_first_vertex),                     \
+    NDS_IMG_PRIM_OFF(type_, primitive_group_vertex_count),                     \
+    NDS_IMG_PRIM_OFF(type_, primitive_vertices),
+#else
+#define NDS_IMG_DESC_PRIMITIVES(type_)
+#endif
+#define NDS_IMG_DESC(type_, prefix_)                                           \
+    {                                                                          \
+        offsetof(type_, state_deltas), offsetof(type_, state_sequence),        \
+        offsetof(type_, vertex_actions), offsetof(type_, epoch_direct_policy), \
+        offsetof(type_, dense_vertices), offsetof(type_, dense_normals),       \
+        offsetof(type_, prepared_dense), offsetof(type_, action_dense_spans),  \
+        NDS_IMG_DESC_COLOR(type_)                                              \
+        NDS_IMG_DESC_CORNERS(type_)                                            \
+        offsetof(type_, run_first_unique), offsetof(type_, run_unique_count),  \
+        offsetof(type_, run_unique_dense), offsetof(type_, triangles),         \
+        offsetof(type_, runs),                                                 \
+        NDS_IMG_DESC_PRIMITIVES(type_)                                         \
+        offsetof(type_, epochs),                                               \
+        prefix_##_STATE_DELTAS_COUNT, prefix_##_STATE_SEQUENCE_COUNT,          \
+        prefix_##_VERTEX_ACTIONS_COUNT, prefix_##_DENSE_VERTICES_COUNT,        \
+        NDS_IMG_DESC_CORNER_COUNT(prefix_)                                     \
+        prefix_##_TRIANGLES_COUNT, prefix_##_RUNS_COUNT,                       \
+        prefix_##_EPOCHS_COUNT                                                 \
+    }
 
 /* Every bind and unbind of a tables struct replaces the image bytes its
  * prepared_dense points at, so the per-run UV memo keyed on that struct must
@@ -3877,46 +3932,69 @@ static void ndsRendererNativeForgetFighterRunUvTables(const void *tables);
 #define NDS_IMG_FORGET_RUN_UV(tables_) ((void)0)
 #endif
 
+/* Binds a runtime tables struct to a loaded image (NULL unbinds it). */
+static void __attribute__((noinline)) ndsRendererNativeBindImageTables(
+    NDSNativeFighterRuntimeTables *tables, const NDSImgBindDesc *desc,
+    const void *base)
+{
+    const u8 *img = (const u8 *)base;
+
+    NDS_IMG_FORGET_RUN_UV(*tables);
+    if (img == NULL)
+    {
+        memset(tables, 0, sizeof(*tables));
+        return;
+    }
+    tables->state_deltas = (const NDSNativeStateDelta *)(img + desc->state_deltas);
+    tables->state_delta_count = desc->state_delta_count;
+    tables->state_sequence = img + desc->state_sequence;
+    tables->state_sequence_count = desc->state_sequence_count;
+    tables->vertex_actions = (const NDSNativeVertexAction *)(img + desc->vertex_actions);
+    tables->vertex_action_count = desc->vertex_action_count;
+    tables->epoch_direct_policy = img + desc->epoch_direct_policy;
+    tables->dense_vertices = (const NDSNativeDenseVertex *)(img + desc->dense_vertices);
+    tables->dense_count = desc->dense_count;
+    tables->dense_normals = (const u32 *)(img + desc->dense_normals);
+    /* Image RAM owns mutable prepared-dense scratch. */
+    tables->prepared_dense = (NDSNativePreparedDenseVertex *)(img + desc->prepared_dense);
+    tables->action_dense_spans = (const u16 *)(img + desc->action_dense_spans);
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    tables->dense_color_source = (const u16 *)(img + desc->dense_color_source);
+#endif
+#if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
+    tables->packed_corners = (const u16 *)(img + desc->packed_corners);
+    tables->packed_corner_count = desc->packed_corner_count;
+#else
+    tables->packed_corners = NULL;
+    tables->packed_corner_count = 0u;
+#endif
+    tables->run_first_corner = NULL;
+    tables->run_first_corner_count = 0u;
+    tables->run_first_unique = (const u16 *)(img + desc->run_first_unique);
+    tables->run_unique_count = img + desc->run_unique_count;
+    tables->run_unique_dense = (const u16 *)(img + desc->run_unique_dense);
+    tables->triangles = (const u16 *)(img + desc->triangles);
+    tables->triangle_count = desc->triangle_count;
+    tables->runs = (const NDSNativeRun *)(img + desc->runs);
+    tables->run_count = desc->run_count;
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+    tables->primitive_group_first = (const u16 *)(img + desc->primitive_group_first);
+    tables->primitive_group_count = img + desc->primitive_group_count;
+    tables->primitive_group_type = img + desc->primitive_group_type;
+    tables->primitive_group_first_vertex =
+        (const u16 *)(img + desc->primitive_group_first_vertex);
+    tables->primitive_group_vertex_count = img + desc->primitive_group_vertex_count;
+    tables->primitive_vertices = (const u16 *)(img + desc->primitive_vertices);
+#endif
+    tables->epochs = (const NDSNativeEpoch *)(img + desc->epochs);
+    tables->epoch_count = desc->epoch_count;
+}
+
 #define NDS_IMG_BIND(tables_, type_, base_, prefix_)                            \
     do                                                                         \
     {                                                                          \
-        const type_ *img_ = (const type_ *)(base_);                            \
-        NDS_IMG_FORGET_RUN_UV(tables_);                                        \
-        if (img_ == NULL)                                                      \
-        {                                                                      \
-            memset(&(tables_), 0, sizeof(tables_));                            \
-        }                                                                      \
-        else                                                                   \
-        {                                                                      \
-            (tables_).state_deltas = img_->state_deltas;                       \
-            (tables_).state_delta_count = prefix_##_STATE_DELTAS_COUNT;        \
-            (tables_).state_sequence = img_->state_sequence;                   \
-            (tables_).state_sequence_count = prefix_##_STATE_SEQUENCE_COUNT;   \
-            (tables_).vertex_actions = img_->vertex_actions;                   \
-            (tables_).vertex_action_count = prefix_##_VERTEX_ACTIONS_COUNT;    \
-            (tables_).epoch_direct_policy = img_->epoch_direct_policy;         \
-            (tables_).dense_vertices = img_->dense_vertices;                   \
-            (tables_).dense_count = prefix_##_DENSE_VERTICES_COUNT;            \
-            (tables_).dense_normals = img_->dense_normals;                     \
-            /* Image RAM owns mutable prepared-dense scratch. */               \
-            (tables_).prepared_dense =                                         \
-                (NDSNativePreparedDenseVertex *)img_->prepared_dense;          \
-            (tables_).action_dense_spans = img_->action_dense_spans;           \
-            NDS_IMG_BIND_COLOR(tables_, img_)                                  \
-            NDS_IMG_BIND_PACKED_CORNERS(tables_, img_, prefix_)                \
-            (tables_).run_first_corner = NULL;                                 \
-            (tables_).run_first_corner_count = 0u;                             \
-            (tables_).run_first_unique = img_->run_first_unique;               \
-            (tables_).run_unique_count = img_->run_unique_count;               \
-            (tables_).run_unique_dense = img_->run_unique_dense;               \
-            (tables_).triangles = img_->triangles;                             \
-            (tables_).triangle_count = prefix_##_TRIANGLES_COUNT;              \
-            (tables_).runs = img_->runs;                                       \
-            (tables_).run_count = prefix_##_RUNS_COUNT;                        \
-            NDS_IMG_BIND_PRIMITIVES(tables_, img_)                             \
-            (tables_).epochs = img_->epochs;                                   \
-            (tables_).epoch_count = prefix_##_EPOCHS_COUNT;                    \
-        }                                                                      \
+        static const NDSImgBindDesc desc_ = NDS_IMG_DESC(type_, prefix_);      \
+        ndsRendererNativeBindImageTables(&(tables_), &desc_, (base_));         \
     } while (0)
 
 #if NDS_P2_KIRBY && NDS_NATIVE_OWNER_IMAGE_KIRBY

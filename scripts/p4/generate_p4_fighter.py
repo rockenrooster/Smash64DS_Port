@@ -358,6 +358,21 @@ OWN_SPECIAL_FILES = {
     # The Clown Copter (2), read only by Yoshi's entry egg, which his
     # Falcon Flyer case never runs.
     "bowser": (2,),
+    # SheikNSP's needle (1, Sheik file 6; Captain has no special file 1).
+    "sheik": (1,),
+    # BanjoNSP's eggs (4, Banjo file 9; Captain has no special file 4).
+    "banjo": (4,),
+    # LankyNSP's grape (1, Lanky file 6; Mario's fireball code, the other
+    # reader of special file 1, never runs for him).
+    "lanky": (1,),
+    # SonicUSP's spring (1, Sonic file 6, its graphic in file 9, which loads
+    # with it; Fox's blaster code, the other reader of special file 1, never
+    # runs for him).
+    "sonic": (1,),
+    # DededeUSP's landing stars (2, Dedede file 7: Yoshi's star attributes at
+    # Yoshi's offset, its graphic the item file's star; Captain's Falcon
+    # Kick and Flyer, the readers of special file 2, never run for him).
+    "dedede": (2,),
 }
 
 # Vanilla file IDs that Remix rewrote with equivalent bytes, so the DS keeps
@@ -1046,7 +1061,16 @@ def main() -> int:
     # main closure only by its header words (checked: no other file names
     # them), so they are neither sized nor loaded; the words read NULL
     # (nds_p4.c ndsP4LabSkipsDependency). Sonic's are 172 KB.
-    lab_skip = sorted({int(s["routine"], 16) for s in special_standins} - {0})
+    # A file the content's own special files name loads with them (Sonic's
+    # spring graphic in his file 9, whose slot is a stand-in): never skipped.
+    own_deps: set[int] = set()
+    pending = [file_ids[4 + n] for n in own_special]
+    while pending:
+        for dep in rom.extern_ids(pending.pop()):
+            if dep not in own_deps:
+                own_deps.add(dep)
+                pending.append(dep)
+    lab_skip = sorted({int(s["routine"], 16) for s in special_standins} - {0} - own_deps)
     # The parent's file standing in for one: outside the content's closure,
     # so the runtime loads it whole (ndsP4LoadOpenSpecialFiles).
     open_special_mask = 0

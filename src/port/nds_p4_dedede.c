@@ -38,9 +38,10 @@
  *                                          (word 2, a float)
  *   attributes + 0x58/0x64                 gravity, jumps_max
  *
- * S6 owns his minions (Waddle Dee, Waddle Doo and Gordo: attach_minion_'s
- * items, the toss's throw flag), the up special's landing stars (Yoshi's
- * star weapon on his file) and his entry; the charged hand's colour
+ * The up special's landing stars are Yoshi's star weapon on his special
+ * file 2 (YoshiShared.asm down_special_struct_fix, S6, below). S6 owns his
+ * minions (Waddle Dee, Waddle Doo and Gordo: attach_minion_'s items, the
+ * toss's throw flag) and his entry; the charged hand's colour
  * (DEDEDE_CHARGE, gfx_routine_end) is a Remix colour routine the port's
  * table declines (S4); Kirby wearing his hat is S8's; the CPU's recovery
  * and reflect behaviour are S10's.
@@ -52,6 +53,9 @@
 #if !NDS_P2_KIRBY
 #error "P4 Dedede's inhale runs Kirby's status code (NDS_P2_KIRBY)"
 #endif
+#if !NDS_P2_YOSHI
+#error "P4 Dedede's landing stars run Yoshi's star weapon (NDS_P2_YOSHI)"
+#endif
 
 #include <ef/effect.h>
 #include <it/item.h>
@@ -59,6 +63,11 @@
 #include <reloc_data.h>
 #include <sys/audio.h>
 #include <sys/obj.h>
+#include <wp/weapon.h>
+
+#ifndef DObjGetStruct
+#define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
+#endif
 
 void ftKirbySpecialNInitStatusVars(GObj *fighter_gobj, sb32 unused);
 void ftKirbySpecialNSetCatchParams(FTStruct *fp);
@@ -348,10 +357,96 @@ void ndsP4DededeUSPMoveMap(GObj *fighter_gobj)
     }
 }
 
-/* The landing's stars: Yoshi's star weapon on Dedede's own file (S6). */
+/* ---- The landing's stars (YoshiShared.asm downspecial_struct_dedede) ----
+ *
+ * Yoshi's star weapon with its description's file pointer swapped for
+ * Dedede's special file 2 (Dedede file 7, generated as
+ * gNdsP4DededeSpecial2), which carries the star's WPAttributes at Yoshi's
+ * offset; its graphic is the item file's shared star quad, which the DS
+ * renderer admits under any owner. */
+#define DEDEDE_STAR_LIFETIME 16                 /* WPYOSHISTAR_LIFETIME */
+#define DEDEDE_STAR_ANGLE 0.5235988F            /* WPYOSHISTAR_ANGLE, 30 degrees */
+#define DEDEDE_STAR_VEL 30.0F                   /* WPYOSHISTAR_VEL */
+#define DEDEDE_STAR_OFF_X 300.0F                /* WPYOSHISTAR_OFF_X */
+#define DEDEDE_STAR_OFF_Y 20.0F                 /* WPYOSHISTAR_OFF_Y */
+#define DEDEDE_STAR_ATTRIBUTES 0x40             /* llYoshiMainStarWeaponAttributes */
+
+extern void *gNdsP4DededeSpecial2;
+
+/* Makers that found his star file missing: counted, never a fault. */
+__attribute__((used)) volatile u32 gNdsP4DededeArticleMisses;
+
+f32 __sinf(f32);
+f32 __cosf(f32);
+sb32 wpYoshiStarProcUpdate(GObj *weapon_gobj);
+sb32 wpYoshiStarProcMap(GObj *weapon_gobj);
+sb32 wpYoshiStarProcHit(GObj *weapon_gobj);
+sb32 wpYoshiStarProcShield(GObj *weapon_gobj);
+sb32 wpYoshiStarProcHop(GObj *weapon_gobj);
+sb32 wpYoshiStarProcReflector(GObj *weapon_gobj);
+
+static WPDesc sNdsP4DededeStarWeaponDesc = {
+    0x00,
+    nWPKindYoshiStar,
+    &gNdsP4DededeSpecial2,
+    DEDEDE_STAR_ATTRIBUTES,
+    { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0 },
+    wpYoshiStarProcUpdate,
+    wpYoshiStarProcMap,
+    wpYoshiStarProcHit,
+    wpYoshiStarProcShield,
+    wpYoshiStarProcHop,
+    wpYoshiStarProcHit,
+    wpYoshiStarProcReflector,
+    wpYoshiStarProcShield
+};
+
+/* wpYoshiStarMakeWeapon on that description: 20 up and 300 out on `lr`'s
+ * side, flying at 30 up 30 degrees. */
+static void ndsP4DededeStarMakeWeapon(GObj *fighter_gobj, Vec3f *pos, s32 lr)
+{
+    GObj *weapon_gobj;
+    WPStruct *wp;
+    Vec3f offset = *pos;
+
+    offset.y += DEDEDE_STAR_OFF_Y;
+
+    if (lr == +1)
+    {
+        offset.x += DEDEDE_STAR_OFF_X;
+    }
+    else offset.x -= DEDEDE_STAR_OFF_X;
+
+    weapon_gobj = wpManagerMakeWeapon(fighter_gobj, &sNdsP4DededeStarWeaponDesc, &offset,
+                                      WEAPON_FLAG_COLLPROJECT | WEAPON_FLAG_PARENT_FIGHTER);
+    if (weapon_gobj == NULL)
+    {
+        return;
+    }
+    wp = wpGetStruct(weapon_gobj);
+    wp->lr = lr;
+    wp->lifetime = DEDEDE_STAR_LIFETIME;
+    wp->physics.vel_air.x = __cosf(DEDEDE_STAR_ANGLE) * (DEDEDE_STAR_VEL * wp->lr);
+    wp->physics.vel_air.y = __sinf(DEDEDE_STAR_ANGLE) * DEDEDE_STAR_VEL;
+}
+
+/* DededeUSP.landing_main_'s wpYoshiStarMakeStars: one star each way from
+ * his top joint. */
 static void ndsP4DededeUSPLandingStars(GObj *fighter_gobj)
 {
-    (void)fighter_gobj;
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    Vec3f pos;
+
+    if (gNdsP4DededeSpecial2 == NULL)
+    {
+        gNdsP4DededeArticleMisses++;
+        return;
+    }
+    pos.x = pos.y = pos.z = 0.0F;
+    gmCollisionGetFighterPartsWorldPosition(fp->joints[nFTPartsJointTopN], &pos);
+
+    ndsP4DededeStarMakeWeapon(fighter_gobj, &pos, fp->lr);
+    ndsP4DededeStarMakeWeapon(fighter_gobj, &pos, -fp->lr);
 }
 
 /* DededeUSP.landing_main_ (0xE6 update): the script's temp variable 1

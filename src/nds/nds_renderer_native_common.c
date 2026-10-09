@@ -4952,7 +4952,13 @@ static sb32 ndsRendererEntryEffectP4ContentInMatch(u32 content)
 /* Renderer adapter: a P4 article root is the display list at its content's
  * special file plus the root's offset (the file moves per load, the offset
  * never does). Fills the root's asset, offset and TEXID frame count (0: no
- * live material). */
+ * live material), with NDS_P4_VARIANT_PALETTE_FOLLOWS set when frame i was
+ * baked with palette i (Sonic's spring) and NDS_P4_VARIANT_MATERIAL when a
+ * list with no TEXID frames still draws through the MObj's segment-E branch
+ * (the eggs, the grape, the needle). renderer_adapter_stage.c defines the
+ * same bits. */
+#define NDS_P4_VARIANT_PALETTE_FOLLOWS 0x80u
+#define NDS_P4_VARIANT_MATERIAL 0x40u
 sb32 ndsRendererEntryEffectP4Admit(const void *dl, u32 *owner_asset_id,
                                    u32 *root_offset, u32 *variant_count)
 {
@@ -4965,12 +4971,23 @@ sb32 ndsRendererEntryEffectP4Admit(const void *dl, u32 *owner_asset_id,
             (const u8 *)*row->storage : NULL;
         u32 offset =
             sNdsEntryEffectRoots[NDS_ENTRY_EFFECT_P4_ROOT_FIRST + p].source_offset;
+        const u8 *root;
 
-        if ((file != NULL) && ((const u8 *)dl == file + offset))
+        if (file == NULL)
+        {
+            continue;
+        }
+        /* A root in a file the special file depends on is the list the
+         * special file's pointer names (Sheik's needle graphic). */
+        root = (row->via != 0u) ? *(const u8 *const *)(file + row->via - 1u) : file + offset;
+
+        if ((const u8 *)dl == root)
         {
             *owner_asset_id = row->asset_id;
             *root_offset = offset;
-            *variant_count = row->variant_count;
+            *variant_count = row->variant_count |
+                (((row->material_flags & 1u) != 0u) ? NDS_P4_VARIANT_PALETTE_FOLLOWS : 0u) |
+                (((row->material_flags & 2u) != 0u) ? NDS_P4_VARIANT_MATERIAL : 0u);
             return TRUE;
         }
     }

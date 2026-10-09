@@ -36,13 +36,12 @@
  *                                          start (words 0-1)
  *   object + 0x74                          the top joint (DObjGetStruct)
  *
- * The spring is a projectile of his own file (spring_stage_setting_,
- * spring_main_, check_spring_bounce_): S6. Until it exists he takes a
- * spring that is already gone, which the donor reads as one destroyed
- * under him: he rises on the script's cue without it. Classic Sonic (the
- * character select's per-port toggle and its sounds) is not on the DS; the
- * homing attack's Super Sonic ranges are Super Sonic's, who is not a
- * content. Kirby's copy is S8's.
+ * The spring is his own weapon on his special file 1 (spring_stage_setting_,
+ * spring_main_, check_spring_bounce_; S6, below): it bounces every fighter
+ * that falls onto it. Classic Sonic (the character select's per-port toggle
+ * and its spring and sounds) is not on the DS; the homing attack's Super
+ * Sonic ranges are Super Sonic's, who is not a content. Kirby's copy is
+ * S8's.
  */
 #include <nds/nds_p4.h>
 
@@ -52,8 +51,14 @@
 #include <it/item.h>
 #include <macros.h>
 #include <sc/scene.h>
+#include <sys/audio.h>
 #include <sys/obj.h>
 #include <sys/objdef.h>
+#include <wp/weapon.h>
+
+#if !NDS_P2_SAMUS
+#error "P4 Sonic's spring lands through Samus's bomb map routine (NDS_P2_SAMUS)"
+#endif
 
 s32 ftCommonKneeBendGetInputTypeCommon(FTStruct *fp);
 f32 ftKirbySpecialLwGetGroundAxisYaw(FTStruct *fp);
@@ -591,16 +596,492 @@ void ndsP4SonicOnEjectGObj(GObj *gobj)
 
 /* ---- Up special (the spring) ---- */
 
-/* The spring before S6: an object with no joint, which main_air_ reads as a
- * spring already destroyed. */
-static GObj sNdsP4SonicNoSpring;
+/* ---- The spring (spring_projectile_struct, spring_properties_struct) ----
+ *
+ * His own weapon on his special file 1 (Sonic file 6, generated as
+ * gNdsP4SonicSpecial1; its graphic is in file 9): WPAttributes at 0, Remix's
+ * update below, Samus's bomb map routine for both map and hurtbox contact
+ * (it lands and stays), Fox's blaster reflector routine on a hitbox clang,
+ * nothing on shields, reflectors or absorbers. Its MObj's TEXID and palette
+ * move together: 1 coiled, 0 open (2 and 3 are Classic Sonic's). Remix
+ * keeps its bounce flag and sound in the object's words 0x40/0x44; here
+ * they are weapon_vars. Remix's projectile id is a Remix one; the DS
+ * renderer keys native weapon owners on the kind. */
+#define SONIC_SPRING_DURATION 240
+#define SONIC_SPRING_STILL_TICS 4               /* no gravity or turn at first */
+#define SONIC_SPRING_SPEED_MAX 100.0F
+#define SONIC_SPRING_GRAVITY 3.0F
+#define SONIC_SPRING_ROTATE_STEP 0.1875F
+#define SONIC_SPRING_FGM 0x3D7                  /* the classic spring's 0x3DF is not on the DS */
+#define SONIC_SPRING_IMAGE_COILED 1
+#define SONIC_SPRING_DL_LINK 11                 /* change_spring_room_: the items' room */
+#define SONIC_SPRING_BOUNCE_VEL_Y 130.0F
 
-/* SonicUSP.spring_stage_setting_ (S6): the spring under him; temp
- * variable 3 holds it. */
+/* check_spring_bounce_'s status tests (Action, Sonic.asm's neighbours). */
+#define SONIC_SPRING_STATUS_JUMPF 0x16
+#define SONIC_SPRING_STATUS_PASS 0x21
+#define SONIC_SPRING_STATUS_TUMBLE 0x39
+#define SONIC_SPRING_STATUS_FALL_SPECIAL 0x3A
+#define SONIC_SPRING_STATUS_SHIELD_BREAK 0x9E
+#define SONIC_SPRING_STATUS_SHIELD_BREAK_FALL 0x9F
+#define SONIC_SPRING_STATUS_INHALE_PULLED 0xAD
+#define SONIC_SPRING_FOX_FIRE_FOX_AIR 0xE8      /* Falco's FireBirdAir too */
+#define SONIC_SPRING_FOX_REFLECTOR_AIR_FIRST 0xF1
+#define SONIC_SPRING_FOX_REFLECTOR_AIR_LAST 0xF5
+#define SONIC_SPRING_KIRBY_FINAL_CUTTER 0x100
+#define SONIC_SPRING_KIRBY_FINAL_CUTTER_AIR 0x102
+#define SONIC_SPRING_KIRBY_FINAL_CUTTER_FALL 0x103
+#define SONIC_SPRING_KIRBY_STONE_FALL 0x109
+#define SONIC_SPRING_YOSHI_GROUND_POUND_DROP 0xE3
+#define SONIC_SPRING_BOWSER_BOMB_DROP 0xE3
+#define SONIC_SPRING_BOWSER_FORWARD_THROW_1 0xE5
+#define SONIC_SPRING_BOWSER_FORWARD_THROW_2 0xE6
+#define SONIC_SPRING_BOWSER_FORWARD_THROW_3 0xE8
+#define SONIC_SPRING_NESS_PK_THUNDER_AIR_FIRST 0xE8
+#define SONIC_SPRING_NESS_PK_THUNDER_AIR_LAST 0xEC
+#define SONIC_SPRING_NESS_PSI_MAGNET_AIR_FIRST 0xF1
+#define SONIC_SPRING_NESS_PSI_MAGNET_AIR_LAST 0xF4
+#define SONIC_SPRING_MARTH_DSPGA 0xF1
+#define SONIC_SPRING_MARTH_DSPGA_ATTACK 0xF2
+
+#if NDS_P4_FALCO
+#define SONIC_SPRING_IS_FALCO(content_) ((content_) == NDS_P4_ID_FALCO)
+#else
+#define SONIC_SPRING_IS_FALCO(content_) FALSE
+#endif
+#if NDS_P4_BOWSER
+#define SONIC_SPRING_IS_BOWSER(content_) ((content_) == NDS_P4_ID_BOWSER)
+#else
+#define SONIC_SPRING_IS_BOWSER(content_) FALSE
+#endif
+#if NDS_P4_MARTH
+#define SONIC_SPRING_IS_MARTH(content_) ((content_) == NDS_P4_ID_MARTH)
+#else
+#define SONIC_SPRING_IS_MARTH(content_) FALSE
+#endif
+
+typedef struct NDSP4SonicSpringVars
+{
+    sb32 is_bounce;                             /* object + 0x40: the bounce check runs */
+    u32 fgm_id;                                 /* object + 0x44 */
+} NDSP4SonicSpringVars;
+
+_Static_assert(sizeof(NDSP4SonicSpringVars) <= sizeof(((WPStruct *)0)->weapon_vars),
+               "the spring's words fit weapon_vars");
+
+enum
+{
+    nNDSP4SonicSpringKeep,                      /* the status stays; jump smoke */
+    nNDSP4SonicSpringJump,                      /* JumpF */
+    nNDSP4SonicSpringIgnore                     /* no bounce (after the move and coil) */
+};
+
+extern void *gNdsP4SonicSpecial1;
+
+/* Makers that found his spring file missing: counted, never a fault. */
+__attribute__((used)) volatile u32 gNdsP4SonicArticleMisses;
+
+LBParticle *efManagerDustExpandSmallMakeEffect(Vec3f *pos, f32 f_index);
+LBParticle *efManagerDustHeavyDoubleMakeEffect(Vec3f *pos, s32 lr, f32 f_index);
+sb32 wpSamusBombProcMap(GObj *weapon_gobj);
+sb32 wpFoxBlasterProcReflector(GObj *weapon_gobj);
+
+static NDSP4SonicSpringVars *ndsP4SonicSpringVars(WPStruct *wp)
+{
+    return (NDSP4SonicSpringVars *)(void *)&wp->weapon_vars;
+}
+
+/* The image and palette pair (the MObj's 0x80 index and 0x88 palette). */
+static void ndsP4SonicSpringSetImage(GObj *weapon_gobj, s32 image)
+{
+    MObj *mobj = DObjGetStruct(weapon_gobj)->mobj;
+
+    mobj->texture_id_curr = image;
+    mobj->palette_id = image;
+}
+
+static sb32 ndsP4SonicSpringIsCoiled(GObj *weapon_gobj)
+{
+    return (DObjGetStruct(weapon_gobj)->mobj->texture_id_curr & 1) ? TRUE : FALSE;
+}
+
+/* Temp variable 3 after spring_stage_setting_: the spring, which main_air_
+ * reads as destroyed when its object has no joint. A destroyed weapon's
+ * object goes back to the pool, so this also asks that it is still a
+ * spring. */
+static GObj *ndsP4SonicUSPSpring(FTStruct *fp)
+{
+    GObj *spring_gobj = (GObj *)(uintptr_t)(u32)fp->motion_vars.flags.flag2;
+
+    if ((spring_gobj->obj == NULL) || (spring_gobj->id != nGCCommonKindWeapon) ||
+        (wpGetStruct(spring_gobj)->kind != NDS_P4_WP_KIND_SONIC_SPRING))
+    {
+        return NULL;
+    }
+    return spring_gobj;
+}
+
+/* check_spring_bounce_'s status tests by character: Fox and Falco in Fire
+ * Fox or a reflector in the air, Kirby's Final Cutter or Stone fall,
+ * Yoshi's and Bowser's drops, Ness's PK Thunder or PSI Magnet in the air
+ * and Marth's down special in the air jump; Bowser's forward throws ignore
+ * the spring; everyone else keeps the status. */
+static s32 ndsP4SonicSpringCharacterKind(FTStruct *fp, sb32 *is_magnet)
+{
+    s32 status_id = fp->status_id;
+    u32 content = ndsP4Content(fp);
+
+    if ((fp->fkind == nFTKindFox) && ((content == NDS_P4_ID_NONE) || SONIC_SPRING_IS_FALCO(content)))
+    {
+        if ((status_id == SONIC_SPRING_FOX_FIRE_FOX_AIR) ||
+            ((status_id >= SONIC_SPRING_FOX_REFLECTOR_AIR_FIRST) &&
+             (status_id <= SONIC_SPRING_FOX_REFLECTOR_AIR_LAST)))
+        {
+            return nNDSP4SonicSpringJump;
+        }
+    }
+    else if ((fp->fkind == nFTKindKirby) && (content == NDS_P4_ID_NONE))
+    {
+        if ((status_id == SONIC_SPRING_KIRBY_FINAL_CUTTER) ||
+            (status_id == SONIC_SPRING_KIRBY_FINAL_CUTTER_AIR) ||
+            (status_id == SONIC_SPRING_KIRBY_FINAL_CUTTER_FALL) ||
+            (status_id == SONIC_SPRING_KIRBY_STONE_FALL))
+        {
+            return nNDSP4SonicSpringJump;
+        }
+    }
+    else if ((fp->fkind == nFTKindYoshi) && (content == NDS_P4_ID_NONE))
+    {
+        if (status_id == SONIC_SPRING_YOSHI_GROUND_POUND_DROP)
+        {
+            return nNDSP4SonicSpringJump;
+        }
+    }
+    else if (SONIC_SPRING_IS_BOWSER(content))
+    {
+        if (status_id == SONIC_SPRING_BOWSER_BOMB_DROP)
+        {
+            return nNDSP4SonicSpringJump;
+        }
+        if ((status_id == SONIC_SPRING_BOWSER_FORWARD_THROW_1) ||
+            (status_id == SONIC_SPRING_BOWSER_FORWARD_THROW_2) ||
+            (status_id == SONIC_SPRING_BOWSER_FORWARD_THROW_3))
+        {
+            return nNDSP4SonicSpringIgnore;
+        }
+    }
+    else if ((fp->fkind == nFTKindNess) && (content == NDS_P4_ID_NONE))
+    {
+        if ((status_id >= SONIC_SPRING_NESS_PSI_MAGNET_AIR_FIRST) &&
+            (status_id <= SONIC_SPRING_NESS_PSI_MAGNET_AIR_LAST))
+        {
+            *is_magnet = TRUE;
+            return nNDSP4SonicSpringJump;
+        }
+        if ((status_id >= SONIC_SPRING_NESS_PK_THUNDER_AIR_FIRST) &&
+            (status_id <= SONIC_SPRING_NESS_PK_THUNDER_AIR_LAST))
+        {
+            return nNDSP4SonicSpringJump;
+        }
+    }
+    else if (SONIC_SPRING_IS_MARTH(content))
+    {
+        if ((status_id == SONIC_SPRING_MARTH_DSPGA) || (status_id == SONIC_SPRING_MARTH_DSPGA_ATTACK))
+        {
+            return nNDSP4SonicSpringJump;
+        }
+    }
+    return nNDSP4SonicSpringKeep;
+}
+
+/* check_spring_bounce_'s common tests: the jumps and passes through, tumble
+ * and the shield-break falls jump; being pulled into an inhale ignores the
+ * spring; the rest go to the character tests. */
+static s32 ndsP4SonicSpringBounceKind(FTStruct *fp, sb32 *is_magnet)
+{
+    u32 status_id = (u32)fp->status_id;
+
+    if (status_id < SONIC_SPRING_STATUS_JUMPF)
+    {
+        return ndsP4SonicSpringCharacterKind(fp, is_magnet);
+    }
+    if (status_id <= SONIC_SPRING_STATUS_PASS)
+    {
+        return nNDSP4SonicSpringJump;
+    }
+    if (status_id < SONIC_SPRING_STATUS_TUMBLE)
+    {
+        return ndsP4SonicSpringCharacterKind(fp, is_magnet);
+    }
+    if (status_id < SONIC_SPRING_STATUS_FALL_SPECIAL)
+    {
+        return nNDSP4SonicSpringJump;
+    }
+    if ((status_id == SONIC_SPRING_STATUS_SHIELD_BREAK_FALL) ||
+        (status_id == SONIC_SPRING_STATUS_SHIELD_BREAK))
+    {
+        return nNDSP4SonicSpringJump;
+    }
+    if (status_id == SONIC_SPRING_STATUS_INHALE_PULLED)
+    {
+        return nNDSP4SonicSpringIgnore;
+    }
+    return ndsP4SonicSpringCharacterKind(fp, is_magnet);
+}
+
+/* check_spring_bounce_'s _psi_magnet: Remix clears what it names the
+ * overlay (0xA20-0xA30, 0xA88) and the flags halfword at 0x18C. In
+ * BattleShip's struct those words are the loop sound's handle and id (left
+ * playing: JumpF's status change then has no handle to stop), the first
+ * colour script's pointer and subroutine, and the colour animation's flags;
+ * the halfword is every flag from is_attack_active to is_invisible. */
+static void ndsP4SonicSpringClearMagnet(FTStruct *fp)
+{
+    fp->p_loop_sfx = NULL;
+    fp->loop_sfx_id = 0;
+    fp->colanim.cs[0].p_script = NULL;
+    fp->colanim.cs[0].p_subroutine[0] = NULL;
+    fp->is_attack_active = FALSE;
+    fp->is_hitstatus_nodamage = FALSE;
+    fp->is_damage_coll_modify = FALSE;
+    fp->is_modelpart_modify = FALSE;
+    fp->is_texturepart_modify = FALSE;
+    fp->is_reflect = FALSE;
+    fp->reflect_lr = 0;
+    fp->is_absorb = FALSE;
+    fp->absorb_lr = 0;
+    fp->is_goto_attack100 = FALSE;
+    fp->is_fastfall = FALSE;
+    fp->is_magnify_show = FALSE;
+    fp->is_limit_map_bounds = FALSE;
+    fp->is_invisible = FALSE;
+    fp->colanim.is_use_color1 = FALSE;
+    fp->colanim.is_use_light = FALSE;
+    fp->colanim.is_use_color2 = FALSE;
+    fp->colanim.skeleton_id = 0;
+}
+
+/* check_spring_bounce_: every fighter but Master Hand that is airborne on
+ * the z = 0 plane, moving down, within the spring's half width and between
+ * its centre and top is put on its centre and coiled; then he jumps (or
+ * keeps his status, with jump smoke) at 130 up, his knockback's rise and
+ * fast fall gone, the spring's sound playing, and Sonic gets his up special
+ * back. The DS has no rumble (Remix rumbles a human for 5 frames). */
+static void ndsP4SonicSpringCheckBounce(GObj *weapon_gobj)
+{
+    WPStruct *wp = wpGetStruct(weapon_gobj);
+    DObj *spring = DObjGetStruct(weapon_gobj);
+    GObj *fighter_gobj;
+
+    for (fighter_gobj = gGCCommonLinks[nGCCommonLinkIDFighter]; fighter_gobj != NULL;
+         fighter_gobj = fighter_gobj->link_next)
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+        DObj *topn = DObjGetStruct(fighter_gobj);
+        union { f32 f; u32 u; } z;
+        sb32 is_magnet = FALSE;
+        f32 dist_x;
+        s32 kind;
+
+        if ((fp->fkind == nFTKindBoss) || (fp->ga == nMPKineticsGround))
+        {
+            continue;
+        }
+        z.f = topn->translate.vec.f.z;
+
+        if (z.u != 0u)
+        {
+            continue;
+        }
+        if (!(fp->coll_data.pos_diff.y < 0.0F))
+        {
+            continue;
+        }
+        dist_x = topn->translate.vec.f.x - spring->translate.vec.f.x;
+
+        if (dist_x < 0.0F)
+        {
+            dist_x = -dist_x;
+        }
+        if (!(dist_x <= wp->coll_data.map_coll.width) ||
+            (topn->translate.vec.f.y < spring->translate.vec.f.y) ||
+            !(topn->translate.vec.f.y <= (spring->translate.vec.f.y + wp->coll_data.map_coll.top)))
+        {
+            continue;
+        }
+        topn->translate.vec.f.y = spring->translate.vec.f.y;
+
+        if (ndsP4SonicSpringIsCoiled(weapon_gobj) == FALSE)
+        {
+            ndsP4SonicSpringSetImage(weapon_gobj, spring->mobj->texture_id_curr + 1);
+        }
+        kind = ndsP4SonicSpringBounceKind(fp, &is_magnet);
+
+        if (kind == nNDSP4SonicSpringIgnore)
+        {
+            continue;
+        }
+        if (is_magnet != FALSE)
+        {
+            ndsP4SonicSpringClearMagnet(fp);
+        }
+        if (kind == nNDSP4SonicSpringJump)
+        {
+            ftMainSetStatus(fighter_gobj, nFTCommonStatusJumpF, 0.0F, 1.0F, FTSTATUS_PRESERVE_NONE);
+            ftMainPlayAnimEventsAll(fighter_gobj);
+        }
+        else (void)efManagerDustHeavyDoubleMakeEffect(&topn->translate.vec.f, 1, 1.0F);
+
+        fp->physics.vel_air.y = SONIC_SPRING_BOUNCE_VEL_Y;
+        fp->physics.vel_damage_air.y = 0.0F;
+        ndsP4SonicClearFastFall(fp);
+        func_800269C0_275C0(ndsP4SonicSpringVars(wp)->fgm_id);
+
+        if (ndsP4Content(fp) == NDS_P4_ID_SONIC)
+        {
+            *ndsP4SonicSpringSpent(fp) = FALSE;
+        }
+    }
+}
+
+/* spring_main_ (update): smoke at the end of its 240 frames. For its first
+ * 4 it hangs still; then its hitbox is on and it falls at 3 a frame (speed
+ * capped at 100), turning about x in the air; once grounded it stands
+ * upright with its hitbox off and its hit records cleared, and bounces
+ * fighters, first uncoiling (no bounce on that frame). */
+static sb32 ndsP4SonicSpringProcUpdate(GObj *weapon_gobj)
+{
+    WPStruct *wp = wpGetStruct(weapon_gobj);
+    DObj *dobj = DObjGetStruct(weapon_gobj);
+    NDSP4SonicSpringVars *vars = ndsP4SonicSpringVars(wp);
+    f32 gravity = 0.0F;
+    f32 rotate_step = 0.0F;
+
+    if (wpMainDecLifeCheckExpire(wp) != FALSE)
+    {
+        (void)efManagerDustExpandSmallMakeEffect(&dobj->translate.vec.f, 1.0F);
+
+        return TRUE;
+    }
+    if ((u32)wp->lifetime < (u32)(SONIC_SPRING_DURATION - SONIC_SPRING_STILL_TICS))
+    {
+        gravity = SONIC_SPRING_GRAVITY;
+        wp->attack_coll.attack_count = 1;
+
+        if (wp->ga == nMPKineticsGround)
+        {
+            s32 i;
+
+            dobj->rotate.vec.f.x = 0.0F;
+            wp->attack_coll.attack_count = 0;
+
+            /* Remix's "clear": no victim, and the record's first flag byte
+             * set to 0xE0 (hurt, shield and reflect interacted, group 0,
+             * the rehit timer's top bit clear). */
+            for (i = 0; i < ARRAY_COUNT(wp->attack_coll.attack_records); i++)
+            {
+                GMAttackRecord *record = &wp->attack_coll.attack_records[i];
+
+                record->victim_gobj = NULL;
+                record->victim_flags.is_interact_hurt = TRUE;
+                record->victim_flags.is_interact_shield = TRUE;
+                record->victim_flags.is_interact_reflect = TRUE;
+                record->victim_flags.is_interact_absorb = FALSE;
+                record->victim_flags.group_id = 0;
+                record->victim_flags.timer_rehit &= 0x1F;
+            }
+            vars->is_bounce = TRUE;
+
+            if (ndsP4SonicSpringIsCoiled(weapon_gobj) != FALSE)
+            {
+                ndsP4SonicSpringSetImage(weapon_gobj, dobj->mobj->texture_id_curr - 1);
+                vars->is_bounce = FALSE;
+            }
+            goto apply_gravity;
+        }
+        rotate_step = SONIC_SPRING_ROTATE_STEP;
+    }
+    dobj->rotate.vec.f.x += rotate_step;
+
+apply_gravity:
+    wpMainApplyGravityClampTVel(wp, gravity, SONIC_SPRING_SPEED_MAX);
+
+    if (vars->is_bounce != FALSE)
+    {
+        ndsP4SonicSpringCheckBounce(weapon_gobj);
+    }
+    return FALSE;
+}
+
+static WPDesc sNdsP4SonicSpringWeaponDesc = {
+    0x00,
+    NDS_P4_WP_KIND_SONIC_SPRING,
+    &gNdsP4SonicSpecial1,
+    0x0,
+    { nGCMatrixKindTraRotRpyRSca, 0x47, 0 },    /* 0x12470000 */
+    ndsP4SonicSpringProcUpdate,
+    wpSamusBombProcMap,
+    wpSamusBombProcMap,
+    NULL,
+    NULL,
+    wpFoxBlasterProcReflector,
+    NULL,
+    NULL
+};
+
+/* SonicUSP.spring_stage_setting_: the coiled spring at `pos`, its hitbox
+ * off and no bounce yet; temp variable 3 holds it. It starts on his floor
+ * line when he went up from the ground and is still over the line he left
+ * (temp variable 3's low bytes), else in the air. It sounds, faces right
+ * (it has no speed) and stands in the items' room so it sorts with them. */
 static void ndsP4SonicUSPSpringMake(GObj *fighter_gobj, Vec3f *pos)
 {
-    (void)pos;
-    ftGetStruct(fighter_gobj)->motion_vars.flags.flag2 = (s32)(uintptr_t)&sNdsP4SonicNoSpring;
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    GObj *weapon_gobj;
+    WPStruct *wp;
+    NDSP4SonicSpringVars *vars;
+    u32 start = (u32)fp->motion_vars.flags.flag2;
+    s32 start_line = (s8)((start >> 8) & 0xFFu);
+    sb32 ga = start & 0xFFu;
+
+    if (gNdsP4SonicSpecial1 == NULL)
+    {
+        gNdsP4SonicArticleMisses++;
+        return;
+    }
+    weapon_gobj = wpManagerMakeWeapon(fighter_gobj, &sNdsP4SonicSpringWeaponDesc, pos,
+                                      WEAPON_FLAG_COLLPROJECT | WEAPON_FLAG_PARENT_FIGHTER);
+    if (weapon_gobj == NULL)
+    {
+        return;
+    }
+    wp = wpGetStruct(weapon_gobj);
+    vars = ndsP4SonicSpringVars(wp);
+    wp->lifetime = SONIC_SPRING_DURATION;
+
+    ndsP4SonicSpringSetImage(weapon_gobj, SONIC_SPRING_IMAGE_COILED);
+
+    fp->motion_vars.flags.flag2 = (s32)(uintptr_t)weapon_gobj;
+    vars->is_bounce = FALSE;
+    wp->attack_coll.attack_count = 0;
+
+    if (ga == nMPKineticsGround)
+    {
+        if (start_line != fp->coll_data.floor_line_id)
+        {
+            ga = nMPKineticsAir;
+        }
+        else if (fp->coll_data.floor_line_id >= 0)
+        {
+            wp->coll_data.floor_line_id = fp->coll_data.floor_line_id;
+        }
+        else ga = nMPKineticsAir;
+    }
+    wp->ga = ga;
+    vars->fgm_id = SONIC_SPRING_FGM;
+    func_800269C0_275C0(SONIC_SPRING_FGM);
+    wpMainVelSetModelPitch(weapon_gobj);
+    gcMoveGObjDL(weapon_gobj, SONIC_SPRING_DL_LINK, GOBJ_PRIORITY_DEFAULT);
 }
 
 /* SonicUSP.air_initial_ (air_usp). */
@@ -640,9 +1121,10 @@ void ndsP4SonicUSPGroundInitial(GObj *fighter_gobj)
                                         (((u32)floor_line_id & 0xFFu) << 8) | spring_air);
 }
 
-/* SonicUSP.main_air_ (0xE4 update): the spring first; on the script's
- * temp variable 1 it uncoils (S6) and he rises at 129, the spring spent
- * and, from the air, his jumps too. */
+/* SonicUSP.main_air_ (0xE4 update): the spring first (temp variable 3's
+ * high half is clear until it exists); on the script's temp variable 1 it
+ * uncoils if it is still there and he rises at 129, the spring spent and,
+ * from the air, his jumps too. */
 void ndsP4SonicUSPMainAir(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
@@ -659,6 +1141,13 @@ void ndsP4SonicUSPMainAir(GObj *fighter_gobj)
     }
     else if (fp->motion_vars.flags.flag0 != 0)
     {
+        GObj *spring_gobj = ndsP4SonicUSPSpring(fp);
+
+        if ((spring_gobj != NULL) && (ndsP4SonicSpringIsCoiled(spring_gobj) != FALSE))
+        {
+            ndsP4SonicSpringSetImage(spring_gobj,
+                                     DObjGetStruct(spring_gobj)->mobj->texture_id_curr - 1);
+        }
         fp->physics.vel_air.y = SONIC_USP_Y_SPEED;
         fp->motion_vars.flags.flag0 = 0;
         *ndsP4SonicStatusS32(fp, 0) = TRUE;

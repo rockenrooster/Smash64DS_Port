@@ -25,16 +25,23 @@
  *   attributes + 0x34-0x40/0x64            kneebend_anim_length, jump_vel_x,
  *                                          jump_height_mul/base, jumps_max
  *
- * S6 owns his grape (the Grape Shooter's projectile, grape_stage_setting_)
- * and his entry barrel (dkshared.asm barrel_alternate). The 1P mode's taunt
- * bonus for his handstand taunt is not VS.
+ * His grape is his own weapon on his special file 1 (Lanky file 6, S6,
+ * below). S6 owns his entry barrel (dkshared.asm barrel_alternate). The 1P
+ * mode's taunt bonus for his handstand taunt is not VS.
  */
 #include <nds/nds_p4.h>
 
 #if NDS_P4_LANKY
 
+#include <ef/effect.h>
 #include <macros.h>
+#include <sys/audio.h>
 #include <sys/obj.h>
+#include <wp/weapon.h>
+
+#ifndef DObjGetStruct
+#define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
+#endif
 
 s32 ftCommonKneeBendGetInputTypeCommon(FTStruct *fp);
 sb32 ftCommonPassCheckInputSuccess(FTStruct *fp);
@@ -167,14 +174,156 @@ void ndsP4LankyNSPAirInitial(GObj *fighter_gobj)
     ndsP4LankyNSPInitial(fighter_gobj, LANKY_STATUS_NSPA);
 }
 
-/* LankyNSP.main_ (0xDF/0xE0 update): temp variable 1 shoots the grape
- * (S6); in the script's window (temp variable 2) a B tap spends a shot and
- * restarts the swing at frame 14; the end of the animation waits. */
+/* ---- The grape (grape_projectile_struct) ----
+ *
+ * His own weapon on his special file 1 (Lanky file 6, generated as
+ * gNdsP4LankySpecial1): WPAttributes at 0, Remix's update, map, hit and
+ * destruction below, Mario's fireball bounce off shields and Samus's bomb
+ * reflector. Remix's projectile id is a Remix one; the DS renderer keys
+ * native weapon owners on the kind. */
+#define LANKY_GRAPE_LIFETIME 70
+#define LANKY_GRAPE_SPEED 40.0F
+#define LANKY_GRAPE_SPEED_MAX 50.0F
+#define LANKY_GRAPE_GRAVITY 0.0F
+#define LANKY_GRAPE_ROTATE_STEP 0.4F
+#define LANKY_GRAPE_FGM 1521
+#define LANKY_GRAPE_JOINT 18                    /* part 0xE */
+#define LANKY_GRAPE_OFF_Y -200.0F
+
+extern void *gNdsP4LankySpecial1;
+
+/* Makers that found his grape file missing: counted, never a fault. */
+__attribute__((used)) volatile u32 gNdsP4LankyArticleMisses;
+
+f32 __sinf(f32);
+f32 __cosf(f32);
+LBParticle *efManagerDustExpandSmallMakeEffect(Vec3f *pos, f32 f_index);
+LBParticle *efManagerDamageNormalLightMakeEffect(Vec3f *pos, s32 player, s32 size, sb32 is_static);
+sb32 wpMarioFireballProcHop(GObj *weapon_gobj);
+sb32 wpSamusBombProcReflector(GObj *weapon_gobj);
+
+/* grape_destruction_ (shield, clang, absorb): smoke and its sound, gone. */
+static sb32 ndsP4LankyGrapeProcDestroy(GObj *weapon_gobj)
+{
+    (void)efManagerDustExpandSmallMakeEffect(&DObjGetStruct(weapon_gobj)->translate.vec.f, 1.0F);
+    func_800269C0_275C0(LANKY_GRAPE_FGM);
+
+    return TRUE;
+}
+
+/* grape_main_ (update): smoke at the end of its 70 frames; until then no
+ * gravity, speed capped at 50, and a turn about x. */
+static sb32 ndsP4LankyGrapeProcUpdate(GObj *weapon_gobj)
+{
+    WPStruct *wp = wpGetStruct(weapon_gobj);
+
+    if (wpMainDecLifeCheckExpire(wp) != FALSE)
+    {
+        (void)efManagerDustExpandSmallMakeEffect(&DObjGetStruct(weapon_gobj)->translate.vec.f, 1.0F);
+
+        return TRUE;
+    }
+    wpMainApplyGravityClampTVel(wp, LANKY_GRAPE_GRAVITY, LANKY_GRAPE_SPEED_MAX);
+
+    DObjGetStruct(weapon_gobj)->rotate.vec.f.x += LANKY_GRAPE_ROTATE_STEP;
+
+    return FALSE;
+}
+
+/* grape_collision_ (map): anything solid ends it. */
+static sb32 ndsP4LankyGrapeProcMap(GObj *weapon_gobj)
+{
+    if (wpMapTestAllCheckCollEnd(weapon_gobj) != FALSE)
+    {
+        return ndsP4LankyGrapeProcDestroy(weapon_gobj);
+    }
+    return FALSE;
+}
+
+/* grape_hit_ (hurtbox): the normal hit spark for the damage it dealt. */
+static sb32 ndsP4LankyGrapeProcHit(GObj *weapon_gobj)
+{
+    WPStruct *wp = wpGetStruct(weapon_gobj);
+
+    (void)efManagerDamageNormalLightMakeEffect(&DObjGetStruct(weapon_gobj)->translate.vec.f, 0,
+                                               wp->hit_normal_damage, FALSE);
+
+    return ndsP4LankyGrapeProcDestroy(weapon_gobj);
+}
+
+static WPDesc sNdsP4LankyGrapeWeaponDesc = {
+    0x00,
+    NDS_P4_WP_KIND_LANKY_GRAPE,
+    &gNdsP4LankySpecial1,
+    0x0,
+    { nGCMatrixKindTraRotRpyRSca, 0x47, 0 },    /* 0x12470000 */
+    ndsP4LankyGrapeProcUpdate,
+    ndsP4LankyGrapeProcMap,
+    ndsP4LankyGrapeProcHit,
+    ndsP4LankyGrapeProcDestroy,
+    wpMarioFireballProcHop,
+    ndsP4LankyGrapeProcDestroy,
+    wpSamusBombProcReflector,
+    ndsP4LankyGrapeProcDestroy
+};
+
+/* LankyNSP.grape_stage_setting_: level at 40 a frame in his facing (both
+ * angles are 0). */
+static void ndsP4LankyGrapeMakeWeapon(GObj *fighter_gobj, Vec3f *pos)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    GObj *weapon_gobj;
+    WPStruct *wp;
+    DObj *dobj;
+    f32 angle = 0.0F;
+
+    if (gNdsP4LankySpecial1 == NULL)
+    {
+        gNdsP4LankyArticleMisses++;
+        return;
+    }
+    weapon_gobj = wpManagerMakeWeapon(fighter_gobj, &sNdsP4LankyGrapeWeaponDesc, pos,
+                                      WEAPON_FLAG_COLLPROJECT | WEAPON_FLAG_PARENT_FIGHTER);
+    if (weapon_gobj == NULL)
+    {
+        return;
+    }
+    wp = wpGetStruct(weapon_gobj);
+    wp->lifetime = LANKY_GRAPE_LIFETIME;
+
+    wp->physics.vel_air.z = 0.0F;
+    wp->physics.vel_air.x = __cosf(angle) * LANKY_GRAPE_SPEED * fp->lr;
+    wp->physics.vel_air.y = __sinf(angle) * LANKY_GRAPE_SPEED;
+
+    dobj = DObjGetStruct(weapon_gobj);
+
+    if (dobj->mobj != NULL)
+    {
+        dobj->mobj->palette_id = 0.0F;
+    }
+    wpMainVelSetModelPitch(weapon_gobj);
+}
+
+/* LankyNSP.main_ (0xDF/0xE0 update): temp variable 1 shoots the grape 200
+ * below his weapon part; in the script's window (temp variable 2) a B tap
+ * spends a shot and restarts the swing at frame 14; the end of the
+ * animation waits. */
 void ndsP4LankyNSPMain(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
-    fp->motion_vars.flags.flag0 = 0;
+    if (fp->motion_vars.flags.flag0 != 0)
+    {
+        Vec3f pos;
+
+        fp->motion_vars.flags.flag0 = 0;
+        pos.x = 0.0F;
+        pos.y = LANKY_GRAPE_OFF_Y;
+        pos.z = 0.0F;
+        gmCollisionGetFighterPartsWorldPosition(fp->joints[LANKY_GRAPE_JOINT], &pos);
+        pos.z = 0.0F;
+        ndsP4LankyGrapeMakeWeapon(fighter_gobj, &pos);
+    }
     if ((fp->motion_vars.flags.flag1 != 0) &&
         ((fp->input.pl.button_tap & LANKY_BUTTON_B) != 0))
     {

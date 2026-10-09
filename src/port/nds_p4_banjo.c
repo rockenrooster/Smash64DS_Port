@@ -32,16 +32,27 @@
  *                                          0x30 (x) and 0x38 (z)
  *   attributes + 0x58/0x64                 gravity, jumps_max
  *
- * S6 owns his eggs (egg_stage_setting_, egg_poop_stage_setting_) and his
- * entry (linkshared.asm entry_anim_struct_*_BANJO); Kirby's copy is S8's.
+ * His eggs are his own weapons on his special file 4 (Banjo file 9, S6,
+ * below). S6 owns his entry (linkshared.asm entry_anim_struct_*_BANJO);
+ * Kirby's copy is S8's.
  */
 #include <nds/nds_p4.h>
 
 #if NDS_P4_BANJO
 
+#if !NDS_P2_SAMUS
+#error "P4 Banjo's eggs reflect through Samus's bomb routine (NDS_P2_SAMUS)"
+#endif
+
 #include <ef/effect.h>
 #include <macros.h>
+#include <sys/audio.h>
 #include <sys/obj.h>
+#include <wp/weapon.h>
+
+#ifndef DObjGetStruct
+#define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
+#endif
 
 sb32 ftMarioSpecialHiProcPass(GObj *fighter_gobj);
 void ftCaptainSpecialHiProcStatus(GObj *fighter_gobj);
@@ -260,8 +271,174 @@ void ndsP4BanjoNSPBeginAirMap(GObj *fighter_gobj)
     mpCommonProcFighterLanding(fighter_gobj, ndsP4BanjoNSPBeginAirToGround);
 }
 
+/* ---- The eggs (forward_egg_projectile_struct, backward_egg_projectile_struct) ----
+ *
+ * His own weapons on his special file 4 (Banjo file 9, generated as
+ * gNdsP4BanjoSpecial4): one set of WPAttributes at 0 for both, the forward
+ * egg on Ray Gun ammo's map routine, the backward one bouncing on Mario's
+ * fireball map routine (its rebound and fire sparks, Mario's attribute row
+ * 0, since the egg clears the fireball index); both bounce off shields as
+ * Master Hand's bullet and reflect as Samus's bomb. Remix's projectile id
+ * is a Remix one; the DS renderer keys native weapon owners on the kind. */
+#define BANJO_EGG_HIT_FGM 0x28
+#define BANJO_EGG_SPEED_MAX 250.0F
+
+typedef struct NDSP4BanjoEggProperties
+{
+    s32 lifetime;
+    f32 gravity;
+    f32 rotate_step;
+    f32 angle_ground;
+    f32 angle_air;
+    f32 speed;
+} NDSP4BanjoEggProperties;
+
+/* forward_egg_properties_struct (EGG_DURATION) and
+ * backward_egg_properties_struct (BACKWARD_EGG_DURATION; its angle of 128 is
+ * in radians as given). */
+static const NDSP4BanjoEggProperties sNdsP4BanjoForwardEgg = { 30, 0.1F, 0.15F, 0.0F, 0.0F, 90.0F };
+static const NDSP4BanjoEggProperties sNdsP4BanjoBackwardEgg = { 120, 1.2F, 0.1F, 128.0F, 128.0F, 28.0F };
+
+extern void *gNdsP4BanjoSpecial4;
+
+/* Makers that found his egg file missing: counted, never a fault. */
+__attribute__((used)) volatile u32 gNdsP4BanjoArticleMisses;
+
+f32 __sinf(f32);
+f32 __cosf(f32);
+LBParticle *efManagerDustExpandSmallMakeEffect(Vec3f *pos, f32 f_index);
+sb32 itLGunWeaponAmmoProcMap(GObj *weapon_gobj);
+sb32 wpMarioFireballProcMap(GObj *weapon_gobj);
+sb32 wpSamusBombProcReflector(GObj *weapon_gobj);
+extern Vec3f *syVectorRotateAbout3D(Vec3f *dst, Vec3f *dir, f32 angle);
+
+/* egg_destruction_ (hit, shield, clang, absorb): smoke, destroyed. */
+static sb32 ndsP4BanjoEggProcDestroy(GObj *weapon_gobj)
+{
+    (void)efManagerDustExpandSmallMakeEffect(&DObjGetStruct(weapon_gobj)->translate.vec.f, 1.0F);
+
+    return TRUE;
+}
+
+/* forward_egg_main_ / backward_egg_main_ (update): smoke at the end of its
+ * life; until then its gravity, speed capped at 250, and a turn about x. */
+static sb32 ndsP4BanjoEggUpdate(GObj *weapon_gobj, const NDSP4BanjoEggProperties *egg)
+{
+    WPStruct *wp = wpGetStruct(weapon_gobj);
+
+    if (wpMainDecLifeCheckExpire(wp) != FALSE)
+    {
+        (void)efManagerDustExpandSmallMakeEffect(&DObjGetStruct(weapon_gobj)->translate.vec.f, 1.0F);
+
+        return TRUE;
+    }
+    wpMainApplyGravityClampTVel(wp, egg->gravity, BANJO_EGG_SPEED_MAX);
+
+    DObjGetStruct(weapon_gobj)->rotate.vec.f.x += egg->rotate_step;
+
+    return FALSE;
+}
+
+static sb32 ndsP4BanjoForwardEggProcUpdate(GObj *weapon_gobj)
+{
+    return ndsP4BanjoEggUpdate(weapon_gobj, &sNdsP4BanjoForwardEgg);
+}
+
+static sb32 ndsP4BanjoBackwardEggProcUpdate(GObj *weapon_gobj)
+{
+    return ndsP4BanjoEggUpdate(weapon_gobj, &sNdsP4BanjoBackwardEgg);
+}
+
+/* wpBossBulletProcHop (shield bounce), which Remix's descs name. */
+static sb32 ndsP4BanjoEggProcHop(GObj *weapon_gobj)
+{
+    WPStruct *wp = wpGetStruct(weapon_gobj);
+
+    syVectorRotateAbout3D(&wp->physics.vel_air, &wp->shield_collide_dir,
+                          wp->shield_collide_angle * 2);
+    wpMainReflectorRotateWeaponModel(weapon_gobj);
+
+    return FALSE;
+}
+
+static WPDesc sNdsP4BanjoForwardEggWeaponDesc = {
+    0x00,
+    NDS_P4_WP_KIND_BANJO_EGG,
+    &gNdsP4BanjoSpecial4,
+    0x0,
+    { nGCMatrixKindTraRotRpyRSca, 0x47, 0 },    /* 0x12470000 */
+    ndsP4BanjoForwardEggProcUpdate,
+    itLGunWeaponAmmoProcMap,
+    ndsP4BanjoEggProcDestroy,
+    ndsP4BanjoEggProcDestroy,
+    ndsP4BanjoEggProcHop,
+    ndsP4BanjoEggProcDestroy,
+    wpSamusBombProcReflector,
+    ndsP4BanjoEggProcDestroy
+};
+
+static WPDesc sNdsP4BanjoBackwardEggWeaponDesc = {
+    0x00,
+    NDS_P4_WP_KIND_BANJO_EGG,
+    &gNdsP4BanjoSpecial4,
+    0x0,
+    { nGCMatrixKindTraRotRpyRSca, 0x47, 0 },    /* 0x12470000 */
+    ndsP4BanjoBackwardEggProcUpdate,
+    wpMarioFireballProcMap,
+    ndsP4BanjoEggProcDestroy,
+    ndsP4BanjoEggProcDestroy,
+    ndsP4BanjoEggProcHop,
+    ndsP4BanjoEggProcDestroy,
+    wpSamusBombProcReflector,
+    ndsP4BanjoEggProcDestroy
+};
+
+/* BanjoNSP.egg_stage_setting_ / egg_poop_stage_setting_: the egg, with the
+ * fireball index cleared, a hit sound of 0x28 and a normal hit, flying at
+ * its angle and speed in his facing. */
+static void ndsP4BanjoEggMakeWeapon(GObj *fighter_gobj, Vec3f *pos, WPDesc *desc,
+                                    const NDSP4BanjoEggProperties *egg)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    GObj *weapon_gobj;
+    WPStruct *wp;
+    DObj *dobj;
+    f32 angle;
+
+    if (gNdsP4BanjoSpecial4 == NULL)
+    {
+        gNdsP4BanjoArticleMisses++;
+        return;
+    }
+    weapon_gobj = wpManagerMakeWeapon(fighter_gobj, desc, pos,
+                                      WEAPON_FLAG_COLLPROJECT | WEAPON_FLAG_PARENT_FIGHTER);
+    if (weapon_gobj == NULL)
+    {
+        return;
+    }
+    wp = wpGetStruct(weapon_gobj);
+    wp->lifetime = egg->lifetime;
+    *(s32 *)(void *)&wp->weapon_vars = 0;
+    wp->attack_coll.fgm_id = BANJO_EGG_HIT_FGM;
+    wp->attack_coll.element = nGMHitElementNormal;
+
+    angle = (fp->ga == nMPKineticsAir) ? egg->angle_air : egg->angle_ground;
+
+    wp->physics.vel_air.z = 0.0F;
+    wp->physics.vel_air.x = __cosf(angle) * egg->speed * fp->lr;
+    wp->physics.vel_air.y = __sinf(angle) * egg->speed;
+
+    dobj = DObjGetStruct(weapon_gobj);
+
+    if (dobj->mobj != NULL)
+    {
+        dobj->mobj->palette_id = 0.0F;
+    }
+    wpMainVelSetModelPitch(weapon_gobj);
+}
+
 /* BanjoNSP.shoot_forward_main_ / shoot_backward_main_: temp variable 1
- * fires the egg from Kazooie's head (40 behind it forward; S6 makes it). */
+ * fires the egg from Kazooie's head (40 behind it forward). */
 static void ndsP4BanjoNSPShootMain(GObj *fighter_gobj, sb32 is_forward)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
@@ -275,6 +452,14 @@ static void ndsP4BanjoNSPShootMain(GObj *fighter_gobj, sb32 is_forward)
         pos.y = pos.z = 0.0F;
         gmCollisionGetFighterPartsWorldPosition(fp->joints[BANJO_NSP_KAZOOIE_HEAD_JOINT], &pos);
         pos.z = 0.0F;
+
+        if (is_forward != FALSE)
+        {
+            ndsP4BanjoEggMakeWeapon(fighter_gobj, &pos, &sNdsP4BanjoForwardEggWeaponDesc,
+                                    &sNdsP4BanjoForwardEgg);
+        }
+        else ndsP4BanjoEggMakeWeapon(fighter_gobj, &pos, &sNdsP4BanjoBackwardEggWeaponDesc,
+                                     &sNdsP4BanjoBackwardEgg);
     }
     if (fighter_gobj->anim_frame <= 0.0F)
     {

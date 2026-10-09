@@ -1043,6 +1043,18 @@ class Compiler:
                     # texture/UV resolution; runtime still snapshots and
                     # validates the live material/TEXID before selecting the
                     # corresponding prepared DS texture.
+                    # gcDrawMObjForDObj's branch with MOBJ_FLAG_PALETTE
+                    # first sets the texture image to palettes[palette_id]
+                    # (and loads it itself only with SPLIT or ALPHA, else the
+                    # list's own LOADTLUT reads it: the eggs and the grape),
+                    # then the TEXID image last.
+                    material_tlut = self.material_tluts.get(self.material_slot)
+                    if material_tlut is not None:
+                        self.display.tlut_image, self.display.tlut_count = material_tlut
+                        self.display.image = material_tlut[0]
+                        self.display.image_format = FMT_RGBA
+                        self.display.image_size = SIZ_16B
+                        self.display.image_width = 1
                     material_image = self.material_images.get(self.material_slot)
                     if material_image is not None:
                         ref, fmt, size, width = material_image
@@ -1050,9 +1062,6 @@ class Compiler:
                         self.display.image_format = fmt
                         self.display.image_size = size
                         self.display.image_width = width
-                    material_tlut = self.material_tluts.get(self.material_slot)
-                    if material_tlut is not None:
-                        self.display.tlut_image, self.display.tlut_count = material_tlut
                     material_texture_size = self.material_texture_sizes.get(
                         self.material_slot)
                     if material_texture_size is not None:
@@ -1262,7 +1271,16 @@ def compile_p4(rows: list[dict], resources: dict[int, census.O2RResource],
         if row["texid"] is None:
             articles.setdefault((row["content"], row["article"], row["file_id"]), []).append(index)
     for (_content, _article, file_id), indices in articles.items():
-        compiler = Compiler(resources[file_id], resources)
+        # A sprite-less material's TLUT (p4_articles.material_palette: the
+        # eggs and the grape) comes through the MObj's segment-E branch,
+        # palettes[0]: the makers set palette_id 0.
+        palettes = {(rows[i]["palette"]["offset"], rows[i]["palette"]["count"])
+                    for i in indices if rows[i].get("palette") is not None}
+        if len(palettes) > 1:
+            raise SystemExit(f"P4 {_content} {_article}: roots disagree on the material TLUT")
+        tluts = {0: (census.PointerRef(file_id, offset), count)
+                 for offset, count in palettes}
+        compiler = Compiler(resources[file_id], resources, material_tluts=tluts)
         for index in sorted(indices, key=lambda i: (rows[i].get("head", 0), i)):
             compiler.material_slot = MATERIAL_NONE
             compiler.walk(rows[index]["offset"], root_base + index, ())
@@ -1275,17 +1293,18 @@ def compile_p4(rows: list[dict], resources: dict[int, census.O2RResource],
             continue
         # The MObj's segment-E branch supplies the TEXID image (and with
         # MOBJ_FLAG_PALETTE its TLUT, palettes[0]: the makers set palette_id
-        # 0); the root list owns load, tile and combine. Seed each frame the
-        # way Falcon Punch's is (block format and size; the width is unused
-        # by block loads).
-        tluts = {}
-        if texid["palette"] is not None:
-            tluts = {0: (census.PointerRef(resource.file_id, texid["palette"]),
-                         16 if texid["block_siz"] == SIZ_4B else 256)}
+        # 0, except where palette_id follows the TEXID, Sonic's spring:
+        # palettes[i] for frame i); the root list owns load, tile and
+        # combine. Seed each frame the way Falcon Punch's is (block format
+        # and size; the width is unused by block loads).
+        tlut_count = 16 if texid["block_siz"] == SIZ_4B else 256
+        frame_palettes = texid.get("palettes") or [texid["palette"]] * len(texid["images"])
         sizes = ({0: (texid["width"], texid["height"])}
                  if texid["flags"] & 0x20 else None)
         frames = []
-        for image in texid["images"]:
+        for image, palette in zip(texid["images"], frame_palettes):
+            tluts = ({0: (census.PointerRef(resource.file_id, palette), tlut_count)}
+                     if palette is not None else {})
             compiler = Compiler(
                 resource, resources,
                 material_images={0: (census.PointerRef(resource.file_id, image),
@@ -2060,8 +2079,15 @@ def emit_p4_tables(p4: list[P4Root], texture_keys: list, texture_slot: dict,
         "    u8 variant_count;",
         "    u16 mobj_flags;",
         "    u8 sidecar_joint;",
-        "    u8 reserved;",
+        "    /* Bit 0: the MObj's palette_id follows its TEXID (frame i was baked",
+        "     * with palette i), else palette 0. Bit 1: a list with no TEXID",
+        "     * frames takes its TLUT from the MObj's segment-E branch (palette 0",
+        "     * baked), so its draw needs the live material. */",
+        "    u8 material_flags;",
         "    u8 variant_slots[4];",
+        "    /* Nonzero: 1 + the storage file's offset of the pointer that names",
+        "     * the root (a root in a file the special file depends on). */",
+        "    u16 via;",
         "} NDSEntryEffectP4Root;",
         "static const NDSEntryEffectP4Root "
         "sNdsEntryEffectP4Roots[NDS_ENTRY_EFFECT_P4_ROOT_COUNT] = {",
@@ -2090,8 +2116,9 @@ def emit_p4_tables(p4: list[P4Root], texture_keys: list, texture_slot: dict,
         lines.append(
             f"    {{ {('&' + storage) if storage else 'NULL'}, 0x{p4_root.row['file_id']:04x}u, "
             f"{p4_root.content_id}u, {len(slots)}u, 0x{flags:04x}u, "
-            f"{0xFF if sidecar is None else sidecar}u, 0u, "
-            f"{{ {', '.join(f'{s}u' for s in padded)} }} }}, "
+            f"{0xFF if sidecar is None else sidecar}u, "
+            f"{(1 if (p4_root.row['texid'] or {}).get('palettes') else 0) | (2 if p4_root.row.get('palette') else 0)}u, "
+            f"{{ {', '.join(f'{s}u' for s in padded)} }}, {p4_root.row.get('via', 0)}u }}, "
             f"/* {p4_root.row['content']} {p4_root.row['article']} +0x{p4_root.row['offset']:x} */")
     lines += ["};", "",
               "/* Textures only one P4 content's roots use: prepared only when it is",

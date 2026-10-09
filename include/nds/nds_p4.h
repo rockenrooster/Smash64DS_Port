@@ -235,6 +235,15 @@ typedef struct NDSP4Overrides
     void (*on_custom_reflect)(GObj *fighter_gobj);
 } NDSP4Overrides;
 
+/* Weapon kinds past the source's last (nWPKindMonsterEnd, wp/weapon.h), one
+ * per content weapon: the DS renderer keys its native weapon owners on the
+ * kind, and Remix's projectile ids reuse the source's. */
+#define NDS_P4_WP_KIND_WOLF_BLASTER (nWPKindMonsterEnd + 1)
+#define NDS_P4_WP_KIND_SHEIK_NEEDLE (nWPKindMonsterEnd + 2)
+#define NDS_P4_WP_KIND_BANJO_EGG (nWPKindMonsterEnd + 3)
+#define NDS_P4_WP_KIND_LANKY_GRAPE (nWPKindMonsterEnd + 4)
+#define NDS_P4_WP_KIND_SONIC_SPRING (nWPKindMonsterEnd + 5)
+
 /* Remix's custom reflect kind (Reflect.asm reflect_type.CUSTOM): the low
  * half of FTSpecialColl.kind (the N64's second halfword), the routine index
  * in the high half; index 0 is the Franklin Badge's plain reflect. */

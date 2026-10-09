@@ -91,6 +91,10 @@ volatile u32 gNdsBattleCoreForeignImageLoadCount;
 #define NDS_BATTLE_EXTERN_MAGIC 0x31584542u
 #define NDS_BATTLE_EXTERN_VERSION 2u
 #define NDS_BATTLE_EXTERN_MAX 24u
+/* A row's target for a Main word that pointed past its file on the N64 (Remix
+ * kept a parent's offsets: p4_preview_pack.py): the file loads, as the
+ * source's extern closure loaded it, and the word stays NULL. */
+#define NDS_BATTLE_EXTERN_LOAD_ONLY 0xFFFFu
 typedef struct NDSBattleExternHeader {
     u32 magic;
     u16 version;
@@ -1203,9 +1207,16 @@ s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
         if ((dep == NULL) ||
             (ndsRelocFindStatusNode(sNdsRelocStatusBuffer,
                                     sNdsRelocStatusBufferCount,
-                                    rows[i].dep_asset) != dep->data) ||
-            (ndsPreviewFileOffset(dep, rows[i].target_offset, 1u,
-                                  &dep_offset) == FALSE))
+                                    rows[i].dep_asset) != dep->data))
+        {
+            ndsBattleCoreExternHalt(fkind);
+        }
+        if (rows[i].target_offset == NDS_BATTLE_EXTERN_LOAD_ONLY)
+        {
+            continue;
+        }
+        if (ndsPreviewFileOffset(dep, rows[i].target_offset, 1u,
+                                 &dep_offset) == FALSE)
         {
             ndsBattleCoreExternHalt(fkind);
         }

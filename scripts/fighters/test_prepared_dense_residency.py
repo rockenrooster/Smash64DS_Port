@@ -301,7 +301,7 @@ class PreparedDenseResidencyTests(unittest.TestCase):
         m = re.search(r"#define NDS_IMG_BIND\(([^)]*)\)", src)
         self.assertIsNotNone(m)
         self.assertNotIn("prepared_", m.group(1))
-        self.assertIn("(NDSNativePreparedDenseVertex *)img_->prepared_dense",
+        self.assertIn("(NDSNativePreparedDenseVertex *)(img + desc->prepared_dense)",
                       src)
         # Every ordinary owner/detail and the single shared deferred-hat
         # dispatch pass (tables, type, base, prefix), with no static scratch.
@@ -310,11 +310,17 @@ class PreparedDenseResidencyTests(unittest.TestCase):
         calls = re.findall(r"(?m)^\s+NDS_IMG_BIND\((.*?)\);", src, re.DOTALL)
         ordinary = []
         hats = []
+        # The P4 contents bind through one token-pasting macro
+        # (NDS_P4_OWNER_BIND), a high and a low call per content row.
+        p4 = []
         for call in calls:
             self.assertEqual(call.count(","), 3,
                              f"bind call arg count changed: {call[:80]}")
             self.assertNotIn("PreparedDense", call)
             args = tuple(arg.strip() for arg in call.split(","))
+            if "##" in args[0]:
+                p4.append(args)
+                continue
             (hats if args[0] == "entry->tables" else ordinary).append(args)
         expected = {
             (f"sNdsNative{images._owner_title(owner)}Fighter{detail.title()}Tables",
@@ -330,6 +336,9 @@ class PreparedDenseResidencyTests(unittest.TestCase):
         self.assertEqual(set(ordinary), expected)
         self.assertEqual(len(ordinary), len(expected), "duplicate ordinary image bind")
         self.assertEqual(len(hats), 1, "expected one deferred-hat image bind")
+        self.assertEqual(sorted(a[0] for a in p4),
+                         ["sNdsNative##T_##FighterHighTables",
+                          "sNdsNative##T_##FighterLowTables"])
         hat_call = ",".join(hats[0]).replace("\\", "").replace("\r", "").replace("\n", "").replace(" ", "")
         self.assertEqual(
             hat_call,

@@ -295,7 +295,7 @@ const NDSP4Overrides gNdsP4WolfOverrides = {
  * routines below. Remix gives it weapon kind 0 (Mario's fireball), which
  * no game code reads; the DS renderer keys its native weapon owners on
  * the kind, so his shot takes a P4 kind past the source's 0x1F. */
-#define WOLF_BLASTER_KIND (nWPKindMonsterEnd + 1)
+#define WOLF_BLASTER_KIND NDS_P4_WP_KIND_WOLF_BLASTER
 #define WOLF_BLASTER_JOINT 16
 #define WOLF_BLASTER_LIFETIME 100
 #define WOLF_BLASTER_SPEED_MAX 200.0F

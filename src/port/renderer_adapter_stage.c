@@ -6702,7 +6702,11 @@ ndsRendererAdapterEntryEffectAccumulate(const NDSRendererStats *stats)
 
 #if NDS_P4 && NDS_RENDERER_HW_TRIANGLES
 /* nds_renderer_native_common.c: a P4 content article root's admission
- * (scripts/p4/p4_articles.py rows in the build's entry-effect packet). */
+ * (scripts/p4/p4_articles.py rows in the build's entry-effect packet). The
+ * variant count carries these bits (the same values there): frame i was
+ * baked with palette i; a list with no TEXID frames needs the live material. */
+#define NDS_P4_VARIANT_PALETTE_FOLLOWS 0x80u
+#define NDS_P4_VARIANT_MATERIAL 0x40u
 sb32 ndsRendererEntryEffectP4Admit(const void *dl, u32 *owner_asset_id,
                                    u32 *root_offset, u32 *variant_count);
 #endif
@@ -7238,25 +7242,51 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
     }
 #endif
 #if NDS_P4
-    if (p4_variant_count != 0u)
+    if ((p4_variant_count & NDS_P4_VARIANT_MATERIAL) != 0u)
+    {
+        /* A P4 list with no TEXID frames whose TLUT comes from its MObj's
+         * segment-E branch (the eggs, the grape, the needle): the generator
+         * baked palette 0, which is all their makers select; the draw takes
+         * the live material. Anything else declines, counted. */
+        MObj *mobj = dobj->mobj;
+
+        bzero(&common_effect_material, sizeof(common_effect_material));
+        if ((mobj == NULL) || (mobj->next != NULL) ||
+            (((mobj->sub.flags & MOBJ_FLAG_PALETTE) != 0u) && (mobj->palette_id != 0.0F)) ||
+            (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                 mobj, &common_effect_material, FALSE, NULL, NULL) == FALSE))
+        {
+            NDS_DIAG(gNdsEntryEffectNativeFallbackCount++);
+            return FALSE;
+        }
+        native_materials = &common_effect_material;
+        native_material_count = 1u;
+    }
+    else if (p4_variant_count != 0u)
     {
         /* A P4 TEXID root (Falcon Punch's shape): one live MObj whose
          * MatAnim switches only TEXID among the preconverted frames; with
          * MOBJ_FLAG_PALETTE the generator baked palette 0, which is all the
-         * makers ever select. Anything else declines, counted. */
+         * makers ever select, or palette i into frame i where the article
+         * moves palette_id with the TEXID (Sonic's spring). Anything else
+         * declines, counted. */
         MObj *mobj = dobj->mobj;
         s32 texture_id_curr = -1;
         s32 texture_id_next = -1;
+        sb32 palette_follows =
+            ((p4_variant_count & NDS_P4_VARIANT_PALETTE_FOLLOWS) != 0u) ? TRUE : FALSE;
 
+        p4_variant_count &= ~NDS_P4_VARIANT_PALETTE_FOLLOWS;
         bzero(&common_effect_material, sizeof(common_effect_material));
         if ((mobj == NULL) || (mobj->next != NULL) ||
-            (((mobj->sub.flags & MOBJ_FLAG_PALETTE) != 0u) &&
-             (mobj->palette_id != 0.0F)) ||
             (ndsRendererAdapterBuildNativeMaterialSnapshot(
                  mobj, &common_effect_material, FALSE,
                  &texture_id_curr, &texture_id_next) == FALSE) ||
             (texture_id_curr < 0) ||
-            ((u32)texture_id_curr >= p4_variant_count))
+            ((u32)texture_id_curr >= p4_variant_count) ||
+            (((mobj->sub.flags & MOBJ_FLAG_PALETTE) != 0u) &&
+             (mobj->palette_id !=
+              ((palette_follows != FALSE) ? (f32)texture_id_curr : 0.0F))))
         {
             NDS_DIAG(gNdsEntryEffectNativeFallbackCount++);
             return FALSE;

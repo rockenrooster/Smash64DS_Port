@@ -7834,6 +7834,10 @@ battleship_mn%.o nds_menu_shell.o nds_ui_kit.o: CFLAGS += -Os
 # screens. sc1pgame, training, bonus stages and the auto demo ARE battles and
 # keep -O2.
 battleship_mv%.o battleship_scstaffroll.o battleship_scexplain.o battleship_sc1pintro.o battleship_sc1pstageclear.o battleship_sc1pchallenger.o: CFLAGS += -Os
+# A P4 fighter's own routines (src/port/nds_p4_<name>.c) run only for that
+# fighter, in its specials, but all fourteen are resident in every scene, the
+# character select's included: their bytes are size-optimized.
+nds_p4_falco.o nds_p4_bowser.o nds_p4_marth.o nds_p4_roy.o nds_p4_wario.o nds_p4_peach.o nds_p4_crash.o nds_p4_lanky.o nds_p4_sheik.o nds_p4_banjo.o nds_p4_sonic.o nds_p4_dedede.o nds_p4_wolf.o: CFLAGS += -Os
 # The measured renderer is cache-resident on retail hardware and wins in ARM
 # state despite melonDS's main-RAM fetch model.
 #

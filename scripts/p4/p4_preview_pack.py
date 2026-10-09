@@ -55,6 +55,7 @@ FTMODELPART_DESC_PARTS = 2   # FTModelPartDesc.modelparts[1][2]
 EXT_MAGIC = 0x31584542  # BEX1: reloc_preview_pack.c NDS_BATTLE_EXTERN_MAGIC
 EXT_VERSION = 2
 EXT_MAX = 24            # NDS_BATTLE_EXTERN_MAX
+EXT_LOAD_ONLY = 0xFFFF  # NDS_BATTLE_EXTERN_LOAD_ONLY: load the file, patch nothing
 
 
 class PackError(Exception):
@@ -524,11 +525,25 @@ def build(o2r_dir: Path, main_id: int, model_id: int, attr: int, kind: int,
     # The battle manifest (reloc_preview_pack.c, BEX1): every Main pointer
     # the pack left NULL, as (Main slot, file, offset in that file), which a
     # match restores after loading those files. No foreign image bank.
+    # Remix built several Main files from their parent's and retargeted the
+    # header words' file ids to the donor's own files without moving their
+    # offsets (Sheik's, Banjo's and Dedede's Captain words: Falcon Punch at
+    # +0x760, Falcon Kick at +0xB08, into 64- and 128-byte files). On the N64
+    # they relocate to pointers past their file that nothing reads. The row
+    # still loads the file (it is how the content's own special file reaches
+    # the status buffer the fighter's file setup reads), but its target is
+    # EXT_LOAD_ONLY: the slot stays NULL.
     externs = []
+    dangling = []
     for _sec, slot, cls, _fid in pairs:
         if cls != "null":
             continue
         _kind, fid, target = main.slots[slot]
+        dep = o2r_dir / f"{fid:04x}"
+        if dep.exists() and target >= len(P.O2RFile(dep).data):
+            dangling.append(f"{slot:#x}->{fid:#x}+{target:#x}")
+            externs.append((slot, fid, EXT_LOAD_ONLY))
+            continue
         if max(slot, fid, target) > 0xFFFF:
             raise PackError(f"main slot {slot:#x} -> {fid:#x}+{target:#x} exceeds a manifest row")
         externs.append((slot, fid, target))
@@ -542,7 +557,7 @@ def build(o2r_dir: Path, main_id: int, model_id: int, attr: int, kind: int,
         "display_lists": len(dls), "roots": len(roots), "variant_roots": len(variants),
         "root_cells": len(cells),
         "fixups": len(fixups), "null_fixups": {f"{k:#x}": v for k, v in sorted(nulls.items())},
-        "file_bytes": file_bytes, "manifest_rows": len(externs),
+        "file_bytes": file_bytes, "manifest_rows": len(externs), "dangling_externs": dangling,
         "low_only": low_only, "high_only_bytes": high_bytes,
         "dropped_slots": sum(1 for p in pairs if p[2] == "drop"),
     }

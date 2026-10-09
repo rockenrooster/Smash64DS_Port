@@ -45,7 +45,7 @@
  *   attributes + 0x4C/0x50/0x58/0x5C/0x64  air_accel, air_speed_max_x,
  *                                          gravity, tvel_base, jumps_max
  *
- * S6 owns the needle (needle_stage_setting_ makes it after its sound). S4
+ * The needle is her own weapon on her special file 1 (S6, below). S4
  * owns the vanish's per-port environment colour (CharEnvColor.asm), and the
  * gfx-routine table owns the full charge's flash (GFXRoutine.id.SHEIK_CHARGE,
  * also re-run at full charge by samusshared.asm kirby_power_check_flash_):
@@ -60,9 +60,15 @@
 #error "P4 Sheik runs Samus's charge routines (NDS_P2_SAMUS)"
 #endif
 
+#include <ef/effect.h>
 #include <macros.h>
 #include <sys/audio.h>
 #include <sys/obj.h>
+#include <wp/weapon.h>
+
+#ifndef DObjGetStruct
+#define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
+#endif
 
 void ftSamusSpecialNProcDamage(GObj *fighter_gobj);
 void ftSamusSpecialNStartInitStatusVars(FTStruct *fp);
@@ -761,12 +767,132 @@ void ndsP4SheikNSPChargeAirMap(GObj *fighter_gobj)
     mpCommonProcFighterLanding(fighter_gobj, ndsP4SheikNSPChargeAirToGround);
 }
 
-/* SheikNSP.needle_stage_setting_: the throw's sound, then the needle (S6). */
+/* ---- The needle (needle_projectile_struct) ----
+ *
+ * Her own weapon on her special file 1 (Sheik file 6, generated as
+ * gNdsP4SheikSpecial1): WPAttributes at 0, Ray Gun ammo's map routine,
+ * Master Hand's bullet bounce off shields, Samus's bomb reflector and
+ * Remix's update and destruction below. Remix's projectile id is a Remix
+ * one; the DS renderer keys native weapon owners on the kind, so it takes a
+ * P4 kind. */
+#define SHEIK_NEEDLE_LIFETIME 18                /* NEEDLE_DURATION */
+#define SHEIK_NEEDLE_SPEED 225.0F
+#define SHEIK_NEEDLE_SPEED_MAX 250.0F
+#define SHEIK_NEEDLE_GRAVITY 0.0F
+#define SHEIK_NEEDLE_ANGLE_AIR -0.785398F       /* float32 -0.785398 */
+#define SHEIK_NEEDLE_ROLL_AIR 0.78539753F       /* 0x3F490FD8 */
+#define SHEIK_NEEDLE_YAW_AIR -1.5707964F        /* 0xBFC90FDB, a word of item data */
+
+extern void *gNdsP4SheikSpecial1;
+
+/* Makers that found her needle file missing: counted, never a fault. */
+__attribute__((used)) volatile u32 gNdsP4SheikArticleMisses;
+
+LBParticle *efManagerDustExpandSmallMakeEffect(Vec3f *pos, f32 f_index);
+sb32 itLGunWeaponAmmoProcMap(GObj *weapon_gobj);
+sb32 wpSamusBombProcReflector(GObj *weapon_gobj);
+extern Vec3f *syVectorRotateAbout3D(Vec3f *dst, Vec3f *dir, f32 angle);
+
+/* needle_destruction_ (hit, shield, clang, absorb): smoke, destroyed. */
+static sb32 ndsP4SheikNeedleProcDestroy(GObj *weapon_gobj)
+{
+    (void)efManagerDustExpandSmallMakeEffect(&DObjGetStruct(weapon_gobj)->translate.vec.f, 1.0F);
+
+    return TRUE;
+}
+
+/* needle_main_ (update): smoke at the end of its 18 frames; until then no
+ * gravity, its speed capped at 250. */
+static sb32 ndsP4SheikNeedleProcUpdate(GObj *weapon_gobj)
+{
+    WPStruct *wp = wpGetStruct(weapon_gobj);
+
+    if (wpMainDecLifeCheckExpire(wp) != FALSE)
+    {
+        (void)efManagerDustExpandSmallMakeEffect(&DObjGetStruct(weapon_gobj)->translate.vec.f, 1.0F);
+
+        return TRUE;
+    }
+    wpMainApplyGravityClampTVel(wp, SHEIK_NEEDLE_GRAVITY, SHEIK_NEEDLE_SPEED_MAX);
+
+    return FALSE;
+}
+
+/* wpBossBulletProcHop (shield bounce), which Remix's desc names. */
+static sb32 ndsP4SheikNeedleProcHop(GObj *weapon_gobj)
+{
+    WPStruct *wp = wpGetStruct(weapon_gobj);
+
+    syVectorRotateAbout3D(&wp->physics.vel_air, &wp->shield_collide_dir,
+                          wp->shield_collide_angle * 2);
+    wpMainReflectorRotateWeaponModel(weapon_gobj);
+
+    return FALSE;
+}
+
+static WPDesc sNdsP4SheikNeedleWeaponDesc = {
+    0x00,
+    NDS_P4_WP_KIND_SHEIK_NEEDLE,
+    &gNdsP4SheikSpecial1,
+    0x0,
+    { nGCMatrixKindTraRotRpyRSca, 0x47, 0 },    /* 0x12470000 */
+    ndsP4SheikNeedleProcUpdate,
+    itLGunWeaponAmmoProcMap,
+    ndsP4SheikNeedleProcDestroy,
+    ndsP4SheikNeedleProcDestroy,
+    ndsP4SheikNeedleProcHop,
+    ndsP4SheikNeedleProcDestroy,
+    wpSamusBombProcReflector,
+    ndsP4SheikNeedleProcDestroy
+};
+
+/* SheikNSP.needle_stage_setting_: the throw's sound, then a needle level
+ * from the ground, 45 degrees down from the air, at 225 a frame. Its aerial
+ * tilt is Remix's test of what sinf leaves in v0, the angle's bits (zero
+ * only for the ground's 0): the needle rolls 45 degrees, its yaw then set
+ * from its heading as on the ground. */
 static void ndsP4SheikNSPMakeNeedle(GObj *fighter_gobj, Vec3f *pos)
 {
-    (void)fighter_gobj;
-    (void)pos;
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    GObj *weapon_gobj;
+    WPStruct *wp;
+    DObj *dobj;
+    f32 angle;
+
     func_800269C0_275C0(SHEIK_NSP_FGM_THROW);
+
+    if (gNdsP4SheikSpecial1 == NULL)
+    {
+        gNdsP4SheikArticleMisses++;
+        return;
+    }
+    weapon_gobj = wpManagerMakeWeapon(fighter_gobj, &sNdsP4SheikNeedleWeaponDesc, pos,
+                                      WEAPON_FLAG_COLLPROJECT | WEAPON_FLAG_PARENT_FIGHTER);
+    if (weapon_gobj == NULL)
+    {
+        return;
+    }
+    wp = wpGetStruct(weapon_gobj);
+    wp->lifetime = SHEIK_NEEDLE_LIFETIME;
+
+    angle = (fp->ga == nMPKineticsAir) ? SHEIK_NEEDLE_ANGLE_AIR : 0.0F;
+
+    wp->physics.vel_air.z = 0.0F;
+    wp->physics.vel_air.x = __cosf(angle) * SHEIK_NEEDLE_SPEED * fp->lr;
+    wp->physics.vel_air.y = __sinf(angle) * SHEIK_NEEDLE_SPEED;
+
+    dobj = DObjGetStruct(weapon_gobj);
+
+    if (angle != 0.0F)
+    {
+        dobj->rotate.vec.f.y = SHEIK_NEEDLE_YAW_AIR;
+        dobj->rotate.vec.f.x = SHEIK_NEEDLE_ROLL_AIR;
+    }
+    if (dobj->mobj != NULL)
+    {
+        dobj->mobj->palette_id = 0.0F;
+    }
+    wpMainVelSetModelPitch(weapon_gobj);
 }
 
 /* SheikNSP.shoot_main_ (0xEC/0xEF update): temp variable 1 throws a needle
