@@ -13685,6 +13685,22 @@ void *lbRelocGetExternHeapFile(const void *file_id, void *heap)
 #endif
 }
 
+/* What ndsRelocLoadExternTreeAssetID would take for `asset_id`: 0 when it is
+ * already resident. The VS select sizes a content's preview block by it (S15).
+ * Not for a fighter Main file: its size walk can load a guard-pose package. */
+u32 ndsRelocExternTreeAssetBytes(u32 asset_id)
+{
+    u32 seen[NDS_RELOC_EXTERN_FILE_ID_CAPACITY];
+    u32 seen_count = 0u;
+
+    if ((asset_id == NDS_RELOC_ASSET_INVALID) ||
+        (ndsRelocFindLoadedFileByAsset(asset_id) != NULL))
+    {
+        return 0u;
+    }
+    return (u32)ndsRelocExternTreeAllocSize(asset_id, seen, &seen_count);
+}
+
 s32 ndsRelocLoadExternTreeAssetID(u32 asset_id)
 {
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
@@ -15183,18 +15199,9 @@ sNdsR2CssInitialMotionDescs[nFTKindPlayableEnd + 1] = {
  * warm loader's own provider and the total uses the bump allocator's exact
  * 16-byte placement rule, so the reservation cannot drift from what loading
  * actually consumes. */
-#if NDS_P4
-/* Rows 0-4 of a P4 content's menu motions: its DemoNull pose and every
- * Selected (Win1-4) pose the VS select can give it. */
-#define NDS_R2_CSS_P4_CLIP_ROWS 5u
-#define NDS_R2_CSS_P4_CLIPS (NDS_R2_CSS_P4_CLIP_ROWS * (NDS_P4_CONTENT_LIMIT - 1u))
-#else
-#define NDS_R2_CSS_P4_CLIPS 0u
-#endif
-
 static u32 ndsR2AnimCacheSetupBytes(void)
 {
-    u32 ids[nFTKindPlayableEnd + 1 + NDS_R2_CSS_P4_CLIPS];
+    u32 ids[nFTKindPlayableEnd + 1];
     u32 count = 0u;
     u32 total = 0u;
     s32 kind;
@@ -15230,66 +15237,10 @@ static u32 ndsR2AnimCacheSetupBytes(void)
         }
         total = ((total + 15u) & ~15u) + (u32)bytes;
     }
-#if NDS_P4
-    /* P4, VS select only: each compiled-in content's own menu clips, so
-     * building its preview reads no storage either. */
-    if (gSCManagerSceneData.scene_curr == nSCKindPlayersVS)
-    {
-        u32 c;
-
-        for (c = 1u; c < NDS_P4_CONTENT_LIMIT; c++)
-        {
-            const NDSP4Fighter *f = ndsP4Fighter(c);
-            u32 row;
-
-            if ((f == NULL) || (f->data->submotion == NULL))
-            {
-                continue;
-            }
-            for (row = 0u; (row < NDS_R2_CSS_P4_CLIP_ROWS) &&
-                           (row < (u32)*f->data->submotion_array_count); row++)
-            {
-                const void *file = (const void *)(uintptr_t)
-                    f->data->submotion->motion_desc[row].anim_file_id;
-                u32 asset_id;
-                u32 i;
-                u32 stream_size;
-                sb32 stream_ready;
-                size_t bytes;
-
-                /* Only the content's own clips: a row naming a parent clip is
-                 * the parent's (compiled-in Selected tables, or a pose the VS
-                 * select never gives this content). Never fail the whole
-                 * reservation over a content row. */
-                if (file == NULL)
-                {
-                    continue;
-                }
-                asset_id = ndsRelocAssetIDForToken((u32)(uintptr_t)file);
-                if ((asset_id == NDS_RELOC_ASSET_INVALID) ||
-                    (ndsP4IsFighterAnim(asset_id) == FALSE))
-                {
-                    continue;
-                }
-                for (i = 0u; i < count && ids[i] != asset_id; i++) {}
-                if (i != count) { continue; }
-                bytes = ndsR2AnimCachePayloadBytes(asset_id, &stream_ready,
-                                                   &stream_size);
-                if (bytes == 0u)
-                {
-                    continue;
-                }
-                ids[count++] = asset_id;
-                if ((total > UINT32_MAX - 15u) ||
-                    (bytes > UINT32_MAX - total - 15u))
-                {
-                    return 0u;
-                }
-                total = ((total + 15u) & ~15u) + (u32)bytes;
-            }
-        }
-    }
-#endif
+    /* A P4 content's menu clips are not reserved here (S15): fourteen
+     * contents' five rows came to 450 KB, more than the select has. Its
+     * preview reads them when it plays them, into the slot's figatree heap,
+     * which the select sizes for that content's clips. */
     return total;
 }
 

@@ -123,6 +123,21 @@ typedef struct NDSRendererTraversalState
 #define NDS_NATIVE_DENSE_ID_MASK 0x07ffu
 #define NDS_NATIVE_DENSE_SPAN_COUNT_SHIFT 11u
 #define NDS_NATIVE_PACKED_CORNER_MATRIX_SHIFT 11u
+/* An owner with 2048 dense vertices or more (a P4 donor carrying every model
+ * part its motions draw: Banjo, Crash) has wide dense ids: a span's u16 is its
+ * whole first id and its count is the action's own (a vertex block's count,
+ * else one), and a raw run's corner is a whole id. A cross run's corner keeps
+ * the 11-bit id beside its GX slot; the generator keeps those ids below 2048
+ * (generate_nds_native_owners.py build_direct_dense_tables). */
+#define NDS_NATIVE_DENSE_WIDE(tables_)                                         \
+    ((tables_)->dense_count > NDS_NATIVE_DENSE_ID_MASK)
+#define NDS_NATIVE_SPAN_FIRST(wide_, span_)                                    \
+    ((wide_) ? (u32)(span_) : ((u32)(span_) & NDS_NATIVE_DENSE_ID_MASK))
+#define NDS_NATIVE_SPAN_COUNT(wide_, span_, action_)                           \
+    ((wide_) ?                                                                 \
+        (((action_)->kind == NDS_NATIVE_VERTEX_BLOCK) ?                        \
+            (u32)(action_)->count : 1u) :                                      \
+        ((u32)(span_) >> NDS_NATIVE_DENSE_SPAN_COUNT_SHIFT))
 /* P2-3 image ABI tag: first u32 of every native-owner image, checked on load
  * before any member is bound. v6 gives NDSNativeRun.submit_class upper bits
  * the source-unlit vertex-colour flag plus per-run polygon alpha while keeping
@@ -2581,6 +2596,66 @@ NDS_FTR_OWNER_RUNTIME(
         sNdsNative##T_##RootLightPreambles, NDS_NATIVE_##N_##_MODEL_DATA_SIZE);
 NDS_P4_CONTENT_ROWS(NDS_P4_OWNER_RUNTIME)
 #undef NDS_P4_OWNER_RUNTIME
+
+/* A content's root programs (scripts/p4/p4_native_owner.py donor_superset).
+ * Its canonical vector carries every joint its motions make draw -- Banjo's
+ * Kazooie (hidden parts his motions' anim-desc masks install), the articles
+ * Crash, Peach, Lanky and Dedede hold (model parts on list-less joints) -- and
+ * each live vector with some of them absent is a program. A program root's
+ * `bindings` entry is the canonical binding its model-part variants name. */
+typedef struct NDSP4RootProgram
+{
+    const NDSNativeFighterOwnerRuntime *owners[2];
+    const u8 *parents;
+    const u8 *cross;
+    const u8 *bindings[2];
+} NDSP4RootProgram;
+
+#define NDS_P4_PROGRAM_OWNERS(T_, N_, P_)                                      \
+    NDS_FTR_OWNER_RUNTIME(                                                     \
+        sNdsNative##T_##P_##HighOwner, &sNdsNative##T_##FighterHighTables,     \
+        sNdsNative##T_##P_##Roots, sNdsNative##T_##P_##CrossPaletteSlots,      \
+        sNdsNative##T_##RootLightPreambles,                                    \
+        NDS_NATIVE_##N_##_MODEL_DATA_SIZE);                                    \
+    NDS_FTR_OWNER_RUNTIME(                                                     \
+        sNdsNative##T_##P_##LowOwner, &sNdsNative##T_##FighterLowTables,       \
+        sNdsNative##T_##P_##RootsLow,                                          \
+        sNdsNative##T_##P_##CrossPaletteSlotsLow,                              \
+        sNdsNative##T_##RootLightPreambles,                                    \
+        NDS_NATIVE_##N_##_MODEL_DATA_SIZE);
+#define NDS_P4_PROGRAM_ROW(T_, N_, P_)                                         \
+    { { &sNdsNative##T_##P_##HighOwner, &sNdsNative##T_##P_##LowOwner },       \
+      sNdsNative##T_##P_##BindingParents,                                      \
+      sNdsNative##T_##P_##CrossPaletteSlots,                                   \
+      { sNdsNative##T_##P_##RootBindings,                                      \
+        sNdsNative##T_##P_##RootBindingsLow } },
+#define NDS_P4_OWNER_PROGRAMS(id_, T_, N_, n_, parent_, model_, main_)        \
+    NDS_P4_NATIVE_##N_##_PROGRAMS(NDS_P4_PROGRAM_OWNERS)                       \
+    static const NDSP4RootProgram                                             \
+        sNdsP4##T_##RootPrograms[NDS_P4_NATIVE_##N_##_PROGRAM_COUNT + 1u] =   \
+    {                                                                          \
+        NDS_P4_NATIVE_##N_##_PROGRAMS(NDS_P4_PROGRAM_ROW)                      \
+        { { NULL, NULL }, NULL, NULL, { NULL, NULL } }                         \
+    };
+NDS_P4_CONTENT_ROWS(NDS_P4_OWNER_PROGRAMS)
+#undef NDS_P4_OWNER_PROGRAMS
+#undef NDS_P4_PROGRAM_ROW
+#undef NDS_P4_PROGRAM_OWNERS
+
+/* Programs 1..*count of a P4 owner slot; NULL for any other slot. */
+static const NDSP4RootProgram *ndsP4RootPrograms(u32 slot, u32 *count)
+{
+#define NDS_P4_PROGRAM_TABLE(id_, T_, N_, n_, parent_, model_, main_)         \
+    if (slot == NDS_P4_RENDERER_OWNER_SLOT(id_))                                \
+    {                                                                           \
+        *count = NDS_P4_NATIVE_##N_##_PROGRAM_COUNT;                            \
+        return sNdsP4##T_##RootPrograms;                                        \
+    }
+    NDS_P4_CONTENT_ROWS(NDS_P4_PROGRAM_TABLE)
+#undef NDS_P4_PROGRAM_TABLE
+    *count = 0u;
+    return NULL;
+}
 #endif
 
 #if NDS_P2_NDONKEY
@@ -3582,6 +3657,19 @@ static const NDSNativeFighterOwnerRuntime *sNdsNativeFighterActiveOwner =
 static const u32 (*sNdsNativeFighterActiveRootLightPreambles)[2];
 static u32 sNdsNativeFighterActiveRootLightPreambleCount;
 static u8 sNdsNativeFighterRootPrograms[NDS_NATIVE_FIGHTER_OWNER_COUNT];
+#if NDS_P4
+/* The slot's current program's row; NULL for canonical or another slot. */
+static const NDSP4RootProgram *ndsP4CurrentRootProgram(u32 slot)
+{
+    u32 count;
+    const NDSP4RootProgram *programs = ndsP4RootPrograms(slot, &count);
+    u32 program = (slot < NDS_NATIVE_FIGHTER_OWNER_COUNT) ?
+        (u32)sNdsNativeFighterRootPrograms[slot] : 0u;
+
+    return ((programs != NULL) && (program >= 1u) && (program <= count)) ?
+        &programs[program - 1u] : NULL;
+}
+#endif
 #if NDS_P2_KIRBY
 /* The complete 9/10-root hidden-part programs are keyed not only by their
  * ordered source DL vector but by the live joint-6 head that produced the
@@ -6091,6 +6179,17 @@ ndsRendererNativeFighterOwnerForProgramDetail(
             &sNdsNativePurinAccessoryHighOwner;
     }
 #endif
+#if NDS_P4
+    {
+        u32 count;
+        const NDSP4RootProgram *programs = ndsP4RootPrograms(slot, &count);
+
+        if ((programs != NULL) && (program >= 1u) && (program <= count))
+        {
+            return programs[program - 1u].owners[(use_low_detail != 0u) ? 1u : 0u];
+        }
+    }
+#endif
 #if !(NDS_P2_SAMUS && defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)) && \
     !(NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)) && \
     !(NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)) && \
@@ -6257,6 +6356,17 @@ void ndsRendererNativeFighterSetRootProgram(u32 slot, u32 program)
         return;
     }
 #endif
+#if NDS_P4
+    {
+        u32 count;
+
+        if ((ndsP4RootPrograms(slot, &count) != NULL) && (program <= count))
+        {
+            sNdsNativeFighterRootPrograms[slot] = (u8)program;
+            return;
+        }
+    }
+#endif
 #if !(NDS_P2_SAMUS && defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)) && \
     !(NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)) && \
     !(NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)) && \
@@ -6268,6 +6378,88 @@ void ndsRendererNativeFighterSetRootProgram(u32 slot, u32 program)
 #endif
     sNdsNativeFighterRootPrograms[slot] = 0u;
 }
+
+#if NDS_P4
+/* A P4 owner's variant rows (donor_variants), keyed by canonical binding. */
+static sb32 ndsP4RootVariantFits(u32 slot, u32 use_low_detail, u32 binding,
+                                 u32 root_offset)
+{
+    const NDSNativeRootVariant *variants = NULL;
+    u32 variant_count = 0u;
+    u32 i;
+
+#define NDS_P4_PROGRAM_VARIANTS(id_, T_, N_, n_, parent_, model_, main_)      \
+    if (slot == NDS_P4_RENDERER_OWNER_SLOT(id_))                                \
+    {                                                                           \
+        variants = (use_low_detail != 0u) ?                                     \
+            NDS_P4_NATIVE_##N_##_ROOT_VARIANTS_LOW :                            \
+            NDS_P4_NATIVE_##N_##_ROOT_VARIANTS;                                 \
+        variant_count = (use_low_detail != 0u) ?                                \
+            NDS_P4_NATIVE_##N_##_ROOT_VARIANTS_LOW_COUNT :                      \
+            NDS_P4_NATIVE_##N_##_ROOT_VARIANTS_COUNT;                           \
+    }
+    NDS_P4_CONTENT_ROWS(NDS_P4_PROGRAM_VARIANTS)
+#undef NDS_P4_PROGRAM_VARIANTS
+    for (i = 0u; i < variant_count; i++)
+    {
+        if ((variants[i].binding == binding) &&
+            (variants[i].root.root_offset == root_offset))
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+/* A P4 owner's live vector may carry model-part variants on any program's
+ * roots, so a program matches when every root is its own list or one of the
+ * variants its canonical binding owns -- the check ResolveRoot then makes. */
+static u32 ndsP4SelectRootProgram(
+    u32 slot, u32 use_low_detail, const u32 *root_offsets, u32 root_count,
+    const NDSP4RootProgram *programs, u32 count, u32 *programs_tried)
+{
+    u32 detail = (use_low_detail != 0u) ? 1u : 0u;
+    u32 program;
+
+    for (program = 0u; program <= count; program++)
+    {
+        const NDSNativeFighterOwnerRuntime *owner = (program == 0u) ?
+            ndsRendererNativeFighterCanonicalOwnerForDetail(slot, use_low_detail) :
+            programs[program - 1u].owners[detail];
+        const u8 *bindings = (program == 0u) ? NULL :
+            programs[program - 1u].bindings[detail];
+        u32 i;
+
+        if (owner == NULL)
+        {
+            continue;
+        }
+        if (programs_tried != NULL)
+        {
+            (*programs_tried)++;
+        }
+        if (owner->root_count != root_count)
+        {
+            continue;
+        }
+        for (i = 0u; i < root_count; i++)
+        {
+            if ((owner->roots[i].root_offset != root_offsets[i]) &&
+                (ndsP4RootVariantFits(slot, use_low_detail,
+                                      (bindings != NULL) ? bindings[i] : i,
+                                      root_offsets[i]) == FALSE))
+            {
+                break;
+            }
+        }
+        if (i == root_count)
+        {
+            return program;
+        }
+    }
+    return 0xffu;
+}
+#endif
 
 u32 ndsRendererNativeFighterSelectRootProgram(
     u32 slot, u32 use_low_detail, const u32 *root_offsets, u32 root_count,
@@ -6297,6 +6489,19 @@ u32 ndsRendererNativeFighterSelectRootProgram(
             if (i == root_count) { return NDS_NATIVE_SKELETON_PROGRAM; }
         }
     }
+#if NDS_P4
+    {
+        u32 count;
+        const NDSP4RootProgram *programs = ndsP4RootPrograms(slot, &count);
+
+        if (programs != NULL)
+        {
+            return ndsP4SelectRootProgram(slot, use_low_detail, root_offsets,
+                                          root_count, programs, count,
+                                          programs_tried);
+        }
+    }
+#endif
 #if NDS_P2_SAMUS && defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_SAMUS)
     {
@@ -6590,7 +6795,16 @@ static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
 #if NDS_P4
     /* A P4 owner carries every alternate model part its donor's joints have
      * (scripts/p4/p4_native_owner.py donor_variants): its own scripts and
-     * its parent's code both set them. */
+     * its parent's code both set them. The rows name canonical bindings, so a
+     * program's root is looked up by the canonical binding it draws. */
+    {
+        const NDSP4RootProgram *program = ndsP4CurrentRootProgram(slot);
+
+        if (program != NULL)
+        {
+            binding = program->bindings[(use_low_detail != 0u) ? 1u : 0u][binding];
+        }
+    }
 #define NDS_P4_OWNER_VARIANTS(id_, T_, N_, n_, parent_, model_, main_)         \
     if (slot == NDS_P4_RENDERER_OWNER_SLOT(id_))                                \
     {                                                                           \
@@ -6829,8 +7043,11 @@ static s32 ndsRendererM2ShadeOutputsResident(
     {
         u32 action_index = epoch->first_action + action_offset;
         u32 span = sNdsNativeFighterActiveTables->action_dense_spans[action_index];
-        u32 dense_first = span & NDS_NATIVE_DENSE_ID_MASK;
-        u32 dense_count = span >> NDS_NATIVE_DENSE_SPAN_COUNT_SHIFT;
+        u32 wide = NDS_NATIVE_DENSE_WIDE(sNdsNativeFighterActiveTables);
+        u32 dense_first = NDS_NATIVE_SPAN_FIRST(wide, span);
+        u32 dense_count = NDS_NATIVE_SPAN_COUNT(
+            wide, span,
+            &sNdsNativeFighterActiveTables->vertex_actions[action_index]);
         u32 dense_offset;
 
         for (dense_offset = 0u;
@@ -6946,8 +7163,11 @@ static void __attribute__((noinline)) ndsRendererM2ShadeRecordProduced(
     {
         u32 action_index = epoch->first_action + action_offset;
         u32 span = sNdsNativeFighterActiveTables->action_dense_spans[action_index];
-        u32 dense_first = span & NDS_NATIVE_DENSE_ID_MASK;
-        u32 dense_count = span >> NDS_NATIVE_DENSE_SPAN_COUNT_SHIFT;
+        u32 wide = NDS_NATIVE_DENSE_WIDE(sNdsNativeFighterActiveTables);
+        u32 dense_first = NDS_NATIVE_SPAN_FIRST(wide, span);
+        u32 dense_count = NDS_NATIVE_SPAN_COUNT(
+            wide, span,
+            &sNdsNativeFighterActiveTables->vertex_actions[action_index]);
         u32 dense_offset;
 
         sNdsRendererM2ShadeDenseVisitCount += dense_count;

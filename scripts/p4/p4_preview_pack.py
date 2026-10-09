@@ -125,9 +125,11 @@ def dl_roots(main: P.O2RFile, model: P.O2RFile, model_id: int, attr: int, trees,
     if container is not None:
         if container[0] != "intern":
             raise PackError("modelparts_container is not in Main")
-        # One entry per joint past the common ones; the array ends with the
-        # fighter's joints (the next words are another table).
-        entries = min(MODELPARTS_ENTRIES, (trees[0][1] - 1) - 4)
+        # One entry per JointTree descriptor (joint 4 up; the tree's count
+        # includes its depth-18 sentinel); the array ends with the fighter's
+        # joints (the next words are another table). Crash's joint 32 and
+        # Banjo's joint 36 are its last.
+        entries = min(MODELPARTS_ENTRIES, trees[0][1] - 1)
         for i in range(entries):
             desc = main.ptr(container[2] + 4 * i)
             if desc is None:
@@ -205,7 +207,7 @@ def variant_roots(main: P.O2RFile, model_id: int, attr: int, trees) -> set[int]:
     if container is None or container[0] != "intern":
         return roots
     rows = {}
-    for index in range(min(MODELPARTS_ENTRIES, (trees[0][1] - 1) - 4)):
+    for index in range(min(MODELPARTS_ENTRIES, trees[0][1] - 1)):
         ref = main.ptr(container[2] + 4 * index)
         if ref is not None and ref[0] == "intern":
             rows[index] = ref[2]
@@ -299,7 +301,7 @@ def high_only_spans(main: P.O2RFile, model: P.O2RFile, model_id: int, attr: int,
     size = lay["sizeof(FTModelPart)"]
     if mp is not None and mp[0] == "intern":
         rows = {}
-        for index in range(min(MODELPARTS_ENTRIES, (trees[0][1] - 1) - 4)):
+        for index in range(min(MODELPARTS_ENTRIES, trees[0][1] - 1)):
             ref = main.ptr(mp[2] + 4 * index)
             if ref is not None and ref[0] == "intern":
                 rows[index] = ref[2]

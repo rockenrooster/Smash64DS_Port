@@ -737,6 +737,10 @@ s32 ndsP4PipeTurnKind(const FTStruct *fp);
  * only its low detail, so it loads its low-detail battle pack
  * (fighters/battle/<kind>.fpc, p4_preview_pack.py --battle-out). */
 sb32 ndsP4LowDetailBattle(void);
+/* TRUE on the VS select: a content's preview draws its low detail (owner
+ * 2026-10-08, lower content fidelity; a preview panel is 42 pixels wide), from
+ * the battle pack and the low owner image. */
+sb32 ndsP4LowDetailSelect(void);
 /* NDS_P4_COMPUTER_REFLECT_* bits; 0 for the original cast. */
 u32 ndsP4ComputerReflect(const FTStruct *fp);
 /* The fighter as the CPU reflect checks see it: Fox for a content with

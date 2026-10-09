@@ -116,6 +116,9 @@ enum {
     NDS_PREVIEW_PACK_STEP_DONE = 2
 };
 void *ndsRelocPreviewFighterLoadBegin(s32 fkind);
+/* The size of the pack file LoadBegin would open for `fkind` in this scene
+ * (its load takes at most that), 0 when absent. */
+u32 ndsRelocPreviewFighterPackBytes(s32 fkind);
 s32 ndsRelocPreviewFighterLoadStep(void *handle, u32 byte_budget,
                                    u32 *out_bytes);
 /* `fkind` is checked against the handle so a stale pointer to a pool row that

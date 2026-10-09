@@ -1009,6 +1009,15 @@ void ndsFTManagerEnsureOwnerImages(FTDesc *desc)
             }
 #endif
 
+            /* The VS select's previews keep their detail too (the original
+             * cast HIGH, a content LOW: ndsFTManagerSelectLowDetail), and
+             * their block holds only that image (S15). */
+            if ((gSCManagerSceneData.scene_curr == nSCKindPlayersVS) &&
+                (desc->pkind == nFTPlayerKindDemo))
+            {
+                first_detail = last_detail =
+                    (desc->detail == nFTPartsDetailLow) ? 1u : 0u;
+            }
 #if NDS_P2_1P_GAME
             /* These source display scenes keep each actor's chosen detail.
              * CSS uses HIGH; the intro explicitly chooses LOW for some team
@@ -1208,12 +1217,30 @@ static void ndsFTManagerBattleLowDetail(FTDesc *desc)
     }
 }
 
+#if NDS_P4
+/* S15: a content's VS-select preview draws its low detail
+ * (ndsP4LowDetailSelect): its pack is the battle pack, which keeps only what
+ * that detail reads, and its block holds only the low owner image. */
+static void ndsFTManagerSelectLowDetail(FTDesc *desc)
+{
+    if ((desc != NULL) && (desc->pkind == nFTPlayerKindDemo) &&
+        (ndsP4LowDetailSelect() != FALSE) &&
+        (ndsP4MakeContent(desc->player, desc->fkind) != 0u))
+    {
+        desc->detail = nFTPartsDetailLow;
+    }
+}
+#endif
+
 GObj *ftManagerMakeFighter(FTDesc *desc)
 {
 #if NDS_P2_1P_GAME && NDS_P2_MENU_WALK
     ndsCampaignWalkCpuRoute(desc);
 #endif
     ndsFTManagerBattleLowDetail(desc);
+#if NDS_P4
+    ndsFTManagerSelectLowDetail(desc);
+#endif
     ndsFTManagerEnsureOwnerImages(desc);
     if ((desc != NULL) && (desc->figatree_heap != NULL) &&
         (desc->fkind >= 0) && (desc->fkind < nFTKindEnumCount) &&

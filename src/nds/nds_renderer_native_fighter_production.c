@@ -695,8 +695,8 @@ static s32 ndsRendererValidateNativeVertexAction(
      * consumed by production shading. The historical action_dense_first table
      * duplicated that value solely for validation; validate the executable
      * representation itself. */
-    dense_first =
-        tables->action_dense_spans[action_index] & NDS_NATIVE_DENSE_ID_MASK;
+    dense_first = NDS_NATIVE_SPAN_FIRST(
+        NDS_NATIVE_DENSE_WIDE(tables), tables->action_dense_spans[action_index]);
     if (action->command_index >= root->source_command_count)
     {
         return FALSE;
@@ -788,9 +788,16 @@ static s32 ndsRendererValidateNativeRun(
     for (i = 0u; i < corner_count; i++)
     {
         /* Production consumes packed_corners. Its low bits are exactly the
-         * dense id formerly mirrored in validation-only dense_corners. */
-        u32 dense_id =
-            tables->packed_corners[first_corner + i] & NDS_NATIVE_DENSE_ID_MASK;
+         * dense id formerly mirrored in validation-only dense_corners; a
+         * wide owner's raw-run corner is the whole id. */
+        u32 dense_id = tables->packed_corners[first_corner + i];
+
+        if ((NDS_NATIVE_DENSE_WIDE(tables) == FALSE) ||
+            ((((u32)run->submit_class & NDS_NATIVE_RUN_SUBMIT_CLASS_MASK) ==
+              NDS_NATIVE_RUN_CROSS_MATRIX)))
+        {
+            dense_id &= NDS_NATIVE_DENSE_ID_MASK;
+        }
 
         if ((dense_id >= tables->dense_count) ||
             (tables->dense_vertices[dense_id].cache_slot >=

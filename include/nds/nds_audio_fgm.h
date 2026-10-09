@@ -164,6 +164,10 @@ void ndsAudioFgmPrefetch(const u16 *ids, u32 count, u32 max_frames);
 void ndsAudioFgmPauseGame(void);
 void ndsAudioFgmResumeGame(void);
 void ndsAudioFgmStopAll(void);
+/* S15: lend the cue arena's tail past `keep` bytes to a scene that plays few
+ * cues (the VS select's previews), and take it back before the next scene. */
+void *ndsAudioFgmLendTail(u32 keep, u32 *out_bytes);
+void ndsAudioFgmReclaimTail(void);
 void ndsAudioFgmStop(alSoundEffect *effect);
 alSoundEffect *ndsAudioFgmPlay(u16 fgm_id);
 alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan);

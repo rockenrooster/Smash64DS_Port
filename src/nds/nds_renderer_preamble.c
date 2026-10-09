@@ -3394,7 +3394,12 @@ typedef struct NDSFighterPacketTexgenSite
     u16 dense_id;
 } NDSFighterPacketTexgenSite;
 
-#define NDS_FIGHTER_PACKET_SITE_MAX 64u
+/* One shade site per lit epoch. 96 since 2026-10-09: a P4 owner whose
+ * canonical vector carries every joint its motions draw needs up to 70
+ * (Banjo's with Kazooie, Crash's with the mask); 64 declined their draws as
+ * Capacity in every high-detail frame. +640 B per packet: an entry keeps
+ * 3,132 list words (the original cast's largest list is Link's 2,634). */
+#define NDS_FIGHTER_PACKET_SITE_MAX 96u
 /* 32 since 2026-10-05: a lean list's GX texgen groups (one per lit spherical
  * run) for the environment-mapped 1P owners -- a Polygon has 28. */
 #define NDS_FIGHTER_PACKET_TEXGEN_GROUP_MAX 32u

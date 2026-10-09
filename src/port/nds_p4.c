@@ -226,6 +226,11 @@ sb32 ndsP4LowDetailBattle(void)
         TRUE : FALSE;
 }
 
+sb32 ndsP4LowDetailSelect(void)
+{
+    return (gSCManagerSceneData.scene_curr == nSCKindPlayersVS) ? TRUE : FALSE;
+}
+
 sb32 ndsP4ContentLowDetailOnly(s32 player)
 {
     if (ndsP4MatchContent(player) == 0u)

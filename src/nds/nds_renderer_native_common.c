@@ -9491,8 +9491,9 @@ ndsRendererNativeShadeProductionActions(
 #if !NDS_R2_FIGHTER_HW_LIGHT
         u32 span =
             sNdsNativeFighterActiveTables->action_dense_spans[action_index];
-        u32 dense_first = span & NDS_NATIVE_DENSE_ID_MASK;
-        u32 dense_count = span >> NDS_NATIVE_DENSE_SPAN_COUNT_SHIFT;
+        u32 wide = NDS_NATIVE_DENSE_WIDE(sNdsNativeFighterActiveTables);
+        u32 dense_first = NDS_NATIVE_SPAN_FIRST(wide, span);
+        u32 dense_count = NDS_NATIVE_SPAN_COUNT(wide, span, action);
         u32 dense_offset;
 #endif
 
@@ -17844,6 +17845,13 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
 #define NDS_P4_OWNER_PARENTS(id_, T_, N_, n_, parent_, model_, main_)          \
     if (slot == NDS_P4_RENDERER_OWNER_SLOT(id_))                                \
     {                                                                           \
+        const NDSP4RootProgram *program_ = ndsP4CurrentRootProgram(slot);       \
+                                                                                \
+        if (program_ != NULL)                                                   \
+        {                                                                       \
+            *count = program_->owners[0]->root_count;                           \
+            return program_->parents;                                           \
+        }                                                                       \
         *count = (u32)(sizeof(sNdsNative##T_##BindingParents) /                 \
                        sizeof(sNdsNative##T_##BindingParents[0]));              \
         return sNdsNative##T_##BindingParents;                                  \
@@ -18228,6 +18236,13 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
 #define NDS_P4_OWNER_CROSS(id_, T_, N_, n_, parent_, model_, main_)            \
     if (slot == NDS_P4_RENDERER_OWNER_SLOT(id_))                                \
     {                                                                           \
+        const NDSP4RootProgram *program_ = ndsP4CurrentRootProgram(slot);       \
+                                                                                \
+        if (program_ != NULL)                                                   \
+        {                                                                       \
+            *count = program_->owners[0]->root_count;                           \
+            return program_->cross;                                             \
+        }                                                                       \
         *count = (u32)(sizeof(sNdsNative##T_##CrossPaletteSlots) /              \
                        sizeof(sNdsNative##T_##CrossPaletteSlots[0]));           \
         return sNdsNative##T_##CrossPaletteSlots;                               \

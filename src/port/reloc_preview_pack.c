@@ -514,6 +514,58 @@ static void ndsPreviewPackLoadFree(NDSPreviewPackLoad *load)
     load->fkind = -1;
 }
 
+#if NDS_P4
+/* A content's low-detail pack (battle/<kind>.fpc): in a battle of three or
+ * four fighters, and on the VS select, which draws a content's low detail
+ * (ndsP4LowDetailSelect). */
+static sb32 ndsRelocPreviewP4LowPack(s32 fkind)
+{
+    return ((fkind >= 12) && ((ndsP4LowDetailBattle() != FALSE) ||
+                              (ndsP4LowDetailSelect() != FALSE))) ? TRUE : FALSE;
+}
+#endif
+
+/* The bytes of the pack the VS select loads for a kind's preview, which its
+ * block is sized by (the load takes at most the file's size); 0 when the file
+ * is absent. */
+u32 ndsRelocPreviewFighterPackBytes(s32 fkind)
+{
+    char path[] = "nitro:/fighters/preview/00.fpc";
+    char battle_path[] = "nitro:/fighters/battle/00.fpc";
+    char *p = path;
+    u32 digit_at = sizeof("nitro:/fighters/preview/") - 1u;
+    FILE *file;
+    long bytes = 0;
+
+    if ((fkind < 0) || (fkind > 99))
+    {
+        return 0u;
+    }
+#if NDS_P4
+    if (ndsRelocPreviewP4LowPack(fkind) != FALSE)
+    {
+        p = battle_path;
+        digit_at = sizeof("nitro:/fighters/battle/") - 1u;
+    }
+#else
+    (void)battle_path;
+#endif
+    p[digit_at] = '0' + (u32)fkind / 10u;
+    p[digit_at + 1u] = '0' + (u32)fkind % 10u;
+    ndsFsLock();
+    file = fopen(p, "rb");
+    if (file != NULL)
+    {
+        if (fseek(file, 0, SEEK_END) == 0)
+        {
+            bytes = ftell(file);
+        }
+        fclose(file);
+    }
+    ndsFsUnlock();
+    return (bytes > 0) ? (u32)bytes : 0u;
+}
+
 void *ndsRelocPreviewFighterLoadBegin(s32 fkind)
 {
     NDSPreviewPackLoad *load = NULL;
@@ -610,7 +662,7 @@ void *ndsRelocPreviewFighterLoadBegin(s32 fkind)
      * low detail, close-ups included, so it loads the pack without the data
      * only the high detail reads (p4_preview_pack.py --battle-out). Its Main
      * is the select pack's: the same manifest restores its externs. */
-    else if ((fkind >= 12) && (ndsP4LowDetailBattle() != FALSE))
+    else if (ndsRelocPreviewP4LowPack(fkind) != FALSE)
     {
         path = battle_path;
         digit_at = sizeof("nitro:/fighters/battle/") - 1u;

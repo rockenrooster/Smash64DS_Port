@@ -682,13 +682,79 @@ skip ("p4g"). 0 native failures in every run.
 | Marth | clean | 0 | 0xD9 SET ENV COLOR (8 per run) is the one unported command |
 | Roy | clean | 0 | 0xD9 as Marth |
 | Wario | clean | 0 | |
-| Peach | clean | 325, low detail | a motion's hidden-part joint adds a root the owner lacks (17 against 16), the original cast's root-program case |
+| Peach | clean | 325, low detail | a motion's hidden-part joint adds a root the owner lacks (17 against 16), the original cast's root-program case. Fixed 2026-10-09 by the donors' root programs ("Root programs" below) |
 | Crash | clean | 0 | fits since the lab skip |
 | Lanky | clean | 0 | |
 | Sheik | clean | 0 | |
-| Banjo | the mirror's fourth 52 KB animation heap overflows (S15) | 237-342 per 600-900 frames, low detail (beside Samus, Link and Kirby, "p4y") | his main loads since the 208-id fix. His Kazooie joints (15-21) are hidden parts: setup_parts leaves them out and his motions' anim-desc masks install them (ftMainSetStatus), so while they show the low root vector is 23 against his owner's 16 and the draw declines (validate code 3), as Peach's below. The original cast's hidden parts are owner root programs (`OWNER_ROOT_PROGRAMS`, generate_nds_native_owners.py); a content needs them derived from its motions |
+| Banjo | the mirror's fourth 52 KB animation heap overflows (S15) | 237-342 per 600-900 frames, low detail (beside Samus, Link and Kirby, "p4y") | his main loads since the 208-id fix. His Kazooie joints (15-21) are hidden parts: setup_parts leaves them out and his motions' anim-desc masks install them (ftMainSetStatus), so while they show the low root vector is 23 against his owner's 16 and the draw declines (validate code 3), as Peach's below. The original cast's hidden parts are owner root programs (`OWNER_ROOT_PROGRAMS`, generate_nds_native_owners.py); a content needs them derived from its motions. Done 2026-10-09 ("Root programs" below) |
 | Sonic | clean | 0 | fits since the lab skip (closure 329 KB to 144 KB) |
 | Dedede | clean | 0 | |
+
+## Root programs, wide dense ids, select-screen previews (S15, 2026-10-09)
+
+**Root programs.** A content's motions make joints draw that its
+setup_parts leaves out: hidden parts their anim-desc masks install (Banjo's
+Kazooie, hidden parts 4-10, in 57 motions; Crash's joint 32 in his Win3 pose
+and one battle motion; Banjo's joint 36) and model parts on joints whose
+JointTree entry has no list (Peach's five articles on joint 18, Lanky's
+joints 13 and 18, Dedede's joint 13). Others hide every part and show one
+(`HideModelPartAll`: Crash's spin shows only joint 5's second part, Sonic's
+ball only joint 6). Each changed the live root vector, the owner validator
+refused it (code 3) and the fighter drew nothing: Crash's select-screen
+preview never appeared, Banjo vanished whenever Kazooie showed and Crash and
+Sonic during their spins. `p4_native_owner.py donor_superset` runs every
+motion's scripts (its main script and the parallel ones it starts,
+subroutines in place; `ftMainUpdateHiddenPartID`, `ftParamSetModelPartID`,
+`ftParamHideModelPartAll`, `ftParamResetModelPartAll`), takes the joints
+drawing wherever a script yields a frame, adds every joint that ever draws to
+the owner's canonical vector (a hidden part through setup_parts, a list-less
+joint through the first part that draws it) and emits each other live vector
+as a root program of model-part -1 writes. The generator's generic program
+builder derives their binding parents, cross slots and cache proofs; the
+renderer selects them (`ndsP4RootPrograms`, nds_renderer_assets.c): a program
+matches when every root is its own list or a variant its canonical binding
+owns, and a program root's variant lookup goes through that binding.
+Programs: Peach 1, Crash 2, Dedede 1, Lanky 3, Banjo 4, Sonic 1; none for the
+other eight. `p4_preview_pack.py` read the model-part table for four joints
+fewer than the JointTree has, so Crash's joint 32 and Banjo's joint 36 lists
+were never root cells; fixed.
+
+**Wide dense ids.** With every part of every joint Banjo's owner needs 2,777
+dense vertices (high) and 2,522 (low) and Crash's 2,447 (high), past the
+packed 11-bit id. The generator had dropped variants until each fit, and
+those it dropped declined: Banjo's item-holding hand (35 motions, low) and
+Crash's (52, high). A span's count is its vertex action's own, so an owner
+past 2,047 now keeps a span's whole first id and a raw run's whole corner id
+(`NDS_NATIVE_DENSE_WIDE`); cross-run corners keep 11 bits beside their GX
+slot, and the generator numbers the action blocks they read first
+(`_wide_dense_cross_first`). No variant is dropped now. Banjo's low image
+grows to about 86 KB.
+
+**Shade sites.** A lean packet holds one shade site per lit epoch; Banjo's
+high owner has 70 epochs and Crash's 67, past the packet's 64, which declined
+their high-detail draws as Capacity. 96 now (+640 B a packet; an entry keeps
+3,132 list words against the original cast's largest list, Link's 2,634).
+
+**Select-screen previews.** On the all-content ROM the previews were off
+(four 80 KiB arenas against 305 KB free). A content's preview now loads its
+low-detail pack and low owner image (`ndsP4LowDetailSelect`,
+`ndsRelocPreviewP4LowPack`; the high image is never admitted on the select),
+and its blocks are sized per kind -- pack, image and motion file plus 4 KB
+(`ndsMNPlayersVSPreviewBlockBytes`) -- and placed first-fit in two regions:
+the general heap above a 140 KB floor, and the FGM cue cache's tail, lent
+while the select runs (`ndsAudioFgmLendTail`: 72 KB stays for cues; the
+battle gets its whole 160 KB back). Each slot's animation heap is reserved
+beside its block (24 KB floor for the fighter's objects) and dropped with its
+fighter. The original cast shows four previews; a mix with P4 contents three
+or four; four of the heaviest contents fewer. P4 animation files are
+compacted at generation (`scripts/p4/p4_anim_compact.py`: event16 keys
+re-fit within 2 units, event32 converted, 77c19d0ea07; the image -88 KB).
+
+Open: four of the heaviest contents in one match still run out of memory at
+the countdown (Banjo, Crash, Peach and Dedede: the general heap 532 B short
+at `ifCommonCountdownMakeInterface`); a match with Banjo records 26 native
+failures on Fox's blaster shot (FoxSpecial4 root 0x40, stage domain), which
+the original-cast match does not.
 
 ## Board 1 status (master plan Revision 3)
 

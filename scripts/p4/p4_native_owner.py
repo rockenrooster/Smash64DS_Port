@@ -44,8 +44,84 @@ def load_donor(name: str, export_root: Path) -> dict:
     facts = p4_contents.export_facts(export_root, name)
     DONORS[name] = {"main": facts["main"], "model": facts["model"],
                     "attributes": facts["attributes"],
-                    "script_parts": script_model_parts(export_root / name / "events.json")}
+                    "script_parts": script_model_parts(export_root / name / "events.json"),
+                    "motion_scripts": motion_scripts(export_root / name)}
     return DONORS[name]
+
+
+def motion_scripts(export_dir: Path) -> list[tuple[str, int, tuple[tuple[tuple, ...], ...]]]:
+    """(label, anim-desc word, threads) for each of the donor's main and menu
+    motions. A thread -- the motion's script, then each parallel script it
+    starts -- is its model-part events in run order: ("part", joint, part),
+    ("hide",) for HideModelPartAll, ("reset",) for ResetModelPartAll and
+    ("wait",) where the script yields a frame. A subroutine's commands run at
+    its call, a goto ends its block and a loop runs once; a thrown fighter's
+    script is not this one's."""
+    resolved_path = export_dir / "resolved.json"
+    if not resolved_path.exists():
+        return []
+    resolved = json.loads(resolved_path.read_text(encoding="utf-8"))
+    events_path = export_dir / "events.json"
+    blocks = (json.loads(events_path.read_text(encoding="utf-8"))["blocks"]
+              if events_path.exists() else {})
+
+    def run(block: str, out: list, parallels: list, active: set) -> None:
+        if block not in blocks or block in active:
+            return
+        active.add(block)
+        targets = {"call": [], "goto": [], "parallel": []}
+        for edge in blocks[block].get("edges", ()):
+            if isinstance(edge, dict) and edge.get("kind") in targets:
+                targets[edge["kind"]].append(edge["to"])
+        for command in blocks[block]["commands"]:
+            op = command["op"]
+            if op == "SetModelPartID":
+                word = command["words"][0]
+                part = word & 0x7FFFF
+                if part & 0x40000:
+                    part -= 0x80000
+                out.append(("part", (word >> 19) & 0x7F, part))
+            elif op == "HideModelPartAll":
+                out.append(("hide",))
+            elif op == "ResetModelPartAll":
+                out.append(("reset",))
+            elif op in ("AsyncWait", "SyncWait"):
+                out.append(("wait",))
+            elif op == "Subroutine":
+                if targets["call"]:
+                    run(targets["call"].pop(0), out, parallels, active)
+            elif op == "SetParallelScript":
+                if targets["parallel"]:
+                    parallels.append(targets["parallel"].pop(0))
+            elif op in ("Goto", "RemixGotoMovesetFile"):
+                if targets["goto"]:
+                    run(targets["goto"].pop(0), out, parallels, active)
+                break
+            elif op in ("End", "Return"):
+                break
+        active.discard(block)
+
+    def threads(root: str) -> tuple[tuple[tuple, ...], ...]:
+        result = []
+        pending = [root]
+        started = set()
+        while pending:
+            script = pending.pop(0)
+            if script in started:
+                continue
+            started.add(script)
+            out: list = []
+            run(script, out, pending, set())
+            result.append(tuple(out))
+        return tuple(result)
+
+    rows = []
+    for table, tag in (("motions", "Main"), ("menu_motions", "Sub")):
+        for motion in resolved.get(table, ()):
+            root = motion.get("script_root")
+            rows.append((f"{tag}{motion['index']}", int(motion["anim_flags"]),
+                         threads(root) if root else ()))
+    return rows
 
 
 def script_model_parts(events_path: Path) -> set[tuple[int, int]]:
@@ -197,6 +273,206 @@ def donor_variants(name: str, o2r_dir: Path, main_id: int, model_id: int,
     return result
 
 
+# Hidden parts 0-2 are the TransN/XRotN/YRotN joints (FTHiddenPart kind 3),
+# which never carry a display list.
+HIDDEN_PART_FIRST = 3
+# The anim-desc word's low five bits are flags (FTANIM_FLAG_*); bit 31 - i
+# above them installs hidden part i (ftMainSetStatus).
+ANIM_DESC_FLAG_BITS = 0x1F
+
+# name -> [(program name, model-part -1 writes, motion labels)] (donor_superset).
+PROGRAM_INFO: dict[str, list[tuple[str, tuple, tuple]]] = {}
+
+
+def _hidden_part_ids(word: int) -> list[int]:
+    mask = word & ~ANIM_DESC_FLAG_BITS & 0xFFFFFFFF
+    return [i for i in range(32) if (mask & (1 << (31 - i))) and i >= HIDDEN_PART_FIRST]
+
+
+def donor_superset(name: str, o2r_dir: Path, main_id: int, model_id: int,
+                   attr_offset: int) -> dict:
+    """The joints a donor's motions make draw beyond its setup_parts, and the
+    live root vectors that leaves.
+
+    The original cast carries these as root programs over the setup_parts
+    vector (OWNER_ROOT_PROGRAMS: Ness's yo-yo and bat, Samus's grapple,
+    Yoshi's grab). A donor's come from its own motions: a motion's anim-desc
+    mask installs hidden parts (ftMainUpdateHiddenPartID: the JointTree list,
+    the Low detail taking the High one when its own is NULL) and its
+    SetModelPartID commands change parts (ftParamSetModelPartID: the part's
+    list at the fighter's detail, or the JointTree's for a joint with no part
+    table). Every joint some motion makes draw joins the canonical vector --
+    a hidden part through setup_parts, a list-less joint through the first
+    part that draws it -- so each live vector is the canonical one less some
+    roots: a program of model-part -1 writes, and the joints' other parts are
+    ordinary variants. Banjo's Kazooie (hidden parts 4-10, 55 motions) draws
+    this way, and so do Crash's, Peach's, Lanky's and Dedede's articles."""
+    lay = ft_layout.layout()
+    main = O2RFile(o2r_dir / f"{main_id:04x}")
+    payload = O.load_o2r_payload(REPO, name)
+    states = DONORS[name].get("motion_scripts", [])
+    raw = {d: O._owner_raw_joint_descriptors(payload, name, d)[:-1] for d in ("high", "low")}
+    count = len(raw["high"])
+    selected = set(O._owner_selected_descriptor_indices(name, count))
+    container = main.ptr(attr_offset + lay["FTAttributes.modelparts_container"])
+    hidden_ids = sorted({i for _label, word, _events in states for i in _hidden_part_ids(word)})
+    hidden_rows: dict[int, tuple[int, int, int, int]] = {}
+    if hidden_ids:
+        ref = main.ptr(attr_offset + lay["FTAttributes.hiddenparts"])
+        if ref is None or ref[0] != "intern":
+            raise SystemExit(f"{name}: motions install hidden parts but FTAttributes."
+                             "hiddenparts names no table")
+        for i in hidden_ids:
+            hidden_rows[i] = struct.unpack_from(">iiii", main.data, ref[2] + 16 * i)
+
+    def part_list(joint: int, part: int, detail: str) -> int | None:
+        if part < 0:
+            return None
+        table = None
+        if container is not None and container[0] == "intern":
+            desc = main.ptr(container[2] + 4 * (joint - 4))
+            table = desc[2] if desc is not None and desc[0] == "intern" else None
+        if table is None:
+            return raw[detail][joint - 4][1]
+        ref = main.ptr(table + (part * 2 + (detail == "low")) * 20)
+        if ref is None:
+            return None
+        if ref[0] != "extern" or ref[1] != model_id:
+            # A list in another file (Falco's, Wolf's and Sonic's pistol on
+            # joint 17) draws beside the body: the renderer strips that DObj
+            # from the owner's vector (the gun sidecar).
+            return None
+        if name in O.OWNER_DL_PAIR_MODE:
+            raise SystemExit(f"{name}: a pair-mode donor's part lists are not derived yet")
+        return None if payload[ref[2]] == O.SOURCE_END_DL else ref[2]
+
+    hidden_joints: dict[int, tuple[int, int]] = {}
+    snapshots: list[tuple[str, frozenset, frozenset]] = []
+
+    def simulate(label: str, word: int, events, detail: str) -> list[frozenset]:
+        """The joints drawing wherever the script yields a frame (and at its
+        end): the canonical joints and the mask's hidden parts, then the
+        thread's events."""
+        parts: dict[int, int] = {}
+        lists: dict[int, int | None] = {}
+        for index in selected:
+            lists[index + 4] = raw[detail][index][1]
+            parts[index + 4] = 0 if lists[index + 4] is not None else -1
+        for i in _hidden_part_ids(word):
+            joint, parent, _partindex, kind = hidden_rows[i]
+            if joint < 4:
+                continue
+            if joint - 4 in selected or not (4 <= joint < 4 + count):
+                raise SystemExit(f"{name} {label}: hidden part {i} is joint {joint}")
+            hidden_joints[joint] = (parent, kind)
+            lists[joint] = raw[detail][joint - 4][1]
+            parts[joint] = 0 if lists[joint] is not None else -1
+        base_parts = dict(parts)
+        base_lists = dict(lists)
+        snaps = [frozenset(j for j, dl in lists.items() if dl is not None)]
+        for event in tuple(events) + (("wait",),):
+            if event[0] == "part":
+                _kind, joint, part = event
+                if joint in parts and parts[joint] != part:
+                    parts[joint] = part
+                    lists[joint] = part_list(joint, part, detail)
+            elif event[0] == "hide":
+                for joint in parts:
+                    parts[joint] = -1
+                    lists[joint] = None
+            elif event[0] == "reset":
+                parts.update(base_parts)
+                lists.update(base_lists)
+            else:
+                snaps.append(frozenset(j for j, dl in lists.items() if dl is not None))
+        return snaps
+
+    for label, word, threads in states:
+        # Each thread from the motion's start, and all of them in a row (a
+        # parallel script's writes land on the motion script's).
+        for events in (tuple(threads) or ((),)) + (
+                (tuple(e for t in threads for e in t),) if len(threads) > 1 else ()):
+            per = {d: simulate(label, word, events, d) for d in ("high", "low")}
+            for high, low in dict.fromkeys(zip(per["high"], per["low"])):
+                if high or low:
+                    snapshots.append((label, high, low))
+
+    canonical = {d: frozenset(i + 4 for i in selected if raw[d][i][1] is not None)
+                 for d in ("high", "low")}
+    superset = {d: set(canonical[d]) for d in ("high", "low")}
+    for _label, high, low in snapshots:
+        superset["high"] |= high
+        superset["low"] |= low
+    extra_hidden = sorted(j for j in hidden_joints if j in superset["high"] | superset["low"])
+
+    # The live tree: setup_parts' JointTree walk (lbCommonSetupFighterPartsDObjs:
+    # a joint hangs from the last selected one a level up), then each hidden
+    # part appended as its parent's last child in install order. Its preorder
+    # must be the descriptor order the owner bakes in.
+    children: dict[int, list[int]] = {}
+    active: list[int | None] = [None] * 19
+    for index in sorted(selected | {j - 4 for j in extra_hidden}):
+        depth = raw["high"][index][0]
+        parent = 3 if depth == 0 else (active[depth - 1] + 4 if active[depth - 1] is not None else None)
+        if parent is None:
+            raise SystemExit(f"{name}: joint {index + 4} has no selected parent")
+        if index + 4 in hidden_joints:
+            want, kind = hidden_joints[index + 4]
+            if kind != 0 or want != parent:
+                raise SystemExit(f"{name}: hidden joint {index + 4} hangs from {want} "
+                                 f"(kind {kind}), not the JointTree's {parent}")
+        else:
+            children.setdefault(parent, []).append(index + 4)
+        active[depth] = index
+    for i in hidden_ids:
+        joint = hidden_rows[i][0]
+        if joint in extra_hidden:
+            children.setdefault(hidden_rows[i][1], []).append(joint)
+    order: list[int] = []
+    stack = [4]
+    while stack:
+        joint = stack.pop()
+        order.append(joint)
+        stack.extend(reversed(children.get(joint, [])))
+    union = superset["high"] | superset["low"]
+    if [j for j in order if j in union] != sorted(union):
+        raise SystemExit(f"{name}: live walk {[j for j in order if j in union]} is not "
+                         "the JointTree's descriptor order")
+
+    used_parts: dict[int, set[int]] = {}
+    for _label, _word, threads in states:
+        for events in threads:
+            for event in events:
+                if event[0] == "part" and event[2] >= 0:
+                    used_parts.setdefault(event[1], set()).add(event[2])
+    base: dict[str, dict[int, int]] = {"high": {}, "low": {}}
+    for detail in ("high", "low"):
+        for joint in sorted(superset[detail] - canonical[detail]):
+            if raw[detail][joint - 4][1] is not None:
+                continue
+            drawing = sorted((p for p in used_parts.get(joint, ())
+                              if part_list(joint, p, detail) is not None),
+                             key=lambda p: (p != 0, p))
+            if not drawing:
+                raise SystemExit(f"{name}: joint {joint} draws with no part list at {detail}")
+            base[detail][joint - 4] = part_list(joint, drawing[0], detail)
+
+    programs: dict[frozenset, list[str]] = {}
+    for label, high, low in snapshots:
+        removed = (superset["high"] - high) | (superset["low"] - low)
+        if ((superset["high"] - removed) != high) or ((superset["low"] - removed) != low):
+            raise SystemExit(f"{name} {label}: the details' live vectors differ")
+        if removed:
+            programs.setdefault(frozenset(removed), []).append(label)
+    rows = []
+    for k, (removed, labels) in enumerate(sorted(programs.items(),
+                                                 key=lambda kv: (len(kv[0]), sorted(kv[0])))):
+        rows.append((f"Live{k + 1}", tuple((j, -1) for j in sorted(removed)),
+                     tuple(dict.fromkeys(labels))))
+    return {"setup": [j - 4 for j in extra_hidden], "base": base, "programs": rows,
+            "container": container[2] if container is not None else None}
+
+
 def _o2r_rel(repo: Path, path: Path) -> Path:
     try:
         return path.resolve().relative_to(repo.resolve())
@@ -217,6 +493,24 @@ def register(name: str, o2r_dir: Path, attr_offset: int, pins: dict | None) -> d
     O.OWNER_JOINT_TREES[name] = tuple(tables["trees"][0])
     O.OWNER_JOINT_TREES_LOW[name] = tuple(tables["trees"][1])
     O.OWNER_SETUP_PARTS[name] = tuple(tables["setup"])
+    O.P4_CANONICAL_DISPLAY_OVERRIDES.pop(name, None)
+    superset = donor_superset(name, o2r_dir, spec["main"], spec["model"], attr_offset)
+    if superset["setup"]:
+        words = list(O.OWNER_SETUP_PARTS[name])
+        for index in superset["setup"]:
+            words[index // 32] |= 1 << (31 - (index & 31))
+        O.OWNER_SETUP_PARTS[name] = tuple(words)
+    if superset["base"]["high"] or superset["base"]["low"]:
+        O.P4_CANONICAL_DISPLAY_OVERRIDES[name] = superset["base"]
+    if superset["programs"]:
+        PROGRAM_INFO[name] = superset["programs"]
+        O.OWNER_ROOT_PROGRAMS[name] = tuple((row[0], row[1]) for row in superset["programs"])
+        O.OWNER_ROOT_PROGRAM_SOURCES[name] = (
+            _o2r_rel(REPO, o2r_dir / f"{spec['main']:04x}"), spec["main"], superset["container"])
+    else:
+        PROGRAM_INFO.pop(name, None)
+        O.OWNER_ROOT_PROGRAMS.pop(name, None)
+        O.OWNER_ROOT_PROGRAM_SOURCES.pop(name, None)
     pins = pins or {}
     O.OWNER_PLAN_COUNTS[name] = tuple(pins.get("plan", (0, 0)))
     O.OWNER_CROSS_BINDING_SLOTS[name] = tuple(tuple(x) for x in pins.get("cross_high", ()))
@@ -402,6 +696,10 @@ def emit(out_dir: Path, owners: dict[str, tuple[Path, int]]) -> dict[str, list[P
         guard = f"NDS_P4_{name.upper()}"
         contexts = {d: O.build_p2_owner_runtime_context(REPO, name, d) for d in ("high", "low")}
         _merge_light_preambles(name, contexts["high"], contexts["low"])
+        if name in PROGRAM_INFO:
+            for detail in ("high", "low"):
+                contexts[detail]["root_programs"] = O.build_owner_root_programs(
+                    REPO, contexts[detail])
         header += [f"#if {guard}",
                    f"#define NDS_NATIVE_IMAGE_SLOT_{name.upper()} (NDS_NATIVE_IMAGE_OWNER_SLOTS + {index}u)",
                    f"#define NDS_NATIVE_OWNER_IMAGE_{name.upper()} 1"]
@@ -428,6 +726,7 @@ def emit(out_dir: Path, owners: dict[str, tuple[Path, int]]) -> dict[str, list[P
             macro = f"NDS_P4_NATIVE_{name.upper()}_ROOT_VARIANTS{'_LOW' if detail == 'low' else ''}"
             array = f"sNdsNative{O._owner_title(name)}RootVariants{suffix}" if count else "NULL"
             inc += [f"#define {macro} {array}", f"#define {macro}_COUNT {count}u"]
+        inc += _render_programs(name, contexts)
         inc += [f"#endif  /* {guard} */", ""]
         files = []
         for detail in ("high", "low"):
@@ -449,6 +748,40 @@ def emit(out_dir: Path, owners: dict[str, tuple[Path, int]]) -> dict[str, list[P
     (out_dir / "nds_p4_native_owner.generated.inc").write_text(
         "\n".join(inc), encoding="utf-8", newline="\n")
     return products
+
+
+def _render_programs(name: str, contexts: dict) -> list[str]:
+    """The donor's root programs (donor_superset) for the renderer: the
+    program list, and each program's canonical binding per live root, which
+    keys its roots' model-part variants (the variant rows name canonical
+    bindings; a program's roots after a removed one sit at lower ordinals)."""
+    title = O._owner_title(name)
+    upper = name.upper()
+    programs = {d: contexts[d].get("root_programs", ()) for d in ("high", "low")}
+    if not programs["high"]:
+        return [f"#define NDS_P4_NATIVE_{upper}_PROGRAM_COUNT 0u",
+                f"#define NDS_P4_NATIVE_{upper}_PROGRAMS(X)", ""]
+    names = [p["name"] for p in programs["high"]]
+    if names != [p["name"] for p in programs["low"]]:
+        raise SystemExit(f"{name}: High and Low programs differ")
+    lines = []
+    labels = {row[0]: row[2] for row in PROGRAM_INFO.get(name, ())}
+    for high, low in zip(programs["high"], programs["low"]):
+        if tuple(high["root_joints"]) != tuple(low["root_joints"]):
+            raise SystemExit(f"{name} {high['name']}: High/Low live joints differ "
+                             f"{high['root_joints']} / {low['root_joints']}")
+        shown = labels.get(high["name"], ())
+        lines.append(f"/* {high['name']}: joints {', '.join(map(str, high['root_joints']))}; "
+                     f"{len(shown)} motions ({', '.join(shown[:8])}{', ...' if len(shown) > 8 else ''}). */")
+        for detail, program, suffix in (("high", high, ""), ("low", low, "Low")):
+            rows = ", ".join(f"{b}u" for b in program["root_bindings"])
+            lines.append(f"static const u8 sNdsNative{title}{program['name']}RootBindings{suffix}"
+                         f"[{len(program['root_bindings'])}] = {{ {rows} }};")
+    lines.append(f"#define NDS_P4_NATIVE_{upper}_PROGRAM_COUNT {len(names)}u")
+    lines.append(f"#define NDS_P4_NATIVE_{upper}_PROGRAMS(X) \\")
+    lines += [f"    X({title}, {upper}, {program}) \\" for program in names]
+    lines += ["    /* end */", ""]
+    return lines
 
 
 def load_pins(name: str) -> dict | None:

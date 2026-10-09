@@ -1541,6 +1541,74 @@ static s32 ndsAudioFgmArenaClaim(u32 offset, u32 bytes)
     return best;
 }
 
+/* S15: the VS select plays a handful of cues against the match's 133 KB
+ * pinned peak, and its previews need RAM, so it borrows the arena's tail:
+ * the arena keeps `keep` bytes, every unpinned cue past them is forgotten,
+ * and [keep, end) is the caller's until ndsAudioFgmReclaimTail. NULL (nothing
+ * lent) when a playing or filling cue sits in the tail, or it is lent out. */
+static u32 sNdsAudioFgmTailLent;
+volatile u32 gNdsAudioFgmTailLendCount;
+volatile u32 gNdsAudioFgmTailLendRefusedCount;
+
+void *ndsAudioFgmLendTail(u32 keep, u32 *out_bytes)
+{
+    u32 i;
+
+    if (out_bytes != NULL)
+    {
+        *out_bytes = 0u;
+    }
+    keep = (keep + 31u) & ~31u;
+    if ((sNdsAudioFgmTailLent != 0u) || (keep >= NDS_AUDIO_FGM_CACHE_BYTES))
+    {
+        return NULL;
+    }
+    for (i = 0u; i < NDS_AUDIO_FGM_CACHE_SLOT_COUNT; i++)
+    {
+        const NDSAudioFgmCacheSlot *slot = &sNdsAudioFgmCacheSlots[i];
+
+        if ((slot->data != NULL) && (ndsAudioFgmSlotPinned(slot) != FALSE) &&
+            ((u32)(slot->data - sNdsAudioFgmCache) + slot->capacity > keep))
+        {
+            gNdsAudioFgmTailLendRefusedCount++;
+            return NULL;
+        }
+    }
+    for (i = 0u; i < NDS_AUDIO_FGM_CACHE_SLOT_COUNT; i++)
+    {
+        NDSAudioFgmCacheSlot *slot = &sNdsAudioFgmCacheSlots[i];
+
+        if ((slot->data != NULL) &&
+            ((u32)(slot->data - sNdsAudioFgmCache) + slot->capacity > keep))
+        {
+            memset(slot, 0, sizeof(*slot));
+        }
+    }
+    gNdsAudioFgmArenaLimit = keep;
+    if (sNdsAudioFgmArenaHead > keep)
+    {
+        sNdsAudioFgmArenaHead = 0u;
+    }
+    sNdsAudioFgmTailLent = 1u;
+    gNdsAudioFgmTailLendCount++;
+    if (out_bytes != NULL)
+    {
+        *out_bytes = NDS_AUDIO_FGM_CACHE_BYTES - keep;
+    }
+    return &sNdsAudioFgmCache[keep];
+}
+
+/* The tail is the arena's again; no cue was left pointing into it. */
+void ndsAudioFgmReclaimTail(void)
+{
+    if (sNdsAudioFgmTailLent == 0u)
+    {
+        return;
+    }
+    gNdsAudioFgmArenaLimit = NDS_AUDIO_FGM_CACHE_BYTES;
+    sNdsAudioFgmTailLent = 0u;
+}
+
 /* -> the slot holding or filling this cue, or -1. */
 static s32 ndsAudioFgmCacheAcquire(const NDSAudioFgmPackEntry *entry)
 {

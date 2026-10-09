@@ -14,6 +14,7 @@
 #include <if/interface.h>
 #include <mn/menu.h>
 #include <nds/nds_audio_bgm.h>
+#include <nds/nds_audio_fgm.h>
 #include <nds/nds_preview_pack.h>
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_renderer.h>
@@ -171,6 +172,14 @@ static void ndsCssPreviewSetShown(u32 slot, s32 kind)
 #endif
 }
 
+/* The owner-image detail a preview kind draws: a P4 content its low detail
+ * (ndsP4LowDetailSelect, ftmanager's ndsFTManagerSelectLowDetail), the
+ * original cast its high. A block holds that one image (S15). */
+static u32 ndsCssPreviewKindDetail(s32 kind)
+{
+    return (ndsCssPreviewKindContent(kind) != 0u) ? 1u : 0u;
+}
+
 /* VS preview residency. Native production reuses 1P CSS's compact Main/Model
  * FPC1 packs. Each compact block also owns that preview's two native owner
  * images, so browsing a new fighter cannot permanently raise the scene heap's
@@ -261,6 +270,10 @@ enum {
 typedef struct NDSPlayersVSResidentBlock {
     SYMallocRegion arena;
     void *base;
+    /* The block's bytes: NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES for the raw-tree
+     * profiles; for the compact select, its span of the preview region
+     * (0 with base NULL when it holds none). */
+    u32 bytes;
     s32 fkind;
     u32 refs;
     void *load_cursor;
@@ -309,6 +322,42 @@ static NDSPlayersVSResidentBlock
     sNdsPlayersVSResidentBlocks[NDS_PLAYERS_VS_RESIDENT_BLOCKS];
 static u32 sNdsPlayersVSResidentPoolGeneration;
 static sb32 sNdsPlayersVSResidentPoolsReady;
+#if NDS_PLAYERS_VS_COMPACT_PREVIEW
+/* S15: the compact select carves its four blocks and the four slots' figatree
+ * heaps from one region when they are needed, each sized for the kind it
+ * holds: a P4 content's low-detail closure is 40-120 KB against the original
+ * cast's 25-55 KB, and a content's clips reach 35 KB against 12 KB, so four
+ * fixed 80 KB blocks and four heaps of the largest clip fit neither. What the
+ * select allocates after the region stays free behind it: the door underlay
+ * (31 KB), the UI surface cache (10 KB) and the preview fighters' objects
+ * (four of the original cast left 7 KB of 100 KB, 2026-10-09). */
+#define NDS_PLAYERS_VS_REGION_KEEP_FREE (140u * 1024u)
+#define NDS_PLAYERS_VS_REGION_MIN (64u * 1024u)
+/* Over a block's measured inputs (pack file, owner image, a content's motion
+ * file): the particle bank and registration the source setup adds. Trimmed to
+ * what the load used once it is ready; with 12 KB every block measured 13.6 KB
+ * or more unused at READY (twelve kinds, 2026-10-09). */
+#define NDS_PLAYERS_VS_BLOCK_SLACK (4u * 1024u)
+/* What a preview fighter's objects may still take from the scene heap: a slot
+ * whose fighter would leave less shows none rather than halt the select. */
+#define NDS_PLAYERS_VS_FIGHTER_HEAP_FLOOR (24u * 1024u)
+volatile u32 gNdsPlayersVSPreviewFighterHeapShortCount;
+/* Two ranges: the scene heap's, and the FGM cue arena's tail, lent for the
+ * select's lifetime (ndsAudioFgmLendTail): the select's cues fit in
+ * NDS_PLAYERS_VS_FGM_KEEP, and the match's 133 KB pinned peak gets the arena
+ * back at exit. */
+#define NDS_PLAYERS_VS_REGIONS 2u
+#define NDS_PLAYERS_VS_FGM_KEEP (72u * 1024u)
+static u8 *sNdsPlayersVSRegionBase[NDS_PLAYERS_VS_REGIONS];
+static u32 sNdsPlayersVSRegionBytes[NDS_PLAYERS_VS_REGIONS];
+volatile u32 gNdsPlayersVSPreviewFgmLentBytes;
+static void *sNdsPlayersVSSlotHeapBase[GMCOMMON_PLAYERS_MAX];
+static u32 sNdsPlayersVSSlotHeapBytes[GMCOMMON_PLAYERS_MAX];
+volatile u32 gNdsPlayersVSPreviewRegionBytes;
+volatile u32 gNdsPlayersVSPreviewRegionShortCount;
+volatile u32 gNdsPlayersVSPreviewHeapShortCount;
+volatile u32 gNdsPlayersVSPreviewBlockSlackMin;
+#endif
 static f32 sNdsPlayersVSReleasedRotationY[GMCOMMON_PLAYERS_MAX];
 static NDSPlayersVSPreviewPending
     sNdsPlayersVSPreviewPending[GMCOMMON_PLAYERS_MAX];
@@ -584,10 +633,24 @@ static sb32 ndsMNPlayersVSPreviewPrepareResidentStage(
     }
     if (stage == NDS_PLAYERS_VS_PREPARE_OWNER_HIGH)
     {
+#if NDS_PLAYERS_VS_COMPACT_PREVIEW
+        /* Only the detail the preview draws (ndsCssPreviewKindDetail). */
+        if (ndsCssPreviewKindDetail(fkind) != 0u)
+        {
+            return TRUE;
+        }
+#endif
         return ndsMNPlayersVSPreviewEnsureOwnerImage(fkind, 0u);
     }
     if (stage == NDS_PLAYERS_VS_PREPARE_OWNER_LOW)
     {
+#if NDS_PLAYERS_VS_COMPACT_PREVIEW
+        if (ndsCssPreviewKindDetail(fkind) != 1u)
+        {
+            gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
+            return TRUE;
+        }
+#endif
         if (ndsMNPlayersVSPreviewEnsureOwnerImage(fkind, 1u) == FALSE)
         {
             return FALSE;
@@ -595,6 +658,15 @@ static sb32 ndsMNPlayersVSPreviewPrepareResidentStage(
         gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
         return TRUE;
     }
+#if NDS_P4
+    /* A content's menu clips are not in the select's reserved cache: its
+     * preview reads them when it plays them, into its slot heap, which
+     * ndsMNPlayersVSPreviewEnsureSlotHeap sizes for them (S15). */
+    if (ndsCssPreviewKindContent(fkind) != 0u)
+    {
+        return TRUE;
+    }
+#endif
 
     /* ftManagerMakeFighter gives demo fighters nFTDemoStatusNull before the CSS
      * applies its Selected status. BattleShip maps that to Opening2/submotion 0.
@@ -792,7 +864,8 @@ static sb32 ndsMNPlayersVSPreviewOwnerImagesFit(
         u32 bytes = ndsMNPlayersVSPreviewOwnerImageBytes(fkind, detail);
         uintptr_t aligned;
 
-        if (bytes == 0u)
+        /* The one image the preview draws (ndsCssPreviewKindDetail). */
+        if ((bytes == 0u) || (detail != ndsCssPreviewKindDetail(fkind)))
         {
             continue;
         }
@@ -805,6 +878,294 @@ static sb32 ndsMNPlayersVSPreviewOwnerImagesFit(
         cursor = aligned + (uintptr_t)bytes;
     }
     return TRUE;
+}
+
+/* The bytes a kind's block takes: its pack file (the load takes at most
+ * that), the owner image it draws, a content's motion file (its menu
+ * scripts, ndsFTManagerSetupPreviewFilesP4) and the slack the source setup
+ * adds. The block is trimmed to what the load used once it is ready. */
+#if NDS_P4
+#define NDS_PLAYERS_VS_KIND_MEMO (12u + NDS_P4_CONTENT_LIMIT)
+#else
+#define NDS_PLAYERS_VS_KIND_MEMO 12u
+#endif
+/* Per preview kind for this select: a file size is a NitroFS open. */
+static u32 sNdsPlayersVSBlockBytesMemo[NDS_PLAYERS_VS_KIND_MEMO];
+
+static u32 ndsMNPlayersVSPreviewBlockBytes(s32 fkind)
+{
+    u32 content = ndsCssPreviewKindContent(fkind);
+    u32 memo = (content != 0u) ? (12u + content) : (u32)fkind;
+    u32 bytes;
+
+    if ((memo < NDS_PLAYERS_VS_KIND_MEMO) &&
+        (sNdsPlayersVSBlockBytesMemo[memo] != 0u))
+    {
+        return sNdsPlayersVSBlockBytesMemo[memo];
+    }
+    bytes = ndsRelocPreviewFighterPackBytes(fkind) + 64u;
+    bytes += ndsMNPlayersVSPreviewOwnerImageBytes(
+        fkind, ndsCssPreviewKindDetail(fkind)) + 64u;
+#if NDS_P4
+    if (ndsCssPreviewKindContent(fkind) != 0u)
+    {
+        const FTData *data = ndsCssPreviewKindData(fkind);
+
+        if ((data != NULL) && (data->file_mainmotion_id != 0))
+        {
+            bytes += ndsRelocExternTreeAssetBytes(
+                (u32)(uintptr_t)data->file_mainmotion_id) + 64u;
+        }
+    }
+#endif
+    bytes = (bytes + NDS_PLAYERS_VS_BLOCK_SLACK + 31u) & ~31u;
+    if (memo < NDS_PLAYERS_VS_KIND_MEMO)
+    {
+        sNdsPlayersVSBlockBytesMemo[memo] = bytes;
+    }
+    return bytes;
+}
+
+/* First fit in the preview region around every live block and slot heap,
+ * or NULL. Eight spans at most, so the scan is the allocator. */
+static void *ndsMNPlayersVSRegionTakeIn(u32 range, u32 bytes)
+{
+    uintptr_t lo = (uintptr_t)sNdsPlayersVSRegionBase[range];
+    uintptr_t end = lo + sNdsPlayersVSRegionBytes[range];
+    u32 guard;
+
+    if ((sNdsPlayersVSRegionBase[range] == NULL) || (bytes == 0u))
+    {
+        return NULL;
+    }
+    for (guard = 0u;
+         guard <= NDS_PLAYERS_VS_RESIDENT_BLOCKS + GMCOMMON_PLAYERS_MAX;
+         guard++)
+    {
+        uintptr_t blocked = 0u;
+        u32 i;
+
+        if ((lo > end) || ((uintptr_t)bytes > end - lo))
+        {
+            return NULL;
+        }
+        for (i = 0u; i < NDS_PLAYERS_VS_RESIDENT_BLOCKS; i++)
+        {
+            const NDSPlayersVSResidentBlock *b = &sNdsPlayersVSResidentBlocks[i];
+            uintptr_t s = (uintptr_t)b->base;
+
+            if ((b->base != NULL) && (s < lo + bytes) && (s + b->bytes > lo) &&
+                (s + b->bytes > blocked))
+            {
+                blocked = s + b->bytes;
+            }
+        }
+        for (i = 0u; i < GMCOMMON_PLAYERS_MAX; i++)
+        {
+            uintptr_t s = (uintptr_t)sNdsPlayersVSSlotHeapBase[i];
+            uintptr_t e = s + sNdsPlayersVSSlotHeapBytes[i];
+
+            if ((sNdsPlayersVSSlotHeapBase[i] != NULL) && (s < lo + bytes) &&
+                (e > lo) && (e > blocked))
+            {
+                blocked = e;
+            }
+        }
+        if (blocked == 0u)
+        {
+            return (void *)lo;
+        }
+        lo = (blocked + 31u) & ~(uintptr_t)31u;
+    }
+    return NULL;
+}
+
+/* First fit over the ranges, the scene heap's first. */
+static void *ndsMNPlayersVSRegionTake(u32 bytes)
+{
+    u32 range;
+
+    bytes = (bytes + 31u) & ~31u;
+    for (range = 0u; range < NDS_PLAYERS_VS_REGIONS; range++)
+    {
+        void *base = ndsMNPlayersVSRegionTakeIn(range, bytes);
+
+        if (base != NULL)
+        {
+            return base;
+        }
+    }
+    return NULL;
+}
+
+/* Give a block its span for `fkind`, or FALSE when the region has no gap of
+ * that size now (a cached closure can be retired for one). */
+static sb32 ndsMNPlayersVSPreviewBlockTake(NDSPlayersVSResidentBlock *block,
+                                           s32 fkind)
+{
+    u32 bytes;
+    void *base;
+
+    if (block->base != NULL)
+    {
+        return TRUE;
+    }
+    bytes = ndsMNPlayersVSPreviewBlockBytes(fkind);
+    base = ndsMNPlayersVSRegionTake(bytes);
+    if (base == NULL)
+    {
+        gNdsPlayersVSPreviewRegionShortCount++;
+        return FALSE;
+    }
+    block->base = base;
+    block->bytes = bytes;
+    syMallocInit(&block->arena,
+                 0x43535310u + (u32)(block - sNdsPlayersVSResidentBlocks),
+                 base, bytes);
+    return TRUE;
+}
+
+/* A ready block keeps only what its load used: the rest of the span returns
+ * to the region (nothing allocates into a block after READY). */
+static void ndsMNPlayersVSPreviewBlockTrim(NDSPlayersVSResidentBlock *block)
+{
+    u32 used;
+
+    if ((block->base == NULL) || (block->arena.ptr == NULL))
+    {
+        return;
+    }
+    used = (u32)((u8 *)block->arena.ptr - (u8 *)block->base);
+    used = (used + 31u) & ~31u;
+    if ((block->bytes - used) < gNdsPlayersVSPreviewBlockSlackMin)
+    {
+        gNdsPlayersVSPreviewBlockSlackMin = block->bytes - used;
+    }
+    if (used < block->bytes)
+    {
+        block->bytes = used;
+        block->arena.end = (u8 *)block->base + used;
+    }
+}
+
+/* Return a block's span (after its ranges were released and its arena reset). */
+static void ndsMNPlayersVSPreviewBlockGive(NDSPlayersVSResidentBlock *block)
+{
+    block->base = NULL;
+    block->bytes = 0u;
+}
+
+/* Size `slot`'s figatree heap for the clips its kind plays before the source
+ * remakes its fighter (mnPlayersVSUpdateFighter): FALSE when the region has no
+ * room, and the slot then gets no fighter rather than a heap its clip would
+ * overrun. The fighter it replaces is destroyed before the new one plays
+ * anything, so the old heap's bytes may be reused at once. */
+static sb32 ndsMNPlayersVSPreviewReserveSlotHeap(u32 slot, s32 kind);
+
+static sb32 ndsMNPlayersVSPreviewEnsureSlotHeap(u32 slot)
+{
+    return ndsMNPlayersVSPreviewReserveSlotHeap(
+        slot, sNdsPlayersVSPreviewShownKind[slot]);
+}
+
+/* TRUE when a block holds `fkind`'s closure or is loading it. */
+static sb32 ndsMNPlayersVSPreviewKindHasBlock(s32 fkind)
+{
+    u32 i;
+
+    for (i = 0u; i < NDS_PLAYERS_VS_RESIDENT_BLOCKS; i++)
+    {
+        const NDSPlayersVSResidentBlock *b = &sNdsPlayersVSResidentBlocks[i];
+
+        if ((b->fkind == fkind) ||
+            ((b->load_cursor != NULL) && (b->loading_fkind == fkind)))
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+/* A slot whose fighter was destroyed for a kind change gives its heap back,
+ * and reserves the next kind's before that kind's block is loaded, so four
+ * loading blocks cannot take the bytes the slots then need to play them. */
+static void ndsMNPlayersVSPreviewDropSlotHeap(u32 slot)
+{
+    sNdsPlayersVSSlotHeapBase[slot] = NULL;
+    sNdsPlayersVSSlotHeapBytes[slot] = 0u;
+    sMNPlayersVSSlots[slot].figatree_heap = NULL;
+}
+
+static sb32 ndsMNPlayersVSPreviewReserveSlotHeap(u32 slot, s32 kind)
+{
+    const FTData *data;
+    u32 need;
+    void *base;
+    void *old_base;
+    u32 old_bytes;
+
+    if (ndsCssPreviewKindValid(kind) == FALSE)
+    {
+        return TRUE;
+    }
+    /* The kind's own largest clip for this scene's flags: what
+     * ftManagerAllocFighter (and ndsP4SetupFileSizes for a content) set in
+     * its FTData. The source sized every slot by the largest of all kinds. */
+    data = ndsCssPreviewKindData(kind);
+    need = ((data != NULL) && (data->file_anim_size != 0u)) ?
+        (u32)data->file_anim_size : (u32)gFTManagerFigatreeHeapSize;
+    need = (need + 31u) & ~31u;
+    old_base = sNdsPlayersVSSlotHeapBase[slot];
+    old_bytes = sNdsPlayersVSSlotHeapBytes[slot];
+    if ((old_base != NULL) && (old_bytes >= need))
+    {
+        return TRUE;
+    }
+    /* Beside the old heap first; else over it, which is safe because the
+     * source destroys the old fighter before the new one plays anything. */
+    base = ndsMNPlayersVSRegionTake(need);
+    if (base == NULL)
+    {
+        sNdsPlayersVSSlotHeapBase[slot] = NULL;
+        sNdsPlayersVSSlotHeapBytes[slot] = 0u;
+        base = ndsMNPlayersVSRegionTake(need);
+        if (base == NULL)
+        {
+            sNdsPlayersVSSlotHeapBase[slot] = old_base;
+            sNdsPlayersVSSlotHeapBytes[slot] = old_bytes;
+            gNdsPlayersVSPreviewHeapShortCount++;
+            return FALSE;
+        }
+    }
+    sNdsPlayersVSSlotHeapBase[slot] = base;
+    sNdsPlayersVSSlotHeapBytes[slot] = need;
+    sMNPlayersVSSlots[slot].figatree_heap = base;
+    return TRUE;
+}
+
+/* mnPlayersVSUpdateFighter with the slot's figatree heap sized first (S15).
+ * A slot whose kind the region cannot hold a heap for shows no fighter; its
+ * old one keeps its own heap, hidden. */
+static void ndsMNPlayersVSPreviewUpdateFighter(u32 slot)
+{
+    sb32 room = ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap,
+                                    NDS_PLAYERS_VS_FIGHTER_HEAP_FLOOR, 4u);
+
+    if (room == FALSE)
+    {
+        gNdsPlayersVSPreviewFighterHeapShortCount++;
+    }
+    if ((room == FALSE) || (ndsMNPlayersVSPreviewEnsureSlotHeap(slot) == FALSE))
+    {
+        GObj *fighter_gobj = sMNPlayersVSSlots[slot].player;
+
+        if (fighter_gobj != NULL)
+        {
+            fighter_gobj->flags = GOBJ_FLAG_HIDDEN;
+        }
+        return;
+    }
+    mnPlayersVSUpdateFighter((s32)slot);
 }
 #endif
 
@@ -900,6 +1261,113 @@ static sb32 ndsMNPlayersVSPreviewPoolFail(u32 stage)
     return FALSE;
 }
 
+static void ndsMNPlayersVSPreviewResetResidentLoadState(
+    NDSPlayersVSResidentBlock *block);
+
+#if NDS_PLAYERS_VS_COMPACT_PREVIEW
+/* S15: the shared tree's arena, the reserved row-0 clips, then the preview
+ * region: everything the heap has left but NDS_PLAYERS_VS_REGION_KEEP_FREE.
+ * Blocks and slot heaps take their spans from it as kinds arrive. */
+static sb32 ndsMNPlayersVSPreviewInitResidentPools(void)
+{
+    SYMallocRegion *previous;
+    u32 i;
+
+    if ((sNdsPlayersVSResidentPoolGeneration != gNdsTaskmanHeapGeneration) ||
+        (sNdsPlayersVSSharedResidentBase == NULL))
+    {
+        sNdsPlayersVSRegionBase[0] = NULL;
+        sNdsPlayersVSRegionBytes[0] = 0u;
+        gNdsPlayersVSPreviewRegionBytes = 0u;
+        sNdsPlayersVSResidentPoolGeneration = gNdsTaskmanHeapGeneration;
+        if (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap,
+                                NDS_PLAYERS_VS_SHARED_RESIDENT_BYTES + 0x10u,
+                                0x10u) == FALSE)
+        {
+            sNdsPlayersVSSharedResidentBase = NULL;
+            return ndsMNPlayersVSPreviewPoolFail(1u);
+        }
+        sNdsPlayersVSSharedResidentBase =
+            syTaskmanMalloc(NDS_PLAYERS_VS_SHARED_RESIDENT_BYTES, 0x10u);
+    }
+    if (sNdsPlayersVSSharedResidentBase == NULL)
+    {
+        return ndsMNPlayersVSPreviewPoolFail(1u);
+    }
+    syMallocInit(&sNdsPlayersVSSharedResidentArena, 0x43535300u,
+                 sNdsPlayersVSSharedResidentBase,
+                 NDS_PLAYERS_VS_SHARED_RESIDENT_BYTES);
+    for (i = 0u; i < NDS_PLAYERS_VS_RESIDENT_BLOCKS; i++)
+    {
+        NDSPlayersVSResidentBlock *block = &sNdsPlayersVSResidentBlocks[i];
+
+        block->base = NULL;
+        block->bytes = 0u;
+        block->fkind = nFTKindNull;
+        block->refs = 0u;
+        ndsMNPlayersVSPreviewResetResidentLoadState(block);
+    }
+    for (i = 0u; i < GMCOMMON_PLAYERS_MAX; i++)
+    {
+        sNdsPlayersVSSlotHeapBase[i] = NULL;
+        sNdsPlayersVSSlotHeapBytes[i] = 0u;
+    }
+    for (i = 0u; i < NDS_PLAYERS_VS_KIND_MEMO; i++)
+    {
+        sNdsPlayersVSBlockBytesMemo[i] = 0u;
+    }
+
+    previous = ndsTaskmanSwapMallocRegion(&sNdsPlayersVSSharedResidentArena);
+    for (i = 0u; i < ARRAY_COUNT(sNdsPlayersVSSharedResidentAssetIDs); i++)
+    {
+        if (ndsRelocLoadExternTreeAssetID(
+                sNdsPlayersVSSharedResidentAssetIDs[i]) == FALSE)
+        {
+            ndsTaskmanSwapMallocRegion(previous);
+            ndsRelocReleaseHeapRange(sNdsPlayersVSSharedResidentBase,
+                                     NDS_PLAYERS_VS_SHARED_RESIDENT_BYTES);
+            syMallocReset(&sNdsPlayersVSSharedResidentArena);
+            return ndsMNPlayersVSPreviewPoolFail(3u);
+        }
+    }
+    ndsTaskmanSwapMallocRegion(previous);
+    /* Reserve every original-cast row-0 clip before the first lazy per-kind
+     * acquisition can run; the cache sizer uses immutable source descriptors
+     * and the same payload provider as the actual warm loader. */
+    if (ndsR2AnimCacheReserveCSSWorkingSet() == FALSE)
+    {
+        return ndsMNPlayersVSPreviewPoolFail(4u);
+    }
+    if (sNdsPlayersVSRegionBase[0] == NULL)
+    {
+        u32 free_bytes = (u32)((uintptr_t)gSYTaskmanGeneralHeap.end -
+                               (uintptr_t)gSYTaskmanGeneralHeap.ptr);
+        u32 bytes;
+
+        if (free_bytes < (NDS_PLAYERS_VS_REGION_KEEP_FREE +
+                          NDS_PLAYERS_VS_REGION_MIN + 0x40u))
+        {
+            return ndsMNPlayersVSPreviewPoolFail(5u);
+        }
+        bytes = (free_bytes - NDS_PLAYERS_VS_REGION_KEEP_FREE - 0x40u) & ~31u;
+        sNdsPlayersVSRegionBase[0] = syTaskmanMalloc(bytes, 0x20u);
+        sNdsPlayersVSRegionBytes[0] = bytes;
+        gNdsPlayersVSPreviewRegionBytes = bytes;
+    }
+    if (sNdsPlayersVSRegionBase[1] == NULL)
+    {
+        u32 lent = 0u;
+
+        sNdsPlayersVSRegionBase[1] =
+            ndsAudioFgmLendTail(NDS_PLAYERS_VS_FGM_KEEP, &lent);
+        sNdsPlayersVSRegionBytes[1] = (sNdsPlayersVSRegionBase[1] != NULL) ?
+            (lent & ~31u) : 0u;
+        gNdsPlayersVSPreviewFgmLentBytes = sNdsPlayersVSRegionBytes[1];
+    }
+    gNdsPlayersVSPreviewBlockSlackMin = 0xFFFFFFFFu;
+    return TRUE;
+}
+#else
 static sb32 ndsMNPlayersVSPreviewInitResidentPools(void)
 {
     SYMallocRegion *previous;
@@ -955,6 +1423,7 @@ static sb32 ndsMNPlayersVSPreviewInitResidentPools(void)
         syMallocInit(&sNdsPlayersVSResidentBlocks[i].arena, 0x43535310u + i,
                      sNdsPlayersVSResidentBlocks[i].base,
                      NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
+        sNdsPlayersVSResidentBlocks[i].bytes = NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES;
         sNdsPlayersVSResidentBlocks[i].fkind = nFTKindNull;
         sNdsPlayersVSResidentBlocks[i].refs = 0u;
         sNdsPlayersVSResidentBlocks[i].load_cursor = NULL;
@@ -991,6 +1460,7 @@ static sb32 ndsMNPlayersVSPreviewInitResidentPools(void)
     }
     return TRUE;
 }
+#endif
 
 static void ndsMNPlayersVSPreviewResetResidentLoadState(
     NDSPlayersVSResidentBlock *block)
@@ -1032,7 +1502,7 @@ static sb32 ndsMNPlayersVSPreviewCancelResidentLoad(
     ndsMNPlayersClearPreviewFighterFiles(fkind);
     ndsRelocReleasePreviewFighter(fkind);
     ndsRendererNativeReleaseOwnerImagesInRange(
-        block->base, NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
+        block->base, block->bytes);
     /* The owner-image release above clears one alias into these bytes; the
      * hardware texture cache is the other, and it was being left behind. Its
      * keys are image POINTERS compared by memcmp, so an entry built from this
@@ -1043,9 +1513,12 @@ static sb32 ndsMNPlayersVSPreviewCancelResidentLoad(
      * the only screen drawing four fighters with no pinned corpus, needs a
      * takeable victim among. Every site that frees this range does it. */
     (void)ndsRendererHardwareReleaseTexturesInRange(
-        block->base, NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
-    ndsRelocReleaseHeapRange(block->base, NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
+        block->base, block->bytes);
+    ndsRelocReleaseHeapRange(block->base, block->bytes);
     syMallocReset(&block->arena);
+#if NDS_PLAYERS_VS_COMPACT_PREVIEW
+    ndsMNPlayersVSPreviewBlockGive(block);
+#endif
     ndsMNPlayersVSPreviewResetResidentLoadState(block);
     gNdsPlayersVSPreviewAcquireLoadFinishCount++;
     return TRUE;
@@ -1172,7 +1645,7 @@ static sb32 ndsMNPlayersVSPreviewRetireResidentBlock(
     ndsMNPlayersClearPreviewFighterFiles(fkind);
     ndsRelocReleasePreviewFighter(fkind);
     ndsRendererNativeReleaseOwnerImagesInRange(
-        block->base, NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
+        block->base, block->bytes);
     /* The owner-image release above clears one alias into these bytes; the
      * hardware texture cache is the other, and it was being left behind. Its
      * keys are image POINTERS compared by memcmp, so an entry built from this
@@ -1183,9 +1656,12 @@ static sb32 ndsMNPlayersVSPreviewRetireResidentBlock(
      * the only screen drawing four fighters with no pinned corpus, needs a
      * takeable victim among. Every site that frees this range does it. */
     (void)ndsRendererHardwareReleaseTexturesInRange(
-        block->base, NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
-    ndsRelocReleaseHeapRange(block->base, NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
+        block->base, block->bytes);
+    ndsRelocReleaseHeapRange(block->base, block->bytes);
     syMallocReset(&block->arena);
+#if NDS_PLAYERS_VS_COMPACT_PREVIEW
+    ndsMNPlayersVSPreviewBlockGive(block);
+#endif
     block->fkind = nFTKindNull;
     gNdsPlayersVSPreviewResidentReadyMask &= ~ndsCssPreviewKindBit(fkind);
     gNdsPlayersVSPreviewReleaseRetireCount++;
@@ -1211,7 +1687,7 @@ static void ndsMNPlayersVSPreviewAbandonCompactLoad(
     ndsMNPlayersClearPreviewFighterFiles(fkind);
     ndsRelocReleasePreviewFighter(fkind);
     ndsRendererNativeReleaseOwnerImagesInRange(
-        block->base, NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
+        block->base, block->bytes);
     /* The owner-image release above clears one alias into these bytes; the
      * hardware texture cache is the other, and it was being left behind. Its
      * keys are image POINTERS compared by memcmp, so an entry built from this
@@ -1222,9 +1698,10 @@ static void ndsMNPlayersVSPreviewAbandonCompactLoad(
      * the only screen drawing four fighters with no pinned corpus, needs a
      * takeable victim among. Every site that frees this range does it. */
     (void)ndsRendererHardwareReleaseTexturesInRange(
-        block->base, NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
-    ndsRelocReleaseHeapRange(block->base, NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
+        block->base, block->bytes);
+    ndsRelocReleaseHeapRange(block->base, block->bytes);
     syMallocReset(&block->arena);
+    ndsMNPlayersVSPreviewBlockGive(block);
     ndsMNPlayersVSPreviewResetResidentLoadState(block);
 }
 
@@ -1263,6 +1740,13 @@ ndsMNPlayersVSPreviewServiceCompactLoad(NDSPlayersVSResidentBlock *block,
             gNdsPlayersVSPreviewAcquireRetryCount++;
             return nNDSPlayersVSResidentAcquireRetry;
         }
+        /* The block's span, sized for this kind (S15); the caller retires a
+         * cached closure to make room when the region has none. */
+        if (ndsMNPlayersVSPreviewBlockTake(block, fkind) == FALSE)
+        {
+            gNdsPlayersVSPreviewAcquireRetryCount++;
+            return nNDSPlayersVSResidentAcquireRetry;
+        }
         sNdsPlayersVSPreviewResidencyActionBudget--;
         data = ndsCssPreviewKindData(fkind);
         gNdsPlayersVSPreviewAcquireLoadCount++;
@@ -1274,8 +1758,9 @@ ndsMNPlayersVSPreviewServiceCompactLoad(NDSPlayersVSResidentBlock *block,
         if (block->load_cursor == NULL)
         {
             ndsRelocReleaseHeapRange(block->base,
-                                     NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
+                                     block->bytes);
             syMallocReset(&block->arena);
+            ndsMNPlayersVSPreviewBlockGive(block);
             ndsMNPlayersVSPreviewResetResidentLoadState(block);
             ndsMNPlayersVSPreviewMarkPermanentFailure(fkind);
             gNdsPlayersVSPreviewAcquireFailCount++;
@@ -1478,6 +1963,7 @@ ndsMNPlayersVSPreviewServiceCompactLoad(NDSPlayersVSResidentBlock *block,
      * can ever draw a half-relocated preview. */
     block->fkind = fkind;
     block->refs = 1u;
+    ndsMNPlayersVSPreviewBlockTrim(block);
     ndsMNPlayersVSPreviewResetResidentLoadState(block);
     gNdsPlayersVSPreviewAcquireLoadFinishCount++;
     return nNDSPlayersVSResidentAcquireReady;
@@ -1593,9 +2079,27 @@ ndsMNPlayersVSPreviewAcquireResidentKind(s32 fkind)
 #if NDS_PLAYERS_VS_COMPACT_PREVIEW
     /* Native CSS only needs Main/Model plus the row-0/Selected animations that
      * the preparation stages warm explicitly. Keep the compact pack and its
-     * owner-image pair in this resettable block; the animation cache has its
-     * own pre-reserved arena. Retirement invalidates those image bindings before
-     * the block is reused, so browsing history cannot accumulate arena bytes. */
+     * owner image in this resettable block; the animation cache has its own
+     * pre-reserved arena. Retirement invalidates those image bindings before
+     * the block is reused, so browsing history cannot accumulate arena bytes.
+     * S15: a free block takes its span from the preview region; when the
+     * region has no gap that large, a cached closure is retired for one. */
+    if ((block->base == NULL) && (block->load_cursor == NULL) &&
+        (victim != NULL) &&
+        (ndsMNPlayersVSRegionTake(ndsMNPlayersVSPreviewBlockBytes(fkind)) ==
+         NULL))
+    {
+        if (sNdsPlayersVSPreviewResidencyActionBudget == 0u)
+        {
+            gNdsPlayersVSPreviewAcquireRetryCount++;
+            return nNDSPlayersVSResidentAcquireRetry;
+        }
+        sNdsPlayersVSPreviewResidencyActionBudget--;
+        (void)ndsMNPlayersVSPreviewRetireResidentBlock(
+            victim, nNDSPlayersVSResidentRetireReuse);
+        gNdsPlayersVSPreviewAcquireRetryCount++;
+        return nNDSPlayersVSResidentAcquireRetry;
+    }
     return ndsMNPlayersVSPreviewServiceCompactLoad(block, fkind);
 #else
     if (sNdsPlayersVSPreviewResidencyActionBudget == 0u)
@@ -1620,7 +2124,7 @@ ndsMNPlayersVSPreviewAcquireResidentKind(s32 fkind)
         if (block->load_cursor == NULL)
         {
             ndsRelocReleaseHeapRange(block->base,
-                                     NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
+                                     block->bytes);
             syMallocReset(&block->arena);
             ndsMNPlayersVSPreviewResetResidentLoadState(block);
             ndsMNPlayersVSPreviewMarkPermanentFailure(fkind);
@@ -1927,8 +2431,14 @@ void ndsMNPlayersVSPreviewInit(void)
     for (i = 0; i < ARRAY_COUNT(sMNPlayersVSSlots); i++)
     {
         sMNPlayersVSSlots[i].player = NULL;
+#if NDS_PLAYERS_VS_COMPACT_PREVIEW
+        /* From the preview region, sized for the kind the slot shows, before
+         * its fighter is made (ndsMNPlayersVSPreviewEnsureSlotHeap). */
+        sMNPlayersVSSlots[i].figatree_heap = NULL;
+#else
         sMNPlayersVSSlots[i].figatree_heap =
             syTaskmanMalloc(gFTManagerFigatreeHeapSize, 0x10);
+#endif
         sMNPlayersVSSlots[i].pkind = nFTPlayerKindNot;
         sMNPlayersVSSlots[i].fkind = nFTKindNull;
         sMNPlayersVSSlots[i].costume = 0;
@@ -2086,7 +2596,11 @@ static void ndsMNPlayersVSPreviewRebuildChangedKind(u32 slot, s32 pkind,
     sMNPlayersVSSlots[slot].is_fighter_selected = is_selected;
 
     payload_before = gNdsRelocAssetPayloadReadCount;
+#if NDS_PLAYERS_VS_COMPACT_PREVIEW
+    ndsMNPlayersVSPreviewUpdateFighter(slot);
+#else
     mnPlayersVSUpdateFighter((s32)slot);
+#endif
     payload_delta = gNdsRelocAssetPayloadReadCount - payload_before;
     gNdsPlayersVSPreviewRebuildCount++;
     gNdsPlayersVSPreviewRebuildPayloadReadCount += payload_delta;
@@ -2264,9 +2778,23 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
     {
         if (fkind == pending->fkind)
         {
+#if NDS_PLAYERS_VS_COMPACT_PREVIEW
+            if (ndsMNPlayersVSPreviewReserveSlotHeap(slot, fkind) == FALSE)
+            {
+                return;
+            }
+#endif
             acquire_result = ndsMNPlayersVSPreviewAcquireResidentKind(fkind);
             if (acquire_result == nNDSPlayersVSResidentAcquireRetry)
             {
+#if NDS_PLAYERS_VS_COMPACT_PREVIEW
+                /* A slot whose block found no room holds no heap while it
+                 * waits, so the slots after it can still fit theirs. */
+                if (ndsMNPlayersVSPreviewKindHasBlock(fkind) == FALSE)
+                {
+                    ndsMNPlayersVSPreviewDropSlotHeap(slot);
+                }
+#endif
                 return;
             }
             pending->acquire_pending = FALSE;
@@ -2336,7 +2864,11 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
                 u32 payload_before = gNdsRelocAssetPayloadReadCount;
                 u32 payload_delta;
 
+#if NDS_PLAYERS_VS_COMPACT_PREVIEW
+                ndsMNPlayersVSPreviewUpdateFighter(slot);
+#else
                 mnPlayersVSUpdateFighter((s32)slot);
+#endif
                 payload_delta =
                     gNdsRelocAssetPayloadReadCount - payload_before;
                 gNdsPlayersVSPreviewRebuildCount++;
@@ -2413,6 +2945,9 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
         ftManagerDestroyFighter(fighter_gobj);
         sMNPlayersVSSlots[slot].player = NULL;
     }
+#if NDS_PLAYERS_VS_COMPACT_PREVIEW
+    ndsMNPlayersVSPreviewDropSlotHeap(slot);
+#endif
     if (ndsCssPreviewKindValid(old_fkind) != FALSE)
     {
         gNdsPlayersVSPreviewReleaseCount++;
@@ -2441,7 +2976,11 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
     /* Initial CSS construction is already a load frame and precedes BGM. Keep
      * its previous behavior; live kind changes always take the staged return
      * above and resume here on a later tic. */
-    if (initial_request != FALSE)
+    if ((initial_request != FALSE)
+#if NDS_PLAYERS_VS_COMPACT_PREVIEW
+        && (ndsMNPlayersVSPreviewReserveSlotHeap(slot, fkind) != FALSE)
+#endif
+        )
     {
         acquire_result = ndsMNPlayersVSPreviewAcquireResidentKind(fkind);
         if (acquire_result == nNDSPlayersVSResidentAcquireReady)
@@ -2456,6 +2995,12 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
             pending->acquire_pending = FALSE;
             return;
         }
+#if NDS_PLAYERS_VS_COMPACT_PREVIEW
+        if (ndsMNPlayersVSPreviewKindHasBlock(fkind) == FALSE)
+        {
+            ndsMNPlayersVSPreviewDropSlotHeap(slot);
+        }
+#endif
     }
     pending->acquire_pending = TRUE;
 }
@@ -2741,6 +3286,24 @@ void ndsMNPlayersVSPreviewExit(void)
         (void)ndsMNPlayersVSPreviewRetireResidentBlock(
             block, nNDSPlayersVSResidentRetireExit);
     }
+#if NDS_PLAYERS_VS_COMPACT_PREVIEW
+    /* The fighters that played from the slot heaps are destroyed above. */
+    for (slot = 0u; slot < GMCOMMON_PLAYERS_MAX; slot++)
+    {
+        sNdsPlayersVSSlotHeapBase[slot] = NULL;
+        sNdsPlayersVSSlotHeapBytes[slot] = 0u;
+        sMNPlayersVSSlots[slot].figatree_heap = NULL;
+    }
+    /* Every block in the cue arena's tail is retired: the match gets it back. */
+    if (sNdsPlayersVSRegionBase[1] != NULL)
+    {
+        sNdsPlayersVSRegionBase[1] = NULL;
+        sNdsPlayersVSRegionBytes[1] = 0u;
+        ndsAudioFgmReclaimTail();
+    }
+    sNdsPlayersVSRegionBase[0] = NULL;
+    sNdsPlayersVSRegionBytes[0] = 0u;
+#endif
     if ((sNdsPlayersVSResidentPoolsReady != FALSE) &&
         (sNdsPlayersVSSharedResidentBase != NULL))
     {

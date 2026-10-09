@@ -318,6 +318,10 @@ def _owner_title(owner_name: str) -> str:
 # display list is only G_ENDDL draws and loads nothing, exactly like a joint
 # without one, and is decoded as one.
 P4_DONOR_OWNERS: set[str] = set()
+# P4 donor owner -> detail -> JointTree descriptor index -> display list offset
+# for a joint the JointTree leaves blank but the donor's motions draw (a model
+# part on a selected joint, or a hidden part's). Registered with the donor.
+P4_CANONICAL_DISPLAY_OVERRIDES: dict[str, dict[str, dict[int, int]]] = {}
 
 P2_O2R_ASSETS = {
     **O2R_ASSETS,
@@ -1270,6 +1274,12 @@ def _owner_raw_joint_descriptors(
             )
             if high_reloc_pointer != 0:
                 display_offset = (high_reloc_pointer & 0xffff) * 4
+        if display_offset is None:
+            # A P4 donor's joint that draws only through a model part its
+            # motions set (scripts/p4/p4_native_owner.py donor_superset): the
+            # owner bakes that part as the joint's canonical list.
+            display_offset = P4_CANONICAL_DISPLAY_OVERRIDES.get(
+                owner_name, {}).get(detail, {}).get(descriptor_index)
         if display_offset is not None and display_offset >= len(payload):
             raise ValueError(
                 f"{owner_name} JointTree entry {descriptor_index}: "
@@ -3911,6 +3921,12 @@ def _verify_owner_modelpart_resolver(
             continue
         resolved = _owner_modelpart_display_offset(
             main_payload, container_offset, descriptor_index + 4, 0, detail)
+        if (resolved != display_offset) and (owner_name in P4_DONOR_OWNERS):
+            # A donor's part 0 need not be its JointTree list (Peach's joint
+            # 17): the joint starts at part 0 with the JointTree's, so
+            # SetModelPartID(17, 0) is a no-op there. The matches still pair
+            # Main with this model.
+            continue
         if resolved != display_offset:
             raise ValueError(
                 f"{owner_name} {detail} descriptor {descriptor_index}: "
@@ -4553,7 +4569,13 @@ def decode_joint_topology(
         cross_slots[binding] = palette_slot
 
     expected_store_count = DETAIL_GX_PLAN_COUNTS[detail][owner_name][3]
-    if len(physical_slots) != expected_store_count:
+    if ((owner_name in P4_DONOR_OWNERS) and (descriptor_overrides is not None)
+            and (len(physical_slots) <= expected_store_count)):
+        # A donor's program drops roots from its canonical vector
+        # (p4_native_owner.py donor_superset): a cross binding whose roots
+        # are absent stores nothing.
+        pass
+    elif len(physical_slots) != expected_store_count:
         raise ValueError(
             f"{owner_name} {detail} GX store count {len(physical_slots)} != "
             f"{expected_store_count}"
@@ -4837,6 +4859,13 @@ def build_dense_geometry(
     if not (len(runs) == len(run_owners) == len(run_root_bindings) ==
             len(run_binding_sets)):
         raise ValueError("run metadata cardinality mismatch")
+    if ((len(dense_vertices) >= PACKED_DENSE_ID_LIMIT) and owners and
+            all(owner_name in P4_DONOR_OWNERS for owner_name, _ in owners)):
+        (dense_vertices, dense_color_sources, dense_owners, dense_corners,
+         action_dense_first) = _wide_dense_cross_first(
+            vertex, runs, run_first_corner, dense_vertices,
+            dense_color_sources, dense_owners, dense_corners,
+            action_dense_first)
     return (
         dense_vertices,
         dense_color_sources,
@@ -4848,6 +4877,83 @@ def build_dense_geometry(
         run_root_bindings,
         run_binding_sets,
     )
+
+
+def _wide_dense_cross_first(vertex, runs, run_first_corner, dense_vertices,
+                            dense_color_sources, dense_owners, dense_corners,
+                            action_dense_first):
+    """Renumber a wide owner's dense IDs so every cross-run corner's sits
+    below PACKED_DENSE_ID_LIMIT (its corner packs the ID beside a GX slot).
+
+    Whole vertex-action blocks move, so each span stays contiguous: first the
+    blocks cross runs read and, transitively, the blocks their colour sources
+    name, in source order; then the rest in source order. A colour source
+    therefore still precedes the vertex that names it."""
+    blocks = []
+    action_of = [None] * len(dense_vertices)
+    for action_index, action in enumerate(vertex):
+        count = action[3] if action[0] == 0 else 1
+        first = action_dense_first[action_index]
+        for dense_id in range(first, first + count):
+            if action_of[dense_id] is not None:
+                raise ValueError(f"dense vertex {dense_id} is in two action blocks")
+            action_of[dense_id] = action_index
+        blocks.append((first, count))
+    if any(owner is None for owner in action_of):
+        raise ValueError("a dense vertex is outside every action block")
+    moved = set()
+    for run_index, run in enumerate(runs):
+        if run[2] != 1:
+            continue
+        corner_first = run_first_corner[run_index]
+        for offset in range(run[1] * 3):
+            moved.add(action_of[dense_corners[corner_first + offset]])
+    stack = list(moved)
+    while stack:
+        first, count = blocks[stack.pop()]
+        for dense_id in range(first, first + count):
+            source = action_of[dense_color_sources[dense_id]]
+            if source not in moved:
+                moved.add(source)
+                stack.append(source)
+    order = (sorted(moved, key=lambda a: blocks[a][0]) +
+             sorted((a for a in range(len(vertex)) if a not in moved),
+                    key=lambda a: blocks[a][0]))
+    new_id = [0] * len(dense_vertices)
+    new_first = [0] * len(vertex)
+    next_id = 0
+    for action_index in order:
+        first, count = blocks[action_index]
+        new_first[action_index] = next_id
+        for offset in range(count):
+            new_id[first + offset] = next_id + offset
+        next_id += count
+    old_of = [0] * len(dense_vertices)
+    for old, new in enumerate(new_id):
+        old_of[new] = old
+    corners = [new_id[dense_id] for dense_id in dense_corners]
+    for run_index, run in enumerate(runs):
+        if run[2] != 1:
+            continue
+        corner_first = run_first_corner[run_index]
+        for offset in range(run[1] * 3):
+            if corners[corner_first + offset] >= PACKED_DENSE_ID_LIMIT:
+                raise ValueError(
+                    f"cross run {run_index}: its dense vertices need more "
+                    f"than the {PACKED_DENSE_ID_LIMIT} packed cross IDs")
+    return (
+        [dense_vertices[old] for old in old_of],
+        [new_id[dense_color_sources[old]] for old in old_of],
+        [dense_owners[old] for old in old_of],
+        corners,
+        new_first,
+    )
+
+
+def _corner_dense_id(packed: int, submit_class: int) -> int:
+    """A packed corner's dense ID: a cross run's packs an 11-bit ID beside
+    its GX slot; a raw run's is the whole ID (wide owners exceed 11 bits)."""
+    return packed & (PACKED_DENSE_ID_LIMIT - 1) if submit_class == 1 else packed
 
 
 def build_direct_dense_tables(
@@ -4867,9 +4973,20 @@ def build_direct_dense_tables(
         raise ValueError(
             "direct-table owner names do not match cross-slot table count"
         )
-    if len(dense_vertices) >= PACKED_DENSE_ID_LIMIT:
+    # Wide dense IDs (NDS_NATIVE_DENSE_WIDE, nds_renderer_assets.c): an owner
+    # with PACKED_DENSE_ID_LIMIT dense vertices or more keeps a span's whole
+    # first ID in its u16 (the runtime takes the count from the action) and a
+    # raw run's whole ID in its corner; a cross run's corner still packs an
+    # 11-bit ID beside its GX slot. Only P4 donors, whose canonical vector
+    # carries every joint their motions draw and every part, reach it.
+    wide = len(dense_vertices) >= PACKED_DENSE_ID_LIMIT
+    if wide and not all(name in P4_DONOR_OWNERS for name in owner_names):
         raise ValueError(
             f"{len(dense_vertices)} dense IDs exceed the 11-bit direct ABI"
+        )
+    if len(dense_vertices) > 0xffff:
+        raise ValueError(
+            f"{len(dense_vertices)} dense IDs exceed the wide u16 ABI"
         )
     action_dense_spans = []
     for action_index, action in enumerate(vertex):
@@ -4877,13 +4994,14 @@ def build_direct_dense_tables(
         dense_count = count if kind == 0 else 1
         dense_first = action_dense_first[action_index]
         if ((dense_count == 0) or (dense_count > 31) or
-                (dense_first >= PACKED_DENSE_ID_LIMIT) or
+                ((dense_first >= PACKED_DENSE_ID_LIMIT) and not wide) or
                 ((dense_first + dense_count) > len(dense_vertices))):
             raise ValueError(
                 f"vertex action {action_index}: dense span does not fit "
                 "the packed direct ABI"
             )
         action_dense_spans.append(
+            dense_first if wide else
             dense_first | (dense_count << PACKED_DENSE_ID_BITS))
 
     packed_corners = []
@@ -4927,7 +5045,8 @@ def build_direct_dense_tables(
         seen = set()
         for dense_id in dense_corners[
                 corner_first:corner_first + corner_count]:
-            if dense_id >= PACKED_DENSE_ID_LIMIT:
+            if ((dense_id >= PACKED_DENSE_ID_LIMIT) and
+                    ((submit_class != 0) or not wide)):
                 raise ValueError(
                     f"run {run_index}: dense ID {dense_id} is not packable"
                 )
@@ -5011,7 +5130,7 @@ def build_direct_dense_tables(
                 )
     for dense_id, color_source in enumerate(dense_color_sources):
         if ((color_source > dense_id) or
-                (color_source >= PACKED_DENSE_ID_LIMIT)):
+                ((color_source >= PACKED_DENSE_ID_LIMIT) and not wide)):
             raise ValueError(
                 f"dense vertex {dense_id}: invalid color source {color_source}"
             )
@@ -5073,8 +5192,8 @@ def build_ds_coverage_gx_positions(
         for triangle_index in range(triangle_count):
             corner = first_corner + triangle_index * 3
             yield tuple(
-                packed_corners[corner + vertex_index] &
-                (PACKED_DENSE_ID_LIMIT - 1)
+                _corner_dense_id(packed_corners[corner + vertex_index],
+                                 runs[run_index][2])
                 for vertex_index in range(3)
             )
 
@@ -5421,8 +5540,9 @@ def build_packed_fifo_owner_plan(
 
                 for corner_offset in range(run_corner_count):
                     packed = packed_corners[run_corner_first + corner_offset]
-                    dense_id = packed & (PACKED_DENSE_ID_LIMIT - 1)
-                    palette_slot = packed >> PACKED_DENSE_ID_BITS
+                    dense_id = _corner_dense_id(packed, submit_class)
+                    palette_slot = (packed >> PACKED_DENSE_ID_BITS
+                                    if submit_class == 1 else 0)
                     if dense_id >= len(dense_vertices):
                         raise ValueError(
                             f"{owner_name} run {run_index}: dense ID "
@@ -5628,7 +5748,8 @@ def _run_triangles(runs, run_index, packed_corners, run_first_corner):
     tris = []
     for t in range(count):
         base = c0 + t * 3
-        tris.append(tuple(packed_corners[base + k] & (PACKED_DENSE_ID_LIMIT - 1) for k in range(3)))
+        tris.append(tuple(_corner_dense_id(packed_corners[base + k], _submit_class)
+                          for k in range(3)))
     return tris
 
 
@@ -7719,7 +7840,10 @@ def _derive_owner_root_program_cross_slots(
     if plan is not None:
         store_count = sum(slot <= 30 for slot in slots)
         expected_store_count = plan[3]
-        if store_count != expected_store_count:
+        if (owner_name in P4_DONOR_OWNERS) and (store_count <= expected_store_count):
+            # A donor program is its canonical vector less some roots.
+            pass
+        elif store_count != expected_store_count:
             raise ValueError(
                 f"{owner_name} {detail} {program_name}: GX store count "
                 f"{store_count} != {expected_store_count}")
