@@ -7956,6 +7956,7 @@ $$(NDS_P4_GEN)/$(1)/nds_p4_$(1).generated.c: $$(NDS_P4_EXPORT)/$(1)/resolved.jso
 		$$(PROJECT_ROOT)/scripts/p4/ft_layout.py $$(PROJECT_ROOT)/scripts/menus/generate_battle_hud.py \
 		$$(PROJECT_ROOT)/scripts/p4/contents.json $$(NDS_P4_LAB_FALLBACK_STAMP) \
 		$$(PROJECT_ROOT)/scripts/p4/p4_shield_pose.py $$(PROJECT_ROOT)/scripts/p4/p4_articles.py \
+		$$(PROJECT_ROOT)/scripts/p4/p4_anim_compact.py \
 		$$(PROJECT_ROOT)/scripts/fighters/generate_nds_shield_pose_pack.py
 	python "$$(PROJECT_ROOT)/scripts/p4/generate_p4_fighter.py" --staging "$$(NDS_P4_STAGING)" \
 		--export "$$(NDS_P4_EXPORT)/$(1)" --out "$$(NDS_P4_GEN)/$(1)" \

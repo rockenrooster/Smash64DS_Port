@@ -729,6 +729,61 @@ void ndsPlatformInit(void)
 #endif
 }
 
+/* libnds's text console is the image's only siscanf caller: its escape parser
+ * reads "[%dA" through "[%d;%df" (console.c). newlib's siscanf links the whole
+ * scanf engine and the wide-character class tables, about 25 KB of .main;
+ * this one reads what the console asks for -- literal characters and %d --
+ * and, like siscanf, stops at the first mismatch and returns the conversions
+ * it assigned. */
+int siscanf(const char *str, const char *format, ...)
+{
+    va_list args;
+    int assigned = 0;
+
+    va_start(args, format);
+    while (*format != '\0')
+    {
+        if ((format[0] == '%') && (format[1] == 'd'))
+        {
+            const char *digits;
+            int negative = 0;
+            int value = 0;
+
+            while ((*str == ' ') || (*str == '\t') || (*str == '\n'))
+            {
+                str++;
+            }
+            if ((*str == '-') || (*str == '+'))
+            {
+                negative = (*str == '-');
+                str++;
+            }
+            digits = str;
+            while ((*str >= '0') && (*str <= '9'))
+            {
+                value = (value * 10) + (*str - '0');
+                str++;
+            }
+            if (str == digits)
+            {
+                break;
+            }
+            *va_arg(args, int *) = negative ? -value : value;
+            assigned++;
+            format += 2;
+            continue;
+        }
+        if (*str != *format)
+        {
+            break;
+        }
+        str++;
+        format++;
+    }
+    va_end(args);
+    return assigned;
+}
+
 u32 ndsPlatformReadInput(void)
 {
     u32 input = 0;

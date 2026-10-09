@@ -34,6 +34,11 @@ import remix_rom as R  # noqa: E402
 NO_SCRIPT = 0x80000000
 # DS-synthesized files live above the donor's largest ID (Remix: 5455 files).
 SYNTH_FILE_BASE = 0x1600
+# p4_anim_compact.py's fit tolerance, in FIGATREE units: 2/512 rad (0.22
+# degrees) of rotation, half a unit of translation. Remix keys its tracks
+# every one to three frames; the fit keeps every frame of every track within
+# this of the donor's curve.
+ANIM_EPS = 2
 # ftCommonAppearSetStatus (0x8013DBE0): the address past its fkind switch, the
 # entry_script value Remix uses for "no entry effect" (Ganondorf).
 ENTRY_SCRIPT_NONE = 0x8013DD68
@@ -1109,6 +1114,41 @@ def main() -> int:
     (o2r_out / f"{synth_id:04x}").write_bytes(motion_o2r)
     shipped[synth_id] = hashlib.sha256(motion_o2r).hexdigest()
 
+    # S15: the content's own animations without the keys their interpolation
+    # already implies, and its event32 joint animations (Remix's entries) as
+    # FIGATREE (p4_anim_compact.py). A fighter's figatree heap holds its
+    # largest animation, the select reads its menu clips, and every status
+    # change reads one: Banjo's heap 52 -> 29 KB, Sonic's 31 -> 12 KB. A file
+    # another file points into keeps its layout.
+    import p4_anim_compact  # noqa: E402
+
+    anim_files: dict[int, int] = {}
+    for m in resolved["motions"] + resolved["menu_motions"]:
+        a = m["anim_file_id"]
+        if a in shipped and a != synth_id and not (m["anim_flags"] & 0x2):
+            anim_files[a] = anim_files.get(a, 0) | m["anim_flags"]
+    named_by_others = {t[1] for fid in shipped if fid != synth_id
+                       for t in rom.reloc_slots(fid).values() if t[0] == "extern"}
+    converted32: set[int] = set()
+    anim_sizes: dict[int, int] = {}
+    for a, flags in sorted(anim_files.items()):
+        if a in named_by_others:
+            continue
+        path = o2r_out / f"{a:04x}"
+        blob = path.read_bytes()
+        if flags & 0x8:
+            new = p4_anim_compact.convert32_o2r(blob, ANIM_EPS)
+            if new is not None:
+                converted32.add(a)
+        else:
+            new = p4_anim_compact.compact_o2r(blob, ANIM_EPS)
+        if new is None:
+            continue
+        path.write_bytes(new)
+        shipped[a] = hashlib.sha256(new).hexdigest()
+        ext_n = struct.unpack_from("<I", new, 0x48)[0]
+        anim_sizes[a] = struct.unpack_from("<I", new, 0x4C + 2 * ext_n)[0]
+
     # HUD presentation: the stock icon baked exactly as the legacy roster's
     # (generate_battle_hud.stock_asset), and the FTSprites sprites the reloc
     # loader normalizes so the emblem bake reads real header fields.
@@ -1141,17 +1181,21 @@ def main() -> int:
     roots += [(f"menu:{m['index']:#x}", m["script"]) for m in resolved["menu_motions"]]
     checked = round_trip(rom, motion_o2r, synth, roots)
 
+    def anim_flags_of(m) -> int:
+        # A converted event32 animation is FIGATREE now: no FTANIM_FLAG_ANIMJOINT.
+        return m["anim_flags"] & ~0x8 if m["anim_file_id"] in converted32 else m["anim_flags"]
+
     motions = resolved["motions"]
     rows = []
     for m in motions:
-        rows.append((m["anim_file_id"], script_offset(m["script"]), m["anim_flags"]))
+        rows.append((m["anim_file_id"], script_offset(m["script"]), anim_flags_of(m)))
     menus = []
     for m in resolved["menu_motions"]:
         s = m["script"]
         if s != NO_SCRIPT and not (s >= R.REMIX_CODE_RAM or
                                    R.MENU_OVERLAY_RAM[0] <= s < R.MENU_OVERLAY_RAM[1]):
             raise GenError(f"menu motion {m['index']}: vanilla script pointer {s:#x} needs a symbol")
-        menus.append((m["anim_file_id"], script_offset(s), m["anim_flags"]))
+        menus.append((m["anim_file_id"], script_offset(s), anim_flags_of(m)))
 
     # The special status table (0xDC on): Remix's action array, statuses its
     # add_new_action appended included. A slot whose callback is the parent's
@@ -1354,6 +1398,8 @@ def main() -> int:
             seen.add(fid)
             if fid == synth_id:
                 size, deps = len(synth.data), rom.extern_ids(parent_motion)
+            elif fid in anim_sizes:
+                size, deps = anim_sizes[fid], rom.extern_ids(fid)
             else:
                 size, deps = len(rom.file_bytes(fid)), rom.extern_ids(fid)
                 deps = [synth_id if d == parent_motion and fid == file_ids[0] else d for d in deps]
@@ -1373,15 +1419,15 @@ def main() -> int:
                 best = max(best, alloc_size(a))
         return best
 
-    sizes = (alloc_size(file_ids[0]), largest([(m["anim_file_id"], 0, m["anim_flags"]) for m in resolved["motions"]]),
-             largest([(m["anim_file_id"], 0, m["anim_flags"]) for m in resolved["menu_motions"]]))
+    sizes = (alloc_size(file_ids[0]), largest([(m["anim_file_id"], 0, anim_flags_of(m)) for m in resolved["motions"]]),
+             largest([(m["anim_file_id"], 0, anim_flags_of(m)) for m in resolved["menu_motions"]]))
 
     own = {row["file_id"] for row in resolved["file_closure"] if not row["vanilla_id"]}
     anim_flags: dict[int, int] = {}
     for m in resolved["motions"] + resolved["menu_motions"]:
         a = m["anim_file_id"]
         if a in own and not (m["anim_flags"] & 0x2):
-            anim_flags[a] = anim_flags.get(a, 0) | m["anim_flags"]
+            anim_flags[a] = anim_flags.get(a, 0) | anim_flags_of(m)
     anims = [(a, bool(f & 0x8)) for a, f in sorted(anim_flags.items())]
     if any(a >= 0x8000 for a, _ in anims):
         raise GenError("animation id does not fit the 15-bit table encoding")
