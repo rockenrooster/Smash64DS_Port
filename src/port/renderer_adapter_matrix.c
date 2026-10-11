@@ -434,6 +434,44 @@ volatile u32 gNdsR2StageMaterialRejectFlagsGot;
 volatile u32 gNdsR2StageMaterialRejectHeapGen;
 #endif
 
+#if NDS_TASK39_FX_FLASH
+/* ftDisplayMainCalcFogColor: a shaded fighter's colour animation blends the
+ * animation's fog colour with the team shade (same integer steps). */
+static u32 ndsRendererAdapterFighterShadeFlash(const FTStruct *fp)
+{
+    const SYColorRGBA *shade = &fp->attr->shade_color[fp->shade - 1];
+    const GMColKeys *ck = &fp->colanim.color1;
+    s32 shade_base = ((0xFF - shade->a) * (0xFF - ck->a)) / 0xFF;
+    s32 temp_color, red, green, blue, alpha;
+
+    if (shade_base == 0xFF)
+    {
+        red = ck->r;
+        green = ck->g;
+        blue = ck->b;
+        alpha = ck->a;
+    }
+    else
+    {
+        shade_base = 0xFF - shade_base;
+        temp_color = (((ck->r - fp->shade_color.r) * ck->a) / 0xFF) + fp->shade_color.r;
+        red = (temp_color * 0xFF) / shade_base;
+        alpha = (red != 0) ? ((temp_color * 0xFF) / red) :
+                             (((shade_base - temp_color) * 0xFF) / 0xFF);
+        temp_color = (((ck->g - fp->shade_color.g) * ck->a) / 0xFF) + fp->shade_color.g;
+        green = (temp_color * 0xFF) / shade_base;
+        temp_color = (((ck->b - fp->shade_color.b) * ck->a) / 0xFF) + fp->shade_color.b;
+        blue = (temp_color * 0xFF) / shade_base;
+    }
+    if (fp->attr->fog_color.r != 0xFF)
+    {
+        alpha = (fp->attr->fog_color.r * alpha) / 0xFF;
+    }
+    return ((u32)(u8)red << 24) | ((u32)(u8)green << 16) |
+           ((u32)(u8)blue << 8) | (u32)(u8)alpha;
+}
+#endif
+
 static u32 ndsRendererAdapterFighterColorModulate(const FTStruct *fp)
 {
 #if NDS_TASK39_FX_FLASH
@@ -443,8 +481,23 @@ static u32 ndsRendererAdapterFighterColorModulate(const FTStruct *fp)
 
         NDS_DIAG(gNdsTask39FxFlashDrawCount++);
         ndsTask39EffectsEngage(NDS_TASK39_FX_ENGAGED_FLASH);
+        if ((fp->shade != 0) && (fp->attr != NULL))
+        {
+            return ndsRendererAdapterFighterShadeFlash(fp);
+        }
         return ((u32)color->r << 24) | ((u32)color->g << 16) |
                ((u32)color->b << 8) | color->a;
+    }
+    /* A team's second and third fighter of one kind (ftManagerMakeFighter's
+     * shade) draw through the source's G_RM_FOG_PRIM_A with the shade colour
+     * as fog (ftDisplayMainDecideFogColor): the same blend toward it by its
+     * alpha. */
+    if ((fp != NULL) && (fp->shade != 0) && (fp->shade <= 3) && (fp->attr != NULL))
+    {
+        const SYColorRGBA *shade = &fp->attr->shade_color[fp->shade - 1];
+
+        return ((u32)shade->r << 24) | ((u32)shade->g << 16) |
+               ((u32)shade->b << 8) | shade->a;
     }
 #else
     (void)fp;

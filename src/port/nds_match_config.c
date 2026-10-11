@@ -203,6 +203,9 @@ volatile u32 gNdsLabFourCpuKinds __attribute__((used)) =
  * the same kind costume 1, and so on -- so a roster of four of one fighter
  * draws the four alternate costumes, as the shell's character select does. */
 volatile u32 gNdsLabFourCpuCostumes __attribute__((used)) = 0xffffffffu;
+/* Boot-poked team shade (FTStruct.shade, 1-3: a team's second and third
+ * fighter of one kind), one byte a slot; 0xFF keeps the preset's (none). */
+volatile u32 gNdsLabFourCpuShades __attribute__((used)) = 0xffffffffu;
 /* Boot-poked item switch (0 keeps every kind) and rate (the enum count or
  * more keeps the preset's; 5 is very high). With the source's dITManagerForceMonsterKind this puts one Poke
  * Ball Pokemon on screen for an owner capture. */
@@ -527,6 +530,15 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
             }
             cfg->fighters[slot].costume = (u8)ftParamGetCostumeCommonID(
                 cfg->fighters[slot].fkind, (s32)(color & 3u));
+        }
+        for (slot = 0u; slot < 4u; slot++)
+        {
+            u32 shade = (gNdsLabFourCpuShades >> (slot * 8u)) & 0xffu;
+
+            if (shade <= 3u)
+            {
+                cfg->fighters[slot].shade = (u8)shade;
+            }
         }
     }
 #endif
