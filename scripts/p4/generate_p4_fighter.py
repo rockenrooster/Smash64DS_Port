@@ -125,8 +125,7 @@ CALLBACK_PORTS = {
     "WarioDSP.air_move_": "ndsP4WarioDSPAirMove",
     "WarioDSP.physics_": "ndsP4WarioDSPPhysics",
     "WarioDSP.collision_": "ndsP4WarioDSPMap",
-    # src/port/nds_p4_peach.c (PeachDSP, the turnip pull, waits for the
-    # turnip item: S6)
+    # src/port/nds_p4_peach.c
     "PeachFloat.main_": "ndsP4PeachFloatMain",
     "PeachFloat.interrupt_": "ndsP4PeachFloatInterrupt",
     "PeachNSP.ground_initial_": "ndsP4PeachNSPGroundInitial",
@@ -146,6 +145,9 @@ CALLBACK_PORTS = {
     "PeachUSP.physics_": "ndsP4PeachUSPPhysics",
     "PeachUSP.float_physics_": "ndsP4PeachUSPFloatPhysics",
     "PeachUSP.collision_": "ndsP4PeachUSPMap",
+    "PeachDSP.ground_initial_": "ndsP4PeachDSPGroundInitial",
+    "PeachDSP.air_initial_": "ndsP4PeachDSPAirInitial",
+    "PeachDSP.main": "ndsP4PeachDSPMain",
     # src/port/nds_p4_crash.c
     "CrashNSP.ground_initial_": "ndsP4CrashNSPGroundInitial",
     "CrashNSP.air_initial_": "ndsP4CrashNSPAirInitial",
@@ -399,6 +401,10 @@ OWN_SPECIAL_FILES = {
     # Yoshi's offset, its graphic the item file's star; Captain's Falcon
     # Kick and Flyer, the readers of special file 2, never run for him).
     "dedede": (2,),
+    # Her turnip's item attributes (2, PEACH_TURNIP_INFO; its model in the
+    # file it names). Fox's reflector and Arwing entry, the parent's readers
+    # of special file 2, never run for her.
+    "peach": (2,),
     # His entry's object (3, Crash file 8; no code reads Mario's special
     # file 3), and his spin's effect (2, CRASH_SPIN_GFX, Link's spin attack
     # description on his file; it names his dig effect's file at 0xCC0).

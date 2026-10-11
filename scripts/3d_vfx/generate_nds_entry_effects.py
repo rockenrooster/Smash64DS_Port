@@ -2055,6 +2055,10 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
     return "\n".join(lines) + "\n"
 
 
+# TEXID frames a P4 root row can select (Peach's turnip uses faces 3-6).
+P4_VARIANT_SLOTS = 8
+
+
 def emit_p4_tables(p4: list[P4Root], texture_keys: list, texture_slot: dict,
                    p4_root_first: int, groups: list) -> list[str]:
     """The P4 rows the runtime reads beside the shared tables: each article
@@ -2070,6 +2074,7 @@ def emit_p4_tables(p4: list[P4Root], texture_keys: list, texture_slot: dict,
         " * drawn by the fighter renderer beside the body, never admitted. */",
     ]
     lines += [f"extern void *{name};" for name in storages]
+    lines += [f"#define NDS_ENTRY_EFFECT_P4_VARIANT_SLOTS {P4_VARIANT_SLOTS}u"]
     lines += [
         "typedef struct NDSEntryEffectP4Root",
         "{",
@@ -2083,13 +2088,15 @@ def emit_p4_tables(p4: list[P4Root], texture_keys: list, texture_slot: dict,
         "     * with palette i), else palette 0. Bit 1: a list with no TEXID",
         "     * frames takes its TLUT (palette 0 baked) or its colours from the",
         "     * MObj's segment-E branch, so its draw needs the live material.",
-        "     * Bit 2: via names the root's file base, not the root (Crash's dig",
-        "     * effect file), so the root is that base plus source_offset. */",
+        "     * Bit 2: via names a place in the root's file, not the root (Crash's",
+        "     * dig effect file base, Peach's turnip tree): the root is that place",
+        "     * less via_bias plus source_offset. */",
         "    u8 material_flags;",
-        "    u8 variant_slots[4];",
+        "    u8 variant_slots[NDS_ENTRY_EFFECT_P4_VARIANT_SLOTS];",
         "    /* Nonzero: 1 + the storage file's offset of the pointer that names",
         "     * the root (a root in a file the special file depends on). */",
         "    u16 via;",
+        "    u16 via_bias;",
         "} NDSEntryEffectP4Root;",
         "static const NDSEntryEffectP4Root "
         "sNdsEntryEffectP4Roots[NDS_ENTRY_EFFECT_P4_ROOT_COUNT] = {",
@@ -2108,11 +2115,12 @@ def emit_p4_tables(p4: list[P4Root], texture_keys: list, texture_slot: dict,
                 (key,) = tuple(compiler.textures)
                 slots.append(texture_slot[key])
                 key_contents.setdefault(key, set()).add(p4_root.content_id)
-        if len(slots) > 4:
+        if len(slots) > P4_VARIANT_SLOTS:
             raise SystemExit(f"P4 {p4_root.row['content']} {p4_root.row['article']}: "
-                             f"{len(slots)} TEXID frames, the runtime row holds 4")
+                             f"{len(slots)} TEXID frames, the runtime row holds "
+                             f"{P4_VARIANT_SLOTS}")
         flags = p4_root.row["texid"]["flags"] if p4_root.row["texid"] is not None else 0
-        padded = slots + [0] * (4 - len(slots))
+        padded = slots + [0] * (P4_VARIANT_SLOTS - len(slots))
         storage = p4_root.row["storage"]
         sidecar = p4_root.row.get("sidecar_joint")
         lines.append(
@@ -2120,7 +2128,8 @@ def emit_p4_tables(p4: list[P4Root], texture_keys: list, texture_slot: dict,
             f"{p4_root.content_id}u, {len(slots)}u, 0x{flags:04x}u, "
             f"{0xFF if sidecar is None else sidecar}u, "
             f"{(1 if (p4_root.row['texid'] or {}).get('palettes') else 0) | (2 if (p4_root.row.get('palette') or p4_root.row.get('material')) else 0) | (4 if p4_root.row.get('via_base') else 0)}u, "
-            f"{{ {', '.join(f'{s}u' for s in padded)} }}, {p4_root.row.get('via', 0)}u }}, "
+            f"{{ {', '.join(f'{s}u' for s in padded)} }}, {p4_root.row.get('via', 0)}u, "
+            f"{p4_root.row.get('via_bias', 0)}u }}, "
             f"/* {p4_root.row['content']} {p4_root.row['article']} +0x{p4_root.row['offset']:x} */")
     lines += ["};", "",
               "/* Textures only one P4 content's roots use: prepared only when it is",

@@ -7188,13 +7188,14 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
         }
     }
 #if NDS_P4
-    /* A P4 content's own effects and weapons (Wolf's reflector, Wolfen,
-     * slash and blaster): exact content file plus exact generated root, as
-     * every arm above. Only effect and weapon GObjs ask, so stage lists never
-     * pay the row walk. */
+    /* A P4 content's own effects, weapons and items (Wolf's reflector,
+     * Wolfen, slash and blaster; Peach's turnip): exact content file plus
+     * exact generated root, as every arm above. Only effect, weapon and item
+     * GObjs ask, so stage lists never pay the row walk. */
     if ((candidate == FALSE) && (dobj->parent_gobj != NULL) &&
         ((dobj->parent_gobj->id == nGCCommonKindEffect) ||
-         (dobj->parent_gobj->id == nGCCommonKindWeapon)) &&
+         (dobj->parent_gobj->id == nGCCommonKindWeapon) ||
+         (dobj->parent_gobj->id == nGCCommonKindItem)) &&
         (ndsRendererEntryEffectP4Admit(dl, &owner_asset_id, &root_offset,
                                        &p4_variant_count) != FALSE))
     {

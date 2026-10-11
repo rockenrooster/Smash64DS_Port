@@ -27,6 +27,10 @@
 #include <sys/objman.h>
 #include <sys/taskman.h>
 #include <wp/weapon.h>
+#include <nds/nds_p4_contents.h>
+#if NDS_P4
+#include <nds/nds_p4.h>
+#endif
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
@@ -158,7 +162,12 @@ static ITStruct *sNdsItemStructsFree;
  * ITAttributes is about 110 bytes and the arena is the binding constraint here,
  * so RAM tracks shipped content. Raise the bound with each landed batch.
  */
+#if NDS_P4
+/* The P4 contents' own item kinds follow the source's (nds_p4.h). */
+#define NDS_IT_ATTR_KIND_MAX (NDS_P4_IT_KIND_LAST + 1)
+#else
 #define NDS_IT_ATTR_KIND_MAX (nITKindMew + 1)
+#endif
 static ITAttributes sNdsItAttributes[NDS_IT_ATTR_KIND_MAX];
 static void *sNdsItAttributesFile[NDS_IT_ATTR_KIND_MAX];
 s32 gITManagerDisplayMode;
@@ -2201,6 +2210,9 @@ void itMainSetFighterDrop(GObj *item_gobj, Vec3f *vel, f32 throw_mul)
 #if NDS_P2_LINK
     else if (ip->kind == nITKindLinkBomb) itLinkBombDroppedSetStatus(item_gobj);
 #endif
+#if NDS_P4
+    else if (ip->kind >= NDS_P4_IT_KIND_FIRST) ndsP4ItemProc(item_gobj, NDS_P4_ITEM_DROPPED);
+#endif
     itMainSetFighterRelease(item_gobj, vel, throw_mul,
                             nFTStatusAttackIDItemThrow, fp->stat_count);
     func_800269C0_275C0(ip->drop_sfx);
@@ -2229,6 +2241,9 @@ void itMainSetFighterThrow(GObj *item_gobj, Vec3f *vel, f32 throw_mul,
     }
 #if NDS_P2_LINK
     else if (ip->kind == nITKindLinkBomb) itLinkBombThrownSetStatus(item_gobj);
+#endif
+#if NDS_P4
+    else if (ip->kind >= NDS_P4_IT_KIND_FIRST) ndsP4ItemProc(item_gobj, NDS_P4_ITEM_THROWN);
 #endif
     itMainSetFighterRelease(item_gobj, vel, throw_mul,
                             fp->stat_flags.halfword, fp->stat_count);
@@ -2276,6 +2291,9 @@ void itMainSetFighterHold(GObj *item_gobj, GObj *fighter_gobj)
     }
 #if NDS_P2_LINK
     else if (ip->kind == nITKindLinkBomb) itLinkBombHoldSetStatus(item_gobj);
+#endif
+#if NDS_P4
+    else if (ip->kind >= NDS_P4_IT_KIND_FIRST) ndsP4ItemProc(item_gobj, NDS_P4_ITEM_HOLD);
 #endif
     ndsItParamLinkResetShieldModelParts(fighter_gobj);
     if (ip->weight == nITWeightLight)

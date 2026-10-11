@@ -26,14 +26,39 @@
  * frame a float starts, counting down while a jump button is held, and 1
  * once the float is used up or let go.
  *
- * Her down special (PeachDSP: the turnip pull) needs Remix's turnip item, an
- * S6 item article; it keeps its lab fallbacks until then.
+ * Her down special (PeachDSP, the turnip pull) and the turnip item are at
+ * the end ("Down special").
  */
 #include <nds/nds_p4.h>
 
 #if NDS_P4_PEACH
 
 #include <macros.h>
+#include <stddef.h>
+#include <it/item.h>
+#include <sys/audio.h>
+#include <sys/obj.h>
+#include <sys/objdef.h>
+#include <sys/objman.h>
+
+GObj *itManagerMakeItem(GObj *parent_gobj, ITDesc *item_desc, Vec3f *pos, Vec3f *vel, u32 flags);
+GObj *itSwordMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+GObj *itBombHeiMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+void itMainSetStatus(GObj *item_gobj, ITStatusDesc *status_desc, s32 status_id);
+void itMainSetFighterHold(GObj *item_gobj, GObj *fighter_gobj);
+void itMainClearOwnerStats(GObj *item_gobj);
+void itMainApplyGravityClampTVel(ITStruct *ip, f32 gravity, f32 terminal_velocity);
+sb32 itMainCommonProcReflector(GObj *item_gobj);
+sb32 itMainCommonProcHop(GObj *item_gobj);
+sb32 itMapTestAllCollisionFlag(GObj *item_gobj, u32 flag);
+void itVisualsUpdateSpin(GObj *item_gobj);
+void itBombHeiCommonSetHitStatusNone(GObj *item_gobj);
+sb32 itTomatoFallProcUpdate(GObj *item_gobj);
+sb32 itTomatoWaitProcMap(GObj *item_gobj);
+sb32 itTomatoFallProcMap(GObj *item_gobj);
+void ftCommonItemThrowSetStatus(GObj *fighter_gobj, s32 status_id);
+GObj *ifCommonItemArrowMakeInterface(ITStruct *ip);
+void mpCommonSetFighterWaitOrFall(GObj *fighter_gobj);
 
 sb32 ftMarioSpecialHiProcPass(GObj *fighter_gobj);
 void ftCaptainSpecialHiProcInterrupt(GObj *fighter_gobj);
@@ -730,7 +755,358 @@ void ndsP4PeachUSPMap(GObj *fighter_gobj)
     else mpCommonSetFighterFallOnEdgeBreak(fighter_gobj);
 }
 
+/* ---- Down special (PeachDSP: the turnip pull) and the turnip (S6) ----
+ *
+ * PeachDSP.ground_initial_: with empty hands she pulls (Action DSPPull);
+ * holding a turnip she throws it forward (light throw 0x6E), and holding
+ * anything else nothing happens. air_initial_ throws a held turnip (0x76).
+ * main: the script's temp variable 1 pulls (create_and_assign_item_), its
+ * temp variable 2 checks the pulled turnip for the stitch face ("BINGO"),
+ * and the animation's end returns her to wait or fall.
+ *
+ * create_and_assign_item_: one pull in 128 is a rare item -- a Beam Sword (1
+ * in 6), a Bob-omb (2 in 6) or Mr. Saturn (3 in 6) -- else a turnip, made at
+ * her position and put in her hand. Mr. Saturn lives in Remix's extended
+ * common item file, which the DS does not load: until he is ported his pull
+ * makes a turnip. */
+#define PEACH_STATUS_DSP_PULL 0xE9
+#define PEACH_STATUS_LIGHT_THROW_F 0x6E
+#define PEACH_STATUS_LIGHT_THROW_AIR_F 0x76
+#define PEACH_FGM_BINGO 0x5D6
+
+/* items/Turnip.asm (Remix item 0x2D + index; the DS numbers it past the
+ * source's kinds, NDS_P4_IT_KIND_TURNIP). */
+#define PEACH_TURNIP_BKB 25
+#define PEACH_TURNIP_KBG 60
+#define PEACH_TURNIP_KB_ANGLE 361
+#define PEACH_TURNIP_THROW_TIMER 50
+#define PEACH_TURNIP_HIT_FGM 0x38
+#define PEACH_TURNIP_GROUND_TIMER 48   /* GROUND_TIMER 0x30C's pickup_wait */
+#define PEACH_TURNIP_NORMAL_DAMAGE 2
+#define PEACH_TURNIP_WINK_DAMAGE 6
+#define PEACH_TURNIP_DOT_DAMAGE 12
+#define PEACH_TURNIP_STITCH_DAMAGE 30
+
+extern void *gNdsP4PeachSpecial2;
+
+/* The donor writes three words of the item struct by their N64 offsets
+ * (0x1CC, its "throw timer", 0x1D0 and 0x1D4): inside the attack collision's
+ * records in BattleShip's layout, which the DS struct keeps. */
+_Static_assert(offsetof(ITStruct, attack_coll) == 0x10C, "ITStruct is not N64's layout");
+_Static_assert(sizeof(ITStruct) == 0x39C, "ITStruct is not N64's layout");
+static s32 *ndsP4PeachItemWord(ITStruct *ip, u32 n64_offset)
+{
+    return (s32 *)(void *)((u8 *)ip + n64_offset);
+}
+
+static sb32 ndsP4PeachTurnipThrownProcUpdate(GObj *item_gobj);
+static sb32 ndsP4PeachTurnipThrownProcMap(GObj *item_gobj);
+static sb32 ndsP4PeachTurnipThrowCollide(GObj *item_gobj);
+static sb32 ndsP4PeachTurnipThrowCollideHitbox(GObj *item_gobj);
+static sb32 ndsP4PeachTurnipReflector(GObj *item_gobj);
+
+/* item_state_table: prepickup grounded, prepickup aerial, held, thrown,
+ * falling. */
+static ITStatusDesc sNdsP4PeachTurnipStatusDescs[5] = {
+    { NULL, itTomatoWaitProcMap, NULL, NULL, NULL, NULL, NULL, NULL },
+    { itTomatoFallProcUpdate, itTomatoFallProcMap, NULL, NULL, NULL, NULL, NULL, NULL },
+    { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+    { ndsP4PeachTurnipThrownProcUpdate, ndsP4PeachTurnipThrownProcMap,
+      ndsP4PeachTurnipThrowCollide, ndsP4PeachTurnipThrowCollide, itMainCommonProcHop,
+      ndsP4PeachTurnipThrowCollide, ndsP4PeachTurnipReflector,
+      ndsP4PeachTurnipThrowCollideHitbox },
+    { itTomatoFallProcUpdate, itTomatoFallProcMap, NULL, NULL, NULL, NULL, NULL, NULL },
+};
+
+/* item_info_array: PEACH_TURNIP_INFO (her special file 2), attributes at
+ * 0x40, the Maxim Tomato's fall. */
+static ITDesc sNdsP4PeachTurnipDesc = {
+    NDS_P4_IT_KIND_TURNIP, &gNdsP4PeachSpecial2, 0x40,
+    { nGCMatrixKindTraRotRpyR, nGCMatrixKindNull, 0x00 }, 0,
+    itTomatoFallProcUpdate, itTomatoFallProcMap, NULL, NULL, NULL, NULL, NULL, NULL
+};
+
+/* Turnip.stage_setting_: the Bob-omb's maker (itBombHeiMakeItem) with the
+ * turnip's knockback, sound and face; one in 58 is a stitch face (30), one
+ * a dot (12), four a wink (6), the rest a plain turnip (2). */
+static GObj *ndsP4PeachMakeTurnip(GObj *fighter_gobj, Vec3f *pos, Vec3f *vel, u32 flags)
+{
+    GObj *item_gobj = itManagerMakeItem(fighter_gobj, &sNdsP4PeachTurnipDesc, pos, vel, flags);
+    DObj *dobj;
+    ITStruct *ip;
+    Vec3f translate;
+    s32 roll;
+    u16 face;
+    s32 damage;
+
+    if (item_gobj == NULL)
+    {
+        return NULL;
+    }
+    dobj = DObjGetStruct(item_gobj);
+    ip = itGetStruct(item_gobj);
+    if (dobj->mobj != NULL)
+    {
+        dobj->mobj->texture_id_curr = 5;
+    }
+    translate = dobj->translate.vec.f;
+    ip->multi = 0;
+    itMainClearOwnerStats(item_gobj);
+    gcAddXObjForDObjFixed(dobj, 0x2E, 0);
+    dobj->translate.vec.f = translate;
+
+    ip->damage_coll.hitstatus = nGMHitStatusNone;
+    ip->attack_coll.attack_state = nGMAttackStateOff;
+    *ndsP4PeachItemWord(ip, 0x1CC) = 0;
+    *ndsP4PeachItemWord(ip, 0x1D0) = 0;
+    *ndsP4PeachItemWord(ip, 0x1D4) = 0;
+    ip->proc_dead = NULL;
+    ip->multi = 0;
+    ip->attack_coll.knockback_scale = PEACH_TURNIP_KBG;
+    ip->attack_coll.knockback_base = PEACH_TURNIP_BKB;
+    ip->attack_coll.angle = PEACH_TURNIP_KB_ANGLE;
+    ip->attack_coll.fgm_id = PEACH_TURNIP_HIT_FGM;
+
+    roll = syUtilsRandIntRange(58);
+    if (roll < 52)
+    {
+        face = 6;
+        damage = PEACH_TURNIP_NORMAL_DAMAGE;
+    }
+    else if (roll >= 54)
+    {
+        face = 3;
+        damage = PEACH_TURNIP_WINK_DAMAGE;
+    }
+    else if (roll == 53)
+    {
+        face = 5;
+        damage = PEACH_TURNIP_DOT_DAMAGE;
+    }
+    else
+    {
+        face = 4;
+        damage = PEACH_TURNIP_STITCH_DAMAGE;
+    }
+    if (dobj->mobj != NULL)
+    {
+        dobj->mobj->texture_id_curr = face;
+    }
+    ip->attack_coll.damage = damage;
+
+    ip->is_unused_item_bool = TRUE;
+    dobj->rotate.vec.f.z = 0.0F;
+    ip->arrow_gobj = ifCommonItemArrowMakeInterface(ip);
+    return item_gobj;
+}
+
+/* Turnip.throw_initial_ (THROW_ITEM). */
+static void ndsP4PeachTurnipThrown(GObj *item_gobj)
+{
+    itGetStruct(item_gobj)->damage_coll.hitstatus = nGMHitStatusNormal;
+    itMainSetStatus(item_gobj, sNdsP4PeachTurnipStatusDescs, 3);
+}
+
+/* Turnip.reflected_initial_. */
+static void ndsP4PeachTurnipReflected(GObj *item_gobj)
+{
+    *ndsP4PeachItemWord(itGetStruct(item_gobj), 0x1CC) = PEACH_TURNIP_THROW_TIMER;
+    itMainSetStatus(item_gobj, sNdsP4PeachTurnipStatusDescs, 3);
+}
+
+/* Turnip.falling_initial_ (DROP_ITEM): it may not despawn at random, and
+ * goes after GROUND_TIMER. The donor writes the N64 bitfield bytes: byte
+ * 0x2CE bit 1 is times_thrown's low bit, halfword 0x2D2 (0x030C) is
+ * pickup_wait 48 with is_allow_knockback and is_unused_item_bool set. */
+static void ndsP4PeachTurnipDropped(GObj *item_gobj)
+{
+    ITStruct *ip = itGetStruct(item_gobj);
+
+    ip->times_thrown &= ~1u;
+    ip->pickup_wait = PEACH_TURNIP_GROUND_TIMER;
+    ip->is_allow_knockback = TRUE;
+    ip->is_unused_item_bool = TRUE;
+    ip->is_static_damage = FALSE;
+    ip->damage_coll.hitstatus = nGMHitStatusNone;
+    itMainSetStatus(item_gobj, sNdsP4PeachTurnipStatusDescs, 4);
+}
+
+/* Turnip.prepickup_ (PICKUP_ITEM_INIT). */
+static void ndsP4PeachTurnipHold(GObj *item_gobj)
+{
+    itBombHeiCommonSetHitStatusNone(item_gobj);
+    itMainSetStatus(item_gobj, sNdsP4PeachTurnipStatusDescs, 2);
+}
+
+/* Turnip.thrown_main_: spin, the unused throw timer, gravity 1.7547 to 100,
+ * and a second spin (the donor calls the spin routine twice). */
+static sb32 ndsP4PeachTurnipThrownProcUpdate(GObj *item_gobj)
+{
+    ITStruct *ip = itGetStruct(item_gobj);
+
+    itVisualsUpdateSpin(item_gobj);
+    *ndsP4PeachItemWord(ip, 0x1CC) -= 1;
+    itMainApplyGravityClampTVel(ip, ndsP4PeachBitsToF32(0x3FE0999Au),
+                                ndsP4PeachBitsToF32(0x42C80000u));
+    itVisualsUpdateSpin(item_gobj);
+    return FALSE;
+}
+
+/* Turnip.throw_collision_: any wall, floor or ceiling destroys it. */
+static sb32 ndsP4PeachTurnipThrownProcMap(GObj *item_gobj)
+{
+    return (itMapTestAllCollisionFlag(item_gobj, 0x0C21) != FALSE) ? TRUE : FALSE;
+}
+
+/* Turnip.throw_collide_ (hurtbox, shield, clang): it stops hitting, bounces
+ * back at -0.125 its speed and 40 up, and falls. */
+static sb32 ndsP4PeachTurnipThrowCollide(GObj *item_gobj)
+{
+    ITStruct *ip = itGetStruct(item_gobj);
+
+    ip->damage_coll.hitstatus = nGMHitStatusNone;
+    ip->attack_coll.attack_state = nGMAttackStateOff;
+    ip->physics.vel_air.x *= ndsP4PeachBitsToF32(0xBE000000u);
+    ip->physics.vel_air.y = ndsP4PeachBitsToF32(0x42200000u);
+    ndsP4PeachTurnipDropped(item_gobj);
+    return FALSE;
+}
+
+/* Turnip.throw_collide_hitbox_ (hit by an attack): as above, its hitbox
+ * kept. */
+static sb32 ndsP4PeachTurnipThrowCollideHitbox(GObj *item_gobj)
+{
+    ITStruct *ip = itGetStruct(item_gobj);
+
+    ip->physics.vel_air.x *= ndsP4PeachBitsToF32(0xBE000000u);
+    ip->damage_coll.hitstatus = nGMHitStatusNone;
+    ip->physics.vel_air.y = ndsP4PeachBitsToF32(0x42200000u);
+    ndsP4PeachTurnipDropped(item_gobj);
+    return FALSE;
+}
+
+/* Turnip.reflect_. */
+static sb32 ndsP4PeachTurnipReflector(GObj *item_gobj)
+{
+    itMainCommonProcReflector(item_gobj);
+    ndsP4PeachTurnipReflected(item_gobj);
+    return FALSE;
+}
+
+/* NDSP4Overrides.item: Remix's DROP_ITEM, THROW_ITEM and PICKUP_ITEM_INIT
+ * for her turnip. */
+static sb32 ndsP4PeachItem(GObj *item_gobj, s32 which)
+{
+    if (itGetStruct(item_gobj)->kind != NDS_P4_IT_KIND_TURNIP)
+    {
+        return FALSE;
+    }
+    switch (which)
+    {
+    case NDS_P4_ITEM_DROPPED:
+        ndsP4PeachTurnipDropped(item_gobj);
+        break;
+    case NDS_P4_ITEM_THROWN:
+        ndsP4PeachTurnipThrown(item_gobj);
+        break;
+    case NDS_P4_ITEM_HOLD:
+        ndsP4PeachTurnipHold(item_gobj);
+        break;
+    default:
+        break;
+    }
+    return TRUE;
+}
+
+static sb32 ndsP4PeachHoldsTurnip(FTStruct *fp)
+{
+    return ((fp->item_gobj != NULL) &&
+            (itGetStruct(fp->item_gobj)->kind == NDS_P4_IT_KIND_TURNIP)) ? TRUE : FALSE;
+}
+
+/* PeachDSP.create_and_assign_item_. */
+static void ndsP4PeachPull(GObj *fighter_gobj)
+{
+    Vec3f vel = { 0.0F, 0.0F, 0.0F };
+    Vec3f *pos = &DObjGetStruct(fighter_gobj)->translate.vec.f;
+    GObj *item_gobj;
+
+    if (syUtilsRandIntRange(128) == 127)
+    {
+        s32 rare = syUtilsRandIntRange(6);
+
+        if (rare == 0)
+        {
+            item_gobj = itSwordMakeItem(fighter_gobj, pos, &vel, 0);
+        }
+        else if (rare < 3)
+        {
+            item_gobj = itBombHeiMakeItem(fighter_gobj, pos, &vel, 0);
+        }
+        else item_gobj = ndsP4PeachMakeTurnip(fighter_gobj, pos, &vel, 0);
+    }
+    else item_gobj = ndsP4PeachMakeTurnip(fighter_gobj, pos, &vel, 0);
+
+    if (item_gobj != NULL)
+    {
+        itMainSetFighterHold(item_gobj, fighter_gobj);
+    }
+}
+
+/* PeachDSP.ground_initial_ (ground_dsp). */
+void ndsP4PeachDSPGroundInitial(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    fp->motion_vars.flags.flag0 = 0;
+    if (fp->item_gobj == NULL)
+    {
+        ftMainSetStatus(fighter_gobj, PEACH_STATUS_DSP_PULL, 0.0F, 1.0F, FTSTATUS_PRESERVE_NONE);
+    }
+    else if (ndsP4PeachHoldsTurnip(fp) != FALSE)
+    {
+        ftCommonItemThrowSetStatus(fighter_gobj, PEACH_STATUS_LIGHT_THROW_F);
+    }
+}
+
+/* PeachDSP.air_initial_ (air_dsp). */
+void ndsP4PeachDSPAirInitial(GObj *fighter_gobj)
+{
+    if (ndsP4PeachHoldsTurnip(ftGetStruct(fighter_gobj)) != FALSE)
+    {
+        ftCommonItemThrowSetStatus(fighter_gobj, PEACH_STATUS_LIGHT_THROW_AIR_F);
+    }
+}
+
+/* PeachDSP.main (0xE9 update). */
+void ndsP4PeachDSPMain(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if (fp->motion_vars.flags.flag0 != 0)
+    {
+        fp->motion_vars.flags.flag0 = 0;
+        ndsP4PeachPull(fighter_gobj);
+        return;
+    }
+    if (fp->motion_vars.flags.flag1 != 0)
+    {
+        fp->motion_vars.flags.flag1 = 0;
+        if ((ndsP4PeachHoldsTurnip(fp) != FALSE) &&
+            (itGetStruct(fp->item_gobj)->attack_coll.damage == PEACH_TURNIP_STITCH_DAMAGE))
+        {
+            func_800269C0_275C0(PEACH_FGM_BINGO);
+        }
+        return;
+    }
+    if (fighter_gobj->anim_frame <= 0.0F)
+    {
+        mpCommonSetFighterWaitOrFall(fighter_gobj);
+    }
+}
+
 const NDSP4Overrides gNdsP4PeachOverrides = {
+    .item = ndsP4PeachItem,
     .gravity = ndsP4PeachGravity,
     .air_jump_check = ndsP4PeachCheckFloat,
     .fall_status = ndsP4PeachFallStatus,

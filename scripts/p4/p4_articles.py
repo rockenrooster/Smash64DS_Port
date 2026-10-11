@@ -110,6 +110,12 @@ ARTICLES = {
         {"name": "entry_plane_r", "special": 3, "dobjdesc": 0x2A28, "entry": True},
         {"name": "entry_plane_l", "special": 3, "dobjdesc": 0xA5E8, "entry": True},
     ),
+    "peach": (
+        # items/Turnip.asm item_info_array: ITAttributes at 0x40 of
+        # PEACH_TURNIP_INFO (file 7), its model in the file it names; the
+        # spawn picks face 3 to 6 (texture_id_curr), so frames 0-6 are kept.
+        {"name": "turnip", "special": 2, "itattributes": 0x40, "texid_frames": 7},
+    ),
     "crash": (
         # samusshared.asm crash_entry_anim_gfx_struct: the point case's
         # object, DObjDesc 0x2310 on his file 8, drawn through DObjDLLinks.
@@ -170,6 +176,25 @@ def dobjdesc_lists(res: census.O2RResource, start: int) -> list[int]:
     raise ArticleError(f"{res.file_id:#x}+{start:#x}: DObjDesc array has no terminator")
 
 
+def dobjdesc_entries(res: census.O2RResource, start: int) -> list[tuple[int, int]]:
+    """(entry index, display list) for each DObjDesc of an array that has a
+    list, in tree order; the index selects the entry's MObjSub list."""
+    found = []
+    for i in range(256):
+        at = start + i * DOBJ_DESC_SIZE
+        if (u32(res, at) & 0xFFFF) == DOBJ_DESC_END:
+            return found
+        ref = res.pointer_at(at + 4)
+        if ref is None:
+            if u32(res, at + 4) != 0:
+                raise ArticleError(f"{res.file_id:#x}+{at + 4:#x}: unresolved DObjDesc pointer")
+            continue
+        if ref.asset_id != res.file_id:
+            raise ArticleError(f"{res.file_id:#x}+{at + 4:#x}: DObjDesc list in another file")
+        found.append((i, ref.offset))
+    raise ArticleError(f"{res.file_id:#x}+{start:#x}: DObjDesc array has no terminator")
+
+
 def dllink_lists(res: census.O2RResource, start: int) -> list[tuple[int, int]]:
     """A DObjDLLink array's (list_id, display list) pairs up to id 4. The id
     is the display-list head the list joins (0 opaque, 1 translucent)."""
@@ -206,12 +231,12 @@ def modelpart_list(main: census.O2RResource, o_attributes: int, joint: int,
     return dl
 
 
-def single_mobjsub(res: census.O2RResource, table: int) -> int:
-    """The one MObjSub of a one-DObj MObjSub*** table."""
-    # Only the first DObj's list is read: these articles are one DObj, and
-    # the word after the table is often other data (the blaster's palette
-    # array).
-    lst = res.pointer_at(table)
+def single_mobjsub(res: census.O2RResource, table: int, dobj: int = 0) -> int:
+    """The one MObjSub of DObj `dobj`'s list in a MObjSub*** table."""
+    # Only the named DObj's list is read: these articles are one DObj (an
+    # item's tree names its lists per entry), and the word after the table is
+    # often other data (the blaster's palette array).
+    lst = res.pointer_at(table + 4 * dobj)
     if lst is None or lst.asset_id != res.file_id:
         raise ArticleError(f"{res.file_id:#x}+{table:#x}: MObjSub table did not resolve")
     sub = res.pointer_at(lst.offset)
@@ -245,12 +270,12 @@ def material_palette(res: census.O2RResource, table: int) -> dict | None:
 
 
 def texid_images(res: census.O2RResource, table: int, frames: int | None = None,
-                 palette_per_frame: bool = False) -> dict:
+                 palette_per_frame: bool = False, dobj: int = 0) -> dict:
     """A one-DObj MObjSub*** table whose one MObjSub's sprites MatAnim cycles:
     its images (the consecutive non-NULL sprites, the first `frames` of
     them) and their format. palette_per_frame: the article sets palette_id
     to the TEXID (Sonic's spring), so frame i is drawn with palette i."""
-    sub = census.PointerRef(res.file_id, single_mobjsub(res, table))
+    sub = census.PointerRef(res.file_id, single_mobjsub(res, table, dobj))
     # MObjSub (sys/objtypes.h): the segment-E image's fmt/siz at +2/+3, the
     # render tile's size at +0x0C/+0x0E (flag 0x20), palettes at +0x2C,
     # flags at +0x30, the texel block's format and size at +0x32/+0x33.
@@ -317,7 +342,7 @@ def resolve(content: str, title: str, o2r: Path, descriptor: dict) -> list[dict]
 
     def add(article: dict, res: census.O2RResource, offset: int, texid: dict | None,
             head: int = 0, via: tuple | None = None, palette: dict | None = None,
-            via_base: bool = False) -> None:
+            via_base: bool = False, via_bias: int = 0) -> None:
         """via: (special file, offset) of the pointer that names the root,
         for a root in a file the special file depends on (Sheik's needle
         graphic): the runtime admits the list that pointer holds. palette: a
@@ -334,7 +359,7 @@ def resolve(content: str, title: str, o2r: Path, descriptor: dict) -> list[dict]
                       "texid": texid, "palette": palette, "head": head,
                       "sidecar_joint": sidecar,
                       "material": bool(article.get("material")),
-                      "via_base": via_base})
+                      "via_base": via_base, "via_bias": via_bias})
 
     for article in ARTICLES.get(content, ()):
         if "modelpart_joint" in article:
@@ -344,6 +369,28 @@ def resolve(content: str, title: str, o2r: Path, descriptor: dict) -> list[dict]
             add(article, res_of(dl.asset_id), dl.offset, None)
             continue
         res = res_of(file_ids[FILE_SLOTS[article["special"]]])
+        if "itattributes" in article:
+            # An item's ITAttributes in the special file: its first word names
+            # the item's DObjDesc tree in another file (Peach's turnip model),
+            # its second the tree's MObjSub*** table. Each entry's list is a
+            # root admitted through the attributes' word: the tree's address
+            # less its offset is the file's base (via_bias). An entry whose
+            # MObjSub cycles TEXID (the turnip's faces) carries its frames.
+            at = article["itattributes"]
+            tree = res.pointer_at(at)
+            mobjsubs = res.pointer_at(at + 4)
+            if tree is None:
+                raise ArticleError(f"{content} {article['name']}: attributes name no tree")
+            target = res_of(tree.asset_id)
+            for index, dl in dobjdesc_entries(target, tree.offset):
+                texid = None
+                if (mobjsubs is not None and
+                        target.pointer_at(mobjsubs.offset + 4 * index) is not None):
+                    texid = texid_images(target, mobjsubs.offset, article.get("texid_frames"),
+                                         bool(article.get("palette_per_frame")), index)
+                add(article, target, dl, texid, via=(res.file_id, at), via_base=True,
+                    via_bias=tree.offset)
+            continue
         if "via_base" in article:
             # The structure is in the file a word of the special file names
             # (that file's base): its roots are admitted as *(*storage + word)

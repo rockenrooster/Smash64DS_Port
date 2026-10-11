@@ -233,7 +233,24 @@ typedef struct NDSP4Overrides
     /* ftMainProcParams' reflect switch, a special_coll of Remix's custom
      * kind (Reflect.asm extend_reflect_types, custom_reflect_table). */
     void (*on_custom_reflect)(GObj *fighter_gobj);
+    /* itMainSetFighterDrop/Throw/Hold for one of the content's own item kinds
+     * (Remix Item.asm's item_drop_table, extended_item_throw_table and
+     * extended_item_pre_pickup_table): `which` is NDS_P4_ITEM_*; TRUE when the
+     * item's kind is the content's. */
+    sb32 (*item)(GObj *item_gobj, s32 which);
 } NDSP4Overrides;
+
+/* Item kinds past the source's last (nITKindEnumCount, as Remix numbers its
+ * custom items from 0x2D), one per content item. */
+#define NDS_P4_IT_KIND_TURNIP (nITKindEnumCount + 0)
+#define NDS_P4_IT_KIND_FIRST NDS_P4_IT_KIND_TURNIP
+#define NDS_P4_IT_KIND_LAST NDS_P4_IT_KIND_TURNIP
+#define NDS_P4_ITEM_DROPPED 0
+#define NDS_P4_ITEM_THROWN 1
+#define NDS_P4_ITEM_HOLD 2
+/* battleship_item_link_core.c: a P4 item kind's drop, throw or hold routine,
+ * from the overrides of the contents in the match. */
+void ndsP4ItemProc(GObj *item_gobj, s32 which);
 
 /* Weapon kinds past the source's last (nWPKindMonsterEnd, wp/weapon.h), one
  * per content weapon: the DS renderer keys its native weapon owners on the

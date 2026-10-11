@@ -1040,6 +1040,22 @@ const NDSP4Overrides *ndsP4Overrides(const FTStruct *fp)
     return (f != NULL) ? f->overrides : NULL;
 }
 
+void ndsP4ItemProc(GObj *item_gobj, s32 which)
+{
+    s32 player;
+
+    for (player = 0; player < GMCOMMON_PLAYERS_MAX; player++)
+    {
+        const NDSP4Fighter *f = ndsP4Fighter(ndsP4MatchContent(player));
+
+        if ((f != NULL) && (f->overrides != NULL) && (f->overrides->item != NULL) &&
+            (f->overrides->item(item_gobj, which) != FALSE))
+        {
+            return;
+        }
+    }
+}
+
 __attribute__((used)) volatile u32 gNdsP4EntryEffectMisses;
 
 GObj *ndsP4EntryMakeEffect(struct EFDesc *desc, const Vec3f *pos)
