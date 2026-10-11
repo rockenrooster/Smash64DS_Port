@@ -1184,9 +1184,51 @@ is made.
 
 ### Snake (content 18, Captain's code)
 
-Exports and builds with lab stand-ins; the port (C4, Nikita, grenades,
-Cypher, the replaced jab, dash attack, crouch, forward tilt, up smash and
-taunts) is next.
+Every routine is ported (`src/port/nds_p4_snake.c`, 0 lab fallbacks): the
+C4 (down special: set on the ground, a wall or a fighter he faces, set off
+with a second press), the grenades (neutral: pulled, held while he walks or
+jumps, thrown three ways, two out at most), the Nikita (his forward smash: a
+missile he steers until it hits, runs out of gas or Z cuts its engine), the
+Cypher (up: a rising hover with 7 points of non-cumulative armour, let go or
+cut down), his crawl, his dash attack into his crouch, his two-part forward
+tilt, his up smash's mortar, five codec taunts, his CPU's Nikita, grenade and
+C4 handling and its Cypher recovery, and the up special's return on landing,
+rebirth and hit. His four items are P4 item kinds on his own special files
+(the merged file's C4, Nikita and Cypher attributes, the grenade's file) and
+the mortar a P4 weapon kind; their explosions run Link's bomb events from his
+files at Link's offset, as Remix's do (his hitbox files are copies of the
+bomb's, events included).
+His items are translucent (the attributes' is_display_xlu: they draw through
+DObjDLLinks), so an item article's entries now admit their DObjDLLink lists
+(`p4_articles.py`).
+
+As assembled: the grenade pull's end reads its ga from its own code (always
+the aerial wait; a grounded Snake lands back into the wait), a Cypher a hit
+destroys leaves his reference set (the hang rises on to its end), the CPU's
+grenade throw goes back beyond 500 and forward within it, and the C4's team
+test compares an unset register (the DS compares his own team).
+
+CPU fix for three contents: Remix's `nsp_shoot_custom_move` (Dedede, Peach
+and Snake shoot from afar with their down special) had no port; the
+generator now emits it (`computer_long_range_move`) and the walk-and-shoot
+case issues it.
+
+The shipping select bakes his series logo, an I8 sprite the UI kit could not
+decode before (`generate_mn_ui_kit.py` decode_i8). A seeded play build kept
+the previous content count (its contents header, Kirby copies and colanims
+depended only on the exports, older than the copied outputs); they now also
+follow `nds_build_config.h` (`scripts/p4/p4_rules.mk`).
+
+Probes: lab (build-lab-p4x), four Snake CPUs 1,500 frames, 0 declines, 0
+native failures; every special and replaced move forced (grenade pull, wait,
+throw and its fuse; Cypher start, hang, cut, landing refresh; C4 set,
+detonated and exploded; Nikita launched, steered, exploded; mortar fired and
+burst; forward tilt into its second kick; taunt calls; crawl); a four-Snake
+CPU match of 1,800 frames draws all five articles (ndsRendererEntryEffectP4Admit
+counts), 0 failures. Play ROM play-1011sn (all 18 contents): select with four
+Snakes and with four MRGAWs, 0 failures; four Snake CPUs on Dream Land 1,500
+frames, low-water 36,748, and four MRGAWs, low-water 51,852, 0 failures;
+Results with both, 0 failures.
 
 ## Board 1 status (master plan Revision 3)
 

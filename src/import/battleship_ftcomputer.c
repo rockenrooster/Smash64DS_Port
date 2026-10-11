@@ -469,6 +469,7 @@ static sb32 ndsP4FTComputerLongRange(FTStruct *this_fp, sb32 is_delay)
     Vec3f ga_last;
     s32 stand_line_id;
     s32 fkind;
+    u32 move;
 
     if (mode == NDS_P4_COMPUTER_LONG_RANGE_PARENT)
     {
@@ -556,11 +557,17 @@ static sb32 ndsP4FTComputerLongRange(FTStruct *this_fp, sb32 is_delay)
     {
         return FALSE;
     }
+    /* Remix's custom_move: the content's nsp_shoot_custom_move in place of
+     * either input. */
+    move = ndsP4ComputerLongRangeMove(this_fp);
+
     if (is_delay == FALSE)
     {
-        ftComputerSetCommandWaitLong(this_fp, nFTComputerInputStickSmashAutoXButtonB);
+        ftComputerSetCommandWaitLong(this_fp, (move != 0u) ? (s32)move :
+                                     nFTComputerInputStickSmashAutoXButtonB);
     }
-    else ftComputerSetCommandWaitLong(this_fp, nFTComputerInputStickTiltAutoXNYD5SmashAutoXButtonB);
+    else ftComputerSetCommandWaitLong(this_fp, (move != 0u) ? (s32)move :
+                                      nFTComputerInputStickTiltAutoXNYD5SmashAutoXButtonB);
 
     return TRUE;
 }

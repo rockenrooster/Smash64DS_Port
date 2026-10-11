@@ -80,7 +80,7 @@ one-fighter-at-a-time cycle eighteen times. Revision 3 changes three things:
 | Metal Mario | MMario kind | 24 | 0 | n/a | n/a | none (selectable 2026-10-11: P4_STATUS "Metal Mario") |
 | Meta Knight | Purin | 2,218 | 26 | 19 | none | none (EXTRA; P4_STATUS "EXTRA characters") |
 | MRGAW | Mario | 2,364 | 16 | 16 | none | sausage (weapon); judge 7's Dango item open |
-| Snake | Captain | 7,476 | 0 of 39 | 21 | | C4, grenades, Nikita, Cypher (port next) |
+| Snake | Captain | 7,476 | 39 | 21 | RandomSFX | 4 items (C4, grenade, Nikita, Cypher), 1 weapon (mortar); P4_STATUS "EXTRA characters" |
 
 Falco used 12 of the 33 table seams. The roster needs the other 21:
 

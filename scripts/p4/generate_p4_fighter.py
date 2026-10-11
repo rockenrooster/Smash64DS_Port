@@ -419,6 +419,42 @@ CALLBACK_PORTS = {
     "GameAndWatch2D.GameAndWatchDSP.air_collision_": "ndsP4MrgawDSPAirMap",
     "GameAndWatch2D.GameAndWatchDSP.air_physics_": "ndsP4MrgawDSPAirPhysics",
     "GameAndWatch2D.GameAndWatchDSP.attacks_main_": "ndsP4MrgawDSPAttacksMain",
+    # src/port/nds_p4_snake.c (EXTRA).
+    "SnakeSpecial.Crawl": "ndsP4SnakeCrawlInterrupt",
+    "SnakeSpecial.Crawl.physics": "ndsP4SnakeCrawlPhysics",
+    "SnakeSpecial.DashAttack": "ndsP4SnakeDashAttackUpdate",
+    "SnakeSpecial.TiltF": "ndsP4SnakeTiltFUpdate",
+    "SnakeSpecial.Taunt": "ndsP4SnakeTauntUpdate",
+    "SnakeSpecial.USmash.main": "ndsP4SnakeUSmashUpdate",
+    "SnakeSpecial.C4": "ndsP4SnakeC4Initial",
+    "SnakeSpecial.C4.Start": "ndsP4SnakeC4StartUpdate",
+    "SnakeSpecial.C4.Start.air_collision": "ndsP4SnakeC4StartAirMap",
+    "SnakeSpecial.C4.Ground": "ndsP4SnakeC4GroundUpdate",
+    "SnakeSpecial.C4.Ground.main_air": "ndsP4SnakeC4GroundAirUpdate",
+    "SnakeSpecial.C4.Detonate": "ndsP4SnakeC4DetonateUpdate",
+    "SnakeSpecial.C4.Detonate.main_air": "ndsP4SnakeC4DetonateAirUpdate",
+    "SnakeSpecial.C4.Detonate.air_collision": "ndsP4SnakeC4DetonateAirMap",
+    "SnakeSpecial.Grenade": "ndsP4SnakeGrenadeInitial",
+    "SnakeSpecial.Grenade.Start": "ndsP4SnakeGrenadeStartUpdate",
+    "SnakeSpecial.Grenade.Start.air_collision": "ndsP4SnakeGrenadeStartAirMap",
+    "SnakeSpecial.Grenade.Wait": "ndsP4SnakeGrenadeWaitUpdate",
+    "SnakeSpecial.Grenade.Wait.air_collision": "ndsP4SnakeGrenadeWaitAirMap",
+    "SnakeSpecial.Grenade.Throw": "ndsP4SnakeGrenadeThrowUpdate",
+    "SnakeSpecial.Grenade.Throw.air_collision": "ndsP4SnakeGrenadeThrowAirMap",
+    "SnakeSpecial.Grenade.Walk": "ndsP4SnakeGrenadeWalkInterrupt",
+    "SnakeSpecial.Grenade.Walk.physics": "ndsP4SnakeGrenadeWalkPhysics",
+    "SnakeSpecial.Grenade.JumpSquat.main": "ndsP4SnakeGrenadeJumpSquatUpdate",
+    "SnakeSpecial.Nikita.Start": "ndsP4SnakeNikitaStartUpdate",
+    "SnakeSpecial.Nikita.Start.air_collision": "ndsP4SnakeNikitaStartAirMap",
+    "SnakeSpecial.Nikita.Operation": "ndsP4SnakeNikitaOperationUpdate",
+    "SnakeSpecial.Nikita.Operation.air_collision": "ndsP4SnakeNikitaOperationAirMap",
+    "SnakeSpecial.Nikita.End": "ndsP4SnakeNikitaEndAirMap",
+    "SnakeSpecial.Nikita.Success": "ndsP4SnakeNikitaSuccessAirMap",
+    "SnakeSpecial.Cypher.initial": "ndsP4SnakeCypherInitial",
+    "SnakeSpecial.Cypher.Start": "ndsP4SnakeCypherStartUpdate",
+    "SnakeSpecial.Cypher.Start.air_collision": "ndsP4SnakeCypherStartAirMap",
+    "SnakeSpecial.Cypher.Hang": "ndsP4SnakeCypherHangUpdate",
+    "SnakeSpecial.Cypher.Hang.interrupt": "ndsP4SnakeCypherHangInterrupt",
 }
 
 # P4: entry_script cases of another kind a content's port carries
@@ -511,6 +547,12 @@ OWN_SPECIAL_FILES = {
     # Mario's entry pipe, the other reader of special file 2, never runs for
     # him.
     "crash": (2, 3),
+    # EXTRA's Snake: his merged file (1: the C4's, Nikita's and Cypher's item
+    # attributes and the mortar's weapon attributes, each naming its graphic
+    # file, which loads with it) and his grenade's (2). Captain has no special
+    # file 1; his Falcon Kick and Flyer, the readers of special file 2, never
+    # run for him (C4 is his down special, his entry skips the Flyer).
+    "snake": (1, 2),
 }
 
 # P4 S6: data a content's ported routines read from Remix's own code segment
@@ -547,6 +589,9 @@ UNREAD_SPECIAL_FILES = {
     # EXTRA's Meta Knight names no special file 2; Jigglypuff's (Sing's
     # notes) is read only by her specials, all three his own.
     "metaknight": (2,),
+    # EXTRA's Snake names no special file 3; Captain's (the Falcon Punch
+    # effect) is read only by his neutral special, Snake's grenades.
+    "snake": (3,),
 }
 
 # Vanilla file IDs that Remix rewrote with equivalent bytes, so the DS keeps
@@ -631,7 +676,7 @@ GROUNDED_CASE_KINDS = {"Mario": 0, "Samus": 3, "Luigi": 4, "Captain": 7, "Purin"
 # Remix grounded_script routines a content's port runs instead
 # (NDSP4Overrides.on_landing): each ends the switch as the default does, so
 # the content takes the default case beside its hook.
-GROUNDED_PORTS = {"Peach.grounded_script_"}
+GROUNDED_PORTS = {"Peach.grounded_script_", "Snake.grounded_script_"}
 
 
 def kind_cases(rom: R.Rom, sym: dict, remix_id: int, tables: dict,
@@ -1620,7 +1665,17 @@ def main() -> int:
             if len(computer_attacks) > 64:
                 raise GenError("ai_behaviour: no second END within 64 rows")
     long_range = int(tables["ai_long_range"]["value"], 16)
-    if tables["ai_long_range"]["same_as_parent"]:
+    # Character.nsp_shoot_custom_move (AI.asm LONG_RANGE custom_move): the
+    # input the projectile users' walk and shoot issues in place of the
+    # source's; it takes the copied case even when the row is the parent's.
+    long_range_move = rom.u32_ram(R.load_symbols(args.staging / "logfile.log")[0]
+                                  ["Character.nsp_shoot_custom_move.table"]
+                                  + 4 * resolved["remix_kind_id"])
+    if long_range_move >= CPU_INPUT_BASE:
+        raise GenError(f"nsp_shoot_custom_move {long_range_move:#x} is a Remix input routine")
+    if long_range_move and long_range != AI_LONG_RANGE_PROJECTILE:
+        long_range_move = 0
+    if tables["ai_long_range"]["same_as_parent"] and not long_range_move:
         computer_long_range = "NDS_P4_COMPUTER_LONG_RANGE_PARENT"
     elif long_range == AI_LONG_RANGE_NONE:
         computer_long_range = "NDS_P4_COMPUTER_LONG_RANGE_NONE"
@@ -1883,6 +1938,7 @@ def main() -> int:
               "/* CPU rows (S7): ai_long_range; the attack list and the Remix input",
               " * routines it names are in the content's tables (ndsP4LoadTables). */",
               f"const u8 g{ident}ComputerLongRange = {computer_long_range};",
+              f"const u8 g{ident}ComputerLongRangeMove = {long_range_move:#x};",
               "/* Remix's reflect AI (Reflect.asm): its fighter_reflect row and Fox's",
               " * branch in the three reflect hooks (NDS_P4_COMPUTER_REFLECT_*). */",
               f"const u8 g{ident}ComputerReflect = {reflect};", ""]

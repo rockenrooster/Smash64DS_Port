@@ -322,6 +322,18 @@ def decode_i4(fileobj: RelocFile, bitmap: Bitmap, sprite: Sprite,
     return rows
 
 
+def decode_i8(fileobj: RelocFile, bitmap: Bitmap, sprite: Sprite,
+              width: int, height: int) -> list[list[int]]:
+    """8-bit intensity -> rows of 8-bit intensity (one byte a texel, the
+    narrow LoadBlock granule as IA8). EXTRA's Snake series logo is I8."""
+    stride = max(1, bitmap.width_img)
+    rows: list[list[int]] = []
+    for y in range(height):
+        raw = read_row(fileobj, bitmap, sprite, y, stride)
+        rows.append([raw[bitmap.s + x] for x in range(width)])
+    return rows
+
+
 def decode_ia4(fileobj: RelocFile, bitmap: Bitmap, sprite: Sprite,
                width: int, height: int) -> list[list[tuple[int, int]]]:
     """4-bit IA (3 intensity + 1 alpha in one nibble) -> rows of (i, a).
@@ -811,6 +823,14 @@ def decode_band(fileobj: RelocFile, sprite: Sprite, piece: Bitmap, symbol: str,
     if sprite.bmfmt == G_IM_FMT_I and sprite.bmsiz in (G_IM_SIZ_4b, 4):
         for y, pixels in enumerate(
                 decode_i4(fileobj, piece, sprite, piece_w, piece_h)):
+            for x, i in enumerate(pixels):
+                raster[row + y][x] = (
+                    (sprite.red * i) // 255, (sprite.green * i) // 255,
+                    (sprite.blue * i) // 255,
+                    i if alpha_ramp else (255 if i else 0))
+    elif sprite.bmfmt == G_IM_FMT_I and sprite.bmsiz == G_IM_SIZ_8b:
+        for y, pixels in enumerate(
+                decode_i8(fileobj, piece, sprite, piece_w, piece_h)):
             for x, i in enumerate(pixels):
                 raster[row + y][x] = (
                     (sprite.red * i) // 255, (sprite.green * i) // 255,

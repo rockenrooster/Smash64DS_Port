@@ -98,6 +98,14 @@ $(NITROFS_DIR)/fighters/preview/13.fpc: $(NDS_P4_GEN)/mmario/13.fpc
 	@mkdir -p $(dir $@)
 	@cp $< $@
 
+# A content-set change rewrites nds_build_config.h (its NDS_P4_<NAME> rows):
+# the aggregates over the enabled contents follow it, as the select's tables
+# do. Their export prerequisites alone miss it when a build directory is
+# seeded from another (build_p4play.ps1 copies with mtimes): the copied
+# aggregates stay newer than a new content's export (play-1011sn kept
+# NDS_P4_CONTENT_MAX_ID 16 with 18 contents).
+$(NDS_P4_CONTENTS_HEADER) $(NDS_P4_COLANIM_INC) $(NDS_P4_KIRBY_OUT): $(NDS_BUILD_CONFIG)
+
 # The later contents' routines, size-optimized as the Makefile's first
 # fourteen are (resident in every scene; they run only in their specials).
 nds_p4_piano.o nds_p4_metaknight.o nds_p4_mrgaw.o nds_p4_snake.o: CFLAGS += -Os

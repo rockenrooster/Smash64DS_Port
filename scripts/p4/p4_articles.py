@@ -141,6 +141,20 @@ ARTICLES = {
          "extra_lists": (0xC8,)},
         {"name": "gordo", "special": 1, "itattributes": 0x120, "texid_frames": 1},
     ),
+    "snake": (
+        # EXTRA's C4.asm, Nikita.asm and Cypher.asm item_info_array:
+        # ITAttributes at 0x40, 0xF0 and 0x1E0 of his merged file (special 1,
+        # MERGED_FILERESOURCE_6_0, _1 and _3), each naming its model in its own
+        # graphic file; SnakeSpecial.asm USmash.projectile_struct: the mortar's
+        # WPAttributes at 0x160 (MERGED_FILERESOURCE_6_2).
+        {"name": "c4", "special": 1, "itattributes": 0x40},
+        {"name": "nikita", "special": 1, "itattributes": 0xF0},
+        {"name": "cypher", "special": 1, "itattributes": 0x1E0},
+        {"name": "mortar", "special": 1, "wpattributes": 0x160},
+        # Grenade.asm item_info_array: ITAttributes at 0x40 of his special
+        # file 2 (the grenade's own file).
+        {"name": "grenade", "special": 2, "itattributes": 0x40},
+    ),
     "crash": (
         # samusshared.asm crash_entry_anim_gfx_struct: the point case's
         # object, DObjDesc 0x2310 on his file 8, drawn through DObjDLLinks.
@@ -404,12 +418,16 @@ def resolve(content: str, title: str, o2r: Path, descriptor: dict) -> list[dict]
             # its second the tree's MObjSub*** table. Each entry's list is a
             # root admitted through the attributes' word: the tree's address
             # less its offset is the file's base (via_bias). An entry whose
-            # MObjSub cycles TEXID (the turnip's faces) carries its frames.
+            # MObjSub cycles TEXID (the turnip's faces) carries its frames. A
+            # translucent item (the flags word's is_display_xlu, bit 31 of
+            # +0x10) draws through DObjDLLinks (itDisplayXLUProcDisplay): an
+            # entry's list is then its DObjDLLink array (Snake's items).
             at = article["itattributes"]
             tree = res.pointer_at(at)
             mobjsubs = res.pointer_at(at + 4)
             if tree is None:
                 raise ArticleError(f"{content} {article['name']}: attributes name no tree")
+            xlu = (u32(res, at + 0x10) >> 31) & 1
             target = res_of(tree.asset_id)
             entries = dobjdesc_entries(target, tree.offset)
             for index, dl in entries:
@@ -418,8 +436,9 @@ def resolve(content: str, title: str, o2r: Path, descriptor: dict) -> list[dict]
                         target.pointer_at(mobjsubs.offset + 4 * index) is not None):
                     texid = texid_images(target, mobjsubs.offset, article.get("texid_frames"),
                                          bool(article.get("palette_per_frame")), index)
-                add(article, target, dl, texid, via=(res.file_id, at), via_base=True,
-                    via_bias=tree.offset)
+                for head, root in (dllink_lists(target, dl) if xlu else [(0, dl)]):
+                    add(article, target, root, texid, head, via=(res.file_id, at),
+                        via_base=True, via_bias=tree.offset)
             # Lists the item's code sets at the tree's address plus an offset
             # (Dedede's minions' left walk): drawn with the one listed
             # entry's material.

@@ -331,8 +331,12 @@ typedef struct NDSP4Overrides
 #define NDS_P4_IT_KIND_WADDLE_DEE (nITKindEnumCount + 1)
 #define NDS_P4_IT_KIND_WADDLE_DOO (nITKindEnumCount + 2)
 #define NDS_P4_IT_KIND_GORDO (nITKindEnumCount + 3)
+#define NDS_P4_IT_KIND_SNAKE_C4 (nITKindEnumCount + 4)
+#define NDS_P4_IT_KIND_SNAKE_GRENADE (nITKindEnumCount + 5)
+#define NDS_P4_IT_KIND_SNAKE_NIKITA (nITKindEnumCount + 6)
+#define NDS_P4_IT_KIND_SNAKE_CYPHER (nITKindEnumCount + 7)
 #define NDS_P4_IT_KIND_FIRST NDS_P4_IT_KIND_TURNIP
-#define NDS_P4_IT_KIND_LAST NDS_P4_IT_KIND_GORDO
+#define NDS_P4_IT_KIND_LAST NDS_P4_IT_KIND_SNAKE_CYPHER
 #define NDS_P4_ITEM_DROPPED 0
 #define NDS_P4_ITEM_THROWN 1
 #define NDS_P4_ITEM_HOLD 2
@@ -354,6 +358,7 @@ sb32 ndsP4ColAnimEnd(GObj *fighter_gobj);
 #define NDS_P4_WP_KIND_WADDLEDOO_BEAM (nWPKindMonsterEnd + 6)
 #define NDS_P4_WP_KIND_PIANO_BOOK (nWPKindMonsterEnd + 7)
 #define NDS_P4_WP_KIND_MRGAW_CHEF (nWPKindMonsterEnd + 8)
+#define NDS_P4_WP_KIND_SNAKE_MORTAR (nWPKindMonsterEnd + 9)
 
 /* Remix's custom reflect kind (Reflect.asm reflect_type.CUSTOM): the low
  * half of FTSpecialColl.kind (the N64's second halfword), the routine index
@@ -596,6 +601,10 @@ typedef struct NDSP4Fighter
      * list and the Remix input routines it names are in the content's
      * match tables (NDSP4TablesHeader). */
     const u8 *computer_long_range;
+    /* Character.nsp_shoot_custom_move: the input routine the projectile
+     * users' walk and shoot issues in place of the source's two (AI.asm
+     * LONG_RANGE custom_move); 0 keeps the source's. */
+    const u8 *computer_long_range_move;
     /* NDS_P4_COMPUTER_REFLECT_* bits. */
     const u8 *computer_reflect;
     /* Entry-article texture pointers its native packets carry. */
@@ -939,6 +948,8 @@ const NDSP4Computer *ndsP4Computer(const FTStruct *fp);
 const FTComputerAttack *ndsP4ComputerAttacks(const FTStruct *fp);
 /* NDS_P4_COMPUTER_LONG_RANGE_*; PARENT for the original cast. */
 u32 ndsP4ComputerLongRange(const FTStruct *fp);
+/* NDSP4Fighter.computer_long_range_move; 0 for the original cast. */
+u32 ndsP4ComputerLongRangeMove(const FTStruct *fp);
 /* Owner 2026-10-08 (S15 memory): a content in a battle of three or four
  * fighters draws its low-detail model everywhere, the source's KO and pause
  * close-ups included, and its high-detail owner image is never admitted.
