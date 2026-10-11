@@ -85,6 +85,7 @@ CALLBACK_PORTS = {
     "MarthNSP.air_main_": "ndsP4MarthNSPAirMain",
     "MarthNSP.ground_collision_": "ndsP4MarthNSPGroundMap",
     "MarthNSP.air_collision_": "ndsP4MarthNSPAirMap",
+    "MarthNSP.kirby_ground_collision_": "ndsP4MarthNSPKirbyGroundMap",
     "MarthDSP.ground_initial_": "ndsP4MarthDSPGroundInitial",
     "MarthDSP.air_initial_": "ndsP4MarthDSPAirInitial",
     "MarthDSP.main_": "ndsP4MarthDSPMain",
@@ -236,6 +237,11 @@ CALLBACK_PORTS = {
     "SheikNSP.air_charge_collision_": "ndsP4SheikNSPChargeAirMap",
     "SheikNSP.shoot_main_": "ndsP4SheikNSPShootMain",
     "SheikNSP.ground_shoot_collision_": "ndsP4SheikNSPShootGroundMap",
+    # Kirby's copy (p4_kirby.py): his statuses' own collision routines.
+    "SheikNSP.kirby_ground_begin_collision_": "ndsP4SheikNSPKirbyBeginGroundMap",
+    "SheikNSP.kirby_ground_charge_collision_": "ndsP4SheikNSPKirbyChargeGroundMap",
+    "SheikNSP.kirby_ground_shoot_collision_": "ndsP4SheikNSPKirbyShootGroundMap",
+    "SheikNSP.air_shoot_collision_": "ndsP4SheikNSPKirbyShootAirMap",
     "SheikDSP.initial_": "ndsP4SheikDSPInitial",
     "SheikDSP.main_": "ndsP4SheikDSPMain",
     "SheikDSP.physics_": "ndsP4SheikDSPPhysics",
@@ -427,6 +433,8 @@ RAM_DATA = {
         # CrashNSP.spin_gfx_table: prim and env colours of the spin's two
         # parts, per costume (7 x 16 bytes).
         ("SpinColors", "CrashNSP.spin_gfx_table", 0x70),
+        # CrashNSP.kirby_spin_gfx_table: Kirby's copy, per Kirby costume.
+        ("KirbySpinColors", "CrashNSP.kirby_spin_gfx_table", 0x70),
         # CrashDSP's dig effect animation tracks (AObjEvent32 on joint 1).
         ("DigTurnTrack", "CrashDSP.track_dig_turn", 0x20),
         ("DigWaitTrack", "CrashDSP.track_dig_wait", 0x10),
@@ -1616,12 +1624,15 @@ def main() -> int:
               f"    .menu_zoom = {c_float(present['menu_zoom'])},",
               "    .default_costumes = { " + ", ".join(str(b) for b in present["default_costumes"]) + " },",
               "};", ""]
-    # SwordTrail.asm rows whose character is this content (the SET AFTERIMAGE
-    # id is the row's table index). An exporter without the table is an error,
-    # not an empty list: the content's trails would silently not draw.
+    # SwordTrail.asm rows whose character is this content or any (0xFFFF:
+    # initial_setup_ skips the test; Sonic's homing attack trail), the SET
+    # AFTERIMAGE id being the row's table index. An exporter without the
+    # table is an error, not an empty list: the content's trails would
+    # silently not draw.
     if "sword_trails" not in resolved:
         raise SystemExit("export has no sword_trails table (re-run remix_export.py)")
-    trails = [t for t in resolved["sword_trails"] if t["character"] == resolved["remix_kind_id"]]
+    trails = [t for t in resolved["sword_trails"]
+              if t["character"] in (resolved["remix_kind_id"], 0xFFFF)]
     lines += ["/* Remix sword trails (SwordTrail.asm add_sword_trail rows for this character). */",
               f"const NDSP4SwordTrail g{ident}SwordTrails[{max(len(trails), 1)}] = {{"]
     for t in trails:

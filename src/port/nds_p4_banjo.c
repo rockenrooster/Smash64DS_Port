@@ -39,6 +39,9 @@
 #include <nds/nds_p4.h>
 
 #if NDS_P4_BANJO
+#if NDS_P2_KIRBY
+#include "kirby/nds_p4_kirby.generated.h"
+#endif
 
 #if !NDS_P2_SAMUS
 #error "P4 Banjo's eggs reflect through Samus's bomb routine (NDS_P2_SAMUS)"
@@ -162,10 +165,26 @@ static void ndsP4BanjoClearFastFall(FTStruct *fp)
 
 /* ---- Neutral special (the eggs) ---- */
 
+/* Kirby's copy (S8): BanjoNSP sets Banjo's statuses for his id and Kirby's
+ * own BANJO_NSP statuses, in the same order, for any other. */
+static s32 ndsP4BanjoNSPStatus(const FTStruct *fp, s32 status_id)
+{
+#if NDS_P2_KIRBY
+    if (fp->fkind == nFTKindKirby)
+    {
+        return NDS_P4_KIRBY_STATUS_BANJO_NSPBEGING + (status_id - BANJO_STATUS_NSPG_BEGIN);
+    }
+#else
+    (void)fp;
+#endif
+    return status_id;
+}
+
 /* BanjoNSP.begin_initial_. */
 static void ndsP4BanjoNSPInitial(GObj *fighter_gobj, s32 status_id)
 {
-    ftMainSetStatus(fighter_gobj, status_id, 0.0F, 1.0F, FTSTATUS_PRESERVE_NONE);
+    ftMainSetStatus(fighter_gobj, ndsP4BanjoNSPStatus(ftGetStruct(fighter_gobj), status_id), 0.0F,
+                    1.0F, FTSTATUS_PRESERVE_NONE);
     ftMainPlayAnimEventsAll(fighter_gobj);
 }
 
@@ -189,7 +208,8 @@ static void ndsP4BanjoNSPGroundShootInitial(GObj *fighter_gobj, s32 status_id)
 
     fp->motion_vars.flags.flag0 = 0;
     fp->motion_vars.flags.flag1 = 0;
-    ftMainSetStatus(fighter_gobj, status_id, fighter_gobj->anim_frame, 1.0F, BANJO_PRESERVE_NSP);
+    ftMainSetStatus(fighter_gobj, ndsP4BanjoNSPStatus(fp, status_id), fighter_gobj->anim_frame,
+                    1.0F, BANJO_PRESERVE_NSP);
 }
 
 /* BanjoNSP.air_shoot_forward_initial_ / air_shoot_backward_initial_. */
@@ -204,7 +224,8 @@ static void ndsP4BanjoNSPAirShootInitial(GObj *fighter_gobj, s32 status_id)
     }
     fp->motion_vars.flags.flag0 = 0;
     fp->motion_vars.flags.flag1 = 0;
-    ftMainSetStatus(fighter_gobj, status_id, 0.0F, 1.0F, BANJO_PRESERVE_NSP);
+    ftMainSetStatus(fighter_gobj, ndsP4BanjoNSPStatus(fp, status_id), 0.0F, 1.0F,
+                    BANJO_PRESERVE_NSP);
 }
 
 /* BanjoNSP.begin_main_ (0xE1/0xE4 update): at the end of the motion the
@@ -247,16 +268,18 @@ static void ndsP4BanjoNSPBeginGroundToAir(GObj *fighter_gobj)
 
     mpCommonSetFighterAir(fp);
     ftPhysicsClampAirVelXMax(fp);
-    ftMainSetStatus(fighter_gobj, BANJO_STATUS_NSPA_BEGIN, fighter_gobj->anim_frame, 1.0F,
-                    BANJO_PRESERVE_NSP);
+    ftMainSetStatus(fighter_gobj, ndsP4BanjoNSPStatus(fp, BANJO_STATUS_NSPA_BEGIN),
+                    fighter_gobj->anim_frame, 1.0F, BANJO_PRESERVE_NSP);
 }
 
 /* BanjoNSP.ground_begin_transition_. */
 static void ndsP4BanjoNSPBeginAirToGround(GObj *fighter_gobj)
 {
-    mpCommonSetFighterGround(ftGetStruct(fighter_gobj));
-    ftMainSetStatus(fighter_gobj, BANJO_STATUS_NSPG_BEGIN, fighter_gobj->anim_frame, 1.0F,
-                    BANJO_PRESERVE_NSP);
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    mpCommonSetFighterGround(fp);
+    ftMainSetStatus(fighter_gobj, ndsP4BanjoNSPStatus(fp, BANJO_STATUS_NSPG_BEGIN),
+                    fighter_gobj->anim_frame, 1.0F, BANJO_PRESERVE_NSP);
 }
 
 /* BanjoNSP.ground_begin_collision_ (0xE1 map). */
@@ -494,16 +517,22 @@ void ndsP4BanjoNSPAirShootPhysics(GObj *fighter_gobj)
 /* BanjoNSP.ground_shoot_*_transition_: Samus's aerial end's first lines. */
 static void ndsP4BanjoNSPShootAirToGround(GObj *fighter_gobj, s32 status_id)
 {
-    mpCommonSetFighterGround(ftGetStruct(fighter_gobj));
-    ftMainSetStatus(fighter_gobj, status_id, fighter_gobj->anim_frame, 1.0F, BANJO_PRESERVE_NSP);
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    mpCommonSetFighterGround(fp);
+    ftMainSetStatus(fighter_gobj, ndsP4BanjoNSPStatus(fp, status_id), fighter_gobj->anim_frame,
+                    1.0F, BANJO_PRESERVE_NSP);
 }
 
 /* BanjoNSP.air_shoot_*_transition_: Samus's ground end's first lines, no
  * clamp. */
 static void ndsP4BanjoNSPShootGroundToAir(GObj *fighter_gobj, s32 status_id)
 {
-    mpCommonSetFighterAir(ftGetStruct(fighter_gobj));
-    ftMainSetStatus(fighter_gobj, status_id, fighter_gobj->anim_frame, 1.0F, BANJO_PRESERVE_NSP);
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    mpCommonSetFighterAir(fp);
+    ftMainSetStatus(fighter_gobj, ndsP4BanjoNSPStatus(fp, status_id), fighter_gobj->anim_frame,
+                    1.0F, BANJO_PRESERVE_NSP);
 }
 
 static void ndsP4BanjoNSPShootForwardAirToGround(GObj *fighter_gobj)

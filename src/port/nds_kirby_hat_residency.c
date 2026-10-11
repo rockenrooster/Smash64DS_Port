@@ -5,6 +5,7 @@
 #include <nds/arm9/cache.h>
 #include <nds/nds_kirby_hat_residency.h>
 #include <nds/nds_renderer.h>
+#include <nds/nds_p4.h>
 
 volatile u32 gNdsKirbyHatRequiredHighMask;
 volatile u32 gNdsKirbyHatRequiredLowMask;
@@ -55,6 +56,14 @@ static u32 ndsKirbyHatPlayerMask(const FTKirbyCopy *copy)
     {
         if (gSCManagerBattleState->players[player].pkind == nFTPlayerKindNot)
             continue;
+#if NDS_P4
+        /* P4 S8: a content player's power shows its own hat. */
+        if (ndsP4KirbyHatMask(player) != 0u)
+        {
+            mask |= ndsP4KirbyHatMask(player);
+            continue;
+        }
+#endif
         mask |= ndsKirbyHatBitForKind(copy,
             gSCManagerBattleState->players[player].fkind);
     }

@@ -144,6 +144,10 @@ ARTICLES = {
         # texture.
         {"name": "dig", "special": 2, "via_base": 0xCC0, "dobjdesc": 0x230, "dllinks": True,
          "material": True},
+        # kirby_spin_gfx_struct (S8): Kirby's copy of the spin, the same
+        # description on the file file 7's word 0xCC4 names.
+        {"name": "kirby_spin", "special": 2, "via_base": 0xCC4, "dobjdesc": 0x708, "dllinks": True,
+         "material": True},
     ),
 }
 

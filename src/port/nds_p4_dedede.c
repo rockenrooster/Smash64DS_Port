@@ -50,6 +50,7 @@
 
 #if NDS_P4_DEDEDE
 
+#include "kirby/nds_p4_kirby.generated.h"
 #if !NDS_P2_KIRBY
 #error "P4 Dedede's inhale runs Kirby's status code (NDS_P2_KIRBY)"
 #endif
@@ -560,6 +561,61 @@ void ndsP4DededeUSPCeilingBonkMap(GObj *fighter_gobj)
 
 /* ---- Neutral special (the inhale) ---- */
 
+/* Kirby's copy (S8): DededeNSP and Remix's hooks on Kirby's inhale set
+ * Kirby's own DEDEDE_NSP statuses (Kirby wearing Dedede's hat) where they
+ * set Dedede's. */
+static s32 ndsP4DededeKirbyStatus(s32 status_id)
+{
+    switch (status_id)
+    {
+    case DEDEDE_STATUS_NSP_BEGIN_GROUND:
+        return NDS_P4_KIRBY_STATUS_DEDEDE_NSP_BEGIN_GROUND;
+    case DEDEDE_STATUS_NSP_LOOP_GROUND:
+        return NDS_P4_KIRBY_STATUS_DEDEDE_NSP_LOOP_GROUND;
+    case DEDEDE_STATUS_NSP_PULL_GROUND:
+        return NDS_P4_KIRBY_STATUS_DEDEDE_NSP_PULL_GROUND;
+    case DEDEDE_STATUS_NSP_SWALLOW_GROUND:
+        return NDS_P4_KIRBY_STATUS_DEDEDE_NSP_SWALLOW_GROUND;
+    case DEDEDE_STATUS_NSP_IDLE_GROUND:
+        return NDS_P4_KIRBY_STATUS_DEDEDE_NSP_IDLE_GROUND;
+    case DEDEDE_STATUS_NSP_SPIT_GROUND:
+        return NDS_P4_KIRBY_STATUS_DEDEDE_NSP_SPIT_GROUND;
+    case DEDEDE_STATUS_NSP_TURN_GROUND:
+        return NDS_P4_KIRBY_STATUS_DEDEDE_NSP_TURN_GROUND;
+    case DEDEDE_STATUS_NSP_END_GROUND:
+        return NDS_P4_KIRBY_STATUS_DEDEDE_NSP_END_GROUND;
+    case DEDEDE_STATUS_NSP_BEGIN_AIR:
+        return NDS_P4_KIRBY_STATUS_DEDEDE_NSP_BEGIN_AIR;
+    case DEDEDE_STATUS_NSP_LOOP_AIR:
+        return NDS_P4_KIRBY_STATUS_DEDEDE_NSP_LOOP_AIR;
+    case DEDEDE_STATUS_NSP_PULL_AIR:
+        return NDS_P4_KIRBY_STATUS_DEDEDE_NSP_PULL_AIR;
+    case DEDEDE_STATUS_NSP_SWALLOW_AIR:
+        return NDS_P4_KIRBY_STATUS_DEDEDE_NSP_SWALLOW_AIR;
+    case DEDEDE_STATUS_NSP_FALL:
+        return NDS_P4_KIRBY_STATUS_DEDEDE_NSP_FALL;
+    case DEDEDE_STATUS_NSP_SPIT_AIR:
+        return NDS_P4_KIRBY_STATUS_DEDEDE_NSP_SPIT_AIR;
+    case DEDEDE_STATUS_NSP_TURN_AIR:
+        return NDS_P4_KIRBY_STATUS_DEDEDE_NSP_TURN_AIR;
+    case DEDEDE_STATUS_NSP_END_AIR:
+        return NDS_P4_KIRBY_STATUS_DEDEDE_NSP_END_AIR;
+    default:
+        if ((status_id >= DEDEDE_STATUS_NSP_WALK_1) &&
+            (status_id <= DEDEDE_STATUS_NSP_WALK_1 + 2))
+        {
+            return NDS_P4_KIRBY_STATUS_DEDEDE_NSP_WALK_1 + (status_id - DEDEDE_STATUS_NSP_WALK_1);
+        }
+        return status_id;
+    }
+}
+
+static s32 ndsP4DededeNSPStatus(GObj *fighter_gobj, s32 status_id)
+{
+    return (ftGetStruct(fighter_gobj)->fkind == nFTKindKirby) ? ndsP4DededeKirbyStatus(status_id) :
+                                                                status_id;
+}
+
 static void ndsP4DededeNSPGroundLoopInitial(GObj *fighter_gobj);
 static void ndsP4DededeNSPAirLoopInitial(GObj *fighter_gobj);
 
@@ -586,7 +642,8 @@ static void ndsP4DededeNSPBeginInitial(GObj *fighter_gobj, s32 status_id)
 {
     FTStruct *fp;
 
-    ftMainSetStatus(fighter_gobj, status_id, 0.0F, 1.0F, FTSTATUS_PRESERVE_NONE);
+    ftMainSetStatus(fighter_gobj, ndsP4DededeNSPStatus(fighter_gobj, status_id), 0.0F, 1.0F,
+                    FTSTATUS_PRESERVE_NONE);
     ftKirbySpecialNInitStatusVars(fighter_gobj, FALSE);
     ftKirbySpecialNGotoSetCatchParams(fighter_gobj);
     ftMainPlayAnimEventsAll(fighter_gobj);
@@ -624,7 +681,8 @@ void ndsP4DededeNSPAirBeginMain(GObj *fighter_gobj)
  * the absorb before its events. */
 static void ndsP4DededeNSPLoopInitial(GObj *fighter_gobj, s32 status_id)
 {
-    ftMainSetStatus(fighter_gobj, status_id, 0.0F, 1.0F, DEDEDE_PRESERVE_NSP_LOOP);
+    ftMainSetStatus(fighter_gobj, ndsP4DededeNSPStatus(fighter_gobj, status_id), 0.0F, 1.0F,
+                    DEDEDE_PRESERVE_NSP_LOOP);
     ftKirbySpecialNGotoSetCatchParams(fighter_gobj);
     ndsP4DededeAbsorbSetup(fighter_gobj);
     ftMainPlayAnimEventsAll(fighter_gobj);
@@ -646,7 +704,7 @@ static void ndsP4DededeNSPLoopGroundToAir(GObj *fighter_gobj)
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
     mpCommonSetFighterAir(fp);
-    ftMainSetStatus(fighter_gobj, DEDEDE_STATUS_NSP_LOOP_AIR, fighter_gobj->anim_frame, 1.0F,
+    ftMainSetStatus(fighter_gobj, ndsP4DededeNSPStatus(fighter_gobj, DEDEDE_STATUS_NSP_LOOP_AIR), fighter_gobj->anim_frame, 1.0F,
                     DEDEDE_PRESERVE_NSP_LOOP_SWITCH);
     ftKirbySpecialNSetCatchParams(fp);
     ndsP4DededeAbsorbSetup(fighter_gobj);
@@ -658,7 +716,7 @@ static void ndsP4DededeNSPLoopAirToGround(GObj *fighter_gobj)
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
     mpCommonSetFighterGround(fp);
-    ftMainSetStatus(fighter_gobj, DEDEDE_STATUS_NSP_LOOP_GROUND, fighter_gobj->anim_frame, 1.0F,
+    ftMainSetStatus(fighter_gobj, ndsP4DededeNSPStatus(fighter_gobj, DEDEDE_STATUS_NSP_LOOP_GROUND), fighter_gobj->anim_frame, 1.0F,
                     DEDEDE_PRESERVE_NSP_LOOP_SWITCH);
     ftKirbySpecialNSetCatchParams(fp);
     ndsP4DededeAbsorbSetup(fighter_gobj);
@@ -701,7 +759,8 @@ static void ndsP4DededeNSPSpitSetStatus(GObj *fighter_gobj, s32 status_id)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
-    ftMainSetStatus(fighter_gobj, status_id, 0.0F, 1.0F, DEDEDE_PRESERVE_NSP_SPIT);
+    ftMainSetStatus(fighter_gobj, ndsP4DededeNSPStatus(fighter_gobj, status_id), 0.0F, 1.0F,
+                    DEDEDE_PRESERVE_NSP_SPIT);
     ftParamSetCaptureImmuneMask(fp, FTCATCHKIND_MASK_ALL);
     ftMainPlayAnimEventsAll(fighter_gobj);
 }
@@ -725,7 +784,8 @@ static void ndsP4DededeNSPWalkSetStatus(GObj *fighter_gobj, f32 frame_begin)
     s32 status_id = ftCommonWalkGetWalkStatus(fp->input.pl.stick_range.x) +
                     (DEDEDE_STATUS_NSP_WALK_1 - nFTCommonStatusWalkSlow);
 
-    ftMainSetStatus(fighter_gobj, status_id, frame_begin, 1.0F, FTSTATUS_PRESERVE_NONE);
+    ftMainSetStatus(fighter_gobj, ndsP4DededeNSPStatus(fighter_gobj, status_id), frame_begin, 1.0F,
+                    FTSTATUS_PRESERVE_NONE);
     ftMainPlayAnimEventsAll(fighter_gobj);
 }
 
@@ -738,7 +798,7 @@ static void ndsP4DededeNSPWalkToIdle(GObj *fighter_gobj)
     {
         mpCommonSetFighterGround(fp);
     }
-    ftMainSetStatus(fighter_gobj, DEDEDE_STATUS_NSP_IDLE_GROUND, 0.0F, 1.0F, FTSTATUS_PRESERVE_NONE);
+    ftMainSetStatus(fighter_gobj, ndsP4DededeNSPStatus(fighter_gobj, DEDEDE_STATUS_NSP_IDLE_GROUND), 0.0F, 1.0F, FTSTATUS_PRESERVE_NONE);
 }
 
 /* DededeNSP.ground_idle_interrupt_ (0xEC interrupt): spit, Kirby's turn
@@ -778,7 +838,8 @@ void ndsP4DededeNSPWalkInterrupt(GObj *fighter_gobj)
     }
     stick_x = ABS(fp->input.pl.stick_range.x);
 
-    if ((ftCommonWalkGetWalkStatus((s8)stick_x) + (DEDEDE_STATUS_NSP_WALK_1 - nFTCommonStatusWalkSlow)) ==
+    if (ndsP4DededeNSPStatus(fighter_gobj, ftCommonWalkGetWalkStatus((s8)stick_x) +
+                                               (DEDEDE_STATUS_NSP_WALK_1 - nFTCommonStatusWalkSlow)) ==
         fp->status_id)
     {
         return;
@@ -796,7 +857,7 @@ static void ndsP4DededeNSPWalkFall(GObj *fighter_gobj)
     {
         mpCommonSetFighterAir(fp);
     }
-    ftMainSetStatus(fighter_gobj, DEDEDE_STATUS_NSP_FALL, 0.0F, 0.0F, FTSTATUS_PRESERVE_FASTFALL);
+    ftMainSetStatus(fighter_gobj, ndsP4DededeNSPStatus(fighter_gobj, DEDEDE_STATUS_NSP_FALL), 0.0F, 0.0F, FTSTATUS_PRESERVE_FASTFALL);
     ftPhysicsClampAirVelXMax(fp);
 }
 
@@ -916,8 +977,10 @@ static void ndsP4DededeOnCustomReflect(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
-    ftKirbySpecialNEatSetStatusParam(fighter_gobj, (fp->ga != nMPKineticsGround) ?
-                                     DEDEDE_STATUS_NSP_SPIT_AIR : DEDEDE_STATUS_NSP_SPIT_GROUND);
+    ftKirbySpecialNEatSetStatusParam(fighter_gobj,
+        ndsP4DededeNSPStatus(fighter_gobj, (fp->ga != nMPKineticsGround) ?
+                                           DEDEDE_STATUS_NSP_SPIT_AIR :
+                                           DEDEDE_STATUS_NSP_SPIT_GROUND));
 }
 
 /* Remix's DededeNSP hooks on Kirby's status changes (25 patches in
@@ -978,6 +1041,12 @@ static s32 ndsP4DededeKirbyInhaleStatus(s32 status_id)
     default:
         return status_id;
     }
+}
+
+/* Kirby holding the power: the same hooks, Kirby's DEDEDE_NSP statuses. */
+static s32 ndsP4DededeKirbyCopyInhaleStatus(s32 status_id)
+{
+    return ndsP4DededeKirbyStatus(ndsP4DededeKirbyInhaleStatus(status_id));
 }
 
 /* Dedede.custom_initial_absorbed_timer_: held half as long as Kirby holds,
@@ -2944,8 +3013,11 @@ const NDSP4Overrides gNdsP4DededeOverrides = {
     .kirby_capture_wait = ndsP4DededeKirbyCaptureWait,
     .kirby_inhale_wind_x = DEDEDE_NSP_WIND_X,
     .on_custom_reflect = ndsP4DededeOnCustomReflect,
+    .kirby_copy_inhale_status = ndsP4DededeKirbyCopyInhaleStatus,
+    .kirby_on_custom_reflect = ndsP4DededeOnCustomReflect,
     .entry_case = ndsP4DededeEntryCase,
     .colanim_end = ndsP4DededeColAnimEnd,
+    .kirby_colanim_end = ndsP4DededeColAnimEnd,
 };
 
 #endif /* NDS_P4_DEDEDE */

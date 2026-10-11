@@ -1511,6 +1511,16 @@ static sb32 ndsFighterHoldsFoxGunSource(const FTStruct *fp)
     {
         return TRUE;
     }
+#if NDS_P4
+    /* P4 S8: a power's weapon on Kirby's joint 17 (Remix's extended special
+     * part: Wolf's gun, Marth's and Roy's swords, Lanky's gun) is selected
+     * through the same source pistol part, so it leaves the body the same
+     * way and draws beside it (ndsFighterDrawFoxGunSidecar). */
+    if ((fp->fkind == nFTKindKirby) && (fp->nds_p4_kirby_copy != 0u))
+    {
+        return TRUE;
+    }
+#endif
 #endif
     return FALSE;
 }
@@ -1615,9 +1625,20 @@ static void ndsFighterDrawFoxGunSidecar(FTStruct *fp)
     u32 asset;
     u32 offset;
 
-    if ((fp->nds_p4_content != 0u) &&
-        (ndsRendererEntryEffectP4Sidecar(fp->nds_p4_content,
-                                         NDS_FOX_GUN_HOLD_JOINT,
+    /* A Kirby holding a content's power shows that content's weapon (Remix's
+     * extended special part); a Fox clone's power without its own root
+     * (Falco's) keeps Fox's pistol, any other one the port has no root for
+     * (Marth's, Roy's and Lanky's, S8) draws nothing. */
+    u32 content = fp->nds_p4_content;
+
+#if NDS_P2_KIRBY
+    if ((content == 0u) && (fp->fkind == nFTKindKirby))
+    {
+        content = fp->nds_p4_kirby_copy;
+    }
+#endif
+    if ((content != 0u) &&
+        (ndsRendererEntryEffectP4Sidecar(content, NDS_FOX_GUN_HOLD_JOINT,
                                          &asset, &offset) != FALSE))
     {
         NDSRendererMatrix20p12 projection;
@@ -1631,6 +1652,13 @@ static void ndsFighterDrawFoxGunSidecar(FTStruct *fp)
         }
         return;
     }
+#if NDS_P2_KIRBY
+    if ((fp->fkind == nFTKindKirby) && (fp->nds_p4_kirby_copy != 0u) &&
+        (fp->passive_vars.kirby.copy_id != (s32)nFTKindFox))
+    {
+        return;
+    }
+#endif
 #endif
     if (ndsRendererAdapterBuildFoxGunJointMtx(fp, cobj, &sidecar_world) != FALSE)
     {

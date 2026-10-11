@@ -714,7 +714,27 @@ void ftComputerProcessAll(GObj *fighter_gobj)
     }
     else
     {
+#if NDS_P4 && NDS_P2_KIRBY
+        /* S8: where the CPU tests Kirby's copy_id, Remix's sees a content
+         * power's own id, which none of the source's cases name; the port's
+         * copy_id is the parent's kind, so it reads as an unnamed id for the
+         * decision only. */
+        s32 kirby_copy_id = fp->passive_vars.kirby.copy_id;
+        sb32 is_kirby_power = ((fp->fkind == nFTKindKirby) &&
+                               (fp->nds_p4_kirby_copy != 0u)) ? TRUE : FALSE;
+
+        if (is_kirby_power != FALSE)
+        {
+            fp->passive_vars.kirby.copy_id = nFTKindEnumCount;
+        }
+#endif
         ndsBaseFTComputerProcessAll(fighter_gobj);
+#if NDS_P4 && NDS_P2_KIRBY
+        if (is_kirby_power != FALSE)
+        {
+            fp->passive_vars.kirby.copy_id = kirby_copy_id;
+        }
+#endif
 #if NDS_SHIP_TELEMETRY
         gNdsFTComputerProcessCount++;
         ndsFTComputerRecord(fp);

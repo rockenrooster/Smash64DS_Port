@@ -25,6 +25,9 @@
 
 #if NDS_P4_BOWSER
 
+#if NDS_P2_KIRBY
+#include "kirby/nds_p4_kirby.generated.h"
+#endif
 #include <ef/effect.h>
 #include <ft/ftcomputer.h>
 #include <gm/gmsound.h>
@@ -80,6 +83,9 @@ __attribute__((used)) volatile u32 gNdsP4BowserArticleMisses;
 #define BOWSER_FLAME_RECHARGE 2
 #define BOWSER_FLAME_JOINT 7
 #define BOWSER_FLAME_X 120.0F                   /* lui 0x42F0 */
+#define BOWSER_FLAME_KIRBY_JOINT 13
+#define BOWSER_FLAME_KIRBY_X -20.0F             /* lui 0xC1A0 */
+#define BOWSER_SMOKE_KIRBY_JOINT 16
 #define BOWSER_FLAME_OFFSET_X 100.0F            /* lui 0x42C8, times his facing */
 #define BOWSER_FLAME_OFFSET_Y -200.0F           /* lui 0xC348 */
 #define BOWSER_FLAME_LAND_CANCEL_FRAME 20.0F    /* lui 0x41A0 */
@@ -100,10 +106,25 @@ static f32 ndsP4BowserBitsToF32(u32 bits)
 }
 
 /* passive_vars' first two halfwords: [0] the recharge timer, [1] the
- * flames left. */
+ * flames left. Kirby's copy keeps them in the next two (0xAE0/0xAE2). */
 static u16 *ndsP4BowserFlame(FTStruct *fp)
 {
-    return (u16 *)(void *)&fp->passive_vars;
+    return (u16 *)(void *)&fp->passive_vars + ((fp->fkind == nFTKindKirby) ? 2 : 0);
+}
+
+/* Kirby's copy (S8): BowserNSP sets Kirby's own BOWSER_NSP statuses. */
+static s32 ndsP4BowserNSPStatus(const FTStruct *fp, s32 status_id)
+{
+#if NDS_P2_KIRBY
+    if (fp->fkind == nFTKindKirby)
+    {
+        return (status_id == BOWSER_STATUS_NSP) ? NDS_P4_KIRBY_STATUS_BOWSER_NSP_GROUND :
+                                                  NDS_P4_KIRBY_STATUS_BOWSER_NSP_AIR;
+    }
+#else
+    (void)fp;
+#endif
+    return status_id;
 }
 
 /* ---- Up special (Whirling Fortress) ---- */
@@ -233,7 +254,8 @@ static void ndsP4BowserNSPInitial(GObj *fighter_gobj, s32 status_id)
     ff->ammo_fire_count = 0;
     ff->is_release = FALSE;
     ff->release_lag = 0;
-    ftMainSetStatus(fighter_gobj, status_id, 0.0F, 1.0F, FTSTATUS_PRESERVE_NONE);
+    ftMainSetStatus(fighter_gobj, ndsP4BowserNSPStatus(fp, status_id), 0.0F, 1.0F,
+                    FTSTATUS_PRESERVE_NONE);
     ftMainPlayAnimEventsAll(fighter_gobj);
 }
 
@@ -285,21 +307,24 @@ static void ndsP4BowserFlameShoot(FTStruct *fp, s32 ammo_sub)
 
     if ((s32)flame[1] >= ammo_sub)
     {
-        f32 size_mul = 1.0F / fp->attr->size;
+        /* Kirby's copy: twice the scale, 20 behind, from his joint 13. */
+        sb32 kirby = (fp->fkind == nFTKindKirby) ? TRUE : FALSE;
+        s32 joint = (kirby != FALSE) ? BOWSER_FLAME_KIRBY_JOINT : BOWSER_FLAME_JOINT;
+        f32 size_mul = ((kirby != FALSE) ? 2.0F : 1.0F) / fp->attr->size;
         Vec3f pos;
         s32 index;
 
         pos.x = 60.0F * size_mul;
         pos.y = 100.0F * size_mul;
-        pos.z = BOWSER_FLAME_X * size_mul;
+        pos.z = ((kirby != FALSE) ? BOWSER_FLAME_KIRBY_X : BOWSER_FLAME_X) * size_mul;
 
-        if (fp->joints[BOWSER_FLAME_JOINT] == NULL)
+        if (fp->joints[joint] == NULL)
         {
             gNdsP4BowserArticleMisses++;
         }
         else
         {
-            gmCollisionGetFighterPartsWorldPosition(fp->joints[BOWSER_FLAME_JOINT], &pos);
+            gmCollisionGetFighterPartsWorldPosition(fp->joints[joint], &pos);
 
             index = ff->flame_vel_index;
             if (index >= BOWSER_FLAME_LOOP_INDEX)
@@ -363,11 +388,19 @@ void ndsP4BowserNSPMain(GObj *fighter_gobj)
 
             if (ndsP4BowserFlame(fp)[1] == 0)
             {
-                /* Out of flames: smoke at his mouth and the empty burn. */
+                /* Out of flames: smoke at his mouth and the empty burn
+                 * (Kirby's copy: his joint 16, -300 and -97.5). */
                 Vec3f smoke = { 81.0F, 304.0F, 260.0F };
+                s32 joint = fp->attr->joint_itemlight_id;
 
-                ftParamMakeEffect(fighter_gobj, nEFKindDustLight,
-                                  fp->attr->joint_itemlight_id, &smoke, NULL,
+                if (fp->fkind == nFTKindKirby)
+                {
+                    smoke.x = -300.0F;
+                    smoke.y = -97.5F;
+                    smoke.z = 0.0F;
+                    joint = BOWSER_SMOKE_KIRBY_JOINT;
+                }
+                ftParamMakeEffect(fighter_gobj, nEFKindDustLight, joint, &smoke, NULL,
                                   -fp->lr, TRUE, FALSE);
                 func_800269C0_275C0(nSYAudioFGMFireFlowerBurn);
             }
@@ -416,9 +449,12 @@ void ndsP4BowserNSPMain(GObj *fighter_gobj)
 /* BowserNSP.air_to_ground_: the ground breath at the same frame and speed. */
 static void ndsP4BowserNSPAirToGround(GObj *fighter_gobj)
 {
-    mpCommonSetFighterGround(ftGetStruct(fighter_gobj));
-    ftMainSetStatus(fighter_gobj, BOWSER_STATUS_NSP, fighter_gobj->anim_frame,
-                    DObjGetStruct(fighter_gobj)->anim_speed, FTSTATUS_PRESERVE_NONE);
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    mpCommonSetFighterGround(fp);
+    ftMainSetStatus(fighter_gobj, ndsP4BowserNSPStatus(fp, BOWSER_STATUS_NSP),
+                    fighter_gobj->anim_frame, DObjGetStruct(fighter_gobj)->anim_speed,
+                    FTSTATUS_PRESERVE_NONE);
 }
 
 /* BowserNSP.air_collision_ (0xE7 map): landing keeps breathing while B is
@@ -437,7 +473,8 @@ void ndsP4BowserNSPAirMap(GObj *fighter_gobj)
 }
 
 /* bowser.asm bowser_nsp_recharge: two flames every 30 frames outside the
- * breath, until 20 (a count the costs leave odd overshoots, as there). */
+ * breath, until 20 (a count the costs leave odd overshoots, as there); for
+ * Kirby holding the power as well. */
 static void ndsP4BowserAfterProcMap(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
@@ -450,7 +487,8 @@ static void ndsP4BowserAfterProcMap(GObj *fighter_gobj)
     }
     flame[0] = 0;
 
-    if ((fp->status_id == BOWSER_STATUS_NSP) || (fp->status_id == BOWSER_STATUS_NSP_AIR))
+    if ((fp->status_id == ndsP4BowserNSPStatus(fp, BOWSER_STATUS_NSP)) ||
+        (fp->status_id == ndsP4BowserNSPStatus(fp, BOWSER_STATUS_NSP_AIR)))
     {
         return;
     }
@@ -562,6 +600,7 @@ const NDSP4Overrides gNdsP4BowserOverrides = {
     .entry_case = ndsP4BowserEntryCase,
     .throw_f_kirby_status = BOWSER_STATUS_FTHROW,
     .after_proc_map = ndsP4BowserAfterProcMap,
+    .kirby_after_proc_map = ndsP4BowserAfterProcMap,
     .on_dead = ndsP4BowserOnDead,
     .no_yoshi_lw_stars = TRUE,
 };

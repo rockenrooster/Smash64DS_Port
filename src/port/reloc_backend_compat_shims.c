@@ -7117,6 +7117,12 @@ void ftParamSetModelPartID(GObj *fighter_gobj, s32 joint_id,
     {
         return;
     }
+#if NDS_P4 && NDS_P2_KIRBY
+    if (fp->nds_p4_kirby_copy != 0u)
+    {
+        modelpart_id = ndsP4KirbyModelPart(fp, joint_id, modelpart_id);
+    }
+#endif
     slot = joint_id - nFTPartsJointCommonStart;
     if (((u32)slot >= ARRAY_COUNT(fp->modelpart_status)) ||
         (fp->joints[joint_id] == NULL))

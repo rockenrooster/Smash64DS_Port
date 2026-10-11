@@ -47,6 +47,9 @@
 
 #if NDS_P4_SONIC
 
+#if NDS_P2_KIRBY
+#include "kirby/nds_p4_kirby.generated.h"
+#endif
 #include <ef/effect.h>
 #include <it/item.h>
 #include <macros.h>
@@ -175,9 +178,26 @@ static void ndsP4SonicClearFastFall(FTStruct *fp)
     fp->is_fastfall = FALSE;
 }
 
+/* Kirby's copy (S8): SonicNSP sets Kirby's own SONIC_NSP statuses, in
+ * Sonic's order, for his homing attack (Remix's Kirby branches). */
+static s32 ndsP4SonicNSPStatus(GObj *fighter_gobj, s32 status_id)
+{
+#if NDS_P2_KIRBY
+    if ((ftGetStruct(fighter_gobj)->fkind == nFTKindKirby) &&
+        (status_id >= SONIC_STATUS_NSP_BEGIN) && (status_id <= SONIC_STATUS_NSP_BOUNCE))
+    {
+        return NDS_P4_KIRBY_STATUS_SONIC_NSP_BEGIN + (status_id - SONIC_STATUS_NSP_BEGIN);
+    }
+#else
+    (void)fighter_gobj;
+#endif
+    return status_id;
+}
+
 static void ndsP4SonicSetStatusEvents(GObj *fighter_gobj, s32 status_id)
 {
-    ftMainSetStatus(fighter_gobj, status_id, 0.0F, 1.0F, FTSTATUS_PRESERVE_NONE);
+    ftMainSetStatus(fighter_gobj, ndsP4SonicNSPStatus(fighter_gobj, status_id), 0.0F, 1.0F,
+                    FTSTATUS_PRESERVE_NONE);
     ftMainPlayAnimEventsAll(fighter_gobj);
 }
 
@@ -514,7 +534,8 @@ void ndsP4SonicNSPMoveMap(GObj *fighter_gobj)
 static void ndsP4SonicNSPAirToGround(GObj *fighter_gobj, s32 status_id)
 {
     mpCommonSetFighterGround(ftGetStruct(fighter_gobj));
-    ftMainSetStatus(fighter_gobj, status_id, fighter_gobj->anim_frame, 1.0F, SONIC_PRESERVE_HIT);
+    ftMainSetStatus(fighter_gobj, ndsP4SonicNSPStatus(fighter_gobj, status_id),
+                    fighter_gobj->anim_frame, 1.0F, SONIC_PRESERVE_HIT);
 }
 
 static void ndsP4SonicNSPGroundToAir(GObj *fighter_gobj, s32 status_id)
@@ -522,7 +543,8 @@ static void ndsP4SonicNSPGroundToAir(GObj *fighter_gobj, s32 status_id)
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
     mpCommonSetFighterAir(fp);
-    ftMainSetStatus(fighter_gobj, status_id, fighter_gobj->anim_frame, 1.0F, SONIC_PRESERVE_HIT);
+    ftMainSetStatus(fighter_gobj, ndsP4SonicNSPStatus(fighter_gobj, status_id),
+                    fighter_gobj->anim_frame, 1.0F, SONIC_PRESERVE_HIT);
     ftPhysicsClampAirVelXMax(fp);
 }
 

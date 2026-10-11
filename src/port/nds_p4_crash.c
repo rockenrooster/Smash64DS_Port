@@ -31,6 +31,9 @@
 
 #if NDS_P4_CRASH
 
+#if NDS_P2_KIRBY
+#include "kirby/nds_p4_kirby.generated.h"
+#endif
 #include <ef/effect.h>
 #include <it/item.h>
 #include <macros.h>
@@ -71,8 +74,10 @@ void ftCaptainSpecialHiProcInterrupt(GObj *fighter_gobj);
 #define CRASH_NSP_G_SPEED_MULTIPLIER 0.625F
 #define CRASH_NSP_A_SPEED_MULTIPLIER 0.5F
 #define CRASH_NSP_GRAVITY 2.625F
+#define CRASH_NSP_KIRBY_GRAVITY 2.109375F       /* KIRBY_GRAVITY 0x4007 ("2.1") */
 #define CRASH_NSP_FALL_SPEED 48.0F
 #define CRASH_NSP_JUMP_SPEED 72.0F
+#define CRASH_NSP_KIRBY_JUMP_SPEED 64.0F        /* KIRBY_JUMP_SPEED 0x4280 */
 #define CRASH_NSP_FLING_SIZE 300.0F
 #define CRASH_FGM_FLING 0x5BD
 #define CRASH_FGM_EAT 0x5BF
@@ -197,6 +202,7 @@ static f32 ndsP4CrashSteer(f32 vel, f32 target, f32 accel, f32 max)
  * of the size multiplier are its size toggle (1 in the profile). */
 extern void *gNdsP4CrashSpecial2;
 extern const u32 gNdsP4CrashSpinColors[28];
+extern const u32 gNdsP4CrashKirbySpinColors[28];
 extern const u32 gNdsP4CrashDigTurnTrack[8];
 extern const u32 gNdsP4CrashDigWaitTrack[4];
 extern const u32 gNdsP4CrashDigEndTrack[35];
@@ -208,12 +214,25 @@ void ftParamProcResumeEffect(GObj *fighter_gobj);
 
 #define CRASH_SPIN_COSTUMES 7
 #define CRASH_DIG_FILE_WORD 0xCC0
+/* kirby_spin_gfx_struct's file: the one special file 2's word 0xCC4 names
+ * (create_spin_gfx_'s Kirby branch). */
+#define CRASH_KIRBY_SPIN_FILE_WORD 0xCC4
 #define CRASH_FGM_DIG 132
 #define CRASH_FGM_DIVE_LAND_1 45
 #define CRASH_FGM_DIVE_LAND_2 220
 
 static EFDesc sNdsP4CrashSpinDesc = {
     0x4 | EFFECT_FLAG_USERDATA, 15, &gNdsP4CrashSpecial2,
+    { 0x50, nGCMatrixKindRotRpyR, 0x00 },
+    { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0x00 },
+    efManagerHaveStructProcUpdate, gcDrawDObjTreeDLLinksForGObj,
+    0x708, 0x838, 0x894, 0x8B4
+};
+
+/* kirby_spin_gfx_struct: the same description on Kirby's spin file, set per
+ * make. */
+static EFDesc sNdsP4CrashKirbySpinDesc = {
+    0x4 | EFFECT_FLAG_USERDATA, 15, NULL,
     { 0x50, nGCMatrixKindRotRpyR, 0x00 },
     { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0x00 },
     efManagerHaveStructProcUpdate, gcDrawDObjTreeDLLinksForGObj,
@@ -262,16 +281,28 @@ static void ndsP4CrashSetPartColors(DObj *part, const u32 *prim_env)
     }
 }
 
-/* CrashNSP.create_spin_gfx_ + setup_spin_gfx_. */
+/* CrashNSP.create_spin_gfx_ + setup_spin_gfx_ (Kirby's copy: his spin
+ * file and colour table). */
 static void ndsP4CrashMakeSpinGfx(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
+    sb32 kirby = (fp->fkind == nFTKindKirby) ? TRUE : FALSE;
     GObj *effect_gobj;
     EFStruct *ep;
     DObj *dobj;
     const u32 *colors;
 
-    effect_gobj = efManagerMakeEffectNoForce(&sNdsP4CrashSpinDesc);
+    if (kirby != FALSE)
+    {
+        if (gNdsP4CrashSpecial2 == NULL)
+        {
+            return;
+        }
+        sNdsP4CrashKirbySpinDesc.file_head =
+            (void **)((u8 *)gNdsP4CrashSpecial2 + CRASH_KIRBY_SPIN_FILE_WORD);
+    }
+    effect_gobj = efManagerMakeEffectNoForce((kirby != FALSE) ? &sNdsP4CrashKirbySpinDesc :
+                                                                &sNdsP4CrashSpinDesc);
     if (effect_gobj == NULL)
     {
         return;
@@ -285,7 +316,8 @@ static void ndsP4CrashMakeSpinGfx(GObj *fighter_gobj)
     dobj->rotate.vec.f.y = (fp->lr == +1) ? F_CLC_DTOR32(30.0F) : F_CLC_DTOR32(210.0F);
 
     fp->is_effect_attach = TRUE;
-    colors = &gNdsP4CrashSpinColors[4 * ((fp->costume < CRASH_SPIN_COSTUMES) ? fp->costume : 0)];
+    colors = &((kirby != FALSE) ? gNdsP4CrashKirbySpinColors : gNdsP4CrashSpinColors)
+                 [4 * ((fp->costume < CRASH_SPIN_COSTUMES) ? fp->costume : 0)];
     if (dobj->child != NULL)
     {
         ndsP4CrashSetPartColors(dobj->child, &colors[0]);
@@ -466,13 +498,29 @@ static void ndsP4CrashDigGfxEnd(GObj *fighter_gobj)
 
 /* ---- Neutral special (the spin) ---- */
 
+/* Kirby's copy (S8): CrashNSP sets Crash's statuses for his id and Kirby's
+ * own CRASH_NSP statuses, in the same order, for any other. */
+static s32 ndsP4CrashNSPStatus(GObj *fighter_gobj, s32 status_id)
+{
+#if NDS_P2_KIRBY
+    if (ftGetStruct(fighter_gobj)->fkind == nFTKindKirby)
+    {
+        return NDS_P4_KIRBY_STATUS_CRASH_NSP_GROUND + (status_id - CRASH_STATUS_NSPG);
+    }
+#else
+    (void)fighter_gobj;
+#endif
+    return status_id;
+}
+
 static void ndsP4CrashNSPShieldHit(GObj *fighter_gobj);
 
 static void ndsP4CrashNSPInitial(GObj *fighter_gobj, s32 status_id, f32 x_scale)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
-    ftMainSetStatus(fighter_gobj, status_id, 0.0F, 1.0F, FTSTATUS_PRESERVE_NONE);
+    ftMainSetStatus(fighter_gobj, ndsP4CrashNSPStatus(fighter_gobj, status_id), 0.0F, 1.0F,
+                    FTSTATUS_PRESERVE_NONE);
     ftMainPlayAnimEventsAll(fighter_gobj);
     ndsP4CrashMakeSpinGfx(fighter_gobj);
     fp->proc_shield = ndsP4CrashNSPShieldHit;
@@ -540,13 +588,13 @@ static void ndsP4CrashNSPShieldHit(GObj *fighter_gobj)
     fp->physics.vel_air.y = 0.0F;
     if (fp->ga == nMPKineticsGround)
     {
-        ftMainSetStatus(fighter_gobj, CRASH_STATUS_NSPG_BLOCKED, 0.0F, 1.0F,
+        ftMainSetStatus(fighter_gobj, ndsP4CrashNSPStatus(fighter_gobj, CRASH_STATUS_NSPG_BLOCKED), 0.0F, 1.0F,
                         FTSTATUS_PRESERVE_NONE);
     }
     else
     {
         ndsP4CrashClearFastFall(fp);
-        ftMainSetStatus(fighter_gobj, CRASH_STATUS_NSPA_BLOCKED, 0.0F, 1.0F,
+        ftMainSetStatus(fighter_gobj, ndsP4CrashNSPStatus(fighter_gobj, CRASH_STATUS_NSPA_BLOCKED), 0.0F, 1.0F,
                         FTSTATUS_PRESERVE_NONE);
     }
     ftMainPlayAnimEventsAll(fighter_gobj);
@@ -633,7 +681,7 @@ static void ndsP4CrashNSPGroundToAir(GObj *fighter_gobj)
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
     mpCommonSetFighterAir(fp);
-    ftMainSetStatus(fighter_gobj, CRASH_STATUS_NSPA, fighter_gobj->anim_frame, 1.0F,
+    ftMainSetStatus(fighter_gobj, ndsP4CrashNSPStatus(fighter_gobj, CRASH_STATUS_NSPA), fighter_gobj->anim_frame, 1.0F,
                     CRASH_PRESERVE_SPIN);
     fp->proc_shield = ndsP4CrashNSPShieldHit;
 }
@@ -643,7 +691,7 @@ static void ndsP4CrashNSPAirToGround(GObj *fighter_gobj)
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
     mpCommonSetFighterGround(fp);
-    ftMainSetStatus(fighter_gobj, CRASH_STATUS_NSPG, fighter_gobj->anim_frame, 1.0F,
+    ftMainSetStatus(fighter_gobj, ndsP4CrashNSPStatus(fighter_gobj, CRASH_STATUS_NSPG), fighter_gobj->anim_frame, 1.0F,
                     CRASH_PRESERVE_SPIN);
     fp->proc_shield = ndsP4CrashNSPShieldHit;
 }
@@ -668,7 +716,8 @@ void ndsP4CrashNSPGroundMain(GObj *fighter_gobj)
         {
             /* CrashNSP.ground_to_air_jump_. */
             ndsP4CrashNSPGroundToAir(fighter_gobj);
-            fp->physics.vel_air.y = CRASH_NSP_JUMP_SPEED;
+            fp->physics.vel_air.y = (fp->fkind == nFTKindKirby) ? CRASH_NSP_KIRBY_JUMP_SPEED :
+                                                                  CRASH_NSP_JUMP_SPEED;
             efManagerDustHeavyDoubleMakeEffect(fp->coll_data.p_translate, 1, 1.0F);
             return;
         }
@@ -755,7 +804,9 @@ void ndsP4CrashNSPAirPhysics(GObj *fighter_gobj)
         (f32)fp->input.pl.stick_range.x * CRASH_NSP_A_SPEED_MULTIPLIER,
         CRASH_NSP_ACCELERATION, CRASH_NSP_MAX_SPEED);
 
-    ftPhysicsApplyGravityClampTVel(fp, CRASH_NSP_GRAVITY, CRASH_NSP_FALL_SPEED);
+    ftPhysicsApplyGravityClampTVel(fp, (fp->fkind == nFTKindKirby) ? CRASH_NSP_KIRBY_GRAVITY :
+                                                                     CRASH_NSP_GRAVITY,
+                                   CRASH_NSP_FALL_SPEED);
 }
 
 /* CrashNSP.blocked_air_physics_ (0xE2 physics): nothing until the blocked
@@ -782,14 +833,14 @@ void ndsP4CrashNSPAirMap(GObj *fighter_gobj)
 static void ndsP4CrashNSPBlockedGroundToAir(GObj *fighter_gobj)
 {
     mpCommonSetFighterAir(ftGetStruct(fighter_gobj));
-    ftMainSetStatus(fighter_gobj, CRASH_STATUS_NSPA_BLOCKED, fighter_gobj->anim_frame, 1.0F,
+    ftMainSetStatus(fighter_gobj, ndsP4CrashNSPStatus(fighter_gobj, CRASH_STATUS_NSPA_BLOCKED), fighter_gobj->anim_frame, 1.0F,
                     CRASH_PRESERVE_SPIN);
 }
 
 static void ndsP4CrashNSPBlockedAirToGround(GObj *fighter_gobj)
 {
     mpCommonSetFighterGround(ftGetStruct(fighter_gobj));
-    ftMainSetStatus(fighter_gobj, CRASH_STATUS_NSPG_BLOCKED, fighter_gobj->anim_frame, 1.0F,
+    ftMainSetStatus(fighter_gobj, ndsP4CrashNSPStatus(fighter_gobj, CRASH_STATUS_NSPG_BLOCKED), fighter_gobj->anim_frame, 1.0F,
                     CRASH_PRESERVE_SPIN);
 }
 

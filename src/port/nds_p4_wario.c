@@ -30,6 +30,9 @@
 
 #include <ef/effect.h>
 #include <sys/audio.h>
+#if NDS_P2_KIRBY
+#include "kirby/nds_p4_kirby.generated.h"
+#endif
 
 sb32 ftMarioSpecialHiProcPass(GObj *fighter_gobj);
 void ftCaptainSpecialHiProcInterrupt(GObj *fighter_gobj);
@@ -76,6 +79,37 @@ f32 __sinf(f32);
 /* Hit-status preserve: hit and colanim. */
 #define WARIO_PRESERVE_HIT 0x3u
 
+/* Kirby's copy (S8): WarioNSP's Kirby branches set his own statuses, and
+ * Wario.asm reads his shoulder hurtbox at 0x640 (damage_colls[3]) where
+ * Wario's is at 0x5BC (damage_colls[0]). */
+static s32 ndsP4WarioNSPStatus(const FTStruct *fp, s32 status_id)
+{
+#if NDS_P2_KIRBY
+    if (fp->fkind == nFTKindKirby)
+    {
+        switch (status_id)
+        {
+        case WARIO_STATUS_NSP_GROUND:
+            return NDS_P4_KIRBY_STATUS_WARIO_NSP_GROUND;
+        case WARIO_STATUS_NSP_AIR:
+            return NDS_P4_KIRBY_STATUS_WARIO_NSP_AIR;
+        case WARIO_STATUS_NSP_RECOIL_GROUND:
+            return NDS_P4_KIRBY_STATUS_WARIO_NSP_RECOIL_GROUND;
+        case WARIO_STATUS_NSP_RECOIL_AIR:
+            return NDS_P4_KIRBY_STATUS_WARIO_NSP_RECOIL_AIR;
+        }
+    }
+#else
+    (void)fp;
+#endif
+    return status_id;
+}
+
+static s32 ndsP4WarioShoulderHitStatus(const FTStruct *fp)
+{
+    return fp->damage_colls[(fp->fkind == nFTKindKirby) ? 3 : 0].hitstatus;
+}
+
 static f32 ndsP4WarioBitsToF32(u32 bits)
 {
     union { u32 u; f32 f; } v;
@@ -103,7 +137,8 @@ void ndsP4WarioNSPGroundInitial(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
-    ftMainSetStatus(fighter_gobj, WARIO_STATUS_NSP_GROUND, 0.0F, 1.0F, FTSTATUS_PRESERVE_NONE);
+    ftMainSetStatus(fighter_gobj, ndsP4WarioNSPStatus(fp, WARIO_STATUS_NSP_GROUND), 0.0F, 1.0F,
+                    FTSTATUS_PRESERVE_NONE);
     ftMainPlayAnimEventsAll(fighter_gobj);
     fp->motion_vars.flags.flag0 = 0;
     fp->motion_vars.flags.flag1 = 0;
@@ -116,7 +151,8 @@ void ndsP4WarioNSPAirInitial(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
-    ftMainSetStatus(fighter_gobj, WARIO_STATUS_NSP_AIR, 0.0F, 1.0F, FTSTATUS_PRESERVE_FASTFALL);
+    ftMainSetStatus(fighter_gobj, ndsP4WarioNSPStatus(fp, WARIO_STATUS_NSP_AIR), 0.0F, 1.0F,
+                    FTSTATUS_PRESERVE_FASTFALL);
     ftMainPlayAnimEventsAll(fighter_gobj);
     fp->motion_vars.flags.flag0 = 0;
     fp->motion_vars.flags.flag1 = 0;
@@ -154,16 +190,20 @@ void ndsP4WarioNSPGroundPhysics(GObj *fighter_gobj)
 
 static void ndsP4WarioNSPGroundToAir(GObj *fighter_gobj)
 {
-    mpCommonSetFighterAir(ftGetStruct(fighter_gobj));
-    ftMainSetStatus(fighter_gobj, WARIO_STATUS_NSP_AIR, fighter_gobj->anim_frame, 1.0F,
-                    WARIO_PRESERVE_HIT);
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    mpCommonSetFighterAir(fp);
+    ftMainSetStatus(fighter_gobj, ndsP4WarioNSPStatus(fp, WARIO_STATUS_NSP_AIR),
+                    fighter_gobj->anim_frame, 1.0F, WARIO_PRESERVE_HIT);
 }
 
 static void ndsP4WarioNSPAirToGround(GObj *fighter_gobj)
 {
-    mpCommonSetFighterGround(ftGetStruct(fighter_gobj));
-    ftMainSetStatus(fighter_gobj, WARIO_STATUS_NSP_GROUND, fighter_gobj->anim_frame, 1.0F,
-                    WARIO_PRESERVE_HIT);
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    mpCommonSetFighterGround(fp);
+    ftMainSetStatus(fighter_gobj, ndsP4WarioNSPStatus(fp, WARIO_STATUS_NSP_GROUND),
+                    fighter_gobj->anim_frame, 1.0F, WARIO_PRESERVE_HIT);
 }
 
 /* WarioNSP.begin_recoil_: his bounce off what he hit. */
@@ -176,7 +216,8 @@ static void ndsP4WarioNSPBeginRecoil(GObj *fighter_gobj)
     {
         mpCommonSetFighterAir(fp);
     }
-    ftMainSetStatus(fighter_gobj, WARIO_STATUS_NSP_RECOIL_AIR, 0.0F, 1.0F, WARIO_PRESERVE_HIT);
+    ftMainSetStatus(fighter_gobj, ndsP4WarioNSPStatus(fp, WARIO_STATUS_NSP_RECOIL_AIR), 0.0F,
+                    1.0F, WARIO_PRESERVE_HIT);
 }
 
 /* WarioNSP.check_recoil_: TRUE when the recoil flag started the bounce
@@ -227,8 +268,8 @@ void ndsP4WarioNSPGroundMap(GObj *fighter_gobj)
     mpCommonProcFighterOnFloor(fighter_gobj, ndsP4WarioNSPGroundToAir);
 
     /* A jump out of the slam's run: the air slam, 68 up, the double dust
-     * and its sound. (Kirby's copy is S8's.) */
-    if ((fp->status_id == WARIO_STATUS_NSP_GROUND) &&
+     * and its sound. */
+    if ((fp->status_id == ndsP4WarioNSPStatus(fp, WARIO_STATUS_NSP_GROUND)) &&
         (fp->motion_vars.flags.flag2 == WARIO_MOVE) &&
         (ftCommonKneeBendGetInputTypeCommon(fp) != 0))
     {
@@ -311,15 +352,17 @@ void ndsP4WarioNSPAirMap(GObj *fighter_gobj)
 
 /* WarioNSP.recoil_move_ (0xE6 interrupt): until the script frees him
  * (temp variable 2), the drift fades and the fall slows. The donor adds
- * 1.25 for Remix's Wario id and 0.55 for the Kirby and Polygon copies. */
+ * 1.25 for Remix's Wario id and 0.55 for Kirby's copy. */
 void ndsP4WarioNSPRecoilMove(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
     if (fp->motion_vars.flags.flag1 == 0)
     {
+        union { u32 u; f32 f; } kirby = { 0x3F0CCCCDu };
+
         fp->physics.vel_air.x *= 0.96875F;
-        fp->physics.vel_air.y += 1.25F;
+        fp->physics.vel_air.y += (fp->fkind == nFTKindKirby) ? kirby.f : 1.25F;
     }
 }
 
@@ -335,9 +378,11 @@ void ndsP4WarioNSPRecoilPhysics(GObj *fighter_gobj)
 
 static void ndsP4WarioNSPRecoilToGround(GObj *fighter_gobj)
 {
-    mpCommonSetFighterGround(ftGetStruct(fighter_gobj));
-    ftMainSetStatus(fighter_gobj, WARIO_STATUS_NSP_RECOIL_GROUND, fighter_gobj->anim_frame, 1.0F,
-                    FTSTATUS_PRESERVE_NONE);
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    mpCommonSetFighterGround(fp);
+    ftMainSetStatus(fighter_gobj, ndsP4WarioNSPStatus(fp, WARIO_STATUS_NSP_RECOIL_GROUND),
+                    fighter_gobj->anim_frame, 1.0F, FTSTATUS_PRESERVE_NONE);
 }
 
 static void ndsP4WarioNSPRecoilToAir(GObj *fighter_gobj)
@@ -345,8 +390,8 @@ static void ndsP4WarioNSPRecoilToAir(GObj *fighter_gobj)
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
     mpCommonSetFighterAir(fp);
-    ftMainSetStatus(fighter_gobj, WARIO_STATUS_NSP_RECOIL_AIR, fighter_gobj->anim_frame, 1.0F,
-                    FTSTATUS_PRESERVE_NONE);
+    ftMainSetStatus(fighter_gobj, ndsP4WarioNSPStatus(fp, WARIO_STATUS_NSP_RECOIL_AIR),
+                    fighter_gobj->anim_frame, 1.0F, FTSTATUS_PRESERVE_NONE);
     ftPhysicsClampAirVelXMax(fp);
 }
 
@@ -367,13 +412,14 @@ void ndsP4WarioNSPRecoilAirMap(GObj *fighter_gobj)
  * invincible, bounces him. */
 static void ndsP4WarioOnHitInteract(FTStruct *fp, s32 attack_type)
 {
-    if ((fp->status_id != WARIO_STATUS_NSP_GROUND) && (fp->status_id != WARIO_STATUS_NSP_AIR))
+    if ((fp->status_id != ndsP4WarioNSPStatus(fp, WARIO_STATUS_NSP_GROUND)) &&
+        (fp->status_id != ndsP4WarioNSPStatus(fp, WARIO_STATUS_NSP_AIR)))
     {
         return;
     }
     if ((attack_type == nGMHitTypeDamage) || (attack_type == nGMHitTypeShield) ||
         ((attack_type == nGMHitTypeAttack) &&
-         (fp->damage_colls[0].hitstatus != nGMHitStatusInvincible)))
+         (ndsP4WarioShoulderHitStatus(fp) != nGMHitStatusInvincible)))
     {
         fp->motion_vars.flags.flag0 = 1;
     }
@@ -634,6 +680,7 @@ void ndsP4WarioDSPMap(GObj *fighter_gobj)
 
 const NDSP4Overrides gNdsP4WarioOverrides = {
     .on_hit_interact = ndsP4WarioOnHitInteract,
+    .kirby_on_hit_interact = ndsP4WarioOnHitInteract,
 };
 
 #endif /* NDS_P4_WARIO */

@@ -33,11 +33,77 @@
 #define ftMainSetStatus(g_, s_, f_, a_, fl_) \
     ftMainSetStatus((g_), ndsP4KirbyInhaleStatus((g_), (s_)), (f_), (a_), (fl_))
 #define gFTDataKirbyMainMotion ndsP4KirbyCopyFile()
+#if NDS_P2_KIRBY
+/* S8: a content's power travels with copy_id (FTStruct.nds_p4_kirby_copy).
+ * The catch records it where it has just chosen the copy_id (its eat
+ * sound), the copy takes it (ndsP4KirbyCopyInitCopyVars, below, around the
+ * source's), and the loss of the copy clears it (its sound). The definition
+ * keeps the source body (first argument's type); both call sites pass
+ * fighter_gobj. */
+void battleship_ftKirbySpecialNCopyInitCopyVars(GObj *fighter_gobj);
+#define ftKirbySpecialNCopyInitCopyVars(a_) NDS_P4_KIRBY_COPYINIT_##a_)
+#define NDS_P4_KIRBY_COPYINIT_GObj battleship_ftKirbySpecialNCopyInitCopyVars(GObj
+#define NDS_P4_KIRBY_COPYINIT_fighter_gobj ndsP4KirbyCopyInitCopyVars(fighter_gobj
+#define func_800269C0_275C0(fgm_) NDS_P4_KIRBY_FGM_##fgm_
+#define NDS_P4_KIRBY_FGM_nSYAudioFGMKirbySpecialNCopyEat \
+    (ndsP4KirbyCatch(kirby_fp, victim_fp), \
+     func_800269C0_275C0(nSYAudioFGMKirbySpecialNCopyEat))
+#define NDS_P4_KIRBY_FGM_nSYAudioFGMKirbySpecialNLoseCopy \
+    (ndsP4KirbyLoseCopy(fp), func_800269C0_275C0(nSYAudioFGMKirbySpecialNLoseCopy))
+#define NDS_P4_KIRBY_FGM_nSYAudioFGMKirbySpecialNCopyUnk \
+    func_800269C0_275C0(nSYAudioFGMKirbySpecialNCopyUnk)
+#define NDS_P4_KIRBY_FGM_nSYAudioFGMKirbySpecialNCopyThrow \
+    func_800269C0_275C0(nSYAudioFGMKirbySpecialNCopyThrow)
+#endif
 #endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftkirby/ftkirbyspecialn.c"
 #if NDS_P4
 #undef ftMainSetStatus
 #undef gFTDataKirbyMainMotion
+#if NDS_P2_KIRBY
+#undef ftKirbySpecialNCopyInitCopyVars
+#undef func_800269C0_275C0
+
+/* ftKirbySpecialNCopyInitCopyVars with the power taken alongside copy_id.
+ * The source keeps a copy whose copy_id it already holds: a content's power
+ * names its parent's kind, so a Kirby with Fox's blaster who swallows Falco
+ * must still take the power (Remix's ids differ there). The source's take
+ * path then runs as written; the power, and the hat of the power's source
+ * hat until the Remix hats are drawn (S8), follow it. */
+void ndsP4KirbyCopyInitCopyVars(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    u32 power = ndsP4KirbyPendingPower(fp);
+    sb32 take;
+
+    if ((fp->fkind != nFTKindKirby) || (fp->motion_vars.flags.flag1 == 0) ||
+        ((power == 0u) && (fp->nds_p4_kirby_copy == 0u)))
+    {
+        battleship_ftKirbySpecialNCopyInitCopyVars(fighter_gobj);
+        return;
+    }
+    take = ((fp->passive_vars.kirby.copy_id != fp->status_vars.kirby.specialn.copy_id) ||
+            (fp->nds_p4_kirby_copy != power)) ? TRUE : FALSE;
+    if ((take != FALSE) &&
+        (fp->passive_vars.kirby.copy_id == fp->status_vars.kirby.specialn.copy_id))
+    {
+        fp->passive_vars.kirby.copy_id = nFTKindKirby;
+    }
+    battleship_ftKirbySpecialNCopyInitCopyVars(fighter_gobj);
+    if (take != FALSE)
+    {
+        const NDSP4KirbyPower *p = ndsP4KirbyPowerOf(power);
+
+        fp->nds_p4_kirby_copy = (p != NULL) ? power : 0u;
+        if (p != NULL)
+        {
+            ftParamSetModelPartDefaultID(fighter_gobj, FTKIRBY_COPY_MODELPARTS_JOINT,
+                                         p->hat_base);
+            ftParamResetModelPartAll(fighter_gobj);
+        }
+    }
+}
+#endif
 #endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftkirby/ftkirbyspecialhi.c"
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftkirby/ftkirbyspeciallw.c"

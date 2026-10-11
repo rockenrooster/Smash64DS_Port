@@ -202,6 +202,7 @@ void ftManagerAllocFighter(u32 data_flags, s32 allocs_num)
         for (i = 0; i < allocs_num; i++)
         {
             sFTManagerStructsAllocBuf[i].nds_p4_content = 0u;
+            sFTManagerStructsAllocBuf[i].nds_p4_kirby_copy = 0u;
         }
         ndsP4SetupFileSizes(data_flags);
     }
@@ -1360,6 +1361,22 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
                 view[desc->fkind] = p4;
                 sNdsP4FtDataView = view;
             }
+#if NDS_P2_KIRBY
+            /* S8: a battle Kirby beside a content whose power he can take
+             * reads the power rows from the match's Kirby FTData. */
+            else if ((desc != NULL) && (desc->fkind == nFTKindKirby) &&
+                     (desc->pkind != nFTPlayerKindDemo))
+            {
+                FTData *kirby = ndsP4KirbyMatchData();
+
+                if (kirby != NULL)
+                {
+                    memcpy(view, sNdsP4FtDataReal, sizeof(view));
+                    view[nFTKindKirby] = kirby;
+                    sNdsP4FtDataView = view;
+                }
+            }
+#endif
             fighter_gobj = ndsBaseFTManagerMakeFighter(desc);
             sNdsP4FtDataView = sNdsP4FtDataReal;
             if (fighter_gobj != NULL)
@@ -1408,6 +1425,7 @@ void ftManagerDestroyFighter(GObj *fighter_gobj)
         ndsFtPoseRelease(fighter_gobj);
 #if NDS_P4
         ftGetStruct(fighter_gobj)->nds_p4_content = 0u;
+        ftGetStruct(fighter_gobj)->nds_p4_kirby_copy = 0u;
 #endif
     }
     ndsBaseFTManagerDestroyFighter(fighter_gobj);

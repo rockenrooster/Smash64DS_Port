@@ -30,6 +30,9 @@
 
 #include <ef/effect.h>
 #include <wp/weapon.h>
+#if NDS_P2_KIRBY
+#include "kirby/nds_p4_kirby.generated.h"
+#endif
 
 sb32 ftMarioSpecialHiProcPass(GObj *fighter_gobj);
 void ftFoxSpecialHiHoldInitStatusVars(GObj *fighter_gobj);
@@ -737,12 +740,21 @@ void ndsP4WolfDSPPhysics(GObj *fighter_gobj)
     }
 }
 
-/* WolfNSP.air_to_ground_: landing keeps the shot's ground status (0xE1)
- * at the same frame and hitboxes. */
+/* WolfNSP.air_to_ground_: landing keeps the shot's ground status (0xE1;
+ * Kirby's copy, his WOLF_NSP_Ground) at the same frame and hitboxes. */
 static void ndsP4WolfNSPAirToGround(GObj *fighter_gobj)
 {
-    mpCommonSetFighterGround(ftGetStruct(fighter_gobj));
-    ftMainSetStatus(fighter_gobj, 0xE1, fighter_gobj->anim_frame, 1.0F, 1);
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    s32 status_id = 0xE1;
+
+#if NDS_P2_KIRBY
+    if (fp->fkind == nFTKindKirby)
+    {
+        status_id = NDS_P4_KIRBY_STATUS_WOLF_NSP_GROUND;
+    }
+#endif
+    mpCommonSetFighterGround(fp);
+    ftMainSetStatus(fighter_gobj, status_id, fighter_gobj->anim_frame, 1.0F, 1);
 }
 
 /* WolfNSP.air_collision_ (0xE2 map). */

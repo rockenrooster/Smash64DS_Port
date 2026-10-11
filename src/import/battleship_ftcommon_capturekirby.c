@@ -83,11 +83,20 @@ void ndsBaseFTCommonCaptureApplyCaptureKnockback(GObj *fighter_gobj,
 #define ftCommonCaptureTrappedInitBreakoutVars(fp_, wait_) \
     ftCommonCaptureTrappedInitBreakoutVars((fp_), ndsP4KirbyCaptureWait((fp_), (wait_)))
 #define gFTDataKirbyMainMotion ndsP4KirbyCopyFile()
+#if NDS_P2_KIRBY
+/* S8: a Kirby another swallows loses his copy, and a content's power with
+ * it (the only call here is that loss). */
+#define ftKirbySpecialNInitPassiveVars(fp_) \
+    (ndsP4KirbyLoseCopy(fp_), ftKirbySpecialNInitPassiveVars(fp_))
+#endif
 #endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommoncapturekirby.c"
 #if NDS_P4
 #undef ftCommonCaptureTrappedInitBreakoutVars
 #undef gFTDataKirbyMainMotion
+#if NDS_P2_KIRBY
+#undef ftKirbySpecialNInitPassiveVars
+#endif
 #endif
 /* P4: as battleship_ftcommon_catch.c's copy (yoshi_grab_fix_2). */
 #if NDS_P4

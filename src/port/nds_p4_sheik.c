@@ -55,6 +55,9 @@
 
 #if NDS_P4_SHEIK
 
+#if NDS_P2_KIRBY
+#include "kirby/nds_p4_kirby.generated.h"
+#endif
 #if !NDS_P2_SAMUS
 #error "P4 Sheik runs Samus's charge routines (NDS_P2_SAMUS)"
 #endif
@@ -70,7 +73,9 @@
 #endif
 
 void ftSamusSpecialNProcDamage(GObj *fighter_gobj);
+void ftKirbyCopySamusSpecialNProcDamage(GObj *fighter_gobj);
 void ftSamusSpecialNStartInitStatusVars(FTStruct *fp);
+void ftKirbyCopySamusSpecialNInitStatusVars(FTStruct *fp);
 sb32 ftSamusSpecialHiProcPass(GObj *fighter_gobj);
 s32 ndsBaseFTCommonEscapeGetStatus(FTStruct *fp);
 void ndsBaseFTCommonEscapeSetStatus(GObj *fighter_gobj, s32 status_id,
@@ -495,9 +500,33 @@ void ndsP4SheikUSPEndPhysics(GObj *fighter_gobj)
 
 /* ---- Neutral special (the needles) ---- */
 
+/* Her charge, passive word 1 (0xAE0): Kirby's copy keeps it in the same
+ * word (his copied Samus charge's). */
 static s32 *ndsP4SheikCharge(FTStruct *fp)
 {
     return ndsP4SheikPassiveS32(fp, 1);
+}
+
+/* Kirby's copy (S8): SheikNSP sets Kirby's own SHEIK_NSP statuses, in
+ * Sheik's order, and his copy's Samus damage routine and status setup
+ * (0x80156E98, 0x801576B4) where hers are Samus's. */
+static s32 ndsP4SheikNSPStatus(GObj *fighter_gobj, s32 status_id)
+{
+#if NDS_P2_KIRBY
+    if (ftGetStruct(fighter_gobj)->fkind == nFTKindKirby)
+    {
+        return NDS_P4_KIRBY_STATUS_SHEIK_NSP_GROUND_BEGIN + (status_id - SHEIK_STATUS_NSPG_BEGIN);
+    }
+#else
+    (void)fighter_gobj;
+#endif
+    return status_id;
+}
+
+static void (*ndsP4SheikNSPProcDamage(const FTStruct *fp))(GObj *)
+{
+    return (fp->fkind == nFTKindKirby) ? ftKirbyCopySamusSpecialNProcDamage :
+                                         ftSamusSpecialNProcDamage;
 }
 
 /* SheikNSP.begin_initial_: a full charge shoots when the begin ends, any
@@ -506,9 +535,14 @@ static void ndsP4SheikNSPInitial(GObj *fighter_gobj, s32 status_id)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
-    ftMainSetStatus(fighter_gobj, status_id, 0.0F, 1.0F, FTSTATUS_PRESERVE_NONE);
+    ftMainSetStatus(fighter_gobj, ndsP4SheikNSPStatus(fighter_gobj, status_id), 0.0F, 1.0F,
+                    FTSTATUS_PRESERVE_NONE);
     ftMainPlayAnimEventsAll(fighter_gobj);
-    ftSamusSpecialNStartInitStatusVars(fp);
+    if (fp->fkind == nFTKindKirby)
+    {
+        ftKirbyCopySamusSpecialNInitStatusVars(fp);
+    }
+    else ftSamusSpecialNStartInitStatusVars(fp);
     *ndsP4SheikStatusS32(fp, 0) = (*ndsP4SheikCharge(fp) == SHEIK_NSP_CHARGE_MAX) ? TRUE : FALSE;
 }
 
@@ -530,7 +564,8 @@ static void ndsP4SheikNSPChargeInitial(GObj *fighter_gobj, s32 status_id)
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
     *ndsP4SheikStatusS32(fp, 1) = SHEIK_NSP_CHARGE_INT;
-    ftMainSetStatus(fighter_gobj, status_id, 0.0F, 1.0F, SHEIK_PRESERVE_NSP);
+    ftMainSetStatus(fighter_gobj, ndsP4SheikNSPStatus(fighter_gobj, status_id), 0.0F, 1.0F,
+                    SHEIK_PRESERVE_NSP);
 }
 
 /* SheikNSP.ground_shoot_initial_: at least one needle. */
@@ -544,8 +579,8 @@ static void ndsP4SheikNSPGroundShootInitial(GObj *fighter_gobj)
     {
         *charge = 1;
     }
-    ftMainSetStatus(fighter_gobj, SHEIK_STATUS_NSPG_SHOOT, 0.0F, 1.0F, SHEIK_PRESERVE_NSP);
-    fp->proc_damage = ftSamusSpecialNProcDamage;
+    ftMainSetStatus(fighter_gobj, ndsP4SheikNSPStatus(fighter_gobj, SHEIK_STATUS_NSPG_SHOOT), 0.0F, 1.0F, SHEIK_PRESERVE_NSP);
+    fp->proc_damage = ndsP4SheikNSPProcDamage(fp);
 }
 
 /* SheikNSP.air_shoot_initial_: Samus's aerial end's first lines, then as
@@ -565,8 +600,8 @@ static void ndsP4SheikNSPAirShootInitial(GObj *fighter_gobj)
     {
         *charge = 1;
     }
-    ftMainSetStatus(fighter_gobj, SHEIK_STATUS_NSPA_SHOOT, 0.0F, 1.0F, SHEIK_PRESERVE_NSP);
-    fp->proc_damage = ftSamusSpecialNProcDamage;
+    ftMainSetStatus(fighter_gobj, ndsP4SheikNSPStatus(fighter_gobj, SHEIK_STATUS_NSPA_SHOOT), 0.0F, 1.0F, SHEIK_PRESERVE_NSP);
+    fp->proc_damage = ndsP4SheikNSPProcDamage(fp);
 }
 
 /* SheikNSP.begin_main_ (0xEA/0xED update). */
@@ -634,9 +669,9 @@ static void ndsP4SheikNSPBeginGroundToAir(GObj *fighter_gobj)
 
     mpCommonSetFighterAir(fp);
     ftPhysicsClampAirVelXMax(fp);
-    ftMainSetStatus(fighter_gobj, SHEIK_STATUS_NSPA_BEGIN, fighter_gobj->anim_frame, 1.0F,
+    ftMainSetStatus(fighter_gobj, ndsP4SheikNSPStatus(fighter_gobj, SHEIK_STATUS_NSPA_BEGIN), fighter_gobj->anim_frame, 1.0F,
                     SHEIK_PRESERVE_NSP);
-    fp->proc_damage = ftSamusSpecialNProcDamage;
+    fp->proc_damage = ndsP4SheikNSPProcDamage(fp);
 }
 
 /* SheikNSP.ground_begin_transition_. */
@@ -645,9 +680,9 @@ static void ndsP4SheikNSPBeginAirToGround(GObj *fighter_gobj)
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
     mpCommonSetFighterGround(fp);
-    ftMainSetStatus(fighter_gobj, SHEIK_STATUS_NSPG_BEGIN, fighter_gobj->anim_frame, 1.0F,
+    ftMainSetStatus(fighter_gobj, ndsP4SheikNSPStatus(fighter_gobj, SHEIK_STATUS_NSPG_BEGIN), fighter_gobj->anim_frame, 1.0F,
                     SHEIK_PRESERVE_NSP);
-    fp->proc_damage = ftSamusSpecialNProcDamage;
+    fp->proc_damage = ndsP4SheikNSPProcDamage(fp);
 }
 
 /* SheikNSP.ground_begin_collision_ (0xEA map). */
@@ -737,9 +772,9 @@ static void ndsP4SheikNSPChargeAirToGround(GObj *fighter_gobj)
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
     mpCommonSetFighterGround(fp);
-    ftMainSetStatus(fighter_gobj, SHEIK_STATUS_NSPG_CHARGE, fighter_gobj->anim_frame, 1.0F,
+    ftMainSetStatus(fighter_gobj, ndsP4SheikNSPStatus(fighter_gobj, SHEIK_STATUS_NSPG_CHARGE), fighter_gobj->anim_frame, 1.0F,
                     SHEIK_PRESERVE_NSP_CHARGE);
-    fp->proc_damage = ftSamusSpecialNProcDamage;
+    fp->proc_damage = ndsP4SheikNSPProcDamage(fp);
 }
 
 /* SheikNSP.air_charge_transition_. */
@@ -749,9 +784,9 @@ static void ndsP4SheikNSPChargeGroundToAir(GObj *fighter_gobj)
 
     mpCommonSetFighterAir(fp);
     ftPhysicsClampAirVelXMax(fp);
-    ftMainSetStatus(fighter_gobj, SHEIK_STATUS_NSPA_CHARGE, fighter_gobj->anim_frame, 1.0F,
+    ftMainSetStatus(fighter_gobj, ndsP4SheikNSPStatus(fighter_gobj, SHEIK_STATUS_NSPA_CHARGE), fighter_gobj->anim_frame, 1.0F,
                     SHEIK_PRESERVE_NSP_CHARGE);
-    fp->proc_damage = ftSamusSpecialNProcDamage;
+    fp->proc_damage = ndsP4SheikNSPProcDamage(fp);
 }
 
 /* SheikNSP.ground_charge_collision_ (0xEB map). */
@@ -930,15 +965,52 @@ static void ndsP4SheikNSPShootGroundToAir(GObj *fighter_gobj)
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
     mpCommonSetFighterAir(fp);
-    ftMainSetStatus(fighter_gobj, SHEIK_STATUS_NSPA_SHOOT, fighter_gobj->anim_frame, 1.0F,
+    ftMainSetStatus(fighter_gobj, ndsP4SheikNSPStatus(fighter_gobj, SHEIK_STATUS_NSPA_SHOOT), fighter_gobj->anim_frame, 1.0F,
                     SHEIK_PRESERVE_NSP);
-    fp->proc_damage = ftSamusSpecialNProcDamage;
+    fp->proc_damage = ndsP4SheikNSPProcDamage(fp);
 }
 
 /* SheikNSP.ground_shoot_collision_ (0xEC map). */
 void ndsP4SheikNSPShootGroundMap(GObj *fighter_gobj)
 {
     mpCommonProcFighterOnEdge(fighter_gobj, ndsP4SheikNSPShootGroundToAir);
+}
+
+/* Kirby's copy (S8): his grounded statuses slide off an edge (0x800DDDDC)
+ * where Sheik's stop at it (SheikNSP.kirby_ground_*_collision_). */
+void ndsP4SheikNSPKirbyBeginGroundMap(GObj *fighter_gobj)
+{
+    mpCommonProcFighterOnFloor(fighter_gobj, ndsP4SheikNSPBeginGroundToAir);
+}
+
+void ndsP4SheikNSPKirbyChargeGroundMap(GObj *fighter_gobj)
+{
+    mpCommonProcFighterOnFloor(fighter_gobj, ndsP4SheikNSPChargeGroundToAir);
+}
+
+void ndsP4SheikNSPKirbyShootGroundMap(GObj *fighter_gobj)
+{
+    mpCommonProcFighterOnFloor(fighter_gobj, ndsP4SheikNSPShootGroundToAir);
+}
+
+/* SheikNSP.ground_shoot_transition_ (Samus's air-to-ground shot lines):
+ * Kirby's aerial shot lands in a light landing, his copy's damage callback
+ * kept. */
+static void ndsP4SheikNSPShootAirToGround(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    mpCommonSetFighterGround(fp);
+    ftMainSetStatus(fighter_gobj, nFTCommonStatusLandingLight, 0.0F, 1.0F, SHEIK_PRESERVE_NSP);
+    fp->proc_damage = (fp->fkind == nFTKindKirby) ? ftKirbyCopySamusSpecialNProcDamage :
+                                                     ftSamusSpecialNProcDamage;
+}
+
+/* SheikNSP.air_shoot_collision_ (Kirby's aerial shot; Sheik's own takes the
+ * source's wait-or-landing). */
+void ndsP4SheikNSPKirbyShootAirMap(GObj *fighter_gobj)
+{
+    mpCommonProcFighterLanding(fighter_gobj, ndsP4SheikNSPShootAirToGround);
 }
 
 /* ---- Down special (Bouncing Fish) ---- */
@@ -1215,6 +1287,7 @@ const NDSP4Overrides gNdsP4SheikOverrides = {
     .on_init = ndsP4SheikOnInit,
     .on_hit_interact = ndsP4SheikOnHitInteract,
     .colanim_end = ndsP4SheikColAnimEnd,
+    .kirby_colanim_end = ndsP4SheikColAnimEnd,
 };
 
 #endif /* NDS_P4_SHEIK */

@@ -29,6 +29,9 @@
 #if NDS_P4_MARTH || NDS_P4_ROY
 
 #include <ef/effect.h>
+#if NDS_P2_KIRBY
+#include "kirby/nds_p4_kirby.generated.h"
+#endif
 
 sb32 ftMarioSpecialHiProcPass(GObj *fighter_gobj);
 void ftCaptainSpecialHiProcInterrupt(GObj *fighter_gobj);
@@ -247,13 +250,39 @@ void ndsP4MarthUSPMap(GObj *fighter_gobj)
 
 /* ---- Neutral special (Dancing Blade) ---- */
 
-/* MarthNSP.ground_shared_initial_ / air_shared_initial_. The Kirby
- * branches (his Roy hat's action ids) are S8's. */
+/* Kirby's copy (S8): MarthNSP's Kirby branches set his own statuses, in
+ * Marth's order from Kirby.Action.MARTH_NSPG_1, or Roy's from ROY_NSPG_1
+ * (Remix adds 101 when Kirby wears Roy's hat; here, Roy's power). */
+static s32 ndsP4MarthNSPKirbyStatus(FTStruct *fp, s32 status_id)
+{
+#if NDS_P2_KIRBY
+    if (fp->fkind == nFTKindKirby)
+    {
+#if NDS_P4_ROY
+        if (fp->nds_p4_kirby_copy == NDS_P4_CONTENT_ROY)
+        {
+            return NDS_P4_KIRBY_STATUS_ROY_NSPG_1 + (status_id - MARTH_STATUS_NSPG_1);
+        }
+#endif
+#if NDS_P4_MARTH
+        return NDS_P4_KIRBY_STATUS_MARTH_NSPG_1 + (status_id - MARTH_STATUS_NSPG_1);
+#endif
+    }
+#else
+    (void)fp;
+#endif
+    return status_id;
+}
+
+/* MarthNSP.ground_shared_initial_ / air_shared_initial_, status_id one of
+ * Marth's. Kirby keeps the aerial boost's flag in his second passive word
+ * (Marth: the first), which his grounded_script clears. */
 static void ndsP4MarthNSPSharedInitial(GObj *fighter_gobj, s32 status_id, sb32 air)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
-    ftMainSetStatus(fighter_gobj, status_id, 0.0F, 1.0F, FTSTATUS_PRESERVE_NONE);
+    ftMainSetStatus(fighter_gobj, ndsP4MarthNSPKirbyStatus(fp, status_id), 0.0F, 1.0F,
+                    FTSTATUS_PRESERVE_NONE);
     ftMainPlayAnimEventsAll(fighter_gobj);
     fp->motion_vars.flags.flag0 = 0;
     fp->motion_vars.flags.flag1 = 0;
@@ -261,6 +290,11 @@ static void ndsP4MarthNSPSharedInitial(GObj *fighter_gobj, s32 status_id, sb32 a
     if (air != FALSE)
     {
         u32 *boost = (u32 *)(void *)&fp->passive_vars;
+
+        if (fp->fkind == nFTKindKirby)
+        {
+            boost++;
+        }
 
         ndsP4MarthClearFastFall(fp);
         fp->physics.vel_air.x *= 0.875F;
@@ -399,6 +433,21 @@ void ndsP4MarthNSPAirMap(GObj *fighter_gobj)
     mpCommonProcFighterLanding(fighter_gobj, ndsP4MarthNSPAirToGround);
 }
 
+/* MarthNSP.kirby_ground_collision_ (S8): Kirby's copy slides off an edge
+ * (0x800DDDDC) where Marth stops at it; his air statuses are the ground
+ * ones plus 7 as well. */
+void ndsP4MarthNSPKirbyGroundMap(GObj *fighter_gobj)
+{
+    mpCommonProcFighterOnFloor(fighter_gobj, ndsP4MarthNSPGroundToAir);
+}
+
+/* Kirby.clear_marth_flag_ (his grounded_script row): landing with Marth's
+ * or Roy's power gives the aerial boost back. */
+static void ndsP4MarthKirbyOnLanding(FTStruct *fp)
+{
+    ((u32 *)(void *)&fp->passive_vars)[1] = FALSE;
+}
+
 /* ---- Entry (Link's case on the Marth entry-effects file) ----
  *
  * Marth.asm and Roy.asm marth_entry_routine_ / roy_entry_routine_ flip an
@@ -447,6 +496,7 @@ static void ndsP4RoyEntryCase(FTStruct *fp)
 
 const NDSP4Overrides gNdsP4RoyOverrides = {
     .entry_case = ndsP4RoyEntryCase,
+    .kirby_on_landing = ndsP4MarthKirbyOnLanding,
 };
 #endif
 
@@ -587,6 +637,7 @@ static void ndsP4MarthEntryCase(FTStruct *fp)
 const NDSP4Overrides gNdsP4MarthOverrides = {
     .entry_case = ndsP4MarthEntryCase,
     .update_damage = ndsP4MarthUpdateDamage,
+    .kirby_on_landing = ndsP4MarthKirbyOnLanding,
 };
 #endif /* NDS_P4_MARTH */
 

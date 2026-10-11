@@ -33,6 +33,9 @@
 
 #if NDS_P4_LANKY
 
+#if NDS_P2_KIRBY
+#include "kirby/nds_p4_kirby.generated.h"
+#endif
 #include <ef/effect.h>
 #include <macros.h>
 #include <sys/audio.h>
@@ -154,12 +157,28 @@ static sb32 ndsP4LankyStickAgainst(FTStruct *fp)
 
 /* ---- Neutral special (the Grape Shooter) ---- */
 
+/* Kirby's copy (S8): LankyNSP's Kirby branches set his own statuses. */
+static s32 ndsP4LankyNSPStatus(const FTStruct *fp, s32 status_id)
+{
+#if NDS_P2_KIRBY
+    if (fp->fkind == nFTKindKirby)
+    {
+        return (status_id == LANKY_STATUS_NSPG) ? NDS_P4_KIRBY_STATUS_LANKY_NSP_GROUND :
+                                                  NDS_P4_KIRBY_STATUS_LANKY_NSP_AIR;
+    }
+#else
+    (void)fp;
+#endif
+    return status_id;
+}
+
 /* LankyNSP.ground_initial_ / air_initial_: three more shots after this. */
 static void ndsP4LankyNSPInitial(GObj *fighter_gobj, s32 status_id)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
-    ndsP4LankySetStatus(fighter_gobj, status_id, 0.0F, FTSTATUS_PRESERVE_NONE);
+    ndsP4LankySetStatus(fighter_gobj, ndsP4LankyNSPStatus(fp, status_id), 0.0F,
+                        FTSTATUS_PRESERVE_NONE);
     ndsP4LankyClearFlags(fp);
     *ndsP4LankyStatusS32(fp, 2) = LANKY_NSP_AMMO;
 }
@@ -188,6 +207,8 @@ void ndsP4LankyNSPAirInitial(GObj *fighter_gobj)
 #define LANKY_GRAPE_ROTATE_STEP 0.4F
 #define LANKY_GRAPE_FGM 1521
 #define LANKY_GRAPE_JOINT 18                    /* part 0xE */
+#define LANKY_GRAPE_KIRBY_JOINT 17              /* Kirby's part 0xD */
+#define LANKY_GRAPE_KIRBY_OFF_X 300.0F          /* lui 0x4396 ("200") */
 #define LANKY_GRAPE_OFF_Y -200.0F
 
 extern void *gNdsP4LankySpecial1;
@@ -305,22 +326,24 @@ static void ndsP4LankyGrapeMakeWeapon(GObj *fighter_gobj, Vec3f *pos)
 }
 
 /* LankyNSP.main_ (0xDF/0xE0 update): temp variable 1 shoots the grape 200
- * below his weapon part; in the script's window (temp variable 2) a B tap
- * spends a shot and restarts the swing at frame 14; the end of the
- * animation waits. */
+ * below his weapon part (Kirby's copy: 300 along part 0xD); in the script's
+ * window (temp variable 2) a B tap spends a shot and restarts the swing at
+ * frame 14; the end of the animation waits. */
 void ndsP4LankyNSPMain(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
     if (fp->motion_vars.flags.flag0 != 0)
     {
+        sb32 kirby = (fp->fkind == nFTKindKirby) ? TRUE : FALSE;
         Vec3f pos;
 
         fp->motion_vars.flags.flag0 = 0;
-        pos.x = 0.0F;
-        pos.y = LANKY_GRAPE_OFF_Y;
+        pos.x = (kirby != FALSE) ? LANKY_GRAPE_KIRBY_OFF_X : 0.0F;
+        pos.y = (kirby != FALSE) ? 0.0F : LANKY_GRAPE_OFF_Y;
         pos.z = 0.0F;
-        gmCollisionGetFighterPartsWorldPosition(fp->joints[LANKY_GRAPE_JOINT], &pos);
+        gmCollisionGetFighterPartsWorldPosition(
+            fp->joints[(kirby != FALSE) ? LANKY_GRAPE_KIRBY_JOINT : LANKY_GRAPE_JOINT], &pos);
         pos.z = 0.0F;
         ndsP4LankyGrapeMakeWeapon(fighter_gobj, &pos);
     }
@@ -338,7 +361,8 @@ void ndsP4LankyNSPMain(GObj *fighter_gobj)
         else
         {
             ndsP4LankySetStatus(fighter_gobj,
-                                (fp->ga == nMPKineticsGround) ? LANKY_STATUS_NSPG : LANKY_STATUS_NSPA,
+                                ndsP4LankyNSPStatus(fp, (fp->ga == nMPKineticsGround) ?
+                                                            LANKY_STATUS_NSPG : LANKY_STATUS_NSPA),
                                 LANKY_NSP_REFIRE_FRAME, FTSTATUS_PRESERVE_NONE);
             fp->motion_vars.flags.flag1 = 0;
         }

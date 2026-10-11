@@ -367,6 +367,96 @@ class Exporter:
         return out
 
 
+class KirbyExporter(Exporter):
+    """Remix's Kirby: the vanilla fighter whose parameter and action arrays
+    Character.asm moves and extends (KIRBY_param_array, KIRBY_action_array)
+    with the statuses Remix's fighters' powers give him (P4 S8). Kirby keeps
+    his vanilla struct, now pointing at the extended arrays; the parent is
+    vanilla Kirby read from the original image. The new statuses take the
+    names of their add_new_action(KIRBY, ...) calls, in call order
+    (Character.asm: action array size / 0x14 + n + 0xDC)."""
+
+    def __init__(self, staging: Path, failures: Failures):
+        self.staging = staging
+        self.fighter = "KIRBY"
+        self.fail = failures
+        self.rom = R.Rom(staging / "ssb64asm.z64")
+        self.vanilla = R.Rom(staging / "roms" / "original.z64")
+        self.sym, self.sym_by_addr = R.load_symbols(staging / "logfile.log")
+        self.decomp_sym = R.load_decomp_symbols(DECOMP / "symbols" / "symbols_us.txt")
+        self.args = []
+        self.parent_name = "KIRBY"
+        self.parent_id = VANILLA_IDS["KIRBY"]
+        self.kind_id = self.parent_id
+        self.struct_ram = self.rom.u32(STRUCT_TABLE_ROM + self.parent_id * 4)
+        text = (staging / "src" / "Kirby" / "Kirby.asm").read_text(encoding="utf-8", errors="replace")
+        self.new_names = re.findall(r"^\s*Character\.add_new_action\(KIRBY,\s*(\w+)", text, flags=re.M)
+
+    def export(self) -> dict:
+        rom, van = self.rom, self.vanilla
+        me = self.read_struct(self.struct_ram)
+        raw = van.read_ram(self.struct_ram, 0x78)
+        w = struct.unpack(">30I", raw)
+        parent = {"file_ids": list(w[0:9]), "mainmotion": w[0x64 // 4],
+                  "mainmotion_count": w[0x6C // 4]}
+        motions = self.read_motion_descs(me["mainmotion"], me["mainmotion_count"])
+        parent_motions = []
+        for i in range(parent["mainmotion_count"]):
+            a, s, f = struct.unpack(">III", van.read_ram(parent["mainmotion"] + i * MOTION_DESC_SIZE, 12))
+            parent_motions.append({"index": i, "anim_file_id": a, "script": s, "anim_flags": f})
+        for m in motions:
+            p = parent_motions[m["index"]] if m["index"] < len(parent_motions) else None
+            m["inherited"] = {k: (p is not None and p[k] == m[k])
+                              for k in ("anim_file_id", "script", "anim_flags")}
+        vanilla_count = int(self._action_size(), 0) // STATUS_DESC_SIZE
+        own_ram = self.sym["Character.KIRBY_action_array"]
+        specials = self.read_status_descs(rom.remix_rom_offset(own_ram),
+                                          vanilla_count + len(self.new_names))
+        parent_ram = van.u32(ACTION_ARRAY_TABLE_ROM + self.parent_id * 4)
+        parent_specials = []
+        for i in range(vanilla_count):
+            off = parent_ram - R.FT_OVERLAY_RAM_MINUS_ROM + i * 20
+            mf, sf, u, it, ph, mp = struct.unpack(">HHIIII", van.data[off:off + 20])
+            parent_specials.append((mf, sf, u, it, ph, mp))
+        names = status_names(self.parent_id)
+        statuses = []
+        for k, d in enumerate(specials):
+            sid = SHARED_ACTION_COUNT + k
+            row = dict(d)
+            row["status_id"] = sid
+            if k < vanilla_count:
+                row["name"] = names.get(sid)
+                p = parent_specials[k]
+                mf = (row["motion_id"] & 0x3FF) << 6 | row["attack_id"]
+                mine = (mf, row["sflags"], row["proc_update"], row["proc_interrupt"],
+                        row["proc_physics"], row["proc_map"])
+                row["inherited"] = {f: a == b for f, a, b in zip(
+                    ("motion", "sflags", "proc_update", "proc_interrupt", "proc_physics",
+                     "proc_map"), mine, p)}
+            else:
+                row["name"] = self.new_names[k - vanilla_count]
+                row["remix_new"] = True
+            for proc in ("proc_update", "proc_interrupt", "proc_physics", "proc_map"):
+                addr = d[proc]
+                if addr:
+                    nm = self.name_code(addr)
+                    row[proc + "_name"] = nm
+                    if nm is None and row.get("remix_new"):
+                        self.fail.add(f"status {sid:#x} {proc} {addr:#010x}: no symbol")
+            mid = d["motion_id"]
+            if row.get("remix_new") and (mid < -2 or mid >= len(motions)):
+                self.fail.add(f"status {sid:#x} motion {mid:#x} beyond {len(motions)} motion descs")
+            statuses.append(row)
+        return {
+            "fighter": "KIRBY", "remix_kind_id": self.kind_id,
+            "parent": "KIRBY", "parent_kind_id": self.parent_id,
+            "define_character_args": [], "descriptor": me, "parent_descriptor": parent,
+            "motions": motions, "menu_motions": [], "statuses": statuses,
+            "vanilla_special_count": vanilla_count, "vanilla_motion_count": len(parent_motions),
+            "kind_tables": {},
+        }
+
+
 # ---------------------------------------------------------------------------
 # Event graph
 # ---------------------------------------------------------------------------
@@ -550,7 +640,8 @@ def main() -> int:
     args = ap.parse_args()
 
     fail = Failures()
-    ex = Exporter(args.staging, args.fighter, fail)
+    ex = (KirbyExporter(args.staging, fail) if args.fighter == "KIRBY"
+          else Exporter(args.staging, args.fighter, fail))
     resolved = ex.export()
     motion_file = resolved["descriptor"]["file_ids"][1]
 

@@ -457,7 +457,7 @@ static inline void ndsP4FTMainSetHitInteractStats(FTStruct *fp, u32 attack_group
  * began, drawstatus not -1. */
 static sb32 ndsP4CustomReflectKind(const FTStruct *fp)
 {
-    return ((fp->nds_p4_content != 0u) && (fp->special_coll != NULL) &&
+    return (((fp->nds_p4_content | fp->nds_p4_kirby_copy) != 0u) && (fp->special_coll != NULL) &&
             ((fp->special_coll->kind & 0xFFFF) == NDS_P4_SPECIAL_COLL_CUSTOM)) ? TRUE : FALSE;
 }
 
@@ -609,6 +609,15 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
     FTStatusDesc *nds_p4_saved = NULL;
 #endif
 
+#if NDS_P4 && NDS_P2_KIRBY
+    /* S8, Kirby.clone_power_action_swap_: a Kirby holding a content's power
+     * takes the power's status where the parent's copy routine sets its
+     * own (Falco's Phantasm for Fox's blaster). */
+    if ((fighter_gobj != NULL) && (ftGetStruct(fighter_gobj)->nds_p4_kirby_copy != 0u))
+    {
+        status_id = ndsP4KirbyCloneStatus(ftGetStruct(fighter_gobj), status_id);
+    }
+#endif
     if (ndsDiagnosticsHandleImportedFTMainSetStatusBefore(fighter_gobj,
             status_id, frame_begin, anim_speed, flags) != FALSE)
     {
@@ -644,6 +653,12 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
         {
             ndsP4AfterSetStatus(fighter_gobj, status_id);
         }
+#if NDS_P2_KIRBY
+        else if (nds_topology_fp->nds_p4_kirby_copy != 0u)
+        {
+            ndsP4KirbyAfterSetStatus(fighter_gobj, status_id);
+        }
+#endif
 #endif
     }
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP && \

@@ -33,6 +33,9 @@
 
 #if NDS_P4_PEACH
 
+#if NDS_P2_KIRBY
+#include "kirby/nds_p4_kirby.generated.h"
+#endif
 #include <macros.h>
 #include <stddef.h>
 #include <it/item.h>
@@ -330,6 +333,29 @@ void ndsP4PeachOnStatus(GObj *fighter_gobj, s32 status_id)
 
 /* ---- Neutral special (Peach Bomber) ---- */
 
+/* Kirby's copy (S8): PeachNSP sets Peach's statuses for her id and Kirby's
+ * own PEACH_NSP statuses for any other. */
+static s32 ndsP4PeachNSPStatus(const FTStruct *fp, s32 status_id)
+{
+#if NDS_P2_KIRBY
+    if (fp->fkind == nFTKindKirby)
+    {
+        switch (status_id)
+        {
+        case PEACH_STATUS_NSPG:
+            return NDS_P4_KIRBY_STATUS_PEACH_NSP_GROUND;
+        case PEACH_STATUS_NSPA:
+            return NDS_P4_KIRBY_STATUS_PEACH_NSP_AIR;
+        case PEACH_STATUS_NSP_RECOIL:
+            return NDS_P4_KIRBY_STATUS_PEACH_NSP_RECOIL;
+        }
+    }
+#else
+    (void)fp;
+#endif
+    return status_id;
+}
+
 static void ndsP4PeachNSPRecoilInitial(GObj *fighter_gobj);
 static void ndsP4PeachNSPShieldClangHit(GObj *fighter_gobj);
 
@@ -358,7 +384,8 @@ static void ndsP4PeachNSPInitial(GObj *fighter_gobj, s32 status_id)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
-    ftMainSetStatus(fighter_gobj, status_id, 0.0F, 1.0F, PEACH_PRESERVE_MODELPART);
+    ftMainSetStatus(fighter_gobj, ndsP4PeachNSPStatus(fp, status_id), 0.0F, 1.0F,
+                    PEACH_PRESERVE_MODELPART);
     ftMainPlayAnimEventsAll(fighter_gobj);
     ndsP4PeachNSPSmashTest(fp);
     fp->motion_vars.flags.flag1 = 0;
@@ -392,7 +419,8 @@ static void ndsP4PeachNSPRecoilInitial(GObj *fighter_gobj)
     {
         mpCommonSetFighterAir(fp);
     }
-    ftMainSetStatus(fighter_gobj, PEACH_STATUS_NSP_RECOIL, 0.0F, 1.0F, FTSTATUS_PRESERVE_NONE);
+    ftMainSetStatus(fighter_gobj, ndsP4PeachNSPStatus(fp, PEACH_STATUS_NSP_RECOIL), 0.0F, 1.0F,
+                    FTSTATUS_PRESERVE_NONE);
     fp->physics.vel_air.x = PEACH_NSP_RECOIL_X_SPEED * (f32)fp->lr;
     fp->physics.vel_air.y = PEACH_NSP_RECOIL_Y_SPEED;
 }
@@ -499,8 +527,8 @@ static void ndsP4PeachNSPGroundToAir(GObj *fighter_gobj)
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
     mpCommonSetFighterAir(fp);
-    ftMainSetStatus(fighter_gobj, PEACH_STATUS_NSPA, fighter_gobj->anim_frame, 1.0F,
-                    PEACH_PRESERVE_HIT);
+    ftMainSetStatus(fighter_gobj, ndsP4PeachNSPStatus(fp, PEACH_STATUS_NSPA),
+                    fighter_gobj->anim_frame, 1.0F, PEACH_PRESERVE_HIT);
     ndsP4PeachNSPSetProcs(fp);
 }
 
@@ -509,8 +537,8 @@ static void ndsP4PeachNSPAirToGround(GObj *fighter_gobj)
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
     mpCommonSetFighterGround(fp);
-    ftMainSetStatus(fighter_gobj, PEACH_STATUS_NSPG, fighter_gobj->anim_frame, 1.0F,
-                    PEACH_PRESERVE_HIT);
+    ftMainSetStatus(fighter_gobj, ndsP4PeachNSPStatus(fp, PEACH_STATUS_NSPG),
+                    fighter_gobj->anim_frame, 1.0F, PEACH_PRESERVE_HIT);
     ndsP4PeachNSPSetProcs(fp);
 }
 

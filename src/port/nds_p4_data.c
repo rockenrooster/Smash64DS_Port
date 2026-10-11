@@ -7,4 +7,8 @@
 
 #if NDS_P4
 #include "nds_p4_contents_data.generated.inc"
+#if NDS_P2_KIRBY
+/* S8: Kirby's statuses for the contents' powers (scripts/p4/p4_kirby.py). */
+#include "kirby/nds_p4_kirby.generated.c"
+#endif
 #endif

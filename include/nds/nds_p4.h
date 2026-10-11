@@ -241,6 +241,29 @@ typedef struct NDSP4Overrides
     /* ftParamResetStatUpdateColAnim's per-kind case when a colour animation
      * ends (Remix's gfx_routine_end): replaces the parent's case. */
     void (*colanim_end)(GObj *fighter_gobj);
+    /* S8: after each status change of a Kirby holding this content's power
+     * (the init Remix patches into the parent's copy routine: Falco's
+     * Phantasm.set_variables_ on Kirby's Fox copy). */
+    void (*kirby_on_status)(GObj *fighter_gobj, s32 status_id);
+    /* S8: a landing of a Kirby holding the power (Remix's grounded_script
+     * row for Kirby: Kirby.clear_marth_flag_). */
+    void (*kirby_on_landing)(FTStruct *fp);
+    /* S8: on_hit_interact for a Kirby holding the power (Wario.asm
+     * body_slam_recoil_'s Kirby branch); kept apart from on_hit_interact,
+     * whose status tests are the content's own ids. */
+    void (*kirby_on_hit_interact)(FTStruct *fp, s32 attack_type);
+    /* S8: colanim_end for a Kirby holding the power, in place of his
+     * source case (samusshared.asm kirby_power_check_flash_: Sheik's and
+     * Dedede's charge flashes). */
+    void (*kirby_colanim_end)(GObj *fighter_gobj);
+    /* S8: after_proc_map for a Kirby holding the power (bowser.asm
+     * bowser_nsp_recharge's Kirby branch). */
+    void (*kirby_after_proc_map)(GObj *fighter_gobj);
+    /* S8: kirby_inhale_status for a Kirby holding the power, whose inhale
+     * runs on his own copy statuses (Dedede's, DededeNSP's hat checks). */
+    s32 (*kirby_copy_inhale_status)(s32 status_id);
+    /* S8: on_custom_reflect for a Kirby holding the power (Dedede's absorb). */
+    void (*kirby_on_custom_reflect)(GObj *fighter_gobj);
 } NDSP4Overrides;
 
 /* Item kinds past the source's last (nITKindEnumCount, as Remix numbers its
@@ -434,6 +457,33 @@ typedef struct NDSP4KirbyInhale
     s32 star_damage;
 } NDSP4KirbyInhale;
 
+/* S8: Kirby's copy of a content (scripts/p4/p4_kirby.py). Remix gives Kirby
+ * his own statuses for each power (Kirby.asm add_new_action), numbered on
+ * the DS densely from 0x12F past his 83 vanilla specials, their motions from
+ * 276; a match with a Kirby and a content whose power he can take loads
+ * their rows (ndsP4KirbyMatchData). Kirby's copy_id stays the parent's kind,
+ * so the source's copy code runs the parent's power; FTStruct
+ * .nds_p4_kirby_copy names the content, and these rows turn it into Remix's:
+ * the starters Remix's kirby_ground_nsp / kirby_air_nsp name, and the
+ * statuses Kirby.clone_power_action_swap_ sets in place of the parent's
+ * copy statuses (Falco's Phantasm in place of Fox's blaster). */
+typedef struct NDSP4KirbyClone
+{
+    u16 status; /* the status the parent's copy routine sets */
+    u16 clone;  /* the power's status Remix sets in its place */
+} NDSP4KirbyClone;
+typedef struct NDSP4KirbyPower
+{
+    u16 hat_id;      /* Remix kirby_hat_id (KirbyHats.asm add_hat); 0: no power */
+    u8 hat_base;     /* the source hat it re-skins (copy_modelpart_id) */
+    u8 clone_count;
+    u8 clone_first;  /* into gNdsP4KirbyClones */
+    u8 reserved;
+    u16 hat_mask;    /* source hats the power shows: its own and its scripts' */
+    NDSP4SpecialStart nsp_ground; /* NULL: the parent's copy routine */
+    NDSP4SpecialStart nsp_air;
+} NDSP4KirbyPower;
+
 typedef struct NDSP4Fighter
 {
     const char *name;
@@ -591,7 +641,9 @@ GObj *ndsP4EntryMakeEffect(struct EFDesc *desc, const Vec3f *pos);
 void ndsP4AfterProcMapSlow(GObj *fighter_gobj);
 static inline void ndsP4AfterProcMap(GObj *fighter_gobj)
 {
-    if (__builtin_expect(ftGetStruct(fighter_gobj)->nds_p4_content != 0u, 0))
+    const FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if (__builtin_expect((fp->nds_p4_content | fp->nds_p4_kirby_copy) != 0u, 0))
     {
         ndsP4AfterProcMapSlow(fighter_gobj);
     }
@@ -604,7 +656,7 @@ void ndsP4OnDead(GObj *fighter_gobj);
 void ndsP4OnHitInteractSlow(FTStruct *fp, s32 attack_type);
 static inline void ndsP4OnHitInteract(FTStruct *fp, s32 attack_type)
 {
-    if (__builtin_expect(fp->nds_p4_content != 0u, 0))
+    if (__builtin_expect((fp->nds_p4_content | fp->nds_p4_kirby_copy) != 0u, 0))
     {
         ndsP4OnHitInteractSlow(fp, attack_type);
     }
@@ -672,6 +724,33 @@ void ndsP4OnInitFighter(GObj *fighter_gobj);
 /* ftkirbyspecialn.c's status changes (battleship_kirby.c): the content's
  * kirby_inhale_status. */
 s32 ndsP4KirbyInhaleStatus(GObj *fighter_gobj, s32 status_id);
+/* S8, Kirby's copies (NDSP4KirbyPower). ftManagerMakeFighter for a Kirby of
+ * a VS battle: his FTData with the power rows (motions, scripts) when a
+ * content of the match has a power, else NULL (battleship_ftmanager.c). */
+FTData *ndsP4KirbyMatchData(void);
+/* ftMainSetStatus' head (battleship_ftmain.c): the power's status in place
+ * of the parent copy's (Kirby.clone_power_action_swap_). */
+s32 ndsP4KirbyCloneStatus(FTStruct *fp, s32 status_id);
+/* After that status change: the power's kirby_on_status. */
+void ndsP4KirbyAfterSetStatus(GObj *fighter_gobj, s32 status_id);
+/* ftKirbySpecialNCatchProcUpdate (battleship_kirby.c): the power the catch
+ * takes, the victim content's or a victim Kirby's. */
+void ndsP4KirbyCatch(FTStruct *kirby_fp, FTStruct *victim_fp);
+/* ftKirbySpecialNCopyInitCopyVars, the power taken with the copy. */
+void ndsP4KirbyCopyInitCopyVars(GObj *fighter_gobj);
+/* ftKirbySpecialNLoseCopy, a Kirby swallowed by another, a new stock: the
+ * power goes. */
+void ndsP4KirbyLoseCopy(FTStruct *fp);
+/* The power the catching player's last catch took (0: none). */
+u32 ndsP4KirbyPendingPower(const FTStruct *fp);
+/* A content's power row, NULL when it has none. */
+const NDSP4KirbyPower *ndsP4KirbyPowerOf(u32 content);
+/* nds_kirby_hat_residency.c: the hat bits a content player's power shows,
+ * 0 for any other player. */
+u32 ndsP4KirbyHatMask(s32 player);
+/* ftParamSetModelPartID: a Remix hat id (0xF on) a Kirby's power script
+ * sets on joint 6 shows the source hat it re-skins (S8). */
+s32 ndsP4KirbyModelPart(const FTStruct *fp, s32 joint_id, s32 modelpart_id);
 /* Kirby's copy table, the rows of his main motion file's
  * (relocData/228_KirbyMainMotion.c), for the inhale code a content runs
  * without Kirby's file in the match (battleship_kirby.c,
