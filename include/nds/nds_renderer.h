@@ -1600,6 +1600,10 @@ s32 ndsRendererSubmitNativeVisualEffect(
     u32 template_index,
     const NDSRendererConfig *config, NDSRendererStats *stats);
 s32 ndsRendererHardwarePrepareEntryEffectTextures(void);
+/* After the startup-only names retire: the gameplay images (P4 articles, KO
+ * and its palettes, shield, catch...) the scene-start pass could not place. */
+s32 ndsRendererHardwarePrepareEntryEffectGameplayTextures(void);
+extern volatile u32 gNdsEntryEffectNativeTexturePrepareFailCount;
 s32 ndsRendererHardwarePrepareFoxGunTexture(void);
 extern volatile u32 gNdsEntryEffectNativeDrawCount;
 extern volatile u32 gNdsEntryEffectNativeFallbackCount;

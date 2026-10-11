@@ -416,6 +416,10 @@ void scVSBattleFuncUpdate(void)
         }
         ndsRendererHardwareReleaseEntryStartupTextures();
         sNdsSCVSBattleEntryStartupTexturesRetired = TRUE;
+        /* Gameplay entry images the scene start had no room for (28 in a
+         * four-content match on Dream Land) take the released names' room
+         * first; none of them can draw before GO. */
+        (void)ndsRendererHardwarePrepareEntryEffectGameplayTextures();
         /* The flying-dust planes are 25 resident 1 KB bands, prepared at
          * scene start after every larger owner. On Dream Land the pinned
          * static corpus leaves room for nine (lab gate q48: 9 prepared, 1

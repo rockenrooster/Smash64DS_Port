@@ -1226,9 +1226,40 @@ detonated and exploded; Nikita launched, steered, exploded; mortar fired and
 burst; forward tilt into its second kick; taunt calls; crawl); a four-Snake
 CPU match of 1,800 frames draws all five articles (ndsRendererEntryEffectP4Admit
 counts), 0 failures. Play ROM play-1011sn (all 18 contents): select with four
-Snakes and with four MRGAWs, 0 failures; four Snake CPUs on Dream Land 1,500
-frames, low-water 36,748, and four MRGAWs, low-water 51,852, 0 failures;
-Results with both, 0 failures.
+Snakes and with four MRGAWs, 0 failures; four Snake CPUs, 1,500 frames,
+low-water 36,748, and four MRGAWs, low-water 51,852, 0 failures (the probe's
+stage poke does not hold: Peach's Castle); Results with both, 0 failures.
+
+## Entry images at scene start (2026-10-11)
+
+Four Dededes on Dream Land lost every KO effect natively (6 failures): the
+scene-start texture pass stopped at the first image the texture VRAM refused,
+his 18th article image, and the KO palettes are made last. Each image now
+fails alone, and the KO palettes need only the KO image
+(`ndsRendererPrepareEntryEffectTextureSet`).
+
+Two changes give the entries their room. An image only the original cast's
+entry props name (Mario's pipe, Fox's Arwing, the barrel, capsule, Falcon's
+car, Link's) is skipped when the scene never loaded the special file that
+holds them: 18.5 KB in an all-P4 match (FoxSpecial3 also loads for Sector Z's
+fly-by, so the Arwing stays there). And images no entry draws (the contents'
+articles; Link's spin and boomerang, shield, reflector, catch, KO, reflector
+break, Kirby's cutter, Samus's grapple, Falcon's kick and punch) are placed
+after the entry images. Whatever the scene start could not place is placed
+when the startup images retire, two frames into GO, before the dust planes
+(`ndsRendererHardwarePrepareEntryEffectGameplayTextures`). The setup
+functions are compact (`optimize("Os")`, with the startup release), so .main
+keeps its size: it ends on a 1 KB boundary and the heap moves in whole KB.
+
+Lab (build-lab-p4x, Dream Land, 1,500 frames): four Dededes 0 refusals, 0
+native failures (were 6); Crash, Lanky, Sonic and Dedede refuse 28 late
+images at scene start, all placed after GO, 0 native failures (were 16:
+Sonic's entry props); the original cast (Mario, Fox, Donkey Kong, Falcon)
+skips Samus's and Link's props, 0 failures; Sector Z without Fox keeps the
+Arwing, 0 failures. Play ROM play-1011ko: four Dededes 0 failures,
+low-water 17,608, as before. That four-content match does not fit the
+shipping heap: it runs out making the damage interface at battle start
+("S15 P4 memory"; the lab ends it with 10.8 KB).
 
 ## Board 1 status (master plan Revision 3)
 

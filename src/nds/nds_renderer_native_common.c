@@ -7680,7 +7680,9 @@ s32 ndsRendererReplayNativeEntryEffectFox(u32 root_offset,
 #endif
 }
 
-static s32 ndsRendererPrepareEntryShieldTextures(const NDSEntryEffectTexture *texture)
+/* Setup-only, with the texture set below: compact, not fast. */
+static s32 __attribute__((noinline, cold, optimize("Os")))
+ndsRendererPrepareEntryShieldTextures(const NDSEntryEffectTexture *texture)
 {
     u32 variant;
     /* A3I5, thirty-two entries.  The blend below runs once per PALETTE ENTRY,
@@ -7721,7 +7723,8 @@ static s32 ndsRendererPrepareEntryShieldTextures(const NDSEntryEffectTexture *te
  * probe: --gc-sections has discarded unreferenced witnesses in this tree. */
 __attribute__((used)) volatile u32 gNdsEntryShieldTexturePrepareDeclineCount;
 
-static s32 ndsRendererPrepareEntryKoPalettes(void)
+static s32 __attribute__((noinline, cold, optimize("Os")))
+ndsRendererPrepareEntryKoPalettes(void)
 {
     u32 part;
     for (part = 0u; part < 3u; part++)
@@ -7736,7 +7739,8 @@ static s32 ndsRendererPrepareEntryKoPalettes(void)
         if (texture_slot >= NDS_ENTRY_EFFECT_TEXTURE_COUNT) { return FALSE; }
         texture = &sNdsEntryEffectTextures[texture_slot];
         if ((texture->ds_format != NDS_ENTRY_EFFECT_TEXTURE_A5I3) ||
-            (texture->palette_entries != 8u)) { return FALSE; }
+            (texture->palette_entries != 8u) ||
+            (sNdsRendererEntryEffectTextureName[texture_slot] == 0u)) { return FALSE; }
         for (player = 0u; player < 4u; player++)
         {
             int name = 0;
@@ -7772,35 +7776,135 @@ static s32 ndsRendererPrepareEntryKoPalettes(void)
     return TRUE;
 }
 
-s32 ndsRendererHardwarePrepareEntryEffectTextures(void)
-{
 #if NDS_RENDERER_HW_TRIANGLES && \
     (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+volatile u32 gNdsEntryEffectNativeTexturePrepareFailCount;
+
+/* EACH TEXTURE FAILS ALONE. The first refused texture used to end the setup,
+ * and the KO palettes come last: four Dededes on Dream Land ran out of texture
+ * VRAM at the 18th of his 19 article images, the KO palettes were never made,
+ * and every KO effect of the match failed natively. A refused image now
+ * leaves only its own groups unbound, and the KO palettes need only the KO
+ * image.
+ *
+ * Two phases: the images an entry may draw first, then the late ones (below),
+ * which can first appear only after GO; at scene start they take what the
+ * entries leave. Four different contents on Dream Land (Crash, Lanky, Sonic,
+ * Dedede) refused 30 images, two of them Sonic's entry props, in index order.
+ *
+ * skip_startup is the second pass, after the startup-only names retire at
+ * GO: it places the gameplay images the scene-start pass had no room for,
+ * as the dust planes do, and never re-makes the retired entry props. */
+#define NDS_ENTRY_TEXTURE_SKIP 3u
+
+/* late[i]: 0, an entry may draw image i; 1, no entry draws it (the contents'
+ * articles, and images only the original cast's gameplay roots name: Link's
+ * spin and boomerang, shield, reflector, catch, KO and reflector break, up to
+ * the Master Ball rays; Kirby's cutter, Samus's grapple, Falcon's kick and
+ * punch, up to Yoshi's egg, which is also his entry); SKIP, nothing of this
+ * scene can draw it: an absent content's image, or one only the original
+ * cast's entry props name whose special files the scene never loaded (18.5 KB
+ * in an all-P4 match; FoxSpecial3 also loads for Sector Z's fly-by). */
+static void ndsRendererEntryTextureMarkLate(u8 *late)
+{
+    static const u8 entry_end[6] = {
+        NDS_ENTRY_EFFECT_FOX_ROOT_FIRST, NDS_ENTRY_EFFECT_DONKEY_ROOT_FIRST,
+        NDS_ENTRY_EFFECT_SAMUS_ROOT_FIRST, NDS_ENTRY_EFFECT_CAPTAIN_ROOT_FIRST,
+        NDS_ENTRY_EFFECT_LINK_ROOT_FIRST,
+        NDS_ENTRY_EFFECT_LINK_SPIN_WEAPON_ROOT_FIRST
+    };
+    static const u16 entry_asset[6] = { 356u, 161u, 355u, 349u, 350u, 353u };
+    u32 loaded = 0u;
+    u32 g;
     u32 i;
 
+    for (i = 0u; i < 6u; i++)
+    {
+        const void *data;
+        u32 size;
+
+        if (ndsRelocGetLoadedAssetView(entry_asset[i], &data, &size) != FALSE)
+        {
+            loaded |= 1u << i;
+        }
+    }
+    /* Bits a root sets: 1 early, 2 gameplay, 4 an entry prop not loaded. */
     for (i = 0u; i < NDS_ENTRY_EFFECT_TEXTURE_COUNT; i++)
     {
+        late[i] = 0u;
+    }
+    for (g = 0u; g < NDS_ENTRY_EFFECT_GROUP_COUNT; g++)
+    {
+        u32 slot = sNdsEntryEffectGroups[g].texture_slot;
+        u32 root = sNdsEntryEffectGroups[g].root_index;
+        u32 f;
+
+        if (slot >= NDS_ENTRY_EFFECT_TEXTURE_COUNT)
+        {
+            continue;
+        }
+        for (f = 0u; (f < 6u) && (root >= entry_end[f]); f++)
+        {
+        }
+        if (f < 6u)
+        {
+            late[slot] |= (((loaded >> f) & 1u) != 0u) ? 1u : 4u;
+        }
+        else if (((root >= NDS_ENTRY_EFFECT_LINK_SPIN_WEAPON_ROOT_FIRST) &&
+                  (root < NDS_ENTRY_EFFECT_MBALLRAYS_ROOT_FIRST)) ||
+                 ((root >= NDS_ENTRY_EFFECT_KIRBY_CUTTER_ROOT_FIRST) &&
+                  (root < NDS_ENTRY_EFFECT_YOSHI_EGG_ROOT_FIRST)))
+        {
+            late[slot] |= 2u;
+        }
+        else
+        {
+            late[slot] |= 1u;
+        }
+    }
+    for (i = 0u; i < NDS_ENTRY_EFFECT_TEXTURE_COUNT; i++)
+    {
+        u32 bits = late[i];
+
+        late[i] = (((bits & 1u) != 0u) || (bits == 0u)) ? 0u :
+                  ((bits & 2u) != 0u) ? 1u : NDS_ENTRY_TEXTURE_SKIP;
+#ifdef NDS_ENTRY_EFFECT_P4_ROOT_COUNT
+        if (sNdsEntryEffectTextureP4Content[i] != 0u)
+        {
+            late[i] = (ndsRendererEntryEffectP4ContentInMatch(
+                           sNdsEntryEffectTextureP4Content[i]) == FALSE) ?
+                NDS_ENTRY_TEXTURE_SKIP :
+                (sNdsEntryEffectTextureStartupOnly[i] == 0u) ? 1u : 0u;
+        }
+#endif
+    }
+}
+
+static s32 __attribute__((noinline, cold, optimize("Os")))
+ndsRendererPrepareEntryEffectTextureSet(u32 skip_startup)
+{
+    u8 late[NDS_ENTRY_EFFECT_TEXTURE_COUNT];
+    u32 k;
+    s32 ok = TRUE;
+
+    ndsRendererEntryTextureMarkLate(late);
+    for (k = 0u; k < (2u * NDS_ENTRY_EFFECT_TEXTURE_COUNT); k++)
+    {
+        u32 i = k % NDS_ENTRY_EFFECT_TEXTURE_COUNT;
         const NDSEntryEffectTexture *texture = &sNdsEntryEffectTextures[i];
         s32 prepared;
 
-        if (sNdsRendererEntryEffectTextureName[i] != 0u)
+        if ((sNdsRendererEntryEffectTextureName[i] != 0u) ||
+            ((skip_startup != 0u) && (sNdsEntryEffectTextureStartupOnly[i] != 0u)) ||
+            (late[i] != (k / NDS_ENTRY_EFFECT_TEXTURE_COUNT)))
         {
             continue;
         }
-#ifdef NDS_ENTRY_EFFECT_P4_ROOT_COUNT
-        /* A P4 content's own article textures cost VRAM only in a match
-         * that has the content. */
-        if ((sNdsEntryEffectTextureP4Content[i] != 0u) &&
-            (ndsRendererEntryEffectP4ContentInMatch(
-                 sNdsEntryEffectTextureP4Content[i]) == FALSE))
-        {
-            continue;
-        }
-#endif
         if ((texture->texels == NULL) ||
             (texture->width == 0u) || (texture->height == 0u))
         {
-            return FALSE;
+            ok = FALSE;
+            continue;
         }
         if (i == sNdsEntryEffectGroups[
                 sNdsEntryEffectRoots[NDS_ENTRY_EFFECT_SHIELD_ROOT_FIRST].first_group].texture_slot)
@@ -7808,7 +7912,7 @@ s32 ndsRendererHardwarePrepareEntryEffectTextures(void)
             if (ndsRendererPrepareEntryShieldTextures(texture) == FALSE)
             {
                 NDS_DIAG(gNdsEntryShieldTexturePrepareDeclineCount++);
-                return FALSE;
+                ok = FALSE;
             }
             continue;
         }
@@ -7816,7 +7920,8 @@ s32 ndsRendererHardwarePrepareEntryEffectTextures(void)
         {
             if (texture->palette_entries != 16u)
             {
-                return FALSE;
+                ok = FALSE;
+                continue;
             }
             /* Unlike IFCommon's PAL16 atlases, an entry texture does not
              * necessarily reserve index 0 for transparency. Mario's pipe uses
@@ -7833,7 +7938,8 @@ s32 ndsRendererHardwarePrepareEntryEffectTextures(void)
         {
             if (texture->palette_entries != 8u)
             {
-                return FALSE;
+                ok = FALSE;
+                continue;
             }
             prepared = ndsRendererHardwarePrepareIFCommonCloudAtlas(
                 texture->width, texture->height, texture->palette,
@@ -7844,7 +7950,8 @@ s32 ndsRendererHardwarePrepareEntryEffectTextures(void)
         {
             if ((texture->palette != NULL) || (texture->palette_entries != 0u))
             {
-                return FALSE;
+                ok = FALSE;
+                continue;
             }
             prepared = ndsRendererHardwarePrepareIFCommonAtlas(
                 texture->width, texture->height, GL_RGBA,
@@ -7854,15 +7961,40 @@ s32 ndsRendererHardwarePrepareEntryEffectTextures(void)
         }
         else
         {
-            return FALSE;
+            ok = FALSE;
+            continue;
         }
         if (prepared == FALSE)
         {
-            return FALSE;
+            gNdsEntryEffectNativeTexturePrepareFailCount++;
+            ok = FALSE;
+            continue;
         }
         gNdsEntryEffectNativeTexturePrepareCount++;
     }
-    return ndsRendererPrepareEntryKoPalettes();
+    if (ndsRendererPrepareEntryKoPalettes() == FALSE)
+    {
+        ok = FALSE;
+    }
+    return ok;
+}
+#endif
+
+s32 ndsRendererHardwarePrepareEntryEffectTextures(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES && \
+    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+    return ndsRendererPrepareEntryEffectTextureSet(0u);
+#else
+    return FALSE;
+#endif
+}
+
+s32 ndsRendererHardwarePrepareEntryEffectGameplayTextures(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES && \
+    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+    return ndsRendererPrepareEntryEffectTextureSet(1u);
 #else
     return FALSE;
 #endif

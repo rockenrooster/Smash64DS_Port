@@ -4298,7 +4298,9 @@ static s32 ndsRendererEntryTextureIsFoxArwing(u32 texture_slot)
 }
 #endif
 
-void ndsRendererHardwareReleaseEntryStartupTextures(void)
+/* Once a match, two frames into GO: compact, not fast. */
+void __attribute__((cold, optimize("Os")))
+ndsRendererHardwareReleaseEntryStartupTextures(void)
 {
 #if NDS_RENDERER_HW_TRIANGLES && \
     (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
