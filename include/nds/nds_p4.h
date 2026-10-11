@@ -478,8 +478,11 @@ typedef struct NDSP4KirbyPower
     u8 hat_base;     /* the source hat it re-skins (copy_modelpart_id) */
     u8 clone_count;
     u8 clone_first;  /* into gNdsP4KirbyClones */
-    u8 reserved;
-    u16 hat_mask;    /* source hats the power shows: its own and its scripts' */
+    u8 hat_count;    /* its Remix hats (ids from 0xF), in hats[] */
+    u16 hat_mask;    /* source hats (ids below 0xF) the power shows */
+    u8 hats[4];      /* its Remix hats: its own, then its scripts' */
+    u16 hat_texture_file; /* their textures (nitro:/reloc/p4/<id>); 0: none */
+    u16 weapon_file; /* the list it holds on joint 17 (a sidecar root); 0: none */
     NDSP4SpecialStart nsp_ground; /* NULL: the parent's copy routine */
     NDSP4SpecialStart nsp_air;
 } NDSP4KirbyPower;
@@ -749,8 +752,27 @@ const NDSP4KirbyPower *ndsP4KirbyPowerOf(u32 content);
  * 0 for any other player. */
 u32 ndsP4KirbyHatMask(s32 player);
 /* ftParamSetModelPartID: a Remix hat id (0xF on) a Kirby's power script
- * sets on joint 6 shows the source hat it re-skins (S8). */
-s32 ndsP4KirbyModelPart(const FTStruct *fp, s32 joint_id, s32 modelpart_id);
+ * sets on joint 6 stands on the source hat it re-skins, whose part the live
+ * DObj keeps; FTStruct.nds_p4_kirby_hat records the Remix hat, whose image
+ * draws in its place (S8). */
+s32 ndsP4KirbyModelPart(FTStruct *fp, s32 joint_id, s32 modelpart_id);
+/* ftParamSetModelPartDefaultID for a Kirby holding a power: the power's hat
+ * as his default, its image bound; TRUE when the source hat's image is not
+ * wanted (a Remix power never draws the parent's copy row). */
+sb32 ndsP4KirbyDefaultHat(FTStruct *fp, s32 modelpart_id);
+/* Binds the Remix hat a Kirby shows to his slot's hat image. */
+void ndsP4KirbyBindHat(FTStruct *fp);
+/* ftParamResetModelPartAll restores joint 6 without ftParamSetModelPartID:
+ * the Remix hat follows the restored part. */
+void ndsP4KirbyRefreshHat(FTStruct *fp);
+/* nds_kirby_hat_residency.c: the player is a content whose power a Kirby
+ * takes (its hats: ndsP4KirbyHatMask's source hats, ndsP4KirbyMatchHats'
+ * Remix hats). */
+sb32 ndsP4KirbyPlayerHasPower(s32 player);
+/* The Remix hats the match's powers draw, at most `capacity`. */
+u32 ndsP4KirbyMatchHats(u8 *hats, u32 capacity);
+/* The foreign-image resolver: a power's hat texture file. */
+sb32 ndsP4KirbyHatTextureAsset(u32 asset_id);
 /* Kirby's copy table, the rows of his main motion file's
  * (relocData/228_KirbyMainMotion.c), for the inhale code a content runs
  * without Kirby's file in the match (battleship_kirby.c,

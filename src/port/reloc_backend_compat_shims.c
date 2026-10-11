@@ -2756,6 +2756,12 @@ void ftParamResetModelPartAll(GObj *fighter_gobj)
     }
     /* Source clears this after all requested parts have been restored. */
     fp->is_modelpart_modify = FALSE;
+#if NDS_P4 && NDS_P2_KIRBY
+    if (fp->nds_p4_kirby_copy != 0u)
+    {
+        ndsP4KirbyRefreshHat(fp);
+    }
+#endif
     if (changed != FALSE)
     {
         ndsFTParamInvalidateModelPartRenderer(fighter_gobj, fp);
@@ -7159,6 +7165,15 @@ void ftParamSetModelPartDetailAll(GObj *fighter_gobj, u8 detail)
     {
         detail = nFTPartsDetailLow;
     }
+#if NDS_P2_KIRBY
+    /* S8: so does a Kirby holding a content's power: the match admits his
+     * Remix hats in the low detail only there (nds_kirby_hat_residency.c). */
+    if ((fp != NULL) && (fp->fkind == nFTKindKirby) && (fp->nds_p4_kirby_copy != 0u) &&
+        (detail == nFTPartsDetailHigh) && (ndsP4LowDetailBattle() != FALSE))
+    {
+        detail = nFTPartsDetailLow;
+    }
+#endif
 #endif
     if ((fp == NULL) || (detail == fp->detail_curr))
     {
@@ -13177,6 +13192,14 @@ void ftParamSetModelPartDefaultID(GObj *fighter_gobj, s32 joint_id,
             NDS_DIAG(gNdsNativeKirbyHatSuppressedCount++);
             modelpart_id = 0;
         }
+#if NDS_P4
+        /* P4 S8: a Kirby holding a content's power defaults to the power's
+         * Remix hat, whose image is bound in the source hat's place; the
+         * parent's copy row the source passes first draws nothing. */
+        else if (ndsP4KirbyDefaultHat(fp, modelpart_id) != FALSE)
+        {
+        }
+#endif
         else
         {
             /* LOAD THE LOW HAT ONLY WHEN THIS FIGHTER CAN EVER SELECT IT.

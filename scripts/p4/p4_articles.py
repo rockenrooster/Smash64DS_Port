@@ -481,6 +481,21 @@ def main() -> int:
         Path(__file__).with_name("contents.json").read_text(encoding="utf-8"))["contents"]}
     roots = resolve(args.content, titles[args.content], args.o2r.resolve(),
                     resolved["descriptor"])
+    # S8: the weapon Kirby holds with this content's power (p4_kirby.py's
+    # articles_<content>.json beside the Kirby files): a sidecar root of this
+    # content, its file copied beside the content's own.
+    kirby_dir = args.o2r.resolve().parent.parent / "kirby"
+    kirby_rows = kirby_dir / f"articles_{args.content}.json"
+    if kirby_rows.exists():
+        for row in json.loads(kirby_rows.read_text(encoding="utf-8"))["roots"]:
+            # Wolf's: his own gun's root (the runtime falls back to it).
+            if any(r["file_id"] == row["file_id"] and r["offset"] == row["offset"]
+                   for r in roots):
+                continue
+            name = f"{row['file_id']:04x}"
+            if not (args.o2r / name).exists():
+                (args.o2r / name).write_bytes((kirby_dir / "o2r" / name).read_bytes())
+            roots.append(row)
     args.out.write_text(json.dumps({"content": args.content, "roots": roots}, indent=1),
                         encoding="utf-8", newline="\n")
     print(f"{args.content}: {len(roots)} article roots")

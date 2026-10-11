@@ -59,6 +59,17 @@ FLAG_SHIELDPOSE = 0x2
 FIRST_CUSTOM_HAT = 0xF            # KirbyHats.asm: ids past the source's
 HAT_ROW_BYTES = 0x20              # KirbyHats.extended_special_parts rows
 DEFERRED_HATS = 0x3FF8            # source hats 3..13: per-match native images
+# KirbyHats.file_index: File.asm KIRBY_CUSTOM_HATS and KIRBY_CUSTOM_HATS_2.
+HAT_FILES = (0xA8D, 0x1533)
+# Each power's Remix hat textures (p4_kirby_hats.py): one file per content,
+# past the synthesized files (SYNTH_FILE_BASE .. SCRIPT_FILE_ID).
+HAT_TEXTURE_FILE_BASE = 0x1800
+POWER_HAT_SLOTS = 4               # NDSP4KirbyPower.hats
+KIRBY_MODEL_FILE = 0x148
+# A power's weapon on Kirby's joint 17 (special part index 0x11) draws beside
+# his body as a P4 sidecar root: its rows carry the joint with this bit, so
+# they never answer a content's own joint-17 lookup (Wolf's gun).
+KIRBY_SIDECAR_BIT = 0x80
 
 # The status-name prefix of each content's power (Kirby.asm add_new_action).
 POWER_PREFIX = {
@@ -102,6 +113,15 @@ class _EmptyBase:
 
 def c_ident(name: str) -> str:
     return re.sub(r"[^A-Za-z0-9_]", "_", name).upper()
+
+
+def power_weapons(hats_asm: str) -> dict[int, int]:
+    """KirbyHats.use_extended_special_parts_pause_: Remix hat id -> the
+    offset, in Kirby's model file, of the special part whose list the power
+    holds on joint 17 (Marth's and Roy's swords, Wolf's and Lanky's guns)."""
+    return {int(m[1], 16): int(m[2], 16) for m in re.finditer(
+        r"addiu\s+t6,\s*r0,\s*(0x[0-9A-Fa-f]+)[^\n]*\n\s*li\s+t7,\s*(0x[0-9A-Fa-f]+)",
+        hats_asm)}
 
 
 def clone_swaps(kirby_asm: str, new_names: list[str]) -> dict[str, list[tuple[int, int]]]:
@@ -325,6 +345,21 @@ def main() -> int:
     custom_hats = list(range(FIRST_CUSTOM_HAT, FIRST_CUSTOM_HAT +
                              (sym["KirbyHats.temp_special_parts"] - hats) // HAT_ROW_BYTES))
     hat_bases = [hat_base_of(h) for h in custom_hats]
+
+    # A Remix hat's row (KirbyHats.add_hat): the source hat it re-skins and
+    # its own lists, high and low, in the file its index names. The roster's
+    # hats override only the list (images and tracks -1: the source hat's).
+    def hat_row(hat: int) -> dict:
+        words = struct.unpack(">8i", rom.read_ram(
+            hats + (hat - FIRST_CUSTOM_HAT) * HAT_ROW_BYTES, HAT_ROW_BYTES))
+        base, dl_hi, img_hi, trk_hi, dl_lo, img_lo, trk_lo, file_index = words
+        if (img_hi, trk_hi, img_lo, trk_lo) != (-1, -1, -1, -1) or dl_hi < 0 or dl_lo < 0:
+            raise KirbyError(f"hat {hat:#x}: row {words} overrides more than its lists")
+        if not 0 <= base < 15 or file_index not in (0, 1):
+            raise KirbyError(f"hat {hat:#x}: row {words}")
+        return {"base": base, "file": HAT_FILES[file_index], "dl": [dl_hi, dl_lo]}
+
+    hat_rows: dict[int, dict] = {}
     powers = []
     proto = set()
     for c in contents:
@@ -343,17 +378,30 @@ def main() -> int:
                 hats + (hat_id - FIRST_CUSTOM_HAT) * HAT_ROW_BYTES, 4))[0]
         if not 3 <= hat_base <= 13:
             raise KirbyError(f"{c}: hat {hat_id:#x} re-skins {hat_base}, not a copy hat")
-        hat_mask = 1 << hat_base
+        # The power's hats: its own, then the ones its scripts set on joint 6.
+        # A Remix hat (id from 0xF) is drawn from its own native image
+        # (p4_kirby_hats.py); a source hat id from the deferred source image.
+        shown = [hat_id]
         for s in selected:
             if owner[s["status_id"]] != c:
                 continue
-            for part in script_hats(s):
+            for part in sorted(script_hats(s)):
                 base = hat_base_of(part)
                 if not 0 <= base < 15:
                     raise KirbyError(f"{c}: script hat {part:#x} re-skins {base}")
-                hat_mask |= 1 << base
+                if part not in shown:
+                    shown.append(part)
+        remix_hats = [h for h in shown if h >= FIRST_CUSTOM_HAT]
+        if len(remix_hats) > POWER_HAT_SLOTS:
+            raise KirbyError(f"{c}: {len(remix_hats)} Remix hats, room for {POWER_HAT_SLOTS}")
+        for h in remix_hats:
+            hat_rows.setdefault(h, hat_row(h))
         # Hats 3..13 are the deferred images a match admits; 0-2 and 14
         # (the inhale and Yoshi-swallow faces) stay in Kirby's own owner.
+        hat_mask = 0
+        for h in shown:
+            if h < FIRST_CUSTOM_HAT:
+                hat_mask |= 1 << h
         hat_mask &= DEFERRED_HATS
         starters = []
         for table in (ground_nsp, air_nsp):
@@ -379,8 +427,40 @@ def main() -> int:
                 raise KirbyError(f"{c}: clone swap {base:#x} -> {clone:#x} is not a power status")
             clone_rows.append((base, status_map[clone]))
         powers.append({"content": c, "id": registry[c]["id"], "hat": hat_id, "hat_base": hat_base,
-                       "hat_mask": hat_mask,
+                       "hat_mask": hat_mask, "hats": remix_hats,
+                       "hat_texture_file": (HAT_TEXTURE_FILE_BASE + registry[c]["id"]
+                                            if remix_hats else 0),
                        "starters": starters, "clones": clone_rows})
+    for p in powers:
+        if p["hat_texture_file"]:
+            shipped[p["hat_texture_file"]] = "p4_kirby_hats.py"
+
+    # The weapons the powers hold: each its own file, a sidecar root of the
+    # power's content (articles_<content>.json beside o2r/, for
+    # generate_nds_entry_effects.py --p4), loaded for a match with the power.
+    weapons = power_weapons((args.staging / "src" / "KirbyHats.asm").read_text(
+        encoding="utf-8", errors="replace"))
+    model_slots = rom.reloc_slots(KIRBY_MODEL_FILE)
+    for p in powers:
+        p["weapon"] = None
+        part = weapons.get(p["hat"])
+        if part is None:
+            continue
+        slot = model_slots.get(part)
+        if slot is None or slot[0] != "extern":
+            raise KirbyError(f"{p['content']}: weapon part {part:#x} names no file's list")
+        _, wfile, woff = slot
+        blob = rom.o2r(wfile)
+        (out / "o2r" / f"{wfile:04x}").write_bytes(blob)
+        shipped[wfile] = hashlib.sha256(blob).hexdigest()
+        p["weapon"] = (wfile, woff)
+        row = {"article": "kirby_weapon", "file_id": wfile, "storage": None, "via": 0,
+               "offset": woff, "entry": False, "texid": None, "palette": None, "head": 0,
+               "sidecar_joint": 17 | KIRBY_SIDECAR_BIT, "material": False,
+               "via_base": False, "via_bias": 0}
+        (out / f"articles_{p['content']}.json").write_text(
+            json.dumps({"content": p["content"], "roots": [row]}, indent=1) + "\n",
+            encoding="utf-8", newline="\n")
 
     # Outputs.
     header = [
@@ -435,9 +515,14 @@ def main() -> int:
               " * and its clone swaps. */",
               "const NDSP4KirbyPower gNdsP4KirbyPowers[NDS_P4_CONTENT_LIMIT] = {"]
     for p in powers:
-        lines.append(f"    [{p['id']}] = {{ {p['hat']:#x}, {p['hat_base']}, {len(p['clones'])}, "
-                     f"{p['clone_first']}, 0, {p['hat_mask']:#06x}, {p['starters'][0]}, "
-                     f"{p['starters'][1]} }}, /* {p['content']} */")
+        hats = ", ".join(f"{h:#x}" for h in p["hats"]) or "0"
+        lines.append(f"    [{p['id']}] = {{ .hat_id = {p['hat']:#x}, .hat_base = {p['hat_base']}, "
+                     f".clone_count = {len(p['clones'])}, .clone_first = {p['clone_first']}, "
+                     f".hat_count = {len(p['hats'])}, .hat_mask = {p['hat_mask']:#06x}, "
+                     f".hats = {{ {hats} }}, .hat_texture_file = {p['hat_texture_file']:#06x}, "
+                     f".weapon_file = {p['weapon'][0] if p['weapon'] else 0:#06x}, "
+                     f".nsp_ground = {p['starters'][0]}, .nsp_air = {p['starters'][1]} }},"
+                     f" /* {p['content']} */")
     lines += ["};", "",
               "/* KirbyHats.add_hat: the source hat each Remix hat id from 0xF re-skins. */",
               f"const u8 gNdsP4KirbyHatBases[{len(hat_bases)}] = {{",
@@ -510,8 +595,11 @@ def main() -> int:
                         "intern_slots": synth.intern_count, "round_trip_roots": checked},
         "animations": {f"{a:#x}": anim_sizes.get(a) for a in anims},
         "largest_animation": max(anim_sizes.values(), default=0),
+        "custom_hats": {f"{h:#x}": r for h, r in sorted(hat_rows.items())},
         "powers": [{"content": p["content"], "hat": p["hat"], "hat_base": p["hat_base"],
-                    "hat_mask": hex(p["hat_mask"]),
+                    "hat_mask": hex(p["hat_mask"]), "hats": p["hats"],
+                    "hat_texture_file": p["hat_texture_file"],
+                    "weapon": [hex(v) for v in p["weapon"]] if p["weapon"] else None,
                     "starters": p["starters"],
                     "clones": [[hex(b), hex(c)] for b, c in p["clones"]]} for p in powers],
         "files": {f"{k:#06x}": v for k, v in sorted(shipped.items())},

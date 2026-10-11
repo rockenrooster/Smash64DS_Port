@@ -67,13 +67,15 @@ void battleship_ftKirbySpecialNCopyInitCopyVars(GObj *fighter_gobj);
 /* ftKirbySpecialNCopyInitCopyVars with the power taken alongside copy_id.
  * The source keeps a copy whose copy_id it already holds: a content's power
  * names its parent's kind, so a Kirby with Fox's blaster who swallows Falco
- * must still take the power (Remix's ids differ there). The source's take
- * path then runs as written; the power, and the hat of the power's source
- * hat until the Remix hats are drawn (S8), follow it. */
+ * must still take the power (Remix's ids differ there). The power is in
+ * place before the source's take path runs as written, so the parent's copy
+ * row it passes ftParamSetModelPartDefaultID draws nothing; the power's hat
+ * (its Remix hat, drawn in its source hat's place, S8) follows it. */
 void ndsP4KirbyCopyInitCopyVars(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
     u32 power = ndsP4KirbyPendingPower(fp);
+    const NDSP4KirbyPower *p = ndsP4KirbyPowerOf(power);
     sb32 take;
 
     if ((fp->fkind != nFTKindKirby) || (fp->motion_vars.flags.flag1 == 0) ||
@@ -89,18 +91,17 @@ void ndsP4KirbyCopyInitCopyVars(GObj *fighter_gobj)
     {
         fp->passive_vars.kirby.copy_id = nFTKindKirby;
     }
-    battleship_ftKirbySpecialNCopyInitCopyVars(fighter_gobj);
     if (take != FALSE)
     {
-        const NDSP4KirbyPower *p = ndsP4KirbyPowerOf(power);
-
-        fp->nds_p4_kirby_copy = (p != NULL) ? power : 0u;
-        if (p != NULL)
-        {
-            ftParamSetModelPartDefaultID(fighter_gobj, FTKIRBY_COPY_MODELPARTS_JOINT,
-                                         p->hat_base);
-            ftParamResetModelPartAll(fighter_gobj);
-        }
+        fp->nds_p4_kirby_copy = (p != NULL) ? (u8)power : 0u;
+        fp->nds_p4_kirby_hat = 0u;
+    }
+    battleship_ftKirbySpecialNCopyInitCopyVars(fighter_gobj);
+    if ((take != FALSE) && (p != NULL))
+    {
+        ftParamSetModelPartDefaultID(fighter_gobj, FTKIRBY_COPY_MODELPARTS_JOINT,
+                                     p->hat_base);
+        ftParamResetModelPartAll(fighter_gobj);
     }
 }
 #endif

@@ -1625,21 +1625,28 @@ static void ndsFighterDrawFoxGunSidecar(FTStruct *fp)
     u32 asset;
     u32 offset;
 
-    /* A Kirby holding a content's power shows that content's weapon (Remix's
-     * extended special part); a Fox clone's power without its own root
-     * (Falco's) keeps Fox's pistol, any other one the port has no root for
-     * (Marth's, Roy's and Lanky's, S8) draws nothing. */
+    /* A Kirby holding a content's power shows the weapon Remix gives him for
+     * it (KirbyHats' special parts: Marth's and Roy's swords, Lanky's gun,
+     * their roots marked 0x80 on the joint) or the content's own (Wolf's
+     * gun); a Fox clone's power with neither (Falco's) keeps Fox's pistol. */
     u32 content = fp->nds_p4_content;
+    sb32 found = FALSE;
 
 #if NDS_P2_KIRBY
     if ((content == 0u) && (fp->fkind == nFTKindKirby))
     {
         content = fp->nds_p4_kirby_copy;
+        found = ((content != 0u) &&
+                 (ndsRendererEntryEffectP4Sidecar(content, NDS_FOX_GUN_HOLD_JOINT | 0x80u,
+                                                  &asset, &offset) != FALSE)) ? TRUE : FALSE;
     }
 #endif
-    if ((content != 0u) &&
-        (ndsRendererEntryEffectP4Sidecar(content, NDS_FOX_GUN_HOLD_JOINT,
-                                         &asset, &offset) != FALSE))
+    if ((found == FALSE) && (content != 0u))
+    {
+        found = ndsRendererEntryEffectP4Sidecar(content, NDS_FOX_GUN_HOLD_JOINT,
+                                                &asset, &offset);
+    }
+    if (found != FALSE)
     {
         NDSRendererMatrix20p12 projection;
 
@@ -1704,6 +1711,19 @@ static sb32 ndsFighterKirbyTrioHeadKey(const FTStruct *fp, u32 *head_mp)
     {
         return FALSE;
     }
+#if NDS_P4
+    /* P4 S8: a Remix hat is its own trio head (its image carries the body
+     * baked against it, p4_kirby_hats.py), whatever source hat it stands on. */
+    if (fp->nds_p4_kirby_hat != 0u)
+    {
+        if (ndsRendererNativeKirbyTrioHeadSupported((u32)fp->nds_p4_kirby_hat) != FALSE)
+        {
+            *head_mp = (u32)fp->nds_p4_kirby_hat;
+            return TRUE;
+        }
+        return FALSE;
+    }
+#endif
     if (ndsRendererNativeKirbyTrioHeadSupported(
             (u32)fp->modelpart_status[slot].modelpart_id_curr) != FALSE)
     {

@@ -1645,6 +1645,13 @@ s32 ndsRendererNativePrepareKirbyHatMatch(u32 high_mask, u32 low_mask);
 s32 ndsRendererNativeKirbyHatMatchHasPart(u32 part, u32 use_low_detail);
 s32 ndsRendererNativeEnsureKirbyCopyHat(
     u32 battle_slot, u32 copy_modelpart_id, u32 use_low_detail);
+/* P4 S8: the Remix hats (KirbyHats ids from 0xF) the match's powers draw,
+ * admitted beside the source hats by the next ndsRendererNativePrepareKirbyHatMatch
+ * in one detail (low when `use_low_detail`); a Kirby showing one binds its
+ * image to his slot in the source hat's place. FALSE when the match holds no
+ * such image. */
+void ndsRendererNativeKirbyHatSetP4Hats(const u8 *hats, u32 count, u32 use_low_detail);
+s32 ndsRendererNativeEnsureKirbyP4Hat(u32 battle_slot, u32 hat, u32 use_low_detail);
 #if NDS_NATIVE_OWNER_IMAGE_VERIFY
 s32 ndsRendererNativeVerifyOwnerImage(u32 owner_slot, u32 use_low_detail);
 #endif

@@ -3894,8 +3894,11 @@ typedef struct FTStruct {
      * fkind stays the donor's setup parent. */
     u32 nds_p4_content;
     /* P4 S8: the content whose power a Kirby holds (passive copy_id is its
-     * parent's kind), 0 = none. */
-    u32 nds_p4_kirby_copy;
+     * parent's kind), 0 = none; the Remix hat (KirbyHats id from 0xF) his
+     * joint 6 shows in the source hat's place, 0 = a source part. */
+    u8 nds_p4_kirby_copy;
+    u8 nds_p4_kirby_hat;
+    u16 nds_p4_kirby_reserved;
 } FTStruct;
 
 typedef struct FTCamera {

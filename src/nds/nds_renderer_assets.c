@@ -279,6 +279,12 @@ _Static_assert(sizeof(NDSNativeDirectPolicy) == 12u,
 #include "nds_native_fighter_owner.generated.inc"
 #if NDS_P4
 #include "nds_p4_native_owner.generated.inc"
+#if NDS_P2_KIRBY && NDS_NATIVE_OWNER_IMAGE_KIRBY
+/* P4 S8: Remix's Kirby hats (scripts/p4/p4_kirby_hats.py): their image types,
+ * and their trio programs with Kirby's head list regenerated around them. */
+#include "kirby/hats/nds_p4_kirby_hats.generated.h"
+#include "kirby/hats/nds_p4_kirby_hats.generated.inc"
+#endif
 #endif
 #if NDS_P2_KIRBY && NDS_NATIVE_OWNER_IMAGE_KIRBY && \
     !defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
@@ -3798,7 +3804,7 @@ typedef struct NDSNativeKirbyHatImageSlot
     u8 copy_modelpart_id;
     u8 use_low_detail;
     u8 valid;
-    u8 reserved;
+    u8 p4_hat;       /* P4 S8: the Remix hat this image draws, 0: the source hat */
     NDSNativeFighterRuntimeTables tables;
     NDSNativeRoot root;
     const u32 (*light_preambles)[2];
@@ -4149,6 +4155,91 @@ static s32 ndsRendererNativeBindKirbyHatImage(
     return FALSE;
 }
 
+#if NDS_P4 && defined(NDS_P4_KIRBY_HATS_PRESENT)
+static const char *ndsRendererNativeP4KirbyHatImagePath(u32 hat, u32 use_low_detail)
+{
+#define NDS_P4_KIRBY_HAT_PATH_CASE(id_, base_, detail_, type_, prefix_, path_)   \
+    if ((hat == (id_)) && (use_low_detail == (detail_)))                        \
+    {                                                                            \
+        return path_;                                                            \
+    }
+    NDS_P4_KIRBY_HAT_IMAGES(NDS_P4_KIRBY_HAT_PATH_CASE)
+#undef NDS_P4_KIRBY_HAT_PATH_CASE
+    return NULL;
+}
+
+static u32 ndsRendererNativeP4KirbyHatImageBytes(u32 hat, u32 use_low_detail)
+{
+#define NDS_P4_KIRBY_HAT_BYTES_CASE(id_, base_, detail_, type_, prefix_, path_)  \
+    if ((hat == (id_)) && (use_low_detail == (detail_)))                        \
+    {                                                                            \
+        return (u32)sizeof(type_);                                                \
+    }
+    NDS_P4_KIRBY_HAT_IMAGES(NDS_P4_KIRBY_HAT_BYTES_CASE)
+#undef NDS_P4_KIRBY_HAT_BYTES_CASE
+    return 0u;
+}
+
+/* A Remix hat's image binds as its source hat's does: the image names the
+ * source hat (copy_modelpart_id) whose live part it draws in place of. */
+static s32 ndsRendererNativeBindP4KirbyHatImage(
+    NDSNativeKirbyHatImageSlot *entry, u32 hat, u32 use_low_detail, const void *base)
+{
+    if ((entry == NULL) || (use_low_detail >= NDS_NATIVE_IMAGE_DETAILS) || (base == NULL))
+    {
+        return FALSE;
+    }
+#define NDS_P4_KIRBY_HAT_BIND_CASE(id_, base_, detail_, type_, prefix_, path_)   \
+    if ((hat == (id_)) && (use_low_detail == (detail_)))                        \
+    {                                                                            \
+        const type_ *hat_ = (const type_ *)(base);                               \
+        if ((hat_->copy_modelpart_id[0] != (base_)) ||                           \
+            (hat_->root_offset[0] == 0u) ||                                      \
+            ((prefix_##_LIGHT_PREAMBLE_WORDS_COUNT & 1u) != 0u))                 \
+        {                                                                        \
+            return FALSE;                                                        \
+        }                                                                        \
+        NDS_IMG_BIND(entry->tables, type_, base, prefix_);                        \
+        entry->root.root_offset = hat_->root_offset[0];                          \
+        entry->root.first_epoch = hat_->root_first_epoch[0];                     \
+        entry->root.tail_state_first = hat_->root_tail_state_first[0];           \
+        entry->root.source_command_count = hat_->root_source_command_count[0];   \
+        entry->root.epoch_count = hat_->root_epoch_count[0];                     \
+        entry->root.tail_state_count = hat_->root_tail_state_count[0];           \
+        entry->root.tail_sync_count = hat_->root_tail_sync_count[0];             \
+        entry->root.light_preamble = hat_->root_light_preamble[0];               \
+        entry->light_preambles = (const u32 (*)[2])hat_->light_preamble_words;    \
+        entry->light_preamble_count = prefix_##_LIGHT_PREAMBLE_WORDS_COUNT / 2u; \
+        entry->copy_modelpart_id = (u8)(base_);                                  \
+        return TRUE;                                                             \
+    }
+    NDS_P4_KIRBY_HAT_IMAGES(NDS_P4_KIRBY_HAT_BIND_CASE)
+#undef NDS_P4_KIRBY_HAT_BIND_CASE
+    return FALSE;
+}
+#endif
+
+/* P4 S8: the Remix hats the next admission adds (ndsRendererNativeKirbyHatSetP4Hats). */
+static u8 sNdsNativeKirbyP4Hats[8];
+static u32 sNdsNativeKirbyP4HatCount;
+static u32 sNdsNativeKirbyP4HatWithLow;
+
+void ndsRendererNativeKirbyHatSetP4Hats(const u8 *hats, u32 count, u32 use_low_detail)
+{
+    u32 i;
+
+    if (count > ARRAY_COUNT(sNdsNativeKirbyP4Hats))
+    {
+        count = ARRAY_COUNT(sNdsNativeKirbyP4Hats);
+    }
+    for (i = 0u; i < count; i++)
+    {
+        sNdsNativeKirbyP4Hats[i] = hats[i];
+    }
+    sNdsNativeKirbyP4HatCount = count;
+    sNdsNativeKirbyP4HatWithLow = use_low_detail;
+}
+
 s32 ndsRendererNativePrepareKirbyHatMatch(u32 high_mask, u32 low_mask)
 {
     const u32 valid_mask = 0x3ff8u; /* source modelparts 3..13 */
@@ -4158,6 +4249,10 @@ s32 ndsRendererNativePrepareKirbyHatMatch(u32 high_mask, u32 low_mask)
     u32 part, detail, index;
     u32 table_bytes;
     u8 *storage;
+    u32 p4_count = sNdsNativeKirbyP4HatCount;
+    u32 p4_with_low = sNdsNativeKirbyP4HatWithLow;
+
+    sNdsNativeKirbyP4HatCount = 0u;
 
     if ((sNdsNativeKirbyHatMatchGeneration != gNdsTaskmanHeapGeneration) ||
         ((high_mask | low_mask) & ~valid_mask) || (low_mask & ~high_mask))
@@ -4196,6 +4291,26 @@ s32 ndsRendererNativePrepareKirbyHatMatch(u32 high_mask, u32 low_mask)
             }
         }
     }
+#if NDS_P4 && defined(NDS_P4_KIRBY_HATS_PRESENT)
+    for (part = 0u; part < p4_count; part++)
+    {
+        for (detail = p4_with_low ? 1u : 0u; detail < (p4_with_low ? 2u : 1u); detail++)
+        {
+            u32 bytes = ndsRendererNativeP4KirbyHatImageBytes(sNdsNativeKirbyP4Hats[part], detail);
+
+            if (bytes == 0u)
+            {
+                gNdsNativeKirbyHatMatchRejectCount++;
+                return FALSE;
+            }
+            image_bytes += (bytes + 15u) & ~15u;
+            count++;
+        }
+    }
+#else
+    (void)p4_count;
+    (void)p4_with_low;
+#endif
     table_bytes = (count * sizeof(NDSNativeKirbyHatImageSlot) + 15u) & ~15u;
     gNdsNativeKirbyHatMatchRequiredBytes = table_bytes + image_bytes;
     if (count == 0u)
@@ -4254,6 +4369,47 @@ s32 ndsRendererNativePrepareKirbyHatMatch(u32 high_mask, u32 low_mask)
             NDS_DIAG(gNdsNativeKirbyHatBytes += bytes);
         }
     }
+#if NDS_P4 && defined(NDS_P4_KIRBY_HATS_PRESENT)
+    for (part = 0u; part < p4_count; part++)
+    {
+        for (detail = p4_with_low ? 1u : 0u; detail < (p4_with_low ? 2u : 1u); detail++)
+        {
+            u32 hat = sNdsNativeKirbyP4Hats[part];
+            NDSNativeKirbyHatImageSlot *entry = &sNdsNativeKirbyHatMatchImages[index++];
+            NdsRelocAssetStream stream;
+            u32 bytes = ndsRendererNativeP4KirbyHatImageBytes(hat, detail);
+
+            entry->base = storage;
+            if (ndsRelocAssetStreamOpen(&stream,
+                    ndsRendererNativeP4KirbyHatImagePath(hat, detail)) == FALSE)
+            {
+                gNdsNativeKirbyHatMatchRejectCount++;
+                return FALSE;
+            }
+            if (ndsRelocAssetStreamRead(&stream, 0u, storage, bytes) == FALSE)
+            {
+                ndsRelocAssetStreamClose(&stream);
+                gNdsNativeKirbyHatMatchRejectCount++;
+                return FALSE;
+            }
+            ndsRelocAssetStreamClose(&stream);
+            if ((*(const u32 *)storage != (u32)NDS_NATIVE_OWNER_IMAGE_ABI_TAG) ||
+                (ndsRendererNativeBindP4KirbyHatImage(entry, hat, detail, storage) == FALSE))
+            {
+                gNdsNativeKirbyHatMatchRejectCount++;
+                return FALSE;
+            }
+            entry->heap_generation = gNdsTaskmanHeapGeneration;
+            entry->bytes = bytes;
+            entry->use_low_detail = (u8)detail;
+            entry->p4_hat = (u8)hat;
+            entry->valid = 1u;
+            storage += (bytes + 15u) & ~15u;
+            gNdsNativeKirbyHatLoadCount++;
+            NDS_DIAG(gNdsNativeKirbyHatBytes += bytes);
+        }
+    }
+#endif
     sNdsNativeKirbyHatMatchCount = count;
     sNdsNativeKirbyHatMatchReady = TRUE;
     gNdsNativeKirbyHatMatchReadyCount++;
@@ -4276,9 +4432,35 @@ s32 ndsRendererNativeKirbyHatMatchHasPart(u32 part, u32 use_low_detail)
         const NDSNativeKirbyHatImageSlot *slot =
             &sNdsNativeKirbyHatMatchImages[i];
 
-        if ((slot->copy_modelpart_id == part) &&
+        if ((slot->copy_modelpart_id == part) && (slot->p4_hat == 0u) &&
             (slot->use_low_detail == use_low_detail) && slot->valid)
         {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+s32 ndsRendererNativeEnsureKirbyP4Hat(u32 battle_slot, u32 hat, u32 use_low_detail)
+{
+    u32 i;
+
+    if ((battle_slot >= NDS_NATIVE_KIRBY_HAT_BATTLE_SLOTS) ||
+        (use_low_detail >= NDS_NATIVE_IMAGE_DETAILS) || (hat == 0u) ||
+        (sNdsNativeKirbyHatMatchGeneration != gNdsTaskmanHeapGeneration) ||
+        (sNdsNativeKirbyHatMatchReady == FALSE))
+    {
+        return FALSE;
+    }
+    for (i = 0u; i < sNdsNativeKirbyHatMatchCount; i++)
+    {
+        NDSNativeKirbyHatImageSlot *slot = &sNdsNativeKirbyHatMatchImages[i];
+
+        if ((slot->p4_hat == hat) && (slot->use_low_detail == use_low_detail) && slot->valid)
+        {
+            sNdsNativeKirbyHatBindingGeneration = gNdsTaskmanHeapGeneration;
+            sNdsNativeKirbyHatActive[battle_slot][use_low_detail] = slot;
+            gNdsNativeKirbyHatResidentBindCount++;
             return TRUE;
         }
     }
@@ -4322,7 +4504,7 @@ s32 ndsRendererNativeEnsureKirbyCopyHat(
             for (i = 0u; i < sNdsNativeKirbyHatMatchCount; i++)
             {
                 slot = &sNdsNativeKirbyHatMatchImages[i];
-                if ((slot->copy_modelpart_id == copy_modelpart_id) &&
+                if ((slot->copy_modelpart_id == copy_modelpart_id) && (slot->p4_hat == 0u) &&
                     (slot->use_low_detail == use_low_detail) && slot->valid)
                 {
                     sNdsNativeKirbyHatActive[battle_slot][use_low_detail] = slot;
@@ -4841,6 +5023,21 @@ s32 ndsRendererNativeEnsureKirbyCopyHat(
 {
     (void)battle_slot;
     (void)copy_modelpart_id;
+    (void)use_low_detail;
+    return FALSE;
+}
+
+void ndsRendererNativeKirbyHatSetP4Hats(const u8 *hats, u32 count, u32 use_low_detail)
+{
+    (void)hats;
+    (void)count;
+    (void)use_low_detail;
+}
+
+s32 ndsRendererNativeEnsureKirbyP4Hat(u32 battle_slot, u32 hat, u32 use_low_detail)
+{
+    (void)battle_slot;
+    (void)hat;
     (void)use_low_detail;
     return FALSE;
 }

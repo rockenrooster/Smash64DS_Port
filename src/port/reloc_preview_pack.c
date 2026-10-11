@@ -472,8 +472,15 @@ const void *ndsRelocNativeForeignImageAddress(const void *base, u32 asset_id,
             }
         }
 #endif
-        /* Never let a missing private span borrow a different fighter's bank. */
-        return NULL;
+        /* Never let a missing private span borrow a different fighter's bank.
+         * P4 S8: a power's Remix hat textures are their own file, loaded for
+         * the match (ndsP4KirbyMatchData), not any fighter's bank. */
+#if NDS_P4 && NDS_P2_KIRBY
+        if (ndsP4KirbyHatTextureAsset(asset_id) == FALSE)
+#endif
+        {
+            return NULL;
+        }
     }
     foreign = ndsRelocFindLoadedFileByAsset(asset_id);
     if ((foreign == NULL) || (foreign->data == NULL) ||

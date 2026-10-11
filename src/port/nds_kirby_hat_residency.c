@@ -57,8 +57,10 @@ static u32 ndsKirbyHatPlayerMask(const FTKirbyCopy *copy)
         if (gSCManagerBattleState->players[player].pkind == nFTPlayerKindNot)
             continue;
 #if NDS_P4
-        /* P4 S8: a content player's power shows its own hat. */
-        if (ndsP4KirbyHatMask(player) != 0u)
+        /* P4 S8: a content player's power shows its own hats: the source
+         * hats here, its Remix hats from their own images
+         * (ndsKirbyHatPrepareMatch); never its parent's copy hat. */
+        if (ndsP4KirbyPlayerHasPower(player) != FALSE)
         {
             mask |= ndsP4KirbyHatMask(player);
             continue;
@@ -100,11 +102,25 @@ void ndsKirbyHatPrepareMatch(void)
 #if NDS_P2_KIRBY
     if (ndsKirbyHatCountKirbys() != 0u)
     {
+        u32 with_low = ((gSCManagerBattleState->pl_count +
+                         gSCManagerBattleState->cp_count) >= 3) ? 1u : 0u;
+
         high = ndsKirbyHatPlayerMask(ndsKirbyHatCopyTable());
         /* The source selects low detail for three or four fighters, and can
          * temporarily raise it for KO/pause. High-only matches never lower it. */
-        if ((gSCManagerBattleState->pl_count + gSCManagerBattleState->cp_count)
-                >= 3) { low = high; }
+        if (with_low != 0u) { low = high; }
+#if NDS_P4
+        /* A power's Remix hats load in the detail the match draws: a Kirby
+         * holding one stays low in the close-ups of a battle of three or four
+         * (ftParamSetModelPartDetailAll), as a content does (owner
+         * 2026-10-08: lower content fidelity rather than a budget). */
+        {
+            u8 hats[8];
+
+            ndsRendererNativeKirbyHatSetP4Hats(
+                hats, ndsP4KirbyMatchHats(hats, sizeof(hats)), with_low);
+        }
+#endif
     }
 #endif
     ndsKirbyHatAdmit(high, low);

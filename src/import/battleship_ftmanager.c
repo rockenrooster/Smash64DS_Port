@@ -203,6 +203,7 @@ void ftManagerAllocFighter(u32 data_flags, s32 allocs_num)
         {
             sFTManagerStructsAllocBuf[i].nds_p4_content = 0u;
             sFTManagerStructsAllocBuf[i].nds_p4_kirby_copy = 0u;
+            sFTManagerStructsAllocBuf[i].nds_p4_kirby_hat = 0u;
         }
         ndsP4SetupFileSizes(data_flags);
     }
@@ -1426,6 +1427,7 @@ void ftManagerDestroyFighter(GObj *fighter_gobj)
 #if NDS_P4
         ftGetStruct(fighter_gobj)->nds_p4_content = 0u;
         ftGetStruct(fighter_gobj)->nds_p4_kirby_copy = 0u;
+        ftGetStruct(fighter_gobj)->nds_p4_kirby_hat = 0u;
 #endif
     }
     ndsBaseFTManagerDestroyFighter(fighter_gobj);

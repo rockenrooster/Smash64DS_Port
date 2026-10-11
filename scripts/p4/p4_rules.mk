@@ -50,3 +50,36 @@ $(OUTPUT).nds: $(NITROFS_DIR)/p4/kirby.tab $(NDS_P4_GEN)/.nitrofs-kirby-staged
 nds_p4_data.o: $(NDS_P4_KIRBY_GEN)/nds_p4_kirby.generated.c
 nds_p4.o $(foreach name,$(NDS_P4_ENABLED),nds_p4_$(name).o): \
 	$(NDS_P4_KIRBY_GEN)/nds_p4_kirby.generated.h
+
+# S8: Remix's Kirby hats (scripts/p4/p4_kirby_hats.py): native copy-hat images
+# built through the owner generator's own copy-hat path, their trio programs
+# (nds_renderer_assets.c includes them, in nds_renderer.o) and each power's
+# hat texture file (into o2r/, staged with the Kirby files above).
+NDS_P4_KIRBY_HATS := $(NDS_P4_KIRBY_GEN)/hats
+NDS_P4_KIRBY_HAT_STAMP := $(NDS_P4_KIRBY_HATS)/.stamp
+$(NDS_P4_KIRBY_HAT_STAMP): $(NDS_P4_KIRBY_GEN)/nds_p4_kirby.generated.c \
+		$(PROJECT_ROOT)/scripts/p4/p4_kirby_hats.py \
+		$(PROJECT_ROOT)/scripts/fighters/generate_nds_native_owners.py \
+		$(PROJECT_ROOT)/scripts/fighters/generate_nds_native_owner_images.py
+	python "$(PROJECT_ROOT)/scripts/p4/p4_kirby_hats.py" --staging "$(NDS_P4_STAGING)" \
+		--manifest "$(NDS_P4_KIRBY_GEN)/manifest.json" --out "$(NDS_P4_KIRBY_GEN)"
+	@touch $@
+# Each image TU compiled alone and lifted from .fighter_image into NitroFS.
+$(NDS_P4_GEN)/.nitrofs-kirby-hats: $(NDS_P4_KIRBY_HAT_STAMP) $(NDS_BUILD_CONFIG) \
+		$(PROJECT_ROOT)/include/nds/nds_native_fighter_tables.h
+	@mkdir -p $(NITROFS_DIR)/fighters/p4 $(BUILD)/p4_kirby_hats
+	@for f in $(NDS_P4_KIRBY_HATS)/nds_native_fighter_p4kirbyhat_*.image.c; do \
+		n=$${f##*/nds_native_fighter_p4kirbyhat_}; n=$${n%.image.c}; \
+		$(CC) -c $(CFLAGS) -I $(PROJECT_ROOT)/include -I $(BUILD) -I $(NDS_P4_KIRBY_HATS) \
+			-o $(BUILD)/p4_kirby_hats/$$n.o $$f || exit 1; \
+		$(OBJCOPY) -O binary --only-section=.fighter_image $(BUILD)/p4_kirby_hats/$$n.o \
+			$(NITROFS_DIR)/fighters/p4/kirby_hat_$$n.bin || exit 1; \
+	done
+	@touch $@
+$(NDS_P4_GEN)/.nitrofs-kirby-staged: $(NDS_P4_KIRBY_HAT_STAMP)
+$(OUTPUT).nds: $(NDS_P4_GEN)/.nitrofs-kirby-hats
+nds_renderer.o: $(NDS_P4_KIRBY_HAT_STAMP)
+# The weapon Kirby holds with a content's power is a sidecar root of that
+# content: p4_articles.py merges p4_kirby.py's row (articles_<content>.json).
+$(foreach name,$(NDS_P4_ENABLED),$(NDS_P4_GEN)/$(name)/articles.json): \
+	$(NDS_P4_KIRBY_GEN)/nds_p4_kirby.generated.c

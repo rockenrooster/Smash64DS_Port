@@ -14,6 +14,8 @@
 #include <string.h>
 #include <ef/effect.h>
 #include <nds/nds_reloc_assets.h>
+#include <nds/nds_kirby_hat_residency.h>
+#include <nds/nds_renderer.h>
 #include <nds/nds_scene_manager.h>
 #include <nds/nds_startup.h>
 #include <macros.h>
@@ -1478,6 +1480,7 @@ void ndsP4OnInitFighter(GObj *fighter_gobj)
     /* S8: a new stock starts with the source's copy_kind (none), and no
      * content power with it. */
     fp->nds_p4_kirby_copy = 0u;
+    fp->nds_p4_kirby_hat = 0u;
     if (fp->nds_p4_content == 0u)
     {
         return;
@@ -1593,6 +1596,22 @@ static u32 sNdsP4KirbyStatusGeneration = 0xFFFFFFFFu;
 /* The power the last catch took, by the catching player. */
 static u8 sNdsP4KirbyPending[GMCOMMON_PLAYERS_MAX];
 
+/* The content's own files (its closure) include the file. */
+static sb32 ndsP4ContentHasAsset(u32 content, u32 file_id)
+{
+    const NDSP4Fighter *f = ndsP4Fighter(content);
+    u32 i;
+
+    for (i = 0u; (f != NULL) && (file_id != 0u) && (i < *f->asset_count); i++)
+    {
+        if (f->assets[i] == file_id)
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
 static const NDSP4KirbyPower *ndsP4KirbyPower(u32 content)
 {
     if ((content == 0u) || (content >= NDS_P4_CONTENT_LIMIT) ||
@@ -1671,6 +1690,46 @@ FTData *ndsP4KirbyMatchData(void)
         sNdsP4KirbyMotions = ndsP4KirbyLoadMotions();
         sNdsP4KirbyScriptFile = lbRelocGetExternHeapFile(
             id, syTaskmanMalloc(lbRelocGetFileSize(id), 0x10));
+        /* The powers' Remix hat textures (their images read them as foreign
+         * images, p4_kirby_hats.py) and the weapons they hold on joint 17
+         * (sidecar roots; Wolf's is his own gun, loaded with his files). One
+         * load per file. */
+        {
+            u16 loaded[2 * GMCOMMON_PLAYERS_MAX] = { 0u };
+            u32 n = 0u;
+
+            for (player = 0; player < GMCOMMON_PLAYERS_MAX; player++)
+            {
+                u32 content = ndsP4MatchContent(player);
+                const NDSP4KirbyPower *p = ndsP4KirbyPower(content);
+                u32 files[2];
+                u32 k;
+
+                if (p == NULL)
+                {
+                    continue;
+                }
+                files[0] = p->hat_texture_file;
+                files[1] = (ndsP4ContentHasAsset(content, p->weapon_file) == FALSE) ?
+                    p->weapon_file : 0u;
+                for (k = 0u; k < 2u; k++)
+                {
+                    u32 i;
+
+                    for (i = 0u; (i < n) && (loaded[i] != files[k]); i++)
+                    {
+                    }
+                    if ((files[k] != 0u) && (i == n))
+                    {
+                        const void *file = (const void *)(uintptr_t)files[k];
+
+                        loaded[n++] = (u16)files[k];
+                        (void)lbRelocGetExternHeapFile(
+                            file, syTaskmanMalloc(lbRelocGetFileSize(file), 0x10));
+                    }
+                }
+            }
+        }
         sNdsP4KirbyGeneration = gNdsTaskmanHeapGeneration;
     }
     sNdsP4KirbyData = dFTKirbyData;
@@ -1770,6 +1829,7 @@ const NDSP4KirbyPower *ndsP4KirbyPowerOf(u32 content)
 void ndsP4KirbyLoseCopy(FTStruct *fp)
 {
     fp->nds_p4_kirby_copy = 0u;
+    fp->nds_p4_kirby_hat = 0u;
 }
 
 /* A content player's hat bits for the match's Kirby hat admission
@@ -1784,16 +1844,150 @@ u32 ndsP4KirbyHatMask(s32 player)
 extern const u8 gNdsP4KirbyHatBases[];
 extern const u32 gNdsP4KirbyHatBaseCount;
 
-s32 ndsP4KirbyModelPart(const FTStruct *fp, s32 joint_id, s32 modelpart_id)
+/* The source hat a Remix hat re-skins, -1 for an id that is none. */
+static s32 ndsP4KirbyHatBase(u32 hat)
 {
-    u32 index = (u32)(modelpart_id - NDS_P4_KIRBY_FIRST_CUSTOM_HAT);
+    u32 index = hat - (u32)NDS_P4_KIRBY_FIRST_CUSTOM_HAT;
 
-    if ((fp->fkind == nFTKindKirby) && (joint_id == NDS_P4_KIRBY_HAT_JOINT) &&
-        (modelpart_id >= NDS_P4_KIRBY_FIRST_CUSTOM_HAT) && (index < gNdsP4KirbyHatBaseCount))
+    return ((hat >= (u32)NDS_P4_KIRBY_FIRST_CUSTOM_HAT) && (index < gNdsP4KirbyHatBaseCount)) ?
+        (s32)gNdsP4KirbyHatBases[index] : -1;
+}
+
+static sb32 ndsP4KirbyPowerDrawsHat(const NDSP4KirbyPower *p, u32 hat)
+{
+    u32 i;
+
+    for (i = 0u; (p != NULL) && (i < p->hat_count); i++)
     {
-        return gNdsP4KirbyHatBases[index];
+        if (p->hats[i] == hat)
+        {
+            return TRUE;
+        }
     }
+    return FALSE;
+}
+
+void ndsP4KirbyBindHat(FTStruct *fp)
+{
+    /* The slot the draw looks the hat up by (ftParamSetModelPartDefaultID's
+     * rule: a battle fighter's player, recorded before nds_slot is). */
+    u32 slot = (gNdsSceneManagerCurrIsBattle != 0u) ? (u32)fp->player : (u32)fp->nds_slot;
+
+    if (fp->nds_p4_kirby_hat == 0u)
+    {
+        return;
+    }
+    /* The match admits one detail (ndsKirbyHatPrepareMatch). */
+    if ((ndsRendererNativeEnsureKirbyP4Hat(slot, fp->nds_p4_kirby_hat, 0u) |
+         ndsRendererNativeEnsureKirbyP4Hat(slot, fp->nds_p4_kirby_hat, 1u)) == FALSE)
+    {
+        NDS_DIAG(gNdsKirbyHatMissingCount++);
+    }
+}
+
+/* Joint 6 of a Kirby holding a power: a Remix hat id stands on the source hat
+ * it re-skins (the live part) and is recorded; the power's own source hat id
+ * (ResetModelPartAll, the default) is its Remix hat; the same source hat set
+ * again (a detail change) keeps the Remix hat; anything else is a source
+ * part. */
+s32 ndsP4KirbyModelPart(FTStruct *fp, s32 joint_id, s32 modelpart_id)
+{
+    const NDSP4KirbyPower *p = ndsP4KirbyPower(fp->nds_p4_kirby_copy);
+    s32 base = ndsP4KirbyHatBase((u32)modelpart_id);
+    u32 hat = 0u;
+
+    if ((fp->fkind != nFTKindKirby) || (joint_id != NDS_P4_KIRBY_HAT_JOINT))
+    {
+        return modelpart_id;
+    }
+    if (base >= 0)
+    {
+        hat = (ndsP4KirbyPowerDrawsHat(p, (u32)modelpart_id) != FALSE) ? (u32)modelpart_id : 0u;
+        modelpart_id = base;
+    }
+    else if ((fp->nds_p4_kirby_hat != 0u) &&
+             (modelpart_id == ndsP4KirbyHatBase(fp->nds_p4_kirby_hat)))
+    {
+        hat = fp->nds_p4_kirby_hat;
+    }
+    else if ((p != NULL) && (modelpart_id == (s32)p->hat_base) &&
+             (ndsP4KirbyPowerDrawsHat(p, p->hat_id) != FALSE))
+    {
+        hat = p->hat_id;
+    }
+    fp->nds_p4_kirby_hat = (u8)hat;
+    ndsP4KirbyBindHat(fp);
     return modelpart_id;
+}
+
+void ndsP4KirbyRefreshHat(FTStruct *fp)
+{
+    if ((fp->fkind == nFTKindKirby) && (fp->nds_p4_kirby_copy != 0u))
+    {
+        (void)ndsP4KirbyModelPart(fp, NDS_P4_KIRBY_HAT_JOINT,
+            fp->modelpart_status[NDS_P4_KIRBY_HAT_JOINT - nFTPartsJointCommonStart].modelpart_id_curr);
+    }
+}
+
+sb32 ndsP4KirbyDefaultHat(FTStruct *fp, s32 modelpart_id)
+{
+    const NDSP4KirbyPower *p = ndsP4KirbyPower(fp->nds_p4_kirby_copy);
+
+    if ((p == NULL) || (fp->fkind != nFTKindKirby))
+    {
+        return FALSE;
+    }
+    if ((modelpart_id == (s32)p->hat_base) && (ndsP4KirbyPowerDrawsHat(p, p->hat_id) != FALSE))
+    {
+        fp->nds_p4_kirby_hat = (u8)p->hat_id;
+        ndsP4KirbyBindHat(fp);
+        return TRUE;
+    }
+    fp->nds_p4_kirby_hat = 0u;
+    return (p->hat_count != 0u) ? TRUE : FALSE;
+}
+
+sb32 ndsP4KirbyPlayerHasPower(s32 player)
+{
+    return (ndsP4KirbyPower(ndsP4MatchContent(player)) != NULL) ? TRUE : FALSE;
+}
+
+u32 ndsP4KirbyMatchHats(u8 *hats, u32 capacity)
+{
+    u32 count = 0u;
+    s32 player;
+
+    for (player = 0; player < GMCOMMON_PLAYERS_MAX; player++)
+    {
+        const NDSP4KirbyPower *p = ndsP4KirbyPower(ndsP4MatchContent(player));
+        u32 i, j;
+
+        for (i = 0u; (p != NULL) && (i < p->hat_count); i++)
+        {
+            for (j = 0u; (j < count) && (hats[j] != p->hats[i]); j++)
+            {
+            }
+            if ((j == count) && (count < capacity))
+            {
+                hats[count++] = p->hats[i];
+            }
+        }
+    }
+    return count;
+}
+
+sb32 ndsP4KirbyHatTextureAsset(u32 asset_id)
+{
+    u32 c;
+
+    for (c = 1u; (asset_id != 0u) && (c < NDS_P4_CONTENT_LIMIT); c++)
+    {
+        if (gNdsP4KirbyPowers[c].hat_texture_file == asset_id)
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
 }
 #endif
 
