@@ -1578,7 +1578,16 @@ static void ndsP4SonicEntryCase(FTStruct *fp)
                          &fp->entry_pos);
 }
 
+/* Sonic.asm initial_script (0x800D7DCC, the source's case that clears the
+ * first passive word; Fox's clears nothing): no spent spring left over from
+ * the last stock. */
+static void ndsP4SonicOnInit(FTStruct *fp)
+{
+    *ndsP4SonicSpringSpent(fp) = 0;
+}
+
 const NDSP4Overrides gNdsP4SonicOverrides = {
+    .on_init = ndsP4SonicOnInit,
     .entry_case = ndsP4SonicEntryCase,
     .on_damage = ndsP4SonicOnDamage,
     .air_special_block = ndsP4SonicAirSpecialBlock,

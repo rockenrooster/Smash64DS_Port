@@ -1105,7 +1105,16 @@ void ndsP4PeachDSPMain(GObj *fighter_gobj)
     }
 }
 
+/* Peach.asm initial_script (0x800D7DCC, the source's case that clears the
+ * first passive word; Fox's clears nothing): no float left over from the
+ * last stock. */
+static void ndsP4PeachOnInit(FTStruct *fp)
+{
+    *ndsP4PeachFloatTimer(fp) = 0;
+}
+
 const NDSP4Overrides gNdsP4PeachOverrides = {
+    .on_init = ndsP4PeachOnInit,
     .item = ndsP4PeachItem,
     .gravity = ndsP4PeachGravity,
     .air_jump_check = ndsP4PeachCheckFloat,

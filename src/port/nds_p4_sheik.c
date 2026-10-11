@@ -1202,7 +1202,17 @@ static void ndsP4SheikColAnimEnd(GObj *fighter_gobj)
     }
 }
 
+/* Sheik.asm initial_script (0x800D7DEC, Samus's case, which clears the
+ * first two passive words; Captain's clears the first): her needles and the
+ * fish's lift start empty every stock. */
+static void ndsP4SheikOnInit(FTStruct *fp)
+{
+    *ndsP4SheikPassiveS32(fp, 0) = 0;
+    *ndsP4SheikPassiveS32(fp, 1) = 0;
+}
+
 const NDSP4Overrides gNdsP4SheikOverrides = {
+    .on_init = ndsP4SheikOnInit,
     .on_hit_interact = ndsP4SheikOnHitInteract,
     .colanim_end = ndsP4SheikColAnimEnd,
 };
