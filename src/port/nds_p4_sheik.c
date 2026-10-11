@@ -46,10 +46,9 @@
  *                                          gravity, tvel_base, jumps_max
  *
  * The needle is her own weapon on her special file 1 (S6, below). S4
- * owns the vanish's per-port environment colour (CharEnvColor.asm), and the
- * gfx-routine table owns the full charge's flash (GFXRoutine.id.SHEIK_CHARGE,
- * also re-run at full charge by samusshared.asm kirby_power_check_flash_):
- * the DS colanim table declines Remix's ids. Kirby's copy of the needles is
+ * owns the vanish's per-port environment colour (CharEnvColor.asm). The full
+ * charge's flash is Remix's SHEIK_CHARGE routine (scripts/p4/p4_colanims.py),
+ * which her gfx_routine_end case brings back. Kirby's copy of the needles is
  * S8's.
  */
 #include <nds/nds_p4.h>
@@ -1193,8 +1192,19 @@ static void ndsP4SheikOnHitInteract(FTStruct *fp, s32 attack_type)
     }
 }
 
+/* Sheik.charge_gfx_routine_ (gfx_routine_end): the full charge's flash
+ * comes back when another colour animation ends. */
+static void ndsP4SheikColAnimEnd(GObj *fighter_gobj)
+{
+    if (*ndsP4SheikCharge(ftGetStruct(fighter_gobj)) == SHEIK_NSP_CHARGE_MAX)
+    {
+        ftParamCheckSetFighterColAnimID(fighter_gobj, SHEIK_NSP_COLANIM_CHARGE, 0);
+    }
+}
+
 const NDSP4Overrides gNdsP4SheikOverrides = {
     .on_hit_interact = ndsP4SheikOnHitInteract,
+    .colanim_end = ndsP4SheikColAnimEnd,
 };
 
 #endif /* NDS_P4_SHEIK */

@@ -1041,6 +1041,18 @@ const NDSP4Overrides *ndsP4Overrides(const FTStruct *fp)
     return (f != NULL) ? f->overrides : NULL;
 }
 
+sb32 ndsP4ColAnimEnd(GObj *fighter_gobj)
+{
+    const NDSP4Overrides *ov = ndsP4Overrides(ftGetStruct(fighter_gobj));
+
+    if ((ov == NULL) || (ov->colanim_end == NULL))
+    {
+        return FALSE;
+    }
+    ov->colanim_end(fighter_gobj);
+    return TRUE;
+}
+
 void ndsP4ItemProc(GObj *item_gobj, s32 which)
 {
     s32 player;

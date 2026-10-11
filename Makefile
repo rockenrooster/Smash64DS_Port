@@ -8067,6 +8067,9 @@ $(NDS_P4_ENTRY_EFFECT_INC): $(NDS_ENTRY_EFFECT_INC) \
 	python "$(PROJECT_ROOT)/scripts/3d_vfx/generate_nds_entry_effects.py" --p4 \
 		$(foreach name,$(NDS_P4_ENABLED),"$(NDS_P4_GEN)/$(name)/articles.json") --out "$@"
 nds_renderer.o: $(NDS_P4_ENTRY_EFFECT_INC)
+# Further P4 generated-data rules (a fragment, so adding one does not rebuild
+# every object the way a Makefile edit does).
+include $(PROJECT_ROOT)/scripts/p4/p4_rules.mk
 endif
 # P4 character select: Remix's grid, its donor portrait/name/emblem files for
 # the UI kit bake, and the runtime tables nds_menu_shell_css.c includes.

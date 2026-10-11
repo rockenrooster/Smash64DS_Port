@@ -238,6 +238,9 @@ typedef struct NDSP4Overrides
      * extended_item_pre_pickup_table): `which` is NDS_P4_ITEM_*; TRUE when the
      * item's kind is the content's. */
     sb32 (*item)(GObj *item_gobj, s32 which);
+    /* ftParamResetStatUpdateColAnim's per-kind case when a colour animation
+     * ends (Remix's gfx_routine_end): replaces the parent's case. */
+    void (*colanim_end)(GObj *fighter_gobj);
 } NDSP4Overrides;
 
 /* Item kinds past the source's last (nITKindEnumCount, as Remix numbers its
@@ -254,6 +257,9 @@ typedef struct NDSP4Overrides
 /* battleship_item_link_core.c: a P4 item kind's drop, throw or hold routine,
  * from the overrides of the contents in the match. */
 void ndsP4ItemProc(GObj *item_gobj, s32 which);
+/* reloc_backend_compat_shims.c ftParamResetStatUpdateColAnim: TRUE when the
+ * fighter's content has its own gfx_routine_end case (run here). */
+sb32 ndsP4ColAnimEnd(GObj *fighter_gobj);
 
 /* Weapon kinds past the source's last (nWPKindMonsterEnd, wp/weapon.h), one
  * per content weapon: the DS renderer keys its native weapon owners on the

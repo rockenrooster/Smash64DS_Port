@@ -42,9 +42,8 @@
  * file 2 (YoshiShared.asm down_special_struct_fix, S6, below). His minions
  * (Waddle Dee, Waddle Doo and Gordo) are P4 item kinds on his special file 1
  * and the Waddle Doo's beam a P4 weapon kind (S6, below); the charged hand's
- * colour
- * (DEDEDE_CHARGE, gfx_routine_end) is a Remix colour routine the port's
- * table declines (S4); Kirby wearing his hat is S8's; the CPU's recovery
+ * colour is Remix's DEDEDE_CHARGE routine (p4_colanims.py), which his
+ * gfx_routine_end case brings back; Kirby wearing his hat is S8's; the CPU's recovery
  * and reflect behaviour are S10's.
  */
 #include <nds/nds_p4.h>
@@ -2912,6 +2911,16 @@ static void ndsP4DededeAfterProcMap(GObj *fighter_gobj)
     }
 }
 
+/* Dedede.charge_gfx_routine_ (gfx_routine_end): the full charge's colour
+ * comes back when another colour animation ends. */
+static void ndsP4DededeColAnimEnd(GObj *fighter_gobj)
+{
+    if (*ndsP4DededePassiveS32(ftGetStruct(fighter_gobj), 2) == DEDEDE_DSP_CHARGE_MAX)
+    {
+        (void)ftParamCheckSetFighterColAnimID(fighter_gobj, DEDEDE_DSP_COLANIM_CHARGE, 0);
+    }
+}
+
 /* Dedede.asm entry_script 0x8013DCF4 is Kirby's case of
  * ftCommonAppearSetStatus: the warp star on Kirby's special file 2, which
  * his Main externs, so the file is resident and VS's file setup
@@ -2936,6 +2945,7 @@ const NDSP4Overrides gNdsP4DededeOverrides = {
     .kirby_inhale_wind_x = DEDEDE_NSP_WIND_X,
     .on_custom_reflect = ndsP4DededeOnCustomReflect,
     .entry_case = ndsP4DededeEntryCase,
+    .colanim_end = ndsP4DededeColAnimEnd,
 };
 
 #endif /* NDS_P4_DEDEDE */

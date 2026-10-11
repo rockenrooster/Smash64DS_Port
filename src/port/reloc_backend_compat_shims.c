@@ -503,6 +503,15 @@ FTOpeningDesc *D_ovl1_80390D20[] = {
  * direct command-for-command transcription of gmcolscripts.c; keeping them in
  * the DS-native event layout avoids reintroducing source relocation work while
  * preserving BattleShip's priorities, looping and effect requests. */
+#if NDS_P4
+/* P4: Remix's extended colour animations (ids 0x56 on) the enabled contents
+ * reach (scripts/p4/p4_colanims.py), appended to the table below. */
+#include "nds_p4_colanims.generated.inc"
+#define NDS_GM_COL_DESC_COUNT (NDS_P4_COLANIM_LAST + 1)
+#else
+#define NDS_GM_COL_DESC_COUNT nGMColAnimEnumCount
+#endif
+
 static u32 sNdsGMColScriptsFighterComPlayer[] = {
     NDS_GM_COL_COMMAND_SET_COLOR1(0xFF, 0xFF, 0xFF, 0x30),
     NDS_GM_COL_COMMAND_WAIT(65535),
@@ -1186,7 +1195,7 @@ static u32 sNdsGMColScriptsFighterNessAppear[] = {
     NDS_GM_COL_COMMAND_END()
 };
 
-GMColDesc dGMColScriptsDescs[nGMColAnimEnumCount] = {
+GMColDesc dGMColScriptsDescs[NDS_GM_COL_DESC_COUNT] = {
     [nGMColAnimFighterComPlayer] =
         { sNdsGMColScriptsFighterComPlayer, 1, FALSE },
     [nGMColAnimFighterHitStatusNormal] =
@@ -1314,10 +1323,15 @@ GMColDesc dGMColScriptsDescs[nGMColAnimEnumCount] = {
     [nGMColAnimScreenFlashDamageElectric] =
         { sNdsGMColScriptsScreenFlashDamageElectric, 60, TRUE },
     [nGMColAnimScreenFlashDamageIce] =
-        { sNdsGMColScriptsScreenFlashDamageIce, 60, TRUE }
+        { sNdsGMColScriptsScreenFlashDamageIce, 60, TRUE },
+#if NDS_P4
+    NDS_P4_COLANIM_ROWS
+#endif
 };
 
-_Static_assert(ARRAY_COUNT(dGMColScriptsDescs) == nGMColAnimEnumCount,
+_Static_assert(nGMColAnimScreenFlashDamageIce + 1 == nGMColAnimEnumCount,
+               "BattleShip color-animation table count changed");
+_Static_assert(ARRAY_COUNT(dGMColScriptsDescs) >= nGMColAnimEnumCount,
                "BattleShip color-animation table count changed");
 
 static FTParts sNdsFTManagerPartsAllocPool[64];
@@ -2069,13 +2083,13 @@ sb32 ftParamCheckSetColAnimID(GMColAnim *colanim, s32 colanim_id, s32 length)
     s32 i;
 
     if ((colanim == NULL) || (colanim_id < 0) ||
-        (colanim_id >= nGMColAnimEnumCount) ||
+        (colanim_id >= NDS_GM_COL_DESC_COUNT) ||
         (dGMColScriptsDescs[colanim_id].p_script == NULL))
     {
         return FALSE;
     }
     if ((colanim->colanim_id >= 0) &&
-        (colanim->colanim_id < nGMColAnimEnumCount) &&
+        (colanim->colanim_id < NDS_GM_COL_DESC_COUNT) &&
         (dGMColScriptsDescs[colanim_id].priority <
          dGMColScriptsDescs[colanim->colanim_id].priority))
     {
@@ -4068,6 +4082,11 @@ void ftParamResetStatUpdateColAnim(GObj *fighter_gobj)
             fighter_gobj, nGMColAnimFighterHitStatusIntangible, 0);
         break;
     }
+#if NDS_P4
+    /* Remix's gfx_routine_end table: a content's own routine replaces its
+     * parent's case (Dedede's and Sheik's full charge). */
+    if (ndsP4ColAnimEnd(fighter_gobj) == FALSE)
+#endif
     switch (fp->fkind)
     {
     case nFTKindDonkey:
@@ -4089,6 +4108,44 @@ void ftParamResetStatUpdateColAnim(GObj *fighter_gobj)
                 fighter_gobj, nGMColAnimFighterCommonSpecialNCharge, 0);
         }
         break;
+#if NDS_P2_KIRBY
+    /* ftparam.c:1285-1299: a Kirby holding a full copied charge. */
+    case nFTKindKirby:
+    case nFTKindNKirby:
+        if ((fp->passive_vars.kirby.copy_id == nFTKindSamus) ||
+            (fp->passive_vars.kirby.copy_id == nFTKindNSamus))
+        {
+            if (fp->passive_vars.kirby.copysamus_charge_level ==
+                NDS_COMPAT_SAMUS_CHARGE_MAX)
+            {
+                ftParamCheckSetFighterColAnimID(
+                    fighter_gobj, nGMColAnimFighterCommonSpecialNCharge, 0);
+            }
+        }
+        if ((fp->passive_vars.kirby.copy_id == nFTKindDonkey) ||
+            (fp->passive_vars.kirby.copy_id == nFTKindNDonkey) ||
+            (fp->passive_vars.kirby.copy_id == nFTKindGDonkey))
+        {
+            if (fp->passive_vars.kirby.copydonkey_charge_level ==
+                NDS_COMPAT_DONKEY_CHARGE_MAX)
+            {
+                ftParamCheckSetFighterColAnimID(
+                    fighter_gobj, nGMColAnimFighterCommonSpecialNCharge, 0);
+            }
+        }
+        break;
+#endif
+#if NDS_P2_NESS
+    /* ftparam.c:1300-1305: PSI Magnet's hold glow. */
+    case nFTKindNess:
+    case nFTKindNNess:
+        if (fp->is_absorb)
+        {
+            ftParamCheckSetFighterColAnimID(
+                fighter_gobj, nGMColAnimFighterNessSpecialLwHold, 0);
+        }
+        break;
+#endif
     }
     if (fp->damage_heal != 0)
     {
