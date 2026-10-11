@@ -951,6 +951,126 @@
       "source_symbol": "ftCommonEntryNullProcUpdate",
       "target_symbol": "ftBossWaitSetStatus",
       "reason": "The source caller runs this target only for fighter kind Boss (Master Hand, the 1P Game final stage): ftcommonentry.c sends him from the entry to his own Wait. VS CSS cannot select Boss, so no VS fighter takes this branch; the 1P Game retains the frontend for the whole nested battle."
+    },
+    {
+      "source_symbol": "ndsBattleShipIsCSSSelectedFigatreeJoint",
+      "target_symbol": "dFTCaptainAnimSelected_joints",
+      "reason": "Select-screen Selected clips (battleship_scsubsysdata_ft.c) moved to the overlay tail 2026-10-11. Both resident readers return before touching them unless ndsFrontendOverlayTailResident(): the preview loader is reached only by the select screens' Selected file ids, and the joint test answers FALSE while a battle borrows the tail."
+    },
+    {
+      "source_symbol": "ndsBattleShipIsCSSSelectedFigatreeJoint",
+      "target_symbol": "dFTDonkeyAnimSelected_joints",
+      "reason": "Select-screen Selected clips (battleship_scsubsysdata_ft.c) moved to the overlay tail 2026-10-11. Both resident readers return before touching them unless ndsFrontendOverlayTailResident(): the preview loader is reached only by the select screens' Selected file ids, and the joint test answers FALSE while a battle borrows the tail."
+    },
+    {
+      "source_symbol": "ndsBattleShipIsCSSSelectedFigatreeJoint",
+      "target_symbol": "dFTFoxAnimSelected_joints",
+      "reason": "Select-screen Selected clips (battleship_scsubsysdata_ft.c) moved to the overlay tail 2026-10-11. Both resident readers return before touching them unless ndsFrontendOverlayTailResident(): the preview loader is reached only by the select screens' Selected file ids, and the joint test answers FALSE while a battle borrows the tail."
+    },
+    {
+      "source_symbol": "ndsBattleShipIsCSSSelectedFigatreeJoint",
+      "target_symbol": "dFTKirbyAnimSelected_joints",
+      "reason": "Select-screen Selected clips (battleship_scsubsysdata_ft.c) moved to the overlay tail 2026-10-11. Both resident readers return before touching them unless ndsFrontendOverlayTailResident(): the preview loader is reached only by the select screens' Selected file ids, and the joint test answers FALSE while a battle borrows the tail."
+    },
+    {
+      "source_symbol": "ndsBattleShipIsCSSSelectedFigatreeJoint",
+      "target_symbol": "dFTLinkAnimSelected_joints",
+      "reason": "Select-screen Selected clips (battleship_scsubsysdata_ft.c) moved to the overlay tail 2026-10-11. Both resident readers return before touching them unless ndsFrontendOverlayTailResident(): the preview loader is reached only by the select screens' Selected file ids, and the joint test answers FALSE while a battle borrows the tail."
+    },
+    {
+      "source_symbol": "ndsBattleShipIsCSSSelectedFigatreeJoint",
+      "target_symbol": "dFTLuigiAnimSelected_joints",
+      "reason": "Select-screen Selected clips (battleship_scsubsysdata_ft.c) moved to the overlay tail 2026-10-11. Both resident readers return before touching them unless ndsFrontendOverlayTailResident(): the preview loader is reached only by the select screens' Selected file ids, and the joint test answers FALSE while a battle borrows the tail."
+    },
+    {
+      "source_symbol": "ndsBattleShipIsCSSSelectedFigatreeJoint",
+      "target_symbol": "dFTMarioAnimSelected_joints",
+      "reason": "Select-screen Selected clips (battleship_scsubsysdata_ft.c) moved to the overlay tail 2026-10-11. Both resident readers return before touching them unless ndsFrontendOverlayTailResident(): the preview loader is reached only by the select screens' Selected file ids, and the joint test answers FALSE while a battle borrows the tail."
+    },
+    {
+      "source_symbol": "ndsBattleShipIsCSSSelectedFigatreeJoint",
+      "target_symbol": "dFTNessAnimSelected_joints",
+      "reason": "Select-screen Selected clips (battleship_scsubsysdata_ft.c) moved to the overlay tail 2026-10-11. Both resident readers return before touching them unless ndsFrontendOverlayTailResident(): the preview loader is reached only by the select screens' Selected file ids, and the joint test answers FALSE while a battle borrows the tail."
+    },
+    {
+      "source_symbol": "ndsBattleShipIsCSSSelectedFigatreeJoint",
+      "target_symbol": "dFTPikachuAnimSelected_joints",
+      "reason": "Select-screen Selected clips (battleship_scsubsysdata_ft.c) moved to the overlay tail 2026-10-11. Both resident readers return before touching them unless ndsFrontendOverlayTailResident(): the preview loader is reached only by the select screens' Selected file ids, and the joint test answers FALSE while a battle borrows the tail."
+    },
+    {
+      "source_symbol": "ndsBattleShipIsCSSSelectedFigatreeJoint",
+      "target_symbol": "dFTPurinAnimSelected_joints",
+      "reason": "Select-screen Selected clips (battleship_scsubsysdata_ft.c) moved to the overlay tail 2026-10-11. Both resident readers return before touching them unless ndsFrontendOverlayTailResident(): the preview loader is reached only by the select screens' Selected file ids, and the joint test answers FALSE while a battle borrows the tail."
+    },
+    {
+      "source_symbol": "ndsBattleShipIsCSSSelectedFigatreeJoint",
+      "target_symbol": "dFTSamusAnimSelected_joints",
+      "reason": "Select-screen Selected clips (battleship_scsubsysdata_ft.c) moved to the overlay tail 2026-10-11. Both resident readers return before touching them unless ndsFrontendOverlayTailResident(): the preview loader is reached only by the select screens' Selected file ids, and the joint test answers FALSE while a battle borrows the tail."
+    },
+    {
+      "source_symbol": "ndsBattleShipIsCSSSelectedFigatreeJoint",
+      "target_symbol": "dFTYoshiAnimSelected_joints",
+      "reason": "Select-screen Selected clips (battleship_scsubsysdata_ft.c) moved to the overlay tail 2026-10-11. Both resident readers return before touching them unless ndsFrontendOverlayTailResident(): the preview loader is reached only by the select screens' Selected file ids, and the joint test answers FALSE while a battle borrows the tail."
+    },
+    {
+      "source_symbol": "ndsBattleShipLoadCSSSelectedFigatree",
+      "target_symbol": "dFTCaptainAnimSelected_joints",
+      "reason": "Select-screen Selected clips (battleship_scsubsysdata_ft.c) moved to the overlay tail 2026-10-11. Both resident readers return before touching them unless ndsFrontendOverlayTailResident(): the preview loader is reached only by the select screens' Selected file ids, and the joint test answers FALSE while a battle borrows the tail."
+    },
+    {
+      "source_symbol": "ndsBattleShipLoadCSSSelectedFigatree",
+      "target_symbol": "dFTDonkeyAnimSelected_joints",
+      "reason": "Select-screen Selected clips (battleship_scsubsysdata_ft.c) moved to the overlay tail 2026-10-11. Both resident readers return before touching them unless ndsFrontendOverlayTailResident(): the preview loader is reached only by the select screens' Selected file ids, and the joint test answers FALSE while a battle borrows the tail."
+    },
+    {
+      "source_symbol": "ndsBattleShipLoadCSSSelectedFigatree",
+      "target_symbol": "dFTFoxAnimSelected_joints",
+      "reason": "Select-screen Selected clips (battleship_scsubsysdata_ft.c) moved to the overlay tail 2026-10-11. Both resident readers return before touching them unless ndsFrontendOverlayTailResident(): the preview loader is reached only by the select screens' Selected file ids, and the joint test answers FALSE while a battle borrows the tail."
+    },
+    {
+      "source_symbol": "ndsBattleShipLoadCSSSelectedFigatree",
+      "target_symbol": "dFTKirbyAnimSelected_joints",
+      "reason": "Select-screen Selected clips (battleship_scsubsysdata_ft.c) moved to the overlay tail 2026-10-11. Both resident readers return before touching them unless ndsFrontendOverlayTailResident(): the preview loader is reached only by the select screens' Selected file ids, and the joint test answers FALSE while a battle borrows the tail."
+    },
+    {
+      "source_symbol": "ndsBattleShipLoadCSSSelectedFigatree",
+      "target_symbol": "dFTLinkAnimSelected_joints",
+      "reason": "Select-screen Selected clips (battleship_scsubsysdata_ft.c) moved to the overlay tail 2026-10-11. Both resident readers return before touching them unless ndsFrontendOverlayTailResident(): the preview loader is reached only by the select screens' Selected file ids, and the joint test answers FALSE while a battle borrows the tail."
+    },
+    {
+      "source_symbol": "ndsBattleShipLoadCSSSelectedFigatree",
+      "target_symbol": "dFTLuigiAnimSelected_joints",
+      "reason": "Select-screen Selected clips (battleship_scsubsysdata_ft.c) moved to the overlay tail 2026-10-11. Both resident readers return before touching them unless ndsFrontendOverlayTailResident(): the preview loader is reached only by the select screens' Selected file ids, and the joint test answers FALSE while a battle borrows the tail."
+    },
+    {
+      "source_symbol": "ndsBattleShipLoadCSSSelectedFigatree",
+      "target_symbol": "dFTMarioAnimSelected_joints",
+      "reason": "Select-screen Selected clips (battleship_scsubsysdata_ft.c) moved to the overlay tail 2026-10-11. Both resident readers return before touching them unless ndsFrontendOverlayTailResident(): the preview loader is reached only by the select screens' Selected file ids, and the joint test answers FALSE while a battle borrows the tail."
+    },
+    {
+      "source_symbol": "ndsBattleShipLoadCSSSelectedFigatree",
+      "target_symbol": "dFTNessAnimSelected_joints",
+      "reason": "Select-screen Selected clips (battleship_scsubsysdata_ft.c) moved to the overlay tail 2026-10-11. Both resident readers return before touching them unless ndsFrontendOverlayTailResident(): the preview loader is reached only by the select screens' Selected file ids, and the joint test answers FALSE while a battle borrows the tail."
+    },
+    {
+      "source_symbol": "ndsBattleShipLoadCSSSelectedFigatree",
+      "target_symbol": "dFTPikachuAnimSelected_joints",
+      "reason": "Select-screen Selected clips (battleship_scsubsysdata_ft.c) moved to the overlay tail 2026-10-11. Both resident readers return before touching them unless ndsFrontendOverlayTailResident(): the preview loader is reached only by the select screens' Selected file ids, and the joint test answers FALSE while a battle borrows the tail."
+    },
+    {
+      "source_symbol": "ndsBattleShipLoadCSSSelectedFigatree",
+      "target_symbol": "dFTPurinAnimSelected_joints",
+      "reason": "Select-screen Selected clips (battleship_scsubsysdata_ft.c) moved to the overlay tail 2026-10-11. Both resident readers return before touching them unless ndsFrontendOverlayTailResident(): the preview loader is reached only by the select screens' Selected file ids, and the joint test answers FALSE while a battle borrows the tail."
+    },
+    {
+      "source_symbol": "ndsBattleShipLoadCSSSelectedFigatree",
+      "target_symbol": "dFTSamusAnimSelected_joints",
+      "reason": "Select-screen Selected clips (battleship_scsubsysdata_ft.c) moved to the overlay tail 2026-10-11. Both resident readers return before touching them unless ndsFrontendOverlayTailResident(): the preview loader is reached only by the select screens' Selected file ids, and the joint test answers FALSE while a battle borrows the tail."
+    },
+    {
+      "source_symbol": "ndsBattleShipLoadCSSSelectedFigatree",
+      "target_symbol": "dFTYoshiAnimSelected_joints",
+      "reason": "Select-screen Selected clips (battleship_scsubsysdata_ft.c) moved to the overlay tail 2026-10-11. Both resident readers return before touching them unless ndsFrontendOverlayTailResident(): the preview loader is reached only by the select screens' Selected file ids, and the joint test answers FALSE while a battle borrows the tail."
     }
   ]
 }

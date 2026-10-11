@@ -171,6 +171,7 @@ _Static_assert(_FT_ANIM_CMD(5, FT_ANIM_ROTZ, 0) == 0x0085,
 #undef _RELOCDATA_TYPES_H_
 
 #include <string.h>
+#include <nds/nds_frontend_overlay.h>
 
 size_t ndsBattleShipCSSSelectedFigatreeSize(const void *file_id)
 {
@@ -334,6 +335,10 @@ void *ndsBattleShipLoadCSSSelectedFigatree(const void *file_id, void *heap)
     {
         return NULL;
     }
+    if (ndsFrontendOverlayTailResident() == FALSE)
+    {
+        return NULL;
+    }
     if (heap == NULL)
     {
         return (void *)source;
@@ -349,7 +354,10 @@ sb32 ndsBattleShipIsCSSSelectedFigatreeJoint(const void *ptr)
     uintptr_t value;
     size_t i;
 
-    if (ptr == NULL)
+    /* The clips live in the frontend overlay's tail (nds_frontend_overlay.ld):
+     * only the select screens play them, and a battle that borrows the tail
+     * reuses those bytes, so no pointer there is one of these joints then. */
+    if ((ptr == NULL) || (ndsFrontendOverlayTailResident() == FALSE))
     {
         return FALSE;
     }

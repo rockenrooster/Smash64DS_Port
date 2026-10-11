@@ -115,6 +115,12 @@ void ndsFrontendOverlayRestoreTail(void)
     sNdsFrontendTailLoaned = 0u;
 }
 
+s32 ndsFrontendOverlayTailResident(void)
+{
+    return ((sNdsFrontendLoaded != 0u) && (sNdsFrontendTailLoaned == 0u) &&
+            (sNdsFrontendTailDirty == 0u)) ? TRUE : FALSE;
+}
+
 void ndsFrontendOverlayBeginScene(u32 kind)
 {
     sNdsFrontendCursor = NULL;

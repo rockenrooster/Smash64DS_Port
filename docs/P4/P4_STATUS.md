@@ -671,6 +671,15 @@ into the global reservation.
   never reach the match (his 52 KB animation heap per fighter). The heavy
   contents need compact packs and smaller animation heaps first; texture
   reduction or a per-match budget would be an owner decision.
+  2026-10-11: the select screens' Selected clips (58.7 KB of .main.rw,
+  `battleship_scsubsysdata_ft.c`) live in the frontend overlay's tail, which
+  a VS battle borrows as scene-asset space; the two resident lookups read
+  them only while the tail is resident (`ndsFrontendOverlayTailResident`).
+  The VS loan grows by 58.7 KB and the select screen keeps the same heap
+  (same Selected rows, 0 animation fallbacks). Kirby with Falco, Marth and
+  Wario (Dream Land, 900 frames, ship ROM) now ends at 30,968 B; Kirby with
+  Bowser, Dedede and Banjo still overflows making parts, and Banjo, Crash,
+  Lanky and Bowser on Dream Land ask 43,036 B against 36,932.
 
 Four-CPU mirrors, lab ROM with all fourteen (`NDS_P4_LAB_FALLBACK=1`, lab
 stage, 1,200 frames, exception vectors trapped), on the build with the

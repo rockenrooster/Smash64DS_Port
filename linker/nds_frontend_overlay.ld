@@ -91,6 +91,11 @@ SECTIONS {
             .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
         :battleship_mnplayersvs.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx
             .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
+        /* The select screens' Selected clips (battleship_scsubsysdata_ft.c,
+         * 2026-10-11): only their preview loader reads them, and the resident
+         * lookups touch them only while this tail is resident
+         * (ndsFrontendOverlayTailResident). The VS loan grows by their size. */
+        :battleship_scsubsysdata_ft.o (.data.dFT*AnimSelected*)
         :battleship_mnmaps.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx
             .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
         :battleship_mnoption.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx

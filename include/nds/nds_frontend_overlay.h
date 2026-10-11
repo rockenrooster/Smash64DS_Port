@@ -14,6 +14,9 @@ void ndsFrontendOverlayEndScene(void);
 /* After a 1P, bonus or training battle returns into the campaign: reload the
  * overlay if the battle borrowed its tail, before any tail code runs. */
 void ndsFrontendOverlayRestoreTail(void);
+/* TRUE while the whole overlay is loaded and no battle borrows its tail: its
+ * data (the select screens' Selected clips) may be read. */
+s32 ndsFrontendOverlayTailResident(void);
 
 /* Scene-lifetime asset storage. The loan is separate from the existing taskman
  * allocation, whose newlib header and ownership must never be overwritten. */
