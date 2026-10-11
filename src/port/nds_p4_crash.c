@@ -955,7 +955,32 @@ static void ndsP4CrashOnEatTomato(FTStruct *fp)
     func_800269C0_275C0(CRASH_FGM_EAT);
 }
 
+/* ---- Entry ----
+ *
+ * Crash.asm entry_script 0x8013DCBC is Samus's point case of
+ * ftCommonAppearSetStatus; samusshared.asm get_entry_anim_gfx_struct gives
+ * it crash_entry_anim_gfx_struct on CRASH_ENTRY, his special file 3: the
+ * point's procs and transforms, DObjDesc 0x2310 and AnimJoint 0x27E8, drawn
+ * through DObjDLLinks. */
+extern void *gNdsP4CrashSpecial3;
+void efManagerHaveStructProcUpdate(GObj *effect_gobj);
+void gcDrawDObjTreeDLLinksForGObj(GObj *gobj);
+
+static EFDesc sNdsP4CrashEntryDesc = {
+    0x4, 10, &gNdsP4CrashSpecial3,
+    { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0x00 },
+    { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0x00 },
+    efManagerHaveStructProcUpdate, gcDrawDObjTreeDLLinksForGObj,
+    0x2310, 0x0, 0x27E8, 0x0
+};
+
+static void ndsP4CrashEntryCase(FTStruct *fp)
+{
+    ndsP4EntryMakeEffect(&sNdsP4CrashEntryDesc, &fp->entry_pos);
+}
+
 const NDSP4Overrides gNdsP4CrashOverrides = {
+    .entry_case = ndsP4CrashEntryCase,
     .before_physics_map = ndsP4CrashBeforePhysicsMap,
     .grabbable = ndsP4CrashGrabbable,
     .attack_air_lw_hit = ndsP4CrashAttackAirLwHit,

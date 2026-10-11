@@ -7247,7 +7247,9 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
         /* A P4 list with no TEXID frames whose TLUT comes from its MObj's
          * segment-E branch (the eggs, the grape, the needle): the generator
          * baked palette 0, which is all their makers select; the draw takes
-         * the live material. Anything else declines, counted. */
+         * the live material. Marth's, Roy's and Banjo's entry wave and beam
+         * take their colours there, as Link's do (owner 353 below). Anything
+         * else declines, counted. */
         MObj *mobj = dobj->mobj;
 
         bzero(&common_effect_material, sizeof(common_effect_material));

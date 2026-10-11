@@ -28,6 +28,8 @@
 
 #if NDS_P4_MARTH || NDS_P4_ROY
 
+#include <ef/effect.h>
+
 sb32 ftMarioSpecialHiProcPass(GObj *fighter_gobj);
 void ftCaptainSpecialHiProcInterrupt(GObj *fighter_gobj);
 
@@ -397,6 +399,57 @@ void ndsP4MarthNSPAirMap(GObj *fighter_gobj)
     mpCommonProcFighterLanding(fighter_gobj, ndsP4MarthNSPAirToGround);
 }
 
+/* ---- Entry (Link's case on the Marth entry-effects file) ----
+ *
+ * Marth.asm and Roy.asm marth_entry_routine_ / roy_entry_routine_ flip an
+ * arrival from the left (the Falcon Flyer's is_rotate) and run the Link case
+ * of ftCommonAppearSetStatus, whose wave and beam linkshared.asm
+ * get_entry_anim_struct_1/_2 take from entry_anim_struct_1_MARTH/_ROY and
+ * _2_ on MARTH_ENTRY_EFFECTS: both fighters' special file 3, the same file
+ * at the same offsets (Link's procs and transforms). */
+void gcPlayAnimAll(GObj *gobj);
+void gcDrawDObjTreeDLLinksForGObj(GObj *gobj);
+
+#define NDS_P4_MARTH_ENTRY_DESC(file_, dobjdesc_, mobjsub_, anim_, matanim_)       \
+    {                                                                          \
+        0x4, 10, (file_),                                                      \
+        { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0x00 },               \
+        { nGCMatrixKindNull, nGCMatrixKindNull, 0x00 },                        \
+        gcPlayAnimAll, gcDrawDObjTreeDLLinksForGObj,                           \
+        (dobjdesc_), (mobjsub_), (anim_), (matanim_)                           \
+    }
+#define NDS_P4_MARTH_ENTRY_WAVE(file_) \
+    NDS_P4_MARTH_ENTRY_DESC(file_, 0x110, 0x218, 0x344, 0x3A0)
+#define NDS_P4_MARTH_ENTRY_BEAM(file_) \
+    NDS_P4_MARTH_ENTRY_DESC(file_, 0x638, 0x740, 0x76C, 0x7B4)
+
+static void ndsP4MarthEntryCaseOn(FTStruct *fp, EFDesc *wave, EFDesc *beam)
+{
+    if (fp->status_vars.common.entry.lr == -1)
+    {
+        fp->status_vars.common.entry.is_rotate = TRUE;
+    }
+    ndsP4EntryMakeEffect(wave, &fp->entry_pos);
+    ndsP4EntryMakeEffect(beam, &fp->entry_pos);
+}
+
+#if NDS_P4_ROY
+/* Roy's, here beside the helper: nds_p4_roy.c compiles this file only
+ * when Marth is not enabled. */
+extern void *gNdsP4RoySpecial3;
+static EFDesc sNdsP4RoyEntryWaveDesc = NDS_P4_MARTH_ENTRY_WAVE(&gNdsP4RoySpecial3);
+static EFDesc sNdsP4RoyEntryBeamDesc = NDS_P4_MARTH_ENTRY_BEAM(&gNdsP4RoySpecial3);
+
+static void ndsP4RoyEntryCase(FTStruct *fp)
+{
+    ndsP4MarthEntryCaseOn(fp, &sNdsP4RoyEntryWaveDesc, &sNdsP4RoyEntryBeamDesc);
+}
+
+const NDSP4Overrides gNdsP4RoyOverrides = {
+    .entry_case = ndsP4RoyEntryCase,
+};
+#endif
+
 #if NDS_P4_MARTH
 /* ---- Down special (Counter), Marth's alone ---- */
 
@@ -522,7 +575,17 @@ static s32 ndsP4MarthUpdateDamage(FTStruct *fp, s32 damage)
     return damage;
 }
 
+extern void *gNdsP4MarthSpecial3;
+static EFDesc sNdsP4MarthEntryWaveDesc = NDS_P4_MARTH_ENTRY_WAVE(&gNdsP4MarthSpecial3);
+static EFDesc sNdsP4MarthEntryBeamDesc = NDS_P4_MARTH_ENTRY_BEAM(&gNdsP4MarthSpecial3);
+
+static void ndsP4MarthEntryCase(FTStruct *fp)
+{
+    ndsP4MarthEntryCaseOn(fp, &sNdsP4MarthEntryWaveDesc, &sNdsP4MarthEntryBeamDesc);
+}
+
 const NDSP4Overrides gNdsP4MarthOverrides = {
+    .entry_case = ndsP4MarthEntryCase,
     .update_damage = ndsP4MarthUpdateDamage,
 };
 #endif /* NDS_P4_MARTH */

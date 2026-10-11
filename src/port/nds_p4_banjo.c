@@ -1037,7 +1037,42 @@ static void ndsP4BanjoOnHitInteract(FTStruct *fp, s32 attack_type)
     }
 }
 
+/* ---- Entry (Link's case on his entry-effects file) ----
+ *
+ * Banjo.asm entry_script 0x8013DCCC is the Link case of
+ * ftCommonAppearSetStatus: its wave and beam, which linkshared.asm
+ * get_entry_anim_struct_1/_2 take from entry_anim_struct_1_BANJO and
+ * _2_BANJO on BANJO_ENTRY_EFFECTS, his special file 3 (Link's procs and
+ * transforms; the DObjDesc, MObjSub, AnimJoint and MatAnimJoint offsets are
+ * Remix's). */
+extern void *gNdsP4BanjoSpecial3;
+void gcPlayAnimAll(GObj *gobj);
+void gcDrawDObjTreeDLLinksForGObj(GObj *gobj);
+
+static EFDesc sNdsP4BanjoEntryWaveDesc = {
+    0x4, 10, &gNdsP4BanjoSpecial3,
+    { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0x00 },
+    { nGCMatrixKindNull, nGCMatrixKindNull, 0x00 },
+    gcPlayAnimAll, gcDrawDObjTreeDLLinksForGObj,
+    0x878, 0x980, 0xA54, 0xA9C
+};
+
+static EFDesc sNdsP4BanjoEntryBeamDesc = {
+    0x4, 10, &gNdsP4BanjoSpecial3,
+    { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0x00 },
+    { nGCMatrixKindNull, nGCMatrixKindNull, 0x00 },
+    gcPlayAnimAll, gcDrawDObjTreeDLLinksForGObj,
+    0x240, 0x348, 0x378, 0x3D4
+};
+
+static void ndsP4BanjoEntryCase(FTStruct *fp)
+{
+    ndsP4EntryMakeEffect(&sNdsP4BanjoEntryWaveDesc, &fp->entry_pos);
+    ndsP4EntryMakeEffect(&sNdsP4BanjoEntryBeamDesc, &fp->entry_pos);
+}
+
 const NDSP4Overrides gNdsP4BanjoOverrides = {
+    .entry_case = ndsP4BanjoEntryCase,
     .on_hit_interact = ndsP4BanjoOnHitInteract,
 };
 

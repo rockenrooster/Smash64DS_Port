@@ -62,16 +62,41 @@ ARTICLES = {
         # Sheik file 6.
         {"name": "needle", "special": 1, "wpattributes": 0x0},
     ),
+    # linkshared.asm entry_anim_struct_1_MARTH/_ROY and _2_: the Link entry's
+    # wave (DObjDesc 0x110) and beam (0x638) on MARTH_ENTRY_EFFECTS, drawn
+    # through DObjDLLinks; entry lifetime. "material": each list branches to
+    # its DObj's one MObj (segment E), whose MatAnim stays live, as Link's.
+    "marth": (
+        {"name": "entry_wave", "special": 3, "dobjdesc": 0x110, "dllinks": True, "entry": True,
+         "material": True},
+        {"name": "entry_beam", "special": 3, "dobjdesc": 0x638, "dllinks": True, "entry": True,
+         "material": True},
+    ),
+    "roy": (
+        {"name": "entry_wave", "special": 3, "dobjdesc": 0x110, "dllinks": True, "entry": True,
+         "material": True},
+        {"name": "entry_beam", "special": 3, "dobjdesc": 0x638, "dllinks": True, "entry": True,
+         "material": True},
+    ),
     "banjo": (
         # BanjoSpecial.asm forward_egg_projectile_struct and
         # backward_egg_projectile_struct: one WPAttributes at 0 of Banjo
         # file 9.
         {"name": "egg", "special": 4, "wpattributes": 0x0},
+        # linkshared.asm entry_anim_struct_1_BANJO and _2_BANJO: the Link
+        # entry's wave (DObjDesc 0x878) and beam (0x240) on his file 8.
+        {"name": "entry_wave", "special": 3, "dobjdesc": 0x878, "dllinks": True, "entry": True,
+         "material": True},
+        {"name": "entry_beam", "special": 3, "dobjdesc": 0x240, "dllinks": True, "entry": True,
+         "material": True},
     ),
     "lanky": (
         # LankySpecial.asm grape_projectile_struct: WPAttributes at 0 of
         # Lanky file 6 (its graphic in file 8).
         {"name": "grape", "special": 1, "wpattributes": 0x0},
+        # dkshared.asm lanky_entry_struct: the barrel case's Tag Barrel,
+        # DObjDesc 0xF88 on his file 7, drawn as a DObj tree.
+        {"name": "tag_barrel", "special": 2, "dobjdesc": 0xF88, "entry": True},
     ),
     "sonic": (
         # SonicSpecial.asm spring_projectile_struct: WPAttributes at 0 of
@@ -80,6 +105,15 @@ ARTICLES = {
         # Sonic's, not on the DS).
         {"name": "spring", "special": 1, "wpattributes": 0x0, "texid_frames": 2,
          "palette_per_frame": True},
+        # dkshared.asm sonic_entry_struct_right/_left: Tails' plane on his
+        # file 8, DObjDesc 0x2A28 or 0xA5E8 by side, drawn as a DObj tree.
+        {"name": "entry_plane_r", "special": 3, "dobjdesc": 0x2A28, "entry": True},
+        {"name": "entry_plane_l", "special": 3, "dobjdesc": 0xA5E8, "entry": True},
+    ),
+    "crash": (
+        # samusshared.asm crash_entry_anim_gfx_struct: the point case's
+        # object, DObjDesc 0x2310 on his file 8, drawn through DObjDLLinks.
+        {"name": "entry", "special": 3, "dobjdesc": 0x2310, "dllinks": True, "entry": True},
     ),
 }
 
@@ -287,7 +321,8 @@ def resolve(content: str, title: str, o2r: Path, descriptor: dict) -> list[dict]
                       "via": 0 if via is None else via[1] + 1,
                       "offset": offset, "entry": bool(article.get("entry")),
                       "texid": texid, "palette": palette, "head": head,
-                      "sidecar_joint": sidecar})
+                      "sidecar_joint": sidecar,
+                      "material": bool(article.get("material"))})
 
     for article in ARTICLES.get(content, ()):
         if "modelpart_joint" in article:

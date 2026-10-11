@@ -552,6 +552,13 @@ void ndsP4AfterSetStatus(GObj *fighter_gobj, s32 status_id);
 const NDSP4Entry *ndsP4Entry(const FTStruct *fp);
 /* The content's effect makers (S6), or NULL. */
 const NDSP4Overrides *ndsP4Overrides(const FTStruct *fp);
+/* NDSP4Overrides.entry_case: one effect of a vanilla entry case on the
+ * content's own description (Remix's struct for that case: its file, DObjDesc
+ * and animation offsets), placed at the entry position as the source maker
+ * places it. NULL, counted in gNdsP4EntryEffectMisses, when the content's
+ * file is not resident or no effect slot is free. */
+struct EFDesc;
+GObj *ndsP4EntryMakeEffect(struct EFDesc *desc, const Vec3f *pos);
 /* ftMainProcPhysicsMap after the map proc (battleship_ftmain.c): the
  * content's after_proc_map, at the cost of one load for everyone else. */
 void ndsP4AfterProcMapSlow(GObj *fighter_gobj);

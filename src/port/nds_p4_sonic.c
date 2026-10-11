@@ -1543,7 +1543,43 @@ static sb32 ndsP4SonicAirSpecialBlock(FTStruct *fp)
     return (*ndsP4SonicSpringSpent(fp) != FALSE) ? TRUE : FALSE;
 }
 
+/* ---- Entry (Tails' plane) ----
+ *
+ * Sonic.asm entry_script 0x8013DCAC is Donkey Kong's barrel case of
+ * ftCommonAppearSetStatus; dkshared.asm barrel_alternate gives it
+ * sonic_entry_struct_right or _left on SONIC_ENTRY, his special file 3, by
+ * the side he arrives from (Sonic.asm sonic_facing_ keeps his facing for that
+ * test; the port reads it from the entry's saved lr). */
+extern void *gNdsP4SonicSpecial3;
+void efManagerHaveStructProcUpdate(GObj *effect_gobj);
+void gcDrawDObjTreeForGObj(GObj *gobj);
+
+static EFDesc sNdsP4SonicEntryPlaneRDesc = {
+    0x4, 10, &gNdsP4SonicSpecial3,
+    { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0x00 },
+    { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0x00 },
+    efManagerHaveStructProcUpdate, gcDrawDObjTreeForGObj,
+    0x2A28, 0x0, 0x68C8, 0x0
+};
+
+static EFDesc sNdsP4SonicEntryPlaneLDesc = {
+    0x4, 10, &gNdsP4SonicSpecial3,
+    { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0x00 },
+    { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0x00 },
+    efManagerHaveStructProcUpdate, gcDrawDObjTreeForGObj,
+    0xA5E8, 0x0, 0x112AC, 0x0
+};
+
+static void ndsP4SonicEntryCase(FTStruct *fp)
+{
+    ndsP4EntryMakeEffect((fp->status_vars.common.entry.lr == +1) ?
+                             &sNdsP4SonicEntryPlaneRDesc :
+                             &sNdsP4SonicEntryPlaneLDesc,
+                         &fp->entry_pos);
+}
+
 const NDSP4Overrides gNdsP4SonicOverrides = {
+    .entry_case = ndsP4SonicEntryCase,
     .on_damage = ndsP4SonicOnDamage,
     .air_special_block = ndsP4SonicAirSpecialBlock,
 };

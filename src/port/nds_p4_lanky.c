@@ -1057,7 +1057,31 @@ void ndsP4LankyDSPAirMap(GObj *fighter_gobj)
     mpCommonProcFighterCliff(fighter_gobj, ndsP4LankyDSPAirToGround);
 }
 
+/* ---- Entry (the Tag Barrel) ----
+ *
+ * Lanky.asm entry_script 0x8013DCAC is Donkey Kong's barrel case of
+ * ftCommonAppearSetStatus; dkshared.asm barrel_alternate gives it
+ * lanky_entry_struct on LANKY_ENTRY, his special file 2: the barrel's procs
+ * and transforms, DObjDesc 0xF88 and AnimJoint 0x14E4. */
+extern void *gNdsP4LankySpecial2;
+void efManagerHaveStructProcUpdate(GObj *effect_gobj);
+void gcDrawDObjTreeForGObj(GObj *gobj);
+
+static EFDesc sNdsP4LankyEntryBarrelDesc = {
+    0x4, 10, &gNdsP4LankySpecial2,
+    { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0x00 },
+    { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0x00 },
+    efManagerHaveStructProcUpdate, gcDrawDObjTreeForGObj,
+    0xF88, 0x0, 0x14E4, 0x0
+};
+
+static void ndsP4LankyEntryCase(FTStruct *fp)
+{
+    ndsP4EntryMakeEffect(&sNdsP4LankyEntryBarrelDesc, &fp->entry_pos);
+}
+
 const NDSP4Overrides gNdsP4LankyOverrides = {
+    .entry_case = ndsP4LankyEntryCase,
     .damage_status = ndsP4LankyDamageStatus,
 };
 

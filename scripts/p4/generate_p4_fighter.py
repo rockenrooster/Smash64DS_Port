@@ -349,6 +349,16 @@ CALLBACK_PORTS = {
 # (NDS_P4_ENTRY_PORT): Bowser's Clown Copter in the Falcon Flyer's case.
 ENTRY_PORTS = {
     "bowser": 0x8013DD14,
+    # Link's case (wave and beam) on the content's entry-effects file 3.
+    "banjo": 0x8013DCCC,
+    "marth": 0x8055F384,    # Marth.asm marth_entry_routine_, then Link's case
+    "roy": 0x80587EE8,      # Roy.asm roy_entry_routine_, then Link's case
+    # Donkey Kong's barrel case: Lanky's Tag Barrel (file 2), Tails' plane
+    # (Sonic's file 3).
+    "lanky": 0x8013DCAC,
+    "sonic": 0x8013DCAC,
+    # Samus's point case on Crash's file 3.
+    "crash": 0x8013DCBC,
 }
 
 # P4 S6: special-file slots (1-4) a content loads into its own storage,
@@ -365,19 +375,33 @@ OWN_SPECIAL_FILES = {
     "bowser": (2,),
     # SheikNSP's needle (1, Sheik file 6; Captain has no special file 1).
     "sheik": (1,),
+    # Their entry's wave and beam (3, MARTH_ENTRY_EFFECTS, one file for both;
+    # Captain's Falcon Punch code, the other reader of special file 3, never
+    # runs for them).
+    "marth": (3,),
+    "roy": (3,),
     # BanjoNSP's eggs (4, Banjo file 9; Captain has no special file 4).
-    "banjo": (4,),
+    # His entry's wave and beam (3, Banjo file 8; Captain's Falcon Punch
+    # code, the other reader of special file 3, never runs for him).
+    "banjo": (3, 4),
     # LankyNSP's grape (1, Lanky file 6; Mario's fireball code, the other
     # reader of special file 1, never runs for him).
-    "lanky": (1,),
+    # His entry's Tag Barrel (2, Lanky file 7; Mario's entry pipe, the
+    # other reader of special file 2, never runs for him).
+    "lanky": (1, 2),
     # SonicUSP's spring (1, Sonic file 6, its graphic in file 9, which loads
     # with it; Fox's blaster code, the other reader of special file 1, never
     # runs for him).
-    "sonic": (1,),
+    # His entry's Tails plane (3, Sonic file 8; Fox's Arwing entry, the
+    # other reader of special file 3, never runs for him).
+    "sonic": (1, 3),
     # DededeUSP's landing stars (2, Dedede file 7: Yoshi's star attributes at
     # Yoshi's offset, its graphic the item file's star; Captain's Falcon
     # Kick and Flyer, the readers of special file 2, never run for him).
     "dedede": (2,),
+    # His entry's object (3, Crash file 8; no code reads Mario's special
+    # file 3).
+    "crash": (3,),
 }
 
 # Vanilla file IDs that Remix rewrote with equivalent bytes, so the DS keeps

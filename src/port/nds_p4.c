@@ -12,6 +12,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <ef/effect.h>
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_scene_manager.h>
 #include <nds/nds_startup.h>
@@ -1034,6 +1035,27 @@ const NDSP4Overrides *ndsP4Overrides(const FTStruct *fp)
     const NDSP4Fighter *f = ndsP4Fighter(ndsP4Content(fp));
 
     return (f != NULL) ? f->overrides : NULL;
+}
+
+__attribute__((used)) volatile u32 gNdsP4EntryEffectMisses;
+
+GObj *ndsP4EntryMakeEffect(struct EFDesc *desc, const Vec3f *pos)
+{
+    GObj *effect_gobj;
+
+    if ((desc->file_head == NULL) || (*desc->file_head == NULL))
+    {
+        gNdsP4EntryEffectMisses++;
+        return NULL;
+    }
+    effect_gobj = efManagerMakeEffectNoForce(desc);
+    if (effect_gobj == NULL)
+    {
+        gNdsP4EntryEffectMisses++;
+        return NULL;
+    }
+    DObjGetStruct(effect_gobj)->translate.vec.f = *pos;
+    return effect_gobj;
 }
 
 static void ndsP4TablesHalt(u32 content)

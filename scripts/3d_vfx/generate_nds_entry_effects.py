@@ -2081,8 +2081,8 @@ def emit_p4_tables(p4: list[P4Root], texture_keys: list, texture_slot: dict,
         "    u8 sidecar_joint;",
         "    /* Bit 0: the MObj's palette_id follows its TEXID (frame i was baked",
         "     * with palette i), else palette 0. Bit 1: a list with no TEXID",
-        "     * frames takes its TLUT from the MObj's segment-E branch (palette 0",
-        "     * baked), so its draw needs the live material. */",
+        "     * frames takes its TLUT (palette 0 baked) or its colours from the",
+        "     * MObj's segment-E branch, so its draw needs the live material. */",
         "    u8 material_flags;",
         "    u8 variant_slots[4];",
         "    /* Nonzero: 1 + the storage file's offset of the pointer that names",
@@ -2117,7 +2117,7 @@ def emit_p4_tables(p4: list[P4Root], texture_keys: list, texture_slot: dict,
             f"    {{ {('&' + storage) if storage else 'NULL'}, 0x{p4_root.row['file_id']:04x}u, "
             f"{p4_root.content_id}u, {len(slots)}u, 0x{flags:04x}u, "
             f"{0xFF if sidecar is None else sidecar}u, "
-            f"{(1 if (p4_root.row['texid'] or {}).get('palettes') else 0) | (2 if p4_root.row.get('palette') else 0)}u, "
+            f"{(1 if (p4_root.row['texid'] or {}).get('palettes') else 0) | (2 if (p4_root.row.get('palette') or p4_root.row.get('material')) else 0)}u, "
             f"{{ {', '.join(f'{s}u' for s in padded)} }}, {p4_root.row.get('via', 0)}u }}, "
             f"/* {p4_root.row['content']} {p4_root.row['article']} +0x{p4_root.row['offset']:x} */")
     lines += ["};", "",
