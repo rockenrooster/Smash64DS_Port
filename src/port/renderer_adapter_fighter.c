@@ -609,6 +609,36 @@ void ndsFighterDisplayContractProjectTarget(CObj *cobj,
     ndsProjectToViewport(cobj, matrix, pos, dist_x, dist_y);
 }
 
+#if NDS_P4
+/* TRUE when the list ends before any vertex, triangle, rectangle or branch
+ * command: it sets state and draws nothing. */
+static sb32 ndsFighterDisplayListDrawsNothing(const Gfx *dl)
+{
+    const u32 *w = (const u32 *)dl;
+    u32 i;
+
+    for (i = 0u; i < 32u; i++, w += 2)
+    {
+        switch (w[0] >> 24)
+        {
+        case 0xdfu: /* G_ENDDL */
+            return TRUE;
+        case 0x01u: /* G_VTX */
+        case 0x05u: /* G_TRI1 */
+        case 0x06u: /* G_TRI2 */
+        case 0x07u: /* G_QUAD */
+        case 0xdeu: /* G_DL */
+        case 0xe4u: /* G_TEXRECT */
+        case 0xf6u: /* G_FILLRECT */
+            return FALSE;
+        default:
+            break;
+        }
+    }
+    return FALSE;
+}
+#endif
+
 void ndsFighterDisplayContractSelectDL(const Gfx *dl)
 {
     NDSFighterDisplayContractEvent *event;
@@ -634,6 +664,20 @@ void ndsFighterDisplayContractSelectDL(const Gfx *dl)
     {
         sNdsFighterDisplayContract.matrix_ready = FALSE;
         sNdsFighterDisplayContract.material_ready = FALSE;
+        return;
+    }
+    /* EXTRA's Meta Knight wears, in costumes 1-3, a costume accessory
+     * (Jigglypuff's bow mechanism, ftDisplayMainDrawAccessory) whose list
+     * only re-sets the lights his joint 6 list sets again: it draws nothing
+     * and is no event. It leaves the joint's matrix for that list, as an
+     * accessory does (below). */
+    if ((sNdsFighterDisplayContract.skip_empty_dl != 0u) &&
+        (sNdsFighterDisplayContract.current_dobj != NULL) &&
+        ((parts = ftGetParts(sNdsFighterDisplayContract.current_dobj)) != NULL) &&
+        (parts->gobj != NULL) && (DObjGetStruct(parts->gobj) != NULL) &&
+        (DObjGetStruct(parts->gobj)->dl == dl) &&
+        (ndsFighterDisplayListDrawsNothing(dl) != FALSE))
+    {
         return;
     }
 #endif

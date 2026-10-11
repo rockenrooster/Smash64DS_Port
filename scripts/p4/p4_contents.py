@@ -31,7 +31,8 @@ PARENT_KINDS = {
     "MARIO": "nFTKindMario", "FOX": "nFTKindFox", "DONKEY": "nFTKindDonkey",
     "SAMUS": "nFTKindSamus", "LUIGI": "nFTKindLuigi", "LINK": "nFTKindLink",
     "YOSHI": "nFTKindYoshi", "CAPTAIN": "nFTKindCaptain", "KIRBY": "nFTKindKirby",
-    "PIKACHU": "nFTKindPikachu", "JIGGLY": "nFTKindPurin", "NESS": "nFTKindNess",
+    "PIKACHU": "nFTKindPikachu", "JIGGLY": "nFTKindPurin", "JIGGLYPUFF": "nFTKindPurin",
+    "NESS": "nFTKindNess",
 }
 
 

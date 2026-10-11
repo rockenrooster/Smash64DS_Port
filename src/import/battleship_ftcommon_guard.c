@@ -118,8 +118,24 @@ static void ndsGuardSourcePlayAnimEventsAll(GObj *fighter_gobj)
 #define ftCommonGuardGetJointTransform ndsBaseFTCommonGuardGetJointTransform
 #define ftCommonGuardGetJointTransformScale \
     ndsBaseFTCommonGuardGetJointTransformScale
+#if NDS_P4
+/* EXTRA's static parts (nds_p4.h static_parts): the guard's joint count and
+ * its DObjDesc rows leave them out (StaticPart.asm
+ * fix_ftCommonGuardUpdateJoints_, fix_ftCommonGuardInitJoints_). The source
+ * bodies keep their names (first token `GObj`); every call (`fighter_gobj`)
+ * runs them through ndsP4GuardRun, which hides the parts from fp->joints. */
+#define ftCommonGuardUpdateJoints(first) NDS_P4_GUARD_UPDATE_##first)
+#define NDS_P4_GUARD_UPDATE_GObj ndsBaseFTCommonGuardUpdateJoints(GObj
+#define NDS_P4_GUARD_UPDATE_fighter_gobj ndsP4GuardUpdateJoints(fighter_gobj
+#define ftCommonGuardInitJoints(first) NDS_P4_GUARD_INIT_##first)
+#define NDS_P4_GUARD_INIT_GObj ndsBaseFTCommonGuardInitJoints(GObj
+#define NDS_P4_GUARD_INIT_fighter_gobj ndsP4GuardInitJoints(fighter_gobj
+static void ndsP4GuardUpdateJoints(GObj *fighter_gobj);
+static void ndsP4GuardInitJoints(GObj *fighter_gobj);
+#else
 #define ftCommonGuardUpdateJoints ndsBaseFTCommonGuardUpdateJoints
 #define ftCommonGuardInitJoints ndsBaseFTCommonGuardInitJoints
+#endif
 #define ftCommonGuardOnProcUpdate ndsBaseFTCommonGuardOnProcUpdate
 #define ftCommonGuardCommonProcInterrupt \
     ndsBaseFTCommonGuardCommonProcInterrupt
@@ -179,6 +195,54 @@ void ndsBaseFTCommonGuardOffSetStatus(GObj *fighter_gobj);
 #undef ftCommonGuardGetJointTransformScale
 #undef ftCommonGuardUpdateJoints
 #undef ftCommonGuardInitJoints
+#if NDS_P4
+#undef NDS_P4_GUARD_UPDATE_GObj
+#undef NDS_P4_GUARD_UPDATE_fighter_gobj
+#undef NDS_P4_GUARD_INIT_GObj
+#undef NDS_P4_GUARD_INIT_fighter_gobj
+
+void ndsBaseFTCommonGuardUpdateJoints(GObj *fighter_gobj);
+void ndsBaseFTCommonGuardInitJoints(GObj *fighter_gobj);
+
+static void ndsP4GuardRun(GObj *fighter_gobj, void (*body)(GObj *))
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    DObj *saved[4];
+    s32 ids[4];
+    s32 count = 0;
+    s32 i;
+
+    if (fp->nds_p4_content != 0u)
+    {
+        for (i = nFTPartsJointCommonStart;
+             (i < (s32)ARRAY_COUNT(fp->joints)) && (count < 4); i++)
+        {
+            if ((fp->joints[i] != NULL) && (ndsP4StaticPart(fp, i) != FALSE))
+            {
+                ids[count] = i;
+                saved[count++] = fp->joints[i];
+                fp->joints[i] = NULL;
+            }
+        }
+    }
+    body(fighter_gobj);
+
+    for (i = 0; i < count; i++)
+    {
+        fp->joints[ids[i]] = saved[i];
+    }
+}
+
+static void ndsP4GuardUpdateJoints(GObj *fighter_gobj)
+{
+    ndsP4GuardRun(fighter_gobj, ndsBaseFTCommonGuardUpdateJoints);
+}
+
+static void ndsP4GuardInitJoints(GObj *fighter_gobj)
+{
+    ndsP4GuardRun(fighter_gobj, ndsBaseFTCommonGuardInitJoints);
+}
+#endif
 #undef ftCommonGuardOnProcUpdate
 #undef ftCommonGuardCommonProcInterrupt
 #undef ftCommonGuardOnSetStatus

@@ -51,8 +51,8 @@ STATUS_FIRST = 0xDC + VANILLA_SPECIAL_COUNT
 VANILLA_MOTION_COUNT = 276        # dFTKirbyData.mainmotion_array_count
 KIRBY_MOTION_FILE = 0xE4
 # The script file: above every content's synthesized motion file
-# (SYNTH_FILE_BASE + content id * 0x10).
-SCRIPT_FILE_ID = 0x17F0
+# (SYNTH_FILE_BASE + (content id - 1) * 0x10, 0x1700-0x182F for 19 ids).
+SCRIPT_FILE_ID = 0x1900
 FLAG_SUBMOTION_SCRIPT = 0x10
 FLAG_ANIMJOINT = 0x8
 FLAG_SHIELDPOSE = 0x2
@@ -63,7 +63,7 @@ DEFERRED_HATS = 0x3FF8            # source hats 3..13: per-match native images
 HAT_FILES = (0xA8D, 0x1533)
 # Each power's Remix hat textures (p4_kirby_hats.py): one file per content,
 # past the synthesized files (SYNTH_FILE_BASE .. SCRIPT_FILE_ID).
-HAT_TEXTURE_FILE_BASE = 0x1800
+HAT_TEXTURE_FILE_BASE = 0x1910
 POWER_HAT_SLOTS = 4               # NDSP4KirbyPower.hats
 KIRBY_MODEL_FILE = 0x148
 # A power's weapon on Kirby's joint 17 (special part index 0x11) draws beside
@@ -81,7 +81,7 @@ POWER_PREFIX = {
 # Vanilla fighter ids (Character.id) for the parent rows of kirby_*_nsp.
 VANILLA_IDS = {"MARIO": 0, "FOX": 1, "DONKEY": 2, "SAMUS": 3, "LUIGI": 4, "LINK": 5,
                "YOSHI": 6, "CAPTAIN": 7, "KIRBY": 8, "PIKACHU": 9, "JIGGLY": 10,
-               "NESS": 11}
+               "JIGGLYPUFF": 10, "NESS": 11}
 
 
 class KirbyError(SystemExit):

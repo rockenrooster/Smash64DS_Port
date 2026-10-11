@@ -78,7 +78,9 @@ one-fighter-at-a-time cycle eighteen times. Revision 3 changes three things:
 | Dedede | Captain | 3,288 | 32 | 27 | Goto, FSM | items (Gordo, Waddle Dee) |
 | Mad Piano | Mario | 1,732 | 19 | 23 | none | book (fireball row) |
 | Metal Mario | MMario kind | 24 | 0 | n/a | n/a | none (selectable 2026-10-11: P4_STATUS "Metal Mario") |
-| Meta Knight, MRGAW, Snake | EXTRA tree | not exported yet | | | | |
+| Meta Knight | Purin | 2,218 | 26 | 19 | none | none (EXTRA; P4_STATUS "EXTRA characters") |
+| MRGAW | Mario | 2,364 | 16 | 16 | none | sausage (weapon); judge 7's Dango item open |
+| Snake | Captain | 7,476 | 0 of 39 | 21 | | C4, grenades, Nikita, Cypher (port next) |
 
 Falco used 12 of the 33 table seams. The roster needs the other 21:
 

@@ -1044,7 +1044,13 @@ s32 ndsShieldPoseTryApplySingle(DObj *dobj, f32 angle)
     }
     for (i = nFTPartsJointXRotN; i < ARRAY_COUNT(fp->joints); i++)
     {
-        if (fp->joints[i] != NULL)
+        if ((fp->joints[i] != NULL)
+#if NDS_P4
+            /* EXTRA's static parts are left out of the count
+             * (StaticPart.asm fix_ftCommonGuardUpdateJoints_). */
+            && (ndsP4StaticPart(fp, i) == FALSE)
+#endif
+            )
         {
             joint_num++;
         }
@@ -1105,6 +1111,16 @@ s32 ndsShieldPoseTryApplyAll(DObj *root_dobj, f32 angle)
     {
         u16 handle;
 
+#if NDS_P4
+        /* A static part takes no guard row and no animation
+         * (lbCommonAddDObjAnimJointAll_extended_). */
+        if (ndsP4StaticPartDObj(current) != FALSE)
+        {
+            current->anim_wait = AOBJ_ANIM_NULL;
+            joint--;
+            continue;
+        }
+#endif
         if (joint >= view.h->joint_count)
         {
             gNdsShieldPoseDecodeFailCount++;
@@ -1165,6 +1181,14 @@ s32 ndsShieldPoseTryPlayBatch(GObj *fighter_gobj)
     {
         u16 handle;
 
+#if NDS_P4
+        if (ndsP4StaticPartDObj(current) != FALSE)
+        {
+            current->anim_wait = AOBJ_ANIM_NULL;
+            joint--;
+            continue;
+        }
+#endif
         if (joint >= view.h->joint_count)
         {
             gNdsShieldPoseDecodeFailCount++;

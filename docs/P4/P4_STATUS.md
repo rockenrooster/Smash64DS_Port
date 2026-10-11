@@ -1105,6 +1105,89 @@ costumes (0,1,4,5 and teams 1,3,2) from a rebuilt model (MMarioModel +1,488 B,
 MMarioMain's stock LUTs 1 -> 6); the source model has one look, so his
 mirrors are told apart only by their tags.
 
+## EXTRA characters (S12, 2026-10-11)
+
+The staging tree is EXTRA's (`joaorb64/smashremix-plus-extra` 96621af, its
+nested Remix at its pin): the Makefile's `NDS_P4_STAGING` and `NDS_P4_EXPORT`
+now default to `builds/p4-staging/extra-96621af` and `export-x`, and every
+content exports from it (EXTRA's tree is Remix's plus three characters). Its
+5,850 files push the synthesized ids up (`SYNTH_FILE_BASE` 0x1700, Kirby's
+script and hat files 0x1900/0x1910); a build directory seeded from an older
+staging kept files under ids that now mean something else, so the generator
+now deletes the O2R files an earlier run shipped and this one does not.
+Export and generator fixes the three needed: Marth's and Roy's entry routines
+by symbol (`ENTRY_PORTS`), a Goto or Subroutine whose target is NULL (MRGAW's
+IDLE stops its script there, as the source's script engine does), 288 extern
+ids per file (MRGAW's main names 284; `NDS_RELOC_EXTERN_FILE_ID_CAPACITY`), a
+parent of JIGGLYPUFF (Purin) and the `j target; nop` thunk Remix writes in a
+grounded_script row. Their sounds and victory songs live under
+`build/extra_characters/<folder>` (`contents.json` "sounds").
+
+### Meta Knight (content 16, Jigglypuff's code)
+
+Every routine is ported (`src/port/nds_p4_metaknight.c`, 0 lab fallbacks):
+Shuttle Loop (up), Mach Tornado (neutral), Dimensional Cape (down), his jab
+loop and three-hit forward tilt, the wing state his OnActionChanged carries
+into aerials, falls, landings and aerial damage, his initial_script and the
+ThrownDK mash-out fix. Three mechanisms are new and general:
+
+- **Status replace** (`NDSP4Overrides.status_replace`, Remix's
+  action_replace_map): ftMainSetStatus sets up the replacement's descriptor,
+  motion and procs while fp->status_id keeps the original id (his jab runs
+  JAB_START as Attack11, his forward tilt TILTF as AttackS3); the
+  on_status hook gets the replacement, as Remix's on_action_changed does.
+- **Static parts** (`NDSP4Overrides.static_parts`, EXTRA's StaticPart.asm):
+  a joint that always exists. Setup creates it, the hidden-part loop never
+  installs or ejects it, a motion that does not install it gives it no track
+  (the figatree walk takes no entry for it) and the guard's joint count and
+  pose walks pass over it. His is joint 12, his light-item joint: without it
+  a held item read a NULL joint in every motion but his item and cape ones.
+- **State-only accessory lists**: Jigglypuff's costume accessory
+  (ftDisplayMainDrawAccessory) is, for his costumes 1-3, a list that only
+  re-sets the lights his joint 6 list sets again; the renderer takes no root
+  for it (three of four Meta Knights declined every frame before). The owner
+  generator now builds a P4 donor's accessory programs (the canonical vector
+  and each live program with the accessory) when its list does draw.
+
+His two entry animations are event32 with values event16 cannot hold (wing
+joints parked 16,384 units away, a joint grown past scale 8) and one cubic
+key a frame: 65 and 58 KB, so four Meta Knights ran out of battle heap at
+the fourth figatree heap. They are now refit as joint-synchronised linear
+keys within the same two units every P4 animation keeps
+(`p4_anim_compact.compact32_o2r`, checked frame by frame): 22.7 KB each, his
+heap 22,704 B. His select name is 72 texels wide with ink through column 62
+on a 66-wide card: the panel bake drops a P4 name's fully transparent
+right-hand columns (lossless).
+
+Probes: lab (build-lab-p4x), four Meta Knights 1,500 frames, 0 declines, 0
+native failures; forced up, neutral and down specials, jab and forward tilt
+run their statuses (the jab as Attack11 through the loop and end). Play
+ROM play-1011z: select with four Meta Knights (costumes 0-3), 0 failures;
+four Meta Knight CPUs on Dream Land, 1,500 frames, low-water 29,088, 0
+failures; Results with two of them, 0 failures.
+
+### MRGAW (content 17, Mario's code)
+
+Ported (`src/port/nds_p4_mrgaw.c`, 0 lab fallbacks): his 2D facing (the top,
+weapon and grab joints' x scale signed against his direction every frame,
+NDSP4Overrides.before_physics_map), Chef with his sausage (a weapon of his
+own, `NDS_P4_WP_KIND_MRGAW_CHEF`, on his special files 1 and 3), its
+refreshes and its landing, Fire (up) with its firemen kept where it began,
+Judge (down: one of nine at random, judge 1 costing him 12, judge 7 making a
+food item on its first hit) and his on_hit refresh of Fire. Remix's random
+draw advances the seed by the audio thread's tics (netplay lockstep); the DS
+advances it by the battle's logic updates, which replays reproduce. Open:
+judge 7's Dango (Remix's custom item, 99 in 100: the Maxim Tomato with a 10%
+heal, its attributes appended to Remix's ITCommonData, its model in Remix's
+common items file 0xA96) makes no item yet (counted); the Maxim Tomato in 100
+is made.
+
+### Snake (content 18, Captain's code)
+
+Exports and builds with lab stand-ins; the port (C4, Nikita, grenades,
+Cypher, the replaced jab, dash attack, crouch, forward tilt, up smash and
+taunts) is next.
+
 ## Board 1 status (master plan Revision 3)
 
 | Item | State |
@@ -1120,7 +1203,7 @@ mirrors are told apart only by their tags.
 | S9 select-screen preview | done for Falco on the menu ROM; pack facts come from the export (`p4_preview_pack.py --content`); the all-content ROM cannot hold P4 menu clips in the select's global reservation (see above) |
 | S10 acceptance probe | lab probes exist per topic (`gNdsLabP4Content`); no single command |
 | S11 whole-roster generation | all 14 generate, learn owner pins and build into one lab ROM (`NDS_P4_LAB_FALLBACK=1`); four-CPU mirror results in "Whole roster in the lab" |
-| S12 EXTRA export | not started; EXTRA's nested Remix gitlink not initialized |
+| S12 EXTRA export | done 2026-10-11: the three export with 0 failures from EXTRA's tree (now every content's staging); Meta Knight ported and in the play ROM, MRGAW ported in the lab (Dango open), Snake next ("EXTRA characters" above) |
 | S13 sword trails | done: Remix rows exported and generated, update and native draw; vanilla Link and Beam Sword trails drawn too |
 | S14 own action arrays | done: content special-status tables (Falco verified unchanged; Ganondorf 0 stand-ins) |
 | S15 P4 memory | open, and it blocks mixed matches: one content with three of the original cast overflows the heap at battle start, and so does any two-content mix; mirrors fit. Lab ("p4q", Dream Land): Donkey Kong's setup takes 49.9 KB (26.3 KB pack, 2.8 KB native shield pose, 11.6 KB animation heap), Bowser's 179.9 KB (a 145.3 KB file pool: model 112.5 KB, of which 37.1 KB geometry (4.5 KB of it model-part variants), 41 KB MObj texture frames and palettes, about 21 KB textures its lists load and other data, 12 KB structure; motion 11 KB, Clown Copter 11.3 KB, shield pose 5.1 KB; a 23.2 KB animation heap). Content file paths are now computed instead of stored (1,558 strings), which gives every match 47 KB: the four originals end setup with 53.2 KB, and Bowser with three originals gets past Kirby's load but runs out making parts. The match tables (motion descriptors, CPU attack lists and the Remix routines they name: 48 KB for the fourteen) then left the binary for `nitro:/p4/<name>.tab`, read into the heap only for the contents a scene makes fighters of (`ndsP4LoadTables`; "p4r": `nds_p4_data.o` 72.5 -> 25.0 KB, the arena 918.5 -> 992.0 KB). The four originals end a 300-frame lab run with 65.0 KB, after the caches that keep a free floor (stage GX body 25.3 KB, lean spare 17.7 KB, world caches 13.3 KB) took theirs; Bowser with three originals now makes all four fighters and stops at Kirby's hat admission with 17.3 KB free (the admission keeps the 25.6 KB floor). Bowser costs about 177 KB more than Donkey Kong (setup +133.5 KB, his native images +27 KB, 16.4 KB more before setup), against about 96 KB that match can give. A content's match now loads its select-screen pack ("p4s", `ndsP4SetupPackFiles`): Main whole, the model without the display lists its native owner image draws -- every model-part variant the image carries is pruned too, not only part 0 (Bowser's model 112.5 -> 75.4 KB kept, Banjo's 162.9 -> 86.9, Crash's 143.2 -> 79.7) -- and the pack's manifest (`fighters/preview/<kind>.ext`, the original cast's BEX1 rows) restores the Main pointers into the content's other files, loading them, before the source's `ftManagerSetupFilesKind` publishes the file globals. Bowser's file setup 183.4 -> 124.6 KB. One content beside Samus, Link and Kirby (Dream Land, 600 frames) now plays for nine of the fourteen, 0 native failures: low-water Falco 48.6 KB, Wario 48.4, Peach 25.8, Roy 24.8, Marth 15.0, Ganondorf 13.7, Bowser 11.3, Wolf 7.8 KB (the floor is 25.6 KB); Lanky, Sheik, Sonic and Dedede stop at Kirby's hat admission (33.6-44.9 KB free), Crash and Banjo run out at Kirby's setup. Per-content setup ("p4s"): Wolf 147.8 KB of which extern bank 0x6D 47.1 KB (only the Wolfen's four texture pointers name it, and its native entry packet carries those pixels, as Fox's Arwing's does) and his shield-pose file 29.1 KB; Dedede 152 KB of which pack 53.7, shield pose 20.4, own special files 28.3. The contents' own shield-pose files are 20-42 KB (Lanky 41.8, Sheik 38.1, Sonic 35.4, Wolf 29.2, Banjo 25.8, Marth and Roy 25.0, Crash 22.6, Peach 22.3, Dedede 20.4; Bowser 5.1) and run the source Event32 path; Falco, Ganondorf and Wario load their parent's raw file. Both are now done ("p4u"). The Wolfen's four texture pointers are generated as baked references (`NDSP4BakedRef`, `ndsP4NativeOwnsDependency`; an entry article's foreign pointers must all be G_SETTIMG images or the generator fails), so bank 0x6D never loads: Wolf's file setup 155.5 -> 108.4 KB. Each content guards with a native NSP1 package (`scripts/p4/p4_shield_pose.py`, which reproduces seven of the original cast's nine packages byte for byte and differs in the other two only by the token it reserves): Wolf 29.1 -> 3.0 KB, Sheik 38.0 -> 5.1, Lanky 41.8 -> 10.9, Sonic 35.3 -> 6.7, Banjo 25.7 -> 3.2, Marth and Roy 24.9 -> 7.1 (their guard poses reach 530 units, past Q6's s16, so a wide-value token carries an s32), Crash 22.5 -> 4.0, Peach 22.2 -> 4.4, Dedede 20.3 -> 2.3, Bowser 5.0 -> 1.6 KB; Falco and Ganondorf use Fox's and Captain's packages (same file, same nine targets); Wario keeps Mario's raw file (no Mario package). A content package keeps its dobj_lookup rows in the heap (the shared scratch is in DTCM, sized for the original cast; 40 rows overran the boot stack's margin) and, past 58 words, its own decode scratch (Lanky's longest script is 491 words). With player 0 held in shield, Wolf, Marth, Lanky, Falco, Ganondorf and Sonic mirrors apply the native pose about 200 times in 300 frames, 0 decode failures, 0 native failures. One content beside Samus, Link and Kirby, 600 frames, low-water: Falco 55.7 KB, Wolf 54.2, Wario 48.9, Peach 38.2, Roy 35.5 (above the floor); Marth 25.2, Ganondorf 20.0, Lanky 18.8, Sonic 14.7, Sheik 6.6 (below it); Bowser and Dedede stop at Kirby's hat admission (63.6 and 46.2 KB free: Kirby's three copy hats in both details take about 38 KB and the admission keeps the 25.6 KB floor), Crash and Banjo still run out at Kirby's setup. Owner 2026-10-08, asked with those numbers: lower content fidelity rather than a character-select budget. A content in a battle of three or four fighters now draws its low-detail model in the source's KO and pause close-ups too (`ndsP4ContentLowDetailOnly`; `ftParamSetModelPartDetailAll` keeps it low), so its high-detail owner image is never admitted; one- and two-fighter battles keep both. The largest-first image preload also passes the player now (a content outside port 0 preloaded its parent's images). "p4v": Bowser 43.8 KB, Dedede 30.7, Sheik 36.1, Sonic 44.3, Lanky 52.7, Ganondorf 45.8, Marth 46.2 -- twelve of the fourteen above the floor beside Samus, Link and Kirby; Crash stops at the hat admission with 53.6 KB free, Banjo with 15.3. Sonic's four-CPU mirror overflows the heap at fighter setup, Crash's leaves 7.7 KB ("Memory" above). The pack now prunes every alternate model part, not only the ones the owner image carries ("p4w"): a variant the image does not carry declines the native draw whether its slot names a source list or a root cell, and no ROM draws source lists, so its bytes were dead. Model kept: Banjo 86.9 -> 62.9 KB (40 variant roots), Crash 79.7 -> 72.6; packs Banjo 103.6 -> 78.9 KB, Crash 91.2 -> 83.9, Peach 52.1 -> 45.0. Beside Samus, Link and Kirby: Crash stops at the hat admission with 60.7 KB free (about 1 KB short), Banjo with 39.0; Peach's low-water is 41.9 KB. A special slot naming a file outside the content's closure now reads NULL unless another fighter of the match loaded it, as Remix's status-buffer lookup does; only a lab stand-in (the parent's file in place of a donor file) still loads whole (`OpenSpecialMask`). Banjo names Captain's Falcon Kick and car file (26 KB), which his closure never loads and nothing of his reads: "p4x" Banjo's setup 168.8 -> 142.7 KB. He and Crash still stop at the hat admission, with 64.0 and 59.8 KB free: Kirby's three hats in both details take about 38.5 KB, and the 88.5 KB frontend-overlay tail the largest-first preload fills first (Crash's low image 63.8 KB and Kirby's 24.3 KB) has 336 B left. Lanky's low-water is 51.6 KB, Sheik's 37.2. A battle of three or four fighters now loads each content's low-detail pack (`fighters/battle/<kind>.fpc`, `ndsP4LowDetailBattle`, `p4_preview_pack.py --battle-out`; "p4y"): the select pack less what only the high detail reads there -- the MObjs, matanims and textures of every joint whose low DObjDesc names its own list (the low detail takes a joint without one from the high rows: lbCommonSetupFighterPartsDObjs, ftParamSetModelPartDetailAll, the hidden parts) and of the high model-part rows -- with the slots naming them NULL; both JointTrees and the per-joint arrays stay whole. The select screen, one- and two-fighter battles and Results keep the select pack, and one manifest serves both. Packs: Crash 83.9 -> 53.5 KB, Bowser 83.9 -> 58.6, Banjo 78.9 -> 56.0, Lanky 62.0 -> 40.7, Ganondorf 60.5 -> 40.1, Dedede 59.2 -> 40.1, Sonic 58.1 -> 38.0, Peach 45.0 -> 31.2, Marth 53.9 -> 41.9, Roy 44.8 -> 33.0, Sheik 36.7 -> 26.3, Wario 45.5 -> 35.4, Falco 26.9 -> 21.8; Wolf's details share one tree. Beside Samus, Link and Kirby (600 frames, 0 native failures), low-water: Falco 63.1 KB, Wolf 62.3, Marth 55.3, Bowser 53.0, Peach 53.0, Ganondorf 50.2, Lanky 49.2, Roy 49.0, Sonic 49.0, Wario 47.0, Sheik 46.2, Crash 38.3, Dedede 38.2 -- thirteen of fourteen above the floor. Banjo passes the hat admission and ends at 19.8 KB: his match grows the AObj pool 6.5 KB in 150 frames (180 allocations, his Kazooie joints' animations), and the front-end tail is full before the admission (Kirby's two images, Link's high, 12.6 KB of other scene assets), so hats taken image by image from it gain nothing (measured, not kept). His own special3 (9.0 KB, a lab stand-in of 2.2 KB today) will cost a shipping build 6.8 KB more The shipping image with all fourteen (playtest "play-1008b") is 204 KB larger than the original cast's (.main +148 KB, .main.rw +12 KB, .main.bss +24 KB, the menu overlay +20 KB, of which newlib's floating-point formatter 18 KB for one `snprintf`, now `sniprintf`), and the VS select halted entering: its preview arenas (24 KiB shared, 80 KiB a slot) asked the heap for more than it had, and `syTaskmanMalloc` halts on overflow. The pool now asks `ndsSyMallocWouldFit` for the whole set and switches the previews off when it does not fit (the select opens with 304,936 B free). The owner-image binding is a table per image (`NDSImgBindDesc`) instead of each owner's inlined field assignments, and the P4 fighters' routine files are `-Os`: .main -21.5 KB. The P4 previews themselves need 100-150 KB a slot (pack plus high-detail mesh: Crash 148, Banjo 135, Bowser 117, against the original cast's 55 KB at most), so the select's previews need a budget per slot, not four 80 KiB arenas. |

@@ -1084,6 +1084,18 @@ DIRECT_POLICY_COMBINE_ALIASES = {
     # vertices have SHADEa == 1 -- the same proof _check_combine_alias_alpha
     # runs per triangle for the Pikachu alias.
     (0xfcfffe05, 0xff1679ff): (0xfcfffe05, 0xff167dff),
+    # NOT exact (P4, EXTRA's Meta Knight, model 0x15EE lists at 0x9400 and
+    # 0x9528): two unlit translucent 32x32 CI4 quads, PRIM alpha 0x30, whose
+    # combine reads COMBINED in cycle 0 and LOD_FRACTION alpha in cycle 1
+    # (an exporter's malformed pair; on the N64 the quads come out faint or
+    # invisible). Family 0 draws their texels at texture alpha.
+    # docs/P4/P4_STATUS.md "EXTRA" lists it until a ground-truth capture.
+    (0xfc123245, 0x00400087): (0xfc127e05, 0xff17f3ff),
+    # NOT exact (P4, Meta Knight's eyes, model 0x15EE lists at 0x97C0 and
+    # 0x9AA0): colour PRIM*SHADE*PRIM (PRIM 0xF8F8C0), alpha TEXEL0a*SHADEa
+    # through a 64x64 IA8 mask. Family 0 draws the mask's own intensity
+    # (white) for the colour: pale yellow eyes come out near white.
+    (0xfc321803, 0xff17ffff): (0xfc127e05, 0xff17f3ff),
 }
 DIRECT_POLICY_TEXTURED_EPOCHS = frozenset((0, 4, 5, 19, 24, 30, 31, 47, 48))
 DIRECT_POLICY_LIT_ONLY_EPOCHS = frozenset(
@@ -8231,20 +8243,28 @@ def _verify_owner_accesspart(repo_root: Path, owner_name: str) -> None:
 def _build_owner_accessory_program(
         repo_root: Path, context: dict[str, object], owner_name: str,
         detail: str, payload: bytes, canonical_offsets: tuple[int, ...],
-        root_rows_by_offset) -> dict[str, object]:
-    """Canonical with the costume accessory's list inserted at its joint."""
+        root_rows_by_offset, base: dict[str, object] | None = None,
+        program_name: str = "Accessory") -> dict[str, object]:
+    """Canonical -- or the program `base`, a P4 donor's live vector -- with
+    the costume accessory's list inserted at its joint."""
     joint_id, accessory_offset, before = OWNER_ACCESSORY_PARTS[owner_name]
     _verify_owner_accesspart(repo_root, owner_name)
-    descriptors = _owner_joint_descriptors(payload, owner_name, detail, {})[:-1]
-    selected = tuple(sorted(_owner_selected_descriptor_indices(
-        owner_name, len(descriptors))))
-    joints, bindings = _owner_root_program_joint_bindings(
-        context, payload, owner_name, detail, descriptors, selected)
+    if base is None:
+        descriptors = _owner_joint_descriptors(payload, owner_name, detail, {})[:-1]
+        selected = tuple(sorted(_owner_selected_descriptor_indices(
+            owner_name, len(descriptors))))
+        joints, bindings = _owner_root_program_joint_bindings(
+            context, payload, owner_name, detail, descriptors, selected)
+        base_offsets = canonical_offsets
+    else:
+        joints = tuple(base["root_joints"])
+        bindings = tuple(base["root_bindings"])
+        base_offsets = tuple(base["root_offsets"])
     if joint_id not in joints:
         raise ValueError(
             f"{owner_name} {detail}: accessory joint {joint_id} draws no root")
     joint_ordinal = joints.index(joint_id)
-    if canonical_offsets[joint_ordinal] == accessory_offset:
+    if base_offsets[joint_ordinal] == accessory_offset:
         raise ValueError(f"{owner_name} {detail}: accessory is canonical")
     appendix = dict((offset, binding) for binding, offset in
                     context.get("root_program_appendix_specs", ()))
@@ -8254,8 +8274,8 @@ def _build_owner_accessory_program(
             f"binding {appendix.get(accessory_offset)} != joint {joint_id}'s "
             f"binding {bindings[joint_ordinal]}")
     at = joint_ordinal if before else joint_ordinal + 1
-    root_offsets = (canonical_offsets[:at] + (accessory_offset,) +
-                    canonical_offsets[at:])
+    root_offsets = (base_offsets[:at] + (accessory_offset,) +
+                    base_offsets[at:])
     root_joints = joints[:at] + (joint_id,) + joints[at:]
     root_bindings = (bindings[:at] + (bindings[joint_ordinal],) +
                      bindings[at:])
@@ -8271,16 +8291,16 @@ def _build_owner_accessory_program(
     parents = tuple(INVALID_U8 for _ in root_offsets)
     root_contexts = [context for _ in program_roots]
     cross = _derive_owner_root_program_cross_slots(
-        context, owner_name, detail, "Accessory", program_roots,
+        context, owner_name, detail, program_name, program_roots,
         root_joints, root_bindings, root_contexts)
     _assert_owner_root_program_vertex_cache(
-        repo_root, owner_name, detail, root_offsets, {accessory_offset},
-        cross, canonical_offsets)
+        repo_root, owner_name, detail, root_offsets,
+        set(root_offsets) - set(canonical_offsets), cross, canonical_offsets)
     _verify_program_roots_lit(
-        context, owner_name, detail, "Accessory", program_roots,
+        context, owner_name, detail, program_name, program_roots,
         program_light_indices, root_contexts)
     return {
-        "name": "Accessory",
+        "name": program_name,
         "roots": program_roots,
         "light_indices": program_light_indices,
         "binding_parents": parents,
@@ -8847,6 +8867,17 @@ def build_owner_root_programs(
             programs.append(_build_owner_accessory_program(
                 repo_root, context, owner_name, detail, payload,
                 canonical_offsets, root_rows_by_offset))
+            continue
+        if isinstance(events, tuple) and len(events) == 2 and events[0] == "accesspart":
+            # ("accesspart", base): a P4 donor's earlier program with the
+            # costume accessory (scripts/p4/p4_native_owner.py).
+            base = next((row for row in programs if row["name"] == events[1]), None)
+            if base is None:
+                raise ValueError(
+                    f"{owner_name} {program_name} requires {events[1]} first")
+            programs.append(_build_owner_accessory_program(
+                repo_root, context, owner_name, detail, payload,
+                canonical_offsets, root_rows_by_offset, base, program_name))
             continue
         overrides = _owner_root_program_overrides(
             repo_root, owner_name, detail, events)

@@ -69,7 +69,9 @@ import p4_contents  # noqa: E402
 
 # Per Remix name: the content's directory in FGM.asm paths ("Falco/sounds/66"),
 # which is its registry title, and its export directory (its registry name).
-CONTENT_DIRS = {row["remix"]: row["title"] for row in p4_contents.load_registry()}
+# The folder FGM.asm's add_sound rows name: the title, or EXTRA's
+# ../build/extra_characters/<folder> (contents.json `sounds`).
+CONTENT_DIRS = {row["remix"]: row.get("sounds", row["title"]) for row in p4_contents.load_registry()}
 EXPORT_DIRS = {row["remix"]: row["name"] for row in p4_contents.load_registry()}
 
 
@@ -313,9 +315,11 @@ def build(staging: Path, contents: list[str], out_dir: Path) -> dict:
 
 def remix_songs(bass_out: str) -> dict[int, str]:
     """bass.out's MIDI lines: "Added MIDI_<NAME>(<path>)" and
-    "MIDI_<NAME>_ID: 0x.." -> {id: path relative to the donor src/}."""
+    "MIDI_<NAME>_ID: 0x.." -> {id: path relative to the staging root}. The
+    paths are relative to the donor src/: Remix's own under ../src/, EXTRA's
+    appended characters' under ../build/extra_characters/."""
     paths = {m.group(1): m.group(2) for m in
-             re.finditer(r"Added MIDI_(\w+)\(\.\./src/([^)]+)\)", bass_out)}
+             re.finditer(r"Added MIDI_(\w+)\(\.\./([^)]+)\)", bass_out)}
     songs = {}
     for m in re.finditer(r"^MIDI_(\w+)_ID: 0x([0-9A-Fa-f]+)", bass_out, re.M):
         if m.group(1) in paths:
@@ -340,7 +344,7 @@ def build_bgm(staging: Path, content: str, export_dir: Path, out_dir: Path) -> l
     rel = songs.get(bgm_id)
     if rel is None:
         raise ValueError(f"{content}: victory BGM {bgm_id:#x} has no MIDI line in bass.out")
-    source = staging / "src" / rel
+    source = staging / rel
     name = f"bgm_p4_{bgm_id:02x}"
     output = out_dir / f"{name}.bin"
     subprocess.run([sys.executable, str(BGM_RENDERER), "--repo", str(ROOT),

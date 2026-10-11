@@ -97,3 +97,7 @@ $(NDS_P4_GEN)/mmario/13.fpc: $(PROJECT_ROOT)/scripts/p4/p4_source_pack.py \
 $(NITROFS_DIR)/fighters/preview/13.fpc: $(NDS_P4_GEN)/mmario/13.fpc
 	@mkdir -p $(dir $@)
 	@cp $< $@
+
+# The later contents' routines, size-optimized as the Makefile's first
+# fourteen are (resident in every scene; they run only in their specials).
+nds_p4_piano.o nds_p4_metaknight.o nds_p4_mrgaw.o nds_p4_snake.o: CFLAGS += -Os

@@ -1126,6 +1126,11 @@ class Placement:
     # pixel replication applied to the 5-row glyphs before the frame's 4/5.
     text: str | None = None
     text_scale: int = 1
+    # P4: drop the sprite's fully transparent right-hand columns before it is
+    # placed. Lossless (those texels show what is under them either way); a
+    # Remix name texture can carry such padding past the card it is drawn on
+    # (EXTRA's Meta Knight: 72 wide, ink through column 62, on a 66-wide card).
+    trim_clear: bool = False
 
 
 # The menu font's glyphs by character, filled once convert_font has run.
@@ -1189,6 +1194,11 @@ def place_raster(fileobj: RelocFile | None, part: Placement, offset: int,
                                               (255, 255, 255), alpha_ramp=True,
                                               width_override=period_s,
                                               lut_override=lut_offset)
+        if part.trim_clear:
+            width = len(raster[0])
+            while width > 1 and not any(row[width - 1][3] for row in raster):
+                width -= 1
+            raster = [row[:width] for row in raster]
         prim = part.tint if part.tint is not None else (sprite.red,
                                                         sprite.green,
                                                         sprite.blue)
@@ -2973,7 +2983,8 @@ def css_gate(player: int, state: str, lut: str, shut: bool,
             if not isinstance(name, tuple):
                 name = ("MNPlayersCommon", name)
             parts.append(Placement(name[0], name[1],
-                                    start + 22, 201, False))
+                                    start + 22, 201, False,
+                                    trim_clear=name[0].startswith("p4:")))
     if team_label is not None:
         # mnPlayersVSMakeTeamSelect, mnplayersvs.c:487: RED/BLUE/GREEN is a
         # 24x10 source sprite at (player*69+34, 131), above the card.  It is

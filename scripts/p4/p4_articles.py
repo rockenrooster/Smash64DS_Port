@@ -121,6 +121,12 @@ ARTICLES = {
         # (PIANO_PROJECTILE_HITBOX), the book's model in the file it names.
         {"name": "book", "special": 1, "wpattributes": 0x0},
     ),
+    "mrgaw": (
+        # GameAndWatchSpecial.asm _blaster_fireball_struct: WPAttributes at 0
+        # of MRGAW file 6 (MRGAW_FILE_PROJECTILE_HITBOX), the sausage's model
+        # in the file it names (his special file 3).
+        {"name": "chef", "special": 1, "wpattributes": 0x0},
+    ),
     "dedede": (
         # items/WaddleDee.asm, WaddleDoo.asm and Gordo.asm item_info_array:
         # ITAttributes at 0x40, 0xB0 and 0x120 of WADDLE_DEE_INFO (file 6),

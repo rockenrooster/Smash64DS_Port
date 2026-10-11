@@ -311,6 +311,18 @@ typedef struct NDSP4Overrides
      * intangible while thrown, as Yoshi's (yoshishared.asm
      * yoshi_throw_fix_1). */
     sb32 thrown_hidden;
+    /* Character.action_replace_map: {original, replacement} status pairs,
+     * ended by 0xFFFF. ftMainSetStatus keeps the original in fp->status_id
+     * and sets up the replacement's descriptor, motion and procs (Meta
+     * Knight's jab and forward tilt). */
+    const u16 *status_replace;
+    /* Character.static_part (EXTRA StaticPart.asm): joints that always
+     * exist. Setup creates them, ftMainSetStatus never installs or ejects
+     * them as hidden parts, a motion that does not install one gives it no
+     * track, and the guard skips them. Bit 0x80000000 >> (joint - 4) of word
+     * 0 for joints 4-35, of word 1 for the next 32 (Meta Knight's left-hand
+     * item joint). */
+    u32 static_parts[2];
 } NDSP4Overrides;
 
 /* Item kinds past the source's last (nITKindEnumCount, as Remix numbers its
@@ -341,6 +353,7 @@ sb32 ndsP4ColAnimEnd(GObj *fighter_gobj);
 #define NDS_P4_WP_KIND_SONIC_SPRING (nWPKindMonsterEnd + 5)
 #define NDS_P4_WP_KIND_WADDLEDOO_BEAM (nWPKindMonsterEnd + 6)
 #define NDS_P4_WP_KIND_PIANO_BOOK (nWPKindMonsterEnd + 7)
+#define NDS_P4_WP_KIND_MRGAW_CHEF (nWPKindMonsterEnd + 8)
 
 /* Remix's custom reflect kind (Reflect.asm reflect_type.CUSTOM): the low
  * half of FTSpecialColl.kind (the N64's second halfword), the routine index
@@ -676,6 +689,30 @@ FTStatusDesc *ndsP4SpecialStatusDescs(const FTStruct *fp,
                                       const FTStatusDesc *parent);
 /* ftMainSetStatus epilogue: the content's on_status hook. */
 void ndsP4AfterSetStatus(GObj *fighter_gobj, s32 status_id);
+/* ftMainSetStatus: the status the content sets up in place of status_id
+ * (NDSP4Overrides.status_replace), or status_id. */
+s32 ndsP4ReplaceStatus(const FTStruct *fp, s32 status_id);
+/* NDSP4Overrides.static_parts: TRUE when joint_id is one of the fighter's
+ * static parts. */
+sb32 ndsP4StaticPart(const FTStruct *fp, s32 joint_id);
+/* lbCommonAddFighterPartsFigatree: TRUE when the motion gives this static
+ * part no track (StaticPart.asm skip_static_parts_: its anim desc installs no
+ * hidden part rooted at it). */
+sb32 ndsP4StaticPartSkipsAnim(const FTStruct *fp, s32 joint_id);
+/* ftManagerMakeFighter: the setup_parts words with the static parts added
+ * (always_create_static_parts_), or setup_parts. */
+u32 *ndsP4SetupParts(const FTStruct *fp, u32 *setup_parts);
+/* ftManagerMakeFighter's wrapper: the content being built (0 after), which
+ * the static-part tests read until the fighter's own content is written. */
+void ndsP4SetMakeContent(u32 content);
+/* ftMainSetStatus' hidden-part loop: the source's install and eject, which
+ * leave a static part alone (prevent_update/eject_static_part_). */
+void ndsP4UpdateHiddenPartID(FTStruct *fp, s32 hiddenpart_id);
+void ndsP4EjectHiddenPartID(FTStruct *fp, s32 hiddenpart_id);
+/* The guard's joint count and pose walks: the static part's DObj, which the
+ * guard tables leave out (fix_ftCommonGuardUpdateJoints_ and
+ * lbCommonAddDObjAnimJointAll_extended_). */
+sb32 ndsP4StaticPartDObj(const DObj *dobj);
 /* ftCommonAppearSetStatus: the content's entry row, or NULL. */
 const NDSP4Entry *ndsP4Entry(const FTStruct *fp);
 /* The content's effect makers (S6), or NULL. */

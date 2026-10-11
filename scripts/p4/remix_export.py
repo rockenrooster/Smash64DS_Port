@@ -515,6 +515,16 @@ class EventDecoder:
             return None
         return ("ram", value)
 
+    def _null_pointer(self, loc: tuple) -> bool:
+        """The pointer word at loc is zero and nothing relocates it: NULL."""
+        if self._word(loc) != 0:
+            return False
+        if loc[0] == "ram":
+            return True
+        if loc[1] not in self.slots:
+            self.slots[loc[1]] = self.rom.reloc_slots(loc[1])
+        return loc[2] not in self.slots[loc[1]]
+
     def label(self, loc: tuple) -> str | None:
         if loc[0] == "ram":
             names = self.sym_by_addr.get(loc[1])
@@ -577,6 +587,15 @@ class EventDecoder:
                     break
                 if op == EV_RETURN:
                     block["exit"] = "return"
+                    break
+                if op in (EV_GOTO, EV_SUBROUTINE) and self._null_pointer(self._advance(cur, 4)):
+                    # A NULL target (EXTRA's binary movesets: MRGAW's IDLE
+                    # calls SUBROUTINE(0)): the call or jump sets the script
+                    # to NULL and ftMainUpdateMotionEventsAll stops it there
+                    # for the rest of the motion; nothing past it runs.
+                    cmd["to"] = None
+                    cmd["null"] = True
+                    block["exit"] = "null"
                     break
                 if op in (EV_GOTO, EV_SUBROUTINE, EV_PARALLEL, EV_SETTHROW, EV_SETDAMAGETHROWN):
                     target = self._pointer(self._advance(cur, 4), k)

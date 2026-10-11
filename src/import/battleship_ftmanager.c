@@ -122,8 +122,13 @@ static void *ndsFTManagerPoolMalloc(size_t size, u32 align)
 static FTData **const sNdsP4FtDataReal = dFTManagerDataFiles;
 static FTData **sNdsP4FtDataView = dFTManagerDataFiles;
 #define dFTManagerDataFiles sNdsP4FtDataView
+/* EXTRA's static parts (nds_p4.h static_parts) join the setup selection. */
+#define lbCommonSetupFighterPartsDObjs(root_, container_, detail_, dobjs_, setup_, ...)     lbCommonSetupFighterPartsDObjs(root_, container_, detail_, dobjs_,                                                 ndsP4SetupParts(fp, setup_), __VA_ARGS__)
 #endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftmanager.c"
+#if NDS_P4
+#undef lbCommonSetupFighterPartsDObjs
+#endif
 #if NDS_P2_ARM9_WRAM || NDS_P2_1P_GAME
 #undef syTaskmanMalloc
 #endif
@@ -1394,7 +1399,9 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
                 }
             }
 #endif
+            ndsP4SetMakeContent((p4 != NULL) ? content : 0u);
             fighter_gobj = ndsBaseFTManagerMakeFighter(desc);
+            ndsP4SetMakeContent(0u);
             sNdsP4FtDataView = sNdsP4FtDataReal;
             if (fighter_gobj != NULL)
             {

@@ -1066,8 +1066,12 @@ $(foreach row,$(NDS_P4_REGISTRY),$(eval NDS_P4_$(call nds_p4_field,$(row),2) ?= 
 NDS_P4_ENABLED_ROWS := $(foreach row,$(NDS_P4_REGISTRY),$(if $(filter 1,$(NDS_P4_$(call nds_p4_field,$(row),2))),$(row)))
 NDS_P4_ENABLED := $(foreach row,$(NDS_P4_ENABLED_ROWS),$(call nds_p4_field,$(row),1))
 override NDS_P4 := $(if $(NDS_P4_ENABLED),1,0)
-NDS_P4_STAGING ?= $(PROJECT_ROOT)/builds/p4-staging/remix-5e04fe7
-NDS_P4_EXPORT ?= $(PROJECT_ROOT)/builds/p4-staging/export
+# S12: the EXTRA staging (scripts/p4/stage_extra.py) is Remix at the same pin
+# plus EXTRA's appended Meta Knight, MRGAW and Snake; the fifteen main-tree
+# contents generate the same data from it as from Remix's own, but for the
+# Remix RAM addresses a few synthesized scripts carry (2026-10-11).
+NDS_P4_STAGING ?= $(PROJECT_ROOT)/builds/p4-staging/extra-96621af
+NDS_P4_EXPORT ?= $(PROJECT_ROOT)/builds/p4-staging/export-x
 # Lab builds only: a donor status routine with no DS port yet runs a stand-in
 # (generate_p4_fighter.py --lab-fallback, listed in each manifest) instead of
 # failing the generator, so every content can be built and probed early.

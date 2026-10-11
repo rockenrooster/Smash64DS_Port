@@ -9632,10 +9632,24 @@ void lbCommonAddFighterPartsFigatree(DObj *root_dobj, void *figatree,
     {
         AObjEvent32 *anim_joint = *figatree_entries;
         FTParts *parts = ftGetParts(current_dobj);
+#if NDS_P4
+        /* EXTRA's static part (nds_p4.h static_parts): unless a hidden part
+         * of the motion is rooted at it, it has no track in the figatree and
+         * takes no entry (StaticPart.asm skip_static_parts_). */
+        const sb32 static_skip =
+            ((parts != NULL) && (root_dobj->parent_gobj != NULL) &&
+             (ndsP4StaticPartSkipsAnim(ftGetStruct(root_dobj->parent_gobj),
+                                       parts->joint_id) != FALSE)) ?
+                TRUE : FALSE;
 
+        anim_joint = (static_skip != FALSE) ? NULL :
+            ndsRelocResolvePointerFromFileBase(figatree, anim_joint,
+                                               sizeof(*anim_joint));
+#else
         anim_joint = ndsRelocResolvePointerFromFileBase(figatree,
                                                         anim_joint,
                                                         sizeof(*anim_joint));
+#endif
         if (anim_joint != NULL)
         {
             if (pose_engine != FALSE)
@@ -9700,11 +9714,16 @@ void lbCommonAddFighterPartsFigatree(DObj *root_dobj, void *figatree,
                 parts->is_have_anim = FALSE;
             }
         }
-        figatree_entries++;
-        pose_entries++;
-#if NDS_R2_FTANIM_TRACK
-        trk_index++;
+#if NDS_P4
+        if (static_skip == FALSE)
 #endif
+        {
+            figatree_entries++;
+#if NDS_R2_FTANIM_TRACK
+            trk_index++;
+#endif
+        }
+        pose_entries++;
         current_dobj =
             ndsLBCommonGetTreeDObjNextFromRoot(current_dobj, root_dobj);
     }
@@ -9756,9 +9775,21 @@ void lbCommonAddDObjAnimJointAll(DObj *dobj, AObjEvent32 **anim_joint,
     }
     while (current_dobj != NULL)
     {
-        AObjEvent32 *script =
-            ndsRelocResolvePointerFromFileBase(file_base, *anim_joint,
-                                               sizeof(AObjEvent32));
+        AObjEvent32 *script;
+
+#if NDS_P4
+        /* The guard's walk passes over EXTRA's static parts: no animation,
+         * no entry (StaticPart.asm lbCommonAddDObjAnimJointAll_extended_). */
+        if (ndsP4StaticPartDObj(current_dobj) != FALSE)
+        {
+            current_dobj->anim_wait = AOBJ_ANIM_NULL;
+            current_dobj =
+                ndsLBCommonGetTreeDObjNextFromRoot(current_dobj, dobj);
+            continue;
+        }
+#endif
+        script = ndsRelocResolvePointerFromFileBase(file_base, *anim_joint,
+                                                    sizeof(AObjEvent32));
 
         if (script != NULL)
         {

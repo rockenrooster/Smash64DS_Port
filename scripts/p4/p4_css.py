@@ -69,9 +69,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import p4_contents  # noqa: E402
 
 CONTENT = {row["remix"]: row["id"] for row in p4_contents.load_registry()}
-# EXTRA-tree selections (Meta Knight, MRGAW, Snake) have no portrait in the main
-# tree's file 0xA05 until the EXTRA staging lands; they draw the NONE plate.
-EXTRA_TREE = {"METAKNIGHT", "MRGAW", "SNAKE"}
 
 
 class CssError(SystemExit):
@@ -98,14 +95,22 @@ def asm_scope_constants(text: str, scope: str) -> dict[str, int]:
 
 
 def add_to_css_rows(text: str) -> dict[str, dict]:
+    """add_to_css rows. EXTRA's appended characters give the announcer FGM and
+    the name texture as numbers (`0x0609`, `0x00028970 + 0x10`) where Remix's
+    own rows name constants."""
     rows = {}
     pat = re.compile(r"add_to_css\(Character\.id\.(\w+),\s*([\w.]+),\s*([\d.]+),\s*(0x[0-9A-Fa-f]+),"
-                     r"\s*(\w+),\s*name_texture\.(\w+),\s*portrait_offsets\.(\w+),\s*(-?\w+)\)")
+                     r"\s*(\w+),\s*(name_texture\.\w+|0x[0-9A-Fa-f]+(?:\s*\+\s*0x[0-9A-Fa-f]+)?),"
+                     r"\s*portrait_offsets\.(\w+),\s*(-?\w+)\)")
     for m in pat.finditer(text):
         rows[m.group(1)] = {"fgm": m.group(2), "circle": float(m.group(3)),
                             "action": int(m.group(4), 16), "logo": m.group(5),
                             "name": m.group(6), "portrait": m.group(7)}
     return rows
+
+
+def hex_sum(expr: str) -> int:
+    return sum(int(t.strip(), 0) for t in expr.split("+"))
 
 
 def announcer_ids(fgm_text: str) -> dict[str, int]:
@@ -203,9 +208,9 @@ def main() -> int:
             content = CONTENT.get(token, 0)
             cell.update(fkind=None, content=content, locked=token not in built)
         # A selection this build does not compile shows Remix's NONE plate (the
-        # question mark), as do the EXTRA-tree three until their staging lands.
+        # question mark).
         key = token if token in portraits else None
-        if token in EXTRA_TREE or key is None or cell["locked"]:
+        if key is None or cell["locked"]:
             key = "NONE"
         cell["portrait"] = portraits[key]
         cell["flash"] = portraits[key] + FLASH_STRIDE
@@ -216,16 +221,22 @@ def main() -> int:
         row = rows.get(token)
         if row is None:
             raise CssError(f"{token}: no add_to_css row")
-        fgm_name = row["fgm"].rsplit(".", 1)[-1]
-        if fgm_name not in announce:
-            raise CssError(f"{token}: announcer FGM {row['fgm']} not found")
+        if row["fgm"].startswith("0x"):
+            fgm = int(row["fgm"], 16)
+        else:
+            fgm_name = row["fgm"].rsplit(".", 1)[-1]
+            if fgm_name not in announce:
+                raise CssError(f"{token}: announcer FGM {row['fgm']} not found")
+            fgm = announce[fgm_name]
+        name_sprite = (names[row["name"].split(".", 1)[1]] if row["name"].startswith("name_texture.")
+                       else hex_sum(row["name"]))
         logo = row["logo"]
         fighters.append({
             "token": token, "content": CONTENT[token],
-            "name_sprite": names[row["name"]],
+            "name_sprite": name_sprite,
             "logo": logo, "logo_sprite": logo_offsets[logo],
             "logo_x": logo_pos.get("X_" + logo, 0), "logo_y": logo_pos.get("Y_" + logo, 0),
-            "announce_fgm": announce[fgm_name], "circle": row["circle"], "action": row["action"],
+            "announce_fgm": fgm, "circle": row["circle"], "action": row["action"],
         })
     # The selectable source kinds' gate art follows the contents' in the bake.
     for token, kind in KINDS.items():

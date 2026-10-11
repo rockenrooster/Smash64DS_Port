@@ -809,3 +809,131 @@ def convert32_o2r(blob: bytes, eps: int = 0):
     if compacted is not None:
         new_body, new_slots = compacted
     return o2r_with_body(blob, new_body, new_slots)
+
+
+# ---------------------------------------------------------------------------
+# Event32 joint animations that stay event32 (a value past event16's range:
+# EXTRA's Meta Knight parks his entry's wing joints 16384 units away and grows
+# a joint past scale 8), refit as joint-synchronised linear keys within `eps`
+# event16 units of every frame of the exact curve, the policy _fit_joint
+# applies to FIGATREE streams. His two entries are 58 and 65 KB of one cubic
+# key a frame; refit they are about a third, and the figatree heap each
+# fighter reserves for its largest animation shrinks with them.
+
+EV32_SETVALBLOCK, EV32_SETVAL = 3, 4
+
+
+def _refit32_stream(cmds, eps: int):
+    """(event32 words, value floats) of one stream refit, or None to keep it:
+    the stream must open with a payload-less SetVal of every track it keys,
+    key only values, and end without looping."""
+    first = cmds[0]
+    if first[0] != OP_SETVAL or first[2]:
+        return None
+    flags = first[1]
+    for op, f, payload, values, _, _ in cmds[1:]:
+        if op in (OP_END, OP_BLOCK):
+            continue
+        if op not in (OP_SETVALBLOCK, OP_SETVAL, OP_SETVALRATEBLOCK, OP_SETVALRATE,
+                      OP_SETVAL0RATEBLOCK, OP_SETVAL0RATE) or (f & ~flags):
+            return None
+    if cmds[-1][0] != OP_END:
+        return None
+    end = _t_end(cmds)
+    if end <= 0 or end > 0x7FFF:
+        return None
+    tracks = [t for t in range(TRACKS) if flags & (1 << t)]
+    rows = _simulate_cmds(cmds, None, end + 1)
+    vals = {t: [row[t] for row in rows] for t in tracks}
+    if any(v is None for t in tracks for v in vals[t]):
+        return None
+
+    def fits(a, b):
+        for t in tracks:
+            va, vb = vals[t][a], vals[t][b]
+            for f in range(a + 1, b):
+                if abs(vals[t][f] - (va + (vb - va) * Fraction(f - a, b - a))) > eps:
+                    return False
+        return True
+
+    kept = [0]
+    while kept[-1] < end:
+        a = kept[-1]
+        b = a + 1
+        while b + 1 <= end and fits(a, b + 1):
+            b += 1
+        kept.append(b)
+    out = bytearray()
+
+    def key(op, payload, frame):
+        out.extend(struct.pack(">I", (op << 25) | (flags << 15) | payload))
+        for t in tracks:
+            out.extend(struct.pack(">f", float(vals[t][frame] / _ev16_scale(t))))
+
+    key(EV32_SETVAL, 0, 0)
+    for a, b in zip(kept, kept[1:]):
+        key(EV32_SETVALBLOCK, b - a, b)
+    out.extend(b"\0\0\0\0")
+    return bytes(out), vals, end
+
+
+def compact32_body(body: bytes, slots: dict[int, int], eps: int):
+    """An event32 joint-animation body refit (_refit32_stream) as a smaller
+    event32 body: (body, slots), or None. Every frame of each refit stream is
+    checked against the exact curve within `eps` (and a float's rounding)."""
+    if not slots:
+        return None
+    array_end = min(t for s, t in slots.items() if s < min(slots.values()))
+    joints = {s: t for s, t in slots.items() if s < array_end}
+    pointers = {s: t for s, t in slots.items() if s >= array_end}
+    if pointers:
+        return None
+    streams = {}
+    for target in sorted(set(joints.values())):
+        decoded = _decode32(body, target, pointers)
+        if decoded is None or decoded[1]:
+            return None
+        cmds = decoded[0]
+        refit = _refit32_stream(cmds, eps)
+        if refit is None:
+            o = cmds[-1][5]
+            streams[target] = body[target:o]
+            continue
+        data, vals, end = refit
+        check = _decode32(data + b"\0\0\0\0", 0, {})
+        if check is None:
+            raise CompactError(f"stream {target:#x}: refit does not decode")
+        rows = _simulate_cmds(check[0], None, end + 1)
+        for t, exact in vals.items():
+            for f in range(end + 1):
+                if abs(rows[f][t] - exact[f]) > eps + Fraction(1, 64):
+                    raise CompactError(f"stream {target:#x} track {t} frame {f}: "
+                                       f"{float(rows[f][t])} vs {float(exact[f])}")
+        streams[target] = data
+    out = bytearray(body[:array_end])
+    for i in range(0, array_end, 4):
+        if i in joints:
+            out[i:i + 4] = b"\0\0\0\0"
+    placed = {}
+    for target in sorted(streams):
+        while len(out) % 4:
+            out += b"\0"
+        placed[target] = len(out)
+        out += streams[target]
+    while len(out) % 16:
+        out += b"\0"
+    if len(out) >= len(body):
+        return None
+    return bytes(out), {s: placed[t] for s, t in joints.items()}
+
+
+def compact32_o2r(blob: bytes, eps: int = 0):
+    """An event32 joint-animation container refit and kept event32, or None."""
+    body, slots = _o2r_body(blob)
+    if body is None:
+        return None
+    result = compact32_body(body, slots, eps)
+    if result is None:
+        return None
+    new_body, new_slots = result
+    return o2r_with_body(blob, new_body, new_slots)

@@ -2361,6 +2361,116 @@ sb32 ndsP4CheckSpecialLent(GObj *fighter_gobj, sb32 (*check)(GObj *),
     return result;
 }
 
+s32 ndsP4ReplaceStatus(const FTStruct *fp, s32 status_id)
+{
+    const NDSP4Overrides *o = ndsP4Overrides(fp);
+    const u16 *map;
+
+    if ((o == NULL) || (o->status_replace == NULL))
+    {
+        return status_id;
+    }
+    for (map = o->status_replace; map[0] != 0xFFFFu; map += 2)
+    {
+        if ((s32)map[0] == status_id)
+        {
+            return map[1];
+        }
+    }
+    return status_id;
+}
+
+/* The content ftManagerMakeFighter is building: the fighter's own
+ * nds_p4_content is written after it returns, and its setup and first status
+ * already place the static parts. */
+static u32 sNdsP4MakeContent;
+
+void ndsP4SetMakeContent(u32 content)
+{
+    sNdsP4MakeContent = content;
+}
+
+static const NDSP4Overrides *ndsP4StaticOverrides(const FTStruct *fp)
+{
+    u32 content = (fp->nds_p4_content != 0u) ? fp->nds_p4_content : sNdsP4MakeContent;
+    const NDSP4Fighter *f = (content != 0u) ? ndsP4Fighter(content) : NULL;
+
+    return (f != NULL) ? f->overrides : NULL;
+}
+
+sb32 ndsP4StaticPart(const FTStruct *fp, s32 joint_id)
+{
+    const NDSP4Overrides *o;
+    u32 bit;
+
+    if ((joint_id < nFTPartsJointCommonStart) ||
+        (joint_id >= (nFTPartsJointCommonStart + 64)))
+    {
+        return FALSE;
+    }
+    o = ndsP4StaticOverrides(fp);
+    if (o == NULL)
+    {
+        return FALSE;
+    }
+    bit = (u32)(joint_id - nFTPartsJointCommonStart);
+
+    return (o->static_parts[bit >> 5] & (0x80000000u >> (bit & 31u))) ? TRUE : FALSE;
+}
+
+sb32 ndsP4StaticPartSkipsAnim(const FTStruct *fp, s32 joint_id)
+{
+    u32 word;
+    s32 i;
+
+    if (ndsP4StaticPart(fp, joint_id) == FALSE)
+    {
+        return FALSE;
+    }
+    /* The anim desc's hidden-part bits, each naming the row of the same
+     * index in the attributes' hidden-part table. */
+    word = fp->anim_desc.word & ~0x1Fu;
+
+    for (i = 0; word != 0u; i++, word <<= 1)
+    {
+        if ((word & 0x80000000u) &&
+            (fp->attr->hiddenparts[i].root_joint_id == joint_id))
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+u32 *ndsP4SetupParts(const FTStruct *fp, u32 *setup_parts)
+{
+    static u32 parts[GMCOMMON_PLAYERS_MAX][2];
+    const NDSP4Overrides *o = ndsP4StaticOverrides(fp);
+    u32 *words;
+
+    if ((o == NULL) || ((o->static_parts[0] | o->static_parts[1]) == 0u))
+    {
+        return setup_parts;
+    }
+    words = parts[fp->player & 3u];
+    words[0] = setup_parts[0] | o->static_parts[0];
+    words[1] = setup_parts[1] | o->static_parts[1];
+
+    return words;
+}
+
+sb32 ndsP4StaticPartDObj(const DObj *dobj)
+{
+    const FTParts *parts = dobj->user_data.p;
+
+    if ((parts == NULL) || (dobj->parent_gobj == NULL) ||
+        (dobj->parent_gobj->id != nGCCommonKindFighter))
+    {
+        return FALSE;
+    }
+    return ndsP4StaticPart(ftGetStruct(dobj->parent_gobj), parts->joint_id);
+}
+
 void ndsP4AfterSetStatus(GObj *fighter_gobj, s32 status_id)
 {
     const NDSP4Fighter *f =

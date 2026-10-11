@@ -1,6 +1,6 @@
 # Meta Knight — P4 character subplan
 
-**Status:** planned; source slices inspected, no DS implementation or performance pass claimed.  
+**Status:** ported (2026-10-11): every routine, his wings, static item joint and refit entries; play ROM verified in select, battle and Results ([P4_STATUS](../P4_STATUS.md) "EXTRA characters"). No performance pass claimed.  
 **Source:** `joaorb64/smashremix-plus-extra` at `96621afea26a83305abaf81add07dcf5a9c5fe3e`.  
 **Default production wave:** 6 (Revision 3). Parent: [master](../New_Characters.md).
 

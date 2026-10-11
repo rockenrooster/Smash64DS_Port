@@ -33,8 +33,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import remix_rom as R  # noqa: E402
 
 NO_SCRIPT = 0x80000000
-# DS-synthesized files live above the donor's largest ID (Remix: 5455 files).
-SYNTH_FILE_BASE = 0x1600
+# DS-synthesized files live above the donor's largest ID (Remix: 5455 files;
+# the EXTRA staging the P4 roster builds from, 5850 = 0x16DA).
+SYNTH_FILE_BASE = 0x1700
 # p4_anim_compact.py's fit tolerance, in FIGATREE units: 2/512 rad (0.22
 # degrees) of rotation, half a unit of translation. Remix keys its tracks
 # every one to three frames; the fit keeps every frame of every track within
@@ -372,16 +373,64 @@ CALLBACK_PORTS = {
     "PianoDSP.cmd_throw_ground_physics_": "ndsP4PianoDSPGroundThrowPhysics",
     "PianoDSP.cmd_throw_ground_collision_": "ndsP4PianoDSPGroundThrowMap",
     "PianoDSP.cmd_throw_air_collision_": "ndsP4PianoDSPAirThrowMap",
+    # src/port/nds_p4_metaknight.c (EXTRA). bass's log names each address
+    # by its first label: a scope's first routine carries the scope's name
+    # (NSP = NSP.air_initial, NSP.Start = NSP.Start.update, DSP.Attack =
+    # DSP.Attack.air_main, NSP.End = NSP.End.air_collision).
+    "MetaKnightSpecial.USP": "ndsP4MetaknightUSPAirInitial",
+    "MetaKnightSpecial.USP.ground_initial": "ndsP4MetaknightUSPGroundInitial",
+    "MetaKnightSpecial.USP.air_start_update": "ndsP4MetaknightUSPAirStartUpdate",
+    "MetaKnightSpecial.USP.main": "ndsP4MetaknightUSPMain",
+    "MetaKnightSpecial.USP.interrupt": "ndsP4MetaknightUSPInterrupt",
+    "MetaKnightSpecial.USP.physics": "ndsP4MetaknightUSPPhysics",
+    "MetaKnightSpecial.USP.collision": "ndsP4MetaknightUSPCollision",
+    "MetaKnightSpecial.NSP": "ndsP4MetaknightNSPAirInitial",
+    "MetaKnightSpecial.NSP.ground_initial": "ndsP4MetaknightNSPGroundInitial",
+    "MetaKnightSpecial.NSP.Start": "ndsP4MetaknightNSPStartUpdate",
+    "MetaKnightSpecial.NSP.Loop": "ndsP4MetaknightNSPLoopUpdate",
+    "MetaKnightSpecial.NSP.Loop.physics": "ndsP4MetaknightNSPLoopPhysics",
+    "MetaKnightSpecial.NSP.Loop.collision": "ndsP4MetaknightNSPLoopCollision",
+    "MetaKnightSpecial.NSP.End": "ndsP4MetaknightNSPEndAirCollision",
+    "MetaKnightSpecial.Jab": "ndsP4MetaknightJabStartUpdate",
+    "MetaKnightSpecial.Jab.Loop": "ndsP4MetaknightJabLoopUpdate",
+    "MetaKnightSpecial.TiltF": "ndsP4MetaknightTiltFUpdate",
+    "MetaKnightSpecial.DSP": "ndsP4MetaknightDSPGroundInitial",
+    "MetaKnightSpecial.DSP.air_initial": "ndsP4MetaknightDSPAirInitial",
+    "MetaKnightSpecial.DSP.Start": "ndsP4MetaknightDSPStartUpdate",
+    "MetaKnightSpecial.DSP.Start.physics": "ndsP4MetaknightDSPStartPhysics",
+    "MetaKnightSpecial.DSP.Start.ground_collision": "ndsP4MetaknightDSPStartGroundCollision",
+    "MetaKnightSpecial.DSP.Start.air_collision": "ndsP4MetaknightDSPStartAirCollision",
+    "MetaKnightSpecial.DSP.Attack": "ndsP4MetaknightDSPAttackAirMain",
+    "MetaKnightSpecial.DSP.Attack.air_physics": "ndsP4MetaknightDSPAttackAirPhysics",
+    # src/port/nds_p4_mrgaw.c (EXTRA).
+    "GameAndWatch2D.GameAndWatchNSP.main": "ndsP4MrgawNSPMain",
+    "GameAndWatch2D.GameAndWatchNSP.chef_refresh_": "ndsP4MrgawNSPRefresh",
+    "GameAndWatch2D.GameAndWatchNSP.air_collision_": "ndsP4MrgawNSPAirMap",
+    "GameAndWatch2D.GameAndWatchUSP.ground_initial_": "ndsP4MrgawUSPGroundInitial",
+    "GameAndWatch2D.GameAndWatchUSP.air_initial_": "ndsP4MrgawUSPAirInitial",
+    "GameAndWatch2D.GameAndWatchUSP.main_air_": "ndsP4MrgawUSPMain",
+    "GameAndWatch2D.GameAndWatchUSP.change_direction_": "ndsP4MrgawUSPChangeDirection",
+    "GameAndWatch2D.GameAndWatchUSP.physics_": "ndsP4MrgawUSPPhysics",
+    "GameAndWatch2D.GameAndWatchUSP.collision_": "ndsP4MrgawUSPMap",
+    "GameAndWatch2D.GameAndWatchDSP.ground_initial_": "ndsP4MrgawDSPGroundInitial",
+    "GameAndWatch2D.GameAndWatchDSP.air_initial_": "ndsP4MrgawDSPAirInitial",
+    "GameAndWatch2D.GameAndWatchDSP.main": "ndsP4MrgawDSPMain",
+    "GameAndWatch2D.GameAndWatchDSP.ground_collision_": "ndsP4MrgawDSPGroundMap",
+    "GameAndWatch2D.GameAndWatchDSP.air_collision_": "ndsP4MrgawDSPAirMap",
+    "GameAndWatch2D.GameAndWatchDSP.air_physics_": "ndsP4MrgawDSPAirPhysics",
+    "GameAndWatch2D.GameAndWatchDSP.attacks_main_": "ndsP4MrgawDSPAttacksMain",
 }
 
 # P4: entry_script cases of another kind a content's port carries
-# (NDS_P4_ENTRY_PORT): Bowser's Clown Copter in the Falcon Flyer's case.
+# (NDS_P4_ENTRY_PORT): Bowser's Clown Copter in the Falcon Flyer's case. A
+# source case is its address; a Remix routine is its symbol (bass's -sym
+# log), which moves with the staging's code layout.
 ENTRY_PORTS = {
     "bowser": 0x8013DD14,
     # Link's case (wave and beam) on the content's entry-effects file 3.
     "banjo": 0x8013DCCC,
-    "marth": 0x8055F384,    # Marth.asm marth_entry_routine_, then Link's case
-    "roy": 0x80587EE8,      # Roy.asm roy_entry_routine_, then Link's case
+    "marth": "Marth.marth_entry_routine_",  # then Link's case
+    "roy": "Roy.roy_entry_routine_",        # then Link's case
     # Donkey Kong's barrel case: Lanky's Tag Barrel (file 2), Tails' plane
     # (Sonic's file 3).
     "lanky": 0x8013DCAC,
@@ -392,6 +441,14 @@ ENTRY_PORTS = {
     # externs (VS's ftManagerSetupFilesPlayablesAll finds it resident).
     "dedede": 0x8013DCF4,
 }
+
+
+def entry_port(staging: Path, port) -> int | None:
+    """An ENTRY_PORTS value as an address: a symbol resolves in the staging's
+    bass -sym log."""
+    if isinstance(port, str):
+        return R.load_symbols(staging / "logfile.log")[0].get(port)
+    return port
 
 # P4 S6: special-file slots (1-4) a content loads into its own storage,
 # g<Ident>Special<n>, instead of the parent's globals. Remix gives such a
@@ -442,6 +499,12 @@ OWN_SPECIAL_FILES = {
     # struct_book's WPAttributes at 0). Mario's fireball code, the other
     # reader of special file 1, never runs for him (the fireball table).
     "piano": (1,),
+    # EXTRA's MRGAW: his sausage (1, MRGAW_FILE_PROJECTILE_HITBOX, MRGAW file
+    # 6) and its graphic (3, MRGAW_FILE_PROJECTILE_GFX, which special file 1
+    # names). Mario's fireball code, the other reader of special file 1, never
+    # runs for him (his Chef clears the script's flag first); Mario's entry
+    # pipe, the reader of special file 3, has no case for him.
+    "mrgaw": (1, 3),
     # His entry's object (3, Crash file 8; no code reads Mario's special
     # file 3), and his spin's effect (2, CRASH_SPIN_GFX, Link's spin attack
     # description on his file; it names his dig effect's file at 0xCC0).
@@ -481,6 +544,9 @@ RAM_DATA = {
 UNREAD_SPECIAL_FILES = {
     "sonic": (2, 4),
     "dedede": (3,),
+    # EXTRA's Meta Knight names no special file 2; Jigglypuff's (Sing's
+    # notes) is read only by her specials, all three his own.
+    "metaknight": (2,),
 }
 
 # Vanilla file IDs that Remix rewrote with equivalent bytes, so the DS keeps
@@ -496,14 +562,16 @@ EQUIVALENT_FILES = {
 PARENT_DECOMP = {
     "MARIO": "Mario", "FOX": "Fox", "DONKEY": "Donkey", "SAMUS": "Samus",
     "LUIGI": "Luigi", "LINK": "Link", "YOSHI": "Yoshi", "CAPTAIN": "Captain",
-    "KIRBY": "Kirby", "PIKACHU": "Pikachu", "JIGGLY": "Purin", "NESS": "Ness",
+    "KIRBY": "Kirby", "PIKACHU": "Pikachu", "JIGGLY": "Purin", "JIGGLYPUFF": "Purin",
+    "NESS": "Ness",
 }
 DECOMP_FTDATA = Path(__file__).resolve().parents[2] / "decomp" / "BattleShip-main" / "decomp" / "src" / "ft" / "ftdata.c"
 DECOMP_SYMBOLS = Path(__file__).resolve().parents[2] / "decomp" / "BattleShip-main" / "decomp" / "symbols" / "symbols_us.txt"
 
 # The DS loader's per-file extern id table (reloc_backend_assets.c
-# NDS_RELOC_EXTERN_FILE_ID_CAPACITY in P4 builds): Banjo's main has 208.
-MAX_EXTERN_IDS = 208
+# NDS_RELOC_EXTERN_FILE_ID_CAPACITY in P4 builds): EXTRA's MRGAW main has 284
+# (Banjo's 208 the main tree's largest).
+MAX_EXTERN_IDS = 288
 
 # Remix's special-move starter tables, in NDS_P4_SPECIAL_* order (nds_p4.h).
 SPECIAL_START_TABLES = ("ground_nsp", "air_nsp", "ground_usp", "air_usp", "ground_dsp", "air_dsp")
@@ -577,6 +645,12 @@ def kind_cases(rom: R.Rom, sym: dict, remix_id: int, tables: dict,
     by_value = {rom.u32_ram(base + 4 * k): kind for kind, k in GROUNDED_CASE_KINDS.items()}
     default = rom.u32_ram(base + 4 * 1)
     value = int(tables["grounded_script"]["value"], 16)
+    # A Remix thunk `j <case>; nop` (EXTRA's Meta Knight: j
+    # Character.grounded_script.DISABLED, the default) is the case it jumps to.
+    if value >= R.REMIX_CODE_RAM:
+        insn, slot = rom.u32_ram(value), rom.u32_ram(value + 4)
+        if (insn >> 26) == 2 and slot == 0:
+            value = (value & 0xF0000000) | ((insn & 0x03FFFFFF) << 2)
     fallbacks = []
     if value == default:
         grounded = "NDS_P4_FOREIGN_FKIND"
@@ -1048,6 +1122,9 @@ class MotionSynth:
                 at = parse_key(cmd["at"])
                 target = cmd.get("to") or cmd.get("data")
                 if target is None:
+                    if cmd.get("null"):
+                        # A NULL target stays the copied zero word: no slot.
+                        continue
                     if cmd["op"] in ("Goto", "Subroutine", "SetParallelScript", "SetThrow",
                                      "SetDamageThrown", "RemixRandomSFX"):
                         raise GenError(f"{cmd['at']}: unresolved pointer")
@@ -1332,6 +1409,9 @@ def main() -> int:
             new = p4_anim_compact.convert32_o2r(blob, ANIM_EPS)
             if new is not None:
                 converted32.add(a)
+            else:
+                # A value event16 cannot hold: refit, kept event32.
+                new = p4_anim_compact.compact32_o2r(blob, ANIM_EPS)
         else:
             new = p4_anim_compact.compact_o2r(blob, ANIM_EPS)
         if new is None:
@@ -1467,7 +1547,7 @@ def main() -> int:
         # Every special slot the parent's code reads now holds the
         # parent's file or a same-layout copy (the stand-ins above).
         entry_effect = "NDS_P4_ENTRY_PARENT"
-    elif ENTRY_PORTS.get(name) == script:
+    elif entry_port(args.staging, ENTRY_PORTS.get(name)) == script:
         # Another kind's case, ported on the content's own files
         # (NDSP4Overrides.entry_case in src/port/nds_p4_<name>.c).
         entry_effect = "NDS_P4_ENTRY_PORT"
@@ -1884,6 +1964,17 @@ def main() -> int:
     (args.out / f"nds_p4_{name}.tables.c").write_text("\n".join(tables), encoding="utf-8", newline="\n")
     src = "\n".join(lines)
     (args.out / f"nds_p4_{name}.generated.c").write_text(src, encoding="utf-8", newline="\n")
+
+    # A file an earlier run shipped and this one does not (a staging that
+    # renumbers files: EXTRA's tree moved the synthesized ids) leaves the
+    # directory, so NitroFS staging never meets two versions of one id. Other
+    # tools' files here (p4_articles.py's Kirby sidecar copies) are kept.
+    previous = args.out / "manifest.json"
+    if previous.exists():
+        old = json.loads(previous.read_text(encoding="utf-8")).get("shipped_o2r_sha256", {})
+        for key in old:
+            if int(key, 16) not in shipped:
+                (o2r_out / f"{int(key, 16):04x}").unlink(missing_ok=True)
 
     manifest = {
         "schema": "p4-ds-fighter-v1", "fighter": fighter,

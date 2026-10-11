@@ -456,10 +456,11 @@ _Static_assert(NDS_RELOC_ASSET_FOX_ANIM_LAST == NDS_K0_FOX_ANIM_LAST,
  * it lets the loader cover the full source roster without turning every loaded
  * file record into a u32-padded dependency table.  An offline census of the US
  * fighter mains puts the maximum at KirbyMain's 144 ids (DonkeyMain is 81;
- * Mario/Fox/Luigi are 48/51/62). P4 builds: Banjo's main has 208, the Remix
- * roster's maximum (generate_p4_fighter.py MAX_EXTERN_IDS checks every file). */
+ * Mario/Fox/Luigi are 48/51/62). P4 builds: EXTRA's MRGAW main has 284, the
+ * roster's maximum (Banjo's 208 the main tree's; generate_p4_fighter.py
+ * MAX_EXTERN_IDS checks every file). */
 #if NDS_P4
-#define NDS_RELOC_EXTERN_FILE_ID_CAPACITY 208u
+#define NDS_RELOC_EXTERN_FILE_ID_CAPACITY 288u
 #else
 #define NDS_RELOC_EXTERN_FILE_ID_CAPACITY 144u
 #endif

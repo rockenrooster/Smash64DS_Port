@@ -33,7 +33,14 @@ PINS_DIR = HERE / "owners"
 # Joints a content's own code (not its scripts) hides at every status change:
 # its root programs also carry each motion state without them. Mad Piano's
 # tongue (Piano.asm extra_part_visibility_, src/port/nds_p4_piano.c).
-CODE_HIDDEN_JOINTS = {"piano": frozenset({14, 15, 16})}
+CODE_HIDDEN_JOINTS = {"piano": frozenset({14, 15, 16}),
+                      # Meta Knight's wings (MetaKnightSpecial.asm
+                      # OnActionChanged, src/port/nds_p4_metaknight.c).
+                      "metaknight": frozenset({30, 31, 32, 33})}
+# Joints a content always has (EXTRA's Character.static_part, nds_p4.h
+# static_parts): setup creates them, the hidden-part rows rooted at them never
+# install or eject them. Meta Knight's left-hand item joint.
+STATIC_JOINTS = {"metaknight": frozenset({12})}
 DOBJ_DESC_SIZE = 0x2C
 CROSS_SLOT_FIRST = 16
 
@@ -48,6 +55,7 @@ def load_donor(name: str, export_root: Path) -> dict:
     facts = p4_contents.export_facts(export_root, name)
     DONORS[name] = {"main": facts["main"], "model": facts["model"],
                     "attributes": facts["attributes"],
+                    "parent_kind": facts["parent_kind"],
                     "script_parts": script_model_parts(export_root / name / "events.json"),
                     "motion_scripts": motion_scripts(export_root / name)}
     return DONORS[name]
@@ -366,7 +374,7 @@ def donor_superset(name: str, o2r_dir: Path, main_id: int, model_id: int,
             parts[index + 4] = 0 if lists[index + 4] is not None else -1
         for i in _hidden_part_ids(word):
             joint, parent, _partindex, kind = hidden_rows[i]
-            if joint < 4:
+            if joint < 4 or joint in STATIC_JOINTS.get(name, ()):
                 continue
             if joint - 4 in selected or not (4 <= joint < 4 + count):
                 raise SystemExit(f"{name} {label}: hidden part {i} is joint {joint}")
@@ -485,6 +493,46 @@ def donor_superset(name: str, o2r_dir: Path, main_id: int, model_id: int,
             "container": container[2] if container is not None else None}
 
 
+# ftDisplayMainDrawAccessory draws a costume's FTAttributes.accesspart list
+# (costumes other than 0, ftParamInitAllParts) for these kinds only: Purin's
+# before its joint's own list, Pikachu's after it.
+ACCESSORY_KINDS = {"nFTKindPurin": True, "nFTKindPikachu": False}
+
+
+def donor_accessory(name: str, o2r_dir: Path, main_id: int, model_id: int,
+                    attr_offset: int) -> tuple[int, int, bool, int] | None:
+    """(joint, model-file list, drawn before the joint's list, row offset) of
+    the donor's costume accessory, when its kind draws one: EXTRA's Meta
+    Knight (Jigglypuff's code) wears his costumes' through it."""
+    before = ACCESSORY_KINDS.get(DONORS[name].get("parent_kind"))
+    if before is None:
+        return None
+    lay = ft_layout.layout()
+    main = O2RFile(o2r_dir / f"{main_id:04x}")
+    ref = main.ptr(attr_offset + lay["FTAttributes.accesspart"])
+    if ref is None:
+        return None
+    if ref[0] != "intern":
+        raise SystemExit(f"{name}: FTAttributes.accesspart is not in the donor main")
+    joint = struct.unpack_from(">i", main.data, ref[2])[0]
+    dl = main.ptr(ref[2] + 4)
+    if dl is None:
+        return None
+    if dl[0] != "extern" or dl[1] != model_id:
+        raise SystemExit(f"{name}: the accesspart list is not in the model file")
+    # A list that ends before any vertex, triangle, rectangle or branch draws
+    # nothing (Meta Knight's only re-sets the lights his joint 6 list sets):
+    # the renderer takes no root for it (renderer_adapter_fighter.c).
+    model = O2RFile(o2r_dir / f"{model_id:04x}")
+    for i in range(32):
+        op = model.u32(dl[2] + 8 * i) >> 24
+        if op == 0xDF:
+            return None
+        if op in (0x01, 0x05, 0x06, 0x07, 0xDE, 0xE4, 0xF6):
+            break
+    return joint, dl[2], before, ref[2]
+
+
 def _o2r_rel(repo: Path, path: Path) -> Path:
     try:
         return path.resolve().relative_to(repo.resolve())
@@ -504,7 +552,10 @@ def register(name: str, o2r_dir: Path, attr_offset: int, pins: dict | None) -> d
     O.P2_O2R_ASSETS[name] = (_o2r_rel(REPO, model_path), spec["model"], sha)
     O.OWNER_JOINT_TREES[name] = tuple(tables["trees"][0])
     O.OWNER_JOINT_TREES_LOW[name] = tuple(tables["trees"][1])
-    O.OWNER_SETUP_PARTS[name] = tuple(tables["setup"])
+    setup = list(tables["setup"])
+    for joint in STATIC_JOINTS.get(name, ()):
+        setup[(joint - 4) // 32] |= 1 << (31 - ((joint - 4) & 31))
+    O.OWNER_SETUP_PARTS[name] = tuple(setup)
     O.P4_CANONICAL_DISPLAY_OVERRIDES.pop(name, None)
     superset = donor_superset(name, o2r_dir, spec["main"], spec["model"], attr_offset)
     if superset["setup"]:
@@ -523,6 +574,34 @@ def register(name: str, o2r_dir: Path, attr_offset: int, pins: dict | None) -> d
         PROGRAM_INFO.pop(name, None)
         O.OWNER_ROOT_PROGRAMS.pop(name, None)
         O.OWNER_ROOT_PROGRAM_SOURCES.pop(name, None)
+    # The costume accessory: one appendix list at its joint's canonical
+    # binding (both details draw the same list), and each live vector -- the
+    # canonical one and every program's -- again with it inserted.
+    O.OWNER_ACCESSORY_PARTS.pop(name, None)
+    O.OWNER_ACCESSORY_SOURCES.pop(name, None)
+    O.P2_ROOT_PROGRAM_APPENDIX.pop(name, None)
+    accessory = donor_accessory(name, o2r_dir, spec["main"], spec["model"], attr_offset)
+    if accessory is not None:
+        joint, dl, before, row = accessory
+        payload = O.load_o2r_payload(REPO, name)
+        bindings = []
+        for detail in ("high", "low"):
+            raw = O._owner_raw_joint_descriptors(payload, name, detail)[:-1]
+            canonical = [i + 4 for i in O._owner_selected_descriptor_indices(name, len(raw))
+                         if raw[i][1] is not None]
+            if joint not in canonical:
+                raise SystemExit(f"{name}: accessory joint {joint} draws no {detail} root")
+            bindings.append(canonical.index(joint))
+        if bindings[0] != bindings[1]:
+            raise SystemExit(f"{name}: accessory joint {joint} binds {bindings}")
+        O.OWNER_ACCESSORY_PARTS[name] = (joint, dl, before)
+        O.OWNER_ACCESSORY_SOURCES[name] = (
+            _o2r_rel(REPO, o2r_dir / f"{spec['main']:04x}"), spec["main"], row)
+        O.P2_ROOT_PROGRAM_APPENDIX[name] = {d: ((bindings[0], dl),) for d in ("high", "low")}
+        rows = [("Accessory", "accesspart")] + [
+            (f"{row[0]}Acc", ("accesspart", row[0])) for row in PROGRAM_INFO.get(name, ())]
+        O.OWNER_ROOT_PROGRAMS[name] = O.OWNER_ROOT_PROGRAMS.get(name, ()) + tuple(rows)
+        PROGRAM_INFO[name] = list(PROGRAM_INFO.get(name, ())) + [(n, (), ()) for n, _ in rows]
     pins = pins or {}
     O.OWNER_PLAN_COUNTS[name] = tuple(pins.get("plan", (0, 0)))
     O.OWNER_CROSS_BINDING_SLOTS[name] = tuple(tuple(x) for x in pins.get("cross_high", ()))

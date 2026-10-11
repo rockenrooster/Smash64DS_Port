@@ -378,6 +378,15 @@ static inline void ndsP4FTMainSetHitInteractStats(FTStruct *fp, u32 attack_group
 #define NDS_P4_DAMAGE_COLLIDE_other_attack_coll \
     gmCollisionCheckFighterAttackDamageCollide(other_attack_coll
 #define NDS_P4_DAMAGE_COLLIDE_attack_coll ndsP4CatchDamageCollide(other_fp, attack_coll
+/* P4: EXTRA's static parts stay put through the hidden-part loop
+ * (ndsP4UpdateHiddenPartID); the definitions and prototypes keep their names
+ * (first token `FTStruct`), the loop's calls (`fp`) take the wrappers. */
+#define ftMainUpdateHiddenPartID(first, ...) NDS_P4_HIDDEN_UPDATE_##first, __VA_ARGS__)
+#define NDS_P4_HIDDEN_UPDATE_FTStruct ftMainUpdateHiddenPartID(FTStruct
+#define NDS_P4_HIDDEN_UPDATE_fp ndsP4UpdateHiddenPartID(fp
+#define ftMainEjectHiddenPartID(first, ...) NDS_P4_HIDDEN_EJECT_##first, __VA_ARGS__)
+#define NDS_P4_HIDDEN_EJECT_FTStruct ftMainEjectHiddenPartID(FTStruct
+#define NDS_P4_HIDDEN_EJECT_fp ndsP4EjectHiddenPartID(fp
 #endif
 #if NDS_P4
 /* P4: Ness's absorb routine is the content's when it has one
@@ -396,6 +405,28 @@ void ndsP4FTMainUpdateAbsorbStatWeapon(WPStruct *wp, WPAttackColl *wp_attack_col
 #if NDS_P4
 #undef ftNessSpecialLwProcAbsorb
 #undef ftMainUpdateAbsorbStatWeapon
+#undef ftMainUpdateHiddenPartID
+#undef NDS_P4_HIDDEN_UPDATE_FTStruct
+#undef NDS_P4_HIDDEN_UPDATE_fp
+#undef ftMainEjectHiddenPartID
+#undef NDS_P4_HIDDEN_EJECT_FTStruct
+#undef NDS_P4_HIDDEN_EJECT_fp
+
+void ndsP4UpdateHiddenPartID(FTStruct *fp, s32 hiddenpart_id)
+{
+    if (ndsP4StaticPart(fp, fp->attr->hiddenparts[hiddenpart_id].root_joint_id) == FALSE)
+    {
+        ftMainUpdateHiddenPartID(fp, hiddenpart_id);
+    }
+}
+
+void ndsP4EjectHiddenPartID(FTStruct *fp, s32 hiddenpart_id)
+{
+    if (ndsP4StaticPart(fp, fp->attr->hiddenparts[hiddenpart_id].root_joint_id) == FALSE)
+    {
+        ftMainEjectHiddenPartID(fp, hiddenpart_id);
+    }
+}
 
 /* ftMainUpdateAbsorbStatWeapon with the content's heal (absorb_heal). */
 void ndsP4FTMainUpdateAbsorbStatWeapon(WPStruct *wp, WPAttackColl *wp_attack_coll,
@@ -657,6 +688,7 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
 #if NDS_P4
     FTStatusDesc **nds_p4_row = NULL;
     FTStatusDesc *nds_p4_saved = NULL;
+    s32 nds_p4_status = status_id;
 #endif
 
 #if NDS_P4 && NDS_P2_KIRBY
@@ -685,15 +717,27 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
         ndsP4OnSetStatus(fighter_gobj);
         nds_p4_row = ndsFTMainLendSpecialStatusDescs(nds_topology_fp,
                                                      &nds_p4_saved);
+        /* Character.action_replace_map: the replacement is set up and the
+         * original kept in status_id (Remix's hook stores the original,
+         * then overwrites the setter's own argument). */
+        if (nds_topology_fp->nds_p4_content != 0u)
+        {
+            nds_p4_status = ndsP4ReplaceStatus(nds_topology_fp, status_id);
+        }
     }
-#endif
-    battleship_ftMainSetStatus(fighter_gobj, status_id, frame_begin,
+    battleship_ftMainSetStatus(fighter_gobj, nds_p4_status, frame_begin,
                                anim_speed, flags);
-#if NDS_P4
+    if (nds_p4_status != status_id)
+    {
+        nds_topology_fp->status_id = status_id;
+    }
     if (nds_p4_row != NULL)
     {
         *nds_p4_row = nds_p4_saved;
     }
+#else
+    battleship_ftMainSetStatus(fighter_gobj, status_id, frame_begin,
+                               anim_speed, flags);
 #endif
     if (nds_topology_fp != NULL)
     {
@@ -701,7 +745,8 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
 #if NDS_P4
         if (nds_topology_fp->nds_p4_content != 0u)
         {
-            ndsP4AfterSetStatus(fighter_gobj, status_id);
+            /* on_action_changed reads the replaced argument. */
+            ndsP4AfterSetStatus(fighter_gobj, nds_p4_status);
         }
 #if NDS_P2_KIRBY
         else if (nds_topology_fp->nds_p4_kirby_copy != 0u)
