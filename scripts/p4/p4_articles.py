@@ -116,6 +116,11 @@ ARTICLES = {
         # spawn picks face 3 to 6 (texture_id_curr), so frames 0-6 are kept.
         {"name": "turnip", "special": 2, "itattributes": 0x40, "texid_frames": 7},
     ),
+    "piano": (
+        # fireball.asm struct_book: WPAttributes at 0 of Piano file 6
+        # (PIANO_PROJECTILE_HITBOX), the book's model in the file it names.
+        {"name": "book", "special": 1, "wpattributes": 0x0},
+    ),
     "dedede": (
         # items/WaddleDee.asm, WaddleDoo.asm and Gordo.asm item_info_array:
         # ITAttributes at 0x40, 0xB0 and 0x120 of WADDLE_DEE_INFO (file 6),

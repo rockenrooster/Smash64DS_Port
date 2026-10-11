@@ -30,9 +30,10 @@ one-fighter-at-a-time cycle eighteen times. Revision 3 changes three things:
 ## Product contract (unchanged)
 
 - Original DS envelope: no RAM expansion, no DSi requirement.
-- Roster: Revision 2's 18 selections. These are the 14 main-tree fighters
-  below, Metal Mario (the existing MMario kind) and EXTRA's Meta Knight,
-  MRGAW and Snake. No other Remix variants.
+- Roster: Revision 2's 18 selections, and Mad Piano (owner, 2026-10-11:
+  content 15, a select portrait of his own in an eleventh column). These are
+  the 15 main-tree fighters below, Metal Mario (the existing MMario kind) and
+  EXTRA's Meta Knight, MRGAW and Snake. No other Remix variants.
 - Fidelity: original SSB64 common rules plus the pinned donor's
   character-specific mechanics. Remix's engine-wide changes stay outside the
   profile. One example is the aerial fast-fall check that Remix puts on every
@@ -75,6 +76,7 @@ one-fighter-at-a-time cycle eighteen times. Revision 3 changes three things:
 | Banjo | Captain | 2,379 | 28 | 26 | Goto, FastFall, YVel, EnvColor, HitboxDir | 4 weapons (eggs) |
 | Sonic | Fox | 4,005 | 24 | 23 | Goto, TopN, FSM, HitboxDir | 2 weapons |
 | Dedede | Captain | 3,288 | 32 | 27 | Goto, FSM | items (Gordo, Waddle Dee) |
+| Mad Piano | Mario | 1,732 | 19 | 23 | none | book (fireball row) |
 | Metal Mario | MMario kind | 24 | 0 | n/a | n/a | none |
 | Meta Knight, MRGAW, Snake | EXTRA tree | not exported yet | | | | |
 

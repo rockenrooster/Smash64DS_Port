@@ -30,6 +30,10 @@ import generate_nds_native_owners as O  # noqa: E402
 import ft_layout  # noqa: E402
 
 PINS_DIR = HERE / "owners"
+# Joints a content's own code (not its scripts) hides at every status change:
+# its root programs also carry each motion state without them. Mad Piano's
+# tongue (Piano.asm extra_part_visibility_, src/port/nds_p4_piano.c).
+CODE_HIDDEN_JOINTS = {"piano": frozenset({14, 15, 16})}
 DOBJ_DESC_SIZE = 0x2C
 CROSS_SLOT_FIRST = 16
 
@@ -349,10 +353,12 @@ def donor_superset(name: str, o2r_dir: Path, main_id: int, model_id: int,
     hidden_joints: dict[int, tuple[int, int]] = {}
     snapshots: list[tuple[str, frozenset, frozenset]] = []
 
-    def simulate(label: str, word: int, events, detail: str) -> list[frozenset]:
+    def simulate(label: str, word: int, events, detail: str,
+                 pre_hide: frozenset = frozenset()) -> list[frozenset]:
         """The joints drawing wherever the script yields a frame (and at its
-        end): the canonical joints and the mask's hidden parts, then the
-        thread's events."""
+        end): the canonical joints and the mask's hidden parts, less the
+        joints the content's code hid at the status change, then the thread's
+        events."""
         parts: dict[int, int] = {}
         lists: dict[int, int | None] = {}
         for index in selected:
@@ -369,6 +375,10 @@ def donor_superset(name: str, o2r_dir: Path, main_id: int, model_id: int,
             parts[joint] = 0 if lists[joint] is not None else -1
         base_parts = dict(parts)
         base_lists = dict(lists)
+        for joint in pre_hide:
+            if joint in parts:
+                parts[joint] = -1
+                lists[joint] = None
         snaps = [frozenset(j for j, dl in lists.items() if dl is not None)]
         for event in tuple(events) + (("wait",),):
             if event[0] == "part":
@@ -392,10 +402,12 @@ def donor_superset(name: str, o2r_dir: Path, main_id: int, model_id: int,
         # parallel script's writes land on the motion script's).
         for events in (tuple(threads) or ((),)) + (
                 (tuple(e for t in threads for e in t),) if len(threads) > 1 else ()):
-            per = {d: simulate(label, word, events, d) for d in ("high", "low")}
-            for high, low in dict.fromkeys(zip(per["high"], per["low"])):
-                if high or low:
-                    snapshots.append((label, high, low))
+            for hide in (frozenset(),) + ((CODE_HIDDEN_JOINTS[name],)
+                                          if name in CODE_HIDDEN_JOINTS else ()):
+                per = {d: simulate(label, word, events, d, hide) for d in ("high", "low")}
+                for high, low in dict.fromkeys(zip(per["high"], per["low"])):
+                    if high or low:
+                        snapshots.append((label, high, low))
 
     canonical = {d: frozenset(i + 4 for i in selected if raw[d][i][1] is not None)
                  for d in ("high", "low")}

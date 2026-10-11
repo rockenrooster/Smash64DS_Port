@@ -519,19 +519,30 @@ def _select_block_violations(elf: Elf32, symbol_tables: dict[int, list[Symbol]],
                              select_allowed: set[tuple[str, str]]
                              ) -> list[dict[str, str]]:
     """The VS character select lends [__nds_frontend_start,
-    __nds_frontend_select_start) to its previews, so nothing linked at or after
-    __nds_frontend_select_start (its block) may name a symbol in that range."""
+    __nds_frontend_select_start) to its previews, so nothing in its block,
+    [__nds_frontend_select_start, __nds_frontend_select_end), may name a symbol
+    there; VS Results, linked between the middle and the select's block, lends
+    [__nds_frontend_start, __nds_frontend_results_start) and the select's
+    block, so nothing in its own block may name a symbol in either."""
     symtab = next((s for s in elf.sections if s.kind == SHT_SYMTAB), None)
     if symtab is None:
         return []
     if symtab.index not in symbol_tables:
         symbol_tables[symtab.index] = elf.symbols(symtab)
     symbols = symbol_tables[symtab.index]
-    marks = {s.name: s.value for s in symbols
-             if s.name in ("__nds_frontend_start", "__nds_frontend_select_start")}
-    if len(marks) != 2:
+    names = ("__nds_frontend_start", "__nds_frontend_select_start",
+             "__nds_frontend_select_end", "__nds_frontend_results_start")
+    marks = {s.name: s.value for s in symbols if s.name in names}
+    if "__nds_frontend_start" not in marks or "__nds_frontend_select_start" not in marks:
         return []
-    lo, mid = marks["__nds_frontend_start"], marks["__nds_frontend_select_start"]
+    lo = marks["__nds_frontend_start"]
+    sel = marks["__nds_frontend_select_start"]
+    sel_end = marks.get("__nds_frontend_select_end", 0xFFFFFFFF)
+    res = marks.get("__nds_frontend_results_start")
+    # (source range, lent target ranges)
+    rules = [((sel, sel_end), ((lo, sel),))]
+    if res is not None:
+        rules.append(((res, sel), ((lo, res), (sel, sel_end))))
     overlay_index = _source_symbol_indexes(elf, symbols, include_overlay=True)
     found: dict[tuple[str, str], dict[str, str]] = {}
     for rsec in elf.sections:
@@ -545,17 +556,27 @@ def _select_block_violations(elf: Elf32, symbol_tables: dict[int, list[Symbol]],
             if r.symbol_index == 0 or r.symbol_index >= len(symbols):
                 continue
             offset = _section_offset(elf, src, r.offset)
-            if src.address + offset < mid:
-                continue
             target = symbols[r.symbol_index]
-            if target.kind == STT_SECTION or not (lo <= target.value < mid):
+            value = target.value
+            if target.kind == STT_SECTION:
+                # A section-relative word (merged strings, anonymous constants):
+                # the linked image already holds the address it resolved to.
+                if (r.kind != R_ARM_ABS32 or src.kind == SHT_NOBITS or
+                        offset + 4 > src.size):
+                    continue
+                value = struct.unpack_from("<I", elf.data, src.offset + offset)[0]
+            site = src.address + offset
+            if not any((a <= site < b) and any(c <= value < d for c, d in lent)
+                       for (a, b), lent in rules):
                 continue
             source = index.resolve(src, offset)[0] if index is not None else src.name
-            if (source, target.identity) in select_allowed:
+            target_name = (target.identity if target.kind != STT_SECTION else
+                           f"{target.identity}@0x{value:08x}")
+            if (source, target_name) in select_allowed:
                 continue
-            found.setdefault((source, target.identity),
+            found.setdefault((source, target_name),
                              {"source_symbol": source,
-                              "target_symbol": target.identity})
+                              "target_symbol": target_name})
     return [found[k] for k in sorted(found)]
 
 

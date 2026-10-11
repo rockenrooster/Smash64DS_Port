@@ -209,6 +209,13 @@ void ndsMNVSResultsSetLoadScene(void);
     ndsP4MNVSResultsSetFighterScale(sMNVSResultsFighterGObjs
 void ndsP4MNVSResultsSetFighterScale(GObj *fighter_gobj, s32 player, s32 fkind,
                                      s32 place);
+/* resultsscreen.asm label_height_fix_: a content's podium tag sits at the
+ * height of its label_height row's kind. The definition's first argument
+ * text is `GObj`, its one call's `gobj`. */
+#define mnVSResultsSetPlayerTagPosition(first, ...) NDS_P4_TAG_##first, __VA_ARGS__)
+#define NDS_P4_TAG_GObj ndsBaseMNVSResultsSetPlayerTagPosition(GObj
+#define NDS_P4_TAG_gobj ndsP4MNVSResultsSetPlayerTagPosition(gobj
+void ndsP4MNVSResultsSetPlayerTagPosition(GObj *gobj, s32 player);
 void ndsP4MNVSResultsAnnounceWinner(void);
 void ndsP4MNVSResultMakeFighterName(void);
 void ndsP4MNVSResultsPlayWinBGM(void);
@@ -216,6 +223,24 @@ void ndsP4MNVSResultsSaveBackup(void);
 #endif
 
 void ndsBaseMNVSResultsStartScene(void);
+
+/* Each podium fighter's figatree heap holds only what it plays here: a
+ * content's, the demo Null its making sets (motion 0), then a winner's three
+ * victory poses or anyone else's Lose (mnVSResultsSetFighterStatus; a demo
+ * status's motion is the status less 0x10000, D_ovl1_80390BE8); one of the
+ * original cast's, its kind's largest. The source gives all four slots,
+ * present or not, the largest animation of every kind and content the scene
+ * set up (four heavy contents: 115 of 147 KB). FuncStart's heap
+ * loop, the only reader of the size here (its index `i`), takes none, and
+ * mnVSResultsMakeFighter, the only maker (its argument `player`), takes the
+ * fighter's own heap once the places are ranked. A P4 podium fighter is
+ * also the transfer state's player: a content is looked up per player
+ * (ndsP4MakeContent), and the source leaves every Results desc with
+ * dFTManagerDefaultFighterDesc's player 0. */
+#define gFTManagerFigatreeHeapSize ndsMNVSResultsFigatreeHeapSize(i)
+size_t ndsMNVSResultsFigatreeHeapSize(s32 player);
+#define ftManagerMakeFighter(desc) ndsMNVSResultsMakeFighter((desc), player)
+GObj *ndsMNVSResultsMakeFighter(FTDesc *desc, s32 player);
 
 /* Weak, so the call in mnVSResultsSetPlayerTagPosition resolves to the
  * N64-layout copy in battleship_mnvsresults_spot.c: on tied places the source
@@ -235,6 +260,101 @@ s32 mnVSResultsGetSpot(s32 player) __attribute__((weak));
 #undef mnVSResultsBarProcDisplay
 #undef mnVSResultsLabelProcDisplay
 #undef mnVSResultsEmblemProcUpdate
+#undef gFTManagerFigatreeHeapSize
+#undef ftManagerMakeFighter
+
+size_t ndsMNVSResultsFigatreeHeapSize(s32 player)
+{
+    (void)player;
+    return 0u;
+}
+
+/* One submotion's animation bytes, 16-aligned; 0 when it has none. A file
+ * another podium fighter already loaded answers from its loaded span:
+ * lbRelocGetFileSize answers sizeof(Sprite) for a resident file. */
+static size_t ndsMNVSResultsMotionBytes(FTData *data, s32 motion_id, sb32 *missing)
+{
+    FTMotionDesc *motion;
+    const void *file_id;
+    size_t bytes;
+
+    if ((data->submotion == NULL) || (data->submotion_array_count == NULL) ||
+        (motion_id >= *data->submotion_array_count))
+    {
+        *missing = TRUE;
+        return 0u;
+    }
+    motion = &data->submotion->motion_desc[motion_id];
+    if ((motion->anim_file_id == 0u) || (motion->anim_desc.flags.is_use_shieldpose))
+    {
+        return 0u;
+    }
+    file_id = (const void *)(uintptr_t)motion->anim_file_id;
+    bytes = ndsRelocGetLoadedFileSize(file_id);
+    if (bytes == 0u)
+    {
+        bytes = lbRelocGetFileSize(file_id);
+    }
+    return (bytes + 0xFu) & ~0xFu;
+}
+
+static size_t ndsMNVSResultsHeapBytes(s32 player)
+{
+    s32 fkind = gSCManagerTransferBattleState.players[player].fkind;
+    FTData *data = dFTManagerDataFiles[fkind];
+    sb32 wins = ((sMNVSResultsKind != nMNVSResultsKindNoContest) &&
+                 (sMNVSResultsPlaces[player] == 0)) ? TRUE : FALSE;
+    sb32 missing = FALSE;
+    size_t need;
+    size_t bytes;
+#if NDS_P4
+    const NDSP4Fighter *p4 = ndsP4Fighter(gNdsP4PlayerContent[player]);
+
+    if ((p4 != NULL) && (p4->parent_kind == fkind) && (p4->data->file_anim_size != 0u))
+    {
+        data = p4->data;
+    }
+    else
+#endif
+    {
+        /* The original cast's animations load converted, larger than their
+         * files (the kind's census size covers that): its largest. */
+        return data->file_anim_size;
+    }
+    need = ndsMNVSResultsMotionBytes(data, nFTDemoStatusNull - FTSTAT_OPENING2_START, &missing);
+    if (wins != FALSE)
+    {
+        s32 status_id;
+
+        for (status_id = nFTDemoStatusWin1; status_id <= nFTDemoStatusWin3; status_id++)
+        {
+            bytes = ndsMNVSResultsMotionBytes(data, status_id - FTSTAT_OPENING2_START, &missing);
+            need = (bytes > need) ? bytes : need;
+        }
+    }
+    else
+    {
+        bytes = ndsMNVSResultsMotionBytes(data, nFTDemoStatusLose - FTSTAT_OPENING2_START, &missing);
+        need = (bytes > need) ? bytes : need;
+    }
+    /* Anything unreadable keeps the kind's largest, as the source sizes it. */
+    return ((missing != FALSE) || (need == 0u) || (need > data->file_anim_size)) ?
+        data->file_anim_size : need;
+}
+
+/* Each podium fighter's heap bytes, for probes. */
+__attribute__((used)) volatile u32 gNdsMNVSResultsHeapBytes[GMCOMMON_PLAYERS_MAX];
+
+GObj *ndsMNVSResultsMakeFighter(FTDesc *desc, s32 player)
+{
+#if NDS_P4
+    desc->player = (u8)player;
+#endif
+    gNdsMNVSResultsHeapBytes[player] = (u32)ndsMNVSResultsHeapBytes(player);
+    desc->figatree_heap = syTaskmanMalloc(gNdsMNVSResultsHeapBytes[player], 0x10);
+    sMNVSResultsFigatreeHeaps[player] = desc->figatree_heap;
+    return ftManagerMakeFighter(desc);
+}
 
 #if NDS_P4
 #undef mnVSResultsAnnounceWinner
@@ -242,6 +362,20 @@ s32 mnVSResultsGetSpot(s32 player) __attribute__((weak));
 #undef mnVSResultsPlayWinBGM
 #undef mnVSResultsSaveBackup
 #undef mnVSResultsSetFighterScale
+#undef mnVSResultsSetPlayerTagPosition
+
+void ndsP4MNVSResultsSetPlayerTagPosition(GObj *gobj, s32 player)
+{
+    const NDSP4Fighter *p4 = ndsP4Fighter(gNdsP4PlayerContent[player]);
+    s32 fkind = sMNVSResultsFighterKinds[player];
+
+    if ((p4 != NULL) && (p4->parent_kind == fkind) && (p4->present != NULL))
+    {
+        sMNVSResultsFighterKinds[player] = p4->present->results_label_kind;
+    }
+    ndsBaseMNVSResultsSetPlayerTagPosition(gobj, player);
+    sMNVSResultsFighterKinds[player] = fkind;
+}
 
 void ndsP4MNVSResultsSetFighterScale(GObj *fighter_gobj, s32 player, s32 fkind,
                                      s32 place)
@@ -286,10 +420,111 @@ void ndsP4MNVSResultsAnnounceWinner(void)
     ndsBaseMNVSResultsAnnounceWinner();
 }
 
+/* mnVSResultsMakeString (mnvsresults.c:1142) with Remix's add_ampersand_
+ * (resultsscreen.asm): '&' draws the content's glyph Sprite and advances by
+ * its own width; every other character is the source's. Only a P4 name with
+ * an '&' comes here. */
+static void ndsP4MNVSResultsMakeGlyphString(const NDSP4Present *p4, f32 x,
+                                            f32 y, s32 color_id, f32 scale)
+{
+    f32 widths[/* */] =
+    {
+        35.0F, 24.0F, 24.0F, 28.0F, 22.0F, 20.0F, 31.0F, 27.0F, 9.0F, 20.0F, 27.0F, 20.0F, 37.0F, 29.0F,
+        34.0F, 24.0F, 37.0F, 27.0F, 24.0F, 24.0F, 26.0F, 28.0F, 39.0F, 31.0F, 29.0F, 30.0F, 10.0F, 8.0F
+    };
+    const void *offsets[/* */] =
+    {
+        &llIFCommonAnnounceCommonLetterASprite, &llIFCommonAnnounceCommonLetterBSprite,
+        &llIFCommonAnnounceCommonLetterCSprite, &llIFCommonAnnounceCommonLetterDSprite,
+        &llIFCommonAnnounceCommonLetterESprite, &llIFCommonAnnounceCommonLetterFSprite,
+        &llIFCommonAnnounceCommonLetterGSprite, &llIFCommonAnnounceCommonLetterHSprite,
+        &llIFCommonAnnounceCommonLetterISprite, &llIFCommonAnnounceCommonLetterJSprite,
+        &llIFCommonAnnounceCommonLetterKSprite, &llIFCommonAnnounceCommonLetterLSprite,
+        &llIFCommonAnnounceCommonLetterMSprite, &llIFCommonAnnounceCommonLetterNSprite,
+        &llIFCommonAnnounceCommonLetterOSprite, &llIFCommonAnnounceCommonLetterPSprite,
+        &llIFCommonAnnounceCommonLetterQSprite, &llIFCommonAnnounceCommonLetterRSprite,
+        &llIFCommonAnnounceCommonLetterSSprite, &llIFCommonAnnounceCommonLetterTSprite,
+        &llIFCommonAnnounceCommonLetterUSprite, &llIFCommonAnnounceCommonLetterVSprite,
+        &llIFCommonAnnounceCommonLetterWSprite, &llIFCommonAnnounceCommonLetterXSprite,
+        &llIFCommonAnnounceCommonLetterYSprite, &llIFCommonAnnounceCommonLetterZSprite,
+
+        &llIFCommonAnnounceCommonSymbolExclaimSprite,
+        &llIFCommonAnnounceCommonSymbolPeriodSprite
+    };
+    SYColorRGBPair colors[/* */] =
+    {
+        { { 0xFF, 0x00, 0x00 }, { 0xFF, 0xFF, 0xFF } },
+        { { 0x12, 0x00, 0xD9 }, { 0xFF, 0xFF, 0xFF } },
+        { { 0x03, 0x73, 0x00 }, { 0xFF, 0xFF, 0xFF } },
+        { { 0x60, 0x03, 0xD4 }, { 0xFF, 0xFF, 0xFF } },
+        { { 0x00, 0x00, 0x00 }, { 0xFF, 0xFF, 0xFF } }
+    };
+    const void *glyph_id = (const void *)(uintptr_t)p4->results_glyph_file;
+    void *glyph_file = lbRelocGetExternHeapFile(
+        glyph_id, syTaskmanMalloc(lbRelocGetFileSize(glyph_id), 0x10));
+    const char *str = p4->results_name;
+    GObj *gobj;
+    SObj *sobj;
+    s32 i;
+    f32 current_x = x;
+
+    gobj = gcMakeGObjSPAfter(0, NULL, 20, GOBJ_PRIORITY_DEFAULT);
+    gcAddGObjDisplay(gobj, lbCommonDrawSObjAttr, 29, GOBJ_PRIORITY_DEFAULT, ~0);
+
+    for (i = 0; str[i] != '\0'; i++)
+    {
+        s32 char_id;
+        Sprite *sprite;
+        f32 width;
+
+        if ((str[i] >= '0') && (str[i] <= '9'))
+        {
+            current_x += str[i] - '0';
+            continue;
+        }
+        if (str[i] == ' ')
+        {
+            current_x += 10.0F * scale;
+            continue;
+        }
+        if (str[i] == '&')
+        {
+            sprite = lbRelocGetFileData(Sprite*, glyph_file,
+                                        (const void *)(uintptr_t)p4->results_glyph_sprite);
+            width = p4->results_glyph_width;
+            char_id = -1;
+        }
+        else
+        {
+            char_id = mnVSResultsGetCharacterID(str[i]);
+            if ((char_id < 0) || (char_id >= (s32)ARRAY_COUNT(offsets)))
+            {
+                continue;
+            }
+            sprite = lbRelocGetFileData(Sprite*, sMNVSResultsFiles[6], offsets[char_id]);
+            width = widths[char_id];
+        }
+        sobj = lbCommonMakeSObjForGObj(gobj, sprite);
+        sobj->sprite.scalex = scale;
+        sobj->pos.x = current_x;
+        sobj->pos.y = (char_id == 0x1B) ? (y + 26.0F) : y; /* . */
+        sobj->sprite.attr &= ~SP_FASTCOPY;
+        sobj->sprite.attr |= SP_TRANSPARENT;
+        sobj->envcolor.r = colors[color_id].prim.r;
+        sobj->envcolor.g = colors[color_id].prim.g;
+        sobj->envcolor.b = colors[color_id].prim.b;
+        sobj->sprite.red = colors[color_id].env.r;
+        sobj->sprite.green = colors[color_id].env.g;
+        sobj->sprite.blue = colors[color_id].env.b;
+        current_x += width * scale;
+    }
+}
+
 void ndsP4MNVSResultMakeFighterName(void)
 {
     const NDSP4Present *p4 = ndsP4MNVSResultsWinnerPresent();
     char wins[] = "W1I1N1S1!";
+    char win[] = "W1I1N1!";
 
     if (p4 == NULL)
     {
@@ -298,9 +533,18 @@ void ndsP4MNVSResultMakeFighterName(void)
     }
     /* mnVSResultMakeFighterName and mnVSResultsMakeWinnerText's FFA arm
      * (mnvsresults.c:1371, :1278) with the donor's own rows. */
-    mnVSResultsMakeString(p4->results_name, p4->results_name_x, 180.0F, 0,
-                          p4->results_name_scale);
-    mnVSResultsMakeString(wins, p4->results_wins_x, 180.0F, 3, 1.0F);
+    if (p4->results_glyph_file != 0u)
+    {
+        ndsP4MNVSResultsMakeGlyphString(p4, p4->results_name_x, 180.0F, 0,
+                                        p4->results_name_scale);
+    }
+    else
+    {
+        mnVSResultsMakeString(p4->results_name, p4->results_name_x, 180.0F, 0,
+                              p4->results_name_scale);
+    }
+    mnVSResultsMakeString((p4->results_win_singular != 0u) ? win : wins,
+                          p4->results_wins_x, 180.0F, 3, 1.0F);
 }
 
 void ndsP4MNVSResultsPlayWinBGM(void)
@@ -310,6 +554,11 @@ void ndsP4MNVSResultsPlayWinBGM(void)
     if (p4 == NULL)
     {
         ndsBaseMNVSResultsPlayWinBGM();
+        return;
+    }
+    /* add_victory_bgm(-1): the winner has no victory song (Mad Piano). */
+    if (p4->victory_bgm == 0xFFFFu)
+    {
         return;
     }
     syAudioPlayBGM(0, p4->victory_bgm);

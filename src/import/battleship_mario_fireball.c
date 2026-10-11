@@ -5,6 +5,7 @@
 #include <ft/fighter.h>
 #include <gm/gmsound.h>
 #include <mp/map.h>
+#include <nds/nds_p4.h>
 #include <nds/nds_startup.h>
 #include <reloc_data.h>
 #include <sc/scene.h>
@@ -787,6 +788,16 @@ static void ndsMarioFireballSampleWeaponPool(void)
 GObj *wpMarioFireballMakeWeapon(GObj *fighter_gobj, Vec3f *pos, s32 index)
 {
     GObj *weapon_gobj;
+#if NDS_P4
+    /* The fireball table: a content's (or its copied power's) own
+     * projectile in the fireball's place (Mad Piano's book). */
+    GObj *(*fireball)(GObj *, Vec3f *) = ndsP4Fireball(ftGetStruct(fighter_gobj));
+
+    if (fireball != NULL)
+    {
+        return fireball(fighter_gobj, pos);
+    }
+#endif
 
     gNdsFighterProjectileProofSpawnCallCount++;
     dWPMarioFireballWeaponDesc.proc_update = ndsMarioFireballProcUpdateProbe;

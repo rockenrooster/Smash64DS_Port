@@ -1151,6 +1151,26 @@
       "source_symbol": "ndsFrontendOverlayBorrowForSelect",
       "target_symbol": "__nds_frontend_select_start",
       "reason": "Linker boundary symbol: the VS character select's loan takes the address range before its own block as preview storage; it is an address, never called or read."
+    },
+    {
+      "source_symbol": "ndsFrontendOverlayBeginScene",
+      "target_symbol": "__nds_frontend_results_start",
+      "reason": "Linker boundary symbol: VS Results lends the address range before its own block as its scene-asset loan; it is an address, never called or read."
+    },
+    {
+      "source_symbol": "ndsFrontendOverlayBeginScene",
+      "target_symbol": "__nds_frontend_select_end",
+      "reason": "Linker boundary symbol: VS Results lends the select's block as its second scene-asset range (ndsFrontendOverlayBeginScene/TryAlloc); it is an address, never called or read."
+    },
+    {
+      "source_symbol": "ndsFrontendOverlayBeginScene",
+      "target_symbol": "__nds_frontend_select_start",
+      "reason": "Linker boundary symbol: VS Results lends the select's block as its second scene-asset range (ndsFrontendOverlayBeginScene/TryAlloc); it is an address, never called or read."
+    },
+    {
+      "source_symbol": "ndsFrontendOverlayTryAlloc",
+      "target_symbol": "__nds_frontend_select_start",
+      "reason": "Linker boundary symbol: VS Results lends the select's block as its second scene-asset range (ndsFrontendOverlayBeginScene/TryAlloc); it is an address, never called or read."
     }
   ],
   "select_pairs": [

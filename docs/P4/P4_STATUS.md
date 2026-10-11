@@ -719,6 +719,29 @@ into the global reservation.
   failures in 1,800 frames of Samus, Mario, Fox and Pikachu); FoxSpecial4's
   list 0x40 is now a baked weapon root (`generate_nds_native_item_baked.py`),
   0 failures.
+  VS Results with contents (2026-10-11). The overlay links in four output
+  sections (head, middle, the Results block, the select's block) so the
+  linker cannot merge strings across a lent boundary; Results lends
+  [start, results_start) and the select's block as two ranges, and the
+  checker resolves section-relative words (it found 48 references into lent
+  ranges, the UI kit's strings among them). The podium fighters are the
+  transfer state's players (`ndsMNVSResultsMakeFighter`; the source made all
+  four with player 0, so a content outside port 0 drew as its parent or read
+  NULL attributes), and after a three- or four-fighter match a content keeps
+  its battle low detail and pack there (`ndsP4LowDetailResults`, owner
+  2026-10-08). Each podium heap holds only what its fighter plays: the demo
+  Null, then a winner's three poses or anyone else's Lose (Banjo's Lose 2.8
+  KB against his 34.6 KB largest); nobody guards on the podium, so a
+  content's guard-pose package stays unloaded (`ndsP4GuardPosesNeeded`, 27
+  KB for four). Remix's Results font draws '&' (Banjo & Kazooie) from a
+  Sprite it appended to IFCommonAnnounceCommon: the generator ships the glyph
+  as the content's second synthesized file and the name maker draws it
+  (`resultsscreen.asm add_ampersand_`). Banjo, Crash, Lanky and Dedede: 289
+  KB free at the podium's start, 49 KB at frame 400; Kirby, Bowser, Dedede
+  and Banjo 100 KB (it ran out before). Kirby's Remix hats: a battle whose
+  arena cannot hold every reachable hat keeps one buffer per Kirby, sized
+  for the largest, and loads a hat into it when he takes the power
+  (Kirby with Banjo, Crash and Lanky now plays).
 
 Four-CPU mirrors, lab ROM with all fourteen (`NDS_P4_LAB_FALLBACK=1`, lab
 stage, 1,200 frames, exception vectors trapped), on the build with the
@@ -1006,6 +1029,42 @@ A battle of three or four admits the powers' Remix hats in the low detail
 only, and a Kirby holding a power keeps the low model in its close-ups, as
 a content does (owner 2026-10-08: lower content fidelity rather than a
 budget); a two-fighter battle admits the high detail.
+
+## Mad Piano (owner request, 2026-10-11)
+
+The owner added Mad Piano (Remix PIANO, kind 0x36, parent Mario) as content
+15, with a select portrait of his own: the grid is eleven columns, Mad Piano
+between Mr. Game & Watch and Metal Mario, the two spare cells the NONE plate
+at the left of the lower rows (`scripts/p4/p4_css.py`; Remix shows him only
+on its bonus bookend). His export and generation are clean (19 donor
+routines, 0 failures); `src/port/nds_p4_piano.c` ports all 19 read as
+assembled: the up special (Super Jump Chomp: its begin, launch at 120 up and
+50 plus half the stick forward, Mario's landing map with 0x3E205C29), and the
+down special, which is Ness's absorb fused with Yoshi's command grab (open
+mouth, absorb, end, the command throw with the victim hidden once the script
+says so, and the ground/air switches through Remix's two tables). The hooks
+Remix puts on his id are `NDSP4Overrides` rows: `absorb_hit` (Ness's absorb
+routine sends him to his own absorb status), `absorb_heal` (an absorbed shot
+heals 0.75 of its damage, the source twice it, and banks a third as books, at
+most five), `command_capture_status` and `capture_status` (his command grab's
+and his grab's victims enter ThrownDK, Shouldered here),
+`shouldered_interrupt` (the victim never mashes out and is eaten while he
+holds it), `fireball`/`kirby_fireball` (fireball.asm's struct_book: one book
+at 60 degrees with a random 25-degree spread, plus one per banked book, each
+spread a quarter wider; Kirby's from joint 7), `thrown_hidden` (his throws
+hide the victim as Yoshi's do), and `ndsP4PianoOnStatus` (his tongue and held
+item show only in the grab, the grab pull and the item statuses). The book is
+a P4 weapon (`NDS_P4_WP_KIND_PIANO_BOOK`) on his own special file 1, drawn
+natively (`p4_articles.py`). His CPU takes Ness's absorb branch
+(`NDS_P4_COMPUTER_REFLECT_NESS`, generated from
+extend_projectile_reflect_initial_) and holds and presses his own absorb
+statuses (0xE5-0xED: `NDSP4Computer.absorb_first/_end`, Reflect.asm
+_piano_absorb). He has no victory song (add_victory_bgm(-1)); his podium tag
+sits at Kirby's height (label_height). Two fixes for the others came with
+him: Wario's grab puts its victim in ThrownDK as Remix does
+(CustomGrabAction.asm, never ported before), and the podium tag heights of
+Crash, Lanky and Peach follow their label_height rows; Banjo's podium says
+"WIN!".
 
 ## Board 1 status (master plan Revision 3)
 

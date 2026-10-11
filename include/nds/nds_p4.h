@@ -57,11 +57,19 @@ typedef struct NDSP4Present
     f32 results_name_x;
     f32 results_name_scale;
     f32 results_wins_x;       /* "WINS!" left x */
+    u8 results_label_kind;    /* label_height: the kind whose podium tag height it takes */
+    u8 results_win_singular;  /* get_str_wins_lx_: "WIN!" (Banjo & Kazooie) */
     u16 announce_fgm;         /* winner_fgm: the announcer's name call */
     u16 victory_bgm;          /* winner_bgm */
     u16 crowd_chant_fgm;
     f32 menu_zoom;
     u8 default_costumes[8];
+    /* The name's '&' (resultsscreen.asm add_ampersand_): Remix's glyph Sprite
+     * at results_glyph_sprite in content file results_glyph_file, advanced by
+     * results_glyph_width; file 0 when the name has none. */
+    u16 results_glyph_file;
+    u32 results_glyph_sprite;
+    f32 results_glyph_width;
 } NDSP4Present;
 
 /* A content's hand-ported CPU routines: Remix code AI.asm runs from the
@@ -80,6 +88,12 @@ typedef struct NDSP4Computer
     /* AI.asm usp_check_: the input interpreter's Fox up-special test
      * (ftcomputer.c:3575) takes this content, as it takes Fox (Falco). */
     u8 fox_usp_check;
+    /* Reflect.asm maintain_ and apply_reflect_input_'s own case for an
+     * absorber of the Ness branch (NDS_P4_COMPUTER_REFLECT_NESS): its
+     * absorb statuses [absorb_first, absorb_end) stand for Ness's
+     * PSI Magnet scope (Mad Piano's 0xE5-0xED). */
+    u16 absorb_first;
+    u16 absorb_end;
 } NDSP4Computer;
 
 /* ai_long_range: the parent's own case, or one of the two cases of the
@@ -102,6 +116,7 @@ enum
  * compares at those sites see a foreign kind (generate_p4_fighter.py). */
 #define NDS_P4_COMPUTER_REFLECT_TABLE 0x01u
 #define NDS_P4_COMPUTER_REFLECT_FOX 0x02u
+#define NDS_P4_COMPUTER_REFLECT_NESS 0x04u
 
 /* A texture pointer in one of the content's own files whose image the
  * native entry packet already carries (scripts/3d_vfx/
@@ -264,6 +279,38 @@ typedef struct NDSP4Overrides
     s32 (*kirby_copy_inhale_status)(s32 status_id);
     /* S8: on_custom_reflect for a Kirby holding the power (Dedede's absorb). */
     void (*kirby_on_custom_reflect)(GObj *fighter_gobj);
+    /* Ness's absorb routine (ftNessSpecialLwProcAbsorb, called from the hit
+     * processing) after its turn to face the shot: the content's absorb
+     * status in place of Ness's (PianoSpecial.asm ground/
+     * air_absorb_initial_patch_). */
+    void (*absorb_hit)(GObj *fighter_gobj);
+    /* ftMainUpdateAbsorbStatWeapon: the percent an absorbed projectile heals
+     * when it heals at all (the source heals twice its damage;
+     * PianoSpecial.asm absorb_behaviour_). */
+    s32 (*absorb_heal)(FTStruct *fp, s32 damage);
+    /* ftCommonCaptureYoshiProcCapture: the status a fighter its command grab
+     * catches enters instead of CaptureYoshi (command_grab_action_fix_); 0
+     * keeps the source's. */
+    s32 command_capture_status;
+    /* ftCommonCapturePulledProcCapture: the status its grab's victim enters
+     * instead of CapturePulled, its first-frame position then taken by the
+     * thrown statuses' physics (CustomGrabAction.asm,
+     * Character.custom_capture_action: ThrownDK, here Shouldered); 0 keeps
+     * the source's. */
+    s32 capture_status;
+    /* ftCommonCaptureShoulderedProcInterrupt of a victim it holds, ahead of
+     * the source's mash-out (Character.custom_capture_dk_interrupt): TRUE
+     * skips the source's. */
+    sb32 (*shouldered_interrupt)(GObj *victim_gobj);
+    /* Mario's fireball maker (the fireball table): the content's projectile
+     * in its place, at the hand position the accessory found. */
+    GObj *(*fireball)(GObj *fighter_gobj, Vec3f *pos);
+    /* The same for a Kirby holding the power (kirby_fireball). */
+    GObj *(*kirby_fireball)(GObj *fighter_gobj, Vec3f *pos);
+    /* ftCommonThrownSetStatusImmediate: its victims are hidden and
+     * intangible while thrown, as Yoshi's (yoshishared.asm
+     * yoshi_throw_fix_1). */
+    sb32 thrown_hidden;
 } NDSP4Overrides;
 
 /* Item kinds past the source's last (nITKindEnumCount, as Remix numbers its
@@ -293,6 +340,7 @@ sb32 ndsP4ColAnimEnd(GObj *fighter_gobj);
 #define NDS_P4_WP_KIND_LANKY_GRAPE (nWPKindMonsterEnd + 4)
 #define NDS_P4_WP_KIND_SONIC_SPRING (nWPKindMonsterEnd + 5)
 #define NDS_P4_WP_KIND_WADDLEDOO_BEAM (nWPKindMonsterEnd + 6)
+#define NDS_P4_WP_KIND_PIANO_BOOK (nWPKindMonsterEnd + 7)
 
 /* Remix's custom reflect kind (Reflect.asm reflect_type.CUSTOM): the low
  * half of FTSpecialColl.kind (the N64's second halfword), the routine index
@@ -876,8 +924,38 @@ sb32 ndsP4LowDetailBattle(void);
  * 2026-10-08, lower content fidelity; a preview panel is 42 pixels wide), from
  * the battle pack and the low owner image. */
 sb32 ndsP4LowDetailSelect(void);
+/* TRUE on the Results podium of a three- or four-fighter match: its contents
+ * keep the battle's low detail there too (owner 2026-10-08), from the battle
+ * pack and the low owner image; the original cast keeps its high detail. */
+sb32 ndsP4LowDetailResults(void);
+/* FALSE on the Results podium, where no fighter guards: a content's Main
+ * keeps its nine guard-pose pointers NULL and its native package (2-11 KB)
+ * stays unloaded. */
+sb32 ndsP4GuardPosesNeeded(void);
+/* ftmain.c's absorb dispatch: Ness's absorb routine, or the content's
+ * absorb_hit after its turn to face the shot. */
+void ndsP4ProcAbsorb(GObj *fighter_gobj);
+/* ftCommonCapturePulledProcCapture for a grabber with a capture_status:
+ * TRUE when it made the capture. */
+sb32 ndsP4CustomCapture(GObj *fighter_gobj, GObj *capture_gobj);
+/* ftCommonCaptureShoulderedProcInterrupt: TRUE when the holder's
+ * shouldered_interrupt replaced the source's. */
+sb32 ndsP4ShoulderedInterrupt(GObj *victim_gobj);
+/* ftCommonCaptureYoshiProcCapture's status for a fighter `fighter_gobj`
+ * whose capturer is set: the capturer's command_capture_status, or
+ * `status_id`. */
+s32 ndsP4CommandCaptureStatus(GObj *fighter_gobj, s32 status_id);
+/* wpMarioFireballMakeWeapon: the fighter's (or its copied power's)
+ * fireball row, or NULL for Mario's fireball. */
+GObj *(*ndsP4Fireball(const FTStruct *fp))(GObj *fighter_gobj, Vec3f *pos);
+/* ftCommonThrownSetStatusImmediate: TRUE when the thrower hides its
+ * victims as Yoshi does. */
+sb32 ndsP4ThrownHidden(const FTStruct *fp);
 /* NDS_P4_COMPUTER_REFLECT_* bits; 0 for the original cast. */
 u32 ndsP4ComputerReflect(const FTStruct *fp);
+/* TRUE while a Ness-branch absorber content is in its own absorb statuses
+ * (NDSP4Computer.absorb_first/_end). */
+sb32 ndsP4ComputerAbsorbing(const FTStruct *fp);
 /* The fighter as the CPU reflect checks see it: Fox for a content with
  * Fox's branch, NDS_P4_FOREIGN_FKIND for any other content, else its kind. */
 s32 ndsP4ComputerReflectKind(const FTStruct *fp);

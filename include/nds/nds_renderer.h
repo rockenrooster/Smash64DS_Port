@@ -1650,6 +1650,7 @@ s32 ndsRendererNativeEnsureKirbyCopyHat(
  * in one detail (low when `use_low_detail`); a Kirby showing one binds its
  * image to his slot in the source hat's place. FALSE when the match holds no
  * such image. */
+void ndsRendererNativeKirbyHatSetKirbySlots(u32 slot_mask);
 void ndsRendererNativeKirbyHatSetP4Hats(const u8 *hats, u32 count, u32 use_low_detail);
 s32 ndsRendererNativeEnsureKirbyP4Hat(u32 battle_slot, u32 hat, u32 use_low_detail);
 #if NDS_NATIVE_OWNER_IMAGE_VERIFY

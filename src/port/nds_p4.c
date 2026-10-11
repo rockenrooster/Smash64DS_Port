@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ef/effect.h>
+#include <it/item.h>
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_kirby_hat_residency.h>
 #include <nds/nds_renderer.h>
@@ -240,6 +241,148 @@ sb32 ndsP4LowDetailBattle(void)
 sb32 ndsP4LowDetailSelect(void)
 {
     return (gSCManagerSceneData.scene_curr == nSCKindPlayersVS) ? TRUE : FALSE;
+}
+
+void ftNessSpecialLwProcAbsorb(GObj *fighter_gobj);
+void ftParamsUpdateFighterPartsTransformAll(DObj *dobj);
+
+void ndsP4ProcAbsorb(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    const NDSP4Overrides *o = ndsP4Overrides(fp);
+    DObj *joint;
+
+    if ((o == NULL) || (o->absorb_hit == NULL))
+    {
+        ftNessSpecialLwProcAbsorb(fighter_gobj);
+        return;
+    }
+    /* ftNessSpecialLwProcAbsorb up to the status it sets. */
+    joint = fp->joints[nFTPartsJointTopN];
+    fp->lr = fp->absorb_lr;
+    joint->rotate.vec.f.y += F_CST_DTOR32(-180.0F);
+    ftParamsUpdateFighterPartsTransformAll(fp->joints[nFTPartsJointTopN]);
+    o->absorb_hit(fighter_gobj);
+}
+
+void ftParamStopVoiceRunProcDamage(GObj *fighter_gobj);
+void ftSetupDropItem(FTStruct *fp);
+void ftCommonThrownSetStatusDamageRelease(GObj *fighter_gobj);
+void ftCommonThrownDecideFighterLoseGrip(GObj *fighter_gobj, GObj *interact_gobj);
+void ftCommonThrownProcPhysics(GObj *fighter_gobj);
+void ftCommonCapturePulledProcMap(GObj *fighter_gobj);
+
+/* ftCommonCapturePulledProcCapture with the grabber's capture status, and
+ * the thrown statuses' physics for the first frame
+ * (CustomGrabAction.asm capture_action_override_, capture_position_fix_). */
+sb32 ndsP4CustomCapture(GObj *fighter_gobj, GObj *capture_gobj)
+{
+    FTStruct *this_fp = ftGetStruct(fighter_gobj);
+    FTStruct *capture_fp = ftGetStruct(capture_gobj);
+    const NDSP4Overrides *o = ndsP4Overrides(capture_fp);
+
+    if ((o == NULL) || (o->capture_status == 0))
+    {
+        return FALSE;
+    }
+    ftParamStopVoiceRunProcDamage(fighter_gobj);
+
+    if ((this_fp->item_gobj != NULL) && (itGetStruct(this_fp->item_gobj)->weight == nITWeightHeavy))
+    {
+        ftSetupDropItem(this_fp);
+    }
+    if (this_fp->catch_gobj != NULL)
+    {
+        ftCommonThrownSetStatusDamageRelease(this_fp->catch_gobj);
+
+        this_fp->catch_gobj = NULL;
+    }
+    else if (this_fp->capture_gobj != NULL)
+    {
+        ftCommonThrownDecideFighterLoseGrip(this_fp->capture_gobj, fighter_gobj);
+    }
+    this_fp->is_catch_or_capture = FALSE;
+    this_fp->capture_gobj = capture_gobj;
+    this_fp->lr = -capture_fp->lr;
+
+    ftMainSetStatus(fighter_gobj, o->capture_status, 0.0F, 1.0F, FTSTATUS_PRESERVE_NONE);
+    ftMainPlayAnimEventsAll(fighter_gobj);
+
+    this_fp->status_vars.common.capture.is_goto_pulled_wait = FALSE;
+
+    ftParamSetCaptureImmuneMask(this_fp, FTCATCHKIND_MASK_ALL);
+    ftParamMakeRumble(this_fp, 9, 0);
+    ftPhysicsStopVelAll(fighter_gobj);
+    ftCommonThrownProcPhysics(fighter_gobj);
+    ftCommonCapturePulledProcMap(fighter_gobj);
+
+    return TRUE;
+}
+
+sb32 ndsP4ShoulderedInterrupt(GObj *victim_gobj)
+{
+    GObj *capture_gobj = ftGetStruct(victim_gobj)->capture_gobj;
+    const NDSP4Overrides *o = (capture_gobj != NULL) ?
+        ndsP4Overrides(ftGetStruct(capture_gobj)) : NULL;
+
+    return ((o != NULL) && (o->shouldered_interrupt != NULL)) ?
+        o->shouldered_interrupt(victim_gobj) : FALSE;
+}
+
+s32 ndsP4CommandCaptureStatus(GObj *fighter_gobj, s32 status_id)
+{
+    GObj *capture_gobj = ftGetStruct(fighter_gobj)->capture_gobj;
+    const NDSP4Overrides *o;
+
+    if ((status_id != nFTCommonStatusCaptureYoshi) || (capture_gobj == NULL))
+    {
+        return status_id;
+    }
+    o = ndsP4Overrides(ftGetStruct(capture_gobj));
+
+    return ((o != NULL) && (o->command_capture_status != 0)) ?
+        o->command_capture_status : status_id;
+}
+
+GObj *(*ndsP4Fireball(const FTStruct *fp))(GObj *fighter_gobj, Vec3f *pos)
+{
+    const NDSP4Overrides *o = ndsP4Overrides(fp);
+
+    if (o != NULL)
+    {
+        return o->fireball;
+    }
+#if NDS_P2_KIRBY
+    if ((fp->nds_p4_content == 0u) && (fp->nds_p4_kirby_copy != 0u))
+    {
+        const NDSP4Fighter *f = ndsP4Fighter(fp->nds_p4_kirby_copy);
+
+        return ((f != NULL) && (f->overrides != NULL)) ? f->overrides->kirby_fireball : NULL;
+    }
+#endif
+    return NULL;
+}
+
+sb32 ndsP4ThrownHidden(const FTStruct *fp)
+{
+    const NDSP4Overrides *o = ndsP4Overrides(fp);
+
+    return ((o != NULL) && (o->thrown_hidden != FALSE)) ? TRUE : FALSE;
+}
+
+sb32 ndsP4GuardPosesNeeded(void)
+{
+    return (gSCManagerSceneData.scene_curr != nSCKindVSResults) ? TRUE : FALSE;
+}
+
+sb32 ndsP4LowDetailResults(void)
+{
+    if (gSCManagerSceneData.scene_curr != nSCKindVSResults)
+    {
+        return FALSE;
+    }
+    return ((gSCManagerTransferBattleState.pl_count +
+             gSCManagerTransferBattleState.cp_count) >= 3) ? TRUE : FALSE;
 }
 
 sb32 ndsP4ContentLowDetailOnly(s32 player)
@@ -477,8 +620,21 @@ s32 ndsP4ComputerReflectKind(const FTStruct *fp)
     {
         return fp->fkind;
     }
+    if ((ndsP4ComputerReflect(fp) & NDS_P4_COMPUTER_REFLECT_NESS) != 0u)
+    {
+        return nFTKindNess;
+    }
     return ((ndsP4ComputerReflect(fp) & NDS_P4_COMPUTER_REFLECT_FOX) != 0u) ?
         nFTKindFox : NDS_P4_FOREIGN_FKIND;
+}
+
+sb32 ndsP4ComputerAbsorbing(const FTStruct *fp)
+{
+    const NDSP4Fighter *f = ndsP4Fighter(ndsP4Content(fp));
+    const NDSP4Computer *c = (f != NULL) ? f->computer : NULL;
+
+    return ((c != NULL) && (fp->status_id >= c->absorb_first) &&
+            (fp->status_id < c->absorb_end)) ? TRUE : FALSE;
 }
 
 sb32 ndsP4ComputerTargetReflects(const FTStruct *fp)

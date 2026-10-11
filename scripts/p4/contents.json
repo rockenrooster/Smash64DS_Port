@@ -14,6 +14,7 @@
   {"id": 11, "name": "sheik", "remix": "SHEIK", "title": "Sheik"},
   {"id": 12, "name": "banjo", "remix": "BANJO", "title": "Banjo"},
   {"id": 13, "name": "sonic", "remix": "SONIC", "title": "Sonic"},
-  {"id": 14, "name": "dedede", "remix": "DEDEDE", "title": "Dedede"}
+  {"id": 14, "name": "dedede", "remix": "DEDEDE", "title": "Dedede"},
+  {"id": 15, "name": "piano", "remix": "PIANO", "title": "Piano"}
  ]
 }

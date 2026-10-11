@@ -14,8 +14,17 @@ extern u8 __nds_frontend_1p_end[];
 /* Start of the VS character select's block (the same script): the select lends
  * everything before it. */
 extern u8 __nds_frontend_select_start[];
+/* The VS Results block sits between the middle and the select's block (the
+ * same script): Results lends everything before it and the select's block. */
+extern u8 __nds_frontend_results_start[];
+extern u8 __nds_frontend_select_end[];
 
 static u8 *sNdsFrontendCursor;
+/* Where the current loan ends: the overlay's end, or the Results block. */
+static u8 *sNdsFrontendLoanEnd;
+/* Results' second range (the select's block), taken once the first is full. */
+static u8 *sNdsFrontendCursor2;
+static u8 *sNdsFrontendLoanEnd2;
 static u32 sNdsFrontendInitialized;
 static u32 sNdsFrontendLoaded;
 /* A 1P, bonus or training battle borrowed the tail: its code and the scene
@@ -152,10 +161,13 @@ void *ndsFrontendOverlayBorrowForSelect(u32 *bytes)
 void ndsFrontendOverlayBeginScene(u32 kind)
 {
     sNdsFrontendCursor = NULL;
+    sNdsFrontendCursor2 = NULL;
+    sNdsFrontendLoanEnd2 = NULL;
     gNdsFrontendOverlayLoanBytes = 0u;
     gNdsFrontendOverlayUsedBytes = 0u;
     gNdsFrontendOverlayAllocCount = 0u;
     gNdsFrontendOverlaySpillBytes = 0u;
+    sNdsFrontendLoanEnd = __nds_frontend_end;
     if ((kind == (u32)nSCKindVSBattle) && (sNdsFrontendLoaded == 0u))
     {
         /* Reset at every scene instance, including Sudden Death. This seam is
@@ -184,24 +196,74 @@ void ndsFrontendOverlayBeginScene(u32 kind)
         NDS_DIAG(gNdsFrontendOverlayTailLoanCount++);
         sNdsFrontendTailLoaned = 1u;
     }
+    else if ((kind == (u32)nSCKindVSResults) && (sNdsFrontendLoaded != 0u))
+    {
+        /* VS Results runs only its own block, linked last; everything before
+         * it is this scene's asset storage (a battle of contents reloads their
+         * select packs and images here), as a battle's tail loan, and the next
+         * dispatch reloads the overlay once an allocation landed in it. */
+        sNdsFrontendCursor = __nds_frontend_start;
+        sNdsFrontendLoanEnd = __nds_frontend_results_start;
+        sNdsFrontendCursor2 = __nds_frontend_select_start;
+        sNdsFrontendLoanEnd2 = __nds_frontend_select_end;
+        gNdsFrontendOverlayLoanBytes =
+            (u32)(__nds_frontend_results_start - __nds_frontend_start) +
+            (u32)(__nds_frontend_select_end - __nds_frontend_select_start);
+        gNdsFrontendOverlayLoanCount++;
+        sNdsFrontendTailLoaned = 1u;
+    }
 }
 
 void ndsFrontendOverlayEndScene(void)
 {
     sNdsFrontendCursor = NULL;
+    sNdsFrontendCursor2 = NULL;
 }
+
+static void *ndsFrontendOverlayTryAllocIn(u8 **cursor, u8 *limit,
+                                          size_t bytes, u32 alignment);
 
 void *ndsFrontendOverlayTryAlloc(size_t bytes, u32 alignment)
 {
-    uintptr_t start;
-    uintptr_t end = (uintptr_t)__nds_frontend_end;
+    void *storage;
 
     if ((sNdsFrontendCursor == NULL) || (bytes == 0u) ||
         (alignment == 0u) || ((alignment & (alignment - 1u)) != 0u))
     {
         return NULL;
     }
-    start = (uintptr_t)sNdsFrontendCursor;
+    storage = ndsFrontendOverlayTryAllocIn(
+        &sNdsFrontendCursor,
+        (sNdsFrontendLoanEnd != NULL) ? sNdsFrontendLoanEnd : __nds_frontend_end,
+        bytes, alignment);
+    if ((storage == NULL) && (sNdsFrontendCursor2 != NULL))
+    {
+        storage = ndsFrontendOverlayTryAllocIn(&sNdsFrontendCursor2,
+                                               sNdsFrontendLoanEnd2, bytes,
+                                               alignment);
+    }
+    if (storage != NULL)
+    {
+        if (sNdsFrontendTailLoaned != 0u)
+        {
+            sNdsFrontendTailDirty = 1u;
+        }
+        gNdsFrontendOverlayUsedBytes =
+            (u32)(sNdsFrontendCursor - __nds_frontend_start) +
+            ((sNdsFrontendCursor2 != NULL) ?
+                 (u32)(sNdsFrontendCursor2 - __nds_frontend_select_start) : 0u);
+        gNdsFrontendOverlayAllocCount++;
+    }
+    return storage;
+}
+
+static void *ndsFrontendOverlayTryAllocIn(u8 **cursor, u8 *limit,
+                                          size_t bytes, u32 alignment)
+{
+    uintptr_t start;
+    uintptr_t end = (uintptr_t)limit;
+
+    start = (uintptr_t)*cursor;
     if (start > UINTPTR_MAX - (alignment - 1u))
     {
         return NULL;
@@ -211,14 +273,7 @@ void *ndsFrontendOverlayTryAlloc(size_t bytes, u32 alignment)
     {
         return NULL;
     }
-    sNdsFrontendCursor = (u8 *)(start + bytes);
-    if (sNdsFrontendTailLoaned != 0u)
-    {
-        sNdsFrontendTailDirty = 1u;
-    }
-    gNdsFrontendOverlayUsedBytes =
-        (u32)(sNdsFrontendCursor - __nds_frontend_start);
-    gNdsFrontendOverlayAllocCount++;
+    *cursor = (u8 *)(start + bytes);
     return (void *)start;
 }
 

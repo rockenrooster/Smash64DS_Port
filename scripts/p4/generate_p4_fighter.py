@@ -24,6 +24,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import struct
 import sys
 from pathlib import Path
@@ -351,6 +352,26 @@ CALLBACK_PORTS = {
     "DededeDSP.shoot_main_": "ndsP4DededeDSPShootMain",
     "DededeDSP.ground_shoot_collision_": "ndsP4DededeDSPShootGroundMap",
     "DededeDSP.air_shoot_collision_": "ndsP4DededeDSPShootAirMap",
+    # src/port/nds_p4_piano.c
+    "PianoUSP.initial_": "ndsP4PianoUSPInitial",
+    "PianoUSP.main_": "ndsP4PianoUSPMain",
+    "PianoUSP.change_direction_": "ndsP4PianoUSPChangeDirection",
+    "PianoUSP.physics_": "ndsP4PianoUSPPhysics",
+    "PianoUSP.collision_": "ndsP4PianoUSPMap",
+    "PianoDSP.ground_begin_initial_": "ndsP4PianoDSPGroundInitial",
+    "PianoDSP.air_begin_initial_": "ndsP4PianoDSPAirInitial",
+    "PianoDSP.ground_begin_main_": "ndsP4PianoDSPGroundBeginMain",
+    "PianoDSP.air_begin_main_": "ndsP4PianoDSPAirBeginMain",
+    "PianoDSP.ground_wait_main_": "ndsP4PianoDSPGroundWaitMain",
+    "PianoDSP.air_wait_main_": "ndsP4PianoDSPAirWaitMain",
+    "PianoDSP.ground_absorb_main_": "ndsP4PianoDSPGroundAbsorbMain",
+    "PianoDSP.air_absorb_main_": "ndsP4PianoDSPAirAbsorbMain",
+    "PianoDSP.ground_collision_": "ndsP4PianoDSPGroundMap",
+    "PianoDSP.air_collision_": "ndsP4PianoDSPAirMap",
+    "PianoDSP.cmd_throw_hide_": "ndsP4PianoDSPThrowHide",
+    "PianoDSP.cmd_throw_ground_physics_": "ndsP4PianoDSPGroundThrowPhysics",
+    "PianoDSP.cmd_throw_ground_collision_": "ndsP4PianoDSPGroundThrowMap",
+    "PianoDSP.cmd_throw_air_collision_": "ndsP4PianoDSPAirThrowMap",
 }
 
 # P4: entry_script cases of another kind a content's port carries
@@ -417,6 +438,10 @@ OWN_SPECIAL_FILES = {
     # file it names). Fox's reflector and Arwing entry, the parent's readers
     # of special file 2, never run for her.
     "peach": (2,),
+    # His book (1, PIANO_PROJECTILE_HITBOX, Piano file 6: fireball.asm
+    # struct_book's WPAttributes at 0). Mario's fireball code, the other
+    # reader of special file 1, never runs for him (the fireball table).
+    "piano": (1,),
     # His entry's object (3, Crash file 8; no code reads Mario's special
     # file 3), and his spin's effect (2, CRASH_SPIN_GFX, Link's spin attack
     # description on his file; it names his dig effect's file at 0xCC0).
@@ -509,10 +534,11 @@ REFLECT_FOX_HOOKS = ("Reflect.AI.extend_projectile_reflect_initial_",
                      "Reflect.AI.apply_reflect_input_")
 
 
-def reflect_fox_ids(rom: R.Rom, sym: dict, hook: str) -> set[int]:
-    """Character ids `hook` sends to its _fox_reflect label: the immediate of
-    the `ori at, zero, id` before each `beq at, v0` / `beq v0, at` there."""
-    start, normal, fox = (sym[hook], sym[f"{hook}._normal"], sym[f"{hook}._fox_reflect"])
+def reflect_fox_ids(rom: R.Rom, sym: dict, hook: str, label: str = "_fox_reflect") -> set[int]:
+    """Character ids `hook` sends to its `label` (_fox_reflect, _ness_absorb):
+    the immediate of the `ori at, zero, id` before each `beq at, v0` /
+    `beq v0, at` there."""
+    start, normal, fox = (sym[hook], sym[f"{hook}._normal"], sym[f"{hook}.{label}"])
     ids: set[int] = set()
     at_value = None
     for pc in range(start, normal, 4):
@@ -525,7 +551,7 @@ def reflect_fox_ids(rom: R.Rom, sym: dict, hook: str) -> set[int]:
             if target == fox and at_value is not None:
                 ids.add(at_value)
     if not ids:
-        raise GenError(f"{hook}: no Fox-branch character ids decoded")
+        raise GenError(f"{hook}: no {label} character ids decoded")
     return ids
 
 
@@ -581,6 +607,12 @@ def computer_reflect(rom: R.Rom, sym: dict, remix_id: int) -> str:
         raise GenError(f"reflect AI hooks disagree on Fox's branch for id {remix_id}: {fox}")
     if all(fox):
         bits.append("NDS_P4_COMPUTER_REFLECT_FOX")
+    # The incoming-shot scan's Ness branch (extend_projectile_reflect_initial_
+    # _ness_absorb: Mad Piano); the hold and the press (maintain_ and
+    # apply_reflect_input_) give such a content a case of its own, its port's
+    # absorb statuses (NDSP4Computer.absorb_first/_end).
+    if remix_id in reflect_fox_ids(rom, sym, REFLECT_FOX_HOOKS[0], "_ness_absorb"):
+        bits.append("NDS_P4_COMPUTER_REFLECT_NESS")
     return " | ".join(bits) or "0"
 
 
@@ -834,6 +866,77 @@ def sprite_row(rom: R.Rom, fid: int, off: int) -> dict:
     return {"file_id": fid, "offset": off, "width": width, "height": height,
             "bitmaps": struct.unpack_from(">h", data, off + 40)[0],
             "fmt": data[off + 48], "siz": data[off + 49]}
+
+
+# Smash Remix's Results font (resultsscreen.asm add_ampersand_): '&' is char
+# 0x1D, drawn from a Sprite Remix appended to IFCommonAnnounceCommon -- the
+# letters' file, dMNVSResultsFileIDs[6] -- and advanced by its own width.
+ANNOUNCE_FILE = 0x25
+
+
+def results_ampersand(rom: R.Rom, staging: Path, file_id: int) -> tuple[bytes, dict]:
+    """The '&' Sprite with its bitmap and texels as a file of its own, so the
+    DS loads 1.3 KB at Results instead of the donor's 33 KB letters file."""
+    text = (staging / "src" / "resultsscreen.asm").read_text(encoding="utf-8", errors="replace")
+    at = text.find("scope add_ampersand_")
+    scope = text[at:at + 4000] if at >= 0 else ""
+    m_off = re.search(r"lli\s+t3,\s*(0x[0-9A-Fa-f]+)(?:\s*\+\s*(0x[0-9A-Fa-f]+))?", scope)
+    m_w = re.search(r"lui\s+t3,\s*(0x[0-9A-Fa-f]+)", scope)
+    if m_off is None or m_w is None:
+        raise GenError("resultsscreen.asm add_ampersand_: no ampersand offset or width")
+    sprite = int(m_off.group(1), 16) + int(m_off.group(2) or "0", 16)
+    advance = struct.unpack(">f", struct.pack(">I", int(m_w.group(1), 16) << 16))[0]
+    data = rom.file_bytes(ANNOUNCE_FILE)
+    slots = rom.reloc_slots(ANNOUNCE_FILE)
+    where = f"{ANNOUNCE_FILE:#x}+{sprite:#x}"
+    bm_ref = slots.get(sprite + 52)
+    if bm_ref is None or bm_ref[0] != "intern":
+        raise GenError(f"{where}: the ampersand Sprite has no internal bitmap")
+    if struct.unpack_from(">h", data, sprite + 40)[0] != 1 or (sprite + 32) in slots:
+        raise GenError(f"{where}: the ampersand is not one bitmap without a LUT")
+    bitmap = bm_ref[1]
+    buf_ref = slots.get(bitmap + 8)
+    if buf_ref is None or buf_ref[0] != "intern":
+        raise GenError(f"{where}: the ampersand's texels are not internal")
+    texels = buf_ref[1]
+    # Remix lays the glyph out as texels, bitmap, Sprite; the Sprite ends the
+    # file without its last word (frac_s/frac_t), restored here as zero.
+    end = sprite + 0x44
+    if not (texels < bitmap and bitmap + 0x10 == sprite and end - len(data) in (0, 4)):
+        raise GenError(f"{where}: unexpected ampersand layout")
+    if sorted(o for o in slots if texels <= o < end) != [bitmap + 8, sprite + 52]:
+        raise GenError(f"{where}: the ampersand span holds other pointers")
+    body = bytearray(data[texels:end].ljust(end - texels, b"\0"))
+    first, second = (bitmap + 8 - texels) // 4, (sprite + 52 - texels) // 4
+    struct.pack_into(">I", body, bitmap + 8 - texels, (second << 16) | 0)
+    struct.pack_into(">I", body, sprite + 52 - texels,
+                     (R.NO_RELOC << 16) | ((bitmap - texels) // 4))
+    out = bytearray(R.O2R_HEADER)
+    out += struct.pack("<IHHI", file_id, first, R.NO_RELOC, 0)
+    out += struct.pack("<I", len(body))
+    out += body
+    width, height = struct.unpack_from(">hh", data, sprite + 4)
+    row = {"file_id": file_id, "offset": sprite - texels, "width": width, "height": height,
+           "bitmaps": 1, "fmt": data[sprite + 48], "siz": data[sprite + 49]}
+    return bytes(out), {"row": row, "advance": advance}
+
+
+def results_win_singular(staging: Path, remix_name: str) -> bool:
+    """resultsscreen.asm get_str_wins_lx_: the fighters whose "WINS!" is
+    "WIN!" by id (Banjo & Kazooie): an `lli t6, Character.id.<X>` whose
+    branch to _get_lx moves the string pointer (`addiu a0, a0, 0x000C`).
+    The J sound type's case names no P4 fighter."""
+    text = (staging / "src" / "resultsscreen.asm").read_text(encoding="utf-8", errors="replace")
+    at = text.find("scope get_str_wins_lx_")
+    if at < 0:
+        raise GenError("resultsscreen.asm: no get_str_wins_lx_")
+    lines = [ln.split("//")[0].strip() for ln in text[at:at + 4000].splitlines()]
+    for i, ln in enumerate(lines[:-2]):
+        m = re.match(r"lli\s+t6,\s*Character\.id\.(\w+)$", ln)
+        if (m and m.group(1) == remix_name and lines[i + 1].startswith("beql")
+                and re.match(r"addiu\s+a0,\s*a0,\s*0x000C$", lines[i + 2])):
+            return True
+    return False
 
 
 def stock_texture(rom: R.Rom, fid: int, sprite_off: int) -> int:
@@ -1255,6 +1358,10 @@ def main() -> int:
         "palettes": [o for _, o in fs["luts"]]})
     sprite_rows = [sprite_row(rom, *fs["stock"]), sprite_row(rom, *fs["emblem"])]
     present = present_rows(rom, resolved["kind_tables"])
+    # resultsscreen.asm label_height_fix_: the podium tag's height is the
+    # Character.label_height row's kind's; get_str_wins_lx_: "WIN!".
+    present["results_label_kind"] = int(resolved["kind_tables"]["label_height"]["value"], 16)
+    present["results_win_singular"] = results_win_singular(args.staging, resolved["fighter"])
     for row in sprite_rows:
         if row["file_id"] not in shipped:
             raise GenError(f"sprite file {row['file_id']:#x} is not a donor file this build ships")
@@ -1521,6 +1628,16 @@ def main() -> int:
     if any(a >= 0x8000 for a, _ in anims):
         raise GenError("animation id does not fit the 15-bit table encoding")
 
+    # The Results name's '&' (Banjo & Kazooie): Remix's glyph as the
+    # content's second synthesized file, normalized with its sprites.
+    glyph = None
+    if "&" in present["results_name"]:
+        glyph_id = synth_id + 1
+        glyph_o2r, glyph = results_ampersand(rom, args.staging, glyph_id)
+        (o2r_out / f"{glyph_id:04x}").write_bytes(glyph_o2r)
+        shipped[glyph_id] = hashlib.sha256(glyph_o2r).hexdigest()
+        sprite_rows.append(glyph["row"])
+
     ident = f"NdsP4{title}"
     store = dict(spec["shared_storage"])
     own_store = set()
@@ -1606,7 +1723,7 @@ def main() -> int:
     for pal in stock_palettes:
         lines.append("    { " + ", ".join(f"0x{v:04x}" for v in pal) + " },")
     lines += ["};", f"const u32 g{ident}StockPaletteCount = {len(stock_palettes)};", "",
-              "/* FTSprites sprites the reloc loader normalizes (stock icon, emblem). */",
+              "/* Sprites the reloc loader normalizes (stock icon, emblem, Results '&'). */",
               f"const NDSP4SpriteDesc g{ident}Sprites[] = {{"]
     for row in sprite_rows:
         lines.append(f"    {{ {row['file_id']:#x}, {row['bitmaps']}, {row['offset']:#x}, "
@@ -1618,12 +1735,18 @@ def main() -> int:
               f"    .results_name_x = {c_float(present['results_name_x'])},",
               f"    .results_name_scale = {c_float(present['results_name_scale'])},",
               f"    .results_wins_x = {c_float(present['results_wins_x'])},",
+              f"    .results_label_kind = {present['results_label_kind']},",
+              f"    .results_win_singular = {int(present['results_win_singular'])},",
               f"    .announce_fgm = {present['announce_fgm']:#x},",
               f"    .victory_bgm = {present['victory_bgm']:#x},",
               f"    .crowd_chant_fgm = {present['crowd_chant_fgm']:#x},",
               f"    .menu_zoom = {c_float(present['menu_zoom'])},",
-              "    .default_costumes = { " + ", ".join(str(b) for b in present["default_costumes"]) + " },",
-              "};", ""]
+              "    .default_costumes = { " + ", ".join(str(b) for b in present["default_costumes"]) + " },"]
+    if glyph is not None:
+        lines += [f"    .results_glyph_file = {glyph['row']['file_id']:#x},",
+                  f"    .results_glyph_sprite = {glyph['row']['offset']:#x},",
+                  f"    .results_glyph_width = {c_float(glyph['advance'])},"]
+    lines += ["};", ""]
     # SwordTrail.asm rows whose character is this content or any (0xFFFF:
     # initial_setup_ skips the test; Sonic's homing attack trail), the SET
     # AFTERIMAGE id being the row's table index. An exporter without the

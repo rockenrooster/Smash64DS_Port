@@ -20,6 +20,9 @@ s32 ndsShieldPoseReplacesSourceFile(s32 fkind);
  * ShieldPose file (a base fighter's or a polygon's), so the extern-tree loader
  * neither reserves nor loads the raw file. */
 s32 ndsShieldPoseServesDependency(u32 owner_asset, u32 dep_asset);
+/* TRUE when a native package exists for these fixups; unlike
+ * ndsShieldPoseServesDependency it never loads the package. */
+s32 ndsShieldPoseNamesDependency(u32 owner_asset, u32 dep_asset);
 s32 ndsShieldPoseTryApplySingle(DObj *dobj, f32 angle);
 s32 ndsShieldPoseTryApplyAll(DObj *root_dobj, f32 angle);
 s32 ndsShieldPoseTryPlayBatch(GObj *fighter_gobj);

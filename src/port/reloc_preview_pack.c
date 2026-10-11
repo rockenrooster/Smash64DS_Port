@@ -709,11 +709,12 @@ static void ndsPreviewPackLoadFree(NDSPreviewPackLoad *load)
 
 #if NDS_P4
 /* A content's low-detail pack (battle/<kind>.fpc): in a battle of three or
- * four fighters, and on the VS select, which draws a content's low detail
- * (ndsP4LowDetailSelect). */
+ * four fighters and on its Results podium, and on the VS select, which draws
+ * a content's low detail (ndsP4LowDetailSelect). */
 static sb32 ndsRelocPreviewP4LowPack(s32 fkind)
 {
     return ((fkind >= 12) && ((ndsP4LowDetailBattle() != FALSE) ||
+                              (ndsP4LowDetailResults() != FALSE) ||
                               (ndsP4LowDetailSelect() != FALSE))) ? TRUE : FALSE;
 }
 #endif
@@ -1430,7 +1431,15 @@ s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
             continue;
         }
         /* The content's native guard-pose package serves its nine guard
-         * pointers (patched below); the raw ShieldPose file never loads. */
+         * pointers (patched below); the raw ShieldPose file never loads. On
+         * the Results podium nobody guards: the pointers stay NULL and the
+         * package does not load either (ndsP4GuardPosesNeeded). */
+        if ((fkind >= 12) && (ndsP4GuardPosesNeeded() == FALSE) &&
+            (ndsShieldPoseNamesDependency(main_loaded->asset_id,
+                                          rows[i].dep_asset) != FALSE))
+        {
+            continue;
+        }
         if ((fkind >= 12) &&
             (ndsShieldPoseServesDependency(main_loaded->asset_id,
                                            rows[i].dep_asset) != FALSE))
@@ -1475,7 +1484,7 @@ s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
         gNdsBattleCoreExternPatchCount++;
     }
 #if NDS_P4
-    if ((fkind >= 12) &&
+    if ((fkind >= 12) && (ndsP4GuardPosesNeeded() != FALSE) &&
         (ndsShieldPosePatchCompactMain(fkind, main_loaded->data,
                                        main_loaded->data_size) < 0))
     {

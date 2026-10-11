@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 """P4 character select: the 30-cell grid and its donor art, for the UI kit bake.
 
-The P4 roster is the 12 originals plus the 18 Remix selections
-(docs/P4/New_Characters.md). The select screen uses Smash Remix's own layout
-(src/CharacterSelect.asm): a 10x3 grid of 24-pixel cells whose 32x32
-portraits from CHARACTER_PORTRAITS (file 0xA05) draw at scale 0.8125, with the
+The P4 roster is the 12 originals plus the 19 Remix selections
+(docs/P4/New_Characters.md, and Mad Piano at the owner's request,
+2026-10-11). The select screen uses Smash Remix's own layout
+(src/CharacterSelect.asm): a grid of 24-pixel cells whose 32x32 portraits
+from CHARACTER_PORTRAITS (file 0xA05) draw at scale 0.8125, with the
 originals in the same 6x2 block they hold in the vanilla grid. Remix's six
 selections that are not P4 roster (Marina, Dr. Mario, Young Link, Goemon,
 Conker, Mewtwo) give their cells to the six P4 selections Remix's main grid
 does not carry (Metal Mario, Roy, Lanky, Meta Knight, MRGAW, Snake), each
-next to its series where the grid allows.
+next to its series where the grid allows. Mad Piano, on Remix's bonus
+bookend there, has a cell of his own: an eleventh column, its two spare
+cells the NONE plate (owner, 2026-10-11), the grid centred where Remix's
+ten columns sit.
 
 Writes, under --out (a build directory: everything here is derived from the
 user's ROM):
@@ -34,16 +38,18 @@ LOGO_FILE = 0x14        # series logos (Remix-extended FTEmblemSprites)
 FLASH_STRIDE = 0x860    # CharacterSelect.asm: the white flash follows each portrait
 
 # CharacterSelect.asm layout constants.
-GRID = {"columns": 10, "rows": 3, "pitch": 24, "x": 39, "y": 44,
+# Remix's ten columns start at x 39 (START_VISUAL + START_X); eleven start a
+# half-cell-pair left of it, 27, so the grid keeps Remix's centre.
+GRID = {"columns": 11, "rows": 3, "pitch": 24, "x": 27, "y": 44,
         "scale_num": 13, "scale_den": 16,          # PORTRAIT_SCALE 0.8125
-        "hit_x": 29, "hit_y": 35}                  # START_X - TOKEN_OFFSET_X, START_Y - TOKEN_OFFSET_Y
+        "hit_x": 17, "hit_y": 35}                  # START_X - TOKEN_OFFSET_X - 12, START_Y - TOKEN_OFFSET_Y
 
 # The DS P4 grid, row-major. Originals keep Remix's (and the vanilla grid's)
 # cells; each P4 replacement names the Remix cell it takes.
 LAYOUT = (
-    "MRGAW", "METAL", "LUIGI", "MARIO", "DONKEY", "LINK", "SAMUS", "CAPTAIN", "GND", "SONIC",
-    "DEDEDE", "METAKNIGHT", "NESS", "YOSHI", "KIRBY", "FOX", "PIKACHU", "JIGGLYPUFF", "FALCO", "SHEIK",
-    "SNAKE", "CRASH", "WARIO", "PEACH", "BOWSER", "WOLF", "LANKY", "ROY", "MARTH", "BANJO",
+    "MRGAW", "PIANO", "METAL", "LUIGI", "MARIO", "DONKEY", "LINK", "SAMUS", "CAPTAIN", "GND", "SONIC",
+    "NONE", "DEDEDE", "METAKNIGHT", "NESS", "YOSHI", "KIRBY", "FOX", "PIKACHU", "JIGGLYPUFF", "FALCO", "SHEIK",
+    "NONE", "SNAKE", "CRASH", "WARIO", "PEACH", "BOWSER", "WOLF", "LANKY", "ROY", "MARTH", "BANJO",
 )
 # Original cast: Remix constant name -> fkind.
 ORIGINALS = {"MARIO": 0, "FOX": 1, "DONKEY": 2, "SAMUS": 3, "LUIGI": 4, "LINK": 5,

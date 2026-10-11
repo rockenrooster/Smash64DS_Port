@@ -4223,6 +4223,25 @@ static s32 ndsRendererNativeBindP4KirbyHatImage(
 static u8 sNdsNativeKirbyP4Hats[8];
 static u32 sNdsNativeKirbyP4HatCount;
 static u32 sNdsNativeKirbyP4HatWithLow;
+/* P4 S15: a battle whose arena cannot hold every reachable Remix hat keeps
+ * one buffer per Kirby instead, sized for the largest of them, and a Kirby's
+ * hat loads into its own buffer when it takes the power
+ * (ndsRendererNativeEnsureKirbyP4Hat): a Kirby wears one hat at a time. */
+static NDSNativeKirbyHatImageSlot
+    sNdsNativeKirbyP4HatWorking[NDS_NATIVE_KIRBY_HAT_BATTLE_SLOTS];
+static u8 sNdsNativeKirbyP4DeferredHats[8];
+static u32 sNdsNativeKirbyP4DeferredCount;
+static u32 sNdsNativeKirbyP4DeferredDetail;
+static u32 sNdsNativeKirbyP4DeferredBytes;
+/* The battle slots a Kirby plays (nds_kirby_hat_residency.c). */
+static u32 sNdsNativeKirbyP4KirbySlots;
+
+void ndsRendererNativeKirbyHatSetKirbySlots(u32 slot_mask)
+{
+    sNdsNativeKirbyP4KirbySlots = slot_mask;
+}
+__attribute__((used)) volatile u32 gNdsNativeKirbyP4HatDeferCount;
+__attribute__((used)) volatile u32 gNdsNativeKirbyP4HatLateLoadCount;
 
 void ndsRendererNativeKirbyHatSetP4Hats(const u8 *hats, u32 count, u32 use_low_detail)
 {
@@ -4251,11 +4270,21 @@ s32 ndsRendererNativePrepareKirbyHatMatch(u32 high_mask, u32 low_mask)
     u8 *storage;
     u32 p4_count = sNdsNativeKirbyP4HatCount;
     u32 p4_with_low = sNdsNativeKirbyP4HatWithLow;
+    u32 p4_images = 0u;
+    u32 p4_bytes = 0u;
+    u32 p4_max = 0u;
+    u32 p4_deferred = FALSE;
 
     sNdsNativeKirbyP4HatCount = 0u;
+    sNdsNativeKirbyP4DeferredCount = 0u;
+    sNdsNativeKirbyP4DeferredBytes = 0u;
+    memset(sNdsNativeKirbyP4HatWorking, 0, sizeof(sNdsNativeKirbyP4HatWorking));
 
+    /* A low bit outside the high mask is a source hat only a content's power
+     * shows, in a battle of three or four where such a Kirby stays low
+     * (nds_kirby_hat_residency.c). */
     if ((sNdsNativeKirbyHatMatchGeneration != gNdsTaskmanHeapGeneration) ||
-        ((high_mask | low_mask) & ~valid_mask) || (low_mask & ~high_mask))
+        ((high_mask | low_mask) & ~valid_mask))
     {
         gNdsNativeKirbyHatMatchRejectCount++;
         return FALSE;
@@ -4303,7 +4332,11 @@ s32 ndsRendererNativePrepareKirbyHatMatch(u32 high_mask, u32 low_mask)
                 gNdsNativeKirbyHatMatchRejectCount++;
                 return FALSE;
             }
-            image_bytes += (bytes + 15u) & ~15u;
+            bytes = (bytes + 15u) & ~15u;
+            image_bytes += bytes;
+            p4_bytes += bytes;
+            p4_max = (bytes > p4_max) ? bytes : p4_max;
+            p4_images++;
             count++;
         }
     }
@@ -4320,6 +4353,29 @@ s32 ndsRendererNativePrepareKirbyHatMatch(u32 high_mask, u32 low_mask)
         return TRUE;
     }
     storage = ndsSceneAssetTryAlloc(table_bytes + image_bytes, 16u, 25600u);
+#if NDS_P4 && defined(NDS_P4_KIRBY_HATS_PRESENT)
+    if ((storage == NULL) && (p4_images != 0u) && (sNdsNativeKirbyP4KirbySlots != 0u))
+    {
+        u32 kirbys = 0u;
+        u32 player;
+
+        for (player = 0u; player < NDS_NATIVE_KIRBY_HAT_BATTLE_SLOTS; player++)
+        {
+            if ((sNdsNativeKirbyP4KirbySlots & (1u << player)) != 0u)
+            {
+                kirbys++;
+            }
+        }
+        count -= p4_images;
+        image_bytes -= p4_bytes;
+        table_bytes = (count * sizeof(NDSNativeKirbyHatImageSlot) + 15u) & ~15u;
+        gNdsNativeKirbyHatMatchRequiredBytes =
+            table_bytes + image_bytes + (kirbys * p4_max);
+        storage = ndsSceneAssetTryAlloc(table_bytes + image_bytes +
+                                            (kirbys * p4_max), 16u, 25600u);
+        p4_deferred = TRUE;
+    }
+#endif
     if (storage == NULL)
     {
         gNdsNativeKirbyHatMatchRejectCount++;
@@ -4370,6 +4426,30 @@ s32 ndsRendererNativePrepareKirbyHatMatch(u32 high_mask, u32 low_mask)
         }
     }
 #if NDS_P4 && defined(NDS_P4_KIRBY_HATS_PRESENT)
+    if (p4_deferred != FALSE)
+    {
+        u32 player;
+
+        for (part = 0u; part < p4_count; part++)
+        {
+            sNdsNativeKirbyP4DeferredHats[part] = sNdsNativeKirbyP4Hats[part];
+        }
+        sNdsNativeKirbyP4DeferredCount = p4_count;
+        sNdsNativeKirbyP4DeferredDetail = p4_with_low ? 1u : 0u;
+        sNdsNativeKirbyP4DeferredBytes = p4_max;
+        for (player = 0u; player < NDS_NATIVE_KIRBY_HAT_BATTLE_SLOTS; player++)
+        {
+            if ((sNdsNativeKirbyP4KirbySlots & (1u << player)) != 0u)
+            {
+                sNdsNativeKirbyP4HatWorking[player].base = storage;
+                sNdsNativeKirbyP4HatWorking[player].heap_generation =
+                    gNdsTaskmanHeapGeneration;
+                storage += p4_max;
+            }
+        }
+        gNdsNativeKirbyP4HatDeferCount++;
+        p4_count = 0u;
+    }
     for (part = 0u; part < p4_count; part++)
     {
         for (detail = p4_with_low ? 1u : 0u; detail < (p4_with_low ? 2u : 1u); detail++)
@@ -4464,6 +4544,60 @@ s32 ndsRendererNativeEnsureKirbyP4Hat(u32 battle_slot, u32 hat, u32 use_low_deta
             return TRUE;
         }
     }
+#if NDS_P4 && defined(NDS_P4_KIRBY_HATS_PRESENT)
+    if ((sNdsNativeKirbyP4DeferredCount != 0u) &&
+        (use_low_detail == sNdsNativeKirbyP4DeferredDetail))
+    {
+        NDSNativeKirbyHatImageSlot *slot = &sNdsNativeKirbyP4HatWorking[battle_slot];
+        NdsRelocAssetStream stream;
+        u32 bytes = ndsRendererNativeP4KirbyHatImageBytes(hat, use_low_detail);
+        u32 listed = FALSE;
+
+        for (i = 0u; i < sNdsNativeKirbyP4DeferredCount; i++)
+        {
+            listed |= (sNdsNativeKirbyP4DeferredHats[i] == hat) ? TRUE : FALSE;
+        }
+        if ((listed == FALSE) || (slot->base == NULL) ||
+            (slot->heap_generation != gNdsTaskmanHeapGeneration) ||
+            (bytes == 0u) || (bytes > sNdsNativeKirbyP4DeferredBytes))
+        {
+            return FALSE;
+        }
+        if ((slot->valid == 0u) || (slot->p4_hat != hat))
+        {
+            /* Invalidate before overwrite: a failed read cannot leave the
+             * previous hat claiming these bytes. */
+            slot->valid = 0u;
+            slot->p4_hat = 0u;
+            if (ndsRelocAssetStreamOpen(&stream,
+                    ndsRendererNativeP4KirbyHatImagePath(hat, use_low_detail)) == FALSE)
+            {
+                return FALSE;
+            }
+            if (ndsRelocAssetStreamRead(&stream, 0u, slot->base, bytes) == FALSE)
+            {
+                ndsRelocAssetStreamClose(&stream);
+                return FALSE;
+            }
+            ndsRelocAssetStreamClose(&stream);
+            if ((*(const u32 *)slot->base != (u32)NDS_NATIVE_OWNER_IMAGE_ABI_TAG) ||
+                (ndsRendererNativeBindP4KirbyHatImage(slot, hat, use_low_detail,
+                                                      slot->base) == FALSE))
+            {
+                return FALSE;
+            }
+            slot->bytes = bytes;
+            slot->use_low_detail = (u8)use_low_detail;
+            slot->p4_hat = (u8)hat;
+            slot->valid = 1u;
+            gNdsNativeKirbyP4HatLateLoadCount++;
+            NDS_DIAG(gNdsNativeKirbyHatBytes += bytes);
+        }
+        sNdsNativeKirbyHatBindingGeneration = gNdsTaskmanHeapGeneration;
+        sNdsNativeKirbyHatActive[battle_slot][use_low_detail] = slot;
+        return TRUE;
+    }
+#endif
     return FALSE;
 }
 
@@ -5032,6 +5166,11 @@ void ndsRendererNativeKirbyHatSetP4Hats(const u8 *hats, u32 count, u32 use_low_d
     (void)hats;
     (void)count;
     (void)use_low_detail;
+}
+
+void ndsRendererNativeKirbyHatSetKirbySlots(u32 slot_mask)
+{
+    (void)slot_mask;
 }
 
 s32 ndsRendererNativeEnsureKirbyP4Hat(u32 battle_slot, u32 hat, u32 use_low_detail)

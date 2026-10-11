@@ -125,7 +125,18 @@ void ndsKirbyHatPrepareMatch(void)
          * 2026-10-08: lower content fidelity rather than a budget). */
         {
             u8 hats[8];
+            u32 kirby_slots = 0u;
+            s32 player;
 
+            for (player = 0; player < GMCOMMON_PLAYERS_MAX; player++)
+            {
+                if ((gSCManagerBattleState->players[player].pkind != nFTPlayerKindNot) &&
+                    (gSCManagerBattleState->players[player].fkind == nFTKindKirby))
+                {
+                    kirby_slots |= 1u << player;
+                }
+            }
+            ndsRendererNativeKirbyHatSetKirbySlots(kirby_slots);
             ndsRendererNativeKirbyHatSetP4Hats(
                 hats, ndsP4KirbyMatchHats(hats, sizeof(hats)), with_low);
         }

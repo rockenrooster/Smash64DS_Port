@@ -678,9 +678,20 @@ void ndsP4WarioDSPMap(GObj *fighter_gobj)
     else mpCommonProcFighterCliffWaitOrLanding(fighter_gobj);
 }
 
+/* Wario.asm capture_action_fix_ (custom_capture_dk_interrupt): his grab's
+ * victim (ThrownDK, Shouldered here) never mashes out on its own. */
+static sb32 ndsP4WarioShoulderedInterrupt(GObj *victim_gobj)
+{
+    (void)victim_gobj;
+    return TRUE;
+}
+
 const NDSP4Overrides gNdsP4WarioOverrides = {
     .on_hit_interact = ndsP4WarioOnHitInteract,
     .kirby_on_hit_interact = ndsP4WarioOnHitInteract,
+    /* Wario.asm custom_capture_action: ThrownDK for his grab's victim. */
+    .capture_status = nFTCommonStatusShouldered,
+    .shouldered_interrupt = ndsP4WarioShoulderedInterrupt,
 };
 
 #endif /* NDS_P4_WARIO */

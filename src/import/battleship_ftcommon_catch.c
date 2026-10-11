@@ -173,7 +173,11 @@ void ndsBaseFTCommonThrowSetStatus(GObj *fighter_gobj, sb32 is_throwf);
 sb32 ndsBaseFTCommonThrowCheckInterruptCatchWait(GObj *fighter_gobj);
 
 #if NDS_P4
-#define nFTKindYoshi NDS_P4_PARENT_KIND(capture_fp, nFTKindYoshi)
+/* A content compares as its own id here, except one Remix sends down
+ * Yoshi's branch (yoshishared.asm yoshi_throw_fix_1: Mad Piano). */
+#define nFTKindYoshi \
+    ((ndsP4ThrownHidden(capture_fp) != FALSE) ? capture_fp->fkind : \
+     NDS_P4_PARENT_KIND(capture_fp, nFTKindYoshi))
 #endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonthrown1.c"
 #if NDS_P4

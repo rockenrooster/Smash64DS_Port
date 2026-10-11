@@ -25,7 +25,13 @@ SECTIONS {
 INSERT BEFORE .main;
 
 SECTIONS {
-    .ovl.frontend ALIGN(32) : {
+    /* FOUR OUTPUT SECTIONS, ONE LOAD SEGMENT (2026-10-11). The linker merges
+     * identical strings across the input sections of one output section, and
+     * the VS Results block's fighter names were merged into a 1P select's copy
+     * in the range Results lends (garbage names, a data abort). Each range a
+     * scene keeps -- the 1P head, the select's block, the Results block -- is
+     * its own output section, so its strings stay inside it. */
+    .ovl.frontend.head ALIGN(32) : {
         __nds_frontend_start = .;
         /* 1P BATTLE-TIME HEAD (2026-10-01). Everything a 1P, bonus or
          * training battle can execute or read from this overlay sits
@@ -95,6 +101,9 @@ SECTIONS {
             .data.dFTGDonkeyMotionDescs .data.dFTBossMotionDescs)
         . = ALIGN(32);
         __nds_frontend_1p_end = .;
+    } AT>ovlmem :ovl_frontend = 0xff
+
+    .ovl.frontend . : {
         :battleship_mntitlefiles.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx
             .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
         :battleship_mntitle.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx
@@ -128,10 +137,6 @@ SECTIONS {
         :battleship_mnplayers1pbonus.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx
             .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
         :battleship_mncongra.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx
-            .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
-        :battleship_mnvsresults.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx
-            .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
-        :battleship_mnvsresults_spot.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx
             .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
         :battleship_mvopeningroom.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx
             .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
@@ -211,6 +216,26 @@ SECTIONS {
          * (ndsFrontendOverlayBorrowForSelect); the next scene dispatch reloads the
          * overlay. */
         . = ALIGN(32);
+    } AT>ovlmem :ovl_frontend = 0xff
+
+    .ovl.frontend.results . : {
+        /* THE VS RESULTS BLOCK (2026-10-11), between the middle and the
+         * select's block: the select lends it with everything before it, and
+         * Results lends both sides of it -- [__nds_frontend_start,
+         * __nds_frontend_results_start) and the select's block,
+         * [__nds_frontend_select_start, __nds_frontend_select_end) -- as its
+         * scene-asset loan (ndsFrontendOverlayBeginScene);
+         * check_frontend_overlay.py rejects a reference from this block into
+         * either. */
+        __nds_frontend_results_start = .;
+        :battleship_mnvsresults.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx
+            .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
+        :battleship_mnvsresults_spot.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx
+            .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
+        . = ALIGN(32);
+    } AT>ovlmem :ovl_frontend = 0xff
+
+    .ovl.frontend.select . : {
         __nds_frontend_select_start = .;
         :nds_ui_kit.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx
             .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
@@ -227,6 +252,7 @@ SECTIONS {
         :battleship_mnsoundtest.o (.data.dMNSoundTestMusicIDs
             .data.dMNSoundTestSoundIDs .data.dMNSoundTestVoiceIDs)
         . = ALIGN(32);
+        __nds_frontend_select_end = .;
     } AT>ovlmem :ovl_frontend = 0xff
 
     /* Each LBFileNode workspace is installed with count zero by its own

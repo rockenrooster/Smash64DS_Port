@@ -6511,6 +6511,12 @@ void ftCommonCatchPullProcCatch(GObj *fighter_gobj)
 void ftCommonCapturePulledProcCapture(GObj *fighter_gobj,
                                       GObj *capture_gobj)
 {
+#if NDS_P4
+    if (ndsP4CustomCapture(fighter_gobj, capture_gobj) != FALSE)
+    {
+        return;
+    }
+#endif
     ndsBaseFTCommonCapturePulledProcCapture(fighter_gobj, capture_gobj);
     return;
 }
@@ -7222,6 +7228,12 @@ void ftCommonCaptureShoulderedSetStatus(GObj *fighter_gobj)
 #if NDS_P2_DONKEY
 void ftCommonCaptureShoulderedProcInterrupt(GObj *fighter_gobj)
 {
+#if NDS_P4
+    if (ndsP4ShoulderedInterrupt(fighter_gobj) != FALSE)
+    {
+        return;
+    }
+#endif
     ndsBaseFTCommonCaptureShoulderedProcInterrupt(fighter_gobj);
 }
 #endif

@@ -76,7 +76,7 @@ POWER_PREFIX = {
     "falco": "FALCO", "ganondorf": "GND", "wolf": "WOLF", "bowser": "BOWSER",
     "marth": "MARTH", "roy": "ROY", "wario": "WARIO", "peach": "PEACH",
     "crash": "CRASH", "lanky": "LANKY", "sheik": "SHEIK", "banjo": "BANJO",
-    "sonic": "SONIC", "dedede": "DEDEDE",
+    "sonic": "SONIC", "dedede": "DEDEDE", "piano": "PIANO",
 }
 # Vanilla fighter ids (Character.id) for the parent rows of kirby_*_nsp.
 VANILLA_IDS = {"MARIO": 0, "FOX": 1, "DONKEY": 2, "SAMUS": 3, "LUIGI": 4, "LINK": 5,

@@ -379,7 +379,57 @@ static inline void ndsP4FTMainSetHitInteractStats(FTStruct *fp, u32 attack_group
     gmCollisionCheckFighterAttackDamageCollide(other_attack_coll
 #define NDS_P4_DAMAGE_COLLIDE_attack_coll ndsP4CatchDamageCollide(other_fp, attack_coll
 #endif
+#if NDS_P4
+/* P4: Ness's absorb routine is the content's when it has one
+ * (ndsP4ProcAbsorb), and an absorbed shot heals a content its own amount.
+ * ftMainUpdateAbsorbStatWeapon's definition and its one call differ in their
+ * first argument's first token (`WPStruct`, `wp`). */
+#include <wp/weapon.h>
+#define ftNessSpecialLwProcAbsorb(gobj_) ndsP4ProcAbsorb(gobj_)
+#define ftMainUpdateAbsorbStatWeapon(first, ...) NDS_P4_ABSORB_##first, __VA_ARGS__)
+#define NDS_P4_ABSORB_WPStruct ndsBaseFTMainUpdateAbsorbStatWeapon(WPStruct
+#define NDS_P4_ABSORB_wp ndsP4FTMainUpdateAbsorbStatWeapon(wp
+void ndsP4FTMainUpdateAbsorbStatWeapon(WPStruct *wp, WPAttackColl *wp_attack_coll,
+                                       FTStruct *fp, GObj *fighter_gobj);
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftmain.c"
+#if NDS_P4
+#undef ftNessSpecialLwProcAbsorb
+#undef ftMainUpdateAbsorbStatWeapon
+
+/* ftMainUpdateAbsorbStatWeapon with the content's heal (absorb_heal). */
+void ndsP4FTMainUpdateAbsorbStatWeapon(WPStruct *wp, WPAttackColl *wp_attack_coll,
+                                       FTStruct *fp, GObj *fighter_gobj)
+{
+    const NDSP4Overrides *o = ndsP4Overrides(fp);
+    s32 damage;
+
+    if ((o == NULL) || (o->absorb_heal == NULL))
+    {
+        ndsBaseFTMainUpdateAbsorbStatWeapon(wp, wp_attack_coll, fp, fighter_gobj);
+        return;
+    }
+    damage = wpMainGetStaledDamage(wp);
+
+    wpProcessUpdateHitInteractStats(wp, wp_attack_coll, fighter_gobj, nGMHitTypeAbsorb, 0);
+
+    wp->absorb_gobj = fighter_gobj;
+
+    fp->absorb_lr = (DObjGetStruct(fighter_gobj)->translate.vec.f.x <
+                     DObjGetStruct(wp->weapon_gobj)->translate.vec.f.x) ? +1 : -1;
+
+    if (!(wp_attack_coll->can_not_heal))
+    {
+        fp->percent_damage -= o->absorb_heal(fp, damage);
+
+        if (fp->percent_damage < 0)
+        {
+            fp->percent_damage = 0;
+        }
+        gSCManagerBattleState->players[fp->player].stock_damage_all = fp->percent_damage;
+    }
+}
+#endif
 #if NDS_P4
 #undef lbCommonMakePositionFGM
 #undef ftParamUpdate1PGameDamageStats

@@ -323,6 +323,9 @@ def remix_songs(bass_out: str) -> dict[int, str]:
     return songs
 
 
+NO_VICTORY_BGM = 0xFFFF
+
+
 def build_bgm(staging: Path, content: str, export_dir: Path, out_dir: Path) -> list[dict]:
     """The content's victory song, when it is a Remix one: rendered on the
     vanilla sequence bank by the vanilla BGM renderer, plus its track row."""
@@ -330,7 +333,8 @@ def build_bgm(staging: Path, content: str, export_dir: Path, out_dir: Path) -> l
     rom = generator.R.Rom(staging / "ssb64asm.z64")
     resolved = json.loads((export_dir / "resolved.json").read_text(encoding="utf-8"))
     bgm_id = generator.present_rows(rom, resolved["kind_tables"])["victory_bgm"]
-    if bgm_id < VANILLA_BGM_COUNT:
+    # add_victory_bgm(-1) (Mad Piano): no victory song (ndsP4MNVSResultsPlayWinBGM).
+    if (bgm_id < VANILLA_BGM_COUNT) or (bgm_id == NO_VICTORY_BGM):
         return []
     songs = remix_songs((staging / "bass.out").read_text(encoding="utf-8", errors="replace"))
     rel = songs.get(bgm_id)

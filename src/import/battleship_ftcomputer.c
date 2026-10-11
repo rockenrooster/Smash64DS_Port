@@ -90,6 +90,12 @@ static sb32 ndsP4FTComputerCheckHazard(FTStruct *fp);
 #define ftComputerFollowObjectiveUseItem(arg) NDS_P4_USE_ITEM_##arg)
 static void ndsP4FTComputerFollowObjectiveUseItem(FTStruct *fp);
 #define ftComputerProcDefault ndsBaseFTComputerProcDefault
+/* Reflect.asm apply_reflect_input_: a Ness-branch absorber content presses
+ * its absorb unless it is already in it (Mad Piano's _piano_absorb). */
+#define NDS_P4_COUNTER_FTStruct ndsBaseFTComputerFollowObjectiveCounterAttack(FTStruct
+#define NDS_P4_COUNTER_fp ndsP4FTComputerFollowObjectiveCounterAttack(fp
+#define ftComputerFollowObjectiveCounterAttack(arg) NDS_P4_COUNTER_##arg)
+static void ndsP4FTComputerFollowObjectiveCounterAttack(FTStruct *fp);
 #endif
 #define ftComputerSetupAll ndsBaseFTComputerSetupAll
 #define ftComputerProcessAll ndsBaseFTComputerProcessAll
@@ -108,7 +114,55 @@ static void ndsP4FTComputerFollowObjectiveUseItem(FTStruct *fp);
 #undef func_ovl3_80135B78
 #undef ftComputerFollowObjectiveUseItem
 #undef ftComputerProcDefault
+#undef ftComputerFollowObjectiveCounterAttack
 #include <nds/nds_p4.h>
+
+/* ftcomputer.c:6565 for a Ness-branch absorber content: the source's, with
+ * its own absorb statuses for Ness's PSI Magnet scope (its fkind is its
+ * parent's, which has no case). */
+static void ndsP4FTComputerFollowObjectiveCounterAttack(FTStruct *fp)
+{
+    FTComputer *com = &fp->computer;
+
+    if ((fp->nds_p4_content == 0u) ||
+        ((ndsP4ComputerReflect(fp) & NDS_P4_COMPUTER_REFLECT_NESS) == 0u))
+    {
+        ndsBaseFTComputerFollowObjectiveCounterAttack(fp);
+        return;
+    }
+    func_ovl3_801361BC(fp);
+
+    if (com->is_counterattack)
+    {
+        ftComputerSetCommandImmediate(fp, nFTComputerInputButtonZ2);
+
+        com->is_counterattack = FALSE;
+    }
+    else if (com->is_opponent_ra)
+    {
+        com->is_opponent_ra = FALSE;
+
+        if (ndsP4ComputerAbsorbing(fp) == FALSE)
+        {
+            ftComputerSetCommandImmediate(fp, nFTComputerInputStickNXSmashLwButtonBReleaseBHold);
+        }
+    }
+    else if (com->is_shield_item_weapon)
+    {
+        com->is_shield_item_weapon = FALSE;
+
+        if ((fp->status_id < nFTCommonStatusGuardStart) || (fp->status_id > nFTCommonStatusGuardEnd))
+        {
+            ftComputerSetCommandImmediate(fp, nFTComputerInputStickNButtonZHold);
+        }
+    }
+    else ndsP4FTComputerFollowObjectiveWalk(fp);
+}
+
+void ftComputerFollowObjectiveCounterAttack(FTStruct *fp)
+{
+    ndsP4FTComputerFollowObjectiveCounterAttack(fp);
+}
 
 /* ftcomputer.c:4960 for a P4 content. Its fkind reads are three compares
  * (Kirby/Jigglypuff 5026, Yoshi/Jigglypuff 5133, Giant DK 5145) and its
@@ -266,7 +320,8 @@ static s32 ndsP4FTComputerProcDefault(GObj *fighter_gobj)
 
     case nFTKindNess:
     case nFTKindNNess:
-        if ((fp->status_id >= nFTNessStatusSpecialLwScopeStart) && (fp->status_id <= nFTNessStatusSpecialLwScopeEnd))
+        if ((fp->nds_p4_content != 0u) ? ndsP4ComputerAbsorbing(fp) :
+            ((fp->status_id >= nFTNessStatusSpecialLwScopeStart) && (fp->status_id <= nFTNessStatusSpecialLwScopeEnd)))
         {
             ftComputerSetCommandWaitShort(fp, nFTComputerInputStickNButtonBRelease);
             return FALSE;

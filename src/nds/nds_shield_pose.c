@@ -561,6 +561,11 @@ s32 ndsShieldPoseReplacesSourceFile(s32 fkind)
     return (ndsShieldPosePackageForFKind(fkind) >= 0) ? TRUE : FALSE;
 }
 
+s32 ndsShieldPoseNamesDependency(u32 owner_asset, u32 dep_asset)
+{
+    return (ndsShieldPosePackageForAssets(owner_asset, dep_asset) >= 0) ? TRUE : FALSE;
+}
+
 s32 ndsShieldPoseServesDependency(u32 owner_asset, u32 dep_asset)
 {
     s32 package = ndsShieldPosePackageForAssets(owner_asset, dep_asset);
@@ -1190,6 +1195,12 @@ s32 ndsShieldPoseReplacesSourceFile(s32 fkind)
 }
 
 s32 ndsShieldPoseServesDependency(u32 owner_asset, u32 dep_asset)
+{
+    (void)owner_asset; (void)dep_asset;
+    return FALSE;
+}
+
+s32 ndsShieldPoseNamesDependency(u32 owner_asset, u32 dep_asset)
 {
     (void)owner_asset; (void)dep_asset;
     return FALSE;

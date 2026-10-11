@@ -122,11 +122,16 @@ static void ndsP4YoshiEggSetDamageCollCollisions(GObj *fighter_gobj);
 #define NDS_P4_EGG_COLL_GObj ndsSourceFTCommonYoshiEggSetDamageCollCollisions(GObj
 #define NDS_P4_EGG_COLL_fighter_gobj ndsP4YoshiEggSetDamageCollCollisions(fighter_gobj
 #define ftCommonYoshiEggSetDamageCollCollisions(arg_) NDS_P4_EGG_COLL_##arg_)
+/* The command grab's victim status (ndsP4CommandCaptureStatus: Mad Piano's
+ * victims enter ThrownDK, Shouldered here, for CaptureYoshi). */
+#define ftMainSetStatus(gobj_, status_, ...) \
+    ftMainSetStatus((gobj_), ndsP4CommandCaptureStatus((gobj_), (status_)), __VA_ARGS__)
 #endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommoncaptureyoshi.c"
 #if NDS_P4
 #undef efManagerYoshiEggLayMakeEffect
 #undef ftCommonYoshiEggSetDamageCollCollisions
+#undef ftMainSetStatus
 
 _Static_assert(sizeof(ftCommonYoshiEggDesc) == 7 * sizeof(f32),
                "yoshi_egg row is the source's 0x1C-byte desc");

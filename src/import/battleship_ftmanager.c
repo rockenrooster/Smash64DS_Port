@@ -1063,10 +1063,12 @@ void ndsFTManagerEnsureOwnerImages(FTDesc *desc)
             }
 #endif
 
-            /* The VS select's previews keep their detail too (the original
-             * cast HIGH, a content LOW: ndsFTManagerSelectLowDetail), and
-             * their block holds only that image (S15). */
-            if ((gSCManagerSceneData.scene_curr == nSCKindPlayersVS) &&
+            /* The VS select's previews and the Results podium keep their
+             * detail too (the original cast HIGH, a content LOW in the
+             * select and in a three- or four-fighter match's Results:
+             * ndsFTManagerSelectLowDetail), so only that image (S15). */
+            if (((gSCManagerSceneData.scene_curr == nSCKindPlayersVS) ||
+                 (gSCManagerSceneData.scene_curr == nSCKindVSResults)) &&
                 (desc->pkind == nFTPlayerKindDemo))
             {
                 first_detail = last_detail =
@@ -1273,12 +1275,15 @@ static void ndsFTManagerBattleLowDetail(FTDesc *desc)
 
 #if NDS_P4
 /* S15: a content's VS-select preview draws its low detail
- * (ndsP4LowDetailSelect): its pack is the battle pack, which keeps only what
- * that detail reads, and its block holds only the low owner image. */
+ * (ndsP4LowDetailSelect), and so does its Results podium after a match of
+ * three or four fighters (ndsP4LowDetailResults): its pack is the battle
+ * pack, which keeps only what that detail reads, and only the low owner
+ * image loads. */
 static void ndsFTManagerSelectLowDetail(FTDesc *desc)
 {
     if ((desc != NULL) && (desc->pkind == nFTPlayerKindDemo) &&
-        (ndsP4LowDetailSelect() != FALSE) &&
+        ((ndsP4LowDetailSelect() != FALSE) ||
+         (ndsP4LowDetailResults() != FALSE)) &&
         (ndsP4MakeContent(desc->player, desc->fkind) != 0u))
     {
         desc->detail = nFTPartsDetailLow;
