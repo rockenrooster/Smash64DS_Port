@@ -852,12 +852,32 @@ static inline f32 ndsP4TranslationMultiplier(const FTStruct *fp)
     return gNdsP4TranslationMultiplier[fp->player & 3u];
 }
 
+/* Remix SET ENV COLOR (0xD9, CharEnvColor.moveset_table), per player port:
+ * 0, or the RGBA that replaces the stage light colour in the fighter's draw.
+ * Every action change clears it. Its alpha is what the DS draws: 0 hides the
+ * fighter, anything under 0xFF draws it translucent (Remix's alpha render
+ * modes). The entries use it (Marth and Roy hidden in the beam, Banjo's
+ * fade-in). */
+extern u32 gNdsP4EnvColor[GMCOMMON_PLAYERS_MAX];
+static inline u32 ndsP4EnvAlpha(const FTStruct *fp)
+{
+    u32 color = (fp->nds_p4_content != 0u) ?
+        gNdsP4EnvColor[fp->player & 3u] : 0u;
+
+    return (color != 0u) ? (color & 0xFFu) : 0xFFu;
+}
+
 #else
 
 static inline u32 ndsP4Content(const FTStruct *fp)
 {
     (void)fp;
     return 0u;
+}
+static inline u32 ndsP4EnvAlpha(const FTStruct *fp)
+{
+    (void)fp;
+    return 0xFFu;
 }
 static inline u32 ndsP4PlayerContent(u32 player)
 {

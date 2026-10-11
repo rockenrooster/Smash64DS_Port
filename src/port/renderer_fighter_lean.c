@@ -1818,6 +1818,12 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp)
     u32 retried = FALSE;
 #endif
 
+#if NDS_P4
+    if (gNdsFtrLeanAlphaPending != 0u)
+    {
+        ndsFtrLeanPacketAlphaRestore();
+    }
+#endif
     kind = ndsFtrLeanEligible(fp, &owner_slot);
     if (kind == NDS_FTR_LEAN_KIND_NONE)
     {
@@ -2158,6 +2164,21 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp)
     NDS_TICK_HUD_NATIVE_OWNER_MARK(nNDSTickHudNativeOwnerFallbackCalls);
     NDS_TICK_HUD_NATIVE_OWNER_MARK(nNDSTickHudNativeOwnerFallbackEligible);
 #endif
+#if NDS_P4
+    {
+        /* Remix 0xD9: alpha 0 draws nothing, a partial alpha translucent. */
+        u32 env_alpha = ndsP4EnvAlpha(fp);
+
+        if (env_alpha == 0u)
+        {
+            return TRUE;
+        }
+        if (env_alpha != 0xFFu)
+        {
+            ndsFtrLeanPacketSetAlpha(slot, env_alpha);
+        }
+    }
+#endif
     ndsRendererProfileSetOwner(ndsFighterNativeOwnerProfileId(owner_slot));
     t0 = NDS_FTR_LEAN_CLOCK();
     NDS_FTR_LEAN_TCTR(gNdsFtrLean.book_ticks += t0 - t1);
@@ -2284,6 +2305,13 @@ static sb32 ndsFtrLeanTransientDraw(FTStruct *fp, sb32 rebind)
 
 static void ndsFtrLeanFrameEnd(void)
 {
+#if NDS_P4
+    /* The list's memory can change hands at a scene change. */
+    if (gNdsFtrLeanAlphaPending != 0u)
+    {
+        ndsFtrLeanPacketAlphaRestore();
+    }
+#endif
     ndsFtrLeanMatchReset();
     ndsFtrLeanAdmitFrame();
 #if NDS_FTR_LEAN_LAB

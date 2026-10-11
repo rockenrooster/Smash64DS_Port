@@ -33,6 +33,7 @@ void gcSetAnimSpeed(GObj *gobj, f32 anim_speed);
 
 u8 gNdsP4PlayerContent[GMCOMMON_PLAYERS_MAX];
 f32 gNdsP4TranslationMultiplier[GMCOMMON_PLAYERS_MAX] = { 1.0F, 1.0F, 1.0F, 1.0F };
+u32 gNdsP4EnvColor[GMCOMMON_PLAYERS_MAX];
 /* Remix custom commands no P4 content has needed yet: counted, never silent. */
 __attribute__((used)) volatile u32 gNdsP4UnportedMotionEvents;
 __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
@@ -985,8 +986,10 @@ void ndsP4OnSetStatus(GObj *fighter_gobj)
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
     /* Remix Command.asm change_action_: every action change restores the
-     * top-joint translation multiplier to 1.0 for that port. */
+     * top-joint translation multiplier to 1.0 for that port and clears its
+     * env colour override. */
     gNdsP4TranslationMultiplier[fp->player & 3u] = 1.0F;
+    gNdsP4EnvColor[fp->player & 3u] = 0u;
 }
 
 static u8 sNdsP4SpecialStatusResolved[NDS_P4_CONTENT_LIMIT];
@@ -2028,12 +2031,13 @@ u32 *ndsP4RunRemixMotionEvents(GObj *fighter_gobj, FTMotionScript *ms,
                     (u16)word;
             }
             break;
-        case 0xD9: /* SET ENV COLOR: the fighter's draw colour, not ported */
+        case 0xD9:
+            /* SET ENV COLOR (set_env_color_), 8 bytes: the second word is
+             * the port's colour; the fast-forward table skips it. */
             length = 8u;
             if (forward == FALSE)
             {
-                gNdsP4UnportedMotionEvents++;
-                gNdsP4UnportedMotionEventLast = word;
+                gNdsP4EnvColor[fp->player & 3u] = p[1];
             }
             break;
         case 0xDA:

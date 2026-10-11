@@ -15921,6 +15921,140 @@ ndsFtrLeanPacketSubmit(u32 battle_slot)
     return raw + cross;
 }
 
+#if NDS_P4
+/* P4 S4, Remix SET ENV COLOR (0xD9): a content whose env-colour alpha is
+ * under 0xFF draws translucent, as Remix's alpha render modes draw it. The
+ * active list's POLY_FORMAT alphas are scaled in place for its one DMA and
+ * put back before the next lean draw or frame end
+ * (ndsFtrLeanPacketAlphaRestore): the DMA reads them asynchronously, and a
+ * rematerialization must find the list as it was built. */
+#define NDS_FTR_LEAN_ALPHA_SITES 192u
+static u32 *sNdsFtrLeanAlphaWords;
+static u32 sNdsFtrLeanAlphaBytes;
+static u32 sNdsFtrLeanAlphaCount;
+static u16 sNdsFtrLeanAlphaSite[NDS_FTR_LEAN_ALPHA_SITES];
+static u8 sNdsFtrLeanAlphaOrig[NDS_FTR_LEAN_ALPHA_SITES];
+u32 gNdsFtrLeanAlphaPending;
+
+/* Parameter words of a packed geometry command (GBATEK, 0x10-0x72). */
+static u32 ndsFtrLeanGxParams(u32 op)
+{
+    switch (op)
+    {
+    case 0x00u: case 0x11u: case 0x15u: case 0x41u:
+        return 0u;
+    case 0x16u: case 0x18u:
+        return 16u;
+    case 0x17u: case 0x19u:
+        return 12u;
+    case 0x1Au:
+        return 9u;
+    case 0x1Bu: case 0x1Cu: case 0x70u:
+        return 3u;
+    case 0x23u: case 0x71u:
+        return 2u;
+    case 0x34u:
+        return 32u;
+    default:
+        return 1u;
+    }
+}
+
+void __attribute__((noinline, cold)) ndsFtrLeanPacketAlphaRestore(void)
+{
+    u32 i;
+
+    if (gNdsFtrLeanAlphaPending == 0u)
+    {
+        return;
+    }
+    if ((DMA_CR(0) & DMA_BUSY) != 0u)
+    {
+        ndsGxDma0WaitSlow(6u);
+    }
+    for (i = 0u; i < sNdsFtrLeanAlphaCount; i++)
+    {
+        u32 *w = &sNdsFtrLeanAlphaWords[sNdsFtrLeanAlphaSite[i]];
+
+        *w = (*w & ~(31u << 16)) | ((u32)sNdsFtrLeanAlphaOrig[i] << 16);
+    }
+    DC_FlushRange(sNdsFtrLeanAlphaWords, sNdsFtrLeanAlphaBytes);
+    gNdsFtrLeanAlphaPending = 0u;
+}
+
+void __attribute__((noinline, cold)) ndsFtrLeanPacketSetAlpha(u32 battle_slot,
+                                                             u32 alpha)
+{
+    NDSFtrLeanEntryState *state;
+    NDSFighterPacket *packet;
+    u32 *words;
+    u32 count;
+    u32 alpha5;
+    u32 sites = 0u;
+    u32 i = 0u;
+
+    ndsFtrLeanPacketAlphaRestore();
+    packet = ndsFtrLeanActive(battle_slot, &state);
+    alpha5 = (alpha * 31u + 127u) / 255u;
+    if ((packet == NULL) || (alpha5 >= 31u))
+    {
+        return;
+    }
+    if (alpha5 == 0u)
+    {
+        alpha5 = 1u;    /* POLY_ALPHA(0) is wireframe */
+    }
+    if ((DMA_CR(0) & DMA_BUSY) != 0u)
+    {
+        ndsGxDma0WaitSlow(6u);
+    }
+    words = packet->words;
+    count = packet->word_count;
+    while (i < count)
+    {
+        u32 header = words[i++];
+        u32 params = 0u;
+        u32 s;
+
+        for (s = 0u; s < 4u; s++)
+        {
+            u32 op = (header >> (s * 8u)) & 0xFFu;
+            u32 n = ndsFtrLeanGxParams(op);
+
+            if ((op == (u32)REG2ID(GFX_POLY_FORMAT)) && (i < count) &&
+                (sites < NDS_FTR_LEAN_ALPHA_SITES))
+            {
+                u32 w = words[i];
+                u32 a = (w >> 16) & 31u;
+
+                if (a != 0u)
+                {
+                    u32 scaled = (a * alpha5 + 15u) / 31u;
+
+                    sNdsFtrLeanAlphaSite[sites] = (u16)i;
+                    sNdsFtrLeanAlphaOrig[sites] = (u8)a;
+                    sites++;
+                    words[i] = (w & ~(31u << 16)) |
+                               (((scaled != 0u) ? scaled : 1u) << 16);
+                }
+            }
+            i += n;
+            params += n;
+        }
+        if (params == 0u)
+        {
+            i++;    /* the packer's pad after a parameterless header */
+        }
+    }
+    sNdsFtrLeanAlphaWords = words;
+    sNdsFtrLeanAlphaBytes = count * sizeof(u32);
+    sNdsFtrLeanAlphaCount = sites;
+    DC_FlushRange(words, sNdsFtrLeanAlphaBytes);
+    gNdsFtrLeanAlphaPending = (sites != 0u) ? 1u : 0u;
+    (void)state;
+}
+#endif
+
 #if NDS_FTR_LEAN_LAB
 /* Census of the texture cache; also the admission's print-first number. */
 static void ndsFtrLeanCensusCache(u32 *out)
@@ -16257,6 +16391,20 @@ u32 ndsFtrLeanPacketSubmit(u32 battle_slot)
     (void)battle_slot;
     return 0u;
 }
+
+#if NDS_P4
+u32 gNdsFtrLeanAlphaPending;
+
+void ndsFtrLeanPacketAlphaRestore(void)
+{
+}
+
+void ndsFtrLeanPacketSetAlpha(u32 battle_slot, u32 alpha)
+{
+    (void)battle_slot;
+    (void)alpha;
+}
+#endif
 
 void ndsFtrLeanTextureCensus(void)
 {

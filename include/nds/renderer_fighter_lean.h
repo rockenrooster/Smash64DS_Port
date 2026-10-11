@@ -694,6 +694,14 @@ u32 ndsFtrLeanPacketPatch(u32 battle_slot, const NDSFtrLeanPatchView *view,
 /* Returns the hardware triangles the list presents (slice 5: no stats
  * block; the frame summary is accounted directly). */
 u32 ndsFtrLeanPacketSubmit(u32 battle_slot);
+#if NDS_P4
+/* P4 S4 (Remix 0xD9): scale the active list's POLY_FORMAT alphas by
+ * alpha/255 for its next submit; the restore puts them back (the next lean
+ * draw and the frame end call it while one is pending). */
+extern u32 gNdsFtrLeanAlphaPending;
+void ndsFtrLeanPacketSetAlpha(u32 battle_slot, u32 alpha);
+void ndsFtrLeanPacketAlphaRestore(void);
+#endif
 /* Slice 6: a list longer than an entry (the high-detail Donkey and Link
  * lists, 3,535-3,873 words against 3,460) is materialized WIDE in route 1
  * (ndsFtrLeanMaterialize with NDS_FTR_LEAN_ENTRY_WIDE): entry 0 over the
