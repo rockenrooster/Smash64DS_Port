@@ -46,12 +46,15 @@ static const FTKirbyCopy *ndsKirbyHatCopyTable(void)
 }
 
 /* Every power a Kirby can take from the closed set of this match's fighters
- * (a Kirby can transfer a power it acquired from the same set). */
-static u32 ndsKirbyHatPlayerMask(const FTKirbyCopy *copy)
+ * (a Kirby can transfer a power it acquired from the same set): the source
+ * cast's powers' hats, and in `*p4_mask` the source hats the contents' powers
+ * show. */
+static u32 ndsKirbyHatPlayerMask(const FTKirbyCopy *copy, u32 *p4_mask)
 {
     u32 mask = 0u;
     s32 player;
 
+    *p4_mask = 0u;
     for (player = 0; player < GMCOMMON_PLAYERS_MAX; player++)
     {
         if (gSCManagerBattleState->players[player].pkind == nFTPlayerKindNot)
@@ -62,7 +65,7 @@ static u32 ndsKirbyHatPlayerMask(const FTKirbyCopy *copy)
          * (ndsKirbyHatPrepareMatch); never its parent's copy hat. */
         if (ndsP4KirbyPlayerHasPower(player) != FALSE)
         {
-            mask |= ndsP4KirbyHatMask(player);
+            *p4_mask |= ndsP4KirbyHatMask(player);
             continue;
         }
 #endif
@@ -105,10 +108,16 @@ void ndsKirbyHatPrepareMatch(void)
         u32 with_low = ((gSCManagerBattleState->pl_count +
                          gSCManagerBattleState->cp_count) >= 3) ? 1u : 0u;
 
-        high = ndsKirbyHatPlayerMask(ndsKirbyHatCopyTable());
+        u32 p4 = 0u;
+
+        high = ndsKirbyHatPlayerMask(ndsKirbyHatCopyTable(), &p4);
         /* The source selects low detail for three or four fighters, and can
-         * temporarily raise it for KO/pause. High-only matches never lower it. */
-        if (with_low != 0u) { low = high; }
+         * temporarily raise it for KO/pause. High-only matches never lower it.
+         * A Kirby holding a content's power stays low in those close-ups
+         * (ftParamSetModelPartDetailAll, owner 2026-10-08), so the source hats
+         * its power shows load in low detail only. */
+        if (with_low != 0u) { low = high | p4; }
+        else { high |= p4; }
 #if NDS_P4
         /* A power's Remix hats load in the detail the match draws: a Kirby
          * holding one stays low in the close-ups of a battle of three or four
@@ -136,7 +145,8 @@ void ndsKirbyHatPrepare1PMatch(const u8 *team_copy_kinds, u32 team_count,
     if (ndsKirbyHatCountKirbys() != 0u)
     {
         const FTKirbyCopy *copy = ndsKirbyHatCopyTable();
-        u32 mask = ndsKirbyHatPlayerMask(copy);
+        u32 p4 = 0u;
+        u32 mask = ndsKirbyHatPlayerMask(copy, &p4) | p4;
         u32 i;
 
         /* The Kirby Team (sc1pgame.c:1203-1219, 1356-1360): each wave's

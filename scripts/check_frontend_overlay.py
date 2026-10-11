@@ -323,6 +323,28 @@ class Elf32:
         return records
 
 
+def load_select_allowlist(path: Path | None) -> set[tuple[str, str]]:
+    """Reviewed references from the VS select's block into the range it
+    lends (key ``select_pairs``, same row format as ``pairs``)."""
+    if path is None:
+        return set()
+    document = json.loads(path.read_text(encoding="utf-8"))
+    rows = document.get("select_pairs", [])
+    if not isinstance(rows, list):
+        raise CheckerError("allowlist 'select_pairs' must be a JSON array")
+    allowed: set[tuple[str, str]] = set()
+    for index, pair in enumerate(rows):
+        source = pair.get("source_symbol") if isinstance(pair, dict) else None
+        target = pair.get("target_symbol") if isinstance(pair, dict) else None
+        reason = pair.get("reason", "") if isinstance(pair, dict) else ""
+        if (not isinstance(source, str) or not isinstance(target, str) or
+                not source.strip() or not target.strip() or
+                not isinstance(reason, str) or not reason.strip()):
+            raise CheckerError(f"select pair {index} needs source, target and reason")
+        allowed.add((source, target))
+    return allowed
+
+
 def load_allowlist(path: Path | None) -> tuple[set[tuple[str, str]], dict[tuple[str, str], str]]:
     if path is None:
         return set(), {}
@@ -393,14 +415,16 @@ def _symbol_offset(elf: Elf32, section: Section, symbol: Symbol) -> int:
     return value
 
 
-def _source_symbol_indexes(elf: Elf32, symbols: list[Symbol]
+def _source_symbol_indexes(elf: Elf32, symbols: list[Symbol],
+                           include_overlay: bool = False
                            ) -> dict[int, SourceSymbolIndex]:
     by_section: dict[int, list[tuple[int, Symbol]]] = defaultdict(list)
     for symbol in symbols:
         if symbol.kind not in (STT_FUNC, STT_OBJECT, STT_NOTYPE):
             continue
         section = elf.section_by_index.get(symbol.section_index)
-        if section is None or not section.alloc or section.overlay:
+        if (section is None or not section.alloc or
+                (section.overlay and not include_overlay)):
             continue
         start = _symbol_offset(elf, section, symbol)
         if 0 <= start < section.size:
@@ -492,7 +516,7 @@ def _relocation_detail(source_section: Section, source_offset: int,
 
 
 def _select_block_violations(elf: Elf32, symbol_tables: dict[int, list[Symbol]],
-                             source_indexes: dict[int, dict[int, SourceSymbolIndex]]
+                             select_allowed: set[tuple[str, str]]
                              ) -> list[dict[str, str]]:
     """The VS character select lends [__nds_frontend_start,
     __nds_frontend_select_start) to its previews, so nothing linked at or after
@@ -508,8 +532,7 @@ def _select_block_violations(elf: Elf32, symbol_tables: dict[int, list[Symbol]],
     if len(marks) != 2:
         return []
     lo, mid = marks["__nds_frontend_start"], marks["__nds_frontend_select_start"]
-    if symtab.index not in source_indexes:
-        source_indexes[symtab.index] = _source_symbol_indexes(elf, symbols)
+    overlay_index = _source_symbol_indexes(elf, symbols, include_overlay=True)
     found: dict[tuple[str, str], dict[str, str]] = {}
     for rsec in elf.sections:
         if rsec.kind not in (SHT_REL, SHT_RELA):
@@ -517,7 +540,7 @@ def _select_block_violations(elf: Elf32, symbol_tables: dict[int, list[Symbol]],
         src = elf.section_by_index.get(rsec.info)
         if src is None or not src.alloc or not src.overlay:
             continue
-        index = source_indexes[symtab.index].get(src.index)
+        index = overlay_index.get(src.index)
         for r in elf.relocations(rsec):
             if r.symbol_index == 0 or r.symbol_index >= len(symbols):
                 continue
@@ -528,6 +551,8 @@ def _select_block_violations(elf: Elf32, symbol_tables: dict[int, list[Symbol]],
             if target.kind == STT_SECTION or not (lo <= target.value < mid):
                 continue
             source = index.resolve(src, offset)[0] if index is not None else src.name
+            if (source, target.identity) in select_allowed:
+                continue
             found.setdefault((source, target.identity),
                              {"source_symbol": source,
                               "target_symbol": target.identity})
@@ -537,7 +562,9 @@ def _select_block_violations(elf: Elf32, symbol_tables: dict[int, list[Symbol]],
 def inspect_elf(data: bytes, *, elf_name: str,
                 allowed_pairs: set[tuple[str, str]] | None = None,
                 allowlist_reasons: dict[tuple[str, str], str] | None = None,
-                required: bool = False) -> dict[str, Any]:
+                required: bool = False,
+                select_allowed: set[tuple[str, str]] | None = None
+                ) -> dict[str, Any]:
     allowed_pairs = allowed_pairs or set()
     allowlist_reasons = allowlist_reasons or {}
     elf = Elf32(data)
@@ -669,7 +696,8 @@ def inspect_elf(data: bytes, *, elf_name: str,
             "no resident allocated-section relocations were emitted; "
             "link with --emit-relocs"
         )
-    select_violations = _select_block_violations(elf, symbol_tables, source_indexes)
+    select_violations = _select_block_violations(elf, symbol_tables,
+                                                 select_allowed or set())
     if select_violations:
         errors.append(
             f"{len(select_violations)} select-block reference(s) into the range the "
@@ -749,6 +777,7 @@ def main(argv: list[str] | None = None) -> int:
             args.elf.read_bytes(), elf_name=str(args.elf),
             allowed_pairs=allowed, allowlist_reasons=reasons,
             required=args.required,
+            select_allowed=load_select_allowlist(args.allowlist),
         )
     except (OSError, CheckerError) as exc:
         report = {

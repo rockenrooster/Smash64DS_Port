@@ -1158,6 +1158,15 @@ static int ndsRelocAnimDirLookup(u32 asset_id)
     return -1;
 }
 
+/* libfat's disc cache, which nitroFSInit creates for a ROM read through DLDI
+ * or the DSi SD: libnds's weak default (dvm_calico.o) is 16 pages of 8
+ * sectors, 65,832 B of libc heap below the taskman arena for the whole run.
+ * NitroFS reads are whole files at a time; the cache's lasting use is the FAT
+ * sectors of the ROM file's cluster chain (about 22 sectors for a 90 MB ROM
+ * on 32 KB clusters), which eight pages still hold. The other 32 KB go to
+ * every scene's arena (2026-10-11). */
+unsigned g_dvmDefaultCachePages = 8u;
+
 void ndsRelocAssetsInit(void)
 {
     if (nitroFSInit(NULL))

@@ -9,6 +9,18 @@
 #define NDS_OS_MAX_THREADS 64
 #define NDS_OS_SERVICE_STACK_SIZE (16u * 1024u)
 #define NDS_OS_GOBJ_STACK_SIZE (4u * 1024u)
+/* The service threads that only block and relay -- idle (1), scheduler (3)
+ * and controller (6) -- peaked at 184-236 B of their 16 KB in a heavy
+ * four-fighter match (2026-10-11, interrupts included); the game thread (5)
+ * at 13,604 B. They take the coroutine minimum (4 KB) and give the libc heap
+ * below the taskman arena 36 KB. */
+#define NDS_OS_RELAY_STACK_SIZE (4u * 1024u)
+
+static size_t ndsOsServiceStackSize(OSId id)
+{
+    return ((id == 1) || (id == 3) || (id == 6)) ? NDS_OS_RELAY_STACK_SIZE :
+                                                   NDS_OS_SERVICE_STACK_SIZE;
+}
 /* BattleShip's own split: main.c's service threads are 1..6, and objman hands
  * GObj threads ids from 10000000 up (`dGCProcessThreadID`). The port's two
  * private threads (os_selftest 90, video_bootstrap 91) sit below the line and
@@ -234,7 +246,7 @@ void osStartThread(OSThread *thread)
          * competes for the heap. A GObj thread reaching this is the old defect
          * and StartCreateFail is where it becomes visible instead of silent. */
         stack_size = (thread->id < NDS_OS_GOBJ_THREAD_ID_MIN)
-            ? NDS_OS_SERVICE_STACK_SIZE : NDS_OS_GOBJ_STACK_SIZE;
+            ? ndsOsServiceStackSize(thread->id) : NDS_OS_GOBJ_STACK_SIZE;
         coroutine = portCoroutineCreate(ndsOsThreadEntry, thread, stack_size,
                                         thread->id);
         if (coroutine == NULL) {

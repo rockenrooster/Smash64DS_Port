@@ -700,6 +700,25 @@ into the global reservation.
   Sonic and Dedede; Banjo, Crash, Lanky and Bowser show three (the fourth
   block, about 75 KB, finds no gap). The select-to-stage-select-to-match path
   plays after the loan.
+  Two boot-time libc allocations below the taskman arena shrank, so every
+  scene's arena grows by about 68 KB: libfat's disc cache, which
+  `nitroFSInit` builds for a ROM read through DLDI, takes 8 pages instead of
+  libnds's weak default of 16 (`g_dvmDefaultCachePages`, 32 KB; NitroFS reads
+  whole files, and eight pages hold the ROM file's FAT chain), and the
+  service threads that only block and relay (idle 1, scheduler 3, controller
+  6) take the 4 KB coroutine minimum instead of 16 KB each (they peaked at
+  184-236 B in a heavy match; the game thread, 13,604 B, keeps 16 KB). The
+  select places its blocks best-fit across its three ranges and takes slot
+  heaps from the ranges' tops. Banjo, Crash, Lanky and Bowser now show four
+  previews (38.7 KB free at the select's low point), and the same four play
+  1,800 frames on Dream Land at 37,872 B low-water (the floor is 25,600);
+  Banjo, Crash, Lanky and Mario 35,320. Kirby with Bowser, Dedede and Banjo
+  plays at 14,452 B (under the floor), and Kirby with Banjo, Crash and Lanky
+  still stops at the hat admission. Fox's blaster shot declined the native
+  draw whenever the quad path refused it (a hop, reflection or tilt: 28
+  failures in 1,800 frames of Samus, Mario, Fox and Pikachu); FoxSpecial4's
+  list 0x40 is now a baked weapon root (`generate_nds_native_item_baked.py`),
+  0 failures.
 
 Four-CPU mirrors, lab ROM with all fourteen (`NDS_P4_LAB_FALLBACK=1`, lab
 stage, 1,200 frames, exception vectors trapped), on the build with the

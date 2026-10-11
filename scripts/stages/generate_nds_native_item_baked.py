@@ -50,6 +50,14 @@ FILES = {
         "7b8c444662623b4a1948c82371401cdae5bdf3108223b798b696542adba0d1b2",
         159, 43, 0,
         "977292623f0a4a3e5175fc77e4e39105d23e76fca4bf0ebc76613413f84e0ab6"),
+    # Fox's blaster shot (wpfoxblaster.c, gFTDataFoxSpecial4 0x40): the quad
+    # path (reloc_backend_movement.c ndsStageGCDrawAllLoopDrawFoxBlasterQuad)
+    # takes the natural +/-160 shot; a hopped, reflected or tilted one draws
+    # this list through the weapon seam.
+    "FoxSpecial4": sm.InputSpec(
+        "decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/FoxSpecial4",
+        "5408bd00a01f4ada549755870c978bb22e0057aeb38fc094c6c76cb9fc5b905c",
+        316, None, None, None),
     "NessSpecial2": sm.InputSpec(
         "decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/NessSpecial2",
         "3512fa549138f4bc1541c7cbb1ca45d0521207af38462a4ed87ef17298ebdb8a",
@@ -199,6 +207,8 @@ ENTRIES = (
      "GRYamabukiMap 0x308 FushigibanaRazorWeaponAttributes, DObj 1 list 0"),
     ("FushigibanaRazorXlu", "MiscDataBank159", 0x2998, GOBJ_WEAPON,
      "GRYamabukiMap 0x308 FushigibanaRazorWeaponAttributes, DObj 1 list 1"),
+    ("FoxBlasterShot", "FoxSpecial4", 0x0040, GOBJ_WEAPON,
+     "wpfoxblaster.c: a shot the quad path declines (hop, reflection, tilt)"),
     ("NessSpecial2Effect", "NessSpecial2", 0x08E0, GOBJ_EFFECT,
      "NessSpecial2 root 0x08e0, a Ness effect"),
     # Master Hand's finger-gun bullets: BossMainMotion 0x774 / 0x7A8 (Normal /

@@ -933,7 +933,7 @@ static u32 ndsMNPlayersVSPreviewBlockBytes(s32 fkind)
 
 /* First fit in the preview region around every live block and slot heap,
  * or NULL. Eight spans at most, so the scan is the allocator. */
-static void *ndsMNPlayersVSRegionTakeIn(u32 range, u32 bytes)
+static void *ndsMNPlayersVSRegionTakeIn(u32 range, u32 bytes, u32 *gap)
 {
     uintptr_t lo = (uintptr_t)sNdsPlayersVSRegionBase[range];
     uintptr_t end = lo + sNdsPlayersVSRegionBytes[range];
@@ -978,6 +978,30 @@ static void *ndsMNPlayersVSRegionTakeIn(u32 range, u32 bytes)
         }
         if (blocked == 0u)
         {
+            /* The free run this fit opens: up to the next span or the end. */
+            uintptr_t next = end;
+
+            for (i = 0u; i < NDS_PLAYERS_VS_RESIDENT_BLOCKS; i++)
+            {
+                uintptr_t s = (uintptr_t)sNdsPlayersVSResidentBlocks[i].base;
+
+                if ((sNdsPlayersVSResidentBlocks[i].base != NULL) &&
+                    (s >= lo) && (s < next))
+                {
+                    next = s;
+                }
+            }
+            for (i = 0u; i < GMCOMMON_PLAYERS_MAX; i++)
+            {
+                uintptr_t s = (uintptr_t)sNdsPlayersVSSlotHeapBase[i];
+
+                if ((sNdsPlayersVSSlotHeapBase[i] != NULL) && (s >= lo) &&
+                    (s < next))
+                {
+                    next = s;
+                }
+            }
+            *gap = (u32)(next - lo);
             return (void *)lo;
         }
         lo = (blocked + 31u) & ~(uintptr_t)31u;
@@ -985,15 +1009,101 @@ static void *ndsMNPlayersVSRegionTakeIn(u32 range, u32 bytes)
     return NULL;
 }
 
-/* First fit over the ranges, the scene heap's first. */
+/* Best fit over the ranges: each range's first fit, and of those the one
+ * whose free run is the smallest that holds the request. Four blocks of
+ * 75-115 KB and four slot heaps fill about 95% of the three ranges with a
+ * heavy roster, and taking the scene heap first left the overlay's range with
+ * gaps none of the last block fit in (2026-10-11). */
 static void *ndsMNPlayersVSRegionTake(u32 bytes)
 {
+    void *best = NULL;
+    u32 best_gap = 0xFFFFFFFFu;
     u32 range;
 
     bytes = (bytes + 31u) & ~31u;
     for (range = 0u; range < NDS_PLAYERS_VS_REGIONS; range++)
     {
-        void *base = ndsMNPlayersVSRegionTakeIn(range, bytes);
+        u32 gap = 0u;
+        void *base = ndsMNPlayersVSRegionTakeIn(range, bytes, &gap);
+
+        if ((base != NULL) && (gap < best_gap))
+        {
+            best = base;
+            best_gap = gap;
+        }
+    }
+    return best;
+}
+
+/* Slot heaps come from the top of a range, the last range (the overlay's)
+ * first: the blocks fill the ranges' low ends, and heaps taken there left
+ * holes between blocks that the last heavy block found no room in. */
+static void *ndsMNPlayersVSRegionTakeTopIn(u32 range, u32 bytes)
+{
+    uintptr_t lo = (uintptr_t)sNdsPlayersVSRegionBase[range];
+    uintptr_t top = lo + sNdsPlayersVSRegionBytes[range];
+    u32 guard;
+
+    if ((sNdsPlayersVSRegionBase[range] == NULL) || (bytes == 0u))
+    {
+        return NULL;
+    }
+    for (guard = 0u;
+         guard <= NDS_PLAYERS_VS_RESIDENT_BLOCKS + GMCOMMON_PLAYERS_MAX;
+         guard++)
+    {
+        uintptr_t base;
+        uintptr_t blocked = top;
+        u32 i;
+
+        if ((top < lo) || ((uintptr_t)bytes > top - lo))
+        {
+            return NULL;
+        }
+        base = (top - bytes) & ~(uintptr_t)31u;
+        if (base < lo)
+        {
+            return NULL;
+        }
+        for (i = 0u; i < NDS_PLAYERS_VS_RESIDENT_BLOCKS; i++)
+        {
+            const NDSPlayersVSResidentBlock *b = &sNdsPlayersVSResidentBlocks[i];
+            uintptr_t s = (uintptr_t)b->base;
+
+            if ((b->base != NULL) && (s < top) && (s + b->bytes > base) &&
+                (s < blocked))
+            {
+                blocked = s;
+            }
+        }
+        for (i = 0u; i < GMCOMMON_PLAYERS_MAX; i++)
+        {
+            uintptr_t s = (uintptr_t)sNdsPlayersVSSlotHeapBase[i];
+            uintptr_t e = s + sNdsPlayersVSSlotHeapBytes[i];
+
+            if ((sNdsPlayersVSSlotHeapBase[i] != NULL) && (s < top) &&
+                (e > base) && (s < blocked))
+            {
+                blocked = s;
+            }
+        }
+        if (blocked == top)
+        {
+            return (void *)base;
+        }
+        top = blocked;
+    }
+    return NULL;
+}
+
+static void *ndsMNPlayersVSRegionTakeTop(u32 bytes)
+{
+    u32 range;
+
+    bytes = (bytes + 31u) & ~31u;
+    for (range = NDS_PLAYERS_VS_REGIONS; range-- > 0u;)
+    {
+        void *base = ndsMNPlayersVSRegionTakeTopIn(range, bytes);
 
         if (base != NULL)
         {
@@ -1159,12 +1269,12 @@ static sb32 ndsMNPlayersVSPreviewReserveSlotHeap(u32 slot, s32 kind)
     }
     /* Beside the old heap first; else over it, which is safe because the
      * source destroys the old fighter before the new one plays anything. */
-    base = ndsMNPlayersVSRegionTake(need);
+    base = ndsMNPlayersVSRegionTakeTop(need);
     if (base == NULL)
     {
         sNdsPlayersVSSlotHeapBase[slot] = NULL;
         sNdsPlayersVSSlotHeapBytes[slot] = 0u;
-        base = ndsMNPlayersVSRegionTake(need);
+        base = ndsMNPlayersVSRegionTakeTop(need);
         if (base == NULL)
         {
             sNdsPlayersVSSlotHeapBase[slot] = old_base;
