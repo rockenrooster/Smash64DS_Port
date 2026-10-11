@@ -15,6 +15,7 @@
 #include <mn/menu.h>
 #include <nds/nds_audio_bgm.h>
 #include <nds/nds_audio_fgm.h>
+#include <nds/nds_frontend_overlay.h>
 #include <nds/nds_preview_pack.h>
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_renderer.h>
@@ -342,15 +343,19 @@ static sb32 sNdsPlayersVSResidentPoolsReady;
  * whose fighter would leave less shows none rather than halt the select. */
 #define NDS_PLAYERS_VS_FIGHTER_HEAP_FLOOR (24u * 1024u)
 volatile u32 gNdsPlayersVSPreviewFighterHeapShortCount;
-/* Two ranges: the scene heap's, and the FGM cue arena's tail, lent for the
+/* Three ranges: the scene heap's; the FGM cue arena's tail, lent for the
  * select's lifetime (ndsAudioFgmLendTail): the select's cues fit in
  * NDS_PLAYERS_VS_FGM_KEEP, and the match's 133 KB pinned peak gets the arena
- * back at exit. */
-#define NDS_PLAYERS_VS_REGIONS 2u
+ * back at exit; and the front-end overlay before the select's own block
+ * (ndsFrontendOverlayBorrowForSelect, about 250 KB: other scenes' code,
+ * reloaded at the next scene dispatch), the one range a P4 content's block
+ * (its pack, owner image and motion file, 90-140 KB) fits in. */
+#define NDS_PLAYERS_VS_REGIONS 3u
 #define NDS_PLAYERS_VS_FGM_KEEP (72u * 1024u)
 static u8 *sNdsPlayersVSRegionBase[NDS_PLAYERS_VS_REGIONS];
 static u32 sNdsPlayersVSRegionBytes[NDS_PLAYERS_VS_REGIONS];
 volatile u32 gNdsPlayersVSPreviewFgmLentBytes;
+volatile u32 gNdsPlayersVSPreviewOverlayLentBytes;
 static void *sNdsPlayersVSSlotHeapBase[GMCOMMON_PLAYERS_MAX];
 static u32 sNdsPlayersVSSlotHeapBytes[GMCOMMON_PLAYERS_MAX];
 volatile u32 gNdsPlayersVSPreviewRegionBytes;
@@ -1114,6 +1119,37 @@ static sb32 ndsMNPlayersVSPreviewReserveSlotHeap(u32 slot, s32 kind)
     data = ndsCssPreviewKindData(kind);
     need = ((data != NULL) && (data->file_anim_size != 0u)) ?
         (u32)data->file_anim_size : (u32)gFTManagerFigatreeHeapSize;
+#if NDS_P4
+    /* A content's slot plays two of its demo clips: DemoNull (row 0) and its
+     * parent's Selected status (mnPlayersVSGetStatusSelected, rows 1..4;
+     * the source slot's fkind is the parent). Its largest demo clip is often
+     * another victory pose (Banjo's Win3, 34.6 KB, against 16.8 KB for the
+     * two he plays here), so the heap takes the larger of those two. */
+    if ((data != NULL) && (ndsCssPreviewKindContent(kind) != 0u) &&
+        (data->submotion != NULL) && (data->submotion_array_count != NULL))
+    {
+        s32 row = mnPlayersVSGetStatusSelected(ndsCssPreviewKindParent(kind)) -
+            nFTDemoStatusNull;
+        u32 idle = 0u;
+        u32 pose = 0u;
+
+        if ((row > 0) && (row < *data->submotion_array_count))
+        {
+            const void *idle_id =
+                (const void *)(uintptr_t)data->submotion->motion_desc[0].anim_file_id;
+            const void *pose_id =
+                (const void *)(uintptr_t)data->submotion->motion_desc[row].anim_file_id;
+
+            idle = (idle_id != NULL) ? (u32)lbRelocGetFileSize(idle_id) : 0u;
+            pose = (pose_id != NULL) ? (u32)lbRelocGetFileSize(pose_id) : 0u;
+        }
+        if ((idle != 0u) && (pose != 0u) &&
+            (((idle > pose) ? idle : pose) < need))
+        {
+            need = (idle > pose) ? idle : pose;
+        }
+    }
+#endif
     need = (need + 31u) & ~31u;
     old_base = sNdsPlayersVSSlotHeapBase[slot];
     old_bytes = sNdsPlayersVSSlotHeapBytes[slot];
@@ -1363,6 +1399,16 @@ static sb32 ndsMNPlayersVSPreviewInitResidentPools(void)
         sNdsPlayersVSRegionBytes[1] = (sNdsPlayersVSRegionBase[1] != NULL) ?
             (lent & ~31u) : 0u;
         gNdsPlayersVSPreviewFgmLentBytes = sNdsPlayersVSRegionBytes[1];
+    }
+    if (sNdsPlayersVSRegionBase[2] == NULL)
+    {
+        u32 lent = 0u;
+
+        sNdsPlayersVSRegionBase[2] =
+            (u8 *)ndsFrontendOverlayBorrowForSelect(&lent);
+        sNdsPlayersVSRegionBytes[2] = (sNdsPlayersVSRegionBase[2] != NULL) ?
+            lent : 0u;
+        gNdsPlayersVSPreviewOverlayLentBytes = sNdsPlayersVSRegionBytes[2];
     }
     gNdsPlayersVSPreviewBlockSlackMin = 0xFFFFFFFFu;
     return TRUE;
@@ -3303,6 +3349,9 @@ void ndsMNPlayersVSPreviewExit(void)
     }
     sNdsPlayersVSRegionBase[0] = NULL;
     sNdsPlayersVSRegionBytes[0] = 0u;
+    /* The overlay's lent range: the next scene dispatch reloads it. */
+    sNdsPlayersVSRegionBase[2] = NULL;
+    sNdsPlayersVSRegionBytes[2] = 0u;
 #endif
     if ((sNdsPlayersVSResidentPoolsReady != FALSE) &&
         (sNdsPlayersVSSharedResidentBase != NULL))

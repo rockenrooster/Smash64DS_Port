@@ -11,6 +11,9 @@ extern u8 __nds_frontend_start[];
 extern u8 __nds_frontend_end[];
 /* End of the 1P battle-time head (linker/nds_frontend_overlay.ld). */
 extern u8 __nds_frontend_1p_end[];
+/* Start of the VS character select's block (the same script): the select lends
+ * everything before it. */
+extern u8 __nds_frontend_select_start[];
 
 static u8 *sNdsFrontendCursor;
 static u32 sNdsFrontendInitialized;
@@ -20,6 +23,9 @@ static u32 sNdsFrontendLoaded;
 static u32 sNdsFrontendTailLoaned;
 /* ...and an allocation actually landed in it (nothing to reload otherwise). */
 static u32 sNdsFrontendTailDirty;
+/* The VS character select lent the range before its block to its previews
+ * (ndsFrontendOverlayBorrowForSelect). */
+static u32 sNdsFrontendSelectDirty;
 
 volatile u32 gNdsFrontendOverlayTailLoanCount;
 volatile u32 gNdsFrontendOverlayTailReloadCount;
@@ -60,6 +66,7 @@ static void ndsFrontendOverlayLoadNow(void)
     sNdsFrontendLoaded = 1u;
     sNdsFrontendTailLoaned = 0u;
     sNdsFrontendTailDirty = 0u;
+    sNdsFrontendSelectDirty = 0u;
     gNdsFrontendOverlayLoadCount++;
 }
 
@@ -90,7 +97,8 @@ void ndsFrontendOverlayPrepareDispatch(u32 kind)
         }
         return;
     }
-    if ((sNdsFrontendLoaded == 0u) || (sNdsFrontendTailDirty != 0u))
+    if ((sNdsFrontendLoaded == 0u) || (sNdsFrontendTailDirty != 0u) ||
+        (sNdsFrontendSelectDirty != 0u))
     {
         if (sNdsFrontendTailDirty != 0u)
         {
@@ -119,6 +127,26 @@ s32 ndsFrontendOverlayTailResident(void)
 {
     return ((sNdsFrontendLoaded != 0u) && (sNdsFrontendTailLoaned == 0u) &&
             (sNdsFrontendTailDirty == 0u)) ? TRUE : FALSE;
+}
+
+void *ndsFrontendOverlayBorrowForSelect(u32 *bytes)
+{
+    u32 lent = (u32)(__nds_frontend_select_start - __nds_frontend_start) & ~31u;
+
+    if (bytes == NULL)
+    {
+        return NULL;
+    }
+    *bytes = 0u;
+    if ((sNdsFrontendLoaded == 0u) || (sNdsFrontendTailLoaned != 0u) ||
+        (sNdsFrontendCursor != NULL) || (lent == 0u) ||
+        (gSCManagerSceneData.scene_curr != nSCKindPlayersVS))
+    {
+        return NULL;
+    }
+    sNdsFrontendSelectDirty = 1u;
+    *bytes = lent;
+    return __nds_frontend_start;
 }
 
 void ndsFrontendOverlayBeginScene(u32 kind)

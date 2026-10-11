@@ -680,6 +680,26 @@ into the global reservation.
   Wario (Dream Land, 900 frames, ship ROM) now ends at 30,968 B; Kirby with
   Bowser, Dedede and Banjo still overflows making parts, and Banjo, Crash,
   Lanky and Bowser on Dream Land ask 43,036 B against 36,932.
+  The 1P Game opponents' motion tables (the Polygon Team, Giant Donkey Kong
+  and Master Hand, 36 KB of `battleship_ftdata.o`) moved into the overlay's 1P
+  battle-time head; their FTData rows stay resident because
+  `ftManagerAllocFighter` writes every kind's row. VS battles borrow 36 KB
+  more: the heavy four's packs and images now all sit in the loan (422 KB of
+  428 KB) and the match runs out in the general heap instead, at fighter
+  setup; Kirby with Bowser, Dedede and Banjo reaches the hat admission.
+  The VS select lends the overlay's other scenes to its previews: the select's
+  own block (native menu shell, UI kit, `mnplayersvs`, the Selected clips and
+  the sound test's tables) links last, `ndsFrontendOverlayBorrowForSelect`
+  hands the 246,656 B before it to the preview pool as a third range, and the
+  next scene dispatch reloads the overlay (`check_frontend_overlay.py`
+  rejects any reference from the block into the lent range). A content's slot
+  heap takes the larger of the two demo clips the select plays (DemoNull and
+  its parent's Selected row) instead of its largest demo clip: Banjo 34.6 ->
+  16.8 KB, Crash 35.8 -> 8.6, Lanky 27.5 -> 23.2, Bowser 17.3 -> 7.0. Four
+  previews show for Link, Donkey Kong, Samus and Kirby, and for Marth, Peach,
+  Sonic and Dedede; Banjo, Crash, Lanky and Bowser show three (the fourth
+  block, about 75 KB, finds no gap). The select-to-stage-select-to-match path
+  plays after the loan.
 
 Four-CPU mirrors, lab ROM with all fourteen (`NDS_P4_LAB_FALLBACK=1`, lab
 stage, 1,200 frames, exception vectors trapped), on the build with the

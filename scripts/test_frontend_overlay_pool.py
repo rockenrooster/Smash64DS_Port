@@ -22,6 +22,10 @@ def test_frontend_loan_lifecycle_and_bounds():
                             "#define __nds_frontend_start test_overlay")
     source = source.replace("extern u8 __nds_frontend_end[];",
                             "#define __nds_frontend_end (test_overlay + 256)")
+    source = source.replace("extern u8 __nds_frontend_1p_end[];",
+                            "#define __nds_frontend_1p_end (test_overlay + 64)")
+    source = source.replace("extern u8 __nds_frontend_select_start[];",
+                            "#define __nds_frontend_select_start (test_overlay + 192)")
     source = "\n".join(line for line in source.splitlines()
                        if not line.startswith("#include"))
     fixture = r'''
@@ -31,8 +35,13 @@ def test_frontend_loan_lifecycle_and_bounds():
 #include <string.h>
 typedef uint8_t u8;
 typedef uint32_t u32;
+typedef int32_t s32;
 typedef int32_t sb32;
-enum { FALSE = 0, nSCKindVSBattle = 22 };
+enum { FALSE = 0, TRUE = 1 };
+enum { nSCKindPlayersVS = 16, nSCKind1PGame = 52, nSCKind1PBonusStage = 53,
+       nSCKind1PTrainingMode = 54, nSCKindVSBattle = 22 };
+#define NDS_DIAG(x) ((void)(x))
+static struct { u32 scene_curr; } gSCManagerSceneData;
 static _Alignas(32) u8 test_overlay[256];
 static u8 general_asset[512];
 static unsigned loads, deactivations, initializations, locks, allocations;
@@ -116,6 +125,19 @@ int main(void) {
     assert(test_overlay[0] == 0xa5 && test_overlay[255] == 0xa5);
     ndsFrontendOverlayPrepareDispatch(2);
     assert(loads == 2); // menu-to-menu does not reload or reset mutable state
+    // The VS select lends everything before its block, only in its own scene,
+    // and the next dispatch reloads the overlay.
+    u32 lent = 1;
+    gSCManagerSceneData.scene_curr = 2;
+    assert(ndsFrontendOverlayBorrowForSelect(&lent) == NULL && lent == 0);
+    gSCManagerSceneData.scene_curr = nSCKindPlayersVS;
+    assert(ndsFrontendOverlayBorrowForSelect(&lent) == test_overlay && lent == 192);
+    assert(ndsFrontendOverlayTailResident() != FALSE);
+    memset(test_overlay, 0x44, 192);
+    ndsFrontendOverlayPrepareDispatch(3);
+    assert(loads == 3 && test_overlay[0] == 0xa5 && test_overlay[191] == 0xa5);
+    ndsFrontendOverlayPrepareDispatch(4);
+    assert(loads == 3);
     assert(gNdsFrontendOverlayLoadFailCount == 0 && locks == 0);
     return 0;
 }

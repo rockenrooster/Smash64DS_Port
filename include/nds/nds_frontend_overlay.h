@@ -17,6 +17,12 @@ void ndsFrontendOverlayRestoreTail(void);
 /* TRUE while the whole overlay is loaded and no battle borrows its tail: its
  * data (the select screens' Selected clips) may be read. */
 s32 ndsFrontendOverlayTailResident(void);
+/* The VS character select's loan of everything the overlay links before the
+ * select's own block (linker/nds_frontend_overlay.ld: other scenes' code and
+ * tables, which nothing in that scene runs or reads; check_frontend_overlay.py
+ * rejects a reference from the block into it): its base and size, or NULL.
+ * The next scene dispatch reloads the overlay before any of it runs again. */
+void *ndsFrontendOverlayBorrowForSelect(u32 *bytes);
 
 /* Scene-lifetime asset storage. The loan is separate from the existing taskman
  * allocation, whose newlib header and ownership must never be overwritten. */

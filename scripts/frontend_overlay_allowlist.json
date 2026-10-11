@@ -1071,6 +1071,86 @@
       "source_symbol": "ndsBattleShipLoadCSSSelectedFigatree",
       "target_symbol": "dFTYoshiAnimSelected_joints",
       "reason": "Select-screen Selected clips (battleship_scsubsysdata_ft.c) moved to the overlay tail 2026-10-11. Both resident readers return before touching them unless ndsFrontendOverlayTailResident(): the preview loader is reached only by the select screens' Selected file ids, and the joint test answers FALSE while a battle borrows the tail."
+    },
+    {
+      "source_symbol": "dFTNMarioData",
+      "target_symbol": "dFTNMarioMotionDescs",
+      "reason": "1P Game opponents' motion tables moved to the overlay's 1P head 2026-10-11. Only a live fighter of this kind reads its FTData's motion table (ftMainSetStatus through fp->data), and these kinds are made only by the 1P Game and its intro, which keep the head resident; ftManagerAllocFighter's all-kind loop writes the resident FTData row without reading the table, and ftManagerSetupFileSize copies the generated census instead of walking it."
+    },
+    {
+      "source_symbol": "dFTNFoxData",
+      "target_symbol": "dFTNFoxMotionDescs",
+      "reason": "1P Game opponents' motion tables moved to the overlay's 1P head 2026-10-11. Only a live fighter of this kind reads its FTData's motion table (ftMainSetStatus through fp->data), and these kinds are made only by the 1P Game and its intro, which keep the head resident; ftManagerAllocFighter's all-kind loop writes the resident FTData row without reading the table, and ftManagerSetupFileSize copies the generated census instead of walking it."
+    },
+    {
+      "source_symbol": "dFTNDonkeyData",
+      "target_symbol": "dFTNDonkeyMotionDescs",
+      "reason": "1P Game opponents' motion tables moved to the overlay's 1P head 2026-10-11. Only a live fighter of this kind reads its FTData's motion table (ftMainSetStatus through fp->data), and these kinds are made only by the 1P Game and its intro, which keep the head resident; ftManagerAllocFighter's all-kind loop writes the resident FTData row without reading the table, and ftManagerSetupFileSize copies the generated census instead of walking it."
+    },
+    {
+      "source_symbol": "dFTNSamusData",
+      "target_symbol": "dFTNSamusMotionDescs",
+      "reason": "1P Game opponents' motion tables moved to the overlay's 1P head 2026-10-11. Only a live fighter of this kind reads its FTData's motion table (ftMainSetStatus through fp->data), and these kinds are made only by the 1P Game and its intro, which keep the head resident; ftManagerAllocFighter's all-kind loop writes the resident FTData row without reading the table, and ftManagerSetupFileSize copies the generated census instead of walking it."
+    },
+    {
+      "source_symbol": "dFTNLuigiData",
+      "target_symbol": "dFTNLuigiMotionDescs",
+      "reason": "1P Game opponents' motion tables moved to the overlay's 1P head 2026-10-11. Only a live fighter of this kind reads its FTData's motion table (ftMainSetStatus through fp->data), and these kinds are made only by the 1P Game and its intro, which keep the head resident; ftManagerAllocFighter's all-kind loop writes the resident FTData row without reading the table, and ftManagerSetupFileSize copies the generated census instead of walking it."
+    },
+    {
+      "source_symbol": "dFTNLinkData",
+      "target_symbol": "dFTNLinkMotionDescs",
+      "reason": "1P Game opponents' motion tables moved to the overlay's 1P head 2026-10-11. Only a live fighter of this kind reads its FTData's motion table (ftMainSetStatus through fp->data), and these kinds are made only by the 1P Game and its intro, which keep the head resident; ftManagerAllocFighter's all-kind loop writes the resident FTData row without reading the table, and ftManagerSetupFileSize copies the generated census instead of walking it."
+    },
+    {
+      "source_symbol": "dFTNYoshiData",
+      "target_symbol": "dFTNYoshiMotionDescs",
+      "reason": "1P Game opponents' motion tables moved to the overlay's 1P head 2026-10-11. Only a live fighter of this kind reads its FTData's motion table (ftMainSetStatus through fp->data), and these kinds are made only by the 1P Game and its intro, which keep the head resident; ftManagerAllocFighter's all-kind loop writes the resident FTData row without reading the table, and ftManagerSetupFileSize copies the generated census instead of walking it."
+    },
+    {
+      "source_symbol": "dFTNCaptainData",
+      "target_symbol": "dFTNCaptainMotionDescs",
+      "reason": "1P Game opponents' motion tables moved to the overlay's 1P head 2026-10-11. Only a live fighter of this kind reads its FTData's motion table (ftMainSetStatus through fp->data), and these kinds are made only by the 1P Game and its intro, which keep the head resident; ftManagerAllocFighter's all-kind loop writes the resident FTData row without reading the table, and ftManagerSetupFileSize copies the generated census instead of walking it."
+    },
+    {
+      "source_symbol": "dFTNKirbyData",
+      "target_symbol": "dFTNKirbyMotionDescs",
+      "reason": "1P Game opponents' motion tables moved to the overlay's 1P head 2026-10-11. Only a live fighter of this kind reads its FTData's motion table (ftMainSetStatus through fp->data), and these kinds are made only by the 1P Game and its intro, which keep the head resident; ftManagerAllocFighter's all-kind loop writes the resident FTData row without reading the table, and ftManagerSetupFileSize copies the generated census instead of walking it."
+    },
+    {
+      "source_symbol": "dFTNPikachuData",
+      "target_symbol": "dFTNPikachuMotionDescs",
+      "reason": "1P Game opponents' motion tables moved to the overlay's 1P head 2026-10-11. Only a live fighter of this kind reads its FTData's motion table (ftMainSetStatus through fp->data), and these kinds are made only by the 1P Game and its intro, which keep the head resident; ftManagerAllocFighter's all-kind loop writes the resident FTData row without reading the table, and ftManagerSetupFileSize copies the generated census instead of walking it."
+    },
+    {
+      "source_symbol": "dFTNPurinData",
+      "target_symbol": "dFTNPurinMotionDescs",
+      "reason": "1P Game opponents' motion tables moved to the overlay's 1P head 2026-10-11. Only a live fighter of this kind reads its FTData's motion table (ftMainSetStatus through fp->data), and these kinds are made only by the 1P Game and its intro, which keep the head resident; ftManagerAllocFighter's all-kind loop writes the resident FTData row without reading the table, and ftManagerSetupFileSize copies the generated census instead of walking it."
+    },
+    {
+      "source_symbol": "dFTNNessData",
+      "target_symbol": "dFTNNessMotionDescs",
+      "reason": "1P Game opponents' motion tables moved to the overlay's 1P head 2026-10-11. Only a live fighter of this kind reads its FTData's motion table (ftMainSetStatus through fp->data), and these kinds are made only by the 1P Game and its intro, which keep the head resident; ftManagerAllocFighter's all-kind loop writes the resident FTData row without reading the table, and ftManagerSetupFileSize copies the generated census instead of walking it."
+    },
+    {
+      "source_symbol": "dFTGDonkeyData",
+      "target_symbol": "dFTGDonkeyMotionDescs",
+      "reason": "1P Game opponents' motion tables moved to the overlay's 1P head 2026-10-11. Only a live fighter of this kind reads its FTData's motion table (ftMainSetStatus through fp->data), and these kinds are made only by the 1P Game and its intro, which keep the head resident; ftManagerAllocFighter's all-kind loop writes the resident FTData row without reading the table, and ftManagerSetupFileSize copies the generated census instead of walking it."
+    },
+    {
+      "source_symbol": "dFTBossData",
+      "target_symbol": "dFTBossMotionDescs",
+      "reason": "1P Game opponents' motion tables moved to the overlay's 1P head 2026-10-11. Only a live fighter of this kind reads its FTData's motion table (ftMainSetStatus through fp->data), and these kinds are made only by the 1P Game and its intro, which keep the head resident; ftManagerAllocFighter's all-kind loop writes the resident FTData row without reading the table, and ftManagerSetupFileSize copies the generated census instead of walking it."
+    },
+    {
+      "source_symbol": "ndsFrontendOverlayBorrowForSelect",
+      "target_symbol": "__nds_frontend_start",
+      "reason": "Linker boundary symbol: the VS character select's loan takes the address range before its own block as preview storage; it is an address, never called or read."
+    },
+    {
+      "source_symbol": "ndsFrontendOverlayBorrowForSelect",
+      "target_symbol": "__nds_frontend_select_start",
+      "reason": "Linker boundary symbol: the VS character select's loan takes the address range before its own block as preview storage; it is an address, never called or read."
     }
   ]
 }

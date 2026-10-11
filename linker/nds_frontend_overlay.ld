@@ -81,6 +81,18 @@ SECTIONS {
             .data.dSC1PManager1PChallengerOverlay .data.dSC1PManagerEndingOverlay
             .data.dSC1PManagerStaffrollOverlay .data.dSC1PManagerCongraOverlay
             .data.dSC1PManagerMessageOverlay)
+        /* The 1P Game's opponents' motion tables (2026-10-11): the Fighting
+         * Polygon Team, Giant Donkey Kong and Master Hand are made only by
+         * the 1P Game and its intro, which keep this head; their FTData rows
+         * stay resident (ftManagerAllocFighter writes every kind's row). VS
+         * battles borrow these 36 KB. */
+        :battleship_ftdata.o (.data.dFTNMarioMotionDescs .data.dFTNFoxMotionDescs
+            .data.dFTNDonkeyMotionDescs .data.dFTNSamusMotionDescs
+            .data.dFTNLuigiMotionDescs .data.dFTNLinkMotionDescs
+            .data.dFTNYoshiMotionDescs .data.dFTNCaptainMotionDescs
+            .data.dFTNKirbyMotionDescs .data.dFTNPikachuMotionDescs
+            .data.dFTNPurinMotionDescs .data.dFTNNessMotionDescs
+            .data.dFTGDonkeyMotionDescs .data.dFTBossMotionDescs)
         . = ALIGN(32);
         __nds_frontend_1p_end = .;
         :battleship_mntitlefiles.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx
@@ -89,13 +101,6 @@ SECTIONS {
             .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
         :battleship_mnvsmode.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx
             .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
-        :battleship_mnplayersvs.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx
-            .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
-        /* The select screens' Selected clips (battleship_scsubsysdata_ft.c,
-         * 2026-10-11): only their preview loader reads them, and the resident
-         * lookups touch them only while this tail is resident
-         * (ndsFrontendOverlayTailResident). The VS loan grows by their size. */
-        :battleship_scsubsysdata_ft.o (.data.dFT*AnimSelected*)
         :battleship_mnmaps.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx
             .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
         :battleship_mnoption.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx
@@ -150,10 +155,6 @@ SECTIONS {
             .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
         :battleship_mvending.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx
             .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
-        :nds_ui_kit.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx
-            .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
-        :nds_menu_shell.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx
-            .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
         /* Non-VS scenes retain this overlay for their complete nested call.
          * The 1P runtime's boss/death/camera closure moved here too: its shared
          * callers test the 1P game rule/type or are themselves boss code. */
@@ -196,13 +197,35 @@ SECTIONS {
             .data.dMNCharactersSpecialMotionYoshi .data.dMNCharactersSpecialMotionCaptain
             .data.dMNCharactersSpecialMotionKirby .data.dMNCharactersSpecialMotionPikachu
             .data.dMNCharactersSpecialMotionPurin .data.dMNCharactersSpecialMotionNess)
-        :battleship_mnsoundtest.o (.data.dMNSoundTestMusicIDs
-            .data.dMNSoundTestSoundIDs .data.dMNSoundTestVoiceIDs)
         :battleship_scstaffroll.o (.data.dSCStaffrollNameCharacters
             .data.dSCStaffrollNameTextInfo .data.dSCStaffrollStaffRoleTextInfo
             .data.dSCStaffrollJobDescriptions .data.dSCStaffrollJobCharacters
             .data.dSCStaffrollJobTextInfo .data.dSCStaffrollCompanyCharacters
             .data.dSCStaffrollCompanyTextInfo .data.dSCStaffrollCompanyIDs)
+        /* THE VS CHARACTER SELECT'S BLOCK (2026-10-11). Everything that select
+         * runs or reads from this overlay sits last: the native menu shell and
+         * UI kit, the source select and the Selected clips (scripts/
+         * check_frontend_overlay.py --select-block checks that nothing here names
+         * an overlay symbol before __nds_frontend_select_start). The select lends
+         * [__nds_frontend_start, __nds_frontend_select_start) to its previews
+         * (ndsFrontendOverlayBorrowForSelect); the next scene dispatch reloads the
+         * overlay. */
+        . = ALIGN(32);
+        __nds_frontend_select_start = .;
+        :nds_ui_kit.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx
+            .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
+        :nds_menu_shell.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx
+            .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
+        :battleship_mnplayersvs.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx
+            .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
+        /* The select screens' Selected clips (battleship_scsubsysdata_ft.c,
+         * 2026-10-11): only their preview loader reads them, and the resident
+         * lookups touch them only while this tail is resident
+         * (ndsFrontendOverlayTailResident). The VS loan grows by their size. */
+        :battleship_scsubsysdata_ft.o (.data.dFT*AnimSelected*)
+        /* The native sound test (nds_menu_shell.o) names these. */
+        :battleship_mnsoundtest.o (.data.dMNSoundTestMusicIDs
+            .data.dMNSoundTestSoundIDs .data.dMNSoundTestVoiceIDs)
         . = ALIGN(32);
     } AT>ovlmem :ovl_frontend = 0xff
 

@@ -491,6 +491,49 @@ def _relocation_detail(source_section: Section, source_offset: int,
     }
 
 
+def _select_block_violations(elf: Elf32, symbol_tables: dict[int, list[Symbol]],
+                             source_indexes: dict[int, dict[int, SourceSymbolIndex]]
+                             ) -> list[dict[str, str]]:
+    """The VS character select lends [__nds_frontend_start,
+    __nds_frontend_select_start) to its previews, so nothing linked at or after
+    __nds_frontend_select_start (its block) may name a symbol in that range."""
+    symtab = next((s for s in elf.sections if s.kind == SHT_SYMTAB), None)
+    if symtab is None:
+        return []
+    if symtab.index not in symbol_tables:
+        symbol_tables[symtab.index] = elf.symbols(symtab)
+    symbols = symbol_tables[symtab.index]
+    marks = {s.name: s.value for s in symbols
+             if s.name in ("__nds_frontend_start", "__nds_frontend_select_start")}
+    if len(marks) != 2:
+        return []
+    lo, mid = marks["__nds_frontend_start"], marks["__nds_frontend_select_start"]
+    if symtab.index not in source_indexes:
+        source_indexes[symtab.index] = _source_symbol_indexes(elf, symbols)
+    found: dict[tuple[str, str], dict[str, str]] = {}
+    for rsec in elf.sections:
+        if rsec.kind not in (SHT_REL, SHT_RELA):
+            continue
+        src = elf.section_by_index.get(rsec.info)
+        if src is None or not src.alloc or not src.overlay:
+            continue
+        index = source_indexes[symtab.index].get(src.index)
+        for r in elf.relocations(rsec):
+            if r.symbol_index == 0 or r.symbol_index >= len(symbols):
+                continue
+            offset = _section_offset(elf, src, r.offset)
+            if src.address + offset < mid:
+                continue
+            target = symbols[r.symbol_index]
+            if target.kind == STT_SECTION or not (lo <= target.value < mid):
+                continue
+            source = index.resolve(src, offset)[0] if index is not None else src.name
+            found.setdefault((source, target.identity),
+                             {"source_symbol": source,
+                              "target_symbol": target.identity})
+    return [found[k] for k in sorted(found)]
+
+
 def inspect_elf(data: bytes, *, elf_name: str,
                 allowed_pairs: set[tuple[str, str]] | None = None,
                 allowlist_reasons: dict[tuple[str, str], str] | None = None,
@@ -626,6 +669,13 @@ def inspect_elf(data: bytes, *, elf_name: str,
             "no resident allocated-section relocations were emitted; "
             "link with --emit-relocs"
         )
+    select_violations = _select_block_violations(elf, symbol_tables, source_indexes)
+    if select_violations:
+        errors.append(
+            f"{len(select_violations)} select-block reference(s) into the range the "
+            "VS character select lends (__nds_frontend_start.."
+            "__nds_frontend_select_start)"
+        )
 
     def ordered_pairs(table: dict[tuple[str, str], dict[str, Any]]):
         result = []
@@ -677,6 +727,7 @@ def inspect_elf(data: bytes, *, elf_name: str,
             {"source_symbol": source, "target_symbol": target}
             for source, target in unused_allowlist
         ],
+        "select_block_violations": select_violations,
         "errors": errors,
         "passed": not errors,
     }
