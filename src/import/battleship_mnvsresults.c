@@ -199,6 +199,11 @@ void ndsMNVSResultsSetLoadScene(void);
     NDS_P4_RESULTS_SPLIT(NDS_P4_RESULTS_SAVE_, __VA_ARGS__)
 #define NDS_P4_RESULTS_SAVE_void ndsBaseMNVSResultsSaveBackup(void)
 #define NDS_P4_RESULTS_SAVE_ ndsP4MNVSResultsSaveBackup()
+/* The winner's series emblem (mnVSResultsMakeEmblem): selectable Metal
+ * Mario's is the Mario Bros. one. */
+#define mnVSResultsMakeEmblem(...)     NDS_P4_RESULTS_SPLIT(NDS_P4_RESULTS_EMBLEM_, __VA_ARGS__)
+#define NDS_P4_RESULTS_EMBLEM_void ndsBaseMNVSResultsMakeEmblem(void)
+#define NDS_P4_RESULTS_EMBLEM_ ndsP4MNVSResultsMakeEmblem()
 /* The fighter scale (0x801338EC) is patched by Remix's menu_zoom row: the
  * definition's first argument text `GObj` pastes to the base name, the
  * call's `sMNVSResultsFighterGObjs` to the port wrapper. */
@@ -220,6 +225,7 @@ void ndsP4MNVSResultsAnnounceWinner(void);
 void ndsP4MNVSResultMakeFighterName(void);
 void ndsP4MNVSResultsPlayWinBGM(void);
 void ndsP4MNVSResultsSaveBackup(void);
+void ndsP4MNVSResultsMakeEmblem(void);
 #endif
 
 void ndsBaseMNVSResultsStartScene(void);
@@ -363,17 +369,70 @@ GObj *ndsMNVSResultsMakeFighter(FTDesc *desc, s32 player)
 #undef mnVSResultsSaveBackup
 #undef mnVSResultsSetFighterScale
 #undef mnVSResultsSetPlayerTagPosition
+#undef mnVSResultsMakeEmblem
+
+/* Selectable Metal Mario is the source MMario kind (scripts/p4/p4_css.py
+ * KINDS), past the end of every Results table the source sizes by the
+ * twelve. His rows are Remix's: add_to_results_screen(METAL,
+ * METAL_MARIO, MARIO_BROS, MARIO, 185, METAL MARIO, 20, 0.55, 0x0C)
+ * (resultsscreen.asm), and move_table_12's copy of Mario's menu_zoom. */
+static const NDSP4Present sNdsMNVSResultsMMarioPresent = {
+    .results_name = "METAL MARIO",
+    .results_name_x = 20.0F,
+    .results_name_scale = 0.55F,
+    .results_wins_x = 185.0F,
+    .announce_fgm = nSYAudioVoiceAnnounceMMario,
+    .victory_bgm = nSYAudioBGMWinMario,
+    .results_label_kind = nFTKindMario,
+};
+
+/* A player's P4 presentation rows: its content's, Metal Mario's, or NULL. */
+static const NDSP4Present *ndsP4MNVSResultsPlayerPresent(s32 player)
+{
+    const NDSP4Fighter *p4;
+
+    if ((player < 0) || (player >= GMCOMMON_PLAYERS_MAX))
+    {
+        return NULL;
+    }
+    if (sMNVSResultsFighterKinds[player] == nFTKindMMario)
+    {
+        return &sNdsMNVSResultsMMarioPresent;
+    }
+    p4 = ndsP4Fighter(gNdsP4PlayerContent[player]);
+    return ((p4 != NULL) && (p4->parent_kind == sMNVSResultsFighterKinds[player])) ?
+        p4->present : NULL;
+}
 
 void ndsP4MNVSResultsSetPlayerTagPosition(GObj *gobj, s32 player)
 {
-    const NDSP4Fighter *p4 = ndsP4Fighter(gNdsP4PlayerContent[player]);
+    const NDSP4Present *present = ndsP4MNVSResultsPlayerPresent(player);
     s32 fkind = sMNVSResultsFighterKinds[player];
 
-    if ((p4 != NULL) && (p4->parent_kind == fkind) && (p4->present != NULL))
+    if (present != NULL)
     {
-        sMNVSResultsFighterKinds[player] = p4->present->results_label_kind;
+        sMNVSResultsFighterKinds[player] = present->results_label_kind;
     }
     ndsBaseMNVSResultsSetPlayerTagPosition(gobj, player);
+    sMNVSResultsFighterKinds[player] = fkind;
+}
+
+void ndsP4MNVSResultsMakeEmblem(void)
+{
+    s32 player = mnVSResultsGetWinPlayer();
+    s32 fkind;
+
+    if ((player < 0) || (player >= GMCOMMON_PLAYERS_MAX))
+    {
+        ndsBaseMNVSResultsMakeEmblem();
+        return;
+    }
+    fkind = sMNVSResultsFighterKinds[player];
+    if (fkind == nFTKindMMario)
+    {
+        sMNVSResultsFighterKinds[player] = nFTKindMario;
+    }
+    ndsBaseMNVSResultsMakeEmblem();
     sMNVSResultsFighterKinds[player] = fkind;
 }
 
@@ -382,7 +441,10 @@ void ndsP4MNVSResultsSetFighterScale(GObj *fighter_gobj, s32 player, s32 fkind,
 {
     const NDSP4Fighter *p4;
 
-    ndsBaseMNVSResultsSetFighterScale(fighter_gobj, player, fkind, place);
+    /* Metal Mario's menu_zoom is Mario's row (move_table_12). */
+    ndsBaseMNVSResultsSetFighterScale(fighter_gobj, player,
+                                      (fkind == nFTKindMMario) ? nFTKindMario : fkind,
+                                      place);
     p4 = (fighter_gobj != NULL) ?
         ndsP4Fighter(ndsP4Content(ftGetStruct(fighter_gobj))) : NULL;
     if ((p4 != NULL) && (p4->present != NULL))
@@ -396,15 +458,12 @@ void ndsP4MNVSResultsSetFighterScale(GObj *fighter_gobj, s32 player, s32 fkind,
 /* The winner's P4 presentation, or NULL for the original cast and teams. */
 static const NDSP4Present *ndsP4MNVSResultsWinnerPresent(void)
 {
-    const NDSP4Fighter *p4;
-
     if ((sMNVSResultsKind == nMNVSResultsKindNoContest) ||
         (sMNVSResultsIsTeamBattle != FALSE))
     {
         return NULL;
     }
-    p4 = ndsP4Fighter(gNdsP4PlayerContent[mnVSResultsGetWinPlayer()]);
-    return (p4 != NULL) ? p4->present : NULL;
+    return ndsP4MNVSResultsPlayerPresent(mnVSResultsGetWinPlayer());
 }
 
 void ndsP4MNVSResultsAnnounceWinner(void)
@@ -575,7 +634,9 @@ void ndsP4MNVSResultsSaveBackup(void)
     for (i = 0; i < GMCOMMON_PLAYERS_MAX; i++)
     {
         pkind[i] = gSCManagerTransferBattleState.players[i].pkind;
-        if (ndsP4Fighter(gNdsP4PlayerContent[i]) != NULL)
+        /* Nor has Metal Mario: the source's records stop at the twelve. */
+        if ((ndsP4Fighter(gNdsP4PlayerContent[i]) != NULL) ||
+            (gSCManagerTransferBattleState.players[i].fkind == nFTKindMMario))
         {
             gSCManagerTransferBattleState.players[i].pkind = nFTPlayerKindNot;
         }
@@ -903,6 +964,14 @@ void ndsMNVSResultsSetupFilesKind(s32 fkind)
      * every future one -- loads exactly when it is on the podium. */
     s32 i;
 
+#if NDS_P4
+    /* The source's loop covers the playable kinds; selectable Metal Mario
+     * is none of them, so its last kind sets him up as well. */
+    if (fkind == nFTKindPlayableEnd)
+    {
+        ndsMNVSResultsSetupFilesKind(nFTKindMMario);
+    }
+#endif
     for (i = 0; i < (s32)ARRAY_COUNT(gSCManagerTransferBattleState.players); i++)
     {
         if ((gSCManagerTransferBattleState.players[i].pkind !=

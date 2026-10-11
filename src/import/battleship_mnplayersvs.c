@@ -90,7 +90,31 @@ void lbCommonSetSpriteScissor(s32 xmin, s32 xmax, s32 ymin, s32 ymax);
 void ndsBaseMNPlayersVSFuncStart(void);
 void ndsBaseMNPlayersVSStartScene(void);
 
+#if NDS_P4
+/* Remix's selection_action_table (CharacterSelect.asm): selectable Metal
+ * Mario's pose is Mario's, Win3 (his row 3: Mario's Selected clip with his
+ * own step sound). The definition's argument text starts `s32`; every call's
+ * starts `sMNPlayersVSSlots` (mnPlayersVSFighterProcUpdate) or
+ * `ndsCssPreviewKindParent` (this file). */
+#define mnPlayersVSGetStatusSelected(first) NDS_P4_SELECTED_##first)
+#define NDS_P4_SELECTED_s32 ndsBaseMNPlayersVSGetStatusSelected(s32
+#define NDS_P4_SELECTED_sMNPlayersVSSlots \
+    ndsP4MNPlayersVSGetStatusSelected(sMNPlayersVSSlots
+#define NDS_P4_SELECTED_ndsCssPreviewKindParent \
+    ndsP4MNPlayersVSGetStatusSelected(ndsCssPreviewKindParent
+s32 ndsBaseMNPlayersVSGetStatusSelected(s32 fkind);
+s32 ndsP4MNPlayersVSGetStatusSelected(s32 fkind);
+#endif
+
 #include "../../decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c"
+
+#if NDS_P4
+s32 ndsP4MNPlayersVSGetStatusSelected(s32 fkind)
+{
+    return ndsBaseMNPlayersVSGetStatusSelected(
+        (fkind == nFTKindMMario) ? nFTKindMario : fkind);
+}
+#endif
 
 #undef mnPlayersVSFuncStart
 #undef mnPlayersVSStartScene
@@ -115,19 +139,42 @@ static u32 ndsCssPreviewKindContent(s32 kind)
 #endif
 }
 
+/* Selectable Metal Mario (p4_css.py KINDS) previews as his own source kind
+ * from his select pack (reloc_preview_pack.c). */
+static sb32 ndsCssPreviewKindIsMMario(s32 kind)
+{
+#if NDS_P4 && NDS_P2_MMARIO
+    return (kind == nFTKindMMario) ? TRUE : FALSE;
+#else
+    (void)kind;
+    return FALSE;
+#endif
+}
+
 static sb32 ndsCssPreviewKindValid(s32 kind)
 {
     return (((kind >= nFTKindPlayableStart) &&
              (kind <= nFTKindPlayableEnd)) ||
-            (ndsCssPreviewKindContent(kind) != 0u)) ? TRUE : FALSE;
+            (ndsCssPreviewKindContent(kind) != 0u) ||
+            (ndsCssPreviewKindIsMMario(kind) != FALSE)) ? TRUE : FALSE;
 }
 
 /* One bit per preview kind for the failure/ready masks: the twelve, then
- * the contents. */
+ * the contents, then Metal Mario. */
+#if NDS_P4
+_Static_assert((nFTKindPlayableEnd + NDS_P4_CONTENT_LIMIT) < 32,
+               "preview kind bits must fit a u32");
+#endif
 static u32 ndsCssPreviewKindBit(s32 kind)
 {
     u32 content = ndsCssPreviewKindContent(kind);
 
+#if NDS_P4
+    if (ndsCssPreviewKindIsMMario(kind) != FALSE)
+    {
+        return 1u << (nFTKindPlayableEnd + NDS_P4_CONTENT_LIMIT);
+    }
+#endif
     return (content != 0u) ? (1u << (nFTKindPlayableEnd + content)) :
                              (1u << kind);
 }
@@ -569,6 +616,9 @@ static sb32 ndsMNPlayersVSPreviewOwnerImageSlot(s32 fkind, u32 *out_slot)
                              NDS_NATIVE_IMAGE_SLOT_##N_)
     NDS_P4_CONTENT_ROWS(NDS_CSS_P4_OWNER_IMAGE_SLOT)
 #undef NDS_CSS_P4_OWNER_IMAGE_SLOT
+#if NDS_P2_MMARIO
+    NDS_CSS_OWNER_IMAGE_SLOT(nFTKindMMario, NDS_NATIVE_IMAGE_SLOT_MMARIO)
+#endif
 #endif
 #undef NDS_CSS_OWNER_IMAGE_SLOT
     (void)out_slot;
@@ -844,6 +894,13 @@ static u32 ndsMNPlayersVSPreviewOwnerImageBytes(s32 fkind, u32 use_low_detail)
     }
     NDS_P4_CONTENT_ROWS(NDS_CSS_P4_OWNER_IMAGE_BYTES)
 #undef NDS_CSS_P4_OWNER_IMAGE_BYTES
+#if NDS_P2_MMARIO
+    if (fkind == nFTKindMMario)
+    {
+        return (use_low_detail != 0u) ? (u32)sizeof(NDSNativeMMarioLowImage) :
+                                        (u32)sizeof(NDSNativeMMarioHighImage);
+    }
+#endif
 #endif
     (void)fkind;
     (void)use_low_detail;
@@ -900,7 +957,9 @@ static u32 sNdsPlayersVSBlockBytesMemo[NDS_PLAYERS_VS_KIND_MEMO];
 static u32 ndsMNPlayersVSPreviewBlockBytes(s32 fkind)
 {
     u32 content = ndsCssPreviewKindContent(fkind);
-    u32 memo = (content != 0u) ? (12u + content) : (u32)fkind;
+    /* Row 12 (no content 0) is Metal Mario's. */
+    u32 memo = (content != 0u) ? (12u + content) :
+               (ndsCssPreviewKindIsMMario(fkind) != FALSE) ? 12u : (u32)fkind;
     u32 bytes;
 
     if ((memo < NDS_PLAYERS_VS_KIND_MEMO) &&
@@ -2511,6 +2570,16 @@ static void ndsMNPlayersVSPreviewApplyOuterSlotInset(u32 slot,
             root->scale.vec.f.y = f->present->menu_zoom;
             root->scale.vec.f.z = f->present->menu_zoom;
         }
+        /* Selectable Metal Mario: the source's table stops at the twelve
+         * (his read ran past it to a near-zero scale); Remix's row is
+         * move_table_12's copy of Mario's. */
+        if (ndsCssPreviewKindIsMMario(sNdsPlayersVSPreviewShownKind[slot]) !=
+            FALSE)
+        {
+            root->scale.vec.f.x = dSCSubsysFighterScales[nFTKindMario];
+            root->scale.vec.f.y = dSCSubsysFighterScales[nFTKindMario];
+            root->scale.vec.f.z = dSCSubsysFighterScales[nFTKindMario];
+        }
     }
 #endif
 }
@@ -2854,6 +2923,7 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
 #if NDS_P2_KIRBY
         && (fkind != nFTKindKirby)
 #endif
+        && (ndsCssPreviewKindIsMMario(fkind) == FALSE)
     )
     {
         fkind = nFTKindNull;

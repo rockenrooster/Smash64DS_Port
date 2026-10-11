@@ -1,6 +1,6 @@
 # Metal Mario — P4 character subplan
 
-**Status:** planned; source slices inspected, no DS implementation or performance pass claimed.  
+**Status:** selectable (2026-10-11): the source MMario kind with Remix's menu motions, select, HUD and Results rows ([P4_STATUS](../P4_STATUS.md) "Metal Mario"). Open: Remix's six costumes (rebuilt model); no performance pass claimed.  
 **Source:** `JSsixtyfour/smashremix` at `5e04fe7fcd023cd43c71f25f89bb6e810d254d55`.  
 **Default production wave:** 1 (Revision 3). Parent: [master](../New_Characters.md).
 

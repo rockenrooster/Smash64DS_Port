@@ -6052,6 +6052,9 @@ export NDS_P4_AUDIO_DIR := $(NDS_P4_GEN)/audio
 export NDS_P4_EXPORT_FILES := $(foreach name,$(NDS_P4_ENABLED),$(NDS_P4_EXPORT)/$(name)/resolved.json)
 NDS_NITROFS_P4_FILES += $(NDS_P4_AUDIO_DIR)/.nitrofs-staged
 NDS_NITROFS_P4_FILES += $(NDS_P4_GEN)/.nitrofs-staged
+# Selectable Metal Mario, the source MMario kind (scripts/p4/p4_css.py KINDS):
+# his VS select preview's pack (rule in scripts/p4/p4_rules.mk).
+NDS_NITROFS_P4_FILES += $(NITROFS_DIR)/fighters/preview/13.fpc
 endif
 
 export NDS_NITROFS_RELOC_FILES := \
@@ -8764,6 +8767,7 @@ $(NDS_BATTLE_HUD_INC) $(NDS_BATTLE_HUD_ASSET) &: \
 		$(BATTLESHIP_O2R)/reloc_fighters_main/FoxModel \
 		$(BATTLESHIP_O2R)/reloc_fighters_main/LuigiModel \
 		$(BATTLESHIP_O2R)/reloc_fighters_main/YoshiModel \
+		$(BATTLESHIP_O2R)/reloc_fighters_main/MMarioModel \
 		$(BATTLESHIP_O2R)/reloc_fighters_common/FTStocksZako
 	python "$(PROJECT_ROOT)/scripts/menus/generate_battle_hud.py" --repo-root "$(PROJECT_ROOT)"
 	@touch $(NDS_BATTLE_HUD_INC) $(NDS_BATTLE_HUD_ASSET)

@@ -13,16 +13,17 @@ def test_hud_blob_preserves_pixels(tmp_path):
     subprocess.run([sys.executable, str(root / "scripts/menus/generate_battle_hud.py"),
                     "--output", str(header), "--binary-output", str(blob)], check=True)
     data = blob.read_bytes()
-    assert struct.unpack_from("<II", data) == (0x31444842, 11296)
-    assert len(data) == 11304
+    assert struct.unpack_from("<II", data) == (0x31444842, 11328)
+    assert len(data) == 11336
     # The damage, timer and stock-count glyphs, byte for byte as before.
     assert hashlib.sha256(data[8:8456]).hexdigest() == "779476d753f8ae930310e6f115403622a568b7be1ffa3f308d7619f115b87ff7"
     # The twelve CSS portrait cells (1,536 B) left for the source's emblem,
     # baked at runtime; every later cell is the same bytes, 1,536 B earlier.
-    assert hashlib.sha256(data[8456:11304]).hexdigest() == "0a193947e31061a0b3d0c47e4f5fa1f368c9eff933c49e7b7ee326570fb130cb"
+    # Metal Mario's stock cell (32 B) follows Kirby's (2026-10-11).
+    assert hashlib.sha256(data[8456:11336]).hexdigest() == "8925917626c35588d551a3ac0839b4d4b8bc7a579c55863c3980919480a0ea97"
     text = header.read_text()
     assert "kNdsBattleHudDamageGfx" not in text
-    assert "NDS_BATTLE_HUD_BLOB_BYTES 11296u" in text
+    assert "NDS_BATTLE_HUD_BLOB_BYTES 11328u" in text
     # Bonus Practice's two timer marks only append (16x16 4bpp cells).
     assert "NDS_BATTLE_HUD_TIMER_MARKS 2u" in text
     assert "kNdsBattleHudScorePalette" in text

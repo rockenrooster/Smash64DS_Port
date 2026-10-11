@@ -77,7 +77,7 @@ one-fighter-at-a-time cycle eighteen times. Revision 3 changes three things:
 | Sonic | Fox | 4,005 | 24 | 23 | Goto, TopN, FSM, HitboxDir | 2 weapons |
 | Dedede | Captain | 3,288 | 32 | 27 | Goto, FSM | items (Gordo, Waddle Dee) |
 | Mad Piano | Mario | 1,732 | 19 | 23 | none | book (fireball row) |
-| Metal Mario | MMario kind | 24 | 0 | n/a | n/a | none |
+| Metal Mario | MMario kind | 24 | 0 | n/a | n/a | none (selectable 2026-10-11: P4_STATUS "Metal Mario") |
 | Meta Knight, MRGAW, Snake | EXTRA tree | not exported yet | | | | |
 
 Falco used 12 of the 33 table seams. The roster needs the other 21:

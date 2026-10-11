@@ -172,6 +172,15 @@ MODEL_STOCK = {
         "texture": 0xA958,
         "palettes": [0xA9B0, 0xA9D8, 0xAA00, 0xAA28, 0xAA50, 0xAA78],
     },
+    # Metal Mario (the campaign's stage 11, and a P4 selection): sprite
+    # llMMarioModelStockSprite, its texture 88 bytes before its one LUT, the
+    # single entry of MMarioMain's stock_luts (Main +0x298 -> Model 0x2CD0).
+    "MMARIO": {
+        "file": "MMarioModel",
+        "sprite": 0x2D00,
+        "texture": 0x2C78,
+        "palettes": [0x2CD0],
+    },
 }
 
 # The Fighting Polygon Team's stock row (sc1pgame.c:1702-1703) shows one
@@ -535,6 +544,7 @@ def bake(repo_root: Path, output: Path, binary_output: Path) -> None:
     purin_gfx, purin_palettes = stock_asset(ui, repo_root, MODEL_STOCK["PURIN"])
     ness_gfx, ness_palettes = stock_asset(ui, repo_root, MODEL_STOCK["NESS"])
     yoshi_gfx, yoshi_palettes = stock_asset(ui, repo_root, MODEL_STOCK["YOSHI"])
+    mmario_gfx, mmario_palettes = stock_asset(ui, repo_root, MODEL_STOCK["MMARIO"])
     zako_gfx, zako_palettes = stock_asset(ui, repo_root, ZAKO_STOCK)
     yoshi_lane_gfx, yoshi_team_palettes, yoshi_team_looks = team_lanes(
         yoshi_gfx, yoshi_palettes)
@@ -568,7 +578,8 @@ def bake(repo_root: Path, output: Path, binary_output: Path) -> None:
         score_palettes.append(palette)
     graphics = glyph_groups + [[
         mario_gfx, fox_gfx, luigi_gfx, donkey_gfx, captain_gfx, samus_gfx,
-        link_gfx, pikachu_gfx, yoshi_gfx, ness_gfx, purin_gfx, kirby_gfx], score_gfx,
+        link_gfx, pikachu_gfx, yoshi_gfx, ness_gfx, purin_gfx, kirby_gfx,
+        mmario_gfx], score_gfx,
         [zako_gfx] + yoshi_lane_gfx, mark_rows]
     payload = b"".join(cell for group in graphics for cell in group)
     binary = struct.pack("<II", 0x31444842, len(payload)) + payload
@@ -629,6 +640,8 @@ def bake(repo_root: Path, output: Path, binary_output: Path) -> None:
     lines += c_array_u16("kNdsBattleHudPurinStockPalette", purin_palettes)
     lines += [""]
     lines += c_array_u16("kNdsBattleHudKirbyStockPalette", kirby_palettes)
+    lines += [""]
+    lines += c_array_u16("kNdsBattleHudMMarioStockPalette", mmario_palettes)
     lines += [""]
     lines += c_array_u16("kNdsBattleHudWhitePalette", [white_palette])
     lines += c_array_u16("kNdsBattleHudScorePalette", score_palettes)

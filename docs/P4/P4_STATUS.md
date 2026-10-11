@@ -1066,6 +1066,45 @@ him: Wario's grab puts its victim in ThrownDK as Remix does
 Crash, Lanky and Peach follow their label_height rows; Banjo's podium says
 "WIN!".
 
+## Metal Mario (2026-10-11)
+
+Metal Mario is the source MMario kind (13), selectable as itself: his cell's
+selection id is his fkind and his content is 0, so every match runs the
+source's own MMario code (the campaign's stage 11 fighter), CPU and Kirby's
+inhale (no copy, Remix's row too) included. What P4 adds is Remix's
+presentation of METAL:
+
+- **Character select** (`scripts/p4/p4_css.py` KINDS): Remix's portrait
+  (portrait_offsets.METAL), name (name_texture.METAL) and Mario Bros. logo
+  baked as gate art after the contents', the source's call
+  (nSYAudioVoiceAnnounceMMario, FGM.asm names.METAL_MARIO). His preview is a
+  select pack of his source Main and Model (`scripts/p4/p4_source_pack.py`,
+  the content pack builder on BattleShip's O2R files, kind 13, 6,560 B) drawn
+  by the campaign's MMario owner image; only the VS select loads it
+  (`reloc_preview_pack.c`). His selected pose is Mario's (Remix's
+  selection_action_table: Win3). The source's menu scale table stops at the
+  twelve: his read ran past it to a near-zero scale and left the panel empty;
+  he takes Mario's row, as Remix's move_table_12 does.
+- **Menu motions** (`battleship_scsubsysdata_ft.c`): MetalMario.asm's table,
+  rows 1-13 Mario's (copy_menu_actions), his three victories with the metal
+  footstep (FGM 0x7A) at Remix's frames, Win4 silent. The census's largest
+  submotion clip for MMario is raised to Mario's (`ftManagerSetupFileSize`).
+- **Battle HUD**: his stock icon is baked like the cast's (MMarioModel's
+  stock sprite, his one LUT); the campaign's Metal Mario had none before.
+- **VS Results**: add_to_results_screen(METAL): "METAL MARIO" at x 20, scale
+  0.55, "WINS!" at 185, the announcer's Metal Mario, Mario's victory song, the
+  Mario Bros. emblem, Mario's podium tag height and menu zoom, set up by the
+  source's per-kind loop through its last playable kind. No VS record (the
+  source's records stop at the twelve).
+
+Probes (play-1011y): select with two Metal Marios beside Mario and Mad Piano
+draws all four (0 native failures, Metal block 15,264 B); four Metal Mario
+CPUs on Peach's Castle, 600 frames, low-water 100,664, 0 failures; their
+Results "METAL MARIO WINS!" with 0 failures. Open: Remix gives METAL six
+costumes (0,1,4,5 and teams 1,3,2) from a rebuilt model (MMarioModel +1,488 B,
+MMarioMain's stock LUTs 1 -> 6); the source model has one look, so his
+mirrors are told apart only by their tags.
+
 ## Board 1 status (master plan Revision 3)
 
 | Item | State |

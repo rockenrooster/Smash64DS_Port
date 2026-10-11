@@ -476,6 +476,11 @@ static void ndsBattleHudStockPalette(u32 palette, u32 fkind, u32 costume)
         if (costume >= 5u) costume = 0u;
         source = kNdsBattleHudKirbyStockPalette[costume];
     }
+    else if (fkind == (u32)nFTKindMMario)
+    {
+        /* MMarioMain's stock_luts names one LUT; every costume id is 0. */
+        source = kNdsBattleHudMMarioStockPalette[0];
+    }
     else
     {
         if (costume >= 5u) costume = 0u;
@@ -678,6 +683,7 @@ static u32 ndsBattleHudStockOwner(u32 fkind)
     if (fkind == (u32)nFTKindNess) return 9u;
     if (fkind == (u32)nFTKindPurin) return 10u;
     if (fkind == (u32)nFTKindKirby) return 11u;
+    if (fkind == (u32)nFTKindMMario) return 12u;
     return 0xffu;
 }
 

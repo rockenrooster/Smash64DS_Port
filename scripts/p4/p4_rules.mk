@@ -83,3 +83,17 @@ nds_renderer.o: $(NDS_P4_KIRBY_HAT_STAMP)
 # content: p4_articles.py merges p4_kirby.py's row (articles_<content>.json).
 $(foreach name,$(NDS_P4_ENABLED),$(NDS_P4_GEN)/$(name)/articles.json): \
 	$(NDS_P4_KIRBY_GEN)/nds_p4_kirby.generated.c
+
+# Selectable Metal Mario, the source MMario kind (scripts/p4/p4_css.py KINDS):
+# his VS select preview's pack, built like a content's from his source files
+# (scripts/p4/p4_source_pack.py; reloc_preview_pack.c loads it on that screen
+# only).
+$(NDS_P4_GEN)/mmario/13.fpc: $(PROJECT_ROOT)/scripts/p4/p4_source_pack.py \
+		$(PROJECT_ROOT)/scripts/p4/p4_preview_pack.py $(PROJECT_ROOT)/scripts/p4/p4_native_owner.py \
+		$(PROJECT_ROOT)/scripts/p4/ft_layout.py $(PROJECT_ROOT)/include/nds/nds_preview_pack.h \
+		$(BATTLESHIP_O2R)/reloc_fighters_main/MMarioMain $(BATTLESHIP_O2R)/reloc_fighters_main/MMarioModel
+	python "$(PROJECT_ROOT)/scripts/p4/p4_source_pack.py" --kind 13 \
+		--work "$(NDS_P4_GEN)/mmario" --out "$@"
+$(NITROFS_DIR)/fighters/preview/13.fpc: $(NDS_P4_GEN)/mmario/13.fpc
+	@mkdir -p $(dir $@)
+	@cp $< $@

@@ -311,6 +311,17 @@ void ftManagerSetupFileSize(void)
      * and filesystem metadata lookups. */
     memcpy(gSCManagerFighterFileSizes, sNdsFTManagerSourceFileSizes,
            sizeof(sNdsFTManagerSourceFileSizes));
+#if NDS_P4
+    /* Selectable Metal Mario plays Mario's menu motions 1-13
+     * (battleship_scsubsysdata_ft.c); the census walked the source's table,
+     * whose rows are his idle and 1P pose only. Mario's largest bounds his. */
+    if (gSCManagerFighterFileSizes[nFTKindMMario].submotion_largest_anim <
+        gSCManagerFighterFileSizes[nFTKindMario].submotion_largest_anim)
+    {
+        gSCManagerFighterFileSizes[nFTKindMMario].submotion_largest_anim =
+            gSCManagerFighterFileSizes[nFTKindMario].submotion_largest_anim;
+    }
+#endif
 }
 
 #if NDS_P2_1P_GAME

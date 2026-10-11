@@ -69,10 +69,17 @@ typedef struct NDSPreviewResident {
  * the twelve, and its FTData is the content's own. */
 #if NDS_P4
 #define NDS_PREVIEW_P4_KINDS (NDS_P4_CONTENT_LIMIT - 1u)
+/* Selectable Metal Mario, the source MMario kind (p4_css.py KINDS): his VS
+ * select preview's pack (p4_preview_pack.py on his source files), after the
+ * contents' rows. Only the VS select loads it (ndsRelocPreviewFighterLoadBegin):
+ * his matches and the campaign's stage keep the source loader. */
+#define NDS_PREVIEW_MMARIO_ROWS 1u
 #else
 #define NDS_PREVIEW_P4_KINDS 0u
+#define NDS_PREVIEW_MMARIO_ROWS 0u
 #endif
-static NDSPreviewResident sNdsPreviewResidents[12u + NDS_PREVIEW_P4_KINDS];
+static NDSPreviewResident sNdsPreviewResidents[12u + NDS_PREVIEW_P4_KINDS +
+                                               NDS_PREVIEW_MMARIO_ROWS];
 
 static s32 ndsPreviewKindIndex(s32 kind)
 {
@@ -81,6 +88,10 @@ static s32 ndsPreviewKindIndex(s32 kind)
         return kind;
     }
 #if NDS_P4
+    if (kind == nFTKindMMario)
+    {
+        return 12 + (s32)NDS_PREVIEW_P4_KINDS;
+    }
     if ((kind > 0) && (ndsP4Fighter(ndsP4SelContent((u32)kind)) != NULL))
     {
         return 12 + (s32)ndsP4SelContent((u32)kind) - 1;
@@ -92,7 +103,7 @@ static s32 ndsPreviewKindIndex(s32 kind)
 static FTData *ndsPreviewKindData(s32 kind)
 {
 #if NDS_P4
-    if (kind >= 12)
+    if (ndsP4SelContent((u32)kind) != 0u)
     {
         const NDSP4Fighter *f = ndsP4Fighter(ndsP4SelContent((u32)kind));
 
@@ -713,9 +724,10 @@ static void ndsPreviewPackLoadFree(NDSPreviewPackLoad *load)
  * a content's low detail (ndsP4LowDetailSelect). */
 static sb32 ndsRelocPreviewP4LowPack(s32 fkind)
 {
-    return ((fkind >= 12) && ((ndsP4LowDetailBattle() != FALSE) ||
-                              (ndsP4LowDetailResults() != FALSE) ||
-                              (ndsP4LowDetailSelect() != FALSE))) ? TRUE : FALSE;
+    return ((ndsP4SelContent((u32)fkind) != 0u) &&
+            ((ndsP4LowDetailBattle() != FALSE) ||
+             (ndsP4LowDetailResults() != FALSE) ||
+             (ndsP4LowDetailSelect() != FALSE))) ? TRUE : FALSE;
 }
 #endif
 
@@ -788,6 +800,13 @@ void *ndsRelocPreviewFighterLoadBegin(s32 fkind)
 #endif
         ) ||
         (ndsPreviewKindIndex(fkind) < 0)) { return NULL; }
+#if NDS_P4
+    if ((fkind == nFTKindMMario) &&
+        (gSCManagerSceneData.scene_curr != nSCKindPlayersVS))
+    {
+        return NULL;
+    }
+#endif
 #if NDS_P2_1P_GAME
     /* Giant DK's stage. GDonkeyMain's extern tree names DonkeyModel, and the
      * relocator resolves those externs by SOURCE offset. A compact DK pack

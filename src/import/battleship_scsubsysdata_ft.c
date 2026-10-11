@@ -13,7 +13,67 @@
 #include "../../decomp/BattleShip-main/decomp/src/sc/scsubsys/scsubsysdatalink.c"
 #include "../../decomp/BattleShip-main/decomp/src/sc/scsubsys/scsubsysdataluigi.c"
 #include "../../decomp/BattleShip-main/decomp/src/sc/scsubsys/scsubsysdatamario.c"
+#if NDS_P4
+/* P4 makes Metal Mario selectable (docs/P4/New_Characters.md) with Smash
+ * Remix's menu motions (src/MetalMario/MetalMario.asm): 1-13 are Mario's
+ * (copy_menu_actions(MARIO, METAL, 1, 13)), his three victories play a
+ * metal footstep (STEP_FGM 0x7A, nSYAudioFGMMMarioFoot) at Remix's frames,
+ * and Win4 has no script (edit_menu_action_parameters 0x4: 0x80000000).
+ * Row 0 and his 1P pose (row 14) stay the source's. The source's table is
+ * kept under another name; ftdata.c's dFTMMarioData names this one. */
+#define dFTMMarioSubMotionDescs dNdsSourceMMarioSubMotionDescs
+#define dFTMMarioSubMotionDescsCount dNdsSourceMMarioSubMotionDescsCount
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/sc/scsubsys/scsubsysdatammario.c"
+#if NDS_P4
+#undef dFTMMarioSubMotionDescs
+#undef dFTMMarioSubMotionDescsCount
+
+s32 dNdsP4MMarioVictory1[] =
+{
+	ftMotionCommandWaitAsync(0x6C),
+	ftMotionPlayFGM(nSYAudioFGMMMarioFoot),
+	ftMotionCommandEnd()
+};
+
+s32 dNdsP4MMarioVictory2[] =
+{
+	ftMotionCommandWaitAsync(0x27),
+	ftMotionPlayFGM(nSYAudioFGMMMarioFoot),
+	ftMotionCommandWaitAsync(0x44),
+	ftMotionPlayFGM(nSYAudioFGMMMarioFoot),
+	ftMotionCommandWaitAsync(0x64),
+	ftMotionPlayFGM(nSYAudioFGMMMarioFoot),
+	ftMotionCommandEnd()
+};
+
+s32 dNdsP4MMarioVictory3[] =
+{
+	ftMotionCommandWaitAsync(0x62),
+	ftMotionPlayFGM(nSYAudioFGMMMarioFoot),
+	ftMotionCommandEnd()
+};
+
+FTMotionDesc dFTMMarioSubMotionDescs[] =
+{
+	&llFTMarioAnimWaitFileID, 0x80000000, 0x00000000,
+	&llFTMarioAnimWin2FileID, &dNdsP4MMarioVictory1, 0x00000000,
+	&llFTMarioAnimWin3FileID, &dNdsP4MMarioVictory2, 0x00000000,
+	&llFTMarioAnimSelectedFileID, &dNdsP4MMarioVictory3, 0x00000000,
+	&llFTMarioAnimWinBetaFileID, 0x80000000, 0x00000000,
+	&llFTMarioAnimClapsFileID, &D_ovl1_80390E70, 0x00000000,
+	&llFTMarioAnimRunFileID, 0x80000000, 0x00000000,
+	0x00000000, 0x80000000, 0x00000000,
+	&llFTMarioAnimDollPickUpFileID, 0x80000000, 0x80000000,
+	&llFTMarioAnimDollFallsFileID, 0x80000000, 0x40000000,
+	&llFTMarioAnimDollRevivalFileID, 0x80000000, 0x40000000,
+	&llFTMarioAnimIntroFileID, 0x80000000, 0x00000000,
+	&llFTMarioAnimIntro2FileID, 0x80000000, 0x00000000,
+	&llFTMarioAnimPoseFileID, 0x80000000, 0x00000000,
+	&llFTMMarioAnimPose1PFileID, 0x80000000, 0x00000000
+};
+s32 dFTMMarioSubMotionDescsCount = sizeof(dFTMMarioSubMotionDescs)/sizeof(FTMotionDesc);
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/sc/scsubsys/scsubsysdatancaptain.c"
 #include "../../decomp/BattleShip-main/decomp/src/sc/scsubsys/scsubsysdatandonkey.c"
 #include "../../decomp/BattleShip-main/decomp/src/sc/scsubsys/scsubsysdataness.c"

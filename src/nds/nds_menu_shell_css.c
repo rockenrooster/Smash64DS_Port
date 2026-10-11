@@ -397,6 +397,15 @@ static void ndsMenuShellCssAnnounce(u32 slot)
         return;
     }
 #endif
+#ifdef NDS_P4_CSS_ANNOUNCE_KIND_13
+    if (fkind == (u32)nFTKindMMario)
+    {
+        ndsMenuShellCssCue(NDS_CSS_FGM_ANNOUNCE_WHOOSH);
+        ndsMenuShellCssCue(NDS_P4_CSS_ANNOUNCE_KIND_13);
+        gNdsMenuShellCssAnnounceCount++;
+        return;
+    }
+#endif
     if (fkind >= NDS_CSS_PORTRAITS)
     {
         return;
@@ -433,6 +442,14 @@ static u32 ndsMenuShellCssFighterLocked(u32 fkind)
     {
         return (ndsP4Fighter(ndsMenuShellCssSelContent(fkind)) == NULL) ?
             TRUE : FALSE;
+    }
+#endif
+#ifdef NDS_P4_CSS_GATE_KIND_13
+    /* Metal Mario: the source kind P4 makes selectable (p4_css.py KINDS); no
+     * save bit unlocks him in the source. */
+    if (fkind == (u32)nFTKindMMario)
+    {
+        return FALSE;
     }
 #endif
     if (fkind >= NDS_CSS_PORTRAITS)
@@ -1057,6 +1074,12 @@ static u32 ndsMenuShellCssGateState(u32 slot)
     {
         fighter = 12u +
             (u32)kNdsP4CssGateIndex[ndsMenuShellCssSelContent(fkind)];
+    }
+#endif
+#ifdef NDS_P4_CSS_GATE_KIND_13
+    else if (fkind == (u32)nFTKindMMario)
+    {
+        fighter = 12u + NDS_P4_CSS_GATE_KIND_13;
     }
 #endif
     else
@@ -1838,7 +1861,11 @@ static void ndsMenuShellCssFlashCancel(u32 slot)
 
 static void ndsMenuShellCssStepFlashes(void)
 {
-    u32 dirty = 0u;
+    /* The flashing kinds this tic, one per slot at most: the P4 grid has more
+     * cells than a u32 has bits. A kind listed twice syncs once in effect
+     * (ndsMenuShellCssSyncFlashKind redraws only on a change). */
+    u8 dirty[NDS_CSS_SLOTS];
+    u32 dirty_count = 0u;
     u32 slot;
     u32 kind;
 
@@ -1851,7 +1878,7 @@ static void ndsMenuShellCssStepFlashes(void)
         kind = (u32)sCssFlashKind[slot];
         if (kind < NDS_CSS_FLASH_KIND_COUNT)
         {
-            dirty |= (1u << kind);
+            dirty[dirty_count++] = (u8)kind;
         }
         sCssFlashRemain[slot]--;
         if (sCssFlashRemain[slot] == 0u)
@@ -1865,12 +1892,9 @@ static void ndsMenuShellCssStepFlashes(void)
             sCssFlashVisible[slot] = (sCssFlashVisible[slot] != 0u) ? 0u : 1u;
         }
     }
-    for (kind = 0u; kind < NDS_CSS_FLASH_KIND_COUNT; kind++)
+    for (slot = 0u; slot < dirty_count; slot++)
     {
-        if ((dirty & (1u << kind)) != 0u)
-        {
-            ndsMenuShellCssSyncFlashKind(kind);
-        }
+        ndsMenuShellCssSyncFlashKind((u32)dirty[slot]);
     }
 }
 
