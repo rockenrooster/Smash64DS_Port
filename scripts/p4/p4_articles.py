@@ -114,6 +114,16 @@ ARTICLES = {
         # samusshared.asm crash_entry_anim_gfx_struct: the point case's
         # object, DObjDesc 0x2310 on his file 8, drawn through DObjDLLinks.
         {"name": "entry", "special": 3, "dobjdesc": 0x2310, "dllinks": True, "entry": True},
+        # CrashSpecial.asm spin_gfx_struct: Link's spin attack description on
+        # CRASH_SPIN_GFX (file 7), DObjDesc 0x708; setup_spin_gfx_ writes each
+        # part's MObj prim and env colours per costume, so the lists draw
+        # with the live material.
+        {"name": "spin", "special": 2, "dobjdesc": 0x708, "dllinks": True, "material": True},
+        # dig_gfx_struct: its file is the one file 7's word 0xCC0 names
+        # (CRASH_DIG_GFX), DObjDesc 0x230; dig_graphic_update_ scrolls its
+        # texture.
+        {"name": "dig", "special": 2, "via_base": 0xCC0, "dobjdesc": 0x230, "dllinks": True,
+         "material": True},
     ),
 }
 
@@ -306,7 +316,8 @@ def resolve(content: str, title: str, o2r: Path, descriptor: dict) -> list[dict]
     roots = []
 
     def add(article: dict, res: census.O2RResource, offset: int, texid: dict | None,
-            head: int = 0, via: tuple | None = None, palette: dict | None = None) -> None:
+            head: int = 0, via: tuple | None = None, palette: dict | None = None,
+            via_base: bool = False) -> None:
         """via: (special file, offset) of the pointer that names the root,
         for a root in a file the special file depends on (Sheik's needle
         graphic): the runtime admits the list that pointer holds. palette: a
@@ -322,7 +333,8 @@ def resolve(content: str, title: str, o2r: Path, descriptor: dict) -> list[dict]
                       "offset": offset, "entry": bool(article.get("entry")),
                       "texid": texid, "palette": palette, "head": head,
                       "sidecar_joint": sidecar,
-                      "material": bool(article.get("material"))})
+                      "material": bool(article.get("material")),
+                      "via_base": via_base})
 
     for article in ARTICLES.get(content, ()):
         if "modelpart_joint" in article:
@@ -332,6 +344,22 @@ def resolve(content: str, title: str, o2r: Path, descriptor: dict) -> list[dict]
             add(article, res_of(dl.asset_id), dl.offset, None)
             continue
         res = res_of(file_ids[FILE_SLOTS[article["special"]]])
+        if "via_base" in article:
+            # The structure is in the file a word of the special file names
+            # (that file's base): its roots are admitted as *(*storage + word)
+            # + offset.
+            at = article["via_base"]
+            ref = res.pointer_at(at)
+            if ref is None or ref.offset != 0:
+                raise ArticleError(f"{content} {article['name']}: {res.file_id:#x}+{at:#x} "
+                                   "names no file base")
+            target = res_of(ref.asset_id)
+            for dl in dobjdesc_lists(target, article["dobjdesc"]):
+                lists = dllink_lists(target, dl) if article.get("dllinks") else [(0, dl)]
+                for head, root in lists:
+                    add(article, target, root, None, head, via=(res.file_id, at),
+                        via_base=True)
+            continue
         if "dobjdesc" in article:
             for dl in dobjdesc_lists(res, article["dobjdesc"]):
                 lists = dllink_lists(res, dl) if article.get("dllinks") else [(0, dl)]

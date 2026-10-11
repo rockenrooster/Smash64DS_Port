@@ -400,8 +400,38 @@ OWN_SPECIAL_FILES = {
     # Kick and Flyer, the readers of special file 2, never run for him).
     "dedede": (2,),
     # His entry's object (3, Crash file 8; no code reads Mario's special
-    # file 3).
-    "crash": (3,),
+    # file 3), and his spin's effect (2, CRASH_SPIN_GFX, Link's spin attack
+    # description on his file; it names his dig effect's file at 0xCC0).
+    # Mario's entry pipe, the other reader of special file 2, never runs for
+    # him.
+    "crash": (2, 3),
+}
+
+# P4 S6: data a content's ported routines read from Remix's own code segment
+# (bass symbol, bytes), emitted as u32 words (big-endian in the ROM, so an
+# animation track's floats keep their bits): g<Title><Name>[].
+RAM_DATA = {
+    "crash": (
+        # CrashNSP.spin_gfx_table: prim and env colours of the spin's two
+        # parts, per costume (7 x 16 bytes).
+        ("SpinColors", "CrashNSP.spin_gfx_table", 0x70),
+        # CrashDSP's dig effect animation tracks (AObjEvent32 on joint 1).
+        ("DigTurnTrack", "CrashDSP.track_dig_turn", 0x20),
+        ("DigWaitTrack", "CrashDSP.track_dig_wait", 0x10),
+        ("DigEndTrack", "CrashDSP.track_dig_end", 0x8C),
+    ),
+}
+
+# P4 S6: special-file slots no code of the content's profile reads, loaded
+# by neither build (the slot reads NULL; the file stays out of the closure
+# like a lab stand-in's). Sonic's special2 is Classic Sonic's model
+# (CSONIC_MAIN), read only by Remix's select-screen swap to Classic Sonic, a
+# selection outside the P4 roster; the parent's readers of special file 2
+# (Fox's reflector and Arwing entry) never run for him. His special4 is the
+# spring's graphic, which his own special1 names (it loads with that file);
+# the slot's only parent reader, Fox's blaster, never runs for him.
+UNREAD_SPECIAL_FILES = {
+    "sonic": (2, 4),
 }
 
 # Vanilla file IDs that Remix rewrote with equivalent bytes, so the DS keeps
@@ -1050,12 +1080,20 @@ def main() -> int:
     parent_ids = resolved["parent_descriptor"]["file_ids"]
     special_standins = []
     own_special = OWN_SPECIAL_FILES.get(name, ())
+    unread_special = UNREAD_SPECIAL_FILES.get(name, ())
+    unread_skip: set[int] = set()
 
     def file_layout(fid: int) -> tuple:
         return (len(rom.file_bytes(fid)),
                 tuple(sorted((off, t[0]) for off, t in rom.reloc_slots(fid).items())))
 
     for i in range(5, 9):
+        if (i - 4) in unread_special:
+            if file_ids[i] == 0:
+                raise GenError(f"special file {i - 4} is listed as unread but {name} names none")
+            unread_skip.add(file_ids[i])
+            file_ids[i] = 0
+            continue
         if (i - 4) in own_special:
             if file_ids[i] == 0 or file_ids[i] == parent_ids[i]:
                 raise GenError(f"special file {i - 4} is listed as {name}'s own but is "
@@ -1099,7 +1137,8 @@ def main() -> int:
             if dep not in own_deps:
                 own_deps.add(dep)
                 pending.append(dep)
-    lab_skip = sorted({int(s["routine"], 16) for s in special_standins} - {0} - own_deps)
+    lab_skip = sorted(({int(s["routine"], 16) for s in special_standins} | unread_skip)
+                      - {0} - own_deps)
     # The parent's file standing in for one: outside the content's closure,
     # so the runtime loads it whole (ndsP4LoadOpenSpecialFiles).
     open_special_mask = 0
@@ -1593,6 +1632,15 @@ def main() -> int:
               " * the content's closure) loads whole; any other slot outside it reads",
               " * NULL, as Remix's status-buffer lookup does. */",
               f"const u8 g{ident}OpenSpecialMask = {open_special_mask:#04x};", "",
+              "/* Remix code-segment data the ported routines read (RAM_DATA). */"]
+    ram_sym = R.load_symbols(args.staging / "logfile.log")[0]
+    for data_name, symbol, size in RAM_DATA.get(name, ()):
+        if symbol not in ram_sym or size % 4:
+            raise GenError(f"RAM data {symbol}: no such symbol or not word-sized")
+        words = struct.unpack(f">{size // 4}I", rom.read_ram(ram_sym[symbol], size))
+        lines.append(f"const u32 g{ident}{data_name}[{len(words)}] = {{ "
+                     + ", ".join(f"{w:#010x}u" for w in words) + " };")
+    lines += ["",
               "/* Kind-table cases (S3, nds_p4.h NDSP4KindCases): grounded_script's",
               " * landing case and pipe_turn. */",
               f"const NDSP4KindCases g{ident}KindCases = {cases};", "",

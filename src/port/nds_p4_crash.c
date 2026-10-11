@@ -21,11 +21,11 @@
  *                                          timer, effect and move offset
  *   attributes + 0x9C/0xA0                 map_coll.top/center
  *
- * S6 owns the spin and dig effects (create_spin_gfx_, create_dig_gfx_) and
- * what the donor runs only while the dig effect exists (dig_graphic_update_,
- * dig_update_'s dust, sound and rumble, and the dive landing's two sounds);
- * without the effect the donor skips them, as here. The Pokemon Stadium
- * announcer lines are not in the port.
+ * The spin and dig effects (create_spin_gfx_, create_dig_gfx_) and what the
+ * donor runs only while the dig effect exists (dig_graphic_update_,
+ * dig_update_'s dust, sound and rumble, and the dive landing's two sounds)
+ * are below ("The spin and dig effects"). The Pokemon Stadium announcer
+ * lines are not in the port.
  */
 #include <nds/nds_p4.h>
 
@@ -184,6 +184,286 @@ static f32 ndsP4CrashSteer(f32 vel, f32 target, f32 accel, f32 max)
     return vel;
 }
 
+/* ---- The spin and dig effects (S6) ----
+ *
+ * CrashNSP.create_spin_gfx_ is Link's spin attack effect
+ * (efManagerLinkSpinAttackMakeEffect, whose tail the donor jumps into) on
+ * CRASH_SPIN_GFX, his special file 2; setup_spin_gfx_ marks it attached and
+ * gives its two parts their prim and env colours from spin_gfx_table by
+ * costume. CrashDSP.create_dig_gfx_ makes the same description on
+ * CRASH_DIG_GFX (the file special file 2's word 0xCC0 names), attached by
+ * position to his top joint with its facing copied; setup_dig_gfx_ makes
+ * its second XObj scalable. Remix's Size.asm render routine and its writes
+ * of the size multiplier are its size toggle (1 in the profile). */
+extern void *gNdsP4CrashSpecial2;
+extern const u32 gNdsP4CrashSpinColors[28];
+extern const u32 gNdsP4CrashDigTurnTrack[8];
+extern const u32 gNdsP4CrashDigWaitTrack[4];
+extern const u32 gNdsP4CrashDigEndTrack[35];
+void efManagerHaveStructProcUpdate(GObj *effect_gobj);
+void gcDrawDObjTreeDLLinksForGObj(GObj *gobj);
+f32 ftKirbySpecialLwGetGroundAxisYaw(FTStruct *fp);
+void ftParamProcPauseEffect(GObj *effect_gobj);
+void ftParamProcResumeEffect(GObj *fighter_gobj);
+
+#define CRASH_SPIN_COSTUMES 7
+#define CRASH_DIG_FILE_WORD 0xCC0
+#define CRASH_FGM_DIG 132
+#define CRASH_FGM_DIVE_LAND_1 45
+#define CRASH_FGM_DIVE_LAND_2 220
+
+static EFDesc sNdsP4CrashSpinDesc = {
+    0x4 | EFFECT_FLAG_USERDATA, 15, &gNdsP4CrashSpecial2,
+    { 0x50, nGCMatrixKindRotRpyR, 0x00 },
+    { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0x00 },
+    efManagerHaveStructProcUpdate, gcDrawDObjTreeDLLinksForGObj,
+    0x708, 0x838, 0x894, 0x8B4
+};
+
+static void ndsP4CrashDigGfxProcUpdate(GObj *effect_gobj);
+
+/* dig_gfx_struct; its file head is set per make (create_dig_gfx_). */
+static EFDesc sNdsP4CrashDigDesc = {
+    0x4 | EFFECT_FLAG_USERDATA, 15, NULL,
+    { 0x50, nGCMatrixKindRotRpyR, 0x00 },
+    { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0x00 },
+    ndsP4CrashDigGfxProcUpdate, gcDrawDObjTreeDLLinksForGObj,
+    0x230, 0x340, 0x378, 0x394
+};
+
+/* The dig effect once he comes out (end_initial_): the donor freezes the
+ * attached effect's joint matrix where it is (XObj unk05 = 2) and plays the
+ * end track there. The port's attach builder reads the joint every draw, so
+ * the effect is remade free at that position: its root's own translation is
+ * where kind 0x50 put it, its rotation and joint 1's texture scroll carry
+ * over. */
+static EFDesc sNdsP4CrashDigEndDesc = {
+    0x4 | EFFECT_FLAG_USERDATA, 15, NULL,
+    { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0x00 },
+    { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0x00 },
+    ndsP4CrashDigGfxProcUpdate, gcDrawDObjTreeDLLinksForGObj,
+    0x230, 0x340, 0x378, 0x394
+};
+
+static void ndsP4CrashSetColor(SYColorPack *c, u32 rgba)
+{
+    c->s.r = (u8)(rgba >> 24);
+    c->s.g = (u8)(rgba >> 16);
+    c->s.b = (u8)(rgba >> 8);
+    c->s.a = (u8)rgba;
+}
+
+static void ndsP4CrashSetPartColors(DObj *part, const u32 *prim_env)
+{
+    if ((part != NULL) && (part->mobj != NULL))
+    {
+        ndsP4CrashSetColor(&part->mobj->sub.primcolor, prim_env[0]);
+        ndsP4CrashSetColor(&part->mobj->sub.envcolor, prim_env[1]);
+    }
+}
+
+/* CrashNSP.create_spin_gfx_ + setup_spin_gfx_. */
+static void ndsP4CrashMakeSpinGfx(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    GObj *effect_gobj;
+    EFStruct *ep;
+    DObj *dobj;
+    const u32 *colors;
+
+    effect_gobj = efManagerMakeEffectNoForce(&sNdsP4CrashSpinDesc);
+    if (effect_gobj == NULL)
+    {
+        return;
+    }
+    ep = efGetStruct(effect_gobj);
+    ep->fighter_gobj = fighter_gobj;
+    fp->proc_lagstart = ftParamProcPauseEffect;
+    fp->proc_lagend = ftParamProcResumeEffect;
+    dobj = DObjGetStruct(effect_gobj);
+    dobj->user_data.p = fp->joints[nFTPartsJointTopN];
+    dobj->rotate.vec.f.y = (fp->lr == +1) ? F_CLC_DTOR32(30.0F) : F_CLC_DTOR32(210.0F);
+
+    fp->is_effect_attach = TRUE;
+    colors = &gNdsP4CrashSpinColors[4 * ((fp->costume < CRASH_SPIN_COSTUMES) ? fp->costume : 0)];
+    if (dobj->child != NULL)
+    {
+        ndsP4CrashSetPartColors(dobj->child, &colors[0]);
+        ndsP4CrashSetPartColors(dobj->child->child, &colors[2]);
+    }
+}
+
+static GObj **ndsP4CrashDigGfx(FTStruct *fp)
+{
+    return (GObj **)(void *)ndsP4CrashStatusS32(fp, 1);
+}
+
+/* CrashDSP.create_dig_gfx_ + setup_dig_gfx_; the effect is kept in the
+ * dig's status word 1 (0xB1C). */
+static GObj *ndsP4CrashMakeDigGfx(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    GObj *effect_gobj;
+    DObj *dobj;
+    DObj *top = fp->joints[nFTPartsJointTopN];
+
+    if (gNdsP4CrashSpecial2 == NULL)
+    {
+        return NULL;
+    }
+    sNdsP4CrashDigDesc.file_head =
+        (void **)(void *)((u8 *)gNdsP4CrashSpecial2 + CRASH_DIG_FILE_WORD);
+    effect_gobj = efManagerMakeEffectNoForce(&sNdsP4CrashDigDesc);
+    if (effect_gobj == NULL)
+    {
+        return NULL;
+    }
+    efGetStruct(effect_gobj)->fighter_gobj = fighter_gobj;
+    dobj = DObjGetStruct(effect_gobj);
+    dobj->user_data.p = top;
+    dobj->rotate.vec.f.y = top->rotate.vec.f.y;
+
+    fp->is_effect_attach = TRUE;
+    if (dobj->xobjs[1] != NULL)
+    {
+        dobj->xobjs[1]->kind = nGCMatrixKindTraRotRpyRSca;
+    }
+    *ndsP4CrashDigGfx(fp) = effect_gobj;
+    return effect_gobj;
+}
+
+/* gcAddDObjAnimJoint on the dig effect's joint 1. */
+static void ndsP4CrashDigTrack(GObj *effect_gobj, const u32 *track)
+{
+    DObj *root = (effect_gobj != NULL) ? DObjGetStruct(effect_gobj) : NULL;
+
+    if ((root != NULL) && (root->child != NULL))
+    {
+        gcAddDObjAnimJoint(root->child, (AObjEvent32 *)(uintptr_t)track, 0.0F);
+    }
+}
+
+/* CrashDSP.dig_graphic_update_: the effect follows the slope and scrolls
+ * its texture with his speed. */
+static void ndsP4CrashDigGraphicUpdate(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    f32 slope = ftKirbySpecialLwGetGroundAxisYaw(fp);
+    GObj *effect_gobj = *ndsP4CrashDigGfx(fp);
+    DObj *root;
+    MObj *mobj;
+
+    if (effect_gobj == NULL)
+    {
+        return;
+    }
+    root = DObjGetStruct(effect_gobj);
+    root->rotate.vec.f.z = slope;
+    mobj = (root->child != NULL) ? root->child->mobj : NULL;
+    if (mobj != NULL)
+    {
+        mobj->sub.trav -= ABSF(fp->physics.vel_air.x) * ndsP4CrashBitsToF32(0x3B400000u);
+    }
+}
+
+/* CrashDSP.dig_update_: while he moves, dust behind him every 16 frames of
+ * the dig's timer (from the phase his first move marked) and a sound every
+ * 32. */
+static void ndsP4CrashDigUpdate(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    s32 timer;
+    Vec3f pos;
+
+    if ((*ndsP4CrashDigGfx(fp) == NULL) || (fp->physics.vel_air.x == 0.0F))
+    {
+        return;
+    }
+    timer = *ndsP4CrashStatusS32(fp, 0) - *ndsP4CrashStatusS32(fp, 2);
+    if ((timer & 0xF) != 0)
+    {
+        return;
+    }
+    pos.x = DObjGetStruct(fighter_gobj)->translate.vec.f.x - ((f32)fp->lr * 140.0F);
+    pos.y = DObjGetStruct(fighter_gobj)->translate.vec.f.y;
+    pos.z = 0.0F;
+    efManagerDustLightMakeEffect(&pos, fp->lr, 1.0F);
+    if ((timer & 0x1F) == 0)
+    {
+        /* and Global.rumble_(port, 0, 30): the DS has no rumble. */
+        func_800269C0_275C0(CRASH_FGM_DIG);
+    }
+}
+
+/* CrashDSP.dig_gfx_main_ (0x800FD568 with the donor's end): when its
+ * animation ends, a heavy dust 80 below where it stood. */
+static void ndsP4CrashDigGfxProcUpdate(GObj *effect_gobj)
+{
+    EFStruct *ep = efGetStruct(effect_gobj);
+    DObj *root;
+    Vec3f pos;
+
+    if (ep->is_pause_effect)
+    {
+        return;
+    }
+    gcPlayAnimAll(effect_gobj);
+    if (effect_gobj->anim_frame > 0.0F)
+    {
+        return;
+    }
+    root = DObjGetStruct(effect_gobj);
+    pos.x = root->translate.vec.f.x;
+    pos.y = root->translate.vec.f.y - 80.0F;
+    pos.z = 0.0F;
+    efManagerDustHeavyDoubleMakeEffect(&pos, 1, 1.0F);
+    if ((ep->fighter_gobj != NULL) &&
+        (*ndsP4CrashDigGfx(ftGetStruct(ep->fighter_gobj)) == effect_gobj))
+    {
+        *ndsP4CrashDigGfx(ftGetStruct(ep->fighter_gobj)) = NULL;
+    }
+    efManagerSetPrevStructAlloc(ep);
+    gcEjectGObj(effect_gobj);
+}
+
+/* end_initial_'s part: the effect stays where he leaves the ground and
+ * plays the end track (sNdsP4CrashDigEndDesc). */
+static void ndsP4CrashDigGfxEnd(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    GObj *old_gobj = *ndsP4CrashDigGfx(fp);
+    GObj *effect_gobj;
+    DObj *top = fp->joints[nFTPartsJointTopN];
+    DObj *old_root;
+    DObj *root;
+
+    if (old_gobj == NULL)
+    {
+        return;
+    }
+    old_root = DObjGetStruct(old_gobj);
+    sNdsP4CrashDigEndDesc.file_head = sNdsP4CrashDigDesc.file_head;
+    effect_gobj = efManagerMakeEffectNoForce(&sNdsP4CrashDigEndDesc);
+    if (effect_gobj != NULL)
+    {
+        efGetStruct(effect_gobj)->fighter_gobj = fighter_gobj;
+        root = DObjGetStruct(effect_gobj);
+        root->translate.vec.f = top->translate.vec.f;
+        root->rotate.vec.f = old_root->rotate.vec.f;
+        root->rotate.vec.f.y = top->rotate.vec.f.y;
+        if ((root->child != NULL) && (root->child->mobj != NULL) &&
+            (old_root->child != NULL) && (old_root->child->mobj != NULL))
+        {
+            root->child->mobj->sub.trau = old_root->child->mobj->sub.trau;
+            root->child->mobj->sub.trav = old_root->child->mobj->sub.trav;
+        }
+        ndsP4CrashDigTrack(effect_gobj, gNdsP4CrashDigEndTrack);
+    }
+    *ndsP4CrashDigGfx(fp) = effect_gobj;
+    efManagerSetPrevStructAlloc(efGetStruct(old_gobj));
+    gcEjectGObj(old_gobj);
+}
+
 /* ---- Neutral special (the spin) ---- */
 
 static void ndsP4CrashNSPShieldHit(GObj *fighter_gobj);
@@ -194,6 +474,7 @@ static void ndsP4CrashNSPInitial(GObj *fighter_gobj, s32 status_id, f32 x_scale)
 
     ftMainSetStatus(fighter_gobj, status_id, 0.0F, 1.0F, FTSTATUS_PRESERVE_NONE);
     ftMainPlayAnimEventsAll(fighter_gobj);
+    ndsP4CrashMakeSpinGfx(fighter_gobj);
     fp->proc_shield = ndsP4CrashNSPShieldHit;
     fp->physics.vel_air.x *= x_scale;
     fp->motion_vars.flags.flag0 = 0;
@@ -654,6 +935,7 @@ static void ndsP4CrashDSPClearFlags(FTStruct *fp)
 static void ndsP4CrashDSPBeginInitial(GObj *fighter_gobj)
 {
     ndsP4CrashDSPSetStatus(fighter_gobj, CRASH_STATUS_DSP_BEGIN, 0.0F);
+    (void)ndsP4CrashMakeDigGfx(fighter_gobj);
     ndsP4CrashDSPClearFlags(ftGetStruct(fighter_gobj));
 }
 
@@ -697,12 +979,24 @@ void ndsP4CrashDSPDiveAirInitial(GObj *fighter_gobj)
 /* CrashDSP.wait_initial_ / turn_intial_. */
 static void ndsP4CrashDSPWaitInitial(GObj *fighter_gobj)
 {
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    GObj *effect_gobj;
+
     ndsP4CrashDSPSetStatus(fighter_gobj, CRASH_STATUS_DSP_WAIT, 0.0F);
+    effect_gobj = *ndsP4CrashDigGfx(fp);
+    if (effect_gobj != NULL)
+    {
+        DObjGetStruct(effect_gobj)->rotate.vec.f.y =
+            fp->joints[nFTPartsJointTopN]->rotate.vec.f.y;
+        ndsP4CrashDigTrack(effect_gobj, gNdsP4CrashDigWaitTrack);
+    }
 }
 
 static void ndsP4CrashDSPTurnInitial(GObj *fighter_gobj)
 {
     ndsP4CrashDSPSetStatus(fighter_gobj, CRASH_STATUS_DSP_TURN, 0.0F);
+    ndsP4CrashDigTrack(*ndsP4CrashDigGfx(ftGetStruct(fighter_gobj)),
+                       gNdsP4CrashDigTurnTrack);
 }
 
 /* CrashDSP.end_initial_: out of the ground, 60 up (40 when he slid off an
@@ -712,6 +1006,7 @@ static void ndsP4CrashDSPEndInitial(GObj *fighter_gobj, sb32 slide_off)
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
     ndsP4CrashDSPSetStatus(fighter_gobj, CRASH_STATUS_DSP_END, 0.0F);
+    ndsP4CrashDigGfxEnd(fighter_gobj);
     fp->physics.vel_air.y = (slide_off != FALSE) ? CRASH_DSP_END_Y_SPEED_EDGE
                                                  : CRASH_DSP_END_Y_SPEED;
     mpCommonSetFighterAir(fp);
@@ -728,14 +1023,29 @@ static void ndsP4CrashDSPBeginInitialFromDive(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
+    GObj *effect_gobj;
+
     mpCommonSetFighterGround(fp);
     ndsP4CrashDSPSetStatus(fighter_gobj, CRASH_STATUS_DSP_BEGIN, 20.0F);
+    effect_gobj = ndsP4CrashMakeDigGfx(fighter_gobj);
+    if (effect_gobj != NULL)
+    {
+        DObj *root = DObjGetStruct(effect_gobj);
+
+        if (root->child != NULL)
+        {
+            root->child->anim_wait = 3.0F;
+        }
+        func_800269C0_275C0(CRASH_FGM_DIVE_LAND_1);
+        func_800269C0_275C0(CRASH_FGM_DIVE_LAND_2);
+    }
     ndsP4CrashDSPClearFlags(fp);
 }
 
 /* CrashDSP.begin_main_ (0xE5 update): the dig's timer starts at 180. */
 void ndsP4CrashDSPBeginMain(GObj *fighter_gobj)
 {
+    ndsP4CrashDigGraphicUpdate(fighter_gobj);
     if (fighter_gobj->anim_frame <= 0.0F)
     {
         *ndsP4CrashStatusS32(ftGetStruct(fighter_gobj), 0) = CRASH_DSP_MAX_TIME;
@@ -764,6 +1074,8 @@ void ndsP4CrashDSPWaitMain(GObj *fighter_gobj)
     FTStruct *fp = ftGetStruct(fighter_gobj);
     s32 stick_x;
 
+    ndsP4CrashDigGraphicUpdate(fighter_gobj);
+    ndsP4CrashDigUpdate(fighter_gobj);
     if (ndsP4CrashDSPCheckEnd(fighter_gobj, fp) != FALSE)
     {
         return;
@@ -785,6 +1097,8 @@ void ndsP4CrashDSPTurnMain(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
+    ndsP4CrashDigGraphicUpdate(fighter_gobj);
+    ndsP4CrashDigUpdate(fighter_gobj);
     if (fp->motion_vars.flags.flag1 != 0)
     {
         fp->lr = -fp->lr;

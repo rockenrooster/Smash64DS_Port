@@ -4978,8 +4978,22 @@ sb32 ndsRendererEntryEffectP4Admit(const void *dl, u32 *owner_asset_id,
             continue;
         }
         /* A root in a file the special file depends on is the list the
-         * special file's pointer names (Sheik's needle graphic). */
-        root = (row->via != 0u) ? *(const u8 *const *)(file + row->via - 1u) : file + offset;
+         * special file's pointer names (Sheik's needle graphic), or, with
+         * material bit 2, that file's base plus the offset (Crash's dig
+         * effect file). */
+        if (row->via != 0u)
+        {
+            root = *(const u8 *const *)(file + row->via - 1u);
+            if ((row->material_flags & 4u) != 0u)
+            {
+                if (root == NULL)
+                {
+                    continue;
+                }
+                root += offset;
+            }
+        }
+        else root = file + offset;
 
         if ((const u8 *)dl == root)
         {
