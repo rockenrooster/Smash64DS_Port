@@ -2055,8 +2055,9 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
     return "\n".join(lines) + "\n"
 
 
-# TEXID frames a P4 root row can select (Peach's turnip uses faces 3-6).
-P4_VARIANT_SLOTS = 8
+# TEXID frames a P4 root row can select (Peach's turnip uses faces 3-6;
+# Dedede's Waddle Dee and Doo all nine). Ten keeps the row 28 bytes.
+P4_VARIANT_SLOTS = 10
 
 
 def emit_p4_tables(p4: list[P4Root], texture_keys: list, texture_slot: dict,

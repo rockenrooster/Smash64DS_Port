@@ -361,6 +361,9 @@ ENTRY_PORTS = {
     "sonic": 0x8013DCAC,
     # Samus's point case on Crash's file 3.
     "crash": 0x8013DCBC,
+    # Kirby's warp star case, on Kirby's special file 2, which Dedede's Main
+    # externs (VS's ftManagerSetupFilesPlayablesAll finds it resident).
+    "dedede": 0x8013DCF4,
 }
 
 # P4 S6: special-file slots (1-4) a content loads into its own storage,
@@ -397,10 +400,13 @@ OWN_SPECIAL_FILES = {
     # His entry's Tails plane (3, Sonic file 8; Fox's Arwing entry, the
     # other reader of special file 3, never runs for him).
     "sonic": (1, 3),
+    # DededeDSP's minions (1, WADDLE_DEE_INFO: the Waddle Dee's, Waddle
+    # Doo's and Gordo's item attributes, their models in WADDLE_DEE_GFX,
+    # which loads with it; Captain has no special file 1).
     # DededeUSP's landing stars (2, Dedede file 7: Yoshi's star attributes at
     # Yoshi's offset, its graphic the item file's star; Captain's Falcon
     # Kick and Flyer, the readers of special file 2, never run for him).
-    "dedede": (2,),
+    "dedede": (1, 2),
     # Her turnip's item attributes (2, PEACH_TURNIP_INFO; its model in the
     # file it names). Fox's reflector and Arwing entry, the parent's readers
     # of special file 2, never run for her.
@@ -436,8 +442,12 @@ RAM_DATA = {
 # (Fox's reflector and Arwing entry) never run for him. His special4 is the
 # spring's graphic, which his own special1 names (it loads with that file);
 # the slot's only parent reader, Fox's blaster, never runs for him.
+# A slot the content names no file in, where the parent's is read only by
+# code that never runs for the content, is the same: it stays empty (Dedede's
+# special3, Captain's Falcon Punch effect file).
 UNREAD_SPECIAL_FILES = {
     "sonic": (2, 4),
+    "dedede": (3,),
 }
 
 # Vanilla file IDs that Remix rewrote with equivalent bytes, so the DS keeps
@@ -1095,9 +1105,11 @@ def main() -> int:
 
     for i in range(5, 9):
         if (i - 4) in unread_special:
-            if file_ids[i] == 0:
-                raise GenError(f"special file {i - 4} is listed as unread but {name} names none")
-            unread_skip.add(file_ids[i])
+            if file_ids[i] == 0 and parent_ids[i] == 0:
+                raise GenError(f"special file {i - 4} is listed as unread but neither {name} "
+                               "nor the parent names one")
+            if file_ids[i] != 0:
+                unread_skip.add(file_ids[i])
             file_ids[i] = 0
             continue
         if (i - 4) in own_special:

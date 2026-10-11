@@ -243,8 +243,11 @@ typedef struct NDSP4Overrides
 /* Item kinds past the source's last (nITKindEnumCount, as Remix numbers its
  * custom items from 0x2D), one per content item. */
 #define NDS_P4_IT_KIND_TURNIP (nITKindEnumCount + 0)
+#define NDS_P4_IT_KIND_WADDLE_DEE (nITKindEnumCount + 1)
+#define NDS_P4_IT_KIND_WADDLE_DOO (nITKindEnumCount + 2)
+#define NDS_P4_IT_KIND_GORDO (nITKindEnumCount + 3)
 #define NDS_P4_IT_KIND_FIRST NDS_P4_IT_KIND_TURNIP
-#define NDS_P4_IT_KIND_LAST NDS_P4_IT_KIND_TURNIP
+#define NDS_P4_IT_KIND_LAST NDS_P4_IT_KIND_GORDO
 #define NDS_P4_ITEM_DROPPED 0
 #define NDS_P4_ITEM_THROWN 1
 #define NDS_P4_ITEM_HOLD 2
@@ -260,6 +263,7 @@ void ndsP4ItemProc(GObj *item_gobj, s32 which);
 #define NDS_P4_WP_KIND_BANJO_EGG (nWPKindMonsterEnd + 3)
 #define NDS_P4_WP_KIND_LANKY_GRAPE (nWPKindMonsterEnd + 4)
 #define NDS_P4_WP_KIND_SONIC_SPRING (nWPKindMonsterEnd + 5)
+#define NDS_P4_WP_KIND_WADDLEDOO_BEAM (nWPKindMonsterEnd + 6)
 
 /* Remix's custom reflect kind (Reflect.asm reflect_type.CUSTOM): the low
  * half of FTSpecialColl.kind (the N64's second halfword), the routine index

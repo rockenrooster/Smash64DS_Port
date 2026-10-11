@@ -21,6 +21,7 @@
 #include <sys/objman.h>
 #include <sys/audio.h>
 #include <sys/taskman.h>
+#include <wp/weapon.h>
 
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
 
@@ -1937,6 +1938,14 @@ void ndsP4UpdateHitDamageStats(const FTHitLog *hitlog, FTStruct *fp,
                 fp->damage_lr = -attacker_fp->lr;
             }
         }
+    }
+    /* WaddleDoo.asm beam_knockback_direction_fix (at 0x800E44EC): a Waddle
+     * Doo's beam star pushes along its facing, as a moving shot does, not
+     * by the sides it and the victim are on (its stars do not move). */
+    else if ((hitlog->attacker_object_class == nFTHitLogObjectWeapon) &&
+             (wpGetStruct(hitlog->attacker_gobj)->kind == NDS_P4_WP_KIND_WADDLEDOO_BEAM))
+    {
+        fp->damage_lr = (wpGetStruct(hitlog->attacker_gobj)->lr < 0) ? +1 : -1;
     }
     ftParamUpdate1PGameDamageStats(fp, damage_player, damage_object_class,
                                    damage_object_kind, flags,

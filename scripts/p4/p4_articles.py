@@ -116,6 +116,20 @@ ARTICLES = {
         # spawn picks face 3 to 6 (texture_id_curr), so frames 0-6 are kept.
         {"name": "turnip", "special": 2, "itattributes": 0x40, "texid_frames": 7},
     ),
+    "dedede": (
+        # items/WaddleDee.asm, WaddleDoo.asm and Gordo.asm item_info_array:
+        # ITAttributes at 0x40, 0xB0 and 0x120 of WADDLE_DEE_INFO (file 6),
+        # their trees in WADDLE_DEE_GFX. A Waddle Dee or Doo walks with the
+        # Bob-omb's walk, which sets its DObj's list to the tree's address
+        # less 0xE8 (its entry's list) or plus 0xC8 (the left walk), drawn
+        # with the entry's material: all nine TEXID frames (held 0/1, squat
+        # 5, jump 6, the walk's MatAnim 2, 3, 4, 7 and 8).
+        {"name": "waddle_dee", "special": 1, "itattributes": 0x40, "texid_frames": 9,
+         "extra_lists": (0xC8,)},
+        {"name": "waddle_doo", "special": 1, "itattributes": 0xB0, "texid_frames": 9,
+         "extra_lists": (0xC8,)},
+        {"name": "gordo", "special": 1, "itattributes": 0x120, "texid_frames": 1},
+    ),
     "crash": (
         # samusshared.asm crash_entry_anim_gfx_struct: the point case's
         # object, DObjDesc 0x2310 on his file 8, drawn through DObjDLLinks.
@@ -298,7 +312,7 @@ def texid_images(res: census.O2RResource, table: int, frames: int | None = None,
     if sprites is None or sprites.asset_id != res.file_id:
         raise ArticleError(f"{res.file_id:#x}+{sub.offset:#x}: MObjSub sprites did not resolve")
     images = []
-    for i in range(8):
+    for i in range(16):
         image = res.pointer_at(sprites.offset + i * 4)
         if image is None:
             break
@@ -382,7 +396,8 @@ def resolve(content: str, title: str, o2r: Path, descriptor: dict) -> list[dict]
             if tree is None:
                 raise ArticleError(f"{content} {article['name']}: attributes name no tree")
             target = res_of(tree.asset_id)
-            for index, dl in dobjdesc_entries(target, tree.offset):
+            entries = dobjdesc_entries(target, tree.offset)
+            for index, dl in entries:
                 texid = None
                 if (mobjsubs is not None and
                         target.pointer_at(mobjsubs.offset + 4 * index) is not None):
@@ -390,6 +405,19 @@ def resolve(content: str, title: str, o2r: Path, descriptor: dict) -> list[dict]
                                          bool(article.get("palette_per_frame")), index)
                 add(article, target, dl, texid, via=(res.file_id, at), via_base=True,
                     via_bias=tree.offset)
+            # Lists the item's code sets at the tree's address plus an offset
+            # (Dedede's minions' left walk): drawn with the one listed
+            # entry's material.
+            extra = article.get("extra_lists", ())
+            if extra and len(entries) != 1:
+                raise ArticleError(f"{content} {article['name']}: extra lists need a "
+                                   "one-list tree")
+            for rel in extra:
+                index, _ = entries[0]
+                texid = texid_images(target, mobjsubs.offset, article.get("texid_frames"),
+                                     bool(article.get("palette_per_frame")), index)
+                add(article, target, tree.offset + rel, texid, via=(res.file_id, at),
+                    via_base=True, via_bias=tree.offset)
             continue
         if "via_base" in article:
             # The structure is in the file a word of the special file names
