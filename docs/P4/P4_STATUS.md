@@ -1176,11 +1176,24 @@ refreshes and its landing, Fire (up) with its firemen kept where it began,
 Judge (down: one of nine at random, judge 1 costing him 12, judge 7 making a
 food item on its first hit) and his on_hit refresh of Fire. Remix's random
 draw advances the seed by the audio thread's tics (netplay lockstep); the DS
-advances it by the battle's logic updates, which replays reproduce. Open:
-judge 7's Dango (Remix's custom item, 99 in 100: the Maxim Tomato with a 10%
-heal, its attributes appended to Remix's ITCommonData, its model in Remix's
-common items file 0xA96) makes no item yet (counted); the Maxim Tomato in 100
-is made.
+advances it by the battle's logic updates, which replays reproduce.
+Judge 7's food is Remix's Dango 99 times in 100 (items/Dango.asm: the Maxim
+Tomato with a 10% heal), the Maxim Tomato otherwise. The Dango's attributes
+sit in Remix's extended ITCommonData (0xFB+0x1010) and its model in the
+common items file Remix adds (0xA96, 29.6 KB); the generator ships the
+attributes and the closure they name as an item subset file of 1,096 B
+(`item_subset_file`, `SUBSET_FILES`: an object starts at a pointer target and
+runs to the next, every pointer in a reached object followed, the tree's
+terminator and lists checked inside the subset) in his special slot 4,
+loaded whole at setup. It is a P4 item kind (`NDS_P4_IT_KIND_MRGAW_DANGO`)
+with the Tomato's matrices, routines and status table, made by the Tomato's
+maker with the swirl and appear spin its SHOW_GFX_WHEN_SPAWNED asks; its
+pickup runs the Tomato's case with heal 10 (`ndsFTCommonGetEatHeal`, Remix's
+jump to 0x80145C40: the eat hook, the item's end, the 1P tomato bonus),
+dispatched as a consumable (`NDS_P4_ITEM_CONSUME`). Lab, four MRGAW CPUs on
+Castle, player 0 forced to down-B with every judge made judge 7, 1,800
+frames: 5 Dangos made, 5 eaten (10 healed each), drawn natively, 0 native
+failures, 0 declines.
 
 ### Snake (content 18, Captain's code)
 

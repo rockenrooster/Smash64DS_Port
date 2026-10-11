@@ -594,6 +594,18 @@ UNREAD_SPECIAL_FILES = {
     "snake": (3,),
 }
 
+# P4 S6: a Remix custom item whose ITAttributes sit in Remix's extended
+# ITCommonData (file 0xFB) and whose model sits in the common items file Remix
+# adds (0xA96, 29.6 KB): the content ships the attributes and the closure of
+# what they name as a synthesized file of its own (item_subset_file), loaded
+# whole into a special-file slot no code of the content or its parent reads.
+# EXTRA's MRGAW: judge 7's Dango (items/Dango.asm FILE_OFFSET 0x1010; about
+# 1 KB of 0xA96) in slot 4 (Mario has no special file 4).
+SUBSET_FILES = {
+    "mrgaw": ({"name": "dango", "slot": 4, "attributes": (0xFB, 0x1010)},),
+}
+ITATTRIBUTES_SIZE = 0x50
+
 # Vanilla file IDs that Remix rewrote with equivalent bytes, so the DS keeps
 # the vanilla file the parent already ships (manifest "deviations").
 EQUIVALENT_FILES = {
@@ -1040,6 +1052,113 @@ def results_ampersand(rom: R.Rom, staging: Path, file_id: int) -> tuple[bytes, d
     return bytes(out), {"row": row, "advance": advance}
 
 
+def item_subset_file(rom: R.Rom, file_id: int, attr_file: int, attr_off: int) -> tuple[bytes, dict]:
+    """An item's ITAttributes and the closure of what they name, as a file of
+    its own: the attributes at 0, then each run of reached bytes of the file
+    they point into, at its own offset mod 16. An object starts at a pointer
+    target and runs to the next target; every pointer in a reached object is
+    followed. Fails on a pointer it cannot keep (another file, or into the
+    attributes' own file)."""
+    where = f"{attr_file:#x}+{attr_off:#x}"
+    attr = rom.file_bytes(attr_file)[attr_off:attr_off + ITATTRIBUTES_SIZE]
+    if len(attr) != ITATTRIBUTES_SIZE:
+        raise GenError(f"{where}: ITAttributes past the file's end")
+    attr_slots = {o - attr_off: s for o, s in rom.reloc_slots(attr_file).items()
+                  if attr_off <= o < attr_off + ITATTRIBUTES_SIZE}
+    if not attr_slots or any(s[0] != "extern" for s in attr_slots.values()):
+        raise GenError(f"{where}: an item subset takes attributes that name another file only")
+    model = {s[1] for s in attr_slots.values()}
+    if len(model) != 1:
+        raise GenError(f"{where}: the attributes name {len(model)} files")
+    model = model.pop()
+    data = rom.file_bytes(model)
+    slots = rom.reloc_slots(model)
+    if any(s[0] != "intern" for s in slots.values()):
+        raise GenError(f"{model:#x}: an item subset's model file names other files")
+    starts = sorted({s[1] for s in slots.values()} | {s[2] for s in attr_slots.values()})
+    reached: set[int] = set()
+    work = [s[2] for s in attr_slots.values()]
+    while work:
+        at = work.pop()
+        if at in reached:
+            continue
+        reached.add(at)
+        end = next((t for t in starts if t > at), len(data))
+        work += [s[1] for o, s in slots.items() if at <= o < end]
+    spans = sorted((at, next((t for t in starts if t > at), len(data))) for at in reached)
+    runs: list[list[int]] = []
+    for lo, hi in spans:
+        if runs and lo == runs[-1][1]:
+            runs[-1][1] = hi
+        else:
+            runs.append([lo, hi])
+    body = bytearray(attr)
+    moved: list[tuple[int, int, int]] = []  # (old lo, old hi, new lo)
+    for lo, hi in runs:
+        new = len(body) + ((lo - len(body)) & 0xF)
+        body += b"\0" * (new - len(body)) + data[lo:hi]
+        moved.append((lo, hi, new))
+
+    def relocate(old: int) -> int:
+        for lo, hi, new in moved:
+            if lo <= old < hi:
+                return new + old - lo
+        raise GenError(f"{model:#x}+{old:#x}: a kept pointer leaves the subset")
+
+    # The model's tree ends inside the subset: its DObjDesc array's terminator
+    # (p4_articles.DOBJ_DESC_SIZE, id 18) and each list's G_ENDDL (a
+    # translucent item's entries name DObjDLLink arrays, list id 4 ending
+    # them: the flags word's is_display_xlu, bit 31).
+    def walk_list(cmd: int) -> None:
+        while not (data[cmd] == 0xDF or (data[cmd] == 0xDE and data[cmd + 1] == 1)):
+            relocate(cmd + 7)
+            cmd += 8
+        relocate(cmd + 7)
+
+    xlu = attr[0x10] >> 7
+    tree = attr_slots.get(0)
+    if tree is None:
+        raise GenError(f"{where}: the attributes name no model")
+    at = tree[2]
+    for _ in range(256):
+        relocate(at + 3)
+        if (int.from_bytes(data[at:at + 4], "big") & 0xFFFF) == 18:
+            break
+        relocate(at + 0x2B)
+        dl = slots.get(at + 4)
+        if dl is not None and xlu:
+            link = dl[1]
+            while int.from_bytes(data[link:link + 4], "big") != 4:
+                if slots.get(link + 4) is not None:
+                    walk_list(slots[link + 4][1])
+                link += 8
+            relocate(link + 3)
+        elif dl is not None:
+            walk_list(dl[1])
+        at += 0x2C
+    else:
+        raise GenError(f"{model:#x}+{tree[2]:#x}: DObjDesc array has no terminator")
+    kept = {o: t for o, t in ((o, s[2]) for o, s in attr_slots.items())}
+    for lo, hi, new in moved:
+        for o, s in slots.items():
+            if lo <= o < hi:
+                kept[new + o - lo] = relocate(s[1])
+    for o in list(kept):
+        if o < ITATTRIBUTES_SIZE:
+            kept[o] = relocate(kept[o])
+    order = sorted(kept)
+    for i, o in enumerate(order):
+        nxt = order[i + 1] // 4 if i + 1 < len(order) else R.NO_RELOC
+        struct.pack_into(">I", body, o, (nxt << 16) | (kept[o] // 4))
+    out = bytearray(R.O2R_HEADER)
+    out += struct.pack("<IHHI", file_id, order[0] // 4, R.NO_RELOC, 0)
+    out += struct.pack("<I", len(body))
+    out += body
+    return bytes(out), {"file_id": file_id, "attributes": [f"{attr_file:#x}", f"{attr_off:#x}"],
+                        "model": f"{model:#x}", "bytes": len(body),
+                        "runs": [[hex(lo), hex(hi), hex(new)] for lo, hi, new in moved]}
+
+
 def results_win_singular(staging: Path, remix_name: str) -> bool:
     """resultsscreen.asm get_str_wins_lx_: the fighters whose "WINS!" is
     "WIN!" by id (Banjo & Kazooie): an `lli t6, Character.id.<X>` whose
@@ -1336,7 +1455,14 @@ def main() -> int:
         return (len(rom.file_bytes(fid)),
                 tuple(sorted((off, t[0]) for off, t in rom.reloc_slots(fid).items())))
 
+    subsets = SUBSET_FILES.get(name, ())
+    subset_slots = {s["slot"] for s in subsets}
     for i in range(5, 9):
+        if (i - 4) in subset_slots:
+            if file_ids[i] != 0 or parent_ids[i] != 0:
+                raise GenError(f"special file {i - 4} holds {name}'s item subset but "
+                               f"{file_ids[i]:#x} (the parent's {parent_ids[i]:#x}) names a file")
+            continue
         if (i - 4) in unread_special:
             if file_ids[i] == 0 and parent_ids[i] == 0:
                 raise GenError(f"special file {i - 4} is listed as unread but neither {name} "
@@ -1398,6 +1524,16 @@ def main() -> int:
             open_special_mask |= 1 << (int(s["slot"][len("special"):]) - 1)
 
     synth_id = SYNTH_FILE_BASE + spec["kind_index"] * 0x10
+    # Item subsets after the motion (+0) and the Results glyph (+1); outside
+    # every closure, so they load whole like a stand-in.
+    subset_rows = []
+    for k, s in enumerate(subsets):
+        sid = synth_id + 2 + k
+        blob, row = item_subset_file(rom, sid, *s["attributes"])
+        row.update({"name": s["name"], "slot": s["slot"]})
+        subset_rows.append((sid, blob, row))
+        file_ids[4 + s["slot"]] = sid
+        open_special_mask |= 1 << (s["slot"] - 1)
     if rom.file_bytes(parent_motion) != vanilla.file_bytes(parent_motion):
         raise GenError(f"parent motion {parent_motion:#x} differs from vanilla")
     synth = MotionSynth(rom, parent_motion, events, synth_id)
@@ -1772,11 +1908,14 @@ def main() -> int:
         (o2r_out / f"{glyph_id:04x}").write_bytes(glyph_o2r)
         shipped[glyph_id] = hashlib.sha256(glyph_o2r).hexdigest()
         sprite_rows.append(glyph["row"])
+    for sid, blob, _ in subset_rows:
+        (o2r_out / f"{sid:04x}").write_bytes(blob)
+        shipped[sid] = hashlib.sha256(blob).hexdigest()
 
     ident = f"NdsP4{title}"
     store = dict(spec["shared_storage"])
     own_store = set()
-    for n in own_special:
+    for n in tuple(own_special) + tuple(sorted(subset_slots)):
         store[f"p_file_special{n}"] = f"g{ident}Special{n}"
         own_store.add(f"g{ident}Special{n}")
     lines = [
@@ -2041,6 +2180,7 @@ def main() -> int:
                                "intern_slots": synth.intern_count,
                                "remix_intervals": [[hex(a), hex(b)] for a, b in synth.intervals]},
         "shipped_o2r_sha256": {f"{k:#x}": v for k, v in sorted(shipped.items())},
+        "subset_files": [row for _, _, row in subset_rows],
         "special_statuses": len(specials),
         "status_changes": [{"status": hex(r["status"]), "procs": r["procs"]} for r in specials
                            if any(p != "NDS_P4_PROC_INHERIT" for p in r["procs"])],

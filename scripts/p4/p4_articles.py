@@ -126,6 +126,10 @@ ARTICLES = {
         # of MRGAW file 6 (MRGAW_FILE_PROJECTILE_HITBOX), the sausage's model
         # in the file it names (his special file 3).
         {"name": "chef", "special": 1, "wpattributes": 0x0},
+        # Judge 7's Dango (items/Dango.asm): its ITAttributes at 0 of the item
+        # subset file generate_p4_fighter.py ships in his special slot 4
+        # (SUBSET_FILES), its model after them.
+        {"name": "dango", "special": 4, "itattributes": 0x0},
     ),
     "dedede": (
         # items/WaddleDee.asm, WaddleDoo.asm and Gordo.asm item_info_array:
@@ -509,8 +513,16 @@ def main() -> int:
     resolved = json.loads((args.export / "resolved.json").read_text(encoding="utf-8"))
     titles = {row["name"]: row["title"] for row in json.loads(
         Path(__file__).with_name("contents.json").read_text(encoding="utf-8"))["contents"]}
-    roots = resolve(args.content, titles[args.content], args.o2r.resolve(),
-                    resolved["descriptor"])
+    # An item subset file (generate_p4_fighter.py SUBSET_FILES) fills a slot
+    # the donor's descriptor leaves empty: the generator's manifest names it.
+    descriptor = dict(resolved["descriptor"])
+    manifest = args.o2r.resolve().parent / "manifest.json"
+    if manifest.exists():
+        file_ids = list(descriptor["file_ids"])
+        for row in json.loads(manifest.read_text(encoding="utf-8")).get("subset_files", ()):
+            file_ids[FILE_SLOTS[row["slot"]]] = row["file_id"]
+        descriptor["file_ids"] = file_ids
+    roots = resolve(args.content, titles[args.content], args.o2r.resolve(), descriptor)
     # S8: the weapon Kirby holds with this content's power (p4_kirby.py's
     # articles_<content>.json beside the Kirby files): a sidecar root of this
     # content, its file copied beside the content's own.

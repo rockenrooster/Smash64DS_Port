@@ -1,6 +1,6 @@
 # Mr. Game & Watch — P4 character subplan
 
-**Status:** ported in the lab (2026-10-11): 2D facing, Chef, Fire, Judge ([P4_STATUS](../P4_STATUS.md) "EXTRA characters"). Play ROM verified in select, battle and Results (play-1011sn). Open: judge 7's Dango item; no performance pass claimed.  
+**Status:** ported in the lab (2026-10-11): 2D facing, Chef, Fire, Judge ([P4_STATUS](../P4_STATUS.md) "EXTRA characters"). Play ROM verified in select, battle and Results (play-1011sn). Judge 7's Dango ported (lab, 2026-10-11); no performance pass claimed.  
 **Source:** `joaorb64/smashremix-plus-extra` at `96621afea26a83305abaf81add07dcf5a9c5fe3e`.  
 **Default production wave:** 6 (Revision 3). Parent: [master](../New_Characters.md).
 

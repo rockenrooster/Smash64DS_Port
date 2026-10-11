@@ -335,14 +335,21 @@ typedef struct NDSP4Overrides
 #define NDS_P4_IT_KIND_SNAKE_GRENADE (nITKindEnumCount + 5)
 #define NDS_P4_IT_KIND_SNAKE_NIKITA (nITKindEnumCount + 6)
 #define NDS_P4_IT_KIND_SNAKE_CYPHER (nITKindEnumCount + 7)
+#define NDS_P4_IT_KIND_MRGAW_DANGO (nITKindEnumCount + 8)
 #define NDS_P4_IT_KIND_FIRST NDS_P4_IT_KIND_TURNIP
-#define NDS_P4_IT_KIND_LAST NDS_P4_IT_KIND_SNAKE_CYPHER
+#define NDS_P4_IT_KIND_LAST NDS_P4_IT_KIND_MRGAW_DANGO
 #define NDS_P4_ITEM_DROPPED 0
 #define NDS_P4_ITEM_THROWN 1
 #define NDS_P4_ITEM_HOLD 2
+/* ftCommonLightGetProcDamage: a consumable's pickup (Remix's
+ * item_pickup_table). */
+#define NDS_P4_ITEM_CONSUME 3
 /* battleship_item_link_core.c: a P4 item kind's drop, throw or hold routine,
  * from the overrides of the contents in the match. */
 void ndsP4ItemProc(GObj *item_gobj, s32 which);
+/* battleship_ftcommon_get.c: the Maxim Tomato's case with another heal
+ * (Remix's custom consumables jump into it at 0x80145C40). */
+void ndsFTCommonGetEatHeal(FTStruct *fp, GObj *item_gobj, s32 heal);
 /* reloc_backend_compat_shims.c ftParamResetStatUpdateColAnim: TRUE when the
  * fighter's content has its own gfx_routine_end case (run here). */
 sb32 ndsP4ColAnimEnd(GObj *fighter_gobj);

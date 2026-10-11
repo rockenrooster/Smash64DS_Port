@@ -35,6 +35,8 @@
 #if NDS_P4_MRGAW
 
 #include <ef/effect.h>
+#include <gr/ground.h>
+#include <if/interface.h>
 #include <it/item.h>
 #include <sys/audio.h>
 #include <wp/weapon.h>
@@ -705,17 +707,88 @@ static sb32 ndsP4MrgawDSPHitSomething(FTStruct *fp)
     return FALSE;
 }
 
-/* Remix's Dango (items/Dango.asm: the Maxim Tomato with a 10% heal, its
- * attributes appended to Remix's ITCommonData, its model in the common items
- * file Remix adds) is not on the DS yet: counted, no item. */
+/* Remix's Dango (items/Dango.asm): the Maxim Tomato with a 10% heal. Its
+ * attributes (appended to Remix's ITCommonData at 0x1010) and the model they
+ * name (in the common items file Remix adds) are his item subset file,
+ * special file 4 (generate_p4_fighter.py SUBSET_FILES): attributes at 0. */
+#define MRGAW_DANGO_HEAL 10                  /* DAMAGE_RESTORE */
+
+extern void *gNdsP4MrgawSpecial4;
+extern LBParticle *efManagerItemSpawnSwirlMakeEffect(Vec3f *pos);
+extern sb32 itTomatoFallProcUpdate(GObj *item_gobj);
+extern sb32 itTomatoFallProcMap(GObj *item_gobj);
+extern void itTomatoDroppedSetStatus(GObj *item_gobj);
+
+/* A Dango maker that found the subset file missing: counted, no item. */
 __attribute__((used)) volatile u32 gNdsP4MrgawDangoMisses;
 
+/* Its item_info_array: the Tomato's matrices and routines, the Tomato's
+ * status table (0x34-0x9C: 0x801744FC, 0x801744C0/0x80174524,
+ * 0x801744C0/0x801745CC). */
+static ITDesc sNdsP4MrgawDangoDesc = {
+    NDS_P4_IT_KIND_MRGAW_DANGO, &gNdsP4MrgawSpecial4, (const void *)0x0,
+    { nGCMatrixKindTraRotRpyR, nGCMatrixKindNull, 0x00 }, nGMAttackStateOff,
+    itTomatoFallProcUpdate, itTomatoFallProcMap, NULL, NULL, NULL, NULL, NULL, NULL
+};
+
+/* itManagerMakeItemSetupCommon for its id (0x8016EA78, as _create_food calls
+ * it): Item.spawn_custom_item_based_on_tomato_, itTomatoMakeItem (US) with
+ * the Dango's info array, then the swirl and appear spin its
+ * SHOW_GFX_WHEN_SPAWNED asks (extend_item_spawn_gfx_). */
 static GObj *ndsP4MrgawMakeDango(Vec3f *pos, Vec3f *vel)
 {
-    (void)pos;
-    (void)vel;
-    gNdsP4MrgawDangoMisses++;
-    return NULL;
+    GObj *item_gobj;
+    DObj *joint;
+    Vec3f translate;
+    ITStruct *ip;
+
+    if (gNdsP4MrgawSpecial4 == NULL)
+    {
+        gNdsP4MrgawDangoMisses++;
+        return NULL;
+    }
+    item_gobj = itManagerMakeItem(NULL, &sNdsP4MrgawDangoDesc, pos, vel,
+                                  ITEM_FLAG_PARENT_GROUND);
+    if (item_gobj != NULL)
+    {
+        joint = DObjGetStruct(item_gobj);
+        ip = itGetStruct(item_gobj);
+        translate = joint->translate.vec.f;
+
+        gcAddXObjForDObjFixed(joint, 0x2E, 0);
+
+        joint->translate.vec.f = translate;
+
+        ip->is_unused_item_bool = TRUE;
+
+        ip->arrow_gobj = ifCommonItemArrowMakeInterface(ip);
+
+        efManagerItemSpawnSwirlMakeEffect(pos);
+        itMainSetAppearSpin(item_gobj, FALSE);
+    }
+    return item_gobj;
+}
+
+/* Item.asm's tables for the Dango: DROP_ITEM is the Tomato's
+ * (0x801745FC), no throw or pre-pickup routine, and pickup_main_ heals 10
+ * through the Tomato's case. */
+static sb32 ndsP4MrgawItem(GObj *item_gobj, s32 which)
+{
+    ITStruct *ip = itGetStruct(item_gobj);
+
+    if (ip->kind != NDS_P4_IT_KIND_MRGAW_DANGO)
+    {
+        return FALSE;
+    }
+    if (which == NDS_P4_ITEM_DROPPED)
+    {
+        itTomatoDroppedSetStatus(item_gobj);
+    }
+    else if ((which == NDS_P4_ITEM_CONSUME) && (ip->owner_gobj != NULL))
+    {
+        ndsFTCommonGetEatHeal(ftGetStruct(ip->owner_gobj), item_gobj, MRGAW_DANGO_HEAL);
+    }
+    return TRUE;
 }
 
 /* attacks_main_'s _create_food: a food item over his top joint, rising at
@@ -780,6 +853,7 @@ void ndsP4MrgawDSPAttacksMain(GObj *fighter_gobj)
 const NDSP4Overrides gNdsP4MrgawOverrides = {
     .before_physics_map = ndsP4MrgawBeforePhysicsMap,
     .on_damage = ndsP4MrgawOnDamage,
+    .item = ndsP4MrgawItem,
 };
 
 #endif /* NDS_P4_MRGAW */

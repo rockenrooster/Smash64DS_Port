@@ -186,11 +186,37 @@ void ftCommonLightGetProcDamage(GObj *fighter_gobj)
                 break;
 
             default:
+#if NDS_P4
+                /* Remix's item_pickup_check_: a custom kind runs its
+                 * item_pickup_table routine (EXTRA's Dango). */
+                if (ip->kind >= NDS_P4_IT_KIND_FIRST)
+                {
+                    ndsP4ItemProc(item_gobj, NDS_P4_ITEM_CONSUME);
+                }
+#endif
                 break;
             }
         }
     }
 }
+
+#if NDS_P4
+/* The Maxim Tomato case above with another heal: a custom consumable's
+ * pickup routine sets the heal and jumps to 0x80145C40 (items/Dango.asm
+ * pickup_main_), through Remix's eat hook, the item's end and the 1P
+ * tomato bonus. */
+void ndsFTCommonGetEatHeal(FTStruct *fp, GObj *item_gobj, s32 heal)
+{
+    ndsP4OnEatTomato(fp);
+    ftParamSetHealDamage(fp, heal);
+    itMainDestroyItem(item_gobj);
+
+    if ((gSCManagerBattleState->game_type == nSCBattleGameType1PGame) && (fp->player == gSCManagerSceneData.player) && (gSC1PGameBonusTomatoCount < U8_MAX))
+    {
+        gSC1PGameBonusTomatoCount++;
+    }
+}
+#endif
 
 // 0x80145D28
 // decomp ftcommonget.c:128-136 verbatim. A heavy item is dropped rather than
