@@ -105,8 +105,12 @@ void ndsKirbyHatPrepareMatch(void)
 #if NDS_P2_KIRBY
     if (ndsKirbyHatCountKirbys() != 0u)
     {
-        u32 with_low = ((gSCManagerBattleState->pl_count +
-                         gSCManagerBattleState->cp_count) >= 3) ? 1u : 0u;
+        /* Every VS battle draws its fighters' low detail (owner 2026-10-01,
+         * ndsFTManagerBattleLowDetail), not only one of three or four as the
+         * source picks, so the hats load in the low detail in every match:
+         * admitted high only, a Remix hat left a Kirby holding its power
+         * undrawn in a match of one or two (owner, play-1012y). */
+        u32 with_low = 1u;
 
         u32 p4 = 0u;
 

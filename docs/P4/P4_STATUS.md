@@ -2167,6 +2167,48 @@ outlasts the charge (21 levels, one per 9 frames, ~550 ticks), so the loop
 the N64 would run is never reached. play-1013c, Roy holding down-B: the cue
 starts at each DSP_WAIT entry on a live channel, no unsupported calls.
 
+## The 1012y playtest (owner, 2026-10-12)
+
+Two consoles, play-1012y; the multiplayer side is in
+`docs/P3_Multiplayer/P3_STATUS.md` ("Third report set").
+
+- **"Kirby hats for extra and remix characters make Kirby invisible."** Every
+  VS battle draws low detail (owner 2026-10-01, `ndsFTManagerBattleLowDetail`),
+  but the hat admission kept the source's rule -- low detail only for three or
+  four fighters -- so in a match of one or two a power's Remix hats were
+  admitted in high detail only, Kirby drew low, and the owner validator
+  refused his head root (reject code 4: root 0 at 0x8F18, the Remix hat's
+  list, where the program without a hat expects 0x27B0), every frame.
+  `ndsKirbyHatPrepareMatch` admits the low detail in every VS battle, and a
+  Kirby holding a content's power stays low in any VS battle's close-ups
+  (`ftParamSetModelPartDetailAll`). Probe (play-1013e, Kirby taking Bowser's
+  power in a match of two): the four Remix hats admitted low, 0 declines over
+  300 frames of the power, Kirby drawn with the hat.
+- **A data abort with Kirby holding Lanky's power** (found while probing the
+  above; the frozen-console class the owner reports). Remix's own ids for its
+  Mario clones are not Mario's, so the source's shared fireball routines set
+  Luigi's copy statuses for them (`FTKIRBY_COPYMARIO_FIREBALL_CHECK_FTKIND`)
+  and Remix's clone swaps name 0xE9/0xEA; the DS Kirby takes the content's
+  parent kind, Mario, whose statuses (0xE7/0xE8) no swap matched. Landing from
+  the air neutral special therefore entered Mario's copy status, whose
+  accessory made Mario's fireball from `gFTMarioFileMain` -- never loaded in a
+  match whose only Mario-kind fighter is a content -- and faulted on NULL in
+  `wpManagerMakeWeapon`. `p4_kirby.py` maps those swaps onto Mario's statuses
+  for a Mario-parent content (Lanky, Mad Piano: Piano's Kirby book throw now
+  plays its own animation too), and `wpManagerMakeWeapon` makes no weapon
+  from a file the match never loaded (`gNdsWeaponFileMissingCount`). Probe
+  (play-1013e, the same four-fighter run that faulted at frame 346): Kirby in
+  Lanky's statuses, no fault, 1,500 frames.
+- **"Sometimes Luigi's nose changes to his hat color especially during
+  results screen."** Luigi's HIGH head reads one costume script per MObj (six)
+  from an array relocData declares with one entry (0x2C40): the source reads
+  the next arrays' words for MObjs 1-5. The battle core pack copies objects by
+  their declared size, so his nose and the skin MObjs beside it took other
+  joints' scripts -- the hat's green -- wherever the high detail draws
+  (Results, every KO or pause close-up). `generate_battle_core_packs.py` keeps
+  each joint's costume array out to its MObj count, with the scripts it names;
+  only Luigi's pack changes (+112 B).
+
 ## Board 1 status (master plan Revision 3)
 
 | Item | State |

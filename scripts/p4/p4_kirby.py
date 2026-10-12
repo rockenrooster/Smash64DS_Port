@@ -48,6 +48,14 @@ import generate_p4_fighter as G  # noqa: E402
 
 VANILLA_SPECIAL_COUNT = 83        # Kirby's specials 0xDC..0x12E
 STATUS_FIRST = 0xDC + VANILLA_SPECIAL_COUNT
+# The fireball copy's routines pick Mario's statuses for a Mario copy id and
+# Luigi's for any other (ftkirbycopymariospecialn.c
+# FTKIRBY_COPYMARIO_FIREBALL_CHECK_FTKIND). Remix's own ids for its Mario
+# clones are not Mario's, so its swaps name Luigi's statuses (0xE9/0xEA); the
+# DS Kirby takes the content's parent kind, Mario, and the same routines set
+# Mario's (0xE7/0xE8).
+MARIO_KIND = 0
+LUIGI_TO_MARIO_COPY_STATUS = {0xE9: 0xE7, 0xEA: 0xE8}
 VANILLA_MOTION_COUNT = 276        # dFTKirbyData.mainmotion_array_count
 KIRBY_MOTION_FILE = 0xE4
 # The script file: above every content's synthesized motion file
@@ -425,6 +433,8 @@ def main() -> int:
         for base, clone in swaps.get(registry[c]["remix"], ()):
             if clone not in status_map:
                 raise KirbyError(f"{c}: clone swap {base:#x} -> {clone:#x} is not a power status")
+            if parent_id == MARIO_KIND:
+                base = LUIGI_TO_MARIO_COPY_STATUS.get(base, base)
             clone_rows.append((base, status_map[clone]))
         powers.append({"content": c, "id": registry[c]["id"], "hat": hat_id, "hat_base": hat_base,
                        "hat_mask": hat_mask, "hats": remix_hats,

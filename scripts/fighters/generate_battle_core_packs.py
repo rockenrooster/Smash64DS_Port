@@ -379,6 +379,66 @@ def _structural_model_closure(fighter: str, model_id: int, meta: dict,
     keep_dispatch(roots["high_apost"], "HIGH matanim")
     keep_dispatch(roots["low_apost"], "LOW matanim")
 
+    # A joint's costume matanim array is read once per MObj of that joint
+    # (lbCommonAddMObjForFighterPartsDObj advances it beside the joint's
+    # NULL-terminated MObjSub list), whatever size relocData declares for it.
+    # Luigi's HIGH head (joint 8) declares one entry at 0x2C40 and its other
+    # five MObjs read the words after it (0x2C44.., the next joints' arrays);
+    # packed by declared size, its hat-side and nose MObjs took other joints'
+    # scripts and drew the hat's green on the nose (owner, play-1012y Results
+    # and every high-detail close-up). Keep each array's source extent to its
+    # joint's MObj count, with the owners of those words and what they name.
+    def keep_matanim_extents(mobj_root: int, apost_root: int, label: str) -> None:
+        for joint in range(dispatch_count):
+            mobj_target = pointer_map.get(mobj_root + 4 * joint)
+            apost_target = pointer_map.get(apost_root + 4 * joint)
+            if (mobj_target is None) or (apost_target is None):
+                continue
+            if (mobj_target[0] != model_id) or (apost_target[0] != model_id):
+                raise BattlePackError(
+                    "%s %s joint %d dispatch escapes Model" %
+                    (fighter, label, joint))
+            count = 0
+            cursor = mobj_target[1]
+            while (cursor + 4 <= len(payload)) and \
+                    (int.from_bytes(payload[cursor:cursor + 4], "big") != 0):
+                count += 1
+                cursor += 4
+            start = apost_target[1]
+            end = start + 4 * count
+            if end > len(payload):
+                raise BattlePackError(
+                    "%s %s joint %d array 0x%x..0x%x escapes Model" %
+                    (fighter, label, joint, start, end))
+            for slot in range(start, end, 4):
+                row = _owner(pf.objects, slot)
+                if (row is None) or _is_geometry(row):
+                    raise BattlePackError(
+                        "%s %s joint %d slot 0x%x is not a pointer row" %
+                        (fighter, label, joint, slot))
+                queue.append(row)
+                target = pointer_map.get(slot)
+                if target is None:
+                    if int.from_bytes(payload[slot:slot + 4], "big") != 0:
+                        raise BattlePackError(
+                            "%s %s joint %d slot 0x%x is non-NULL without a "
+                            "local reloc pointer" % (fighter, label, joint, slot))
+                    continue
+                target_row = _owner(pf.objects, target[1])
+                if (target[0] != model_id) or (target_row is None) or \
+                        _is_geometry(target_row):
+                    raise BattlePackError(
+                        "%s %s joint %d slot 0x%x names no script row" %
+                        (fighter, label, joint, slot))
+                queue.append(target_row)
+            if end > start:
+                forced_spans.append((start, end))
+
+    payload = pf.source["payload"]
+    pointer_map = pf.source["pointers"]
+    keep_matanim_extents(0, roots["high_apost"], "HIGH matanim")
+    keep_matanim_extents(roots["low_mobj"], roots["low_apost"], "LOW matanim")
+
     # Some fighter-owned weapon/article attributes point at a runtime handle
     # CELL in Model rather than directly at the logical table.  BattleShip
     # then advances through that cell and the adjacent pointer cells as one C

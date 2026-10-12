@@ -7172,10 +7172,12 @@ void ftParamSetModelPartDetailAll(GObj *fighter_gobj, u8 detail)
         detail = nFTPartsDetailLow;
     }
 #if NDS_P2_KIRBY
-    /* S8: so does a Kirby holding a content's power: the match admits his
-     * Remix hats in the low detail only there (nds_kirby_hat_residency.c). */
+    /* S8: so does a Kirby holding a content's power, in any VS battle: the
+     * match admits his Remix hats in the low detail only
+     * (nds_kirby_hat_residency.c), whatever its fighter count. */
     if ((fp != NULL) && (fp->fkind == nFTKindKirby) && (fp->nds_p4_kirby_copy != 0u) &&
-        (detail == nFTPartsDetailHigh) && (ndsP4LowDetailBattle() != FALSE))
+        (detail == nFTPartsDetailHigh) &&
+        (gSCManagerSceneData.scene_curr == nSCKindVSBattle))
     {
         detail = nFTPartsDetailLow;
     }

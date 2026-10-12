@@ -456,6 +456,8 @@ void wpProcessProcHitCollisions(GObj *weapon_gobj)
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpdisplay.c"
 
 __attribute__((used)) volatile u32 gNdsWeaponPoolRefusalCount;
+/* Weapons not made because their file was never loaded (wpManagerMakeWeapon). */
+__attribute__((used)) volatile u32 gNdsWeaponFileMissingCount;
 __attribute__((used)) volatile u32 gNdsWeaponPoolLiveHighWater;
 static u32 sNdsWeaponPoolLiveCount;
 #if NDS_P2_YOSHI_BUG_PROOF
@@ -520,6 +522,16 @@ GObj *wpManagerMakeWeapon(GObj *parent_gobj, WPDesc *wp_desc, Vec3f *spawn_pos,
     void *weapon_data;
     s32 unused[7];
 
+    /* A file the match never loaded makes no weapon: on the N64 every
+     * fighter a Kirby can copy brings its files, while a P4 match loads a
+     * content's own instead of its parent's, so a copy routine that still
+     * reads the parent's (Mario's fireball for a power without its own)
+     * would fault on NULL here. Counted; the source cannot reach it. */
+    if ((wp_desc->p_weapon == NULL) || (*wp_desc->p_weapon == NULL))
+    {
+        gNdsWeaponFileMissingCount++;
+        return NULL;
+    }
     wp = wpManagerGetNextStructAlloc();
 
     if (wp == NULL)
