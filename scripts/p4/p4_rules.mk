@@ -122,3 +122,6 @@ $(NITROFS_DIR)/p4/entry_texels.bin $(NITROFS_DIR)/p4/entry_corners.bin: $(NITROF
 	@mkdir -p $(dir $@)
 	@cp -f $(NDS_P4_GEN)/nds_p4_entry_$*.bin $@
 $(OUTPUT).nds: $(NITROFS_DIR)/p4/entry_texels.bin $(NITROFS_DIR)/p4/entry_corners.bin
+# The select's preview code places its fighters by the P4 screen's panel
+# offset (p4_css.py writes nds_p4_css_screen.generated.h with the tables).
+battleship_mnplayersvs.o: $(NDS_P4_CSS_DIR)/nds_p4_css.generated.inc

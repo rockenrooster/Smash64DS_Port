@@ -1285,7 +1285,7 @@ low-water 17,608, as before. That four-content match does not fit the
 shipping heap: it runs out making the damage interface at battle start
 ("S15 P4 memory"; the lab ends it with 10.8 KB).
 
-## Select costumes and the default time (owner, 2026-10-11)
+## Select screen layout, costumes and the default time (owner, 2026-10-11)
 
 Peach's first select preview showed Remix's Daisy colours. A content's slot
 keeps its parent's fkind, so the source's same-fighter tests in the VS
@@ -1301,6 +1301,18 @@ Peach gets 0 and 1 (pink, Daisy), Peach beside Fox, Falco and Wolf 0.
 
 The shipping preset's match is Time, three minutes (was one); the VS menu
 starts from it.
+
+The select's screen uses its room (owner: "lots of extra room"): the grid
+spans the width, eleven 29-unit cells from x 0 with portraits at 15/16
+(Remix's was 24-unit cells at 0.8125, 264 units wide); the mode label and
+BACK move 18 units up to the top edge; the four player panels, everything
+on them and the 3D previews move 22 units down, so the card ends at the
+bottom edge; PRESS START, which sat under the panels, moves into the band
+between the grid and the panels (`p4_css.py` SCREEN, read by the UI kit
+bake, `nds_menu_shell_css.c` -- hit boxes, cursor bounds, token home --
+and the preview roots in battleship_mnplayersvs.c). The original-cast and
+1P selects keep the source layout. Play ROM play-1011x2: four previews,
+0 failures.
 
 ## Memory: mirrors, the event32 ledger, article data (2026-10-11)
 

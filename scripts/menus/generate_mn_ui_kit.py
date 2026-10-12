@@ -75,6 +75,11 @@ if os.environ.get("NDS_P4_CSS"):
 # Offsets of the donor sprites the P4 placements name, merged into the reloc
 # offset table in main().
 P4_OFFSETS: dict[str, int] = {}
+# The P4 VS select's screen (scripts/p4/p4_css.py SCREEN): the mode label and
+# BACK move to the top edge and the four player panels to the bottom edge, in
+# source units; 0 in a vanilla bake.
+CSS_HEADER_DY = P4_CSS["screen"]["header_dy"] if P4_CSS is not None else 0
+CSS_PANEL_DY = P4_CSS["screen"]["panel_dy"] if P4_CSS is not None else 0
 
 
 # The tokens shrink with the portraits on the P4 grid (CharacterSelect.asm
@@ -2909,7 +2914,7 @@ for _fkind, _portrait, _token in CSS_LOCKED_CELLS:
 # door art.  The box is the union -- the card's own x span (66) and the doors'
 # own y span (92) -- and `convert_surface` refuses any placement that escapes
 # it.
-CSS_GATE_BOX = (22, 126, 66, 92)
+CSS_GATE_BOX = (22, 126 + CSS_PANEL_DY, 66, 92)
 CSS_EMBLEM_SYMBOL = ("llFTEmblemSpritesMarioSprite",
                      "llFTEmblemSpritesFoxSprite",
                      # mnPlayersVSMakeNameAndEmblem indexes Luigi (fkind 4)
@@ -2983,27 +2988,27 @@ def css_gate(player: int, state: str, lut: str, shut: bool,
     start = player * 69
     lut_player = (player + 1) if gate_color is None else (gate_color + 1)
     parts = [Placement("MNPlayersCommon", "llMNPlayersCommonRedCardSprite",
-                       start + 22, 126, False,
+                       start + 22, 126 + CSS_PANEL_DY, False,
                        lut_symbol="llMNPlayersCommon" + (lut % lut_player))]
     if shut:
         parts.append(Placement("MNPlayersCommon",
                                "llMNPlayersCommonSmashLogoCardLeftSprite",
-                               start + 22, 126, False))
+                               start + 22, 126 + CSS_PANEL_DY, False))
         parts.append(Placement("MNPlayersCommon",
                                "llMNPlayersCommonSmashLogoCardRightSprite",
-                               start + 47, 126, False))
+                               start + 47, 126 + CSS_PANEL_DY, False))
     if fighter is not None:
         emblem = CSS_EMBLEM_SYMBOL[fighter]
         if not isinstance(emblem, tuple):
             emblem = ("FTEmblemSprites", emblem)
         parts.append(Placement(emblem[0], emblem[1],
-                               start + 24, 143, False, tint))
+                               start + 24, 143 + CSS_PANEL_DY, False, tint))
         if with_name:
             name = CSS_NAME_SYMBOL[fighter]
             if not isinstance(name, tuple):
                 name = ("MNPlayersCommon", name)
             parts.append(Placement(name[0], name[1],
-                                    start + 22, 201, False,
+                                    start + 22, 201 + CSS_PANEL_DY, False,
                                     trim_clear=name[0].startswith("p4:")))
     if team_label is not None:
         # mnPlayersVSMakeTeamSelect, mnplayersvs.c:487: RED/BLUE/GREEN is a
@@ -3011,7 +3016,7 @@ def css_gate(player: int, state: str, lut: str, shut: bool,
         # folded into the panel surface instead of consuming scarce main OBJ
         # VRAM; changing team already re-blits this same panel in the source.
         parts.append(Placement("MNPlayersCommon", team_label,
-                               start + 34, 131, False))
+                               start + 34, 131 + CSS_PANEL_DY, False))
     box = (start + CSS_GATE_BOX[0], CSS_GATE_BOX[1],
            CSS_GATE_BOX[2], CSS_GATE_BOX[3])
     return SurfaceSpec(f"{token_prefix}_{player}_{state}", tuple(parts), None,
@@ -3053,7 +3058,7 @@ for _team_name, _gate_color, _team_label in CSS_TEAM_GATE:
         SURFACE_SOURCES.append(SurfaceSpec(
             f"CSS_TEAM_SELECT_{_team_name}_{_player}",
             (Placement("MNPlayersCommon", _team_label,
-                       (_player * 69) + 34, 131, False),),
+                       (_player * 69) + 34, 131 + CSS_PANEL_DY, False),),
             None))
 
 # P2-1N (owner round 7, 2026-08-19). Three formerly font-composed elements
@@ -3160,28 +3165,28 @@ AUDIT_TOKEN_SYMBOLS = {
 # (4) FREE FOR ALL / TEAM BATTLE: `mnPlayersVSMakeLabels` draws the mode
 # label at (27,24); the toggle handler tints FFA E3/AC/04 and Team Battle
 # 61/AD/49 and swaps the sprite. Two states, same box.
-CSS_MODE_BOX = (27, 24, 150, 22)
+CSS_MODE_BOX = (27, 24 + CSS_HEADER_DY, 150, 22)
 SURFACE_SOURCES.append(SurfaceSpec(
     "CSS_MODE_FFA",
     (Placement("MNPlayersGameModes",
                "llMNPlayersGameModesFreeForAllTextSprite",
-               27, 24, False, (0xE3, 0xAC, 0x04)),),
+               27, 24 + CSS_HEADER_DY, False, (0xE3, 0xAC, 0x04)),),
     None, under=css_screen_parts(), box=CSS_MODE_BOX))
 SURFACE_SOURCES.append(SurfaceSpec(
     "CSS_MODE_TEAM",
     (Placement("MNPlayersGameModes",
                "llMNPlayersGameModesTeamBattleTextSprite",
-               27, 24, False, (0x61, 0xAD, 0x49)),),
+               27, 24 + CSS_HEADER_DY, False, (0x61, 0xAD, 0x49)),),
     None, under=css_screen_parts(), box=CSS_MODE_BOX))
 
 # (2) BACK: `llMNPlayersCommonBackButtonSprite` at (244,23) — static, so it
 # joins the CSS base rather than being a state. The old font composition of
 # "BACK" leaves the shell with this landing.
-CSS_BACK_BOX = (244, 23, 50, 24)
+CSS_BACK_BOX = (244, 23 + CSS_HEADER_DY, 50, 24)
 SURFACE_SOURCES.append(SurfaceSpec(
     "CSS_BACK",
     (Placement("MNPlayersCommon", "llMNPlayersCommonBackButtonSprite",
-               244, 23, False),),
+               244, 23 + CSS_HEADER_DY, False),),
     None, under=css_screen_parts(), box=CSS_BACK_BOX))
 
 # (3) The slot doors, for the shutter slide (`mnPlayersVSShutterProcUpdate`:

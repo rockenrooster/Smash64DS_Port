@@ -25,6 +25,9 @@
 #include <nds/nds_startup.h>
 #include <nds/nds_p4.h>
 #include <nds/nds_p4_native.h>
+#if NDS_P4
+#include "nds_p4_css_screen.generated.h"
+#endif
 #include <sc/scene.h>
 #include <sys/controller.h>
 #include <sys/obj.h>
@@ -2763,6 +2766,11 @@ static void ndsMNPlayersVSPreviewApplyOuterSlotInset(u32 slot,
     }
     root->translate.vec.f.x = x;
 #if NDS_P4
+    /* The P4 screen moves the panels NDS_P4_CSS_PANEL_DY source units down
+     * (p4_css.py SCREEN); the source root sits at y -850, and the viewport
+     * above maps 840 world units to 80 source units. */
+    root->translate.vec.f.y =
+        -850.0F - ((f32)NDS_P4_CSS_PANEL_DY * (840.0F / 80.0F));
     /* Remix's menu_zoom row stands in for dSCSubsysFighterScales
      * (Character.asm menu_zoom_patches, mnPlayersVSMakeFighter). */
     {
