@@ -76,10 +76,28 @@ if os.environ.get("NDS_P4_CSS"):
 # offset table in main().
 P4_OFFSETS: dict[str, int] = {}
 # The P4 VS select's screen (scripts/p4/p4_css.py SCREEN): the mode label and
-# BACK move to the top edge and the four player panels to the bottom edge, in
-# source units; 0 in a vanilla bake.
+# BACK move to the top edge, and the four player cards scale to fill the width
+# down to the bottom edge, in source units; identity in a vanilla bake.
 CSS_HEADER_DY = P4_CSS["screen"]["header_dy"] if P4_CSS is not None else 0
-CSS_PANEL_DY = P4_CSS["screen"]["panel_dy"] if P4_CSS is not None else 0
+CSS_CARD_K = tuple(P4_CSS["screen"]["card_k"]) if P4_CSS is not None else (1, 1)
+# A card's artwork at its scale (DS pixels per texel), None at the frame's own.
+CSS_CARD_SCALE = ((4 * CSS_CARD_K[0], 5 * CSS_CARD_K[1])
+                  if P4_CSS is not None else None)
+
+
+def css_card_pos(player: int, sx: int, sy: int) -> tuple[int, int]:
+    """A source panel position (player * 69 + sx, sy) on player's card."""
+    if P4_CSS is None:
+        return (player * 69 + sx, sy)
+    screen = P4_CSS["screen"]
+    kn, kd = CSS_CARD_K
+    return (screen["card_x"] + player * screen["card_pitch"] + ((sx - 22) * kn) // kd,
+            screen["card_y"] + ((sy - 126) * kn) // kd)
+
+
+def css_card_len(v: int) -> int:
+    """A source length on a card."""
+    return (v * CSS_CARD_K[0]) // CSS_CARD_K[1]
 
 
 # The tokens shrink with the portraits on the P4 grid (CharacterSelect.asm
@@ -2914,7 +2932,7 @@ for _fkind, _portrait, _token in CSS_LOCKED_CELLS:
 # door art.  The box is the union -- the card's own x span (66) and the doors'
 # own y span (92) -- and `convert_surface` refuses any placement that escapes
 # it.
-CSS_GATE_BOX = (22, 126 + CSS_PANEL_DY, 66, 92)
+CSS_GATE_BOX = (22, 126, 66, 92)
 CSS_EMBLEM_SYMBOL = ("llFTEmblemSpritesMarioSprite",
                      "llFTEmblemSpritesFoxSprite",
                      # mnPlayersVSMakeNameAndEmblem indexes Luigi (fkind 4)
@@ -2985,40 +3003,45 @@ def css_gate(player: int, state: str, lut: str, shut: bool,
              gate_color: int | None = None,
              team_label: str | None = None,
              token_prefix: str = "CSS_GATE") -> SurfaceSpec:
-    start = player * 69
     lut_player = (player + 1) if gate_color is None else (gate_color + 1)
     parts = [Placement("MNPlayersCommon", "llMNPlayersCommonRedCardSprite",
-                       start + 22, 126 + CSS_PANEL_DY, False,
-                       lut_symbol="llMNPlayersCommon" + (lut % lut_player))]
+                       *css_card_pos(player, 22, 126), False,
+                       lut_symbol="llMNPlayersCommon" + (lut % lut_player),
+                       scale=CSS_CARD_SCALE)]
     if shut:
         parts.append(Placement("MNPlayersCommon",
                                "llMNPlayersCommonSmashLogoCardLeftSprite",
-                               start + 22, 126 + CSS_PANEL_DY, False))
+                               *css_card_pos(player, 22, 126), False,
+                               scale=CSS_CARD_SCALE))
         parts.append(Placement("MNPlayersCommon",
                                "llMNPlayersCommonSmashLogoCardRightSprite",
-                               start + 47, 126 + CSS_PANEL_DY, False))
+                               *css_card_pos(player, 47, 126), False,
+                               scale=CSS_CARD_SCALE))
     if fighter is not None:
         emblem = CSS_EMBLEM_SYMBOL[fighter]
         if not isinstance(emblem, tuple):
             emblem = ("FTEmblemSprites", emblem)
         parts.append(Placement(emblem[0], emblem[1],
-                               start + 24, 143 + CSS_PANEL_DY, False, tint))
+                               *css_card_pos(player, 24, 143), False, tint,
+                               scale=CSS_CARD_SCALE))
         if with_name:
             name = CSS_NAME_SYMBOL[fighter]
             if not isinstance(name, tuple):
                 name = ("MNPlayersCommon", name)
             parts.append(Placement(name[0], name[1],
-                                    start + 22, 201 + CSS_PANEL_DY, False,
-                                    trim_clear=name[0].startswith("p4:")))
+                                    *css_card_pos(player, 22, 201), False,
+                                    trim_clear=name[0].startswith("p4:"),
+                                    scale=CSS_CARD_SCALE))
     if team_label is not None:
         # mnPlayersVSMakeTeamSelect, mnplayersvs.c:487: RED/BLUE/GREEN is a
         # 24x10 source sprite at (player*69+34, 131), above the card.  It is
         # folded into the panel surface instead of consuming scarce main OBJ
         # VRAM; changing team already re-blits this same panel in the source.
         parts.append(Placement("MNPlayersCommon", team_label,
-                               start + 34, 131 + CSS_PANEL_DY, False))
-    box = (start + CSS_GATE_BOX[0], CSS_GATE_BOX[1],
-           CSS_GATE_BOX[2], CSS_GATE_BOX[3])
+                               *css_card_pos(player, 34, 131), False,
+                               scale=CSS_CARD_SCALE))
+    box = (*css_card_pos(player, CSS_GATE_BOX[0], CSS_GATE_BOX[1]),
+           css_card_len(CSS_GATE_BOX[2]), css_card_len(CSS_GATE_BOX[3]))
     return SurfaceSpec(f"{token_prefix}_{player}_{state}", tuple(parts), None,
                        under=css_screen_parts(), box=box)
 
@@ -3058,7 +3081,8 @@ for _team_name, _gate_color, _team_label in CSS_TEAM_GATE:
         SURFACE_SOURCES.append(SurfaceSpec(
             f"CSS_TEAM_SELECT_{_team_name}_{_player}",
             (Placement("MNPlayersCommon", _team_label,
-                       (_player * 69) + 34, 131 + CSS_PANEL_DY, False),),
+                       *css_card_pos(_player, 34, 131), False,
+                       scale=CSS_CARD_SCALE),),
             None))
 
 # P2-1N (owner round 7, 2026-08-19). Three formerly font-composed elements
@@ -3204,9 +3228,9 @@ SURFACE_SOURCES.append(SurfaceSpec(
 SURFACE_SOURCES.append(SurfaceSpec(
     "CSS_DOORS",
     (Placement("MNPlayersCommon", "llMNPlayersCommonSmashLogoCardLeftSprite",
-               0, 0, False),
+               0, 0, False, scale=CSS_CARD_SCALE),
      Placement("MNPlayersCommon", "llMNPlayersCommonSmashLogoCardRightSprite",
-               41, 0, False)),
+               css_card_len(41), 0, False, scale=CSS_CARD_SCALE)),
     None, cacheable=True))
 
 

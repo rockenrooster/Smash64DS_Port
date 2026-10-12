@@ -1598,9 +1598,8 @@ void gcPlayDObjAnimJoint(DObj *dobj)
  * (builds/resume-20260905/agents-0906/event32_prenormalize.final.md). */
 /* 4,096 read a high-water of 4,035 on the very next Zebes probe (zebes-z1,
  * shell path plus the stage), 61 entries from the cliff; 5,120 keeps the
- * 8,192-slot index and a real margin. At 5 B per entry (pointer plus
- * signature, see sNdsAObjEvent32NormalizedSig) the ledger is 25,600 B plus
- * the 16,384 B index. */
+ * 8,192-slot index and a real margin. At 4 B per entry (a key, see
+ * sNdsAObjEvent32Keys) the ledger is 20,480 B. */
 #define NDS_AOBJ_EVENT32_NORMALIZED_MAX 5120u
 #define NDS_AOBJ_EVENT32_BONUS2_FOX_LIMIT 7168u
 /* ONE SCRIPT'S COMMAND PLAN LIVES IN THE LEDGER'S OWN FREE TAIL (2026-10-02).
@@ -1615,9 +1614,9 @@ void gcPlayDObjAnimJoint(DObj *dobj)
  * frame 0) stayed at its DObjDesc pose, so Fox fell to a FAILURE 0.9 s after
  * GO with no input. A plan entry is a command pointer; the source word is
  * still in place until commit and the native word is computed from it. So the
- * plan is written straight into sNdsAObjEvent32Normalized[Count..Count+Plan),
- * above the committed entries and outside the hash index, and committing an
- * entry is indexing the slot it already occupies. Any script that fits the
+ * plan is written straight into sNdsAObjEvent32Keys[Count..Count+Plan),
+ * above the committed keys, and committing turns each pointer into its key
+ * and merges them (ndsAObjEvent32CommitKeys). Any script that fits the
  * ledger now plans, and the 7,680 B of static RAM the array took is free. */
 #define NDS_AOBJ_EVENT32_BRANCH_DEPTH_MAX 16u
 
@@ -1645,28 +1644,43 @@ typedef struct NDSAObjEvent32PlanSegment
     u32 plan_end;
 } NDSAObjEvent32PlanSegment;
 
-/* The source command corpus is stage-dependent, but the old fixed BSS paid the
+/* THE LEDGER IS ONE SORTED ARRAY OF KEYS (P4, 2026-10-11).
+ *
+ * A key is a command's word index in main RAM shifted up a byte, with the
+ * one-byte signature of the native word the commit wrote below it
+ * (ndsAObjEvent32WordSig), so the array sorts by address. "Was this command
+ * normalized" is a binary search, and a retired buffer's commands are one
+ * contiguous run of keys, removed with one memmove. The ledger it replaces
+ * held a pointer and a signature byte per command (5 B) and an
+ * open-addressed index over a power of two above the limit (another ~2.8 B
+ * a command): four P4 contents' allowances made a 5,851-entry, 45,640 B
+ * ledger in a match whose heap ended at 7.3 KB; their keys are 23,404 B. The
+ * holes, tombstones and per-page counts that index needed (4 KiB of bss) are
+ * gone with it. A command outside main RAM has no key and is refused
+ * (reason 15); every loaded file is in main RAM.
+ *
+ * The source command corpus is stage-dependent, but the old fixed BSS paid the
  * Planet Zebes worst case in every match. Keep 5120 as the hard/default ceiling
  * and allocate only the selected stage's proven bound from the scene taskman
  * heap. The allocation dies with that heap; ResetNormalizedScripts therefore
- * discards these pointers instead of touching storage after a scene rewind. */
-static NDSAObjEvent32Normalized *sNdsAObjEvent32Normalized;
-/* One byte of the committed native word per entry. The word itself is
- * committed in place (Plan commit below), so the ledger only has to answer
- * "was this pointer normalized" and re-check that the word it committed is
- * still there. The byte is a multiplicative hash, NOT an XOR fold: source
- * and native layouts are bit permutations of the same 32 bits, so an XOR
- * fold agreed for every flags-only End word (a one-byte rotation) and missed
- * one random word in 128 (review, 2026-09-07); the multiply mixes across
- * byte lanes and misses about one in 256. That is what the reason-3 witness
- * needs, at 5,120 B where the full word cost 20,480 B (2026-09-07 shell-loop
- * floor: 19,220 B free against the 32,768 B minimum after the 5,120-entry
- * raise). */
-static u8 *sNdsAObjEvent32NormalizedSig;
+ * discards the keys instead of touching storage after a scene rewind. */
+#define NDS_AOBJ_EVENT32_RAM_BASE 0x02000000u
+#define NDS_AOBJ_EVENT32_RAM_END 0x02400000u
+/* The largest limit: a key's index stays a u32, but the VS bound is kept
+ * where the old index (8,192 slots) kept it. */
+#define NDS_AOBJ_EVENT32_LIMIT_MAX 8191u
+_Static_assert(NDS_AOBJ_EVENT32_NORMALIZED_MAX < NDS_AOBJ_EVENT32_LIMIT_MAX,
+               "AObj event-32 default limit must fit the bound");
+static u32 *sNdsAObjEvent32Keys;
 static NDSAObjEvent32PlanSegment
     sNdsAObjEvent32PlanSegments[NDS_AOBJ_EVENT32_BRANCH_DEPTH_MAX + 1u];
 static u32 sNdsAObjEvent32PlanSegmentCount;
 
+/* The multiplicative hash's top byte, NOT an XOR fold: source and native
+ * layouts are bit permutations of the same 32 bits, so an XOR fold agreed for
+ * every flags-only End word (a one-byte rotation) and missed one random word
+ * in 128 (review, 2026-09-07); the multiply mixes across byte lanes and misses
+ * about one in 256. That is what the reason-3 witness needs. */
 static inline u8 ndsAObjEvent32WordSig(u32 word)
 {
     return (u8)((word * 0x9E3779B1u) >> 24);
@@ -1674,11 +1688,19 @@ static inline u8 ndsAObjEvent32WordSig(u32 word)
 static u32 sNdsAObjEvent32NormalizedCount;
 static u32 sNdsAObjEvent32PlanCount;
 
-/* Plan entry i (see the plan note above NDS_AOBJ_EVENT32_BRANCH_DEPTH_MAX). */
+/* A main-RAM command's key with signature `sig`. */
+static inline u32 ndsAObjEvent32Key(const AObjEvent32 *command, u32 sig)
+{
+    return ((((u32)(uintptr_t)command - NDS_AOBJ_EVENT32_RAM_BASE) >> 2) << 8) |
+           (sig & 0xffu);
+}
+
+/* Plan entry i (see the plan note above NDS_AOBJ_EVENT32_BRANCH_DEPTH_MAX): a
+ * raw command pointer in the keys' free tail. */
 static inline AObjEvent32 *ndsAObjEvent32PlanCommand(u32 i)
 {
-    return sNdsAObjEvent32Normalized[sNdsAObjEvent32NormalizedCount + i]
-        .command;
+    return (AObjEvent32 *)(uintptr_t)
+        sNdsAObjEvent32Keys[sNdsAObjEvent32NormalizedCount + i];
 }
 
 /* objdef.h:272-281 source word to the ARM GCC bitfield layout. */
@@ -1688,189 +1710,35 @@ static inline u32 ndsAObjEvent32NativeWord(u32 source_word)
            (((source_word >> 15) & 0x03ffu) << 7) |
            ((source_word & 0x7fffu) << 17);
 }
-/* 32 - log2(hash slots): ndsAObjEvent32HashSlot's multiplicative form. */
-static u32 sNdsAObjEvent32NormalizedHashShift = 32u;
-
-/* AN INDEX OVER THE LEDGER ABOVE -- not a second cache, and the distinction is
- * the whole of its safety argument.
- *
- * ndsAObjEvent32FindNormalized was a linear scan of sNdsAObjEvent32Normalized,
- * and after the 2026-08-13 shield anim-joint fix (607d3697455) the shield's
- * install path calls it once per attached joint: 1,344 times a minute on the
- * gate arm, 9,154 in a five-minute match, each one a hit near the far end of a
- * table that reaches 1,177 entries in a minute and 1,598 in five. That scan is
- * ~88% of the 5,123 ticks each attach costs (the fix's whole price, isolated by
- * the one-variable five-minute pair in
- * artifacts/performance/2026-08-13_c-animjoint-fix/, re-derived per attach in
- * ../2026-08-13_c-ledger-index/LEDGER_INDEX.md).
- *
- * SwitchPlan 3.12 bans keying anything on a pointer that survives a scene
- * boundary. This does not introduce such a key: the LEDGER is already keyed on
- * the command pointer, and this array holds nothing but positions inside it.
- * Same array, same contents, same single reset seam
- * (ndsAObjEvent32ResetNormalizedScripts, from ndsRelocResetLoadedFiles). There
- * is no new lifetime to get wrong, no invalidation to forget, and no state that
- * can disagree with the ledger -- which is exactly what the five 3.12 incidents
- * did have. The ledger's own `script->u == native_word` re-check is untouched.
- *
- * Exactness: the ledger's keys are unique. ndsAObjEvent32PlanStream returns as
- * soon as it reaches an already-normalized command and ndsAObjEvent32FindPlanned
- * blocks duplicates inside one plan, so no command is ever appended twice. With
- * unique keys an open-addressed probe returns the same index the scan returned,
- * bit for bit. NDS_AOBJ_EVENT32_HASH_ORACLE proves that rather than asserting it.
- *
- * Slots hold index+1 so that freshly allocated, zeroed hash storage reads as
- * EMPTY. That is not a style choice: with a 0xffff sentinel an uninitialized
- * table would look occupied and a probe could never terminate -- 3.11's freeze
- * class, in the one subsystem whose failure mode is already a freeze. */
-#define NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS 8192u
-
-_Static_assert((NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS &
-                (NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS - 1u)) == 0u,
-               "AObj event-32 ledger index must be a power of two");
-_Static_assert(NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS >
-               NDS_AOBJ_EVENT32_NORMALIZED_MAX,
-               "AObj event-32 ledger index must keep a free slot per entry");
-_Static_assert(NDS_AOBJ_EVENT32_NORMALIZED_MAX < 0xffffu,
-               "AObj event-32 ledger index stores index+1 in a u16");
-
-static u16
-    *sNdsAObjEvent32NormalizedHash;
 static u32 sNdsAObjEvent32NormalizedLimit;
-static u32 sNdsAObjEvent32NormalizedHashSlots;
 static u32 sNdsEvent32InterpDescFixedCount;
-
-/* A RANGE FORGET THAT LEAVES HOLES (P2-2p8, 2026-09-30).
- *
- * ForgetRange compacted the ledger in order and rebuilt the whole index
- * (8,192 slots cleared, every entry re-hashed) whenever it removed anything:
- * ~150-200K ticks for a retired file's few hundred commands, about four times
- * a match, landing on whichever load reuses the heap (a 1.5M Dream Land frame,
- * Samus's second entry clip). Removing entries one by one with linear
- * probing's backward-shift deletion was slower still (the index is dense
- * around a file's addresses). Now a removed entry leaves a HOLE: its ledger
- * command becomes NULL and its index slot a TOMBSTONE that lookups probe past
- * and inserts reuse. Every live entry keeps its index and its slot, so every
- * lookup returns what it returned before. Holes are compacted out (with the
- * one rebuild) only when an append would not fit, and tombstones are
- * rebuilt away once they fill a quarter of the index. */
-#define NDS_AOBJ_EVENT32_TOMB 0xffffu
+/* Diagnostics the pointer ledger published; kept so probes still resolve. */
 __attribute__((used)) volatile u32 gNdsAObjEvent32ForgetHoleRemovals;
 __attribute__((used)) volatile u32 gNdsAObjEvent32ForgetHoleRebuilds;
 __attribute__((used)) volatile u32 gNdsAObjEvent32LedgerCompactions;
-static u32 sNdsAObjEvent32Holes;
-static u32 sNdsAObjEvent32Tombs;
-
-/* Ledger entries per 4 KiB page of main RAM. ForgetRange runs at every fighter
- * motion load over a range (the figatree heap) whose AObj16 commands never
- * enter this ledger; with these counts it skips its whole-ledger scan when no
- * page of the range holds an entry. An entry outside main RAM counts in
- * Outside and disables the skip. */
-#define NDS_AOBJ_EVENT32_PAGE_SHIFT 12u
-#define NDS_AOBJ_EVENT32_RAM_BASE 0x02000000u
-#define NDS_AOBJ_EVENT32_RAM_END 0x02400000u
-#define NDS_AOBJ_EVENT32_PAGES     ((NDS_AOBJ_EVENT32_RAM_END - NDS_AOBJ_EVENT32_RAM_BASE) >>      NDS_AOBJ_EVENT32_PAGE_SHIFT)
-static u16 sNdsAObjEvent32PageEntries[NDS_AOBJ_EVENT32_PAGES];
-/* The 16-byte blocks of each page that can hold an entry: [lo, hi] is set by
- * the first entry after the count reaches zero and widens with each add, so it
- * bounds every live entry; a removal leaves it wide until a ForgetRange scan
- * re-derives it for the range's two edge pages. A figatree buffer starts and
- * ends inside pages shared with the files around it, so the page count alone
- * refused most skips (237 of 722 calls scanned the 1,508-entry ledger, 6 KB
- * through a 4 KB D-cache, to remove nothing). */
-#define NDS_AOBJ_EVENT32_BLOCK_SHIFT 4u
-static u8 sNdsAObjEvent32PageLo[NDS_AOBJ_EVENT32_PAGES];
-static u8 sNdsAObjEvent32PageHi[NDS_AOBJ_EVENT32_PAGES];
-static u32 sNdsAObjEvent32OutsideEntries;
 __attribute__((used)) volatile u32 gNdsAObjEvent32ForgetSkips;
 
-static void ndsAObjEvent32PageAdd(const void *command, s32 delta)
+/* The first key at or above main-RAM word index `word`. */
+static u32 ndsAObjEvent32LowerBound(u32 word)
 {
-    uintptr_t address = (uintptr_t)command;
+    const u32 *keys = sNdsAObjEvent32Keys;
+    u32 lo = 0u;
+    u32 hi = sNdsAObjEvent32NormalizedCount;
 
-    if ((address >= NDS_AOBJ_EVENT32_RAM_BASE) &&
-        (address < NDS_AOBJ_EVENT32_RAM_END))
+    while (lo < hi)
     {
-        u32 offset = (u32)(address - NDS_AOBJ_EVENT32_RAM_BASE);
-        u32 page = offset >> NDS_AOBJ_EVENT32_PAGE_SHIFT;
-        u8 block = (u8)((offset & ((1u << NDS_AOBJ_EVENT32_PAGE_SHIFT) - 1u)) >>
-                        NDS_AOBJ_EVENT32_BLOCK_SHIFT);
+        u32 mid = (lo + hi) >> 1;
 
-        if (delta > 0)
+        if ((keys[mid] >> 8) < word)
         {
-            if (sNdsAObjEvent32PageEntries[page] == 0u)
-            {
-                sNdsAObjEvent32PageLo[page] = block;
-                sNdsAObjEvent32PageHi[page] = block;
-            }
-            else if (block < sNdsAObjEvent32PageLo[page])
-            {
-                sNdsAObjEvent32PageLo[page] = block;
-            }
-            else if (block > sNdsAObjEvent32PageHi[page])
-            {
-                sNdsAObjEvent32PageHi[page] = block;
-            }
+            lo = mid + 1u;
         }
-        sNdsAObjEvent32PageEntries[page] += (u16)delta;
-    }
-    else
-    {
-        sNdsAObjEvent32OutsideEntries += (u32)delta;
-    }
-}
-
-static void ndsAObjEvent32PageReset(void)
-{
-    memset(sNdsAObjEvent32PageEntries, 0, sizeof(sNdsAObjEvent32PageEntries));
-    sNdsAObjEvent32OutsideEntries = 0u;
-}
-
-/* TRUE when no ledger entry can lie in [start, end). */
-static sb32 ndsAObjEvent32RangeHoldsNone(uintptr_t start, uintptr_t end)
-{
-    u32 page;
-    u32 last;
-    u32 first_block;
-    u32 last_block;
-
-    if ((sNdsAObjEvent32OutsideEntries != 0u) ||
-        (start < NDS_AOBJ_EVENT32_RAM_BASE) ||
-        (end > NDS_AOBJ_EVENT32_RAM_END) || (end <= start))
-    {
-        return FALSE;
-    }
-    page = (u32)((start - NDS_AOBJ_EVENT32_RAM_BASE) >>
-                 NDS_AOBJ_EVENT32_PAGE_SHIFT);
-    last = (u32)((end - 1u - NDS_AOBJ_EVENT32_RAM_BASE) >>
-                 NDS_AOBJ_EVENT32_PAGE_SHIFT);
-    /* The range's blocks inside its first and last pages; every page between
-     * is covered whole. */
-    first_block = (u32)(((start - NDS_AOBJ_EVENT32_RAM_BASE) &
-                         ((1u << NDS_AOBJ_EVENT32_PAGE_SHIFT) - 1u)) >>
-                        NDS_AOBJ_EVENT32_BLOCK_SHIFT);
-    last_block = (u32)(((end - 1u - NDS_AOBJ_EVENT32_RAM_BASE) &
-                        ((1u << NDS_AOBJ_EVENT32_PAGE_SHIFT) - 1u)) >>
-                       NDS_AOBJ_EVENT32_BLOCK_SHIFT);
-    for (; page <= last; page++)
-    {
-        if (sNdsAObjEvent32PageEntries[page] != 0u)
+        else
         {
-            u32 range_hi = (page == last) ? last_block :
-                     ((1u << (NDS_AOBJ_EVENT32_PAGE_SHIFT -
-                              NDS_AOBJ_EVENT32_BLOCK_SHIFT)) - 1u);
-
-            /* The page's entries lie in blocks [PageLo, PageHi]; the range
-             * covers blocks [first_block, range_hi] of it. */
-            if ((sNdsAObjEvent32PageHi[page] >= first_block) &&
-                (sNdsAObjEvent32PageLo[page] <= range_hi))
-            {
-                return FALSE;
-            }
+            hi = mid;
         }
-        first_block = 0u;
     }
-    return TRUE;
+    return lo;
 }
 
 /* Live capacity and its verifier-facing witness. Every new published diagnostic
@@ -2111,9 +1979,9 @@ static u32 ndsAObjEvent32RosterLimit(u32 gkind, u32 limit)
         return limit;
     }
     need += ndsAObjEvent32RosterClips(gSCManagerBattleState->players);
-    if (need > (NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS - 1u))
+    if (need > NDS_AOBJ_EVENT32_LIMIT_MAX)
     {
-        need = NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS - 1u;
+        need = NDS_AOBJ_EVENT32_LIMIT_MAX;
     }
     gNdsAObjEvent32RosterNeed = need;
     return (need > limit) ? need : limit;
@@ -2144,16 +2012,6 @@ static u32 ndsAObjEvent32ResultsLimit(void)
         need : NDS_AOBJ_EVENT32_NORMALIZED_MAX;
 }
 
-static u32 ndsAObjEvent32HashSlotsForLimit(u32 limit)
-{
-    u32 slots = 1u;
-
-    while (slots <= limit)
-    {
-        slots <<= 1;
-    }
-    return slots;
-}
 
 /* Called once from the relocation scene-prep seam, before that scene begins
  * normalizing O2R scripts. One allocation keeps the ledger, signature bytes,
@@ -2193,29 +2051,19 @@ sb32 ndsAObjEvent32ConfigureNormalizedCapacity(u32 gkind)
 {
     sb32 stage_bound;
     u32 limit = ndsAObjEvent32VSLimit(gkind, &stage_bound);
-    u32 hash_slots = ndsAObjEvent32HashSlotsForLimit(limit);
-    u32 ledger_bytes = limit * (u32)sizeof(NDSAObjEvent32Normalized);
-    u32 sig_bytes = limit * (u32)sizeof(u8);
-    u32 hash_offset = (ledger_bytes + sig_bytes + 1u) & ~1u;
-    u32 hash_bytes = hash_slots * (u32)sizeof(u16);
-    u32 alloc_bytes = hash_offset + hash_bytes;
-    u8 *storage;
+    u32 alloc_bytes = limit * (u32)sizeof(u32);
+    u32 *storage;
 
     gNdsAObjEvent32CapacityGKind = gkind;
     gNdsAObjEvent32CapacityLimit = limit;
-    gNdsAObjEvent32CapacityHashSlots = hash_slots;
+    gNdsAObjEvent32CapacityHashSlots = 0u;
     gNdsAObjEvent32CapacityBytes = alloc_bytes;
     gNdsAObjEvent32CapacityStageBoundApplied = (u32)stage_bound;
 
-    if ((limit == 0u) || (limit >= 0xffffu) ||
-        (hash_slots > NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS) ||
-        (hash_slots <= limit) || ((hash_slots & (hash_slots - 1u)) != 0u))
+    sNdsAObjEvent32Keys = NULL;
+    sNdsAObjEvent32NormalizedLimit = 0u;
+    if ((limit == 0u) || (limit > NDS_AOBJ_EVENT32_LIMIT_MAX))
     {
-        sNdsAObjEvent32Normalized = NULL;
-        sNdsAObjEvent32NormalizedSig = NULL;
-        sNdsAObjEvent32NormalizedHash = NULL;
-        sNdsAObjEvent32NormalizedLimit = 0u;
-        sNdsAObjEvent32NormalizedHashSlots = 0u;
         NDS_DIAG(gNdsAObjEvent32CapacityRefusedCount++);
         return FALSE;
     }
@@ -2228,42 +2076,19 @@ sb32 ndsAObjEvent32ConfigureNormalizedCapacity(u32 gkind)
     if (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap,
                             (size_t)alloc_bytes, 4u) == FALSE)
     {
-        sNdsAObjEvent32Normalized = NULL;
-        sNdsAObjEvent32NormalizedSig = NULL;
-        sNdsAObjEvent32NormalizedHash = NULL;
-        sNdsAObjEvent32NormalizedLimit = 0u;
-        sNdsAObjEvent32NormalizedHashSlots = 0u;
         NDS_DIAG(gNdsAObjEvent32CapacityRefusedCount++);
         return FALSE;
     }
     storage = syMallocSet(&gSYTaskmanGeneralHeap, (size_t)alloc_bytes, 4u);
     if (storage == NULL)
     {
-        sNdsAObjEvent32Normalized = NULL;
-        sNdsAObjEvent32NormalizedSig = NULL;
-        sNdsAObjEvent32NormalizedHash = NULL;
-        sNdsAObjEvent32NormalizedLimit = 0u;
-        sNdsAObjEvent32NormalizedHashSlots = 0u;
         NDS_DIAG(gNdsAObjEvent32CapacityRefusedCount++);
         return FALSE;
     }
 
-    sNdsAObjEvent32Normalized = (NDSAObjEvent32Normalized *)(void *)storage;
-    sNdsAObjEvent32NormalizedSig = storage + ledger_bytes;
-    sNdsAObjEvent32NormalizedHash = (u16 *)(void *)(storage + hash_offset);
+    sNdsAObjEvent32Keys = storage;
     sNdsAObjEvent32NormalizedLimit = limit;
-    sNdsAObjEvent32NormalizedHashSlots = hash_slots;
-    /* hash_slots is a power of two above limit >= 1, so the shift is 1..31. */
-    sNdsAObjEvent32NormalizedHashShift = 32u;
-    while ((1u << (32u - sNdsAObjEvent32NormalizedHashShift)) < hash_slots)
-    {
-        sNdsAObjEvent32NormalizedHashShift--;
-    }
-    memset(sNdsAObjEvent32NormalizedHash, 0, (size_t)hash_bytes);
     sNdsAObjEvent32NormalizedCount = 0u;
-    sNdsAObjEvent32Holes = 0u;
-    sNdsAObjEvent32Tombs = 0u;
-    ndsAObjEvent32PageReset();
     sNdsAObjEvent32PlanCount = 0u;
     sNdsAObjEvent32PlanSegmentCount = 0u;
     sNdsEvent32InterpDescFixedCount = 0u;
@@ -2310,164 +2135,82 @@ volatile u32 gNdsAObjEvent32HashOverflowCount;
 volatile u32 gNdsAObjEvent32HashOracleRuns;
 volatile u32 gNdsAObjEvent32HashOracleMismatch;
 
-/* Commands are 4-byte objects inside one loaded file, so a script's commands
- * are adjacent words. The two folds used before kept adjacent words on
- * adjacent slots, and linear probing then walked whole scripts: on the gate a
- * lookup took 12.2 probes and an insert ~37, at a load under 20% (P2-2p8,
- * 2026-09-29). The multiplicative hash takes the product's top bits, which
- * every input bit reaches. Placement only: the ledger's keys are unique, so a
- * probe returns the same index whatever the hash. */
+/* The plan's keys, written over its pointers at [Count, Count + count), join
+ * the sorted run [0, Count). The plan is sorted in place first (a plan is a
+ * few forward runs, so insertion is near linear), then merged from the top
+ * through a buffer: a small static one, or the free tail above the plan when
+ * a big plan fits there twice (stage layer scripts at load); with neither,
+ * key by key, each moving the run above its place up one. */
+#define NDS_AOBJ_EVENT32_MERGE_BUFFER 256u
+static u32 sNdsAObjEvent32MergeBuffer[NDS_AOBJ_EVENT32_MERGE_BUFFER];
 
-static u32 ndsAObjEvent32HashSlot(const AObjEvent32 *command)
+static void ndsAObjEvent32CommitKeys(u32 count)
 {
-    const u32 h = (u32)(uintptr_t)command >> 2;
-
-    return (h * 0x9E3779B1u) >> sNdsAObjEvent32NormalizedHashShift;
-}
-
-static s32 ndsAObjEvent32ScanNormalized(const AObjEvent32 *command)
-{
+    u32 *keys = sNdsAObjEvent32Keys;
+    u32 n = sNdsAObjEvent32NormalizedCount;
+    u32 *plan = keys + n;
+    u32 *buffer = NULL;
     u32 i;
 
-    for (i = 0u; i < sNdsAObjEvent32NormalizedCount; i++)
+    for (i = 1u; i < count; i++)
     {
-        if (sNdsAObjEvent32Normalized[i].command == command)
+        u32 key = plan[i];
+        u32 j = i;
+
+        while ((j > 0u) && (plan[j - 1u] > key))
         {
-            return (s32)i;
+            plan[j] = plan[j - 1u];
+            j--;
         }
+        plan[j] = key;
     }
-    return -1;
-}
-
-static void ndsAObjEvent32IndexNormalized(u32 index)
-{
-    u32 slot = ndsAObjEvent32HashSlot(sNdsAObjEvent32Normalized[index].command);
-    u32 probes;
-
-    for (probes = 0u; probes < sNdsAObjEvent32NormalizedHashSlots;
-         probes++)
+    if ((count == 0u) || (n == 0u) || (keys[n - 1u] < plan[0]))
     {
-        const u32 entry = sNdsAObjEvent32NormalizedHash[slot];
-
-        if ((entry == 0u) || (entry == NDS_AOBJ_EVENT32_TOMB))
-        {
-            if (entry == NDS_AOBJ_EVENT32_TOMB)
-            {
-                sNdsAObjEvent32Tombs--;
-            }
-            sNdsAObjEvent32NormalizedHash[slot] = (u16)(index + 1u);
-            NDS_DIAG(gNdsAObjEvent32HashInsertProbeCount += probes + 1u);
-            return;
-        }
-        slot = (slot + 1u) & (sNdsAObjEvent32NormalizedHashSlots - 1u);
-    }
-    /* Unreachable while the static assert above holds: the ledger cannot hold
-     * more entries than the index has slots. Counted rather than asserted so
-     * that if it ever does happen the lookup below degrades to the scan it
-     * replaced instead of dropping an entry. */
-    gNdsAObjEvent32HashOverflowCount++;
-}
-
-/* Rebuild the pointer index after an owning buffer is retired.  This is not a
- * normal lookup/insert operation, so deliberately do not charge the rebuild to
- * the hash engagement counters: those counters price parser work, while this is
- * relocation-lifetime maintenance at the force-load seam. */
-static void ndsAObjEvent32RebuildNormalizedIndex(void)
-{
-    u32 i;
-
-    if ((sNdsAObjEvent32NormalizedHash == NULL) ||
-        (sNdsAObjEvent32NormalizedHashSlots == 0u))
-    {
+        sNdsAObjEvent32NormalizedCount = n + count;
         return;
     }
-    for (i = 0u; i < sNdsAObjEvent32NormalizedHashSlots; i++)
+    if (count <= NDS_AOBJ_EVENT32_MERGE_BUFFER)
     {
-        sNdsAObjEvent32NormalizedHash[i] = 0u;
+        buffer = sNdsAObjEvent32MergeBuffer;
     }
-    sNdsAObjEvent32Tombs = 0u;
-    for (i = 0u; i < sNdsAObjEvent32NormalizedCount; i++)
+    else if ((sNdsAObjEvent32NormalizedLimit - n - count) >= count)
     {
-        u32 slot;
-        u32 probes;
+        buffer = plan + count;
+    }
+    if (buffer != NULL)
+    {
+        s32 a = (s32)n - 1;
+        s32 b = (s32)count - 1;
+        u32 out = n + count;
 
-        if (sNdsAObjEvent32Normalized[i].command == NULL)
+        memcpy(buffer, plan, count * sizeof(u32));
+        while (b >= 0)
         {
-            continue;
-        }
-        slot = ndsAObjEvent32HashSlot(sNdsAObjEvent32Normalized[i].command);
-
-        for (probes = 0u; probes < sNdsAObjEvent32NormalizedHashSlots;
-             probes++)
-        {
-            if (sNdsAObjEvent32NormalizedHash[slot] == 0u)
+            if ((a >= 0) && (keys[a] > buffer[b]))
             {
-                sNdsAObjEvent32NormalizedHash[slot] = (u16)(i + 1u);
-                break;
+                keys[--out] = keys[a--];
             }
-            slot = (slot + 1u) &
-                   (sNdsAObjEvent32NormalizedHashSlots - 1u);
-        }
-        if (probes == sNdsAObjEvent32NormalizedHashSlots)
-        {
-            /* The static load-factor assertion makes this unreachable.  Keep
-             * the same fail-open diagnostic as ordinary index insertion if a
-             * future capacity edit violates that invariant. */
-            gNdsAObjEvent32HashOverflowCount++;
+            else
+            {
+                keys[--out] = buffer[b--];
+            }
         }
     }
-}
-
-/* The index slot naming ledger entry `index`; the slot count when absent. */
-static u32 ndsAObjEvent32IndexSlotOf(u32 index)
-{
-    const u32 mask = sNdsAObjEvent32NormalizedHashSlots - 1u;
-    u32 slot = ndsAObjEvent32HashSlot(sNdsAObjEvent32Normalized[index].command);
-    u32 probes;
-
-    for (probes = 0u; probes < sNdsAObjEvent32NormalizedHashSlots; probes++)
+    else
     {
-        const u32 entry = sNdsAObjEvent32NormalizedHash[slot];
+        for (i = 0u; i < count; i++)
+        {
+            u32 key = keys[n + i];
+            u32 at = ndsAObjEvent32LowerBound(key >> 8);
 
-        if (entry == 0u)
-        {
-            break;
+            /* The run is [0, n + i); its upper part moves over the key's
+             * own slot, which the local holds. */
+            memmove(&keys[at + 1u], &keys[at], (n + i - at) * sizeof(u32));
+            keys[at] = key;
+            sNdsAObjEvent32NormalizedCount = n + i + 1u;
         }
-        if (entry == index + 1u)
-        {
-            return slot;
-        }
-        slot = (slot + 1u) & mask;
     }
-    return sNdsAObjEvent32NormalizedHashSlots;
-}
-
-/* Drop the holes (every live entry moves down, in order) and rebuild. */
-static void ndsAObjEvent32CompactLedger(void)
-{
-    u32 read_index;
-    u32 write_index = 0u;
-
-    for (read_index = 0u; read_index < sNdsAObjEvent32NormalizedCount;
-         read_index++)
-    {
-        if (sNdsAObjEvent32Normalized[read_index].command == NULL)
-        {
-            continue;
-        }
-        if (write_index != read_index)
-        {
-            sNdsAObjEvent32Normalized[write_index] =
-                sNdsAObjEvent32Normalized[read_index];
-            sNdsAObjEvent32NormalizedSig[write_index] =
-                sNdsAObjEvent32NormalizedSig[read_index];
-        }
-        write_index++;
-    }
-    sNdsAObjEvent32NormalizedCount = write_index;
-    sNdsAObjEvent32Holes = 0u;
-    ndsAObjEvent32RebuildNormalizedIndex();
-    NDS_DIAG(gNdsAObjEvent32LedgerCompactions++);
+    sNdsAObjEvent32NormalizedCount = n + count;
 }
 
 /* Sector Z Arwing flight-path descriptors (asset 0x99, MiscDataBank153).
@@ -2526,15 +2269,6 @@ void ndsAObjEvent32ForgetRange(const void *base, size_t size)
 {
     uintptr_t range_start;
     uintptr_t range_end;
-    u32 read_index;
-    u32 write_index = 0u;
-    u32 edge_page[2];
-    u32 edge_lo[2];
-    u32 edge_hi[2];
-    u32 side;
-    const sb32 holes =
-        (sNdsAObjEvent32NormalizedHash != NULL) ? TRUE : FALSE;
-    sb32 rebuild = FALSE;
 
     if ((base == NULL) || (size == 0u))
     {
@@ -2547,128 +2281,32 @@ void ndsAObjEvent32ForgetRange(const void *base, size_t size)
         return;
     }
 
-    if (ndsAObjEvent32RangeHoldsNone(range_start, range_end) != FALSE)
+    /* The range's commands are the keys from the first word at or above its
+     * start to the first at or above its end. */
+    if ((sNdsAObjEvent32Keys != NULL) &&
+        (range_end > NDS_AOBJ_EVENT32_RAM_BASE) &&
+        (range_start < NDS_AOBJ_EVENT32_RAM_END))
     {
-        NDS_DIAG(gNdsAObjEvent32ForgetSkips++);
-        read_index = write_index = sNdsAObjEvent32NormalizedCount;
-    }
-    else
-    {
-        /* The range's first and last pages (an index past the table when the
-         * edge is outside main RAM): the scan re-derives their block interval
-         * from the entries it keeps, so a stale wide one refuses one skip,
-         * not every later one. */
-        edge_page[0] = edge_page[1] = NDS_AOBJ_EVENT32_PAGES;
-        if ((range_start >= NDS_AOBJ_EVENT32_RAM_BASE) &&
-            (range_start < NDS_AOBJ_EVENT32_RAM_END))
-        {
-            edge_page[0] = (u32)((range_start - NDS_AOBJ_EVENT32_RAM_BASE) >>
-                                 NDS_AOBJ_EVENT32_PAGE_SHIFT);
-        }
-        if ((range_end > NDS_AOBJ_EVENT32_RAM_BASE) &&
-            (range_end <= NDS_AOBJ_EVENT32_RAM_END))
-        {
-            edge_page[1] = (u32)((range_end - 1u - NDS_AOBJ_EVENT32_RAM_BASE) >>
-                                 NDS_AOBJ_EVENT32_PAGE_SHIFT);
-        }
-        edge_lo[0] = edge_lo[1] = 0xffu;
-        edge_hi[0] = edge_hi[1] = 0u;
-        for (read_index = 0u; read_index < sNdsAObjEvent32NormalizedCount;
-             read_index++)
-        {
-            uintptr_t command =
-                (uintptr_t)sNdsAObjEvent32Normalized[read_index].command;
-            u32 page;
-            u32 block;
-            u32 edge;
+        uintptr_t start = (range_start < NDS_AOBJ_EVENT32_RAM_BASE) ?
+            NDS_AOBJ_EVENT32_RAM_BASE : range_start;
+        uintptr_t end = (range_end > NDS_AOBJ_EVENT32_RAM_END) ?
+            NDS_AOBJ_EVENT32_RAM_END : range_end;
+        u32 lo = ndsAObjEvent32LowerBound(
+            (u32)((start - NDS_AOBJ_EVENT32_RAM_BASE + 3u) >> 2));
+        u32 hi = ndsAObjEvent32LowerBound(
+            (u32)((end - NDS_AOBJ_EVENT32_RAM_BASE + 3u) >> 2));
 
-            if (command == 0u)
-            {
-                /* A hole: the ordered pass drops it with the rest. */
-                continue;
-            }
-            if ((command >= range_start) && (command < range_end))
-            {
-                ndsAObjEvent32PageAdd((const void *)command, -1);
-                if (holes != FALSE)
-                {
-                    const u32 slot = ndsAObjEvent32IndexSlotOf(read_index);
-
-                    if (slot < sNdsAObjEvent32NormalizedHashSlots)
-                    {
-                        sNdsAObjEvent32NormalizedHash[slot] =
-                            NDS_AOBJ_EVENT32_TOMB;
-                        sNdsAObjEvent32Tombs++;
-                    }
-                    else
-                    {
-                        rebuild = TRUE;
-                    }
-                    sNdsAObjEvent32Normalized[read_index].command = NULL;
-                    sNdsAObjEvent32Holes++;
-                    NDS_DIAG(gNdsAObjEvent32ForgetHoleRemovals++);
-                }
-                continue;
-            }
-            if (holes != FALSE)
-            {
-                /* Kept in place: nothing moves. */
-            }
-            else if (write_index != read_index)
-            {
-                sNdsAObjEvent32Normalized[write_index] =
-                    sNdsAObjEvent32Normalized[read_index];
-                sNdsAObjEvent32NormalizedSig[write_index] =
-                    sNdsAObjEvent32NormalizedSig[read_index];
-            }
-            write_index++;
-            page = (u32)(command - NDS_AOBJ_EVENT32_RAM_BASE) >>
-                   NDS_AOBJ_EVENT32_PAGE_SHIFT;
-            edge = (page == edge_page[0]) ? 0u :
-                   (page == edge_page[1]) ? 1u : 2u;
-            if (edge < 2u)
-            {
-                block = (u32)(command &
-                              ((1u << NDS_AOBJ_EVENT32_PAGE_SHIFT) - 1u)) >>
-                        NDS_AOBJ_EVENT32_BLOCK_SHIFT;
-                if (block < edge_lo[edge])
-                {
-                    edge_lo[edge] = block;
-                }
-                if (block > edge_hi[edge])
-                {
-                    edge_hi[edge] = block;
-                }
-            }
-        }
-        /* A single-page range accumulated everything in slot 0. */
-        for (side = 0u; side < 2u; side++)
+        if (hi > lo)
         {
-            u32 page = edge_page[side];
-
-            if ((page < NDS_AOBJ_EVENT32_PAGES) &&
-                (sNdsAObjEvent32PageEntries[page] != 0u) &&
-                (edge_lo[side] <= edge_hi[side]))
-            {
-                sNdsAObjEvent32PageLo[page] = (u8)edge_lo[side];
-                sNdsAObjEvent32PageHi[page] = (u8)edge_hi[side];
-            }
+            memmove(&sNdsAObjEvent32Keys[lo], &sNdsAObjEvent32Keys[hi],
+                    (sNdsAObjEvent32NormalizedCount - hi) * sizeof(u32));
+            sNdsAObjEvent32NormalizedCount -= hi - lo;
+            NDS_DIAG(gNdsAObjEvent32ForgetHoleRemovals += hi - lo);
         }
-    }
-    if (holes != FALSE)
-    {
-        if ((rebuild != FALSE) ||
-            (sNdsAObjEvent32Tombs > (sNdsAObjEvent32NormalizedHashSlots >> 2)))
+        else
         {
-            NDS_DIAG(gNdsAObjEvent32ForgetHoleRebuilds++);
-            ndsAObjEvent32RebuildNormalizedIndex();
+            NDS_DIAG(gNdsAObjEvent32ForgetSkips++);
         }
-    }
-    else if (write_index != sNdsAObjEvent32NormalizedCount)
-    {
-        sNdsAObjEvent32NormalizedCount = write_index;
-        sNdsAObjEvent32Holes = 0u;
-        ndsAObjEvent32RebuildNormalizedIndex();
     }
 
     /* The descriptor ledger keys the same buffer lifetime: a retired file's
@@ -2935,56 +2573,26 @@ static u32 ndsAObjEvent32CountFlags(u32 flags)
 
 static s32 ndsAObjEvent32FindNormalized(AObjEvent32 *command)
 {
-#if !NDS_AOBJ_EVENT32_LEDGER_INDEX
-    /* Falsifier arm: the index is still built and still occupies its bss, so
-     * every section places as it does in the shipping arm; only the lookup
-     * reverts. See the Makefile flag for why a rebuilt control cannot do this. */
-    return ndsAObjEvent32ScanNormalized(command);
-#else
-    u32 slot = ndsAObjEvent32HashSlot(command);
-    s32 found = -1;
-    u32 probes;
+    uintptr_t address = (uintptr_t)command;
+    u32 word;
+    u32 at;
 
-    for (probes = 0u; probes < sNdsAObjEvent32NormalizedHashSlots;
-         probes++)
+    if ((sNdsAObjEvent32Keys == NULL) ||
+        (address < NDS_AOBJ_EVENT32_RAM_BASE) ||
+        (address >= NDS_AOBJ_EVENT32_RAM_END))
     {
-        u32 entry = sNdsAObjEvent32NormalizedHash[slot];
-
-        if (entry == 0u)
-        {
-            NDS_DIAG(gNdsAObjEvent32HashMissCount++);
-            break;
-        }
-        if ((entry != NDS_AOBJ_EVENT32_TOMB) &&
-            (sNdsAObjEvent32Normalized[entry - 1u].command == command))
-        {
-            NDS_DIAG(gNdsAObjEvent32HashHitCount++);
-            found = (s32)(entry - 1u);
-            break;
-        }
-        slot = (slot + 1u) & (sNdsAObjEvent32NormalizedHashSlots - 1u);
+        return -1;
     }
-    NDS_DIAG(gNdsAObjEvent32HashProbeCount += probes + 1u);
-    if (probes == sNdsAObjEvent32NormalizedHashSlots)
+    word = (u32)(address - NDS_AOBJ_EVENT32_RAM_BASE) >> 2;
+    at = ndsAObjEvent32LowerBound(word);
+    if ((at < sNdsAObjEvent32NormalizedCount) &&
+        ((sNdsAObjEvent32Keys[at] >> 8) == word))
     {
-        gNdsAObjEvent32HashOverflowCount++;
-        return ndsAObjEvent32ScanNormalized(command);
+        NDS_DIAG(gNdsAObjEvent32HashHitCount++);
+        return (s32)at;
     }
-#if NDS_AOBJ_EVENT32_HASH_ORACLE
-    {
-        s32 scanned = ndsAObjEvent32ScanNormalized(command);
-
-        NDS_DIAG(gNdsAObjEvent32HashOracleRuns++);
-        if (scanned != found)
-        {
-            NDS_DIAG(gNdsAObjEvent32HashOracleMismatch++);
-            gNdsAObjEvent32NormalizeLastFailAddress = (u32)(uintptr_t)command;
-            found = scanned;
-        }
-    }
-#endif
-    return found;
-#endif
+    NDS_DIAG(gNdsAObjEvent32HashMissCount++);
+    return -1;
 }
 
 static s32 ndsAObjEvent32FindPlanned(AObjEvent32 *command)
@@ -3013,27 +2621,9 @@ static s32 ndsAObjEvent32FindPlanned(AObjEvent32 *command)
     return -1;
 }
 
-/* Room for one more plan entry above the committed ledger. When the ledger is
- * full, compacting its holes is what the old post-plan check did; the plan
- * sits above the committed entries, so it follows them down. */
+/* Room for one more plan entry above the committed keys. */
 static sb32 ndsAObjEvent32PlanReserve(void)
 {
-    u32 committed;
-
-    if ((sNdsAObjEvent32NormalizedCount + sNdsAObjEvent32PlanCount) <
-        sNdsAObjEvent32NormalizedLimit)
-    {
-        return TRUE;
-    }
-    if (sNdsAObjEvent32Holes == 0u)
-    {
-        return FALSE;
-    }
-    committed = sNdsAObjEvent32NormalizedCount;
-    ndsAObjEvent32CompactLedger();
-    memmove(&sNdsAObjEvent32Normalized[sNdsAObjEvent32NormalizedCount],
-            &sNdsAObjEvent32Normalized[committed],
-            sNdsAObjEvent32PlanCount * sizeof(sNdsAObjEvent32Normalized[0]));
     return ((sNdsAObjEvent32NormalizedCount + sNdsAObjEvent32PlanCount) <
             sNdsAObjEvent32NormalizedLimit) ? TRUE : FALSE;
 }
@@ -3092,12 +2682,18 @@ static sb32 ndsAObjEvent32PlanStream(AObjEvent32 *script,
         {
             return ndsAObjEvent32Reject(2u, command, owner_kind, 0u);
         }
+        if (((uintptr_t)command < NDS_AOBJ_EVENT32_RAM_BASE) ||
+            ((uintptr_t)command >= NDS_AOBJ_EVENT32_RAM_END) ||
+            (((uintptr_t)command & 3u) != 0u))
+        {
+            return ndsAObjEvent32Reject(15u, command, owner_kind, 0u);
+        }
 
         normalized_index = ndsAObjEvent32FindNormalized(command);
         if (normalized_index >= 0)
         {
             return (ndsAObjEvent32WordSig(command->u) ==
-                    sNdsAObjEvent32NormalizedSig[normalized_index]) ?
+                    (u8)sNdsAObjEvent32Keys[normalized_index]) ?
                        TRUE : ndsAObjEvent32Reject(3u, command, owner_kind,
                                                    command->u);
         }
@@ -3225,8 +2821,8 @@ static sb32 ndsAObjEvent32PlanStream(AObjEvent32 *script,
                                         source_word);
         }
 
-        sNdsAObjEvent32Normalized[sNdsAObjEvent32NormalizedCount +
-                                  sNdsAObjEvent32PlanCount].command = command;
+        sNdsAObjEvent32Keys[sNdsAObjEvent32NormalizedCount +
+                            sNdsAObjEvent32PlanCount] = (u32)(uintptr_t)command;
         sNdsAObjEvent32PlanCount++;
         segment->last = command;
         segment->plan_end = sNdsAObjEvent32PlanCount;
@@ -3383,11 +2979,8 @@ static sb32 ndsAObjEvent32NormalizeScript(
      * failed, refuse loudly before dereferencing a NULL ledger. There is no
      * hidden 5120 fallback here: CapacityStageBoundApplied is the witness that
      * a VS stage actually received its row. */
-    if ((sNdsAObjEvent32Normalized == NULL) ||
-        (sNdsAObjEvent32NormalizedSig == NULL) ||
-        (sNdsAObjEvent32NormalizedHash == NULL) ||
-        (sNdsAObjEvent32NormalizedLimit == 0u) ||
-        (sNdsAObjEvent32NormalizedHashSlots == 0u))
+    if ((sNdsAObjEvent32Keys == NULL) ||
+        (sNdsAObjEvent32NormalizedLimit == 0u))
     {
         NDS_DIAG(gNdsAObjEvent32CapacityRefusedCount++);
         (void)ndsAObjEvent32Reject(14u, script, owner_kind, script->u);
@@ -3399,7 +2992,7 @@ static sb32 ndsAObjEvent32NormalizeScript(
     if (normalized_index >= 0)
     {
         if (ndsAObjEvent32WordSig(script->u) ==
-            sNdsAObjEvent32NormalizedSig[normalized_index])
+            (u8)sNdsAObjEvent32Keys[normalized_index])
         {
             gNdsAObjEvent32NormalizeReuseCount++;
             return TRUE;
@@ -3441,35 +3034,26 @@ static sb32 ndsAObjEvent32NormalizeScript(
             ndsAObjEvent32NativeWord(gNdsAObjEvent32NormalizeFirstSourceWord);
     }
 
-    /* Each plan entry already occupies the ledger slot it commits to: rewrite
-     * its word, sign and index that slot, and the next entry is the tail. */
+    /* Each plan entry's word is rewritten in place and its pointer becomes
+     * its key; the keys then join the sorted run. */
     for (i = 0u; i < sNdsAObjEvent32PlanCount; i++)
     {
-        AObjEvent32 *command =
-            sNdsAObjEvent32Normalized[sNdsAObjEvent32NormalizedCount].command;
+        AObjEvent32 *command = ndsAObjEvent32PlanCommand(i);
         u32 native_word = ndsAObjEvent32NativeWord(command->u);
 
         command->u = native_word;
-        sNdsAObjEvent32NormalizedSig[sNdsAObjEvent32NormalizedCount] =
-            ndsAObjEvent32WordSig(native_word);
-        ndsAObjEvent32IndexNormalized(sNdsAObjEvent32NormalizedCount);
-        ndsAObjEvent32PageAdd(command, 1);
-        sNdsAObjEvent32NormalizedCount++;
+        sNdsAObjEvent32Keys[sNdsAObjEvent32NormalizedCount + i] =
+            ndsAObjEvent32Key(command, ndsAObjEvent32WordSig(native_word));
     }
+    ndsAObjEvent32CommitKeys(sNdsAObjEvent32PlanCount);
 
     if (sNdsAObjEvent32NormalizedCount > gNdsAObjEvent32NormalizedHighWater)
     {
         gNdsAObjEvent32NormalizedHighWater = sNdsAObjEvent32NormalizedCount;
     }
-    /* The count keeps the holes ForgetRange leaves until an append needs the
-     * room, so it is not the working set; live entries are what a limit must
-     * hold (2026-09-30: Jungle, Captain/Yoshi/Kirby/DK, live ~3,300 against a
-     * 3,288 limit). */
-    if ((sNdsAObjEvent32NormalizedCount - sNdsAObjEvent32Holes) >
-        gNdsAObjEvent32LiveHighWater)
+    if (sNdsAObjEvent32NormalizedCount > gNdsAObjEvent32LiveHighWater)
     {
-        gNdsAObjEvent32LiveHighWater =
-            sNdsAObjEvent32NormalizedCount - sNdsAObjEvent32Holes;
+        gNdsAObjEvent32LiveHighWater = sNdsAObjEvent32NormalizedCount;
     }
     gNdsAObjEvent32NormalizeScriptCount++;
     gNdsAObjEvent32NormalizeCommandCount += sNdsAObjEvent32PlanCount;
@@ -3478,19 +3062,13 @@ static sb32 ndsAObjEvent32NormalizeScript(
 
 void ndsAObjEvent32ResetNormalizedScripts(void)
 {
-    /* The three arrays now live in the taskman arena. By the time a scene-reset
-     * owner calls here, that arena may already have been rewound, so touching
-     * the old hash would write into the next scene. Discard the complete owner
-     * tuple; ConfigureNormalizedCapacity installs and clears fresh storage. */
-    sNdsAObjEvent32Normalized = NULL;
-    sNdsAObjEvent32NormalizedSig = NULL;
-    sNdsAObjEvent32NormalizedHash = NULL;
+    /* The keys live in the taskman arena. By the time a scene-reset owner
+     * calls here, that arena may already have been rewound, so the old
+     * storage is discarded, never touched; ConfigureNormalizedCapacity
+     * installs fresh storage. */
+    sNdsAObjEvent32Keys = NULL;
     sNdsAObjEvent32NormalizedLimit = 0u;
-    sNdsAObjEvent32NormalizedHashSlots = 0u;
     sNdsAObjEvent32NormalizedCount = 0u;
-    sNdsAObjEvent32Holes = 0u;
-    sNdsAObjEvent32Tombs = 0u;
-    ndsAObjEvent32PageReset();
     sNdsAObjEvent32PlanCount = 0u;
     sNdsAObjEvent32PlanSegmentCount = 0u;
     /* Discarded with the ledger it shadows, in the same breath. */

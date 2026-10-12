@@ -46,11 +46,14 @@ FLASH_STRIDE = 0x860    # CharacterSelect.asm: the white flash follows each port
 GRID = {"columns": 11, "rows": 3, "pitch": 29, "x": 0, "y": 30,
         "scale_num": 15, "scale_den": 16}
 # The rest of the screen around it (same owner request): the mode label and
-# BACK move 18 units up to the top edge, the four player panels and their
-# previews 22 down to the bottom edge (the 92-unit card ends at 240), and
-# PRESS START, which sat under the panels at y 219, moves into the band
-# between the grid and the panels.
-SCREEN = {"header_dy": -18, "panel_dy": 22, "press_y": 124}
+# BACK move 18 units up to the top edge; the four player cards, everything on
+# them and their 3D previews scale by 80/69 and sit at an 80-unit pitch from
+# x 2, so they fill the width and their centres land on the source's preview
+# roots (840 world units apart, 80 source units); the scaled 92-unit card
+# ends at the bottom edge (y 133 + 107); PRESS START, which sat under the
+# cards at y 219, moves into the band between the grid and the cards.
+SCREEN = {"header_dy": -18, "card_pitch": 80, "card_x": 2, "card_y": 133,
+          "card_k": [80, 69], "press_y": 122}
 
 # The DS P4 grid, row-major. Originals keep Remix's (and the vanilla grid's)
 # cells; each P4 replacement names the Remix cell it takes.
@@ -180,7 +183,11 @@ def write_c_tables(path: Path, cells: list[dict], fighters: list[dict]) -> None:
         "#ifndef NDS_P4_CSS_SCREEN_GENERATED_H",
         "#define NDS_P4_CSS_SCREEN_GENERATED_H",
         f"#define NDS_P4_CSS_HEADER_DY ({SCREEN['header_dy']})",
-        f"#define NDS_P4_CSS_PANEL_DY {SCREEN['panel_dy']}",
+        f"#define NDS_P4_CSS_CARD_PITCH {SCREEN['card_pitch']}",
+        f"#define NDS_P4_CSS_CARD_X {SCREEN['card_x']}",
+        f"#define NDS_P4_CSS_CARD_Y {SCREEN['card_y']}",
+        f"#define NDS_P4_CSS_CARD_KN {SCREEN['card_k'][0]}",
+        f"#define NDS_P4_CSS_CARD_KD {SCREEN['card_k'][1]}",
         f"#define NDS_P4_CSS_PRESS_Y {SCREEN['press_y']}",
         "#endif", ""]), encoding="utf-8", newline="\n")
 

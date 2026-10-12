@@ -86,16 +86,25 @@
 #define NDS_CSS_P4_PUCK_W 21
 #define NDS_CSS_P4_PUCK_H 20
 /* The P4 screen (p4_css.py SCREEN, owner 2026-10-11): the mode label and
- * BACK sit HEADER_DY source units higher, the player panels and everything
- * on them PANEL_DY lower (their card ends at the frame's bottom edge), and
- * PRESS START in the band between the grid and the panels. */
+ * BACK sit HEADER_DY source units higher; the player cards scale by
+ * CARD_KN/CARD_KD at CARD_PITCH from CARD_X, ending at the frame's bottom
+ * edge, so a source position on panel `panel` (p * 69) maps through
+ * NDS_CSS_CARD_X/Y; PRESS START sits in the band between grid and cards. */
 #define NDS_CSS_HEADER_DY NDS_P4_CSS_HEADER_DY
-#define NDS_CSS_PANEL_DY NDS_P4_CSS_PANEL_DY
+#define NDS_CSS_CARD_X(panel, sx)                                   \
+    (NDS_P4_CSS_CARD_X + ((panel) / 69) * NDS_P4_CSS_CARD_PITCH +   \
+     ((((s32)(sx)) - 22) * NDS_P4_CSS_CARD_KN) / NDS_P4_CSS_CARD_KD)
+#define NDS_CSS_CARD_Y(sy)                                          \
+    (NDS_P4_CSS_CARD_Y +                                            \
+     ((((s32)(sy)) - 126) * NDS_P4_CSS_CARD_KN) / NDS_P4_CSS_CARD_KD)
+#define NDS_CSS_CARD_LEN(v) (((v) * NDS_P4_CSS_CARD_KN) / NDS_P4_CSS_CARD_KD)
 #define NDS_CSS_PRESS_Y NDS_P4_CSS_PRESS_Y
 #else
 #define NDS_CSS_CELLS NDS_CSS_PORTRAITS
 #define NDS_CSS_HEADER_DY 0
-#define NDS_CSS_PANEL_DY 0
+#define NDS_CSS_CARD_X(panel, sx) ((panel) + (sx))
+#define NDS_CSS_CARD_Y(sy) (sy)
+#define NDS_CSS_CARD_LEN(v) (v)
 #define NDS_CSS_PRESS_Y 219
 #endif
 
@@ -128,7 +137,7 @@ static u32 ndsMenuShellCssSelContent(u32 sel)
 #define NDS_CSS_CURSOR_X_MIN 0
 #define NDS_CSS_CURSOR_X_MAX 280
 #define NDS_CSS_CURSOR_Y_MIN (10 + NDS_CSS_HEADER_DY)
-#define NDS_CSS_CURSOR_Y_MAX (205 + NDS_CSS_PANEL_DY)
+#define NDS_CSS_CURSOR_Y_MAX NDS_CSS_CARD_Y(205)
 #define NDS_CSS_CURSOR_STEP 4
 
 /* nMNPlayersCursorStatus*, in the order mnPlayersVSUpdateCursor's own
@@ -139,10 +148,15 @@ static u32 ndsMenuShellCssSelContent(u32 sel)
 
 /* mnPlayersVSMakeCursor's player-0 seat, mnplayersvs.c:3684. */
 #define NDS_CSS_CURSOR_HOME_X 40
-#define NDS_CSS_CURSOR_HOME_Y (170 + NDS_CSS_PANEL_DY)
+#define NDS_CSS_CURSOR_HOME_Y NDS_CSS_CARD_Y(170)
 /* mnPlayersVSMakePuck's parking spot for a slot with no fighter yet. */
-#define NDS_CSS_PUCK_HOME_X 51
-#define NDS_CSS_PUCK_HOME_Y (161 + NDS_CSS_PANEL_DY)
+#define NDS_CSS_PUCK_HOME_X NDS_CSS_CARD_X(0, 51)
+#define NDS_CSS_PUCK_HOME_Y NDS_CSS_CARD_Y(161)
+#if NDS_P4
+#define NDS_CSS_PUCK_HOME_SLOT_X(i) NDS_CSS_CARD_X(69 * (s32)(i), 51)
+#else
+#define NDS_CSS_PUCK_HOME_SLOT_X(i) (NDS_CSS_PUCK_HOME_X + 68 * (s32)(i))
+#endif
 /* The offset a carried token keeps from the cursor, mnplayersvs.c:3529. */
 #define NDS_CSS_PUCK_CARRY_DX 11
 #define NDS_CSS_PUCK_CARRY_DY (-14)
@@ -1308,9 +1322,9 @@ static void ndsMenuShellCssStepDoors(void)
              * 33 columns and the pair sat one row above the gate (owner
              * screenshot, 2026-08-19). One rule for every door number. */
             #define NDS_CSS_DSR(v) (((v) * 4 + 2) / 5)
-            s32 clip0 = NDS_CSS_DSR(start + 22);
-            s32 clip1 = NDS_CSS_DSR(start + 88);
-            s32 dy = NDS_CSS_DSR(126 + NDS_CSS_PANEL_DY);
+            s32 clip0 = NDS_CSS_DSR(NDS_CSS_CARD_X(start, 22));
+            s32 clip1 = NDS_CSS_DSR(NDS_CSS_CARD_X(start, 88));
+            s32 dy = NDS_CSS_DSR(NDS_CSS_CARD_Y(126));
             /* Both source door sprites are 41x92. Closed, the left occupies
              * source x=22..62 and the right x=47..87, overlapping by 16 px;
              * their alpha masks form the source's zigzag seam. The cache keeps
@@ -1318,14 +1332,14 @@ static void ndsMenuShellCssStepDoors(void)
              * positions recreate that overlap. Cutting the cache at x=25 was
              * the old straight-seam defect: it discarded those 16 left-door
              * pixels before the two source masks could interlock. */
-            u32 split = (u32)NDS_CSS_DSR(41);
-            u32 strip_w = (u32)NDS_CSS_DSR(41 + 41);
+            u32 split = (u32)NDS_CSS_DSR(NDS_CSS_CARD_LEN(41));
+            u32 strip_w = (u32)NDS_CSS_DSR(NDS_CSS_CARD_LEN(41) * 2);
 
             (void)ndsUiKitDrawCachedSub(0u, split,
-                                        NDS_CSS_DSR(start - 19 + (s32)offset),
+                                        NDS_CSS_DSR(NDS_CSS_CARD_X(start, -19 + (s32)offset)),
                                         dy, clip0, clip1);
             (void)ndsUiKitDrawCachedSub(split, strip_w - split,
-                                        NDS_CSS_DSR(start + 88 - (s32)offset),
+                                        NDS_CSS_DSR(NDS_CSS_CARD_X(start, 88 - (s32)offset)),
                                         dy, clip0, clip1);
             gNdsMenuShellCssDoorSlideFrames++;
             #undef NDS_CSS_DSR
@@ -1412,7 +1426,7 @@ static void ndsMenuShellCssDrawArrows(void)
         {
             ndsUiKitSetSprite(NDS_CSS_SPRITE_ARROWL0 + i,
                               NDS_MN_UI_KIT_IMAGE_CSS_ARROW_L,
-                              NDS_CSS_DS(panel + 25), NDS_CSS_DS(201 + NDS_CSS_PANEL_DY));
+                              NDS_CSS_DS(NDS_CSS_CARD_X(panel, 25)), NDS_CSS_DS(NDS_CSS_CARD_Y(201)));
         }
         else
         {
@@ -1422,7 +1436,7 @@ static void ndsMenuShellCssDrawArrows(void)
         {
             ndsUiKitSetSprite(NDS_CSS_SPRITE_ARROWR0 + i,
                               NDS_MN_UI_KIT_IMAGE_CSS_ARROW_R,
-                              NDS_CSS_DS(panel + 79), NDS_CSS_DS(201 + NDS_CSS_PANEL_DY));
+                              NDS_CSS_DS(NDS_CSS_CARD_X(panel, 79)), NDS_CSS_DS(NDS_CSS_CARD_Y(201)));
         }
         else
         {
@@ -1471,7 +1485,7 @@ static void ndsMenuShellCssPopulate(void)
         /* The player-kind button, mnplayersvs.c:963. */
         ndsUiKitSetSprite(NDS_CSS_SPRITE_KIND0 + i,
                           ndsMenuShellCssKindImage((u32)sCssPkind[i]),
-                          NDS_CSS_DS(panel + 64), NDS_CSS_DS(131 + NDS_CSS_PANEL_DY));
+                          NDS_CSS_DS(NDS_CSS_CARD_X(panel, 64)), NDS_CSS_DS(NDS_CSS_CARD_Y(131)));
 
         /* P2-1j (e): the panel's own player tag, mnPlayersVSMakePlayerKind
          * (:969) -- a CPU slot draws the shared CP art at `p*69+26` and a
@@ -1490,7 +1504,7 @@ static void ndsMenuShellCssPopulate(void)
         {
             (void)ndsUiKitSetSpriteBlend(
                 NDS_CSS_SPRITE_TAG0 + i, NDS_MN_UI_KIT_IMAGE_PANEL_CP,
-                NDS_CSS_DS(panel + 26), NDS_CSS_DS(131 + NDS_CSS_PANEL_DY), 15u, 0u, 2u);
+                NDS_CSS_DS(NDS_CSS_CARD_X(panel, 26)), NDS_CSS_DS(NDS_CSS_CARD_Y(131)), 15u, 0u, 2u);
         }
         else if (sCssPkind[i] == (u8)nFTPlayerKindMan)
         {
@@ -1499,9 +1513,9 @@ static void ndsMenuShellCssPopulate(void)
 
             (void)ndsUiKitSetSpriteBlend(
                 NDS_CSS_SPRITE_TAG0 + i, tag,
-                NDS_CSS_DS(panel +
-                           ((tag == NDS_MN_UI_KIT_IMAGE_PANEL_1P) ? 30 : 27)),
-                NDS_CSS_DS(131 + NDS_CSS_PANEL_DY), 15u, 0u, 2u);
+                NDS_CSS_DS(NDS_CSS_CARD_X(panel,
+                           ((tag == NDS_MN_UI_KIT_IMAGE_PANEL_1P) ? 30 : 27))),
+                NDS_CSS_DS(NDS_CSS_CARD_Y(131)), 15u, 0u, 2u);
         }
         else
         {
@@ -1532,14 +1546,14 @@ static void ndsMenuShellCssPopulate(void)
             {
                 ndsUiKitSetSprite(NDS_CSS_SPRITE_LEVEL0 + i,
                                   NDS_MN_UI_KIT_IMAGE_CP_LEVEL,
-                                  NDS_CSS_DS(panel + 34), NDS_CSS_DS(201 + NDS_CSS_PANEL_DY));
+                                  NDS_CSS_DS(NDS_CSS_CARD_X(panel, 34)), NDS_CSS_DS(NDS_CSS_CARD_Y(201)));
                 value = (u32)sCssLevel[i];
             }
             else
             {
                 ndsUiKitSetSprite(NDS_CSS_SPRITE_LEVEL0 + i,
                                   NDS_MN_UI_KIT_IMAGE_HANDICAP,
-                                  NDS_CSS_DS(panel + 35), NDS_CSS_DS(201 + NDS_CSS_PANEL_DY));
+                                  NDS_CSS_DS(NDS_CSS_CARD_X(panel, 35)), NDS_CSS_DS(NDS_CSS_CARD_Y(201)));
                 value = (u32)sCssHandicap[i];
             }
             /* P2-1j (e): the colon between label and value is its own sprite
@@ -1547,12 +1561,12 @@ static void ndsMenuShellCssPopulate(void)
              * white -- mnplayersvs.c:2740), and it was simply absent. */
             ndsUiKitSetSprite(NDS_CSS_SPRITE_COLON0 + i,
                               NDS_MN_UI_KIT_IMAGE_COLON,
-                              NDS_CSS_DS(panel + 61), NDS_CSS_DS(202 + NDS_CSS_PANEL_DY));
+                              NDS_CSS_DS(NDS_CSS_CARD_X(panel, 61)), NDS_CSS_DS(NDS_CSS_CARD_Y(202)));
             (void)ndsUiKitSetNumber(NDS_CSS_SPRITE_DIGIT0 + i, 1u,
                                     (s32)value,
-                                    NDS_CSS_DS(panel + 67) +
+                                    NDS_CSS_DS(NDS_CSS_CARD_X(panel, 67)) +
                                         NDS_UI_KIT_DIGIT_PITCH,
-                                    NDS_CSS_DS(200 + NDS_CSS_PANEL_DY));
+                                    NDS_CSS_DS(NDS_CSS_CARD_Y(200)));
         }
         else
         {
@@ -2235,8 +2249,9 @@ static u32 ndsMenuShellCssCheckKindButton(void)
         s32 panel = (s32)(slot * 69u);
         u32 next;
 
-        if (ndsMenuShellCssBoxHit(panel + 60, panel + 88, 127 + NDS_CSS_PANEL_DY,
-                                  145 + NDS_CSS_PANEL_DY) == FALSE)
+        if (ndsMenuShellCssBoxHit(NDS_CSS_CARD_X(panel, 60),
+                                  NDS_CSS_CARD_X(panel, 88),
+                                  NDS_CSS_CARD_Y(127), NDS_CSS_CARD_Y(145)) == FALSE)
         {
             continue;
         }
@@ -2283,8 +2298,9 @@ static u32 ndsMenuShellCssCheckTeamSelect(void)
         s32 panel = (s32)(slot * 69u);
 
         if ((sCssPkind[slot] == (u8)nFTPlayerKindNot) ||
-            (ndsMenuShellCssBoxHit(panel + 34, panel + 58, 131 + NDS_CSS_PANEL_DY,
-                                   141 + NDS_CSS_PANEL_DY) == FALSE))
+            (ndsMenuShellCssBoxHit(NDS_CSS_CARD_X(panel, 34),
+                                   NDS_CSS_CARD_X(panel, 58),
+                                   NDS_CSS_CARD_Y(131), NDS_CSS_CARD_Y(141)) == FALSE))
         {
             continue;
         }
@@ -2348,8 +2364,9 @@ static u32 ndsMenuShellCssCheckLevelArrows(void)
         {
             continue;
         }
-        if (ndsMenuShellCssBoxHit(panel + 68, panel + 90, 197 + NDS_CSS_PANEL_DY,
-                                  216 + NDS_CSS_PANEL_DY) != FALSE)
+        if (ndsMenuShellCssBoxHit(NDS_CSS_CARD_X(panel, 68),
+                                  NDS_CSS_CARD_X(panel, 90),
+                                  NDS_CSS_CARD_Y(197), NDS_CSS_CARD_Y(216)) != FALSE)
         {
             if (*value < 9u)
             {
@@ -2367,8 +2384,9 @@ static u32 ndsMenuShellCssCheckLevelArrows(void)
             }
             return TRUE;
         }
-        if (ndsMenuShellCssBoxHit(panel + 21, panel + 43, 197 + NDS_CSS_PANEL_DY,
-                                  216 + NDS_CSS_PANEL_DY) != FALSE)
+        if (ndsMenuShellCssBoxHit(NDS_CSS_CARD_X(panel, 21),
+                                  NDS_CSS_CARD_X(panel, 43),
+                                  NDS_CSS_CARD_Y(197), NDS_CSS_CARD_Y(216)) != FALSE)
         {
             if (*value > 1u)
             {
@@ -2590,8 +2608,9 @@ static u32 ndsMenuShellCssCheckPreviewCostume(void)
         s32 panel = (s32)(slot * 69u);
         s32 costume;
 
-        if (ndsMenuShellCssBoxHit(panel + 22, panel + 88, 146 + NDS_CSS_PANEL_DY,
-                                  200 + NDS_CSS_PANEL_DY) == FALSE)
+        if (ndsMenuShellCssBoxHit(NDS_CSS_CARD_X(panel, 22),
+                                  NDS_CSS_CARD_X(panel, 88),
+                                  NDS_CSS_CARD_Y(146), NDS_CSS_CARD_Y(200)) == FALSE)
         {
             continue;
         }
@@ -3020,7 +3039,7 @@ static u32 ndsMenuShellCssNetSync(void)
                     sCssPkind[i] = (u8)nFTPlayerKindMan;
                     sCssFkind[i] = (u8)nFTKindNull;
                     sCssSelected[i] = 0u;
-                    sCssPuckX[i] = (s16)(NDS_CSS_PUCK_HOME_X + 68 * (s32)i);
+                    sCssPuckX[i] = (s16)NDS_CSS_PUCK_HOME_SLOT_X(i);
                     sCssPuckY[i] = (s16)NDS_CSS_PUCK_HOME_Y;
                     sCssNetCursor[i] = 0u;
                     sCssNetCostumeSeen[i] = 0u;

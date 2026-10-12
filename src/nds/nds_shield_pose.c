@@ -854,6 +854,29 @@ static s32 NDS_SHIELD_POSE_HOT_CODE ndsShieldPoseUnpackScript(
     return FALSE;
 }
 
+/* A posed joint's AObjs go back to the pool. The guard never plays them again
+ * (anim_wait is AOBJ_ANIM_NULL until the next apply parses its script from
+ * the start), every script is checked independent of stale AObj state
+ * (generate_nds_shield_pose_pack.py, p4_shield_pose.py), and the pose engine
+ * keeps fighter motions in its own tracks. Left attached they stayed on every
+ * joint after a fighter's first shield: four Sonics held 511 AObjs, 18 KB of
+ * the heap's per-AObj fallback once the pool ran dry (2026-10-11). Kirby keeps
+ * them: his copy of Donkey Kong's charge is an animjoint motion, which the
+ * generic player parses over whatever his joints hold. */
+static sb32 ndsShieldPoseReturnsAObjs(const DObj *dobj)
+{
+    const FTStruct *fp = ftGetStruct(dobj->parent_gobj);
+
+#if NDS_P4
+    if (fp->nds_p4_content != 0u)
+    {
+        return TRUE;
+    }
+#endif
+    return ((fp->fkind != nFTKindKirby) && (fp->fkind != nFTKindNKirby)) ?
+               TRUE : FALSE;
+}
+
 static s32 NDS_SHIELD_POSE_CODE ndsShieldPoseApplyScript(
     const NDSShieldPoseView *view, DObj *dobj, u16 handle, f32 angle)
 {
@@ -869,6 +892,10 @@ static s32 NDS_SHIELD_POSE_CODE ndsShieldPoseApplyScript(
     gcParseDObjAnimJoint(dobj);
     gcPlayDObjAnimJoint(dobj);
     dobj->anim_joint.event32 = NULL;
+    if (ndsShieldPoseReturnsAObjs(dobj) != FALSE)
+    {
+        gcRemoveAObjFromDObj(dobj);
+    }
     dobj->anim_wait = AOBJ_ANIM_NULL;
     return TRUE;
 }

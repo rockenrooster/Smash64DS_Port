@@ -2766,33 +2766,41 @@ static void ndsMNPlayersVSPreviewApplyOuterSlotInset(u32 slot,
     }
     root->translate.vec.f.x = x;
 #if NDS_P4
-    /* The P4 screen moves the panels NDS_P4_CSS_PANEL_DY source units down
-     * (p4_css.py SCREEN); the source root sits at y -850, and the viewport
-     * above maps 840 world units to 80 source units. */
-    root->translate.vec.f.y =
-        -850.0F - ((f32)NDS_P4_CSS_PANEL_DY * (840.0F / 80.0F));
-    /* Remix's menu_zoom row stands in for dSCSubsysFighterScales
-     * (Character.asm menu_zoom_patches, mnPlayersVSMakeFighter). */
+    /* The P4 screen scales the cards by CARD_KN/CARD_KD with their top at
+     * CARD_Y (p4_css.py SCREEN). The camera (eye z 5000 on the origin, the
+     * viewport above) maps 840 world units to 80 source units and world y 0
+     * to source y 120, so the source root (y -850) stands at source y 201,
+     * 75 below the card's top: the root keeps that place on the scaled card
+     * and the fighter scales with it, from its own scale row. */
+    root->translate.vec.f.y = -(((f32)NDS_P4_CSS_CARD_Y +
+        (75.0F * (f32)NDS_P4_CSS_CARD_KN / (f32)NDS_P4_CSS_CARD_KD)) - 120.0F) *
+        (840.0F / 80.0F);
     {
+        s32 fkind = sMNPlayersVSSlots[slot].fkind;
+        f32 scale = ((fkind >= nFTKindPlayableStart) &&
+                     (fkind <= nFTKindPlayableEnd)) ?
+            dSCSubsysFighterScales[fkind] : root->scale.vec.f.x;
         const NDSP4Fighter *f = ndsP4Fighter(
             ndsCssPreviewKindContent(sNdsPlayersVSPreviewShownKind[slot]));
 
-        if ((f != NULL) && (f->present != NULL))
-        {
-            root->scale.vec.f.x = f->present->menu_zoom;
-            root->scale.vec.f.y = f->present->menu_zoom;
-            root->scale.vec.f.z = f->present->menu_zoom;
-        }
-        /* Selectable Metal Mario: the source's table stops at the twelve
+        /* Remix's menu_zoom row stands in for dSCSubsysFighterScales
+         * (Character.asm menu_zoom_patches, mnPlayersVSMakeFighter).
+         * Selectable Metal Mario: the source's table stops at the twelve
          * (his read ran past it to a near-zero scale); Remix's row is
          * move_table_12's copy of Mario's. */
-        if (ndsCssPreviewKindIsMMario(sNdsPlayersVSPreviewShownKind[slot]) !=
-            FALSE)
+        if ((f != NULL) && (f->present != NULL))
         {
-            root->scale.vec.f.x = dSCSubsysFighterScales[nFTKindMario];
-            root->scale.vec.f.y = dSCSubsysFighterScales[nFTKindMario];
-            root->scale.vec.f.z = dSCSubsysFighterScales[nFTKindMario];
+            scale = f->present->menu_zoom;
         }
+        else if (ndsCssPreviewKindIsMMario(
+                     sNdsPlayersVSPreviewShownKind[slot]) != FALSE)
+        {
+            scale = dSCSubsysFighterScales[nFTKindMario];
+        }
+        scale = scale * (f32)NDS_P4_CSS_CARD_KN / (f32)NDS_P4_CSS_CARD_KD;
+        root->scale.vec.f.x = scale;
+        root->scale.vec.f.y = scale;
+        root->scale.vec.f.z = scale;
     }
 #endif
 }

@@ -1305,14 +1305,19 @@ starts from it.
 The select's screen uses its room (owner: "lots of extra room"): the grid
 spans the width, eleven 29-unit cells from x 0 with portraits at 15/16
 (Remix's was 24-unit cells at 0.8125, 264 units wide); the mode label and
-BACK move 18 units up to the top edge; the four player panels, everything
-on them and the 3D previews move 22 units down, so the card ends at the
-bottom edge; PRESS START, which sat under the panels, moves into the band
-between the grid and the panels (`p4_css.py` SCREEN, read by the UI kit
-bake, `nds_menu_shell_css.c` -- hit boxes, cursor bounds, token home --
-and the preview roots in battleship_mnplayersvs.c). The original-cast and
-1P selects keep the source layout. Play ROM play-1011x2: four previews,
-0 failures.
+BACK move 18 units up to the top edge; the four player cards, everything
+on them and their 3D previews scale by 80/69 (owner: "the 3d preview cards
+can be scaled to fit the space") at an 80-unit pitch from x 2, so they fill
+the width, their centres stay on the source's preview roots (840 world units
+apart, 80 source units) and the scaled 92-unit card ends at the bottom edge
+(y 133 + 107); PRESS START, which sat under the panels, moves into the band
+between the grid and the cards (`p4_css.py` SCREEN, read by the UI kit
+bake -- placements, boxes, team buttons, the doors --,
+`nds_menu_shell_css.c` -- hit boxes, cursor bounds, token homes, the door
+animator -- and the preview roots and fighter scale in
+battleship_mnplayersvs.c). The original-cast and 1P selects keep the source
+layout. Play ROM play-1011x3: four previews filling their cards, 0
+failures.
 
 ## Memory: mirrors, the event32 ledger, article data (2026-10-11)
 
@@ -1388,6 +1393,53 @@ above the floor, 0 overflows, 0 native failures, 0 entry-texture failures,
 Dedede) 7.3 KB, and Sonic's and Meta Knight's mirrors on Planet Zebes 12.6
 and 19.8 KB (Zebes's stage share holds a 5,539-5,756-entry ledger). Peach
 beside Mario (high detail) 66.1 KB; her select previews 0 failures.
+
+### The ledger as sorted keys (2026-10-11)
+
+The heavy mix's battle-start ledger (Crash, Lanky, Sonic, Dedede on Peach's
+Castle) showed the event32 ledger as its largest single P4 cost: 45,640 B for
+a 5,851-entry limit, of which 1,640 were live after 900 frames. Each entry was
+a command pointer and a signature byte, and the open-addressed index over it
+took a power of two above the limit in u16 slots (8,192 here: 16 KB). The
+ledger is now one sorted array of u32 keys (battleship_sys_objanim.c,
+`sNdsAObjEvent32Keys`): a command's word index in main RAM shifted up a byte
+with its native word's signature below it. A lookup is a binary search, a plan
+commits by sorting its keys and merging them from the top (a 256-key static
+buffer, or the free tail for a stage layer's big plan, else key by key), and a
+retired buffer's commands are one contiguous run removed with one memmove, so
+the holes, tombstones, per-page counts (4 KiB of bss) and the index are gone.
+4 B a command: the mix's ledger 45,640 -> 23,404 B, Zebes mirrors' 44 KB ->
+~22 KB. Normalization itself is unchanged (the same words, the same
+refusals; a command outside main RAM, which no loaded file holds, is refused
+as reason 15).
+
+Shipping ROM play-1011x3, four CPUs, 900 frames: the heavy mix on Peach's
+Castle 22.1 KB (7.3 before; its ledger 45,640 -> 23,404 B), Sonic's and
+Meta Knight's mirrors on Planet Zebes 46.5 and 37.9 KB (12.6 and 19.8), 0
+refusals, 0 native failures. Lab, ledger forced to 4,095, 1,500 frames:
+Sonic 2,039, Crash 883 and Falco 1,630 live entries as before (Crash's two
+dig-track refusals are gone), Meta Knight 2,232 (2,771 before his entries
+were resampled), 0 refusals. The select's new layout also moved the match's
+random state, and a row's low-water moves with its match's events: Sonic's
+Castle mirror read 25.5 KB (34.5 before) with an 11.6 KB smaller ledger
+(see "AObjs past the pool" below).
+
+### AObjs past the pool: shield poses kept theirs (2026-10-11)
+
+Four Sonics on Peach's Castle ended at 25.5 KB because the heap's per-AObj
+fallback had taken 22 KB: 612 AObjs past the 384-entry pool, 511 of them
+made by the guard's pose. The native shield pose parses a joint's script
+into AObjs, plays it once and clears the animation (nds_shield_pose.c), and
+the AObjs stayed on the joint: a fighter that had shielded once held one per
+animated track of every joint (Sonic 128) until it was ejected, since
+nothing plays them again and fighter motions run in the pose engine's own
+tracks. They now go back to the pool after each apply
+(`gcRemoveAObjFromDObj`); the shield-pose generators check every script for
+independence from stale AObj state, so the poses are unchanged. Kirby keeps
+his: his copy of Donkey Kong's charge is an animjoint motion, which the
+generic player parses over whatever his joints hold. Shipping ROM
+play-1011x4, 900 frames: four Sonics 25.5 -> 47.2 KB (10 AObjs live at the
+end), the heavy mix 22.1 -> 36.3 KB, 0 native failures.
 
 ## Board 1 status (master plan Revision 3)
 
