@@ -691,6 +691,18 @@ OWNER_IA_INTENSITY_MAX = {
 OWNER_VERTEX_SHIFT = {
     "piano": ((3, 0xB38, 30, (0, -9, 4)), (3, 0xD18, 30, (0, -9, 4))),
 }
+# Model blocks of separate triangles (three vertices each) pulled in along
+# their own normals, parallel to a reference plane (render-class deviation).
+# Closed, Mad Piano's teeth hang along the lid's rim in the planes of his
+# case's walls (left x -273 against -274, right 372 against 377, the curved
+# rim the same), so they z-fought the walls and showed through his body
+# (owner BUGS.md 2026-10-12: "move inward more please"). Each tooth moves 20
+# units toward the lid's centre, parallel to the lid top (block 0xEF8).
+# (descriptor file index, model offset, vertex count, distance, reference
+# block offset, reference block vertex count).
+OWNER_TRIANGLE_INSET = {
+    "piano": ((3, 0xB38, 30, 20, 0xEF8, 8), (3, 0xD18, 30, 20, 0xEF8, 8)),
+}
 # Model vertex colours scaled per channel by n/255 (render-class deviation).
 # Meta Knight's Mach Tornado colours PRIM*SHADE*PRIM with PRIM (248, 248, 192)
 # set in its lists and lighting off, so SHADE is the vertex colour (all
@@ -1192,11 +1204,30 @@ def max_o2r_ia_intensity(blob: bytes, rom: R.Rom, fid: int,
     return bytes(out)
 
 
+def _sub3(a, b):
+    return (a[0] - b[0], a[1] - b[1], a[2] - b[2])
+
+
+def _cross3(a, b):
+    return (a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2],
+            a[0] * b[1] - a[1] * b[0])
+
+
+def _dot3(a, b):
+    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+
+
+def _unit3(a):
+    length = _dot3(a, a) ** 0.5
+    return None if length < 1e-6 else (a[0] / length, a[1] / length, a[2] / length)
+
+
 def patch_o2r_vertices(blob: bytes, rom: R.Rom, fid: int,
-                       shifts: tuple, tints: tuple) -> bytes:
-    """An O2R model file with vertex blocks moved (OWNER_VERTEX_SHIFT) or
-    their colours scaled (OWNER_VERTEX_TINT). Each block must be one a G_VTX
-    of this file loads whole."""
+                       shifts: tuple, tints: tuple, insets: tuple = ()) -> bytes:
+    """An O2R model file with blocks of separate triangles pulled in
+    (OWNER_TRIANGLE_INSET), vertex blocks moved (OWNER_VERTEX_SHIFT) or their
+    colours scaled (OWNER_VERTEX_TINT). Each block must be one a G_VTX of this
+    file loads whole."""
     ext_n = struct.unpack_from("<I", blob, 0x48)[0]
     body = 0x4C + 2 * ext_n + 4
     data = rom.file_bytes(fid)
@@ -1206,9 +1237,36 @@ def patch_o2r_vertices(blob: bytes, rom: R.Rom, fid: int,
             count = (struct.unpack_from(">I", data, at - 4)[0] >> 12) & 0xFF
             loads[slot[1]] = max(loads.get(slot[1], 0), count)
     out = bytearray(blob)
-    for offset, count, _ in shifts + tints:
+    for offset, count, _ in shifts + tints + tuple((i[0], i[1], None) for i in insets):
         if loads.get(offset, 0) < count:
             raise GenError(f"file {fid:#x}: no G_VTX loads {count} vertices at {offset:#x}")
+
+    def vertex(offset, k):
+        return struct.unpack_from(">hhh", out, body + offset + 16 * k)
+
+    for offset, count, distance, ref_offset, ref_count in insets:
+        # The reference block's plane (its first triangle) and centre.
+        ref = [vertex(ref_offset, k) for k in range(ref_count)]
+        plane = _unit3(_cross3(_sub3(ref[1], ref[0]), _sub3(ref[2], ref[0])))
+        centre = tuple(sum(p[c] for p in ref) / ref_count for c in range(3))
+        if (plane is None) or (count % 3 != 0):
+            raise GenError(f"file {fid:#x}: inset block {offset:#x} has no plane or whole triangles")
+        for t in range(0, count, 3):
+            p = [vertex(offset, t + k) for k in range(3)]
+            normal = _cross3(_sub3(p[1], p[0]), _sub3(p[2], p[0]))
+            # Parallel to the reference plane, toward its centre.
+            along = _dot3(normal, plane)
+            inward = _unit3(tuple(normal[c] - along * plane[c] for c in range(3)))
+            if inward is None:
+                raise GenError(f"file {fid:#x}: triangle {t // 3} of {offset:#x} lies in the plane")
+            middle = tuple(sum(q[c] for q in p) / 3.0 for c in range(3))
+            if _dot3(inward, _sub3(centre, middle)) < 0.0:
+                inward = (-inward[0], -inward[1], -inward[2])
+            delta = tuple(int(round(distance * inward[c])) for c in range(3))
+            for k in range(3):
+                x, y, z = p[k]
+                struct.pack_into(">hhh", out, body + offset + 16 * (t + k),
+                                 x + delta[0], y + delta[1], z + delta[2])
     for offset, count, (dx, dy, dz) in shifts:
         for k in range(count):
             at = body + offset + 16 * k
@@ -1873,10 +1931,13 @@ def main() -> int:
                        if file_ids[index] == fid)
         tints = tuple((off, n, c) for index, off, n, c in OWNER_VERTEX_TINT.get(name, ())
                       if file_ids[index] == fid)
-        if shifts or tints:
-            blob = patch_o2r_vertices(blob, rom, fid, shifts, tints)
+        insets = tuple(row[1:] for row in OWNER_TRIANGLE_INSET.get(name, ())
+                       if file_ids[row[0]] == fid)
+        if shifts or tints or insets:
+            blob = patch_o2r_vertices(blob, rom, fid, shifts, tints, insets)
             deviations.append({"file_id": fid, "class": "render",
                                "why": "vertices " + ", ".join(
+                                   [f"{i[0]:#x} triangles pulled in {i[2]}" for i in insets] +
                                    [f"{o:#x} moved by {d}" for o, _, d in shifts] +
                                    [f"{o:#x} coloured x{c}/255" for o, _, c in tints])})
         if len(rom.extern_ids(fid)) > MAX_EXTERN_IDS:

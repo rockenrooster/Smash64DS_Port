@@ -1789,7 +1789,12 @@ Meta Knight 1,419,840 -> 1,397,440, Banjo 1,378,688 -> 1,364,096, Dedede
   select and in matches. The generator moves both blocks along the lid's
   normal into the mouth (`OWNER_VERTEX_SHIFT`, generate_p4_fighter.py; the
   owner's "moved inwards just a tad"; a render-class deviation in the
-  manifest).
+  manifest). Still showing in play-1012l ("move inward more please"): with
+  the lid closed the teeth hang along its rim in the planes of the case's
+  side walls (left x -273 against the wall's -274, right 372 against 377,
+  the curved rim alike), so they z-fought the body. Each tooth triangle
+  now also moves 20 units toward the lid's centre along its own normal,
+  parallel to the lid top (`OWNER_TRIANGLE_INSET`; play-1012m).
 - **Meta Knight's Mach Tornado is cream, not white.** Its lists colour
   PRIM * SHADE * PRIM with PRIM (248, 248, 192) and lighting off; the owner
   draws TEXEL0 * SHADE with the mask's intensity raised to full (2026-10-11).
