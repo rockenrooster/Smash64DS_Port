@@ -1028,6 +1028,8 @@ void ndsNetBattleEnd(void)
         if (pending == 0u)
             linger++;
         swiWaitForVBlank();
+        /* Up to 3 s waiting on a peer, as long as the watchdog's window. */
+        NDS_FREEZE_DIAGNOSTICS_NET_WAIT();
     }
     if ((gNdsNetDesyncBatch != 0xFFFFFFFFu) || (linger == 0u))
     {

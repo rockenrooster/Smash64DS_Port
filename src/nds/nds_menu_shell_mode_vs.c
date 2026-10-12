@@ -691,7 +691,11 @@ static void ndsMenuShellVsJoinStep(u32 taps)
         }
         if (answer < 0)
         {
-            if (sMenuVsJoinRefusedCount < NDS_NET_MAX_ROOMS)
+            /* A refusal (full, another build) is final for this search; no
+             * answer at all (-2, after the request's resends) is asked
+             * again while the room still shows. */
+            if ((answer != -2) &&
+                (sMenuVsJoinRefusedCount < NDS_NET_MAX_ROOMS))
             {
                 sMenuVsJoinRefused[sMenuVsJoinRefusedCount++] =
                     sMenuVsJoinSession;

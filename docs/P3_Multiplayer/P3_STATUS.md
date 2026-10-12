@@ -268,6 +268,52 @@ play-1007g ELF):
   main loop's VBlanks), shown on the report's row 14 with the resends. A resend
   fixes a dropped request; a stalled service shows in the health line.
 
+### Third report set (owner, 2026-10-12, play-1012y)
+
+Eight freezes over two consoles (Hyrule, Peach's Castle, Sector Z, Kongo
+Jungle; Crash, Metal Mario, Mr. Game & Watch, Mad Piano, Kirby, Bowser, Roy,
+Peach, Meta Knight, Ness, Snake, Dedede), a capsule one console showed as a
+Poke Ball, and a "battle stall" report seen too briefly to photograph. The
+same pairs in the harness (`NDS_NET_LAB_SWEEP_REPRO=4`, every item at Medium,
+two-minute matches; `own1`, 40 minutes, 10 matches) froze nothing and stayed
+in step: 0 desyncs, aborts, heap overflows or watchdog trips, 0 native
+failures. What changed:
+
+- **Kirby.** Two Kirby faults were real and are fixed (`docs/P4/P4_STATUS.md`,
+  "The 1012y playtest"): with a content's power in a match of one or two he
+  was never drawn, and with Lanky's power a landing neutral special made
+  Mario's fireball from a file the match had not loaded -- a data abort, so a
+  frozen console. Weapons now refuse a missing file instead of faulting.
+- **The radio's receive drain is bounded.** The drain walks the MAC's receive
+  buffer by each header's length word, as Calico's did; a header the MAC
+  overwrote in a receive overrun (a busy channel) sends that walk anywhere,
+  and a walk that never lands on the write cursor spins the radio thread --
+  priority 0x12, above the storage thread (24) -- so the game thread waits on
+  a read nobody serves: a battle stall, music on (the BGM thread outranks
+  it). The drain now walks at most 64 frames and skips to the write cursor at
+  a cursor or length outside the receive region
+  (`NDS_NET_STAT_RX_RESYNC`; net ABI 2).
+- **The end-of-match wait feeds the watchdog.** Waiting up to 3 s for the
+  peers' terminal digest (`ndsNetBattleEnd`) did not count as progress, so a
+  slow peer could draw a BATTLE STALL report over a healthy ending; it counts
+  now, as the batch gate's wait does.
+- **Joins survive a lost packet.** A guest sends JOIN_REQ again every 30
+  frames while it waits (the host answers a known MAC again), and only a
+  refusal (full, another build) skips the room for the rest of the search; no
+  answer at all asks again while the room still shows. Before, one lost
+  request or answer skipped the only room in range for good.
+- **A guest takes the host's messages from the host's MAC** (snapshots,
+  START, GO, CANCEL, the host's close), as the host already took the guests'.
+  The session id rides every packet in the clear.
+
+With these changes (`own2`, 20 minutes): 10 matches through one join and the
+lobby's rematches, 0 desyncs, aborts or watchdog trips, 1 lean decline over
+the run (`own1` before them: 1,629, the undrawn Kirby).
+
+The freezes themselves still have no photograph: the report stays on the
+lower screen while a console is stuck and is redrawn every second; a photo of
+it (both consoles if both stop) names the stuck call.
+
 ## Testing
 
 - `melonDS-mp`: an export of the owner's melonDS-Accurate `master` (the build
@@ -290,7 +336,9 @@ play-1007g ELF):
   `NDS_NET_LAB_LEAVE=N` makes the guest hold START (Leave) in its Nth battle.
   `NDS_NET_LAB_SWEEP_REPRO=N` replays a reported setup instead of the sweep
   (2: Donkey Kong host against Luigi guest, each VS stage in turn, every
-  item at Very High), and `NDS_NET_LAB_HANG=1|2` freezes the guest at batch
+  item at Very High; 3: four heavy P4 mixes with two CPUs on Hyrule and
+  Sector Z; 4: the owner's play-1012y pairs on their stages, every item at
+  Medium), and `NDS_NET_LAB_HANG=1|2` freezes the guest at batch
   600 for the freeze report.
   `NDS_NET_LAB_SOAK=1` (with the sweep) plays rooms without end: the two
   consoles swap host and guest every room (host rotation), and the rooms cycle

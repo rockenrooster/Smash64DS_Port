@@ -29,10 +29,20 @@
 
 void ndsNet7RxFrame(const void *frame, u32 len);
 void ndsNet7RxSkipped(void);
+void ndsNet7RxResync(void);
 
 /* A whole frame of ours is 24 + NDS_NET_MAX_PAYLOAD bytes; anything longer is
  * not ours and is skipped unread. */
 #define NDS_NET7_RX_FRAME_MAX (sizeof(WlanMacHdr) + NDS_NET_MAX_PAYLOAD)
+
+/* The most frames one drain walks. The walk follows each header's length
+ * word, as Calico's does; a header the MAC overwrote (a receive buffer
+ * overrun on a busy channel) sends it anywhere, and a walk that never lands
+ * on the write cursor would spin the radio thread above the storage and
+ * sound threads -- the game would wait on a read nobody serves. Past this,
+ * or at a cursor or length outside the receive region, the drain skips to
+ * the write cursor the IRQ latched. */
+#define NDS_NET7_RX_DRAIN_MAX 64u
 
 static u16 sNet7RxFrame[(NDS_NET7_RX_FRAME_MAX + 1u) / 2u];
 
@@ -49,7 +59,10 @@ MK_NOINLINE static void ndsNet7MwlRxRead(void *dst, unsigned len)
 
 void _mwlRxEndTask(void)
 {
-    for (;;)
+    const unsigned region_lo = s_mwlState.rx_pos;
+    unsigned frames;
+
+    for (frames = 0u; ; frames++)
     {
         /* Read cursor against the write cursor the RX_END IRQ latched. */
         const unsigned rdcsr = MWL_REG(W_RXBUF_READCSR);
@@ -62,9 +75,22 @@ void _mwlRxEndTask(void)
         armCompilerBarrier();
         if (rdcsr == wrcsr)
             break;
+        if ((frames >= NDS_NET7_RX_DRAIN_MAX) || (rdcsr * 2u < region_lo) ||
+            (rdcsr * 2u >= MWL_MAC_RAM_SZ))
+        {
+            MWL_REG(W_RXBUF_READCSR) = wrcsr;
+            ndsNet7RxResync();
+            break;
+        }
 
         MWL_REG(W_RXBUF_RD_ADDR) = rdcsr * 2u;
         ndsNet7MwlRxRead(&rxhdr, sizeof(rxhdr));
+        if (rxhdr.mpdu_len > MWL_MAC_RAM_SZ - region_lo - sizeof(MwlDataRxHdr))
+        {
+            MWL_REG(W_RXBUF_READCSR) = wrcsr;
+            ndsNet7RxResync();
+            break;
+        }
         type = rxhdr.status & 0xFu;
         read_sz = (rxhdr.mpdu_len + 1u) & ~1u;
         /* The next frame starts after this one, word aligned, wrapping inside

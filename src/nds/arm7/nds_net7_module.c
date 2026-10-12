@@ -149,6 +149,13 @@ void ndsNet7RxSkipped(void)
     ndsNet7Stat(NDS_NET_STAT_RX_FOREIGN);
 }
 
+/* The drain met a cursor or length that is not a frame and skipped to the
+ * write cursor (nds_net7_mwl_rx.c). */
+void ndsNet7RxResync(void)
+{
+    ndsNet7Stat(NDS_NET_STAT_RX_RESYNC);
+}
+
 /* --- TX: ARM9 ring -> driver ------------------------------------------- */
 
 static void ndsNet7TxDone(void *arg, MwlTxEvent evt, MwlDataTxHdr *hdr)

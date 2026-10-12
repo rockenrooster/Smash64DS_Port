@@ -31,7 +31,7 @@
 #define NDS_NET_PXI_CHANNEL     25u         /* Calico PxiChannel_User2 */
 #define NDS_NET7_MAGIC          0x374E3653u /* "S6N7" */
 #define NDS_NET_SHARED_MAGIC    0x484E3653u /* "S6NH" */
-#define NDS_NET_ABI             1u
+#define NDS_NET_ABI             2u
 
 /* PXI words, ARM9 -> ARM7: command in bits 0..3, argument in bits 4..25. */
 #define NDS_NET_CMD_ATTACH      1u  /* module image is in place: start it */
@@ -80,6 +80,7 @@ enum
     NDS_NET_STAT_RX_FOREIGN,
     NDS_NET_STAT_TX_NO_BUFFER,
     NDS_NET_STAT_KICKS,
+    NDS_NET_STAT_RX_RESYNC,       /* RX drains that skipped to the write cursor */
     NDS_NET_STAT_COUNT
 };
 

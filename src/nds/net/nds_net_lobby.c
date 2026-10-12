@@ -46,6 +46,9 @@
 #define NDS_NET_LOBBY_TIMEOUT      240u   /* frames without a word: gone */
 #define NDS_NET_ROOM_EXPIRE        120u
 #define NDS_NET_JOIN_TIMEOUT       180u
+/* A lost request or answer only delays a join: the request goes out again
+ * this often while it waits (the host answers a known MAC again). */
+#define NDS_NET_JOIN_RESEND        30u
 /* The match start is two-phase (ndsNetLobbyHostStartMatch): the host offers
  * START until every guest ACKs it, then commits with GO, or withdraws with
  * CANCEL. A guest that ACKed waits for the verdict; it never enters a match
@@ -141,6 +144,7 @@ static u32 sJoinState;        /* 0 idle, 1 waiting, 2 in, 3 refused */
 static u32 sJoinSession;
 static u32 sJoinNonce;
 static u32 sJoinSentFrame;
+static u32 sJoinResentFrame;
 
 volatile u32 gNdsNetLobbyJoins;
 volatile u32 gNdsNetLobbyDrops;
@@ -406,11 +410,24 @@ uint32_t ndsNetJoinRooms(NdsNetRoom *rooms, uint32_t max)
     return n;
 }
 
-int ndsNetJoinRequest(const NdsNetRoom *room)
+static void ndsNetJoinSend(void)
 {
     u8 buf[NDS_NET_HDR_BYTES + 4u + NDS_NET_NAME_LEN + NDS_NET_BUILD_ID_BYTES];
     u32 n;
 
+    sJoinResentFrame = sFrame;
+    n = ndsNetHeaderWrite(buf, NDS_NET_KIND_JOIN_REQ, sJoinSession);
+    ndsNetPut32(buf + n, sJoinNonce);
+    n += 4u;
+    memcpy(buf + n, sMyName, NDS_NET_NAME_LEN);
+    n += NDS_NET_NAME_LEN;
+    memcpy(buf + n, sBuildId, NDS_NET_BUILD_ID_BYTES);
+    n += NDS_NET_BUILD_ID_BYTES;
+    ndsNetSend(buf, n);
+}
+
+int ndsNetJoinRequest(const NdsNetRoom *room)
+{
     if (room == NULL || room->session == 0u)
         return -1;
     if (room->same_build == 0u)
@@ -423,14 +440,7 @@ int ndsNetJoinRequest(const NdsNetRoom *room)
     sJoinNonce = (u32)cpuGetTiming() ^ sFrame;
     sJoinState = 1u;
     sJoinSentFrame = sFrame;
-    n = ndsNetHeaderWrite(buf, NDS_NET_KIND_JOIN_REQ, sJoinSession);
-    ndsNetPut32(buf + n, sJoinNonce);
-    n += 4u;
-    memcpy(buf + n, sMyName, NDS_NET_NAME_LEN);
-    n += NDS_NET_NAME_LEN;
-    memcpy(buf + n, sBuildId, NDS_NET_BUILD_ID_BYTES);
-    n += NDS_NET_BUILD_ID_BYTES;
-    ndsNetSend(buf, n);
+    ndsNetJoinSend();
     return 0;
 }
 
@@ -447,6 +457,8 @@ int ndsNetJoinPoll(void)
         sJoinState = 0u;
         return -2;
     }
+    if (sJoinState == 1u && (sFrame - sJoinResentFrame) >= NDS_NET_JOIN_RESEND)
+        ndsNetJoinSend();
     return 0;
 }
 
@@ -686,7 +698,7 @@ static void ndsNetLobbyReceive(void)
             if (sScanning != 0u)
                 ndsNetRoomSeen(src, session, body);
             if (sRole == NDS_NET_ROLE_GUEST && session == sSession &&
-                blen >= NDS_NET_LOBBY_BODY_BYTES)
+                blen >= NDS_NET_LOBBY_BODY_BYTES && memcmp(src, sHostMac, 6) == 0)
             {
                 u32 p;
 
@@ -789,7 +801,10 @@ static void ndsNetLobbyReceive(void)
             }
             continue;
         }
-        if (sRole == NDS_NET_ROLE_GUEST && session == sSession)
+        /* The host's own messages, from the host's MAC as the guests' are
+         * from theirs: the session id alone rides every packet in the clear. */
+        if (sRole == NDS_NET_ROLE_GUEST && session == sSession &&
+            memcmp(src, sHostMac, 6) == 0)
         {
             if (kind == NDS_NET_KIND_START)
                 ndsNetGuestStart(body, blen);
@@ -799,8 +814,7 @@ static void ndsNetLobbyReceive(void)
             else if (kind == NDS_NET_KIND_START_CANCEL && blen >= 4u &&
                      ndsNetGet32(body) == sStartRound)
                 ndsNetGuestStartCancel();
-            else if (kind == NDS_NET_KIND_INPUT &&
-                     memcmp(src, sHostMac, 6) == 0)
+            else if (kind == NDS_NET_KIND_INPUT)
                 ndsNetGuestStartGo(); /* the host is already playing */
             else if (kind == NDS_NET_KIND_LEAVE && blen >= 1u && body[0] == 0xFFu)
                 sLost = 1u;
@@ -1118,6 +1132,58 @@ static void ndsNetLabSweepDescriptor(NdsMatchConfig *cfg)
         cfg->time_limit = 5u;
         cfg->item_toggles = ndsMatchConfigItemTogglesFromRows(kAllRows);
         cfg->item_appearance_rate = nSCBattleItemSwitchVeryHigh;
+        ndsMatchConfigApply(cfg);
+        return;
+    }
+    if (gNdsNetLabSweepRepro == 4u)
+    {
+        /* Owner, 2026-10-12 (play-1012y on two consoles): freezes with these
+         * pairs on Hyrule, Peach's Castle, Sector Z and Kongo Jungle, and a
+         * capsule one console showed as a Poke Ball. The two humans (host,
+         * guest) and, in the three-player row, a level-9 CPU; a content of
+         * 0 is the original cast on the row's kind. Every item at Medium,
+         * the shipped default, in two-minute time. */
+        static const struct
+        {
+            u8 gkind;
+            u8 content[3];
+            u8 fkind[3];
+        } kOwner[7] = {
+            { nGRKindHyrule, { 9u, 0u, 0u }, { 0u, nFTKindMMario, nFTKindNull } },
+            { nGRKindHyrule, { 17u, 15u, 0u }, { 0u, 0u, nFTKindNull } },
+            { nGRKindCastle, { 0u, 4u, 0u }, { nFTKindKirby, 0u, nFTKindNull } },
+            { nGRKindHyrule, { 6u, 8u, 0u }, { 0u, 0u, nFTKindNull } },
+            { nGRKindSector, { 15u, 16u, 0u }, { 0u, 0u, nFTKindNess } },
+            { nGRKindJungle, { 4u, 17u, 0u }, { 0u, 0u, nFTKindNull } },
+            { nGRKindJungle, { 18u, 14u, 0u }, { 0u, 0u, nFTKindNull } },
+        };
+        const u32 row = m % 7u;
+
+        cfg->gkind = kOwner[row].gkind;
+        for (i = 0u; i < NDS_NET_PORTS; i++)
+        {
+            NdsMatchFighterConfig *f = &cfg->fighters[i];
+            const u32 content = (i < 3u) ? kOwner[row].content[i] : 0u;
+            const NDSP4Fighter *p4 = (content != 0u) ? ndsP4Fighter(content) : NULL;
+            const u32 fkind = (p4 != NULL) ? (u32)p4->parent_kind :
+                              (i < 3u) ? kOwner[row].fkind[i] : (u32)nFTKindNull;
+
+            f->pkind = (fkind == nFTKindNull) ? nFTPlayerKindNot :
+                       (i < 2u) ? nFTPlayerKindMan : nFTPlayerKindCom;
+            f->fkind = (u8)fkind;
+            f->p4_content = (p4 != NULL) ? (u8)content : 0u;
+            f->level = 9u;
+            f->team = (u8)i;
+            f->costume = ((p4 == NULL) && (fkind != nFTKindNull)) ?
+                (u8)ftParamGetCostumeCommonID((s32)fkind, (s32)i) : 0u;
+            f->shade = 0u;
+        }
+        cfg->is_team_battle = FALSE;
+        cfg->is_team_attack = FALSE;
+        cfg->game_rules = SCBATTLE_GAMERULE_TIME;
+        cfg->time_limit = 2u;
+        cfg->item_toggles = ~0u;
+        cfg->item_appearance_rate = nSCBattleItemSwitchMiddle;
         ndsMatchConfigApply(cfg);
         return;
     }
