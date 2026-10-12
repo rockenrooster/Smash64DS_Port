@@ -12836,21 +12836,9 @@ static s32 ndsRelocExternTreeSliceFail(NDSRelocExternTreeSlice *slice)
 static s32 ndsRelocExternTreeSliceReadSequential(
     NDSRelocExternTreeSlice *slice, void *dst, u32 bytes, sb32 is_payload)
 {
-    FILE *file;
-    size_t read_count;
-
-    if ((slice == NULL) || (slice->stream.file == NULL) || (dst == NULL) ||
-        (bytes == 0u))
+    if ((slice == NULL) || (dst == NULL) || (bytes == 0u) ||
+        (ndsRelocAssetStreamReadNext(&slice->stream, dst, bytes) == FALSE))
     {
-        return FALSE;
-    }
-    file = (FILE *)slice->stream.file;
-    ndsFsLock();
-    read_count = fread(dst, 1u, (size_t)bytes, file);
-    ndsFsUnlock();
-    if (read_count != (size_t)bytes)
-    {
-        gNdsRelocAssetShortReadCount++;
         return FALSE;
     }
     if (is_payload != FALSE)

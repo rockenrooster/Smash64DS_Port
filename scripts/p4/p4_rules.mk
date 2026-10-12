@@ -140,3 +140,8 @@ $(NDS_P4_ANIM_STREAM): \
 	python "$(PROJECT_ROOT)/scripts/p4/p4_anim_stream.py" --gen "$(NDS_P4_GEN)" \
 		--contents "$(NDS_P4_ENABLED)" --out "$@"
 $(OUTPUT).nds: $(NDS_P4_ANIM_STREAM)
+# nitro:/reloc/p4 resolves by its boot-time FNT runs (nds_reloc_assets.c,
+# ndsRelocP4DirBuild): every resolver -- libfat's open included -- reaches
+# __wrap_nitroromResolvePath, which answers "reloc/p4/<id>" without walking
+# the directory's 2,161 names through the ARM7 storage path.
+LDFLAGS += -Wl,--wrap=nitroromResolvePath

@@ -1158,6 +1158,244 @@ static int ndsRelocAnimDirLookup(u32 asset_id)
     return -1;
 }
 
+#if NDS_P4
+/* nitro:/reloc/p4 file ids, read once from the FNT (2026-10-12). The
+ * directory holds every content's loose file (2,161 with eighteen contents),
+ * and a resolve walks its subtable to the name, two ROM reads an entry
+ * through the ARM7 storage path: the VS select's commit of Mad Piano's motion
+ * file (11 KB) took 14 VBlanks in its five opens (header, extern ids, size,
+ * data), and a content's select clips load the same way. One buffered pass at
+ * boot keeps (asset, file id) runs -- the names are four hex digits, sorted,
+ * so the runs ascend -- and the linker wraps nitroromResolvePath
+ * (scripts/p4/p4_rules.mk): libfat's open, the direct loaders and every other
+ * resolver answer "reloc/p4/<id>" from the runs. A name the runs lack walks
+ * as before. */
+#define NDS_RELOC_P4_DIR_PATH "reloc/p4"
+#define NDS_RELOC_P4_DIR_RUNS_MAX 192u
+
+typedef struct NDSRelocP4DirRun
+{
+    u16 asset_first;
+    u16 count;
+    u16 nitro_first;
+} NDSRelocP4DirRun;
+
+static NDSRelocP4DirRun sNdsRelocP4DirRuns[NDS_RELOC_P4_DIR_RUNS_MAX];
+static u32 sNdsRelocP4DirRunCount;
+static NitroRom *sNdsRelocP4DirRom;
+__attribute__((used)) volatile u32 gNdsRelocP4DirFiles;
+__attribute__((used)) volatile u32 gNdsRelocP4DirRuns;
+__attribute__((used)) volatile u32 gNdsRelocP4DirFailStep;
+__attribute__((used)) volatile u32 gNdsRelocP4DirHits;
+
+/* A content file's name, four lowercase hex digits, as its asset id; or -1. */
+static s32 ndsRelocP4DirParse(const char *name, u32 len)
+{
+    u32 value = 0u;
+    u32 i;
+
+    if (len != 4u)
+    {
+        return -1;
+    }
+    for (i = 0u; i < 4u; i++)
+    {
+        const char c = name[i];
+
+        if ((c >= '0') && (c <= '9'))
+        {
+            value = (value << 4) | (u32)(c - '0');
+        }
+        else if ((c >= 'a') && (c <= 'f'))
+        {
+            value = (value << 4) | ((u32)(c - 'a') + 10u);
+        }
+        else
+        {
+            return -1;
+        }
+    }
+    return (s32)value;
+}
+
+static void ndsRelocP4DirBuild(NitroRom *rom)
+{
+    NDSRelocAnimDirReader reader;
+    const NitroRomDir *dir;
+    char name[NITROROM_NAME_MAX + 1u];
+    s32 last_asset = -1;
+    int dir_id;
+    u32 file_id;
+
+    sNdsRelocP4DirRunCount = 0u;
+    sNdsRelocP4DirRom = rom;
+    if (rom == NULL)
+    {
+        gNdsRelocP4DirFailStep = 1u;
+        return;
+    }
+    dir_id = nitroromResolvePath(rom, NITROROM_ROOT_DIR,
+                                 NDS_RELOC_P4_DIR_PATH);
+    if ((dir_id < (s32)NITROROM_ROOT_DIR) ||
+        ((u32)(dir_id - NITROROM_ROOT_DIR) >= rom->num_dirs))
+    {
+        gNdsRelocP4DirFailStep = 2u;
+        return;
+    }
+    dir = &rom->dir_table[dir_id - NITROROM_ROOT_DIR];
+    reader.rom = rom;
+    reader.offset = rom->fnt_offset + dir->subtable_offset;
+    reader.pos = 0u;
+    reader.fill = 0u;
+    file_id = dir->file_id_base;
+    for (;;)
+    {
+        NDSRelocP4DirRun *run;
+        s32 kind = ndsRelocAnimDirReadByte(&reader);
+        s32 asset;
+        u32 len;
+        u32 i;
+
+        if (kind <= 0)
+        {
+            if (kind < 0)
+            {
+                gNdsRelocP4DirFailStep = 3u;
+                sNdsRelocP4DirRunCount = 0u;
+            }
+            break;
+        }
+        len = (u32)kind & 0x7fu;
+        for (i = 0u; i < len; i++)
+        {
+            s32 c = ndsRelocAnimDirReadByte(&reader);
+
+            if (c < 0)
+            {
+                gNdsRelocP4DirFailStep = 3u;
+                sNdsRelocP4DirRunCount = 0u;
+                return;
+            }
+            name[i] = (char)c;
+        }
+        if (((u32)kind & 0x80u) != 0u)
+        {
+            /* Subdirectory: its 16-bit id follows; it uses no file id. */
+            if ((ndsRelocAnimDirReadByte(&reader) < 0) ||
+                (ndsRelocAnimDirReadByte(&reader) < 0))
+            {
+                gNdsRelocP4DirFailStep = 3u;
+                sNdsRelocP4DirRunCount = 0u;
+                return;
+            }
+            continue;
+        }
+        asset = ndsRelocP4DirParse(name, len);
+        if (asset < 0)
+        {
+            /* A foreign name keeps its file id out of every run. */
+            file_id++;
+            continue;
+        }
+        if ((asset <= last_asset) || (file_id >= rom->num_files))
+        {
+            /* Out of order: the runs must ascend for the search below;
+             * the names from here on walk. */
+            gNdsRelocP4DirFailStep = 4u;
+            break;
+        }
+        last_asset = asset;
+        run = (sNdsRelocP4DirRunCount != 0u) ?
+            &sNdsRelocP4DirRuns[sNdsRelocP4DirRunCount - 1u] : NULL;
+        if ((run != NULL) &&
+            ((u32)asset == (u32)run->asset_first + run->count) &&
+            (file_id == (u32)run->nitro_first + run->count))
+        {
+            run->count++;
+        }
+        else if (sNdsRelocP4DirRunCount < NDS_RELOC_P4_DIR_RUNS_MAX)
+        {
+            run = &sNdsRelocP4DirRuns[sNdsRelocP4DirRunCount++];
+            run->asset_first = (u16)asset;
+            run->count = 1u;
+            run->nitro_first = (u16)file_id;
+        }
+        else
+        {
+            gNdsRelocP4DirFailStep = 5u;
+            break;
+        }
+        gNdsRelocP4DirFiles++;
+        file_id++;
+    }
+    gNdsRelocP4DirRuns = sNdsRelocP4DirRunCount;
+}
+
+static int ndsRelocP4DirLookup(u32 asset_id)
+{
+    u32 lo = 0u;
+    u32 hi = sNdsRelocP4DirRunCount;
+
+    while (lo < hi)
+    {
+        const u32 mid = (lo + hi) >> 1;
+        const NDSRelocP4DirRun *run = &sNdsRelocP4DirRuns[mid];
+
+        if (asset_id < run->asset_first)
+        {
+            hi = mid;
+        }
+        else if ((asset_id - run->asset_first) >= run->count)
+        {
+            lo = mid + 1u;
+        }
+        else
+        {
+            NDS_DIAG(gNdsRelocP4DirHits++);
+            return (int)(run->nitro_first + (asset_id - run->asset_first));
+        }
+    }
+    return -1;
+}
+
+int __real_nitroromResolvePath(NitroRom *nr, u16 base_dir, const char *path);
+int __wrap_nitroromResolvePath(NitroRom *nr, u16 base_dir, const char *path);
+
+int __wrap_nitroromResolvePath(NitroRom *nr, u16 base_dir, const char *path)
+{
+    static const char prefix[] = NDS_RELOC_P4_DIR_PATH "/";
+    const char *p = path;
+
+    if ((sNdsRelocP4DirRunCount != 0u) && (nr == sNdsRelocP4DirRom) &&
+        (p != NULL))
+    {
+        while (*p == '/')
+        {
+            p++;
+        }
+        /* An absolute path, or one from the root (what libfat's open of
+         * "nitro:/reloc/p4/<id>" and the direct loaders pass). */
+        if (((p != path) || (base_dir == NITROROM_ROOT_DIR)) &&
+            (strncmp(p, prefix, sizeof(prefix) - 1u) == 0))
+        {
+            const char *leaf = p + (sizeof(prefix) - 1u);
+            s32 asset = ndsRelocP4DirParse(leaf, (u32)strlen(leaf));
+
+            if (asset >= 0)
+            {
+                int id = ndsRelocP4DirLookup((u32)asset);
+
+                if (id >= 0)
+                {
+                    return id;
+                }
+            }
+        }
+    }
+    return __real_nitroromResolvePath(nr, base_dir, path);
+}
+#endif
+
 /* libfat's disc cache, which nitroFSInit creates for a ROM read through DLDI
  * or the DSi SD: libnds's weak default (dvm_calico.o) is 16 pages of 8
  * sectors, 65,832 B of libc heap below the taskman arena for the whole run.
@@ -1173,6 +1411,9 @@ void ndsRelocAssetsInit(void)
     {
         gNdsRelocAssetInitResult = NDS_RELOC_ASSET_INIT_PASS;
         ndsRelocAnimDirBuild();
+#if NDS_P4
+        ndsRelocP4DirBuild(nitroromGetSelf());
+#endif
 #if NDS_R2_FTANIM_STREAM
         /* Its resident directory is read in 256 B chunks: do that on the
          * boot stack, not inside the first frame that streams a clip. */
@@ -2502,9 +2743,30 @@ static s32 ndsRelocAssetStreamOpenUnlocked(NdsRelocAssetStream *stream, const ch
         return FALSE;
     }
     stream->file = NULL;
+    stream->rom = NULL;
+    stream->nitro_id = 0u;
+    stream->size = 0u;
+    stream->pos = 0u;
     if (path == NULL)
     {
         return FALSE;
+    }
+    if (strncmp(path, "nitro:/", 7u) == 0)
+    {
+        /* By file id (nds_reloc_assets.h): the same resolve libfat's open
+         * makes, then every read is one ROM range read. */
+        NitroRom *rom = nitroromGetSelf();
+        int id = (rom != NULL) ?
+            nitroromResolvePath(rom, NITROROM_ROOT_DIR, path + 7u) : -1;
+
+        if ((id >= 0) && (id < (int)NITROROM_ROOT_DIR) &&
+            ((u32)id < rom->num_files))
+        {
+            stream->rom = rom;
+            stream->nitro_id = (u32)id;
+            stream->size = nitroromGetFileSize(rom, (u16)id);
+            return TRUE;
+        }
     }
     stream->file = (void *)fopen(path, "rb");
     if (stream->file == NULL)
@@ -2530,8 +2792,24 @@ static s32 ndsRelocAssetStreamReadUnlocked(NdsRelocAssetStream *stream, u32 offs
 {
     FILE *file;
 
-    if ((stream == NULL) || (stream->file == NULL) || (dst == NULL) ||
-        (bytes == 0u))
+    if ((stream == NULL) || (dst == NULL) || (bytes == 0u))
+    {
+        return FALSE;
+    }
+    if (stream->rom != NULL)
+    {
+        if ((offset > stream->size) || (bytes > (stream->size - offset)) ||
+            (nitroromReadFile((NitroRom *)stream->rom, (u16)stream->nitro_id,
+                              offset, dst, bytes) == false))
+        {
+            gNdsRelocAssetShortReadCount++;
+            return FALSE;
+        }
+        stream->pos = offset + bytes;
+        gNdsRelocAssetPayloadReadCount++;
+        return TRUE;
+    }
+    if (stream->file == NULL)
     {
         return FALSE;
     }
@@ -2546,8 +2824,56 @@ static s32 ndsRelocAssetStreamReadUnlocked(NdsRelocAssetStream *stream, u32 offs
         gNdsRelocAssetShortReadCount++;
         return FALSE;
     }
+    stream->pos = offset + bytes;
     gNdsRelocAssetPayloadReadCount++;
     return TRUE;
+}
+
+static s32 ndsRelocAssetStreamReadNextUnlocked(NdsRelocAssetStream *stream,
+                                               void *dst, u32 bytes)
+{
+    if ((stream == NULL) || (dst == NULL) || (bytes == 0u))
+    {
+        return FALSE;
+    }
+    if (stream->rom != NULL)
+    {
+        if ((stream->pos > stream->size) ||
+            (bytes > (stream->size - stream->pos)) ||
+            (nitroromReadFile((NitroRom *)stream->rom, (u16)stream->nitro_id,
+                              stream->pos, dst, bytes) == false))
+        {
+            gNdsRelocAssetShortReadCount++;
+            return FALSE;
+        }
+        stream->pos += bytes;
+        return TRUE;
+    }
+    if ((stream->file == NULL) ||
+        (fread(dst, 1u, (size_t)bytes, (FILE *)stream->file) !=
+         (size_t)bytes))
+    {
+        gNdsRelocAssetShortReadCount++;
+        return FALSE;
+    }
+    stream->pos += bytes;
+    return TRUE;
+}
+
+s32 ndsRelocAssetStreamReadNext(NdsRelocAssetStream *stream, void *dst,
+                                u32 bytes)
+{
+    s32 result;
+
+    ndsFsLock();
+    result = ndsRelocAssetStreamReadNextUnlocked(stream, dst, bytes);
+    ndsFsUnlock();
+    return result;
+}
+
+u32 ndsRelocAssetStreamSize(const NdsRelocAssetStream *stream)
+{
+    return ((stream != NULL) && (stream->rom != NULL)) ? stream->size : 0u;
 }
 
 s32 ndsRelocAssetStreamRead(NdsRelocAssetStream *stream, u32 offset, void *dst, u32 bytes)
@@ -2562,7 +2888,12 @@ s32 ndsRelocAssetStreamRead(NdsRelocAssetStream *stream, u32 offset, void *dst, 
 
 static void ndsRelocAssetStreamCloseUnlocked(NdsRelocAssetStream *stream)
 {
-    if ((stream == NULL) || (stream->file == NULL))
+    if (stream == NULL)
+    {
+        return;
+    }
+    stream->rom = NULL;
+    if (stream->file == NULL)
     {
         return;
     }

@@ -130,7 +130,7 @@ typedef struct NdsUiKitSpriteSlot {
 } NdsUiKitSpriteSlot;
 
 static u8 sNdsUiKitGlyphs[NDS_MN_UI_KIT_GLYPH_BLOCK_BYTES];
-static u8 sNdsUiKitStaging[NDS_UI_KIT_STAGING_BYTES] __attribute__((aligned(4)));
+static u8 sNdsUiKitStaging[NDS_UI_KIT_STAGING_BYTES] __attribute__((aligned(32)));
 static NdsUiKitTextSlot sNdsUiKitText[NDS_UI_KIT_TEXT_SLOTS];
 static NdsUiKitSpriteSlot sNdsUiKitSprites[NDS_UI_KIT_SPRITE_SLOTS];
 static u32 sNdsUiKitImageVram[NDS_UI_KIT_IMAGE_IDS];
@@ -1023,10 +1023,18 @@ static s32 ndsUiKitBlitOneSurface(NdsRelocAssetStream *stream, u32 index,
     NdsUiKitSurfaceMetric placed = kNdsUiKitSurfaceMetrics[index];
     const NdsUiKitSurfaceMetric *metric = &placed;
     u32 row_bytes = (u32)metric->width * sizeof(u16);
-    u32 rows_per_slice = NDS_UI_KIT_STAGING_BYTES / row_bytes;
+    /* 2026-10-12: room to round each read up to whole 32-byte lines, so a
+     * stream read by file id goes to the ARM7 as one direct transfer into
+     * the aligned staging (no bounced head or tail). */
+    u32 rows_per_slice = (NDS_UI_KIT_STAGING_BYTES - 31u) / row_bytes;
+    u32 file_bytes = ndsRelocAssetStreamSize(stream);
     u32 hash = 0x811C9DC5u;
     u32 row = 0u;
 
+    if (rows_per_slice == 0u)
+    {
+        rows_per_slice = 1u;
+    }
     if ((site != NULL) && (site[0] != NDS_UI_KIT_SITE_BAKED))
     {
         placed.x = site[0];
@@ -1035,16 +1043,24 @@ static s32 ndsUiKitBlitOneSurface(NdsRelocAssetStream *stream, u32 index,
     while (row < (u32)metric->height)
     {
         u32 rows = (u32)metric->height - row;
+        u32 offset;
+        u32 read_bytes;
         u32 i;
 
         if (rows > rows_per_slice)
         {
             rows = rows_per_slice;
         }
-        if (ndsRelocAssetStreamRead(stream,
-                                    metric->offset + (row * row_bytes),
-                                    sNdsUiKitStaging,
-                                    rows * row_bytes) == FALSE)
+        offset = metric->offset + (row * row_bytes);
+        read_bytes = rows * row_bytes;
+        if ((((read_bytes + 31u) & ~31u) <= NDS_UI_KIT_STAGING_BYTES) &&
+            (offset <= file_bytes) &&
+            (((read_bytes + 31u) & ~31u) <= (file_bytes - offset)))
+        {
+            read_bytes = (read_bytes + 31u) & ~31u;
+        }
+        if (ndsRelocAssetStreamRead(stream, offset, sNdsUiKitStaging,
+                                    read_bytes) == FALSE)
         {
             gNdsUiKitSurfaceReadFailCount++;
             return FALSE;

@@ -90,14 +90,31 @@ s32 ndsRelocAssetReadRawRange(const char *path, u32 offset, void *dst,
  * every later call on it returns FALSE, so a caller may check once at the end.
  * Close is idempotent and safe on a stream that never opened. Reads count
  * through gNdsRelocAssetPayloadReadCount exactly as the one-shot form does, so
- * a run's payload-read total does not change shape when a caller switches. */
+ * a run's payload-read total does not change shape when a caller switches.
+ *
+ * 2026-10-12: a "nitro:/" stream reads by NitroFS file id (calico's NitroRom,
+ * the ARM7 storage path) instead of through libfat's FILE: newlib's buffer
+ * is not 32-byte aligned, so each 1 KB refill went to the ARM7 as a bounced
+ * head and a body -- the VS select's 10 KB card bake took 27 round trips
+ * (~330K ticks waiting) where an aligned destination takes one per read.
+ * `file` stays NULL for such a stream. */
 typedef struct NdsRelocAssetStream {
     void *file; /* FILE*, kept void so callers need no <stdio.h> */
+    void *rom;  /* the NitroRom of a stream read by file id, else NULL */
+    u32 nitro_id;
+    u32 size;   /* that file's bytes */
+    u32 pos;    /* where ndsRelocAssetStreamReadNext continues */
 } NdsRelocAssetStream;
 
 s32 ndsRelocAssetStreamOpen(NdsRelocAssetStream *stream, const char *path);
 s32 ndsRelocAssetStreamRead(NdsRelocAssetStream *stream, u32 offset, void *dst,
                             u32 bytes);
+/* The next `bytes` after the last read (byte zero after Open), uncounted:
+ * the caller counts its payload. */
+s32 ndsRelocAssetStreamReadNext(NdsRelocAssetStream *stream, void *dst,
+                                u32 bytes);
+/* The file's size for a stream read by file id, else 0. */
+u32 ndsRelocAssetStreamSize(const NdsRelocAssetStream *stream);
 void ndsRelocAssetStreamClose(NdsRelocAssetStream *stream);
 /* Size, zero and load from one open. Prefer this over sizing with
  * ndsRelocAssetAllocSize and then loading: that pair walks the NitroFS

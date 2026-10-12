@@ -354,6 +354,9 @@ static u32 sCssBackTics;
  * the mode-label toggle, and written back through the descriptor on commit.
  * P2-2 also makes sCssTeam[] live through the source RED/BLUE/GREEN controls. */
 static u8 sCssIsTeamBattle;
+/* 1 + the mode label surface ndsMenuShellCssPopulate last blitted with BACK
+ * over this entry's base surfaces; 0 until it has. */
+static u32 sCssEntryStatesShown;
 /* P2-1N (3): the shutter, in the source's own units. door_offset slides
  * 2/tic between 0 (open — halves parked at the panel edges, hidden by the
  * frame) and 41 (shut — halves meeting at +22/+47, which is exactly the
@@ -1600,8 +1603,13 @@ static void ndsMenuShellCssPopulate(void)
             NDS_MN_UI_KIT_SURFACE_CSS_MODE_TEAM :
             NDS_MN_UI_KIT_SURFACE_CSS_MODE_FFA;
         entry_states[1] = NDS_MN_UI_KIT_SURFACE_CSS_BACK;
-        if (ndsUiKitBlitSurfaces(entry_states, 2u) != FALSE)
+        /* 2026-10-12: once per entry and mode, not per populate: a carried
+         * token re-populates on every portrait it crosses, and these two
+         * reads (5.8 KB from NitroFS) were ~230K ticks of each such frame. */
+        if ((sCssEntryStatesShown != (u32)entry_states[0] + 1u) &&
+            (ndsUiKitBlitSurfaces(entry_states, 2u) != FALSE))
         {
+            sCssEntryStatesShown = (u32)entry_states[0] + 1u;
             gNdsMenuShellCssPanelBlitCount += 2u;
         }
     }
@@ -3125,6 +3133,10 @@ static void ndsMenuShellCssNetSetTeamBattle(u32 team_battle)
     if (ndsUiKitBlitSurfaces(&label, 1u) != FALSE)
     {
         gNdsMenuShellCssPanelBlitCount++;
+        if (sCssEntryStatesShown != 0u)
+        {
+            sCssEntryStatesShown = (u32)label + 1u;
+        }
     }
     ndsMenuShellCssSyncPanels((u32)NDS_CSS_SLOTS);
     ndsMenuShellCssSyncTeamSelectAll();
@@ -3442,6 +3454,10 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
                         if (ndsUiKitBlitSurfaces(&label, 1u) != FALSE)
                         {
                             gNdsMenuShellCssPanelBlitCount++;
+                            if (sCssEntryStatesShown != 0u)
+                            {
+                                sCssEntryStatesShown = (u32)label + 1u;
+                            }
                         }
                         /* mnPlayersVSUpdateGameMode:1918 stops every current FGM
                          * before the scroll and new mode announcement. */
@@ -3794,6 +3810,8 @@ static void ndsMenuShellCssSyncPreviews(void)
  * sync. */
 static void ndsMenuShellPopulateCssScreen(void)
 {
+    /* The base surfaces were just blitted under the mode label and BACK. */
+    sCssEntryStatesShown = 0u;
     ndsMenuShellCssSyncPanels((u32)NDS_CSS_SLOTS);
     ndsMenuShellCssPopulate();
     ndsMenuShellCssSyncTeamSelectAll();

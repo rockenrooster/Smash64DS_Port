@@ -887,8 +887,46 @@ static sb32 ndsShieldPoseReturnsAObjs(const DObj *dobj)
                TRUE : FALSE;
 }
 
+/* The tracks a decoded script sets (its value commands' flags, bit b the
+ * track nGCAnimTrackJointStart + b): what the play writes, and all it writes
+ * of the joint's transform. */
+static u32 ndsShieldPoseScriptTracks(const AObjEvent32 *scratch)
+{
+    u32 mask = 0u;
+    u32 at = 0u;
+    u32 guard;
+
+    for (guard = 0u; guard < NDS_SHIELD_POSE_MAX_SCRATCH_WORDS; guard++)
+    {
+        u32 word;
+        u32 opcode;
+        u32 flags;
+
+        if (at >= NDS_SHIELD_POSE_MAX_SCRATCH_WORDS)
+        {
+            break;
+        }
+        word = scratch[at++].u;
+        opcode = word & 0x7fu;
+        flags = (word >> 7) & 0x3ffu;
+        if (opcode == 0u)
+        {
+            return mask;
+        }
+        if ((opcode == 2u) || (opcode == 12u))
+        {
+            continue;
+        }
+        mask |= flags;
+        at += (u32)__builtin_popcount(flags) *
+            (((opcode == 5u) || (opcode == 6u)) ? 2u : 1u);
+    }
+    return 0xffffffffu;
+}
+
 static s32 NDS_SHIELD_POSE_CODE ndsShieldPoseApplyScript(
-    const NDSShieldPoseView *view, DObj *dobj, u16 handle, f32 angle)
+    const NDSShieldPoseView *view, DObj *dobj, u16 handle, f32 angle,
+    u32 *out_tracks)
 {
     AObjEvent32 stack_scratch[NDS_SHIELD_POSE_MAX_SCRATCH_WORDS];
     AObjEvent32 *scratch = (view->scratch != NULL) ? view->scratch : stack_scratch;
@@ -897,6 +935,10 @@ static s32 NDS_SHIELD_POSE_CODE ndsShieldPoseApplyScript(
         (ndsShieldPoseUnpackScript(view, handle, scratch) == FALSE))
     {
         return FALSE;
+    }
+    if (out_tracks != NULL)
+    {
+        *out_tracks = ndsShieldPoseScriptTracks(scratch);
     }
     ndsBaseGcAddDObjAnimJoint(dobj, scratch, angle);
     gcParseDObjAnimJoint(dobj);
@@ -1101,7 +1143,7 @@ s32 ndsShieldPoseTryApplySingle(DObj *dobj, f32 angle)
     }
     handle = view.handles[(sector * view.h->joint_count) + (u32)joint_num];
     if ((handle == NDS_SHIELD_POSE_NULL_HANDLE) ||
-        (ndsShieldPoseApplyScript(&view, dobj, handle, angle) == FALSE) ||
+        (ndsShieldPoseApplyScript(&view, dobj, handle, angle, NULL) == FALSE) ||
         (ndsShieldPoseRefreshBaseRow(&view, (u32)joint_num) == FALSE))
     {
         dobj->anim_joint.event32 = NULL;
@@ -1113,9 +1155,251 @@ s32 ndsShieldPoseTryApplySingle(DObj *dobj, f32 angle)
     return 1;
 }
 
+/* THE LAST POSE OF EACH SHIELD, KEPT (P4, 2026-10-12).
+ *
+ * The source re-applies the guard pose to every joint every tick a fighter
+ * shields (ftCommonGuardInitJoints): here a script decode, an AObj add, the
+ * source parse and play and the AObjs' return, per joint -- the largest
+ * simulation premium of a P4 four-CPU tail (four Banjos: decode, parse, play
+ * and AObj adds ~125K cycles a frame over the gate, 2026-10-12 census). The
+ * pose is a function of the fighter's package and sector, the stick angle
+ * and the joints' speed alone (every script is checked independent of stale
+ * AObj state, generate_nds_shield_pose_pack.py), and a held shield repeats
+ * them tick after tick: each battle slot keeps the tracks its last apply
+ * wrote, bit for bit, and a repeat writes those instead. The rows live in the
+ * framebuffer's tail past the fighter packets (ndsFighterPacketArenaTail):
+ * no memory of their own. Not for Kirby, whose AObjs stay on his joints. */
+extern u8 *ndsFighterPacketArenaTail(u32 *out_bytes);
+#define NDS_SHIELD_POSE_MEMO_SLOTS 4u
+#define NDS_SHIELD_POSE_MEMO_BYTES 1600u
+#define NDS_SHIELD_POSE_MEMO_ROWS 48u
+#define NDS_SHIELD_POSE_MEMO_POSED 0x8000u
+typedef struct NDSShieldPoseMemo
+{
+    const GObj *gobj;
+    u32 heap_generation;
+    u32 angle_bits;
+    u32 speed_bits;
+    f32 parent_anim_frame;
+    u16 rows;           /* DObjs the apply visits, static parts included */
+    u8 package;
+    u8 sector;
+    u8 valid;
+    u8 reserved[3];
+} NDSShieldPoseMemo;
+/* After the head: u16 tracks[rows] (POSED | the track bits the play wrote),
+ * f32 anim_frame[posed rows], f32 values[] (each posed row's tracks in track
+ * order). */
+#define NDS_SHIELD_POSE_MEMO_HEAD_BYTES ((sizeof(NDSShieldPoseMemo) + 3u) & ~3u)
+__attribute__((used)) volatile u32 gNdsShieldPoseMemoHits;
+__attribute__((used)) volatile u32 gNdsShieldPoseMemoFills;
+__attribute__((used)) volatile u32 gNdsShieldPoseMemo = 1u; /* A/B word */
+
+static NDSShieldPoseMemo *ndsShieldPoseMemoFor(const FTStruct *fp)
+{
+    u32 bytes = 0u;
+    u8 *tail;
+
+    if ((gNdsShieldPoseMemo == 0u) ||
+        ((u32)fp->player >= NDS_SHIELD_POSE_MEMO_SLOTS) ||
+        (fp->fkind == nFTKindKirby) || (fp->fkind == nFTKindNKirby))
+    {
+        return NULL;
+    }
+    tail = ndsFighterPacketArenaTail(&bytes);
+    if ((tail == NULL) ||
+        (bytes < (NDS_SHIELD_POSE_MEMO_SLOTS * NDS_SHIELD_POSE_MEMO_BYTES)))
+    {
+        return NULL;
+    }
+    return (NDSShieldPoseMemo *)(void *)(tail +
+        ((u32)fp->player * NDS_SHIELD_POSE_MEMO_BYTES));
+}
+
+static u32 ndsShieldPoseF32Bits(f32 value)
+{
+    u32 bits;
+
+    __builtin_memcpy(&bits, &value, sizeof(bits));
+    return bits;
+}
+
+/* The DObj fields of the joint tracks, by track bit (TraI never: the decode
+ * refuses it). */
+static f32 *ndsShieldPoseTrackField(DObj *dobj, u32 bit)
+{
+    switch (bit)
+    {
+    case 0u: return &dobj->rotate.vec.f.x;
+    case 1u: return &dobj->rotate.vec.f.y;
+    case 2u: return &dobj->rotate.vec.f.z;
+    case 4u: return &dobj->translate.vec.f.x;
+    case 5u: return &dobj->translate.vec.f.y;
+    case 6u: return &dobj->translate.vec.f.z;
+    case 7u: return &dobj->scale.vec.f.x;
+    case 8u: return &dobj->scale.vec.f.y;
+    case 9u: return &dobj->scale.vec.f.z;
+    default: return NULL;
+    }
+}
+
+static sb32 ndsShieldPoseMemoMatches(const NDSShieldPoseMemo *memo,
+                                     DObj *root_dobj, u32 package,
+                                     u32 sector, f32 angle)
+{
+    const GObj *gobj = root_dobj->parent_gobj;
+
+    return ((memo->valid != 0u) && (memo->gobj == gobj) &&
+            (memo->heap_generation == gNdsTaskmanHeapGeneration) &&
+            (memo->package == (u8)package) && (memo->sector == (u8)sector) &&
+            (memo->angle_bits == ndsShieldPoseF32Bits(angle)) &&
+            (memo->speed_bits == ndsShieldPoseF32Bits(root_dobj->anim_speed)) &&
+            ((gobj->flags & GOBJ_FLAG_NOANIM) == 0u)) ? TRUE : FALSE;
+}
+
+/* The apply's effects from the memo: FALSE (nothing written) when the tree
+ * no longer has the memo's shape. */
+static sb32 ndsShieldPoseMemoApply(const NDSShieldPoseMemo *memo,
+                                   DObj *root_dobj)
+{
+    const u16 *tracks = (const u16 *)(const void *)
+        ((const u8 *)memo + NDS_SHIELD_POSE_MEMO_HEAD_BYTES);
+    const f32 *frames = (const f32 *)(const void *)
+        ((const u8 *)tracks + ((((u32)memo->rows * sizeof(u16)) + 3u) & ~3u));
+    const f32 *values;
+    DObj *current;
+    u32 rows = 0u;
+    u32 posed = 0u;
+    u32 row;
+
+    for (current = root_dobj; current != NULL;
+         current = lbCommonGetTreeDObjNextFromRoot(current, root_dobj))
+    {
+        if (rows >= memo->rows)
+        {
+            return FALSE;
+        }
+        if ((tracks[rows] & NDS_SHIELD_POSE_MEMO_POSED) != 0u)
+        {
+            posed++;
+        }
+        rows++;
+    }
+    if (rows != memo->rows)
+    {
+        return FALSE;
+    }
+    values = frames + posed;
+    row = 0u;
+    for (current = root_dobj; current != NULL;
+         current = lbCommonGetTreeDObjNextFromRoot(current, root_dobj), row++)
+    {
+        u32 mask = tracks[row];
+        u32 bit;
+
+        if ((mask & NDS_SHIELD_POSE_MEMO_POSED) == 0u)
+        {
+            current->anim_wait = AOBJ_ANIM_NULL;
+            continue;
+        }
+        for (bit = 0u; bit < 10u; bit++)
+        {
+            if ((mask & (1u << bit)) != 0u)
+            {
+                *ndsShieldPoseTrackField(current, bit) = *values++;
+            }
+        }
+        current->anim_frame = *frames++;
+        current->anim_joint.event32 = NULL;
+        if (current->aobj != NULL)
+        {
+            gcRemoveAObjFromDObj(current);
+        }
+        current->anim_wait = AOBJ_ANIM_NULL;
+    }
+    root_dobj->parent_gobj->anim_frame = memo->parent_anim_frame;
+    return TRUE;
+}
+
+/* After a full apply: what it wrote, for the next tick of the same pose. */
+static void ndsShieldPoseMemoFill(NDSShieldPoseMemo *memo, DObj *root_dobj,
+                                  const u16 *row_tracks, u32 rows,
+                                  u32 package, u32 sector, f32 angle)
+{
+    u16 *tracks = (u16 *)(void *)((u8 *)memo + NDS_SHIELD_POSE_MEMO_HEAD_BYTES);
+    f32 *frames = (f32 *)(void *)
+        ((u8 *)tracks + (((rows * sizeof(u16)) + 3u) & ~3u));
+    f32 *values;
+    f32 *end = (f32 *)(void *)((u8 *)memo + NDS_SHIELD_POSE_MEMO_BYTES);
+    DObj *current;
+    u32 posed = 0u;
+    u32 row;
+
+    memo->valid = 0u;
+    if ((rows == 0u) || (rows > NDS_SHIELD_POSE_MEMO_ROWS) ||
+        ((root_dobj->parent_gobj->flags & GOBJ_FLAG_NOANIM) != 0u))
+    {
+        return;
+    }
+    for (row = 0u; row < rows; row++)
+    {
+        if ((row_tracks[row] == 0xffffu) || ((row_tracks[row] & 0x8u) != 0u))
+        {
+            return;     /* unread script, or a TraI track (never decoded) */
+        }
+        tracks[row] = row_tracks[row];
+        if ((row_tracks[row] & NDS_SHIELD_POSE_MEMO_POSED) != 0u)
+        {
+            posed++;
+        }
+    }
+    values = frames + posed;
+    if (values > end)
+    {
+        return;
+    }
+    row = 0u;
+    for (current = root_dobj; (current != NULL) && (row < rows);
+         current = lbCommonGetTreeDObjNextFromRoot(current, root_dobj), row++)
+    {
+        u32 mask = tracks[row];
+        u32 bit;
+
+        if ((mask & NDS_SHIELD_POSE_MEMO_POSED) == 0u)
+        {
+            continue;
+        }
+        for (bit = 0u; bit < 10u; bit++)
+        {
+            if ((mask & (1u << bit)) != 0u)
+            {
+                if (values >= end)
+                {
+                    return;
+                }
+                *values++ = *ndsShieldPoseTrackField(current, bit);
+            }
+        }
+        *frames++ = current->anim_frame;
+    }
+    memo->gobj = root_dobj->parent_gobj;
+    memo->heap_generation = gNdsTaskmanHeapGeneration;
+    memo->angle_bits = ndsShieldPoseF32Bits(angle);
+    memo->speed_bits = ndsShieldPoseF32Bits(root_dobj->anim_speed);
+    memo->parent_anim_frame = root_dobj->parent_gobj->anim_frame;
+    memo->rows = (u16)rows;
+    memo->package = (u8)package;
+    memo->sector = (u8)sector;
+    memo->valid = 1u;
+    gNdsShieldPoseMemoFills++;
+}
+
 s32 ndsShieldPoseTryApplyAll(DObj *root_dobj, f32 angle)
 {
     FTStruct *fp;
+    NDSShieldPoseMemo *memo;
+    u16 row_tracks[NDS_SHIELD_POSE_MEMO_ROWS];
+    u32 rows = 0u;
     NDSShieldPoseView view;
     s32 package;
     u32 sector;
@@ -1142,11 +1426,36 @@ s32 ndsShieldPoseTryApplyAll(DObj *root_dobj, f32 angle)
         gNdsShieldPoseDecodeFailCount++;
         return -1;
     }
+    memo = ndsShieldPoseMemoFor(fp);
+    if ((memo != NULL) &&
+        (ndsShieldPoseMemoMatches(memo, root_dobj, (u32)package, sector,
+                                  angle) != FALSE) &&
+        (ndsShieldPoseMemoApply(memo, root_dobj) != FALSE))
+    {
+        gNdsShieldPoseMemoHits++;
+        sNdsShieldPoseBatchGObj = root_dobj->parent_gobj;
+        sNdsShieldPoseBatchRoot = root_dobj;
+        sNdsShieldPoseBatchPackage = (u8)package;
+        sNdsShieldPoseBatchSector = (u8)sector;
+        gNdsShieldPoseAllApplyCount++;
+        return 1;
+    }
+    if (memo != NULL)
+    {
+        memo->valid = 0u;
+    }
     root_dobj->parent_gobj->anim_frame = angle;
     for (current = root_dobj; current != NULL;
          current = lbCommonGetTreeDObjNextFromRoot(current, root_dobj), joint++)
     {
         u16 handle;
+        u32 tracks = 0u;
+
+        if (rows < NDS_SHIELD_POSE_MEMO_ROWS)
+        {
+            row_tracks[rows] = 0u;
+        }
+        rows++;
 
 #if NDS_P4
         /* A static part takes no guard row and no animation
@@ -1170,7 +1479,8 @@ s32 ndsShieldPoseTryApplyAll(DObj *root_dobj, f32 angle)
             current->anim_wait = AOBJ_ANIM_NULL;
             continue;
         }
-        if (ndsShieldPoseApplyScript(&view, current, handle, angle) == FALSE)
+        if (ndsShieldPoseApplyScript(&view, current, handle, angle,
+                                     &tracks) == FALSE)
         {
             current->anim_joint.event32 = NULL;
             current->anim_wait = AOBJ_ANIM_NULL;
@@ -1178,12 +1488,22 @@ s32 ndsShieldPoseTryApplyAll(DObj *root_dobj, f32 angle)
             ndsShieldPoseMarkBatchFailure(root_dobj->parent_gobj);
             return -1;
         }
+        if (rows <= NDS_SHIELD_POSE_MEMO_ROWS)
+        {
+            row_tracks[rows - 1u] = (tracks > 0x3ffu) ? 0xffffu :
+                (u16)(NDS_SHIELD_POSE_MEMO_POSED | tracks);
+        }
     }
     if (joint != view.h->joint_count)
     {
         gNdsShieldPoseDecodeFailCount++;
         ndsShieldPoseMarkBatchFailure(root_dobj->parent_gobj);
         return -1;
+    }
+    if ((memo != NULL) && (rows <= NDS_SHIELD_POSE_MEMO_ROWS))
+    {
+        ndsShieldPoseMemoFill(memo, root_dobj, row_tracks, rows,
+                              (u32)package, sector, angle);
     }
     sNdsShieldPoseBatchGObj = root_dobj->parent_gobj;
     sNdsShieldPoseBatchRoot = root_dobj;

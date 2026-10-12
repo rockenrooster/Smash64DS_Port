@@ -1843,6 +1843,73 @@ Memory rows (play-1012k, low-water against the 25,600 floor): hvjg 28,412
 (was 25,756: .main shrank a kilobyte with the camera code), w4sf 29,208,
 w4sz 33,092, hvsf 39,212; 0 overflows, 0 native failures.
 
+## Lean walks, the guard pose and the select's panning (2026-10-12)
+
+Four-CPU WORK P95 on Dream Land (clean sweep ROMs, 1,960 frames), before
+this section -> after it: Meta Knight 1,397,440 -> 1,270,976, Crash
+1,474,304 -> 1,404,096, Banjo 1,364,096 -> 1,285,376, Dedede 1,317,056 ->
+1,218,944, Peach 1,232,320 -> 1,184,768, Sonic 1,289,728 (unchanged:
+his tail is the simulation, SRC P95 688K); the originals 1,070,464 ->
+1,064,384.
+
+- **The guard pose is memoized.** The source re-applies the shield pose to
+  every joint every tic a fighter shields (NSP1 unpack, AObj add, parse,
+  play, remove). The posed joints' rows are a function of the fighter, the
+  pose package and sector, the shield angle and the animation speed, so
+  four slots of 48 rows live in the framebuffer arena's tail (6,400 B past
+  the packet arena) and a repeat copies them back (`nds_shield_pose.c`).
+  Banjo -90K, Dedede -74K, Peach -55K.
+- **VTX_10 at half scale.** A corner past +/-511 source units put the whole
+  list on VTX_16 (two words a corner): Meta Knight, Dedede, Lanky and MRGAW
+  carry 4-24 such vertices, and Meta Knight's 3,800-word lists outgrew an
+  entry and went wide. A list whose corners fit +/-1023 now takes VTX_10
+  with the unit halved (rounded up) and its translation rows and P' row 3
+  at twice VTX_16 scale (`NDS_FTR_LEAN_ENTRY_VTX10H`); a vertex moves at
+  most one source unit.
+- **A list's walk is remembered by its key.** A slot-wide memory of the
+  corner format and width was tried first and cost Meta Knight +88K: once
+  any list needed VTX_16 (which never declines) or went wide, every later
+  list of the slot did, and wide lists evict the other entry (walks 132 ->
+  221 in 1,200 frames). The memory is per key now (16 24-bit tags a slot,
+  `walk_memo`); a slot-wide default only starts new keys at half scale. A
+  walk also stops at its first capacity fault or VTX_10 corner fail instead
+  of finishing a list it is about to discard.
+- **The parked-list pool holds up to sixteen** (was eight) where the battle
+  heap has them above the spare floor (25,600 + 36,420 B): four Meta Knights
+  still re-derived 43 of 93 lists at eight.
+- **The walk's texture binds go through a memo.** A third of a P4
+  materialization was the full texture resolver re-resolving a texture the
+  walk or the slot's last walk had bound (Banjo 294K ticks a walk, Crash
+  189K, Meta Knight 126K). Rows keyed by the run (tables, run index, battle
+  slot), the owner memo's live inputs, the render tile and its TMEM load
+  replay the resolver's cache-hit tail (`ndsFtrLeanBindTexture`; 256 rows,
+  5 KB of the battle heap). The lab verify arm (`gNdsFtrLeanTexMemoVerify`)
+  ran the full resolver on 3,846 hits over Meta Knight, Crash, Banjo, Sonic
+  and the cast: 0 disagreements. Texture time a walk -38% (MK), -23%
+  (Crash), -17% (Banjo).
+- **The select's panning.** A pan with the token carried measured 15-VBlank
+  stalls and a two-VBlank frame on every portrait it crossed. Three causes:
+  (1) every open of a P4 file walked `nitro:/reloc/p4`'s 2,161 FNT names,
+  two ARM7 storage reads a name: the commit of Mad Piano's 11 KB motion file
+  took 14 VBlanks in its five opens. One buffered pass at boot keeps the
+  directory's (asset, file id) runs and the linker wraps
+  `nitroromResolvePath` (P4 builds, `scripts/p4/p4_rules.mk`) so every
+  resolver answers "reloc/p4/<id>" from them: 363 scanlines now. (2) The
+  carried token re-populates the cards on every portrait, and that re-blit
+  the mode label and BACK (5.8 KB from NitroFS, ~230K ticks): once per entry
+  and mode now. (3) Streams read through libfat's FILE, whose buffer is not
+  32-byte aligned, so each 1 KB refill went to the ARM7 as a bounced head
+  and a body (27 round trips for a 10 KB card); a `nitro:/` stream reads by
+  file id now, and the UI kit's staging is aligned with each read rounded
+  to whole lines (8 round trips). Pan of 261 frames (play-1012o against
+  play-1012m, probe `panprobe4`): one VBlank 256 (was 240), two 3 (was 18),
+  three 2 (0), four or more 0 (3, worst 15 -> 4).
+
+Gate with all of the above (build-gate-r1012,
+`artifacts/performance/2026-10-12_lean-walks`): WORK P50 755,584, P95
+1,034,304, 1,900 of 1,961 frames within two VBlanks, replay digest
+identical (DGSA/DGSB as before).
+
 ## Board 1 status (master plan Revision 3)
 
 | Item | State |

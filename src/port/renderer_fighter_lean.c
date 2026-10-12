@@ -269,6 +269,8 @@ void ndsFtrLeanNoteTexturePart(u32 slot)
  * draw of the oracle routes -- the whole identity is still that one. */
 #define NDS_FTR_LEAN_WATCH_MAX 6u
 #define NDS_FTR_LEAN_WATCH_ALL 0xffu
+/* Keys a slot remembers its lists' walks for (ndsFtrLeanMaterializeFor). */
+#define NDS_FTR_LEAN_WALK_MEMO 16u
 
 /* One instance per battle slot (slice 4). The lists themselves live in the
  * slot's region (ndsFtrLeanMaterialize, two entries); the instance holds the
@@ -290,7 +292,8 @@ typedef struct NDSFtrLeanInstance
     u8 wide_high;               /* slice 6: this slot's high-detail lists
                                    outgrow an entry (Donkey, Link): go wide
                                    at once instead of walking twice */
-    u8 pad0[1];
+    u8 walk;                    /* 2026-10-12: each detail's lists took
+                                   VTX_10 at half scale (NDS_FTR_LEAN_WALK_*) */
     u32 rr_key;                 /* its packet key's shadow at the last
                                    re-record (ndsFtrLeanRerecordKey) */
     u32 status_gen;
@@ -310,7 +313,8 @@ typedef struct NDSFtrLeanInstance
     u8 watch_count;             /* animated MObjs, or WATCH_ALL */
     u8 alias_dst;               /* a root bound to the same joint as another */
     u8 alias_src;               /* ... whose world it takes, 0xff = none */
-    u8 pad[1];
+    u8 walk_next;               /* the walk memo's next replacement */
+    u32 walk_memo[NDS_FTR_LEAN_WALK_MEMO];  /* NDS_FTR_LEAN_WALK_* */
     const MObj *watch[NDS_FTR_LEAN_WATCH_MAX];
     u32 watch_hash[NDS_FTR_LEAN_WATCH_MAX];
     u32 root_offsets[NDS_FTR_LEAN_ROOT_MAX];
@@ -433,6 +437,9 @@ static void ndsFtrLeanInvalidate(u32 slot, u32 lists)
     {
         ndsFtrLeanPacketDrop(slot);
         inst->wide_high = 0u;
+        inst->walk = 0u;
+        inst->walk_next = 0u;
+        memset(inst->walk_memo, 0, sizeof(inst->walk_memo));
     }
     inst->valid = 0u;
     inst->rebind = 0u;
@@ -1079,6 +1086,34 @@ static void ndsFtrLeanView(NDSFtrLeanPatchView *view,
  * the wide list would overwrite). A slot whose high-detail list went wide
  * once goes wide directly (wide_high). The walk mutates the renderer state,
  * so each walk starts from a fresh seed. */
+/* What a slot's walks learned (2026-10-12); a walk is a whole
+ * materialization. Per key (walk_memo, 16 a slot): the corner format its
+ * list took -- 1 + 0 VTX_16, 1 VTX_10, 2 VTX_10 at half scale -- and that it
+ * went wide, under a 24-bit tag of the key, so a list materialized again
+ * walks once (four Meta Knights' lists walked two or three times each:
+ * VTX_10 declined, then Capacity). Per detail (walk): a list of the slot
+ * took half scale, so a new key starts there. A slot-wide VTX_16 or width
+ * would put every later list on the larger format: that cost Meta Knight
+ * +88K at P95. A tag that collides only picks a first format the ladder
+ * still proves. */
+#define NDS_FTR_LEAN_WALK_HALF(low) ((low) ? 2u : 1u)
+#define NDS_FTR_LEAN_WALK_MODE_MASK 3u
+#define NDS_FTR_LEAN_WALK_WIDE 4u
+#define NDS_FTR_LEAN_WALK_TAG_MASK 0xffffff00u
+
+static u32 ndsFtrLeanWalkTag(const u32 *key)
+{
+    u32 h = 0x9e3779b9u;
+    u32 i;
+
+    for (i = 0u; i < NDS_FTR_LEAN_KEY_WORDS; i++)
+    {
+        h = (h ^ key[i]) * 0x01000193u;
+        h ^= h >> 15;
+    }
+    return h & NDS_FTR_LEAN_WALK_TAG_MASK;
+}
+
 static u32 __attribute__((noinline, cold, optimize("Os")))
 ndsFtrLeanMaterializeFor(u32 slot, u32 *entry, const u32 *key, u32 count,
                          u32 owner_slot, u32 use_low_detail,
@@ -1089,10 +1124,14 @@ ndsFtrLeanMaterializeFor(u32 slot, u32 *entry, const u32 *key, u32 count,
     /* Slice 5: the materializer's renderer state is this call's own (it was
      * a 1,300 B static); the old path's DrawForSlot keeps the same block on
      * its stack at the same depth. */
+    NDSFtrLeanInstance *inst = &sNdsFtrLeanInstances[slot];
     NDSRendererStats stats;
     u32 reason;
     u32 wide;
-    u32 vtx16 = 0u;
+    u32 mode;
+    u32 tag;
+    u32 memo = 0u;
+    u32 at;
     u32 t1;
     u32 i;
 
@@ -1113,8 +1152,23 @@ ndsFtrLeanMaterializeFor(u32 slot, u32 *entry, const u32 *key, u32 count,
             sNdsRendererAdapterNativeOwnerMaterialRows[i]];
         input->gx_modelview_mirror_valid = 0u;
     }
-    wide = ((allow_wide != FALSE) && (use_low_detail == FALSE) &&
-            (sNdsFtrLeanInstances[slot].wide_high != 0u)) ? TRUE : FALSE;
+    tag = ndsFtrLeanWalkTag(key);
+    for (at = 0u; at < NDS_FTR_LEAN_WALK_MEMO; at++)
+    {
+        if ((inst->walk_memo[at] != 0u) &&
+            ((inst->walk_memo[at] & NDS_FTR_LEAN_WALK_TAG_MASK) == tag))
+        {
+            memo = inst->walk_memo[at];
+            break;
+        }
+    }
+    wide = ((allow_wide != FALSE) &&
+            (((use_low_detail == FALSE) && (inst->wide_high != 0u)) ||
+             ((memo & NDS_FTR_LEAN_WALK_WIDE) != 0u))) ? TRUE : FALSE;
+    mode = ((memo & NDS_FTR_LEAN_WALK_MODE_MASK) != 0u) ?
+        ((memo & NDS_FTR_LEAN_WALK_MODE_MASK) - 1u) :
+        (((inst->walk & NDS_FTR_LEAN_WALK_HALF(use_low_detail)) != 0u) ?
+             2u : 1u);
     ndsRendererProfileSetOwner(ndsFighterNativeOwnerProfileId(owner_slot));
     t1 = cpuGetTiming();
     for (;;)
@@ -1141,12 +1195,18 @@ ndsFtrLeanMaterializeFor(u32 slot, u32 *entry, const u32 *key, u32 count,
             *entry = 0u;
         }
         reason = ndsFtrLeanMaterialize(
-            slot, ((wide != FALSE) ? NDS_FTR_LEAN_ENTRY_WIDE : *entry) | vtx16,
+            slot, ((wide != FALSE) ? NDS_FTR_LEAN_ENTRY_WIDE : *entry) |
+                ((mode == 0u) ? NDS_FTR_LEAN_ENTRY_VTX16 :
+                 ((mode == 2u) ? NDS_FTR_LEAN_ENTRY_VTX10H : 0u)),
             key, ws->production_roots, count, owner_slot, use_low_detail,
             owner_file->data, &stats);
-        if ((reason == nNDSFtrLeanDeclineVtx10) && (vtx16 == 0u))
+        if ((reason == nNDSFtrLeanDeclineVtx10) && (mode != 0u))
         {
-            vtx16 = NDS_FTR_LEAN_ENTRY_VTX16; /* a corner past VTX_10 */
+            /* A corner past VTX_10: at half scale when range alone failed
+             * at full scale, else VTX_16. */
+            mode = ((mode == 1u) &&
+                    (ndsFtrLeanLastVtxFail() == NDS_FTR_LEAN_VTX_FAIL_RANGE)) ?
+                2u : 0u;
             continue;
         }
         if ((wide != FALSE) || (allow_wide == FALSE) ||
@@ -1158,7 +1218,21 @@ ndsFtrLeanMaterializeFor(u32 slot, u32 *entry, const u32 *key, u32 count,
     }
     if ((wide != FALSE) && (reason == 0u) && (use_low_detail == FALSE))
     {
-        sNdsFtrLeanInstances[slot].wide_high = 1u;
+        inst->wide_high = 1u;
+    }
+    if ((reason == 0u) && (allow_wide != FALSE))
+    {
+        if (mode == 2u)
+        {
+            inst->walk |= (u8)NDS_FTR_LEAN_WALK_HALF(use_low_detail);
+        }
+        if (at == NDS_FTR_LEAN_WALK_MEMO)
+        {
+            at = inst->walk_next;
+            inst->walk_next = (u8)((at + 1u) % NDS_FTR_LEAN_WALK_MEMO);
+        }
+        inst->walk_memo[at] = tag | ((wide != FALSE) ? NDS_FTR_LEAN_WALK_WIDE :
+                                     0u) | (mode + 1u);
     }
     NDS_FTR_LEAN_CTR(gNdsFtrLean.materialize_list_ticks +=
                          cpuGetTiming() - t1);

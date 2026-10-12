@@ -533,6 +533,12 @@ NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanSiteShift6S32(s32 value)
 {
     return (s32)(((s64)value + 0x20) >> 6);
 }
+
+/* At half scale (NDS_FTR_LEAN_SITES_VTX10H): 2x, half up. */
+NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanSiteShift7S32(s32 value)
+{
+    return (s32)(((s64)value + 0x40) >> 7);
+}
 #else
 NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanRoundShift8S32(s32 value)
 {
@@ -556,6 +562,11 @@ NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanSiteShift8S32(s32 value)
 NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanSiteShift6S32(s32 value)
 {
     return (s32)(((s64)value + 0x20) >> 6);
+}
+
+NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanSiteShift7S32(s32 value)
+{
+    return (s32)(((s64)value + 0x40) >> 7);
 }
 #endif
 
@@ -874,6 +885,12 @@ ndsFtrLeanKernelCompose(const NDSFtrLeanJoint *joints, u32 joint_count,
                     dst[0] = (u32)ndsFtrLeanSiteShift6S32(translation[0]);
                     dst[1] = (u32)ndsFtrLeanSiteShift6S32(translation[1]);
                     dst[2] = (u32)ndsFtrLeanSiteShift6S32(translation[2]);
+                }
+                else if ((world_mask & NDS_FTR_LEAN_SITES_VTX10H) != 0u)
+                {
+                    dst[0] = (u32)ndsFtrLeanSiteShift7S32(translation[0]);
+                    dst[1] = (u32)ndsFtrLeanSiteShift7S32(translation[1]);
+                    dst[2] = (u32)ndsFtrLeanSiteShift7S32(translation[2]);
                 }
                 else
                 {

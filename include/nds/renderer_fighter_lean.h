@@ -578,6 +578,18 @@ s32 ndsFtrLeanKernelCompose(const NDSFtrLeanJoint *joints, u32 joint_count,
  * the perspective divide, the homogeneous clip and the z/w depth buffer
  * cancel exactly, and the vector matrix (normals, lighting) is unscaled. */
 #define NDS_FTR_LEAN_ENTRY_VTX16 0x200u
+/* 2026-10-12: VTX_10 at HALF that scale -- the corner the unit halved
+ * (rounded up), 2x its VTX_16 value, the translation rows and P' row 3 at 2x
+ * -- for a list with a corner past +/-511 units but none past +/-1023: Meta
+ * Knight, Dedede, Lanky and MRGAW have 4-24 such vertices, which put every
+ * list that drew one on VTX_16 (two words a corner; Meta Knight's 3,800-word
+ * lists outgrew an entry and went wide). The halving moves a vertex by at
+ * most one source unit. ndsFtrLeanLastVtxFail says which a VTX_10 decline
+ * was. */
+#define NDS_FTR_LEAN_ENTRY_VTX10H 0x400u
+#define NDS_FTR_LEAN_VTX_FAIL_BITS 1u   /* a corner off the unit grid */
+#define NDS_FTR_LEAN_VTX_FAIL_RANGE 2u  /* a corner past the format's range */
+u32 ndsFtrLeanLastVtxFail(void);
 
 /* The list of `battle_slot` for `key` (still current: tint-tile set, texture
  * fence) as an entry code for ndsFtrLeanEntryActivate -- an entry whose words
@@ -673,6 +685,8 @@ void ndsFtrLeanPacketDrop(u32 battle_slot);
 /* Bit 30: the list's corners are VTX_10 (NDS_FTR_LEAN_ENTRY_VTX16 above): the
  * kernel writes each site's translation row at 4x. */
 #define NDS_FTR_LEAN_SITES_VTX10 0x40000000u
+/* Bit 29: VTX_10 at half scale (NDS_FTR_LEAN_ENTRY_VTX10H): rows at 2x. */
+#define NDS_FTR_LEAN_SITES_VTX10H 0x20000000u
 u32 ndsFtrLeanPacketModelviewSites(u32 battle_slot, u32 **sites,
                                    u32 root_count);
 /* The active list's validity half: tint-tile set generation (the tile words

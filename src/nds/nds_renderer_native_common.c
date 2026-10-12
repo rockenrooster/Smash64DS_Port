@@ -12380,6 +12380,22 @@ void ndsRendererFighterPacketInvalidateSlot(u32 slot)
      * list they held). */
 }
 
+/* THE FRAMEBUFFER'S TAIL. The packet arena stops 6,400 B short of the
+ * buffer's end, where sys/video.h's z-buffer start pointer is aimed and never
+ * dereferenced (battleship_sys_zbuffer.c), and no draw path reads it in a
+ * battle. The shield pose memo keeps its rows there (nds_shield_pose.c); the
+ * release below restores the clear over it with the arena's. */
+u8 *ndsFighterPacketArenaTail(u32 *out_bytes)
+{
+    if (out_bytes != NULL)
+    {
+        *out_bytes = (u32)sizeof(gSYFramebufferSets) -
+            (NDS_FIGHTER_PACKET_ARENA_WORDS * (u32)sizeof(u32));
+    }
+    return (u8 *)(void *)&gSYFramebufferSets[0][0][0] +
+        (NDS_FIGHTER_PACKET_ARENA_WORDS * sizeof(u32));
+}
+
 void ndsRendererFighterPacketRelease(void)
 {
     u16 *arena = &gSYFramebufferSets[0][0][0];
@@ -12387,9 +12403,9 @@ void ndsRendererFighterPacketRelease(void)
 
     ndsRendererFighterPacketInvalidateAll();
     /* scmanager.c's boot clear, GPACK_RGBA5551(0, 0, 0, 1), over the words
-     * the packets borrowed, so the Results photo wipe reads what it always
-     * read. */
-    for (i = 0u; i < NDS_FIGHTER_PACKET_ARENA_WORDS * 2u; i++)
+     * the packets borrowed and the tail the shield memo used, so the Results
+     * photo wipe reads what it always read. */
+    for (i = 0u; i < (u32)(sizeof(gSYFramebufferSets) / sizeof(u16)); i++)
     {
         arena[i] = 0x0001u;
     }
@@ -13007,10 +13023,12 @@ typedef struct NDSFtrLeanMat
     u32 tint_binds;
     u32 tint_pending;
     u32 mark;                   /* lab: the materializer's part timer */
-    u32 vtx10;                  /* corners as VTX_10 (NDS_FTR_LEAN_ENTRY_VTX16) */
-    u32 vtx10_fail;             /* a corner did not fit: walk again at VTX_16 */
+    u32 vtx10;                  /* corners as VTX_10: 1 at 4x, 2 at 2x
+                                   (NDS_FTR_LEAN_ENTRY_VTX16/VTX10H) */
+    u32 vtx10_fail;             /* NDS_FTR_LEAN_VTX_FAIL_*: walk again */
     u32 hw_texgen_ok;           /* the owner takes GX texgen (1P owners) */
     u32 hw_texgen;              /* the current run's texture matrix is loaded */
+    u32 battle_slot;            /* the texture memo's rows (ndsFtrLeanBindTexture) */
 } NDSFtrLeanMat;
 
 /* P2-2p8 (2026-10-05): route-1 lists take VTX_10 corners where every corner
@@ -13342,18 +13360,28 @@ static void ndsFtrLeanMatCorners(NDSFtrLeanMat *m, const u16 *refs, u32 count,
         if (m->vtx10 != 0u)
         {
             /* The VTX_16 words are whole source units at 4.12 (unit << 4);
-             * VTX_10 at 4.6 holds the unit itself, 4x the VTX_16 value. */
+             * VTX_10 at 4.6 holds the unit itself, 4x the VTX_16 value, or
+             * at half scale the unit halved (rounded up), 2x. */
             const u32 xy = prepared[d].gx_xy;
             const u32 zw = prepared[d].gx_z;
-            const s32 x = (s32)(s16)xy >> 4;
-            const s32 y = (s32)(s16)(xy >> 16) >> 4;
-            const s32 z = (s32)(s16)zw >> 4;
+            s32 x = (s32)(s16)xy >> 4;
+            s32 y = (s32)(s16)(xy >> 16) >> 4;
+            s32 z = (s32)(s16)zw >> 4;
 
-            if ((((xy & 0x000f000fu) | (zw & 0xfu)) != 0u) ||
-                ((u32)(x + 512) >= 1024u) || ((u32)(y + 512) >= 1024u) ||
+            if (((xy & 0x000f000fu) | (zw & 0xfu)) != 0u)
+            {
+                m->vtx10_fail |= NDS_FTR_LEAN_VTX_FAIL_BITS;
+            }
+            if (m->vtx10 == 2u)
+            {
+                x = (x + 1) >> 1;
+                y = (y + 1) >> 1;
+                z = (z + 1) >> 1;
+            }
+            if (((u32)(x + 512) >= 1024u) || ((u32)(y + 512) >= 1024u) ||
                 ((u32)(z + 512) >= 1024u))
             {
-                m->vtx10_fail = 1u;
+                m->vtx10_fail |= NDS_FTR_LEAN_VTX_FAIL_RANGE;
             }
             NDS_FTR_LEAN_OP(FIFO_VERTEX10, 1u);
             w[n++] = ((u32)x & 0x3ffu) | (((u32)y & 0x3ffu) << 10) |
@@ -13382,6 +13410,248 @@ static void ndsFtrLeanMatCorners(NDSFtrLeanMat *m, const u16 *refs, u32 count,
     pk->header_params = hp;
     pk->header_valid = hv;
 }
+
+/* 2026-10-12: THE WALK'S TEXTURE BINDS THROUGH A MEMO. Each textured run of
+ * a list binds through the full resolver (tile sync, TMEM record search, the
+ * ~30-field cache key, its hash, the lookup): a third of a P4
+ * materialization (phase-tick lab, 1,200 frames: Banjo 294K ticks a walk,
+ * Crash 189K, Meta Knight 126K), and nearly all of it re-resolves a texture
+ * the walk or the slot's last walk already bound -- a texture is re-set at
+ * every epoch that uses it, and a re-materialized key binds the same runs
+ * again. A row answers a bind from a hash of the run (tables, run index,
+ * battle slot), the live inputs the owner memo keys (texel and TLUT images,
+ * load size, prim/env without alpha, both othermode words, the combine,
+ * the geometry mode), the render tile's words and the TMEM load it samples,
+ * and replays the resolver's cache-hit tail exactly as the owner memo does
+ * (tile sync, LRU stamp, name and parameter binds, active entry, pinned hit,
+ * stats fields). The entry is revalidated by readiness, name and key
+ * generation; anything else takes the full resolver and refills. Rows come
+ * from a battle's general heap once per heap generation (5 KB), before the
+ * list pool sizes; elsewhere there is no memo. Lab: gNdsFtrLeanTexMemoVerify
+ * runs the full resolver on every hit and counts disagreements. */
+#define NDS_FTR_LEAN_TEXMEMO_ROWS 256u
+typedef struct NDSFtrLeanTexMemo
+{
+    u32 key;                    /* 0 = empty */
+    u32 entry_generation;
+    u16 slot_plus1;
+    u16 name;
+    u16 width;
+    u16 height;
+    u32 format;
+} NDSFtrLeanTexMemo;
+static NDSFtrLeanTexMemo *sNdsFtrLeanTexMemo;
+static u32 sNdsFtrLeanTexMemoGen;   /* gNdsTaskmanHeapGeneration + 1 tried */
+extern volatile u32 gNdsSceneManagerCurrIsBattle;
+#if NDS_FTR_LEAN_LAB
+volatile u32 gNdsFtrLeanTexMemoHits;
+volatile u32 gNdsFtrLeanTexMemoFills;
+volatile u32 gNdsFtrLeanTexMemoMisses;
+volatile u32 gNdsFtrLeanTexMemoVerify __attribute__((used, section(".data"))) =
+    0u;
+volatile u32 gNdsFtrLeanTexMemoVerifyRuns;
+volatile u32 gNdsFtrLeanTexMemoVerifyFail;
+/* Lab: the hit path's parts (key, tile sync, binds) and the misses' full
+ * resolves, in ticks. */
+volatile u32 gNdsFtrLeanTexMemoKeyTicks;
+volatile u32 gNdsFtrLeanTexMemoSyncTicks;
+volatile u32 gNdsFtrLeanTexMemoBindTicks;
+volatile u32 gNdsFtrLeanTexMemoMissTicks;
+#endif
+
+static NDSFtrLeanTexMemo *ndsFtrLeanTexMemoTable(void)
+{
+    if (sNdsFtrLeanTexMemoGen != gNdsTaskmanHeapGeneration + 1u)
+    {
+        const u32 bytes =
+            NDS_FTR_LEAN_TEXMEMO_ROWS * (u32)sizeof(NDSFtrLeanTexMemo);
+        const u32 free_bytes = ((uintptr_t)gSYTaskmanGeneralHeap.end >
+                                (uintptr_t)gSYTaskmanGeneralHeap.ptr) ?
+            (u32)((uintptr_t)gSYTaskmanGeneralHeap.end -
+                  (uintptr_t)gSYTaskmanGeneralHeap.ptr) : 0u;
+
+        sNdsFtrLeanTexMemoGen = gNdsTaskmanHeapGeneration + 1u;
+        sNdsFtrLeanTexMemo = NULL;
+        if ((gNdsSceneManagerCurrIsBattle != 0u) &&
+            (free_bytes > bytes + NDS_FTR_LEAN_SPARE_KEEP_FREE))
+        {
+            sNdsFtrLeanTexMemo = syTaskmanMalloc(bytes, 32u);
+            if (sNdsFtrLeanTexMemo != NULL)
+            {
+                memset(sNdsFtrLeanTexMemo, 0, bytes);
+            }
+        }
+    }
+    return sNdsFtrLeanTexMemo;
+}
+
+static u32 ndsFtrLeanTexMemoKey(u32 run_index, u32 battle_slot,
+                                const NDSRendererStats *stats)
+{
+    const u32 tile_index =
+        ((stats->texture_state_flags & NDS_RENDERER_TEXTURE_STATE_SEEN) !=
+         0u) ? (stats->texture_tile & 0x7u) : NDS_RENDERER_RENDER_TILE;
+    const NDSRendererTileState *tile = &stats->texture_tiles[tile_index];
+    const NDSRendererTextureLoadState *load =
+        ndsRendererHardwareFindTextureLoadForTmem(stats, tile->tmem);
+    u32 h = 0x811c9dc5u;
+
+#define NDS_FTR_LEAN_TEXMEMO_MIX(value) \
+    h = (h ^ (u32)(value)) * 0x01000193u
+    NDS_FTR_LEAN_TEXMEMO_MIX((uintptr_t)sNdsNativeFighterActiveTables);
+    NDS_FTR_LEAN_TEXMEMO_MIX(run_index | (battle_slot << 16) |
+                             (tile_index << 24));
+    NDS_FTR_LEAN_TEXMEMO_MIX(stats->texture_image);
+    NDS_FTR_LEAN_TEXMEMO_MIX(stats->texture_format |
+                             (stats->texture_size << 4) |
+                             (stats->texture_image_width << 8));
+    NDS_FTR_LEAN_TEXMEMO_MIX(stats->texture_tlut_image);
+    NDS_FTR_LEAN_TEXMEMO_MIX(stats->texture_load_texels);
+    NDS_FTR_LEAN_TEXMEMO_MIX(stats->prim_color & 0xffffff00u);
+    NDS_FTR_LEAN_TEXMEMO_MIX(stats->env_color & 0xffffff00u);
+    NDS_FTR_LEAN_TEXMEMO_MIX(stats->othermode_h);
+    NDS_FTR_LEAN_TEXMEMO_MIX(stats->othermode_l);
+    NDS_FTR_LEAN_TEXMEMO_MIX(stats->texture_combine_w0);
+    NDS_FTR_LEAN_TEXMEMO_MIX(stats->texture_combine_w1);
+    NDS_FTR_LEAN_TEXMEMO_MIX(stats->geometry_mode);
+    NDS_FTR_LEAN_TEXMEMO_MIX(stats->texture_state_flags);
+    NDS_FTR_LEAN_TEXMEMO_MIX(tile->format | (tile->size << 4) |
+                             (tile->palette << 8) | (tile->cms << 12) |
+                             (tile->cmt << 14) | (tile->masks << 16) |
+                             (tile->maskt << 20) | (tile->shifts << 24) |
+                             (tile->shiftt << 28));
+    NDS_FTR_LEAN_TEXMEMO_MIX(tile->line | (tile->tmem << 16));
+    NDS_FTR_LEAN_TEXMEMO_MIX(tile->uls | (tile->ult << 16));
+    NDS_FTR_LEAN_TEXMEMO_MIX(tile->lrs | (tile->lrt << 16));
+    NDS_FTR_LEAN_TEXMEMO_MIX(tile->set_seen | (tile->size_seen << 1) |
+                             (tile->flags << 2));
+    if (load != NULL)
+    {
+        NDS_FTR_LEAN_TEXMEMO_MIX(load->image);
+        NDS_FTR_LEAN_TEXMEMO_MIX(load->image_width |
+                                 ((u32)load->load_texels << 16));
+        NDS_FTR_LEAN_TEXMEMO_MIX(load->load_uls | ((u32)load->load_ult << 16));
+        NDS_FTR_LEAN_TEXMEMO_MIX(load->load_lrs | ((u32)load->load_dxt << 16));
+        NDS_FTR_LEAN_TEXMEMO_MIX(load->image_format |
+                                 ((u32)load->image_size << 8) |
+                                 ((u32)load->load_kind << 16) |
+                                 ((u32)load->load_tile << 24));
+    }
+#undef NDS_FTR_LEAN_TEXMEMO_MIX
+    return (h != 0u) ? h : 1u;
+}
+
+static s32 __attribute__((noinline))
+ndsFtrLeanBindTexture(u32 run_index, u32 battle_slot, NDSRendererStats *stats,
+                      const NDSRendererConfig *config,
+                      NDSRendererTraversalState *state)
+{
+    NDSFtrLeanTexMemo *table = ndsFtrLeanTexMemoTable();
+    NDSFtrLeanTexMemo *row;
+    NDSRendererHardwareTextureCacheEntry *entry;
+    u32 key;
+#if NDS_FTR_LEAN_LAB
+    u32 lab_mark = cpuGetTiming();
+#define NDS_FTR_LEAN_TEXMEMO_LAB_PART(counter)                              \
+    do                                                                      \
+    {                                                                       \
+        const u32 lab_now_ = cpuGetTiming();                                \
+        (counter) += lab_now_ - lab_mark;                                   \
+        lab_mark = lab_now_;                                                \
+    } while (0)
+#else
+#define NDS_FTR_LEAN_TEXMEMO_LAB_PART(counter) ((void)0)
+#endif
+
+    if ((table == NULL) || (ndsRendererHardwareUsesTexel01Lerp(stats) != FALSE))
+    {
+        return ndsRendererHardwareBindTexture(stats, config, state);
+    }
+    key = ndsFtrLeanTexMemoKey(run_index, battle_slot, stats);
+    row = &table[key & (NDS_FTR_LEAN_TEXMEMO_ROWS - 1u)];
+    NDS_FTR_LEAN_TEXMEMO_LAB_PART(gNdsFtrLeanTexMemoKeyTicks);
+    if ((row->key == key) && (row->slot_plus1 != 0u))
+    {
+        entry = &sNdsRendererHardwareTextureCache[row->slot_plus1 - 1u];
+        if ((entry->ready != FALSE) && ((u32)entry->name == row->name) &&
+            (entry->key_generation == row->entry_generation))
+        {
+#if NDS_FTR_LEAN_LAB
+            if (gNdsFtrLeanTexMemoVerify != 0u)
+            {
+                s32 ok = ndsRendererHardwareBindTexture(stats, config, state);
+
+                gNdsFtrLeanTexMemoVerifyRuns++;
+                if ((ok == FALSE) ||
+                    (sNdsRendererHardwareActiveTextureEntry != entry) ||
+                    (sNdsRendererHardwareBoundTextureName != row->name) ||
+                    (stats->hardware_texture_format != row->format) ||
+                    (stats->hardware_texture_width != row->width) ||
+                    (stats->hardware_texture_height != row->height))
+                {
+                    gNdsFtrLeanTexMemoVerifyFail++;
+                }
+                return ok;
+            }
+#endif
+            ndsRendererSyncTextureTile(stats);
+            NDS_FTR_LEAN_TEXMEMO_LAB_PART(gNdsFtrLeanTexMemoSyncTicks);
+            entry->last_used_frame = sNdsRendererHardwareFrameSerial + 1u;
+            if (entry->pinned != 0u)
+            {
+                ndsRendererHardwareBindTextureName(stats, row->name);
+                ndsRendererHardwareApplyTextureParams(entry->params);
+                sNdsRendererHardwareActiveTextureEntry = entry;
+                ndsRendererHardwareRecordBattleStaticTextureHit(entry);
+            }
+            else if ((sNdsRendererHardwareActiveTextureEntry != entry) ||
+                     (sNdsRendererHardwareBoundTextureName != row->name))
+            {
+                ndsRendererHardwareBindTextureName(stats, row->name);
+                ndsRendererHardwareApplyTextureParams(entry->params);
+                sNdsRendererHardwareActiveTextureEntry = entry;
+            }
+            NDS_FTR_LEAN_TEXMEMO_LAB_PART(gNdsFtrLeanTexMemoBindTicks);
+            stats->hardware_texture_ready_count++;
+            stats->hardware_texture_format = row->format;
+            stats->hardware_texture_width = row->width;
+            stats->hardware_texture_height = row->height;
+            NDS_FTR_LEAN_CTR(gNdsFtrLeanTexMemoHits++);
+            return TRUE;
+        }
+        row->key = 0u;
+    }
+    NDS_FTR_LEAN_CTR(gNdsFtrLeanTexMemoMisses++);
+    if (ndsRendererHardwareBindTexture(stats, config, state) == FALSE)
+    {
+        return FALSE;
+    }
+    NDS_FTR_LEAN_TEXMEMO_LAB_PART(gNdsFtrLeanTexMemoMissTicks);
+    entry = sNdsRendererHardwareActiveTextureEntry;
+    if ((entry != NULL) && (entry->ready != FALSE) && (entry->name > 0) &&
+        ((u32)entry->name == sNdsRendererHardwareBoundTextureName) &&
+        ((u32)entry->name <= 0xffffu) &&
+        (stats->hardware_texture_width <= 0xffffu) &&
+        (stats->hardware_texture_height <= 0xffffu))
+    {
+        const u32 slot = (u32)(entry - sNdsRendererHardwareTextureCache);
+
+        if (slot < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT)
+        {
+            row->key = key;
+            row->entry_generation = entry->key_generation;
+            row->slot_plus1 = (u16)(slot + 1u);
+            row->name = (u16)entry->name;
+            row->width = (u16)stats->hardware_texture_width;
+            row->height = (u16)stats->hardware_texture_height;
+            row->format = stats->hardware_texture_format;
+            NDS_FTR_LEAN_CTR(gNdsFtrLeanTexMemoFills++);
+        }
+    }
+    return TRUE;
+}
+
+#undef NDS_FTR_LEAN_TEXMEMO_LAB_PART
 
 /* One run: SubmitProductionRun -> PrepareProductionRunCore (packet mode 0) ->
  * the prepare hook -> the emitter's packet twin -> the run's accounting.
@@ -13546,9 +13816,11 @@ ndsFtrLeanMatRun(NDSFtrLeanMat *m, u32 run_index, u32 epoch_policy,
             }
             /* The production bind path itself (resolve, convert on a miss,
              * bind, texture parameters), so the words read back below are
-             * the ones a record of this run would read. */
+             * the ones a record of this run would read; a repeat answers
+             * from the memo with the same binds. */
             NDS_FTR_LEAN_MAT_PART(m, 4u);
-            use_texture = ndsRendererHardwareBindTexture(stats, config, state);
+            use_texture = ndsFtrLeanBindTexture(run_index, m->battle_slot,
+                                                stats, config, state);
             NDS_FTR_LEAN_MAT_PART(m, 6u);
             if (use_texture == FALSE)
             {
@@ -13826,6 +14098,14 @@ ndsFtrLeanMatRun(NDSFtrLeanMat *m, u32 run_index, u32 epoch_policy,
     return (pk->fault != 0u) ? nNDSFtrLeanDeclineCapacity : 0u;
 }
 
+/* Which corners failed the last VTX_10 walk (NDS_FTR_LEAN_VTX_FAIL_*). */
+static u32 sNdsFtrLeanLastVtxFail;
+
+u32 ndsFtrLeanLastVtxFail(void)
+{
+    return sNdsFtrLeanLastVtxFail;
+}
+
 u32 NDS_FIGHTER_PACKET_COLD_CODE
 ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
                       const NDSRendererNativeFighterRoot *inputs,
@@ -13848,7 +14128,8 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
     /* Slice 6: NDS_FTR_LEAN_ENTRY_WIDE asks for entry 0 over the whole
      * region (route 1 only); the other entry is given up while it holds. */
     u32 wide = ((entry & NDS_FTR_LEAN_ENTRY_WIDE) != 0u) ? TRUE : FALSE;
-    u32 vtx10 = ((entry & NDS_FTR_LEAN_ENTRY_VTX16) == 0u) ? 1u : 0u;
+    u32 vtx10 = ((entry & NDS_FTR_LEAN_ENTRY_VTX16) != 0u) ? 0u :
+        (((entry & NDS_FTR_LEAN_ENTRY_VTX10H) != 0u) ? 2u : 1u);
     u32 capacity = (wide != FALSE) ? ndsFtrLeanWideCapacity() :
         ndsFtrLeanWordCapacity();
     /* Slice 6: the fence the old path's key would carry for this record --
@@ -13856,7 +14137,9 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
     u32 record_fence = sNdsRendererHardwareTextureKeyGeneration ^
         (sNdsRendererRuntimeTextureCacheEvictCount << 16);
 
-    entry &= ~(NDS_FTR_LEAN_ENTRY_WIDE | NDS_FTR_LEAN_ENTRY_VTX16);
+    entry &= ~(NDS_FTR_LEAN_ENTRY_WIDE | NDS_FTR_LEAN_ENTRY_VTX16 |
+               NDS_FTR_LEAN_ENTRY_VTX10H);
+    sNdsFtrLeanLastVtxFail = 0u;
     if ((battle_slot >= NDS_FIGHTER_PACKET_SLOTS) || (key == NULL) ||
         (ndsFtrLeanEntryUsable(entry) == FALSE) || (inputs == NULL) ||
         (stats == NULL) || (asset_base == NULL) || (input_count == 0u) ||
@@ -13951,6 +14234,7 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
     m.vtx10 = vtx10;
     m.hw_texgen_ok = (owner_slot >= NDS_RENDERER_NATIVE_FIGHTER_OWNER_MMARIO) ?
         1u : 0u;
+    m.battle_slot = battle_slot;
     ndsRendererInitTraversalState(state, NULL, stats, NULL, NULL, 0u);
     state->color_modulate = packet->tint_modulate;
     if (*sNdsNativeFighterActiveDenseNormalsBuilt == 0u)
@@ -14089,6 +14373,18 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
                     &m, (u32)epoch->first_run + run_offset, epoch_policy,
                     palette_slot, input->config, stats, state);
             }
+            if ((m.pk.fault | m.vtx10_fail) != 0u)
+            {
+                /* 2026-10-12: this walk's list is already lost (an entry
+                 * outgrown, a corner VTX_10 cannot hold) and the walk's
+                 * rest would be wasted: stop here (the caller walks again
+                 * wide or at another corner format, or declines). */
+                break;
+            }
+        }
+        if ((m.pk.fault | m.vtx10_fail) != 0u)
+        {
+            break;
         }
         ndsRendererNativeApplyStateSpanPreflight(
             root->tail_state_first, root->tail_state_count,
@@ -14129,6 +14425,7 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
     }
     if ((reason == 0u) && (m.vtx10_fail != 0u))
     {
+        sNdsFtrLeanLastVtxFail = m.vtx10_fail;
         reason = nNDSFtrLeanDeclineVtx10;
     }
     if (reason != 0u)
@@ -14464,8 +14761,10 @@ static void ndsFtrLeanSpareIdentity(NDSFtrLeanSlotState *s)
  * copying instead of a materialization. The lab pool of 2026-10-05
  * (`artifacts/performance/2026-10-05_lean-park`) replaced the spare where the
  * heap refused it; this one stands behind it. Sized once per heap generation
- * at its first use, leaving the spare floor and every slot's pending spare. */
-#define NDS_FTR_LEAN_POOL_MAX 8u
+ * at its first use, leaving the spare floor and every slot's pending spare.
+ * 2026-10-12: up to sixteen (was eight) where the heap has them: four Meta
+ * Knights still re-derived 43 of 93 lists with the pool full at eight. */
+#define NDS_FTR_LEAN_POOL_MAX 16u
 #define NDS_FTR_LEAN_POOL_FREE 0xffu
 typedef struct NDSFtrLeanPoolHead
 {
@@ -15705,9 +16004,13 @@ ndsFtrLeanPacketModelviewSites(u32 battle_slot, u32 **sites,
          * production inputs (the caller refreshes them for this draw). */
         mask |= NDS_FTR_LEAN_SITES_INPUTS;
     }
-    if (state->vtx10 != 0u)
+    if (state->vtx10 == 1u)
     {
         mask |= NDS_FTR_LEAN_SITES_VTX10;
+    }
+    else if (state->vtx10 == 2u)
+    {
+        mask |= NDS_FTR_LEAN_SITES_VTX10H;
     }
     return mask;
 }
@@ -15986,9 +16289,8 @@ u32 ndsFtrLeanPacketPatch(u32 battle_slot, const NDSFtrLeanPatchView *view,
         /* A VTX_10 list's eye coordinates are 4x the VTX_16 list's but its
          * homogeneous w is still 1: row 3 takes the 4x as well (the uniform
          * clip scale, NDS_FTR_LEAN_ENTRY_VTX16). */
-        const u32 row3_shift = (state->vtx10 != 0u) ?
-            (NDS_RENDERER_HW_WORLD_UNIT_SHIFT - 2u) :
-            NDS_RENDERER_HW_WORLD_UNIT_SHIFT;
+        const u32 row3_shift = NDS_RENDERER_HW_WORLD_UNIT_SHIFT -
+            ((state->vtx10 == 1u) ? 2u : ((state->vtx10 == 2u) ? 1u : 0u));
 
         for (i = 0u; i < 12u; i++)
         {
@@ -16625,6 +16927,11 @@ void ndsFtrLeanEntryResetShade(u32 battle_slot,
     (void)view;
 }
 
+u32 ndsFtrLeanLastVtxFail(void)
+{
+    return 0u;
+}
+
 u32 ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
                           const NDSRendererNativeFighterRoot *inputs,
                           u32 input_count, u32 owner_slot,
@@ -16773,6 +17080,15 @@ void ndsRendererFighterPacketInvalidateAll(void)
 void ndsRendererFighterPacketInvalidateSlot(u32 slot)
 {
     (void)slot;
+}
+
+u8 *ndsFighterPacketArenaTail(u32 *out_bytes)
+{
+    if (out_bytes != NULL)
+    {
+        *out_bytes = 0u;
+    }
+    return NULL;
 }
 
 void ndsRendererFighterPacketRelease(void)
