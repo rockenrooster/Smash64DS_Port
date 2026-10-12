@@ -8,19 +8,6 @@ static u32 sNdsNativeStageMatrixGen = 1u;
 #include "generated/nds_native_actor_yoster_cloud.generated.inc"
 #include "nds_native_actor_yoster_cloud.exec.inc"
 #endif
-/* EF-LAKITU-BRONTO: same-TU textual packets + executors, no new link unit.
- * Lakitu rides the Castle flag; Bronto rides the base build (Dream Land is
- * the base stage and has no stage flag) behind the triangles gate. */
-#if NDS_P2_STAGE_CASTLE && NDS_RENDERER_HW_TRIANGLES
-#include <nds/nds_native_actor_ef_lakitu.h>
-#include "generated/nds_native_actor_ef_lakitu.generated.inc"
-#include "nds_native_actor_ef_lakitu.exec.inc"
-#endif
-#if NDS_RENDERER_HW_TRIANGLES
-#include <nds/nds_native_actor_ef_bronto.h>
-#include "generated/nds_native_actor_ef_bronto.generated.inc"
-#include "nds_native_actor_ef_bronto.exec.inc"
-#endif
 
 #if NDS_P2_STAGE_JUNGLE && NDS_RENDERER_HW_TRIANGLES
 #include <nds/generated/nds_native_actor_tarucann.generated.h>

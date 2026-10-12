@@ -3,9 +3,9 @@
 #ifndef NDS_NATIVE_ITEM_BAKED_GENERATED_H
 #define NDS_NATIVE_ITEM_BAKED_GENERATED_H
 
-#define NDS_NATIVE_BAKED_ROOT_COUNT 55u
-#define NDS_NATIVE_BAKED_OP_COUNT 1093u
-#define NDS_NATIVE_BAKED_GROUP_COUNT 71u
+#define NDS_NATIVE_BAKED_ROOT_COUNT 76u
+#define NDS_NATIVE_BAKED_OP_COUNT 1504u
+#define NDS_NATIVE_BAKED_GROUP_COUNT 95u
 #define NDS_NATIVE_BAKED_MATERIAL_SLOTS 2u
 #define NDS_NATIVE_BAKED_OP_ENV 64u
 #define NDS_NATIVE_BAKED_OP_MATERIAL 65u
@@ -17,6 +17,6 @@
     (((asset) == 52u))
 /* The assets any baked root lives in: the adapter's cheap first test. */
 #define NDS_NATIVE_BAKED_ASSET_MATCH(asset) \
-    (((asset) == 86u) || ((asset) == 136u) || ((asset) == 150u) || ((asset) == 159u) || ((asset) == 162u) || ((asset) == 316u) || ((asset) == 336u) || ((asset) == 344u) || ((asset) == 352u))
+    (((asset) == 86u) || ((asset) == 104u) || ((asset) == 105u) || ((asset) == 106u) || ((asset) == 108u) || ((asset) == 109u) || ((asset) == 111u) || ((asset) == 112u) || ((asset) == 136u) || ((asset) == 150u) || ((asset) == 159u) || ((asset) == 162u) || ((asset) == 316u) || ((asset) == 336u) || ((asset) == 344u) || ((asset) == 352u))
 
 #endif

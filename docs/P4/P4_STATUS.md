@@ -1632,6 +1632,56 @@ faults the harness had not reached:
   Sheik's scale X/Z over 7 frames). Such a key now starts from the joint's
   current rotation or scale (`NDS_FT_POSE_FIRST_KEY`), what the previous
   clip left there. The same match runs 3,000 frames (play-1012b).
+- **The stages' background actors drew nothing.** The same stress match
+  recorded 990 native failures on Sector Z's rocket (ExternDataBank109
+  0xAB20, an effect GObj). The VS stages' efground actors (ef/efground.c
+  `dEFGround*EffectDescs`: Sector Z's rockets and ship, Zebes' Ridley and
+  ship, Kongo Jungle's bird, Yoshi's Island's birds and Shy Guys, Saffron's
+  Butterfree, Charizard's fire, Beedrill and Pidgey, Dream Land's Dedede)
+  appear 100-266 s into a match (`efGroundMakeAppearActor`: wait 6,000
+  plus up to 10,000 ticks), so no census match ever met them. Their 17
+  roots now compile as baked effect roots
+  (`generate_nds_native_item_baked.py`, GOBJ_EFFECT; Lakitu and Bronto Burt
+  keep their hand-written owners). Probe (play-1012d, four Marios, 900
+  frames, the actor wait forced to 90 ticks): Sector Z 23 actors, Zebes 24,
+  Kongo Jungle 25, Yoshi's Island 21, Saffron 23, every effect id of each
+  stage, 0 native failures. Dream Land still failed on Bronto Burt (5,956
+  in 900 frames) and Peach's Castle on Lakitu (11,007 in 600): their
+  hand-written slots (generate_nds_native_ef_lakitu_bronto.py, about 10 KB
+  of code, tables and workspaces) had never drawn. They tested a loaded
+  file's liveness against the taskman heap generation, while a loaded file
+  carries the reloc scene generation, and the Bronto slot expected the
+  sprite MObj on the joint above the one the source gives it, so both
+  refused every draw and the actors fell to the generic walk. The slots,
+  their packets, executors and NDL route are deleted; the four roots
+  (Lakitu's three quads, Bronto Burt's) are baked effect roots like the
+  rest, whose live material is the drawing DObj's own MObj. The billboard
+  row cores the generic walk shares keep their host test
+  (`test_ef_ground_billboard_rows.py`).
+- **Owner images without dense vertices.** The lean fighter renderer, the
+  only one a shipping build links, reads a dense vertex's s/t and, at a
+  texgen site, its normal; an imaged owner's shade words already ride in
+  dense_normals. A lean build now images a P4 owner's `dense_vertices` as a
+  zero-length member (`LEAN_TRIM`, generate_nds_native_owner_images.py):
+  PreparedDense carries the source s/t (the production path that rewrites
+  them is not linked), and the texgen patch recovers the s8 normal from the
+  vertex's NORMAL word, which packs it one-to-one
+  (`ndsFighterPacketTexgenRgba`). 12 B a vertex: Banjo's low image 52,768
+  -> 37,132 B, Lanky's 31,700 -> 22,100, Crash's 40,440 -> 28,080. An owner
+  with texgen and an unlit run (whose dense_normals hold colour words)
+  would keep its dense vertices; none of the eighteen has one. Photos of
+  the same match with full and trimmed images are identical.
+- **Memory rows (play-1012g, items very high, 1,500 frames).** With the
+  trims, the no-attack motions' compaction (a content's figatree heap is its
+  largest main-motion clip, often its teeter or taunt: Banjo 22,428 ->
+  13,492 B) and the Lakitu/Bronto code gone (.main -7.2 KB, .bss -1.5 KB,
+  which every scene's heap gets back), every row clears the 25,600 floor.
+  The heaviest four (Banjo, Crash, Lanky, Bowser): Kongo Jungle 5,872 ->
+  27,292 B, Saffron 13,520 -> 40,044; on play-1012e (before the deletion)
+  Sector Z 18,560 -> 34,464, Zebes 22,228 -> 42,916, Yoshi's Island 19,024
+  -> 33,672, Mushroom Kingdom 54,652. Banjo, MRGAW, Crash and Lanky:
+  Saffron 5,984 -> 30,488, Sector Z 24,948 -> 33,652. The P3 stress's
+  Sector rows: 43,352 and 59,040. 0 overflows, 0 native failures.
 
 ## Board 1 status (master plan Revision 3)
 

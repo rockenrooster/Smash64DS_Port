@@ -422,8 +422,8 @@ extern volatile u32 gNdsEffectRendererDObjFieldMask;
  * later Phase-2 owners append new slots in source-order migration batches. */
 #define NDS_P2_NDL_KIND_IMPACT_WAVE  0u
 #define NDS_P2_NDL_KIND_DAMAGE_SLASH 1u
-#define NDS_P2_NDL_KIND_EF_LAKITU    2u
-#define NDS_P2_NDL_KIND_EF_BRONTO    3u
+/* 2 and 3 were Lakitu and Bronto Burt (baked effect roots since 2026-10-12);
+ * the numbers stay so the dispatch counters keep their indices. */
 #define NDS_P2_NDL_KIND_GR_YOSTER_CLOUD 4u
 #define NDS_P2_NDL_KIND_GR_TARUCANN     5u
 #define NDS_P2_NDL_KIND_WP_FIREBALL      6u
@@ -438,10 +438,6 @@ extern volatile u32 gNdsNdlNegativeBindCount;
 s32 ndsRendererAdapterNdlDispatchEffect(void *camera_gobj,
                                         void *display_gobj,
                                         s32 link_id);
-u32 ndsStageGCDrawAllLoopNdlEfGroundKind(void *display_gobj);
-s32 ndsStageGCDrawAllLoopSubmitNdlEfGround(void *camera_gobj,
-                                            void *display_gobj,
-                                            u32 kind);
 u32 ndsStageGCDrawAllLoopNdlGroundKind(void *display_gobj);
 s32 ndsStageGCDrawAllLoopSubmitNdlGround(void *camera_gobj,
                                           void *display_gobj,

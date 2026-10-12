@@ -519,19 +519,9 @@ def render_types(hat: int, detail: str, context: dict) -> list[str]:
     name = image_type(hat, detail)
     lines = [f"/* Remix Kirby hat {hat:#x}, {detail} detail. */",
              f"typedef struct {name}", "{", "    u32 abi_tag[1];"]
-    for ctype, member, values, guard in members:
-        if guard:
-            lines.append(f"#if {guard}")
-        lines.append(f"    {ctype} {member}[{len(values)}];")
-        if guard:
-            lines.append("#endif")
+    lines += I.member_decl_lines(members)
     lines += [f"}} {name};", ""]
-    for _ctype, member, values, guard in members:
-        if guard:
-            lines.append(f"#if {guard}")
-        lines.append(f"#define {image_prefix(hat, detail)}_{member.upper()}_COUNT {len(values)}u")
-        if guard:
-            lines.append("#endif")
+    lines += I.member_count_lines(image_prefix(hat, detail), members)
     lines.append("")
     return lines
 

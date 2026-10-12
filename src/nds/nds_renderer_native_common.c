@@ -12097,6 +12097,39 @@ static inline s32 ndsFighterPacketTexgenScaled(
     return (s32)(((u64)(u32)(dot + unit) * (u64)factor) >> 40);
 }
 
+/* A texgen site's normal as the source rgba carried it (s8 x, y, z in the
+ * top three bytes). A LEAN_TRIM image has no dense_vertices: the normal is
+ * recovered from the vertex's baked NORMAL word, each s8 n scaled by 511/127
+ * truncating and clamped to [-512, 511] (_pack_ds_normal_from_rgba), which is
+ * one-to-one: |n| = ceil(|w| * 127 / 511). Texgen sites are lit vertices, and
+ * the generator trims no owner whose texgen could meet an unlit run's colour
+ * word (p4_native_owner.py). */
+static inline u32 ndsFighterPacketTexgenRgba(
+    const NDSNativeFighterRuntimeTables *tables, u32 dense_id)
+{
+    u32 word;
+    u32 rgba = 0u;
+    u32 i;
+
+    if (tables->dense_vertices != NULL)
+    {
+        return tables->dense_vertices[dense_id].rgba;
+    }
+    word = tables->dense_normals[dense_id];
+    for (i = 0u; i < 3u; i++)
+    {
+        const s32 v = ((s32)(word << (22u - 10u * i))) >> 22;
+        s32 n = (((v < 0) ? -v : v) * 127 + 510) / 511;
+
+        if (v < 0)
+        {
+            n = -n;
+        }
+        rgba |= (u32)(u8)(s8)n << (24u - 8u * i);
+    }
+    return rgba;
+}
+
 static s32 ndsFighterPacketPatchTexgen(
     NDSFighterPacket *packet,
     const NDSRendererNativeFighterRoot *inputs,
@@ -12190,8 +12223,8 @@ static s32 ndsFighterPacketPatchTexgen(
          * 3 * 2^22, so every value is the one the 64-bit form computed. The
          * LINEAR form keeps ndsRendererNativeTexgenCoord. */
         {
-            const NDSNativeDenseVertex *dense_vertices =
-                sNdsNativeFighterActiveTables->dense_vertices;
+            const NDSNativeFighterRuntimeTables *tables =
+                sNdsNativeFighterActiveTables;
             const u32 dense_count = sNdsNativeFighterActiveTables->dense_count;
             const u32 word_count = packet->word_count;
             u32 *words = packet->words;
@@ -12227,7 +12260,7 @@ static s32 ndsFighterPacketPatchTexgen(
                     {
                         return FALSE;
                     }
-                    rgba = dense_vertices[dense_id].rgba;
+                    rgba = ndsFighterPacketTexgenRgba(tables, dense_id);
                     nx = (s32)(s8)(rgba >> 24);
                     ny = (s32)(s8)(rgba >> 16);
                     nz = (s32)(s8)(rgba >> 8);
@@ -12813,7 +12846,6 @@ static s32 ndsFtrLeanPatchTexgenMapped(
         for (slot = 0u; slot < (u32)map->slot_count[group_index]; slot++)
         {
             u32 dense_id = map->dense[group_index][slot];
-            const NDSNativeDenseVertex *dense;
             u32 rgba;
             s32 nx;
             s32 ny;
@@ -12827,8 +12859,8 @@ static s32 ndsFtrLeanPatchTexgenMapped(
             {
                 return FALSE;
             }
-            dense = &sNdsNativeFighterActiveTables->dense_vertices[dense_id];
-            rgba = dense->rgba;
+            rgba = ndsFighterPacketTexgenRgba(sNdsNativeFighterActiveTables,
+                                              dense_id);
             nx = (s32)(s8)(rgba >> 24);
             ny = (s32)(s8)(rgba >> 16);
             nz = (s32)(s8)(rgba >> 8);
@@ -13262,9 +13294,15 @@ static void ndsFtrLeanMatCorners(NDSFtrLeanMat *m, const u16 *refs, u32 count,
             NDS_FTR_LEAN_OP(FIFO_TEX_COORD, 1u);
             if (texgen == FALSE)
             {
-                const NDSNativeDenseVertex *v = &dense[d];
-                s16 s = (s16)((((s32)v->s * scale_s) >> 17) + base_s);
-                s16 t = (s16)((((s32)v->t * scale_t) >> 17) + base_t);
+                /* A LEAN_TRIM image has no dense_vertices: its source s/t
+                 * ride in PreparedDense, which nothing else writes in a
+                 * lean build. */
+                const s32 vs = (dense != NULL) ? (s32)dense[d].s :
+                    (s32)prepared[d].s;
+                const s32 vt = (dense != NULL) ? (s32)dense[d].t :
+                    (s32)prepared[d].t;
+                s16 s = (s16)(((vs * scale_s) >> 17) + base_s);
+                s16 t = (s16)(((vt * scale_t) >> 17) + base_t);
 
                 w[n] = (u32)(u16)s | ((u32)(u16)t << 16);
             }

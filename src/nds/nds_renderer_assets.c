@@ -3970,6 +3970,9 @@ typedef struct NDSImgBindDesc
     u32 triangle_count;
     u32 run_count;
     u32 epoch_count;
+    /* 0 when a lean build images the owner without dense_vertices
+     * (generate_nds_native_owner_images.py LEAN_TRIM): bound NULL. */
+    u32 dense_vertices_imaged;
 } NDSImgBindDesc;
 
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
@@ -4012,7 +4015,7 @@ typedef struct NDSImgBindDesc
         prefix_##_VERTEX_ACTIONS_COUNT, prefix_##_DENSE_VERTICES_COUNT,        \
         NDS_IMG_DESC_CORNER_COUNT(prefix_)                                     \
         prefix_##_TRIANGLES_COUNT, prefix_##_RUNS_COUNT,                       \
-        prefix_##_EPOCHS_COUNT                                                 \
+        prefix_##_EPOCHS_COUNT, prefix_##_DENSE_VERTICES_IMAGED                \
     }
 
 /* Every bind and unbind of a tables struct replaces the image bytes its
@@ -4049,7 +4052,8 @@ static void __attribute__((noinline)) ndsRendererNativeBindImageTables(
     tables->vertex_actions = (const NDSNativeVertexAction *)(img + desc->vertex_actions);
     tables->vertex_action_count = desc->vertex_action_count;
     tables->epoch_direct_policy = img + desc->epoch_direct_policy;
-    tables->dense_vertices = (const NDSNativeDenseVertex *)(img + desc->dense_vertices);
+    tables->dense_vertices = (desc->dense_vertices_imaged != 0u) ?
+        (const NDSNativeDenseVertex *)(img + desc->dense_vertices) : NULL;
     tables->dense_count = desc->dense_count;
     tables->dense_normals = (const u32 *)(img + desc->dense_normals);
     /* Image RAM owns mutable prepared-dense scratch. */

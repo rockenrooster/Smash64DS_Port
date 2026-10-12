@@ -25,13 +25,6 @@
 #if NDS_P2_STAGE_YOSTER
 #include <nds/nds_native_actor_yoster_cloud.h>
 #endif
-/* EF-LAKITU-BRONTO: adapter slots beside SubmitNativeYosterCloud. */
-#if NDS_P2_STAGE_CASTLE
-#include <nds/nds_native_actor_ef_lakitu.h>
-#endif
-#if NDS_RENDERER_HW_TRIANGLES
-#include <nds/nds_native_actor_ef_bronto.h>
-#endif
 #include <ft/ftdata_file_slots.h>
 
 #ifndef NDS_RENDERER_HW_TRIANGLES
@@ -118,8 +111,8 @@ __attribute__((used)) volatile u32 gNdsLabItemAcc[16];
 #define NDS_RENDERER_ADAPTER_MVP_RECALC_Z_0X46_KIND 0x46u
 /* ef/efground.c:1336 specifies hexadecimal 0x48 (decimal 72), which maps to
  * func_ovl0_800CAB48 (dLBCommonFuncMatrixList index 12, lbcommon.c:1852).
- * Every Castle Lakitu / Dream Land Bronto drawable carries it beside its
- * TraRotRpyR XObj. Like the 0x46/0x47 callbacks it rewrites the composed
+ * Every efground actor's billboard drawable (lr +/-1) carries it beside
+ * its TraRotRpyR XObj. Like the 0x46/0x47 callbacks it rewrites the composed
  * orientation while preserving the translation row, with the source's
  * gGCScaleX accumulation threaded per tree. Listed here (not just in the
  * actor slot) so ndsRendererAdapterBuildDObjLocalMatrix skips it exactly
@@ -3914,12 +3907,12 @@ static void ndsRendererAdapterTask91LocalMemoProbe(
 }
 #endif
 
-/* EF-LAKITU-BRONTO: kind72 (0x48, func_ovl0_800CAB48, lbcommon.c:1852-1932)
- * row core, shared by the ApplyMvpRecalc kind72 arm and (through it) the
- * actor slots. Orientation rows from the camera persp x rotX/rotY x scale;
+/* EF-GROUND: kind72 (0x48, func_ovl0_800CAB48, lbcommon.c:1852-1932) row
+ * core of the ApplyMvpRecalc kind72 arm, which every efground actor's
+ * billboard drawable takes (lr +/-1). Orientation rows from the camera persp x rotX/rotY x scale;
  * scale_accum threads the source's gGCScaleX mutation in walk order. */
 /* BEGIN-EF-GROUND-BILLBOARD-ROWS (host-extracted verbatim by
- * scripts/stages/test_native_ef_lakitu_bronto.py; keep this body portable:
+ * scripts/stages/test_ef_ground_billboard_rows.py; keep this body portable:
  * float ops + sinf/cosf only, no renderer types). */
 static void ndsRendererAdapterEfGroundBillboardRows(const float persp[4][4],
     float rotx, float roty, float scale_x, float scale_y,
@@ -3944,16 +3937,15 @@ static void ndsRendererAdapterEfGroundBillboardRows(const float persp[4][4],
 }
 /* END-EF-GROUND-BILLBOARD-ROWS */
 
-/* EF-LAKITU-BRONTO: kind46 (nGCMatrixKind46, objdisplay.c:960-1004) row
- * core, shared by the ApplyMvpRecalc kind46 arm and (through it) the actor
- * slots' lr +/-3 variants (efground.c:1332-1336 arms 0x2E where lr_bool is
- * set). Orientation rows from the camera persp x rotZ x scale; scale_accum
+/* EF-GROUND: kind46 (nGCMatrixKind46, objdisplay.c:960-1004) row core of
+ * the ApplyMvpRecalc kind46 arm, the efground actors' lr +/-3 variants
+ * (efground.c:1332-1336 arms 0x2E where lr_bool is set). Orientation rows from the camera persp x rotZ x scale; scale_accum
  * threads the source's gGCScaleX mutation in walk order (f12 = scale.y *
  * prior, then the global *= scale.x). Bit-identical to the inline arm it
  * replaces: __sinf/__cosf are sinf/cosf here (n64_stubs.c) and
  * RotRpyR(0,0,z)[0][0..1] is 1.0f * cos/sin, and float * commutes. */
 /* BEGIN-EF-GROUND-KIND46-ROWS (host-extracted verbatim by
- * scripts/stages/test_native_ef_lakitu_bronto.py; keep this body portable:
+ * scripts/stages/test_ef_ground_billboard_rows.py; keep this body portable:
  * float ops + sinf/cosf only, no renderer types). */
 static void ndsRendererAdapterEfGroundKind46Rows(const float persp[4][4],
     float rotz, float scale_x, float scale_y,
@@ -4401,7 +4393,7 @@ ndsRendererAdapterMvpKind48RowsQ(const NDSRendererAdapterMvpMod1Q *mod1,
  * ~45K ticks a frame there, and every billboarded item and weapon the stage
  * DL submit draws paid ~3-4K ticks a call more than with it (Mushroom
  * Kingdom's Meowth coins: same-ROM A/B -8K WORK-H median, replay
- * identical; the Lakitu and Bronto actors share it too). The operands
+ * identical; the efground actors share it too). The operands
  * are kept while the CObj's own inputs (eye, at, perspective) are
  * bit-identical, so every value it serves is the one the recalc would
  * compute. It claims the row memo (resets it as its owner)
@@ -4717,9 +4709,9 @@ static void ndsRendererAdapterApplyMvpRecalc(
 
         if (kind == nGCMatrixKind46)
         {
-            /* Row core shared above (EF-LAKITU-BRONTO seam): the efground
-             * lr +/-3 drawables reach this arm with the same threading the
-             * kind72 drawables use, so the slot dispatches the live kind. */
+            /* Row core shared above (EF-GROUND seam): the efground lr +/-3
+             * drawables reach this arm with the same threading the kind72
+             * drawables use. */
             float ef_ground_kind46_rows[3][4];
             const DObj *scale_ancestor;
 
@@ -8668,8 +8660,8 @@ static sb32 ndsRendererAdapterMatrixIsAffine20p12(
  * product split at its natural affine boundary so source-unit translation can
  * be scaled once in GX without CPU-composing every fighter root. */
 /* One-entry memo of the look-at/perspective pair (P2-2p8, 2026-09-28). The
- * native actor slots (Yoshi's Island's three clouds, Lakitu, Bronto, the
- * barrel cannons) each call this once per draw, and each call rebuilt both
+ * native actor slots (Yoshi's Island's three clouds, the barrel cannons)
+ * each call this once per draw, and each call rebuilt both
  * matrices from the same camera: ~8K ticks a frame on Yoshi's Island. The
  * outputs are a pure function of the key below -- the eye/at/up and
  * perspective words and the float/fixed route word -- plus the norm the
@@ -9465,433 +9457,6 @@ sb32 ndsRendererAdapterSubmitNativeYosterCloud(void *root_ptr, void *cobj,
     return ndsRendererSubmitNativeYosterCloud(loaded->data, loaded->data_size,
         &workspace->hierarchy, workspace->drawable_mvps,
         alphas[0], alphas[1], alphas[2],
-        initial_geometry_mode, stats);
-}
-#endif
-/* EF-LAKITU-BRONTO: slots beside SubmitNativeYosterCloud. The billboard row
- * cores live at the owning seam (ndsRendererAdapterEfGroundBillboardRows
- * + the ApplyMvpRecalc kind72 arm above, ndsRendererAdapterEfGroundKind46Rows
- * + the ApplyMvpRecalc kind46 arm), so slots and the generic effect walk
- * share one source-correct implementation per lr class; each slot composes
- * the full live chain MVP first, resets sNdsRendererAdapterMvpRecalcScaleX
- * once per tree (source gGCScaleX scope), and dispatches the live billboard
- * kind per drawable exactly like the yoster kind48 slot. */
-#if NDS_P2_STAGE_CASTLE
-typedef struct NDSRendererAdapterNativeEfLakituWorkspace
-{
-    DObj *hierarchy_joints[6];
-    u8 hierarchy_parents[6];
-    u8 hierarchy_bindings[6];
-    struct { NDSRendererMatrix20p12 hierarchy_locals[6]; } hierarchy_storage;
-    NDSRendererMatrix20p12 hierarchy_projection;
-    NDSRendererMatrix20p12 hierarchy_camera_modelview;
-    NDSRendererMatrix20p12 drawable_mvps[3];
-    NDSRendererNativeFighterHierarchy hierarchy;
-} NDSRendererAdapterNativeEfLakituWorkspace;
-
-static NDSRendererAdapterNativeEfLakituWorkspace
-    sNdsRendererAdapterNativeEfLakituWorkspace;
-
-/* 6-joint slot for one Lakitu instance. Live tree from efGroundMakeEffect
- * flags 0x4|USERDATA|0x1 over DObjDesc @ 0x4118 (file 106): A (tk1 root,
- * live spawn pose) -> e0 (entry 0, NULL dl, BB0 sweep) -> e1 (entry 1,
- * NULL dl, C14 scale flap) -> e2 (entry 2, DL_0x3F20 prelude), e0 -> e3
- * (entry 3, DL_0x3FF8), e0 -> e4 (entry 4, gap DL at file 0x4070).
- * e1 is a live NULL-dl intermediate (its C14 flap feeds e2's world), so it
- * stays a joint. Plain joints use BuildDObjLocalMatrix (the billboard XObj
- * is skipped there as a recalc kind, same as 48 was); billboard drawables
- * add the billboard above (never BuildDObjLocalMatrix alone). The live
- * billboard kind is 72 (lr +/-1) or 46 (lr +/-3); the dispatch below reads
- * it per drawable so both reuse the owning ApplyMvpRecalc arms. */
-sb32 ndsRendererAdapterSubmitNativeEfLakitu(void *root_ptr, void *cobj,
-    u32 initial_geometry_mode, NDSRendererStats *stats)
-{
-    DObj *root = (DObj *)root_ptr;
-    DObj *joints[6];
-    DObj *draws[3];
-    NDSRendererAdapterNativeEfLakituWorkspace *workspace =
-        &sNdsRendererAdapterNativeEfLakituWorkspace;
-    NDSRelocLoadedFile *loaded;
-    u32 i;
-    static const u32 sEfLakituDlOffs[3] = { 0x3f20u, 0x3ff8u, 0x4070u };
-    /* Packet-pinned topology (parents 31,0,1,2,1,1): spelled here,
-     * yoster-slot style, because the packet tables live in the owners TU.
-     * Cross-checked against the generator by
-     * test_native_ef_lakitu_bronto.py; the executor re-validates every
-     * hierarchy against the packet tables, so drift fail-closes. */
-    static const u8 sEfLakituParents[6] = { 31u, 0u, 1u, 2u, 1u, 1u };
-
-    if ((root == NULL) || (stats == NULL))
-    {
-        return FALSE;
-    }
-    if ((root->sib_next != NULL) || (root->child == NULL) ||
-        (root->dv != NULL) || (root->mobj != NULL))
-    {
-        return FALSE;
-    }
-    joints[0] = root;
-    joints[1] = root->child;
-    if ((joints[1]->dv != NULL) || (joints[1]->mobj != NULL) ||
-        (joints[1]->child == NULL) || (joints[1]->sib_next != NULL))
-    {
-        return FALSE;
-    }
-    joints[2] = joints[1]->child;
-    if ((joints[2]->dv != NULL) || (joints[2]->mobj != NULL) ||
-        (joints[2]->child == NULL) || (joints[2]->sib_next == NULL))
-    {
-        return FALSE;
-    }
-    joints[3] = joints[2]->child;
-    if (joints[3]->sib_next != NULL)
-    {
-        return FALSE;
-    }
-    joints[4] = joints[2]->sib_next;
-    if (joints[4] == NULL)
-    {
-        return FALSE;
-    }
-    joints[5] = joints[4]->sib_next;
-    if ((joints[5] == NULL) || (joints[5]->sib_next != NULL))
-    {
-        return FALSE;
-    }
-    draws[0] = joints[3];
-    draws[1] = joints[4];
-    draws[2] = joints[5];
-    for (i = 0u; i < 3u; i++)
-    {
-        loaded = ndsRelocFindLoadedFileContaining(draws[i]->dv, sizeof(Gfx));
-        if ((loaded == NULL) || (loaded->asset_id != 106u) ||
-            (loaded->owner_generation != gNdsTaskmanHeapGeneration) ||
-            (draws[i]->dv != (void *)((u8 *)loaded->data + sEfLakituDlOffs[i])) ||
-            (draws[i]->mobj != NULL) || (draws[i]->child != NULL))
-        {
-            return FALSE;
-        }
-    }
-    /* XObj allowlist (packet-header pinned; tables live with the packet in
-     * the owners TU, so the slot spells the same allowlist positionally
-     * from the header kind defines, yoster-slot style): A carries tk1
-     * (28); e0/e1 carry tk2 (27); drawables carry tk2 (27) + the efground
-     * billboard, which is kind72 (0x48) for lr +/-1 and kind46 (0x2E) for
-     * lr +/-3 (efground.c:1332-1336). Same DLs either way, so both admit. */
-    for (i = 0u; i < 6u; i++)
-    {
-        DObj *joint = joints[i];
-        u32 want_num = (i < 3u) ? 1u : 2u;
-        u32 x;
-
-        workspace->hierarchy_parents[i] = sEfLakituParents[i];
-        workspace->hierarchy_bindings[i] = (u8)i;
-        workspace->hierarchy_joints[i] = joint;
-        if ((i == 0u) ? (joint->parent != DOBJ_PARENT_NULL) :
-            (joint->parent != joints[workspace->hierarchy_parents[i]]))
-        {
-            return FALSE;
-        }
-        if (joint->xobjs_num != (s32)want_num)
-        {
-            return FALSE;
-        }
-        for (x = 0u; x < want_num; x++)
-        {
-            if (joint->xobjs[x] == NULL)
-            {
-                return FALSE;
-            }
-            if (x == 0u)
-            {
-                u32 want = (i == 0u) ?
-                    NDS_NATIVE_ACTOR_EF_LAKITU_XOBJ_KIND_TRA_ROTRPYRSCA :
-                    NDS_NATIVE_ACTOR_EF_LAKITU_XOBJ_KIND_TRA_ROTRPYR;
-
-                if (joint->xobjs[x]->kind != want)
-                {
-                    return FALSE;
-                }
-            }
-            else if ((joint->xobjs[x]->kind !=
-                         NDS_NATIVE_ACTOR_EF_LAKITU_XOBJ_KIND_BILLBOARD) &&
-                     (joint->xobjs[x]->kind !=
-                         NDS_NATIVE_ACTOR_EF_LAKITU_XOBJ_KIND_BILLBOARD_46))
-            {
-                return FALSE;
-            }
-        }
-        if ((ndsRendererAdapterBuildDObjLocalMatrix(joint,
-                &workspace->hierarchy_storage.hierarchy_locals[i]) == FALSE) ||
-            (ndsRendererAdapterMatrixIsAffine20p12(
-                &workspace->hierarchy_storage.hierarchy_locals[i]) == FALSE))
-        {
-            return FALSE;
-        }
-    }
-    if (ndsRendererAdapterGetHierarchyCameraMatrices(cobj,
-            &workspace->hierarchy_projection,
-            &workspace->hierarchy_camera_modelview) == FALSE)
-    {
-        return FALSE;
-    }
-    workspace->hierarchy.projection = &workspace->hierarchy_projection;
-    workspace->hierarchy.camera_modelview = &workspace->hierarchy_camera_modelview;
-    workspace->hierarchy.joint_locals = workspace->hierarchy_storage.hierarchy_locals;
-    workspace->hierarchy.joint_parents = workspace->hierarchy_parents;
-    workspace->hierarchy.joint_bindings = workspace->hierarchy_bindings;
-    workspace->hierarchy.joint_count =
-        NDS_NATIVE_ACTOR_EF_LAKITU_JOINT_COUNT;
-    /* Compose each drawable's live parent chain (same mul order as the
-     * yoster slot), then rewrite rows 0-2 with the live billboard at the
-     * owning seam, threading the source gGCScaleX across drawables in
-     * 800CAB48 walk order (= run order): e2 under e1 under e0 under A,
-     * e3/e4 under e0 under A. The kind is per drawable (72 for lr +/-1,
-     * 46 for lr +/-3); one tree carries one lr class, so in practice all
-     * three agree, but each dispatches live. */
-    sNdsRendererAdapterMvpRecalcScaleX = 1.0F;
-    {
-        NDSRendererMatrix20p12 *mvp = &workspace->drawable_mvps[0];
-        const NDSRendererMatrix20p12 *modelview_ptr = mvp;
-        const NDSRendererMatrix20p12 *projection_ptr =
-            &workspace->hierarchy_projection;
-        u32 billboard_kind = joints[3]->xobjs[1]->kind;
-
-        ndsRendererMtxMul20p12(
-            &workspace->hierarchy_storage.hierarchy_locals[3],
-            &workspace->hierarchy_storage.hierarchy_locals[2], mvp);
-        ndsRendererMtxMul20p12(mvp,
-            &workspace->hierarchy_storage.hierarchy_locals[1], mvp);
-        ndsRendererMtxMul20p12(mvp,
-            &workspace->hierarchy_storage.hierarchy_locals[0], mvp);
-        ndsRendererMtxMul20p12(mvp,
-            &workspace->hierarchy_camera_modelview, mvp);
-        /* BuildDObjLocalMatrix deliberately skips the billboard kind. The
-         * source then replaces MVP orientation while retaining the composed
-         * translation; reuse that owning seam for each drawable's live
-         * scale and camera. */
-        ndsRendererAdapterApplyMvpRecalc(joints[3],
-            billboard_kind, cobj,
-            &workspace->hierarchy_projection, &projection_ptr,
-            mvp, &modelview_ptr,
-            (cobj != NULL) ?
-                ndsRendererAdapterSharedMvpCamera((CObj *)cobj) : NULL);
-        if ((modelview_ptr == NULL) || (projection_ptr != NULL))
-        {
-            return FALSE;
-        }
-    }
-    for (i = 1u; i < 3u; i++)
-    {
-        NDSRendererMatrix20p12 *mvp = &workspace->drawable_mvps[i];
-        const NDSRendererMatrix20p12 *modelview_ptr = mvp;
-        const NDSRendererMatrix20p12 *projection_ptr =
-            &workspace->hierarchy_projection;
-        u32 billboard_kind = joints[3u + i]->xobjs[1]->kind;
-
-        ndsRendererMtxMul20p12(
-            &workspace->hierarchy_storage.hierarchy_locals[3u + i],
-            &workspace->hierarchy_storage.hierarchy_locals[1], mvp);
-        ndsRendererMtxMul20p12(mvp,
-            &workspace->hierarchy_storage.hierarchy_locals[0], mvp);
-        ndsRendererMtxMul20p12(mvp,
-            &workspace->hierarchy_camera_modelview, mvp);
-        ndsRendererAdapterApplyMvpRecalc(joints[3u + i],
-            billboard_kind, cobj,
-            &workspace->hierarchy_projection, &projection_ptr,
-            mvp, &modelview_ptr,
-            (cobj != NULL) ?
-                ndsRendererAdapterSharedMvpCamera((CObj *)cobj) : NULL);
-        if ((modelview_ptr == NULL) || (projection_ptr != NULL))
-        {
-            return FALSE;
-        }
-    }
-    loaded = ndsRelocFindLoadedFileContaining(draws[0]->dv, sizeof(Gfx));
-    return ndsRendererSubmitNativeEfLakitu(loaded->data, loaded->data_size,
-        &workspace->hierarchy, workspace->drawable_mvps,
-        initial_geometry_mode, stats);
-}
-#endif
-#if NDS_RENDERER_HW_TRIANGLES
-typedef struct NDSRendererAdapterNativeEfBrontoWorkspace
-{
-    DObj *hierarchy_joints[3];
-    u8 hierarchy_parents[3];
-    u8 hierarchy_bindings[3];
-    struct { NDSRendererMatrix20p12 hierarchy_locals[3]; } hierarchy_storage;
-    NDSRendererMatrix20p12 hierarchy_projection;
-    NDSRendererMatrix20p12 hierarchy_camera_modelview;
-    NDSRendererMatrix20p12 drawable_mvp;
-    NDSRendererNativeFighterHierarchy hierarchy;
-} NDSRendererAdapterNativeEfBrontoWorkspace;
-
-static NDSRendererAdapterNativeEfBrontoWorkspace
-    sNdsRendererAdapterNativeEfBrontoWorkspace;
-
-/* 3-joint slot for one Bronto instance. Live tree from efGroundMakeEffect
- * flags 0x4|USERDATA|0x1 over DObjDesc_0x33B8 (file 104): A (tk1 root,
- * live spawn pose) -> e0 (entry 0, NULL dl, carries the single MObj from
- * mobjlink_0x31F4) -> e1 (entry 1, DL_0x32C8, no MObj). The live
- * wing-flap frame is e0's mobj->texture_id_curr
- * (objdisplay.c:1429 submits sprites[texture_id_curr]), fail-closed past
- * NDS_NATIVE_ACTOR_EF_BRONTO_FRAME_MAX. */
-sb32 ndsRendererAdapterSubmitNativeEfBronto(void *root_ptr, void *cobj,
-    u32 initial_geometry_mode, NDSRendererStats *stats)
-{
-    DObj *root = (DObj *)root_ptr;
-    DObj *e0;
-    DObj *draw;
-    NDSRendererAdapterNativeEfBrontoWorkspace *workspace =
-        &sNdsRendererAdapterNativeEfBrontoWorkspace;
-    NDSRelocLoadedFile *loaded;
-    u32 frame;
-    u32 i;
-    static const u8 sEfBrontoParents[3] = { 31u, 0u, 1u };
-
-    if ((root == NULL) || (stats == NULL))
-    {
-        return FALSE;
-    }
-    if ((root->sib_next != NULL) || (root->child == NULL) ||
-        (root->dv != NULL) || (root->mobj != NULL))
-    {
-        return FALSE;
-    }
-    e0 = root->child;
-    if ((e0->dv != NULL) || (e0->mobj == NULL) || (e0->child == NULL) ||
-        (e0->sib_next != NULL))
-    {
-        return FALSE;
-    }
-    draw = e0->child;
-    if ((draw->sib_next != NULL) || (draw->child != NULL) ||
-        (draw->mobj != NULL))
-    {
-        return FALSE;
-    }
-    loaded = ndsRelocFindLoadedFileContaining(draw->dv, sizeof(Gfx));
-    if ((loaded == NULL) || (loaded->asset_id != 104u) ||
-        (loaded->owner_generation != gNdsTaskmanHeapGeneration) ||
-        (draw->dv != (void *)((u8 *)loaded->data + 0x32c8u)))
-    {
-        return FALSE;
-    }
-    frame = (u32)e0->mobj->texture_id_curr;
-    if ((frame > NDS_NATIVE_ACTOR_EF_BRONTO_FRAME_MAX) ||
-        (e0->mobj->sub.sprites == NULL) ||
-        (e0->mobj->sub.sprites[frame] == NULL))
-    {
-        return FALSE;
-    }
-    workspace->hierarchy_joints[0] = root;
-    workspace->hierarchy_joints[1] = e0;
-    workspace->hierarchy_joints[2] = draw;
-    /* Packet-pinned topology (parents 31,0,1): spelled here, yoster-slot
-     * style; cross-checked against the generator, executor re-validates. */
-    for (i = 0u; i < 3u; i++)
-    {
-        workspace->hierarchy_parents[i] = sEfBrontoParents[i];
-    }
-    for (i = 0u; i < 3u; i++)
-    {
-        DObj *joint = workspace->hierarchy_joints[i];
-        u32 want_num = (i < 2u) ? 1u : 2u;
-        u32 x;
-
-        workspace->hierarchy_bindings[i] = (u8)i;
-        if ((i == 0u) ? (joint->parent != DOBJ_PARENT_NULL) :
-            (joint->parent != workspace->hierarchy_joints[
-                workspace->hierarchy_parents[i]]))
-        {
-            return FALSE;
-        }
-        if (joint->xobjs_num != (s32)want_num)
-        {
-            return FALSE;
-        }
-        for (x = 0u; x < want_num; x++)
-        {
-            if (joint->xobjs[x] == NULL)
-            {
-                return FALSE;
-            }
-            if (x == 0u)
-            {
-                u32 want = (i == 0u) ?
-                    NDS_NATIVE_ACTOR_EF_BRONTO_XOBJ_KIND_TRA_ROTRPYRSCA :
-                    NDS_NATIVE_ACTOR_EF_BRONTO_XOBJ_KIND_TRA_ROTRPYR;
-
-                if (joint->xobjs[x]->kind != want)
-                {
-                    return FALSE;
-                }
-            }
-            else if ((joint->xobjs[x]->kind !=
-                         NDS_NATIVE_ACTOR_EF_BRONTO_XOBJ_KIND_BILLBOARD) &&
-                     (joint->xobjs[x]->kind !=
-                         NDS_NATIVE_ACTOR_EF_BRONTO_XOBJ_KIND_BILLBOARD_46))
-            {
-                /* efground.c:1332-1336: lr +/-1 arms 0x48 (kind72),
-                 * lr +/-3 arms 0x2E (kind46); same DL either way. */
-                return FALSE;
-            }
-        }
-        if ((ndsRendererAdapterBuildDObjLocalMatrix(joint,
-                &workspace->hierarchy_storage.hierarchy_locals[i]) == FALSE) ||
-            (ndsRendererAdapterMatrixIsAffine20p12(
-                &workspace->hierarchy_storage.hierarchy_locals[i]) == FALSE))
-        {
-            return FALSE;
-        }
-    }
-    if (ndsRendererAdapterGetHierarchyCameraMatrices(cobj,
-            &workspace->hierarchy_projection,
-            &workspace->hierarchy_camera_modelview) == FALSE)
-    {
-        return FALSE;
-    }
-    workspace->hierarchy.projection = &workspace->hierarchy_projection;
-    workspace->hierarchy.camera_modelview = &workspace->hierarchy_camera_modelview;
-    workspace->hierarchy.joint_locals = workspace->hierarchy_storage.hierarchy_locals;
-    workspace->hierarchy.joint_parents = workspace->hierarchy_parents;
-    workspace->hierarchy.joint_bindings = workspace->hierarchy_bindings;
-    workspace->hierarchy.joint_count =
-        NDS_NATIVE_ACTOR_EF_BRONTO_JOINT_COUNT;
-    /* Chain MVP (e1 under e0 under A) then the live billboard at the
-     * owning seam, same as the lakitu slot (72 for lr +/-1, 46 for
-     * lr +/-3; the allowlist above pins both). */
-    ndsRendererMtxMul20p12(
-        &workspace->hierarchy_storage.hierarchy_locals[2],
-        &workspace->hierarchy_storage.hierarchy_locals[1],
-        &workspace->drawable_mvp);
-    ndsRendererMtxMul20p12(&workspace->drawable_mvp,
-        &workspace->hierarchy_storage.hierarchy_locals[0],
-        &workspace->drawable_mvp);
-    ndsRendererMtxMul20p12(&workspace->drawable_mvp,
-        &workspace->hierarchy_camera_modelview, &workspace->drawable_mvp);
-    {
-        NDSRendererMatrix20p12 *mvp = &workspace->drawable_mvp;
-        const NDSRendererMatrix20p12 *modelview_ptr = mvp;
-        const NDSRendererMatrix20p12 *projection_ptr =
-            &workspace->hierarchy_projection;
-        u32 billboard_kind = draw->xobjs[1]->kind;
-
-        /* One-tree submit: reset the source gGCScaleX scope once. */
-        sNdsRendererAdapterMvpRecalcScaleX = 1.0F;
-        ndsRendererAdapterApplyMvpRecalc(draw,
-            billboard_kind, cobj,
-            &workspace->hierarchy_projection, &projection_ptr,
-            mvp, &modelview_ptr,
-            (cobj != NULL) ?
-                ndsRendererAdapterSharedMvpCamera((CObj *)cobj) : NULL);
-        if ((modelview_ptr == NULL) || (projection_ptr != NULL))
-        {
-            return FALSE;
-        }
-    }
-    return ndsRendererSubmitNativeEfBronto(loaded->data, loaded->data_size,
-        &workspace->hierarchy, &workspace->drawable_mvp, frame,
         initial_geometry_mode, stats);
 }
 #endif

@@ -717,7 +717,10 @@ static s32 ndsRendererValidateNativeVertexAction(
         {
             return FALSE;
         }
-        for (i = 0u; i < action->count; i++)
+        /* A LEAN_TRIM image carries no dense_vertices: nothing in a lean
+         * build reads their slots or bindings, so there is none to check. */
+        for (i = 0u; (tables->dense_vertices != NULL) && (i < action->count);
+             i++)
         {
             const NDSNativeDenseVertex *dense =
                 &tables->dense_vertices[dense_first + i];
@@ -735,10 +738,11 @@ static s32 ndsRendererValidateNativeVertexAction(
     {
         if ((action->index >= NDS_RENDERER_MAX_VTX) ||
             (dense_first >= tables->dense_count) ||
-            (tables->dense_vertices[dense_first].cache_slot !=
-             action->index) ||
-            (tables->dense_vertices[dense_first].matrix_binding >=
-             NDS_NATIVE_ROOT_BINDING_COUNT))
+            ((tables->dense_vertices != NULL) &&
+             ((tables->dense_vertices[dense_first].cache_slot !=
+               action->index) ||
+              (tables->dense_vertices[dense_first].matrix_binding >=
+               NDS_NATIVE_ROOT_BINDING_COUNT))))
         {
             return FALSE;
         }
@@ -800,10 +804,11 @@ static s32 ndsRendererValidateNativeRun(
         }
 
         if ((dense_id >= tables->dense_count) ||
-            (tables->dense_vertices[dense_id].cache_slot >=
-             NDS_RENDERER_MAX_VTX) ||
-            (tables->dense_vertices[dense_id].matrix_binding >=
-             NDS_NATIVE_ROOT_BINDING_COUNT))
+            ((tables->dense_vertices != NULL) &&
+             ((tables->dense_vertices[dense_id].cache_slot >=
+               NDS_RENDERER_MAX_VTX) ||
+              (tables->dense_vertices[dense_id].matrix_binding >=
+               NDS_NATIVE_ROOT_BINDING_COUNT))))
         {
             return FALSE;
         }

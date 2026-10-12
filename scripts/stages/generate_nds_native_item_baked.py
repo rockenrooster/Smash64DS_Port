@@ -89,6 +89,35 @@ FILES = {
         "decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/BossModel",
         "922b090fff108bf91fc3951883f84a54d05db89a5e8fa80d1870d08f4f42232a",
         344, None, None, None),
+    # The VS stages' geometry banks: their efground actors (below).
+    "ExternDataBank104": sm.InputSpec(
+        "decomp/BattleShip-main/BattleShip_o2r/reloc_extern_data/ExternDataBank104",
+        "3ce7e51da3810dca927521717357a2c44b1c51760bc942b0d4e5bfebe6fd4d52",
+        104, None, None, None),
+    "ExternDataBank105": sm.InputSpec(
+        "decomp/BattleShip-main/BattleShip_o2r/reloc_extern_data/ExternDataBank105",
+        "2cf584df3ed7bed141315f2d3ba0fd122e683fb608aad3254d8aec6b8bf93b8e",
+        105, None, None, None),
+    "ExternDataBank106": sm.InputSpec(
+        "decomp/BattleShip-main/BattleShip_o2r/reloc_extern_data/ExternDataBank106",
+        "68d9697a574df02a72a37877abee5ce0e20b959563da379635a049839d35782a",
+        106, None, None, None),
+    "ExternDataBank108": sm.InputSpec(
+        "decomp/BattleShip-main/BattleShip_o2r/reloc_extern_data/ExternDataBank108",
+        "88c28ded72fbb300aa5600fd833832fba4c6acbf0c2813c88abb5233e018e8da",
+        108, None, None, None),
+    "ExternDataBank109": sm.InputSpec(
+        "decomp/BattleShip-main/BattleShip_o2r/reloc_extern_data/ExternDataBank109",
+        "7670e2e1cd8bd02c895c18e028e57455323a81ee58567312f7f947be38c2f9b7",
+        109, None, None, None),
+    "ExternDataBank111": sm.InputSpec(
+        "decomp/BattleShip-main/BattleShip_o2r/reloc_extern_data/ExternDataBank111",
+        "5f348389c800947ce9f62174f1c2a99ca7b9ea9d4eed6235656ae279c568ccf9",
+        111, None, None, None),
+    "ExternDataBank112": sm.InputSpec(
+        "decomp/BattleShip-main/BattleShip_o2r/reloc_extern_data/ExternDataBank112",
+        "860553a3c63dcdeae2b521724ebd560f925111501aec1db39a1b4a1bc0e20211",
+        112, None, None, None),
 }
 
 # GObj ids (decomp sys/objdef.h): the owner a root is admitted for.
@@ -263,6 +292,57 @@ ENTRIES = (
      "sc1PBonusStageUpdatePlatformCount: dSC1PBonusStageBoardedPlatformDescs Large, DObj 1"),
     ("Bonus2BoardedLarge2", "Bonus2Common", 0x6128, GOBJ_GROUND_DISPLAY,
      "sc1PBonusStageUpdatePlatformCount: dSC1PBonusStageBoardedPlatformDescs Large, DObj 2"),
+    # The VS stages' efground actors (ef/efground.c dEFGround*EffectDescs):
+    # background flybys a stage makes 100-266 s into a match
+    # (efGroundMakeAppearActor: make_wait 6000 + rand 10000), so the short
+    # census matches never met them and they drew nothing. A P3 stress
+    # run's five-minute Sector Z match recorded 990 native failures on
+    # the rocket (2026-10-12). Castle's Lakitu and Dream Land's Bronto Burt
+    # had hand-written owners that never drew (their slots expected the
+    # sprite MObj on the wrong DObj and tested liveness against the wrong
+    # generation counter); their roots are baked here too.
+    ("EfCastleLakitu0", "ExternDataBank106", 0x3F20, GOBJ_EFFECT,
+     "llGRCastleMapLakituDObjDesc 0x4118, entry 2"),
+    ("EfCastleLakitu1", "ExternDataBank106", 0x3FF8, GOBJ_EFFECT,
+     "llGRCastleMapLakituDObjDesc 0x4118, entry 3"),
+    ("EfCastleLakitu2", "ExternDataBank106", 0x4070, GOBJ_EFFECT,
+     "llGRCastleMapLakituDObjDesc 0x4118, entry 4"),
+    ("EfJungleBird", "ExternDataBank108", 0xF310, GOBJ_EFFECT,
+     "llGRJungleMapBirdDObjDesc 0xF400"),
+    ("EfPupupuBronto", "ExternDataBank104", 0x32C8, GOBJ_EFFECT,
+     "llGRPupupuMapBrontoDObjDesc 0x33B8; its sprite MObj rides this DObj"),
+    ("EfPupupuDedede", "ExternDataBank104", 0x3D90, GOBJ_EFFECT,
+     "llGRPupupuMapDededeDObjDesc 0x3E80"),
+    ("EfSectorRocket0", "ExternDataBank109", 0xAB20, GOBJ_EFFECT,
+     "llGRSectorMapRocketDObjDesc 0xAD00"),
+    ("EfSectorRocket1", "ExternDataBank109", 0xAC10, GOBJ_EFFECT,
+     "llGRSectorMapRocketDObjDesc 0xAD00"),
+    ("EfSectorShip", "ExternDataBank109", 0xB668, GOBJ_EFFECT,
+     "llGRSectorMapShipDObjDesc 0xB6F8"),
+    ("EfYamabukiButterfree", "ExternDataBank112", 0x9868, GOBJ_EFFECT,
+     "llGRYamabukiMapButterfreeDObjDesc 0x9958"),
+    ("EfYamabukiFire", "ExternDataBank112", 0xC7A0, GOBJ_EFFECT,
+     "llGRYamabukiMapFireDObjDesc 0xC890"),
+    ("EfYamabukiOnidrill", "ExternDataBank112", 0xE310, GOBJ_EFFECT,
+     "llGRYamabukiMapOnidrillDObjDesc 0xE400"),
+    ("EfYamabukiPoppo", "ExternDataBank112", 0xFD68, GOBJ_EFFECT,
+     "llGRYamabukiMapPoppoDObjDesc 0xFE58"),
+    ("EfYosterBird", "ExternDataBank111", 0x76F0, GOBJ_EFFECT,
+     "llGRYosterMapBirdDObjDesc 0x77E0"),
+    ("EfYosterHeihoFast", "ExternDataBank111", 0xB368, GOBJ_EFFECT,
+     "llGRYosterMapHeihoFastDObjDesc 0xB458"),
+    ("EfYosterHeihoFruitFast", "ExternDataBank111", 0xA4B8, GOBJ_EFFECT,
+     "llGRYosterMapHeihoFruitFastDObjDesc 0xA5A8"),
+    ("EfYosterHeihoFruitSlowL", "ExternDataBank111", 0x8438, GOBJ_EFFECT,
+     "llGRYosterMapHeihoFruitSlowLDObjDesc 0x8528"),
+    ("EfYosterHeihoFruitSlowR", "ExternDataBank111", 0x8688, GOBJ_EFFECT,
+     "llGRYosterMapHeihoFruitSlowRDObjDesc 0x8778"),
+    ("EfYosterHeihoSlow", "ExternDataBank111", 0x95F8, GOBJ_EFFECT,
+     "llGRYosterMapHeihoSlowDObjDesc 0x96E8"),
+    ("EfZebesRidley", "ExternDataBank105", 0xCDA0, GOBJ_EFFECT,
+     "llGRZebesMapRidleyDObjDesc 0xCEE8"),
+    ("EfZebesShip", "ExternDataBank105", 0xDD98, GOBJ_EFFECT,
+     "llGRZebesMapShipDObjDesc 0xDE28"),
     # P2-6: the 1P ending's room (mvending.c:158-236; the opening room
     # draws the same MVCommon lists). Every DObj list of the background
     # (gcDrawDObjTreeDLLinksForGObj), desk, books, pencils and lamp

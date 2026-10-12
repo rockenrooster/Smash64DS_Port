@@ -333,7 +333,9 @@ static void ndsRendererScreenSpaceCensusFighterRun(
     u32 triangle_offset;
 
     if ((gNdsRendererScreenSpaceCensusArmed == 0u) || (run == NULL) ||
-        (inputs == NULL) || (root_index >= input_count))
+        (inputs == NULL) || (root_index >= input_count) ||
+        /* A LEAN_TRIM image has no matrix bindings to read. */
+        (sNdsNativeFighterActiveTables->dense_vertices == NULL))
     {
         return;
     }

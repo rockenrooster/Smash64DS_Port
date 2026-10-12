@@ -112,6 +112,73 @@ NDS_NATIVE_OWNER_IMAGE_ABI_TAG = 0x364F444E
 # or the screen-space diagnostic which deliberately walks source triangles.
 PACKED_CORNERS_GUARD = "NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS"
 
+# A member under a '?' guard is ZERO-LENGTH, not absent, where the guard is
+# false: the runtime binds every image type through one offsetof list
+# (NDS_IMG_DESC), and <PREFIX>_<MEMBER>_IMAGED says whether to bind it.
+LEAN_TRIM_GUARD = "?!NDS_FTR_LEAN_LIVE"
+# Members the runtime binds through an _IMAGED flag.
+IMAGED_FLAG_MEMBERS = ("dense_vertices",)
+
+
+def _guard_condition(guard: str) -> str:
+    """A member guard's preprocessor condition ('' for none)."""
+    return guard[1:] if guard.startswith("?") else guard
+
+
+def member_decl_lines(members) -> list[str]:
+    """The struct members, each under its guard; a '?' guard's member is
+    zero-length (not absent) where the guard is false."""
+    lines: list[str] = []
+    for ctype, name, values, guard in members:
+        cond = _guard_condition(guard)
+        if cond:
+            lines.append(f"#if {cond}")
+        lines.append(f"    {ctype} {name}[{len(values)}];")
+        if guard.startswith("?"):
+            lines.append("#else")
+            lines.append(f"    {ctype} {name}[0];")
+        if cond:
+            lines.append("#endif")
+    return lines
+
+
+def member_count_lines(prefix: str, members) -> list[str]:
+    """<PREFIX>_<MEMBER>_COUNT for each member (a '?' member's count is its
+    full length either way: dense_vertices' is the dense count), and
+    <PREFIX>_<MEMBER>_IMAGED for the members bound through a flag."""
+    lines: list[str] = []
+    for _ctype, name, values, guard in members:
+        cond = "" if guard.startswith("?") else guard
+        if cond:
+            lines.append(f"#if {cond}")
+        lines.append(f"#define {prefix}_{name.upper()}_COUNT {len(values)}u")
+        if cond:
+            lines.append("#endif")
+        if name in IMAGED_FLAG_MEMBERS:
+            flag = f"{prefix}_{name.upper()}_IMAGED"
+            if guard.startswith("?"):
+                lines += [f"#if {guard[1:]}", f"#define {flag} 1u", "#else",
+                          f"#define {flag} 0u", "#endif"]
+            else:
+                lines.append(f"#define {flag} 1u")
+    return lines
+
+
+def member_init_lines(members) -> list[str]:
+    """The image initializer, each member under its guard's condition."""
+    lines: list[str] = []
+    for _ctype, name, values, guard in members:
+        cond = _guard_condition(guard)
+        if cond:
+            lines.append(f"#if {cond}")
+        lines.append(f"    .{name} =")
+        lines.append("    {")
+        lines += [f"    {row}" for row in _rows(values)]
+        lines.append("    },")
+        if cond:
+            lines.append("#endif")
+    return lines
+
 
 def _rows(values: list[str]) -> list[str]:
     """One initializer row per line, in the generator's own house style."""
@@ -188,6 +255,18 @@ def _member_values(
         ]
     direct_policies = context["direct_epoch_policies"]
     primitive_streams = context["primitive_streams"]
+    # LEAN_TRIM (P4 owners): the lean fighter renderer, the only one a
+    # NDS_FTR_LEAN_LIVE build links, reads a dense vertex's s/t and, at a
+    # texgen site, its rgba normal, and nothing else of it; an imaged owner's
+    # shade words arrive baked in dense_normals. Such a build images
+    # dense_vertices as a zero-length member: the corners read s/t from
+    # PreparedDense, whose s/t carry the source's here (the production path
+    # that rewrites them is not linked there), and the texgen patch recovers
+    # the normal from the vertex's NORMAL word (ndsFighterPacketTexgenRgba):
+    # 12 B a vertex. An owner with texgen and an unlit run (whose
+    # dense_normals hold COLOR words) keeps dense_vertices
+    # (p4_native_owner.py).
+    lean_trim = bool(context.get("lean_trim"))
 
     color_guard = ("!NDS_R2_FIGHTER_HW_LIGHT || "
                    "NDS_RENDERER_M2_DETAILED_LEDGER")
@@ -205,7 +284,8 @@ def _member_values(
         ("NDSNativeDenseVertex", "dense_vertices",
          ["{{ 0x{:08x}u, {}, {}, {}u, {}u, 0u }}".format(
              rgba, s, t, binding, cache_slot)
-           for x, y, z, s, t, binding, cache_slot, rgba in dense_vertices], ""),
+           for x, y, z, s, t, binding, cache_slot, rgba in dense_vertices],
+         LEAN_TRIM_GUARD if lean_trim else ""),
         ("u32", "dense_normals",
          [f"0x{value:08x}u" for value in dense_shade_words], ""),
         # Scene-resident PreparedDense: the exact generated initial bytes the
@@ -217,13 +297,14 @@ def _member_values(
         # Like every other member it rides the PROFILE<2 guard the runtime
         # tables struct uses: PROFILE>=2 builds have no prepared_dense field.
         ("NDSNativePreparedDenseVertex", "prepared_dense",
-         ["{{ .gx_xy = 0x{:08x}u, .gx_z = 0x{:04x}u }}".format(
+         ["{{ .gx_xy = 0x{:08x}u, .gx_z = 0x{:04x}u{} }}".format(
              *owners.pack_fifo_vertex16_scaled(
                  gx_positions[dense_id][0],
                  gx_positions[dense_id][1],
                  gx_positions[dense_id][2],
-                 f"{owner_name} {detail} dense vertex {dense_id}"))
-          for dense_id, _vertex in enumerate(dense_vertices)],
+                 f"{owner_name} {detail} dense vertex {dense_id}"),
+             f", .s = {vertex[3]}, .t = {vertex[4]}" if lean_trim else "")
+          for dense_id, vertex in enumerate(dense_vertices)],
          "NDS_RENDERER_PROFILE_LEVEL < 2"),
         ("u16", "action_dense_spans",
          [f"0x{value:04x}u" for value in action_dense_spans], ""),
@@ -354,24 +435,13 @@ def render_owner_image_types(owner_name: str, detail: str,
         "{",
         "    u32 abi_tag[1];",
     ]
-    for ctype, name, values, guard in members:
-        if guard:
-            lines.append(f"#if {guard}")
-        lines.append(f"    {ctype} {name}[{len(values)}];")
-        if guard:
-            lines.append("#endif")
+    lines += member_decl_lines(members)
     lines += [
         f"}} {type_name};",
         "",
     ]
-    for ctype, name, values, guard in members:
-        macro = (f"NDS_NATIVE_IMAGE_{owner_name.upper()}_"
-                 f"{detail.upper()}_{name.upper()}_COUNT")
-        if guard:
-            lines.append(f"#if {guard}")
-        lines.append(f"#define {macro} {len(values)}u")
-        if guard:
-            lines.append("#endif")
+    lines += member_count_lines(
+        f"NDS_NATIVE_IMAGE_{owner_name.upper()}_{detail.upper()}", members)
     lines.append("")
     # The equivalence list: every member paired with the in-binary array
     # it is a copy of, generated from the same description that generated
@@ -400,6 +470,7 @@ def render_owner_image_types(owner_name: str, detail: str,
             continue
         row = (f"    X({type_name}, {name}, "
                f"{_array_symbol(owner_name, detail, name)})")
+        guard = _guard_condition(guard)
         if segments and segments[-1][0] == guard:
             segments[-1][1].append(row)
         else:
@@ -463,6 +534,7 @@ def render_header(
         " * the image TU and the renderer cannot be compiled against different",
         " * answers to the same question. */",
         "#include <nds_build_config.h>",
+        "#include <nds/nds_ftr_lean_live.h>",
         "#include <nds/nds_native_fighter_tables.h>",
         "",
         "/* Source-order packed corners are redundant in the production Task56",
@@ -630,20 +702,9 @@ def render_header(
                 "{",
                 "    u32 abi_tag[1];",
             ]
-            for ctype, name, values, guard in members:
-                if guard:
-                    lines.append(f"#if {guard}")
-                lines.append(f"    {ctype} {name}[{len(values)}];")
-                if guard:
-                    lines.append("#endif")
+            lines += member_decl_lines(members)
             lines += [f"}} {type_name};", ""]
-            for _ctype, name, values, guard in members:
-                macro = f"{macro_prefix}_{name.upper()}_COUNT"
-                if guard:
-                    lines.append(f"#if {guard}")
-                lines.append(f"#define {macro} {len(values)}u")
-                if guard:
-                    lines.append("#endif")
+            lines += member_count_lines(macro_prefix, members)
             lines += [
                 f"#define {macro_prefix}_BYTES ((u32)sizeof({type_name}))",
                 "",
@@ -743,15 +804,7 @@ def render_image(owner_name: str, detail: str,
         "{",
         f"    .abi_tag = {{ 0x{NDS_NATIVE_OWNER_IMAGE_ABI_TAG:08x}u }},",
     ]
-    for _ctype, name, values, guard in members:
-        if guard:
-            lines.append(f"#if {guard}")
-        lines.append(f"    .{name} =")
-        lines.append("    {")
-        lines += [f"    {row}" for row in _rows(values)]
-        lines.append("    },")
-        if guard:
-            lines.append("#endif")
+    lines += member_init_lines(members)
     lines += ["};", ""]
     return "\n".join(lines)
 
@@ -775,15 +828,7 @@ def render_kirby_hat_image(
         "{",
         f"    .abi_tag = {{ 0x{NDS_NATIVE_OWNER_IMAGE_ABI_TAG:08x}u }},",
     ]
-    for _ctype, name, values, guard in members:
-        if guard:
-            lines.append(f"#if {guard}")
-        lines.append(f"    .{name} =")
-        lines.append("    {")
-        lines += [f"    {row}" for row in _rows(values)]
-        lines.append("    },")
-        if guard:
-            lines.append("#endif")
+    lines += member_init_lines(members)
     lines += ["};", ""]
     return "\n".join(lines)
 

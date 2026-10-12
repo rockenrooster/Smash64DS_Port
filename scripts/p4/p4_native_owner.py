@@ -787,6 +787,20 @@ def emit(out_dir: Path, owners: dict[str, tuple[Path, int]]) -> dict[str, list[P
         guard = f"NDS_P4_{name.upper()}"
         contexts = {d: O.build_p2_owner_runtime_context(REPO, name, d) for d in ("high", "low")}
         _merge_light_preambles(name, contexts["high"], contexts["low"])
+        # A lean build images no dense_vertices (generate_nds_native_owner_
+        # images.py LEAN_TRIM): the lean renderer reads s/t of them, from
+        # PreparedDense there, and a texgen site's normal, which it recovers
+        # from the vertex's NORMAL word in dense_normals. An unlit run's
+        # dense_normals hold COLOR words, so an owner whose state turns
+        # G_TEXTURE_GEN on (G_GEOMETRYMODE 0xD9, set bit 0x40000) and which has
+        # an unlit run keeps its dense_vertices.
+        for detail in ("high", "low"):
+            texgen = any(
+                ((row[0] >> 24) == 0xD9) and ((row[1] & 0x40000) != 0)
+                for row in contexts[detail]["state"])
+            unlit = any((meta & 0x80) != 0
+                        for meta in contexts[detail].get("run_metadata", ()))
+            contexts[detail]["lean_trim"] = not (texgen and unlit)
         if name in PROGRAM_INFO:
             for detail in ("high", "low"):
                 contexts[detail]["root_programs"] = O.build_owner_root_programs(

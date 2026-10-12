@@ -2484,7 +2484,7 @@ static sb32 ndsRendererAdapterBuildNativeMaterial(
 #define NDS_P2_NDL_OWNER_NONE 0u
 #define NDS_P2_NDL_OWNER_IMPACT_WAVE 1u
 #define NDS_P2_NDL_OWNER_DAMAGE_SLASH 2u
-#define NDS_P2_NDL_OWNER_EFGROUND 3u
+/* 3 was the efground owner (Lakitu, Bronto Burt): their roots are baked now. */
 #define NDS_P2_NDL_OWNER_GROUND 4u
 #define NDS_P2_NDL_OWNER_WEAPON 5u
 #define NDS_P2_NDL_OWNER_ITEM 6u
@@ -2819,16 +2819,6 @@ static void ndsP2NdlBindRecord(GObj *gobj, u32 serial, NDSNdlRecord *record)
             }
             record->body_count = 0u;
         }
-    }
-    kind = ndsStageGCDrawAllLoopNdlEfGroundKind(gobj);
-    if (kind < NDS_P2_NDL_KIND_COUNT)
-    {
-        record->owner = NDS_P2_NDL_OWNER_EFGROUND;
-        record->kind = (u8)kind;
-        record->dobj[0] = DObjGetStruct(gobj);
-        record->body_count = 1u;
-        NDS_DIAG(gNdsNdlBindCount++);
-        return;
     }
     kind = ndsStageGCDrawAllLoopNdlGroundKind(gobj);
     if (kind < NDS_P2_NDL_KIND_COUNT)
@@ -3318,21 +3308,6 @@ static s32 ndsRendererAdapterNdlDispatchEffectBody(GObj *camera_gobj,
         return FALSE;
     }
     kind = record->kind;
-    if (record->owner == NDS_P2_NDL_OWNER_EFGROUND)
-    {
-        handled = ndsStageGCDrawAllLoopSubmitNdlEfGround(
-            camera_gobj, gobj, kind);
-        if (handled != FALSE)
-        {
-            NDS_DIAG(gNdsNdlDispatch[kind]++);
-            NDS_DIAG(gNdsNdlProcsSkipped++);
-        }
-        else
-        {
-            NDS_DIAG(gNdsNdlFallback[kind]++);
-        }
-        return handled;
-    }
     if (record->owner == NDS_P2_NDL_OWNER_GROUND)
     {
         handled = ndsStageGCDrawAllLoopSubmitNdlGround(

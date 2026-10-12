@@ -641,6 +641,14 @@ EVENT32_SHARED_UNMEASURED = 2048
 # rotation and two units of translation. Meta Knight's event32 entries 22.7
 # -> 18.2 KB, 650 -> 518 ledger commands each.
 ENTRY_ANIM_EPS = 8
+# Main motions that run no attack (FTCommonMotion: RebirthWait 3, Wait 4,
+# OttottoWait 29, Ottotto 30, YoshiEgg 153, Appeal 164) take the entry
+# tolerance too when every motion naming the clip is one of them. A content's
+# figatree heap is its largest main-motion clip, and that clip is often its
+# taunt or teeter: Banjo's teeter 22,428 -> 13,492 B, Dedede's taunt
+# 18,636 -> 14,144, Lanky's 14,616 -> 11,208, Falco's wait 16,356 -> 10,540
+# (S15: the heavy four-content mixes on Sector Z ran under the floor).
+NO_ATTACK_MOTIONS = frozenset((3, 4, 29, 30, 153, 164))
 
 # Peach's rare pull (PeachSpecial.asm create_and_assign_item_): Mr. Saturn
 # (items/MrSaturn.asm FILE_OFFSET 0x10B0, his model in 0xA96) in her slot 4,
@@ -1839,12 +1847,18 @@ def main() -> int:
     motion_of = {row["status_id"]: row["motion_id"] for row in resolved["statuses"]}
     anim_of = {m["index"]: m["anim_file_id"] for m in resolved["motions"]}
     entry_anims = {anim_of.get(motion_of.get(sid)) for sid in entry_statuses} - {None, 0}
+    no_attack: dict[int, bool] = {}
+    for m in resolved["motions"]:
+        if m["anim_file_id"]:
+            no_attack[m["anim_file_id"]] = (no_attack.get(m["anim_file_id"], True) and
+                                            m["index"] in NO_ATTACK_MOTIONS)
+    loose_anims = entry_anims | {a for a, ok in no_attack.items() if ok}
     for a, flags in sorted(anim_files.items()):
         if a in named_by_others:
             continue
         path = o2r_out / f"{a:04x}"
         blob = path.read_bytes()
-        eps = ENTRY_ANIM_EPS if a in entry_anims else ANIM_EPS
+        eps = ENTRY_ANIM_EPS if a in loose_anims else ANIM_EPS
         if flags & 0x8:
             new = p4_anim_compact.convert32_o2r(blob, eps)
             if new is not None:
