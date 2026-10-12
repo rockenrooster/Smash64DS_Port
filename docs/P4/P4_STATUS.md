@@ -1858,7 +1858,12 @@ his tail is the simulation, SRC P95 688K); the originals 1,070,464 ->
   pose package and sector, the shield angle and the animation speed, so
   four slots of 48 rows live in the framebuffer arena's tail (6,400 B past
   the packet arena) and a repeat copies them back (`nds_shield_pose.c`).
-  Banjo -90K, Dedede -74K, Peach -55K.
+  Banjo -90K, Dedede -74K, Peach -55K. Sonic's memo never filled: the
+  track walk that names what a script writes stopped at the original cast's
+  58 scratch words, and two of his scripts run longer (his package's scratch
+  is 148), so it read them as unbounded and the fill refused. It walks the
+  package's own scratch now: four Sonics, 1,800 frames, 94 of 97 applies
+  replayed (play-1012w; 0 before), every apply and play count unchanged.
 - **VTX_10 at half scale.** A corner past +/-511 source units put the whole
   list on VTX_16 (two words a corner): Meta Knight, Dedede, Lanky and MRGAW
   carry 4-24 such vertices, and Meta Knight's 3,800-word lists outgrew an

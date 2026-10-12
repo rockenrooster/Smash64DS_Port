@@ -889,20 +889,22 @@ static sb32 ndsShieldPoseReturnsAObjs(const DObj *dobj)
 
 /* The tracks a decoded script sets (its value commands' flags, bit b the
  * track nGCAnimTrackJointStart + b): what the play writes, and all it writes
- * of the joint's transform. */
-static u32 ndsShieldPoseScriptTracks(const AObjEvent32 *scratch)
+ * of the joint's transform. `words` is the package's scratch: a P4 content's
+ * scripts run past the original cast's 58 words (Sonic's two longest, of 148,
+ * read as unbounded, so his shield memo never filled). */
+static u32 ndsShieldPoseScriptTracks(const AObjEvent32 *scratch, u32 words)
 {
     u32 mask = 0u;
     u32 at = 0u;
     u32 guard;
 
-    for (guard = 0u; guard < NDS_SHIELD_POSE_MAX_SCRATCH_WORDS; guard++)
+    for (guard = 0u; guard < words; guard++)
     {
         u32 word;
         u32 opcode;
         u32 flags;
 
-        if (at >= NDS_SHIELD_POSE_MAX_SCRATCH_WORDS)
+        if (at >= words)
         {
             break;
         }
@@ -938,7 +940,8 @@ static s32 NDS_SHIELD_POSE_CODE ndsShieldPoseApplyScript(
     }
     if (out_tracks != NULL)
     {
-        *out_tracks = ndsShieldPoseScriptTracks(scratch);
+        *out_tracks = ndsShieldPoseScriptTracks(scratch,
+                                                view->h->scratch_words);
     }
     ndsBaseGcAddDObjAnimJoint(dobj, scratch, angle);
     gcParseDObjAnimJoint(dobj);
