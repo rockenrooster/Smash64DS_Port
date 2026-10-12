@@ -2114,6 +2114,15 @@ hand); the pins verify unchanged, and no other content has such a part 0.
 play-1012y, Peach (human) against Fox, paused at GO and unpaused: drawn in
 the close-up and after, 0 declines (play-1012x: 252 by frame 450).
 
+"Peaches tennis racket looks off ... i can see it during idle and
+walk/running." What showed was Fox's pistol: Peach's parent is Fox, and the
+pistol sidecar's gate (Fox, joint 17 at part 0 or above) holds for her whole
+match, her own hand being part 0 of that joint. A content now draws the held
+gun only while joint 17's live list lives in the gun's file (the strip's own
+test): Wolf's gun (WOLF_WEAPON) still draws in his neutral special (probe
+`gunfile`), Peach's hand alone shows in the pause close-up (play-1012z). Her
+racket proper is joint 18's part 1, set by the forward smash only.
+
 ## Board 1 status (master plan Revision 3)
 
 | Item | State |

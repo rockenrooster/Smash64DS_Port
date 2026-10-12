@@ -1655,6 +1655,28 @@ static void ndsFighterCollectStripFoxGunSidecar(
 }
 #endif
 
+#if NDS_R2_FOX_GUN_OVERLAY && NDS_P4
+/* Joint 17 shows the held gun's list: the strip's own test above, on the live
+ * joint. A Remix content runs its parent's code, so a Fox-parent content
+ * passes the parent's gate (Fox, part >= 0) with a hand of its own on that
+ * joint at part 0 for the whole match: Peach held Fox's pistol standing and
+ * walking (owner, 2026-10-12, "Peaches tennis racket ... i can see it during
+ * idle and walk/running"). */
+static sb32 ndsFighterJoint17ShowsGun(const FTStruct *fp)
+{
+    const DObj *joint = fp->joints[NDS_FOX_GUN_HOLD_JOINT];
+    NDSRelocLoadedFile *loaded;
+
+    if ((joint == NULL) || (joint == DOBJ_PARENT_NULL) || (joint->dl == NULL))
+    {
+        return FALSE;
+    }
+    loaded = ndsRelocFindLoadedFileContaining(joint->dl, sizeof(*joint->dl));
+    return ((loaded != NULL) &&
+            (loaded->asset_id == ndsFighterFoxGunSourceAsset(fp))) ? TRUE : FALSE;
+}
+#endif
+
 #if NDS_R2_FOX_GUN_OVERLAY
 /* The held pistol beside the body, after either body path: Fox's baked
  * file-315 mesh at joint 17, or, for a P4 content with its own gun (Wolf),
@@ -1676,6 +1698,10 @@ static void ndsFighterDrawFoxGunSidecar(FTStruct *fp)
     u32 content = fp->nds_p4_content;
     sb32 found = FALSE;
 
+    if ((content != 0u) && (ndsFighterJoint17ShowsGun(fp) == FALSE))
+    {
+        return;
+    }
 #if NDS_P2_KIRBY
     if ((content == 0u) && (fp->fkind == nFTKindKirby))
     {
