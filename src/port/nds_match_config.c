@@ -299,14 +299,17 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
 
 #if NDS_DEV_LIVE_INPUT_PREVIEW
     /* The shipped match: three-minute Time (owner, 2026-10-11; the VS menu
-     * starts from it), items off, Fox on the CPU. */
+     * starts from it), Fox on the CPU, and the source's item defaults: every
+     * item at the middle rate (scmanager.c:578,583; owner, 2026-10-12, "Items
+     * default to none/off. Should be ALL at Medium freq."). */
     cfg->game_rules = SCBATTLE_GAMERULE_TIME;
     cfg->time_limit = 3;
-    cfg->item_toggles = 0u;
-    cfg->item_appearance_rate = nSCBattleItemSwitchNone;
+    cfg->item_toggles = ~0u;
+    cfg->item_appearance_rate = nSCBattleItemSwitchMiddle;
 #if NDS_HARNESS_ITEMS_ON
-    /* DIAGNOSTIC ONLY, DEFAULT OFF. The preset above runs items off, which
-     * makes one question unanswerable on this arm: the Poke Ball rays row.
+    /* DIAGNOSTIC ONLY, DEFAULT OFF. Written when the preset above ran items
+     * off (until 2026-10-12), which made one question unanswerable on this
+     * arm: the Poke Ball rays row.
      * Those rays (roots 41/42) were measured drawing 25 times each -- but from
      * the FIGHTER ENTRY path, because with items off no Poke Ball item ever
      * spawns. Entry and item reach the same effect through the same roots, so

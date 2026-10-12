@@ -2071,6 +2071,32 @@ up-B every 90 ticks) against Fox on Dream Land: the spring drawn from its
 first frame, 150 weapon submits in 420 frames, 0 native failures (play-1012u:
 238).
 
+## The select's rule bar and the item defaults (owner bugs, 2026-10-12)
+
+"Missing Timer/Stock settings bar at middle/top of screen (should be host
+changeable in multiplayer too)." The character select had left the source's
+rule selector out as a narrowing (the VS menu sets the same rules). It is the
+source's now: `mnPlayersVSMakeTimeSelect` / `MakeStockSelect` draw the 90x13
+selector at (140,22) and the value in the dark digits, right-aligned by each
+digit's width, or the Infinity sprite; the arrows' hit boxes (x 140-160 and
+210-230 at the button hotspot, the header band) step the time through the
+source's table (2, 3, 5, 10, 15, 30, 60, infinite) or the stocks through
+0-98, before the mode label's test as in `mnPlayersVSCursorProcUpdate`, and
+the commit writes both as `mnPlayersVSSetSceneData` does. The kit bakes two
+selector states over the base and keyed digit and Infinity glyphs the
+presenter places in one blit (`CSS_RULE_*`); the mode label's box is 113 wide
+now, so a mode toggle leaves the selector alone. Wireless: only the host
+steps it (the descriptor follows at once, so its lobby packets carry the new
+rule); a guest shows the host's from the lobby snapshot
+(`ndsNetLobbyGuestRules`). play-1012x, probe `cssrule2`: right twice 3 -> 5
+-> 10, left three times 10 -> 5 -> 3 -> 2, the descriptor's time following.
+
+"Original SSB64 defaults for Item settings should be active now, currently
+Items default to none/off. Should be ALL at Medium freq." The shipped match's
+descriptor turned items off; it takes the source's defaults now, every item
+at the middle rate (scmanager.c:578,583), which the VS menu's item screen
+starts from.
+
 ## Board 1 status (master plan Revision 3)
 
 | Item | State |

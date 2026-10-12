@@ -1309,6 +1309,17 @@ uint32_t ndsNetLobbyUnlockMask(void)
         (u32)gSCManagerBackupData.unlock_mask;
 }
 
+uint32_t ndsNetLobbyGuestRules(uint8_t rules[3])
+{
+    if ((sRole != NDS_NET_ROLE_GUEST) ||
+        ((sHostRules[0] & (SCBATTLE_GAMERULE_TIME | SCBATTLE_GAMERULE_STOCK)) == 0u))
+        return 0u;
+    rules[0] = sHostRules[0];
+    rules[1] = sHostRules[1];
+    rules[2] = sHostRules[2];
+    return 1u;
+}
+
 void ndsNetLobbyRulesText(char out[NDS_NET_RULES_TEXT_LEN + 1u])
 {
     static const char *const kRates[] = {

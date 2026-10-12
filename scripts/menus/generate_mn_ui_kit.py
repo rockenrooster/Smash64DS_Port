@@ -3218,8 +3218,9 @@ AUDIT_TOKEN_SYMBOLS = {
 
 # (4) FREE FOR ALL / TEAM BATTLE: `mnPlayersVSMakeLabels` draws the mode
 # label at (27,24); the toggle handler tints FFA E3/AC/04 and Team Battle
-# 61/AD/49 and swaps the sprite. Two states, same box.
-CSS_MODE_BOX = (27, 24 + CSS_HEADER_DY, 150, 22)
+# 61/AD/49 and swaps the sprite. Two states, same box: 113 wide, the wider
+# label's 112, so a toggle leaves the rule selector at x 140 alone.
+CSS_MODE_BOX = (27, 24 + CSS_HEADER_DY, 113, 22)
 SURFACE_SOURCES.append(SurfaceSpec(
     "CSS_MODE_FFA",
     (Placement("MNPlayersGameModes",
@@ -3242,6 +3243,36 @@ SURFACE_SOURCES.append(SurfaceSpec(
     (Placement("MNPlayersCommon", "llMNPlayersCommonBackButtonSprite",
                244, 23 + CSS_HEADER_DY, False),),
     None, under=css_screen_parts(), box=CSS_BACK_BOX))
+
+# (5) THE RULE BAR (owner, 2026-10-12: "Missing Timer/Stock settings bar").
+# mnPlayersVSMakeTimeSelect / MakeStockSelect (:1252/:1305) draw the 90x13
+# selector, its arrows part of the art, at (140,22); MakeTimeSetting /
+# MakeStockSetting (:1221/:1289) the value in the dark digits under ENV
+# 32/1C/0E and PRIM white, right-aligned digit by digit at each sprite's own
+# width (MakeGameRuleNumber, :1177), or the Infinity sprite at (194,24). Two
+# selector states over the base; the digits and Infinity are KEYED glyphs at a
+# dummy origin that the presenter places per value (ndsUiKitBlitSurfacesAt),
+# as the bonus select's record digits are. The runtime indexes
+# CSS_RULE_DIGIT_0 + digit, so the ten stay contiguous in digit order.
+CSS_RULE_BOX = (140, 22 + CSS_HEADER_DY, 90, 16)
+for _token, _symbol in (("TIME", "llMNPlayersCommonTimeSelectorSprite"),
+                        ("STOCK", "llMNPlayersCommonStockSelectorSprite")):
+    SURFACE_SOURCES.append(SurfaceSpec(
+        f"CSS_RULE_{_token}",
+        (Placement("MNPlayersCommon", _symbol, 140, 22 + CSS_HEADER_DY,
+                   False),),
+        None, under=css_screen_parts(), box=CSS_RULE_BOX))
+for _digit in range(10):
+    SURFACE_SOURCES.append(SurfaceSpec(
+        f"CSS_RULE_DIGIT_{_digit}",
+        (Placement("MNPlayersCommon", f"llMNPlayersCommon{_digit}DarkSprite",
+                   0, 0, False, (0xFF, 0xFF, 0xFF), env=(0x32, 0x1C, 0x0E)),),
+        None, box=(0, 0, 11, 11)))
+SURFACE_SOURCES.append(SurfaceSpec(
+    "CSS_RULE_INFINITY",
+    (Placement("MNPlayersCommon", "llMNPlayersCommonInfinityDarkSprite",
+               0, 0, False, (0xFF, 0xFF, 0xFF), env=(0x32, 0x1C, 0x0E)),),
+    None, box=(0, 0, 17, 9)))
 
 # (3) The slot doors, for the shutter slide (`mnPlayersVSShutterProcUpdate`:
 # 2/tic between 0 = open at the panel edges and 41 = shut meeting at +22/+47;

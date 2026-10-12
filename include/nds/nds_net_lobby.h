@@ -106,12 +106,15 @@ uint32_t ndsNetLobbyStageCursor(void);
 /* After a match: back to the character select. */
 void ndsNetLobbyMatchOver(void);
 
-/* One lower-screen line of the rules the host's VS menu set (the character
- * select has no rule panel, and a guest never saw the host's VS menu): the
- * host's own, or a guest's copy from the latest snapshot. The match takes its
- * rules from the descriptor, never from this. */
+/* One lower-screen line of the rules the host set (its items and team attack
+ * are on no panel a guest sees): the host's own, or a guest's copy from the
+ * latest snapshot. The match takes its rules from the descriptor, never from
+ * this. */
 #define NDS_NET_RULES_TEXT_LEN 32u
 void ndsNetLobbyRulesText(char out[NDS_NET_RULES_TEXT_LEN + 1u]);
+/* Guest: the host's game rules, time limit and stocks from the latest
+ * snapshot, for the character select's rule bar; 0 before one. */
+uint32_t ndsNetLobbyGuestRules(uint8_t rules[3]);
 
 /* The save unlock mask that governs the room (plan 7.1): the host's, which a
  * guest has from the snapshot. It gates the stage select on every console and

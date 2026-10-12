@@ -50,8 +50,10 @@
  *     (mnplayersvs.c:3372); the DS pad has no C-buttons and P2-3 owns alternate
  *     costume input. Team costumes are not optional presentation: P2-2 applies
  *     the source's team costume IDs automatically when Team Battle is active.
- *   - THE TIME/STOCK ARROWS at the top of the source's CSS duplicate the VS
- *     menu P2-1d already transcribed, so the rules stay that screen's.
+ *   - THE TIME/STOCK ARROWS are no longer a narrowing (owner, 2026-10-12):
+ *     the rule bar at the header's centre steps the time or the stocks as the
+ *     source's does (ndsMenuShellCssRuleArrow); a wireless guest shows the
+ *     host's.
  *   - THE 5-MINUTE IDLE RETURN (mnplayersvs.c:4470) is attract behaviour and
  *     belongs to P2-7, exactly as it does on the mode select.
  *   - THE RECALL TOSS. mnPlayersVSPuckAdjustRecall arcs the token back over 11
@@ -357,6 +359,16 @@ static u8 sCssIsTeamBattle;
 /* 1 + the mode label surface ndsMenuShellCssPopulate last blitted with BACK
  * over this entry's base surfaces; 0 until it has. */
 static u32 sCssEntryStatesShown;
+/* THE RULE BAR (owner, 2026-10-12): the source's sMNPlayersVSGameRule,
+ * TimeValue and StockValue, seeded at entry from the transfer state
+ * (mnplayersvs.c:4676-4681), stepped by the selector's arrows (:3318-3353)
+ * and committed with the rest (mnPlayersVSSetSceneData :4383). Wireless:
+ * only the host steps them; a guest shows the host's. sCssRuleShown is 1 +
+ * the state ndsMenuShellCssShowRule last blitted, 0 until it has. */
+static u8 sCssRuleIsStock;
+static u8 sCssRuleTime;
+static u8 sCssRuleStock;
+static u32 sCssRuleShown;
 /* P2-1N (3): the shutter, in the source's own units. door_offset slides
  * 2/tic between 0 (open — halves parked at the panel edges, hidden by the
  * frame) and 41 (shut — halves meeting at +22/+47, which is exactly the
@@ -685,6 +697,156 @@ static u32 ndsMenuShellCssBoxHit(s32 x0, s32 x1, s32 y0, s32 y1)
     s32 y = sCssCursorY + 3;
 
     return ((x >= x0) && (x <= x1) && (y >= y0) && (y <= y1)) ? TRUE : FALSE;
+}
+
+/* --- The rule bar -------------------------------------------------------- */
+
+_Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_RULE_DIGIT_9 ==
+                   NDS_MN_UI_KIT_SURFACE_CSS_RULE_DIGIT_0 + 9u,
+               "rule digit glyphs must stay contiguous in digit order");
+
+/* llMNPlayersCommon<N>DarkSprite's widths: MakeGameRuleNumber steps left by
+ * each digit's own (mnplayersvs.c:1196-1216). */
+static const u8 kCssRuleDigitWidth[10] = { 10, 7, 11, 10, 10, 11, 9, 10, 10, 9 };
+
+/* mnPlayersVSGetNextTimeValue / GetPrevTimeValue's table (:4539-4576). */
+static const u8 kCssRuleTimes[8] = {
+    2, 3, 5, 10, 15, 30, 60, SCBATTLE_TIMELIMIT_INFINITE
+};
+
+static u8 ndsMenuShellCssRuleStepTime(u8 value, s32 step)
+{
+    s32 i;
+
+    if (step > 0)
+    {
+        if (value == kCssRuleTimes[7])
+        {
+            return kCssRuleTimes[0];
+        }
+        for (i = 0; i < 8; i++)
+        {
+            if (value < kCssRuleTimes[i])
+            {
+                return kCssRuleTimes[i];
+            }
+        }
+        return kCssRuleTimes[7];
+    }
+    if (value == kCssRuleTimes[0])
+    {
+        return kCssRuleTimes[7];
+    }
+    for (i = 7; i >= 0; i--)
+    {
+        if (value > kCssRuleTimes[i])
+        {
+            return kCssRuleTimes[i];
+        }
+    }
+    return kCssRuleTimes[7];
+}
+
+/* mnPlayersVSMakeTimeSelect / MakeStockSelect (:1252/:1305): the selector,
+ * then MakeTimeSetting's Infinity at (194,24) or the value right-aligned at
+ * x 208 (one digit) or 212, MakeStockSetting's stocks + 1 at 210 or 214, both
+ * at y 23 -- one open for the whole bar, only when the state changed. */
+static void ndsMenuShellCssShowRule(void)
+{
+    NdsUiKitSurfaceId surfaces[3];
+    s16 sites[6];
+    u32 count = 1u;
+    u32 key = (sCssRuleIsStock != 0u) ? (0x100u | sCssRuleStock) :
+                                        (u32)sCssRuleTime;
+
+    if (sCssRuleShown == key + 1u)
+    {
+        return;
+    }
+    surfaces[0] = (sCssRuleIsStock != 0u) ? NDS_MN_UI_KIT_SURFACE_CSS_RULE_STOCK :
+                                            NDS_MN_UI_KIT_SURFACE_CSS_RULE_TIME;
+    sites[0] = NDS_UI_KIT_SITE_BAKED;
+    sites[1] = 0;
+    if ((sCssRuleIsStock == 0u) &&
+        (sCssRuleTime == SCBATTLE_TIMELIMIT_INFINITE))
+    {
+        surfaces[1] = NDS_MN_UI_KIT_SURFACE_CSS_RULE_INFINITY;
+        sites[2] = (s16)NDS_CSS_DS(194);
+        sites[3] = (s16)NDS_CSS_DS(24 + NDS_CSS_HEADER_DY);
+        count = 2u;
+    }
+    else
+    {
+        u32 number = (sCssRuleIsStock != 0u) ? ((u32)sCssRuleStock + 1u) :
+                                               (u32)sCssRuleTime;
+        s32 x = (sCssRuleIsStock != 0u) ? ((number < 10u) ? 210 : 214) :
+                                          ((number < 10u) ? 208 : 212);
+        u32 places = (number >= 10u) ? 2u : 1u;
+
+        while (places != 0u)
+        {
+            u32 digit = number % 10u;
+
+            x -= (s32)kCssRuleDigitWidth[digit];
+            surfaces[count] = (NdsUiKitSurfaceId)
+                (NDS_MN_UI_KIT_SURFACE_CSS_RULE_DIGIT_0 + digit);
+            sites[2u * count] = (s16)NDS_CSS_DS(x);
+            sites[(2u * count) + 1u] = (s16)NDS_CSS_DS(23 + NDS_CSS_HEADER_DY);
+            count++;
+            number /= 10u;
+            places--;
+        }
+    }
+    if (ndsUiKitBlitSurfacesAt(surfaces, sites, count) != FALSE)
+    {
+        sCssRuleShown = key + 1u;
+        gNdsMenuShellCssPanelBlitCount += count;
+    }
+}
+
+/* mnPlayersVSCursorProcUpdate's first furniture tests (:3318-3353): the right
+ * arrow, then the left, at the button hotspot over the header band (y 12-35).
+ * TRUE when the press stepped the rule. The descriptor follows at once, so a
+ * wireless room's lobby shows the host's new rule. */
+static u32 ndsMenuShellCssRuleArrow(void)
+{
+    s32 step;
+
+    if (ndsMenuShellCssBoxHit(210, 230, 12 + NDS_CSS_HEADER_DY,
+                              35 + NDS_CSS_HEADER_DY) != FALSE)
+    {
+        step = 1;
+    }
+    else if (ndsMenuShellCssBoxHit(140, 160, 12 + NDS_CSS_HEADER_DY,
+                                   35 + NDS_CSS_HEADER_DY) != FALSE)
+    {
+        step = -1;
+    }
+    else
+    {
+        return FALSE;
+    }
+    if (ndsMenuShellCssNetGuest() != FALSE)
+    {
+        return FALSE;
+    }
+    if (sCssRuleIsStock == 0u)
+    {
+        sCssRuleTime = ndsMenuShellCssRuleStepTime(sCssRuleTime, step);
+    }
+    else if (step > 0)
+    {
+        sCssRuleStock = (u8)((sCssRuleStock >= 98u) ? 0u : (sCssRuleStock + 1u));
+    }
+    else
+    {
+        sCssRuleStock = (u8)((sCssRuleStock == 0u) ? 98u : (sCssRuleStock - 1u));
+    }
+    gNdsMatchConfig.time_limit = sCssRuleTime;
+    gNdsMatchConfig.stocks = sCssRuleStock;
+    ndsMenuShellCssShowRule();
+    ndsMenuShellCssCue(NDS_CSS_FGM_SCROLL2);
+    return TRUE;
 }
 
 /* --- Drawing ------------------------------------------------------------- */
@@ -1613,6 +1775,7 @@ static void ndsMenuShellCssPopulate(void)
             gNdsMenuShellCssPanelBlitCount += 2u;
         }
     }
+    ndsMenuShellCssShowRule();
 
     /* P2-1L (5): EVERY portrait cell is backdrop art now. The old twelve OBJ
      * slots were dead after that migration and are no longer reserved; P2-1
@@ -2621,6 +2784,10 @@ static void ndsMenuShellCssCommit(void)
      * descriptor therefore carries the same CSS state mnPlayersVSSetSceneData
      * commits for FFA and Team Battle. */
     gNdsMatchConfig.is_team_battle = (sCssIsTeamBattle != FALSE) ? 1u : 0u;
+    /* mnPlayersVSSetSceneData :4383-4384: the rule bar's values. A wireless
+     * guest's match takes the host's from the descriptor instead. */
+    gNdsMatchConfig.time_limit = sCssRuleTime;
+    gNdsMatchConfig.stocks = sCssRuleStock;
     ndsMatchConfigApply(&gNdsMatchConfig);
     gNdsMenuShellCssCommitCount++;
 }
@@ -3264,6 +3431,19 @@ static u32 ndsMenuShellCssNetSync(void)
                 ndsMenuShellCssNetSetTeamBattle(team_battle);
                 changed = TRUE;
             }
+            {
+                u8 rules[3];
+
+                /* The host's rule bar, which only the host steps. */
+                if (ndsNetLobbyGuestRules(rules) != 0u)
+                {
+                    sCssRuleIsStock =
+                        (rules[0] != SCBATTLE_GAMERULE_TIME) ? 1u : 0u;
+                    sCssRuleTime = rules[1];
+                    sCssRuleStock = rules[2];
+                    ndsMenuShellCssShowRule();
+                }
+            }
         }
         ndsMenuShellCssNetSlotOut((u32)NDS_CSS_CURSOR_SLOT, &mine);
         mine.pkind = (u8)nFTPlayerKindMan;
@@ -3438,8 +3618,13 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
             {
                 if (ndsMenuShellCssCheckGrab() == FALSE)
                 {
-                    /* mnPlayersVSCursorProcUpdate checks game mode, BACK, then
-                     * the team selectors in exactly this order (:3356-3367). */
+                    /* mnPlayersVSCursorProcUpdate checks the rule arrows, game
+                     * mode, BACK, then the team selectors in exactly this
+                     * order (:3318-3367). */
+                    if (ndsMenuShellCssRuleArrow() != FALSE)
+                    {
+                        return;
+                    }
                     if ((ndsMenuShellCssBoxHit(27, 137, 14 + NDS_CSS_HEADER_DY,
                                                35 + NDS_CSS_HEADER_DY) != FALSE) &&
                         (ndsMenuShellCssNetGuest() == FALSE))
@@ -3469,7 +3654,7 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
                          * source DL-34 selectors are foreground BG3. */
                         ndsMenuShellCssSyncPanels((u32)NDS_CSS_SLOTS);
                         ndsMenuShellCssSyncTeamSelectAll();
-                        /* The mode label box (27,24,150,22) crosses the top
+                        /* The mode label box (27,24,113,22) crosses the top
                          * portrait row, and its state surface restores the
                          * unlocked base there -- re-cover what the save locks. */
                         ndsMenuShellCssSyncLockedCells();
@@ -3650,6 +3835,11 @@ static void ndsMenuShellCssInit(void)
      * sMNPlayersVSIsTeamBattle on scene entry (mnplayersvs.c:4679). */
     sCssIsTeamBattle = (gSCManagerTransferBattleState.is_team_battle != 0) ?
         1u : 0u;
+    /* The rule bar, as mnPlayersVSInitVars seeds it (:4676-4681). */
+    sCssRuleIsStock = (gSCManagerTransferBattleState.game_rules !=
+                       SCBATTLE_GAMERULE_TIME) ? 1u : 0u;
+    sCssRuleTime = (u8)gSCManagerTransferBattleState.time_limit;
+    sCssRuleStock = (u8)gSCManagerTransferBattleState.stocks;
 
     for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
     {
@@ -3810,8 +4000,10 @@ static void ndsMenuShellCssSyncPreviews(void)
  * sync. */
 static void ndsMenuShellPopulateCssScreen(void)
 {
-    /* The base surfaces were just blitted under the mode label and BACK. */
+    /* The base surfaces were just blitted under the mode label, BACK and the
+     * rule bar. */
     sCssEntryStatesShown = 0u;
+    sCssRuleShown = 0u;
     ndsMenuShellCssSyncPanels((u32)NDS_CSS_SLOTS);
     ndsMenuShellCssPopulate();
     ndsMenuShellCssSyncTeamSelectAll();
