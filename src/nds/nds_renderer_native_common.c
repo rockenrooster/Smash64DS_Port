@@ -5267,7 +5267,13 @@ ndsRendererEntryP4CornersLoad(void)
 
         sNdsEntryP4CornerData[content] = NULL;
         if ((block->count == 0u) ||
-            (ndsRendererEntryEffectP4ContentInMatch(content) == FALSE) ||
+            (ndsRendererEntryEffectP4ContentInMatch(content) == FALSE))
+        {
+            continue;
+        }
+        /* A VS battle's idle overlay tail first, then the heap if it fits. */
+        data = ndsVSBattleOverlayTryAlloc(bytes, 4u);
+        if ((data == NULL) &&
             (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap, bytes, 4u) == FALSE))
         {
             continue;
@@ -5278,7 +5284,10 @@ ndsRendererEntryP4CornersLoad(void)
         {
             break;
         }
-        data = syTaskmanMalloc(bytes, 4u);
+        if (data == NULL)
+        {
+            data = syTaskmanMalloc(bytes, 4u);
+        }
         if ((data != NULL) &&
             (ndsRendererHardwareFencedTextureFseek(file, (long)block->offset, SEEK_SET) == 0) &&
             (ndsRendererHardwareFencedTextureFread(data, 1u, bytes, file) == bytes))

@@ -794,6 +794,38 @@ ndsFtPoseRecipQ30(u32 n)
 
 #define NDS_FT_POSE_TARGET(vos) ndsFtPoseArg((pc++)->s, i, (vos))
 
+/* A track's first value key in a clip reads the source AObj's old target
+ * (ftanim.c: value_base = value_target), and the source's AObj outlives the
+ * clip that made it; the engine's slot starts at 0. No BattleShip clip's first
+ * key carries a payload (all 1,736 AObj16 files, 2026-10-12), so none reads
+ * that base, but 46 Remix clips do: Sheik's neutral special begins her hip's
+ * scale X/Z on a 7-frame line, and from 0 the hip was singular -- the hurtbox
+ * inversion's own infinite loop (gmcollision.c:256, "zero div in
+ * gcSetInvMatrix()"), a frozen match on Sector Z. The joint's pose float is
+ * what the previous clip left there: its old target wherever that clip ended
+ * its segment. Rotation and scale only; a translate-scaled fighter's float is
+ * not the track's value. */
+static void __attribute__((noinline, cold))
+ndsFtPoseSeedBase(NdsFtPoseTrack *t, const DObj *dobj, u32 i)
+{
+    s32 q;
+
+    if ((i >= 3u) && (i <= 6u))
+    {
+        return;
+    }
+    q = ndsR2F32ToFixed(*(const f32 *)(const void *)
+                            ((const u8 *)dobj + sNdsFtPoseStoreOffset[i]),
+                        NDS_R2_AQ_VF);
+    if (t->shift_val != 0u)
+    {
+        q = (q + (1 << (t->shift_val - 1u))) >> t->shift_val;
+    }
+    t->value_target = (s16)((q > 32767) ? 32767 : ((q < -32768) ? -32768 : q));
+}
+
+#define NDS_FT_POSE_FIRST_KEY(t)                                                  do                                                                            {                                                                                 if ((payload_u != 0u) && ((t)->kind == NDS_FT_POSE_KIND_NONE))                {                                                                                 ndsFtPoseSeedBase((t), dobj, i);                                          }                                                                         } while (0)
+
 static void __attribute__((target("arm")))
 ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
 {
@@ -865,6 +897,7 @@ ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
                     continue;
                 }
                 t = ndsFtPoseTrackFor(pose, joint, i);
+                NDS_FT_POSE_FIRST_KEY(t);
                 t->value_base = t->value_target;
                 t->value_target = NDS_FT_POSE_TARGET(0);
                 t->rate_base = t->rate_target;
@@ -901,6 +934,7 @@ ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
                     continue;
                 }
                 t = ndsFtPoseTrackFor(pose, joint, i);
+                NDS_FT_POSE_FIRST_KEY(t);
                 t->value_base = t->value_target;
                 t->value_target = NDS_FT_POSE_TARGET(0);
                 t->kind = NDS_R2_AQ_KIND_LINEAR;
@@ -945,6 +979,7 @@ ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
                     continue;
                 }
                 t = ndsFtPoseTrackFor(pose, joint, i);
+                NDS_FT_POSE_FIRST_KEY(t);
                 t->value_base = t->value_target;
                 t->value_target = NDS_FT_POSE_TARGET(0);
                 t->rate_base = t->rate_target;
@@ -1008,6 +1043,7 @@ ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
                     continue;
                 }
                 t = ndsFtPoseTrackFor(pose, joint, i);
+                NDS_FT_POSE_FIRST_KEY(t);
                 t->value_base = t->value_target;
                 t->value_target = NDS_FT_POSE_TARGET(0);
                 t->kind = NDS_R2_AQ_KIND_STEP;

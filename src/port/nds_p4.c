@@ -15,6 +15,7 @@
 #include <ef/effect.h>
 #include <it/item.h>
 #include <nds/nds_reloc_assets.h>
+#include <nds/nds_frontend_overlay.h>
 #include <nds/nds_kirby_hat_residency.h>
 #include <nds/nds_renderer.h>
 #include <nds/nds_scene_manager.h>
@@ -1368,7 +1369,12 @@ const NDSP4TablesHeader *ndsP4LoadTables(u32 content)
         ndsFsUnlock();
         ndsP4TablesHalt(content);
     }
-    t = syTaskmanMalloc((size_t)bytes, 4);
+    /* Battle-lifetime: a VS battle's idle overlay tail first. */
+    t = ndsVSBattleOverlayTryAlloc((size_t)bytes, 4u);
+    if (t == NULL)
+    {
+        t = syTaskmanMalloc((size_t)bytes, 4);
+    }
     if (fread(t, 1u, (size_t)bytes, file) != (size_t)bytes)
     {
         fclose(file);

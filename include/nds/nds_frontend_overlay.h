@@ -31,5 +31,8 @@ void *ndsSceneAssetAlloc(size_t bytes, u32 alignment);
 /* Atomic admission: preserve keep_free bytes in the taskman heap, including
  * alignment, and leave both cursors unchanged on rejection. */
 void *ndsSceneAssetTryAlloc(size_t bytes, u32 alignment, size_t keep_free);
+/* A VS battle's battle-lifetime data from the loaned range's idle tail, or
+ * NULL (any other scene, or no room): the caller then takes its usual heap. */
+void *ndsVSBattleOverlayTryAlloc(size_t bytes, u32 alignment);
 
 #endif

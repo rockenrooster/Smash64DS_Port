@@ -3,6 +3,7 @@
  * the unchanged original parser sees them. */
 #include <nds/nds_fcmp.h>
 #include <nds/nds_reloc_assets.h>
+#include <nds/nds_frontend_overlay.h>
 #include <nds/nds_anim_fixed.h>
 #include <sc/scene.h>
 #include <string.h>
@@ -2072,14 +2073,20 @@ sb32 ndsAObjEvent32ConfigureNormalizedCapacity(u32 gkind)
      * short-lived override and take the bytes from the scene general heap
      * explicitly. A nested reloc load may temporarily redirect syTaskmanMalloc;
      * putting the ledger there would leave dangling pointers when that subarena
-     * is restored. */
-    if (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap,
-                            (size_t)alloc_bytes, 4u) == FALSE)
+     * is restored. A VS battle's idle overlay tail lives as long as the scene
+     * too, and goes first. */
+    storage = ndsVSBattleOverlayTryAlloc((size_t)alloc_bytes, 4u);
+    if ((storage == NULL) &&
+        (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap,
+                             (size_t)alloc_bytes, 4u) == FALSE))
     {
         NDS_DIAG(gNdsAObjEvent32CapacityRefusedCount++);
         return FALSE;
     }
-    storage = syMallocSet(&gSYTaskmanGeneralHeap, (size_t)alloc_bytes, 4u);
+    if (storage == NULL)
+    {
+        storage = syMallocSet(&gSYTaskmanGeneralHeap, (size_t)alloc_bytes, 4u);
+    }
     if (storage == NULL)
     {
         NDS_DIAG(gNdsAObjEvent32CapacityRefusedCount++);

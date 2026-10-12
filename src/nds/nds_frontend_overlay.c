@@ -292,6 +292,23 @@ void *ndsSceneAssetAlloc(size_t bytes, u32 alignment)
     return storage;
 }
 
+/* A VS battle lends the whole range, and its fighters' packs, images and files
+ * leave the end of it idle: 41,696 B with four P4 contents (play-1011x14),
+ * while the same match on Sector Z ran the general heap out making the
+ * fighters' parts at entry (owner, 2026-10-11: a frozen host with nothing on
+ * screen). Data that lives exactly as long as the battle -- the event32
+ * ledger, the contents' match tables, the shield poses, the entry corners --
+ * takes that tail first. Only a VS battle: a campaign battle's tail holds
+ * its own files. */
+void *ndsVSBattleOverlayTryAlloc(size_t bytes, u32 alignment)
+{
+    if (gSCManagerSceneData.scene_curr != nSCKindVSBattle)
+    {
+        return NULL;
+    }
+    return ndsFrontendOverlayTryAlloc(bytes, alignment);
+}
+
 void *ndsSceneAssetTryAlloc(size_t bytes, u32 alignment, size_t keep_free)
 {
     void *storage;

@@ -1594,6 +1594,45 @@ Later (play-1011x14):
   static corpus moves. Photo: a white translucent swirl. Not exact: the
   source also multiplies by SHADE alpha per vertex, which the DS cannot.
 
+## Multiplayer freezes: the stress run (owner, 2026-10-11/12)
+
+The owner's report: four-player matches froze on Hyrule and Sector Z, the
+host sometimes with nothing on screen. The P3 lab sweep's repro 3
+(`NDS_NET_LAB_SWEEP_REPRO=3`, nds_net_lobby.c) is that report as a run: two
+linked consoles, two humans and two level-9 CPUs, four heavy P4 mixes in
+turn on Hyrule and Sector Z, every item at the highest rate, five-minute
+matches. 25 minutes in the melonDS-mp harness: no freeze, no desync, no
+out-of-memory halt, heap low-water 11,952 B. The same rows as local
+four-CPU matches (`shipbattle.ps1`, items poked at VeryHigh) found the two
+faults the harness had not reached:
+
+- **Out of heap at entry on Sector Z.** Sonic, Lanky, Meta Knight and Wolf
+  ran the general heap out making their parts at entry (request 136 B,
+  44 left): `ndsSyMallocOverflowHalt` spins silently, the frozen host of the
+  report (the shipping freeze report now shows it, rows 17 and 20). Sector Z
+  costs 60 KB more than Peach's Castle at battle start, most of it the map's
+  extern closure (`mpCollisionInitGroundData`, 68,048 B against 18,736). A VS
+  battle lends the whole front-end overlay, and the fighters' packs, images
+  and files left 41,696 B of it idle: the event32 ledger, the contents'
+  match tables, the shield poses and the entry corners now take that tail
+  first (`ndsVSBattleOverlayTryAlloc`, nds_frontend_overlay.c; any other
+  scene, or no room, takes the heap as before). The mix now ends a
+  3,000-frame match with 16,784 B (under the 25,600 floor: open, below).
+- **A frozen battle: the hurtbox inversion's own loop.** Marth, Roy, Sheik
+  and MRGAW on Sector Z froze at frame 822, the freeze report pointing into
+  `gmCollisionSetInvertMatrix`: a zero determinant, where the source spins
+  forever ("zero div in gcSetInvMatrix()"). Sheik's hip had scale
+  (0, 1.25, 0) on the first tick of her aerial neutral special. The native
+  pose engine (nds_ft_pose.c) starts each clip's tracks in fresh slots at 0,
+  while the source keeps a joint's AObjs across clips and every key takes
+  the old target as its base: a first key with a payload (a line or curve
+  over some frames, or a delayed step) interpolates from the previous
+  clip's pose in the source and from 0 in the engine. None of BattleShip's
+  1,736 clips has such a first key; 46 Remix clips do (rotation lines, and
+  Sheik's scale X/Z over 7 frames). Such a key now starts from the joint's
+  current rotation or scale (`NDS_FT_POSE_FIRST_KEY`), what the previous
+  clip left there. The same match runs 3,000 frames (play-1012b).
+
 ## Board 1 status (master plan Revision 3)
 
 | Item | State |

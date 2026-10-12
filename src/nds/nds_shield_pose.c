@@ -12,6 +12,7 @@
 
 #include <nds/nds_anim_fixed.h>
 #include <nds/nds_reloc_assets.h>
+#include <nds/nds_frontend_overlay.h>
 #include <nds/nds_startup.h>
 #include <sys/obj.h>
 #include <sys/taskman.h>
@@ -342,6 +343,15 @@ static s32 NDS_SHIELD_POSE_CODE ndsShieldPoseValidateBlob(
     return TRUE;
 }
 
+/* A pose package lives as long as the battle: a VS battle's idle overlay
+ * tail first (ndsVSBattleOverlayTryAlloc), the scene heap otherwise. */
+static void *ndsShieldPoseAlloc(size_t bytes)
+{
+    void *data = ndsVSBattleOverlayTryAlloc(bytes, 4u);
+
+    return (data != NULL) ? data : syTaskmanMalloc(bytes, 4u);
+}
+
 static void *NDS_SHIELD_POSE_CODE ndsShieldPoseLoad(u32 package)
 {
     const NDSShieldPoseAssetDesc *desc;
@@ -370,16 +380,16 @@ static void *NDS_SHIELD_POSE_CODE ndsShieldPoseLoad(u32 package)
             (sNdsShieldPoseP4Scratch[content] == NULL))
         {
             sNdsShieldPoseP4Scratch[content] =
-                syTaskmanMalloc(words * sizeof(AObjEvent32), 4u);
+                ndsShieldPoseAlloc(words * sizeof(AObjEvent32));
         }
         if (sNdsShieldPoseP4Base[content] == NULL)
         {
-            sNdsShieldPoseP4Base[content] = syTaskmanMalloc(
-                ndsP4Fighter(content)->shield_pose->base_count * sizeof(DObjDesc), 4u);
+            sNdsShieldPoseP4Base[content] = ndsShieldPoseAlloc(
+                ndsP4Fighter(content)->shield_pose->base_count * sizeof(DObjDesc));
         }
     }
 #endif
-    data = syTaskmanMalloc(desc->blob_bytes, 4u);
+    data = ndsShieldPoseAlloc(desc->blob_bytes);
     if (data == NULL)
     {
         gNdsShieldPoseLoadFailCount++;
