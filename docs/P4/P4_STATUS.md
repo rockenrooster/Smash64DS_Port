@@ -1159,6 +1159,17 @@ heap 22,704 B. His select name is 72 texels wide with ink through column 62
 on a 66-wide card: the panel bake drops a P4 name's fully transparent
 right-hand columns (lossless).
 
+His sword trail (joint 34 part 0, model 0x15EE lists at 0x93D0 and 0x94F8:
+two 32x32 CI4 flame quads, PRIM alpha 0x30, EXTRA's transparency.txt edits)
+is drawn by nothing on the N64: its combine's second-cycle alpha is
+(TEXEL1 - COMBINED) * LOD_FRACTION + 0, LOD_FRACTION stays 0 with texture LOD
+off, and the XLU blender then keeps the framebuffer. The DS drew the quads
+opaque, black around the flame (owner, 2026-10-11); the owner generator now
+emits no triangles under that combine (`DIRECT_POLICY_COMBINE_INVISIBLE`).
+A static scan of every content's files for blending lists found no other
+such combine: the rest are articles (entry-effect packet, XLU-aware) or
+exact texture-alpha cutouts.
+
 Probes: lab (build-lab-p4x), four Meta Knights 1,500 frames, 0 declines, 0
 native failures; forced up, neutral and down specials, jab and forward tilt
 run their statuses (the jab as Attack11 through the loop and end). Play
@@ -1273,6 +1284,23 @@ Arwing, 0 failures. Play ROM play-1011ko: four Dededes 0 failures,
 low-water 17,608, as before. That four-content match does not fit the
 shipping heap: it runs out making the damage interface at battle start
 ("S15 P4 memory"; the lab ends it with 10.8 KB).
+
+## Select costumes and the default time (owner, 2026-10-11)
+
+Peach's first select preview showed Remix's Daisy colours. A content's slot
+keeps its parent's fkind, so the source's same-fighter tests in the VS
+select (`mnPlayersVSCheckCostumeUsed`, the free royal costume, the team
+shade, the fighter count) took Falco, Wolf, Peach and Sonic for Fox: beside
+a Fox, Peach's costume 0 counted as taken and she got costume 1. The select
+now compares the content too (`ndsCss*` in battleship_mnplayersvs.c, routed
+from the source's call sites by argument-token macros), and a content's
+costume ids are its own rows (Remix's `set_default_costumes`,
+NDSP4Present.default_costumes: four royal colours, then the red, blue and
+green teams) rather than its parent's. Play ROM play-1011v: Peach beside
+Peach gets 0 and 1 (pink, Daisy), Peach beside Fox, Falco and Wolf 0.
+
+The shipping preset's match is Time, three minutes (was one); the VS menu
+starts from it.
 
 ## Memory: mirrors, the event32 ledger, article data (2026-10-11)
 

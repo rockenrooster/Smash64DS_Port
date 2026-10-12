@@ -293,9 +293,10 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
 #endif
 
 #if NDS_DEV_LIVE_INPUT_PREVIEW
-    /* The shipped match: one-minute Time, items off, Fox on the CPU. */
+    /* The shipped match: three-minute Time (owner, 2026-10-11; the VS menu
+     * starts from it), items off, Fox on the CPU. */
     cfg->game_rules = SCBATTLE_GAMERULE_TIME;
-    cfg->time_limit = 1;
+    cfg->time_limit = 3;
     cfg->item_toggles = 0u;
     cfg->item_appearance_rate = nSCBattleItemSwitchNone;
 #if NDS_HARNESS_ITEMS_ON

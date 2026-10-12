@@ -104,6 +104,49 @@ void ndsBaseMNPlayersVSStartScene(void);
     ndsP4MNPlayersVSGetStatusSelected(ndsCssPreviewKindParent
 s32 ndsBaseMNPlayersVSGetStatusSelected(s32 fkind);
 s32 ndsP4MNPlayersVSGetStatusSelected(s32 fkind);
+
+/* A content's slot keeps its parent's fkind (ndsCssPreviewSetShown), so the
+ * source's same-fighter tests -- the team shade, a costume in use, the free
+ * costume, the fighter count -- took Falco, Wolf, Peach and Sonic for Fox:
+ * Peach beside a Fox lost her first costume and showed Remix's Daisy colours
+ * (owner, 2026-10-11). The routines below (ndsCss*) compare the content too,
+ * and a content's costume ids are its own rows (Remix's
+ * set_default_costumes, NDSP4Present.default_costumes: the four royal
+ * colours, then the red, blue and green teams), not its parent's. Each
+ * definition's argument text starts `s32`; each call's starts with the slot
+ * (`sMNPlayersVSSlots`), a slot index local (`held_player`, `player`, `i`),
+ * or, inside the source's two costume routines these replace, `fkind`. */
+#define ftParamGetCostumeCommonID(first, ...) NDS_P4_CCI_##first, __VA_ARGS__)
+#define NDS_P4_CCI_sMNPlayersVSSlots ndsCssCostumeCommon(&sMNPlayersVSSlots
+#define NDS_P4_CCI_fkind (ftParamGetCostumeCommonID)(fkind
+#define ftParamGetCostumeTeamID(first, ...) NDS_P4_CTI_##first, __VA_ARGS__)
+#define NDS_P4_CTI_sMNPlayersVSSlots ndsCssCostumeTeam(&sMNPlayersVSSlots
+#define NDS_P4_CTI_fkind (ftParamGetCostumeTeamID)(fkind
+#define mnPlayersVSCheckCostumeUsed(first, ...) NDS_P4_CCU_##first, __VA_ARGS__)
+#define NDS_P4_CCU_s32 ndsBaseMNPlayersVSCheckCostumeUsed(s32
+#define NDS_P4_CCU_sMNPlayersVSSlots ndsCssCheckCostumeUsed(sMNPlayersVSSlots
+#define mnPlayersVSGetFreeCostumeRoyal(first, ...) NDS_P4_FCR_##first, __VA_ARGS__)
+#define NDS_P4_FCR_s32 ndsBaseMNPlayersVSGetFreeCostumeRoyal(s32
+#define NDS_P4_FCR_fkind ndsBaseMNPlayersVSGetFreeCostumeRoyal(fkind
+#define NDS_P4_FCR_sMNPlayersVSSlots ndsCssGetFreeCostumeRoyal(sMNPlayersVSSlots
+#define mnPlayersVSGetFreeCostume(first, ...) NDS_P4_FC_##first, __VA_ARGS__)
+#define NDS_P4_FC_s32 ndsBaseMNPlayersVSGetFreeCostume(s32
+#define NDS_P4_FC_sMNPlayersVSSlots ndsCssGetFreeCostume(sMNPlayersVSSlots
+#define mnPlayersVSGetShade(first) NDS_P4_GS_##first)
+#define NDS_P4_GS_s32 ndsBaseMNPlayersVSGetShade(s32
+#define NDS_P4_GS_held_player ndsCssGetShade(held_player
+#define NDS_P4_GS_player ndsCssGetShade(player
+#define NDS_P4_GS_i ndsCssGetShade(i
+#define mnPlayersVSGetFighterKindCount(first) NDS_P4_FKC_##first)
+#define NDS_P4_FKC_s32 ndsBaseMNPlayersVSGetFighterKindCount(s32
+#define NDS_P4_FKC_sMNPlayersVSSlots ndsCssGetFighterKindCount(&sMNPlayersVSSlots
+s32 ndsCssCostumeCommon(const s32 *p_fkind, s32 color);
+s32 ndsCssCostumeTeam(const s32 *p_fkind, s32 color);
+sb32 ndsCssCheckCostumeUsed(s32 fkind, s32 player, s32 costume);
+s32 ndsCssGetFreeCostumeRoyal(s32 fkind, s32 player);
+s32 ndsCssGetFreeCostume(s32 fkind, s32 player);
+s32 ndsCssGetShade(s32 player);
+s32 ndsCssGetFighterKindCount(const s32 *p_fkind);
 #endif
 
 #include "../../decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c"
@@ -219,6 +262,168 @@ static void ndsCssPreviewSetShown(u32 slot, s32 kind)
                                  ndsCssPreviewKindContent(kind));
 #endif
 }
+
+#if NDS_P4
+/* The same-fighter, costume and shade rules for contents (the macros before
+ * the source include). A slot is the same fighter as another when its kind
+ * and its content both match. */
+static s32 ndsCssSlotOfKind(const s32 *p_fkind)
+{
+    return (s32)(((uintptr_t)p_fkind - (uintptr_t)&sMNPlayersVSSlots[0].fkind) /
+                 sizeof(sMNPlayersVSSlots[0]));
+}
+
+static u32 ndsCssSlotContent(s32 slot)
+{
+    return ((slot >= 0) && (slot < GMCOMMON_PLAYERS_MAX) &&
+            (sMNPlayersVSSlots[slot].fkind != nFTKindNull)) ?
+        ndsCssPreviewKindContent(sNdsPlayersVSPreviewShownKind[slot]) : 0u;
+}
+
+static sb32 ndsCssSameFighter(s32 a, s32 b)
+{
+    return ((sMNPlayersVSSlots[a].fkind == sMNPlayersVSSlots[b].fkind) &&
+            (ndsCssSlotContent(a) == ndsCssSlotContent(b))) ? TRUE : FALSE;
+}
+
+static const u8 *ndsCssSlotCostumes(s32 slot)
+{
+    const NDSP4Fighter *f = ndsP4Fighter(ndsCssSlotContent(slot));
+
+    return ((f != NULL) && (f->present != NULL)) ?
+        f->present->default_costumes : NULL;
+}
+
+s32 ndsCssCostumeCommon(const s32 *p_fkind, s32 color)
+{
+    const u8 *rows = ndsCssSlotCostumes(ndsCssSlotOfKind(p_fkind));
+
+    return ((rows != NULL) && (color >= 0) && (color < 4)) ?
+        (s32)rows[color] : (ftParamGetCostumeCommonID)(*p_fkind, color);
+}
+
+s32 ndsCssCostumeTeam(const s32 *p_fkind, s32 color)
+{
+    const u8 *rows = ndsCssSlotCostumes(ndsCssSlotOfKind(p_fkind));
+
+    return ((rows != NULL) && (color >= 0) && (color < 3)) ?
+        (s32)rows[4 + color] : (ftParamGetCostumeTeamID)(*p_fkind, color);
+}
+
+/* mnPlayersVSCheckCostumeUsed; the caller's fkind is its slot's. */
+sb32 ndsCssCheckCostumeUsed(s32 fkind, s32 player, s32 costume)
+{
+    s32 i;
+
+    (void)fkind;
+    for (i = 0; i < GMCOMMON_PLAYERS_MAX; i++)
+    {
+        if ((player != i) && (ndsCssSameFighter(player, i) != FALSE) &&
+            ((u32)costume == sMNPlayersVSSlots[i].costume))
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+/* mnPlayersVSGetFreeCostumeRoyal: the first royal colour whose costume no
+ * other slot of the same fighter holds. */
+s32 ndsCssGetFreeCostumeRoyal(s32 fkind, s32 player)
+{
+    sb32 is_costume_used[GMCOMMON_PLAYERS_MAX];
+    s32 i, j;
+
+    (void)fkind;
+    for (i = 0; i < GMCOMMON_PLAYERS_MAX; i++)
+    {
+        is_costume_used[i] = FALSE;
+    }
+    for (i = 0; i < GMCOMMON_PLAYERS_MAX; i++)
+    {
+        if ((i != player) && (ndsCssSameFighter(player, i) != FALSE))
+        {
+            for (j = 0; j < GMCOMMON_PLAYERS_MAX; j++)
+            {
+                if ((u32)ndsCssCostumeCommon(&sMNPlayersVSSlots[player].fkind, j) ==
+                    sMNPlayersVSSlots[i].costume)
+                {
+                    is_costume_used[j] = TRUE;
+                }
+            }
+        }
+    }
+    for (i = 0; i < GMCOMMON_PLAYERS_MAX; i++)
+    {
+        if (is_costume_used[i] == FALSE)
+        {
+            return i;
+        }
+    }
+    return 0;
+}
+
+s32 ndsCssGetFreeCostume(s32 fkind, s32 player)
+{
+    if (sMNPlayersVSIsTeamBattle == FALSE)
+    {
+        return ndsCssCostumeCommon(&sMNPlayersVSSlots[player].fkind,
+                                   ndsCssGetFreeCostumeRoyal(fkind, player));
+    }
+    return ndsCssCostumeTeam(&sMNPlayersVSSlots[player].fkind,
+                             sMNPlayersVSSlots[player].team);
+}
+
+/* mnPlayersVSGetShade: in Team Battle, the lowest shade no teammate of the
+ * same fighter holds. */
+s32 ndsCssGetShade(s32 player)
+{
+    sb32 is_shade_used[GMCOMMON_PLAYERS_MAX];
+    s32 i;
+
+    if (sMNPlayersVSIsTeamBattle == FALSE)
+    {
+        return 0;
+    }
+    for (i = 0; i < GMCOMMON_PLAYERS_MAX; i++)
+    {
+        is_shade_used[i] = FALSE;
+    }
+    for (i = 0; i < GMCOMMON_PLAYERS_MAX; i++)
+    {
+        if ((player != i) && (ndsCssSameFighter(player, i) != FALSE) &&
+            (sMNPlayersVSSlots[player].team == sMNPlayersVSSlots[i].team) &&
+            (sMNPlayersVSSlots[i].shade < GMCOMMON_PLAYERS_MAX))
+        {
+            is_shade_used[sMNPlayersVSSlots[i].shade] = TRUE;
+        }
+    }
+    for (i = 0; i < GMCOMMON_PLAYERS_MAX; i++)
+    {
+        if (is_shade_used[i] == FALSE)
+        {
+            return i;
+        }
+    }
+    return 0;
+}
+
+/* mnPlayersVSGetFighterKindCount: the other slots with the slot's fighter. */
+s32 ndsCssGetFighterKindCount(const s32 *p_fkind)
+{
+    s32 slot = ndsCssSlotOfKind(p_fkind);
+    s32 count = 0, i;
+
+    for (i = 0; i < GMCOMMON_PLAYERS_MAX; i++)
+    {
+        if (ndsCssSameFighter(slot, i) != FALSE)
+        {
+            count++;
+        }
+    }
+    return (count != 0) ? count - 1 : count;
+}
+#endif
 
 /* The owner-image detail a preview kind draws: a P4 content its low detail
  * (ndsP4LowDetailSelect, ftmanager's ndsFTManagerSelectLowDetail), the
@@ -2798,7 +3003,7 @@ void ndsMNPlayersVSPreviewSyncRules(sb32 is_team_battle, const u8 *teams,
             }
             sMNPlayersVSSlots[i].costume = mnPlayersVSGetFreeCostume(
                 sMNPlayersVSSlots[i].fkind, (s32)i);
-            sMNPlayersVSSlots[i].shade = mnPlayersVSGetShade((s32)i);
+            sMNPlayersVSSlots[i].shade = mnPlayersVSGetShade(i);
             ftParamInitAllParts(fighter_gobj,
                                 sMNPlayersVSSlots[i].costume,
                                 sMNPlayersVSSlots[i].shade);
@@ -3250,6 +3455,7 @@ s32 ndsMNPlayersVSPreviewCycleCostume(u32 slot)
     s32 fkind;
     s32 current;
     s32 i;
+    s32 player = (s32)slot;
 
     if ((sNdsPlayersVSPreviewActive == FALSE) ||
         (slot >= ARRAY_COUNT(sMNPlayersVSSlots)))
@@ -3279,7 +3485,8 @@ s32 ndsMNPlayersVSPreviewCycleCostume(u32 slot)
 
         for (i = 0; i < 4; i++)
         {
-            if (ftParamGetCostumeCommonID(fkind, i) == current)
+            if (ftParamGetCostumeCommonID(sMNPlayersVSSlots[slot].fkind, i) ==
+                current)
             {
                 start = i + 1;
                 break;
@@ -3288,19 +3495,20 @@ s32 ndsMNPlayersVSPreviewCycleCostume(u32 slot)
         for (i = 0; i < 4; i++)
         {
             s32 button = (start + i) & 3;
-            s32 costume = ftParamGetCostumeCommonID(fkind, button);
+            s32 costume =
+                ftParamGetCostumeCommonID(sMNPlayersVSSlots[slot].fkind, button);
 
             if (costume == current)
             {
                 continue;
             }
-            if (mnPlayersVSCheckCostumeUsed(fkind, (s32)slot, costume) !=
-                FALSE)
+            if (mnPlayersVSCheckCostumeUsed(sMNPlayersVSSlots[slot].fkind,
+                                            player, costume) != FALSE)
             {
                 continue;
             }
             sMNPlayersVSSlots[slot].costume = costume;
-            sMNPlayersVSSlots[slot].shade = mnPlayersVSGetShade((s32)slot);
+            sMNPlayersVSSlots[slot].shade = mnPlayersVSGetShade(player);
             ftParamInitAllParts(sMNPlayersVSSlots[slot].player, costume,
                                 sMNPlayersVSSlots[slot].shade);
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
@@ -3325,6 +3533,7 @@ sb32 ndsMNPlayersVSPreviewSetCostume(u32 slot, s32 fkind, s32 costume)
 {
     s32 i;
     sb32 valid = FALSE;
+    s32 player = (s32)slot;
 
     if ((sNdsPlayersVSPreviewActive == FALSE) ||
         (slot >= ARRAY_COUNT(sMNPlayersVSSlots)) ||
@@ -3336,8 +3545,11 @@ sb32 ndsMNPlayersVSPreviewSetCostume(u32 slot, s32 fkind, s32 costume)
     }
     for (i = 0; i < 4; i++)
     {
-        if ((ftParamGetCostumeCommonID(fkind, i) == costume) ||
-            ((i < 3) && (ftParamGetCostumeTeamID(fkind, i) == costume)))
+        if ((ftParamGetCostumeCommonID(sMNPlayersVSSlots[slot].fkind, i) ==
+             costume) ||
+            ((i < 3) &&
+             (ftParamGetCostumeTeamID(sMNPlayersVSSlots[slot].fkind, i) ==
+              costume)))
         {
             valid = TRUE;
         }
@@ -3347,7 +3559,7 @@ sb32 ndsMNPlayersVSPreviewSetCostume(u32 slot, s32 fkind, s32 costume)
         return FALSE;
     }
     sMNPlayersVSSlots[slot].costume = costume;
-    sMNPlayersVSSlots[slot].shade = mnPlayersVSGetShade((s32)slot);
+    sMNPlayersVSSlots[slot].shade = mnPlayersVSGetShade(player);
     ftParamInitAllParts(sMNPlayersVSSlots[slot].player, costume,
                         sMNPlayersVSSlots[slot].shade);
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)

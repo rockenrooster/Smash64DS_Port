@@ -1084,12 +1084,9 @@ DIRECT_POLICY_COMBINE_ALIASES = {
     # vertices have SHADEa == 1 -- the same proof _check_combine_alias_alpha
     # runs per triangle for the Pikachu alias.
     (0xfcfffe05, 0xff1679ff): (0xfcfffe05, 0xff167dff),
-    # NOT exact (P4, EXTRA's Meta Knight, model 0x15EE lists at 0x9400 and
-    # 0x9528): two unlit translucent 32x32 CI4 quads, PRIM alpha 0x30, whose
-    # combine reads COMBINED in cycle 0 and LOD_FRACTION alpha in cycle 1
-    # (an exporter's malformed pair; on the N64 the quads come out faint or
-    # invisible). Family 0 draws their texels at texture alpha.
-    # docs/P4/P4_STATUS.md "EXTRA" lists it until a ground-truth capture.
+    # EXTRA's Meta Knight's sword trail (model 0x15EE lists at 0x93D0 and
+    # 0x94F8, joint 34 part 0): its triangles are never emitted
+    # (DIRECT_POLICY_COMBINE_INVISIBLE); the alias keeps the state rows valid.
     (0xfc123245, 0x00400087): (0xfc127e05, 0xff17f3ff),
     # NOT exact (P4, Meta Knight's eyes, model 0x15EE lists at 0x97C0 and
     # 0x9AA0): colour PRIM*SHADE*PRIM (PRIM 0xF8F8C0), alpha TEXEL0a*SHADEa
@@ -1097,6 +1094,16 @@ DIRECT_POLICY_COMBINE_ALIASES = {
     # (white) for the colour: pale yellow eyes come out near white.
     (0xfc321803, 0xff17ffff): (0xfc127e05, 0xff17f3ff),
 }
+# Source G_SETCOMBINE pairs whose output alpha is zero, so under a blending
+# render mode their triangles draw nothing on the N64: emitted as no
+# triangles. EXTRA's Meta Knight's two sword-trail quads (32x32 CI4, PRIM
+# alpha 0x30, render mode 0x441049D8: FORCE_BL, ZMODE_XLU, the second cycle
+# CLR_IN*A_IN + CLR_MEM*(1-A_IN)) take cycle-1 alpha (TEXEL1 - COMBINED) *
+# LOD_FRACTION + 0, and LOD_FRACTION stays 0 with texture LOD off. The DS drew
+# them opaque, black around the flame (owner, 2026-10-11).
+DIRECT_POLICY_COMBINE_INVISIBLE = frozenset((
+    (0xfc123245, 0x00400087),
+))
 DIRECT_POLICY_TEXTURED_EPOCHS = frozenset((0, 4, 5, 19, 24, 30, 31, 47, 48))
 DIRECT_POLICY_LIT_ONLY_EPOCHS = frozenset(
     (3, 11, 14, 17, 22, 26, 28, 32, 36, 38, 42, 46)
@@ -1640,6 +1647,14 @@ def _combine_alias_state(control, current: bool) -> bool:
     return current
 
 
+def _combine_invisible_state(control, current: bool) -> bool:
+    """Carry the 'effective combine draws nothing' flag through a span."""
+    for _index, op, w0, w1 in control:
+        if op == 0xfc:
+            current = (w0, w1) in DIRECT_POLICY_COMBINE_INVISIBLE
+    return current
+
+
 def _check_combine_alias_alpha(payload: bytes, owner_name: str,
                                root_index: int, command_index: int,
                                slot_offsets, indices) -> None:
@@ -1786,6 +1801,7 @@ def _build_source_export_for_owners(
         slot_loads = [None] * VERTEX_CACHE_SIZE
         trim_loads = owner_name in P4_DONOR_OWNERS
         combine_aliased = False
+        combine_invisible = False
         if root_specs_by_owner is not None and owner_name in root_specs_by_owner:
             own_specs = root_specs_by_owner[owner_name]
         else:
@@ -1891,6 +1907,8 @@ def _build_source_export_for_owners(
                         ]
                         combine_aliased = _combine_alias_state(
                             control, combine_aliased)
+                        combine_invisible = _combine_invisible_state(
+                            control, combine_invisible)
                         before, after, before_sync, after_sync, material = \
                             _decode_control(owner_name, root_index, control,
                                             image_refs)
@@ -1908,6 +1926,8 @@ def _build_source_export_for_owners(
                     for index in range(cursor, action_indices[0])
                 ]
                 combine_aliased = _combine_alias_state(control, combine_aliased)
+                combine_invisible = _combine_invisible_state(
+                    control, combine_invisible)
                 before, after, before_sync, after_sync, material = \
                     _decode_control(owner_name, root_index, control, image_refs)
                 before_first, before_count = _append_state_span(
@@ -1957,6 +1977,8 @@ def _build_source_export_for_owners(
                     op, w0, w1 = commands[index]
                     for half, indices in enumerate(
                             stage_manifest.decode_triangles(op, w0, w1)):
+                        if combine_invisible:
+                            continue
                         bindings = {slots[slot] for slot in indices}
                         # Smash Remix models (P4) also draw triangles whose
                         # three vertices an earlier joint loaded; they are
@@ -2009,6 +2031,8 @@ def _build_source_export_for_owners(
                 for index in range(cursor, len(commands) - 1)
             ]
             combine_aliased = _combine_alias_state(tail_control, combine_aliased)
+            combine_invisible = _combine_invisible_state(
+                tail_control, combine_invisible)
             tail, tail_after, tail_sync, tail_after_sync, tail_material = \
                 _decode_control(owner_name, root_index, tail_control, image_refs)
             if tail_after or tail_after_sync or tail_material != INVALID_U8:
