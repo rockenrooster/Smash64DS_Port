@@ -377,8 +377,18 @@ sb32 gmCollisionCheckItemAttackSpecialCollide(ITAttackColl *attack_coll,
 
 int ndsP2JointWorldPosition(DObj *joint, Vec3f *vec);
 
+/* Calls that name a joint the fighter never made: counted, the position
+ * left as the caller's offset. The source faults on NULL there; a Remix part
+ * index read on another fighter can name such a joint (Kirby has no joint 7). */
+__attribute__((used)) volatile u32 gNdsCollisionNullJointCount;
+
 void gmCollisionGetFighterPartsWorldPosition(DObj *main_dobj, Vec3f *vec)
 {
+    if (main_dobj == NULL)
+    {
+        gNdsCollisionNullJointCount++;
+        return;
+    }
     if (ndsP2JointWorldPosition(main_dobj, vec) != 0)
     {
         return;

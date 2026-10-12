@@ -626,6 +626,8 @@ void ndsP4PianoOnStatus(GObj *fighter_gobj, s32 status_id)
 #define PIANO_BOOK_SPREAD_GROWTH 0.25F
 #define PIANO_BOOK_HIT_FGM 0x1F                 /* Book.FGM */
 #define PIANO_BOOK_KIRBY_JOINT 7                /* kirby_fix_: part 0x3 */
+/* kirby_fix_'s original line: Kirby's fireball hand, part 0xD. */
+#define PIANO_BOOK_KIRBY_HAND_JOINT 17
 
 extern void *gNdsP4PianoSpecial1;
 
@@ -767,8 +769,19 @@ static GObj *ndsP4PianoFireball(GObj *fighter_gobj, Vec3f *pos)
 
     if (fp->fkind == nFTKindKirby)
     {
+        /* Kirby's attributes never make joint 7 (setup_parts 0xEF7CFFC0
+         * skips DObjDesc 3), so the part Remix names is NULL here and the
+         * position walk faulted on it (owner, play-1012y: Kirby with Mad
+         * Piano's power, a data abort at his first book). Kirby's own
+         * fireball hand stands in. */
+        DObj *joint = fp->joints[PIANO_BOOK_KIRBY_JOINT];
+
+        if (joint == NULL)
+        {
+            joint = fp->joints[PIANO_BOOK_KIRBY_HAND_JOINT];
+        }
         pos->x = pos->y = pos->z = 0.0F;
-        gmCollisionGetFighterPartsWorldPosition(fp->joints[PIANO_BOOK_KIRBY_JOINT], pos);
+        gmCollisionGetFighterPartsWorldPosition(joint, pos);
     }
     else
     {

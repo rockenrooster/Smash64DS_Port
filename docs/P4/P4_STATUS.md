@@ -2199,6 +2199,18 @@ Two consoles, play-1012y; the multiplayer side is in
   from a file the match never loaded (`gNdsWeaponFileMissingCount`). Probe
   (play-1013e, the same four-fighter run that faulted at frame 346): Kirby in
   Lanky's statuses, no fault, 1,500 frames.
+- **The owner's freeze photo (Kirby with Mad Piano's power).** The report
+  (play-1012y) named a data abort reading NULL+4 with Kirby's TopN DObj in
+  two registers; the same four-register picture came back in the harness
+  from Kirby taking Piano's power and throwing his first book. Remix's
+  `kirby_fix_` takes the book's origin from part 0x3 (`fp->joints[7]`), and
+  Kirby's attributes never make that joint (setup_parts 0xEF7CFFC0 skips
+  DObjDesc 3), so the position walk read a NULL joint. The book now leaves
+  Kirby's fireball hand (part 0xD, the source's own origin) when joint 7 is
+  absent, and the parts-position seam returns for a NULL joint
+  (`gNdsCollisionNullJointCount`). Probe (play-1013h, the same match): Kirby
+  in Piano's own Kirby statuses (0x139/0x13A, since the clone fix above),
+  books thrown, 1,810 frames, no abort.
 - **"Sometimes Luigi's nose changes to his hat color especially during
   results screen."** Luigi's HIGH head reads one costume script per MObj (six)
   from an array relocData declares with one entry (0x2C40): the source reads
