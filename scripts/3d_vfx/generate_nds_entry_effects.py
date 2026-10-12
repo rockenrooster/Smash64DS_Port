@@ -1445,7 +1445,9 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
          falcon_punch_alt1_texture: Compiler | None = None,
          falcon_punch_alt2_texture: Compiler | None = None,
          yoshi_egg: Compiler | None = None,
-         p4: list[P4Root] | None = None) -> str:
+         p4: list[P4Root] | None = None,
+         texels_file: bytearray | None = None,
+         corners_file: bytearray | None = None) -> str:
     extra_groups: list[Group] = []
     extra_compilers: list[Compiler] = []
     p4 = p4 or []
@@ -1778,9 +1780,34 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
         )
         texture_payload_refs.append((texel_index, palette_index))
 
+    # P4 builds: a payload only P4-owned textures use is read at texture
+    # preparation from nitro:/p4/entry_texels.bin (raw, 4-aligned), so the
+    # eighteen contents' article texels cost no .main bytes in every scene
+    # (NDS_ENTRY_EFFECT_COMPRESSION_FILE; the row's texels is 1 + offset).
+    file_payloads: dict[int, int] = {}
+    if p4 and texels_file is not None:
+        owners = p4_texture_owners(p4, texture_keys, p4_root_first, groups)
+        shared: set[int] = set()
+        for slot, key in enumerate(texture_keys):
+            if owners[slot] == 0:
+                shared.add(texture_payload_refs[slot][0])
+        for slot, key in enumerate(texture_keys):
+            index = texture_payload_refs[slot][0]
+            if index in shared or index in file_payloads:
+                continue
+            if not texels_file:
+                texels_file += b"P4TX"
+            texels_file += b"\0" * (-len(texels_file) & 3)
+            file_payloads[index] = len(texels_file)
+            texels_file += texel_payloads[index]
+
     stored_texel_payloads: list[bytes] = []
     texel_compression: list[int] = []
-    for payload in texel_payloads:
+    for index, payload in enumerate(texel_payloads):
+        if index in file_payloads:
+            stored_texel_payloads.append(b"")
+            texel_compression.append(2)
+            continue
         packed = lz10(payload)
         if unlz10(packed) != payload:
             raise ValueError("entry texture LZ10 round-trip mismatch")
@@ -1893,6 +1920,36 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
     if uv_index_type != "u8":
         lines.append(f"#define NDS_ENTRY_EFFECT_UV_INDEX_T {uv_index_type}")
         lines.append("")
+    # P4 builds: each content's article corners are one block of the four
+    # index rows in nitro:/p4/entry_corners.bin, loaded per match for the
+    # contents in it (ndsRendererEntryP4CornersLoad); the packet keeps the
+    # original roots' rows. A content's groups are contiguous, after every
+    # original group.
+    base_corners = len(corner_position)
+    corner_blocks: dict[int, list[int]] = {}
+    if p4 and corners_file is not None:
+        for first, triangles, group, _, _ in group_rows:
+            root = group.state.root_index
+            if root < p4_root_first:
+                if first + 3 * triangles > base_corners:
+                    base_corners = first + 3 * triangles
+                continue
+            content = p4[root - p4_root_first].content_id
+            block = corner_blocks.setdefault(content, [first, first])
+            if first != block[1]:
+                raise SystemExit(f"P4 content {content}'s entry groups are not contiguous")
+            block[1] = first + 3 * triangles
+        if corner_blocks:
+            base_corners = min(b[0] for b in corner_blocks.values())
+            for first, triangles, group, _, _ in group_rows:
+                if group.state.root_index < p4_root_first and first + 3 * triangles > base_corners:
+                    raise SystemExit("an original entry group follows the P4 groups")
+    count_macro = "NDS_ENTRY_EFFECT_VERTEX_COUNT"
+    if corners_file is not None:
+        count_macro = "NDS_ENTRY_EFFECT_BASE_VERTEX_COUNT"
+        lines.append(f"#define NDS_ENTRY_EFFECT_BASE_VERTEX_COUNT {base_corners}u")
+        lines.append("")
+    uv_bytes = 1 if uv_index_type == "u8" else 2
     for name, values, index_type in (
         ("Position", corner_position, "u16"),
         ("S", corner_s, uv_index_type),
@@ -1901,12 +1958,41 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
     ):
         lines.append(
             f"static const {index_type} "
-            f"sNdsEntryEffectCorner{name}[NDS_ENTRY_EFFECT_VERTEX_COUNT] = {{"
+            f"sNdsEntryEffectCorner{name}[{count_macro}] = {{"
         )
-        for i in range(0, len(values), 24):
-            lines.append("    " + ", ".join(f"{x}u" for x in values[i:i + 24]) + ",")
+        for i in range(0, base_corners, 24):
+            lines.append("    " + ", ".join(f"{x}u" for x in values[i:min(i + 24, base_corners)]) + ",")
         lines.append("};")
         lines.append("")
+    if corner_blocks:
+        if uv_bytes != 2:
+            raise SystemExit("P4 corner blocks expect u16 texcoord indices")
+        rows = {}
+        for content, (first, end) in sorted(corner_blocks.items()):
+            if not corners_file:
+                corners_file += b"P4CR"
+            corners_file += b"\0" * (-len(corners_file) & 3)
+            rows[content] = (first, end - first, len(corners_file))
+            for values in (corner_position, corner_s, corner_t, corner_color):
+                corners_file += struct.pack(f"<{end - first}H", *values[first:end])
+        lines += [
+            "/* Each P4 content's article corners: first corner, count and the byte",
+            " * offset of its block (position, s, t and colour rows, u16 each) in",
+            " * nitro:/p4/entry_corners.bin; count 0: none. */",
+            "#define NDS_ENTRY_EFFECT_P4_CORNER_BLOCKS 1",
+            "#define NDS_ENTRY_EFFECT_P4_CONTENT_SLOTS (NDS_P4_CONTENT_MAX_ID + 1u)",
+            "typedef struct NDSEntryEffectP4CornerBlock",
+            "{",
+            "    u16 first;",
+            "    u16 count;",
+            "    u32 offset;",
+            "} NDSEntryEffectP4CornerBlock;",
+            "static const NDSEntryEffectP4CornerBlock "
+            "sNdsEntryEffectP4CornerBlocks[NDS_ENTRY_EFFECT_P4_CONTENT_SLOTS] = {",
+        ]
+        for content, (first, count, offset) in sorted(rows.items()):
+            lines.append(f"    [{content}] = {{ {first}u, {count}u, {offset}u }},")
+        lines += ["};", ""]
 
     # Only corners whose RSP cache slot was loaded under an earlier DObj root
     # need an override; the group root is the exact source default.
@@ -2004,6 +2090,8 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
     lines.append("")
 
     for slot, payload in enumerate(stored_texel_payloads):
+        if slot in file_payloads:
+            continue
         lines.extend(c_bytes(f"sNdsEntryEffectTexels{slot}", payload))
         lines.append("")
     for slot, palette in enumerate(palette_payloads):
@@ -2041,9 +2129,15 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
         palette_expr = (
             f"sNdsEntryEffectPalette{palette_index}" if palette_index >= 0 else "NULL"
         )
+        texels_expr = (
+            f"(const u8 *)(uintptr_t){file_payloads[texel_index] + 1}u, "
+            f"{len(texel_payloads[texel_index])}u"
+            if texel_index in file_payloads else
+            f"sNdsEntryEffectTexels{texel_index}, sizeof(sNdsEntryEffectTexels{texel_index})"
+        )
         lines.append(
             "    { "
-            f"sNdsEntryEffectTexels{texel_index}, sizeof(sNdsEntryEffectTexels{texel_index}), "
+            f"{texels_expr}, "
             f"{palette_expr}, {len(texture.palette)}u, "
             f"{key.upload_width}u, {key.upload_height}u, {texture.ds_format}u, "
             f"{1 if color0_transparent else 0}u, {compression}u }},"
@@ -2058,6 +2152,29 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
 # TEXID frames a P4 root row can select (Peach's turnip uses faces 3-6;
 # Dedede's Waddle Dee and Doo all nine). Ten keeps the row 28 bytes.
 P4_VARIANT_SLOTS = 10
+
+
+def p4_texture_owners(p4: list[P4Root], texture_keys: list, p4_root_first: int,
+                      groups: list) -> list[int]:
+    """Per texture, the one P4 content whose roots alone use it (its groups'
+    and TEXID frames'), else 0."""
+    key_contents: dict = {}
+    for group in groups:
+        if group.state.texture_key is None:
+            continue
+        index = group.state.root_index
+        content = p4[index - p4_root_first].content_id if index >= p4_root_first else 0
+        key_contents.setdefault(group.state.texture_key, set()).add(content)
+    for p4_root in p4:
+        if p4_root.row["texid"] is not None:
+            for compiler in [p4_root.compiler] + p4_root.variants:
+                (key,) = tuple(compiler.textures)
+                key_contents.setdefault(key, set()).add(p4_root.content_id)
+    owners = []
+    for key in texture_keys:
+        contents = key_contents.get(key, {0})
+        owners.append(next(iter(contents)) if len(contents) == 1 else 0)
+    return owners
 
 
 def emit_p4_tables(p4: list[P4Root], texture_keys: list, texture_slot: dict,
@@ -2102,20 +2219,12 @@ def emit_p4_tables(p4: list[P4Root], texture_keys: list, texture_slot: dict,
         "static const NDSEntryEffectP4Root "
         "sNdsEntryEffectP4Roots[NDS_ENTRY_EFFECT_P4_ROOT_COUNT] = {",
     ]
-    key_contents: dict = {}
-    for group in groups:
-        if group.state.texture_key is None:
-            continue
-        index = group.state.root_index
-        content = p4[index - p4_root_first].content_id if index >= p4_root_first else 0
-        key_contents.setdefault(group.state.texture_key, set()).add(content)
     for p4_root in p4:
         slots = []
         if p4_root.row["texid"] is not None:
             for compiler in [p4_root.compiler] + p4_root.variants:
                 (key,) = tuple(compiler.textures)
                 slots.append(texture_slot[key])
-                key_contents.setdefault(key, set()).add(p4_root.content_id)
         if len(slots) > P4_VARIANT_SLOTS:
             raise SystemExit(f"P4 {p4_root.row['content']} {p4_root.row['article']}: "
                              f"{len(slots)} TEXID frames, the runtime row holds "
@@ -2136,10 +2245,7 @@ def emit_p4_tables(p4: list[P4Root], texture_keys: list, texture_slot: dict,
               "/* Textures only one P4 content's roots use: prepared only when it is",
               " * in the match (0: always). */",
               "static const u8 sNdsEntryEffectTextureP4Content[NDS_ENTRY_EFFECT_TEXTURE_COUNT] = {"]
-    owners = []
-    for key in texture_keys:
-        contents = key_contents.get(key, {0})
-        owners.append(next(iter(contents)) if len(contents) == 1 else 0)
+    owners = p4_texture_owners(p4, texture_keys, p4_root_first, groups)
     for i in range(0, len(owners), 24):
         lines.append("    " + ", ".join(f"{o}u" for o in owners[i:i + 24]) + ",")
     lines += ["};", ""]
@@ -2348,6 +2454,8 @@ def main() -> None:
     if len(yoshi_egg.groups) < 1:
         raise SystemExit("Yoshi egg root 0xa860 compiled to no geometry")
     p4_roots: list[P4Root] = []
+    texels_file = bytearray()
+    corners_file = bytearray()
     if p4_paths:
         p4_rows = load_p4_rows(p4_paths, resources)
         p4_roots = compile_p4(p4_rows, resources, yoshi_egg_base + len(YOSHI_EGG_ROOTS))
@@ -2357,9 +2465,13 @@ def main() -> None:
                      kirby_cutter_weapon, samus_grapple, samus_grapple_alt,
                      falcon_kick, falcon_kick_alt, falcon_punch,
                      falcon_punch_variants[1], falcon_punch_variants[2],
-                     yoshi_egg, p4=p4_roots)
+                     yoshi_egg, p4=p4_roots,
+                     texels_file=texels_file,
+                     corners_file=corners_file if p4_out is not None else None)
     if p4_out is not None:
         p4_out.write_text(generated, encoding="ascii", newline="\n")
+        p4_out.with_name("nds_p4_entry_texels.bin").write_bytes(bytes(texels_file))
+        p4_out.with_name("nds_p4_entry_corners.bin").write_bytes(bytes(corners_file))
         p4_compilers = {id(r.compiler): r.compiler for r in p4_roots}
         print(f"wrote {p4_out}: {len(p4_roots)} P4 roots, "
               f"{sum(len(c.groups) for c in p4_compilers.values())} groups")

@@ -10,6 +10,13 @@
 
 extern sb32 ndsSyMallocWouldFit(const SYMallocRegion *bp, size_t size,
                                 u32 alignment);
+#if NDS_P4
+/* nds_p4.h, without its fighter headers in this TU. */
+extern u32 ndsP4MatchContent(s32 player);
+extern u32 ndsP4Event32Commands(u32 content);
+extern u32 ndsP4Event32MatAnims(u32 content, sb32 low_only);
+extern u32 ndsP4Event32Allowance(u32 content);
+#endif
 
 /* Outside every configuration gate on purpose: `nds_anim_fixed.h` declares it
  * and `battleship_ftanim.c` includes that header whether or not this file's
@@ -2029,16 +2036,56 @@ static u32 ndsAObjEvent32StagePart(u32 gkind)
     }
 }
 
-/* The players' entry clips plus the event32-motion margins, over `players`. */
+/* The players' entry clips plus the event32-motion margins, over `players`.
+ * A P4 content counts its own event32 animations (per fighter: each plays
+ * its copy) and, once, the entries its fighters were measured to hold in a
+ * battle of four (generate_p4_fighter.py EVENT32_LIVE: its effects', weapons'
+ * and model's scripts, which its fighters share), plus its high-detail
+ * material scripts in a battle of one or two (ndsP4ContentLowDetailOnly) --
+ * not its parent's clip and margin: its motions are FIGATREE, and four
+ * Bowsers (Yoshi's children) reserved 7,346 entries (53 KB) and used 309-650,
+ * while four Sonics hold 2,000 (2026-10-11). */
 static u32 ndsAObjEvent32RosterClips(const SCPlayerData *players)
 {
     u32 need = 0u;
     u32 i;
+#if NDS_P4
+    u32 count = 0u;
+    u32 seen = 0u;
+
+    for (i = 0u; i < GMCOMMON_PLAYERS_MAX; i++)
+    {
+        if (players[i].pkind != nFTPlayerKindNot)
+        {
+            count++;
+        }
+    }
+#endif
 
     for (i = 0u; i < GMCOMMON_PLAYERS_MAX; i++)
     {
         const SCPlayerData *player = &players[i];
 
+#if NDS_P4
+        u32 content = (player->pkind != nFTPlayerKindNot) ?
+            ndsP4MatchContent((s32)i) : 0u;
+
+        if (content != 0u)
+        {
+            need += ndsP4Event32Commands(content);
+            if ((seen & (1u << content)) == 0u)
+            {
+                seen |= 1u << content;
+                need += ndsP4Event32Allowance(content);
+                if (count < 3u)
+                {
+                    need += ndsP4Event32MatAnims(content, FALSE) -
+                            ndsP4Event32MatAnims(content, TRUE);
+                }
+            }
+            continue;
+        }
+#endif
         if ((player->pkind != nFTPlayerKindNot) &&
             (player->fkind <= nFTKindPlayableEnd))
         {

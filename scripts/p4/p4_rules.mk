@@ -109,3 +109,16 @@ $(NDS_P4_CONTENTS_HEADER) $(NDS_P4_COLANIM_INC) $(NDS_P4_KIRBY_OUT): $(NDS_BUILD
 # The later contents' routines, size-optimized as the Makefile's first
 # fourteen are (resident in every scene; they run only in their specials).
 nds_p4_piano.o nds_p4_metaknight.o nds_p4_mrgaw.o nds_p4_snake.o: CFLAGS += -Os
+
+# The P4 article textures' texels and each content's article corners:
+# generate_nds_entry_effects.py --p4 writes them beside the packet, and the
+# renderer reads them from NitroFS (the texels at texture preparation,
+# NDS_ENTRY_EFFECT_COMPRESSION_FILE; the corners per match for the contents in
+# it, ndsRendererEntryP4CornersLoad) instead of keeping 63 KB of .main data
+# every scene's heap pays for. The packet also follows its generator, which
+# writes all three.
+$(NDS_P4_ENTRY_EFFECT_INC): $(PROJECT_ROOT)/scripts/3d_vfx/generate_nds_entry_effects.py
+$(NITROFS_DIR)/p4/entry_texels.bin $(NITROFS_DIR)/p4/entry_corners.bin: $(NITROFS_DIR)/p4/entry_%.bin: 		$(NDS_P4_ENTRY_EFFECT_INC)
+	@mkdir -p $(dir $@)
+	@cp -f $(NDS_P4_GEN)/nds_p4_entry_$*.bin $@
+$(OUTPUT).nds: $(NITROFS_DIR)/p4/entry_texels.bin $(NITROFS_DIR)/p4/entry_corners.bin

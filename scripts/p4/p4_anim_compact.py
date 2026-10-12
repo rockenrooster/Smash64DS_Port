@@ -236,7 +236,7 @@ def compact_stream(d: bytes, start: int, eps: int = 0):
     keep the stream."""
     cmds, loop_target, simple = decode(d, start)
     if not simple:
-        return None
+        return _resample_stream(d, start, eps) if eps > 0 else None
     last = cmds[-1]
     if last[0] == OP_LOOP and loop_target != start:
         return None
@@ -277,6 +277,43 @@ def compact_stream(d: bytes, start: int, eps: int = 0):
         words[-1] = rel & 0xFFFF
     old_len = (last[5] - start) // 2
     return (words, lossy) if len(words) < old_len else None
+
+
+def _resample_stream(d: bytes, start: int, eps: int):
+    """A stream the exact rules cannot re-encode (cubic keys with rates:
+    every converted event32 animation, Remix's entries among them) as
+    joint-synchronised linear keys within `eps` of its exact value at every
+    frame: a payload-less step key a track at frame 0, then the _fit_joint
+    fit of one linear segment a frame. Only a stream that ends (no loop), has
+    no flag, translate-interpolation or 1611 command, and whose values never
+    depend on the previous animation's pose (simulated from two different
+    poses); None otherwise or when nothing gets smaller."""
+    cmds, _, _ = decode(d, start)
+    if cmds[-1][0] != OP_END or any(c[0] in (OP_1611, OP_SETFLAGS, 12) for c in cmds):
+        return None
+    t_end = _t_end(cmds)
+    if t_end <= 0:
+        return None
+    tracks = sorted({track for c in cmds if c[0] not in (OP_END, OP_BLOCK)
+                     for track in range(TRACKS) if c[1] & (1 << track)})
+    rows = _simulate_cmds(cmds, None, t_end + 1)
+    if rows != _simulate_cmds(cmds, None, t_end + 1, previous=-23456):
+        return None
+    keys = {}
+    for track in tracks:
+        vals = [rows[f][track] for f in range(t_end + 1)]
+        if any(v is None for v in vals):
+            return None
+        ivals = [round(v) for v in vals]
+        if any(not -0x8000 <= v <= 0x7FFF for v in ivals):
+            return None
+        keys[track] = [(0, 0, STEP, ivals[0])] + [(f, 1, LINEAR, ivals[f + 1])
+                                                 for f in range(t_end)]
+    fitted = _fit_joint(keys, eps)
+    if fitted is None:
+        return None
+    words = _encode(fitted, t_end, [OP_END << 11])
+    return (words, True) if len(words) < (cmds[-1][5] - start) // 2 else None
 
 
 def _fit_tracks(keys, eps):
@@ -405,13 +442,13 @@ def _rate_ratio(track: int) -> Fraction:
     return Fraction(1, 2)         # scale: 1/8192 over 1/4096
 
 
-def _simulate_cmds(cmds, loop_index, frames: int):
+def _simulate_cmds(cmds, loop_index, frames: int, previous: int = 12345):
     """Per-frame track values, in event16 value units, of the source parser
     at speed 1 (ftAnimParseDObjFigatree + gcPlayDObjAnimJoint), exactly.
     Rates in the commands are raw event16 rate units."""
     # base, target, kind, length offset (frame the length was 0),
     # length_invert, linear rate, rate_base, rate_target
-    state = {track: [Fraction(12345), Fraction(12345), None, 0, 0, Fraction(0),
+    state = {track: [Fraction(previous), Fraction(previous), None, 0, 0, Fraction(0),
                      Fraction(0), Fraction(0)] for track in range(TRACKS)}
     pc = 0
     wait = 0
@@ -505,7 +542,7 @@ def _simulate_cmds(cmds, loop_index, frames: int):
 def _stream_frames(d: bytes, start: int) -> int:
     cmds, _, _ = decode(d, start)
     _, t_end = _keys(cmds)
-    return 2 * t_end + 2
+    return 2 * max(t_end, _t_end(cmds)) + 2
 
 
 def compact_file(body: bytes, slots: dict[int, int], eps: int = 0):
@@ -925,6 +962,23 @@ def compact32_body(body: bytes, slots: dict[int, int], eps: int):
     if len(out) >= len(body):
         return None
     return bytes(out), {s: placed[t] for s, t in joints.items()}
+
+
+def event32_command_count(blob: bytes) -> int | None:
+    """The AObjEvent32 commands of an event32 joint-animation container, over
+    every stream its pointers start: the entries the DS normalizer's ledger
+    (battleship_sys_objanim.c) takes while one fighter plays it. None when a
+    stream does not decode."""
+    body, slots = _o2r_body(blob)
+    if body is None:
+        return None
+    total = 0
+    for start in sorted(set(slots.values())):
+        decoded = _decode32(body, start, slots)
+        if decoded is None:
+            return None
+        total += len(decoded[0])
+    return total
 
 
 def compact32_o2r(blob: bytes, eps: int = 0):

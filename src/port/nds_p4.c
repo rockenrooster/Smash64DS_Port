@@ -77,7 +77,7 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
     extern const u8 gNdsP4##T##OpenSpecialMask; \
     extern const NDSP4KindCases gNdsP4##T##KindCases; \
     extern const NDSP4KirbyInhale gNdsP4##T##KirbyInhale; \
-    extern const u8 gNdsP4##T##ComputerLongRange; \
+    extern const u8 gNdsP4##T##ComputerLongRange;     extern const u16 gNdsP4##T##Event32Commands;     extern const u16 gNdsP4##T##Event32MatAnims[2];     extern const u16 gNdsP4##T##Event32Allowance; \
     extern const u8 gNdsP4##T##ComputerLongRangeMove; \
     extern const u8 gNdsP4##T##ComputerReflect; \
     extern const NDSP4BakedRef gNdsP4##T##BakedRefs[]; \
@@ -114,7 +114,7 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
         .kind_cases = &gNdsP4##T##KindCases, \
         .kirby_inhale = &gNdsP4##T##KirbyInhale, \
         .computer_long_range = &gNdsP4##T##ComputerLongRange, \
-        .computer_long_range_move = &gNdsP4##T##ComputerLongRangeMove, \
+        .computer_long_range_move = &gNdsP4##T##ComputerLongRangeMove,         .event32_commands = &gNdsP4##T##Event32Commands,         .event32_matanims = gNdsP4##T##Event32MatAnims,         .event32_allowance = &gNdsP4##T##Event32Allowance, \
         .computer_reflect = &gNdsP4##T##ComputerReflect, \
         .baked_refs = gNdsP4##T##BakedRefs, \
         .baked_ref_count = &gNdsP4##T##BakedRefCount, \
@@ -614,6 +614,27 @@ u32 ndsP4ComputerLongRangeMove(const FTStruct *fp)
     const NDSP4Fighter *f = ndsP4Fighter(ndsP4Content(fp));
 
     return (f != NULL) ? *f->computer_long_range_move : 0u;
+}
+
+u32 ndsP4Event32Commands(u32 content)
+{
+    const NDSP4Fighter *f = ndsP4Fighter(content);
+
+    return (f != NULL) ? *f->event32_commands : 0u;
+}
+
+u32 ndsP4Event32MatAnims(u32 content, sb32 low_only)
+{
+    const NDSP4Fighter *f = ndsP4Fighter(content);
+
+    return (f != NULL) ? f->event32_matanims[(low_only != FALSE) ? 0 : 1] : 0u;
+}
+
+u32 ndsP4Event32Allowance(u32 content)
+{
+    const NDSP4Fighter *f = ndsP4Fighter(content);
+
+    return (f != NULL) ? *f->event32_allowance : 0u;
 }
 
 u32 ndsP4ComputerReflect(const FTStruct *fp)

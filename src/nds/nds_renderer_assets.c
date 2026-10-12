@@ -692,6 +692,9 @@ typedef struct NDSEntryEffectTexture
 #define NDS_ENTRY_EFFECT_TEXTURE_NONE 0xffu
 #define NDS_ENTRY_EFFECT_COMPRESSION_RAW 0u
 #define NDS_ENTRY_EFFECT_COMPRESSION_LZ10 1u
+/* P4 builds: a P4 article texture's raw texels in nitro:/p4/entry_texels.bin;
+ * texels holds 1 + the byte offset (generate_nds_entry_effects.py --p4). */
+#define NDS_ENTRY_EFFECT_COMPRESSION_FILE 2u
 
 #if NDS_P4
 /* P4 builds: the same packet with every enabled content's article roots

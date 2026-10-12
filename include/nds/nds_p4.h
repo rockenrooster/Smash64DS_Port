@@ -612,6 +612,15 @@ typedef struct NDSP4Fighter
      * users' walk and shoot issues in place of the source's two (AI.asm
      * LONG_RANGE custom_move); 0 keeps the source's. */
     const u8 *computer_long_range_move;
+    /* The event32 ledger entries one fighter of the content holds: its
+     * largest event32 animation in commands (0: none). */
+    const u16 *event32_commands;
+    /* Its model's material scripts in ledger entries, shared by its
+     * fighters: [0] low detail only, [1] both details. */
+    const u16 *event32_matanims;
+    /* Its fighters' measured ledger entries in a battle of four, its event32
+     * animations aside (generate_p4_fighter.py EVENT32_LIVE). */
+    const u16 *event32_allowance;
     /* NDS_P4_COMPUTER_REFLECT_* bits. */
     const u8 *computer_reflect;
     /* Entry-article texture pointers its native packets carry. */
@@ -957,6 +966,13 @@ const FTComputerAttack *ndsP4ComputerAttacks(const FTStruct *fp);
 u32 ndsP4ComputerLongRange(const FTStruct *fp);
 /* NDSP4Fighter.computer_long_range_move; 0 for the original cast. */
 u32 ndsP4ComputerLongRangeMove(const FTStruct *fp);
+/* NDSP4Fighter.event32_commands of a content (battleship_sys_objanim.c's
+ * ledger bound); 0 for none. */
+u32 ndsP4Event32Commands(u32 content);
+/* NDSP4Fighter.event32_matanims[low_only ? 0 : 1]; 0 for none. */
+u32 ndsP4Event32MatAnims(u32 content, sb32 low_only);
+/* NDSP4Fighter.event32_allowance; 0 for none. */
+u32 ndsP4Event32Allowance(u32 content);
 /* Owner 2026-10-08 (S15 memory): a content in a battle of three or four
  * fighters draws its low-detail model everywhere, the source's KO and pause
  * close-ups included, and its high-detail owner image is never admitted.

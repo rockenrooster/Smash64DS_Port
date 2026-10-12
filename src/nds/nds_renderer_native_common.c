@@ -5076,9 +5076,12 @@ static const NDSEntryEffectRoot *ndsRendererEntryEffectRoot(
     }
 #ifdef NDS_ENTRY_EFFECT_P4_ROOT_COUNT
     /* P4 content article roots, appended after every original root; their
-     * assets are Remix's own files, past every original id. */
+     * assets are Remix's own files, past every original id. Two contents
+     * may name one file (Marth's and Roy's entry, 0x0DA7): the root of a
+     * content in the match, whose corner block is loaded, else the first. */
     if (owner_asset_id >= NDS_ENTRY_EFFECT_P4_ASSET_MIN)
     {
+        const NDSEntryEffectRoot *first = NULL;
         u32 p;
 
         for (p = 0u; p < NDS_ENTRY_EFFECT_P4_ROOT_COUNT; p++)
@@ -5089,10 +5092,21 @@ static const NDSEntryEffectRoot *ndsRendererEntryEffectRoot(
             if ((sNdsEntryEffectP4Roots[p].asset_id == owner_asset_id) &&
                 (root->source_offset == root_offset))
             {
+#ifdef NDS_ENTRY_EFFECT_P4_CORNER_BLOCKS
+                if (ndsRendererEntryEffectP4ContentInMatch(
+                        sNdsEntryEffectP4Roots[p].content) == FALSE)
+                {
+                    if (first == NULL)
+                    {
+                        first = root;
+                    }
+                    continue;
+                }
+#endif
                 return root;
             }
         }
-        return NULL;
+        return first;
     }
 #endif
     u32 first = (owner_asset_id == 356u) ? 0u :
@@ -5178,6 +5192,108 @@ u32 ndsRendererEntryEffectNativeRootDrawCount(u32 owner_asset_id,
  * reconstruction at the native owner preserves all downstream lighting,
  * projection and GX submission code while avoiding ~10 KiB of repeated entry
  * data in ARM9 RAM. */
+/* The corner rows the root being drawn reads (ndsRendererEntryEffectCornersSelect):
+ * the packet's own for an original root, and for a P4 root its content's
+ * block, loaded per match (ndsRendererEntryP4CornersLoad) and based so the
+ * group's global corner index lands in it. The P4 rows left .main: 31 KB for
+ * the eighteen contents, which every scene's heap paid for. */
+static const u16 *sNdsEntryCornerPosition = sNdsEntryEffectCornerPosition;
+static const NDS_ENTRY_EFFECT_UV_INDEX_T *sNdsEntryCornerS = sNdsEntryEffectCornerS;
+static const NDS_ENTRY_EFFECT_UV_INDEX_T *sNdsEntryCornerT = sNdsEntryEffectCornerT;
+static const u16 *sNdsEntryCornerColor = sNdsEntryEffectCornerColor;
+
+#ifdef NDS_ENTRY_EFFECT_P4_CORNER_BLOCKS
+static const u16 *sNdsEntryP4CornerData[NDS_ENTRY_EFFECT_P4_CONTENT_SLOTS];
+static u32 sNdsEntryP4CornerScene = 0xffffffffu;
+/* A P4 root whose content's block is not loaded this scene: counted. */
+__attribute__((used)) volatile u32 gNdsEntryP4CornerMisses;
+static sb32 ndsRendererEntryEffectP4ContentInMatch(u32 content);
+#endif
+
+static s32 ndsRendererEntryEffectCornersSelect(u32 root_index)
+{
+#ifdef NDS_ENTRY_EFFECT_P4_CORNER_BLOCKS
+    if (root_index >= NDS_ENTRY_EFFECT_P4_ROOT_FIRST)
+    {
+        u32 content = sNdsEntryEffectP4Roots[root_index - NDS_ENTRY_EFFECT_P4_ROOT_FIRST].content;
+        const NDSEntryEffectP4CornerBlock *block;
+        const u16 *data;
+
+        if (content >= NDS_ENTRY_EFFECT_P4_CONTENT_SLOTS)
+        {
+            return FALSE;
+        }
+        block = &sNdsEntryEffectP4CornerBlocks[content];
+        data = sNdsEntryP4CornerData[content];
+        if (block->count != 0u)
+        {
+            if ((data == NULL) ||
+                (sNdsEntryP4CornerScene != gNdsRendererSceneTextureVramResetCount))
+            {
+                gNdsEntryP4CornerMisses++;
+                return FALSE;
+            }
+            sNdsEntryCornerPosition = data - block->first;
+            sNdsEntryCornerS = data + block->count - block->first;
+            sNdsEntryCornerT = data + 2u * block->count - block->first;
+            sNdsEntryCornerColor = data + 3u * block->count - block->first;
+            return TRUE;
+        }
+    }
+#endif
+    (void)root_index;
+    sNdsEntryCornerPosition = sNdsEntryEffectCornerPosition;
+    sNdsEntryCornerS = sNdsEntryEffectCornerS;
+    sNdsEntryCornerT = sNdsEntryEffectCornerT;
+    sNdsEntryCornerColor = sNdsEntryEffectCornerColor;
+    return TRUE;
+}
+
+#ifdef NDS_ENTRY_EFFECT_P4_CORNER_BLOCKS
+/* At battle setup, before any entry draws: the blocks of the contents in the
+ * match from nitro:/p4/entry_corners.bin into this scene's heap. A block that
+ * does not fit or read stays out; its roots then fail closed (counted). */
+static void __attribute__((noinline, cold, optimize("Os")))
+ndsRendererEntryP4CornersLoad(void)
+{
+    FILE *file = NULL;
+    u32 content;
+
+    for (content = 0u; content < NDS_ENTRY_EFFECT_P4_CONTENT_SLOTS; content++)
+    {
+        const NDSEntryEffectP4CornerBlock *block = &sNdsEntryEffectP4CornerBlocks[content];
+        u32 bytes = (u32)block->count * 8u;
+        u16 *data;
+
+        sNdsEntryP4CornerData[content] = NULL;
+        if ((block->count == 0u) ||
+            (ndsRendererEntryEffectP4ContentInMatch(content) == FALSE) ||
+            (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap, bytes, 4u) == FALSE))
+        {
+            continue;
+        }
+        if ((file == NULL) &&
+            ((file = ndsRendererHardwareFencedTextureFopen(
+                  "nitro:/p4/entry_corners.bin", "rb")) == NULL))
+        {
+            break;
+        }
+        data = syTaskmanMalloc(bytes, 4u);
+        if ((data != NULL) &&
+            (ndsRendererHardwareFencedTextureFseek(file, (long)block->offset, SEEK_SET) == 0) &&
+            (ndsRendererHardwareFencedTextureFread(data, 1u, bytes, file) == bytes))
+        {
+            sNdsEntryP4CornerData[content] = data;
+        }
+    }
+    if (file != NULL)
+    {
+        (void)ndsRendererHardwareFencedTextureFclose(file);
+    }
+    sNdsEntryP4CornerScene = gNdsRendererSceneTextureVramResetCount;
+}
+#endif
+
 static s32 ndsRendererEntryEffectVertex(u32 corner,
                                         NDSRendererInputVertex *out)
 {
@@ -5192,10 +5308,10 @@ static s32 ndsRendererEntryEffectVertex(u32 corner,
     {
         return FALSE;
     }
-    position_index = sNdsEntryEffectCornerPosition[corner];
-    s_index = sNdsEntryEffectCornerS[corner];
-    t_index = sNdsEntryEffectCornerT[corner];
-    color_index = sNdsEntryEffectCornerColor[corner];
+    position_index = sNdsEntryCornerPosition[corner];
+    s_index = sNdsEntryCornerS[corner];
+    t_index = sNdsEntryCornerT[corner];
+    color_index = sNdsEntryCornerColor[corner];
     if ((position_index >= NDS_ENTRY_EFFECT_POSITION_COUNT) ||
         (s_index >= NDS_ENTRY_EFFECT_S_COUNT) ||
         (t_index >= NDS_ENTRY_EFFECT_T_COUNT) ||
@@ -5249,15 +5365,15 @@ static inline __attribute__((always_inline)) void
 ndsRendererEntryEffectVertexProven(u32 corner, NDSRendererInputVertex *out)
 {
     const NDSEntryEffectPosition *position =
-        &sNdsEntryEffectPositions[sNdsEntryEffectCornerPosition[corner]];
+        &sNdsEntryEffectPositions[sNdsEntryCornerPosition[corner]];
     const NDSEntryEffectColor *color =
-        &sNdsEntryEffectColors[sNdsEntryEffectCornerColor[corner]];
+        &sNdsEntryEffectColors[sNdsEntryCornerColor[corner]];
 
     out->x = position->x;
     out->y = position->y;
     out->z = position->z;
-    out->s = sNdsEntryEffectS[sNdsEntryEffectCornerS[corner]];
-    out->t = sNdsEntryEffectT[sNdsEntryEffectCornerT[corner]];
+    out->s = sNdsEntryEffectS[sNdsEntryCornerS[corner]];
+    out->t = sNdsEntryEffectT[sNdsEntryCornerT[corner]];
     out->r = color->r;
     out->g = color->g;
     out->b = color->b;
@@ -6195,7 +6311,8 @@ s32 ndsRendererSubmitNativeEntryEffect(
         NDS_ENTRY_EFFECT_REJECT();
     }
     root_index = (u32)(root - &sNdsEntryEffectRoots[0]);
-    if (root_index >= NDS_ENTRY_EFFECT_ROOT_COUNT)
+    if ((root_index >= NDS_ENTRY_EFFECT_ROOT_COUNT) ||
+        (ndsRendererEntryEffectCornersSelect(root_index) == FALSE))
     {
         NDS_ENTRY_EFFECT_REJECT();
     }
@@ -6325,19 +6442,19 @@ s32 ndsRendererSubmitNativeEntryEffect(
         {
             u32 vertex_index = (u32)group->first_vertex + corner;
 
-            if ((sNdsEntryEffectCornerPosition[vertex_index] >=
+            if ((sNdsEntryCornerPosition[vertex_index] >=
                  NDS_ENTRY_EFFECT_POSITION_COUNT) ||
-                (sNdsEntryEffectCornerS[vertex_index] >=
+                (sNdsEntryCornerS[vertex_index] >=
                  NDS_ENTRY_EFFECT_S_COUNT) ||
-                (sNdsEntryEffectCornerT[vertex_index] >=
+                (sNdsEntryCornerT[vertex_index] >=
                  NDS_ENTRY_EFFECT_T_COUNT) ||
-                (sNdsEntryEffectCornerColor[vertex_index] >=
+                (sNdsEntryCornerColor[vertex_index] >=
                  NDS_ENTRY_EFFECT_COLOR_COUNT))
             {
                 NDS_ENTRY_EFFECT_REJECT();
             }
             if (ndsRendererEntryEffectPositionFits(&sNdsEntryEffectPositions[
-                    sNdsEntryEffectCornerPosition[vertex_index]]) == 0u)
+                    sNdsEntryCornerPosition[vertex_index]]) == 0u)
             {
                 coords_fit = FALSE;
             }
@@ -7972,6 +8089,9 @@ ndsRendererPrepareEntryEffectTextureSet(u32 skip_startup)
         }
         gNdsEntryEffectNativeTexturePrepareCount++;
     }
+#if NDS_P4
+    ndsRendererEntryTexelsClose();
+#endif
     if (ndsRendererPrepareEntryKoPalettes() == FALSE)
     {
         ok = FALSE;
@@ -7984,6 +8104,9 @@ s32 ndsRendererHardwarePrepareEntryEffectTextures(void)
 {
 #if NDS_RENDERER_HW_TRIANGLES && \
     (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#ifdef NDS_ENTRY_EFFECT_P4_CORNER_BLOCKS
+    ndsRendererEntryP4CornersLoad();
+#endif
     return ndsRendererPrepareEntryEffectTextureSet(0u);
 #else
     return FALSE;
@@ -8082,10 +8205,10 @@ ndsRendererEntryEffectFastCornerLoop(u32 first, u32 count, u32 lit,
                                      u32 textured)
 {
     const u32 shift = 12u - NDS_RENDERER_HW_WORLD_UNIT_SHIFT;
-    const u16 *position_index = &sNdsEntryEffectCornerPosition[first];
-    const u16 *color_index = &sNdsEntryEffectCornerColor[first];
-    const NDS_ENTRY_EFFECT_UV_INDEX_T *s_index = &sNdsEntryEffectCornerS[first];
-    const NDS_ENTRY_EFFECT_UV_INDEX_T *t_index = &sNdsEntryEffectCornerT[first];
+    const u16 *position_index = &sNdsEntryCornerPosition[first];
+    const u16 *color_index = &sNdsEntryCornerColor[first];
+    const NDS_ENTRY_EFFECT_UV_INDEX_T *s_index = &sNdsEntryCornerS[first];
+    const NDS_ENTRY_EFFECT_UV_INDEX_T *t_index = &sNdsEntryCornerT[first];
     const u16 *end = position_index + count;
 
     while (position_index != end)

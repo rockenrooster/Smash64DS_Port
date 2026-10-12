@@ -556,8 +556,12 @@ OWN_SPECIAL_FILES = {
 }
 
 # P4 S6: data a content's ported routines read from Remix's own code segment
-# (bass symbol, bytes), emitted as u32 words (big-endian in the ROM, so an
-# animation track's floats keep their bits): g<Title><Name>[].
+# (bass symbol, bytes[, "track"]), emitted as u32 words (big-endian in the
+# ROM, so an animation track's floats keep their bits): g<Title><Name>[]. A
+# "track" is a DObj's AObjEvent32 script, emitted in the native layout
+# (event32_native_track): no loaded file holds it, so the normalizer's ledger
+# refuses it (reason 2: the dig effect played no animation); the routine
+# attaches it as it is (ndsBaseGcAddDObjAnimJoint, as the guard poses do).
 RAM_DATA = {
     "crash": (
         # CrashNSP.spin_gfx_table: prim and env colours of the spin's two
@@ -566,9 +570,9 @@ RAM_DATA = {
         # CrashNSP.kirby_spin_gfx_table: Kirby's copy, per Kirby costume.
         ("KirbySpinColors", "CrashNSP.kirby_spin_gfx_table", 0x70),
         # CrashDSP's dig effect animation tracks (AObjEvent32 on joint 1).
-        ("DigTurnTrack", "CrashDSP.track_dig_turn", 0x20),
-        ("DigWaitTrack", "CrashDSP.track_dig_wait", 0x10),
-        ("DigEndTrack", "CrashDSP.track_dig_end", 0x8C),
+        ("DigTurnTrack", "CrashDSP.track_dig_turn", 0x20, "track"),
+        ("DigWaitTrack", "CrashDSP.track_dig_wait", 0x10, "track"),
+        ("DigEndTrack", "CrashDSP.track_dig_end", 0x8C, "track"),
     ),
 }
 
@@ -601,6 +605,43 @@ UNREAD_SPECIAL_FILES = {
 # whole into a special-file slot no code of the content or its parent reads.
 # EXTRA's MRGAW: judge 7's Dango (items/Dango.asm FILE_OFFSET 0x1010; about
 # 1 KB of 0xA96) in slot 4 (Mario has no special file 4).
+# The event32 normalizer's ledger entries a content's fighters hold alive at
+# once (battleship_sys_objanim.c) beside their event32 entry animations,
+# measured: the live high-water of four of its CPUs on Peach's Castle over
+# 1,500 frames on the lab ROM with the ledger forced to 4,095 entries
+# (gNdsLabAObjEvent32CapacityOverride), 2026-10-11, less the four entries'
+# commands at that time (Meta Knight's 2,771 less 4 x 650). Its effects',
+# weapons' and items' scripts as well as its model's material scripts
+# (Sonic's 2,039 against 445 of material scripts), the stage's share on
+# Castle included. A content not measured fails a shipping build; a lab
+# build takes EVENT32_SHARED_UNMEASURED.
+EVENT32_SHARED = {
+    "falco": 1630,
+    "ganondorf": 901,
+    "wolf": 593,
+    "bowser": 650,
+    "marth": 471,
+    "roy": 552,
+    "wario": 716,
+    "peach": 514,
+    "crash": 1004,
+    "lanky": 866,
+    "sheik": 663,
+    "banjo": 842,
+    "sonic": 2039,
+    "dedede": 580,
+    "piano": 391,
+    "metaknight": 171,
+    "mrgaw": 750,
+    "snake": 558,
+}
+EVENT32_SHARED_UNMEASURED = 2048
+# Entry animations (the entry action statuses' motions) fit within this many
+# units: no hitbox runs during an entry, and 8 units stay under a degree of
+# rotation and two units of translation. Meta Knight's event32 entries 22.7
+# -> 18.2 KB, 650 -> 518 ledger commands each.
+ENTRY_ANIM_EPS = 8
+
 SUBSET_FILES = {
     "mrgaw": ({"name": "dango", "slot": 4, "attributes": (0xFB, 0x1010)},),
 }
@@ -1159,6 +1200,136 @@ def item_subset_file(rom: R.Rom, file_id: int, attr_file: int, attr_off: int) ->
                         "runs": [[hex(lo), hex(hi), hex(new)] for lo, hi, new in moved]}
 
 
+# battleship_sys_objanim.c's normalizer: payload words after an AObjEvent32
+# command by opcode (a MObj's script), the flags' set bits where it names
+# none; 1 and 14 (Jump, SetAnim) branch through their one word.
+EVENT32_FIXED_WORDS = {2: 0, 12: 0, 13: 1, 15: 0, 16: 0, 23: 2}
+EVENT32_FLAG_WORDS = {3, 4, 7, 8, 9, 10, 11, 17, 18, 19, 20, 21}
+
+
+def event32_native_track(words: tuple, what: str) -> list:
+    """A DObj's AObjEvent32 script with each command word in the ARM GCC
+    bitfield layout (battleship_sys_objanim.c ndsAObjEvent32NativeWord), its
+    value words as they are; a branch names an address and is refused."""
+    out = list(words)
+    i = 0
+    while True:
+        if i >= len(out):
+            raise GenError(f"{what}: the track runs past its {len(out)} words")
+        w = out[i]
+        op, flags = w >> 25, (w >> 15) & 0x3FF
+        out[i] = op | (flags << 7) | ((w & 0x7FFF) << 17)
+        if op == 0:
+            return out
+        if op in (2, 12):
+            n = 0
+        elif op in (3, 4, 7, 8, 9, 10, 11):
+            n = bin(flags).count("1")
+        elif op in (5, 6):
+            n = 2 * bin(flags).count("1")
+        else:
+            raise GenError(f"{what}+{4 * i:#x}: AObjEvent32 opcode {op} in a native track")
+        i += 1 + n
+
+
+def event32_stream_commands(rom: R.Rom, fid: int, start: int, seen: set) -> int:
+    """The commands of an AObjEvent32 stream the normalizer's ledger takes,
+    each once across calls (`seen`: two fighters of a content share their
+    model file's scripts)."""
+    n = 0
+    work = [(fid, start)]
+    while work:
+        fid, o = work.pop()
+        data = rom.file_bytes(fid)
+        while (fid, o) not in seen:
+            seen.add((fid, o))
+            n += 1
+            w = int.from_bytes(data[o:o + 4], "big")
+            op, flags = w >> 25, (w >> 15) & 0x3FF
+            if op == 0:
+                break
+            if op in (1, 14):
+                t = rom.reloc_slots(fid).get(o + 4)
+                if t is not None:
+                    work.append((fid, t[1]) if t[0] == "intern" else (t[1], t[2]))
+                break
+            if op in EVENT32_FIXED_WORDS:
+                words = EVENT32_FIXED_WORDS[op]
+            elif op in EVENT32_FLAG_WORDS:
+                words = bin(flags).count("1")
+            elif op in (5, 6):
+                words = 2 * bin(flags).count("1")
+            elif op == 22:
+                words = bin(flags & 0x1F).count("1")
+            else:
+                raise GenError(f"{fid:#x}+{o:#x}: AObjEvent32 opcode {op} the normalizer refuses")
+            o += 4 * (1 + words)
+    return n
+
+
+def matanim_commands(rom: R.Rom, main_id: int, o_attr: int, details=(0, 1)) -> int:
+    """The ledger entries a content's model material animations take: every
+    model part's costume and main scripts (the `details` given, every part a
+    joint's FTModelPartDesc holds), the access part's and the common parts',
+    per MObjSub (lbCommonAddMObjForFighterPartsDObj), each script once."""
+    import ft_layout  # noqa: E402
+
+    lay = ft_layout.layout()
+    seen: set = set()
+    total = 0
+
+    def ref(fid: int, off: int):
+        s = rom.reloc_slots(fid).get(off)
+        if s is None:
+            return None
+        return (fid, s[1]) if s[0] == "intern" else (s[1], s[2])
+
+    def count(subs_ref, arrays) -> int:
+        nsubs = 0
+        if subs_ref is not None:
+            while ref(subs_ref[0], subs_ref[1] + 4 * nsubs) is not None:
+                nsubs += 1
+        n = 0
+        for arr in arrays:
+            if arr is None:
+                continue
+            for k in range(nsubs):
+                st = ref(arr[0], arr[1] + 4 * k)
+                if st is not None:
+                    n += event32_stream_commands(rom, st[0], st[1], seen)
+        return n
+
+    container = ref(main_id, o_attr + lay["FTAttributes.modelparts_container"])
+    if container is not None:
+        rows = {}
+        for i in range(37 - 4):
+            r = ref(container[0], container[1] + 4 * i)
+            if r is not None:
+                rows[i] = r
+        starts = sorted({r[1] for r in rows.values() if r[0] == container[0]} | {container[1]})
+        for fid, base in rows.values():
+            bound = (min([s for s in starts if s > base], default=len(rom.file_bytes(fid)))
+                     if fid == container[0] else base + 2 * 20)
+            for at in range(base, bound - 19, 20):
+                if ((at - base) // 20) % 2 in details:
+                    total += count(ref(fid, at + 4), (ref(fid, at + 8), ref(fid, at + 12)))
+    access = ref(main_id, o_attr + lay["FTAttributes.accesspart"])
+    if access is not None:
+        total += count(ref(access[0], access[1] + 8), (ref(access[0], access[1] + 12),))
+    common = ref(main_id, o_attr + lay["FTAttributes.commonparts_container"])
+    if common is not None:
+        for detail in details:
+            at = common[1] + detail * 16
+            subs = ref(common[0], at + 4)
+            costume = ref(common[0], at + 8)
+            if subs is None:
+                continue
+            for j in range(37 - 4):
+                total += count(ref(subs[0], subs[1] + 4 * j),
+                               (ref(costume[0], costume[1] + 4 * j) if costume else None,))
+    return total
+
+
 def results_win_singular(staging: Path, remix_name: str) -> bool:
     """resultsscreen.asm get_str_wins_lx_: the fighters whose "WINS!" is
     "WIN!" by id (Banjo & Kazooie): an `lli t6, Character.id.<X>` whose
@@ -1581,20 +1752,25 @@ def main() -> int:
                        for t in rom.reloc_slots(fid).values() if t[0] == "extern"}
     converted32: set[int] = set()
     anim_sizes: dict[int, int] = {}
+    entry_statuses = struct.unpack(">ii", bytes.fromhex(resolved["kind_tables"]["entry_action"]["value"]))
+    motion_of = {row["status_id"]: row["motion_id"] for row in resolved["statuses"]}
+    anim_of = {m["index"]: m["anim_file_id"] for m in resolved["motions"]}
+    entry_anims = {anim_of.get(motion_of.get(sid)) for sid in entry_statuses} - {None, 0}
     for a, flags in sorted(anim_files.items()):
         if a in named_by_others:
             continue
         path = o2r_out / f"{a:04x}"
         blob = path.read_bytes()
+        eps = ENTRY_ANIM_EPS if a in entry_anims else ANIM_EPS
         if flags & 0x8:
-            new = p4_anim_compact.convert32_o2r(blob, ANIM_EPS)
+            new = p4_anim_compact.convert32_o2r(blob, eps)
             if new is not None:
                 converted32.add(a)
             else:
                 # A value event16 cannot hold: refit, kept event32.
-                new = p4_anim_compact.compact32_o2r(blob, ANIM_EPS)
+                new = p4_anim_compact.compact32_o2r(blob, eps)
         else:
-            new = p4_anim_compact.compact_o2r(blob, ANIM_EPS)
+            new = p4_anim_compact.compact_o2r(blob, eps)
         if new is None:
             continue
         path.write_bytes(new)
@@ -1898,6 +2074,29 @@ def main() -> int:
     anims = [(a, bool(f & 0x8)) for a, f in sorted(anim_flags.items())]
     if any(a >= 0x8000 for a, _ in anims):
         raise GenError("animation id does not fit the 15-bit table encoding")
+    # The event32 normalizer's ledger (battleship_sys_objanim.c) holds each
+    # fighter's own copy of its event32 entry animation (every fighter enters
+    # at once): its largest in commands (Meta Knight's 518), not its parent's
+    # entry clip and motion margin (a Yoshi child reserved 1,496 entries and
+    # used none). Its other event32 animations are in EVENT32_SHARED.
+    event32_commands = 0
+    for a, ev in anims:
+        if ev and a in entry_anims:
+            n = p4_anim_compact.event32_command_count((o2r_out / f"{a:04x}").read_bytes())
+            if n is None:
+                raise GenError(f"event32 animation {a:#x} does not decode")
+            event32_commands = max(event32_commands, n)
+    # Its model's material scripts, shared by every fighter of the content:
+    # low detail only (a battle of three or four fighters), and all.
+    event32_matanims = (matanim_commands(rom, file_ids[0], desc["o_attributes"], (1,)),
+                        matanim_commands(rom, file_ids[0], desc["o_attributes"]))
+    # Its fighters' measured shared entries, never under its material scripts.
+    shared = EVENT32_SHARED.get(name)
+    if shared is None:
+        if not args.lab_fallback:
+            raise GenError(f"{name}: no EVENT32_SHARED measurement (scratchpad e32census.ps1)")
+        shared = EVENT32_SHARED_UNMEASURED
+    event32_allowance = max(shared, event32_matanims[0])
 
     # The Results name's '&' (Banjo & Kazooie): Remix's glyph as the
     # content's second synthesized file, normalized with its sprites.
@@ -1986,6 +2185,12 @@ def main() -> int:
               f"const u16 g{ident}Anims[] = {{",
               "    " + ", ".join(f"{a | (0x8000 if ev else 0):#06x}" for a, ev in anims) + ",",
               "};", f"const u32 g{ident}AnimCount = {len(anims)};", "",
+              "/* The event32 ledger entries each of its fighters holds (its largest event32 entry animation). */",
+              f"const u16 g{ident}Event32Commands = {event32_commands};",
+              "/* Its model's material-script ledger entries, shared by its fighters: low detail, all. */",
+              f"const u16 g{ident}Event32MatAnims[2] = {{ {event32_matanims[0]}u, {event32_matanims[1]}u }};",
+              "/* Its fighters' measured shared ledger entries (EVENT32_SHARED). */",
+              f"const u16 g{ident}Event32Allowance = {event32_allowance};", "",
               "/* FTFileSize: main closure, largest main-motion and menu-motion figatree. */",
               f"const FTFileSize g{ident}FileSize = {{ {sizes[0]}u, {sizes[1]}u, {sizes[2]}u }};", "",
               "/* HUD: the stock icon as one 8x8 OBJ4 cell and its costume LUTs",
@@ -2060,10 +2265,12 @@ def main() -> int:
               f"const u8 g{ident}OpenSpecialMask = {open_special_mask:#04x};", "",
               "/* Remix code-segment data the ported routines read (RAM_DATA). */"]
     ram_sym = R.load_symbols(args.staging / "logfile.log")[0]
-    for data_name, symbol, size in RAM_DATA.get(name, ()):
+    for data_name, symbol, size, *kind in RAM_DATA.get(name, ()):
         if symbol not in ram_sym or size % 4:
             raise GenError(f"RAM data {symbol}: no such symbol or not word-sized")
         words = struct.unpack(f">{size // 4}I", rom.read_ram(ram_sym[symbol], size))
+        if kind == ["track"]:
+            words = event32_native_track(words, symbol)
         lines.append(f"const u32 g{ident}{data_name}[{len(words)}] = {{ "
                      + ", ".join(f"{w:#010x}u" for w in words) + " };")
     lines += ["",

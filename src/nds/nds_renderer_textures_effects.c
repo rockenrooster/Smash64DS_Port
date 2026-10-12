@@ -3721,6 +3721,41 @@ static s32 ndsRendererRebirthHaloTextureFill(u8 *pixels, u32 bytes,
 }
 #endif
 
+#if NDS_P4
+/* The P4 article textures' texels are read only here, at preparation, so
+ * they live in NitroFS rather than as .main data every scene's heap would pay
+ * for (32 KB for the eighteen contents). One handle per preparation pass;
+ * ndsRendererEntryTexelsClose ends it. */
+static FILE *sNdsEntryTexelsFile;
+
+static s32 ndsRendererEntryTexelsRead(u32 offset, u8 *out, u32 bytes)
+{
+    if (sNdsEntryTexelsFile == NULL)
+    {
+        sNdsEntryTexelsFile = ndsRendererHardwareFencedTextureFopen(
+            "nitro:/p4/entry_texels.bin", "rb");
+        if (sNdsEntryTexelsFile == NULL)
+        {
+            return FALSE;
+        }
+    }
+    return ((ndsRendererHardwareFencedTextureFseek(sNdsEntryTexelsFile,
+                                                   (long)offset, SEEK_SET) == 0) &&
+            (ndsRendererHardwareFencedTextureFread(out, 1u, bytes,
+                                                   sNdsEntryTexelsFile) == bytes)) ?
+        TRUE : FALSE;
+}
+
+static void ndsRendererEntryTexelsClose(void)
+{
+    if (sNdsEntryTexelsFile != NULL)
+    {
+        (void)ndsRendererHardwareFencedTextureFclose(sNdsEntryTexelsFile);
+        sNdsEntryTexelsFile = NULL;
+    }
+}
+#endif
+
 static s32 ndsRendererEntryEffectTextureFill(u8 *pixels, u32 bytes,
                                               void *user_data)
 {
@@ -3782,6 +3817,18 @@ static s32 ndsRendererEntryEffectTextureFill(u8 *pixels, u32 bytes,
         }
         swiDecompressLZSSWram(texture->texels, pixels);
     }
+#if NDS_P4
+    else if (texture->compression == NDS_ENTRY_EFFECT_COMPRESSION_FILE)
+    {
+        if ((texture->texel_bytes != decoded_bytes) ||
+            (ndsRendererEntryTexelsRead(
+                 (u32)((uintptr_t)texture->texels - 1u), pixels,
+                 decoded_bytes) == FALSE))
+        {
+            return FALSE;
+        }
+    }
+#endif
     else
     {
         return FALSE;

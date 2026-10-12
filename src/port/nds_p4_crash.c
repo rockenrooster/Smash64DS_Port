@@ -203,9 +203,12 @@ static f32 ndsP4CrashSteer(f32 vel, f32 target, f32 accel, f32 max)
 extern void *gNdsP4CrashSpecial2;
 extern const u32 gNdsP4CrashSpinColors[28];
 extern const u32 gNdsP4CrashKirbySpinColors[28];
+/* Generated in the native AObjEvent32 layout (RAM_DATA "track"). */
 extern const u32 gNdsP4CrashDigTurnTrack[8];
 extern const u32 gNdsP4CrashDigWaitTrack[4];
 extern const u32 gNdsP4CrashDigEndTrack[35];
+extern void ndsBaseGcAddDObjAnimJoint(DObj *dobj, AObjEvent32 *anim_joint,
+                                      f32 anim_frame);
 void efManagerHaveStructProcUpdate(GObj *effect_gobj);
 void gcDrawDObjTreeDLLinksForGObj(GObj *gobj);
 f32 ftKirbySpecialLwGetGroundAxisYaw(FTStruct *fp);
@@ -364,14 +367,17 @@ static GObj *ndsP4CrashMakeDigGfx(GObj *fighter_gobj)
     return effect_gobj;
 }
 
-/* gcAddDObjAnimJoint on the dig effect's joint 1. */
+/* gcAddDObjAnimJoint on the dig effect's joint 1. The tracks are native
+ * already and no file holds them (the normalizer refused them), so they
+ * attach as they are. */
 static void ndsP4CrashDigTrack(GObj *effect_gobj, const u32 *track)
 {
     DObj *root = (effect_gobj != NULL) ? DObjGetStruct(effect_gobj) : NULL;
 
     if ((root != NULL) && (root->child != NULL))
     {
-        gcAddDObjAnimJoint(root->child, (AObjEvent32 *)(uintptr_t)track, 0.0F);
+        ndsBaseGcAddDObjAnimJoint(root->child,
+                                  (AObjEvent32 *)(uintptr_t)track, 0.0F);
     }
 }
 
