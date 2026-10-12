@@ -13407,6 +13407,11 @@ static NDSRendererHardwareTextureKey *sNdsFtrAdmitKeyProbe;
 #define NDS_FTR_CARVE_LIVE 0
 #endif
 
+/* The stage select's preview (battleship_mnmaps.c) points this at its
+ * low-pass around its prepares, whose uploads are all its own; NULL
+ * everywhere else. */
+void (*gNdsRendererTexturePrefilter)(u16 *texels, u32 width, u32 height);
+
 static s32 ndsRendererHardwareResolveOrBindTexture(
     NDSRendererStats *stats,
     const NDSRendererConfig *config,
@@ -14789,6 +14794,18 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
         ndsRendererHardwareReplicateClampPadding(
             sNdsRendererHardwareTextureScratch, width, height,
             upload_width, upload_height, render_tile->cms, render_tile->cmt);
+    }
+    /* The stage select's preview low-passes its uploads (see
+     * gNdsRendererTexturePrefilter): direct-colour words only, so not the
+     * coverage encodings, TEXEL1's images or the CI4 direct rows. */
+    if ((gNdsRendererTexturePrefilter != NULL) &&
+        (graded_coverage == FALSE) && (intensity_coverage == FALSE) &&
+        (blendpe_coverage == FALSE) && (use_texel1 == FALSE) &&
+        (use_texel1_ci4_direct == FALSE) && (fraction_entry == NULL) &&
+        (upload_buffer == sNdsRendererHardwareTextureScratch))
+    {
+        gNdsRendererTexturePrefilter(sNdsRendererHardwareTextureScratch,
+                                     upload_width, upload_height);
     }
     /* Preserve the canonical lane-observation totals while paying one volatile
      * update per converted texture instead of one per texel. */

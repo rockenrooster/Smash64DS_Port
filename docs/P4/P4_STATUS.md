@@ -1984,6 +1984,39 @@ Owner playtest of the first build, two more:
   stays their own coverage, so their edges match BG2 where no model is
   behind them.
 
+The owner's next pass, three more:
+
+- **The bob.** mnMapsPreviewCameraThreadUpdate moves the camera's target
+  +/-40 units over three seconds (+/-1.5 pixels on the N64, measured on
+  mupen64plus; +/-1.2 on the DS). The preview never advanced the
+  renderer's source-frame epoch, so the frame camera cache kept the first
+  draw's camera for the whole visit: two captures 90 tics apart were the
+  same image. The preview advances it each tic as the character select's
+  does.
+- **Saffron's speckle.** The preview draws a stage at a fraction of its
+  battle size and the DS samples the nearest texel where the N64's
+  bilinear tap averaged four: Saffron's window textures broke up. Each
+  preview upload is low-passed once in the resolver's scratch (each texel
+  the mean of its 2x2 block over the opaque ones; three 5-bit lanes added
+  in one word), through a hook the preview sets around its prepares
+  (`gNdsRendererTexturePrefilter`); battle never samples them, the preview
+  releases its uploads. The slowest warming draw is 2.36M ticks (1.87M
+  without the filter; a first 3x3 version cost 6.2M).
+- **A CPU gate drew four fighters.** `osGetTime` returned `cpuGetTiming`,
+  which is Calico's TIMER2 count times 64: its low six bits are always
+  zero, and the source's time-seeded picks read `osGetTime() & 0xFF`, so a
+  new CPU drew Kirby, Samus, MRGAW or Wario and the stage select's RANDOM
+  four stages (the title's colours and the opening's fighters too). It
+  returns the count itself now; every reader in this build is one of those
+  picks.
+
+The owner also saw the character select's previews missing after a return
+from the stage select, sometimes. The first preview build never released
+its warm textures, which eviction skips, so a few stages browsed left the
+VRAM full for the select's fighters; the release above covers it. Eight
+probes returning from the stage select (at rest, mid-load, after browsing
+all ten, four contents and the cast) showed all four previews.
+
 ## The character select's Selected pose (owner bug, 2026-10-12)
 
 Mad Piano played Mario's Selected pose (Win3). Remix keeps each

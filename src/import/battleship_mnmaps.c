@@ -349,6 +349,8 @@ extern u32 cpuGetTiming(void);
 extern s32 ndsRendererAdapterNativeStagePreloadAsset(u32 index);
 extern size_t ndsRelocExternTreeUnloadedSize(const void *file_id);
 extern void ndsRendererHardwareReleaseStageWarmTextures(void);
+extern void (*gNdsRendererTexturePrefilter)(u16 *texels, u32 width,
+                                            u32 height);
 extern volatile u32 gNdsNativeStageWarmUploadLimit;
 extern void ndsRendererAdapterSetStagePreviewLayers(void *const *layers);
 extern volatile u32 gNdsRendererAdapterStagePreviewArmed;
@@ -951,6 +953,104 @@ void ndsMNMapsPreviewRequest(s32 gkind)
     }
 }
 
+/* 2026-10-12, owner BUGS.md: "Saffron City looks wrong in SSS, like
+ * corrupted geometry". The preview draws a stage at a fraction of its battle
+ * size, and the DS samples a texture at its nearest texel where the N64's
+ * bilinear tap averaged a neighbourhood: Saffron's window textures broke up
+ * into speckle. Each preview upload is low-passed once, in the resolver's
+ * scratch before it packs: each texel becomes the mean of its 2x2 block
+ * (itself, right, below, below-right; the last row and column clamp), the
+ * colour over the block's opaque texels, opaque when at least two are. In
+ * place, row by row: a texel's block is read before it is written. The three
+ * channels add in one word, 5-bit lanes spread apart (red 0-6, blue 10-16,
+ * green 21-27 hold a sum of four). Battle never samples these: the preview
+ * releases its uploads when it drops a stage. */
+#define NDS_MAPS_PREFILTER_SPREAD(t) (((t) & 0x7c1fu) | (((t) & 0x03e0u) << 16))
+#define NDS_MAPS_PREFILTER_PACK(v) \
+    ((u16)(0x8000u | ((v) & 0x7c1fu) | (((v) >> 16) & 0x03e0u)))
+static void ndsMNMapsPreviewPrefilter(u16 *texels, u32 width, u32 height)
+{
+    u32 x;
+    u32 y;
+
+    if ((width < 2u) || (height < 2u))
+    {
+        return;
+    }
+    for (y = 0u; y < height; y++)
+    {
+        u16 *row = &texels[y * width];
+        const u16 *below = ((y + 1u) < height) ? (row + width) : row;
+
+        for (x = 0u; x < width; x++)
+        {
+            const u32 xr = ((x + 1u) < width) ? (x + 1u) : x;
+            const u32 a = row[x];
+            const u32 b = row[xr];
+            const u32 c = below[x];
+            const u32 d = below[xr];
+
+            if ((a & b & c & d & 0x8000u) != 0u)
+            {
+                const u32 sum = NDS_MAPS_PREFILTER_SPREAD(a) +
+                    NDS_MAPS_PREFILTER_SPREAD(b) +
+                    NDS_MAPS_PREFILTER_SPREAD(c) +
+                    NDS_MAPS_PREFILTER_SPREAD(d) + 0x00400802u;
+
+                row[x] = NDS_MAPS_PREFILTER_PACK(sum >> 2);
+            }
+            else
+            {
+                u32 sum = 0u;
+                u32 count = 0u;
+
+                if ((a & 0x8000u) != 0u)
+                {
+                    sum += NDS_MAPS_PREFILTER_SPREAD(a);
+                    count++;
+                }
+                if ((b & 0x8000u) != 0u)
+                {
+                    sum += NDS_MAPS_PREFILTER_SPREAD(b);
+                    count++;
+                }
+                if ((c & 0x8000u) != 0u)
+                {
+                    sum += NDS_MAPS_PREFILTER_SPREAD(c);
+                    count++;
+                }
+                if ((d & 0x8000u) != 0u)
+                {
+                    sum += NDS_MAPS_PREFILTER_SPREAD(d);
+                    count++;
+                }
+                if (count == 2u)
+                {
+                    row[x] = NDS_MAPS_PREFILTER_PACK((sum + 0x00200401u) >> 1);
+                }
+                else if (count == 3u)
+                {
+                    /* (x + 1) * 21846 >> 16: x / 3 rounded, x <= 93. */
+                    const u32 red = ((((sum & 0x7fu) + 1u) * 21846u) >> 16);
+                    const u32 blue =
+                        (((((sum >> 10) & 0x7fu) + 1u) * 21846u) >> 16);
+                    const u32 green =
+                        (((((sum >> 21) & 0x7fu) + 1u) * 21846u) >> 16);
+
+                    row[x] = (u16)(0x8000u | red | (green << 5) |
+                                   (blue << 10));
+                }
+                else
+                {
+                    row[x] = (u16)(a & 0x7fffu);
+                }
+            }
+        }
+    }
+}
+#undef NDS_MAPS_PREFILTER_SPREAD
+#undef NDS_MAPS_PREFILTER_PACK
+
 /* The 3D layer shows a model only once a draw of it was whole. */
 static void ndsMNMapsPreviewShow(sb32 visible)
 {
@@ -970,6 +1070,12 @@ void ndsMNMapsPreviewFrame(void)
     {
         return;
     }
+    /* The renderer's source-frame epoch, as the character select's preview
+     * advances it (ndsMNPlayersVSPreviewFrame): per-frame caches key on it,
+     * and without it the camera cache kept the first draw's camera for the
+     * whole visit -- the camera's bob (mnmaps.c:1319) never reached the
+     * screen. */
+    gNdsRendererProfileFrameCount++;
     if (sNdsMapsPreviewWanted != sNdsMapsPreviewShown)
     {
         /* The panel already shows the new stage's art: the old model goes
@@ -1007,8 +1113,10 @@ void ndsMNMapsPreviewFrame(void)
     syTaskmanResetGraphicsHeap();
     func_80004AB0();
     gNdsNativeStageWarmUploadLimit = NDS_MAPS_PREVIEW_WARM_TICKS;
+    gNdsRendererTexturePrefilter = ndsMNMapsPreviewPrefilter;
     armed = (ndsRendererAdapterPrepareNativeStageOwner(sNdsMapsPreviewCamera) !=
              FALSE) ? TRUE : FALSE;
+    gNdsRendererTexturePrefilter = NULL;
     gNdsNativeStageWarmUploadLimit = 0u;
     if (armed != FALSE)
     {

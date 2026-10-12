@@ -5,9 +5,16 @@
 #include <nds/timers.h>
 #include <nds/nds_platform.h>
 
+/* cpuGetTiming is Calico's TIMER2 count (33.5 MHz / 64) times 64, so its low
+ * six bits are always zero, and the source's time-seeded picks
+ * (syUtilsRandTimeUCharRange: osGetTime() & 0xFF, scaled) saw four values: a
+ * CPU gate drew only four fighters (owner: Kirby, Samus, MRGAW, Wario) and the
+ * stage select's RANDOM four stages. The count itself, whose low byte steps
+ * 49 a frame. Every osGetTime reader in this build is one of those picks
+ * (sys/utils.c's RandTime functions); none reads it as a duration. */
 OSTime osGetTime(void)
 {
-    return (OSTime)cpuGetTiming();
+    return (OSTime)(cpuGetTiming() >> 6);
 }
 
 /* sinf and cosf in fixed point (P2-2p8, 2026-10-05; owner: "Software floating
