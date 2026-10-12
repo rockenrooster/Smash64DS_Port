@@ -18355,6 +18355,27 @@ size_t lbRelocLoadFilesExtern(u32 *ids, u32 len, void **files, void *heap)
  * "EFCommonEffects1/2/3 are not in the ROM" when all three were loaded and
  * EFCommonEffects2 was 28,432 bytes on disk. Anything bounds-checking an
  * offset against a live file wants this function. */
+/* A file's whole loaded image, whatever is resident: the bytes
+ * lbRelocGetForceExternHeapFile writes into a caller's heap. A resident copy's
+ * span (ndsRelocGetLoadedFileSize) can be a pack's or a cache's, smaller than
+ * that image, and lbRelocGetFileSize answers sizeof(Sprite) for a resident
+ * file. VS Results sized Ganondorf's podium heap by a resident span 8,080 B
+ * and the 10,784-byte opening clip overran his DObjs (owner, 2026-10-11). */
+size_t ndsRelocFullLoadSize(const void *file_id)
+{
+    u32 asset_id = ndsRelocAssetIDForToken(ndsRelocFileID(file_id));
+    size_t bytes = ndsRelocAssetAllocSize(asset_id);
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    size_t generated = ndsRelocP2GeneratedAllocSize(asset_id);
+
+    if (generated > bytes)
+    {
+        bytes = generated;
+    }
+#endif
+    return bytes;
+}
+
 size_t ndsRelocGetLoadedFileSize(const void *file_id)
 {
     u32 token = ndsRelocFileID(file_id);

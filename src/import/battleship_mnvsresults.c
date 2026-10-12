@@ -275,9 +275,10 @@ size_t ndsMNVSResultsFigatreeHeapSize(s32 player)
     return 0u;
 }
 
-/* One submotion's animation bytes, 16-aligned; 0 when it has none. A file
- * another podium fighter already loaded answers from its loaded span:
- * lbRelocGetFileSize answers sizeof(Sprite) for a resident file. */
+/* One submotion's animation bytes, 16-aligned; 0 when it has none: the
+ * larger of the file's whole loaded image (ndsRelocFullLoadSize, what the
+ * heap load writes) and a resident copy's span; lbRelocGetFileSize answers
+ * sizeof(Sprite) for a resident file, so it is only the last resort. */
 static size_t ndsMNVSResultsMotionBytes(FTData *data, s32 motion_id, sb32 *missing)
 {
     FTMotionDesc *motion;
@@ -296,7 +297,11 @@ static size_t ndsMNVSResultsMotionBytes(FTData *data, s32 motion_id, sb32 *missi
         return 0u;
     }
     file_id = (const void *)(uintptr_t)motion->anim_file_id;
-    bytes = ndsRelocGetLoadedFileSize(file_id);
+    bytes = ndsRelocFullLoadSize(file_id);
+    if (ndsRelocGetLoadedFileSize(file_id) > bytes)
+    {
+        bytes = ndsRelocGetLoadedFileSize(file_id);
+    }
     if (bytes == 0u)
     {
         bytes = lbRelocGetFileSize(file_id);
@@ -343,9 +348,9 @@ static size_t ndsMNVSResultsHeapBytes(s32 player)
         bytes = ndsMNVSResultsMotionBytes(data, nFTDemoStatusLose - FTSTAT_OPENING2_START, &missing);
         need = (bytes > need) ? bytes : need;
     }
-    /* Anything unreadable keeps the kind's largest, as the source sizes it. */
-    return ((missing != FALSE) || (need == 0u) || (need > data->file_anim_size)) ?
-        data->file_anim_size : need;
+    /* Anything unreadable keeps the kind's largest, as the source sizes it; a
+     * measured clip larger than that row is what the load will write. */
+    return ((missing != FALSE) || (need == 0u)) ? data->file_anim_size : need;
 }
 
 /* Each podium fighter's heap bytes, for probes. */

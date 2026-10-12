@@ -462,6 +462,51 @@ def output_uses_alpha(state: DisplayState, source: int) -> bool:
     return False
 
 
+ACMUX_ZERO = 7
+RM_ZMODE_MASK = 0x0C00
+RM_ZMODE_XLU = 0x0800
+RM_CVG_X_ALPHA = 0x1000
+RM_ALPHA_CVG_SEL = 0x2000
+RM_FORCE_BL = 0x4000
+
+
+def blender_reads_alpha(state: DisplayState) -> bool:
+    """Mirror of ndsRendererHardwareBlenderReadsAlpha: coverage times alpha,
+    the translucent z mode, or a forced blend whose alpha is not the coverage.
+    ALPHA_CVG_SEL alone (every antialiased opaque mode) reads no alpha."""
+    mode = state.othermode_l
+    return bool(
+        (mode & RM_CVG_X_ALPHA)
+        or (mode & RM_ZMODE_MASK) == RM_ZMODE_XLU
+        or ((mode & RM_FORCE_BL) and not (mode & RM_ALPHA_CVG_SEL))
+    )
+
+
+def cycle_alpha_reads(a: int, b: int, c: int, d: int, source: int) -> bool:
+    return c == source or d == source or ((a == source or b == source) and c != ACMUX_ZERO)
+
+
+def output_reads_alpha_full(state: DisplayState, source: int) -> bool:
+    """Mirror of ndsRendererHardwareOutputReadsAlphaFull: every alpha slot,
+    COMBINED followed from the second cycle into the first."""
+    if not state.combine_seen:
+        return False
+    w0, w1 = state.combine_w0, state.combine_w1
+    a0, c0 = (w0 >> 12) & 7, (w0 >> 9) & 7
+    b0, d0 = (w1 >> 12) & 7, (w1 >> 9) & 7
+    a1, c1 = (w1 >> 21) & 7, (w1 >> 18) & 7
+    b1, d1 = (w1 >> 3) & 7, w1 & 7
+    if (state.othermode_h & CYCLETYPE_MASK) != CYC_2CYCLE:
+        return cycle_alpha_reads(a0, b0, c0, d0, source)
+    if cycle_alpha_reads(a1, b1, c1, d1, source):
+        return True
+    return bool(
+        (((a1 == ACMUX_COMBINED or b1 == ACMUX_COMBINED) and c1 != ACMUX_ZERO)
+         or d1 == ACMUX_COMBINED)
+        and cycle_alpha_reads(a0, b0, c0, d0, source)
+    )
+
+
 def alpha_ignores_texels(state: DisplayState, require_combine: bool = False) -> bool:
     if not state.combine_seen:
         if require_combine:
@@ -469,9 +514,16 @@ def alpha_ignores_texels(state: DisplayState, require_combine: bool = False) -> 
         return False
     if state.othermode_l & ALPHA_COMPARE_MASK:
         return False
-    return not output_uses_alpha(state, ACMUX_TEXEL0) and not output_uses_alpha(
-        state, ACMUX_TEXEL1
-    )
+    if output_uses_alpha(state, ACMUX_TEXEL0) or output_uses_alpha(state, ACMUX_TEXEL1):
+        return False
+    # The runtime key (alpha_ignores_texels, nds_renderer_textures_effects.c):
+    # a blender that reads alpha keeps the texels' alpha whenever any alpha
+    # slot reaches them.
+    if blender_reads_alpha(state):
+        return not output_reads_alpha_full(state, ACMUX_TEXEL0) and not output_reads_alpha_full(
+            state, ACMUX_TEXEL1
+        )
+    return True
 
 
 def block_for_image(

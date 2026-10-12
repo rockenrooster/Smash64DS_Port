@@ -1485,6 +1485,70 @@ joint's child, whose face and x scale the held routine sets. His sounds are
 Remix's add_sound voice and two add_fgm cues that replay it 4 and 7
 semitones lower (`EXTRA_SOUNDS` in p4_audio.py). Shipping ROM play-1011x5, four Peach CPUs on Peach's Castle with every pull forced to Mr. Saturn (gdb), 2,400 frames: seven Mr. Saturns, carried and thrown by the CPUs (1,363 held ticks), waiting, then walking both ways and turning (485 walk ticks, faces 4/5 swapping), drawn (photos held and walking), 0 native failures, 0 subset misses, heap low-water 59.5 KB.
 
+## Owner playtest 1011x5 fixes (2026-10-11)
+
+- **Ganondorf froze at Results.** The podium's motion heap was sized from
+  the resident span of the parent's main motion file, but
+  `lbRelocGetForceExternHeapFile` writes the whole loaded image, and
+  Ganondorf's (Captain's) image is the larger: the write ran past the heap
+  and the next tree walk faulted. `ndsRelocFullLoadSize` (the asset's
+  allocation size, or the generated one when larger) now sizes it, and the
+  heap keeps what that asks. play-1011x7, Ganondorf beats Mario: "GANONDORF
+  WINS!", START returns to the character select, the stage select and a
+  second match (low-water 111,768 B, 0 native failures).
+- **Wario jumps lower (owner: x0.75).** Jump height goes with the square of
+  the take-off speed, so `OWNER_ATTRIBUTE_SCALES` (generate_p4_fighter.py)
+  multiplies his `jump_height_mul` and `jump_height_base` by sqrt(0.75) in
+  the generated Main (deviation class "owner"); the double jump multiplies
+  the same speed (`jumpaerial_height`), so it follows.
+- **Wario's mustache and Meta Knight's wings drew as opaque blocks.** The
+  texture key forced DS texels opaque (`alpha_ignores_texels`) whenever the
+  combiner's C/D alpha inputs skipped the texels, but their lists take the
+  texel alpha through A/B of the second cycle and draw XLU (render mode
+  0xC4113878): when the blender reads alpha (CVG_X_ALPHA, ZMODE_XLU, or
+  FORCE_BL without ALPHA_CVG_SEL), the key now follows the whole two-cycle
+  alpha path. Select-screen photo play-1011x7: the mustache keeps its shape,
+  the wings have no black edge. The first version also counted ALPHA_CVG_SEL
+  alone, which every antialiased opaque mode sets: nearly every stage key
+  changed, Dream Land's pinned corpus missed, and the gate went to three
+  VBlanks (WORK P50 759K -> 1,428K, polygons 580 -> 424, digest identical).
+  The corpus generator (`generate_battle_playable_static_textures.py`)
+  mirrors the corrected test; its corpus is byte-identical under it. The
+  census had been failing since the 1P task-icon OBJ bank was added (it did
+  not know the bank), so no generator change could build: it learns the bank
+  and is re-pinned (only `native_obj_bank_reserved_bytes` moved).
+- **Ganondorf's up tilt blast trailed its animation.** Remix's frame-speed
+  multiplier with flag 1 (FSM 0xD0) slows every joint below the top joint
+  and leaves the top joint, the motion script's clock; the native pose took
+  the top joint's speed for all its entries, so the up tilt's windup
+  (x0.1875, motion 0xAE) played at full speed and the blast, timed by the
+  script, came late. The pose now takes the speed of the top joint's first
+  child (`gcSetAnimSpeed` writes every joint alike, so the original cast
+  reads the same speed). His idle (x0.70) and motions 0xA8-0xAC (x0.90) are
+  flag 1 too and now play at Remix's speed (probe: idle pose speed Q12 2864).
+- **Mad Piano's teeth flickered through his closed lid.** The DS keeps z/w
+  to fifteen bits in Z-buffering mode, so with the source's near plane of
+  256 one depth step at a battle distance of 5,000 is about 3 world units;
+  his lid's tooth layer is a double-sided polygon 1-3 units under the lid's
+  face (model 0xA99). After the source's camera function, the battle
+  camera's near is now a quarter of the eye-target distance, never past the
+  nearest fighter less 400 units (the screen KO, the pause close-up) and
+  never under 256 (`ndsCameraUpdateDepthNear`, battleship_gmcamera.c): one
+  depth step grows with z instead of z squared (about 0.6 units at 5,000).
+  Draw only: the camera matrix feeds draw-side readers alone and the replay
+  digest folds no camera state; every renderer path reads the same CObj
+  field after the sim, so stage, fighters and particles share one mapping.
+  No list sets a depth-fog position. play-1011x8, two Mad Pianos on Peach's
+  Castle: near 1,001 at eye z 3,858, 0 native failures. The photo A/B is
+  owed: window captures were black while the console was locked.
+
+Official gate ROM with all five (`artifacts/performance/2026-10-11_pose-camera-digest`,
+`fixed.*` against the ledger commit's `cand.*`): replay digest IDENTICAL over
+1,960 frames, WORK P50 759,488 -> 765,824, P95 1,038,208 -> 1,045,760,
+two-VBlank presents 96.7% both, polygons and vertices per frame unchanged
+(580/1,381). The same ROM with the near pinned at 256 measured the camera
+change apart from the alpha mistake above (`pin.*`, `noalpha.*`).
+
 ## Board 1 status (master plan Revision 3)
 
 | Item | State |

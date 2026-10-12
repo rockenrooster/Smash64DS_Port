@@ -649,6 +649,16 @@ SUBSET_FILES = {
     "mrgaw": ({"name": "dango", "slot": 4, "attributes": (0xFB, 0x1010)},),
     "peach": ({"name": "saturn", "slot": 4, "attributes": (0xFB, 0x10B0)},),
 }
+# Owner tuning, not Remix: FTAttributes floats of a content's main file
+# scaled in the shipped copy (manifest "deviations", class "owner"). Wario's
+# jumps (owner, 2026-10-11: "default jump/double jump height needs to be
+# lower (make it x0.75 for now)"): his ground and aerial jumps rise 0.75 as
+# high, so their take-off speed scales by sqrt(0.75): jump_height_mul and
+# jump_height_base, which the aerial jump multiplies by jumpaerial_height
+# (ftcommonjumpaerial.c:158).
+OWNER_ATTRIBUTE_SCALES = {
+    "wario": {"jump_height_mul": 0.75 ** 0.5, "jump_height_base": 0.75 ** 0.5},
+}
 # Parent special-file slots no parent code reads, which an item subset may
 # take while the content names the parent's file there: Fox's special file 4
 # (FoxSpecial4, the reflector's list) is named only by FoxSpecial1's extern
@@ -1100,6 +1110,23 @@ def results_ampersand(rom: R.Rom, staging: Path, file_id: int) -> tuple[bytes, d
     row = {"file_id": file_id, "offset": sprite - texels, "width": width, "height": height,
            "bitmaps": 1, "fmt": data[sprite + 48], "siz": data[sprite + 49]}
     return bytes(out), {"row": row, "advance": advance}
+
+
+def scale_o2r_attributes(blob: bytes, o_attributes: int, scales: dict[str, float]) -> bytes:
+    """An O2R main file with FTAttributes floats scaled (OWNER_ATTRIBUTE_SCALES):
+    the body follows the header, the reloc words and the extern ids, and keeps
+    the N64's big-endian words."""
+    import ft_layout  # noqa: E402
+
+    layout = ft_layout.layout()
+    ext_n = struct.unpack_from("<I", blob, 0x48)[0]
+    body = 0x4C + 2 * ext_n + 4
+    out = bytearray(blob)
+    for field, k in scales.items():
+        at = body + o_attributes + layout[f"FTAttributes.{field}"]
+        value = struct.unpack_from(">f", out, at)[0]
+        struct.pack_into(">f", out, at, value * k)
+    return bytes(out)
 
 
 def item_subset_file(rom: R.Rom, file_id: int, attr_file: int, attr_off: int) -> tuple[bytes, dict]:
@@ -1738,6 +1765,10 @@ def main() -> int:
         # The main file's references into the parent motion file resolve to the
         # same offsets in the synthesized copy, so the parent file never loads.
         blob = retarget_o2r_externs(blob, {parent_motion: synth_id})
+        if fid == file_ids[0] and name in OWNER_ATTRIBUTE_SCALES:
+            blob = scale_o2r_attributes(blob, desc["o_attributes"], OWNER_ATTRIBUTE_SCALES[name])
+            deviations.append({"file_id": fid, "class": "owner",
+                               "why": f"FTAttributes scaled: {OWNER_ATTRIBUTE_SCALES[name]}"})
         if len(rom.extern_ids(fid)) > MAX_EXTERN_IDS:
             raise GenError(f"file {fid:#x}: {len(rom.extern_ids(fid))} extern ids, the DS loader holds "
                            f"{MAX_EXTERN_IDS} (NDS_RELOC_EXTERN_FILE_ID_CAPACITY)")

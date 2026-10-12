@@ -250,6 +250,13 @@ EXPECTED_ACTOR_ROOTS = {
 
 
 EXPECTED_CENSUS_SHA256 = (
+    # RE-PINNED 2026-10-11. The 1P bonus boards' task-icon OBJ bank
+    # (NDS_IFCOMMON_TASK_BANK, 128 B on the next 128-byte tile after the item
+    # arrow) had moved NDS_IFCOMMON_USED_BYTES to 64,000 without this check
+    # learning the bank, so every run since falsified. Only
+    # countdown_go.native_obj_bank_reserved_bytes moved, 63,808 -> 64,000:
+    # setting that one leaf back reproduces the previous pin dfbc08e0...
+    # exactly. No corpus field moved.
     # RE-PINNED 2026-09-23 (P2-2p8 Phase 1 slice 2c). The texture cache's
     # dynamic slots keep a 28-byte identity instead of a 236-byte pool key, the
     # entry drops its profile-2-only fields, and the count grows 124 -> 254.
@@ -301,7 +308,7 @@ EXPECTED_CENSUS_SHA256 = (
     #
     # WHEN YOU CHANGE THE KEY CONTRACT, RE-PIN IN THE SAME COMMIT.
     # Native ending glyphs and fixed OBJ banks; source GX texture data unchanged.
-    "dfbc08e05da1b5323681d41b0627d41ed100c9583fe358c1cf7746e5ed24509a"
+    "4c65083147f102be89143be58e82094fdab80d95bc51784cb6813ff617ffca51"
 )
 
 
@@ -931,6 +938,8 @@ def parse_countdown_oam(repo_root: Path, countdown: O2RResource) -> dict[str, ob
         "NDS_IFCOMMON_SPARK_BANK_BASE",
         "NDS_IFCOMMON_TAG_BANK_BASE",
         "NDS_IFCOMMON_ITEM_BANK_BASE",
+        "NDS_IFCOMMON_TASK_BANK_BYTES",
+        "NDS_IFCOMMON_TASK_BANK_BASE",
         "NDS_IFCOMMON_USED_BYTES",
     ):
         match = re.search(
@@ -963,9 +972,13 @@ def parse_countdown_oam(repo_root: Path, countdown: O2RResource) -> dict[str, ob
     message_bytes = (macro_values['NDS_IFCOMMON_GO_BANK_BYTES'] +
                      macro_values['NDS_IFCOMMON_END_BANK_BYTES'])
     reserved = 0
-    for bank in ('GO', 'END', 'SPARK', 'TAG', 'ITEM'):
+    # The 1P bonus boards' task icon starts on the next 128-byte OBJ tile
+    # boundary after the item arrow (nds_ifcommon_oam.c).
+    for bank in ('GO', 'END', 'SPARK', 'TAG', 'ITEM', 'TASK'):
         base = macro_values[f'NDS_IFCOMMON_{bank}_BANK_BASE']
         size = macro_values[f'NDS_IFCOMMON_{bank}_BANK_BYTES']
+        if bank == 'TASK':
+            reserved = (reserved + 127) & ~127
         if base != reserved or size <= 0:
             raise falsify(
                 f'native interface OBJ {bank} bank starts at {base}, '

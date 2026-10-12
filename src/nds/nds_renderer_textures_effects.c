@@ -859,6 +859,69 @@ static s32 ndsRendererCombineSecondOutputUsesAlpha(u32 w1, u32 source)
             (((w1 >> 0) & 0x07u) == source)) ? TRUE : FALSE;
 }
 
+/* Whether the RDP's blender reads the combiner's alpha: coverage times alpha
+ * (CVG_X_ALPHA), the translucent z mode, or a forced blend whose alpha is not
+ * the coverage (FORCE_BL without ALPHA_CVG_SEL, 0x2000). ALPHA_CVG_SEL alone
+ * is every antialiased opaque mode (AA_ZB_OPA_SURF, the fighters'
+ * AA_ZB_OPA_SURF2): its blender alpha is the coverage, so those modes draw
+ * every texel whatever its alpha, and the pinned stage and fighter keys
+ * (generate_battle_playable_static_textures.py) keep the C/D test for them. */
+static s32 ndsRendererHardwareBlenderReadsAlpha(const NDSRendererStats *stats)
+{
+    const u32 mode = stats->othermode_l;
+
+    return (((mode & NDS_RENDERER_CVG_X_ALPHA) != 0u) ||
+            ((mode & NDS_RENDERER_ZMODE_MASK) == NDS_RENDERER_ZMODE_XLU) ||
+            (((mode & NDS_RENDERER_FORCE_BL) != 0u) &&
+             ((mode & 0x00002000u) == 0u))) ?
+        TRUE : FALSE;
+}
+
+/* One cycle's alpha (A - B) * C + D reads `source`: in C or D, or in A or B
+ * while C is not zero. */
+static s32 ndsRendererCombineCycleAlphaReads(u32 a, u32 b, u32 c, u32 d, u32 source)
+{
+    return ((c == source) || (d == source) ||
+            (((a == source) || (b == source)) && (c != NDS_RENDERER_ACMUX_0))) ? TRUE : FALSE;
+}
+
+/* The combiner's output alpha reads `source` through any slot, following
+ * COMBINED from the second cycle into the first (COMBINED is 0 in the A, B and
+ * D slots; C's 0 is LOD_FRACTION). ndsRendererHardwareOutputUsesAlpha below
+ * reads only the C and D slots, on purpose for opaque surfaces. */
+static s32 ndsRendererHardwareOutputReadsAlphaFull(const NDSRendererStats *stats,
+                                                   u32 source)
+{
+    const u32 w0 = stats->texture_combine_w0;
+    const u32 w1 = stats->texture_combine_w1;
+    const u32 a0 = (w0 >> 12) & 0x07u;
+    const u32 c0 = (w0 >> 9) & 0x07u;
+    const u32 b0 = (w1 >> 12) & 0x07u;
+    const u32 d0 = (w1 >> 9) & 0x07u;
+    const u32 a1 = (w1 >> 21) & 0x07u;
+    const u32 c1 = (w1 >> 18) & 0x07u;
+    const u32 b1 = (w1 >> 3) & 0x07u;
+    const u32 d1 = w1 & 0x07u;
+
+    if (stats->texture_combine_count == 0u)
+    {
+        return FALSE;
+    }
+    if (ndsRendererHardwareUseSecondCycle(stats) == FALSE)
+    {
+        return ndsRendererCombineCycleAlphaReads(a0, b0, c0, d0, source);
+    }
+    if (ndsRendererCombineCycleAlphaReads(a1, b1, c1, d1, source) != FALSE)
+    {
+        return TRUE;
+    }
+    return (((((a1 == NDS_RENDERER_ACMUX_COMBINED) || (b1 == NDS_RENDERER_ACMUX_COMBINED)) &&
+              (c1 != NDS_RENDERER_ACMUX_0)) ||
+             (d1 == NDS_RENDERER_ACMUX_COMBINED)) &&
+            (ndsRendererCombineCycleAlphaReads(a0, b0, c0, d0, source) != FALSE)) ?
+        TRUE : FALSE;
+}
+
 static s32 ndsRendererHardwareOutputUsesAlpha(const NDSRendererStats *stats,
                                               u32 source)
 {
@@ -13805,7 +13868,15 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
      * opaque while alpha compare is active fills source cutouts.  Keep the
      * optimized TEXEL0/TEXEL1 composite path unchanged; its output alpha is
      * part of the composite contract and is already keyed by the combine
-     * words. */
+     * words.
+     *
+     * Under a render mode whose blender reads alpha, the texels' alpha
+     * stays whenever the output alpha reads it through any slot: the
+     * two-cycle family-0 combine takes TEXEL0a in cycle 0 and COMBINEDa *
+     * ENVa in cycle 1's A and C slots, and the C/D test alone made Wario's
+     * mustache and Meta Knight's wings (CI4 decals, render mode 0xC4113878:
+     * ZMODE_XLU, CVG_X_ALPHA, ALPHA_CVG_SEL) opaque rectangles (owner,
+     * 2026-10-11). */
     alpha_ignores_texels =
         ((use_texel1 == FALSE) &&
          (stats != NULL) &&
@@ -13813,7 +13884,12 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
          (ndsRendererHardwareOutputUsesAlpha(
               stats, NDS_RENDERER_ACMUX_TEXEL0) == FALSE) &&
          (ndsRendererHardwareOutputUsesAlpha(
-              stats, NDS_RENDERER_ACMUX_TEXEL1) == FALSE)) ? TRUE : FALSE;
+              stats, NDS_RENDERER_ACMUX_TEXEL1) == FALSE) &&
+         ((ndsRendererHardwareBlenderReadsAlpha(stats) == FALSE) ||
+          ((ndsRendererHardwareOutputReadsAlphaFull(
+                stats, NDS_RENDERER_ACMUX_TEXEL0) == FALSE) &&
+           (ndsRendererHardwareOutputReadsAlphaFull(
+                stats, NDS_RENDERER_ACMUX_TEXEL1) == FALSE)))) ? TRUE : FALSE;
     /* An owner's intensity-coverage request (sNdsRendererHardwareIntensity
      * Coverage): only an I4/I8 tile none of the bakes above already owns. */
     intensity_coverage =

@@ -1531,12 +1531,22 @@ static void ndsFtPoseRun(NdsFtPose *pose, Vec3f *translate_scales,
     u32 pending_lo;
     u32 pending_hi;
 
-    /* gcSetAnimSpeed writes every DObj of the GObj, so the root's speed is
-     * every joint's speed: one conversion per update instead of one per
-     * joint. The oracle feeds the shadow GObj the live root. */
-    pose->speed_q = ndsR2F32ToFixed(
-        ((DObj *)pose->clock_gobj->obj)->anim_speed, NDS_R2_AQ_LF);
-    pose->speed_bits = ndsR2FloatBits(((DObj *)pose->clock_gobj->obj)->anim_speed);
+    /* gcSetAnimSpeed writes every DObj of the GObj, so one speed serves every
+     * joint: one conversion per update instead of one per joint. Remix's
+     * frame speed multiplier with flag 1 (nds_p4.c ndsP4RemixFrameSpeed)
+     * slows the joints below the root and leaves the root, the motion
+     * script's clock; the entries are the root's subtree, so they take its
+     * first child's speed (Ganondorf's up tilt stamped at full speed under
+     * its 0.1875 windup and its blast came late; owner, 2026-10-11). The
+     * oracle feeds the shadow GObj the live root. */
+    {
+        const DObj *root = (const DObj *)pose->clock_gobj->obj;
+        const f32 speed = (root->child != NULL) ? root->child->anim_speed :
+                                                  root->anim_speed;
+
+        pose->speed_q = ndsR2F32ToFixed(speed, NDS_R2_AQ_LF);
+        pose->speed_bits = ndsR2FloatBits(speed);
+    }
     pose->gobj_frame_pending = 0u;
 
     if (pose->entry_count > 64u)
