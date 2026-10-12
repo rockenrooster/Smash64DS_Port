@@ -13059,12 +13059,17 @@ static u32 ndsStageGCDrawAllLoopInitialGeometryMode(void)
         mode : (mode & ~NDS_RENDERER_GEOM_ZBUFFER);
 }
 
+/* Weapons draw on link 14; link 11, the items', carries P4 Sonic's spring:
+ * Remix's change_spring_room_ moves it there so it sorts with the items
+ * (nds_p4_sonic.c), and admitting only 14 left it undrawn (owner,
+ * 2026-10-12: "Jump Pad Spring not visible"). The camera captures 11 in the
+ * same pass as 14's neighbours; the GObj-kind test keeps the items out. */
 static sb32 ndsStageGCDrawAllLoopIsWeaponDisplay(GObj *gobj, s32 link_id)
 {
     return ((gobj != NULL) &&
             (gobj->id == nGCCommonKindWeapon) &&
-            (gobj->dl_link_id == 14) &&
-            (link_id == 14)) ? TRUE : FALSE;
+            (gobj->dl_link_id == link_id) &&
+            ((link_id == 14) || (link_id == 11))) ? TRUE : FALSE;
 }
 
 #define NDS_ITEM_DISPLAY_LINK 11

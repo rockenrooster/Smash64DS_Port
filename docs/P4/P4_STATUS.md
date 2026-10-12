@@ -2039,6 +2039,33 @@ play-1012p, all eighteen contents and two originals selected (probes
 `csss[a-e]`): every status is its row, every figatree loaded, 0 native
 failures.
 
+## Sonic's spring drawn (owner bug, 2026-10-12)
+
+"Jump Pad Spring not visible." Two faults, each enough to keep it off the
+screen:
+
+- Its display link. Remix's `change_spring_room_` moves the spring to link
+  11, the items' (`nds_p4_sonic.c`), and the battle camera's weapon test
+  (`ndsStageGCDrawAllLoopIsWeaponDisplay`) admitted link 14 only, so the
+  spring was never asked to draw and nothing failed. A weapon GObj on link 11
+  is admitted too; the GObj-kind test keeps the items out.
+- Its program. The spring's list calls segment E twice: E+0 before its
+  LOADTLUT and E+8 before its LOADBLOCK. With one MObj, `gcDrawMObjForDObj`
+  writes the MObj's body right after its one branch, so E+8 is MObj 0's
+  material run again. The generator read it as a second MObj (material slot
+  1), which the renderer's one-MObj admission refused (REJECTED_PROGRAM, two a
+  frame while a spring lives), and with slot 1 unseeded the frames' TLUT came
+  from the image's own bytes. P4 compiles alias slot 1 to slot 0
+  (`P4_MATERIAL_ALIASES`, `generate_nds_entry_effects.py`): the two frames
+  convert with their palettes (8 open, 48 coiled), and only the spring's group
+  row and its two textures change in the packet.
+
+The lab line above (p4al, "four Sonics make 11 springs ... 0 native
+failures") counted springs that were never drawn. play-1012v, Sonic (human,
+up-B every 90 ticks) against Fox on Dream Land: the spring drawn from its
+first frame, 150 weapon submits in 420 frames, 0 native failures (play-1012u:
+238).
+
 ## Board 1 status (master plan Revision 3)
 
 | Item | State |

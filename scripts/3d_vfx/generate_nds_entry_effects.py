@@ -937,7 +937,8 @@ class Compiler:
             resources: dict[int, census.O2RResource],
             material_images: dict[int, tuple[census.PointerRef, int, int, int]] | None = None,
             material_texture_sizes: dict[int, tuple[int, int]] | None = None,
-            material_tluts: dict[int, tuple[census.PointerRef, int]] | None = None):
+            material_tluts: dict[int, tuple[census.PointerRef, int]] | None = None,
+            material_aliases: dict[int, int] | None = None):
         self.resource = resource
         self.resources = resources
         self.material_images = material_images or {}
@@ -945,6 +946,12 @@ class Compiler:
         # A material whose MObj has MOBJ_FLAG_PALETTE loads its TLUT in the
         # segment-E branch (palettes[palette_id]); P4's Wolf blaster is one.
         self.material_tluts = material_tluts or {}
+        # Branch slots that are another slot's material. gcDrawMObjForDObj
+        # writes one branch per MObj and the first MObj's body right after
+        # them, so with one MObj slot 1 (E+8) is slot 0's body: a list that
+        # calls both runs MObj 0's material twice (Sonic's spring: E+0 before
+        # its LOADTLUT, E+8 before its LOADBLOCK).
+        self.material_aliases = material_aliases or {}
         self.display = static.DisplayState()
         self.vertex_cache: dict[int, Vertex] = {}
         self.vertex_matrix_root: dict[int, int] = {}
@@ -1036,6 +1043,8 @@ class Compiler:
                     self.material_slot = material_offset >> 3
                     if self.material_slot >= MATERIAL_NONE:
                         raise SystemExit("entry segment-E material slot exceeds u8")
+                    self.material_slot = self.material_aliases.get(
+                        self.material_slot, self.material_slot)
                     # Some material branches own only the source G_SETTIMG.
                     # Samus's grapple beam is the first: its MObj has
                     # MOBJ_FLAG_ALPHA and MatAnim switches texture_id_curr
@@ -1235,6 +1244,9 @@ class P4Root:
 
 
 P4_CONTENTS = ROOT / "scripts" / "p4" / "contents.json"
+# The runtime admits a P4 list's live material only from a DObj with one MObj
+# (renderer_adapter_stage.c), whose segment-E slot 1 is slot 0's body.
+P4_MATERIAL_ALIASES = {1: 0}
 
 
 def load_p4_rows(paths: list[Path], resources: dict[int, census.O2RResource]) -> list[dict]:
@@ -1280,7 +1292,8 @@ def compile_p4(rows: list[dict], resources: dict[int, census.O2RResource],
             raise SystemExit(f"P4 {_content} {_article}: roots disagree on the material TLUT")
         tluts = {0: (census.PointerRef(file_id, offset), count)
                  for offset, count in palettes}
-        compiler = Compiler(resources[file_id], resources, material_tluts=tluts)
+        compiler = Compiler(resources[file_id], resources, material_tluts=tluts,
+                            material_aliases=P4_MATERIAL_ALIASES)
         for index in sorted(indices, key=lambda i: (rows[i].get("head", 0), i)):
             compiler.material_slot = MATERIAL_NONE
             compiler.walk(rows[index]["offset"], root_base + index, ())
@@ -1309,7 +1322,8 @@ def compile_p4(rows: list[dict], resources: dict[int, census.O2RResource],
                 resource, resources,
                 material_images={0: (census.PointerRef(resource.file_id, image),
                                      texid["block_fmt"], texid["block_siz"], 32)},
-                material_texture_sizes=sizes, material_tluts=tluts)
+                material_texture_sizes=sizes, material_tluts=tluts,
+                material_aliases=P4_MATERIAL_ALIASES)
             compiler.compile_roots((row["offset"],), root_base + index)
             if len(compiler.textures) != 1:
                 raise SystemExit(f"P4 {row['content']} {row['article']}: a TEXID frame "
