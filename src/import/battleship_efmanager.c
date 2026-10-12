@@ -2419,12 +2419,13 @@ static void ndsEFManagerBoundEffectPool(void)
  * fighter's body is a few tens of units deep either side of that joint, and
  * the bubble's own full-health radius is 280, so 150 clears the torso while
  * staying well inside the bubble's own extent -- it cannot detach and float.
- * Above the floor the bias is HALF THE LIVE BUBBLE RADIUS
- * (0.5 * guard_scale * 30, see the call site): the bubble always encloses its
- * fighter, so half its radius clears any body it contains while staying
- * inside the bubble, and bigger fighters travel with bigger bubbles -- DK's
+ * Above the floor the bias is 1.25 x THE LIVE BUBBLE RADIUS (guard_scale * 30,
+ * see the call site; half the radius until 2026-10-12, when Bowser's front
+ * showed through it): bigger fighters travel with bigger bubbles -- DK's
  * guard_scale pulls his shield farther forward than Fox's without a per-fight
- * table. The owner judges it; this is presentation, not mechanics. */
+ * table -- and the quad shrinks by the distance it moved, so its size on
+ * screen is the source's. The owner judges it; this is presentation, not
+ * mechanics. */
 #define NDS_R2_SHIELD_QUAD_DEPTH_BIAS 150.0F
 /* BGR555, NOT 0xRRGGBB. ndsRendererSubmitParticleQuad takes the DS's own vertex
  * colour packing -- red bits 0-4, green 5-9, blue 10-14. This function first
@@ -2560,13 +2561,39 @@ static void ndsEFManagerShieldQuadProcDisplay(GObj *effect_gobj)
                   (parts->mtx_translate[0][1] * parts->mtx_translate[0][1]) +
                   (parts->mtx_translate[0][2] * parts->mtx_translate[0][2]));
         /* DK moves farther than Fox by construction, not by a table: the same
-         * guard_scale that sizes the bubble also sizes this bias, because the
-         * bubble always encloses the fighter it shields. The floor keeps the
-         * previously chosen 150 wherever the half-bubble is smaller (Fox at
-         * full health computes 140, small fighters less). */
+         * guard_scale that sizes the bubble also sizes this bias. Half the
+         * radius left a big body's front showing through the disc (owner
+         * BUGS.md 2026-10-12: Bowser; "audit the rest"): the disc now sits a
+         * quarter past the bubble's front, and never nearer than
+         * NDS_R2_SHIELD_QUAD_DEPTH_BIAS, so every body the bubble encloses
+         * is behind it, and the size below keeps its picture. */
         half_bubble = 0.5F * guard_scale * NDS_R2_SHIELD_QUAD_SIZE;
-        depth_bias = (half_bubble > NDS_R2_SHIELD_QUAD_DEPTH_BIAS)
-            ? half_bubble : NDS_R2_SHIELD_QUAD_DEPTH_BIAS;
+        depth_bias = 2.5F * half_bubble;
+        if (depth_bias < NDS_R2_SHIELD_QUAD_DEPTH_BIAS)
+        {
+            depth_bias = NDS_R2_SHIELD_QUAD_DEPTH_BIAS;
+        }
+        f32 quad_size = guard_scale * NDS_R2_SHIELD_QUAD_SIZE;
+        {
+            /* Moved toward the eye, the same world size looks larger: shrink
+             * it by the distance it moved, so the bubble keeps the size the
+             * source draws on screen. */
+            CObj *cobj = (gGCCurrentCamera != NULL) ?
+                CObjGetStruct(gGCCurrentCamera) : NULL;
+
+            if (cobj != NULL)
+            {
+                f32 dx = cobj->vec.eye.x - world_pos.x;
+                f32 dy = cobj->vec.eye.y - world_pos.y;
+                f32 dz = cobj->vec.eye.z - world_pos.z;
+                f32 len = sqrtf((dx * dx) + (dy * dy) + (dz * dz));
+
+                if (len > (depth_bias + 1.0F))
+                {
+                    quad_size *= (len - depth_bias) / len;
+                }
+            }
+        }
         /* WHITE vertex colour on purpose: the palette carries the player's
          * colour now, and the polygon stays in modulation mode, so anything
          * other than white would tint the ramp a second time. */
@@ -2576,7 +2603,7 @@ static void ndsEFManagerShieldQuadProcDisplay(GObj *effect_gobj)
         if ((texture_name != 0u) &&
             (ndsParticleDrawOwnTextureQuad(
                  texture_name, NDS_SHIELD_TEX_WIDTH, NDS_SHIELD_TEX_HEIGHT,
-                 &world_pos, guard_scale * NDS_R2_SHIELD_QUAD_SIZE,
+                 &world_pos, quad_size,
                  NDS_R2_BGR555(0xff, 0xff, 0xff),
                  NDS_R2_SHIELD_QUAD_ALPHA,
                  depth_bias,

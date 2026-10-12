@@ -10184,6 +10184,7 @@ typedef struct NDSR2RunTextureMemo
     u8 slot_plus1;
     u8 format;
     u8 valid;
+    u8 run;         /* the run this row holds (rows are run_index mod 67) */
 } NDSR2RunTextureMemo;
 _Static_assert(sizeof(NDSR2RunTextureMemo) == 28u,
                "run texture memo must retain the compact DS field layout");
@@ -10203,10 +10204,23 @@ static NDSR2RunTextureMemo
     sNdsR2RunTextureMemo[NDS_R2_RUN_MEMO_MAX]
                           [NDS_R2_RUN_TEXMEMO_PLAYER_COUNT];
 
+/* Rows by run index modulo 67, tagged with the run. A P4 content's owner
+ * image appends its model parts' runs after the canonical ones (Banjo's runs
+ * reach 160), so a draw's runs reached past the 67 rows and every one of
+ * those took the full resolver at every materialization; a list draws ~60,
+ * and runs sharing a residue only take turns. Run indices fit the tag byte
+ * (the generator's u8 run counts); a larger one is never memoized. */
+#define NDS_R2_RUN_TEXMEMO_RUN_MAX 0xffu
 static inline NDSR2RunTextureMemo *ndsRendererR2RunTextureMemoFor(
     u32 run_index, u32 owner_key)
 {
-    return &sNdsR2RunTextureMemo[run_index][(owner_key >> 9) & 3u];
+    u32 row = run_index;
+
+    while (row >= NDS_R2_RUN_MEMO_MAX)
+    {
+        row -= NDS_R2_RUN_MEMO_MAX;
+    }
+    return &sNdsR2RunTextureMemo[row][(owner_key >> 9) & 3u];
 }
 
 /* THE MEMO IS FENCED ON THE FIGHTER'S LIVE MATERIAL STATE.
@@ -10259,13 +10273,13 @@ static s32 __attribute__((noinline)) ndsRendererR2RunTextureMemoApply(
     NDSR2RunTextureMemo *memo;
     NDSRendererHardwareTextureCacheEntry *entry;
 
-    if (run_index >= NDS_R2_RUN_MEMO_MAX)
+    if (run_index > NDS_R2_RUN_TEXMEMO_RUN_MAX)
     {
         return FALSE;
     }
     memo = ndsRendererR2RunTextureMemoFor(
         run_index, sNdsNativeFighterOwnerExecution.texture_memo_owner_key);
-    if (memo->valid == 0u)
+    if ((memo->valid == 0u) || (memo->run != (u8)run_index))
     {
         gNdsR2TexMemoMissCount++;
         return FALSE;
@@ -10336,7 +10350,7 @@ static void __attribute__((noinline)) ndsRendererR2RunTextureMemoFill(
      * the stage-site shortcut or the no-texture path leaves no active entry, and
      * baking one from a neighbouring run's state is exactly the class of bug the
      * revalidation above cannot catch. */
-    if ((run_index >= NDS_R2_RUN_MEMO_MAX) || (entry == NULL) ||
+    if ((run_index > NDS_R2_RUN_TEXMEMO_RUN_MAX) || (entry == NULL) ||
         (entry->ready == FALSE) || ((u32)entry->name != texture_name) ||
         (texture_name == 0u))
     {
@@ -10382,6 +10396,7 @@ static void __attribute__((noinline)) ndsRendererR2RunTextureMemoFill(
     memo->origin_t = origin_t;
     memo->offset = offset;
     memo->owner_key = sNdsNativeFighterOwnerExecution.texture_memo_owner_key;
+    memo->run = (u8)run_index;
     memo->valid = 1u;
     gNdsR2TexMemoFillCount++;
 }
@@ -10404,13 +10419,13 @@ static void __attribute__((noinline)) ndsRendererR2RunTextureMemoVerify(
     const NDSR2RunTextureMemo *memo;
     const NDSRendererHardwareTextureCacheEntry *entry;
 
-    if (run_index >= NDS_R2_RUN_MEMO_MAX)
+    if (run_index > NDS_R2_RUN_TEXMEMO_RUN_MAX)
     {
         return;
     }
     memo = ndsRendererR2RunTextureMemoFor(
         run_index, sNdsNativeFighterOwnerExecution.texture_memo_owner_key);
-    if (memo->valid == 0u)
+    if ((memo->valid == 0u) || (memo->run != (u8)run_index))
     {
         return;
     }

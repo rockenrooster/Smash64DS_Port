@@ -1337,6 +1337,121 @@ s32 ndsUiKitBlitSurfaceCopy(u32 surface, const u8 *buffer)
     return TRUE;
 }
 
+u16 *ndsUiKitBackgroundSpare(u32 *out_bytes)
+{
+    u32 pitch = 0u;
+    u32 layer_h = 0u;
+    u16 *layer = ndsPlatformGetOriginalSpriteOverlayLayer(FALSE, &pitch, NULL,
+                                                          &layer_h, NULL);
+
+    if (out_bytes != NULL)
+    {
+        *out_bytes = 0u;
+    }
+    if ((layer == NULL) || (pitch != 256u) || (layer_h >= 256u))
+    {
+        return NULL;
+    }
+    if (out_bytes != NULL)
+    {
+        *out_bytes = (256u - layer_h) * pitch * (u32)sizeof(u16);
+    }
+    return layer + (layer_h * pitch);
+}
+
+/* A surface's metric rectangle clipped to the screen (as the row writer
+ * clips it) and the layer it lies on, or NULL. */
+static u16 *ndsUiKitSurfaceScreenRect(u32 surface, u32 *pitch, u32 *x,
+                                      u32 *y, u32 *w, u32 *h)
+{
+    const NdsUiKitSurfaceMetric *metric;
+    u32 layer_w = 0u;
+    u32 layer_h = 0u;
+    s32 x0;
+    s32 y0;
+    s32 x1;
+    s32 y1;
+    u16 *layer;
+
+    if (surface >= NDS_MN_UI_KIT_SURFACE_COUNT)
+    {
+        return NULL;
+    }
+    layer = ndsPlatformGetOriginalSpriteOverlayLayer(FALSE, pitch, &layer_w,
+                                                     &layer_h, NULL);
+    if ((layer == NULL) || (*pitch == 0u))
+    {
+        return NULL;
+    }
+    metric = &kNdsUiKitSurfaceMetrics[surface];
+    x0 = (metric->x < 0) ? 0 : (s32)metric->x;
+    y0 = (metric->y < 0) ? 0 : (s32)metric->y;
+    x1 = (s32)metric->x + (s32)metric->width;
+    y1 = (s32)metric->y + (s32)metric->height;
+    if (x1 > (s32)layer_w)
+    {
+        x1 = (s32)layer_w;
+    }
+    if (y1 > (s32)layer_h)
+    {
+        y1 = (s32)layer_h;
+    }
+    if ((x1 <= x0) || (y1 <= y0))
+    {
+        return NULL;
+    }
+    *x = (u32)x0;
+    *y = (u32)y0;
+    *w = (u32)(x1 - x0);
+    *h = (u32)(y1 - y0);
+    return layer;
+}
+
+s32 ndsUiKitSaveSurfaceRect(u32 surface, u16 *spare, u32 capacity)
+{
+    u32 pitch = 0u;
+    u32 x = 0u;
+    u32 y = 0u;
+    u32 w = 0u;
+    u32 h = 0u;
+    u32 row;
+    u16 *layer = ndsUiKitSurfaceScreenRect(surface, &pitch, &x, &y, &w, &h);
+
+    if ((layer == NULL) || (spare == NULL) ||
+        ((w * h * (u32)sizeof(u16)) > capacity))
+    {
+        return FALSE;
+    }
+    for (row = 0u; row < h; row++)
+    {
+        dmaCopyHalfWords(3, layer + ((y + row) * pitch) + x, spare + (row * w),
+                         w * sizeof(u16));
+    }
+    return TRUE;
+}
+
+s32 ndsUiKitRestoreSurfaceRect(u32 surface, const u16 *spare)
+{
+    u32 pitch = 0u;
+    u32 x = 0u;
+    u32 y = 0u;
+    u32 w = 0u;
+    u32 h = 0u;
+    u32 row;
+    u16 *layer = ndsUiKitSurfaceScreenRect(surface, &pitch, &x, &y, &w, &h);
+
+    if ((layer == NULL) || (spare == NULL))
+    {
+        return FALSE;
+    }
+    for (row = 0u; row < h; row++)
+    {
+        dmaCopyHalfWords(3, spare + (row * w), layer + ((y + row) * pitch) + x,
+                         w * sizeof(u16));
+    }
+    return TRUE;
+}
+
 s32 ndsUiKitCacheSurface(u32 surface)
 {
     NdsRelocAssetStream stream;

@@ -3429,8 +3429,12 @@ typedef struct NDSFighterPacketTexgenSite
  * Slice 2b cut this to 4 (Samus records 2); slice 3 measured Link above 4 and
  * Kirby at 19 (7 tinted shade sites, one bind per tinted run; tint_bind_seen),
  * so it is 24, and the never-read tile name is gone (12 B a bind): +224 B per
- * packet over the 2b layout. */
-#define NDS_FIGHTER_PACKET_TINT_BIND_MAX 24u
+ * packet over the 2b layout. P4 measured Crash at 32-34 (2026-10-12): 300 of
+ * his 305 lists overflowed, so each kept the global texture fence: 117 fence
+ * rematerializations in 1,200 frames of four Crashes. 40 costs 192 B more per
+ * packet (48 words of each entry's capacity; the packet sits in the borrowed
+ * framebuffer). */
+#define NDS_FIGHTER_PACKET_TINT_BIND_MAX 40u
 typedef struct NDSFighterPacketTintBind
 {
     u16 tex_index;

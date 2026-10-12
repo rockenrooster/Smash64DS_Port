@@ -257,6 +257,13 @@ s32 ndsUiKitCacheSurface(u32 surface);
  * was an open + 7.8 KB read + hash + flush per sliding slot per tic. */
 s32 ndsUiKitLoadSurfaceCopy(u32 surface, u8 *buffer, u32 capacity);
 s32 ndsUiKitBlitSurfaceCopy(u32 surface, const u8 *buffer);
+/* The same copy without arena bytes: BG2's offscreen rows (192-255 of its
+ * 256x256 bitmap; every backdrop row clips to the 192-row screen) hold a
+ * surface's on-screen rectangle, saved after its blit and restored VRAM to
+ * VRAM. ndsUiKitBackgroundSpare returns those rows (and their byte count). */
+u16 *ndsUiKitBackgroundSpare(u32 *out_bytes);
+s32 ndsUiKitSaveSurfaceRect(u32 surface, u16 *spare, u32 capacity);
+s32 ndsUiKitRestoreSurfaceRect(u32 surface, const u16 *spare);
 void ndsUiKitDrawCachedSurface(void);
 /* P2-1N (3): draw a keyed sub-rectangle of the cached surface at an arbitrary
  * destination, clipped horizontally to [clip_x0, clip_x1) and to the layer.

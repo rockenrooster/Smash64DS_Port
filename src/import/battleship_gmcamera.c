@@ -412,8 +412,6 @@ static void ndsCameraInishieFuncCameraWitness(GObj *camera_gobj)
 #endif
 }
 
-static void ndsCameraRunFuncCameraDepth(GObj *camera_gobj);
-
 void gmCameraMakeBattleCamera(void)
 {
     ndsCameraResetFrameWitness();
@@ -421,14 +419,6 @@ void gmCameraMakeBattleCamera(void)
     dGMCameraFuncList[nGMCameraStatusInishie] = ndsCameraInishieFuncCameraWitness;
     dGMCameraFuncList[nGMCameraStatusZebes] = ndsCameraZebesFuncCameraWitness;
     battleship_gmCameraMakeBattleCamera();
-    /* The camera's one process (gmCameraMakeDefaultCamera's proc) gains the
-     * depth near below after the source's own camera function; func_id, which
-     * the pause code matches, stays the source's. */
-    if ((gGMCameraGObj != NULL) && (gGMCameraGObj->gobjproc_head != NULL) &&
-        (gGMCameraGObj->gobjproc_head->exec.func == gmCameraRunFuncCamera))
-    {
-        gGMCameraGObj->gobjproc_head->exec.func = ndsCameraRunFuncCameraDepth;
-    }
 }
 
 #define NDS_R2_CAM_Q 12
@@ -631,84 +621,6 @@ NDS_R2_CAM_LEAF f32 ndsR2CamQToF32(s32 value)
     bits.f = (f32)value;
     bits.u -= ((u32)NDS_R2_CAM_Q << 23);
     return bits.f;
-}
-
-/* THE BATTLE CAMERA'S DEPTH NEAR (owner BUGS.md, 2026-10-11: Mad Piano's
- * teeth flickered through his closed lid). In Z-buffering mode the DS keeps
- * z/w to fifteen bits ((z * 0x4000) / w, GBATEK), so with the source's near
- * plane of 256 one depth step is z^2 / (2 * 256 * 16384) world units: ~3 at a
- * battle distance of 5,000. His lid's tooth layer is a double-sided polygon
- * 1-3 units under the lid's face (model 0xA99), so it won the depth test in
- * patches. The N64's 18-bit floating depth resolved it; this hardware's
- * fixed-point depth needs a larger near.
- *
- * Every frame, after the source's camera function, the battle camera's near
- * becomes a quarter of the eye-target distance (one depth step then grows
- * with z instead of z^2: ~0.6 units at 5,000), but never past the nearest
- * fighter less 400 units, so the screen KO (ftcommondead.c: 3,000 units in
- * front of the eye, at least z 2,000) and the pause close-up stay unclipped,
- * and never below the source's 256. Draw only: the CObj's projection feeds
- * gGMCameraMatrix and the renderer's camera producers, all draw side (see
- * gmCameraLookAtFuncMatrix below), and the replay digest folds no camera
- * state. Every producer reads this same field after the sim, so the stage,
- * fighters and particles share one depth mapping in a frame. No depth fog is
- * affected: no source or O2R display list sets a fog position. */
-#define NDS_CAMERA_DEPTH_NEAR_MIN 256
-#define NDS_CAMERA_DEPTH_NEAR_MAX 4096
-#define NDS_CAMERA_DEPTH_NEAR_FIGHTER_MARGIN 400
-
-u32 gNdsCameraDepthNear;
-
-#define ndsCameraWorldUnits(value) (ndsR2CamF32ToQ(value) >> NDS_R2_CAM_Q)
-
-NDS_R2_CAM_ARM static void ndsCameraUpdateDepthNear(CObj *cobj)
-{
-    const s32 ex = ndsCameraWorldUnits(cobj->vec.eye.x);
-    const s32 ey = ndsCameraWorldUnits(cobj->vec.eye.y);
-    const s32 ez = ndsCameraWorldUnits(cobj->vec.eye.z);
-    const s32 vx = ndsCameraWorldUnits(cobj->vec.at.x) - ex;
-    const s32 vy = ndsCameraWorldUnits(cobj->vec.at.y) - ey;
-    const s32 vz = ndsCameraWorldUnits(cobj->vec.at.z) - ez;
-    const s32 dist = ndsR2CamSqrt64(((s64)vx * vx) + ((s64)vy * vy) +
-                                    ((s64)vz * vz));
-    s32 near = dist >> 2;
-    GObj *fighter_gobj;
-
-    if (dist > 0)
-    {
-        for (fighter_gobj = gGCCommonLinks[nGCCommonLinkIDFighter];
-             fighter_gobj != NULL; fighter_gobj = fighter_gobj->link_next)
-        {
-            const Vec3f *pos = &DObjGetStruct(fighter_gobj)->translate.vec.f;
-            const s64 dot =
-                ((s64)(ndsCameraWorldUnits(pos->x) - ex) * vx) +
-                ((s64)(ndsCameraWorldUnits(pos->y) - ey) * vy) +
-                ((s64)(ndsCameraWorldUnits(pos->z) - ez) * vz);
-            const s32 depth = ndsR2CamDiv64(dot, dist) -
-                              NDS_CAMERA_DEPTH_NEAR_FIGHTER_MARGIN;
-
-            if (depth < near)
-            {
-                near = depth;
-            }
-        }
-    }
-    if (near < NDS_CAMERA_DEPTH_NEAR_MIN)
-    {
-        near = NDS_CAMERA_DEPTH_NEAR_MIN;
-    }
-    else if (near > NDS_CAMERA_DEPTH_NEAR_MAX)
-    {
-        near = NDS_CAMERA_DEPTH_NEAR_MAX;
-    }
-    gNdsCameraDepthNear = (u32)near;
-    cobj->projection.persp.near = ndsR2CamQToF32(near << NDS_R2_CAM_Q);
-}
-
-static void ndsCameraRunFuncCameraDepth(GObj *camera_gobj)
-{
-    gmCameraRunFuncCamera(camera_gobj);
-    ndsCameraUpdateDepthNear(CObjGetStruct(camera_gobj));
 }
 
 /* FTOFRAC8(x) == (int)MIN(x * 128.0F, 127.0F) & 0xff.  x * 128 in Q12 is

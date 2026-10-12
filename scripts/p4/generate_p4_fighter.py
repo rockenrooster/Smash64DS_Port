@@ -680,6 +680,27 @@ OWNER_ATTRIBUTE_SCALES = {
 OWNER_IA_INTENSITY_MAX = {
     "metaknight": ((3, 0xF878, 0x1000), (3, 0x10880, 0x1000)),
 }
+# Model vertex blocks moved by a vector (render-class deviation). Mad Piano's
+# twenty teeth (model 0xA99, blocks 0xB38 and 0xD18 of his lid joint) hang
+# from the lid 0.3-2.7 units under its top (block 0xEF8), which the lid draws
+# after them, so the teeth won every depth tie the DS's 15-bit z/w makes of
+# so small a gap and showed through the closed lid (owner BUGS.md
+# 2026-10-12: "the teeth should be moved inwards just a tad"). They move 9.85
+# units into the mouth along the lid top's normal (0.015, 0.910, -0.414).
+# (descriptor file index, model offset, vertex count, (dx, dy, dz)).
+OWNER_VERTEX_SHIFT = {
+    "piano": ((3, 0xB38, 30, (0, -9, 4)), (3, 0xD18, 30, (0, -9, 4))),
+}
+# Model vertex colours scaled per channel by n/255 (render-class deviation).
+# Meta Knight's Mach Tornado colours PRIM*SHADE*PRIM with PRIM (248, 248, 192)
+# set in its lists and lighting off, so SHADE is the vertex colour (all
+# white); the owner draws TEXEL0*SHADE (OWNER_IA_INTENSITY_MAX above), a white
+# swirl. Its vertices take PRIM squared, (241, 241, 144): the N64's cream
+# (owner BUGS.md 2026-10-12: "more yellow/orange"). (descriptor file index,
+# model offset, vertex count, (r, g, b)).
+OWNER_VERTEX_TINT = {
+    "metaknight": ((3, 0x95E0, 27, (241, 241, 144)), (3, 0x98C0, 27, (241, 241, 144))),
+}
 # Parent special-file slots no parent code reads, which an item subset may
 # take while the content names the parent's file there: Fox's special file 4
 # (FoxSpecial4, the reflector's list) is named only by FoxSpecial1's extern
@@ -1168,6 +1189,36 @@ def max_o2r_ia_intensity(blob: bytes, rom: R.Rom, fid: int,
             raise GenError(f"file {fid:#x}: no G_SETTIMG names {offset:#x}")
         for i in range(body + offset, body + offset + size):
             out[i] |= 0xF0
+    return bytes(out)
+
+
+def patch_o2r_vertices(blob: bytes, rom: R.Rom, fid: int,
+                       shifts: tuple, tints: tuple) -> bytes:
+    """An O2R model file with vertex blocks moved (OWNER_VERTEX_SHIFT) or
+    their colours scaled (OWNER_VERTEX_TINT). Each block must be one a G_VTX
+    of this file loads whole."""
+    ext_n = struct.unpack_from("<I", blob, 0x48)[0]
+    body = 0x4C + 2 * ext_n + 4
+    data = rom.file_bytes(fid)
+    loads = {}
+    for at, slot in rom.reloc_slots(fid).items():
+        if slot[0] == "intern" and at >= 4 and data[at - 4] == 0x01:
+            count = (struct.unpack_from(">I", data, at - 4)[0] >> 12) & 0xFF
+            loads[slot[1]] = max(loads.get(slot[1], 0), count)
+    out = bytearray(blob)
+    for offset, count, _ in shifts + tints:
+        if loads.get(offset, 0) < count:
+            raise GenError(f"file {fid:#x}: no G_VTX loads {count} vertices at {offset:#x}")
+    for offset, count, (dx, dy, dz) in shifts:
+        for k in range(count):
+            at = body + offset + 16 * k
+            x, y, z = struct.unpack_from(">hhh", out, at)
+            struct.pack_into(">hhh", out, at, x + dx, y + dy, z + dz)
+    for offset, count, rgb in tints:
+        for k in range(count):
+            at = body + offset + 16 * k + 12
+            for c in range(3):
+                out[at + c] = (out[at + c] * rgb[c] + 127) // 255
     return bytes(out)
 
 
@@ -1818,6 +1869,16 @@ def main() -> int:
             deviations.append({"file_id": fid, "class": "render",
                                "why": "IA8 intensity raised to 15 at " +
                                       ", ".join(f"{o:#x}" for o, _ in ia_patches)})
+        shifts = tuple((off, n, d) for index, off, n, d in OWNER_VERTEX_SHIFT.get(name, ())
+                       if file_ids[index] == fid)
+        tints = tuple((off, n, c) for index, off, n, c in OWNER_VERTEX_TINT.get(name, ())
+                      if file_ids[index] == fid)
+        if shifts or tints:
+            blob = patch_o2r_vertices(blob, rom, fid, shifts, tints)
+            deviations.append({"file_id": fid, "class": "render",
+                               "why": "vertices " + ", ".join(
+                                   [f"{o:#x} moved by {d}" for o, _, d in shifts] +
+                                   [f"{o:#x} coloured x{c}/255" for o, _, c in tints])})
         if len(rom.extern_ids(fid)) > MAX_EXTERN_IDS:
             raise GenError(f"file {fid:#x}: {len(rom.extern_ids(fid))} extern ids, the DS loader holds "
                            f"{MAX_EXTERN_IDS} (NDS_RELOC_EXTERN_FILE_ID_CAPACITY)")

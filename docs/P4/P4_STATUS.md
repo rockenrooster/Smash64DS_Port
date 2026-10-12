@@ -1541,6 +1541,8 @@ semitones lower (`EXTRA_SOUNDS` in p4_audio.py). Shipping ROM play-1011x5, four 
   No list sets a depth-fog position. play-1011x8, two Mad Pianos on Peach's
   Castle: near 1,001 at eye z 3,858, 0 native failures. The photo A/B is
   owed: window captures were black while the console was locked.
+  **Reverted 2026-10-12** (owner: no difference to the teeth, and the
+  pause close-up lost the stage); see "Owner playtest 1012i fixes".
 
 Official gate ROM with all five (`artifacts/performance/2026-10-11_pose-camera-digest`,
 `fixed.*` against the ledger commit's `cand.*`): replay digest IDENTICAL over
@@ -1754,6 +1756,87 @@ unpack, AObj add, parse and play: ~130K).
 The gate (cast only, build-gate-o1012) with the stream, the search and the
 48-colour table: WORK P50 767,808, P95 1,048,000 (2026-10-11: 1,038,208),
 1,896 of 1,961 frames within two VBlanks, replay digest identical.
+
+Then two more (build-sweep-p4d, same rows):
+
+- **Crash's lists kept the global texture fence.** A lean list records
+  where each tint-tile bind sits so a moved tile set re-points it; Crash's
+  lists make 32-34 such binds and the record held 24 (the cast's most is
+  Kirby's 19), so 300 of his 305 lists overflowed and fell back to the
+  global texture fence: every texture key move anywhere (stage, items,
+  effects) re-materialized them, 117 times in 1,200 frames.
+  `NDS_FIGHTER_PACKET_TINT_BIND_MAX` is 40 (192 B more per packet, in the
+  borrowed framebuffer).
+- **`ndsP4RelocAssetPath` walked every content's file list** (the loader's
+  find and the relocation's range checks ask it for every P4 file): a
+  binary search a sorted list now, like `ndsP4FindAnim` (Kirby's power
+  animations too).
+
+WORK P95: Crash 1,894,016 -> 1,474,304, Peach 1,329,792 -> 1,232,320,
+Meta Knight 1,419,840 -> 1,397,440, Banjo 1,378,688 -> 1,364,096, Dedede
+1,321,088 -> 1,317,056; the originals 1,070,912 -> 1,070,464.
+
+## Owner playtest 1012i fixes (2026-10-12)
+
+- **The battle camera's depth near is reverted.** The owner: the Piano's
+  teeth flickered the same before and after it, and the pause close-up lost
+  the stage behind the fighter (geometry inside a quarter of the close-up's
+  eye distance clipped). The camera keeps the source's near of 256 again.
+- **Mad Piano's teeth sit 9.85 units deeper.** His twenty teeth (model
+  0xA99, vertex blocks 0xB38 and 0xD18 of the lid joint) hang from the lid
+  0.3-2.7 units under its top, which the lid draws after them, so the
+  teeth won every depth tie and showed through the closed lid in the
+  select and in matches. The generator moves both blocks along the lid's
+  normal into the mouth (`OWNER_VERTEX_SHIFT`, generate_p4_fighter.py; the
+  owner's "moved inwards just a tad"; a render-class deviation in the
+  manifest).
+- **Meta Knight's Mach Tornado is cream, not white.** Its lists colour
+  PRIM * SHADE * PRIM with PRIM (248, 248, 192) and lighting off; the owner
+  draws TEXEL0 * SHADE with the mask's intensity raised to full (2026-10-11).
+  The tornado's 54 vertices take PRIM squared, (241, 241, 144)
+  (`OWNER_VERTEX_TINT`), which is the N64's colour.
+- **The select's outer previews were cut at the screen's 3D window.** The
+  fighter camera drew into the source's (10,10)-(310,230) window by
+  narrowing GFX_VIEWPORT to it (DS 8..247 x 8..183), which also clipped
+  every fighter at its edges: the P4 select's wider cards put the 1P and
+  4P previews partly outside it (Meta Knight, Bowser). The viewport stays
+  whole and the camera takes the window's projection instead (fovy 30 ->
+  32.588, aspect 4/3 -> 1.30370: the same pixels; `ndsMNPlayersVSFitFighterCamera`).
+- **Door slides streamed their card every tic.** The arena copy of the card
+  under a sliding door (2026-10-11) needs four copies plus 48 KiB behind
+  them at the select's load, which the all-content image never has, so
+  every sliding tic opened the surface pack and read the card again (four
+  slots at once at the entry and back from a match). BG2's offscreen rows
+  (192-255 of its 256x256 bitmap, 32 KB nothing draws) hold the copy
+  instead: saved from the screen right after the first streamed blit,
+  restored VRAM to VRAM after (`ndsUiKitSaveSurfaceRect`; three P4 cards or
+  four original ones fit; A/B word `gNdsMenuShellCssVramUnderlay`). The
+  all-content walk ROM (walk-1012a, two doors sliding per select visit) with
+  the arena copy forced off: streamed 24 frames of three or more VBlanks a
+  visit, the VRAM copy 9, the arena copy 8; the mid-slide frame is
+  pixel-identical to the arena copy's.
+- **MRGAW's CP badge could not be picked up.** The P4 grid starts at x 0
+  (eleven 29-unit columns), so a token on its first column (x 3-24) lay
+  left of the hand's grab point (cursor x + 25) at the source's left clamp
+  of 0. The hand may run to x -20 on P4 builds.
+- **Bowser showed through his shield.** The shield is a camera-facing disc
+  pulled toward the eye so the body it encloses stays behind it; the pull
+  was half the bubble's radius, short of a big body's front. It is 1.25
+  radii now (floor 150), and the disc shrinks by the distance it moved, so
+  its size on screen is unchanged (`ndsEFManagerShieldQuadProcDisplay`).
+- **The run texture memo covers every run.** Its 67 rows were indexed by run
+  number, and a P4 owner image appends its model parts' runs after the
+  canonical ones (Banjo's reach 160): every run past 66 took the full texture
+  resolver at every list materialization (a quarter of a materialization's
+  cost). Rows are run number modulo 67 now, tagged with the run in a byte
+  the row's padding had; no memory.
+
+Gate with all of the above (build-gate-p1012,
+`artifacts/performance/2026-10-12_p4-fixes`): WORK P50 761,920, P95
+1,039,936, 1,897 of 1,961 frames within two VBlanks, replay digest identical.
+Memory rows (play-1012k, low-water against the 25,600 floor): hvjg 28,412
+(was 25,756: .main shrank a kilobyte with the camera code), w4sf 29,208,
+w4sz 33,092, hvsf 39,212; 0 overflows, 0 native failures.
 
 ## Board 1 status (master plan Revision 3)
 

@@ -133,8 +133,16 @@ static u32 ndsMenuShellCssSelContent(u32 sel)
 #endif
 }
 
-/* mnPlayersVSAdjustCursor's clamps and its full-deflection step. */
+/* mnPlayersVSAdjustCursor's clamps and its full-deflection step. The P4
+ * grid starts at x 0 (eleven 29-unit columns), so a token on its first column
+ * (x 3-24) lay left of the hand's grab point at the source's minimum (cursor
+ * x + 25): MRGAW's CP badge could not be picked up (owner BUGS.md
+ * 2026-10-12). The hand may run 20 units past the left edge there. */
+#if NDS_P4
+#define NDS_CSS_CURSOR_X_MIN (-20)
+#else
 #define NDS_CSS_CURSOR_X_MIN 0
+#endif
 #define NDS_CSS_CURSOR_X_MAX 280
 #define NDS_CSS_CURSOR_Y_MIN (10 + NDS_CSS_HEADER_DY)
 #define NDS_CSS_CURSOR_Y_MAX NDS_CSS_CARD_Y(205)
@@ -1238,6 +1246,113 @@ static u8 *ndsMenuShellCssUnderlay(u32 slot, u32 surface)
     return buffer;
 }
 
+/* THE SAME COPY IN VRAM WHERE THE ARENA HAS NO ROOM.
+ *
+ * The all-content image never has the four copies (and the 48 KiB behind
+ * them) at the select's load, so there every sliding tic streamed its card
+ * again: an open, a 10 KB read and a hash per sliding slot per tic, twenty
+ * tics a slide, four slots at once at the entry and back from a match -- the
+ * owner's "card door open/close is very slow" (BUGS.md 2026-10-12). BG2's
+ * offscreen rows (ndsUiKitBackgroundSpare, 32 KB) take the copy instead: the
+ * card's on-screen rectangle right after its first streamed blit, before the
+ * halves draw over it, then VRAM to VRAM for the rest of the slide. Three P4
+ * cards (10,370 B) or four original ones (7,844 B) fit; a slot without a
+ * line streams as before. gNdsMenuShellCssVramUnderlay is the A/B word. */
+#define NDS_CSS_VRAM_LINES 4u
+#define NDS_CSS_VRAM_LINE_FREE 0xffu
+volatile u32 gNdsMenuShellCssVramUnderlay __attribute__((used)) = 1u;
+volatile u32 gNdsMenuShellCssVramUnderlayBlitCount;
+volatile u32 gNdsMenuShellCssVramUnderlaySaveCount;
+static u8 sCssVramLineSlot[NDS_CSS_VRAM_LINES];
+static u16 sCssVramLineSurface[NDS_CSS_VRAM_LINES];
+
+static void ndsMenuShellCssVramUnderlayReset(void)
+{
+    u32 line;
+
+    for (line = 0u; line < NDS_CSS_VRAM_LINES; line++)
+    {
+        sCssVramLineSlot[line] = NDS_CSS_VRAM_LINE_FREE;
+    }
+}
+
+static u16 *ndsMenuShellCssVramLine(u32 line)
+{
+    u32 bytes = 0u;
+    u16 *spare = ndsUiKitBackgroundSpare(&bytes);
+
+    if ((spare == NULL) || (((line + 1u) * NDS_CSS_UNDERLAY_BYTES) > bytes))
+    {
+        return NULL;
+    }
+    return spare + (line * (NDS_CSS_UNDERLAY_BYTES / sizeof(u16)));
+}
+
+static void ndsMenuShellCssVramUnderlayRelease(u32 slot)
+{
+    u32 line;
+
+    for (line = 0u; line < NDS_CSS_VRAM_LINES; line++)
+    {
+        if (sCssVramLineSlot[line] == (u8)slot)
+        {
+            sCssVramLineSlot[line] = NDS_CSS_VRAM_LINE_FREE;
+        }
+    }
+}
+
+static sb32 ndsMenuShellCssVramUnderlayRestore(u32 slot, u32 surface)
+{
+    u32 line;
+
+    for (line = 0u; line < NDS_CSS_VRAM_LINES; line++)
+    {
+        const u16 *copy;
+
+        if (sCssVramLineSlot[line] != (u8)slot)
+        {
+            continue;
+        }
+        copy = ndsMenuShellCssVramLine(line);
+        if ((sCssVramLineSurface[line] == (u16)surface) && (copy != NULL) &&
+            (ndsUiKitRestoreSurfaceRect(surface, copy) != FALSE))
+        {
+            gNdsMenuShellCssVramUnderlayBlitCount++;
+            return TRUE;
+        }
+        sCssVramLineSlot[line] = NDS_CSS_VRAM_LINE_FREE;
+    }
+    return FALSE;
+}
+
+static void ndsMenuShellCssVramUnderlaySave(u32 slot, u32 surface)
+{
+    u32 line;
+    u16 *copy;
+
+    ndsMenuShellCssVramUnderlayRelease(slot);
+    if (gNdsMenuShellCssVramUnderlay == 0u)
+    {
+        return;
+    }
+    for (line = 0u; line < NDS_CSS_VRAM_LINES; line++)
+    {
+        if (sCssVramLineSlot[line] == NDS_CSS_VRAM_LINE_FREE)
+        {
+            break;
+        }
+    }
+    copy = (line < NDS_CSS_VRAM_LINES) ? ndsMenuShellCssVramLine(line) : NULL;
+    if ((copy != NULL) &&
+        (ndsUiKitSaveSurfaceRect(surface, copy, NDS_CSS_UNDERLAY_BYTES) !=
+         FALSE))
+    {
+        sCssVramLineSlot[line] = (u8)slot;
+        sCssVramLineSurface[line] = (u16)surface;
+        gNdsMenuShellCssVramUnderlaySaveCount++;
+    }
+}
+
 static void ndsMenuShellCssStepDoors(void)
 {
     NdsUiKitSurfaceId blits[NDS_CSS_SLOTS];
@@ -1277,6 +1392,7 @@ static void ndsMenuShellCssStepDoors(void)
             /* Terminal frame: the baked gate lands and the doors are done. */
             blits[blit_count] = ndsMenuShellCssGateSurface(i);
             blit_is_terminal[blit_count] = 1u;
+            ndsMenuShellCssVramUnderlayRelease(i);
         }
         else
         {
@@ -1289,6 +1405,11 @@ static void ndsMenuShellCssStepDoors(void)
                 (ndsUiKitBlitSurfaceCopy(sCssPanelSurface[i], underlay) != FALSE))
             {
                 NDS_DIAG(gNdsMenuShellCssUnderlayBlitCount++);
+                continue;
+            }
+            if (ndsMenuShellCssVramUnderlayRestore(i, sCssPanelSurface[i]) !=
+                FALSE)
+            {
                 continue;
             }
             blits[blit_count] = sCssPanelSurface[i];
@@ -1307,6 +1428,11 @@ static void ndsMenuShellCssStepDoors(void)
             if (blit_is_terminal[i] != 0u)
             {
                 sCssPanelSurface[blit_slot[i]] = blits[i];
+            }
+            else
+            {
+                /* The clean card, before the halves below draw over it. */
+                ndsMenuShellCssVramUnderlaySave(blit_slot[i], blits[i]);
             }
         }
         gNdsMenuShellCssPanelBlitCount += blit_count;
@@ -3590,6 +3716,7 @@ static void ndsMenuShellCssInit(void)
     }
     (void)ndsUiKitCacheSurface((u32)NDS_MN_UI_KIT_SURFACE_CSS_DOORS);
     ndsMenuShellCssUnderlayReserve();
+    ndsMenuShellCssVramUnderlayReset();
 }
 
 /* --- M03/M04 loader witnesses --------------------------------------------

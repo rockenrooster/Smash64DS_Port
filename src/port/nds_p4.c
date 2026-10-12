@@ -2549,10 +2549,45 @@ void ndsP4BindMenuScripts(u32 content)
     sNdsP4MenuScriptBase[content] = (void *)new_base;
 }
 
+/* A sorted file list (generate_p4_fighter.py and p4_kirby.py emit them
+ * ascending) holds `file_id`. */
+static sb32 ndsP4AssetListHas(const u16 *assets, u32 count, u32 file_id)
+{
+    u32 lo = 0u;
+    u32 hi = count;
+
+    if ((count == 0u) || (file_id < assets[0]) ||
+        (file_id > assets[count - 1u]))
+    {
+        return FALSE;
+    }
+    while (lo < hi)
+    {
+        const u32 mid = (lo + hi) >> 1;
+
+        if (assets[mid] == file_id)
+        {
+            return TRUE;
+        }
+        if (assets[mid] < file_id)
+        {
+            lo = mid + 1u;
+        }
+        else
+        {
+            hi = mid;
+        }
+    }
+    return FALSE;
+}
+
 /* A content file's NitroFS path, nitro:/reloc/p4/<id as 4 hex digits>; NULL
  * for a file no content has. One buffer, rewritten by each lookup: the
  * reloc loader's caller (ndsRelocAssetFind) keeps it in its own single
- * static entry, which has the same lifetime. */
+ * static entry, which has the same lifetime. Every P4 file lookup asks (the
+ * loader's find, the relocation's range checks): a binary search a list,
+ * where the linear walk of every list cost four Banjos ~10K cycles a frame
+ * of their over-gate frames (2026-10-12 census). */
 const char *ndsP4RelocAssetPath(u32 file_id)
 {
     static char path[] = "nitro:/reloc/p4/0000";
@@ -2568,7 +2603,6 @@ const char *ndsP4RelocAssetPath(u32 file_id)
         const NDSP4Fighter *f = (c < NDS_P4_CONTENT_LIMIT) ? ndsP4Fighter(c) : NULL;
         const u16 *assets = (f != NULL) ? f->assets : NULL;
         u32 count = (f != NULL) ? *f->asset_count : 0u;
-        u32 i;
 
 #if NDS_P2_KIRBY
         /* Past the contents: Kirby's power files (S8). */
@@ -2578,18 +2612,15 @@ const char *ndsP4RelocAssetPath(u32 file_id)
             count = gNdsP4KirbyRelocAssetCount;
         }
 #endif
-        for (i = 0u; i < count; i++)
+        if (ndsP4AssetListHas(assets, count, file_id) != FALSE)
         {
-            if (assets[i] == file_id)
-            {
-                u32 at = sizeof(path) - 5u;
+            u32 at = sizeof(path) - 5u;
 
-                path[at + 0u] = hex[(file_id >> 12) & 0xFu];
-                path[at + 1u] = hex[(file_id >> 8) & 0xFu];
-                path[at + 2u] = hex[(file_id >> 4) & 0xFu];
-                path[at + 3u] = hex[file_id & 0xFu];
-                return path;
-            }
+            path[at + 0u] = hex[(file_id >> 12) & 0xFu];
+            path[at + 1u] = hex[(file_id >> 8) & 0xFu];
+            path[at + 2u] = hex[(file_id >> 4) & 0xFu];
+            path[at + 3u] = hex[file_id & 0xFu];
+            return path;
         }
     }
     return NULL;
@@ -2733,19 +2764,12 @@ static u32 ndsP4FindAnim(u32 asset_id)
         }
     }
 #if NDS_P2_KIRBY
-    /* Past the contents: Kirby's power animations (S8), in emission order. */
+    /* Past the contents: Kirby's power animations (S8), ascending too
+     * (p4_kirby.py sorts them). */
     if (found == 0u)
     {
-        u32 i;
-
-        for (i = 0u; i < gNdsP4KirbyAnimCount; i++)
-        {
-            if ((gNdsP4KirbyAnims[i] & 0x7FFFu) == asset_id)
-            {
-                found = 1u | ((gNdsP4KirbyAnims[i] >> 15) << 1);
-                break;
-            }
-        }
+        found = ndsP4FindAnimIn(gNdsP4KirbyAnims, gNdsP4KirbyAnimCount,
+                                asset_id);
     }
 #endif
     sNdsP4FindAnimLastId = asset_id;

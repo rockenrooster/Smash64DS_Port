@@ -153,7 +153,43 @@ s32 ndsCssGetShade(s32 player);
 s32 ndsCssGetFighterKindCount(const s32 *p_fkind);
 #endif
 
+/* The last camera the source made: right after mnPlayersVSMakeFighterCamera
+ * it is the fighter camera (ndsMNPlayersVSFitFighterCamera). */
+static GObj *sNdsPlayersVSLastCamera;
+static GObj *ndsPlayersVSNoteCamera(GObj *camera_gobj)
+{
+    sNdsPlayersVSLastCamera = camera_gobj;
+    return camera_gobj;
+}
+#define gcMakeCameraGObj(...) \
+    ndsPlayersVSNoteCamera(gcMakeCameraGObj(__VA_ARGS__))
+
 #include "../../decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c"
+
+#undef gcMakeCameraGObj
+
+/* The source draws the select's fighters into a (10,10)-(310,230) window of
+ * its 320x240 frame. The DS narrowed GFX_VIEWPORT to that window (8..247 x
+ * 8..183), which also clipped every fighter at its edges: the P4 select's
+ * wider cards put the 1P and 4P previews partly outside it (owner BUGS.md
+ * 2026-10-12: Meta Knight and Bowser cut at the outer card edges). The
+ * window's projection is the whole frame's scaled by 300/320 in x and
+ * 220/240 in y about the frame centre, which is the window's centre, so the
+ * camera takes that projection (fovy 30 -> 32.588, aspect 4/3 -> 1.30370)
+ * and the viewport stays whole: the same pixels, clipped only by the
+ * screen. */
+static void ndsMNPlayersVSFitFighterCamera(void)
+{
+    CObj *cobj;
+
+    if (sNdsPlayersVSLastCamera == NULL)
+    {
+        return;
+    }
+    cobj = CObjGetStruct(sNdsPlayersVSLastCamera);
+    cobj->projection.persp.fovy = 32.588150F;
+    cobj->projection.persp.aspect = 1.3037037F;
+}
 
 #if NDS_P4
 s32 ndsP4MNPlayersVSGetStatusSelected(s32 fkind)
@@ -2965,6 +3001,7 @@ void ndsMNPlayersVSPreviewInit(void)
     sMNPlayersVSIsTeamBattle = FALSE;
     sNdsPlayersVSPreviewRulesReady = FALSE;
     mnPlayersVSMakeFighterCamera();
+    ndsMNPlayersVSFitFighterCamera();
     scSubsysFighterSetLightParams(45.0F, 45.0F, 0xFF, 0xFF, 0xFF, 0xFF);
     sNdsPlayersVSPreviewDrawPhase = 0u;
     sNdsPlayersVSPreviewActive = TRUE;
@@ -3727,10 +3764,9 @@ void ndsMNPlayersVSPreviewFrame(void)
     if (sNdsPlayersVSPreviewDrawPhase == 0u)
     {
         /* mnPlayersVSMakeFighterCamera uses (10,10)-(310,230) inside the
-         * source's 320x240 frame. Using the whole DS viewport stretched that
-         * 300x220 window to 320x240 equivalent, which moved the outer 1P/4P
-         * previews away from their source panel centres. */
-        ndsPlatformSet3DViewportSource(10, 10, 310, 230);
+         * source's 320x240 frame: its projection maps that window over the
+         * whole viewport (ndsMNPlayersVSFitFighterCamera), so the previews sit
+         * at their source panel centres and only the screen clips them. */
         /* taskman.c:1093-1100 rewinds the graphics heap and the four DL heads
          * before EVERY source scene draw; this loop drew without doing either.
          * The preview camera's own capture proc emits about seventeen Gfx
@@ -3742,7 +3778,6 @@ void ndsMNPlayersVSPreviewFrame(void)
         syTaskmanResetGraphicsHeap();
         func_80004AB0();
         gcDrawAll();
-        ndsPlatformReset3DViewport();
         gNdsPlayersVSPreviewDrawCount++;
     }
     sNdsPlayersVSPreviewDrawPhase ^= 1u;
@@ -3983,6 +4018,7 @@ void mnPlayersVSFuncStart(void)
     mnPlayersVSMakeGateCamera();
     mnPlayersVSMakePlayerKindSelectCamera();
     mnPlayersVSMakeFighterCamera();
+    ndsMNPlayersVSFitFighterCamera();
     mnPlayersVSMakeTeamSelectCamera();
     mnPlayersVSMakeHandicapLevelCamera();
     mnPlayersVSMakePortraitWallpaperCamera();
