@@ -166,6 +166,11 @@ typedef struct NDSP4Overrides
     GObj *(*fox_reflector)(GObj *fighter_gobj);
     /* efManagerFoxEntryArwingMakeEffect (ftCommonAppearSetStatus). */
     GObj *(*fox_entry_arwing)(FTStruct *fp, Vec3f *pos, s32 lr);
+    /* efManagerCaptainFalconPunchMakeEffect and FalconKickMakeEffect
+     * (Captain's neutral and down specials; a Kirby holding the content's
+     * power takes the punch too). */
+    GObj *(*captain_falcon_punch)(GObj *fighter_gobj);
+    GObj *(*captain_falcon_kick)(GObj *fighter_gobj);
     /* NDS_P4_ENTRY_PORT: the ftCommonAppearSetStatus case the content's
      * entry_script names, on its own files (Bowser's Clown Copter in the
      * Falcon Flyer's case). */

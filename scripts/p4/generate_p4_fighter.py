@@ -463,6 +463,10 @@ CALLBACK_PORTS = {
 # log), which moves with the staging's code layout.
 ENTRY_PORTS = {
     "bowser": 0x8013DD14,
+    # Captain's own case (his entry_script is the parent's): Remix's
+    # get_entry_anim_struct_ and get_entry_file_ptr_ give it his file 7,
+    # which is his own storage (OWN_SPECIAL_FILES).
+    "ganondorf": 0x8013DD14,
     # Link's case (wave and beam) on the content's entry-effects file 3.
     "banjo": 0x8013DCCC,
     "marth": "Marth.marth_entry_routine_",  # then Link's case
@@ -495,6 +499,12 @@ OWN_SPECIAL_FILES = {
     # WolfNSP's shot (1, its graphic 4), the reflector (2), the Wolfen (3)
     # and the Fire Wolf slash (4).
     "wolf": (1, 2, 3, 4),
+    # His Warlock Kick and entry craft (2, GND file 7) and his Warlock Punch
+    # (3, GND file 8): captainshared.asm's kick, punch and entry structs on
+    # his files at Captain's offsets, so a match with Captain keeps both.
+    # Captain's kick, punch and entry-car makers, their only readers, are
+    # ported for him (src/port/nds_p4_ganondorf.c).
+    "ganondorf": (2, 3),
     # The Clown Copter (2), read only by Yoshi's entry egg, which his
     # Falcon Flyer case never runs.
     "bowser": (2,),
@@ -2119,14 +2129,15 @@ def main() -> int:
     entry_lab_fallback = 0
     if script == ENTRY_SCRIPT_NONE:
         entry_effect = "NDS_P4_ENTRY_NONE"
+    elif entry_port(args.staging, ENTRY_PORTS.get(name)) == script:
+        # A case ported on the content's own files (NDSP4Overrides.entry_case
+        # in src/port/nds_p4_<name>.c): another kind's, or the parent's own
+        # where Remix gives it the content's file (Ganondorf).
+        entry_effect = "NDS_P4_ENTRY_PORT"
     elif script == parent_script:
         # Every special slot the parent's code reads now holds the
         # parent's file or a same-layout copy (the stand-ins above).
         entry_effect = "NDS_P4_ENTRY_PARENT"
-    elif entry_port(args.staging, ENTRY_PORTS.get(name)) == script:
-        # Another kind's case, ported on the content's own files
-        # (NDSP4Overrides.entry_case in src/port/nds_p4_<name>.c).
-        entry_effect = "NDS_P4_ENTRY_PORT"
     elif args.lab_fallback:
         entry_effect = "NDS_P4_ENTRY_NONE"
         entry_lab_fallback = 1

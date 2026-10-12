@@ -50,6 +50,20 @@ ARTICLES = {
         # pistol is (renderer_adapter_fighter.c's gun sidecar).
         {"name": "gun", "modelpart_joint": 17, "modelpart": 0},
     ),
+    "ganondorf": (
+        # captainshared.asm punch_anim_struct, kick_anim_struct and
+        # entry_anim_struct: Captain's descriptions on his own files at
+        # Captain's offsets. The Warlock Punch: one display list with its
+        # MObjSub table (GND file 8; llCaptainSpecial3FalconPunch*).
+        {"name": "punch", "special": 3, "dl": 0x760, "mobjsubs": 0x690},
+        # The Warlock Kick: a DObjDesc tree, its drawn entry's MObjSub
+        # cycling TEXID (GND file 7; llCaptainSpecial2FalconKick*).
+        {"name": "kick", "special": 2, "dobjdesc": 0xB08, "mobjsubs": 0x960},
+        # His craft: the Falcon Flyer's DObjDesc on the same file, drawn
+        # through DObjDLLinks; entry lifetime.
+        {"name": "entry_car", "special": 2, "dobjdesc": 0x5FC0, "dllinks": True,
+         "entry": True},
+    ),
     "bowser": (
         # captainshared.asm entry_anim_struct_BOWSER: the Falcon Flyer's
         # description on his Clown Copter file, DObjDesc 0x1E80, drawn
@@ -479,10 +493,16 @@ def resolve(content: str, title: str, o2r: Path, descriptor: dict) -> list[dict]
                         via_base=True)
             continue
         if "dobjdesc" in article:
-            for dl in dobjdesc_lists(res, article["dobjdesc"]):
+            # With a MObjSub*** table, an entry whose MObjSub cycles TEXID
+            # carries its frames (Ganondorf's Warlock Kick).
+            table = article.get("mobjsubs")
+            for index, dl in dobjdesc_entries(res, article["dobjdesc"]):
+                texid = None
+                if table is not None and res.pointer_at(table + 4 * index) is not None:
+                    texid = texid_images(res, table, article.get("texid_frames"), dobj=index)
                 lists = dllink_lists(res, dl) if article.get("dllinks") else [(0, dl)]
                 for head, root in lists:
-                    add(article, res, root, None, head)
+                    add(article, res, root, texid, head)
         elif "dl" in article:
             texid = texid_images(res, article["mobjsubs"]) if "mobjsubs" in article else None
             add(article, res, article["dl"], texid)

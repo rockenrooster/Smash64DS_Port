@@ -6670,22 +6670,42 @@ s32 ndsRendererSubmitNativeEntryEffect(
     /* A P4 article root with a TEXID material (Wolf's slash and blaster):
      * one live MObj whose segment-E branch supplies only the current image
      * and, with MOBJ_FLAG_PALETTE, the palette-0 TLUT the generator baked.
-     * MatAnim changes only TEXID, and every frame is preconverted. */
+     * MatAnim changes only TEXID, and every frame is preconverted. A MObj
+     * with flags 0x20 and MOBJ_FLAG_TEXTURE (Falcon Punch's 0x00A1, which
+     * Ganondorf's punch and kick keep) also sets the render tile's size and
+     * G_TEXTURE: the generator baked both from the MObjSub (its size at
+     * +0x0C, scale 0xFFFF), so they are admitted while the tile's origin is
+     * the bake's (no scroll) and the scale is the bake's. */
     if ((root_index >= NDS_ENTRY_EFFECT_P4_ROOT_FIRST) &&
         (sNdsEntryEffectP4Roots[root_index - NDS_ENTRY_EFFECT_P4_ROOT_FIRST]
              .variant_count != 0u))
     {
         const NDSEntryEffectP4Root *p4_root =
             &sNdsEntryEffectP4Roots[root_index - NDS_ENTRY_EFFECT_P4_ROOT_FIRST];
-        const u32 allowed_effects =
+        u32 allowed_effects =
             NDS_RENDERER_NATIVE_MATERIAL_CURRENT_IMAGE |
             NDS_RENDERER_NATIVE_MATERIAL_PALETTE_IMAGE |
             NDS_RENDERER_NATIVE_MATERIAL_PALETTE_TLUT;
 
+        if ((p4_root->mobj_flags & 0x0020u) != 0u)
+        {
+            allowed_effects |= NDS_RENDERER_NATIVE_MATERIAL_RENDER_TILE_SIZE;
+        }
+        if ((p4_root->mobj_flags & 0x0080u) != 0u)
+        {
+            allowed_effects |= NDS_RENDERER_NATIVE_MATERIAL_TEXTURE;
+        }
         if ((materials == NULL) || (material_count != 1u) ||
             ((materials[0].effects & ~allowed_effects) != 0u) ||
             ((materials[0].effects &
               NDS_RENDERER_NATIVE_MATERIAL_CURRENT_IMAGE) == 0u) ||
+            (((materials[0].effects &
+               NDS_RENDERER_NATIVE_MATERIAL_RENDER_TILE_SIZE) != 0u) &&
+             (materials[0].render_tile_size_w0 != 0xf2000000u)) ||
+            (((materials[0].effects &
+               NDS_RENDERER_NATIVE_MATERIAL_TEXTURE) != 0u) &&
+             ((materials[0].texture_w0 != 0xd7000002u) ||
+              (materials[0].texture_w1 != 0xffffffffu))) ||
             (live_texture_variant >= (u32)p4_root->variant_count) ||
             (sNdsRendererEntryEffectTextureName[
                  p4_root->variant_slots[live_texture_variant]] == 0u))

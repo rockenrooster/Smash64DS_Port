@@ -3137,12 +3137,12 @@ static sb32 ndsRendererAdapterBuildJointAttachTraMtx(DObj *dobj, Mtx *out)
         return FALSE;
     }
     gmCollisionGetFighterPartsWorldPosition(attach, &translate_base);
-    if ((gNdsEffectTowardEyeDL != NULL) &&
-        (ndsEffectTreeFirstDL(dobj) == gNdsEffectTowardEyeDL))
+    if (ndsEffectTowardEye(dobj) != FALSE)
     {
-        /* nds_effects.h: Ness's PSI Magnet, drawn toward the camera eye by
-         * the shield's floor so his own body stops hiding it. Translation
-         * only; the source pose and position are untouched. */
+        /* nds_effects.h: Ness's PSI Magnet, Falcon's punch and kick and
+         * Ganondorf's, drawn toward the camera eye by the shield's floor so
+         * the fighter's own body stops hiding them. Translation only; the
+         * source pose and position are untouched. */
         CObj *cobj = (gGCCurrentCamera != NULL) ?
             CObjGetStruct(gGCCurrentCamera) : NULL;
 

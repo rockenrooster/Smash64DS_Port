@@ -194,6 +194,12 @@ uintptr_t lEFCommonParticleTextureBankHi;
 #define efManagerNessPsychicMagnetMakeEffect \
     ndsBaseEFManagerNessPsychicMagnetMakeEffect
 #endif
+#if NDS_P2_CAPTAIN
+#define efManagerCaptainFalconPunchMakeEffect \
+    ndsBaseEFManagerCaptainFalconPunchMakeEffect
+#define efManagerCaptainFalconKickMakeEffect \
+    ndsBaseEFManagerCaptainFalconKickMakeEffect
+#endif
 #if NDS_R2_FOX_BLASTER_GLOW_AOT
 #define efManagerFoxBlasterGlowMakeEffect \
     ndsBaseEFManagerFoxBlasterGlowMakeEffect
@@ -273,6 +279,10 @@ void efManagerKirbyInhaleWindProcUpdate(GObj *effect_gobj)
 #undef efManagerNessPKThunderWaveMakeEffect
 #undef efManagerNessPKFlashMakeEffect
 #undef efManagerNessPsychicMagnetMakeEffect
+#endif
+#if NDS_P2_CAPTAIN
+#undef efManagerCaptainFalconPunchMakeEffect
+#undef efManagerCaptainFalconKickMakeEffect
 #endif
 #if NDS_R2_FOX_BLASTER_GLOW_AOT
 #undef efManagerFoxBlasterGlowMakeEffect
@@ -2112,21 +2122,126 @@ GObj *efManagerNessPsychicMagnetMakeEffect(GObj *fighter_gobj)
 {
     GObj *effect_gobj =
         ndsBaseEFManagerNessPsychicMagnetMakeEffect(fighter_gobj);
-    const void *dl = (effect_gobj != NULL) ?
-        ndsEffectTreeFirstDL(DObjGetStruct(effect_gobj)) : NULL;
 
-    if (dl != NULL)
-    {
-        gNdsEffectTowardEyeDL = dl;
-    }
+    ndsEffectTowardEyeRegister(effect_gobj);
     return effect_gobj;
 }
 #endif
 
-/* nds_effects.h: the toward-eye model effect's first display list, and the
- * pre-order walk (three levels; the trees are shallow) that names a tree by
- * it. */
-const void *gNdsEffectTowardEyeDL;
+#if NDS_P2_CAPTAIN
+#if NDS_P4
+/* The content whose Captain makers a fighter takes: its own, or a Kirby's
+ * held power's (captainshared.asm get_punch_anim_struct_ gives a Kirby
+ * holding Ganondorf's power his punch). */
+static const NDSP4Overrides *ndsEFManagerCaptainOverrides(GObj *fighter_gobj)
+{
+    const FTStruct *fp = ftGetStruct(fighter_gobj);
+    const NDSP4Overrides *p4 = ndsP4Overrides(fp);
+
+#if NDS_P2_KIRBY
+    if ((p4 == NULL) && (fp->nds_p4_kirby_copy != 0u))
+    {
+        const NDSP4Fighter *f = ndsP4Fighter(fp->nds_p4_kirby_copy);
+
+        p4 = (f != NULL) ? f->overrides : NULL;
+    }
+#endif
+    return p4;
+}
+#endif
+
+/* Owner 2026-10-12: "move VFX towards camera for 'Falcon punch' and 'Falcon
+ * Kick' so it doesn't clip fighter". The punch and the kick follow a fighter
+ * joint (matrix kind 0x50) and cut into his body; registered, they draw
+ * toward the eye as the PSI Magnet does (nds_effects.h). A content with its
+ * own files (Ganondorf, captainshared.asm) builds its own. */
+GObj *efManagerCaptainFalconPunchMakeEffect(GObj *fighter_gobj)
+{
+    GObj *effect_gobj;
+#if NDS_P4
+    const NDSP4Overrides *p4 = ndsEFManagerCaptainOverrides(fighter_gobj);
+
+    effect_gobj = ((p4 != NULL) && (p4->captain_falcon_punch != NULL)) ?
+        p4->captain_falcon_punch(fighter_gobj) :
+        ndsBaseEFManagerCaptainFalconPunchMakeEffect(fighter_gobj);
+#else
+    effect_gobj = ndsBaseEFManagerCaptainFalconPunchMakeEffect(fighter_gobj);
+#endif
+    ndsEffectTowardEyeRegister(effect_gobj);
+    return effect_gobj;
+}
+
+GObj *efManagerCaptainFalconKickMakeEffect(GObj *fighter_gobj)
+{
+    GObj *effect_gobj;
+#if NDS_P4
+    const NDSP4Overrides *p4 = ndsP4Overrides(ftGetStruct(fighter_gobj));
+
+    effect_gobj = ((p4 != NULL) && (p4->captain_falcon_kick != NULL)) ?
+        p4->captain_falcon_kick(fighter_gobj) :
+        ndsBaseEFManagerCaptainFalconKickMakeEffect(fighter_gobj);
+#else
+    effect_gobj = ndsBaseEFManagerCaptainFalconKickMakeEffect(fighter_gobj);
+#endif
+    ndsEffectTowardEyeRegister(effect_gobj);
+    return effect_gobj;
+}
+#endif
+
+/* nds_effects.h: the toward-eye model effects' first display lists, a match's
+ * (each list is its file's, so a few slots hold every maker that registers),
+ * and the pre-order walk (three levels; the trees are shallow) that names a
+ * tree by its first list. */
+#define NDS_EFFECT_TOWARD_EYE_MAX 6u
+static const void *sNdsEffectTowardEyeDLs[NDS_EFFECT_TOWARD_EYE_MAX];
+static u32 sNdsEffectTowardEyeNext;
+
+void ndsEffectTowardEyeRegister(GObj *effect_gobj)
+{
+    const void *dl = (effect_gobj != NULL) ?
+        ndsEffectTreeFirstDL(DObjGetStruct(effect_gobj)) : NULL;
+    u32 i;
+
+    if (dl == NULL)
+    {
+        return;
+    }
+    for (i = 0u; i < NDS_EFFECT_TOWARD_EYE_MAX; i++)
+    {
+        if (sNdsEffectTowardEyeDLs[i] == dl)
+        {
+            return;
+        }
+    }
+    sNdsEffectTowardEyeDLs[sNdsEffectTowardEyeNext] = dl;
+    sNdsEffectTowardEyeNext =
+        (sNdsEffectTowardEyeNext + 1u) % NDS_EFFECT_TOWARD_EYE_MAX;
+}
+
+void ndsEffectTowardEyeReset(void)
+{
+    memset(sNdsEffectTowardEyeDLs, 0, sizeof(sNdsEffectTowardEyeDLs));
+    sNdsEffectTowardEyeNext = 0u;
+}
+
+int ndsEffectTowardEye(const DObj *root)
+{
+    const void *dl = ndsEffectTreeFirstDL(root);
+    u32 i;
+
+    if (dl == NULL)
+    {
+        return FALSE;
+    }
+    for (i = 0u; i < NDS_EFFECT_TOWARD_EYE_MAX; i++)
+    {
+        if (sNdsEffectTowardEyeDLs[i] == dl)
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
 
 const void *ndsEffectTreeFirstDL(const DObj *root)
 {
@@ -2630,6 +2745,7 @@ void efManagerInitEffects(void)
     gNdsVisualEffectMaxActiveCount = 0u;
     gNdsVisualEffectKindMask = 0u;
     gNdsVisualEffectTemplateBytes = 0u;
+    ndsEffectTowardEyeReset();
     ndsBaseEFManagerInitEffects();
 #if NDS_R2_IMPACT_WAVE_NATIVE
     gNdsImpactWaveNativeDrawCount = 0u;

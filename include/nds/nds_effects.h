@@ -76,11 +76,17 @@ void ndsParticleTransformTowardEye(struct LBTransform *xf);
 /* The same depth treatment for a model effect whose root follows a fighter
  * joint (matrix kind 0x50): Ness's PSI Magnet sits on his TopN joint and the
  * opaque body hid most of it (owner 2026-10-05: "Down B needs shield guard z
- * move treatment"). The maker publishes the first display list of its tree;
- * the 0x50 builder pulls a root whose tree leads with that list
- * NDS_PARTICLE_TOWARD_EYE_BIAS units toward the camera eye. */
+ * move treatment"); Falcon's punch and kick, and Ganondorf's, cut into the
+ * fighter they follow (owner 2026-10-12: "move VFX towards camera ... so it
+ * doesn't clip fighter"). Each maker registers the first display list of
+ * its tree; the 0x50 builder pulls a root whose tree leads with a registered
+ * list NDS_PARTICLE_TOWARD_EYE_BIAS units toward the camera eye. The lists
+ * are a match's: efManagerInitEffects forgets them. */
 struct DObj;
-extern const void *gNdsEffectTowardEyeDL;
+struct GObj;
+void ndsEffectTowardEyeRegister(struct GObj *effect_gobj);
+void ndsEffectTowardEyeReset(void);
+int ndsEffectTowardEye(const struct DObj *root);
 const void *ndsEffectTreeFirstDL(const struct DObj *root);
 extern volatile u32 gNdsSourceAssetQuadAttempts;
 extern volatile u32 gNdsSourceAssetQuadDrawn;

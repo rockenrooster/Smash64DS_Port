@@ -2123,6 +2123,35 @@ test): Wolf's gun (WOLF_WEAPON) still draws in his neutral special (probe
 `gunfile`), Peach's hand alone shows in the pause close-up (play-1012z). Her
 racket proper is joint 18's part 1, set by the forward smash only.
 
+## Falcon's and Ganondorf's punch and kick (owner bugs, 2026-10-12)
+
+"Ganondorfs 'Falcon punch' and 'falcon kick' should have more purple VFX."
+Ganondorf's special files 2 and 3 (GND files 7 and 8) loaded into Captain's
+globals, and the effects drew through Captain's native owners (assets 350
+and 333), whose programs carry Captain's textures; a match with both fighters
+also left one file in the shared global. They are his own storage now
+(`OWN_SPECIAL_FILES`): `src/port/nds_p4_ganondorf.c` runs Captain's three
+makers (punch, kick, entry craft) on them at Captain's offsets, as Remix's
+`captainshared.asm` structs do (a Kirby holding his power takes his punch,
+`get_punch_anim_struct_`), through `NDSP4Overrides.captain_falcon_punch` /
+`captain_falcon_kick` and an entry port of Captain's own case. The articles
+(`p4_articles.py`) compile his punch (one list, three TEXID frames), his kick
+(a tree whose drawn entry's MObjSub cycles two frames; a DObjDesc article may
+carry a MObjSub table now) and his craft's lists. A P4 TEXID root may take a
+MObj with flags 0x20 and TEXTURE (Falcon Punch's 0x00A1): the render tile
+size and G_TEXTURE the generator baked from the MObjSub are admitted while the
+live tile's origin and scale are the bake's. His craft is mostly empty lists
+in his file (Remix reuses the Falcon Flyer's tree for timing); until now it
+drew Captain's Blue Falcon.
+
+"move VFX towards camera for 'Falcon punch' and 'Falcon Kick' so it doesn't
+clip fighter." Both effects follow a joint (matrix kind 0x50); their makers
+register with the PSI Magnet's toward-eye treatment, now a list of a match's
+registered effects (`ndsEffectTowardEyeRegister`), so the 0x50 builder draws
+them the shield's floor toward the camera. play-1013b, Ganondorf against
+Captain on Dream Land: his punch and kick purple, Captain's kick orange in
+the same match, 0 native failures (the pause menu's sprites aside).
+
 ## Board 1 status (master plan Revision 3)
 
 | Item | State |

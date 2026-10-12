@@ -108,7 +108,7 @@ $(NDS_P4_CONTENTS_HEADER) $(NDS_P4_COLANIM_INC) $(NDS_P4_KIRBY_OUT): $(NDS_BUILD
 
 # The later contents' routines, size-optimized as the Makefile's first
 # fourteen are (resident in every scene; they run only in their specials).
-nds_p4_piano.o nds_p4_metaknight.o nds_p4_mrgaw.o nds_p4_snake.o: CFLAGS += -Os
+nds_p4_piano.o nds_p4_metaknight.o nds_p4_mrgaw.o nds_p4_snake.o nds_p4_ganondorf.o: CFLAGS += -Os
 
 # The P4 article textures' texels and each content's article corners:
 # generate_nds_entry_effects.py --p4 writes them beside the packet, and the
