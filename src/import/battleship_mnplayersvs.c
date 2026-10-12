@@ -49,6 +49,7 @@ extern void ndsFighterManagerRegisterDisplayFighter(GObj *fighter_gobj,
                                                      u32 slot);
 extern void *ndsBattleShipLoadCSSSelectedFigatree(const void *file_id,
                                                    void *heap);
+extern size_t ndsBattleShipCSSSelectedFigatreeSize(const void *file_id);
 extern void ftManagerSetupFilesKind(s32 fkind);
 extern void ndsFTManagerRestoreKirbyPreviewMainMotion(void);
 extern void *ndsRelocExternTreeSliceBegin(const void *file_id);
@@ -490,8 +491,17 @@ static u32 ndsCssPreviewKindDetail(s32 kind)
  * load sliced and cancellable, an abandoned request now costs at most the units
  * already spent, so stabilization only has to reject genuine cursor transit.
  * Two stable updates is the candidate value to measure; a kind that is already
- * resident pays one, because reusing a warm block moves no bytes at all. */
-#define NDS_PLAYERS_VS_PREVIEW_DWELL_TICKS 2u
+ * resident pays one, because reusing a warm block moves no bytes at all.
+ *
+ * Measured too short (owner, 2026-10-11: "CSS slowness/stuttering when
+ * panning over fighter portraits"). A carried token crossing the P4 grid's
+ * cells (about 28 source pixels at 4 a tic) rests 7 tics on each, so every
+ * portrait it passed started a load: 34 hovers in one pan made 30 loads,
+ * each update then spent ~9 ms reading its 8 KiB, the select fell to two
+ * VBlanks a frame, and the unsliced stages (owner images, the rebuild)
+ * stalled it 6-17 VBlanks. Eight stable tics outlast a cell's transit, so a
+ * pan loads nothing and the portrait the token stops on loads once. */
+#define NDS_PLAYERS_VS_PREVIEW_DWELL_TICKS 8u
 #define NDS_PLAYERS_VS_PREVIEW_DWELL_WARM_TICKS 1u
 
 /* Stages of the compact transaction AFTER its pack has been read, decoded and
@@ -1478,6 +1488,34 @@ static void ndsMNPlayersVSPreviewDropSlotHeap(u32 slot)
     sMNPlayersVSSlots[slot].figatree_heap = NULL;
 }
 
+#if NDS_P4
+/* A demo clip's bytes in the slot heap: the larger of the whole image the
+ * figatree's force load writes (ndsRelocFullLoadSize) and a resident copy's
+ * span. lbRelocGetFileSize answers sizeof(Sprite) for a resident file, so
+ * Ganondorf's slot -- both clips Captain's, already resident -- took 96 B
+ * and his Selected clip overran it: he stood in his bind pose (owner,
+ * 2026-10-11). It is the last resort, as in the Results podium heap. */
+static u32 ndsMNPlayersVSPreviewClipBytes(const void *file_id)
+{
+    size_t bytes = ndsRelocFullLoadSize(file_id);
+
+    if (ndsRelocGetLoadedFileSize(file_id) > bytes)
+    {
+        bytes = ndsRelocGetLoadedFileSize(file_id);
+    }
+    if (bytes == 0u)
+    {
+        bytes = lbRelocGetFileSize(file_id);
+    }
+    /* A cast Selected clip plays from its compiled table, copied whole. */
+    if (ndsBattleShipCSSSelectedFigatreeSize(file_id) > bytes)
+    {
+        bytes = ndsBattleShipCSSSelectedFigatreeSize(file_id);
+    }
+    return (u32)bytes;
+}
+#endif
+
 static sb32 ndsMNPlayersVSPreviewReserveSlotHeap(u32 slot, s32 kind)
 {
     const FTData *data;
@@ -1517,8 +1555,8 @@ static sb32 ndsMNPlayersVSPreviewReserveSlotHeap(u32 slot, s32 kind)
             const void *pose_id =
                 (const void *)(uintptr_t)data->submotion->motion_desc[row].anim_file_id;
 
-            idle = (idle_id != NULL) ? (u32)lbRelocGetFileSize(idle_id) : 0u;
-            pose = (pose_id != NULL) ? (u32)lbRelocGetFileSize(pose_id) : 0u;
+            idle = (idle_id != NULL) ? ndsMNPlayersVSPreviewClipBytes(idle_id) : 0u;
+            pose = (pose_id != NULL) ? ndsMNPlayersVSPreviewClipBytes(pose_id) : 0u;
         }
         if ((idle != 0u) && (pose != 0u) &&
             (((idle > pose) ? idle : pose) < need))

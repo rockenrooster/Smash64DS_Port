@@ -659,6 +659,19 @@ SUBSET_FILES = {
 OWNER_ATTRIBUTE_SCALES = {
     "wario": {"jump_height_mul": 0.75 ** 0.5, "jump_height_base": 0.75 ** 0.5},
 }
+# Model IA textures whose intensity the native owner must not draw. Meta
+# Knight's Mach Tornado (model 0x15EE lists at 0x97C0 and 0x9AA0, render mode
+# 0x00504130) colours PRIM*SHADE*PRIM and takes only its 64x64 IA8 mask's
+# alpha (combine 0xFC321803/0xFF17FFFF). The owner draws it as fighter family
+# 0, TEXEL0 colour (generate_nds_native_owners.py DIRECT_POLICY_COMBINE_ALIASES),
+# and the mask's intensity is mostly 0-3 where its alpha is 5-9: dark
+# translucent bands, the "black opaqueness" of the owner's report
+# (2026-10-11). Full intensity leaves the alpha exact and the colour SHADE,
+# a white swirl where the N64's is PRIM-tinted cream. (descriptor file index,
+# model offset, bytes).
+OWNER_IA_INTENSITY_MAX = {
+    "metaknight": ((3, 0xF878, 0x1000), (3, 0x10880, 0x1000)),
+}
 # Parent special-file slots no parent code reads, which an item subset may
 # take while the content names the parent's file there: Fox's special file 4
 # (FoxSpecial4, the reflector's list) is named only by FoxSpecial1's extern
@@ -1126,6 +1139,27 @@ def scale_o2r_attributes(blob: bytes, o_attributes: int, scales: dict[str, float
         at = body + o_attributes + layout[f"FTAttributes.{field}"]
         value = struct.unpack_from(">f", out, at)[0]
         struct.pack_into(">f", out, at, value * k)
+    return bytes(out)
+
+
+def max_o2r_ia_intensity(blob: bytes, rom: R.Rom, fid: int,
+                         patches: tuple[tuple[int, int], ...]) -> bytes:
+    """An O2R model file with the intensity nibble of IA8 texels raised to 15
+    (OWNER_IA_INTENSITY_MAX), alpha untouched. Each patch must start at a
+    texture a G_SETTIMG of this file names."""
+    ext_n = struct.unpack_from("<I", blob, 0x48)[0]
+    body = 0x4C + 2 * ext_n + 4
+    data = rom.file_bytes(fid)
+    named = set()
+    for at, slot in rom.reloc_slots(fid).items():
+        if slot[0] == "intern" and at >= 4 and data[at - 4] == 0xFD:
+            named.add(slot[1])
+    out = bytearray(blob)
+    for offset, size in patches:
+        if offset not in named:
+            raise GenError(f"file {fid:#x}: no G_SETTIMG names {offset:#x}")
+        for i in range(body + offset, body + offset + size):
+            out[i] |= 0xF0
     return bytes(out)
 
 
@@ -1769,6 +1803,13 @@ def main() -> int:
             blob = scale_o2r_attributes(blob, desc["o_attributes"], OWNER_ATTRIBUTE_SCALES[name])
             deviations.append({"file_id": fid, "class": "owner",
                                "why": f"FTAttributes scaled: {OWNER_ATTRIBUTE_SCALES[name]}"})
+        ia_patches = tuple((off, size) for index, off, size in OWNER_IA_INTENSITY_MAX.get(name, ())
+                           if file_ids[index] == fid)
+        if ia_patches:
+            blob = max_o2r_ia_intensity(blob, rom, fid, ia_patches)
+            deviations.append({"file_id": fid, "class": "render",
+                               "why": "IA8 intensity raised to 15 at " +
+                                      ", ".join(f"{o:#x}" for o, _ in ia_patches)})
         if len(rom.extern_ids(fid)) > MAX_EXTERN_IDS:
             raise GenError(f"file {fid:#x}: {len(rom.extern_ids(fid))} extern ids, the DS loader holds "
                            f"{MAX_EXTERN_IDS} (NDS_RELOC_EXTERN_FILE_ID_CAPACITY)")

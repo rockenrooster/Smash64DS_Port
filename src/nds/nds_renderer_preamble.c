@@ -2002,6 +2002,11 @@ void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner)
  * sNdsRendererHardwareIntensityCoverage. The same image without the request
  * is the opaque I conversion, so the two must not share an entry. */
 #define NDS_RENDERER_HW_TEXTURE_KEY_I_TEXEL_ALPHA (1u << 28)
+/* An IA8 tile baked with its alpha nibble as graded alpha (GL_RGB8_A5 over a
+ * grey ramp of its intensity) for a fighter owner that asked for it: see
+ * sNdsRendererHardwareTexelAlphaGraded. The same image without the request
+ * is the one-bit IA conversion, so the two must not share an entry. */
+#define NDS_RENDERER_HW_TEXTURE_KEY_IA_GRADED_ALPHA (1u << 27)
 #define NDS_RENDERER_MDSFT_CYCLETYPE 20u
 #define NDS_RENDERER_CYCLETYPE_MASK (3u << NDS_RENDERER_MDSFT_CYCLETYPE)
 #define NDS_RENDERER_CYC_2CYCLE (1u << NDS_RENDERER_MDSFT_CYCLETYPE)

@@ -163,6 +163,18 @@ void ndsRendererHardwareSetNoOracle(u32 enabled)
 #endif
 }
 
+/* The fighter draw's bracket for sNdsRendererHardwareTexelAlphaGraded
+ * (renderer_adapter_fighter.c): set across one fighter's draw, cleared after,
+ * so no effect, item or stage texture sees the request. */
+void ndsRendererHardwareSetTexelAlphaGraded(u32 enabled)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    sNdsRendererHardwareTexelAlphaGraded = (enabled != 0u) ? 1u : 0u;
+#else
+    (void)enabled;
+#endif
+}
+
 u32 ndsRendererHardwareNoOracleEnabled(void)
 {
 #if NDS_RENDERER_HW_TRIANGLES

@@ -1548,6 +1548,51 @@ Official gate ROM with all five (`artifacts/performance/2026-10-11_pose-camera-d
 two-VBlank presents 96.7% both, polygons and vertices per frame unchanged
 (580/1,381). The same ROM with the near pinned at 256 measured the camera
 change apart from the alpha mistake above (`pin.*`, `noalpha.*`).
+Mad Piano photo A/B (`pianobat` x7 against `pianobat11` x11, the same replay
+frame): the red interior and teeth showed through both lids before, the lids
+are clean after at frames 240, 300, 360 and 420.
+
+Later the same night (play-1011x12):
+
+- **Ganondorf's select pose.** His Selected row is Captain's clip named by
+  number (file 429). The select answers the cast's Selected clips from
+  compiled tables keyed by the ll...FileID token, so the number took the
+  stream path and he stood in his bind pose; his slot heap was also 96 B,
+  because `lbRelocGetFileSize` answers sizeof(Sprite) for a resident file
+  (the Results podium's trap again). The cast's Selected numbers now map to
+  their tokens (`ndsBattleShipCSSSelectedToken`), and the slot heap takes
+  the whole load or the compiled copy, whichever is larger
+  (`ndsMNPlayersVSPreviewClipBytes`). Photo: posed.
+- **Select stutter while panning.** A carried token crossed the P4 grid's
+  cells in about 7 tics against a dwell of 2, so every portrait it passed
+  started a load: 34 hovers, 30 loads, each update then reading its 8 KiB
+  (~9 ms) and the unsliced stages stalling 6-17 VBlanks. With a dwell of 8
+  the same pan makes 5 loads and no frame of three or more VBlanks while
+  panning (two-VBlank frames 28 -> 18). Open: the first stop on a P4
+  fighter still pauses about 17 VBlanks in its commit stage
+  (`ndsFTManagerSetupPreviewFilesP4` loads the content's files at once).
+- **The shipping ROM carries the freeze report.** `TARGET=smash64ds` builds
+  with `NDS_FREEZE_DIAGNOSTICS=1` (every measurement target keeps it off): a
+  battle frame that stops for 3-4 s draws the stall report (PC, stack, BGM,
+  radio, GX) on the lower screen, an exception draws the exception report,
+  and an out-of-memory halt -- which spun silently -- now adds its arena,
+  request, what was left and its caller (rows 17 and 20). ROM +10 KB.
+
+Later (play-1011x14):
+
+- **Meta Knight's Mach Tornado is translucent.** Its two lists (model
+  0x15EE, 0x97C0 and 0x9AA0) draw a 64x64 IA8 mask under a blender that reads
+  the mask's alpha. Two things drew it wrong: the native owner's family 0
+  takes the mask's intensity for the colour, and the mask is dark where its
+  alpha is not (`generate_p4_fighter.py` OWNER_IA_INTENSITY_MAX raises the
+  intensity to full, a render-class deviation); and the DS converted IA8 with
+  one-bit alpha, so almost every texel (alpha 5-15 of 15) was opaque. The
+  fighter draw now brackets a request (`sNdsRendererHardwareTexelAlphaGraded`)
+  under which such an IA8 tile bakes as GL_RGB8_A5: the nibble as five-bit
+  alpha over an eight-step grey. BattleShip's fighters carry no IA image and
+  effects, items and stages are outside the bracket, so no other key or the
+  static corpus moves. Photo: a white translucent swirl. Not exact: the
+  source also multiplies by SHADE alpha per vertex, which the DS cannot.
 
 ## Board 1 status (master plan Revision 3)
 

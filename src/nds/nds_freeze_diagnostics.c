@@ -93,6 +93,12 @@ extern volatile u32 gNdsGxStallPowcnt __attribute__((weak));
 extern volatile u32 gNdsGxStallDisp3dcnt __attribute__((weak));
 extern volatile u32 gNdsGxStallDispcnt __attribute__((weak));
 extern volatile u32 gNdsGxStallVcount __attribute__((weak));
+/* What the last out-of-memory halt published (battleship_sys_malloc.c). */
+extern volatile u32 gNdsSyMallocOverflowCount __attribute__((weak));
+extern volatile u32 gNdsSyMallocOverflowArenaID __attribute__((weak));
+extern volatile u32 gNdsSyMallocOverflowRequest __attribute__((weak));
+extern volatile u32 gNdsSyMallocOverflowHeadroom __attribute__((weak));
+extern volatile u32 gNdsSyMallocOverflowCallerLR __attribute__((weak));
 
 static u16 ndsFreezeDiagnosticsCharacterTile(char value)
 {
@@ -353,6 +359,24 @@ static void ndsFreezeDiagnosticsRenderStall(u32 resumed)
         ndsFreezeDiagnosticsPutText(14u, 25u, "RS");
         ndsFreezeDiagnosticsPutHex(14u, 27u,
             ndsFreezeDiagnosticsWeak(&gNdsAudioStorageResends), 2u);
+    }
+    /* Row 17 and 20: an out-of-memory halt (ndsSyMallocOverflowHalt spins
+     * with these published): the arena, the request and what it had left,
+     * and the caller. */
+    if (ndsFreezeDiagnosticsWeak(&gNdsSyMallocOverflowCount) != 0u)
+    {
+        ndsFreezeDiagnosticsPutText(17u, 0u, "OOM A");
+        ndsFreezeDiagnosticsPutHex(17u, 5u,
+            ndsFreezeDiagnosticsWeak(&gNdsSyMallocOverflowArenaID), 8u);
+        ndsFreezeDiagnosticsPutText(17u, 14u, "REQ ");
+        ndsFreezeDiagnosticsPutHex(17u, 18u,
+            ndsFreezeDiagnosticsWeak(&gNdsSyMallocOverflowRequest), 6u);
+        ndsFreezeDiagnosticsPutText(20u, 0u, "FREE ");
+        ndsFreezeDiagnosticsPutHex(20u, 5u,
+            ndsFreezeDiagnosticsWeak(&gNdsSyMallocOverflowHeadroom), 6u);
+        ndsFreezeDiagnosticsPutText(20u, 12u, "BY ");
+        ndsFreezeDiagnosticsPutHex(20u, 15u,
+            ndsFreezeDiagnosticsWeak(&gNdsSyMallocOverflowCallerLR), 8u);
     }
     ndsFreezeDiagnosticsPutText(18u, 0u, "Please photo this screen.");
     /* Rows 19 and 21: the last geometry-FIFO stall the renderer cleared --

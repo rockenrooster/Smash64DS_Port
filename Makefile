@@ -1927,7 +1927,11 @@ ifneq ($(NDS_DEBUG_HUD),0)
 $(error NDS_DEBUG_HUD legacy debug wall is retired; use the focused battle phase HUD)
 endif
 NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS ?= 0
-NDS_FREEZE_DIAGNOSTICS ?= 0
+# The shipping free-play ROM carries the freeze watchdog and the exception
+# report (owner, 2026-10-11: a frozen console showed nothing to photograph,
+# and an out-of-memory halt spins silently); every measurement target keeps
+# it off.
+NDS_FREEZE_DIAGNOSTICS ?= $(if $(filter smash64ds,$(TARGET)),1,0)
 NDS_TASK9_FLOAT_CENSUS ?= 0
 NDS_TASK9_FLOAT_ITCM ?= 1
 # 2026-08-16 ITCM reclaim. Two of the six Task 9 libgcc members are DEAD CODE in

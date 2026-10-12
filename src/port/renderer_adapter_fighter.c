@@ -6123,6 +6123,9 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
     saved_no_oracle = ndsRendererHardwareNoOracleEnabled();
     ndsRendererHardwareSetNoOracle(TRUE);
 #endif
+    /* A fighter's IA8 masks keep their graded alpha (P4 Meta Knight's Mach
+     * Tornado); see sNdsRendererHardwareTexelAlphaGraded. */
+    ndsRendererHardwareSetTexelAlphaGraded(TRUE);
 #if NDS_FTR_LEAN_LIVE
     {
         sb32 lean_drew;
@@ -6152,6 +6155,7 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
 #else
     ndsFighterMarioFoxDLAllDrawForSlot((u32)fp->nds_slot, fp, NULL, 0u);
 #endif
+    ndsRendererHardwareSetTexelAlphaGraded(FALSE);
 #if NDS_RENDERER_PROFILE_LEVEL < 2
     /* ftDisplayMainDrawAll's tail: the afterimage after the fighter. */
     if (fp->afterimage.drawstatus >= 2)

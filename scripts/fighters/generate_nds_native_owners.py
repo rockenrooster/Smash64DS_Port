@@ -1088,10 +1088,12 @@ DIRECT_POLICY_COMBINE_ALIASES = {
     # 0x94F8, joint 34 part 0): its triangles are never emitted
     # (DIRECT_POLICY_COMBINE_INVISIBLE); the alias keeps the state rows valid.
     (0xfc123245, 0x00400087): (0xfc127e05, 0xff17f3ff),
-    # NOT exact (P4, Meta Knight's eyes, model 0x15EE lists at 0x97C0 and
-    # 0x9AA0): colour PRIM*SHADE*PRIM (PRIM 0xF8F8C0), alpha TEXEL0a*SHADEa
-    # through a 64x64 IA8 mask. Family 0 draws the mask's own intensity
-    # (white) for the colour: pale yellow eyes come out near white.
+    # NOT exact (P4, Meta Knight's Mach Tornado, model 0x15EE lists at 0x97C0
+    # and 0x9AA0, render mode 0x00504130): colour PRIM*SHADE*PRIM (PRIM
+    # 0xF8F8C0), alpha TEXEL0a*SHADEa through a 64x64 IA8 mask. Family 0
+    # draws the mask's own intensity for the colour, and the mask is dark
+    # where its alpha is not: generate_p4_fighter.py (OWNER_IA_INTENSITY_MAX)
+    # raises its intensity to full, so the swirl comes out white for cream.
     (0xfc321803, 0xff17ffff): (0xfc127e05, 0xff17f3ff),
 }
 # Source G_SETCOMBINE pairs whose output alpha is zero, so under a blending

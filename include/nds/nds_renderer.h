@@ -2160,6 +2160,7 @@ s32 ndsRendererHardwareDrawIFCommonCloudAtlas(
     u32 texture_height, u32 poly_id);
 void ndsRendererHardwareSetNoOracle(u32 enabled);
 u32 ndsRendererHardwareNoOracleEnabled(void);
+void ndsRendererHardwareSetTexelAlphaGraded(u32 enabled);
 u32 ndsRendererHardwareConsumeSubmittedFrame(void);
 u32 ndsRendererHardwareCommitPendingTextureRefreshes(void);
 void ndsRendererCommitDeferredPalettes(void);

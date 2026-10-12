@@ -233,8 +233,58 @@ _Static_assert(_FT_ANIM_CMD(5, FT_ANIM_ROTZ, 0) == 0x0085,
 #include <string.h>
 #include <nds/nds_frontend_overlay.h>
 
+#if NDS_P4
+/* A P4 content's demo rows name files by number (generate_p4_fighter.py), and
+ * a row may be one of the cast's own Selected clips: Ganondorf's Selected is
+ * Captain's file 429. The tables below answer the ll...FileID token only, so
+ * the number took the generic stream path and he stood in his bind pose on
+ * the character select (owner, 2026-10-11). A number names the token's file. */
+static const void *ndsBattleShipCSSSelectedToken(const void *file_id)
+{
+    switch ((uintptr_t)file_id)
+    {
+    case 359u: return &llFTMarioAnimSelectedFileID;
+    case 372u: return &llFTFoxAnimSelectedFileID;
+#if NDS_P2_DONKEY
+    case 381u: return &llFTDonkeyAnimSelectedFileID;
+#endif
+#if NDS_P2_SAMUS
+    case 395u: return &llFTSamusAnimSelectedFileID;
+#endif
+#if NDS_P2_LINK
+    case 404u: return &llFTLinkAnimSelectedFileID;
+#endif
+#if NDS_P2_KIRBY
+    case 418u: return &llFTKirbyAnimSelectedFileID;
+#endif
+#if NDS_P2_CAPTAIN
+    case 429u: return &llFTCaptainAnimSelectedFileID;
+#endif
+#if NDS_P2_NESS
+    case 437u: return &llFTNessAnimSelectedFileID;
+#endif
+#if NDS_P2_YOSHI
+    case 444u: return &llFTYoshiAnimSelectedFileID;
+#endif
+#if NDS_P2_LUIGI
+    case 462u: return &llFTLuigiAnimSelectedFileID;
+#endif
+#if NDS_P2_PURIN
+    case 470u: return &llFTPurinAnimSelectedFileID;
+#endif
+#if NDS_P2_PIKACHU
+    case 476u: return &llFTPikachuAnimSelectedFileID;
+#endif
+    default: return file_id;
+    }
+}
+#endif
+
 size_t ndsBattleShipCSSSelectedFigatreeSize(const void *file_id)
 {
+#if NDS_P4
+    file_id = ndsBattleShipCSSSelectedToken(file_id);
+#endif
     if (file_id == &llFTMarioAnimSelectedFileID)
     {
         return sizeof(dFTMarioAnimSelected_joints);
@@ -311,6 +361,9 @@ void *ndsBattleShipLoadCSSSelectedFigatree(const void *file_id, void *heap)
     const void *source;
     size_t size;
 
+#if NDS_P4
+    file_id = ndsBattleShipCSSSelectedToken(file_id);
+#endif
     if (file_id == &llFTMarioAnimSelectedFileID)
     {
         source = dFTMarioAnimSelected_joints;

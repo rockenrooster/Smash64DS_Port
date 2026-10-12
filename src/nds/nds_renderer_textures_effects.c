@@ -708,6 +708,17 @@ static u32 ndsRendererHardwarePrimEnvTexel0BlendMode(
  * combine does. An owner request rather than a combine rule, so no other
  * surface's texture key or static corpus entry moves (2026-09-30). */
 static u32 sNdsRendererHardwareIntensityCoverage;
+/* Set by the native fighter prepare around its texture resolve. An IA8 tile
+ * whose alpha the blender reads (no alpha compare, no PRIM/ENV bake) converts
+ * through ndsRendererHardwareConvertIA with one-bit alpha, so a mask whose
+ * alpha is graded drew as a solid shape: Meta Knight's Mach Tornado (P4,
+ * 64x64 IA8, alpha 5-15 of 15 over most of the swirl) was an opaque cone.
+ * With this set such a tile bakes as GL_RGB8_A5: the nibble as five-bit
+ * alpha, the intensity as an eight-step grey the vertex colour modulates.
+ * A request rather than a combine rule, so effect, item and stage keys and
+ * the static corpus stay as they are; BattleShip's own fighters carry no IA
+ * image (fighters/admission.bin is all CI), so only P4 models reach it. */
+static u32 sNdsRendererHardwareTexelAlphaGraded;
 
 static s32 ndsRendererHardwareBlendModeKeepsTexelCoverage(u32 mode)
 {
@@ -13446,6 +13457,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     s32 graded_coverage = FALSE;
     s32 intensity_coverage = FALSE;
     s32 blendpe_coverage = FALSE;
+    s32 ia_graded_alpha = FALSE;
     s32 use_texel1_ci4_lut = FALSE;
     s32 use_texel1_ci4_direct = FALSE;
 #if NDS_RENDERER_PROFILE_LEVEL < 2
@@ -13912,6 +13924,17 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
          (prim_env_blend_mode == NDS_RENDERER_PRIM_ENV_BLEND_PRIM_ALPHA) &&
          (format == NDS_RENDERER_HW_TEXTURE_FMT_I16) &&
          (size == NDS_RENDERER_HW_TEXTURE_SIZ_8B)) ? TRUE : FALSE;
+    /* A fighter owner's graded-alpha request (sNdsRendererHardwareTexel
+     * AlphaGraded): an IA8 tile whose alpha the blender takes as is. */
+    ia_graded_alpha =
+        ((sNdsRendererHardwareTexelAlphaGraded != 0u) &&
+         (use_texel1 == FALSE) &&
+         (alpha_ignores_texels == FALSE) &&
+         (prim_env_blend_mode == NDS_RENDERER_PRIM_ENV_BLEND_NONE) &&
+         ((stats->othermode_l & NDS_RENDERER_ALPHA_COMPARE_MASK) == 0u) &&
+         (ndsRendererHardwareBlenderReadsAlpha(stats) != FALSE) &&
+         (format == NDS_RENDERER_HW_TEXTURE_FMT_IA) &&
+         (size == NDS_RENDERER_HW_TEXTURE_SIZ_8B)) ? TRUE : FALSE;
 
     memset(&key, 0, sizeof(key));
     key.image = primary_image;
@@ -13985,6 +14008,10 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     if ((intensity_coverage != FALSE) || (blendpe_coverage != FALSE))
     {
         key.flags |= NDS_RENDERER_HW_TEXTURE_KEY_I_TEXEL_ALPHA;
+    }
+    if (ia_graded_alpha != FALSE)
+    {
+        key.flags |= NDS_RENDERER_HW_TEXTURE_KEY_IA_GRADED_ALPHA;
     }
     if (use_texel1 != FALSE)
     {
@@ -14517,11 +14544,13 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
         ((use_texel1 == FALSE) && (fraction_entry == NULL) &&
          (upload_buffer == sNdsRendererHardwareTextureScratch) &&
          (alpha_ignores_texels == FALSE) &&
-         ((prim_env_blend_mode == NDS_RENDERER_PRIM_ENV_BLEND_SOURCE_ALPHA) ||
-          (intensity_coverage != FALSE) || (blendpe_coverage != FALSE)) &&
-         (format == NDS_RENDERER_HW_TEXTURE_FMT_I16) &&
-         ((size == NDS_RENDERER_HW_TEXTURE_SIZ_4B) ||
-          (size == NDS_RENDERER_HW_TEXTURE_SIZ_8B))) ? TRUE : FALSE;
+         (((format == NDS_RENDERER_HW_TEXTURE_FMT_I16) &&
+           ((size == NDS_RENDERER_HW_TEXTURE_SIZ_4B) ||
+            (size == NDS_RENDERER_HW_TEXTURE_SIZ_8B)) &&
+           ((prim_env_blend_mode ==
+             NDS_RENDERER_PRIM_ENV_BLEND_SOURCE_ALPHA) ||
+            (intensity_coverage != FALSE) || (blendpe_coverage != FALSE))) ||
+          (ia_graded_alpha != FALSE))) ? TRUE : FALSE;
 
     /* Only the power-of-two rectangle handed to libnds is observable.  The
      * shared scratch arena is sized for the worst 128x128 texture, but smaller
@@ -14670,6 +14699,17 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
                                 (color1 & 0x8000u));
                         }
                     }
+                    else if (ia_graded_alpha != FALSE)
+                    {
+                        /* The packed byte itself: the alpha nibble widened
+                         * to five bits over the intensity's top three. */
+                        u32 value = ndsRendererReadTextureByte(
+                            config, texels_src, src_index, format, size);
+                        u32 alpha = value & 0xfu;
+
+                        color = (u16)((((alpha << 1) | (alpha >> 3)) << 3) |
+                                      (value >> 5));
+                    }
                     else if (graded_coverage != FALSE)
                     {
                         /* The I conversion wrote intensity >> 3 into every
@@ -14751,7 +14791,9 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
         {
             u32 coverage = sNdsRendererHardwareTextureScratch[i] & 0x1fu;
 
-            packed[i] = (u8)((coverage << 3) | (coverage >> 2));
+            packed[i] = (ia_graded_alpha != FALSE) ?
+                (u8)sNdsRendererHardwareTextureScratch[i] :
+                (u8)((coverage << 3) | (coverage >> 2));
         }
         /* Each palette step is the endpoint lerp at the midpoint of the
          * coverage band it serves, through the same helper the RGB5A1 bake
@@ -14761,9 +14803,18 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
             u32 v = (i << 2) + 2u;
             u16 texel0 = (u16)(0x8000u | v | (v << 5) | (v << 10));
 
+            /* An IA8 tile's step i is intensity nibble (i << 1) | (i >> 2),
+             * so 0 and 7 keep black and white. */
+            if (ia_graded_alpha != FALSE)
+            {
+                u32 g = ((((i << 1) | (i >> 2)) * 0x11u) >> 3);
+
+                texel0 = (u16)(0x8000u | g | (g << 5) | (g << 10));
+            }
             /* An intensity-coverage tile keeps TEXEL0's own grey: the
              * vertex/PRIM modulate is the hardware's, not the bake's. */
-            resident_palette[i] = (intensity_coverage != FALSE) ?
+            resident_palette[i] = ((intensity_coverage != FALSE) ||
+                                   (ia_graded_alpha != FALSE)) ?
                 (u16)(texel0 & 0x7fffu) :
                 (u16)(ndsRendererHardwareBlendPrimEnvTexel0(
                           texel0, stats->prim_color,

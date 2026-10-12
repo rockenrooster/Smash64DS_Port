@@ -35,6 +35,9 @@
 #include <nds/nds_net_lobby.h>
 #include <nds/nds_net_session.h>
 #include <nds/nds_net_ui.h>
+#if NDS_P4
+#include <nds/nds_p4.h>
+#endif
 
 #include "nds_net_internal.h"
 
@@ -1078,6 +1081,47 @@ static void ndsNetLabSweepDescriptor(NdsMatchConfig *cfg)
     const u32 m = gNdsNetLabSweepMatches++;
     u32 i;
 
+#if NDS_P4
+    if (gNdsNetLabSweepRepro == 3u)
+    {
+        /* Owner, 2026-10-11: four-player matches froze on Hyrule and Sector
+         * Z, and a two-player Hyrule match ran at 3 FPS. Four heavy content
+         * mixes in turn -- the two humans and two level-9 CPUs, Kirby in one
+         * for copies -- on those two stages, every item at the highest rate,
+         * five-minute time. */
+        static const u8 kStressStages[2] = { nGRKindHyrule, nGRKindSector };
+        static const u8 kStressContent[4][NDS_NET_PORTS] = {
+            { 4u, 9u, 12u, 14u },  /* Bowser, Crash, Banjo, Dedede */
+            { 13u, 10u, 16u, 3u }, /* Sonic, Lanky, Meta Knight, Wolf */
+            { 2u, 8u, 18u, 0u },   /* Ganondorf, Peach, Snake, Kirby */
+            { 5u, 6u, 11u, 17u },  /* Marth, Roy, Sheik, MRGAW */
+        };
+        const u8 *row = kStressContent[m % 4u];
+
+        cfg->gkind = kStressStages[m % 2u];
+        for (i = 0u; i < NDS_NET_PORTS; i++)
+        {
+            NdsMatchFighterConfig *f = &cfg->fighters[i];
+            const NDSP4Fighter *p4 = (row[i] != 0u) ? ndsP4Fighter(row[i]) : NULL;
+
+            f->pkind = (i < 2u) ? nFTPlayerKindMan : nFTPlayerKindCom;
+            f->fkind = (p4 != NULL) ? (u8)p4->parent_kind : (u8)nFTKindKirby;
+            f->p4_content = (p4 != NULL) ? row[i] : 0u;
+            f->level = 9u;
+            f->team = (u8)i;
+            f->costume = 0u;
+            f->shade = 0u;
+        }
+        cfg->is_team_battle = FALSE;
+        cfg->is_team_attack = FALSE;
+        cfg->game_rules = SCBATTLE_GAMERULE_TIME;
+        cfg->time_limit = 5u;
+        cfg->item_toggles = ndsMatchConfigItemTogglesFromRows(kAllRows);
+        cfg->item_appearance_rate = nSCBattleItemSwitchVeryHigh;
+        ndsMatchConfigApply(cfg);
+        return;
+    }
+#endif
     if (gNdsNetLabSweepRepro != 0u)
     {
         /* Reported two-human setups, no CPUs, every item on. 1: Kirby (host)
