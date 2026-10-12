@@ -2097,6 +2097,23 @@ descriptor turned items off; it takes the source's defaults now, every item
 at the middle rate (scmanager.c:578,583), which the VS menu's item screen
 starts from.
 
+## Peach after a pause (owner bug, 2026-10-12)
+
+"Pressing pause causes peach to be invisible for the rest of the match." The
+pause close-up raises the pausing fighter to high detail and the unpause puts
+the old detail back (`ftParamSetModelPartDetailAll`), which re-applies every
+visible joint's model part: `modelparts[part][detail].dl`, not the
+JointTree's list. A vanilla part 0 is the JointTree list itself; Remix's Peach
+keeps her joint-17 hand twice, the part's copy (0xC250 high, 0xC470 low) with
+its own normals, so after the round trip the joint named a list her native
+owner had no root for, and the lean path declined her (validate code 3) for
+the rest of the match, silently (0 native failures). `donor_variants`
+(`p4_native_owner.py`) now carries part 0 as well wherever its list is not
+the JointTree's, the same variant rows a part 1 takes (binding 9 for that
+hand); the pins verify unchanged, and no other content has such a part 0.
+play-1012y, Peach (human) against Fox, paused at GO and unpaused: drawn in
+the close-up and after, 0 declines (play-1012x: 252 by frame 450).
+
 ## Board 1 status (master plan Revision 3)
 
 | Item | State |

@@ -240,7 +240,13 @@ def donor_variants(name: str, o2r_dir: Path, main_id: int, model_id: int,
     the live DObj, and a P4 fighter's parts are set by its own scripts and by
     its parent's code (Bowser's jaw by Yoshi's specials), so the owner carries
     every part, not only the ones a script names. A joint's FTModelPartDesc
-    runs from its row to the next descriptor (or the container itself)."""
+    runs from its row to the next descriptor (or the container itself).
+
+    Part 0 too, where its list is not the JointTree's: ftParamSetModelPartDetailAll
+    re-applies every visible joint's part on the pause and KO close-ups, and
+    Remix's Peach keeps her joint-17 hand twice, the part's copy with its own
+    normals, so the round trip left the joint on a list the owner had no root
+    for and declined her for the rest of the match (owner, 2026-10-12)."""
     lay = ft_layout.layout()
     main = O2RFile(o2r_dir / f"{main_id:04x}")
     container = main.ptr(attr_offset + lay["FTAttributes.modelparts_container"])
@@ -267,7 +273,7 @@ def donor_variants(name: str, o2r_dir: Path, main_id: int, model_id: int,
             if base is None:
                 continue
             bound = min([s for s in starts if s > base], default=len(main.data))
-            part = 1
+            part = 0
             while base + (part + 1) * 2 * 20 <= bound:
                 ref = main.ptr(base + (part * 2 + (detail == "low")) * 20)
                 if (ref is not None and ref[0] == "extern" and ref[1] == model_id and
