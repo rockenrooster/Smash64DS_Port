@@ -13028,7 +13028,6 @@ typedef struct NDSFtrLeanMat
     u32 vtx10_fail;             /* NDS_FTR_LEAN_VTX_FAIL_*: walk again */
     u32 hw_texgen_ok;           /* the owner takes GX texgen (1P owners) */
     u32 hw_texgen;              /* the current run's texture matrix is loaded */
-    u32 battle_slot;            /* the texture memo's rows (ndsFtrLeanBindTexture) */
 } NDSFtrLeanMat;
 
 /* P2-2p8 (2026-10-05): route-1 lists take VTX_10 corners where every corner
@@ -13418,11 +13417,13 @@ static void ndsFtrLeanMatCorners(NDSFtrLeanMat *m, const u16 *refs, u32 count,
  * Crash 189K, Meta Knight 126K), and nearly all of it re-resolves a texture
  * the walk or the slot's last walk already bound -- a texture is re-set at
  * every epoch that uses it, and a re-materialized key binds the same runs
- * again. A row answers a bind from a hash of the run (tables, run index,
- * battle slot), the live inputs the owner memo keys (texel and TLUT images,
- * load size, prim/env without alpha, both othermode words, the combine,
- * the geometry mode), the render tile's words and the TMEM load it samples,
- * and replays the resolver's cache-hit tail exactly as the owner memo does
+ * again. A row answers a bind from a hash of the content's tables, the live
+ * inputs the owner memo keys (texel and TLUT images, load size, prim/env
+ * without alpha, both othermode words, the combine, the geometry mode), the
+ * render tile's words and the TMEM load it samples -- not the run or the
+ * battle slot: the resolver reads neither, and keyed by them Banjo's 161
+ * runs a walk across four slots missed 46% of 256 rows -- and replays the
+ * resolver's cache-hit tail exactly as the owner memo does
  * (tile sync, LRU stamp, name and parameter binds, active entry, pinned hit,
  * stats fields). The entry is revalidated by readiness, name and key
  * generation; anything else takes the full resolver and refills. Rows come
@@ -13485,8 +13486,7 @@ static NDSFtrLeanTexMemo *ndsFtrLeanTexMemoTable(void)
     return sNdsFtrLeanTexMemo;
 }
 
-static u32 ndsFtrLeanTexMemoKey(u32 run_index, u32 battle_slot,
-                                const NDSRendererStats *stats)
+static u32 ndsFtrLeanTexMemoKey(const NDSRendererStats *stats)
 {
     const u32 tile_index =
         ((stats->texture_state_flags & NDS_RENDERER_TEXTURE_STATE_SEEN) !=
@@ -13499,8 +13499,7 @@ static u32 ndsFtrLeanTexMemoKey(u32 run_index, u32 battle_slot,
 #define NDS_FTR_LEAN_TEXMEMO_MIX(value) \
     h = (h ^ (u32)(value)) * 0x01000193u
     NDS_FTR_LEAN_TEXMEMO_MIX((uintptr_t)sNdsNativeFighterActiveTables);
-    NDS_FTR_LEAN_TEXMEMO_MIX(run_index | (battle_slot << 16) |
-                             (tile_index << 24));
+    NDS_FTR_LEAN_TEXMEMO_MIX(tile_index);
     NDS_FTR_LEAN_TEXMEMO_MIX(stats->texture_image);
     NDS_FTR_LEAN_TEXMEMO_MIX(stats->texture_format |
                              (stats->texture_size << 4) |
@@ -13538,11 +13537,18 @@ static u32 ndsFtrLeanTexMemoKey(u32 run_index, u32 battle_slot,
                                  ((u32)load->load_tile << 24));
     }
 #undef NDS_FTR_LEAN_TEXMEMO_MIX
+    /* The row is the key's low byte, and a multiply carries bits only upward:
+     * without this the row saw only each input's low bits, and aligned image
+     * addresses put most textures in a few rows (Meta Knight's misses rose
+     * 314 -> 463 when the run index left the key). */
+    h ^= h >> 16;
+    h *= 0x85ebca6bu;
+    h ^= h >> 13;
     return (h != 0u) ? h : 1u;
 }
 
 static s32 __attribute__((noinline))
-ndsFtrLeanBindTexture(u32 run_index, u32 battle_slot, NDSRendererStats *stats,
+ndsFtrLeanBindTexture(NDSRendererStats *stats,
                       const NDSRendererConfig *config,
                       NDSRendererTraversalState *state)
 {
@@ -13567,7 +13573,7 @@ ndsFtrLeanBindTexture(u32 run_index, u32 battle_slot, NDSRendererStats *stats,
     {
         return ndsRendererHardwareBindTexture(stats, config, state);
     }
-    key = ndsFtrLeanTexMemoKey(run_index, battle_slot, stats);
+    key = ndsFtrLeanTexMemoKey(stats);
     row = &table[key & (NDS_FTR_LEAN_TEXMEMO_ROWS - 1u)];
     NDS_FTR_LEAN_TEXMEMO_LAB_PART(gNdsFtrLeanTexMemoKeyTicks);
     if ((row->key == key) && (row->slot_plus1 != 0u))
@@ -13819,8 +13825,7 @@ ndsFtrLeanMatRun(NDSFtrLeanMat *m, u32 run_index, u32 epoch_policy,
              * the ones a record of this run would read; a repeat answers
              * from the memo with the same binds. */
             NDS_FTR_LEAN_MAT_PART(m, 4u);
-            use_texture = ndsFtrLeanBindTexture(run_index, m->battle_slot,
-                                                stats, config, state);
+            use_texture = ndsFtrLeanBindTexture(stats, config, state);
             NDS_FTR_LEAN_MAT_PART(m, 6u);
             if (use_texture == FALSE)
             {
@@ -14234,7 +14239,6 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
     m.vtx10 = vtx10;
     m.hw_texgen_ok = (owner_slot >= NDS_RENDERER_NATIVE_FIGHTER_OWNER_MMARIO) ?
         1u : 0u;
-    m.battle_slot = battle_slot;
     ndsRendererInitTraversalState(state, NULL, stats, NULL, NULL, 0u);
     state->color_modulate = packet->tint_modulate;
     if (*sNdsNativeFighterActiveDenseNormalsBuilt == 0u)

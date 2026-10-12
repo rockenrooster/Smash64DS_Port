@@ -1886,7 +1886,12 @@ his tail is the simulation, SRC P95 688K); the originals 1,070,464 ->
   5 KB of the battle heap). The lab verify arm (`gNdsFtrLeanTexMemoVerify`)
   ran the full resolver on 3,846 hits over Meta Knight, Crash, Banjo, Sonic
   and the cast: 0 disagreements. Texture time a walk -38% (MK), -23%
-  (Crash), -17% (Banjo).
+  (Crash), -17% (Banjo). Later the same day the key dropped the run and
+  the slot (the resolver reads neither; Banjo's 161 runs across four
+  slots filled 703 rows in 1,200 frames) and ends in an avalanche (the row
+  is the key's low byte, and aligned image addresses had crowded a few
+  rows): misses Banjo 703 -> 139, Crash 366 -> 188, Meta Knight 314 -> 181;
+  the verify arm agreed on 4,901 hits.
 - **The select's panning.** A pan with the token carried measured 15-VBlank
   stalls and a two-VBlank frame on every portrait it crossed. Three causes:
   (1) every open of a P4 file walked `nitro:/reloc/p4`'s 2,161 FNT names,
