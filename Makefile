@@ -757,7 +757,9 @@ NDS_LAB_FOURCPU_TWO ?=
 # (the default) emits nothing, so the gate ROM carries neither word.
 # `NDS_LAB_FOURCPU_SWEEP_GKIND=<n>` sets the stage word's initial value, for
 # harnesses that cannot poke it (the profile census);
-# `NDS_LAB_FOURCPU_SWEEP_KINDS=<decimal word>` does the same for the roster.
+# `NDS_LAB_FOURCPU_SWEEP_KINDS=<decimal word>` does the same for the roster,
+# and `NDS_LAB_FOURCPU_SWEEP_P4=<decimal word>` for gNdsLabP4Content (one P4
+# content a slot; the slot becomes it on its setup parent).
 # `NDS_LAB_FOURCPU_WORDS=1` compiles the same words WITHOUT the sweep's lab
 # instruments (stage/Fox GX hashes, item/PIM/baked accumulators, lean-event
 # and status-change columns): the per-stage worst case on the gate's own
@@ -810,6 +812,7 @@ NDS_NET_LAB_STARTLOSS_ROUNDS ?= 2
 NDS_NET_LAB_GATE_RADIO ?= 0
 NDS_LAB_FOURCPU_SWEEP_GKIND ?=
 NDS_LAB_FOURCPU_SWEEP_KINDS ?=
+NDS_LAB_FOURCPU_SWEEP_P4 ?=
 # LAB ONLY: the lean renderer's root-reuse census (ndsFtrLeanRootCensus,
 # gNdsLabLeanRootCensus). Empty = not compiled.
 NDS_LAB_LEAN_ROOT_CENSUS ?=
@@ -7096,6 +7099,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		$(if $(strip $(NDS_LAB_FOURCPU_SWEEP)$(NDS_LAB_FOURCPU_WORDS)),echo '#define NDS_LAB_FOURCPU_WORDS 1';) \
 		$(if $(strip $(NDS_LAB_FOURCPU_SWEEP_GKIND)),echo '#define NDS_LAB_FOURCPU_SWEEP_GKIND $(NDS_LAB_FOURCPU_SWEEP_GKIND)u';) \
 		$(if $(strip $(NDS_LAB_FOURCPU_SWEEP_KINDS)),echo '#define NDS_LAB_FOURCPU_SWEEP_KINDS $(NDS_LAB_FOURCPU_SWEEP_KINDS)u';) \
+		$(if $(strip $(NDS_LAB_FOURCPU_SWEEP_P4)),echo '#define NDS_LAB_FOURCPU_SWEEP_P4 $(NDS_LAB_FOURCPU_SWEEP_P4)u';) \
 		$(if $(strip $(NDS_LAB_LEAN_ROOT_CENSUS)),echo '#define NDS_LAB_LEAN_ROOT_CENSUS 1';) \
 		$(if $(strip $(NDS_LAB_TEXMISS)),echo '#define NDS_LAB_TEXMISS 1';) \
 		echo '#define NDS_P2_LUIGI $(NDS_P2_LUIGI)'; \

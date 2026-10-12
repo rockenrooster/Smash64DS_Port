@@ -2669,38 +2669,88 @@ sb32 ndsP4NativeBakedRef(u32 owner_asset, u32 dep_asset, u32 slot, u32 target)
     return ((r != NULL) && (r->target == target)) ? TRUE : FALSE;
 }
 
+/* A content's animation ids ascend (generate_p4_fighter.py emits them
+ * sorted; bit 15 is the event32 flag): one binary search a list. */
+static u32 ndsP4FindAnimIn(const u16 *anims, u32 count, u32 asset_id)
+{
+    u32 lo = 0u;
+    u32 hi = count;
+
+    if ((count == 0u) || (asset_id < (anims[0] & 0x7FFFu)) ||
+        (asset_id > (anims[count - 1u] & 0x7FFFu)))
+    {
+        return 0u;
+    }
+    while (lo < hi)
+    {
+        const u32 mid = (lo + hi) >> 1;
+        const u32 id = anims[mid] & 0x7FFFu;
+
+        if (id == asset_id)
+        {
+            return 1u | ((anims[mid] >> 15) << 1);
+        }
+        if (id < asset_id)
+        {
+            lo = mid + 1u;
+        }
+        else
+        {
+            hi = mid;
+        }
+    }
+    return 0u;
+}
+
+/* The AObj16 admission gate asks this twice for every animated joint of
+ * every clip it binds (ndsRelocPointerIsFighterAObj16), and it was a linear
+ * walk of every content's list (~5,000 ids): 158K cycles a frame of four
+ * Banjos' over-gate frames (2026-10-12 census). The last answer is memoized:
+ * the joints of one clip ask about one id. */
+static u32 sNdsP4FindAnimLastId = 0xFFFFFFFFu;
+static u32 sNdsP4FindAnimLast;
+
 static u32 ndsP4FindAnim(u32 asset_id)
 {
     u32 c;
+    u32 found = 0u;
 
     if ((asset_id < 0x854u) || (asset_id >= 0x8000u))
     {
         return 0u;
     }
-    for (c = 1u; c <= NDS_P4_CONTENT_LIMIT; c++)
+    if (asset_id == sNdsP4FindAnimLastId)
     {
-        const NDSP4Fighter *f = (c < NDS_P4_CONTENT_LIMIT) ? ndsP4Fighter(c) : NULL;
-        const u16 *anims = (f != NULL) ? f->anims : NULL;
-        u32 count = (f != NULL) ? *f->anim_count : 0u;
+        return sNdsP4FindAnimLast;
+    }
+    for (c = 1u; (c < NDS_P4_CONTENT_LIMIT) && (found == 0u); c++)
+    {
+        const NDSP4Fighter *f = ndsP4Fighter(c);
+
+        if (f != NULL)
+        {
+            found = ndsP4FindAnimIn(f->anims, *f->anim_count, asset_id);
+        }
+    }
+#if NDS_P2_KIRBY
+    /* Past the contents: Kirby's power animations (S8), in emission order. */
+    if (found == 0u)
+    {
         u32 i;
 
-#if NDS_P2_KIRBY
-        /* Past the contents: Kirby's power animations (S8). */
-        if (c == NDS_P4_CONTENT_LIMIT)
+        for (i = 0u; i < gNdsP4KirbyAnimCount; i++)
         {
-            anims = gNdsP4KirbyAnims;
-            count = gNdsP4KirbyAnimCount;
-        }
-#endif
-        for (i = 0u; i < count; i++)
-        {
-            if ((anims[i] & 0x7FFFu) == asset_id)
+            if ((gNdsP4KirbyAnims[i] & 0x7FFFu) == asset_id)
             {
-                return 1u | ((anims[i] >> 15) << 1);
+                found = 1u | ((gNdsP4KirbyAnims[i] >> 15) << 1);
+                break;
             }
         }
     }
-    return 0u;
+#endif
+    sNdsP4FindAnimLastId = asset_id;
+    sNdsP4FindAnimLast = found;
+    return found;
 }
 
 sb32 ndsP4IsFighterAnim(u32 asset_id)

@@ -1796,6 +1796,141 @@ fail:
     gNdsRelocAssetFighterStreamFailures++;
     return FALSE;
 }
+
+#if NDS_P4
+/* THE P4 CLIP STREAM (2026-10-12). The contents' and Kirby's powers'
+ * FIGATREE clips in the cast pack's BPS1 format, ids past the cast's
+ * (scripts/p4/p4_anim_stream.py). A content's clip was a loose O2R file in
+ * nitro:/reloc/p4, and an animation-cache miss paid the FAT path walk, the
+ * O2R header and relocation reads, the byte swap and the AObj16 normalizers:
+ * four Banjos' over-gate frames spent ~330K cycles in storage and ~190K in
+ * the normalizers (task37 census, build-prof-banjo). Its directory (3,717
+ * dense rows) stays in the ROM: a miss reads the clip's 8-byte row once (the
+ * size query and the read that follows it share the memo), then the clip.
+ * An event32 or spline clip has an empty row and still loads loose. */
+#define NDS_FTANIM_P4_STREAM_PATH "animation/ftanim_p4_stream.bin"
+static NitroRom *sNdsFtAnimP4StreamRom;
+static NDSFtAnimStreamHeader sNdsFtAnimP4StreamHeader;
+static u16 sNdsFtAnimP4StreamFileId;
+static u8 sNdsFtAnimP4StreamState;
+static u32 sNdsFtAnimP4StreamMemoId = 0xffffffffu;
+static NDSFtAnimStreamEntry sNdsFtAnimP4StreamMemo;
+__attribute__((used)) volatile u32 gNdsRelocAssetP4StreamRowReads;
+
+static s32 ndsRelocAssetOpenP4Stream(void)
+{
+    NDSFtAnimStreamHeader *header = &sNdsFtAnimP4StreamHeader;
+    NitroRom *rom;
+    u32 file_size;
+    u32 dense_count;
+    int file_id;
+
+    if (sNdsFtAnimP4StreamState != 0u)
+    {
+        return (sNdsFtAnimP4StreamState == 1u) ? TRUE : FALSE;
+    }
+    sNdsFtAnimP4StreamState = 2u;
+    rom = nitroromGetSelf();
+    if (rom == NULL)
+    {
+        return FALSE;
+    }
+    file_id = nitroromResolvePath(rom, NITROROM_ROOT_DIR,
+                                  NDS_FTANIM_P4_STREAM_PATH);
+    if ((file_id < 0) || (file_id >= (s32)NITROROM_ROOT_DIR))
+    {
+        return FALSE;
+    }
+    file_size = nitroromGetFileSize(rom, (u16)file_id);
+    if ((file_size < sizeof(*header)) ||
+        (nitroromReadFile(rom, (u16)file_id, 0u, header,
+                          sizeof(*header)) == false) ||
+        (header->magic != NDS_FTANIM_STREAM_MAGIC) ||
+        (header->version != NDS_FTANIM_STREAM_VERSION) ||
+        (header->blob_bytes != file_size) ||
+        (header->first_id > header->last_id))
+    {
+        return FALSE;
+    }
+    dense_count = header->last_id - header->first_id + 1u;
+    if ((header->clip_count > dense_count) ||
+        (header->dir_off < sizeof(*header)) ||
+        (dense_count > ((0xffffffffu - header->dir_off) /
+                        sizeof(NDSFtAnimStreamEntry))) ||
+        ((header->dir_off + dense_count * sizeof(NDSFtAnimStreamEntry)) >
+         header->data_off) ||
+        (header->data_off > file_size))
+    {
+        return FALSE;
+    }
+    sNdsFtAnimP4StreamRom = rom;
+    sNdsFtAnimP4StreamFileId = (u16)file_id;
+    sNdsFtAnimP4StreamState = 1u;
+    return TRUE;
+}
+
+/* The P4 pack's row for `asset_id`: FALSE outside its range, or for an empty
+ * or malformed row. */
+static s32 ndsRelocAssetP4StreamEntry(u32 asset_id,
+                                      NDSFtAnimStreamEntry *entry)
+{
+    const NDSFtAnimStreamHeader *header = &sNdsFtAnimP4StreamHeader;
+
+    if ((ndsRelocAssetOpenP4Stream() == FALSE) ||
+        (asset_id < header->first_id) || (asset_id > header->last_id))
+    {
+        return FALSE;
+    }
+    if (asset_id != sNdsFtAnimP4StreamMemoId)
+    {
+        if (nitroromReadFile(sNdsFtAnimP4StreamRom, sNdsFtAnimP4StreamFileId,
+                             header->dir_off + ((asset_id - header->first_id) *
+                                                sizeof(NDSFtAnimStreamEntry)),
+                             &sNdsFtAnimP4StreamMemo,
+                             sizeof(sNdsFtAnimP4StreamMemo)) == false)
+        {
+            sNdsFtAnimP4StreamMemoId = 0xffffffffu;
+            return FALSE;
+        }
+        sNdsFtAnimP4StreamMemoId = asset_id;
+        gNdsRelocAssetP4StreamRowReads++;
+    }
+    *entry = sNdsFtAnimP4StreamMemo;
+    return ((entry->offset >= header->data_off) && (entry->size != 0u) &&
+            (entry->offset <= header->blob_bytes) &&
+            (entry->size <= (header->blob_bytes - entry->offset))) ?
+        TRUE : FALSE;
+}
+
+/* ndsRelocAssetLoadFighterStreamClip for an id past the cast's pack. */
+static s32 ndsRelocAssetLoadP4StreamClip(u32 asset_id, void *dst,
+                                         u32 *out_size)
+{
+    NDSFtAnimStreamEntry entry;
+
+    if (ndsRelocAssetP4StreamEntry(asset_id, &entry) == FALSE)
+    {
+        gNdsRelocAssetFighterStreamMisses++;
+        return FALSE;
+    }
+    if (out_size != NULL)
+    {
+        *out_size = entry.size;
+    }
+    if (dst == NULL)
+    {
+        return TRUE;
+    }
+    if (nitroromReadFile(sNdsFtAnimP4StreamRom, sNdsFtAnimP4StreamFileId,
+                         entry.offset, dst, entry.size) == false)
+    {
+        gNdsRelocAssetFighterStreamFailures++;
+        return FALSE;
+    }
+    gNdsRelocAssetFighterStreamReads++;
+    return TRUE;
+}
+#endif
 #endif
 
 s32 ndsRelocAssetLoadFighterStreamClip(u32 asset_id, void *dst,
@@ -1811,8 +1946,20 @@ s32 ndsRelocAssetLoadFighterStreamClip(u32 asset_id, void *dst,
         const NDSFtAnimStreamHeader *header = &sNdsFtAnimStreamHeader;
         u32 row;
 
-        if ((gNdsRelocAssetFighterStreamDispatch == 0u) ||
-            (ndsRelocAssetOpenFighterStream() == FALSE) ||
+        if (gNdsRelocAssetFighterStreamDispatch == 0u)
+        {
+            gNdsRelocAssetFighterStreamMisses++;
+            return FALSE;
+        }
+#if NDS_P4
+        /* Past the cast's pack: the contents' (their ids follow the cast's). */
+        if ((ndsRelocAssetOpenFighterStream() != FALSE) &&
+            (asset_id > header->last_id))
+        {
+            return ndsRelocAssetLoadP4StreamClip(asset_id, dst, out_size);
+        }
+#endif
+        if ((ndsRelocAssetOpenFighterStream() == FALSE) ||
             (asset_id < header->first_id) || (asset_id > header->last_id))
         {
             gNdsRelocAssetFighterStreamMisses++;
@@ -1923,6 +2070,25 @@ static s32 ndsRelocAssetFighterStreamClipStart(u32 asset_id, u32 *out_start,
     u32 offset;
     u32 size;
 
+#if NDS_P4
+    /* Past the cast's pack: the contents' clip, from its ROM row. */
+    if ((gNdsRelocAssetFighterStreamDispatch != 0u) &&
+        (ndsRelocAssetOpenFighterStream() != FALSE) &&
+        (asset_id > header->last_id))
+    {
+        NDSFtAnimStreamEntry entry;
+
+        if (ndsRelocAssetP4StreamEntry(asset_id, &entry) == FALSE)
+        {
+            return FALSE;
+        }
+        *out_start = nitroromGetFileOffset(sNdsFtAnimP4StreamRom,
+                                           sNdsFtAnimP4StreamFileId) +
+            entry.offset;
+        *out_size = entry.size;
+        return TRUE;
+    }
+#endif
     if ((gNdsRelocAssetFighterStreamDispatch == 0u) ||
         (ndsRelocAssetOpenFighterStream() == FALSE) ||
         (sNdsFtAnimStreamDirReady == FALSE) ||

@@ -2278,7 +2278,8 @@ def main() -> int:
     for i in range(0, len(ids), 12):
         lines.append("    " + ", ".join(ids[i:i + 12]) + ",")
     lines += ["};", f"const u32 g{ident}RelocAssetCount = {len(shipped)};", "",
-              "/* The content's own animation files; bit 15 marks AObjEvent32 (FTANIM_FLAG_ANIMJOINT). */",
+              "/* The content's own animation files, ascending (ndsP4FindAnim binary-searches);",
+              " * bit 15 marks AObjEvent32 (FTANIM_FLAG_ANIMJOINT). */",
               f"const u16 g{ident}Anims[] = {{",
               "    " + ", ".join(f"{a | (0x8000 if ev else 0):#06x}" for a, ev in anims) + ",",
               "};", f"const u32 g{ident}AnimCount = {len(anims)};", "",

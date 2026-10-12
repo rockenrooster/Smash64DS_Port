@@ -125,3 +125,18 @@ $(OUTPUT).nds: $(NITROFS_DIR)/p4/entry_texels.bin $(NITROFS_DIR)/p4/entry_corner
 # The select's preview code places its fighters by the P4 screen's panel
 # offset (p4_css.py writes nds_p4_css_screen.generated.h with the tables).
 battleship_mnplayersvs.o: $(NDS_P4_CSS_DIR)/nds_p4_css.generated.inc
+# The contents' (and Kirby's powers') FIGATREE clips as one BPS1 stream pack
+# (scripts/p4/p4_anim_stream.py), read like the cast's ftanim_stream_pack.bin:
+# one storage command a clip and no byte swap, relocation or AObj16
+# normalization at run time (nds_reloc_assets.c, the P4 clip stream). The
+# loose files stay staged in nitro:/reloc/p4 for event32 clips and the menus.
+NDS_P4_ANIM_STREAM := $(NITROFS_DIR)/animation/ftanim_p4_stream.bin
+$(NDS_P4_ANIM_STREAM): \
+		$(foreach name,$(NDS_P4_ENABLED),$(NDS_P4_GEN)/$(name)/nds_p4_$(name).generated.c) \
+		$(NDS_P4_KIRBY_GEN)/nds_p4_kirby.generated.c \
+		$(PROJECT_ROOT)/scripts/p4/p4_anim_stream.py \
+		$(PROJECT_ROOT)/scripts/generate_battlepack_anim.py \
+		$(PROJECT_ROOT)/scripts/ftanim_reloc_probe.py
+	python "$(PROJECT_ROOT)/scripts/p4/p4_anim_stream.py" --gen "$(NDS_P4_GEN)" \
+		--contents "$(NDS_P4_ENABLED)" --out "$@"
+$(OUTPUT).nds: $(NDS_P4_ANIM_STREAM)

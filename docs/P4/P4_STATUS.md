@@ -1683,6 +1683,78 @@ faults the harness had not reached:
   Saffron 5,984 -> 30,488, Sector Z 24,948 -> 33,652. The P3 stress's
   Sector rows: 43,352 and 59,040. 0 overflows, 0 native failures.
 
+## Four-CPU P95 of the contents (2026-10-12)
+
+The first P95 measurement of the contents: four CPU mirrors of each on Dream
+Land, items on, the clean sweep ROM (gate target plus the boot-poked stage,
+roster and content words, `NDS_LAB_FOURCPU_WORDS`; build-sweep-p4a), 1,960
+frames, WORK P95 (two-VBlank frames of 1,961):
+
+| Roster | P50 | P95 | <= 2 VBlanks |
+|---|---|---|---|
+| preset originals | 780,672 | 1,078,720 | 1,884 |
+| Ganondorf | 784,960 | 1,079,552 | 1,884 |
+| Wario | 756,928 | 1,190,528 | 1,834 |
+| Sonic | 848,192 | 1,397,184 | 1,612 |
+| Marth | 886,784 | 1,568,320 | 1,647 |
+| Bowser | 872,448 | 1,601,024 | 1,659 |
+| MRGAW | 779,328 | 1,665,408 | 1,692 |
+| Peach | 895,168 | 1,828,480 | 1,599 |
+| Sheik | 801,408 | 1,834,112 | 1,651 |
+| Dedede | 906,752 | 1,882,880 | 1,497 |
+| Lanky | 755,456 | 1,995,968 | 1,733 |
+| Banjo | 850,560 | 2,002,368 | 1,491 |
+| Meta Knight | 829,632 | 2,532,032 | 1,604 |
+| Crash | 841,856 | 2,794,048 | 1,352 |
+
+The medians are the cast's; the tails are events. Two owners, from the
+lean lab counters (`NDS_DIAG_COUNTERS=1` sweep ROM, 1,200 frames):
+
+- **Lean list rematerializations.** Four Crashes materialized 682 lists
+  (385M ticks, 564K each) against 45 for the original cast: 309 of their
+  key events were tint-set moves. An untextured body whose prim is not
+  white draws textured with an 8x8 tile of that colour, and four Crashes
+  carry more than the table's 16 colours: 344 builds, 328 evictions, 829
+  full-table misses, and every build or eviction moves the generation that
+  retires every tinted list. The table now holds 48 (16-byte rows).
+- **The simulation's tail (gcRunAll): the contents' clips loaded loose.**
+  Banjo's lists hit (47 materializations), yet his gcRunAll P95 was 1.40M
+  (Meta Knight 1.93M, Crash 1.31M) against the cast's 531K. A task37 census
+  of four Banjos (build-prof-banjo, frames 200-1,400, split over the gate:
+  304 over-gate frames, 1.78M cycles a frame over the rest) put the
+  premium in animation-cache misses: ~330K in storage reads (the card read,
+  its PXI round trips and mutexes, NitroROM's path walk), ~190K in the
+  loaders' normalizers (byte swap, AObj16 normalization and validation,
+  the sprite pass) and 158K in `ndsP4FindAnim`, which the AObj16
+  admission gate asks twice for every animated joint of every clip it
+  binds and which walked every content's list (~5,000 ids). The cast
+  reads its clips from `animation/ftanim_stream_pack.bin`: compacted at
+  build time, one sector-aligned storage command a clip, nothing to
+  normalize. The contents' clips now form its sibling,
+  `animation/ftanim_p4_stream.bin` (scripts/p4/p4_anim_stream.py, the same
+  generator code; 2,012 clips, 7.8 MB; event32 and spline clips stay
+  loose), read through the same paths; its directory stays in the ROM
+  (one 8-byte row read a miss, no resident memory). `ndsP4FindAnim`
+  binary-searches each content's sorted list behind a last-id memo.
+  Replay digests of the four-Banjo and four-Crash runs are identical
+  before and after (the animations are the same bytes).
+
+After both (build-sweep-p4c, Dream Land, WORK P95): Lanky 1,995,968 ->
+1,085,696, Sheik 1,834,112 -> 1,138,432, Marth 1,568,320 -> 1,201,408,
+Bowser 1,601,024 -> 1,226,240, MRGAW 1,665,408 -> 1,255,680, Sonic
+1,397,184 -> 1,281,920, Dedede 1,882,880 -> 1,321,088, Peach 1,828,480 ->
+1,329,792, Banjo 2,002,368 -> 1,378,688, Meta Knight 2,532,032 ->
+1,419,840, Crash 2,794,048 -> 1,894,016; the originals 1,070,912. A second
+census of four Banjos (167 over-gate frames, 1.34M premium) leaves lean
+rematerializations (~1M cycles each for his 2,600-word list, ~240K a
+frame averaged over the over-gate frames) and the guard pose, which the
+source re-applies to every joint every frame a fighter shields (NSP1
+unpack, AObj add, parse and play: ~130K).
+
+The gate (cast only, build-gate-o1012) with the stream, the search and the
+48-colour table: WORK P50 767,808, P95 1,048,000 (2026-10-11: 1,038,208),
+1,896 of 1,961 frames within two VBlanks, replay digest identical.
+
 ## Board 1 status (master plan Revision 3)
 
 | Item | State |

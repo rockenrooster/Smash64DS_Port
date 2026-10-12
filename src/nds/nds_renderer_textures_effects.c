@@ -4066,8 +4066,15 @@ void ndsRendererHardwareReleaseIFCommonCloudAtlas(u32 *texture_name)
  * the batch closes and before the bind trackers reset) creates queued tiles.
  * Nothing is ever created, evicted or bound from inside a draw walk -- the
  * three routes withdrawn as r42, r43 and r44 all created or bound tiles there.
- * A colour whose upload fails is not retried until the next VRAM reset. */
-#define NDS_R2_FIGHTER_TINT_SLOTS 16u
+ * A colour whose upload fails is not retried until the next VRAM reset.
+ *
+ * 48 slots (1.5 KB of texels, 48 palettes, 768 B of table): four Crash
+ * Bandicoots carry more than 16 colours at once, and with 16 the table
+ * thrashed -- 344 builds, 328 evictions and 829 full-table misses in 1,200
+ * frames, each build or eviction moving the set generation that retires
+ * every tinted lean list (682 list materializations against 45 for the
+ * original cast; Dream Land WORK P95 2.79M, 2026-10-12). */
+#define NDS_R2_FIGHTER_TINT_SLOTS 48u
 #define NDS_R2_FIGHTER_TINT_QUEUE 8u
 #define NDS_R2_FIGHTER_TINT_BYTES \
     ((NDS_R2_FIGHTER_TINT_DIM * NDS_R2_FIGHTER_TINT_DIM) / 2u)
@@ -4076,11 +4083,13 @@ typedef struct NDSR2FighterTint
 {
     u32 rgb;       /* 24-bit RRGGBB this tile carries */
     u32 name;
-    u32 last_used; /* sNdsRendererHardwareFrameSerial of the last hit */
     /* P2-2p8 Phase 1 slice 1: the two words a packet records when it binds
-     * this tile (glGetTexParameter / PLTT_BASE), captured at creation. */
+     * this tile (glGetTexParameter / PLTT_BASE), captured at creation. The
+     * PLTT base is below 0x3000 (0xFFFF: none). */
     u32 teximage;
-    u32 pltt;
+    u16 pltt;
+    u16 last_used; /* low half of sNdsRendererHardwareFrameSerial at the last
+                      hit: only differences of a few frames are read */
 } NDSR2FighterTint;
 
 static NDSR2FighterTint sNdsR2FighterTints[NDS_R2_FIGHTER_TINT_SLOTS];
@@ -4148,7 +4157,8 @@ static u32 ndsRendererR2FighterTintLookup(u32 material_color)
         if (sNdsR2FighterTints[i].rgb == rgb)
         {
             NDS_DIAG(gNdsR2FighterTintHits++);
-            sNdsR2FighterTints[i].last_used = sNdsRendererHardwareFrameSerial;
+            sNdsR2FighterTints[i].last_used =
+                (u16)sNdsRendererHardwareFrameSerial;
             return sNdsR2FighterTints[i].name;
         }
     }
@@ -4224,10 +4234,10 @@ static void ndsRendererHardwareServiceFighterTintTiles(void)
              * just below could land in the block a deleted one freed. */
             for (i = 0u; i < sNdsR2FighterTintCount; i++)
             {
-                if (((u32)(sNdsRendererHardwareFrameSerial -
+                if (((u16)((u16)sNdsRendererHardwareFrameSerial -
                            sNdsR2FighterTints[i].last_used) >= 2u) &&
                     ((victim == NDS_R2_FIGHTER_TINT_SLOTS) ||
-                     ((s32)(sNdsR2FighterTints[i].last_used -
+                     ((s16)(sNdsR2FighterTints[i].last_used -
                             sNdsR2FighterTints[victim].last_used) < 0)))
                 {
                     victim = i;
@@ -4264,7 +4274,7 @@ static void ndsRendererHardwareServiceFighterTintTiles(void)
         sNdsR2FighterTints[sNdsR2FighterTintCount].rgb = rgb;
         sNdsR2FighterTints[sNdsR2FighterTintCount].name = name;
         sNdsR2FighterTints[sNdsR2FighterTintCount].last_used =
-            sNdsRendererHardwareFrameSerial;
+            (u16)sNdsRendererHardwareFrameSerial;
         {
             /* P2-2p8 Phase 1 slice 1: capture exactly the words a lean list
              * binds for this tile. The prepare above returns with the tile
@@ -4277,7 +4287,8 @@ static void ndsRendererHardwareServiceFighterTintTiles(void)
             glGetColorTableParameterEXT(
                 GL_TEXTURE_2D, GL_COLOR_TABLE_FORMAT_EXT, &palette_format);
             sNdsR2FighterTints[sNdsR2FighterTintCount].pltt =
-                (palette_format >= 0) ? (u32)palette_format : 0xffffffffu;
+                ((palette_format >= 0) && (palette_format < 0xFFFF)) ?
+                    (u16)palette_format : 0xFFFFu;
         }
         sNdsR2FighterTintCount++;
         NDS_DIAG(gNdsR2FighterTintBuilds++);
@@ -4300,10 +4311,11 @@ s32 ndsFtrLeanTintTileWords(u32 rgb, u32 touch, u32 *teximage, u32 *pltt)
             if (touch != 0u)
             {
                 sNdsR2FighterTints[i].last_used =
-                    sNdsRendererHardwareFrameSerial;
+                    (u16)sNdsRendererHardwareFrameSerial;
             }
             *teximage = sNdsR2FighterTints[i].teximage;
-            *pltt = sNdsR2FighterTints[i].pltt;
+            *pltt = (sNdsR2FighterTints[i].pltt == 0xFFFFu) ? 0xffffffffu :
+                (u32)sNdsR2FighterTints[i].pltt;
             return TRUE;
         }
     }

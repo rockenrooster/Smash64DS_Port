@@ -213,8 +213,13 @@ volatile u32 gNdsLabItemToggles __attribute__((used));
 volatile u32 gNdsLabItemRate __attribute__((used)) = 0xffu;
 #if NDS_P4
 /* Boot-poked P4 content, one byte a slot (0 = the slot's own kind): the slot
- * becomes that content on its setup parent (include/nds/nds_p4.h). */
-volatile u32 gNdsLabP4Content __attribute__((used));
+ * becomes that content on its setup parent (include/nds/nds_p4.h). The
+ * profile census, which cannot poke, bakes it (NDS_LAB_FOURCPU_SWEEP_P4). */
+#ifndef NDS_LAB_FOURCPU_SWEEP_P4
+#define NDS_LAB_FOURCPU_SWEEP_P4 0u
+#endif
+volatile u32 gNdsLabP4Content __attribute__((used)) =
+    NDS_LAB_FOURCPU_SWEEP_P4;
 #endif
 #endif
 
