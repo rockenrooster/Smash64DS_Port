@@ -12387,6 +12387,88 @@ static size_t ndsRelocExternTreeAllocSize(u32 asset_id, u32 *seen,
     return total;
 }
 
+/* ndsRelocExternTreeAllocSize less every file already loaded: the tree
+ * loader takes a loaded file as it is (ndsRelocLoadExternTreeAsset), so this
+ * is the heap a tree load still writes. */
+static size_t ndsRelocExternTreeUnloadedSizeFor(u32 asset_id, u32 *seen,
+                                                u32 *seen_count)
+{
+    NDSRelocAssetHeader header;
+    u16 extern_ids[NDS_RELOC_EXTERN_FILE_ID_CAPACITY];
+    u32 extern_count = 0;
+    size_t total;
+    u32 i;
+
+    if ((asset_id == NDS_RELOC_ASSET_INVALID) ||
+        (ndsRelocAddSeenAsset(seen, seen_count, asset_id) == FALSE) ||
+        (ndsRelocFindStatusNode(sNdsRelocStatusBuffer,
+                                sNdsRelocStatusBufferCount,
+                                asset_id) != NULL) ||
+        (ndsRelocFindLoadedFileByAsset(asset_id) != NULL) ||
+        (ndsRelocAssetReadHeader(asset_id, &header) == FALSE))
+    {
+        return 0;
+    }
+    total = (size_t)NDS_RELOC_ALIGN(header.data_size);
+    if ((header.extern_file_ids_num == 0u) ||
+        (header.extern_file_ids_num > NDS_RELOC_EXTERN_FILE_ID_CAPACITY) ||
+        (ndsRelocAssetReadExternFileIDs(asset_id,
+                                        extern_ids,
+                                        NDS_RELOC_EXTERN_FILE_ID_CAPACITY,
+                                        &extern_count) == FALSE))
+    {
+        return total;
+    }
+    for (i = 0; i < extern_count; i++)
+    {
+        u32 dep_asset_id = ndsRelocAssetIDForToken(extern_ids[i]);
+
+        if ((ndsRelocNativeEntryOwnsDependency(asset_id, dep_asset_id) !=
+             FALSE) ||
+            (ndsShieldPoseServesDependency(asset_id, dep_asset_id) != FALSE))
+        {
+            continue;
+        }
+        total = (size_t)NDS_RELOC_ALIGN(total);
+        total += ndsRelocExternTreeUnloadedSizeFor(dep_asset_id, seen,
+                                                   seen_count);
+    }
+    return total;
+}
+
+/* The stage select's preview loads a stage's packet assets a tic apiece,
+ * then its map file's tree: that load needs only this much heap. */
+size_t ndsRelocExternTreeUnloadedSize(const void *file_id)
+{
+    u32 seen[NDS_RELOC_EXTERN_FILE_ID_CAPACITY];
+    u32 seen_count = 0u;
+
+    return ndsRelocExternTreeUnloadedSizeFor(
+        ndsRelocAssetIDForToken(ndsRelocFileID(file_id)), seen, &seen_count);
+}
+
+/* One file and what its tree still needs, loaded as lbRelocGetExternHeapFile
+ * loads a tree: into a heap taken from the current region, named in the
+ * scene's status buffer (ndsRelocEnsureLoadedAsset is the battle's preload,
+ * after its tree loads, and may take a harness buffer instead). */
+s32 ndsRelocLoadAssetTree(u32 asset_id)
+{
+    u32 seen[NDS_RELOC_EXTERN_FILE_ID_CAPACITY];
+    u32 seen_count = 0u;
+    u32 unused = 0u;
+    size_t bytes;
+    uintptr_t heap_ptr;
+
+    ndsRelocPrepareSceneCache();
+    bytes = ndsRelocExternTreeUnloadedSizeFor(asset_id, seen, &seen_count);
+    /* A loaded tree is taken as it is and writes nothing. */
+    heap_ptr = (bytes != 0u) ?
+        (uintptr_t)syTaskmanMalloc(bytes, NDS_RELOC_ALIGN_BYTES) :
+        (uintptr_t)&unused;
+    return (ndsRelocLoadExternTreeAsset(asset_id, &heap_ptr) != NULL) ?
+        TRUE : FALSE;
+}
+
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
 typedef struct NDSP2FighterPayloadSizeRow
 {

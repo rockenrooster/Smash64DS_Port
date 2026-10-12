@@ -318,3 +318,739 @@ void mnMapsStartScene(void)
     }
 }
 #endif
+
+#if NDS_P2_MENU_SHELL
+/* THE STAGE SELECT'S 3D PREVIEW (owner BUGS.md 2026-10-12: "SSS: missing 3D
+ * rendered previews"). mnMapsMakePreview loads the ground's map file, builds
+ * its four display layers (mnMapsMakeLayer: the ground descriptors' DObjs,
+ * MObjs and first animation frame at a per-stage scale) and draws them
+ * through a camera that only bobs (mnmaps.c:1100/:1027/:1336). The shell's
+ * stage select keeps its own 2D screen (the baked panel is the source's
+ * preview wallpaper) and runs just this part of the scene: the source's
+ * preview camera and the four layers, built the way the battle builds them
+ * (grDisplayMakeGeometryLayer's procs and display links, no processes, the
+ * preview's scale and hidden parts) so the native stage owner draws them
+ * from the stage's own packet (ndsRendererAdapterSetStagePreviewLayers). A
+ * packet that also names battle-only actors (Zebes' acid, Saffron's gate,
+ * Mushroom Kingdom's scale, Dream Land's map objects) gets hidden stand-ins
+ * for them (ndsMNMapsPreviewMakeActors).
+ *
+ * The packet's assets, the map file's tree and the native packet blob load
+ * into one block of the screen's heap, reset for each stage the cursor rests
+ * on (one stage at a time, where the source keeps two). */
+#include <nds/nds_native_stage_blob.h>
+#include <nds/nds_reloc_assets.h>
+extern void grDisplayDObjSetNoAnimXObj(GObj *ground_gobj, DObjDesc *dobjdesc);
+
+extern GRDisplayDesc dGRDisplayDescs[];
+extern volatile u32 gNdsSCVSBattleStageGKind;
+extern volatile u32 gNdsNativeStageWarmUploads;
+extern u32 cpuGetTiming(void);
+extern s32 ndsRendererAdapterNativeStagePreloadAsset(u32 index);
+extern size_t ndsRelocExternTreeUnloadedSize(const void *file_id);
+extern volatile u32 gNdsNativeStageWarmUploadLimit;
+extern void ndsRendererAdapterSetStagePreviewLayers(void *const *layers);
+extern volatile u32 gNdsRendererAdapterStagePreviewArmed;
+extern void ndsPlatformSet3DLayerEnabled(s32 is_enabled);
+extern void syTaskmanResetGraphicsHeap(void);
+extern void func_80004AB0(void);
+
+/* Tics the cursor rests on a stage before its preview loads: a hold that
+ * scrolls the row (12 tics a step) never loads the stages it passes. */
+#define NDS_MAPS_PREVIEW_DWELL_TICS 6u
+#define NDS_MAPS_PREVIEW_GKIND_NONE (-1)
+/* The packet blob's body cap (nds_native_stage_blob.c) and the slack the
+ * blob header, alignment and a preloaded asset outside the tree may take. */
+#define NDS_MAPS_PREVIEW_BLOB_BYTES (48u * 1024u)
+/* A stage's first draws each upload textures for about this many ticks
+ * (at least one): 0.7 of a VBlank. */
+#define NDS_MAPS_PREVIEW_WARM_TICKS 400000u
+
+enum
+{
+    NDS_MAPS_PREVIEW_STEP_IDLE,
+    NDS_MAPS_PREVIEW_STEP_ASSETS, /* the packet's assets, one a tic */
+    NDS_MAPS_PREVIEW_STEP_MAP,    /* the map file, its tree, the packet */
+    NDS_MAPS_PREVIEW_STEP_MODEL,  /* the layers, the actors, the camera */
+    NDS_MAPS_PREVIEW_STEP_WARM    /* drawing until a draw is whole */
+};
+
+__attribute__((used)) volatile u32 gNdsMapsPreviewLoads;
+__attribute__((used)) volatile u32 gNdsMapsPreviewDraws;
+__attribute__((used)) volatile u32 gNdsMapsPreviewNativeDraws;
+__attribute__((used)) volatile u32 gNdsMapsPreviewFailStep;
+__attribute__((used)) volatile s32 gNdsMapsPreviewShownGkind = -1;
+__attribute__((used)) volatile u32 gNdsMapsPreviewBlockBytes;
+/* The last load's ticks over its steps, the slowest step, and the slowest
+ * draw and the first after a load. */
+__attribute__((used)) volatile u32 gNdsMapsPreviewStepTicksMax;
+__attribute__((used)) volatile u32 gNdsMapsPreviewLoadTicks;
+__attribute__((used)) volatile u32 gNdsMapsPreviewLoadTicksMax;
+__attribute__((used)) volatile u32 gNdsMapsPreviewDrawTicksMax;
+__attribute__((used)) volatile u32 gNdsMapsPreviewFirstDrawTicks;
+/* Of the file ticks, those spent waiting on the ARM7's card reads. */
+__attribute__((used)) volatile u32 gNdsMapsPreviewFileWaitTicks;
+extern volatile u32 gNdsAudioStorageWaitTicks64;
+
+/* Map-file offsets of the battle-only actors' data, as the ground imports
+ * name them (battleship_grzebes_ground.c, battleship_gryamabuki_ground.c,
+ * battleship_grinishie_ground.c); Dream Land's are menu symbols. */
+#define NDS_MAPS_PREVIEW_ZEBES_ACID_MOBJSUB 0x8c0u     /* llGRZebesMapAcidMObjSub */
+#define NDS_MAPS_PREVIEW_ZEBES_ACID_DOBJDESC 0xb08u    /* llGRZebesMapAcidDObjDesc */
+#define NDS_MAPS_PREVIEW_YAMABUKI_GATE_DOBJDESC 0x8a0u /* llGRYamabukiMapMapHead */
+#define NDS_MAPS_PREVIEW_INISHIE_SCALE_DOBJDESC 0x380u /* llGRInishieMapScaleDObjDesc */
+#define NDS_MAPS_PREVIEW_INISHIE_PLATFORM_DL 0x5f0u    /* llGRInishieMapMapHead */
+/* renderer_adapter_matrix.c's NDS_RENDERER_ADAPTER_STAGE_CAPTURE_* */
+#define NDS_MAPS_PREVIEW_CAPTURE_PUPUPU_MAP 1u
+#define NDS_MAPS_PREVIEW_CAPTURE_ZEBES_ACID 2u
+#define NDS_MAPS_PREVIEW_CAPTURE_INISHIE_SCALE_TREE 3u
+#define NDS_MAPS_PREVIEW_CAPTURE_INISHIE_SCALE_PLATFORM 4u
+#define NDS_MAPS_PREVIEW_CAPTURE_YAMABUKI_GATE 5u
+#define NDS_MAPS_PREVIEW_ACTOR_MAX 4
+
+extern DObjTransformTypes dGRInishieScaleTransformKinds[];
+extern void ndsRendererAdapterSetStagePreviewActor(u32 source, u32 index,
+                                                   void *gobj);
+
+static sb32 sNdsMapsPreviewActive;
+static GObj *sNdsMapsPreviewActors[NDS_MAPS_PREVIEW_ACTOR_MAX];
+static s32 sNdsMapsPreviewShown = NDS_MAPS_PREVIEW_GKIND_NONE;
+static s32 sNdsMapsPreviewWanted = NDS_MAPS_PREVIEW_GKIND_NONE;
+static u32 sNdsMapsPreviewDwell;
+static u32 sNdsMapsPreviewDrawPhase;
+static sb32 sNdsMapsPreviewHasModel;
+static sb32 sNdsMapsPreviewFreshDraw;
+static sb32 sNdsMapsPreviewVisible;
+static u32 sNdsMapsPreviewStep;
+static u32 sNdsMapsPreviewAsset;
+static MPGroundData *sNdsMapsPreviewGroundData;
+static u32 sNdsMapsPreviewLoadTicks;
+static u32 sNdsMapsPreviewLoadWait;
+static GObj *sNdsMapsPreviewCamera;
+static GObj *sNdsMapsPreviewLayers[4];
+static u8 *sNdsMapsPreviewBlock;
+static size_t sNdsMapsPreviewBlockSize;
+static SYMallocRegion sNdsMapsPreviewArena;
+
+/* mnMapsMakeLayer's model, on grDisplayMakeGeometryLayer's procs and display
+ * links (the native stage packet's capture rows) and with no process: the
+ * source's preview plays each layer's first animation frame once. */
+static GObj *ndsMNMapsPreviewMakeLayer(s32 gkind, MPGroundData *ground_data,
+                                       s32 id)
+{
+    f32 scales[/* */] =
+    {
+        0.5F, 0.2F, 0.6F,
+        0.5F, 0.3F, 0.6F,
+        0.5F, 0.4F, 0.2F
+    };
+    MPGroundDesc *gr_desc = &ground_data->gr_desc[id];
+    GObj *gobj;
+
+    if (gr_desc->dobjdesc == NULL)
+    {
+        return NULL;
+    }
+    gobj = gcMakeGObjSPAfter(nGCCommonKindGroundDisplay, NULL,
+                             nGCCommonLinkIDGroundDisplay,
+                             GOBJ_PRIORITY_DEFAULT);
+    if (gobj == NULL)
+    {
+        return NULL;
+    }
+    gcAddGObjDisplay(gobj,
+                     (ground_data->layer_mask & (1 << id)) ?
+                         dGRDisplayDescs[id].sec_proc_display :
+                         dGRDisplayDescs[id].pri_proc_display,
+                     dGRDisplayDescs[id].dl_link, GOBJ_PRIORITY_DEFAULT, ~0);
+    gcSetupCustomDObjs(gobj, gr_desc->dobjdesc, NULL,
+                       nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull,
+                       nGCMatrixKindNull);
+    if (gr_desc->p_mobjsubs != NULL)
+    {
+        gcAddMObjAll(gobj, gr_desc->p_mobjsubs);
+    }
+    if ((gr_desc->anim_joints != NULL) || (gr_desc->p_matanim_joints != NULL))
+    {
+        gcAddAnimAll(gobj, gr_desc->anim_joints, gr_desc->p_matanim_joints,
+                     0.0F);
+        gcPlayAnimAll(gobj);
+    }
+    grDisplayDObjSetNoAnimXObj(gobj, gr_desc->dobjdesc);
+    DObjGetStruct(gobj)->scale.vec.f.x = scales[gkind];
+    DObjGetStruct(gobj)->scale.vec.f.y = scales[gkind];
+    DObjGetStruct(gobj)->scale.vec.f.z = scales[gkind];
+    return gobj;
+}
+
+/* One battle-only actor's stand-in: its GObj on the battle's proc and link,
+ * its DObjs from the map file with the battle's matrix kind, its MObjs, no
+ * process and no animation, the root hidden -- mnMapsMakeModel shows the
+ * four layers alone, and the owner admits a packet only whole. */
+static GObj *ndsMNMapsPreviewMakeActor(u32 slot, u32 source, u32 index,
+                                       void (*proc_display)(GObj *),
+                                       u8 dl_link)
+{
+    GObj *gobj;
+
+    if (slot >= NDS_MAPS_PREVIEW_ACTOR_MAX)
+    {
+        return NULL;
+    }
+    gobj = gcMakeGObjSPAfter(nGCCommonKindGround, NULL, nGCCommonLinkIDGround,
+                             GOBJ_PRIORITY_DEFAULT);
+    if (gobj == NULL)
+    {
+        return NULL;
+    }
+    gcAddGObjDisplay(gobj, proc_display, dl_link, GOBJ_PRIORITY_DEFAULT, ~0);
+    sNdsMapsPreviewActors[slot] = gobj;
+    ndsRendererAdapterSetStagePreviewActor(source, index, gobj);
+    return gobj;
+}
+
+static void ndsMNMapsPreviewHideActor(GObj *gobj)
+{
+    if ((gobj != NULL) && (DObjGetStruct(gobj) != NULL))
+    {
+        DObjGetStruct(gobj)->flags |= DOBJ_FLAG_HIDDEN;
+    }
+}
+
+/* The actors a stage's packet captures beside its layers, as
+ * grZebesMakeAcid, grYamabukiMakeGate, grInishieMakeScale and
+ * grPupupuInitAll build them: from the file the ground data's map_nodes
+ * points into, its base found the way each of them finds it. */
+static void ndsMNMapsPreviewMakeActors(s32 gkind, MPGroundData *ground_data)
+{
+    uintptr_t base;
+    void *map_head;
+    GObj *gobj;
+    s32 i;
+
+    switch (gkind)
+    {
+    case nGRKindZebes:
+        base = NDS_MAPS_PREVIEW_ZEBES_ACID_DOBJDESC;
+        break;
+    case nGRKindYamabuki:
+        base = NDS_MAPS_PREVIEW_YAMABUKI_GATE_DOBJDESC;
+        break;
+    case nGRKindInishie:
+        base = NDS_MAPS_PREVIEW_INISHIE_PLATFORM_DL;
+        break;
+    case nGRKindPupupu:
+        base = llGRPupupuMapMapHead;
+        break;
+    default:
+        return;
+    }
+    if ((ground_data == NULL) || (ground_data->map_nodes == NULL))
+    {
+        return;
+    }
+    base = (uintptr_t)ground_data->map_nodes - base;
+    map_head = (void *)base;
+
+    switch (gkind)
+    {
+    case nGRKindZebes:
+        gobj = ndsMNMapsPreviewMakeActor(0u,
+            NDS_MAPS_PREVIEW_CAPTURE_ZEBES_ACID, 0u,
+            gcDrawDObjTreeDLLinksForGObj, 12);
+        if (gobj != NULL)
+        {
+            gcSetupCustomDObjs(gobj,
+                (DObjDesc *)(base + NDS_MAPS_PREVIEW_ZEBES_ACID_DOBJDESC),
+                NULL, nGCMatrixKindTra, nGCMatrixKindNull, nGCMatrixKindNull);
+            gcAddMObjAll(gobj, lbRelocGetFileData(MObjSub ***, map_head,
+                (const void *)(uintptr_t)NDS_MAPS_PREVIEW_ZEBES_ACID_MOBJSUB));
+            ndsMNMapsPreviewHideActor(gobj);
+        }
+        break;
+
+    case nGRKindYamabuki:
+        gobj = ndsMNMapsPreviewMakeActor(0u,
+            NDS_MAPS_PREVIEW_CAPTURE_YAMABUKI_GATE, 0u,
+            gcDrawDObjTreeDLLinksForGObj, 6);
+        if (gobj != NULL)
+        {
+            gcSetupCustomDObjs(gobj,
+                (DObjDesc *)(base + NDS_MAPS_PREVIEW_YAMABUKI_GATE_DOBJDESC),
+                NULL, nGCMatrixKindTraRotRpyR, nGCMatrixKindNull,
+                nGCMatrixKindNull);
+            ndsMNMapsPreviewHideActor(gobj);
+        }
+        break;
+
+    case nGRKindInishie:
+        gobj = ndsMNMapsPreviewMakeActor(0u,
+            NDS_MAPS_PREVIEW_CAPTURE_INISHIE_SCALE_TREE, 0u,
+            gcDrawDObjTreeForGObj, 6);
+        if (gobj != NULL)
+        {
+            grModelSetupGroundDObjs(gobj,
+                (DObjDesc *)(base + NDS_MAPS_PREVIEW_INISHIE_SCALE_DOBJDESC),
+                NULL, dGRInishieScaleTransformKinds);
+            ndsMNMapsPreviewHideActor(gobj);
+        }
+        for (i = 0; i < 2; i++)
+        {
+            gobj = ndsMNMapsPreviewMakeActor((u32)(1 + i),
+                NDS_MAPS_PREVIEW_CAPTURE_INISHIE_SCALE_PLATFORM, (u32)i,
+                gcDrawDObjDLHead0, 6);
+            if (gobj != NULL)
+            {
+                DObj *dobj = gcAddDObjForGObj(gobj,
+                    (void *)(base + NDS_MAPS_PREVIEW_INISHIE_PLATFORM_DL));
+
+                if (dobj != NULL)
+                {
+                    gcAddXObjForDObjFixed(dobj, nGCMatrixKindTra, 0);
+                }
+                ndsMNMapsPreviewHideActor(gobj);
+            }
+        }
+        break;
+
+    case nGRKindPupupu:
+    {
+        const uintptr_t descs[4] =
+        {
+            llGRPupupuMapMapHead,
+            llGRPupupuMapWhispyMouthTransformKindsDObjDesc,
+            llGRPupupuMapFlowersBackTransformKindsDObjDesc,
+            llGRPupupuMapFlowersFrontTransformKindsDObjDesc
+        };
+        const void *mobjsubs[4] =
+        {
+            &llGRPupupuMapWhispyEyesTransformKindsMObjSub,
+            &llGRPupupuMapWhispyMouthTransformKindsMObjSub,
+            NULL,
+            NULL
+        };
+
+        for (i = 0; i < 4; i++)
+        {
+            gobj = ndsMNMapsPreviewMakeActor((u32)i,
+                NDS_MAPS_PREVIEW_CAPTURE_PUPUPU_MAP, (u32)i,
+                (i == 3) ? grDisplayLayer3PriProcDisplay :
+                           grDisplayLayer0PriProcDisplay,
+                (i == 3) ? 16 : 4);
+            if (gobj == NULL)
+            {
+                continue;
+            }
+            gcSetupCustomDObjs(gobj, (DObjDesc *)(base + descs[i]), NULL,
+                               nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull,
+                               nGCMatrixKindNull);
+            if (mobjsubs[i] != NULL)
+            {
+                gcAddMObjAll(gobj, lbRelocGetFileData(MObjSub ***, map_head,
+                                                      mobjsubs[i]));
+            }
+            ndsMNMapsPreviewHideActor(gobj);
+        }
+        break;
+    }
+
+    default:
+        break;
+    }
+}
+
+static void ndsMNMapsPreviewDropModel(void)
+{
+    s32 i;
+
+    ndsRendererAdapterSetStagePreviewLayers(NULL);
+    for (i = 0; i < NDS_MAPS_PREVIEW_ACTOR_MAX; i++)
+    {
+        if (sNdsMapsPreviewActors[i] != NULL)
+        {
+            gcEjectGObj(sNdsMapsPreviewActors[i]);
+            sNdsMapsPreviewActors[i] = NULL;
+        }
+    }
+    for (i = 0; i < 4; i++)
+    {
+        if (sNdsMapsPreviewLayers[i] != NULL)
+        {
+            gcEjectGObj(sNdsMapsPreviewLayers[i]);
+            sNdsMapsPreviewLayers[i] = NULL;
+        }
+    }
+    sNdsMapsPreviewHasModel = FALSE;
+    if (sNdsMapsPreviewBlock != NULL)
+    {
+        ndsRelocReleaseHeapRange(sNdsMapsPreviewBlock,
+                                 sNdsMapsPreviewBlockSize);
+        syMallocReset(&sNdsMapsPreviewArena);
+    }
+}
+
+/* mnMapsMakePreview for one stage, a step a tic so the select never stalls
+ * on it (a whole load and its first draw took 8-11M ticks, 15-20 VBlanks,
+ * in one tic): the packet's assets one apiece into the block, then the map
+ * file and its tree with the packet, then the layers (mnMapsMakeModel's
+ * hides included) and the camera's target; the draws after upload the
+ * stage's textures a little at a time (gNdsNativeStageWarmUploadLimit) and
+ * the model shows from the first whole one. */
+static void ndsMNMapsPreviewBegin(s32 gkind)
+{
+    ndsMNMapsPreviewDropModel();
+    sNdsMapsPreviewShown = gkind;
+    gNdsMapsPreviewShownGkind = gkind;
+    sNdsMapsPreviewStep = NDS_MAPS_PREVIEW_STEP_IDLE;
+    if ((gkind < 0) || (gkind >= (s32)ARRAY_COUNT(dMNMapsFileInfos)) ||
+        (sNdsMapsPreviewBlock == NULL))
+    {
+        /* RANDOM shows the panel's own art and no model (mnmaps.c:1102). */
+        return;
+    }
+    gNdsMapsPreviewLoads++;
+    sNdsMapsPreviewLoadTicks = 0u;
+    sNdsMapsPreviewLoadWait = gNdsAudioStorageWaitTicks64;
+    /* The packet the owner reads, and the assets it names, are the battle
+     * stage kind's (ndsRendererAdapterNativeStageDescriptor). */
+    gNdsSCVSBattleStageGKind = (u32)gkind;
+    sNdsMapsPreviewAsset = 0u;
+    sNdsMapsPreviewStep = NDS_MAPS_PREVIEW_STEP_ASSETS;
+}
+
+static void ndsMNMapsPreviewFail(u32 step)
+{
+    gNdsMapsPreviewFailStep = step;
+    ndsMNMapsPreviewDropModel();
+    sNdsMapsPreviewStep = NDS_MAPS_PREVIEW_STEP_IDLE;
+}
+
+static void ndsMNMapsPreviewStepLoad(void)
+{
+    s32 gkind = sNdsMapsPreviewShown;
+    SYMallocRegion *previous;
+    u32 step_start = cpuGetTiming();
+    s32 i;
+
+    switch (sNdsMapsPreviewStep)
+    {
+    case NDS_MAPS_PREVIEW_STEP_ASSETS:
+        previous = ndsTaskmanSwapMallocRegion(&sNdsMapsPreviewArena);
+        if (ndsRendererAdapterNativeStagePreloadAsset(sNdsMapsPreviewAsset) !=
+            FALSE)
+        {
+            sNdsMapsPreviewAsset++;
+        }
+        else
+        {
+            sNdsMapsPreviewStep = NDS_MAPS_PREVIEW_STEP_MAP;
+        }
+        ndsTaskmanSwapMallocRegion(previous);
+        break;
+
+    case NDS_MAPS_PREVIEW_STEP_MAP:
+    {
+        size_t bytes;
+        void *heap;
+        void *file;
+
+        previous = ndsTaskmanSwapMallocRegion(&sNdsMapsPreviewArena);
+        /* The packet's assets are loaded: the tree load writes only what
+         * they left out (lbRelocGetFileSize sizes the whole tree). */
+        bytes = ndsRelocExternTreeUnloadedSize(dMNMapsFileInfos[gkind].file_id);
+        heap = syTaskmanMalloc((bytes != 0u) ? bytes : 0x10u, 0x10);
+        file = lbRelocGetExternHeapFile(dMNMapsFileInfos[gkind].file_id, heap);
+        sNdsMapsPreviewGroundData = (file != NULL) ?
+            lbRelocGetFileData(MPGroundData*, file,
+                               dMNMapsFileInfos[gkind].offset) : NULL;
+        if (sNdsMapsPreviewGroundData != NULL)
+        {
+            (void)ndsNativeStageBlobLoad((u32)gkind);
+            /* The battle pins Dream Land's textures with its static set
+             * before its first draw; the preview has no such set, so its
+             * first prepares upload on a miss as a loaded packet's do. */
+            gNdsNativeStageWarmUploads = 1u;
+        }
+        ndsTaskmanSwapMallocRegion(previous);
+        gNdsMapsPreviewFileWaitTicks =
+            (gNdsAudioStorageWaitTicks64 - sNdsMapsPreviewLoadWait) * 64u;
+        if (sNdsMapsPreviewGroundData == NULL)
+        {
+            ndsMNMapsPreviewFail(1u);
+            return;
+        }
+        sNdsMapsPreviewStep = NDS_MAPS_PREVIEW_STEP_MODEL;
+        break;
+    }
+
+    case NDS_MAPS_PREVIEW_STEP_MODEL:
+        for (i = 0; i < 4; i++)
+        {
+            sNdsMapsPreviewLayers[i] = ndsMNMapsPreviewMakeLayer(
+                gkind, sNdsMapsPreviewGroundData, i);
+        }
+        /* mnMapsMakeModel's own hides (mnmaps.c:1048-1060). */
+        if ((gkind == nGRKindYamabuki) && (sNdsMapsPreviewLayers[3] != NULL))
+        {
+            DObjGetChild(DObjGetChild(DObjGetStruct(sNdsMapsPreviewLayers[3])))->flags =
+                DOBJ_FLAG_HIDDEN;
+        }
+        if ((gkind == nGRKindYoster) && (sNdsMapsPreviewLayers[0] != NULL))
+        {
+            DObj *root_dobj = DObjGetStruct(sNdsMapsPreviewLayers[0]);
+            DObj *next_dobj;
+
+            for (next_dobj = root_dobj, i = 1; next_dobj != NULL;
+                 next_dobj = lbCommonGetTreeDObjNextFromRoot(next_dobj,
+                                                             root_dobj),
+                 i++)
+            {
+                if ((i == 0xF) || (i == 0x11))
+                {
+                    next_dobj->flags = DOBJ_FLAG_HIDDEN;
+                }
+            }
+        }
+        /* After the layers, as the battle makes them: Dream Land's layer-0
+         * order (L0, then its three map GObjs) is part of the packet. */
+        ndsMNMapsPreviewMakeActors(gkind, sNdsMapsPreviewGroundData);
+        ndsRendererAdapterSetStagePreviewLayers(
+            (void *const *)sNdsMapsPreviewLayers);
+        if (sMNMapsPreviewCObj != NULL)
+        {
+            mnMapsSetPreviewCameraPosition(sMNMapsPreviewCObj, gkind);
+        }
+        sNdsMapsPreviewHasModel = TRUE;
+        sNdsMapsPreviewFreshDraw = TRUE;
+        sNdsMapsPreviewStep = NDS_MAPS_PREVIEW_STEP_WARM;
+        gNdsMapsPreviewFailStep = 0u;
+        break;
+
+    default:
+        return;
+    }
+    step_start = cpuGetTiming() - step_start;
+    sNdsMapsPreviewLoadTicks += step_start;
+    gNdsMapsPreviewLoadTicks = sNdsMapsPreviewLoadTicks;
+    if (step_start > gNdsMapsPreviewStepTicksMax)
+    {
+        gNdsMapsPreviewStepTicksMax = step_start;
+    }
+    if (sNdsMapsPreviewLoadTicks > gNdsMapsPreviewLoadTicksMax)
+    {
+        gNdsMapsPreviewLoadTicksMax = sNdsMapsPreviewLoadTicks;
+    }
+}
+
+void ndsMNMapsPreviewInit(s32 gkind)
+{
+    LBRelocSetup rl_setup;
+    size_t max = 0u;
+    size_t size;
+    GObj *camera_gobj;
+    CObj *cobj;
+    s32 i;
+
+    if (sNdsMapsPreviewActive != FALSE)
+    {
+        return;
+    }
+    rl_setup.table_addr = (uintptr_t)&lLBRelocTableAddr;
+    rl_setup.table_files_num = (u32)&llRelocFileCount;
+    rl_setup.file_heap = NULL;
+    rl_setup.file_heap_size = 0;
+    rl_setup.status_buffer = sMNMapsStatusBuffer;
+    rl_setup.status_buffer_size = ARRAY_COUNT(sMNMapsStatusBuffer);
+    rl_setup.force_status_buffer = sMNMapsForceStatusBuffer;
+    rl_setup.force_status_buffer_size = ARRAY_COUNT(sMNMapsForceStatusBuffer);
+    lbRelocInitSetup(&rl_setup);
+
+    /* mnMapsAllocModelHeaps' size, one heap. */
+    for (i = 0; i < (s32)ARRAY_COUNT(dMNMapsFileInfos); i++)
+    {
+        size = lbRelocGetFileSize(dMNMapsFileInfos[i].file_id);
+        if (max < size)
+        {
+            max = size;
+        }
+    }
+    sNdsMapsPreviewBlockSize = ((max + 0x1fu) & ~(size_t)0x1fu) +
+        NDS_MAPS_PREVIEW_BLOB_BYTES;
+    sNdsMapsPreviewBlock = syTaskmanMalloc(sNdsMapsPreviewBlockSize, 0x20);
+    gNdsMapsPreviewBlockBytes = (sNdsMapsPreviewBlock != NULL) ?
+        (u32)sNdsMapsPreviewBlockSize : 0u;
+    if (sNdsMapsPreviewBlock != NULL)
+    {
+        syMallocInit(&sNdsMapsPreviewArena, 0x4d415053u, sNdsMapsPreviewBlock,
+                     sNdsMapsPreviewBlockSize);
+    }
+    else
+    {
+        gNdsMapsPreviewFailStep = 2u;
+    }
+
+    /* mnMapsMakePreviewCamera (mnmaps.c:1336) on the layers' display links,
+     * with the select's window fit (ndsMNPlayersVSFitFighterCamera). */
+    camera_gobj = gcMakeCameraGObj(1, NULL, 1, GOBJ_PRIORITY_DEFAULT,
+                                   func_80017DBC, 65,
+                                   COBJ_MASK_DLLINK(4) | COBJ_MASK_DLLINK(6) |
+                                   COBJ_MASK_DLLINK(13) | COBJ_MASK_DLLINK(17),
+                                   ~0, TRUE, nGCProcessKindThread, NULL, 1,
+                                   FALSE);
+    sNdsMapsPreviewCamera = camera_gobj;
+    if (camera_gobj != NULL)
+    {
+        cobj = CObjGetStruct(camera_gobj);
+        sMNMapsPreviewCObj = cobj;
+        syRdpSetViewport(&cobj->viewport, 10.0F, 10.0F, 310.0F, 230.0F);
+        cobj->projection.persp.far = 16384.0F;
+        cobj->projection.persp.fovy = 32.588150F;
+        cobj->projection.persp.aspect = 1.3037037F;
+        mnMapsSetPreviewCameraPosition(cobj, gkind);
+        gcAddGObjProcess(camera_gobj, mnMapsPreviewCameraThreadUpdate,
+                         nGCProcessKindThread, 1);
+    }
+    for (i = 0; i < 4; i++)
+    {
+        sNdsMapsPreviewLayers[i] = NULL;
+    }
+    sNdsMapsPreviewHasModel = FALSE;
+    sNdsMapsPreviewDrawPhase = 0u;
+    /* The scene's light (dMNMapsDisplayList: lighting on, ambient 0x20 and a
+     * white light) before each preview draw, as mnMapsFuncStart's setup
+     * names it (mnmaps.c:1685); Planet Zebes' lit ground drew black
+     * without it. */
+    syRdpSetFuncLights(mnMapsFuncLights);
+    sNdsMapsPreviewActive = TRUE;
+    sNdsMapsPreviewWanted = gkind;
+    sNdsMapsPreviewDwell = NDS_MAPS_PREVIEW_DWELL_TICS;
+    /* The select's first stage loads whole, behind the scene's entry. */
+    ndsMNMapsPreviewBegin(gkind);
+    while ((sNdsMapsPreviewStep != NDS_MAPS_PREVIEW_STEP_IDLE) &&
+           (sNdsMapsPreviewStep != NDS_MAPS_PREVIEW_STEP_WARM))
+    {
+        ndsMNMapsPreviewStepLoad();
+    }
+}
+
+void ndsMNMapsPreviewRequest(s32 gkind)
+{
+    if (sNdsMapsPreviewActive == FALSE)
+    {
+        return;
+    }
+    if (gkind != sNdsMapsPreviewWanted)
+    {
+        sNdsMapsPreviewWanted = gkind;
+        sNdsMapsPreviewDwell = 0u;
+    }
+}
+
+/* The 3D layer shows a model only once a draw of it was whole. */
+static void ndsMNMapsPreviewShow(sb32 visible)
+{
+    if (visible != sNdsMapsPreviewVisible)
+    {
+        sNdsMapsPreviewVisible = visible;
+        ndsPlatformSet3DLayerEnabled(visible);
+    }
+}
+
+void ndsMNMapsPreviewFrame(void)
+{
+    u32 draw_start;
+    sb32 armed;
+
+    if (sNdsMapsPreviewActive == FALSE)
+    {
+        return;
+    }
+    if (sNdsMapsPreviewWanted != sNdsMapsPreviewShown)
+    {
+        /* The panel already shows the new stage's art: the old model goes
+         * at once and the new one loads once the cursor rests. */
+        ndsMNMapsPreviewShow(FALSE);
+        if (sNdsMapsPreviewDwell < NDS_MAPS_PREVIEW_DWELL_TICS)
+        {
+            sNdsMapsPreviewDwell++;
+        }
+        else
+        {
+            ndsMNMapsPreviewBegin(sNdsMapsPreviewWanted);
+        }
+    }
+    else if ((sNdsMapsPreviewStep != NDS_MAPS_PREVIEW_STEP_IDLE) &&
+             (sNdsMapsPreviewStep != NDS_MAPS_PREVIEW_STEP_WARM))
+    {
+        ndsMNMapsPreviewStepLoad();
+    }
+    /* The camera's bob is the scene's only process (mnmaps.c:1319). */
+    gcRunAll();
+    /* 30 Hz like the character select's previews: BG0 retains the last
+     * frame between draws. */
+    sNdsMapsPreviewDrawPhase ^= 1u;
+    if (sNdsMapsPreviewDrawPhase == 0u)
+    {
+        return;
+    }
+    if ((sNdsMapsPreviewHasModel == FALSE) || (sNdsMapsPreviewCamera == NULL))
+    {
+        ndsMNMapsPreviewShow(FALSE);
+        return;
+    }
+    draw_start = cpuGetTiming();
+    syTaskmanResetGraphicsHeap();
+    func_80004AB0();
+    gNdsNativeStageWarmUploadLimit = NDS_MAPS_PREVIEW_WARM_TICKS;
+    armed = (ndsRendererAdapterPrepareNativeStageOwner(sNdsMapsPreviewCamera) !=
+             FALSE) ? TRUE : FALSE;
+    gNdsNativeStageWarmUploadLimit = 0u;
+    if (armed != FALSE)
+    {
+        /* Only a whole native draw reaches the screen: a prepare that
+         * declined (textures still uploading) draws nothing, and the
+         * layers' own display procs never draw the preview. */
+        gNdsRendererAdapterStagePreviewArmed = 1u;
+        gcDrawAll();
+        ndsRendererAdapterFinishNativeStageOwner();
+        gNdsRendererAdapterStagePreviewArmed = 0u;
+        gNdsMapsPreviewNativeDraws++;
+        ndsMNMapsPreviewShow(TRUE);
+        if (sNdsMapsPreviewStep == NDS_MAPS_PREVIEW_STEP_WARM)
+        {
+            sNdsMapsPreviewStep = NDS_MAPS_PREVIEW_STEP_IDLE;
+        }
+    }
+    gNdsMapsPreviewDraws++;
+    draw_start = cpuGetTiming() - draw_start;
+    if (draw_start > gNdsMapsPreviewDrawTicksMax)
+    {
+        gNdsMapsPreviewDrawTicksMax = draw_start;
+    }
+    if (sNdsMapsPreviewFreshDraw != FALSE)
+    {
+        gNdsMapsPreviewFirstDrawTicks = draw_start;
+        sNdsMapsPreviewFreshDraw = FALSE;
+    }
+}
+
+void ndsMNMapsPreviewExit(void)
+{
+    if (sNdsMapsPreviewActive == FALSE)
+    {
+        return;
+    }
+    ndsMNMapsPreviewDropModel();
+    sNdsMapsPreviewActive = FALSE;
+    sNdsMapsPreviewShown = NDS_MAPS_PREVIEW_GKIND_NONE;
+    sNdsMapsPreviewWanted = NDS_MAPS_PREVIEW_GKIND_NONE;
+    sNdsMapsPreviewCamera = NULL;
+    sMNMapsPreviewCObj = NULL;
+    sNdsMapsPreviewBlock = NULL;
+    gNdsSCVSBattleStageGKind = NDS_NATIVE_STAGE_BLOB_GKIND_INVALID;
+    syRdpSetFuncLights(NULL);
+    sNdsMapsPreviewStep = NDS_MAPS_PREVIEW_STEP_IDLE;
+    sNdsMapsPreviewVisible = FALSE;
+    ndsPlatformSet3DLayerEnabled(FALSE);
+}
+#endif

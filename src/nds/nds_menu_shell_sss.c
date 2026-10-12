@@ -324,6 +324,14 @@ static NdsUiKitSurfaceId sSssPreviewSurface;
 static u32 sSssCursorSlot;
 static u32 sSssScrollWait;
 
+/* The stage's 3D preview, mnMapsMakePreview's (src/import/battleship_mnmaps.c):
+ * built at the screen's entry, asked for the stage the cursor rests on, run
+ * and drawn every tic, retired at the exit. */
+void ndsMNMapsPreviewInit(s32 gkind);
+void ndsMNMapsPreviewRequest(s32 gkind);
+void ndsMNMapsPreviewFrame(void);
+void ndsMNMapsPreviewExit(void);
+
 static void ndsMenuShellSssCue(u32 id)
 {
     gNdsMenuShellSssCueCount++;
@@ -592,6 +600,7 @@ static void ndsMenuShellSssMoveTo(u32 slot)
     sSssCursorSlot = slot;
     gNdsMenuShellSssMoveCount++;
     ndsMenuShellSssCue(NDS_SSS_FGM_SCROLL2);
+    ndsMNMapsPreviewRequest((s32)kNdsSssSlotGkind[slot]);
     /* Budget ZERO: the cursor moves on the press, the surfaces follow from the
      * next frame's sync. This frame already carries the FGM cue's own sample
      * read, and P2-1j's measurement is that a cue frame is exactly the wrong

@@ -274,6 +274,8 @@ static void ndsMenuShellUpdate(u32 screen, u32 held, u32 taps)
     }
     case NDS_MENU_SHELL_SCREEN_SSS:
         ndsMenuShellUpdateSss(held, taps);
+        /* The stage's 3D preview (battleship_mnmaps.c). */
+        ndsMNMapsPreviewFrame();
         break;
     case NDS_MENU_SHELL_SCREEN_ITEMSWITCH:
         ndsMenuShellUpdateItems(held, taps);
@@ -548,6 +550,11 @@ static void ndsMenuShellRun(u32 screen)
         ndsMNPlayersVSPreviewExit();
         ndsPlatformSet3DLayerEnabled(FALSE);
     }
+    if (screen == NDS_MENU_SHELL_SCREEN_SSS)
+    {
+        /* The same for the stage preview's layers and its packet. */
+        ndsMNMapsPreviewExit();
+    }
 
     ndsUiKitExit();
     ndsPlatformSetBackdropColor(NDS_MENU_BACKDROP_BLACK);
@@ -732,6 +739,7 @@ void ndsMenuShellRunCharSelect(void)
 void ndsMenuShellRunStageSelect(void)
 {
     ndsMenuShellSssInit();
+    ndsMNMapsPreviewInit((s32)kNdsSssSlotGkind[sSssCursorSlot]);
     ndsMenuShellRun(NDS_MENU_SHELL_SCREEN_SSS);
 }
 

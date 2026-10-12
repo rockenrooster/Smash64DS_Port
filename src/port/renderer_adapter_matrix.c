@@ -133,6 +133,40 @@ __attribute__((used)) volatile u32 gNdsLabItemAcc[16];
 /* dLBCommonFuncMatrixList kind 0x4C maps to gmCameraLookAtFuncMatrix. */
 #define NDS_RENDERER_ADAPTER_GM_CAMERA_MTX_KIND 0x4Cu
 
+/* Set while the stage select's 3D preview owns the stage packet
+ * (ndsRendererAdapterSetStagePreviewLayers, renderer_adapter_stage.c). Its
+ * camera is the default one (gcAddCameraMatrixSets: PerspFastF, then
+ * LookAt): the same perspective and look-at the battle's 0x4C camera
+ * carries, so the stage paths that ask for that camera accept it then. */
+static u32 sNdsRendererAdapterStagePreviewMode;
+
+static sb32 ndsRendererAdapterIsStagePreviewCamera(const CObj *cobj)
+{
+    u32 seen = 0u;
+    u32 i;
+
+    if ((sNdsRendererAdapterStagePreviewMode == 0u) || (cobj == NULL))
+    {
+        return FALSE;
+    }
+    for (i = 0u; i < (u32)cobj->xobjs_num; i++)
+    {
+        if (cobj->xobjs[i] == NULL)
+        {
+            continue;
+        }
+        if (cobj->xobjs[i]->kind == nGCMatrixKindPerspFastF)
+        {
+            seen |= 1u;
+        }
+        else if (cobj->xobjs[i]->kind == nGCMatrixKindLookAt)
+        {
+            seen |= 2u;
+        }
+    }
+    return (seen == 3u) ? TRUE : FALSE;
+}
+
 /* objdisplay.c:2950-2983, camera xobj kinds 12-17: the view of 6/7, 8/9 or
  * 10/11 together with the LookAt the RSP's texgen reads. */
 static void ndsRendererAdapterReflectCameraView(const CObj *cobj, u32 kind,
@@ -1812,6 +1846,24 @@ void ndsRendererAdapterNativeStagePreloadAssets(void)
             NDS_DIAG(gNdsNativeStagePreloadFailCount++);
         }
     }
+}
+
+/* One of the loaded stage's packet assets (the stage select's preview loads
+ * them a tic apiece); FALSE once index is past the last. */
+s32 ndsRendererAdapterNativeStagePreloadAsset(u32 index)
+{
+    const NDSRendererAdapterNativeStageDescriptor *desc =
+        ndsRendererAdapterNativeStageDescriptor();
+
+    if ((desc == NULL) || (index >= desc->asset_count))
+    {
+        return FALSE;
+    }
+    if (ndsRelocLoadAssetTree(desc->asset_ids[index]) == FALSE)
+    {
+        NDS_DIAG(gNdsNativeStagePreloadFailCount++);
+    }
+    return TRUE;
 }
 
 #if defined(NDS_P2_COMPACT_GROUND_MAPS) && NDS_P2_COMPACT_GROUND_MAPS
@@ -4511,6 +4563,11 @@ static void ndsRendererAdapterApplyMvpRecalc(
                 break;
             }
         }
+    }
+    if ((has_battle_camera == FALSE) &&
+        (ndsRendererAdapterIsStagePreviewCamera(cobj) != FALSE))
+    {
+        has_battle_camera = TRUE;
     }
     if ((cobj == NULL) || (has_battle_camera == FALSE) ||
         (projection == NULL) || (projection_ptr == NULL) ||

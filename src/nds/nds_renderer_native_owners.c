@@ -1412,6 +1412,13 @@ volatile u32 gNdsNativeStagePrepareRunTexture[8];
  * is accepted. Dream Land never sets it. */
 volatile u32 gNdsNativeStageWarmUploads;
 volatile u32 gNdsNativeStageWarmUploadCount;
+/* The stage select's preview spreads a stage's first uploads over several
+ * draws: once a prepare has uploaded one texture and spent this many ticks
+ * since it began, it declines at the next miss (0: no limit, the battle's
+ * warm). Both counts restart at every prepare. */
+volatile u32 gNdsNativeStageWarmUploadLimit;
+static u32 sNdsNativeStageWarmUploadsThisPrepare;
+static u32 sNdsNativeStageWarmPrepareStart;
 /* Non-point texture-filter phase witness, reset once per taskman heap/scene
  * generation. Keep these exported even when no C code reads them: the scene
  * probe is the consumer and --gc-sections has dropped unreferenced diagnostics
@@ -1716,8 +1723,13 @@ static s32 ndsRendererNativeStagePrepareRun(
          * carries its own pin set, the first prepare after a blob load may
          * upload through the live path once and retry the lookup. */
         ((gNdsNativeStageWarmUploads == 0u) ||
+         ((gNdsNativeStageWarmUploadLimit != 0u) &&
+          (sNdsNativeStageWarmUploadsThisPrepare != 0u) &&
+          ((cpuGetTiming() - sNdsNativeStageWarmPrepareStart) >=
+           gNdsNativeStageWarmUploadLimit)) ||
          (ndsRendererHardwareEndBatch(),
           gNdsNativeStageWarmUploadCount++,
+          sNdsNativeStageWarmUploadsThisPrepare++,
           ndsRendererHardwareResolveOrBindTexture(
               stats, frame->config, state, NULL, TRUE) == FALSE) ||
          (ndsRendererHardwareResolveStageSourceFrameTexture(
@@ -4078,6 +4090,11 @@ s32 ndsRendererPrepareNativeStageOwner(
         gNdsNativeStageRoofSnapValid[roof_snap_run_index] = 0u;
     }
     sNdsNativeStageEmitShortfallSnapshot.active = 0u;
+    sNdsNativeStageWarmUploadsThisPrepare = 0u;
+    if (gNdsNativeStageWarmUploadLimit != 0u)
+    {
+        sNdsNativeStageWarmPrepareStart = cpuGetTiming();
+    }
     if (sNdsNativeStageFilterPhaseHeapGeneration != gNdsTaskmanHeapGeneration)
     {
         gNdsNativeStageFilterPhase8RunCount = 0u;

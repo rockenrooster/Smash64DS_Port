@@ -3424,6 +3424,20 @@ extern void *ndsGRInishieScaleStringGObj(u32 index);
 extern void *ndsGRInishieScalePlatformGObj(u32 index);
 #endif
 
+/* THE STAGE SELECT'S 3D PREVIEW (2026-10-12, battleship_mnmaps.c). The
+ * preview builds a stage's four display layers the way the battle does
+ * (grDisplayMakeGeometryLayer's procs and links, the preview's own scale),
+ * and the owner draws them from the same packet: while preview layers are
+ * set (sNdsRendererAdapterStagePreviewMode, renderer_adapter_matrix.c), a
+ * LAYER row names the preview's GObj and every other row the preview's
+ * stand-in for that battle-only actor (built like the battle's, its root
+ * hidden: the source preview shows the layers alone). Armed only around the
+ * preview camera's gcDrawAll. */
+volatile u32 gNdsRendererAdapterStagePreviewArmed;
+static GObj *sNdsRendererAdapterStagePreviewLayers[4];
+/* [capture source][index]; LAYER rows read the layers above. */
+static GObj *sNdsRendererAdapterStagePreviewActors[6][4];
+
 static GObj *ndsRendererAdapterNativeStageSegmentGObj(u32 segment_index)
 {
     const NDSRendererAdapterNativeStageCaptureSegment *row =
@@ -3432,6 +3446,20 @@ static GObj *ndsRendererAdapterNativeStageSegmentGObj(u32 segment_index)
     if (row == NULL)
     {
         return NULL;
+    }
+    if (sNdsRendererAdapterStagePreviewMode != 0u)
+    {
+        if (row->index >= 4u)
+        {
+            return NULL;
+        }
+        if (row->source == NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER)
+        {
+            return sNdsRendererAdapterStagePreviewLayers[row->index];
+        }
+        return (row->source < 6u) ?
+            sNdsRendererAdapterStagePreviewActors[row->source][row->index] :
+            NULL;
     }
     switch (row->source)
     {
@@ -4206,6 +4234,44 @@ static u64 __attribute__((cold)) ndsRendererAdapterStageYakumonoBindings(
 }
 #endif
 
+/* gGCScaleX as the source's tree walk leaves it at a billboard: every
+ * ancestor whose matrix kind scales multiplies its scale.x in
+ * (objdisplay.c:574-670). The battle's stage trees leave it at 1.0, which
+ * the stage path assumes; the stage select's preview scales each layer's
+ * root (mnMapsMakeLayer), so its billboards take that scale. */
+static f32 ndsRendererAdapterStagePreviewRecalcScale(const DObj *dobj)
+{
+    const DObj *parent;
+    f32 scale = 1.0F;
+    u32 depth = 0u;
+
+    if ((sNdsRendererAdapterStagePreviewMode == 0u) || (dobj == NULL))
+    {
+        return 1.0F;
+    }
+    for (parent = dobj->parent;
+         (parent != NULL) && (parent != DOBJ_PARENT_NULL) && (depth < 32u);
+         parent = parent->parent, depth++)
+    {
+        u32 i;
+
+        for (i = 0u; i < (u32)parent->xobjs_num; i++)
+        {
+            const XObj *xobj = parent->xobjs[i];
+
+            if ((xobj != NULL) &&
+                ((xobj->kind == nGCMatrixKindTraRotRSca) ||
+                 (xobj->kind == nGCMatrixKindTraRotRpyRSca) ||
+                 (xobj->kind == nGCMatrixKindTraRotPyrRSca) ||
+                 (xobj->kind == nGCMatrixKindSca)))
+            {
+                scale *= parent->scale.vec.f.x;
+            }
+        }
+    }
+    return scale;
+}
+
 static sb32 ndsRendererAdapterPrepareNativeStageBindingMatrix(
     CObj *cobj, NDSRendererAdapterNativeStageWorkspace *workspace,
     u32 binding_index
@@ -4227,7 +4293,11 @@ static sb32 ndsRendererAdapterPrepareNativeStageBindingMatrix(
     u32 task103_now;
 #endif
 
-    if (kind != 0u) { sNdsRendererAdapterMvpRecalcScaleX = 1.0F; }
+    if (kind != 0u)
+    {
+        sNdsRendererAdapterMvpRecalcScaleX =
+            ndsRendererAdapterStagePreviewRecalcScale(dobj);
+    }
     /* The cached world itself, not a copy (2026-10-04). */
 #if NDS_TASK44_STAGE_STEADY && NDS_R2_STAGE_VALIDATE_STRIDE
     /* P2-2p8 (2026-10-04, owner ruling D12c): a dynamic binding whose chain
@@ -4422,6 +4492,34 @@ static void ndsRendererAdapterStageBindingCensus(
 }
 #endif
 
+#if NDS_TASK36_HW_COMPOSE
+/* The stage select's preview camera (ndsRendererAdapterIsStagePreviewCamera):
+ * the same eye, target and perspective as the battle's 0x4C camera, split
+ * the way that camera is. */
+static sb32 ndsRendererAdapterBuildStagePreviewCameraMatrices(
+    CObj *cobj, NDSRendererMatrix20p12 *projection,
+    NDSRendererMatrix20p12 *modelview)
+{
+    LookAt look_at;
+
+    if (ndsRendererAdapterIsStagePreviewCamera(cobj) == FALSE)
+    {
+        return FALSE;
+    }
+    ndsRendererAdapterCameraLookAtReflect(
+        modelview, &look_at,
+        cobj->vec.eye.x, cobj->vec.eye.y, cobj->vec.eye.z,
+        cobj->vec.at.x, cobj->vec.at.y, cobj->vec.at.z,
+        cobj->vec.up.x, cobj->vec.up.y, cobj->vec.up.z);
+    ndsRendererAdapterCameraPerspFast(
+        projection, &cobj->projection.persp.norm,
+        cobj->projection.persp.fovy, cobj->projection.persp.aspect,
+        cobj->projection.persp.near, cobj->projection.persp.far,
+        cobj->projection.persp.scale);
+    return TRUE;
+}
+#endif
+
 static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
     CObj *cobj, NDSRendererAdapterNativeStageWorkspace *workspace)
 {
@@ -4451,6 +4549,9 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
              cobj, &workspace->projection,
              &workspace->camera_modelview) == FALSE) &&
         (ndsRendererAdapterBuildTask36StageCameraMatrices(
+             cobj, &workspace->projection,
+             &workspace->camera_modelview) == FALSE) &&
+        (ndsRendererAdapterBuildStagePreviewCameraMatrices(
              cobj, &workspace->projection,
              &workspace->camera_modelview) == FALSE))
     {
@@ -4530,11 +4631,21 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
  * (nds_stage_gx.exec.inc). */
 volatile u32 gNdsStageRigidWorldSerial;
 
+/* The packet's rigid bindings, none while the stage select's preview owns
+ * the packet: it composes every binding each draw (Planet Zebes' rigid
+ * ground -- bindings 0, 2-7, 11, 15 and 24, mostly range runs -- drew
+ * nothing under the preview's camera on the rigid path). */
+static u64 ndsRendererAdapterStageRigidBindingMask(void)
+{
+    return (sNdsRendererAdapterStagePreviewMode != 0u) ? 0u :
+        ndsRendererNativeStageRigidBindingMask();
+}
+
 static sb32 ndsRendererAdapterCaptureTask36StageWorld(
     NDSRendererAdapterNativeStageWorkspace *workspace)
 {
     u32 binding_index;
-    const u64 rigid_mask = ndsRendererNativeStageRigidBindingMask();
+    const u64 rigid_mask = ndsRendererAdapterStageRigidBindingMask();
 
     for (binding_index = 0u;
          binding_index < workspace->binding_count;
@@ -4591,7 +4702,7 @@ static void ndsRendererAdapterValidateTask36StageWorld(
     NDSRendererAdapterNativeStageWorkspace *workspace)
 {
     u32 binding_index;
-    const u64 rigid_mask = ndsRendererNativeStageRigidBindingMask();
+    const u64 rigid_mask = ndsRendererAdapterStageRigidBindingMask();
 #if NDS_TASK44_STAGE_STEADY
     u32 rigid_slot;
 #endif
@@ -4802,6 +4913,44 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
         camera_gobj_ptr);
 }
 
+/* The stage select's preview layers (NULL: the battle's own), see
+ * sNdsRendererAdapterStagePreviewMode. A change re-validates the topology
+ * from scratch: the preview reloads its stage into the same arena. */
+void ndsRendererAdapterSetStagePreviewLayers(void *const *layers)
+{
+    NDSRendererAdapterNativeStageWorkspace *workspace =
+        &sNdsRendererAdapterNativeStageWorkspace;
+    u32 i;
+
+    for (i = 0u; i < 4u; i++)
+    {
+        sNdsRendererAdapterStagePreviewLayers[i] =
+            (layers != NULL) ? (GObj *)layers[i] : NULL;
+    }
+    if (layers == NULL)
+    {
+        memset(sNdsRendererAdapterStagePreviewActors, 0,
+               sizeof(sNdsRendererAdapterStagePreviewActors));
+    }
+    sNdsRendererAdapterStagePreviewMode = (layers != NULL) ? 1u : 0u;
+    workspace->active = FALSE;
+    workspace->topology_valid = FALSE;
+#if NDS_TASK44_STAGE_STEADY
+    workspace->task44_admission_generation = 0u;
+#endif
+}
+
+/* A preview stand-in for a capture row's battle-only actor (source
+ * NDS_RENDERER_ADAPTER_STAGE_CAPTURE_*, index as the row names it). Set
+ * before ndsRendererAdapterSetStagePreviewLayers; cleared with it. */
+void ndsRendererAdapterSetStagePreviewActor(u32 source, u32 index, void *gobj)
+{
+    if ((source < 6u) && (index < 4u))
+    {
+        sNdsRendererAdapterStagePreviewActors[source][index] = (GObj *)gobj;
+    }
+}
+
 #if NDS_P2_STAGE_SECTOR
 extern DObj *ndsGRSectorPlatformDObj(void);
 #endif
@@ -4844,7 +4993,8 @@ static s32 ndsRendererAdapterPrepareNativeStageOwnerBody(
      * Keep this before packet admission: an unrelated stage-packet decline
      * must not blank an otherwise valid native background. */
     if ((cobj != NULL) && (gSCManagerBattleState != NULL) &&
-        ((u32)gSCManagerBattleState->gkind <= 8u))
+        ((u32)gSCManagerBattleState->gkind <= 8u) &&
+        (sNdsRendererAdapterStagePreviewMode == 0u))
     {
         (void)ndsNativeBattleWallpaperDraw(
             (u32)gSCManagerBattleState->gkind,
@@ -5311,6 +5461,20 @@ void ndsRendererAdapterFinishNativeStageOwner(void)
     workspace->next_segment = 0u;
 }
 #else
+volatile u32 gNdsRendererAdapterStagePreviewArmed;
+
+void ndsRendererAdapterSetStagePreviewLayers(void *const *layers)
+{
+    (void)layers;
+}
+
+void ndsRendererAdapterSetStagePreviewActor(u32 source, u32 index, void *gobj)
+{
+    (void)source;
+    (void)index;
+    (void)gobj;
+}
+
 s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj)
 {
     (void)camera_gobj;

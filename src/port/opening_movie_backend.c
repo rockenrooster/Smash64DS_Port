@@ -1633,6 +1633,8 @@ extern sb32 ndsResultsEmblemRecordCapturedDisplay(void *camera_gobj,
                                                   void *display_gobj,
                                                   s32 link_id);
 #endif
+/* The stage select's 3D preview (battleship_mnmaps.c, renderer_adapter_stage.c). */
+extern volatile u32 gNdsRendererAdapterStagePreviewArmed;
 
 #if NDS_TICK_HUD && NDS_P2_MISC_SPLIT
 /* P2-2p8 Phase 2 B3. The particle pass is implemented by effect-display
@@ -1749,6 +1751,15 @@ gcCaptureCameraGObj(GObj *camera_gobj, sb32 is_tag_mask_or_id)
                         native_stage_handled =
                             ndsStageGCDrawAllLoopRecordCapturedDisplay(
                                 camera_gobj, current_gobj, link_id);
+                    }
+                    /* The stage select's preview layers, outside a battle:
+                     * the owner commits its segments and declines the rest. */
+                    if ((native_stage_handled == FALSE) &&
+                        (gNdsRendererAdapterStagePreviewArmed != 0u))
+                    {
+                        native_stage_handled =
+                            ndsRendererAdapterCommitNativeStageDisplay(
+                                current_gobj, link_id);
                     }
 #if NDS_IMPORT_BATTLESHIP_VS_RESULTS
                     /* R01-B. The Results winner-series emblem, on the same

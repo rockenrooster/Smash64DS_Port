@@ -1910,6 +1910,54 @@ Gate with all of the above (build-gate-r1012,
 1,034,304, 1,900 of 1,961 frames within two VBlanks, replay digest
 identical (DGSA/DGSB as before).
 
+## The stage select's 3D previews (owner bug, 2026-10-12)
+
+The stage select showed only the panel's 2D art: the menu shell compiles
+out mnMapsStartScene, which makes the source's preview camera and model.
+`battleship_mnmaps.c` now builds the preview the way mnMapsMakePreview
+does and the battle's native stage owner draws it from the stage's own
+packet (`ndsMNMapsPreview*`, driven by the router's SSS frame).
+
+- **The model is the battle's packet.** Each layer GObj is made like
+  mnMapsMakeLayer (the source's per-stage scale, the first animation frame,
+  mnMapsMakeModel's hides) but on grDisplayMakeGeometryLayer's procs and
+  links, so the owner admits it; `ndsRendererAdapterSetStagePreviewLayers`
+  names them in place of gGRCommonLayerGObjs. A packet that also captures a
+  battle-only actor (Zebes' acid, Saffron's gate, Mushroom Kingdom's scale,
+  Dream Land's Whispy and flowers) gets a stand-in built from the same map
+  file as the stage's ground code builds it, with its root hidden: the
+  source preview shows the four layers alone, and the owner admits a packet
+  only whole.
+- **The preview's camera.** mnMapsMakePreviewCamera's default camera
+  (PerspFastF then LookAt) is accepted where the stage paths asked for the
+  battle's 0x4C camera (the stage camera split and the billboards' MVP
+  recalc); its window fit is the character select's. A billboard takes its
+  ancestors' scale as the source's gGCScaleX does (Sector Z's engine glow
+  and Saffron's Poke Ball drew five times too big). The scene's light is
+  mnMapsFuncLights. In preview mode every binding is composed each draw
+  (Zebes' rigid ground drew nothing on the rigid path) and the compiled
+  stage GX program is not used (its worlds are the battle's).
+- **Loading without a stall.** One load and first draw took 8-11M ticks
+  (15-20 VBlanks) in one tic. The cursor resting six tics starts a load
+  that takes one step a tic: each packet asset, then the map file's tree
+  (now only what the assets left out, `ndsRelocExternTreeUnloadedSize`) and
+  the packet, then the model. Its first draws upload at most four textures
+  each (`gNdsNativeStageWarmUploadLimit`) and decline until whole; the 3D
+  layer shows the model from the first whole draw, and the old model leaves
+  as soon as the cursor moves. Dream Land, whose battle pins its textures
+  up front, warms the same way. The select's first stage loads whole at
+  entry.
+
+play-1012p, each stage reached from the left of its row and held 60 tics
+(probe `sssph_<slot>`): all nine draw natively; the slowest load step
+0.74-2.64M ticks (one packet asset; Dream Land's and Sector Z's largest),
+the slowest draw 0.70-1.87M (a warming draw), the select's tick HUD worst
+3-5 VBlanks over the run (it was 13-22 with the whole load in one tic). N64
+references (mupen64plus 2.5, the Maps scene cheat-booted per stage,
+scratchpad `n64/setup_maps.py`) match the port's placement and size on
+eight; Dream Land's model sits about 10 pixels low and its tree's stars
+draw small (open).
+
 ## Board 1 status (master plan Revision 3)
 
 | Item | State |

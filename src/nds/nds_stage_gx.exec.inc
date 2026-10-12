@@ -357,11 +357,19 @@ failed:
     return FALSE;
 }
 
+/* Set around the stage select's preview draws (renderer_adapter_stage.c). */
+extern volatile u32 gNdsRendererAdapterStagePreviewArmed;
+
 static sb32 ndsStageGxEligible(u32 segment)
 {
     u32 gkind = sNdsNativeStagePacketActive->gkind;
     if (gkind >= NDS_STAGE_GX_PATH_COUNT || sNdsStageGxPaths[gkind] == NULL ||
         segment >= NDS_NATIVE_STAGE_SEGMENT_COUNT) { return FALSE; }
+    /* The stage select's preview draws uncompiled: a program's static worlds
+     * are the battle's (the preview scales each layer's root), its body is
+     * battle-lifetime heap, and the select shows one stage after another
+     * within one heap generation. */
+    if (gNdsRendererAdapterStagePreviewArmed != 0u) { return FALSE; }
     if (!ndsStageGxLoad()) { NDS_DIAG(gNdsP2StageProgDeclines++); return FALSE; }
     if ((sNdsStageGxStaticWorld & ~sNdsNativeStageOwnerExecution.rigid_binding_mask) != 0u)
     { gNdsP2StageProgDeclines++; gNdsP2StageProgReason = 7u; return FALSE; }
