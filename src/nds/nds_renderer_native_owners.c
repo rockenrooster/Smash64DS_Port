@@ -3158,6 +3158,16 @@ static void ndsRendererNativeStageSetNoZColumn(
     }
 }
 
+/* The stage select's preview (battleship_mnmaps.c) draws a packet whose
+ * no-Z runs are the battle's: mnMapsModelPriProcDisplay and
+ * mnMapsModelSecProcDisplay (mnmaps.c:970-990) set G_ZBUFFER and a ZB render
+ * mode before every layer, so the source preview depth-tests the layers a
+ * battle paints without Z (Saffron's layers 0 and 3). Painted, Saffron's
+ * Silph front (layer 3) covered its roof walkway and the garage roof
+ * (owner, 2026-10-12). While the preview is armed those runs keep their
+ * depth. */
+extern volatile u32 gNdsRendererAdapterStagePreviewArmed;
+
 /* Keep the bounded no-Z matrix setup in main RAM. Expanded fighter owners
  * put the four-CPU build 336 bytes past the hard ITCM limit (2026-09-06);
  * this 512-byte helper returns room without moving the per-vertex loop.
@@ -3185,7 +3195,10 @@ static void __attribute__((noinline)) ndsRendererNativeStageLoadNoZMatrix(
             &sNdsNativeStageOwnerExecution.binding_composed[binding_index],
             &matrix, coordinate_shift);
     }
-    ndsRendererNativeStageSetNoZColumn(&matrix, projected_z);
+    if (gNdsRendererAdapterStagePreviewArmed == 0u)
+    {
+        ndsRendererNativeStageSetNoZColumn(&matrix, projected_z);
+    }
     ndsRendererCopyMtx20p12ToM4x4(&matrix, &hardware);
     glLoadMatrix4x4(&hardware);
     ndsRendererProfileRecordMatrixLoad();
@@ -3235,7 +3248,14 @@ static void ndsRendererNativeStageEmitClippedVertex(
     matrix.m[3][0] = ndsRendererRoundShiftS32Signed(vertex->clip.x, 8u);
     matrix.m[3][1] = ndsRendererRoundShiftS32Signed(vertex->clip.y, 8u);
     matrix.m[3][3] = ndsRendererRoundShiftS32Signed(vertex->clip.w, 8u);
-    ndsRendererNativeStageSetNoZColumn(&matrix, projected_z);
+    if (gNdsRendererAdapterStagePreviewArmed != 0u)
+    {
+        matrix.m[3][2] = ndsRendererRoundShiftS32Signed(vertex->clip.z, 8u);
+    }
+    else
+    {
+        ndsRendererNativeStageSetNoZColumn(&matrix, projected_z);
+    }
     ndsRendererCopyMtx20p12ToM4x4(&matrix, &hardware);
     glLoadMatrix4x4(&hardware);
     ndsRendererProfileRecordMatrixLoad();

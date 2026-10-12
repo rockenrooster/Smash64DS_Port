@@ -2010,6 +2010,16 @@ The owner's next pass, three more:
   returns the count itself now; every reader in this build is one of those
   picks.
 
+Saffron's roof walkway, its garage roof and the Silph sign were still
+missing after the low-pass. A probe that hid one binding at a time (a gdb
+word poke on the DObj's flags) showed layer 3, the Silph front, painted
+over them: the battle draws layers 0 and 3 without Z (a painter band), but
+the source preview's mnMapsModelPri/SecProcDisplay set G_ZBUFFER and a ZB
+render mode before every layer. While the preview is armed the packet's
+no-Z runs keep their depth (`ndsRendererNativeStageLoadNoZMatrix`, the
+clipped-vertex load too). Play-1012t against the mupen64plus references:
+all eight stages match, Saffron's walkway and sign included.
+
 The owner also saw the character select's previews missing after a return
 from the stage select, sometimes. The first preview build never released
 its warm textures, which eviction skips, so a few stages browsed left the
