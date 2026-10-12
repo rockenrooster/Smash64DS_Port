@@ -14,6 +14,10 @@ the channel rate from the articulation pitch and the note, the channel
 volume from the UCD and articulation volumes, the pause bit from the UCD,
 and the same IMA-ADPCM encoder.
 
+A cue FGM.asm adds with ``add_fgm`` and its own articulation over a vanilla
+sample (PROGRAM_SOUNDS: Roy's down-special charge) is baked by the vanilla
+pack's program renderer instead, root and forks mixed.
+
 One choice is the DS's own: Remix's automatic note length (the file size /
 177) is shorter than most of its voice samples; on the N64 the voice rings
 out through its envelope's release after the note ends. The DS cue plays the
@@ -132,6 +136,112 @@ def extra_sound_rows(fgm_asm: str, content: str) -> list[dict]:
     return rows
 
 
+VANILLA_AUDIO = ROOT / "decomp" / "BattleShip-main" / "BattleShip_o2r" / "audio"
+DECODE_CTL = ROOT / "decomp" / "BattleShip-main" / "decomp" / "tools" / "decode_ctl.py"
+SINE_TABLE = ROOT / "decomp" / "BattleShip-main" / "decomp" / "src" / "sys" / "sintable.c"
+
+# Sounds FGM.asm adds with add_fgm(name, ucd, size, -1, sfx, size, sound): a
+# content's own UCD and articulation microcode over a VANILLA sample, so no
+# add_sound row. Roy's down-special charge (Roy.asm DSP_WAIT plays 0x5C0) is
+# Samus's charge shape: it forks vanilla program 673 and climbs sample 0x12B
+# through notes 10-13 under a pitch-sweeping articulation, then loops its
+# last note. The vanilla pack's program renderer bakes it as it bakes the
+# vanilla full-program cues, root and fork mixed (the fork's 90 ticks then
+# pause with the root; BattleShip leaves 673 running through a pause). Its
+# one pass, 600 ticks, outlasts the charge (RoySpecial.asm: one level per
+# 9 frames, forced end at level 21, ~550 ticks), so the loop never sounds.
+PROGRAM_SOUNDS = {"ROY": ("RoyCharge1",)}
+
+
+def program_sound_rows(fgm_asm: str, content: str) -> list[dict]:
+    """PROGRAM_SOUNDS rows: each name's add_fgm call with its own
+    articulation microcode (sfx_id -1) and the vanilla sound it triggers."""
+    rows = []
+    for name in PROGRAM_SOUNDS.get(content, ()):
+        found = re.findall(
+            r"^\s*add_fgm\(\s*" + re.escape(name) + r"\s*,\s*([^,\s]+)\s*,\s*\w+\s*,"
+            r"\s*(-?\w+)\s*,\s*([^,\s]+)\s*,\s*\w+\s*,\s*(\w+)\s*\)", fgm_asm, re.M)
+        if len(found) != 1 or int(found[0][1], 0) != -1:
+            raise ValueError(f"{name}: no single add_fgm row with its own articulation")
+        ucd_file, _sfx_id, art_file, sound = found[0]
+        rows.append({"name": name, "type": "FGM_TYPE_PROGRAM", "ucd_file": ucd_file,
+                     "art_file": art_file, "sound": int(sound, 0)})
+    return rows
+
+
+def vanilla_audio(renderer, extract) -> dict:
+    """The vanilla FGM tables and sound bank the program renderer walks
+    (build_pack's own inputs)."""
+    decode_ctl = load_module(DECODE_CTL, "decode_ctl")
+    raw = {name: renderer.read_o2r_payload(VANILLA_AUDIO / name)[1] for name in
+           ("fgm_tbl", "fgm_ucd", "fgm_unk", "B1_sounds2_ctl", "B1_sounds2_tbl")}
+    ctl = decode_ctl.walk(raw["B1_sounds2_ctl"])
+    ctl_by_offset = {entry["offset"]: entry for entry in ctl}
+    banks = [entry for entry in ctl if entry["kind"] == "ALBank"]
+    if len(banks) != 1 or len(banks[0]["instArray_offs"]) != 1:
+        raise ValueError("unexpected B1_sounds2 instrument layout")
+    return {
+        "ucd": extract.decode_fgm_ucd(raw["fgm_ucd"]),
+        "articulations": extract.decode_fgm_tbl(raw["fgm_tbl"]),
+        "modulators": extract.decode_fgm_unk(raw["fgm_unk"]),
+        "ctl_by_offset": ctl_by_offset,
+        "instrument": ctl_by_offset[banks[0]["instArray_offs"][0]],
+        "tbl": raw["B1_sounds2_tbl"],
+        "sine": renderer.source_sine_table(SINE_TABLE)[0],
+    }
+
+
+def program_record(row: dict, fgm_id: int, staging: Path, renderer, extract, codec,
+                   vanilla: dict) -> dict:
+    """One PROGRAM_SOUNDS cue: its programs join copies of the vanilla
+    tables (the articulation at the table's end, its trigger on the row's
+    sound -- add_sfx_fgm patches bytes 1-2 so) and the composite renderer
+    bakes the root with its forks at the 32 kHz mixer rate."""
+    ucd = extract._disassemble_ucd_entry((staging / "src" / f"{row['ucd_file']}.bin").read_bytes())
+    art = extract._disassemble_entry((staging / "src" / f"{row['art_file']}.bin").read_bytes())
+    ucd_table = dict(vanilla["ucd"], entries=list(vanilla["ucd"]["entries"]))
+    art_table = dict(vanilla["articulations"], entries=list(vanilla["articulations"]["entries"]))
+    art_id = len(art_table["entries"])
+    program_id = len(ucd_table["entries"])
+    ucd = [["set_articulation", art_id] if r[0] == "set_articulation" else r for r in ucd]
+    art = [["trigger", row["sound"]] + list(r[2:]) if r[0] == "trigger" else r for r in art]
+    art_table["entries"].append({"idx": art_id, "program": art})
+    ucd_table["entries"].append({"idx": program_id, "name": row["name"], "program": ucd})
+    pcm, meta = renderer.render_fgm_composite_aot(
+        program_id, ucd_table, art_table, vanilla["modulators"], vanilla["instrument"],
+        vanilla["ctl_by_offset"], vanilla["tbl"], codec, vanilla["sine"],
+        output_rate=renderer.FGM_OUTPUT_RATE)
+    while len(pcm) > 1 and pcm[-1] == 0:
+        pcm.pop()
+    ima = renderer.ima_encode(pcm)
+    metrics = renderer.audio_metrics(pcm, renderer.ima_decode(ima, len(pcm)))
+    if metrics["ima_snr_db"] < 14.0:
+        ima = renderer.ima_encode_lookahead(pcm)
+        metrics = renderer.audio_metrics(pcm, renderer.ima_decode(ima, len(pcm)))
+    if len(ima) > P4_MAX_CUE_IMA_BYTES:
+        raise ValueError(f"{row['name']}: {len(ima)} B IMA exceeds the P4 cue bound")
+    return {
+        "id": fgm_id,
+        "name": row["name"],
+        "type": row["type"],
+        "flags": FLAG_PAUSE_WITH_GAME if (last(ucd, "set_unk1F", 0) & 0x80) else 0,
+        "frequency": meta["aot_output_frequency_hz"],
+        # The render carries the UCD and articulation volumes, as the
+        # vanilla full-program cues' do.
+        "volume": 127,
+        "pan": 64,
+        "duration_ticks": meta["duration_ticks"],
+        "note_ticks": [r[3] for r in ucd if r[0] == "note"],
+        "sample_count": len(pcm),
+        "ima": ima,
+        "ucd_program": ucd,
+        "articulation_program": art,
+        "source_sound": row["sound"],
+        "voice_programs": meta["voice_program_ids"],
+        "ima_snr_db": metrics["ima_snr_db"],
+    }
+
+
 def add_sound_rows(fgm_asm: str, content_dir: str) -> list[dict]:
     """FGM.asm's add_sound calls for one content, in declaration order."""
     rows = []
@@ -236,11 +346,13 @@ def build(staging: Path, contents: list[str], out_dir: Path) -> dict:
     ids = fgm_ids((staging / "bass.out").read_text(encoding="utf-8", errors="replace"))
     fgm_asm = (staging / "src" / "FGM.asm").read_text(encoding="utf-8")
     rows = []
+    programs = []
     for content in contents:
         content_rows = add_sound_rows(fgm_asm, CONTENT_DIRS[content])
         if not content_rows:
             raise ValueError(f"{content}: no add_sound rows in FGM.asm")
         rows += content_rows + extra_sound_rows(fgm_asm, content)
+        programs += program_sound_rows(fgm_asm, content)
     tick_us = renderer.FGM_TIMER_MICROSECONDS
     records = []
     uses: dict[str, int] = {}
@@ -312,6 +424,13 @@ def build(staging: Path, contents: list[str], out_dir: Path) -> dict:
             "source_frames": aifc["comm"]["frames"],
             "ima_snr_db": metrics["ima_snr_db"],
         })
+    vanilla = vanilla_audio(renderer, extract) if programs else None
+    for row in programs:
+        named = ids.get(row["name"], [])
+        if len(named) != 1:
+            raise ValueError(f"{row['name']}: no single FGM_ID in bass.out")
+        records.append(program_record(row, named[0], staging, renderer, extract,
+                                      vadpcm_decode, vanilla))
 
     records.sort(key=lambda r: r["id"])
     if len({r["id"] for r in records}) != len(records):

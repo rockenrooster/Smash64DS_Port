@@ -2152,6 +2152,21 @@ them the shield's floor toward the camera. play-1013b, Ganondorf against
 Captain on Dream Land: his punch and kick purple, Captain's kick orange in
 the same match, 0 native failures (the pause menu's sprites aside).
 
+## Roy's charge sound (owner bug, 2026-10-12)
+
+"Down B charge SFX missing." Roy's DSP_WAIT script plays FGM 0x5C0
+(RoyCharge1), which FGM.asm adds with `add_fgm` and its own UCD and
+articulation microcode over vanilla sound 0x12B -- no add_sound row, so the P4
+pack never held it and every play missed. `p4_audio.py` PROGRAM_SOUNDS now
+injects both programs into copies of the vanilla FGM tables (the articulation's
+trigger patched to the sound, as `add_sfx_fgm` does) and bakes them with the
+vanilla pack's composite renderer: the root's four climbing notes under the
+pitch sweep plus its fork, vanilla program 673, mixed; 600 ticks at 32 kHz,
+55 KB of IMA, 16.4 dB, pause bit from the UCD's set_unk1F 226. One pass
+outlasts the charge (21 levels, one per 9 frames, ~550 ticks), so the loop
+the N64 would run is never reached. play-1013c, Roy holding down-B: the cue
+starts at each DSP_WAIT entry on a live channel, no unsupported calls.
+
 ## Board 1 status (master plan Revision 3)
 
 | Item | State |
