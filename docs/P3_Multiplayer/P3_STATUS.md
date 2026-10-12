@@ -310,6 +310,15 @@ With these changes (`own2`, 20 minutes): 10 matches through one join and the
 lobby's rematches, 0 desyncs, aborts or watchdog trips, 1 lean decline over
 the run (`own1` before them: 1,629, the undrawn Kirby).
 
+The "intermittent white horizontal line artifacts" have no emulator
+counterpart: melonDS answers RDLINES_COUNT with a constant and never
+underflows the 3D line buffer, which on hardware leaves lines wrong when a
+scanline holds more than the engine renders in time. Each flush now reads
+DISP3DCNT's two fault latches (line-buffer underflow, polygon/vertex RAM
+overflow) and acknowledges them; the battle FPS row adds `L<n> R<n>` (frames
+with each fault this match) once either is nonzero, so a photo during the
+lines tells an overload from a drawing bug.
+
 The freezes themselves still have no photograph: the report stays on the
 lower screen while a console is stuck and is redrawn every second; a photo of
 it (both consoles if both stop) names the stuck call.

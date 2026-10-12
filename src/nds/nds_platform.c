@@ -252,6 +252,17 @@ static u32 sBattleFpsHudLastPresentedFrames;
 static u32 sBattleFpsHudLastLogicFrames;
 static u32 sBattleFpsHudPrintedFpsX10 = 0xffffffffu;
 static u32 sBattleFpsHudPrintedUpdatesX10 = 0xffffffffu;
+static u32 sBattleFpsHudPrintedGx3dFaults = 0xffffffffu;
+/* Frames the 3D engine reported a fault on (DISP3DCNT acknowledge bits, read
+ * at each flush): its line buffer underflowed -- too much on some scanlines
+ * to render in time, which real hardware shows as wrong or blank lines and no
+ * emulator models (melonDS answers RDLINES_COUNT with a constant) -- or the
+ * polygon/vertex RAM overflowed and dropped geometry. Shown on the battle
+ * FPS row when nonzero, so a hardware photo can tell an overload from a
+ * drawing bug. */
+volatile u32 gNdsGx3dUnderflowFrames;
+volatile u32 gNdsGx3dRamOverflowFrames;
+volatile u32 gNdsGx3dRdlinesMin = 46u;
 #if NDS_BATTLE_FPS_HUD_ENABLED && NDS_P2_MENU_SHELL
 static u32 sMenuFpsHudScreen = 0xffffffffu;
 static u32 sMenuFpsHudEnterCount = 0xffffffffu;
@@ -3911,15 +3922,32 @@ static void ndsPlatformRenderBattleFpsHud(void)
     /* sm64-nds also dedicates the lower console to FPS. Keep this port's
      * update change-driven so the counter does not clear or pulse the screen. */
     if ((fps_x10 != sBattleFpsHudPrintedFpsX10) ||
-        (updates_x10 != sBattleFpsHudPrintedUpdatesX10))
+        (updates_x10 != sBattleFpsHudPrintedUpdatesX10) ||
+        ((gNdsGx3dUnderflowFrames + gNdsGx3dRamOverflowFrames) !=
+         sBattleFpsHudPrintedGx3dFaults))
     {
         sBattleFpsHudPrintedFpsX10 = fps_x10;
         sBattleFpsHudPrintedUpdatesX10 = updates_x10;
-        NDS_BATTLE_FPS_HUD_PRINT(0u, "FPS %lu.%lu  UP %lu.%lu",
-                                  (unsigned long)(fps_x10 / 10u),
-                                   (unsigned long)(fps_x10 % 10u),
-                                   (unsigned long)(updates_x10 / 10u),
-                                   (unsigned long)(updates_x10 % 10u));
+        sBattleFpsHudPrintedGx3dFaults =
+            gNdsGx3dUnderflowFrames + gNdsGx3dRamOverflowFrames;
+        if (sBattleFpsHudPrintedGx3dFaults == 0u)
+        {
+            NDS_BATTLE_FPS_HUD_PRINT(0u, "FPS %lu.%lu  UP %lu.%lu",
+                                      (unsigned long)(fps_x10 / 10u),
+                                      (unsigned long)(fps_x10 % 10u),
+                                      (unsigned long)(updates_x10 / 10u),
+                                      (unsigned long)(updates_x10 % 10u));
+        }
+        else
+        {
+            NDS_BATTLE_FPS_HUD_PRINT(0u, "FPS %lu.%lu  UP %lu.%lu  L%lu R%lu",
+                                      (unsigned long)(fps_x10 / 10u),
+                                      (unsigned long)(fps_x10 % 10u),
+                                      (unsigned long)(updates_x10 / 10u),
+                                      (unsigned long)(updates_x10 % 10u),
+                                      (unsigned long)gNdsGx3dUnderflowFrames,
+                                      (unsigned long)gNdsGx3dRamOverflowFrames);
+        }
     }
 #if NDS_LAB_NO_CULL
     /* Row 3 is free in this configuration: row 0 is FPS, row 2 TIME, rows 5/6
@@ -4218,6 +4246,10 @@ void ndsPlatformClearBattleTextHud(void)
     }
     sBattleFpsHudSampleReady = 0u;
     sBattleFpsHudPrintedFpsX10 = 0xffffffffu;
+    sBattleFpsHudPrintedGx3dFaults = 0xffffffffu;
+    gNdsGx3dUnderflowFrames = 0u;
+    gNdsGx3dRamOverflowFrames = 0u;
+    gNdsGx3dRdlinesMin = 46u;
     sBattleTextHudReady = FALSE;
     sBattleTextHudFingerprint = 0xffffffffu;
 #if NDS_LAB_NO_CULL
@@ -4767,6 +4799,29 @@ void ndsPlatformEndFrame(void)
         profile_start = cpuGetTiming();
 #endif
         NDS_FREEZE_DIAGNOSTICS_FLUSH();
+        /* The previous frame's 3D faults (gNdsGx3dUnderflowFrames above):
+         * DISP3DCNT bits 12 and 13 latch until written back as 1. */
+        {
+            const u32 control = GFX_CONTROL;
+            const u32 rdlines = *(vu8 *)0x04000320u;
+
+            if (rdlines < gNdsGx3dRdlinesMin)
+            {
+                gNdsGx3dRdlinesMin = rdlines;
+            }
+            if ((control & ((1u << 12) | (1u << 13))) != 0u)
+            {
+                if ((control & (1u << 12)) != 0u)
+                {
+                    gNdsGx3dUnderflowFrames++;
+                }
+                if ((control & (1u << 13)) != 0u)
+                {
+                    gNdsGx3dRamOverflowFrames++;
+                }
+                GFX_CONTROL = control;
+            }
+        }
 #if NDS_TICK_HUD
         tickhud_flush_start = cpuGetTiming();
 #endif
