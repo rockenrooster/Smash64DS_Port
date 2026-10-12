@@ -211,28 +211,13 @@ static const u8 kNdsSssSlotGkind[NDS_SSS_SLOTS] = {
 
 /* P2-1k (c). THE STAGE SELECT'S TEXT IS SOURCE ART NOW and this screen draws
  * no kit text at all: the STAGE SELECT header is `llMNMapsStageSelectTextSprite`
- * baked into SSS_SCREEN, and the per-stage name is
- * `llMNMaps<Ground>TextSprite` baked into one of the ten SSS_PLAQUE surfaces.
- *
- * The plaque is its own surface for the reason the VS menu's buttons are:
- * `mnMapsMakeNameAndEmblem` (mnmaps.c:818) ejects and re-makes the pair on
- * every cursor move, and all ten share one declared box composited over the
- * furniture beneath them, so a move is a single blit that overwrites the last
- * state exactly. Indexed by SLOT, which is what the cursor holds. */
-static const NdsUiKitSurfaceId kNdsSssPlaqueSurface[NDS_SSS_SLOTS] = {
-    NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_0,
-    NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_1,
-    NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_2,
-    NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_3,
-    NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_4,
-    NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_5,
-    NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_6,
-    NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_7,
-    NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_8,
-    NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_9
-};
+ * baked into SSS_SCREEN (and SSS_FRONT), and the per-stage name is
+ * `llMNMaps<Ground>TextSprite` baked into one of the ten SSS_PLAQUE_FRONT
+ * surfaces (kNdsSssPlaqueFrontSurface below): `mnMapsMakeNameAndEmblem`
+ * (mnmaps.c:818) ejects and re-makes the pair on every cursor move, and all
+ * ten share one declared box, so a move is one cleared box and one blit. */
 
-/* P2-1L (9). THE PREVIEW PANEL'S ART, on the same terms as the plaque above.
+/* P2-1L (9). THE PREVIEW PANEL'S ART, on the same terms as the plaque.
  * `mnMapsMakePreviewWallpaper` (mnmaps.c:909) draws the SELECTED ground's own
  * 300x220 background at scale 0.37 -- or RANDOM's own 110x82 plate unscaled --
  * over the fill and the seven tiles SSS_SCREEN already carries, and
@@ -250,8 +235,9 @@ static const NdsUiKitSurfaceId kNdsSssPlaqueSurface[NDS_SSS_SLOTS] = {
  * NDS_MN_UI_KIT_SURFACE_SSS_PREVIEW_YOSHIS_ISLAND -- when the kit bakes with
  * NDS_P2_STAGE_YOSTER=1, so the id is only named when the flag is on. Off, the
  * NONE sentinel leaves the panel on the last preview rather than blitting a
- * wrong stage (the sync skips NONE entries), and the plaque (SSS_PLAQUE_5,
- * baked for all ten slots already) still names the stage. */
+ * wrong stage (the sync skips NONE entries), and the plaque
+ * (SSS_PLAQUE_FRONT_5, baked for all ten slots already) still names the
+ * stage. */
 #if NDS_P2_STAGE_YOSTER
 #define NDS_SSS_PREVIEW_YOSTER NDS_MN_UI_KIT_SURFACE_SSS_PREVIEW_YOSHIS_ISLAND
 #else
@@ -304,8 +290,28 @@ static const NdsUiKitSurfaceId kNdsSssPreviewSurface[NDS_SSS_SLOTS] = {
     NDS_MN_UI_KIT_SURFACE_SSS_PREVIEW_RANDOM
 };
 
-static NdsUiKitSurfaceId sSssPlaqueSurface;
 static NdsUiKitSurfaceId sSssPreviewSurface;
+
+/* 2026-10-12, owner BUGS.md: THE LABELS AND THE PLAQUE IN FRONT OF THE 3D
+ * PREVIEW. mnMapsMakePreviewCamera's priority 65 puts the model in front of
+ * the wallpapers (80, 70) and behind the icons, the plaque, the labels and
+ * the name and emblem (60..20), so those draw again, keyed, on BG3 in front
+ * of BG0: SSS_FRONT at the entry, and the plaque's own copy per slot (its
+ * box holds the wooden circle and the labels beneath the name, so a cleared
+ * box re-blits whole). BG2 keeps the whole screen as before. */
+static const NdsUiKitSurfaceId kNdsSssPlaqueFrontSurface[NDS_SSS_SLOTS] = {
+    NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_FRONT_0,
+    NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_FRONT_1,
+    NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_FRONT_2,
+    NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_FRONT_3,
+    NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_FRONT_4,
+    NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_FRONT_5,
+    NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_FRONT_6,
+    NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_FRONT_7,
+    NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_FRONT_8,
+    NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_FRONT_9
+};
+static NdsUiKitSurfaceId sSssPlaqueFrontSurface;
 
 /* THE CURSOR IS THE ONLY OBJ LEFT ON THIS SCREEN. P2-1L (6) moved the ten grid
  * cells into the backdrop surface and (9) moved the preview panel into two
@@ -497,40 +503,34 @@ static s32 ndsMenuShellSssIconY(u32 slot)
  * than recording a state the screen is not showing. */
 static void ndsMenuShellSssSyncSurfaces(u32 budget)
 {
-    NdsUiKitSurfaceId list[2];
-    NdsUiKitSurfaceId *tracker[2];
-    u32 count = 0u;
-    u32 i;
     NdsUiKitSurfaceId wanted;
+    u32 count = 0u;
 
-    wanted = kNdsSssPlaqueSurface[sSssCursorSlot];
-    if ((wanted != sSssPlaqueSurface) && (count < budget))
+    /* The plaque goes to BG3 alone: its copy there holds the wooden circle,
+     * the labels and the name and emblem, opaque wherever BG2's plaque box
+     * could differ between two stages, so BG2 keeps SSS_SCREEN's plain box. */
+    wanted = kNdsSssPlaqueFrontSurface[sSssCursorSlot];
+    if ((wanted != sSssPlaqueFrontSurface) && (count < budget))
     {
-        list[count] = wanted;
-        tracker[count] = &sSssPlaqueSurface;
+        ndsUiKitClearForegroundSurfaceRect(wanted);
+        if (ndsUiKitBlitForegroundSurfaces(&wanted, 1u) != FALSE)
+        {
+            sSssPlaqueFrontSurface = wanted;
+            gNdsMenuShellSssPlaqueBlitCount++;
+        }
         count++;
     }
     wanted = kNdsSssPreviewSurface[sSssCursorSlot];
     if ((wanted != NDS_MENU_VS_SURFACE_NONE) &&
         (wanted != sSssPreviewSurface) && (count < budget))
     {
-        list[count] = wanted;
-        tracker[count] = &sSssPreviewSurface;
+        if (ndsUiKitBlitSurfaces(&wanted, 1u) != FALSE)
+        {
+            sSssPreviewSurface = wanted;
+            gNdsMenuShellSssPlaqueBlitCount++;
+        }
         count++;
     }
-    if (count == 0u)
-    {
-        return;
-    }
-    if (ndsUiKitBlitSurfaces(list, count) == FALSE)
-    {
-        return;
-    }
-    for (i = 0u; i < count; i++)
-    {
-        *tracker[i] = list[i];
-    }
-    gNdsMenuShellSssPlaqueBlitCount += count;
 }
 
 /* mnMapsMakeNameAndEmblem, mnmaps.c:1015: the name follows the cursor, and
@@ -567,6 +567,13 @@ static void ndsMenuShellSssPopulate(void)
      * does: it is already the frame that blits 98,304 B of SSS_SCREEN, and a
      * screen whose first present had no stage name or preview on it would show
      * the panel empty for two frames. */
+    /* The parts in front of the 3D preview, on BG3 (the screen entry cleared
+     * it), before the plaque's copy overwrites its own box of them. */
+    {
+        const NdsUiKitSurfaceId front = NDS_MN_UI_KIT_SURFACE_SSS_FRONT;
+
+        (void)ndsUiKitBlitForegroundSurfaces(&front, 1u);
+    }
     ndsMenuShellSssShowSelection(2u);
 }
 
@@ -880,12 +887,13 @@ static void ndsMenuShellSssInit(void)
     ndsNetLobbyHostSetStageCursor(sSssCursorSlot);
     /* The lobby rows redraw on this screen's first frame. */
     ndsNetUiLobbyReset();
-    /* The screen entry re-blits SSS_SCREEN over BG2, which erases whatever
-     * plaque the last visit left there -- so the cached "which plaque is on
-     * screen" must be invalidated with it, or a re-entry on the same slot
-     * would skip the blit and show a stage select with no name on it. Same
-     * reason NDS_MENU_VS_SURFACE_NONE exists for the gates and the buttons. */
-    sSssPlaqueSurface = NDS_MENU_VS_SURFACE_NONE;
+    /* The screen entry re-blits SSS_SCREEN over BG2 and clears BG3, which
+     * erases whatever preview art and plaque the last visit left -- so the
+     * cached "which is on screen" must be invalidated with them, or a
+     * re-entry on the same slot would skip the blits and show a stage select
+     * with no name on it. Same reason NDS_MENU_VS_SURFACE_NONE exists for the
+     * gates and the buttons. */
     sSssPreviewSurface = NDS_MENU_VS_SURFACE_NONE;
+    sSssPlaqueFrontSurface = NDS_MENU_VS_SURFACE_NONE;
     sSssEnterCount++;
 }

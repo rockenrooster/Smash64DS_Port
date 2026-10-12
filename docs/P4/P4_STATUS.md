@@ -1958,6 +1958,39 @@ scratchpad `n64/setup_maps.py`) match the port's placement and size on
 eight; Dream Land's model sits about 10 pixels low and its tree's stars
 draw small (open).
 
+Owner playtest of the first build, two more:
+
+- **Stages went missing after a few.** A warm upload marks its texture
+  `stage_warm`, which eviction skips for the scene (a battle's stage keeps
+  its set). After about six previews the VRAM held the earlier stages and
+  Zebes, Mushroom Kingdom, Yoshi's Island and Saffron warmed forever. The
+  preview releases its stage's warm textures when it drops the model
+  (`ndsRendererHardwareReleaseStageWarmTextures`). Each stage probed alone
+  had passed; a browse of all ten (`shipbattle.ps1 -SssBrowse`, play-1012p)
+  shows all nine models.
+- **The labels in front of the model.** The source's preview camera
+  (priority 65) draws the model in front of the two wallpapers and behind
+  the icons, the cursor, the plaque, the labels and the name and emblem;
+  on the DS the 3D layer sat in front of the whole BG2 screen, and Congo
+  Jungle's trees covered the logo and the stage name. The kit bakes those
+  parts again for BG3, keyed: `SSS_FRONT` at the entry and
+  `SSS_PLAQUE_FRONT_<slot>` per cursor move (its box cleared first). Their
+  colour is composited over the stone (`SurfaceSpec.matte`) while the key
+  stays their own coverage, so their edges match BG2 where no model is
+  behind them.
+
+## The character select's Selected pose (owner bug, 2026-10-12)
+
+Mad Piano played Mario's Selected pose (Win3). Remix keeps each
+selection's pose in `selection_action_table`, which `add_to_css`
+fills per character (0x0001000N: nFTDemoStatusWinN), and seven contents
+differ from their parents (Mad Piano Win4; Ganondorf, Wario, Marth, Roy,
+Crash, Lanky). `p4_css.py` emits the rows (`NDS_P4_CSS_SELECTED_ROWS`) and
+both the slot's and the preview's Selected status take the content's row.
+play-1012p, all eighteen contents and two originals selected (probes
+`csss[a-e]`): every status is its row, every figatree loaded, 0 native
+failures.
+
 ## Board 1 status (master plan Revision 3)
 
 | Item | State |

@@ -241,6 +241,10 @@ s32 ndsUiKitBlitSurfacesAt(const NdsUiKitSurfaceId *surfaces,
 /* Clear a small rectangle of BG3 to transparent before replacing/removing a
  * keyed foreground surface. Coordinates are already in DS screen pixels. */
 void ndsUiKitClearForegroundRect(s32 x, s32 y, u32 width, u32 height);
+/* The same, over `surface`'s own baked rectangle: the states of one keyed
+ * foreground element share a declared box, so this clears exactly what the
+ * next state's blit covers. */
+void ndsUiKitClearForegroundSurfaceRect(u32 surface);
 
 /* P2-1i -- the title's fire ATLAS. Its own entry point because it is the one
  * surface that is not a screen-space backdrop: it is a 255x252 sheet of the

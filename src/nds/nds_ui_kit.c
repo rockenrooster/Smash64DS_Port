@@ -1192,6 +1192,19 @@ void ndsUiKitClearForegroundRect(s32 x, s32 y, u32 width, u32 height)
     }
 }
 
+void ndsUiKitClearForegroundSurfaceRect(u32 surface)
+{
+    const NdsUiKitSurfaceMetric *metric;
+
+    if (surface >= NDS_MN_UI_KIT_SURFACE_COUNT)
+    {
+        return;
+    }
+    metric = &kNdsUiKitSurfaceMetrics[surface];
+    ndsUiKitClearForegroundRect(metric->x, metric->y, metric->width,
+                                metric->height);
+}
+
 /* P2-1i -- the title's fire atlas. NOT a screen-space backdrop: it is the
  * thirty mnTitleMakeFire states tiled 5x6 into one 255x252 sheet written
  * into the FOREGROUND overlay bitmap (BG3), full-height -- the backdrop

@@ -1380,6 +1380,13 @@ class SurfaceSpec:
     # bake-time fact -- and `convert_surface` REFUSES a placement that escapes
     # it, so the wrong form cannot be written rather than merely avoided.
     box: tuple[int, int, int, int] | None = None
+    # 2026-10-12. WHAT A KEYED SURFACE'S EDGES BLEND INTO: composited beneath
+    # `under` and `parts` for colour only, while the alpha key stays theirs.
+    # The stage select's foreground copy of its labels and plaque sits on BG3
+    # in front of the 3D preview, which passes between the source's
+    # wallpapers and its labels; matted on the stone, its antialiased edges
+    # match the BG2 copy wherever no model is behind them.
+    matte: tuple[Placement, ...] = ()
 
 
 def convert_surface(cache: dict[str, RelocFile], offsets: dict[str, int],
@@ -1483,34 +1490,51 @@ def convert_surface(cache: dict[str, RelocFile], offsets: dict[str, int],
             "screen; the runtime's erase path assumes a non-negative origin")
 
     field = spec.background
-    canvas = [[(field[0], field[1], field[2], 255) if field is not None
-               else (0, 0, 0, 0) for _ in range(width)] for _ in range(height)]
-    for x0, y0, raster in (beneath + placed):
-        for sy, row in enumerate(raster):
-            dy = y0 + sy - top
-            if (dy < 0) or (dy >= height):
-                continue
-            target = canvas[dy]
-            for sx, (r, g, b, a) in enumerate(row):
-                if a == 0:
+
+    def composite(layers: list) -> list:
+        canvas = [[(field[0], field[1], field[2], 255) if field is not None
+                   else (0, 0, 0, 0) for _ in range(width)]
+                  for _ in range(height)]
+        for x0, y0, raster in layers:
+            for sy, row in enumerate(raster):
+                dy = y0 + sy - top
+                if (dy < 0) or (dy >= height):
                     continue
-                dx = x0 + sx - left
-                if (dx < 0) or (dx >= width):
-                    continue
-                if a == 255:
-                    target[dx] = (r, g, b, 255)
-                    continue
-                dr, dg, db, da = target[dx]
-                inv = 255 - a
-                out_a = a + ((da * inv) // 255)
-                if out_a == 0:
-                    target[dx] = (0, 0, 0, 0)
-                    continue
-                target[dx] = (
-                    ((r * a) + ((dr * da * inv) // 255)) // out_a,
-                    ((g * a) + ((dg * da * inv) // 255)) // out_a,
-                    ((b * a) + ((db * da * inv) // 255)) // out_a,
-                    out_a)
+                target = canvas[dy]
+                for sx, (r, g, b, a) in enumerate(row):
+                    if a == 0:
+                        continue
+                    dx = x0 + sx - left
+                    if (dx < 0) or (dx >= width):
+                        continue
+                    if a == 255:
+                        target[dx] = (r, g, b, 255)
+                        continue
+                    dr, dg, db, da = target[dx]
+                    inv = 255 - a
+                    out_a = a + ((da * inv) // 255)
+                    if out_a == 0:
+                        target[dx] = (0, 0, 0, 0)
+                        continue
+                    target[dx] = (
+                        ((r * a) + ((dr * da * inv) // 255)) // out_a,
+                        ((g * a) + ((dg * da * inv) // 255)) // out_a,
+                        ((b * a) + ((db * da * inv) // 255)) // out_a,
+                        out_a)
+        return canvas
+
+    canvas = composite(beneath + placed)
+    if spec.matte:
+        # The key is the surface's own coverage; the colour under it is the
+        # surface composited over the matte.
+        colour = composite(place_all(spec.matte) + beneath + placed)
+        for y in range(height):
+            for x in range(width):
+                if canvas[y][x][3] >= 128:
+                    r, g, b, _ = colour[y][x]
+                    canvas[y][x] = (r, g, b, 255)
+                else:
+                    canvas[y][x] = (0, 0, 0, 0)
 
     texels = [0] * (width * height)
     opaque = True
@@ -3396,6 +3420,16 @@ def sss_icon_parts() -> tuple[Placement, ...]:
 
 
 def _sss_background() -> tuple[Placement, ...]:
+    return _sss_back_parts() + _sss_front_parts()
+
+
+# 2026-10-12, owner BUGS.md: "Stage Select, logo and stage name should draw in
+# front of 3d preview". The preview camera's dl_link_priority is 65
+# (mnMapsMakePreviewCamera, mnmaps.c:1342): the model draws in front of the
+# two wallpapers (80, 70) and behind the icons (60), the cursor (50), the
+# plaque (40), the labels (30) and the name and emblem (20). BG2 keeps the
+# whole screen; the parts in front of 65 are baked again, keyed, for BG3.
+def _sss_back_parts() -> tuple[Placement, ...]:
     return (
     # mnMapsMakeWallpaper, :364, full-bleed per the P2-1k ruling.
     STONE_FULL_BLEED,
@@ -3408,6 +3442,11 @@ def _sss_background() -> tuple[Placement, ...]:
               size=(109, 81)),
     *(Placement("MNMaps", "llMNMapsTilesSprite", x, 130, False)
       for x in range(43, 155, 16)),
+    )
+
+
+def _sss_front_parts() -> tuple[Placement, ...]:
+    return (
     # ICONS, camera 60 -- in front of both wallpapers, behind the cursor.
     *sss_icon_parts(),
     # PLAQUE, camera 40 -- behind the labels.
@@ -3474,6 +3513,16 @@ def sss_plaque(slot: int) -> SurfaceSpec:
         )
     return SurfaceSpec(f"SSS_PLAQUE_{slot}", parts, None,
                        under=SSS_BACKGROUND, box=SSS_PLAQUE_BOX)
+
+
+def sss_plaque_front(slot: int) -> SurfaceSpec:
+    """The plaque's BG3 copy, keyed: the name and emblem over the front parts
+    its box holds (the wooden circle, the labels), so a cleared box re-blits
+    whole; matted on the back parts for its edges."""
+    plaque = sss_plaque(slot)
+    return SurfaceSpec(f"SSS_PLAQUE_FRONT_{slot}", plaque.parts, None,
+                       under=_sss_front_parts(), box=SSS_PLAQUE_BOX,
+                       matte=_sss_back_parts())
 
 
 # ---------------------------------------------------------------------------
@@ -3586,7 +3635,6 @@ def sss_preview(token: str, part: Placement) -> SurfaceSpec:
 
 def _sss_surface_sources() -> list[SurfaceSpec]:
     sources = [SurfaceSpec("SSS_SCREEN", SSS_BACKGROUND, MENU_FIELD)]
-    sources.extend(sss_plaque(slot) for slot in range(10))
     for name, _gkind, o2r, symbol in SSS_PREVIEW_WALLPAPER:
         sources.append(sss_preview(
             f"SSS_PREVIEW_{name}",
@@ -3595,6 +3643,10 @@ def _sss_surface_sources() -> list[SurfaceSpec]:
     sources.append(sss_preview(
         "SSS_PREVIEW_RANDOM",
         Placement("MNMaps", "llMNMapsRandomBigSprite", 40, 127, False)))
+    # The parts in front of the 3D preview (_sss_front_parts), keyed for BG3.
+    sources.append(SurfaceSpec("SSS_FRONT", _sss_front_parts(), None,
+                               matte=_sss_back_parts()))
+    sources.extend(sss_plaque_front(slot) for slot in range(10))
     return sources
 
 

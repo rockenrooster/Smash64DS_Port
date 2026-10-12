@@ -189,6 +189,15 @@ def write_c_tables(path: Path, cells: list[dict], fighters: list[dict]) -> None:
         f"#define NDS_P4_CSS_CARD_KN {SCREEN['card_k'][0]}",
         f"#define NDS_P4_CSS_CARD_KD {SCREEN['card_k'][1]}",
         f"#define NDS_P4_CSS_PRESS_Y {SCREEN['press_y']}",
+        "/* add_to_css's action: each content's Selected demo status, as "
+        "Remix's",
+        " * selection_action_table holds it (0x0001000N: nFTDemoStatusWin "
+        "N), which",
+        " * is not always its parent's. */",
+        "#define NDS_P4_CSS_SELECTED_ROWS { [0] = 0u" + "".join(
+            f", [{f['content']}] = {f['action'] & 0xff}u"
+            for f in fighters
+            if f["content"] and (f["action"] is not None)) + " }",
         "#endif", ""]), encoding="utf-8", newline="\n")
 
 

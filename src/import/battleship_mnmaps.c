@@ -348,6 +348,7 @@ extern volatile u32 gNdsNativeStageWarmUploads;
 extern u32 cpuGetTiming(void);
 extern s32 ndsRendererAdapterNativeStagePreloadAsset(u32 index);
 extern size_t ndsRelocExternTreeUnloadedSize(const void *file_id);
+extern void ndsRendererHardwareReleaseStageWarmTextures(void);
 extern volatile u32 gNdsNativeStageWarmUploadLimit;
 extern void ndsRendererAdapterSetStagePreviewLayers(void *const *layers);
 extern volatile u32 gNdsRendererAdapterStagePreviewArmed;
@@ -681,6 +682,10 @@ static void ndsMNMapsPreviewDropModel(void)
         }
     }
     sNdsMapsPreviewHasModel = FALSE;
+    /* The stage's warm textures (eviction skips them): the next stage needs
+     * the VRAM (the owner's playtest lost Zebes, Mushroom Kingdom, Yoshi's
+     * Island and Saffron to it). */
+    ndsRendererHardwareReleaseStageWarmTextures();
     if (sNdsMapsPreviewBlock != NULL)
     {
         ndsRelocReleaseHeapRange(sNdsMapsPreviewBlock,

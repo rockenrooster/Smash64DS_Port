@@ -2966,6 +2966,27 @@ ndsRendererHardwareReleaseTexture(
     return entry;
 }
 
+/* The stage select's preview warms each stage it shows the way a loaded
+ * stage packet does (stage_warm: eviction skips the entry for the scene), so
+ * its next stage would find the VRAM held by the stages before it and never
+ * finish warming. The preview releases them when it drops a stage. */
+void ndsRendererHardwareReleaseStageWarmTextures(void)
+{
+    u32 i;
+
+    for (i = 0u; i < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT; i++)
+    {
+        NDSRendererHardwareTextureCacheEntry *entry =
+            &sNdsRendererHardwareTextureCache[i];
+
+        if ((entry->name != 0) && (entry->stage_warm != 0u) &&
+            (entry->pinned == 0u) && (entry->admitted == 0u))
+        {
+            (void)ndsRendererHardwareReleaseTexture(entry);
+        }
+    }
+}
+
 /* P01. The ground Thunder Jolt's three A5I3 coverage names are dedicated GL
  * names, not cache entries, so the sweep below cannot reach them. Defined in
  * src/nds/nds_native_pikachu_thunderground_coverage.inc. */

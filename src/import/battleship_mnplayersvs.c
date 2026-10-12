@@ -95,19 +95,23 @@ void ndsBaseMNPlayersVSFuncStart(void);
 void ndsBaseMNPlayersVSStartScene(void);
 
 #if NDS_P4
-/* Remix's selection_action_table (CharacterSelect.asm): selectable Metal
- * Mario's pose is Mario's, Win3 (his row 3: Mario's Selected clip with his
- * own step sound). The definition's argument text starts `s32`; every call's
- * starts `sMNPlayersVSSlots` (mnPlayersVSFighterProcUpdate) or
- * `ndsCssPreviewKindParent` (this file). */
+/* Remix's selection_action_table (CharacterSelect.asm): each selection's own
+ * Selected pose -- a content's from its add_to_css row (Mad Piano Win4 where
+ * his parent Mario plays Win3; Ganondorf, Wario, Marth, Roy, Crash and Lanky
+ * differ from their parents too), selectable Metal Mario's Mario's Win3 (his
+ * row 3: Mario's Selected clip with his own step sound). The definition's
+ * argument text starts `s32`; every call's starts `sMNPlayersVSSlots`
+ * (mnPlayersVSFighterProcUpdate: the slot, whose content says the pose) or
+ * `ndsCssPreviewKindParent` (this file: the preview kind, content and all). */
 #define mnPlayersVSGetStatusSelected(first) NDS_P4_SELECTED_##first)
 #define NDS_P4_SELECTED_s32 ndsBaseMNPlayersVSGetStatusSelected(s32
 #define NDS_P4_SELECTED_sMNPlayersVSSlots \
-    ndsP4MNPlayersVSGetStatusSelected(sMNPlayersVSSlots
+    ndsP4MNPlayersVSGetStatusSelectedSlot(&sMNPlayersVSSlots
 #define NDS_P4_SELECTED_ndsCssPreviewKindParent \
-    ndsP4MNPlayersVSGetStatusSelected(ndsCssPreviewKindParent
+    ndsP4MNPlayersVSGetStatusSelectedKind(
 s32 ndsBaseMNPlayersVSGetStatusSelected(s32 fkind);
-s32 ndsP4MNPlayersVSGetStatusSelected(s32 fkind);
+static s32 ndsP4MNPlayersVSGetStatusSelectedSlot(const s32 *p_fkind);
+static s32 ndsP4MNPlayersVSGetStatusSelectedKind(s32 kind);
 
 /* A content's slot keeps its parent's fkind (ndsCssPreviewSetShown), so the
  * source's same-fighter tests -- the team shade, a costume in use, the free
@@ -191,13 +195,6 @@ static void ndsMNPlayersVSFitFighterCamera(void)
     cobj->projection.persp.aspect = 1.3037037F;
 }
 
-#if NDS_P4
-s32 ndsP4MNPlayersVSGetStatusSelected(s32 fkind)
-{
-    return ndsBaseMNPlayersVSGetStatusSelected(
-        (fkind == nFTKindMMario) ? nFTKindMario : fkind);
-}
-#endif
 
 #undef mnPlayersVSFuncStart
 #undef mnPlayersVSStartScene
@@ -324,6 +321,36 @@ static sb32 ndsCssSameFighter(s32 a, s32 b)
 {
     return ((sMNPlayersVSSlots[a].fkind == sMNPlayersVSSlots[b].fkind) &&
             (ndsCssSlotContent(a) == ndsCssSlotContent(b))) ? TRUE : FALSE;
+}
+
+static const u8 kNdsP4CssSelectedRow[NDS_P4_CONTENT_LIMIT] =
+    NDS_P4_CSS_SELECTED_ROWS;
+
+/* The Selected demo status of `parent` showing `content`: the content's own
+ * add_to_css row (nFTDemoStatusWin1..4), else the source's for the parent,
+ * selectable Metal Mario's being Mario's. */
+static s32 ndsP4SelectedStatus(s32 parent, u32 content)
+{
+    if ((content != 0u) && (content < NDS_P4_CONTENT_LIMIT) &&
+        (kNdsP4CssSelectedRow[content] >= 1u) &&
+        (kNdsP4CssSelectedRow[content] <= 4u))
+    {
+        return nFTDemoStatusNull + (s32)kNdsP4CssSelectedRow[content];
+    }
+    return ndsBaseMNPlayersVSGetStatusSelected(
+        (parent == nFTKindMMario) ? nFTKindMario : parent);
+}
+
+static s32 ndsP4MNPlayersVSGetStatusSelectedSlot(const s32 *p_fkind)
+{
+    return ndsP4SelectedStatus(*p_fkind,
+                               ndsCssSlotContent(ndsCssSlotOfKind(p_fkind)));
+}
+
+static s32 ndsP4MNPlayersVSGetStatusSelectedKind(s32 kind)
+{
+    return ndsP4SelectedStatus(ndsCssPreviewKindParent(kind),
+                               ndsCssPreviewKindContent(kind));
 }
 
 static const u8 *ndsCssSlotCostumes(s32 slot)
