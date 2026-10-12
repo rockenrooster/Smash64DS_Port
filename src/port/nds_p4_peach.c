@@ -794,9 +794,7 @@ void ndsP4PeachUSPMap(GObj *fighter_gobj)
  *
  * create_and_assign_item_: one pull in 128 is a rare item -- a Beam Sword (1
  * in 6), a Bob-omb (2 in 6) or Mr. Saturn (3 in 6) -- else a turnip, made at
- * her position and put in her hand. Mr. Saturn lives in Remix's extended
- * common item file, which the DS does not load: until he is ported his pull
- * makes a turnip. */
+ * her position and put in her hand. */
 #define PEACH_STATUS_DSP_PULL 0xE9
 #define PEACH_STATUS_LIGHT_THROW_F 0x6E
 #define PEACH_STATUS_LIGHT_THROW_AIR_F 0x76
@@ -1021,10 +1019,331 @@ static sb32 ndsP4PeachTurnipReflector(GObj *item_gobj)
     return FALSE;
 }
 
+/* ---- Mr. Saturn (items/MrSaturn.asm), her rare pull's other item ----
+ *
+ * His ITAttributes (appended to Remix's ITCommonData at 0x10B0) and the
+ * model they name (in the common items file Remix adds) are her item subset
+ * file, special file 4 (generate_p4_fighter.py SUBSET_FILES): attributes at
+ * 0. Six states: grounded wait, aerial, held, thrown, falling, and the walk
+ * he starts after WAIT_TIME, turning at ledges and walls, until WALK_TIME
+ * runs out and he is gone. */
+#define PEACH_SATURN_DAMAGE 6               /* stage_setting_ overwrites BASE_DAMAGE 2 */
+#define PEACH_SATURN_SHIELD_DAMAGE 30
+#define PEACH_SATURN_WAIT_TIME 120
+#define PEACH_SATURN_WALK_TIME (25 * 60)
+#define PEACH_SATURN_FGM 0x5FD              /* mr_saturn_1; mr_saturn_2, _3 follow */
+#define PEACH_SATURN_GROUND_TIMER 0x567     /* falling_initial_'s halfword 0x5674 */
+
+extern void *gNdsP4PeachSpecial4;
+extern void itRShellSpinCheckCollisionEdge(GObj *item_gobj);
+extern sb32 itMapCheckLRWallProcNoFloor(GObj *item_gobj, void (*proc_map)(GObj *));
+extern sb32 itMapCheckDestroyDropped(GObj *item_gobj, f32 common_rebound, f32 ground_rebound,
+                                     void (*proc_status)(GObj *));
+
+/* A Mr. Saturn pull that found the subset file missing: counted, no item. */
+__attribute__((used)) volatile u32 gNdsP4PeachSaturnMisses;
+
+static sb32 ndsP4PeachSaturnWaitProcUpdate(GObj *item_gobj);
+static sb32 ndsP4PeachSaturnWaitProcMap(GObj *item_gobj);
+static sb32 ndsP4PeachSaturnMap(GObj *item_gobj);
+static sb32 ndsP4PeachSaturnHeldProcUpdate(GObj *item_gobj);
+static sb32 ndsP4PeachSaturnThrowCollide(GObj *item_gobj);
+static sb32 ndsP4PeachSaturnThrowCollideHitbox(GObj *item_gobj);
+static sb32 ndsP4PeachSaturnReflector(GObj *item_gobj);
+static sb32 ndsP4PeachSaturnWalkProcUpdate(GObj *item_gobj);
+static sb32 ndsP4PeachSaturnWalkProcMap(GObj *item_gobj);
+
+/* item_state_table: grounded wait, aerial, held, thrown (the turnip's
+ * thrown_main_), falling, walking. */
+static ITStatusDesc sNdsP4PeachSaturnStatusDescs[6] = {
+    { ndsP4PeachSaturnWaitProcUpdate, ndsP4PeachSaturnWaitProcMap, NULL, NULL, NULL, NULL, NULL, NULL },
+    { itTomatoFallProcUpdate, ndsP4PeachSaturnMap, NULL, NULL, NULL, NULL, NULL, NULL },
+    { ndsP4PeachSaturnHeldProcUpdate, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
+    { ndsP4PeachTurnipThrownProcUpdate, ndsP4PeachSaturnMap,
+      ndsP4PeachSaturnThrowCollide, ndsP4PeachSaturnThrowCollide, itMainCommonProcHop,
+      ndsP4PeachSaturnThrowCollide, ndsP4PeachSaturnReflector,
+      ndsP4PeachSaturnThrowCollideHitbox },
+    { itTomatoFallProcUpdate, ndsP4PeachSaturnMap, NULL, NULL, NULL, NULL, NULL, NULL },
+    { ndsP4PeachSaturnWalkProcUpdate, ndsP4PeachSaturnWalkProcMap, NULL, NULL, NULL, NULL, NULL, NULL },
+};
+
+/* item_info_array: the subset file's attributes, the Maxim Tomato's fall and
+ * his ground_collision. */
+static ITDesc sNdsP4PeachSaturnDesc = {
+    NDS_P4_IT_KIND_MRSATURN, &gNdsP4PeachSpecial4, 0x0,
+    { nGCMatrixKindTraRotRpyR, nGCMatrixKindNull, 0x00 }, 0,
+    itTomatoFallProcUpdate, ndsP4PeachSaturnMap, NULL, NULL, NULL, NULL, NULL, NULL
+};
+
+/* _update_x_scale: his root's x scale is his facing. */
+static void ndsP4PeachSaturnFaceScale(GObj *item_gobj)
+{
+    DObjGetStruct(item_gobj)->scale.vec.f.x =
+        (itGetStruct(item_gobj)->lr == +1) ? 1.0F : -1.0F;
+}
+
+/* _animate_saturn and _animate_held_saturn: on a frame count that is a
+ * multiple of 4, TEXID 4 becomes 5 and any other 4. */
+static void ndsP4PeachSaturnBlink(DObj *dobj, s32 count)
+{
+    if (((count & 3) == 0) && (dobj != NULL) && (dobj->mobj != NULL))
+    {
+        dobj->mobj->texture_id_curr = (dobj->mobj->texture_id_curr == 4) ? 5 : 4;
+    }
+}
+
+/* MrSaturn.stage_setting_: the item at her position, TEXID 5 and then 6,
+ * the turnip's knockback, angle and sound with 6 damage and 30 shield
+ * damage, facing right, and the wait before his walk (his lifetime). The
+ * donor writes the item words the turnip's maker writes (0x1CC-0x1D4) and
+ * leaves his hurtbox as the attributes make it (its disable is commented
+ * out). */
+static GObj *ndsP4PeachMakeSaturn(GObj *fighter_gobj, Vec3f *pos, Vec3f *vel)
+{
+    GObj *item_gobj;
+    DObj *dobj;
+    ITStruct *ip;
+    Vec3f translate;
+
+    if (gNdsP4PeachSpecial4 == NULL)
+    {
+        gNdsP4PeachSaturnMisses++;
+        return NULL;
+    }
+    item_gobj = itManagerMakeItem(fighter_gobj, &sNdsP4PeachSaturnDesc, pos, vel, 0);
+    if (item_gobj == NULL)
+    {
+        return NULL;
+    }
+    dobj = DObjGetStruct(item_gobj);
+    ip = itGetStruct(item_gobj);
+    if (dobj->mobj != NULL)
+    {
+        dobj->mobj->texture_id_curr = 5;
+    }
+    translate = dobj->translate.vec.f;
+    ip->multi = 0;
+    itMainClearOwnerStats(item_gobj);
+    gcAddXObjForDObjFixed(dobj, 0x2E, 0);
+    dobj->translate.vec.f = translate;
+
+    ip->attack_coll.attack_state = nGMAttackStateOff;
+    *ndsP4PeachItemWord(ip, 0x1CC) = 0;
+    *ndsP4PeachItemWord(ip, 0x1D0) = 0;
+    *ndsP4PeachItemWord(ip, 0x1D4) = 0;
+    ip->proc_dead = NULL;
+    ip->multi = 0;
+    ip->attack_coll.knockback_scale = PEACH_TURNIP_KBG;
+    ip->attack_coll.knockback_base = PEACH_TURNIP_BKB;
+    ip->attack_coll.angle = PEACH_TURNIP_KB_ANGLE;
+    ip->attack_coll.fgm_id = PEACH_TURNIP_HIT_FGM;
+    ip->attack_coll.shield_damage = PEACH_SATURN_SHIELD_DAMAGE;
+    ip->attack_coll.damage = PEACH_SATURN_DAMAGE;
+    if (dobj->mobj != NULL)
+    {
+        dobj->mobj->texture_id_curr = 6;
+    }
+    ip->lifetime = PEACH_SATURN_WAIT_TIME;
+    ip->is_unused_item_bool = TRUE;
+    dobj->rotate.vec.f.z = 0.0F;
+    ip->arrow_gobj = ifCommonItemArrowMakeInterface(ip);
+    ip->lr = +1;
+    ip->item_vars.shell.vel_x = 0.0F;
+    return item_gobj;
+}
+
+/* MrSaturn.falling_initial_ (DROP_ITEM): no hitbox, no random despawn
+ * (times_thrown's low bit), halfword 0x2D2 = 0x5674 (pickup_wait 0x567 with
+ * only is_unused_item_bool set), no hurtbox, the falling state. */
+static void ndsP4PeachSaturnDropped(GObj *item_gobj)
+{
+    ITStruct *ip = itGetStruct(item_gobj);
+
+    ip->attack_coll.attack_state = nGMAttackStateOff;
+    ip->times_thrown &= ~1u;
+    ip->pickup_wait = PEACH_SATURN_GROUND_TIMER;
+    ip->is_allow_knockback = FALSE;
+    ip->is_unused_item_bool = TRUE;
+    ip->is_static_damage = FALSE;
+    ip->damage_coll.hitstatus = nGMHitStatusNone;
+    itMainSetStatus(item_gobj, sNdsP4PeachSaturnStatusDescs, 4);
+}
+
+/* MrSaturn.throw_initial_ (THROW_ITEM): the thrown state and his facing's
+ * x scale (the hurtbox enable the turnip has is commented out). */
+static void ndsP4PeachSaturnThrown(GObj *item_gobj)
+{
+    itMainSetStatus(item_gobj, sNdsP4PeachSaturnStatusDescs, 3);
+    ndsP4PeachSaturnFaceScale(item_gobj);
+}
+
+/* MrSaturn.reflected_initial_. */
+static void ndsP4PeachSaturnReflected(GObj *item_gobj)
+{
+    *ndsP4PeachItemWord(itGetStruct(item_gobj), 0x1CC) = PEACH_TURNIP_THROW_TIMER;
+    itMainSetStatus(item_gobj, sNdsP4PeachSaturnStatusDescs, 3);
+}
+
+/* MrSaturn.prepickup_ (PICKUP_ITEM_INIT). */
+static void ndsP4PeachSaturnHold(GObj *item_gobj)
+{
+    itBombHeiCommonSetHitStatusNone(item_gobj);
+    itMainSetStatus(item_gobj, sNdsP4PeachSaturnStatusDescs, 2);
+}
+
+/* MrSaturn.wait_initial: pickup allowed, his wait restarted, the grounded
+ * wait. */
+static void ndsP4PeachSaturnWaitSet(GObj *item_gobj)
+{
+    itMainSetGroundAllowPickup(item_gobj);
+    itGetStruct(item_gobj)->lifetime = PEACH_SATURN_WAIT_TIME;
+    itMainSetStatus(item_gobj, sNdsP4PeachSaturnStatusDescs, 0);
+}
+
+/* MrSaturn.ground_collision (aerial, thrown and falling): the item landing
+ * routine with rebounds 0.3 and 0.5, into the wait. */
+static sb32 ndsP4PeachSaturnMap(GObj *item_gobj)
+{
+    return itMapCheckDestroyDropped(item_gobj, ndsP4PeachBitsToF32(0x3E99999Au),
+                                    ndsP4PeachBitsToF32(0x3F000000u),
+                                    ndsP4PeachSaturnWaitSet);
+}
+
+/* MrSaturn.wait_main: when the wait runs out he walks for WALK_TIME. */
+static sb32 ndsP4PeachSaturnWaitProcUpdate(GObj *item_gobj)
+{
+    ITStruct *ip = itGetStruct(item_gobj);
+
+    ip->lifetime--;
+    if (ip->lifetime == 0)
+    {
+        itMainSetStatus(item_gobj, sNdsP4PeachSaturnStatusDescs, 5);
+        ip->lifetime = PEACH_SATURN_WALK_TIME;
+    }
+    return FALSE;
+}
+
+/* MrSaturn.grounded_wait_collision: off the floor he falls. */
+static sb32 ndsP4PeachSaturnWaitProcMap(GObj *item_gobj)
+{
+    itMapCheckLRWallProcNoFloor(item_gobj, ndsP4PeachSaturnDropped);
+    return FALSE;
+}
+
+/* MrSaturn.held_main: the held part's face every 4 frames, his facing and
+ * that part's x scale from his holder's, and the frame count (his lifetime,
+ * counting up while held). The part is his root's child. */
+static sb32 ndsP4PeachSaturnHeldProcUpdate(GObj *item_gobj)
+{
+    ITStruct *ip = itGetStruct(item_gobj);
+    DObj *held = DObjGetStruct(item_gobj)->child;
+
+    ndsP4PeachSaturnBlink(held, ip->lifetime);
+    if (ip->owner_gobj != NULL)
+    {
+        ip->lr = ftGetStruct(ip->owner_gobj)->lr;
+        if (held != NULL)
+        {
+            held->scale.vec.f.x = (ip->lr == +1) ? 1.0F : -1.0F;
+        }
+    }
+    ip->lifetime++;
+    return FALSE;
+}
+
+/* MrSaturn.throw_collide_ (hurtbox, shield, clang): back at -0.125 his
+ * speed and 40 up into his fall, saying one of his three words. */
+static sb32 ndsP4PeachSaturnThrowCollide(GObj *item_gobj)
+{
+    ITStruct *ip = itGetStruct(item_gobj);
+
+    ip->physics.vel_air.x *= ndsP4PeachBitsToF32(0xBE000000u);
+    ip->physics.vel_air.y = ndsP4PeachBitsToF32(0x42200000u);
+    ndsP4PeachSaturnDropped(item_gobj);
+    func_800269C0_275C0(PEACH_SATURN_FGM + syUtilsRandIntRange(3));
+    return FALSE;
+}
+
+/* MrSaturn.throw_collide_hitbox_ (hit by an attack): the same without a
+ * word, his hurtbox off. */
+static sb32 ndsP4PeachSaturnThrowCollideHitbox(GObj *item_gobj)
+{
+    ITStruct *ip = itGetStruct(item_gobj);
+
+    ip->physics.vel_air.x *= ndsP4PeachBitsToF32(0xBE000000u);
+    ip->damage_coll.hitstatus = nGMHitStatusNone;
+    ip->physics.vel_air.y = ndsP4PeachBitsToF32(0x42200000u);
+    ndsP4PeachSaturnDropped(item_gobj);
+    return FALSE;
+}
+
+/* MrSaturn.reflect_. */
+static sb32 ndsP4PeachSaturnReflector(GObj *item_gobj)
+{
+    itMainCommonProcReflector(item_gobj);
+    ndsP4PeachSaturnReflected(item_gobj);
+    return FALSE;
+}
+
+/* MrSaturn.walking_main: gone when the walk runs out; at a ledge the red
+ * shell's edge test turns him (its speed flips and his facing with it; the
+ * donor's own "switch direction" rewrites the facing it finds), then he
+ * walks at 8 his way, his x scale his facing, his face swapped every 4
+ * frames. */
+static sb32 ndsP4PeachSaturnWalkProcUpdate(GObj *item_gobj)
+{
+    ITStruct *ip = itGetStruct(item_gobj);
+
+    ip->lifetime--;
+    if (ip->lifetime == 0)
+    {
+        return TRUE;
+    }
+    itRShellSpinCheckCollisionEdge(item_gobj);
+    ip->physics.vel_air.x = (ip->lr == -1) ? -8.0F : 8.0F;
+    ndsP4PeachSaturnFaceScale(item_gobj);
+    ndsP4PeachSaturnBlink(DObjGetStruct(item_gobj), ip->lifetime);
+    return FALSE;
+}
+
+/* MrSaturn.grounded_check_collision_ (the red shell's 0x8017ADD4 with his
+ * fall): off the floor he falls; against a wall his speed flips, his facing
+ * follows it, and he belongs to nobody. */
+static sb32 ndsP4PeachSaturnWalkProcMap(GObj *item_gobj)
+{
+    ITStruct *ip = itGetStruct(item_gobj);
+
+    if ((itMapCheckLRWallProcNoFloor(item_gobj, ndsP4PeachSaturnDropped) != FALSE) &&
+        ((ip->coll_data.mask_curr & (MAP_FLAG_LWALL | MAP_FLAG_RWALL)) != 0))
+    {
+        ip->physics.vel_air.x = -ip->physics.vel_air.x;
+        itMainSetSpinVelLR(item_gobj);
+        itMainClearOwnerStats(item_gobj);
+        ip->item_vars.shell.vel_x = -ip->item_vars.shell.vel_x;
+    }
+    return FALSE;
+}
+
 /* NDSP4Overrides.item: Remix's DROP_ITEM, THROW_ITEM and PICKUP_ITEM_INIT
- * for her turnip. */
+ * for her turnip and Mr. Saturn. */
 static sb32 ndsP4PeachItem(GObj *item_gobj, s32 which)
 {
+    if (itGetStruct(item_gobj)->kind == NDS_P4_IT_KIND_MRSATURN)
+    {
+        if (which == NDS_P4_ITEM_DROPPED)
+        {
+            ndsP4PeachSaturnDropped(item_gobj);
+        }
+        else if (which == NDS_P4_ITEM_THROWN)
+        {
+            ndsP4PeachSaturnThrown(item_gobj);
+        }
+        else if (which == NDS_P4_ITEM_HOLD)
+        {
+            ndsP4PeachSaturnHold(item_gobj);
+        }
+        return TRUE;
+    }
     if (itGetStruct(item_gobj)->kind != NDS_P4_IT_KIND_TURNIP)
     {
         return FALSE;
@@ -1071,7 +1390,7 @@ static void ndsP4PeachPull(GObj *fighter_gobj)
         {
             item_gobj = itBombHeiMakeItem(fighter_gobj, pos, &vel, 0);
         }
-        else item_gobj = ndsP4PeachMakeTurnip(fighter_gobj, pos, &vel, 0);
+        else item_gobj = ndsP4PeachMakeSaturn(fighter_gobj, pos, &vel);
     }
     else item_gobj = ndsP4PeachMakeTurnip(fighter_gobj, pos, &vel, 0);
 

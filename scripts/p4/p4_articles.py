@@ -115,6 +115,11 @@ ARTICLES = {
         # PEACH_TURNIP_INFO (file 7), its model in the file it names; the
         # spawn picks face 3 to 6 (texture_id_curr), so frames 0-6 are kept.
         {"name": "turnip", "special": 2, "itattributes": 0x40, "texid_frames": 7},
+        # items/MrSaturn.asm: his ITAttributes at 0 of the item subset file
+        # generate_p4_fighter.py ships in her slot 4 (SUBSET_FILES), his tree
+        # after them; his code picks TEXID 4 to 6 on his body and on the
+        # part he is held by.
+        {"name": "saturn", "special": 4, "itattributes": 0x0, "texid_frames": 7},
     ),
     "piano": (
         # fireball.asm struct_book: WPAttributes at 0 of Piano file 6

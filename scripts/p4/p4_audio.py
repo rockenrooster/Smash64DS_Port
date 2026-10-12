@@ -95,6 +95,43 @@ def fgm_ids(bass_out: str) -> dict[str, list[int]]:
     return ids
 
 
+# Sounds a content's ported code plays that FGM.asm adds outside its folder:
+# Peach's Mr. Saturn (items/MrSaturn.asm plays 0x5FD plus 0 to 2) -- his
+# voice (add_sound) and two add_fgm cues whose microcode files replay that
+# sample at other notes (FGM.asm: their sound id and length are hard-coded
+# to mr_saturn_1's). A row is an add_sound name, or (add_fgm name, its
+# microcode file) after the add_sound row whose sample it plays.
+EXTRA_SOUNDS = {
+    "PEACH": ("sounds/misc/mr_saturn_1",
+              ("mr_saturn_2", "sounds/misc/mr_saturn_2"),
+              ("mr_saturn_3", "sounds/misc/mr_saturn_3")),
+}
+
+
+def extra_sound_rows(fgm_asm: str, content: str) -> list[dict]:
+    """EXTRA_SOUNDS rows for one content: add_sound rows as add_sound_rows
+    reads them; an add_fgm row takes its sample's row with its own name and
+    microcode file."""
+    rows = []
+    sample = None
+    for item in EXTRA_SOUNDS.get(content, ()):
+        if isinstance(item, str):
+            found = [r for r in add_sound_rows(fgm_asm, item.rsplit("/", 1)[0])
+                     if r["name"] == item]
+            if len(found) != 1:
+                raise ValueError(f"{item}: no single add_sound row in FGM.asm")
+            sample = found[0]
+            rows.append(sample)
+            continue
+        name, ucd = item
+        if sample is None or not re.search(
+                r"^\s*add_fgm\(\s*" + re.escape(name) + r"\s*,\s*" + re.escape(ucd) + r"\s*,",
+                fgm_asm, re.M):
+            raise ValueError(f"{name}: no add_fgm row for {ucd} after its sample")
+        rows.append(dict(sample, name=name, ucd_file=ucd, sample=sample["name"]))
+    return rows
+
+
 def add_sound_rows(fgm_asm: str, content_dir: str) -> list[dict]:
     """FGM.asm's add_sound calls for one content, in declaration order."""
     rows = []
@@ -203,7 +240,7 @@ def build(staging: Path, contents: list[str], out_dir: Path) -> dict:
         content_rows = add_sound_rows(fgm_asm, CONTENT_DIRS[content])
         if not content_rows:
             raise ValueError(f"{content}: no add_sound rows in FGM.asm")
-        rows += content_rows
+        rows += content_rows + extra_sound_rows(fgm_asm, content)
     tick_us = renderer.FGM_TIMER_MICROSECONDS
     records = []
     uses: dict[str, int] = {}
@@ -214,11 +251,14 @@ def build(staging: Path, contents: list[str], out_dir: Path) -> dict:
         if use >= len(named):
             raise ValueError(f"{row['name']}: no FGM_ID in bass.out")
         fgm_id = named[use]
-        aifc = read_aifc(staging / "src" / f"{row['name']}.aifc")
+        aifc = read_aifc(staging / "src" / f"{row.get('sample', row['name'])}.aifc")
         # FGM.asm: an explicit length, else the file's FORM size / 177.
         length = row["length"] if row["length"] != -1 else aifc["form_size"] // 177
         ucd_bytes, art_bytes = templates(row["rate_byte"], row["type"], row["reverb"],
                                          length, 0x1F0, fgm_id)
+        if "ucd_file" in row:
+            # An add_fgm cue: its own microcode over its sample's articulation.
+            ucd_bytes = (staging / "src" / f"{row['ucd_file']}.bin").read_bytes()
         ucd = extract._disassemble_ucd_entry(ucd_bytes)
         art = extract._disassemble_entry(art_bytes)
         notes = [r for r in ucd if r[0] == "note"]

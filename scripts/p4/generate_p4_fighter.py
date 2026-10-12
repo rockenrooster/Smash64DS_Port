@@ -642,9 +642,18 @@ EVENT32_SHARED_UNMEASURED = 2048
 # -> 18.2 KB, 650 -> 518 ledger commands each.
 ENTRY_ANIM_EPS = 8
 
+# Peach's rare pull (PeachSpecial.asm create_and_assign_item_): Mr. Saturn
+# (items/MrSaturn.asm FILE_OFFSET 0x10B0, his model in 0xA96) in her slot 4,
+# which names her parent's file there (PARENT_UNREAD_SLOTS).
 SUBSET_FILES = {
     "mrgaw": ({"name": "dango", "slot": 4, "attributes": (0xFB, 0x1010)},),
+    "peach": ({"name": "saturn", "slot": 4, "attributes": (0xFB, 0x10B0)},),
 }
+# Parent special-file slots no parent code reads, which an item subset may
+# take while the content names the parent's file there: Fox's special file 4
+# (FoxSpecial4, the reflector's list) is named only by FoxSpecial1's extern
+# (gFTDataFoxSpecial4 has no reader), which still loads it.
+PARENT_UNREAD_SLOTS = {"FOX": (4,)}
 ITATTRIBUTES_SIZE = 0x50
 
 # Vanilla file IDs that Remix rewrote with equivalent bytes, so the DS keeps
@@ -1630,7 +1639,9 @@ def main() -> int:
     subset_slots = {s["slot"] for s in subsets}
     for i in range(5, 9):
         if (i - 4) in subset_slots:
-            if file_ids[i] != 0 or parent_ids[i] != 0:
+            if (file_ids[i] != parent_ids[i]) or (
+                    parent_ids[i] != 0 and
+                    (i - 4) not in PARENT_UNREAD_SLOTS.get(resolved["parent"], ())):
                 raise GenError(f"special file {i - 4} holds {name}'s item subset but "
                                f"{file_ids[i]:#x} (the parent's {parent_ids[i]:#x}) names a file")
             continue
