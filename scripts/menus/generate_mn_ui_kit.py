@@ -1665,6 +1665,12 @@ def emit_manifest(path: Path, glyphs: list[Glyph], images: list[Image],
     lines.append(f"#define NDS_MN_UI_KIT_SURFACE_CACHE_BYTES "
                  f"{max((s.width * s.height * 2 for s in surfaces
                         if s.token in cacheable), default=0)}u")
+    # The character select's resident card copies (nds_menu_shell_css.c's
+    # door underlay) hold its largest gate surface: the P4 select's cards
+    # are scaled.
+    lines.append(f"#define NDS_MN_UI_KIT_CSS_GATE_MAX_BYTES "
+                 f"{max((s.width * s.height * 2 for s in surfaces
+                        if s.token.startswith('CSS_GATE')), default=0)}u")
     lines.append("")
     lines.append("/* Backdrop surfaces, DS BGR5551, drawn into the main BG2 "
                  "bitmap. */")

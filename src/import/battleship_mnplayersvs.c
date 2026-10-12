@@ -2766,15 +2766,28 @@ static void ndsMNPlayersVSPreviewApplyOuterSlotInset(u32 slot,
     }
     root->translate.vec.f.x = x;
 #if NDS_P4
-    /* The P4 screen scales the cards by CARD_KN/CARD_KD with their top at
-     * CARD_Y (p4_css.py SCREEN). The camera (eye z 5000 on the origin, the
-     * viewport above) maps 840 world units to 80 source units and world y 0
-     * to source y 120, so the source root (y -850) stands at source y 201,
-     * 75 below the card's top: the root keeps that place on the scaled card
-     * and the fighter scales with it, from its own scale row. */
-    root->translate.vec.f.y = -(((f32)NDS_P4_CSS_CARD_Y +
-        (75.0F * (f32)NDS_P4_CSS_CARD_KN / (f32)NDS_P4_CSS_CARD_KD)) - 120.0F) *
-        (840.0F / 80.0F);
+    /* The P4 screen scales the cards by CARD_KN/CARD_KD at CARD_PITCH from
+     * CARD_X, their top at CARD_Y (p4_css.py SCREEN). The camera (eye z 5000
+     * on the origin, the viewport above) maps 840 world units to the source's
+     * 69-unit panel pitch, world (0, 0) to source (160, 120): the source root
+     * (-1250 + 840 x slot, -850) stands at the middle of its 69-unit panel,
+     * 63.8 units below the panel's top (y 126). Each fighter now stands at
+     * the middle of its card, as far below the card's top as the scaled
+     * panel puts it, and scales with the card from its own scale row (the
+     * outer inset above was for 64-pixel panels at the screen's edges; the
+     * cards' middles are 34 pixels in). */
+#define NDS_CSS_WORLD_PER_SOURCE (840.0F / 69.0F)
+    {
+        const f32 k = (f32)NDS_P4_CSS_CARD_KN / (f32)NDS_P4_CSS_CARD_KD;
+        const f32 feet = (120.0F + (850.0F / NDS_CSS_WORLD_PER_SOURCE)) - 126.0F;
+
+        root->translate.vec.f.x = (((f32)NDS_P4_CSS_CARD_X +
+            ((f32)slot * (f32)NDS_P4_CSS_CARD_PITCH) + (34.5F * k)) - 160.0F) *
+            NDS_CSS_WORLD_PER_SOURCE;
+        root->translate.vec.f.y = -(((f32)NDS_P4_CSS_CARD_Y + (feet * k)) - 120.0F) *
+            NDS_CSS_WORLD_PER_SOURCE;
+    }
+#undef NDS_CSS_WORLD_PER_SOURCE
     {
         s32 fkind = sMNPlayersVSSlots[slot].fkind;
         f32 scale = ((fkind >= nFTKindPlayableStart) &&

@@ -1319,6 +1319,19 @@ battleship_mnplayersvs.c). The original-cast and 1P selects keep the source
 layout. Play ROM play-1011x3: four previews filling their cards, 0
 failures.
 
+Two regressions the owner saw on play-1011x5, fixed in play-1011x6: the
+previews were placed with a camera scale of 840 world units to 80 source
+units, but the select's viewport maps them to the source's 69-unit panel
+pitch (measured on a photo; world (0, 0) at source (160, 120)), so the outer
+previews stood 14-17 pixels inside their cards; each now stands at its
+card's middle (`ndsMNPlayersVSPreviewApplyOuterSlotInset`, 840/69). And the
+doors' resident card copies were 7,844 B while a scaled card is 10,370 B, so
+every slide failed the copy and streamed the card from NitroFS each tic (the
+slow, flashing doors the underlay had fixed in September); the copy is now
+sized by the bake (`NDS_MN_UI_KIT_CSS_GATE_MAX_BYTES`). play-1011x6: four
+previews centred, all four card copies resident, 80 slide frames from
+copies, select heap minimum 36.6 KB (43.2 before), 0 failures.
+
 ## Memory: mirrors, the event32 ledger, article data (2026-10-11)
 
 A sweep of four-CPU mirrors on the shipping ROM (play-1011ko, Peach's

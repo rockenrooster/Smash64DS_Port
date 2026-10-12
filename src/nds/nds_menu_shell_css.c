@@ -1158,7 +1158,7 @@ static u32 ndsMenuShellCssGateState(u32 slot)
  * tic, DMA rows from main RAM after. The terminal frame still takes the baked
  * gate from the pack, once.
  *
- * ARENA, NOT .bss: four cards are 31,376 bytes and a static buffer would cost
+ * ARENA, NOT .bss: four cards are 31-41 KB and a static buffer would cost
  * every scene, battle included. The block comes out of this scene's arena and
  * dies with it; the heap generation says whether the pointer is still ours.
  * A refusal (no room, bad read) falls back to the streamed blit unchanged.
@@ -1169,8 +1169,14 @@ static u32 ndsMenuShellCssGateState(u32 slot)
  * the first slide broke that: re-entering the CSS from Results slides the
  * doors while the previous fighters' previews are still loading, the cancel
  * rewound under this block, and the next card copy landed in a preview pack
- * -- a wandering-PC abort a few frames later. */
-#define NDS_CSS_UNDERLAY_BYTES 7844u
+ * -- a wandering-PC abort a few frames later.
+ *
+ * SIZED BY THE BAKE: the largest gate surface (NDS_MN_UI_KIT_CSS_GATE_MAX_BYTES,
+ * 7,844 B on the original select, 10,370 B for the P4 select's scaled cards).
+ * A card larger than its copy fails the load on every slide and falls back
+ * to the streamed blit, which is how the scaled cards brought the slow,
+ * flashing doors back (owner, 2026-10-11). */
+#define NDS_CSS_UNDERLAY_BYTES ((NDS_MN_UI_KIT_CSS_GATE_MAX_BYTES + 3u) & ~3u)
 /* The underlay is a cache, so it takes only bytes the select's preview
  * fighters will not need after it: their objects took 25,880 B with two
  * previews (all-content walk ROM, 2026-10-07), about 40 KiB with four. On
