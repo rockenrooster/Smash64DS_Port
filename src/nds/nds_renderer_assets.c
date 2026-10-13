@@ -747,10 +747,17 @@ static const u32 sNdsEntryKoEnvRgb[3][4] = {
 };
 static u32 sNdsEntryKoPaletteName[3][4];
 static u16 sNdsEntryKoPaletteScratch[8] __attribute__((aligned(32)));
+/* A root's modelview and composed matrices, by matrix slot
+ * (ndsRendererEntryEffectMatrixSlot): slot 0 is the root being drawn, slots
+ * 1.. the override sources, whose matrices later roots' corners read and so
+ * keep theirs across draws. Every root kept its own (205 roots with the P4
+ * contents' articles: 26 KB of .bss) though only the sources' are read after
+ * their draw. */
+#define NDS_ENTRY_EFFECT_MATRIX_SLOTS 16u
 static NDSRendererMatrix20p12
-    sNdsRendererEntryEffectModelview[NDS_ENTRY_EFFECT_ROOT_COUNT];
+    sNdsRendererEntryEffectModelview[NDS_ENTRY_EFFECT_MATRIX_SLOTS];
 static NDSRendererMatrix20p12
-    sNdsRendererEntryEffectComposed[NDS_ENTRY_EFFECT_ROOT_COUNT];
+    sNdsRendererEntryEffectComposed[NDS_ENTRY_EFFECT_MATRIX_SLOTS];
 #define NDS_ENTRY_EFFECT_MASK_WORDS ((NDS_ENTRY_EFFECT_ROOT_COUNT + 31u) / 32u)
 _Static_assert(NDS_ENTRY_EFFECT_ROOT_COUNT <= 256u,
                "entry root indices must fit their generated u8 fields");

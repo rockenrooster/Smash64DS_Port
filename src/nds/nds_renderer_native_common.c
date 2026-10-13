@@ -5602,27 +5602,60 @@ volatile u32 gNdsEntryEffectLazyComposed __attribute__((used, section(".data")))
 static u32 sNdsEntryEffectOverrideSourceMask[
     (NDS_ENTRY_EFFECT_ROOT_COUNT + 31u) / 32u];
 static u8 sNdsEntryEffectOverrideSourceReady;
+/* Each root's matrix slot: 0 for a root no corner names (its matrices serve
+ * its own draw), 1.. for an override source, 0xff for a source past the
+ * slots (its draw and every corner naming it reject). */
+static u8 sNdsEntryEffectMatrixSlot[NDS_ENTRY_EFFECT_ROOT_COUNT];
+#define NDS_ENTRY_EFFECT_MATRIX_SLOT_NONE 0xffu
+__attribute__((used)) volatile u32 gNdsEntryEffectMatrixSlotOverflow;
+
+static void ndsRendererEntryEffectOverrideSourcesInit(void)
+{
+    u32 next = 1u;
+    u32 i;
+
+    for (i = 0u; i < NDS_ENTRY_EFFECT_CROSS_MATRIX_CORNER_COUNT; i++)
+    {
+        u32 source = sNdsEntryEffectMatrixOverrideRoot[i];
+
+        if ((source < NDS_ENTRY_EFFECT_ROOT_COUNT) &&
+            ((sNdsEntryEffectOverrideSourceMask[source >> 5] &
+              (1u << (source & 31u))) == 0u))
+        {
+            sNdsEntryEffectOverrideSourceMask[source >> 5] |=
+                1u << (source & 31u);
+            if (next < NDS_ENTRY_EFFECT_MATRIX_SLOTS)
+            {
+                sNdsEntryEffectMatrixSlot[source] = (u8)next++;
+            }
+            else
+            {
+                sNdsEntryEffectMatrixSlot[source] =
+                    (u8)NDS_ENTRY_EFFECT_MATRIX_SLOT_NONE;
+                gNdsEntryEffectMatrixSlotOverflow++;
+            }
+        }
+    }
+    sNdsEntryEffectOverrideSourceReady = 1u;
+}
 
 static u32 ndsRendererEntryEffectIsOverrideSource(u32 root_index)
 {
     if (sNdsEntryEffectOverrideSourceReady == 0u)
     {
-        u32 i;
-
-        for (i = 0u; i < NDS_ENTRY_EFFECT_CROSS_MATRIX_CORNER_COUNT; i++)
-        {
-            u32 source = sNdsEntryEffectMatrixOverrideRoot[i];
-
-            if (source < NDS_ENTRY_EFFECT_ROOT_COUNT)
-            {
-                sNdsEntryEffectOverrideSourceMask[source >> 5] |=
-                    1u << (source & 31u);
-            }
-        }
-        sNdsEntryEffectOverrideSourceReady = 1u;
+        ndsRendererEntryEffectOverrideSourcesInit();
     }
     return ((sNdsEntryEffectOverrideSourceMask[root_index >> 5] &
              (1u << (root_index & 31u))) != 0u) ? 1u : 0u;
+}
+
+static u32 ndsRendererEntryEffectMatrixSlot(u32 root_index)
+{
+    if (sNdsEntryEffectOverrideSourceReady == 0u)
+    {
+        ndsRendererEntryEffectOverrideSourcesInit();
+    }
+    return (u32)sNdsEntryEffectMatrixSlot[root_index];
 }
 static NDSEntryEffectGroupState
     sNdsEntryEffectStateGroups[NDS_ENTRY_STATE_GROUPS];
@@ -6413,8 +6446,9 @@ s32 ndsRendererSubmitNativeEntryEffect(
     u32 matrix_generation;
     u32 root_index;
     NDSRendererHardwareLightDirection
-        light_direction_by_root[NDS_ENTRY_EFFECT_ROOT_COUNT];
-    u32 light_direction_valid_mask[NDS_ENTRY_EFFECT_MASK_WORDS] = {0};
+        light_direction_by_slot[NDS_ENTRY_EFFECT_MATRIX_SLOTS];
+    u32 light_direction_valid_slots = 0u;
+    u32 root_slot;
     u32 initial_prim_color;
     u32 initial_env_color;
     u32 initial_othermode_h;
@@ -6460,6 +6494,11 @@ s32 ndsRendererSubmitNativeEntryEffect(
     root_index = (u32)(root - &sNdsEntryEffectRoots[0]);
     if ((root_index >= NDS_ENTRY_EFFECT_ROOT_COUNT) ||
         (ndsRendererEntryEffectCornersSelect(root_index) == FALSE))
+    {
+        NDS_ENTRY_EFFECT_REJECT();
+    }
+    root_slot = ndsRendererEntryEffectMatrixSlot(root_index);
+    if (root_slot >= NDS_ENTRY_EFFECT_MATRIX_SLOTS)
     {
         NDS_ENTRY_EFFECT_REJECT();
     }
@@ -6554,8 +6593,10 @@ s32 ndsRendererSubmitNativeEntryEffect(
                 u32 source_root = sNdsEntryEffectMatrixOverrideRoot[
                     (u32)group->matrix_override_first + override_index];
 
-                if ((sNdsRendererEntryEffectModelviewValidMask[source_root >> 5] &
-                     (1u << (source_root & 31u))) == 0u)
+                if (((sNdsRendererEntryEffectModelviewValidMask[source_root >> 5] &
+                      (1u << (source_root & 31u))) == 0u) ||
+                    (ndsRendererEntryEffectMatrixSlot(source_root) >=
+                     NDS_ENTRY_EFFECT_MATRIX_SLOTS))
                 {
                     NDS_ENTRY_EFFECT_REJECT();
                 }
@@ -6623,7 +6664,9 @@ s32 ndsRendererSubmitNativeEntryEffect(
                 (source_root >= NDS_ENTRY_EFFECT_ROOT_COUNT) ||
                 (source_root >= root_index) ||
                 ((sNdsRendererEntryEffectModelviewValidMask[source_root >> 5] &
-                  (1u << (source_root & 31u))) == 0u))
+                  (1u << (source_root & 31u))) == 0u) ||
+                (ndsRendererEntryEffectMatrixSlot(source_root) >=
+                 NDS_ENTRY_EFFECT_MATRIX_SLOTS))
             {
                 NDS_ENTRY_EFFECT_REJECT();
             }
@@ -6920,13 +6963,13 @@ s32 ndsRendererSubmitNativeEntryEffect(
     }
 
     ndsRendererHardwareEndBatch();
-    sNdsRendererEntryEffectModelview[root_index] = *config->initial_modelview;
+    sNdsRendererEntryEffectModelview[root_slot] = *config->initial_modelview;
     if ((gNdsEntryEffectLazyComposed == 0u) ||
         (ndsRendererEntryEffectIsOverrideSource(root_index) != 0u))
     {
         ndsRendererMtxMul20p12(
             config->initial_modelview, config->initial_projection,
-            &sNdsRendererEntryEffectComposed[root_index]);
+            &sNdsRendererEntryEffectComposed[root_slot]);
         composed_ready = TRUE;
     }
     sNdsRendererEntryEffectModelviewValidMask[root_index >> 5] |=
@@ -7050,16 +7093,16 @@ s32 ndsRendererSubmitNativeEntryEffect(
             if (ndsRendererEntryEffectPacketCurrent(
                     packet, root, packet_first, ramp_names) != 0u)
             {
-                u32 bit = 1u << (root_index & 31u);
+                u32 bit = 1u << root_slot;
 
                 NDS_LAB_FOX_GX_HASH(root_index, config, packet, stats);
                 ndsRendererEntryEffectPacketReplay(
                     packet, stats, config->initial_modelview,
-                    &light_direction_by_root[root_index],
-                    light_direction_valid_mask[root_index >> 5] & bit);
+                    &light_direction_by_slot[root_slot],
+                    light_direction_valid_slots & bit);
                 if (packet->lit != 0u)
                 {
-                    light_direction_valid_mask[root_index >> 5] |= bit;
+                    light_direction_valid_slots |= bit;
                 }
                 packet_sent = TRUE;
             }
@@ -7112,18 +7155,16 @@ s32 ndsRendererSubmitNativeEntryEffect(
             {
                 if (hw_light_loaded == FALSE)
                 {
-                    if ((light_direction_valid_mask[root_index >> 5] &
-                         (1u << (root_index & 31u))) == 0u)
+                    if ((light_direction_valid_slots & (1u << root_slot)) == 0u)
                     {
                         ndsRendererHardwarePrepareLitDirection(
                             stats, config->initial_modelview,
-                            &light_direction_by_root[root_index]);
-                        light_direction_valid_mask[root_index >> 5] |=
-                            1u << (root_index & 31u);
+                            &light_direction_by_slot[root_slot]);
+                        light_direction_valid_slots |= 1u << root_slot;
                     }
                     ndsRendererEntryEffectLoadLitMatrices(
                         config->initial_modelview,
-                        &light_direction_by_root[root_index]);
+                        &light_direction_by_slot[root_slot]);
                     hw_light_loaded = TRUE;
 #if NDS_ENTRY_PACKET_LIVE
                     if (packet_recording != FALSE)
@@ -7328,14 +7369,12 @@ s32 ndsRendererSubmitNativeEntryEffect(
          * modelview, and no group changes either: once per root. */
         if ((lit != FALSE) &&
             ((gNdsEntryEffectHwLight == 0u) ||
-             ((light_direction_valid_mask[root_index >> 5] &
-               (1u << (root_index & 31u))) == 0u)))
+             ((light_direction_valid_slots & (1u << root_slot)) == 0u)))
         {
             ndsRendererHardwarePrepareLitDirection(
                 stats, config->initial_modelview,
-                &light_direction_by_root[root_index]);
-            light_direction_valid_mask[root_index >> 5] |=
-                1u << (root_index & 31u);
+                &light_direction_by_slot[root_slot]);
+            light_direction_valid_slots |= 1u << root_slot;
         }
 
         if (use_texture != FALSE)
@@ -7453,7 +7492,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
             {
                 ndsRendererMtxMul20p12(
                     config->initial_modelview, config->initial_projection,
-                    &sNdsRendererEntryEffectComposed[root_index]);
+                    &sNdsRendererEntryEffectComposed[root_slot]);
                 composed_ready = TRUE;
             }
         }
@@ -7464,13 +7503,13 @@ s32 ndsRendererSubmitNativeEntryEffect(
             {
                 ndsRendererMtxMul20p12(
                     config->initial_modelview, config->initial_projection,
-                    &sNdsRendererEntryEffectComposed[root_index]);
+                    &sNdsRendererEntryEffectComposed[root_slot]);
                 composed_ready = TRUE;
             }
             /* The CPU painter takes one depth a triangle; the group draws at
              * its first and consumes the rest. */
             ndsRendererEntryEffectLoadPainter(
-                &sNdsRendererEntryEffectComposed[root_index],
+                &sNdsRendererEntryEffectComposed[root_slot],
                 ndsRendererHardwareNextProjectedDepth());
             if (group->triangle_count > 1u)
             {
@@ -7494,7 +7533,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
             {
                 ndsRendererEntryEffectLoadLitMatrices(
                     config->initial_modelview,
-                    &light_direction_by_root[root_index]);
+                    &light_direction_by_slot[root_slot]);
                 hw_light_loaded = TRUE;
             }
             if (dif_amb != last_dif_amb)
@@ -7563,6 +7602,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
             NDSRendererInputVertex vertex;
             const NDSRendererInputVertex *vtx = &vertex;
             u32 source_root = root_index;
+            u32 source_slot = root_slot;
             u16 packed_color;
 
             if (matrix_override_cursor < group->matrix_override_count)
@@ -7574,9 +7614,12 @@ s32 ndsRendererSubmitNativeEntryEffect(
                 {
                     source_root =
                         sNdsEntryEffectMatrixOverrideRoot[table_index];
+                    /* Proved to have a slot by the checks above. */
+                    source_slot = ndsRendererEntryEffectMatrixSlot(source_root);
                     matrix_override_cursor++;
                 }
             }
+            (void)source_root;
             if (static_proven != FALSE)
             {
                 ndsRendererEntryEffectVertexProven(vertex_index, &vertex);
@@ -7599,21 +7642,19 @@ s32 ndsRendererSubmitNativeEntryEffect(
             }
             else if (lit != FALSE)
             {
-                if ((light_direction_valid_mask[source_root >> 5] &
-                     (1u << (source_root & 31u))) == 0u)
+                if ((light_direction_valid_slots & (1u << source_slot)) == 0u)
                 {
                     ndsRendererHardwarePrepareLitDirection(
-                        stats, &sNdsRendererEntryEffectModelview[source_root],
-                        &light_direction_by_root[source_root]);
-                    light_direction_valid_mask[source_root >> 5] |=
-                        1u << (source_root & 31u);
+                        stats, &sNdsRendererEntryEffectModelview[source_slot],
+                        &light_direction_by_slot[source_slot]);
+                    light_direction_valid_slots |= 1u << source_slot;
                 }
                 /* r,g,b hold the source normal; shade it against the seeded
                  * battle light under the matrix that was live when the RSP
                  * cache slot was loaded, not necessarily this DObj's matrix. */
                 packed_color = ndsRendererHardwarePackedResolvedColor(
                     ndsRendererHardwareLitShadeColorPrepared(
-                        stats, vtx, &light_direction_by_root[source_root]),
+                        stats, vtx, &light_direction_by_slot[source_slot]),
                     material_color, use_material_color, 0u);
             }
             else
@@ -7648,7 +7689,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
                 }
 
                 ndsRendererTransformVertex20p12(
-                    &sNdsRendererEntryEffectComposed[source_root], vtx, &clip);
+                    &sNdsRendererEntryEffectComposed[source_slot], vtx, &clip);
                 stats->matrix_transform_count++;
                 stats->transformed_vertex_count++;
                 ndsRendererHardwareClipVertex(
@@ -7799,6 +7840,7 @@ s32 ndsRendererReplayNativeEntryEffectFox(u32 root_offset,
     NDSRendererHardwareLightDirection light_direction;
     u32 ramp_names[NDS_ENTRY_STATE_GROUPS];
     u32 root_index;
+    u32 root_slot;
     u32 root_bit;
     u32 first;
     u32 group_offset;
@@ -7824,6 +7866,12 @@ s32 ndsRendererReplayNativeEntryEffectFox(u32 root_offset,
     }
     root_index = (u32)(root - &sNdsEntryEffectRoots[0]);
     root_bit = 1u << (root_index & 31u);
+    root_slot = (root_index < NDS_ENTRY_EFFECT_ROOT_COUNT) ?
+        ndsRendererEntryEffectMatrixSlot(root_index) : NDS_ENTRY_EFFECT_MATRIX_SLOTS;
+    if (root_slot >= NDS_ENTRY_EFFECT_MATRIX_SLOTS)
+    {
+        return FALSE;
+    }
     if ((root_index < NDS_ENTRY_EFFECT_FOX_ROOT_FIRST) ||
         (root_index >= NDS_ENTRY_EFFECT_FOX_ROOT_FIRST + NDS_ENTRY_STATE_ROOTS) ||
         ((sNdsEntryEffectRootStaticOk[root_index >> 5] & root_bit) == 0u))
@@ -7878,8 +7926,10 @@ s32 ndsRendererReplayNativeEntryEffectFox(u32 root_offset,
             u32 source_root = sNdsEntryEffectMatrixOverrideRoot[
                 (u32)group->matrix_override_first + override_index];
 
-            if ((sNdsRendererEntryEffectModelviewValidMask[source_root >> 5] &
-                 (1u << (source_root & 31u))) == 0u)
+            if (((sNdsRendererEntryEffectModelviewValidMask[source_root >> 5] &
+                  (1u << (source_root & 31u))) == 0u) ||
+                (ndsRendererEntryEffectMatrixSlot(source_root) >=
+                 NDS_ENTRY_EFFECT_MATRIX_SLOTS))
             {
                 return FALSE;
             }
@@ -7903,13 +7953,13 @@ s32 ndsRendererReplayNativeEntryEffectFox(u32 root_offset,
     }
 
     ndsRendererHardwareEndBatch();
-    sNdsRendererEntryEffectModelview[root_index] = *config->initial_modelview;
+    sNdsRendererEntryEffectModelview[root_slot] = *config->initial_modelview;
     if ((gNdsEntryEffectLazyComposed == 0u) ||
         (ndsRendererEntryEffectIsOverrideSource(root_index) != 0u))
     {
         ndsRendererMtxMul20p12(
             config->initial_modelview, config->initial_projection,
-            &sNdsRendererEntryEffectComposed[root_index]);
+            &sNdsRendererEntryEffectComposed[root_slot]);
     }
     sNdsRendererEntryEffectModelviewValidMask[root_index >> 5] |= root_bit;
     ndsRendererLoadHardwareSplitMatrices(
