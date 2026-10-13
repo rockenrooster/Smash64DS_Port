@@ -2457,7 +2457,34 @@ list's materialization.
 Four Crashes (DIAG ROM): uploads after GO 66 -> 24, the texture binds' miss
 cost 6.94M -> 2.23M cycles over 1,200 frames, the slot budget reached at 153.
 WORK P95 (clean ROM): Crash 1,245,120 -> 1,161,728, Dedede 1,203,136 ->
-1,184,576, Bowser 1,195,904 -> 1,187,328.
+1,184,576, Bowser 1,195,904 -> 1,187,328, MRGAW 1,132,352 -> 1,118,976
+(passes).
+
+## Entry vehicles (P95, 2026-10-13)
+
+Four Sonics: 92 of their 164 over-gate frames were the entry (frames
+78-136, the MISC bucket +640K ticks): each arrives on Tails' plane, an
+effect DObj tree of fifteen roots and 23 groups (205 triangles), drawn
+through the entry-effect owner -- 60 roots a frame, each ~10K cycles of
+cache misses rather than corners (task37 census, frames 60-260):
+`ndsRendererEntryEffectP4Admit` walked all 132 content rows on every effect
+DL (122K cycles a frame), `ndsRendererEntryEffectRoot` the root table again
+(79K), the adapter's ~20 cast arms ran first (88K), and every group
+re-resolved its state.
+
+- The rows' answer is memoized by display list (256 ways) and the root's by
+  (asset, offset) (64 ways), per heap generation; a content's root is asked
+  before the cast's arms (no arm can claim a list in a content's file).
+- The entry state cache (the Arwing's: a root's group states recorded on one
+  draw and replayed while its inherited state holds) serves the contents'
+  roots: a slot and a group range on a root's first cacheable draw, per heap
+  generation (40 roots, 96 groups); the packet replay stays the Arwing's.
+  Entry frames 96, 112, 128 are pixel-identical with the cache on and off
+  (`gNdsEntryEffectStateCache`).
+
+Four Sonics, WORK P95: 1,264,000 -> 1,209,792 (memos) -> 1,167,808 (wider
+memos) -> 1,111,360 (state cache; entry frames' mean 1.159M -> 1.070M,
+1,862/1,961 in two VBlanks).
 
 ## Board 1 status (master plan Revision 3)
 
