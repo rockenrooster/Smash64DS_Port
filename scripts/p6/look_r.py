@@ -944,8 +944,18 @@ def replay_edits(scene: dict, edits: dict) -> None:
     for k, d in edits.get("moved", {}).items():
         v = verts[int(k)]
         place(v, [v["model"][i] + d[i] for i in range(3)])
-    for k, desc in edits.get("retint", {}).items():
-        scene["triangles"][int(k)]["material"] = material(desc)
+    # Recolours by vertex set when the capture has them: list positions
+    # differ from the composed scene's while dropped triangles are still in.
+    if "retint_verts" in edits:
+        by_set = {frozenset(t["v"]): t for t in scene["triangles"]}
+        for r in edits["retint_verts"]:
+            t = by_set.get(frozenset(r["v"]))
+            if t is None:
+                raise SystemExit("edits: a recoloured triangle was not found")
+            t["material"] = material(r["material"])
+    else:
+        for k, desc in edits.get("retint", {}).items():
+            scene["triangles"][int(k)]["material"] = material(desc)
     base_n = len(verts)
     for av in edits.get("added_vertices", ()):
         v = {"joint": av["joint"], "address": 0x200000 + len(verts) * 16, "local": [0, 0, 0],

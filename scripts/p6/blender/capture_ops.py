@@ -12,7 +12,8 @@ object with its scene.json and writes:
   texture coordinates from the loops that use them);
 - added_tris: new triangles (vertex refs: ["s", source index] or ["a", new
   index]), each with its material and the joint of its first vertex;
-- retint: source triangle -> material, for triangles kept but recoloured.
+- retint: source triangle -> material, for triangles kept but recoloured
+  (retint_verts names them by vertex set, which replay prefers).
 
 Materials are named by what they are ({"prim", "texture"}), not by slot.
 
@@ -80,6 +81,9 @@ def capture(obj_name: str, out: Path, tolerance: float = 0.05) -> dict:
     deleted = sorted(set(range(len(data["triangles"]))) - present)
     added_tris = []
     retint = {}
+    # By vertex set too: the composed scene has its dropped triangles
+    # removed, the replay has not (look_r.py removes them after the edits).
+    retint_verts = []
     seen_tri = set()
 
     def material(mi):
@@ -95,6 +99,8 @@ def capture(obj_name: str, out: Path, tolerance: float = 0.05) -> dict:
             if same:
                 if poly.material_index != data["triangles"][src]["material"]:
                     retint[str(src)] = material(poly.material_index)
+                    retint_verts.append({"v": sorted(data["triangles"][src]["v"]),
+                                         "material": material(poly.material_index)})
                 continue
             deleted.append(src)
         vs = list(poly.vertices)
@@ -106,6 +112,7 @@ def capture(obj_name: str, out: Path, tolerance: float = 0.05) -> dict:
             added_tris.append({"v": [ref[i] for i in tri], "material": material(poly.material_index), "joint": joint})
     gone = sorted(set(deleted))
     ops = {"form": "p6-look-edits-v1", "scene": scene_dir.name, "moved": moved, "retint": retint,
+           "retint_verts": retint_verts,
            "deleted_tris": gone,
            # By vertex set too: replay finds them whatever came before.
            "deleted_tri_verts": [sorted(data["triangles"][t]["v"]) for t in gone],

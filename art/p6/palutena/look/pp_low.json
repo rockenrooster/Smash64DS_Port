@@ -208,33 +208,9 @@
      }
     ]
    }
-  },
-  "stocking": {
-   "color": "f0ecf2ff"
   }
  },
  "add_parts": [
-  {
-   "name": "thigh_l",
-   "joint": 16,
-   "axis": [
-    16,
-    17
-   ],
-   "stations": [
-    0.1,
-    1.0
-   ],
-   "sides": 4,
-   "twist": 45,
-   "radii": [
-    13,
-    13,
-    13,
-    13
-   ],
-   "material": "stocking"
-  },
   {
    "name": "staff_shaft",
    "joint": 14,
@@ -1200,7 +1176,8 @@
   "art/p6/palutena/look/pp_low_edits_slit.json",
   "art/p6/palutena/look/pp_low_edits_skirt8.json",
   "art/p6/palutena/look/pp_low_edits_torso.json",
-  "art/p6/palutena/look/pp_low_edits_face.json"
+  "art/p6/palutena/look/pp_low_edits_face.json",
+  "art/p6/palutena/look/pp_low_edits_v64.json"
  ],
  "textures": {
   "skirt_hem": {
