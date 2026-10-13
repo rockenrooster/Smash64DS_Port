@@ -2221,6 +2221,49 @@ Two consoles, play-1012y; the multiplayer side is in
   each joint's costume array out to its MObj count, with the scripts it names;
   only Luigi's pack changes (+112 B).
 
+## Kirby's copies of all eighteen (owner request, 2026-10-12)
+
+Owner: exercise every Remix and EXTRA hat and copied attack. Probe: eighteen
+matches of two on the shipping ROM, nine at a time in one melonDS-mp process,
+a human Kirby (inhale, copy, ground and air neutral special, walking at his
+opponent) against each content at level 9, 1,500 frames.
+
+- **The clone swap ran the parent's row.** Since S12's action_replace_map
+  seam, `ftMainSetStatus`'s wrapper copied `status_id` into `nds_p4_status`
+  before S8's swap (`ndsP4KirbyCloneStatus`) rewrote it, called the source
+  setter with the copy and stored the swapped id afterwards. A Kirby holding
+  Falco's, Ganondorf's, Wolf's or Mad Piano's power therefore ran the parent's
+  copy row -- its routines and motion -- under the power's status id: Fox's
+  blaster for Falco, the Falcon Punch for Ganondorf, Mario's fireball for Mad
+  Piano, and for Wolf Fox's blaster from Fox's special file, never loaded in a
+  match whose Fox-kind fighter is Wolf, so every shot was refused (29 in 1,200
+  frames, `gNdsWeaponFileMissingCount`). The swap now sets the status the
+  setter runs. The Mad Piano probe in "The 1012y playtest" above read the
+  status id only. Lab (play-1013k): Wolf's power in 0x13B/0x13C with motions
+  288/289, 23 shots, none refused.
+- **EXTRA's three are not copyable in their source.** EXTRA's
+  `define_character` passes `bool_inhale_copy` from the config's `kirby_hat`
+  (FALSE unless set; of its characters only DKUlt sets it), so the inhale row
+  holds Kirby's own id and no hat (MRGAW's own patch writes hat 0x08, none,
+  too). The DS Kirby took the parent's copy: the Falcon Punch for Snake (whose
+  effect file is never loaded: 20 bare-effect refusals), Mario's fireball for
+  MRGAW (refused) and Pound for Meta Knight. `ndsP4KirbyCatch` now gives any
+  catcher Kirby's own id for a content with no power (a held power goes, as
+  swallowing a Kirby without one does), the hat admission no longer loads
+  their parents' hats (`ndsP4KirbyPlayerNoCopy`), and `p4_kirby.py` fails if
+  a content without a power exports `bool_inhale_copy` TRUE. Snake's config
+  keeps a grenade file "separated for Kirby use" that nothing reads.
+
+Result (play-1013k): all fifteen Remix powers taken and used in their own
+ground and air statuses with their own motions -- Falco 0x135/0x136 (the
+Phantasm), Ganondorf 0x12F/0x130, Wolf 0x13B/0x13C, Bowser 0x137/0x138, Marth
+0x13D-0x144, Roy 0x179-0x180, Wario 0x131-0x134, Peach 0x176/0x177, Crash
+0x172/0x173, Lanky 0x187/0x188, Sheik 0x153-0x158, Banjo 0x16F/0x170, Sonic
+0x14B-0x151, Dedede 0x159-0x15C, Mad Piano 0x139/0x13A -- each Kirby drawn
+with the power's hat; Meta Knight, MRGAW and Snake caught with no copy. Every
+match: 0 native failures, 0 weapon or effect refusals, 0 NULL joints, 0 lean
+declines, 0 heap overflows, heap low-water 61.9 KB or more.
+
 ## Board 1 status (master plan Revision 3)
 
 | Item | State |

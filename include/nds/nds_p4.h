@@ -885,6 +885,9 @@ void ndsP4KirbyRefreshHat(FTStruct *fp);
  * takes (its hats: ndsP4KirbyHatMask's source hats, ndsP4KirbyMatchHats'
  * Remix hats). */
 sb32 ndsP4KirbyPlayerHasPower(s32 player);
+/* The player is a content Kirby cannot copy (its source disables the copy:
+ * the catch gives Kirby's own id), so no hat of its parent's loads. */
+sb32 ndsP4KirbyPlayerNoCopy(s32 player);
 /* The Remix hats the match's powers draw, at most `capacity`. */
 u32 ndsP4KirbyMatchHats(u8 *hats, u32 capacity);
 /* The foreign-image resolver: a power's hat texture file. */

@@ -2130,6 +2130,10 @@ GObj *efManagerNessPsychicMagnetMakeEffect(GObj *fighter_gobj)
 
 #if NDS_P2_CAPTAIN
 #if NDS_P4
+/* Makers refused because their desc was deferred for a missing file (the
+ * source maker would write the bare GObj's absent DObj). */
+__attribute__((used)) volatile u32 gNdsEFDescBareMakeRefusals;
+
 /* The content whose Captain makers a fighter takes: its own, or a Kirby's
  * held power's (captainshared.asm get_punch_anim_struct_ gives a Kirby
  * holding Ganondorf's power his punch). */
@@ -2161,9 +2165,25 @@ GObj *efManagerCaptainFalconPunchMakeEffect(GObj *fighter_gobj)
 #if NDS_P4
     const NDSP4Overrides *p4 = ndsEFManagerCaptainOverrides(fighter_gobj);
 
-    effect_gobj = ((p4 != NULL) && (p4->captain_falcon_punch != NULL)) ?
-        p4->captain_falcon_punch(fighter_gobj) :
-        ndsBaseEFManagerCaptainFalconPunchMakeEffect(fighter_gobj);
+    if ((p4 != NULL) && (p4->captain_falcon_punch != NULL))
+    {
+        effect_gobj = p4->captain_falcon_punch(fighter_gobj);
+    }
+    else if ((ndsEFManagerRetryDeferredDescs(), FALSE) ||
+             (dEFManagerCaptainFalconPunchEffectDesc.proc_display == NULL))
+    {
+        /* Captain's special file is not in the match (Kirby once took
+         * Captain's punch from Snake, whose copy the source disables): the
+         * deferred desc would hand the source maker a bare GObj, whose
+         * missing DObj it writes at once. No effect, as for any other file
+         * the match never loaded. */
+        gNdsEFDescBareMakeRefusals++;
+        return NULL;
+    }
+    else
+    {
+        effect_gobj = ndsBaseEFManagerCaptainFalconPunchMakeEffect(fighter_gobj);
+    }
 #else
     effect_gobj = ndsBaseEFManagerCaptainFalconPunchMakeEffect(fighter_gobj);
 #endif
@@ -2177,9 +2197,20 @@ GObj *efManagerCaptainFalconKickMakeEffect(GObj *fighter_gobj)
 #if NDS_P4
     const NDSP4Overrides *p4 = ndsP4Overrides(ftGetStruct(fighter_gobj));
 
-    effect_gobj = ((p4 != NULL) && (p4->captain_falcon_kick != NULL)) ?
-        p4->captain_falcon_kick(fighter_gobj) :
-        ndsBaseEFManagerCaptainFalconKickMakeEffect(fighter_gobj);
+    if ((p4 != NULL) && (p4->captain_falcon_kick != NULL))
+    {
+        effect_gobj = p4->captain_falcon_kick(fighter_gobj);
+    }
+    else if ((ndsEFManagerRetryDeferredDescs(), FALSE) ||
+             (dEFManagerCaptainFalconKickEffectDesc.proc_display == NULL))
+    {
+        gNdsEFDescBareMakeRefusals++;
+        return NULL;
+    }
+    else
+    {
+        effect_gobj = ndsBaseEFManagerCaptainFalconKickMakeEffect(fighter_gobj);
+    }
 #else
     effect_gobj = ndsBaseEFManagerCaptainFalconKickMakeEffect(fighter_gobj);
 #endif

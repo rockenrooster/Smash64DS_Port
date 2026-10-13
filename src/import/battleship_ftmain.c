@@ -698,6 +698,10 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
     if ((fighter_gobj != NULL) && (ftGetStruct(fighter_gobj)->nds_p4_kirby_copy != 0u))
     {
         status_id = ndsP4KirbyCloneStatus(ftGetStruct(fighter_gobj), status_id);
+        /* The swap is the status the setter runs (the power's row and
+         * motion), not only the id it stores: Wolf's shot ran Fox's
+         * blaster from an unloaded file. */
+        nds_p4_status = status_id;
     }
 #endif
     if (ndsDiagnosticsHandleImportedFTMainSetStatusBefore(fighter_gobj,

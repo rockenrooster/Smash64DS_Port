@@ -179,6 +179,16 @@ def main() -> int:
     registry = {row["name"]: row for row in
                 json.loads((HERE / "contents.json").read_text(encoding="utf-8"))["contents"]}
     contents = [c for c in args.contents.split() if c in POWER_PREFIX]
+    # A content without a power must be one its source will not let Kirby
+    # copy (the port's catch gives Kirby's own id for it: ndsP4KirbyCatch).
+    # EXTRA's define_character passes bool_inhale_copy (argument 13) from the
+    # config's kirby_hat, FALSE unless set; a TRUE one needs its power ported.
+    for c in args.contents.split():
+        if c in POWER_PREFIX:
+            continue
+        export = json.loads((args.export_root / c / "resolved.json").read_text(encoding="utf-8"))
+        if export["define_character_args"][13] != "OS.FALSE":
+            raise KirbyError(f"{c}: its source lets Kirby copy it, but it has no power here")
     kirby_asm = (args.staging / "src" / "Kirby" / "Kirby.asm").read_text(encoding="utf-8",
                                                                          errors="replace")
     new_names = [s["name"] for s in resolved["statuses"] if s.get("remix_new")]

@@ -1986,14 +1986,36 @@ void ndsP4KirbyAfterSetStatus(GObj *fighter_gobj, s32 status_id)
     }
 }
 
+/* A content its source will not let Kirby copy: EXTRA's define_character
+ * takes bool_inhale_copy from the config's kirby_hat (FALSE unless set),
+ * and the inhale row then holds Kirby's own id and no hat. These are the
+ * contents with no power (p4_kirby.py checks their exports). */
+static sb32 ndsP4KirbyNoCopy(u32 content)
+{
+    return ((content != 0u) && (ndsP4Fighter(content) != NULL) &&
+            (ndsP4KirbyPower(content) == NULL)) ? TRUE : FALSE;
+}
+
+sb32 ndsP4KirbyPlayerNoCopy(s32 player)
+{
+    return ndsP4KirbyNoCopy(ndsP4MatchContent(player));
+}
+
 /* The catch takes the victim content's power, or the one a victim Kirby
  * holds (ftKirbySpecialNCatchProcUpdate: a Kirby passes on his copy_id).
  * Only a Kirby takes one: Polygon Kirby keeps the parent's copy, as Remix's
- * swaps and hats test Kirby's id. */
+ * swaps and hats test Kirby's id. A content with no copy gives any catcher
+ * Kirby's own id, as its inhale row does: the copy is none (a held power
+ * goes, as swallowing a Kirby without one does), not the parent's. */
 void ndsP4KirbyCatch(FTStruct *kirby_fp, FTStruct *victim_fp)
 {
     u32 power = 0u;
 
+    if ((victim_fp->fkind != nFTKindKirby) && (victim_fp->fkind != nFTKindNKirby) &&
+        (ndsP4KirbyNoCopy(victim_fp->nds_p4_content) != FALSE))
+    {
+        kirby_fp->status_vars.kirby.specialn.copy_id = nFTKindKirby;
+    }
     if (kirby_fp->fkind == nFTKindKirby)
     {
         if ((victim_fp->fkind == nFTKindKirby) || (victim_fp->fkind == nFTKindNKirby))

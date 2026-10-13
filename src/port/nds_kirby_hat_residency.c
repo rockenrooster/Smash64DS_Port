@@ -68,6 +68,11 @@ static u32 ndsKirbyHatPlayerMask(const FTKirbyCopy *copy, u32 *p4_mask)
             *p4_mask |= ndsP4KirbyHatMask(player);
             continue;
         }
+        /* A content Kirby cannot copy shows no hat (its inhale row). */
+        if (ndsP4KirbyPlayerNoCopy(player) != FALSE)
+        {
+            continue;
+        }
 #endif
         mask |= ndsKirbyHatBitForKind(copy,
             gSCManagerBattleState->players[player].fkind);
