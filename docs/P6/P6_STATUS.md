@@ -10,7 +10,8 @@ Roy's and Peach's exports (null clones) and play in every ROM. G0 settled by
 the owner: Palutena's look is Peach's model reshaped onto the 3DS kit's
 proportions (owner route, after a first pick of the decimated kit), built in
 the live Blender against the kit's wire overlay; the low detail is in owner
-review (v60, 250 of 262 triangles, [look record](#palutena-look-record)).
+review (v63, 275 triangles of the 278 the plan allows with the staff and
+shield, [look record](#palutena-look-record)).
 Nothing goes into a ROM before the owner's OK. The high detail is the
 approved low refined (owner). A2's writer and A7's file substitution are
 done and checked on the host (the native owner generator and the P4
@@ -25,7 +26,7 @@ then the high, then the look's build rules and pins.
 | A2 model reader and writer (F1) | done 2026-10-13 (`model_writer.py`: Peach's own low scene written back draws the same 211 triangles; the written look passes the native owner generator, host) |
 | A3 Blender bridge, kit reader, fit | done 2026-10-13 (`dae_reader.py`, `kit_fit.py`, `scripts/p6/blender/`) |
 | A3b Track K: the kit rebuilt (F6) | dropped by the owner's route (ops kept for reference) |
-| A3c Track R: the base restyled (F6) | Palutena low in owner review (v51) |
+| A3c Track R: the base restyled (F6) | Palutena low in owner review (v63) |
 | A4 animation codec and retarget (F2) | planned |
 | A5 motion-script assembler (F3) | done 2026-10-13 (`mscript.py`: text and back; F3 over every export's motion scripts, 18,741 commands, 0 differ) |
 | A6 review harness | planned |
@@ -187,27 +188,36 @@ tubes, plates, two-sided sprites, a billboard flag). Ops in
 colours only (D10); scenes, textures and renders are local (`builds/p6-art/`,
 `artifacts/p6/review/pp_v*`).
 
-**Low detail, v60 (250 triangles, budget 262; Peach low 211).** The torso is
-rebuilt from rings sampled on the kit's surface (neckline, bust with a
-shallow valley between its two forms, waist; a collar of clavicles,
+**Low detail, v63 (275 triangles; the plan allows 278 with the staff and
+shield; Peach low 211).** The face is rebuilt on the kit's face at 1.1x
+about the head's centre (owner: the face may be bigger than the wire, about
+1.1x): 17 kit points per half (centre line, the eyes' inner and outer
+rings, nose, cheekbones, jaw, chin) and their mirror, the lips three
+triangles of their own; the recoloured face frames are mapped by a front
+projection that puts the drawn eye on the kit's eye and the mouth frame on
+the kit's lips (`pp_low_edits_face.json`). The bust runs smooth across the
+centre (no valley); the neck keeps its width and runs straight down to the collar.
+Earlier (v60) and kept: the torso is
+rebuilt from rings sampled on the kit's surface (neckline, bust, waist; a
+collar of clavicles,
 shoulder tops and the neck's base, closed on top), every band triangulated
 as a half and its mirror image; the dress continues the bodice's waist ring
 and runs as one A-line to the hip ring (the owner preferred v40's hips to a
 kit-sampled hip ring), its hem lower at the front than the back as the
 kit's; the hair ends above the dress so it never passes through it; the
 neck is on the kit's. Earlier (v51) and kept: Peach's head
-kept and scaled, face snapped to the kit face at 1.12 (the owner allows a
-bigger face), Peach's own face frames recoloured (green iris, Palutena's
+kept and scaled (its face since rebuilt, above), Peach's own face frames recoloured (green iris, Palutena's
 skin) with the gold circlet painted across the forehead rows (no crown
 geometry; ears and crown dropped); hair cap and the long hair curtain on the
 kit's hair; strapless bodice in one surface with the skirt, a level
-neckline and a two-form bust on the kit chest; arms joined to the torso,
+neckline and the bust on the kit chest; arms joined to the torso,
 gold bracers; skirt hem round (eight points) with a red, gold and cream hem
 texture, two-sided, slit on the left side up near the hip over a white
 stocking leg; staff = a three-sided shaft, gold wing sprite and a billboard
 gem; shield = a flat round sprite on the left forearm.
 
-**Owner directions on the way (2026-10-13).** Waist and dress one mesh;
+**Owner directions on the way (2026-10-13).** Face on the kit's at about
+1.1x; no cleavage valley; the neck not fatter, only longer; waist and dress one mesh;
 face flatter and slightly bigger, cheeks (not the jaw) narrower, forehead
 not concave; hair without a missing chunk; calves and shoes from Peach;
 hands solid like Peach's and smaller; shoulders seamless with the arms;

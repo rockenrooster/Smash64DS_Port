@@ -1110,8 +1110,8 @@
    ],
    "to": [
     0,
-    402,
-    26
+    398,
+    24
    ],
    "joints": [
     7
@@ -1125,9 +1125,9 @@
     -8.9
    ],
    "to": [
-    13.5,
-    409,
-    -9
+    12.2,
+    398,
+    -3.3
    ],
    "joints": [
     7
@@ -1141,9 +1141,9 @@
     -8.9
    ],
    "to": [
-    -13.5,
-    409,
-    -9
+    -12.2,
+    398,
+    -3.3
    ],
    "joints": [
     7
@@ -1199,7 +1199,8 @@
   "art/p6/palutena/look/pp_low_edits_chest4.json",
   "art/p6/palutena/look/pp_low_edits_slit.json",
   "art/p6/palutena/look/pp_low_edits_skirt8.json",
-  "art/p6/palutena/look/pp_low_edits_torso.json"
+  "art/p6/palutena/look/pp_low_edits_torso.json",
+  "art/p6/palutena/look/pp_low_edits_face.json"
  ],
  "textures": {
   "skirt_hem": {
