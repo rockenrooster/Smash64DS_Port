@@ -1079,6 +1079,11 @@ NDS_P4_EXPORT ?= $(PROJECT_ROOT)/builds/p4-staging/export-x
 # (generate_p4_fighter.py --lab-fallback, listed in each manifest) instead of
 # failing the generator, so every content can be built and probed early.
 NDS_P4_LAB_FALLBACK ?= 0
+# P5 (docs/P5/New_Stages.md): the new VS stages and the 6x3 stage select,
+# from scripts/p5/stages.json; Remix's select art comes from the P4 staging
+# above and Meta Crystal, Duel Zone and Final Destination are the 1P venues
+# (NDS_P2_1P_GAME). Opt-in until admitted.
+NDS_P5 ?= 0
 # P2-3 fighter: NDonkey stays opt-in until his source specials, articles, native
 # owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
 NDS_P2_NDONKEY ?= 0
@@ -3995,6 +4000,10 @@ endif
 ifeq ($(NDS_P4),1)
 CFLAGS += -I$(PROJECT_ROOT)/$(BUILD)/p4/css -I$(PROJECT_ROOT)/$(BUILD)/p4/audio
 endif
+# P5 stage registry header and the stage select's tables (scripts/p5).
+ifeq ($(NDS_P5),1)
+CFLAGS += -I$(PROJECT_ROOT)/$(BUILD)/p5 -I$(PROJECT_ROOT)/$(BUILD)/p5/sss
+endif
 # P3 build identity (plan 7.1): libnds's inline asserts embed their headers'
 # __FILE__, i.e. the devkitPro install path (C:/devkitPro/libnds/include/...),
 # so the same commit built with the toolchain installed elsewhere had another
@@ -6040,6 +6049,8 @@ endif
 
 # P4 generated data (rules beside the import overlay's below).
 export NDS_P4_GEN := $(PROJECT_ROOT)/$(BUILD)/p4
+# P5 generated data (scripts/p5/p5_rules.mk).
+export NDS_P5_GEN := $(PROJECT_ROOT)/$(BUILD)/p5
 export NDS_NITROFS_P4_FILES :=
 # The 30-cell character select (scripts/p4/p4_css.py) names the compiled
 # contents by their Remix names.
@@ -7129,6 +7140,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_NFOX $(NDS_P2_NFOX)'; \
 		echo '#define NDS_P4 $(NDS_P4)'; \
 		$(foreach row,$(NDS_P4_REGISTRY),echo '#define NDS_P4_$(call nds_p4_field,$(row),2) $(NDS_P4_$(call nds_p4_field,$(row),2))';) \
+		echo '#define NDS_P5 $(NDS_P5)'; \
 		echo '#define NDS_P2_NDONKEY $(NDS_P2_NDONKEY)'; \
 		echo '#define NDS_P2_NSAMUS $(NDS_P2_NSAMUS)'; \
 		echo '#define NDS_P2_NLUIGI $(NDS_P2_NLUIGI)'; \
@@ -8080,6 +8092,12 @@ $(NDS_P4_CSS_DIR)/css.json $(NDS_P4_CSS_DIR)/nds_p4_css.generated.inc &: \
 	python "$(PROJECT_ROOT)/scripts/p4/p4_css.py" --staging "$(NDS_P4_STAGING)" \
 		--out "$(NDS_P4_CSS_DIR)" --contents "$(NDS_P4_CONTENTS)"
 nds_menu_shell.o: $(NDS_P4_CSS_DIR)/nds_p4_css.generated.inc
+endif
+# P5 generated-data rules (a fragment, as P4's are).
+ifeq ($(NDS_P5),1)
+include $(PROJECT_ROOT)/scripts/p5/p5_rules.mk
+endif
+ifeq ($(NDS_P4),1)
 # The sound pack, its entry count, the victory songs and their BGM rows come
 # from one run.
 $(NDS_P4_AUDIO_DIR)/fgm_p4.bin $(NDS_P4_AUDIO_DIR)/nds_p4_bgm.generated.inc \
@@ -8732,6 +8750,11 @@ ifeq ($(NDS_P4),1)
 NDS_MN_UI_KIT_FLAGS := $(NDS_MN_UI_KIT_FLAGS)P4$(NDS_P4_CONTENTS)
 NDS_MN_UI_KIT_P4_CSS := $(NDS_P4_CSS_DIR)/css.json
 endif
+# P5 bakes the stage select on the 6x3 grid (scripts/p5/p5_stages.py --sss).
+ifeq ($(NDS_P5),1)
+NDS_MN_UI_KIT_FLAGS := $(NDS_MN_UI_KIT_FLAGS)P5
+NDS_MN_UI_KIT_P5_SSS := $(NDS_P5_GEN)/sss/sss.json
+endif
 NDS_MN_UI_KIT_STAMP := $(PROJECT_ROOT)/src/nds/generated/mn_ui_kit.flags.stamp
 
 $(NDS_MN_UI_KIT_STAMP): FORCE
@@ -8744,8 +8767,9 @@ $(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) $(NDS_MN_UI_SURFACE_ASSET) $(NDS_MN_
 		$(NDS_BUILD_CONFIG) \
 		$(NDS_MN_UI_KIT_STAMP) \
 		$(NDS_MN_UI_KIT_P4_CSS) \
+		$(NDS_MN_UI_KIT_P5_SSS) \
 		$(PROJECT_ROOT)/include/reloc_data.h
-	NDS_P4_CSS=$(NDS_MN_UI_KIT_P4_CSS) NDS_P2_STAGE_YOSTER=$(NDS_P2_STAGE_YOSTER) NDS_P2_STAGE_CASTLE=$(NDS_P2_STAGE_CASTLE) NDS_P2_STAGE_JUNGLE=$(NDS_P2_STAGE_JUNGLE) NDS_P2_STAGE_ZEBES=$(NDS_P2_STAGE_ZEBES) NDS_P2_STAGE_HYRULE=$(NDS_P2_STAGE_HYRULE) NDS_P2_STAGE_YAMABUKI=$(NDS_P2_STAGE_YAMABUKI) NDS_P2_STAGE_INISHIE=$(NDS_P2_STAGE_INISHIE) NDS_P2_STAGE_SECTOR=$(NDS_P2_STAGE_SECTOR) python "$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py" --repo-root "$(PROJECT_ROOT)"
+	NDS_P4_CSS=$(NDS_MN_UI_KIT_P4_CSS) NDS_P5_SSS=$(NDS_MN_UI_KIT_P5_SSS) NDS_P2_STAGE_YOSTER=$(NDS_P2_STAGE_YOSTER) NDS_P2_STAGE_CASTLE=$(NDS_P2_STAGE_CASTLE) NDS_P2_STAGE_JUNGLE=$(NDS_P2_STAGE_JUNGLE) NDS_P2_STAGE_ZEBES=$(NDS_P2_STAGE_ZEBES) NDS_P2_STAGE_HYRULE=$(NDS_P2_STAGE_HYRULE) NDS_P2_STAGE_YAMABUKI=$(NDS_P2_STAGE_YAMABUKI) NDS_P2_STAGE_INISHIE=$(NDS_P2_STAGE_INISHIE) NDS_P2_STAGE_SECTOR=$(NDS_P2_STAGE_SECTOR) python "$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py" --repo-root "$(PROJECT_ROOT)"
 	@touch $(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) $(NDS_MN_UI_SURFACE_ASSET) $(NDS_MN_UI_KIT_NET_ASSET)
 
 # P2-2 lower-screen HUD.  Keep every source container the bake reads on the

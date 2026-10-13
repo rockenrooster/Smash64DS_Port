@@ -11,6 +11,7 @@
 #include <sys/objhelper.h>
 #include <sys/objman.h>
 #include <nds/nds_scene_manager.h>
+#include <nds/nds_p5.h>
 
 #ifndef U16_MAX
 #define U16_MAX 0xffffu
@@ -114,6 +115,9 @@ static void ndsIFCommonAddGObjDisplay(GObj *gobj,
 #define ifCommonBattleUpdateInterfaceAll ndsIFCommonBattleUpdateInterfaceAllOriginal
 #define ifCommonPlayerTagMakeInterface ndsIFCommonPlayerTagMakeInterfaceOriginal
 #define ifCommonItemArrowSetAttr ndsIFCommonItemArrowSetAttrOriginal
+#if NDS_P5
+#define ifCommonBattleSetGameStatusWait ndsIFCommonBattleSetGameStatusWaitOriginal
+#endif
 #define sySchedulerGetTicCount ndsIFCommonGetTicCount
 #define sySchedulerSetTicCount ndsIFCommonSetTicCount
 #define lbCommonMakeSObjForGObj ndsIFCommonMakeSObjForGObj
@@ -129,6 +133,9 @@ static void ndsIFCommonAddGObjDisplay(GObj *gobj,
 #undef ifCommonBattleUpdateInterfaceAll
 #undef ifCommonEntryAllMakeInterface
 #undef ifCommonItemArrowSetAttr
+#if NDS_P5
+#undef ifCommonBattleSetGameStatusWait
+#endif
 
 static void ndsIFCommonAnnounceProcUpdate(GObj *interface_gobj)
 {
@@ -490,8 +497,49 @@ void ifCommonEntryAllMakeInterface(void)
     }
 }
 
+#if NDS_P5
+/* P5 (Remix FD.asm music_fix_): updates since the battle scene loaded. Every
+ * battle scene's start -- each battle and each sudden death -- sets the game
+ * status to Wait first, and the interface update below runs once an update
+ * from then on. */
+static u32 sNdsP5StageSongFrames;
+extern s32 syAudioPlayBGM(s32 sngplayer, u32 bgm);
+
+void ifCommonBattleSetGameStatusWait(void)
+{
+    sNdsP5StageSongFrames = 0u;
+    ndsIFCommonBattleSetGameStatusWaitOriginal();
+}
+
+/* A stage whose registry row names a second song switches to it at its frame
+ * if the stage's first song is still the default: Final Destination plays
+ * Master Hand's entrance (24) and then Final Destination (25) at 840. Remix
+ * sets both songs and plays the new one at once, as here. */
+static void ndsP5StageSongUpdate(void)
+{
+    s32 song;
+
+    sNdsP5StageSongFrames++;
+    if (gSCManagerBattleState == NULL)
+    {
+        return;
+    }
+    song = ndsP5StageSongSwitch((u32)gSCManagerBattleState->gkind,
+                                sNdsP5StageSongFrames, gMPCollisionBGMDefault);
+    if (song >= 0)
+    {
+        gMPCollisionBGMDefault = (u32)song;
+        gMPCollisionBGMCurrent = (u32)song;
+        syAudioPlayBGM(0, (u32)song);
+    }
+}
+#endif
+
 void ifCommonBattleUpdateInterfaceAll(void)
 {
+#if NDS_P5
+    ndsP5StageSongUpdate();
+#endif
     ndsIFCommonBattleUpdateInterfaceAllOriginal();
 
     /* The source call above owns the 25 KiB latch decision. Adapt only the

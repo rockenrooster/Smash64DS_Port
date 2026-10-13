@@ -424,8 +424,13 @@ extern volatile u32 gNdsMenuShellSssCursorGkind;
 /* The stage an opt-in build is for, so the scripted walk confirms on THAT
  * stage rather than on whichever slot a fixed cursor path happens to reach.
  * Returns Dream Land when no stage flag is set. */
-/* Stage-select grid width, so the walk can tell the two rows apart. */
+/* Stage-select grid width, so the walk can tell the rows apart (P5's grid,
+ * docs/P5/New_Stages.md, is six wide and three deep). */
+#if NDS_P5
+#define NDS_SSS_WALK_ROW 6u
+#else
 #define NDS_SSS_WALK_ROW 5u
+#endif
 /* "no explicit target": the walk picks the first stage the build has. */
 #define NDS_SSS_WALK_TARGET_AUTO 0xffu
 /* 0xff means "whichever stage this build has"; the harness pokes a gkind

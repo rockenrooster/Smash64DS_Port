@@ -2796,6 +2796,10 @@ static void ndsMenuShellCssCommit(void)
  * Keeping one lock/build predicate prevents CSS random selection from
  * inventing a second idea of which grounds exist in this ROM/save. */
 static u32 ndsMenuShellSssGroundLocked(u32 gkind);
+#if NDS_P5
+/* P5: the stage select's draw over every ground it offers. */
+static u32 ndsMenuShellSssRandomGround(void);
+#endif
 
 /* mnPlayersVSFuncRun:4497-4508. Stage Select Off enters battle directly and
  * rolls one source time-RNG ground per retry. The retail source can assume its
@@ -2811,6 +2815,19 @@ static void ndsMenuShellCssRandomizeStage(void)
     u32 pick = (u32)nGRKindInishie + 1u;
     u32 tries;
 
+#if NDS_P5
+    /* Remix's Stage Select Off draws from its stages, new ones included. */
+    pick = ndsMenuShellSssRandomGround();
+    if (pick != 0xdeu)
+    {
+        gNdsMatchConfig.gkind = (u8)pick;
+        dSCManagerDefaultSceneData.gkind = (u8)pick;
+        gSCManagerSceneData.gkind = (u8)pick;
+        gNdsMenuShellCssRandomCount++;
+        return;
+    }
+    pick = (u32)nGRKindInishie + 1u;
+#endif
     for (gkind = 0u; gkind <= (u32)nGRKindInishie; gkind++)
     {
         if (ndsMenuShellSssGroundLocked(gkind) == FALSE)

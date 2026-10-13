@@ -20,4 +20,19 @@ void sc1PGameBossInitWallpaper(void);
  * battleship_gmcamera_fixed.c (ndsWallpaperPerspQ). */
 #pragma weak grWallpaperCalcPersp
 
+#if NDS_P5
+/* P5 (Remix FD.asm fix_): Final Destination in a VS battle keeps its plain
+ * wallpaper. The boss wallpaper -- its colour steps, its own camera, the
+ * boss player it looks up -- belongs to the 1P game, and Remix skips the
+ * call everywhere else. */
+static void ndsGrWallpaperBossInit(void)
+{
+    if (gSCManagerSceneData.scene_curr != nSCKindVSBattle)
+    {
+        sc1PGameBossInitWallpaper();
+    }
+}
+#define sc1PGameBossInitWallpaper ndsGrWallpaperBossInit
+#endif
+
 #include "../../decomp/BattleShip-main/decomp/src/gr/grwallpaper.c"

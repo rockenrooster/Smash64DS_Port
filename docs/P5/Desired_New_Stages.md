@@ -1,0 +1,10 @@
+-Maximize SSS space like we did with CSS.
+-New stages from remix/extras:
+    -Meta Crystal
+    -Final Destination
+    -First Destination
+    -Duel Zone
+    -Bowsers Stadium
+    -Hyrule Temple
+    -Dinosaur Land
+-Same level of polish as original stages.

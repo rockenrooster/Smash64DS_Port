@@ -971,9 +971,9 @@ static u32 ndsMenuShellWalkTap(u32 screen, u32 *out_tap)
          * A stage sitting diagonally from the cursor on a one-stage build is
          * simply unreachable, which is how Planet Zebes and Hyrule Castle each
          * passed a lap having played Dream Land. */
-        if ((want < NDS_SSS_WALK_ROW) != (have < NDS_SSS_WALK_ROW))
+        if ((want / NDS_SSS_WALK_ROW) != (have / NDS_SSS_WALK_ROW))
         {
-            press = (want < NDS_SSS_WALK_ROW) ?
+            press = ((want / NDS_SSS_WALK_ROW) < (have / NDS_SSS_WALK_ROW)) ?
                 (u32)NDS_INPUT_UP : (u32)NDS_INPUT_DOWN;
         }
         else if (want != have)

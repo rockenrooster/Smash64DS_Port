@@ -75,6 +75,15 @@ if os.environ.get("NDS_P4_CSS"):
 # Offsets of the donor sprites the P4 placements name, merged into the reloc
 # offset table in main().
 P4_OFFSETS: dict[str, int] = {}
+# P5 (docs/P5/New_Stages.md T6): a build with the P5 stages bakes the VS stage
+# select on the owner's 6x3 grid (2026-10-12) with Remix's icons for every
+# cell. scripts/p5/p5_stages.py --sss writes the spec and the donor's icon and
+# logo containers into the build tree and the Makefile names it in
+# NDS_P5_SSS; without it the stage select is the vanilla bake, byte for byte.
+P5_SSS: dict | None = None
+if os.environ.get("NDS_P5_SSS"):
+    import json as _json
+    P5_SSS = _json.loads(Path(os.environ["NDS_P5_SSS"]).read_text(encoding="utf-8"))
 # The P4 VS select's screen (scripts/p4/p4_css.py SCREEN): the mode label and
 # BACK move to the top edge, and the four player cards scale to fill the width
 # down to the bottom edge, in source units; identity in a vanilla bake.
@@ -110,6 +119,23 @@ def p4_sprite(kind: str, offset: int) -> tuple[str, str]:
     symbol = f"p4:{kind}@{offset:#x}"
     P4_OFFSETS[symbol] = offset
     return "p4:" + P4_CSS["files"][kind], symbol
+
+
+def p5_sprite(kind: str, offset: int) -> tuple[str, str]:
+    """(o2r, symbol) of a sprite at `offset` in one of the P5 spec's donor
+    files (the "p4:" prefix is the bake's own "a path, not a container
+    name" marker)."""
+    symbol = f"p5:{kind}@{offset:#x}"
+    P4_OFFSETS[symbol] = offset
+    return "p4:" + P5_SSS["files"][kind], symbol
+
+
+def o2r_sprite(container: str, offset: int) -> tuple[str, str]:
+    """(o2r, symbol) of a sprite at `offset` in a BattleShip container that
+    reloc_data.h names no symbol for (the 1P arenas' wallpaper files)."""
+    symbol = f"o2r:{container}@{offset:#x}"
+    P4_OFFSETS[symbol] = offset
+    return container, symbol
 
 
 _STAGE_FLAG_NAMES = (
@@ -199,12 +225,19 @@ class RelocFile:
         self.path = path
         self.file_id = struct.unpack_from("<I", raw, 0x40)[0]
         self.reloc_intern = struct.unpack_from("<H", raw, 0x44)[0]
-        self.data_size = struct.unpack_from("<I", raw, 0x4C)[0]
-        if RELO_HEADER_BYTES + self.data_size > len(raw):
+        # The extern file ids (u16 each) sit between their count and the
+        # payload size; every BattleShip menu container has none, a Remix
+        # donor file can (P5: STAGE_ICONS, 0xA04, names one).
+        extern_count = struct.unpack_from("<I", raw, 0x48)[0]
+        size_at = RELO_HEADER_BYTES - 4 + (2 * extern_count)
+        if size_at + 4 > len(raw):
+            raise ConvertError(f"{path.name}: {extern_count} extern ids exceed file")
+        self.data_size = struct.unpack_from("<I", raw, size_at)[0]
+        start = size_at + 4
+        if start + self.data_size > len(raw):
             raise ConvertError(
                 f"{path.name}: declared payload {self.data_size} exceeds file")
-        self.payload = bytearray(raw[RELO_HEADER_BYTES:
-                                     RELO_HEADER_BYTES + self.data_size])
+        self.payload = bytearray(raw[start:start + self.data_size])
         self.pointer_targets: dict[int, int] = {}
         self._walk_internal_relocs()
 
@@ -1174,6 +1207,10 @@ class Placement:
     # Remix name texture can carry such padding past the card it is drawn on
     # (EXTRA's Meta Knight: 72 wide, ink through column 62, on a 66-wide card).
     trim_clear: bool = False
+    # P5: centre the placed artwork inside the source-frame span
+    # [x, x + centre_width] instead of starting it at x (a composed name on the
+    # stage select's plate, whose width is only known once the font is read).
+    centre_width: int | None = None
 
 
 # The menu font's glyphs by character, filled once convert_font has run.
@@ -1311,6 +1348,8 @@ def place_raster(fileobj: RelocFile | None, part: Placement, offset: int,
     top = part.y - (src_h // 2) if part.centred else part.y
     dst_x = frame_pos(left)
     dst_y = frame_pos(top)
+    if part.centre_width is not None:
+        dst_x += (frame_pos(left + part.centre_width) - dst_x - width) // 2
     if part.centre_in is not None:
         # Keep the source's own footprint on the screen and put the smaller
         # artwork in the middle of it, so only the drawing shrinks.
@@ -3337,6 +3376,9 @@ SURFACE_SOURCES.append(SurfaceSpec(
 # FRONT of the wooden circle, not behind it.  They overlap: the circle spans
 # (189,124)..(273,209) and the text (172,122)..(284,141).
 SSS_EMBLEM_TINT = (0x5C, 0x22, 0x00)
+# P5's grid has a third row: the lower block moves down by its growth
+# (scripts/p5/p5_stages.py LOWER_DY), every y below the grid with it.
+SSS_DY = P5_SSS["lower_dy"] if P5_SSS is not None else 0
 # mnMapsSetLogoPosition, :752 -- indexed by gkind.  The tenth entry {34,20} is
 # unreachable: gkind 0xDE takes the other branch and gets its own fixed site.
 SSS_LOGO_POS = ((3, 19), (3, 19), (3, 20), (2, 20), (3, 17),
@@ -3428,10 +3470,45 @@ SSS_ICON_DEST = (38, 29)
 
 def sss_icon_pos(slot: int) -> tuple[int, int]:
     """mnMapsMakeIcons, :540/:546 -- `slot * 50 + 30` folded per row."""
+    if P5_SSS is not None:
+        cell = P5_SSS["cells"][slot]
+        return (cell["x"], cell["y"])
     return (((slot % 5) * 50) + 30, 30 if slot < 5 else 68)
 
 
+def sss_slot_count() -> int:
+    return len(P5_SSS["cells"]) if P5_SSS is not None else 10
+
+
+def sss_slot_gkind(slot: int) -> int:
+    return P5_SSS["cells"][slot]["gkind"] if P5_SSS is not None else SSS_SLOT_GKIND[slot]
+
+
+def p5_sss_icon_parts() -> tuple[Placement, ...]:
+    """The owner's 6x3 grid (2026-10-12): Remix's 40x30 STAGE_ICONS for every
+    cell and RANDOM, filling the source's 48x36 cell, as the P4 character
+    select draws Remix's portraits for every cell. A vanilla stage this build
+    does not have, a P5 stage not landed and the spare cell take the locked
+    plate."""
+    parts = []
+    for cell in P5_SSS["cells"]:
+        x, y = cell["x"], cell["y"]
+        gkind = cell["gkind"]
+        built = (gkind == 0xDE or
+                 (gkind < 9 and gkind in SSS_BUILT_GKIND) or
+                 (9 <= gkind < 0xDE and not cell["locked"]))
+        if built:
+            o2r, symbol = p5_sprite("icons", cell["icon"])
+            parts.append(Placement(o2r, symbol, x, y, False, dest=SSS_ICON_DEST))
+        else:
+            parts.append(Placement("MNPlayersPortraits", SSS_LOCKED_SYMBOL,
+                                   x, y, False, dest=SSS_ICON_DEST))
+    return tuple(parts)
+
+
 def sss_icon_parts() -> tuple[Placement, ...]:
+    if P5_SSS is not None:
+        return p5_sss_icon_parts()
     parts = []
     for slot in range(10):
         gkind = SSS_SLOT_GKIND[slot]
@@ -3469,9 +3546,9 @@ def _sss_back_parts() -> tuple[Placement, ...]:
     # tiles cover 43..155 x 130..212 and the fill only 43..152 x 130..211: a
     # fill the source draws is composited, and letting the tiles "probably"
     # cover it is exactly the reasoning that loses an element.
-    Placement("MNMaps", "", 43, 130, False, fill=(0x00, 0x00, 0x00, 0x73),
+    Placement("MNMaps", "", 43, 130 + SSS_DY, False, fill=(0x00, 0x00, 0x00, 0x73),
               size=(109, 81)),
-    *(Placement("MNMaps", "llMNMapsTilesSprite", x, 130, False)
+    *(Placement("MNMaps", "llMNMapsTilesSprite", x, 130 + SSS_DY, False)
       for x in range(43, 155, 16)),
     )
 
@@ -3481,16 +3558,16 @@ def _sss_front_parts() -> tuple[Placement, ...]:
     # ICONS, camera 60 -- in front of both wallpapers, behind the cursor.
     *sss_icon_parts(),
     # PLAQUE, camera 40 -- behind the labels.
-    Placement("MNMaps", "llMNMapsWoodenCircleSprite", 189, 124, False),
+    Placement("MNMaps", "llMNMapsWoodenCircleSprite", 189, 124 + SSS_DY, False),
     # LABELS, camera 30 -- both fills first (mnMapsLabelsProcDisplay draws them
     # before its own SObj list), then the text and the three-part plate.
-    Placement("MNMaps", "", 160, 128, False, fill=(0x57, 0x60, 0x88, 0xFF),
+    Placement("MNMaps", "", 160, 128 + SSS_DY, False, fill=(0x57, 0x60, 0x88, 0xFF),
               size=(160, 6)),
-    Placement("MNMaps", "", 194, 189, False, fill=(0x00, 0x00, 0x00, 0x33),
+    Placement("MNMaps", "", 194, 189 + SSS_DY, False, fill=(0x00, 0x00, 0x00, 0x33),
               size=(74, 4)),
-    Placement("MNMaps", "llMNMapsStageSelectTextSprite", 172, 122, False,
+    Placement("MNMaps", "llMNMapsStageSelectTextSprite", 172, 122 + SSS_DY, False,
               (0xAF, 0xB1, 0xCC), env=(0x00, 0x00, 0x00)),
-    Placement("MNMaps", "llMNMapsPlateLeftSprite", 174, 191, False),
+    Placement("MNMaps", "llMNMapsPlateLeftSprite", 174, 191 + SSS_DY, False),
     # P2-1L, owner finding (7): THE MIDDLE IS ONE TILED RUN, NOT NINETEEN
     # PLACEMENTS, and that is what closes the black breaks the owner reported.
     # `mnMapsMakeLabels` (:439) draws `llMNMapsPlateMiddleSprite` -- 4x20 --
@@ -3506,9 +3583,9 @@ def _sss_front_parts() -> tuple[Placement, ...]:
     # 139..148 and the right cap's 210..228.  Same `tile`/`period` the VS
     # menu's option-tab middle already uses, and the same reason: an RDP wrap
     # is a continuous fill, not a row of stamps.
-    Placement("MNMaps", "llMNMapsPlateMiddleSprite", 186, 191, False,
+    Placement("MNMaps", "llMNMapsPlateMiddleSprite", 186, 191 + SSS_DY, False,
               tile=(76, 20), period=(4, None)),
-    Placement("MNMaps", "llMNMapsPlateRightSprite", 262, 191, False),
+    Placement("MNMaps", "llMNMapsPlateRightSprite", 262, 191 + SSS_DY, False),
     )
 
 
@@ -3524,22 +3601,51 @@ SSS_BACKGROUND = _sss_background()
 # the cursor shows a name over whichever cell it is on, and P2-1f's
 # font-composed version did the same for all nine.
 SSS_PLAQUE_BOX = (183, 141, 96, 66)
+# P5: a composed name can run past the vanilla sprites' 96 units (FINAL
+# DESTINATION is 87 DS pixels), so the box spans the whole plate, 174-286.
+if P5_SSS is not None:
+    SSS_PLAQUE_BOX = (174, 141 + SSS_DY, 112, 66)
+
+
+def p5_sss_plaque_parts(cell: dict) -> tuple[Placement, ...]:
+    """A P5 stage's emblem and name (owner decision 2, 2026-10-12): Remix's
+    series logo, in the source's emblem tint, at Remix's own offset on the
+    wooden circle (CharacterSelect.asm `position`, as mnMapsSetLogoPosition
+    places the vanilla emblems), and the name composed from the source's own
+    menu font in the source's black, centred where the vanilla names centre.
+    The font's pixels go one per DS pixel: at the frame's 4/5 its five rows
+    would be four, and at twice its size FINAL DESTINATION is 174 units on a
+    96-unit plate. Five DS rows against the vanilla names' 6.4."""
+    o2r, symbol = p5_sprite("logos", cell["logo_sprite"])
+    return (
+        Placement(o2r, symbol, 189 + cell["logo_dx"], 124 + cell["logo_dy"] + SSS_DY,
+                  False, SSS_EMBLEM_TINT),
+        Placement("MNCommonFonts", "", 183, 197 + SSS_DY, False, (0x00, 0x00, 0x00),
+                  text=cell["name_text"], scale=(1, 1), centre_width=96),
+    )
 
 
 def sss_plaque(slot: int) -> SurfaceSpec:
-    gkind = SSS_SLOT_GKIND[slot]
+    gkind = sss_slot_gkind(slot)
+    if P5_SSS is not None and 9 <= gkind < 0xDE:
+        return SurfaceSpec(f"SSS_PLAQUE_{slot}", p5_sss_plaque_parts(P5_SSS["cells"][slot]),
+                           None, under=SSS_BACKGROUND, box=SSS_PLAQUE_BOX)
+    if gkind == 0xFF:
+        # P5's spare cell: no ground, so the plaque stays bare.
+        return SurfaceSpec(f"SSS_PLAQUE_{slot}", (), None,
+                           under=SSS_BACKGROUND, box=SSS_PLAQUE_BOX)
     if gkind == 0xDE:
         # mnMapsMakeEmblem's RANDOM arm (:793): the question mark at its own
         # fixed site (mnMapsSetLogoPosition, :767), and NO name -- :831 skips
         # mnMapsMakeName for slot 9.
         parts = (Placement("MNMaps", "llMNMapsQuestionMarkSprite",
-                           223, 144, False, SSS_EMBLEM_TINT),)
+                           223, 144 + SSS_DY, False, SSS_EMBLEM_TINT),)
     else:
         dx, dy = SSS_LOGO_POS[gkind]
         parts = (
             Placement("FTEmblemSprites", SSS_EMBLEM_SYMBOL[gkind],
-                      189 + dx, 124 + dy, False, SSS_EMBLEM_TINT),
-            Placement("MNMaps", SSS_NAME_SYMBOL[gkind], 183, 196, False,
+                      189 + dx, 124 + dy + SSS_DY, False, SSS_EMBLEM_TINT),
+            Placement("MNMaps", SSS_NAME_SYMBOL[gkind], 183, 196 + SSS_DY, False,
                       (0x00, 0x00, 0x00)),
         )
     return SurfaceSpec(f"SSS_PLAQUE_{slot}", parts, None,
@@ -3596,7 +3702,7 @@ def sss_plaque_front(slot: int) -> SurfaceSpec:
 # the stage art's own scaled width, and 82 = the RANDOM sprite's own height --
 # so a move between Dream Land and RANDOM overwrites the previous state
 # exactly, which is the invariant `SurfaceSpec.box` exists to hold.
-SSS_PREVIEW_BOX = (40, 127, 111, 82)
+SSS_PREVIEW_BOX = (40, 127 + SSS_DY, 111, 82)
 SSS_PREVIEW_WALLPAPER_SCALE = (37, 125)
 
 # One row per ground this build HAS, keyed by the token the shell names it by.
@@ -3656,7 +3762,21 @@ def _sss_preview_wallpaper() -> tuple[tuple[str, int, str, str], ...]:
      if os.environ.get("NDS_P2_STAGE_SECTOR") == "1" else ())
 
 
-SSS_PREVIEW_WALLPAPER = _sss_preview_wallpaper()
+# P5: the preview panels scripts/p5/p5_stages.py lists -- a landed 1P arena's
+# own wallpaper, through the container that holds its file (the o2r names are
+# mislabelled; p5_stages.py VENUE_WALLPAPER), at the Sprite offset every stage
+# wallpaper file shares.
+def _p5_preview_wallpaper() -> tuple[tuple[str, int, str, str], ...]:
+    if P5_SSS is None:
+        return ()
+    rows = []
+    for row in P5_SSS["previews"]:
+        o2r, symbol = o2r_sprite(row["container"], row["offset"])
+        rows.append((row["token"], row["gkind"], o2r, symbol))
+    return tuple(rows)
+
+
+SSS_PREVIEW_WALLPAPER = _sss_preview_wallpaper() + _p5_preview_wallpaper()
 
 
 def sss_preview(token: str, part: Placement) -> SurfaceSpec:
@@ -3669,15 +3789,15 @@ def _sss_surface_sources() -> list[SurfaceSpec]:
     for name, _gkind, o2r, symbol in SSS_PREVIEW_WALLPAPER:
         sources.append(sss_preview(
             f"SSS_PREVIEW_{name}",
-            Placement(o2r, symbol, 40, 127, False,
+            Placement(o2r, symbol, 40, 127 + SSS_DY, False,
                       scale=SSS_PREVIEW_WALLPAPER_SCALE)))
     sources.append(sss_preview(
         "SSS_PREVIEW_RANDOM",
-        Placement("MNMaps", "llMNMapsRandomBigSprite", 40, 127, False)))
+        Placement("MNMaps", "llMNMapsRandomBigSprite", 40, 127 + SSS_DY, False)))
     # The parts in front of the 3D preview (_sss_front_parts), keyed for BG3.
     sources.append(SurfaceSpec("SSS_FRONT", _sss_front_parts(), None,
                                matte=_sss_back_parts()))
-    sources.extend(sss_plaque_front(slot) for slot in range(10))
+    sources.extend(sss_plaque_front(slot) for slot in range(sss_slot_count()))
     return sources
 
 
@@ -3691,7 +3811,7 @@ def _refresh_stage_dependent_sources() -> None:
     global SSS_BUILT_GKIND, SSS_BACKGROUND, SSS_PREVIEW_WALLPAPER, _SSS_SURFACE_END
     SSS_BUILT_GKIND = _sss_built_gkind()
     SSS_BACKGROUND = _sss_background()
-    SSS_PREVIEW_WALLPAPER = _sss_preview_wallpaper()
+    SSS_PREVIEW_WALLPAPER = _sss_preview_wallpaper() + _p5_preview_wallpaper()
     refreshed = _sss_surface_sources()
     SURFACE_SOURCES[_SSS_SURFACE_START:_SSS_SURFACE_END] = refreshed
     _SSS_SURFACE_END = _SSS_SURFACE_START + len(refreshed)

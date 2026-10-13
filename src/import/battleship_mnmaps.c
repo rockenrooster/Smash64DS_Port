@@ -435,6 +435,67 @@ static u8 *sNdsMapsPreviewBlock;
 static size_t sNdsMapsPreviewBlockSize;
 static SYMallocRegion sNdsMapsPreviewArena;
 
+#if NDS_P5
+#include "nds_p5_preview.generated.h"
+/* P5: the 1P arenas the select offers (docs/P5/New_Stages.md), by the
+ * battle's own file infos (mpcollision.c:39-44), which are the headers Remix's
+ * stage_file_table names for its preview too. */
+static GRFileInfo sNdsMapsPreviewVenueFileInfos[] =
+{
+    { &llGRMetalMapFileID, &llGRMetalMapMapHeader },
+    { &llGRZakoMapFileID,  &llGRZakoMapMapHeader },
+    { &llGRLastMapFileID,  &llGRLastMapMapHeader }
+};
+#endif
+
+/* The map file and header a preview loads: dMNMapsFileInfos for the nine,
+ * P5's rows past them, NULL for RANDOM and anything else. */
+static GRFileInfo *ndsMNMapsPreviewFileInfo(s32 gkind)
+{
+    if ((gkind >= 0) && (gkind < (s32)ARRAY_COUNT(dMNMapsFileInfos)))
+    {
+        return &dMNMapsFileInfos[gkind];
+    }
+#if NDS_P5
+    switch (gkind)
+    {
+    case nGRKindMetal:
+        return &sNdsMapsPreviewVenueFileInfos[0];
+    case nGRKindZako:
+        return &sNdsMapsPreviewVenueFileInfos[1];
+    case nGRKindLast:
+        return &sNdsMapsPreviewVenueFileInfos[2];
+    default:
+        break;
+    }
+#endif
+    return NULL;
+}
+
+/* Remix Stages.asm random_fix_2_: a stage past the nine takes Peach's
+ * Castle's camera target, "for consistency" (its position_table sets none). */
+static s32 ndsMNMapsPreviewCameraGkind(s32 gkind)
+{
+    return ((gkind > (s32)nGRKindInishie) && (gkind != 0xDE)) ?
+        (s32)nGRKindCastle : gkind;
+}
+
+/* mnMapsSetPreviewCameraPosition, then P5's panel offset: the 6x3 grid moves
+ * the preview panel down NDS_P5_PREVIEW_DY source rows (p5_stages.py
+ * LOWER_DY), and the model moves with it. The camera's viewport is the whole
+ * frame, so the model is lifted with the camera instead: eye and target rise
+ * together, which carries the target's depth down the screen by the same
+ * rows -- at the preview's 32.59-degree fovy and the ~10,200-unit
+ * eye-to-target distance, 8 rows of the 220-row viewport are 217 units. */
+static void ndsMNMapsPreviewPlaceCamera(CObj *cobj, s32 gkind)
+{
+    mnMapsSetPreviewCameraPosition(cobj, ndsMNMapsPreviewCameraGkind(gkind));
+#if NDS_P5
+    cobj->vec.eye.y += NDS_P5_PREVIEW_LIFT;
+    cobj->vec.at.y += NDS_P5_PREVIEW_LIFT;
+#endif
+}
+
 /* mnMapsMakeLayer's model, on grDisplayMakeGeometryLayer's procs and display
  * links (the native stage packet's capture rows) and with no process: the
  * source's preview plays each layer's first animation frame once. */
@@ -449,7 +510,22 @@ static GObj *ndsMNMapsPreviewMakeLayer(s32 gkind, MPGroundData *ground_data,
     };
     MPGroundDesc *gr_desc = &ground_data->gr_desc[id];
     GObj *gobj;
+    f32 scale;
 
+    if ((gkind >= 0) && (gkind < (s32)ARRAY_COUNT(scales)))
+    {
+        scale = scales[gkind];
+    }
+    else
+    {
+        /* Remix set_preview_position_: its zoom_table's scale. */
+        scale = 0.5F;
+#if NDS_P5
+#define NDS_MAPS_PREVIEW_P5_ZOOM(g, zoom) if (gkind == (g)) { scale = (zoom); }
+        NDS_P5_PREVIEW_ROWS(NDS_MAPS_PREVIEW_P5_ZOOM)
+#undef NDS_MAPS_PREVIEW_P5_ZOOM
+#endif
+    }
     if (gr_desc->dobjdesc == NULL)
     {
         return NULL;
@@ -480,9 +556,9 @@ static GObj *ndsMNMapsPreviewMakeLayer(s32 gkind, MPGroundData *ground_data,
         gcPlayAnimAll(gobj);
     }
     grDisplayDObjSetNoAnimXObj(gobj, gr_desc->dobjdesc);
-    DObjGetStruct(gobj)->scale.vec.f.x = scales[gkind];
-    DObjGetStruct(gobj)->scale.vec.f.y = scales[gkind];
-    DObjGetStruct(gobj)->scale.vec.f.z = scales[gkind];
+    DObjGetStruct(gobj)->scale.vec.f.x = scale;
+    DObjGetStruct(gobj)->scale.vec.f.y = scale;
+    DObjGetStruct(gobj)->scale.vec.f.z = scale;
     return gobj;
 }
 
@@ -709,7 +785,7 @@ static void ndsMNMapsPreviewBegin(s32 gkind)
     sNdsMapsPreviewShown = gkind;
     gNdsMapsPreviewShownGkind = gkind;
     sNdsMapsPreviewStep = NDS_MAPS_PREVIEW_STEP_IDLE;
-    if ((gkind < 0) || (gkind >= (s32)ARRAY_COUNT(dMNMapsFileInfos)) ||
+    if ((ndsMNMapsPreviewFileInfo(gkind) == NULL) ||
         (sNdsMapsPreviewBlock == NULL))
     {
         /* RANDOM shows the panel's own art and no model (mnmaps.c:1102). */
@@ -757,6 +833,7 @@ static void ndsMNMapsPreviewStepLoad(void)
 
     case NDS_MAPS_PREVIEW_STEP_MAP:
     {
+        GRFileInfo *info = ndsMNMapsPreviewFileInfo(gkind);
         size_t bytes;
         void *heap;
         void *file;
@@ -764,12 +841,11 @@ static void ndsMNMapsPreviewStepLoad(void)
         previous = ndsTaskmanSwapMallocRegion(&sNdsMapsPreviewArena);
         /* The packet's assets are loaded: the tree load writes only what
          * they left out (lbRelocGetFileSize sizes the whole tree). */
-        bytes = ndsRelocExternTreeUnloadedSize(dMNMapsFileInfos[gkind].file_id);
+        bytes = ndsRelocExternTreeUnloadedSize(info->file_id);
         heap = syTaskmanMalloc((bytes != 0u) ? bytes : 0x10u, 0x10);
-        file = lbRelocGetExternHeapFile(dMNMapsFileInfos[gkind].file_id, heap);
+        file = lbRelocGetExternHeapFile(info->file_id, heap);
         sNdsMapsPreviewGroundData = (file != NULL) ?
-            lbRelocGetFileData(MPGroundData*, file,
-                               dMNMapsFileInfos[gkind].offset) : NULL;
+            lbRelocGetFileData(MPGroundData*, file, info->offset) : NULL;
         if (sNdsMapsPreviewGroundData != NULL)
         {
             (void)ndsNativeStageBlobLoad((u32)gkind);
@@ -825,7 +901,7 @@ static void ndsMNMapsPreviewStepLoad(void)
             (void *const *)sNdsMapsPreviewLayers);
         if (sMNMapsPreviewCObj != NULL)
         {
-            mnMapsSetPreviewCameraPosition(sMNMapsPreviewCObj, gkind);
+            ndsMNMapsPreviewPlaceCamera(sMNMapsPreviewCObj, gkind);
         }
         sNdsMapsPreviewHasModel = TRUE;
         sNdsMapsPreviewFreshDraw = TRUE;
@@ -881,6 +957,16 @@ void ndsMNMapsPreviewInit(s32 gkind)
             max = size;
         }
     }
+#if NDS_P5
+    for (i = 0; i < (s32)ARRAY_COUNT(sNdsMapsPreviewVenueFileInfos); i++)
+    {
+        size = lbRelocGetFileSize(sNdsMapsPreviewVenueFileInfos[i].file_id);
+        if (max < size)
+        {
+            max = size;
+        }
+    }
+#endif
     sNdsMapsPreviewBlockSize = ((max + 0x1fu) & ~(size_t)0x1fu) +
         NDS_MAPS_PREVIEW_BLOB_BYTES;
     sNdsMapsPreviewBlock = syTaskmanMalloc(sNdsMapsPreviewBlockSize, 0x20);
@@ -913,7 +999,7 @@ void ndsMNMapsPreviewInit(s32 gkind)
         cobj->projection.persp.far = 16384.0F;
         cobj->projection.persp.fovy = 32.588150F;
         cobj->projection.persp.aspect = 1.3037037F;
-        mnMapsSetPreviewCameraPosition(cobj, gkind);
+        ndsMNMapsPreviewPlaceCamera(cobj, gkind);
         gcAddGObjProcess(camera_gobj, mnMapsPreviewCameraThreadUpdate,
                          nGCProcessKindThread, 1);
     }

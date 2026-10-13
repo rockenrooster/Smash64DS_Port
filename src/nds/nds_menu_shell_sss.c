@@ -96,16 +96,27 @@
  * own include note. */
 #include <nds/nds_scene_harness.h>
 
-#define NDS_SSS_SLOTS 10u
-#define NDS_SSS_ROW 5u
 /* mnMapsGetGroundKind:453 -- slot 9's ground kind. */
 #define NDS_SSS_GKIND_RANDOM 0xdeu
+#if NDS_P5
+/* P5 (docs/P5/New_Stages.md T6): the owner's 6x3 grid (2026-10-12), Remix's
+ * page 1 with the three later-page stages, a spare cell and RANDOM. The cells
+ * (row-major), the grid's origin and pitch, and the plaque copy of each cell
+ * come from scripts/p5/p5_stages.py, which the UI kit bake reads too. */
+#include <nds/nds_p5.h>
+#include "nds_p5_sss.generated.inc"
+/* The spare cell: never a ground, always locked. */
+#define NDS_SSS_GKIND_NONE 0xffu
+#else
+#define NDS_SSS_SLOTS 10u
+#define NDS_SSS_ROW 5u
 
 /* mnMapsMakeIcons' grid, in source units. */
 #define NDS_SSS_ICON_X0 30
 #define NDS_SSS_ICON_PITCH 50
 #define NDS_SSS_ICON_Y0 30
 #define NDS_SSS_ICON_Y1 68
+#endif
 /* mnMapsSetCursorPosition (mnmaps.c:845/:851): the frame sits 7 px up and
  * left of the icon -- `slot * 50 + 23` against the icon's `slot * 50 + 30`.
  * P2-1L (6) applies it directly: with the grid and the cursor both at the
@@ -144,6 +155,7 @@
  * `scene_prev != nSCKindMaps` (mnplayersvs.c:4899), the condition P2-1e already
  * transcribed against a scene that could not yet be scene_prev. It can now. */
 
+#if !NDS_P5
 /* mnMapsGetGroundKind, mnmaps.c:453. */
 static const u8 kNdsSssSlotGkind[NDS_SSS_SLOTS] = {
     (u8)nGRKindCastle, (u8)nGRKindJungle, (u8)nGRKindHyrule,
@@ -151,6 +163,7 @@ static const u8 kNdsSssSlotGkind[NDS_SSS_SLOTS] = {
     (u8)nGRKindPupupu, (u8)nGRKindSector, (u8)nGRKindYamabuki,
     (u8)NDS_SSS_GKIND_RANDOM
 };
+#endif
 
 /* Which grounds this build HAS. Same shape as the source's ground_mask
  * (LBBACKUP_MASK_STAGE, sc/scene.h:107), and it is the whole lock table.
@@ -281,6 +294,31 @@ static const u8 kNdsSssSlotGkind[NDS_SSS_SLOTS] = {
 #else
 #define NDS_SSS_PREVIEW_SECTOR NDS_MENU_VS_SURFACE_NONE
 #endif
+#if NDS_P5
+/* P5: by ground rather than by slot, since the grid is generated; the P5
+ * stages' panels are the ones the kit bakes (NDS_SSS_P5_PREVIEW_ROWS). */
+static NdsUiKitSurfaceId ndsMenuShellSssPreviewOfGkind(u32 gkind)
+{
+    switch (gkind)
+    {
+    case nGRKindCastle: return NDS_SSS_PREVIEW_CASTLE;
+    case nGRKindSector: return NDS_SSS_PREVIEW_SECTOR;
+    case nGRKindJungle: return NDS_SSS_PREVIEW_JUNGLE;
+    case nGRKindZebes: return NDS_SSS_PREVIEW_ZEBES;
+    case nGRKindHyrule: return NDS_SSS_PREVIEW_HYRULE;
+    case nGRKindYoster: return NDS_SSS_PREVIEW_YOSTER;
+    case nGRKindPupupu: return NDS_MN_UI_KIT_SURFACE_SSS_PREVIEW_DREAM_LAND;
+    case nGRKindYamabuki: return NDS_SSS_PREVIEW_YAMABUKI;
+    case nGRKindInishie: return NDS_SSS_PREVIEW_INISHIE;
+    case NDS_SSS_GKIND_RANDOM: return NDS_MN_UI_KIT_SURFACE_SSS_PREVIEW_RANDOM;
+#define NDS_SSS_P5_PREVIEW_CASE(g, token) \
+    case (g): return NDS_MN_UI_KIT_SURFACE_SSS_PREVIEW_##token;
+    NDS_SSS_P5_PREVIEW_ROWS(NDS_SSS_P5_PREVIEW_CASE)
+#undef NDS_SSS_P5_PREVIEW_CASE
+    default: return NDS_MENU_VS_SURFACE_NONE;
+    }
+}
+#else
 static const NdsUiKitSurfaceId kNdsSssPreviewSurface[NDS_SSS_SLOTS] = {
     NDS_SSS_PREVIEW_CASTLE, NDS_SSS_PREVIEW_JUNGLE,
     NDS_SSS_PREVIEW_HYRULE, NDS_SSS_PREVIEW_ZEBES,
@@ -289,6 +327,7 @@ static const NdsUiKitSurfaceId kNdsSssPreviewSurface[NDS_SSS_SLOTS] = {
     NDS_SSS_PREVIEW_SECTOR, NDS_SSS_PREVIEW_YAMABUKI,
     NDS_MN_UI_KIT_SURFACE_SSS_PREVIEW_RANDOM
 };
+#endif
 
 static NdsUiKitSurfaceId sSssPreviewSurface;
 
@@ -299,6 +338,7 @@ static NdsUiKitSurfaceId sSssPreviewSurface;
  * of BG0: SSS_FRONT at the entry, and the plaque's own copy per slot (its
  * box holds the wooden circle and the labels beneath the name, so a cleared
  * box re-blits whole). BG2 keeps the whole screen as before. */
+#if !NDS_P5
 static const NdsUiKitSurfaceId kNdsSssPlaqueFrontSurface[NDS_SSS_SLOTS] = {
     NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_FRONT_0,
     NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_FRONT_1,
@@ -311,6 +351,7 @@ static const NdsUiKitSurfaceId kNdsSssPlaqueFrontSurface[NDS_SSS_SLOTS] = {
     NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_FRONT_8,
     NDS_MN_UI_KIT_SURFACE_SSS_PLAQUE_FRONT_9
 };
+#endif
 static NdsUiKitSurfaceId sSssPlaqueFrontSurface;
 
 /* THE CURSOR IS THE ONLY OBJ LEFT ON THIS SCREEN. P2-1L (6) moved the ten grid
@@ -372,6 +413,7 @@ static void ndsMenuShellSssCue(u32 id)
  * that wants any other one says so -- which the sentence above already
  * required and the eight-stage sweep already does. */
 static u32 ndsMenuShellSssGroundLocked(u32 gkind);
+static u32 ndsMenuShellSssFindSlot(u32 gkind);
 static u32 ndsMenuShellSssSlotOfGkind(u32 gkind);
 
 __attribute__((used)) volatile u32 gNdsMenuShellSssWalkTargetGkind =
@@ -386,11 +428,20 @@ u32 ndsMenuShellSssWalkTargetGkind(void)
     {
         u32 want = gNdsMenuShellSssWalkTargetGkind;
 
+#if NDS_P5
+        if ((want != NDS_SSS_GKIND_RANDOM) && (want != NDS_SSS_GKIND_NONE) &&
+            (ndsMenuShellSssFindSlot(want) < NDS_SSS_SLOTS) &&
+            (ndsMenuShellSssGroundLocked(want) == FALSE))
+        {
+            return want;
+        }
+#else
         if ((want <= (u32)nGRKindInishie) &&
             (ndsMenuShellSssGroundLocked(want) == FALSE))
         {
             return want;
         }
+#endif
     }
     return (u32)nGRKindPupupu;
 }
@@ -429,7 +480,12 @@ static u32 ndsMenuShellSssGroundLocked(u32 gkind)
     }
     if (gkind > (u32)nGRKindInishie)
     {
+#if NDS_P5
+        /* A P5 stage is offered once it has landed (P7 adds its unlock). */
+        return (ndsP5StageAdmitted(gkind) != FALSE) ? FALSE : TRUE;
+#else
         return TRUE;
+#endif
     }
     if ((NDS_SSS_GROUND_MASK & (1u << gkind)) == 0u)
     {
@@ -461,7 +517,7 @@ static u32 ndsMenuShellSssSlotLocked(u32 slot)
 
 /* mnMapsGetSlot, mnmaps.c:471 -- the inverse, used only to restore the cursor
  * from gSCManagerSceneData.maps_vsmode_gkind on re-entry. */
-static u32 ndsMenuShellSssSlotOfGkind(u32 gkind)
+static u32 ndsMenuShellSssFindSlot(u32 gkind)
 {
     u32 i;
 
@@ -472,20 +528,39 @@ static u32 ndsMenuShellSssSlotOfGkind(u32 gkind)
             return i;
         }
     }
-    return 6u; /* nGRKindPupupu's slot: the only ground this build has. */
+    return NDS_SSS_SLOTS;
+}
+
+static u32 ndsMenuShellSssSlotOfGkind(u32 gkind)
+{
+    u32 slot = ndsMenuShellSssFindSlot(gkind);
+
+    /* A ground with no cell opens on Dream Land's, the one every build has. */
+    return (slot < NDS_SSS_SLOTS) ?
+        slot : ndsMenuShellSssFindSlot((u32)nGRKindPupupu);
 }
 
 static s32 ndsMenuShellSssIconX(u32 slot)
 {
+#if NDS_P5
+    return (s32)((slot % NDS_SSS_ROW) * (u32)NDS_SSS_ICON_PITCH) +
+        NDS_SSS_ICON_X0;
+#else
     return (slot < NDS_SSS_ROW) ?
         (s32)((slot * (u32)NDS_SSS_ICON_PITCH)) + NDS_SSS_ICON_X0 :
         (s32)(((slot - NDS_SSS_ROW) * (u32)NDS_SSS_ICON_PITCH)) +
             NDS_SSS_ICON_X0;
+#endif
 }
 
 static s32 ndsMenuShellSssIconY(u32 slot)
 {
+#if NDS_P5
+    return (s32)((slot / NDS_SSS_ROW) * (u32)NDS_SSS_ICON_PITCH_Y) +
+        NDS_SSS_ICON_Y0;
+#else
     return (slot < NDS_SSS_ROW) ? NDS_SSS_ICON_Y0 : NDS_SSS_ICON_Y1;
+#endif
 }
 
 /* THE TWO SURFACES THE CURSOR OWNS, at most `budget` of them a frame.
@@ -520,7 +595,11 @@ static void ndsMenuShellSssSyncSurfaces(u32 budget)
         }
         count++;
     }
+#if NDS_P5
+    wanted = ndsMenuShellSssPreviewOfGkind((u32)kNdsSssSlotGkind[sSssCursorSlot]);
+#else
     wanted = kNdsSssPreviewSurface[sSssCursorSlot];
+#endif
     if ((wanted != NDS_MENU_VS_SURFACE_NONE) &&
         (wanted != sSssPreviewSurface) && (count < budget))
     {
@@ -581,7 +660,7 @@ static void ndsMenuShellSssPopulate(void)
  * scan is bounded by the row length -- see the generalisation note above. */
 static u32 ndsMenuShellSssStepRow(u32 slot, s32 step)
 {
-    u32 base = (slot < NDS_SSS_ROW) ? 0u : NDS_SSS_ROW;
+    u32 base = (slot / NDS_SSS_ROW) * NDS_SSS_ROW;
     u32 index = slot - base;
     u32 tries;
 
@@ -615,6 +694,43 @@ static void ndsMenuShellSssMoveTo(u32 slot)
     ndsMenuShellSssShowSelection(0u);
 }
 
+#if NDS_P5
+/* P5: RANDOM, and the character select's Stage Select Off, pick among every
+ * ground the select offers -- Remix's random stage draws from its stages,
+ * new ones included. The source's own draw (mnmaps.c:1383, one time-RNG
+ * roll per try over the ground count) over the offered list instead of the
+ * nine, with its no-repeat clause; NDS_SSS_GKIND_RANDOM if nothing qualifies,
+ * and the caller's own fallback runs. */
+static u32 ndsMenuShellSssRandomGround(void)
+{
+    u8 offered[NDS_SSS_SLOTS];
+    u32 count = 0u;
+    u32 i;
+    u32 tries;
+
+    for (i = 0u; i < NDS_SSS_SLOTS; i++)
+    {
+        u32 gkind = (u32)kNdsSssSlotGkind[i];
+
+        if ((gkind != NDS_SSS_GKIND_RANDOM) && (gkind != NDS_SSS_GKIND_NONE) &&
+            (ndsMenuShellSssGroundLocked(gkind) == FALSE))
+        {
+            offered[count++] = (u8)gkind;
+        }
+    }
+    for (tries = 0u; (count != 0u) && (tries < 32u); tries++)
+    {
+        u32 pick = (u32)offered[syUtilsRandTimeUCharRange((s32)count)];
+
+        if ((count <= 1u) || (pick != (u32)gSCManagerSceneData.gkind))
+        {
+            return pick;
+        }
+    }
+    return NDS_SSS_GKIND_RANDOM;
+}
+#endif
+
 /* mnMapsSaveSceneData, mnmaps.c:1367 -- through the P2-1a descriptor, which is
  * the battle's only input, rather than straight into the scene data. The
  * descriptor's STAGE FIELD is the only thing this screen writes: the fighters
@@ -640,7 +756,14 @@ static void ndsMenuShellSssCommit(void)
         u32 tries;
 
         gkind = NDS_SSS_GKIND_RANDOM; /* "unresolved" -- never a ground id */
-        for (tries = 0u; tries < 32u; tries++)
+#if NDS_P5
+        gkind = ndsMenuShellSssRandomGround();
+        if (gkind != NDS_SSS_GKIND_RANDOM)
+        {
+            gNdsMenuShellSssRandomCount++;
+        }
+#endif
+        for (tries = 0u; (gkind == NDS_SSS_GKIND_RANDOM) && (tries < 32u); tries++)
         {
             /* mnmaps.c:1383 rolls syUtilsRandTimeUCharRange(9) -- every ground
              * id 0..8, not just the first five. The old Inishie+1 bound could
@@ -843,7 +966,7 @@ static void ndsMenuShellUpdateSss(u32 held, u32 taps)
     }
     if ((held & NDS_INPUT_DOWN) != 0u)
     {
-        if ((sSssCursorSlot < NDS_SSS_ROW) &&
+        if (((sSssCursorSlot + NDS_SSS_ROW) < NDS_SSS_SLOTS) &&
             (ndsMenuShellSssSlotLocked(sSssCursorSlot + NDS_SSS_ROW) == FALSE))
         {
             ndsMenuShellSssMoveTo(sSssCursorSlot + NDS_SSS_ROW);

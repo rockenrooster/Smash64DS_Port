@@ -74,3 +74,10 @@ worktree_report.md
 # Local pre-change backups (project CLAUDE.md convention) stay on disk only.
 backups/
 /.codex-worktrees/
+
+# P6: ripped Brawl/Ultimate reference data stays local (public repo; docs/P6/P6_PLAN.md D1).
+/decomp/alt_assets/Fighters/Super Smash Bros Ultimate/
+/decomp/alt_assets/Fighters/Super Smash Bros brawl/
+# P6: local-only reference scenes and owner voice clips beside the committed art.
+/art/**/*.local.blend
+/art/**/voice.local/

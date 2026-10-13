@@ -1,0 +1,27 @@
+{
+ "schema": "p5-stages-v1",
+ "comment": "P5 stage registry (docs/P5/New_Stages.md, T1). One row per P5 stage; the select's grid and the vanilla cells live in scripts/p5/p5_sss.py. ROM facts (icon, zoom, training parent, map file) are read from the staged Remix build by the generators; a row carries the port's own decisions.",
+ "stages": [
+  {"name": "meta_crystal", "title": "Meta Crystal", "token": "META_CRYSTAL", "remix_id": 13, "gkind": 13,
+   "source": "vanilla", "descriptor": "metal", "logo": "MARIO_BROS",
+   "camera": "default", "bgm": [37], "items": "header", "hazard": null, "unlock_id": 0, "landed": true},
+  {"name": "duel_zone", "title": "Duel Zone", "token": "DUEL_ZONE", "remix_id": 14, "gkind": 14,
+   "source": "vanilla", "descriptor": "zako", "logo": "SMASH",
+   "camera": "default", "bgm": [36], "items": "header", "hazard": null, "unlock_id": 1, "landed": true},
+  {"name": "final_destination", "title": "Final Destination", "token": "FINAL_DESTINATION", "remix_id": 16, "gkind": 16,
+   "source": "vanilla", "descriptor": "last", "logo": "SMASH",
+   "camera": "default", "bgm": [24, 25], "bgm_switch_frame": 840, "items": "none", "hazard": null, "unlock_id": 2, "landed": true},
+  {"name": "first_destination", "title": "First Destination", "token": "FIRST_DESTINATION", "remix_id": 42, "gkind": 41,
+   "source": "remix", "descriptor": null, "logo": "SMASH",
+   "camera": "default", "bgm": null, "items": "header", "hazard": null, "unlock_id": 3, "landed": false},
+  {"name": "bowsers_stadium", "title": "Bowser's Stadium", "token": "BOWSERS_STADIUM", "remix_id": 67, "gkind": 42,
+   "source": "remix", "descriptor": null, "logo": "BOWSER",
+   "camera": "default", "bgm": null, "items": "header", "hazard": "bombs", "unlock_id": 4, "landed": false},
+  {"name": "hyrule_temple", "title": "Hyrule Temple", "token": "HYRULE_TEMPLE", "remix_id": 85, "gkind": 43,
+   "source": "remix", "descriptor": null, "logo": "ZELDA",
+   "camera": "inishie", "bgm": null, "items": "header", "hazard": null, "unlock_id": 5, "landed": false},
+  {"name": "dinosaur_land", "title": "Dinosaur Land", "token": "DINOSAUR_LAND", "remix_id": 193, "gkind": 44,
+   "source": "remix", "descriptor": null, "logo": "YOSHI",
+   "camera": "inishie", "bgm": null, "items": "header", "hazard": null, "unlock_id": 6, "landed": false}
+ ]
+}
