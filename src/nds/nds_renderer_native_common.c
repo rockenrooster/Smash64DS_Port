@@ -5613,6 +5613,67 @@ static u32 ndsRendererEntryEffectIsOverrideSource(u32 root_index)
 static NDSEntryEffectGroupState
     sNdsEntryEffectStateGroups[NDS_ENTRY_STATE_GROUPS];
 
+#ifdef NDS_ENTRY_EFFECT_P4_ROOT_COUNT
+/* P4 (2026-10-13): the contents' roots take the state cache too. Four
+ * Sonics' entry planes (fifteen roots, 23 groups a plane) re-resolved every
+ * group's state on every draw -- the ~2,500-cycle resolution above, ~90 groups
+ * a frame for two seconds of entry. A content's root takes a slot and its
+ * groups' range on its first cacheable draw, per heap generation; the packet
+ * replay stays the Arwing's (its arena is Sector Z's). */
+#define NDS_ENTRY_P4_STATE_ROOTS 40u
+#define NDS_ENTRY_P4_STATE_GROUPS 96u
+#define NDS_ENTRY_P4_STATE_NONE 0xffu
+static NDSEntryEffectStateRoot sNdsEntryP4StateRoots[NDS_ENTRY_P4_STATE_ROOTS];
+static NDSEntryEffectGroupState
+    sNdsEntryP4StateGroups[NDS_ENTRY_P4_STATE_GROUPS];
+static u8 sNdsEntryP4StateSlot[NDS_ENTRY_EFFECT_P4_ROOT_COUNT];
+static u8 sNdsEntryP4StateFirst[NDS_ENTRY_P4_STATE_ROOTS];
+static u32 sNdsEntryP4StateSlots;
+static u32 sNdsEntryP4StateGroupsUsed;
+static u32 sNdsEntryP4StateGen;
+
+static sb32 ndsRendererEntryEffectP4State(
+    u32 root_index, const NDSEntryEffectRoot *root,
+    NDSEntryEffectStateRoot **state_root,
+    NDSEntryEffectGroupState **state_groups)
+{
+    const u32 p = root_index - NDS_ENTRY_EFFECT_P4_ROOT_FIRST;
+    u32 slot;
+
+    if (sNdsEntryP4StateGen != gNdsTaskmanHeapGeneration + 1u)
+    {
+        memset(sNdsEntryP4StateSlot, NDS_ENTRY_P4_STATE_NONE,
+               sizeof(sNdsEntryP4StateSlot));
+        sNdsEntryP4StateSlots = 0u;
+        sNdsEntryP4StateGroupsUsed = 0u;
+        sNdsEntryP4StateGen = gNdsTaskmanHeapGeneration + 1u;
+    }
+    if ((p >= NDS_ENTRY_EFFECT_P4_ROOT_COUNT) ||
+        ((u32)root->group_count > NDS_ENTRY_STATE_GROUPS))
+    {
+        return FALSE;
+    }
+    slot = sNdsEntryP4StateSlot[p];
+    if (slot == NDS_ENTRY_P4_STATE_NONE)
+    {
+        if ((sNdsEntryP4StateSlots >= NDS_ENTRY_P4_STATE_ROOTS) ||
+            (sNdsEntryP4StateGroupsUsed + (u32)root->group_count >
+             NDS_ENTRY_P4_STATE_GROUPS))
+        {
+            return FALSE;
+        }
+        slot = sNdsEntryP4StateSlots++;
+        sNdsEntryP4StateFirst[slot] = (u8)sNdsEntryP4StateGroupsUsed;
+        sNdsEntryP4StateGroupsUsed += (u32)root->group_count;
+        sNdsEntryP4StateRoots[slot].valid = 0u;
+        sNdsEntryP4StateSlot[p] = (u8)slot;
+    }
+    *state_root = &sNdsEntryP4StateRoots[slot];
+    *state_groups = &sNdsEntryP4StateGroups[sNdsEntryP4StateFirst[slot]];
+    return TRUE;
+}
+#endif
+
 static inline __attribute__((always_inline)) u32
 ndsRendererEntryEffectStateWords(void)
 {
@@ -6355,6 +6416,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
     u32 state_recording = FALSE;
     u32 state_ok = TRUE;
     u32 state_replayed = FALSE;
+    u32 state_fox = FALSE;
     u32 state_light_written = 0u;
     u32 composed_ready = FALSE;
 
@@ -6865,19 +6927,35 @@ s32 ndsRendererSubmitNativeEntryEffect(
 #endif
 
     if ((gNdsEntryEffectStateCache != 0u) && (static_proven != FALSE) &&
-        (owner_asset_id == 161u) && (material_count == 0u) &&
-        (root_index >= NDS_ENTRY_EFFECT_FOX_ROOT_FIRST) &&
-        (root_index < NDS_ENTRY_EFFECT_FOX_ROOT_FIRST + NDS_ENTRY_STATE_ROOTS) &&
+        (material_count == 0u) &&
         (root_offset != gNdsEntryEffectWitnessRoot))
     {
-        u32 first = (u32)root->first_group -
-            (u32)sNdsEntryEffectRoots[NDS_ENTRY_EFFECT_FOX_ROOT_FIRST].first_group;
-
-        if (first + (u32)root->group_count <= NDS_ENTRY_STATE_GROUPS)
+        if ((owner_asset_id == 161u) &&
+            (root_index >= NDS_ENTRY_EFFECT_FOX_ROOT_FIRST) &&
+            (root_index <
+             NDS_ENTRY_EFFECT_FOX_ROOT_FIRST + NDS_ENTRY_STATE_ROOTS))
         {
-            state_root = &sNdsEntryEffectStateRoots[
-                root_index - NDS_ENTRY_EFFECT_FOX_ROOT_FIRST];
-            state_groups = &sNdsEntryEffectStateGroups[first];
+            u32 first = (u32)root->first_group -
+                (u32)sNdsEntryEffectRoots[
+                    NDS_ENTRY_EFFECT_FOX_ROOT_FIRST].first_group;
+
+            if (first + (u32)root->group_count <= NDS_ENTRY_STATE_GROUPS)
+            {
+                state_root = &sNdsEntryEffectStateRoots[
+                    root_index - NDS_ENTRY_EFFECT_FOX_ROOT_FIRST];
+                state_groups = &sNdsEntryEffectStateGroups[first];
+                state_fox = TRUE;
+            }
+        }
+#ifdef NDS_ENTRY_EFFECT_P4_ROOT_COUNT
+        else if (root_index >= NDS_ENTRY_EFFECT_P4_ROOT_FIRST)
+        {
+            (void)ndsRendererEntryEffectP4State(root_index, root, &state_root,
+                                                &state_groups);
+        }
+#endif
+        if (state_root != NULL)
+        {
             if (ndsRendererEntryEffectStateMatches(
                     state_root, stats, initial_prim_color, initial_env_color,
                     initial_othermode_h, initial_othermode_l,
@@ -6909,8 +6987,8 @@ s32 ndsRendererSubmitNativeEntryEffect(
     {
         u32 ramp_names[NDS_ENTRY_STATE_GROUPS];
 #if NDS_ENTRY_PACKET_LIVE
-        const u32 packet_first =
-            (u32)(state_groups - &sNdsEntryEffectStateGroups[0]);
+        const u32 packet_first = (state_fox != FALSE) ?
+            (u32)(state_groups - &sNdsEntryEffectStateGroups[0]) : 0u;
         NDSEntryEffectPacket *packet = NULL;
         NDSEntryEffectPacketRecorder packet_rec;
         u32 packet_recording = FALSE;
@@ -6948,7 +7026,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
             }
         }
 #if NDS_ENTRY_PACKET_LIVE
-        if (state_replayed != FALSE)
+        if ((state_replayed != FALSE) && (state_fox != FALSE))
         {
             packet = ndsRendererEntryEffectPacketFor(
                 root_index - NDS_ENTRY_EFFECT_FOX_ROOT_FIRST);
