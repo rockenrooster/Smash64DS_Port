@@ -48,6 +48,14 @@ KIT_EXTRA = {
         "SWG_RHair1__swing": 9, "SWG_RHair3__swing": 9,
         "SWG_String0__swing": 5,
     },
+    # Ike's kit on Roy: the left shoulder armour on Roy's left pad (20),
+    # the headband's tails on the head, the cape's swing chains on Roy's cape
+    # (15-18).
+    "roy": {
+        "TransN": 1, "ThrowN": 1, "LArmorN": 20, "SWG_hatiA1__swing": 9,
+        "SWG_RMant1__swing": 16, "SWG_LMant1__swing": 16,
+        "SWG_RMant3__swing": 17, "SWG_LMant3__swing": 17,
+    },
 }
 
 
@@ -559,6 +567,7 @@ def main() -> int:
         ops = json.loads(args.ops.read_text(encoding="utf-8"))
         ops["vertices"] = json.loads(args.anchors.read_text(encoding="utf-8"))["vertices"]
         ops["_migrate_edits"] = args.migrate_edits
+        ops["_base_dir"] = str(args.base.parent)
         args.out.mkdir(parents=True, exist_ok=True)
         scene = compose(base, fit, ops, args.role, args.kit_dir, args.out)
         for png in args.base.parent.glob("tex_*.png"):
@@ -861,6 +870,62 @@ def compose(base: dict, fit: dict, ops: dict, role: str, kit_dir: Path | None, o
         for i in idx:
             s0, t0 = scene["vertices"][i]["st"]
             scene["vertices"][i]["st"] = [int(round(s0 * sc.get("s", 1.0))), int(round(t0 * sc.get("t", 1.0)))]
+    # Palette rules (ops "palette": base material -> rules): each palette
+    # entry takes the first rule whose hue range (degrees; saturation and
+    # value floors optional) holds it: a new hue, saturation and value as
+    # multipliers, or a fixed colour. Parameters only; the texels stay.
+    import colorsys
+    for (m, colour), mi in remap.items():
+        rules = ops.get("palette", {}).get(str(m))
+        mat = scene["materials"][mi]
+        if not rules or not mat.get("texture"):
+            continue
+        tex = mat["texture"]
+        if "texels" not in tex:
+            # The base's decoded image: its colours (at most a CI4 palette's
+            # sixteen) become the palette, its pixels the texels.
+            from PIL import Image
+            img = Image.open(Path(ops["_base_dir"]) / tex["file"]).convert("RGBA")
+            colours, texels = [], []
+            for y in range(img.height):
+                row = []
+                for x in range(img.width):
+                    c = list(img.getpixel((x, y)))
+                    if c not in colours:
+                        colours.append(c)
+                    row.append(colours.index(c))
+                texels.append(row)
+            if len(colours) > 16:
+                raise SystemExit(f"palette: material {m} has {len(colours)} colours")
+            tex = dict(tex, palette=colours, texels=texels)
+        pal = []
+        for rgba in tex["palette"]:
+            r, g, b = (c / 255.0 for c in rgba[:3])
+            h, s_, v = colorsys.rgb_to_hsv(r, g, b)
+            hue = h * 360.0
+            for rule in rules:
+                lo, hi = rule.get("hue", (0, 360))
+                inside = (lo <= hue <= hi) if lo <= hi else (hue >= lo or hue <= hi)
+                if not inside or s_ < rule.get("min_sat", 0.0) or v < rule.get("min_val", 0.0) \
+                        or s_ > rule.get("max_sat", 1.0):
+                    continue
+                if "color" in rule:
+                    c = rule["color"]
+                    r, g, b = (int(c[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
+                else:
+                    h = (rule["to_hue"] / 360.0) if "to_hue" in rule else h
+                    s_ = min(1.0, s_ * rule.get("sat", 1.0))
+                    v = min(1.0, v * rule.get("val", 1.0))
+                    r, g, b = colorsys.hsv_to_rgb(h, s_, v)
+                break
+            pal.append([int(round(r * 255)), int(round(g * 255)), int(round(b * 255)), rgba[3]])
+        name = f"p_{m}_{tex['width']}x{tex['height']}.png"
+        from PIL import Image
+        rgba_img = [tuple(pal[i]) for row in tex["texels"] for i in row]
+        img = Image.new("RGBA", (tex["width"], tex["height"]))
+        img.putdata(rgba_img)
+        img.save(out / name)
+        mat["texture"] = dict(tex, file=name, palette=pal)
     # Composed textures (face_frames.py) or authored ones replace a base
     # material's image.
     for (m, colour), mi in remap.items():

@@ -43,7 +43,7 @@ then the high, then the look's build rules and pins.
 | Fighter | Step | State |
 |---|---|---|
 | Palutena | G0 look (owner route: Peach reshaped onto the kit) | low in review; high next |
-| Ike | I0 null clone done (A1); I1 approved; I2-I6 | planned |
+| Ike | I0 null clone done (A1); I1 approved; I2 look started 2026-10-13 (route R on Roy's low: the kit fitted on Roy's tree, v1 = Roy recoloured to the kit's palette by `palette` rules, 202 of 222 triangles; in owner review); I3-I6 | I2 in progress |
 | Palutena | P0 null clone done (A1); P1 approved; P2-P8 | planned |
 
 ## A1 record
