@@ -647,9 +647,9 @@
     -63.5
    ],
    "to": [
-    125,
-    130,
-    -60
+    118,
+    170,
+    -64
    ],
    "joints": [
     9
@@ -662,9 +662,9 @@
     -56.9
    ],
    "to": [
-    75,
-    45,
-    -92
+    78,
+    135,
+    -105
    ],
    "joints": [
     9
@@ -877,7 +877,7 @@
    "to": [
     0,
     250,
-    -46.5
+    -43
    ],
    "joints": [
     25
@@ -891,8 +891,8 @@
    ],
    "to": [
     0,
-    80,
-    101
+    61,
+    111
    ],
    "joints": [
     26
@@ -906,7 +906,7 @@
    ],
    "to": [
     0,
-    80,
+    83,
     -126
    ],
    "joints": [
@@ -920,9 +920,9 @@
     -0.1
    ],
    "to": [
-    112,
-    80,
-    0
+    118,
+    64,
+    5
    ],
    "joints": [
     26
@@ -951,8 +951,8 @@
    ],
    "to": [
     0,
-    25,
-    -132
+    125,
+    -122
    ],
    "joints": [
     9
@@ -1150,7 +1150,8 @@
   "art/p6/palutena/look/pp_low_edits_chest3.json",
   "art/p6/palutena/look/pp_low_edits_chest4.json",
   "art/p6/palutena/look/pp_low_edits_slit.json",
-  "art/p6/palutena/look/pp_low_edits_skirt8.json"
+  "art/p6/palutena/look/pp_low_edits_skirt8.json",
+  "art/p6/palutena/look/pp_low_edits_torso.json"
  ],
  "textures": {
   "skirt_hem": {
@@ -1298,6 +1299,51 @@
     0,
     0
    ],
+   "max": 15,
+   "box": [
+    [
+     -200,
+     250,
+     -200
+    ],
+    [
+     200,
+     500,
+     200
+    ]
+   ]
+  },
+  {
+   "joints": [
+    7
+   ],
+   "box": [
+    [
+     -40,
+     395,
+     -30
+    ],
+    [
+     40,
+     440,
+     40
+    ]
+   ],
+   "kit": {
+    "meshes": [
+     "body_mh_0_0",
+     "body_mh_0_1"
+    ],
+    "regions": [
+     2,
+     7,
+     8
+    ]
+   },
+   "axis": [
+    0,
+    12
+   ],
    "max": 15
   },
   {
@@ -1402,39 +1448,6 @@
    },
    "centre_joint": 19,
    "max": 25
-  },
-  {
-   "stage": "after_edits",
-   "joints": [
-    2
-   ],
-   "box": [
-    [
-     -60,
-     300,
-     -60
-    ],
-    [
-     60,
-     420,
-     70
-    ]
-   ],
-   "kit": {
-    "meshes": [
-     "body_mh_0_0",
-     "body_mh_0_1"
-    ],
-    "regions": [
-     1,
-     2
-    ]
-   },
-   "axis": [
-    0,
-    8
-   ],
-   "max": 15
   },
   {
    "stage": "after_edits",
