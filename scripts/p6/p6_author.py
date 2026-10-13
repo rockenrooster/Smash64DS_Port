@@ -25,10 +25,12 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import struct
 import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+REPO = HERE.parents[1]
 sys.path.insert(0, str(HERE.parent / "p4"))
 import p4_contents  # noqa: E402
 
@@ -37,6 +39,13 @@ import p4_contents  # noqa: E402
 # animations). Identity keys only describe the spec.
 SPEC_IDENTITY = {"schema", "content", "comment"}
 SPEC_SCHEMA = "p6-spec-v1"
+# Spec keys this author applies.
+SPEC_APPLIED = {"files"}
+# "files": the content's own main and model file (model_writer.py), by role:
+# the descriptor slot each replaces.
+FILE_ROLES = {"main": 0, "model": 3}
+# New file ids live in the P6 window (P6_PLAN.md A1 record: 0x1A00-0x1BFF).
+P6_FILE_WINDOW = range(0x1A00, 0x1C00)
 
 
 class AuthorError(SystemExit):
@@ -56,7 +65,7 @@ def load_spec(path: Path | None, name: str) -> tuple[dict, str | None]:
         raise AuthorError(f"{path}: schema {spec.get('schema')!r}, expected {SPEC_SCHEMA}")
     if spec.get("content", name) != name:
         raise AuthorError(f"{path}: spec of {spec['content']!r}, not {name!r}")
-    unknown = sorted(set(spec) - SPEC_IDENTITY)
+    unknown = sorted(set(spec) - SPEC_IDENTITY - SPEC_APPLIED)
     if unknown:
         raise AuthorError(f"{path}: spec keys {unknown} need the authored export (A7)")
     return spec, sha256(path)
@@ -84,6 +93,7 @@ def author(base_export: Path, name: str, spec_path: Path | None, out: Path) -> d
         "spec_sha256": spec_sha,
     }
     out.mkdir(parents=True, exist_ok=True)
+    substitute_files(resolved, spec.get("files") or {}, out)
     (out / "events.json").write_bytes((base_export / "events.json").read_bytes())
     summary = base_export / "summary.txt"
     text = summary.read_text(encoding="utf-8") if summary.exists() else ""
@@ -95,6 +105,51 @@ def author(base_export: Path, name: str, spec_path: Path | None, out: Path) -> d
     (out / "resolved.json").write_text(json.dumps(resolved, indent=1) + "\n",
                                        encoding="utf-8", newline="\n")
     return {"content": name, "base": base["name"], "spec": spec_sha, "keys": sorted(spec)}
+
+
+def substitute_files(resolved: dict, files: dict, out: Path) -> None:
+    """The spec's own files replace the base's in the descriptor and the
+    file closure: each copied into <out>/o2r under its new id, the closure
+    row rebuilt from it and every other row's references renamed. The files
+    are build outputs (builds/p6-art/<name>/), never tracked (D10)."""
+    if not files:
+        return
+    desc = resolved["descriptor"]
+    mapping = {}
+    o2r = out / "o2r"
+    o2r.mkdir(parents=True, exist_ok=True)
+    rows = {}
+    for role, entry in sorted(files.items()):
+        if role not in FILE_ROLES:
+            raise AuthorError(f"spec files: unknown role {role!r} (one of {sorted(FILE_ROLES)})")
+        old = desc["file_ids"][FILE_ROLES[role]]
+        new = int(entry["id"], 0)
+        if new not in P6_FILE_WINDOW:
+            raise AuthorError(f"spec files {role}: id {new:#x} outside the P6 window")
+        src = REPO / entry["from"]
+        if not src.exists():
+            raise AuthorError(f"spec files {role}: {src} not built (the look's writer makes it)")
+        blob = src.read_bytes()
+        if blob[4:8] != b"OLER" or struct.unpack_from("<I", blob, 0x40)[0] != new:
+            raise AuthorError(f"spec files {role}: {src} is not an O2R container of file {new:#x}")
+        n = struct.unpack_from("<I", blob, 0x48)[0]
+        externs = list(struct.unpack_from(f"<{n}H", blob, 0x4C))
+        size = struct.unpack_from("<I", blob, 0x4C + 2 * n)[0]
+        (o2r / f"{new:04x}").write_bytes(blob)
+        mapping[old] = new
+        rows[old] = {"file_id": new, "vanilla_id": False, "bytes": size, "externs": externs}
+        resolved["authored"].setdefault("files", {})[role] = [old, new]
+        resolved["authored"].setdefault("files_sha256", {})[role] = hashlib.sha256(blob).hexdigest()
+    desc["file_ids"] = [mapping.get(x, x) for x in desc["file_ids"]]
+    closure = []
+    for row in resolved["file_closure"]:
+        if row["file_id"] in rows:
+            closure.append(rows[row["file_id"]])
+            continue
+        if any(x in mapping for x in row.get("externs", ())):
+            raise AuthorError(f"file {row['file_id']:#x} names a replaced file; it would need its own copy")
+        closure.append(row)
+    resolved["file_closure"] = closure
 
 
 def main() -> int:

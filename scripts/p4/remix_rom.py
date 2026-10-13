@@ -256,6 +256,50 @@ class Rom:
         return int.from_bytes(self.data[rom_off:rom_off + 4], "big")
 
 
+class OverlayRom(Rom):
+    """A Rom whose listed files come from O2R containers instead of the
+    image (P6 authored contents: a written main and model file under new
+    ids, docs/P6/P6_PLAN.md A7). Every other file, and every address-space
+    read, is the base image's."""
+
+    def __init__(self, base: Rom, blobs: dict[int, bytes]):
+        self.__dict__.update(base.__dict__)
+        self._file_cache = dict(base._file_cache)
+        self.overlay: dict[int, tuple] = {}
+        for fid, blob in blobs.items():
+            if blob[4:8] != b"OLER":
+                raise RomError(f"overlay file {fid:#x}: not an O2R container")
+            file_id, head_int, head_ext, n = struct.unpack_from("<IHHI", blob, 0x40)
+            if file_id != fid:
+                raise RomError(f"overlay file {fid:#x}: container names {file_id:#x}")
+            externs = list(struct.unpack_from(f"<{n}H", blob, 0x4C))
+            at = 0x4C + 2 * n
+            size = struct.unpack_from("<I", blob, at)[0]
+            body = bytes(blob[at + 4:at + 4 + size])
+            self.overlay[fid] = (head_int, head_ext, externs, body, bytes(blob))
+
+    def entry(self, file_id: int) -> TableEntry:
+        if file_id in self.overlay:
+            head_int, head_ext, _, body, _ = self.overlay[file_id]
+            return TableEntry(False, 0, head_int, 0, head_ext, len(body) // 4)
+        return super().entry(file_id)
+
+    def file_bytes(self, file_id: int) -> bytes:
+        if file_id in self.overlay:
+            return self.overlay[file_id][3]
+        return super().file_bytes(file_id)
+
+    def extern_ids(self, file_id: int) -> list[int]:
+        if file_id in self.overlay:
+            return list(self.overlay[file_id][2])
+        return super().extern_ids(file_id)
+
+    def o2r(self, file_id: int) -> bytes:
+        if file_id in self.overlay:
+            return self.overlay[file_id][4]
+        return super().o2r(file_id)
+
+
 def load_symbols(path: Path) -> tuple[dict[str, int], dict[int, list[str]]]:
     """bass `-sym` log: `<hex address> <scoped.name>` per line."""
     by_name: dict[str, int] = {}

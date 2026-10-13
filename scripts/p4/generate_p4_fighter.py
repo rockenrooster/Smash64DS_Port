@@ -1817,6 +1817,13 @@ def main() -> int:
     spec = fighter_spec(resolved)
     rom = R.Rom(args.staging / "ssb64asm.z64")
     vanilla = R.Rom(args.staging / "roms" / "ssb.rom")
+    # A P6 authored content's own files (p6_author.py "files": a written main
+    # and model under new ids) come from its export, every other file from
+    # the image.
+    authored_files = (resolved.get("authored") or {}).get("files") or {}
+    if authored_files:
+        rom = R.OverlayRom(rom, {new: (args.export / "o2r" / f"{new:04x}").read_bytes()
+                                 for _old, new in authored_files.values()})
     name, title = spec["name"], spec["title"]
     # The per-content tables' rows: the base's for an authored content (P6).
     key = spec["key"]
