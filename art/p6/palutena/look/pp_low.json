@@ -16,7 +16,11 @@
   "3": "f2cfb2ff",
   "4": "dcae46ff",
   "5": "f2cfb2ff",
-  "6": "f2cfb2ff",
+  "6": {
+   "*": "f2cfb2ff",
+   "17": "f0ecf2ff",
+   "22": "f0ecf2ff"
+  },
   "7": "2f8a4eff",
   "11": "dcb040ff",
   "12": "2f8a4eff",
@@ -204,9 +208,33 @@
      }
     ]
    }
+  },
+  "stocking": {
+   "color": "f0ecf2ff"
   }
  },
  "add_parts": [
+  {
+   "name": "thigh_l",
+   "joint": 16,
+   "axis": [
+    16,
+    17
+   ],
+   "stations": [
+    0.1,
+    1.0
+   ],
+   "sides": 4,
+   "twist": 45,
+   "radii": [
+    13,
+    13,
+    13,
+    13
+   ],
+   "material": "stocking"
+  },
   {
    "name": "staff_shaft",
    "joint": 14,
@@ -739,9 +767,9 @@
     55.9
    ],
    "to": [
-    20,
-    383,
-    46
+    25,
+    382,
+    37
    ],
    "joints": [
     2
@@ -757,7 +785,7 @@
    "to": [
     0,
     402,
-    24
+    25
    ],
    "joints": [
     2
@@ -863,8 +891,8 @@
    ],
    "to": [
     0,
-    72,
-    104
+    80,
+    101
    ],
    "joints": [
     26
@@ -878,8 +906,8 @@
    ],
    "to": [
     0,
-    72,
-    -122
+    80,
+    -126
    ],
    "joints": [
     26
@@ -892,9 +920,9 @@
     -0.1
    ],
    "to": [
-    118,
-    68,
-    -4
+    112,
+    80,
+    0
    ],
    "joints": [
     26
@@ -1085,11 +1113,18 @@
    "factor": 0.78
   }
  ],
- "keep_texture": [
-  8,
-  9,
-  10
- ],
+ "keep_texture": {
+  "materials": [
+   8,
+   9,
+   10
+  ],
+  "scale": 0.85,
+  "centre": [
+   0,
+   455
+  ]
+ },
  "drop": [
   {
    "materials": [
@@ -1098,13 +1133,24 @@
    "joints": [
     8
    ]
+  },
+  {
+   "materials": [
+    14
+   ],
+   "joints": [
+    26
+   ]
   }
  ],
  "edits": [
   "art/p6/palutena/look/pp_low_edits_shoulders.json",
   "art/p6/palutena/look/pp_low_edits_chest.json",
   "art/p6/palutena/look/pp_low_edits_chest2.json",
-  "art/p6/palutena/look/pp_low_edits_chest3.json"
+  "art/p6/palutena/look/pp_low_edits_chest3.json",
+  "art/p6/palutena/look/pp_low_edits_chest4.json",
+  "art/p6/palutena/look/pp_low_edits_slit.json",
+  "art/p6/palutena/look/pp_low_edits_skirt8.json"
  ],
  "textures": {
   "skirt_hem": {
@@ -1171,6 +1217,246 @@
     26
    ],
    "s": 0.6667
+  }
+ ],
+ "two_sided": [
+  2
+ ],
+ "snap": [
+  {
+   "joints": [
+    8
+   ],
+   "materials": [
+    7,
+    12
+   ],
+   "exclude_materials": [
+    8,
+    9,
+    10
+   ],
+   "kit": {
+    "meshes": [
+     "body_mh_0_0",
+     "body_mh_0_1"
+    ],
+    "regions": [
+     8,
+     9
+    ]
+   },
+   "centre": [
+    0,
+    455,
+    -5
+   ],
+   "max": 25
+  },
+  {
+   "joints": [
+    8
+   ],
+   "materials": [
+    8,
+    9,
+    10
+   ],
+   "kit": {
+    "meshes": [
+     "face_mh_25_0"
+    ]
+   },
+   "centre": [
+    0,
+    450,
+    -5
+   ],
+   "max": 15,
+   "scale": 1.12,
+   "scale_centre": [
+    0,
+    452,
+    10
+   ]
+  },
+  {
+   "joints": [
+    9
+   ],
+   "kit": {
+    "meshes": [
+     "body_mh_0_0",
+     "body_mh_0_1"
+    ],
+    "regions": [
+     8,
+     9
+    ]
+   },
+   "axis": [
+    0,
+    0
+   ],
+   "max": 15
+  },
+  {
+   "joints": [
+    4,
+    11
+   ],
+   "box": [
+    [
+     -130,
+     370,
+     -40
+    ],
+    [
+     130,
+     440,
+     40
+    ]
+   ],
+   "min_abs_x": 40,
+   "kit": {
+    "meshes": [
+     "body_mh_0_0",
+     "body_mh_0_1"
+    ],
+    "regions": [
+     4
+    ]
+   },
+   "bone": [
+    4,
+    5
+   ],
+   "max": 20
+  },
+  {
+   "joints": [
+    5,
+    12
+   ],
+   "kit": {
+    "meshes": [
+     "body_mh_0_0",
+     "body_mh_0_1"
+    ],
+    "regions": [
+     5
+    ]
+   },
+   "bone": [
+    5,
+    6
+   ],
+   "max": 25
+  },
+  {
+   "joints": [
+    6,
+    13
+   ],
+   "kit": {
+    "meshes": [
+     "Lhand_1_VIS_O_OBJ_26_0"
+    ]
+   },
+   "centre_joint": 6,
+   "max": 25
+  },
+  {
+   "joints": [
+    17,
+    22
+   ],
+   "kit": {
+    "meshes": [
+     "body_mh_0_0",
+     "body_mh_0_1"
+    ],
+    "regions": [
+     17
+    ]
+   },
+   "bone": [
+    17,
+    19
+   ],
+   "max": 25
+  },
+  {
+   "joints": [
+    19,
+    24
+   ],
+   "kit": {
+    "meshes": [
+     "body_mh_0_0",
+     "body_mh_0_1"
+    ],
+    "regions": [
+     19
+    ]
+   },
+   "centre_joint": 19,
+   "max": 25
+  },
+  {
+   "stage": "after_edits",
+   "joints": [
+    2
+   ],
+   "box": [
+    [
+     -60,
+     300,
+     -60
+    ],
+    [
+     60,
+     420,
+     70
+    ]
+   ],
+   "kit": {
+    "meshes": [
+     "body_mh_0_0",
+     "body_mh_0_1"
+    ],
+    "regions": [
+     1,
+     2
+    ]
+   },
+   "axis": [
+    0,
+    8
+   ],
+   "max": 15
+  },
+  {
+   "stage": "after_edits",
+   "joints": [
+    26
+   ],
+   "kit": {
+    "meshes": [
+     "body_mh_0_0",
+     "body_mh_0_1"
+    ],
+    "regions": [
+     1,
+     25,
+     26
+    ]
+   },
+   "axis": [
+    0,
+    0
+   ],
+   "max": 30
   }
  ]
 }

@@ -4,24 +4,26 @@ Owner of the live P6 state. The plan is [P6_PLAN.md](P6_PLAN.md); the cards
 are [characters/ike.md](characters/ike.md) and
 [characters/palutena.md](characters/palutena.md).
 
-**State (2026-10-13):** active (goal P5-P7). Move cards approved (I1, P1).
-Plan revision 3: Palutena's look goes to the owner as two best-effort
-candidates at the same budget, the 3DS kit rebuilt and hand-tuned (Track K)
-or Peach restyled (Track R), and the pick also sets Ike's (D12, G0);
-kit-derived art stays local (D10); no Smash 4 motions (D11). A1 done: Ike
-(19) and Palutena (20) are registry contents built from Roy's and Peach's
-exports (null clones) and play in every ROM; no P6 art exists yet. Next: A2
-and A3 (F1, the kit reader, the fit), then the G0 tracks.
+**State (2026-10-13, late):** active (goal P5-P7). Move cards approved (I1,
+P1). A1 done: Ike (19) and Palutena (20) are registry contents built from
+Roy's and Peach's exports (null clones) and play in every ROM. G0 settled by
+the owner: Palutena's look is Peach's model reshaped onto the 3DS kit's
+proportions (owner route, after a first pick of the decimated kit), built in
+the live Blender against the kit's wire overlay; the low detail is in owner
+review (v51, 249 of 262 triangles, [look record](#palutena-look-record)).
+Nothing goes into a ROM before the owner's OK. The high detail is the
+approved low refined (owner). Next: the owner's verdict on the low, then the
+high, then A2's writer and A7 so the look replaces the null clone.
 
 ## Board 1
 
 | Item | State |
 |---|---|
 | A1 registry, build, null clones | done 2026-10-13 ([A1 record](#a1-record)) |
-| A2 model reader and writer (F1) | planned |
-| A3 Blender bridge, kit reader, fit | planned |
-| A3b Track K: the kit rebuilt (F6) | planned |
-| A3c Track R: the base restyled (F6) | planned |
+| A2 model reader and writer (F1) | reader done (`n64_model.py`, `model_scene.py`); writer planned |
+| A3 Blender bridge, kit reader, fit | done 2026-10-13 (`dae_reader.py`, `kit_fit.py`, `scripts/p6/blender/`) |
+| A3b Track K: the kit rebuilt (F6) | dropped by the owner's route (ops kept for reference) |
+| A3c Track R: the base restyled (F6) | Palutena low in owner review (v51) |
 | A4 animation codec and retarget (F2) | planned |
 | A5 motion-script assembler (F3) | planned |
 | A6 review harness | planned |
@@ -37,7 +39,7 @@ and A3 (F1, the kit reader, the fit), then the G0 tracks.
 
 | Fighter | Step | State |
 |---|---|---|
-| Palutena | G0 look bake-off (K and R, sheet, pick) | planned |
+| Palutena | G0 look (owner route: Peach reshaped onto the kit) | low in review; high next |
 | Ike | I0 null clone done (A1); I1 approved; I2-I6 | planned |
 | Palutena | P0 null clone done (A1); P1 approved; P2-P8 | planned |
 
@@ -158,6 +160,54 @@ vertices: Roy 525 / 382, Peach 581 / 420. Main file (setup heap): Roy
 156,624 B, Peach 140,000 B; clips: Roy 159 (largest main-motion clip
 11,728 B), Peach 149 (12,608 B); shipped files: Roy 164, Peach 156.
 
+## Palutena look record
+
+**Route (owner, 2026-10-13 evening).** The owner first picked the decimated
+kit (G0), then proposed, and we agreed, to start from another copy of
+Peach's model and give it the proportions of the owner's baseline
+(`Palutena_Owner_Attempt.blend`: the kit's low model with a HAL armature).
+The kit is fitted at Peach's height by uniform scale only, crown top to hair
+top (`kit_fit.py`, scale 24.922; the owner: no per-bone stretching). The
+look is built in the live Blender with the fitted kit drawn as a wire
+overlay on the model, the owner's proportion check.
+
+**Tools.** `look_r.py compose` applies, in order: kit-surface anchors
+(`pp_low_anchors.json`), rigid parts (Peach's head at 0.7, hands at 0.75),
+mirror symmetry, placed vertices, squashes, kit snaps (vertices pushed along
+rays from a centre, axis or bone onto the kit surface, mirror pairs
+together), a texture keeper (a moved face corner keeps its drawing; the
+eye drawing scaled to the face), dropped base triangles, recolours, authored
+and composed textures, then the edits captured in Blender
+(`capture_ops.py`: moves, deleted triangles by vertex set, added vertices
+and triangles, recolours by colour), then the added parts (`look_k.py`:
+tubes, plates, two-sided sprites, a billboard flag). Ops in
+`art/p6/palutena/look/` hold parameters, anchors, authored positions and
+colours only (D10); scenes, textures and renders are local (`builds/p6-art/`,
+`artifacts/p6/review/pp_v*`).
+
+**Low detail, v51 (249 triangles, budget 262; Peach low 211).** Peach's head
+kept and scaled, face snapped to the kit face at 1.12 (the owner allows a
+bigger face), Peach's own face frames recoloured (green iris, Palutena's
+skin) with the gold circlet painted across the forehead rows (no crown
+geometry; ears and crown dropped); hair cap and the long hair curtain on the
+kit's hair; strapless bodice in one surface with the skirt, a level
+neckline and a two-form bust on the kit chest; arms joined to the torso,
+gold bracers; skirt hem round (eight points) with a red, gold and cream hem
+texture, two-sided, slit on the left side up near the hip over a white
+stocking leg; staff = a three-sided shaft, gold wing sprite and a billboard
+gem; shield = a flat round sprite on the left forearm.
+
+**Owner directions on the way (2026-10-13).** Waist and dress one mesh;
+face flatter and slightly bigger, cheeks (not the jaw) narrower, forehead
+not concave; hair without a missing chunk; calves and shoes from Peach;
+hands solid like Peach's and smaller; shoulders seamless with the arms;
+chest not "mono", two forms, no points outside the wire; neck area flat
+(no point at the upper sternum); every part fills the kit wire as closely
+as possible, neither inside nor outside, the face excepted; eyes were
+upside down (Peach's face texture runs bottom-up); circlet in the face
+texture; staff wings sprites, staff gem a billboard, shield a flat sprite;
+slit over the left thigh, toward the side, up almost to the hip.
+
 ## Art approvals
 
 One row per owner verdict: date, fighter, gate (G0 bake-off pick, G1 look, G2
@@ -169,6 +219,13 @@ hashes), verdict.
 
 ## Owner decisions
 
+- 2026-10-13 (night): Palutena's high detail is the approved low look
+  refined (detail added where close-ups show it, up to about 412 triangles,
+  2x textures), not a second restyle of Peach's high model and not the low
+  model everywhere.
+- 2026-10-13 (evening): G0 route, sizing and review rules: see the
+  [look record](#palutena-look-record). Nothing goes into a ROM before the
+  owner OKs the look.
 - 2026-10-13: D12, after reading plan revision 2: the owner doubts the kit's
   models can be cut to the DS budget and look good without hand-tuning, and
   asked to see both: the kit model reduced with best-effort hand-tuning, and

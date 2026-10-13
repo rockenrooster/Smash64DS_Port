@@ -104,8 +104,12 @@ def capture(obj_name: str, out: Path, tolerance: float = 0.05) -> dict:
             joint = (data["vertices"][first[1]]["joint"] if first[0] == "s"
                      else added_vertices[first[1]]["joint"])
             added_tris.append({"v": [ref[i] for i in tri], "material": material(poly.material_index), "joint": joint})
+    gone = sorted(set(deleted))
     ops = {"form": "p6-look-edits-v1", "scene": scene_dir.name, "moved": moved, "retint": retint,
-           "deleted_tris": sorted(set(deleted)), "added_vertices": added_vertices, "added_tris": added_tris}
+           "deleted_tris": gone,
+           # By vertex set too: replay finds them whatever came before.
+           "deleted_tri_verts": [sorted(data["triangles"][t]["v"]) for t in gone],
+           "added_vertices": added_vertices, "added_tris": added_tris}
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(ops, indent=1) + "\n", encoding="utf-8")
     print(f"captured {obj_name}: {len(moved)} moved, {len(ops['deleted_tris'])} deleted, "

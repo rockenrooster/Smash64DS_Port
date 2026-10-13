@@ -1,0 +1,275 @@
+{
+ "form": "p6-look-edits-v1",
+ "scene": "low_v50",
+ "moved": {},
+ "retint": {},
+ "deleted_tris": [
+  175,
+  176,
+  177,
+  178,
+  179,
+  180
+ ],
+ "deleted_tri_verts": [
+  [
+   353,
+   354,
+   359
+  ],
+  [
+   353,
+   358,
+   359
+  ],
+  [
+   353,
+   355,
+   360
+  ],
+  [
+   353,
+   358,
+   360
+  ],
+  [
+   356,
+   357,
+   362
+  ],
+  [
+   356,
+   361,
+   362
+  ]
+ ],
+ "added_vertices": [
+  {
+   "joint": 26,
+   "model": [
+    -92.6,
+    80.0,
+    -92.6
+   ],
+   "uv": [
+    1.0,
+    -2.0
+   ]
+  },
+  {
+   "joint": 26,
+   "model": [
+    -80.0,
+    80.0,
+    80.0
+   ],
+   "uv": [
+    1.0,
+    -4.0
+   ]
+  },
+  {
+   "joint": 26,
+   "model": [
+    92.6,
+    80.0,
+    -92.6
+   ],
+   "uv": [
+    1.0,
+    -8.0
+   ]
+  }
+ ],
+ "added_tris": [
+  {
+   "v": [
+    [
+     "s",
+     353
+    ],
+    [
+     "s",
+     354
+    ],
+    [
+     "a",
+     0
+    ]
+   ],
+   "material": {
+    "prim": "ffffffff",
+    "texture": "t_skirt_hem_16x8.png"
+   },
+   "joint": 25
+  },
+  {
+   "v": [
+    [
+     "s",
+     353
+    ],
+    [
+     "a",
+     0
+    ],
+    [
+     "s",
+     358
+    ]
+   ],
+   "material": {
+    "prim": "ffffffff",
+    "texture": "t_skirt_hem_16x8.png"
+   },
+   "joint": 25
+  },
+  {
+   "v": [
+    [
+     "s",
+     353
+    ],
+    [
+     "a",
+     1
+    ],
+    [
+     "s",
+     355
+    ]
+   ],
+   "material": {
+    "prim": "ffffffff",
+    "texture": "t_skirt_hem_16x8.png"
+   },
+   "joint": 25
+  },
+  {
+   "v": [
+    [
+     "s",
+     353
+    ],
+    [
+     "s",
+     358
+    ],
+    [
+     "a",
+     1
+    ]
+   ],
+   "material": {
+    "prim": "ffffffff",
+    "texture": "t_skirt_hem_16x8.png"
+   },
+   "joint": 25
+  },
+  {
+   "v": [
+    [
+     "s",
+     356
+    ],
+    [
+     "a",
+     2
+    ],
+    [
+     "s",
+     357
+    ]
+   ],
+   "material": {
+    "prim": "ffffffff",
+    "texture": "t_skirt_hem_16x8.png"
+   },
+   "joint": 25
+  },
+  {
+   "v": [
+    [
+     "s",
+     356
+    ],
+    [
+     "s",
+     361
+    ],
+    [
+     "a",
+     2
+    ]
+   ],
+   "material": {
+    "prim": "ffffffff",
+    "texture": "t_skirt_hem_16x8.png"
+   },
+   "joint": 25
+  },
+  {
+   "v": [
+    [
+     "s",
+     354
+    ],
+    [
+     "s",
+     359
+    ],
+    [
+     "a",
+     0
+    ]
+   ],
+   "material": {
+    "prim": "ffffffff",
+    "texture": "t_skirt_hem_16x8.png"
+   },
+   "joint": 25
+  },
+  {
+   "v": [
+    [
+     "s",
+     355
+    ],
+    [
+     "a",
+     1
+    ],
+    [
+     "s",
+     360
+    ]
+   ],
+   "material": {
+    "prim": "ffffffff",
+    "texture": "t_skirt_hem_16x8.png"
+   },
+   "joint": 25
+  },
+  {
+   "v": [
+    [
+     "s",
+     357
+    ],
+    [
+     "a",
+     2
+    ],
+    [
+     "s",
+     362
+    ]
+   ],
+   "material": {
+    "prim": "ffffffff",
+    "texture": "t_skirt_hem_16x8.png"
+   },
+   "joint": 25
+  }
+ ]
+}

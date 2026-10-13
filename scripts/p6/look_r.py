@@ -351,6 +351,116 @@ def shrinkwrap(base: dict, fit: dict, role: str, joints: set | None = None) -> d
     return ops
 
 
+
+def snap_to_kit(scene: dict, fit: dict, role: str, spec: dict, base: dict | None = None) -> int:
+    """Ops "snap": the selected vertices pushed onto the fitted kit's
+    surface along rays from an inner centre (a point, or the axis line
+    x = cx, z = cz at the vertex's own height), taking the outermost hit of
+    the chosen kit meshes and regions (owner 2026-10-13: the chest and face
+    must follow the kit wire). Mirror pairs move together; a vertex on the
+    centre plane stays on it. Selection: joints, and a model-space box, and
+    base materials (before edits) or material colours (after)."""
+    tris = kit_triangles(fit, role)
+    meshes = spec.get("kit", {}).get("meshes")
+    regions = spec.get("kit", {}).get("regions")
+    sel = [t for t in tris if (meshes is None or t[0] in meshes) and (regions is None or t[5] in regions)]
+    A = np.array([t[2] for t in sel]); B = np.array([t[3] for t in sel]); C = np.array([t[4] for t in sel])
+    verts = scene["vertices"]
+    box = spec.get("box")
+    want_mats = set(spec.get("materials", ()))
+    want_prims = set(spec.get("prims", ()))
+    used = {}
+    for t in scene["triangles"]:
+        for i in t["v"]:
+            used.setdefault(i, set()).add(t["material"])
+    base_mats = {}
+    if base is not None and (want_mats or spec.get("exclude_materials")):
+        for t in base["triangles"]:
+            for i in t["v"]:
+                base_mats.setdefault(i, set()).add(t["material"])
+    groups = {}
+    for i, v in enumerate(verts):
+        if v["joint"] not in spec["joints"]:
+            continue
+        q = np.array(v["model"], dtype=float)
+        if box is not None and not (np.all(q >= np.array(box[0])) and np.all(q <= np.array(box[1]))):
+            continue
+        if abs(q[0]) < spec.get("min_abs_x", -1.0):
+            continue
+        if want_mats and not (base_mats.get(i, set()) & want_mats):
+            continue
+        if spec.get("exclude_materials") and base_mats.get(i, set()) & set(spec["exclude_materials"]):
+            continue
+        if want_prims and not ({scene["materials"][m]["prim"] for m in used.get(i, ())} & want_prims):
+            continue
+        groups.setdefault(tuple(np.round(q, 2)), []).append(i)
+    # Every vertex of the same joint at a selected position moves with it
+    # (the face's corners are the bangs' and the skin's too).
+    by_pos = {}
+    for i, v in enumerate(verts):
+        by_pos.setdefault((v["joint"], tuple(np.round(np.array(v["model"], dtype=float), 2))), []).append(i)
+    for key in list(groups):
+        js = {verts[i]["joint"] for i in groups[key]}
+        groups[key] = sorted({i for j in js for i in by_pos.get((j, key), [])} | set(groups[key]))
+    moved = 0
+    done = set()
+    inv = {}
+    for key, idx in groups.items():
+        if key in done:
+            continue
+        q = np.array(key, dtype=float)
+        mirror = (-key[0], key[1], key[2])
+        centre = np.array(spec.get("centre", (0.0, q[1], 0.0)), dtype=float)
+        if spec.get("axis"):
+            centre = np.array([spec["axis"][0], q[1], spec["axis"][1]], dtype=float)
+        if spec.get("centre_joint") is not None:
+            centre = np.array(scene["joints"][spec["centre_joint"]]["world"], dtype=float)[:3, 3]
+        if spec.get("bone"):
+            # A limb: rays out from the nearest point of its bone segment.
+            a = np.array(scene["joints"][spec["bone"][0]]["world"], dtype=float)[:3, 3]
+            b = np.array(scene["joints"][spec["bone"][1]]["world"], dtype=float)[:3, 3]
+            ab = b - a
+            t_ = float(np.clip((q - a) @ ab / max(ab @ ab, 1e-9), 0.0, 1.0))
+            centre = a + ab * t_
+        side = np.sign(q[0]) if abs(q[0]) > 0.5 else 0.0
+        if side < 0 and mirror in groups:
+            continue          # its +x partner carries it
+        d = q - centre
+        if np.linalg.norm(d) < 1e-6:
+            continue
+        d = d / np.linalg.norm(d)
+        t, u, w = _ray_hits(centre, d, A, B, C)
+        finite = np.where(np.isfinite(t), t, -np.inf)
+        k = int(np.argmax(finite))
+        if not np.isfinite(t[k]):
+            continue
+        dist = float(t[k]) + float(spec.get("offset", 0.0))
+        if abs(dist - np.linalg.norm(q - centre)) > spec.get("max", 30.0):
+            continue
+        new = centre + d * dist
+        if spec.get("scale"):
+            # Bigger than the kit's, about a point (the face: owner 2026-10-13).
+            sc = np.array(spec.get("scale_centre", centre), dtype=float)
+            new = sc + (new - sc) * float(spec["scale"])
+        if side == 0.0:
+            new[0] = 0.0
+        targets = [(idx, new)]
+        if side > 0 and mirror in groups:
+            targets.append((groups[mirror], new * np.array([-1.0, 1.0, 1.0])))
+            done.add(mirror)
+        for ii, pos in targets:
+            for i in ii:
+                v = verts[i]
+                j = v["joint"]
+                if j not in inv:
+                    inv[j] = _inverse_affine(scene["joints"][j]["world"])
+                v["model"] = [round(float(c), 4) for c in pos]
+                local = inv[j] @ np.append(pos, 1.0)
+                v["local"] = [int(round(float(c))) for c in local[:3]]
+                moved += 1
+        done.add(key)
+    return moved
+
 def _kit_point(fit_index: dict, anchor: dict):
     mesh = fit_index[anchor["mesh"]]
     a, b, c = mesh["triangles"][anchor["triangle"]]
@@ -440,12 +550,15 @@ def main() -> int:
     c.add_argument("--role", required=True)
     c.add_argument("--kit-dir", type=Path)
     c.add_argument("--out", type=Path, required=True)
+    c.add_argument("--migrate-edits", action="store_true",
+                   help="record each edit's deleted triangles as vertex sets in its file")
     args = ap.parse_args()
     if args.cmd == "compose":
         base = json.loads(args.base.read_text(encoding="utf-8"))
         fit = json.loads(args.fit.read_text(encoding="utf-8"))
         ops = json.loads(args.ops.read_text(encoding="utf-8"))
         ops["vertices"] = json.loads(args.anchors.read_text(encoding="utf-8"))["vertices"]
+        ops["_migrate_edits"] = args.migrate_edits
         args.out.mkdir(parents=True, exist_ok=True)
         scene = compose(base, fit, ops, args.role, args.kit_dir, args.out)
         for png in args.base.parent.glob("tex_*.png"):
@@ -575,13 +688,21 @@ def compose(base: dict, fit: dict, ops: dict, role: str, kit_dir: Path | None, o
                 p = np.array(v["model"], dtype=float)
                 p[axis] = start + (p[axis] - start) * k
                 put(i, p)
+    # Snaps onto the kit (ops "snap", before the edits): see snap_to_kit.
+    for sp in ops.get("snap", ()):
+        if sp.get("stage", "before_edits") == "before_edits":
+            snap_to_kit(scene, fit, role, sp, base)
     # Texture keepers (ops "keep_texture": base materials): a vertex of these
     # materials that a placement moved (a face corner Peach's bangs share)
     # takes the texture coordinate its new place had on the unmoved face,
     # seen from the front -- each of its triangles' affine map, extended and
     # averaged -- so the drawing stays put and the face only grows or shrinks
     # around it (owner 2026-10-13: the brows tilted when the bangs moved).
-    keep = set(ops.get("keep_texture", ()))
+    kt = ops.get("keep_texture", ())
+    if isinstance(kt, dict):
+        keep, k_scale, k_centre = set(kt["materials"]), float(kt.get("scale", 1.0)), np.array(kt.get("centre", (0, 0)), dtype=float)
+    else:
+        keep, k_scale, k_centre = set(kt), 1.0, np.zeros(2)
     if keep:
         tri_of = {}
         for ti, t in enumerate(base["triangles"]):
@@ -590,8 +711,11 @@ def compose(base: dict, fit: dict, ops: dict, role: str, kit_dir: Path | None, o
                     tri_of.setdefault(i, []).append(ti)
         for i, tis in tri_of.items():
             new = np.array(verts[i]["model"][:2], dtype=float)
-            if np.abs(new - np.array(before_place[i][:2])).max() < 0.5:
+            if k_scale == 1.0 and np.abs(new - np.array(before_place[i][:2])).max() < 0.5:
                 continue
+            # A drawing scale: the texture shows k_scale times its size about
+            # k_centre (the eyes fitted to the kit's narrower face).
+            new = k_centre + (new - k_centre) / k_scale
             sts = []
             for ti in tis:
                 a, b, c = base["triangles"][ti]["v"]
@@ -605,13 +729,21 @@ def compose(base: dict, fit: dict, ops: dict, role: str, kit_dir: Path | None, o
             if sts:
                 st = np.mean(sts, axis=0)
                 verts[i]["st"] = [int(round(float(st[0]))), int(round(float(st[1])))]
-    # Dropped parts (ops "drop": base materials per joint): their triangles
-    # go (owner 2026-10-13: the circlet is painted on the face, so Peach's
-    # crown is not drawn).
+    # Dropped parts (ops "drop": base materials per joint, or base triangle
+    # indices): their triangles go (owner 2026-10-13: the circlet is painted
+    # on the face, so Peach's crown is not drawn; the hem's cover, the skirt
+    # being two-sided). Every drop names base triangles, all removed at once.
+    gone = set()
+    late = set()
     for dr in ops.get("drop", ()):
-        gone = {ti for ti, t in enumerate(base["triangles"])
-                if t["material"] in dr["materials"] and t["joint"] in dr["joints"]}
-        scene["triangles"] = [t for ti, t in enumerate(scene["triangles"]) if ti not in gone]
+        hit = {ti for ti, t in enumerate(base["triangles"])
+               if (t["material"] in dr.get("materials", ()) and t["joint"] in dr.get("joints", ()))
+               or ti in dr.get("tris", ())}
+        (late if dr.get("late") else gone).update(hit)
+    for ti in late:
+        # Flagged now, removed after the edits replay.
+        scene["triangles"][ti]["dropped"] = True
+    scene["triangles"] = [t for ti, t in enumerate(scene["triangles"]) if ti not in gone]
     # Region scales (ops "scale"): the vertices of the listed base materials
     # on a joint scaled about their centroid, per model axis (the face made
     # flatter (z) and a little bigger (x, y): owner 2026-10-13).
@@ -679,6 +811,12 @@ def compose(base: dict, fit: dict, ops: dict, role: str, kit_dir: Path | None, o
             new_mats.append(mat)
         t["material"] = remap[key]
     scene["materials"] = new_mats
+    # Two-sided base materials (ops "two_sided"): the skirt, whose lining
+    # shows through the slit.
+    two = {int(m) for m in ops.get("two_sided", ())}
+    for (m, colour), mi in remap.items():
+        if m in two:
+            scene["materials"][mi]["two_sided"] = True
     # Re-bake textures named in ops["bake"] (by base material index) from the
     # kit albedo through the restyled triangles' own UVs.
     if kit_dir is not None and ops.get("bake"):
@@ -747,7 +885,15 @@ def compose(base: dict, fit: dict, ops: dict, role: str, kit_dir: Path | None, o
     if isinstance(edits, str):
         edits = [edits]
     for e in edits:
-        replay_edits(scene, json.loads(Path(e).read_text(encoding="utf-8")))
+        data = json.loads(Path(e).read_text(encoding="utf-8"))
+        replay_edits(scene, data)
+        if "_migrated" in data and ops.get("_migrate_edits"):
+            data["deleted_tri_verts"] = data.pop("_migrated")
+            Path(e).write_text(json.dumps(data, indent=1) + "\n", encoding="utf-8")
+    scene["triangles"] = [t for t in scene["triangles"] if not t.pop("dropped", False)]
+    for sp in ops.get("snap", ()):
+        if sp.get("stage") == "after_edits":
+            snap_to_kit(scene, fit, role, sp)
     # Added parts (look_k ring syntax), appended as new vertices/triangles.
     if ops.get("add_parts"):
         kops = {"detail": scene.get("detail", "high"), "materials": ops.get("add_materials", {}),
@@ -807,7 +953,17 @@ def replay_edits(scene: dict, edits: dict) -> None:
              "rgba": [0, 0, 0, 255], "normal": [0, 0, 0]}
         verts.append(v)
         place(v, av["model"])
-    gone = set(edits.get("deleted_tris", ()))
+    # Deleted triangles by their vertex sets (stable whatever came before);
+    # older captures name list positions, recorded here once as vertex sets
+    # (look_r.py compose --migrate-edits).
+    if "deleted_tri_verts" in edits:
+        want = {frozenset(v) for v in edits["deleted_tri_verts"]}
+        gone = {i for i, t in enumerate(scene["triangles"]) if frozenset(t["v"]) in want}
+        if len(gone) != len(want):
+            raise SystemExit(f"edits: {len(want) - len(gone)} deleted triangle(s) not found")
+    else:
+        gone = set(edits.get("deleted_tris", ()))
+        edits["_migrated"] = [sorted(scene["triangles"][i]["v"]) for i in sorted(gone)]
     tris = [t for i, t in enumerate(scene["triangles"]) if i not in gone]
     for at in edits.get("added_tris", ()):
         idx = [r[1] if r[0] == "s" else base_n + r[1] for r in at["v"]]
