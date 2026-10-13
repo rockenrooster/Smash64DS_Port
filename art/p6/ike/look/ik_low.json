@@ -260,5 +260,11 @@
     "val": 0.24
    }
   ]
- }
+ },
+ "two_sided": [
+  14
+ ],
+ "edits": [
+  "art/p6/ike/look/ik_low_edits_cape.json"
+ ]
 }
