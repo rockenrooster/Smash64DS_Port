@@ -2971,10 +2971,43 @@ static const NDSRelocSpriteNormalizeDesc
     /* FTStocksZako (reloc asset 0x19), stage_reloc_file.py --extend. */
     { NDS_RELOC_ASSET_FT_STOCKS_ZAKO, 0x0080u, 8u, 8u, 1u,
       G_IM_FMT_CI, G_IM_SIZ_4b },
-    /* IFCommonBattlePause (reloc asset 0xc5), stage_reloc_file.py --extend. */
+    /* IFCommonBattlePause (reloc asset 0xc5), stage_reloc_file.py --extend.
+     * The rest of the pause decals (ifcommon.c dIFCommonBattlePauseDecals-
+     * SpriteData, the player numbers) were symbols with no geometry row, so
+     * their records stayed mixed-width after the u32 swap (width and height
+     * read crossed, nbitmaps the display-list count): the file's Sprite
+     * records. */
+    { NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, 0x0078u, 16u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, 0x0138u, 16u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, 0x01f8u, 16u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, 0x02b8u, 16u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, 0x0438u, 39u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, 0x04d8u, 8u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, 0x0610u, 38u, 9u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, 0x06d8u, 12u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, 0x0828u, 37u, 10u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
     { NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, 0x0958u, 13u, 13u, 1u,
       G_IM_FMT_IA, G_IM_SIZ_8b },
     { NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, 0x0a88u, 13u, 13u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, 0x0bd8u, 9u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, 0x0cf8u, 16u, 12u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, 0x1538u, 43u, 42u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, 0x17a8u, 23u, 22u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_IF_COMMON_BATTLE_PAUSE, 0x18c8u, 16u, 12u, 1u,
       G_IM_FMT_IA, G_IM_SIZ_8b },
     /* MNCommonFonts (reloc asset 0x21), stage_reloc_file.py --extend. */
     { NDS_RELOC_ASSET_MN_COMMON_FONTS, 0x0040u, 5u, 5u, 1u,
