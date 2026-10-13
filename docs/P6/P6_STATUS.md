@@ -10,24 +10,26 @@ Roy's and Peach's exports (null clones) and play in every ROM. G0 settled by
 the owner: Palutena's look is Peach's model reshaped onto the 3DS kit's
 proportions (owner route, after a first pick of the decimated kit), built in
 the live Blender against the kit's wire overlay; the low detail is in owner
-review (v51, 249 of 262 triangles, [look record](#palutena-look-record)).
+review (v60, 250 of 262 triangles, [look record](#palutena-look-record)).
 Nothing goes into a ROM before the owner's OK. The high detail is the
-approved low refined (owner). Next: the owner's verdict on the low, then the
-high, then A2's writer and A7 so the look replaces the null clone.
+approved low refined (owner). A2's writer and A7's file substitution are
+done and checked on the host (the native owner generator and the P4
+generator accept the written look). Next: the owner's verdict on the low,
+then the high, then the look's build rules and pins.
 
 ## Board 1
 
 | Item | State |
 |---|---|
 | A1 registry, build, null clones | done 2026-10-13 ([A1 record](#a1-record)) |
-| A2 model reader and writer (F1) | reader done (`n64_model.py`, `model_scene.py`); writer planned |
+| A2 model reader and writer (F1) | done 2026-10-13 (`model_writer.py`: Peach's own low scene written back draws the same 211 triangles; the written look passes the native owner generator, host) |
 | A3 Blender bridge, kit reader, fit | done 2026-10-13 (`dae_reader.py`, `kit_fit.py`, `scripts/p6/blender/`) |
 | A3b Track K: the kit rebuilt (F6) | dropped by the owner's route (ops kept for reference) |
 | A3c Track R: the base restyled (F6) | Palutena low in owner review (v51) |
 | A4 animation codec and retarget (F2) | planned |
 | A5 motion-script assembler (F3) | planned |
 | A6 review harness | planned |
-| A7 authored export (F4) | planned |
+| A7 authored export (F4) | file substitution done 2026-10-13 (spec "files", `remix_rom.OverlayRom`; host-checked through `generate_p4_fighter.py`); the rest planned |
 | A8 audio | planned |
 | A9 presentation | planned |
 | A10 effects | planned |
@@ -185,7 +187,15 @@ tubes, plates, two-sided sprites, a billboard flag). Ops in
 colours only (D10); scenes, textures and renders are local (`builds/p6-art/`,
 `artifacts/p6/review/pp_v*`).
 
-**Low detail, v51 (249 triangles, budget 262; Peach low 211).** Peach's head
+**Low detail, v60 (250 triangles, budget 262; Peach low 211).** The torso is
+rebuilt from rings sampled on the kit's surface (neckline, bust with a
+shallow valley between its two forms, waist; a collar of clavicles,
+shoulder tops and the neck's base, closed on top), every band triangulated
+as a half and its mirror image; the dress continues the bodice's waist ring
+and runs as one A-line to the hip ring (the owner preferred v40's hips to a
+kit-sampled hip ring), its hem lower at the front than the back as the
+kit's; the hair ends above the dress so it never passes through it; the
+neck is on the kit's. Earlier (v51) and kept: Peach's head
 kept and scaled, face snapped to the kit face at 1.12 (the owner allows a
 bigger face), Peach's own face frames recoloured (green iris, Palutena's
 skin) with the gold circlet painted across the forehead rows (no crown
