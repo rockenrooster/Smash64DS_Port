@@ -13868,6 +13868,7 @@ ndsFtrLeanRootCopy(NDSFtrLeanMat *m, u32 root_index,
     delta = (s32)pk->count - (s32)src->start;
     memcpy(&pk->words[pk->count], &donor->words[src->start],
            len * sizeof(u32));
+    NDS_FTR_LEAN_CTR(gNdsFtrLean.root_copy_words += len);
     i = (stats->texture_combine_count - (u32)src->combine_base) &
         NDS_RENDERER_POLY_ID_MASK;
     if ((i != 0u) &&
@@ -16187,6 +16188,8 @@ static void __attribute__((noinline)) ndsFtrLeanPoolStore(
                        ndsFtrLeanWordCapacity() - records,
                    records * sizeof(u32));
         }
+        NDS_FTR_LEAN_CTR(gNdsFtrLean.pool_store_words +=
+                             NDS_FTR_LEAN_STRUCT_WORDS + floor + records);
     }
     park->state = *es;
     park->list_words = floor;
@@ -16210,6 +16213,8 @@ static u32 __attribute__((noinline)) ndsFtrLeanPoolRevive(
 
     /* Nothing may still be streaming the victim's old words. */
     ndsFighterPacketDmaWait();
+    NDS_FTR_LEAN_CTR(gNdsFtrLean.pool_revive_words +=
+                         NDS_FTR_LEAN_STRUCT_WORDS + floor + records);
     memcpy(dst, src, (NDS_FTR_LEAN_STRUCT_WORDS + floor) * sizeof(u32));
     if (records != 0u)
     {
@@ -16875,18 +16880,26 @@ ndsFtrLeanLearnVariant(u32 battle_slot, u32 fresh)
      * difference in the list and then walk it again to record them -- two
      * reads of two ~16 KB lists from main RAM after every materialization,
      * the learn's whole cost (~46K cycles a marked frame, 4 x Yoshi). Same
-     * records, same rejects. */
-    for (i = 0u; i < a->word_count; i++)
+     * records, same rejects. 2026-10-13: the words first, the mask only
+     * where they differ -- nearly every word of two same-shape lists is
+     * equal (25.7K cycles a marked frame, four Crashes). */
     {
-        if ((((mask[i >> 5] >> (i & 31u)) & 1u) == 0u) &&
-            (a->words[i] != b->words[i]))
+        const u32 *aw = a->words;
+        const u32 *bw = b->words;
+        const u32 count = a->word_count;
+
+        for (i = 0u; i < count; i++)
         {
-            if (n == NDS_FTR_LEAN_VARIANT_DIFF_MAX)
+            if ((aw[i] != bw[i]) &&
+                (((mask[i >> 5] >> (i & 31u)) & 1u) == 0u))
             {
-                ndsFtrLeanVariantReject(3u);
-                return NDS_FTR_LEAN_ENTRY_NONE;
+                if (n == NDS_FTR_LEAN_VARIANT_DIFF_MAX)
+                {
+                    ndsFtrLeanVariantReject(3u);
+                    return NDS_FTR_LEAN_ENTRY_NONE;
+                }
+                diff_index[n++] = (u16)i;
             }
-            diff_index[n++] = (u16)i;
         }
     }
     if (hs->variant_count == 0u)
