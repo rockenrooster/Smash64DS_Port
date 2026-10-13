@@ -463,6 +463,32 @@ static u32 ndsNetBatchReady(u32 batch)
     return 1u;
 }
 
+/* The wait notice names the first player whose records for `batch` are
+ * missing, as the leave notice names the player who left. */
+static void ndsNetWaitNotice(u32 batch)
+{
+    const u32 need = 2u * batch + 2u;
+    u32 p;
+
+    for (p = 0u; p < NDS_NET_PORTS; p++)
+    {
+        if ((p != gNdsNetLocalPort) && (((gNdsNetHumanMask >> p) & 1u) != 0u) &&
+            (sNetHave[p] < need))
+        {
+            char name[NDS_NET_NAME_LEN + 1u];
+
+            strncpy(name, ndsNetLobbyMemberName(p), NDS_NET_NAME_LEN);
+            name[NDS_NET_NAME_LEN] = '\0';
+            if (name[0] != '\0')
+                ndsNetUiLine(21, " Waiting for %s...", name);
+            else
+                ndsNetUiLine(21, " Waiting for player %lu...", (unsigned long)(p + 1u));
+            return;
+        }
+    }
+    ndsNetUiLine(21, " Waiting for the other players...");
+}
+
 /* Ends the match without inventing a result. As the source's pause quit
  * (ifcommon.c, A+B+R+Z) does, it ends as a reset, which Results shows as NO
  * CONTEST; the scene exit is requested directly so it works in any phase (the
@@ -614,7 +640,7 @@ void ndsNetBattleGate(void)
             }
         }
         if (waited == NDS_NET_STALL_NOTICE)
-            ndsNetUiLine(21, " Waiting for the other players...");
+            ndsNetWaitNotice(sNetBatch);
 #if NDS_FREEZE_DIAGNOSTICS
         /* Diagnostic playtests: the radio's own counters (frames sent and
          * received, TX buffer stalls, RX ring overflows) and the batch it
