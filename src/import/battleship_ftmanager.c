@@ -1217,7 +1217,7 @@ static void ndsFTManagerPreloadVSOwnerImagesLargestFirst(void)
 /* include/nds/renderer_fighter_lean.h (not included here: it drags the
  * renderer's lean-path types into a decomp TU). */
 void ndsFtrLeanAdmitNoteFighter(u32 player, u32 fkind, u32 costume,
-                                u32 detail);
+                                u32 detail, u32 content);
 
 #if NDS_P2_1P_GAME && NDS_P2_MENU_WALK
 extern volatile u32 gNdsMenuShellWalkRoute;
@@ -1423,7 +1423,13 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
         if ((fighter_gobj != NULL) && (desc != NULL))
         {
             ndsFtrLeanAdmitNoteFighter((u32)desc->player, (u32)desc->fkind,
-                                       (u32)desc->costume, (u32)desc->detail);
+                                       (u32)desc->costume, (u32)desc->detail,
+#if NDS_P4
+                                       ftGetStruct(fighter_gobj)->nds_p4_content
+#else
+                                       0u
+#endif
+                                       );
         }
         return fighter_gobj;
     }

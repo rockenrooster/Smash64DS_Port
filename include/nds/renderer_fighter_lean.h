@@ -399,6 +399,9 @@ typedef struct NDSFtrLeanCounters
                                    tile, 1 light colours, 2 light direction,
                                    3 combine, 4 blend, 5 texture state,
                                    6 render tile, 7 othermode_h bits */
+    u32 pool_store_words;       /* words copied into the pool */
+    u32 pool_revive_words;      /* ... copied back out of it */
+    u32 root_copy_words;        /* root block words copied from donors */
 } NDSFtrLeanCounters;
 
 #if NDS_FTR_LEAN_LAB
@@ -833,9 +836,10 @@ enum
 extern volatile u32 gNdsFtrLeanAdmitFail;
 extern volatile u32 gNdsFtrLeanAdmitFailFirst[4];
 
-/* TU B (renderer_fighter_lean.c): creation seam and frame pass. */
+/* TU B (renderer_fighter_lean.c): creation seam and frame pass. `content`:
+ * the fighter's P4 content (fp->nds_p4_content), 0 for the cast. */
 void ndsFtrLeanAdmitNoteFighter(u32 player, u32 fkind, u32 costume,
-                                u32 detail);
+                                u32 detail, u32 content);
 /* Slice 2c: the creation-time admission, run last by
  * ndsBattlePrepareSceneTextures (after the scene's texture VRAM reset). */
 void ndsFtrLeanAdmitSceneTexturesReady(void);
@@ -843,10 +847,11 @@ void ndsFtrLeanAdmitSceneTexturesReady(void);
  * loaded files of the fighters present (asset id -> loaded data), which the
  * adapter reads from each kind's FTData file pointers; a record's image and
  * TLUT resolve through them (ndsRelocNativeAssetAddress), falling back to
- * ndsRelocGetLoadedAssetView. */
+ * ndsRelocGetLoadedAssetView. A fighter with a P4 `content` takes its
+ * records from fighters/p4_admission.bin (scripts/p4/p4_admission.py). */
 u32 ndsFtrLeanAdmitRun(NDSRendererStats *scratch, const u32 *fkind,
                        const u32 *costume, const u32 *detail,
-                       const u32 *player, u32 count,
+                       const u32 *player, const u32 *content, u32 count,
                        const u32 *base_asset, const void *const *base_data,
                        u32 base_count, u32 word);
 /* Lock A+B once the battle's setup uploads are done (word 2; idempotent). */

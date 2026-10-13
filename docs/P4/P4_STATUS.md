@@ -2418,6 +2418,47 @@ list holds. Lab verify on four Crashes, Meta Knights, Banjos and the cast:
 607 with copies and 607 without (the known modulate-0 re-record effect). WORK
 P95: Meta Knight 1,264,704 -> 1,221,760, Crash 1,252,032, Banjo 1,237,888.
 
+## P4 texture admission (residency, P95, 2026-10-13)
+
+The 18 contents' four-fighter mirrors on Dream Land (clean sweep ROM,
+build-sweep-p95g, 1,961 frames), WORK P95: Falco 1,027,712, Ganondorf
+1,056,320, Wolf 1,074,048, Bowser 1,195,904, Marth 1,164,928, Roy 1,168,640,
+Wario 1,020,800, Peach 1,076,864, Crash 1,245,120, Lanky 1,042,880, Sheik
+1,077,952, Banjo 1,234,432, Sonic 1,257,536, Dedede 1,203,136, Mad Piano
+923,392, Meta Knight 1,215,168, MRGAW 1,132,352, Snake 1,102,144: nine over
+the gate.
+
+A content's textures converted on first sight, mid-match. The cast's battle
+load replays a generated table of every texture a kind can show
+(scripts/fighters/generate_nds_fighter_admission.py, fighters/admission.bin),
+so the cast uploads nothing after GO; a content was noted under its parent
+kind, whose records name files a content's battle never loads. Four Crashes
+uploaded 66 textures after GO (Bowser 50, Banjo 43, Dedede 28, Sonic 18, Meta
+Knight 12, Marth and Roy 2), ~100K cycles each, inside the materialization of
+the frame that first showed a face or a costume's palette -- 34% of a Crash
+list's materialization.
+
+- `scripts/p4/p4_admission.py` enumerates each content with the cast
+  generator's own display-list state machine, material evaluator and record
+  packer over the content's O2R files: the JointTree lists with their MObjSub
+  chains and costume streams, every FTModelPart row with its streams, the
+  access part, and the texture-part ids its motion scripts set
+  (SetTexturePartID in the export's events). `fighters/p4_admission.bin`
+  holds the records by content id x detail (p4_rules.mk). A costume's set is
+  3-20 KB (Mr. Game & Watch 45-59 KB).
+- The admission seam passes the content (`ndsFtrLeanAdmitNoteFighter`); the
+  bases are the content's own FTData files, whose model is a compact battle
+  pack that only its loaded data maps SOURCE offsets into. Cast fighters admit
+  first, then the contents one record each in turn (a content's list is a
+  superset of every face of every costume; four outgrow the 153-entry slot
+  budget, which in fighter order would leave the last fighters none), to at
+  most 64 KB of texels so bank D keeps room for the battle's own uploads.
+
+Four Crashes (DIAG ROM): uploads after GO 66 -> 24, the texture binds' miss
+cost 6.94M -> 2.23M cycles over 1,200 frames, the slot budget reached at 153.
+WORK P95 (clean ROM): Crash 1,245,120 -> 1,161,728, Dedede 1,203,136 ->
+1,184,576, Bowser 1,195,904 -> 1,187,328.
+
 ## Board 1 status (master plan Revision 3)
 
 | Item | State |

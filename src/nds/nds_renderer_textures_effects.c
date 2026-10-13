@@ -18934,20 +18934,293 @@ static void ndsFtrAdmitIdentCensus(NdsRelocAssetStream *stream,
 }
 #endif
 
+/* One admission pass: the stops and counts every record shares. */
+typedef struct NDSFtrAdmitPass
+{
+    NDSRendererStats *scratch;
+    u32 present;
+    u32 libc_stop;
+    u32 slot_stop;
+    u32 admitted_total;
+    u32 admitted;
+    u32 bytes;          /* texel bytes of the entries admitted */
+} NDSFtrAdmitPass;
+
+/* TEXIMAGE_PARAM's texel bytes (entry->params). */
+static u32 ndsFtrAdmitParamsBytes(u32 params)
+{
+    static const u8 bits_per_texel[8] = { 0u, 8u, 2u, 4u, 8u, 2u, 8u, 16u };
+
+    return ((8u << ((params >> 20) & 7u)) * (8u << ((params >> 23) & 7u)) *
+            (u32)bits_per_texel[(params >> 26) & 7u]) / 8u;
+}
+
+/* Record `index` (`w`) of fighter `i`'s list (kind, detail d, costume):
+ * skipped (another kind's hat, another costume, a stop), or replayed and the
+ * entry it resolves admitted. */
+static void NDS_FTR_ADMIT_COLD_CODE
+ndsFtrAdmitRecord(NDSFtrAdmitPass *pass, const u32 *w, u32 i, u32 kind,
+                  u32 d, u32 costume, u32 index)
+{
+    NDSRendererHardwareResolvedTexture resolved;
+    s32 result;
+
+    NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.records++);
+    if ((w[0] & NDS_FIGHTER_ADMISSION_F_HAT) != 0u)
+    {
+        u32 hat = (w[0] >> 8) & 0xffu;
+
+        if ((kind != NDS_FTR_ADMIT_KIRBY) ||
+            (hat == NDS_FTR_ADMIT_KIRBY) || (hat >= 32u) ||
+            ((pass->present & (1u << hat)) == 0u))
+        {
+            NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.skipped_hat++);
+            return;
+        }
+    }
+    if ((w[1] & (1u << (costume & 7u))) == 0u)
+    {
+        NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.skipped_costume++);
+        return;
+    }
+    if (pass->libc_stop != 0u)
+    {
+        NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.libc_skipped++);
+        return;
+    }
+    if (pass->admitted_total + NDS_FTR_ADMIT_SLOT_RESERVE >=
+        NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT)
+    {
+        if (pass->slot_stop == 0u)
+        {
+            pass->slot_stop = 1u;
+            ndsFtrAdmitLatch(kind, d, nNDSFtrLeanAdmitFailSlots, index,
+                             pass->admitted_total, 0u);
+        }
+        NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.slot_skipped++);
+        return;
+    }
+    {
+        u32 top = mallinfo().keepcost;
+
+        NDS_FTR_ADMIT_LAB(
+            if ((gNdsFtrAdmitLab.libc_top_min == 0u) ||
+                (top < gNdsFtrAdmitLab.libc_top_min))
+            {
+                gNdsFtrAdmitLab.libc_top_min = top;
+            });
+        if (top < NDS_FTR_ADMIT_LIBC_FLOOR)
+        {
+            pass->libc_stop = 1u;
+            NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.libc_skipped++);
+            ndsFtrAdmitLatch(kind, d, nNDSFtrLeanAdmitFailLibc, index, top,
+                             0u);
+            return;
+        }
+    }
+#if NDS_VRAM_CENSUS_LIVE
+    gNdsFtrAdmitLastReject = 0u;
+    {
+        u32 apply_start = cpuGetTiming();
+
+        result = ndsFtrAdmitApply(pass->scratch, w, &resolved);
+        gNdsFtrAdmitLab.apply_ticks += cpuGetTiming() - apply_start;
+    }
+#else
+    result = ndsFtrAdmitApply(pass->scratch, w, &resolved);
+#endif
+    if (result == -2)
+    {
+        NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.pruned++);
+        return;
+    }
+    if (result == -3)
+    {
+        NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.absent++);
+        return;
+    }
+    if (result < 0)
+    {
+        NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.asset_fails++);
+        ndsFtrAdmitLatch(kind, d, nNDSFtrLeanAdmitFailAsset, index, w[3],
+                         w[2]);
+        return;
+    }
+    if ((result == 0) || (resolved.entry == NULL))
+    {
+#if NDS_VRAM_CENSUS_LIVE
+        gNdsFtrAdmitLab.reject_mask |= gNdsFtrAdmitLastReject;
+        if (gNdsFtrAdmitLab.reject_first[0] == 0u)
+        {
+            gNdsFtrAdmitLab.reject_first[0] =
+                gNdsFtrAdmitLastReject | ((result == 0) ? 0u : 0x80000000u);
+            gNdsFtrAdmitLab.reject_first[1] = index;
+            gNdsFtrAdmitLab.reject_first[2] = w[14];
+            gNdsFtrAdmitLab.reject_first[3] = w[15];
+            gNdsFtrAdmitLab.reject_first[4] = w[16];
+            gNdsFtrAdmitLab.reject_first[5] = w[17];
+        }
+#endif
+        NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.fails++);
+        ndsFtrAdmitLatch(kind, d, nNDSFtrLeanAdmitFailResolve, index,
+                         ((w[2] & 0xfffu) << 20) | (w[3] & 0xfffffu),
+#if NDS_FTR_LEAN_LAB
+                         gNdsFtrLean.reject_mask
+#else
+                         0u
+#endif
+                         );
+        return;
+    }
+    NDS_FTR_ADMIT_LAB((gNdsFtrAdmitLab.applied++,
+                       gNdsFtrAdmitLab.per_fighter_applied[i & 3u]++));
+    if (resolved.entry->admitted == 0u)
+    {
+        resolved.entry->admitted = 1u;
+        pass->admitted++;
+        pass->admitted_total++;
+        pass->bytes += ndsFtrAdmitParamsBytes(resolved.entry->params);
+#if NDS_VRAM_CENSUS_LIVE
+        {
+            u32 addr = ndsFtrAdmitEntryAddress(resolved.entry);
+            u32 bytes = ndsVramCensusParamsBytes(resolved.entry->params);
+
+            gNdsFtrAdmitLab.entries_admitted++;
+            gNdsFtrAdmitLab.bytes_admitted += bytes;
+            gNdsFtrAdmitLab.per_fighter_bytes[i & 3u] += bytes;
+            if ((addr >= NDS_FTR_ADMIT_D_LO) && (addr < NDS_FTR_ADMIT_D_HI))
+            {
+                gNdsFtrAdmitLab.bytes_in_d += bytes;
+            }
+            else
+            {
+                gNdsFtrAdmitLab.bytes_in_ab += bytes;
+            }
+        }
+#endif
+    }
+}
+
+#if NDS_P4
+/* P4 (2026-10-13): the contents' records (scripts/p4/p4_admission.py) -- the
+ * cast's record format under a header naming the content ids it indexes, then
+ * (first, count) per content id x detail. A content was noted under its
+ * parent kind, whose records name files its battle never loads, so its own
+ * textures converted on first sight mid-match (four Crashes: 66 uploads after
+ * GO, ~100K cycles each, inside the materializations of the frames that
+ * first showed them). */
+#define NDS_FTR_ADMIT_P4_MAGIC 0x34504441u /* 'ADP4' */
+#define NDS_FTR_ADMIT_P4_VERSION 1u
+/* The contents' texel bytes: a costume's set is 3-20 KB (Mr. Game & Watch
+ * 45-59 KB), the cast's about 18 KB a fighter, and after the admission bank
+ * D alone serves the battle's own uploads (effects, items, the stage's
+ * animated textures). */
+#define NDS_FTR_ADMIT_P4_BYTES 0x10000u
+
+/* Every P4 fighter's list, one record of each in turn: a content's list is a
+ * superset (every face of every costume), and four of them outgrow the slot
+ * budget, which in fighter order would leave the last fighters none. */
+static void NDS_FTR_ADMIT_COLD_CODE
+ndsFtrAdmitP4Pass(NDSFtrAdmitPass *pass, const u32 *fkind, const u32 *costume,
+                  const u32 *detail, const u32 *player, const u32 *content,
+                  u32 count)
+{
+    NdsRelocAssetStream stream = { NULL };
+    u32 head[4];
+    u32 first[NDS_FTR_LEAN_ADMIT_FIGHTERS];
+    u32 n[NDS_FTR_LEAN_ADMIT_FIGHTERS];
+    u32 records_at;
+    u32 longest = 0u;
+    u32 budget;
+    u32 r;
+    u32 i;
+
+    for (i = 0u; (i < count) && (content[i] == 0u); i++)
+    {
+    }
+    if ((i == count) || (count > NDS_FTR_LEAN_ADMIT_FIGHTERS))
+    {
+        return;
+    }
+    if (ndsRelocAssetStreamOpen(&stream, "nitro:/fighters/p4_admission.bin") ==
+        FALSE)
+    {
+        ndsFtrAdmitLatch(0u, 0u, nNDSFtrLeanAdmitFailOpen, 0u, 0u, 0u);
+        return;
+    }
+    if ((ndsRelocAssetStreamRead(&stream, 0u, head, sizeof(head)) == FALSE) ||
+        (head[0] != NDS_FTR_ADMIT_P4_MAGIC) ||
+        (head[1] != NDS_FTR_ADMIT_P4_VERSION) ||
+        (head[3] != NDS_FIGHTER_ADMISSION_RECORD_WORDS))
+    {
+        ndsRelocAssetStreamClose(&stream);
+        ndsFtrAdmitLatch(0u, 0u, nNDSFtrLeanAdmitFailFormat, 0u, 0u, 0u);
+        return;
+    }
+    records_at = sizeof(head) + head[2] * 2u * 2u * sizeof(u32);
+    for (i = 0u; i < count; i++)
+    {
+        u32 row[2] = { 0u, 0u };
+        u32 d = (detail[i] == 2u) ? 1u : 0u;
+
+        if ((content[i] != 0u) && (content[i] < head[2]) &&
+            (ndsRelocAssetStreamRead(
+                 &stream,
+                 sizeof(head) + (content[i] * 2u + d) * 2u * sizeof(u32),
+                 row, sizeof(row)) == FALSE))
+        {
+            row[1] = 0u;
+        }
+        first[i] = row[0];
+        n[i] = (content[i] != 0u) ? row[1] : 0u;
+        longest = (n[i] > longest) ? n[i] : longest;
+    }
+    budget = pass->bytes + NDS_FTR_ADMIT_P4_BYTES;
+    for (r = 0u; (r < longest) && (pass->slot_stop == 0u) &&
+                 (pass->libc_stop == 0u) && (pass->bytes < budget); r++)
+    {
+        for (i = 0u; i < count; i++)
+        {
+            const u32 d = (detail[i] == 2u) ? 1u : 0u;
+
+            if (r >= n[i])
+            {
+                continue;
+            }
+#if NDS_VRAM_CENSUS_LIVE
+            gNdsVramCensusDrawSlotPlus1 = (player[i] & 3u) + 1u;
+#else
+            (void)player;
+#endif
+            if (ndsRelocAssetStreamRead(
+                    &stream,
+                    records_at + (first[i] + r) *
+                                     NDS_FIGHTER_ADMISSION_RECORD_WORDS * 4u,
+                    sNdsFtrAdmitChunk,
+                    NDS_FIGHTER_ADMISSION_RECORD_WORDS * 4u) == FALSE)
+            {
+                ndsFtrAdmitLatch(fkind[i], d, nNDSFtrLeanAdmitFailRead, r, 0u,
+                                 0u);
+                n[i] = 0u;
+                continue;
+            }
+            ndsFtrAdmitRecord(pass, sNdsFtrAdmitChunk, i, fkind[i], d,
+                              costume[i], first[i] + r);
+        }
+    }
+    ndsRelocAssetStreamClose(&stream);
+}
+#endif
+
 u32 NDS_FTR_ADMIT_COLD_CODE
 ndsFtrLeanAdmitRun(NDSRendererStats *scratch, const u32 *fkind,
                    const u32 *costume, const u32 *detail,
-                   const u32 *player, u32 count,
+                   const u32 *player, const u32 *content, u32 count,
                    const u32 *base_asset, const void *const *base_data,
                    u32 base_count, u32 word)
 {
     NdsRelocAssetStream stream = { NULL };
-    NDSRendererHardwareResolvedTexture resolved;
-    u32 libc_stop = 0u;
-    u32 slot_stop = 0u;
-    u32 admitted_total = 0u;
-    u32 present = 0u;
-    u32 admitted = 0u;
+    NDSFtrAdmitPass pass;
     u32 start = cpuGetTiming();
     u32 i;
 
@@ -18966,6 +19239,8 @@ ndsFtrLeanAdmitRun(NDSRendererStats *scratch, const u32 *fkind,
     {
         return 0u;
     }
+    memset(&pass, 0, sizeof(pass));
+    pass.scratch = scratch;
     NDS_FTR_ADMIT_LAB((gNdsFtrAdmitLab.runs++, gNdsFtrAdmitLab.word = word,
                        gNdsFtrAdmitLab.frame = gNdsRendererProfileFrameCount,
                        gNdsFtrAdmitLab.bases = base_count));
@@ -18975,7 +19250,7 @@ ndsFtrLeanAdmitRun(NDSRendererStats *scratch, const u32 *fkind,
         base_count : 0u;
     for (i = 0u; i < count; i++)
     {
-        present |= 1u << (fkind[i] & 31u);
+        pass.present |= 1u << (fkind[i] & 31u);
     }
     if (ndsRelocAssetStreamOpen(&stream, "nitro:/fighters/admission.bin") ==
         FALSE)
@@ -18999,7 +19274,7 @@ ndsFtrLeanAdmitRun(NDSRendererStats *scratch, const u32 *fkind,
 #if NDS_VRAM_CENSUS_LIVE
     if (gNdsFtrAdmitIdentCensus != 0u)
     {
-        ndsFtrAdmitIdentCensus(&stream, scratch, present);
+        ndsFtrAdmitIdentCensus(&stream, scratch, pass.present);
     }
 #endif
     /* Slice 2c: carve (no libnds record, no libc per texture). Without the
@@ -19015,7 +19290,8 @@ ndsFtrLeanAdmitRun(NDSRendererStats *scratch, const u32 *fkind,
         u32 n;
         u32 r;
 
-        if (kind >= NDS_FIGHTER_ADMISSION_KINDS)
+        /* A content's records are its own (ndsFtrAdmitP4Pass). */
+        if ((kind >= NDS_FIGHTER_ADMISSION_KINDS) || (content[i] != 0u))
         {
             continue;
         }
@@ -19058,159 +19334,24 @@ ndsFtrLeanAdmitRun(NDSRendererStats *scratch, const u32 *fkind,
             }
             for (k = 0u; k < m; k++)
             {
-                const u32 *w =
-                    &sNdsFtrAdmitChunk[k * NDS_FIGHTER_ADMISSION_RECORD_WORDS];
-                s32 result;
-
-                NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.records++);
-                if ((w[0] & NDS_FIGHTER_ADMISSION_F_HAT) != 0u)
-                {
-                    u32 hat = (w[0] >> 8) & 0xffu;
-
-                    if ((kind != NDS_FTR_ADMIT_KIRBY) ||
-                        (hat == NDS_FTR_ADMIT_KIRBY) || (hat >= 32u) ||
-                        ((present & (1u << hat)) == 0u))
-                    {
-                        NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.skipped_hat++);
-                        continue;
-                    }
-                }
-                if ((w[1] & (1u << (costume[i] & 7u))) == 0u)
-                {
-                    NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.skipped_costume++);
-                    continue;
-                }
-                if (libc_stop != 0u)
-                {
-                    NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.libc_skipped++);
-                    continue;
-                }
-                if (admitted_total + NDS_FTR_ADMIT_SLOT_RESERVE >=
-                    NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT)
-                {
-                    if (slot_stop == 0u)
-                    {
-                        slot_stop = 1u;
-                        ndsFtrAdmitLatch(kind, d, nNDSFtrLeanAdmitFailSlots,
-                                         first + r + k, admitted_total, 0u);
-                    }
-                    NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.slot_skipped++);
-                    continue;
-                }
-                {
-                    u32 top = mallinfo().keepcost;
-
-                    NDS_FTR_ADMIT_LAB(
-                        if ((gNdsFtrAdmitLab.libc_top_min == 0u) ||
-                            (top < gNdsFtrAdmitLab.libc_top_min))
-                        {
-                            gNdsFtrAdmitLab.libc_top_min = top;
-                        });
-                    if (top < NDS_FTR_ADMIT_LIBC_FLOOR)
-                    {
-                        libc_stop = 1u;
-                        NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.libc_skipped++);
-                        ndsFtrAdmitLatch(kind, d, nNDSFtrLeanAdmitFailLibc,
-                                         first + r + k, top, 0u);
-                        continue;
-                    }
-                }
-#if NDS_VRAM_CENSUS_LIVE
-                gNdsFtrAdmitLastReject = 0u;
-#endif
-#if NDS_VRAM_CENSUS_LIVE
-                {
-                    u32 apply_start = cpuGetTiming();
-
-                    result = ndsFtrAdmitApply(scratch, w, &resolved);
-                    gNdsFtrAdmitLab.apply_ticks += cpuGetTiming() - apply_start;
-                }
-#else
-                result = ndsFtrAdmitApply(scratch, w, &resolved);
-#endif
-                if (result == -2)
-                {
-                    NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.pruned++);
-                    continue;
-                }
-                if (result == -3)
-                {
-                    NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.absent++);
-                    continue;
-                }
-                if (result < 0)
-                {
-                    NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.asset_fails++);
-                    ndsFtrAdmitLatch(kind, d, nNDSFtrLeanAdmitFailAsset,
-                                     first + r + k, w[3], w[2]);
-                    continue;
-                }
-                if ((result == 0) || (resolved.entry == NULL))
-                {
-#if NDS_VRAM_CENSUS_LIVE
-                    gNdsFtrAdmitLab.reject_mask |= gNdsFtrAdmitLastReject;
-                    if (gNdsFtrAdmitLab.reject_first[0] == 0u)
-                    {
-                        gNdsFtrAdmitLab.reject_first[0] =
-                            gNdsFtrAdmitLastReject | ((result == 0) ? 0u :
-                                                      0x80000000u);
-                        gNdsFtrAdmitLab.reject_first[1] = first + r + k;
-                        gNdsFtrAdmitLab.reject_first[2] = w[14];
-                        gNdsFtrAdmitLab.reject_first[3] = w[15];
-                        gNdsFtrAdmitLab.reject_first[4] = w[16];
-                        gNdsFtrAdmitLab.reject_first[5] = w[17];
-                    }
-#endif
-                    NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.fails++);
-                    ndsFtrAdmitLatch(kind, d, nNDSFtrLeanAdmitFailResolve,
-                                     first + r + k,
-                                     ((w[2] & 0xfffu) << 20) |
-                                         (w[3] & 0xfffffu),
-#if NDS_FTR_LEAN_LAB
-                                     gNdsFtrLean.reject_mask
-#else
-                                     0u
-#endif
-                                     );
-                    continue;
-                }
-                NDS_FTR_ADMIT_LAB((gNdsFtrAdmitLab.applied++,
-                                   gNdsFtrAdmitLab.per_fighter_applied[i & 3u]++));
-                if (resolved.entry->admitted == 0u)
-                {
-                    resolved.entry->admitted = 1u;
-                    admitted++;
-                    admitted_total++;
-#if NDS_VRAM_CENSUS_LIVE
-                    {
-                        u32 addr = ndsFtrAdmitEntryAddress(resolved.entry);
-                        u32 bytes = ndsVramCensusParamsBytes(
-                            resolved.entry->params);
-
-                        gNdsFtrAdmitLab.entries_admitted++;
-                        gNdsFtrAdmitLab.bytes_admitted += bytes;
-                        gNdsFtrAdmitLab.per_fighter_bytes[i & 3u] += bytes;
-                        if ((addr >= NDS_FTR_ADMIT_D_LO) &&
-                            (addr < NDS_FTR_ADMIT_D_HI))
-                        {
-                            gNdsFtrAdmitLab.bytes_in_d += bytes;
-                        }
-                        else
-                        {
-                            gNdsFtrAdmitLab.bytes_in_ab += bytes;
-                        }
-                    }
-#endif
-                }
+                ndsFtrAdmitRecord(
+                    &pass,
+                    &sNdsFtrAdmitChunk[k * NDS_FIGHTER_ADMISSION_RECORD_WORDS],
+                    i, kind, d, costume[i], first + r + k);
             }
         }
     }
+    ndsRelocAssetStreamClose(&stream);
+#if NDS_P4
+    ndsFtrAdmitP4Pass(&pass, fkind, costume, detail, player, content, count);
+#else
+    (void)content;
+#endif
     ndsFtrCarveClose();
     if (sNdsFtrCarveLive == 0u)
     {
         ndsFtrLeanAdmitCarveRetire();
     }
-    ndsRelocAssetStreamClose(&stream);
     sNdsFtrAdmitBaseCount = 0u;
 #if NDS_VRAM_CENSUS_LIVE
     gNdsVramCensusDrawSlotPlus1 = 0u;
@@ -19222,7 +19363,7 @@ ndsFtrLeanAdmitRun(NDSRendererStats *scratch, const u32 *fkind,
 #else
     (void)start;
 #endif
-    return admitted;
+    return pass.admitted;
 }
 
 /* Battle exit: admitted textures stop being special, and bank D goes back to
@@ -19330,13 +19471,13 @@ volatile u32 gNdsFtrLeanAdmitFailFirst[4];
 
 u32 ndsFtrLeanAdmitRun(NDSRendererStats *scratch, const u32 *fkind,
                        const u32 *costume, const u32 *detail,
-                       const u32 *player, u32 count,
+                       const u32 *player, const u32 *content, u32 count,
                        const u32 *base_asset, const void *const *base_data,
                        u32 base_count, u32 word)
 {
     (void)scratch; (void)fkind; (void)costume; (void)detail; (void)player;
-    (void)count; (void)base_asset; (void)base_data; (void)base_count;
-    (void)word;
+    (void)content; (void)count; (void)base_asset; (void)base_data;
+    (void)base_count; (void)word;
     return 0u;
 }
 

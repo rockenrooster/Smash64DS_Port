@@ -141,6 +141,18 @@ $(NDS_P4_ANIM_STREAM): \
 	python "$(PROJECT_ROOT)/scripts/p4/p4_anim_stream.py" --gen "$(NDS_P4_GEN)" \
 		--contents "$(NDS_P4_ENABLED)" --out "$@"
 $(OUTPUT).nds: $(NDS_P4_ANIM_STREAM)
+# The contents' fighter texture admission records (scripts/p4/p4_admission.py):
+# the cast's table for the contents, replayed at battle load
+# (ndsFtrLeanAdmitRun) so a content's textures convert before GO.
+NDS_P4_ADMISSION := $(NITROFS_DIR)/fighters/p4_admission.bin
+$(NDS_P4_ADMISSION): \
+		$(foreach name,$(NDS_P4_ENABLED),$(NDS_P4_GEN)/$(name)/nds_p4_$(name).generated.c) \
+		$(PROJECT_ROOT)/scripts/p4/p4_admission.py \
+		$(PROJECT_ROOT)/scripts/fighters/generate_nds_fighter_admission.py
+	@mkdir -p $(dir $@)
+	python "$(PROJECT_ROOT)/scripts/p4/p4_admission.py" --gen "$(NDS_P4_GEN)" \
+		--export-root "$(NDS_P4_EXPORT)" --contents "$(NDS_P4_ENABLED)" --out "$@"
+$(OUTPUT).nds: $(NDS_P4_ADMISSION)
 # nitro:/reloc/p4 resolves by its boot-time FNT runs (nds_reloc_assets.c,
 # ndsRelocP4DirBuild): every resolver -- libfat's open included -- reaches
 # __wrap_nitroromResolvePath, which answers "reloc/p4/<id>" without walking

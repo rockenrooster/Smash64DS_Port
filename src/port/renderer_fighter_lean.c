@@ -84,6 +84,7 @@ static u32 sNdsFtrAdmitKind[NDS_FTR_LEAN_ADMIT_FIGHTERS];
 static u32 sNdsFtrAdmitCostume[NDS_FTR_LEAN_ADMIT_FIGHTERS];
 static u32 sNdsFtrAdmitDetail[NDS_FTR_LEAN_ADMIT_FIGHTERS];
 static u32 sNdsFtrAdmitPlayer[NDS_FTR_LEAN_ADMIT_FIGHTERS];
+static u32 sNdsFtrAdmitContent[NDS_FTR_LEAN_ADMIT_FIGHTERS];
 static u32 sNdsFtrAdmitDone;     /* generation + 1 the admission ran for */
 
 /* "Is this a fight" is the scene manager's battle flag (VS, every 1P fight,
@@ -129,6 +130,16 @@ static u32 ndsFtrLeanAdmitCollectBases(void)
         void **files[9];
         u32 f;
 
+#if NDS_P4
+        /* A content's records name its own files: its model is a compact
+         * battle pack, whose SOURCE offsets only its loaded data maps. */
+        if (sNdsFtrAdmitContent[i] != 0u)
+        {
+            const NDSP4Fighter *p4 = ndsP4Fighter(sNdsFtrAdmitContent[i]);
+
+            data = (p4 != NULL) ? p4->data : NULL;
+        }
+#endif
         if (data == NULL)
         {
             continue;
@@ -192,7 +203,8 @@ static void ndsFtrLeanAdmitMaybeRun(u32 word)
     bases = ndsFtrLeanAdmitCollectBases();
     (void)ndsFtrLeanAdmitRun(&scratch, sNdsFtrAdmitKind,
                              sNdsFtrAdmitCostume, sNdsFtrAdmitDetail,
-                             sNdsFtrAdmitPlayer, sNdsFtrAdmitCount,
+                             sNdsFtrAdmitPlayer, sNdsFtrAdmitContent,
+                             sNdsFtrAdmitCount,
                              sNdsFtrAdmitBaseAsset, sNdsFtrAdmitBaseData,
                              bases, word);
 #else
@@ -205,7 +217,7 @@ static void ndsFtrLeanAdmitMaybeRun(u32 word)
  * initialiser -- gNdsFtrLeanAdmit above -- so the creation-time path this
  * existed to exercise is the default path.) */
 void ndsFtrLeanAdmitNoteFighter(u32 player, u32 fkind, u32 costume,
-                                u32 detail)
+                                u32 detail, u32 content)
 {
     ndsFtrLeanAdmitSync();
     if ((ndsFtrLeanAdmitBattleScene() == FALSE) ||
@@ -222,6 +234,7 @@ void ndsFtrLeanAdmitNoteFighter(u32 player, u32 fkind, u32 costume,
     sNdsFtrAdmitCostume[sNdsFtrAdmitCount] = costume;
     sNdsFtrAdmitDetail[sNdsFtrAdmitCount] = detail;
     sNdsFtrAdmitPlayer[sNdsFtrAdmitCount] = player;
+    sNdsFtrAdmitContent[sNdsFtrAdmitCount] = content;
     sNdsFtrAdmitCount++;
 }
 
