@@ -73,6 +73,13 @@ volatile u32 gNdsVramCensusEnable;
  * slice 2c), else at the first frame end that sees it set. */
 static u32 sNdsFtrAdmitGen;      /* gNdsTaskmanHeapGeneration + 1 noted */
 static u32 sNdsFtrAdmitCount;
+/* Every fighter noted, admissible or not: the scene preparation's admission
+ * waits for the whole battle's. A kind past the admission table's twelve
+ * (Metal Mario, selectable with P4) was never counted, so a battle with one
+ * admitted at its first frame end instead -- after that frame's stage
+ * prepare had only banks A and B for its textures (a two-console Hyrule
+ * match: 15 stage lists failed on the first frame, 2026-10-12). */
+static u32 sNdsFtrAdmitSeen;
 static u32 sNdsFtrAdmitKind[NDS_FTR_LEAN_ADMIT_FIGHTERS];
 static u32 sNdsFtrAdmitCostume[NDS_FTR_LEAN_ADMIT_FIGHTERS];
 static u32 sNdsFtrAdmitDetail[NDS_FTR_LEAN_ADMIT_FIGHTERS];
@@ -97,6 +104,7 @@ static void ndsFtrLeanAdmitSync(void)
     {
         sNdsFtrAdmitGen = gen;
         sNdsFtrAdmitCount = 0u;
+        sNdsFtrAdmitSeen = 0u;
         sNdsFtrAdmitDone = 0u;
     }
 }
@@ -174,7 +182,7 @@ static void ndsFtrLeanAdmitMaybeRun(u32 word)
     NDSRendererStats scratch;
     u32 bases;
 
-    if ((word == 0u) || (sNdsFtrAdmitCount == 0u) ||
+    if ((word == 0u) || (sNdsFtrAdmitSeen == 0u) ||
         (sNdsFtrAdmitDone == sNdsFtrAdmitGen) ||
         (ndsFtrLeanAdmitBattleScene() == FALSE))
     {
@@ -201,8 +209,12 @@ void ndsFtrLeanAdmitNoteFighter(u32 player, u32 fkind, u32 costume,
 {
     ndsFtrLeanAdmitSync();
     if ((ndsFtrLeanAdmitBattleScene() == FALSE) ||
-        (sNdsFtrAdmitCount >= NDS_FTR_LEAN_ADMIT_FIGHTERS) ||
-        (fkind >= 12u) || (sNdsFtrAdmitDone == sNdsFtrAdmitGen))
+        (sNdsFtrAdmitDone == sNdsFtrAdmitGen))
+    {
+        return;
+    }
+    sNdsFtrAdmitSeen++;
+    if ((sNdsFtrAdmitCount >= NDS_FTR_LEAN_ADMIT_FIGHTERS) || (fkind >= 12u))
     {
         return;
     }
@@ -225,7 +237,7 @@ void ndsFtrLeanAdmitSceneTexturesReady(void)
 {
     ndsFtrLeanAdmitSync();
     if ((gSCManagerBattleState != NULL) &&
-        (sNdsFtrAdmitCount ==
+        (sNdsFtrAdmitSeen ==
          ((u32)gSCManagerBattleState->pl_count +
           (u32)gSCManagerBattleState->cp_count)))
     {

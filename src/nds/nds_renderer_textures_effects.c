@@ -18951,7 +18951,18 @@ ndsFtrLeanAdmitRun(NDSRendererStats *scratch, const u32 *fkind,
     u32 start = cpuGetTiming();
     u32 i;
 
-    if ((scratch == NULL) || (count == 0u) || (word == 0u))
+    if ((scratch == NULL) || (word == 0u))
+    {
+        return 0u;
+    }
+    /* Bank D goes to the textures before the first frame whatever the
+     * battle's fighters are: one with no admissible kind (Metal Mario
+     * alone) admits nothing, but its stage still needs D. */
+    if (word >= NDS_FTR_LEAN_ADMIT_REGIONS)
+    {
+        ndsFtrAdmitEnterRegions();
+    }
+    if (count == 0u)
     {
         return 0u;
     }
@@ -18962,10 +18973,6 @@ ndsFtrLeanAdmitRun(NDSRendererStats *scratch, const u32 *fkind,
     sNdsFtrAdmitBaseData = base_data;
     sNdsFtrAdmitBaseCount = ((base_asset != NULL) && (base_data != NULL)) ?
         base_count : 0u;
-    if (word >= NDS_FTR_LEAN_ADMIT_REGIONS)
-    {
-        ndsFtrAdmitEnterRegions();
-    }
     for (i = 0u; i < count; i++)
     {
         present |= 1u << (fkind[i] & 31u);
