@@ -2306,8 +2306,47 @@ with the alpha flag the TLUT load and the sprite), scaled 1.08 onto Kirby's
 head; Snake's low-detail head splits into no clean bandana (his texture
 carries skin, band and hair in one), so his is a ring generated around
 Kirby's forehead with two tails, on the band rows (15-19) of that texture.
-Each file (0x1930 + content id, 2-4 KB) rides the power's
+Each file (0x1930 + content id, 2-9 KB) rides the power's
 `hat_texture_file`, which the match loads.
+
+Owner BUGS.md rows of 2026-10-12 against the first cut, fixed:
+
+- **Meta Knight's copy is his whole neutral special.** The spin of Kirby's
+  neutral air used none of Mach Tornado ("just use metaknights entire b
+  attack"). Four statuses run Meta Knight's start, loop and ends on Kirby's
+  motions (`nds_p4_metaknight.c`): the start's 11 tics; the loop's spin
+  counted as his loop animation's speed (130, -2 a tic for 60 tics then -3,
+  +7 and a lift for B every 4 tics, a whoosh at each turn of its 358 frames,
+  floor dust every 8 tics, out at 60 with half the x speed); his
+  `moveset_tornadoLoop` hitboxes word for word (joint 0, which Kirby has too:
+  12% at size 600, then 8% from frame 1550 -- the measured MK ran his ends
+  and mash exactly so); his drift, gravity and wall bounce; his 54-tic ends,
+  the grounded one with `moveset_tornadoEnd`'s effects, the aerial one into a
+  special fall. His tornado (model joint 34 part 1, the loop script's
+  `SetModelPartID`) is the hat file's second list, a sidecar root on Kirby's
+  root joint turned by the spin (`ndsFighterDrawKirbyTornadoSidecar`),
+  carrying the content generator's deviations for those bytes (the cream
+  vertex tint, full IA intensity) and the combine his native owner aliases.
+  Each status replaces Kirby's motion script (`ndsP4KirbySetMotionScript`;
+  the motion's first frame plays muted), so no neutral-air hitbox or swing
+  sound comes along.
+- **MRGAW's copy keeps Kirby black.** The figure came back only at status
+  changes: every colour animation's end (`ftParamResetStatUpdateColAnim`)
+  cleared it, so Kirby standing still stayed pink. The power's
+  `kirby_colanim_end` sets it again there. The fireball motion's frame-16
+  events -- the Mario fireball flash (colour animation 39, which also ended
+  the figure), its sparkle and FGM -- are replaced by the toss alone (the
+  food's flag and its rumble).
+- **Snake's copy sounds like Snake.** The Thunder Jolt toss's first frame
+  ("Pika" and the electric FGM) plays muted and the throw plays Snake's
+  own throw FGM (`moveset_grenadeThrowN`'s 0x2A; with two out, ThrowEmpty's
+  0x2B).
+
+A build seeded from an earlier one kept the content directory's copy of the
+hat file from before it gained the tornado list (`p4_articles.py` copied it
+only when missing), so the entry packet baked the tornado's offset in the old
+bytes and drew 0 triangles while reporting success; the copy is refreshed
+whenever it differs now.
 
 ## Board 1 status (master plan Revision 3)
 

@@ -95,18 +95,40 @@ POWER_PREFIX = {
 # id, ga, is_projectile, (update, interrupt, physics, map)).
 CUSTOM_POWERS = {
     "metaknight": {
-        # Mach Tornado: his neutral-air spin, turned again while B is mashed.
+        # Mach Tornado, his whole neutral special (owner BUGS.md 2026-10-12):
+        # his start, loop and ends with his loop's hitboxes and his tornado
+        # around Kirby (src/port/nds_p4_metaknight.c), on Kirby's neutral-air
+        # pose, then his special landing and fall.
         "statuses": (
-            ("METAKNIGHT_NSP", "nFTCommonMotionAttackAirN", "nFTMotionAttackIDAttackAirN",
-             "nFTStatusAttackIDAttackAirN", 1, 0,
-             ("ndsP4MetaknightKirbyNSPUpdate", "NULL", "ndsP4MetaknightNSPLoopPhysics",
+            ("METAKNIGHT_NSP_START", "nFTCommonMotionAttackAirN", "nFTMotionAttackIDSpecialNCopyPurin",
+             "nFTStatusAttackIDSpecialNCopyPurin", 1, 0,
+             ("ndsP4MetaknightKirbyNSPStartUpdate", "NULL", "ftPhysicsApplyAirVelDrift",
+              "mpCommonCheckFighterCeilHeavyCliff")),
+            ("METAKNIGHT_NSP_LOOP", "nFTCommonMotionAttackAirN", "nFTMotionAttackIDSpecialNCopyPurin",
+             "nFTStatusAttackIDSpecialNCopyPurin", 1, 0,
+             ("ndsP4MetaknightKirbyNSPLoopUpdate", "NULL", "ndsP4MetaknightKirbyNSPLoopPhysics",
               "ndsP4MetaknightNSPLoopCollision")),
+            ("METAKNIGHT_NSP_END", "nFTCommonMotionLandingFallSpecial",
+             "nFTMotionAttackIDSpecialNCopyPurin", "nFTStatusAttackIDSpecialNCopyPurin", 0, 0,
+             ("ndsP4MetaknightKirbyNSPEndUpdate", "NULL", "ftPhysicsApplyGroundVelFriction",
+              "mpCommonSetFighterFallOnEdgeBreak")),
+            ("METAKNIGHT_NSP_END_AIR", "nFTCommonMotionFallSpecial",
+             "nFTMotionAttackIDSpecialNCopyPurin", "nFTStatusAttackIDSpecialNCopyPurin", 1, 0,
+             ("ndsP4MetaknightKirbyNSPEndAirUpdate", "NULL", "ftPhysicsApplyAirVelDrift",
+              "ndsP4MetaknightKirbyNSPEndAirMap")),
         ),
         "starters": ("ndsP4MetaknightKirbyNSPGroundInitial", "ndsP4MetaknightKirbyNSPAirInitial"),
         # His mask: the front of his body (material 2) and its eyes (material
         # 1), a shade larger than Kirby's head and on its centre.
         "hat": {"kind": "spans", "joint": 2, "detail": 1, "materials": (1, 2),
                 "scale": 1.08, "offset": (0, 20, 0)},
+        # His tornado (joint 34's part 1, the loop script's SetModelPartID)
+        # with generate_p4_fighter.py's deviations for those bytes and the
+        # combine generate_nds_native_owners.py aliases for it, at Kirby's
+        # root joint.
+        "tornado": {"kind": "part", "joint": 34, "part": 1, "detail": 1,
+                    "vertex_tint": (241, 241, 144), "ia_intensity_max": True,
+                    "combine": (0xFC127E05, 0xFF17F3FF)},
     },
     "mrgaw": {
         # Chef: the fireball throw, a sausage at its flag, re-cooked with B.
@@ -159,6 +181,9 @@ CUSTOM_POWERS = {
 CUSTOM_HAT_ID = 0xFF
 CUSTOM_HAT_FILE_BASE = 0x1930
 KIRBY_HAT_JOINT = 6
+# A custom power's second list in its hat file (Meta Knight's tornado), at
+# Kirby's root joint (renderer_adapter_fighter.c's tornado sidecar).
+KIRBY_TORNADO_JOINT = 0
 
 # Vanilla fighter ids (Character.id) for the parent rows of kirby_*_nsp.
 VANILLA_IDS = {"MARIO": 0, "FOX": 1, "DONKEY": 2, "SAMUS": 3, "LUIGI": 4, "LINK": 5,
@@ -547,17 +572,21 @@ def main() -> int:
             import p4_kirby_custom_hats  # noqa: E402
 
             hat_file = CUSTOM_HAT_FILE_BASE + registry[c]["id"]
-            blob, list_offset = p4_kirby_custom_hats.build(
-                rom, p4_contents.export_facts(args.export_root, c), CUSTOM_POWERS[c]["hat"],
+            lists = [("kirby_hat", KIRBY_HAT_JOINT, CUSTOM_POWERS[c]["hat"])]
+            if CUSTOM_POWERS[c].get("tornado") is not None:
+                lists.append(("kirby_tornado", KIRBY_TORNADO_JOINT, CUSTOM_POWERS[c]["tornado"]))
+            blob, list_offsets = p4_kirby_custom_hats.build_lists(
+                rom, p4_contents.export_facts(args.export_root, c), [s for _, _, s in lists],
                 hat_file)
             (o2r_out / f"{hat_file:04x}").write_bytes(blob)
             shipped[hat_file] = hashlib.sha256(blob).hexdigest()
-            row = {"article": "kirby_hat", "file_id": hat_file, "storage": None, "via": 0,
-                   "offset": list_offset, "entry": False, "texid": None, "palette": None,
-                   "head": 0, "sidecar_joint": KIRBY_HAT_JOINT | KIRBY_SIDECAR_BIT,
-                   "material": False, "via_base": False, "via_bias": 0}
+            rows_out = [{"article": article, "file_id": hat_file, "storage": None, "via": 0,
+                         "offset": list_offset, "entry": False, "texid": None, "palette": None,
+                         "head": 0, "sidecar_joint": joint | KIRBY_SIDECAR_BIT,
+                         "material": False, "via_base": False, "via_bias": 0}
+                        for (article, joint, _), list_offset in zip(lists, list_offsets)]
             (out / f"articles_{c}.json").write_text(
-                json.dumps({"content": c, "roots": [row]}, indent=1) + "\n",
+                json.dumps({"content": c, "roots": rows_out}, indent=1) + "\n",
                 encoding="utf-8", newline="\n")
         powers.append({"content": c, "id": registry[c]["id"], "hat": CUSTOM_HAT_ID, "hat_base": 0,
                        "hat_mask": 0, "hats": [], "hat_texture_file": hat_file,

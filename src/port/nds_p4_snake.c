@@ -3112,8 +3112,14 @@ const NDSP4Overrides gNdsP4SnakeOverrides = {
  * grenade on his Pikachu copy's Thunder Jolt toss (scripts/p4/p4_kirby.py
  * CUSTOM_POWERS): made at the throw's flag already thrown -- Snake's neutral
  * throw, his forward one with the stick held forward -- with no cooking, two
- * out at most for that Kirby. */
+ * out at most for that Kirby. The toss's first frame says "Pika" and plays
+ * the electric FGM (228_KirbyMainMotion.c ThunderJoltGround/Air); the owner
+ * asked for Snake's throw instead (BUGS.md 2026-10-12): that frame plays
+ * muted, and the throw plays Snake's own FGM (moveset_grenadeThrowN's, or
+ * moveset_grenadeThrowEmpty's with two out). */
 #define SNAKE_KIRBY_HAND_JOINT 17  /* FTKIRBY_COPYMARIO_FIREBALL_SPAWN_JOINT */
+#define SNAKE_FGM_GRENADE_THROW 0x2A
+#define SNAKE_FGM_GRENADE_EMPTY 0x2B
 
 static s32 ndsP4SnakeKirbyGrenadesOut(FTStruct *fp)
 {
@@ -3138,11 +3144,26 @@ static void ndsP4SnakeKirbyNSPProcStatus(GObj *fighter_gobj)
     ftGetStruct(fighter_gobj)->motion_vars.flags.flag0 = 0;
 }
 
+/* The status change with the Thunder Jolt's sounds muted (the switches too:
+ * one at frame 0 would replay the first frame). */
+static void ndsP4SnakeKirbyNSPChangeStatus(GObj *fighter_gobj, s32 status_id, f32 frame_begin)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    ub32 is_muted = fp->is_muted;
+
+    fp->is_muted = TRUE;
+    ftMainSetStatus(fighter_gobj, status_id, frame_begin, 1.0F, FTSTATUS_PRESERVE_NONE);
+    if (frame_begin == 0.0F)
+    {
+        ftMainPlayAnimEventsAll(fighter_gobj);
+    }
+    fp->is_muted = is_muted;
+}
+
 static void ndsP4SnakeKirbyNSPSetStatus(GObj *fighter_gobj, s32 status_id)
 {
     ftGetStruct(fighter_gobj)->proc_status = ndsP4SnakeKirbyNSPProcStatus;
-    ftMainSetStatus(fighter_gobj, status_id, 0.0F, 1.0F, FTSTATUS_PRESERVE_NONE);
-    ftMainPlayAnimEventsAll(fighter_gobj);
+    ndsP4SnakeKirbyNSPChangeStatus(fighter_gobj, status_id, 0.0F);
 }
 
 void ndsP4SnakeKirbyNSPGroundInitial(GObj *fighter_gobj)
@@ -3163,14 +3184,19 @@ void ndsP4SnakeKirbyNSPUpdate(GObj *fighter_gobj)
     {
         fp->motion_vars.flags.flag0 = 0;
 
-        if ((gNdsP4SnakeSpecial2 != NULL) &&
-            (ndsP4SnakeKirbyGrenadesOut(fp) < SNAKE_GRENADE_MAX))
+        if ((gNdsP4SnakeSpecial2 == NULL) ||
+            (ndsP4SnakeKirbyGrenadesOut(fp) >= SNAKE_GRENADE_MAX))
+        {
+            func_800269C0_275C0(SNAKE_FGM_GRENADE_EMPTY);
+        }
+        else
         {
             Vec3f pos = { 0.0F, 0.0F, 0.0F };
             GObj *item_gobj;
 
             gmCollisionGetFighterPartsWorldPosition(fp->joints[SNAKE_KIRBY_HAND_JOINT], &pos);
             item_gobj = ndsP4SnakeMakeGrenade(fighter_gobj, &pos);
+            func_800269C0_275C0(SNAKE_FGM_GRENADE_THROW);
 
             if (item_gobj != NULL)
             {
@@ -3197,15 +3223,15 @@ void ndsP4SnakeKirbyNSPUpdate(GObj *fighter_gobj)
 static void ndsP4SnakeKirbyNSPSwitchAir(GObj *fighter_gobj)
 {
     mpCommonSetFighterAir(ftGetStruct(fighter_gobj));
-    ftMainSetStatus(fighter_gobj, NDS_P4_KIRBY_STATUS_SNAKE_NSP_AIR, fighter_gobj->anim_frame,
-                    1.0F, FTSTATUS_PRESERVE_NONE);
+    ndsP4SnakeKirbyNSPChangeStatus(fighter_gobj, NDS_P4_KIRBY_STATUS_SNAKE_NSP_AIR,
+                                   fighter_gobj->anim_frame);
 }
 
 static void ndsP4SnakeKirbyNSPSwitchGround(GObj *fighter_gobj)
 {
     mpCommonSetFighterGround(ftGetStruct(fighter_gobj));
-    ftMainSetStatus(fighter_gobj, NDS_P4_KIRBY_STATUS_SNAKE_NSP_GROUND, fighter_gobj->anim_frame,
-                    1.0F, FTSTATUS_PRESERVE_NONE);
+    ndsP4SnakeKirbyNSPChangeStatus(fighter_gobj, NDS_P4_KIRBY_STATUS_SNAKE_NSP_GROUND,
+                                   fighter_gobj->anim_frame);
 }
 
 void ndsP4SnakeKirbyNSPGroundMap(GObj *fighter_gobj)

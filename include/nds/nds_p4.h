@@ -862,6 +862,17 @@ void ndsP4KirbyCopyInitCopyVars(GObj *fighter_gobj);
 void ndsP4KirbyLoseCopy(FTStruct *fp);
 /* The black figure of MRGAW's custom power ends with the power. */
 void ndsP4KirbyClearSilhouette(FTStruct *fp);
+/* A custom power's status runs its own motion events in place of the copy
+ * motion's, which carry the copied fighter's sounds and flashes (owner
+ * BUGS.md 2026-10-12): one word of the source's motion command encoding
+ * (ftdef.h ftMotionCommand*), and the script (NULL: none) installed on both
+ * passes of the first track from the next motion update. */
+#define NDS_P4_MOTION_EVENT(op, value) \
+    ((((u32)(op) & 0x3Fu) << 26) | ((u32)(value) & 0x3FFFFFFu))
+void ndsP4KirbySetMotionScript(FTStruct *fp, const u32 *script);
+/* nds_p4_metaknight.c: a Kirby spinning in Meta Knight's tornado with his
+ * power (its turn, a turn in 65536, in *angle). */
+sb32 ndsP4MetaknightKirbyTornado(const FTStruct *fp, u16 *angle);
 /* The power the catching player's last catch took (0: none). */
 u32 ndsP4KirbyPendingPower(const FTStruct *fp);
 /* A content's power row, NULL when it has none. */

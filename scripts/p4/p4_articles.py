@@ -559,9 +559,14 @@ def main() -> int:
             if any(r["file_id"] == row["file_id"] and r["offset"] == row["offset"]
                    for r in roots):
                 continue
+            # Refreshed when it differs, not only when missing: a build seeded
+            # from an earlier one kept the old copy of a hat file that had
+            # gained a list (Meta Knight's tornado), and the entry packet
+            # baked the new root's offset in the old bytes (no triangles).
             name = f"{row['file_id']:04x}"
-            if not (args.o2r / name).exists():
-                (args.o2r / name).write_bytes((kirby_dir / "o2r" / name).read_bytes())
+            blob = (kirby_dir / "o2r" / name).read_bytes()
+            if not (args.o2r / name).exists() or (args.o2r / name).read_bytes() != blob:
+                (args.o2r / name).write_bytes(blob)
             roots.append(row)
     args.out.write_text(json.dumps({"content": args.content, "roots": roots}, indent=1),
                         encoding="utf-8", newline="\n")

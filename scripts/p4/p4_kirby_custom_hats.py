@@ -16,9 +16,17 @@ powers' weapons ride joint 17. Two kinds:
   "band"   a ring around Kirby's head between two heights, with tails at the
            back, generated, drawn with the material of one of the content's
            spans (the band takes texel rows of its texture).
+  "part"   a model part of the content (FTModelPartDesc: joint, part,
+           detail) whole, its own inline material: Meta Knight's Mach
+           Tornado, drawn around Kirby while he spins (BUGS.md 2026-10-12).
+           The content generator's render deviations for those bytes come
+           along ("vertex_tint", "ia_intensity_max", "combine": its
+           OWNER_VERTEX_TINT, OWNER_IA_INTENSITY_MAX and the combine the
+           content's native owner aliases).
 
-The vertices, texels and palettes are copied into the file, so its pointers
-are internal relocations only. Build output: derived from the user's ROM.
+A file holds one list per spec (build_lists). The vertices, texels and
+palettes are copied into the file, so its pointers are internal relocations
+only. Build output: derived from the user's ROM.
 """
 from __future__ import annotations
 
@@ -33,6 +41,8 @@ import remix_rom as R  # noqa: E402
 import ft_layout  # noqa: E402
 
 DOBJ_DESC_SIZE = 0x2C
+MODELPART_SIZE = 20          # FTModelPart: dl, three pointers, flags
+JOINT_COMMON_START = 4       # nFTPartsJointCommonStart
 NO_RELOC = 0xFFFF
 TRIANGLE_OPS = (0x05, 0x06, 0x07)
 OP_VTX, OP_DL, OP_ENDDL, OP_SETTIMG = 0x01, 0xDE, 0xDF, 0xFD
@@ -100,6 +110,26 @@ def _joint_list(files: _Files, facts: dict, joint: int, detail: int):
                       "sprite": files.ptr(*spr) if spr else None})
         k += 1
     return dl[1], mobjs
+
+
+def _part_list(files: _Files, facts: dict, joint: int, part: int, detail: int):
+    """A model part's list (FTModelPartContainer -> FTModelPartDesc ->
+    modelparts[part][detail]); its material is inline, so no MObjs."""
+    lay = ft_layout.layout()
+    main, model = facts["main"], facts["model"]
+    cont = files.ptr(main, facts["attributes"] + lay["FTAttributes.modelparts_container"])
+    if cont is None:
+        raise HatError("the content has no model parts")
+    desc = files.ptr(cont[0], cont[1] + 4 * (joint - JOINT_COMMON_START))
+    if desc is None:
+        raise HatError(f"joint {joint} has no model parts")
+    row = desc[1] + (part * 2 + detail) * MODELPART_SIZE
+    dl = files.ptr(desc[0], row)
+    if dl is None or dl[0] != model:
+        raise HatError(f"joint {joint} part {part} draws no list of the model file")
+    if files.ptr(desc[0], row + 4) is not None:
+        raise HatError(f"joint {joint} part {part} has MObjs (only inline materials are lowered)")
+    return dl[1], []
 
 
 def _material(mobj: dict, model: int) -> list:
@@ -250,69 +280,91 @@ def _band_geometry(spec: dict):
     return [ring, tails], [tris, tail_tris]
 
 
-def build(rom: R.Rom, facts: dict, spec: dict, file_id: int) -> tuple[bytes, int]:
-    """The hat's file (O2R container) and its list's offset in the file."""
-    files = _Files(rom, (facts["main"], facts["model"]))
+def _list_commands(files: _Files, facts: dict, spec: dict, index: int) -> list:
+    """One spec's commands, ending in G_ENDDL. Payload keys carry the list's
+    index, so each list transforms its own copy of what it loads."""
     model = facts["model"]
-    dl, mobjs = _joint_list(files, facts, spec["joint"], spec["detail"])
+    if spec["kind"] == "part":
+        dl, mobjs = _part_list(files, facts, spec["joint"], spec["part"], spec["detail"])
+    else:
+        dl, mobjs = _joint_list(files, facts, spec["joint"], spec["detail"])
     cmds = _source_commands(files.data[model], dl)
-    if spec["kind"] == "spans":
-        out = _keep_spans(files, model, cmds, mobjs, set(spec["materials"]))
-        scale, offset = spec["scale"], spec["offset"]
-        loads = []
+    generated = []
+    if spec["kind"] in ("spans", "part"):
+        keep = set(spec["materials"]) if spec["kind"] == "spans" else {None}
+        out = _keep_spans(files, model, cmds, mobjs, keep)
     elif spec["kind"] == "band":
         out = _keep_spans(files, model, cmds, mobjs, {spec["material"]}, stop_at_vertices=True)
         out.append(CLEAR_CULL)
-        loads, tri_sets = _band_geometry(spec)
-        scale, offset = 1.0, (0, 0, 0)
-    else:
-        raise HatError(f"hat kind {spec['kind']}")
-
-    # The file: the list, then the generated and copied vertices, texels and
-    # palettes, each 8-aligned; every slot an internal relocation.
-    body = bytearray()
-    commands = []
-    payload = []
-    if spec["kind"] == "band":
-        for verts, tris in zip(loads, tri_sets):
+        for verts, tris in zip(*_band_geometry(spec)):
             if not verts:
                 continue
             n = len(verts)
-            commands.append(((0x01 << 24) | (n << 12) | ((n * 2) & 0xFF), ("gen", len(payload))))
-            payload.append(b"".join(verts))
-            commands += [((0x05 << 24) | (a * 2 << 16) | (b * 2 << 8) | (c * 2), 0)
-                         for a, b, c in tris]
-    commands = out + commands + [(0xDF000000, 0)]
-    for w0, w1 in commands:
+            generated.append(((0x01 << 24) | (n << 12) | ((n * 2) & 0xFF),
+                              ("gen", index, len(generated), b"".join(verts))))
+            generated += [((0x05 << 24) | (a * 2 << 16) | (b * 2 << 8) | (c * 2), 0)
+                          for a, b, c in tris]
+    else:
+        raise HatError(f"hat kind {spec['kind']}")
+    commands = []
+    for w0, w1 in out + generated:
         if isinstance(w1, tuple) and w1[0] == "pending":
             raise HatError(f"image {w1[1]:#x} has no load")
-    body += bytes(8 * len(commands))
+        if (w0 >> 24) == 0xFC and "combine" in spec:
+            w0, w1 = spec["combine"]
+        if isinstance(w1, tuple) and w1[0] in ("vtx", "tex"):
+            w1 = w1 + (index,)
+        commands.append((w0, w1))
+    return commands + [(0xDF000000, 0)]
+
+
+def _payload(src: bytes, spec: dict, key: tuple) -> bytes:
+    """The bytes one payload key places: generated vertices, or copied ones
+    scaled, moved and tinted, or copied texels (IA intensity raised)."""
+    if key[0] == "gen":
+        return key[3]
+    raw = bytearray(src[key[1]:key[1] + key[2]])
+    if key[0] == "vtx":
+        scale, offset = spec.get("scale", 1.0), spec.get("offset", (0, 0, 0))
+        sc = scale if isinstance(scale, (tuple, list)) else (scale,) * 3
+        tint = spec.get("vertex_tint")
+        for v in range(len(raw) // 16):
+            p = struct.unpack_from(">hhh", raw, 16 * v)
+            q = [int(round(p[a] * sc[a] + offset[a])) for a in range(3)]
+            if any(abs(c) > 0x7FF for c in q):
+                raise HatError(f"vertex {q} past the VERTEX16 lattice")
+            struct.pack_into(">hhh", raw, 16 * v, *q)
+            if tint is not None:
+                for c in range(3):
+                    raw[16 * v + 12 + c] = (raw[16 * v + 12 + c] * tint[c] + 127) // 255
+    elif spec.get("ia_intensity_max"):
+        for i in range(len(raw)):
+            raw[i] |= 0xF0
+    return bytes(raw)
+
+
+def build_lists(rom: R.Rom, facts: dict, specs, file_id: int) -> tuple[bytes, list]:
+    """One file (O2R container) with a list per spec, and the lists' offsets
+    in the file: the lists, then the vertices, texels and palettes they
+    load, each 8-aligned; every slot an internal relocation."""
+    files = _Files(rom, (facts["main"], facts["model"]))
+    src = files.data[facts["model"]]
+    commands, offsets = [], []
+    for index, spec in enumerate(specs):
+        offsets.append(8 * len(commands))
+        commands += [(w0, w1, index) for w0, w1 in _list_commands(files, facts, spec, index)]
+    body = bytearray(8 * len(commands))
     placed = {}
     relocs = []
-    src = files.data[model]
-    for i, (w0, w1) in enumerate(commands):
+    for i, (w0, w1, index) in enumerate(commands):
         if isinstance(w1, tuple):
-            kind = w1[0]
-            key = w1
-            if key not in placed:
+            if w1 not in placed:
                 while len(body) % 8:
                     body.append(0)
-                placed[key] = len(body)
-                if kind == "gen":
-                    body += payload[w1[1]]
-                else:
-                    raw = bytearray(src[w1[1]:w1[1] + w1[2]])
-                    if kind == "vtx":
-                        sc = scale if isinstance(scale, (tuple, list)) else (scale,) * 3
-                        for v in range(len(raw) // 16):
-                            p = struct.unpack_from(">hhh", raw, 16 * v)
-                            q = [int(round(p[a] * sc[a] + offset[a])) for a in range(3)]
-                            if any(abs(c) > 0x7FF for c in q):
-                                raise HatError(f"vertex {q} past the VERTEX16 lattice")
-                            struct.pack_into(">hhh", raw, 16 * v, *q)
-                    body += raw
+                placed[w1] = len(body)
+                body += _payload(src, specs[index], w1)
             relocs.append(8 * i + 4)
-            w1 = placed[key]
+            w1 = placed[w1]
         struct.pack_into(">II", body, 8 * i, w0, w1)
     if len(body) > 0x40000:
         raise HatError("hat past the relocation word range")
@@ -330,4 +382,10 @@ def build(rom: R.Rom, facts: dict, spec: dict, file_id: int) -> tuple[bytes, int
     out_blob += struct.pack("<IHHI", file_id, first, NO_RELOC, 0)
     out_blob += struct.pack("<I", len(body))
     out_blob += body
-    return bytes(out_blob), 0
+    return bytes(out_blob), offsets
+
+
+def build(rom: R.Rom, facts: dict, spec: dict, file_id: int) -> tuple[bytes, int]:
+    """The hat's file (O2R container) and its list's offset in the file."""
+    blob, offsets = build_lists(rom, facts, [spec], file_id)
+    return blob, offsets[0]

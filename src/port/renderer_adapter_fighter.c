@@ -1775,6 +1775,40 @@ static void ndsFighterDrawKirbyHatSidecar(FTStruct *fp)
             fp->joints[NDS_KIRBY_HAT_SIDECAR_JOINT], asset, offset, &projection, &world);
     }
 }
+
+/* Meta Knight's tornado around a Kirby spinning with his power (owner
+ * BUGS.md 2026-10-12): the custom hat file's second list, a sidecar root on
+ * Kirby's root joint, turned by the spin (nds_p4_metaknight.c). */
+#define NDS_KIRBY_TORNADO_SIDECAR_JOINT 0u
+static void ndsFighterDrawKirbyTornadoSidecar(FTStruct *fp)
+{
+#if NDS_P4_METAKNIGHT
+    NDSRendererMatrix20p12 projection;
+    NDSRendererMatrix20p12 world;
+    CObj *cobj;
+    u32 asset;
+    u32 offset;
+    u16 angle;
+
+    if ((fp == NULL) || (fp->fkind != nFTKindKirby) || (fp->nds_p4_kirby_copy == 0u) ||
+        (ndsP4MetaknightKirbyTornado(fp, &angle) == FALSE) ||
+        (ndsRendererEntryEffectP4Sidecar(fp->nds_p4_kirby_copy,
+                                         NDS_KIRBY_TORNADO_SIDECAR_JOINT | 0x80u,
+                                         &asset, &offset) == FALSE))
+    {
+        return;
+    }
+    cobj = (gGCCurrentCamera != NULL) ? CObjGetStruct(gGCCurrentCamera) : NULL;
+    if (ndsRendererAdapterBuildKirbyTornadoMatrices(fp, angle, cobj, &projection,
+                                                    &world) != FALSE)
+    {
+        (void)ndsRendererAdapterSubmitP4SidecarRoot(
+            fp->joints[NDS_KIRBY_TORNADO_SIDECAR_JOINT], asset, offset, &projection, &world);
+    }
+#else
+    (void)fp;
+#endif
+}
 #endif
 #endif
 
@@ -5474,6 +5508,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         ndsFighterDrawFoxGunSidecar(fp);
 #if NDS_P4 && NDS_P2_KIRBY
         ndsFighterDrawKirbyHatSidecar(fp);
+        ndsFighterDrawKirbyTornadoSidecar(fp);
 #endif
     }
 #endif

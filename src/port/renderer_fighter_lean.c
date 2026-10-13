@@ -2273,8 +2273,10 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp)
         ndsFighterDrawFoxGunSidecar(fp);
     }
 #if NDS_P4 && NDS_P2_KIRBY && NDS_RENDERER_HW_TRIANGLES
-    /* A custom power's hat on joint 6, the same way. */
+    /* A custom power's hat on joint 6, the same way, and Meta Knight's
+     * tornado while he spins. */
     ndsFighterDrawKirbyHatSidecar(fp);
+    ndsFighterDrawKirbyTornadoSidecar(fp);
 #endif
 #endif
     ndsRendererProfileSetOwner(NDS_RENDERER_PROFILE_OWNER_NONE);

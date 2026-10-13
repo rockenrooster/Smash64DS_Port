@@ -2060,6 +2060,19 @@ void ndsP4KirbyClearSilhouette(FTStruct *fp)
 #endif
 }
 
+void ndsP4KirbySetMotionScript(FTStruct *fp, const u32 *script)
+{
+    s32 i;
+
+    for (i = 0; i < ARRAY_COUNT(fp->motion_scripts); i++)
+    {
+        fp->motion_scripts[i][0].p_script = (u32 *)script;
+        fp->motion_scripts[i][0].script_wait = 0.0F;
+        fp->motion_scripts[i][0].script_id = 0;
+        fp->motion_scripts[i][1].p_script = NULL;
+    }
+}
+
 void ndsP4KirbyLoseCopy(FTStruct *fp)
 {
     ndsP4KirbyClearSilhouette(fp);

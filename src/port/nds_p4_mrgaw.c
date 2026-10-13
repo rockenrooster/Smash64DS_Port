@@ -855,6 +855,7 @@ void ndsP4MrgawDSPAttacksMain(GObj *fighter_gobj)
 
 #if NDS_P2_KIRBY
 static void ndsP4MrgawKirbyOnStatus(GObj *fighter_gobj, s32 status_id);
+static void ndsP4MrgawKirbyColAnimEnd(GObj *fighter_gobj);
 #endif
 
 const NDSP4Overrides gNdsP4MrgawOverrides = {
@@ -863,6 +864,7 @@ const NDSP4Overrides gNdsP4MrgawOverrides = {
     .item = ndsP4MrgawItem,
 #if NDS_P2_KIRBY
     .kirby_on_status = ndsP4MrgawKirbyOnStatus,
+    .kirby_colanim_end = ndsP4MrgawKirbyColAnimEnd,
 #endif
 };
 
@@ -874,9 +876,32 @@ const NDSP4Overrides gNdsP4MrgawOverrides = {
  * (scripts/p4/p4_kirby.py CUSTOM_POWERS): his fireball throw, MRGAW's
  * sausage from his hand at its flag, and Chef's refresh: B pressed past the
  * throw (or held at the end) cooks again from the start, four times more at
- * most. Kirby is drawn black while he holds it (ndsP4MrgawKirbyOnStatus). */
+ * most. Kirby is drawn black while he holds it (ndsP4MrgawKirbySilhouette).
+ *
+ * The fireball motion's script (228_KirbyMainMotion.c dKirbyMainMotion_0x1D88)
+ * makes the fireball's flash (colour animation nGMColAnimFighterMarioSpecialN,
+ * which also ended the black figure), its sparkle and its FGM at frame 16;
+ * the owner asked for no fireball sound (BUGS.md 2026-10-12). Chef runs the
+ * script's toss alone: the flag at frame 16 (the food) and its rumble. */
 #define MRGAW_KIRBY_HAND_JOINT 17   /* FTKIRBY_COPYMARIO_FIREBALL_SPAWN_JOINT */
 #define MRGAW_KIRBY_REFRESH_FROM 12.0F
+#define MRGAW_KIRBY_TOSS_FRAME 16
+
+static const u32 sNdsP4MrgawKirbyNSPScript[] = {
+    NDS_P4_MOTION_EVENT(nFTMotionEventAsyncWait, MRGAW_KIRBY_TOSS_FRAME),
+    NDS_P4_MOTION_EVENT(nFTMotionEventSetFlag0, 1),
+    NDS_P4_MOTION_EVENT(nFTMotionEventMakeRumble, 6), /* MakeRumble(0, 6) */
+    NDS_P4_MOTION_EVENT(nFTMotionEventEnd, 0),
+};
+
+/* The status's own script from its frame: the toss, or nothing once past it
+ * (a switch between ground and air keeps the frame). */
+static void ndsP4MrgawKirbyNSPScript(GObj *fighter_gobj)
+{
+    ndsP4KirbySetMotionScript(ftGetStruct(fighter_gobj),
+                              (fighter_gobj->anim_frame < (f32)MRGAW_KIRBY_TOSS_FRAME) ?
+                                  sNdsP4MrgawKirbyNSPScript : NULL);
+}
 
 static void ndsP4MrgawKirbyNSPProcStatus(GObj *fighter_gobj)
 {
@@ -890,6 +915,7 @@ static void ndsP4MrgawKirbyNSPSetStatus(GObj *fighter_gobj, s32 status_id)
 {
     ftGetStruct(fighter_gobj)->proc_status = ndsP4MrgawKirbyNSPProcStatus;
     ftMainSetStatus(fighter_gobj, status_id, 0.0F, 1.0F, FTSTATUS_PRESERVE_NONE);
+    ndsP4MrgawKirbyNSPScript(fighter_gobj);
     ftMainPlayAnimEventsAll(fighter_gobj);
 }
 
@@ -944,6 +970,7 @@ void ndsP4MrgawKirbyNSPRefresh(GObj *fighter_gobj)
         return;
     }
     ftMainSetStatus(fighter_gobj, fp->status_id, 0.0F, 1.0F, FTSTATUS_PRESERVE_NONE);
+    ndsP4MrgawKirbyNSPScript(fighter_gobj);
     ftMainPlayAnimEventsAll(fighter_gobj);
     fp->motion_vars.flags.flag0 = 0;
     fp->motion_vars.flags.flag1 = loops + 1u;
@@ -954,6 +981,7 @@ static void ndsP4MrgawKirbyNSPSwitchAir(GObj *fighter_gobj)
     mpCommonSetFighterAir(ftGetStruct(fighter_gobj));
     ftMainSetStatus(fighter_gobj, NDS_P4_KIRBY_STATUS_MRGAW_NSP_AIR, fighter_gobj->anim_frame,
                     1.0F, FTSTATUS_PRESERVE_NONE);
+    ndsP4MrgawKirbyNSPScript(fighter_gobj);
 }
 
 static void ndsP4MrgawKirbyNSPSwitchGround(GObj *fighter_gobj)
@@ -961,6 +989,7 @@ static void ndsP4MrgawKirbyNSPSwitchGround(GObj *fighter_gobj)
     mpCommonSetFighterGround(ftGetStruct(fighter_gobj));
     ftMainSetStatus(fighter_gobj, NDS_P4_KIRBY_STATUS_MRGAW_NSP_GROUND, fighter_gobj->anim_frame,
                     1.0F, FTSTATUS_PRESERVE_NONE);
+    ndsP4MrgawKirbyNSPScript(fighter_gobj);
 }
 
 void ndsP4MrgawKirbyNSPGroundMap(GObj *fighter_gobj)
@@ -975,14 +1004,15 @@ void ndsP4MrgawKirbyNSPAirMap(GObj *fighter_gobj)
 
 /* His model has no chef's hat (its Chef variant is a face cutout), so as in
  * Brawl Kirby holding this power is MRGAW's black figure: the colour
- * animation fields a hit flash uses (color1, a full blend to black), set at
- * every status change while no colour animation runs, so a flash hands back
- * to it; nds_p4.c ndsP4KirbyClearSilhouette clears it with the power. */
-static void ndsP4MrgawKirbyOnStatus(GObj *fighter_gobj, s32 status_id)
+ * animation fields a hit flash uses (color1, a full blend to black), set
+ * while no colour animation runs -- at every status change and every reset
+ * of the colour animation (a flash's end), so it holds the whole time he has
+ * the power (owner BUGS.md 2026-10-12: it had come back only at status
+ * changes); nds_p4.c ndsP4KirbyClearSilhouette clears it with the power. */
+static void ndsP4MrgawKirbySilhouette(GObj *fighter_gobj)
 {
     GMColAnim *colanim = &ftGetStruct(fighter_gobj)->colanim;
 
-    (void)status_id;
     if ((colanim->cs[0].p_script == NULL) && (colanim->cs[1].p_script == NULL))
     {
         colanim->is_use_color1 = TRUE;
@@ -990,6 +1020,18 @@ static void ndsP4MrgawKirbyOnStatus(GObj *fighter_gobj, s32 status_id)
         colanim->color1.a = 0xFF;
         colanim->color1.ir = colanim->color1.ig = colanim->color1.ib = colanim->color1.ia = 0;
     }
+}
+
+static void ndsP4MrgawKirbyOnStatus(GObj *fighter_gobj, s32 status_id)
+{
+    (void)status_id;
+    ndsP4MrgawKirbySilhouette(fighter_gobj);
+}
+
+/* ftParamResetStatUpdateColAnim's routine for a Kirby holding the power. */
+static void ndsP4MrgawKirbyColAnimEnd(GObj *fighter_gobj)
+{
+    ndsP4MrgawKirbySilhouette(fighter_gobj);
 }
 #endif /* NDS_P2_KIRBY */
 

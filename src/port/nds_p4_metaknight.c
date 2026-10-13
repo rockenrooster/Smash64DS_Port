@@ -791,29 +791,89 @@ const NDSP4Overrides gNdsP4MetaknightOverrides = {
 /* ---- Kirby's copy (owner request 2026-10-12, "Brawl-style") ----
  *
  * EXTRA lets no Kirby copy Meta Knight (define_character's bool_inhale_copy
- * is the config's kirby_hat, unset); the owner asked for one. Kirby's Mach
- * Tornado (scripts/p4/p4_kirby.py CUSTOM_POWERS): his own neutral-air spin
- * at 1.5 speed, airborne from the ground with Meta Knight's 30 hop, three
- * turns, each with the spin's hitboxes and Meta Knight's whoosh; B mashed
- * every 4 frames lifts him (26, at most 36) as it lifts Meta Knight, whose
- * drift and wall bounce he takes too; a special fall at the end. */
-#define MK_KIRBY_TURNS 3
-#define MK_KIRBY_SPIN_SPEED 1.5F
+ * is the config's kirby_hat, unset); the owner asked for one, then for Meta
+ * Knight's whole neutral special (BUGS.md 2026-10-12). Kirby runs it on his
+ * own motions (scripts/p4/p4_kirby.py CUSTOM_POWERS), his scripts replaced
+ * by Meta Knight's:
+ *  - the start: Meta Knight's 11 tics (from the ground airborne with his 30
+ *    hop, in the air x stopped and y at 0.4 of itself plus 30 unless
+ *    falling; his jumps used);
+ *  - the loop: his spin, the loop animation's speed -- 130, slowing 2 a tic
+ *    for 60 tics then 3, B mashed every 4 tics adding 7 and lifting him (26,
+ *    at most 36) -- a whoosh at each turn of the animation's 358 frames,
+ *    dust under him every 8 tics on the floor, ended at 60 with half the x
+ *    speed; moveset_tornadoLoop's two hitboxes (its words verbatim: joint 0,
+ *    which Kirby has too; the second from frame 1550), his gravity, drift
+ *    and wall bounce; his tornado (his model's joint 34 part 1) drawn around
+ *    Kirby, turning with the spin (renderer_adapter_fighter.c
+ *    ndsFighterDrawKirbyTornadoSidecar);
+ *  - the ends: his 54 tics, the grounded one with moveset_tornadoEnd's two
+ *    effects, the aerial one into a special fall (drift 0.6), a landing
+ *    taking the grounded one for the rest. */
+#define MK_KIRBY_START_TICS 11
+#define MK_KIRBY_LOOP_FRAMES 358.0F
+#define MK_KIRBY_SECOND_HIT 1550.0F
+#define MK_KIRBY_END_TICS 54
+#define MK_KIRBY_END_EFFECT_TICS 10
 
-static u8 sNdsP4MetaknightKirbyTurns[GMCOMMON_PLAYERS_MAX];
-static s8 sNdsP4MetaknightKirbyCooldown[GMCOMMON_PLAYERS_MAX];
-
-static void ndsP4MetaknightKirbyNSPTurn(GObj *fighter_gobj)
+typedef struct NDSP4MetaknightKirby
 {
-    ftMainSetStatus(fighter_gobj, NDS_P4_KIRBY_STATUS_METAKNIGHT_NSP, 0.0F,
-                    MK_KIRBY_SPIN_SPEED, FTSTATUS_PRESERVE_NONE);
-    func_800269C0_275C0(MK_FGM_TORNADO);
+    f32 speed;        /* the loop animation's speed */
+    f32 frame;        /* the loop animation's frame */
+    f32 progress;     /* the loop's frames so far */
+    s32 cooldown;     /* tics to the next mash */
+    s32 end_tics;     /* the end's tics so far */
+    u16 angle;        /* the tornado's turn */
+    u8 second;        /* the second hitbox is out */
+} NDSP4MetaknightKirby;
+
+static NDSP4MetaknightKirby sNdsP4MetaknightKirby[GMCOMMON_PLAYERS_MAX];
+
+/* moveset_tornadoLoop: a slash on joint 0, size 600 at y 300, 361 degrees,
+ * 50 base; 12% with 80 growth, then from frame 1550 8% at size 520 with 70
+ * growth. */
+static const u32 sNdsP4MetaknightKirbyLoopHit1[] = {
+    0x0C000183u, 0x02580000u, 0x012C0000u, 0x5A450003u, 0x004A1900u,
+    NDS_P4_MOTION_EVENT(nFTMotionEventEnd, 0),
+};
+static const u32 sNdsP4MetaknightKirbyLoopHit2[] = {
+    0x0C000103u, 0x02080000u, 0x012C0000u, 0x5A446003u, 0x000A1900u,
+    NDS_P4_MOTION_EVENT(nFTMotionEventEnd, 0),
+};
+/* moveset_tornadoEnd's effects (its eye texture parts are Meta Knight's). */
+static const u32 sNdsP4MetaknightKirbyEndScript[] = {
+    0x98005800u, 0x00000000u, 0x00000000u, 0x00000000u,
+    NDS_P4_MOTION_EVENT(nFTMotionEventAsyncWait, MK_KIRBY_END_EFFECT_TICS),
+    0x98003400u, 0x0000FFA0u, 0x00000000u, 0x00000000u,
+    NDS_P4_MOTION_EVENT(nFTMotionEventEnd, 0),
+};
+
+static NDSP4MetaknightKirby *ndsP4MetaknightKirbyState(const FTStruct *fp)
+{
+    return &sNdsP4MetaknightKirby[fp->player & 3];
 }
 
-static void ndsP4MetaknightKirbyNSPBegin(FTStruct *fp)
+/* A status of the power with its script in place of the motion's (Kirby's
+ * own, whose first frame plays muted). */
+static void ndsP4MetaknightKirbySetStatus(GObj *fighter_gobj, s32 status_id, const u32 *script)
 {
-    sNdsP4MetaknightKirbyTurns[fp->player & 3] = 0u;
-    sNdsP4MetaknightKirbyCooldown[fp->player & 3] = 0;
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    ub32 is_muted = fp->is_muted;
+
+    fp->is_muted = TRUE;
+    ftMainSetStatus(fighter_gobj, status_id, 0.0F, 1.0F, FTSTATUS_PRESERVE_NONE);
+    fp->is_muted = is_muted;
+    ftParamClearAttackCollAll(fighter_gobj);
+    ndsP4KirbySetMotionScript(fp, script);
+    ftMainPlayAnimEventsAll(fighter_gobj);
+}
+
+static void ndsP4MetaknightKirbyNSPStart(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    ndsP4MetaknightKirbySetStatus(fighter_gobj, NDS_P4_KIRBY_STATUS_METAKNIGHT_NSP_START, NULL);
+    fp->physics.vel_air.x = 0.0F;
     fp->jumps_used = (u8)fp->attr->jumps_max;
 }
 
@@ -822,53 +882,162 @@ void ndsP4MetaknightKirbyNSPGroundInitial(GObj *fighter_gobj)
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
     mpCommonSetFighterAir(fp);
-    ndsP4MetaknightKirbyNSPBegin(fp);
-    ndsP4MetaknightKirbyNSPTurn(fighter_gobj);
-    fp->physics.vel_air.x = 0.0F;
+    ndsP4MetaknightKirbyNSPStart(fighter_gobj);
     fp->physics.vel_air.y = 30.0F;
 }
 
-/* As Meta Knight's air start: x stopped, y at 0.4 of itself and a 30 hop
- * unless falling. */
 void ndsP4MetaknightKirbyNSPAirInitial(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
     f32 y = fp->physics.vel_air.y * 0.3984375F;
 
-    ndsP4MetaknightKirbyNSPBegin(fp);
-    ndsP4MetaknightKirbyNSPTurn(fighter_gobj);
-    fp->physics.vel_air.x = 0.0F;
+    ndsP4MetaknightKirbyNSPStart(fighter_gobj);
     fp->physics.vel_air.y = (y < 0.0F) ? 0.0F : (y + 30.0F);
 }
 
-void ndsP4MetaknightKirbyNSPUpdate(GObj *fighter_gobj)
+void ndsP4MetaknightKirbyNSPStartUpdate(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
-    s8 *cooldown = &sNdsP4MetaknightKirbyCooldown[fp->player & 3];
+    NDSP4MetaknightKirby *mk;
 
-    if (*cooldown > 0)
+    if ((s32)fp->status_total_tics < MK_KIRBY_START_TICS)
     {
-        (*cooldown)--;
+        return;
     }
-    if ((*cooldown <= 0) && (fp->input.pl.button_tap & MK_BUTTON_B))
-    {
-        *cooldown = 4;
-        ftPhysicsAddClampAirVelY(fp, 26.0F, 36.0F);
-    }
-    if (fighter_gobj->anim_frame <= 0.0F)
-    {
-        u8 *turns = &sNdsP4MetaknightKirbyTurns[fp->player & 3];
+    ndsP4MetaknightKirbySetStatus(fighter_gobj, NDS_P4_KIRBY_STATUS_METAKNIGHT_NSP_LOOP,
+                                  sNdsP4MetaknightKirbyLoopHit1);
+    mk = ndsP4MetaknightKirbyState(fp);
+    mk->speed = 130.0F;
+    mk->frame = 0.0F;
+    mk->progress = 0.0F;
+    mk->cooldown = 0;
+    mk->second = FALSE;
+}
 
-        if (++(*turns) < MK_KIRBY_TURNS)
+/* NSP.Loop.update on a counted spin: the animation advances by last tic's
+ * speed before the update reads it, as Meta Knight's does. */
+void ndsP4MetaknightKirbyNSPLoopUpdate(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    NDSP4MetaknightKirby *mk = ndsP4MetaknightKirbyState(fp);
+
+    mk->frame += mk->speed;
+    mk->progress += mk->speed;
+    while (mk->frame >= MK_KIRBY_LOOP_FRAMES)
+    {
+        mk->frame -= MK_KIRBY_LOOP_FRAMES;
+    }
+    if ((s32)fp->status_total_tics < 60)
+    {
+        mk->speed -= 2.0F;
+        mk->cooldown -= 1;
+        if ((mk->cooldown <= 0) && (fp->input.pl.button_tap & MK_BUTTON_B))
         {
-            ndsP4MetaknightKirbyNSPTurn(fighter_gobj);
-        }
-        else
-        {
-            fp->physics.vel_air.x = fp->physics.vel_air.x / 2.0F;
-            ftCommonFallSpecialSetStatus(fighter_gobj, 0.6F, TRUE, TRUE, TRUE, 1.0F, FALSE);
+            mk->cooldown = 4;
+            mk->speed += 7.0F;
+            ftPhysicsAddClampAirVelY(fp, 26.0F, 36.0F);
         }
     }
+    else
+    {
+        mk->speed -= 3.0F;
+    }
+    if (mk->frame <= mk->speed)
+    {
+        func_800269C0_275C0(MK_FGM_TORNADO);
+    }
+    if ((mk->second == FALSE) && (mk->progress >= MK_KIRBY_SECOND_HIT))
+    {
+        mk->second = TRUE;
+        ndsP4KirbySetMotionScript(fp, sNdsP4MetaknightKirbyLoopHit2);
+    }
+    if (((fp->status_total_tics & 7u) == 0u) &&
+        (fp->coll_data.mask_prev & MAP_FLAG_FLOOR))
+    {
+        Vec3f pos;
+
+        pos.x = fp->coll_data.p_translate->x + ((f32)fp->lr * -80.0F);
+        pos.y = fp->coll_data.p_translate->y + -80.0F;
+        pos.z = 0.0F;
+        efManagerDustHeavyDoubleMakeEffect(&pos, -fp->lr, 1.0F);
+    }
+    /* A twelfth of a turn a tic at the full spin. */
+    mk->angle = (u16)(mk->angle + (s32)(mk->speed * (5461.0F / 130.0F)));
+    if (mk->speed <= 60.0F)
+    {
+        fp->physics.vel_air.x = fp->physics.vel_air.x / 2.0F;
+        ndsP4MetaknightKirbySetStatus(fighter_gobj, NDS_P4_KIRBY_STATUS_METAKNIGHT_NSP_END_AIR,
+                                      NULL);
+        mk->end_tics = 0;
+    }
+}
+
+/* NSP.Loop.physics: the strong drift while the loop script runs (until its
+ * second hitbox). */
+void ndsP4MetaknightKirbyNSPLoopPhysics(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    ftPhysicsApplyGravityClampTVel(fp, 1.0F, 12.0F);
+    if (ndsP4MetaknightKirbyState(fp)->second == FALSE)
+    {
+        ftPhysicsClampAirVelXStickRange(fp, 0, 0.3F, 80.0F);
+    }
+    else
+    {
+        ftPhysicsClampAirVelXStickRange(fp, 0, 0.06F, 60.0F);
+    }
+    ftPhysicsApplyAirVelXFriction(fp, fp->attr);
+}
+
+void ndsP4MetaknightKirbyNSPEndUpdate(GObj *fighter_gobj)
+{
+    NDSP4MetaknightKirby *mk = ndsP4MetaknightKirbyState(ftGetStruct(fighter_gobj));
+
+    if (++mk->end_tics >= MK_KIRBY_END_TICS)
+    {
+        ftCommonWaitSetStatus(fighter_gobj);
+    }
+}
+
+void ndsP4MetaknightKirbyNSPEndAirUpdate(GObj *fighter_gobj)
+{
+    NDSP4MetaknightKirby *mk = ndsP4MetaknightKirbyState(ftGetStruct(fighter_gobj));
+
+    if (++mk->end_tics >= MK_KIRBY_END_TICS)
+    {
+        ftCommonFallSpecialSetStatus(fighter_gobj, 0.6F, TRUE, TRUE, TRUE, 1.0F, FALSE);
+    }
+}
+
+/* NSP.End.air_to_ground: the grounded end for the rest of the tics, its
+ * effects only from its start. */
+static void ndsP4MetaknightKirbyNSPEndAirToGround(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    NDSP4MetaknightKirby *mk = ndsP4MetaknightKirbyState(fp);
+    s32 end_tics = mk->end_tics;
+
+    mpCommonSetFighterGround(fp);
+    ndsP4MetaknightKirbySetStatus(fighter_gobj, NDS_P4_KIRBY_STATUS_METAKNIGHT_NSP_END,
+                                  (end_tics == 0) ? sNdsP4MetaknightKirbyEndScript : NULL);
+    mk->end_tics = end_tics;
+}
+
+void ndsP4MetaknightKirbyNSPEndAirMap(GObj *fighter_gobj)
+{
+    mpCommonProcFighterLanding(fighter_gobj, ndsP4MetaknightKirbyNSPEndAirToGround);
+}
+
+sb32 ndsP4MetaknightKirbyTornado(const FTStruct *fp, u16 *angle)
+{
+    if ((fp->fkind != nFTKindKirby) ||
+        (fp->status_id != NDS_P4_KIRBY_STATUS_METAKNIGHT_NSP_LOOP))
+    {
+        return FALSE;
+    }
+    *angle = ndsP4MetaknightKirbyState(fp)->angle;
+    return TRUE;
 }
 #endif /* NDS_P2_KIRBY */
 
