@@ -27,7 +27,7 @@ then the high, then the look's build rules and pins.
 | A3b Track K: the kit rebuilt (F6) | dropped by the owner's route (ops kept for reference) |
 | A3c Track R: the base restyled (F6) | Palutena low in owner review (v51) |
 | A4 animation codec and retarget (F2) | planned |
-| A5 motion-script assembler (F3) | planned |
+| A5 motion-script assembler (F3) | done 2026-10-13 (`mscript.py`: text and back; F3 over every export's motion scripts, 18,741 commands, 0 differ) |
 | A6 review harness | planned |
 | A7 authored export (F4) | file substitution done 2026-10-13 (spec "files", `remix_rom.OverlayRom`; host-checked through `generate_p4_fighter.py`); the rest planned |
 | A8 audio | planned |
