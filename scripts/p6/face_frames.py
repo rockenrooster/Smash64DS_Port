@@ -141,6 +141,7 @@ def main() -> int:
         jobs = [(off, int(ops["palette"], 0), ops["palette_map"], 32, 32, f"face_{int(off, 0):05x}.png",
                  ops.get("texel_map"), ops.get("paint", ()))
                 for off in ops["frames"]]
+        writes = []     # model_writer.py --textures: in-place replacements
         for extra in ops.get("extra", ()):
             w, h = extra["size"]
             jobs.append((extra["texture"], int(extra["palette"], 0), extra["palette_map"], w, h, extra["name"],
@@ -150,6 +151,8 @@ def main() -> int:
             img, pal = recolored(fm, int(off, 0), pal_off, mapping, w, h, tmap, paint)
             img.save(args.out / name)
             made[off] = {"file": name, "palette": [list(c) for c in pal]}
+            writes.append({"image": off, "png": str((args.out / name).resolve()), "size": [w, h],
+                           "palette": [list(c) for c in pal], "palette_at": [f"{pal_off:#x}"]})
             orig, _ = recolored(fm, int(off, 0), pal_off, {}, w, h)
             # The sheet shows each texture as the model shows it (V flipped).
             sheet.paste(orig.transpose(Image.FLIP_TOP_BOTTOM).resize((128, 128 * h // w), Image.NEAREST), (k * 136, 0))
@@ -157,6 +160,7 @@ def main() -> int:
         sheet.save(args.out / "face_sheet.png")
         (args.out / "frames.json").write_text(json.dumps({"mode": "peach-recolor", "frames": made}, indent=1),
                                               encoding="utf-8")
+        (args.out / "writer.json").write_text(json.dumps(writes, indent=1), encoding="utf-8")
         print(f"{len(made)} recoloured textures -> {args.out}")
         return 0
     kit_face = Image.open(args.kit_face).convert("RGBA")

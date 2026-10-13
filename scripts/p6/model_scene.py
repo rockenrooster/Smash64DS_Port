@@ -186,6 +186,8 @@ def scene(fm: N.FighterModel, detail: str, costume: int, out: Path) -> dict:
     materials = []
     material_index = {}
     textures = {}
+    spans = []                 # per material: {joint: the span commands that set it up}
+    preludes = {}              # per joint: its list's commands before the first load
     data = fm.model.data
     cache = [None] * N.VERTEX_CACHE
     for joint, dl in enumerate(fm.lists(detail)):
@@ -193,9 +195,23 @@ def scene(fm: N.FighterModel, detail: str, costume: int, out: Path) -> dict:
             continue
         mobjs = fm.mobjs(detail, joint)
         st = _State()
+        # The state commands since the last vertex load or triangle: a span's
+        # material setup, kept per material and joint for the writer
+        # (model_writer.py re-emits a material as its base drew it there).
+        pending = []
+        prelude = None
         for pc, g in N.walk_dl(fm.model, dl):
             op = g.op
+            if op not in (N.G_VTX, N.G_TRI1, N.G_TRI2, N.G_ENDDL):
+                pending.append([f"{g.w0:08x}", f"{g.w1:08x}",
+                                None if g.target is None else [g.target[0], g.target[1], g.target[2]]])
             if op == N.G_VTX:
+                if prelude is None:
+                    prelude = list(pending)
+                span_cmds = list(pending) if pending else None
+                pending = []
+                if span_cmds is not None:
+                    st.span = span_cmds
                 n, v0 = N.vtx_load(g)
                 for i in range(n):
                     addr = g.target[2] + i * N.VERTEX_SIZE
@@ -212,11 +228,14 @@ def scene(fm: N.FighterModel, detail: str, costume: int, out: Path) -> dict:
                         })
                     cache[v0 + i] = vertex_index[key]
             elif op in (N.G_TRI1, N.G_TRI2):
+                pending = []
                 mat = _material(fm, st, costume, data, textures, out)
                 key = json.dumps(mat, sort_keys=True)
                 if key not in material_index:
                     material_index[key] = len(materials)
                     materials.append(mat)
+                    spans.append({})
+                spans[material_index[key]].setdefault(str(joint), getattr(st, "span", None))
                 for tri in ((N.tri1(g),) if op == N.G_TRI1 else N.tri2(g)):
                     triangles.append({"joint": joint, "v": [cache[i] for i in tri],
                                       "material": material_index[key]})
@@ -246,6 +265,9 @@ def scene(fm: N.FighterModel, detail: str, costume: int, out: Path) -> dict:
                 index = (g.w1 & 0xFFFFFF) // 8
                 if index < len(mobjs):
                     st.mobj(mobjs[index], costume)
+        preludes[str(joint)] = prelude
+    for mat, sp in zip(materials, spans):
+        mat["spans"] = sp
     result = {
         "detail": detail, "costume": costume,
         "joints": [{"index": i, "parent": parents[i], "depth": j.depth,
@@ -253,6 +275,7 @@ def scene(fm: N.FighterModel, detail: str, costume: int, out: Path) -> dict:
                     "world": world[i], "has_list": fm.lists(detail)[i] is not None}
                    for i, j in enumerate(joints)],
         "vertices": vertices, "triangles": triangles, "materials": materials,
+        "preludes": preludes, "lists": {str(j): dl for j, dl in enumerate(fm.lists(detail)) if dl is not None},
     }
     (out / "scene.json").write_text(json.dumps(result, indent=0), encoding="utf-8")
     return result
