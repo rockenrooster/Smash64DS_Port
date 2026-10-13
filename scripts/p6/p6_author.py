@@ -40,12 +40,18 @@ import p4_contents  # noqa: E402
 SPEC_IDENTITY = {"schema", "content", "comment"}
 SPEC_SCHEMA = "p6-spec-v1"
 # Spec keys this author applies.
-SPEC_APPLIED = {"files"}
+SPEC_APPLIED = {"files", "motions"}
 # "files": the content's own main and model file (model_writer.py), by role:
 # the descriptor slot each replaces.
 FILE_ROLES = {"main": 0, "model": 3}
-# New file ids live in the P6 window (P6_PLAN.md A1 record: 0x1A00-0x1BFF).
+# New file ids live in the P6 window (P6_PLAN.md A1 record: 0x1A00-0x1BFF),
+# 0x100 a content: its main and model first, its clips from ANIM_FIRST.
 P6_FILE_WINDOW = range(0x1A00, 0x1C00)
+CONTENT_WINDOW = {"ike": 0x1A00, "palutena": 0x1B00}
+ANIM_FIRST = 0x20
+# Pointer commands' edges in events.json (remix_export.py's kinds).
+EDGE_KIND = {"Goto": "goto", "Subroutine": "call", "SetParallelScript": "parallel",
+             "SetDamageThrown": "damage-thrown"}
 
 
 class AuthorError(SystemExit):
@@ -94,7 +100,9 @@ def author(base_export: Path, name: str, spec_path: Path | None, out: Path) -> d
     }
     out.mkdir(parents=True, exist_ok=True)
     substitute_files(resolved, spec.get("files") or {}, out)
-    (out / "events.json").write_bytes((base_export / "events.json").read_bytes())
+    events = json.loads((base_export / "events.json").read_text(encoding="utf-8"))
+    author_motions(resolved, events, spec.get("motions") or {}, name, out)
+    (out / "events.json").write_text(json.dumps(events, indent=1) + "\n", encoding="utf-8", newline="\n")
     summary = base_export / "summary.txt"
     text = summary.read_text(encoding="utf-8") if summary.exists() else ""
     (out / "summary.txt").write_text(
@@ -150,6 +158,103 @@ def substitute_files(resolved: dict, files: dict, out: Path) -> None:
             raise AuthorError(f"file {row['file_id']:#x} names a replaced file; it would need its own copy")
         closure.append(row)
     resolved["file_closure"] = closure
+
+
+def author_motions(resolved: dict, events: dict, motions: dict, name: str, out: Path) -> None:
+    """The spec's motions (index -> {"anim", "anim_flags", "script"}):
+    - "anim": a built clip (an O2R container under builds/, anim.py), copied
+      into <out>/o2r under the next id of the content's window and added to
+      the file closure;
+    - "script": a committed motion script (mscript.py text, one command a
+      line, "#" comments), assembled into the authored RAM window
+      (remix_rom.AUTHORED_RAM, <out>/authored_ram.bin) and listed in
+      events.json as a block the generator copies like Remix's own; pointer
+      targets name Remix blocks (ram:/file:) or NULL.
+    The motion row takes the new clip and script; the generator reads both
+    through OverlayRom."""
+    if not motions:
+        return
+    import mscript
+    from remix_rom import AUTHORED_RAM
+    if name not in CONTENT_WINDOW:
+        raise AuthorError(f"{name}: no P6 file window")
+    window = CONTENT_WINDOW[name]
+    o2r = out / "o2r"
+    o2r.mkdir(parents=True, exist_ok=True)
+    rows = {m["index"]: m for m in resolved["motions"]}
+    authored = resolved["authored"]
+    ram = bytearray()
+    next_id = window + ANIM_FIRST
+    for key in sorted(motions, key=lambda k: int(k, 0)):
+        entry = motions[key]
+        index = int(key, 0)
+        row = rows.get(index)
+        if row is None:
+            raise AuthorError(f"spec motions: no motion {index} in the base")
+        unknown = set(entry) - {"anim", "anim_flags", "script", "comment"}
+        if unknown:
+            raise AuthorError(f"spec motions {index}: unknown keys {sorted(unknown)}")
+        if "anim" in entry:
+            src = REPO / entry["anim"]
+            if not src.exists():
+                raise AuthorError(f"spec motions {index}: {src} not built (anim.py makes it)")
+            blob = bytearray(src.read_bytes())
+            if blob[4:8] != b"OLER":
+                raise AuthorError(f"spec motions {index}: {src} is not an O2R container")
+            fid = next_id
+            next_id += 1
+            if fid >= window + 0x100:
+                raise AuthorError(f"{name}: more clips than its file window holds")
+            struct.pack_into("<I", blob, 0x40, fid)
+            (o2r / f"{fid:04x}").write_bytes(bytes(blob))
+            n = struct.unpack_from("<I", blob, 0x48)[0]
+            size = struct.unpack_from("<I", blob, 0x4C + 2 * n)[0]
+            resolved["file_closure"].append({"file_id": fid, "vanilla_id": False, "bytes": size, "externs": []})
+            row["anim_file_id"] = fid
+            row["inherited"]["anim_file_id"] = False
+            authored.setdefault("anims", {})[str(index)] = fid
+            authored.setdefault("anims_sha256", {})[str(index)] = hashlib.sha256(bytes(blob)).hexdigest()
+        if "anim_flags" in entry:
+            row["anim_flags"] = int(str(entry["anim_flags"]), 0)
+            row["inherited"]["anim_flags"] = False
+        if "script" in entry:
+            src = REPO / entry["script"]
+            lines = [ln.split("#", 1)[0].strip() for ln in src.read_text(encoding="utf-8").splitlines()]
+            lines = [ln for ln in lines if ln]
+            start = AUTHORED_RAM + len(ram)
+            block_key = f"ram:{start:#010x}"
+            cmds, edges, exit_ = [], [], None
+            for line in lines:
+                words, pointers = mscript.assemble(line)
+                at = AUTHORED_RAM + len(ram)
+                op = line.split()[0]
+                rec = {"at": f"ram:{at:#010x}", "op": op, "words": [words[0]]}
+                for target in pointers.values():
+                    if target == "NULL":
+                        rec["to"] = None
+                        rec["null"] = True
+                    else:
+                        rec["to"] = target
+                        if op in EDGE_KIND:
+                            edges.append({"kind": EDGE_KIND[op], "to": target})
+                cmds.append(rec)
+                ram += b"".join(struct.pack(">I", w) for w in words)
+                if op in ("End", "Return", "Goto"):
+                    exit_ = op.lower()
+                    break
+            if exit_ is None:
+                raise AuthorError(f"spec motions {index}: {src} does not end (End, Return or Goto)")
+            events["blocks"][block_key] = {"start": block_key, "label": f"{name}.motion{index:#x}",
+                                           "referrers": [f"motion:{index:#x}"], "commands": cmds,
+                                           "exit": exit_, "edges": edges}
+            row["script"] = start
+            row["inherited"]["script"] = False
+            row["script_root"] = block_key
+            authored.setdefault("scripts_sha256", {})[str(index)] = sha256(src)
+    if ram:
+        (out / "authored_ram.bin").write_bytes(bytes(ram))
+        authored["ram"] = {"base": AUTHORED_RAM, "file": "authored_ram.bin", "bytes": len(ram),
+                           "sha256": hashlib.sha256(bytes(ram)).hexdigest()}
 
 
 def main() -> int:

@@ -7987,8 +7987,17 @@ $$(NDS_P4_EXPORT)/$(1)/resolved.json: $$(NDS_P4_STAGING)/ssb64asm.z64 \
 	python "$$(PROJECT_ROOT)/scripts/p4/remix_export.py" --staging "$$(NDS_P4_STAGING)" \
 		--fighter $(3) --out "$$(NDS_P4_EXPORT)/$(1)" --no-o2r
 else
+# Its clips: each recipe in art/p6/<name>/anims built by anim.py from the
+# staged ROM (ROM-derived, so under builds/); its motion scripts are
+# committed text the author assembles.
+$$(PROJECT_ROOT)/builds/p6-art/$(1)/anims/%.o2r: $$(PROJECT_ROOT)/art/p6/$(1)/anims/%.json \
+		$$(NDS_P4_STAGING)/ssb64asm.z64 $$(PROJECT_ROOT)/scripts/p6/anim.py
+	python "$$(PROJECT_ROOT)/scripts/p6/anim.py" --build "$$<" --staging "$$(NDS_P4_STAGING)" --out "$$@"
 $$(NDS_P4_EXPORT)/$(1)/resolved.json: $$(NDS_P4_EXPORT)/$(5)/resolved.json \
-		$$(PROJECT_ROOT)/scripts/p6/p6_author.py $$(wildcard $$(PROJECT_ROOT)/scripts/p6/$(1)/spec.json)
+		$$(PROJECT_ROOT)/scripts/p6/p6_author.py $$(PROJECT_ROOT)/scripts/p6/mscript.py \
+		$$(wildcard $$(PROJECT_ROOT)/scripts/p6/$(1)/spec.json) \
+		$$(wildcard $$(PROJECT_ROOT)/scripts/p6/$(1)/motions/*.ms) \
+		$$(patsubst $$(PROJECT_ROOT)/art/p6/$(1)/anims/%.json,$$(PROJECT_ROOT)/builds/p6-art/$(1)/anims/%.o2r,$$(wildcard $$(PROJECT_ROOT)/art/p6/$(1)/anims/*.json))
 	python "$$(PROJECT_ROOT)/scripts/p6/p6_author.py" --base-export "$$(NDS_P4_EXPORT)/$(5)" \
 		--content $(1) --out "$$(NDS_P4_EXPORT)/$(1)"
 endif

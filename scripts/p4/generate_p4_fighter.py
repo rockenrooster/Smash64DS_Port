@@ -1820,10 +1820,17 @@ def main() -> int:
     # A P6 authored content's own files (p6_author.py "files": a written main
     # and model under new ids) come from its export, every other file from
     # the image.
-    authored_files = (resolved.get("authored") or {}).get("files") or {}
-    if authored_files:
+    # Its authored clips (p6_author.py "motions") are such files too, and its
+    # authored motion scripts read from their own RAM window.
+    authored = resolved.get("authored") or {}
+    authored_files = authored.get("files") or {}
+    authored_ids = [new for _old, new in authored_files.values()] + list(authored.get("anims", {}).values())
+    authored_ram = authored.get("ram")
+    if authored_ids or authored_ram:
+        ram = ({authored_ram["base"]: (args.export / authored_ram["file"]).read_bytes()}
+               if authored_ram else None)
         rom = R.OverlayRom(rom, {new: (args.export / "o2r" / f"{new:04x}").read_bytes()
-                                 for _old, new in authored_files.values()})
+                                 for new in authored_ids}, ram)
     name, title = spec["name"], spec["title"]
     # The per-content tables' rows: the base's for an authored content (P6).
     key = spec["key"]

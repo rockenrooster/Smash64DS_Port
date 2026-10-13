@@ -1,0 +1,5 @@
+{
+ "comment": "Ike's jab 1 (Attack11, card: new, a left jab): Captain's jab 1 retargeted onto Roy's tree.",
+ "source": "0x653",
+ "retarget": {"from": "captain", "to": "roy"}
+}

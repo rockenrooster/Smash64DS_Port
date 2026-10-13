@@ -1,0 +1,8 @@
+{
+ "schema": "p6-spec-v1",
+ "content": "ike",
+ "comment": "Ike's authored data over Roy's export (docs/P6/characters/ike.md). Clips are built from art/p6/ike/anims (anim.py --build) into builds/p6-art/ike/anims.",
+ "motions": {
+  "165": {"comment": "Attack11: jab 1", "anim": "builds/p6-art/ike/anims/jab1.o2r", "script": "scripts/p6/ike/motions/jab1.ms"}
+ }
+}

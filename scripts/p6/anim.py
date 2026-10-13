@@ -420,6 +420,34 @@ ROLES = {
 }
 
 
+# Skeletons by name: (main file, model file, FTAttributes offset) in the
+# staged reference ROM (resolved.json descriptors; Captain is Roy's setup
+# parent, so Roy's parent_descriptor names him).
+SKELETONS = {"captain": (236, 332, 1160), "roy": (0x142A, 0x142B, 1236)}
+
+
+def skeleton(rom, name: str, detail: str = "high") -> Skeleton:
+    import n64_model as N
+    main, model, attr = SKELETONS[name]
+    return Skeleton.from_model(N.FighterModel(N.RelocFile.read(rom.o2r(main)),
+                                              N.RelocFile.read(rom.o2r(model)), attr), detail)
+
+
+def build(recipe: dict, rom) -> bytes:
+    """A clip from its recipe (art/p6/<name>/anims/*.json): a source clip
+    (file id in the reference ROM), optionally retargeted ("retarget":
+    {"from", "to", "height_scale"}); the O2R container keeps the source's
+    header (p6_author.py gives it its own id)."""
+    blob = rom.o2r(int(str(recipe["source"]), 0))
+    clip = decode(blob)
+    rt = recipe.get("retarget")
+    if rt:
+        src, dst = skeleton(rom, rt["from"]), skeleton(rom, rt["to"])
+        clip = retarget(clip, src, dst, ROLES[(rt["from"], rt["to"])],
+                        dst_slots=len(dst.parents) - 1, height_scale=float(rt.get("height_scale", 1.0)))
+    return encode(clip, blob, int(recipe.get("eps", ANIM_EPS)))
+
+
 def compare(old: bytes, new: bytes, eps: int = ANIM_EPS) -> list[str]:
     """Differences beyond eps (plus the half unit rounding adds) between two
     clips, simulated over two periods from both previous poses."""
@@ -482,10 +510,22 @@ def check(staging: Path, export_root: Path, fighters=("roy", "marth", "peach")) 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--check", nargs=2, type=Path, metavar=("STAGING", "EXPORT_ROOT"))
+    ap.add_argument("--build", type=Path, metavar="RECIPE", help="build a clip from its recipe")
+    ap.add_argument("--staging", type=Path, help="the P4 staging directory (ssb64asm.z64)")
+    ap.add_argument("--out", type=Path, help="the built clip (O2R container, under builds/)")
     args = ap.parse_args()
     if args.check:
         sys.path.insert(0, str(HERE.parent))
         return check(*args.check)
+    if args.build:
+        sys.path.insert(0, str(HERE.parent))
+        import remix_rom as R
+        recipe = json.loads(args.build.read_text(encoding="utf-8"))
+        blob = build(recipe, R.Rom(args.staging / "ssb64asm.z64"))
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_bytes(blob)
+        print(f"anim: {args.build.name} -> {args.out} ({len(blob)} bytes)")
+        return 0
     ap.print_help()
     return 0
 

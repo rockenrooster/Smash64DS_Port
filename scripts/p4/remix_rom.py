@@ -256,15 +256,23 @@ class Rom:
         return int.from_bytes(self.data[rom_off:rom_off + 4], "big")
 
 
+# Authored motion scripts (P6 A7) live at addresses no real RAM has: above
+# the Remix code region and past the console's 8 MB, so a generator reading
+# them through OverlayRom can never mistake them for the image's.
+AUTHORED_RAM = 0x80F00000
+
+
 class OverlayRom(Rom):
     """A Rom whose listed files come from O2R containers instead of the
     image (P6 authored contents: a written main and model file under new
-    ids, docs/P6/P6_PLAN.md A7). Every other file, and every address-space
-    read, is the base image's."""
+    ids, docs/P6/P6_PLAN.md A7), and whose `ram` windows (base address ->
+    bytes: authored motion scripts) read from those bytes. Every other file,
+    and every other address-space read, is the base image's."""
 
-    def __init__(self, base: Rom, blobs: dict[int, bytes]):
+    def __init__(self, base: Rom, blobs: dict[int, bytes], ram: dict[int, bytes] | None = None):
         self.__dict__.update(base.__dict__)
         self._file_cache = dict(base._file_cache)
+        self.ram_overlay = {int(b): bytes(d) for b, d in (ram or {}).items()}
         self.overlay: dict[int, tuple] = {}
         for fid, blob in blobs.items():
             if blob[4:8] != b"OLER":
@@ -298,6 +306,14 @@ class OverlayRom(Rom):
         if file_id in self.overlay:
             return self.overlay[file_id][4]
         return super().o2r(file_id)
+
+    def read_ram(self, ram: int, size: int) -> bytes:
+        for base, data in self.ram_overlay.items():
+            if base <= ram < base + len(data):
+                if ram + size > base + len(data):
+                    raise RomError(f"{ram:#010x}+{size}: past the authored window")
+                return data[ram - base:ram - base + size]
+        return super().read_ram(ram, size)
 
 
 def load_symbols(path: Path) -> tuple[dict[str, int], dict[int, list[str]]]:
