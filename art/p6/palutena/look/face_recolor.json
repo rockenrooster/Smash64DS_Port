@@ -1,0 +1,80 @@
+{
+ "form": "p6-face-frames-v1",
+ "mode": "peach-recolor",
+ "note": "Palutena's face frames as Peach's own (scripts/p6/face_frames.py peach-recolor): her texels, palette entries recoloured -- skin to Palutena's tone, iris to green, lips softened -- one skin shade merged (7 -> 6) to free a gold, and the circlet painted across the forehead rows of every frame (owner 2026-10-13). Authored colours and rows only; no kit data (D10).",
+ "palette": "0x10080",
+ "palette_map": {
+  "2": "3f8c59",
+  "3": "81c798",
+  "4": "f2cfb3",
+  "5": "ebd8c8",
+  "6": "e4c1a4",
+  "7": "dcae46",
+  "8": "bd9d82",
+  "9": "dcb99c",
+  "14": "c8323c"
+ },
+ "frames": [
+  "0x10558",
+  "0x10760",
+  "0x10968",
+  "0x10b70",
+  "0x10d78",
+  "0x10f80"
+ ],
+ "extra": [
+  {
+   "texture": "0x112a0",
+   "palette": "0x100f8",
+   "size": [
+    16,
+    16
+   ],
+   "name": "mouth_112a0.png",
+   "palette_map": {
+    "2": "e7848b",
+    "3": "ce6572",
+    "4": "d66b79",
+    "5": "de7683",
+    "6": "e77d8a",
+    "7": "e77d8a",
+    "8": "efa7ad",
+    "9": "f2cfb3",
+    "10": "ebc8ab",
+    "11": "ebc7aa",
+    "12": "ebc4a5",
+    "13": "efb4a0",
+    "14": "ef9999"
+   }
+  }
+ ],
+ "texel_map": {
+  "7": 6
+ },
+ "paint": [
+  {
+   "rows": [
+    25
+   ],
+   "index": 10
+  },
+  {
+   "rows": [
+    26,
+    27
+   ],
+   "index": 7
+  },
+  {
+   "rows": [
+    26,
+    27
+   ],
+   "columns": [
+    0,
+    1
+   ],
+   "index": 14
+  }
+ ]
+}

@@ -1,0 +1,103 @@
+{
+ "form": "p6-look-ops-v1",
+ "note": "Bake regions for scripts/p6/blender/bake_atlas.py: which kit faces each look region reads (kit joints, colour rules). No kit data (D10).",
+ "default_region": "torso",
+ "regions": {
+  "head": {
+   "joints": [
+    "HeadN",
+    "NeckN"
+   ],
+   "colour_split": [
+    [
+     "hair",
+     "green"
+    ],
+    [
+     "tiara",
+     "gold"
+    ]
+   ],
+   "weight": 0.6
+  },
+  "hair": {
+   "joints": [
+    "SWG_LHair1__swing",
+    "SWG_LHair3__swing",
+    "SWG_RHair1__swing",
+    "SWG_RHair3__swing"
+   ],
+   "weight": 0.5
+  },
+  "tiara": {
+   "weight": 0.5
+  },
+  "torso": {
+   "joints": [
+    "BustN",
+    "WaistN"
+   ],
+   "weight": 0.5
+  },
+  "dress": {
+   "joints": [
+    "HipN",
+    "RotN",
+    "TransN",
+    "LSkirtJa",
+    "LSkirtJb",
+    "RSkirtJa",
+    "RSkirtJb"
+   ],
+   "weight": 0.5
+  },
+  "arms": {
+   "joints": [
+    "LShoulderN",
+    "LShoulderJ",
+    "LArmJ",
+    "RShoulderN",
+    "RShoulderJ",
+    "RArmJ"
+   ],
+   "weight": 0.5
+  },
+  "legs": {
+   "joints": [
+    "LLegJ",
+    "LKneeJ",
+    "RLegJ",
+    "RKneeJ"
+   ],
+   "weight": 0.5
+  },
+  "feet": {
+   "joints": [
+    "LFootJ",
+    "LToeN",
+    "RFootJ",
+    "RToeN"
+   ],
+   "weight": 0.5
+  },
+  "staff": {
+   "joints": [
+    "RStickN",
+    "RHaveN"
+   ]
+  },
+  "shield": {
+   "joints": [
+    "ShieldN",
+    "SWG_String0__swing"
+   ]
+  },
+  "hands": {
+   "joints": [
+    "LHandN",
+    "RHandN",
+    "LHaveN"
+   ]
+  }
+ }
+}

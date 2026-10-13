@@ -1,0 +1,230 @@
+{
+ "form": "p6-look-edits-v1",
+ "scene": "low_v28",
+ "moved": {},
+ "retint": {},
+ "deleted_tris": [
+  2,
+  3,
+  5,
+  201,
+  204
+ ],
+ "added_vertices": [
+  {
+   "joint": 2,
+   "model": [
+    -23.0,
+    365.0,
+    50.0
+   ],
+   "uv": [
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "joint": 2,
+   "model": [
+    23.0,
+    365.0,
+    50.0
+   ],
+   "uv": [
+    0.0,
+    0.0
+   ]
+  }
+ ],
+ "added_tris": [
+  {
+   "v": [
+    [
+     "s",
+     10
+    ],
+    [
+     "s",
+     11
+    ],
+    [
+     "a",
+     0
+    ]
+   ],
+   "material": {
+    "prim": "f4f0f4ff",
+    "texture": null
+   },
+   "joint": 2
+  },
+  {
+   "v": [
+    [
+     "s",
+     14
+    ],
+    [
+     "a",
+     1
+    ],
+    [
+     "s",
+     13
+    ]
+   ],
+   "material": {
+    "prim": "f4f0f4ff",
+    "texture": null
+   },
+   "joint": 2
+  },
+  {
+   "v": [
+    [
+     "s",
+     369
+    ],
+    [
+     "a",
+     1
+    ],
+    [
+     "s",
+     14
+    ]
+   ],
+   "material": {
+    "prim": "f4f0f4ff",
+    "texture": null
+   },
+   "joint": 2
+  },
+  {
+   "v": [
+    [
+     "s",
+     369
+    ],
+    [
+     "a",
+     0
+    ],
+    [
+     "a",
+     1
+    ]
+   ],
+   "material": {
+    "prim": "f4f0f4ff",
+    "texture": null
+   },
+   "joint": 2
+  },
+  {
+   "v": [
+    [
+     "s",
+     10
+    ],
+    [
+     "a",
+     0
+    ],
+    [
+     "s",
+     369
+    ]
+   ],
+   "material": {
+    "prim": "f4f0f4ff",
+    "texture": null
+   },
+   "joint": 2
+  },
+  {
+   "v": [
+    [
+     "a",
+     0
+    ],
+    [
+     "s",
+     11
+    ],
+    [
+     "s",
+     9
+    ]
+   ],
+   "material": {
+    "prim": "f4f0f4ff",
+    "texture": null
+   },
+   "joint": 2
+  },
+  {
+   "v": [
+    [
+     "a",
+     0
+    ],
+    [
+     "s",
+     9
+    ],
+    [
+     "a",
+     1
+    ]
+   ],
+   "material": {
+    "prim": "f4f0f4ff",
+    "texture": null
+   },
+   "joint": 2
+  },
+  {
+   "v": [
+    [
+     "a",
+     1
+    ],
+    [
+     "s",
+     9
+    ],
+    [
+     "s",
+     12
+    ]
+   ],
+   "material": {
+    "prim": "f4f0f4ff",
+    "texture": null
+   },
+   "joint": 2
+  },
+  {
+   "v": [
+    [
+     "a",
+     1
+    ],
+    [
+     "s",
+     12
+    ],
+    [
+     "s",
+     13
+    ]
+   ],
+   "material": {
+    "prim": "f4f0f4ff",
+    "texture": null
+   },
+   "joint": 2
+  }
+ ]
+}

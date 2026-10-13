@@ -1,0 +1,110 @@
+{
+ "form": "p6-look-edits-v1",
+ "scene": "low_v25",
+ "moved": {},
+ "retint": {},
+ "deleted_tris": [
+  5,
+  6
+ ],
+ "added_vertices": [
+  {
+   "joint": 2,
+   "model": [
+    -20.0,
+    383.0,
+    46.0
+   ],
+   "uv": [
+    0.0,
+    0.0
+   ]
+  }
+ ],
+ "added_tris": [
+  {
+   "v": [
+    [
+     "a",
+     0
+    ],
+    [
+     "s",
+     10
+    ],
+    [
+     "s",
+     9
+    ]
+   ],
+   "material": {
+    "prim": "f4f0f4ff",
+    "texture": null
+   },
+   "joint": 2
+  },
+  {
+   "v": [
+    [
+     "a",
+     0
+    ],
+    [
+     "s",
+     15
+    ],
+    [
+     "s",
+     10
+    ]
+   ],
+   "material": {
+    "prim": "f2cfb2ff",
+    "texture": null
+   },
+   "joint": 2
+  },
+  {
+   "v": [
+    [
+     "s",
+     14
+    ],
+    [
+     "s",
+     15
+    ],
+    [
+     "a",
+     0
+    ]
+   ],
+   "material": {
+    "prim": "f2cfb2ff",
+    "texture": null
+   },
+   "joint": 2
+  },
+  {
+   "v": [
+    [
+     "a",
+     0
+    ],
+    [
+     "s",
+     9
+    ],
+    [
+     "s",
+     14
+    ]
+   ],
+   "material": {
+    "prim": "f4f0f4ff",
+    "texture": null
+   },
+   "joint": 2
+  }
+ ]
+}

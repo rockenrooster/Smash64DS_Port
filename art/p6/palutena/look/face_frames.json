@@ -1,0 +1,74 @@
+{
+ "form": "p6-face-frames-v1",
+ "note": "Palutena's face frames from the kit's face atlas (scripts/p6/face_frames.py): Peach's frame offsets (her model file) -> the kit atlas tile (box in palutena_face.png, coordinates only) placed into the box Peach's open eye takes. No kit texels (D10).",
+ "reference_frame": "66904",
+ "palette": "65664",
+ "peach_skin": "f8e0a0",
+ "skin": "f4cfb4",
+ "colors": 16,
+ "frames": {
+  "66904": {
+   "tile": [
+    160,
+    0,
+    208,
+    31
+   ],
+   "role": "open"
+  },
+  "67424": {
+   "tile": [
+    160,
+    93,
+    208,
+    124
+   ],
+   "role": "hurt"
+  },
+  "67944": {
+   "tile": [
+    160,
+    62,
+    208,
+    93
+   ],
+   "role": "half"
+  },
+  "68464": {
+   "tile": [
+    160,
+    93,
+    208,
+    124
+   ],
+   "role": "closed"
+  },
+  "68984": {
+   "tile": [
+    208,
+    93,
+    256,
+    124
+   ],
+   "role": "look"
+  },
+  "69504": {
+   "tile": [
+    160,
+    0,
+    208,
+    31
+   ],
+   "role": "open (other side)"
+  }
+ },
+ "key": [
+  38,
+  0
+ ],
+ "saturation": 1.8,
+ "eye_grow": [
+  2,
+  2
+ ]
+}

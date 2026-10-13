@@ -1,0 +1,4785 @@
+{
+"form": "p6-look-ops-v1",
+"track": "R",
+"base_role": "peach",
+"vertices": [
+{
+"joint": 2,
+"address": 21680,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 182,
+"bary": [
+0.83668,
+0.14547,
+0.01784
+],
+"offset": 0.0
+}
+},
+{
+"joint": 2,
+"address": 21696,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 775,
+"bary": [
+0.79256,
+2e-05,
+0.20743
+],
+"offset": 0.0
+}
+},
+{
+"joint": 2,
+"address": 21712,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 48,
+"bary": [
+0.36545,
+0.39804,
+0.23652
+],
+"offset": 0.0
+}
+},
+{
+"joint": 2,
+"address": 21728,
+"anchor": {
+"mesh": "body_mh_0_1",
+"triangle": 426,
+"bary": [
+0.02895,
+0.14287,
+0.82819
+],
+"offset": 0.0
+}
+},
+{
+"joint": 2,
+"address": 21744,
+"anchor": {
+"mesh": "body_mh_0_1",
+"triangle": 603,
+"bary": [
+0.52954,
+0.19196,
+0.2785
+],
+"offset": 0.0
+}
+},
+{
+"joint": 2,
+"address": 21760,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 48,
+"bary": [
+0.36545,
+0.39804,
+0.23652
+],
+"offset": 0.0
+}
+},
+{
+"joint": 2,
+"address": 21776,
+"anchor": {
+"mesh": "body_mh_0_1",
+"triangle": 803,
+"bary": [
+0.2219,
+0.07858,
+0.69952
+],
+"offset": 0.0
+}
+},
+{
+"joint": 2,
+"address": 21792,
+"anchor": {
+"mesh": "body_mh_0_1",
+"triangle": 592,
+"bary": [
+0.46852,
+0.47787,
+0.05361
+],
+"offset": 0.0
+}
+},
+{
+"joint": 2,
+"address": 21808,
+"anchor": {
+"mesh": "body_mh_0_1",
+"triangle": 613,
+"bary": [
+0.47779,
+0.46838,
+0.05383
+],
+"offset": 0.0
+}
+},
+{
+"joint": 2,
+"address": 21824,
+"anchor": {
+"mesh": "body_mh_0_1",
+"triangle": 446,
+"bary": [
+0.63273,
+0.35074,
+0.01653
+],
+"offset": 0.0
+}
+},
+{
+"joint": 2,
+"address": 21840,
+"anchor": {
+"mesh": "body_mh_0_1",
+"triangle": 592,
+"bary": [
+0.46852,
+0.47787,
+0.05361
+],
+"offset": 0.0
+}
+},
+{
+"joint": 2,
+"address": 21856,
+"anchor": {
+"mesh": "body_mh_0_1",
+"triangle": 426,
+"bary": [
+0.02895,
+0.14287,
+0.82819
+],
+"offset": 0.0
+}
+},
+{
+"joint": 2,
+"address": 21872,
+"anchor": {
+"mesh": "body_mh_0_1",
+"triangle": 803,
+"bary": [
+0.2219,
+0.07858,
+0.69952
+],
+"offset": 0.0
+}
+},
+{
+"joint": 2,
+"address": 21888,
+"anchor": {
+"mesh": "body_mh_0_1",
+"triangle": 613,
+"bary": [
+0.47779,
+0.46838,
+0.05383
+],
+"offset": 0.0
+}
+},
+{
+"joint": 2,
+"address": 21904,
+"anchor": {
+"mesh": "double_mh_1_0",
+"triangle": 216,
+"bary": [
+0.16887,
+0.7974,
+0.03373
+],
+"offset": 0.0
+}
+},
+{
+"joint": 2,
+"address": 21920,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 775,
+"bary": [
+0.79256,
+2e-05,
+0.20743
+],
+"offset": 0.0
+}
+},
+{
+"joint": 2,
+"address": 21936,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 48,
+"bary": [
+0.36545,
+0.39804,
+0.23652
+],
+"offset": 0.0
+}
+},
+{
+"joint": 2,
+"address": 21952,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 182,
+"bary": [
+0.83668,
+0.14547,
+0.01784
+],
+"offset": 0.0
+}
+},
+{
+"joint": 2,
+"address": 21968,
+"anchor": {
+"mesh": "body_mh_0_1",
+"triangle": 426,
+"bary": [
+0.02895,
+0.14287,
+0.82819
+],
+"offset": 0.0
+}
+},
+{
+"joint": 2,
+"address": 21984,
+"anchor": {
+"mesh": "body_mh_0_1",
+"triangle": 603,
+"bary": [
+0.52954,
+0.19196,
+0.2785
+],
+"offset": 0.0
+}
+},
+{
+"joint": 2,
+"address": 22000,
+"anchor": {
+"mesh": "body_mh_0_1",
+"triangle": 497,
+"bary": [
+0.25158,
+0.39736,
+0.35106
+],
+"offset": 0.0
+}
+},
+{
+"joint": 2,
+"address": 22016,
+"anchor": {
+"mesh": "body_mh_0_1",
+"triangle": 446,
+"bary": [
+0.63273,
+0.35074,
+0.01653
+],
+"offset": 0.0
+}
+},
+{
+"joint": 2,
+"address": 22032,
+"anchor": {
+"mesh": "double_mh_1_0",
+"triangle": 4,
+"bary": [
+0.39743,
+0.23559,
+0.36698
+],
+"offset": 0.0
+}
+},
+{
+"joint": 2,
+"address": 22048,
+"anchor": {
+"mesh": "body_mh_0_1",
+"triangle": 803,
+"bary": [
+0.2219,
+0.07858,
+0.69952
+],
+"offset": 0.0
+}
+},
+{
+"joint": 2,
+"address": 22064,
+"anchor": {
+"mesh": "body_mh_0_1",
+"triangle": 367,
+"bary": [
+0.13482,
+0.60471,
+0.26047
+],
+"offset": 0.0
+}
+},
+{
+"joint": 4,
+"address": 22080,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 201,
+"bary": [
+0.28563,
+0.0,
+0.71437
+],
+"offset": 0.0
+}
+},
+{
+"joint": 4,
+"address": 22096,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 86,
+"bary": [
+1.0,
+0.0,
+0.0
+],
+"offset": 0.0
+}
+},
+{
+"joint": 4,
+"address": 22112,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 215,
+"bary": [
+0.28187,
+0.59102,
+0.12711
+],
+"offset": 0.0
+}
+},
+{
+"joint": 4,
+"address": 22128,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 53,
+"bary": [
+0.12405,
+0.42838,
+0.44757
+],
+"offset": 0.0
+}
+},
+{
+"joint": 4,
+"address": 22144,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 202,
+"bary": [
+0.02518,
+0.45108,
+0.52374
+],
+"offset": 0.0
+}
+},
+{
+"joint": 4,
+"address": 22160,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 30,
+"bary": [
+0.55225,
+0.30763,
+0.14012
+],
+"offset": 0.0
+}
+},
+{
+"joint": 4,
+"address": 22176,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 82,
+"bary": [
+0.6082,
+0.34191,
+0.04989
+],
+"offset": 0.0
+}
+},
+{
+"joint": 4,
+"address": 22192,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 59,
+"bary": [
+0.46361,
+0.15479,
+0.38161
+],
+"offset": 0.0
+}
+},
+{
+"joint": 4,
+"address": 22208,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 31,
+"bary": [
+0.08021,
+0.17505,
+0.74475
+],
+"offset": 0.0
+}
+},
+{
+"joint": 4,
+"address": 22224,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 1241,
+"bary": [
+0.26254,
+0.38363,
+0.35384
+],
+"offset": 0.0
+}
+},
+{
+"joint": 4,
+"address": 22240,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 84,
+"bary": [
+0.3753,
+0.58813,
+0.03657
+],
+"offset": 0.0
+}
+},
+{
+"joint": 4,
+"address": 22256,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 78,
+"bary": [
+0.4882,
+0.16811,
+0.34369
+],
+"offset": 0.0
+}
+},
+{
+"joint": 4,
+"address": 22272,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 207,
+"bary": [
+0.18904,
+0.66911,
+0.14185
+],
+"offset": 0.0
+}
+},
+{
+"joint": 4,
+"address": 22288,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 1246,
+"bary": [
+0.07362,
+0.0,
+0.92638
+],
+"offset": 0.0
+}
+},
+{
+"joint": 4,
+"address": 22304,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 78,
+"bary": [
+0.4882,
+0.16811,
+0.34369
+],
+"offset": 0.0
+}
+},
+{
+"joint": 4,
+"address": 22320,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 1246,
+"bary": [
+0.07362,
+0.0,
+0.92638
+],
+"offset": 0.0
+}
+},
+{
+"joint": 4,
+"address": 22336,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 1241,
+"bary": [
+0.26254,
+0.38363,
+0.35384
+],
+"offset": 0.0
+}
+},
+{
+"joint": 4,
+"address": 22352,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 1246,
+"bary": [
+0.07362,
+0.0,
+0.92638
+],
+"offset": 0.0
+}
+},
+{
+"joint": 4,
+"address": 22368,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 1241,
+"bary": [
+0.26254,
+0.38363,
+0.35384
+],
+"offset": 0.0
+}
+},
+{
+"joint": 4,
+"address": 22384,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 78,
+"bary": [
+0.4882,
+0.16811,
+0.34369
+],
+"offset": 0.0
+}
+},
+{
+"joint": 4,
+"address": 22400,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 78,
+"bary": [
+0.4882,
+0.16811,
+0.34369
+],
+"offset": 0.0
+}
+},
+{
+"joint": 5,
+"address": 22416,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 1113,
+"bary": [
+0.36066,
+0.46566,
+0.17369
+],
+"offset": 0.0
+}
+},
+{
+"joint": 5,
+"address": 22432,
+"anchor": {
+"mesh": "weapon_mh_48_0",
+"triangle": 14,
+"bary": [
+0.55967,
+0.01499,
+0.42534
+],
+"offset": 0.0
+}
+},
+{
+"joint": 5,
+"address": 22448,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 1132,
+"bary": [
+0.29679,
+0.48421,
+0.21899
+],
+"offset": 0.0
+}
+},
+{
+"joint": 5,
+"address": 22464,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 1132,
+"bary": [
+0.29679,
+0.48421,
+0.21899
+],
+"offset": 0.0
+}
+},
+{
+"joint": 5,
+"address": 22480,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 1113,
+"bary": [
+0.36066,
+0.46566,
+0.17369
+],
+"offset": 0.0
+}
+},
+{
+"joint": 6,
+"address": 22496,
+"offset": [
+13.608,
+84.633,
+0.504
+]
+},
+{
+"joint": 6,
+"address": 22512,
+"offset": [
+13.608,
+84.633,
+0.504
+]
+},
+{
+"joint": 6,
+"address": 22528,
+"offset": [
+13.608,
+84.633,
+0.504
+]
+},
+{
+"joint": 6,
+"address": 22544,
+"offset": [
+13.608,
+84.633,
+0.504
+]
+},
+{
+"joint": 6,
+"address": 22560,
+"offset": [
+13.608,
+84.633,
+0.504
+]
+},
+{
+"joint": 6,
+"address": 22576,
+"offset": [
+13.608,
+84.633,
+0.504
+]
+},
+{
+"joint": 6,
+"address": 22592,
+"offset": [
+13.608,
+84.633,
+0.504
+]
+},
+{
+"joint": 6,
+"address": 22608,
+"offset": [
+13.608,
+84.633,
+0.504
+]
+},
+{
+"joint": 6,
+"address": 22624,
+"offset": [
+13.608,
+84.633,
+0.504
+]
+},
+{
+"joint": 6,
+"address": 22640,
+"offset": [
+13.608,
+84.633,
+0.504
+]
+},
+{
+"joint": 6,
+"address": 22656,
+"offset": [
+13.608,
+84.633,
+0.504
+]
+},
+{
+"joint": 7,
+"address": 22672,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 593,
+"bary": [
+0.16825,
+0.31047,
+0.52128
+],
+"offset": 0.0
+}
+},
+{
+"joint": 7,
+"address": 22688,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 629,
+"bary": [
+0.22339,
+0.04363,
+0.73298
+],
+"offset": 0.0
+}
+},
+{
+"joint": 7,
+"address": 22704,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 774,
+"bary": [
+0.01191,
+0.98809,
+0.0
+],
+"offset": 0.0
+}
+},
+{
+"joint": 7,
+"address": 22720,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 716,
+"bary": [
+0.51126,
+0.17052,
+0.31822
+],
+"offset": 0.0
+}
+},
+{
+"joint": 7,
+"address": 22736,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 716,
+"bary": [
+0.51126,
+0.17052,
+0.31822
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 22752,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 834,
+"bary": [
+0.63184,
+0.18042,
+0.18774
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 22768,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 63,
+"bary": [
+0.37038,
+0.46821,
+0.16141
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 22784,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 801,
+"bary": [
+0.00013,
+0.79489,
+0.20498
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 22800,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 60,
+"bary": [
+0.54421,
+0.27897,
+0.17682
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 22816,
+"anchor": {
+"mesh": "Palutena_Mouth_mh_46_0",
+"triangle": 19,
+"bary": [
+0.9625,
+0.02807,
+0.00943
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 22832,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 174,
+"bary": [
+0.00067,
+0.72324,
+0.27609
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 22848,
+"anchor": {
+"mesh": "Palutena_Mouth_mh_46_0",
+"triangle": 27,
+"bary": [
+0.00043,
+0.52172,
+0.47785
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 22864,
+"anchor": {
+"mesh": "Palutena_Mouth_mh_46_0",
+"triangle": 19,
+"bary": [
+0.9625,
+0.02807,
+0.00943
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 22880,
+"anchor": {
+"mesh": "Palutena_Mouth_mh_46_0",
+"triangle": 27,
+"bary": [
+0.00043,
+0.52172,
+0.47785
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 22896,
+"anchor": {
+"mesh": "Palutena_Mouth_mh_46_0",
+"triangle": 38,
+"bary": [
+0.96229,
+0.00968,
+0.02803
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 22912,
+"anchor": {
+"mesh": "Palutena_Mouth_mh_46_0",
+"triangle": 38,
+"bary": [
+0.96229,
+0.00968,
+0.02803
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 22928,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 12,
+"bary": [
+0.27964,
+0.54643,
+0.17393
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 22944,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 86,
+"bary": [
+0.37058,
+0.16112,
+0.4683
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 22960,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 45,
+"bary": [
+0.2795,
+0.5377,
+0.1828
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 22976,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 229,
+"bary": [
+0.43143,
+0.00865,
+0.55993
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 22992,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 232,
+"bary": [
+0.70849,
+0.17363,
+0.11789
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23008,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 242,
+"bary": [
+0.70842,
+0.11812,
+0.17346
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23024,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 791,
+"bary": [
+0.43137,
+0.55995,
+0.00869
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23040,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 4,
+"bary": [
+0.18297,
+0.53773,
+0.27931
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23056,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 176,
+"bary": [
+0.00073,
+0.10856,
+0.8907
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23072,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 119,
+"bary": [
+0.18395,
+0.69439,
+0.12165
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23088,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 112,
+"bary": [
+0.16073,
+0.00035,
+0.83892
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23104,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 769,
+"bary": [
+0.70213,
+0.16674,
+0.13113
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23120,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 745,
+"bary": [
+0.33375,
+5e-05,
+0.66619
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23136,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 623,
+"bary": [
+0.16675,
+0.7022,
+0.13106
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23152,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 326,
+"bary": [
+0.11442,
+0.8736,
+0.01198
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23168,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 538,
+"bary": [
+0.44036,
+0.16662,
+0.39301
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23184,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 326,
+"bary": [
+0.11442,
+0.8736,
+0.01198
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23200,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 745,
+"bary": [
+0.33375,
+5e-05,
+0.66619
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23216,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 538,
+"bary": [
+0.44036,
+0.16662,
+0.39301
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23232,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 119,
+"bary": [
+0.18395,
+0.69439,
+0.12165
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23248,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 769,
+"bary": [
+0.70213,
+0.16674,
+0.13113
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23264,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 716,
+"bary": [
+0.06125,
+0.58732,
+0.35143
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23280,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 589,
+"bary": [
+0.78661,
+0.201,
+0.01238
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23296,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 589,
+"bary": [
+0.78661,
+0.201,
+0.01238
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23312,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 12,
+"bary": [
+0.27964,
+0.54643,
+0.17393
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23328,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 834,
+"bary": [
+0.63184,
+0.18042,
+0.18774
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23344,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 12,
+"bary": [
+0.27964,
+0.54643,
+0.17393
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23360,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 716,
+"bary": [
+0.06125,
+0.58732,
+0.35143
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23376,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 27,
+"bary": [
+0.12182,
+0.69421,
+0.18397
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23392,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 355,
+"bary": [
+0.11442,
+0.01197,
+0.8736
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23408,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 12,
+"bary": [
+0.27964,
+0.54643,
+0.17393
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23424,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 176,
+"bary": [
+0.00073,
+0.10856,
+0.8907
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23440,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 112,
+"bary": [
+0.16073,
+0.00035,
+0.83892
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23456,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 27,
+"bary": [
+0.12182,
+0.69421,
+0.18397
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23472,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 355,
+"bary": [
+0.11442,
+0.01197,
+0.8736
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23488,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 745,
+"bary": [
+0.33375,
+5e-05,
+0.66619
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23504,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 769,
+"bary": [
+0.70213,
+0.16674,
+0.13113
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23520,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 769,
+"bary": [
+0.70213,
+0.16674,
+0.13113
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23536,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 12,
+"bary": [
+0.27964,
+0.54643,
+0.17393
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23552,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 755,
+"bary": [
+0.44045,
+0.39306,
+0.16649
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23568,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 745,
+"bary": [
+0.33375,
+5e-05,
+0.66619
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23584,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 745,
+"bary": [
+0.33375,
+5e-05,
+0.66619
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23600,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 755,
+"bary": [
+0.44045,
+0.39306,
+0.16649
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23616,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 31,
+"bary": [
+0.0001,
+0.52072,
+0.47918
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23632,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 27,
+"bary": [
+0.12182,
+0.69421,
+0.18397
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23648,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 112,
+"bary": [
+0.16073,
+0.00035,
+0.83892
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23664,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 31,
+"bary": [
+0.0001,
+0.52072,
+0.47918
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23680,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 538,
+"bary": [
+0.44036,
+0.16662,
+0.39301
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23696,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 623,
+"bary": [
+0.16675,
+0.7022,
+0.13106
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23712,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 453,
+"bary": [
+0.201,
+0.78667,
+0.01233
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23728,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 593,
+"bary": [
+0.58732,
+0.0596,
+0.35308
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23744,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 355,
+"bary": [
+0.11442,
+0.01197,
+0.8736
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23760,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 27,
+"bary": [
+0.12182,
+0.69421,
+0.18397
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23776,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 755,
+"bary": [
+0.44045,
+0.39306,
+0.16649
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23792,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 453,
+"bary": [
+0.201,
+0.78667,
+0.01233
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23808,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 60,
+"bary": [
+0.54421,
+0.27897,
+0.17682
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23824,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 593,
+"bary": [
+0.58732,
+0.0596,
+0.35308
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23840,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 834,
+"bary": [
+0.63184,
+0.18042,
+0.18774
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23856,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 593,
+"bary": [
+0.58732,
+0.0596,
+0.35308
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23872,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 60,
+"bary": [
+0.54421,
+0.27897,
+0.17682
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23888,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 593,
+"bary": [
+0.58732,
+0.0596,
+0.35308
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23904,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 834,
+"bary": [
+0.63184,
+0.18042,
+0.18774
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23920,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 716,
+"bary": [
+0.06125,
+0.58732,
+0.35143
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23936,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 326,
+"bary": [
+0.11442,
+0.8736,
+0.01198
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23952,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 60,
+"bary": [
+0.54421,
+0.27897,
+0.17682
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23968,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 623,
+"bary": [
+0.16675,
+0.7022,
+0.13106
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 23984,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 453,
+"bary": [
+0.201,
+0.78667,
+0.01233
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24000,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 119,
+"bary": [
+0.18395,
+0.69439,
+0.12165
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24016,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 60,
+"bary": [
+0.54421,
+0.27897,
+0.17682
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24032,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 326,
+"bary": [
+0.11442,
+0.8736,
+0.01198
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24048,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 538,
+"bary": [
+0.44036,
+0.16662,
+0.39301
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24064,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 112,
+"bary": [
+0.16073,
+0.00035,
+0.83892
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24080,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 119,
+"bary": [
+0.18395,
+0.69439,
+0.12165
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24096,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 745,
+"bary": [
+0.33375,
+5e-05,
+0.66619
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24112,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 31,
+"bary": [
+0.0001,
+0.52072,
+0.47918
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24128,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 538,
+"bary": [
+0.44036,
+0.16662,
+0.39301
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24144,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 12,
+"bary": [
+0.27964,
+0.54643,
+0.17393
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24160,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 769,
+"bary": [
+0.70213,
+0.16674,
+0.13113
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24176,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 589,
+"bary": [
+0.78661,
+0.201,
+0.01238
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24192,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 119,
+"bary": [
+0.18395,
+0.69439,
+0.12165
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24208,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 176,
+"bary": [
+0.00073,
+0.10856,
+0.8907
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24224,
+"anchor": {
+"mesh": "Palutena_Mouth_mh_46_0",
+"triangle": 3,
+"bary": [
+0.99695,
+0.00049,
+0.00256
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24240,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 119,
+"bary": [
+0.18395,
+0.69439,
+0.12165
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24256,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 63,
+"bary": [
+0.37038,
+0.46821,
+0.16141
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24272,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 60,
+"bary": [
+0.54421,
+0.27897,
+0.17682
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24288,
+"anchor": {
+"mesh": "Palutena_Mouth_mh_46_0",
+"triangle": 3,
+"bary": [
+0.99695,
+0.00049,
+0.00256
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24304,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 27,
+"bary": [
+0.12182,
+0.69421,
+0.18397
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24320,
+"anchor": {
+"mesh": "Palutena_Mouth_mh_46_0",
+"triangle": 3,
+"bary": [
+0.99695,
+0.00049,
+0.00256
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24336,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 176,
+"bary": [
+0.00073,
+0.10856,
+0.8907
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24352,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 12,
+"bary": [
+0.27964,
+0.54643,
+0.17393
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24368,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 86,
+"bary": [
+0.37058,
+0.16112,
+0.4683
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24384,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 801,
+"bary": [
+0.00013,
+0.79489,
+0.20498
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24400,
+"anchor": {
+"mesh": "Palutena_Mouth_mh_46_0",
+"triangle": 3,
+"bary": [
+0.99695,
+0.00049,
+0.00256
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24416,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 86,
+"bary": [
+0.37058,
+0.16112,
+0.4683
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24432,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 63,
+"bary": [
+0.37038,
+0.46821,
+0.16141
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24448,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 748,
+"bary": [
+0.76165,
+9e-05,
+0.23826
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24464,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 745,
+"bary": [
+0.70978,
+5e-05,
+0.29016
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24480,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 746,
+"bary": [
+0.47861,
+0.38682,
+0.13457
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24496,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 768,
+"bary": [
+0.19373,
+0.3238,
+0.48247
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24512,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 746,
+"bary": [
+0.47861,
+0.38682,
+0.13457
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24528,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 745,
+"bary": [
+0.70978,
+5e-05,
+0.29016
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24544,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 31,
+"bary": [
+0.0001,
+0.52072,
+0.47918
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24560,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 541,
+"bary": [
+0.16337,
+0.30631,
+0.53031
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24576,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 751,
+"bary": [
+0.46278,
+0.05222,
+0.485
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24592,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 628,
+"bary": [
+0.38681,
+0.47871,
+0.13448
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24608,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 628,
+"bary": [
+0.38681,
+0.47871,
+0.13448
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24624,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 624,
+"bary": [
+0.32376,
+0.19378,
+0.48246
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24640,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 763,
+"bary": [
+0.16339,
+0.5303,
+0.30631
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24656,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 766,
+"bary": [
+0.08218,
+0.50771,
+0.41011
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24672,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 768,
+"bary": [
+0.19373,
+0.3238,
+0.48247
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24688,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 746,
+"bary": [
+0.47861,
+0.38682,
+0.13457
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24704,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 763,
+"bary": [
+0.16339,
+0.5303,
+0.30631
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24720,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 541,
+"bary": [
+0.16337,
+0.30631,
+0.53031
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24736,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 31,
+"bary": [
+0.0001,
+0.52072,
+0.47918
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24752,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 624,
+"bary": [
+0.32376,
+0.19378,
+0.48246
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24768,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 763,
+"bary": [
+0.16339,
+0.5303,
+0.30631
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24784,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 768,
+"bary": [
+0.19373,
+0.3238,
+0.48247
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24800,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 624,
+"bary": [
+0.32376,
+0.19378,
+0.48246
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24816,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 626,
+"bary": [
+0.08223,
+0.41011,
+0.50766
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24832,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 541,
+"bary": [
+0.16337,
+0.30631,
+0.53031
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24848,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 628,
+"bary": [
+0.38681,
+0.47871,
+0.13448
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24864,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 791,
+"bary": [
+0.09472,
+0.10005,
+0.80523
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24880,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 790,
+"bary": [
+0.16744,
+0.4941,
+0.33846
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24896,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 242,
+"bary": [
+0.70281,
+0.24248,
+0.05471
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24912,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 16,
+"bary": [
+0.09383,
+0.6685,
+0.23767
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24928,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 229,
+"bary": [
+0.09473,
+0.80522,
+0.10005
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24944,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 232,
+"bary": [
+0.70266,
+0.05435,
+0.24299
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24960,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 228,
+"bary": [
+0.16748,
+0.33839,
+0.49413
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24976,
+"anchor": {
+"mesh": "face_mh_25_0",
+"triangle": 54,
+"bary": [
+0.2378,
+0.66836,
+0.09384
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 24992,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 623,
+"bary": [
+0.16675,
+0.7022,
+0.13106
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 25008,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 593,
+"bary": [
+0.58732,
+0.0596,
+0.35308
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 25024,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 623,
+"bary": [
+0.16675,
+0.7022,
+0.13106
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 25040,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 623,
+"bary": [
+0.16675,
+0.7022,
+0.13106
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 25056,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 593,
+"bary": [
+0.58732,
+0.0596,
+0.35308
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 25072,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 593,
+"bary": [
+0.58732,
+0.0596,
+0.35308
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 25088,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 769,
+"bary": [
+0.70213,
+0.16674,
+0.13113
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 25104,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 716,
+"bary": [
+0.06125,
+0.58732,
+0.35143
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 25120,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 769,
+"bary": [
+0.70213,
+0.16674,
+0.13113
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 25136,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 769,
+"bary": [
+0.70213,
+0.16674,
+0.13113
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 25152,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 623,
+"bary": [
+0.16675,
+0.7022,
+0.13106
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 25168,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 593,
+"bary": [
+0.58732,
+0.0596,
+0.35308
+],
+"offset": 0.0
+}
+},
+{
+"joint": 8,
+"address": 25184,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 593,
+"bary": [
+0.58732,
+0.0596,
+0.35308
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25200,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 479,
+"bary": [
+0.62424,
+0.28636,
+0.0894
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25216,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 808,
+"bary": [
+0.35953,
+0.03824,
+0.60223
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25232,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 808,
+"bary": [
+0.35953,
+0.03824,
+0.60223
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25248,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 479,
+"bary": [
+0.62424,
+0.28636,
+0.0894
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25264,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 811,
+"bary": [
+0.16342,
+0.54245,
+0.29413
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25280,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 823,
+"bary": [
+0.03794,
+0.74779,
+0.21427
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25296,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 469,
+"bary": [
+0.5478,
+0.41045,
+0.04175
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25312,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 469,
+"bary": [
+0.5478,
+0.41045,
+0.04175
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25328,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 808,
+"bary": [
+0.35953,
+0.03824,
+0.60223
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25344,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 689,
+"bary": [
+0.08349,
+0.28644,
+0.63007
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25360,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 808,
+"bary": [
+0.68262,
+0.03824,
+0.27914
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25376,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 808,
+"bary": [
+0.68262,
+0.03824,
+0.27914
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25392,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 811,
+"bary": [
+0.16342,
+0.54245,
+0.29413
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25408,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 689,
+"bary": [
+0.08349,
+0.28644,
+0.63007
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25424,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 808,
+"bary": [
+0.68262,
+0.03824,
+0.27914
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25440,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 823,
+"bary": [
+0.03794,
+0.74779,
+0.21427
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25456,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 808,
+"bary": [
+0.35953,
+0.03824,
+0.60223
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25472,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 469,
+"bary": [
+0.5478,
+0.41045,
+0.04175
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25488,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 804,
+"bary": [
+0.41918,
+0.03549,
+0.54533
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25504,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 605,
+"bary": [
+0.20152,
+0.55304,
+0.24544
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25520,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 803,
+"bary": [
+0.94859,
+0.01956,
+0.03185
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25536,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 804,
+"bary": [
+0.41918,
+0.03549,
+0.54533
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25552,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 605,
+"bary": [
+0.20152,
+0.55304,
+0.24544
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25568,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 808,
+"bary": [
+0.35953,
+0.03824,
+0.60223
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25584,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 469,
+"bary": [
+0.5478,
+0.41045,
+0.04175
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25600,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 823,
+"bary": [
+0.03794,
+0.74779,
+0.21427
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25616,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 803,
+"bary": [
+0.94859,
+0.01956,
+0.03185
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25632,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 811,
+"bary": [
+0.16342,
+0.54245,
+0.29413
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25648,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 808,
+"bary": [
+0.35953,
+0.03824,
+0.60223
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25664,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 689,
+"bary": [
+0.08349,
+0.28644,
+0.63007
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25680,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 811,
+"bary": [
+0.16342,
+0.54245,
+0.29413
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25696,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 808,
+"bary": [
+0.68262,
+0.03824,
+0.27914
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25712,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 823,
+"bary": [
+0.03794,
+0.74779,
+0.21427
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25728,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 815,
+"bary": [
+0.20197,
+0.25832,
+0.5397
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25744,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 803,
+"bary": [
+0.94859,
+0.01956,
+0.03185
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25760,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 815,
+"bary": [
+0.20197,
+0.25832,
+0.5397
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25776,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 823,
+"bary": [
+0.03794,
+0.74779,
+0.21427
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25792,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 808,
+"bary": [
+0.68262,
+0.03824,
+0.27914
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25808,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 811,
+"bary": [
+0.16342,
+0.54245,
+0.29413
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25824,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 804,
+"bary": [
+0.41918,
+0.03549,
+0.54533
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25840,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 808,
+"bary": [
+0.68262,
+0.03824,
+0.27914
+],
+"offset": 0.0
+}
+},
+{
+"joint": 9,
+"address": 25856,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 804,
+"bary": [
+0.41918,
+0.03549,
+0.54533
+],
+"offset": 0.0
+}
+},
+{
+"joint": 11,
+"address": 25872,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 129,
+"bary": [
+0.28743,
+0.71257,
+0.0
+],
+"offset": 0.0
+}
+},
+{
+"joint": 11,
+"address": 25888,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 126,
+"bary": [
+0.59186,
+0.28137,
+0.12677
+],
+"offset": 0.0
+}
+},
+{
+"joint": 11,
+"address": 25904,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 103,
+"bary": [
+0.0,
+1.0,
+0.0
+],
+"offset": 0.0
+}
+},
+{
+"joint": 11,
+"address": 25920,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 157,
+"bary": [
+0.42854,
+0.12398,
+0.44748
+],
+"offset": 0.0
+}
+},
+{
+"joint": 11,
+"address": 25936,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 127,
+"bary": [
+0.42605,
+0.05009,
+0.52386
+],
+"offset": 0.0
+}
+},
+{
+"joint": 11,
+"address": 25952,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 106,
+"bary": [
+0.04992,
+0.34199,
+0.60809
+],
+"offset": 0.0
+}
+},
+{
+"joint": 11,
+"address": 25968,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 164,
+"bary": [
+0.55233,
+0.14014,
+0.30753
+],
+"offset": 0.0
+}
+},
+{
+"joint": 11,
+"address": 25984,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 141,
+"bary": [
+0.38154,
+0.15482,
+0.46364
+],
+"offset": 0.0
+}
+},
+{
+"joint": 11,
+"address": 26000,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 177,
+"bary": [
+0.0,
+0.0,
+1.0
+],
+"offset": 0.0
+}
+},
+{
+"joint": 11,
+"address": 26016,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 105,
+"bary": [
+0.58822,
+0.37523,
+0.03656
+],
+"offset": 0.0
+}
+},
+{
+"joint": 11,
+"address": 26032,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 108,
+"bary": [
+0.16819,
+0.48811,
+0.3437
+],
+"offset": 0.0
+}
+},
+{
+"joint": 11,
+"address": 26048,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 140,
+"bary": [
+0.14195,
+0.66912,
+0.18893
+],
+"offset": 0.0
+}
+},
+{
+"joint": 11,
+"address": 26064,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 115,
+"bary": [
+1.0,
+0.0,
+0.0
+],
+"offset": 0.0
+}
+},
+{
+"joint": 11,
+"address": 26080,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 163,
+"bary": [
+0.17497,
+0.08031,
+0.74472
+],
+"offset": 0.0
+}
+},
+{
+"joint": 11,
+"address": 26096,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 115,
+"bary": [
+1.0,
+0.0,
+0.0
+],
+"offset": 0.0
+}
+},
+{
+"joint": 11,
+"address": 26112,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 108,
+"bary": [
+0.16819,
+0.48811,
+0.3437
+],
+"offset": 0.0
+}
+},
+{
+"joint": 11,
+"address": 26128,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 177,
+"bary": [
+0.0,
+0.0,
+1.0
+],
+"offset": 0.0
+}
+},
+{
+"joint": 11,
+"address": 26144,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 115,
+"bary": [
+1.0,
+0.0,
+0.0
+],
+"offset": 0.0
+}
+},
+{
+"joint": 11,
+"address": 26160,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 108,
+"bary": [
+0.16819,
+0.48811,
+0.3437
+],
+"offset": 0.0
+}
+},
+{
+"joint": 11,
+"address": 26176,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 177,
+"bary": [
+0.0,
+0.0,
+1.0
+],
+"offset": 0.0
+}
+},
+{
+"joint": 12,
+"address": 26192,
+"anchor": {
+"mesh": "Rhand_1_VIS_O_OBJ_29_0",
+"triangle": 14,
+"bary": [
+0.16032,
+0.83968,
+0.0
+],
+"offset": 0.0
+}
+},
+{
+"joint": 12,
+"address": 26208,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 1083,
+"bary": [
+0.29851,
+0.0,
+0.70149
+],
+"offset": 0.0
+}
+},
+{
+"joint": 12,
+"address": 26224,
+"anchor": {
+"mesh": "Rhand_1_VIS_O_OBJ_29_0",
+"triangle": 10,
+"bary": [
+0.22294,
+0.1699,
+0.60716
+],
+"offset": 0.0
+}
+},
+{
+"joint": 12,
+"address": 26240,
+"anchor": {
+"mesh": "Rhand_1_VIS_O_OBJ_29_0",
+"triangle": 10,
+"bary": [
+0.22294,
+0.1699,
+0.60716
+],
+"offset": 0.0
+}
+},
+{
+"joint": 12,
+"address": 26256,
+"anchor": {
+"mesh": "body_mh_0_0",
+"triangle": 1083,
+"bary": [
+0.29851,
+0.0,
+0.70149
+],
+"offset": 0.0
+}
+},
+{
+"joint": 13,
+"address": 26272,
+"offset": [
+-13.608,
+84.633,
+0.502
+]
+},
+{
+"joint": 13,
+"address": 26288,
+"offset": [
+-13.608,
+84.633,
+0.502
+]
+},
+{
+"joint": 13,
+"address": 26304,
+"offset": [
+-13.608,
+84.633,
+0.502
+]
+},
+{
+"joint": 13,
+"address": 26320,
+"offset": [
+-13.608,
+84.633,
+0.502
+]
+},
+{
+"joint": 13,
+"address": 26336,
+"offset": [
+-13.608,
+84.633,
+0.502
+]
+},
+{
+"joint": 13,
+"address": 26352,
+"offset": [
+-13.608,
+84.633,
+0.502
+]
+},
+{
+"joint": 13,
+"address": 26368,
+"offset": [
+-13.608,
+84.633,
+0.502
+]
+},
+{
+"joint": 13,
+"address": 26384,
+"offset": [
+-13.608,
+84.633,
+0.502
+]
+},
+{
+"joint": 13,
+"address": 26400,
+"offset": [
+-13.608,
+84.633,
+0.502
+]
+},
+{
+"joint": 13,
+"address": 26416,
+"offset": [
+-13.608,
+84.633,
+0.502
+]
+},
+{
+"joint": 13,
+"address": 26432,
+"offset": [
+-13.608,
+84.633,
+0.502
+]
+},
+{
+"joint": 17,
+"address": 26448,
+"offset": [
+11.14,
+9.258,
+-6.547
+]
+},
+{
+"joint": 17,
+"address": 26464,
+"offset": [
+11.14,
+13.91,
+-6.077
+]
+},
+{
+"joint": 17,
+"address": 26480,
+"offset": [
+11.14,
+13.91,
+-6.077
+]
+},
+{
+"joint": 17,
+"address": 26496,
+"offset": [
+11.14,
+15.163,
+-5.95
+]
+},
+{
+"joint": 17,
+"address": 26512,
+"offset": [
+11.14,
+13.91,
+-6.077
+]
+},
+{
+"joint": 17,
+"address": 26528,
+"offset": [
+11.14,
+9.258,
+-6.547
+]
+},
+{
+"joint": 17,
+"address": 26544,
+"offset": [
+11.14,
+15.163,
+-5.95
+]
+},
+{
+"joint": 17,
+"address": 26560,
+"offset": [
+11.14,
+13.91,
+-6.077
+]
+},
+{
+"joint": 19,
+"address": 26576,
+"offset": [
+11.14,
+9.805,
+-6.492
+]
+},
+{
+"joint": 19,
+"address": 26592,
+"offset": [
+11.14,
+9.805,
+-6.492
+]
+},
+{
+"joint": 19,
+"address": 26608,
+"offset": [
+11.14,
+9.805,
+-6.492
+]
+},
+{
+"joint": 19,
+"address": 26624,
+"offset": [
+11.14,
+9.805,
+-6.492
+]
+},
+{
+"joint": 19,
+"address": 26640,
+"offset": [
+11.14,
+9.805,
+-6.492
+]
+},
+{
+"joint": 19,
+"address": 26656,
+"offset": [
+11.14,
+9.805,
+-6.492
+]
+},
+{
+"joint": 19,
+"address": 26672,
+"offset": [
+11.14,
+9.805,
+-6.492
+]
+},
+{
+"joint": 19,
+"address": 26688,
+"offset": [
+11.14,
+9.805,
+-6.492
+]
+},
+{
+"joint": 19,
+"address": 26704,
+"offset": [
+11.14,
+9.805,
+-6.492
+]
+},
+{
+"joint": 19,
+"address": 26720,
+"offset": [
+11.14,
+9.805,
+-6.492
+]
+},
+{
+"joint": 19,
+"address": 26736,
+"offset": [
+11.14,
+9.805,
+-6.492
+]
+},
+{
+"joint": 19,
+"address": 26752,
+"offset": [
+11.14,
+9.805,
+-6.492
+]
+},
+{
+"joint": 19,
+"address": 26768,
+"offset": [
+11.14,
+9.805,
+-6.492
+]
+},
+{
+"joint": 19,
+"address": 26784,
+"offset": [
+11.14,
+9.805,
+-6.492
+]
+},
+{
+"joint": 19,
+"address": 26800,
+"offset": [
+11.14,
+9.805,
+-6.492
+]
+},
+{
+"joint": 19,
+"address": 26816,
+"offset": [
+11.14,
+9.805,
+-6.492
+]
+},
+{
+"joint": 19,
+"address": 26832,
+"offset": [
+11.14,
+9.805,
+-6.492
+]
+},
+{
+"joint": 22,
+"address": 26848,
+"offset": [
+-11.14,
+9.06,
+-6.567
+]
+},
+{
+"joint": 22,
+"address": 26864,
+"offset": [
+-11.14,
+13.881,
+-6.08
+]
+},
+{
+"joint": 22,
+"address": 26880,
+"offset": [
+-11.14,
+13.881,
+-6.08
+]
+},
+{
+"joint": 22,
+"address": 26896,
+"offset": [
+-11.14,
+15.179,
+-5.948
+]
+},
+{
+"joint": 22,
+"address": 26912,
+"offset": [
+-11.14,
+9.06,
+-6.567
+]
+},
+{
+"joint": 22,
+"address": 26928,
+"offset": [
+-11.14,
+13.881,
+-6.08
+]
+},
+{
+"joint": 22,
+"address": 26944,
+"offset": [
+-11.14,
+15.179,
+-5.948
+]
+},
+{
+"joint": 22,
+"address": 26960,
+"offset": [
+-11.14,
+13.881,
+-6.08
+]
+},
+{
+"joint": 24,
+"address": 26976,
+"offset": [
+-11.14,
+9.635,
+-6.509
+]
+},
+{
+"joint": 24,
+"address": 26992,
+"offset": [
+-11.14,
+9.635,
+-6.509
+]
+},
+{
+"joint": 24,
+"address": 27008,
+"offset": [
+-11.14,
+9.635,
+-6.509
+]
+},
+{
+"joint": 24,
+"address": 27024,
+"offset": [
+-11.14,
+9.635,
+-6.509
+]
+},
+{
+"joint": 24,
+"address": 27040,
+"offset": [
+-11.14,
+9.635,
+-6.509
+]
+},
+{
+"joint": 24,
+"address": 27056,
+"offset": [
+-11.14,
+9.635,
+-6.509
+]
+},
+{
+"joint": 24,
+"address": 27072,
+"offset": [
+-11.14,
+9.635,
+-6.509
+]
+},
+{
+"joint": 24,
+"address": 27088,
+"offset": [
+-11.14,
+9.635,
+-6.509
+]
+},
+{
+"joint": 24,
+"address": 27104,
+"offset": [
+-11.14,
+9.635,
+-6.509
+]
+},
+{
+"joint": 24,
+"address": 27120,
+"offset": [
+-11.14,
+9.635,
+-6.509
+]
+},
+{
+"joint": 24,
+"address": 27136,
+"offset": [
+-11.14,
+9.635,
+-6.509
+]
+},
+{
+"joint": 24,
+"address": 27152,
+"offset": [
+-11.14,
+9.635,
+-6.509
+]
+},
+{
+"joint": 24,
+"address": 27168,
+"offset": [
+-11.14,
+9.635,
+-6.509
+]
+},
+{
+"joint": 24,
+"address": 27184,
+"offset": [
+-11.14,
+9.635,
+-6.509
+]
+},
+{
+"joint": 24,
+"address": 27200,
+"offset": [
+-11.14,
+9.635,
+-6.509
+]
+},
+{
+"joint": 24,
+"address": 27216,
+"offset": [
+-11.14,
+9.635,
+-6.509
+]
+},
+{
+"joint": 24,
+"address": 27232,
+"offset": [
+-11.14,
+9.635,
+-6.509
+]
+},
+{
+"joint": 25,
+"address": 27248,
+"anchor": {
+"mesh": "body_mh_0_1",
+"triangle": 471,
+"bary": [
+0.12736,
+0.1953,
+0.67733
+],
+"offset": 0.0
+}
+},
+{
+"joint": 25,
+"address": 27264,
+"anchor": {
+"mesh": "double_mh_1_0",
+"triangle": 20,
+"bary": [
+0.71167,
+0.19076,
+0.09757
+],
+"offset": 0.0
+}
+},
+{
+"joint": 25,
+"address": 27280,
+"anchor": {
+"mesh": "body_mh_0_1",
+"triangle": 418,
+"bary": [
+0.31902,
+0.36839,
+0.3126
+],
+"offset": 0.0
+}
+},
+{
+"joint": 25,
+"address": 27296,
+"anchor": {
+"mesh": "double_mh_1_0",
+"triangle": 11,
+"bary": [
+0.20611,
+0.5483,
+0.24559
+],
+"offset": 0.0
+}
+},
+{
+"joint": 25,
+"address": 27312,
+"anchor": {
+"mesh": "body_mh_0_1",
+"triangle": 74,
+"bary": [
+0.06462,
+0.16159,
+0.77379
+],
+"offset": 0.0
+}
+},
+{
+"joint": 25,
+"address": 27328,
+"anchor": {
+"mesh": "double_mh_1_0",
+"triangle": 20,
+"bary": [
+0.71167,
+0.19076,
+0.09757
+],
+"offset": 0.0
+}
+},
+{
+"joint": 25,
+"address": 27344,
+"anchor": {
+"mesh": "body_mh_0_1",
+"triangle": 471,
+"bary": [
+0.12736,
+0.1953,
+0.67733
+],
+"offset": 0.0
+}
+},
+{
+"joint": 25,
+"address": 27360,
+"anchor": {
+"mesh": "double_mh_1_0",
+"triangle": 11,
+"bary": [
+0.20611,
+0.5483,
+0.24559
+],
+"offset": 0.0
+}
+},
+{
+"joint": 25,
+"address": 27376,
+"anchor": {
+"mesh": "body_mh_0_1",
+"triangle": 74,
+"bary": [
+0.06462,
+0.16159,
+0.77379
+],
+"offset": 0.0
+}
+},
+{
+"joint": 25,
+"address": 27392,
+"anchor": {
+"mesh": "body_mh_0_1",
+"triangle": 471,
+"bary": [
+0.12736,
+0.1953,
+0.67733
+],
+"offset": 0.0
+}
+},
+{
+"joint": 26,
+"address": 27408,
+"anchor": {
+"mesh": "body_mh_0_1",
+"triangle": 55,
+"bary": [
+0.0,
+0.26699,
+0.73301
+],
+"offset": 0.0
+}
+},
+{
+"joint": 26,
+"address": 27424,
+"anchor": {
+"mesh": "body_mh_0_1",
+"triangle": 59,
+"bary": [
+0.04852,
+0.3254,
+0.62608
+],
+"offset": 0.0
+}
+},
+{
+"joint": 26,
+"address": 27440,
+"anchor": {
+"mesh": "body_mh_0_1",
+"triangle": 49,
+"bary": [
+0.74379,
+0.16651,
+0.0897
+],
+"offset": 0.0
+}
+},
+{
+"joint": 26,
+"address": 27456,
+"anchor": {
+"mesh": "body_mh_0_1",
+"triangle": 66,
+"bary": [
+0.58811,
+0.0,
+0.41189
+],
+"offset": 0.0
+}
+},
+{
+"joint": 26,
+"address": 27472,
+"anchor": {
+"mesh": "body_mh_0_1",
+"triangle": 59,
+"bary": [
+0.04852,
+0.3254,
+0.62608
+],
+"offset": 0.0
+}
+},
+{
+"joint": 26,
+"address": 27488,
+"anchor": {
+"mesh": "body_mh_0_1",
+"triangle": 49,
+"bary": [
+0.74379,
+0.16651,
+0.0897
+],
+"offset": 0.0
+}
+},
+{
+"joint": 26,
+"address": 27504,
+"anchor": {
+"mesh": "body_mh_0_1",
+"triangle": 55,
+"bary": [
+0.0,
+0.26699,
+0.73301
+],
+"offset": 0.0
+}
+},
+{
+"joint": 26,
+"address": 27520,
+"anchor": {
+"mesh": "body_mh_0_1",
+"triangle": 59,
+"bary": [
+0.04852,
+0.3254,
+0.62608
+],
+"offset": 0.0
+}
+},
+{
+"joint": 26,
+"address": 27536,
+"anchor": {
+"mesh": "body_mh_0_1",
+"triangle": 66,
+"bary": [
+0.58811,
+0.0,
+0.41189
+],
+"offset": 0.0
+}
+}
+]
+}

@@ -1,0 +1,132 @@
+{
+ "form": "p6-look-edits-v1",
+ "scene": "low_v33",
+ "moved": {},
+ "retint": {},
+ "deleted_tris": [
+  202,
+  203,
+  206
+ ],
+ "added_vertices": [
+  {
+   "joint": 2,
+   "model": [
+    0.0,
+    363.0,
+    47.5
+   ],
+   "uv": [
+    0.0,
+    0.0
+   ]
+  }
+ ],
+ "added_tris": [
+  {
+   "v": [
+    [
+     "s",
+     14
+    ],
+    [
+     "a",
+     0
+    ],
+    [
+     "s",
+     371
+    ]
+   ],
+   "material": {
+    "prim": "f4f0f4ff",
+    "texture": null
+   },
+   "joint": 2
+  },
+  {
+   "v": [
+    [
+     "s",
+     369
+    ],
+    [
+     "a",
+     0
+    ],
+    [
+     "s",
+     14
+    ]
+   ],
+   "material": {
+    "prim": "f4f0f4ff",
+    "texture": null
+   },
+   "joint": 2
+  },
+  {
+   "v": [
+    [
+     "s",
+     369
+    ],
+    [
+     "s",
+     370
+    ],
+    [
+     "a",
+     0
+    ]
+   ],
+   "material": {
+    "prim": "f4f0f4ff",
+    "texture": null
+   },
+   "joint": 2
+  },
+  {
+   "v": [
+    [
+     "s",
+     370
+    ],
+    [
+     "s",
+     9
+    ],
+    [
+     "a",
+     0
+    ]
+   ],
+   "material": {
+    "prim": "f4f0f4ff",
+    "texture": null
+   },
+   "joint": 2
+  },
+  {
+   "v": [
+    [
+     "a",
+     0
+    ],
+    [
+     "s",
+     9
+    ],
+    [
+     "s",
+     371
+    ]
+   ],
+   "material": {
+    "prim": "f4f0f4ff",
+    "texture": null
+   },
+   "joint": 2
+  }
+ ]
+}

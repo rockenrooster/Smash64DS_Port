@@ -1,0 +1,101 @@
+{
+ "form": "p6-look-ops-v1",
+ "track": "R",
+ "detail": "high",
+ "base": "peach",
+ "note": "Peach's model restyled: anchors (r_high_anchors.json: each base vertex at a kit triangle and barycentric point, no kit data), a recolour of the base's materials (base material index -> colour, or per joint), the base textures re-baked from the kit albedo through the base's own UVs, and added ring parts (look_k syntax) for what Peach lacks.",
+ "recolor": {
+  "0": {
+   "2": "f4f0f4ff",
+   "4": "f2cfb2ff",
+   "11": "f2cfb2ff",
+   "25": "f0ecf2ff"
+  },
+  "1": "f4f0f4ff",
+  "2": "f0ecf2ff",
+  "3": "f2cfb2ff",
+  "4": "f2cfb2ff",
+  "5": "f2cfb2ff",
+  "6": "f2cfb2ff",
+  "7": "2f8a4eff",
+  "11": "dcb040ff",
+  "12": "2f8a4eff",
+  "13": "9a6a3aff",
+  "14": "e6e0ecff"
+ },
+ "bake": {
+  "8": {
+   "colors": 16,
+   "regions": {
+    "meshes": [
+     "face_mh_25_0",
+     "Palutena_Eye_mh_19_0",
+     "Palutena_Mouth_mh_46_0"
+    ]
+   }
+  },
+  "9": {
+   "colors": 16,
+   "regions": {
+    "meshes": [
+     "face_mh_25_0",
+     "Palutena_Eye_mh_19_0",
+     "Palutena_Mouth_mh_46_0"
+    ]
+   }
+  },
+  "10": {
+   "colors": 16,
+   "regions": {
+    "meshes": [
+     "face_mh_25_0",
+     "Palutena_Eye_mh_19_0",
+     "Palutena_Mouth_mh_46_0"
+    ]
+   }
+  }
+ },
+ "add_materials": {
+  "hair_ext": {
+   "color": "2f8a4eff"
+  }
+ },
+ "add_parts": [
+  {
+   "name": "hair_ext",
+   "joint": 8,
+   "axis": [
+    {
+     "joint": 8,
+     "offset": [
+      0,
+      10,
+      -26
+     ]
+    },
+    {
+     "joint": 8,
+     "offset": [
+      0,
+      -200,
+      -52
+     ]
+    }
+   ],
+   "stations": [
+    0,
+    0.3,
+    0.6,
+    0.85,
+    1.0
+   ],
+   "sides": 5,
+   "twist": 0,
+   "regions": [
+    8
+   ],
+   "cap_end": 0.02,
+   "material": "hair_ext"
+  }
+ ]
+}

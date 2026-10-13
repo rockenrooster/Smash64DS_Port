@@ -1,0 +1,39 @@
+{
+  "form": "p6-look-ops-v1",
+  "track": "K",
+  "detail": "high",
+  "base": "peach",
+  "note": "Ring retopology parameters only (P6 plan D10: no kit data). Axes name base joints (Peach's JointTree rows) with offsets in base units, or kit joints and kit principal axes evaluated from the fitted kit at build time; regions are the base joints a part's kit slice may come from (look_r.py REGIONS labels).",
+  "materials": {
+    "face": {"texture": {"size": [32, 32], "uv": "planar", "colors": 16}},
+    "gold": {"color": "dcb040ff"},
+    "torso": {"color": "f4f0f4ff"},
+    "dress": {"color": "f0ecf2ff"},
+    "hair": {"color": "2f8a4eff"},
+    "skin": {"color": "f2cfb2ff"},
+    "sandal": {"color": "9a6a3aff"},
+    "staff": {"color": "3848a8ff"},
+    "shield": {"color": "dcb040ff"}
+  },
+  "parts": [
+    {"name": "torso", "joint": 2, "axis": [2, 7], "stations": [-0.02, 0.3, 0.62, 0.88, 1.0], "sides": 6, "regions": [2], "material": "torso"},
+    {"name": "neck", "joint": 7, "axis": [7, 8], "stations": [-0.3, 1.0], "sides": 5, "regions": [7, 8], "scale": 0.8, "material": "skin"},
+    {"name": "head", "joint": 8, "axis": [8, {"joint": 8, "offset": [0, 58, 0]}], "stations": [-0.05, 0.3, 0.62, 0.88], "sides": 8, "twist": 0, "regions": [8], "cap_end": 0.12, "material": "hair", "front_material": "face", "front_span": 70},
+    {"name": "tiara", "joint": 8, "axis": [{"joint": 8, "offset": [0, 38, 0]}, {"joint": 8, "offset": [0, 50, 0]}], "stations": [0, 1], "sides": 8, "regions": [8], "scale": 1.04, "material": "gold"},
+    {"name": "hair_back", "joint": 8, "axis": [{"joint": 8, "offset": [0, 30, -20]}, {"joint": 8, "offset": [0, -200, -52]}], "stations": [0, 0.2, 0.45, 0.7, 0.88, 1.0], "sides": 6, "twist": 0, "regions": [8], "cap_end": 0.02, "material": "hair"},
+    {"name": "l_upper_arm", "joint": 4, "axis": [4, 5], "stations": [0.0, 0.5, 1.0], "sides": 4, "twist": 45, "regions": [4], "material": "skin"},
+    {"name": "l_forearm", "joint": 5, "axis": [5, 6], "stations": [0.0, 1.0], "sides": 4, "twist": 45, "regions": [5], "share": {"0": "l_upper_arm:2"}, "material": "skin"},
+    {"name": "l_hand", "joint": 6, "axis": [6, {"joint": 6, "offset": [26, 0, 0]}], "stations": [0.0, 1.0], "sides": 4, "twist": 45, "regions": [6], "cap_end": 0.25, "material": "skin"},
+    {"name": "r_upper_arm", "joint": 11, "axis": [11, 12], "stations": [0.0, 0.5, 1.0], "sides": 4, "twist": 45, "regions": [11], "material": "skin"},
+    {"name": "r_forearm", "joint": 12, "axis": [12, 13], "stations": [0.0, 1.0], "sides": 4, "twist": 45, "regions": [12], "share": {"0": "r_upper_arm:2"}, "material": "skin"},
+    {"name": "r_hand", "joint": 13, "axis": [13, {"joint": 13, "offset": [-26, 0, 0]}], "stations": [0.0, 1.0], "sides": 4, "twist": 45, "regions": [13], "cap_end": 0.25, "material": "skin"},
+    {"name": "l_shin", "joint": 17, "axis": [17, 19], "stations": [-0.15, 1.0], "sides": 4, "twist": 45, "regions": [17, 16], "material": "skin"},
+    {"name": "r_shin", "joint": 22, "axis": [22, 24], "stations": [-0.15, 1.0], "sides": 4, "twist": 45, "regions": [22, 21], "material": "skin"},
+    {"name": "l_foot", "joint": 19, "axis": [19, {"joint": 19, "offset": [0, -24, 30]}], "stations": [0.0, 1.0], "sides": 4, "twist": 45, "regions": [19], "cap_end": 0.1, "material": "sandal"},
+    {"name": "r_foot", "joint": 24, "axis": [24, {"joint": 24, "offset": [0, -24, 30]}], "stations": [0.0, 1.0], "sides": 4, "twist": 45, "regions": [24], "cap_end": 0.1, "material": "sandal"},
+    {"name": "dress_top", "joint": 25, "axis": [{"joint": 25, "offset": [0, -16, 0]}, {"joint": 26, "offset": [0, 18, 0]}], "stations": [0.0, 0.18], "sides": 8, "regions": [1, 25, 26], "material": "dress"},
+    {"name": "dress", "joint": 26, "axis": [{"joint": 25, "offset": [0, -16, 0]}, {"joint": 26, "offset": [0, 18, 0]}], "stations": [0.18, 0.55, 1.0], "sides": 8, "regions": [1, 25, 26, 16, 17, 21, 22], "share": {"0": "dress_top:1"}, "open": [1], "material": "dress"},
+    {"name": "staff", "joint": 14, "axis": [{"kit_pca": "RStickN", "mesh": "weapon_mh_48_0", "end": 0}, {"kit_pca": "RStickN", "mesh": "weapon_mh_48_0", "end": 1}], "stations": [0.0, 0.06, 0.5, 0.94, 1.0], "sides": 3, "regions": [14], "material": "staff"},
+    {"name": "shield", "joint": 5, "shape": "plate", "axis": [{"kit_pca": "ShieldN", "mesh": "weapon_mh_48_0", "end": "centre"}, {"kit_pca": "ShieldN", "mesh": "weapon_mh_48_0", "end": 1, "axis": 2}], "stations": [0.0], "sides": 8, "regions": [5], "material": "shield"}
+  ]
+}

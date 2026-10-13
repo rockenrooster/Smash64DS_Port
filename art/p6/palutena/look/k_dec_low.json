@@ -1,0 +1,138 @@
+{
+ "form": "p6-look-ops-v1",
+ "track": "K",
+ "route": "decimate",
+ "detail": "low",
+ "base": "peach",
+ "note": "Kit model reduced by region (scripts/p6/blender/kit_decimate.py). Parameters only: the kit meshes kept, hidden-face culling, kit joints per region, colour rules and the budget per region. Hands come from Peach (owner 2026-10-13: solid hands like Peach's), the staff and shield are built shapes. No kit data (D10).",
+ "meshes": [
+  "body_mh_0_0",
+  "body_mh_0_1",
+  "face_mh_25_0",
+  "Palutena_Eye_mh_19_0"
+ ],
+ "weld": 0.0005,
+ "factor": 8.0,
+ "passes": 8,
+ "default_region": "torso",
+ "regions": {
+  "head": {
+   "joints": [
+    "HeadN",
+    "NeckN"
+   ],
+   "colour_split": [
+    [
+     "hair",
+     "green"
+    ],
+    [
+     "tiara",
+     "gold"
+    ]
+   ],
+   "weight": 0.6
+  },
+  "hair": {
+   "joints": [
+    "SWG_LHair1__swing",
+    "SWG_LHair3__swing",
+    "SWG_RHair1__swing",
+    "SWG_RHair3__swing"
+   ],
+   "weight": 0.5,
+   "planar": 6
+  },
+  "tiara": {
+   "weight": 0.5
+  },
+  "torso": {
+   "joints": [
+    "BustN",
+    "WaistN"
+   ],
+   "weight": 0.5,
+   "planar": 8
+  },
+  "dress": {
+   "joints": [
+    "HipN",
+    "RotN",
+    "TransN",
+    "LSkirtJa",
+    "LSkirtJb",
+    "RSkirtJa",
+    "RSkirtJb"
+   ],
+   "weight": 0.5,
+   "symmetry": false,
+   "planar": 8
+  },
+  "arms": {
+   "joints": [
+    "LShoulderN",
+    "LShoulderJ",
+    "LArmJ",
+    "RShoulderN",
+    "RShoulderJ",
+    "RArmJ",
+    "LHandN",
+    "RHandN",
+    "LHaveN",
+    "RHaveN"
+   ],
+   "weight": 0.5
+  },
+  "legs": {
+   "joints": [
+    "LLegJ",
+    "LKneeJ",
+    "RLegJ",
+    "RKneeJ"
+   ],
+   "weight": 0.5,
+   "planar": 8
+  },
+  "feet": {
+   "joints": [
+    "LFootJ",
+    "LToeN",
+    "RFootJ",
+    "RToeN"
+   ],
+   "weight": 0.5
+  }
+ },
+ "targets": {
+  "head": 30,
+  "hair": 40,
+  "tiara": 6,
+  "torso": 28,
+  "dress": 60,
+  "arms": 28,
+  "legs": 12,
+  "feet": 10
+ },
+ "cull_hidden": {
+  "elevation": [
+   -15,
+   75
+  ],
+  "directions": 128
+ },
+ "slivers": {
+  "min_angle": 8.0,
+  "rounds": 4
+ },
+ "border_weight": 0.6,
+ "keep_regions": [
+  "torso",
+  "dress",
+  "hair"
+ ],
+ "hand_joints": [
+  6,
+  13
+ ],
+ "hand_scale": 1.1768
+}
