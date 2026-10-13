@@ -192,7 +192,7 @@ def _f32_unit(bits: int) -> int:
     return int(value + 0.5) if value >= 0 else -int(-value + 0.5)
 
 
-def emit_sss(out: Path, staging: Path, rows: list[dict]) -> None:
+def emit_sss(out: Path, staging: Path, rows: list[dict], stages_root: Path | None = None) -> None:
     rom, u32, u8, f32, table = remix_tables(staging)
     css_text = (staging / "src" / "CharacterSelect.asm").read_text(encoding="utf-8", errors="replace")
     logo_offsets = asm_scope_constants(css_text, "offset")
@@ -246,6 +246,14 @@ def emit_sss(out: Path, staging: Path, rows: list[dict]) -> None:
             previews.append({"gkind": row["gkind"], "token": row["token"],
                              "container": VENUE_WALLPAPER[row["descriptor"]],
                              "offset": WALLPAPER_SPRITE})
+        elif row["landed"]:
+            if stages_root is None:
+                raise StageError(f"{row['name']}: a landed Remix stage needs --stages-root")
+            stage = json.loads((stages_root / row["name"] / "stage.json").read_text(encoding="utf-8"))
+            fid, off = stage["wallpaper"]
+            previews.append({"gkind": row["gkind"], "token": row["token"],
+                             "container": "p4:" + str((stages_root / row["name"] / "o2r" / f"{fid:04x}").resolve()),
+                             "offset": off})
     spec = {"schema": "p5-sss-v1", "grid": GRID, "lower_dy": LOWER_DY, "cells": cells,
             "previews": previews,
             "files": {"icons": str(o2r / f"{ICON_FILE:04x}"), "logos": str(o2r / f"{LOGO_FILE:04x}")}}
@@ -319,18 +327,26 @@ def main() -> int:
     ap.add_argument("--header", type=Path)
     ap.add_argument("--sss", type=Path)
     ap.add_argument("--staging", type=Path)
+    ap.add_argument("--stages-root", type=Path,
+                    help="scripts/p5/stage_export.py's --out, for landed Remix stages")
     ap.add_argument("--list", action="store_true")
+    ap.add_argument("--remix-landed", action="store_true")
     args = ap.parse_args()
     rows = load_registry()
     if args.list:
         print(" ".join(f"{r['name']}:{r['gkind']}" for r in rows))
+        return 0
+    if args.remix_landed:
+        # "name:c_name" per landed Remix stage, for the NitroFS staging rule.
+        print(" ".join(f"{r['name']}:{r['c_name']}" for r in rows
+                       if r["source"] == "remix" and r["landed"]))
         return 0
     if args.header is not None:
         emit_header(args.header, rows)
     if args.sss is not None:
         if args.staging is None:
             raise StageError("--sss needs --staging")
-        emit_sss(args.sss, args.staging, rows)
+        emit_sss(args.sss, args.staging, rows, args.stages_root)
     return 0
 
 

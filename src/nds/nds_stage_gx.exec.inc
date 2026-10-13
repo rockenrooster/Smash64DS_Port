@@ -289,7 +289,14 @@ static const char *const sNdsStageGxPaths[] = {
     "nitro:/stages/bonus2_luigi.gxp", "nitro:/stages/bonus2_link.gxp",
     "nitro:/stages/bonus2_yoshi.gxp", "nitro:/stages/bonus2_captain.gxp",
     "nitro:/stages/bonus2_kirby.gxp", "nitro:/stages/bonus2_pikachu.gxp",
-    "nitro:/stages/bonus2_purin.gxp", "nitro:/stages/bonus2_ness.gxp"
+    "nitro:/stages/bonus2_purin.gxp", "nitro:/stages/bonus2_ness.gxp",
+#if NDS_P5
+    /* P5: the Remix stages' templates (scripts/p5/stage_generate.py). */
+#define NDS_P5_GX_PATH(g, cname, name, map_file, map_offset) \
+    [g] = "nitro:/stages/" #name ".gxp",
+    NDS_P5_NATIVE_STAGE_ROWS(NDS_P5_GX_PATH)
+#undef NDS_P5_GX_PATH
+#endif
 };
 #define NDS_STAGE_GX_PATH_COUNT \
     (sizeof(sNdsStageGxPaths) / sizeof(sNdsStageGxPaths[0]))

@@ -437,6 +437,7 @@ static SYMallocRegion sNdsMapsPreviewArena;
 
 #if NDS_P5
 #include "nds_p5_preview.generated.h"
+#include "nds_p5_native_stages.generated.h"
 /* P5: the 1P arenas the select offers (docs/P5/New_Stages.md), by the
  * battle's own file infos (mpcollision.c:39-44), which are the headers Remix's
  * stage_file_table names for its preview too. */
@@ -465,6 +466,16 @@ static GRFileInfo *ndsMNMapsPreviewFileInfo(s32 gkind)
         return &sNdsMapsPreviewVenueFileInfos[1];
     case nGRKindLast:
         return &sNdsMapsPreviewVenueFileInfos[2];
+    /* The Remix stages this build carries: their map file and header
+     * (Remix stage_file_table, through scripts/p5/stage_export.py). */
+#define NDS_MAPS_P5_REMIX_INFO(g, cname, name, map_file, map_offset) \
+    case (g): \
+    { \
+        static GRFileInfo info = { (intptr_t)(map_file), (intptr_t)(map_offset) }; \
+        return &info; \
+    }
+    NDS_P5_NATIVE_STAGE_ROWS(NDS_MAPS_P5_REMIX_INFO)
+#undef NDS_MAPS_P5_REMIX_INFO
     default:
         break;
     }
@@ -966,6 +977,14 @@ void ndsMNMapsPreviewInit(s32 gkind)
             max = size;
         }
     }
+#define NDS_MAPS_P5_REMIX_SIZE(g, cname, name, map_file, map_offset) \
+    size = lbRelocGetFileSize((u32)(map_file)); \
+    if (max < size) \
+    { \
+        max = size; \
+    }
+    NDS_P5_NATIVE_STAGE_ROWS(NDS_MAPS_P5_REMIX_SIZE)
+#undef NDS_MAPS_P5_REMIX_SIZE
 #endif
     sNdsMapsPreviewBlockSize = ((max + 0x1fu) & ~(size_t)0x1fu) +
         NDS_MAPS_PREVIEW_BLOB_BYTES;

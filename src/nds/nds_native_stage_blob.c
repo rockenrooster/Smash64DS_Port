@@ -29,7 +29,14 @@
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_native_stage_blob.h>
 
+#if NDS_P5
+/* P5: the Remix stages' kinds follow the source's last ground (nds_p5.h). */
+#include <nds/nds_p5.h>
+#include "nds_p5_native_stages.generated.h"
+#define NDS_NATIVE_STAGE_BLOB_GKIND_COUNT (NDS_P5_GKIND_MAX + 1u)
+#else
 #define NDS_NATIVE_STAGE_BLOB_GKIND_COUNT 41u
+#endif
 #define NDS_NATIVE_STAGE_BLOB_BODY_CAP_BYTES (32u * 1024u)
 
 __attribute__((used)) volatile u32 gNdsNativeStageBlobLoadCount;
@@ -88,6 +95,12 @@ static const char *const sNdsNativeStageBlobPaths[NDS_NATIVE_STAGE_BLOB_GKIND_CO
     "nitro:/stages/native_stage_bonus2_pikachu.bin", /* 38 */
     "nitro:/stages/native_stage_bonus2_purin.bin", /* 39 */
     "nitro:/stages/native_stage_bonus2_ness.bin", /* 40 */
+#if NDS_P5
+#define NDS_P5_BLOB_PATH(g, cname, name, map_file, map_offset) \
+    [g] = "nitro:/stages/native_stage_" #name ".bin",
+    NDS_P5_NATIVE_STAGE_ROWS(NDS_P5_BLOB_PATH)
+#undef NDS_P5_BLOB_PATH
+#endif
 };
 
 static NDSNativeStageBlobPacket sNdsNativeStageBlobPacket;

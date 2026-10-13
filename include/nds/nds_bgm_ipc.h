@@ -2,7 +2,7 @@
 #define NDS_BGM_IPC_H
 #include <nds/nds_bgm_stream.h>
 
-#define NDS_BGM_IPC_ABI 0x42474d32u
+#define NDS_BGM_IPC_ABI 0x42474d33u
 #define NDS_BGM_IPC_CHANNEL 24u
 /* The two hardware channels the ARM7 stream alternates its one-shot buffers
  * on (nds_audio_bgm_service.c). The waiting buffer's channel is prepared but
@@ -10,8 +10,15 @@
  * picker excludes the pair (nds_audio_fgm.c). */
 #define NDS_BGM_HW_CHANNEL 14u
 #define NDS_BGM_HW_CHANNEL_MASK (3u << NDS_BGM_HW_CHANNEL)
-#define NDS_BGM_MAX_TRACKS 64u
-#define NDS_BGM_GENERATION_MASK 0x1ffffu
+/* PLAY's 23-bit argument is (generation << NDS_BGM_INDEX_BITS) | index. The
+ * vanilla, P4 and P5 songs passed 64 with Dinosaur Land's (2026-10-13), so
+ * the index took a bit from the generation, which only has to differ from
+ * the last few commands' to fence stale replies. */
+#define NDS_BGM_INDEX_BITS 7u
+#define NDS_BGM_MAX_TRACKS (1u << NDS_BGM_INDEX_BITS)
+#define NDS_BGM_GENERATION_MASK 0xffffu
+_Static_assert(((NDS_BGM_GENERATION_MASK << NDS_BGM_INDEX_BITS) & ~0x7fffffu) == 0u,
+               "BGM PLAY argument must fit the command's 23 bits");
 #define NDS_BGM_REPLY_ERROR 0x03ffffffu
 enum { NDS_BGM_INIT, NDS_BGM_PLAY, NDS_BGM_STOP, NDS_BGM_VOLUME, NDS_BGM_RESET };
 enum { NDS_BGM_STOPPED, NDS_BGM_STARTING, NDS_BGM_PLAYING, NDS_BGM_NATURAL, NDS_BGM_FAILED };

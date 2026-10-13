@@ -11,7 +11,11 @@
 #include <nds/nds_native_stage_blob.h>
 #include <nds/nds_scene_manager.h>
 #include <nds/nds_p4.h>
+#include <nds/nds_p5.h>
 #include <sys/vector.h>
+#if NDS_P5
+#include "nds_p5_native_stages.generated.h"
+#endif
 
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
 void ndsFighterRendererInvalidateMaterialCaches(void);
@@ -13657,27 +13661,58 @@ void mpCollisionInitGroundData(void)
             { &llGRBonus2NessMapFileID, &llGRBonus2NessMapMapHeader }, /* 40 nGRKindBonus2Ness */
         };
         u32 i;
+#if NDS_P5
+        /* P5: the Remix stages' kinds follow the source's last ground, their
+         * map file and header offset from scripts/p5/stage_export.py. */
+        const u32 kinds = NDS_P5_GKIND_MAX + 1u;
+#else
+        const u32 kinds = ARRAY_COUNT(dMPCollisionGroundFileInfos);
+#endif
 
-        for (i = 0u; i < ARRAY_COUNT(dMPCollisionGroundFileInfos); i++)
+        for (i = 0u; i < kinds; i++)
         {
             void *file;
             MPGroundData *ground_data;
             size_t bytes;
+            uintptr_t *file_id;
+            uintptr_t *header;
 
             if ((gSCManagerBattleState == NULL) ||
                 (gSCManagerBattleState->gkind != (s32)i))
             {
                 continue;
             }
-            bytes = lbRelocGetFileSize(dMPCollisionGroundFileInfos[i].file_id);
+            if (i < ARRAY_COUNT(dMPCollisionGroundFileInfos))
+            {
+                file_id = dMPCollisionGroundFileInfos[i].file_id;
+                header = dMPCollisionGroundFileInfos[i].offset;
+            }
+            else
+            {
+                file_id = NULL;
+                header = NULL;
+#if NDS_P5
+#define NDS_P5_GROUND_ROW(g, cname, name, map_file, map_offset) \
+                if (i == (g)) \
+                { \
+                    file_id = (uintptr_t *)(uintptr_t)(map_file); \
+                    header = (uintptr_t *)(uintptr_t)(map_offset); \
+                }
+                NDS_P5_NATIVE_STAGE_ROWS(NDS_P5_GROUND_ROW)
+#undef NDS_P5_GROUND_ROW
+#endif
+                if (file_id == NULL)
+                {
+                    break;
+                }
+            }
+            bytes = lbRelocGetFileSize(file_id);
             if (bytes == 0u)
             {
                 break;
             }
-            file = lbRelocGetExternHeapFile(dMPCollisionGroundFileInfos[i].file_id,
-                                            syTaskmanMalloc(bytes, 0x10));
-            ground_data = lbRelocGetFileData(MPGroundData*, file,
-                                             dMPCollisionGroundFileInfos[i].offset);
+            file = lbRelocGetExternHeapFile(file_id, syTaskmanMalloc(bytes, 0x10));
+            ground_data = lbRelocGetFileData(MPGroundData*, file, header);
             if (ground_data == NULL)
             {
                 break;

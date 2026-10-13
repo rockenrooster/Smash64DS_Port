@@ -33,6 +33,27 @@ static void ndsGrWallpaperBossInit(void)
     }
 }
 #define sc1PGameBossInitWallpaper ndsGrWallpaperBossInit
+#define grWallpaperMakeDecideKind ndsGrWallpaperMakeDecideKindSource
 #endif
 
 #include "../../decomp/BattleShip-main/decomp/src/gr/grwallpaper.c"
+
+#if NDS_P5
+#include <nds/nds_p5.h>
+#undef grWallpaperMakeDecideKind
+
+/* P5 (Remix Stages.asm bg_type): a Remix stage draws the common moving
+ * wallpaper -- none of the four sets another type -- where the source's own
+ * bound would take its kind past nGRKindBonusStageStart for a bonus board's
+ * static one. Training keeps the source's own first arm. */
+void grWallpaperMakeDecideKind(void)
+{
+    if ((gSCManagerSceneData.scene_curr != nSCKind1PTrainingMode) &&
+        (ndsP5StageIsRemix((u32)gSCManagerBattleState->gkind) != FALSE))
+    {
+        grWallpaperMakeCommon();
+        return;
+    }
+    ndsGrWallpaperMakeDecideKindSource();
+}
+#endif

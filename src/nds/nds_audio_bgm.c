@@ -825,6 +825,10 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
     /* The P4 contents' Remix songs (scripts/p4/p4_audio.py). */
 #include "nds_p4_bgm.generated.inc"
 #endif
+#if NDS_P5
+    /* The landed Remix stages' songs (scripts/p5/p5_audio.py). */
+#include "nds_p5_bgm.generated.inc"
+#endif
 };
 
 volatile u32 gNdsAudioBgmResult;
@@ -1074,7 +1078,7 @@ static void ndsBgmObserve(void)
         {
             sBgmRestarts++;
             gNdsAudioBgmRecoveries++;
-            ndsBgmPost(NDS_BGM_PLAY, (ndsBgmNextGeneration() << 6) | sBgmCurrentIndex, FALSE);
+            ndsBgmPost(NDS_BGM_PLAY, (ndsBgmNextGeneration() << NDS_BGM_INDEX_BITS) | sBgmCurrentIndex, FALSE);
             gNdsAudioBgmPlaying = 1u;
         }
     }
@@ -1261,7 +1265,7 @@ void ndsAudioBgmPlay(s32 player, s32 bgm_id)
     gNdsAudioBgmSoundActive = 0u;
     gNdsAudioBgmMask |= 1u;
     gNdsAudioBgmResult = NDS_AUDIO_BGM_PASS;
-    ndsBgmPost(NDS_BGM_PLAY, (generation << 6) | index, FALSE);
+    ndsBgmPost(NDS_BGM_PLAY, (generation << NDS_BGM_INDEX_BITS) | index, FALSE);
 }
 
 void ndsAudioBgmStopAll(void)

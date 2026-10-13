@@ -123,7 +123,19 @@ static void ndsIFCommonAddGObjDisplay(GObj *gobj,
 #define lbCommonMakeSObjForGObj ndsIFCommonMakeSObjForGObj
 #define gcAddGObjProcess ndsIFCommonAddGObjProcess
 #define gcAddGObjDisplay ndsIFCommonAddGObjDisplay
+#if NDS_P5
+/* P5: ifCommonAnnounceEndMessage announces FAILURE for every kind at or past
+ * the bonus boards (ifcommon.c:3317). A Remix stage's kind lies past them and
+ * is a VS stage, so it reads the bound as unreachable and announces GAME SET;
+ * the bound is unchanged for every source kind. */
+#define nGRKindBonusStageStart \
+    (((u32)gSCManagerBattleState->gkind > (u32)nGRKindBonusStageEnd) ? \
+     0x7FFFFFFF : nGRKindBonusStageStart)
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/if/ifcommon.c"
+#if NDS_P5
+#undef nGRKindBonusStageStart
+#endif
 #undef gcAddGObjDisplay
 #undef gcAddGObjProcess
 #undef lbCommonMakeSObjForGObj

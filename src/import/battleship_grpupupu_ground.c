@@ -25,6 +25,7 @@
 #include <sys/objman.h>
 #include <sys/rdp.h>
 #include <sys/taskman.h>
+#include <nds/nds_p5.h>
 
 extern s32 gcGetGObjsActiveNum(void);
 extern u32 sGCDrawsActiveNum;
@@ -103,7 +104,25 @@ void sc1PBonusStageMakeBonus1Ground(void);
 void ndsBaseGRCommonSetupInitAll(void);
 
 #include "../../decomp/BattleShip-main/decomp/src/gr/grdisplay.c"
+#if NDS_P5
+/* P5: grMainSetupMakeGround takes every kind past the VS stages and the Race
+ * for a bonus board (gkind >= nGRKindBonus2Start, then Bonus1Start). A Remix
+ * stage's kind lies past the boards and has no ground routine of its own
+ * (Remix Stages.asm function_table: CLONE), so for it both bounds read as
+ * unreachable and the dispatch makes nothing -- the bounds are unchanged for
+ * every source kind. */
+#define nGRKindBonus2Start \
+    (((u32)gSCManagerBattleState->gkind > (u32)nGRKindBonusStageEnd) ? \
+     0x7FFFFFFF : nGRKindBonus2Start)
+#define nGRKindBonus1Start \
+    (((u32)gSCManagerBattleState->gkind > (u32)nGRKindBonusStageEnd) ? \
+     0x7FFFFFFF : nGRKindBonus1Start)
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/gr/grmainsetup.c"
+#if NDS_P5
+#undef nGRKindBonus2Start
+#undef nGRKindBonus1Start
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/gr/grcommonsetup.c"
 #include "../../decomp/BattleShip-main/decomp/src/gr/grcommon/grpupupu.c"
 
@@ -626,6 +645,21 @@ void grCommonSetupInitAll(void)
         (gNdsSCVSBattleStageGroundDataReady != 0u))
     {
         ndsGRSectorSetupInitAll();
+        return;
+    }
+#endif
+
+#if NDS_P5
+    /* P5: a Remix stage is set up as the 1P arenas below are -- the source's
+     * common setup builds its four layers and yakumono, its ground dispatch
+     * makes nothing for it (the bonus bounds above), and it makes the item
+     * and effect appear actors. */
+    if ((gSCManagerBattleState != NULL) &&
+        (ndsP5StageIsRemix((u32)gSCManagerBattleState->gkind) != FALSE) &&
+        (gMPCollisionGroundData != NULL) &&
+        (gNdsSCVSBattleStageGroundDataReady != 0u))
+    {
+        ndsBaseGRCommonSetupInitAll();
         return;
     }
 #endif

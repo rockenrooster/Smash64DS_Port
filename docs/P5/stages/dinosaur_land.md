@@ -1,6 +1,6 @@
 # Dinosaur Land — P5 stage card
 
-**Status:** source inspected (P5.0, 2026-10-12).
+**Status:** landed in VS (play-p5a, 2026-10-13); owner playtest pending.
 **Source:** Remix id 0xC1, scope `yoshis_island_melee` (`Stages.asm`:219);
 map 0x1247 at offset 0x14 (`Stages.asm`:474, `stage_file_table` row :4309),
 geometry 0x1246, wallpaper 0x1245. Port gkind 44. **Wave:** 3, first.
@@ -47,6 +47,18 @@ left.
 - Music: the T7 bank fix and the song's volume override.
 - P3 digest: the yakumono loop covers the movers.
 
+## Landing notes (2026-10-13)
+
+- The movers' anim-joint scripts loop with SetAnim back into themselves;
+  the shared generator's reader refused any branch, so
+  `scripts/p5/stage_generate.py` replaces it with one that follows them
+  (the movers' bindings compose their world live).
+- Athletic Theme (0xE9) renders with Remix's master volume override, 85.
+  It was the song that took the BGM table past 64 rows; PLAY's track index
+  is seven bits now (`include/nds/nds_bgm_ipc.h`).
+- Probe: four level-9 CPUs, 900 frames: 0 native failures, topology
+  admitted, the 3D preview shown, the song streaming with no errors.
+
 ## Work sequence
 
 1. Export and generate; register the blob; registry row; select cell row 2,
@@ -72,10 +84,10 @@ left.
 
 | Row | Value |
 |---|---|
-| Blob slab / body | unmeasured |
+| Blob slab / body | slab 15,653; blob 17,348; GX template 37,744 (28 DObjs, 24 bindings, 47 runs, 548 of 939 dense vertices) |
 | Layer-animation tick cost | unmeasured |
 | Textures / palettes | census: 12 textures, 7.1 KB; 384 B palettes |
-| Heap low-water, cast preset | unmeasured |
+| Heap low-water, cast preset | 45,200 (Mario, Fox, DK, Samus; 900 frames) |
 | Heap low-water, heaviest roster | unmeasured |
 | Four-CPU WORK P95 / two-VBlank, cast preset | unmeasured |
 | Four-CPU WORK P95 / two-VBlank, heaviest roster | unmeasured |

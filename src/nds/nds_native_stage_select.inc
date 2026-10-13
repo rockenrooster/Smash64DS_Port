@@ -249,7 +249,13 @@
 #define NDS_NATIVE_STAGE_GKIND_BONUS2_PURIN 39u
 #define NDS_NATIVE_STAGE_GKIND_BONUS2_NESS 40u
 #define NDS_NATIVE_STAGE_GKIND_PUPUPU 6u
+#if NDS_P5
+/* P5: the Remix stages are blob-resident kinds past the source's last
+ * ground; their packet slots stay NULL like every blob stage's. */
+#define NDS_NATIVE_STAGE_GKIND_COUNT (NDS_P5_GKIND_MAX + 1u)
+#else
 #define NDS_NATIVE_STAGE_GKIND_COUNT 41u
+#endif
 
 /* Written by the scene loader (src/port/diagnostics_renderer_census.c). */
 extern volatile u32 gNdsSCVSBattleStageGKind;

@@ -82,11 +82,11 @@ Asked with the plan; the owner chose every recommended option:
 |---|---|
 | T1 stage registry | landed for Wave 1: `scripts/p5/stages.json` (seven rows), `scripts/p5/p5_stages.py` (`--header` X-macro rows in the build tree, read by `include/nds/nds_p5.h`; `--sss` select spec), `scripts/p5/p5_rules.mk` (inner make), `NDS_P5` flag |
 | T2 identity seams | Wave 1 sites done: select lock and both randoms (offered list), walk target and rows, preview file/scale/camera rows, Final Destination's boss wallpaper and song switch; Results' `u16` stage mask is harmless for 13/14/16 and needs a guard before 41-44 |
-| T3 donor stage export | `scripts/p5/stage_export.py` writes the four Remix stages' O2R closures and `stage.json` (resolved header, layers, Remix rows); twice bit-identical (`--verify-repeat`) |
-| T4 generator donor mode | `scripts/p5/stage_generate.py` derives the descriptor from `stage.json`, learns pins (`scripts/p5/pins/`), and emits include, blob and GX template through the unchanged generator; runtime registration open |
+| T3 donor stage export | `scripts/p5/stage_export.py` writes the Remix stages' O2R closures and `stage.json` (resolved header, layers, Remix rows); twice bit-identical (`--verify-repeat`); the build exports the landed ones (`p5_rules.mk`) |
+| T4 generator donor mode | `scripts/p5/stage_generate.py` derives each descriptor from `stage.json` (owner specs from the header's layers and `layer_mask`, MObjSub material sources, header offset for the light angle), learns the pins once (`--learn`, `scripts/p5/pins/<stage>.json`: counts, partitions, O2R hashes, include SHA256) and must reproduce them; the shared generator is unchanged (its name-keyed tables take the donor rows at run time, and its anim-joint reader is replaced by one that follows Jump/SetAnim loops, which Dinosaur Land's movers use). Dense vertices no corner names are dropped per binding (First Destination 1,120 loaded, 366 kept; Hyrule Temple 4,317 for 527 triangles). It writes the blob, GX template and converted wallpaper per stage and the runtime's C rows: blob and template paths, adapter capture/descriptor rows, reloc files (staged in `reloc/p4`), wallpaper rows, the blob maxima the packets raise, the compact ground maps (wallpaper container out of the map tree) and the ground-map normalizer rows (`sNdsRelocGroundMapAssets`: without its row First Destination's MPGroundData stayed in ROM word order -- layer_mask 0, no structure, no preview, blast bounds that KO'd on landing) |
 | T5 residency and memory | open; Hyrule Temple exceeds today's 863-vertex workspace maximum (census) |
 | T6 6x3 stage select | landed: kit bake on the 6x3 grid (Remix icons for every cell, lower block +8 rows, menu-font names 1:1 on the vanilla plate, Remix logos, venue preview wallpapers), shell grid, generated plaque/preview tables, 3D preview rows (Remix zoom, Peach's Castle camera, lifted with the panel); full browse and Training select open |
-| T7 stage music | open; the bank defect also affects five P4 victory songs |
+| T7 stage music | `scripts/p5/remix_bank.py` maps the staged ROM's bank file and Remix's code region at their RAM offsets (71 instruments; the vanilla 43 and the sample table are the o2r's bytes) and `scripts/p5/render_remix_bgm.py` runs the vanilla renderer on it, failing on a program past the bank; `p5_audio.py` renders each landed stage's song and appends its BGM row. `--remix-bgm-id` applies Remix's per-song overrides from the assembled tables (`MIDI.master_volume_override_table`, `MIDI.bend_range_override_table`: Athletic Theme volume 85, Koopa's Theme bend and volume). The five P4 victory songs on the Remix bank are open |
 | T8 hazards and movers | open |
 | T9 camera and bounds | open |
 | T10 per-gkind rows | open |
@@ -100,8 +100,8 @@ Asked with the plan; the owner chose every recommended option:
 | 1 | Meta Crystal | [card](stages/meta_crystal.md) | landed in VS (play-p5a); owner playtest passed 2026-10-13 |
 | 1 | Duel Zone | [card](stages/duel_zone.md) | landed in VS (play-p5a); owner playtest passed 2026-10-13 |
 | 1 | Final Destination | [card](stages/final_destination.md) | landed in VS (play-p5a): static wallpaper, Master Hand's entrance then Final Destination at 840 updates; owner playtest passed 2026-10-13 |
-| 2 | First Destination | [card](stages/first_destination.md) | source inspected |
-| 3 | Dinosaur Land | [card](stages/dinosaur_land.md) | source inspected |
+| 2 | First Destination | [card](stages/first_destination.md) | landed in VS (play-p5a); the owner's first playtest found no structure, no preview and instant KOs (header not normalized), fixed and probed 2026-10-13; owner playtest of the fix pending |
+| 3 | Dinosaur Land | [card](stages/dinosaur_land.md) | landed in VS (play-p5a): 339 triangles, blob 17,348, GX 37,744; heap low-water 45,200, 0 native failures, preview shown, Athletic Theme at volume 85; owner playtest pending |
 | 3 | Bowser's Stadium | [card](stages/bowsers_stadium.md) | source inspected |
 | 4 | Hyrule Temple | [card](stages/hyrule_temple.md) | source inspected |
 
@@ -121,7 +121,23 @@ The select's cursor, plaque and preview were captured on each cell's slot
 (5, 10, 11). One Duel Zone probe went back to the character select at the
 screenshot frame and did not reproduce in two reruns of the same command.
 
+## Wave 2 record (2026-10-13)
+
+First Destination, same build and probe as Wave 1 (four level-9 CPUs Mario,
+Fox, DK, Samus; 900 presented frames; select cell 13 with a capture):
+heap low-water 69,236, 0 native failures, topology admitted, layer_mask 1,
+camera bounds -5000/5000/-2400/5000, the 3D preview shown (fail step 0),
+fighters damaged and standing on the desk at frame 900. Packet: 153
+triangles, 366 of 1,120 loaded dense vertices kept.
+
 ## Risks and open items
+
+- The shared stage generator's source manifest has drifted from the
+  renderer (`ndsRendererCommitNativeStageSegment` reads three lab-hash
+  counters it does not classify; `ndsRendererAdapterMvpMod1F` no longer
+  exists). Any edit to `scripts/stages/generate_nds_native_stage.py`
+  regenerates every vanilla stage include and fails there, so P5 keeps its
+  generator overrides in `scripts/p5/stage_generate.py`.
 
 - Hyrule Temple's size: the workspace maxima, the blob caps and the heap
   floor with heavy P4 rosters (T5); the widest camera on the DS (T9).

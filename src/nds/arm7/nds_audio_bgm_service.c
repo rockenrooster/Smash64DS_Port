@@ -191,8 +191,8 @@ static int ndsBgmFill(uint32_t buffer)
 
 static void ndsBgmPlay(uint32_t argument)
 {
-    uint32_t index = argument & 63u;
-    uint32_t generation = argument >> 6;
+    uint32_t index = argument & (NDS_BGM_MAX_TRACKS - 1u);
+    uint32_t generation = argument >> NDS_BGM_INDEX_BITS;
     ndsBgmStopHardware(NDS_BGM_STOPPED);
     sGeneration = generation;
     sStats.play_commands++;

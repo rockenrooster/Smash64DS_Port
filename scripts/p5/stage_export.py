@@ -168,10 +168,14 @@ def main() -> int:
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--stage", action="append", default=[],
                     help="registry name; default every Remix stage")
+    ap.add_argument("--landed", action="store_true",
+                    help="only the Remix stages the registry marks landed")
     ap.add_argument("--verify-repeat", action="store_true",
                     help="export twice and require identical bytes")
     args = ap.parse_args()
     rows = [r for r in p5_stages.load_registry() if r["source"] == "remix"]
+    if args.landed:
+        rows = [r for r in rows if r["landed"]]
     if args.stage:
         names = set(args.stage)
         rows = [r for r in rows if r["name"] in names]

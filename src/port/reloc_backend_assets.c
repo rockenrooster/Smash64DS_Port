@@ -6450,6 +6450,15 @@ static const struct {
     { NDS_RELOC_ASSET_GR_BONUS2_PURIN_MAP, NDS_RELOC_ASSET_STAGE_BONUS_WALLPAPER, 0x0u },
     { NDS_RELOC_ASSET_GR_BONUS2_NESS_MAP, NDS_RELOC_ASSET_STAGE_BONUS_WALLPAPER, 0x0u }
 #endif
+#if NDS_P5
+#include "nds_p5_native_stages.generated.h"
+    /* P5: the Remix stages' maps, compacted the same way
+     * (scripts/p5/stage_generate.py stage_nitro_files). */
+#define NDS_P5_COMPACT_MAP_ROW(map_file, wallpaper_file, header) \
+    , { (map_file), (wallpaper_file), (header) }
+    NDS_P5_COMPACT_MAP_ROWS(NDS_P5_COMPACT_MAP_ROW)
+#undef NDS_P5_COMPACT_MAP_ROW
+#endif
 };
 
 /* Compact maps whose stub Sprite was normalized (once per load), and wallpaper
@@ -10428,6 +10437,16 @@ static const struct {
     { 0x124, 0x0 }, /* nGRKindBonus2Pikachu */
     { 0x125, 0x0 }, /* nGRKindBonus2Purin */
     { 0x126, 0x0 }, /* nGRKindBonus2Ness */
+#if NDS_P5
+    /* P5: the Remix stages' maps (scripts/p5/stage_generate.py). Without its
+     * row First Destination's header stayed in ROM word order: layer_mask
+     * read 0, so the stage adapter declined its Sec layer and drew nothing,
+     * and the scrambled blast-zone bounds KO'd every fighter on landing. */
+#define NDS_P5_GROUND_MAP_ROW(g, cname, name, map_file, map_offset) \
+    { (map_file), (map_offset) },
+    NDS_P5_NATIVE_STAGE_ROWS(NDS_P5_GROUND_MAP_ROW)
+#undef NDS_P5_GROUND_MAP_ROW
+#endif
 };
 
 /* The witness this cost four emulator runs for want of. A stage whose bounds

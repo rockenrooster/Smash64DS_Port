@@ -4,6 +4,9 @@
  * the source adapter that generates each content's data from the user's ROM.
  */
 #include <nds/nds_p4.h>
+#if NDS_P5
+#include "nds_p5_native_stages.generated.h"
+#endif
 
 #if NDS_P4
 
@@ -2679,6 +2682,24 @@ const char *ndsP4RelocAssetPath(u32 file_id)
             return path;
         }
     }
+#if NDS_P5 && (NDS_P5_RELOC_FILE_COUNT > 0)
+    {
+        /* P5: the Remix stages' map, geometry and wallpaper files, staged
+         * beside the contents' (scripts/p5/p5_rules.mk). */
+        static const u16 kP5Files[] = { NDS_P5_RELOC_FILE_IDS };
+
+        if (ndsP4AssetListHas(kP5Files, NDS_P5_RELOC_FILE_COUNT, file_id) != FALSE)
+        {
+            u32 at = sizeof(path) - 5u;
+
+            path[at + 0u] = hex[(file_id >> 12) & 0xFu];
+            path[at + 1u] = hex[(file_id >> 8) & 0xFu];
+            path[at + 2u] = hex[(file_id >> 4) & 0xFu];
+            path[at + 3u] = hex[file_id & 0xFu];
+            return path;
+        }
+    }
+#endif
     return NULL;
 }
 

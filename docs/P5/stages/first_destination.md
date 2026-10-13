@@ -1,6 +1,7 @@
 # First Destination — P5 stage card
 
-**Status:** source inspected (P5.0, 2026-10-12).
+**Status:** landed in VS (play-p5a, 2026-10-13); owner playtest of the
+header fix pending.
 **Source:** Remix id 0x2A (`Stages.asm`:68); map 0x877 at offset 0x14
 (`Stages.asm`:323, `stage_file_table` row :4158), geometry 0x878, wallpaper
 0x879. Port gkind 41. **Wave:** 2 (the donor-path prover). Parent:
@@ -64,15 +65,21 @@ Camera bounds 5000/-2400/5000/-5000; blast bounds 7000/-4200/9221/-9219
 
 | Row | Value |
 |---|---|
-| Blob slab / body | unmeasured |
-| Collision maps | unmeasured |
-| Wallpaper | unmeasured |
+| Blob slab / body | slab 9,780; blob 10,322; GX template 15,948 (10 DObjs, 6 bindings, 38 runs, 366 of 1,120 dense vertices) |
+| Collision maps | compact map + geometry in `reloc/p4` (wallpaper container out of the tree) |
+| Wallpaper | converted from 0x879 (`native_wallpaper_p5_firstdest.bin`) |
 | Textures / palettes | census: 13 textures, 3.4 KB; 858 B palettes |
-| Heap low-water, cast preset | unmeasured |
+| Heap low-water, cast preset | 69,236 (Mario, Fox, DK, Samus; 900 frames) |
 | Heap low-water, heaviest roster | unmeasured |
 | Four-CPU WORK P95 / two-VBlank, cast preset | unmeasured |
 | Four-CPU WORK P95 / two-VBlank, heaviest roster | unmeasured |
 
 ## Closure record
 
-Open.
+Open. 2026-10-13: the owner's first playtest found no structure, no 3D
+preview and instant KOs. The map's MPGroundData had no row in the ground-map
+normalizer (`sNdsRelocGroundMapAssets`), so it stayed in ROM word order:
+layer_mask read 0 (the adapter's topology step declined layer 0's Sec
+callback, mask 0x10) and the blast bounds were scrambled. The rows now come
+from the runtime header; the probe shows the preview, the desk, layer_mask 1
+and bounds -5000/5000/-2400/5000.

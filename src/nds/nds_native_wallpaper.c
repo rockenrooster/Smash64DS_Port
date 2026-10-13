@@ -10,6 +10,10 @@
 #include <nds/nds_fixed_convert.h>
 
 #include "generated/native_wallpapers.generated.inc"
+#if NDS_P5
+/* P5: the Remix stages' wallpapers (scripts/p5/stage_generate.py). */
+#include "nds_p5_wallpapers.generated.inc"
+#endif
 
 /* Only one BG2 image is resident. Row staging is main RAM and all VRAM
  * stores are halfwords; fread must never write directly to VRAM. */
@@ -451,6 +455,16 @@ s32 ndsNativeWallpaperDraw(u32 asset_id, u32 bitmap_offset,
             break;
         }
     }
+#if NDS_P5
+    for (i = 0u; (asset == NULL) && (i < kNDSNativeWallpaperP5Count); i++)
+    {
+        if ((kNDSNativeWallpapersP5[i].asset_id == asset_id) &&
+            (kNDSNativeWallpapersP5[i].src_offset == bitmap_offset))
+        {
+            asset = &kNDSNativeWallpapersP5[i];
+        }
+    }
+#endif
     if ((asset == NULL) || (asset->native_w != 240u) ||
         (asset->native_h != 176u) || (asset->format > 1u) ||
         ((asset->format == 1u) != (palette != NULL)) ||

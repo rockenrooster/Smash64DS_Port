@@ -1,4 +1,5 @@
 #include <gm/generic.h>
+#include <nds/nds_p5.h>
 #include <if/interface.h>
 #include <sys/debug.h>
 #include <sys/matrix.h>
@@ -419,6 +420,20 @@ void gmCameraMakeBattleCamera(void)
     dGMCameraFuncList[nGMCameraStatusInishie] = ndsCameraInishieFuncCameraWitness;
     dGMCameraFuncList[nGMCameraStatusZebes] = ndsCameraZebesFuncCameraWitness;
     battleship_gmCameraMakeBattleCamera();
+#if NDS_P5
+    /* P5 (Remix Camera.asm :67, :83): Hyrule Temple and Dinosaur Land frame
+     * the match with Mushroom Kingdom's camera, set the way
+     * gmCameraMakeDefaultCamera sets a stage's status (gmcamera.c:1175). */
+    if ((gSCManagerBattleState != NULL) &&
+        (ndsP5StageCameraInishie((u32)gSCManagerBattleState->gkind) != FALSE))
+    {
+        gGMCameraStruct.status_curr = nGMCameraStatusInishie;
+        gGMCameraStruct.status_default = gGMCameraStruct.status_prev =
+            gGMCameraStruct.status_curr;
+        gGMCameraStruct.func_camera =
+            dGMCameraFuncList[gGMCameraStruct.status_curr];
+    }
+#endif
 }
 
 #define NDS_R2_CAM_Q 12

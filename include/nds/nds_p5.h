@@ -26,6 +26,24 @@ static inline u32 ndsP5StageAdmitted(u32 gkind)
     return FALSE;
 }
 
+/* A Remix stage (as opposed to a vanilla 1P arena): its kind is past the
+ * source's last ground, nGRKindBonus2Ness (40). */
+static inline u32 ndsP5StageIsRemix(u32 gkind)
+{
+    return ((gkind > 40u) && (gkind <= NDS_P5_GKIND_MAX)) ? TRUE : FALSE;
+}
+
+/* Remix Camera.asm: the stages whose row routes the match camera to the
+ * Mushroom Kingdom status (Hyrule Temple, Dinosaur Land). */
+static inline u32 ndsP5StageCameraInishie(u32 gkind)
+{
+#define NDS_P5_CAMERA_ROW(g, token, unlock, landed, inishie, none, b0, b1, frame) \
+    if (gkind == (u32)(g)) { return (inishie) ? TRUE : FALSE; }
+    NDS_P5_STAGE_ROWS(NDS_P5_CAMERA_ROW)
+#undef NDS_P5_CAMERA_ROW
+    return FALSE;
+}
+
 /* Remix FD.asm music_fix_: a stage whose row names a second song switches to
  * it at exactly `frame` updates after its scene loaded, if the first is still
  * the stage's song (Final Destination: Master Hand's entrance, 24, then Final

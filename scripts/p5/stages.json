@@ -12,16 +12,16 @@
    "source": "vanilla", "descriptor": "last", "logo": "SMASH",
    "camera": "default", "bgm": [24, 25], "bgm_switch_frame": 840, "items": "none", "hazard": null, "unlock_id": 2, "landed": true},
   {"name": "first_destination", "title": "First Destination", "token": "FIRST_DESTINATION", "remix_id": 42, "gkind": 41,
-   "source": "remix", "descriptor": null, "logo": "SMASH",
-   "camera": "default", "bgm": null, "items": "header", "hazard": null, "unlock_id": 3, "landed": false},
+   "source": "remix", "descriptor": null, "c_name": "firstdest", "c_symbol": "FirstDest", "logo": "SMASH",
+   "camera": "default", "bgm": null, "items": "header", "hazard": null, "unlock_id": 3, "landed": true},
   {"name": "bowsers_stadium", "title": "Bowser's Stadium", "token": "BOWSERS_STADIUM", "remix_id": 67, "gkind": 42,
-   "source": "remix", "descriptor": null, "logo": "BOWSER",
+   "source": "remix", "descriptor": null, "c_name": "bowserst", "c_symbol": "BowserSt", "logo": "BOWSER",
    "camera": "default", "bgm": null, "items": "header", "hazard": "bombs", "unlock_id": 4, "landed": false},
   {"name": "hyrule_temple", "title": "Hyrule Temple", "token": "HYRULE_TEMPLE", "remix_id": 85, "gkind": 43,
-   "source": "remix", "descriptor": null, "logo": "ZELDA",
+   "source": "remix", "descriptor": null, "c_name": "hyruletemple", "c_symbol": "HyruleTemple", "logo": "ZELDA",
    "camera": "inishie", "bgm": null, "items": "header", "hazard": null, "unlock_id": 5, "landed": false},
   {"name": "dinosaur_land", "title": "Dinosaur Land", "token": "DINOSAUR_LAND", "remix_id": 193, "gkind": 44,
-   "source": "remix", "descriptor": null, "logo": "YOSHI",
-   "camera": "inishie", "bgm": null, "items": "header", "hazard": null, "unlock_id": 6, "landed": false}
+   "source": "remix", "descriptor": null, "c_name": "dinoland", "c_symbol": "DinoLand", "logo": "YOSHI",
+   "camera": "inishie", "bgm": null, "items": "header", "hazard": null, "unlock_id": 6, "landed": true}
  ]
 }

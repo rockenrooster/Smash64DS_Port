@@ -4002,7 +4002,8 @@ CFLAGS += -I$(PROJECT_ROOT)/$(BUILD)/p4/css -I$(PROJECT_ROOT)/$(BUILD)/p4/audio
 endif
 # P5 stage registry header and the stage select's tables (scripts/p5).
 ifeq ($(NDS_P5),1)
-CFLAGS += -I$(PROJECT_ROOT)/$(BUILD)/p5 -I$(PROJECT_ROOT)/$(BUILD)/p5/sss
+CFLAGS += -I$(PROJECT_ROOT)/$(BUILD)/p5 -I$(PROJECT_ROOT)/$(BUILD)/p5/sss \
+	-I$(PROJECT_ROOT)/$(BUILD)/p5/audio
 endif
 # P3 build identity (plan 7.1): libnds's inline asserts embed their headers'
 # __FILE__, i.e. the devkitPro install path (C:/devkitPro/libnds/include/...),

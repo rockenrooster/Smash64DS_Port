@@ -923,6 +923,16 @@
       "reason": "grWallpaperMakeDecideKind calls this only for gkind == nGRKindLast (Final Destination), a 1P Game stage the VS stage select cannot choose."
     },
     {
+      "source_symbol": "ndsGrWallpaperMakeDecideKindSource",
+      "target_symbol": "sc1PGameBossInitWallpaper",
+      "reason": "P5 builds rename the source grWallpaperMakeDecideKind (battleship_grwallpaper.c) and offer Final Destination in VS; its call here goes through ndsGrWallpaperBossInit, which skips it outside the 1P game (Remix FD.asm fix_), so VS never reaches the target."
+    },
+    {
+      "source_symbol": "ndsGrWallpaperMakeDecideKindSource",
+      "target_symbol": "sc1PTrainingModeLoadWallpaper",
+      "reason": "P5 builds rename the source grWallpaperMakeDecideKind (battleship_grwallpaper.c); the source caller still checks scene_curr == nSCKind1PTrainingMode before invoking this target, so VS cannot take this branch."
+    },
+    {
       "source_symbol": "ndsBaseSCManagerRunLoop",
       "target_symbol": "mnPlayers1PTrainingStartScene",
       "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."

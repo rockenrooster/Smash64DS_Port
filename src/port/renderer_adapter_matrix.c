@@ -1536,7 +1536,16 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
+#if NDS_P5
+/* P5: the Remix stages' capture and descriptor rows, generated from their
+ * packets (scripts/p5/stage_generate.py), at kinds past the source's last
+ * ground. */
+#include <nds/nds_p5.h>
+#include "nds_p5_adapter.generated.inc"
+#define NDS_RENDERER_ADAPTER_NATIVE_STAGE_KIND_COUNT (NDS_P5_GKIND_MAX + 1u)
+#else
 #define NDS_RENDERER_ADAPTER_NATIVE_STAGE_KIND_COUNT 41u
+#endif
 
 static const NDSRendererAdapterNativeStageDescriptor *const
     sNdsRendererAdapterNativeStageTable[
@@ -1733,6 +1742,11 @@ static const NDSRendererAdapterNativeStageDescriptor *const
         &sNdsRendererAdapterNativeStageBonus2Ness,
 #else
         NULL,
+#endif
+#if NDS_P5
+#define NDS_P5_ADAPTER_SLOT(g, cname) [g] = &sNdsRendererAdapterNativeStage##cname,
+        NDS_P5_ADAPTER_ROWS(NDS_P5_ADAPTER_SLOT)
+#undef NDS_P5_ADAPTER_SLOT
 #endif
     };
 

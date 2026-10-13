@@ -533,6 +533,12 @@ _Static_assert(sizeof(NDSNativeDirectPolicy) == 12u,
 #include "generated/nds_native_stage_blob_maxima.generated.h"
 #endif
 #endif
+#if NDS_P5
+/* P5: the Remix stages' packets (scripts/p5/stage_generate.py) raise the
+ * blob maxima the workspaces below are sized by, as a vanilla stage's do. */
+#include <nds/nds_p5.h>
+#include "nds_p5_native_stages.generated.h"
+#endif
 /* Must follow every generated packet: it names their tables. */
 #include "nds_native_stage_select.inc"
 #include "dreamland_ds_mesh.generated.inc"
