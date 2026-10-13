@@ -356,7 +356,9 @@ def _member_values(
           for row in epochs], ""),
     ]
     del owner_name, detail
-    return members
+    # A P4 owner's root tables lead its image (scripts/p4/p4_native_owner.py
+    # split_owner_tables): resident in no build, so no array pairs them.
+    return list(context.get("prefix_members", ())) + members
 
 
 def _array_symbol(owner_name: str, detail: str, member: str) -> str:
@@ -463,6 +465,8 @@ def render_owner_image_types(owner_name: str, detail: str,
     segments: list[tuple[str, list[str]]] = []
     normals_rows: list[str] = []
     for _ctype, name, _values, guard in members:
+        if name == "owner_words":
+            continue
         if name == "dense_normals":
             normals_rows.append(
                 f"    X({type_name}, {name}, "

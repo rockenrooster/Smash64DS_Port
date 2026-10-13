@@ -761,6 +761,149 @@ def _merge_light_preambles(name: str, high: dict, low: dict) -> None:
     low["high_light_preambles"] = merged
 
 
+# Owner tables (2026-10-13 memory pass): an owner's root tables -- every
+# array of its runtime program that is not an image-backed Fighter* table:
+# roots, root variants, binding parents and joints, the joint schedule, the
+# light preambles and each root program's -- leave the resident include for
+# the head of both of its images (`owner_words`, packed here). The include
+# keeps their names as macros over the loaded copy (sNdsP4<Title>Owner, bound
+# with the image: nds_renderer_assets.c). Twenty contents carried ~31 KB of
+# them in every scene; a match loads its four. The cross-palette slots stay:
+# the GX slot table reserves the union of every owner's, loaded or not
+# (renderer_adapter_matrix.c ndsRendererAdapterBuildGxSlotTable).
+OWNER_TABLE_TYPES = {
+    # C type: (byte size, alignment)
+    "u8": (1, 1), "u16": (2, 2), "u32": (4, 4),
+    "NDSNativeRoot": (16, 4), "NDSNativeRootVariant": (20, 4),
+}
+OWNER_RESIDENT_TABLES = ("CrossPaletteSlots",)
+_OWNER_ARRAY_RE = re.compile(r"static const (\w+) (sNdsNative(\w+?))((?:\[\d+\])+) =\s*")
+
+
+def _c_values(text: str) -> list:
+    """A C initializer (braces, integer literals with a u suffix) as nested
+    lists of ints."""
+    tokens = re.findall(r"\{|\}|0x[0-9A-Fa-f]+u?|\d+u?|-\d+|[A-Za-z_]\w*|[^\s,]", text)
+    bad = [tok for tok in tokens if not re.fullmatch(r"\{|\}|0x[0-9A-Fa-f]+u?|\d+u?|-\d+", tok)]
+    if bad:
+        raise SystemExit(f"owner table initializer: unpackable tokens {bad[:4]} in {text[:60]!r}")
+    pos = 0
+
+    def parse():
+        nonlocal pos
+        tok = tokens[pos]
+        if tok == "{":
+            pos += 1
+            out = []
+            while tokens[pos] != "}":
+                out.append(parse())
+            pos += 1
+            return out
+        pos += 1
+        return int(tok.rstrip("u"), 0)
+
+    value = parse()
+    if pos != len(tokens):
+        raise SystemExit(f"owner table initializer: trailing tokens in {text[:60]!r}")
+    return value
+
+
+def _pack_cell(ctype: str, value) -> bytes:
+    if ctype == "u8":
+        return struct.pack("<B", value & 0xFF)
+    if ctype == "u16":
+        return struct.pack("<H", value & 0xFFFF)
+    if ctype == "u32":
+        return struct.pack("<I", value & 0xFFFFFFFF)
+    if ctype == "NDSNativeRoot":
+        if len(value) != 8:
+            raise SystemExit(f"NDSNativeRoot initializer {value}")
+        return struct.pack("<IHHHBBBB", *value) + b"\0\0"
+    if ctype == "NDSNativeRootVariant":
+        binding, root = value
+        return struct.pack("<I", binding) + _pack_cell("NDSNativeRoot", root)
+    raise SystemExit(f"owner table type {ctype} has no packing")
+
+
+def split_owner_tables(title: str, lines: list[str]):
+    """Move the owner's root tables out of its include lines: (lines with each
+    array replaced by a macro over sNdsP4<Title>Owner, the tables' typedef and
+    checks, the packed words)."""
+    text = "\n".join(lines)
+    out = []
+    fields = []          # (ctype, member, dims)
+    blob = bytearray()
+    checks = []
+    at = 0
+    struct_align = 4
+    for m in _OWNER_ARRAY_RE.finditer(text):
+        name, member, dims = m.group(2), m.group(3), m.group(4)
+        if not member.startswith(title) or member[len(title):].startswith("Fighter"):
+            continue
+        member = member[len(title):]
+        if any(kind in member for kind in OWNER_RESIDENT_TABLES):
+            continue
+        ctype = m.group(1)
+        if ctype not in OWNER_TABLE_TYPES:
+            raise SystemExit(f"{name}: owner table type {ctype}")
+        # The initializer: balanced braces from the first '{', then ';'.
+        start = m.end()
+        if text[start] != "{":
+            raise SystemExit(f"{name}: initializer does not open with a brace")
+        depth, i = 0, start
+        while True:
+            if text[i] == "{":
+                depth += 1
+            elif text[i] == "}":
+                depth -= 1
+                if depth == 0:
+                    break
+            i += 1
+        end = text.index(";", i) + 1
+        values = _c_values(text[start:i + 1])
+        size, align = OWNER_TABLE_TYPES[ctype]
+        shape = [int(d) for d in re.findall(r"\d+", dims)]
+        cells = values
+        if len(shape) == 2:
+            cells = [cell for row in values for cell in row]
+        count = 1
+        for d in shape:
+            count *= d
+        if len(cells) != count:
+            raise SystemExit(f"{name}: {len(cells)} cells for {dims}")
+        while len(blob) % align:
+            blob.append(0)
+        checks.append((member, len(blob)))
+        for cell in cells:
+            blob += _pack_cell(ctype, cell)
+        fields.append((ctype, member, dims))
+        out.append((m.start(), end, f"#define {name} (sNdsP4{title}Owner->{member})"))
+    if not fields:
+        return lines, [], []
+    while len(blob) % struct_align:
+        blob.append(0)
+    pieces = []
+    last = 0
+    for start, end, macro in out:
+        pieces.append(text[last:start])
+        pieces.append(macro)
+        last = end
+    pieces.append(text[last:])
+    words = [f"0x{w:08x}u" for w in struct.unpack(f"<{len(blob) // 4}I", bytes(blob))]
+    typedef = [f"/* {title}'s root tables, in its images' owner_words (p4_native_owner.py",
+               " * split_owner_tables); bound with the image (nds_renderer_assets.c). */",
+               f"typedef struct NDSP4{title}OwnerTables", "{"]
+    typedef += [f"    {ctype} {member}{dims};" for ctype, member, dims in fields]
+    typedef += [f"}} NDSP4{title}OwnerTables;",
+                f"_Static_assert(sizeof(NDSP4{title}OwnerTables) == {len(blob)}u,",
+                f"               \"{title} owner tables: layout differs from the packed words\");"]
+    typedef += [f"_Static_assert(offsetof(NDSP4{title}OwnerTables, {member}) == {offset}u, "
+                f"\"{title} owner table {member} moved\");" for member, offset in checks]
+    typedef += [f"static const NDSP4{title}OwnerTables *sNdsP4{title}Owner =",
+                f"    (const NDSP4{title}OwnerTables *)(const void *)sNdsP4OwnerZero;", ""]
+    return "".join(pieces).split("\n"), typedef, words
+
+
 def emit(out_dir: Path, owners: dict[str, tuple[Path, int]]) -> dict[str, list[Path]]:
     """Write the build-local owner products for every enabled donor owner.
 
@@ -787,6 +930,7 @@ def emit(out_dir: Path, owners: dict[str, tuple[Path, int]]) -> dict[str, list[P
     ]
     inc = ["/* Generated by scripts/p4/p4_native_owner.py. Do not edit. */", ""]
     rows = []
+    zero_words = 0
     for index, name in enumerate(P4_IMAGE_OWNERS):
         if name not in owners:
             continue
@@ -813,6 +957,24 @@ def emit(out_dir: Path, owners: dict[str, tuple[Path, int]]) -> dict[str, list[P
             for detail in ("high", "low"):
                 contexts[detail]["root_programs"] = O.build_owner_root_programs(
                     REPO, contexts[detail])
+        owner_inc = []
+        for detail in ("high", "low"):
+            owner_inc += O.render_p2_owner_runtime_program(contexts[detail])
+        # The model-part variants the program emitted (donor_variants), by
+        # name for the renderer's resolver; NULL and 0 when it has none.
+        for detail, suffix in (("high", ""), ("low", "Low")):
+            count = len(O._p2_owner_variant_specs(name, detail))
+            macro = f"NDS_P4_NATIVE_{name.upper()}_ROOT_VARIANTS{'_LOW' if detail == 'low' else ''}"
+            array = f"sNdsNative{O._owner_title(name)}RootVariants{suffix}" if count else "NULL"
+            owner_inc += [f"#define {macro} {array}", f"#define {macro}_COUNT {count}u"]
+        owner_inc += _render_programs(name, contexts)
+        owner_inc, owner_typedef, owner_words = split_owner_tables(
+            O._owner_title(name), owner_inc)
+        if not owner_words:
+            raise SystemExit(f"{name}: no owner tables found in its runtime program")
+        zero_words = max(zero_words, len(owner_words))
+        for detail in ("high", "low"):
+            contexts[detail]["prefix_members"] = [("u32", "owner_words", owner_words, "")]
         header += [f"#if {guard}",
                    f"#define NDS_NATIVE_IMAGE_SLOT_{name.upper()} (NDS_NATIVE_IMAGE_OWNER_SLOTS + {index}u)",
                    f"#define NDS_NATIVE_OWNER_IMAGE_{name.upper()} 1"]
@@ -830,16 +992,7 @@ def emit(out_dir: Path, owners: dict[str, tuple[Path, int]]) -> dict[str, list[P
             "#endif",
         ]
         inc += [f"#if {guard}", f"/* P4: donor-derived {O._owner_title(name)} runtime owner. */", ""]
-        for detail in ("high", "low"):
-            inc += O.render_p2_owner_runtime_program(contexts[detail])
-        # The model-part variants the program emitted (donor_variants), by
-        # name for the renderer's resolver; NULL and 0 when it has none.
-        for detail, suffix in (("high", ""), ("low", "Low")):
-            count = len(O._p2_owner_variant_specs(name, detail))
-            macro = f"NDS_P4_NATIVE_{name.upper()}_ROOT_VARIANTS{'_LOW' if detail == 'low' else ''}"
-            array = f"sNdsNative{O._owner_title(name)}RootVariants{suffix}" if count else "NULL"
-            inc += [f"#define {macro} {array}", f"#define {macro}_COUNT {count}u"]
-        inc += _render_programs(name, contexts)
+        inc += owner_typedef + owner_inc
         inc += [f"#endif  /* {guard} */", ""]
         files = []
         for detail in ("high", "low"):
@@ -858,6 +1011,10 @@ def emit(out_dir: Path, owners: dict[str, tuple[Path, int]]) -> dict[str, list[P
                "#endif /* NDS_P4_NATIVE_IMAGE_GENERATED_H */", ""]
     (out_dir / "nds_p4_native_image.generated.h").write_text(
         "\n".join(header), encoding="utf-8", newline="\n")
+    # Every owner's tables pointer reads zeros until its image binds them.
+    inc[1:1] = ["#include <stddef.h>",
+                "/* An unbound owner's tables (sNdsP4<Title>Owner before its image binds). */",
+                f"static const u32 sNdsP4OwnerZero[{max(zero_words, 1)}];", ""]
     (out_dir / "nds_p4_native_owner.generated.inc").write_text(
         "\n".join(inc), encoding="utf-8", newline="\n")
     return products

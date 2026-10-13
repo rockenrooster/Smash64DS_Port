@@ -2601,21 +2601,37 @@ NDS_FTR_OWNER_RUNTIME(
 #endif
 
 #if NDS_P4
-/* P4 donor owners (nds_p4_contents.h): image-backed, so each content's two
+/* P4 donor owners (nds_p4_contents.h): image-backed. Each content's two
  * tables structs are bound to its loaded image (ndsRendererNativeBindOwnerImage)
- * and its runtime owners name the generated roots, cross-palette slots and
- * light preambles (nds_p4_native_owner.generated.inc). */
+ * and so are its root tables -- roots, light preambles, binding parents and
+ * joints, the joint schedule, root variants and each root program's -- which
+ * lead both of its images (owner_words: scripts/p4/p4_native_owner.py
+ * split_owner_tables) and which nds_p4_native_owner.generated.inc names through
+ * sNdsP4<Title>Owner. Its runtime owners and program rows are therefore
+ * writable and read the shared zero tables until an image binds them
+ * (ndsP4Bind<Title>OwnerTables); their counts and cross-palette slots are
+ * resident constants. Twenty contents' root tables were ~31 KB of every
+ * scene's heap; a match now loads its fighters'. */
+#define NDS_P4_OWNER_UNBOUND(T_)                                               \
+    ((const NDSP4##T_##OwnerTables *)(const void *)sNdsP4OwnerZero)
+#define NDS_P4_FTR_OWNER_RUNTIME(name_, tables_, T_, roots_, cross_, bytes_)   \
+    static NDSNativeFighterOwnerRuntime name_ = {                              \
+        (tables_), NDS_P4_OWNER_UNBOUND(T_)->roots_,                           \
+        NDS_FTR_COUNT(NDS_P4_OWNER_UNBOUND(T_)->roots_), (cross_),             \
+        NDS_P4_OWNER_UNBOUND(T_)->RootLightPreambles,                          \
+        NDS_FTR_COUNT(NDS_P4_OWNER_UNBOUND(T_)->RootLightPreambles), (bytes_)  \
+    }
 #define NDS_P4_OWNER_RUNTIME(id_, T_, N_, n_, parent_, model_, main_)          \
-    static NDSNativeFighterRuntimeTables sNdsNative##T_##FighterHighTables;      \
-    static NDSNativeFighterRuntimeTables sNdsNative##T_##FighterLowTables;       \
-    NDS_FTR_OWNER_RUNTIME(                                                       \
-        sNdsNative##T_##HighOwner, &sNdsNative##T_##FighterHighTables,           \
-        sNdsNative##T_##Roots, sNdsNative##T_##CrossPaletteSlots,                \
-        sNdsNative##T_##RootLightPreambles, NDS_NATIVE_##N_##_MODEL_DATA_SIZE);  \
-    NDS_FTR_OWNER_RUNTIME(                                                       \
-        sNdsNative##T_##LowOwner, &sNdsNative##T_##FighterLowTables,             \
-        sNdsNative##T_##RootsLow, sNdsNative##T_##CrossPaletteSlotsLow,          \
-        sNdsNative##T_##RootLightPreambles, NDS_NATIVE_##N_##_MODEL_DATA_SIZE);
+    static NDSNativeFighterRuntimeTables sNdsNative##T_##FighterHighTables;    \
+    static NDSNativeFighterRuntimeTables sNdsNative##T_##FighterLowTables;     \
+    NDS_P4_FTR_OWNER_RUNTIME(                                                  \
+        sNdsNative##T_##HighOwner, &sNdsNative##T_##FighterHighTables, T_,     \
+        Roots, sNdsNative##T_##CrossPaletteSlots,                              \
+        NDS_NATIVE_##N_##_MODEL_DATA_SIZE);                                    \
+    NDS_P4_FTR_OWNER_RUNTIME(                                                  \
+        sNdsNative##T_##LowOwner, &sNdsNative##T_##FighterLowTables, T_,       \
+        RootsLow, sNdsNative##T_##CrossPaletteSlotsLow,                        \
+        NDS_NATIVE_##N_##_MODEL_DATA_SIZE);
 NDS_P4_CONTENT_ROWS(NDS_P4_OWNER_RUNTIME)
 #undef NDS_P4_OWNER_RUNTIME
 
@@ -2634,26 +2650,23 @@ typedef struct NDSP4RootProgram
 } NDSP4RootProgram;
 
 #define NDS_P4_PROGRAM_OWNERS(T_, N_, P_)                                      \
-    NDS_FTR_OWNER_RUNTIME(                                                     \
-        sNdsNative##T_##P_##HighOwner, &sNdsNative##T_##FighterHighTables,     \
-        sNdsNative##T_##P_##Roots, sNdsNative##T_##P_##CrossPaletteSlots,      \
-        sNdsNative##T_##RootLightPreambles,                                    \
+    NDS_P4_FTR_OWNER_RUNTIME(                                                  \
+        sNdsNative##T_##P_##HighOwner, &sNdsNative##T_##FighterHighTables, T_, \
+        P_##Roots, sNdsNative##T_##P_##CrossPaletteSlots,                      \
         NDS_NATIVE_##N_##_MODEL_DATA_SIZE);                                    \
-    NDS_FTR_OWNER_RUNTIME(                                                     \
-        sNdsNative##T_##P_##LowOwner, &sNdsNative##T_##FighterLowTables,       \
-        sNdsNative##T_##P_##RootsLow,                                          \
-        sNdsNative##T_##P_##CrossPaletteSlotsLow,                              \
-        sNdsNative##T_##RootLightPreambles,                                    \
+    NDS_P4_FTR_OWNER_RUNTIME(                                                  \
+        sNdsNative##T_##P_##LowOwner, &sNdsNative##T_##FighterLowTables, T_,   \
+        P_##RootsLow, sNdsNative##T_##P_##CrossPaletteSlotsLow,                \
         NDS_NATIVE_##N_##_MODEL_DATA_SIZE);
 #define NDS_P4_PROGRAM_ROW(T_, N_, P_)                                         \
     { { &sNdsNative##T_##P_##HighOwner, &sNdsNative##T_##P_##LowOwner },       \
-      sNdsNative##T_##P_##BindingParents,                                      \
+      NDS_P4_OWNER_UNBOUND(T_)->P_##BindingParents,                            \
       sNdsNative##T_##P_##CrossPaletteSlots,                                   \
-      { sNdsNative##T_##P_##RootBindings,                                      \
-        sNdsNative##T_##P_##RootBindingsLow } },
+      { NDS_P4_OWNER_UNBOUND(T_)->P_##RootBindings,                            \
+        NDS_P4_OWNER_UNBOUND(T_)->P_##RootBindingsLow } },
 #define NDS_P4_OWNER_PROGRAMS(id_, T_, N_, n_, parent_, model_, main_)        \
     NDS_P4_NATIVE_##N_##_PROGRAMS(NDS_P4_PROGRAM_OWNERS)                       \
-    static const NDSP4RootProgram                                             \
+    static NDSP4RootProgram                                                    \
         sNdsP4##T_##RootPrograms[NDS_P4_NATIVE_##N_##_PROGRAM_COUNT + 1u] =   \
     {                                                                          \
         NDS_P4_NATIVE_##N_##_PROGRAMS(NDS_P4_PROGRAM_ROW)                      \
@@ -2663,6 +2676,47 @@ NDS_P4_CONTENT_ROWS(NDS_P4_OWNER_PROGRAMS)
 #undef NDS_P4_OWNER_PROGRAMS
 #undef NDS_P4_PROGRAM_ROW
 #undef NDS_P4_PROGRAM_OWNERS
+
+/* Points a content's root tables at an image's owner_words (NULL: the zero
+ * tables), then every runtime owner and program row that names them. */
+static void ndsP4OwnerBindRuntime(NDSNativeFighterOwnerRuntime *owner,
+                                  const NDSNativeRoot *roots,
+                                  const u32 (*preambles)[2])
+{
+    owner->roots = roots;
+    owner->root_light_preambles = preambles;
+}
+
+#define NDS_P4_PROGRAM_BIND(T_, N_, P_)                                        \
+    ndsP4OwnerBindRuntime(&sNdsNative##T_##P_##HighOwner,                      \
+                          sNdsNative##T_##P_##Roots,                           \
+                          sNdsNative##T_##RootLightPreambles);                 \
+    ndsP4OwnerBindRuntime(&sNdsNative##T_##P_##LowOwner,                       \
+                          sNdsNative##T_##P_##RootsLow,                        \
+                          sNdsNative##T_##RootLightPreambles);                 \
+    program->parents = sNdsNative##T_##P_##BindingParents;                     \
+    program->bindings[0] = sNdsNative##T_##P_##RootBindings;                   \
+    program->bindings[1] = sNdsNative##T_##P_##RootBindingsLow;                \
+    program++;
+#define NDS_P4_OWNER_TABLES_BIND(id_, T_, N_, n_, parent_, model_, main_)      \
+    static void ndsP4Bind##T_##OwnerTables(const void *tables)                 \
+    {                                                                          \
+        NDSP4RootProgram *program = sNdsP4##T_##RootPrograms;                  \
+                                                                               \
+        sNdsP4##T_##Owner = (tables != NULL) ?                                 \
+            (const NDSP4##T_##OwnerTables *)tables : NDS_P4_OWNER_UNBOUND(T_); \
+        ndsP4OwnerBindRuntime(&sNdsNative##T_##HighOwner,                      \
+                              sNdsNative##T_##Roots,                           \
+                              sNdsNative##T_##RootLightPreambles);             \
+        ndsP4OwnerBindRuntime(&sNdsNative##T_##LowOwner,                       \
+                              sNdsNative##T_##RootsLow,                        \
+                              sNdsNative##T_##RootLightPreambles);             \
+        NDS_P4_NATIVE_##N_##_PROGRAMS(NDS_P4_PROGRAM_BIND)                     \
+        (void)program;                                                         \
+    }
+NDS_P4_CONTENT_ROWS(NDS_P4_OWNER_TABLES_BIND)
+#undef NDS_P4_OWNER_TABLES_BIND
+#undef NDS_P4_PROGRAM_BIND
 
 /* Programs 1..*count of a P4 owner slot; NULL for any other slot. */
 static const NDSP4RootProgram *ndsP4RootPrograms(u32 slot, u32 *count)
@@ -5240,6 +5294,30 @@ static const u8 sNdsSkeletonBindingParents[32] = { [0 ... 31] = 0xffu };
 static const u8 sNdsSkeletonCrossSlots[32] = { [0 ... 31] = 31u };
 #include "generated/nds_native_skeletons.generated.inc"
 
+#if NDS_P4
+/* A P4 content's root tables (owner_words) are in each of its images: the one
+ * being bound, else -- it is being unbound -- the other detail's while that
+ * one stays loaded; NULL when neither is. */
+static const void *ndsP4OwnerTablesInImage(u32 owner_slot, u32 use_low_detail,
+                                           const void *base, u32 offset)
+{
+    const NDSNativeOwnerImageSlot *self =
+        &sNdsNativeOwnerImage[owner_slot][use_low_detail];
+    const NDSNativeOwnerImageSlot *other =
+        &sNdsNativeOwnerImage[owner_slot][use_low_detail ^ 1u];
+
+    if (base != NULL)
+    {
+        return (const u8 *)base + offset;
+    }
+    if ((other->base != NULL) && (other->base != self->base))
+    {
+        return (const u8 *)other->base + offset;
+    }
+    return NULL;
+}
+#endif
+
 static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
                                             const void *base)
 {
@@ -5493,6 +5571,9 @@ static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
 #define NDS_P4_OWNER_BIND(id_, T_, N_, n_, parent_, model_, main_)             \
     if (owner_slot == NDS_NATIVE_IMAGE_SLOT_##N_)                               \
     {                                                                           \
+        _Static_assert(offsetof(NDSNative##T_##LowImage, owner_words) ==        \
+                       offsetof(NDSNative##T_##HighImage, owner_words),         \
+                       "P4 owner tables differ in place between details");      \
         if (use_low_detail != 0u)                                               \
         {                                                                       \
             NDS_IMG_BIND(sNdsNative##T_##FighterLowTables,                      \
@@ -5505,6 +5586,9 @@ static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
                          NDSNative##T_##HighImage, base,                        \
                          NDS_NATIVE_IMAGE_##N_##_HIGH);                         \
         }                                                                       \
+        ndsP4Bind##T_##OwnerTables(ndsP4OwnerTablesInImage(                     \
+            owner_slot, use_low_detail, base,                                   \
+            (u32)offsetof(NDSNative##T_##LowImage, owner_words)));              \
         return;                                                                 \
     }
     NDS_P4_CONTENT_ROWS(NDS_P4_OWNER_BIND)
