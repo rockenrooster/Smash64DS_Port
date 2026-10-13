@@ -4959,11 +4959,55 @@ static sb32 ndsRendererEntryEffectP4ContentInMatch(u32 content)
  * same bits. */
 #define NDS_P4_VARIANT_PALETTE_FOLLOWS 0x80u
 #define NDS_P4_VARIANT_MATERIAL 0x40u
+/* The rows' answers by display list (2026-10-13): every effect, weapon and
+ * item DObj asked on every draw, and the walk reads each row's file pointer
+ * -- four Sonics' entry planes paid 122K cycles a frame here. A list's
+ * answer holds for the heap generation: the contents' special files load
+ * once a scene and its bump heap never reuses an address within one. */
+#define NDS_ENTRY_P4_ADMIT_MEMO 256u
+#define NDS_ENTRY_P4_ADMIT_NONE 0xffffu
+static const void *sNdsEntryP4AdmitMemoDl[NDS_ENTRY_P4_ADMIT_MEMO];
+static u16 sNdsEntryP4AdmitMemoRow[NDS_ENTRY_P4_ADMIT_MEMO];
+static u32 sNdsEntryP4AdmitMemoGen;
+
+static void ndsRendererEntryEffectP4AdmitRow(u32 p, u32 *owner_asset_id,
+                                             u32 *root_offset,
+                                             u32 *variant_count)
+{
+    const NDSEntryEffectP4Root *row = &sNdsEntryEffectP4Roots[p];
+
+    *owner_asset_id = row->asset_id;
+    *root_offset =
+        sNdsEntryEffectRoots[NDS_ENTRY_EFFECT_P4_ROOT_FIRST + p].source_offset;
+    *variant_count = row->variant_count |
+        (((row->material_flags & 1u) != 0u) ? NDS_P4_VARIANT_PALETTE_FOLLOWS : 0u) |
+        (((row->material_flags & 2u) != 0u) ? NDS_P4_VARIANT_MATERIAL : 0u);
+}
+
 sb32 ndsRendererEntryEffectP4Admit(const void *dl, u32 *owner_asset_id,
                                    u32 *root_offset, u32 *variant_count)
 {
+    const u32 way = ((u32)(uintptr_t)dl * 2654435761u) >> 24;
     u32 p;
 
+    if (sNdsEntryP4AdmitMemoGen != gNdsTaskmanHeapGeneration + 1u)
+    {
+        memset(sNdsEntryP4AdmitMemoDl, 0, sizeof(sNdsEntryP4AdmitMemoDl));
+        sNdsEntryP4AdmitMemoGen = gNdsTaskmanHeapGeneration + 1u;
+    }
+    if ((dl != NULL) && (sNdsEntryP4AdmitMemoDl[way] == dl))
+    {
+        p = sNdsEntryP4AdmitMemoRow[way];
+        if (p == NDS_ENTRY_P4_ADMIT_NONE)
+        {
+            return FALSE;
+        }
+        ndsRendererEntryEffectP4AdmitRow(p, owner_asset_id, root_offset,
+                                         variant_count);
+        return TRUE;
+    }
+    sNdsEntryP4AdmitMemoDl[way] = dl;
+    sNdsEntryP4AdmitMemoRow[way] = NDS_ENTRY_P4_ADMIT_NONE;
     for (p = 0u; p < NDS_ENTRY_EFFECT_P4_ROOT_COUNT; p++)
     {
         const NDSEntryEffectP4Root *row = &sNdsEntryEffectP4Roots[p];
@@ -4997,11 +5041,9 @@ sb32 ndsRendererEntryEffectP4Admit(const void *dl, u32 *owner_asset_id,
 
         if ((const u8 *)dl == root)
         {
-            *owner_asset_id = row->asset_id;
-            *root_offset = offset;
-            *variant_count = row->variant_count |
-                (((row->material_flags & 1u) != 0u) ? NDS_P4_VARIANT_PALETTE_FOLLOWS : 0u) |
-                (((row->material_flags & 2u) != 0u) ? NDS_P4_VARIANT_MATERIAL : 0u);
+            sNdsEntryP4AdmitMemoRow[way] = (u16)p;
+            ndsRendererEntryEffectP4AdmitRow(p, owner_asset_id, root_offset,
+                                             variant_count);
             return TRUE;
         }
     }
@@ -5081,9 +5123,26 @@ static const NDSEntryEffectRoot *ndsRendererEntryEffectRoot(
      * content in the match, whose corner block is loaded, else the first. */
     if (owner_asset_id >= NDS_ENTRY_EFFECT_P4_ASSET_MIN)
     {
+        /* The answer by (asset, offset) for the heap generation, whose match
+         * fixes the contents the scan prefers (2026-10-13: four Sonics'
+         * entry planes paid 79K cycles a frame scanning the rows). */
+        static u32 memo_key[64];
+        static const NDSEntryEffectRoot *memo_root[64];
+        static u32 memo_gen;
+        const u32 key = (owner_asset_id << 16) ^ root_offset;
+        const u32 way = (key * 2654435761u) >> 26;
         const NDSEntryEffectRoot *first = NULL;
         u32 p;
 
+        if (memo_gen != gNdsTaskmanHeapGeneration + 1u)
+        {
+            memset(memo_key, 0, sizeof(memo_key));
+            memo_gen = gNdsTaskmanHeapGeneration + 1u;
+        }
+        if ((memo_key[way] == key + 1u) && (memo_root[way] != NULL))
+        {
+            return memo_root[way];
+        }
         for (p = 0u; p < NDS_ENTRY_EFFECT_P4_ROOT_COUNT; p++)
         {
             const NDSEntryEffectRoot *root =
@@ -5103,9 +5162,12 @@ static const NDSEntryEffectRoot *ndsRendererEntryEffectRoot(
                     continue;
                 }
 #endif
-                return root;
+                first = root;
+                break;
             }
         }
+        memo_key[way] = key + 1u;
+        memo_root[way] = first;
         return first;
     }
 #endif

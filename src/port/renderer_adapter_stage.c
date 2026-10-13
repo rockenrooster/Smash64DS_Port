@@ -6894,10 +6894,26 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
     }
     NDS_LAB_ARW_MARK(lab_t[0]);
 
+#if NDS_P4
+    /* A content's root first: its rows answer from a memo by list
+     * (ndsRendererEntryEffectP4Admit), and no arm below can claim a list in
+     * a content's file. Four Sonics' entry planes drew 60 roots a frame
+     * through every arm. */
+    if ((dobj->parent_gobj != NULL) &&
+        ((dobj->parent_gobj->id == nGCCommonKindEffect) ||
+         (dobj->parent_gobj->id == nGCCommonKindWeapon) ||
+         (dobj->parent_gobj->id == nGCCommonKindItem)) &&
+        (ndsRendererEntryEffectP4Admit(dl, &owner_asset_id, &root_offset,
+                                       &p4_variant_count) != FALSE))
+    {
+        base = (const u8 *)dl - root_offset;
+        candidate = TRUE;
+    }
+#endif
     /* Exact source asset + exact generated root is the whole admission test.
      * Do not classify arbitrary effect lists by shape: this path intentionally
      * owns only entry props that the offline source bake emitted. */
-    if (gEFManagerFiles[1] != NULL)
+    if ((candidate == FALSE) && (gEFManagerFiles[1] != NULL))
     {
         const uintptr_t address = (uintptr_t)dl;
         const uintptr_t effect_base = (uintptr_t)gEFManagerFiles[1];
@@ -7326,22 +7342,6 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
             }
         }
     }
-#if NDS_P4
-    /* A P4 content's own effects, weapons and items (Wolf's reflector,
-     * Wolfen, slash and blaster; Peach's turnip): exact content file plus
-     * exact generated root, as every arm above. Only effect, weapon and item
-     * GObjs ask, so stage lists never pay the row walk. */
-    if ((candidate == FALSE) && (dobj->parent_gobj != NULL) &&
-        ((dobj->parent_gobj->id == nGCCommonKindEffect) ||
-         (dobj->parent_gobj->id == nGCCommonKindWeapon) ||
-         (dobj->parent_gobj->id == nGCCommonKindItem)) &&
-        (ndsRendererEntryEffectP4Admit(dl, &owner_asset_id, &root_offset,
-                                       &p4_variant_count) != FALSE))
-    {
-        base = (const u8 *)dl - root_offset;
-        candidate = TRUE;
-    }
-#endif
     if (candidate == FALSE)
     {
         return FALSE;
