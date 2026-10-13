@@ -384,6 +384,24 @@ def retarget(clip: Clip, src: Skeleton, dst: Skeleton, roles: dict, src_first_sl
     return out
 
 
+def world_frames(clip: Clip, skel: Skeleton, first_slot: int = 0, frames=None) -> list:
+    """Each frame's joint world matrices (4x4 rows, model space): the
+    playback a review renders (A6)."""
+    import numpy as np
+    length = max((st.length for st in clip.streams.values()), default=0)
+    out = []
+    for f in (frames if frames is not None else range(length + 1)):
+        trans, rot = pose(clip, skel, f, first_slot)
+        mats = []
+        for i, p in enumerate(skel.parents):
+            m = np.eye(4)
+            m[:3, :3] = euler(*rot[i])
+            m[:3, 3] = trans[i]
+            mats.append(m if p < 0 else mats[p] @ m)
+        out.append([m.tolist() for m in mats])
+    return out
+
+
 def _ancestors(skel: Skeleton, row: int) -> list:
     out = []
     while skel.parents[row] >= 0:

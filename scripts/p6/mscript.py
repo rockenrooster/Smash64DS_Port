@@ -197,6 +197,79 @@ def disassemble(words: list[int], pointers: dict[int, str] | None = None) -> str
     return " ".join(parts)
 
 
+def parse(text: str) -> tuple[str, dict]:
+    """A command's name and its named fields (pointer targets under "->")."""
+    name, *rest = text.split()
+    out = {}
+    i = 0
+    while i < len(rest):
+        if rest[i] == "->":
+            out.setdefault("->", []).append(rest[i + 1])
+            i += 2
+            continue
+        k, v = rest[i].split("=", 1)
+        out[k] = int(v, 0)
+        i += 1
+    return name, out
+
+
+def attack_timeline(commands: list[str], frames: int) -> list[list[dict]]:
+    """Active attack collisions per frame (0..frames) of a straight-line
+    script: MakeAttackColl, SetAttackCollOffset/Size, ClearAttackCollID/All,
+    timed by SyncWait (frames from now) and AsyncWait (to an animation
+    frame). Each entry: attack_id, joint_id, off (x, y, z) and radius
+    (size * 0.5, ftMainUpdateMotionEventsDefault), in the joint's frame."""
+    active: dict[int, dict] = {}
+    out: list[list[dict]] = []
+    t = 0
+
+    def emit(until: int):
+        while len(out) <= min(until, frames):
+            out.append([dict(a) for a in active.values()])
+    for text in commands:
+        name, f = parse(text)
+        if name == "SyncWait":
+            emit(t + f["frames"] - 1)
+            t += f["frames"]
+        elif name == "AsyncWait":
+            if f["frames"] > t:
+                emit(f["frames"] - 1)
+                t = f["frames"]
+        elif name == "MakeAttackColl":
+            active[f["attack_id"]] = {"attack_id": f["attack_id"], "joint_id": f["joint_id"],
+                                      "off": (f["off_x"], f["off_y"], f["off_z"]), "radius": f["size"] * 0.5,
+                                      "damage": f["damage"]}
+        elif name == "SetAttackCollOffset" and f["attack_id"] in active:
+            active[f["attack_id"]]["off"] = (f["off_x"], f["off_y"], f["off_z"])
+        elif name == "SetAttackCollSize" and f["attack_id"] in active:
+            active[f["attack_id"]]["radius"] = f["size"] * 0.5
+        elif name == "ClearAttackCollID":
+            active.pop(f.get("value", -1), None)
+        elif name == "ClearAttackCollAll":
+            active.clear()
+        elif name in ("End", "Goto", "Return"):
+            break
+    emit(frames)
+    return out[:frames + 1]
+
+
+def block_commands(rom, events: dict, start: str) -> list[str]:
+    """A block's command texts (events.json "blocks", words from the ROM)."""
+    out = []
+    for cmd in events["blocks"][start]["commands"]:
+        kind, *rest = cmd["at"].split(":")
+        if kind == "file":
+            fid, off = int(rest[0], 16), int(rest[1], 16)
+            data = rom.file_bytes(fid)
+            word = lambda k: int.from_bytes(data[off + 4 * k:off + 4 * k + 4], "big")  # noqa: E731
+        else:
+            addr = int(rest[0], 16)
+            word = lambda k: rom.u32_ram(addr + 4 * k)  # noqa: E731
+        n = length(word(0)) // 4
+        out.append(disassemble([word(k) for k in range(n)], {}))
+    return out
+
+
 def assemble(text: str) -> tuple[list[int], dict[int, str]]:
     """A command's words from its text; pointer words are 0, their targets
     returned by word index (the container writes them)."""
