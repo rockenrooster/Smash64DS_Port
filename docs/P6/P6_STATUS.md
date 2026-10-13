@@ -27,7 +27,7 @@ then the high, then the look's build rules and pins.
 | A3 Blender bridge, kit reader, fit | done 2026-10-13 (`dae_reader.py`, `kit_fit.py`, `scripts/p6/blender/`) |
 | A3b Track K: the kit rebuilt (F6) | dropped by the owner's route (ops kept for reference) |
 | A3c Track R: the base restyled (F6) | Palutena low in owner review (v66; owner: close) |
-| A4 animation codec and retarget (F2) | planned |
+| A4 animation codec and retarget (F2) | codec done 2026-10-13 (`anim.py`: F2 over every Roy, Marth and Peach clip, 486 clips, 10,802 streams, 0 differ within ANIM_EPS from two previous poses; blend-in leads and loops that skip their opening steps kept); retarget written (Captain's jab on Roy's tree: head and feet on the source's paths, hands along them); transforms and the playback check (A6) next |
 | A5 motion-script assembler (F3) | done 2026-10-13 (`mscript.py`: text and back; F3 over every export's motion scripts, 18,741 commands, 0 differ) |
 | A6 review harness | planned |
 | A7 authored export (F4) | file substitution done 2026-10-13 (spec "files", `remix_rom.OverlayRom`; host-checked through `generate_p4_fighter.py`); the rest planned |
