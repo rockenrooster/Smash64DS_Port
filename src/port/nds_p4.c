@@ -2040,8 +2040,29 @@ const NDSP4KirbyPower *ndsP4KirbyPowerOf(u32 content)
     return ndsP4KirbyPower(content);
 }
 
+/* The black figure a Kirby holding MRGAW's custom power is drawn as
+ * (nds_p4_mrgaw.c ndsP4MrgawKirbyOnStatus) goes with the power: a colour
+ * animation still holding that full blend to black, with no script, ends. */
+void ndsP4KirbyClearSilhouette(FTStruct *fp)
+{
+#if defined(NDS_P4_KIRBY_SILHOUETTE_CONTENT)
+    GMColAnim *colanim = &fp->colanim;
+
+    if ((fp->nds_p4_kirby_copy == NDS_P4_KIRBY_SILHOUETTE_CONTENT) &&
+        (colanim->is_use_color1 != FALSE) && (colanim->cs[0].p_script == NULL) &&
+        (colanim->color1.r == 0) && (colanim->color1.g == 0) &&
+        (colanim->color1.b == 0) && (colanim->color1.a == 0xFF))
+    {
+        ftParamResetColAnim(colanim);
+    }
+#else
+    (void)fp;
+#endif
+}
+
 void ndsP4KirbyLoseCopy(FTStruct *fp)
 {
+    ndsP4KirbyClearSilhouette(fp);
     fp->nds_p4_kirby_copy = 0u;
     fp->nds_p4_kirby_hat = 0u;
 }

@@ -2272,6 +2272,10 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp)
     {
         ndsFighterDrawFoxGunSidecar(fp);
     }
+#if NDS_P4 && NDS_P2_KIRBY && NDS_RENDERER_HW_TRIANGLES
+    /* A custom power's hat on joint 6, the same way. */
+    ndsFighterDrawKirbyHatSidecar(fp);
+#endif
 #endif
     ndsRendererProfileSetOwner(NDS_RENDERER_PROFILE_OWNER_NONE);
     if (slot == 0u)

@@ -2264,6 +2264,51 @@ with the power's hat; Meta Knight, MRGAW and Snake caught with no copy. Every
 match: 0 native failures, 0 weapon or effect refusals, 0 NULL joints, 0 lean
 declines, 0 heap overflows, heap low-water 61.9 KB or more.
 
+### Custom copies for EXTRA's three (owner request, 2026-10-12)
+
+Asked whether Kirby could copy Meta Knight, MRGAW and Snake, the owner chose
+Brawl-style copies over the source's none. They are custom content -- no
+source has them -- built from each content's own move code and assets and
+Kirby's own vanilla animations (`scripts/p4/p4_kirby.py` CUSTOM_POWERS, after
+Remix's statuses; the catch takes them as any power):
+
+- **Meta Knight: Mach Tornado and his mask.** Kirby's neutral-air spin at 1.5
+  speed, three turns each with the spin's hitboxes and Meta Knight's whoosh,
+  airborne from the ground with Meta Knight's 30 hop; B mashed every 4 frames
+  lifts him as it lifts Meta Knight (his drift, wall bounce and gravity,
+  `ndsP4MetaknightNSPLoopPhysics`/`Collision`), a special fall at the end.
+- **MRGAW: Chef, and Kirby turns his black figure.** The fireball throw
+  makes MRGAW's sausage from Kirby's hand at its flag; B pressed after the
+  throw cooks again, four times more at most. His model has no chef's hat
+  (his Chef variant is a face cutout), so as in Brawl Kirby is drawn black
+  while he holds the power: the colour-animation fields a hit flash uses
+  (`colanim.color1`, a full blend to black) set at every status change while
+  no colour animation runs (`ndsP4MrgawKirbyOnStatus`, so a flash hands back
+  to it) and cleared with the power (`ndsP4KirbyClearSilhouette`). A blend
+  made in the renderer alone (`ndsRendererAdapterFighterColorModulate`) left
+  him pink: the lean path re-tints a list only when its tint-tile set moves,
+  which a colour animation drives.
+- **Snake: a hand grenade and his bandana.** Snake's grenade, made at the
+  Thunder Jolt toss's flag already thrown (his neutral throw; his forward one
+  with the stick forward), two out at most for that Kirby, counted on the item
+  list (Kirby keeps none of Snake's words). The Link copy's boomerang throw was
+  tried first and drew no Kirby: its script enables Link's hidden joint 18, a
+  root vector (8 roots for 7) no Kirby program without Link's copy carries, so
+  the validator refused every frame of the throw (`nNDSFtrLeanDeclineValidate`).
+
+The hats are P4 sidecar roots on joint 6 (`scripts/p4/p4_kirby_custom_hats.py`,
+`ndsFighterDrawKirbyHatSidecar`), drawn over Kirby's plain head (part 0) and
+only over it -- Stone and the inhale faces put another part there -- the way
+the powers' weapons ride joint 17. Meta Knight's mask is the front of his body
+list (material 2) and its eyes (material 1), each material call replaced by
+its MObj's commands for costume 0 (`gcDrawMObjForDObj`: the palette image;
+with the alpha flag the TLUT load and the sprite), scaled 1.08 onto Kirby's
+head; Snake's low-detail head splits into no clean bandana (his texture
+carries skin, band and hair in one), so his is a ring generated around
+Kirby's forehead with two tails, on the band rows (15-19) of that texture.
+Each file (0x1930 + content id, 2-4 KB) rides the power's
+`hat_texture_file`, which the match loads.
+
 ## Board 1 status (master plan Revision 3)
 
 | Item | State |

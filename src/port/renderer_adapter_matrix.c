@@ -7119,6 +7119,55 @@ static sb32 ndsRendererAdapterBuildFoxGunJointMatrices(
     }
     return (camera_projection_valid != FALSE) ? TRUE : FALSE;
 }
+
+#if NDS_P2_KIRBY
+/* A custom Kirby power's hat (scripts/p4/p4_kirby_custom_hats.py), a P4
+ * sidecar root on joint 6: the matrices above at that joint, gated on a
+ * gameplay Kirby whose joint 6 shows his plain head. */
+static sb32 ndsRendererAdapterBuildKirbyHatJointMatrices(
+    FTStruct *fp, u32 joint_id, CObj *cobj, NDSRendererMatrix20p12 *projection,
+    NDSRendererMatrix20p12 *modelview)
+{
+    DObj *joint;
+    FTParts *parts;
+    Mtx mtx;
+    NDSRendererMatrix20p12 camera_modelview;
+    u32 camera_projection_valid = FALSE;
+    u32 camera_modelview_valid = FALSE;
+
+    if ((fp == NULL) || (projection == NULL) || (modelview == NULL) ||
+        (ndsRendererAdapterFoxGunGameplayOwner(fp) == FALSE))
+    {
+        return FALSE;
+    }
+    joint = fp->joints[joint_id];
+    if ((joint == NULL) || (joint == DOBJ_PARENT_NULL) ||
+        (joint->parent_gobj == NULL))
+    {
+        return FALSE;
+    }
+    parts = ftGetParts(joint);
+    if (parts == NULL)
+    {
+        return FALSE;
+    }
+    func_ovl2_800EDBA4(joint);
+    if (ndsRendererAdapterF2LFixedWExact(&parts->mtx_translate, &mtx) == FALSE)
+    {
+        syMatrixF2LFixedW(&parts->mtx_translate, &mtx);
+    }
+    ndsRendererAdapterMtxFromN64(&mtx, modelview);
+    ndsRendererAdapterGetFrameCameraMatrices(
+        cobj, projection, &camera_projection_valid,
+        &camera_modelview, &camera_modelview_valid,
+        NULL, NULL, NULL);
+    if (camera_modelview_valid != FALSE)
+    {
+        ndsRendererMtxMulAffine20p12(modelview, &camera_modelview, modelview);
+    }
+    return (camera_projection_valid != FALSE) ? TRUE : FALSE;
+}
+#endif
 #endif
 #endif
 

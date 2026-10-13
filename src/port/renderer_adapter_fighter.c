@@ -1742,6 +1742,40 @@ static void ndsFighterDrawFoxGunSidecar(FTStruct *fp)
         (void)ndsRendererSubmitFoxGun(&sidecar_world);
     }
 }
+
+#if NDS_P4 && NDS_P2_KIRBY && NDS_RENDERER_HW_TRIANGLES
+/* A Kirby holding a custom power (scripts/p4/p4_kirby.py CUSTOM_POWERS,
+ * owner 2026-10-12): its hat, a list cut from the content's model or made on
+ * its material (p4_kirby_custom_hats.py), drawn at joint 6 over his plain
+ * head as the powers' weapons are at joint 17 -- and only over it: Stone and
+ * the inhale faces put another part on joint 6. */
+#define NDS_KIRBY_HAT_SIDECAR_JOINT 6u
+static void ndsFighterDrawKirbyHatSidecar(FTStruct *fp)
+{
+    NDSRendererMatrix20p12 projection;
+    NDSRendererMatrix20p12 world;
+    CObj *cobj;
+    u32 asset;
+    u32 offset;
+
+    if ((fp == NULL) || (fp->fkind != nFTKindKirby) || (fp->nds_p4_kirby_copy == 0u) ||
+        (fp->modelpart_status[NDS_KIRBY_HAT_SIDECAR_JOINT -
+                              nFTPartsJointCommonStart].modelpart_id_curr != 0) ||
+        (ndsRendererEntryEffectP4Sidecar(fp->nds_p4_kirby_copy,
+                                         NDS_KIRBY_HAT_SIDECAR_JOINT | 0x80u,
+                                         &asset, &offset) == FALSE))
+    {
+        return;
+    }
+    cobj = (gGCCurrentCamera != NULL) ? CObjGetStruct(gGCCurrentCamera) : NULL;
+    if (ndsRendererAdapterBuildKirbyHatJointMatrices(
+            fp, NDS_KIRBY_HAT_SIDECAR_JOINT, cobj, &projection, &world) != FALSE)
+    {
+        (void)ndsRendererAdapterSubmitP4SidecarRoot(
+            fp->joints[NDS_KIRBY_HAT_SIDECAR_JOINT], asset, offset, &projection, &world);
+    }
+}
+#endif
 #endif
 
 #if NDS_P2_KIRBY
@@ -5438,6 +5472,9 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     if (native_owner_failed == FALSE)
     {
         ndsFighterDrawFoxGunSidecar(fp);
+#if NDS_P4 && NDS_P2_KIRBY
+        ndsFighterDrawKirbyHatSidecar(fp);
+#endif
     }
 #endif
 

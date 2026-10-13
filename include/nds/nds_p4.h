@@ -860,6 +860,8 @@ void ndsP4KirbyCopyInitCopyVars(GObj *fighter_gobj);
 /* ftKirbySpecialNLoseCopy, a Kirby swallowed by another, a new stock: the
  * power goes. */
 void ndsP4KirbyLoseCopy(FTStruct *fp);
+/* The black figure of MRGAW's custom power ends with the power. */
+void ndsP4KirbyClearSilhouette(FTStruct *fp);
 /* The power the catching player's last catch took (0: none). */
 u32 ndsP4KirbyPendingPower(const FTStruct *fp);
 /* A content's power row, NULL when it has none. */

@@ -66,6 +66,9 @@
 #include <sys/audio.h>
 #include <wp/weapon.h>
 #include <math.h>
+#if NDS_P2_KIRBY
+#include "kirby/nds_p4_kirby.generated.h"
+#endif
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
@@ -1210,6 +1213,21 @@ static FTStruct *ndsP4SnakeGrenadeMaker(ITStruct *ip)
     return (FTStruct *)(uintptr_t)*ndsP4SnakeItemWord(ip, SNAKE_ITEM_MAKER);
 }
 
+/* The maker's count of grenades out: Snake's passive word 3. A Kirby holding
+ * his copy (below) keeps no words of Snake's, so his grenades are counted on
+ * the item list instead and this count is a scratch word. */
+static s32 *ndsP4SnakeGrenadeCount(FTStruct *fp)
+{
+    static s32 kirby_scratch;
+
+    if (fp->fkind != nFTKindKirby)
+    {
+        return ndsP4SnakePassiveWord(fp, 3);
+    }
+    kirby_scratch = 0;
+    return &kirby_scratch;
+}
+
 /* flashbang_begin_main_ (DROP_ITEM): pickable, airborne, no hitbox, its
  * hurtbox on (the Link bomb's), thrown. */
 static void ndsP4SnakeGrenadeBeginMain(GObj *item_gobj)
@@ -1455,7 +1473,7 @@ static sb32 ndsP4SnakeGrenadeExplodeProcUpdate(GObj *item_gobj)
 
     if (ip->multi == SNAKE_GRENADE_EXPLODE_FRAMES)
     {
-        (*ndsP4SnakePassiveWord(ndsP4SnakeGrenadeMaker(ip), 3))--;
+        (*ndsP4SnakeGrenadeCount(ndsP4SnakeGrenadeMaker(ip)))--;
         return TRUE;
     }
     return FALSE;
@@ -1547,7 +1565,7 @@ static sb32 ndsP4SnakeGrenadeProcDamage(GObj *item_gobj)
 /* flashbang_blast_zone_ (proc_dead): one grenade fewer out. */
 static sb32 ndsP4SnakeGrenadeProcDead(GObj *item_gobj)
 {
-    (*ndsP4SnakePassiveWord(ndsP4SnakeGrenadeMaker(itGetStruct(item_gobj)), 3))--;
+    (*ndsP4SnakeGrenadeCount(ndsP4SnakeGrenadeMaker(itGetStruct(item_gobj))))--;
     return TRUE;
 }
 
@@ -1601,7 +1619,7 @@ static GObj *ndsP4SnakeMakeGrenade(GObj *fighter_gobj, Vec3f *pos)
     ip->attack_coll.fgm_id = SNAKE_FGM_PUNCH_S;
     *ndsP4SnakeItemWord(ip, SNAKE_ITEM_MAKER) = (s32)(uintptr_t)fp;
     *ndsP4SnakeItemWord(ip, SNAKE_GRENADE_LANDINGS) = 0;
-    (*ndsP4SnakePassiveWord(fp, 3))++;
+    (*ndsP4SnakeGrenadeCount(fp))++;
     *ndsP4SnakeItemWord(ip, SNAKE_GRENADE_LAST_OWNER) = (s32)(uintptr_t)fighter_gobj;
     ip->vel_scale = 1.5F;
     ip->attack_coll.knockback_scale = 0;
@@ -3085,5 +3103,120 @@ const NDSP4Overrides gNdsP4SnakeOverrides = {
     .shouldered_interrupt = ndsP4SnakeShoulderedInterrupt,
     .status_replace = sNdsP4SnakeStatusReplace,
 };
+
+#if NDS_P2_KIRBY
+/* ---- Kirby's copy (owner request 2026-10-12, "Brawl-style") ----
+ *
+ * EXTRA lets no Kirby copy Snake (define_character's bool_inhale_copy is the
+ * config's kirby_hat, unset); the owner asked for one. Kirby throws Snake's
+ * grenade on his Pikachu copy's Thunder Jolt toss (scripts/p4/p4_kirby.py
+ * CUSTOM_POWERS): made at the throw's flag already thrown -- Snake's neutral
+ * throw, his forward one with the stick held forward -- with no cooking, two
+ * out at most for that Kirby. */
+#define SNAKE_KIRBY_HAND_JOINT 17  /* FTKIRBY_COPYMARIO_FIREBALL_SPAWN_JOINT */
+
+static s32 ndsP4SnakeKirbyGrenadesOut(FTStruct *fp)
+{
+    GObj *item_gobj;
+    s32 out = 0;
+
+    for (item_gobj = gGCCommonLinks[nGCCommonLinkIDItem]; item_gobj != NULL;
+         item_gobj = item_gobj->link_next)
+    {
+        ITStruct *ip = itGetStruct(item_gobj);
+
+        if ((ip->kind == NDS_P4_IT_KIND_SNAKE_GRENADE) && (ndsP4SnakeGrenadeMaker(ip) == fp))
+        {
+            out++;
+        }
+    }
+    return out;
+}
+
+static void ndsP4SnakeKirbyNSPProcStatus(GObj *fighter_gobj)
+{
+    ftGetStruct(fighter_gobj)->motion_vars.flags.flag0 = 0;
+}
+
+static void ndsP4SnakeKirbyNSPSetStatus(GObj *fighter_gobj, s32 status_id)
+{
+    ftGetStruct(fighter_gobj)->proc_status = ndsP4SnakeKirbyNSPProcStatus;
+    ftMainSetStatus(fighter_gobj, status_id, 0.0F, 1.0F, FTSTATUS_PRESERVE_NONE);
+    ftMainPlayAnimEventsAll(fighter_gobj);
+}
+
+void ndsP4SnakeKirbyNSPGroundInitial(GObj *fighter_gobj)
+{
+    ndsP4SnakeKirbyNSPSetStatus(fighter_gobj, NDS_P4_KIRBY_STATUS_SNAKE_NSP_GROUND);
+}
+
+void ndsP4SnakeKirbyNSPAirInitial(GObj *fighter_gobj)
+{
+    ndsP4SnakeKirbyNSPSetStatus(fighter_gobj, NDS_P4_KIRBY_STATUS_SNAKE_NSP_AIR);
+}
+
+void ndsP4SnakeKirbyNSPUpdate(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if (fp->motion_vars.flags.flag0 != 0)
+    {
+        fp->motion_vars.flags.flag0 = 0;
+
+        if ((gNdsP4SnakeSpecial2 != NULL) &&
+            (ndsP4SnakeKirbyGrenadesOut(fp) < SNAKE_GRENADE_MAX))
+        {
+            Vec3f pos = { 0.0F, 0.0F, 0.0F };
+            GObj *item_gobj;
+
+            gmCollisionGetFighterPartsWorldPosition(fp->joints[SNAKE_KIRBY_HAND_JOINT], &pos);
+            item_gobj = ndsP4SnakeMakeGrenade(fighter_gobj, &pos);
+
+            if (item_gobj != NULL)
+            {
+                ITStruct *ip = itGetStruct(item_gobj);
+                sb32 forward = ((fp->input.pl.stick_range.x * fp->lr) >= 20) ? TRUE : FALSE;
+
+                ip->physics.vel_air.x = (f32)fp->lr * ((forward != FALSE) ? 100.0F : 36.0F);
+                ip->physics.vel_air.y = (forward != FALSE) ? 20.0F : 36.0F;
+                ip->attack_coll.attack_state = nGMAttackStateNew;
+                itMapSetAir(ip);
+                itMainSetStatus(item_gobj, sNdsP4SnakeGrenadeStatusDescs, 3);
+                ip->is_thrown = TRUE;
+                ip->is_allow_pickup = TRUE;
+            }
+        }
+    }
+    if (fp->ga == nMPKineticsGround)
+    {
+        ftAnimEndSetWait(fighter_gobj);
+    }
+    else ftAnimEndSetFall(fighter_gobj);
+}
+
+static void ndsP4SnakeKirbyNSPSwitchAir(GObj *fighter_gobj)
+{
+    mpCommonSetFighterAir(ftGetStruct(fighter_gobj));
+    ftMainSetStatus(fighter_gobj, NDS_P4_KIRBY_STATUS_SNAKE_NSP_AIR, fighter_gobj->anim_frame,
+                    1.0F, FTSTATUS_PRESERVE_NONE);
+}
+
+static void ndsP4SnakeKirbyNSPSwitchGround(GObj *fighter_gobj)
+{
+    mpCommonSetFighterGround(ftGetStruct(fighter_gobj));
+    ftMainSetStatus(fighter_gobj, NDS_P4_KIRBY_STATUS_SNAKE_NSP_GROUND, fighter_gobj->anim_frame,
+                    1.0F, FTSTATUS_PRESERVE_NONE);
+}
+
+void ndsP4SnakeKirbyNSPGroundMap(GObj *fighter_gobj)
+{
+    mpCommonProcFighterOnFloor(fighter_gobj, ndsP4SnakeKirbyNSPSwitchAir);
+}
+
+void ndsP4SnakeKirbyNSPAirMap(GObj *fighter_gobj)
+{
+    mpCommonProcFighterLanding(fighter_gobj, ndsP4SnakeKirbyNSPSwitchGround);
+}
+#endif /* NDS_P2_KIRBY */
 
 #endif /* NDS_P4_SNAKE */

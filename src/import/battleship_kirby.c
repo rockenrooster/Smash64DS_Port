@@ -93,6 +93,7 @@ void ndsP4KirbyCopyInitCopyVars(GObj *fighter_gobj)
     }
     if (take != FALSE)
     {
+        ndsP4KirbyClearSilhouette(fp);
         fp->nds_p4_kirby_copy = (p != NULL) ? (u8)power : 0u;
         fp->nds_p4_kirby_hat = 0u;
     }

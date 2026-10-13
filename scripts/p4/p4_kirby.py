@@ -86,6 +86,80 @@ POWER_PREFIX = {
     "crash": "CRASH", "lanky": "LANKY", "sheik": "SHEIK", "banjo": "BANJO",
     "sonic": "SONIC", "dedede": "DEDEDE", "piano": "PIANO",
 }
+# Powers the source does not have (owner request 2026-10-12, "Brawl-style"):
+# EXTRA lets no Kirby copy its characters (define_character's
+# bool_inhale_copy is the config's kirby_hat, unset for these three). Each
+# status runs the content's own move code (src/port/nds_p4_<content>.c) on
+# one of Kirby's vanilla motions, its script's events included; no clone
+# swaps, no Remix hats. Rows: (name, motion, motion attack id, status attack
+# id, ga, is_projectile, (update, interrupt, physics, map)).
+CUSTOM_POWERS = {
+    "metaknight": {
+        # Mach Tornado: his neutral-air spin, turned again while B is mashed.
+        "statuses": (
+            ("METAKNIGHT_NSP", "nFTCommonMotionAttackAirN", "nFTMotionAttackIDAttackAirN",
+             "nFTStatusAttackIDAttackAirN", 1, 0,
+             ("ndsP4MetaknightKirbyNSPUpdate", "NULL", "ndsP4MetaknightNSPLoopPhysics",
+              "ndsP4MetaknightNSPLoopCollision")),
+        ),
+        "starters": ("ndsP4MetaknightKirbyNSPGroundInitial", "ndsP4MetaknightKirbyNSPAirInitial"),
+        # His mask: the front of his body (material 2) and its eyes (material
+        # 1), a shade larger than Kirby's head and on its centre.
+        "hat": {"kind": "spans", "joint": 2, "detail": 1, "materials": (1, 2),
+                "scale": 1.08, "offset": (0, 20, 0)},
+    },
+    "mrgaw": {
+        # Chef: the fireball throw, a sausage at its flag, re-cooked with B.
+        "statuses": (
+            ("MRGAW_NSP_Ground", "nFTKirbyMotionCopyMarioSpecialN", "nFTMotionAttackIDSpecialNCopyMario",
+             "nFTStatusAttackIDSpecialNCopyMario", 0, 1,
+             ("ndsP4MrgawKirbyNSPUpdate", "ndsP4MrgawKirbyNSPRefresh",
+              "ftPhysicsApplyGroundVelFriction", "ndsP4MrgawKirbyNSPGroundMap")),
+            ("MRGAW_NSP_Air", "nFTKirbyMotionCopyMarioSpecialAirN", "nFTMotionAttackIDSpecialNCopyMario",
+             "nFTStatusAttackIDSpecialNCopyMario", 1, 1,
+             ("ndsP4MrgawKirbyNSPUpdate", "ndsP4MrgawKirbyNSPRefresh",
+              "ftPhysicsApplyAirVelFriction", "ndsP4MrgawKirbyNSPAirMap")),
+        ),
+        "starters": ("ndsP4MrgawKirbyNSPGroundInitial", "ndsP4MrgawKirbyNSPAirInitial"),
+        # No hat (his model has no chef's hat): Kirby turns his black figure,
+        # as Brawl's copy does (NDS_P4_KIRBY_SILHOUETTE_CONTENT).
+        "silhouette": True,
+    },
+    "snake": {
+        # A hand grenade on the Thunder Jolt toss's flag, already thrown (the
+        # boomerang throw enables Link's hidden joint 18: a root vector no
+        # Kirby program without Link's copy carries).
+        "statuses": (
+            ("SNAKE_NSP_Ground", "nFTKirbyMotionCopyPikachuSpecialN",
+             "nFTMotionAttackIDSpecialNCopyPikachu", "nFTStatusAttackIDSpecialNCopyPikachu", 0, 1,
+             ("ndsP4SnakeKirbyNSPUpdate", "NULL", "ftPhysicsApplyGroundVelFriction",
+              "ndsP4SnakeKirbyNSPGroundMap")),
+            ("SNAKE_NSP_Air", "nFTKirbyMotionCopyPikachuSpecialAirN",
+             "nFTMotionAttackIDSpecialNCopyPikachu", "nFTStatusAttackIDSpecialNCopyPikachu", 1, 1,
+             ("ndsP4SnakeKirbyNSPUpdate", "NULL", "ftPhysicsApplyAirVelFriction",
+              "ndsP4SnakeKirbyNSPAirMap")),
+        ),
+        "starters": ("ndsP4SnakeKirbyNSPGroundInitial", "ndsP4SnakeKirbyNSPAirInitial"),
+        # His bandana: a ring around Kirby's forehead just off his head
+        # (y 86-128, Kirby's head an ellipsoid about y 24, radius 150) and two
+        # tails behind, on his head's texture (material 0), whose rows 15-19
+        # are the band.
+        "hat": {"kind": "band", "joint": 8, "detail": 1, "material": 0,
+                "texel_rows": (15.5, 19.5), "texels_around": 64, "segments": 12,
+                "y": (86, 128), "radius": (145, 114),
+                "tails": (((-14, 106, -126), (10, 108, -128), (-28, 22, -180), (-52, 30, -174)),
+                          ((-6, 108, -128), (18, 106, -126), (52, 28, -176), (28, 20, -182)))},
+    },
+}
+# A custom power's hat id: no Remix image (hat_count 0), the plain head
+# (hat_base 0) beneath; its hat, when it has one, is a joint-6 sidecar
+# (p4_kirby_custom_hats.py), its file past the Remix hat textures (0x1910 +
+# content id) and carried in the power's hat_texture_file, which the match
+# loads.
+CUSTOM_HAT_ID = 0xFF
+CUSTOM_HAT_FILE_BASE = 0x1930
+KIRBY_HAT_JOINT = 6
+
 # Vanilla fighter ids (Character.id) for the parent rows of kirby_*_nsp.
 VANILLA_IDS = {"MARIO": 0, "FOX": 1, "DONKEY": 2, "SAMUS": 3, "LUIGI": 4, "LINK": 5,
                "YOSHI": 6, "CAPTAIN": 7, "KIRBY": 8, "PIKACHU": 9, "JIGGLY": 10,
@@ -184,7 +258,7 @@ def main() -> int:
     # EXTRA's define_character passes bool_inhale_copy (argument 13) from the
     # config's kirby_hat, FALSE unless set; a TRUE one needs its power ported.
     for c in args.contents.split():
-        if c in POWER_PREFIX:
+        if c in POWER_PREFIX or c in CUSTOM_POWERS:
             continue
         export = json.loads((args.export_root / c / "resolved.json").read_text(encoding="utf-8"))
         if export["define_character_args"][13] != "OS.FALSE":
@@ -451,8 +525,45 @@ def main() -> int:
                        "hat_texture_file": (HAT_TEXTURE_FILE_BASE + registry[c]["id"]
                                             if remix_hats else 0),
                        "starters": starters, "clones": clone_rows})
+    # The custom powers, after Remix's: their statuses follow the selected
+    # ones; their motions are Kirby's own vanilla rows (C names).
+    custom = [c for c in args.contents.split() if c in CUSTOM_POWERS]
+    for c in custom:
+        names = []
+        for name, motion, attack, stat_attack, ga, projectile, procs in CUSTOM_POWERS[c]["statuses"]:
+            status = STATUS_FIRST + len(specials)
+            names.append(name)
+            specials.append({"status": status, "remix": None, "name": name, "content": c,
+                             "motion_id": motion, "attack_id": attack, "unused": 0,
+                             "is_smash_attack": 0, "ga": ga, "is_projectile": projectile,
+                             "stat_attack_id": stat_attack, "procs": list(procs)})
+        starters = []
+        for proc in CUSTOM_POWERS[c]["starters"]:
+            proto.add(proc)
+            starters.append("ndsP4Proc_" + proc)
+        hat_file = 0
+        if CUSTOM_POWERS[c].get("hat") is not None:
+            import p4_contents  # noqa: E402
+            import p4_kirby_custom_hats  # noqa: E402
+
+            hat_file = CUSTOM_HAT_FILE_BASE + registry[c]["id"]
+            blob, list_offset = p4_kirby_custom_hats.build(
+                rom, p4_contents.export_facts(args.export_root, c), CUSTOM_POWERS[c]["hat"],
+                hat_file)
+            (o2r_out / f"{hat_file:04x}").write_bytes(blob)
+            shipped[hat_file] = hashlib.sha256(blob).hexdigest()
+            row = {"article": "kirby_hat", "file_id": hat_file, "storage": None, "via": 0,
+                   "offset": list_offset, "entry": False, "texid": None, "palette": None,
+                   "head": 0, "sidecar_joint": KIRBY_HAT_JOINT | KIRBY_SIDECAR_BIT,
+                   "material": False, "via_base": False, "via_bias": 0}
+            (out / f"articles_{c}.json").write_text(
+                json.dumps({"content": c, "roots": [row]}, indent=1) + "\n",
+                encoding="utf-8", newline="\n")
+        powers.append({"content": c, "id": registry[c]["id"], "hat": CUSTOM_HAT_ID, "hat_base": 0,
+                       "hat_mask": 0, "hats": [], "hat_texture_file": hat_file,
+                       "starters": starters, "clones": [], "custom": True})
     for p in powers:
-        if p["hat_texture_file"]:
+        if p["hat_texture_file"] and not p.get("custom"):
             shipped[p["hat_texture_file"]] = "p4_kirby_hats.py"
 
     # The weapons the powers hold: each its own file, a sidecar root of the
@@ -494,9 +605,13 @@ def main() -> int:
         f"#define NDS_P4_KIRBY_MOTION_COUNT {len(rows)}",
         f"#define NDS_P4_KIRBY_SCRIPT_FILE {SCRIPT_FILE_ID:#x}",
     ]
+    for c in custom:
+        if CUSTOM_POWERS[c].get("silhouette"):
+            header.append(f"#define NDS_P4_KIRBY_SILHOUETTE_CONTENT {registry[c]['id']}u"
+                          f" /* {c}: Kirby drawn black */")
     for r in specials:
         header.append(f"#define NDS_P4_KIRBY_STATUS_{c_ident(r['name'])} {r['status']:#x}"
-                      f" /* Remix {r['remix']:#x} */")
+                      + (f" /* Remix {r['remix']:#x} */" if r['remix'] is not None else " /* custom */"))
     header += ["#endif", ""]
     (out / "nds_p4_kirby.generated.h").write_text("\n".join(header), encoding="utf-8", newline="\n")
 
@@ -513,7 +628,8 @@ def main() -> int:
               " * and callbacks, as generate_p4_fighter.py's special rows. */",
               f"FTStatusDesc gNdsP4KirbySpecialStatusDescs[{max(len(specials), 1)}] = {{"]
     for r in specials:
-        lines.append(f"    /* {r['status']:#x} {r['name']} (Remix {r['remix']:#x}) */")
+        lines.append(f"    /* {r['status']:#x} {r['name']} "
+                     + (f"(Remix {r['remix']:#x}) */" if r['remix'] is not None else "(custom) */"))
         lines.append(f"    {{ {{ {r['motion_id']}, {r['attack_id']} }}, "
                      f"{{ {{ {r['unused']}, {r['is_smash_attack']}, {r['ga']}, "
                      f"{r['is_projectile']}, {r['stat_attack_id']} }} }}, "
