@@ -4403,11 +4403,15 @@ static u32 sNdsIFCommonCommonPaletteValid;
  * VRAM and the palette, so a later message drew from whatever was there --
  * and COMPLETE! plus FAILURE need 13 distinct letters against the 12-cell
  * cache. The cache now lives for one battle scene and one end-bank layout. */
+static void ndsIFCommonResetPause(void);
+
 static void ndsIFCommonResetCommonLetters(void)
 {
     memset(sNdsIFCommonCommonLetters, 0, sizeof(sNdsIFCommonCommonLetters));
     sNdsIFCommonCommonLetterCount = 0u;
     sNdsIFCommonCommonPaletteValid = FALSE;
+    /* The pause cells share the end bank's base. */
+    ndsIFCommonResetPause();
 }
 
 static s32 ndsIFCommonIsCommonLetter(const SObj *sobj)
@@ -4458,8 +4462,10 @@ static u16 *ndsIFCommonBakeCommonLetter(const Sprite *sprite)
     if (sNdsIFCommonCommonLetterCount == 0u)
     {
         /* The end bank is about to hold these letters: TIME UP / GAME SET
-         * must be laid out again before either shows. */
+         * must be laid out again before either shows, and the pause cells
+         * baked again. */
         sNdsIFCommonAnnounceActive = FALSE;
+        ndsIFCommonResetPause();
     }
     memset(cell, 0, sizeof(cell));
     for (y = 0u; y < ds_height; y++)
@@ -4605,6 +4611,461 @@ static s32 ndsIFCommonEmitCommonLetters(struct GObj *gobj)
     return TRUE;
 }
 
+/* ---- The pause menu (ifcommon.c ifCommonBattlePauseMakeInterface) -------
+ * The pausing player's number and the control decals are I4 and IA8 Sprites
+ * tinted env-to-prim like the announce letters. They bake once into the end
+ * bank as 16-colour cells at the 0.8 DS grid, one ramp palette per prim/env
+ * pair in OBJ palettes 2-7 (no battle OBJ presenter uses 0-7); the
+ * announcement and the announce letters lay the bank out again before they
+ * show, and taking the bank resets this cache. The border frame
+ * (ifCommonBattlePauseProcDisplay's five fill rectangles) is 2-pixel runs of
+ * white cells. */
+#define NDS_IFCOMMON_PAUSE_CELLS 16u
+#define NDS_IFCOMMON_PAUSE_PALETTE_FIRST 2u
+#define NDS_IFCOMMON_PAUSE_PALETTES 6u
+#define NDS_IFCOMMON_PAUSE_CELL_MAX_BYTES 2048u    /* a 64x64 4bpp cell */
+
+typedef struct NDSIFCommonPauseCell
+{
+    const Bitmap *bitmap;
+    u32 prim;
+    u32 env;
+    u16 *gfx;
+    SpriteSize size;
+    u8 palette;
+} NDSIFCommonPauseCell;
+
+static NDSIFCommonPauseCell sNdsIFCommonPauseCells[NDS_IFCOMMON_PAUSE_CELLS];
+static u32 sNdsIFCommonPauseCellCount;
+static u32 sNdsIFCommonPauseBankUsed;
+static u32 sNdsIFCommonPausePalettePrim[NDS_IFCOMMON_PAUSE_PALETTES];
+static u32 sNdsIFCommonPausePaletteEnv[NDS_IFCOMMON_PAUSE_PALETTES];
+static u32 sNdsIFCommonPausePaletteCount;
+/* The border's white runs: 32x8 / 8x8 with rows 0-1 set, 8x32 / 8x8 with
+ * columns 0-1 set (the longest thin OBJ shapes), in the white-over-black
+ * ramp's entry 15. */
+static u16 *sNdsIFCommonPauseRunH32;
+static u16 *sNdsIFCommonPauseRunH8;
+static u16 *sNdsIFCommonPauseRunV32;
+static u16 *sNdsIFCommonPauseRunV8;
+static u8 sNdsIFCommonPauseRunPalette;
+static u32 sNdsIFCommonPauseOwnsBank;
+static u32 sNdsIFCommonPauseCellBuffer[NDS_IFCOMMON_PAUSE_CELL_MAX_BYTES / 4u];
+volatile u32 gNdsIFCommonPauseMisses;
+
+static void ndsIFCommonResetPause(void)
+{
+    sNdsIFCommonPauseCellCount = 0u;
+    sNdsIFCommonPauseBankUsed = 0u;
+    sNdsIFCommonPausePaletteCount = 0u;
+    sNdsIFCommonPauseRunH32 = NULL;
+    sNdsIFCommonPauseRunH8 = NULL;
+    sNdsIFCommonPauseRunV32 = NULL;
+    sNdsIFCommonPauseRunV8 = NULL;
+    sNdsIFCommonPauseOwnsBank = FALSE;
+}
+
+/* The first pause cell takes the end bank from the letters and the
+ * announcement, which lay it out again before they show. */
+static void ndsIFCommonPauseTakeBank(void)
+{
+    if (sNdsIFCommonPauseOwnsBank == FALSE)
+    {
+        ndsIFCommonResetCommonLetters();
+        sNdsIFCommonAnnounceActive = FALSE;
+        sNdsIFCommonPauseOwnsBank = TRUE;
+    }
+}
+
+/* The end bank from its base, 128-byte granules (SpriteMapping_Bmp_1D_128). */
+static u16 *ndsIFCommonPauseAlloc(u32 bytes)
+{
+    u32 at;
+
+    at = (sNdsIFCommonPauseBankUsed + 127u) & ~127u;
+    if ((at + bytes) > NDS_IFCOMMON_END_BANK_BYTES)
+    {
+        return NULL;
+    }
+    sNdsIFCommonPauseBankUsed = at + bytes;
+    return (u16 *)((u8 *)SPRITE_GFX + NDS_IFCOMMON_END_BANK_BASE + at);
+}
+
+/* The ramp palette for one prim/env pair (the announce letters' ramp). */
+static s32 ndsIFCommonPausePalette(u32 prim, u32 env)
+{
+    u16 *palette;
+    u32 slot;
+    u32 i;
+
+    for (slot = 0u; slot < sNdsIFCommonPausePaletteCount; slot++)
+    {
+        if ((sNdsIFCommonPausePalettePrim[slot] == prim) &&
+            (sNdsIFCommonPausePaletteEnv[slot] == env))
+        {
+            return (s32)(NDS_IFCOMMON_PAUSE_PALETTE_FIRST + slot);
+        }
+    }
+    if (sNdsIFCommonPausePaletteCount >= NDS_IFCOMMON_PAUSE_PALETTES)
+    {
+        return -1;
+    }
+    slot = sNdsIFCommonPausePaletteCount++;
+    sNdsIFCommonPausePalettePrim[slot] = prim;
+    sNdsIFCommonPausePaletteEnv[slot] = env;
+    palette = &SPRITE_PALETTE[(NDS_IFCOMMON_PAUSE_PALETTE_FIRST + slot) * 16u];
+    palette[0] = 0u;
+    for (i = 1u; i < 16u; i++)
+    {
+        u32 t = (i == 1u) ? 0u : i;
+        u32 channel[3];
+        u32 c;
+
+        for (c = 0u; c < 3u; c++)
+        {
+            u32 p = (prim >> (16u - 8u * c)) & 0xffu;
+            u32 e = (env >> (16u - 8u * c)) & 0xffu;
+
+            channel[c] = e + ndsIFCommonDiv15((u32)((s32)p - (s32)e + 255) * t) -
+                         ndsIFCommonDiv15(255u * t);
+        }
+        palette[i] = ndsIFCommonPackRgb15((u8)channel[0], (u8)channel[1],
+                                          (u8)channel[2]);
+    }
+    return (s32)(NDS_IFCOMMON_PAUSE_PALETTE_FIRST + slot);
+}
+
+/* The smallest legal OBJ shape holding w x h. */
+static s32 ndsIFCommonPauseShape(u32 w, u32 h, SpriteSize *size, u32 *cw, u32 *ch)
+{
+    static const struct
+    {
+        u8 w;
+        u8 h;
+        SpriteSize size;
+    } kShapes[] = {
+        { 8, 8, SpriteSize_8x8 },     { 16, 8, SpriteSize_16x8 },
+        { 8, 16, SpriteSize_8x16 },   { 16, 16, SpriteSize_16x16 },
+        { 32, 8, SpriteSize_32x8 },   { 8, 32, SpriteSize_8x32 },
+        { 32, 16, SpriteSize_32x16 }, { 16, 32, SpriteSize_16x32 },
+        { 32, 32, SpriteSize_32x32 }, { 64, 32, SpriteSize_64x32 },
+        { 32, 64, SpriteSize_32x64 }, { 64, 64, SpriteSize_64x64 },
+    };
+    u32 i;
+
+    for (i = 0u; i < ARRAY_COUNT(kShapes); i++)
+    {
+        if ((w <= kShapes[i].w) && (h <= kShapes[i].h))
+        {
+            *size = kShapes[i].size;
+            *cw = kShapes[i].w;
+            *ch = kShapes[i].h;
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+/* A built cell into OBJ VRAM, a word at a time (VRAM takes no byte stores). */
+static u16 *ndsIFCommonPauseUpload(u32 cw, u32 ch)
+{
+    u32 bytes = (cw * ch) / 2u;
+    u16 *gfx = ndsIFCommonPauseAlloc(bytes);
+    u32 *dst;
+    u32 i;
+
+    if (gfx == NULL)
+    {
+        return NULL;
+    }
+    dst = (u32 *)(void *)gfx;
+    for (i = 0u; i < bytes / 4u; i++)
+    {
+        dst[i] = sNdsIFCommonPauseCellBuffer[i];
+    }
+    return gfx;
+}
+
+static void ndsIFCommonPauseSetTexel(u32 cw, u32 x, u32 y, u8 index)
+{
+    u8 *cell = (u8 *)sNdsIFCommonPauseCellBuffer;
+    u32 offset = ((((y >> 3) * (cw >> 3)) + (x >> 3)) * 32u) +
+                 ((y & 7u) * 4u) + ((x & 7u) >> 1);
+
+    cell[offset] = ((x & 1u) == 0u) ?
+        (u8)((cell[offset] & 0xf0u) | index) :
+        (u8)((cell[offset] & 0x0fu) | (u8)(index << 4));
+}
+
+static const NDSIFCommonPauseCell *ndsIFCommonBakePauseCell(const SObj *sobj)
+{
+    const Sprite *sprite = &sobj->sprite;
+    u32 prim = ((u32)sprite->red << 16) | ((u32)sprite->green << 8) |
+               (u32)sprite->blue;
+    u32 env = ((u32)sobj->envcolor.r << 16) | ((u32)sobj->envcolor.g << 8) |
+              (u32)sobj->envcolor.b;
+    u32 width = (u32)(u16)sprite->width;
+    u32 height = (u32)(u16)sprite->height;
+    u32 ds_width = (width * 4u + 2u) / 5u;
+    u32 ds_height = (height * 4u + 2u) / 5u;
+    NDSIFCommonPauseCell *cell;
+    SpriteSize size;
+    s32 palette;
+    u32 cw;
+    u32 ch;
+    u32 x;
+    u32 y;
+    u32 i;
+
+    for (i = 0u; i < sNdsIFCommonPauseCellCount; i++)
+    {
+        cell = &sNdsIFCommonPauseCells[i];
+        if ((cell->bitmap == sprite->bitmap) && (cell->prim == prim) &&
+            (cell->env == env))
+        {
+            return cell;
+        }
+    }
+    ndsIFCommonPauseTakeBank();
+    if ((sNdsIFCommonPauseCellCount >= NDS_IFCOMMON_PAUSE_CELLS) ||
+        (sprite->bitmap == NULL) || (sprite->bitmap->buf == NULL) ||
+        (width == 0u) || (height == 0u) ||
+        !(((sprite->bmfmt == G_IM_FMT_IA) && (sprite->bmsiz == G_IM_SIZ_8b)) ||
+          ((sprite->bmfmt == G_IM_FMT_I) && (sprite->bmsiz == G_IM_SIZ_4b))) ||
+        (ndsIFCommonPauseShape(ds_width, ds_height, &size, &cw, &ch) == FALSE))
+    {
+        return NULL;
+    }
+    palette = ndsIFCommonPausePalette(prim, env);
+    if (palette < 0)
+    {
+        return NULL;
+    }
+    memset(sNdsIFCommonPauseCellBuffer, 0, (cw * ch) / 2u);
+    for (y = 0u; y < ds_height; y++)
+    {
+        u32 source_y = ((2u * y + 1u) * height) / (2u * ds_height);
+
+        for (x = 0u; x < ds_width; x++)
+        {
+            u32 source_x = ((2u * x + 1u) * width) / (2u * ds_width);
+            u8 index;
+
+            if (sprite->bmfmt == G_IM_FMT_IA)
+            {
+                u8 ia;
+
+                /* The announce letters' rule: alpha nibble 8 and up kept,
+                 * the intensity nibble picks the ramp entry. */
+                if ((ndsIFCommonReadTagI8(sprite, source_x, source_y, &ia) == FALSE) ||
+                    ((ia & 0x0fu) < 8u))
+                {
+                    continue;
+                }
+                index = (u8)(ia >> 4);
+            }
+            else
+            {
+                const Bitmap *bitmap = sprite->bitmap;
+                u32 width_img = ((u32)(u16)bitmap->width_img != 0u) ?
+                    (u32)(u16)bitmap->width_img : (u32)(u16)bitmap->width;
+                u8 intensity;
+
+                /* I4 is its own alpha: half and up kept. */
+                if ((ndsIFCommonReadI4(sprite, bitmap->buf,
+                                       (size_t)((width_img + 1u) / 2u) * height,
+                                       source_x, source_y, &intensity) == FALSE) ||
+                    (intensity < 8u))
+                {
+                    continue;
+                }
+                index = intensity;
+            }
+            ndsIFCommonPauseSetTexel(cw, x, y, (index == 0u) ? 1u : index);
+        }
+    }
+    cell = &sNdsIFCommonPauseCells[sNdsIFCommonPauseCellCount];
+    cell->gfx = ndsIFCommonPauseUpload(cw, ch);
+    if (cell->gfx == NULL)
+    {
+        return NULL;
+    }
+    cell->bitmap = sprite->bitmap;
+    cell->prim = prim;
+    cell->env = env;
+    cell->size = size;
+    cell->palette = (u8)palette;
+    sNdsIFCommonPauseCellCount++;
+    return cell;
+}
+
+static s32 ndsIFCommonPauseRuns(void)
+{
+    s32 palette;
+    u32 i;
+
+    if (sNdsIFCommonPauseRunH32 != NULL)
+    {
+        return TRUE;
+    }
+    ndsIFCommonPauseTakeBank();
+    palette = ndsIFCommonPausePalette(0xffffffu, 0u);
+    if (palette < 0)
+    {
+        return FALSE;
+    }
+    sNdsIFCommonPauseRunPalette = (u8)palette;
+    memset(sNdsIFCommonPauseCellBuffer, 0, sizeof(sNdsIFCommonPauseCellBuffer));
+    for (i = 0u; i < 32u; i++)
+    {
+        ndsIFCommonPauseSetTexel(32u, i, 0u, 15u);
+        ndsIFCommonPauseSetTexel(32u, i, 1u, 15u);
+    }
+    sNdsIFCommonPauseRunH32 = ndsIFCommonPauseUpload(32u, 8u);
+    memset(sNdsIFCommonPauseCellBuffer, 0, sizeof(sNdsIFCommonPauseCellBuffer));
+    for (i = 0u; i < 8u; i++)
+    {
+        ndsIFCommonPauseSetTexel(8u, i, 0u, 15u);
+        ndsIFCommonPauseSetTexel(8u, i, 1u, 15u);
+    }
+    sNdsIFCommonPauseRunH8 = ndsIFCommonPauseUpload(8u, 8u);
+    memset(sNdsIFCommonPauseCellBuffer, 0, sizeof(sNdsIFCommonPauseCellBuffer));
+    for (i = 0u; i < 32u; i++)
+    {
+        ndsIFCommonPauseSetTexel(8u, 0u, i, 15u);
+        ndsIFCommonPauseSetTexel(8u, 1u, i, 15u);
+    }
+    sNdsIFCommonPauseRunV32 = ndsIFCommonPauseUpload(8u, 32u);
+    memset(sNdsIFCommonPauseCellBuffer, 0, sizeof(sNdsIFCommonPauseCellBuffer));
+    for (i = 0u; i < 8u; i++)
+    {
+        ndsIFCommonPauseSetTexel(8u, 0u, i, 15u);
+        ndsIFCommonPauseSetTexel(8u, 1u, i, 15u);
+    }
+    sNdsIFCommonPauseRunV8 = ndsIFCommonPauseUpload(8u, 8u);
+    return ((sNdsIFCommonPauseRunH32 != NULL) && (sNdsIFCommonPauseRunH8 != NULL) &&
+            (sNdsIFCommonPauseRunV32 != NULL) && (sNdsIFCommonPauseRunV8 != NULL)) ?
+        TRUE : FALSE;
+}
+
+static s32 ndsIFCommonPauseObject(s32 x, s32 y, SpriteSize size, u32 palette,
+                                  u16 *gfx)
+{
+    if (sNdsIFCommonNextOamID < 0)
+    {
+        return FALSE;
+    }
+    oamSet(&oamMain, sNdsIFCommonNextOamID, x, y, 0, (int)palette, size,
+           SpriteColorFormat_16Color, gfx, -1, false, false, false, false, false);
+    sNdsIFCommonNextOamID--;
+    gNdsIFCommonNativeOamFrameObjectCount++;
+    sNdsIFCommonFrameNeedsCommit = TRUE;
+    return TRUE;
+}
+
+/* One run of the frame: 32-long pieces, then 8-long pieces, the last one
+ * ending flush with the run. */
+static s32 ndsIFCommonPauseRun(s32 x0, s32 y0, s32 length, sb32 vertical)
+{
+    s32 at = 0;
+
+    while ((length - at) >= 32)
+    {
+        if (ndsIFCommonPauseObject(vertical ? x0 : (x0 + at), vertical ? (y0 + at) : y0,
+                                   vertical ? SpriteSize_8x32 : SpriteSize_32x8,
+                                   sNdsIFCommonPauseRunPalette,
+                                   vertical ? sNdsIFCommonPauseRunV32 :
+                                              sNdsIFCommonPauseRunH32) == FALSE)
+        {
+            return FALSE;
+        }
+        at += 32;
+    }
+    while (at < length)
+    {
+        s32 piece = ((length - at) >= 8) ? at : (length - 8);
+
+        if (piece < 0)
+        {
+            piece = 0;
+        }
+        if (ndsIFCommonPauseObject(vertical ? x0 : (x0 + piece), vertical ? (y0 + piece) : y0,
+                                   SpriteSize_8x8, sNdsIFCommonPauseRunPalette,
+                                   vertical ? sNdsIFCommonPauseRunV8 :
+                                              sNdsIFCommonPauseRunH8) == FALSE)
+        {
+            return FALSE;
+        }
+        at += 8;
+    }
+    return TRUE;
+}
+
+/* ifCommonBattlePauseProcDisplay's five fill rectangles (ifcommon.c
+ * dIFCommonBattlePauseBorderRectangle), corners inclusive as fill mode
+ * draws them, at the 0.8 grid. */
+void ndsIFCommonNativeOamPauseBorder(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    static const s16 kRects[5][4] = {
+        { 26, 24, 294, 26 }, { 26, 24, 28, 199 }, { 26, 197, 190, 199 },
+        { 292, 24, 294, 199 }, { 279, 197, 294, 199 },
+    };
+    u32 i;
+
+    if (ndsIFCommonPauseRuns() == FALSE)
+    {
+        gNdsIFCommonPauseMisses++;
+        return;
+    }
+    for (i = 0u; i < ARRAY_COUNT(kRects); i++)
+    {
+        s32 x0 = (kRects[i][0] * 4 + 2) / 5;
+        s32 y0 = (kRects[i][1] * 4 + 2) / 5;
+        s32 x1 = ((kRects[i][2] + 1) * 4 + 2) / 5;
+        s32 y1 = ((kRects[i][3] + 1) * 4 + 2) / 5;
+        sb32 vertical = ((y1 - y0) > (x1 - x0)) ? TRUE : FALSE;
+
+        if (ndsIFCommonPauseRun(x0, y0, vertical ? (y1 - y0) : (x1 - x0),
+                                vertical) == FALSE)
+        {
+            gNdsIFCommonPauseMisses++;
+            return;
+        }
+    }
+#endif
+}
+
+static s32 ndsIFCommonEmitPause(struct GObj *gobj)
+{
+    SObj *sobj;
+
+    for (sobj = SObjGetStruct(gobj); sobj != NULL; sobj = sobj->next)
+    {
+        const NDSIFCommonPauseCell *cell;
+
+        if ((sobj->sprite.attr & SP_HIDDEN) != 0u)
+        {
+            continue;
+        }
+        cell = ndsIFCommonBakePauseCell(sobj);
+        if ((cell == NULL) ||
+            (ndsIFCommonPauseObject(
+                 ndsIFCommonRoundQ16HalfUp(ndsIFCommonScaleRound(
+                     sobj->pos.x, NDS_IFCOMMON_SCREEN_SCALE_Q16)),
+                 ndsIFCommonRoundQ16HalfUp(ndsIFCommonScaleRound(
+                     sobj->pos.y, NDS_IFCOMMON_SCREEN_SCALE_Q16)),
+                 cell->size, cell->palette, cell->gfx) == FALSE))
+        {
+            gNdsIFCommonPauseMisses++;
+            return FALSE;
+        }
+    }
+    gNdsIFCommonNativeOamFrameRecognizedCalls++;
+    gNdsIFCommonNativeOamFrameDrawCalls++;
+    return TRUE;
+}
+
 s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj)
 {
 #if NDS_RENDERER_HW_TRIANGLES
@@ -4633,6 +5094,11 @@ s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj)
     if (gobj->proc_display == ifCommonItemArrowProcDisplay)
     {
         return ndsIFCommonEmitItemArrow(gobj);
+    }
+    if ((gobj->id == nGCCommonKindPauseMenu) &&
+        (gobj->proc_display == lbCommonDrawSObjAttr))
+    {
+        return ndsIFCommonEmitPause(gobj);
     }
 #if NDS_P2_1P_GAME
     if (ndsIFCommonIsBonusTaskGObj(gobj) != FALSE)

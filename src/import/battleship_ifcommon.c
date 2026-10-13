@@ -169,6 +169,20 @@ static void ndsIFCommonPlayerDamageProcDisplayGate(GObj *interface_gobj)
     ifCommonPlayerDamageProcDisplay(interface_gobj);
 }
 
+#if NDS_RENDERER_HW_TRIANGLES
+void ndsIFCommonNativeOamPauseBorder(void);
+
+/* ifCommonBattlePauseProcDisplay's border frame as OBJ runs (the five fill
+ * rectangles nothing native could draw), beside the pause decals the same
+ * presenter draws (nds_ifcommon_oam.c). */
+static void ndsIFCommonBattlePauseProcDisplayNative(GObj *interface_gobj)
+{
+    (void)interface_gobj;
+    ndsIFCommonNativeOamPauseBorder();
+    lbCommonClearExternSpriteParams();
+}
+#endif
+
 static void ndsIFCommonAddGObjDisplay(GObj *gobj,
                                       void (*proc_display)(GObj *),
                                       u8 dl_link, u32 priority,
@@ -178,6 +192,12 @@ static void ndsIFCommonAddGObjDisplay(GObj *gobj,
     {
         proc_display = ndsIFCommonPlayerDamageProcDisplayGate;
     }
+#if NDS_RENDERER_HW_TRIANGLES
+    if (proc_display == ifCommonBattlePauseProcDisplay)
+    {
+        proc_display = ndsIFCommonBattlePauseProcDisplayNative;
+    }
+#endif
     gcAddGObjDisplay(gobj, proc_display, dl_link, priority, camera_tag);
 }
 
