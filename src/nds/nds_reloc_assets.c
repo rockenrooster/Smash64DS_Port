@@ -2048,14 +2048,21 @@ fail:
  * the normalizers (task37 census, build-prof-banjo). Its directory (3,717
  * dense rows) stays in the ROM: a miss reads the clip's 8-byte row once (the
  * size query and the read that follows it share the memo), then the clip.
- * An event32 or spline clip has an empty row and still loads loose. */
+ * An event32 or spline clip has an empty row and still loads loose.
+ *
+ * 2026-10-13: the rows read stay in a direct-mapped memo by id. Most misses
+ * re-fetch a clip the animation cache dropped (four Meta Knights: 240
+ * misses over 95 clip ids in 1,200 frames), and each paid a second storage
+ * round trip for its 8-byte row. A row is the ROM's, so it never goes stale;
+ * an id is past the cast's pack, so 0 marks an empty way. */
 #define NDS_FTANIM_P4_STREAM_PATH "animation/ftanim_p4_stream.bin"
+#define NDS_FTANIM_P4_ROW_MEMO 128u
 static NitroRom *sNdsFtAnimP4StreamRom;
 static NDSFtAnimStreamHeader sNdsFtAnimP4StreamHeader;
 static u16 sNdsFtAnimP4StreamFileId;
 static u8 sNdsFtAnimP4StreamState;
-static u32 sNdsFtAnimP4StreamMemoId = 0xffffffffu;
-static NDSFtAnimStreamEntry sNdsFtAnimP4StreamMemo;
+static u16 sNdsFtAnimP4RowMemoId[NDS_FTANIM_P4_ROW_MEMO];
+static NDSFtAnimStreamEntry sNdsFtAnimP4RowMemo[NDS_FTANIM_P4_ROW_MEMO];
 __attribute__((used)) volatile u32 gNdsRelocAssetP4StreamRowReads;
 
 static s32 ndsRelocAssetOpenP4Stream(void)
@@ -2122,21 +2129,28 @@ static s32 ndsRelocAssetP4StreamEntry(u32 asset_id,
     {
         return FALSE;
     }
-    if (asset_id != sNdsFtAnimP4StreamMemoId)
     {
-        if (nitroromReadFile(sNdsFtAnimP4StreamRom, sNdsFtAnimP4StreamFileId,
-                             header->dir_off + ((asset_id - header->first_id) *
-                                                sizeof(NDSFtAnimStreamEntry)),
-                             &sNdsFtAnimP4StreamMemo,
-                             sizeof(sNdsFtAnimP4StreamMemo)) == false)
+        const u32 way = asset_id & (NDS_FTANIM_P4_ROW_MEMO - 1u);
+
+        if ((u32)sNdsFtAnimP4RowMemoId[way] != asset_id)
         {
-            sNdsFtAnimP4StreamMemoId = 0xffffffffu;
-            return FALSE;
+            sNdsFtAnimP4RowMemoId[way] = 0u;
+            if ((asset_id > 0xffffu) ||
+                (nitroromReadFile(sNdsFtAnimP4StreamRom,
+                                  sNdsFtAnimP4StreamFileId,
+                                  header->dir_off +
+                                      ((asset_id - header->first_id) *
+                                       sizeof(NDSFtAnimStreamEntry)),
+                                  &sNdsFtAnimP4RowMemo[way],
+                                  sizeof(NDSFtAnimStreamEntry)) == false))
+            {
+                return FALSE;
+            }
+            sNdsFtAnimP4RowMemoId[way] = (u16)asset_id;
+            gNdsRelocAssetP4StreamRowReads++;
         }
-        sNdsFtAnimP4StreamMemoId = asset_id;
-        gNdsRelocAssetP4StreamRowReads++;
+        *entry = sNdsFtAnimP4RowMemo[way];
     }
-    *entry = sNdsFtAnimP4StreamMemo;
     return ((entry->offset >= header->data_off) && (entry->size != 0u) &&
             (entry->offset <= header->blob_bytes) &&
             (entry->size <= (header->blob_bytes - entry->offset))) ?

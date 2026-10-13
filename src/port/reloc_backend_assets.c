@@ -16271,7 +16271,8 @@ typedef struct NDSR2AnimPrefetch {
     u32 busy;
 } NDSR2AnimPrefetch;
 static NDSR2AnimPrefetch sNdsR2AnimPrefetchSlots[NDS_R2_ANIM_PREFETCH_SLOTS];
-__attribute__((used, section(".data"))) volatile u32 gNdsR2AnimPrefetch = 1u;
+/* Bit 0: the prefetch; bit 1: its learned successors (below). */
+__attribute__((used, section(".data"))) volatile u32 gNdsR2AnimPrefetch = 3u;
 __attribute__((used)) volatile u32 gNdsR2AnimPrefetchIssued;
 __attribute__((used)) volatile u32 gNdsR2AnimPrefetchLanded;
 __attribute__((used)) volatile u32 gNdsR2AnimPrefetchWaits;
@@ -16397,6 +16398,57 @@ __attribute__((used)) volatile u32 gNdsR2AnimPrefetchIdleCalls;
 __attribute__((used)) volatile u32 gNdsR2AnimPrefetchIdleStops;
 u32 ndsPlatformTicksToPresentVBlank(void);
 
+/* LEARNED SUCCESSORS (2026-10-13). The measured table names the cast's
+ * clips only; a P4 content's (and Kirby's powers', ids past the cast's) never
+ * had a successor, so every one of their misses blocked: four Meta Knights
+ * read storage on 240 of 413 fetches, over 95 clip ids. Per fighter (its
+ * figatree heap), the clip fetched after each clip, direct-mapped by id; a
+ * clip the measured table lacks prefetches the one that followed it last
+ * time. A wrong guess costs ring bytes and an ARM7 read, never a different
+ * frame -- a clip's bytes are the pack's wherever they come from. */
+#define NDS_R2_ANIM_LEARN_WAYS 256u
+#define NDS_R2_ANIM_LEARN_FIGHTERS 4u
+static u16 sNdsR2AnimLearnKey[NDS_R2_ANIM_LEARN_WAYS];
+static u16 sNdsR2AnimLearnNext[NDS_R2_ANIM_LEARN_WAYS];
+static const void *sNdsR2AnimLearnHeap[NDS_R2_ANIM_LEARN_FIGHTERS];
+static u16 sNdsR2AnimLearnLast[NDS_R2_ANIM_LEARN_FIGHTERS];
+static u32 sNdsR2AnimLearnVictim;
+__attribute__((used)) volatile u32 gNdsR2AnimLearnIssued;
+
+static void ndsR2AnimLearnNote(const void *heap, u32 asset_id)
+{
+    u32 f;
+
+    if (((gNdsR2AnimPrefetch & 2u) == 0u) || (asset_id > 0xffffu))
+    {
+        return;
+    }
+    for (f = 0u; f < NDS_R2_ANIM_LEARN_FIGHTERS; f++)
+    {
+        if (sNdsR2AnimLearnHeap[f] == heap)
+        {
+            break;
+        }
+    }
+    if (f == NDS_R2_ANIM_LEARN_FIGHTERS)
+    {
+        f = sNdsR2AnimLearnVictim;
+        sNdsR2AnimLearnVictim = (f + 1u) % NDS_R2_ANIM_LEARN_FIGHTERS;
+        sNdsR2AnimLearnHeap[f] = heap;
+        sNdsR2AnimLearnLast[f] = 0u;
+    }
+    if ((sNdsR2AnimLearnLast[f] != 0u) &&
+        ((u32)sNdsR2AnimLearnLast[f] != asset_id))
+    {
+        const u32 way = (u32)sNdsR2AnimLearnLast[f] &
+            (NDS_R2_ANIM_LEARN_WAYS - 1u);
+
+        sNdsR2AnimLearnKey[way] = sNdsR2AnimLearnLast[f];
+        sNdsR2AnimLearnNext[way] = (u16)asset_id;
+    }
+    sNdsR2AnimLearnLast[f] = (u16)asset_id;
+}
+
 static void ndsR2AnimPrefetchNote(u32 asset_id)
 {
     u32 i;
@@ -16482,6 +16534,20 @@ static u32 ndsR2AnimPrefetchNextCandidate(void)
                 {
                     return next;
                 }
+            }
+        }
+        else if ((gNdsR2AnimPrefetch & 2u) != 0u)
+        {
+            const u32 clip = sNdsR2AnimPrefetchQueue[0];
+            const u32 way = clip & (NDS_R2_ANIM_LEARN_WAYS - 1u);
+            const u32 next = sNdsR2AnimLearnNext[way];
+
+            if (((u32)sNdsR2AnimLearnKey[way] == clip) && (next != 0u) &&
+                (ndsR2AnimCacheFind(next) == NULL) &&
+                (ndsR2AnimPrefetchInFlight(next) == FALSE))
+            {
+                NDS_DIAG(gNdsR2AnimLearnIssued++);
+                return next;
             }
         }
         memmove(&sNdsR2AnimPrefetchQueue[0], &sNdsR2AnimPrefetchQueue[1],
@@ -17736,6 +17802,7 @@ void *lbRelocGetForceExternHeapFile(const void *file_id, void *heap)
         {
             gNdsRelocForceFighterAnimResolveCount++;
 #if NDS_R2_ANIM_CACHE && NDS_R2_FTANIM_STREAM && NDS_R2_ANIM_ZERO_COPY
+            ndsR2AnimLearnNote(heap, asset_id);
             ndsR2AnimPrefetchNote(asset_id);
 #endif
         }
