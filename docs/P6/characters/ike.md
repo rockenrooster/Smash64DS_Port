@@ -3,7 +3,8 @@
 **Status:** planned. **Content:** 19 (`NDS_P4_IKE`). **Base:** Roy (content 6:
 setup parent Captain, the Marth/Roy JointTree). **Brief:** [../Ike.md](../Ike.md),
 with owner decisions D5 and D6 of 2026-10-12 (Ultimate's Radiant Dawn voice,
-Ultimate's sound effects).
+Ultimate's sound effects) and D10 of 2026-10-13 (the look converted from the
+3DS kit).
 **Plan:** [../P6_PLAN.md](../P6_PLAN.md), Wave 1.
 
 ## What the base gives
@@ -21,18 +22,36 @@ Ike keeps Roy's skeleton, so every Roy and Marth clip plays on him.
 
 ## Look (G1)
 
-- Roy's high and low meshes restyled: Ike's heavier build (broad chest and
-  shoulders, thick arms, heavy boots), short blue hair and headband, tunic and
-  cape after his Brawl design. Colours are fixed on the palette sheet.
-- **Ragnell** replaces Roy's sword part: a longer, broader blade, gold (brief).
-  Sword hitbox offsets and the sword-trail endpoints of every reused script
-  scale by the blade-length ratio measured from the two models.
-- No overall scale change: Roy's hurtboxes and map box stay valid.
-- Costumes: Roy's count; default colours from the brief, alternates and team
-  colours on the sheet.
-- Kirby hat: Ike's blue hair and headband, taken from his head spans.
+Source (plan D12): by default the track the owner picks in Palutena's look
+bake-off ([G0](../P6_PLAN.md#look-bake-off-g0)): **K**, the 3DS kit's Ike
+(`decomp/alt_assets/Fighters/Super Smash Bros 3DS/Ike/`, local; plan D10)
+rebuilt onto Roy's skeleton by ring retopology and hand-tuned (A3b), or **R**,
+Roy's own model restyled into Ike with the fitted kit model as the target
+(A3c). The owner can ask for Ike's own two-track sheet instead. Smash 4's Ike
+keeps his Brawl design. Either way the model meets every line below.
 
-## Move card (draft for I1)
+- Both details: Ike's heavier build (broad chest and shoulders, thick arms,
+  heavy boots), short blue hair and headband, tunic and cape. Track K maps
+  the kit's 33 joints onto Roy's; the cape and headband-tail swing joints bind
+  to Roy's cape joints if his tree has them (A2 lists it), else to the bust
+  and head.
+- Budget: at most 386 triangles high and 222 low (Roy 351 / 202); the kit's
+  low model draws 1,515.
+- **Ragnell** replaces Roy's sword part in either track: the kit's gold blade
+  (98 triangles in its low model, also `Sword/sword.dae`), rebuilt, longer and
+  broader than Roy's. Sword hitbox offsets and the sword-trail endpoints of
+  every reused script scale by the blade-length ratio measured from the two
+  models.
+- No overall scale change: Roy's hurtboxes and map box stay valid.
+- Costumes: Roy's count, chosen from the kit's eight on the palette sheet
+  (the default first); each is a palette over one baked texture set.
+- Face and hands: the kit's neutral eyes and mouth baked into the face
+  texture; Roy's face frames, if any, get the kit's matching expressions; the
+  kit's three hand poses a side map onto Roy's hand variants.
+- Kirby hat: Ike's blue hair and headband, taken from the picked model's head
+  spans.
+
+## Move card (approved 2026-10-13, I1)
 
 Damage and timing numbers are lab defaults on SSB64's scale, tuned against
 Roy; Brawl gives the motion and the intent only.
@@ -96,6 +115,9 @@ The clips used come to well under 1 MB of NitroFS.
   directly. The owner approves the map by ear on the sample sheet.
 - The Brawl clips supplied first (`Super Smash Bros brawl/Ike (International)/`)
   stay local as a reference.
+- The 3DS kit's Ike audio is not used: its voice is the Brawl set (37 of 39
+  clips match outright) and its effects are `se_ike`'s recordings (58 of 65), at
+  14-16 kHz and unnamed.
 - Announcer "Ike" (D7): Ultimate's narrator clip
   (`vc_narration_characall_ike.wav`, 0.87 s), level-matched to SSB64's
   announcer cues; select screen and Results.

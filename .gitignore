@@ -75,9 +75,10 @@ worktree_report.md
 backups/
 /.codex-worktrees/
 
-# P6: ripped Brawl/Ultimate reference data stays local (public repo; docs/P6/P6_PLAN.md D1).
+# P6: ripped Brawl/Ultimate/3DS data stays local (public repo; docs/P6/P6_PLAN.md D1).
 /decomp/alt_assets/Fighters/Super Smash Bros Ultimate/
 /decomp/alt_assets/Fighters/Super Smash Bros brawl/
+/decomp/alt_assets/Fighters/Super Smash Bros 3DS/
 # P6: local-only reference scenes and owner voice clips beside the committed art.
 /art/**/*.local.blend
 /art/**/voice.local/

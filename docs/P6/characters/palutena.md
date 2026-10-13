@@ -2,7 +2,8 @@
 
 **Status:** planned. **Content:** 20 (`NDS_P4_PALUTENA`). **Base:** Peach
 (content 8: setup parent Fox). **Brief:** [../Palutena.md](../Palutena.md),
-with owner decisions D2-D4 of 2026-10-12. **Plan:** [../P6_PLAN.md](../P6_PLAN.md),
+with owner decisions D2-D4 of 2026-10-12 and D10 of 2026-10-13 (the look
+converted from the 3DS kit). **Plan:** [../P6_PLAN.md](../P6_PLAN.md),
 Wave 2.
 
 ## What the base gives
@@ -14,27 +15,48 @@ the parasol, the turnip — is **not** inherited: those overrides are keyed to
 Peach's content, and Palutena's statuses name her own routines. Her parent
 kind is Fox, so Fox's rapid-jab, reflector and thrown rows are at hand.
 
-## Look (G1)
+## Look (G0, G1)
 
-Reference: the Ultimate model in the local reference scene only (D1).
+Source: picked by the owner from two best-effort candidates at the same
+budget (plan D12, [Look bake-off](../P6_PLAN.md#look-bake-off-g0)): **Track
+K**, the 3DS kit's Palutena (`decomp/alt_assets/Fighters/Super Smash Bros 3DS/Palutena/`,
+local; plan D10) rebuilt onto Peach's skeleton by ring retopology and
+hand-tuned (A3b); **Track R**, Peach's own model restyled into Palutena with
+the fitted kit model as the target (A3c). Regions can mix. Smash 4's design is
+the one Ultimate keeps; the Ultimate model is no longer needed for the look.
+Both candidates must meet every line below.
 
-- Peach's meshes restyled, both details: long, slim, sleeveless white dress
-  with a high side slit; gold trim and accessories; long straight green hair
-  (split between the head and upper-back joints so it does not cut through
-  the back when the head turns); gold tiara; white over-knee stocking showing
-  through the slit.
-- **Staff:** tall, gold-topped, in her right hand as the model part where
+- Both details: long, slim, sleeveless white dress with a high side slit;
+  gold trim and accessories; long straight green hair, split between the
+  head and upper-back joints so it does not cut through the back when the
+  head turns; gold tiara; white over-knee stocking showing through the slit.
+  Track K binds the kit's hair swing joints that way, and its skirt joints to
+  Peach's dress joints if her tree has them, else to the thighs. The kit's
+  UVs need mirrored-repeat sampling (its note).
+- Budget: at most 426 triangles high and 278 low, staff and shield included
+  (Peach 371 / 242); the kit's low model draws 1,930, its staff alone 267.
+- Track R's restyle of Peach: the gown pulled into the slim dress and its
+  slit, the puffed sleeves and gloves into bare arms with gold armlets, the
+  hair lengthened to her knees, the crown reshaped into the tiara.
+- **Staff:** the kit's (its RStickN part), rebuilt once and shared by both
+  tracks: tall, gold-topped, in her right hand as the model part where
   Peach's held items sit; drawn in every status.
-- **Shield:** on her left forearm.
-- **Joints appended:** two wings (forward and down smashes), the halo (up
-  air, down taunt, an idle accent), the light pillar (up smash). Each is
-  hidden unless a script shows it.
+- **Shield:** the kit's (its ShieldN part), shared the same way, on her left
+  forearm.
+- **Joints appended:** two wings (forward and down smashes) from the kit's
+  `godwing.dae` (774 triangles, 11 joints, rebuilt with a few joints a wing);
+  the halo (up air, down taunt, an idle accent) and the light pillar (up
+  smash), authored. Each is hidden unless a script shows it.
 - Removed: Peach's crown, parasol and held-item variants.
-- Costumes: Peach's count; default white and green, alternates and team
-  colours on the sheet.
-- Kirby hat: green hair and tiara, from her head spans.
+- Costumes: Peach's count, chosen from the kit's eight on the palette sheet
+  (white first); each is a palette over one baked texture set.
+- Face and hands: as Ike's card (neutral set baked; the kit's expressions on
+  Peach's face frames, if any; hand poses onto Peach's hand variants).
+- Entry gate: the kit's `gate.dae` (two doors, 216 triangles), rebuilt as
+  the gate article.
+- Kirby hat: green hair and tiara, from the picked model's head spans.
 
-## Move card (draft for P1)
+## Move card (approved 2026-10-13, P1)
 
 Motions follow Ultimate's moves (SmashWiki's Palutena (SSBU) descriptions);
 SSB64 has no pummel, no up or down throw and no smash charge. Numbers are lab
@@ -63,7 +85,7 @@ defaults on SSB64's scale, tuned against Peach.
 | Up B: **Warp** | new: vanish, travel, reappear; ground and air | new: vanish and appear poses | see below |
 | Down B: **Counter / Reflect** | new: stance, counterattack; ground and air | new | see below |
 | Taunt | Appeal | new: Ultimate's down taunt (D4): lets go of the staff beside her, brushes her hair back, halo glows, retakes the staff | — |
-| Entry | entry rows | new: walks out of golden halo-shaped doors | gate article (authored) |
+| Entry | entry rows | new: walks out of golden halo-shaped doors | gate article (the kit's gate, converted) |
 | Idle | Wait | new: staff upright | — |
 | Walk, run, jumps, damage, shield, dodges, ledge, sleep and the rest | Peach's | Peach's, through the staff-hold transform | — |
 | Results | three victory poses; clap | new (Ultimate's three, simplified); Peach's clap with the staff hold | — |
@@ -93,7 +115,9 @@ WAVs, 7.4 MB): about 30 cues, mapped to SSB64's voice slots (attacks, damage,
 KO, star KO, jump, ledge catch, taunt, victory, specials) and to her scripts'
 sound commands. They stream from the FGM pack through the cue cache like every
 other content's sounds. The build fails with a message if the folder is
-missing. Announcer "Palutena" (D7): Ultimate's narrator clip
+missing. The 3DS kit's Palutena audio is not used: 40 of its 52 voice clips
+and 50 of its 51 effects are the same recordings at 14-16 kHz, unnamed; its
+12 other voice lines are unidentified spares. Announcer "Palutena" (D7): Ultimate's narrator clip
 (`vc_narration_characall_palutena.wav`, 1.31 s), level-matched to SSB64's
 announcer cues; select screen and Results. Crowd chant (D8): Ultimate's
 cheer (`vc_palutena_cheer.wav`, 1.72 s), downmixed to mono. Victory (D9): an
