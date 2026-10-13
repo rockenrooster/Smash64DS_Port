@@ -31,7 +31,7 @@
  */
 #include <nds/nds_p4.h>
 
-#if NDS_P4_PEACH
+#if NDS_P4_CODE_PEACH
 
 #if NDS_P2_KIRBY
 #include "kirby/nds_p4_kirby.generated.h"
@@ -1472,4 +1472,4 @@ const NDSP4Overrides gNdsP4PeachOverrides = {
     .fall_special_status = ndsP4PeachFallSpecialStatus,
 };
 
-#endif /* NDS_P4_PEACH */
+#endif /* NDS_P4_CODE_PEACH */

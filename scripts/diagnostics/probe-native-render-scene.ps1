@@ -304,7 +304,7 @@ try {
         'quit 1',
         'end',
         'printf "DIAG_WALK_CSS_FAST=%u,%u,%u,%u,%u,%u,%u\n", sMenuTics, sMenuWalkCursor, sMenuWalkTimer, kNdsMenuWalkLengths[3], gNdsPlayersVSPreviewAcquireLoadCount, gNdsPlayersVSPreviewAcquireLoadFinishCount, gNdsPlayersVSPreviewAcquireRetryCount',
-        'printf "DIAG_CSS_CACHE_FAST=load:%u finish:%u fail:%u anim:%08x reserve:%u used:%u warmfail:%u\n", gNdsPlayersVSPreviewAcquireLoadCount, gNdsPlayersVSPreviewAcquireLoadFinishCount, gNdsPlayersVSPreviewAcquireFailCount, gNdsPlayersVSPreviewResidentAnimFailMask, gNdsR2AnimCacheArenaReservedBytes, gNdsR2AnimCacheArenaUsedBytes, gNdsR2AnimWarmFailed',
+        'printf "DIAG_CSS_CACHE_FAST=load:%u finish:%u fail:%u anim:%llx reserve:%u used:%u warmfail:%u\n", gNdsPlayersVSPreviewAcquireLoadCount, gNdsPlayersVSPreviewAcquireLoadFinishCount, gNdsPlayersVSPreviewAcquireFailCount, gNdsPlayersVSPreviewResidentAnimFailMask, gNdsR2AnimCacheArenaReservedBytes, gNdsR2AnimCacheArenaUsedBytes, gNdsR2AnimWarmFailed',
         'set variable sMenuWalkCursor = kNdsMenuWalkLengths[3] - 1',
         'set variable sMenuWalkTimer = 61',
         'set variable sMenuWalkHold = 0',
@@ -316,7 +316,7 @@ try {
         # stage select. Scene-entry lines bracket every successful hand-off.
         'tbreak ndsMenuShellCssCommit','commands','silent',
         'printf "DIAG_WALK_CSS_COMMIT=%u,%u,%u,%u,%u,%u,%u,%u\n", sMenuTics, gNdsMenuShellWalkSteps, gNdsMenuShellCssStartCount, gNdsMenuShellCssStartDeniedCount, gNdsPlayersVSPreviewAcquireLoadCount, gNdsPlayersVSPreviewAcquireLoadFinishCount, gNdsPlayersVSPreviewAcquireRetryCount, gNdsPlayersVSPreviewDwellCommitCount',
-        'printf "DIAG_CSS_CACHE_COMMIT=load:%u finish:%u fail:%u anim:%08x reserve:%u used:%u warmfail:%u\n", gNdsPlayersVSPreviewAcquireLoadCount, gNdsPlayersVSPreviewAcquireLoadFinishCount, gNdsPlayersVSPreviewAcquireFailCount, gNdsPlayersVSPreviewResidentAnimFailMask, gNdsR2AnimCacheArenaReservedBytes, gNdsR2AnimCacheArenaUsedBytes, gNdsR2AnimWarmFailed',
+        'printf "DIAG_CSS_CACHE_COMMIT=load:%u finish:%u fail:%u anim:%llx reserve:%u used:%u warmfail:%u\n", gNdsPlayersVSPreviewAcquireLoadCount, gNdsPlayersVSPreviewAcquireLoadFinishCount, gNdsPlayersVSPreviewAcquireFailCount, gNdsPlayersVSPreviewResidentAnimFailMask, gNdsR2AnimCacheArenaReservedBytes, gNdsR2AnimCacheArenaUsedBytes, gNdsR2AnimWarmFailed',
         'printf "DIAG_CSS_BGM_COMMIT=playing:%u track:%u\n", gNdsAudioBgmPlaying, gNdsAudioBgmTrackID',
         'continue','end',
         'tbreak ndsMenuShellSssCommit','commands','silent',

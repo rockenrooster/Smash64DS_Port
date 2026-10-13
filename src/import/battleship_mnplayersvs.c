@@ -240,23 +240,23 @@ static sb32 ndsCssPreviewKindValid(s32 kind)
 }
 
 /* One bit per preview kind for the failure/ready masks: the twelve, then
- * the contents, then Metal Mario. */
+ * the contents, then Metal Mario (33 with P6's twenty contents). */
 #if NDS_P4
-_Static_assert((nFTKindPlayableEnd + NDS_P4_CONTENT_LIMIT) < 32,
-               "preview kind bits must fit a u32");
+_Static_assert((nFTKindPlayableEnd + NDS_P4_CONTENT_LIMIT) < 64,
+               "preview kind bits must fit a u64");
 #endif
-static u32 ndsCssPreviewKindBit(s32 kind)
+static u64 ndsCssPreviewKindBit(s32 kind)
 {
     u32 content = ndsCssPreviewKindContent(kind);
 
 #if NDS_P4
     if (ndsCssPreviewKindIsMMario(kind) != FALSE)
     {
-        return 1u << (nFTKindPlayableEnd + NDS_P4_CONTENT_LIMIT);
+        return (u64)1u << (nFTKindPlayableEnd + NDS_P4_CONTENT_LIMIT);
     }
 #endif
-    return (content != 0u) ? (1u << (nFTKindPlayableEnd + content)) :
-                             (1u << kind);
+    return (content != 0u) ? ((u64)1u << (nFTKindPlayableEnd + content)) :
+                             ((u64)1u << kind);
 }
 
 static s32 ndsCssPreviewKindParent(s32 kind)
@@ -713,18 +713,18 @@ static sb32 sNdsPlayersVSPreviewEntrySyncPending;
  * Latch it per fighter so a stationary/selected request remains an explicit
  * failed preview without turning into a NitroFS reload loop. */
 static u32 sNdsPlayersVSPreviewPermanentFailGeneration;
-static u32 sNdsPlayersVSPreviewPermanentFailMask;
+static u64 sNdsPlayersVSPreviewPermanentFailMask;
 /* P2-3r12: the per-kind "this rebuild needs no storage" mask is GONE, not
  * merely unused. It licensed skipping the BGM fence, and the claim was false
  * -- a prepared kind still ran +1,054 payload reads on rebuild. The masks
  * below stay: they are telemetry for what the warming pass achieved, which is
  * a real effect, and probes read them. */
-volatile u32 gNdsPlayersVSPreviewResidentPrepareMask;
-volatile u32 gNdsPlayersVSPreviewResidentReadyMask;
-volatile u32 gNdsPlayersVSPreviewResidentMainFailMask;
-volatile u32 gNdsPlayersVSPreviewResidentSubmotionFailMask;
-volatile u32 gNdsPlayersVSPreviewResidentAnimFailMask;
-volatile u32 gNdsPlayersVSPreviewResidentOwnerFailMask;
+volatile u64 gNdsPlayersVSPreviewResidentPrepareMask;
+volatile u64 gNdsPlayersVSPreviewResidentReadyMask;
+volatile u64 gNdsPlayersVSPreviewResidentMainFailMask;
+volatile u64 gNdsPlayersVSPreviewResidentSubmotionFailMask;
+volatile u64 gNdsPlayersVSPreviewResidentAnimFailMask;
+volatile u64 gNdsPlayersVSPreviewResidentOwnerFailMask;
 /* Boot-lifetime witness: a compact preview is admitted only when its already-
  * loaded FPC1 body leaves enough of the fixed resident block for both native
  * owner images. Do not clear this at CSS re-entry; LOOPDONE must see a failure
@@ -949,7 +949,7 @@ static sb32 ndsMNPlayersVSPreviewPrepareResidentStage(
 {
     FTData *data;
     const void *initial_anim_file;
-    u32 kind_bit;
+    u64 kind_bit;
 
     if (ndsCssPreviewKindValid(fkind) == FALSE)
     {

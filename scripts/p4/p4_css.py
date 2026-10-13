@@ -13,7 +13,9 @@ does not carry (Metal Mario, Roy, Lanky, Meta Knight, MRGAW, Snake), each
 next to its series where the grid allows. Mad Piano, on Remix's bonus
 bookend there, has a cell of his own: an eleventh column, its two spare
 cells the NONE plate (owner, 2026-10-11), the grid centred where Remix's
-ten columns sit. Metal Mario's cell selects the source MMario kind itself
+ten columns sit. The P6 fighters take those two spare cells (Palutena row 1,
+Ike row 2); an authored content shows its base's portrait, name, logo and
+call until its own (docs/P6/P6_PLAN.md A9). Metal Mario's cell selects the source MMario kind itself
 (KINDS): Remix's portrait, name and logo, and the source's call.
 
 Writes, under --out (a build directory: everything here is derived from the
@@ -59,8 +61,8 @@ SCREEN = {"header_dy": -18, "card_pitch": 80, "card_x": 2, "card_y": 133,
 # cells; each P4 replacement names the Remix cell it takes.
 LAYOUT = (
     "MRGAW", "PIANO", "METAL", "LUIGI", "MARIO", "DONKEY", "LINK", "SAMUS", "CAPTAIN", "GND", "SONIC",
-    "NONE", "DEDEDE", "METAKNIGHT", "NESS", "YOSHI", "KIRBY", "FOX", "PIKACHU", "JIGGLYPUFF", "FALCO", "SHEIK",
-    "NONE", "SNAKE", "CRASH", "WARIO", "PEACH", "BOWSER", "WOLF", "LANKY", "ROY", "MARTH", "BANJO",
+    "PALUTENA", "DEDEDE", "METAKNIGHT", "NESS", "YOSHI", "KIRBY", "FOX", "PIKACHU", "JIGGLYPUFF", "FALCO", "SHEIK",
+    "IKE", "SNAKE", "CRASH", "WARIO", "PEACH", "BOWSER", "WOLF", "LANKY", "ROY", "MARTH", "BANJO",
 )
 # Original cast: Remix constant name -> fkind.
 ORIGINALS = {"MARIO": 0, "FOX": 1, "DONKEY": 2, "SAMUS": 3, "LUIGI": 4, "LINK": 5,
@@ -72,13 +74,17 @@ ORIGINALS = {"MARIO": 0, "FOX": 1, "DONKEY": 2, "SAMUS": 3, "LUIGI": 4, "LINK": 
 # series_logo_offset_table, fgm_table): Metal Mario's name, the Mario Bros.
 # logo, the announcer's "Metal Mario" (FGM.asm names.METAL_MARIO).
 KINDS = {"METAL": {"fkind": 13, "name": "METAL", "logo": "MARIO_BROS", "fgm": "METAL_MARIO"}}
-# P4 selections: Remix constant name -> DS content id, from the content
-# registry (scripts/p4/contents.json); a selection without a compiled content
-# draws its portrait locked.
+# P4 selections: token (Remix constant name, or an authored content's NAME)
+# -> DS content id, from the content registry (scripts/p4/contents.json); a
+# selection without a compiled content draws its portrait locked. ART names
+# the Remix selection whose portrait, name, logo and call a token shows: its
+# own, or an authored content's base's.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import p4_contents  # noqa: E402
 
-CONTENT = {row["remix"]: row["id"] for row in p4_contents.load_registry()}
+_REGISTRY = p4_contents.load_registry()
+CONTENT = {p4_contents.token(row): row["id"] for row in _REGISTRY}
+ART = {p4_contents.token(row): p4_contents.source_row(row, _REGISTRY)["remix"] for row in _REGISTRY}
 
 
 class CssError(SystemExit):
@@ -206,7 +212,8 @@ def main() -> int:
     ap.add_argument("--staging", type=Path, required=True)
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--contents", default="",
-                    help="Remix names of the contents this build compiles, comma or space separated (e.g. FALCO)")
+                    help="tokens of the contents this build compiles (Remix names, or an authored "
+                         "content's NAME), comma or space separated (e.g. FALCO IKE)")
     args = ap.parse_args()
 
     src = args.staging / "src"
@@ -243,7 +250,8 @@ def main() -> int:
             cell.update(fkind=None, content=content, locked=token not in built)
         # A selection this build does not compile shows Remix's NONE plate (the
         # question mark).
-        key = token if token in portraits else None
+        key = ART.get(token, token)
+        key = key if key in portraits else None
         if key is None or cell["locked"]:
             key = "NONE"
         cell["portrait"] = portraits[key]
@@ -252,9 +260,9 @@ def main() -> int:
 
     fighters = []
     for token in sorted(built, key=lambda t: CONTENT[t]):
-        row = rows.get(token)
+        row = rows.get(ART[token])
         if row is None:
-            raise CssError(f"{token}: no add_to_css row")
+            raise CssError(f"{token}: no add_to_css row for {ART[token]}")
         if row["fgm"].startswith("0x"):
             fgm = int(row["fgm"], 16)
         else:

@@ -678,6 +678,13 @@ extern u8 gNdsP4PlayerContent[GMCOMMON_PLAYERS_MAX];
 #if NDS_P4
 
 const NDSP4Fighter *ndsP4Fighter(u32 content);
+/* The content whose code a content runs (nds_p4_contents.h NDS_P4_CODE_ROWS):
+ * itself, or a P6 authored content's base until the authored content has a
+ * source file of its own. A base's code tests its own id through this
+ * (NDS_P4_CODE_ID_<NAME>), so the authored content takes the base's paths;
+ * the base itself need not be enabled, so the result is for compares, not
+ * for ndsP4Fighter. */
+u32 ndsP4CodeContent(u32 content);
 static inline u32 ndsP4Content(const FTStruct *fp)
 {
     return (fp != NULL) ? fp->nds_p4_content : 0u;
@@ -872,7 +879,7 @@ void ndsP4KirbyClearSilhouette(FTStruct *fp);
 void ndsP4KirbySetMotionScript(FTStruct *fp, const u32 *script);
 /* nds_p4_metaknight.c: a Kirby spinning in Meta Knight's tornado with his
  * power (its turn, a turn in 65536, in *angle). */
-sb32 ndsP4MetaknightKirbyTornado(const FTStruct *fp, u16 *angle);
+sb32 ndsP4MetaknightKirbyTornado(const FTStruct *fp);
 /* The power the catching player's last catch took (0: none). */
 u32 ndsP4KirbyPendingPower(const FTStruct *fp);
 /* A content's power row, NULL when it has none. */

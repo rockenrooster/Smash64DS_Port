@@ -49,7 +49,7 @@ $(NDS_P4_GEN)/.nitrofs-kirby-staged: $(NDS_P4_KIRBY_GEN)/nds_p4_kirby.generated.
 	@touch $@
 $(OUTPUT).nds: $(NITROFS_DIR)/p4/kirby.tab $(NDS_P4_GEN)/.nitrofs-kirby-staged
 nds_p4_data.o: $(NDS_P4_KIRBY_GEN)/nds_p4_kirby.generated.c
-nds_p4.o $(foreach name,$(NDS_P4_ENABLED),nds_p4_$(name).o): \
+nds_p4.o $(foreach name,$(NDS_P4_CODE_NAMES),nds_p4_$(name).o): \
 	$(NDS_P4_KIRBY_GEN)/nds_p4_kirby.generated.h
 
 # S8: Remix's Kirby hats (scripts/p4/p4_kirby_hats.py): native copy-hat images

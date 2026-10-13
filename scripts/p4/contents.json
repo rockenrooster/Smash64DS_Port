@@ -1,5 +1,5 @@
 {
- "comment": "P4 content registry (docs/P4/New_Characters.md, S1). One row per Smash Remix fighter the port can build. `id` is the content's stable identity: it is saved in match configs, sent in the P3 descriptor and sits in the character-select id NDS_P4_SEL_BASE + id, so it never changes once assigned. `name` names the build directories, the NitroFS files and the Makefile flag NDS_P4_<NAME>; `remix` is the donor's define_character name; `title` builds the C symbol names (gNdsP4<Title>...) and names the content's sound folder in the staging's FGM.asm unless `sounds` gives it (EXTRA's appended characters). Everything else (parent, files, attributes) comes from the export.",
+ "comment": "P4 content registry (docs/P4/New_Characters.md, S1). One row per Smash Remix fighter the port can build. `id` is the content's stable identity: it is saved in match configs, sent in the P3 descriptor and sits in the character-select id NDS_P4_SEL_BASE + id, so it never changes once assigned. `name` names the build directories, the NitroFS files and the Makefile flag NDS_P4_<NAME>; `remix` is the donor's define_character name; `title` builds the C symbol names (gNdsP4<Title>...) and names the content's sound folder in the staging's FGM.asm unless `sounds` gives it (EXTRA's appended characters). Everything else (parent, files, attributes) comes from the export. An authored content (P6, docs/P6/P6_PLAN.md) names `base` instead of `remix`: the Remix content whose export scripts/p6/p6_author.py starts from. Its sounds, select-screen art and Kirby power are the base's until its spec replaces them, and, until src/port/nds_p4_<name>.c exists, it runs the base's code as the base does.",
  "contents": [
   {"id": 1, "name": "falco", "remix": "FALCO", "title": "Falco"},
   {"id": 2, "name": "ganondorf", "remix": "GND", "title": "Ganondorf"},
@@ -18,6 +18,8 @@
   {"id": 15, "name": "piano", "remix": "PIANO", "title": "Piano"},
   {"id": 16, "name": "metaknight", "remix": "METAKNIGHT", "title": "Metaknight", "sounds": "../build/extra_characters/MetaKnight"},
   {"id": 17, "name": "mrgaw", "remix": "MRGAW", "title": "Mrgaw", "sounds": "../build/extra_characters/MRGAW"},
-  {"id": 18, "name": "snake", "remix": "SNAKE", "title": "Snake", "sounds": "../build/extra_characters/Snake"}
+  {"id": 18, "name": "snake", "remix": "SNAKE", "title": "Snake", "sounds": "../build/extra_characters/Snake"},
+  {"id": 19, "name": "ike", "base": "roy", "title": "Ike"},
+  {"id": 20, "name": "palutena", "base": "peach", "title": "Palutena"}
  ]
 }

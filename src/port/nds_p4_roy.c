@@ -3,7 +3,9 @@
  * JSsixtyfour/smashremix 5e04fe7, src/Roy/RoySpecial.asm and Roy.asm, read
  * as assembled (scripts/p4/mipsdis.py). Roy runs Captain's status code
  * (fp->fkind == nFTKindCaptain) and Marth's up and neutral specials
- * (nds_p4_marth.c), which this file compiles when Marth is not enabled.
+ * (nds_p4_marth.c), which this file compiles when Marth's code is not
+ * compiled. NDS_P4_CODE_ROY: Roy, or a P6 content on Roy's code (Ike's
+ * null clone), is enabled.
  *
  * Player-struct offsets in the donor map to BattleShip fields as:
  *   0x17C/0x180/0x184 temp variables 1-3   motion_vars.flags.flag0/1/2
@@ -14,11 +16,11 @@
  */
 #include <nds/nds_p4.h>
 
-#if NDS_P4_ROY && !NDS_P4_MARTH
+#if NDS_P4_CODE_ROY && !NDS_P4_CODE_MARTH
 #include "nds_p4_marth.c"
 #endif
 
-#if NDS_P4_ROY
+#if NDS_P4_CODE_ROY
 
 /* Roy.Action. */
 #define ROY_STATUS_DSPG_BEGIN 0xEF
@@ -209,4 +211,4 @@ void ndsP4RoyDSPAirMap(GObj *fighter_gobj)
     mpCommonProcFighterLanding(fighter_gobj, ndsP4RoyDSPAirToGround);
 }
 
-#endif /* NDS_P4_ROY */
+#endif /* NDS_P4_CODE_ROY */

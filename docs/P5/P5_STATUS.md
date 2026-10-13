@@ -132,6 +132,17 @@ triangles, 366 of 1,120 loaded dense vertices kept.
 
 ## Risks and open items
 
+- **Heavy P4 rosters run out of heap (2026-10-13).** Banjo, Crash, Lanky and
+  Bowser with items at the highest rate on Congo Jungle halt at battle start
+  (`ifCommonTimerMakeDigits`) on play-p5a. The seed ROM without P5
+  (play-1013s) ran the same row to its end at a low-water of 7,324 B, already
+  under the 25,600 floor with the overlay loan full (439,992 of 441,152 B);
+  play-1012k had 28,412. Since then the P4 entry and lean memos added about
+  9 KB of .bss and 6 KB of code, and P5 about 15 KB resident (P5 also took
+  7.2 KB of stage workspace back out of .bss). The FGM cue arena cannot give
+  any back: a match with two heavy contents pins 183,652 B of cues against
+  its 163,840 and already drops three. This is the memory pass's, before the
+  P95 pass.
 - The shared stage generator's source manifest has drifted from the
   renderer (`ndsRendererCommitNativeStageSegment` reads three lab-hash
   counters it does not classify; `ndsRendererAdapterMvpMod1F` no longer

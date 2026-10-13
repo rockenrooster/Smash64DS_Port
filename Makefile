@@ -1061,14 +1061,22 @@ NDS_P2_NFOX ?= 0
 # admitted; NDS_P4 follows any enabled content. The staging and export roots are
 # local, ignored build inputs prepared once by scripts/p4/stage_remix.py and
 # scripts/p4/remix_export.py.
-# The contents come from scripts/p4/contents.json, one name:NAME:REMIX:id row
-# each; NDS_P4_<NAME>=1 compiles one (NDS_P4_FALCO=1, ...).
+# The contents come from scripts/p4/contents.json, one name:NAME:TOKEN:id:BASE
+# row each (TOKEN the Remix name, or NAME for a P6 authored content, whose
+# BASE is the Remix content it starts from; - for the others);
+# NDS_P4_<NAME>=1 compiles one (NDS_P4_FALCO=1, ...).
 NDS_P4_REGISTRY := $(shell python "$(PROJECT_ROOT)/scripts/p4/p4_contents.py" --list)
 nds_p4_field = $(word $(2),$(subst :, ,$(1)))
 $(foreach row,$(NDS_P4_REGISTRY),$(eval NDS_P4_$(call nds_p4_field,$(row),2) ?= 0))
 NDS_P4_ENABLED_ROWS := $(foreach row,$(NDS_P4_REGISTRY),$(if $(filter 1,$(NDS_P4_$(call nds_p4_field,$(row),2))),$(row)))
 NDS_P4_ENABLED := $(foreach row,$(NDS_P4_ENABLED_ROWS),$(call nds_p4_field,$(row),1))
 override NDS_P4 := $(if $(NDS_P4_ENABLED),1,0)
+# The source files the enabled contents run (src/port/nds_p4_<name>.c): each
+# content's own, or, for an authored content without one, its base's
+# (scripts/p4/p4_contents.py code_row), each once.
+nds_p4_code_name = $(if $(wildcard $(PROJECT_ROOT)/src/port/nds_p4_$(1).c),$(1),$(if $(filter-out -,$(2)),$(if $(wildcard $(PROJECT_ROOT)/src/port/nds_p4_$(2).c),$(2))))
+nds_p4_uniq = $(if $(1),$(firstword $(1)) $(call nds_p4_uniq,$(filter-out $(firstword $(1)),$(1))))
+NDS_P4_CODE_NAMES := $(call nds_p4_uniq,$(foreach row,$(NDS_P4_ENABLED_ROWS),$(call nds_p4_code_name,$(call nds_p4_field,$(row),1),$(call nds_p4_field,$(row),5))))
 # S12: the EXTRA staging (scripts/p4/stage_extra.py) is Remix at the same pin
 # plus EXTRA's appended Meta Knight, MRGAW and Snake; the fifteen main-tree
 # contents generate the same data from it as from Remix's own, but for the
@@ -4919,11 +4927,11 @@ ifeq ($(NDS_P2_MENU_SHELL),1)
 CFILES += nds_menu_shell.c
 endif
 CFILES += nds_p4.c
-# Every content's generated data in one TU, plus each content's own native
-# code (src/port/nds_p4_<name>.c) where it has any.
+# Every content's generated data in one TU, plus the native code the contents
+# run (src/port/nds_p4_<name>.c, NDS_P4_CODE_NAMES).
 ifeq ($(NDS_P4),1)
 CFILES += nds_p4_data.c \
-	$(foreach name,$(NDS_P4_ENABLED),$(if $(wildcard $(PROJECT_ROOT)/src/port/nds_p4_$(name).c),nds_p4_$(name).c))
+	$(foreach name,$(NDS_P4_CODE_NAMES),nds_p4_$(name).c)
 # The jab and rapid-jab files' copy a content runs (Remix's jab tables).
 CFILES += battleship_ftcommon_jab_p4.c
 endif
@@ -6067,8 +6075,8 @@ export NDS_P4_GEN := $(PROJECT_ROOT)/$(BUILD)/p4
 # P5 generated data (scripts/p5/p5_rules.mk).
 export NDS_P5_GEN := $(PROJECT_ROOT)/$(BUILD)/p5
 export NDS_NITROFS_P4_FILES :=
-# The 30-cell character select (scripts/p4/p4_css.py) names the compiled
-# contents by their Remix names.
+# The character select (scripts/p4/p4_css.py) names the compiled contents by
+# their tokens (Remix names, or an authored content's NAME).
 export NDS_P4_CSS_DIR := $(NDS_P4_GEN)/css
 export NDS_P4_CONTENTS := $(foreach row,$(NDS_P4_ENABLED_ROWS),$(call nds_p4_field,$(row),3))
 # Per content: its generated data, its O2R files and native images in NitroFS,
@@ -7967,17 +7975,30 @@ $(NDS_BATTLESHIP_IMPORT_OVERLAY_STAMP): \
 		-OutputRoot "$(NDS_BATTLESHIP_IMPORT_OVERLAY)"
 
 # P4 contents (docs/P4/P4_STATUS.md). The export and the generated data derive
-# from the user's ROM, so they live under the ignored build tree. One rule set
-# per enabled content -- $(1) name, $(2) NAME, $(3) Remix name, $(4) id,
-# $(5) preview kind (NDS_P4_SEL_BASE + id) -- from scripts/p4/contents.json:
-# the export, the generated data, the character-select preview pack and the
-# two native images (NitroFS payloads like every P2 owner's). The O2R
-# containers are staged into NitroFS for all contents at once (below).
-define NDS_P4_CONTENT_RULES
+# from the user's ROM, so they live under the ignored build tree. Each
+# registry content's export -- $(1) name, $(3) Remix name, $(5) base -- for
+# every row, so an authored content's base exports when only the authored one
+# is enabled: remix_export.py's for a Remix fighter; for a P6 authored content,
+# scripts/p6/p6_author.py's from its base's export and its spec.
+define NDS_P4_EXPORT_RULE
+ifeq ($(5),-)
 $$(NDS_P4_EXPORT)/$(1)/resolved.json: $$(NDS_P4_STAGING)/ssb64asm.z64 \
 		$$(PROJECT_ROOT)/scripts/p4/remix_export.py $$(PROJECT_ROOT)/scripts/p4/remix_rom.py
 	python "$$(PROJECT_ROOT)/scripts/p4/remix_export.py" --staging "$$(NDS_P4_STAGING)" \
 		--fighter $(3) --out "$$(NDS_P4_EXPORT)/$(1)" --no-o2r
+else
+$$(NDS_P4_EXPORT)/$(1)/resolved.json: $$(NDS_P4_EXPORT)/$(5)/resolved.json \
+		$$(PROJECT_ROOT)/scripts/p6/p6_author.py $$(wildcard $$(PROJECT_ROOT)/scripts/p6/$(1)/spec.json)
+	python "$$(PROJECT_ROOT)/scripts/p6/p6_author.py" --base-export "$$(NDS_P4_EXPORT)/$(5)" \
+		--content $(1) --out "$$(NDS_P4_EXPORT)/$(1)"
+endif
+endef
+# One rule set per enabled content -- $(1) name, $(2) NAME, $(3) token, $(4)
+# id, $(5) preview kind (NDS_P4_SEL_BASE + id) -- from scripts/p4/contents.json:
+# the generated data, the character-select preview pack and the two native
+# images (NitroFS payloads like every P2 owner's). The O2R containers are
+# staged into NitroFS for all contents at once (below).
+define NDS_P4_CONTENT_RULES
 $$(NDS_P4_GEN)/$(1)/nds_p4_$(1).generated.c: $$(NDS_P4_EXPORT)/$(1)/resolved.json \
 		$$(PROJECT_ROOT)/scripts/p4/generate_p4_fighter.py $$(PROJECT_ROOT)/scripts/p4/remix_rom.py \
 		$$(PROJECT_ROOT)/scripts/p4/ft_layout.py $$(PROJECT_ROOT)/scripts/menus/generate_battle_hud.py \
@@ -8045,6 +8066,7 @@ NDS_P4_LAB_FALLBACK_STAMP := $(NDS_P4_GEN)/.lab-fallback
 $(NDS_P4_LAB_FALLBACK_STAMP): FORCE
 	@mkdir -p $(dir $@); v='$(NDS_P4_LAB_FALLBACK)'; \
 	[ "$$(cat $@ 2>/dev/null)" = "$$v" ] || echo "$$v" > $@
+$(foreach row,$(NDS_P4_REGISTRY),$(eval $(call NDS_P4_EXPORT_RULE,$(call nds_p4_field,$(row),1),$(call nds_p4_field,$(row),2),$(call nds_p4_field,$(row),3),$(call nds_p4_field,$(row),4),$(call nds_p4_field,$(row),5))))
 $(foreach row,$(NDS_P4_ENABLED_ROWS),$(eval $(call NDS_P4_CONTENT_RULES,$(call nds_p4_field,$(row),1),$(call nds_p4_field,$(row),2),$(call nds_p4_field,$(row),3),$(call nds_p4_field,$(row),4),$(shell echo $$((64 + $(call nds_p4_field,$(row),4)))))))
 # Every content's O2R containers, staged into NitroFS beside the vanilla reloc
 # files in one recipe: contents share files (Marth's and Roy's), and two

@@ -130,23 +130,47 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
  * src/port/nds_p4_<name>.c when it has any: ndsP4<Title>OnStatus (donor init
  * hooks after the status callbacks), gNdsP4<Title>Computer (CPU routines)
  * and gNdsP4<Title>Overrides (the parent's routines it replaces). All
- * are weak, so a content without them gets NULL. */
+ * are weak, so a content without them gets NULL. A content takes the hooks
+ * of the content whose code it runs (NDS_P4_CODE_ROWS): its own, or a P6
+ * authored content's base's until it has a source file of its own. */
 #define NDS_P4_DECLARE_ROW(id_, T_, N_, n_, parent_, model_, main_) \
-    NDS_P4_DECLARE(T_) \
-    void ndsP4##T_##OnStatus(GObj *fighter_gobj, s32 status_id) \
-        __attribute__((weak)); \
-    extern const NDSP4Computer gNdsP4##T_##Computer __attribute__((weak)); \
-    extern const NDSP4Overrides gNdsP4##T_##Overrides __attribute__((weak));
+    NDS_P4_DECLARE(T_)
 NDS_P4_CONTENT_ROWS(NDS_P4_DECLARE_ROW)
 #undef NDS_P4_DECLARE_ROW
+#define NDS_P4_DECLARE_HOOKS(id_, T_, code_id_, C_) \
+    void ndsP4##C_##OnStatus(GObj *fighter_gobj, s32 status_id) \
+        __attribute__((weak)); \
+    extern const NDSP4Computer gNdsP4##C_##Computer __attribute__((weak)); \
+    extern const NDSP4Overrides gNdsP4##C_##Overrides __attribute__((weak));
+NDS_P4_CODE_ROWS(NDS_P4_DECLARE_HOOKS)
+#undef NDS_P4_DECLARE_HOOKS
+#define NDS_P4_HOOK_(C_, prefix_, what_) prefix_##C_##what_
+#define NDS_P4_HOOK(C_, prefix_, what_) NDS_P4_HOOK_(C_, prefix_, what_)
 
 static const NDSP4Fighter sNdsP4Fighters[NDS_P4_CONTENT_LIMIT] = {
 #define NDS_P4_FIGHTER_ROW(id_, T_, N_, n_, parent_, model_, main_) \
-    [(id_)] = NDS_P4_ROW(T_, #T_, parent_, ndsP4##T_##OnStatus, \
-                         &gNdsP4##T_##Computer, &gNdsP4##T_##Overrides),
+    [(id_)] = NDS_P4_ROW(T_, #T_, parent_, \
+                         NDS_P4_HOOK(NDS_P4_CODE_TITLE_##T_, ndsP4, OnStatus), \
+                         &NDS_P4_HOOK(NDS_P4_CODE_TITLE_##T_, gNdsP4, Computer), \
+                         &NDS_P4_HOOK(NDS_P4_CODE_TITLE_##T_, gNdsP4, Overrides)),
     NDS_P4_CONTENT_ROWS(NDS_P4_FIGHTER_ROW)
 #undef NDS_P4_FIGHTER_ROW
 };
+#undef NDS_P4_HOOK
+#undef NDS_P4_HOOK_
+
+/* The content whose code each content runs (0: its own). */
+static const u8 sNdsP4CodeContent[NDS_P4_CONTENT_LIMIT] = {
+#define NDS_P4_CODE_CONTENT_ROW(id_, T_, code_id_, C_) [(id_)] = (code_id_),
+    NDS_P4_CODE_ROWS(NDS_P4_CODE_CONTENT_ROW)
+#undef NDS_P4_CODE_CONTENT_ROW
+};
+
+u32 ndsP4CodeContent(u32 content)
+{
+    return ((content < NDS_P4_CONTENT_LIMIT) && (sNdsP4CodeContent[content] != 0u)) ?
+        (u32)sNdsP4CodeContent[content] : content;
+}
 
 /* Menu-motion scripts are absolute pointers in the source (opening statuses
  * take motion_desc->offset as the script itself); the generator emits them as

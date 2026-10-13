@@ -97,14 +97,16 @@ CUSTOM_POWERS = {
     "metaknight": {
         # Mach Tornado, his whole neutral special (owner BUGS.md 2026-10-12):
         # his start, loop and ends with his loop's hitboxes and his tornado
-        # around Kirby (src/port/nds_p4_metaknight.c), on Kirby's neutral-air
-        # pose, then his special landing and fall.
+        # around Kirby (src/port/nds_p4_metaknight.c): the start on Kirby's
+        # neutral-air pose, the loop on his fall pose turned by the spin (the
+        # neutral air ended on a pose with one foot out, BUGS.md 2026-10-13),
+        # the ends on his special landing and fall poses.
         "statuses": (
             ("METAKNIGHT_NSP_START", "nFTCommonMotionAttackAirN", "nFTMotionAttackIDSpecialNCopyPurin",
              "nFTStatusAttackIDSpecialNCopyPurin", 1, 0,
              ("ndsP4MetaknightKirbyNSPStartUpdate", "NULL", "ftPhysicsApplyAirVelDrift",
               "mpCommonCheckFighterCeilHeavyCliff")),
-            ("METAKNIGHT_NSP_LOOP", "nFTCommonMotionAttackAirN", "nFTMotionAttackIDSpecialNCopyPurin",
+            ("METAKNIGHT_NSP_LOOP", "nFTCommonMotionFall", "nFTMotionAttackIDSpecialNCopyPurin",
              "nFTStatusAttackIDSpecialNCopyPurin", 1, 0,
              ("ndsP4MetaknightKirbyNSPLoopUpdate", "NULL", "ndsP4MetaknightKirbyNSPLoopPhysics",
               "ndsP4MetaknightNSPLoopCollision")),
@@ -275,15 +277,19 @@ def main() -> int:
     rom = R.Rom(args.staging / "ssb64asm.z64")
     sym, by_addr = R.load_symbols(args.staging / "logfile.log")
     decomp_names = R.load_decomp_symbols(G.DECOMP_SYMBOLS)
-    registry = {row["name"]: row for row in
-                json.loads((HERE / "contents.json").read_text(encoding="utf-8"))["contents"]}
-    contents = [c for c in args.contents.split() if c in POWER_PREFIX]
+    import p4_contents  # noqa: E402
+
+    registry = {row["name"]: row for row in p4_contents.load_registry()}
+    # An authored content (P6) holds its base's power (A11 gives Ike his
+    # tint and hat): the base's statuses, once for both, under its own row.
+    power_key = {c: p4_contents.table_key(c) for c in args.contents.split()}
+    contents = [c for c in args.contents.split() if power_key[c] in POWER_PREFIX]
     # A content without a power must be one its source will not let Kirby
     # copy (the port's catch gives Kirby's own id for it: ndsP4KirbyCatch).
     # EXTRA's define_character passes bool_inhale_copy (argument 13) from the
     # config's kirby_hat, FALSE unless set; a TRUE one needs its power ported.
     for c in args.contents.split():
-        if c in POWER_PREFIX or c in CUSTOM_POWERS:
+        if power_key[c] in POWER_PREFIX or power_key[c] in CUSTOM_POWERS:
             continue
         export = json.loads((args.export_root / c / "resolved.json").read_text(encoding="utf-8"))
         if export["define_character_args"][13] != "OS.FALSE":
@@ -298,10 +304,10 @@ def main() -> int:
     for s in resolved["statuses"]:
         if not s.get("remix_new"):
             continue
-        for c in contents:
-            if s["name"].startswith(POWER_PREFIX[c] + "_"):
+        for k in dict.fromkeys(power_key[c] for c in contents):
+            if s["name"].startswith(POWER_PREFIX[k] + "_"):
                 selected.append(s)
-                owner[s["status_id"]] = c
+                owner[s["status_id"]] = k
     status_map = {s["status_id"]: STATUS_FIRST + i for i, s in enumerate(selected)}
     motion_ids = sorted({s["motion_id"] for s in selected if s["motion_id"] >= 0})
     for m in motion_ids:
@@ -500,7 +506,7 @@ def main() -> int:
         # (p4_kirby_hats.py); a source hat id from the deferred source image.
         shown = [hat_id]
         for s in selected:
-            if owner[s["status_id"]] != c:
+            if owner[s["status_id"]] != power_key[c]:
                 continue
             for part in sorted(script_hats(s)):
                 base = hat_base_of(part)
@@ -539,7 +545,7 @@ def main() -> int:
             else:
                 raise KirbyError(f"{c}: Kirby's neutral special {value:#010x} ({nm}) has no DS port")
         clone_rows = []
-        for base, clone in swaps.get(registry[c]["remix"], ()):
+        for base, clone in swaps.get(registry[power_key[c]]["remix"], ()):
             if clone not in status_map:
                 raise KirbyError(f"{c}: clone swap {base:#x} -> {clone:#x} is not a power status")
             if parent_id == MARIO_KIND:
@@ -547,34 +553,38 @@ def main() -> int:
             clone_rows.append((base, status_map[clone]))
         powers.append({"content": c, "id": registry[c]["id"], "hat": hat_id, "hat_base": hat_base,
                        "hat_mask": hat_mask, "hats": remix_hats,
-                       "hat_texture_file": (HAT_TEXTURE_FILE_BASE + registry[c]["id"]
+                       "hat_texture_file": (HAT_TEXTURE_FILE_BASE + registry[power_key[c]]["id"]
                                             if remix_hats else 0),
                        "starters": starters, "clones": clone_rows})
     # The custom powers, after Remix's: their statuses follow the selected
     # ones; their motions are Kirby's own vanilla rows (C names).
-    custom = [c for c in args.contents.split() if c in CUSTOM_POWERS]
+    custom = [c for c in args.contents.split() if power_key[c] in CUSTOM_POWERS]
+    custom_done: set[str] = set()
     for c in custom:
         names = []
-        for name, motion, attack, stat_attack, ga, projectile, procs in CUSTOM_POWERS[c]["statuses"]:
+        for name, motion, attack, stat_attack, ga, projectile, procs in CUSTOM_POWERS[power_key[c]]["statuses"]:
+            if power_key[c] in custom_done:
+                break
             status = STATUS_FIRST + len(specials)
             names.append(name)
-            specials.append({"status": status, "remix": None, "name": name, "content": c,
+            specials.append({"status": status, "remix": None, "name": name, "content": power_key[c],
                              "motion_id": motion, "attack_id": attack, "unused": 0,
                              "is_smash_attack": 0, "ga": ga, "is_projectile": projectile,
                              "stat_attack_id": stat_attack, "procs": list(procs)})
+        custom_done.add(power_key[c])
         starters = []
-        for proc in CUSTOM_POWERS[c]["starters"]:
+        for proc in CUSTOM_POWERS[power_key[c]]["starters"]:
             proto.add(proc)
             starters.append("ndsP4Proc_" + proc)
         hat_file = 0
-        if CUSTOM_POWERS[c].get("hat") is not None:
+        if CUSTOM_POWERS[power_key[c]].get("hat") is not None:
             import p4_contents  # noqa: E402
             import p4_kirby_custom_hats  # noqa: E402
 
-            hat_file = CUSTOM_HAT_FILE_BASE + registry[c]["id"]
-            lists = [("kirby_hat", KIRBY_HAT_JOINT, CUSTOM_POWERS[c]["hat"])]
-            if CUSTOM_POWERS[c].get("tornado") is not None:
-                lists.append(("kirby_tornado", KIRBY_TORNADO_JOINT, CUSTOM_POWERS[c]["tornado"]))
+            hat_file = CUSTOM_HAT_FILE_BASE + registry[power_key[c]]["id"]
+            lists = [("kirby_hat", KIRBY_HAT_JOINT, CUSTOM_POWERS[power_key[c]]["hat"])]
+            if CUSTOM_POWERS[power_key[c]].get("tornado") is not None:
+                lists.append(("kirby_tornado", KIRBY_TORNADO_JOINT, CUSTOM_POWERS[power_key[c]]["tornado"]))
             blob, list_offsets = p4_kirby_custom_hats.build_lists(
                 rom, p4_contents.export_facts(args.export_root, c), [s for _, _, s in lists],
                 hat_file)
@@ -635,7 +645,7 @@ def main() -> int:
         f"#define NDS_P4_KIRBY_SCRIPT_FILE {SCRIPT_FILE_ID:#x}",
     ]
     for c in custom:
-        if CUSTOM_POWERS[c].get("silhouette"):
+        if CUSTOM_POWERS[power_key[c]].get("silhouette"):
             header.append(f"#define NDS_P4_KIRBY_SILHOUETTE_CONTENT {registry[c]['id']}u"
                           f" /* {c}: Kirby drawn black */")
     for r in specials:

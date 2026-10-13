@@ -572,7 +572,13 @@ def main() -> int:
 
     built = []  # (hat, base, {detail: (context, program)})
     texture_bytes = {}
+    done_files: set[int] = set()
     for power in powers:
+        # An authored content's power (P6) shares its base's hats and their
+        # texture file (p4_kirby.py): built once.
+        if power["hat_texture_file"] in done_files:
+            continue
+        done_files.add(power["hat_texture_file"])
         sources = [HatSource(rom, h, rows[h]) for h in power["hats"]]
         tex_blob, tex_where = texture_file(sources)
         # A content whose hats take all their textures from the source hat's

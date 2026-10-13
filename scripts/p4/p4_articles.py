@@ -390,7 +390,14 @@ def texid_images(res: census.O2RResource, table: int, frames: int | None = None,
             "palettes": palettes}
 
 
-def resolve(content: str, title: str, o2r: Path, descriptor: dict) -> list[dict]:
+def resolve(content: str, title: str, o2r: Path, descriptor: dict,
+            export_root: Path | None = None) -> list[dict]:
+    """The content's article roots. An authored content (P6) has its base's
+    articles while its export holds the base's files (p4_contents.table_key),
+    in the storage the base's code reads (p4_contents.special_storage)."""
+    import p4_contents  # noqa: E402
+
+    key = p4_contents.table_key(content)
     file_ids = list(descriptor["file_ids"])
     resources: dict[int, census.O2RResource] = {}
 
@@ -402,8 +409,10 @@ def resolve(content: str, title: str, o2r: Path, descriptor: dict) -> list[dict]
     # Only the special files its articles name are the content's own
     # storage (generate_p4_fighter.py OWN_SPECIAL_FILES); a root elsewhere is
     # admitted through the pointer that names it.
-    own = {article["special"] for article in ARTICLES.get(content, ()) if "special" in article}
-    storage = {file_ids[FILE_SLOTS[n]]: f"gNdsP4{title}Special{n}" for n in sorted(own)}
+    own = {article["special"] for article in ARTICLES.get(key, ()) if "special" in article}
+    storage = {file_ids[FILE_SLOTS[n]]: (f"gNdsP4{title}Special{n}" if export_root is None else
+                                         p4_contents.special_storage(export_root, content, n))
+               for n in sorted(own)}
     roots = []
 
     def add(article: dict, res: census.O2RResource, offset: int, texid: dict | None,
@@ -427,7 +436,7 @@ def resolve(content: str, title: str, o2r: Path, descriptor: dict) -> list[dict]
                       "material": bool(article.get("material")),
                       "via_base": via_base, "via_bias": via_bias})
 
-    for article in ARTICLES.get(content, ()):
+    for article in ARTICLES.get(key, ()):
         if "modelpart_joint" in article:
             main = res_of(file_ids[0])
             dl = modelpart_list(main, descriptor["o_attributes"],
@@ -547,7 +556,8 @@ def main() -> int:
         for row in json.loads(manifest.read_text(encoding="utf-8")).get("subset_files", ()):
             file_ids[FILE_SLOTS[row["slot"]]] = row["file_id"]
         descriptor["file_ids"] = file_ids
-    roots = resolve(args.content, titles[args.content], args.o2r.resolve(), descriptor)
+    roots = resolve(args.content, titles[args.content], args.o2r.resolve(), descriptor,
+                    args.export.resolve().parent)
     # S8: the weapon Kirby holds with this content's power (p4_kirby.py's
     # articles_<content>.json beside the Kirby files): a sidecar root of this
     # content, its file copied beside the content's own.

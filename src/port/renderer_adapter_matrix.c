@@ -7182,38 +7182,6 @@ static sb32 ndsRendererAdapterBuildKirbyHatJointMatrices(
     return (camera_projection_valid != FALSE) ? TRUE : FALSE;
 }
 
-#if NDS_P4_METAKNIGHT
-/* Meta Knight's tornado around a Kirby spinning with his power (the custom
- * hat file's second list): Kirby's root joint's matrices turned about y by
- * the spin (`angle`, a turn in 65536). */
-static sb32 ndsRendererAdapterBuildKirbyTornadoMatrices(
-    FTStruct *fp, u16 angle, CObj *cobj, NDSRendererMatrix20p12 *projection,
-    NDSRendererMatrix20p12 *modelview)
-{
-    NDSRendererMatrix20p12 turn;
-    NDSRendererMatrix20p12 root;
-    s32 s;
-    s32 c;
-
-    if (ndsRendererAdapterBuildKirbyHatJointMatrices(fp, 0u, cobj, projection,
-                                                    &root) == FALSE)
-    {
-        return FALSE;
-    }
-    /* gSYSinTable's 1.0 is 0x8000: 20.12 is that >> 3. */
-    s = ndsRendererAdapterFighterSinFromIndex((s32)(angle >> 4)) >> 3;
-    c = ndsRendererAdapterFighterCosFromIndex((s32)(angle >> 4)) >> 3;
-    memset(&turn, 0, sizeof(turn));
-    turn.m[0][0] = c;
-    turn.m[0][2] = -s;
-    turn.m[1][1] = 1 << 12;
-    turn.m[2][0] = s;
-    turn.m[2][2] = c;
-    turn.m[3][3] = 1 << 12;
-    ndsRendererMtxMulAffine20p12(&turn, &root, modelview);
-    return TRUE;
-}
-#endif
 #endif
 #endif
 #endif

@@ -26,7 +26,7 @@
  */
 #include <nds/nds_p4.h>
 
-#if NDS_P4_MARTH || NDS_P4_ROY
+#if NDS_P4_CODE_MARTH || NDS_P4_CODE_ROY
 
 #include <ef/effect.h>
 #if NDS_P2_KIRBY
@@ -77,8 +77,8 @@ static f32 ndsP4MarthBitsToF32(u32 bits)
 
 static sb32 ndsP4MarthIsRoy(FTStruct *fp)
 {
-#if NDS_P4_ROY
-    return (ndsP4Content(fp) == NDS_P4_CONTENT_ROY) ? TRUE : FALSE;
+#if NDS_P4_CODE_ROY
+    return (ndsP4CodeContent(ndsP4Content(fp)) == NDS_P4_CODE_ID_ROY) ? TRUE : FALSE;
 #else
     (void)fp;
     return FALSE;
@@ -258,13 +258,13 @@ static s32 ndsP4MarthNSPKirbyStatus(FTStruct *fp, s32 status_id)
 #if NDS_P2_KIRBY
     if (fp->fkind == nFTKindKirby)
     {
-#if NDS_P4_ROY
-        if (fp->nds_p4_kirby_copy == NDS_P4_CONTENT_ROY)
+#if NDS_P4_CODE_ROY
+        if (ndsP4CodeContent(fp->nds_p4_kirby_copy) == NDS_P4_CODE_ID_ROY)
         {
             return NDS_P4_KIRBY_STATUS_ROY_NSPG_1 + (status_id - MARTH_STATUS_NSPG_1);
         }
 #endif
-#if NDS_P4_MARTH
+#if NDS_P4_CODE_MARTH
         return NDS_P4_KIRBY_STATUS_MARTH_NSPG_1 + (status_id - MARTH_STATUS_NSPG_1);
 #endif
     }
@@ -482,9 +482,9 @@ static void ndsP4MarthEntryCaseOn(FTStruct *fp, EFDesc *wave, EFDesc *beam)
     ndsP4EntryMakeEffect(beam, &fp->entry_pos);
 }
 
-#if NDS_P4_ROY
+#if NDS_P4_CODE_ROY
 /* Roy's, here beside the helper: nds_p4_roy.c compiles this file only
- * when Marth is not enabled. */
+ * when Marth's code is not compiled. */
 extern void *gNdsP4RoySpecial3;
 static EFDesc sNdsP4RoyEntryWaveDesc = NDS_P4_MARTH_ENTRY_WAVE(&gNdsP4RoySpecial3);
 static EFDesc sNdsP4RoyEntryBeamDesc = NDS_P4_MARTH_ENTRY_BEAM(&gNdsP4RoySpecial3);
@@ -500,7 +500,7 @@ const NDSP4Overrides gNdsP4RoyOverrides = {
 };
 #endif
 
-#if NDS_P4_MARTH
+#if NDS_P4_CODE_MARTH
 /* ---- Down special (Counter), Marth's alone ---- */
 
 static s32 *ndsP4MarthDSPHit(FTStruct *fp)
@@ -639,6 +639,6 @@ const NDSP4Overrides gNdsP4MarthOverrides = {
     .update_damage = ndsP4MarthUpdateDamage,
     .kirby_on_landing = ndsP4MarthKirbyOnLanding,
 };
-#endif /* NDS_P4_MARTH */
+#endif /* NDS_P4_CODE_MARTH */
 
-#endif /* NDS_P4_MARTH || NDS_P4_ROY */
+#endif /* NDS_P4_CODE_MARTH || NDS_P4_CODE_ROY */

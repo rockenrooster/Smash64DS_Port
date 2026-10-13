@@ -1016,19 +1016,41 @@ def parent_storage(parent: str) -> dict:
     }
 
 
-def fighter_spec(remix: str, parent: str) -> dict:
+def fighter_spec(resolved: dict) -> dict:
     """A content's DS facts: its registry row (scripts/p4/contents.json) and its
-    parent's storage."""
+    parent's storage. A Remix export names its donor (`fighter`); an authored
+    export (P6, scripts/p6/p6_author.py) names its content and its base.
+
+    `key` names the content's rows in this script's per-content tables
+    (special files, entry ports, item subsets, event32 shares, owner
+    deviations, articles): an authored content's export starts as its base's,
+    so it takes the base's rows until its spec changes what they describe.
+    `synth_index` places its synthesized files: an authored content whose
+    motions are its base's shares the base's (A7 gives one with its own
+    motions files of its own), so the two contents' main files, which name
+    the synthesized motion file, stay one file."""
     import p4_contents  # noqa: E402
 
-    for row in p4_contents.load_registry():
-        if row["remix"] == remix:
-            spec = {"name": row["name"], "title": row["title"], "kind_index": row["id"] - 1}
-            spec.update(parent_storage(parent))
-            if spec["particle"] is None:
-                raise GenError(f"parent {parent} has no particle bank global")
-            return spec
-    raise GenError(f"{remix}: not in scripts/p4/contents.json")
+    parent = resolved["parent"]
+    registry = p4_contents.load_registry()
+    if "content" in resolved:
+        row = p4_contents.row_of(resolved["content"], registry)
+        if row.get("base") != resolved.get("base"):
+            raise GenError(f"{row['name']}: export of base {resolved.get('base')!r}, "
+                           f"registry base {row.get('base')!r}")
+    else:
+        rows = [r for r in registry if r.get("remix") == resolved["fighter"]]
+        if not rows:
+            raise GenError(f"{resolved['fighter']}: not in scripts/p4/contents.json")
+        row = rows[0]
+    source = p4_contents.source_row(row, registry)
+    spec = {"name": row["name"], "title": row["title"], "kind_index": row["id"] - 1,
+            "key": source["name"], "base": row.get("base"), "base_title": source["title"],
+            "synth_index": source["id"] - 1}
+    spec.update(parent_storage(parent))
+    if spec["particle"] is None:
+        raise GenError(f"parent {parent} has no particle bank global")
+    return spec
 
 THROW_DATA_BYTES = 28  # FTThrowHitDesc, the larger of the two SetThrow targets
 SPRITE_BYTES = 68      # libultra Sprite (include/PR/sp.h)
@@ -1792,10 +1814,12 @@ def main() -> int:
     resolved = json.loads((args.export / "resolved.json").read_text(encoding="utf-8"))
     events = json.loads((args.export / "events.json").read_text(encoding="utf-8"))
     fighter = resolved["fighter"]
-    spec = fighter_spec(fighter, resolved["parent"])
+    spec = fighter_spec(resolved)
     rom = R.Rom(args.staging / "ssb64asm.z64")
     vanilla = R.Rom(args.staging / "roms" / "ssb.rom")
     name, title = spec["name"], spec["title"]
+    # The per-content tables' rows: the base's for an authored content (P6).
+    key = spec["key"]
     desc = resolved["descriptor"]
     file_ids = list(desc["file_ids"])
     parent_motion = file_ids[1]
@@ -1815,15 +1839,15 @@ def main() -> int:
     # has no file in (no parent code reads it).
     parent_ids = resolved["parent_descriptor"]["file_ids"]
     special_standins = []
-    own_special = OWN_SPECIAL_FILES.get(name, ())
-    unread_special = UNREAD_SPECIAL_FILES.get(name, ())
+    own_special = OWN_SPECIAL_FILES.get(key, ())
+    unread_special = UNREAD_SPECIAL_FILES.get(key, ())
     unread_skip: set[int] = set()
 
     def file_layout(fid: int) -> tuple:
         return (len(rom.file_bytes(fid)),
                 tuple(sorted((off, t[0]) for off, t in rom.reloc_slots(fid).items())))
 
-    subsets = SUBSET_FILES.get(name, ())
+    subsets = SUBSET_FILES.get(key, ())
     subset_slots = {s["slot"] for s in subsets}
     for i in range(5, 9):
         if (i - 4) in subset_slots:
@@ -1893,7 +1917,7 @@ def main() -> int:
         if int(s["fallback"], 16) != 0:
             open_special_mask |= 1 << (int(s["slot"][len("special"):]) - 1)
 
-    synth_id = SYNTH_FILE_BASE + spec["kind_index"] * 0x10
+    synth_id = SYNTH_FILE_BASE + spec["synth_index"] * 0x10
     # Item subsets after the motion (+0) and the Results glyph (+1); outside
     # every closure, so they load whole like a stand-in.
     subset_rows = []
@@ -1926,22 +1950,22 @@ def main() -> int:
         # The main file's references into the parent motion file resolve to the
         # same offsets in the synthesized copy, so the parent file never loads.
         blob = retarget_o2r_externs(blob, {parent_motion: synth_id})
-        if fid == file_ids[0] and name in OWNER_ATTRIBUTE_SCALES:
-            blob = scale_o2r_attributes(blob, desc["o_attributes"], OWNER_ATTRIBUTE_SCALES[name])
+        if fid == file_ids[0] and key in OWNER_ATTRIBUTE_SCALES:
+            blob = scale_o2r_attributes(blob, desc["o_attributes"], OWNER_ATTRIBUTE_SCALES[key])
             deviations.append({"file_id": fid, "class": "owner",
-                               "why": f"FTAttributes scaled: {OWNER_ATTRIBUTE_SCALES[name]}"})
-        ia_patches = tuple((off, size) for index, off, size in OWNER_IA_INTENSITY_MAX.get(name, ())
+                               "why": f"FTAttributes scaled: {OWNER_ATTRIBUTE_SCALES[key]}"})
+        ia_patches = tuple((off, size) for index, off, size in OWNER_IA_INTENSITY_MAX.get(key, ())
                            if file_ids[index] == fid)
         if ia_patches:
             blob = max_o2r_ia_intensity(blob, rom, fid, ia_patches)
             deviations.append({"file_id": fid, "class": "render",
                                "why": "IA8 intensity raised to 15 at " +
                                       ", ".join(f"{o:#x}" for o, _ in ia_patches)})
-        shifts = tuple((off, n, d) for index, off, n, d in OWNER_VERTEX_SHIFT.get(name, ())
+        shifts = tuple((off, n, d) for index, off, n, d in OWNER_VERTEX_SHIFT.get(key, ())
                        if file_ids[index] == fid)
-        tints = tuple((off, n, c) for index, off, n, c in OWNER_VERTEX_TINT.get(name, ())
+        tints = tuple((off, n, c) for index, off, n, c in OWNER_VERTEX_TINT.get(key, ())
                       if file_ids[index] == fid)
-        insets = tuple(row[1:] for row in OWNER_TRIANGLE_INSET.get(name, ())
+        insets = tuple(row[1:] for row in OWNER_TRIANGLE_INSET.get(key, ())
                        if file_ids[row[0]] == fid)
         if shifts or tints or insets:
             blob = patch_o2r_vertices(blob, rom, fid, shifts, tints, insets)
@@ -2129,7 +2153,7 @@ def main() -> int:
     entry_lab_fallback = 0
     if script == ENTRY_SCRIPT_NONE:
         entry_effect = "NDS_P4_ENTRY_NONE"
-    elif entry_port(args.staging, ENTRY_PORTS.get(name)) == script:
+    elif entry_port(args.staging, ENTRY_PORTS.get(key)) == script:
         # A case ported on the content's own files (NDSP4Overrides.entry_case
         # in src/port/nds_p4_<name>.c): another kind's, or the parent's own
         # where Remix gives it the content's file (Ganondorf).
@@ -2321,7 +2345,7 @@ def main() -> int:
     event32_matanims = (matanim_commands(rom, file_ids[0], desc["o_attributes"], (1,)),
                         matanim_commands(rom, file_ids[0], desc["o_attributes"]))
     # Its fighters' measured shared entries, never under its material scripts.
-    shared = EVENT32_SHARED.get(name)
+    shared = EVENT32_SHARED.get(key)
     if shared is None:
         if not args.lab_fallback:
             raise GenError(f"{name}: no EVENT32_SHARED measurement (scratchpad e32census.ps1)")
@@ -2344,9 +2368,17 @@ def main() -> int:
     ident = f"NdsP4{title}"
     store = dict(spec["shared_storage"])
     own_store = set()
+    import p4_contents  # noqa: E402
+
+    # An own special file loads into g<Ident>Special<n>, which the content's
+    # ported code reads. An authored content holding its base's file there
+    # shares the base's storage (p4_contents.special_storage), which the
+    # base's code it runs reads; a tentative definition in each content's
+    # data, one object in the shared data TU.
     for n in tuple(own_special) + tuple(sorted(subset_slots)):
-        store[f"p_file_special{n}"] = f"g{ident}Special{n}"
-        own_store.add(f"g{ident}Special{n}")
+        v = p4_contents.special_storage(args.export.parent, name, n)
+        store[f"p_file_special{n}"] = v
+        own_store.add(v)
     lines = [
         f"/* Generated by scripts/p4/generate_p4_fighter.py for {fighter} from the staged",
         " * Remix donor build. Derived from the user's ROM: build output only, never tracked. */",
@@ -2496,14 +2528,18 @@ def main() -> int:
               f"const u8 g{ident}OpenSpecialMask = {open_special_mask:#04x};", "",
               "/* Remix code-segment data the ported routines read (RAM_DATA). */"]
     ram_sym = R.load_symbols(args.staging / "logfile.log")[0]
-    for data_name, symbol, size, *kind in RAM_DATA.get(name, ()):
+    # Named by the content whose ported routines read them: an authored
+    # content's base's, once in the data TU however many contents carry it.
+    for data_name, symbol, size, *kind in RAM_DATA.get(key, ()):
         if symbol not in ram_sym or size % 4:
             raise GenError(f"RAM data {symbol}: no such symbol or not word-sized")
         words = struct.unpack(f">{size // 4}I", rom.read_ram(ram_sym[symbol], size))
         if kind == ["track"]:
             words = event32_native_track(words, symbol)
-        lines.append(f"const u32 g{ident}{data_name}[{len(words)}] = {{ "
-                     + ", ".join(f"{w:#010x}u" for w in words) + " };")
+        sym_name = f"gNdsP4{spec['base_title']}{data_name}"
+        lines += [f"#ifndef NDS_P4_RAM_DATA_{sym_name}", f"#define NDS_P4_RAM_DATA_{sym_name}",
+                  f"const u32 {sym_name}[{len(words)}] = {{ "
+                  + ", ".join(f"{w:#010x}u" for w in words) + " };", "#endif"]
     lines += ["",
               "/* Kind-table cases (S3, nds_p4.h NDSP4KindCases): grounded_script's",
               " * landing case and pipe_turn. */",
@@ -2536,7 +2572,7 @@ def main() -> int:
               "    { " + ", ".join(f"{t:#x}" for t in guard["table_offsets"]) + " },",
               "    { " + ", ".join(f"{t:#x}" for t in guard["main_fixup_slots"]) + " },",
               f"    {guard['alias_fkind']}, {guard['base_count']}, {guard['scratch_words']} }};", ""]
-    baked = baked_refs(rom, name, file_ids, own | {synth_id})
+    baked = baked_refs(rom, key, file_ids, own | {synth_id})
     lines += ["/* Entry-article texture pointers its native entry packets carry",
               " * (NDSP4BakedRef): resolved NULL, the dependency never loaded for them. */",
               f"const NDSP4BakedRef g{ident}BakedRefs[{max(len(baked), 1)}] = {{"]

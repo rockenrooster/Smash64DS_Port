@@ -28,6 +28,7 @@ sys.path.insert(0, str(REPO / "scripts" / "fighters"))
 import _paths  # noqa: E402,F401
 import generate_nds_native_owners as O  # noqa: E402
 import ft_layout  # noqa: E402
+import p4_contents  # noqa: E402
 
 PINS_DIR = HERE / "owners"
 # Joints a content's own code (not its scripts) hides at every status change:
@@ -380,7 +381,7 @@ def donor_superset(name: str, o2r_dir: Path, main_id: int, model_id: int,
             parts[index + 4] = 0 if lists[index + 4] is not None else -1
         for i in _hidden_part_ids(word):
             joint, parent, _partindex, kind = hidden_rows[i]
-            if joint < 4 or joint in STATIC_JOINTS.get(name, ()):
+            if joint < 4 or joint in STATIC_JOINTS.get(p4_contents.table_key(name), ()):
                 continue
             if joint - 4 in selected or not (4 <= joint < 4 + count):
                 raise SystemExit(f"{name} {label}: hidden part {i} is joint {joint}")
@@ -416,8 +417,9 @@ def donor_superset(name: str, o2r_dir: Path, main_id: int, model_id: int,
         # parallel script's writes land on the motion script's).
         for events in (tuple(threads) or ((),)) + (
                 (tuple(e for t in threads for e in t),) if len(threads) > 1 else ()):
-            for hide in (frozenset(),) + ((CODE_HIDDEN_JOINTS[name],)
-                                          if name in CODE_HIDDEN_JOINTS else ()):
+            code = p4_contents.table_key(name)
+            for hide in (frozenset(),) + ((CODE_HIDDEN_JOINTS[code],)
+                                          if code in CODE_HIDDEN_JOINTS else ()):
                 per = {d: simulate(label, word, events, d, hide) for d in ("high", "low")}
                 for high, low in dict.fromkeys(zip(per["high"], per["low"])):
                     if high or low:
@@ -559,7 +561,7 @@ def register(name: str, o2r_dir: Path, attr_offset: int, pins: dict | None) -> d
     O.OWNER_JOINT_TREES[name] = tuple(tables["trees"][0])
     O.OWNER_JOINT_TREES_LOW[name] = tuple(tables["trees"][1])
     setup = list(tables["setup"])
-    for joint in STATIC_JOINTS.get(name, ()):
+    for joint in STATIC_JOINTS.get(p4_contents.table_key(name), ()):
         setup[(joint - 4) // 32] |= 1 << (31 - ((joint - 4) & 31))
     O.OWNER_SETUP_PARTS[name] = tuple(setup)
     O.P4_CANONICAL_DISPLAY_OVERRIDES.pop(name, None)

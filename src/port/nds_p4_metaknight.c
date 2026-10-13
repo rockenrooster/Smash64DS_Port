@@ -778,10 +778,17 @@ static const u16 sNdsP4MetaknightStatusReplace[] = {
     0xFFFF
 };
 
+#if NDS_P2_KIRBY
+static void ndsP4MetaknightKirbyOnLanding(FTStruct *fp);
+#endif
+
 const NDSP4Overrides gNdsP4MetaknightOverrides = {
     .on_init = ndsP4MetaknightOnInit,
     .shouldered_interrupt = ndsP4MetaknightShoulderedInterrupt,
     .status_replace = sNdsP4MetaknightStatusReplace,
+#if NDS_P2_KIRBY
+    .kirby_on_landing = ndsP4MetaknightKirbyOnLanding,
+#endif
     /* main.asm static_part: "withheld part 5 - left hand item", joint 12
      * (his light-item joint, a hidden part his item motions install). */
     .static_parts = { 0x00800000u, 0u },
@@ -804,16 +811,20 @@ const NDSP4Overrides gNdsP4MetaknightOverrides = {
  *    dust under him every 8 tics on the floor, ended at 60 with half the x
  *    speed; moveset_tornadoLoop's two hitboxes (its words verbatim: joint 0,
  *    which Kirby has too; the second from frame 1550), his gravity, drift
- *    and wall bounce; his tornado (his model's joint 34 part 1) drawn around
- *    Kirby, turning with the spin (renderer_adapter_fighter.c
- *    ndsFighterDrawKirbyTornadoSidecar);
- *  - the ends: his 54 tics, the grounded one with moveset_tornadoEnd's two
- *    effects, the aerial one into a special fall (drift 0.6), a landing
- *    taking the grounded one for the rest. */
+ *    and wall bounce; Kirby spinning on his root joint, his tornado (his
+ *    model's joint 34 part 1) drawn around him on that joint
+ *    (renderer_adapter_fighter.c ndsFighterDrawKirbyTornadoSidecar);
+ *  - the ends: the grounded one with moveset_tornadoEnd's two effects, a
+ *    landing taking the grounded one for the rest. Meta Knight's run 54
+ *    tics, the aerial one into a special fall; Kirby's run the effects'
+ *    span and end in a plain fall, the tornado spent until he lands, as
+ *    Brawl's Mach Tornado (owner BUGS.md 2026-10-13: he held a pose with
+ *    one foot out instead of spinning, and "there seems to be a delay when
+ *    the tornado is done and kirby can be controlled again"). */
 #define MK_KIRBY_START_TICS 11
 #define MK_KIRBY_LOOP_FRAMES 358.0F
 #define MK_KIRBY_SECOND_HIT 1550.0F
-#define MK_KIRBY_END_TICS 54
+#define MK_KIRBY_END_TICS 18
 #define MK_KIRBY_END_EFFECT_TICS 10
 
 typedef struct NDSP4MetaknightKirby
@@ -825,6 +836,7 @@ typedef struct NDSP4MetaknightKirby
     s32 end_tics;     /* the end's tics so far */
     u16 angle;        /* the tornado's turn */
     u8 second;        /* the second hitbox is out */
+    u8 air_used;      /* the tornado ran since he last landed */
 } NDSP4MetaknightKirby;
 
 static NDSP4MetaknightKirby sNdsP4MetaknightKirby[GMCOMMON_PLAYERS_MAX];
@@ -884,15 +896,27 @@ void ndsP4MetaknightKirbyNSPGroundInitial(GObj *fighter_gobj)
     mpCommonSetFighterAir(fp);
     ndsP4MetaknightKirbyNSPStart(fighter_gobj);
     fp->physics.vel_air.y = 30.0F;
+    ndsP4MetaknightKirbyState(fp)->air_used = TRUE;
 }
 
+/* Once until he lands: a spent tornado leaves B doing nothing. */
 void ndsP4MetaknightKirbyNSPAirInitial(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
     f32 y = fp->physics.vel_air.y * 0.3984375F;
 
+    if (ndsP4MetaknightKirbyState(fp)->air_used != FALSE)
+    {
+        return;
+    }
     ndsP4MetaknightKirbyNSPStart(fighter_gobj);
     fp->physics.vel_air.y = (y < 0.0F) ? 0.0F : (y + 30.0F);
+    ndsP4MetaknightKirbyState(fp)->air_used = TRUE;
+}
+
+static void ndsP4MetaknightKirbyOnLanding(FTStruct *fp)
+{
+    ndsP4MetaknightKirbyState(fp)->air_used = FALSE;
 }
 
 void ndsP4MetaknightKirbyNSPStartUpdate(GObj *fighter_gobj)
@@ -961,8 +985,11 @@ void ndsP4MetaknightKirbyNSPLoopUpdate(GObj *fighter_gobj)
         pos.z = 0.0F;
         efManagerDustHeavyDoubleMakeEffect(&pos, -fp->lr, 1.0F);
     }
-    /* A twelfth of a turn a tic at the full spin. */
+    /* A twelfth of a turn a tic at the full spin: his facing plus the turn
+     * on the root joint (a status change resets it to his facing). */
     mk->angle = (u16)(mk->angle + (s32)(mk->speed * (5461.0F / 130.0F)));
+    fp->joints[nFTPartsJointTopN]->rotate.vec.f.y =
+        ((f32)fp->lr * F_CLC_DTOR32(90.0F)) + ((f32)mk->angle * (6.2831855F / 65536.0F));
     if (mk->speed <= 60.0F)
     {
         fp->physics.vel_air.x = fp->physics.vel_air.x / 2.0F;
@@ -1006,7 +1033,7 @@ void ndsP4MetaknightKirbyNSPEndAirUpdate(GObj *fighter_gobj)
 
     if (++mk->end_tics >= MK_KIRBY_END_TICS)
     {
-        ftCommonFallSpecialSetStatus(fighter_gobj, 0.6F, TRUE, TRUE, TRUE, 1.0F, FALSE);
+        ftCommonFallSetStatus(fighter_gobj);
     }
 }
 
@@ -1029,15 +1056,10 @@ void ndsP4MetaknightKirbyNSPEndAirMap(GObj *fighter_gobj)
     mpCommonProcFighterLanding(fighter_gobj, ndsP4MetaknightKirbyNSPEndAirToGround);
 }
 
-sb32 ndsP4MetaknightKirbyTornado(const FTStruct *fp, u16 *angle)
+sb32 ndsP4MetaknightKirbyTornado(const FTStruct *fp)
 {
-    if ((fp->fkind != nFTKindKirby) ||
-        (fp->status_id != NDS_P4_KIRBY_STATUS_METAKNIGHT_NSP_LOOP))
-    {
-        return FALSE;
-    }
-    *angle = ndsP4MetaknightKirbyState(fp)->angle;
-    return TRUE;
+    return ((fp->fkind == nFTKindKirby) &&
+            (fp->status_id == NDS_P4_KIRBY_STATUS_METAKNIGHT_NSP_LOOP)) ? TRUE : FALSE;
 }
 #endif /* NDS_P2_KIRBY */
 

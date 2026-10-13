@@ -43,6 +43,7 @@ _AREA_DIRS = (
     "2d_vfx",
     "3d_vfx",
     "menus",
+    "p6",
 )
 
 for _rel in _AREA_DIRS:

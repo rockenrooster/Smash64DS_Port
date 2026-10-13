@@ -75,8 +75,14 @@ import p4_contents  # noqa: E402
 # which is its registry title, and its export directory (its registry name).
 # The folder FGM.asm's add_sound rows name: the title, or EXTRA's
 # ../build/extra_characters/<folder> (contents.json `sounds`).
-CONTENT_DIRS = {row["remix"]: row.get("sounds", row["title"]) for row in p4_contents.load_registry()}
-EXPORT_DIRS = {row["remix"]: row["name"] for row in p4_contents.load_registry()}
+# Keyed by token (the Remix name, or an authored content's NAME): an authored
+# content (P6) has its base's sounds until its spec maps its own (A8), so its
+# token names the base's folder, and a build with both packs it once.
+_REGISTRY = p4_contents.load_registry()
+SOURCES = {p4_contents.token(row): p4_contents.source_row(row, _REGISTRY)["remix"]
+           for row in _REGISTRY}
+CONTENT_DIRS = {row["remix"]: row.get("sounds", row["title"]) for row in _REGISTRY if "remix" in row}
+EXPORT_DIRS = {p4_contents.token(row): row["name"] for row in _REGISTRY}
 
 
 def load_module(path: Path, name: str):
@@ -347,6 +353,7 @@ def build(staging: Path, contents: list[str], out_dir: Path) -> dict:
     fgm_asm = (staging / "src" / "FGM.asm").read_text(encoding="utf-8")
     rows = []
     programs = []
+    contents = list(dict.fromkeys(SOURCES[c] for c in contents))
     for content in contents:
         content_rows = add_sound_rows(fgm_asm, CONTENT_DIRS[content])
         if not content_rows:
@@ -549,7 +556,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--staging", type=Path, required=True)
     parser.add_argument("--content", action="append", required=True,
-                        choices=sorted(CONTENT_DIRS))
+                        choices=sorted(SOURCES))
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--export-root", type=Path, required=True,
                         help="remix_export.py output root (<content>/resolved.json)")

@@ -8,14 +8,16 @@ are [characters/ike.md](characters/ike.md) and
 Plan revision 3: Palutena's look goes to the owner as two best-effort
 candidates at the same budget, the 3DS kit rebuilt and hand-tuned (Track K)
 or Peach restyled (Track R), and the pick also sets Ike's (D12, G0);
-kit-derived art stays local (D10); no Smash 4 motions (D11). No P6 code, art
-or build exists yet.
+kit-derived art stays local (D10); no Smash 4 motions (D11). A1 done: Ike
+(19) and Palutena (20) are registry contents built from Roy's and Peach's
+exports (null clones) and play in every ROM; no P6 art exists yet. Next: A2
+and A3 (F1, the kit reader, the fit), then the G0 tracks.
 
 ## Board 1
 
 | Item | State |
 |---|---|
-| A1 registry, build, null clones | planned |
+| A1 registry, build, null clones | done 2026-10-13 ([A1 record](#a1-record)) |
 | A2 model reader and writer (F1) | planned |
 | A3 Blender bridge, kit reader, fit | planned |
 | A3b Track K: the kit rebuilt (F6) | planned |
@@ -36,8 +38,125 @@ or build exists yet.
 | Fighter | Step | State |
 |---|---|---|
 | Palutena | G0 look bake-off (K and R, sheet, pick) | planned |
-| Ike | I0-I6 | planned |
-| Palutena | P0-P8 | planned |
+| Ike | I0 null clone done (A1); I1 approved; I2-I6 | planned |
+| Palutena | P0 null clone done (A1); P1 approved; P2-P8 | planned |
+
+## A1 record
+
+**Plumbing (2026-10-13).** `contents.json` rows `{"id": 19, "name": "ike",
+"base": "roy"}` and `{"id": 20, "name": "palutena", "base": "peach"}`.
+`p4_contents.py` validates them and adds the helpers every script uses:
+`source_row` (the Remix content whose donor data a content starts from),
+`table_key` (the per-content table rows it takes: its base's), `token` (its
+select token, `IKE`/`PALUTENA`), `code_row` (whose code it runs) and
+`special_storage` (the global an own special file loads into). `--list`
+prints `name:NAME:TOKEN:id:BASE`. The Makefile defines every registry row's
+export (so a base exports when only the authored content is enabled): an
+authored one runs `scripts/p6/p6_author.py`, which with no spec writes the
+base export plus `content`, `base` and `authored` digests (F4: the rest is
+byte-equal). The generator, articles, colour animations, native owner,
+Kirby, CSS and audio scripts take the base's rows through these helpers.
+
+- **Code.** Until `src/port/nds_p4_<name>.c` exists, an authored content runs
+  its base's code as the base: `NDS_P4_CODE_<BASE>` compiles the base's file
+  (`NDS_P4_CODE_NAMES` in the Makefile), `NDS_P4_CODE_ROWS` gives it the
+  base's OnStatus, CPU and override hooks, and the base's tests of its own id
+  go through `ndsP4CodeContent` (Roy's Dolphin Slash speeds and Kirby's
+  Roy-power statuses in `nds_p4_marth.c`). Without this the clones could not
+  run their base's specials: Peach's turnip reads `gNdsP4PeachSpecial2` and
+  her held turnip needs her item override.
+- **Storage and files.** An own special file the authored content shares
+  with its base loads into the base's global (Roy's entry wave and beam file
+  into `gNdsP4RoySpecial3`), where the base's code reads it. The authored
+  content also takes the base's synthesized motion file id: the main file
+  names that file, so a per-content id would give the two contents' main
+  files (one id) different bytes. Ike's generated data and all 164 files are
+  byte-identical to Roy's but for names; the 18 Remix contents' generated
+  data is unchanged (Crash's RAM data gains include guards only).
+- **Select screen.** Palutena takes row 1 column 0 and Ike row 2 column 0 (the
+  two spare cells); each shows its base's portrait, name, logo and call until
+  A9. Kirby's copy of either is the base's power (statuses packed once, hat
+  texture file shared), A11 gives them their own.
+- **Limits checked.** The VS select's preview-kind masks were u32 (12 kinds +
+  contents + Metal Mario = 33 bits with twenty contents): now u64. File ids
+  stay u16 keys everywhere (`reloc/p4` runs, reloc caches, NitroFS names),
+  and no table is sized by the file count, so the P6 window (0x1A00-0x1BFF)
+  needs no change. Synthesized ids end at 0x183F (content 20), Kirby's hat
+  files at 0x1924 and custom hat files at 0x1944. Renderer owner slots scale
+  with `NDS_P4_CONTENT_MAX_ID` (Ike 43, Palutena 44). The lab content knob
+  and the P3 descriptor carry a content as a byte.
+
+**Proof (2026-10-13).** All twenty contents built into the playable ROM
+(play-p6a1, 113.5 MB), the menu-walk ROM (walk-p6a1) and the lab ROM
+(build-lab-p6a1, which with `NDS_FREEZE_DIAGNOSTICS=1` needs two more
+lab-only ITCM evictions, `ndsRendererNativeStageMaterialMask` and
+`ftDisplayLightsDrawReflect`; no ITCM function changed size between the
+18- and 20-content play builds). The play ROM boots to the title with the
+`reloc/p4` index at 2,174 files in 145 runs (cap 192).
+
+- Four-CPU mirrors (lab, Dream Land, 1,800 presented frames each): Ike and
+  Palutena 0 native failures, 0 lean declines, no exception.
+- Kirby against three CPUs of each (lab, Kirby tapping B, 2,400 frames):
+  Kirby took Ike's power (Roy's statuses 0x179 and 0x180, Roy's hat 0x2c)
+  and Palutena's (Peach's 0x176 and 0x177, her crown 0x2b) again after each
+  loss; 0 native failures. One lean camera decline on an Ike fighter in that
+  run (a frame drawn with a camera the lean path does not seed); not seen in
+  the mirrors or the Palutena run. Open: traced with the KO-camera check
+  (BUGS.md, upward KOs).
+- Menu-walk ROM: the select commits Ike (0x53) and Palutena (0x54) with both
+  3D previews ready, the match plays Ike against Palutena (HUD stocks and
+  percentages drawn, 0 native failures) and Results names the winner
+  (Palutena, as "PEACH": names and art are the base's until A9). Stills:
+  `artifacts/p6/review/2026-10-13_a1/w1/` (local). The select's preview
+  failure latch also holds Jigglypuff and Ness on the walk's second pass;
+  the 18-content walk ROM (walk-1012a) does the same, so it predates P6.
+- P3: the descriptor carries each port's content as a byte (19 and 20 pass
+  unchanged); the two-console run is checklist line 13, per fighter.
+
+**Memory.** The two contents cost every scene 16,480 B of heap (heap start
+0x0232FCC0 -> 0x02333D20): renderer tables +6,572 B (native owner roots and
+programs, entry-effect texels of their article roots), generated data
++4,392 B, renderer .bss +1,352 B, the select overlay +2,528 B (UI kit
+surfaces). Every content costs about 8 KB resident; the memory pass must
+budget it (moving per-content renderer tables to per-match NitroFS loads,
+as the match tables already are, is the largest lever).
+
+**Base budgets.** Per joint, triangles and vertex loads (G_VTX), high / low:
+
+| Joint | Roy high | Roy low | Peach high | Peach low |
+|---|---|---|---|---|
+| 1 | 14 / 24 | 13 / 21 | | |
+| 2 | 20 / 62 | 10 / 34 | 34 / 101 | 21 / 75 |
+| 4 | 10 / 20 | 7 / 13 | 30 / 50 | 18 / 35 |
+| 5 | 16 / 7 | 7 / 3 | 18 / 17 | 7 / 5 |
+| 6 | 10 / 22 | 6 / 16 | 14 / 15 | 9 / 11 |
+| 7 | | | 4 / 6 | 3 / 5 |
+| 8 | 6 / 10 | 3 / 7 | 85 / 348 | 61 / 322 |
+| 9 | 101 / 249 | 65 / 273 | 31 / 50 | 24 / 42 |
+| 11 | 10 / 20 | 7 / 13 | 30 / 50 | 18 / 34 |
+| 12 | 16 / 7 | 7 / 3 | 18 / 17 | 7 / 5 |
+| 13 | 10 / 22 | 4 / 16 | 14 / 15 | 9 / 11 |
+| 14 | 38 / 152 | 21 / 128 | | |
+| 16 | 8 / 18 | 4 / 12 | | |
+| 17 | 8 / 18 | 4 / 12 | 4 / 9 | 3 / 8 |
+| 18 | 8 / 12 | 4 / 8 | | |
+| 19 | 6 / 7 | 3 / 5 | 11 / 23 | 7 / 17 |
+| 20 | 6 / 7 | 3 / 5 | | |
+| 22 | 10 / 8 | 6 / 6 | 4 / 9 | 3 / 8 |
+| 23 | 10 / 15 | 7 / 13 | | |
+| 24 | | | 11 / 23 | 7 / 17 |
+| 25 | 12 / 13 | 4 / 10 | 8 / 19 | 4 / 10 |
+| 26 | | | 24 / 34 | 10 / 18 |
+| 27 | 10 / 8 | 6 / 6 | | |
+| 28 | 10 / 15 | 7 / 13 | | |
+| 30 | 12 / 13 | 4 / 10 | | |
+| Tree | 351 / 735 | 202 / 631 | 340 / 786 | 211 / 623 |
+
+Roy's tree is his whole model (the owner pins' 351 / 202 triangles); Peach's
+model parts outside the tree add 31 (371 / 242). The native owner's dense
+vertices: Roy 525 / 382, Peach 581 / 420. Main file (setup heap): Roy
+156,624 B, Peach 140,000 B; clips: Roy 159 (largest main-motion clip
+11,728 B), Peach 149 (12,608 B); shipped files: Roy 164, Peach 156.
 
 ## Art approvals
 

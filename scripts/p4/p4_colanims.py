@@ -30,6 +30,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import remix_rom as R  # noqa: E402
+import p4_contents  # noqa: E402
 
 FIRST_ID = 0x56          # nGMColAnimEnumCount; Remix's first new id
 ROW_BYTES = 8            # {script*, u8 priority, u8 bool_action, u16 pad}
@@ -101,7 +102,8 @@ def used_ids(export_root: Path, contents: list[str]) -> dict[int, set[str]]:
                     cid = (cmd["words"][0] >> 18) & 0xFF
                     if cid >= FIRST_ID:
                         ids.setdefault(cid, set()).add(name)
-        for cid in CODE_COLANIMS.get(name, ()):
+        # An authored content (P6) runs its base's code, and its colours.
+        for cid in CODE_COLANIMS.get(p4_contents.table_key(name), ()):
             ids.setdefault(cid, set()).add(name)
     return ids
 
