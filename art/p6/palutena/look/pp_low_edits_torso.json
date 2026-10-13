@@ -836,6 +836,27 @@
    "v": [
     [
      "a",
+     32
+    ],
+    [
+     "a",
+     33
+    ],
+    [
+     "a",
+     36
+    ]
+   ],
+   "material": {
+    "prim": "f2cfb2ff",
+    "texture": null
+   },
+   "joint": 2
+  },
+  {
+   "v": [
+    [
+     "a",
      4
     ],
     [
@@ -971,6 +992,48 @@
     [
      "a",
      7
+    ]
+   ],
+   "material": {
+    "prim": "f2cfb2ff",
+    "texture": null
+   },
+   "joint": 2
+  },
+  {
+   "v": [
+    [
+     "a",
+     34
+    ],
+    [
+     "a",
+     33
+    ],
+    [
+     "a",
+     35
+    ]
+   ],
+   "material": {
+    "prim": "f2cfb2ff",
+    "texture": null
+   },
+   "joint": 2
+  },
+  {
+   "v": [
+    [
+     "a",
+     32
+    ],
+    [
+     "a",
+     34
+    ],
+    [
+     "a",
+     33
     ]
    ],
    "material": {
@@ -2046,6 +2109,27 @@
    ],
    "material": {
     "prim": "f4f0f4ff",
+    "texture": null
+   },
+   "joint": 2
+  },
+  {
+   "v": [
+    [
+     "a",
+     36
+    ],
+    [
+     "a",
+     37
+    ],
+    [
+     "a",
+     33
+    ]
+   ],
+   "material": {
+    "prim": "f2cfb2ff",
     "texture": null
    },
    "joint": 2
