@@ -2394,8 +2394,17 @@ identical, root for root, to the list beside it.
 Clean sweep ROMs, Dream Land, 1,961 frames, WORK P95 (build-sweep-p95a ->
 build-sweep-p95e): four Crashes 1,403,328 -> 1,284,736, four Banjos 1,282,432
 -> 1,249,792, four Meta Knights 1,272,192 -> 1,272,896 (their blocks copy
-little: under investigation), the cast 1,061,312 -> 1,065,216 (within one
+little: a model-part swap shifts the roots after it, and with them the GX
+palette slots their keys carry), the cast 1,061,312 -> 1,065,216 (within one
 run's spread).
+
+The copies' own costs, trimmed next (the census put them at ~100K cycles an
+over-gate frame): a block's key takes its root's material words from the
+event path's per-root fold (`gNdsFtrLeanRootMaterialKey`) instead of hashing
+the rows again; self-containment is cached per root and the inputs it reads;
+the polygon-ID walk runs only when the IDs move, from a table of the packed
+commands' parameter counts. WORK P95: Crash 1,257,344, Meta Knight 1,264,704,
+Banjo 1,246,080, the cast 1,055,616; lab verify unchanged (0 mismatches).
 
 ## Board 1 status (master plan Revision 3)
 

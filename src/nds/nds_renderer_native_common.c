@@ -13524,21 +13524,85 @@ ndsFtrLeanRootSelfContained(const NDSNativeFighterRuntimeTables *tables,
     return TRUE;
 }
 
-/* The inputs a self-contained root's block is a function of. Not the colour
- * modulate: it moves only the shade words (ndsRendererR2ResolveEpochShade's
- * diffuse/ambient), which a copy re-derives (ndsFtrLeanRederiveSites). */
+/* ndsFtrLeanRootSelfContained's answers, by root and the inputs it reads
+ * beyond the root's own tables (light preamble, preamble light flag, the
+ * plan's writers, the materials' state words): most lists repeat them. */
+#define NDS_FTR_LEAN_SELF_CACHE 64u
+typedef struct NDSFtrLeanSelfCache
+{
+    const NDSNativeRoot *root;
+    u32 sig;
+    u32 self;
+} NDSFtrLeanSelfCache;
+static NDSFtrLeanSelfCache sNdsFtrLeanSelfCache[NDS_FTR_LEAN_SELF_CACHE];
+static u32 sNdsFtrLeanSelfCacheGen;
+
+static u32 NDS_FIGHTER_PACKET_COLD_CODE
+ndsFtrLeanRootSelfContainedCached(const NDSNativeFighterRuntimeTables *tables,
+                                  const NDSNativeRoot *root, u32 light_ok,
+                                  const NDSRendererNativeFighterRoot *input,
+                                  u32 any)
+{
+    NDSFtrLeanSelfCache *c;
+    u32 sig = 2166136261u;
+    u32 k;
+
+    if (sNdsFtrLeanSelfCacheGen != gNdsTaskmanHeapGeneration + 1u)
+    {
+        memset(sNdsFtrLeanSelfCache, 0, sizeof(sNdsFtrLeanSelfCache));
+        sNdsFtrLeanSelfCacheGen = gNdsTaskmanHeapGeneration + 1u;
+    }
+#define NDS_FTR_LEAN_SELF_MIX(v) sig = (sig ^ (u32)(v)) * 16777619u
+    NDS_FTR_LEAN_SELF_MIX((uintptr_t)tables);
+    NDS_FTR_LEAN_SELF_MIX(light_ok | (any << 1) |
+                          (((input->preamble != NULL) &&
+                            ((input->preamble->flags &
+                              NDS_RENDERER_NATIVE_PREAMBLE_LIGHT_VALID) !=
+                             0u)) ? 0x100u : 0u));
+    NDS_FTR_LEAN_SELF_MIX(input->material_count);
+    for (k = 0u; (input->materials != NULL) && (k < input->material_count);
+         k++)
+    {
+        const NDSRendererNativeMaterial *mt = &input->materials[k];
+
+        NDS_FTR_LEAN_SELF_MIX(mt->effects);
+        NDS_FTR_LEAN_SELF_MIX(mt->palette_tile_w0);
+        NDS_FTR_LEAN_SELF_MIX(mt->palette_tile_w1);
+        NDS_FTR_LEAN_SELF_MIX(mt->load_block_w1);
+        NDS_FTR_LEAN_SELF_MIX(mt->render_tile_size_w1);
+        NDS_FTR_LEAN_SELF_MIX(mt->scroll_tile_size_w1);
+        NDS_FTR_LEAN_SELF_MIX(mt->texture_w0);
+    }
+#undef NDS_FTR_LEAN_SELF_MIX
+    c = &sNdsFtrLeanSelfCache[(((u32)(uintptr_t)root >> 2) ^ sig) &
+                              (NDS_FTR_LEAN_SELF_CACHE - 1u)];
+    if ((c->root != root) || (c->sig != sig))
+    {
+        c->root = root;
+        c->sig = sig;
+        c->self = ndsFtrLeanRootSelfContained(tables, root, light_ok, input,
+                                              ndsFtrLeanSelfImageOf(tables),
+                                              any);
+    }
+    return c->self;
+}
+
+/* The inputs a self-contained root's block is a function of: its tables,
+ * root, asset base, light preamble, palette slot, corner format, GX slots,
+ * preamble and material rows -- the rows by the material words they are
+ * built from (`material_key`, the event path's per-root fold). Not the
+ * colour modulate: it moves only the shade words (ndsRendererR2Resolve-
+ * EpochShade's diffuse/ambient), which a copy re-derives
+ * (ndsFtrLeanRederiveSites). */
 static u32 ndsFtrLeanRootKey(const NDSNativeFighterRuntimeTables *tables,
                              const NDSNativeRoot *root,
                              const NDSRendererNativeFighterRoot *input,
                              const void *root_asset_base,
                              const void *light_preambles, u32 light_count,
-                             u32 palette_slot, u32 vtx10)
+                             u32 palette_slot, u32 vtx10, u32 material_key)
 {
     const NDSRendererNativeFighterPreamble *pre = input->preamble;
-    const u32 *w = (const u32 *)(const void *)input->materials;
-    const u32 n = input->material_count;
     u32 h = 2166136261u;
-    u32 i;
 
 #define NDS_FTR_LEAN_ROOT_MIX(v) h = (h ^ (u32)(v)) * 16777619u
     NDS_FTR_LEAN_ROOT_MIX((uintptr_t)tables);
@@ -13563,16 +13627,8 @@ static u32 ndsFtrLeanRootKey(const NDSNativeFighterRuntimeTables *tables,
                               ((u32)(u8)pre->light_dir_z << 16) |
                               ((u32)pre->flags << 24));
     }
-    NDS_FTR_LEAN_ROOT_MIX(n);
-    if (w != NULL)
-    {
-        for (i = 0u;
-             i < (n * (u32)sizeof(NDSRendererNativeMaterial)) / sizeof(u32);
-             i++)
-        {
-            NDS_FTR_LEAN_ROOT_MIX(w[i]);
-        }
-    }
+    NDS_FTR_LEAN_ROOT_MIX(input->material_count);
+    NDS_FTR_LEAN_ROOT_MIX(material_key);
 #undef NDS_FTR_LEAN_ROOT_MIX
     h ^= h >> 15;
     return (h != 0u) ? h : 1u;
@@ -13663,62 +13719,29 @@ static void ndsFtrLeanRederiveSites(NDSFighterPacket *packet, u32 first,
     }
 }
 
-/* The parameter words of a packed GX command; *known FALSE for an opcode
- * a lean list never carries (the block walk below then refuses). */
-static u32 ndsFtrLeanGxParamsKnown(u32 op, u32 *known)
-{
-    *known = TRUE;
-    switch (op)
-    {
-    case 0x00u: /* NOP */
-    case 0x11u: /* MTX_PUSH */
-    case 0x15u: /* MTX_IDENTITY */
-    case 0x41u: /* END_VTXS */
-        return 0u;
-    case 0x10u: /* MTX_MODE */
-    case 0x12u: /* MTX_POP */
-    case 0x13u: /* MTX_STORE */
-    case 0x14u: /* MTX_RESTORE */
-    case 0x20u: /* COLOR */
-    case 0x21u: /* NORMAL */
-    case 0x22u: /* TEXCOORD */
-    case 0x24u: /* VTX_10 */
-    case 0x25u: /* VTX_XY */
-    case 0x26u: /* VTX_XZ */
-    case 0x27u: /* VTX_YZ */
-    case 0x28u: /* VTX_DIFF */
-    case 0x29u: /* POLYGON_ATTR */
-    case 0x2Au: /* TEXIMAGE_PARAM */
-    case 0x2Bu: /* PLTT_BASE */
-    case 0x30u: /* DIF_AMB */
-    case 0x31u: /* SPE_EMI */
-    case 0x32u: /* LIGHT_VECTOR */
-    case 0x33u: /* LIGHT_COLOR */
-    case 0x40u: /* BEGIN_VTXS */
-        return 1u;
-    case 0x23u: /* VTX_16 */
-        return 2u;
-    case 0x1Bu: /* MTX_SCALE */
-    case 0x1Cu: /* MTX_TRANS */
-        return 3u;
-    case 0x1Au: /* MTX_MULT_3x3 */
-        return 9u;
-    case 0x17u: /* MTX_LOAD_4x3 */
-    case 0x19u: /* MTX_MULT_4x3 */
-        return 12u;
-    case 0x16u: /* MTX_LOAD_4x4 */
-    case 0x18u: /* MTX_MULT_4x4 */
-        return 16u;
-    default:
-        *known = FALSE;
-        return 0u;
-    }
-}
+/* The parameter words of each packed GX command a lean list carries (GBATEK
+ * 0x10-0x41); 0xff for an opcode it never carries, which the block walk below
+ * refuses. */
+static const u8 sNdsFtrLeanGxParams[0x42] = {
+    [0x00] = 0u,
+    [0x01 ... 0x0f] = 0xffu,
+    [0x10] = 1u,  [0x11] = 0u,  [0x12] = 1u,  [0x13] = 1u,
+    [0x14] = 1u,  [0x15] = 0u,  [0x16] = 16u, [0x17] = 12u,
+    [0x18] = 16u, [0x19] = 12u, [0x1a] = 9u,  [0x1b] = 3u,
+    [0x1c] = 3u,  [0x1d ... 0x1f] = 0xffu,
+    [0x20] = 1u,  [0x21] = 1u,  [0x22] = 1u,  [0x23] = 2u,
+    [0x24] = 1u,  [0x25] = 1u,  [0x26] = 1u,  [0x27] = 1u,
+    [0x28] = 1u,  [0x29] = 1u,  [0x2a] = 1u,  [0x2b] = 1u,
+    [0x2c ... 0x2f] = 0xffu,
+    [0x30] = 1u,  [0x31] = 1u,  [0x32] = 1u,  [0x33] = 1u,
+    [0x34 ... 0x3f] = 0xffu,
+    [0x40] = 1u,  [0x41] = 0u,
+};
 
 /* Add `delta` (mod 64) to the polygon ID of every POLYGON_ATTR in a block of
  * packed commands (the packer's layout: a header of four opcodes, their
  * parameters, a dummy word after a header whose opcodes take none). FALSE
- * when the block does not parse. With delta 0 it only checks. */
+ * when the block does not parse. */
 static u32 ndsFtrLeanRebasePolyIds(u32 *words, u32 count, u32 delta)
 {
     u32 i = 0u;
@@ -13732,14 +13755,14 @@ static u32 ndsFtrLeanRebasePolyIds(u32 *words, u32 count, u32 delta)
         for (slot = 0u; slot < 4u; slot++)
         {
             const u32 op = (header >> (slot * 8u)) & 0xffu;
-            u32 known;
-            const u32 n = ndsFtrLeanGxParamsKnown(op, &known);
+            const u32 n = (op < sizeof(sNdsFtrLeanGxParams)) ?
+                (u32)sNdsFtrLeanGxParams[op] : 0xffu;
 
-            if (known == FALSE)
+            if (n == 0xffu)
             {
                 return FALSE;
             }
-            if ((op == 0x29u) && (delta != 0u) && ((i + params) < count))
+            if ((op == 0x29u) && ((i + params) < count))
             {
                 u32 *w = &words[i + params];
 
@@ -13835,10 +13858,10 @@ ndsFtrLeanRootCopy(NDSFtrLeanMat *m, u32 root_index,
     delta = (s32)pk->count - (s32)src->start;
     memcpy(&pk->words[pk->count], &donor->words[src->start],
            len * sizeof(u32));
-    if (ndsFtrLeanRebasePolyIds(&pk->words[pk->count], len,
-                                (stats->texture_combine_count -
-                                 (u32)src->combine_base) &
-                                    NDS_RENDERER_POLY_ID_MASK) == FALSE)
+    i = (stats->texture_combine_count - (u32)src->combine_base) &
+        NDS_RENDERER_POLY_ID_MASK;
+    if ((i != 0u) &&
+        (ndsFtrLeanRebasePolyIds(&pk->words[pk->count], len, i) == FALSE))
     {
         return FALSE;
     }
@@ -15212,9 +15235,8 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
               sNdsNativeProductionResolvedLightPreambleCounts[root_index])) ?
                 TRUE : FALSE;
 
-        if (ndsFtrLeanRootSelfContained(
-                t, r, light_ok, &inputs[root_index],
-                ndsFtrLeanSelfImageOf(t), plan_any) == FALSE)
+        if (ndsFtrLeanRootSelfContainedCached(
+                t, r, light_ok, &inputs[root_index], plan_any) == FALSE)
         {
             record = FALSE;
         }
@@ -15298,7 +15320,7 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
                 sNdsNativeFighterActiveTables, root, input, root_asset_base,
                 (const void *)sNdsNativeFighterActiveRootLightPreambles,
                 sNdsNativeFighterActiveRootLightPreambleCount, palette_slot,
-                m.vtx10);
+                m.vtx10, gNdsFtrLeanRootMaterialKey[root_index]);
         }
         if (donor_count != 0u)
         {

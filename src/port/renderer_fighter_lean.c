@@ -1119,6 +1119,8 @@ static void ndsFtrLeanView(NDSFtrLeanPatchView *view,
 _Static_assert((offsetof(MObj, palette_id) + sizeof(f32)) -
                    offsetof(MObj, sub) == 33u * sizeof(u32),
                "an MObj's material words are MObjSub and the three after it");
+u32 gNdsFtrLeanRootMaterialKey[NDS_FTR_LEAN_ROOT_MAX];
+
 static u32 ndsFtrLeanMaterialContent(u32 h, const MObj *mobj)
 {
     const u32 *w = (const u32 *)(const void *)&mobj->sub;
@@ -1555,6 +1557,7 @@ rows:
     for (i = 0u; i < count; i++)
     {
         const MObj *mobj;
+        u32 root_key = 2166136261u;
         u32 n = 0u;
 
         sNdsRendererAdapterNativeOwnerMaterialRows[i] = (u8)
@@ -1572,7 +1575,9 @@ rows:
             hash = ndsRendererAdapterMaterialAnimHash(mobj);
             ident = (ident ^ hash) * 16777619u;
             ident ^= (u32)(uintptr_t)mobj;
-            key[0] = ndsFtrLeanMaterialContent(key[0], mobj);
+            hash = ndsFtrLeanMaterialContent(2166136261u, mobj);
+            key[0] = (key[0] ^ hash) * 16777619u;
+            root_key = (root_key ^ hash) * 16777619u;
             n++;
         }
         if ((n != inst->material_counts[i]) && (reuse_plan != FALSE))
@@ -1587,6 +1592,9 @@ rows:
             return nNDSFtrLeanDeclineMaterial;
         }
         key[0] = (key[0] ^ n) * 16777619u;
+        /* The root's own material words, for its block key (ROOT BLOCKS in
+         * nds_renderer_native_common.c, ndsFtrLeanRootKey). */
+        gNdsFtrLeanRootMaterialKey[i] = (root_key ^ n) * 16777619u;
     }
     key[1] = (owner_slot & 0xffu) | ((use_low_detail & 1u) << 8) |
         ((slot & 3u) << 9) |

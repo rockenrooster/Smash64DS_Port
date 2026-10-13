@@ -601,6 +601,9 @@ s32 ndsFtrLeanKernelCompose(const NDSFtrLeanJoint *joints, u32 joint_count,
 /* 2026-10-13: walk every root, copying none (ROOT BLOCKS in
  * nds_renderer_native_common.c): the lab verify arm's fresh list. */
 #define NDS_FTR_LEAN_ENTRY_NOCOPY 0x800u
+/* The plan's roots' material words, folded per root by the event path (TU B)
+ * for the materializer's block keys (TU A). */
+extern u32 gNdsFtrLeanRootMaterialKey[];
 #define NDS_FTR_LEAN_VTX_FAIL_BITS 1u   /* a corner off the unit grid */
 #define NDS_FTR_LEAN_VTX_FAIL_RANGE 2u  /* a corner past the format's range */
 u32 ndsFtrLeanLastVtxFail(void);
