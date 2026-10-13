@@ -4053,6 +4053,16 @@ NDS_HOT_TEXT_SPECS := $(PROJECT_ROOT)/linker/ds9_hot_text.specs
 NDS_HOT_TEXT_LINKER_SCRIPT := $(PROJECT_ROOT)/linker/nds_hot_text.ld
 NDS_MEMORY_LINKER_SCRIPT := $(PROJECT_ROOT)/linker/nds_memory.ld
 NDS_FRONTEND_OVERLAY_LINKER_SCRIPT := $(PROJECT_ROOT)/linker/nds_frontend_overlay.ld
+ifeq ($(NDS_P5),1)
+# P5: Bowser's Stadium's bombs run the Race to the Finish bomb's code in VS,
+# whose battles borrow the whole overlay, so P5 builds keep that object
+# resident: the same script without its two input-section rows.
+NDS_FRONTEND_OVERLAY_LINKER_SCRIPT := $(PROJECT_ROOT)/$(BUILD)/nds_frontend_overlay_p5.ld
+$(NDS_FRONTEND_OVERLAY_LINKER_SCRIPT): $(PROJECT_ROOT)/linker/nds_frontend_overlay.ld
+	@mkdir -p $(dir $@)
+	sed -e '/battleship_item_tarubomb\.o (\.data/,/)/d' \
+		-e '/battleship_item_tarubomb\.o/d' $< > $@
+endif
 NDS_TASK32_DRAW_HOT_FRAGMENT := $(PROJECT_ROOT)/$(BUILD)/nds_task32_draw_hot.inc
 NDS_TASK39_HIT_SPARKS_INC := $(PROJECT_ROOT)/src/nds/generated/task39_hit_sparks.generated.inc
 NDS_TASK39_HIT_SPARKS_ASSET := $(PROJECT_ROOT)/assets/effects/task39_hit_sparks.rgb5a1.bin
@@ -4916,6 +4926,10 @@ CFILES += nds_p4_data.c \
 	$(foreach name,$(NDS_P4_ENABLED),$(if $(wildcard $(PROJECT_ROOT)/src/port/nds_p4_$(name).c),nds_p4_$(name).c))
 # The jab and rapid-jab files' copy a content runs (Remix's jab tables).
 CFILES += battleship_ftcommon_jab_p4.c
+endif
+# P5: the Remix stages' ground routines and hazards.
+ifeq ($(NDS_P5),1)
+CFILES += nds_p5_stages.c
 endif
 
 export LD := $(CC)
@@ -8078,7 +8092,8 @@ NDS_P4_ENTRY_EFFECT_INC := $(NDS_P4_GEN)/nds_p4_entry_effects.generated.inc
 $(NDS_P4_ENTRY_EFFECT_INC): $(NDS_ENTRY_EFFECT_INC) \
 		$(foreach name,$(NDS_P4_ENABLED),$(NDS_P4_GEN)/$(name)/articles.json)
 	python "$(PROJECT_ROOT)/scripts/3d_vfx/generate_nds_entry_effects.py" --p4 \
-		$(foreach name,$(NDS_P4_ENABLED),"$(NDS_P4_GEN)/$(name)/articles.json") --out "$@"
+		$(foreach name,$(NDS_P4_ENABLED),"$(NDS_P4_GEN)/$(name)/articles.json") \
+		$(NDS_P5_ARTICLES_ARGS) --out "$@"
 nds_renderer.o: $(NDS_P4_ENTRY_EFFECT_INC)
 # Further P4 generated-data rules (a fragment, so adding one does not rebuild
 # every object the way a Makefile edit does).

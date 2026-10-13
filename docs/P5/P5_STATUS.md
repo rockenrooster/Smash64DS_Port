@@ -87,7 +87,7 @@ Asked with the plan; the owner chose every recommended option:
 | T5 residency and memory | open; Hyrule Temple exceeds today's 863-vertex workspace maximum (census) |
 | T6 6x3 stage select | landed: kit bake on the 6x3 grid (Remix icons for every cell, lower block +8 rows, menu-font names 1:1 on the vanilla plate, Remix logos, venue preview wallpapers), shell grid, generated plaque/preview tables, 3D preview rows (Remix zoom, Peach's Castle camera, lifted with the panel); full browse and Training select open |
 | T7 stage music | `scripts/p5/remix_bank.py` maps the staged ROM's bank file and Remix's code region at their RAM offsets (71 instruments; the vanilla 43 and the sample table are the o2r's bytes) and `scripts/p5/render_remix_bgm.py` runs the vanilla renderer on it, failing on a program past the bank; `p5_audio.py` renders each landed stage's song and appends its BGM row. `--remix-bgm-id` applies Remix's per-song overrides from the assembled tables (`MIDI.master_volume_override_table`, `MIDI.bend_range_override_table`: Athletic Theme volume 85, Koopa's Theme bend and volume). The five P4 victory songs on the Remix bank are open |
-| T8 hazards and movers | open |
+| T8 hazards and movers | Bowser's Stadium's bombs landed (`src/port/nds_p5_stages.c`: ground maker, sides, respawn, flash, explosion and landing sounds, hitstun rule, P3 digest; native draw through P5 article rows); Dinosaur Land's movers run the source's layer-animation path |
 | T9 camera and bounds | open |
 | T10 per-gkind rows | open |
 | T11 acceptance probe | open |
@@ -102,7 +102,7 @@ Asked with the plan; the owner chose every recommended option:
 | 1 | Final Destination | [card](stages/final_destination.md) | landed in VS (play-p5a): static wallpaper, Master Hand's entrance then Final Destination at 840 updates; owner playtest passed 2026-10-13 |
 | 2 | First Destination | [card](stages/first_destination.md) | landed in VS (play-p5a); the owner's first playtest found no structure, no preview and instant KOs (header not normalized), fixed and probed 2026-10-13; owner playtest of the fix pending |
 | 3 | Dinosaur Land | [card](stages/dinosaur_land.md) | landed in VS (play-p5a): 339 triangles, blob 17,348, GX 37,744; heap low-water 45,200, 0 native failures, preview shown, Athletic Theme at volume 85; owner playtest pending |
-| 3 | Bowser's Stadium | [card](stages/bowsers_stadium.md) | source inspected |
+| 3 | Bowser's Stadium | [card](stages/bowsers_stadium.md) | landed in VS with its bombs (play-p5a): 48 triangles; heap low-water 59,944 over 1,800 frames with two explosions and respawns a side, 0 native failures, preview shown, Koopa's Theme with its overrides; owner playtest pending |
 | 4 | Hyrule Temple | [card](stages/hyrule_temple.md) | source inspected |
 
 ## Wave 1 record (2026-10-13)

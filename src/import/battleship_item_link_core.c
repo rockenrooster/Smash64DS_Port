@@ -1986,11 +1986,19 @@ sb32 itMainCheckShootNoAmmo(GObj *item_gobj)
     return FALSE;
 }
 
+#if NDS_P5
+void ndsP5ItemDestroyed(GObj *item_gobj);
+#endif
+
 void itMainDestroyItem(GObj *item_gobj)
 {
     ITStruct *ip = itGetStruct(item_gobj);
 #if NDS_P2_LINK_BOMB_TOUR
     ndsLinkBombTourProofItemDestroy(item_gobj);
+#endif
+#if NDS_P5
+    /* P5: a Bowser's Stadium bomb leaves its side (src/port/nds_p5_stages.c). */
+    ndsP5ItemDestroyed(item_gobj);
 #endif
     if ((ip->is_hold) && (ip->owner_gobj != NULL))
     {

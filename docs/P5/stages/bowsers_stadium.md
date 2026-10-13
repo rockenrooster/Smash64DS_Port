@@ -1,6 +1,7 @@
 # Bowser's Stadium — P5 stage card
 
-**Status:** source inspected (P5.0, 2026-10-12).
+**Status:** landed in VS with its bombs (play-p5a, 2026-10-13); owner
+playtest pending.
 **Source:** Remix id 0x43 (`Stages.asm`:93); map 0x8CA at offset 0x14
 (`Stages.asm`:348, `stage_file_table` row :4183), geometry 0x8CB, wallpaper
 0x8CC. Port gkind 42. **Wave:** 3, after Dinosaur Land. Parent:
@@ -78,6 +79,33 @@ objects. Camera bounds 6000/-2100/6000/-6000; blast bounds
 4. Fold the bomb state into the P3 sync digest and the replay digest.
 5. Song, per-gkind rows (Sector Z Training parent), probe.
 
+## Landing notes (2026-10-13)
+
+- `src/port/nds_p5_stages.c` ports `peach_bumper_`'s Bowser's Stadium arm,
+  `add_item_`, `replenish_bowser_bombs_` and `bowser_bomb_flash_main` as
+  assembled; `ndsP5StageMakeGround` runs where the source's ground dispatch
+  does (`grMainSetupMakeGround`, renamed under P5 with a wrapper). The
+  source's TaruBomb code runs the bombs; Remix's patches to it are hooks in
+  `battleship_item_tarubomb.c` (explosion: FGM 0x01, respawn flag, no
+  shrapnel; landing: FGM 0xC2), the item destroy (a destroyed bomb leaves
+  its side), `ftMainProcessHitCollisionStatsMain`'s head (the first hit
+  log's attacker per port) and `ftCommonDamageInitDamageVars`' hitstun
+  (times 9 / (gravity + 4) when that attacker is a bomb).
+- Read as assembled and kept: a remade bomb's main routine is the flash and
+  then none, so it hangs where it was made; the first two fall to the
+  hover. Remix renumbers a remade bomb 0x11A; only its own hitstun test reads
+  that (and takes 0x1A too), so the port keeps the source kind -- 0x11A would
+  index the item tables past their end.
+- The bomb draws natively from Remix's model: `scripts/p5/p5_articles.py`
+  resolves the header's ITAttributes (0xA8) to the model's DObjDLLink lists
+  (three roots) and adds them to the P4 article rows as a stage "content"
+  (64 + stage index) that is in the match only on its stage.
+- The Race bomb's code sat in the frontend overlay's 1P head, which VS
+  battles borrow (the first probe aborted in `itTaruBombFallProcUpdate`);
+  P5 builds link the overlay script without its rows, so the object is
+  resident (1,636 bytes).
+- The P3 digest folds each side's timer, flash and flags.
+
 ## Directed witnesses
 
 - [ ] Both bombs hover at x +-2990, y 512 from the first frame of the match.
@@ -95,10 +123,10 @@ objects. Camera bounds 6000/-2100/6000/-6000; blast bounds
 
 | Row | Value |
 |---|---|
-| Blob slab / body | unmeasured |
-| Bomb files | unmeasured |
+| Blob slab / body | slab 3,736; blob 4,790; GX template 3,752 (18 DObjs, 14 bindings, 9 runs) |
+| Bomb files | 0x9B2 header 272 B, 0x9B1 model 7,176 B, loaded with the ground (battle heap) |
 | Textures / palettes | census: 3 textures, 4.0 KB; 530 B palettes |
-| Heap low-water, cast preset | unmeasured |
+| Heap low-water, cast preset | 59,944 (Mario, Fox, DK, Samus; 1,800 frames, two explosions and respawns a side) |
 | Heap low-water, heaviest roster | unmeasured |
 | Four-CPU WORK P95 / two-VBlank, cast preset | unmeasured |
 | Four-CPU WORK P95 / two-VBlank, heaviest roster | unmeasured |

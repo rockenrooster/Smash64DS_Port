@@ -74,6 +74,23 @@ $(NDS_P5_BGM_INC): $(NDS_P5_EXPORT_STAMP) \
 		--stages-root "$(NDS_P5_STAGES_DIR)" --out "$(NDS_P5_AUDIO_DIR)"
 nds_audio_bgm.o: $(NDS_P5_BGM_INC)
 
+# The landed stages' hazard item roots (scripts/p5/p5_articles.py: Bowser's
+# Stadium's bombs), joined to the P4 article rows in the entry-effect packet
+# so the items draw natively from Remix's model.
+NDS_P5_ARTICLES := $(NDS_P5_STAGES_DIR)/articles.json
+$(NDS_P5_ARTICLES): $(NDS_P5_EXPORT_STAMP) \
+		$(PROJECT_ROOT)/scripts/p5/p5_articles.py \
+		$(PROJECT_ROOT)/scripts/p4/p4_articles.py
+	python "$(PROJECT_ROOT)/scripts/p5/p5_articles.py" --stages-root "$(NDS_P5_STAGES_DIR)" \
+		--out "$@"
+	@touch $@
+ifeq ($(NDS_P4),1)
+$(NDS_P4_ENTRY_EFFECT_INC): $(NDS_P5_ARTICLES)
+NDS_P5_ARTICLES_ARGS := "$(NDS_P5_ARTICLES)"
+endif
+# The stages' hazard code reads the hazard file rows.
+nds_p5_stages.o: $(NDS_P5_RUNTIME_OUT)
+
 # NitroFS: the stages' donor files beside the contents' (reloc/p4), their
 # blobs and templates, their wallpapers, and their songs.
 NDS_P5_REMIX_LANDED := $(shell python "$(PROJECT_ROOT)/scripts/p5/p5_stages.py" --remix-landed)

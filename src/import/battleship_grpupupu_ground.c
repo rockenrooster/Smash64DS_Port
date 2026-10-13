@@ -118,10 +118,29 @@ void ndsBaseGRCommonSetupInitAll(void);
     (((u32)gSCManagerBattleState->gkind > (u32)nGRKindBonusStageEnd) ? \
      0x7FFFFFFF : nGRKindBonus1Start)
 #endif
+#if NDS_P5
+#define grMainSetupMakeGround ndsBaseGRMainSetupMakeGround
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/gr/grmainsetup.c"
 #if NDS_P5
 #undef nGRKindBonus2Start
 #undef nGRKindBonus1Start
+#undef grMainSetupMakeGround
+sb32 ndsP5StageMakeGround(u32 gkind);
+
+/* P5: a Remix stage's ground routine (src/port/nds_p5_stages.c: Bowser's
+ * Stadium's bombs, nothing for Remix's CLONE stages), where the source's
+ * dispatch makes a ground -- between the layers' yakumono clear and init,
+ * before the item and effect appear actors. Every source kind dispatches as
+ * before. */
+void grMainSetupMakeGround(void)
+{
+    if (ndsP5StageMakeGround((u32)gSCManagerBattleState->gkind) != FALSE)
+    {
+        return;
+    }
+    ndsBaseGRMainSetupMakeGround();
+}
 #endif
 #include "../../decomp/BattleShip-main/decomp/src/gr/grcommonsetup.c"
 #include "../../decomp/BattleShip-main/decomp/src/gr/grcommon/grpupupu.c"

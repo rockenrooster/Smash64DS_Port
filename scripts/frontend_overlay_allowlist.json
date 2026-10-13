@@ -918,6 +918,21 @@
       "reason": "grMainSetupMakeGround selects this target only for ground kinds Bonus1/Bonus2/Bonus3 (gkind > nGRKindBattleEnd). The VS stage select offers only nGRKindCastle..nGRKindInishie, so VS cannot take this branch."
     },
     {
+      "source_symbol": "ndsBaseGRMainSetupMakeGround",
+      "target_symbol": "grBonus3MakeGround",
+      "reason": "P5 builds rename the source grMainSetupMakeGround (battleship_grpupupu_ground.c); it selects this target only for ground kinds Bonus1/Bonus2/Bonus3, and the P5 wrapper takes every Remix kind first, so VS cannot take this branch."
+    },
+    {
+      "source_symbol": "ndsBaseGRMainSetupMakeGround",
+      "target_symbol": "sc1PBonusStageInitBonus2",
+      "reason": "P5 builds rename the source grMainSetupMakeGround (battleship_grpupupu_ground.c); it selects this target only for ground kinds Bonus1/Bonus2/Bonus3, and the P5 wrapper takes every Remix kind first, so VS cannot take this branch."
+    },
+    {
+      "source_symbol": "ndsBaseGRMainSetupMakeGround",
+      "target_symbol": "sc1PBonusStageMakeBonus1Ground",
+      "reason": "P5 builds rename the source grMainSetupMakeGround (battleship_grpupupu_ground.c); it selects this target only for ground kinds Bonus1/Bonus2/Bonus3, and the P5 wrapper takes every Remix kind first, so VS cannot take this branch."
+    },
+    {
       "source_symbol": "grWallpaperMakeDecideKind",
       "target_symbol": "sc1PGameBossInitWallpaper",
       "reason": "grWallpaperMakeDecideKind calls this only for gkind == nGRKindLast (Final Destination), a 1P Game stage the VS stage select cannot choose."

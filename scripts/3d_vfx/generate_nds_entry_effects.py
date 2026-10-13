@@ -1244,6 +1244,11 @@ class P4Root:
 
 
 P4_CONTENTS = ROOT / "scripts" / "p4" / "contents.json"
+# P5 (scripts/p5/p5_articles.py): a Remix stage's hazard item roots ride the
+# P4 rows as a "content" of their own, one per stage from this id up; the
+# runtime loads its corners and prepares its textures only on that stage
+# (ndsRendererEntryEffectP4ContentInMatch).
+P5_CONTENT_BASE = 64
 # The runtime admits a P4 list's live material only from a DObj with one MObj
 # (renderer_adapter_stage.c), whose segment-E slot 1 is slot 0's body.
 P4_MATERIAL_ALIASES = {1: 0}
@@ -1259,13 +1264,18 @@ def load_p4_rows(paths: list[Path], resources: dict[int, census.O2RResource]) ->
     rows = []
     for path in paths:
         data = json.loads(path.read_text(encoding="utf-8"))
+        stage_gkinds = data.get("stage_gkinds", [])
         for row in data["roots"]:
             fid = row["file_id"]
             if fid not in resources:
                 o2r = (path.parent / "o2r" / f"{fid:04x}").resolve()
                 resources[fid] = census.load_o2r(
                     ROOT, census.InputSpec(str(o2r), census.sha256(o2r.read_bytes()), fid))
-            rows.append(dict(row, content=data["content"], content_id=ids[data["content"]]))
+            if "stage_gkind" in row:
+                content_id = P5_CONTENT_BASE + stage_gkinds.index(row["stage_gkind"])
+            else:
+                content_id = ids[data["content"]]
+            rows.append(dict(row, content=data["content"], content_id=content_id))
     return rows
 
 
@@ -1989,12 +1999,32 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
             rows[content] = (first, end - first, len(corners_file))
             for values in (corner_position, corner_s, corner_t, corner_color):
                 corners_file += struct.pack(f"<{end - first}H", *values[first:end])
+        p5_gkinds = {}
+        for p4_root in p4:
+            if p4_root.content_id >= P5_CONTENT_BASE:
+                p5_gkinds[p4_root.content_id] = p4_root.row["stage_gkind"]
+        if p5_gkinds:
+            if sorted(p5_gkinds) != list(range(P5_CONTENT_BASE, P5_CONTENT_BASE + len(p5_gkinds))):
+                raise SystemExit("P5 stage article contents are not contiguous")
+            lines += [
+                "/* P5: the Remix stages' hazard item roots, one content per stage",
+                " * from NDS_ENTRY_EFFECT_P5_CONTENT_BASE, each in the match only on",
+                " * its ground kind (scripts/p5/p5_articles.py). */",
+                f"#define NDS_ENTRY_EFFECT_P5_CONTENT_BASE {P5_CONTENT_BASE}u",
+                f"#define NDS_ENTRY_EFFECT_P5_STAGE_COUNT {len(p5_gkinds)}u",
+                "_Static_assert(NDS_P4_CONTENT_MAX_ID < NDS_ENTRY_EFFECT_P5_CONTENT_BASE,",
+                "               \"P4 contents reach the P5 stage article ids\");",
+                "static const u8 sNdsEntryEffectP5StageGkind[NDS_ENTRY_EFFECT_P5_STAGE_COUNT] = { "
+                + ", ".join(f"{p5_gkinds[c]}u" for c in sorted(p5_gkinds)) + " };",
+            ]
+        slots = ("(NDS_ENTRY_EFFECT_P5_CONTENT_BASE + NDS_ENTRY_EFFECT_P5_STAGE_COUNT)"
+                 if p5_gkinds else "(NDS_P4_CONTENT_MAX_ID + 1u)")
         lines += [
             "/* Each P4 content's article corners: first corner, count and the byte",
             " * offset of its block (position, s, t and colour rows, u16 each) in",
             " * nitro:/p4/entry_corners.bin; count 0: none. */",
             "#define NDS_ENTRY_EFFECT_P4_CORNER_BLOCKS 1",
-            "#define NDS_ENTRY_EFFECT_P4_CONTENT_SLOTS (NDS_P4_CONTENT_MAX_ID + 1u)",
+            f"#define NDS_ENTRY_EFFECT_P4_CONTENT_SLOTS {slots}",
             "typedef struct NDSEntryEffectP4CornerBlock",
             "{",
             "    u16 first;",

@@ -4939,6 +4939,20 @@ static sb32 ndsRendererEntryEffectP4ContentInMatch(u32 content)
 {
     u32 player;
 
+#ifdef NDS_ENTRY_EFFECT_P5_CONTENT_BASE
+    /* P5: a Remix stage's hazard item roots (scripts/p5/p5_articles.py) are
+     * in the match on their stage (src/port/nds_p5_stages.c). */
+    if (content >= NDS_ENTRY_EFFECT_P5_CONTENT_BASE)
+    {
+        extern u32 ndsP5BattleGkind(void);
+        u32 k = content - NDS_ENTRY_EFFECT_P5_CONTENT_BASE;
+
+        return ((k < NDS_ENTRY_EFFECT_P5_STAGE_COUNT) &&
+                (ndsP5BattleGkind() == (u32)sNdsEntryEffectP5StageGkind[k])) ?
+            TRUE : FALSE;
+    }
+#endif
+
     for (player = 0u; player < 4u; player++)
     {
         if ((u32)gNdsP4PlayerContent[player] == content)

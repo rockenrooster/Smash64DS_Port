@@ -772,6 +772,11 @@ static u32 ndsNetMixVec3(u32 hash, const Vec3f *v)
  * the hazard state each venue's ground update keys on -- Whispy's wind, the
  * clouds, the bumper, the barrel, the acid, the tornado, the Pokemon door,
  * the Arwing, the scales, the POW block. Cosmetic timers stay out. */
+#if NDS_P5
+#define NDS_P5_DIGEST_GKIND_BOWSERST 42
+u32 ndsP5StageDigest(u32 hash, u32 (*mix)(u32, u32));
+#endif
+
 static u32 ndsNetDigestStage(u32 hash)
 {
     const GRStruct *gr = &gGRCommonStruct;
@@ -851,6 +856,12 @@ static u32 ndsNetDigestStage(u32 hash)
                                ((u32)gr->sector.arwing_laser_count << 24));
         hash = ndsNetMix(hash, (u32)gr->sector.arwing_laser_timer);
         break;
+#if NDS_P5
+    case NDS_P5_DIGEST_GKIND_BOWSERST:
+        /* P5: Bowser's Stadium's bomb sides (src/port/nds_p5_stages.c). */
+        hash = ndsP5StageDigest(hash, ndsNetMix);
+        break;
+#endif
     case nGRKindInishie:
         hash = ndsNetMixF32(hash, gr->inishie.splat_alt);
         hash = ndsNetMix(hash, (u32)gr->inishie.splat_wait |

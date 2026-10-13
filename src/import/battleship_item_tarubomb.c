@@ -84,6 +84,10 @@ void itTaruBombExplodeMakeEffectGotoSetStatus(GObj *item_gobj);
 /* Same local-extern shape as battleship_item_box.c:83-84 and
  * battleship_item_taru.c:81-87 for the helpers no port header publishes. */
 extern EFStruct *efManagerGetEffectNoForce(void);
+#if NDS_P5
+sb32 ndsP5TaruBombExplode(GObj *item_gobj);
+u16 ndsP5TaruBombMapFgm(u16 fgm_id);
+#endif
 extern void efManagerSetPrevStructAlloc(EFStruct *ep);
 extern LBParticle *efManagerSparkleWhiteMultiExplodeMakeEffect(Vec3f *pos);
 extern GObj *efManagerQuakeMakeEffect(s32 id);
@@ -262,6 +266,16 @@ sb32 itTaruBombFallProcUpdate(GObj *item_gobj)
 // decomp ittarubomb.c:193-200 verbatim.
 sb32 itTaruBombCommonProcHit(GObj *item_gobj)
 {
+#if NDS_P5
+    /* P5: Bowser's Stadium's bombs (Remix Hazards.asm bowser_bomb_explosion_,
+     * patch at 0x80184DD0): FGM 0x01, the side's respawn flag, no shrapnel. */
+    if (ndsP5TaruBombExplode(item_gobj) != FALSE)
+    {
+        itTaruBombExplodeMakeEffectGotoSetStatus(item_gobj);
+
+        return FALSE;
+    }
+#endif
     func_800269C0_275C0(nSYAudioFGMTaruBombHit);
     itTaruBombContainerSmashMakeEffect(&DObjGetStruct(item_gobj)->translate.vec.f);
     itTaruBombExplodeMakeEffectGotoSetStatus(item_gobj);
@@ -336,7 +350,13 @@ sb32 itTaruBombFallProcMap(GObj *item_gobj)
 
             itMainSetSpinVelLR(item_gobj);
         }
+#if NDS_P5
+        /* Remix bowser_bomb_air_collision_ (0x80184F84): FGM 0xC2 on
+         * Bowser's Stadium. */
+        func_800269C0_275C0(ndsP5TaruBombMapFgm(nSYAudioFGMTaruBombMap));
+#else
         func_800269C0_275C0(nSYAudioFGMTaruBombMap);
+#endif
         itMainClearOwnerStats(item_gobj);
     }
     return FALSE;

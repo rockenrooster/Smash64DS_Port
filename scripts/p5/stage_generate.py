@@ -428,6 +428,7 @@ def build_stage(stage: dict, stage_dir: Path, learn_pins: bool) -> dict:
         "gkind": stage["gkind"], "name": name, "cname": cname,
         "map_file": stage["header"]["file"], "map_offset": stage["header"]["offset"],
         "files": nitro,
+        "hazard_roots": list(stage.get("hazard_roots", ())),
         "wallpaper_file": stage["wallpaper"][0],
         "segments": len(packet.segments), "dobjs": len(packet.dobjs),
         "bindings": len(packet.bindings), "runs": len(packet.runs),
@@ -460,7 +461,7 @@ def stage_nitro_files(stage: dict, stage_dir: Path) -> list[int]:
     nitro.mkdir(parents=True, exist_ok=True)
     write_if_changed(nitro / f"{map_fid:04x}", compact.data)
     files = [map_fid]
-    for fid in stage["files"]:
+    for fid in list(stage["files"]) + list(stage.get("hazard_files", ())):
         if fid in (map_fid, wall_fid):
             continue
         write_if_changed(nitro / f"{fid:04x}", (o2r / f"{fid:04x}").read_bytes())
@@ -509,6 +510,11 @@ def write_runtime(out: Path, facts: list[dict]) -> None:
           " * ground maps, as reloc_backend_assets.c lists the vanilla stages'. */",
           "#define NDS_P5_COMPACT_MAP_ROWS(X) \\"]
     h += [f"    X({s['map_file']:#x}u, {s['wallpaper_file']:#x}u, {s['map_offset']:#x}u) \\" for s in facts]
+    h += ["    /* end */", "",
+          "/* X(gkind, file): the hazard file each stage loads with its ground",
+          " * (the registry's hazard_files; Bowser's Stadium's bomb header). */",
+          "#define NDS_P5_HAZARD_FILE_ROWS(X) \\"]
+    h += [f"    X({s['gkind']}, {f:#x}u) \\" for s in facts for f in s["hazard_roots"]]
     h += ["    /* end */", ""]
     if facts:
         h += ["/* Their packets join the blob maxima the workspaces are sized by. */"]

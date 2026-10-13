@@ -149,7 +149,34 @@ void ndsBaseFTCommonDamageSetDamageColAnim(GObj *fighter_gobj);
 #define NDS_P4_DAMAGE_SET_STATUS_this_gobj(s_) \
     ftMainSetStatus(this_gobj, ndsP4DamageStatus(this_gobj, s_, &status_id_var)
 #endif
+#if NDS_P5
+/* P5: Remix's bomb_hitstun_ (Hazards.asm, patch at 0x80140F44) scales the
+ * hitstun ftCommonDamageInitDamageVars reads from ftParamGetHitStun, before
+ * it stores it and picks the damage level from it. That function is the only
+ * one here to take its fighter from `this_gobj`, so that read arms a one-shot
+ * the next ftParamGetHitStun spends -- the function's own, a few lines on;
+ * the file's other two calls (the catch resist and the colour animation) run
+ * unarmed. Every other ftGetStruct here is the source's. */
+FTStruct *ndsP5HitStunArm(FTStruct *fp);
+f32 ndsP5HitStunTake(f32 hitstun_tics);
+#undef ftGetStruct
+#define ftGetStruct(g_) NDS_P5_FT_GET_##g_
+#define NDS_P5_FT_GET_fighter_gobj ((FTStruct *)(fighter_gobj)->user_data.p)
+#define NDS_P5_FT_GET_attacker_gobj ((FTStruct *)(attacker_gobj)->user_data.p)
+#define NDS_P5_FT_GET_grab_gobj ((FTStruct *)(grab_gobj)->user_data.p)
+#define NDS_P5_FT_GET_this_gobj ndsP5HitStunArm((FTStruct *)(this_gobj)->user_data.p)
+#define ftParamGetHitStun(k_) ndsP5HitStunTake(ftParamGetHitStun(k_))
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommondamage.c"
+#if NDS_P5
+#undef ftParamGetHitStun
+#undef ftGetStruct
+#undef NDS_P5_FT_GET_fighter_gobj
+#undef NDS_P5_FT_GET_attacker_gobj
+#undef NDS_P5_FT_GET_grab_gobj
+#undef NDS_P5_FT_GET_this_gobj
+#define ftGetStruct(fighter_gobj) ((FTStruct*)(fighter_gobj)->user_data.p)
+#endif
 #if NDS_P4
 #undef ftMainSetStatus
 #undef NDS_P4_DAMAGE_SET_STATUS_fighter_gobj

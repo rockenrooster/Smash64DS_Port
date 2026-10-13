@@ -221,7 +221,19 @@ static void ndsLabTimedAddFigatree(DObj *root_dobj, void *figatree,
 #define ftMainUpdateAttackStatFighter battleship_ftMainUpdateAttackStatFighter
 #define ftMainUpdateShieldStatFighter battleship_ftMainUpdateShieldStatFighter
 #define ftMainUpdateCatchStatFighter battleship_ftMainUpdateCatchStatFighter
+#if NDS_P5
+/* P5: Remix's track_hit_object_ (Hazards.asm, patch at 0x800E3F14) heads
+ * this function: the definition (its first argument's first token is the
+ * type) becomes the base, and the TU's call and the runtime's go through
+ * battleship_ftMainProcessHitCollisionStatsMain, defined after the source. */
+#define ftMainProcessHitCollisionStatsMain(a_) NDS_P5_HIT_STATS_##a_)
+#define NDS_P5_HIT_STATS_GObj ndsP5BaseFTMainProcessHitCollisionStatsMain(GObj
+#define NDS_P5_HIT_STATS_fighter_gobj \
+    battleship_ftMainProcessHitCollisionStatsMain(fighter_gobj
+void battleship_ftMainProcessHitCollisionStatsMain(GObj *fighter_gobj);
+#else
 #define ftMainProcessHitCollisionStatsMain battleship_ftMainProcessHitCollisionStatsMain
+#endif
 #define ftMainCheckAddGroundObstacle battleship_ftMainCheckAddGroundObstacle
 #define ftMainClearGroundObstacle battleship_ftMainClearGroundObstacle
 #define ftMainSetHitHazard battleship_ftMainSetHitHazard
@@ -402,6 +414,21 @@ void ndsP4FTMainUpdateAbsorbStatWeapon(WPStruct *wp, WPAttackColl *wp_attack_col
                                        FTStruct *fp, GObj *fighter_gobj);
 #endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftmain.c"
+#if NDS_P5
+#undef ftMainProcessHitCollisionStatsMain
+#undef NDS_P5_HIT_STATS_GObj
+#undef NDS_P5_HIT_STATS_fighter_gobj
+void ndsP5TrackHitObject(u32 player, GObj *attacker_gobj);
+
+/* Remix track_hit_object_: the first hit log's attacker, per port (read by
+ * Bowser's Stadium's bomb hitstun, src/port/nds_p5_stages.c). */
+void battleship_ftMainProcessHitCollisionStatsMain(GObj *fighter_gobj)
+{
+    ndsP5TrackHitObject(ftGetStruct(fighter_gobj)->player,
+                        sFTMainHitLogs[0].attacker_gobj);
+    ndsP5BaseFTMainProcessHitCollisionStatsMain(fighter_gobj);
+}
+#endif
 #if NDS_P4
 #undef ftNessSpecialLwProcAbsorb
 #undef ftMainUpdateAbsorbStatWeapon

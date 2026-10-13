@@ -118,10 +118,14 @@ def export_stage(rom: remix_rom.Rom, u32, u8, f32, row: dict, out: Path) -> dict
     if geometry is None or wallpaper is None:
         raise ExportError(f"{row['name']}: header has no collision geometry or wallpaper")
     files = closure(rom, map_fid)
+    # A hazard's own files (the registry's hazard_files: Bowser's Stadium's
+    # bomb header and the model it externs), outside the map's closure.
+    hazard_files = sorted({f for h in row.get("hazard_files", ()) for f in closure(rom, h)}
+                          - set(files))
     o2r = out / "o2r"
     o2r.mkdir(parents=True, exist_ok=True)
     hashes = {}
-    for fid in files:
+    for fid in files + hazard_files:
         blob = rom.o2r(fid)
         p5_stages.write_if_changed(o2r / f"{fid:04x}", blob)
         hashes[f"{fid:04x}"] = {"sha256": hashlib.sha256(blob).hexdigest(),
@@ -132,6 +136,8 @@ def export_stage(rom: remix_rom.Rom, u32, u8, f32, row: dict, out: Path) -> dict
         "remix_id": rid,
         "header": {"file": map_fid, "offset": hoff},
         "files": files,
+        "hazard_files": hazard_files,
+        "hazard_roots": list(row.get("hazard_files", ())),
         "o2r": hashes,
         "layer_mask": mask,
         "layers": layers,
