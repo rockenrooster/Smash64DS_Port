@@ -1113,6 +1113,83 @@ static void ndsFtrLeanView(NDSFtrLeanPatchView *view,
 #define NDS_FTR_LEAN_WALK_WIDE 4u
 #define NDS_FTR_LEAN_WALK_TAG_MASK 0xffffff00u
 
+/* An MObj's material words -- MObjSub, then the texture ids, lfrac and the
+ * palette id that follow it -- folded into an entry key's word 0: the inputs
+ * ndsRendererAdapterBuildNativeMaterialSnapshot builds a row from. */
+_Static_assert((offsetof(MObj, palette_id) + sizeof(f32)) -
+                   offsetof(MObj, sub) == 33u * sizeof(u32),
+               "an MObj's material words are MObjSub and the three after it");
+static u32 ndsFtrLeanMaterialContent(u32 h, const MObj *mobj)
+{
+    const u32 *w = (const u32 *)(const void *)&mobj->sub;
+    u32 i;
+
+    for (i = 0u; i < 33u; i++)
+    {
+        h = (h ^ w[i]) * 16777619u;
+    }
+    return h;
+}
+
+/* The plan's material rows, for a list about to be materialized: each row
+ * rebuilt where its key moved (the old path's own key: MObj, heap generation,
+ * animation hash), then validated. 0 or a decline. */
+static u32 __attribute__((noinline, cold, optimize("Os")))
+ndsFtrLeanBuildRows(const NDSFtrLeanInstance *inst, u32 count)
+{
+    u32 i;
+
+    for (i = 0u; i < count; i++)
+    {
+        const u32 row = sNdsRendererAdapterNativeOwnerMaterialRows[i];
+        NDSRendererNativeMaterial *rows =
+            sNdsRendererAdapterNativeOwnerMaterials[row];
+        NDSRendererAdapterMaterialKey *keys =
+            sNdsRendererAdapterNativeOwnerMaterialKeys[row];
+        const MObj *mobj;
+        u32 n = 0u;
+
+        for (mobj = (inst->material_dobjs[i] != NULL) ?
+                 inst->material_dobjs[i]->mobj : NULL;
+             mobj != NULL; mobj = mobj->next)
+        {
+            const u32 hash = ndsRendererAdapterMaterialAnimHash(mobj);
+
+            if (n >= NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX)
+            {
+                return nNDSFtrLeanDeclineMaterial;
+            }
+            /* The row's key (2026-10-06), as the old path keeps it: a row
+             * entry built from this MObj with these complete inputs this
+             * heap generation holds the snapshot a build would make, bit for
+             * bit (the build is a pure function of the hashed inputs; this
+             * one does not advance the texture ids, so the hash is the
+             * MObj's before and after). */
+            if ((keys[n].mobj != mobj) ||
+                (keys[n].heap_generation != gNdsTaskmanHeapGeneration) ||
+                (keys[n].hash != hash))
+            {
+                if (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                        (MObj *)mobj, &rows[n], FALSE, NULL, NULL) == FALSE)
+                {
+                    keys[n].mobj = NULL;
+                    return nNDSFtrLeanDeclineMaterial;
+                }
+                keys[n].mobj = mobj;
+                keys[n].heap_generation = gNdsTaskmanHeapGeneration;
+                keys[n].hash = hash;
+            }
+            n++;
+        }
+        if ((n != inst->material_counts[i]) ||
+            (ndsRendererAdapterValidateNativeOwnerMaterials(rows, n) == FALSE))
+        {
+            return nNDSFtrLeanDeclineMaterial;
+        }
+    }
+    return 0u;
+}
+
 static u32 ndsFtrLeanWalkTag(const u32 *key)
 {
     u32 h = 0x9e3779b9u;
@@ -1209,7 +1286,9 @@ ndsFtrLeanMaterializeFor(u32 slot, u32 *entry, const u32 *key, u32 count,
         reason = ndsFtrLeanMaterialize(
             slot, ((wide != FALSE) ? NDS_FTR_LEAN_ENTRY_WIDE : *entry) |
                 ((mode == 0u) ? NDS_FTR_LEAN_ENTRY_VTX16 :
-                 ((mode == 2u) ? NDS_FTR_LEAN_ENTRY_VTX10H : 0u)),
+                 ((mode == 2u) ? NDS_FTR_LEAN_ENTRY_VTX10H : 0u)) |
+                /* The lab verify arm's fresh list walks every root. */
+                ((allow_wide == FALSE) ? NDS_FTR_LEAN_ENTRY_NOCOPY : 0u),
             key, ws->production_roots, count, owner_slot, use_low_detail,
             owner_file->data, &stats);
         if ((reason == nNDSFtrLeanDeclineVtx10) && (mode != 0u))
@@ -1455,10 +1534,16 @@ restart:
         inst->material_dobjs[i] = ws->material_dobjs[i];
     }
     /* The material rows (the old path's own storage and row mapping, built
-     * from the live MObjs without advancing their texture ids): every word a
-     * list takes from its materials comes from these, so their content is
-     * the entry key's word 0 -- a rebuilt MObj graph, or an animation that
-     * moved nothing the rows carry, keeps its list. The instance holds the
+     * from the live MObjs without advancing their texture ids) are what a
+     * list takes its material words from, and a row is a pure function of
+     * its MObj's material words (MObjSub, the texture ids, lfrac and the
+     * palette id: ndsFtrLeanMaterialContent) -- so those words are the entry
+     * key's word 0: a rebuilt MObj graph, or an animation that moved nothing
+     * the rows carry, keeps its list. The rows themselves are built only for
+     * a list this event materializes (ndsFtrLeanBuildRows, 2026-10-13): four
+     * fighters' material DObjs share the 32 rows, so every event rebuilt
+     * most of its own (Crash 36K ticks an event, 279 events in 1,200 frames,
+     * 208 of them entry hits that never read a row). The instance holds the
      * plan's material DObjs and counts (just filled from the resolve, or
      * reused for a material event). */
 rows:
@@ -1469,17 +1554,11 @@ rows:
     ident = 2166136261u;
     for (i = 0u; i < count; i++)
     {
-        u32 row = ndsRendererAdapterMaterialRow(inst->material_dobjs[i], i);
-        NDSRendererNativeMaterial *rows =
-            sNdsRendererAdapterNativeOwnerMaterials[row];
-        NDSRendererAdapterMaterialKey *keys =
-            sNdsRendererAdapterNativeOwnerMaterialKeys[row];
-        const u32 *row_words = (const u32 *)(const void *)rows;
         const MObj *mobj;
         u32 n = 0u;
-        u32 k;
 
-        sNdsRendererAdapterNativeOwnerMaterialRows[i] = (u8)row;
+        sNdsRendererAdapterNativeOwnerMaterialRows[i] = (u8)
+            ndsRendererAdapterMaterialRow(inst->material_dobjs[i], i);
         for (mobj = (inst->material_dobjs[i] != NULL) ?
                  inst->material_dobjs[i]->mobj : NULL;
              mobj != NULL; mobj = mobj->next)
@@ -1493,27 +1572,7 @@ rows:
             hash = ndsRendererAdapterMaterialAnimHash(mobj);
             ident = (ident ^ hash) * 16777619u;
             ident ^= (u32)(uintptr_t)mobj;
-            /* The row's key (2026-10-06), as the old path keeps it: a row
-             * entry built from this MObj with these complete inputs this heap
-             * generation holds the snapshot a build would make, bit for bit
-             * (the build is a pure function of the hashed inputs; this one
-             * does not advance the texture ids, so the hash is the MObj's
-             * before and after). Lean events rebuilt every material of every
-             * root without it. */
-            if ((keys[n].mobj != mobj) ||
-                (keys[n].heap_generation != gNdsTaskmanHeapGeneration) ||
-                (keys[n].hash != hash))
-            {
-                if (ndsRendererAdapterBuildNativeMaterialSnapshot(
-                        (MObj *)mobj, &rows[n], FALSE, NULL, NULL) == FALSE)
-                {
-                    keys[n].mobj = NULL;
-                    return nNDSFtrLeanDeclineMaterial;
-                }
-                keys[n].mobj = mobj;
-                keys[n].heap_generation = gNdsTaskmanHeapGeneration;
-                keys[n].hash = hash;
-            }
+            key[0] = ndsFtrLeanMaterialContent(key[0], mobj);
             n++;
         }
         if ((n != inst->material_counts[i]) && (reuse_plan != FALSE))
@@ -1523,16 +1582,9 @@ rows:
             NDS_FTR_LEAN_CTR(gNdsFtrLean.plan_reuse_restarts++);
             goto restart;
         }
-        if ((n != inst->material_counts[i]) ||
-            (ndsRendererAdapterValidateNativeOwnerMaterials(rows, n) == FALSE))
+        if (n != inst->material_counts[i])
         {
             return nNDSFtrLeanDeclineMaterial;
-        }
-        for (k = 0u;
-             k < (n * (u32)sizeof(NDSRendererNativeMaterial)) / sizeof(u32);
-             k++)
-        {
-            key[0] = (key[0] ^ row_words[k]) * 16777619u;
         }
         key[0] = (key[0] ^ n) * 16777619u;
     }
@@ -1586,6 +1638,7 @@ rows:
             /* A wide list owns both halves: nothing to compare it in. */
             if ((held != NDS_FTR_LEAN_ENTRY_NONE) && (entry != held) &&
                 (ndsFtrLeanEntryWide(slot, held) == FALSE) &&
+                (ndsFtrLeanBuildRows(inst, count) == 0u) &&
                 (ndsFtrLeanMaterializeFor(slot, &entry, key, count,
                                           owner_slot, use_low_detail,
                                           owner_file, FALSE) == 0u))
@@ -1626,6 +1679,7 @@ rows:
                 entry = ndsFtrLeanEntryVictim(slot);
                 if ((held != NDS_FTR_LEAN_ENTRY_NONE) && (entry != held) &&
                     (ndsFtrLeanEntryWide(slot, held) == FALSE) &&
+                    (ndsFtrLeanBuildRows(inst, count) == 0u) &&
                     (ndsFtrLeanMaterializeFor(slot, &entry, key, count,
                                               owner_slot, use_low_detail,
                                               owner_file, FALSE) == 0u))
@@ -1638,9 +1692,13 @@ rows:
             goto listed;
         }
         ndsFtrLeanNoteKeyMiss(slot, key);
-        reason = ndsFtrLeanMaterializeFor(slot, &entry, key, count,
-                                          owner_slot, use_low_detail,
-                                          owner_file, TRUE);
+        reason = ndsFtrLeanBuildRows(inst, count);
+        if (reason == 0u)
+        {
+            reason = ndsFtrLeanMaterializeFor(slot, &entry, key, count,
+                                              owner_slot, use_low_detail,
+                                              owner_file, TRUE);
+        }
         if (reason != 0u)
         {
             return reason;

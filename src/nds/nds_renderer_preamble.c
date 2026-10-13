@@ -3462,6 +3462,9 @@ typedef struct NDSFighterPacket
     u8 needs_fence;
     u8 texture_count;
     u8 texgen_group_count;
+    /* Lean lists (2026-10-13): the root blocks recorded in the texgen site
+     * table (ndsFtrLeanRootRecs), 0 when none. */
+    u8 root_rec_count;
     u16 texgen_site_count;
     u32 triangle_count;
     u32 run_count;

@@ -2348,6 +2348,55 @@ only when missing), so the entry packet baked the tornado's offset in the old
 bytes and drew 0 triangles while reporting success; the copy is refreshed
 whenever it differs now.
 
+## Root blocks and lazy material rows (P95, 2026-10-13)
+
+What four content mirrors spend over the gate (task37 census of four
+Crashes, 126 over-gate frames of 1,200, 1.37M cycles a frame above the
+rest): ~570K is the lean materializer -- corners 111K, the run prepare 78K,
+the texture resolver 58K, the shade 40K, the state deltas 39K -- and ~100K
+the event path around it. Key traces (DIAG sweep, 1,200 frames): four Crashes
+materialize 71 lists for 53 distinct keys -- a blink, a mouth, a hand: one or
+two of twenty roots moved -- so a bigger list cache could save at most a
+quarter of them; the lab root census found 43-59% of every new list's words
+identical, root for root, to the list beside it.
+
+- **Root blocks.** A list is the head and one block per root. Every root of
+  every P4 owner image (and some of the cast's) is self-contained: before its
+  first run it sets every piece of RDP state its runs read that any root of
+  the image writes (combine; for a textured run G_TEXTURE, image, load, the
+  render tile's SETTILE/SETTILESIZE, a TLUT for a CI tile, the othermode_h
+  bits; light colours and direction for a shaded epoch; a material counts as
+  the root's own input). Such a root's block is a function of its tables,
+  preamble, light preamble, material rows, GX slots and corner format, so a
+  list records, per root, where the block sits and what it added to the
+  packet's tables, under a hash of those inputs (`ndsFtrLeanRootKey`), in
+  the packet's texgen site table (unused by a list without texgen sites); a
+  later list of the slot copies a block whose key a donor (the other entry,
+  the spare) holds instead of walking the root. Blocks start and end on a
+  packed-command header boundary; a copy re-bases the packet's indices
+  (seed, shade sites, tint binds), merges the textures (each still the cache
+  entry it bound), re-derives the shade words for the list's modulate, and
+  re-bases the polygon IDs: a run's POLYGON_ATTR carries the walk's combine
+  count, which runs on across roots (`ndsFtrLeanRebasePolyIds`; the lab
+  verify arm caught it as 1,489 differing words). Lab verify (every
+  re-selected list against a full walk, `gNdsFtrLeanSlow` 16, the fresh walk
+  copying nothing): four Crashes, Meta Knights, Banjos and the cast, 622
+  comparisons over 2,161 copied roots, 0 differing words, shapes, textures or
+  fences. `gNdsFtrLeanRootCopyOff` = 1 walks every root.
+- **Lazy material rows.** Four fighters' material DObjs share 32 rows, so
+  every lean event rebuilt most of its own rows (36K ticks a Crash event, 279
+  events in 1,200 frames, 208 of them entry hits that never read a row). A
+  row is a pure function of its MObj's material words (MObjSub, the texture
+  ids, lfrac, the palette id), so those words are the entry key's word 0
+  now, and the rows are built (`ndsFtrLeanBuildRows`) only for a list the
+  event materializes.
+
+Clean sweep ROMs, Dream Land, 1,961 frames, WORK P95 (build-sweep-p95a ->
+build-sweep-p95e): four Crashes 1,403,328 -> 1,284,736, four Banjos 1,282,432
+-> 1,249,792, four Meta Knights 1,272,192 -> 1,272,896 (their blocks copy
+little: under investigation), the cast 1,061,312 -> 1,065,216 (within one
+run's spread).
+
 ## Board 1 status (master plan Revision 3)
 
 | Item | State |

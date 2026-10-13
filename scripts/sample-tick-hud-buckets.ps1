@@ -159,8 +159,14 @@ param(
     # ROM, poked here.
     [string[]]$BootSetGlobals = @(),
     [string]$BootBreak = 'main',
-    [string]$JsonOut = ''
+    [string]$JsonOut = '',
+    # Extra gdb lines (a file) run after the boot and set pokes, before the
+    # sampling breakpoints: lab traces whose breakpoints print and continue.
+    [string]$GdbExtraFile = '',
+    # Keep the raw gdb output (the temporary directory is removed).
+    [string]$GdbOutCopy = ''
 )
+$gdbExtraLines = @(if ($GdbExtraFile -ne '') { Get-Content -LiteralPath $GdbExtraFile })
 
 # Reads the eleven NDS_TICK_HUD buckets
 # (ALL/FTR/STG/BG/AUD/HUD/SRC/MISC/OTHR/WAIT/WORK) straight out of
@@ -637,6 +643,7 @@ try {
         "target remote 127.0.0.1:$($context.GdbPort)",
         $bootGlobalLines,
         $setGlobalLines,
+        $gdbExtraLines,
         # The fallback counters run from boot, so a single read at the end would
         # charge the census window with every fallback taken during boot, the
         # menu and the seeding presents. Stop once at the start frame to take a
@@ -682,6 +689,7 @@ try {
         "target remote 127.0.0.1:$($context.GdbPort)",
         $bootGlobalLines,
         $setGlobalLines,
+        $gdbExtraLines,
         'set $tick_samples = 0',
         'break ndsBattlePlayableFrameCompleteMarker',
         'commands',
@@ -865,6 +873,7 @@ try {
     }
 
     $output = Get-Content $gdbOut -Raw
+    if ($GdbOutCopy -ne '') { Copy-Item -LiteralPath $gdbOut -Destination $GdbOutCopy -Force }
     $rows = if ($RingDump) {
         # Task 70: the per-frame fallback deltas share the ring index, so they
         # append as one more column and every frame carries its own count.

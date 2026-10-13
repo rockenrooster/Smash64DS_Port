@@ -388,6 +388,17 @@ typedef struct NDSFtrLeanCounters
     u32 kernel_part_ticks[4];   /* fast local, compose, output, slow local
                                    (gNdsFtrLeanSlow bit 8 only) */
     u32 kernel_part_joints;     /* joints those ticks cover */
+    u32 root_copies;            /* root blocks copied from a donor list */
+    u32 root_walks;             /* ... walked */
+    u32 root_plans;             /* materializations whose roots all record */
+    u32 root_donor_plans;       /* ... with a donor list */
+    u32 root_key_hits;          /* donor records matching a root's key */
+    u32 verify_site_mismatch;   /* verify: shade site words that differ */
+    u32 verify_tint_mismatch;   /* ... tint bind words */
+    u32 root_self_fail[8];      /* first self-containment failure: 0 load
+                                   tile, 1 light colours, 2 light direction,
+                                   3 combine, 4 blend, 5 texture state,
+                                   6 render tile, 7 othermode_h bits */
 } NDSFtrLeanCounters;
 
 #if NDS_FTR_LEAN_LAB
@@ -587,6 +598,9 @@ s32 ndsFtrLeanKernelCompose(const NDSFtrLeanJoint *joints, u32 joint_count,
  * most one source unit. ndsFtrLeanLastVtxFail says which a VTX_10 decline
  * was. */
 #define NDS_FTR_LEAN_ENTRY_VTX10H 0x400u
+/* 2026-10-13: walk every root, copying none (ROOT BLOCKS in
+ * nds_renderer_native_common.c): the lab verify arm's fresh list. */
+#define NDS_FTR_LEAN_ENTRY_NOCOPY 0x800u
 #define NDS_FTR_LEAN_VTX_FAIL_BITS 1u   /* a corner off the unit grid */
 #define NDS_FTR_LEAN_VTX_FAIL_RANGE 2u  /* a corner past the format's range */
 u32 ndsFtrLeanLastVtxFail(void);

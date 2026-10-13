@@ -13048,6 +13048,9 @@ typedef struct NDSFtrLeanMat
     u32 vtx10_fail;             /* NDS_FTR_LEAN_VTX_FAIL_*: walk again */
     u32 hw_texgen_ok;           /* the owner takes GX texgen (1P owners) */
     u32 hw_texgen;              /* the current run's texture matrix is loaded */
+    u32 root_tex_mask;          /* packet->textures[] the current root bound */
+    u32 root_lit;               /* the current root shaded a lit epoch */
+    u32 root_fence;             /* ... bound a texture with no cache entry */
 } NDSFtrLeanMat;
 
 /* P2-2p8 (2026-10-05): route-1 lists take VTX_10 corners where every corner
@@ -13094,6 +13097,868 @@ static u32 ndsFtrLeanSpanSetsPrim(u16 first, u32 count)
     return FALSE;
 }
 
+/* ---- 2026-10-13: ROOT BLOCKS ---------------------------------------------
+ * A lean list is the head and then one block per root: the root's seed
+ * LOAD4x3, its epochs' state, shades and runs. Four Crashes materialized 71
+ * lists in 1,200 frames, 53 of them for keys the slot had never drawn -- a
+ * blink, a mouth, a hand -- and each was a whole walk (~550K ticks) of twenty
+ * roots of which one or two had changed. A root whose runs read only RDP state
+ * the root sets first (ndsFtrLeanRootSelfContained: every root of every P4
+ * owner image but a handful) walks to the same words whatever the roots before
+ * it left: its block is a function of the root's own inputs -- tables,
+ * preamble, light preamble, material rows, GX slots, colour modulate and corner
+ * format (ndsFtrLeanRootKey). So a list keeps, per root, where its block sits
+ * and what it added to the packet's tables (sites, tint binds, textures,
+ * counters) under that key, and a later list of the slot whose root keys the
+ * same copies the block from the other entry or the spare instead of walking
+ * it. Blocks start and end on a packed-command header boundary, so a block is
+ * position independent but for the word indices the packet keeps, which the
+ * copy re-bases. A list copies only when every root of its plan is
+ * self-contained; a donor only while it holds its base words under the live
+ * tint-tile set, and a block only while every texture it binds is still the
+ * cache entry it bound. The records live in the packet's texgen site table,
+ * which a list without texgen sites never uses (a list with any keeps none).
+ * Lab: gNdsFtrLeanRootCopyOff = 1 walks every root. */
+typedef struct NDSFtrLeanRootRec
+{
+    u32 key;                    /* ndsFtrLeanRootKey */
+    u16 start;                  /* block words [start, end) */
+    u16 end;
+    u8 site_first;              /* packet->sites the block appended */
+    u8 site_count;
+    u8 tint_first;              /* packet->tint_binds it appended */
+    u8 tint_count;
+    u32 tex_mask;               /* packet->textures[] it bound */
+    u16 triangles;
+    u16 vertex_loads;
+    u16 raw_triangles;
+    u16 cross_triangles;
+    u8 raw_runs;
+    u8 cross_runs;
+    u8 prepare_begin;
+    u8 prepare_reuse;
+    u8 texture_binds;
+    u8 tint_binds;
+    u8 tint_seen;
+    u8 flags;                   /* NDS_FTR_LEAN_ROOT_* */
+    /* A run's POLYGON_ATTR carries the walk's combine count (mod 64) as its
+     * polygon ID, a count that runs on across roots: the count at the
+     * block's start and the combines the block applied, so a copy re-bases
+     * the IDs (ndsFtrLeanRebasePolyIds) and advances the count. */
+    u8 combine_base;
+    u8 combine_count;
+} NDSFtrLeanRootRec;
+#define NDS_FTR_LEAN_ROOT_COPY 1u   /* the block may be copied */
+#define NDS_FTR_LEAN_ROOT_LIT 2u    /* it shades a lit epoch */
+#define NDS_FTR_LEAN_ROOT_FENCE 4u  /* it set needs_fence (a tint bind) */
+/* The records a packet's texgen site table holds. */
+#define NDS_FTR_LEAN_ROOT_RECS 28u
+_Static_assert(sizeof(NDSFtrLeanRootRec) == 36u, "root record: 36 bytes");
+_Static_assert(sizeof(((NDSFighterPacket *)0)->texgen_sites) >=
+                   (NDS_FTR_LEAN_ROOT_RECS * sizeof(NDSFtrLeanRootRec)),
+               "the root records fit the texgen site table");
+_Static_assert((offsetof(NDSFighterPacket, texgen_sites) & 3u) == 0u,
+               "the root records are word aligned");
+
+#if defined(__arm__)
+volatile u32 gNdsFtrLeanRootCopyOff __attribute__((used, section(".data"))) =
+    0u;
+#else
+volatile u32 gNdsFtrLeanRootCopyOff;
+#endif
+
+static inline NDSFtrLeanRootRec *ndsFtrLeanRootRecs(NDSFighterPacket *packet)
+{
+    return (NDSFtrLeanRootRec *)(void *)packet->texgen_sites;
+}
+
+/* The othermode_h bits a G_SETOTHERMODE_H / G_RDPSETOTHERMODE writes
+ * (ndsRendererRecordOtherMode's decode). */
+static u32 ndsFtrLeanOtherModeHBits(u32 w0)
+{
+    const u32 op = w0 >> 24;
+    u32 bits;
+    u32 pos;
+
+    if (op == NDS_RENDERER_OP_RDPSETOTHERMODE)
+    {
+        return 0x00ffffffu;
+    }
+    if (op != NDS_RENDERER_OP_SETOTHERMODE_H)
+    {
+        return 0u;
+    }
+    bits = (w0 & 0xffu) + 1u;
+    pos = (w0 >> 8) & 0xffu;
+    if ((bits > 32u) || (pos >= 32u) || ((bits + pos) > 32u))
+    {
+        return 0u;
+    }
+    if (bits >= 32u)
+    {
+        return 0xffffffffu;
+    }
+    return ((1u << bits) - 1u) << (32u - pos - bits);
+}
+
+/* What any root of a table set writes: state no root writes is the walk's
+ * own seed for every root, so reading it carries nothing between roots. */
+#define NDS_FTR_LEAN_ANY_TLUT 1u
+#define NDS_FTR_LEAN_ANY_BLEND 2u
+#define NDS_FTR_LEAN_ANY_LIGHT 4u
+#define NDS_FTR_LEAN_ANY_LIGHT_DIR 8u
+#define NDS_FTR_LEAN_SELF_IMAGES 8u
+typedef struct NDSFtrLeanSelfImage
+{
+    const NDSNativeFighterRuntimeTables *tables;
+    u32 oh_bits;
+    u32 any;
+} NDSFtrLeanSelfImage;
+static NDSFtrLeanSelfImage sNdsFtrLeanSelfImages[NDS_FTR_LEAN_SELF_IMAGES];
+static u32 sNdsFtrLeanSelfImageGen;
+static u32 sNdsFtrLeanSelfImageNext;
+
+static const NDSFtrLeanSelfImage *NDS_FIGHTER_PACKET_COLD_CODE
+ndsFtrLeanSelfImageOf(const NDSNativeFighterRuntimeTables *tables)
+{
+    NDSFtrLeanSelfImage *img;
+    u32 i;
+
+    if (sNdsFtrLeanSelfImageGen != gNdsTaskmanHeapGeneration + 1u)
+    {
+        memset(sNdsFtrLeanSelfImages, 0, sizeof(sNdsFtrLeanSelfImages));
+        sNdsFtrLeanSelfImageGen = gNdsTaskmanHeapGeneration + 1u;
+        sNdsFtrLeanSelfImageNext = 0u;
+    }
+    for (i = 0u; i < NDS_FTR_LEAN_SELF_IMAGES; i++)
+    {
+        if (sNdsFtrLeanSelfImages[i].tables == tables)
+        {
+            return &sNdsFtrLeanSelfImages[i];
+        }
+    }
+    img = &sNdsFtrLeanSelfImages[sNdsFtrLeanSelfImageNext];
+    sNdsFtrLeanSelfImageNext =
+        (sNdsFtrLeanSelfImageNext + 1u) % NDS_FTR_LEAN_SELF_IMAGES;
+    img->tables = tables;
+    img->oh_bits = 0u;
+    img->any = 0u;
+    for (i = 0u; i < tables->state_delta_count; i++)
+    {
+        const NDSNativeStateDelta *d = &tables->state_deltas[i];
+
+        if (d->effect == NDS_NATIVE_STATE_OTHERMODE)
+        {
+            img->oh_bits |= ndsFtrLeanOtherModeHBits(d->w0);
+        }
+        else if (d->effect == NDS_NATIVE_STATE_LOAD_TLUT)
+        {
+            img->any |= NDS_FTR_LEAN_ANY_TLUT;
+        }
+        else if (d->effect == NDS_NATIVE_STATE_BLEND)
+        {
+            img->any |= NDS_FTR_LEAN_ANY_BLEND;
+        }
+        else if (d->effect == NDS_NATIVE_STATE_LIGHT_COLOR)
+        {
+            img->any |= NDS_FTR_LEAN_ANY_LIGHT;
+        }
+    }
+    return img;
+}
+
+/* One root's state writes in walk order, against what its runs read. A
+ * material is not counted as a write (its effects vary by frame), so state
+ * only a material sets reads as carried. Returns FALSE at the first read of
+ * carried state:
+ *   every run      the combine; the blend colour where anything sets one
+ *   textured run   G_TEXTURE, an image, a block or tile load, the render
+ *                  tile's SETTILE and SETTILESIZE, a TLUT load where anything
+ *                  loads one, and every othermode_h bit any root writes
+ *   shaded epoch   both light colours where anything moves them (the root's
+ *                  light preamble counts), and the preamble's light direction
+ *                  where any root's preamble carries one
+ *   a load         its tile's SETTILE first. */
+#define NDS_FTR_LEAN_HAVE_COMBINE 1u
+#define NDS_FTR_LEAN_HAVE_TEXTURE 2u
+#define NDS_FTR_LEAN_HAVE_IMAGE 4u
+#define NDS_FTR_LEAN_HAVE_LOAD 8u
+#define NDS_FTR_LEAN_HAVE_TLUT 16u
+#define NDS_FTR_LEAN_HAVE_BLEND 32u
+#define NDS_FTR_LEAN_HAVE_LIGHT1 64u
+#define NDS_FTR_LEAN_HAVE_LIGHT2 128u
+typedef struct NDSFtrLeanSelfWalk
+{
+    u32 have;
+    u32 oh;
+    u32 tiles;
+    u32 sizes;
+    u32 render_tile;
+    u32 bad;
+    u8 tile_fmt[8];             /* each tile's SETTILE format */
+} NDSFtrLeanSelfWalk;
+
+static void ndsFtrLeanSelfSpan(const NDSNativeFighterRuntimeTables *tables,
+                               u16 first, u32 count, NDSFtrLeanSelfWalk *w)
+{
+    u32 i;
+
+    if ((count == 0u) || (first == NDS_NATIVE_STATE_NONE))
+    {
+        return;
+    }
+    for (i = 0u; i < count; i++)
+    {
+        const NDSNativeStateDelta *d =
+            &tables->state_deltas[tables->state_sequence[first + i]];
+        const u32 tile = (d->w1 >> 24) & 7u;
+
+        switch (d->effect)
+        {
+        case NDS_NATIVE_STATE_OTHERMODE:
+            w->oh |= ndsFtrLeanOtherModeHBits(d->w0);
+            break;
+        case NDS_NATIVE_STATE_COMBINE:
+            w->have |= NDS_FTR_LEAN_HAVE_COMBINE;
+            break;
+        case NDS_NATIVE_STATE_TEXTURE:
+            w->have |= NDS_FTR_LEAN_HAVE_TEXTURE;
+            w->render_tile = (d->w0 >> 8) & 7u;
+            break;
+        case NDS_NATIVE_STATE_IMAGE:
+            w->have |= NDS_FTR_LEAN_HAVE_IMAGE;
+            break;
+        case NDS_NATIVE_STATE_TILE:
+            w->tiles |= 1u << tile;
+            w->tile_fmt[tile] = (u8)((d->w0 >> 21) & 7u);
+            break;
+        case NDS_NATIVE_STATE_TILE_SIZE:
+            w->sizes |= 1u << tile;
+            break;
+        case NDS_NATIVE_STATE_LOAD_BLOCK:
+        case NDS_NATIVE_STATE_LOAD_TILE:
+            if ((w->tiles & (1u << tile)) == 0u)
+            {
+                w->bad = 1u;
+            }
+            w->have |= NDS_FTR_LEAN_HAVE_LOAD;
+            break;
+        case NDS_NATIVE_STATE_LOAD_TLUT:
+            if ((w->tiles & (1u << tile)) == 0u)
+            {
+                w->bad = 1u;
+            }
+            w->have |= NDS_FTR_LEAN_HAVE_TLUT;
+            break;
+        case NDS_NATIVE_STATE_BLEND:
+            w->have |= NDS_FTR_LEAN_HAVE_BLEND;
+            break;
+        case NDS_NATIVE_STATE_LIGHT_COLOR:
+            /* G_MW_LIGHTCOL: offset 0x00/0x04 light 1, 0x18/0x1c light 2. */
+            w->have |= (((d->w0 & 0xffffu) >= 0x18u) ?
+                        NDS_FTR_LEAN_HAVE_LIGHT2 : NDS_FTR_LEAN_HAVE_LIGHT1);
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+/* A material's writes (ndsRendererNativeApplyMaterial): the root key carries
+ * its rows, so state a material sets is the root's own input. */
+static void ndsFtrLeanSelfMaterial(const NDSRendererNativeMaterial *material,
+                                   NDSFtrLeanSelfWalk *w)
+{
+    const u32 fx = material->effects;
+
+    if ((fx & (NDS_RENDERER_NATIVE_MATERIAL_PALETTE_IMAGE |
+               NDS_RENDERER_NATIVE_MATERIAL_BLOCK_IMAGE |
+               NDS_RENDERER_NATIVE_MATERIAL_CURRENT_IMAGE)) != 0u)
+    {
+        w->have |= NDS_FTR_LEAN_HAVE_IMAGE;
+    }
+    if ((fx & NDS_RENDERER_NATIVE_MATERIAL_PALETTE_TLUT) != 0u)
+    {
+        const u32 tile = (material->palette_tile_w1 >> 24) & 7u;
+
+        w->tiles |= 1u << tile;
+        w->tile_fmt[tile] = (u8)((material->palette_tile_w0 >> 21) & 7u);
+        w->have |= NDS_FTR_LEAN_HAVE_TLUT;
+    }
+    if ((fx & NDS_RENDERER_NATIVE_MATERIAL_LIGHT1) != 0u)
+    {
+        w->have |= NDS_FTR_LEAN_HAVE_LIGHT1;
+    }
+    if ((fx & NDS_RENDERER_NATIVE_MATERIAL_LIGHT2) != 0u)
+    {
+        w->have |= NDS_FTR_LEAN_HAVE_LIGHT2;
+    }
+    if ((fx & NDS_RENDERER_NATIVE_MATERIAL_BLEND) != 0u)
+    {
+        w->have |= NDS_FTR_LEAN_HAVE_BLEND;
+    }
+    if ((fx & NDS_RENDERER_NATIVE_MATERIAL_LOAD_BLOCK) != 0u)
+    {
+        if ((w->tiles & (1u << ((material->load_block_w1 >> 24) & 7u))) == 0u)
+        {
+            w->bad = 1u;
+        }
+        w->have |= NDS_FTR_LEAN_HAVE_LOAD;
+    }
+    if ((fx & NDS_RENDERER_NATIVE_MATERIAL_RENDER_TILE_SIZE) != 0u)
+    {
+        w->sizes |= 1u << ((material->render_tile_size_w1 >> 24) & 7u);
+    }
+    if ((fx & NDS_RENDERER_NATIVE_MATERIAL_SCROLL_TILE_SIZE) != 0u)
+    {
+        w->sizes |= 1u << ((material->scroll_tile_size_w1 >> 24) & 7u);
+    }
+    if ((fx & NDS_RENDERER_NATIVE_MATERIAL_TEXTURE) != 0u)
+    {
+        w->have |= NDS_FTR_LEAN_HAVE_TEXTURE;
+        w->render_tile = (material->texture_w0 >> 8) & 7u;
+    }
+}
+
+static u32 NDS_FIGHTER_PACKET_COLD_CODE
+ndsFtrLeanRootSelfContained(const NDSNativeFighterRuntimeTables *tables,
+                            const NDSNativeRoot *root, u32 light_ok,
+                            const NDSRendererNativeFighterRoot *input,
+                            const NDSFtrLeanSelfImage *img, u32 any)
+{
+    const NDSRendererNativeFighterPreamble *preamble = input->preamble;
+    NDSFtrLeanSelfWalk w;
+    u32 e;
+
+    memset(&w, 0, sizeof(w));
+    if (light_ok != FALSE)
+    {
+        w.have |= NDS_FTR_LEAN_HAVE_LIGHT1 | NDS_FTR_LEAN_HAVE_LIGHT2;
+    }
+    any |= img->any;
+    for (e = 0u; e < (u32)root->epoch_count; e++)
+    {
+        const u32 epoch_index = (u32)root->first_epoch + e;
+        const NDSNativeEpoch *epoch = &tables->epochs[epoch_index];
+        const u32 family = tables->epoch_direct_policy[epoch_index] &
+            NDS_NATIVE_DIRECT_POLICY_FAMILY_MASK;
+
+        ndsFtrLeanSelfSpan(tables, epoch->before_state_first,
+                           epoch->before_state_count, &w);
+        if ((epoch->material_slot != NDS_NATIVE_MATERIAL_NONE) &&
+            ((u32)epoch->material_slot < input->material_count) &&
+            (input->materials != NULL))
+        {
+            ndsFtrLeanSelfMaterial(&input->materials[epoch->material_slot],
+                                   &w);
+        }
+        ndsFtrLeanSelfSpan(tables, epoch->after_state_first,
+                           epoch->after_state_count, &w);
+        if (w.bad != 0u)
+        {
+            NDS_FTR_LEAN_CTR(gNdsFtrLean.root_self_fail[0]++);
+            return FALSE;
+        }
+        if (epoch->action_count != 0u)
+        {
+            if (((any & NDS_FTR_LEAN_ANY_LIGHT) != 0u) &&
+                ((w.have & (NDS_FTR_LEAN_HAVE_LIGHT1 |
+                            NDS_FTR_LEAN_HAVE_LIGHT2)) !=
+                 (NDS_FTR_LEAN_HAVE_LIGHT1 | NDS_FTR_LEAN_HAVE_LIGHT2)))
+            {
+                NDS_FTR_LEAN_CTR(gNdsFtrLean.root_self_fail[1]++);
+                return FALSE;
+            }
+            if (((any & NDS_FTR_LEAN_ANY_LIGHT_DIR) != 0u) &&
+                ((preamble == NULL) ||
+                 ((preamble->flags &
+                   NDS_RENDERER_NATIVE_PREAMBLE_LIGHT_VALID) == 0u)))
+            {
+                NDS_FTR_LEAN_CTR(gNdsFtrLean.root_self_fail[2]++);
+                return FALSE;
+            }
+        }
+        if (epoch->run_count == 0u)
+        {
+            continue;
+        }
+        if ((w.have & NDS_FTR_LEAN_HAVE_COMBINE) == 0u)
+        {
+            NDS_FTR_LEAN_CTR(gNdsFtrLean.root_self_fail[3]++);
+            return FALSE;
+        }
+        if (((any & NDS_FTR_LEAN_ANY_BLEND) != 0u) &&
+            ((w.have & NDS_FTR_LEAN_HAVE_BLEND) == 0u))
+        {
+            NDS_FTR_LEAN_CTR(gNdsFtrLean.root_self_fail[4]++);
+            return FALSE;
+        }
+        if ((family == NDS_NATIVE_DIRECT_POLICY_TEXTURED_LIT) ||
+            (family == NDS_NATIVE_DIRECT_POLICY_TEXTURED_PASS2))
+        {
+            /* A TLUT only where the render tile is colour-indexed. */
+            const u32 need = NDS_FTR_LEAN_HAVE_TEXTURE |
+                NDS_FTR_LEAN_HAVE_IMAGE | NDS_FTR_LEAN_HAVE_LOAD |
+                ((((any & NDS_FTR_LEAN_ANY_TLUT) != 0u) &&
+                  (w.tile_fmt[w.render_tile] == 2u)) ?
+                     NDS_FTR_LEAN_HAVE_TLUT : 0u);
+
+            if ((w.have & need) != need)
+            {
+                NDS_FTR_LEAN_CTR(gNdsFtrLean.root_self_fail[5]++);
+                return FALSE;
+            }
+            if (((w.tiles & (1u << w.render_tile)) == 0u) ||
+                ((w.sizes & (1u << w.render_tile)) == 0u))
+            {
+                NDS_FTR_LEAN_CTR(gNdsFtrLean.root_self_fail[6]++);
+                return FALSE;
+            }
+            if ((img->oh_bits & ~w.oh) != 0u)
+            {
+                NDS_FTR_LEAN_CTR(gNdsFtrLean.root_self_fail[7]++);
+                return FALSE;
+            }
+        }
+    }
+    return TRUE;
+}
+
+/* The inputs a self-contained root's block is a function of. Not the colour
+ * modulate: it moves only the shade words (ndsRendererR2ResolveEpochShade's
+ * diffuse/ambient), which a copy re-derives (ndsFtrLeanRederiveSites). */
+static u32 ndsFtrLeanRootKey(const NDSNativeFighterRuntimeTables *tables,
+                             const NDSNativeRoot *root,
+                             const NDSRendererNativeFighterRoot *input,
+                             const void *root_asset_base,
+                             const void *light_preambles, u32 light_count,
+                             u32 palette_slot, u32 vtx10)
+{
+    const NDSRendererNativeFighterPreamble *pre = input->preamble;
+    const u32 *w = (const u32 *)(const void *)input->materials;
+    const u32 n = input->material_count;
+    u32 h = 2166136261u;
+    u32 i;
+
+#define NDS_FTR_LEAN_ROOT_MIX(v) h = (h ^ (u32)(v)) * 16777619u
+    NDS_FTR_LEAN_ROOT_MIX((uintptr_t)tables);
+    NDS_FTR_LEAN_ROOT_MIX((uintptr_t)root);
+    NDS_FTR_LEAN_ROOT_MIX(root->root_offset);
+    NDS_FTR_LEAN_ROOT_MIX((uintptr_t)root_asset_base);
+    NDS_FTR_LEAN_ROOT_MIX((uintptr_t)light_preambles);
+    NDS_FTR_LEAN_ROOT_MIX(light_count);
+    NDS_FTR_LEAN_ROOT_MIX(palette_slot | (vtx10 << 8));
+    NDS_FTR_LEAN_ROOT_MIX((u32)input->gx_parent_slot |
+                          ((u32)input->gx_store_slot << 8) |
+                          ((u32)input->gx_seed_is_identity << 16));
+    if (pre != NULL)
+    {
+        NDS_FTR_LEAN_ROOT_MIX(pre->geometry_mode);
+        NDS_FTR_LEAN_ROOT_MIX(pre->cycle_type);
+        NDS_FTR_LEAN_ROOT_MIX(pre->render_mode);
+        NDS_FTR_LEAN_ROOT_MIX(pre->prim_color);
+        NDS_FTR_LEAN_ROOT_MIX(pre->env_color);
+        NDS_FTR_LEAN_ROOT_MIX((u32)(u8)pre->light_dir_x |
+                              ((u32)(u8)pre->light_dir_y << 8) |
+                              ((u32)(u8)pre->light_dir_z << 16) |
+                              ((u32)pre->flags << 24));
+    }
+    NDS_FTR_LEAN_ROOT_MIX(n);
+    if (w != NULL)
+    {
+        for (i = 0u;
+             i < (n * (u32)sizeof(NDSRendererNativeMaterial)) / sizeof(u32);
+             i++)
+        {
+            NDS_FTR_LEAN_ROOT_MIX(w[i]);
+        }
+    }
+#undef NDS_FTR_LEAN_ROOT_MIX
+    h ^= h >> 15;
+    return (h != 0u) ? h : 1u;
+}
+
+/* End the open packed header, so the next command starts a block. */
+static void ndsFtrLeanPackClose(NDSFtrLeanPacker *pk)
+{
+    if (pk->fault != 0u)
+    {
+        return;
+    }
+    if ((pk->header_valid != 0u) && (pk->header_params == 0u))
+    {
+        if (pk->count >= pk->capacity)
+        {
+            pk->fault = 1u;
+            return;
+        }
+        pk->words[pk->count++] = 0u;
+    }
+    pk->cmd_slot = 4u;
+    pk->header_valid = 0u;
+    pk->header_params = 0u;
+}
+
+/* A donor's block is still what a walk would write: its textures are the
+ * cache entries it bound. */
+static u32 ndsFtrLeanRootRecResident(const NDSFighterPacket *donor,
+                                     const NDSFtrLeanRootRec *rec)
+{
+    u32 mask = rec->tex_mask;
+
+    while (mask != 0u)
+    {
+        const u32 i = (u32)__builtin_ctz(mask);
+        const NDSFighterPacketTexture *t = &donor->textures[i];
+        const NDSRendererHardwareTextureCacheEntry *entry;
+
+        mask &= mask - 1u;
+        if ((i >= (u32)donor->texture_count) || (t->slot_plus1 == 0u) ||
+            ((u32)t->slot_plus1 > NDS_RENDERER_HW_TEXTURE_CACHE_COUNT))
+        {
+            return FALSE;
+        }
+        entry = &sNdsRendererHardwareTextureCache[t->slot_plus1 - 1u];
+        if ((entry->ready == FALSE) || ((u32)(u16)entry->name != t->name) ||
+            (entry->key_generation != t->key_generation))
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+/* A copied block's shade words, re-derived as ndsFighterPacketApplyTintPrims
+ * derives them for the list's modulate and the roots' live prims (the donor
+ * may hold them at another modulate). */
+static void ndsFtrLeanRederiveSites(NDSFighterPacket *packet, u32 first,
+                                    u32 count,
+                                    const NDSRendererNativeFighterRoot *inputs,
+                                    u32 modulate)
+{
+    u32 i;
+
+    for (i = first; i < first + count; i++)
+    {
+        const NDSFighterPacketShadeSite *site = &packet->sites[i];
+        u32 material_color = site->material_color;
+        u32 diffuse;
+        u32 ambient;
+
+        if ((site->prim_from_root != 0u) &&
+            ((u32)site->root < packet->root_count) &&
+            (inputs[site->root].preamble != NULL))
+        {
+            material_color = inputs[site->root].preamble->prim_color;
+        }
+        diffuse = ndsRendererR2MaterialColor15(
+            site->light_color_1, material_color, site->use_material,
+            modulate);
+        ambient = ndsRendererR2MaterialColor15(
+            site->light_color_2, material_color, site->use_material,
+            modulate);
+        diffuse = ndsRendererR2ClampDiffuseToMaterial(
+            diffuse, ambient, material_color, site->use_material, modulate);
+        packet->words[site->index] = diffuse | (ambient << 16);
+    }
+}
+
+/* The parameter words of a packed GX command; *known FALSE for an opcode
+ * a lean list never carries (the block walk below then refuses). */
+static u32 ndsFtrLeanGxParamsKnown(u32 op, u32 *known)
+{
+    *known = TRUE;
+    switch (op)
+    {
+    case 0x00u: /* NOP */
+    case 0x11u: /* MTX_PUSH */
+    case 0x15u: /* MTX_IDENTITY */
+    case 0x41u: /* END_VTXS */
+        return 0u;
+    case 0x10u: /* MTX_MODE */
+    case 0x12u: /* MTX_POP */
+    case 0x13u: /* MTX_STORE */
+    case 0x14u: /* MTX_RESTORE */
+    case 0x20u: /* COLOR */
+    case 0x21u: /* NORMAL */
+    case 0x22u: /* TEXCOORD */
+    case 0x24u: /* VTX_10 */
+    case 0x25u: /* VTX_XY */
+    case 0x26u: /* VTX_XZ */
+    case 0x27u: /* VTX_YZ */
+    case 0x28u: /* VTX_DIFF */
+    case 0x29u: /* POLYGON_ATTR */
+    case 0x2Au: /* TEXIMAGE_PARAM */
+    case 0x2Bu: /* PLTT_BASE */
+    case 0x30u: /* DIF_AMB */
+    case 0x31u: /* SPE_EMI */
+    case 0x32u: /* LIGHT_VECTOR */
+    case 0x33u: /* LIGHT_COLOR */
+    case 0x40u: /* BEGIN_VTXS */
+        return 1u;
+    case 0x23u: /* VTX_16 */
+        return 2u;
+    case 0x1Bu: /* MTX_SCALE */
+    case 0x1Cu: /* MTX_TRANS */
+        return 3u;
+    case 0x1Au: /* MTX_MULT_3x3 */
+        return 9u;
+    case 0x17u: /* MTX_LOAD_4x3 */
+    case 0x19u: /* MTX_MULT_4x3 */
+        return 12u;
+    case 0x16u: /* MTX_LOAD_4x4 */
+    case 0x18u: /* MTX_MULT_4x4 */
+        return 16u;
+    default:
+        *known = FALSE;
+        return 0u;
+    }
+}
+
+/* Add `delta` (mod 64) to the polygon ID of every POLYGON_ATTR in a block of
+ * packed commands (the packer's layout: a header of four opcodes, their
+ * parameters, a dummy word after a header whose opcodes take none). FALSE
+ * when the block does not parse. With delta 0 it only checks. */
+static u32 ndsFtrLeanRebasePolyIds(u32 *words, u32 count, u32 delta)
+{
+    u32 i = 0u;
+
+    while (i < count)
+    {
+        const u32 header = words[i++];
+        u32 params = 0u;
+        u32 slot;
+
+        for (slot = 0u; slot < 4u; slot++)
+        {
+            const u32 op = (header >> (slot * 8u)) & 0xffu;
+            u32 known;
+            const u32 n = ndsFtrLeanGxParamsKnown(op, &known);
+
+            if (known == FALSE)
+            {
+                return FALSE;
+            }
+            if ((op == 0x29u) && (delta != 0u) && ((i + params) < count))
+            {
+                u32 *w = &words[i + params];
+
+                *w = (*w & ~((u32)NDS_RENDERER_POLY_ID_MASK << 24)) |
+                    ((((*w >> 24) + delta) & NDS_RENDERER_POLY_ID_MASK) << 24);
+            }
+            params += n;
+        }
+        i += (params != 0u) ? params : 1u;
+    }
+    return (i == count) ? TRUE : FALSE;
+}
+
+/* Copy `donor`'s root `from` block (record `src`) as this list's root
+ * `root_index`: the words at a fresh header, the root entry, sites, tint
+ * binds and textures re-based, the counters added. FALSE (nothing written)
+ * when a table would overflow. */
+static u32 NDS_FIGHTER_PACKET_COLD_CODE
+ndsFtrLeanRootCopy(NDSFtrLeanMat *m, u32 root_index,
+                   const NDSFighterPacket *donor, u32 from,
+                   const NDSFtrLeanRootRec *src,
+                   const NDSRendererNativeFighterRoot *inputs,
+                   u32 light_word, NDSRendererStats *stats,
+                   NDSFtrLeanRootRec *out)
+{
+    NDSFighterPacket *packet = m->packet;
+    NDSFtrLeanPacker *pk = &m->pk;
+    const u32 len = (u32)src->end - (u32)src->start;
+    const NDSFighterPacketRoot *from_root = &donor->roots[from];
+    NDSFighterPacketRoot *to_root = &packet->roots[root_index];
+    u32 new_textures = 0u;
+    u32 tex_mask = 0u;
+    u32 mask;
+    u32 site_first;
+    u32 tint_first;
+    s32 delta;
+    u32 i;
+
+    if ((src->end <= src->start) || ((u32)src->end > donor->word_count) ||
+        (((u32)src->site_first + src->site_count) >
+         (u32)donor->site_count) ||
+        (((u32)src->tint_first + src->tint_count) >
+         (u32)donor->tint_bind_count) ||
+        (from >= donor->root_count) ||
+        (((u32)packet->site_count + src->site_count) >
+         NDS_FIGHTER_PACKET_SITE_MAX) ||
+        (((u32)packet->tint_bind_count + src->tint_count) >
+         NDS_FIGHTER_PACKET_TINT_BIND_MAX))
+    {
+        return FALSE;
+    }
+    mask = src->tex_mask;
+    while (mask != 0u)
+    {
+        const u32 b = (u32)__builtin_ctz(mask);
+        u32 k;
+
+        mask &= mask - 1u;
+        for (k = 0u; k < (u32)packet->texture_count; k++)
+        {
+            if (packet->textures[k].slot_plus1 ==
+                donor->textures[b].slot_plus1)
+            {
+                break;
+            }
+        }
+        if (k == (u32)packet->texture_count)
+        {
+            new_textures++;
+        }
+    }
+    if (((u32)packet->texture_count + new_textures) >
+        NDS_FIGHTER_PACKET_TEXTURE_MAX)
+    {
+        return FALSE;
+    }
+    if (m->hw_texgen != 0u)
+    {
+        /* The previous run's GX texgen matrix stops here, as the block's
+         * first run would stop it (MatRun): the block was recorded behind a
+         * root that left none. */
+        ndsFtrLeanPack1(pk, REG2ID(MATRIX_CONTROL), (u32)GL_TEXTURE);
+        (void)ndsFtrLeanPack(pk, REG2ID(MATRIX_IDENTITY), 0u);
+        ndsFtrLeanPack1(pk, REG2ID(MATRIX_CONTROL), (u32)GL_MODELVIEW);
+        m->hw_texgen = 0u;
+    }
+    ndsFtrLeanPackClose(pk);
+    if ((pk->fault != 0u) || ((pk->count + len) > pk->capacity) ||
+        (pk->count + len > 0xffffu))
+    {
+        return FALSE;
+    }
+    delta = (s32)pk->count - (s32)src->start;
+    memcpy(&pk->words[pk->count], &donor->words[src->start],
+           len * sizeof(u32));
+    if (ndsFtrLeanRebasePolyIds(&pk->words[pk->count], len,
+                                (stats->texture_combine_count -
+                                 (u32)src->combine_base) &
+                                    NDS_RENDERER_POLY_ID_MASK) == FALSE)
+    {
+        return FALSE;
+    }
+    out->combine_base =
+        (u8)(stats->texture_combine_count & NDS_RENDERER_POLY_ID_MASK);
+    out->combine_count = src->combine_count;
+    stats->texture_combine_count += src->combine_count;
+    out->start = (u16)pk->count;
+    pk->count += len;
+    out->end = (u16)pk->count;
+    *to_root = *from_root;
+    if (to_root->seed_index != NDS_FIGHTER_PACKET_INDEX_NONE)
+    {
+        to_root->seed_index = (u16)((s32)to_root->seed_index + delta);
+    }
+    for (i = 0u; i < (u32)to_root->local_count; i++)
+    {
+        if (to_root->local_index[i] != NDS_FIGHTER_PACKET_INDEX_NONE)
+        {
+            to_root->local_index[i] =
+                (u16)((s32)to_root->local_index[i] + delta);
+        }
+    }
+    to_root->parent_slot = inputs[root_index].gx_parent_slot;
+    to_root->store_slot = inputs[root_index].gx_store_slot;
+    to_root->seed_is_identity = inputs[root_index].gx_seed_is_identity;
+    site_first = packet->site_count;
+    for (i = 0u; i < src->site_count; i++)
+    {
+        NDSFighterPacketShadeSite *site = &packet->sites[packet->site_count++];
+
+        *site = donor->sites[(u32)src->site_first + i];
+        site->index = (u16)((s32)site->index + delta);
+        site->root = (u8)root_index;
+    }
+    tint_first = packet->tint_bind_count;
+    for (i = 0u; i < src->tint_count; i++)
+    {
+        NDSFighterPacketTintBind *bind =
+            &packet->tint_binds[packet->tint_bind_count++];
+
+        *bind = donor->tint_binds[(u32)src->tint_first + i];
+        bind->tex_index = (u16)((s32)bind->tex_index + delta);
+        if (bind->pal_index != NDS_FIGHTER_PACKET_INDEX_NONE)
+        {
+            bind->pal_index = (u16)((s32)bind->pal_index + delta);
+        }
+        bind->root = (u8)root_index;
+    }
+    i = (u32)packet->tint_bind_seen + src->tint_seen;
+    packet->tint_bind_seen = (u8)((i > 0xffu) ? 0xffu : i);
+    mask = src->tex_mask;
+    while (mask != 0u)
+    {
+        const u32 b = (u32)__builtin_ctz(mask);
+        u32 k;
+
+        mask &= mask - 1u;
+        for (k = 0u; k < (u32)packet->texture_count; k++)
+        {
+            if (packet->textures[k].slot_plus1 ==
+                donor->textures[b].slot_plus1)
+            {
+                break;
+            }
+        }
+        if (k == (u32)packet->texture_count)
+        {
+            packet->textures[packet->texture_count++] = donor->textures[b];
+        }
+        tex_mask |= 1u << k;
+    }
+    if ((src->flags & NDS_FTR_LEAN_ROOT_FENCE) != 0u)
+    {
+        packet->needs_fence = 1u;
+    }
+    m->run_count += (u32)src->raw_runs + (u32)src->cross_runs;
+    m->triangle_count += src->triangles;
+    m->raw_triangles += src->raw_triangles;
+    m->raw_reuse += (u32)src->raw_triangles - (u32)src->raw_runs;
+    m->cross_triangles += src->cross_triangles;
+    m->cross_reuse += (u32)src->cross_triangles - (u32)src->cross_runs;
+    m->vertex_loads += src->vertex_loads;
+    m->prepare_begin += src->prepare_begin;
+    m->prepare_reuse += src->prepare_reuse;
+    m->texture_binds += src->texture_binds;
+    m->tint_binds += src->tint_binds;
+    if (((src->flags & NDS_FTR_LEAN_ROOT_LIT) != 0u) &&
+        (m->light_written == FALSE))
+    {
+        /* MatShade's first lit epoch: the head's vector (patched per draw
+         * where the root's preamble carries one). */
+        packet->light_root = (u8)root_index;
+        packet->light_valid = 1u;
+        pk->words[packet->light_index] = light_word;
+        m->light_written = TRUE;
+    }
+    ndsFtrLeanRederiveSites(packet, site_first, src->site_count, inputs,
+                            packet->tint_modulate);
+    out->key = src->key;
+    out->site_first = (u8)site_first;
+    out->site_count = src->site_count;
+    out->tint_first = (u8)tint_first;
+    out->tint_count = src->tint_count;
+    out->tex_mask = tex_mask;
+    out->triangles = src->triangles;
+    out->vertex_loads = src->vertex_loads;
+    out->raw_triangles = src->raw_triangles;
+    out->cross_triangles = src->cross_triangles;
+    out->raw_runs = src->raw_runs;
+    out->cross_runs = src->cross_runs;
+    out->prepare_begin = src->prepare_begin;
+    out->prepare_reuse = src->prepare_reuse;
+    out->texture_binds = src->texture_binds;
+    out->tint_binds = src->tint_binds;
+    out->tint_seen = src->tint_seen;
+    out->flags = src->flags;
+    return TRUE;
+}
+
 /* The bind the prepare just made: its cache entry, validated per draw, or
  * the global texture fence when there is none. */
 static void NDS_FIGHTER_PACKET_COLD_CODE
@@ -13108,6 +13973,7 @@ ndsFtrLeanMatNoteTexture(NDSFtrLeanMat *m, u32 tint)
     if (entry == NULL)
     {
         packet->needs_fence = 1u;
+        m->root_fence = 1u;
         if ((tint == 0u) && (packet->fence_other < 0xffu))
         {
             packet->fence_other++;
@@ -13128,6 +13994,7 @@ ndsFtrLeanMatNoteTexture(NDSFtrLeanMat *m, u32 tint)
     {
         if (packet->textures[i].slot_plus1 == slot + 1u)
         {
+            m->root_tex_mask |= 1u << i;
             return;
         }
     }
@@ -13140,6 +14007,7 @@ ndsFtrLeanMatNoteTexture(NDSFtrLeanMat *m, u32 tint)
         }
         return;
     }
+    m->root_tex_mask |= 1u << packet->texture_count;
     packet->textures[packet->texture_count].slot_plus1 = (u16)(slot + 1u);
     packet->textures[packet->texture_count].name = (u16)entry->name;
     packet->textures[packet->texture_count].key_generation =
@@ -13177,6 +14045,7 @@ ndsFtrLeanMatShade(NDSFtrLeanMat *m, const NDSNativeEpoch *epoch,
         u32 tinted;
         u32 i;
 
+        m->root_lit = 1u;
         if (m->light_written == FALSE)
         {
             /* The light vector's table entry; the vector
@@ -14146,6 +15015,10 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
     const NDSNativeFighterRuntimeTables *owner_tables;
     const u8 *palette_slots;
     NDSFtrLeanMat m;
+    NDSFighterPacket *donors[NDS_FTR_LEAN_ENTRIES + 1u];
+    u32 donor_count = 0u;
+    u32 plan_any = 0u;
+    u32 record;
     u32 root_count;
     u32 root_index;
     u32 reason = 0u;
@@ -14157,13 +15030,14 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
         (((entry & NDS_FTR_LEAN_ENTRY_VTX10H) != 0u) ? 2u : 1u);
     u32 capacity = (wide != FALSE) ? ndsFtrLeanWideCapacity() :
         ndsFtrLeanWordCapacity();
+    u32 no_copy = ((entry & NDS_FTR_LEAN_ENTRY_NOCOPY) != 0u) ? TRUE : FALSE;
     /* Slice 6: the fence the old path's key would carry for this record --
      * built before its execute, so before any bind below uploads. */
     u32 record_fence = sNdsRendererHardwareTextureKeyGeneration ^
         (sNdsRendererRuntimeTextureCacheEvictCount << 16);
 
     entry &= ~(NDS_FTR_LEAN_ENTRY_WIDE | NDS_FTR_LEAN_ENTRY_VTX16 |
-               NDS_FTR_LEAN_ENTRY_VTX10H);
+               NDS_FTR_LEAN_ENTRY_VTX10H | NDS_FTR_LEAN_ENTRY_NOCOPY);
     sNdsFtrLeanLastVtxFail = 0u;
     if ((battle_slot >= NDS_FIGHTER_PACKET_SLOTS) || (key == NULL) ||
         (ndsFtrLeanEntryUsable(entry) == FALSE) || (inputs == NULL) ||
@@ -14287,6 +15161,99 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
         m.light_cmd_slot = m.pk.cmd_slot - 1u;
     }
     es->donor_mask = 0u;
+    /* ROOT BLOCKS: a plan whose roots are all self-contained records its
+     * blocks, and copies those a donor (the other entry, the spare) holds. */
+    record = (root_count <= NDS_FTR_LEAN_ROOT_RECS) ? TRUE : FALSE;
+    for (root_index = 0u; (record != FALSE) && (root_index < root_count);
+         root_index++)
+    {
+        const NDSRendererNativeFighterRoot *input = &inputs[root_index];
+        u32 k;
+
+        if (sNdsNativeProductionResolvedRoots[root_index]->light_preamble !=
+            0u)
+        {
+            plan_any |= NDS_FTR_LEAN_ANY_LIGHT;
+        }
+        if ((input->preamble != NULL) &&
+            ((input->preamble->flags &
+              NDS_RENDERER_NATIVE_PREAMBLE_LIGHT_VALID) != 0u))
+        {
+            plan_any |= NDS_FTR_LEAN_ANY_LIGHT_DIR;
+        }
+        for (k = 0u; k < input->material_count; k++)
+        {
+            const u32 fx = input->materials[k].effects;
+
+            if ((fx & NDS_RENDERER_NATIVE_MATERIAL_PALETTE_TLUT) != 0u)
+            {
+                plan_any |= NDS_FTR_LEAN_ANY_TLUT;
+            }
+            if ((fx & NDS_RENDERER_NATIVE_MATERIAL_BLEND) != 0u)
+            {
+                plan_any |= NDS_FTR_LEAN_ANY_BLEND;
+            }
+            if ((fx & (NDS_RENDERER_NATIVE_MATERIAL_LIGHT1 |
+                       NDS_RENDERER_NATIVE_MATERIAL_LIGHT2)) != 0u)
+            {
+                plan_any |= NDS_FTR_LEAN_ANY_LIGHT;
+            }
+        }
+    }
+    for (root_index = 0u; (record != FALSE) && (root_index < root_count);
+         root_index++)
+    {
+        const NDSNativeFighterRuntimeTables *t =
+            sNdsNativeProductionResolvedTables[root_index];
+        const NDSNativeRoot *r = sNdsNativeProductionResolvedRoots[root_index];
+        const u32 light_ok =
+            ((r->light_preamble != 0u) &&
+             ((u32)r->light_preamble <
+              sNdsNativeProductionResolvedLightPreambleCounts[root_index])) ?
+                TRUE : FALSE;
+
+        if (ndsFtrLeanRootSelfContained(
+                t, r, light_ok, &inputs[root_index],
+                ndsFtrLeanSelfImageOf(t), plan_any) == FALSE)
+        {
+            record = FALSE;
+        }
+    }
+    NDS_FTR_LEAN_CTR(gNdsFtrLean.root_plans += (record != FALSE) ? 1u : 0u);
+    if ((record != FALSE) && (no_copy == FALSE) &&
+        (gNdsFtrLeanRootCopyOff == 0u))
+    {
+        u32 e;
+
+        for (e = 0u; e <= NDS_FTR_LEAN_SPARE; e++)
+        {
+            const NDSFtrLeanEntryState *des = &slot_state->entry[e];
+            NDSFighterPacket *dp;
+
+            if ((e == entry) || (des->valid == 0u) ||
+                ((e < NDS_FTR_LEAN_ENTRIES) &&
+                 (ndsFtrLeanEntryUsable(e) == FALSE)) ||
+                ((e == NDS_FTR_LEAN_SPARE) &&
+                 ((slot_state->spare_buf == NULL) ||
+                  (slot_state->spare_gen != gNdsTaskmanHeapGeneration))) ||
+                ((des->variant_count != 0u) && (des->variant_cur != 0u)) ||
+                (des->tint_set_generation != gNdsR2FighterTintSetGeneration) ||
+                (des->tint_repatch != 0u) || (des->vtx10 != vtx10))
+            {
+                continue;
+            }
+            dp = ndsFtrLeanEntryPacket(battle_slot, e);
+            if ((dp == packet) || (dp->valid == 0u) ||
+                (dp->root_rec_count == 0u) ||
+                (dp->texgen_site_count != 0u))
+            {
+                continue;
+            }
+            donors[donor_count++] = dp;
+        }
+    }
+    NDS_FTR_LEAN_CTR(gNdsFtrLean.root_donor_plans +=
+                         (donor_count != 0u) ? 1u : 0u);
     NDS_FTR_LEAN_MAT_PART(&m, 0u);
     for (root_index = 0u; (root_index < root_count) && (reason == 0u);
          root_index++)
@@ -14300,6 +15267,15 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
         u32 palette_slot = palette_slots[root_index];
         u32 epoch_offset;
         u32 j;
+        u32 root_key = 0u;
+        u32 block_start;
+        u32 snap_sites;
+        u32 snap_tints;
+        u32 snap_tint_seen;
+        u32 snap_fence_other;
+        u32 snap_combine;
+        u32 snap_groups;
+        NDSFtrLeanMat snap;
 
         sNdsNativeFighterActiveTables =
             sNdsNativeProductionResolvedTables[root_index];
@@ -14316,6 +15292,84 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
         {
             es->donor_mask |= 1u << root_index;
         }
+        if (record != FALSE)
+        {
+            root_key = ndsFtrLeanRootKey(
+                sNdsNativeFighterActiveTables, root, input, root_asset_base,
+                (const void *)sNdsNativeFighterActiveRootLightPreambles,
+                sNdsNativeFighterActiveRootLightPreambleCount, palette_slot,
+                m.vtx10);
+        }
+        if (donor_count != 0u)
+        {
+            u32 copied = FALSE;
+            u32 d;
+
+            for (d = 0u; (d < donor_count) && (copied == FALSE); d++)
+            {
+                NDSFighterPacket *dp = donors[d];
+                const NDSFtrLeanRootRec *drecs = ndsFtrLeanRootRecs(dp);
+                u32 k;
+
+                for (k = 0u; k < (u32)dp->root_rec_count; k++)
+                {
+                    if ((drecs[k].key != root_key) ||
+                        ((drecs[k].flags & NDS_FTR_LEAN_ROOT_COPY) == 0u))
+                    {
+                        continue;
+                    }
+                    NDS_FTR_LEAN_CTR(gNdsFtrLean.root_key_hits++);
+                    if (ndsFtrLeanRootRecResident(dp, &drecs[k]) != FALSE)
+                    {
+                        const NDSRendererNativeFighterPreamble *pre =
+                            input->preamble;
+                        NDSFtrLeanRootRec copy_rec;
+
+                        copied = ndsFtrLeanRootCopy(
+                            &m, root_index, dp, k, &drecs[k], inputs,
+                            ((pre != NULL) &&
+                             ((pre->flags &
+                               NDS_RENDERER_NATIVE_PREAMBLE_LIGHT_VALID) !=
+                              0u)) ?
+                                ndsFighterPacketLightWord(pre->light_dir_x,
+                                                          pre->light_dir_y,
+                                                          pre->light_dir_z) :
+                                ndsFighterPacketLightWord(stats->light_dir_x,
+                                                          stats->light_dir_y,
+                                                          stats->light_dir_z),
+                            stats, &copy_rec);
+                        if ((copied != FALSE) &&
+                            (packet->texgen_site_count == 0u))
+                        {
+                            ndsFtrLeanRootRecs(packet)[root_index] = copy_rec;
+                        }
+                    }
+                    break;
+                }
+            }
+            if (copied != FALSE)
+            {
+                NDS_FTR_LEAN_CTR(gNdsFtrLean.root_copies++);
+                continue;
+            }
+        }
+        NDS_FTR_LEAN_CTR(gNdsFtrLean.root_walks++);
+        /* The block starts at a fresh header (ROOT BLOCKS). */
+        if (record != FALSE)
+        {
+            ndsFtrLeanPackClose(&m.pk);
+        }
+        block_start = m.pk.count;
+        snap = m;
+        snap_sites = packet->site_count;
+        snap_tints = packet->tint_bind_count;
+        snap_tint_seen = packet->tint_bind_seen;
+        snap_fence_other = packet->fence_other;
+        snap_combine = stats->texture_combine_count;
+        snap_groups = packet->texgen_group_count;
+        m.root_tex_mask = 0u;
+        m.root_lit = 0u;
+        m.root_fence = 0u;
         ndsRendererNativeBindProductionRoot(state, input, stats);
         /* ndsFighterPacketBeginRoot, then the root's one LOAD4x3. */
         m.root = root_index;
@@ -14413,6 +15467,76 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
         ndsRendererNativeApplyStateSpanPreflight(
             root->tail_state_first, root->tail_state_count,
             root->tail_sync_count, root_asset_base, stats, state);
+        if (record != FALSE)
+        {
+            /* The block ends at a closed header; its record (ROOT BLOCKS). */
+            ndsFtrLeanPackClose(&m.pk);
+            if ((m.pk.fault == 0u) && (packet->texgen_site_count == 0u))
+            {
+                NDSFtrLeanRootRec *rec = &ndsFtrLeanRootRecs(packet)[root_index];
+                const u32 raw_tri = m.raw_triangles - snap.raw_triangles;
+                const u32 raw_runs = raw_tri - (m.raw_reuse - snap.raw_reuse);
+                const u32 cross_tri = m.cross_triangles - snap.cross_triangles;
+                const u32 cross_runs =
+                    cross_tri - (m.cross_reuse - snap.cross_reuse);
+                const u32 triangles = m.triangle_count - snap.triangle_count;
+                const u32 vertex_loads = m.vertex_loads - snap.vertex_loads;
+                const u32 prepare_begin = m.prepare_begin - snap.prepare_begin;
+                const u32 prepare_reuse = m.prepare_reuse - snap.prepare_reuse;
+                const u32 texture_binds = m.texture_binds - snap.texture_binds;
+                const u32 tint_binds = m.tint_binds - snap.tint_binds;
+                const u32 sites = packet->site_count - snap_sites;
+                const u32 tints = packet->tint_bind_count - snap_tints;
+                const u32 tint_seen = packet->tint_bind_seen - snap_tint_seen;
+                const u32 combines =
+                    stats->texture_combine_count - snap_combine;
+                const u32 copyable =
+                    ((combines <= 0xffu) &&
+                     (packet->texgen_group_count == snap_groups) &&
+                     (snap.hw_texgen == 0u) && (m.hw_texgen == 0u) &&
+                     (m.tint_pending == snap.tint_pending) &&
+                     (packet->fence_other == snap_fence_other) &&
+                     (packet->tint_bind_overflow == 0u) &&
+                     (m.pk.count <= 0xffffu) && (raw_runs <= 0xffu) &&
+                     (cross_runs <= 0xffu) && (raw_tri <= 0xffffu) &&
+                     (cross_tri <= 0xffffu) && (triangles <= 0xffffu) &&
+                     (vertex_loads <= 0xffffu) && (prepare_begin <= 0xffu) &&
+                     (prepare_reuse <= 0xffu) && (texture_binds <= 0xffu) &&
+                     (tint_binds <= 0xffu) && (tint_seen <= 0xffu) &&
+                     (snap_sites <= 0xffu) && (sites <= 0xffu) &&
+                     (snap_tints <= 0xffu) && (tints <= 0xffu)) ?
+                        TRUE : FALSE;
+
+                rec->key = root_key;
+                rec->start = (u16)block_start;
+                rec->end = (u16)m.pk.count;
+                rec->site_first = (u8)snap_sites;
+                rec->site_count = (u8)sites;
+                rec->tint_first = (u8)snap_tints;
+                rec->tint_count = (u8)tints;
+                rec->tex_mask = m.root_tex_mask;
+                rec->triangles = (u16)triangles;
+                rec->vertex_loads = (u16)vertex_loads;
+                rec->raw_triangles = (u16)raw_tri;
+                rec->cross_triangles = (u16)cross_tri;
+                rec->raw_runs = (u8)raw_runs;
+                rec->cross_runs = (u8)cross_runs;
+                rec->prepare_begin = (u8)prepare_begin;
+                rec->prepare_reuse = (u8)prepare_reuse;
+                rec->texture_binds = (u8)texture_binds;
+                rec->tint_binds = (u8)tint_binds;
+                rec->tint_seen = (u8)tint_seen;
+                rec->combine_base =
+                    (u8)(snap_combine & NDS_RENDERER_POLY_ID_MASK);
+                rec->combine_count = (u8)combines;
+                rec->flags = (u8)(((copyable != FALSE) ?
+                                   NDS_FTR_LEAN_ROOT_COPY : 0u) |
+                                  ((m.root_lit != 0u) ?
+                                   NDS_FTR_LEAN_ROOT_LIT : 0u) |
+                                  ((m.root_fence != 0u) ?
+                                   NDS_FTR_LEAN_ROOT_FENCE : 0u));
+            }
+        }
     }
     /* Every GX tracker is re-derived by the next writer (the lean submit
      * resets the same ones after its DMA). */
@@ -14471,6 +15595,11 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
     }
     packet->word_count = m.pk.count;
     packet->valid = 1u;
+    /* ROOT BLOCKS: every root's record was written (a list with texgen sites
+     * keeps none: the records share their table). */
+    packet->root_rec_count =
+        ((record != FALSE) && (packet->texgen_site_count == 0u)) ?
+            (u8)root_count : 0u;
     packet->run_count = m.run_count;
     packet->triangle_count = m.triangle_count;
     packet->raw_triangles = m.raw_triangles;
@@ -15864,6 +16993,27 @@ void ndsFtrLeanVerifyEntries(u32 battle_slot, u32 held, u32 fresh)
         {
             gNdsFtrLean.verify_mismatch[2]++;
             break;
+        }
+    }
+    /* The patched words too (ROOT BLOCKS re-derives a copy's shade words and
+     * takes its tint binds' words from the donor): the held list's are at
+     * its last patch, the fresh list's at this draw's modulate and tiles. */
+    for (i = 0u; i < (u32)a->site_count; i++)
+    {
+        if (a->words[a->sites[i].index] != b->words[b->sites[i].index])
+        {
+            gNdsFtrLean.verify_site_mismatch++;
+        }
+    }
+    for (i = 0u; i < (u32)a->tint_bind_count; i++)
+    {
+        if ((a->words[a->tint_binds[i].tex_index] !=
+             b->words[b->tint_binds[i].tex_index]) ||
+            ((a->tint_binds[i].pal_index != NDS_FIGHTER_PACKET_INDEX_NONE) &&
+             (a->words[a->tint_binds[i].pal_index] !=
+              b->words[b->tint_binds[i].pal_index])))
+        {
+            gNdsFtrLean.verify_tint_mismatch++;
         }
     }
     if ((fs->fence_needed != hs->fence_needed) ||
