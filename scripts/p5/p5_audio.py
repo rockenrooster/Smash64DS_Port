@@ -69,7 +69,7 @@ def main() -> int:
         if row["source"] != "remix" or not row["landed"]:
             continue
         stage = json.loads((args.stages_root / row["name"] / "stage.json").read_text(encoding="utf-8"))
-        bgm_id = stage["bgm_id"]
+        bgm_id = stage["remix_bgm"] if stage.get("remix_bgm") is not None else stage["bgm_id"]
         if bgm_id < p4_audio.VANILLA_BGM_COUNT or bgm_id in seen:
             continue
         seen.add(bgm_id)

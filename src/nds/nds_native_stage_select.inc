@@ -3498,6 +3498,9 @@ static const NDSNativeStagePacket *ndsRendererNativeStageResolvePacket(void)
         sNdsNativeStagePacketTable[kind] : NULL;
 }
 
+/* nds_renderer_assets.c, after the workspace types. */
+static s32 ndsRendererNativeStageBindWorkspace(const NDSNativeStagePacket *packet);
+
 /* Called at the top of every native stage entry point.  Returns FALSE when
  * the selected kind has no packet, which is the signal to decline. */
 static s32 ndsRendererNativeStageSelectPacket(void)
@@ -3505,6 +3508,14 @@ static s32 ndsRendererNativeStageSelectPacket(void)
     const NDSNativeStagePacket *packet = ndsRendererNativeStageResolvePacket();
 
     if (packet == NULL)
+    {
+        gNdsNativeStagePacketUnresolvedCount++;
+        gNdsNativeStagePacketUnresolvedKind = gNdsSCVSBattleStageGKind;
+        return FALSE;
+    }
+    /* The packet's workspace: the linked one's is static, a blob's sits
+     * beside its slab (nds_renderer_assets.c NDSNativeStageWorkspace). */
+    if (ndsRendererNativeStageBindWorkspace(packet) == FALSE)
     {
         gNdsNativeStagePacketUnresolvedCount++;
         gNdsNativeStagePacketUnresolvedKind = gNdsSCVSBattleStageGKind;

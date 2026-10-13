@@ -364,7 +364,13 @@ extern void func_80004AB0(void);
 #define NDS_MAPS_PREVIEW_GKIND_NONE (-1)
 /* The packet blob's body cap (nds_native_stage_blob.c) and the slack the
  * blob header, alignment and a preloaded asset outside the tree may take. */
+#if NDS_P5
+/* P5: Hyrule Temple's blob (34,948 B with its header) and the owner's run
+ * and vertex workspace a blob now carries (20,724 B). */
+#define NDS_MAPS_PREVIEW_BLOB_BYTES (64u * 1024u)
+#else
 #define NDS_MAPS_PREVIEW_BLOB_BYTES (48u * 1024u)
+#endif
 /* A stage's first draws each upload textures for about this many ticks
  * (at least one): 0.7 of a VBlank. */
 #define NDS_MAPS_PREVIEW_WARM_TICKS 400000u
@@ -379,6 +385,14 @@ enum
 };
 
 __attribute__((used)) volatile u32 gNdsMapsPreviewLoads;
+/* Loads begun again after the reloc cache was evicted under them, and loads
+ * whose ground data still named an unloaded file. */
+__attribute__((used)) volatile u32 gNdsMapsPreviewRestarts;
+__attribute__((used)) volatile u32 gNdsMapsPreviewUnresolved;
+/* The general heap generation a load began in, and its restarts so far
+ * (ndsMNMapsPreviewStepLoad). */
+static u32 sNdsMapsPreviewHeapGeneration;
+static u32 sNdsMapsPreviewRestartCount;
 __attribute__((used)) volatile u32 gNdsMapsPreviewDraws;
 __attribute__((used)) volatile u32 gNdsMapsPreviewNativeDraws;
 __attribute__((used)) volatile u32 gNdsMapsPreviewFailStep;
@@ -793,6 +807,11 @@ static void ndsMNMapsPreviewDropModel(void)
 static void ndsMNMapsPreviewBegin(s32 gkind)
 {
     ndsMNMapsPreviewDropModel();
+    if (gkind != sNdsMapsPreviewShown)
+    {
+        sNdsMapsPreviewRestartCount = 0u;
+    }
+    sNdsMapsPreviewHeapGeneration = gNdsTaskmanHeapGeneration;
     sNdsMapsPreviewShown = gkind;
     gNdsMapsPreviewShownGkind = gkind;
     sNdsMapsPreviewStep = NDS_MAPS_PREVIEW_STEP_IDLE;
@@ -819,12 +838,63 @@ static void ndsMNMapsPreviewFail(u32 step)
     sNdsMapsPreviewStep = NDS_MAPS_PREVIEW_STEP_IDLE;
 }
 
+/* A load spans tics, and the reloc cache keys its resident set on the
+ * general heap's generation (ndsRelocPrepareSceneCache): when that moves
+ * between two steps it forgets every file the earlier steps loaded, and the
+ * map's tree then resolved its pointers into the geometry file against
+ * nothing -- Hyrule Temple's first layer read the file id 0x982 as its
+ * DObjDesc and the select aborted (2026-10-13). The owner's intermittent
+ * missing previews are the same race on the stages whose pointers it left
+ * NULL. So a load whose generation moved starts again, a few times. */
+#define NDS_MAPS_PREVIEW_RESTART_MAX 3u
+
+static sb32 ndsMNMapsPreviewPointerOk(const void *p)
+{
+    return ((p == NULL) ||
+            (((uintptr_t)p >= 0x02000000u) && ((uintptr_t)p < 0x03000000u))) ?
+        TRUE : FALSE;
+}
+
+/* Every layer's tables are in main RAM or absent: a pointer the tree load
+ * left unresolved reads as a small number. */
+static sb32 ndsMNMapsPreviewGroundDataResolved(const MPGroundData *gd)
+{
+    s32 i;
+
+    for (i = 0; i < 4; i++)
+    {
+        if ((ndsMNMapsPreviewPointerOk(gd->gr_desc[i].dobjdesc) == FALSE) ||
+            (ndsMNMapsPreviewPointerOk(gd->gr_desc[i].anim_joints) == FALSE) ||
+            (ndsMNMapsPreviewPointerOk(gd->gr_desc[i].p_mobjsubs) == FALSE) ||
+            (ndsMNMapsPreviewPointerOk(gd->gr_desc[i].p_matanim_joints) == FALSE))
+        {
+            return FALSE;
+        }
+    }
+    return ndsMNMapsPreviewPointerOk(gd->map_geometry);
+}
+
 static void ndsMNMapsPreviewStepLoad(void)
 {
     s32 gkind = sNdsMapsPreviewShown;
     SYMallocRegion *previous;
     u32 step_start = cpuGetTiming();
     s32 i;
+
+    if ((sNdsMapsPreviewStep != NDS_MAPS_PREVIEW_STEP_IDLE) &&
+        (sNdsMapsPreviewStep != NDS_MAPS_PREVIEW_STEP_WARM) &&
+        (sNdsMapsPreviewHeapGeneration != gNdsTaskmanHeapGeneration))
+    {
+        if (sNdsMapsPreviewRestartCount >= NDS_MAPS_PREVIEW_RESTART_MAX)
+        {
+            ndsMNMapsPreviewFail(4u);
+            return;
+        }
+        sNdsMapsPreviewRestartCount++;
+        gNdsMapsPreviewRestarts++;
+        ndsMNMapsPreviewBegin(gkind);
+        return;
+    }
 
     switch (sNdsMapsPreviewStep)
     {
@@ -878,6 +948,19 @@ static void ndsMNMapsPreviewStepLoad(void)
     }
 
     case NDS_MAPS_PREVIEW_STEP_MODEL:
+        if (ndsMNMapsPreviewGroundDataResolved(sNdsMapsPreviewGroundData) == FALSE)
+        {
+            gNdsMapsPreviewUnresolved++;
+            if (sNdsMapsPreviewRestartCount >= NDS_MAPS_PREVIEW_RESTART_MAX)
+            {
+                ndsMNMapsPreviewFail(5u);
+                return;
+            }
+            sNdsMapsPreviewRestartCount++;
+            gNdsMapsPreviewRestarts++;
+            ndsMNMapsPreviewBegin(gkind);
+            return;
+        }
         for (i = 0; i < 4; i++)
         {
             sNdsMapsPreviewLayers[i] = ndsMNMapsPreviewMakeLayer(

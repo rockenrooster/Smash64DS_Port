@@ -592,8 +592,8 @@ static s32 ndsRendererNativeStageValidateGeneratedSegment0(u32 inject_fault)
          NDS_NATIVE_STAGE_SEGMENT0_PREPARED_DENSE_COUNT) ||
         (certificate->prepared_dense_offset_count !=
          NDS_NATIVE_STAGE_SEGMENT0_PREPARED_DENSE_OFFSET_COUNT) ||
-        (sNdsNativeStageValidationCache.prepared_dense_offsets[0] != 0u) ||
-        (sNdsNativeStageValidationCache.prepared_dense_offsets[
+        (sNdsNativeStageWs.dense_offsets[0] != 0u) ||
+        (sNdsNativeStageWs.dense_offsets[
              NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_RUN_COUNT] !=
          NDS_NATIVE_STAGE_SEGMENT0_PREPARED_DENSE_COUNT))
     {
@@ -679,7 +679,7 @@ static s32 ndsRendererNativeStageValidateGeneratedSegment0(u32 inject_fault)
     {
         dense_hash = ndsRendererNativeStageGeneratedHashU32(
             dense_hash,
-            sNdsNativeStageValidationCache.prepared_dense_offsets[i]);
+            sNdsNativeStageWs.dense_offsets[i]);
     }
     dense_hash = ndsRendererNativeStageGeneratedHashU32(
         dense_hash, 0x4d33535eu);
@@ -689,7 +689,7 @@ static s32 ndsRendererNativeStageValidateGeneratedSegment0(u32 inject_fault)
     {
         dense_hash = ndsRendererNativeStageGeneratedHashU32(
             dense_hash,
-            sNdsNativeStageValidationCache.prepared_dense_indices[i]);
+            sNdsNativeStageWs.dense_indices[i]);
     }
     if (dense_hash != certificate->prepared_dense_checksum)
     {
@@ -979,7 +979,7 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
             gNdsNativeStageValidateFullFailIndex = i;
             return FALSE;
         }
-        sNdsNativeStageValidationCache.prepared_dense_offsets[i] =
+        sNdsNativeStageWs.dense_offsets[i] =
             (u16)prepared_dense_count;
         for (corner_offset = 0u; corner_offset < corner_count; corner_offset++)
         {
@@ -1023,7 +1023,7 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
                 }
                 prepared_dense_mask[dense_index / 32u] |=
                     (u32)1u << (dense_index & 31u);
-                sNdsNativeStageValidationCache.prepared_dense_indices[
+                sNdsNativeStageWs.dense_indices[
                     prepared_dense_count++] = (u16)dense_index;
             }
             if (run->submit_class ==
@@ -1088,7 +1088,7 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
             }
         }
     }
-    sNdsNativeStageValidationCache.prepared_dense_offsets[
+    sNdsNativeStageWs.dense_offsets[
         NDS_NATIVE_STAGE_RUN_COUNT] = (u16)prepared_dense_count;
 #if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE
     if ((NDS_NATIVE_STAGE_STATE_SPAN_COUNT !=
@@ -1432,12 +1432,8 @@ __attribute__((used)) volatile u32 gNdsNativeStageFilterPhaseBlobPacket;
  * after the commit loop has captured Emitted, so a skipped/declined run cannot
  * make a prior frame's emitted count look current to the scene probe. */
 __attribute__((used)) volatile u32 gNdsNativeStageRoofSnapSerial;
-__attribute__((used)) volatile u32
-    gNdsNativeStageRoofSnapValid[NDS_NATIVE_STAGE_MAX_RUN_COUNT];
-__attribute__((used)) volatile u32
-    gNdsNativeStageRoofSnapGiven[NDS_NATIVE_STAGE_MAX_RUN_COUNT];
-__attribute__((used)) volatile u32
-    gNdsNativeStageRoofSnapEmitted[NDS_NATIVE_STAGE_MAX_RUN_COUNT];
+/* Valid, Given and Emitted per run live in the stage workspace
+ * (nds_renderer_assets.c), sized by the active packet. */
 /* Castle source DL 0x1698 (currently run 9) GX position-test witness.  It
  * shares RoofSnapSerial: Valid is published only after all 27 corners have
  * been captured, so Valid != RoofSnapSerial is explicitly stale/partial. */
@@ -1576,7 +1572,7 @@ static s32 ndsRendererNativeStagePrepareRun(
     const NDSNativeStageTextureEpoch *epoch;
     const NDSNativeStageStatePolicy *policy;
     NDSNativeStagePreparedRun *prepared =
-        &sNdsNativeStageOwnerExecution.runs[run_index];
+        &sNdsNativeStageWs.runs[run_index];
     const NDSRendererTileState *render_tile;
     NDSRendererHardwareResolvedTexture resolved;
     u32 implicit_texture_on;
@@ -1816,9 +1812,9 @@ static s32 ndsRendererNativeStagePrepareRun(
         alpha = (dense->rgba & 0xffu) >> 3;
     }
     first_visit_offset =
-        sNdsNativeStageValidationCache.prepared_dense_offsets[run_index];
+        sNdsNativeStageWs.dense_offsets[run_index];
     first_visit_end =
-        sNdsNativeStageValidationCache.prepared_dense_offsets[run_index + 1u];
+        sNdsNativeStageWs.dense_offsets[run_index + 1u];
     if ((first_visit_offset > first_visit_end) ||
         (first_visit_end > NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT))
     {
@@ -1851,7 +1847,7 @@ static s32 ndsRendererNativeStagePrepareRun(
          dense_offset++)
     {
         u32 dense_index =
-            sNdsNativeStageValidationCache.prepared_dense_indices[
+            sNdsNativeStageWs.dense_indices[
                 dense_offset];
         const NDSNativeStageDenseVertex *dense;
         NDSNativeStagePreparedDense *prepared_dense;
@@ -2184,7 +2180,7 @@ static void ndsRendererNativeStageHashGeneratedSegment0Outputs(
     {
         u32 run_index = sNdsNativeStageSegment0HotRuns[i].run_index;
         const NDSNativeStagePreparedRun *prepared =
-            &sNdsNativeStageOwnerExecution.runs[run_index];
+            &sNdsNativeStageWs.runs[run_index];
 
         NDS_TASK26_HASH_FIELD((uintptr_t)prepared->texture_entry);
         NDS_TASK26_HASH_FIELD(prepared->texture_name);
@@ -2201,7 +2197,7 @@ static void ndsRendererNativeStageHashGeneratedSegment0Outputs(
     for (i = 0u; i < NDS_NATIVE_STAGE_SEGMENT0_PREPARED_DENSE_COUNT; i++)
     {
         u32 dense_index =
-            sNdsNativeStageValidationCache.prepared_dense_indices[i];
+            sNdsNativeStageWs.dense_indices[i];
         const NDSNativeStagePreparedDense *prepared =
             &sNdsNativeStagePreparedDense[dense_index];
 
@@ -2278,7 +2274,7 @@ ndsRendererNativeStageAccountShortfall(void)
     {
         u32 run_index = sNdsNativeStageEmitShortfallSnapshot.run_index;
 
-        if ((run_index < NDS_NATIVE_STAGE_MAX_RUN_COUNT) &&
+        if ((run_index < sNdsNativeStageWs.run_capacity) &&
             (gNdsNativeStageRoofSnapValid[run_index] ==
              gNdsNativeStageRoofSnapSerial))
         {
@@ -3881,7 +3877,7 @@ static u32 ndsRendererDreamLandDrawStatic3D(
             continue;
         }
         native_run = &sNdsNativeStageRuns[source_run];
-        prepared_run = &sNdsNativeStageOwnerExecution.runs[source_run];
+        prepared_run = &sNdsNativeStageWs.runs[source_run];
         if ((native_run->submit_class != submit_class) ||
             (native_run->triangle_count != triangle_count))
         {
@@ -4028,7 +4024,7 @@ static void ndsRendererR2ActorPreparedProof(void)
             u32 run_index = (u32)segment->first_run + run_offset;
             const NDSNativeStageRun *run = &sNdsNativeStageRuns[run_index];
             const u32 *run_words =
-                (const u32 *)&sNdsNativeStageOwnerExecution.runs[run_index];
+                (const u32 *)&sNdsNativeStageWs.runs[run_index];
             u32 corner_count = (u32)run->triangle_count * 3u;
             u32 corner;
             u32 word;
@@ -4104,7 +4100,7 @@ s32 ndsRendererPrepareNativeStageOwner(
     }
     for (roof_snap_run_index = 0u;
          (gNdsNativeStageRunWitness != 0u) &&
-         (roof_snap_run_index < NDS_NATIVE_STAGE_MAX_RUN_COUNT);
+         (roof_snap_run_index < sNdsNativeStageWs.run_capacity);
          roof_snap_run_index++)
     {
         gNdsNativeStageRoofSnapValid[roof_snap_run_index] = 0u;
@@ -5031,7 +5027,7 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
         u32 run_index = (u32)segment->first_run + run_offset;
         const NDSNativeStageRun *run = &sNdsNativeStageRuns[run_index];
         const NDSNativeStagePreparedRun *prepared_run =
-            &sNdsNativeStageOwnerExecution.runs[run_index];
+            &sNdsNativeStageWs.runs[run_index];
         u32 emitted_triangles = 0u;
         u32 triangle_offset;
         if ((binding_heads != NULL) &&

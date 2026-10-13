@@ -237,7 +237,14 @@ def build_descriptor(stage: dict, stage_dir: Path, pins: dict | None) -> StageDe
 # A Remix stage's GX template may run past the vanilla VS stages' 36,992-byte
 # body: the runtime's own check is the free heap, keeping its floor, and it
 # draws the stage uncompiled when a body does not fit (nds_stage_gx.exec.inc).
-DONOR_BODY_MAX = 40 * 1024
+# Hyrule Temple's is 61,936 B; the loader takes up to 16,384 words.
+DONOR_BODY_MAX = 64 * 1024
+# The generator caps a packet's const slab at 24 KiB before the donor trim
+# drops the vertices no corner names (Hyrule Temple: 82,292 B loaded, 33,348
+# B kept). The cap that holds is the blob loader's, on the trimmed packet
+# (nds_native_stage_blob.c, 40 KiB under P5).
+DONOR_SLAB_MAX = 40 * 1024
+gen.MAX_SLAB_BYTES = max(gen.MAX_SLAB_BYTES, 128 * 1024)
 
 
 def trim_dense_vertices(packet):
@@ -395,6 +402,9 @@ def build_stage(stage: dict, stage_dir: Path, learn_pins: bool) -> dict:
     try:
         whole = gen.generate(REPO, desc)
         packet = trim_dense_vertices(whole)
+        if packet.slab_bytes() > DONOR_SLAB_MAX:
+            raise DonorError(f"{stage['name']}: trimmed slab {packet.slab_bytes()} B "
+                             f"exceeds the loader's {DONOR_SLAB_MAX}")
         if joints:
             resources = {key: gen.load_o2r(REPO, gen.InputSpec(e["path"], e["sha256"], e["file_id"]))
                          for key, e in desc.o2r_inputs.items()}
@@ -429,6 +439,8 @@ def build_stage(stage: dict, stage_dir: Path, learn_pins: bool) -> dict:
         "map_file": stage["header"]["file"], "map_offset": stage["header"]["offset"],
         "files": nitro,
         "hazard_roots": list(stage.get("hazard_roots", ())),
+        "remix_bgm": stage.get("remix_bgm"),
+        "header_bgm": stage["bgm_id"],
         "wallpaper_file": stage["wallpaper"][0],
         "segments": len(packet.segments), "dobjs": len(packet.dobjs),
         "bindings": len(packet.bindings), "runs": len(packet.runs),
@@ -477,7 +489,26 @@ def convert_wallpaper(stage: dict, stage_dir: Path, name: str) -> dict:
     fid, off = stage["wallpaper"]
     source = wp.WallpaperSource(f"p5_{name}", str((stage_dir / "o2r" / f"{fid:04x}").resolve()),
                                 fid, off, True)
-    asset = wp.convert_source(REPO, source)
+    # The vanilla wallpapers are opaque and the converter refuses anything
+    # else. Hyrule Temple's carries one clear pixel, (150, 0), an authoring
+    # stray in the top row: it keeps its own colour, opaque.
+    opaque = wp.rgba8_to_ds_opaque
+    clear = []
+
+    def stray_opaque(red, green, blue, alpha, where):
+        if alpha != 255:
+            clear.append(where)
+            alpha = 255
+        return opaque(red, green, blue, alpha, where)
+
+    wp.rgba8_to_ds_opaque = stray_opaque
+    try:
+        asset = wp.convert_source(REPO, source)
+    finally:
+        wp.rgba8_to_ds_opaque = opaque
+    if len(clear) > 4:
+        raise DonorError(f"{stage['name']}: {len(clear)} clear wallpaper pixels "
+                         f"({clear[0]}...), not strays")
     from p5_stages import write_if_changed  # noqa: E402
     write_if_changed(stage_dir / asset.filename, asset.payload)
     return {"file": fid, "bitmap": asset.bitmap_offset, "src_w": asset.src_w, "src_h": asset.src_h,
@@ -510,6 +541,12 @@ def write_runtime(out: Path, facts: list[dict]) -> None:
           " * ground maps, as reloc_backend_assets.c lists the vanilla stages'. */",
           "#define NDS_P5_COMPACT_MAP_ROWS(X) \\"]
     h += [f"    X({s['map_file']:#x}u, {s['wallpaper_file']:#x}u, {s['map_offset']:#x}u) \\" for s in facts]
+    h += ["    /* end */", "",
+          "/* X(gkind, bgm): Remix's default song where it replaces the header's",
+          " * (BGM.asm, Stages.default_music_track_table). */",
+          "#define NDS_P5_STAGE_BGM_ROWS(X) \\"]
+    h += [f"    X({s['gkind']}, {s['remix_bgm']:#x}) \\" for s in facts
+          if s.get("remix_bgm") is not None and s["remix_bgm"] != s["header_bgm"]]
     h += ["    /* end */", "",
           "/* X(gkind, file): the hazard file each stage loads with its ground",
           " * (the registry's hazard_files; Bowser's Stadium's bomb header). */",

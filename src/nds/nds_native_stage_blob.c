@@ -23,6 +23,7 @@
 
 #include "nds_build_config.h"
 
+#include <string.h>
 #include <sys/taskman.h>
 
 #include <nds/nds_startup.h>
@@ -38,9 +39,22 @@
 #define NDS_NATIVE_STAGE_BLOB_GKIND_COUNT 41u
 #endif
 #define NDS_NATIVE_STAGE_BLOB_BODY_CAP_BYTES (32u * 1024u)
+#if NDS_P5
+/* P5: Hyrule Temple's packet, the largest stage (slab 33,348 B, body 34,788
+ * B); the vanilla stages stay under the old caps. */
+#undef NDS_NATIVE_STAGE_BLOB_MAX_SLAB_BYTES
+#define NDS_NATIVE_STAGE_BLOB_MAX_SLAB_BYTES (40u * 1024u)
+#undef NDS_NATIVE_STAGE_BLOB_BODY_CAP_BYTES
+#define NDS_NATIVE_STAGE_BLOB_BODY_CAP_BYTES (40u * 1024u)
+#endif
+/* nds_renderer_assets.c: the owner's run and vertex workspace for a packet's
+ * counts, allocated beside its slab. */
+u32 ndsRendererNativeStageWorkspaceBytes(u32 runs, u32 dense);
+static void *sNdsNativeStageBlobWorkspace;
 
 __attribute__((used)) volatile u32 gNdsNativeStageBlobLoadCount;
 __attribute__((used)) volatile u32 gNdsNativeStageBlobBytesLoaded;
+__attribute__((used)) volatile u32 gNdsNativeStageBlobWorkspaceBytes;
 __attribute__((used)) volatile u32 gNdsNativeStageBlobHashMismatchCount;
 /* header[86] of the last loaded blob: the generator's segment-0 program flag,
  * recorded but never honoured (see the load site). */
@@ -137,6 +151,12 @@ static u32 ndsNativeStageBlobFnv1a(const u8 *data, u32 bytes)
         hash *= 16777619u;
     }
     return hash;
+}
+
+void *ndsNativeStageBlobWorkspace(void)
+{
+    return (ndsNativeStageBlobPacket() != NULL) ?
+        sNdsNativeStageBlobWorkspace : NULL;
 }
 
 const NDSNativeStageBlobPacket *ndsNativeStageBlobPacket(void)
@@ -410,6 +430,22 @@ s32 ndsNativeStageBlobLoad(u32 gkind)
     {
         gNdsNativeStageBlobHashMismatchCount++;
         return FALSE;
+    }
+    /* The owner's workspace for this packet's runs and dense vertices, from
+     * the same region as the slab (the battle heap, or the select preview's
+     * arena), zeroed as the static one it replaces was. */
+    {
+        u32 ws_bytes = ndsRendererNativeStageWorkspaceBytes(
+            counts[4], counts[11]);
+
+        sNdsNativeStageBlobWorkspace = syTaskmanMalloc((size_t)ws_bytes, 0x10u);
+        if (sNdsNativeStageBlobWorkspace == NULL)
+        {
+            gNdsNativeStageBlobReadFailCount++;
+            return FALSE;
+        }
+        memset(sNdsNativeStageBlobWorkspace, 0, ws_bytes);
+        gNdsNativeStageBlobWorkspaceBytes = ws_bytes;
     }
     gNdsNativeStageBlobBytesLoaded =
         NDS_NATIVE_STAGE_BLOB_HEADER_BYTES + body_bytes;

@@ -13726,6 +13726,18 @@ void mpCollisionInitGroundData(void)
                 gMPCollisionGeometry->mapobjs : NULL;
             gMPCollisionLightAngleX = ground_data->light_angle.x;
             gMPCollisionLightAngleY = ground_data->light_angle.y;
+#if NDS_P5
+            /* Remix BGM.asm: a stage's entry in Stages.default_music_track_table
+             * replaces its header's song as it loads (Hyrule Temple's header
+             * names Hyrule Castle's track). */
+#define NDS_P5_STAGE_BGM_ROW(g, bgm) \
+            if (i == (u32)(g)) \
+            { \
+                ground_data->bgm_id = (bgm); \
+            }
+            NDS_P5_STAGE_BGM_ROWS(NDS_P5_STAGE_BGM_ROW)
+#undef NDS_P5_STAGE_BGM_ROW
+#endif
             gMPCollisionBGMDefault = ground_data->bgm_id;
             gMPCollisionBGMCurrent = ground_data->bgm_id;
 

@@ -97,6 +97,9 @@ s32 ndsNativeStageBlobLoad(u32 gkind);
 /* The resident blob packet, or NULL when none is loaded for the current
  * scene (never loaded, load failed, or the arena rewound past it). */
 const NDSNativeStageBlobPacket *ndsNativeStageBlobPacket(void);
+/* The active blob packet's owner workspace (runs and dense vertices), NULL
+ * without a loaded blob. */
+void *ndsNativeStageBlobWorkspace(void);
 
 /* gc-sections drops unreferenced diagnostic globals, hence used. Every one
  * is referenced from the load path. */

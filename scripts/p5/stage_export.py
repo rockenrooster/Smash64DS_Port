@@ -79,6 +79,13 @@ def dobj_count(rom: remix_rom.Rom, ref) -> int:
         off += DOBJ_DESC_BYTES
 
 
+def _default_music(rom: remix_rom.Rom, table, rid: int):
+    if table is None:
+        return None
+    value = struct.unpack(">h", rom.read_ram(table("default_music_track_table") + rid * 2, 2))[0]
+    return (value - 1) if value != 0 else None
+
+
 def closure(rom: remix_rom.Rom, first: int) -> list[int]:
     seen, todo = set(), [first]
     while todo:
@@ -89,7 +96,8 @@ def closure(rom: remix_rom.Rom, first: int) -> list[int]:
     return sorted(seen)
 
 
-def export_stage(rom: remix_rom.Rom, u32, u8, f32, row: dict, out: Path) -> dict:
+def export_stage(rom: remix_rom.Rom, u32, u8, f32, row: dict, out: Path,
+                 table=None) -> dict:
     rid = row["remix_id"]
     map_fid = u32("stage_file_table", rid * 2)
     hoff = u32("stage_file_table", rid * 2 + 1)
@@ -150,6 +158,10 @@ def export_stage(rom: remix_rom.Rom, u32, u8, f32, row: dict, out: Path) -> dict
         "camera_bounds": list(struct.unpack_from(">4h", data, hoff + 0x6C)),
         "map_bounds": list(struct.unpack_from(">4h", data, hoff + 0x74)),
         "bgm_id": struct.unpack_from(">I", data, hoff + 0x7C)[0],
+        # BGM.asm: Stages.default_music_track_table holds track + 1 per stage;
+        # a nonzero entry replaces the header's song when the stage loads
+        # (Hyrule Temple's header names Hyrule Castle's track, 9).
+        "remix_bgm": _default_music(rom, table, rid),
         "map_nodes": _ref(slot(map_fid, hoff + 0x80)),
         "item_weights": _ref(slot(map_fid, hoff + 0x84)),
         "alt_warning": struct.unpack_from(">h", data, hoff + 0x88)[0],
@@ -188,14 +200,14 @@ def main() -> int:
         missing = names - {r["name"] for r in rows}
         if missing:
             raise ExportError(f"not Remix stages in stages.json: {sorted(missing)}")
-    rom, u32, u8, f32, _table = p5_stages.remix_tables(args.staging)
+    rom, u32, u8, f32, table = p5_stages.remix_tables(args.staging)
     for row in rows:
         out = args.out / row["name"]
-        stage = export_stage(rom, u32, u8, f32, row, out)
+        stage = export_stage(rom, u32, u8, f32, row, out, table)
         if args.verify_repeat:
             first = {p.name: p.read_bytes() for p in sorted((out / "o2r").iterdir())}
             first_json = (out / "stage.json").read_bytes()
-            export_stage(rom, u32, u8, f32, row, out)
+            export_stage(rom, u32, u8, f32, row, out, table)
             again = {p.name: p.read_bytes() for p in sorted((out / "o2r").iterdir())}
             if again != first or (out / "stage.json").read_bytes() != first_json:
                 raise ExportError(f"{row['name']}: a second export differs")

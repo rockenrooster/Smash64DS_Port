@@ -182,7 +182,7 @@ static sb32 ndsStageGxValidate(const NDSStageGxHeader *h, const u8 *body)
                     if (vertices >= (u32)r->triangles * 3u || depth != 1u) { return FALSE; }
                     shift = native->submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX ? 0u :
                         native->submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX ?
-                        sNdsNativeStageOwnerExecution.runs[i].coordinate_shift :
+                        sNdsNativeStageWs.runs[i].coordinate_shift :
                         ndsRendererNativeStageTask36TriangleShift(native, vertices / 3u);
                     if (!ndsRendererNativeStageTask36BuildWorld(native->binding_index, shift, &expected)) { return FALSE; }
                     if (op == 0x18)
@@ -330,17 +330,26 @@ static sb32 __attribute__((noinline, cold, optimize("Os"))) ndsStageGxLoad(void)
         h.body_bytes != h.run_count * sizeof(NDSStageGxRun) + h.patch_count * 8u + h.word_count * 4u ||
         h.source_hash != ndsStageGxSourceHash()) { goto failed; }
     reason = 3u;
-    /* The body is battle-lifetime heap. It loads at the first stage draw, and
-     * the match still grows the heap after that: 36,420 B on the heavy roster
-     * (phase3-residency, probe 92984). Keep the 25,600 B floor above both, or
-     * decline and draw the stage uncompiled. */
-    if ((uintptr_t)gSYTaskmanGeneralHeap.end < (uintptr_t)gSYTaskmanGeneralHeap.ptr ||
-        (uintptr_t)gSYTaskmanGeneralHeap.end - (uintptr_t)gSYTaskmanGeneralHeap.ptr <
-            h.body_bytes + (h.run_count * sizeof(NDSStageGxRunMemo)) +
-            NDS_STAGE_GX_HEAP_KEEP_FREE)
-    { goto failed; }
-    body = syTaskmanMalloc(
+    /* The body lives as long as the battle. A VS battle's idle overlay tail
+     * takes it first (2026-10-13: a vanilla roster leaves ~170 KB of the
+     * loan idle, and Hyrule Temple's 61,936 B body never fit the heap, so the
+     * stage drew uncompiled at 20 FPS). Otherwise it is battle-lifetime heap:
+     * it loads at the first stage draw, and the match still grows the heap
+     * after that: 36,420 B on the heavy roster (phase3-residency, probe
+     * 92984). Keep the 25,600 B floor above both, or decline and draw the
+     * stage uncompiled. */
+    body = ndsVSBattleOverlayTryAlloc(
         h.body_bytes + (h.run_count * sizeof(NDSStageGxRunMemo)), 32u);
+    if (body == NULL)
+    {
+        if ((uintptr_t)gSYTaskmanGeneralHeap.end < (uintptr_t)gSYTaskmanGeneralHeap.ptr ||
+            (uintptr_t)gSYTaskmanGeneralHeap.end - (uintptr_t)gSYTaskmanGeneralHeap.ptr <
+                h.body_bytes + (h.run_count * sizeof(NDSStageGxRunMemo)) +
+                NDS_STAGE_GX_HEAP_KEEP_FREE)
+        { goto failed; }
+        body = syTaskmanMalloc(
+            h.body_bytes + (h.run_count * sizeof(NDSStageGxRunMemo)), 32u);
+    }
     if (body == NULL) { goto failed; }
     reason = 4u;
     if (!ndsRelocAssetStreamRead(&stream, sizeof(h), body, h.body_bytes) ||
@@ -925,7 +934,7 @@ static sb32 __attribute__((noinline)) ndsStageGxDraw(u32 index, u32 owner, NDSRe
 {
     const NDSStageGxRun *r = &sNdsStageGxRuns[index];
     const NDSNativeStageRun *native = &sNdsNativeStageRuns[index];
-    const NDSNativeStagePreparedRun *prepared = &sNdsNativeStageOwnerExecution.runs[index];
+    const NDSNativeStagePreparedRun *prepared = &sNdsNativeStageWs.runs[index];
     NDSRendererMatrix20p12 composed;
     s32 composed_shift = -1;
     u32 p, composed_binding = UINT_MAX, corner_triangle = UINT_MAX;
@@ -1522,7 +1531,7 @@ static sb32 __attribute__((noinline)) ndsStageGxCommitFast(
             {
                 const NDSStageGxRunMemo *m = &sNdsStageGxRunMemo[run_index];
                 const NDSNativeStagePreparedRun *prepared =
-                    &sNdsNativeStageOwnerExecution.runs[run_index];
+                    &sNdsNativeStageWs.runs[run_index];
 
                 if (((m->material_gen != texgen + 1u) ||
                      (m->poly_fmt != prepared->poly_fmt) ||
@@ -1660,7 +1669,7 @@ static sb32 __attribute__((noinline)) ndsStageGxCommitFast(
             const u32 run_index = (u32)segment->first_run + i;
             NDSStageGxRunMemo *m = &sNdsStageGxRunMemo[run_index];
             const NDSNativeStagePreparedRun *prepared =
-                &sNdsNativeStageOwnerExecution.runs[run_index];
+                &sNdsNativeStageWs.runs[run_index];
 
             m->projection_serial = projection_serial;
             m->poly_fmt = prepared->poly_fmt;
@@ -1686,7 +1695,7 @@ static sb32 __attribute__((noinline)) ndsStageGxCommitFast(
      * stats keep the last textured run's format, as the per-run writes
      * left them, and nothing between reads them. */
     const NDSNativeStagePreparedRun *prepared =
-        &sNdsNativeStageOwnerExecution.runs[segment->first_run];
+        &sNdsNativeStageWs.runs[segment->first_run];
     const NDSNativeStagePreparedRun *const prepared_end =
         prepared + segment->run_count;
     const NDSNativeStagePreparedRun *last_textured = NULL;
@@ -1700,7 +1709,7 @@ static sb32 __attribute__((noinline)) ndsStageGxCommitFast(
 
         if ((s->skip_mask != 0u) &&
             (((s->skip_mask >> sNdsNativeStageRuns[
-                   (u32)(prepared - sNdsNativeStageOwnerExecution.runs)]
+                   (u32)(prepared - sNdsNativeStageWs.runs)]
                    .binding_index) & 1u) != 0u))
         {
             continue;

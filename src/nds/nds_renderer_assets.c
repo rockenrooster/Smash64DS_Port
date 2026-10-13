@@ -7613,11 +7613,126 @@ static s32 ndsRendererNativeStagePreparedTextureValid(
         TRUE : FALSE;
 }
 
+/* The stage owner's per-run and per-vertex workspaces (2026-10-13, P5 T5).
+ * They were static arrays at the largest packet any stage has (92 runs and
+ * 863 dense vertices, 15 KB of .bss that every scene paid), and Hyrule
+ * Temple's 177 runs and 1,258 vertices would have grown them for every scene
+ * again. The linked packet's (Dream Land's) stay static at its size; a blob
+ * packet brings its own beside its slab (nds_native_stage_blob.c), sized by
+ * its counts, and ndsRendererNativeStageSelectPacket binds the active one. */
+typedef struct NDSNativeStageWorkspace
+{
+    NDSNativeStagePreparedRun *runs;
+    NDSNativeStagePreparedDense *dense;
+    /* The validation cache's prepared dense lists: run_capacity + 1 offsets
+     * into dense_capacity indices. */
+    u16 *dense_offsets;
+    u16 *dense_indices;
+    /* The per-run emission witness (the scene probe's). */
+    volatile u32 *roof_valid;
+    volatile u32 *roof_given;
+    volatile u32 *roof_emitted;
+    u32 run_capacity;
+    u32 dense_capacity;
+} NDSNativeStageWorkspace;
+
+static NDSNativeStagePreparedRun sNdsNativeStageLinkedRuns[
+    NDS_NATIVE_STAGE_LINKED_MAX_RUN_COUNT];
+static NDSNativeStagePreparedDense sNdsNativeStageLinkedDense[
+    NDS_NATIVE_STAGE_LINKED_MAX_DENSE_VERTEX_COUNT];
+static u16 sNdsNativeStageLinkedDenseOffsets[
+    NDS_NATIVE_STAGE_LINKED_MAX_RUN_COUNT + 1u];
+static u16 sNdsNativeStageLinkedDenseIndices[
+    NDS_NATIVE_STAGE_LINKED_MAX_DENSE_VERTEX_COUNT];
+static volatile u32 sNdsNativeStageLinkedRoof[3][
+    NDS_NATIVE_STAGE_LINKED_MAX_RUN_COUNT];
+static const NDSNativeStageWorkspace sNdsNativeStageLinkedWorkspace =
+{
+    sNdsNativeStageLinkedRuns, sNdsNativeStageLinkedDense,
+    sNdsNativeStageLinkedDenseOffsets, sNdsNativeStageLinkedDenseIndices,
+    sNdsNativeStageLinkedRoof[0], sNdsNativeStageLinkedRoof[1],
+    sNdsNativeStageLinkedRoof[2],
+    NDS_NATIVE_STAGE_LINKED_MAX_RUN_COUNT,
+    NDS_NATIVE_STAGE_LINKED_MAX_DENSE_VERTEX_COUNT
+};
+static NDSNativeStageWorkspace sNdsNativeStageWs =
+{
+    sNdsNativeStageLinkedRuns, sNdsNativeStageLinkedDense,
+    sNdsNativeStageLinkedDenseOffsets, sNdsNativeStageLinkedDenseIndices,
+    sNdsNativeStageLinkedRoof[0], sNdsNativeStageLinkedRoof[1],
+    sNdsNativeStageLinkedRoof[2],
+    NDS_NATIVE_STAGE_LINKED_MAX_RUN_COUNT,
+    NDS_NATIVE_STAGE_LINKED_MAX_DENSE_VERTEX_COUNT
+};
+#define sNdsNativeStagePreparedDense (sNdsNativeStageWs.dense)
+#define gNdsNativeStageRoofSnapValid (sNdsNativeStageWs.roof_valid)
+#define gNdsNativeStageRoofSnapGiven (sNdsNativeStageWs.roof_given)
+#define gNdsNativeStageRoofSnapEmitted (sNdsNativeStageWs.roof_emitted)
+
+/* A blob packet's workspace bytes for its counts, in the order
+ * ndsRendererNativeStageWorkspaceCarve lays them out (the blob loader
+ * allocates them beside the slab). */
+u32 ndsRendererNativeStageWorkspaceBytes(u32 runs, u32 dense)
+{
+    return (runs * (u32)sizeof(NDSNativeStagePreparedRun)) +
+           (dense * (u32)sizeof(NDSNativeStagePreparedDense)) +
+           (runs * 3u * (u32)sizeof(u32)) +
+           ((runs + 1u) * (u32)sizeof(u16)) +
+           (dense * (u32)sizeof(u16));
+}
+
+static void ndsRendererNativeStageWorkspaceCarve(u8 *base, u32 runs, u32 dense,
+                                                NDSNativeStageWorkspace *ws)
+{
+    ws->runs = (NDSNativeStagePreparedRun *)(void *)base;
+    base += runs * sizeof(NDSNativeStagePreparedRun);
+    ws->dense = (NDSNativeStagePreparedDense *)(void *)base;
+    base += dense * sizeof(NDSNativeStagePreparedDense);
+    ws->roof_valid = (volatile u32 *)(void *)base;
+    base += runs * sizeof(u32);
+    ws->roof_given = (volatile u32 *)(void *)base;
+    base += runs * sizeof(u32);
+    ws->roof_emitted = (volatile u32 *)(void *)base;
+    base += runs * sizeof(u32);
+    ws->dense_offsets = (u16 *)(void *)base;
+    base += (runs + 1u) * sizeof(u16);
+    ws->dense_indices = (u16 *)(void *)base;
+    ws->run_capacity = runs;
+    ws->dense_capacity = dense;
+}
+/* ndsRendererNativeStageSelectPacket: the selected packet's workspace. A
+ * packet whose counts outrun it declines (none does: the linked one is sized
+ * by the linked packets, a blob's by its own counts). */
+static s32 ndsRendererNativeStageBindWorkspace(const NDSNativeStagePacket *packet)
+{
+    sNdsNativeStageWs = sNdsNativeStageLinkedWorkspace;
+#if NDS_NATIVE_STAGE_MULTI
+    if ((const void *)packet == (const void *)ndsNativeStageBlobPacket())
+    {
+        u8 *base = (u8 *)ndsNativeStageBlobWorkspace();
+
+        if (base == NULL)
+        {
+            return FALSE;
+        }
+        ndsRendererNativeStageWorkspaceCarve(base, packet->run_count,
+                                             packet->dense_vertex_count,
+                                             &sNdsNativeStageWs);
+    }
+#endif
+    return ((packet->run_count <= sNdsNativeStageWs.run_capacity) &&
+            (packet->dense_vertex_count <= sNdsNativeStageWs.dense_capacity)) ?
+        TRUE : FALSE;
+}
+_Static_assert((sizeof(NDSNativeStagePreparedRun) % 4u) == 0u,
+               "stage workspace run rows must keep word alignment");
+_Static_assert((sizeof(NDSNativeStagePreparedDense) % 4u) == 0u,
+               "stage workspace dense rows must keep word alignment");
+
 typedef struct NDSNativeStageOwnerExecution
 {
     NDSRendererTraversalState traversal;
     NDSRendererStats preflight_stats;
-    NDSNativeStagePreparedRun runs[NDS_NATIVE_STAGE_MAX_RUN_COUNT];
     const NDSRendererMatrix20p12 *binding_composed;
     u64 hidden_binding_mask;
 #if NDS_TASK36_HW_COMPOSE
@@ -7694,8 +7809,6 @@ typedef struct NDSNativeStageTopologySummary
 typedef struct NDSNativeStageValidationCache
 {
     NDSNativeStageTopologySummary summary;
-    u16 prepared_dense_offsets[NDS_NATIVE_STAGE_MAX_RUN_COUNT + 1u];
-    u16 prepared_dense_indices[NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT];
     u32 generation;
     u32 stamp;
     u32 valid;
@@ -7791,7 +7904,7 @@ static s32 ndsRendererNativeStagePreparedTexturesProven(void)
     for (run_index = 0u; run_index < NDS_NATIVE_STAGE_RUN_COUNT; run_index++)
     {
         if (ndsRendererNativeStagePreparedTextureValid(
-                &sNdsNativeStageOwnerExecution.runs[run_index]) == FALSE)
+                &sNdsNativeStageWs.runs[run_index]) == FALSE)
         {
             sNdsNativeStagePreparedTextureProofValid = FALSE;
             gNdsR2TexProofSweepFailCount++;
@@ -7835,8 +7948,6 @@ volatile u32 gNdsR2StageRejectCounts[7];
 volatile u32 gNdsR2StagePreflightElideCount;
 #endif
 #endif
-static NDSNativeStagePreparedDense sNdsNativeStagePreparedDense[
-    NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT];
 static NDSNativeStageValidationCache sNdsNativeStageValidationCache;
 #if NDS_RENDERER_M3_PHASE0_PROFILE
 static u32 sNdsNativeStageTopologyFaultInjected;
