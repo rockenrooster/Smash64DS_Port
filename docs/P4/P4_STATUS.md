@@ -2406,6 +2406,18 @@ the polygon-ID walk runs only when the IDs move, from a table of the packed
 commands' parameter counts. WORK P95: Crash 1,257,344, Meta Knight 1,264,704,
 Banjo 1,246,080, the cast 1,055,616; lab verify unchanged (0 mismatches).
 
+Why Meta Knight copied little (gdb trace of every block key, 54 plans): not
+the palette slots. His root programs (Live1..Live6, one per model-part
+state) repeat the base program's root rows at other addresses, and the key
+hashed the row's address; and the preamble's light direction flips between
+two values, though a walk writes it only into the head's vector word (a copy
+writes that word from the live preamble). The key now hashes the row's words
+and leaves the direction out: 22% -> 66% of his roots have a key a recent
+list holds. Lab verify on four Crashes, Meta Knights, Banjos and the cast:
+602 comparisons, 0 differing words; Meta Knight's shade-site differences are
+607 with copies and 607 without (the known modulate-0 re-record effect). WORK
+P95: Meta Knight 1,264,704 -> 1,221,760, Crash 1,252,032, Banjo 1,237,888.
+
 ## Board 1 status (master plan Revision 3)
 
 | Item | State |

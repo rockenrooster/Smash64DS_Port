@@ -13593,7 +13593,14 @@ ndsFtrLeanRootSelfContainedCached(const NDSNativeFighterRuntimeTables *tables,
  * built from (`material_key`, the event path's per-root fold). Not the
  * colour modulate: it moves only the shade words (ndsRendererR2Resolve-
  * EpochShade's diffuse/ambient), which a copy re-derives
- * (ndsFtrLeanRederiveSites). */
+ * (ndsFtrLeanRederiveSites).
+ *
+ * The root by its row, not its address: a content's root programs (Meta
+ * Knight's Live1..Live6) repeat the base program's rows, and a walk reads
+ * only the row. Keyed by address, a block recorded under one program never
+ * served another (Meta Knight copied 10% of his roots). Not the preamble's
+ * light direction either: the walk writes it only into the head's vector
+ * word, which a copy writes from the live preamble (light_word). */
 static u32 ndsFtrLeanRootKey(const NDSNativeFighterRuntimeTables *tables,
                              const NDSNativeRoot *root,
                              const NDSRendererNativeFighterRoot *input,
@@ -13606,8 +13613,14 @@ static u32 ndsFtrLeanRootKey(const NDSNativeFighterRuntimeTables *tables,
 
 #define NDS_FTR_LEAN_ROOT_MIX(v) h = (h ^ (u32)(v)) * 16777619u
     NDS_FTR_LEAN_ROOT_MIX((uintptr_t)tables);
-    NDS_FTR_LEAN_ROOT_MIX((uintptr_t)root);
     NDS_FTR_LEAN_ROOT_MIX(root->root_offset);
+    NDS_FTR_LEAN_ROOT_MIX((u32)root->first_epoch |
+                          ((u32)root->tail_state_first << 16));
+    NDS_FTR_LEAN_ROOT_MIX((u32)root->source_command_count |
+                          ((u32)root->epoch_count << 16) |
+                          ((u32)root->tail_state_count << 24));
+    NDS_FTR_LEAN_ROOT_MIX((u32)root->tail_sync_count |
+                          ((u32)root->light_preamble << 8));
     NDS_FTR_LEAN_ROOT_MIX((uintptr_t)root_asset_base);
     NDS_FTR_LEAN_ROOT_MIX((uintptr_t)light_preambles);
     NDS_FTR_LEAN_ROOT_MIX(light_count);
@@ -13622,10 +13635,7 @@ static u32 ndsFtrLeanRootKey(const NDSNativeFighterRuntimeTables *tables,
         NDS_FTR_LEAN_ROOT_MIX(pre->render_mode);
         NDS_FTR_LEAN_ROOT_MIX(pre->prim_color);
         NDS_FTR_LEAN_ROOT_MIX(pre->env_color);
-        NDS_FTR_LEAN_ROOT_MIX((u32)(u8)pre->light_dir_x |
-                              ((u32)(u8)pre->light_dir_y << 8) |
-                              ((u32)(u8)pre->light_dir_z << 16) |
-                              ((u32)pre->flags << 24));
+        NDS_FTR_LEAN_ROOT_MIX(pre->flags);
     }
     NDS_FTR_LEAN_ROOT_MIX(input->material_count);
     NDS_FTR_LEAN_ROOT_MIX(material_key);
