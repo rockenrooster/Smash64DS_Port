@@ -878,6 +878,14 @@ def compose(base: dict, fit: dict, ops: dict, role: str, kit_dir: Path | None, o
         target.write_bytes(src.read_bytes())
         mat["texture"] = dict(mat["texture"], file=src.name)
         mat["prim"] = "ffffffff"
+    # Materials the edits name (ops "edit_materials": name -> {"texture":
+    # a look_k drawing}), added before the edits replay so a captured edit
+    # finds them by texture.
+    for name, spec in ops.get("edit_materials", {}).items():
+        tex = K._drawn_texture(spec["texture"], f"t_{name}", out)
+        tex["alpha"] = any(0 in row for row in tex["texels"])
+        scene["materials"].append({"name": name, "combine": [0, 0], "lit": True, "prim": "ffffffff",
+                                   "texture": tex, "two_sided": bool(spec.get("two_sided"))})
     # Edits captured in Blender (capture_ops.py), replayed in order, each
     # against the scene the ones before it made -- before the added parts,
     # so an edit's indices never depend on how many triangles a part has.

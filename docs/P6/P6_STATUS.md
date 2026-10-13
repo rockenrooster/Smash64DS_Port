@@ -10,7 +10,7 @@ Roy's and Peach's exports (null clones) and play in every ROM. G0 settled by
 the owner: Palutena's look is Peach's model reshaped onto the 3DS kit's
 proportions (owner route, after a first pick of the decimated kit), built in
 the live Blender against the kit's wire overlay; the low detail is in owner
-review (v65, 278 triangles, the plan's cap with the staff and shield,
+review (v66, 278 triangles, the plan's cap with the staff and shield,
 [look record](#palutena-look-record)).
 Nothing goes into a ROM before the owner's OK. The high detail is the
 approved low refined (owner). A2's writer and A7's file substitution are
@@ -26,7 +26,7 @@ then the high, then the look's build rules and pins.
 | A2 model reader and writer (F1) | done 2026-10-13 (`model_writer.py`: Peach's own low scene written back draws the same 211 triangles; the written look passes the native owner generator, host) |
 | A3 Blender bridge, kit reader, fit | done 2026-10-13 (`dae_reader.py`, `kit_fit.py`, `scripts/p6/blender/`) |
 | A3b Track K: the kit rebuilt (F6) | dropped by the owner's route (ops kept for reference) |
-| A3c Track R: the base restyled (F6) | Palutena low in owner review (v65) |
+| A3c Track R: the base restyled (F6) | Palutena low in owner review (v66; owner: close) |
 | A4 animation codec and retarget (F2) | planned |
 | A5 motion-script assembler (F3) | done 2026-10-13 (`mscript.py`: text and back; F3 over every export's motion scripts, 18,741 commands, 0 differ) |
 | A6 review harness | planned |
@@ -188,10 +188,13 @@ tubes, plates, two-sided sprites, a billboard flag). Ops in
 colours only (D10); scenes, textures and renders are local (`builds/p6-art/`,
 `artifacts/p6/review/pp_v*`).
 
-**Low detail, v65 (278 triangles, the plan's cap with the staff and shield;
-Peach low 211).** The face is back at the kit's size (owner: 1.1x looked
-weird); the side locks run from the temples to the jaw and the face's side
-points sit behind them (owner: the ears made the face too wide). The neck is a column: its base sits on the torso's neck hole, its
+**Low detail, v66 (278 triangles, the plan's cap with the staff and shield;
+Peach low 211; the owner: close for the low detail).** The face is back at
+the kit's size (owner: 1.1x looked weird), slimmer than the kit's at the
+cheekbones, upper jaw and jaw corners (owner); the side locks run from the
+temples to the jaw and the face's side points sit behind them (owner: the
+ears made the face too wide). The neck is thinner front to back than the
+kit's (owner: less pointy). The neck is a column: its base sits on the torso's neck hole, its
 front and sides rise to the chin and to two points under the jaw (seam
 triangles drawn with the head), the jaw's underside is closed, and its back
 meets a flat upper back on the kit's nape. The torso is rebuilt again
@@ -201,10 +204,13 @@ top of six; the collar is one closed surface whose armholes are the arms'
 own root rings, so torso and arm meet edge to edge, and Peach's inner cones
 of the arms stay so a lowered arm leaves no hole. The slit is the kit's: its
 apex on the hip ring at 56 degrees, open at the hem from 38 degrees to the
-side. The left leg is one piece in the white stocking down to the ankle
-(owner), a four-sided thigh (the front-outer face toward the slit) and a
-calf seamed to it; the sandal's straps may become a texture on the calves
-(owner: if needed). The triangles come from Peach's sleeve
+side. Both legs are skin (owner); the left is one piece, a four-sided thigh
+(the front-outer face toward the slit) and a calf seamed to it, wearing one
+16x32 texture (`edit_materials` in the ops): the bare upper thigh, the
+stocking's lace top, the white stocking (on the left leg only, owner) and
+the sandal's crossed straps on the calf. The written look (both details
+from the low scene, 0x1A10/0x1A11) reads back with every triangle in place
+and the native owner generator accepts it (host). The triangles come from Peach's sleeve
 break in both upper arms (one tube from shoulder to elbow) and two wrist caps
 hidden in the hands (`pp_low_edits_v64.json`). Earlier (v63) and kept: the
 face rebuilt on the kit's face: 17 kit points per half (centre line, the eyes' inner and outer
@@ -231,7 +237,9 @@ gem; shield = a flat round sprite on the left forearm.
 1.1x, then back to 1.0x; no cleavage valley; the neck not fatter, only longer; face
 and neck connected; back in line with the neck; chest decimated and smoothed,
 back flattened; shoulders connected to the torso; slit as big as the kit's;
-the left leg connected and white to the ankle; ears under the hair; waist and dress one mesh;
+the left leg connected; both legs skin, the white stocking on the left leg only; ears
+under the hair; neck thinner front to back; face slimmer at the cheeks and
+upper jaw; waist and dress one mesh;
 face flatter and slightly bigger, cheeks (not the jaw) narrower, forehead
 not concave; hair without a missing chunk; calves and shoes from Peach;
 hands solid like Peach's and smaller; shoulders seamless with the arms;
