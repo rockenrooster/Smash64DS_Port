@@ -2,13 +2,44 @@
  "form": "p6-look-edits-v1",
  "scene": "low_v64b",
  "moved": {
+  "201": [
+   -0.33,
+   23.195,
+   -0.146
+  ],
+  "202": [
+   4.36,
+   21.808,
+   8.36
+  ],
+  "204": [
+   0.33,
+   23.195,
+   -0.146
+  ],
+  "206": [
+   -4.36,
+   21.808,
+   8.36
+  ],
+  "433": [
+   -3.0,
+   1.0,
+   -1.0
+  ],
   "441": [
    0.0,
    0.5,
    4.5
+  ],
+  "451": [
+   3.0,
+   1.0,
+   -1.0
   ]
  },
  "retint": {},
+ "retint_verts": [],
  "deleted_tris": [
   4,
   5,
@@ -46,9 +77,6 @@
   127,
   128,
   129,
-  137,
-  138,
-  139,
   147,
   148,
   149,
@@ -236,21 +264,6 @@
    303,
    304,
    305
-  ],
-  [
-   326,
-   327,
-   328
-  ],
-  [
-   323,
-   324,
-   325
-  ],
-  [
-   327,
-   329,
-   330
   ],
   [
    355,
@@ -527,7 +540,7 @@
     ]
    ],
    "material": {
-    "prim": "9a6a3aff",
+    "prim": "f0ecf2ff",
     "texture": null
    },
    "joint": 16
@@ -548,7 +561,7 @@
     ]
    ],
    "material": {
-    "prim": "9a6a3aff",
+    "prim": "f0ecf2ff",
     "texture": null
    },
    "joint": 16
@@ -569,7 +582,7 @@
     ]
    ],
    "material": {
-    "prim": "9a6a3aff",
+    "prim": "f0ecf2ff",
     "texture": null
    },
    "joint": 16
@@ -590,7 +603,7 @@
     ]
    ],
    "material": {
-    "prim": "9a6a3aff",
+    "prim": "f0ecf2ff",
     "texture": null
    },
    "joint": 16
@@ -611,7 +624,7 @@
     ]
    ],
    "material": {
-    "prim": "9a6a3aff",
+    "prim": "f0ecf2ff",
     "texture": null
    },
    "joint": 16
@@ -632,7 +645,7 @@
     ]
    ],
    "material": {
-    "prim": "9a6a3aff",
+    "prim": "f0ecf2ff",
     "texture": null
    },
    "joint": 16
@@ -653,7 +666,7 @@
     ]
    ],
    "material": {
-    "prim": "9a6a3aff",
+    "prim": "f0ecf2ff",
     "texture": null
    },
    "joint": 16
@@ -674,7 +687,7 @@
     ]
    ],
    "material": {
-    "prim": "f2cfb2ff",
+    "prim": "f0ecf2ff",
     "texture": null
    },
    "joint": 16
@@ -695,7 +708,7 @@
     ]
    ],
    "material": {
-    "prim": "f2cfb2ff",
+    "prim": "f0ecf2ff",
     "texture": null
    },
    "joint": 16
@@ -716,7 +729,7 @@
     ]
    ],
    "material": {
-    "prim": "f2cfb2ff",
+    "prim": "f0ecf2ff",
     "texture": null
    },
    "joint": 16
@@ -737,7 +750,7 @@
     ]
    ],
    "material": {
-    "prim": "f2cfb2ff",
+    "prim": "f0ecf2ff",
     "texture": null
    },
    "joint": 16
@@ -758,7 +771,7 @@
     ]
    ],
    "material": {
-    "prim": "f2cfb2ff",
+    "prim": "f0ecf2ff",
     "texture": null
    },
    "joint": 16
@@ -779,7 +792,7 @@
     ]
    ],
    "material": {
-    "prim": "f2cfb2ff",
+    "prim": "f0ecf2ff",
     "texture": null
    },
    "joint": 16
@@ -884,7 +897,7 @@
     ]
    ],
    "material": {
-    "prim": "f2cfb2ff",
+    "prim": "f0ecf2ff",
     "texture": null
    },
    "joint": 16
@@ -905,7 +918,7 @@
     ]
    ],
    "material": {
-    "prim": "f2cfb2ff",
+    "prim": "f0ecf2ff",
     "texture": null
    },
    "joint": 16
@@ -1245,69 +1258,6 @@
     "texture": null
    },
    "joint": 4
-  },
-  {
-   "v": [
-    [
-     "s",
-     326
-    ],
-    [
-     "s",
-     327
-    ],
-    [
-     "s",
-     328
-    ]
-   ],
-   "material": {
-    "prim": "9a6a3aff",
-    "texture": null
-   },
-   "joint": 22
-  },
-  {
-   "v": [
-    [
-     "s",
-     323
-    ],
-    [
-     "s",
-     324
-    ],
-    [
-     "s",
-     325
-    ]
-   ],
-   "material": {
-    "prim": "9a6a3aff",
-    "texture": null
-   },
-   "joint": 22
-  },
-  {
-   "v": [
-    [
-     "s",
-     329
-    ],
-    [
-     "s",
-     330
-    ],
-    [
-     "s",
-     327
-    ]
-   ],
-   "material": {
-    "prim": "9a6a3aff",
-    "texture": null
-   },
-   "joint": 22
   },
   {
    "v": [
