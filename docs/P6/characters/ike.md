@@ -95,6 +95,26 @@ scripts in `scripts/p6/ike/motions/`, rows in `scripts/p6/ike/spec.json`):
 - Ike's up tilt stays Roy's (an overhead arc), so jab 3 and the up smash come
   from other clips.
 
+The specials (I4, 2026-10-13; `src/port/nds_p4_ike.c`, appended motions
+225-233 and statuses 250-263 in the spec; the starters are the spec's
+`ground_nsp`/`air_nsp`/`ground_usp`/`air_usp` rows):
+
+- Quick Draw: the charge holds Marth's dash-attack stance (frame 5); the dash
+  his stride (frames 3-5), with a 4% hold-in hit; contact (`proc_hit`,
+  `proc_shield`) cuts to the slash on Roy's forward-tilt clip (6% plus up to
+  9 by charge); a miss plays Marth's dash swing and recovery at 1.15 (about
+  40 frames). The dash runs off an edge and ends in special fall; the other
+  statuses stop at one.
+- Aether: Roy's Blazer crouch and rise (frames 0-22, the last held 8),
+  jumping at frame 9 (110 up, 100 from the air), three carrying hits and
+  armour to frame 18; the plunge at 130 a frame on Roy's down-air frame 8
+  with a meteor; the landing on Roy's Flare Blade end (the sword planted)
+  with a 6% hit and no shockwave. The ledge can be caught on the way.
+- Counter: Ike's taunt runs his counter status through
+  `NDSP4Overrides.status_replace` (Appeal stays in `status_id`); Marth's
+  window (frames 6-30), clips and 8% strike; `update_damage` counts the hit.
+- Eruption: Roy's Flare Blade rows unchanged (the blue tint is A10).
+
 Defaults for the new specials:
 
 - **Quick Draw:** hold B to charge for up to 60 frames; on release he dashes
@@ -137,6 +157,14 @@ The clips used come to well under 1 MB of NitroFS.
   directly. The owner approves the map by ear on the sample sheet.
 - The Brawl clips supplied first (`Super Smash Bros brawl/Ike (International)/`)
   stay local as a reference.
+- Built (A8, 2026-10-13): `scripts/p6/ike/audio.json` names 46 cues (the
+  voices, the narrator's call, the cheer, his swings, steps, landing, dash,
+  dodge, entry and specials) and maps 42 ids his scripts, attributes and
+  kind tables play (Roy's voices, Captain's steps and landing, the vanilla
+  sword swings) to them; `scripts/p6/p6_audio.py` trims, normalizes and
+  resamples each (voices 16 kHz, effects 22.05 kHz) into the P4 pack under
+  ids 0x700 on (about 330 KB of IMA). His own scripts name cues as
+  `cue:<name>`.
 - The 3DS kit's Ike audio is not used: its voice is the Brawl set (37 of 39
   clips match outright) and its effects are `se_ike`'s recordings (58 of 65), at
   14-16 kHz and unnamed.

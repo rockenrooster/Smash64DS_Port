@@ -353,6 +353,8 @@ def build(staging: Path, contents: list[str], out_dir: Path) -> dict:
     fgm_asm = (staging / "src" / "FGM.asm").read_text(encoding="utf-8")
     rows = []
     programs = []
+    authored = [EXPORT_DIRS[c] for c in contents
+                if "base" in p4_contents.row_of(EXPORT_DIRS[c], _REGISTRY)]
     contents = list(dict.fromkeys(SOURCES[c] for c in contents))
     for content in contents:
         content_rows = add_sound_rows(fgm_asm, CONTENT_DIRS[content])
@@ -438,6 +440,13 @@ def build(staging: Path, contents: list[str], out_dir: Path) -> dict:
             raise ValueError(f"{row['name']}: no single FGM_ID in bass.out")
         records.append(program_record(row, named[0], staging, renderer, extract,
                                       vadpcm_decode, vanilla))
+
+    # P6 authored contents' own cues (scripts/p6/p6_audio.py: local
+    # recordings, ids in each content's window).
+    sys.path.insert(0, str(ROOT / "scripts" / "p6"))
+    import p6_audio  # noqa: E402
+    for name in authored:
+        records += p6_audio.records(name, renderer)
 
     records.sort(key=lambda r: r["id"])
     if len({r["id"] for r in records}) != len(records):

@@ -1,0 +1,239 @@
+{
+ "schema": "p6-audio-v1",
+ "content": "ike",
+ "comment": "Ike's sound cues (docs/P6/characters/ike.md, Audio; plan D5-D8): Ultimate's Radiant Dawn voice set (vc_ike_c01) and effects (se_ike), the narrator's name call and the crowd cheer, from the owner's local folder (ignored, never tracked). The map sends each FGM id his scripts, attributes and kind tables play (Roy's voices, the vanilla sword swings) to a cue; his own scripts name cues as cue:<name>.",
+ "source": "decomp/alt_assets/Fighters/Super Smash Bros Ultimate/Fighters",
+ "cues": {
+  "announcer": {
+   "file": "vc_narration_characall_ike.wav",
+   "kind": "voice"
+  },
+  "cheer": {
+   "file": "vc_ike_cheer.wav",
+   "kind": "voice"
+  },
+  "attack01": {
+   "file": "vc_ike_c01/vc_ike_attack01.wav",
+   "kind": "voice"
+  },
+  "attack02": {
+   "file": "vc_ike_c01/vc_ike_attack02.wav",
+   "kind": "voice"
+  },
+  "attack03": {
+   "file": "vc_ike_c01/vc_ike_attack03.wav",
+   "kind": "voice"
+  },
+  "attack04": {
+   "file": "vc_ike_c01/vc_ike_attack04.wav",
+   "kind": "voice"
+  },
+  "attack05": {
+   "file": "vc_ike_c01/vc_ike_attack05.wav",
+   "kind": "voice"
+  },
+  "attack06": {
+   "file": "vc_ike_c01/vc_ike_attack06.wav",
+   "kind": "voice"
+  },
+  "attack07": {
+   "file": "vc_ike_c01/vc_ike_attack07.wav",
+   "kind": "voice"
+  },
+  "appeal01": {
+   "file": "vc_ike_c01/vc_ike_appeal01.wav",
+   "kind": "voice"
+  },
+  "cliffcatch": {
+   "file": "vc_ike_c01/vc_ike_cliffcatch.wav",
+   "kind": "voice"
+  },
+  "damage01": {
+   "file": "vc_ike_c01/vc_ike_damage01.wav",
+   "kind": "voice"
+  },
+  "damage02": {
+   "file": "vc_ike_c01/vc_ike_damage02.wav",
+   "kind": "voice"
+  },
+  "damagefly01": {
+   "file": "vc_ike_c01/vc_ike_damagefly01.wav",
+   "kind": "voice"
+  },
+  "damage_twinkle": {
+   "file": "vc_ike_c01/vc_ike_damage_twinkle.wav",
+   "kind": "voice"
+  },
+  "knockout": {
+   "file": "vc_ike_c01/vc_ike_knockout.wav",
+   "kind": "voice"
+  },
+  "furafura": {
+   "file": "vc_ike_c01/vc_ike_furafura.wav",
+   "kind": "voice"
+  },
+  "furasleep": {
+   "file": "vc_ike_c01/vc_ike_furasleep.wav",
+   "kind": "voice"
+  },
+  "heavyget": {
+   "file": "vc_ike_c01/vc_ike_heavyget.wav",
+   "kind": "voice"
+  },
+  "jump01": {
+   "file": "vc_ike_c01/vc_ike_jump01.wav",
+   "kind": "voice"
+  },
+  "special_n01": {
+   "file": "vc_ike_c01/vc_ike_special_N01.wav",
+   "kind": "voice"
+  },
+  "special_s01": {
+   "file": "vc_ike_c01/vc_ike_special_S01.wav",
+   "kind": "voice"
+  },
+  "special_h01": {
+   "file": "vc_ike_c01/vc_ike_special_H01.wav",
+   "kind": "voice"
+  },
+  "special_h02": {
+   "file": "vc_ike_c01/vc_ike_special_H02.wav",
+   "kind": "voice"
+  },
+  "special_l01": {
+   "file": "vc_ike_c01/vc_ike_special_L01.wav",
+   "kind": "voice"
+  },
+  "win01": {
+   "file": "vc_ike_c01/vc_ike_win01.wav",
+   "kind": "voice"
+  },
+  "win02": {
+   "file": "vc_ike_c01/vc_ike_win02.wav",
+   "kind": "voice"
+  },
+  "win03": {
+   "file": "vc_ike_c01/vc_ike_win03.wav",
+   "kind": "voice"
+  },
+  "se_swing_s": {
+   "file": "se_ike/se_ike_swing_s.wav",
+   "kind": "effect"
+  },
+  "se_swing_m": {
+   "file": "se_ike/se_ike_swing_m.wav",
+   "kind": "effect"
+  },
+  "se_swing_l": {
+   "file": "se_ike/se_ike_swing_l.wav",
+   "kind": "effect"
+  },
+  "se_swing_ll": {
+   "file": "se_ike/se_ike_swing_ll.wav",
+   "kind": "effect"
+  },
+  "se_swordgroundhit": {
+   "file": "se_ike/se_ike_swordgroundhit.wav",
+   "kind": "effect"
+  },
+  "se_eruption_charge": {
+   "file": "se_ike/se_ike_special_N01.wav",
+   "kind": "effect"
+  },
+  "se_quickdraw": {
+   "file": "se_ike/se_ike_special_S01.wav",
+   "kind": "effect"
+  },
+  "se_quickdraw_slash": {
+   "file": "se_ike/se_ike_special_S03.wav",
+   "kind": "effect"
+  },
+  "se_aether": {
+   "file": "se_ike/se_ike_special_H01.wav",
+   "kind": "effect"
+  },
+  "se_aether_land": {
+   "file": "se_ike/se_ike_special_H05.wav",
+   "kind": "effect"
+  },
+  "se_counter": {
+   "file": "se_ike/se_ike_special_L01.wav",
+   "kind": "effect"
+  },
+  "se_appear": {
+   "file": "se_ike/se_ike_appear01.wav",
+   "kind": "effect"
+  },
+  "se_landing": {
+   "file": "se_ike/se_ike_landing01.wav",
+   "kind": "effect"
+  },
+  "se_step": {
+   "file": "se_ike/se_ike_step_right_m_souen01.wav",
+   "kind": "effect"
+  },
+  "se_dash": {
+   "file": "se_ike/se_ike_dash_start.wav",
+   "kind": "effect"
+  },
+  "se_brake": {
+   "file": "se_ike/se_ike_dash_stop.wav",
+   "kind": "effect"
+  },
+  "se_escape": {
+   "file": "se_ike/se_ike_escape.wav",
+   "kind": "effect"
+  },
+  "se_eruption_blast": {
+   "file": "se_ike/se_ike_special_N06.wav",
+   "kind": "effect"
+  }
+ },
+ "map": {
+  "0x309": "announcer",
+  "0x5aa": "cheer",
+  "0x5a2": "attack01",
+  "0x5a3": "attack02",
+  "0x5a4": "attack03",
+  "0x5a5": "attack04",
+  "0x5a6": "attack05",
+  "0x5a7": "attack06",
+  "0x5a8": "attack07",
+  "0x5a9": "jump01",
+  "0x5ab": "appeal01",
+  "0x5ac": "damage01",
+  "0x5ad": "knockout",
+  "0x5ae": "damage_twinkle",
+  "0x5af": "furasleep",
+  "0x5b0": "furafura",
+  "0x5b1": "special_h01",
+  "0x5b4": "special_l01",
+  "0x5b5": "win01",
+  "0x5b6": "win02",
+  "0x5b7": "win03",
+  "0x5b8": "heavyget",
+  "0x5b9": "se_eruption_charge",
+  "0x5ba": "special_n01",
+  "0x102": "se_swing_l",
+  "0x103": "se_swing_m",
+  "0x104": "se_swing_s",
+  "0x29": "se_swing_l",
+  "0x2a": "se_swing_m",
+  "0x2b": "se_swing_s",
+  "0x12b": "se_swordgroundhit",
+  "0x49": "se_landing",
+  "0x6a": "se_step",
+  "0x75": "se_dash",
+  "0x80": "se_brake",
+  "0xb": "se_escape",
+  "0x43": "se_swing_l",
+  "0x44": "se_swing_m",
+  "0x45": "se_swing_s",
+  "0x3d3": "se_appear",
+  "0x5c0": "se_eruption_charge",
+  "0x1": "se_eruption_blast",
+  "0x120": "damagefly01",
+  "0x5f": "se_brake",
+  "0x54": "se_dash"
+ }
+}

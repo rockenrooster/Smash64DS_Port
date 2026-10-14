@@ -773,8 +773,10 @@ RAPID_COUNTS = {"Fox": (4, "nFTCommonStatusAttack12"), "Link": (5, "nFTCommonSta
 RAPID_KINDS = ("Fox", "Link", "Kirby", "Purin", "Captain")
 JAB3_TIMER_END = 0x8014EBA4   # ftCommonAttack12SetStatus past its switch
 # Kind tables a P6 authored content may give a value of its own (p6_author.py
-# {"status": N}) instead of a Remix routine's address.
-AUTHORED_KIND_TABLES = {"jab_3_action"}
+# {"status": N} for the jab, {"routine": name} for a special starter) instead
+# of a Remix routine's address.
+AUTHORED_KIND_TABLES = {"jab_3_action", "ground_nsp", "air_nsp", "ground_usp", "air_usp",
+                        "ground_dsp", "air_dsp", "str_winner_ptr"}
 JAB3_ACTION_END = 0x8014EC30  # ftCommonAttack13SetStatus past its switch
 
 
@@ -1117,11 +1119,16 @@ def present_rows(rom: R.Rom, tables: dict) -> dict:
     def f32(name: str) -> float:
         return struct.unpack(">f", struct.pack(">I", word(name)))[0]
 
-    name_ptr = word("str_winner_ptr")
-    raw = rom.read_ram(name_ptr, 32)
-    if b"\x00" not in raw:
-        raise GenError("results name string is not terminated in 32 bytes")
-    name = raw.split(b"\x00", 1)[0].decode("ascii")
+    own = tables["str_winner_ptr"].get("authored")
+    if own is not None:
+        # A P6 authored content's own Results name (p6_author.py).
+        name = own["name"]
+    else:
+        name_ptr = word("str_winner_ptr")
+        raw = rom.read_ram(name_ptr, 32)
+        if b"\x00" not in raw:
+            raise GenError("results name string is not terminated in 32 bytes")
+        name = raw.split(b"\x00", 1)[0].decode("ascii")
     # winner_bgm is a three-instruction routine: or a0,r0,r0; jal play_bgm;
     # ori a1,r0,<bgm>. Accept exactly that shape.
     routine = struct.unpack(">3I", rom.read_ram(word("winner_bgm"), 12))
@@ -1240,6 +1247,56 @@ def set_o2r_attributes(blob: bytes, o_attributes: int, values: dict[str, float])
         if key not in layout:
             raise GenError(f"attribute {field!r}: not in ft_layout.FIELDS")
         struct.pack_into(">f", out, body + o_attributes + layout[key], float(value))
+    return bytes(out)
+
+
+# Script commands whose value is an FGM id (ftmain.c's sound events: the
+# low 26 bits).
+SOUND_OPS = ("PlayFGM", "PlayLoopSFXStoreInfo", "PlayVoiceStoreInfo", "PlayLoopVoiceStoreInfo",
+             "PlayFGMStoreInfo")
+# FTAttributes' sound fields (u16 lanes): the KO, star-KO, damage, smash and
+# heavy-item voices.
+ATTRIBUTE_SOUNDS = (("dead_fgm_ids", 2), ("deadup_sfx", 1), ("damage_sfx", 1),
+                    ("smash_sfx", 3), ("heavyget_sfx", 1))
+
+
+def remap_o2r_sounds(o2r: bytes, synth, fgm_map: dict[int, int]) -> bytes:
+    """The synthesized motion file with every sound command of the
+    content's blocks playing its mapped id (an id the map does not name
+    stays)."""
+    ext_n = struct.unpack_from("<I", o2r, 0x48)[0]
+    body = 0x4C + 2 * ext_n + 4
+    out = bytearray(o2r)
+    seen = set()
+    for block in synth.blocks.values():
+        for cmd in block["commands"]:
+            if cmd["op"] not in SOUND_OPS:
+                continue
+            at = body + synth.map_loc(parse_key(cmd["at"]))
+            if at in seen:
+                continue
+            seen.add(at)
+            word = struct.unpack_from(">I", out, at)[0]
+            fgm = word & 0x3FFFFFF
+            if fgm in fgm_map:
+                struct.pack_into(">I", out, at, (word & ~0x3FFFFFF) | fgm_map[fgm])
+    return bytes(out)
+
+
+def remap_o2r_attribute_sounds(blob: bytes, o_attributes: int, fgm_map: dict[int, int]) -> bytes:
+    """The main file's FTAttributes sound fields through the content's map."""
+    import ft_layout  # noqa: E402
+
+    layout = ft_layout.layout()
+    ext_n = struct.unpack_from("<I", blob, 0x48)[0]
+    body = 0x4C + 2 * ext_n + 4
+    out = bytearray(blob)
+    for field, count in ATTRIBUTE_SOUNDS:
+        base = body + o_attributes + layout[f"FTAttributes.{field}"]
+        for k in range(count):
+            fgm = struct.unpack_from(">H", out, base + 2 * k)[0]
+            if fgm in fgm_map:
+                struct.pack_into(">H", out, base + 2 * k, fgm_map[fgm])
     return bytes(out)
 
 
@@ -1985,6 +2042,11 @@ def main() -> int:
         raise GenError(f"parent motion {parent_motion:#x} differs from vanilla")
     synth = MotionSynth(rom, parent_motion, events, synth_id)
     motion_o2r = synth.build()
+    # A P6 authored content's sounds (p6_audio.py): the base's FGM ids its
+    # scripts, attributes and kind tables play become its own cues, in the
+    # shipped file (the round trip below checks the copy against the image).
+    fgm_map = {int(k): v for k, v in (authored.get("fgm_map") or {}).items()}
+    shipped_motion = remap_o2r_sounds(motion_o2r, synth, fgm_map) if fgm_map else motion_o2r
 
     deviations = []
     o2r_out = args.out / "o2r"
@@ -2003,6 +2065,8 @@ def main() -> int:
         # The main file's references into the parent motion file resolve to the
         # same offsets in the synthesized copy, so the parent file never loads.
         blob = retarget_o2r_externs(blob, {parent_motion: synth_id})
+        if fid == file_ids[0] and fgm_map:
+            blob = remap_o2r_attribute_sounds(blob, desc["o_attributes"], fgm_map)
         if fid == file_ids[0] and authored.get("attributes"):
             blob = set_o2r_attributes(blob, desc["o_attributes"], authored["attributes"])
         if fid == file_ids[0] and key in OWNER_ATTRIBUTE_SCALES:
@@ -2034,8 +2098,8 @@ def main() -> int:
                            f"{MAX_EXTERN_IDS} (NDS_RELOC_EXTERN_FILE_ID_CAPACITY)")
         (o2r_out / f"{fid:04x}").write_bytes(blob)
         shipped[fid] = hashlib.sha256(blob).hexdigest()
-    (o2r_out / f"{synth_id:04x}").write_bytes(motion_o2r)
-    shipped[synth_id] = hashlib.sha256(motion_o2r).hexdigest()
+    (o2r_out / f"{synth_id:04x}").write_bytes(shipped_motion)
+    shipped[synth_id] = hashlib.sha256(shipped_motion).hexdigest()
 
     # S15: the content's own animations without the keys their interpolation
     # already implies, and its event32 joint animations (Remix's entries) as
@@ -2238,6 +2302,13 @@ def main() -> int:
     special_starts = []
     proto_extra = set()
     for table in SPECIAL_START_TABLES:
+        own = tables[table].get("authored")
+        if own is not None:
+            # A P6 authored content's own starter (p6_author.py
+            # {"routine": name}, defined in src/port/nds_p4_<name>.c).
+            special_starts.append("ndsP4Proc_" + own["routine"])
+            proto_extra.add(own["routine"])
+            continue
         value = int(tables[table]["value"], 16)
         if value == int(tables[table]["parent_value"], 16):
             special_starts.append("NULL")
@@ -2534,9 +2605,9 @@ def main() -> int:
               f"    .results_wins_x = {c_float(present['results_wins_x'])},",
               f"    .results_label_kind = {present['results_label_kind']},",
               f"    .results_win_singular = {int(present['results_win_singular'])},",
-              f"    .announce_fgm = {present['announce_fgm']:#x},",
+              f"    .announce_fgm = {fgm_map.get(present['announce_fgm'], present['announce_fgm']):#x},",
               f"    .victory_bgm = {present['victory_bgm']:#x},",
-              f"    .crowd_chant_fgm = {present['crowd_chant_fgm']:#x},",
+              f"    .crowd_chant_fgm = {fgm_map.get(present['crowd_chant_fgm'], present['crowd_chant_fgm']):#x},",
               f"    .menu_zoom = {c_float(present['menu_zoom'])},",
               "    .default_costumes = { " + ", ".join(str(b) for b in present["default_costumes"]) + " },"]
     if glyph is not None:

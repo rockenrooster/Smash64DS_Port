@@ -427,6 +427,33 @@ def retime(clip: Clip, factor: float) -> Clip:
     return out
 
 
+def splice(clip: Clip, first: int, last: int, hold: int = 0, strip_transn: bool = False) -> Clip:
+    """Frames first..last of the clip as a clip of its own, then the last
+    frame held `hold` frames more (a pose: Quick Draw's stance from a
+    frame of a swing). strip_transn drops a TransN clip's leading travel
+    slot (the status that plays the splice moves the fighter itself), so
+    the rows start at slot 0. A track before its lead takes its first
+    value; a stream past its end holds its last."""
+    if not 0 <= first <= last:
+        raise ValueError(f"splice frames {first}..{last}")
+    out = Clip(clip.slots - 1 if strip_transn else clip.slots)
+    length = last - first + hold
+    for slot, st in clip.streams.items():
+        if strip_transn:
+            if slot == 0:
+                continue
+            slot -= 1
+        new = Stream(length, None)
+        for track, t in st.tracks.items():
+            vals = []
+            for g in range(length + 1):
+                f = min(first + g, last, st.length)
+                vals.append(t.values[max(f - t.lead, 0)])
+            new.tracks[track] = Track(vals, 0, None)
+        out.streams[slot] = new
+    return out
+
+
 def _ancestors(skel: Skeleton, row: int) -> list:
     out = []
     while skel.parents[row] >= 0:
@@ -472,9 +499,11 @@ def skeleton(rom, name: str, detail: str = "high") -> Skeleton:
 def build(recipe: dict, rom) -> bytes:
     """A clip from its recipe (art/p6/<name>/anims/*.json): a source clip
     (file id in the reference ROM), optionally retargeted ("retarget":
-    {"from", "to", "height_scale"}) and retimed ("retime": the length
-    factor); the O2R container keeps the source's header (p6_author.py
-    gives it its own id)."""
+    {"from", "to", "height_scale"}), spliced ("frames": [first, last],
+    "hold": frames the last is held, "strip_transn": drop a TransN clip's
+    travel slot) and retimed ("retime": the length factor); the O2R
+    container keeps the source's header (p6_author.py gives it its own
+    id)."""
     blob = rom.o2r(int(str(recipe["source"]), 0))
     clip = decode(blob)
     rt = recipe.get("retarget")
@@ -482,6 +511,9 @@ def build(recipe: dict, rom) -> bytes:
         src, dst = skeleton(rom, rt["from"]), skeleton(rom, rt["to"])
         clip = retarget(clip, src, dst, ROLES[(rt["from"], rt["to"])],
                         dst_slots=len(dst.parents) - 1, height_scale=float(rt.get("height_scale", 1.0)))
+    if "frames" in recipe:
+        first, last = (int(x) for x in recipe["frames"])
+        clip = splice(clip, first, last, int(recipe.get("hold", 0)), bool(recipe.get("strip_transn")))
     if "retime" in recipe:
         clip = retime(clip, float(recipe["retime"]))
     return encode(clip, blob, int(recipe.get("eps", ANIM_EPS)))

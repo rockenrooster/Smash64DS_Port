@@ -7,7 +7,8 @@
  *
  * Roy shares the up and neutral specials (MarthUSP/MarthNSP name him in
  * their own id tests); nds_p4_roy.c compiles this file when Marth is not
- * enabled. The counter (MarthDSP) is Marth's alone: Remix's damage hook
+ * enabled (and Ike's file compiles Roy's when Roy is not: Ike's entry is
+ * Roy's). The counter (MarthDSP) is Marth's alone: Remix's damage hook
  * names only him.
  *
  * Player-struct offsets in the donor map to BattleShip fields as:
@@ -26,7 +27,7 @@
  */
 #include <nds/nds_p4.h>
 
-#if NDS_P4_CODE_MARTH || NDS_P4_CODE_ROY
+#if NDS_P4_CODE_MARTH || NDS_P4_CODE_ROY || NDS_P4_CODE_IKE
 
 #include <ef/effect.h>
 #if NDS_P2_KIRBY
@@ -482,14 +483,16 @@ static void ndsP4MarthEntryCaseOn(FTStruct *fp, EFDesc *wave, EFDesc *beam)
     ndsP4EntryMakeEffect(beam, &fp->entry_pos);
 }
 
-#if NDS_P4_CODE_ROY
+#if NDS_P4_CODE_ROY || NDS_P4_CODE_IKE
 /* Roy's, here beside the helper: nds_p4_roy.c compiles this file only
- * when Marth's code is not compiled. */
+ * when Marth's code is not compiled. Ike's entry is Roy's (his overrides
+ * name this case). */
 extern void *gNdsP4RoySpecial3;
 static EFDesc sNdsP4RoyEntryWaveDesc = NDS_P4_MARTH_ENTRY_WAVE(&gNdsP4RoySpecial3);
 static EFDesc sNdsP4RoyEntryBeamDesc = NDS_P4_MARTH_ENTRY_BEAM(&gNdsP4RoySpecial3);
 
-static void ndsP4RoyEntryCase(FTStruct *fp)
+void ndsP4RoyEntryCase(FTStruct *fp);
+void ndsP4RoyEntryCase(FTStruct *fp)
 {
     ndsP4MarthEntryCaseOn(fp, &sNdsP4RoyEntryWaveDesc, &sNdsP4RoyEntryBeamDesc);
 }
@@ -641,4 +644,4 @@ const NDSP4Overrides gNdsP4MarthOverrides = {
 };
 #endif /* NDS_P4_CODE_MARTH */
 
-#endif /* NDS_P4_CODE_MARTH || NDS_P4_CODE_ROY */
+#endif /* NDS_P4_CODE_MARTH || NDS_P4_CODE_ROY || NDS_P4_CODE_IKE */

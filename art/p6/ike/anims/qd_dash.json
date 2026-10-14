@@ -1,0 +1,10 @@
+{
+ "comment": "Quick Draw's dash (card: new, a dash pose): Marth's dash-attack stride, frames 3-5, its last held.",
+ "source": "0xd3f",
+ "frames": [
+  3,
+  5
+ ],
+ "hold": 30,
+ "strip_transn": true
+}

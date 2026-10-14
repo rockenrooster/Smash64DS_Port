@@ -103,6 +103,7 @@ def author(base_export: Path, name: str, spec_path: Path | None, out: Path,
     out.mkdir(parents=True, exist_ok=True)
     substitute_files(resolved, spec.get("files") or {}, out)
     events = json.loads((base_export / "events.json").read_text(encoding="utf-8"))
+    author_audio(resolved, name)
     rom = None
     if staging is not None:
         import remix_rom
@@ -170,6 +171,40 @@ def substitute_files(resolved: dict, files: dict, out: Path) -> None:
     resolved["file_closure"] = closure
 
 
+_CUE_IDS: dict[str, int] = {}
+
+
+def _cues(line: str) -> str:
+    """A script line with each `cue:<name>` value replaced by the cue's FGM
+    id (scripts/p6/<name>/audio.json, p6_audio.cue_ids)."""
+    if "cue:" not in line:
+        return line
+    out = []
+    for token in line.split():
+        key, _, value = token.partition("=")
+        if value.startswith("cue:"):
+            cue = value[4:]
+            if cue not in _CUE_IDS:
+                raise AuthorError(f"{line!r}: no cue {cue!r} in the content's audio.json")
+            token = f"{key}={_CUE_IDS[cue]:#x}"
+        out.append(token)
+    return " ".join(out)
+
+
+def author_audio(resolved: dict, name: str) -> None:
+    """The content's sounds (scripts/p6/<name>/audio.json, p6_audio.py): the
+    base's FGM ids it plays mapped to its own cues, which the generator
+    applies to its scripts, attributes and kind tables; its own scripts name
+    cues as cue:<name>."""
+    import p6_audio
+    _CUE_IDS.clear()
+    _CUE_IDS.update(p6_audio.cue_ids(name))
+    fgm_map = p6_audio.fgm_map(name)
+    if fgm_map:
+        resolved["authored"]["fgm_map"] = {str(k): v for k, v in sorted(fgm_map.items())}
+        resolved["authored"]["audio_sha256"] = sha256(p6_audio.spec_path(name))
+
+
 def assemble_block(lines: list[str], ram: bytearray, events: dict, label: str,
                    referrer: str) -> tuple[int, str]:
     """Script text (mscript.py, one command a line) assembled at the end of
@@ -182,7 +217,7 @@ def assemble_block(lines: list[str], ram: bytearray, events: dict, label: str,
     block_key = f"ram:{start:#010x}"
     cmds, edges, exit_ = [], [], None
     for line in lines:
-        words, pointers = mscript.assemble(line)
+        words, pointers = mscript.assemble(_cues(line))
         at = AUTHORED_RAM + len(ram)
         op = line.split()[0]
         rec = {"at": f"ram:{at:#010x}", "op": op, "words": [words[0]]}
@@ -251,7 +286,7 @@ def author_motions(resolved: dict, events: dict, motions: dict, name: str, out: 
     (Ike's jab 3: the base's own row for it is another move):
     - "anim": a built clip (an O2R container under builds/, anim.py), copied
       into <out>/o2r under the next id of the content's window and added to
-      the file closure;
+      the file closure; "anim_id" names a clip already in the closure;
     - "script": a committed motion script (mscript.py text, one command a
       line, "#" comments), assembled into the authored RAM window
       (<out>/authored_ram.bin, assemble_block);
@@ -285,7 +320,7 @@ def author_motions(resolved: dict, events: dict, motions: dict, name: str, out: 
             resolved["motions"].append(row)
             rows[index] = row
             authored.setdefault("motions_appended", []).append(index)
-        unknown = set(entry) - {"anim", "anim_flags", "script", "script_edits", "comment"}
+        unknown = set(entry) - {"anim", "anim_id", "anim_flags", "script", "script_edits", "comment"}
         if unknown:
             raise AuthorError(f"spec motions {index}: unknown keys {sorted(unknown)}")
         if "anim" in entry:
@@ -309,6 +344,16 @@ def author_motions(resolved: dict, events: dict, motions: dict, name: str, out: 
             row["inherited"]["anim_file_id"] = False
             authored.setdefault("anims", {})[str(index)] = fid
             authored.setdefault("anims_sha256", {})[str(index)] = hashlib.sha256(bytes(blob)).hexdigest()
+        if "anim_id" in entry:
+            # A clip already in the content's closure (Quick Draw's slash is
+            # Roy's forward-tilt clip): named, not copied.
+            fid = int(str(entry["anim_id"]), 0)
+            if fid not in {r["file_id"] for r in resolved["file_closure"]}:
+                raise AuthorError(f"spec motions {index}: anim_id {fid:#x} is not in the closure")
+            if row["anim_file_id"]:
+                replaced.add(row["anim_file_id"])
+            row["anim_file_id"] = fid
+            row["inherited"]["anim_file_id"] = False
         if "anim_flags" in entry:
             row["anim_flags"] = int(str(entry["anim_flags"]), 0)
             row["inherited"]["anim_flags"] = False
@@ -430,7 +475,8 @@ def author_kind_tables(resolved: dict, rows: dict) -> None:
         row = tables[name]
         if isinstance(value, dict):
             # An authored value the generator reads in place of the row's
-            # code ({"status": N}: jab_3_action naming an appended status).
+            # code ({"status": N}: jab_3_action naming an appended status;
+            # {"routine": name}: a special starter in nds_p4_<name>.c).
             row["authored"] = value
             resolved["authored"].setdefault("kind_tables", {})[name] = value
             continue

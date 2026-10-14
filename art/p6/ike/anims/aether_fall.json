@@ -1,0 +1,9 @@
+{
+ "comment": "Aether's descent (card: new): Roy's down-air frame 8, the sword pointing down, held.",
+ "source": "0xd4a",
+ "frames": [
+  8,
+  8
+ ],
+ "hold": 60
+}

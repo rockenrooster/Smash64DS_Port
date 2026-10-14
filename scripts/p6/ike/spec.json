@@ -46,6 +46,51 @@
    "comment": "Attack13 (appended; Roy's 195 is his entry): jab 3",
    "anim": "builds/p6-art/ike/anims/jab3.o2r",
    "script": "scripts/p6/ike/motions/jab3.ms"
+  },
+  "225": {
+   "comment": "Quick Draw: charge",
+   "anim": "builds/p6-art/ike/anims/qd_charge.o2r",
+   "script": "scripts/p6/ike/motions/qd_charge.ms"
+  },
+  "226": {
+   "comment": "Quick Draw: dash",
+   "anim": "builds/p6-art/ike/anims/qd_dash.o2r",
+   "script": "scripts/p6/ike/motions/qd_dash.ms"
+  },
+  "227": {
+   "comment": "Quick Draw: slash (Roy's forward-tilt clip)",
+   "anim_id": "0xd40",
+   "script": "scripts/p6/ike/motions/qd_slash.ms"
+  },
+  "228": {
+   "comment": "Quick Draw: miss",
+   "anim": "builds/p6-art/ike/anims/qd_end.o2r",
+   "script": "scripts/p6/ike/motions/qd_end.ms"
+  },
+  "229": {
+   "comment": "Aether: toss and rise",
+   "anim": "builds/p6-art/ike/anims/aether_rise.o2r",
+   "script": "scripts/p6/ike/motions/aether_rise.ms"
+  },
+  "230": {
+   "comment": "Aether: descent",
+   "anim": "builds/p6-art/ike/anims/aether_fall.o2r",
+   "script": "scripts/p6/ike/motions/aether_fall.ms"
+  },
+  "231": {
+   "comment": "Aether: landing",
+   "anim": "builds/p6-art/ike/anims/aether_land.o2r",
+   "script": "scripts/p6/ike/motions/aether_land.ms"
+  },
+  "232": {
+   "comment": "Counter (taunt)",
+   "anim": "builds/p6-art/ike/anims/counter.o2r",
+   "script": "scripts/p6/ike/motions/counter.ms"
+  },
+  "233": {
+   "comment": "Counter: strike",
+   "anim": "builds/p6-art/ike/anims/counter_hit.o2r",
+   "script": "scripts/p6/ike/motions/counter_hit.ms"
   }
  },
  "statuses": {
@@ -61,6 +106,174 @@
     "ftPhysicsApplyGroundVelFriction",
     "mpCommonSetFighterFallOnEdgeBreak"
    ]
+  },
+  "250": {
+   "name": "nFTIkeStatusSpecialNCharge",
+   "motion": 225,
+   "attack_id": 18,
+   "sflags": 18,
+   "procs": [
+    "ndsP4IkeQuickDrawChargeMain",
+    null,
+    "ftPhysicsApplyGroundVelFriction",
+    "ndsP4IkeQuickDrawGroundMap"
+   ]
+  },
+  "251": {
+   "name": "nFTIkeStatusSpecialAirNCharge",
+   "motion": 225,
+   "attack_id": 18,
+   "sflags": 2066,
+   "procs": [
+    "ndsP4IkeQuickDrawChargeMain",
+    null,
+    "ndsP4IkeQuickDrawChargeAirPhysics",
+    "ndsP4IkeQuickDrawAirMap"
+   ]
+  },
+  "252": {
+   "name": "nFTIkeStatusSpecialNDash",
+   "motion": 226,
+   "attack_id": 18,
+   "sflags": 18,
+   "procs": [
+    "ndsP4IkeQuickDrawDashMain",
+    null,
+    "ndsP4IkeQuickDrawDashGroundPhysics",
+    "ndsP4IkeQuickDrawDashGroundMap"
+   ]
+  },
+  "253": {
+   "name": "nFTIkeStatusSpecialAirNDash",
+   "motion": 226,
+   "attack_id": 18,
+   "sflags": 2066,
+   "procs": [
+    "ndsP4IkeQuickDrawDashMain",
+    null,
+    "ndsP4IkeQuickDrawDashAirPhysics",
+    "ndsP4IkeQuickDrawAirMap"
+   ]
+  },
+  "254": {
+   "name": "nFTIkeStatusSpecialNSlash",
+   "motion": 227,
+   "attack_id": 18,
+   "sflags": 18,
+   "procs": [
+    "ndsP4IkeQuickDrawSlashMain",
+    null,
+    "ftPhysicsApplyGroundVelFriction",
+    "ndsP4IkeQuickDrawGroundMap"
+   ]
+  },
+  "255": {
+   "name": "nFTIkeStatusSpecialAirNSlash",
+   "motion": 227,
+   "attack_id": 18,
+   "sflags": 2066,
+   "procs": [
+    "ndsP4IkeQuickDrawSlashMain",
+    null,
+    "ftPhysicsApplyAirVelDrift",
+    "ndsP4IkeQuickDrawAirMap"
+   ]
+  },
+  "256": {
+   "name": "nFTIkeStatusSpecialNEnd",
+   "motion": 228,
+   "attack_id": 18,
+   "sflags": 18,
+   "procs": [
+    "ndsP4IkeQuickDrawEndMain",
+    null,
+    "ftPhysicsApplyGroundVelFriction",
+    "ndsP4IkeQuickDrawGroundMap"
+   ]
+  },
+  "257": {
+   "name": "nFTIkeStatusSpecialAirNEnd",
+   "motion": 228,
+   "attack_id": 18,
+   "sflags": 2066,
+   "procs": [
+    "ndsP4IkeQuickDrawEndMain",
+    null,
+    "ftPhysicsApplyAirVelDrift",
+    "ndsP4IkeQuickDrawAirMap"
+   ]
+  },
+  "258": {
+   "name": "nFTIkeStatusSpecialHi",
+   "motion": 229,
+   "attack_id": 17,
+   "sflags": 17,
+   "procs": [
+    "ndsP4IkeAetherRiseMain",
+    null,
+    "ndsP4IkeAetherRisePhysics",
+    "ndsP4IkeAetherMap"
+   ]
+  },
+  "259": {
+   "name": "nFTIkeStatusSpecialAirHi",
+   "motion": 229,
+   "attack_id": 17,
+   "sflags": 2065,
+   "procs": [
+    "ndsP4IkeAetherRiseMain",
+    null,
+    "ndsP4IkeAetherRisePhysics",
+    "ndsP4IkeAetherMap"
+   ]
+  },
+  "260": {
+   "name": "nFTIkeStatusSpecialHiFall",
+   "motion": 230,
+   "attack_id": 17,
+   "sflags": 2065,
+   "procs": [
+    null,
+    null,
+    "ndsP4IkeAetherFallPhysics",
+    "ndsP4IkeAetherMap"
+   ]
+  },
+  "261": {
+   "name": "nFTIkeStatusSpecialHiLanding",
+   "motion": 231,
+   "attack_id": 17,
+   "sflags": 17,
+   "procs": [
+    "ftAnimEndSetWait",
+    null,
+    "ftPhysicsApplyGroundVelFriction",
+    "mpCommonSetFighterFallOnEdgeBreak"
+   ]
+  },
+  "262": {
+   "name": "nFTIkeStatusAppealCounter",
+   "motion": 232,
+   "attack_id": 30,
+   "sflags": 30,
+   "procs": [
+    "ndsP4IkeCounterMain",
+    null,
+    "ftPhysicsApplyGroundVelFriction",
+    "mpCommonSetFighterFallOnEdgeBreak"
+   ]
+  },
+  "263": {
+   "name": "nFTIkeStatusAppealCounterAttack",
+   "motion": 233,
+   "attack_id": 30,
+   "sflags": 30,
+   "procs": [
+    "ftAnimEndSetWait",
+    null,
+    "ftPhysicsApplyGroundVelFriction",
+    "mpCommonSetFighterFallOnEdgeBreak"
+   ]
   }
  },
  "attributes": {
@@ -70,6 +283,21 @@
   "jab_3_action": {
    "status": 249
   },
-  "jab_3_timer": "parent"
+  "jab_3_timer": "parent",
+  "ground_nsp": {
+   "routine": "ndsP4IkeQuickDrawGroundInitial"
+  },
+  "air_nsp": {
+   "routine": "ndsP4IkeQuickDrawAirInitial"
+  },
+  "ground_usp": {
+   "routine": "ndsP4IkeAetherGroundInitial"
+  },
+  "air_usp": {
+   "routine": "ndsP4IkeAetherAirInitial"
+  },
+  "str_winner_ptr": {
+   "name": "IKE"
+  }
  }
 }

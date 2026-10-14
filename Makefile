@@ -7872,7 +7872,7 @@ battleship_mv%.o battleship_scstaffroll.o battleship_scexplain.o battleship_sc1p
 # A P4 fighter's own routines (src/port/nds_p4_<name>.c) run only for that
 # fighter, in its specials, but all fourteen are resident in every scene, the
 # character select's included: their bytes are size-optimized.
-nds_p4_falco.o nds_p4_bowser.o nds_p4_marth.o nds_p4_roy.o nds_p4_wario.o nds_p4_peach.o nds_p4_crash.o nds_p4_lanky.o nds_p4_sheik.o nds_p4_banjo.o nds_p4_sonic.o nds_p4_dedede.o nds_p4_wolf.o: CFLAGS += -Os
+nds_p4_falco.o nds_p4_bowser.o nds_p4_marth.o nds_p4_roy.o nds_p4_wario.o nds_p4_peach.o nds_p4_crash.o nds_p4_lanky.o nds_p4_sheik.o nds_p4_banjo.o nds_p4_sonic.o nds_p4_dedede.o nds_p4_wolf.o nds_p4_ike.o: CFLAGS += -Os
 # The measured renderer is cache-resident on retail hardware and wins in ARM
 # state despite melonDS's main-RAM fetch model.
 #
@@ -7997,6 +7997,7 @@ $$(NDS_P4_EXPORT)/$(1)/resolved.json: $$(NDS_P4_EXPORT)/$(5)/resolved.json \
 		$$(NDS_P4_STAGING)/ssb64asm.z64 \
 		$$(PROJECT_ROOT)/scripts/p6/p6_author.py $$(PROJECT_ROOT)/scripts/p6/mscript.py \
 		$$(wildcard $$(PROJECT_ROOT)/scripts/p6/$(1)/spec.json) \
+		$$(PROJECT_ROOT)/scripts/p6/p6_audio.py $$(wildcard $$(PROJECT_ROOT)/scripts/p6/$(1)/audio.json) \
 		$$(wildcard $$(PROJECT_ROOT)/scripts/p6/$(1)/motions/*.ms) \
 		$$(patsubst $$(PROJECT_ROOT)/art/p6/$(1)/anims/%.json,$$(PROJECT_ROOT)/builds/p6-art/$(1)/anims/%.o2r,$$(wildcard $$(PROJECT_ROOT)/art/p6/$(1)/anims/*.json))
 	python "$$(PROJECT_ROOT)/scripts/p6/p6_author.py" --base-export "$$(NDS_P4_EXPORT)/$(5)" \
@@ -8154,6 +8155,7 @@ $(NDS_P4_AUDIO_DIR)/fgm_p4.bin $(NDS_P4_AUDIO_DIR)/nds_p4_bgm.generated.inc \
 		$(PROJECT_ROOT)/scripts/sfx/render-audio-fgm-phase-pack.py \
 		$(PROJECT_ROOT)/scripts/sfx/bgm/render-audio-bgm.py \
 		$(PROJECT_ROOT)/scripts/sfx/vadpcm_decode.py \
+		$(PROJECT_ROOT)/scripts/p6/p6_audio.py $(wildcard $(PROJECT_ROOT)/scripts/p6/*/audio.json) \
 		$(NDS_P4_EXPORT_FILES) \
 		$(NDS_BUILD_CONFIG)
 	python "$(PROJECT_ROOT)/scripts/p4/p4_audio.py" --staging "$(NDS_P4_STAGING)" \

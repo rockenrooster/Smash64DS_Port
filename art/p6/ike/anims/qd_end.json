@@ -1,0 +1,10 @@
+{
+ "comment": "Quick Draw's miss (card: about 40 frames of lag): Marth's dash-attack swing and recovery, frames 10-45, at 1.15 times their length.",
+ "source": "0xd3f",
+ "frames": [
+  10,
+  45
+ ],
+ "strip_transn": true,
+ "retime": 1.15
+}

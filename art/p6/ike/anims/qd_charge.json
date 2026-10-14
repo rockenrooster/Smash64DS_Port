@@ -1,0 +1,10 @@
+{
+ "comment": "Quick Draw's charge (card: new, a charge pose): the stance of Marth's dash attack at frame 5, held (the travel slot dropped; Ike's code moves him).",
+ "source": "0xd3f",
+ "frames": [
+  5,
+  5
+ ],
+ "hold": 64,
+ "strip_transn": true
+}
