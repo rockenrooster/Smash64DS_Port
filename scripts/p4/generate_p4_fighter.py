@@ -681,6 +681,13 @@ SUBSET_FILES = {
 # (ftcommonjumpaerial.c:158).
 OWNER_ATTRIBUTE_SCALES = {
     "wario": {"jump_height_mul": 0.75 ** 0.5, "jump_height_base": 0.75 ** 0.5},
+    # P7 B2 (owner, 2026-10-12): Bowser walks and runs at 0.75x, to stop his
+    # feet sliding; his clips are unchanged (the source plays walk, dash and
+    # run at rate 1.0 whatever the speed: ftcommonwalk.c, ftcommondash.c,
+    # ftcommonrun.c). Measured (planted foot against ground speed, frame by
+    # frame, docs/P7/P7_STATUS.md B2): his run slid 2.31x where Fox's and
+    # Link's sit near 1.1x; 0.75x leaves 1.73x.
+    "bowser": {"walk_speed_mul": 0.75, "dash_speed": 0.75, "run_speed": 0.75},
 }
 # Model IA textures whose intensity the native owner must not draw. Meta
 # Knight's Mach Tornado (model 0x15EE lists at 0x97C0 and 0x9AA0, render mode
@@ -692,6 +699,15 @@ OWNER_ATTRIBUTE_SCALES = {
 # (2026-10-11). Full intensity leaves the alpha exact and the colour SHADE,
 # a white swirl where the N64's is PRIM-tinted cream. (descriptor file index,
 # model offset, bytes).
+# P7 B4 (owner): a content's hitboxes made larger in named motions -- the
+# size half of each MakeAttackColl's second word in the scripts those
+# motions run (their blocks and every block they reach by goto or call),
+# in the synthesized motion file. The round trip compares commands' first
+# words, so it still proves every op and target; the manifest lists the
+# deviation. Dedede's neutral A (jabs 1 and 2) at 1.25x.
+OWNER_HITBOX_SCALES = {
+    "dedede": {"motions": (165, 166), "scale": 1.25},
+}
 OWNER_IA_INTENSITY_MAX = {
     "metaknight": ((3, 0xF878, 0x1000), (3, 0x10880, 0x1000)),
 }
@@ -1829,6 +1845,42 @@ class _SynthRom:
         raise R.RomError("synthesized file has no RAM space")
 
 
+def scale_owner_hitboxes(synth: "MotionSynth", events: dict, resolved: dict, row: dict | None) -> int:
+    """OWNER_HITBOX_SCALES: each MakeAttackColl in the named motions'
+    scripts (every block reached from their roots) takes its size times the
+    row's scale, in the synthesized file's copy. Returns the commands
+    changed."""
+    if not row:
+        return 0
+    blocks = events["blocks"]
+    roots = [m.get("script_root") for m in resolved["motions"] if m["index"] in row["motions"]]
+    seen: set = set()
+    todo = [r for r in roots if r]
+    changed = 0
+    while todo:
+        key = todo.pop()
+        if key in seen or key not in blocks:
+            continue
+        seen.add(key)
+        block = blocks[key]
+        for c in block["commands"]:
+            if c["op"] != "MakeAttackColl":
+                continue
+            loc = parse_key(c["at"])
+            if loc[0] != "ram":
+                raise GenError(f"hitbox scale: {c['at']} is not in the copied RAM scripts")
+            at = synth.map_ram(loc[1]) + 4
+            word = struct.unpack_from(">I", synth.data, at)[0]
+            size = word >> 16
+            new = min(0xFFFF, int(round(size * float(row["scale"]))))
+            struct.pack_into(">I", synth.data, at, (new << 16) | (word & 0xFFFF))
+            changed += 1
+        todo += [e["to"] for e in block.get("edges", ()) if e.get("kind") in ("goto", "call")]
+    if not changed:
+        raise GenError(f"hitbox scale: no MakeAttackColl in motions {row['motions']}")
+    return changed
+
+
 def round_trip(rom: R.Rom, blob: bytes, synth: "MotionSynth", roots: list[tuple[str, int]]) -> int:
     """Decode each root inside the synthesized file and compare the op/word
     stream with the donor decode; pointer words are compared by mapped target."""
@@ -2051,6 +2103,7 @@ def main() -> int:
     if rom.file_bytes(parent_motion) != vanilla.file_bytes(parent_motion):
         raise GenError(f"parent motion {parent_motion:#x} differs from vanilla")
     synth = MotionSynth(rom, parent_motion, events, synth_id)
+    hitbox_scaled = scale_owner_hitboxes(synth, events, resolved, OWNER_HITBOX_SCALES.get(key))
     motion_o2r = synth.build()
     # A P6 authored content's sounds (p6_audio.py): the base's FGM ids its
     # scripts, attributes and kind tables play become its own cues, in the
@@ -2059,6 +2112,10 @@ def main() -> int:
     shipped_motion = remap_o2r_sounds(motion_o2r, synth, fgm_map) if fgm_map else motion_o2r
 
     deviations = []
+    if hitbox_scaled:
+        deviations.append({"file_id": synth_id, "class": "owner",
+                           "why": f"hitbox sizes x{OWNER_HITBOX_SCALES[key]['scale']} in motions "
+                                  f"{list(OWNER_HITBOX_SCALES[key]['motions'])}: {hitbox_scaled} commands"})
     o2r_out = args.out / "o2r"
     o2r_out.mkdir(parents=True, exist_ok=True)
     shipped = {}

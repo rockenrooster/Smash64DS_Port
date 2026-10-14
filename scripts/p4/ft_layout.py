@@ -23,6 +23,7 @@ FIELDS = {
         "textureparts_container", "sprites", "skeleton", "thrown_status",
         "shield_anim_joints", "translate_scales", "damage_coll_descs",
         "gravity", "shade_color", "fog_color",
+        "walk_speed_mul", "dash_speed", "run_speed",
         "jump_height_mul", "jump_height_base", "jumpaerial_height",
         "attack1_followup_frames", "dead_fgm_ids", "deadup_sfx", "damage_sfx", "smash_sfx",
         "heavyget_sfx",
