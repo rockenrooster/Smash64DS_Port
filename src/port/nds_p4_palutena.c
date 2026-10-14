@@ -61,28 +61,28 @@ f32 syVectorAngleDiff3D(Vec3f *a, Vec3f *b);
 /* Explosive Flame (card): the stick at the cast picks the distance -- back
  * (against her facing) near, neutral middle, forward far -- at her height.
  * The script's hitboxes sit on TopN; this keeps them at the distance. Owner
- * playtest 2026-10-14: the middle 0.75x (1000 -> 750), the far 1.5x (1400 ->
- * 2100), the near kept below the middle in the old ratio (600 -> 450); the
- * explosion's hitboxes twice the size (the script's; its effects stay their
- * size), a white twinkle where it will go off just before it does (flag2),
- * no green flash ring. */
+ * playtest 2026-10-14: the middle 0.75x (1000 -> 750), the far 1.15x (1400 ->
+ * 1610; 1.5x in the first round was too far), the near kept below the middle
+ * in the old ratio (600 -> 450); the explosion's hitboxes twice the size (the
+ * script's; its effects stay their size), a white twinkle where it will go
+ * off just before it does (flag2), no green flash ring, no ringing sound. */
 #define PAL_FLAME_NEAR 450.0F
 #define PAL_FLAME_MID 750.0F
-#define PAL_FLAME_FAR 2100.0F
+#define PAL_FLAME_FAR 1610.0F
 #define PAL_FLAME_HEIGHT 320.0F
 #define PAL_FLAME_STICK 20
 /* In the air she nearly hangs while casting. */
 #define PAL_FLAME_AIR_FALL_MAX 12.0F
 
-/* Warp (card; owner playtest 2026-10-14: three times the first 1000 units,
- * sliding along walls, white twinkles for the effects): she vanishes at
- * the end of the start, travels 15 frames at 200 units a frame along the
- * stick (eight directions; neutral is up) and reappears; from the air she
- * ends in special fall. A wall or ceiling met nearly head-on stops her; one
- * met at a glancing angle she slides along (Pikachu's Quick Attack's rule),
- * so an upward warp beside a wall rides it to the ledge. A CPU recovering
- * travels only as far as its target. */
-#define PAL_WARP_FRAMES 15
+/* Warp (card; owner playtest 2026-10-14: twice the first 1000 units -- three
+ * times was too far -- sliding along walls, white twinkles for the
+ * effects): she vanishes at the end of the start, travels 10 frames at 200
+ * units a frame along the stick (eight directions; neutral is up) and
+ * reappears; from the air she ends in special fall. A wall or ceiling met
+ * nearly head-on stops her; one met at a glancing angle she slides along
+ * (Pikachu's Quick Attack's rule), so an upward warp beside a wall rides it
+ * to the ledge. A CPU recovering travels only as far as its target. */
+#define PAL_WARP_FRAMES 10
 #define PAL_WARP_FRAMES_MIN 3
 #define PAL_WARP_SPEED 200.0F
 #define PAL_WARP_STICK 11
@@ -424,7 +424,12 @@ void ndsP4PalutenaWarpPhysics(GObj *fighter_gobj)
 
     if (fp->ga == nMPKineticsGround)
     {
+        /* The ground speed moves her only once it is carried along the
+         * floor into her air velocity, as every ground physics proc does
+         * (owner playtest 2026-10-14: a sideways warp on the ground did not
+         * move). */
         fp->physics.vel_ground.x = x;
+        ftPhysicsSetGroundVelTransferAir(fighter_gobj);
     }
     else
     {
@@ -661,6 +666,100 @@ static void ndsP4PalutenaGateProcUpdate(GObj *effect_gobj)
     ep->effect_vars.common.size = tic + 1;
 }
 
+/* Her up smash's light pillar (owner playtest 2026-10-14, round 2: ONE
+ * column in front of her, exactly vertical, as Ultimate's Heavenly Light;
+ * the first build drew it as model-part cards on her hips row, which her
+ * animation turned behind her and doubled): an effect of the second tree in
+ * her special file 2 (scripts/p6/p6_gate.py PILLAR_TREE: a root and the
+ * glow, core and bloom cards facing the camera), made by the up smash's
+ * flag0 (motions/usmash.ms) PAL_PILLAR_AHEAD units ahead of her on her
+ * floor, world-aligned. Its cards flare out from the middle over
+ * PAL_PILLAR_GROW tics, hold with a flicker, narrow from PAL_PILLAR_FADE_AT
+ * and go at PAL_PILLAR_END (its hitboxes are the script's, frames 12-17).
+ * The tic is in effect_vars.common.size, as the gate's. */
+#define PAL_PILLAR_AHEAD 260.0F
+#define PAL_PILLAR_TOWARD_CAMERA 120.0F
+#define PAL_PILLAR_GROW 2
+#define PAL_PILLAR_FADE_AT 8
+#define PAL_PILLAR_END 12
+
+static void ndsP4PalutenaPillarProcUpdate(GObj *effect_gobj);
+
+static EFDesc sNdsP4PalutenaPillarDesc = {
+    0x4 | EFFECT_FLAG_USERDATA, 10, &gNdsP4PalutenaSpecial2,
+    { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0x00 },
+    { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0x00 },
+    ndsP4PalutenaPillarProcUpdate, gcDrawDObjTreeForGObj,
+    0xDC, 0x0, 0x0, 0x0
+};
+
+static void ndsP4PalutenaPillarProcUpdate(GObj *effect_gobj)
+{
+    EFStruct *ep = efGetStruct(effect_gobj);
+    DObj *glow = DObjGetStruct(effect_gobj)->child;
+    DObj *core = glow->sib_next;
+    DObj *bloom = core->sib_next;
+    s32 tic = ep->effect_vars.common.size;
+    f32 width;
+    f32 height;
+
+    if (ep->is_pause_effect)
+    {
+        return;
+    }
+    if (tic >= PAL_PILLAR_END)
+    {
+        efManagerSetPrevStructAlloc(ep);
+        gcEjectGObj(effect_gobj);
+        return;
+    }
+    if (tic < PAL_PILLAR_GROW)
+    {
+        width = (f32)(tic + 1) / (f32)(PAL_PILLAR_GROW + 1);
+        height = (f32)(tic + 1) / (f32)PAL_PILLAR_GROW;
+    }
+    else if (tic < PAL_PILLAR_FADE_AT)
+    {
+        width = ((tic & 1) != 0) ? 0.9F : 1.0F;
+        height = 1.0F;
+    }
+    else
+    {
+        width = (f32)(PAL_PILLAR_END - tic) / (f32)(PAL_PILLAR_END - PAL_PILLAR_FADE_AT);
+        height = 1.0F;
+    }
+    glow->scale.vec.f.x = width;
+    glow->scale.vec.f.y = height;
+    core->scale.vec.f.x = (width < 1.0F) ? (0.5F + (0.5F * width)) : 1.0F;
+    core->scale.vec.f.y = height;
+    bloom->scale.vec.f.x = 0.6F + (0.6F * width);
+    bloom->scale.vec.f.y = 0.6F + (0.6F * width);
+    ep->effect_vars.common.size = tic + 1;
+}
+
+/* ftMainProcPhysicsMap's per-frame hook: the up smash's flag0 makes the
+ * pillar once. */
+static void ndsP4PalutenaAfterProcMap(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    GObj *effect_gobj;
+    Vec3f pos;
+
+    if ((fp->status_id != nFTCommonStatusAttackHi4) || (fp->motion_vars.flags.flag0 == 0))
+    {
+        return;
+    }
+    fp->motion_vars.flags.flag0 = 0;
+    pos = DObjGetStruct(fighter_gobj)->translate.vec.f;
+    pos.x += PAL_PILLAR_AHEAD * (f32)fp->lr;
+    pos.z += PAL_PILLAR_TOWARD_CAMERA;
+    effect_gobj = ndsP4EntryMakeEffect(&sNdsP4PalutenaPillarDesc, &pos);
+    if (effect_gobj != NULL)
+    {
+        efGetStruct(effect_gobj)->effect_vars.common.size = 0;
+    }
+}
+
 static void ndsP4PalutenaEntryCase(FTStruct *fp)
 {
     GObj *effect_gobj = ndsP4EntryMakeEffect(&sNdsP4PalutenaGateDesc, &fp->entry_pos);
@@ -674,6 +773,7 @@ static void ndsP4PalutenaEntryCase(FTStruct *fp)
 const NDSP4Overrides gNdsP4PalutenaOverrides = {
     .update_damage = ndsP4PalutenaUpdateDamage,
     .entry_case = ndsP4PalutenaEntryCase,
+    .after_proc_map = ndsP4PalutenaAfterProcMap,
 };
 
 #if NDS_P2_KIRBY
@@ -795,10 +895,6 @@ void ndsP4PalutenaKirbyNSPUpdate(GObj *fighter_gobj)
 
         if ((t < (PAL_KIRBY_BURST_EVERY * PAL_KIRBY_BURSTS)) && ((t % PAL_KIRBY_BURST_EVERY) == 0))
         {
-            if (t == 0)
-            {
-                func_800269C0_275C0(NDS_P4_KIRBY_PALUTENA_FGM_BURST);
-            }
             ndsP4PalutenaKirbyHit(fp, distance, 1, 640.0F, 90, 0, 30, 0, 0);
             ndsP4PalutenaFlameFx(fighter_gobj, distance, FALSE);
         }

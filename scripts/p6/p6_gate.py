@@ -12,6 +12,14 @@ the two doors on their hinges -- then the lists, the vertices, the image and
 its palette, as an O2R container in her special file 2 (the entry effect
 draws it natively: scripts/p4/p4_articles.py's "gate" root).
 
+The same file holds her up smash's light pillar (owner playtest 2026-10-14,
+round 2: one column in front of her, exactly vertical, as Ultimate's): a
+second DObjDesc tree at PILLAR_TREE -- a root (placed by her code a little
+ahead of her on the ground, src/port/nds_p4_palutena.c) and three cards
+facing the camera, the glow, the core and the bloom at its foot -- cut from
+one authored atlas (look_parts.py authored:pillar_burst), unlit and cut out.
+Her code scales the cards over the effect's life (the burst).
+
     p6_gate.py --out builds/p6-art/palutena/gate/1b10 [--preview gate.png]
 
 Kit-derived: the file stays local (D10); this recipe is the committed part.
@@ -42,6 +50,19 @@ FRONT = 260.0         # the doors stand this far toward the camera from her
 TEX = 64              # the door image's side (CI4: 2 KB, TMEM's half)
 U_CROP = 0.75         # the image's door half (its right quarter is the edges')
 DOBJ_END = N.JOINT_TREE_END
+# The pillar's tree, after the gate's five rows (p4_articles.py "pillar").
+PILLAR_TREE = 5 * N.DOBJ_DESC_SIZE
+PILLAR_HEIGHT = 1560.0     # 1.25x her first pillar's 1,250
+PILLAR_TEX = 64            # the atlas (CI4, 2 KB)
+# Each card: atlas region (s0, t0, s1, t1 in texels), width, bottom, top, z.
+PILLAR_CARDS = (
+    ("glow", (16, 0, 48, 64), 400.0, 0.0, PILLAR_HEIGHT, 0.0),
+    ("core", (0, 0, 16, 64), 180.0, 0.0, PILLAR_HEIGHT, 4.0),
+    ("bloom", (48, 16, 64, 32), 360.0, -60.0, 200.0, 8.0),
+)
+# The model writer's cut-out state (model_writer.CUTOUT_ON / _OFF).
+CUTOUT_ON = [N.Gfx(0xE2001E01, 0x00000001), N.Gfx(0xE200001C, 0xC4113078)]
+CUTOUT_OFF = [N.Gfx(0xE2001E01, 0x00000000), N.Gfx(0xE200001C, 0xC4112078)]
 
 # F3DEX2 words. Geometry: lighting and back-face culling off for the doors'
 # triangles, back on at the end of each list.
@@ -148,8 +169,12 @@ def build() -> tuple[bytes, dict]:
     scale = HEIGHT / top
     f = N.RelocFile(HEADER, FILE_ID, bytearray())
     app = M.Appender(f)
-    # The tree first: root, the front node, the doors (filled in below).
+    # The trees first: the gate's root, the front node, the doors; then the
+    # pillar's root and cards (filled in below).
     tree_at = app.put(bytes(N.DOBJ_DESC_SIZE * 5))
+    pillar_at = app.put(bytes(N.DOBJ_DESC_SIZE * 5))
+    if pillar_at != PILLAR_TREE:
+        raise GateError(f"pillar tree at {pillar_at:#x}, p4_articles.py names {PILLAR_TREE:#x}")
     doors = {}
     for side in ("L", "R"):
         mesh = meshes[side]
@@ -205,9 +230,82 @@ def build() -> tuple[bytes, dict]:
             app.slot(at + 4, ("intern", FILE_ID, dl))
         struct.pack_into(">3f", f.data, at + 8, *t)
         struct.pack_into(">3f", f.data, at + 32, 1.0, 1.0, 1.0)
-    info = {"tree": tree_at, "lists": lists, "scale": scale,
-            "hinges": {s: doors[s]["hinge"] for s in doors}, "preview": preview}
+    pillar_lists = pillar(app)
+    prow = [(0, None, (0.0, 0.0, 0.0))]
+    prow += [(1, pillar_lists[name], (0.0, 0.0, z)) for name, _, _, _, _, z in PILLAR_CARDS]
+    prow.append((DOBJ_END, None, (0.0, 0.0, 0.0)))
+    for k, (ident, dl, t) in enumerate(prow):
+        at = pillar_at + k * N.DOBJ_DESC_SIZE
+        struct.pack_into(">I", f.data, at, ident)
+        if dl is not None:
+            app.slot(at + 4, ("intern", FILE_ID, dl))
+        struct.pack_into(">3f", f.data, at + 8, *t)
+        struct.pack_into(">3f", f.data, at + 32, 1.0, 1.0, 1.0)
+    info = {"tree": tree_at, "pillar": pillar_at, "lists": lists, "pillar_lists": pillar_lists,
+            "scale": scale, "hinges": {s: doors[s]["hinge"] for s in doors}, "preview": preview}
     return f.to_bytes(), info
+
+
+def pillar_atlas() -> tuple[bytes, bytes]:
+    """The pillar's atlas as CI4 texels and an RGBA5551 palette (index 0
+    clear)."""
+    from PIL import Image
+    import look_parts
+    big = look_parts.authored_pillar_burst(PILLAR_TEX * 4, PILLAR_TEX * 4).astype(np.uint8)
+    img = Image.fromarray(big, "RGBA").resize((PILLAR_TEX, PILLAR_TEX), Image.BOX)
+    import look_blend
+    idx, palette = look_blend.quantize(np.asarray(img), 16, True)
+    return M.ci4_bytes(idx), M.rgba5551(palette)
+
+
+def pillar(app: "M.Appender") -> dict:
+    """The pillar's card lists: each a quad facing the camera (+z), its
+    bottom at y 0 of its node, textured from the atlas, unlit, cut out."""
+    texels, pal = pillar_atlas()
+    app.align(8)
+    tex_at = app.put(texels)
+    app.align(8)
+    pal_at = app.put(pal)
+    line = PILLAR_TEX * 4 // 64
+    mask = PILLAR_TEX.bit_length() - 1
+    clamp = 2
+    out = {}
+    for name, (s0, t0, s1, t1), width, bottom, top, _z in PILLAR_CARDS:
+        corners = [(-width / 2, top, s0, t0), (width / 2, top, s1, t0),
+                   (width / 2, bottom, s1, t1), (-width / 2, bottom, s0, t1)]
+        app.align(8)
+        vtx_at = app.put(b"".join(vtx(x, y, 0.0, s * 32, t * 32) for x, y, s, t in corners))
+        cmds = [N.Gfx(0xE7000000, 0),
+                N.Gfx(0xD9000000 | (0xFFFFFF & ~(G_LIGHTING | G_CULL_BACK)), 0),
+                N.Gfx(0xE3001001, 0x00008000)]
+        cmds += CUTOUT_ON
+        cmds += [N.Gfx(0xFC127E05, 0xFF17F3FF), N.Gfx(0xF9000000, 0),
+                 N.Gfx(0xE7000000, 0), N.Gfx(0xFA000000, 0xFFFFFFFF), N.Gfx(0xE8000000, 0),
+                 N.Gfx(0xF5000100, 0x05000000),
+                 N.Gfx(0xF5500000, (7 << 24) | (mask << 14) | (mask << 4)),
+                 N.Gfx(0xF5400000 | (line << 9), (clamp << 18) | (mask << 14) | (clamp << 8) | (mask << 4)),
+                 N.Gfx(0xFD100000, pal_at // 4, ("intern", FILE_ID, pal_at)),
+                 N.Gfx(0xE6000000, 0), N.Gfx(0xF0000000, 0x0503C000), N.Gfx(0xE7000000, 0),
+                 N.Gfx(0xD7000002, 0xFFFFFFFF),
+                 N.Gfx(0xF2000000, (((PILLAR_TEX - 1) << 2) << 12) | ((PILLAR_TEX - 1) << 2)),
+                 N.Gfx(0xFD500000, tex_at // 4, ("intern", FILE_ID, tex_at)),
+                 N.Gfx(0xE6000000, 0),
+                 N.Gfx(0xF3000000, (7 << 24) | ((PILLAR_TEX * PILLAR_TEX // 4 - 1) << 12) | (2048 // line)),
+                 N.Gfx(0xE7000000, 0),
+                 N.Gfx(0x01000000 | (4 << 12) | (4 << 1), vtx_at, ("intern", FILE_ID, vtx_at)),
+                 N.Gfx(0x06000000 | (0 << 16) | (2 << 8) | 4, (0 << 16) | (4 << 8) | 6),
+                 N.Gfx(0xE7000000, 0)]
+        cmds += CUTOUT_OFF
+        cmds += [N.Gfx(0xE3001001, 0x00000000),
+                 N.Gfx(0xD9FFFFFF, G_LIGHTING | G_CULL_BACK),
+                 N.Gfx(0xDF000000, 0)]
+        blob, slots = N.encode_dl(cmds)
+        app.align(8)
+        at = app.put(blob)
+        for rel, target in slots.items():
+            app.slot(at + rel, target)
+        out[name] = at
+    return out
 
 
 def main() -> int:
@@ -221,7 +319,7 @@ def main() -> int:
     if args.preview:
         from PIL import Image
         Image.fromarray(info["preview"]).resize((TEX * 4, TEX * 4), Image.NEAREST).save(args.preview)
-    print(f"p6 gate: {args.out} {len(blob)} bytes, tree {info['tree']:#x}, scale {info['scale']:.2f}, "
+    print(f"p6 gate: {args.out} {len(blob)} bytes, tree {info['tree']:#x}, pillar {info['pillar']:#x}, scale {info['scale']:.2f}, "
           f"hinges L {info['hinges']['L']:.0f} R {info['hinges']['R']:.0f}")
     return 0
 

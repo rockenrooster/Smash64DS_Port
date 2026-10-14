@@ -211,10 +211,22 @@ CUSTOM_POWERS = {
                      "rows": ((150, 92, 1.0), (110, 136, 12.0), (60, 158, 26.0), (0, 161, 40.0),
                               (-60, 152, 52.0), (-100, 142, 62.0))},
                 )},
-        # Her script's sounds (scripts/p6/palutena/audio.json cues) for the
-        # code's bursts and blast: NDS_P4_KIRBY_PALUTENA_FGM_<key>.
-        "cues": {"BURST": "se_special_n01", "BLAST": "se_special_n02"},
+        # Her script's sound (scripts/p6/palutena/audio.json cues) for the
+        # code's blast: NDS_P4_KIRBY_PALUTENA_FGM_<key> (the bursts are
+        # silent, as hers: owner playtest 2026-10-14, round 2).
+        "cues": {"BLAST": "se_special_n02"},
     },
+}
+# An authored content (P6) that holds its base's power but wears its own
+# look's hat (A11): a "spans" hat of p4_kirby_custom_hats.py drawn as a
+# custom power's is (CUSTOM_HAT_ID over the plain head, its own hat file),
+# the base's power and weapon kept. Ike: Roy's Flare Blade and sword, his
+# blue hair and olive headband -- his head row's (joint 9) textured spans 3-5
+# of six in order (the face's three before them) -- over Kirby's head
+# (scripts/p6/hat_preview.py).
+AUTHORED_HATS = {
+    "ike": {"kind": "spans", "joint": 9, "detail": 1, "spans": (3, 4, 5),
+            "scale": (2.6, 2.6, 2.6), "offset": (0, -40, 0)},
 }
 # A custom power's hat id: no Remix image (hat_count 0), the plain head
 # (hat_base 0) beneath; its hat, when it has one, is a joint-6 sidecar
@@ -606,11 +618,29 @@ def main() -> int:
             if parent_id == MARIO_KIND:
                 base = LUIGI_TO_MARIO_COPY_STATUS.get(base, base)
             clone_rows.append((base, status_map[clone]))
-        powers.append({"content": c, "id": registry[c]["id"], "hat": hat_id, "hat_base": hat_base,
-                       "hat_mask": hat_mask, "hats": remix_hats,
-                       "hat_texture_file": (HAT_TEXTURE_FILE_BASE + registry[power_key[c]]["id"]
-                                            if remix_hats else 0),
-                       "starters": starters, "clones": clone_rows})
+        power = {"content": c, "id": registry[c]["id"], "hat": hat_id, "hat_base": hat_base,
+                 "hat_mask": hat_mask, "hats": remix_hats,
+                 "hat_texture_file": (HAT_TEXTURE_FILE_BASE + registry[power_key[c]]["id"]
+                                      if remix_hats else 0),
+                 "starters": starters, "clones": clone_rows, "weapon_hat": hat_id}
+        if c in AUTHORED_HATS:
+            import p4_contents  # noqa: E402
+            import p4_kirby_custom_hats  # noqa: E402
+
+            hat_file = CUSTOM_HAT_FILE_BASE + registry[c]["id"]
+            blob, list_offsets = p4_kirby_custom_hats.build_lists(
+                content_rom(rom, args.export_root / c), p4_contents.export_facts(args.export_root, c),
+                [AUTHORED_HATS[c]], hat_file)
+            (o2r_out / f"{hat_file:04x}").write_bytes(blob)
+            shipped[hat_file] = hashlib.sha256(blob).hexdigest()
+            power.update({"hat": CUSTOM_HAT_ID, "hat_base": 0, "hat_mask": 0, "hats": [],
+                          "hat_texture_file": hat_file, "custom": True,
+                          "hat_root": {"article": "kirby_hat", "file_id": hat_file, "storage": None,
+                                       "via": 0, "offset": list_offsets[0], "entry": False,
+                                       "texid": None, "palette": None, "head": 0,
+                                       "sidecar_joint": KIRBY_HAT_JOINT | KIRBY_SIDECAR_BIT,
+                                       "material": False, "via_base": False, "via_bias": 0}})
+        powers.append(power)
     # The custom powers, after Remix's: their statuses follow the selected
     # ones; their motions are Kirby's own vanilla rows (C names).
     custom = [c for c in args.contents.split() if power_key[c] in CUSTOM_POWERS]
@@ -668,7 +698,7 @@ def main() -> int:
     model_slots = rom.reloc_slots(KIRBY_MODEL_FILE)
     for p in powers:
         p["weapon"] = None
-        part = weapons.get(p["hat"])
+        part = weapons.get(p.get("weapon_hat", p["hat"]))
         if part is None:
             continue
         slot = model_slots.get(part)
@@ -684,7 +714,9 @@ def main() -> int:
                "sidecar_joint": 17 | KIRBY_SIDECAR_BIT, "material": False,
                "via_base": False, "via_bias": 0}
         (out / f"articles_{p['content']}.json").write_text(
-            json.dumps({"content": p["content"], "roots": [row]}, indent=1) + "\n",
+            json.dumps({"content": p["content"],
+                        "roots": ([p["hat_root"]] if "hat_root" in p else []) + [row]},
+                       indent=1) + "\n",
             encoding="utf-8", newline="\n")
 
     # Outputs.

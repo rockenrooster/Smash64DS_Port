@@ -140,6 +140,10 @@ ARTICLES = {
     # lists drawn by the entry case (src/port/nds_p4_palutena.c).
     "palutena": (
         {"name": "gate", "special": 2, "dobjdesc": 0x0, "entry": True},
+        # Her up smash's light pillar, a second tree in the same file
+        # (scripts/p6/p6_gate.py PILLAR_TREE), made by her code for the
+        # whole match.
+        {"name": "pillar", "special": 2, "dobjdesc": 0xDC},
     ),
     "piano": (
         # fireball.asm struct_book: WPAttributes at 0 of Piano file 6

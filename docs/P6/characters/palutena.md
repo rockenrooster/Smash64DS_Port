@@ -120,21 +120,23 @@ Her forward and down smash scripts show the wings (SetModelPartID joint 6),
 her up air the halo (joint 12); a status change resets the parts.
 
 **Pillar, taunt, entry, victory poses (2026-10-14).** The up smash's light
-pillar is the hips row's parts (joint 5): a column of cyan light ahead of
-her where its hitboxes stand (TopN z 260). Cards light by an up normal, not
+pillar is one column of cyan light 260 units ahead of her on her floor, 1,560
+tall (1.25x her first), exactly vertical, where its four stacked 390-unit
+hitboxes stand (TopN z 260, frames 12-17). It is an effect, not a model part:
+the first build drew it as cards on her hips row (joint 5), which her
+animation turned so that the owner saw two columns on her back side (round 2
+of the playtest). The script's flag0 at frame 12 (`motions/usmash.ms`) makes
+it in her code (`nds_p4_palutena.c`, `NDSP4Overrides.after_proc_map`) as a
+world-aligned effect at her floor ahead of her facing, 120 units toward the
+camera; its tree is the second in her special file 2 (`scripts/p6/p6_gate.py`
+PILLAR_TREE, `p4_articles.py` "pillar"): a glow, a core and a bloom at its
+foot, cards facing the camera, unlit and cut out, from one authored 64x64
+CI4 atlas (`look_parts.py` authored:pillar_burst). Her code flares the cards
+out from the middle over two tics, holds them with a flicker and narrows
+them from tic 8 to 12 (the light burst). Cards light by an up normal, not
 their face's: a two-sided card's back face turned away from the light drew
-black (the pillar's first capture). Owner playtest 2026-10-14 (done): a
-strong light burst of several sprites, 1.25x taller (y 0-1,560), always in
-front of her, hitboxes matching it. Five variants shown in turn by the
-script two frames apart (ignite, burst, sustain, fade, thin; then part 0),
-from one authored atlas (`look_parts.py` authored:pillar_burst: a core, a
-ray glow, a star flare, a bloom, sparks; one texture for all five, the
-writer storing it once and the variants' shared seam vertices once); every
-card faces the battle camera and is drawn twice, either side of her in
-depth, so the one toward the camera is in front of her whichever way she
-faces (the old crossed card lay in her own depth and fought her body for
-it). Four 390-unit hitboxes stacked from the floor to the top; white
-sparkles in the column instead of the green ring and PSI sparkles. The down taunt (Appeal, `motions/appeal.ms`) keeps Peach's clip
+black (the pillar's first capture). No explosion effects, only the pillar
+(round 2). The down taunt (Appeal, `motions/appeal.ms`) keeps Peach's clip
 for now and shows the halo with sparkles, her taunt voice and down-taunt
 sound. The entry (statuses 0xDC/0xDD, motions 195/196: `motions/entry.ms`,
 clip `art/p6/palutena/anims/entry.json`, Marth's entry on her tree, the
@@ -183,7 +185,7 @@ defaults on SSB64's scale, tuned against Peach.
 | Down tilt | AttackLw3 | new: kneels, spins the staff along the ground | low hits |
 | Dash attack | AttackDash | new: **shield charge** (D3) | shield hitbox |
 | Forward smash | AttackS4 | new: wings conjured and flapped forward | hitboxes on the wing joints |
-| Up smash | AttackHi4 | new: staff raised, a cyan light pillar erupts ahead of her | a tall column of hitboxes on the pillar joint; the highest vertical reach of her moves |
+| Up smash | AttackHi4 | new: staff raised, a cyan light pillar erupts ahead of her | a tall column of hitboxes where the pillar effect stands; the highest vertical reach of her moves |
 | Down smash | AttackLw4 | new: wings flap downward on both sides | wing joints |
 | Neutral air | AttackAirN | new: staff spun beside her right arm | multi-hit |
 | Forward air | AttackAirF | new: flying kick | — |
@@ -212,17 +214,21 @@ Defaults for the specials:
   lifetime): about 3 1% hits then a 15% blast exp. It is not a projectile, so it
   cannot be reflected.
   Owner playtest 2026-10-14 (done): distances back 450, neutral 750 (0.75x),
-  forward 2,100 (1.5x); the bursts' and the blast's hitboxes twice the size
-  (640 and 860), their effects at their own size (owner: the hitbox radius
-  only); a white twinkle on the spot six frames before the first burst;
-  no green flash ring; her call is Ultimate's side-special voice ("Explosive
-  flame!"). Kirby's copy matches.
+  forward 1,610 (1.15x; 1.5x in the first round was too far); the bursts'
+  and the blast's hitboxes twice the size (640 and 860), their effects at
+  their own size (owner: the hitbox radius only); a white twinkle on the
+  spot six frames before the first burst; no green flash ring; no burst
+  sound (Ultimate's special_N01, a ringing, removed in round 2); her call is
+  Ultimate's side-special voice ("Explosive flame!"). Kirby's copy matches.
 - **Warp:** Meta Knight's Dimensional Cape structure (`nds_p4_metaknight.c`
   DSP): she vanishes, travels about 10 frames in the D-pad's direction (eight
   directions; neutral is up) invisible and intangible, stops at walls and
   floors, and reappears. No hitbox. From the air she ends in special fall.
-  Owner playtest 2026-10-14 (done): 3,000 units (15 frames at 200, three
-  times the first); a wall or ceiling met within 30 degrees of head-on stops
+  Owner playtest 2026-10-14 (done): 2,000 units (10 frames at 200, twice
+  the first; three times in the first round was too far); on the ground a
+  level or downward stick travels along the floor (round 2: the ground
+  speed is carried into her air velocity each frame, as every ground physics
+  proc does; it did not move before); a wall or ceiling met within 30 degrees of head-on stops
   her, one met at a glancing angle she slides along (Pikachu's Quick Attack
   test), so an upward warp beside a wall rides it to the ledge; white
   twinkles where she vanishes and reappears (no PSI sparkles). A recovering
