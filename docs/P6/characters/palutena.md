@@ -78,10 +78,35 @@ smash on Peach's own (the staff where her pan was); forward air on Mario's
 neutral air (a flying kick), back air on Captain's (the backfist, the shield
 arm), down air on Captain's stomp. The dash attack is Peach's clip with
 the shield charge's hitboxes on the shield arm. Scripts in
-`scripts/p6/palutena/motions` with her cues. Not yet: the wings (forward
-and down smash use the staff), the halo joint (up air hits above her), the
-pillar effect (the up smash's column is hitboxes and sparkles), the taunt,
-the entry gate and the victory poses (Peach's for now).
+`scripts/p6/palutena/motions` with her cues. The wings show in the forward
+and down smashes and the halo in the up air (2026-10-14, below); not yet:
+the pillar effect (the up smash's column is hitboxes and sparkles), the
+taunt, the entry gate and the victory poses (Peach's for now).
+
+**Costumes, wings, halo, stock icon (2026-10-14).** Costumes are palettes
+over her one index image per texture (P6_PLAN A3b): `blender/costume_corr.py`
+records, headless in the 3DS-to-DS work file, where each texel of her
+textures sampled the kit; `scripts/p6/p6_costumes.py` samples each kit
+alternate at those places and moves every palette entry by its texels' mean
+change, so her baked colours and retouches stay where a costume does not
+recolour. The dress, chest, arms, hands, legs and staff take costume
+palettes (face and hair keep one); `model_writer.py` writes them as the
+base's do: a palette MObj each (Peach's palette MObjSub and costume
+animation as the template) on the rows and model-part rows that draw them.
+Picks, in Peach's costume order (VS uses 0-3 on the buttons and 2, 3, 4 for
+the red, blue and green teams): 0 white (c00), 1 black (c06), 2 red (c05),
+3 blue (c04), 4 green (c03), then purple (c07), pink (c01), sky (c02). Palette
+sheet: `builds/p6-art/palutena/costumes/sheet.png` (local; for the owner's
+approval). Her stock icon is the kit's stock icon row (the sheet's 28th),
+reduced to the HUD's 8x10 CI4 sprite with one LUT a costume
+(`scripts/p6/p6_stock.py`, written in place over Peach's). The wings and the
+halo are model-part variants of existing rows (`scripts/p6/look_parts.py`,
+recipe `art/p6/palutena/look/parts.json`): the torso row's part 1 draws its
+list plus two cut-out cards of the kit's feathered wing (godwing), sweeping
+up and back from her shoulder blades; the head row's part 2 adds an authored
+gold ring above her head. Her forward and down smash scripts show the wings
+(SetModelPartID joint 6), her up air the halo (joint 12); a status change
+resets the parts.
 
 Motions follow Ultimate's moves (SmashWiki's Palutena (SSBU) descriptions);
 SSB64 has no pummel, no up or down throw and no smash charge. Numbers are lab

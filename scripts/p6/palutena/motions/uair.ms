@@ -1,4 +1,6 @@
-# AttackAirHi: up air (card: a twirl, the halo above her): Marth's up air
+# AttackAirHi: up air (card: a twirl, the halo above her): Marth's up air,
+# her halo (the head row's part 2) shown through the hits
+SetModelPartID joint_id=12 modelpart_id=2
 AsyncWait frames=5
 SetFlag1 value=50
 PlayVoiceStoreInfo value=cue:attack06
@@ -11,4 +13,5 @@ SyncWait frames=6
 ClearAttackCollAll value=0
 AsyncWait frames=26
 SetFlag1 value=0
+SetModelPartID joint_id=12 modelpart_id=0
 End value=0

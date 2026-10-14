@@ -1,5 +1,8 @@
-# AttackS4: forward smash (card: the wings, next; for now the staff swung as Peach swings her pan)
+# AttackS4: forward smash (card: wings conjured and flapped forward): her
+# wings (the torso row's part 1, art/p6/palutena/look/parts.json) out for the
+# swing, the staff swung as Peach swings her pan.
 SetModelPartID joint_id=18 modelpart_id=1
+SetModelPartID joint_id=6 modelpart_id=1
 AsyncWait frames=13
 Effect joint_id=0 effect_id=31 flag=0 off_x=0 off_y=416 off_z=-177 rng_x=0 rng_y=0 rng_z=0
 AsyncWait frames=15
@@ -11,4 +14,6 @@ PlayFGMStoreInfo value=cue:se_smash_s01
 PlaySmashVoice value=0
 SyncWait frames=4
 ClearAttackCollAll value=0
+SyncWait frames=8
+SetModelPartID joint_id=6 modelpart_id=0
 End value=0

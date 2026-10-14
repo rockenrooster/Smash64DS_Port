@@ -1,0 +1,31 @@
+{
+ "schema": 1,
+ "comment": "Palutena's parts shown on demand (A10, scripts/p6/look_parts.py): each a model-part variant of an existing row drawing that row's list plus cut-out cards, two-sided. Corners are in the look's rest model space (y up, she faces +z; the battle camera sees her x axis as depth, so the cards lie across y and z). The wings (forward and down smash: SetModelPartID joint 6 part 1) are the kit's wing image (godwing, its full feathered wing, the island above it cleared), one card a side sweeping up and back from her shoulder blades. The halo (up air: joint 12 part 2) is an authored gold ring above her head, tilted back.",
+ "parts": [
+  {
+   "name": "wings",
+   "joint": 2,
+   "variant": 1,
+   "texture": {
+    "source": "kit:Palutena/godwing/Yoshi_Wing.png",
+    "keep_below": [[0, 212], [35, 191], [95, 163], [230, 168], [256, 178]],
+    "clear": [[200, 225, 256, 256]],
+    "crop": [0, 155, 256, 256],
+    "size": [64, 32]
+   },
+   "cards": [
+    {"corners": [[14, 470, -22], [80, 690, -370], [80, 450, -370], [14, 300, -22]]},
+    {"corners": [[-14, 470, -22], [-80, 690, -370], [-80, 450, -370], [-14, 300, -22]]}
+   ]
+  },
+  {
+   "name": "halo",
+   "joint": 8,
+   "variant": 2,
+   "texture": {"source": "authored:halo", "size": [32, 32]},
+   "cards": [
+    {"corners": [[0, 614, -80], [0, 614, 40], [0, 506, 40], [0, 506, -80]]}
+   ]
+  }
+ ]
+}

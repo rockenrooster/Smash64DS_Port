@@ -62,6 +62,37 @@ def _is_light_or_mode(g: N.Gfx) -> bool:
     return g.op in (N.G_MOVEWORD, N.G_GEOMETRYMODE)
 
 
+# A costume MObj's palette list: as long as the base's (Peach's lists hold
+# 16), the last costume repeated past the look's own.
+COSTUME_SLOTS = 16
+MOBJSUB_SIZE = 0x78
+MOBJSUB_PALETTES = 0x2C
+MOBJ_PALETTE = 0x0004
+
+
+def palette_mobj_template(fm: N.FighterModel, detail: str) -> tuple | None:
+    """The base's first palette-only MObjSub (its bytes, its `palettes` and
+    `sprites` emptied) and that MObj's costume animation (palette = costume):
+    the template of a costume MObj."""
+    for joint in range(len(fm.trees[detail]) - 1):
+        mobjs = fm.mobjs(detail, joint)
+        for k, mo in enumerate(mobjs):
+            if mo.flags != MOBJ_PALETTE or not mo.palettes:
+                continue
+            table = fm.costume_matanims[detail]
+            if table is None:
+                return None
+            arr = fm.model.ptr(table + 4 * joint)
+            script = fm.model.ptr(arr[2] + 4 * k) if arr else None
+            if script is None:
+                continue
+            raw = bytearray(fm.model.data[mo.offset:mo.offset + MOBJSUB_SIZE])
+            raw[MOBJSUB_PALETTES:MOBJSUB_PALETTES + 4] = bytes(4)
+            raw[4:8] = bytes(4)
+            return bytes(raw), script[2]
+    return None
+
+
 def ci4_bytes(texels) -> bytes:
     """Rows of 4-bit indices, two to a byte, high nibble first."""
     out = bytearray()
@@ -155,6 +186,9 @@ class ListWriter:
         self.mats = scene["materials"]
         self.new_textures: dict = {}
         self.app = None
+        # joint -> the materials its list calls through segment E (their
+        # costume palettes as MObjs, in call order).
+        self.mobj_materials: dict[int, list[int]] = {}
 
     def ancestors(self, j: int) -> list[int]:
         out = []
@@ -198,14 +232,17 @@ class ListWriter:
         own = spans.get(str(joint))
         src = own or next((c for c in spans.values() if c), None)
         keep_mobj = False
+        # A synthesized span's segment-E call is its own costume MObj.
+        synth = src is None
         if src is None:
-            cmds = self.synth_span(m)
+            cmds = self.synth_span(m, mi, joint)
         else:
             cmds = [_cmd(c) for c in src]
             loads = any(g.op in (N.G_SETTIMG, N.G_LOADBLOCK, N.G_LOADTILE) for g in cmds)
             if loads and not m.get("texture"):
                 # A recoloured texture: drawn in its colour alone.
-                cmds = self.synth_span(m)
+                cmds = self.synth_span(m, mi, joint)
+                synth = True
             else:
                 span_prim = next((g.w1 for g in cmds if g.op == N.G_SETPRIMCOLOR), None)
                 recolored = span_prim is not None and span_prim != int(m["prim"], 16)
@@ -223,7 +260,7 @@ class ListWriter:
             if _is_light_or_mode(g):
                 continue            # the prelude set them
             if g.op == N.G_DL and (g.w1 >> 24) == N.SEGMENT_E:
-                if keep_mobj:
+                if keep_mobj or synth:
                     out.append(g)
                     continue
                 pal = self.mobj_palette(m, joint)
@@ -258,8 +295,10 @@ class ListWriter:
                         return ("intern", self.model.file_id, mobjs[k].palettes[0])
         return None
 
-    def synth_span(self, m: dict) -> list[N.Gfx]:
-        """A span for a material the base never drew (an added part)."""
+    def synth_span(self, m: dict, mi: int = -1, joint: int = -1) -> list[N.Gfx]:
+        """A span for a material the base never drew (an added part). A
+        texture with costume palettes takes its palette from an MObj (the
+        joint's segment-E material `k`), as the base's costume materials do."""
         prim = int(m["prim"], 16)
         tex = m.get("texture")
         if not tex:
@@ -267,6 +306,12 @@ class ListWriter:
                     N.Gfx(0xFA000000, prim)]
         w, h = int(tex["width"]), int(tex["height"])
         tex_at, pal_at = self.new_texture(m)
+        palette_cmd = N.Gfx(0xFD100000, pal_at // 4, ("intern", self.model.file_id, pal_at))
+        if tex.get("costume_palettes") and joint >= 0:
+            calls = self.mobj_materials.setdefault(joint, [])
+            if mi not in calls:
+                calls.append(mi)
+            palette_cmd = N.Gfx(0xDE000000, (N.SEGMENT_E << 24) | (8 * calls.index(mi)), None)
         cm = {"clamp": 2, "mirror": 1, "repeat": 0}
         wrap = tex.get("wrap") or ["clamp", "clamp"]
         cms, cmt = cm[wrap[0]], cm[wrap[1]]
@@ -283,7 +328,7 @@ class ListWriter:
                  N.Gfx(0xF5000100, 0x05000000),
                  N.Gfx(0xF5500000, (7 << 24) | (mt << 14) | (ms << 4)),
                  N.Gfx(0xF5400000 | (line << 9), (cmt << 18) | (mt << 14) | (cms << 8) | (ms << 4)),
-                 N.Gfx(0xFD100000, pal_at // 4, ("intern", fid, pal_at)),
+                 palette_cmd,
                  N.Gfx(0xE6000000, 0), N.Gfx(0xF0000000, 0x0503C000), N.Gfx(0xE7000000, 0),
                  N.Gfx(0xD7000002, 0xFFFFFFFF),
                  N.Gfx(0xF2000000, (((w - 1) << 2) << 12) | ((h - 1) << 2)),
@@ -294,18 +339,60 @@ class ListWriter:
         return cmds
 
     def new_texture(self, m: dict) -> tuple:
-        """Append a new material's texels and palette (once)."""
+        """Append a new material's texels and palette (once); with costume
+        palettes, each costume's palette and their pointer list (the MObj's
+        `palettes`, COSTUME_SLOTS long, the last repeated)."""
         tex = m["texture"]
         key = tex.get("file")
         if key in self.new_textures:
-            return self.new_textures[key]
+            return self.new_textures[key][:2]
         app = self.app
         app.align(8)
         tex_at = app.put(ci4_bytes(tex["texels"]))
         app.align(8)
         pal_at = app.put(rgba5551(tex["palette"]))
-        self.new_textures[key] = (tex_at, pal_at)
+        list_at = None
+        if tex.get("costume_palettes"):
+            pals = []
+            for pal in tex["costume_palettes"]:
+                app.align(8)
+                pals.append(app.put(rgba5551(pal)))
+            pals += [pals[-1]] * max(0, COSTUME_SLOTS - len(pals))
+            app.align(8)
+            list_at = app.put(bytes(4 * len(pals)))
+            for k, at in enumerate(pals):
+                app.slot(list_at + 4 * k, ("intern", self.model.file_id, at))
+        self.new_textures[key] = (tex_at, pal_at, list_at)
         return tex_at, pal_at
+
+    def write_mobjs(self, app: "Appender", template: tuple) -> dict:
+        """The costume MObjs each joint's list calls: an MObjSub a material
+        (the base's palette MObjSub, its `palettes` ours), and for each joint
+        its MObjSub list (NULL-ended) and costume animation list (the base's
+        palette animation: the costume's frame picks its palette).
+        Returns joint -> (MObjSub list offset, animation list offset)."""
+        sub_bytes, script_at = template
+        fid = self.model.file_id
+        subs: dict[int, int] = {}
+        out = {}
+        for joint, calls in sorted(self.mobj_materials.items()):
+            for mi in calls:
+                if mi in subs:
+                    continue
+                list_at = self.new_textures[self.mats[mi]["texture"]["file"]][2]
+                app.align(8)
+                at = app.put(sub_bytes)
+                app.slot(at + MOBJSUB_PALETTES, ("intern", fid, list_at))
+                subs[mi] = at
+            app.align(4)
+            sub_list = app.put(bytes(4 * (len(calls) + 1)))
+            for k, mi in enumerate(calls):
+                app.slot(sub_list + 4 * k, ("intern", fid, subs[mi]))
+            anim_list = app.put(bytes(4 * (len(calls) + 1)))
+            for k in range(len(calls)):
+                app.slot(anim_list + 4 * k, ("intern", fid, script_at))
+            out[joint] = (sub_list, anim_list)
+        return out
 
     # -- lists ------------------------------------------------------------
     def build(self, app: Appender) -> dict[int, int]:
@@ -339,6 +426,8 @@ class ListWriter:
         prelude_of = self.scene.get("preludes") or (self.base_scene or {}).get("preludes") or {}
         default_prelude = prelude_of.get("2") or []
         base_rows = self.fm.trees[self.detail]
+        self._by_joint, self._seam, self._seam_mat = by_joint, seam, seam_mat
+        self._prelude_of, self._default_prelude = prelude_of, default_prelude
         for j in range(njoints):
             tris = by_joint.get(j, [])
             kids_seam = [c for c in seam if self.parents[c] == j]
@@ -356,6 +445,22 @@ class ListWriter:
                                          [(c, seam[c], seam_mat[c]) for c in kids_seam],
                                          prelude_of.get(str(j)) or default_prelude)
         return offsets
+
+    def write_part_list(self, app: Appender, part: dict) -> int:
+        """A part's variant list (look_parts.py): its joint's own triangles,
+        then the part's cards (their material and vertices appended to the
+        scene's), before the children's seam loads, as the joint's list."""
+        j = part["joint"]
+        mi = len(self.mats)
+        self.mats.append(part["material"])
+        base = len(self.verts)
+        self.verts.extend(part["vertices"])
+        tris = list(self._by_joint.get(j, []))
+        tris += [{"joint": j, "v": [base + i for i in t], "material": mi} for t in part["triangles"]]
+        kids_seam = [c for c in self._seam if self.parents[c] == j]
+        return self.write_list(app, j, tris, self._seam.get(j, []),
+                               [(c, self._seam[c], self._seam_mat[c]) for c in kids_seam],
+                               self._prelude_of.get(str(j)) or self._default_prelude)
 
     def write_list(self, app: Appender, joint: int, tris: list[dict], from_parent: list[int],
                    children: list, prelude: list) -> int:
@@ -550,11 +655,35 @@ def write(base_export: Path, scenes: dict[str, Path], main_id: int, model_id: in
     lay = fm.lay
     # New textures by name, shared by the details (one copy of each).
     shared_textures: dict = {}
+    # Parts (look_parts.py): joint -> variant -> detail -> list offset; the
+    # tree's lists and the costume MObj lists, for the parts' descs.
+    part_lists: dict = {}
+    tree_lists: dict = {}
+    joint_mobjs: dict = {}
     for detail, path in scenes.items():
         scene = json.loads(path.read_text(encoding="utf-8"))
         lw = ListWriter(fm, model, scene, detail, None)
         lw.new_textures = shared_textures
         offsets = lw.build(app)
+        for part in scene.get("parts") or ():
+            part_lists.setdefault(part["joint"], {}).setdefault(part["variant"], {})[detail] = \
+                lw.write_part_list(app, part)
+        tree_lists[detail] = dict(offsets)
+        mobj_lists = {}
+        if lw.mobj_materials:
+            template = palette_mobj_template(fm, detail)
+            if template is None:
+                raise WriterError(f"{detail}: costume palettes, but the base has no palette MObj to copy")
+            mobj_lists = lw.write_mobjs(app, template)
+            joint_mobjs[detail] = mobj_lists
+            for joint, (sub_list, anim_list) in mobj_lists.items():
+                for table, target in ((fm.mobjsubs[detail], sub_list), (fm.costume_matanims[detail], anim_list)):
+                    if table is None:
+                        raise WriterError(f"{detail}: the base has no MObj tables")
+                    app.slot(table + 4 * joint, ("intern", model_id, target))
+            report.setdefault("costume_mobjs", {})[detail] = {
+                str(j): [lw.mats[mi]["texture"]["file"] for mi in calls]
+                for j, calls in sorted(lw.mobj_materials.items())}
         app.align(8)
         tree_at = app.here
         app.put(joint_rows(fm, detail, scene, offsets))
@@ -566,16 +695,34 @@ def write(base_export: Path, scenes: dict[str, Path], main_id: int, model_id: in
         # Model-part rows: a reset puts every joint back on its variant 0,
         # so variant 0 of each joint names our list for it; an aliased
         # joint's other variants too (the look has one form there).
+        # A part switch puts the part's MObjs on the joint
+        # (ftParamSetModelPartID): a retargeted part takes the list's costume
+        # MObjs and their animations, and no main animation of the base's.
         retargeted = []
+        part_dl = lay["FTModelPart.dl"]
         for slot, joint, variant, cell_detail in modelpart_dl_slots(fm):
             if cell_detail != detail or joint not in offsets or slot not in main.extern:
                 continue
             if variant == 0 or joint in alias:
                 main.extern[slot] = (model_id, offsets[joint])
                 retargeted.append([joint, variant])
+                if joint in mobj_lists:
+                    base = slot - part_dl
+                    sub_list, anim_list = mobj_lists[joint]
+                    for field, target in (("FTModelPart.mobjsubs", sub_list),
+                                          ("FTModelPart.costume_matanim_joints", anim_list)):
+                        at = base + lay[field]
+                        main.intern.pop(at, None)
+                        main.extern[at] = (model_id, target)
+                    at = base + lay["FTModelPart.main_matanim_joints"]
+                    main.intern.pop(at, None)
+                    main.extern.pop(at, None)
+                    main.data[at:at + 4] = bytes(4)
         report["details"][detail] = {"tree": tree_at, "lists": {str(j): o for j, o in sorted(offsets.items())},
                                      "model_parts": retargeted,
                                      "triangles": len(scene["triangles"])}
+    if part_lists:
+        report["parts"] = write_part_descs(fm, main, model_id, part_lists, tree_lists, joint_mobjs, alias)
     # A look on its own proportions plays the base's clips at its limb
     # lengths: FTAttributes.translate_scales (look_blend.py), one Vec3f per
     # fighter joint, appended to the main file.
@@ -597,6 +744,70 @@ def write(base_export: Path, scenes: dict[str, Path], main_id: int, model_id: in
     report["model_size"] = len(model.data)
     (out / "writer.json").write_text(json.dumps(report, indent=1) + "\n", encoding="utf-8")
     return report
+
+
+def write_part_descs(fm: N.FighterModel, main: N.RelocFile, model_id: int, part_lists: dict,
+                     tree_lists: dict, joint_mobjs: dict, alias: frozenset) -> dict:
+    """Each part joint's FTModelPartDesc, appended to the main file and named
+    by FTModelPartContainer: the base's variants (as the writer retargeted
+    them) or, for a joint the base had none for, variant 0 drawing the tree's
+    list with the joint's MObjs (a reset puts every joint with a desc back on
+    variant 0); then the parts' variants, the same MObjs, no main animation.
+    Cells run [variant][high, low]."""
+    lay = fm.lay
+    cell = lay["sizeof(FTModelPart)"]
+    container = main.ptr(fm.attr + lay["FTAttributes.modelparts_container"])
+    if container is None or container[0] != "intern":
+        raise WriterError("the base has no model-part container to name a part's desc")
+    existing: dict[int, dict] = {}
+    for slot, joint, variant, detail in modelpart_dl_slots(fm):
+        existing.setdefault(joint, {})[(variant, detail)] = slot - lay["FTModelPart.dl"]
+    mapp = Appender(main)
+    out = {}
+    for joint, variants in sorted(part_lists.items()):
+        old = existing.get(joint, {})
+        count = max([v + 1 for v in variants] + [v + 1 for v, _ in old])
+        mapp.align(8)
+        at = mapp.put(bytes(cell * 2 * count))
+        for v in range(count):
+            for d, detail in enumerate(("high", "low")):
+                c = at + cell * (2 * v + d)
+                if v in variants:
+                    src = None
+                    dl = variants[v][detail]
+                elif (v, detail) in old:
+                    src = old[(v, detail)]
+                    dl = None
+                elif v == 0:
+                    src = None
+                    dl = tree_lists[detail][joint]
+                else:
+                    raise WriterError(f"joint {joint}: variant {v} has no list")
+                if src is not None:
+                    # The base's cell as the writer left it (retargeted lists
+                    # and MObjs for variant 0 and aliased joints).
+                    for field in ("FTModelPart.dl", "FTModelPart.mobjsubs",
+                                  "FTModelPart.costume_matanim_joints", "FTModelPart.main_matanim_joints"):
+                        off = lay[field]
+                        target = main.ptr(src + off)
+                        if target is not None:
+                            mapp.slot(c + off, target)
+                    main.data[c + lay["FTModelPart.flags"]] = main.data[src + lay["FTModelPart.flags"]]
+                    continue
+                mapp.slot(c + lay["FTModelPart.dl"], ("extern", model_id, dl))
+                lists = (joint_mobjs.get(detail) or {}).get(joint)
+                if lists is not None:
+                    mapp.slot(c + lay["FTModelPart.mobjsubs"], ("extern", model_id, lists[0]))
+                    mapp.slot(c + lay["FTModelPart.costume_matanim_joints"], ("extern", model_id, lists[1]))
+                else:
+                    for field, table in (("FTModelPart.mobjsubs", fm.mobjsubs[detail]),
+                                         ("FTModelPart.costume_matanim_joints", fm.costume_matanims[detail])):
+                        target = fm.model.ptr(table + 4 * joint) if table is not None else None
+                        if target is not None:
+                            mapp.slot(c + lay[field], ("extern", model_id, target[2]))
+        mapp.slot(container[2] + 4 * joint, ("intern", main.file_id, at))
+        out[str(joint)] = {"desc": at, "variants": count}
+    return out
 
 
 def modelpart_dl_slots(fm: N.FighterModel) -> list[tuple[int, int, int, str]]:
