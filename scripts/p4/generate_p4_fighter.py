@@ -679,6 +679,11 @@ SUBSET_FILES = {
 # high, so their take-off speed scales by sqrt(0.75): jump_height_mul and
 # jump_height_base, which the aerial jump multiplies by jumpaerial_height
 # (ftcommonjumpaerial.c:158).
+# P7 B3 (owner): a content's animation rate -- every speed its fighters'
+# statuses (ftMainSetStatus) and Remix's frame speed multiplier set, the
+# motion script's clock with them, times this (NDSP4Fighter anim_rate).
+# Kirby's copies play Kirby's own animations and take none.
+OWNER_ANIM_RATES = {"sheik": 1.1}
 OWNER_ATTRIBUTE_SCALES = {
     "wario": {"jump_height_mul": 0.75 ** 0.5, "jump_height_base": 0.75 ** 0.5},
     # P7 B2 (owner, 2026-10-12): Bowser walks and runs at 0.75x, to stop his
@@ -2656,6 +2661,8 @@ def main() -> int:
               f"const u16 g{ident}Event32MatAnims[2] = {{ {event32_matanims[0]}u, {event32_matanims[1]}u }};",
               "/* Its fighters' measured shared ledger entries (EVENT32_SHARED). */",
               f"const u16 g{ident}Event32Allowance = {event32_allowance};", "",
+              "/* Its animations' rate (OWNER_ANIM_RATES, P7 B3). */",
+              f"const f32 g{ident}AnimRate = {float(OWNER_ANIM_RATES.get(key, 1.0))!r}F;", "",
               "/* FTFileSize: main closure, largest main-motion and menu-motion figatree. */",
               f"const FTFileSize g{ident}FileSize = {{ {sizes[0]}u, {sizes[1]}u, {sizes[2]}u }};", "",
               "/* HUD: the stock icon as one 8x8 OBJ4 cell and its costume LUTs",

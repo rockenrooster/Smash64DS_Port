@@ -635,6 +635,10 @@ typedef struct NDSP4Fighter
     const u32 *baked_ref_count;
     /* Its guard-pose package (NDSP4ShieldPose). */
     const NDSP4ShieldPose *shield_pose;
+    /* Its animations' rate (P7 B3, generate_p4_fighter.py OWNER_ANIM_RATES):
+     * every speed ftMainSetStatus or Remix's frame speed multiplier sets on
+     * its fighters takes this factor (1.0 for most). */
+    const f32 *anim_rate;
     /* Optional: the parent's routines it replaces (Remix's id hooks). */
     const NDSP4Overrides *overrides;
 } NDSP4Fighter;
@@ -679,6 +683,9 @@ extern u8 gNdsP4PlayerContent[GMCOMMON_PLAYERS_MAX];
 #if NDS_P4
 
 const NDSP4Fighter *ndsP4Fighter(u32 content);
+/* `speed` times the fighter's content's animation rate (NDSP4Fighter
+ * anim_rate): ftMainSetStatus's speed and Remix's frame speed multiplier. */
+f32 ndsP4ScaleAnimSpeed(GObj *fighter_gobj, f32 speed);
 /* The content whose code a content runs (nds_p4_contents.h NDS_P4_CODE_ROWS):
  * itself, or a P6 authored content's base until the authored content has a
  * source file of its own. A base's code tests its own id through this

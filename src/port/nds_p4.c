@@ -86,7 +86,8 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
     extern const u8 gNdsP4##T##ComputerReflect; \
     extern const NDSP4BakedRef gNdsP4##T##BakedRefs[]; \
     extern const u32 gNdsP4##T##BakedRefCount; \
-    extern const NDSP4ShieldPose gNdsP4##T##ShieldPose;
+    extern const NDSP4ShieldPose gNdsP4##T##ShieldPose; \
+    extern const f32 gNdsP4##T##AnimRate;
 #define NDS_P4_ROW(T, title, parent, on_status_hook, computer_rows, override_rows) \
     { \
         .name = (title), .parent_kind = (parent), \
@@ -123,6 +124,7 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
         .baked_refs = gNdsP4##T##BakedRefs, \
         .baked_ref_count = &gNdsP4##T##BakedRefCount, \
         .shield_pose = &gNdsP4##T##ShieldPose, \
+        .anim_rate = &gNdsP4##T##AnimRate, \
         .overrides = (override_rows), \
     }
 
@@ -189,6 +191,17 @@ static const char *const sNdsP4TableNames[NDS_P4_CONTENT_LIMIT] = {
 /* The content whose tables failed to load (a halt follows), for probes. */
 __attribute__((used)) volatile u32 gNdsP4TablesFailure;
 static const NDSP4TablesHeader *ndsP4FighterTables(const FTStruct *fp);
+
+f32 ndsP4ScaleAnimSpeed(GObj *fighter_gobj, f32 speed)
+{
+    const NDSP4Fighter *f = ndsP4Fighter(ftGetStruct(fighter_gobj)->nds_p4_content);
+
+    if ((f == NULL) || (f->anim_rate == NULL) || (*f->anim_rate == 1.0F))
+    {
+        return speed;
+    }
+    return speed * *f->anim_rate;
+}
 
 const NDSP4Fighter *ndsP4Fighter(u32 content)
 {
@@ -2916,11 +2929,14 @@ static f32 ndsP4HalfFloat(u32 word)
 
 /* Remix 0xD0 SET FRAME SPEED MULTIPLIER (Command.asm fsm_). Flag 0 sets every
  * joint, like gcSetAnimSpeed. Flag 1 leaves the top joint, whose speed is the
- * motion-script clock, and nudges it off exactly 1.0 so ftMainSetStatus's
- * `anim_speed != root speed` test still restores the children afterwards. */
+ * motion-script clock, and nudges it one unit in the last place off the
+ * speed a status sets (1.0 times the content's animation rate) so
+ * ftMainSetStatus's `anim_speed != root speed` test still restores the
+ * children afterwards. The content's animation rate (P7 B3) multiplies the
+ * operand. */
 static void ndsP4RemixFrameSpeed(GObj *fighter_gobj, u32 word)
 {
-    f32 speed = ndsP4HalfFloat(word);
+    f32 speed = ndsP4ScaleAnimSpeed(fighter_gobj, ndsP4HalfFloat(word));
     DObj *root = DObjGetStruct(fighter_gobj);
     DObj *dobj;
 
@@ -2929,11 +2945,12 @@ static void ndsP4RemixFrameSpeed(GObj *fighter_gobj, u32 word)
         gcSetAnimSpeed(fighter_gobj, speed);
         return;
     }
-    if (root->anim_speed == 1.0F)
+    if (root->anim_speed == ndsP4ScaleAnimSpeed(fighter_gobj, 1.0F))
     {
         union { u32 u; f32 f; } nudge;
 
-        nudge.u = 0x3F800001u;
+        nudge.f = root->anim_speed;
+        nudge.u ^= 1u;
         root->anim_speed = nudge.f;
     }
     for (dobj = root->child; dobj != NULL; dobj = gcGetTreeDObjNext(dobj))
