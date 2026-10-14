@@ -199,6 +199,7 @@ class ListWriter:
         self.verts = scene["vertices"]
         self.mats = scene["materials"]
         self.new_textures: dict = {}
+        self.vertex_blobs: dict[bytes, int] = {}
         self.app = None
         # joint -> the materials its list calls through segment E (their
         # costume palettes as MObjs, in call order).
@@ -539,8 +540,14 @@ class ListWriter:
         return at
 
     def put_vertices(self, app: Appender, idx: list[int], mi: int) -> int:
-        app.align(8)
-        return app.put(b"".join(self.vtx_bytes(i, self.mats[mi]) for i in idx))
+        """The vertices' bytes, appended once: a part's variants load the
+        same seam vertices as the joint's own list (five pillar variants on
+        Palutena's hips row re-appended her torso's seam, +12 KB)."""
+        blob = b"".join(self.vtx_bytes(i, self.mats[mi]) for i in idx)
+        if blob not in self.vertex_blobs:
+            app.align(8)
+            self.vertex_blobs[blob] = app.put(blob)
+        return self.vertex_blobs[blob]
 
     def draw_batches(self, app: Appender, tris: list[dict], mi: int, k0: int, slot_of: dict) -> list[N.Gfx]:
         """Vertex loads and triangles for one material span. Parent-loaded

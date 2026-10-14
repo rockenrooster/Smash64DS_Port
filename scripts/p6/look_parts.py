@@ -11,7 +11,10 @@ is a textured cut-out quad, drawn two-sided, as the look's staff wings are.
 The recipe (art/p6/<name>/look/parts.json, committed) gives each part's
 joint and variant, its texture (a crop of a kit image with an optional
 outline keeping only what lies below a polyline, or an authored image) and
-its cards' corners in the model's rest space. This adds the parts to the
+its cards' corners in the model's rest space (a card's optional `st`: its
+corners' texel coordinates, for an atlas). Parts naming one `texture_key`
+share one texture (the writer stores a texture file once): the variants of
+an animated part, shown in turn by its script. This adds the parts to the
 look's scenes (`parts`) for model_writer.py.
 
     look_parts.py --recipe art/p6/palutena/look/parts.json \\
@@ -76,6 +79,63 @@ def authored_pillar(w: int, h: int) -> np.ndarray:
     return out
 
 
+def authored_pillar_burst(w: int, h: int) -> np.ndarray:
+    """The up smash's light burst (owner playtest 2026-10-14: "a strong light
+    burst", several sprites), one atlas a quarter of the width apart:
+    columns 0-1/4 the core (authored_pillar's white-to-cyan column), 1/4-3/4
+    a wider glow with ray-like streaks rising from its foot, and in the last
+    quarter a star flare (rows 0-1/4), a round bloom (1/4-1/2) and scattered
+    sparks (the lower half)."""
+    out = np.zeros((h, w, 4), dtype=np.float32)
+    q = w // 4
+    out[:, 0:q] = authored_pillar(q, h)
+    # The glow: brightest at its middle, streaks of several heights at its
+    # sides (a column of rays, not one flat band).
+    gw = 2 * q
+    c = (gw - 1) / 2.0
+    streak = [0.15, 0.55, 0.25, 0.8, 0.35, 0.95, 0.5, 1.0, 1.0, 0.6, 0.9, 0.4, 0.75, 0.3, 0.6, 0.2]
+    for x in range(gw):
+        d = abs(x - c) / (c + 0.5)
+        reach = 1.0 if d < 0.45 else streak[int(x * len(streak) / gw)]
+        top = (1.0 - reach) * h
+        for y in range(h):
+            if y < top:
+                continue
+            k = max(0.0, 1.0 - d)
+            fade = min(1.0, (y - top) / (0.15 * h + 1.0))
+            out[y, q + x] = (90 + 150 * k * fade, 190 + 60 * k, 255, 255)
+    # The flare: a white centre and eight spikes.
+    s = q
+    cx = (s - 1) / 2.0
+    for y in range(s):
+        for x in range(s):
+            dx, dy = x - cx, y - cx
+            r = math.hypot(dx, dy) / (cx + 0.5)
+            a = math.atan2(dy, dx)
+            spike = abs(math.cos(4.0 * a)) ** 6
+            if r < 0.3 or (r < 1.0 and spike > r * 0.9):
+                k = max(0.0, 1.0 - r)
+                out[y, 3 * q + x] = (180 + 75 * k, 235 + 20 * k, 255, 255)
+    # The bloom: a round glow, white at its middle.
+    for y in range(s):
+        for x in range(s):
+            r = math.hypot(x - cx, y - cx) / (cx + 0.5)
+            if r < 0.95:
+                k = 1.0 - r
+                out[q + y, 3 * q + x] = (110 + 145 * k, 200 + 55 * k, 255, 255)
+    # The sparks: small crosses scattered down the lower half, a texel of
+    # the shipped size (w / 64 here) an arm.
+    unit = max(1, w // 64)
+    rng = np.random.default_rng(64)
+    for _ in range(14):
+        x0 = int(rng.integers(1, s // unit - 1)) * unit
+        y0 = int(rng.integers((2 * q) // unit + 1, h // unit - 1)) * unit
+        for dx, dy in ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)):
+            colour = (255, 255, 255, 255) if (dx, dy) == (0, 0) else (170, 230, 255, 255)
+            out[y0 + dy * unit:y0 + (dy + 1) * unit, 3 * q + x0 + dx * unit:3 * q + x0 + (dx + 1) * unit] = colour
+    return out
+
+
 def texture(spec: dict) -> np.ndarray:
     """The part's texels at its size (RGBA, row 0 the top)."""
     from PIL import Image, ImageDraw
@@ -85,6 +145,8 @@ def texture(spec: dict) -> np.ndarray:
         img = Image.fromarray(authored_halo(max(w, h) * 4).astype(np.uint8), "RGBA")
     elif src == "authored:pillar":
         img = Image.fromarray(authored_pillar(w * 4, h * 4).astype(np.uint8), "RGBA")
+    elif src == "authored:pillar_burst":
+        img = Image.fromarray(authored_pillar_burst(w * 4, h * 4).astype(np.uint8), "RGBA")
     elif src.startswith("kit:"):
         img = Image.open(KIT / src[4:]).convert("RGBA")
     else:
@@ -145,7 +207,8 @@ def apply(recipe: dict, scene: dict) -> dict:
         parts.append({
             "name": part["name"], "joint": part["joint"], "variant": part["variant"],
             "material": {"combine": [0, 0], "lit": True, "prim": "ffffffff", "spans": {}, "two_sided": True,
-                         "texture": {"file": "part_" + part["name"], "width": w, "height": h, "texels": idx,
+                         "texture": {"file": "part_" + part.get("texture_key", part["name"]),
+                                     "width": w, "height": h, "texels": idx,
                                      "palette": pal, "alpha": True, "wrap": ["clamp", "clamp"]}},
             "vertices": verts, "triangles": tris})
     scene["parts"] = parts

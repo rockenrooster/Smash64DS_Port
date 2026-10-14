@@ -110,11 +110,21 @@ Her forward and down smash scripts show the wings (SetModelPartID joint 6),
 her up air the halo (joint 12); a status change resets the parts.
 
 **Pillar, taunt, entry, victory poses (2026-10-14).** The up smash's light
-pillar is the hips row's part 1 (joint 5): two crossed authored cards, a
-column of cyan light ahead of her where its hitboxes stand (TopN z 260,
-y 0-1250). Cards light by an up normal, not their face's: a two-sided card's
-back face turned away from the light drew black (the pillar's first
-capture). The down taunt (Appeal, `motions/appeal.ms`) keeps Peach's clip
+pillar is the hips row's parts (joint 5): a column of cyan light ahead of
+her where its hitboxes stand (TopN z 260). Cards light by an up normal, not
+their face's: a two-sided card's back face turned away from the light drew
+black (the pillar's first capture). Owner playtest 2026-10-14 (done): a
+strong light burst of several sprites, 1.25x taller (y 0-1,560), always in
+front of her, hitboxes matching it. Five variants shown in turn by the
+script two frames apart (ignite, burst, sustain, fade, thin; then part 0),
+from one authored atlas (`look_parts.py` authored:pillar_burst: a core, a
+ray glow, a star flare, a bloom, sparks; one texture for all five, the
+writer storing it once and the variants' shared seam vertices once); every
+card faces the battle camera and is drawn twice, either side of her in
+depth, so the one toward the camera is in front of her whichever way she
+faces (the old crossed card lay in her own depth and fought her body for
+it). Four 390-unit hitboxes stacked from the floor to the top; white
+sparkles in the column instead of the green ring and PSI sparkles. The down taunt (Appeal, `motions/appeal.ms`) keeps Peach's clip
 for now and shows the halo with sparkles, her taunt voice and down-taunt
 sound. The entry (statuses 0xDC/0xDD, motions 195/196: `motions/entry.ms`,
 clip `art/p6/palutena/anims/entry.json`, Marth's entry on her tree, the
