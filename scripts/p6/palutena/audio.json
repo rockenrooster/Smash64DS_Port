@@ -1,0 +1,314 @@
+{
+ "schema": "p6-audio-v1",
+ "content": "palutena",
+ "comment": "Palutena's sound cues (docs/P6/characters/palutena.md, Audio; plan D5-D9): Ultimate's voices (vc_palutena) and effects (se_palutena), the narrator's name call and the crowd cheer, from the owner's local folder (ignored, never tracked). The map sends each FGM id Peach's scripts, attributes and kind tables play (Peach's voices; the vanilla swings) to a cue; her own scripts name cues as cue:<name>.",
+ "source": "decomp/alt_assets/Fighters/Super Smash Bros Ultimate/Fighters",
+ "cues": {
+  "announcer": {
+   "file": "vc_narration_characall_palutena.wav",
+   "kind": "voice"
+  },
+  "appeal01": {
+   "file": "vc_palutena/vc_palutena_appeal01.wav",
+   "kind": "voice"
+  },
+  "appeal02": {
+   "file": "vc_palutena/vc_palutena_appeal02.wav",
+   "kind": "voice"
+  },
+  "appeal03": {
+   "file": "vc_palutena/vc_palutena_appeal03.wav",
+   "kind": "voice"
+  },
+  "attack01": {
+   "file": "vc_palutena/vc_palutena_attack01.wav",
+   "kind": "voice"
+  },
+  "attack02": {
+   "file": "vc_palutena/vc_palutena_attack02.wav",
+   "kind": "voice"
+  },
+  "attack03": {
+   "file": "vc_palutena/vc_palutena_attack03.wav",
+   "kind": "voice"
+  },
+  "attack04": {
+   "file": "vc_palutena/vc_palutena_attack04.wav",
+   "kind": "voice"
+  },
+  "attack05": {
+   "file": "vc_palutena/vc_palutena_attack05.wav",
+   "kind": "voice"
+  },
+  "attack06": {
+   "file": "vc_palutena/vc_palutena_attack06.wav",
+   "kind": "voice"
+  },
+  "attack07": {
+   "file": "vc_palutena/vc_palutena_attack07.wav",
+   "kind": "voice"
+  },
+  "cheer": {
+   "file": "vc_palutena_cheer.wav",
+   "kind": "voice"
+  },
+  "cliffcatch": {
+   "file": "vc_palutena/vc_palutena_cliffcatch.wav",
+   "kind": "voice"
+  },
+  "damage01": {
+   "file": "vc_palutena/vc_palutena_damage01.wav",
+   "kind": "voice"
+  },
+  "damage02": {
+   "file": "vc_palutena/vc_palutena_damage02.wav",
+   "kind": "voice"
+  },
+  "damage03": {
+   "file": "vc_palutena/vc_palutena_damage03.wav",
+   "kind": "voice"
+  },
+  "damage_twinkle": {
+   "file": "vc_palutena/vc_palutena_damage_twinkle.wav",
+   "kind": "voice"
+  },
+  "damagefly01": {
+   "file": "vc_palutena/vc_palutena_damagefly01.wav",
+   "kind": "voice"
+  },
+  "damagefly02": {
+   "file": "vc_palutena/vc_palutena_damagefly02.wav",
+   "kind": "voice"
+  },
+  "furafura": {
+   "file": "vc_palutena/vc_palutena_furafura.wav",
+   "kind": "voice"
+  },
+  "furasleep": {
+   "file": "vc_palutena/vc_palutena_furasleep.wav",
+   "kind": "voice"
+  },
+  "heavyget": {
+   "file": "vc_palutena/vc_palutena_heavyget.wav",
+   "kind": "voice"
+  },
+  "jump": {
+   "file": "vc_palutena/vc_palutena_jump.wav",
+   "kind": "voice"
+  },
+  "knockout": {
+   "file": "vc_palutena/vc_palutena_knockout.wav",
+   "kind": "voice"
+  },
+  "missfoot01": {
+   "file": "vc_palutena/vc_palutena_missfoot01.wav",
+   "kind": "voice"
+  },
+  "ottotto": {
+   "file": "vc_palutena/vc_palutena_ottotto.wav",
+   "kind": "voice"
+  },
+  "passive": {
+   "file": "vc_palutena/vc_palutena_passive.wav",
+   "kind": "voice"
+  },
+  "se_appeal_l01": {
+   "file": "se_palutena/se_palutena_appeal_L01.wav",
+   "kind": "effect"
+  },
+  "se_appear01": {
+   "file": "se_palutena/se_palutena_appear01.wav",
+   "kind": "effect"
+  },
+  "se_attack100": {
+   "file": "se_palutena/se_palutena_attack100.wav",
+   "kind": "effect"
+  },
+  "se_attack100end": {
+   "file": "se_palutena/se_palutena_attack100end.wav",
+   "kind": "effect"
+  },
+  "se_attackair_b01": {
+   "file": "se_palutena/se_palutena_attackair_B01.wav",
+   "kind": "effect"
+  },
+  "se_attackair_f01": {
+   "file": "se_palutena/se_palutena_attackair_F01.wav",
+   "kind": "effect"
+  },
+  "se_attackair_h01": {
+   "file": "se_palutena/se_palutena_attackair_H01.wav",
+   "kind": "effect"
+  },
+  "se_attackair_l01": {
+   "file": "se_palutena/se_palutena_attackair_L01.wav",
+   "kind": "effect"
+  },
+  "se_attackair_n01": {
+   "file": "se_palutena/se_palutena_attackair_N01.wav",
+   "kind": "effect"
+  },
+  "se_attackdash": {
+   "file": "se_palutena/se_palutena_attackdash.wav",
+   "kind": "effect"
+  },
+  "se_attackhard_h01": {
+   "file": "se_palutena/se_palutena_attackhard_H01.wav",
+   "kind": "effect"
+  },
+  "se_attackhard_l01": {
+   "file": "se_palutena/se_palutena_attackhard_L01.wav",
+   "kind": "effect"
+  },
+  "se_attackhard_s01": {
+   "file": "se_palutena/se_palutena_attackhard_S01.wav",
+   "kind": "effect"
+  },
+  "se_dash_start": {
+   "file": "se_palutena/se_palutena_dash_start.wav",
+   "kind": "effect"
+  },
+  "se_dash_stop": {
+   "file": "se_palutena/se_palutena_dash_stop.wav",
+   "kind": "effect"
+  },
+  "se_escape": {
+   "file": "se_palutena/se_palutena_escape.wav",
+   "kind": "effect"
+  },
+  "se_escapeair": {
+   "file": "se_palutena/se_palutena_escapeair.wav",
+   "kind": "effect"
+  },
+  "se_jump01": {
+   "file": "se_palutena/se_palutena_jump01.wav",
+   "kind": "effect"
+  },
+  "se_landing01": {
+   "file": "se_palutena/se_palutena_landing01.wav",
+   "kind": "effect"
+  },
+  "se_smash_h01": {
+   "file": "se_palutena/se_palutena_smash_H01.wav",
+   "kind": "effect"
+  },
+  "se_smash_l01": {
+   "file": "se_palutena/se_palutena_smash_L01.wav",
+   "kind": "effect"
+  },
+  "se_smash_s01": {
+   "file": "se_palutena/se_palutena_smash_S01.wav",
+   "kind": "effect"
+  },
+  "se_special_h01": {
+   "file": "se_palutena/se_palutena_special_H01.wav",
+   "kind": "effect"
+  },
+  "se_special_h02": {
+   "file": "se_palutena/se_palutena_special_H02.wav",
+   "kind": "effect"
+  },
+  "se_special_l01": {
+   "file": "se_palutena/se_palutena_special_L01.wav",
+   "kind": "effect"
+  },
+  "se_special_l02": {
+   "file": "se_palutena/se_palutena_special_L02.wav",
+   "kind": "effect"
+  },
+  "se_special_n01": {
+   "file": "se_palutena/se_palutena_special_N01.wav",
+   "kind": "effect"
+  },
+  "se_special_n02": {
+   "file": "se_palutena/se_palutena_special_N02.wav",
+   "kind": "effect"
+  },
+  "se_special_n03": {
+   "file": "se_palutena/se_palutena_special_N03.wav",
+   "kind": "effect"
+  },
+  "se_swing_l": {
+   "file": "se_palutena/se_palutena_swing_l.wav",
+   "kind": "effect"
+  },
+  "se_swing_m": {
+   "file": "se_palutena/se_palutena_swing_m.wav",
+   "kind": "effect"
+  },
+  "se_swing_s": {
+   "file": "se_palutena/se_palutena_swing_s.wav",
+   "kind": "effect"
+  },
+  "se_throw": {
+   "file": "se_palutena/se_palutena_throw.wav",
+   "kind": "effect"
+  },
+  "special_h01": {
+   "file": "vc_palutena/vc_palutena_special_H01.wav",
+   "kind": "voice"
+  },
+  "special_l01": {
+   "file": "vc_palutena/vc_palutena_special_L01.wav",
+   "kind": "voice"
+  },
+  "special_l02": {
+   "file": "vc_palutena/vc_palutena_special_L02.wav",
+   "kind": "voice"
+  },
+  "special_n01": {
+   "file": "vc_palutena/vc_palutena_special_N01.wav",
+   "kind": "voice"
+  },
+  "special_s01": {
+   "file": "vc_palutena/vc_palutena_special_S01.wav",
+   "kind": "voice"
+  },
+  "wakeup": {
+   "file": "vc_palutena/vc_palutena_wakeup.wav",
+   "kind": "voice"
+  },
+  "win01": {
+   "file": "vc_palutena/vc_palutena_win01.wav",
+   "kind": "voice"
+  },
+  "win02": {
+   "file": "vc_palutena/vc_palutena_win02.wav",
+   "kind": "voice"
+  },
+  "win03": {
+   "file": "vc_palutena/vc_palutena_win03.wav",
+   "kind": "voice"
+  }
+ },
+ "map": {
+  "0x598": "announcer",
+  "0x5d8": "cheer",
+  "0x587": "attack05",
+  "0x588": "attack06",
+  "0x589": "attack07",
+  "0x58a": "damage01",
+  "0x58b": "knockout",
+  "0x58c": "damage_twinkle",
+  "0x58d": "jump",
+  "0x58e": "passive",
+  "0x58f": "furafura",
+  "0x590": "furasleep",
+  "0x591": "win01",
+  "0x597": "win02",
+  "0x593": "ottotto",
+  "0x594": "damagefly02",
+  "0x595": "appeal01",
+  "0x596": "special_n01",
+  "0x5b2": "special_n01",
+  "0x599": "special_l01",
+  "0x59a": "special_h01",
+  "0x2b7": "heavyget",
+  "0x29": "se_swing_l",
+  "0x2a": "se_swing_m",
+  "0x2b": "se_swing_s",
+  "0x102": "se_swing_l",
+  "0x103": "se_swing_m",
+  "0x104": "se_swing_s"
+ }
+}

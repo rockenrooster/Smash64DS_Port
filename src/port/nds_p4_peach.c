@@ -31,7 +31,9 @@
  */
 #include <nds/nds_p4.h>
 
-#if NDS_P4_CODE_PEACH
+/* Palutena (P6) compiles this file when Peach's code is not compiled: her
+ * export keeps Peach's special rows, which name these ports. */
+#if NDS_P4_CODE_PEACH || NDS_P4_CODE_PALUTENA
 
 #if NDS_P2_KIRBY
 #include "kirby/nds_p4_kirby.generated.h"
@@ -1472,4 +1474,4 @@ const NDSP4Overrides gNdsP4PeachOverrides = {
     .fall_special_status = ndsP4PeachFallSpecialStatus,
 };
 
-#endif /* NDS_P4_CODE_PEACH */
+#endif /* NDS_P4_CODE_PEACH || NDS_P4_CODE_PALUTENA */

@@ -1,9 +1,231 @@
 {
  "schema": "p6-spec-v1",
  "content": "palutena",
- "comment": "Palutena's authored data over Peach's export (docs/P6/characters/palutena.md). Her look (main 0x1B00, model 0x1B03) is written by scripts/p6/model_writer.py from the owner's Blender model (scripts/p6/look_blend.py); the files are kit-derived build outputs under builds/p6-art/palutena/look (D10).",
+ "comment": "Palutena's authored data over Peach's export (docs/P6/characters/palutena.md). Her look (main 0x1B00, model 0x1B03) is written by scripts/p6/model_writer.py from the owner's Blender model (scripts/p6/look_blend.py); the files are kit-derived build outputs under builds/p6-art/palutena/look (D10). Clips are built from art/p6/palutena/anims (anim.py --build) into builds/p6-art/palutena/anims; her specials' routines are in src/port/nds_p4_palutena.c.",
  "files": {
-  "main": {"id": "0x1b00", "from": "builds/p6-art/palutena/look/1b00"},
-  "model": {"id": "0x1b03", "from": "builds/p6-art/palutena/look/1b03"}
+  "main": {
+   "id": "0x1b00",
+   "from": "builds/p6-art/palutena/look/1b00"
+  },
+  "model": {
+   "id": "0x1b03",
+   "from": "builds/p6-art/palutena/look/1b03"
+  }
+ },
+ "motions": {
+  "219": {
+   "comment": "Explosive Flame",
+   "anim": "builds/p6-art/palutena/anims/flame.o2r",
+   "script": "scripts/p6/palutena/motions/flame.ms"
+  },
+  "220": {
+   "comment": "Explosive Flame in the air",
+   "anim": "builds/p6-art/palutena/anims/flame_air.o2r",
+   "script": "scripts/p6/palutena/motions/flame.ms"
+  },
+  "221": {
+   "comment": "Warp: the staff raised, the vanish",
+   "anim": "builds/p6-art/palutena/anims/warp_start.o2r",
+   "script": "scripts/p6/palutena/motions/warp_start.ms"
+  },
+  "222": {
+   "comment": "Warp: the travel (invisible)",
+   "anim": "builds/p6-art/palutena/anims/warp_travel.o2r",
+   "script": "scripts/p6/palutena/motions/warp_travel.ms"
+  },
+  "223": {
+   "comment": "Warp: the reappearance",
+   "anim": "builds/p6-art/palutena/anims/warp_end.o2r",
+   "script": "scripts/p6/palutena/motions/warp_end.ms"
+  },
+  "224": {
+   "comment": "Counter / Reflect",
+   "anim": "builds/p6-art/palutena/anims/counter.o2r",
+   "script": "scripts/p6/palutena/motions/counter.ms"
+  },
+  "225": {
+   "comment": "Counter / Reflect in the air",
+   "anim": "builds/p6-art/palutena/anims/counter_air.o2r",
+   "script": "scripts/p6/palutena/motions/counter.ms"
+  },
+  "226": {
+   "comment": "Counter: the counterattack",
+   "anim": "builds/p6-art/palutena/anims/counter_hit.o2r",
+   "script": "scripts/p6/palutena/motions/counter_hit.ms"
+  },
+  "227": {
+   "comment": "Counter: the counterattack in the air",
+   "anim": "builds/p6-art/palutena/anims/counter_hit_air.o2r",
+   "script": "scripts/p6/palutena/motions/counter_hit.ms"
+  }
+ },
+ "statuses": {
+  "246": {
+   "name": "nFTPalutenaStatusSpecialN",
+   "motion": 219,
+   "attack_id": 18,
+   "sflags": 18,
+   "procs": [
+    "ndsP4PalutenaFlameMain",
+    null,
+    "ftPhysicsApplyGroundVelFriction",
+    "ndsP4PalutenaGroundMap"
+   ]
+  },
+  "247": {
+   "name": "nFTPalutenaStatusSpecialAirN",
+   "motion": 220,
+   "attack_id": 18,
+   "sflags": 2066,
+   "procs": [
+    "ndsP4PalutenaFlameMain",
+    null,
+    "ndsP4PalutenaFlameAirPhysics",
+    "ndsP4PalutenaAirMap"
+   ]
+  },
+  "248": {
+   "name": "nFTPalutenaStatusSpecialHiStart",
+   "motion": 221,
+   "attack_id": 17,
+   "sflags": 17,
+   "procs": [
+    "ndsP4PalutenaWarpStartMain",
+    null,
+    "ftPhysicsApplyGroundVelFriction",
+    "ndsP4PalutenaGroundMap"
+   ]
+  },
+  "249": {
+   "name": "nFTPalutenaStatusSpecialAirHiStart",
+   "motion": 221,
+   "attack_id": 17,
+   "sflags": 2065,
+   "procs": [
+    "ndsP4PalutenaWarpStartMain",
+    null,
+    "ndsP4PalutenaWarpStartAirPhysics",
+    "ndsP4PalutenaAirMap"
+   ]
+  },
+  "250": {
+   "name": "nFTPalutenaStatusSpecialHi",
+   "motion": 222,
+   "attack_id": 17,
+   "sflags": 17,
+   "procs": [
+    "ndsP4PalutenaWarpMain",
+    null,
+    "ndsP4PalutenaWarpPhysics",
+    "ndsP4PalutenaWarpGroundMap"
+   ]
+  },
+  "251": {
+   "name": "nFTPalutenaStatusSpecialAirHi",
+   "motion": 222,
+   "attack_id": 17,
+   "sflags": 2065,
+   "procs": [
+    "ndsP4PalutenaWarpMain",
+    null,
+    "ndsP4PalutenaWarpPhysics",
+    "ndsP4PalutenaWarpAirMap"
+   ]
+  },
+  "252": {
+   "name": "nFTPalutenaStatusSpecialHiEnd",
+   "motion": 223,
+   "attack_id": 17,
+   "sflags": 17,
+   "procs": [
+    "ftAnimEndSetWait",
+    null,
+    "ftPhysicsApplyGroundVelFriction",
+    "mpCommonSetFighterFallOnEdgeBreak"
+   ]
+  },
+  "253": {
+   "name": "nFTPalutenaStatusSpecialAirHiEnd",
+   "motion": 223,
+   "attack_id": 17,
+   "sflags": 2065,
+   "procs": [
+    "ndsP4PalutenaWarpEndAirMain",
+    null,
+    "ftPhysicsApplyAirVelDrift",
+    "ndsP4PalutenaWarpEndAirMap"
+   ]
+  },
+  "254": {
+   "name": "nFTPalutenaStatusSpecialLw",
+   "motion": 224,
+   "attack_id": 30,
+   "sflags": 30,
+   "procs": [
+    "ndsP4PalutenaCounterMain",
+    null,
+    "ftPhysicsApplyGroundVelFriction",
+    "ndsP4PalutenaGroundMap"
+   ]
+  },
+  "255": {
+   "name": "nFTPalutenaStatusSpecialAirLw",
+   "motion": 225,
+   "attack_id": 30,
+   "sflags": 2078,
+   "procs": [
+    "ndsP4PalutenaCounterMain",
+    null,
+    "ndsP4PalutenaCounterAirPhysics",
+    "ndsP4PalutenaAirMap"
+   ]
+  },
+  "256": {
+   "name": "nFTPalutenaStatusSpecialLwHit",
+   "motion": 226,
+   "attack_id": 30,
+   "sflags": 30,
+   "procs": [
+    "ftAnimEndSetWait",
+    null,
+    "ftPhysicsApplyGroundVelFriction",
+    "mpCommonSetFighterFallOnEdgeBreak"
+   ]
+  },
+  "257": {
+   "name": "nFTPalutenaStatusSpecialAirLwHit",
+   "motion": 227,
+   "attack_id": 30,
+   "sflags": 2078,
+   "procs": [
+    "ftAnimEndSetFall",
+    null,
+    "ftPhysicsApplyAirVelDrift",
+    "ndsP4PalutenaAirMap"
+   ]
+  }
+ },
+ "kind_tables": {
+  "ground_nsp": {
+   "routine": "ndsP4PalutenaFlameGroundInitial"
+  },
+  "air_nsp": {
+   "routine": "ndsP4PalutenaFlameAirInitial"
+  },
+  "ground_usp": {
+   "routine": "ndsP4PalutenaWarpGroundInitial"
+  },
+  "air_usp": {
+   "routine": "ndsP4PalutenaWarpAirInitial"
+  },
+  "ground_dsp": {
+   "routine": "ndsP4PalutenaCounterGroundInitial"
+  },
+  "air_dsp": {
+   "routine": "ndsP4PalutenaCounterAirInitial"
+  },
+  "str_winner_ptr": {
+   "name": "PALUTENA"
+  }
  }
 }

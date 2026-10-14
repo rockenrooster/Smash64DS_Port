@@ -479,6 +479,28 @@ ROLES = {
     ("link", "roy"): {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 10, 9: 11, 10: 12, 11: 13,
                       15: 14, 18: 8, 19: 9, 21: 21, 22: 22, 23: 23, 24: 24, 25: 25, 26: 26, 27: 27,
                       28: 28, 29: 29, 30: 30},
+    # Peach's tree (Palutena's): the left arm 3-6, the neck 7 and head 8, the
+    # right arm 10-13 with the held point 14 (her staff), the legs 15-19 and
+    # 20-24, the dress 25/26 (never driven: the look does not draw it).
+    ("mario", "peach"): {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 10, 10: 11, 11: 12,
+                         12: 13, 13: 14, 14: 15, 15: 16, 16: 17, 17: 18, 18: 19, 19: 20, 20: 21, 21: 22,
+                         22: 23, 23: 24},
+    # Ness's: Mario's layout with a second hip frame a side (19, 25: unmapped).
+    ("ness", "peach"): {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 10, 10: 11, 11: 12,
+                        12: 13, 13: 14, 14: 15, 15: 16, 16: 17, 17: 18, 18: 19, 20: 20, 21: 21, 22: 22,
+                        23: 23, 24: 24},
+    ("captain", "peach"): {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 10, 10: 11, 11: 12,
+                           12: 13, 13: 14, 15: 15, 16: 16, 17: 17, 18: 18, 19: 19, 20: 20, 21: 21,
+                           22: 22, 23: 23, 24: 24},
+    ("link", "peach"): {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 8: 10, 9: 11, 10: 12, 11: 13, 15: 14,
+                        18: 7, 19: 8, 21: 15, 22: 16, 23: 17, 24: 18, 25: 19, 26: 20, 27: 21, 28: 22,
+                        29: 23, 30: 24},
+    # Marth's: the left arm 3-6 (7 its held point), neck 8 and head 9, the
+    # right arm 10-13 with the sword 14, the cape 15-18 and pads 19/20
+    # (unmapped), the legs 21-25 and 26-30.
+    ("marth", "peach"): {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 8: 7, 9: 8, 10: 10, 11: 11, 12: 12,
+                         13: 13, 14: 14, 21: 15, 22: 16, 23: 17, 24: 18, 25: 19, 26: 20, 27: 21, 28: 22,
+                         29: 23, 30: 24},
 }
 
 
@@ -486,7 +508,9 @@ ROLES = {
 # staged reference ROM (resolved.json descriptors; Captain is Roy's setup
 # parent, so Roy's parent_descriptor names him).
 SKELETONS = {"captain": (236, 332, 1160), "roy": (0x142A, 0x142B, 1236),
-             "mario": (0xCB, 0x128, 1064), "link": (0xE1, 0x144, 0x708)}
+             "mario": (0xCB, 0x128, 1064), "link": (0xE1, 0x144, 0x708),
+             "ness": (0xEF, 0x14F, 0x5BC), "marth": (0xCCA, 0xCCB, 0x524),
+             "peach": (0x136E, 0x136F, 0x59C)}
 
 
 def skeleton(rom, name: str, detail: str = "high") -> Skeleton:

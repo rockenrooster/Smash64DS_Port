@@ -1,0 +1,9 @@
+{
+ "comment": "Explosive Flame in the air: Ness's air PK Fire on Peach's tree, at 0.75 of its length.",
+ "source": "0x70d",
+ "retarget": {
+  "from": "ness",
+  "to": "peach"
+ },
+ "retime": 0.75
+}

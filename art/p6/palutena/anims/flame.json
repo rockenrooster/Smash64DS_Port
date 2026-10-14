@@ -1,0 +1,9 @@
+{
+ "comment": "Explosive Flame (card: new, the staff pointed ahead): Ness's PK Fire on Peach's tree, at 0.75 of its length.",
+ "source": "0x70c",
+ "retarget": {
+  "from": "ness",
+  "to": "peach"
+ },
+ "retime": 0.75
+}

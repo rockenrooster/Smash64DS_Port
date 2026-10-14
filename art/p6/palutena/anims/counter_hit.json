@@ -1,0 +1,8 @@
+{
+ "comment": "The counterattack: Marth's counter strike on Peach's tree (the staff swings).",
+ "source": "0xd71",
+ "retarget": {
+  "from": "marth",
+  "to": "peach"
+ }
+}

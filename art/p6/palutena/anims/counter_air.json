@@ -1,0 +1,8 @@
+{
+ "comment": "Counter / Reflect in the air: Marth's air counter on Peach's tree.",
+ "source": "0xd72",
+ "retarget": {
+  "from": "marth",
+  "to": "peach"
+ }
+}

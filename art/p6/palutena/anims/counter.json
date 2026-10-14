@@ -1,0 +1,8 @@
+{
+ "comment": "Counter / Reflect (card: new, the stance): Marth's counter on Peach's tree; the shield arm comes up.",
+ "source": "0xd70",
+ "retarget": {
+  "from": "marth",
+  "to": "peach"
+ }
+}

@@ -1,0 +1,8 @@
+{
+ "comment": "The counterattack in the air: Marth's air counter strike on Peach's tree.",
+ "source": "0xd73",
+ "retarget": {
+  "from": "marth",
+  "to": "peach"
+ }
+}
