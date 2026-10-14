@@ -93,7 +93,8 @@ def content_rom(staging: Path, export: Path, resolved: dict | None = None):
         resolved = json.loads((export / "resolved.json").read_text(encoding="utf-8"))
     authored = resolved.get("authored") or {}
     files = authored.get("files") or {}
-    ids = [new for _old, new in files.values()] + list((authored.get("anims") or {}).values())
+    ids = ([new for _old, new in files.values()] + list((authored.get("anims") or {}).values()) +
+           list(authored.get("skirt_clips") or []))
     ram = authored.get("ram")
     copies = authored.get("copies") or {}
     if not (ids or ram or copies):

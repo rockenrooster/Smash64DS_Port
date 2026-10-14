@@ -41,7 +41,7 @@ SPEC_IDENTITY = {"schema", "content", "comment"}
 SPEC_SCHEMA = "p6-spec-v1"
 # Spec keys this author applies.
 SPEC_APPLIED = {"files", "motions", "menu_motions", "statuses", "attributes", "kind_tables", "cpu",
-                "colanims", "sword_trails"}
+                "colanims", "sword_trails", "skirt", "pose"}
 # "files": the content's own files by role: the descriptor slot each
 # replaces. Its main and model (model_writer.py); a special file of its own
 # (p6_gate.py: Palutena's entry gate in special 2), which only the content's
@@ -114,6 +114,7 @@ def author(base_export: Path, name: str, spec_path: Path | None, out: Path,
         rom = remix_rom.Rom(staging / "ssb64asm.z64")
     author_motions(resolved, events, spec.get("motions") or {}, name, out, rom,
                    spec.get("menu_motions") or {})
+    author_skirt(resolved, events, spec.get("skirt"), name, out, staging, spec.get("pose") or [])
     author_statuses(resolved, spec.get("statuses") or {})
     author_attributes(resolved, spec.get("attributes") or {})
     own_main(resolved, name)
@@ -483,6 +484,107 @@ def author_motions(resolved: dict, events: dict, motions: dict, name: str, out: 
         (out / "authored_ram.bin").write_bytes(bytes(ram))
         authored["ram"] = {"base": AUTHORED_RAM, "file": "authored_ram.bin", "bytes": len(ram),
                            "sha256": hashlib.sha256(bytes(ram)).hexdigest()}
+
+
+def author_skirt(resolved: dict, events: dict, skirt: dict | None, name: str, out: Path,
+                 staging: Path | None, pose: list | None = None) -> None:
+    """Every clip the content plays, keyed for its skirt (spec "skirt":
+    {"scene": its look's high scene}): Palutena's skirt hangs from Peach's
+    dress rows (look_skirt.py), and skirt_keys.py keys rows 25 and 26 from
+    her legs in each clip, so in every motion the dress holds her legs (the
+    owner's requirement, playtest 2026-10-14). A clip of the content's own
+    window is rewritten under its id; a base clip (Peach's) is copied under
+    the next id of the window, once per (clip, flags), and leaves the
+    closure when nothing plays it any more.
+
+    Spec "pose" (a list of {"motions": [...], "ops": [...]}): before the
+    skirt's keys, those motions' clips take pose_ops.py operations (a
+    smaller stride, the staff held up: Peach's clips made hers, the owner's
+    3DS references, 2026-10-14)."""
+    if not skirt:
+        return
+    if staging is None:
+        raise AuthorError("spec skirt needs the staged ROM (--staging)")
+    import anim as A
+    import coverage
+    import pose_ops
+    import skirt_keys
+    scene = json.loads((REPO / skirt["scene"]).read_text(encoding="utf-8"))
+    window = CONTENT_WINDOW[name]
+    fighter = coverage.load(staging, out, resolved, events)
+    sk = skirt_keys.Skirt(fighter, scene)
+    o2r = out / "o2r"
+    closure = {r["file_id"]: r for r in resolved["file_closure"]}
+    next_id = max([f for f in closure if window + ANIM_FIRST <= f < window + 0x100] +
+                  [window + ANIM_FIRST - 1]) + 1
+    made: dict[tuple, int] = {}
+    replaced = set()
+    authored = resolved["authored"]
+    group_of: dict[int, int] = {}
+    for g, group in enumerate(pose or ()):
+        for index in group["motions"]:
+            if int(index) in group_of:
+                raise AuthorError(f"spec pose: motion {index} in two groups")
+            group_of[int(index)] = g
+    for menu, rows in ((False, resolved["motions"]), (True, resolved["menu_motions"])):
+        for row in rows:
+            fid = row["anim_file_id"]
+            if not fid:
+                continue
+            group = None if menu else group_of.get(row["index"])
+            key = (fid, row["anim_flags"], group)
+            if key not in made:
+                blob = fighter.rom.o2r(fid)
+                clip = A.decode(blob)
+                lead = coverage.first_slot(row["anim_flags"])
+                for op in (pose[group]["ops"] if group is not None else ()):
+                    kind = op["op"]
+                    if kind == "blend":
+                        toward = op.get("toward", "rest")
+                        other = (A.decode(fighter.rom.o2r(int(str(toward["clip"]), 0)))
+                                 if isinstance(toward, dict) and "clip" in toward else None)
+                        clip = pose_ops.blend(clip, fighter.skel, [int(r) for r in op["rows"]],
+                                              float(op["amount"]), toward, lead, toward_clip=other)
+                    elif kind == "turn":
+                        clip = pose_ops.turn(clip, fighter.skel, int(op["row"]), op["deg"],
+                                             op.get("frames"), int(op.get("ease", 0)), lead)
+                    else:
+                        raise AuthorError(f"spec pose: op {kind!r}")
+                keyed = sk.apply(clip, row["anim_flags"])
+                new = bytearray(A.encode(keyed, blob))
+                own = window <= fid < window + 0x100 and group is None and not any(
+                    k[0] == fid for k in made)
+                nid = fid if own else next_id
+                if not own:
+                    next_id += 1
+                    if nid >= window + 0x100:
+                        raise AuthorError(f"{name}: the skirt's clips overflow the file window")
+                struct.pack_into("<I", new, 0x40, nid)
+                (o2r / f"{nid:04x}").write_bytes(bytes(new))
+                n = struct.unpack_from("<I", new, 0x48)[0]
+                size = struct.unpack_from("<I", new, 0x4C + 2 * n)[0]
+                if nid in closure:
+                    closure[nid]["bytes"] = size
+                else:
+                    entry = {"file_id": nid, "vanilla_id": False, "bytes": size, "externs": []}
+                    resolved["file_closure"].append(entry)
+                    closure[nid] = entry
+                made[key] = nid
+            if made[key] != fid:
+                replaced.add(fid)
+                row["anim_file_id"] = made[key]
+                row["inherited"]["anim_file_id"] = False
+    used = {m["anim_file_id"] for m in resolved["motions"] + resolved["menu_motions"]}
+    dropped = sorted(f for f in replaced if f not in used)
+    resolved["file_closure"] = [r for r in resolved["file_closure"] if r["file_id"] not in dropped]
+    # The generator and coverage.py read the content's own clips by these
+    # ids (an OverlayRom over the image).
+    authored["skirt_clips"] = sorted(set(made.values()) - set(authored.get("anims", {}).values()))
+    if pose:
+        authored["pose_groups"] = [{"motions": g["motions"], "ops": len(g["ops"])} for g in pose]
+    authored["skirt"] = {"scene": skirt["scene"], "clips": len(made),
+                         "scene_sha256": sha256(REPO / skirt["scene"]),
+                         "dropped": len(dropped)}
 
 
 def author_statuses(resolved: dict, statuses: dict) -> None:

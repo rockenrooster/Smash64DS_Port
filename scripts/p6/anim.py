@@ -619,11 +619,21 @@ def build(recipe: dict, rom) -> bytes:
     travel slot), retimed ("retime": the length factor), turned ("spin": a
     list of {"row", "axis", "degrees", "frames": [first, last]}, spin(); a
     clip not retargeted names its tree in "skeleton") and given an empty
-    TransN slot ("transn_slot": true, with_transn_slot); the O2R
-    container keeps the source's header (p6_author.py gives it its own
-    id)."""
-    blob = rom.o2r(int(str(recipe["source"]), 0))
-    clip = decode(blob)
+    TransN slot ("transn_slot": true, with_transn_slot); posed
+    ("ops": a list of pose_ops.py operations, in order, on the clip's own
+    tree -- "blend" rows toward the bind pose or a frame of another clip,
+    "turn" a row about the model's axes; or, with no "source", "keys": a
+    clip from key poses); the O2R container keeps the source's header
+    (p6_author.py gives it its own id; a keyed clip takes "header": a
+    clip of the same tree's id for its header)."""
+    import pose_ops
+    if "keys" in recipe:
+        blob = rom.o2r(int(str(recipe["header"]), 0))
+        skel = skeleton(rom, recipe["skeleton"])
+        clip = pose_ops.keys(skel, recipe["keys"], len(skel.parents) - 1)
+    else:
+        blob = rom.o2r(int(str(recipe["source"]), 0))
+        clip = decode(blob)
     rt = recipe.get("retarget")
     if rt:
         src, dst = skeleton(rom, rt["from"]), skeleton(rom, rt["to"])
@@ -645,6 +655,21 @@ def build(recipe: dict, rom) -> bytes:
         rest = skeleton(rom, name).rotate[row]
         clip = spin(clip, row + int(sp.get("first_slot", 0)), rest, sp["axis"], float(sp["degrees"]),
                     int(sp["frames"][0]), int(sp["frames"][1]))
+    if recipe.get("ops"):
+        tree = skeleton(rom, rt["to"] if rt else recipe["skeleton"])
+        for op in recipe["ops"]:
+            kind = op["op"]
+            if kind == "blend":
+                toward = op.get("toward", "rest")
+                other = (decode(rom.o2r(int(str(toward["clip"]), 0)))
+                         if isinstance(toward, dict) and "clip" in toward else None)
+                clip = pose_ops.blend(clip, tree, [int(r) for r in op["rows"]], float(op["amount"]),
+                                      toward, int(op.get("first_slot", 0)), toward_clip=other)
+            elif kind == "turn":
+                clip = pose_ops.turn(clip, tree, int(op["row"]), op["deg"], op.get("frames"),
+                                     int(op.get("ease", 0)), int(op.get("first_slot", 0)))
+            else:
+                raise ValueError(f"recipe op {kind!r}")
     if recipe.get("transn_slot"):
         clip = with_transn_slot(clip)
     return encode(clip, blob, int(recipe.get("eps", ANIM_EPS)))

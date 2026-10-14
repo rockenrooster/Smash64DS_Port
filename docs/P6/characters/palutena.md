@@ -68,14 +68,49 @@ Both candidates must meet every line below.
 ## Move card (approved 2026-10-13, P1)
 
 **Owner requirement for her animations (playtest 2026-10-14).** In EVERY
-animation the dress surrounds her legs (except at the slit). Her dress
-rides her pelvis and waist rows (joints 1-2) and her legs their own rows,
-so a borrowed clip's kick or wide stance puts a leg through the cloth; the
-clips are placeholders until her own are authored. The plan for that step:
-bind the skirt's hem to Peach's dress rows (25/26, which her look leaves
-undrawn and no borrowed clip drives), key them from the thighs in every clip
-(`anim.py`), and check every motion's frames for leg vertices outside the
-dress (a per-clip report, all clips clean before the step closes).
+animation the dress surrounds her legs (except at the slit). Her skirt was a
+cone of long triangles from the bodice's waist ring (row 2) to a hem on the
+pelvis (row 1), so a leg that swung away from the pelvis left it
+(`scripts/p6/dress_check.py`: 205 of 218 motions put a leg outside, many by
+more than 100 units).
+
+**The skirt on Peach's dress rows (2026-10-14).** Peach's own gown hangs from
+her dress rows (row 25 its upper band, row 26 its hem, drawn by row 26 from
+row 25's seam load) and her clips key both. `scripts/p6/look_skirt.py`
+remeshes Palutena's skirt the same way: a short upper band from the waist
+ring to a ring at y 288 (row 1), drawn by the bodice as before, and the lower
+band from a copy of that ring on row 25 (raised 6 and drawn in 4% so a turned
+ring stays inside the upper band) to the hem on row 26, open at the slit (its
+left front, the +x leg). Row 25's origin moves up to her hip joints' height
+(y 280) so the whole thigh hangs inside the band that turns. The seam costs
+two of the owner's GX cross slots (15, 16-30), and her look used 14: each
+foot takes its own copy of the ankle ring (its origin is the ankle, where the
+ring sits) and gives its slot back. (Moving the thighs' top rings onto the
+thigh rows instead was tried and reverted: those rows' origins are the
+knees, so the thigh tops swung away from the pelvis; owner, 2026-10-14.)
+Every clip she plays is keyed for it (`p6_author.py` spec "skirt",
+`scripts/p6/skirt_keys.py`): row 25 turns its band toward the middle of her
+knees and ankles (a tenth of the way toward straight down, at most 75
+degrees), and row 26 scales the hem as an ellipse wide enough to hold the
+legs, up to 1.35x across and 1.75x front to back (a dress, not a bell). Base
+clips are copied into her window keyed (151 of Peach's), her own are rewritten
+in place. Peach's gown keys do not fit her slim skirt and are replaced.
+
+Her locomotion is Peach's made hers (spec "pose", `scripts/p6/pose_ops.py`,
+applied before the skirt's keys; the owner's 3DS references, 2026-10-14):
+the walks with a smaller stride (legs 35% of the way to standing) and the
+staff held up as in her wait; the dash, run, run brake and run turn with a
+smaller stride (40%) and the body leaning into the run; the turn, knee
+bend, jumps, falls and landings with the legs closer (35%); the crouch with
+the knees together (45%). Dress check of those motions: walks, dash, falls
+and crouch clean, the run within 10 units, the jumps within 40.
+
+What is left outside: legs flung far out in the borrowed attack clips
+(Marth's lunges, the borrowed kicks) and Peach's acrobatics (ledge, tumble).
+Those attacks are placeholders: her own (the owner's 3DS references: jab,
+tilts, smashes, dash attack, Warp) keep her legs under the dress, as hers
+do. `pose_ops.py` also takes "turn" (a row about the model's axes) and key
+poses ("keys"), and anim.py recipes take its "ops", for authoring them.
 
 **Authored 2026-10-13 (P3, P4).** Specials as below, in
 `src/port/nds_p4_palutena.c` (her own code row: Peach's float, parasol and

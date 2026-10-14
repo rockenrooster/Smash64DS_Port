@@ -16,11 +16,27 @@
    "from": "builds/p6-art/palutena/look/1b03"
   }
  },
+ "skirt": {
+  "scene": "builds/p6-art/palutena/3ds2ds/scene_high/scene.json",
+  "comment": "Owner playtest 2026-10-14: in every animation the dress surrounds her legs, except at the slit. Her skirt hangs from Peach's dress rows (scripts/p6/look_skirt.py); every clip she plays gets rows 25 and 26 keyed from her legs (scripts/p6/skirt_keys.py)."
+ },
  "menu_motions": {
-  "1": {"comment": "Win1: Peach's clip, her wings out", "script": "scripts/p6/palutena/motions/win1.ms"},
-  "2": {"comment": "Win2: Peach's clip, her halo above her", "script": "scripts/p6/palutena/motions/win2.ms"},
-  "3": {"comment": "Win3: Peach's clip, wings and halo", "script": "scripts/p6/palutena/motions/win3.ms"},
-  "4": {"comment": "Win4, the select screen's Selected pose: Peach's third clip, her halo", "script": "scripts/p6/palutena/motions/win4.ms"}
+  "1": {
+   "comment": "Win1: Peach's clip, her wings out",
+   "script": "scripts/p6/palutena/motions/win1.ms"
+  },
+  "2": {
+   "comment": "Win2: Peach's clip, her halo above her",
+   "script": "scripts/p6/palutena/motions/win2.ms"
+  },
+  "3": {
+   "comment": "Win3: Peach's clip, wings and halo",
+   "script": "scripts/p6/palutena/motions/win3.ms"
+  },
+  "4": {
+   "comment": "Win4, the select screen's Selected pose: Peach's third clip, her halo",
+   "script": "scripts/p6/palutena/motions/win4.ms"
+  }
  },
  "motions": {
   "164": {
@@ -340,11 +356,203 @@
   }
  },
  "cpu": {
-  "drop": ["USPG", "USPA"],
+  "drop": [
+   "USPG",
+   "USPA"
+  ],
   "measure": {
-   "NSPG": {"motion": 219, "offsets_z": [600, 1000, 1400]},
-   "NSPA": {"motion": 220, "offsets_z": [600, 1000, 1400]},
-   "DASH_ATTACK": {"travel": "run"}
+   "NSPG": {
+    "motion": 219,
+    "offsets_z": [
+     600,
+     1000,
+     1400
+    ]
+   },
+   "NSPA": {
+    "motion": 220,
+    "offsets_z": [
+     600,
+     1000,
+     1400
+    ]
+   },
+   "DASH_ATTACK": {
+    "travel": "run"
+   }
   }
- }
+ },
+ "pose": [
+  {
+   "comment": "Walks (WalkSlow, WalkMiddle, WalkFast, WalkEnd): Peach's with a smaller stride under the dress and the staff held up as in her wait (owner's 3DS walking reference, 2026-10-14).",
+   "motions": [
+    5,
+    6,
+    7,
+    8
+   ],
+   "ops": [
+    {
+     "op": "blend",
+     "rows": [
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24
+     ],
+     "amount": 0.35
+    },
+    {
+     "op": "blend",
+     "rows": [
+      10,
+      11,
+      12,
+      13,
+      14
+     ],
+     "amount": 0.75,
+     "toward": {
+      "clip": "0x1371",
+      "frame": 0
+     }
+    }
+   ]
+  },
+  {
+   "comment": "Dash, Run, RunBrake, TurnRun: Peach's with a smaller stride and the body leaning into the run (the 3DS running reference).",
+   "motions": [
+    9,
+    10,
+    11,
+    13
+   ],
+   "ops": [
+    {
+     "op": "blend",
+     "rows": [
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24
+     ],
+     "amount": 0.4
+    },
+    {
+     "op": "turn",
+     "row": 2,
+     "deg": [
+      12,
+      0,
+      0
+     ]
+    }
+   ]
+  },
+  {
+   "comment": "Turn, KneeBend, jumps, falls and landings: Peach's with the legs closer together under the dress (the 3DS jumps reference).",
+   "motions": [
+    12,
+    14,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    25,
+    26
+   ],
+   "ops": [
+    {
+     "op": "blend",
+     "rows": [
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24
+     ],
+     "amount": 0.35
+    }
+   ]
+  },
+  {
+   "comment": "Squat, SquatWait, SquatRv: Peach's crouch with the knees together under the dress.",
+   "motions": [
+    22,
+    23,
+    24
+   ],
+   "ops": [
+    {
+     "op": "blend",
+     "rows": [
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24
+     ],
+     "amount": 0.45
+    }
+   ]
+  },
+  {
+   "comment": "Ground attacks on borrowed clips (jabs, forward and up tilt, smashes): their stance narrowed under the dress (legs 60% of the way to standing) until her own clips from the owner's 3DS references replace them. The down tilt crouches and keeps its stance.",
+   "motions": [
+    165,
+    166,
+    170,
+    174,
+    177,
+    178,
+    179,
+    180,
+    181,
+    182,
+    183
+   ],
+   "ops": [
+    {
+     "op": "blend",
+     "rows": [
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24
+     ],
+     "amount": 0.6
+    }
+   ]
+  }
+ ]
 }
