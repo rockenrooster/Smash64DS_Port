@@ -137,6 +137,20 @@ Selected pose (row 4, Peach's third clip) shows the halo and a line once it
 settles. Results name: "PALUTENA" at x 20, scale 0.7, "WINS!" at x 185
 (Remix's Ganondorf and Marth layout; Peach's left "WINS!" over the name).
 
+**Grab and throws (2026-10-14).** Her grab and throws keep Peach's clips,
+timing and throw parameters, so her victims' thrown rows (Peach's, Fox's
+style) still pair with them; they are made telekinetic by script: the grab's
+box reaches 20% farther (its far edge 504 to 604 units ahead) with a psionic
+flash where it closes (`motions/catch.ms`); both throws glow psionic at her
+hands while she holds the victim and play her throw sound at the release
+(`motions/throwf.ms`, `motions/throwb.ms`; Peach's releases at frames 23 and
+26). New clips (arms out, the inverted arabesque) were tried as Ness's PK
+throws retargeted onto her: his crouched stance read hunched on her, and his
+victims' thrown rows (ThrownCommon) differ from Peach's, so they wait for a
+better source. The idle needs no new clip: Peach's wait with the staff hold
+already stands the staff upright. Lab: four Palutena CPUs over 2,400 frames
+grab 14 times, throw forward twice and back once; 0 native failures.
+
 Motions follow Ultimate's moves (SmashWiki's Palutena (SSBU) descriptions);
 SSB64 has no pummel, no up or down throw and no smash charge. Numbers are lab
 defaults on SSB64's scale, tuned against Peach.

@@ -37,6 +37,18 @@
    "anim": "builds/p6-art/palutena/anims/entry.o2r",
    "script": "scripts/p6/palutena/motions/entry.ms"
   },
+  "146": {
+   "comment": "Catch: grab (card: telekinetic clutch), Peach's with the box 20% farther and a psionic flash",
+   "script": "scripts/p6/palutena/motions/catch.ms"
+  },
+  "148": {
+   "comment": "ThrowF: Peach's throw made telekinetic (psionic glows at her hands, her throw sound)",
+   "script": "scripts/p6/palutena/motions/throwf.ms"
+  },
+  "149": {
+   "comment": "ThrowB: Peach's back throw made telekinetic, as ThrowF",
+   "script": "scripts/p6/palutena/motions/throwb.ms"
+  },
   "165": {
    "comment": "Attack11: jab 1 (card: a staff thrust): Marth's jab 1",
    "script": "scripts/p6/palutena/motions/jab1.ms",
