@@ -270,7 +270,9 @@ def assemble_block(lines: list[str], ram: bytearray, events: dict, label: str,
     """Script text (mscript.py, one command a line) assembled at the end of
     the authored RAM window (remix_rom.AUTHORED_RAM) and listed in
     events.json as a block the generator copies like Remix's own; pointer
-    targets name Remix blocks (ram:/file:) or NULL. Its address and key."""
+    targets name Remix blocks (ram:/file:), NULL, or `self` (the block's own
+    start: a looping script, PauseScript then `Goto -> self`, as Fox's rapid
+    jab loop). Its address and key."""
     import mscript
     from remix_rom import AUTHORED_RAM
     start = AUTHORED_RAM + len(ram)
@@ -278,7 +280,9 @@ def assemble_block(lines: list[str], ram: bytearray, events: dict, label: str,
     cmds, edges, exit_ = [], [], None
     for line in lines:
         words, pointers = mscript.assemble(_cues(line))
-        for k, target in pointers.items():
+        for k, target in list(pointers.items()):
+            if target == "self":
+                pointers[k] = target = block_key
             # A Remix RAM target is written as its address, as Remix's own
             # blocks hold it, so the generator's round trip (which decodes
             # the authored RAM) follows the same edge as the copied block.
@@ -537,9 +541,12 @@ def author_skirt(resolved: dict, events: dict, skirt: dict | None, name: str, ou
                 blob = fighter.rom.o2r(fid)
                 clip = A.decode(blob)
                 lead = coverage.first_slot(row["anim_flags"])
+                trail = 0.0
                 for op in (pose[group]["ops"] if group is not None else ()):
                     kind = op["op"]
-                    if kind == "blend":
+                    if kind == "skirt":
+                        trail = float(op.get("trail", 0.0))
+                    elif kind == "blend":
                         toward = op.get("toward", "rest")
                         other = (A.decode(fighter.rom.o2r(int(str(toward["clip"]), 0)))
                                  if isinstance(toward, dict) and "clip" in toward else None)
@@ -550,7 +557,7 @@ def author_skirt(resolved: dict, events: dict, skirt: dict | None, name: str, ou
                                              op.get("frames"), int(op.get("ease", 0)), lead)
                     else:
                         raise AuthorError(f"spec pose: op {kind!r}")
-                keyed = sk.apply(clip, row["anim_flags"])
+                keyed = sk.apply(clip, row["anim_flags"], trail)
                 new = bytearray(A.encode(keyed, blob))
                 own = window <= fid < window + 0x100 and group is None and not any(
                     k[0] == fid for k in made)

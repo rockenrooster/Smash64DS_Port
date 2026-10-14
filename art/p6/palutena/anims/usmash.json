@@ -1,10 +1,10 @@
 {
- "comment": "Palutena's up smash (AttackHi4; the owner's 3DS reference, 2026-10-14): the staff held level ahead at her hip as she gathers the light (frame 8), raised straight overhead as the pillar rises before her (12, held to 30), lowered, back to her wait.",
+ "comment": "Palutena's up smash (AttackHi4; owner p6i: as long as the 3DS's; the owner's reference at 30 fps): the staff held low ahead as she gathers the light (frame 8), thrust straight up overhead as the pillar rises before her (12), held stretched up while it stands (to 38), lowered (46), back to her wait.",
  "keyposes": {
   "skeleton": "peach",
   "scene": "builds/p6-art/palutena/3ds2ds/scene_high/scene.json",
   "header": "0x1371",
-  "length": 50,
+  "length": 54,
   "first_slot": 0,
   "base": {
    "clip": "0x1371",
@@ -19,19 +19,24 @@
     "trans": {
      "1": [
       0,
-      -15,
-      5
+      -26,
+      8
      ]
     },
-    "turns": {
-     "2": [
-      8,
+    "orient": {
+     "1": [
       10,
+      -25,
+      0
+     ],
+     "2": [
+      16,
+      -30,
       0
      ],
      "7": [
       -6,
-      -10,
+      -20,
       0
      ]
     },
@@ -39,7 +44,7 @@
      {
       "row": 11,
       "to": [
-       -0.12,
+       -0.15,
        -0.9,
        0.4
       ]
@@ -48,8 +53,8 @@
       "row": 12,
       "to": [
        -0.02,
-       -0.2,
-       1
+       -0.3,
+       0.95
       ]
      },
      {
@@ -61,8 +66,8 @@
       ],
       "to": [
        0,
-       -0.05,
-       1
+       -0.15,
+       0.99
       ],
       "twist": {
        "axis": [
@@ -81,7 +86,7 @@
       "row": 4,
       "to": [
        0.3,
-       -0.7,
+       -0.75,
        0.6
       ]
      },
@@ -89,8 +94,8 @@
       "row": 5,
       "to": [
        -0.3,
-       -0.1,
-       0.95
+       -0.2,
+       0.93
       ]
      }
     ],
@@ -118,7 +123,7 @@
        "offset": [
         0,
         0,
-        20
+        25
        ]
       },
       "pole": [
@@ -135,19 +140,24 @@
     "trans": {
      "1": [
       0,
-      6,
+      10,
       0
      ]
     },
-    "turns": {
+    "orient": {
+     "1": [
+      -4,
+      -25,
+      0
+     ],
      "2": [
-      -6,
-      -5,
+      -10,
+      -30,
       0
      ],
      "7": [
-      -10,
-      5,
+      -18,
+      -20,
       0
      ]
     },
@@ -157,7 +167,7 @@
       "to": [
        -0.12,
        1,
-       0.12
+       0.05
       ]
      },
      {
@@ -165,7 +175,7 @@
       "to": [
        -0.03,
        1,
-       0.06
+       0.02
       ]
      },
      {
@@ -178,7 +188,7 @@
       "to": [
        0,
        1,
-       0.04
+       0.03
       ],
       "twist": {
        "axis": [
@@ -196,17 +206,17 @@
      {
       "row": 4,
       "to": [
-       0.3,
-       -0.55,
-       -0.8
+       0.35,
+       -0.6,
+       -0.72
       ]
      },
      {
       "row": 5,
       "to": [
-       0.15,
-       -0.3,
-       -0.95
+       0.25,
+       -0.35,
+       -0.9
       ]
      }
     ],
@@ -234,7 +244,7 @@
        "offset": [
         0,
         0,
-        20
+        25
        ]
       },
       "pole": [
@@ -243,11 +253,12 @@
        1
       ]
      }
-    ]
+    ],
+    "hold": true
    },
    {
-    "frame": 30,
-    "ease": "smooth",
+    "frame": 38,
+    "ease": "linear",
     "trans": {
      "1": [
       0,
@@ -255,15 +266,20 @@
       0
      ]
     },
-    "turns": {
+    "orient": {
+     "1": [
+      -3,
+      -25,
+      0
+     ],
      "2": [
-      -6,
-      -5,
+      -7,
+      -30,
       0
      ],
      "7": [
-      -10,
-      5,
+      -14,
+      -20,
       0
      ]
     },
@@ -273,7 +289,7 @@
       "to": [
        -0.12,
        1,
-       0.12
+       0.05
       ]
      },
      {
@@ -281,7 +297,7 @@
       "to": [
        -0.03,
        1,
-       0.06
+       0.02
       ]
      },
      {
@@ -294,7 +310,7 @@
       "to": [
        0,
        1,
-       0.04
+       0.03
       ],
       "twist": {
        "axis": [
@@ -312,17 +328,17 @@
      {
       "row": 4,
       "to": [
-       0.3,
-       -0.55,
-       -0.8
+       0.35,
+       -0.6,
+       -0.72
       ]
      },
      {
       "row": 5,
       "to": [
-       0.15,
-       -0.3,
-       -0.95
+       0.25,
+       -0.35,
+       -0.9
       ]
      }
     ],
@@ -350,7 +366,7 @@
        "offset": [
         0,
         0,
-        20
+        25
        ]
       },
       "pole": [
@@ -359,14 +375,15 @@
        1
       ]
      }
-    ]
+    ],
+    "hold": true
    },
    {
-    "frame": 40,
+    "frame": 46,
     "trans": {
      "1": [
       0,
-      -5,
+      -6,
       0
      ]
     },
@@ -383,8 +400,8 @@
       "row": 12,
       "to": [
        -0.1,
-       0.2,
-       1
+       0.25,
+       0.96
       ]
      },
      {
@@ -449,8 +466,9 @@
     ]
    },
    {
-    "frame": 50
+    "frame": 54
    }
-  ]
+  ],
+  "interp": "spline"
  }
 }

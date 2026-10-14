@@ -88,7 +88,10 @@ extern uintptr_t llITCommonDataFFlowerFlameWeaponAttributes;
  * fast-forwards its script there (ftMainSetStatus ->
  * ftMainPlayAnimEventsForward), setting flag2 again: a cast makes one fire
  * (status_vars word 1), and no fire is made while one of the fighter's own
- * is younger than PAL_FLAME_COOLDOWN tics. */
+ * is younger than PAL_FLAME_COOLDOWN tics. Owner p6i: one more double cast,
+ * its trigger unknown: no fire is made while one of hers is burning at all
+ * (a fire lives PAL_FLAME_BLAST_AT + PAL_FLAME_BLAST_TICS tics; her cast is
+ * longer than that, so two casts never overlap). */
 #define PAL_FLAME_NEAR 450.0F
 #define PAL_FLAME_MID 750.0F
 #define PAL_FLAME_FAR 1610.0F
@@ -106,7 +109,6 @@ extern uintptr_t llITCommonDataFFlowerFlameWeaponAttributes;
 #define PAL_FLAME_BLAST_ANGLE 361
 #define PAL_FLAME_BLAST_KNOCKBACK_SCALE 95
 #define PAL_FLAME_BLAST_KNOCKBACK_BASE 40
-#define PAL_FLAME_COOLDOWN 15
 /* In the air she nearly hangs while casting. */
 #define PAL_FLAME_AIR_FALL_MAX 12.0F
 
@@ -280,8 +282,7 @@ static WPDesc sNdsP4PalutenaFlameDesc = {
     ndsP4PalutenaFlameProcUpdate, NULL, NULL, NULL, NULL, NULL, NULL, NULL
 };
 
-/* Whether one of the fighter's own fires is younger than PAL_FLAME_COOLDOWN
- * tics. */
+/* Whether one of the fighter's own fires is burning. */
 static sb32 ndsP4PalutenaFlameCooling(GObj *fighter_gobj)
 {
     GObj *weapon_gobj;
@@ -292,7 +293,7 @@ static sb32 ndsP4PalutenaFlameCooling(GObj *fighter_gobj)
         WPStruct *wp = wpGetStruct(weapon_gobj);
 
         if ((wp != NULL) && (wp->kind == NDS_P4_WP_KIND_PALUTENA_FLAME) &&
-            (wp->owner_gobj == fighter_gobj) && (ndsP4PalutenaFlameVars(wp)->tic < PAL_FLAME_COOLDOWN))
+            (wp->owner_gobj == fighter_gobj))
         {
             return TRUE;
         }
@@ -821,12 +822,14 @@ static void ndsP4PalutenaGateProcUpdate(GObj *effect_gobj)
  *
  * Owner p6h notes: 1.25x farther from her (260 -> 325; the script's
  * hitboxes with it), 1.5x the knockback, and its whoosh no longer stored
- * (ftMainPlayHitSFX stops a stored sound when a hit lands). */
+ * (ftMainPlayHitSFX stops a stored sound when a hit lands). Owner p6i: as
+ * long as the 3DS's (16 of its 30 fps frames, 32 tics; 12 before): it
+ * holds to tic 26 and narrows to 32, its hitboxes up as long. */
 #define PAL_PILLAR_AHEAD 325.0F
 #define PAL_PILLAR_TOWARD_CAMERA 120.0F
 #define PAL_PILLAR_GROW 2
-#define PAL_PILLAR_FADE_AT 8
-#define PAL_PILLAR_END 12
+#define PAL_PILLAR_FADE_AT 26
+#define PAL_PILLAR_END 32
 
 static const f32 sNdsP4PalutenaPillarColumn[2][2] = {
     { 200.0F, 1250.0F },    /* attack 0: the floor to the middle */

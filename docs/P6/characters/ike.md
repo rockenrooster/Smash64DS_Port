@@ -198,6 +198,15 @@ Defaults for the new specials:
   his ground speeds are Roy's again (0.75x with the p6f rate). Eruption's
   charge clips were authored for the 0.75 rate, so they now play 1.33x the
   reference's speed.
+- **Owner playtest p6i (2026-10-14):** Eruption plays Roy's Flare Blade clips
+  again (the owner: "I would rather revert back to Roy's"; its charge sound
+  stays the loop that stops with the move). His jab combo steps forward, the
+  third strike most (about 25, 40 and 150 units: his code moves him over each
+  jab's step, `NDSP4Overrides.before_physics_map`; a held ground speed did not,
+  the floor's friction ate it in a tic). Aether: a tucked forward flip at the
+  top (knees to his chest, the blade drawn in, thrown open into the chop),
+  the descent still moving, an impact with a recoil; it and the up tilt move
+  on a spline (keyposes "interp").
 - **Counter:** Marth's window and return rule. SSB64's Appeal is ground-only,
   so the counter is too.
 

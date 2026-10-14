@@ -51,37 +51,29 @@
   },
   "214": {
    "comment": "SpecialLwStart ground (Roy's Flare Blade, his Eruption): its charge sound as the loop sound a new status stops (owner playtest 2026-10-14, p6d)",
-   "script": "scripts/p6/ike/motions/eruption_begin.ms",
-   "anim": "builds/p6-art/ike/anims/eruption_begin.o2r"
+   "script": "scripts/p6/ike/motions/eruption_begin.ms"
   },
   "215": {
-   "comment": "SpecialLwHold ground (Eruption's charge, Roy's Flare Blade row): Ike's charge stance, the 3DS reference",
-   "anim": "builds/p6-art/ike/anims/eruption_wait.o2r"
+   "comment": "SpecialLwHold ground (Eruption's charge, Roy's Flare Blade row): Roy's clip (owner p6i: Roy's again)"
   },
   "216": {
-   "comment": "SpecialLwEnd ground: Ragnell plunged into the ground (the 3DS reference's eruption)",
-   "anim": "builds/p6-art/ike/anims/eruption_end.o2r"
+   "comment": "SpecialLwEnd ground: Roy's clip (owner p6i: Roy's again)"
   },
   "217": {
-   "comment": "SpecialLwEnd at full charge: as 216",
-   "anim": "builds/p6-art/ike/anims/eruption_end.o2r"
+   "comment": "SpecialLwEnd at full charge: as 216"
   },
   "218": {
    "comment": "SpecialAirLwStart: as 214",
-   "script": "scripts/p6/ike/motions/eruption_begin.ms",
-   "anim": "builds/p6-art/ike/anims/eruption_begin.o2r"
+   "script": "scripts/p6/ike/motions/eruption_begin.ms"
   },
   "219": {
-   "comment": "SpecialAirLwHold: as 215",
-   "anim": "builds/p6-art/ike/anims/eruption_wait.o2r"
+   "comment": "SpecialAirLwHold: as 215"
   },
   "220": {
-   "comment": "SpecialAirLwEnd: as 216",
-   "anim": "builds/p6-art/ike/anims/eruption_end.o2r"
+   "comment": "SpecialAirLwEnd: as 216"
   },
   "221": {
-   "comment": "SpecialAirLwEnd at full charge: as 216",
-   "anim": "builds/p6-art/ike/anims/eruption_end.o2r"
+   "comment": "SpecialAirLwEnd at full charge: as 216"
   },
   "224": {
    "comment": "Attack13 (appended; Roy's 195 is his entry): jab 3",

@@ -1,5 +1,5 @@
 {
- "comment": "Palutena's neutral air (AttackAirN; the owner's 3DS reference, 2026-10-14): the staff held before her chest and spun twice around her (frames 4-22: the hits at 5 and 14-21), back to her fall.",
+ "comment": "Palutena's neutral air (AttackAirN; owner p6i, the owner's 3DS reference at 30 fps): the staff brought out before her (frame 3) and whirled around her twice, knees tucked (4-22: the hits at 5 and 14-21), back to her fall.",
  "keyposes": {
   "skeleton": "peach",
   "scene": "builds/p6-art/palutena/3ds2ds/scene_high/scene.json",
@@ -17,15 +17,20 @@
    {
     "frame": 3,
     "ease": "out",
-    "turns": {
+    "orient": {
      "1": [
-      -15,
-      0,
+      -10,
+      -25,
       0
      ],
      "2": [
       -12,
-      0,
+      -30,
+      0
+     ],
+     "7": [
+      -6,
+      -20,
       0
      ]
     },
@@ -33,17 +38,17 @@
      {
       "row": 11,
       "to": [
-       -0.1,
-       -0.6,
-       0.8
+       -0.3,
+       -0.2,
+       0.93
       ]
      },
      {
       "row": 12,
       "to": [
-       -0.05,
-       -0.2,
-       1
+       -0.1,
+       0.0,
+       1.0
       ]
      },
      {
@@ -75,32 +80,70 @@
       "row": 4,
       "to": [
        0.35,
-       -0.6,
-       -0.7
+       -0.55,
+       -0.76
       ]
      },
      {
       "row": 5,
       "to": [
-       0.2,
-       -0.4,
-       -0.9
+       0.25,
+       -0.3,
+       -0.92
+      ]
+     },
+     {
+      "row": 16,
+      "to": [
+       0.05,
+       -0.55,
+       0.83
+      ]
+     },
+     {
+      "row": 17,
+      "to": [
+       0,
+       -1,
+       0.05
+      ]
+     },
+     {
+      "row": 21,
+      "to": [
+       -0.05,
+       -0.5,
+       0.86
+      ]
+     },
+     {
+      "row": 22,
+      "to": [
+       0,
+       -1,
+       0.1
       ]
      }
-    ]
+    ],
+    "hold": true
    },
    {
     "frame": 22,
-    "ease": "smooth",
-    "turns": {
+    "ease": "linear",
+    "orient": {
      "1": [
-      -15,
-      0,
+      -6,
+      -25,
       0
      ],
      "2": [
-      -12,
-      0,
+      -8,
+      -30,
+      0
+     ],
+     "7": [
+      -4,
+      -20,
       0
      ]
     },
@@ -108,17 +151,17 @@
      {
       "row": 11,
       "to": [
-       -0.1,
-       -0.6,
-       0.8
+       -0.3,
+       -0.2,
+       0.93
       ]
      },
      {
       "row": 12,
       "to": [
-       -0.05,
-       -0.2,
-       1
+       -0.1,
+       0.0,
+       1.0
       ]
      },
      {
@@ -150,27 +193,61 @@
       "row": 4,
       "to": [
        0.35,
-       -0.6,
-       -0.7
+       -0.55,
+       -0.76
       ]
      },
      {
       "row": 5,
       "to": [
-       0.2,
-       -0.4,
-       -0.9
+       0.25,
+       -0.3,
+       -0.92
+      ]
+     },
+     {
+      "row": 16,
+      "to": [
+       0.05,
+       -0.55,
+       0.83
+      ]
+     },
+     {
+      "row": 17,
+      "to": [
+       0,
+       -1,
+       0.05
+      ]
+     },
+     {
+      "row": 21,
+      "to": [
+       -0.05,
+       -0.5,
+       0.86
+      ]
+     },
+     {
+      "row": 22,
+      "to": [
+       0,
+       -1,
+       0.1
       ]
      }
-    ]
+    ],
+    "hold": true
    },
    {
-    "frame": 40
+    "frame": 34
    },
    {
     "frame": 50
    }
   ],
+  "interp": "spline",
   "spin": [
    {
     "row": 14,

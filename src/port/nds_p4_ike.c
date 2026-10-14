@@ -21,6 +21,9 @@
 
 #if NDS_P4_CODE_IKE
 
+#include <macros.h>
+#include <sys/obj.h>
+
 #if !NDS_P4_CODE_ROY
 #include "nds_p4_roy.c"
 #endif
@@ -28,6 +31,7 @@
 void ndsP4RoyEntryCase(FTStruct *fp);
 
 /* scripts/p6/ike/spec.json "statuses". */
+#define IKE_STATUS_ATTACK13 0xF9
 #define IKE_STATUS_QD_CHARGE 0xFA
 #define IKE_STATUS_QD_DASH 0xFC
 #define IKE_STATUS_QD_SLASH 0xFE
@@ -489,6 +493,47 @@ void ndsP4IkeOnStatus(GObj *fighter_gobj, s32 status_id)
     }
 }
 
+/* Owner playtest p6i: the jab combo steps forward, the third strike most
+ * (the 3DS reference's lunge). Over each jab's step (its animation frames,
+ * which his 0.75 rate stretches with the clip) he moves `speed` units a tic
+ * along his facing, before the tic's physics and map, so the floor and
+ * walls take the step as any motion: about 25, 40 and 150 units. (A held
+ * ground speed did not: the floor's friction, 6.4 a tic on Dream Land,
+ * eats a jab-sized speed in a tic.) */
+typedef struct NDSP4IkeJabStep
+{
+    s32 status_id;
+    f32 from, to;
+    f32 speed;
+} NDSP4IkeJabStep;
+
+static const NDSP4IkeJabStep sNdsP4IkeJabSteps[] = {
+    { nFTCommonStatusAttack11, 1.0F, 4.0F, 6.0F },
+    { nFTCommonStatusAttack12, 2.0F, 6.0F, 7.5F },
+    { IKE_STATUS_ATTACK13, 2.0F, 7.0F, 22.0F },
+};
+
+static void ndsP4IkeBeforePhysicsMap(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    f32 frame = fighter_gobj->anim_frame;
+    s32 i;
+
+    if (fp->ga != nMPKineticsGround)
+    {
+        return;
+    }
+    for (i = 0; i < ARRAY_COUNT(sNdsP4IkeJabSteps); i++)
+    {
+        const NDSP4IkeJabStep *step = &sNdsP4IkeJabSteps[i];
+
+        if ((fp->status_id == step->status_id) && (frame >= step->from) && (frame < step->to))
+        {
+            DObjGetStruct(fighter_gobj)->translate.vec.f.x += step->speed * (f32)fp->lr;
+        }
+    }
+}
+
 /* The taunt is the counter (card). */
 static const u16 sNdsP4IkeStatusReplace[] = {
     nFTCommonStatusAppeal, IKE_STATUS_COUNTER,
@@ -499,6 +544,7 @@ const NDSP4Overrides gNdsP4IkeOverrides = {
     .entry_case = ndsP4RoyEntryCase,
     .update_damage = ndsP4IkeUpdateDamage,
     .status_replace = sNdsP4IkeStatusReplace,
+    .before_physics_map = ndsP4IkeBeforePhysicsMap,
 };
 
 #endif /* NDS_P4_CODE_IKE */

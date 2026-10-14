@@ -8,9 +8,15 @@
 # 3: a hit on her after the twinkle no longer cancels the fire, the burn
 # holds a fighter as the Fire Flower's flames do, the blast 1.25x, the cast
 # to the blast 0.85x (twinkle 12 -> 10, blast 34 -> 29).
+# Owner p6i: the cast's pose from the owner's Ultimate clip
+# (art/p6/palutena/anims/flame.json); her halo (the head row's part 2) shown
+# through it, as the clip's emblem.
 AsyncWait frames=4
+SetModelPartID joint_id=12 modelpart_id=2
 PlayVoiceStoreInfo value=cue:special_s01
 Effect joint_id=18 effect_id=31 flag=0 off_x=35 off_y=146 off_z=-160 rng_x=0 rng_y=0 rng_z=0
 AsyncWait frames=10
 SetFlag2 value=cue:se_special_n02
+AsyncWait frames=44
+SetModelPartID joint_id=12 modelpart_id=0
 End value=0

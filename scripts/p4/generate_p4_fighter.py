@@ -825,7 +825,8 @@ JAB3_TIMER_END = 0x8014EBA4   # ftCommonAttack12SetStatus past its switch
 # Kind tables a P6 authored content may give a value of its own (p6_author.py
 # {"status": N} for the jab, {"routine": name} for a special starter) instead
 # of a Remix routine's address.
-AUTHORED_KIND_TABLES = {"jab_3_action", "ground_nsp", "air_nsp", "ground_usp", "air_usp",
+AUTHORED_KIND_TABLES = {"jab_3_action", "rapid_jab_begin_action", "rapid_jab_loop_action",
+                        "rapid_jab_ending_action", "ground_nsp", "air_nsp", "ground_usp", "air_usp",
                         "ground_dsp", "air_dsp", "str_winner_ptr", "entry_script"}
 JAB3_ACTION_END = 0x8014EC30  # ftCommonAttack13SetStatus past its switch
 
@@ -1018,6 +1019,12 @@ def jab_rows(rom: R.Rom, sym: dict, tables: dict) -> str:
     steps = []
     for table, step in (("rapid_jab_begin_action", "Start"), ("rapid_jab_loop_action", "Loop"),
                         ("rapid_jab_ending_action", "End")):
+        own = tables[table].get("authored")
+        if own is not None:
+            # A P6 authored content's own status (Palutena's appended rapid
+            # jab, owner p6i).
+            steps.append(f"{int(own['status']):#x}")
+            continue
         value, kinds = rows(table)
         kind = kinds.get(value)
         if kind == "Mario":

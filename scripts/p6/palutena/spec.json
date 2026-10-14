@@ -39,8 +39,33 @@
   }
  },
  "motions": {
+  "5": {
+   "comment": "WalkSlow (owner p6i: her walk): Peach's stride narrowed under the dress, her upper body upright with the staff held upright before her (key poses on the owner's 3DS reference at 30 fps)",
+   "anim": "builds/p6-art/palutena/anims/walk_slow.o2r"
+  },
+  "6": {
+   "comment": "WalkMiddle: as WalkSlow, Peach's middle stride",
+   "anim": "builds/p6-art/palutena/anims/walk_middle.o2r"
+  },
+  "7": {
+   "comment": "WalkFast: as WalkSlow, Peach's fast stride",
+   "anim": "builds/p6-art/palutena/anims/walk_fast.o2r"
+  },
+  "9": {
+   "comment": "Dash (owner p6i: her floating run): from her wait a push into the glide (key poses on the owner's 3DS reference at 30 fps)",
+   "anim": "builds/p6-art/palutena/anims/dash_run.o2r"
+  },
+  "10": {
+   "comment": "Run (owner p6i: \"running animation (floating)\"): leaning far into a glide, the staff level ahead, a slow flutter (key poses on the owner's 3DS reference at 30 fps)",
+   "anim": "builds/p6-art/palutena/anims/run.o2r"
+  },
+  "11": {
+   "comment": "RunBrake: out of the glide leaning back, the staff brought up",
+   "anim": "builds/p6-art/palutena/anims/run_brake.o2r"
+  },
   "164": {
-   "comment": "Appeal: down taunt (card: the halo glows): Peach's taunt clip, her own script showing the halo with sparkles",
+   "comment": "Appeal: down taunt (card: lets go of the staff, brushes her hair back, halo glows, retakes the staff): the staff stood upright on the floor and let go, her hand brushing her hair back (key poses on the owner's 3DS reference)",
+   "anim": "builds/p6-art/palutena/anims/appeal.o2r",
    "script": "scripts/p6/palutena/motions/appeal.ms"
   },
   "195": {
@@ -66,12 +91,12 @@
    "script": "scripts/p6/palutena/motions/throwb.ms"
   },
   "165": {
-   "comment": "Attack11: jab 1 (card: a staff thrust): the staff thrust ahead at hip height (key poses on the owner's 3DS reference)",
+   "comment": "Attack11: jab 1: the shield pushed ahead (owner p6i: the 3DS's continuous jab; key poses on the owner's 3DS reference at 30 fps)",
    "script": "scripts/p6/palutena/motions/jab1.ms",
    "anim": "builds/p6-art/palutena/anims/jab1.o2r"
   },
   "166": {
-   "comment": "Attack12: jab 2 (card: the light burst's finisher, the staff swung up): the 3DS finisher, the thrust with the burst and the staff swung overhead (key poses on the owner's 3DS reference)",
+   "comment": "Attack12: jab 2: the staff thrust at her hip with a light burst; the rapid jab may follow (key poses on the owner's 3DS reference)",
    "script": "scripts/p6/palutena/motions/jab2.ms",
    "anim": "builds/p6-art/palutena/anims/jab2.o2r"
   },
@@ -156,12 +181,12 @@
    "anim": "builds/p6-art/palutena/anims/dair.o2r"
   },
   "219": {
-   "comment": "Explosive Flame",
+   "comment": "Explosive Flame: a quarter turn into a wide stance, the staff arm straight at the target (owner p6i: the owner's Ultimate clip; key poses)",
    "anim": "builds/p6-art/palutena/anims/flame.o2r",
    "script": "scripts/p6/palutena/motions/flame.ms"
   },
   "220": {
-   "comment": "Explosive Flame in the air",
+   "comment": "Explosive Flame in the air: the ground cast's upper body over her fall's legs (key poses)",
    "anim": "builds/p6-art/palutena/anims/flame_air.o2r",
    "script": "scripts/p6/palutena/motions/flame.ms"
   },
@@ -199,6 +224,21 @@
    "comment": "Counter: the counterattack in the air",
    "anim": "builds/p6-art/palutena/anims/counter_hit_air.o2r",
    "script": "scripts/p6/palutena/motions/counter_hit.ms"
+  },
+  "228": {
+   "comment": "Attack100Start (appended, owner p6i): her rapid jab's start, from jab 2's thrust into the held staff (key poses on the owner's 3DS reference)",
+   "anim": "builds/p6-art/palutena/anims/rapid_start.o2r",
+   "script": "scripts/p6/palutena/motions/rapid_start.ms"
+  },
+  "229": {
+   "comment": "Attack100Loop (appended): the staff held ahead, a burst of light four times a loop",
+   "anim": "builds/p6-art/palutena/anims/rapid_loop.o2r",
+   "script": "scripts/p6/palutena/motions/rapid_loop.ms"
+  },
+  "230": {
+   "comment": "Attack100End (appended): the finisher, a burst that launches and the staff swung overhead",
+   "anim": "builds/p6-art/palutena/anims/rapid_end.o2r",
+   "script": "scripts/p6/palutena/motions/rapid_end.ms"
   }
  },
  "statuses": {
@@ -345,9 +385,44 @@
     "ftPhysicsApplyAirVelDrift",
     "ndsP4PalutenaAirMap"
    ]
+  },
+  "258": {
+   "comment": "Attack100Start (appended, owner p6i: her jab continuous, as the 3DS): Fox's row",
+   "name": "nFTPalutenaStatusAttack100Start",
+   "motion": 228,
+   "attack_id": 4,
+   "sflags": 16,
+   "procs": ["ftCommonAttack100StartProcUpdate", null, "ftPhysicsApplyGroundVelFriction", "mpCommonSetFighterFallOnEdgeBreak"]
+  },
+  "259": {
+   "comment": "Attack100Loop (appended): Fox's row",
+   "name": "nFTPalutenaStatusAttack100Loop",
+   "motion": 229,
+   "attack_id": 4,
+   "sflags": 16,
+   "procs": ["ftCommonAttack100LoopProcUpdate", "ftCommonAttack100LoopProcInterrupt", "ftPhysicsApplyGroundVelFriction", "mpCommonSetFighterFallOnEdgeBreak"]
+  },
+  "260": {
+   "comment": "Attack100End (appended): Fox's row",
+   "name": "nFTPalutenaStatusAttack100End",
+   "motion": 230,
+   "attack_id": 4,
+   "sflags": 16,
+   "procs": ["ftAnimEndSetWait", null, "ftPhysicsApplyGroundVelFriction", "mpCommonSetFighterFallOnEdgeBreak"]
   }
  },
  "kind_tables": {
+  "rapid_jab": "parent",
+  "rapid_jab_unknown": "parent",
+  "rapid_jab_begin_action": {
+   "status": 258
+  },
+  "rapid_jab_loop_action": {
+   "status": 259
+  },
+  "rapid_jab_ending_action": {
+   "status": 260
+  },
   "ground_nsp": {
    "routine": "ndsP4PalutenaFlameGroundInitial"
   },
@@ -407,9 +482,6 @@
   {
    "comment": "Walks (WalkSlow, WalkMiddle, WalkFast, WalkEnd): Peach's with a smaller stride under the dress and the staff held up as in her wait (owner's 3DS walking reference, 2026-10-14).",
    "motions": [
-    5,
-    6,
-    7,
     8
    ],
    "ops": [
@@ -449,9 +521,6 @@
   {
    "comment": "Dash, Run, RunBrake, TurnRun: Peach's with a smaller stride and the body leaning into the run (the 3DS running reference).",
    "motions": [
-    9,
-    10,
-    11,
     13
    ],
    "ops": [
@@ -538,6 +607,20 @@
       24
      ],
      "amount": 0.45
+    }
+   ]
+  },
+  {
+   "comment": "Dash, Run, RunBrake (owner p6i: her floating run): their own clips; the dress trailed behind her (skirt_keys.py trail).",
+   "motions": [
+    9,
+    10,
+    11
+   ],
+   "ops": [
+    {
+     "op": "skirt",
+     "trail": 0.35
     }
    ]
   }

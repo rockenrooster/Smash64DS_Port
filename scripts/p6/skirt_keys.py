@@ -20,6 +20,14 @@ EVERY animation the dress surrounds her legs, except at the slit):
   slit's side only up to SLIT_CAP;
 - both are smoothed over SMOOTH frames.
 
+Owner playtest p6i (2026-10-14): "Dress is not flowing". The band's axis
+follows its target (above) through a damped spring in the model's space
+(SPRING, DAMPING): it lags her turns and swings and settles after them,
+and a looping clip's spring runs three periods so its keys loop. A pose
+group's "skirt" op trails it (its axis drawn toward behind her by "trail":
+the run, the dash). The flare is worked out on the axis the spring gives,
+so the band still holds her legs where it lags.
+
 The keys are computed on the content's own skeleton and look scene
 (coverage.py Fighter.pose_frames; the scene's leg and skirt vertices).
 
@@ -53,10 +61,14 @@ MAX_TILT_DEG = 75.0
 GRAVITY = 0.1
 MARGIN = 6.0
 # Ring scale caps: across her (local x), front to back (local y).
-MAX_FLARE_X = 1.35
-MAX_FLARE_Y = 1.75
+MAX_FLARE_X = 1.5
+MAX_FLARE_Y = 2.0
 SLIT_CAP = 1.2
 SMOOTH = 3
+# The band's spring (per frame): the pull toward its target and the share of
+# its angular speed kept.
+SPRING = 0.3
+DAMPING = 0.6
 
 
 def _align(a, b):
@@ -96,9 +108,9 @@ class Skirt:
         self.r1 = float(np.linalg.norm(self.hem_local[:, :2] - self.hem_local[:, :2].mean(0), axis=1).mean())
         self.length = float(np.linalg.norm((np.linalg.inv(b25) @ b26)[:3, 3]))
 
-    def frame_keys(self, mats) -> tuple:
-        """Row 25's local rotation matrix (in the pelvis's frame) and row
-        26's ring scales (across, front to back) for one posed frame."""
+    def target_axis(self, mats, trail: float = 0.0):
+        """The band's target axis (unit, the pelvis's frame) for one posed
+        frame: at the knees and ankles, drawn down, trailed, tilt-capped."""
         pelvis = mats[ROW_PELVIS]
         pinv = np.linalg.inv(pelvis)
         to_pelvis = lambda p: (pinv @ np.append(p, 1.0))[:3]
@@ -110,13 +122,33 @@ class Skirt:
         d = target / n if n > 1e-3 else rest_axis
         down = pinv[:3, :3] @ np.array([0.0, -1.0, 0.0])
         d = (1.0 - GRAVITY) * d + GRAVITY * down / max(np.linalg.norm(down), 1e-6)
+        if trail:
+            back = pinv[:3, :3] @ np.array([0.0, 0.0, -1.0])
+            d = d + trail * back / max(np.linalg.norm(back), 1e-6)
         d /= max(np.linalg.norm(d), 1e-6)
+        return self.cap_tilt(d)
+
+    def cap_tilt(self, d):
+        rest_axis = self.rest25[:3, :3] @ np.array([0.0, 0.0, -1.0])
         ang = np.degrees(np.arccos(np.clip(np.dot(d, rest_axis), -1.0, 1.0)))
         if ang > MAX_TILT_DEG:
             axis = np.cross(rest_axis, d)
             axis /= max(np.linalg.norm(axis), 1e-6)
             t = np.radians(MAX_TILT_DEG)
             d = rest_axis * np.cos(t) + np.cross(axis, rest_axis) * np.sin(t)
+        return d
+
+    def frame_keys(self, mats, d=None) -> tuple:
+        """Row 25's local rotation matrix (in the pelvis's frame) and row
+        26's ring scales (across, front to back) for one posed frame, the
+        band along d (the pelvis's frame; its target when None)."""
+        pelvis = mats[ROW_PELVIS]
+        pinv = np.linalg.inv(pelvis)
+        to_pelvis = lambda p: (pinv @ np.append(p, 1.0))[:3]
+        origin = self.rest25[:3, 3]
+        rest_axis = self.rest25[:3, :3] @ np.array([0.0, 0.0, -1.0])
+        if d is None:
+            d = self.target_axis(mats)
         rot = _align(rest_axis, d) @ self.rest25[:3, :3]
         # The ring's axes in the pelvis's frame (row 25's local x and y).
         ex, ey = rot[:, 0], rot[:, 1]
@@ -138,12 +170,46 @@ class Skirt:
             return min(max(1.0, body, min(slit, SLIT_CAP)), cap)
         return rot, (flare(nx, MAX_FLARE_X), flare(ny, MAX_FLARE_Y))
 
-    def clip_keys(self, clip: A.Clip, anim_flags: int):
+    def flow(self, frames, targets, loop) -> list:
+        """The band's axis per frame (the pelvis's frame): each frame's
+        target followed through the spring in the model's space; a looping
+        clip runs three periods and keeps the last."""
+        world = [frames[i][1][ROW_PELVIS][:3, :3] @ targets[i] for i in range(len(targets))]
+        n = len(world)
+        start = loop if (loop is not None and 0 <= loop < n - 1) else None
+        order = list(range(n))
+        if start is not None:
+            period = list(range(start, n))
+            order = list(range(n)) + period + period
+        s = world[order[0]] / max(np.linalg.norm(world[order[0]]), 1e-6)
+        v = np.zeros(3)
+        out = [None] * n
+        for i in order:
+            t = world[i] / max(np.linalg.norm(world[i]), 1e-6)
+            v = v * DAMPING + SPRING * np.cross(s, t)
+            ang = float(np.linalg.norm(v))
+            if ang > 1e-9:
+                k = v / ang
+                s = s * np.cos(ang) + np.cross(k, s) * np.sin(ang) + k * np.dot(k, s) * (1 - np.cos(ang))
+            s = s / max(np.linalg.norm(s), 1e-6)
+            out[i] = s
+        pel = [frames[i][1][ROW_PELVIS][:3, :3] for i in range(n)]
+        local = []
+        for i in range(n):
+            d = np.linalg.inv(pel[i]) @ out[i]
+            local.append(self.cap_tilt(d / max(np.linalg.norm(d), 1e-6)))
+        return local
+
+    def clip_keys(self, clip: A.Clip, anim_flags: int, trail: float = 0.0):
         length = max((st.length for st in clip.streams.values()), default=0)
         frames = self.f.pose_frames(clip, anim_flags, length)
+        loops = {st.loop for st in clip.streams.values()}
+        loop = loops.pop() if len(loops) == 1 else None
+        targets = [self.target_axis(mats, trail) for _root, mats in frames]
+        axes = self.flow(frames, targets, loop)
         rots, scales = [], []
-        for _root, mats in frames:
-            r, s = self.frame_keys(mats)
+        for (_root, mats), d in zip(frames, axes):
+            r, s = self.frame_keys(mats, d)
             rots.append(r)
             scales.append(s)
         # Smoothing: the axis and the flare, a centred window.
@@ -164,9 +230,10 @@ class Skirt:
             out.append((prev, s))
         return out
 
-    def apply(self, clip: A.Clip, anim_flags: int) -> A.Clip:
-        """The clip with rows 25 and 26 keyed from her legs."""
-        keys = self.clip_keys(clip, anim_flags)
+    def apply(self, clip: A.Clip, anim_flags: int, trail: float = 0.0) -> A.Clip:
+        """The clip with rows 25 and 26 keyed from her legs (the band
+        trailed behind her by `trail`)."""
+        keys = self.clip_keys(clip, anim_flags, trail)
         length = len(keys) - 1
         lead_slot = C.first_slot(anim_flags)
         loops = {st.loop for st in clip.streams.values()}

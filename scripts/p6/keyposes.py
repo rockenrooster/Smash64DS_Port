@@ -10,19 +10,26 @@ moves are authored as key poses against them and reviewed as sheets).
               {"frame": 6, "from": {"clip": ..., "frame": n},
                "trans": {"1": [dx, dy, dz]},
                "turns": {"11": [x, y, z]},
+               "orient": {"2": [pitch, yaw, roll]},
                "aims": [{"row": 11, "to": [x, y, z]}, {"row": 14, "axis": [0, 0, 1], "to": [0, 0, 1]}],
                "ik": [{"chain": [22, 23, 24], "target": "keep", "pole": [0, 0, 1]}],
                "place": [{"row": 14, "at": [x, y, z]}],
                "ease": "smooth" | "linear" | "in" | "out"}, ...],
      "spin": [{"row": 14, "axis": [1, 0, 0], "degrees": 720, "frames": [6, 18],
                "ease": "linear"}],
-     "transn": {"clip": "0x...", "scale": 1.0}}}
+     "transn": {"clip": "0x...", "scale": 1.0} | {"travel": [[0, 0], [10, 400]]},
+     "pin": [{"row": 14, "frames": [8, 58]}],
+     "interp": "spline"}}
 
 A key starts from a base pose (its "from", else the recipe's "base": a
 clip's frame). In order: "trans" offsets rows' translations (model units:
 the hips' height for a crouch or a hop); "turns" turn rows about the model's
 axes as the base holds their parents (a row turns with everything below
-it); "aims" turn a row so its first child (or "child") -- or a local "axis"
+it); "orient" sets rows' world orientations, parents first: yaw about up,
+pitch (positive leans forward) and roll in the row's own facing, relative to
+its bind pose (Ry(yaw) Rx(pitch) Rz(roll); the hips, chest and head of a
+lunge leaning into its facing); "aims" turn a row so its first child (or
+"child") -- or a local "axis"
 of its own -- points along a model direction; "ik" bends a two-bone chain so
 its end reaches a target ("keep": where the base pose had it, plus an
 optional "offset") with the middle joint toward "pole"; "place" puts a row's
@@ -31,11 +38,22 @@ rotation kept. Between keys every
 row's rotation slerps and its translation lerps, eased into the later key.
 A "spin" then turns a row (and everything below it) about a model axis,
 through its parent's pose at each frame, by "degrees" over "frames" (a held
-item twirled: Palutena's staff), the whole turn kept after. A clip whose
+item twirled: Palutena's staff), the whole turn kept after. A "pin" holds a
+row's world pose from the first of its frames through the last (an item
+let go stays where it was put while the hand that put it moves on: her
+taunt's staff stood on the floor). "interp": "spline" (owner, 2026-10-14
+p6i: the eased keys read stiff, every key a dead stop) moves through the
+keys on a cubic (Catmull-Rom tangents, each row's rotation in the rotation
+vectors of its earlier key's frame), stopping only at the first and last
+keys and at a key with "hold"; a key's "ease" there reshapes its segment
+(default linear). A clip whose
 motion row carries the TransN flag ("first_slot": 1) takes its TransN slot
 from "transn"'s clip (its travel times "scale"): AttackDash moves the fighter
 by that slot alone (ftPhysicsApplyGroundVelTransN). A reference reads its
-clip from its own "first_slot" (else the recipe's). A "scene" (a look scene,
+clip from its own "first_slot" (else the recipe's). A "transn" with "travel"
+(owner p6i: the dash attack's lunge) writes the slot from a forward travel
+curve instead: its cumulative distance (model units) at frames, smooth
+between them (Catmull-Rom, its speed continuous). A "scene" (a look scene,
 repo-relative) gives the skeleton the look's rest translations, which its
 model is built with: Palutena's bones are longer than Peach's, so her IK and
 "place" positions are worked out in her own (scene_skeleton). Its
@@ -85,6 +103,40 @@ def _worlds(skel: A.Skeleton, local, trans):
 
 def _first_child(skel: A.Skeleton, row: int) -> int:
     return next(i for i, p in enumerate(skel.parents) if p == row)
+
+
+def _log(m):
+    """The rotation vector of a rotation matrix."""
+    c = float(np.clip((np.trace(m) - 1.0) * 0.5, -1.0, 1.0))
+    th = math.acos(c)
+    v = np.array([m[2, 1] - m[1, 2], m[0, 2] - m[2, 0], m[1, 0] - m[0, 1]])
+    if th < 1e-6:
+        return 0.5 * v
+    if math.pi - th < 1e-4:
+        # Near a half turn: the axis from the diagonal, signed by the
+        # symmetric part.
+        axis = np.sqrt(np.clip((np.diag(m) + 1.0) * 0.5, 0.0, None))
+        i = int(np.argmax(axis))
+        for k in range(3):
+            if k != i and (m[i, k] + m[k, i]) < 0:
+                axis[k] = -axis[k]
+        return th * axis / max(float(np.linalg.norm(axis)), 1e-9)
+    return th / (2.0 * math.sin(th)) * v
+
+
+def _exp(v):
+    """The rotation matrix of a rotation vector."""
+    th = float(np.linalg.norm(v))
+    if th < 1e-9:
+        return np.eye(3)
+    a = v / th
+    k = np.array([[0.0, -a[2], a[1]], [a[2], 0.0, -a[0]], [-a[1], a[0], 0.0]])
+    return np.eye(3) + math.sin(th) * k + (1.0 - math.cos(th)) * (k @ k)
+
+
+def _hermite(u: float):
+    u2, u3 = u * u, u * u * u
+    return 2 * u3 - 3 * u2 + 1, u3 - 2 * u2 + u, -2 * u3 + 3 * u2, u3 - u2
 
 
 def _turn_between(a, b):
@@ -176,9 +228,58 @@ def scene_scales(scene: dict, rows: int):
 def refs(spec: dict) -> list:
     """Every clip reference a keyposes spec reads (base, keys' "from", "transn")."""
     out = [spec["base"]] + [k["from"] for k in spec["keys"] if "from" in k]
-    if spec.get("transn"):
+    if spec.get("transn") and "clip" in spec["transn"]:
         out.append(spec["transn"])
     return out
+
+
+def travel_curve(points, length: int) -> list:
+    """Cumulative forward travel per frame 0..length from (frame, distance)
+    points: a Catmull-Rom curve through them (end tangents one-sided), held
+    after the last."""
+    pts = sorted((int(f), float(d)) for f, d in points)
+    out = []
+    for f in range(length + 1):
+        if f <= pts[0][0]:
+            out.append(pts[0][1])
+            continue
+        if f >= pts[-1][0]:
+            out.append(pts[-1][1])
+            continue
+        i = next(i for i in range(1, len(pts)) if pts[i][0] >= f)
+        (fa, da), (fb, db) = pts[i - 1], pts[i]
+        dt = float(fb - fa)
+        ma = ((db - pts[i - 2][1]) / (fb - pts[i - 2][0]) * dt) if i >= 2 else (db - da)
+        mb = ((pts[i + 1][1] - da) / (pts[i + 1][0] - fa) * dt) if i + 1 < len(pts) else (db - da)
+        u = (f - fa) / dt
+        h00, h10, h01, h11 = _hermite(u)
+        out.append(h00 * da + h10 * ma + h01 * db + h11 * mb)
+    return out
+
+
+def _orient_matrix(deg) -> np.ndarray:
+    pitch, yaw, roll = (math.radians(float(d)) for d in deg)
+    cx, sx = math.cos(pitch), math.sin(pitch)
+    cy, sy = math.cos(yaw), math.sin(yaw)
+    cz, sz = math.cos(roll), math.sin(roll)
+    rx = np.array([[1, 0, 0], [0, cx, -sx], [0, sx, cx]])
+    ry = np.array([[cy, 0, sy], [0, 1, 0], [-sy, 0, cy]])
+    rz = np.array([[cz, -sz, 0], [sz, cz, 0], [0, 0, 1]])
+    return ry @ rx @ rz
+
+
+def _bind_worlds(skel: A.Skeleton):
+    local = [A.euler(*r) for r in skel.rotate]
+    rots, _pos = _worlds(skel, local, [list(t) for t in skel.translate])
+    return rots
+
+
+def _depth(skel: A.Skeleton, row: int) -> int:
+    d = 0
+    while skel.parents[row] >= 0:
+        row = skel.parents[row]
+        d += 1
+    return d
 
 
 def key_pose(skel: A.Skeleton, clips: dict, key: dict, base: dict, first_slot: int, scales=None):
@@ -205,6 +306,13 @@ def key_pose(skel: A.Skeleton, clips: dict, key: dict, base: dict, first_slot: i
         p = skel.parents[r]
         pw = base_rots[p] if p >= 0 else np.eye(3)
         out[r] = pw.T @ P.axis_turn(deg) @ pw @ local[r]
+    if key.get("orient"):
+        bind = _bind_worlds(skel)
+        for r in sorted((int(k) for k in key["orient"]), key=lambda r: _depth(skel, r)):
+            rots, _pos = _worlds(skel, out, trans)
+            p = skel.parents[r]
+            pw = rots[p] if p >= 0 else np.eye(3)
+            out[r] = pw.T @ _orient_matrix(key["orient"][str(r)]) @ bind[r]
     for aim in key.get("aims") or ():
         _aim(skel, out, trans, int(aim["row"]), aim["to"], aim.get("child"), aim.get("axis"), aim.get("twist"))
     for ik in key.get("ik") or ():
@@ -223,13 +331,48 @@ def key_pose(skel: A.Skeleton, clips: dict, key: dict, base: dict, first_slot: i
     return trans, out
 
 
+def _spline_pose(poses, holds, f: int, rows: int):
+    """The pose at frame f between two keys on the cubic: Catmull-Rom
+    tangents from the neighbouring keys (none at the first and last keys or
+    at a held key), rotations as rotation vectors in the earlier key's
+    frame, translations as vectors."""
+    i = next(i for i in range(1, len(poses)) if poses[i][0] >= f)
+    a, b = i - 1, i
+    fa, ta, ra, _ea = poses[a]
+    fb, tb, rb, eb = poses[b]
+    u = _ease((f - fa) / max(fb - fa, 1), eb)
+    h00, h10, h01, h11 = _hermite(u)
+    dt = float(fb - fa)
+    p = a - 1 if (a > 0 and not holds[a]) else None
+    n = b + 1 if (b < len(poses) - 1 and not holds[b]) else None
+    rt, tr = [], []
+    for r in range(rows):
+        ra_t = ra[r].T
+        vb = _log(ra_t @ rb[r])
+        ma = ((vb - _log(ra_t @ poses[p][2][r])) * (dt / float(fb - poses[p][0]))
+              if p is not None else np.zeros(3))
+        mb = (_log(ra_t @ poses[n][2][r]) * (dt / float(poses[n][0] - fa))
+              if n is not None else np.zeros(3))
+        rt.append(ra[r] @ _exp(h10 * ma + h01 * vb + h11 * mb))
+        xa = np.asarray(ta[r], dtype=float)
+        xb = np.asarray(tb[r], dtype=float)
+        ta_m = ((xb - np.asarray(poses[p][1][r], dtype=float)) * (dt / float(fb - poses[p][0]))
+                if p is not None else np.zeros(3))
+        tb_m = ((np.asarray(poses[n][1][r], dtype=float) - xa) * (dt / float(poses[n][0] - fa))
+                if n is not None else np.zeros(3))
+        tr.append([float(v) for v in h00 * xa + h10 * ta_m + h01 * xb + h11 * tb_m])
+    return tr, rt
+
+
 def build(skel: A.Skeleton, spec: dict, clips: dict, slots: int, scales=None) -> A.Clip:
     first_slot = int(spec.get("first_slot", 0))
     length = int(spec["length"])
     keys = sorted(spec["keys"], key=lambda k: int(k["frame"]))
+    spline = spec.get("interp") == "spline"
     poses = [(int(k["frame"]), *key_pose(skel, clips, k, spec["base"], first_slot, scales),
-              k.get("ease", "smooth"))
+              k.get("ease", "linear" if spline else "smooth"))
              for k in keys]
+    holds = [bool(k.get("hold")) for k in keys]
     rows = len(skel.parents)
     per_frame_rot = [None] * (length + 1)
     per_frame_tr = [None] * (length + 1)
@@ -238,6 +381,8 @@ def build(skel: A.Skeleton, spec: dict, clips: dict, slots: int, scales=None) ->
             tr, rt = poses[0][1], poses[0][2]
         elif f >= poses[-1][0]:
             tr, rt = poses[-1][1], poses[-1][2]
+        elif spline:
+            tr, rt = _spline_pose(poses, holds, f, rows)
         else:
             i = next(i for i in range(1, len(poses)) if poses[i][0] >= f)
             fa, ta, ra, _ea = poses[i - 1]
@@ -262,6 +407,20 @@ def build(skel: A.Skeleton, spec: dict, clips: dict, slots: int, scales=None) ->
             p = skel.parents[row]
             pw = rots[p] if p >= 0 else np.eye(3)
             per_frame_rot[f][row] = pw.T @ turn @ pw @ per_frame_rot[f][row]
+    for pn in spec.get("pin") or ():
+        row = int(pn["row"])
+        first, last = (int(x) for x in pn["frames"])
+        par = skel.parents[row]
+        rots, pos = _worlds(skel, per_frame_rot[first], per_frame_tr[first])
+        held_rot, held_pos = rots[row], pos[row]
+        for f in range(first + 1, min(last, length) + 1):
+            per_frame_rot[f] = list(per_frame_rot[f])
+            per_frame_tr[f] = [list(t) for t in per_frame_tr[f]]
+            rots, pos = _worlds(skel, per_frame_rot[f], per_frame_tr[f])
+            pw = rots[par] if par >= 0 else np.eye(3)
+            pp = pos[par] if par >= 0 else np.zeros(3)
+            per_frame_rot[f][row] = pw.T @ held_rot
+            per_frame_tr[f][row] = [float(v) for v in pw.T @ (held_pos - pp)]
     clip = A.Clip(slots)
     loop = spec.get("loop")
     for r in range(rows):
@@ -294,11 +453,22 @@ def build(skel: A.Skeleton, spec: dict, clips: dict, slots: int, scales=None) ->
     if tn:
         if first_slot < 1:
             raise ValueError("keyposes transn needs first_slot 1")
-        src = clips[_clip_id(tn)].streams[0]
-        scale = float(tn.get("scale", 1.0))
-        st = A.Stream(src.length, src.loop, loop_skips_steps=src.loop_skips_steps)
-        for k, t in src.tracks.items():
-            vals = [round(v * scale) for v in t.values] if 4 <= k <= 6 else list(t.values)
-            st.tracks[k] = A.Track(vals, t.lead, t.step)
-        clip.streams[0] = st
+        if "travel" in tn:
+            # The TransN joint's z is the forward travel (ftPhysicsApplyGroundVelTransN).
+            st = A.Stream(length, None)
+            z = travel_curve(tn["travel"], length)
+            for k in range(3):
+                st.tracks[k] = A.Track([0] * (length + 1), 0)
+            st.tracks[4] = A.Track([0] * (length + 1), 0)
+            st.tracks[5] = A.Track([0] * (length + 1), 0)
+            st.tracks[6] = A.Track([round(v * A.TRANS_UNIT) for v in z], 0)
+            clip.streams[0] = st
+        else:
+            src = clips[_clip_id(tn)].streams[0]
+            scale = float(tn.get("scale", 1.0))
+            st = A.Stream(src.length, src.loop, loop_skips_steps=src.loop_skips_steps)
+            for k, t in src.tracks.items():
+                vals = [round(v * scale) for v in t.values] if 4 <= k <= 6 else list(t.values)
+                st.tracks[k] = A.Track(vals, t.lead, t.step)
+            clip.streams[0] = st
     return clip

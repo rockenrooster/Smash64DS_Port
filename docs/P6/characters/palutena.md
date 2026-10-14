@@ -178,9 +178,10 @@ her up air the halo (joint 12); a status change resets the parts.
 **Pillar, taunt, entry, victory poses (2026-10-14).** The up smash's light
 pillar is one column of cyan light 325 units ahead of her on her floor
 (1.25x the first 260, owner p6h notes), 2,500 tall (2x her first, p6f; 1.5x
-after p6d, 1.25x before), exactly vertical, and its hitboxes are the column
-(TopN z 325, frames 12-17; their knockback 1.5x since p6h: scale 158/150,
-base 60, the same damage): attacks 0 and 1, its
+after p6d, 1.25x before), exactly vertical, standing 32 tics as the 3DS's
+(owner p6i; 12 before), and its hitboxes are the column (TopN z 325, frames
+23-49; their knockback 1.5x since p6h: scale 158/150, base 60, the same
+damage): attacks 0 and 1, its
 lower (16%) and upper (14%) halves, 400 wide, move every frame between their
 half's ends in her code (the hit test sweeps a hitbox from where it was to
 where it is), and attacks 2 and 3 at the halves' middles cover the first
@@ -298,9 +299,9 @@ Defaults for the specials:
   weapon's numbers (`coverage.py` "weapon"). Owner playtest p6h: two fires
   a few tics apart. A ground/air switch mid-cast sets the twin status at the
   same frame and the source fast-forwards its script there, setting flag2
-  again; a cast now makes one fire (status_vars word 1, as Kirby's copy),
-  and no fire is made while one of the fighter's own is younger than 15
-  tics.
+  again; a cast now makes one fire (status_vars word 1, as Kirby's copy).
+  Owner p6i: one more double cast, trigger unknown: no fire is made while
+  one of hers is burning at all (her cast outlasts a fire).
 - **Warp:** Meta Knight's Dimensional Cape structure (`nds_p4_metaknight.c`
   DSP): she vanishes, travels about 10 frames in the D-pad's direction (eight
   directions; neutral is up) invisible and intangible, stops at walls and
@@ -321,43 +322,63 @@ Defaults for the specials:
 
 ## Animations (the owner's 3DS references, 2026-10-14)
 
-The owner's 19 3DS clips (local, `decomp/alt_assets/Fighters/Super Smash
-Bros 3DS/Palutena/`) are the reference for her moves; "I author, you
-review": each move is key poses (`scripts/p6/keyposes.py`, anim.py
-"keyposes" recipes in `art/p6/palutena/anims/`) on Peach's tree, reviewed as
-sheets (the 3DS frame over her model from the battle camera's side: her
-right, the staff hand, when she faces right). Hurt animations stay Peach's.
-Her motion scripts keep their frames and damage; the clips are timed to
-them (one 3DS capture frame at 15 fps is four game frames).
+The owner's 3DS clips (local, `decomp/alt_assets/Fighters/Super Smash Bros
+3DS/Palutena/`; Explosive Flame from Ultimate) are the reference for her
+moves; "I author, you review": each move is key poses (`scripts/p6/keyposes.py`,
+anim.py "keyposes" recipes in `art/p6/palutena/anims/`) on Peach's tree with
+her own bone lengths (recipe "scene"), reviewed against the clips at their
+30 fps (two game tics a frame). Hurt animations stay Peach's.
 
-- Jab 1: the staff thrust ahead at hip height. Jab 2: the 3DS finisher, the
-  thrust with the light burst and the staff swung overhead (the move card's
-  "light burst's finisher"; the 3DS shield-bash jab is left out of her two
-  hits).
-- Dash attack (the card's shield charge): the shield thrust ahead and held
-  through the slide, the staff trailing; Peach's TransN travel (AttackDash
-  moves a fighter by its TransN slot alone: keyposes "transn").
-- Forward tilt: the staff spun twice like a windmill before her (keyposes
-  "spin": a row turned about a model axis through its parent's pose). Up
-  tilt: on her knees, the staff spun level overhead three times. Down tilt:
-  from her crouch the staff raised and swept along the floor.
-- Forward smash: her wings out (the torso part), the staff raised back and
-  swung over to level ahead in a lunge; the angled smashes (AttackS4Hi, HiS,
-  LwS, Lw) play it too, where they played Peach's angled smash. Up smash: the
-  staff level at her hip, then raised straight up as the pillar rises. Down
-  smash: she rises, drops low sweeping the staff behind her, over the top
-  and low ahead. The 3DS smashes sweep her wings; hers are rigid cards on
-  her back, so the staff makes the sweep.
-- Neutral air: the staff spun twice around her. Forward air: the staff
-  thrust ahead with a burst; down air: the shield swept under her from front
-  to back (the owner: "follow the 3DS ones" over the cards' kicks; their
-  hitboxes moved from her legs to the staff and the shield). Back air: the
-  shield bashed out behind her. Up air: the staff raised, the halo above.
-- The ground attacks no longer narrow her stance (spec "pose" group for the
-  borrowed clips); the aerials and the down tilt take the leg narrowing of
-  the motions they start from (falls 0.35, the crouch 0.45; recipe "ops").
-- The preview's torso turns stay small: her hair is a rigid panel on the
-  torso row and covers her when she turns her back as the 3DS model does.
+Owner playtest p6i (2026-10-14): "ALL the animations look very stiff with no
+momentum or force ... follow them as close as possible." Since then:
+
+- **Motion.** The recipes move through their keys on a spline (keyposes
+  "interp": "spline": Catmull-Rom tangents, stopping only at the ends and at
+  held keys), not eased to a stop at every key; her torso, hips and head are
+  keyed as world orientations ("orient": yaw, then the lean in her own
+  facing) so a lunge leans into its facing.
+- **The dress flows.** Her skirt's axis follows her legs through a damped
+  spring (`skirt_keys.py`: it lags her turns and swings and settles); her
+  run trails it behind her (spec "pose" op "skirt").
+- **Jab.** Continuous, as the 3DS's: jab 1 the shield pushed ahead, jab 2 the
+  staff thrust at her hip with a light burst, then her own rapid jab (Fox's
+  rows and routines, appended statuses 0x102-0x104 on motions 228-230; four
+  A presses counted in jab 2): the staff held ahead with four bursts a loop
+  (`Goto -> self` scripts, p6_author.py), and a launching finisher with the
+  staff swung overhead when A stops.
+- **Tilts.** Forward: a twirl on the spot and the staff twirled at arm's
+  length (three hits and a launcher). Up: on her knees, the staff spun level
+  overhead (four hits and a launcher), rising leaning back. Down: from her
+  crouch the staff raised behind her and swept along the floor.
+- **Dash attack.** Out of her run she gathers the shield, lunges (its own
+  TransN curve, keyposes "transn" "travel": about 760 units) with the shield
+  punched out, slides on it and rises.
+- **Smashes and wings.** The wings animate as the torso row's poses: its
+  model-part variants 1 (folded up and back), 2 (swept forward low) and 3
+  (flapped down to the floor at her front and back), `look_parts.py` parts
+  wings, wings_forward and wings_down, switched by the smash scripts at their
+  frames while the torso turns and leans with the clip: forward smash leans
+  back with the wings folded and sweeps them forward as she lunges (the hit on
+  the wings and the staff); down smash flaps them down at both sides as she
+  drops (a hit at each). (Cards hinged on the shoulder rows were tried
+  first: rows that draw nothing change the native owner's live root vector
+  while shown, and those frames were declined.) Up smash: the staff thrust
+  straight up as the pillar rises and held while it stands.
+- **Aerials.** Neutral: the staff whirled around her, knees tucked. Forward:
+  her body laid out level behind the thrust. Back: the shield thrust out
+  behind her. Up: turned to the camera, the staff stretched up, the halo
+  above. Down: knees up, the shield swept under her front to back. (The 3DS
+  clips over the cards' kicks: the owner, "follow the 3DS ones".)
+- **Locomotion.** Her run floats (the 3DS's glide: leaning far forward, the
+  staff level ahead, a slow flutter) with a push into it (Dash) and a brake;
+  her walks keep Peach's stride under the dress with her upper body upright
+  and the staff held upright before her.
+- **Specials.** Explosive Flame: a quarter turn into a wide stance, the staff
+  arm straight at the target (owner p6i: no kneel; the Ultimate clip), her
+  halo shown. Warp stays as the owner approved it ("Palutena's teleport is
+  good": the staff raised overhead). Down taunt: the staff stood on the floor
+  and let go (keyposes "pin"), her hand brushing her hair, the halo glowing
+  (no burst effect, p6i).
 
 ## Audio (local inputs, never committed)
 

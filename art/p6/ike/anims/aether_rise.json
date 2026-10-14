@@ -1,5 +1,5 @@
 {
- "comment": "Aether's toss and rise (owner, 2026-10-14: Ike throws Ragnell up, it stops at its high point and spins, he jumps up to it): a crouch, the toss at frame 9 (the script's jump), the blade let go to hang spinning where he will meet it (its height above him follows his rise: 110 a frame less 3.2 a frame for gravity, at his 0.75 animation rate), his arms reaching up, the catch overhead at 28.",
+ "comment": "Aether's toss and rise (owner, 2026-10-14: Ike throws Ragnell up, it stops at its high point and spins, he jumps up to it): a crouch, the toss at frame 9 (the script's jump), the blade let go to hang spinning where he will meet it (its height above him follows his rise: 110 a frame less 3.2 a frame for gravity, at his 0.75 animation rate), his arms reaching up, the catch overhead at 28. p6i: spline motion, a deeper crouch before the toss.",
  "keyposes": {
   "skeleton": "roy",
   "header": "0xcce",
@@ -15,17 +15,16 @@
    },
    {
     "frame": 6,
-    "ease": "smooth",
     "trans": {
      "1": [
       0,
-      -70,
+      -85,
       0
      ]
     },
     "turns": {
      "2": [
-      20,
+      28,
       0,
       0
      ]
@@ -104,7 +103,6 @@
    },
    {
     "frame": 9,
-    "ease": "smooth",
     "trans": {
      "1": [
       0,
@@ -211,7 +209,6 @@
    },
    {
     "frame": 12,
-    "ease": "smooth",
     "turns": {
      "2": [
       -6,
@@ -323,7 +320,6 @@
    },
    {
     "frame": 16,
-    "ease": "smooth",
     "turns": {
      "2": [
       -6,
@@ -435,7 +431,6 @@
    },
    {
     "frame": 20,
-    "ease": "smooth",
     "turns": {
      "2": [
       -6,
@@ -547,7 +542,6 @@
    },
    {
     "frame": 24,
-    "ease": "smooth",
     "turns": {
      "2": [
       -6,
@@ -659,7 +653,6 @@
    },
    {
     "frame": 28,
-    "ease": "smooth",
     "turns": {
      "2": [
       10,
@@ -761,7 +754,6 @@
    },
    {
     "frame": 30,
-    "ease": "smooth",
     "turns": {
      "2": [
       10,
@@ -861,6 +853,7 @@
      }
     ]
    }
-  ]
+  ],
+  "interp": "spline"
  }
 }

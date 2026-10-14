@@ -1,5 +1,5 @@
 {
- "comment": "Palutena's up air (AttackAirHi; the owner's 3DS reference, 2026-10-14): the staff raised straight up, her halo shown above her (the script's part), held through the hits, back to her fall.",
+ "comment": "Palutena's up air (AttackAirHi; owner p6i: as the 3DS's): she turns to face the camera stretching the staff high overhead (frame 4, held to 16) as her halo shows above her (the script's part), back to her fall.",
  "keyposes": {
   "skeleton": "peach",
   "scene": "builds/p6-art/palutena/3ds2ds/scene_high/scene.json",
@@ -17,20 +17,27 @@
    {
     "frame": 4,
     "ease": "out",
-    "turns": {
+    "trans": {
      "1": [
-      -15,
       0,
+      15,
+      0
+     ]
+    },
+    "orient": {
+     "1": [
+      -5,
+      -70,
       0
      ],
      "2": [
-      -15,
-      0,
+      -10,
+      -80,
       0
      ],
      "7": [
-      -12,
-      0,
+      -15,
+      -80,
       0
      ]
     },
@@ -38,17 +45,17 @@
      {
       "row": 11,
       "to": [
-       -0.12,
-       1,
-       0.1
+       -0.25,
+       0.97,
+       0.0
       ]
      },
      {
       "row": 12,
       "to": [
-       -0.03,
+       -0.05,
        1,
-       0.05
+       0.0
       ]
      },
      {
@@ -61,7 +68,7 @@
       "to": [
        0,
        1,
-       0.03
+       0.0
       ],
       "twist": {
        "axis": [
@@ -70,79 +77,87 @@
         -0.164
        ],
        "to": [
-        1,
         0,
-        0
+        0,
+        1
        ]
       }
      },
      {
       "row": 4,
       "to": [
-       0.35,
-       -0.6,
-       -0.7
+       0.5,
+       -0.8,
+       0.3
       ]
      },
      {
       "row": 5,
       "to": [
-       0.2,
-       -0.4,
-       -0.9
+       0.3,
+       -0.5,
+       0.8
       ]
      },
      {
       "row": 16,
       "to": [
        0.05,
-       -1,
-       0.05
+       -0.98,
+       0.15
       ]
      },
      {
       "row": 17,
       "to": [
        0,
-       -1,
-       -0.15
+       -0.95,
+       -0.3
       ]
      },
      {
       "row": 21,
       "to": [
        -0.05,
-       -1,
-       0.05
+       -0.97,
+       0.22
       ]
      },
      {
       "row": 22,
       "to": [
        0,
-       -1,
-       -0.15
+       -0.97,
+       -0.25
       ]
      }
-    ]
+    ],
+    "hold": true
    },
    {
     "frame": 16,
-    "ease": "smooth",
-    "turns": {
+    "ease": "linear",
+    "trans": {
      "1": [
-      -15,
       0,
+      15,
+      0
+     ]
+    },
+    "orient": {
+     "1": [
+      -5,
+      -70,
       0
      ],
      "2": [
-      -15,
-      0,
+      -10,
+      -80,
       0
      ],
      "7": [
-      -12,
-      0,
+      -15,
+      -80,
       0
      ]
     },
@@ -150,17 +165,17 @@
      {
       "row": 11,
       "to": [
-       -0.12,
-       1,
-       0.1
+       -0.25,
+       0.97,
+       0.0
       ]
      },
      {
       "row": 12,
       "to": [
-       -0.03,
+       -0.05,
        1,
-       0.05
+       0.0
       ]
      },
      {
@@ -173,7 +188,7 @@
       "to": [
        0,
        1,
-       0.03
+       0.0
       ],
       "twist": {
        "axis": [
@@ -182,61 +197,62 @@
         -0.164
        ],
        "to": [
-        1,
         0,
-        0
+        0,
+        1
        ]
       }
      },
      {
       "row": 4,
       "to": [
-       0.35,
-       -0.6,
-       -0.7
+       0.5,
+       -0.8,
+       0.3
       ]
      },
      {
       "row": 5,
       "to": [
-       0.2,
-       -0.4,
-       -0.9
+       0.3,
+       -0.5,
+       0.8
       ]
      },
      {
       "row": 16,
       "to": [
        0.05,
-       -1,
-       0.05
+       -0.98,
+       0.15
       ]
      },
      {
       "row": 17,
       "to": [
        0,
-       -1,
-       -0.15
+       -0.95,
+       -0.3
       ]
      },
      {
       "row": 21,
       "to": [
        -0.05,
-       -1,
-       0.05
+       -0.97,
+       0.22
       ]
      },
      {
       "row": 22,
       "to": [
        0,
-       -1,
-       -0.15
+       -0.97,
+       -0.25
       ]
      }
-    ]
+    ],
+    "hold": true
    },
    {
     "frame": 30
@@ -244,7 +260,8 @@
    {
     "frame": 40
    }
-  ]
+  ],
+  "interp": "spline"
  },
  "skeleton": "peach",
  "ops": [
