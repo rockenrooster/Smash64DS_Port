@@ -492,6 +492,50 @@ def _inverse_affine(m):
     return out
 
 
+def palette_rule_colour(rgba, rules) -> list:
+    """One palette entry under the palette rules (ops "palette"): the first
+    rule whose hue range (degrees; saturation and value floors and a
+    saturation ceiling optional) holds it gives a new hue, saturation and
+    value as multipliers, or a fixed colour; alpha stays."""
+    import colorsys
+    r, g, b = (c / 255.0 for c in rgba[:3])
+    h, s_, v = colorsys.rgb_to_hsv(r, g, b)
+    hue = h * 360.0
+    for rule in rules:
+        lo, hi = rule.get("hue", (0, 360))
+        inside = (lo <= hue <= hi) if lo <= hi else (hue >= lo or hue <= hi)
+        if not inside or s_ < rule.get("min_sat", 0.0) or v < rule.get("min_val", 0.0) \
+                or s_ > rule.get("max_sat", 1.0):
+            continue
+        if "color" in rule:
+            c = rule["color"]
+            r, g, b = (int(c[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
+        else:
+            h = (rule["to_hue"] / 360.0) if "to_hue" in rule else h
+            s_ = min(1.0, s_ * rule.get("sat", 1.0))
+            v = min(1.0, v * rule.get("val", 1.0))
+            r, g, b = colorsys.hsv_to_rgb(h, s_, v)
+        break
+    return [int(round(r * 255)), int(round(g * 255)), int(round(b * 255)), rgba[3] if len(rgba) > 3 else 255]
+
+
+def _rebuild_worlds(scene: dict) -> None:
+    """Each joint's world matrix from its parent's and its own rest
+    translate, rotate (Rz Ry Rx) and scale (model_scene.local_matrix)."""
+    import model_scene as MS
+    joints = scene["joints"]
+    for j in joints:
+        r = MS.euler_xyz(*j["rotate"])
+        s, t = j.get("scale", (1.0, 1.0, 1.0)), j["translate"]
+        local = np.array([[r[0][0] * s[0], r[0][1] * s[1], r[0][2] * s[2], t[0]],
+                          [r[1][0] * s[0], r[1][1] * s[1], r[1][2] * s[2], t[1]],
+                          [r[2][0] * s[0], r[2][1] * s[1], r[2][2] * s[2], t[2]],
+                          [0.0, 0.0, 0.0, 1.0]])
+        parent = j["parent"]
+        world = local if parent < 0 else np.array(joints[parent]["world"], dtype=float) @ local
+        j["world"] = world.tolist()
+
+
 def apply(base: dict, fit: dict, ops: dict) -> dict:
     out = copy.deepcopy(base)
     fit_index = {m["name"]: m for m in fit["meshes"]}
@@ -607,6 +651,21 @@ def compose(base: dict, fit: dict, ops: dict, role: str, kit_dir: Path | None, o
     import bake as B
     scene = apply(base, fit, ops)
     verts = scene["vertices"]
+    # Joint shifts (ops "joint_shift": rows and a translation added to each
+    # row's rest translate, in its parent's frame): the look's skeleton moved
+    # where the restyle needs it (owner 2026-10-14: Ike's shoulders a little
+    # broader than Roy's, the arm roots and shoulder pads outward). Every
+    # vertex keeps its place on its joint, so the rows' parts move with them.
+    if ops.get("joint_shift"):
+        for js in ops["joint_shift"]:
+            for r in js["rows"]:
+                j = scene["joints"][r]
+                j["translate"] = [float(a) + float(b) for a, b in zip(j["translate"], js["add"])]
+        _rebuild_worlds(scene)
+        for v in verts:
+            w = np.array(scene["joints"][v["joint"]]["world"], dtype=float)
+            p = w @ np.append(np.asarray(v["local"], dtype=float), 1.0)
+            v["model"] = [round(float(c), 4) for c in p[:3]]
 
     def put(i, model):
         v = verts[i]
@@ -708,8 +767,13 @@ def compose(base: dict, fit: dict, ops: dict, role: str, kit_dir: Path | None, o
     # averaged -- so the drawing stays put and the face only grows or shrinks
     # around it (owner 2026-10-13: the brows tilted when the bangs moved).
     kt = ops.get("keep_texture", ())
+    k_mirror = False
     if isinstance(kt, dict):
         keep, k_scale, k_centre = set(kt["materials"]), float(kt.get("scale", 1.0)), np.array(kt.get("centre", (0, 0)), dtype=float)
+        # "mirror_centre": the drawing scales about the centre on the
+        # vertex's own side of the face (each eye about itself, owner
+        # 2026-10-14: Ike's eyes a little smaller than Roy's).
+        k_mirror = bool(kt.get("mirror_centre"))
     else:
         keep, k_scale, k_centre = set(kt), 1.0, np.zeros(2)
     if keep:
@@ -724,7 +788,10 @@ def compose(base: dict, fit: dict, ops: dict, role: str, kit_dir: Path | None, o
                 continue
             # A drawing scale: the texture shows k_scale times its size about
             # k_centre (the eyes fitted to the kit's narrower face).
-            new = k_centre + (new - k_centre) / k_scale
+            centre = k_centre
+            if k_mirror and new[0] < 0:
+                centre = k_centre * np.array((-1.0, 1.0))
+            new = centre + (new - centre) / k_scale
             sts = []
             for ti in tis:
                 a, b, c = base["triangles"][ti]["v"]
@@ -900,32 +967,64 @@ def compose(base: dict, fit: dict, ops: dict, role: str, kit_dir: Path | None, o
             tex = dict(tex, palette=colours, texels=texels)
         pal = []
         for rgba in tex["palette"]:
-            r, g, b = (c / 255.0 for c in rgba[:3])
-            h, s_, v = colorsys.rgb_to_hsv(r, g, b)
-            hue = h * 360.0
-            for rule in rules:
-                lo, hi = rule.get("hue", (0, 360))
-                inside = (lo <= hue <= hi) if lo <= hi else (hue >= lo or hue <= hi)
-                if not inside or s_ < rule.get("min_sat", 0.0) or v < rule.get("min_val", 0.0) \
-                        or s_ > rule.get("max_sat", 1.0):
-                    continue
-                if "color" in rule:
-                    c = rule["color"]
-                    r, g, b = (int(c[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
-                else:
-                    h = (rule["to_hue"] / 360.0) if "to_hue" in rule else h
-                    s_ = min(1.0, s_ * rule.get("sat", 1.0))
-                    v = min(1.0, v * rule.get("val", 1.0))
-                    r, g, b = colorsys.hsv_to_rgb(h, s_, v)
-                break
-            pal.append([int(round(r * 255)), int(round(g * 255)), int(round(b * 255)), rgba[3]])
+            pal.append(palette_rule_colour(rgba, rules))
         name = f"p_{m}_{tex['width']}x{tex['height']}.png"
         from PIL import Image
         rgba_img = [tuple(pal[i]) for row in tex["texels"] for i in row]
         img = Image.new("RGBA", (tex["width"], tex["height"]))
         img.putdata(rgba_img)
         img.save(out / name)
-        mat["texture"] = dict(tex, file=name, palette=pal)
+        # The rules travel with the material: the writer applies them to
+        # every costume's copy of the base palette in the base's own entry
+        # order (model_writer.scene_texture_writes), so each costume keeps
+        # its own colours under the look's changes.
+        mat["texture"] = dict(tex, file=name, palette=pal, palette_rules=rules)
+    # Drawing scales in texel space (ops "texel_scale": base material ->
+    # {"scale", "centre" in texels}): the image's drawing shrunk or grown
+    # about a texel, nearest-neighbour, the image's corner colour filling
+    # what the drawing leaves (owner 2026-10-14: Ike's eyes a little smaller
+    # than Roy's). Parameters only; the texels are the base's.
+    for (m, colour), mi in remap.items():
+        sc_ = ops.get("texel_scale", {}).get(str(m))
+        mat = scene["materials"][mi]
+        if sc_ is None or not mat.get("texture"):
+            continue
+        tex = mat["texture"]
+        if "texels" not in tex:
+            from PIL import Image
+            img = Image.open(Path(ops["_base_dir"]) / tex["file"]).convert("RGBA")
+            colours, texels = [], []
+            for y in range(img.height):
+                row = []
+                for x in range(img.width):
+                    c = list(img.getpixel((x, y)))
+                    if c not in colours:
+                        colours.append(c)
+                    row.append(colours.index(c))
+                texels.append(row)
+            tex = dict(tex, palette=colours, texels=texels)
+        k = float(sc_["scale"])
+        cx, cy = (float(c) for c in sc_["centre"])
+        old = tex["texels"]
+        h, w = len(old), len(old[0])
+        fill = old[0][0]
+        new = []
+        for y in range(h):
+            row = []
+            for x in range(w):
+                sx = cx + (x + 0.5 - cx) / k - 0.5
+                sy = cy + (y + 0.5 - cy) / k - 0.5
+                ix, iy = int(round(sx)), int(round(sy))
+                row.append(old[iy][ix] if (0 <= ix < w and 0 <= iy < h) else fill)
+            new.append(row)
+        name = f"s_{m}_{w}x{h}.png"
+        from PIL import Image
+        img = Image.new("RGBA", (w, h))
+        img.putdata([tuple(tex["palette"][i]) for row in new for i in row])
+        img.save(out / name)
+        # The writer scales every frame the base's material object shows in
+        # place (the eye's blink frames too); these texels are the preview.
+        mat["texture"] = dict(tex, file=name, texels=new, texel_scale={"scale": k, "centre": [cx, cy]})
     # Composed textures (face_frames.py) or authored ones replace a base
     # material's image.
     for (m, colour), mi in remap.items():

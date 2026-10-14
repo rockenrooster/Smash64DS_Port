@@ -1,5 +1,5 @@
 {
- "note": "Ike low on Roy's low model (P6 I2, route R). Palette rules per base material (look_r palette op): Ike's colours from the 3DS kit's regions (navy hair, charcoal tunic with dark red, dark red cape, beige trousers, dark boots, gold Ragnell).",
+ "note": "Ike low on Roy's low model (P6 I2, route R). Palette rules per base material (look_r palette op): Ike's colours from the 3DS kit's regions (navy hair, charcoal tunic with dark red, dark red cape, beige trousers, dark boots, gold Ragnell). Owner 2026-10-14 (\"Just use roy\"): Roy's model with blue hair, the outfit in Ike's colours, a headband (Roy's circlet recoloured to Ike's olive-green cloth), a gold sword, the eyes 0.85x (texel_scale) and the shoulders broader (arm roots 8 units out, pads 5, the torso's shoulder corners with them).",
  "recolor": {
   "3": "c88c5aff"
  },
@@ -65,8 +65,8 @@
      260
     ],
     "to_hue": 220,
-    "sat": 0.25,
-    "val": 0.32
+    "sat": 0.6,
+    "val": 0.36
    },
    {
     "hue": [
@@ -93,8 +93,8 @@
      260
     ],
     "to_hue": 220,
-    "sat": 0.25,
-    "val": 0.3
+    "sat": 0.6,
+    "val": 0.36
    },
    {
     "hue": [
@@ -259,6 +259,46 @@
     "sat": 1.0,
     "val": 0.24
    }
+  ],
+  "8": [
+   {
+    "hue": [
+     30,
+     70
+    ],
+    "to_hue": 82,
+    "sat": 0.6,
+    "val": 0.55
+   },
+   {
+    "hue": [
+     200,
+     260
+    ],
+    "to_hue": 95,
+    "sat": 0.55,
+    "val": 0.55
+   }
+  ],
+  "9": [
+   {
+    "hue": [
+     30,
+     70
+    ],
+    "to_hue": 82,
+    "sat": 0.6,
+    "val": 0.55
+   },
+   {
+    "hue": [
+     200,
+     260
+    ],
+    "to_hue": 95,
+    "sat": 0.55,
+    "val": 0.55
+   }
   ]
  },
  "two_sided": [
@@ -266,5 +306,105 @@
  ],
  "edits": [
   "art/p6/ike/look/ik_low_edits_cape.json"
+ ],
+ "texel_scale": {
+  "5": {
+   "scale": 0.85,
+   "centre": [
+    16,
+    15
+   ]
+  }
+ },
+ "joint_shift": [
+  {
+   "rows": [
+    3
+   ],
+   "add": [
+    8,
+    0,
+    0
+   ]
+  },
+  {
+   "rows": [
+    10
+   ],
+   "add": [
+    -8,
+    0,
+    0
+   ]
+  },
+  {
+   "rows": [
+    20
+   ],
+   "add": [
+    5,
+    0,
+    0
+   ]
+  },
+  {
+   "rows": [
+    19
+   ],
+   "add": [
+    -5,
+    0,
+    0
+   ]
+  }
+ ],
+ "place": [
+  {
+   "at": [
+    68,
+    536.7289,
+    -63
+   ],
+   "to": [
+    76,
+    536.7289,
+    -63
+   ],
+   "joints": [
+    2
+   ]
+  },
+  {
+   "at": [
+    39,
+    554.7289,
+    13
+   ],
+   "to": [
+    43,
+    554.7289,
+    13
+   ],
+   "joints": [
+    2
+   ],
+   "mirror": false
+  },
+  {
+   "at": [
+    -40,
+    554.7289,
+    13
+   ],
+   "to": [
+    -44,
+    554.7289,
+    13
+   ],
+   "joints": [
+    2
+   ],
+   "mirror": false
+  }
  ]
 }

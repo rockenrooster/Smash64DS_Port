@@ -22,34 +22,35 @@ Ike keeps Roy's skeleton, so every Roy and Marth clip plays on him.
 
 ## Look (G1)
 
-Source (plan D12): by default the track the owner picks in Palutena's look
-bake-off ([G0](../P6_PLAN.md#look-bake-off-g0)): **K**, the 3DS kit's Ike
-(`decomp/alt_assets/Fighters/Super Smash Bros 3DS/Ike/`, local; plan D10)
-rebuilt onto Roy's skeleton by ring retopology and hand-tuned (A3b), or **R**,
-Roy's own model restyled into Ike with the fitted kit model as the target
-(A3c). The owner can ask for Ike's own two-track sheet instead. Smash 4's Ike
-keeps his Brawl design. Either way the model meets every line below.
+Owner decision 2026-10-14 (after the play-p6b playtest ROM): "Just use roy;
+Make hair blue, recolor outfit to match Ike, add a headband, gold sword,
+slightly smaller eyes, slightly broader shoulders. Ike doesn't need very much
+at all since Roy is so close." This replaces the K/R bake-off for Ike.
 
-- Both details: Ike's heavier build (broad chest and shoulders, thick arms,
-  heavy boots), short blue hair and headband, tunic and cape. Track K maps
-  the kit's 33 joints onto Roy's; the cape and headband-tail swing joints bind
-  to Roy's cape joints if his tree has them (A2 lists it), else to the bust
-  and head.
-- Budget: at most 386 triangles high and 222 low (Roy 351 / 202); the kit's
-  low model draws 1,515.
-- **Ragnell** replaces Roy's sword part in either track: the kit's gold blade
-  (98 triangles in its low model, also `Sword/sword.dae`), rebuilt, longer and
-  broader than Roy's. Sword hitbox offsets and the sword-trail endpoints of
-  every reused script scale by the blade-length ratio measured from the two
-  models.
-- No overall scale change: Roy's hurtboxes and map box stay valid.
-- Costumes: Roy's count, chosen from the kit's eight on the palette sheet
-  (the default first); each is a palette over one baked texture set.
-- Face and hands: the kit's neutral eyes and mouth baked into the face
-  texture; Roy's face frames, if any, get the kit's matching expressions; the
-  kit's three hand poses a side map onto Roy's hand variants.
-- Kirby hat: Ike's blue hair and headband, taken from the picked model's head
-  spans.
+Built (route R, `scripts/p6/look_r.py compose` with
+`art/p6/ike/look/ik_low.json`, written by `model_writer.py` over Roy's files
+as Ike's own main and model files 0x1A00 and 0x1A03, spec `files`):
+
+- Roy's low model (202 triangles; the look is written at both details) on
+  Roy's tree, skeleton and budget.
+- Colours by palette rules per material (hue, saturation, value), applied to
+  every costume palette in place, so each of Roy's six costumes keeps its own
+  recolour: costume 0 navy hair, charcoal-navy tunic, dark red cape, gold
+  trim; 1 red, 2 green, 3 blue, 4 gold, 5 black (Roy's order: the team
+  costumes are Roy's rows).
+- Headband: Roy's circlet recoloured to Ike's olive-green cloth.
+- Ragnell: Roy's sword recoloured gold.
+- Eyes 0.85x (the face texture's eye region scaled about its centre,
+  `texel_scale`).
+- Shoulders broader: the arm roots 8 units out, the shoulder pads 5, the
+  torso's shoulder corners moved with them (`joint_shift`, `place`).
+- The writer ends every list in the default cull state: Roy's preludes clear
+  the back cull for his two-sided parts and restored it in spans the look
+  re-emits; a list left two-sided handed the next joint a no-cull state the
+  runtime resets, and the lean path declined every Ike draw (Policy).
+
+Lab (four CPUs, Ike in port 0): drawn, 0 native failures, 0 lean declines.
+Next: his Kirby hat, portrait and stock icon from this look.
 
 ## Move card (approved 2026-10-13, I1)
 

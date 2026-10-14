@@ -62,6 +62,20 @@ def _is_light_or_mode(g: N.Gfx) -> bool:
     return g.op in (N.G_MOVEWORD, N.G_GEOMETRYMODE)
 
 
+def _ends_two_sided(cmds: list[N.Gfx]) -> bool:
+    """Whether the list's last G_GEOMETRYMODE that touches the back cull
+    clears it (G_GEOMETRYMODE: w0's low 24 bits the AND mask, w1 the OR)."""
+    culled = True
+    for g in cmds:
+        if g.op != N.G_GEOMETRYMODE:
+            continue
+        if not (g.w0 & G_CULL_BACK):
+            culled = False
+        if g.w1 & G_CULL_BACK:
+            culled = True
+    return not culled
+
+
 # A costume MObj's palette list: as long as the base's (Peach's lists hold
 # 16), the last costume repeated past the look's own.
 COSTUME_SLOTS = 16
@@ -506,6 +520,12 @@ class ListWriter:
                 cmds += CUTOUT_OFF
             if self.mats[mi].get("two_sided"):
                 cmds.append(N.Gfx((N.G_GEOMETRYMODE << 24) | 0xFFFFFF, G_CULL_BACK, None))
+        # The base's prelude can clear the cull (Roy's two-sided parts); the
+        # base restored it after its own triangles, in a span the look does
+        # not keep. A list left two-sided handed the next joint's list a
+        # no-cull state the runtime resets: the lean path declined Ike.
+        if _ends_two_sided(cmds):
+            cmds.append(N.Gfx((N.G_GEOMETRYMODE << 24) | 0xFFFFFF, G_CULL_BACK, None))
         cmds.append(N.Gfx(0xE7000000, 0))
         if textured_mode:
             cmds.append(N.Gfx(0xE3001001, 0x00000000))
@@ -593,6 +613,28 @@ def scene_texture_writes(fm: N.FighterModel, scene: dict) -> list:
         tex = m.get("texture") or {}
         if not m.get("spans") or "texels" not in tex:
             continue
+        if tex.get("texel_scale"):
+            # A drawing scaled in texel space (look_r.py "texel_scale"):
+            # every image the material object shows (its frames: the eye's
+            # blinks) scaled in place; the palettes stay.
+            images = []
+            for joint, cmds in m["spans"].items():
+                for c in cmds or ():
+                    g = _cmd(c)
+                    if g.op == N.G_SETTIMG and g.target is not None and (g.w0 >> 21) & 7 == 2:
+                        images.append(g.target[2])
+                    elif g.op == N.G_DL and (g.w1 >> 24) == N.SEGMENT_E:
+                        mobjs = fm.mobjs(scene.get("detail", "low"), int(joint))
+                        k = (g.w1 & 0xFFFFFF) // 8
+                        if k < len(mobjs):
+                            pals = set(mobjs[k].palettes)
+                            images += [s for s in mobjs[k].sprites if s not in pals]
+            images = sorted(set(images))
+            if not images:
+                raise WriterError(f"material {tex.get('file')}: no base image to scale")
+            out.append({"image": images[0], "scale_images": images, "width": int(tex["width"]),
+                        "height": int(tex["height"]), "params": tex["texel_scale"]})
+            continue
         image = palette = None
         for joint, cmds in m["spans"].items():
             for c in cmds or ():
@@ -607,10 +649,57 @@ def scene_texture_writes(fm: N.FighterModel, scene: dict) -> list:
                     k = (g.w1 & 0xFFFFFF) // 8
                     if k < len(mobjs) and mobjs[k].palettes:
                         palette = mobjs[k].palettes[0]
+        if tex.get("palette_rules") and palette is not None:
+            # A recolour by palette rules (look_r.py): the base's texels
+            # stay (the material object's frames too); every costume's copy
+            # of the palette takes the rules in its own entry order
+            # (write_rules_in_place).
+            out.append({"image": image if image is not None else palette, "rules": tex["palette_rules"],
+                        "palette_at": [palette]})
+            continue
         if image is None or palette is None:
             raise WriterError(f"material {tex.get('file')}: no base image or palette to replace")
         out.append({"image": image, "texels": tex["texels"], "palette": tex["palette"], "palette_at": [palette]})
     return out
+
+
+def write_scaled_in_place(model: N.RelocFile, images: list, width: int, height: int, params: dict) -> list:
+    """CI4 images scaled about a texel (nearest-neighbour), each image's
+    corner index filling what the drawing leaves, in place."""
+    k = float(params["scale"])
+    cx, cy = (float(c) for c in params["centre"])
+    for at in images:
+        raw = model.data[at:at + width * height // 2]
+        old = [[(raw[(y * width + x) // 2] >> (4 if x % 2 == 0 else 0)) & 15 for x in range(width)]
+               for y in range(height)]
+        fill = old[0][0]
+        new = []
+        for y in range(height):
+            row = []
+            for x in range(width):
+                ix = int(round(cx + (x + 0.5 - cx) / k - 0.5))
+                iy = int(round(cy + (y + 0.5 - cy) / k - 0.5))
+                row.append(old[iy][ix] if (0 <= ix < width and 0 <= iy < height) else fill)
+            new.append(row)
+        model.data[at:at + width * height // 2] = ci4_bytes(new)
+    return images
+
+
+def write_rules_in_place(fm: N.FighterModel, model: N.RelocFile, rules: list, palette_at: list) -> list:
+    """Each costume's copy of a base palette (mobj_palettes_with) recoloured
+    by look_r.py's palette rules, entry by entry, in place."""
+    sys.path.insert(0, str(HERE))
+    import look_r
+    written = []
+    for p in palette_at:
+        for q in mobj_palettes_with(fm, p):
+            for k in range(16):
+                v = struct.unpack_from(">H", model.data, q + 2 * k)[0]
+                rgba = [((v >> 11) & 31) * 255 // 31, ((v >> 6) & 31) * 255 // 31,
+                        ((v >> 1) & 31) * 255 // 31, 255 if v & 1 else 0]
+                model.data[q + 2 * k:q + 2 * k + 2] = rgba5551([look_r.palette_rule_colour(rgba, rules)])
+            written.append(q)
+    return sorted(set(written))
 
 
 def joint_rows(fm: N.FighterModel, detail: str, scene: dict, offsets: dict[int, int]) -> bytes:
@@ -646,9 +735,25 @@ def write(base_export: Path, scenes: dict[str, Path], main_id: int, model_id: in
         texels = t.get("texels") or png_indices(Path(t["png"]), t["palette"])
         at = [int(x, 0) if isinstance(x, str) else int(x) for x in t["palette_at"]]
         report["textures"].append({"image": image, "palettes": write_in_place(fm, model, image, texels, t["palette"], at)})
+    # Each in-place write once: two details from one scene (Ike's low look
+    # for both) name the same base images and palettes, and a recolour or a
+    # scale applied twice would compound.
+    done_writes = set()
     for detail, path in scenes.items():
         scene = json.loads(path.read_text(encoding="utf-8"))
         for t in scene_texture_writes(fm, scene):
+            key = (t["image"], tuple(t.get("palette_at", ())), "rules" in t, "scale_images" in t)
+            if key in done_writes:
+                continue
+            done_writes.add(key)
+            if "rules" in t:
+                report["textures"].append({"image": t["image"], "palettes": write_rules_in_place(
+                    fm, model, t["rules"], t["palette_at"])})
+                continue
+            if "scale_images" in t:
+                report["textures"].append({"image": t["image"], "scaled": write_scaled_in_place(
+                    model, t["scale_images"], t["width"], t["height"], t["params"])})
+                continue
             report["textures"].append({"image": t["image"], "palettes": write_in_place(
                 fm, model, t["image"], t["texels"], t["palette"], t["palette_at"])})
     app = Appender(model)

@@ -503,12 +503,52 @@ class FighterModel:
             return []
         out = []
         at = ref[2]
+        starts = self._mobj_list_starts()
         while True:
             sub = self.model.ptr(at)
             if sub is None:
                 return out
-            out.append(MObjSub.read(self.model, sub[2]))
+            mo = MObjSub.read(self.model, sub[2])
+            # A list ends where the next MObj list starts: the reader stops
+            # only at a non-pointer word, and Roy's six-costume palette lists
+            # sit back to back, so it ran on into the next material's
+            # palettes (and the eye's frames).
+            for slot, name in ((0x04, "sprites"), (0x2C, "palettes")):
+                lref = self.model.ptr(sub[2] + slot)
+                if lref is not None:
+                    nxt = next((s for s in starts if s > lref[2]), None)
+                    if nxt is not None:
+                        setattr(mo, name, getattr(mo, name)[:(nxt - lref[2]) // 4])
+            out.append(mo)
             at += 4
+
+    def _mobj_list_starts(self) -> list[int]:
+        """Where every MObjSub's frame and palette lists start (both
+        details), sorted."""
+        cached = getattr(self, "_list_starts_cache", None)
+        if cached is not None:
+            return cached
+        starts = set()
+        for detail in DETAILS:
+            table = self.mobjsubs[detail]
+            if table is None:
+                continue
+            for joint in range(len(self.trees[detail])):
+                ref = self.model.ptr(table + 4 * joint)
+                if ref is None:
+                    continue
+                at = ref[2]
+                while True:
+                    sub = self.model.ptr(at)
+                    if sub is None:
+                        break
+                    for slot in (0x04, 0x2C):
+                        lref = self.model.ptr(sub[2] + slot)
+                        if lref is not None:
+                            starts.add(lref[2])
+                    at += 4
+        self._list_starts_cache = sorted(starts)
+        return self._list_starts_cache
 
     def all_lists(self) -> set[int]:
         """Every display list the trees and model parts name."""
