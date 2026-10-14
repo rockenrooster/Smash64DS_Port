@@ -1,6 +1,6 @@
 # Palutena — P6 card
 
-**Status:** planned. **Content:** 20 (`NDS_P4_PALUTENA`). **Base:** Peach
+**Status:** P2 look approved and in the lab ROM (2026-10-13); P3-P8 planned. **Content:** 20 (`NDS_P4_PALUTENA`). **Base:** Peach
 (content 8: setup parent Fox). **Brief:** [../Palutena.md](../Palutena.md),
 with owner decisions D2-D4 of 2026-10-12 and D10 of 2026-10-13 (the look
 converted from the 3DS kit). **Plan:** [../P6_PLAN.md](../P6_PLAN.md),
@@ -16,6 +16,15 @@ Peach's content, and Palutena's statuses name her own routines. Her parent
 kind is Fox, so Fox's rapid-jab, reflector and thrown rows are at hand.
 
 ## Look (G0, G1)
+
+**Settled 2026-10-13 (night):** the owner's "3DS to DS" model, built with the
+owner in Blender on the owner's baseline and approved as built: 428
+triangles high, 278 low (`look_reduce.py`), the staff in her right hand on
+the held-item row, turned upright for the idle; her limbs play Peach's clips
+at their own lengths (translate_scales). How it was made and how it reaches
+the game: [P6_STATUS look record](../P6_STATUS.md#palutena-look-record). The
+brief below is the bake-off's (kept for the parts still to come: wings,
+halo, pillar, gate, costumes, Kirby hat).
 
 Source: picked by the owner from two best-effort candidates at the same
 budget (plan D12, [Look bake-off](../P6_PLAN.md#look-bake-off-g0)): **Track

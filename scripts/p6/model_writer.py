@@ -391,6 +391,16 @@ class ListWriter:
             cmds += self.span(mi, joint)
             vat = self.put_vertices(app, need, mi)
             cmds.append(N.make_vtx(len(need), 0, ("intern", self.model.file_id, vat)))
+            # Every list ends in the default state, the seam's material
+            # included: the next list (the child) starts from it, and the
+            # native owner learns each list's runs from a reset state (a
+            # two-sided seam material left the torso's first run culled
+            # where its runtime state was not: the lean path declined
+            # Palutena's every draw).
+            if (self.mats[mi].get("texture") or {}).get("alpha") and not self.mats[mi].get("spans"):
+                cmds += CUTOUT_OFF
+            if self.mats[mi].get("two_sided"):
+                cmds.append(N.Gfx((N.G_GEOMETRYMODE << 24) | 0xFFFFFF, G_CULL_BACK, None))
         cmds.append(N.Gfx(0xE7000000, 0))
         if textured_mode:
             cmds.append(N.Gfx(0xE3001001, 0x00000000))
@@ -538,9 +548,12 @@ def write(base_export: Path, scenes: dict[str, Path], main_id: int, model_id: in
                 fm, model, t["image"], t["texels"], t["palette"], t["palette_at"])})
     app = Appender(model)
     lay = fm.lay
+    # New textures by name, shared by the details (one copy of each).
+    shared_textures: dict = {}
     for detail, path in scenes.items():
         scene = json.loads(path.read_text(encoding="utf-8"))
         lw = ListWriter(fm, model, scene, detail, None)
+        lw.new_textures = shared_textures
         offsets = lw.build(app)
         app.align(8)
         tree_at = app.here
@@ -563,6 +576,21 @@ def write(base_export: Path, scenes: dict[str, Path], main_id: int, model_id: in
         report["details"][detail] = {"tree": tree_at, "lists": {str(j): o for j, o in sorted(offsets.items())},
                                      "model_parts": retargeted,
                                      "triangles": len(scene["triangles"])}
+    # A look on its own proportions plays the base's clips at its limb
+    # lengths: FTAttributes.translate_scales (look_blend.py), one Vec3f per
+    # fighter joint, appended to the main file.
+    scales = [json.loads(p.read_text(encoding="utf-8")).get("translate_scales") for p in scenes.values()]
+    scales = [s for s in scales if s]
+    if scales:
+        if any(s != scales[0] for s in scales):
+            raise WriterError("the details' translate_scales differ")
+        slot = fm.attr + lay["FTAttributes.translate_scales"]
+        if slot in main.intern or slot in main.extern or any(main.data[slot:slot + 4]):
+            raise WriterError("the base's main already has translate_scales")
+        mapp = Appender(main)
+        at = mapp.put(b"".join(struct.pack(">3f", *(float(c) for c in v)) for v in scales[0]))
+        mapp.slot(slot, ("intern", main_id, at))
+        report["translate_scales"] = at
     out.mkdir(parents=True, exist_ok=True)
     (out / f"{main_id:04x}").write_bytes(main.to_bytes())
     (out / f"{model_id:04x}").write_bytes(model.to_bytes())

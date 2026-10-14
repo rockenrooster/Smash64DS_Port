@@ -4,19 +4,17 @@ Owner of the live P6 state. The plan is [P6_PLAN.md](P6_PLAN.md); the cards
 are [characters/ike.md](characters/ike.md) and
 [characters/palutena.md](characters/palutena.md).
 
-**State (2026-10-13, late):** active (goal P5-P7). Move cards approved (I1,
+**State (2026-10-13, night):** active (goal P5-P7). Move cards approved (I1,
 P1). A1 done: Ike (19) and Palutena (20) are registry contents built from
-Roy's and Peach's exports (null clones) and play in every ROM. G0 settled by
-the owner: Palutena's look is Peach's model reshaped onto the 3DS kit's
-proportions (owner route, after a first pick of the decimated kit), built in
-the live Blender against the kit's wire overlay; the low detail is in owner
-review (v66, 278 triangles, the plan's cap with the staff and shield,
-[look record](#palutena-look-record)).
-Nothing goes into a ROM before the owner's OK. The high detail is the
-approved low refined (owner). A2's writer and A7's file substitution are
-done and checked on the host (the native owner generator and the P4
-generator accept the written look). Next: the owner's verdict on the low,
-then the high, then the look's build rules and pins.
+Roy's and Peach's exports (null clones) and play in every ROM. Palutena's
+look is settled: the owner's "3DS to DS" route (the owner's 1,505-triangle
+baseline of the kit, reduced and hand-tuned in Blender with the owner, 428
+triangles; approved "this model we created is what i want our palutena to
+be", [look record](#palutena-look-record)). It is in the lab ROM through
+`look_blend.py`, `look_reduce.py` (low detail, 278) and `model_writer.py`
+(main 0x1B00, model 0x1B03, spec "files"); its limbs play Peach's clips at
+their own lengths through FTAttributes.translate_scales. Next: the in-game
+check and the owner's look at the low, then her moves (P3-P4).
 
 ## Board 1
 
@@ -26,7 +24,7 @@ then the high, then the look's build rules and pins.
 | A2 model reader and writer (F1) | done 2026-10-13 (`model_writer.py`: Peach's own low scene written back draws the same 211 triangles; the written look passes the native owner generator, host) |
 | A3 Blender bridge, kit reader, fit | done 2026-10-13 (`dae_reader.py`, `kit_fit.py`, `scripts/p6/blender/`) |
 | A3b Track K: the kit rebuilt (F6) | dropped by the owner's route (ops kept for reference) |
-| A3c Track R: the base restyled (F6) | Palutena low in owner review (v66; owner: close) |
+| A3c Track R: the base restyled (F6) | superseded for Palutena by the owner's 3DS-to-DS route (look record); `look_blend.py` (Blender dump to scenes, translate_scales), `look_reduce.py` (low detail) |
 | A4 animation codec and retarget (F2) | codec done 2026-10-13 (`anim.py`: F2 over every Roy, Marth and Peach clip, 486 clips, 10,802 streams, 0 differ within ANIM_EPS from two previous poses; blend-in leads and loops that skip their opening steps kept); retarget written (Captain's jab on Roy's tree: head and feet on the source's paths, hands along them; Mario and Link role maps too); recipes (`art/p6/<name>/anims/*.json`: source clip, optional retarget, optional `retime` length factor) built by `anim.py --build`; a clip whose motion row has the TransN flag carries one extra leading slot (the travel the status physics reads), so playback starts its rows at slot 1; mirror and splice not yet needed |
 | A5 motion-script assembler (F3) | done 2026-10-13 (`mscript.py`: text and back; F3 over every export's motion scripts, 18,741 commands, 0 differ) |
 | A6 review harness | clip playback done 2026-10-13 (`blender/clip_view.py` poses an imported model through `anim.world_frames` per frame and renders a strip; script hitboxes from `mscript.attack_timeline`, joint id minus four = model row, drawn as spheres; Captain's jab retargeted onto Roy's tree plays); the lab hitbox census comparison and GIFs next |
@@ -42,9 +40,9 @@ then the high, then the look's build rules and pins.
 
 | Fighter | Step | State |
 |---|---|---|
-| Palutena | G0 look (owner route: Peach reshaped onto the kit) | low in review; high next |
+| Palutena | G0/G1 look (owner route: 3DS to DS, 2026-10-13 night) | approved by the owner (428 triangles); written (high 428, low 278) and in the lab ROM |
 | Ike | I0 null clone done (A1); I1 approved; I2 look started 2026-10-13 (route R on Roy's low: the kit fitted on Roy's tree, v1 = Roy recoloured to the kit's palette by `palette` rules, 202 of 222 triangles; in owner review); I3 normals authored 2026-10-13 (jabs 1-3, dash attack, forward tilt, forward smash, up smash; [card record](characters/ike.md#move-card-approved-2026-10-13-i1)); lab check: four-CPU lab ROM, Ike in port 0 jabbing every 10 frames runs Attack11, Attack12 and the appended Attack13 (249) with their hitboxes, his entry plays Roy's, 0 native failures; I4 specials authored 2026-10-13 (Quick Draw, Aether, the taunt counter in `src/port/nds_p4_ike.c` on appended statuses 250-263; Eruption stays Roy's Flare Blade, its blue tint is A10): lab, forced inputs on port 0: Quick Draw charges, dashes 14 frames at 30 frames held and ends in its miss lag; Aether rises, plunges, lands; the taunt counters a CPU's hit and strikes; 0 native failures. A8 Ike's sounds: four-CPU Ike census plays his cues; I5-I6 next | I2 in owner review; I3, I4 lab-checked |
-| Palutena | P0 null clone done (A1); P1 approved; P2-P8 | planned |
+| Palutena | P0 null clone done (A1); P1 approved; P2 look in the lab ROM; P3-P8 | P3-P8 planned |
 
 ## A1 record
 
@@ -165,7 +163,80 @@ vertices: Roy 525 / 382, Peach 581 / 420. Main file (setup heap): Roy
 
 ## Palutena look record
 
-**Route (owner, 2026-10-13 evening).** The owner first picked the decimated
+**3DS to DS (owner route, 2026-10-13 night; approved).** The owner set the
+earlier routes aside: "lets try a different strategy ... call it '3DS to DS
+Palutena'. we will start from MY baseline 1505 tri palutena". A Blender file
+holds two copies of the owner's baseline (`Palutena_Owner_Attempt.blend`, the
+kit's low model on its HAL armature); one is never touched and is the bake
+source, the other was reduced to the owner's list (one-layer A-line dress
+with the same slit, armlets, belt, gems, choker and the face's features as
+baked texture, Peach-style blocky hands, minimal calf-length hair with the
+kit's hairline, shield and staff wings as sprites, the gem a billboard) and
+then hand-tuned with the owner through many rounds: the face, arms, neck and
+legs rebuilt from named vertex layouts (automatic collapse decimation looked
+"deformed" to the owner every time), the jaw angle, the face texture baked by
+front projection with the dark jaw shading lifted (the face read "skinnier
+from a distance"), heeled shoes, an inverted-V slit top, skin rejection where
+the kit's openings showed through. Result: 428 triangles (face 70, dress 60,
+legs 86, hair cap 44 and panels 36, chest and neck 40, arms 40, hands 28,
+staff 18, gem, wings and shield 2 each), twelve baked textures. Owner: "Ok i
+think we are done" and "this model we created is what i want our palutena to
+be". The Blender file and the textures are local (kit-derived, D10).
+
+**Into the game.** The work copy is dumped as JSON (kit space, bone
+weights, per-corner uvs, materials). `scripts/p6/look_blend.py` poses each
+vertex into Peach's rest pose by its dominant kit bone (`kit_fit.fit`, which
+now returns each bone's rotation) and binds it rigidly to one of Peach's
+rows: face and hair cap on the head (8), long hair, chest and bodice on the
+torso (2), the neck tube on the neck (7), the skirt's waist ring on the torso
+and the rest of the skirt on the hips (1, a seam 1 to 2; Peach's dress rows
+are not used, their clips scale row 26 up to five times for a floor-length
+gown), arms 4/5 and 11/12, hands 6/13, legs 16-19 and 21-24 with seams at the
+knees and ankles, the staff on the held-item row (14), the shield on the
+forearm (5). The staff is turned so Peach's idle (Wait, averaged) stands it
+10 degrees off vertical with the wing sprite facing the battle camera, and
+slid up through the hand so its foot meets the floor (Peach's idle hand
+hangs at the hip). Textures: CI4 at half the baked size (face, dress, legs,
+arms 64x64), shared by both details; 13.5 KB.
+
+**Proportions.** The look keeps the kit's proportions (owner: no
+stretching), but Peach's clips key translations: rows 0 and 1 in about 140
+of her 165 clips, the torso in 12, neck, head, wrists and knees in 15-25. Rows
+whose clips move them around a rest of zero (root, hips, torso) or that the
+look does not draw (crown, held point, dress, floor) keep Peach's offsets;
+every other row's keyed translation plays at the look's length through
+FTAttributes.translate_scales (the look's rest over Peach's per axis; vanilla
+Luigi plays Mario's clips this way). `model_writer.py` appends the table to
+the main file. The guard multiplies the ShieldPose file's rest rows by the
+same table, so every row's rest comes out exact (the thigh roots take a
+negative factor); the P4 native guard package cannot scale, so
+`p4_shield_pose.py` keeps the raw file for a translate-scaled content (the
+source guard path, as Luigi's).
+
+**Low detail.** `scripts/p6/look_reduce.py` reduces each object to the
+recipe's target (`art/p6/palutena/look/low.json`) by quadric-error
+half-edge collapses that keep mirror symmetry, rows, open borders, UV
+islands, a manifold surface and facing; the face keeps its front outline,
+the leg tubes four sides, and the shoes' stiletto blocks (a pixel in battle)
+go. 278 triangles (face 50, dress 36, legs 56, hair 28 and 22, chest 28, arms
+32, hands 12, staff 8 and the three quads). Renders of both details read
+back from the written files: `artifacts/p6/review/` (local).
+
+Files: main 0x1B00 and model 0x1B03 (spec `scripts/p6/palutena/spec.json`
+"files", from `builds/p6-art/palutena/look/`); the native owner's pins
+re-learned (19 drawn rows).
+
+**Lab check (2026-10-13).** Four-CPU lab ROM, Palutena in port 0 on Dream
+Land: drawn in every status the CPU took (idle, walk, jumps, Peach's
+specials still), 0 native failures, 0 lean declines; the staff stands
+beside her in the idle and her feet stay on the floor. The first build drew
+nothing: the lean path declined every draw (reason Policy: a run's cull
+state against its epoch's). The writer left a two-sided seam material's
+no-cull state at the end of the hips' list, and the native owner's replay
+carried it into the torso's first run where the runtime did not; every list
+now ends in the default state (`model_writer.py`).
+
+**Earlier routes (kept for reference).** Route (owner, 2026-10-13 evening): The owner first picked the decimated
 kit (G0), then proposed, and we agreed, to start from another copy of
 Peach's model and give it the proportions of the owner's baseline
 (`Palutena_Owner_Attempt.blend`: the kit's low model with a HAL armature).
@@ -258,9 +329,14 @@ hashes), verdict.
 
 | Date | Fighter | Gate | Shown | Verdict |
 |---|---|---|---|---|
+| 2026-10-13 | Palutena | G0/G1 look | the 3DS-to-DS work copy in the owner's live Blender (428 triangles; Desktop `3DS_to_DS_Palutena.blend`, local) | approved: "this model we created is what i want our palutena to be" |
 
 ## Owner decisions
 
+- 2026-10-13 (night): Palutena's look is the "3DS to DS" model built
+  with the owner on the owner's baseline (look record); it replaces the
+  Peach-restyle route and its high/low plan. Approved as built (428
+  triangles); continue P6.
 - 2026-10-13 (night): Palutena's high detail is the approved low look
   refined (detail added where close-ups show it, up to about 412 triangles,
   2x textures), not a second restyle of Peach's high model and not the low

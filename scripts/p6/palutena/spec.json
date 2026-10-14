@@ -1,0 +1,9 @@
+{
+ "schema": "p6-spec-v1",
+ "content": "palutena",
+ "comment": "Palutena's authored data over Peach's export (docs/P6/characters/palutena.md). Her look (main 0x1B00, model 0x1B03) is written by scripts/p6/model_writer.py from the owner's Blender model (scripts/p6/look_blend.py); the files are kit-derived build outputs under builds/p6-art/palutena/look (D10).",
+ "files": {
+  "main": {"id": "0x1b00", "from": "builds/p6-art/palutena/look/1b00"},
+  "model": {"id": "0x1b03", "from": "builds/p6-art/palutena/look/1b03"}
+ }
+}

@@ -242,7 +242,9 @@ def fit(kit: D.Model, base: dict, role_map: dict, role_name: str = "") -> dict:
             a = base["joints"][a]["parent"]
         moved = _sub(skeleton[a], base_pos[a]) if a >= 0 and skeleton[a] is not None else (0.0, 0.0, 0.0)
         skeleton[bi] = _add(base_pos[bi], moved)
-    return {"scale": s, "joints": [{"name": n, "pos": new_pos[i], "stretch": 1.0}
+    # "rot": each kit joint's re-aimed rotation, so a caller can pose any
+    # point bound to it (look_blend.py: pos + s * rot * kit_rot^T * (x - kit_pos)).
+    return {"scale": s, "joints": [{"name": n, "pos": new_pos[i], "stretch": 1.0, "rot": new_rot[i]}
                                    for i, n in enumerate(names)],
             "skeleton": [list(q) for q in skeleton],
             "meshes": meshes}
