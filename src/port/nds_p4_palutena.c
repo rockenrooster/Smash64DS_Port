@@ -770,7 +770,8 @@ static void ndsP4PalutenaGateProcUpdate(GObj *effect_gobj)
  * and go at PAL_PILLAR_END (its hitboxes are the script's, frames 12-17).
  * The tic is in effect_vars.common.size, as the gate's.
  *
- * Round 3: 1,875 tall, and the hitboxes the column. The script's attacks 0
+ * Round 3: the hitboxes the column; 2,500 tall (2x her first, owner p6f
+ * notes; 1.5x in round 3). The script's attacks 0
  * and 1 are its lower and upper halves: every frame each moves to the other
  * end of its half (PAL_PILLAR_COLUMN, TopN y; the script makes each at the
  * first), and a hitbox's test after its first frame sweeps from where it was
@@ -783,8 +784,8 @@ static void ndsP4PalutenaGateProcUpdate(GObj *effect_gobj)
 #define PAL_PILLAR_END 12
 
 static const f32 sNdsP4PalutenaPillarColumn[2][2] = {
-    { 200.0F, 938.0F },     /* attack 0: the floor to the middle */
-    { 938.0F, 1675.0F },    /* attack 1: the middle to the top */
+    { 200.0F, 1250.0F },    /* attack 0: the floor to the middle */
+    { 1250.0F, 2300.0F },   /* attack 1: the middle to the top */
 };
 
 static void ndsP4PalutenaPillarProcUpdate(GObj *effect_gobj);

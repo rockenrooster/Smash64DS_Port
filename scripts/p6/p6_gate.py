@@ -52,7 +52,7 @@ U_CROP = 0.75         # the image's door half (its right quarter is the edges')
 DOBJ_END = N.JOINT_TREE_END
 # The pillar's tree, after the gate's five rows (p4_articles.py "pillar").
 PILLAR_TREE = 5 * N.DOBJ_DESC_SIZE
-PILLAR_HEIGHT = 1875.0     # 1.5x her first pillar's 1,250 (owner, round 3; 1.25x before)
+PILLAR_HEIGHT = 2500.0     # 2x her first pillar's 1,250 (owner p6f notes; 1.5x and 1.25x before)
 PILLAR_TEX = 64            # the atlas (CI4, 2 KB)
 # Each card: atlas region (s0, t0, s1, t1 in texels), width, bottom, top, z.
 PILLAR_CARDS = (

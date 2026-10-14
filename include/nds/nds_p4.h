@@ -639,6 +639,10 @@ typedef struct NDSP4Fighter
      * every speed ftMainSetStatus or Remix's frame speed multiplier sets on
      * its fighters takes this factor (1.0 for most). */
     const f32 *anim_rate;
+    /* Its hitboxes' damage scale (generate_p4_fighter.py OWNER_DAMAGE_SCALES):
+     * every hitbox its fighters' scripts make or re-damage, after staling
+     * (1.0 for most). */
+    const f32 *damage_scale;
     /* Optional: the parent's routines it replaces (Remix's id hooks). */
     const NDSP4Overrides *overrides;
 } NDSP4Fighter;
@@ -686,6 +690,10 @@ const NDSP4Fighter *ndsP4Fighter(u32 content);
 /* `speed` times the fighter's content's animation rate (NDSP4Fighter
  * anim_rate): ftMainSetStatus's speed and Remix's frame speed multiplier. */
 f32 ndsP4ScaleAnimSpeed(GObj *fighter_gobj, f32 speed);
+/* ftParamGetStaledDamage for a hitbox `fp` makes, times its content's damage
+ * scale (NDSP4Fighter damage_scale): battleship_ftmain.c. */
+s32 ndsP4StaledDamage(const FTStruct *fp, s32 player, s32 damage, s32 attack_id,
+                      u16 motion_count);
 /* The content whose code a content runs (nds_p4_contents.h NDS_P4_CODE_ROWS):
  * itself, or a P6 authored content's base until the authored content has a
  * source file of its own. A base's code tests its own id through this

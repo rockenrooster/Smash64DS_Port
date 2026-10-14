@@ -682,8 +682,14 @@ SUBSET_FILES = {
 # P7 B3 (owner): a content's animation rate -- every speed its fighters'
 # statuses (ftMainSetStatus) and Remix's frame speed multiplier set, the
 # motion script's clock with them, times this (NDSP4Fighter anim_rate).
-# Kirby's copies play Kirby's own animations and take none.
-OWNER_ANIM_RATES = {"sheik": 1.1}
+# Kirby's copies play Kirby's own animations and take none. Ike (owner,
+# 2026-10-14): "more slow and lumbering compared to Roy, but much more
+# powerful": 0.75x Roy's speed (his ground speeds with it, OWNER_ATTRIBUTE_
+# SCALES, so his feet do not slide) and 1.5x the power (OWNER_DAMAGE_SCALES).
+OWNER_ANIM_RATES = {"sheik": 1.1, "ike": 0.75}
+# A content's hitboxes' damage, times this as each is made (after staling:
+# NDSP4Fighter damage_scale, battleship_ftmain.c ftParamGetStaledDamage).
+OWNER_DAMAGE_SCALES = {"ike": 1.5}
 OWNER_ATTRIBUTE_SCALES = {
     "wario": {"jump_height_mul": 0.75 ** 0.5, "jump_height_base": 0.75 ** 0.5},
     # P7 B2 (owner, 2026-10-12): Bowser walks and runs at 0.75x, to stop his
@@ -693,6 +699,8 @@ OWNER_ATTRIBUTE_SCALES = {
     # frame, docs/P7/P7_STATUS.md B2): his run slid 2.31x where Fox's and
     # Link's sit near 1.1x; 0.75x leaves 1.73x.
     "bowser": {"walk_speed_mul": 0.75, "dash_speed": 0.75, "run_speed": 0.75},
+    # Ike's ground speeds with his 0.75 animation rate (OWNER_ANIM_RATES).
+    "ike": {"walk_speed_mul": 0.75, "dash_speed": 0.75, "run_speed": 0.75},
 }
 # Model IA textures whose intensity the native owner must not draw. Meta
 # Knight's Mach Tornado (model 0x15EE lists at 0x97C0 and 0x9AA0, render mode
@@ -704,6 +712,8 @@ OWNER_ATTRIBUTE_SCALES = {
 # (2026-10-11). Full intensity leaves the alpha exact and the colour SHADE,
 # a white swirl where the N64's is PRIM-tinted cream. (descriptor file index,
 # model offset, bytes).
+# The OWNER_* tables are keyed by the content's own registry name (an
+# authored content's, not its base's: Ike's rows are not Roy's).
 # P7 B4 (owner): a content's hitboxes made larger in named motions -- the
 # size half of each MakeAttackColl's second word in the scripts those
 # motions run (their blocks and every block they reach by goto or call),
@@ -2108,7 +2118,7 @@ def main() -> int:
     if rom.file_bytes(parent_motion) != vanilla.file_bytes(parent_motion):
         raise GenError(f"parent motion {parent_motion:#x} differs from vanilla")
     synth = MotionSynth(rom, parent_motion, events, synth_id)
-    hitbox_scaled = scale_owner_hitboxes(synth, events, resolved, OWNER_HITBOX_SCALES.get(key))
+    hitbox_scaled = scale_owner_hitboxes(synth, events, resolved, OWNER_HITBOX_SCALES.get(spec["name"]))
     motion_o2r = synth.build()
     # A P6 authored content's sounds (p6_audio.py): the base's FGM ids its
     # scripts, attributes and kind tables play become its own cues, in the
@@ -2119,8 +2129,8 @@ def main() -> int:
     deviations = []
     if hitbox_scaled:
         deviations.append({"file_id": synth_id, "class": "owner",
-                           "why": f"hitbox sizes x{OWNER_HITBOX_SCALES[key]['scale']} in motions "
-                                  f"{list(OWNER_HITBOX_SCALES[key]['motions'])}: {hitbox_scaled} commands"})
+                           "why": f"hitbox sizes x{OWNER_HITBOX_SCALES[spec['name']]['scale']} in motions "
+                                  f"{list(OWNER_HITBOX_SCALES[spec['name']]['motions'])}: {hitbox_scaled} commands"})
     o2r_out = args.out / "o2r"
     o2r_out.mkdir(parents=True, exist_ok=True)
     shipped = {}
@@ -2141,10 +2151,10 @@ def main() -> int:
             blob = remap_o2r_attribute_sounds(blob, desc["o_attributes"], fgm_map)
         if fid == file_ids[0] and authored.get("attributes"):
             blob = set_o2r_attributes(blob, desc["o_attributes"], authored["attributes"])
-        if fid == file_ids[0] and key in OWNER_ATTRIBUTE_SCALES:
-            blob = scale_o2r_attributes(blob, desc["o_attributes"], OWNER_ATTRIBUTE_SCALES[key])
+        if fid == file_ids[0] and spec["name"] in OWNER_ATTRIBUTE_SCALES:
+            blob = scale_o2r_attributes(blob, desc["o_attributes"], OWNER_ATTRIBUTE_SCALES[spec["name"]])
             deviations.append({"file_id": fid, "class": "owner",
-                               "why": f"FTAttributes scaled: {OWNER_ATTRIBUTE_SCALES[key]}"})
+                               "why": f"FTAttributes scaled: {OWNER_ATTRIBUTE_SCALES[spec['name']]}"})
         ia_patches = tuple((off, size) for index, off, size in OWNER_IA_INTENSITY_MAX.get(key, ())
                            if file_ids[index] == fid)
         if ia_patches:
@@ -2662,7 +2672,9 @@ def main() -> int:
               "/* Its fighters' measured shared ledger entries (EVENT32_SHARED). */",
               f"const u16 g{ident}Event32Allowance = {event32_allowance};", "",
               "/* Its animations' rate (OWNER_ANIM_RATES, P7 B3). */",
-              f"const f32 g{ident}AnimRate = {float(OWNER_ANIM_RATES.get(key, 1.0))!r}F;", "",
+              f"const f32 g{ident}AnimRate = {float(OWNER_ANIM_RATES.get(spec['name'], 1.0))!r}F;",
+              "/* Its hitboxes' damage scale (OWNER_DAMAGE_SCALES). */",
+              f"const f32 g{ident}DamageScale = {float(OWNER_DAMAGE_SCALES.get(spec['name'], 1.0))!r}F;", "",
               "/* FTFileSize: main closure, largest main-motion and menu-motion figatree. */",
               f"const FTFileSize g{ident}FileSize = {{ {sizes[0]}u, {sizes[1]}u, {sizes[2]}u }};", "",
               "/* HUD: the stock icon as one 8x8 OBJ4 cell and its costume LUTs",

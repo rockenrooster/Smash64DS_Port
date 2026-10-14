@@ -342,6 +342,11 @@ static void ndsP4SearchHitWeapon(GObj *fighter_gobj) __attribute__((noinline));
                                        count_) \
     ndsP4UpdateHitDamageStats(hitlog, (fp_), (player_), (class_), (kind_), \
                               (flags_), (count_))
+/* A content's damage scale (NDSP4Fighter damage_scale; Ike's 1.5x): this TU's
+ * two staled-damage calls, MakeAttackColl's and SetAttackCollDamage's, both
+ * with the maker in fp (ft/fighter.h declared it above). */
+#define ftParamGetStaledDamage(player_, damage_, attack_id_, count_) \
+    ndsP4StaledDamage(fp, (player_), (damage_), (attack_id_), (count_))
 /* P4: Remix's per-frame hooks after the map proc (Bowser's flame recharge,
  * bowser.asm bowser_nsp_recharge) run where ftMainProcPhysicsMap updates the
  * part transforms, its one call in this TU. */
@@ -491,6 +496,7 @@ void ndsP4FTMainUpdateAbsorbStatWeapon(WPStruct *wp, WPAttackColl *wp_attack_col
 #if NDS_P4
 #undef lbCommonMakePositionFGM
 #undef ftParamUpdate1PGameDamageStats
+#undef ftParamGetStaledDamage
 #undef NDS_P4_HIT_INTERACT_FTStruct
 #undef NDS_P4_HIT_INTERACT_fp
 #undef NDS_P4_HIT_INTERACT_this_fp

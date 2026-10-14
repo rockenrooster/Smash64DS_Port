@@ -28,17 +28,10 @@
    "anim": "builds/p6-art/ike/anims/dash.o2r",
    "script": "scripts/p6/ike/motions/dash.ms"
   },
-  "170": {
-   "comment": "AttackS3: forward tilt, Roy's at 0.85 speed and 1.25 times his damage",
-   "script_edits": {
-    "damage_scale": 1.25,
-    "frame_speed": 0.85
-   }
-  },
   "179": {
-   "comment": "AttackS4: forward smash, Roy's at 1.2 times his damage, without his fire (fire hitboxes slash, no fire hit sounds)",
+   "comment": "AttackS4: forward smash, Roy's (Ike's 1.5x power is OWNER_DAMAGE_SCALES), without his fire (fire hitboxes slash, no fire hit sounds)",
    "script_edits": {
-    "damage_scale": 1.2,
+    
     "element": {
      "1": 3
     },

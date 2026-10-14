@@ -87,7 +87,8 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
     extern const NDSP4BakedRef gNdsP4##T##BakedRefs[]; \
     extern const u32 gNdsP4##T##BakedRefCount; \
     extern const NDSP4ShieldPose gNdsP4##T##ShieldPose; \
-    extern const f32 gNdsP4##T##AnimRate;
+    extern const f32 gNdsP4##T##AnimRate; \
+    extern const f32 gNdsP4##T##DamageScale;
 #define NDS_P4_ROW(T, title, parent, on_status_hook, computer_rows, override_rows) \
     { \
         .name = (title), .parent_kind = (parent), \
@@ -125,6 +126,7 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
         .baked_ref_count = &gNdsP4##T##BakedRefCount, \
         .shield_pose = &gNdsP4##T##ShieldPose, \
         .anim_rate = &gNdsP4##T##AnimRate, \
+        .damage_scale = &gNdsP4##T##DamageScale, \
         .overrides = (override_rows), \
     }
 
@@ -201,6 +203,19 @@ f32 ndsP4ScaleAnimSpeed(GObj *fighter_gobj, f32 speed)
         return speed;
     }
     return speed * *f->anim_rate;
+}
+
+s32 ndsP4StaledDamage(const FTStruct *fp, s32 player, s32 damage, s32 attack_id,
+                      u16 motion_count)
+{
+    s32 staled = ftParamGetStaledDamage(player, damage, attack_id, motion_count);
+    const NDSP4Fighter *f = ndsP4Fighter(fp->nds_p4_content);
+
+    if ((f == NULL) || (f->damage_scale == NULL) || (*f->damage_scale == 1.0F))
+    {
+        return staled;
+    }
+    return (s32)(((f32)staled * *f->damage_scale) + 0.5F);
 }
 
 const NDSP4Fighter *ndsP4Fighter(u32 content)
