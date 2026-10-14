@@ -135,6 +135,12 @@ ARTICLES = {
         # part he is held by.
         {"name": "saturn", "special": 4, "itattributes": 0x0, "texid_frames": 7},
     ),
+    # P6 Palutena (scripts/p6/p6_gate.py): her entry gate, a DObjDesc tree
+    # at 0 of her special file 2 (Peach's turnip file's slot), the two doors'
+    # lists drawn by the entry case (src/port/nds_p4_palutena.c).
+    "palutena": (
+        {"name": "gate", "special": 2, "dobjdesc": 0x0, "entry": True},
+    ),
     "piano": (
         # fireball.asm struct_book: WPAttributes at 0 of Piano file 6
         # (PIANO_PROJECTILE_HITBOX), the book's model in the file it names.
@@ -397,7 +403,9 @@ def resolve(content: str, title: str, o2r: Path, descriptor: dict,
     in the storage the base's code reads (p4_contents.special_storage)."""
     import p4_contents  # noqa: E402
 
-    key = p4_contents.table_key(content)
+    # An authored content with articles of its own has its own row
+    # (Palutena's gate); otherwise its base's.
+    key = content if content in ARTICLES else p4_contents.table_key(content)
     file_ids = list(descriptor["file_ids"])
     resources: dict[int, census.O2RResource] = {}
 

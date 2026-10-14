@@ -531,8 +531,92 @@ static s32 ndsP4PalutenaUpdateDamage(FTStruct *fp, s32 damage)
     return damage;
 }
 
+/* ---- Entry (her gate; card "Entry") ----
+ *
+ * Her entry_script row is her own (scripts/p6/palutena/spec.json kind_tables
+ * "entry_script"): this case makes her gate, the DObjDesc tree at 0 of her
+ * special file 2 (scripts/p6/p6_gate.py: the root at her entry position, a
+ * node toward the camera, the two doors on their hinges), drawn natively as
+ * an entry effect (scripts/p4/p4_articles.py's "gate" root). Its update parts
+ * the doors from tic PAL_GATE_OPEN_AT over PAL_GATE_OPEN_TICS, each turning
+ * PAL_GATE_OPEN_DEG on its hinge toward the camera, then shrinks the gate
+ * away from PAL_GATE_SHRINK_AT and ejects it at PAL_GATE_END, inside her
+ * entry clip (scripts/p6/palutena/motions/entry.ms times her sparkles to
+ * the parting). The tic count is the effect's (effect_vars.common.size). */
+#define PAL_GATE_OPEN_AT 10
+#define PAL_GATE_OPEN_TICS 24
+#define PAL_GATE_OPEN_DEG 80.0F
+#define PAL_GATE_SHRINK_AT 84
+#define PAL_GATE_END 100
+
+extern void *gNdsP4PalutenaSpecial2;
+void gcDrawDObjTreeForGObj(GObj *gobj);
+static void ndsP4PalutenaGateProcUpdate(GObj *effect_gobj);
+
+static EFDesc sNdsP4PalutenaGateDesc = {
+    0x4 | EFFECT_FLAG_USERDATA, 10, &gNdsP4PalutenaSpecial2,
+    { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0x00 },
+    { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0x00 },
+    ndsP4PalutenaGateProcUpdate, gcDrawDObjTreeForGObj,
+    0x0, 0x0, 0x0, 0x0
+};
+
+static void ndsP4PalutenaGateProcUpdate(GObj *effect_gobj)
+{
+    EFStruct *ep = efGetStruct(effect_gobj);
+    DObj *front = DObjGetStruct(effect_gobj)->child;
+    DObj *left = front->child;
+    DObj *right = left->sib_next;
+    s32 tic = ep->effect_vars.common.size;
+    f32 open = 1.0F;
+    f32 scale = 1.0F;
+
+    if (ep->is_pause_effect)
+    {
+        return;
+    }
+    if (tic >= PAL_GATE_END)
+    {
+        efManagerSetPrevStructAlloc(ep);
+        gcEjectGObj(effect_gobj);
+        return;
+    }
+    if (tic < PAL_GATE_OPEN_AT)
+    {
+        open = 0.0F;
+    }
+    else if (tic < (PAL_GATE_OPEN_AT + PAL_GATE_OPEN_TICS))
+    {
+        /* Eased out: fast as the doors part, slowing to rest. */
+        f32 rest = (f32)(PAL_GATE_OPEN_AT + PAL_GATE_OPEN_TICS - tic) / (f32)PAL_GATE_OPEN_TICS;
+
+        open = 1.0F - (rest * rest);
+    }
+    if (tic >= PAL_GATE_SHRINK_AT)
+    {
+        scale = (f32)(PAL_GATE_END - tic) / (f32)(PAL_GATE_END - PAL_GATE_SHRINK_AT);
+    }
+    left->rotate.vec.f.y = F_CST_DTOR32(PAL_GATE_OPEN_DEG) * open;
+    right->rotate.vec.f.y = -F_CST_DTOR32(PAL_GATE_OPEN_DEG) * open;
+    front->scale.vec.f.x = scale;
+    front->scale.vec.f.y = scale;
+    front->scale.vec.f.z = scale;
+    ep->effect_vars.common.size = tic + 1;
+}
+
+static void ndsP4PalutenaEntryCase(FTStruct *fp)
+{
+    GObj *effect_gobj = ndsP4EntryMakeEffect(&sNdsP4PalutenaGateDesc, &fp->entry_pos);
+
+    if (effect_gobj != NULL)
+    {
+        efGetStruct(effect_gobj)->effect_vars.common.size = 0;
+    }
+}
+
 const NDSP4Overrides gNdsP4PalutenaOverrides = {
     .update_damage = ndsP4PalutenaUpdateDamage,
+    .entry_case = ndsP4PalutenaEntryCase,
 };
 
 #if NDS_P2_KIRBY

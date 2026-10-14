@@ -1,6 +1,6 @@
 {
  "schema": 1,
- "comment": "Palutena's parts shown on demand (A10, scripts/p6/look_parts.py): each a model-part variant of an existing row drawing that row's list plus cut-out cards, two-sided. Corners are in the look's rest model space (y up, she faces +z; the battle camera sees her x axis as depth, so the cards lie across y and z). The wings (forward and down smash: SetModelPartID joint 6 part 1) are the kit's wing image (godwing, its full feathered wing, the island above it cleared), one card a side sweeping up and back from her shoulder blades. The halo (up air: joint 12 part 2) is an authored gold ring above her head, tilted back.",
+ "comment": "Palutena's parts shown on demand (A10, scripts/p6/look_parts.py): each a model-part variant of an existing row drawing that row's list plus cut-out cards, two-sided. Corners are in the look's rest model space (y up, she faces +z; the battle camera sees her x axis as depth, so the cards lie across y and z). The wings (forward and down smash: SetModelPartID joint 6 part 1) are the kit's wing image (godwing, its full feathered wing, the island above it cleared), one card a side sweeping up and back from her shoulder blades. The halo (up air, the down taunt, the victory and select poses: joint 12 part 2) is an authored gold ring above her head, two crossed cards: one faces the battle camera, the other the select and Results cameras, which see her from the front. The light pillar (up smash: joint 5 part 1, the hips row) is an authored column of light ahead of her where the up smash's hitboxes stand (TopN z 260, y 200-1200), two crossed cards.",
  "parts": [
   {
    "name": "wings",
@@ -24,7 +24,18 @@
    "variant": 2,
    "texture": {"source": "authored:halo", "size": [32, 32]},
    "cards": [
-    {"corners": [[0, 614, -80], [0, 614, 40], [0, 506, 40], [0, 506, -80]]}
+    {"corners": [[0, 614, -80], [0, 614, 40], [0, 506, 40], [0, 506, -80]]},
+    {"corners": [[-60, 614, -20], [60, 614, -20], [60, 506, -20], [-60, 506, -20]]}
+   ]
+  },
+  {
+   "name": "pillar",
+   "joint": 1,
+   "variant": 1,
+   "texture": {"source": "authored:pillar", "size": [16, 64]},
+   "cards": [
+    {"corners": [[0, 1250, 170], [0, 1250, 350], [0, 0, 350], [0, 0, 170]]},
+    {"corners": [[-90, 1250, 260], [90, 1250, 260], [90, 0, 260], [-90, 0, 260]]}
    ]
   }
  ]

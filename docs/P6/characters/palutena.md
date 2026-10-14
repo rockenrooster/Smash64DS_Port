@@ -79,9 +79,9 @@ neutral air (a flying kick), back air on Captain's (the backfist, the shield
 arm), down air on Captain's stomp. The dash attack is Peach's clip with
 the shield charge's hitboxes on the shield arm. Scripts in
 `scripts/p6/palutena/motions` with her cues. The wings show in the forward
-and down smashes and the halo in the up air (2026-10-14, below); not yet:
-the pillar effect (the up smash's column is hitboxes and sparkles), the
-taunt, the entry gate and the victory poses (Peach's for now).
+and down smashes, the halo in the up air, the light pillar in the up smash;
+the taunt, the entry gate and the victory poses are hers (2026-10-14,
+below).
 
 **Costumes, wings, halo, stock icon (2026-10-14).** Costumes are palettes
 over her one index image per texture (P6_PLAN A3b): `blender/costume_corr.py`
@@ -104,9 +104,38 @@ halo are model-part variants of existing rows (`scripts/p6/look_parts.py`,
 recipe `art/p6/palutena/look/parts.json`): the torso row's part 1 draws its
 list plus two cut-out cards of the kit's feathered wing (godwing), sweeping
 up and back from her shoulder blades; the head row's part 2 adds an authored
-gold ring above her head. Her forward and down smash scripts show the wings
-(SetModelPartID joint 6), her up air the halo (joint 12); a status change
-resets the parts.
+gold ring above her head, two crossed cards: one faces the battle camera,
+the other the select and Results cameras, which see her from the front.
+Her forward and down smash scripts show the wings (SetModelPartID joint 6),
+her up air the halo (joint 12); a status change resets the parts.
+
+**Pillar, taunt, entry, victory poses (2026-10-14).** The up smash's light
+pillar is the hips row's part 1 (joint 5): two crossed authored cards, a
+column of cyan light ahead of her where its hitboxes stand (TopN z 260,
+y 0-1250). Cards light by an up normal, not their face's: a two-sided card's
+back face turned away from the light drew black (the pillar's first
+capture). The down taunt (Appeal, `motions/appeal.ms`) keeps Peach's clip
+for now and shows the halo with sparkles, her taunt voice and down-taunt
+sound. The entry (statuses 0xDC/0xDD, motions 195/196: `motions/entry.ms`,
+clip `art/p6/palutena/anims/entry.json`, Marth's entry on her tree, the
+staff where his sword is) has her own entry case (`src/port/
+nds_p4_palutena.c`, kind table `entry_script`): her gate, the kit's golden
+double door (`scripts/p6/p6_gate.py`: its front faces, twelve triangles a
+door, a 64x64 CI4 door image, unlit and two-sided) in her special file 2
+in place of Peach's turnip (`p6_author.py` special roles: the main's header
+word that named the turnip file names the gate, since the source loader
+finds special files only in the main's extern closure, and the turnip model
+leaves the closure; her Mr. Saturn slot keeps Fox's file), drawn natively as an entry
+effect (`p4_articles.py` "gate"). The gate stands 920 units tall, 260 units
+toward the camera from her: its doors part from tic 10 over 24 tics, 80
+degrees each on its hinge, and it shrinks away from tic 84 to 100. Her halo
+shows in the doorway, with sparkles and her entry sound as the doors part
+and her line as they open. Victory poses (`menu_motions`, Peach's clips):
+Win1 with her wings, Win2 with her halo, Win3 with both, each with Peach's
+blinks and her win line where Peach's voice was; the select screen's
+Selected pose (row 4, Peach's third clip) shows the halo and a line once it
+settles. Results name: "PALUTENA" at x 20, scale 0.7, "WINS!" at x 185
+(Remix's Ganondorf and Marth layout; Peach's left "WINS!" over the name).
 
 Motions follow Ultimate's moves (SmashWiki's Palutena (SSBU) descriptions);
 SSB64 has no pummel, no up or down throw and no smash charge. Numbers are lab

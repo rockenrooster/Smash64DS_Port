@@ -60,6 +60,22 @@ def authored_halo(size: int) -> np.ndarray:
     return out
 
 
+def authored_pillar(w: int, h: int) -> np.ndarray:
+    """A column of light: white at its core to cyan at its sides, its top
+    thinning out (card "Joints appended": the up smash's pillar, authored)."""
+    out = np.zeros((h, w, 4), dtype=np.float32)
+    c = (w - 1) / 2.0
+    for y in range(h):
+        top = min(1.0, y / (0.25 * h))          # 0 at the top row, 1 below a quarter
+        for x in range(w):
+            d = abs(x - c) / (c + 0.5)
+            if d > 0.35 + 0.6 * top:
+                continue
+            k = max(0.0, 1.0 - d / 0.95)
+            out[y, x] = (120 + 135 * k, 220 + 35 * k, 255, 255)
+    return out
+
+
 def texture(spec: dict) -> np.ndarray:
     """The part's texels at its size (RGBA, row 0 the top)."""
     from PIL import Image, ImageDraw
@@ -67,6 +83,8 @@ def texture(spec: dict) -> np.ndarray:
     src = spec["source"]
     if src == "authored:halo":
         img = Image.fromarray(authored_halo(max(w, h) * 4).astype(np.uint8), "RGBA")
+    elif src == "authored:pillar":
+        img = Image.fromarray(authored_pillar(w * 4, h * 4).astype(np.uint8), "RGBA")
     elif src.startswith("kit:"):
         img = Image.open(KIT / src[4:]).convert("RGBA")
     else:
@@ -99,8 +117,10 @@ def card_geometry(part: dict, joint_world: np.ndarray, base_vertex: int):
     for quad in part["cards"]:
         corners = quad["corners"]
         st = quad.get("st", [[0, 0], [w, 0], [w, h], [0, h]])
-        a, b, c = (np.array(corners[k], dtype=float) for k in range(3))
-        n = np.cross(b - a, c - a)
+        # Lit by an up normal, not the card's own: a two-sided card's face
+        # normal points away from the light for one facing (the pillar drew
+        # black facing right), and up takes the same light either way.
+        n = np.array(part.get("normal", (0.0, 1.0, 0.0)), dtype=float)
         n = n / (np.linalg.norm(n) or 1.0)
         first = base_vertex + len(verts)
         for p, (s, t) in zip(corners, st):

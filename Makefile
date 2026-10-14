@@ -8000,7 +8000,7 @@ $$(NDS_P4_EXPORT)/$(1)/resolved.json: $$(NDS_P4_EXPORT)/$(5)/resolved.json \
 		$$(wildcard $$(PROJECT_ROOT)/scripts/p6/$(1)/spec.json) \
 		$$(PROJECT_ROOT)/scripts/p6/p6_audio.py $$(wildcard $$(PROJECT_ROOT)/scripts/p6/$(1)/audio.json) \
 		$$(wildcard $$(PROJECT_ROOT)/scripts/p6/$(1)/motions/*.ms) \
-		$$(wildcard $$(PROJECT_ROOT)/builds/p6-art/$(1)/look/*) \
+		$$(wildcard $$(PROJECT_ROOT)/builds/p6-art/$(1)/look/*) $$(wildcard $$(PROJECT_ROOT)/builds/p6-art/$(1)/gate/*) \
 		$$(patsubst $$(PROJECT_ROOT)/art/p6/$(1)/anims/%.json,$$(PROJECT_ROOT)/builds/p6-art/$(1)/anims/%.o2r,$$(wildcard $$(PROJECT_ROOT)/art/p6/$(1)/anims/*.json))
 	python "$$(PROJECT_ROOT)/scripts/p6/p6_author.py" --base-export "$$(NDS_P4_EXPORT)/$(5)" \
 		--staging "$$(NDS_P4_STAGING)" --content $(1) --out "$$(NDS_P4_EXPORT)/$(1)"

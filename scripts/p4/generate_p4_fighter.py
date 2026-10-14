@@ -541,6 +541,9 @@ OWN_SPECIAL_FILES = {
     # file it names). Fox's reflector and Arwing entry, the parent's readers
     # of special file 2, never run for her.
     "peach": (2,),
+    # P6 Palutena's entry gate (2, scripts/p6/p6_gate.py), which her entry
+    # case makes (src/port/nds_p4_palutena.c) in place of Peach's turnip.
+    "palutena": (2,),
     # His book (1, PIANO_PROJECTILE_HITBOX, Piano file 6: fireball.asm
     # struct_book's WPAttributes at 0). Mario's fireball code, the other
     # reader of special file 1, never runs for him (the fireball table).
@@ -666,6 +669,8 @@ NO_ATTACK_MOTIONS = frozenset((3, 4, 29, 30, 153, 164))
 SUBSET_FILES = {
     "mrgaw": ({"name": "dango", "slot": 4, "attributes": (0xFB, 0x1010)},),
     "peach": ({"name": "saturn", "slot": 4, "attributes": (0xFB, 0x10B0)},),
+    # P6 Palutena pulls nothing: her slot 4 keeps the parent's file.
+    "palutena": (),
 }
 # Owner tuning, not Remix: FTAttributes floats of a content's main file
 # scaled in the shipped copy (manifest "deviations", class "owner"). Wario's
@@ -776,7 +781,7 @@ JAB3_TIMER_END = 0x8014EBA4   # ftCommonAttack12SetStatus past its switch
 # {"status": N} for the jab, {"routine": name} for a special starter) instead
 # of a Remix routine's address.
 AUTHORED_KIND_TABLES = {"jab_3_action", "ground_nsp", "air_nsp", "ground_usp", "air_usp",
-                        "ground_dsp", "air_dsp", "str_winner_ptr"}
+                        "ground_dsp", "air_dsp", "str_winner_ptr", "entry_script"}
 JAB3_ACTION_END = 0x8014EC30  # ftCommonAttack13SetStatus past its switch
 
 
@@ -1949,15 +1954,17 @@ def main() -> int:
     # has no file in (no parent code reads it).
     parent_ids = resolved["parent_descriptor"]["file_ids"]
     special_standins = []
-    own_special = OWN_SPECIAL_FILES.get(key, ())
-    unread_special = UNREAD_SPECIAL_FILES.get(key, ())
+    # An authored content with special files of its own has its own rows
+    # (Palutena's gate in place of Peach's turnip); otherwise the base's.
+    own_special = OWN_SPECIAL_FILES.get(name, OWN_SPECIAL_FILES.get(key, ()))
+    unread_special = UNREAD_SPECIAL_FILES.get(name, UNREAD_SPECIAL_FILES.get(key, ()))
     unread_skip: set[int] = set()
 
     def file_layout(fid: int) -> tuple:
         return (len(rom.file_bytes(fid)),
                 tuple(sorted((off, t[0]) for off, t in rom.reloc_slots(fid).items())))
 
-    subsets = SUBSET_FILES.get(key, ())
+    subsets = SUBSET_FILES.get(name, SUBSET_FILES.get(key, ()))
     subset_slots = {s["slot"] for s in subsets}
     for i in range(5, 9):
         if (i - 4) in subset_slots:
@@ -2270,7 +2277,11 @@ def main() -> int:
     script = int(tables["entry_script"]["value"], 16)
     parent_script = int(tables["entry_script"]["parent_value"], 16)
     entry_lab_fallback = 0
-    if script == ENTRY_SCRIPT_NONE:
+    if tables["entry_script"].get("authored") is not None:
+        # A P6 authored content's own entry effect: its entry_case
+        # (src/port/nds_p4_<name>.c), on its own special files.
+        entry_effect = "NDS_P4_ENTRY_PORT"
+    elif script == ENTRY_SCRIPT_NONE:
         entry_effect = "NDS_P4_ENTRY_NONE"
     elif entry_port(args.staging, ENTRY_PORTS.get(key)) == script:
         # A case ported on the content's own files (NDSP4Overrides.entry_case

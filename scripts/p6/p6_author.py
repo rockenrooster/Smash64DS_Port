@@ -40,12 +40,15 @@ import p4_contents  # noqa: E402
 SPEC_IDENTITY = {"schema", "content", "comment"}
 SPEC_SCHEMA = "p6-spec-v1"
 # Spec keys this author applies.
-SPEC_APPLIED = {"files", "motions", "statuses", "attributes", "kind_tables", "cpu"}
-# "files": the content's own main and model file (model_writer.py), by role:
-# the descriptor slot each replaces.
-FILE_ROLES = {"main": 0, "model": 3}
+SPEC_APPLIED = {"files", "motions", "menu_motions", "statuses", "attributes", "kind_tables", "cpu"}
+# "files": the content's own files by role: the descriptor slot each
+# replaces. Its main and model (model_writer.py); a special file of its own
+# (p6_gate.py: Palutena's entry gate in special 2), which only the content's
+# own code reads, through its own storage (p4_contents.special_storage).
+FILE_ROLES = {"main": 0, "model": 3, "special1": 5, "special2": 6, "special3": 7, "special4": 8}
 # New file ids live in the P6 window (P6_PLAN.md A1 record: 0x1A00-0x1BFF),
-# 0x100 a content: its main and model first, its clips from ANIM_FIRST.
+# 0x100 a content: its main and model first, its special files from 0x10,
+# its clips from ANIM_FIRST.
 P6_FILE_WINDOW = range(0x1A00, 0x1C00)
 CONTENT_WINDOW = {"ike": 0x1A00, "palutena": 0x1B00}
 ANIM_FIRST = 0x20
@@ -108,7 +111,8 @@ def author(base_export: Path, name: str, spec_path: Path | None, out: Path,
     if staging is not None:
         import remix_rom
         rom = remix_rom.Rom(staging / "ssb64asm.z64")
-    author_motions(resolved, events, spec.get("motions") or {}, name, out, rom)
+    author_motions(resolved, events, spec.get("motions") or {}, name, out, rom,
+                   spec.get("menu_motions") or {})
     author_statuses(resolved, spec.get("statuses") or {})
     author_attributes(resolved, spec.get("attributes") or {})
     own_main(resolved, name)
@@ -160,7 +164,18 @@ def substitute_files(resolved: dict, files: dict, out: Path) -> None:
         rows[old] = {"file_id": new, "vanilla_id": False, "bytes": size, "externs": externs}
         resolved["authored"].setdefault("files", {})[role] = [old, new]
         resolved["authored"].setdefault("files_sha256", {})[role] = hashlib.sha256(blob).hexdigest()
+    before = closure_reach(resolved)
     desc["file_ids"] = [mapping.get(x, x) for x in desc["file_ids"]]
+    specials = {old: new for role, (old, new) in resolved["authored"]["files"].items()
+                if role.startswith("special")}
+    if specials:
+        main_old = next((old for role, (old, _) in resolved["authored"]["files"].items()
+                         if role == "main"), None)
+        if main_old is None:
+            raise AuthorError("spec files: a special file of the content's own needs its own main")
+        rows[main_old] = retarget_main_specials(o2r, rows[main_old], specials)
+        resolved["authored"]["files_sha256"]["main"] = hashlib.sha256(
+            (o2r / f"{rows[main_old]['file_id']:04x}").read_bytes()).hexdigest()
     closure = []
     for row in resolved["file_closure"]:
         if row["file_id"] in rows:
@@ -170,6 +185,46 @@ def substitute_files(resolved: dict, files: dict, out: Path) -> None:
             raise AuthorError(f"file {row['file_id']:#x} names a replaced file; it would need its own copy")
         closure.append(row)
     resolved["file_closure"] = closure
+    # A file only a replaced one named (Peach's turnip model, which her turnip
+    # attributes name) leaves the closure with it.
+    orphans = {r["file_id"] for r in closure} & (before - closure_reach(resolved))
+    if orphans:
+        resolved["file_closure"] = [r for r in closure if r["file_id"] not in orphans]
+        resolved["authored"]["files_dropped"] = sorted(orphans)
+
+
+def closure_reach(resolved: dict) -> set[int]:
+    """The closure files the descriptor's files name, through their externs."""
+    externs = {r["file_id"]: r.get("externs", ()) for r in resolved["file_closure"]}
+    seen: set[int] = set()
+    todo = [x for x in resolved["descriptor"]["file_ids"] if x]
+    while todo:
+        fid = todo.pop()
+        if fid in seen or fid not in externs:
+            continue
+        seen.add(fid)
+        todo.extend(externs[fid])
+    return seen
+
+
+def retarget_main_specials(o2r: Path, row: dict, specials: dict[int, int]) -> dict:
+    """The content's main with the header words that named the base's
+    special files (old -> new in `specials`) naming the content's own, at
+    their start. The source loader finds a special file only in the main's
+    extern closure (battleship_ftmanager.c, lbRelocGetStatusBufferFile), so
+    the word keeps the file loading; Remix's code read the base's file
+    through it, the content's own code reads its storage. The row rebuilt
+    from the rewritten file."""
+    import n64_model as N
+    path = o2r / f"{row['file_id']:04x}"
+    f = N.RelocFile.load(path)
+    for slot, (fid, _) in sorted(f.extern.items()):
+        if fid in specials:
+            f.extern[slot] = (specials[fid], 0)
+    blob = f.to_bytes()
+    path.write_bytes(blob)
+    n = struct.unpack_from("<I", blob, 0x48)[0]
+    return dict(row, externs=list(struct.unpack_from(f"<{n}H", blob, 0x4C)))
 
 
 _CUE_IDS: dict[str, int] = {}
@@ -219,6 +274,14 @@ def assemble_block(lines: list[str], ram: bytearray, events: dict, label: str,
     cmds, edges, exit_ = [], [], None
     for line in lines:
         words, pointers = mscript.assemble(_cues(line))
+        for k, target in pointers.items():
+            # A Remix RAM target is written as its address, as Remix's own
+            # blocks hold it, so the generator's round trip (which decodes
+            # the authored RAM) follows the same edge as the copied block.
+            if target.startswith("ram:"):
+                words[k] = int(target[4:], 16)
+            elif target != "NULL":
+                raise AuthorError(f"{label}: {line!r}: only ram: targets (or NULL) in authored scripts")
         at = AUTHORED_RAM + len(ram)
         op = line.split()[0]
         rec = {"at": f"ram:{at:#010x}", "op": op, "words": [words[0]]}
@@ -281,21 +344,24 @@ def edited_script(rom, events: dict, row: dict, edits: dict, index: int) -> list
 
 
 def author_motions(resolved: dict, events: dict, motions: dict, name: str, out: Path,
-                   rom=None) -> None:
+                   rom=None, menu_motions: dict | None = None) -> None:
     """The spec's motions (index -> {"anim", "anim_flags", "script",
     "script_edits"}); the index one past the base's last appends a motion
     (Ike's jab 3: the base's own row for it is another move):
     - "anim": a built clip (an O2R container under builds/, anim.py), copied
       into <out>/o2r under the next id of the content's window and added to
-      the file closure; "anim_id" names a clip already in the closure;
+      the file closure (once: motions naming the same clip share it, as the
+      entry's two sides do); "anim_id" names a clip already in the closure;
     - "script": a committed motion script (mscript.py text, one command a
       line, "#" comments), assembled into the authored RAM window
       (<out>/authored_ram.bin, assemble_block);
     - "script_edits": the base's own script with edits (edited_script),
       assembled the same way.
     The motion row takes the new clip and script; the generator reads both
-    through OverlayRom."""
-    if not motions:
+    through OverlayRom. `menu_motions` gives the menu (submotion) rows
+    their own scripts the same way: the Results and select poses (1-4 the
+    wins, 5 the clap)."""
+    if not motions and not menu_motions:
         return
     if name not in CONTENT_WINDOW:
         raise AuthorError(f"{name}: no P6 file window")
@@ -307,6 +373,7 @@ def author_motions(resolved: dict, events: dict, motions: dict, name: str, out: 
     ram = bytearray()
     replaced = set()
     next_id = window + ANIM_FIRST
+    clips: dict[str, int] = {}
     for key in sorted(motions, key=lambda k: int(k, 0)):
         entry = motions[key]
         index = int(key, 0)
@@ -324,7 +391,13 @@ def author_motions(resolved: dict, events: dict, motions: dict, name: str, out: 
         unknown = set(entry) - {"anim", "anim_id", "anim_flags", "script", "script_edits", "comment"}
         if unknown:
             raise AuthorError(f"spec motions {index}: unknown keys {sorted(unknown)}")
-        if "anim" in entry:
+        if "anim" in entry and entry["anim"] in clips:
+            fid = clips[entry["anim"]]
+            replaced.add(row["anim_file_id"])
+            row["anim_file_id"] = fid
+            row["inherited"]["anim_file_id"] = False
+            authored.setdefault("anims", {})[str(index)] = fid
+        elif "anim" in entry:
             src = REPO / entry["anim"]
             if not src.exists():
                 raise AuthorError(f"spec motions {index}: {src} not built (anim.py makes it)")
@@ -345,6 +418,7 @@ def author_motions(resolved: dict, events: dict, motions: dict, name: str, out: 
             row["inherited"]["anim_file_id"] = False
             authored.setdefault("anims", {})[str(index)] = fid
             authored.setdefault("anims_sha256", {})[str(index)] = hashlib.sha256(bytes(blob)).hexdigest()
+            clips[entry["anim"]] = fid
         if "anim_id" in entry:
             # A clip already in the content's closure (Quick Draw's slash is
             # Roy's forward-tilt clip): named, not copied.
@@ -375,6 +449,24 @@ def author_motions(resolved: dict, events: dict, motions: dict, name: str, out: 
             row["script"] = start
             row["inherited"]["script"] = False
             row["script_root"] = block_key
+    menu_rows = {m["index"]: m for m in resolved["menu_motions"]}
+    for key in sorted(menu_motions or {}, key=lambda k: int(k, 0)):
+        entry = menu_motions[key]
+        index = int(key, 0)
+        row = menu_rows.get(index)
+        if row is None:
+            raise AuthorError(f"spec menu_motions: no menu motion {index} in the base")
+        unknown = set(entry) - {"script", "comment"}
+        if unknown:
+            raise AuthorError(f"spec menu_motions {index}: unknown keys {sorted(unknown)} (a script only)")
+        src = REPO / entry["script"]
+        lines = [ln.split("#", 1)[0].strip() for ln in src.read_text(encoding="utf-8").splitlines()]
+        lines = [ln for ln in lines if ln]
+        authored.setdefault("menu_scripts_sha256", {})[str(index)] = sha256(src)
+        start, block_key = assemble_block(lines, ram, events, f"{name}.menu{index:#x}", f"menu:{index:#x}")
+        row["script"] = start
+        row["inherited"]["script"] = False
+        row["script_root"] = block_key
     # A clip the content no longer plays leaves its closure: shipped unused,
     # the generator would not compact it, and a base sharing it ships the
     # compacted bytes under the same id.

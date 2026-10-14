@@ -7,12 +7,36 @@
    "id": "0x1b00",
    "from": "builds/p6-art/palutena/look/1b00"
   },
+  "special2": {
+   "id": "0x1b10",
+   "from": "builds/p6-art/palutena/gate/1b10"
+  },
   "model": {
    "id": "0x1b03",
    "from": "builds/p6-art/palutena/look/1b03"
   }
  },
+ "menu_motions": {
+  "1": {"comment": "Win1: Peach's clip, her wings out", "script": "scripts/p6/palutena/motions/win1.ms"},
+  "2": {"comment": "Win2: Peach's clip, her halo above her", "script": "scripts/p6/palutena/motions/win2.ms"},
+  "3": {"comment": "Win3: Peach's clip, wings and halo", "script": "scripts/p6/palutena/motions/win3.ms"},
+  "4": {"comment": "Win4, the select screen's Selected pose: Peach's third clip, her halo", "script": "scripts/p6/palutena/motions/win4.ms"}
+ },
  "motions": {
+  "164": {
+   "comment": "Appeal: down taunt (card: the halo glows): Peach's taunt clip, her own script showing the halo with sparkles",
+   "script": "scripts/p6/palutena/motions/appeal.ms"
+  },
+  "195": {
+   "comment": "AppearL (status 0xDC): entry, her gate before her",
+   "anim": "builds/p6-art/palutena/anims/entry.o2r",
+   "script": "scripts/p6/palutena/motions/entry.ms"
+  },
+  "196": {
+   "comment": "AppearR (status 0xDD): entry, as AppearL",
+   "anim": "builds/p6-art/palutena/anims/entry.o2r",
+   "script": "scripts/p6/palutena/motions/entry.ms"
+  },
   "165": {
    "comment": "Attack11: jab 1 (card: a staff thrust): Marth's jab 1",
    "script": "scripts/p6/palutena/motions/jab1.ms",
@@ -295,6 +319,12 @@
   },
   "str_winner_ptr": {
    "name": "PALUTENA"
+  },
+  "str_winner_lx": "41a00000",
+  "str_winner_scale": "3f333333",
+  "str_wins_lx": "43390000",
+  "entry_script": {
+   "case": "ndsP4PalutenaEntryCase"
   }
  },
  "cpu": {

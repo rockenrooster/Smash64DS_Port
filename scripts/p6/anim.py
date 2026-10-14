@@ -553,13 +553,25 @@ def skeleton(rom, name: str, detail: str = "high") -> Skeleton:
                                               N.RelocFile.read(rom.o2r(model)), attr), detail)
 
 
+def with_transn_slot(clip: Clip) -> Clip:
+    """The clip with an empty TransN slot before its rows, for a motion row
+    with the TransN flag (the Appear statuses read the TransN joint, which
+    only such a row makes): the joint stays at rest, the fighter at its
+    entry position."""
+    out = Clip(clip.slots + 1)
+    for slot, st in clip.streams.items():
+        out.streams[slot + 1] = st
+    return out
+
+
 def build(recipe: dict, rom) -> bytes:
     """A clip from its recipe (art/p6/<name>/anims/*.json): a source clip
     (file id in the reference ROM), optionally retargeted ("retarget":
     {"from", "to", "height_scale", "first_slot": a TransN clip's 1, "item":
     {"row", "from_axis", "to_axis"}}), spliced ("frames": [first, last],
     "hold": frames the last is held, "strip_transn": drop a TransN clip's
-    travel slot) and retimed ("retime": the length factor); the O2R
+    travel slot), retimed ("retime": the length factor) and given an empty
+    TransN slot ("transn_slot": true, with_transn_slot); the O2R
     container keeps the source's header (p6_author.py gives it its own
     id)."""
     blob = rom.o2r(int(str(recipe["source"]), 0))
@@ -577,6 +589,8 @@ def build(recipe: dict, rom) -> bytes:
         clip = splice(clip, first, last, int(recipe.get("hold", 0)), bool(recipe.get("strip_transn")))
     if "retime" in recipe:
         clip = retime(clip, float(recipe["retime"]))
+    if recipe.get("transn_slot"):
+        clip = with_transn_slot(clip)
     return encode(clip, blob, int(recipe.get("eps", ANIM_EPS)))
 
 

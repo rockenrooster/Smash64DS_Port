@@ -1,0 +1,24 @@
+{
+ "comment": "AppearR / AppearL: entry (card: walks out of golden halo-shaped doors): Marth's entry on her tree, the staff where his sword is; her gate opens before her (her entry case). His clip carries the TransN slot (first_slot 1), still throughout; hers gets an empty one (transn_slot): the Appear statuses read the TransN joint, which only a TransN motion row makes.",
+ "source": "0xd4d",
+ "retarget": {
+  "from": "marth",
+  "to": "peach",
+  "first_slot": 1,
+  "height_scale": 0.533,
+  "item": {
+   "row": 14,
+   "from_axis": [
+    0,
+    0,
+    1
+   ],
+   "to_axis": [
+    0.103,
+    0.681,
+    -0.725
+   ]
+  }
+ },
+ "transn_slot": true
+}

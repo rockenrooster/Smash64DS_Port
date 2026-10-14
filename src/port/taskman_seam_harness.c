@@ -106,9 +106,15 @@ static u32 ndsSeamRunSourceMenuScene(struct SYTaskFunction *tfunc, u32 is_result
          * the 1P route's two source menus (mn1pmode, mnplayers1pgame) read the
          * source controller pipeline, so their leg is driven here -- once per
          * pump iteration, before this iteration's task_update, from guest code.
-         * Route-gated inside (gNdsMenuShellWalkRoute == 1); the default VS
-         * route returns without touching the pads. */
-        ndsMenuShellWalkDrive1PSourceMenus();
+         * Route-gated here as well as inside (gNdsMenuShellWalkRoute == 1):
+         * the driver is menu-shell code in the frontend overlay's select
+         * block, which VS Results lends as scene-asset memory, so the VS
+         * route must not call into it there (a data abort after an Ike and
+         * Palutena match, 2026-10-14). */
+        if (gNdsMenuShellWalkRoute == 1u)
+        {
+            ndsMenuShellWalkDrive1PSourceMenus();
+        }
 #endif
         if (is_results != 0u)
         {
