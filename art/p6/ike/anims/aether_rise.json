@@ -1,9 +1,9 @@
 {
- "comment": "Aether's toss and rise (card: new): Roy's Blazer crouch and rise with the sword held up, frames 0-22, the last held 8 frames so the plunge starts at the top of the rise.",
+ "comment": "Aether's toss and rise (card: new): Roy's Blazer crouch and rise, frames 0-14, the sword held straight up 16 frames more (owner playtest 2026-10-14: the animation needed work; the arm no longer drops at the top), so the plunge starts at the top of the rise.",
  "source": "0xd50",
  "frames": [
   0,
-  22
+  14
  ],
- "hold": 8
+ "hold": 16
 }

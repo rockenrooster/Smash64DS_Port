@@ -61,7 +61,7 @@ Roy; Brawl gives the motion and the intent only.
 |---|---|---|---|---|
 | Jab 1 | Attack11 | new: left jab | ~3% | — |
 | Jab 2 | Attack12 | new: kick | ~3% | — |
-| Jab 3 | Attack13; jab_3 rows on (Captain's timer) | new: overhead slash | ~6%, launches | jab tables (S3) |
+| Jab 3 | Attack13; jab_3 rows on (Captain's timer) | new: overhead slash, a downward swing (owner 2026-10-14) | ~6%, launches | jab tables (S3) |
 | Forward tilt | AttackS3 | Roy's (MARTH_F_TILT) at 0.85 speed | Roy's damage x1.25; frame-speed command | — |
 | Dash attack | AttackDash | new: heavy upward swing | Roy's damage x1.2, launches upward | — |
 | Forward smash | AttackS4 | Roy's (MARTH_F_SMASH) | Roy's damage x1.2; his fire Effect commands dropped | — |
@@ -81,7 +81,10 @@ scripts in `scripts/p6/ike/motions/`, rows in `scripts/p6/ike/spec.json`):
   forearm and upper arm.
 - Jab 2: Captain's forward-tilt kick retargeted, at 0.65 of its length (a
   grounded straight kick; Mario's jab-3 kick leaves the ground).
-- Jab 3: Marth's second jab, a rising slash, as an appended motion (224) and
+- Jab 3 (owner playtest 2026-10-14: a downward swing): Marth's forward
+  smash spliced (frames 10-30: overhead at 14, down by 16; its TransN travel
+  dropped, 0.8x), the sword and forearm hitting frames 4-7 (6%, 45 degrees);
+  first built on Marth's second jab, a rising slash, as an appended motion (224) and
   status (249, Captain's Attack13 routines) that `jab_3_action` names: Roy's
   status table has his entry where Captain's Attack13 is (motion 195, status
   220). Captain's jab chain timers (`attack1_followup_frames` 22 in Ike's main
@@ -111,6 +114,11 @@ The specials (I4, 2026-10-13; `src/port/nds_p4_ike.c`, appended motions
   armour to frame 18; the plunge at 130 a frame on Roy's down-air frame 8
   with a meteor; the landing on Roy's Flare Blade end (the sword planted)
   with a 6% hit and no shockwave. The ledge can be caught on the way.
+  Owner playtest 2026-10-14 (the animation needed work): the rise now holds
+  the sword straight up to the top (Blazer frames 0-14, held 16); the plunge
+  starts with Aether's spin, a forward flip about his hips over nine frames
+  (`anim.py` recipe `spin`) while the sword comes from overhead down (Roy's
+  down-air frames 2-8 at 1.5x), then holds the sword-down plunge.
 - Counter: Ike's taunt runs his counter status through
   `NDSP4Overrides.status_replace` (Appeal stays in `status_id`); Marth's
   window (frames 6-30), clips and 8% strike; `update_damage` counts the hit.

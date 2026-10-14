@@ -67,6 +67,16 @@ Both candidates must meet every line below.
 
 ## Move card (approved 2026-10-13, P1)
 
+**Owner requirement for her animations (playtest 2026-10-14).** In EVERY
+animation the dress surrounds her legs (except at the slit). Her dress
+rides her pelvis and waist rows (joints 1-2) and her legs their own rows,
+so a borrowed clip's kick or wide stance puts a leg through the cloth; the
+clips are placeholders until her own are authored. The plan for that step:
+bind the skirt's hem to Peach's dress rows (25/26, which her look leaves
+undrawn and no borrowed clip drives), key them from the thighs in every clip
+(`anim.py`), and check every motion's frames for leg vertices outside the
+dress (a per-clip report, all clips clean before the step closes).
+
 **Authored 2026-10-13 (P3, P4).** Specials as below, in
 `src/port/nds_p4_palutena.c` (her own code row: Peach's float, parasol and
 turnip are not hers). Clips, retargeted onto Peach's tree (`anim.py`;

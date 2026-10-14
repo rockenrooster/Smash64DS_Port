@@ -1,4 +1,10 @@
 {
- "comment": "Ike's jab 3 (an appended Attack13, card: new, an upward slash): Marth's second jab, a rising slash from low in front up over his head.",
- "source": "0xd3e"
+ "comment": "Ike's jab 3 (an appended Attack13; owner playtest 2026-10-14: a downward swing): Marth's forward smash from its wind-up to its follow-through (frames 10-30: the sword raised overhead at 14, brought down by 16), its TransN travel dropped (a jab does not lunge), at 0.8 of its length.",
+ "source": "0xd43",
+ "frames": [
+  10,
+  30
+ ],
+ "strip_transn": true,
+ "retime": 0.8
 }

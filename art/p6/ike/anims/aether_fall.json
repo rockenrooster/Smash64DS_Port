@@ -1,9 +1,26 @@
 {
- "comment": "Aether's descent (card: new): Roy's down-air frame 8, the sword pointing down, held.",
+ "comment": "Aether's descent (card: new; owner playtest 2026-10-14): Roy's down-air from the sword overhead to the sword pointing down (frames 2-8) at 1.5 times its length, a forward flip about his hips over its first nine frames (Aether's spin at the top), then that plunge pose held.",
  "source": "0xd4a",
  "frames": [
-  8,
+  2,
   8
  ],
- "hold": 60
+ "hold": 60,
+ "retime": 1.5,
+ "skeleton": "roy",
+ "spin": [
+  {
+   "row": 0,
+   "axis": [
+    1,
+    0,
+    0
+   ],
+   "degrees": 360,
+   "frames": [
+    0,
+    9
+   ]
+  }
+ ]
 }

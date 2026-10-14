@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import struct
 import sys
 from dataclasses import dataclass, field
@@ -444,6 +445,51 @@ def retime(clip: Clip, factor: float) -> Clip:
     return out
 
 
+def spin(clip: Clip, slot: int, rest: tuple, axis, degrees: float, first: int, last: int) -> Clip:
+    """The clip with one row turned about `axis` (in its parent's frame) by
+    `degrees` over frames first..last, eased in and out, the whole turn kept
+    after: a flip (Aether's apex: the root row, 360 about x, she faces +z).
+    The row's three rotation tracks are rewritten one key a frame (a track
+    the clip leaves alone from the bind pose `rest`, radians); its other
+    tracks stay, held at their last value where the turn runs longer."""
+    import numpy as np
+    st = clip.streams.get(slot)
+    length = max(last, st.length if st is not None else 0)
+
+    def angle(track: int, f: int) -> float:
+        if st is None or track not in st.tracks:
+            return float(rest[track])
+        t = st.tracks[track]
+        f = min(f, st.length)
+        return float(t.values[max(f - t.lead, 0)]) / ROT_UNIT
+
+    a = np.asarray(axis, dtype=float)
+    a = a / np.linalg.norm(a)
+    k = np.array([[0.0, -a[2], a[1]], [a[2], 0.0, -a[0]], [-a[1], a[0], 0.0]])
+    new = Stream(length, None)
+    if st is not None:
+        for track, t in st.tracks.items():
+            if track > 2:
+                vals = list(t.values) + [t.values[-1]] * max(0, length + 1 - t.lead - len(t.values))
+                new.tracks[track] = Track(vals, t.lead, t.step)
+    rot = {0: [], 1: [], 2: []}
+    near = (angle(0, 0), angle(1, 0), angle(2, 0))
+    for f in range(length + 1):
+        u = 0.0 if f <= first else 1.0 if f >= last else (f - first) / float(last - first)
+        u = u * u * (3.0 - 2.0 * u)
+        th = math.radians(degrees) * u
+        turn = np.eye(3) + math.sin(th) * k + (1.0 - math.cos(th)) * (k @ k)
+        near = to_euler(turn @ euler(angle(0, f), angle(1, f), angle(2, f)), near)
+        for i in range(3):
+            rot[i].append(int(round(near[i] * ROT_UNIT)))
+    for i in range(3):
+        new.tracks[i] = Track(rot[i], 0, None)
+    out = Clip(clip.slots)
+    out.streams = dict(clip.streams)
+    out.streams[slot] = new
+    return out
+
+
 def splice(clip: Clip, first: int, last: int, hold: int = 0, strip_transn: bool = False) -> Clip:
     """Frames first..last of the clip as a clip of its own, then the last
     frame held `hold` frames more (a pose: Quick Draw's stance from a
@@ -570,7 +616,9 @@ def build(recipe: dict, rom) -> bytes:
     {"from", "to", "height_scale", "first_slot": a TransN clip's 1, "item":
     {"row", "from_axis", "to_axis"}}), spliced ("frames": [first, last],
     "hold": frames the last is held, "strip_transn": drop a TransN clip's
-    travel slot), retimed ("retime": the length factor) and given an empty
+    travel slot), retimed ("retime": the length factor), turned ("spin": a
+    list of {"row", "axis", "degrees", "frames": [first, last]}, spin(); a
+    clip not retargeted names its tree in "skeleton") and given an empty
     TransN slot ("transn_slot": true, with_transn_slot); the O2R
     container keeps the source's header (p6_author.py gives it its own
     id)."""
@@ -589,6 +637,14 @@ def build(recipe: dict, rom) -> bytes:
         clip = splice(clip, first, last, int(recipe.get("hold", 0)), bool(recipe.get("strip_transn")))
     if "retime" in recipe:
         clip = retime(clip, float(recipe["retime"]))
+    for sp in recipe.get("spin", ()):
+        # The bind pose of the clip's own tree (the retarget's target, else
+        # the recipe's "skeleton").
+        name = rt["to"] if rt else recipe["skeleton"]
+        row = int(sp["row"])
+        rest = skeleton(rom, name).rotate[row]
+        clip = spin(clip, row + int(sp.get("first_slot", 0)), rest, sp["axis"], float(sp["degrees"]),
+                    int(sp["frames"][0]), int(sp["frames"][1]))
     if recipe.get("transn_slot"):
         clip = with_transn_slot(clip)
     return encode(clip, blob, int(recipe.get("eps", ANIM_EPS)))
