@@ -17278,11 +17278,9 @@ void ndsFtrLeanVerifyEntries(u32 battle_slot, u32 held, u32 fresh)
 }
 
 /* The packet recorder (deleted 2026-10-05) re-recorded whenever its key's
- * words moved (or the packet was invalidated), and a record derived every
- * shade word at the execute's modulate (0) while naming the live one -- so
- * the shade words of a fighter depend on WHEN it last re-recorded, and the
- * lean path keeps that timing. This is that key's shadow over the lean
- * inputs: the material identity (the live
+ * words moved (or the packet was invalidated); the lean path re-derives its
+ * shade words at those moments (ndsFtrLeanEntryResetShade). This is that
+ * key's shadow over the lean inputs: the material identity (the live
  * MObj keys, pointers included), the roots' display fields and chain shapes,
  * and the lean key's owner / file / program / head words for the tables and
  * heap generation. The tint-tile set generation is left out: a moved set is
@@ -17332,10 +17330,13 @@ u32 ndsFtrLeanRerecordKey(u32 ident, const u32 *key,
     return ndsFighterPacketMix(h, input_count);
 }
 
-/* An entry switch stands for the re-record the old path makes when its
- * packet's key moves: that record derives every shade word at the execute's
- * modulate (0) from this draw's prims and names the live modulate. Put the
- * switched-to list in the same state (ApplyTint's derivation, modulate 0). */
+/* An entry switch stands for the re-record the old path made when its
+ * packet's key moved: every shade word derived again from this draw's prims,
+ * at the live colour modulate (ApplyTint's derivation). The old recorder
+ * derived them at modulate 0 while naming the live one, so a steady modulate
+ * never reached them after a re-record -- a Kirby holding MRGAW's power
+ * (colour 1 a full blend to black, held) drew pink after the first texture
+ * fence move (BUGS.md, 2026-10-14), as would a team's shaded fighter. */
 void NDS_FIGHTER_PACKET_COLD_CODE
 ndsFtrLeanEntryResetShade(u32 battle_slot, const NDSFtrLeanPatchView *view)
 {
@@ -17369,11 +17370,14 @@ ndsFtrLeanEntryResetShade(u32 battle_slot, const NDSFtrLeanPatchView *view)
                 NDS_FTR_LEAN_VIEW_PRE(view, site->root)->prim_color;
         }
         diffuse = ndsRendererR2MaterialColor15(
-            site->light_color_1, material_color, site->use_material, 0u);
+            site->light_color_1, material_color, site->use_material,
+            view->modulate);
         ambient = ndsRendererR2MaterialColor15(
-            site->light_color_2, material_color, site->use_material, 0u);
+            site->light_color_2, material_color, site->use_material,
+            view->modulate);
         diffuse = ndsRendererR2ClampDiffuseToMaterial(
-            diffuse, ambient, material_color, site->use_material, 0u);
+            diffuse, ambient, material_color, site->use_material,
+            view->modulate);
         word = diffuse | (ambient << 16);
         if (packet->words[site->index] != word)
         {
@@ -17658,13 +17662,10 @@ u32 ndsFtrLeanPacketPatch(u32 battle_slot, const NDSFtrLeanPatchView *view,
     {
         /* Slice 6: a list whose only unvalidated binds are tint tiles stays
          * current when the global texture fence moves (the tiles are proved
-         * per tile) -- but the old path's packet keeps that fence in its key
-         * (needs_fence, key[5]) and re-records on the move, deriving every
-         * shade word at the execute's modulate (0) while naming the live one.
-         * Purin under a steady white flash kept its words at the live
-         * modulate across such a record (route 2 oracle: 98 shade words).
-         * The list takes that record's derivation here; key[5] of a lean
-         * list holds the fence of its last (virtual) record. */
+         * per tile) -- but the old path's packet kept that fence in its key
+         * (needs_fence, key[5]) and re-recorded on the move. The list takes
+         * that record's derivation here (at the live modulate); key[5] of a
+         * lean list holds the fence of its last (virtual) record. */
         ndsFtrLeanEntryResetShade(battle_slot, view);
         NDS_FTR_LEAN_CTR(gNdsFtrLean.fence_rerecords_mirrored++);
     }
@@ -17683,9 +17684,8 @@ u32 ndsFtrLeanPacketPatch(u32 battle_slot, const NDSFtrLeanPatchView *view,
         {
             /* Slice 6: ApplyTint failed closed on a tinted site (reserved[0])
              * because a root's prim moved -- where the old path's replay
-             * re-records this draw, deriving every shade word at the
-             * execute's modulate (0) while naming the live one. The list's
-             * words take that record's derivation; the tile words were
+             * re-recorded this draw. The list's words take that record's
+             * derivation (at the live modulate); the tile words were
              * re-pointed above. */
             ndsFtrLeanEntryResetShade(battle_slot, view);
             NDS_FTR_LEAN_CTR(gNdsFtrLean.tint_rerecords_mirrored++);

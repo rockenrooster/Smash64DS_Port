@@ -657,10 +657,10 @@ void ndsFtrLeanNoteKeyMiss(u32 battle_slot, const u32 *key);
  * patch site is re-derived before its first submit. TRUE when it was not the
  * active entry. */
 u32 ndsFtrLeanEntryActivate(u32 battle_slot, u32 code);
-/* An entry switch stands for the re-record the old path makes when its
- * packet's key moves: re-derive the active list's shade words as that record
- * would (the execute's modulate, 0, over this draw's prims) and name the live
- * modulate, so the per-frame ApplyTint evolves them as the replay's. */
+/* An entry switch stands for the re-record the old path made when its
+ * packet's key moved: re-derive the active list's shade words over this
+ * draw's prims at the live modulate, and name it, so the per-frame ApplyTint
+ * evolves them from there. */
 /* The packet recorder's key (the recorder was deleted 2026-10-05) over the
  * lean inputs, less the tint-tile set generation: when it moves, or the slot
  * was invalidated, a held list takes a fresh record's shade derivation
