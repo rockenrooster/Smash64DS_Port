@@ -1,0 +1,21 @@
+{
+ "comment": "AttackS4: forward smash (card: the wings, next; for now the staff swung as Peach swings her pan)",
+ "source": "0x13ea",
+ "retarget": {
+  "from": "peach",
+  "to": "peach",
+  "item": {
+   "row": 14,
+   "from_axis": [
+    0,
+    1,
+    0
+   ],
+   "to_axis": [
+    0.103,
+    0.681,
+    -0.725
+   ]
+  }
+ }
+}

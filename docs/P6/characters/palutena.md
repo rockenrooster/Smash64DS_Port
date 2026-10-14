@@ -67,6 +67,22 @@ Both candidates must meet every line below.
 
 ## Move card (approved 2026-10-13, P1)
 
+**Authored 2026-10-13 (P3, P4).** Specials as below, in
+`src/port/nds_p4_palutena.c` (her own code row: Peach's float, parasol and
+turnip are not hers). Clips, retargeted onto Peach's tree (`anim.py`;
+`art/p6/palutena/anims`): Explosive Flame on Ness's PK Fire; Warp on
+Peach's parasol-opening start and landing; Counter / Reflect on Marth's
+counter and counterattack; the jabs, tilts, up and down smashes, neutral
+and up air on Marth's, the staff turned to follow his sword; the forward
+smash on Peach's own (the staff where her pan was); forward air on Mario's
+neutral air (a flying kick), back air on Captain's (the backfist, the shield
+arm), down air on Captain's stomp. The dash attack is Peach's clip with
+the shield charge's hitboxes on the shield arm. Scripts in
+`scripts/p6/palutena/motions` with her cues. Not yet: the wings (forward
+and down smash use the staff), the halo joint (up air hits above her), the
+pillar effect (the up smash's column is hitboxes and sparkles), the taunt,
+the entry gate and the victory poses (Peach's for now).
+
 Motions follow Ultimate's moves (SmashWiki's Palutena (SSBU) descriptions);
 SSB64 has no pummel, no up or down throw and no smash charge. Numbers are lab
 defaults on SSB64's scale, tuned against Peach.

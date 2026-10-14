@@ -1,0 +1,9 @@
+{
+ "comment": "AttackAirLw: down air (card: a downward roundhouse kick): Captain's down air on Peach's tree",
+ "source": "0x66a",
+ "retarget": {
+  "from": "captain",
+  "to": "peach",
+  "height_scale": 0.533
+ }
+}

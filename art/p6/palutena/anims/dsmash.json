@@ -1,0 +1,22 @@
+{
+ "comment": "AttackLw4: down smash (card: the wings down both sides; for now the staff sweeps both sides): Marth's down smash",
+ "source": "0xd45",
+ "retarget": {
+  "from": "marth",
+  "to": "peach",
+  "height_scale": 0.533,
+  "item": {
+   "row": 14,
+   "from_axis": [
+    0,
+    0,
+    1
+   ],
+   "to_axis": [
+    0.103,
+    0.681,
+    -0.725
+   ]
+  }
+ }
+}

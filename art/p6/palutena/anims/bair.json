@@ -1,0 +1,9 @@
+{
+ "comment": "AttackAirB: back air (card: a backfist with the shield arm): Captain's back air on Peach's tree",
+ "source": "0x668",
+ "retarget": {
+  "from": "captain",
+  "to": "peach",
+  "height_scale": 0.533
+ }
+}

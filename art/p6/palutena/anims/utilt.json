@@ -1,0 +1,22 @@
+{
+ "comment": "AttackHi3: up tilt (card: the staff spun overhead): Marth's up tilt",
+ "source": "0xd41",
+ "retarget": {
+  "from": "marth",
+  "to": "peach",
+  "height_scale": 0.533,
+  "item": {
+   "row": 14,
+   "from_axis": [
+    0,
+    0,
+    1
+   ],
+   "to_axis": [
+    0.103,
+    0.681,
+    -0.725
+   ]
+  }
+ }
+}

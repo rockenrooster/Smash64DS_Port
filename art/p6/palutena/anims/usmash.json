@@ -1,0 +1,22 @@
+{
+ "comment": "AttackHi4: up smash (card: the light pillar ahead of her): Marth's up smash, the staff raised",
+ "source": "0xd44",
+ "retarget": {
+  "from": "marth",
+  "to": "peach",
+  "height_scale": 0.533,
+  "item": {
+   "row": 14,
+   "from_axis": [
+    0,
+    0,
+    1
+   ],
+   "to_axis": [
+    0.103,
+    0.681,
+    -0.725
+   ]
+  }
+ }
+}

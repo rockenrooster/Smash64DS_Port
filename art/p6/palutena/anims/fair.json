@@ -1,0 +1,9 @@
+{
+ "comment": "AttackAirF: forward air (card: a flying kick): Mario's neutral air on Peach's tree",
+ "source": "0x26e",
+ "retarget": {
+  "from": "mario",
+  "to": "peach",
+  "height_scale": 1.58
+ }
+}

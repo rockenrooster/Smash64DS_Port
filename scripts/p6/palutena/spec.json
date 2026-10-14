@@ -13,6 +13,75 @@
   }
  },
  "motions": {
+  "165": {
+   "comment": "Attack11: jab 1 (card: a staff thrust): Marth's jab 1",
+   "script": "scripts/p6/palutena/motions/jab1.ms",
+   "anim": "builds/p6-art/palutena/anims/jab1.o2r"
+  },
+  "166": {
+   "comment": "Attack12: jab 2 (card: the light burst's finisher, the staff swung up): Marth's jab 2",
+   "script": "scripts/p6/palutena/motions/jab2.ms",
+   "anim": "builds/p6-art/palutena/anims/jab2.o2r"
+  },
+  "167": {
+   "comment": "AttackDash: the shield charge (D3), on Peach's dash attack",
+   "script": "scripts/p6/palutena/motions/dash.ms"
+  },
+  "170": {
+   "comment": "AttackS3: forward tilt (card: the staff spun ahead): Marth's forward tilt",
+   "script": "scripts/p6/palutena/motions/ftilt.ms",
+   "anim": "builds/p6-art/palutena/anims/ftilt.o2r"
+  },
+  "174": {
+   "comment": "AttackHi3: up tilt (card: the staff spun overhead): Marth's up tilt",
+   "script": "scripts/p6/palutena/motions/utilt.ms",
+   "anim": "builds/p6-art/palutena/anims/utilt.o2r"
+  },
+  "176": {
+   "comment": "AttackLw3: down tilt (card: the staff spun along the ground): Marth's down tilt",
+   "script": "scripts/p6/palutena/motions/dtilt.ms",
+   "anim": "builds/p6-art/palutena/anims/dtilt.o2r"
+  },
+  "179": {
+   "comment": "AttackS4: forward smash (card: the wings, next; for now the staff swung as Peach swings her pan)",
+   "script": "scripts/p6/palutena/motions/fsmash.ms",
+   "anim": "builds/p6-art/palutena/anims/fsmash.o2r"
+  },
+  "182": {
+   "comment": "AttackHi4: up smash (card: the light pillar ahead of her): Marth's up smash, the staff raised",
+   "script": "scripts/p6/palutena/motions/usmash.ms",
+   "anim": "builds/p6-art/palutena/anims/usmash.o2r"
+  },
+  "183": {
+   "comment": "AttackLw4: down smash (card: the wings down both sides; for now the staff sweeps both sides): Marth's down smash",
+   "script": "scripts/p6/palutena/motions/dsmash.ms",
+   "anim": "builds/p6-art/palutena/anims/dsmash.o2r"
+  },
+  "184": {
+   "comment": "AttackAirN: neutral air (card: the staff spun beside her): Marth's neutral air",
+   "script": "scripts/p6/palutena/motions/nair.ms",
+   "anim": "builds/p6-art/palutena/anims/nair.o2r"
+  },
+  "185": {
+   "comment": "AttackAirF: forward air (card: a flying kick): Mario's neutral air on Peach's tree",
+   "script": "scripts/p6/palutena/motions/fair.ms",
+   "anim": "builds/p6-art/palutena/anims/fair.o2r"
+  },
+  "186": {
+   "comment": "AttackAirB: back air (card: a backfist with the shield arm): Captain's back air on Peach's tree",
+   "script": "scripts/p6/palutena/motions/bair.ms",
+   "anim": "builds/p6-art/palutena/anims/bair.o2r"
+  },
+  "187": {
+   "comment": "AttackAirHi: up air (card: a twirl, the halo above her): Marth's up air",
+   "script": "scripts/p6/palutena/motions/uair.ms",
+   "anim": "builds/p6-art/palutena/anims/uair.o2r"
+  },
+  "188": {
+   "comment": "AttackAirLw: down air (card: a downward roundhouse kick): Captain's down air on Peach's tree",
+   "script": "scripts/p6/palutena/motions/dair.ms",
+   "anim": "builds/p6-art/palutena/anims/dair.o2r"
+  },
   "219": {
    "comment": "Explosive Flame",
    "anim": "builds/p6-art/palutena/anims/flame.o2r",

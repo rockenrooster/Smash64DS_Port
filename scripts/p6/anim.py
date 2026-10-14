@@ -313,14 +313,19 @@ def pose(clip: Clip, skel: Skeleton, frame: int, first_slot: int = 0):
 
 
 def retarget(clip: Clip, src: Skeleton, dst: Skeleton, roles: dict, src_first_slot: int = 0,
-             dst_slots: int | None = None, height_scale: float = 1.0) -> Clip:
+             dst_slots: int | None = None, height_scale: float = 1.0, item=None) -> Clip:
     """The clip on another skeleton. `roles` maps source rows to target
     rows; a mapped target joint takes its source joint's world rotation
     relative to the source's bind pose, applied to its own bind pose (so
     differently oriented joints still move alike); unmapped target joints
     keep their bind pose. A mapped joint whose source joint's translation is
     animated moves by that joint's offset from its bind position (carried
-    through the parents' bind frames), times height_scale."""
+    through the parents' bind frames), times height_scale.
+
+    `item` (target row, source axis, target axis; each axis in its row's
+    local frame) turns a held item: the target's item axis follows the
+    source's (Palutena's staff where Marth's sword points) by a constant
+    local turn of the target row, which then always plays."""
     import numpy as np
     length = max((st.length for st in clip.streams.values()), default=0)
     lead = max((t.lead for st in clip.streams.values() for t in st.tracks.values()), default=0)
@@ -335,6 +340,16 @@ def retarget(clip: Clip, src: Skeleton, dst: Skeleton, roles: dict, src_first_sl
               if any(4 <= tr <= 6 for tr in clip.streams.get(s + src_first_slot, Stream(0, None)).tracks)}
     rows_out = sorted(d for d, s in inverse.items() if s in animated_src or
                       any(a in animated_src for a in _ancestors(src, s)))
+    turn = {}
+    if item is not None:
+        row, src_axis, dst_axis = item
+        if row not in inverse:
+            raise ValueError(f"item row {row} has no source joint")
+        s_row = inverse[row]
+        want = dst_rest[row].T @ src_rest[s_row] @ np.asarray(src_axis, dtype=float)
+        turn[row] = _turn_between(np.asarray(dst_axis, dtype=float), want)
+        if row not in rows_out:
+            rows_out = sorted(rows_out + [row])
     series = {d: [] for d in rows_out}
     moves = {d: [] for d in moving}
     prev = {d: tuple(dst.rotate[d]) for d in rows_out}
@@ -347,6 +362,8 @@ def retarget(clip: Clip, src: Skeleton, dst: Skeleton, roles: dict, src_first_sl
             if i in inverse:
                 s = inverse[i]
                 w = s_world[s] @ src_rest[s].T @ dst_rest[i]
+                if i in turn:
+                    w = w @ turn[i]
             else:
                 w = (d_world[p] if p >= 0 else np.eye(3)) @ euler(*dst.rotate[i])
             d_world.append(w)
@@ -369,7 +386,7 @@ def retarget(clip: Clip, src: Skeleton, dst: Skeleton, roles: dict, src_first_sl
         for k in range(3):
             vals = [round(series[d][f][k] * ROT_UNIT) for f in range(lead, length + 1)]
             rest = round(dst.rotate[d][k] * ROT_UNIT)
-            if all(abs(v - rest) <= ANIM_EPS for v in vals):
+            if d not in turn and all(abs(v - rest) <= ANIM_EPS for v in vals):
                 continue
             st.tracks[k] = Track(vals, lead)
         if st.tracks:
@@ -454,6 +471,20 @@ def splice(clip: Clip, first: int, last: int, hold: int = 0, strip_transn: bool 
     return out
 
 
+def _turn_between(a, b):
+    """The smallest rotation (3x3) taking direction a to direction b."""
+    import numpy as np
+    a = a / np.linalg.norm(a)
+    b = b / np.linalg.norm(b)
+    v = np.cross(a, b)
+    s = np.linalg.norm(v)
+    c = float(np.dot(a, b))
+    if s < 1e-9:
+        return np.eye(3) if c > 0 else -np.eye(3)
+    k = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
+    return np.eye(3) + k + k @ k * ((1 - c) / (s * s))
+
+
 def _ancestors(skel: Skeleton, row: int) -> list:
     out = []
     while skel.parents[row] >= 0:
@@ -501,6 +532,8 @@ ROLES = {
     ("marth", "peach"): {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 8: 7, 9: 8, 10: 10, 11: 11, 12: 12,
                          13: 13, 14: 14, 21: 15, 22: 16, 23: 17, 24: 18, 25: 19, 26: 20, 27: 21, 28: 22,
                          29: 23, 30: 24},
+    # Peach's own clips with a held item turned (her pan's axis to the staff's).
+    ("peach", "peach"): {r: r for r in range(27)},
 }
 
 
@@ -523,7 +556,8 @@ def skeleton(rom, name: str, detail: str = "high") -> Skeleton:
 def build(recipe: dict, rom) -> bytes:
     """A clip from its recipe (art/p6/<name>/anims/*.json): a source clip
     (file id in the reference ROM), optionally retargeted ("retarget":
-    {"from", "to", "height_scale"}), spliced ("frames": [first, last],
+    {"from", "to", "height_scale", "first_slot": a TransN clip's 1, "item":
+    {"row", "from_axis", "to_axis"}}), spliced ("frames": [first, last],
     "hold": frames the last is held, "strip_transn": drop a TransN clip's
     travel slot) and retimed ("retime": the length factor); the O2R
     container keeps the source's header (p6_author.py gives it its own
@@ -533,8 +567,11 @@ def build(recipe: dict, rom) -> bytes:
     rt = recipe.get("retarget")
     if rt:
         src, dst = skeleton(rom, rt["from"]), skeleton(rom, rt["to"])
+        item = rt.get("item")
         clip = retarget(clip, src, dst, ROLES[(rt["from"], rt["to"])],
-                        dst_slots=len(dst.parents) - 1, height_scale=float(rt.get("height_scale", 1.0)))
+                        src_first_slot=int(rt.get("first_slot", 0)),
+                        dst_slots=len(dst.parents) - 1, height_scale=float(rt.get("height_scale", 1.0)),
+                        item=(int(item["row"]), item["from_axis"], item["to_axis"]) if item else None)
     if "frames" in recipe:
         first, last = (int(x) for x in recipe["frames"])
         clip = splice(clip, first, last, int(recipe.get("hold", 0)), bool(recipe.get("strip_transn")))

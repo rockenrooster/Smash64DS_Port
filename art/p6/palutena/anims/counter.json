@@ -3,6 +3,7 @@
  "source": "0xd70",
  "retarget": {
   "from": "marth",
-  "to": "peach"
+  "to": "peach",
+  "height_scale": 0.533
  }
 }

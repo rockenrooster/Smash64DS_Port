@@ -3,7 +3,8 @@
  "source": "0x70d",
  "retarget": {
   "from": "ness",
-  "to": "peach"
+  "to": "peach",
+  "height_scale": 1.58
  },
  "retime": 0.75
 }
