@@ -4,6 +4,7 @@
 moves are authored as key poses against them and reviewed as sheets).
 
     {"keyposes": {"skeleton": "roy", "header": "0x...", "length": 51, "first_slot": 0,
+     "scene": "builds/p6-art/<name>/.../scene.json",
      "base": {"clip": "0x...", "frame": 0},
      "keys": [{"frame": 0},
               {"frame": 6, "from": {"clip": ..., "frame": n},
@@ -12,7 +13,10 @@ moves are authored as key poses against them and reviewed as sheets).
                "aims": [{"row": 11, "to": [x, y, z]}, {"row": 14, "axis": [0, 0, 1], "to": [0, 0, 1]}],
                "ik": [{"chain": [22, 23, 24], "target": "keep", "pole": [0, 0, 1]}],
                "place": [{"row": 14, "at": [x, y, z]}],
-               "ease": "smooth" | "linear" | "in" | "out"}, ...]}}
+               "ease": "smooth" | "linear" | "in" | "out"}, ...],
+     "spin": [{"row": 14, "axis": [1, 0, 0], "degrees": 720, "frames": [6, 18],
+               "ease": "linear"}],
+     "transn": {"clip": "0x...", "scale": 1.0}}}
 
 A key starts from a base pose (its "from", else the recipe's "base": a
 clip's frame). In order: "trans" offsets rows' translations (model units:
@@ -25,8 +29,25 @@ optional "offset") with the middle joint toward "pole"; "place" puts a row's
 origin at a model position (a held item let go: Ike's thrown Ragnell), its
 rotation kept. Between keys every
 row's rotation slerps and its translation lerps, eased into the later key.
+A "spin" then turns a row (and everything below it) about a model axis,
+through its parent's pose at each frame, by "degrees" over "frames" (a held
+item twirled: Palutena's staff), the whole turn kept after. A clip whose
+motion row carries the TransN flag ("first_slot": 1) takes its TransN slot
+from "transn"'s clip (its travel times "scale"): AttackDash moves the fighter
+by that slot alone (ftPhysicsApplyGroundVelTransN). A reference reads its
+clip from its own "first_slot" (else the recipe's). A "scene" (a look scene,
+repo-relative) gives the skeleton the look's rest translations, which its
+model is built with: Palutena's bones are longer than Peach's, so her IK and
+"place" positions are worked out in her own (scene_skeleton). Its
+translate_scales come with it (scene_scales): the game multiplies a row's
+keyed translation by its scale (FTAttributes.translate_scales; Peach's clips
+key her wrists, neck, knees and hips in Peach's lengths), so a base clip's
+keyed rows are read scaled and the clip's translations written divided by
+it, as coverage.py's pose_frames models the game.
 """
 from __future__ import annotations
+
+import math
 
 import numpy as np
 
@@ -125,10 +146,54 @@ def _ik(skel, local, trans, chain, target, pole):
     _aim(skel, local, trans, b, (pos[a] + u * d) - knee, child=c)
 
 
-def key_pose(skel: A.Skeleton, clips: dict, key: dict, base: dict, first_slot: int):
+def scene_skeleton(skel: A.Skeleton, scene: dict) -> A.Skeleton:
+    """The skeleton with the look scene's rest translations (each joint's
+    offset from its parent's world, as model_writer.py writes them; the
+    rotations stay the tree's)."""
+    worlds = [np.array(j["world"], dtype=float) for j in scene["joints"]]
+    for j, row in enumerate(scene["joints"]):
+        if j >= len(skel.translate):
+            break
+        p = row["parent"]
+        local = worlds[j] if p < 0 else np.linalg.inv(worlds[p]) @ worlds[j]
+        skel.translate[j] = tuple(float(c) for c in local[:3, 3])
+    return skel
+
+
+ROW_JOINT = 4   # model row r is fighter joint r + 4 (coverage.ROW_JOINT)
+
+
+def scene_scales(scene: dict, rows: int):
+    """The look's translate_scales per row (one Vec3f per fighter joint), or
+    None when the look has none."""
+    ts = scene.get("translate_scales")
+    if not ts:
+        return None
+    return [tuple(float(v) for v in ts[r + ROW_JOINT]) if r + ROW_JOINT < len(ts) else (1.0, 1.0, 1.0)
+            for r in range(rows)]
+
+
+def refs(spec: dict) -> list:
+    """Every clip reference a keyposes spec reads (base, keys' "from", "transn")."""
+    out = [spec["base"]] + [k["from"] for k in spec["keys"] if "from" in k]
+    if spec.get("transn"):
+        out.append(spec["transn"])
+    return out
+
+
+def key_pose(skel: A.Skeleton, clips: dict, key: dict, base: dict, first_slot: int, scales=None):
     ref = key.get("from", base)
-    trans, rot = A.pose(clips[_clip_id(ref)], skel, int(ref.get("frame", 0)), first_slot)
+    clip = clips[_clip_id(ref)]
+    fs = int(ref.get("first_slot", first_slot))
+    trans, rot = A.pose(clip, skel, int(ref.get("frame", 0)), fs)
     trans = [list(map(float, t)) for t in trans]
+    if scales is not None:
+        # A row the clip keys a translation of is scaled whole (the game's
+        # translate_scales; coverage.py pose_frames).
+        for r in range(len(trans)):
+            st = clip.streams.get(r + fs)
+            if st is not None and any(4 <= k <= 6 for k in st.tracks):
+                trans[r] = [trans[r][k] * scales[r][k] for k in range(3)]
     local = [A.euler(*r) for r in rot]
     base_rots, base_pos = _worlds(skel, local, trans)
     for r, d in (key.get("trans") or {}).items():
@@ -158,11 +223,12 @@ def key_pose(skel: A.Skeleton, clips: dict, key: dict, base: dict, first_slot: i
     return trans, out
 
 
-def build(skel: A.Skeleton, spec: dict, clips: dict, slots: int) -> A.Clip:
+def build(skel: A.Skeleton, spec: dict, clips: dict, slots: int, scales=None) -> A.Clip:
     first_slot = int(spec.get("first_slot", 0))
     length = int(spec["length"])
     keys = sorted(spec["keys"], key=lambda k: int(k["frame"]))
-    poses = [(int(k["frame"]), *key_pose(skel, clips, k, spec["base"], first_slot), k.get("ease", "smooth"))
+    poses = [(int(k["frame"]), *key_pose(skel, clips, k, spec["base"], first_slot, scales),
+              k.get("ease", "smooth"))
              for k in keys]
     rows = len(skel.parents)
     per_frame_rot = [None] * (length + 1)
@@ -179,7 +245,23 @@ def build(skel: A.Skeleton, spec: dict, clips: dict, slots: int) -> A.Clip:
             t = _ease((f - fa) / max(fb - fa, 1), eb)
             rt = [P.slerp(ra[r], rb[r], t) for r in range(rows)]
             tr = [[ta[r][k] + (tb[r][k] - ta[r][k]) * t for k in range(3)] for r in range(rows)]
-        per_frame_rot[f], per_frame_tr[f] = rt, tr
+        per_frame_rot[f], per_frame_tr[f] = list(rt), tr
+    for sp in spec.get("spin") or ():
+        row = int(sp["row"])
+        first, last = (int(x) for x in sp["frames"])
+        axis = np.asarray(sp["axis"], dtype=float)
+        axis = axis / np.linalg.norm(axis)
+        k = np.array([[0.0, -axis[2], axis[1]], [axis[2], 0.0, -axis[0]], [-axis[1], axis[0], 0.0]])
+        for f in range(length + 1):
+            if f <= first:
+                continue
+            u = 1.0 if f >= last else _ease((f - first) / float(last - first), sp.get("ease", "smooth"))
+            th = math.radians(float(sp["degrees"])) * u
+            turn = np.eye(3) + math.sin(th) * k + (1.0 - math.cos(th)) * (k @ k)
+            rots, _pos = _worlds(skel, per_frame_rot[f], per_frame_tr[f])
+            p = skel.parents[row]
+            pw = rots[p] if p >= 0 else np.eye(3)
+            per_frame_rot[f][row] = pw.T @ turn @ pw @ per_frame_rot[f][row]
     clip = A.Clip(slots)
     loop = spec.get("loop")
     for r in range(rows):
@@ -201,7 +283,22 @@ def build(skel: A.Skeleton, spec: dict, clips: dict, slots: int) -> A.Clip:
         for k in range(3):
             st.tracks[k] = A.Track([round(e[k] * A.ROT_UNIT) for e in eul], 0)
         if tmoved:
+            # The game multiplies a keyed row by its scale: written divided.
+            s = scales[r] if scales is not None else (1.0, 1.0, 1.0)
             for k in range(3):
-                st.tracks[4 + k] = A.Track([round(per_frame_tr[f][r][k] * A.TRANS_UNIT) for f in range(length + 1)], 0)
+                d = s[k] if abs(s[k]) > 1e-6 else 1.0
+                st.tracks[4 + k] = A.Track([round(per_frame_tr[f][r][k] / d * A.TRANS_UNIT)
+                                            for f in range(length + 1)], 0)
         clip.streams[slot] = st
+    tn = spec.get("transn")
+    if tn:
+        if first_slot < 1:
+            raise ValueError("keyposes transn needs first_slot 1")
+        src = clips[_clip_id(tn)].streams[0]
+        scale = float(tn.get("scale", 1.0))
+        st = A.Stream(src.length, src.loop, loop_skips_steps=src.loop_skips_steps)
+        for k, t in src.tracks.items():
+            vals = [round(v * scale) for v in t.values] if 4 <= k <= 6 else list(t.values)
+            st.tracks[k] = A.Track(vals, t.lead, t.step)
+        clip.streams[0] = st
     return clip

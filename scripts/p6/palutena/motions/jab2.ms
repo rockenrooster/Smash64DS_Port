@@ -1,4 +1,6 @@
-# Attack12: jab 2 (card: the light burst's finisher, the staff swung up): Marth's jab 2
+# Attack12: jab 2 (card: the light burst's finisher, the staff swung up): the
+# 3DS finisher, the thrust with the burst and the staff swung overhead
+# (art/p6/palutena/anims, key poses on the owner's 3DS reference, 2026-10-14).
 AsyncWait frames=4
 PlayVoiceStoreInfo value=cue:attack01
 MakeAttackColl attack_id=0 group_id=0 joint_id=18 damage=5 can_rebound=1 element=0 size=200 off_x=23 off_y=150 off_z=-160 angle=361 knockback_scale=100 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=1 fgm_kind=0 knockback_base=25

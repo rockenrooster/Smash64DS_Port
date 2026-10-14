@@ -1,4 +1,5 @@
-# AttackLw3: down tilt (card: the staff spun along the ground): Marth's down tilt
+# AttackLw3: down tilt (card: the staff spun along the ground): from her crouch
+# the staff swept along the floor (art/p6/palutena/anims, key poses on the owner's 3DS reference, 2026-10-14).
 AsyncWait frames=6
 MakeAttackColl attack_id=0 group_id=0 joint_id=18 damage=8 can_rebound=1 element=0 size=200 off_x=23 off_y=150 off_z=-160 angle=30 knockback_scale=70 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=1 fgm_kind=0 knockback_base=30
 MakeAttackColl attack_id=1 group_id=0 joint_id=18 damage=7 can_rebound=1 element=0 size=170 off_x=11 off_y=75 off_z=-80 angle=30 knockback_scale=70 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=1 fgm_kind=0 knockback_base=30

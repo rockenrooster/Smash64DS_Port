@@ -1,22 +1,367 @@
 {
- "comment": "AttackLw3: down tilt (card: the staff spun along the ground): Marth's down tilt",
- "source": "0xd42",
- "retarget": {
-  "from": "marth",
-  "to": "peach",
-  "height_scale": 0.533,
-  "item": {
-   "row": 14,
-   "from_axis": [
-    0,
-    0,
-    1
+ "comment": "Palutena's down tilt (AttackLw3; the owner's 3DS reference, 2026-10-14): from her crouch the staff raised over her shoulder, swept down along the floor ahead (frames 6-11) leaning low, back to her crouch.",
+ "keyposes": {
+  "skeleton": "peach",
+  "scene": "builds/p6-art/palutena/3ds2ds/scene_high/scene.json",
+  "header": "0x1371",
+  "length": 26,
+  "first_slot": 0,
+  "base": {
+   "clip": "0x1382",
+   "frame": 0
+  },
+  "keys": [
+   {
+    "frame": 0
+   },
+   {
+    "frame": 3,
+    "ease": "out",
+    "turns": {
+     "2": [
+      -5,
+      10,
+      0
+     ],
+     "7": [
+      5,
+      -10,
+      0
+     ]
+    },
+    "aims": [
+     {
+      "row": 11,
+      "to": [
+       -0.3,
+       0.55,
+       0.75
+      ]
+     },
+     {
+      "row": 12,
+      "to": [
+       -0.1,
+       0.9,
+       0.4
+      ]
+     },
+     {
+      "row": 14,
+      "axis": [
+       0.103,
+       0.681,
+       -0.725
+      ],
+      "to": [
+       0,
+       0.6,
+       0.8
+      ],
+      "twist": {
+       "axis": [
+        0.934,
+        -0.316,
+        -0.164
+       ],
+       "to": [
+        1,
+        0,
+        0
+       ]
+      }
+     },
+     {
+      "row": 4,
+      "to": [
+       0.4,
+       -0.5,
+       -0.7
+      ]
+     },
+     {
+      "row": 5,
+      "to": [
+       0.2,
+       -0.4,
+       -0.9
+      ]
+     }
+    ],
+    "ik": [
+     {
+      "chain": [
+       16,
+       17,
+       18
+      ],
+      "target": "keep",
+      "pole": [
+       0,
+       0,
+       1
+      ]
+     },
+     {
+      "chain": [
+       21,
+       22,
+       23
+      ],
+      "target": "keep",
+      "pole": [
+       0,
+       0,
+       1
+      ]
+     }
+    ]
+   },
+   {
+    "frame": 6,
+    "ease": "out",
+    "trans": {
+     "1": [
+      0,
+      -5,
+      10
+     ]
+    },
+    "turns": {
+     "2": [
+      40,
+      10,
+      0
+     ],
+     "7": [
+      -30,
+      -10,
+      0
+     ]
+    },
+    "aims": [
+     {
+      "row": 11,
+      "to": [
+       -0.15,
+       -0.55,
+       0.82
+      ]
+     },
+     {
+      "row": 12,
+      "to": [
+       -0.05,
+       -0.5,
+       0.86
+      ]
+     },
+     {
+      "row": 14,
+      "axis": [
+       0.103,
+       0.681,
+       -0.725
+      ],
+      "to": [
+       0,
+       -0.38,
+       1
+      ],
+      "twist": {
+       "axis": [
+        0.934,
+        -0.316,
+        -0.164
+       ],
+       "to": [
+        1,
+        0,
+        0
+       ]
+      }
+     },
+     {
+      "row": 4,
+      "to": [
+       0.4,
+       -0.2,
+       -0.9
+      ]
+     },
+     {
+      "row": 5,
+      "to": [
+       0.2,
+       0.0,
+       -1
+      ]
+     }
+    ],
+    "ik": [
+     {
+      "chain": [
+       16,
+       17,
+       18
+      ],
+      "target": "keep",
+      "pole": [
+       0,
+       0,
+       1
+      ]
+     },
+     {
+      "chain": [
+       21,
+       22,
+       23
+      ],
+      "target": "keep",
+      "pole": [
+       0,
+       0,
+       1
+      ]
+     }
+    ]
+   },
+   {
+    "frame": 11,
+    "ease": "smooth",
+    "trans": {
+     "1": [
+      0,
+      -5,
+      10
+     ]
+    },
+    "turns": {
+     "2": [
+      40,
+      10,
+      0
+     ],
+     "7": [
+      -30,
+      -10,
+      0
+     ]
+    },
+    "aims": [
+     {
+      "row": 11,
+      "to": [
+       -0.15,
+       -0.55,
+       0.82
+      ]
+     },
+     {
+      "row": 12,
+      "to": [
+       -0.05,
+       -0.5,
+       0.86
+      ]
+     },
+     {
+      "row": 14,
+      "axis": [
+       0.103,
+       0.681,
+       -0.725
+      ],
+      "to": [
+       0,
+       -0.38,
+       1
+      ],
+      "twist": {
+       "axis": [
+        0.934,
+        -0.316,
+        -0.164
+       ],
+       "to": [
+        1,
+        0,
+        0
+       ]
+      }
+     },
+     {
+      "row": 4,
+      "to": [
+       0.4,
+       -0.2,
+       -0.9
+      ]
+     },
+     {
+      "row": 5,
+      "to": [
+       0.2,
+       0.0,
+       -1
+      ]
+     }
+    ],
+    "ik": [
+     {
+      "chain": [
+       16,
+       17,
+       18
+      ],
+      "target": "keep",
+      "pole": [
+       0,
+       0,
+       1
+      ]
+     },
+     {
+      "chain": [
+       21,
+       22,
+       23
+      ],
+      "target": "keep",
+      "pole": [
+       0,
+       0,
+       1
+      ]
+     }
+    ]
+   },
+   {
+    "frame": 19
+   },
+   {
+    "frame": 26
+   }
+  ]
+ },
+ "skeleton": "peach",
+ "ops": [
+  {
+   "op": "blend",
+   "rows": [
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24
    ],
-   "to_axis": [
-    0.103,
-    0.681,
-    -0.725
-   ]
+   "amount": 0.45
   }
- }
+ ]
 }

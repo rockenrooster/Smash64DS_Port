@@ -1,4 +1,5 @@
-# AttackS3: forward tilt (card: the staff spun ahead): Marth's forward tilt
+# AttackS3: forward tilt (card: the staff spun ahead): the staff spun twice
+# like a windmill before her (art/p6/palutena/anims, key poses on the owner's 3DS reference, 2026-10-14).
 AsyncWait frames=7
 PlayVoiceStoreInfo value=cue:attack02
 MakeAttackColl attack_id=0 group_id=0 joint_id=18 damage=9 can_rebound=1 element=0 size=200 off_x=23 off_y=150 off_z=-160 angle=361 knockback_scale=100 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=1 fgm_kind=0 knockback_base=15

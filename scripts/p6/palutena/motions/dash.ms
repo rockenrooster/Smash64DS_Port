@@ -1,4 +1,5 @@
-# AttackDash: the shield charge (D3), on Peach's dash attack
+# AttackDash: the shield charge (D3): the shield thrust ahead and held through
+# the slide, Peach's TransN travel (art/p6/palutena/anims, key poses on the owner's 3DS reference, 2026-10-14).
 SetSlopeContour flags=4
 AsyncWait frames=5
 PlayVoiceStoreInfo value=cue:attack02

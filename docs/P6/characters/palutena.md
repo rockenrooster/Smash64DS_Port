@@ -319,6 +319,46 @@ Defaults for the specials:
   blast from the staff (Marth's counter override, `NDSP4Overrides.update_damage`),
   and a projectile is reflected (Fox's reflector rule). Ground and air.
 
+## Animations (the owner's 3DS references, 2026-10-14)
+
+The owner's 19 3DS clips (local, `decomp/alt_assets/Fighters/Super Smash
+Bros 3DS/Palutena/`) are the reference for her moves; "I author, you
+review": each move is key poses (`scripts/p6/keyposes.py`, anim.py
+"keyposes" recipes in `art/p6/palutena/anims/`) on Peach's tree, reviewed as
+sheets (the 3DS frame over her model from the battle camera's side: her
+right, the staff hand, when she faces right). Hurt animations stay Peach's.
+Her motion scripts keep their frames and damage; the clips are timed to
+them (one 3DS capture frame at 15 fps is four game frames).
+
+- Jab 1: the staff thrust ahead at hip height. Jab 2: the 3DS finisher, the
+  thrust with the light burst and the staff swung overhead (the move card's
+  "light burst's finisher"; the 3DS shield-bash jab is left out of her two
+  hits).
+- Dash attack (the card's shield charge): the shield thrust ahead and held
+  through the slide, the staff trailing; Peach's TransN travel (AttackDash
+  moves a fighter by its TransN slot alone: keyposes "transn").
+- Forward tilt: the staff spun twice like a windmill before her (keyposes
+  "spin": a row turned about a model axis through its parent's pose). Up
+  tilt: on her knees, the staff spun level overhead three times. Down tilt:
+  from her crouch the staff raised and swept along the floor.
+- Forward smash: her wings out (the torso part), the staff raised back and
+  swung over to level ahead in a lunge; the angled smashes (AttackS4Hi, HiS,
+  LwS, Lw) play it too, where they played Peach's angled smash. Up smash: the
+  staff level at her hip, then raised straight up as the pillar rises. Down
+  smash: she rises, drops low sweeping the staff behind her, over the top
+  and low ahead. The 3DS smashes sweep her wings; hers are rigid cards on
+  her back, so the staff makes the sweep.
+- Neutral air: the staff spun twice around her. Forward air: the staff
+  thrust ahead with a burst; down air: the shield swept under her from front
+  to back (the owner: "follow the 3DS ones" over the cards' kicks; their
+  hitboxes moved from her legs to the staff and the shield). Back air: the
+  shield bashed out behind her. Up air: the staff raised, the halo above.
+- The ground attacks no longer narrow her stance (spec "pose" group for the
+  borrowed clips); the aerials and the down tilt take the leg narrowing of
+  the motions they start from (falls 0.35, the crouch 0.45; recipe "ops").
+- The preview's torso turns stay small: her hair is a rigid panel on the
+  torso row and covers her when she turns her back as the 3DS model does.
+
 ## Audio (local inputs, never committed)
 
 Cues come from the Ultimate WAVs in `decomp/alt_assets/Fighters/Super Smash

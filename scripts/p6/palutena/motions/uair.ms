@@ -1,5 +1,5 @@
-# AttackAirHi: up air (card: a twirl, the halo above her): Marth's up air,
-# her halo (the head row's part 2) shown through the hits
+# AttackAirHi: up air (card: a twirl, the halo above her): the staff raised
+# straight up (art/p6/palutena/anims, key poses on the owner's 3DS reference, 2026-10-14), her halo (the head row's part 2) shown through the hits
 SetModelPartID joint_id=12 modelpart_id=2
 AsyncWait frames=5
 SetFlag1 value=50

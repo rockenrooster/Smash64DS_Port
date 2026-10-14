@@ -633,9 +633,13 @@ def build(recipe: dict, rom) -> bytes:
         kp = recipe["keyposes"]
         blob = rom.o2r(int(str(kp["header"]), 0))
         skel = skeleton(rom, kp["skeleton"])
-        refs = [kp["base"]] + [k["from"] for k in kp["keys"] if "from" in k]
-        clips = {int(str(r["clip"]), 0): decode(rom.o2r(int(str(r["clip"]), 0))) for r in refs}
-        clip = keyposes.build(skel, kp, clips, len(skel.parents) - 1 + int(kp.get("first_slot", 0)))
+        scales = None
+        if kp.get("scene"):
+            scene = json.loads((HERE.parents[1] / kp["scene"]).read_text(encoding="utf-8"))
+            keyposes.scene_skeleton(skel, scene)
+            scales = keyposes.scene_scales(scene, len(skel.parents))
+        clips = {int(str(r["clip"]), 0): decode(rom.o2r(int(str(r["clip"]), 0))) for r in keyposes.refs(kp)}
+        clip = keyposes.build(skel, kp, clips, len(skel.parents) - 1 + int(kp.get("first_slot", 0)), scales)
     elif "keys" in recipe:
         blob = rom.o2r(int(str(recipe["header"]), 0))
         skel = skeleton(rom, recipe["skeleton"])

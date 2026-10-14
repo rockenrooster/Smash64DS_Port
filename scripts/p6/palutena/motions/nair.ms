@@ -1,4 +1,5 @@
-# AttackAirN: neutral air (card: the staff spun beside her): Marth's neutral air
+# AttackAirN: neutral air (card: the staff spun beside her): the staff spun
+# twice around her (art/p6/palutena/anims, key poses on the owner's 3DS reference, 2026-10-14).
 AsyncWait frames=5
 SetFlag1 value=40
 MakeAttackColl attack_id=0 group_id=0 joint_id=18 damage=2 can_rebound=1 element=0 size=200 off_x=23 off_y=150 off_z=-160 angle=70 knockback_scale=100 knockback_weight=5 is_hit_ground_air=3 shield_damage=0 fgm_level=0 fgm_kind=0 knockback_base=0

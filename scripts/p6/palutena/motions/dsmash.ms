@@ -1,5 +1,6 @@
 # AttackLw4: down smash (card: the wings down both sides): her wings (the
-# torso row's part 1) out while the staff sweeps both sides: Marth's down smash
+# torso row's part 1) out while the staff sweeps low behind her, then over the
+# top and low ahead (art/p6/palutena/anims, key poses on the owner's 3DS reference, 2026-10-14).
 SetModelPartID joint_id=6 modelpart_id=1
 AsyncWait frames=6
 Effect joint_id=0 effect_id=16 flag=0 off_x=0 off_y=0 off_z=-100 rng_x=0 rng_y=0 rng_z=0

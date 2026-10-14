@@ -1,6 +1,7 @@
 # AttackS4: forward smash (card: wings conjured and flapped forward): her
 # wings (the torso row's part 1, art/p6/palutena/look/parts.json) out for the
-# swing, the staff swung as Peach swings her pan.
+# swing, the staff raised back and swung over to level ahead in a lunge
+# (art/p6/palutena/anims, key poses on the owner's 3DS reference, 2026-10-14); the angled smashes (177, 178, 180, 181) play it too.
 SetModelPartID joint_id=18 modelpart_id=1
 SetModelPartID joint_id=6 modelpart_id=1
 AsyncWait frames=13
