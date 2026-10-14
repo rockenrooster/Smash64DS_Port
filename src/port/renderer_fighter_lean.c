@@ -24,6 +24,7 @@
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_r2_collision_mtx.h>
 #include <nds/nds_r2_hwmath_unit.h>
+#include <nds/nds_fixed_convert.h>
 
 /* Slice 2b BSS diet: the per-root arrays hold the most DL-bearing joints any
  * kind x detail has (generator max, 24) instead of the draw collection's 32;
@@ -1087,15 +1088,99 @@ static void ndsFtrLeanRefreshInputs(const NDSFtrLeanInstance *inst,
  * preambles through the instance's event indices, the colour modulate, P's
  * source projection and the binding worlds; `inputs` only when the caller
  * refreshed the shared production inputs. */
+/* BUGS.md (owner): a fighter knocked off the top that falls toward the
+ * camera must draw over all of the stage. ftCommonDeadUpFallSetStatus puts
+ * it on DL link 19, which the battle camera draws last (gmcamera.c), after
+ * the stage's no-Z foreground layers; the DS paints those layers at depths
+ * nearer than any source depth (the renderer's foreground painter band), so
+ * this fighter's depths go to the band's nearest NDS_FTR_LEAN_FRONT_DEPTH_BAND
+ * units, which the painter leaves to it. The window of view depth
+ * NDS_FTR_LEAN_FRONT_REACH game units either side of its TopN is mapped onto
+ * [-4095, -4097 + band] (z/w, 1/4096) by clip z' = s z + t w (column 2 of the
+ * DS's row-vector matrix; w, column 3, is view depth with a 4096-long
+ * gradient): its own ordering kept at about 7 units a depth step. Mapping
+ * all of [-1, 1] there left the whole fighter in one depth step and it
+ * fought itself (lab, 2026-10-14). Integer math (fixed only, owner
+ * 2026-10-05); a window it cannot form keeps the camera's projection. */
+#define NDS_FTR_LEAN_FRONT_REACH 400
+static NDSRendererMatrix20p12 sNdsFtrLeanProjectionFront;
+
+static const NDSRendererMatrix20p12 * __attribute__((noinline, cold))
+ndsFtrLeanFrontProjection(const NDSRendererMatrix20p12 *m, const FTStruct *fp)
+{
+    const DObj *topn = fp->joints[nFTPartsJointTopN];
+    const s64 lo = 1 - 4096;
+    const s64 hi = NDS_FTR_LEAN_FRONT_DEPTH_BAND - 1 - 4096;
+    s64 p[3];
+    s64 reach = NDS_FTR_LEAN_FRONT_REACH;
+    s64 w0, zn, wn, zf, wf, zcn, zcf, sq, tq;
+    u32 r;
+
+    if (topn == NULL)
+    {
+        return m;
+    }
+    p[0] = ndsF32ToFixed(topn->translate.vec.f.x, 0u);
+    p[1] = ndsF32ToFixed(topn->translate.vec.f.y, 0u);
+    p[2] = ndsF32ToFixed(topn->translate.vec.f.z, 0u);
+    w0 = (p[0] * m->m[0][3]) + (p[1] * m->m[1][3]) + (p[2] * m->m[2][3]) +
+         m->m[3][3];
+    if ((w0 >> 12) < (2 * reach))
+    {
+        reach = (w0 >> 12) / 2;
+    }
+    if (reach < 16)
+    {
+        return m;
+    }
+    /* p -/+ reach along the view axis: w's gradient over its 4096 length. */
+    zn = wn = zf = wf = 0;
+    for (r = 0u; r < 3u; r++)
+    {
+        s64 d = (reach * m->m[r][3]) >> 12;
+
+        zn += (p[r] - d) * m->m[r][2];
+        wn += (p[r] - d) * m->m[r][3];
+        zf += (p[r] + d) * m->m[r][2];
+        wf += (p[r] + d) * m->m[r][3];
+    }
+    zn += m->m[3][2];
+    wn += m->m[3][3];
+    zf += m->m[3][2];
+    wf += m->m[3][3];
+    if ((wn <= 0) || (wf <= 0))
+    {
+        return m;
+    }
+    zcn = (zn << 12) / wn;
+    zcf = (zf << 12) / wf;
+    if (zcf <= zcn)
+    {
+        return m;
+    }
+    sq = ((hi - lo) << 12) / (zcf - zcn);
+    tq = lo - ((sq * zcn) >> 12);
+    sNdsFtrLeanProjectionFront = *m;
+    for (r = 0u; r < 4u; r++)
+    {
+        sNdsFtrLeanProjectionFront.m[r][2] = (s32)(
+            ((sq * (s64)m->m[r][2]) + (tq * (s64)m->m[r][3])) >> 12);
+    }
+    return &sNdsFtrLeanProjectionFront;
+}
+
 static void ndsFtrLeanView(NDSFtrLeanPatchView *view,
                            const NDSFtrLeanInstance *inst, u32 color_modulate,
-                           const NDSRendererNativeFighterRoot *inputs)
+                           const NDSRendererNativeFighterRoot *inputs,
+                           const FTStruct *fp)
 {
     view->preambles = sNdsFighterDisplayReplayPreambles;
     view->event_index = inst->event_index;
     view->root_count = inst->root_count;
     view->modulate = color_modulate;
-    view->projection = &sNdsFtrLeanProjection;
+    view->projection = (fp->dl_link == 19u) ?
+        ndsFtrLeanFrontProjection(&sNdsFtrLeanProjection, fp) :
+        &sNdsFtrLeanProjection;
     view->worlds = sNdsFtrLeanWorlds;
     view->inputs = inputs;
 }
@@ -1625,7 +1710,7 @@ rows:
 #endif
     NDS_FTR_LEAN_EVENT_PART(2u, ev_mark);
     ndsFtrLeanRefreshInputs(inst, color_modulate);
-    ndsFtrLeanView(&view, inst, color_modulate, ws->production_roots);
+    ndsFtrLeanView(&view, inst, color_modulate, ws->production_roots, fp);
     rr_key = ndsFtrLeanRerecordKey(ident, key, ws->production_roots, count);
     NDS_FTR_LEAN_EVENT_PART(3u, ev_mark);
     code = (force_new != FALSE) ? NDS_FTR_LEAN_ENTRY_NONE :
@@ -2253,11 +2338,11 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp)
         {
             ndsFtrLeanRefreshInputs(inst, color_modulate);
             ndsFtrLeanView(&view, inst, color_modulate,
-                sNdsRendererAdapterNativeOwnerWorkspace.production_roots);
+                sNdsRendererAdapterNativeOwnerWorkspace.production_roots, fp);
         }
         else
         {
-            ndsFtrLeanView(&view, inst, color_modulate, NULL);
+            ndsFtrLeanView(&view, inst, color_modulate, NULL, fp);
         }
 #if NDS_FTR_LEAN_ATTR_LIVE
             u32 r1 = cpuGetTiming();

@@ -582,6 +582,16 @@ s32 ndsFtrLeanKernelCompose(const NDSFtrLeanJoint *joints, u32 joint_count,
 /* Slice 6: ndsFtrLeanMaterialize's `entry` flag for a wide list (entry 0
  * over the slot's whole region). */
 #define NDS_FTR_LEAN_ENTRY_WIDE 0x100u
+/* BUGS.md (owner, 2026-10-14): the near end of the DS depth range, in v16
+ * depth units (4096 = z/w 1), that a fighter the battle camera draws last
+ * takes -- DL link 19, a KO toward the camera (ftCommonDeadUpFallSetStatus)
+ * -- so it covers the stage's no-Z foreground layers as it does on N64.
+ * The renderer's foreground painter band (nds_renderer_textures_effects.c,
+ * ndsRendererHardwareNextProjectedDepth) stops short of it; the nine VS
+ * stages take at most 73 of the 96 slots that leaves (lab, 2026-10-14).
+ * 32 units are 128 depth steps: about 7 game units a step over the
+ * fighter's 800-unit window (renderer_fighter_lean.c). */
+#define NDS_FTR_LEAN_FRONT_DEPTH_BAND 32
 /* P2-2p8 (2026-10-05): the `entry` flag that keeps a list's corners VTX_16
  * (the retry after nNDSFtrLeanDeclineVtx10). Without it a route-1 list whose
  * every corner is a whole source unit within +/-511 (all four-CPU lists) is

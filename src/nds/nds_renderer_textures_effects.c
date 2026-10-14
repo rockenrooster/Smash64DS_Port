@@ -16350,6 +16350,18 @@ static s32 ndsRendererHardwareNextProjectedDepth(void)
      * allowing an earlier stage triangle to reject a later grass/bush draw. */
     sNdsRendererHardwareProjectedDepth -=
         NDS_RENDERER_HW_PROJECTED_DEPTH_STEP;
+    /* The foreground band leaves its nearest NDS_FTR_LEAN_FRONT_DEPTH_BAND
+     * depths to a fighter drawn after it (renderer_fighter_lean.c); a frame
+     * that would pass them reuses the last depth it may take. */
+    if ((sNdsRendererHardwareProjectedBackground == FALSE) &&
+        (sNdsRendererHardwareProjectedDepth <
+         ((NDS_FTR_LEAN_FRONT_DEPTH_BAND - 0x1000) *
+          NDS_RENDERER_HW_PROJECTED_DEPTH_STEP)))
+    {
+        sNdsRendererHardwareProjectedDepth =
+            (NDS_FTR_LEAN_FRONT_DEPTH_BAND - 0x1000) *
+            NDS_RENDERER_HW_PROJECTED_DEPTH_STEP;
+    }
     return sNdsRendererHardwareProjectedDepth /
         NDS_RENDERER_HW_PROJECTED_DEPTH_STEP;
 }
