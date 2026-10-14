@@ -7870,9 +7870,9 @@ battleship_mn%.o nds_menu_shell.o nds_ui_kit.o: CFLAGS += -Os
 # keep -O2.
 battleship_mv%.o battleship_scstaffroll.o battleship_scexplain.o battleship_sc1pintro.o battleship_sc1pstageclear.o battleship_sc1pchallenger.o: CFLAGS += -Os
 # A P4 fighter's own routines (src/port/nds_p4_<name>.c) run only for that
-# fighter, in its specials, but all fourteen are resident in every scene, the
+# fighter, in its specials, but all fifteen are resident in every scene, the
 # character select's included: their bytes are size-optimized.
-nds_p4_falco.o nds_p4_bowser.o nds_p4_marth.o nds_p4_roy.o nds_p4_wario.o nds_p4_peach.o nds_p4_crash.o nds_p4_lanky.o nds_p4_sheik.o nds_p4_banjo.o nds_p4_sonic.o nds_p4_dedede.o nds_p4_wolf.o nds_p4_ike.o: CFLAGS += -Os
+nds_p4_falco.o nds_p4_bowser.o nds_p4_marth.o nds_p4_roy.o nds_p4_wario.o nds_p4_peach.o nds_p4_crash.o nds_p4_lanky.o nds_p4_sheik.o nds_p4_banjo.o nds_p4_sonic.o nds_p4_dedede.o nds_p4_wolf.o nds_p4_ike.o nds_p4_palutena.o: CFLAGS += -Os
 # The measured renderer is cache-resident on retail hardware and wins in ARM
 # state despite melonDS's main-RAM fetch model.
 #
@@ -7999,6 +7999,7 @@ $$(NDS_P4_EXPORT)/$(1)/resolved.json: $$(NDS_P4_EXPORT)/$(5)/resolved.json \
 		$$(wildcard $$(PROJECT_ROOT)/scripts/p6/$(1)/spec.json) \
 		$$(PROJECT_ROOT)/scripts/p6/p6_audio.py $$(wildcard $$(PROJECT_ROOT)/scripts/p6/$(1)/audio.json) \
 		$$(wildcard $$(PROJECT_ROOT)/scripts/p6/$(1)/motions/*.ms) \
+		$$(wildcard $$(PROJECT_ROOT)/builds/p6-art/$(1)/look/*) \
 		$$(patsubst $$(PROJECT_ROOT)/art/p6/$(1)/anims/%.json,$$(PROJECT_ROOT)/builds/p6-art/$(1)/anims/%.o2r,$$(wildcard $$(PROJECT_ROOT)/art/p6/$(1)/anims/*.json))
 	python "$$(PROJECT_ROOT)/scripts/p6/p6_author.py" --base-export "$$(NDS_P4_EXPORT)/$(5)" \
 		--staging "$$(NDS_P4_STAGING)" --content $(1) --out "$$(NDS_P4_EXPORT)/$(1)"
@@ -8137,7 +8138,9 @@ endif
 ifeq ($(NDS_P4),1)
 $(NDS_P4_CSS_DIR)/css.json $(NDS_P4_CSS_DIR)/nds_p4_css.generated.inc &: \
 		$(NDS_P4_STAGING)/ssb64asm.z64 $(PROJECT_ROOT)/scripts/p4/p4_css.py \
-		$(PROJECT_ROOT)/scripts/p4/remix_rom.py $(NDS_BUILD_CONFIG)
+		$(PROJECT_ROOT)/scripts/p4/remix_rom.py $(NDS_BUILD_CONFIG) \
+		$(PROJECT_ROOT)/scripts/p6/p6_present.py $(PROJECT_ROOT)/scripts/p6/p6_audio.py \
+		$(wildcard $(PROJECT_ROOT)/builds/p6-art/*/portrait.png) $(wildcard $(PROJECT_ROOT)/scripts/p6/*/audio.json)
 	python "$(PROJECT_ROOT)/scripts/p4/p4_css.py" --staging "$(NDS_P4_STAGING)" \
 		--out "$(NDS_P4_CSS_DIR)" --contents "$(NDS_P4_CONTENTS)"
 nds_menu_shell.o: $(NDS_P4_CSS_DIR)/nds_p4_css.generated.inc

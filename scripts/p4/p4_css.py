@@ -15,7 +15,8 @@ bookend there, has a cell of his own: an eleventh column, its two spare
 cells the NONE plate (owner, 2026-10-11), the grid centred where Remix's
 ten columns sit. The P6 fighters take those two spare cells (Palutena row 1,
 Ike row 2); an authored content shows its base's portrait, name, logo and
-call until its own (docs/P6/P6_PLAN.md A9). Metal Mario's cell selects the source MMario kind itself
+call until its own (docs/P6/P6_PLAN.md A9; scripts/p6/p6_present.py appends
+them, the call is its announcer cue). Metal Mario's cell selects the source MMario kind itself
 (KINDS): Remix's portrait, name and logo, and the source's call.
 
 Writes, under --out (a build directory: everything here is derived from the
@@ -235,6 +236,22 @@ def main() -> int:
     o2r.mkdir(parents=True, exist_ok=True)
     for fid in (PORTRAIT_FILE, NAME_FILE, LOGO_FILE):
         (o2r / f"{fid:04x}").write_bytes(rom.o2r(fid))
+    # P6 A9: an authored content's own portrait, name and logo, appended to
+    # the copies (scripts/p6/p6_present.py); what it has none of stays its
+    # base's.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "p6"))
+    import p6_audio  # noqa: E402
+    import p6_present  # noqa: E402
+    present = {}
+    donor = {"portraits": o2r / f"{PORTRAIT_FILE:04x}", "names": o2r / f"{NAME_FILE:04x}",
+             "logos": o2r / f"{LOGO_FILE:04x}"}
+    for reg in _REGISTRY:
+        token = p4_contents.token(reg)
+        if "base" in reg and token in built:
+            present[token] = p6_present.apply(reg["name"], donor, portraits, names, logo_offsets, ART[token])
+            call = p6_audio.cue_ids(reg["name"]).get("announcer")
+            if call is not None:
+                present[token]["announce_fgm"] = call
 
     cells = []
     for index, token in enumerate(LAYOUT):
@@ -255,7 +272,9 @@ def main() -> int:
         if key is None or cell["locked"]:
             key = "NONE"
         cell["portrait"] = portraits[key]
-        cell["flash"] = portraits[key] + FLASH_STRIDE
+        if not cell["locked"] and "portrait" in present.get(token, {}):
+            cell["portrait"] = present[token]["portrait"]
+        cell["flash"] = cell["portrait"] + FLASH_STRIDE
         cells.append(cell)
 
     fighters = []
@@ -273,12 +292,14 @@ def main() -> int:
         name_sprite = (names[row["name"].split(".", 1)[1]] if row["name"].startswith("name_texture.")
                        else hex_sum(row["name"]))
         logo = row["logo"]
+        art = present.get(token, {})
+        logo = art.get("logo", logo)
         fighters.append({
             "token": token, "content": CONTENT[token],
-            "name_sprite": name_sprite,
-            "logo": logo, "logo_sprite": logo_offsets[logo],
+            "name_sprite": art.get("name_sprite", name_sprite),
+            "logo": logo, "logo_sprite": art.get("logo_sprite", logo_offsets[logo]),
             "logo_x": logo_pos.get("X_" + logo, 0), "logo_y": logo_pos.get("Y_" + logo, 0),
-            "announce_fgm": fgm, "circle": row["circle"], "action": row["action"],
+            "announce_fgm": art.get("announce_fgm", fgm), "circle": row["circle"], "action": row["action"],
         })
     # The selectable source kinds' gate art follows the contents' in the bake.
     for token, kind in KINDS.items():
