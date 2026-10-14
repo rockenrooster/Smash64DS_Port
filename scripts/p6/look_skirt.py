@@ -15,7 +15,10 @@ This remeshes Palutena's skirt the same way:
 - the lower band, from a copy of that ring on row 25 (Peach's dress row,
   whose list is only that seam load; raised and drawn in a little so a
   tilted ring stays inside the upper band) to the hem ring on row 26, drawn
-  by row 26, open at the slit.
+  by row 26, open at the slit: an upside-down V, as the approved model's,
+  from the old skirt's slit top (a row 25 vertex on the band, below its
+  ring) to the hem's two slit vertices (owner, 2026-10-14: the first cut
+  left the whole span open, a flat-topped notch from the ring down).
 
 The skirt's seam takes two of the owner's GX cross slots (rows 25 and 26;
 the generator has 15, 16-30), and her look already used 14: each foot (rows
@@ -61,7 +64,8 @@ OVERLAP_UP = 6.0
 OVERLAP_IN = 0.96
 # Foot rows that take their own copy of the ankle ring (their parent's).
 FOOT_ROWS = (19, 24)
-# The slit: the hem's open span in u (the old hem's two vertices beside it).
+# The slit: the hem's open span in u (the old hem's two vertices beside it);
+# its top is the old skirt's one vertex between them, above the hem.
 SLIT = (0.58333, 0.72222)
 # The rings' samples in u: the lower band's (the hem's, with the slit's two
 # edges) and the upper band's cut ring (fewer: the band is short).
@@ -139,6 +143,10 @@ def remesh(scene: dict, detail: str) -> dict:
     cut = _cut_ring(verts, skirt, CUT_Y)
     if len(waist) < 4 or len(hem) < 4 or len(cut) < 4:
         raise SkirtError(f"rings: waist {len(waist)}, hem {len(hem)}, cut {len(cut)}")
+    apex = [_point(verts[i]) for i in used if SLIT[0] + 1e-4 < verts[i]["uv"][0] < SLIT[1] - 1e-4
+            and HEM_MAX_Y < verts[i]["model"][1] < CUT_Y]
+    if len(apex) != 1:
+        raise SkirtError(f"slit top: {len(apex)} vertices between the slit's hem vertices")
     # Row 25 up to the pivot; row 26 keeps its offset from it.
     old25 = np.array(joints[ROW_UPPER]["world"], dtype=float)
     local26 = np.linalg.inv(old25) @ np.array(joints[ROW_HEM]["world"], dtype=float)
@@ -176,6 +184,21 @@ def remesh(scene: dict, detail: str) -> dict:
         p[1] += OVERLAP_UP
         ring25.append(add(ROW_UPPER, q, p))
     ring26 = [add(ROW_HEM, q) for q in hem_pts]
+    # The slit's top on the lower band: where the band's line at its u (row
+    # 25's ring to the hem) reaches its height, with its own uv (the dress
+    # texture's slit trim was baked to it). On row 25, which only turns, so
+    # a flared hem leaves it within a few units of the band.
+    top = apex[0]
+    q_top = _ring_interp(cut, top["u"])
+    p_top = q_top["pos"].copy()
+    p_top[0] = centre[0] + (p_top[0] - centre[0]) * OVERLAP_IN
+    p_top[2] = centre[2] + (p_top[2] - centre[2]) * OVERLAP_IN
+    p_top[1] += OVERLAP_UP
+    q_hem = _ring_interp(hem, top["u"])
+    along = (p_top[1] - top["pos"][1]) / (p_top[1] - q_hem["pos"][1])
+    slit_top = add(ROW_UPPER, {"u": top["u"], "uv": top["uv"],
+                               "normal": q_top["normal"] + (q_hem["normal"] - q_top["normal"]) * along},
+                   p_top + (q_hem["pos"] - p_top) * along)
 
     new_tris = []
 
@@ -193,9 +216,13 @@ def remesh(scene: dict, detail: str) -> dict:
         else:
             tri(ROW_BODICE, waist[i], ring1[k], ring1[k + 1])
             k += 1
-    # The lower band: quads between the rings, but the slit's.
+    # The lower band: quads between the rings; the slit's span closes above
+    # and beside its V.
     for k in range(len(samples) - 1):
         if abs(samples[k] - SLIT[0]) < 1e-4 and abs(samples[k + 1] - SLIT[1]) < 1e-4:
+            tri(ROW_HEM, ring25[k], slit_top, ring25[k + 1])
+            tri(ROW_HEM, ring25[k], ring26[k], slit_top)
+            tri(ROW_HEM, slit_top, ring26[k + 1], ring25[k + 1])
             continue
         tri(ROW_HEM, ring25[k], ring26[k], ring25[k + 1])
         tri(ROW_HEM, ring25[k + 1], ring26[k], ring26[k + 1])

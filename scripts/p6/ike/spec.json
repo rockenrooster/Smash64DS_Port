@@ -52,6 +52,14 @@
    "anim": "builds/p6-art/ike/anims/usmash.o2r",
    "script": "scripts/p6/ike/motions/usmash.ms"
   },
+  "214": {
+   "comment": "SpecialLwStart ground (Roy's Flare Blade, his Eruption): its charge sound as the loop sound a new status stops (owner playtest 2026-10-14, p6d)",
+   "script": "scripts/p6/ike/motions/eruption_begin.ms"
+  },
+  "218": {
+   "comment": "SpecialAirLwStart: as 214",
+   "script": "scripts/p6/ike/motions/eruption_begin.ms"
+  },
   "224": {
    "comment": "Attack13 (appended; Roy's 195 is his entry): jab 3",
    "anim": "builds/p6-art/ike/anims/jab3.o2r",

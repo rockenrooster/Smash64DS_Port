@@ -372,6 +372,7 @@ sb32 ndsP4ColAnimEnd(GObj *fighter_gobj);
 #define NDS_P4_WP_KIND_PIANO_BOOK (nWPKindMonsterEnd + 7)
 #define NDS_P4_WP_KIND_MRGAW_CHEF (nWPKindMonsterEnd + 8)
 #define NDS_P4_WP_KIND_SNAKE_MORTAR (nWPKindMonsterEnd + 9)
+#define NDS_P4_WP_KIND_PALUTENA_FLAME (nWPKindMonsterEnd + 10)
 
 /* Remix's custom reflect kind (Reflect.asm reflect_type.CUSTOM): the low
  * half of FTSpecialColl.kind (the N64's second halfword), the routine index

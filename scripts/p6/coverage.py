@@ -217,6 +217,22 @@ class Fighter:
             return []
         return mscript.block_commands(self.rom, self.events, root)
 
+    def measure_weapon(self, weapon: dict):
+        """(first active frame, last, near x, far x, near y, far y) of hits a
+        weapon makes at TopN offsets (0, y, z), z each of "offsets_z" (times
+        the fighter's size; radii are not scaled), in "phases" of {"frames":
+        [first, last], "radius"} (the code's numbers: Palutena's Explosive
+        Flame, nds_p4_palutena.c)."""
+        xs, ys, frames = [], [], []
+        for phase in weapon["phases"]:
+            frames += [int(f) for f in phase["frames"]]
+            r = float(phase["radius"])
+            for oz in weapon["offsets_z"]:
+                p = np.array([0.0, float(weapon["y"]), float(oz)]) * self.size
+                xs += [p[2] - r, p[2] + r]
+                ys += [p[1] - r, p[1] + r]
+        return (min(frames), max(frames), min(xs), max(xs), min(ys), max(ys))
+
     def measure(self, motion_index: int, offsets_z=None, travel=None):
         """(first active frame, last, near x, far x, near y, far y), or None
         if the motion's script makes no hitbox."""
@@ -343,7 +359,9 @@ def cpu_rows(fighter: Fighter, asm_text: str, spec: dict) -> tuple[list, list]:
     """The content's attack rows and their names: the base's rows (named
     from its AI/Attacks.asm) measured on the content's own moves.
     spec: {"drop": [names], "keep": [names: the base's numbers],
-    "measure": {name: {"motion", "offsets_z", "travel"}}}."""
+    "measure": {name: {"motion", "offsets_z", "travel"} or {"weapon"}}}:
+    "weapon" for a move whose hits a weapon of the content's code makes
+    (Fighter.measure_weapon)."""
     names = source_names(asm_text)
     rows = base_rows(fighter.rom, fighter.resolved)
     flat = [n for table in names for n in table + ["END"]]
@@ -367,6 +385,11 @@ def cpu_rows(fighter: Fighter, asm_text: str, spec: dict) -> tuple[list, list]:
             out_names.append(name + " (base)")
             continue
         opts = measure.get(name, {})
+        if "weapon" in opts:
+            m = fighter.measure_weapon(opts["weapon"])
+            out.append([base[0], m[0], m[1], *(float(round(v)) for v in m[2:])])
+            out_names.append(name + " (weapon)")
+            continue
         motion = opts.get("motion", COMMON.get(name))
         if motion is None:
             raise CoverageError(f"cpu {name}: no motion (spec measure.{name}.motion)")

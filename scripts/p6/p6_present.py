@@ -9,10 +9,12 @@ authored content shows its base's until this appends its own:
 - portrait: a 32x32 RGBA16 sprite block in Remix's layout (texels, bitmap,
   sprite: 0x860 bytes) and its white flash right after it (the select reads
   the flash at the portrait + 0x860). The face is the content's local render
-  (`builds/p6-art/<name>/portrait.png`, scripts/p6/blender/portrait.py: the
-  look is kit-derived, so the render is too, D10) framed as Remix frames its
-  portraits: a 30x30 picture with a one-texel frame over a dark gradient;
-  the flash keeps the face and lights the background. Without the render the
+  (`builds/p6-art/<name>/portrait.png`: the owner's art keyed and graded by
+  scripts/p6/portrait_art.py, or a render of the look by
+  scripts/p6/blender/portrait.py; local, D10) framed as Remix frames its
+  portraits: a 30x30 picture with a one-texel frame over the select's fire
+  plate (the source's PortraitFireBg, behind every vanilla portrait); the
+  flash keeps the face and lights the background. Without the picture the
   base's portrait stays.
 - name: the select's IA8 name sprite composed from the letters of Remix's own
   name sprites (the same font), so nothing new is drawn.
@@ -48,11 +50,12 @@ LOGOS = {"ike": "FIRE_EMBLEM", "palutena": "authored:kid_icarus"}
 # letter gives it.
 LETTER_SOURCES = ("PEACH", "LUIGI", "LINK", "LANKY", "MEWTWO", "CONKER", "SONIC", "SHEIK", "CRASH", "FOX",
                   "WOLF", "GOEMON", "PEPPY", "SLIPPY", "DEDEDE")
-# Remix's portrait frame (its edge texels) and background, from its own
-# portraits (top black to dark red to orange; the flash's white to grey).
+# Remix's portrait frame (its edge texels), from its own portraits, and the
+# flash's background (white to grey). The portrait's background is the
+# select's fire plate (fire_plate).
 FRAME = {"top": (82, 57, 41), "left": (90, 66, 49), "bottom": (90, 66, 49), "right": (66, 49, 33)}
-BG = ((0, 0, 0), (90, 0, 16), (173, 90, 0))
 BG_FLASH = ((255, 255, 255), (206, 206, 206), (239, 239, 239))
+FIRE_PLATE = ("MNPlayersPortraits", "llMNPlayersPortraitsPortraitFireBgSprite")
 # The widest name the select card holds (CSS_GATE_BOX in generate_mn_ui_kit.py:
 # the card is 66 wide and vanilla's DONKEY KONG fills it).
 NAME_MAX_WIDTH = 66
@@ -178,20 +181,36 @@ def _gradient(stops, n: int) -> np.ndarray:
     return out
 
 
+def fire_plate(size: int) -> np.ndarray:
+    """The select's fire plate (the source's 45x43 RGBA16 sprite behind every
+    vanilla portrait, mnPlayersVSMakePortrait) area-averaged to size x size,
+    RGB 0-1: Remix's portraits carry the same fire."""
+    from PIL import Image
+    sys.path.insert(0, str(REPO / "scripts" / "menus"))
+    import generate_mn_ui_kit as K
+    container, symbol = FIRE_PLATE
+    f = K.RelocFile(K.o2r_path(REPO, container))
+    _sprite, rows = K.decode_sprite_raster(f, symbol, K.load_reloc_offsets(REPO)[symbol])
+    im = Image.new("RGBA", (len(rows[0]), len(rows)))
+    im.putdata([tuple(px) for row in rows for px in row])
+    return np.asarray(im.convert("RGB").resize((size, size), Image.BOX)).astype(float) / 255.0
+
+
 def portrait_pair(render: Path) -> tuple[np.ndarray, np.ndarray]:
-    """The 32x32 portrait and its flash from a transparent render."""
+    """The 32x32 portrait and its flash from a transparent picture."""
     from PIL import Image
     im = Image.open(render).convert("RGBA")
-    # Premultiplied downsample to the 28x28 inside of the frame.
+    # Premultiplied downsample (an area average: no ringing at the edges) to
+    # the 28x28 inside of the frame.
     arr = np.asarray(im).astype(float) / 255.0
     pm = arr.copy()
     pm[..., :3] *= pm[..., 3:4]
-    small = np.asarray(Image.fromarray((pm * 255).astype(np.uint8), "RGBA").resize((28, 28), Image.LANCZOS)).astype(float) / 255.0
+    small = np.asarray(Image.fromarray(np.round(pm * 255).astype(np.uint8), "RGBA").resize((28, 28), Image.BOX)).astype(float) / 255.0
     a = small[..., 3:4]
-    colour = np.where(a > 1e-3, small[..., :3] / np.maximum(a, 1e-3), 0.0)
+    colour = np.clip(np.where(a > 1e-3, small[..., :3] / np.maximum(a, 1e-3), 0.0), 0.0, 1.0)
     out = []
-    for stops, glow in ((BG, 0.0), (BG_FLASH, 0.55)):
-        bg = np.repeat(_gradient(stops, 28)[:, None, :] / 255.0, 28, axis=1)
+    for bg, glow in ((fire_plate(28), 0.0),
+                     (np.repeat(_gradient(BG_FLASH, 28)[:, None, :] / 255.0, 28, axis=1), 0.55)):
         pic = colour * a + bg * (1 - a)
         if glow:
             # The flash lights the face's edge as Remix's do.

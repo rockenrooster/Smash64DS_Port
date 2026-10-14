@@ -81,7 +81,10 @@ remeshes Palutena's skirt the same way: a short upper band from the waist
 ring to a ring at y 288 (row 1), drawn by the bodice as before, and the lower
 band from a copy of that ring on row 25 (raised 6 and drawn in 4% so a turned
 ring stays inside the upper band) to the hem on row 26, open at the slit (its
-left front, the +x leg). Row 25's origin moves up to her hip joints' height
+left front, the +x leg) as the approved model is: an upside-down V from the
+old skirt's slit top (y 272, a row 25 vertex on the band) to the hem's two
+slit vertices (owner playtest 2026-10-14, p6d: the first remesh left the
+whole span open below the ring, a flat-topped notch). Row 25's origin moves up to her hip joints' height
 (y 280) so the whole thigh hangs inside the band that turns. The seam costs
 two of the owner's GX cross slots (15, 16-30), and her look used 14: each
 foot takes its own copy of the ankle ring (its origin is the ankle, where the
@@ -128,6 +131,23 @@ and down smashes, the halo in the up air, the light pillar in the up smash;
 the taunt, the entry gate and the victory poses are hers (2026-10-14,
 below).
 
+**Her chest (owner playtest 2026-10-14, p6d: "an upside-down V on her
+chest").** The baseline paints the skin between her bust and her neck on
+the dress mesh, beside the chest's own skin; at 16 colours the dress
+texture's k-means folded that small patch into the cloth's cream, a pale
+inverted V on the bust. `look_blend.py` KEEP_PATCHES gives the patch two
+palette entries of its own (k-means over the patch), in place of the two
+entries whose texels lose least by eye (CIELAB) -- near-duplicate greys, not
+the dress's red, which an RGB cost would have dropped. Every other texture
+quantizes as before.
+
+**Portrait (owner playtest 2026-10-14, p6d: too dark).** From the owner's
+portrait art (local, `builds/p6-art/palutena/owner_art/`):
+`scripts/p6/portrait_art.py` keys its teal backdrop out (her hair is a
+greener hue), keeps the crown in the crop, darkens and saturates it a little
+to sit with the roster, and `p6_present.py` frames it over the select's fire
+plate as Remix's portraits are.
+
 **Costumes, wings, halo, stock icon (2026-10-14).** Costumes are palettes
 over her one index image per texture (P6_PLAN A3b): `blender/costume_corr.py`
 records, headless in the 3DS-to-DS work file, where each texel of her
@@ -155,9 +175,13 @@ Her forward and down smash scripts show the wings (SetModelPartID joint 6),
 her up air the halo (joint 12); a status change resets the parts.
 
 **Pillar, taunt, entry, victory poses (2026-10-14).** The up smash's light
-pillar is one column of cyan light 260 units ahead of her on her floor, 1,560
-tall (1.25x her first), exactly vertical, where its four stacked 390-unit
-hitboxes stand (TopN z 260, frames 12-17). It is an effect, not a model part:
+pillar is one column of cyan light 260 units ahead of her on her floor, 1,875
+tall (1.5x her first; 1.25x before the p6d playtest), exactly vertical, and
+its hitboxes are the column (TopN z 260, frames 12-17): attacks 0 and 1, its
+lower (16%) and upper (14%) halves, 400 wide, move every frame between their
+half's ends in her code (the hit test sweeps a hitbox from where it was to
+where it is), and attacks 2 and 3 at the halves' middles cover the first
+frame, which tests a new hitbox's point only. It is an effect, not a model part:
 the first build drew it as cards on her hips row (joint 5), which her
 animation turned so that the owner saw two columns on her back side (round 2
 of the playtest). The script's flag0 at frame 12 (`motions/usmash.ms`) makes
@@ -255,6 +279,18 @@ Defaults for the specials:
   spot six frames before the first burst; no green flash ring; no burst
   sound (Ultimate's special_N01, a ringing, removed in round 2); her call is
   Ultimate's side-special voice ("Explosive flame!"). Kirby's copy matches.
+  Round 3 (p6d): the fire is a weapon of its own, made where the twinkle
+  shows (her script's flag2 at frame 10, its value the blast's sound), so a
+  hit on her after the twinkle no longer cancels it (she still takes the
+  hit). It burns as the Fire Flower's flames do (their hit: fire, angle 0, a
+  fixed weight-3 knockback, the small burn sound) from 5 tics after the
+  twinkle, hitting again every 5 tics, so a fighter caught in it is held
+  there; the blast at tic 19 is 19% (1.25x the 15%; 18.75), three tics, the
+  large burn sound. The cast to the blast is 0.85x (blast at frame 29, was
+  34). The weapon takes the Fire Flower flame's attributes (the common item
+  file) and is hidden: her fire is the effects. Kirby's copy makes the same
+  weapon at his frame 12. The CPU's rows for it are measured from the
+  weapon's numbers (`coverage.py` "weapon").
 - **Warp:** Meta Knight's Dimensional Cape structure (`nds_p4_metaknight.c`
   DSP): she vanishes, travels about 10 frames in the D-pad's direction (eight
   directions; neutral is up) invisible and intangible, stops at walls and
@@ -298,11 +334,10 @@ green hair and tiara.
 Built 2026-10-14 (A11). `scripts/p4/p4_kirby.py` CUSTOM_POWERS["palutena"]:
 two statuses on Kirby's PK Fire motions and scripts (his cast, his call, the
 flag at frame 20), her code in `nds_p4_palutena.c` (`#if NDS_P2_KIRBY`): the
-stick at the cast picks the distance, and at the flag her script's three 1%
-bursts and the 15% blast come out on TopN at that distance and her height,
-timed as `motions/flame.ms` times them, with her flame effects and her two
-explosion sounds (`NDS_P4_KIRBY_PALUTENA_FGM_*`, from `audio.json`). Ground
-and air switch at the same frame keeping the hitbox. The hat is one list in
+stick at the cast picks the distance, and at his frame 12 her fire's weapon
+starts at that distance and his height (round 3, as hers), its blast with
+her explosion sound (`NDS_P4_KIRBY_PALUTENA_FGM_BLAST`, from `audio.json`).
+Ground and air switch at the same frame. The hat is one list in
 file 0x1944 (`p4_kirby_custom_hats.py`): her head's hair span over the top
 of his head, a gold ring under its front edge (her staff's band texture: her
 own circlet is painted on her face and turns brown at 16 colours), and a

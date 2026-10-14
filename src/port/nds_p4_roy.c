@@ -73,14 +73,23 @@ void ndsP4RoyDSPAirBeginInitial(GObj *fighter_gobj)
     ndsP4RoyDSPBeginInitial(fighter_gobj, ROY_STATUS_DSPA_BEGIN);
 }
 
+/* The charge's wait keeps a loop sound the start made (Ike's charge,
+ * scripts/p6/ike/motions/eruption_begin.ms: owner playtest 2026-10-14), so
+ * the wait's own finds it playing; Roy's start makes none. */
+static void ndsP4RoyDSPWaitInitial(GObj *fighter_gobj, s32 status_id)
+{
+    ftMainSetStatus(fighter_gobj, status_id, 0.0F, 1.0F, FTSTATUS_PRESERVE_LOOPSFX);
+    ftMainPlayAnimEventsAll(fighter_gobj);
+}
+
 static void ndsP4RoyDSPGroundWaitInitial(GObj *fighter_gobj)
 {
-    ndsP4RoySetStatus(fighter_gobj, ROY_STATUS_DSPG_WAIT);
+    ndsP4RoyDSPWaitInitial(fighter_gobj, ROY_STATUS_DSPG_WAIT);
 }
 
 static void ndsP4RoyDSPAirWaitInitial(GObj *fighter_gobj)
 {
-    ndsP4RoySetStatus(fighter_gobj, ROY_STATUS_DSPA_WAIT);
+    ndsP4RoyDSPWaitInitial(fighter_gobj, ROY_STATUS_DSPA_WAIT);
 }
 
 /* RoyDSP.ground_begin_main_ / air_begin_main_ (0xEF/0xF3 update). The

@@ -46,10 +46,11 @@ void ndsP4RoyEntryCase(FTStruct *fp);
  * switch (the raw word Roy's and Marth's ports pass). */
 #define IKE_PRESERVE_SWITCH 0x2003u
 
-/* Quick Draw (card defaults): up to 60 frames of charge; a dash of 8 to 20
- * frames by charge at three times his run speed; the slash on contact
- * gains up to 9 damage by charge. */
-#define IKE_QD_CHARGE_MAX 60
+/* Quick Draw (card defaults): up to 75 frames of charge (60 in the card;
+ * owner playtest 2026-10-14, p6d: 1.25x as long to the farthest dash); a
+ * dash of 8 to 20 frames by charge at three times his run speed; the slash
+ * on contact gains up to 9 damage by charge. */
+#define IKE_QD_CHARGE_MAX 75
 #define IKE_QD_DASH_MIN 8
 #define IKE_QD_DASH_RANGE 12
 #define IKE_QD_SPEED_MUL 3.0F

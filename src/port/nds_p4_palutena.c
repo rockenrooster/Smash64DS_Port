@@ -12,8 +12,8 @@
  * "statuses"; each ground status's air twin follows it), entered from her
  * special starters (the spec's ground_nsp ... air_dsp rows). Their scripts
  * (scripts/p6/palutena/motions/) set the flags read here: Explosive Flame's
- * flag0 at each burst and flag1 at the blast, the counter's flag0 while its
- * window is open.
+ * flag2 at the twinkle (its value the blast's sound), the counter's flag0
+ * while its window is open.
  *
  * status_vars words: 0 Explosive Flame's distance (units), the warp's angle
  * (as f32 bits) or the counter's hit; 1 the warp's frames left.
@@ -32,6 +32,7 @@
 #include <math.h>
 #include <sys/audio.h>
 #include <sys/utils.h>
+#include <wp/weapon.h>
 #if NDS_P2_KIRBY
 #include "kirby/nds_p4_kirby.generated.h"
 #endif
@@ -43,6 +44,11 @@ extern LBParticle *efManagerSparkleWhiteMultiMakeEffect(Vec3f *pos);
 extern LBParticle *efManagerSparkleWhiteMultiExplodeMakeEffect(Vec3f *pos);
 extern LBParticle *efManagerSparkleWhiteScaleMakeEffect(Vec3f *pos, f32 scale);
 f32 syVectorAngleDiff3D(Vec3f *a, Vec3f *b);
+
+/* The Fire Flower's flame (it/itcommon/itfflower.c): its weapon attributes
+ * in the common item file start Explosive Flame's fire. */
+extern void *gITManagerCommonData;
+extern uintptr_t llITCommonDataFFlowerFlameWeaponAttributes;
 
 /* scripts/p6/palutena/spec.json "statuses"; a ground status's air twin is
  * the next id. */
@@ -59,18 +65,39 @@ f32 syVectorAngleDiff3D(Vec3f *a, Vec3f *b);
 #define PAL_PRESERVE_SWITCH 0x2003u
 
 /* Explosive Flame (card): the stick at the cast picks the distance -- back
- * (against her facing) near, neutral middle, forward far -- at her height.
- * The script's hitboxes sit on TopN; this keeps them at the distance. Owner
- * playtest 2026-10-14: the middle 0.75x (1000 -> 750), the far 1.15x (1400 ->
- * 1610; 1.5x in the first round was too far), the near kept below the middle
- * in the old ratio (600 -> 450); the explosion's hitboxes twice the size (the
- * script's; its effects stay their size), a white twinkle where it will go
- * off just before it does (flag2), no green flash ring, no ringing sound. */
+ * (against her facing) near, neutral middle, forward far -- at her height,
+ * as TopN offsets (times her size). Owner playtest 2026-10-14: the middle
+ * 0.75x (1000 -> 750), the far 1.15x (1400 -> 1610; 1.5x in the first round
+ * was too far), the near kept below the middle in the old ratio (600 ->
+ * 450); the explosion twice the size (its effects stay their size), a white
+ * twinkle where it will go off, no green flash ring, no ringing sound.
+ *
+ * Round 3: the fire is a weapon of its own, made where the twinkle shows
+ * (her script's flag2, whose value names the blast's sound), so a hit on her
+ * after the twinkle no longer cancels it. From PAL_FLAME_BURN_AT it burns as
+ * the Fire Flower's flames do (their hit: fire, angle 0, a fixed weight-3
+ * knockback, the small burn sound), every PAL_FLAME_BURN_EVERY tics hitting
+ * again, so a fighter caught in it is held there; at PAL_FLAME_BLAST_AT the
+ * blast, 1.25x the card's 15% (18.75), for PAL_FLAME_BLAST_TICS. The cast to
+ * the blast is 0.85x the first rounds' (twinkle 12 -> 10, blast 34 -> 29).
+ * It is hidden: her fire is the effects. */
 #define PAL_FLAME_NEAR 450.0F
 #define PAL_FLAME_MID 750.0F
 #define PAL_FLAME_FAR 1610.0F
 #define PAL_FLAME_HEIGHT 320.0F
 #define PAL_FLAME_STICK 20
+#define PAL_FLAME_BURN_AT 5
+#define PAL_FLAME_BURN_EVERY 5
+#define PAL_FLAME_BLAST_AT 19
+#define PAL_FLAME_BLAST_TICS 3
+#define PAL_FLAME_BURN_DAMAGE 1
+#define PAL_FLAME_BURN_SIZE 640.0F
+#define PAL_FLAME_BURN_KNOCKBACK_WEIGHT 3
+#define PAL_FLAME_BLAST_DAMAGE 19
+#define PAL_FLAME_BLAST_SIZE 860.0F
+#define PAL_FLAME_BLAST_ANGLE 361
+#define PAL_FLAME_BLAST_KNOCKBACK_SCALE 95
+#define PAL_FLAME_BLAST_KNOCKBACK_BASE 40
 /* In the air she nearly hangs while casting. */
 #define PAL_FLAME_AIR_FALL_MAX 12.0F
 
@@ -172,20 +199,105 @@ static void ndsP4PalutenaTwinkle(GObj *fighter_gobj, f32 forward, f32 scale)
     efManagerSparkleWhiteScaleMakeEffect(&pos, scale);
 }
 
-/* Explosive Flame's fire `distance` ahead: a burst (flames and sparks) or
- * the blast (the sparkle explosion), at the effects' own size. */
-static void ndsP4PalutenaFlameFx(GObj *fighter_gobj, f32 distance, sb32 is_blast)
+/* ---- Explosive Flame's fire ---- */
+
+typedef struct NDSP4PalutenaFlameVars
 {
+    s32 tic;    /* since the twinkle */
+    u32 fgm;    /* the blast's sound, 0 for none */
+} NDSP4PalutenaFlameVars;
+
+_Static_assert(sizeof(NDSP4PalutenaFlameVars) <= sizeof(((WPStruct *)0)->weapon_vars),
+               "the fire's variables outgrow the weapon variables");
+
+static NDSP4PalutenaFlameVars *ndsP4PalutenaFlameVars(WPStruct *wp)
+{
+    return (NDSP4PalutenaFlameVars *)(void *)&wp->weapon_vars;
+}
+
+/* The fire's hit from this tic on, a fresh one (every fighter may be hit
+ * again). */
+static void ndsP4PalutenaFlameHit(WPStruct *wp, s32 damage, f32 size, s32 angle, s32 knockback_scale,
+                                  s32 knockback_weight, s32 knockback_base, u16 fgm)
+{
+    wp->attack_coll.damage = damage;
+    wp->attack_coll.size = size * 0.5F;
+    wp->attack_coll.angle = angle;
+    wp->attack_coll.knockback_scale = knockback_scale;
+    wp->attack_coll.knockback_weight = knockback_weight;
+    wp->attack_coll.knockback_base = knockback_base;
+    wp->attack_coll.element = nGMHitElementFire;
+    wp->attack_coll.fgm_id = fgm;
+    wp->attack_coll.attack_state = nGMAttackStateNew;
+    wpMainClearAttackRecord(wp);
+}
+
+/* The burn's hits and flames, then the blast; gone after it. */
+static sb32 ndsP4PalutenaFlameProcUpdate(GObj *weapon_gobj)
+{
+    WPStruct *wp = wpGetStruct(weapon_gobj);
+    NDSP4PalutenaFlameVars *v = ndsP4PalutenaFlameVars(wp);
+    Vec3f *pos = &DObjGetStruct(weapon_gobj)->translate.vec.f;
+    s32 t = v->tic++;
+
+    if (t == PAL_FLAME_BLAST_AT)
+    {
+        ndsP4PalutenaFlameHit(wp, PAL_FLAME_BLAST_DAMAGE, PAL_FLAME_BLAST_SIZE, PAL_FLAME_BLAST_ANGLE,
+                              PAL_FLAME_BLAST_KNOCKBACK_SCALE, 0, PAL_FLAME_BLAST_KNOCKBACK_BASE,
+                              nSYAudioFGMBurnL);
+        if (v->fgm != 0)
+        {
+            func_800269C0_275C0(v->fgm);
+        }
+        efManagerSparkleWhiteMultiExplodeMakeEffect(pos);
+    }
+    else if ((t >= PAL_FLAME_BURN_AT) && (t < PAL_FLAME_BLAST_AT) &&
+             (((t - PAL_FLAME_BURN_AT) % PAL_FLAME_BURN_EVERY) == 0))
+    {
+        ndsP4PalutenaFlameHit(wp, PAL_FLAME_BURN_DAMAGE, PAL_FLAME_BURN_SIZE, 0, 100,
+                              PAL_FLAME_BURN_KNOCKBACK_WEIGHT, 0, nSYAudioFGMBurnS);
+        efManagerFlameRandomMakeEffect(pos);
+        efManagerSparkleWhiteMultiMakeEffect(pos);
+    }
+    return (t >= (PAL_FLAME_BLAST_AT + PAL_FLAME_BLAST_TICS - 1)) ? TRUE : FALSE;
+}
+
+/* The Fire Flower flame's kind and attributes; no map collision (it stays
+ * where it was made) and nothing it meets ends it. */
+static WPDesc sNdsP4PalutenaFlameDesc = {
+    0x00, NDS_P4_WP_KIND_PALUTENA_FLAME, &gITManagerCommonData,
+    (intptr_t)&llITCommonDataFFlowerFlameWeaponAttributes,
+    { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0 },
+    ndsP4PalutenaFlameProcUpdate, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+};
+
+/* The twinkle `distance` ahead at the flame's height (TopN offsets: times
+ * her size), and the fire there, its blast sounding `fgm`. */
+static void ndsP4PalutenaFlameMakeWeapon(GObj *fighter_gobj, f32 distance, u32 fgm)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    GObj *weapon_gobj;
+    WPStruct *wp;
     Vec3f pos;
 
-    ndsP4PalutenaAhead(fighter_gobj, distance, PAL_FLAME_HEIGHT, &pos);
-    if (is_blast != FALSE)
+    ndsP4PalutenaAhead(fighter_gobj, distance * fp->attr->size, PAL_FLAME_HEIGHT * fp->attr->size, &pos);
+    efManagerSparkleWhiteScaleMakeEffect(&pos, 1.0F);
+    weapon_gobj = wpManagerMakeWeapon(fighter_gobj, &sNdsP4PalutenaFlameDesc, &pos, WEAPON_FLAG_PARENT_FIGHTER);
+    if (weapon_gobj == NULL)
     {
-        efManagerSparkleWhiteMultiExplodeMakeEffect(&pos);
         return;
     }
-    efManagerFlameRandomMakeEffect(&pos);
-    efManagerSparkleWhiteMultiMakeEffect(&pos);
+    weapon_gobj->flags = GOBJ_FLAG_HIDDEN;
+    wp = wpGetStruct(weapon_gobj);
+    wp->attack_coll.attack_state = nGMAttackStateOff;
+    wp->attack_coll.shield_damage = 0;
+    wp->attack_coll.can_setoff = FALSE;
+    wp->attack_coll.can_hop = FALSE;
+    wp->attack_coll.can_reflect = FALSE;
+    wp->attack_coll.can_absorb = FALSE;
+    wp->lifetime = PAL_FLAME_BLAST_AT + PAL_FLAME_BLAST_TICS;
+    ndsP4PalutenaFlameVars(wp)->tic = 0;
+    ndsP4PalutenaFlameVars(wp)->fgm = fgm;
 }
 
 /* ---- Explosive Flame ---- */
@@ -236,36 +348,16 @@ void ndsP4PalutenaFlameAirInitial(GObj *fighter_gobj)
     ndsP4PalutenaFlameStart(fighter_gobj, PAL_STATUS_FLAME + PAL_AIR);
 }
 
-/* Every TopN hitbox at the cast's distance; the twinkle where it will go
- * off (flag2), the fire at each burst (flag0) and the blast (flag1). */
+/* The fire at the cast's distance when the twinkle shows (flag2, its value
+ * the blast's sound). */
 void ndsP4PalutenaFlameMain(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
-    f32 distance = *ndsP4PalutenaVarF(fp, 0);
-    s32 i;
 
-    for (i = 0; i < ARRAY_COUNT(fp->attack_colls); i++)
-    {
-        if ((fp->attack_colls[i].attack_state != nGMAttackStateOff) &&
-            (fp->attack_colls[i].joint_id == nFTPartsJointTopN))
-        {
-            fp->attack_colls[i].offset.z = distance;
-        }
-    }
     if (fp->motion_vars.flags.flag2 != 0)
     {
+        ndsP4PalutenaFlameMakeWeapon(fighter_gobj, *ndsP4PalutenaVarF(fp, 0), fp->motion_vars.flags.flag2);
         fp->motion_vars.flags.flag2 = 0;
-        ndsP4PalutenaTwinkle(fighter_gobj, distance, 1.0F);
-    }
-    if (fp->motion_vars.flags.flag0 != 0)
-    {
-        fp->motion_vars.flags.flag0 = 0;
-        ndsP4PalutenaFlameFx(fighter_gobj, distance, FALSE);
-    }
-    if (fp->motion_vars.flags.flag1 != 0)
-    {
-        fp->motion_vars.flags.flag1 = 0;
-        ndsP4PalutenaFlameFx(fighter_gobj, distance, TRUE);
     }
     if (fighter_gobj->anim_frame <= 0.0F)
     {
@@ -676,12 +768,24 @@ static void ndsP4PalutenaGateProcUpdate(GObj *effect_gobj)
  * floor, world-aligned. Its cards flare out from the middle over
  * PAL_PILLAR_GROW tics, hold with a flicker, narrow from PAL_PILLAR_FADE_AT
  * and go at PAL_PILLAR_END (its hitboxes are the script's, frames 12-17).
- * The tic is in effect_vars.common.size, as the gate's. */
+ * The tic is in effect_vars.common.size, as the gate's.
+ *
+ * Round 3: 1,875 tall, and the hitboxes the column. The script's attacks 0
+ * and 1 are its lower and upper halves: every frame each moves to the other
+ * end of its half (PAL_PILLAR_COLUMN, TopN y; the script makes each at the
+ * first), and a hitbox's test after its first frame sweeps from where it was
+ * to where it is (gmCollisionTestRectangle's interpolated test), so each
+ * covers its whole half, 400 wide. */
 #define PAL_PILLAR_AHEAD 260.0F
 #define PAL_PILLAR_TOWARD_CAMERA 120.0F
 #define PAL_PILLAR_GROW 2
 #define PAL_PILLAR_FADE_AT 8
 #define PAL_PILLAR_END 12
+
+static const f32 sNdsP4PalutenaPillarColumn[2][2] = {
+    { 200.0F, 938.0F },     /* attack 0: the floor to the middle */
+    { 938.0F, 1675.0F },    /* attack 1: the middle to the top */
+};
 
 static void ndsP4PalutenaPillarProcUpdate(GObj *effect_gobj);
 
@@ -737,15 +841,30 @@ static void ndsP4PalutenaPillarProcUpdate(GObj *effect_gobj)
     ep->effect_vars.common.size = tic + 1;
 }
 
-/* ftMainProcPhysicsMap's per-frame hook: the up smash's flag0 makes the
- * pillar once. */
+/* ftMainProcPhysicsMap's per-frame hook: in the up smash, the pillar's
+ * columns sweep, and its flag0 makes the pillar once. */
 static void ndsP4PalutenaAfterProcMap(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
     GObj *effect_gobj;
     Vec3f pos;
+    s32 i;
 
-    if ((fp->status_id != nFTCommonStatusAttackHi4) || (fp->motion_vars.flags.flag0 == 0))
+    if (fp->status_id != nFTCommonStatusAttackHi4)
+    {
+        return;
+    }
+    for (i = 0; i < ARRAY_COUNT(sNdsP4PalutenaPillarColumn); i++)
+    {
+        FTAttackColl *attack_coll = &fp->attack_colls[i];
+
+        if (attack_coll->attack_state != nGMAttackStateOff)
+        {
+            attack_coll->offset.y = sNdsP4PalutenaPillarColumn[i]
+                [(attack_coll->offset.y == sNdsP4PalutenaPillarColumn[i][0]) ? 1 : 0];
+        }
+    }
+    if (fp->motion_vars.flags.flag0 == 0)
     {
         return;
     }
@@ -781,68 +900,19 @@ const NDSP4Overrides gNdsP4PalutenaOverrides = {
  *
  * Explosive Flame on Kirby's own PK Fire motions and scripts
  * (scripts/p4/p4_kirby.py CUSTOM_POWERS; 228_KirbyMainMotion.c
- * PKFireGround/Air: the cast's PSI sound, his call and psionic flash, and at
- * frame 20 the flag Ness's copy fires PK Fire on). At that flag her
- * explosion starts at the distance the stick picked at the cast, at her
- * height, timed as her script times it (scripts/p6/palutena/motions/
- * flame.ms): three 1% bursts two tics each, five apart, and the 15% blast
- * six tics after the third, three tics long. Kirby's script has no
- * hitboxes: these are made here as its MakeAttackColl would make hers, with
- * her sounds (p4_kirby.py "cues").
+ * PKFireGround/Air: the cast's PSI sound, his call and psionic flash). At
+ * frame 12 (PK Fire's own flag is at 20; 0.85x of his first rounds' blast at
+ * 36, as hers) her fire starts at the distance the stick picked at the cast,
+ * at his height: the twinkle, then the weapon her cast makes, with her blast
+ * sound (p4_kirby.py "cues"). Kirby's script has no hitboxes.
  *
- * status_vars words: 0 the distance (as f32 bits), 1 the tics since the
- * flag (-1 before it), 2 whether the twinkle marking the spot has shown (at
- * frame 14, six before his flag, as hers shows six before her first burst). */
-#define PAL_KIRBY_TWINKLE_AT 14.0F
-#define PAL_KIRBY_BURST_EVERY 5
-#define PAL_KIRBY_BURSTS 3
-#define PAL_KIRBY_BURST_TICS 2
-#define PAL_KIRBY_BLAST_AT 16
-#define PAL_KIRBY_BLAST_TICS 3
+ * status_vars words: 0 the distance (as f32 bits), 1 whether the fire is
+ * made. */
+#define PAL_KIRBY_FIRE_AT 12.0F
 /* Kirby's PK Fire switches between ground and air keeping his face, hurt
- * state, effects and colour (FTKIRBY_COPYNESS_SPECIALN_STATUS_FLAGS), and
- * here the explosion's hitbox too. */
+ * state, effects and colour (FTKIRBY_COPYNESS_SPECIALN_STATUS_FLAGS). */
 #define PAL_KIRBY_PRESERVE_SWITCH (FTSTATUS_PRESERVE_TEXTUREPART | FTSTATUS_PRESERVE_HITSTATUS | \
-                                   FTSTATUS_PRESERVE_EFFECT | FTSTATUS_PRESERVE_COLANIM | \
-                                   FTSTATUS_PRESERVE_HIT)
-
-/* Her script's MakeAttackColl on attack 0 (motions/flame.ms): fire on TopN
- * at the distance and her height, hitting ground and air. */
-static void ndsP4PalutenaKirbyHit(FTStruct *fp, f32 distance, s32 damage, f32 size, s32 angle,
-                                  s32 knockback_scale, s32 knockback_weight, s32 knockback_base,
-                                  u32 fgm_level)
-{
-    FTAttackColl *attack_coll = &fp->attack_colls[0];
-
-    attack_coll->group_id = 0;
-    attack_coll->attack_state = nGMAttackStateNew;
-    fp->is_attack_active = TRUE;
-    ftParamClearAttackRecordID(fp, 0);
-    attack_coll->joint_id = nFTPartsJointTopN;
-    attack_coll->joint = fp->joints[nFTPartsJointTopN];
-    attack_coll->damage = damage;
-    attack_coll->can_rebound = FALSE;
-    attack_coll->element = nGMHitElementFire;
-    attack_coll->size = size * 0.5F;
-    attack_coll->offset.x = 0.0F;
-    attack_coll->offset.y = PAL_FLAME_HEIGHT;
-    attack_coll->offset.z = distance;
-    attack_coll->angle = angle;
-    attack_coll->knockback_scale = knockback_scale;
-    attack_coll->knockback_weight = knockback_weight;
-    attack_coll->is_hit_air = TRUE;
-    attack_coll->is_hit_ground = TRUE;
-    attack_coll->shield_damage = 0;
-    attack_coll->fgm_level = fgm_level;
-    attack_coll->fgm_kind = 1;  /* fire */
-    attack_coll->knockback_base = knockback_base;
-    attack_coll->is_scale_pos = FALSE;
-    attack_coll->motion_attack_id = fp->motion_attack_id;
-    attack_coll->motion_count = fp->motion_count;
-    attack_coll->damage = ftParamGetStaledDamage(fp->player, attack_coll->damage,
-                                                 attack_coll->motion_attack_id,
-                                                 attack_coll->motion_count);
-}
+                                   FTSTATUS_PRESERVE_EFFECT | FTSTATUS_PRESERVE_COLANIM)
 
 static void ndsP4PalutenaKirbyNSPStart(GObj *fighter_gobj, s32 status_id)
 {
@@ -851,8 +921,7 @@ static void ndsP4PalutenaKirbyNSPStart(GObj *fighter_gobj, s32 status_id)
 
     ndsP4PalutenaSetStatus(fighter_gobj, status_id);
     *ndsP4PalutenaVarF(fp, 0) = distance;
-    *ndsP4PalutenaVar(fp, 1) = -1;
-    *ndsP4PalutenaVar(fp, 2) = 0;
+    *ndsP4PalutenaVar(fp, 1) = 0;
 }
 
 void ndsP4PalutenaKirbyNSPGroundInitial(GObj *fighter_gobj)
@@ -875,46 +944,14 @@ void ndsP4PalutenaKirbyNSPAirInitial(GObj *fighter_gobj)
 void ndsP4PalutenaKirbyNSPUpdate(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
-    f32 distance = *ndsP4PalutenaVarF(fp, 0);
-    s32 *tic = ndsP4PalutenaVar(fp, 1);
-    s32 *twinkled = ndsP4PalutenaVar(fp, 2);
+    s32 *made = ndsP4PalutenaVar(fp, 1);
 
-    if ((*twinkled == 0) && (fighter_gobj->anim_frame >= PAL_KIRBY_TWINKLE_AT))
+    if ((*made == 0) && (fighter_gobj->anim_frame >= PAL_KIRBY_FIRE_AT))
     {
-        *twinkled = 1;
-        ndsP4PalutenaTwinkle(fighter_gobj, distance, 1.0F);
-    }
-    if ((fp->motion_vars.flags.flag0 != 0) && (*tic < 0))
-    {
-        *tic = 0;
+        *made = 1;
+        ndsP4PalutenaFlameMakeWeapon(fighter_gobj, *ndsP4PalutenaVarF(fp, 0), NDS_P4_KIRBY_PALUTENA_FGM_BLAST);
     }
     fp->motion_vars.flags.flag0 = 0;
-    if (*tic >= 0)
-    {
-        s32 t = *tic;
-
-        if ((t < (PAL_KIRBY_BURST_EVERY * PAL_KIRBY_BURSTS)) && ((t % PAL_KIRBY_BURST_EVERY) == 0))
-        {
-            ndsP4PalutenaKirbyHit(fp, distance, 1, 640.0F, 90, 0, 30, 0, 0);
-            ndsP4PalutenaFlameFx(fighter_gobj, distance, FALSE);
-        }
-        else if (t == PAL_KIRBY_BLAST_AT)
-        {
-            func_800269C0_275C0(NDS_P4_KIRBY_PALUTENA_FGM_BLAST);
-            ndsP4PalutenaKirbyHit(fp, distance, 15, 860.0F, 361, 95, 0, 40, 2);
-            ndsP4PalutenaFlameFx(fighter_gobj, distance, TRUE);
-        }
-        else if (((t < (PAL_KIRBY_BURST_EVERY * PAL_KIRBY_BURSTS)) &&
-                  ((t % PAL_KIRBY_BURST_EVERY) == PAL_KIRBY_BURST_TICS)) ||
-                 (t == (PAL_KIRBY_BLAST_AT + PAL_KIRBY_BLAST_TICS)))
-        {
-            ftParamClearAttackCollAll(fighter_gobj);
-        }
-        if (t <= (PAL_KIRBY_BLAST_AT + PAL_KIRBY_BLAST_TICS))
-        {
-            *tic = t + 1;
-        }
-    }
     if (fp->ga == nMPKineticsGround)
     {
         ftAnimEndSetWait(fighter_gobj);

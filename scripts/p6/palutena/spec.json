@@ -362,20 +362,20 @@
   ],
   "measure": {
    "NSPG": {
-    "motion": 219,
-    "offsets_z": [
-     600,
-     1000,
-     1400
-    ]
+    "weapon": {
+     "comment": "Explosive Flame's fire (nds_p4_palutena.c PAL_FLAME_*): made at frame 10, the burn from 15 (radius 320), the blast 29-31 (radius 430), at the near, middle and far distances",
+     "y": 320,
+     "offsets_z": [450, 750, 1610],
+     "phases": [{"frames": [15, 28], "radius": 320}, {"frames": [29, 31], "radius": 430}]
+    }
    },
    "NSPA": {
-    "motion": 220,
-    "offsets_z": [
-     600,
-     1000,
-     1400
-    ]
+    "weapon": {
+     "comment": "Explosive Flame's fire (nds_p4_palutena.c PAL_FLAME_*): made at frame 10, the burn from 15 (radius 320), the blast 29-31 (radius 430), at the near, middle and far distances",
+     "y": 320,
+     "offsets_z": [450, 750, 1610],
+     "phases": [{"frames": [15, 28], "radius": 320}, {"frames": [29, 31], "radius": 430}]
+    }
    },
    "DASH_ATTACK": {
     "travel": "run"

@@ -52,6 +52,16 @@ as Ike's own main and model files 0x1A00 and 0x1A03, spec `files`):
 Lab (four CPUs, Ike in port 0): drawn, 0 native failures, 0 lean declines.
 Next: his Kirby hat, portrait and stock icon from this look.
 
+Portrait (owner playtest 2026-10-14, p6d: too small and dark, Roy's the
+reference; the owner then supplied portrait art for both P6 fighters):
+`scripts/p6/portrait_art.py` trims the art's viewer frame, keys its pale pink
+backdrop out (that colour class connected to the edge; his skin is a
+different hue), crops his face to the roster's framing and grades it, and
+`p6_present.py` frames it over the select's fire plate (the source's
+PortraitFireBg, which Remix's portraits carry) with an area-average
+downsample (a Lanczos one rang into coloured specks at the hair's edges).
+The art and the picture are local (`builds/p6-art/ike/`).
+
 ## Move card (approved 2026-10-13, I1)
 
 Damage and timing numbers are lab defaults on SSB64's scale, tuned against
@@ -63,7 +73,7 @@ Roy; Brawl gives the motion and the intent only.
 | Jab 2 | Attack12 | new: kick | ~3% | — |
 | Jab 3 | Attack13; jab_3 rows on (Captain's timer) | new: overhead slash, a downward swing (owner 2026-10-14) | ~6%, launches | jab tables (S3) |
 | Forward tilt | AttackS3 | Roy's (MARTH_F_TILT) at 0.85 speed | Roy's damage x1.25; frame-speed command | — |
-| Dash attack | AttackDash | new: heavy upward swing | Roy's damage x1.2, launches upward | — |
+| Dash attack | AttackDash | new: heavy upward swing | Roy's damage x1.2, launches at 30 degrees (p6d) | — |
 | Forward smash | AttackS4 | Roy's (MARTH_F_SMASH) | Roy's damage x1.2; his fire Effect commands dropped | — |
 | Up smash | AttackHi4 | new: wide arc from his left over his head to his right | hitboxes along the arc, Roy's damage x1.1 | — |
 | Up tilt, down tilt, down smash, aerials, grab and throws, floor and edge attacks, dodges | Roy's | Roy's | Roy's, sword hitboxes resized | — |
@@ -90,7 +100,8 @@ scripts in `scripts/p6/ike/motions/`, rows in `scripts/p6/ike/spec.json`):
   220). Captain's jab chain timers (`attack1_followup_frames` 22 in Ike's main
   file, `jab_3_timer` Captain's 24).
 - Dash attack: Marth's dash attack (a lunge with a rising swing) at 1.15
-  times its length; Roy's three hitboxes at 1.2 times his damage, sent up (80).
+  times its length; Roy's three hitboxes at 1.2 times his damage, sent away
+  at 30 degrees (owner playtest 2026-10-14, p6d: more horizontal; 80 before).
 - Up smash: Marth's up tilt (an arc from in front over his head to behind)
   at 1.4 times its length; Roy's final hit at 1.1 (14 and 13), his launch.
 - Forward tilt and forward smash: Roy's scripts edited (`script_edits`): the
@@ -130,12 +141,20 @@ The specials (I4, 2026-10-13; `src/port/nds_p4_ike.c`, appended motions
   `reloc_backend_compat_shims.c`). The swing's trail (Remix trail 21) runs
   blue to azure (spec `sword_trails`). The hit's burn is still the source's
   orange fire (`efManagerDamageFireMakeEffect` takes no tint). Lab: a
-  forced charge on port 0 plays 0x8C, 0 native failures.
+  forced charge on port 0 plays 0x8C, 0 native failures. Owner playtest
+  2026-10-14 (p6d): the charge sound (Ultimate's four-second
+  se_ike_special_N01, on Roy's start sound 0x5B9 and his charge loop 0x5C0)
+  ran on after a cancel, a hit or an early release: the start played it as
+  a one-shot. Ike's start motions (214, 218: `motions/eruption_begin.ms`)
+  play it as the fighter's loop sound, which a new status stops, and the
+  charge's wait keeps it (`nds_p4_roy.c`), so the wait's own loop sound
+  finds it playing and starts no second one.
 
 Defaults for the new specials:
 
-- **Quick Draw:** hold B to charge for up to 60 frames; on release he dashes
-  for 8-20 frames (by charge) at three times Roy's run speed with a hitbox; a
+- **Quick Draw:** hold B to charge for up to 75 frames (60 in the card; owner
+  playtest 2026-10-14, p6d: 1.25x as long to the farthest dash); on release
+  he dashes for 8-20 frames (by charge) at three times Roy's run speed with a hitbox; a
   hit cuts to the slash; a miss ends in about 40 frames of lag. From the air,
   or off an edge, he ends in special fall. Owner playtest 2026-10-14 (the
   charge had no effect or sound; done): the charge glows Ike's blue (Roy's
@@ -148,7 +167,10 @@ Defaults for the new specials:
   statuses and clips; the source's landing weapon (`wpKirbyCutter`) is not
   made. Ledge catch during the descent as Final Cutter allows. One call per
   Aether, at the rise (owner playtest 2026-10-14: the landing's second call,
-  special_H02, sounded like a second voice; removed).
+  special_H02, sounded like a second voice; removed). Owner playtest p6d
+  (open): Aether as Ultimate's -- he throws Ragnell up, it stops at its high
+  point and spins, he jumps to it, spins, and slices down with the blade
+  held level; the owner is sending an Ultimate clip of it.
 - **Counter:** Marth's window and return rule. SSB64's Appeal is ground-only,
   so the counter is too.
 

@@ -51,7 +51,8 @@ TOLERANCE = 4.0
 def rings(scene: dict):
     """The skirt's bands as (top ring, bottom ring) vertex index lists, the
     hem ring, and the slit's vertices (the skirt vertices on neither ring of
-    a one-band skirt: the slit's top)."""
+    a one-band skirt: the slit's top). A two-band skirt's slit top (a row 25
+    vertex below its ring, look_skirt.py) is on neither band's rings."""
     verts = scene["vertices"]
     drawn = {i for t in scene["triangles"] for i in t["v"]}
     skirt = [i for i, v in enumerate(verts) if v.get("object") == DRESS and v["model"][1] <= SKIRT_TOP_Y
@@ -60,7 +61,9 @@ def rings(scene: dict):
     if on(26):
         ys = np.array([verts[i]["model"][1] for i in skirt])
         top = [i for i in skirt if verts[i]["model"][1] > ys.max() - 12.0]
-        return [(top, on(1)), (on(25), on(26))], on(26), []
+        y25 = max(verts[i]["model"][1] for i in on(25))
+        ring25 = [i for i in on(25) if verts[i]["model"][1] > y25 - 12.0]
+        return [(top, on(1)), (ring25, on(26))], on(26), []
     ys = np.array([verts[i]["model"][1] for i in skirt])
     top_y, hem_y = ys.max(), ys.min()
     top = [i for i in skirt if verts[i]["model"][1] > top_y - 12.0]

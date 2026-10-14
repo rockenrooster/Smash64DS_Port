@@ -92,6 +92,13 @@ ANKLE_Y = 1.3           # kit height of the ankle ring (the shoe below it)
 # hair (one sheet), the sprites.
 TWO_SIDED = {"DS_dress", "DS_hair_panels", "DS_staff_gem_bb", "DS_staff_wings_sprite", "DS_shield_sprite"}
 TEXTURE_SCALE = 0.5     # of the baked size, both details (a texture is shared)
+# Palette entries a patch of a texture keeps for itself: the box (u0, v0, u1,
+# v1 of the baked image, v from its top) and how many entries its texels
+# get. k-means over the whole image folds a small patch of a distinct hue into
+# a large neighbour: the dress's skin between the bust and the neck (the
+# baseline paints it on the dress mesh, beside the chest's skin) became the
+# cloth's cream, a pale inverted V on her chest (owner playtest 2026-10-14).
+KEEP_PATCHES = {"DS_dress": [((0.375, 0.015625, 0.625, 0.0625), 2)]}
 
 # The staff. The owner's model holds it as the kit's bind pose does: level,
 # pointing forward from the right hand, which the base's clips turn into a
@@ -218,9 +225,66 @@ def skeleton(kit: D.Model, base: dict) -> tuple[dict, list, list, dict]:
 
 # ------------------------------------------------------------------ textures
 
-def quantize(rgba: np.ndarray, colors: int, cutout: bool) -> tuple[list, list]:
+def _lloyd(pts: np.ndarray, c: np.ndarray, fixed: int = 0) -> np.ndarray:
+    """Lloyd iterations from centres `c`; the first `fixed` never move."""
+    for _ in range(32):
+        lab = ((pts[:, None, :] - c[None]) ** 2).sum(2).argmin(1)
+        new = np.array([c[i] if i < fixed or not np.any(lab == i) else pts[lab == i].mean(0)
+                        for i in range(len(c))])
+        if np.allclose(new, c):
+            break
+        c = new
+    return c
+
+
+def _kmeans(pts: np.ndarray, k: int, rng) -> np.ndarray:
+    """k centres for RGB points: k-means++ seeding, then Lloyd iterations."""
+    centres = [pts[rng.integers(len(pts))]]
+    for _ in range(1, min(k, len(np.unique(pts, axis=0)))):
+        d2 = np.min(((pts[:, None, :] - np.array(centres)[None]) ** 2).sum(2), axis=1)
+        centres.append(pts[rng.choice(len(pts), p=d2 / d2.sum())] if d2.sum() > 0 else pts[rng.integers(len(pts))])
+    return _lloyd(pts, np.array(centres))
+
+
+def _cielab(rgb: np.ndarray) -> np.ndarray:
+    """sRGB 0-255 to CIELAB (D65)."""
+    c = np.asarray(rgb, dtype=float) / 255.0
+    c = np.where(c > 0.04045, ((c + 0.055) / 1.055) ** 2.4, c / 12.92)
+    xyz = c @ np.array([[0.4124, 0.3576, 0.1805], [0.2126, 0.7152, 0.0722],
+                        [0.0193, 0.1192, 0.9505]]).T / np.array([0.95047, 1.0, 1.08883])
+    f = np.where(xyz > 0.008856, np.cbrt(xyz), 7.787 * xyz + 16.0 / 116.0)
+    return np.stack([116.0 * f[..., 1] - 16.0, 500.0 * (f[..., 0] - f[..., 1]),
+                     200.0 * (f[..., 1] - f[..., 2])], -1)
+
+
+def _keep_patches(pts: np.ndarray, c: np.ndarray, rgba: np.ndarray, cutout: bool, keep) -> np.ndarray:
+    """KEEP_PATCHES: each patch's own centres (k-means over its texels) take
+    the places of the centres whose texels lose least, by eye (CIELAB), when
+    they move to their next nearest -- near-duplicate shades, not a small
+    patch of a distinct hue as an RGB cost would pick (her dress's red) --
+    then the rest are refitted around them."""
+    h, w = rgba.shape[:2]
+    fixed: list = []
+    for (u0, v0, u1, v1), entries in keep:
+        patch = rgba[int(v0 * h):int(v1 * h), int(u0 * w):int(u1 * w)].reshape(-1, 4).astype(float)
+        patch = patch[patch[:, 3] >= 128, :3] if cutout else patch[:, :3]
+        if len(patch) == 0:
+            raise LookError(f"keep patch {(u0, v0, u1, v1)} has no texels")
+        fixed += list(_kmeans(patch, entries, np.random.default_rng(1)))
+    lab_pts = _cielab(pts)
+    for _ in fixed:
+        near = ((pts[:, None, :] - c[None]) ** 2).sum(2).argmin(1)
+        d = ((lab_pts[:, None, :] - _cielab(c)[None]) ** 2).sum(2)
+        cost = [float((np.delete(d[near == i], i, axis=1).min(1) - d[near == i, i]).sum())
+                if np.any(near == i) else 0.0 for i in range(len(c))]
+        c = np.delete(c, int(np.argmin(cost)), axis=0)
+    return _lloyd(pts, np.vstack([np.array(fixed), c]), len(fixed))
+
+
+def quantize(rgba: np.ndarray, colors: int, cutout: bool, keep=()) -> tuple[list, list]:
     """Indices (rows of ints) and a palette for an RGBA image: k-means in RGB;
-    with `cutout`, index 0 is clear and every alpha < 128 texel takes it."""
+    with `cutout`, index 0 is clear and every alpha < 128 texel takes it.
+    `keep`: KEEP_PATCHES rows for this image."""
     h, w = rgba.shape[:2]
     px = rgba.reshape(-1, 4).astype(float)
     opaque = px[:, 3] >= 128 if cutout else np.ones(len(px), dtype=bool)
@@ -228,19 +292,9 @@ def quantize(rgba: np.ndarray, colors: int, cutout: bool) -> tuple[list, list]:
     pts = px[opaque, :3]
     if len(pts) == 0:
         pts = px[:, :3]
-    # k-means++ seeding, then Lloyd iterations.
-    rng = np.random.default_rng(1)
-    centres = [pts[rng.integers(len(pts))]]
-    for _ in range(1, min(k, len(np.unique(pts, axis=0)))):
-        d2 = np.min(((pts[:, None, :] - np.array(centres)[None]) ** 2).sum(2), axis=1)
-        centres.append(pts[rng.choice(len(pts), p=d2 / d2.sum())] if d2.sum() > 0 else pts[rng.integers(len(pts))])
-    c = np.array(centres)
-    for _ in range(32):
-        lab = ((pts[:, None, :] - c[None]) ** 2).sum(2).argmin(1)
-        new = np.array([pts[lab == i].mean(0) if np.any(lab == i) else c[i] for i in range(len(c))])
-        if np.allclose(new, c):
-            break
-        c = new
+    c = _kmeans(pts, k, np.random.default_rng(1))
+    if keep:
+        c = _keep_patches(pts, c, rgba, cutout, keep)
     palette = [[int(round(x)) for x in col] + [255] for col in c]
     while len(palette) < k:
         palette.append(list(palette[-1]))
@@ -367,7 +421,8 @@ def build(dump: dict, kit: D.Model, base: dict, fit_base: dict, detail: str, out
             w = _pow2_down(int(bw * TEXTURE_SCALE), 16)
             h = _pow2_down(int(bh * TEXTURE_SCALE), 8)
             cutout = bool(m["alpha"])
-            texels, palette = quantize(load_texture(Path(img["file"]), w, h), 16, cutout)
+            texels, palette = quantize(load_texture(Path(img["file"]), w, h), 16, cutout,
+                                       KEEP_PATCHES.get(name, ()))
             mats.append(len(materials))
             materials.append({"combine": [0, 0], "lit": True, "prim": "ffffffff", "spans": {},
                               "two_sided": name in TWO_SIDED,
