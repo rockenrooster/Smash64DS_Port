@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """P6 A9: an authored content's select portrait from the owner's art.
 
-The owner supplied a portrait for each P6 fighter (2026-10-14, p6d: "style it
-to match the rest of the roster"; local, under builds/p6-art/<name>/owner_art/,
-like the kit). This trims the image viewer's frame from it, keys its
-background out (the pixels of the background's colour class connected to the
-image's edge), crops it to the roster's framing (the face about half the
-picture or more, as Remix's portraits) and grades it, and writes the
-transparent `builds/p6-art/<name>/portrait.png` that p6_present.py frames
-over the select's fire plate.
+The owner supplied a pixel portrait for each P6 fighter (2026-10-14:
+"backgrounds will have to be changed to match the portrait style of the
+existing roster"; local, builds/p6-art/<name>/owner_art/portrait_source.png,
+like the kit): a framed square of about 32 pixels, drawn large on black, its
+backdrop dark. This trims the art's frame and the black gap inside it, keys
+the backdrop out (the dark pixels that are not the fighter's hair colour,
+connected to the art's edge) and writes the transparent
+`builds/p6-art/<name>/portrait.png` that p6_present.py frames over the
+select's fire plate, as the roster's portraits are.
 
     portrait_art.py --name palutena [--preview out.png]
 
@@ -23,21 +24,20 @@ from pathlib import Path
 import numpy as np
 
 REPO = Path(__file__).resolve().parents[2]
-# The image viewer's frame line around the owner's screenshots.
-VIEWER_FRAME = (39, 126, 127)
-# The working width the source is area-averaged to (its art is about 64
-# pixels wide, shown enlarged).
-WORK = 128
-# Per content: the background's colour class (hue range in degrees, which
-# may wrap past 360; saturation and value ranges, 0-1), the square crop at
-# the working size (x, y, side) and the grade (gamma, gain, saturation).
+# The art's frame line (brown) and the black gap inside it.
+FRAME_RGB = (85, 70, 55)
+FRAME_TOLERANCE = 30
+GAP_MAX = 12
+# The working size the art is area-averaged to before keying.
+WORK = 112
+# Per content: the backdrop is the pixels darker than `dark` (value, 0-1)
+# that are not the fighter's own hue (hue range in degrees, which may wrap
+# past 360, at saturations above `keep_s`: the hair's shadows stay).
 ART = {
-    # A teal backdrop behind green hair (hue 125-136) and a gold crown.
-    "palutena": {"key": {"h": (148, 190), "s": (0.15, 1.0), "v": (0.35, 1.0)},
-                 "crop": (12, 12, 104), "gamma": 1.25, "gain": 0.95, "sat": 1.15},
-    # A pale pink backdrop (hue 12) behind blue hair; his skin is hue 30.
-    "ike": {"key": {"h": (335, 22), "s": (0.08, 0.45), "v": (0.45, 1.0)},
-            "crop": (27, 16, 100), "gamma": 1.1, "gain": 1.0, "sat": 1.1},
+    # A dark teal backdrop behind green hair and a gold crown.
+    "palutena": {"dark": 0.26, "keep_h": (70, 165), "keep_s": 0.35},
+    # A dark red backdrop behind blue hair and his red cape.
+    "ike": {"dark": 0.24, "keep_h": (195, 265), "keep_s": 0.30},
 }
 
 
@@ -45,24 +45,34 @@ class ArtError(SystemExit):
     pass
 
 
-def trim_frame(a: np.ndarray) -> np.ndarray:
-    """The image without the viewer's frame rows and columns."""
-    frame = np.array(VIEWER_FRAME)
+def art_box(img: np.ndarray) -> np.ndarray:
+    """The art inside its frame: the outer box of everything lit, then the
+    frame's rows and columns and the black gap trimmed from each side, the
+    result's centre square."""
+    lit = img.max(-1) > 60
+    rows = np.nonzero(lit.mean(1) > 0.3)[0]
+    cols = np.nonzero(lit.mean(0) > 0.3)[0]
+    if len(rows) == 0 or len(cols) == 0:
+        raise ArtError("no framed art found")
+    box = img[rows[0]:rows[-1] + 1, cols[0]:cols[-1] + 1]
 
-    def framed(line: np.ndarray) -> bool:
-        return bool((np.abs(line.astype(int) - frame).max(axis=-1) < 12).mean() > 0.5)
+    def edge(lines: np.ndarray) -> int:
+        k = 0
+        while k < len(lines) // 4:
+            line = lines[k].astype(int)
+            gap = (line.max(-1) < GAP_MAX).mean() > 0.6
+            frame = (np.abs(line - np.array(FRAME_RGB)).max(-1) < FRAME_TOLERANCE).mean() > 0.6
+            if not (gap or frame):
+                break
+            k += 1
+        return k
 
-    h, w = a.shape[:2]
-    top, bot, left, right = 0, h, 0, w
-    while top < h // 4 and framed(a[top]):
-        top += 1
-    while bot > 3 * h // 4 and framed(a[bot - 1]):
-        bot -= 1
-    while left < w // 4 and framed(a[:, left]):
-        left += 1
-    while right > 3 * w // 4 and framed(a[:, right - 1]):
-        right -= 1
-    return a[top:bot, left:right]
+    top, bottom = edge(box), edge(box[::-1])
+    left, right = edge(box.transpose(1, 0, 2)), edge(box.transpose(1, 0, 2)[::-1])
+    art = box[top:box.shape[0] - bottom, left:box.shape[1] - right]
+    side = min(art.shape[:2])
+    y0, x0 = (art.shape[0] - side) // 2, (art.shape[1] - side) // 2
+    return art[y0:y0 + side, x0:x0 + side]
 
 
 def hsv(rgb: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -82,12 +92,13 @@ def hsv(rgb: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     return h * 60.0, np.where(mx > 0, d / np.maximum(mx, 1e-6), 0.0), mx
 
 
-def background(rgb: np.ndarray, key: dict) -> np.ndarray:
-    """The pixels of the key's colour class connected to the image's edge."""
+def backdrop(rgb: np.ndarray, art: dict) -> np.ndarray:
+    """The backdrop's pixels: dark, not the fighter's hue, connected to the
+    edge."""
     h, s, v = hsv(rgb)
-    lo, hi = key["h"]
+    lo, hi = art["keep_h"]
     hue = ((h >= lo) & (h <= hi)) if lo <= hi else ((h >= lo) | (h <= hi))
-    cls = hue & (s >= key["s"][0]) & (s <= key["s"][1]) & (v >= key["v"][0]) & (v <= key["v"][1])
+    cls = (v < art["dark"]) & ~(hue & (s > art["keep_s"]))
     rows, cols = cls.shape
     bg = np.zeros_like(cls)
     todo = deque([(y, x) for y in range(rows) for x in (0, cols - 1)] +
@@ -105,26 +116,17 @@ def background(rgb: np.ndarray, key: dict) -> np.ndarray:
 
 
 def make(name: str) -> np.ndarray:
-    """The keyed, cropped and graded portrait (RGBA, 0-255)."""
+    """The keyed portrait (RGBA, 0-255, WORK square)."""
     from PIL import Image
     if name not in ART:
         raise ArtError(f"no portrait recipe for {name!r}")
     src = REPO / "builds" / "p6-art" / name / "owner_art" / "portrait_source.png"
     if not src.exists():
         raise ArtError(f"{src}: missing (the owner's art, local)")
-    art = ART[name]
-    body = trim_frame(np.asarray(Image.open(src).convert("RGB")))
-    height = int(round(body.shape[0] * WORK / body.shape[1]))
-    rgb = np.asarray(Image.fromarray(body).resize((WORK, height), Image.BOX)).astype(float)
-    alpha = (~background(rgb, art["key"])).astype(float)
-    x, y, side = art["crop"]
-    if x + side > WORK or y + side > height:
-        raise ArtError(f"{name}: crop {art['crop']} leaves the {WORK}x{height} image")
-    rgb, alpha = rgb[y:y + side, x:x + side] / 255.0, alpha[y:y + side, x:x + side]
-    rgb = np.clip(rgb, 0.0, 1.0) ** art["gamma"] * art["gain"]
-    grey = rgb.mean(-1, keepdims=True)
-    rgb = np.clip(grey + (rgb - grey) * art["sat"], 0.0, 1.0)
-    return np.dstack([rgb * 255.0, alpha * 255.0]).round().astype(np.uint8)
+    art = art_box(np.asarray(Image.open(src).convert("RGB")))
+    rgb = np.asarray(Image.fromarray(art).resize((WORK, WORK), Image.BOX)).astype(float)
+    alpha = np.where(backdrop(rgb, ART[name]), 0.0, 255.0)
+    return np.dstack([rgb, alpha]).round().astype(np.uint8)
 
 
 def main() -> int:

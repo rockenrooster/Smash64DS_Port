@@ -141,12 +141,13 @@ entries whose texels lose least by eye (CIELAB) -- near-duplicate greys, not
 the dress's red, which an RGB cost would have dropped. Every other texture
 quantizes as before.
 
-**Portrait (owner playtest 2026-10-14, p6d: too dark).** From the owner's
-portrait art (local, `builds/p6-art/palutena/owner_art/`):
-`scripts/p6/portrait_art.py` keys its teal backdrop out (her hair is a
-greener hue), keeps the crown in the crop, darkens and saturates it a little
-to sit with the roster, and `p6_present.py` frames it over the select's fire
-plate as Remix's portraits are.
+**Portrait (owner, 2026-10-14).** The owner's pixel portrait of her (a
+framed square of about 32 pixels; local, `builds/p6-art/palutena/owner_art/`):
+`scripts/p6/portrait_art.py` trims its frame and the black gap inside it and
+keys its dark teal backdrop out (the dark pixels that are not her hair's
+green, connected to the edge), and `p6_present.py` frames it over the
+select's fire plate as the roster's portraits are ("backgrounds will have to
+be changed to match the portrait style of the existing roster").
 
 **Costumes, wings, halo, stock icon (2026-10-14).** Costumes are palettes
 over her one index image per texture (P6_PLAN A3b): `blender/costume_corr.py`

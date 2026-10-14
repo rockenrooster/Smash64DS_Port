@@ -53,14 +53,14 @@ Lab (four CPUs, Ike in port 0): drawn, 0 native failures, 0 lean declines.
 Next: his Kirby hat, portrait and stock icon from this look.
 
 Portrait (owner playtest 2026-10-14, p6d: too small and dark, Roy's the
-reference; the owner then supplied portrait art for both P6 fighters):
-`scripts/p6/portrait_art.py` trims the art's viewer frame, keys its pale pink
-backdrop out (that colour class connected to the edge; his skin is a
-different hue), crops his face to the roster's framing and grades it, and
-`p6_present.py` frames it over the select's fire plate (the source's
-PortraitFireBg, which Remix's portraits carry) with an area-average
-downsample (a Lanczos one rang into coloured specks at the hair's edges).
-The art and the picture are local (`builds/p6-art/ike/`).
+reference; the owner then supplied pixel portraits of both P6 fighters):
+`scripts/p6/portrait_art.py` trims the art's frame and the black gap inside
+it and keys its dark red backdrop out (the dark pixels that are not his
+hair's blue, connected to the edge), and `p6_present.py` frames it over the
+select's fire plate (the source's PortraitFireBg, which Remix's portraits
+carry) with an area-average downsample (a Lanczos one rang into coloured
+specks at the hair's edges). The art and the picture are local
+(`builds/p6-art/ike/`).
 
 ## Move card (approved 2026-10-13, I1)
 
