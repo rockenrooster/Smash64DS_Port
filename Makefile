@@ -7991,7 +7991,7 @@ else
 # staged ROM (ROM-derived, so under builds/); its motion scripts are
 # committed text the author assembles.
 $$(PROJECT_ROOT)/builds/p6-art/$(1)/anims/%.o2r: $$(PROJECT_ROOT)/art/p6/$(1)/anims/%.json \
-		$$(NDS_P4_STAGING)/ssb64asm.z64 $$(PROJECT_ROOT)/scripts/p6/anim.py $$(PROJECT_ROOT)/scripts/p6/pose_ops.py
+		$$(NDS_P4_STAGING)/ssb64asm.z64 $$(PROJECT_ROOT)/scripts/p6/anim.py $$(PROJECT_ROOT)/scripts/p6/pose_ops.py $$(PROJECT_ROOT)/scripts/p6/keyposes.py
 	python "$$(PROJECT_ROOT)/scripts/p6/anim.py" --build "$$<" --staging "$$(NDS_P4_STAGING)" --out "$$@"
 $$(NDS_P4_EXPORT)/$(1)/resolved.json: $$(NDS_P4_EXPORT)/$(5)/resolved.json \
 		$$(NDS_P4_STAGING)/ssb64asm.z64 \

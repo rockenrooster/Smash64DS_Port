@@ -1,8 +1,330 @@
 {
- "comment": "Aether's landing (card: new): Roy's Flare Blade swing end from frame 9, the sword planted in the ground in front and pulled out (frames 9-34).",
- "source": "0x1431",
- "frames": [
-  9,
-  34
- ]
+ "comment": "Aether's landing (owner, 2026-10-14): the impact crouch with Ragnell level along the ground in front of him, held, then back to his wait.",
+ "keyposes": {
+  "skeleton": "roy",
+  "header": "0xcce",
+  "length": 26,
+  "first_slot": 0,
+  "base": {
+   "clip": "0xcce",
+   "frame": 0
+  },
+  "keys": [
+   {
+    "frame": 0,
+    "ease": "smooth",
+    "turns": {
+     "2": [
+      8,
+      0,
+      0
+     ]
+    },
+    "aims": [
+     {
+      "row": 11,
+      "to": [
+       0,
+       -0.55,
+       0.85
+      ]
+     },
+     {
+      "row": 12,
+      "to": [
+       0,
+       -0.2,
+       1
+      ]
+     },
+     {
+      "row": 14,
+      "axis": [
+       0,
+       0,
+       1
+      ],
+      "to": [
+       0,
+       -0.08,
+       1
+      ],
+      "twist": {
+       "axis": [
+        0,
+        1,
+        0
+       ],
+       "to": [
+        -1,
+        0,
+        0
+       ]
+      }
+     },
+     {
+      "row": 4,
+      "to": [
+       0,
+       -0.5,
+       0.85
+      ]
+     },
+     {
+      "row": 5,
+      "to": [
+       0,
+       -0.15,
+       1
+      ]
+     },
+     {
+      "row": 22,
+      "to": [
+       0,
+       -0.8,
+       0.6
+      ]
+     },
+     {
+      "row": 23,
+      "to": [
+       0,
+       -1,
+       -0.3
+      ]
+     },
+     {
+      "row": 27,
+      "to": [
+       0,
+       -0.9,
+       0.3
+      ]
+     },
+     {
+      "row": 28,
+      "to": [
+       0,
+       -1,
+       -0.2
+      ]
+     }
+    ]
+   },
+   {
+    "frame": 3,
+    "ease": "out",
+    "trans": {
+     "1": [
+      0,
+      -95,
+      0
+     ]
+    },
+    "turns": {
+     "2": [
+      30,
+      0,
+      0
+     ]
+    },
+    "aims": [
+     {
+      "row": 11,
+      "to": [
+       0,
+       -0.75,
+       0.65
+      ]
+     },
+     {
+      "row": 12,
+      "to": [
+       0,
+       -0.35,
+       1
+      ]
+     },
+     {
+      "row": 14,
+      "axis": [
+       0,
+       0,
+       1
+      ],
+      "to": [
+       0,
+       -0.05,
+       1
+      ],
+      "twist": {
+       "axis": [
+        0,
+        1,
+        0
+       ],
+       "to": [
+        -1,
+        0,
+        0
+       ]
+      }
+     },
+     {
+      "row": 4,
+      "to": [
+       0,
+       -0.7,
+       0.7
+      ]
+     },
+     {
+      "row": 5,
+      "to": [
+       0,
+       -0.3,
+       1
+      ]
+     }
+    ],
+    "ik": [
+     {
+      "chain": [
+       22,
+       23,
+       24
+      ],
+      "target": "keep",
+      "pole": [
+       0,
+       0,
+       1
+      ]
+     },
+     {
+      "chain": [
+       27,
+       28,
+       29
+      ],
+      "target": "keep",
+      "pole": [
+       0,
+       0,
+       1
+      ]
+     }
+    ]
+   },
+   {
+    "frame": 14,
+    "ease": "smooth",
+    "trans": {
+     "1": [
+      0,
+      -95,
+      0
+     ]
+    },
+    "turns": {
+     "2": [
+      30,
+      0,
+      0
+     ]
+    },
+    "aims": [
+     {
+      "row": 11,
+      "to": [
+       0,
+       -0.75,
+       0.65
+      ]
+     },
+     {
+      "row": 12,
+      "to": [
+       0,
+       -0.35,
+       1
+      ]
+     },
+     {
+      "row": 14,
+      "axis": [
+       0,
+       0,
+       1
+      ],
+      "to": [
+       0,
+       -0.05,
+       1
+      ],
+      "twist": {
+       "axis": [
+        0,
+        1,
+        0
+       ],
+       "to": [
+        -1,
+        0,
+        0
+       ]
+      }
+     },
+     {
+      "row": 4,
+      "to": [
+       0,
+       -0.7,
+       0.7
+      ]
+     },
+     {
+      "row": 5,
+      "to": [
+       0,
+       -0.3,
+       1
+      ]
+     }
+    ],
+    "ik": [
+     {
+      "chain": [
+       22,
+       23,
+       24
+      ],
+      "target": "keep",
+      "pole": [
+       0,
+       0,
+       1
+      ]
+     },
+     {
+      "chain": [
+       27,
+       28,
+       29
+      ],
+      "target": "keep",
+      "pole": [
+       0,
+       0,
+       1
+      ]
+     }
+    ]
+   },
+   {
+    "frame": 26
+   }
+  ]
+ }
 }

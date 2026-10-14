@@ -1,0 +1,122 @@
+{
+ "comment": "Eruption's start (Ike's down special on Roy's Flare Blade rows, 214/218): from his wait to the charge stance -- Ragnell held at the chest in both hands, pointing up and forward (the owner's 3DS reference, 2026-10-14).",
+ "keyposes": {
+  "skeleton": "roy",
+  "header": "0xcce",
+  "first_slot": 0,
+  "base": {
+   "clip": "0xcce",
+   "frame": 0
+  },
+  "length": 12,
+  "keys": [
+   {
+    "frame": 0
+   },
+   {
+    "frame": 12,
+    "trans": {
+     "1": [
+      0,
+      10,
+      0
+     ]
+    },
+    "turns": {
+     "2": [
+      -5,
+      0,
+      0
+     ]
+    },
+    "aims": [
+     {
+      "row": 11,
+      "to": [
+       0,
+       -0.5,
+       0.85
+      ]
+     },
+     {
+      "row": 12,
+      "to": [
+       0,
+       0.6,
+       0.8
+      ]
+     },
+     {
+      "row": 14,
+      "axis": [
+       0,
+       0,
+       1
+      ],
+      "to": [
+       0,
+       0.75,
+       0.66
+      ],
+      "twist": {
+       "axis": [
+        0,
+        1,
+        0
+       ],
+       "to": [
+        -1,
+        0,
+        0
+       ]
+      }
+     },
+     {
+      "row": 4,
+      "to": [
+       0,
+       -0.45,
+       0.9
+      ]
+     },
+     {
+      "row": 5,
+      "to": [
+       0,
+       0.55,
+       0.85
+      ]
+     }
+    ],
+    "ik": [
+     {
+      "chain": [
+       22,
+       23,
+       24
+      ],
+      "target": "keep",
+      "pole": [
+       0,
+       0,
+       1
+      ]
+     },
+     {
+      "chain": [
+       27,
+       28,
+       29
+      ],
+      "target": "keep",
+      "pole": [
+       0,
+       0,
+       1
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

@@ -171,6 +171,22 @@ Defaults for the new specials:
   (open): Aether as Ultimate's -- he throws Ragnell up, it stops at its high
   point and spins, he jumps to it, spins, and slices down with the blade
   held level; the owner is sending an Ultimate clip of it.
+- **Animations from the owner's 3DS clips (2026-10-14).** The owner's
+  reference videos (local, `decomp/alt_assets/.../Super Smash Bros 3DS/Ike/`,
+  7 clips) against our moves: the jab combo (left punch, kick, overhead
+  downward slash), the dash attack (lunge into a rising slash) and the
+  forward smash (overhead slam) already follow them and stay. New, as key
+  poses (`scripts/p6/keyposes.py`, anim.py "keyposes" recipes): the up tilt
+  (a crouch, a hop with Ragnell level overhead, a low sweep; its own script,
+  Roy's hitboxes on the rise and the sweep), Eruption on Roy's Flare Blade
+  rows (the charge stance with the blade up at the chest, the release
+  plunging it into the ground at Roy's hit frame) and Aether (the owner's
+  description: Ragnell thrown up to hang spinning where he meets it -- its
+  height above him follows his rise -- the catch overhead, a forward flip,
+  the descent with the blade level, an impact crouch). Each is authored
+  0.75x the reference's length, so his 0.75 animation rate plays it at the
+  reference's speed. Lab: up tilt and Aether play through, 0 native
+  failures.
 - **Counter:** Marth's window and return rule. SSB64's Appeal is ground-only,
   so the counter is too.
 

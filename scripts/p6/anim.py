@@ -623,11 +623,20 @@ def build(recipe: dict, rom) -> bytes:
     ("ops": a list of pose_ops.py operations, in order, on the clip's own
     tree -- "blend" rows toward the bind pose or a frame of another clip,
     "turn" a row about the model's axes; or, with no "source", "keys": a
-    clip from key poses); the O2R container keeps the source's header
+    clip from key poses, or "keyposes": key poses over clip frames with
+    turns, aims and leg IK, keyposes.py); the O2R container keeps the source's header
     (p6_author.py gives it its own id; a keyed clip takes "header": a
     clip of the same tree's id for its header)."""
     import pose_ops
-    if "keys" in recipe:
+    if "keyposes" in recipe:
+        import keyposes
+        kp = recipe["keyposes"]
+        blob = rom.o2r(int(str(kp["header"]), 0))
+        skel = skeleton(rom, kp["skeleton"])
+        refs = [kp["base"]] + [k["from"] for k in kp["keys"] if "from" in k]
+        clips = {int(str(r["clip"]), 0): decode(rom.o2r(int(str(r["clip"]), 0))) for r in refs}
+        clip = keyposes.build(skel, kp, clips, len(skel.parents) - 1 + int(kp.get("first_slot", 0)))
+    elif "keys" in recipe:
         blob = rom.o2r(int(str(recipe["header"]), 0))
         skel = skeleton(rom, recipe["skeleton"])
         clip = pose_ops.keys(skel, recipe["keys"], len(skel.parents) - 1)

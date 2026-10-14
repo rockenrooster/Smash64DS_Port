@@ -28,10 +28,14 @@
    "anim": "builds/p6-art/ike/anims/dash.o2r",
    "script": "scripts/p6/ike/motions/dash.ms"
   },
+  "174": {
+   "comment": "AttackHi3: up tilt, his own (the owner's 3DS reference)",
+   "anim": "builds/p6-art/ike/anims/utilt.o2r",
+   "script": "scripts/p6/ike/motions/utilt.ms"
+  },
   "179": {
    "comment": "AttackS4: forward smash, Roy's (Ike's 1.5x power is OWNER_DAMAGE_SCALES), without his fire (fire hitboxes slash, no fire hit sounds)",
    "script_edits": {
-    
     "element": {
      "1": 3
     },
@@ -47,11 +51,37 @@
   },
   "214": {
    "comment": "SpecialLwStart ground (Roy's Flare Blade, his Eruption): its charge sound as the loop sound a new status stops (owner playtest 2026-10-14, p6d)",
-   "script": "scripts/p6/ike/motions/eruption_begin.ms"
+   "script": "scripts/p6/ike/motions/eruption_begin.ms",
+   "anim": "builds/p6-art/ike/anims/eruption_begin.o2r"
+  },
+  "215": {
+   "comment": "SpecialLwHold ground (Eruption's charge, Roy's Flare Blade row): Ike's charge stance, the 3DS reference",
+   "anim": "builds/p6-art/ike/anims/eruption_wait.o2r"
+  },
+  "216": {
+   "comment": "SpecialLwEnd ground: Ragnell plunged into the ground (the 3DS reference's eruption)",
+   "anim": "builds/p6-art/ike/anims/eruption_end.o2r"
+  },
+  "217": {
+   "comment": "SpecialLwEnd at full charge: as 216",
+   "anim": "builds/p6-art/ike/anims/eruption_end.o2r"
   },
   "218": {
    "comment": "SpecialAirLwStart: as 214",
-   "script": "scripts/p6/ike/motions/eruption_begin.ms"
+   "script": "scripts/p6/ike/motions/eruption_begin.ms",
+   "anim": "builds/p6-art/ike/anims/eruption_begin.o2r"
+  },
+  "219": {
+   "comment": "SpecialAirLwHold: as 215",
+   "anim": "builds/p6-art/ike/anims/eruption_wait.o2r"
+  },
+  "220": {
+   "comment": "SpecialAirLwEnd: as 216",
+   "anim": "builds/p6-art/ike/anims/eruption_end.o2r"
+  },
+  "221": {
+   "comment": "SpecialAirLwEnd at full charge: as 216",
+   "anim": "builds/p6-art/ike/anims/eruption_end.o2r"
   },
   "224": {
    "comment": "Attack13 (appended; Roy's 195 is his entry): jab 3",
@@ -312,17 +342,44 @@
   }
  },
  "colanims": {
-  "126": {"comment": "Eruption (Roy's Flare Blade rows): his charge glow, Roy's ROY_CHARGE with red and blue swapped (card A10: blue fire)", "swap": "rb"}
+  "126": {
+   "comment": "Eruption (Roy's Flare Blade rows): his charge glow, Roy's ROY_CHARGE with red and blue swapped (card A10: blue fire)",
+   "swap": "rb"
+  }
  },
  "sword_trails": {
-  "21": {"comment": "Eruption's swing trail, Roy's Flare Blade trail with red and blue swapped", "colour_1": "0000ff00", "colour_2": "006ce000"}
+  "21": {
+   "comment": "Eruption's swing trail, Roy's Flare Blade trail with red and blue swapped",
+   "colour_1": "0000ff00",
+   "colour_2": "006ce000"
+  }
  },
  "cpu": {
   "comment": "A12: Roy's attack rows (src/Roy/AI/Attacks.asm). Measured on Ike's own moves: the new jab 1, the slowed forward tilt, the new up smash, the new dash attack (with its run travel). Kept: Roy's hand-tuned rows for the moves Ike plays as Roy does (tilts, down smash, forward smash's timing, grab, aerials, Eruption on Flare Blade's rows) and Blazer's for Aether (both rise through their hits; Aether's rise is code, not clip). Dropped: Shield Breaker's row (Quick Draw is a charged dash, the recovery code uses it).",
-  "drop": ["NSPG"],
-  "keep": ["UTILT", "GRAB", "DTILT", "DSMASH", "FSMASH", "USPG", "DSPG", "ROY_DSP_HELD_10F", "ROY_DSP_HELD_20F", "FAIR", "UAIR", "NAIR", "BAIR", "DAIR", "DSPA"],
+  "drop": [
+   "NSPG"
+  ],
+  "keep": [
+   "UTILT",
+   "GRAB",
+   "DTILT",
+   "DSMASH",
+   "FSMASH",
+   "USPG",
+   "DSPG",
+   "ROY_DSP_HELD_10F",
+   "ROY_DSP_HELD_20F",
+   "FAIR",
+   "UAIR",
+   "NAIR",
+   "BAIR",
+   "DAIR",
+   "DSPA"
+  ],
   "measure": {
-   "DASH_ATTACK": {"travel": "run"}
+   "DASH_ATTACK": {
+    "travel": "run"
+   }
   }
  }
 }
