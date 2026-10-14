@@ -512,6 +512,36 @@ FTOpeningDesc *D_ovl1_80390D20[] = {
  * reach (scripts/p4/p4_colanims.py), appended to the table below. */
 #include "nds_p4_colanims.generated.inc"
 #define NDS_GM_COL_DESC_COUNT (NDS_P4_COLANIM_LAST + 1)
+/* An authored content's tinted copies of its base's colour animations (Ike's
+ * blue Eruption from Roy's ROY_CHARGE): the content's SetColAnim of the
+ * source id, or that of a Kirby holding its power, plays the copy. */
+typedef struct NDSP4ColAnimRemap
+{
+    u16 content;
+    u16 from;
+    u16 to;
+} NDSP4ColAnimRemap;
+static const NDSP4ColAnimRemap sNdsP4ColAnimRemap[] = NDS_P4_COLANIM_REMAP;
+
+static s32 ndsP4ColAnimRemap(const FTStruct *fp, s32 colanim_id)
+{
+    u32 content = (fp->nds_p4_content != 0u) ? fp->nds_p4_content : fp->nds_p4_kirby_copy;
+    u32 i;
+
+    if (content == 0u)
+    {
+        return colanim_id;
+    }
+    for (i = 0u; i < NDS_P4_COLANIM_REMAP_COUNT; i++)
+    {
+        if ((sNdsP4ColAnimRemap[i].content == content) &&
+            ((s32)sNdsP4ColAnimRemap[i].from == colanim_id))
+        {
+            return (s32)sNdsP4ColAnimRemap[i].to;
+        }
+    }
+    return colanim_id;
+}
 #else
 #define NDS_GM_COL_DESC_COUNT nGMColAnimEnumCount
 #endif
@@ -2152,6 +2182,12 @@ sb32 ftParamCheckSetFighterColAnimID(GObj *fighter_gobj, s32 colanim_id,
         gNdsDonkeyChargePresentationAppliedID = colanim_id;
 #endif
     }
+#if NDS_P4
+    if (fp != NULL)
+    {
+        colanim_id = ndsP4ColAnimRemap(fp, colanim_id);
+    }
+#endif
 
     ndsTask39EffectCensusRecord(
         NDS_TASK39_EFFECT_FT_PARAM_CHECK_SET_FIGHTER_COL_ANIM_I_D,

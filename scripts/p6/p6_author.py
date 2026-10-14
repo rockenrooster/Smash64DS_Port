@@ -40,7 +40,8 @@ import p4_contents  # noqa: E402
 SPEC_IDENTITY = {"schema", "content", "comment"}
 SPEC_SCHEMA = "p6-spec-v1"
 # Spec keys this author applies.
-SPEC_APPLIED = {"files", "motions", "menu_motions", "statuses", "attributes", "kind_tables", "cpu"}
+SPEC_APPLIED = {"files", "motions", "menu_motions", "statuses", "attributes", "kind_tables", "cpu",
+                "colanims", "sword_trails"}
 # "files": the content's own files by role: the descriptor slot each
 # replaces. Its main and model (model_writer.py); a special file of its own
 # (p6_gate.py: Palutena's entry gate in special 2), which only the content's
@@ -118,6 +119,8 @@ def author(base_export: Path, name: str, spec_path: Path | None, out: Path,
     own_main(resolved, name)
     author_kind_tables(resolved, spec.get("kind_tables") or {})
     author_cpu(resolved, events, spec.get("cpu"), out, staging)
+    author_colanims(resolved, spec.get("colanims") or {})
+    author_sword_trails(resolved, spec.get("sword_trails") or {})
     (out / "events.json").write_text(json.dumps(events, indent=1) + "\n", encoding="utf-8", newline="\n")
     summary = base_export / "summary.txt"
     text = summary.read_text(encoding="utf-8") if summary.exists() else ""
@@ -577,6 +580,50 @@ def author_kind_tables(resolved: dict, rows: dict) -> None:
         row["value"] = new
         row["same_as_parent"] = new == row["parent_value"]
         resolved["authored"].setdefault("kind_tables", {})[name] = new
+
+
+COLANIM_SWAPS = ("rb", "rg", "gb")
+
+
+def author_colanims(resolved: dict, rows: dict) -> None:
+    """The spec's tinted copies of the base's colour animations ("<id>":
+    {"swap": "rb"}: the copy's colours with two channels swapped, Ike's blue
+    Eruption from Roy's ROY_CHARGE). scripts/p4/p4_colanims.py writes each
+    copy as a row of its own; a SetColAnim of the source id by the content
+    (or by Kirby holding its power) plays the copy (ndsP4ColAnimRemap,
+    src/port/reloc_backend_compat_shims.c)."""
+    if not rows:
+        return
+    out = {}
+    for key, entry in sorted(rows.items(), key=lambda kv: int(kv[0], 0)):
+        unknown = set(entry) - {"swap", "comment"}
+        if unknown:
+            raise AuthorError(f"spec colanims {key}: unknown keys {sorted(unknown)}")
+        if entry.get("swap") not in COLANIM_SWAPS:
+            raise AuthorError(f"spec colanims {key}: swap is one of {COLANIM_SWAPS}")
+        out[str(int(key, 0))] = {"swap": entry["swap"]}
+    resolved["authored"]["colanims"] = out
+
+
+def author_sword_trails(resolved: dict, rows: dict) -> None:
+    """The spec's trail colours ("<id>": {"colour_1", "colour_2"}, RGBA32
+    hex, alpha unused) on the content's own copy of its base's SwordTrail.asm
+    rows: Ike's Eruption swing trail blue where Roy's Flare Blade's is red."""
+    if not rows:
+        return
+    by_id = {t["id"]: t for t in resolved["sword_trails"]}
+    for key, entry in sorted(rows.items(), key=lambda kv: int(kv[0], 0)):
+        trail = by_id.get(int(key, 0))
+        if trail is None:
+            raise AuthorError(f"spec sword_trails: no trail {key} in the base")
+        unknown = set(entry) - {"colour_1", "colour_2", "comment"}
+        if unknown:
+            raise AuthorError(f"spec sword_trails {key}: unknown keys {sorted(unknown)}")
+        for k in ("colour_1", "colour_2"):
+            if k in entry:
+                trail[k] = int(str(entry[k]), 16)
+    resolved["authored"]["sword_trails"] = {k: {c: v for c, v in e.items() if c != "comment"}
+                                            for k, e in rows.items()}
 
 
 def author_cpu(resolved: dict, events: dict, cpu: dict | None, out: Path, staging: Path | None) -> None:

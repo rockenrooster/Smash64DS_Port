@@ -299,5 +299,19 @@
   "str_winner_ptr": {
    "name": "IKE"
   }
+ },
+ "colanims": {
+  "126": {"comment": "Eruption (Roy's Flare Blade rows): his charge glow, Roy's ROY_CHARGE with red and blue swapped (card A10: blue fire)", "swap": "rb"}
+ },
+ "sword_trails": {
+  "21": {"comment": "Eruption's swing trail, Roy's Flare Blade trail with red and blue swapped", "colour_1": "0000ff00", "colour_2": "006ce000"}
+ },
+ "cpu": {
+  "comment": "A12: Roy's attack rows (src/Roy/AI/Attacks.asm). Measured on Ike's own moves: the new jab 1, the slowed forward tilt, the new up smash, the new dash attack (with its run travel). Kept: Roy's hand-tuned rows for the moves Ike plays as Roy does (tilts, down smash, forward smash's timing, grab, aerials, Eruption on Flare Blade's rows) and Blazer's for Aether (both rise through their hits; Aether's rise is code, not clip). Dropped: Shield Breaker's row (Quick Draw is a charged dash, the recovery code uses it).",
+  "drop": ["NSPG"],
+  "keep": ["UTILT", "GRAB", "DTILT", "DSMASH", "FSMASH", "USPG", "DSPG", "ROY_DSP_HELD_10F", "ROY_DSP_HELD_20F", "FAIR", "UAIR", "NAIR", "BAIR", "DAIR", "DSPA"],
+  "measure": {
+   "DASH_ATTACK": {"travel": "run"}
+  }
  }
 }

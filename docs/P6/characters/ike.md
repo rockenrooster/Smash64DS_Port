@@ -113,7 +113,15 @@ The specials (I4, 2026-10-13; `src/port/nds_p4_ike.c`, appended motions
 - Counter: Ike's taunt runs his counter status through
   `NDSP4Overrides.status_replace` (Appeal stays in `status_id`); Marth's
   window (frames 6-30), clips and 8% strike; `update_damage` counts the hit.
-- Eruption: Roy's Flare Blade rows unchanged (the blue tint is A10).
+- Eruption: Roy's Flare Blade rows, blue (A10, 2026-10-14). The charge glow
+  is a copy of Roy's ROY_CHARGE colour animation with red and blue swapped
+  (spec `colanims`): `scripts/p4/p4_colanims.py` writes it as a row of its
+  own after Remix's table (0x8C), and a SetColAnim of 0x7E by Ike, or by a
+  Kirby holding his power, plays it (`ndsP4ColAnimRemap`,
+  `reloc_backend_compat_shims.c`). The swing's trail (Remix trail 21) runs
+  blue to azure (spec `sword_trails`). The hit's burn is still the source's
+  orange fire (`efManagerDamageFireMakeEffect` takes no tint). Lab: a
+  forced charge on port 0 plays 0x8C, 0 native failures.
 
 Defaults for the new specials:
 
@@ -186,6 +194,18 @@ match, Kirby holding Roy's power keeps Roy's red fire and Roy's hat.
 Coverage rows for every attack from the clips and scripts (A12). Recovery:
 Aether when below the ledge; Quick Draw toward the ledge when level with it.
 Post-process: no Quick Draw toward open air unless it reaches the ledge.
+
+Done 2026-10-14 (spec `cpu`, Roy's `AI/Attacks.asm` rows). Measured on his
+own moves: jab 1 (frames 5-8), the forward tilt at 0.85 (7-10), the up smash
+(7-17), the dash attack with its run travel (14-18, x 872 to 1,620). Kept:
+Roy's hand-tuned rows for the moves he plays as Roy does (tilts, down smash,
+the forward smash's timing, grab, aerials, Eruption's rows and held rows),
+and Blazer's row for Aether, since both rise through their hits and Aether's
+rise is code, not clip. Dropped: Shield Breaker's row; Quick Draw is a
+charged dash. Census: four Ike CPUs over 1,800 frames use the jabs, tilts,
+smashes, aerials, Eruption on the ground and in the air, and Aether; 0 native
+failures, 0 lean declines. Not yet: Quick Draw in the CPU's recovery (the CPU
+recovers with Aether).
 
 ## Code (`src/port/nds_p4_ike.c`)
 
