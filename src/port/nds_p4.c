@@ -88,6 +88,8 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
     extern const u32 gNdsP4##T##BakedRefCount; \
     extern const NDSP4ShieldPose gNdsP4##T##ShieldPose; \
     extern const f32 gNdsP4##T##AnimRate; \
+    extern const u16 gNdsP4##T##AnimRateStatuses[]; \
+    extern const u16 gNdsP4##T##AnimRateStatusCount; \
     extern const f32 gNdsP4##T##DamageScale;
 #define NDS_P4_ROW(T, title, parent, on_status_hook, computer_rows, override_rows) \
     { \
@@ -126,6 +128,8 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
         .baked_ref_count = &gNdsP4##T##BakedRefCount, \
         .shield_pose = &gNdsP4##T##ShieldPose, \
         .anim_rate = &gNdsP4##T##AnimRate, \
+        .anim_rate_statuses = gNdsP4##T##AnimRateStatuses, \
+        .anim_rate_status_count = &gNdsP4##T##AnimRateStatusCount, \
         .damage_scale = &gNdsP4##T##DamageScale, \
         .overrides = (override_rows), \
     }
@@ -194,11 +198,41 @@ static const char *const sNdsP4TableNames[NDS_P4_CONTENT_LIMIT] = {
 __attribute__((used)) volatile u32 gNdsP4TablesFailure;
 static const NDSP4TablesHeader *ndsP4FighterTables(const FTStruct *fp);
 
-f32 ndsP4ScaleAnimSpeed(GObj *fighter_gobj, f32 speed)
+/* Whether a content's animation rate applies to `status_id`: its list
+ * (ascending) holds it, or it lists none. */
+static sb32 ndsP4AnimRateStatus(const NDSP4Fighter *f, s32 status_id)
+{
+    u32 lo = 0u;
+    u32 hi = (f->anim_rate_status_count != NULL) ? *f->anim_rate_status_count : 0u;
+
+    if (hi == 0u)
+    {
+        return TRUE;
+    }
+    while (lo < hi)
+    {
+        u32 mid = (lo + hi) >> 1;
+        s32 s = f->anim_rate_statuses[mid];
+
+        if (s == status_id)
+        {
+            return TRUE;
+        }
+        if (s < status_id)
+        {
+            lo = mid + 1u;
+        }
+        else hi = mid;
+    }
+    return FALSE;
+}
+
+f32 ndsP4ScaleAnimSpeed(GObj *fighter_gobj, s32 status_id, f32 speed)
 {
     const NDSP4Fighter *f = ndsP4Fighter(ftGetStruct(fighter_gobj)->nds_p4_content);
 
-    if ((f == NULL) || (f->anim_rate == NULL) || (*f->anim_rate == 1.0F))
+    if ((f == NULL) || (f->anim_rate == NULL) || (*f->anim_rate == 1.0F) ||
+        !ndsP4AnimRateStatus(f, status_id))
     {
         return speed;
     }
@@ -2951,7 +2985,8 @@ static f32 ndsP4HalfFloat(u32 word)
  * operand. */
 static void ndsP4RemixFrameSpeed(GObj *fighter_gobj, u32 word)
 {
-    f32 speed = ndsP4ScaleAnimSpeed(fighter_gobj, ndsP4HalfFloat(word));
+    s32 status_id = ftGetStruct(fighter_gobj)->status_id;
+    f32 speed = ndsP4ScaleAnimSpeed(fighter_gobj, status_id, ndsP4HalfFloat(word));
     DObj *root = DObjGetStruct(fighter_gobj);
     DObj *dobj;
 
@@ -2960,7 +2995,7 @@ static void ndsP4RemixFrameSpeed(GObj *fighter_gobj, u32 word)
         gcSetAnimSpeed(fighter_gobj, speed);
         return;
     }
-    if (root->anim_speed == ndsP4ScaleAnimSpeed(fighter_gobj, 1.0F))
+    if (root->anim_speed == ndsP4ScaleAnimSpeed(fighter_gobj, status_id, 1.0F))
     {
         union { u32 u; f32 f; } nudge;
 

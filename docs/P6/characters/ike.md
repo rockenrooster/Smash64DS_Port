@@ -187,6 +187,17 @@ Defaults for the new specials:
   0.75x the reference's length, so his 0.75 animation rate plays it at the
   reference's speed. Lab: up tilt and Aether play through, 0 native
   failures.
+- **Speed and power (owner p6f, p6h):** "more slow and lumbering compared to
+  Roy, but much more powerful": his hitboxes deal 1.5x Roy's damage
+  (generate_p4_fighter.py OWNER_DAMAGE_SCALES) and his attacks play at 0.75x
+  (OWNER_ANIM_RATES with OWNER_ANIM_RATE_STATUSES, p6h: "only the attack
+  animations (minus the dash and down b charge)"): the jabs, tilts, smashes,
+  aerials, Quick Draw, Aether, the counter and Eruption's release. The dash
+  attack, Eruption's charge (its begin and wait) and everything else --
+  movement, landings, getup and ledge attacks, throws -- play at 1.0x, and
+  his ground speeds are Roy's again (0.75x with the p6f rate). Eruption's
+  charge clips were authored for the 0.75 rate, so they now play 1.33x the
+  reference's speed.
 - **Counter:** Marth's window and return rule. SSB64's Appeal is ground-only,
   so the counter is too.
 

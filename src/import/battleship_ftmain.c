@@ -761,8 +761,9 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
         {
             nds_p4_status = ndsP4ReplaceStatus(nds_topology_fp, status_id);
             /* P7 B3: the content's animation rate (NDSP4Fighter anim_rate)
-             * on every status's speed, the motion script's clock with it. */
-            anim_speed = ndsP4ScaleAnimSpeed(fighter_gobj, anim_speed);
+             * on the speed of the statuses it names (the one entered), the
+             * motion script's clock with it. */
+            anim_speed = ndsP4ScaleAnimSpeed(fighter_gobj, nds_p4_status, anim_speed);
         }
     }
     battleship_ftMainSetStatus(fighter_gobj, nds_p4_status, frame_begin,

@@ -16,7 +16,8 @@
  * while its window is open.
  *
  * status_vars words: 0 Explosive Flame's distance (units), the warp's angle
- * (as f32 bits) or the counter's hit; 1 the warp's frames left.
+ * (as f32 bits) or the counter's hit; 1 the warp's frames left, or whether
+ * Explosive Flame's fire is made.
  */
 #include <nds/nds_p4.h>
 
@@ -80,7 +81,14 @@ extern uintptr_t llITCommonDataFFlowerFlameWeaponAttributes;
  * again, so a fighter caught in it is held there; at PAL_FLAME_BLAST_AT the
  * blast, 1.25x the card's 15% (18.75), for PAL_FLAME_BLAST_TICS. The cast to
  * the blast is 0.85x the first rounds' (twinkle 12 -> 10, blast 34 -> 29).
- * It is hidden: her fire is the effects. */
+ * It is hidden: her fire is the effects.
+ *
+ * Owner playtest 2026-10-14 (p6h): two fires a few tics apart. A ground/air
+ * switch mid-cast sets the twin status at the same frame, and the source
+ * fast-forwards its script there (ftMainSetStatus ->
+ * ftMainPlayAnimEventsForward), setting flag2 again: a cast makes one fire
+ * (status_vars word 1), and no fire is made while one of the fighter's own
+ * is younger than PAL_FLAME_COOLDOWN tics. */
 #define PAL_FLAME_NEAR 450.0F
 #define PAL_FLAME_MID 750.0F
 #define PAL_FLAME_FAR 1610.0F
@@ -98,6 +106,7 @@ extern uintptr_t llITCommonDataFFlowerFlameWeaponAttributes;
 #define PAL_FLAME_BLAST_ANGLE 361
 #define PAL_FLAME_BLAST_KNOCKBACK_SCALE 95
 #define PAL_FLAME_BLAST_KNOCKBACK_BASE 40
+#define PAL_FLAME_COOLDOWN 15
 /* In the air she nearly hangs while casting. */
 #define PAL_FLAME_AIR_FALL_MAX 12.0F
 
@@ -271,8 +280,29 @@ static WPDesc sNdsP4PalutenaFlameDesc = {
     ndsP4PalutenaFlameProcUpdate, NULL, NULL, NULL, NULL, NULL, NULL, NULL
 };
 
+/* Whether one of the fighter's own fires is younger than PAL_FLAME_COOLDOWN
+ * tics. */
+static sb32 ndsP4PalutenaFlameCooling(GObj *fighter_gobj)
+{
+    GObj *weapon_gobj;
+
+    for (weapon_gobj = gGCCommonLinks[nGCCommonLinkIDWeapon]; weapon_gobj != NULL;
+         weapon_gobj = weapon_gobj->link_next)
+    {
+        WPStruct *wp = wpGetStruct(weapon_gobj);
+
+        if ((wp != NULL) && (wp->kind == NDS_P4_WP_KIND_PALUTENA_FLAME) &&
+            (wp->owner_gobj == fighter_gobj) && (ndsP4PalutenaFlameVars(wp)->tic < PAL_FLAME_COOLDOWN))
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
 /* The twinkle `distance` ahead at the flame's height (TopN offsets: times
- * her size), and the fire there, its blast sounding `fgm`. */
+ * her size), and the fire there, its blast sounding `fgm`; none while the
+ * fighter's last is cooling. */
 static void ndsP4PalutenaFlameMakeWeapon(GObj *fighter_gobj, f32 distance, u32 fgm)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
@@ -280,6 +310,10 @@ static void ndsP4PalutenaFlameMakeWeapon(GObj *fighter_gobj, f32 distance, u32 f
     WPStruct *wp;
     Vec3f pos;
 
+    if (ndsP4PalutenaFlameCooling(fighter_gobj))
+    {
+        return;
+    }
     ndsP4PalutenaAhead(fighter_gobj, distance * fp->attr->size, PAL_FLAME_HEIGHT * fp->attr->size, &pos);
     efManagerSparkleWhiteScaleMakeEffect(&pos, 1.0F);
     weapon_gobj = wpManagerMakeWeapon(fighter_gobj, &sNdsP4PalutenaFlameDesc, &pos, WEAPON_FLAG_PARENT_FIGHTER);
@@ -328,6 +362,7 @@ static void ndsP4PalutenaFlameStart(GObj *fighter_gobj, s32 status_id)
 
     ndsP4PalutenaSetStatus(fighter_gobj, status_id);
     *ndsP4PalutenaVarF(fp, 0) = distance;
+    *ndsP4PalutenaVar(fp, 1) = 0;
 }
 
 /* ground_nsp. */
@@ -349,14 +384,20 @@ void ndsP4PalutenaFlameAirInitial(GObj *fighter_gobj)
 }
 
 /* The fire at the cast's distance when the twinkle shows (flag2, its value
- * the blast's sound). */
+ * the blast's sound), once a cast: a ground/air switch's replay of the
+ * script sets flag2 again. */
 void ndsP4PalutenaFlameMain(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
+    s32 *made = ndsP4PalutenaVar(fp, 1);
 
     if (fp->motion_vars.flags.flag2 != 0)
     {
-        ndsP4PalutenaFlameMakeWeapon(fighter_gobj, *ndsP4PalutenaVarF(fp, 0), fp->motion_vars.flags.flag2);
+        if (*made == 0)
+        {
+            *made = 1;
+            ndsP4PalutenaFlameMakeWeapon(fighter_gobj, *ndsP4PalutenaVarF(fp, 0), fp->motion_vars.flags.flag2);
+        }
         fp->motion_vars.flags.flag2 = 0;
     }
     if (fighter_gobj->anim_frame <= 0.0F)
@@ -776,8 +817,12 @@ static void ndsP4PalutenaGateProcUpdate(GObj *effect_gobj)
  * end of its half (PAL_PILLAR_COLUMN, TopN y; the script makes each at the
  * first), and a hitbox's test after its first frame sweeps from where it was
  * to where it is (gmCollisionTestRectangle's interpolated test), so each
- * covers its whole half, 400 wide. */
-#define PAL_PILLAR_AHEAD 260.0F
+ * covers its whole half, 400 wide.
+ *
+ * Owner p6h notes: 1.25x farther from her (260 -> 325; the script's
+ * hitboxes with it), 1.5x the knockback, and its whoosh no longer stored
+ * (ftMainPlayHitSFX stops a stored sound when a hit lands). */
+#define PAL_PILLAR_AHEAD 325.0F
 #define PAL_PILLAR_TOWARD_CAMERA 120.0F
 #define PAL_PILLAR_GROW 2
 #define PAL_PILLAR_FADE_AT 8

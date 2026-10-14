@@ -176,9 +176,11 @@ Her forward and down smash scripts show the wings (SetModelPartID joint 6),
 her up air the halo (joint 12); a status change resets the parts.
 
 **Pillar, taunt, entry, victory poses (2026-10-14).** The up smash's light
-pillar is one column of cyan light 260 units ahead of her on her floor, 1,875
-tall (1.5x her first; 1.25x before the p6d playtest), exactly vertical, and
-its hitboxes are the column (TopN z 260, frames 12-17): attacks 0 and 1, its
+pillar is one column of cyan light 325 units ahead of her on her floor
+(1.25x the first 260, owner p6h notes), 2,500 tall (2x her first, p6f; 1.5x
+after p6d, 1.25x before), exactly vertical, and its hitboxes are the column
+(TopN z 325, frames 12-17; their knockback 1.5x since p6h: scale 158/150,
+base 60, the same damage): attacks 0 and 1, its
 lower (16%) and upper (14%) halves, 400 wide, move every frame between their
 half's ends in her code (the hit test sweeps a hitbox from where it was to
 where it is), and attacks 2 and 3 at the halves' middles cover the first
@@ -196,7 +198,9 @@ out from the middle over two tics, holds them with a flicker and narrows
 them from tic 8 to 12 (the light burst). Cards light by an up normal, not
 their face's: a two-sided card's back face turned away from the light drew
 black (the pillar's first capture). No explosion effects, only the pillar
-(round 2). The down taunt (Appeal, `motions/appeal.ms`) keeps Peach's clip
+(round 2). Its whoosh is a plain sound (PlayFGM) since p6h: a stored one
+(PlayFGMStoreInfo) is stopped by the source when her hit lands
+(ftMainPlayHitSFX). The down taunt (Appeal, `motions/appeal.ms`) keeps Peach's clip
 for now and shows the halo with sparkles, her taunt voice and down-taunt
 sound. The entry (statuses 0xDC/0xDD, motions 195/196: `motions/entry.ms`,
 clip `art/p6/palutena/anims/entry.json`, Marth's entry on her tree, the
@@ -291,7 +295,12 @@ Defaults for the specials:
   34). The weapon takes the Fire Flower flame's attributes (the common item
   file) and is hidden: her fire is the effects. Kirby's copy makes the same
   weapon at his frame 12. The CPU's rows for it are measured from the
-  weapon's numbers (`coverage.py` "weapon").
+  weapon's numbers (`coverage.py` "weapon"). Owner playtest p6h: two fires
+  a few tics apart. A ground/air switch mid-cast sets the twin status at the
+  same frame and the source fast-forwards its script there, setting flag2
+  again; a cast now makes one fire (status_vars word 1, as Kirby's copy),
+  and no fire is made while one of the fighter's own is younger than 15
+  tics.
 - **Warp:** Meta Knight's Dimensional Cape structure (`nds_p4_metaknight.c`
   DSP): she vanishes, travels about 10 frames in the D-pad's direction (eight
   directions; neutral is up) invisible and intangible, stops at walls and

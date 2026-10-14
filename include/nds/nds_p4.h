@@ -639,6 +639,10 @@ typedef struct NDSP4Fighter
      * every speed ftMainSetStatus or Remix's frame speed multiplier sets on
      * its fighters takes this factor (1.0 for most). */
     const f32 *anim_rate;
+    /* The statuses anim_rate applies to, ascending (OWNER_ANIM_RATE_STATUSES);
+     * a count of 0: every status. */
+    const u16 *anim_rate_statuses;
+    const u16 *anim_rate_status_count;
     /* Its hitboxes' damage scale (generate_p4_fighter.py OWNER_DAMAGE_SCALES):
      * every hitbox its fighters' scripts make or re-damage, after staling
      * (1.0 for most). */
@@ -688,8 +692,9 @@ extern u8 gNdsP4PlayerContent[GMCOMMON_PLAYERS_MAX];
 
 const NDSP4Fighter *ndsP4Fighter(u32 content);
 /* `speed` times the fighter's content's animation rate (NDSP4Fighter
- * anim_rate): ftMainSetStatus's speed and Remix's frame speed multiplier. */
-f32 ndsP4ScaleAnimSpeed(GObj *fighter_gobj, f32 speed);
+ * anim_rate) when it applies to `status_id` (anim_rate_statuses):
+ * ftMainSetStatus's speed and Remix's frame speed multiplier. */
+f32 ndsP4ScaleAnimSpeed(GObj *fighter_gobj, s32 status_id, f32 speed);
 /* ftParamGetStaledDamage for a hitbox `fp` makes, times its content's damage
  * scale (NDSP4Fighter damage_scale): battleship_ftmain.c. */
 s32 ndsP4StaledDamage(const FTStruct *fp, s32 player, s32 damage, s32 attack_id,

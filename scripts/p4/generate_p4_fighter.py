@@ -684,9 +684,25 @@ SUBSET_FILES = {
 # motion script's clock with them, times this (NDSP4Fighter anim_rate).
 # Kirby's copies play Kirby's own animations and take none. Ike (owner,
 # 2026-10-14): "more slow and lumbering compared to Roy, but much more
-# powerful": 0.75x Roy's speed (his ground speeds with it, OWNER_ATTRIBUTE_
-# SCALES, so his feet do not slide) and 1.5x the power (OWNER_DAMAGE_SCALES).
+# powerful": 0.75x Roy's speed on his attacks (OWNER_ANIM_RATE_STATUSES) and
+# 1.5x the power (OWNER_DAMAGE_SCALES).
 OWNER_ANIM_RATES = {"sheik": 1.1, "ike": 0.75}
+# The statuses a content's animation rate applies to (NDSP4Fighter
+# anim_rate_statuses); a content not listed takes it on every status. Ike
+# (owner p6h notes, 2026-10-14: "only the attack animations (minus the dash
+# and down b charge). other ones should be 1.0x"): his jabs, tilts, smashes,
+# aerials, and specials -- Quick Draw, Aether, the counter, Eruption's
+# release -- not the dash attack nor Eruption's charge (its begin and wait;
+# Roy's down special rows), nor his landings, getup and ledge attacks,
+# throws, items or movement.
+OWNER_ANIM_RATE_STATUSES = {
+    "ike": sorted([0xBD]                             # Appeal: the counter (nds_p4_ike.c status_replace;
+                                                      # status_id keeps it, Remix's frame speed reads it)
+                  + [0xBE, 0xBF]                      # Attack11, Attack12
+                  + list(range(0xC1, 0xD6))           # the tilts .. AttackAirLw (0xC0 AttackDash not)
+                  + [0xF1, 0xF2, 0xF5, 0xF6]          # Eruption's ends (0xEF/0xF0, 0xF3/0xF4 its charge)
+                  + list(range(0xF9, 0x108))),        # Attack13, Quick Draw, Aether, the counter
+}
 # A content's hitboxes' damage, times this as each is made (after staling:
 # NDSP4Fighter damage_scale, battleship_ftmain.c ftParamGetStaledDamage).
 OWNER_DAMAGE_SCALES = {"ike": 1.5}
@@ -699,8 +715,6 @@ OWNER_ATTRIBUTE_SCALES = {
     # frame, docs/P7/P7_STATUS.md B2): his run slid 2.31x where Fox's and
     # Link's sit near 1.1x; 0.75x leaves 1.73x.
     "bowser": {"walk_speed_mul": 0.75, "dash_speed": 0.75, "run_speed": 0.75},
-    # Ike's ground speeds with his 0.75 animation rate (OWNER_ANIM_RATES).
-    "ike": {"walk_speed_mul": 0.75, "dash_speed": 0.75, "run_speed": 0.75},
 }
 # Model IA textures whose intensity the native owner must not draw. Meta
 # Knight's Mach Tornado (model 0x15EE lists at 0x97C0 and 0x9AA0, render mode
@@ -2671,8 +2685,12 @@ def main() -> int:
               f"const u16 g{ident}Event32MatAnims[2] = {{ {event32_matanims[0]}u, {event32_matanims[1]}u }};",
               "/* Its fighters' measured shared ledger entries (EVENT32_SHARED). */",
               f"const u16 g{ident}Event32Allowance = {event32_allowance};", "",
-              "/* Its animations' rate (OWNER_ANIM_RATES, P7 B3). */",
+              "/* Its animations' rate (OWNER_ANIM_RATES, P7 B3) and the statuses it",
+              " * applies to (OWNER_ANIM_RATE_STATUSES, ascending; none: every status). */",
               f"const f32 g{ident}AnimRate = {float(OWNER_ANIM_RATES.get(spec['name'], 1.0))!r}F;",
+              f"const u16 g{ident}AnimRateStatuses[] = {{ "
+              + ", ".join(f"{s:#x}" for s in (OWNER_ANIM_RATE_STATUSES.get(spec['name']) or [0xFFFF])) + " };",
+              f"const u16 g{ident}AnimRateStatusCount = {len(OWNER_ANIM_RATE_STATUSES.get(spec['name']) or [])};",
               "/* Its hitboxes' damage scale (OWNER_DAMAGE_SCALES). */",
               f"const f32 g{ident}DamageScale = {float(OWNER_DAMAGE_SCALES.get(spec['name'], 1.0))!r}F;", "",
               "/* FTFileSize: main closure, largest main-motion and menu-motion figatree. */",
