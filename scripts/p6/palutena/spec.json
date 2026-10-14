@@ -1,7 +1,7 @@
 {
  "schema": "p6-spec-v1",
  "content": "palutena",
- "comment": "Palutena's authored data over Peach's export (docs/P6/characters/palutena.md). Her look (main 0x1B00, model 0x1B03) is written by scripts/p6/model_writer.py from the owner's Blender model (scripts/p6/look_blend.py); the files are kit-derived build outputs under builds/p6-art/palutena/look (D10). Clips are built from art/p6/palutena/anims (anim.py --build) into builds/p6-art/palutena/anims; her specials' routines are in src/port/nds_p4_palutena.c.",
+ "comment": "Palutena's authored data over Peach's export (docs/P6/characters/palutena.md). Her look (main 0x1B00, model 0x1B03) is written by scripts/p6/model_writer.py from the owner's Blender model (scripts/p6/look_blend.py); the files are kit-derived build outputs under builds/p6-art/palutena/look (D10). Clips are built from art/p6/palutena/anims (anim.py --build) into builds/p6-art/palutena/anims; her specials' routines are in src/port/nds_p4_palutena.c. CPU rows (cpu): Peach's rows measured on her own moves by scripts/p6/coverage.py; Warp makes no hitbox and drops out.",
  "files": {
   "main": {
    "id": "0x1b00",
@@ -295,6 +295,14 @@
   },
   "str_winner_ptr": {
    "name": "PALUTENA"
+  }
+ },
+ "cpu": {
+  "drop": ["USPG", "USPA"],
+  "measure": {
+   "NSPG": {"motion": 219, "offsets_z": [600, 1000, 1400]},
+   "NSPA": {"motion": 220, "offsets_z": [600, 1000, 1400]},
+   "DASH_ATTACK": {"travel": "run"}
   }
  }
 }

@@ -181,6 +181,38 @@ Coverage rows from the clips and scripts (A12). Recovery: double jump, then
 Warp toward the ledge's direction. Post-process: Explosive Flame picks the
 distance nearest the target.
 
+Built 2026-10-14. Her spec's `cpu` takes Peach's attack rows (named from
+Remix's `Peach/AI/Attacks.asm`, in table order) and measures each on her own
+clips and scripts with `scripts/p6/coverage.py` (the first active frame, the
+box the hitbox spheres sweep while active, in world units): Explosive Flame
+over its three distances, the dash attack with its slide from run speed,
+the Warp rows dropped (no hitbox). The rows (first frame, x, y):
+
+| Row | Frame | x | y |
+|---|---|---|---|
+| Jab | 4 | 85..622 | 155..806 |
+| Down smash | 6 | -685..893 | -217..303 |
+| Grab | 6 | 119..403 | 199..483 |
+| Forward tilt | 7 | -22..714 | -4..573 |
+| Up tilt | 5 | -135..440 | 243..845 |
+| Down tilt | 6 | 236..727 | 49..320 |
+| Up smash | 12 | 82..458 | 265..1394 |
+| Forward smash | 15 | -138..618 | 36..904 |
+| Explosive Flame (ground and air) | 18 | 496..1874 | 164..594 |
+| Dash attack | 5 | 326..952 | -7..477 |
+| Neutral air | 5 | -243..646 | 178..825 |
+| Back air | 7 | -411..-59 | 207..536 |
+| Up air | 5 | -518..370 | 214..805 |
+| Forward air | 3 | -244..285 | 106..437 |
+| Down air | 7 | -264..116 | -69..322 |
+
+In her code a CPU's Explosive Flame takes the distance nearest its target
+ahead, and a CPU recovering warps toward its recovery target (the nearest of
+the eight directions). Lab (four CPU Palutenas, 60 s): every normal, smash,
+aerial, the grab, Explosive Flame (a target 322 ahead took the near
+distance, one 1,112 ahead the middle) and Warp toward the ledge while
+recovering; 0 native failures, 0 lean declines.
+
 ## Code (`src/port/nds_p4_palutena.c`)
 
 Explosive Flame statuses and its article (a P4 item kind, as Peach's turnip

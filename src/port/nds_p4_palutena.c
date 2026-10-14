@@ -27,6 +27,7 @@
 #endif
 
 #include <ef/effect.h>
+#include <ft/ftcomputer.h>
 #include <macros.h>
 #include <sys/audio.h>
 #include <sys/utils.h>
@@ -142,14 +143,32 @@ static void ndsP4PalutenaAhead(GObj *fighter_gobj, f32 forward, f32 up, Vec3f *o
 
 /* ---- Explosive Flame ---- */
 
+/* The cast's distance: the stick's (back near, neutral middle, forward
+ * far); a CPU's, the one nearest its target ahead (card "CPU": the TopN
+ * offsets reach that far times the fighter's size). */
+static f32 ndsP4PalutenaFlameDistance(FTStruct *fp)
+{
+    s32 stick = fp->input.pl.stick_range.x * fp->lr;
+
+    if (fp->pkind == nFTPlayerKindCom)
+    {
+        f32 ahead = (fp->computer.target_pos.x - fp->joints[nFTPartsJointTopN]->translate.vec.f.x) *
+                    (f32)fp->lr / fp->attr->size;
+
+        return (ahead < ((PAL_FLAME_NEAR + PAL_FLAME_MID) * 0.5F)) ? PAL_FLAME_NEAR :
+               (ahead < ((PAL_FLAME_MID + PAL_FLAME_FAR) * 0.5F)) ? PAL_FLAME_MID : PAL_FLAME_FAR;
+    }
+    return (stick >= PAL_FLAME_STICK) ? PAL_FLAME_FAR :
+           (stick <= -PAL_FLAME_STICK) ? PAL_FLAME_NEAR : PAL_FLAME_MID;
+}
+
 static void ndsP4PalutenaFlameStart(GObj *fighter_gobj, s32 status_id)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
-    s32 stick = fp->input.pl.stick_range.x * fp->lr;
+    f32 distance = ndsP4PalutenaFlameDistance(fp);
 
     ndsP4PalutenaSetStatus(fighter_gobj, status_id);
-    *ndsP4PalutenaVarF(fp, 0) = (stick >= PAL_FLAME_STICK) ? PAL_FLAME_FAR :
-                                (stick <= -PAL_FLAME_STICK) ? PAL_FLAME_NEAR : PAL_FLAME_MID;
+    *ndsP4PalutenaVarF(fp, 0) = distance;
 }
 
 /* ground_nsp. */
@@ -251,23 +270,29 @@ static void ndsP4PalutenaVanish(GObj *fighter_gobj)
 
 /* The start's end: the stick (in eight directions, neutral up) gives the
  * travel's angle; on the ground a level or downward stick travels along the
- * ground, anything else lifts her. */
+ * ground, anything else lifts her. A CPU recovering aims at its recovery
+ * target (ftComputer's, the ledge it makes for: card "CPU"). */
 static void ndsP4PalutenaWarpGo(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
-    s32 x = fp->input.pl.stick_range.x * fp->lr;
-    s32 y = fp->input.pl.stick_range.y;
+    f32 x = (f32)(fp->input.pl.stick_range.x * fp->lr);
+    f32 y = (f32)fp->input.pl.stick_range.y;
     f32 angle;
     s32 status_id;
 
-    if (((x * x) + (y * y)) < (PAL_WARP_STICK * PAL_WARP_STICK))
+    if ((fp->pkind == nFTPlayerKindCom) && (fp->computer.objective == nFTComputerObjectiveRecover))
+    {
+        x = (fp->computer.target_pos.x - fp->joints[nFTPartsJointTopN]->translate.vec.f.x) * (f32)fp->lr;
+        y = fp->computer.target_pos.y - fp->joints[nFTPartsJointTopN]->translate.vec.f.y;
+    }
+    if (((x * x) + (y * y)) < (f32)(PAL_WARP_STICK * PAL_WARP_STICK))
     {
         angle = F_CST_DTOR32(90.0F);
     }
     else
     {
         /* To the nearest of eight directions. */
-        angle = syUtilsArcTan2((f32)y, (f32)x);
+        angle = syUtilsArcTan2(y, x);
         angle = F_CST_DTOR32(45.0F) * (f32)(s32)((angle / F_CST_DTOR32(45.0F)) +
                                                  ((angle < 0.0F) ? -0.5F : 0.5F));
     }
@@ -579,11 +604,10 @@ static void ndsP4PalutenaKirbyHit(FTStruct *fp, f32 distance, s32 damage, f32 si
 static void ndsP4PalutenaKirbyNSPStart(GObj *fighter_gobj, s32 status_id)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
-    s32 stick = fp->input.pl.stick_range.x * fp->lr;
+    f32 distance = ndsP4PalutenaFlameDistance(fp);
 
     ndsP4PalutenaSetStatus(fighter_gobj, status_id);
-    *ndsP4PalutenaVarF(fp, 0) = (stick >= PAL_FLAME_STICK) ? PAL_FLAME_FAR :
-                                (stick <= -PAL_FLAME_STICK) ? PAL_FLAME_NEAR : PAL_FLAME_MID;
+    *ndsP4PalutenaVarF(fp, 0) = distance;
     *ndsP4PalutenaVar(fp, 1) = -1;
 }
 

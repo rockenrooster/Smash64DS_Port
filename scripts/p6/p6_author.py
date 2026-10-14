@@ -40,7 +40,7 @@ import p4_contents  # noqa: E402
 SPEC_IDENTITY = {"schema", "content", "comment"}
 SPEC_SCHEMA = "p6-spec-v1"
 # Spec keys this author applies.
-SPEC_APPLIED = {"files", "motions", "statuses", "attributes", "kind_tables"}
+SPEC_APPLIED = {"files", "motions", "statuses", "attributes", "kind_tables", "cpu"}
 # "files": the content's own main and model file (model_writer.py), by role:
 # the descriptor slot each replaces.
 FILE_ROLES = {"main": 0, "model": 3}
@@ -113,6 +113,7 @@ def author(base_export: Path, name: str, spec_path: Path | None, out: Path,
     author_attributes(resolved, spec.get("attributes") or {})
     own_main(resolved, name)
     author_kind_tables(resolved, spec.get("kind_tables") or {})
+    author_cpu(resolved, events, spec.get("cpu"), out, staging)
     (out / "events.json").write_text(json.dumps(events, indent=1) + "\n", encoding="utf-8", newline="\n")
     summary = base_export / "summary.txt"
     text = summary.read_text(encoding="utf-8") if summary.exists() else ""
@@ -484,6 +485,28 @@ def author_kind_tables(resolved: dict, rows: dict) -> None:
         row["value"] = new
         row["same_as_parent"] = new == row["parent_value"]
         resolved["authored"].setdefault("kind_tables", {})[name] = new
+
+
+def author_cpu(resolved: dict, events: dict, cpu: dict | None, out: Path, staging: Path | None) -> None:
+    """The spec's CPU attack rows (A12): the base's rows, named from its
+    Remix source (src/<Base>/AI/Attacks.asm), measured on the content's own
+    clips and scripts by coverage.py ("drop" a move with no hitbox, "keep"
+    the base's numbers, "measure" options), into authored.cpu_attacks for
+    the generator."""
+    if not cpu:
+        return
+    if staging is None:
+        raise AuthorError("spec cpu needs the staged ROM (--staging)")
+    import coverage
+    folder = next((d for d in (staging / "src").iterdir()
+                   if d.is_dir() and d.name.upper() == resolved["fighter"]), None)
+    asm = folder / "AI" / "Attacks.asm" if folder is not None else None
+    if asm is None or not asm.exists():
+        raise AuthorError(f"spec cpu: no AI/Attacks.asm for {resolved['fighter']} under {staging / 'src'}")
+    fighter = coverage.load(staging, out, resolved, events)
+    rows, names = coverage.cpu_rows(fighter, asm.read_text(encoding="utf-8", errors="replace"), cpu)
+    resolved["authored"]["cpu_attacks"] = rows
+    resolved["authored"]["cpu_names"] = names
 
 
 def main() -> int:

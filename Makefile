@@ -7996,6 +7996,7 @@ $$(PROJECT_ROOT)/builds/p6-art/$(1)/anims/%.o2r: $$(PROJECT_ROOT)/art/p6/$(1)/an
 $$(NDS_P4_EXPORT)/$(1)/resolved.json: $$(NDS_P4_EXPORT)/$(5)/resolved.json \
 		$$(NDS_P4_STAGING)/ssb64asm.z64 \
 		$$(PROJECT_ROOT)/scripts/p6/p6_author.py $$(PROJECT_ROOT)/scripts/p6/mscript.py \
+		$$(PROJECT_ROOT)/scripts/p6/coverage.py $$(PROJECT_ROOT)/scripts/p6/anim.py \
 		$$(wildcard $$(PROJECT_ROOT)/scripts/p6/$(1)/spec.json) \
 		$$(PROJECT_ROOT)/scripts/p6/p6_audio.py $$(wildcard $$(PROJECT_ROOT)/scripts/p6/$(1)/audio.json) \
 		$$(wildcard $$(PROJECT_ROOT)/scripts/p6/$(1)/motions/*.ms) \

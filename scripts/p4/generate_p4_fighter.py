@@ -2356,6 +2356,11 @@ def main() -> int:
             ends += row[0] == -1
             if len(computer_attacks) > 64:
                 raise GenError("ai_behaviour: no second END within 64 rows")
+    # A P6 authored content's own rows (p6_author.py "cpu": the base's rows
+    # measured on its own moves by scripts/p6/coverage.py).
+    if (resolved.get("authored") or {}).get("cpu_attacks"):
+        computer_attacks = [(int(r[0]), int(r[1]), int(r[2]), float(r[3]), float(r[4]), float(r[5]),
+                             float(r[6])) for r in resolved["authored"]["cpu_attacks"]]
     long_range = int(tables["ai_long_range"]["value"], 16)
     # Character.nsp_shoot_custom_move (AI.asm LONG_RANGE custom_move): the
     # input the projectile users' walk and shoot issues in place of the
