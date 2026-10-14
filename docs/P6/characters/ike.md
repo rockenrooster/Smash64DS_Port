@@ -73,6 +73,28 @@ Roy; Brawl gives the motion and the intent only.
 | Entry | Roy's | Roy's | Roy's | — |
 | Results | Roy's three victory poses and clap | Roy's | — | — |
 
+How the new clips are made (I3, 2026-10-13; recipes in `art/p6/ike/anims/`,
+scripts in `scripts/p6/ike/motions/`, rows in `scripts/p6/ike/spec.json`):
+
+- Jab 1: Captain's jab retargeted onto Roy's tree; hitboxes on the left
+  forearm and upper arm.
+- Jab 2: Captain's forward-tilt kick retargeted, at 0.65 of its length (a
+  grounded straight kick; Mario's jab-3 kick leaves the ground).
+- Jab 3: Marth's second jab, a rising slash, as an appended motion (224) and
+  status (249, Captain's Attack13 routines) that `jab_3_action` names: Roy's
+  status table has his entry where Captain's Attack13 is (motion 195, status
+  220). Captain's jab chain timers (`attack1_followup_frames` 22 in Ike's main
+  file, `jab_3_timer` Captain's 24).
+- Dash attack: Marth's dash attack (a lunge with a rising swing) at 1.15
+  times its length; Roy's three hitboxes at 1.2 times his damage, sent up (80).
+- Up smash: Marth's up tilt (an arc from in front over his head to behind)
+  at 1.4 times its length; Roy's final hit at 1.1 (14 and 13), his launch.
+- Forward tilt and forward smash: Roy's scripts edited (`script_edits`): the
+  tilt at 0.85 speed and 1.25 times the damage; the smash at 1.2 times the
+  damage, his fire hitboxes slash and his fire hit sounds dropped.
+- Ike's up tilt stays Roy's (an overhead arc), so jab 3 and the up smash come
+  from other clips.
+
 Defaults for the new specials:
 
 - **Quick Draw:** hold B to charge for up to 60 frames; on release he dashes

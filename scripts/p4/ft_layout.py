@@ -24,6 +24,7 @@ FIELDS = {
         "shield_anim_joints", "translate_scales", "damage_coll_descs",
         "gravity", "shade_color", "fog_color",
         "jump_height_mul", "jump_height_base", "jumpaerial_height",
+        "attack1_followup_frames",
     ),
     "FTCommonPart": ("dobjdesc", "p_mobjsubs", "p_costume_matanim_joints", "flags"),
     "FTModelPart": ("dl", "mobjsubs", "costume_matanim_joints", "main_matanim_joints", "flags"),

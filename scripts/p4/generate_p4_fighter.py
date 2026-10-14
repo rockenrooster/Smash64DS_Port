@@ -772,6 +772,9 @@ RAPID_COUNTS = {"Fox": (4, "nFTCommonStatusAttack12"), "Link": (5, "nFTCommonSta
                 "Captain": (6, "nFTCaptainStatusAttack13")}
 RAPID_KINDS = ("Fox", "Link", "Kirby", "Purin", "Captain")
 JAB3_TIMER_END = 0x8014EBA4   # ftCommonAttack12SetStatus past its switch
+# Kind tables a P6 authored content may give a value of its own (p6_author.py
+# {"status": N}) instead of a Remix routine's address.
+AUTHORED_KIND_TABLES = {"jab_3_action"}
 JAB3_ACTION_END = 0x8014EC30  # ftCommonAttack13SetStatus past its switch
 
 
@@ -931,7 +934,12 @@ def jab_rows(rom: R.Rom, sym: dict, tables: dict) -> str:
 
     value, kinds = rows("jab_3_action")
     kind = kinds.get(value)
-    if kind == "Fox":
+    own = tables["jab_3_action"].get("authored")
+    if own is not None:
+        # A P6 authored content's own status (p6_author.py: an appended
+        # Attack13 where the base's status table has none).
+        jab3_status = f"{int(own['status']):#x}"
+    elif kind == "Fox":
         jab3_status = "0"
     elif kind in JAB3_ACTIONS:
         jab3_status = JAB3_ACTIONS[kind]
@@ -1026,9 +1034,10 @@ def fighter_spec(resolved: dict) -> dict:
     deviations, articles): an authored content's export starts as its base's,
     so it takes the base's rows until its spec changes what they describe.
     `synth_index` places its synthesized files: an authored content whose
-    motions are its base's shares the base's (A7 gives one with its own
-    motions files of its own), so the two contents' main files, which name
-    the synthesized motion file, stay one file."""
+    motion scripts are its base's shares the base's, so the two contents'
+    main files, which name the synthesized motion file, stay one file; one
+    with its own scripts (an authored RAM window) synthesizes its own under
+    its own id, and p6_author.py gives it its own main file to name it."""
     import p4_contents  # noqa: E402
 
     parent = resolved["parent"]
@@ -1044,9 +1053,10 @@ def fighter_spec(resolved: dict) -> dict:
             raise GenError(f"{resolved['fighter']}: not in scripts/p4/contents.json")
         row = rows[0]
     source = p4_contents.source_row(row, registry)
+    own_scripts = "ram" in (resolved.get("authored") or {})
     spec = {"name": row["name"], "title": row["title"], "kind_index": row["id"] - 1,
             "key": source["name"], "base": row.get("base"), "base_title": source["title"],
-            "synth_index": source["id"] - 1}
+            "synth_index": (row if own_scripts else source)["id"] - 1}
     spec.update(parent_storage(parent))
     if spec["particle"] is None:
         raise GenError(f"parent {parent} has no particle bank global")
@@ -1212,6 +1222,24 @@ def scale_o2r_attributes(blob: bytes, o_attributes: int, scales: dict[str, float
         at = body + o_attributes + layout[f"FTAttributes.{field}"]
         value = struct.unpack_from(">f", out, at)[0]
         struct.pack_into(">f", out, at, value * k)
+    return bytes(out)
+
+
+def set_o2r_attributes(blob: bytes, o_attributes: int, values: dict[str, float]) -> bytes:
+    """An O2R main file with FTAttributes floats set: a P6 authored content's
+    "attributes" (p6_author.py; Ike's jab follow-up window, Captain's 22
+    frames where Roy has none)."""
+    import ft_layout  # noqa: E402
+
+    layout = ft_layout.layout()
+    ext_n = struct.unpack_from("<I", blob, 0x48)[0]
+    body = 0x4C + 2 * ext_n + 4
+    out = bytearray(blob)
+    for field, value in values.items():
+        key = f"FTAttributes.{field}"
+        if key not in layout:
+            raise GenError(f"attribute {field!r}: not in ft_layout.FIELDS")
+        struct.pack_into(">f", out, body + o_attributes + layout[key], float(value))
     return bytes(out)
 
 
@@ -1821,17 +1849,28 @@ def main() -> int:
     # and model under new ids) come from its export, every other file from
     # the image.
     # Its authored clips (p6_author.py "motions") are such files too, and its
-    # authored motion scripts read from their own RAM window.
+    # authored motion scripts read from their own RAM window. Its "copies"
+    # are the base's files under its own ids (a main naming its own motion
+    # file).
     authored = resolved.get("authored") or {}
     authored_files = authored.get("files") or {}
     authored_ids = [new for _old, new in authored_files.values()] + list(authored.get("anims", {}).values())
     authored_ram = authored.get("ram")
-    if authored_ids or authored_ram:
+    copies = authored.get("copies") or {}
+    if authored_ids or authored_ram or copies:
         ram = ({authored_ram["base"]: (args.export / authored_ram["file"]).read_bytes()}
                if authored_ram else None)
-        rom = R.OverlayRom(rom, {new: (args.export / "o2r" / f"{new:04x}").read_bytes()
-                                 for new in authored_ids}, ram)
+        blobs = {new: (args.export / "o2r" / f"{new:04x}").read_bytes() for new in authored_ids}
+        for old, new in copies.values():
+            blob = bytearray(rom.o2r(old))
+            struct.pack_into("<I", blob, 0x40, new)
+            blobs[new] = bytes(blob)
+        rom = R.OverlayRom(rom, blobs, ram)
     name, title = spec["name"], spec["title"]
+    for table, row in resolved["kind_tables"].items():
+        if "authored" in row and table not in AUTHORED_KIND_TABLES:
+            raise GenError(f"kind table {table}: an authored value is read only for "
+                           f"{sorted(AUTHORED_KIND_TABLES)}")
     # The per-content tables' rows: the base's for an authored content (P6).
     key = spec["key"]
     desc = resolved["descriptor"]
@@ -1964,6 +2003,8 @@ def main() -> int:
         # The main file's references into the parent motion file resolve to the
         # same offsets in the synthesized copy, so the parent file never loads.
         blob = retarget_o2r_externs(blob, {parent_motion: synth_id})
+        if fid == file_ids[0] and authored.get("attributes"):
+            blob = set_o2r_attributes(blob, desc["o_attributes"], authored["attributes"])
         if fid == file_ids[0] and key in OWNER_ATTRIBUTE_SCALES:
             blob = scale_o2r_attributes(blob, desc["o_attributes"], OWNER_ATTRIBUTE_SCALES[key])
             deviations.append({"file_id": fid, "class": "owner",

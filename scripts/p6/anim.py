@@ -402,6 +402,31 @@ def world_frames(clip: Clip, skel: Skeleton, first_slot: int = 0, frames=None) -
     return out
 
 
+def retime(clip: Clip, factor: float) -> Clip:
+    """The clip played `factor` times as long (0.5: twice as fast): every
+    track resampled at the new frames by linear interpolation of its
+    per-frame values; leads and loop frames scale with it."""
+    out = Clip(clip.slots)
+    for slot, st in clip.streams.items():
+        length = max(1, round(st.length * factor)) if st.length else 0
+        loop = None if st.loop is None else round(st.loop * factor)
+        new = Stream(length, loop, loop_skips_steps=st.loop_skips_steps)
+        for track, t in st.tracks.items():
+            lead = round(t.lead * factor)
+            vals = []
+            for g in range(lead, length + 1):
+                x = min(g / factor if factor else 0.0, st.length) - t.lead
+                x = max(0.0, min(x, len(t.values) - 1))
+                i = int(x)
+                frac = x - i
+                a = float(t.values[i])
+                b = float(t.values[min(i + 1, len(t.values) - 1)])
+                vals.append(a + (b - a) * frac)
+            new.tracks[track] = Track(vals, lead, t.step)
+        out.streams[slot] = new
+    return out
+
+
 def _ancestors(skel: Skeleton, row: int) -> list:
     out = []
     while skel.parents[row] >= 0:
@@ -417,13 +442,24 @@ ROLES = {
     ("captain", "roy"): {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 8, 8: 9, 9: 10, 10: 11,
                          11: 12, 12: 13, 13: 14, 15: 21, 16: 22, 17: 23, 18: 24, 19: 25,
                          20: 26, 21: 27, 22: 28, 23: 29, 24: 30},
+    # Mario's tree: the arms 3-6 and 9-12 (13 his held item), the neck 7 and
+    # head 8, the legs 14-18 and 19-23 (14 and 19 the hip frames).
+    ("mario", "roy"): {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 8, 8: 9, 9: 10, 10: 11, 11: 12,
+                       12: 13, 13: 14, 14: 21, 15: 22, 16: 23, 17: 24, 18: 25, 19: 26, 20: 27,
+                       21: 28, 22: 29, 23: 30},
+    # Link's tree: the left arm 3-7 (7 the shield), the right arm 8-11 with
+    # his sword on 15, the neck 18 and head 19, the legs 21-25 and 26-30.
+    ("link", "roy"): {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 10, 9: 11, 10: 12, 11: 13,
+                      15: 14, 18: 8, 19: 9, 21: 21, 22: 22, 23: 23, 24: 24, 25: 25, 26: 26, 27: 27,
+                      28: 28, 29: 29, 30: 30},
 }
 
 
 # Skeletons by name: (main file, model file, FTAttributes offset) in the
 # staged reference ROM (resolved.json descriptors; Captain is Roy's setup
 # parent, so Roy's parent_descriptor names him).
-SKELETONS = {"captain": (236, 332, 1160), "roy": (0x142A, 0x142B, 1236)}
+SKELETONS = {"captain": (236, 332, 1160), "roy": (0x142A, 0x142B, 1236),
+             "mario": (0xCB, 0x128, 1064), "link": (0xE1, 0x144, 0x708)}
 
 
 def skeleton(rom, name: str, detail: str = "high") -> Skeleton:
@@ -436,8 +472,9 @@ def skeleton(rom, name: str, detail: str = "high") -> Skeleton:
 def build(recipe: dict, rom) -> bytes:
     """A clip from its recipe (art/p6/<name>/anims/*.json): a source clip
     (file id in the reference ROM), optionally retargeted ("retarget":
-    {"from", "to", "height_scale"}); the O2R container keeps the source's
-    header (p6_author.py gives it its own id)."""
+    {"from", "to", "height_scale"}) and retimed ("retime": the length
+    factor); the O2R container keeps the source's header (p6_author.py
+    gives it its own id)."""
     blob = rom.o2r(int(str(recipe["source"]), 0))
     clip = decode(blob)
     rt = recipe.get("retarget")
@@ -445,6 +482,8 @@ def build(recipe: dict, rom) -> bytes:
         src, dst = skeleton(rom, rt["from"]), skeleton(rom, rt["to"])
         clip = retarget(clip, src, dst, ROLES[(rt["from"], rt["to"])],
                         dst_slots=len(dst.parents) - 1, height_scale=float(rt.get("height_scale", 1.0)))
+    if "retime" in recipe:
+        clip = retime(clip, float(recipe["retime"]))
     return encode(clip, blob, int(recipe.get("eps", ANIM_EPS)))
 
 

@@ -1,0 +1,9 @@
+{
+ "comment": "Ike's jab 2 (Attack12, card: new, a kick): Captain's forward-tilt kick retargeted onto Roy's tree, played at 0.65 of its length so it lands as a jab follow-up.",
+ "source": "0x65c",
+ "retarget": {
+  "from": "captain",
+  "to": "roy"
+ },
+ "retime": 0.65
+}

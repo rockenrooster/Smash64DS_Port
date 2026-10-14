@@ -40,7 +40,7 @@ import p4_contents  # noqa: E402
 SPEC_IDENTITY = {"schema", "content", "comment"}
 SPEC_SCHEMA = "p6-spec-v1"
 # Spec keys this author applies.
-SPEC_APPLIED = {"files", "motions"}
+SPEC_APPLIED = {"files", "motions", "statuses", "attributes", "kind_tables"}
 # "files": the content's own main and model file (model_writer.py), by role:
 # the descriptor slot each replaces.
 FILE_ROLES = {"main": 0, "model": 3}
@@ -49,6 +49,7 @@ FILE_ROLES = {"main": 0, "model": 3}
 P6_FILE_WINDOW = range(0x1A00, 0x1C00)
 CONTENT_WINDOW = {"ike": 0x1A00, "palutena": 0x1B00}
 ANIM_FIRST = 0x20
+NO_SCRIPT = 0x80000000          # a motion row with no script
 # Pointer commands' edges in events.json (remix_export.py's kinds).
 EDGE_KIND = {"Goto": "goto", "Subroutine": "call", "SetParallelScript": "parallel",
              "SetDamageThrown": "damage-thrown"}
@@ -77,7 +78,8 @@ def load_spec(path: Path | None, name: str) -> tuple[dict, str | None]:
     return spec, sha256(path)
 
 
-def author(base_export: Path, name: str, spec_path: Path | None, out: Path) -> dict:
+def author(base_export: Path, name: str, spec_path: Path | None, out: Path,
+           staging: Path | None = None) -> dict:
     registry = p4_contents.load_registry()
     row = p4_contents.row_of(name, registry)
     if "base" not in row:
@@ -101,7 +103,15 @@ def author(base_export: Path, name: str, spec_path: Path | None, out: Path) -> d
     out.mkdir(parents=True, exist_ok=True)
     substitute_files(resolved, spec.get("files") or {}, out)
     events = json.loads((base_export / "events.json").read_text(encoding="utf-8"))
-    author_motions(resolved, events, spec.get("motions") or {}, name, out)
+    rom = None
+    if staging is not None:
+        import remix_rom
+        rom = remix_rom.Rom(staging / "ssb64asm.z64")
+    author_motions(resolved, events, spec.get("motions") or {}, name, out, rom)
+    author_statuses(resolved, spec.get("statuses") or {})
+    author_attributes(resolved, spec.get("attributes") or {})
+    own_main(resolved, name)
+    author_kind_tables(resolved, spec.get("kind_tables") or {})
     (out / "events.json").write_text(json.dumps(events, indent=1) + "\n", encoding="utf-8", newline="\n")
     summary = base_export / "summary.txt"
     text = summary.read_text(encoding="utf-8") if summary.exists() else ""
@@ -160,22 +170,97 @@ def substitute_files(resolved: dict, files: dict, out: Path) -> None:
     resolved["file_closure"] = closure
 
 
-def author_motions(resolved: dict, events: dict, motions: dict, name: str, out: Path) -> None:
-    """The spec's motions (index -> {"anim", "anim_flags", "script"}):
+def assemble_block(lines: list[str], ram: bytearray, events: dict, label: str,
+                   referrer: str) -> tuple[int, str]:
+    """Script text (mscript.py, one command a line) assembled at the end of
+    the authored RAM window (remix_rom.AUTHORED_RAM) and listed in
+    events.json as a block the generator copies like Remix's own; pointer
+    targets name Remix blocks (ram:/file:) or NULL. Its address and key."""
+    import mscript
+    from remix_rom import AUTHORED_RAM
+    start = AUTHORED_RAM + len(ram)
+    block_key = f"ram:{start:#010x}"
+    cmds, edges, exit_ = [], [], None
+    for line in lines:
+        words, pointers = mscript.assemble(line)
+        at = AUTHORED_RAM + len(ram)
+        op = line.split()[0]
+        rec = {"at": f"ram:{at:#010x}", "op": op, "words": [words[0]]}
+        for target in pointers.values():
+            if target == "NULL":
+                rec["to"] = None
+                rec["null"] = True
+            else:
+                rec["to"] = target
+                if op in EDGE_KIND:
+                    edges.append({"kind": EDGE_KIND[op], "to": target})
+        cmds.append(rec)
+        ram += b"".join(struct.pack(">I", w) for w in words)
+        if op in ("End", "Return", "Goto"):
+            exit_ = op.lower()
+            break
+    if exit_ is None:
+        raise AuthorError(f"{label}: the script does not end (End, Return or Goto)")
+    events["blocks"][block_key] = {"start": block_key, "label": label, "referrers": [referrer],
+                                   "commands": cmds, "exit": exit_, "edges": edges}
+    return start, block_key
+
+
+def edited_script(rom, events: dict, row: dict, edits: dict, index: int) -> list[str]:
+    """The base's own script for a motion as text, edited (A5, a reused move):
+    "damage_scale" multiplies every MakeAttackColl's damage (rounded, at
+    least 1), "element" maps elements ({"1": 3}: fire to slash), "drop" lists
+    command names to leave out, "frame_speed" puts a RemixFrameSpeedMultiplier
+    first (flag 0: animation and script clock together). The command words
+    come from the staged ROM; a script with pointer commands is refused."""
+    import mscript
+    if rom is None:
+        raise AuthorError(f"spec motions {index}: script_edits need the staged ROM (--staging)")
+    unknown = set(edits) - {"damage_scale", "element", "drop", "frame_speed", "comment"}
+    if unknown:
+        raise AuthorError(f"spec motions {index}: unknown script_edits {sorted(unknown)}")
+    root = row.get("script_root")
+    if row.get("script") in (None, 0, NO_SCRIPT) or root not in events["blocks"]:
+        raise AuthorError(f"spec motions {index}: script_edits on a motion with no script of its own")
+    block = events["blocks"][root]
+    if block.get("edges") or any(c.get("to") for c in block["commands"]):
+        raise AuthorError(f"spec motions {index}: script_edits on a script with pointer commands")
+    out = []
+    if "frame_speed" in edits:
+        bits = struct.unpack(">I", struct.pack(">f", float(edits["frame_speed"])))[0]
+        out.append(f"RemixFrameSpeedMultiplier value={(bits + 0x8000) >> 16}")
+    scale = float(edits.get("damage_scale", 1.0))
+    element = {int(str(k), 0): int(v) for k, v in (edits.get("element") or {}).items()}
+    drop = set(edits.get("drop") or ())
+    for text in mscript.block_commands(rom, events, root):
+        op, fields = mscript.parse(text)
+        if op in drop:
+            continue
+        if op == "MakeAttackColl":
+            fields["damage"] = max(1, int(fields["damage"] * scale + 0.5))
+            fields["element"] = element.get(fields["element"], fields["element"])
+            text = op + " " + " ".join(f"{k}={v}" for k, v in fields.items())
+        out.append(text)
+    return out
+
+
+def author_motions(resolved: dict, events: dict, motions: dict, name: str, out: Path,
+                   rom=None) -> None:
+    """The spec's motions (index -> {"anim", "anim_flags", "script",
+    "script_edits"}); the index one past the base's last appends a motion
+    (Ike's jab 3: the base's own row for it is another move):
     - "anim": a built clip (an O2R container under builds/, anim.py), copied
       into <out>/o2r under the next id of the content's window and added to
       the file closure;
     - "script": a committed motion script (mscript.py text, one command a
       line, "#" comments), assembled into the authored RAM window
-      (remix_rom.AUTHORED_RAM, <out>/authored_ram.bin) and listed in
-      events.json as a block the generator copies like Remix's own; pointer
-      targets name Remix blocks (ram:/file:) or NULL.
+      (<out>/authored_ram.bin, assemble_block);
+    - "script_edits": the base's own script with edits (edited_script),
+      assembled the same way.
     The motion row takes the new clip and script; the generator reads both
     through OverlayRom."""
     if not motions:
         return
-    import mscript
-    from remix_rom import AUTHORED_RAM
     if name not in CONTENT_WINDOW:
         raise AuthorError(f"{name}: no P6 file window")
     window = CONTENT_WINDOW[name]
@@ -184,14 +269,23 @@ def author_motions(resolved: dict, events: dict, motions: dict, name: str, out: 
     rows = {m["index"]: m for m in resolved["motions"]}
     authored = resolved["authored"]
     ram = bytearray()
+    replaced = set()
     next_id = window + ANIM_FIRST
     for key in sorted(motions, key=lambda k: int(k, 0)):
         entry = motions[key]
         index = int(key, 0)
         row = rows.get(index)
         if row is None:
-            raise AuthorError(f"spec motions: no motion {index} in the base")
-        unknown = set(entry) - {"anim", "anim_flags", "script", "comment"}
+            if index != len(resolved["motions"]):
+                raise AuthorError(f"spec motions: no motion {index} in the base "
+                                  f"(the next new one is {len(resolved['motions'])})")
+            row = {"index": index, "anim_file_id": 0, "script": NO_SCRIPT, "anim_flags": 0,
+                   "inherited": {"anim_file_id": False, "script": False, "anim_flags": False},
+                   "script_root": None}
+            resolved["motions"].append(row)
+            rows[index] = row
+            authored.setdefault("motions_appended", []).append(index)
+        unknown = set(entry) - {"anim", "anim_flags", "script", "script_edits", "comment"}
         if unknown:
             raise AuthorError(f"spec motions {index}: unknown keys {sorted(unknown)}")
         if "anim" in entry:
@@ -210,6 +304,7 @@ def author_motions(resolved: dict, events: dict, motions: dict, name: str, out: 
             n = struct.unpack_from("<I", blob, 0x48)[0]
             size = struct.unpack_from("<I", blob, 0x4C + 2 * n)[0]
             resolved["file_closure"].append({"file_id": fid, "vanilla_id": False, "bytes": size, "externs": []})
+            replaced.add(row["anim_file_id"])
             row["anim_file_id"] = fid
             row["inherited"]["anim_file_id"] = False
             authored.setdefault("anims", {})[str(index)] = fid
@@ -217,44 +312,132 @@ def author_motions(resolved: dict, events: dict, motions: dict, name: str, out: 
         if "anim_flags" in entry:
             row["anim_flags"] = int(str(entry["anim_flags"]), 0)
             row["inherited"]["anim_flags"] = False
+        if "script" in entry and "script_edits" in entry:
+            raise AuthorError(f"spec motions {index}: a script or script_edits, not both")
+        lines = None
         if "script" in entry:
             src = REPO / entry["script"]
             lines = [ln.split("#", 1)[0].strip() for ln in src.read_text(encoding="utf-8").splitlines()]
             lines = [ln for ln in lines if ln]
-            start = AUTHORED_RAM + len(ram)
-            block_key = f"ram:{start:#010x}"
-            cmds, edges, exit_ = [], [], None
-            for line in lines:
-                words, pointers = mscript.assemble(line)
-                at = AUTHORED_RAM + len(ram)
-                op = line.split()[0]
-                rec = {"at": f"ram:{at:#010x}", "op": op, "words": [words[0]]}
-                for target in pointers.values():
-                    if target == "NULL":
-                        rec["to"] = None
-                        rec["null"] = True
-                    else:
-                        rec["to"] = target
-                        if op in EDGE_KIND:
-                            edges.append({"kind": EDGE_KIND[op], "to": target})
-                cmds.append(rec)
-                ram += b"".join(struct.pack(">I", w) for w in words)
-                if op in ("End", "Return", "Goto"):
-                    exit_ = op.lower()
-                    break
-            if exit_ is None:
-                raise AuthorError(f"spec motions {index}: {src} does not end (End, Return or Goto)")
-            events["blocks"][block_key] = {"start": block_key, "label": f"{name}.motion{index:#x}",
-                                           "referrers": [f"motion:{index:#x}"], "commands": cmds,
-                                           "exit": exit_, "edges": edges}
+            authored.setdefault("scripts_sha256", {})[str(index)] = sha256(src)
+        elif "script_edits" in entry:
+            lines = edited_script(rom, events, row, entry["script_edits"], index)
+            authored.setdefault("script_edits", {})[str(index)] = entry["script_edits"]
+        if lines is not None:
+            start, block_key = assemble_block(lines, ram, events, f"{name}.motion{index:#x}",
+                                              f"motion:{index:#x}")
             row["script"] = start
             row["inherited"]["script"] = False
             row["script_root"] = block_key
-            authored.setdefault("scripts_sha256", {})[str(index)] = sha256(src)
+    # A clip the content no longer plays leaves its closure: shipped unused,
+    # the generator would not compact it, and a base sharing it ships the
+    # compacted bytes under the same id.
+    used = {m["anim_file_id"] for m in resolved["motions"] + resolved["menu_motions"]}
+    dropped = sorted(old for old in replaced if old not in used)
+    if dropped:
+        resolved["file_closure"] = [r for r in resolved["file_closure"] if r["file_id"] not in dropped]
+        authored["anims_dropped"] = dropped
     if ram:
+        from remix_rom import AUTHORED_RAM
         (out / "authored_ram.bin").write_bytes(bytes(ram))
         authored["ram"] = {"base": AUTHORED_RAM, "file": "authored_ram.bin", "bytes": len(ram),
                            "sha256": hashlib.sha256(bytes(ram)).hexdigest()}
+
+
+def author_statuses(resolved: dict, statuses: dict) -> None:
+    """The spec's statuses (id -> {"motion", "attack_id", "sflags", "procs",
+    "name"}): the id one past the base's last appends a special status that
+    the content's rows name (Ike's jab 3, from jab_3_action). "procs" are the
+    four routines (update, interrupt, physics, map) by name, decomp
+    functions or DS ports the generator knows, or null."""
+    if not statuses:
+        return
+    table = resolved["statuses"]
+    motions = {m["index"] for m in resolved["motions"]}
+    slots = ("proc_update", "proc_interrupt", "proc_physics", "proc_map")
+    for key in sorted(statuses, key=lambda k: int(k, 0)):
+        entry = statuses[key]
+        sid = int(key, 0)
+        following = max(s["status_id"] for s in table) + 1
+        if sid != following:
+            raise AuthorError(f"spec statuses: {sid} is not the next status ({following}); "
+                              "a base status keeps its row")
+        unknown = set(entry) - {"motion", "attack_id", "sflags", "procs", "name", "comment"}
+        if unknown:
+            raise AuthorError(f"spec statuses {sid}: unknown keys {sorted(unknown)}")
+        motion = int(entry["motion"])
+        if motion not in motions:
+            raise AuthorError(f"spec statuses {sid}: no motion {motion}")
+        procs = entry["procs"]
+        if len(procs) != len(slots):
+            raise AuthorError(f"spec statuses {sid}: procs lists {len(slots)} routines")
+        row = {"motion_id": motion, "attack_id": int(entry.get("attack_id", 0)),
+               "sflags": int(entry.get("sflags", 0)), "status_id": sid, "name": entry.get("name"),
+               "inherited": {k: False for k in ("motion_id", "attack_id", "sflags") + slots},
+               "parent_procs": None}
+        for slot, routine in zip(slots, procs):
+            # The generator names a routine by its name; 0 is NULL.
+            row[slot] = 1 if routine else 0
+            if routine:
+                row[slot + "_name"] = routine
+        table.append(row)
+        resolved["authored"].setdefault("statuses_appended", []).append(sid)
+
+
+def author_attributes(resolved: dict, attributes: dict) -> None:
+    """The spec's FTAttributes values (field -> float): the generator sets
+    them in the content's main file (Ike: Captain's jab follow-up window)."""
+    if attributes:
+        resolved["authored"]["attributes"] = {k: float(v) for k, v in sorted(attributes.items())}
+
+
+def own_main(resolved: dict, name: str) -> None:
+    """An authored content with its own motion scripts gets its own
+    synthesized motion file (generate_p4_fighter.fighter_spec), and the
+    main file names the motion file; its attributes are the main file's
+    too. A main still the base's is then shipped as a copy under the
+    content's main id (the window's first), its bytes the base's until the
+    generator points it at the content's motion file and sets its
+    attributes (authored "copies": role -> [base id, own id])."""
+    if "ram" not in resolved["authored"] and "attributes" not in resolved["authored"]:
+        return
+    desc = resolved["descriptor"]
+    old = desc["file_ids"][FILE_ROLES["main"]]
+    if old in P6_FILE_WINDOW:
+        return
+    new = CONTENT_WINDOW[name] + FILE_ROLES["main"]
+    closure = []
+    for row in resolved["file_closure"]:
+        if row["file_id"] == old:
+            row = dict(row, file_id=new, vanilla_id=False)
+        elif old in row.get("externs", ()):
+            raise AuthorError(f"file {row['file_id']:#x} names the base's main; it would need its own copy")
+        closure.append(row)
+    resolved["file_closure"] = closure
+    desc["file_ids"][FILE_ROLES["main"]] = new
+    resolved["authored"].setdefault("copies", {})["main"] = [old, new]
+
+
+def author_kind_tables(resolved: dict, rows: dict) -> None:
+    """The spec's kind-table rows (name -> "parent", or a value): Remix's
+    per-kind tables the generator turns into the content's rows. "parent"
+    takes the setup parent's entry (Ike: Captain's jab chain where Roy cuts
+    his after jab 1)."""
+    tables = resolved["kind_tables"]
+    for name, value in sorted(rows.items()):
+        if name not in tables:
+            raise AuthorError(f"spec kind_tables: no table {name!r} in the base")
+        row = tables[name]
+        if isinstance(value, dict):
+            # An authored value the generator reads in place of the row's
+            # code ({"status": N}: jab_3_action naming an appended status).
+            row["authored"] = value
+            resolved["authored"].setdefault("kind_tables", {})[name] = value
+            continue
+        new = row["parent_value"] if value == "parent" else str(value)
+        row["value"] = new
+        row["same_as_parent"] = new == row["parent_value"]
+        resolved["authored"].setdefault("kind_tables", {})[name] = new
 
 
 def main() -> int:
@@ -264,9 +447,11 @@ def main() -> int:
     ap.add_argument("--content", required=True, help="the authored content's registry name")
     ap.add_argument("--spec", type=Path, help="its spec (default scripts/p6/<name>/spec.json)")
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument("--staging", type=Path,
+                    help="the P4 staging directory (ssb64asm.z64): script_edits read the base's words")
     args = ap.parse_args()
     spec = args.spec if args.spec is not None else HERE / args.content / "spec.json"
-    done = author(args.base_export, args.content, spec, args.out)
+    done = author(args.base_export, args.content, spec, args.out, args.staging)
     print(f"p6 author: {done['content']} from {done['base']}, spec "
           f"{'none' if done['spec'] is None else done['spec'][:12]} -> {args.out}")
     return 0

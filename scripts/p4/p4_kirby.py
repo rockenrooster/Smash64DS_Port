@@ -59,7 +59,7 @@ LUIGI_TO_MARIO_COPY_STATUS = {0xE9: 0xE7, 0xEA: 0xE8}
 VANILLA_MOTION_COUNT = 276        # dFTKirbyData.mainmotion_array_count
 KIRBY_MOTION_FILE = 0xE4
 # The script file: above every content's synthesized motion file
-# (SYNTH_FILE_BASE + (content id - 1) * 0x10, 0x1700-0x182F for 19 ids).
+# (SYNTH_FILE_BASE + (content id - 1) * 0x10, 0x1700-0x183F for 20 ids).
 SCRIPT_FILE_ID = 0x1900
 FLAG_SUBMOTION_SCRIPT = 0x10
 FLAG_ANIMJOINT = 0x8
