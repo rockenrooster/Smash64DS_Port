@@ -174,6 +174,47 @@ CUSTOM_POWERS = {
                 "tails": (((-14, 106, -126), (10, 108, -128), (-28, 22, -180), (-52, 30, -174)),
                           ((-6, 108, -128), (18, 106, -126), (52, 28, -176), (28, 20, -182)))},
     },
+    "palutena": {
+        # P6 A11 (docs/P6/characters/palutena.md "Kirby"): Explosive Flame on
+        # Kirby's own PK Fire motions and scripts (the cast's PSI sound, his
+        # call and flash; their flag at frame 20 starts her explosion at the
+        # distance the stick picked, src/port/nds_p4_palutena.c). Not a
+        # projectile, as hers is not.
+        "statuses": (
+            ("PALUTENA_NSP_Ground", "nFTKirbyMotionCopyNessSpecialN", "nFTMotionAttackIDSpecialNCopyNess",
+             "nFTStatusAttackIDSpecialNCopyNess", 0, 0,
+             ("ndsP4PalutenaKirbyNSPUpdate", "NULL", "ftPhysicsApplyGroundVelFriction",
+              "ndsP4PalutenaKirbyNSPGroundMap")),
+            ("PALUTENA_NSP_Air", "nFTKirbyMotionCopyNessSpecialAirN", "nFTMotionAttackIDSpecialNCopyNess",
+             "nFTStatusAttackIDSpecialNCopyNess", 1, 0,
+             ("ndsP4PalutenaKirbyNSPUpdate", "NULL", "ndsP4PalutenaFlameAirPhysics",
+              "ndsP4PalutenaKirbyNSPAirMap")),
+        ),
+        "starters": ("ndsP4PalutenaKirbyNSPGroundInitial", "ndsP4PalutenaKirbyNSPAirInitial"),
+        # Her green hair and circlet (Kirby's body: y -126..171, radius about
+        # 150 about y 22; his eyes' tops at about y 99): her head's (joint 8)
+        # hair, its second textured span (her lists' materials are inline),
+        # over the top of his head; under its front edge a gold ring, her
+        # staff's band (joint 14's first span: rows 4-10 of 64, its 16
+        # columns wrapping, three times round; her own circlet is painted on
+        # her face, too dark at 16 colours); and down his back a sheet of her
+        # hair panels' texture (joint 2's third span: columns 5-27 across,
+        # rows 1-62 down), a third of the way round behind him, off his body
+        # and hanging. scripts/p6/hat_preview.py renders it on him.
+        "hat": {"kind": "spans", "joint": 8, "detail": 1, "spans": (1,),
+                "scale": (4.8, 3.6, 4.4), "offset": (0, -38, 14),
+                "bands": (
+                    {"joint": 14, "span": 0, "rows": ((122, 119, 4.0), (106, 131, 10.0)), "segments": 12,
+                     "texels_around": 48},
+                    {"joint": 2, "span": 2, "segments": 8, "texels_around": 22, "texel_start": 5.0,
+                     "start_angle": 120.0, "arc": 120.0,
+                     "rows": ((150, 92, 1.0), (110, 136, 12.0), (60, 158, 26.0), (0, 161, 40.0),
+                              (-60, 152, 52.0), (-100, 142, 62.0))},
+                )},
+        # Her script's sounds (scripts/p6/palutena/audio.json cues) for the
+        # code's bursts and blast: NDS_P4_KIRBY_PALUTENA_FGM_<key>.
+        "cues": {"BURST": "se_special_n01", "BLAST": "se_special_n02"},
+    },
 }
 # A custom power's hat id: no Remix image (hat_count 0), the plain head
 # (hat_base 0) beneath; its hat, when it has one, is a joint-6 sidecar
@@ -222,6 +263,18 @@ class _EmptyBase:
 
 def c_ident(name: str) -> str:
     return re.sub(r"[^A-Za-z0-9_]", "_", name).upper()
+
+
+def content_rom(rom: R.Rom, export: Path) -> R.Rom:
+    """The image with a P6 authored content's own files over it (its written
+    main and model, p6_author.py "files"), as generate_p4_fighter.py reads
+    them: its hat comes from its own model."""
+    resolved = json.loads((export / "resolved.json").read_text(encoding="utf-8"))
+    files = (resolved.get("authored") or {}).get("files") or {}
+    if not files:
+        return rom
+    return R.OverlayRom(rom, {new: (export / "o2r" / f"{new:04x}").read_bytes()
+                              for _old, new in files.values()})
 
 
 def power_weapons(hats_asm: str) -> dict[int, int]:
@@ -281,8 +334,10 @@ def main() -> int:
 
     registry = {row["name"]: row for row in p4_contents.load_registry()}
     # An authored content (P6) holds its base's power (A11 gives Ike his
-    # tint and hat): the base's statuses, once for both, under its own row.
-    power_key = {c: p4_contents.table_key(c) for c in args.contents.split()}
+    # tint and hat): the base's statuses, once for both, under its own row;
+    # or a custom power of its own (Palutena's Explosive Flame).
+    power_key = {c: (c if c in CUSTOM_POWERS else p4_contents.table_key(c))
+                 for c in args.contents.split()}
     contents = [c for c in args.contents.split() if power_key[c] in POWER_PREFIX]
     # A content without a power must be one its source will not let Kirby
     # copy (the port's catch gives Kirby's own id for it: ndsP4KirbyCatch).
@@ -586,8 +641,8 @@ def main() -> int:
             if CUSTOM_POWERS[power_key[c]].get("tornado") is not None:
                 lists.append(("kirby_tornado", KIRBY_TORNADO_JOINT, CUSTOM_POWERS[power_key[c]]["tornado"]))
             blob, list_offsets = p4_kirby_custom_hats.build_lists(
-                rom, p4_contents.export_facts(args.export_root, c), [s for _, _, s in lists],
-                hat_file)
+                content_rom(rom, args.export_root / c), p4_contents.export_facts(args.export_root, c),
+                [s for _, _, s in lists], hat_file)
             (o2r_out / f"{hat_file:04x}").write_bytes(blob)
             shipped[hat_file] = hashlib.sha256(blob).hexdigest()
             rows_out = [{"article": article, "file_id": hat_file, "storage": None, "via": 0,
@@ -648,6 +703,16 @@ def main() -> int:
         if CUSTOM_POWERS[power_key[c]].get("silhouette"):
             header.append(f"#define NDS_P4_KIRBY_SILHOUETTE_CONTENT {registry[c]['id']}u"
                           f" /* {c}: Kirby drawn black */")
+    for c in custom:
+        cues = CUSTOM_POWERS[power_key[c]].get("cues") or {}
+        if cues:
+            sys.path.insert(0, str(HERE.parent / "p6"))
+            import p6_audio  # noqa: E402
+            ids = p6_audio.cue_ids(c)
+            for key, cue in cues.items():
+                if cue not in ids:
+                    raise KirbyError(f"{c}: no cue {cue!r} (scripts/p6/{c}/audio.json)")
+                header.append(f"#define NDS_P4_KIRBY_{c_ident(c)}_FGM_{key} {ids[cue]:#x} /* {cue} */")
     for r in specials:
         header.append(f"#define NDS_P4_KIRBY_STATUS_{c_ident(r['name'])} {r['status']:#x}"
                       + (f" /* Remix {r['remix']:#x} */" if r['remix'] is not None else " /* custom */"))

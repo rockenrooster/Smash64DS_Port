@@ -12,10 +12,18 @@ powers' weapons ride joint 17. Two kinds:
            replaced by the commands its MObj writes for costume 0
            (gcDrawMObjForDObj: the palette image; with the alpha flag also
            the TLUT load and the sprite image), and the vertices are scaled
-           and moved onto Kirby's head.
+           and moved onto Kirby's head. A list whose materials are inline
+           (a P6 authored model, scripts/p6/model_writer.py) names its spans
+           by order instead ("spans": the textured spans' ordinals). Optional
+           "bands" (each the keys of the kind below; "span" for its material,
+           "joint" for another joint's list) follow in the same list:
+           Palutena's circlet under her hair and her hair down Kirby's back.
   "band"   a ring around Kirby's head between two heights, with tails at the
            back, generated, drawn with the material of one of the content's
-           spans (the band takes texel rows of its texture).
+           spans (the band takes texel rows of its texture). With "rows"
+           ((y, radius, texel row) from the top) it has more than two rows,
+           and with "arc" (degrees from "start_angle") it goes only part of
+           the way round.
   "part"   a model part of the content (FTModelPartDesc: joint, part,
            detail) whole, its own inline material: Meta Knight's Mach
            Tornado, drawn around Kirby while he spins (BUGS.md 2026-10-12).
@@ -187,15 +195,19 @@ def _blocks(cmds):
     return blocks
 
 
-def _keep_spans(files, model, cmds, mobjs, keep, stop_at_vertices=False):
-    """The list's commands with only the named materials' spans: the texture
-    state and geometry of the others dropped (their other state kept), every
-    kept material call inlined. Pending images are sized by the load that
-    reads them. With stop_at_vertices, the commands up to the first kept
-    span's first vertex load."""
+def _keep_spans(files, model, cmds, mobjs, keep, stop_at_vertices=False, spans=None):
+    """The list's commands with only the named materials' spans (or, with
+    `spans`, the textured spans of those ordinals): the texture state and
+    geometry of the others dropped (their other state kept), every kept
+    material call inlined. Pending images are sized by the load that reads
+    them. With stop_at_vertices, the commands up to the first kept span's
+    first vertex load."""
     out = []
+    ordinal = -1
     for mat, block in _blocks(cmds):
-        keep_now = mat in keep
+        if any(op == OP_VTX for _pc, op, _w0, _w1 in block):
+            ordinal += 1
+        keep_now = (mat in keep) if spans is None else (ordinal in spans)
         for pc, op, w0, w1 in block:
             if op == OP_DL:
                 if keep_now:
@@ -254,30 +266,47 @@ def _unit(v):
 
 
 def _band_geometry(spec: dict):
-    """The ring's and tails' vertices (packed) and triangles (index lists)."""
+    """The band's vertex loads: (packed vertices, triangles as index lists),
+    one per pair of rows (the vertex cache holds two rows of up to 15
+    segments), then the tails. The ring starts at `start_angle` degrees from
+    the front (0) and its texels at column `texel_start`."""
     seg = spec["segments"]
-    (y0, y1), (r0, r1) = spec["y"], spec["radius"]
-    (t0, t1), width = spec["texel_rows"], spec["texels_around"]
-    slope = (r0 - r1) / float(y1 - y0)
-    ring = []
-    for row, (y, r, t) in enumerate(((y1, r1, t0), (y0, r0, t1))):
-        for c in range(seg + 1):
-            a = 2.0 * math.pi * c / seg
-            ring.append(_vertex(r * math.sin(a), y, r * math.cos(a), width * c / seg, t,
-                                _unit((math.sin(a), slope, math.cos(a)))))
-    tris = []
-    for c in range(seg):
-        top, bot = c, seg + 1 + c
-        tris.append((top, bot, bot + 1))
-        tris.append((top, bot + 1, top + 1))
+    if "rows" in spec:
+        rows = [tuple(r) for r in spec["rows"]]
+    else:
+        (y0, y1), (r0, r1), (t0, t1) = spec["y"], spec["radius"], spec["texel_rows"]
+        rows = [(y1, r1, t0), (y0, r0, t1)]
+    width = spec["texels_around"]
+    s0, a0 = spec.get("texel_start", 0.0), math.radians(spec.get("start_angle", 0.0))
+    arc = math.radians(spec.get("arc", 360.0))
+    if 2 * (seg + 1) > 32:
+        raise HatError(f"band of {seg} segments: two rows pass the vertex cache")
+    groups = []
+    for k in range(len(rows) - 1):
+        (ya, ra, ta), (yb, rb, tb) = rows[k], rows[k + 1]
+        slope = (rb - ra) / float(ya - yb)
+        ring = []
+        for y, r, t in ((ya, ra, ta), (yb, rb, tb)):
+            for c in range(seg + 1):
+                a = a0 + arc * c / seg
+                ring.append(_vertex(r * math.sin(a), y, r * math.cos(a), s0 + width * c / seg, t,
+                                    _unit((math.sin(a), slope, math.cos(a)))))
+        tris = []
+        for c in range(seg):
+            top, bot = c, seg + 1 + c
+            tris.append((top, bot, bot + 1))
+            tris.append((top, bot + 1, top + 1))
+        groups.append((ring, tris))
+    t_top, t_bottom = rows[0][2], rows[-1][2]
     tails, tail_tris = [], []
     for quad in spec.get("tails", ()):
         base = len(tails)
         n = _unit((0.0, 0.3, -1.0))
-        for corner, (s, t) in zip(quad, ((0.0, t0), (8.0, t0), (8.0, t1), (0.0, t1))):
+        for corner, (s, t) in zip(quad, ((0.0, t_top), (8.0, t_top), (8.0, t_bottom), (0.0, t_bottom))):
             tails.append(_vertex(corner[0], corner[1], corner[2], s, t, n))
         tail_tris += [(base, base + 3, base + 2), (base, base + 2, base + 1)]
-    return [ring, tails], [tris, tail_tris]
+    groups.append((tails, tail_tris))
+    return groups
 
 
 def _list_commands(files: _Files, facts: dict, spec: dict, index: int) -> list:
@@ -289,25 +318,45 @@ def _list_commands(files: _Files, facts: dict, spec: dict, index: int) -> list:
     else:
         dl, mobjs = _joint_list(files, facts, spec["joint"], spec["detail"])
     cmds = _source_commands(files.data[model], dl)
-    generated = []
-    if spec["kind"] in ("spans", "part"):
-        keep = set(spec["materials"]) if spec["kind"] == "spans" else {None}
-        out = _keep_spans(files, model, cmds, mobjs, keep)
-    elif spec["kind"] == "band":
-        out = _keep_spans(files, model, cmds, mobjs, {spec["material"]}, stop_at_vertices=True)
+    loads = [0]
+
+    def band(band_spec: dict) -> list:
+        """The band's material state (its span's, in its joint's list), the
+        culling off, and its generated vertices and triangles."""
+        b_cmds, b_mobjs = cmds, mobjs
+        if band_spec.get("joint", spec["joint"]) != spec["joint"]:
+            b_dl, b_mobjs = _joint_list(files, facts, band_spec["joint"], spec["detail"])
+            b_cmds = _source_commands(files.data[model], b_dl)
+        out = _keep_spans(files, model, b_cmds, b_mobjs, {band_spec.get("material")},
+                          stop_at_vertices=True,
+                          spans={band_spec["span"]} if "span" in band_spec else None)
         out.append(CLEAR_CULL)
-        for verts, tris in zip(*_band_geometry(spec)):
+        for verts, tris in _band_geometry(band_spec):
             if not verts:
                 continue
             n = len(verts)
-            generated.append(((0x01 << 24) | (n << 12) | ((n * 2) & 0xFF),
-                              ("gen", index, len(generated), b"".join(verts))))
-            generated += [((0x05 << 24) | (a * 2 << 16) | (b * 2 << 8) | (c * 2), 0)
-                          for a, b, c in tris]
+            out.append(((0x01 << 24) | (n << 12) | ((n * 2) & 0xFF),
+                        ("gen", index, loads[0], b"".join(verts))))
+            loads[0] += 1
+            out.extend(((0x05 << 24) | (a * 2 << 16) | (b * 2 << 8) | (c * 2), 0)
+                       for a, b, c in tris)
+        return out
+
+    if spec["kind"] in ("spans", "part"):
+        if spec["kind"] == "part":
+            out = _keep_spans(files, model, cmds, mobjs, {None})
+        elif "spans" in spec:
+            out = _keep_spans(files, model, cmds, mobjs, set(), spans=set(spec["spans"]))
+        else:
+            out = _keep_spans(files, model, cmds, mobjs, set(spec["materials"]))
+        for band_spec in spec.get("bands", ()):
+            out += band(band_spec)
+    elif spec["kind"] == "band":
+        out = band(spec)
     else:
         raise HatError(f"hat kind {spec['kind']}")
     commands = []
-    for w0, w1 in out + generated:
+    for w0, w1 in out:
         if isinstance(w1, tuple) and w1[0] == "pending":
             raise HatError(f"image {w1[1]:#x} has no load")
         if (w0 >> 24) == 0xFC and "combine" in spec:

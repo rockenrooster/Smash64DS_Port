@@ -154,6 +154,27 @@ A custom power: Explosive Flame on Kirby's own PK Fire clips
 (`FTKirbyAnimPKFireGround/Air`), the same article and D-pad distances. Hat:
 green hair and tiara.
 
+Built 2026-10-14 (A11). `scripts/p4/p4_kirby.py` CUSTOM_POWERS["palutena"]:
+two statuses on Kirby's PK Fire motions and scripts (his cast, his call, the
+flag at frame 20), her code in `nds_p4_palutena.c` (`#if NDS_P2_KIRBY`): the
+stick at the cast picks the distance, and at the flag her script's three 1%
+bursts and the 15% blast come out on TopN at that distance and her height,
+timed as `motions/flame.ms` times them, with her flame effects and her two
+explosion sounds (`NDS_P4_KIRBY_PALUTENA_FGM_*`, from `audio.json`). Ground
+and air switch at the same frame keeping the hitbox. The hat is one list in
+file 0x1944 (`p4_kirby_custom_hats.py`): her head's hair span over the top
+of his head, a gold ring under its front edge (her staff's band texture: her
+own circlet is painted on her face and turns brown at 16 colours), and a
+sheet of her hair panels' texture down his back, a third of the way round
+behind him. `scripts/p6/hat_preview.py` renders it on Kirby from four sides
+(local review image).
+
+Lab check (four-CPU lab ROM, Kirby in port 0 tapping B against three CPU
+Palutenas, `p6kirbypal.ps1`): he copies her (copy 20) and casts Explosive
+Flame on the ground and in the air: bursts 1% at frames 21, 25 and 31, the
+blast 15% (staled to 12-13 when repeated) at 37, fire, on TopN 1,000 ahead
+and 320 up; his hair draws in battle; 0 native failures, 0 lean declines.
+
 ## CPU
 
 Coverage rows from the clips and scripts (A12). Recovery: double jump, then
@@ -181,7 +202,8 @@ effects need no code: her scripts show and hide them.
       Palutena in one match: Peach still floats, Palutena never does.
 - [ ] Both throws against every victim kind.
 - [ ] Kirby copies her (explosion and hat) and Peach (Peach's power) in the
-      same match.
+      same match. (Her copy lab-checked 2026-10-14; Peach's in the same match
+      still to witness.)
 
 ## Closure record
 

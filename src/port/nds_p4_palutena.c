@@ -28,7 +28,11 @@
 
 #include <ef/effect.h>
 #include <macros.h>
+#include <sys/audio.h>
 #include <sys/utils.h>
+#if NDS_P2_KIRBY
+#include "kirby/nds_p4_kirby.generated.h"
+#endif
 
 /* scripts/p6/palutena/spec.json "statuses"; a ground status's air twin is
  * the next id. */
@@ -505,5 +509,190 @@ static s32 ndsP4PalutenaUpdateDamage(FTStruct *fp, s32 damage)
 const NDSP4Overrides gNdsP4PalutenaOverrides = {
     .update_damage = ndsP4PalutenaUpdateDamage,
 };
+
+#if NDS_P2_KIRBY
+/* ---- Kirby's copy (A11; card "Kirby") ----
+ *
+ * Explosive Flame on Kirby's own PK Fire motions and scripts
+ * (scripts/p4/p4_kirby.py CUSTOM_POWERS; 228_KirbyMainMotion.c
+ * PKFireGround/Air: the cast's PSI sound, his call and psionic flash, and at
+ * frame 20 the flag Ness's copy fires PK Fire on). At that flag her
+ * explosion starts at the distance the stick picked at the cast, at her
+ * height, timed as her script times it (scripts/p6/palutena/motions/
+ * flame.ms): three 1% bursts two tics each, five apart, and the 15% blast
+ * six tics after the third, three tics long. Kirby's script has no
+ * hitboxes: these are made here as its MakeAttackColl would make hers, with
+ * her sounds (p4_kirby.py "cues").
+ *
+ * status_vars words: 0 the distance (as f32 bits), 1 the tics since the
+ * flag (-1 before it). */
+#define PAL_KIRBY_BURST_EVERY 5
+#define PAL_KIRBY_BURSTS 3
+#define PAL_KIRBY_BURST_TICS 2
+#define PAL_KIRBY_BLAST_AT 16
+#define PAL_KIRBY_BLAST_TICS 3
+/* Kirby's PK Fire switches between ground and air keeping his face, hurt
+ * state, effects and colour (FTKIRBY_COPYNESS_SPECIALN_STATUS_FLAGS), and
+ * here the explosion's hitbox too. */
+#define PAL_KIRBY_PRESERVE_SWITCH (FTSTATUS_PRESERVE_TEXTUREPART | FTSTATUS_PRESERVE_HITSTATUS | \
+                                   FTSTATUS_PRESERVE_EFFECT | FTSTATUS_PRESERVE_COLANIM | \
+                                   FTSTATUS_PRESERVE_HIT)
+
+/* Her script's MakeAttackColl on attack 0 (motions/flame.ms): fire on TopN
+ * at the distance and her height, hitting ground and air. */
+static void ndsP4PalutenaKirbyHit(FTStruct *fp, f32 distance, s32 damage, f32 size, s32 angle,
+                                  s32 knockback_scale, s32 knockback_weight, s32 knockback_base,
+                                  u32 fgm_level)
+{
+    FTAttackColl *attack_coll = &fp->attack_colls[0];
+
+    attack_coll->group_id = 0;
+    attack_coll->attack_state = nGMAttackStateNew;
+    fp->is_attack_active = TRUE;
+    ftParamClearAttackRecordID(fp, 0);
+    attack_coll->joint_id = nFTPartsJointTopN;
+    attack_coll->joint = fp->joints[nFTPartsJointTopN];
+    attack_coll->damage = damage;
+    attack_coll->can_rebound = FALSE;
+    attack_coll->element = nGMHitElementFire;
+    attack_coll->size = size * 0.5F;
+    attack_coll->offset.x = 0.0F;
+    attack_coll->offset.y = PAL_FLAME_HEIGHT;
+    attack_coll->offset.z = distance;
+    attack_coll->angle = angle;
+    attack_coll->knockback_scale = knockback_scale;
+    attack_coll->knockback_weight = knockback_weight;
+    attack_coll->is_hit_air = TRUE;
+    attack_coll->is_hit_ground = TRUE;
+    attack_coll->shield_damage = 0;
+    attack_coll->fgm_level = fgm_level;
+    attack_coll->fgm_kind = 1;  /* fire */
+    attack_coll->knockback_base = knockback_base;
+    attack_coll->is_scale_pos = FALSE;
+    attack_coll->motion_attack_id = fp->motion_attack_id;
+    attack_coll->motion_count = fp->motion_count;
+    attack_coll->damage = ftParamGetStaledDamage(fp->player, attack_coll->damage,
+                                                 attack_coll->motion_attack_id,
+                                                 attack_coll->motion_count);
+}
+
+static void ndsP4PalutenaKirbyNSPStart(GObj *fighter_gobj, s32 status_id)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    s32 stick = fp->input.pl.stick_range.x * fp->lr;
+
+    ndsP4PalutenaSetStatus(fighter_gobj, status_id);
+    *ndsP4PalutenaVarF(fp, 0) = (stick >= PAL_FLAME_STICK) ? PAL_FLAME_FAR :
+                                (stick <= -PAL_FLAME_STICK) ? PAL_FLAME_NEAR : PAL_FLAME_MID;
+    *ndsP4PalutenaVar(fp, 1) = -1;
+}
+
+void ndsP4PalutenaKirbyNSPGroundInitial(GObj *fighter_gobj)
+{
+    ndsP4PalutenaKirbyNSPStart(fighter_gobj, NDS_P4_KIRBY_STATUS_PALUTENA_NSP_GROUND);
+}
+
+/* The fall slowed, as hers. */
+void ndsP4PalutenaKirbyNSPAirInitial(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if (fp->physics.vel_air.y < 0.0F)
+    {
+        fp->physics.vel_air.y *= 0.25F;
+    }
+    ndsP4PalutenaKirbyNSPStart(fighter_gobj, NDS_P4_KIRBY_STATUS_PALUTENA_NSP_AIR);
+}
+
+void ndsP4PalutenaKirbyNSPUpdate(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    f32 distance = *ndsP4PalutenaVarF(fp, 0);
+    s32 *tic = ndsP4PalutenaVar(fp, 1);
+    Vec3f pos;
+
+    if ((fp->motion_vars.flags.flag0 != 0) && (*tic < 0))
+    {
+        *tic = 0;
+    }
+    fp->motion_vars.flags.flag0 = 0;
+    if (*tic >= 0)
+    {
+        s32 t = *tic;
+
+        if ((t < (PAL_KIRBY_BURST_EVERY * PAL_KIRBY_BURSTS)) && ((t % PAL_KIRBY_BURST_EVERY) == 0))
+        {
+            if (t == 0)
+            {
+                func_800269C0_275C0(NDS_P4_KIRBY_PALUTENA_FGM_BURST);
+            }
+            ndsP4PalutenaKirbyHit(fp, distance, 1, 320.0F, 90, 0, 30, 0, 0);
+            ndsP4PalutenaAhead(fighter_gobj, distance, PAL_FLAME_HEIGHT, &pos);
+            efManagerFlameRandomMakeEffect(&pos);
+            efManagerSparkleWhiteMultiMakeEffect(&pos);
+        }
+        else if (t == PAL_KIRBY_BLAST_AT)
+        {
+            func_800269C0_275C0(NDS_P4_KIRBY_PALUTENA_FGM_BLAST);
+            ndsP4PalutenaKirbyHit(fp, distance, 15, 430.0F, 361, 95, 0, 40, 2);
+            ndsP4PalutenaAhead(fighter_gobj, distance, PAL_FLAME_HEIGHT, &pos);
+            efManagerSparkleWhiteMultiExplodeMakeEffect(&pos);
+            efManagerFlashLargeMakeEffect(&pos);
+        }
+        else if (((t < (PAL_KIRBY_BURST_EVERY * PAL_KIRBY_BURSTS)) &&
+                  ((t % PAL_KIRBY_BURST_EVERY) == PAL_KIRBY_BURST_TICS)) ||
+                 (t == (PAL_KIRBY_BLAST_AT + PAL_KIRBY_BLAST_TICS)))
+        {
+            ftParamClearAttackCollAll(fighter_gobj);
+        }
+        if (t <= (PAL_KIRBY_BLAST_AT + PAL_KIRBY_BLAST_TICS))
+        {
+            *tic = t + 1;
+        }
+    }
+    if (fp->ga == nMPKineticsGround)
+    {
+        ftAnimEndSetWait(fighter_gobj);
+    }
+    else ftAnimEndSetFall(fighter_gobj);
+}
+
+/* The twin at the same frame, muted (Kirby's script must not replay its
+ * cast's sounds). */
+static void ndsP4PalutenaKirbyNSPSwitch(GObj *fighter_gobj, s32 status_id)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    ub32 is_muted = fp->is_muted;
+
+    fp->is_muted = TRUE;
+    ftMainSetStatus(fighter_gobj, status_id, fighter_gobj->anim_frame, 1.0F, PAL_KIRBY_PRESERVE_SWITCH);
+    fp->is_muted = is_muted;
+}
+
+static void ndsP4PalutenaKirbyNSPToAir(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    mpCommonSetFighterAir(fp);
+    ndsP4PalutenaKirbyNSPSwitch(fighter_gobj, NDS_P4_KIRBY_STATUS_PALUTENA_NSP_AIR);
+    ftPhysicsClampAirVelXMax(fp);
+}
+
+static void ndsP4PalutenaKirbyNSPToGround(GObj *fighter_gobj)
+{
+    mpCommonSetFighterGround(ftGetStruct(fighter_gobj));
+    ndsP4PalutenaKirbyNSPSwitch(fighter_gobj, NDS_P4_KIRBY_STATUS_PALUTENA_NSP_GROUND);
+}
+
+void ndsP4PalutenaKirbyNSPGroundMap(GObj *fighter_gobj)
+{
+    mpCommonProcFighterOnFloor(fighter_gobj, ndsP4PalutenaKirbyNSPToAir);
+}
+
+void ndsP4PalutenaKirbyNSPAirMap(GObj *fighter_gobj)
+{
+    mpCommonProcFighterLanding(fighter_gobj, ndsP4PalutenaKirbyNSPToGround);
+}
+#endif /* NDS_P2_KIRBY */
 
 #endif /* NDS_P4_CODE_PALUTENA */
