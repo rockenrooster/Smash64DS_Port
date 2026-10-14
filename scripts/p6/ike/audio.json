@@ -1,7 +1,7 @@
 {
  "schema": "p6-audio-v1",
  "content": "ike",
- "comment": "Ike's sound cues (docs/P6/characters/ike.md, Audio; plan D5-D8): Ultimate's Radiant Dawn voice set (vc_ike_c01) and effects (se_ike), the narrator's name call and the crowd cheer, from the owner's local folder (ignored, never tracked). The map sends each FGM id his scripts, attributes and kind tables play (Roy's voices, the vanilla sword swings) to a cue; his own scripts name cues as cue:<name>.",
+ "comment": "Ike's sound cues (docs/P6/characters/ike.md, Audio; plan D5-D8): Ultimate's Radiant Dawn voice set (vc_ike_c01) and effects (se_ike), the narrator's name call and the crowd cheer, from the owner's local folder (ignored, never tracked). The map sends each FGM id his scripts, attributes and kind tables play (Roy's voices, the vanilla sword swings) to a cue; his own scripts name cues as cue:<name>. His voice plays 1.5 semitones higher (pitch_semitones; owner playtest 2026-10-14: a tad higher, still below Roy's, whose voice measures about 3.5 semitones above the recordings). Quick Draw: charge S01 then S02, dash S03, slash S04.",
  "source": "decomp/alt_assets/Fighters/Super Smash Bros Ultimate/Fighters",
  "cues": {
   "announcer": {
@@ -14,107 +14,133 @@
   },
   "attack01": {
    "file": "vc_ike_c01/vc_ike_attack01.wav",
-   "kind": "voice"
+   "kind": "voice",
+   "pitch_semitones": 1.5
   },
   "attack02": {
    "file": "vc_ike_c01/vc_ike_attack02.wav",
-   "kind": "voice"
+   "kind": "voice",
+   "pitch_semitones": 1.5
   },
   "attack03": {
    "file": "vc_ike_c01/vc_ike_attack03.wav",
-   "kind": "voice"
+   "kind": "voice",
+   "pitch_semitones": 1.5
   },
   "attack04": {
    "file": "vc_ike_c01/vc_ike_attack04.wav",
-   "kind": "voice"
+   "kind": "voice",
+   "pitch_semitones": 1.5
   },
   "attack05": {
    "file": "vc_ike_c01/vc_ike_attack05.wav",
-   "kind": "voice"
+   "kind": "voice",
+   "pitch_semitones": 1.5
   },
   "attack06": {
    "file": "vc_ike_c01/vc_ike_attack06.wav",
-   "kind": "voice"
+   "kind": "voice",
+   "pitch_semitones": 1.5
   },
   "attack07": {
    "file": "vc_ike_c01/vc_ike_attack07.wav",
-   "kind": "voice"
+   "kind": "voice",
+   "pitch_semitones": 1.5
   },
   "appeal01": {
    "file": "vc_ike_c01/vc_ike_appeal01.wav",
-   "kind": "voice"
+   "kind": "voice",
+   "pitch_semitones": 1.5
   },
   "cliffcatch": {
    "file": "vc_ike_c01/vc_ike_cliffcatch.wav",
-   "kind": "voice"
+   "kind": "voice",
+   "pitch_semitones": 1.5
   },
   "damage01": {
    "file": "vc_ike_c01/vc_ike_damage01.wav",
-   "kind": "voice"
+   "kind": "voice",
+   "pitch_semitones": 1.5
   },
   "damage02": {
    "file": "vc_ike_c01/vc_ike_damage02.wav",
-   "kind": "voice"
+   "kind": "voice",
+   "pitch_semitones": 1.5
   },
   "damagefly01": {
    "file": "vc_ike_c01/vc_ike_damagefly01.wav",
-   "kind": "voice"
+   "kind": "voice",
+   "pitch_semitones": 1.5
   },
   "damage_twinkle": {
    "file": "vc_ike_c01/vc_ike_damage_twinkle.wav",
-   "kind": "voice"
+   "kind": "voice",
+   "pitch_semitones": 1.5
   },
   "knockout": {
    "file": "vc_ike_c01/vc_ike_knockout.wav",
-   "kind": "voice"
+   "kind": "voice",
+   "pitch_semitones": 1.5
   },
   "furafura": {
    "file": "vc_ike_c01/vc_ike_furafura.wav",
-   "kind": "voice"
+   "kind": "voice",
+   "pitch_semitones": 1.5
   },
   "furasleep": {
    "file": "vc_ike_c01/vc_ike_furasleep.wav",
-   "kind": "voice"
+   "kind": "voice",
+   "pitch_semitones": 1.5
   },
   "heavyget": {
    "file": "vc_ike_c01/vc_ike_heavyget.wav",
-   "kind": "voice"
+   "kind": "voice",
+   "pitch_semitones": 1.5
   },
   "jump01": {
    "file": "vc_ike_c01/vc_ike_jump01.wav",
-   "kind": "voice"
+   "kind": "voice",
+   "pitch_semitones": 1.5
   },
   "special_n01": {
    "file": "vc_ike_c01/vc_ike_special_N01.wav",
-   "kind": "voice"
+   "kind": "voice",
+   "pitch_semitones": 1.5
   },
   "special_s01": {
    "file": "vc_ike_c01/vc_ike_special_S01.wav",
-   "kind": "voice"
+   "kind": "voice",
+   "pitch_semitones": 1.5
   },
   "special_h01": {
    "file": "vc_ike_c01/vc_ike_special_H01.wav",
-   "kind": "voice"
+   "kind": "voice",
+   "pitch_semitones": 1.5
   },
   "special_h02": {
    "file": "vc_ike_c01/vc_ike_special_H02.wav",
-   "kind": "voice"
+   "kind": "voice",
+   "pitch_semitones": 1.5
   },
   "special_l01": {
    "file": "vc_ike_c01/vc_ike_special_L01.wav",
-   "kind": "voice"
+   "kind": "voice",
+   "pitch_semitones": 1.5
   },
   "win01": {
    "file": "vc_ike_c01/vc_ike_win01.wav",
-   "kind": "voice"
+   "kind": "voice",
+   "pitch_semitones": 1.5
   },
   "win02": {
    "file": "vc_ike_c01/vc_ike_win02.wav",
-   "kind": "voice"
+   "kind": "voice",
+   "pitch_semitones": 1.5
   },
   "win03": {
    "file": "vc_ike_c01/vc_ike_win03.wav",
-   "kind": "voice"
+   "kind": "voice",
+   "pitch_semitones": 1.5
   },
   "se_swing_s": {
    "file": "se_ike/se_ike_swing_s.wav",
@@ -141,11 +167,19 @@
    "kind": "effect"
   },
   "se_quickdraw": {
+   "file": "se_ike/se_ike_special_S03.wav",
+   "kind": "effect"
+  },
+  "se_quickdraw_charge": {
    "file": "se_ike/se_ike_special_S01.wav",
    "kind": "effect"
   },
+  "se_quickdraw_charge2": {
+   "file": "se_ike/se_ike_special_S02.wav",
+   "kind": "effect"
+  },
   "se_quickdraw_slash": {
-   "file": "se_ike/se_ike_special_S03.wav",
+   "file": "se_ike/se_ike_special_S04.wav",
    "kind": "effect"
   },
   "se_aether": {

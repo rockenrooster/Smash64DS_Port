@@ -4,9 +4,11 @@
 `scripts/p6/<name>/audio.json` (committed: names and parameters, no sound)
 lists each cue's recording under the owner's local folder (`source`,
 ignored, never tracked: Ultimate's voices and effects, plan D5-D8), its
-kind (voice or effect) and optional trim and gain, and maps every FGM id the
-content's scripts, attributes and kind tables play (its base's: Roy's
-voices, the vanilla sword swings) to a cue.
+kind (voice or effect) and optional trim, gain and pitch
+(`pitch_semitones`: played that much higher, and shorter, as a sampler
+plays a note), and maps every FGM id the content's scripts, attributes and
+kind tables play (its base's: Roy's voices, the vanilla sword swings) to a
+cue.
 
 Each cue becomes one entry of the P4 sound pack (`p4_audio.py`, FGP4) under
 an id of the content's own window: P6_FGM_BASE plus 0x80 per authored
@@ -17,9 +19,10 @@ output.
 
 A cue: the recording read (16-bit WAV), downmixed to mono, its silence
 trimmed (below -50 dBFS at either end), peak-normalized to -1 dBFS with the
-cue's gain, resampled (band-limited, by FFT) to the kind's rate and encoded
-IMA by the vanilla pack's encoder. Voices pause with the game, as Remix's
-voice template does.
+cue's gain, resampled (band-limited, by FFT) to the kind's rate (read as
+recorded at its rate times the pitch ratio) and encoded IMA by the vanilla
+pack's encoder. Voices pause with the game, as Remix's voice template
+does.
 """
 from __future__ import annotations
 
@@ -107,7 +110,7 @@ def _read_wav(path: Path) -> tuple[list[float], int]:
     return pcm, rate
 
 
-def _resample(pcm, rate: int, target: int):
+def _resample(pcm, rate: float, target: int):
     """Band-limited resampling by FFT (the spectrum truncated or padded)."""
     import numpy as np
     n = len(pcm)
@@ -137,7 +140,8 @@ def render_cue(row: dict, source: Path) -> tuple[list[int], int]:
     pad = int(0.005 * rate)
     pcm = pcm[max(0, loud[0] - pad):loud[-1] + pad + 1]
     target = RATES[row["kind"]]
-    pcm = _resample(pcm, rate, target)
+    pitch = 2.0 ** (float(row.get("pitch_semitones", 0.0)) / 12.0)
+    pcm = _resample(pcm, rate * pitch, target)
     peak = float(np.max(np.abs(pcm))) or 1.0
     gain = 10 ** ((PEAK_DBFS + float(row.get("gain_db", 0.0))) / 20) / peak
     pcm = np.clip(pcm * gain, -1.0, 32767 / 32768)

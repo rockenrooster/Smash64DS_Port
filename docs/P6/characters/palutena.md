@@ -191,10 +191,22 @@ Defaults for the specials:
   Ness's PK Fire pillar (`itNessPKFire`: a stationary multi-hit fire with a
   lifetime): about 3 1% hits then a 15% blast exp. It is not a projectile, so it
   cannot be reflected.
+  Owner playtest 2026-10-14 (done): distances back 450, neutral 750 (0.75x),
+  forward 2,100 (1.5x); the bursts' and the blast's hitboxes twice the size
+  (640 and 860), their effects at their own size (owner: the hitbox radius
+  only); a white twinkle on the spot six frames before the first burst;
+  no green flash ring; her call is Ultimate's side-special voice ("Explosive
+  flame!"). Kirby's copy matches.
 - **Warp:** Meta Knight's Dimensional Cape structure (`nds_p4_metaknight.c`
   DSP): she vanishes, travels about 10 frames in the D-pad's direction (eight
   directions; neutral is up) invisible and intangible, stops at walls and
   floors, and reappears. No hitbox. From the air she ends in special fall.
+  Owner playtest 2026-10-14 (done): 3,000 units (15 frames at 200, three
+  times the first); a wall or ceiling met within 30 degrees of head-on stops
+  her, one met at a glancing angle she slides along (Pikachu's Quick Attack
+  test), so an upward warp beside a wall rides it to the ledge; white
+  twinkles where she vanishes and reappears (no PSI sparkles). A recovering
+  CPU travels only as far as its ledge.
 - **Counter / Reflect:** a stance with a counter window (Marth's numbers as
   the default) during which a melee hit triggers her counterattack, a light
   blast from the staff (Marth's counter override, `NDSP4Overrides.update_damage`),

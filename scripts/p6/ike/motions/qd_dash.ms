@@ -1,6 +1,8 @@
 # Quick Draw's dash: a hit on the sword and the body that holds the foe
-# (fixed knockback) while the code cuts to the slash.
-Effect joint_id=0 effect_id=19 flag=0 off_x=0 off_y=0 off_z=0 rng_x=0 rng_y=0 rng_z=0
+# (fixed knockback) while the code cuts to the slash; the charge's blue glow
+# goes on, with the large dash dust and the dash's whoosh.
+Effect joint_id=0 effect_id=20 flag=0 off_x=0 off_y=0 off_z=0 rng_x=0 rng_y=0 rng_z=0
+SetColAnim colanim_id=126 length=0
 SetAfterImage is_itemswing=17 drawstatus=0
 PlayFGM value=cue:se_quickdraw
 PlayVoiceStoreInfo value=cue:special_s01

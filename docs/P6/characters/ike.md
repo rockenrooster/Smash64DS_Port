@@ -129,11 +129,18 @@ Defaults for the new specials:
 - **Quick Draw:** hold B to charge for up to 60 frames; on release he dashes
   for 8-20 frames (by charge) at three times Roy's run speed with a hitbox; a
   hit cuts to the slash; a miss ends in about 40 frames of lag. From the air,
-  or off an edge, he ends in special fall.
+  or off an edge, he ends in special fall. Owner playtest 2026-10-14 (the
+  charge had no effect or sound; done): the charge glows Ike's blue (Roy's
+  charge colour animation through Ike's tinted copy) with a twinkle on the
+  blade every ten frames and the charge's sounds (se_ike special_S01, then
+  S02); the dash keeps the glow, with the large dash dust and the dash's
+  whoosh (S03); the slash on contact rings (S04).
 - **Aether:** Kirby's Final Cutter state machine (rise, apex, descent,
   landing; `ftkirbyspecialhi.c` constants as the starting point) with Ike's
   statuses and clips; the source's landing weapon (`wpKirbyCutter`) is not
-  made. Ledge catch during the descent as Final Cutter allows.
+  made. Ledge catch during the descent as Final Cutter allows. One call per
+  Aether, at the rise (owner playtest 2026-10-14: the landing's second call,
+  special_H02, sounded like a second voice; removed).
 - **Counter:** Marth's window and return rule. SSB64's Appeal is ground-only,
   so the counter is too.
 
@@ -145,7 +152,10 @@ encodes IMA; they play through the cue cache like every content's sounds.
 The clips used come to well under 1 MB of NitroFS.
 
 - **Voice (D5): the Radiant Dawn set, `vc_ike_c01`** (Greg Chun in the older
-  Ike's tone; 36 clips named by move, 48 kHz, about 28 s). attack01-07 for the
+  Ike's tone; 36 clips named by move, 48 kHz, about 28 s), played 1.5
+  semitones higher (owner playtest 2026-10-14: "a tad higher but still below
+  Roy's"; Roy's voice measures about 400 Hz, these about 327, 3.5 semitones
+  apart; `pitch_semitones` in `scripts/p6/ike/audio.json`). attack01-07 for the
   attack shouts; damage01-02, damagefly01-02, damage_twinkle (star KO),
   knockout (KO), cliffcatch, jump01, heavyget (heavy item), furafura (dizzy),
   furasleep, ottotto and missfoot01-02 (teeter, trip), passive (tech); the

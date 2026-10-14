@@ -29,11 +29,20 @@
 #include <ef/effect.h>
 #include <ft/ftcomputer.h>
 #include <macros.h>
+#include <math.h>
 #include <sys/audio.h>
 #include <sys/utils.h>
 #if NDS_P2_KIRBY
 #include "kirby/nds_p4_kirby.generated.h"
 #endif
+
+/* The source's particle effects (efmanager.c) and Quick Attack's angle
+ * test (vector.c). */
+extern LBParticle *efManagerFlameRandomMakeEffect(Vec3f *pos);
+extern LBParticle *efManagerSparkleWhiteMultiMakeEffect(Vec3f *pos);
+extern LBParticle *efManagerSparkleWhiteMultiExplodeMakeEffect(Vec3f *pos);
+extern LBParticle *efManagerSparkleWhiteScaleMakeEffect(Vec3f *pos, f32 scale);
+f32 syVectorAngleDiff3D(Vec3f *a, Vec3f *b);
 
 /* scripts/p6/palutena/spec.json "statuses"; a ground status's air twin is
  * the next id. */
@@ -51,23 +60,35 @@
 
 /* Explosive Flame (card): the stick at the cast picks the distance -- back
  * (against her facing) near, neutral middle, forward far -- at her height.
- * The script's hitboxes sit on TopN; this keeps them at the distance. */
-#define PAL_FLAME_NEAR 600.0F
-#define PAL_FLAME_MID 1000.0F
-#define PAL_FLAME_FAR 1400.0F
+ * The script's hitboxes sit on TopN; this keeps them at the distance. Owner
+ * playtest 2026-10-14: the middle 0.75x (1000 -> 750), the far 1.5x (1400 ->
+ * 2100), the near kept below the middle in the old ratio (600 -> 450); the
+ * explosion's hitboxes twice the size (the script's; its effects stay their
+ * size), a white twinkle where it will go off just before it does (flag2),
+ * no green flash ring. */
+#define PAL_FLAME_NEAR 450.0F
+#define PAL_FLAME_MID 750.0F
+#define PAL_FLAME_FAR 2100.0F
 #define PAL_FLAME_HEIGHT 320.0F
 #define PAL_FLAME_STICK 20
 /* In the air she nearly hangs while casting. */
 #define PAL_FLAME_AIR_FALL_MAX 12.0F
 
-/* Warp (card): she vanishes at the end of the start, travels 10 frames at
- * 100 units a frame along the stick (eight directions; neutral is up),
- * stops at walls and floors and reappears; from the air she ends in
- * special fall. */
-#define PAL_WARP_FRAMES 10
-#define PAL_WARP_SPEED 100.0F
+/* Warp (card; owner playtest 2026-10-14: three times the first 1000 units,
+ * sliding along walls, white twinkles for the effects): she vanishes at
+ * the end of the start, travels 15 frames at 200 units a frame along the
+ * stick (eight directions; neutral is up) and reappears; from the air she
+ * ends in special fall. A wall or ceiling met nearly head-on stops her; one
+ * met at a glancing angle she slides along (Pikachu's Quick Attack's rule),
+ * so an upward warp beside a wall rides it to the ledge. A CPU recovering
+ * travels only as far as its target. */
+#define PAL_WARP_FRAMES 15
+#define PAL_WARP_FRAMES_MIN 3
+#define PAL_WARP_SPEED 200.0F
 #define PAL_WARP_STICK 11
 #define PAL_WARP_DRIFT 0.6F
+#define PAL_WARP_HALT_ANGLE F_CST_DTOR32(150.0F)
+#define PAL_TWINKLE_SCALE 2.0F
 
 /* The counter's window holds her as Marth's does (0x48000000), and
  * reflects projectiles (Fox's rule) with Ness's reflector kind (no status
@@ -141,6 +162,32 @@ static void ndsP4PalutenaAhead(GObj *fighter_gobj, f32 forward, f32 up, Vec3f *o
     out->y += up;
 }
 
+/* The white twinkle (the smash charge's) `forward` ahead of her at her
+ * centre's height. */
+static void ndsP4PalutenaTwinkle(GObj *fighter_gobj, f32 forward, f32 scale)
+{
+    Vec3f pos;
+
+    ndsP4PalutenaAhead(fighter_gobj, forward, PAL_FLAME_HEIGHT, &pos);
+    efManagerSparkleWhiteScaleMakeEffect(&pos, scale);
+}
+
+/* Explosive Flame's fire `distance` ahead: a burst (flames and sparks) or
+ * the blast (the sparkle explosion), at the effects' own size. */
+static void ndsP4PalutenaFlameFx(GObj *fighter_gobj, f32 distance, sb32 is_blast)
+{
+    Vec3f pos;
+
+    ndsP4PalutenaAhead(fighter_gobj, distance, PAL_FLAME_HEIGHT, &pos);
+    if (is_blast != FALSE)
+    {
+        efManagerSparkleWhiteMultiExplodeMakeEffect(&pos);
+        return;
+    }
+    efManagerFlameRandomMakeEffect(&pos);
+    efManagerSparkleWhiteMultiMakeEffect(&pos);
+}
+
 /* ---- Explosive Flame ---- */
 
 /* The cast's distance: the stick's (back near, neutral middle, forward
@@ -189,13 +236,12 @@ void ndsP4PalutenaFlameAirInitial(GObj *fighter_gobj)
     ndsP4PalutenaFlameStart(fighter_gobj, PAL_STATUS_FLAME + PAL_AIR);
 }
 
-/* Every TopN hitbox at the cast's distance; the fire at each burst (flag0)
- * and the blast (flag1). */
+/* Every TopN hitbox at the cast's distance; the twinkle where it will go
+ * off (flag2), the fire at each burst (flag0) and the blast (flag1). */
 void ndsP4PalutenaFlameMain(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
     f32 distance = *ndsP4PalutenaVarF(fp, 0);
-    Vec3f pos;
     s32 i;
 
     for (i = 0; i < ARRAY_COUNT(fp->attack_colls); i++)
@@ -206,19 +252,20 @@ void ndsP4PalutenaFlameMain(GObj *fighter_gobj)
             fp->attack_colls[i].offset.z = distance;
         }
     }
+    if (fp->motion_vars.flags.flag2 != 0)
+    {
+        fp->motion_vars.flags.flag2 = 0;
+        ndsP4PalutenaTwinkle(fighter_gobj, distance, 1.0F);
+    }
     if (fp->motion_vars.flags.flag0 != 0)
     {
         fp->motion_vars.flags.flag0 = 0;
-        ndsP4PalutenaAhead(fighter_gobj, distance, PAL_FLAME_HEIGHT, &pos);
-        efManagerFlameRandomMakeEffect(&pos);
-        efManagerSparkleWhiteMultiMakeEffect(&pos);
+        ndsP4PalutenaFlameFx(fighter_gobj, distance, FALSE);
     }
     if (fp->motion_vars.flags.flag1 != 0)
     {
         fp->motion_vars.flags.flag1 = 0;
-        ndsP4PalutenaAhead(fighter_gobj, distance, PAL_FLAME_HEIGHT, &pos);
-        efManagerSparkleWhiteMultiExplodeMakeEffect(&pos);
-        efManagerFlashLargeMakeEffect(&pos);
+        ndsP4PalutenaFlameFx(fighter_gobj, distance, TRUE);
     }
     if (fighter_gobj->anim_frame <= 0.0F)
     {
@@ -259,13 +306,11 @@ void ndsP4PalutenaWarpAirInitial(GObj *fighter_gobj)
 static void ndsP4PalutenaVanish(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
-    Vec3f pos;
 
     fp->is_invisible = TRUE;
     fp->is_jostle_ignore = TRUE;
     ftParamSetHitStatusAll(fighter_gobj, nGMHitStatusIntangible);
-    ndsP4PalutenaAhead(fighter_gobj, 0.0F, PAL_FLAME_HEIGHT, &pos);
-    efManagerSparkleWhiteMultiMakeEffect(&pos);
+    ndsP4PalutenaTwinkle(fighter_gobj, 0.0F, PAL_TWINKLE_SCALE);
 }
 
 /* The start's end: the stick (in eight directions, neutral up) gives the
@@ -279,11 +324,15 @@ static void ndsP4PalutenaWarpGo(GObj *fighter_gobj)
     f32 y = (f32)fp->input.pl.stick_range.y;
     f32 angle;
     s32 status_id;
+    s32 frames = PAL_WARP_FRAMES;
 
     if ((fp->pkind == nFTPlayerKindCom) && (fp->computer.objective == nFTComputerObjectiveRecover))
     {
         x = (fp->computer.target_pos.x - fp->joints[nFTPartsJointTopN]->translate.vec.f.x) * (f32)fp->lr;
         y = fp->computer.target_pos.y - fp->joints[nFTPartsJointTopN]->translate.vec.f.y;
+        frames = (s32)(sqrtf((x * x) + (y * y)) / PAL_WARP_SPEED) + 1;
+        frames = (frames < PAL_WARP_FRAMES_MIN) ? PAL_WARP_FRAMES_MIN :
+                 (frames > PAL_WARP_FRAMES) ? PAL_WARP_FRAMES : frames;
     }
     if (((x * x) + (y * y)) < (f32)(PAL_WARP_STICK * PAL_WARP_STICK))
     {
@@ -317,7 +366,7 @@ static void ndsP4PalutenaWarpGo(GObj *fighter_gobj)
     ftMainSetStatus(fighter_gobj, status_id, 0.0F, 1.0F, FTSTATUS_PRESERVE_NONE);
     fp = ftGetStruct(fighter_gobj);
     *ndsP4PalutenaVarF(fp, 0) = angle;
-    *ndsP4PalutenaVar(fp, 1) = PAL_WARP_FRAMES;
+    *ndsP4PalutenaVar(fp, 1) = frames;
     ndsP4PalutenaVanish(fighter_gobj);
 }
 
@@ -340,7 +389,6 @@ static void ndsP4PalutenaWarpAppear(GObj *fighter_gobj)
     FTStruct *fp = ftGetStruct(fighter_gobj);
     s32 status_id = (fp->ga == nMPKineticsGround) ? PAL_STATUS_WARP_END :
                                                     (PAL_STATUS_WARP_END + PAL_AIR);
-    Vec3f pos;
 
     if (fp->ga == nMPKineticsGround)
     {
@@ -352,8 +400,7 @@ static void ndsP4PalutenaWarpAppear(GObj *fighter_gobj)
         fp->physics.vel_air.y = 0.0F;
     }
     ndsP4PalutenaSetStatus(fighter_gobj, status_id);
-    ndsP4PalutenaAhead(fighter_gobj, 0.0F, PAL_FLAME_HEIGHT, &pos);
-    efManagerSparkleWhiteMultiMakeEffect(&pos);
+    ndsP4PalutenaTwinkle(fighter_gobj, 0.0F, PAL_TWINKLE_SCALE);
 }
 
 /* The travel: invisible and intangible until its frames run out. */
@@ -412,16 +459,26 @@ static void ndsP4PalutenaWarpLand(GObj *fighter_gobj)
 }
 
 /* In the air: a ledge catches her, a floor ends the travel; a wall or a
- * ceiling stops it where it is. */
+ * ceiling met within 30 degrees of head-on stops it where it is, and one met
+ * at a glancing angle she slides along (ftPikachuSpecialAirHiProcMap's test:
+ * the collision pushes her out and the travel's speed along the surface
+ * goes on). */
 void ndsP4PalutenaWarpAirMap(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
+    u32 mask;
 
     if (mpCommonProcFighterCliff(fighter_gobj, ndsP4PalutenaWarpLand) != FALSE)
     {
         return;
     }
-    if ((fp->coll_data.mask_curr & (MAP_FLAG_LWALL | MAP_FLAG_RWALL | MAP_FLAG_CEIL)) != 0u)
+    mask = fp->coll_data.mask_curr;
+    if (((mask & MAP_FLAG_CEIL) &&
+         (syVectorAngleDiff3D(&fp->coll_data.ceil_angle, &fp->physics.vel_air) > PAL_WARP_HALT_ANGLE)) ||
+        ((mask & MAP_FLAG_LWALL) &&
+         (syVectorAngleDiff3D(&fp->coll_data.lwall_angle, &fp->physics.vel_air) > PAL_WARP_HALT_ANGLE)) ||
+        ((mask & MAP_FLAG_RWALL) &&
+         (syVectorAngleDiff3D(&fp->coll_data.rwall_angle, &fp->physics.vel_air) > PAL_WARP_HALT_ANGLE)))
     {
         ndsP4PalutenaWarpAppear(fighter_gobj);
     }
@@ -634,7 +691,9 @@ const NDSP4Overrides gNdsP4PalutenaOverrides = {
  * her sounds (p4_kirby.py "cues").
  *
  * status_vars words: 0 the distance (as f32 bits), 1 the tics since the
- * flag (-1 before it). */
+ * flag (-1 before it), 2 whether the twinkle marking the spot has shown (at
+ * frame 14, six before his flag, as hers shows six before her first burst). */
+#define PAL_KIRBY_TWINKLE_AT 14.0F
 #define PAL_KIRBY_BURST_EVERY 5
 #define PAL_KIRBY_BURSTS 3
 #define PAL_KIRBY_BURST_TICS 2
@@ -693,6 +752,7 @@ static void ndsP4PalutenaKirbyNSPStart(GObj *fighter_gobj, s32 status_id)
     ndsP4PalutenaSetStatus(fighter_gobj, status_id);
     *ndsP4PalutenaVarF(fp, 0) = distance;
     *ndsP4PalutenaVar(fp, 1) = -1;
+    *ndsP4PalutenaVar(fp, 2) = 0;
 }
 
 void ndsP4PalutenaKirbyNSPGroundInitial(GObj *fighter_gobj)
@@ -717,8 +777,13 @@ void ndsP4PalutenaKirbyNSPUpdate(GObj *fighter_gobj)
     FTStruct *fp = ftGetStruct(fighter_gobj);
     f32 distance = *ndsP4PalutenaVarF(fp, 0);
     s32 *tic = ndsP4PalutenaVar(fp, 1);
-    Vec3f pos;
+    s32 *twinkled = ndsP4PalutenaVar(fp, 2);
 
+    if ((*twinkled == 0) && (fighter_gobj->anim_frame >= PAL_KIRBY_TWINKLE_AT))
+    {
+        *twinkled = 1;
+        ndsP4PalutenaTwinkle(fighter_gobj, distance, 1.0F);
+    }
     if ((fp->motion_vars.flags.flag0 != 0) && (*tic < 0))
     {
         *tic = 0;
@@ -734,18 +799,14 @@ void ndsP4PalutenaKirbyNSPUpdate(GObj *fighter_gobj)
             {
                 func_800269C0_275C0(NDS_P4_KIRBY_PALUTENA_FGM_BURST);
             }
-            ndsP4PalutenaKirbyHit(fp, distance, 1, 320.0F, 90, 0, 30, 0, 0);
-            ndsP4PalutenaAhead(fighter_gobj, distance, PAL_FLAME_HEIGHT, &pos);
-            efManagerFlameRandomMakeEffect(&pos);
-            efManagerSparkleWhiteMultiMakeEffect(&pos);
+            ndsP4PalutenaKirbyHit(fp, distance, 1, 640.0F, 90, 0, 30, 0, 0);
+            ndsP4PalutenaFlameFx(fighter_gobj, distance, FALSE);
         }
         else if (t == PAL_KIRBY_BLAST_AT)
         {
             func_800269C0_275C0(NDS_P4_KIRBY_PALUTENA_FGM_BLAST);
-            ndsP4PalutenaKirbyHit(fp, distance, 15, 430.0F, 361, 95, 0, 40, 2);
-            ndsP4PalutenaAhead(fighter_gobj, distance, PAL_FLAME_HEIGHT, &pos);
-            efManagerSparkleWhiteMultiExplodeMakeEffect(&pos);
-            efManagerFlashLargeMakeEffect(&pos);
+            ndsP4PalutenaKirbyHit(fp, distance, 15, 860.0F, 361, 95, 0, 40, 2);
+            ndsP4PalutenaFlameFx(fighter_gobj, distance, TRUE);
         }
         else if (((t < (PAL_KIRBY_BURST_EVERY * PAL_KIRBY_BURSTS)) &&
                   ((t % PAL_KIRBY_BURST_EVERY) == PAL_KIRBY_BURST_TICS)) ||
