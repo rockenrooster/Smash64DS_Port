@@ -41,6 +41,14 @@ rebuilt through the same chain (`look_blend.py`, `p6_costumes.py`,
 `look_skirt.py`, `look_parts.py`, `model_writer.py`). The dress solver
 holds the fuller legs as well.
 
+**Shield without its rod (owner, 2026-10-15: "remove the thing that sticks
+out from her shield").** The shield sprite's image, baked from the kit, held
+the shield and a thin rod with a gold loop beside it (texel columns 77-117
+of its 128x64 image), so the rod stood out past her hand. The sprite card
+now ends at the shield's rim (u 0.60, the card 6.5 units across instead of
+10.8) and the rod's texels are cleared; the old card is kept hidden in
+`_tmp` as `DS_shield_sprite_rod_bak`. Nothing else moved.
+
 Source: picked by the owner from two best-effort candidates at the same
 budget (plan D12, [Look bake-off](../P6_PLAN.md#look-bake-off-g0)): **Track
 K**, the 3DS kit's Palutena (`decomp/alt_assets/Fighters/Super Smash Bros 3DS/Palutena/`,
