@@ -12,7 +12,9 @@
 # 1.25x farther (TopN z 260 -> 325, as her code's effect), 1.5x the knockback
 # (scale 105/100 -> 158/150, base 40 -> 60: the whole knockback 1.5x), the
 # same damage; the whoosh a plain sound (a landed hit stops a stored one).
-# Owner p6i: the column up as long as the 3DS's pillar (frames 23-49).
+# Owner p6i: the column up as long as the 3DS's pillar: 26 frames, 12-38
+# (AsyncWait waits to an animation frame: the hit and flag0 at 12; owner p6j
+# follow-up: her clip's staff thrust put there too).
 SetFlag0 value=0
 AsyncWait frames=11
 Effect joint_id=0 effect_id=13 flag=0 off_x=0 off_y=0 off_z=0 rng_x=0 rng_y=0 rng_z=0

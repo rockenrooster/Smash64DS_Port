@@ -13,12 +13,16 @@ its palette, as an O2R container in her special file 2 (the entry effect
 draws it natively: scripts/p4/p4_articles.py's "gate" root).
 
 The same file holds her up smash's light pillar (owner playtest 2026-10-14,
-round 2: one column in front of her, exactly vertical, as Ultimate's): a
-second DObjDesc tree at PILLAR_TREE -- a root (placed by her code a little
-ahead of her on the ground, src/port/nds_p4_palutena.c) and three cards
-facing the camera, the glow, the core and the bloom at its foot -- cut from
-one authored atlas (look_parts.py authored:pillar_burst), unlit and cut out.
-Her code scales the cards over the effect's life (the burst).
+round 2: one column in front of her, exactly vertical; owner p6j: redone on
+the 3DS's Heavenly Light in the owner's half-speed Strong_Up_A clip): a
+second DObjDesc tree at PILLAR_TREE -- a root (placed by her code ahead of
+her on the ground, src/port/nds_p4_palutena.c) and cards facing the camera:
+the glow (translucent), the core (white down its middle to cyan, cut out),
+the flare on the floor at its foot and the dust rolling out from it either
+way (translucent) -- from one authored atlas (look_parts.py
+pillar_light_atlas), unlit. Her code scales the cards over the effect's
+life: the column rises from the floor with a round head, the dust rolls out
+and settles, the column thins away.
 
 A third tree at WINGS_TREE holds her forward and down smash's wings
 (scripts/p6/p6_wings.py: the kit's godwing rigged, a continuous mesh a wing,
@@ -56,23 +60,40 @@ FRONT = 260.0         # the doors stand this far toward the camera from her
 TEX = 64              # the door image's side (CI4: 2 KB, TMEM's half)
 U_CROP = 0.75         # the image's door half (its right quarter is the edges')
 DOBJ_END = N.JOINT_TREE_END
-# The pillar's tree, after the gate's five rows (p4_articles.py "pillar").
-PILLAR_TREE = 5 * N.DOBJ_DESC_SIZE
-# The wings' tree after the pillar's five rows, then the word that names
-# the wings' table (src/port/nds_p4_palutena.c PAL_WINGS_TREE, _TABLE_SLOT).
-WINGS_TREE = 10 * N.DOBJ_DESC_SIZE
-WINGS_TABLE_SLOT = WINGS_TREE + p6_wings.TREE_ROWS * N.DOBJ_DESC_SIZE
 PILLAR_HEIGHT = 2500.0     # 2x her first pillar's 1,250 (owner p6f notes; 1.5x and 1.25x before)
 PILLAR_TEX = 64            # the atlas (CI4, 2 KB)
-# Each card: atlas region (s0, t0, s1, t1 in texels), width, bottom, top, z.
+# Each card: atlas region (s0, t0, s1, t1 in texels; s1 < s0 mirrors it),
+# left and right x, bottom, top, z (toward the camera), and its PRIM alpha
+# (255: cut out and opaque, else translucent). The 3DS's column (its clip on
+# a model-unit grid): a white core about 85 across in a cyan band about 140,
+# a faint glow past it; the dust a bank either way along the floor, 400 and
+# more from its foot, 150 high. The dust cards reach out from the foot (x 0)
+# and the flare lies over it; her code scales each (src/port/nds_p4_palutena.c,
+# the cards in this order).
 PILLAR_CARDS = (
-    ("glow", (16, 0, 48, 64), 400.0, 0.0, PILLAR_HEIGHT, 0.0),
-    ("core", (0, 0, 16, 64), 180.0, 0.0, PILLAR_HEIGHT, 4.0),
-    ("bloom", (48, 16, 64, 32), 360.0, -60.0, 200.0, 8.0),
+    ("glow", (16, 0, 32, 64), -140.0, 140.0, 0.0, PILLAR_HEIGHT, 0.0, 150),
+    ("core", (0, 0, 16, 64), -65.0, 65.0, 0.0, PILLAR_HEIGHT, 4.0, 255),
+    ("flare", (32, 0, 64, 16), -220.0, 220.0, -40.0, 90.0, 8.0, 210),
+    ("dust_l", (64, 16, 32, 48), -460.0, 0.0, -10.0, 220.0, 12.0, 200),
+    ("dust_r", (32, 16, 64, 48), 0.0, 460.0, -10.0, 220.0, 12.0, 200),
 )
+# The pillar's tree, after the gate's five rows (p4_articles.py "pillar"):
+# its root, its cards, the end.
+PILLAR_TREE = 5 * N.DOBJ_DESC_SIZE
+PILLAR_ROWS = len(PILLAR_CARDS) + 2
+# The wings' tree after the pillar's rows, then the word that names the
+# wings' table (src/port/nds_p4_palutena.c PAL_WINGS_TREE, _TABLE_SLOT;
+# p4_articles.py "wings").
+WINGS_TREE = PILLAR_TREE + PILLAR_ROWS * N.DOBJ_DESC_SIZE
+WINGS_TABLE_SLOT = WINGS_TREE + p6_wings.TREE_ROWS * N.DOBJ_DESC_SIZE
 # The model writer's cut-out state (model_writer.CUTOUT_ON / _OFF).
 CUTOUT_ON = [N.Gfx(0xE2001E01, 0x00000001), N.Gfx(0xE200001C, 0xC4113078)]
 CUTOUT_OFF = [N.Gfx(0xE2001E01, 0x00000000), N.Gfx(0xE200001C, 0xC4112078)]
+# Translucent: G_RM_ZB_XLU_SURF / G_RM_ZB_XLU_SURF2 (the DS draws the polygon
+# at its PRIM alpha), no alpha compare.
+XLU_ON = [N.Gfx(0xE2001E01, 0x00000000), N.Gfx(0xE200001C, 0x00504A50)]
+# The pillar's combine: colour TEXEL0, alpha TEXEL0 * PRIM, both cycles.
+PILLAR_COMBINE = N.Gfx(0xFCFF97FF, 0xFF2CFE7F)
 
 # F3DEX2 words. Geometry: lighting and back-face culling off for the doors'
 # triangles, back on at the end of each list.
@@ -182,7 +203,7 @@ def build() -> tuple[bytes, dict]:
     # The trees first: the gate's root, the front node, the doors; then the
     # pillar's root and cards (filled in below).
     tree_at = app.put(bytes(N.DOBJ_DESC_SIZE * 5))
-    pillar_at = app.put(bytes(N.DOBJ_DESC_SIZE * 5))
+    pillar_at = app.put(bytes(N.DOBJ_DESC_SIZE * PILLAR_ROWS))
     if pillar_at != PILLAR_TREE:
         raise GateError(f"pillar tree at {pillar_at:#x}, p4_articles.py names {PILLAR_TREE:#x}")
     wings_at = app.put(bytes(N.DOBJ_DESC_SIZE * p6_wings.TREE_ROWS + 4))
@@ -245,7 +266,7 @@ def build() -> tuple[bytes, dict]:
         struct.pack_into(">3f", f.data, at + 32, 1.0, 1.0, 1.0)
     pillar_lists = pillar(app)
     prow = [(0, None, (0.0, 0.0, 0.0))]
-    prow += [(1, pillar_lists[name], (0.0, 0.0, z)) for name, _, _, _, _, z in PILLAR_CARDS]
+    prow += [(1, pillar_lists[card[0]], (0.0, 0.0, card[6])) for card in PILLAR_CARDS]
     prow.append((DOBJ_END, None, (0.0, 0.0, 0.0)))
     for k, (ident, dl, t) in enumerate(prow):
         at = pillar_at + k * N.DOBJ_DESC_SIZE
@@ -264,19 +285,17 @@ def build() -> tuple[bytes, dict]:
 
 def pillar_atlas() -> tuple[bytes, bytes]:
     """The pillar's atlas as CI4 texels and an RGBA5551 palette (index 0
-    clear)."""
-    from PIL import Image
+    clear): look_parts.pillar_light_atlas, its palette padded to 16."""
     import look_parts
-    big = look_parts.authored_pillar_burst(PILLAR_TEX * 4, PILLAR_TEX * 4).astype(np.uint8)
-    img = Image.fromarray(big, "RGBA").resize((PILLAR_TEX, PILLAR_TEX), Image.BOX)
-    import look_blend
-    idx, palette = look_blend.quantize(np.asarray(img), 16, True)
+    idx, palette = look_parts.pillar_light_atlas(PILLAR_TEX)
+    palette = list(palette) + [palette[-1]] * (16 - len(palette))
     return M.ci4_bytes(idx), M.rgba5551(palette)
 
 
 def pillar(app: "M.Appender") -> dict:
-    """The pillar's card lists: each a quad facing the camera (+z), its
-    bottom at y 0 of its node, textured from the atlas, unlit, cut out."""
+    """The pillar's card lists: each a quad facing the camera (+z) in its
+    node's plane, textured from the atlas, unlit; cut out and opaque, or
+    translucent at its PRIM alpha."""
     texels, pal = pillar_atlas()
     app.align(8)
     tex_at = app.put(texels)
@@ -286,17 +305,17 @@ def pillar(app: "M.Appender") -> dict:
     mask = PILLAR_TEX.bit_length() - 1
     clamp = 2
     out = {}
-    for name, (s0, t0, s1, t1), width, bottom, top, _z in PILLAR_CARDS:
-        corners = [(-width / 2, top, s0, t0), (width / 2, top, s1, t0),
-                   (width / 2, bottom, s1, t1), (-width / 2, bottom, s0, t1)]
+    for name, (s0, t0, s1, t1), left, right, bottom, top, _z, alpha in PILLAR_CARDS:
+        corners = [(left, top, s0, t0), (right, top, s1, t0),
+                   (right, bottom, s1, t1), (left, bottom, s0, t1)]
         app.align(8)
         vtx_at = app.put(b"".join(vtx(x, y, 0.0, s * 32, t * 32) for x, y, s, t in corners))
         cmds = [N.Gfx(0xE7000000, 0),
                 N.Gfx(0xD9000000 | (0xFFFFFF & ~(G_LIGHTING | G_CULL_BACK)), 0),
                 N.Gfx(0xE3001001, 0x00008000)]
-        cmds += CUTOUT_ON
-        cmds += [N.Gfx(0xFC127E05, 0xFF17F3FF), N.Gfx(0xF9000000, 0),
-                 N.Gfx(0xE7000000, 0), N.Gfx(0xFA000000, 0xFFFFFFFF), N.Gfx(0xE8000000, 0),
+        cmds += CUTOUT_ON if alpha >= 255 else XLU_ON
+        cmds += [PILLAR_COMBINE, N.Gfx(0xF9000000, 0),
+                 N.Gfx(0xE7000000, 0), N.Gfx(0xFA000000, 0xFFFFFF00 | alpha), N.Gfx(0xE8000000, 0),
                  N.Gfx(0xF5000100, 0x05000000),
                  N.Gfx(0xF5500000, (7 << 24) | (mask << 14) | (mask << 4)),
                  N.Gfx(0xF5400000 | (line << 9), (clamp << 18) | (mask << 14) | (clamp << 8) | (mask << 4)),

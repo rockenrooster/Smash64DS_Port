@@ -94,10 +94,43 @@ knees, so the thigh tops swung away from the pelvis; owner, 2026-10-14.)
 Every clip she plays is keyed for it (`p6_author.py` spec "skirt",
 `scripts/p6/skirt_keys.py`): row 25 turns its band toward the middle of her
 knees and ankles (a tenth of the way toward straight down, at most 75
-degrees), and row 26 scales the hem as an ellipse wide enough to hold the
-legs, up to 1.35x across and 1.75x front to back (a dress, not a bell). Base
-clips are copied into her window keyed (151 of Peach's), her own are rewritten
-in place. Peach's gown keys do not fit her slim skirt and are replaced.
+degrees) and about that axis so the ring lies along her legs' spread, and
+row 26 shapes the hem. Base clips are copied into her window keyed (151 of
+Peach's), her own are rewritten in place. Peach's gown keys do not fit her
+slim skirt and are replaced.
+
+**Owner p6j (2026-10-14): the slit leg never leaves the dress, and the
+dress stretches over a stepping knee.** "The slit leg actually never comes
+out of the dress at all on the 3DS" and "if Palutena takes a step forward
+where the knee pokes out, the dress should be stretched over it like on the
+3DS". The 3DS's clips show what holds: her thighs and knees are always under
+the dress, while a shin or a foot may show below the hem (her run's back
+foot, her flying kick's shin from under the hem over the knee). So:
+- `dress_check.py` measures her legs at points along the leg mesh's tubes
+  (hip ring to knee ring to ankle ring; the vertices alone are only those
+  rings), the band as it is drawn (each ring's depth and radius by angle
+  about row 25's axis, so a tilted or stretched hem is measured as it is):
+  the thigh and knee must be inside it and above its hem, the shin must not
+  come through its side above the hem, the feet are free. Both legs count;
+  the slit leg's worst is reported apart.
+- `skirt_keys.py` shapes the hem (row 26 in row 25's frame: its ring scaled
+  across and along the spread, tilted about the across axis, moved along the
+  spread and up the band, up to 1.45x across and 1.75x along) as the least
+  costly shape holding them: a change from rest costs, a point outside costs
+  far more, the cloth's length costs (each panel from row 25's ring to its
+  hem vertex shortened or stretched: a hem lifted all round is a shorter
+  dress, not one held up by a knee), and a change from the frame before
+  costs (Nelder-Mead from the frame before's). A knee raised ahead lifts the
+  hem's front over it while the back hangs behind the other leg; a stride
+  stretches it along the stride. The band's spring lags at most 25 degrees
+  (a tumble's spin left the legs behind it).
+- Where no hem can hold a leg (another fighter's lunge or kick), the leg is
+  held: its thigh and shin turned toward rest by the least of 15%-steps that
+  clears the frame, eased over the frames around, and the clip solved again
+  (up to four passes).
+Dress check: 208 of 221 motions clean, both legs (20 before, the slit leg
+counted); what is left is within 11 units but Peach's special motion 198 and
+EntryNull (neither hers in play).
 
 Her locomotion is Peach's made hers (spec "pose", `scripts/p6/pose_ops.py`,
 applied before the skirt's keys; the owner's 3DS references, 2026-10-14):
@@ -108,12 +141,10 @@ bend, jumps, falls and landings with the legs closer (35%); the crouch with
 the knees together (45%). Dress check of those motions: walks, dash, falls
 and crouch clean, the run within 10 units, the jumps within 40.
 
-What is left outside: legs flung far out in the borrowed attack clips
-(Marth's lunges, the borrowed kicks) and Peach's acrobatics (ledge, tumble).
-Those attacks are placeholders: her own (the owner's 3DS references: jab,
-tilts, smashes, dash attack, Warp) keep her legs under the dress, as hers
-do. `pose_ops.py` also takes "turn" (a row about the model's axes) and key
-poses ("keys"), and anim.py recipes take its "ops", for authoring them.
+Legs flung far out in the borrowed clips (Marth's lunges, the borrowed
+kicks, Peach's acrobatics) are held since p6j (above). `pose_ops.py` also
+takes "turn" (a row about the model's axes) and key poses ("keys"), and
+anim.py recipes take its "ops", for authoring them.
 
 **Authored 2026-10-13 (P3, P4).** Specials as below, in
 `src/port/nds_p4_palutena.c` (her own code row: Peach's float, parasol and
@@ -180,9 +211,9 @@ own (below, Animations).
 **Pillar, taunt, entry, victory poses (2026-10-14).** The up smash's light
 pillar is one column of cyan light 325 units ahead of her on her floor
 (1.25x the first 260, owner p6h notes), 2,500 tall (2x her first, p6f; 1.5x
-after p6d, 1.25x before), exactly vertical, standing 32 tics as the 3DS's
-(owner p6i; 12 before), and its hitboxes are the column (TopN z 325, frames
-23-49; their knockback 1.5x since p6h: scale 158/150, base 60, the same
+after p6d, 1.25x before), exactly vertical, standing 36 tics as the 3DS's
+(owner p6j; 32 since p6i, 12 before), and its hitboxes are the column (TopN z 325, frames
+12-38; their knockback 1.5x since p6h: scale 158/150, base 60, the same
 damage): attacks 0 and 1, its
 lower (16%) and upper (14%) halves, 400 wide, move every frame between their
 half's ends in her code (the hit test sweeps a hitbox from where it was to
@@ -194,11 +225,22 @@ of the playtest). The script's flag0 at frame 12 (`motions/usmash.ms`) makes
 it in her code (`nds_p4_palutena.c`, `NDSP4Overrides.after_proc_map`) as a
 world-aligned effect at her floor ahead of her facing, 120 units toward the
 camera; its tree is the second in her special file 2 (`scripts/p6/p6_gate.py`
-PILLAR_TREE, `p4_articles.py` "pillar"): a glow, a core and a bloom at its
-foot, cards facing the camera, unlit and cut out, from one authored 64x64
-CI4 atlas (`look_parts.py` authored:pillar_burst). Her code flares the cards
-out from the middle over two tics, holds them with a flicker and narrows
-them from tic 8 to 12 (the light burst). Cards light by an up normal, not
+PILLAR_TREE, `p4_articles.py` "pillar"), cards facing the camera, unlit,
+from one authored 64x64 CI4 atlas. Owner p6j ("redo the blue pillar column
+VFX since we have a good animation to follow for it now"): it follows the
+3DS's Heavenly Light in the owner's half-speed Strong_Up_A clip, read on a
+model-unit grid (a white core about 85 across in a cyan band about 140; dust
+banks either way along the floor). Its cards (`p6_gate.py` PILLAR_CARDS,
+atlas `look_parts.py` pillar_light_atlas): the glow (translucent:
+G_RM_ZB_XLU_SURF, the DS polygon at its PRIM alpha), the core (white down
+its middle to cyan, cut out), the flare on the floor at its foot and the
+dust either way (translucent). Her code (`nds_p4_palutena.c`
+ndsP4PalutenaPillarProcUpdate) raises the column from the floor with a round
+head over three tics (18%, 45%, full), fades the flare by tic 9, rolls the
+dust out from tic 2 (full by tic 7, settled by tic 13: the 3DS's frames 26
+to 38), shimmers the glow while it stands and thins the column from tic 24
+to 36 (the 3DS's frames 50 to 62). Two more rows move the wings' tree to
+0x210 (its table word to 0x420). Cards light by an up normal, not
 their face's: a two-sided card's back face turned away from the light drew
 black (the pillar's first capture). No explosion effects, only the pillar
 (round 2). Its whoosh is a plain sound (PlayFGM) since p6h: a stored one
@@ -416,7 +458,10 @@ momentum or force ... follow them as close as possible." Since then:
   V, gone at 49. Their hits are on the wings' inner and outer reach (TopN)
   and, forward, the staff. Up smash: turned to the camera gathering the
   light with the staff low at her right, thrust straight up overhead as the
-  pillar rises and held while it stands.
+  pillar rises and held while it stands. Owner p6j follow-up: the thrust is
+  at frame 12, the script's hit and flag0 (AsyncWait waits to an animation
+  frame; the clip had it at 23, so the pillar rose 11 frames before her
+  staff did), the clip's frames 11-23 on hers 0-12 at the 3DS's own pace.
 - **Aerials.** Neutral: the staff whirled once round before her in the
   camera's plane. Forward: a flying kick (the half-speed clip shows the kick
   the card named): her left leg out through the slit with a burst at the

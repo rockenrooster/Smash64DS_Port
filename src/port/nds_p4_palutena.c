@@ -804,13 +804,12 @@ static void ndsP4PalutenaGateProcUpdate(GObj *effect_gobj)
  * column in front of her, exactly vertical, as Ultimate's Heavenly Light;
  * the first build drew it as model-part cards on her hips row, which her
  * animation turned behind her and doubled): an effect of the second tree in
- * her special file 2 (scripts/p6/p6_gate.py PILLAR_TREE: a root and the
- * glow, core and bloom cards facing the camera), made by the up smash's
+ * her special file 2 (scripts/p6/p6_gate.py PILLAR_TREE: a root and its
+ * cards facing the camera), made by the up smash's
  * flag0 (motions/usmash.ms) PAL_PILLAR_AHEAD units ahead of her on her
- * floor, world-aligned. Its cards flare out from the middle over
- * PAL_PILLAR_GROW tics, hold with a flicker, narrow from PAL_PILLAR_FADE_AT
- * and go at PAL_PILLAR_END (its hitboxes are the script's, frames 12-17).
- * The tic is in effect_vars.common.size, as the gate's.
+ * floor, world-aligned; its cards scaled over its life (owner p6j, below;
+ * its hitboxes are the script's). The tic is in effect_vars.common.size, as
+ * the gate's.
  *
  * Round 3: the hitboxes the column; 2,500 tall (2x her first, owner p6f
  * notes; 1.5x in round 3). The script's attacks 0
@@ -823,13 +822,34 @@ static void ndsP4PalutenaGateProcUpdate(GObj *effect_gobj)
  * Owner p6h notes: 1.25x farther from her (260 -> 325; the script's
  * hitboxes with it), 1.5x the knockback, and its whoosh no longer stored
  * (ftMainPlayHitSFX stops a stored sound when a hit lands). Owner p6i: as
- * long as the 3DS's (16 of its 30 fps frames, 32 tics; 12 before): it
- * holds to tic 26 and narrows to 32, its hitboxes up as long. */
+ * long as the 3DS's, its hitboxes up as long.
+ *
+ * Owner p6j ("redo the blue pillar column VFX since we have a good animation
+ * to follow for it now"): the 3DS's Heavenly Light in the owner's half-speed
+ * Strong_Up_A clip (a frame a tic; her clip maps its frames 11-23 onto hers
+ * 0-12, the staff thrust up at the hit and flag0, frame 12, and its frames
+ * 23-56 onto hers 12-42; the tic below is the 3DS's frame less about 24).
+ * The tree's cards (p6_gate.py PILLAR_CARDS): the glow
+ * (translucent), the core (white down its middle to cyan), the flare on the
+ * floor at its foot and the dust either way along the floor (translucent).
+ * The column rises from the floor with a round head over PAL_PILLAR_RISE
+ * tics (its height sNdsP4PalutenaPillarRise), the flare at its foot fading by
+ * PAL_PILLAR_FLARE_END; from PAL_PILLAR_DUST_AT the dust rolls out either
+ * way, at its full reach by PAL_PILLAR_DUST_FULL, and settles (flattens) by
+ * PAL_PILLAR_DUST_END (the 3DS's frames 26 to 38); the column stands, its
+ * glow shimmering, and thins from PAL_PILLAR_THIN_AT to PAL_PILLAR_END (the
+ * 3DS's frames 50 to 62; its hitboxes, the script's, are up to tic 26). */
 #define PAL_PILLAR_AHEAD 325.0F
 #define PAL_PILLAR_TOWARD_CAMERA 120.0F
-#define PAL_PILLAR_GROW 2
-#define PAL_PILLAR_FADE_AT 26
-#define PAL_PILLAR_END 32
+#define PAL_PILLAR_RISE 3
+#define PAL_PILLAR_FLARE_END 9
+#define PAL_PILLAR_DUST_AT 2
+#define PAL_PILLAR_DUST_FULL 7
+#define PAL_PILLAR_DUST_END 13
+#define PAL_PILLAR_THIN_AT 24
+#define PAL_PILLAR_END 36
+
+static const f32 sNdsP4PalutenaPillarRise[PAL_PILLAR_RISE] = { 0.18F, 0.45F, 1.0F };
 
 static const f32 sNdsP4PalutenaPillarColumn[2][2] = {
     { 200.0F, 1250.0F },    /* attack 0: the floor to the middle */
@@ -851,10 +871,15 @@ static void ndsP4PalutenaPillarProcUpdate(GObj *effect_gobj)
     EFStruct *ep = efGetStruct(effect_gobj);
     DObj *glow = DObjGetStruct(effect_gobj)->child;
     DObj *core = glow->sib_next;
-    DObj *bloom = core->sib_next;
+    DObj *flare = core->sib_next;
+    DObj *dust_l = flare->sib_next;
+    DObj *dust_r = dust_l->sib_next;
     s32 tic = ep->effect_vars.common.size;
     f32 width;
     f32 height;
+    f32 flare_size;
+    f32 reach;
+    f32 rise;
 
     if (ep->is_pause_effect)
     {
@@ -866,27 +891,70 @@ static void ndsP4PalutenaPillarProcUpdate(GObj *effect_gobj)
         gcEjectGObj(effect_gobj);
         return;
     }
-    if (tic < PAL_PILLAR_GROW)
+    if (tic < PAL_PILLAR_RISE)
     {
-        width = (f32)(tic + 1) / (f32)(PAL_PILLAR_GROW + 1);
-        height = (f32)(tic + 1) / (f32)PAL_PILLAR_GROW;
+        width = 0.7F + (0.1F * (f32)tic);
+        height = sNdsP4PalutenaPillarRise[tic];
     }
-    else if (tic < PAL_PILLAR_FADE_AT)
+    else if (tic < PAL_PILLAR_THIN_AT)
     {
-        width = ((tic & 1) != 0) ? 0.9F : 1.0F;
+        width = 1.0F;
         height = 1.0F;
     }
     else
     {
-        width = (f32)(PAL_PILLAR_END - tic) / (f32)(PAL_PILLAR_END - PAL_PILLAR_FADE_AT);
+        width = (f32)(PAL_PILLAR_END - tic) / (f32)(PAL_PILLAR_END - PAL_PILLAR_THIN_AT);
         height = 1.0F;
     }
-    glow->scale.vec.f.x = width;
+    glow->scale.vec.f.x = ((tic >= PAL_PILLAR_RISE) && (tic < PAL_PILLAR_THIN_AT) && ((tic & 1) != 0)) ?
+        0.94F : width;
     glow->scale.vec.f.y = height;
-    core->scale.vec.f.x = (width < 1.0F) ? (0.5F + (0.5F * width)) : 1.0F;
+    core->scale.vec.f.x = (tic < PAL_PILLAR_THIN_AT) ? width : (0.15F + (0.85F * width));
     core->scale.vec.f.y = height;
-    bloom->scale.vec.f.x = 0.6F + (0.6F * width);
-    bloom->scale.vec.f.y = 0.6F + (0.6F * width);
+    /* The flare at its foot: brightest as it rises, gone by
+     * PAL_PILLAR_FLARE_END. */
+    if (tic < PAL_PILLAR_RISE)
+    {
+        flare_size = 0.6F + (0.4F * (f32)tic / (f32)PAL_PILLAR_RISE);
+    }
+    else if (tic < PAL_PILLAR_FLARE_END)
+    {
+        flare_size = (f32)(PAL_PILLAR_FLARE_END - tic) / (f32)(PAL_PILLAR_FLARE_END - PAL_PILLAR_RISE);
+    }
+    else
+    {
+        flare_size = 0.0F;
+    }
+    flare->scale.vec.f.x = flare_size;
+    flare->scale.vec.f.y = flare_size;
+    /* The dust: rolling out either way along the floor and rising, then
+     * still spreading as it settles. */
+    if (tic < PAL_PILLAR_DUST_AT)
+    {
+        reach = 0.0F;
+        rise = 0.0F;
+    }
+    else if (tic <= PAL_PILLAR_DUST_FULL)
+    {
+        f32 p = (f32)(tic - PAL_PILLAR_DUST_AT) / (f32)(PAL_PILLAR_DUST_FULL - PAL_PILLAR_DUST_AT);
+
+        reach = 0.25F + (0.85F * p);
+        rise = 0.45F + (0.55F * p);
+    }
+    else if (tic < PAL_PILLAR_DUST_END)
+    {
+        reach = 1.1F + (0.035F * (f32)(tic - PAL_PILLAR_DUST_FULL));
+        rise = (f32)(PAL_PILLAR_DUST_END - tic) / (f32)(PAL_PILLAR_DUST_END - PAL_PILLAR_DUST_FULL);
+    }
+    else
+    {
+        reach = 0.0F;
+        rise = 0.0F;
+    }
+    dust_l->scale.vec.f.x = reach;
+    dust_l->scale.vec.f.y = rise;
+    dust_r->scale.vec.f.x = reach;
+    dust_r->scale.vec.f.y = rise;
     ep->effect_vars.common.size = tic + 1;
 }
 
@@ -911,8 +979,8 @@ static void ndsP4PalutenaPillarProcUpdate(GObj *effect_gobj)
  * mirrored (x translation, y and z turns negated). Outside the table's
  * frames the root is hidden. Angles are s16 binary angles, scales s16 over
  * 4096. */
-#define PAL_WINGS_TREE 0x1B8                /* p6_gate.py WINGS_TREE */
-#define PAL_WINGS_TABLE_SLOT 0x3C8          /* p6_gate.py WINGS_TABLE_SLOT */
+#define PAL_WINGS_TREE 0x210                /* p6_gate.py WINGS_TREE */
+#define PAL_WINGS_TABLE_SLOT 0x420          /* p6_gate.py WINGS_TABLE_SLOT */
 #define PAL_WINGS_MAGIC 0x50574E48u         /* "PWNH" */
 #define PAL_WINGS_BONES 4
 #define PAL_WINGS_NODES (3 + (2 * PAL_WINGS_BONES))

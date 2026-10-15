@@ -1,5 +1,5 @@
 {
- "comment": "Palutena's up smash (AttackHi4) on the owner's half-speed 3DS clip (Strong_Up_A, 1 frame a tick; her script's pillar kept at 23-49: ours 0-23 = its 11-23, 23-46 = 23-56, 46-54 = 56-66), staff gem and shield placed where the clip has them (arm IK): turning to the camera with the staff swung down low at her right, gathering the light (6-21), thrust straight up overhead as the pillar rises (23-25), held reaching up while it stands (to 44), lowered (48), her wait (54).",
+ "comment": "Palutena's up smash (AttackHi4) on the owner's half-speed 3DS clip (Strong_Up_A, 1 frame a tick; her script's pillar and hit at frame 12 (AsyncWait is to an animation frame), its hitboxes to 38: ours 0-12 = its 11-23, 12-42 = 23-56, 42-54 = 56-66), staff gem and shield placed where the clip has them (arm IK): turning to the camera with the staff swung down low at her right, gathering the light (3-11), thrust straight up overhead as the pillar rises (12-15), held reaching up while it stands (to 39), lowered (44), her wait (54). Owner p6j follow-up: the keys were at 23-25 for the thrust, 11 frames after the pillar rose.",
  "keyposes": {
   "skeleton": "peach",
   "scene": "builds/p6-art/palutena/3ds2ds/scene_high/scene.json",
@@ -15,7 +15,7 @@
     "frame": 0
    },
    {
-    "frame": 6,
+    "frame": 3,
     "orient": {
      "1": [
       0,
@@ -124,7 +124,7 @@
     ]
    },
    {
-    "frame": 15,
+    "frame": 8,
     "trans": {
      "1": [
       0,
@@ -284,7 +284,7 @@
     ]
    },
    {
-    "frame": 21,
+    "frame": 11,
     "trans": {
      "1": [
       0,
@@ -444,7 +444,7 @@
     ]
    },
    {
-    "frame": 23,
+    "frame": 12,
     "orient": {
      "1": [
       0,
@@ -553,7 +553,7 @@
     ]
    },
    {
-    "frame": 25,
+    "frame": 15,
     "ease": "out",
     "trans": {
      "1": [
@@ -670,7 +670,7 @@
     ]
    },
    {
-    "frame": 34,
+    "frame": 26,
     "trans": {
      "1": [
       0,
@@ -786,7 +786,7 @@
     ]
    },
    {
-    "frame": 44,
+    "frame": 39,
     "trans": {
      "1": [
       0,
@@ -902,7 +902,7 @@
     ]
    },
    {
-    "frame": 48,
+    "frame": 44,
     "orient": {
      "1": [
       0,

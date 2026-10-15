@@ -140,6 +140,78 @@ def authored_pillar_burst(w: int, h: int) -> np.ndarray:
     return out
 
 
+# The up smash's light (owner p6j, 2026-10-14: "redo the blue pillar column
+# VFX since we have a good animation to follow"): its palette, index 0 clear.
+PILLAR_LIGHT_PALETTE = (
+    (0, 0, 0, 0),
+    (255, 255, 255, 255), (226, 250, 255, 255), (178, 238, 255, 255), (120, 214, 255, 255),
+    (70, 208, 255, 255), (40, 178, 250, 255), (22, 148, 240, 255),
+    (250, 250, 250, 255), (231, 232, 237, 255), (207, 210, 218, 255), (180, 184, 195, 255),
+    (152, 157, 170, 255),
+)
+
+
+def pillar_light_atlas(size: int = 64) -> tuple[list, tuple]:
+    """The up smash's light, as the 3DS's Heavenly Light (the owner's
+    half-speed Strong_Up_A clip): a 64-texel CI4 atlas (rows of palette
+    indices, PILLAR_LIGHT_PALETTE). Columns 0-15: the core, white down its
+    middle to cyan at its edges, its top rounded (it rises from the floor
+    with a round head); 16-31: the glow around it (drawn translucent), cyan,
+    paler at its middle, its top rounded and wider; 32-63, rows 0-15: the
+    flare on the floor at its foot; rows 16-47: a bank of dust puffs rolling
+    out from its foot along the floor (the foot at column 32), shaded from
+    their tops; rows 48-63 clear."""
+    idx = np.zeros((size, size), dtype=int)
+    q = size // 4
+
+    def column(x0, width, cap, bands):
+        c = (width - 1) / 2.0
+        for y in range(size):
+            half = (width / 2.0) * (math.sqrt(max(0.0, 1.0 - ((cap - y) / cap) ** 2)) if y < cap else 1.0)
+            for x in range(width):
+                d = abs(x - c) / (width / 2.0)
+                if abs(x - c) + 0.5 > half:
+                    continue
+                for limit, k in bands:
+                    if d <= limit:
+                        idx[y, x0 + x] = k
+                        break
+    # The core: white over its middle 60%, pale and light cyan to its edges.
+    column(0, q, 10, ((0.3, 1), (0.5, 2), (0.68, 3), (0.84, 4), (1.01, 5)))
+    # The glow: pale at its middle, cyan, deep cyan to its edges.
+    column(q, q, 14, ((0.25, 3), (0.5, 4), (0.75, 5), (0.9, 6), (1.01, 7)))
+    # The flare: an ellipse on the floor, white at its middle.
+    fw, fh = size - 2 * q, q
+    for y in range(fh):
+        for x in range(fw):
+            r = math.hypot((x - (fw - 1) / 2.0) / (fw / 2.0), (y - (fh - 1) / 2.0) / (fh / 2.0))
+            for limit, k in ((0.35, 1), (0.55, 2), (0.75, 3), (0.9, 4), (1.0, 5)):
+                if r <= limit:
+                    idx[y, 2 * q + x] = k
+                    break
+    # The dust: puffs along the floor, the biggest at the foot (column 32),
+    # each lit from above (paler at its top, darker at its foot).
+    top, depth = q, 2 * q
+    puffs = ((5.0, 21.0, 10.0), (14.0, 19.0, 11.5), (24.0, 22.0, 8.5), (29.0, 25.0, 5.5),
+             (9.0, 13.0, 7.0), (19.0, 12.5, 6.0))
+    for y in range(depth):
+        for x in range(fw):
+            best = None
+            for px, py, pr in puffs:
+                r = math.hypot(x - px, y - py) / pr
+                if r <= 1.0 and (best is None or r < best[0]):
+                    best = (r, (y - (py - pr)) / (2.0 * pr))
+            if best is None:
+                continue
+            r, down = best
+            shade = down + 0.35 * r
+            for limit, k in ((0.35, 8), (0.6, 9), (0.85, 10), (1.1, 11), (9.0, 12)):
+                if shade <= limit:
+                    idx[top + y, 2 * q + x] = k
+                    break
+    return idx.tolist(), PILLAR_LIGHT_PALETTE
+
+
 def texture(spec: dict) -> np.ndarray:
     """The part's texels at its size (RGBA, row 0 the top)."""
     from PIL import Image, ImageDraw
