@@ -1,19 +1,51 @@
-# AttackAirN: neutral air (card: the staff spun beside her): the staff spun
-# twice around her (art/p6/palutena/anims, key poses on the owner's 3DS reference, 2026-10-14).
+# AttackAirN: neutral air, Ultimate's (c05attackairn): the staff whirled round
+# her, its hits Ultimate's: five light ones (5, 8, 11, 14, 17; each re-made:
+# Ultimate's 1%, 100, its set knockback 65 a light 10 here so they stay in)
+# and a launching last (21-22: 5% from ultimateframedata, 55, growth 180, base
+# 30, Ultimate's attack data (the owner's palutena_attack_data.json, p6r)).
 AsyncWait frames=5
 SetFlag1 value=40
-MakeAttackColl attack_id=0 group_id=0 joint_id=18 damage=2 can_rebound=1 element=0 size=200 off_x=23 off_y=150 off_z=-160 angle=70 knockback_scale=100 knockback_weight=5 is_hit_ground_air=3 shield_damage=0 fgm_level=0 fgm_kind=0 knockback_base=0
-MakeAttackColl attack_id=1 group_id=0 joint_id=18 damage=2 can_rebound=1 element=0 size=170 off_x=11 off_y=75 off_z=-80 angle=70 knockback_scale=100 knockback_weight=5 is_hit_ground_air=3 shield_damage=0 fgm_level=0 fgm_kind=0 knockback_base=0
-MakeAttackColl attack_id=2 group_id=0 joint_id=16 damage=2 can_rebound=1 element=0 size=150 off_x=0 off_y=0 off_z=0 angle=70 knockback_scale=100 knockback_weight=5 is_hit_ground_air=3 shield_damage=0 fgm_level=0 fgm_kind=0 knockback_base=0
-PlayFGMStoreInfo value=cue:se_attackair_n01
+MakeAttackColl attack_id=0 group_id=0 joint_id=18 damage=1 can_rebound=1 element=0 size=200 off_x=41 off_y=272 off_z=-290 angle=100 knockback_scale=100 knockback_weight=10 is_hit_ground_air=3 shield_damage=0 fgm_level=0 fgm_kind=0 knockback_base=0
+MakeAttackColl attack_id=1 group_id=0 joint_id=18 damage=1 can_rebound=1 element=0 size=170 off_x=23 off_y=150 off_z=-160 angle=100 knockback_scale=100 knockback_weight=10 is_hit_ground_air=3 shield_damage=0 fgm_level=0 fgm_kind=0 knockback_base=0
+MakeAttackColl attack_id=2 group_id=0 joint_id=16 damage=1 can_rebound=1 element=0 size=150 off_x=0 off_y=0 off_z=0 angle=100 knockback_scale=100 knockback_weight=10 is_hit_ground_air=3 shield_damage=0 fgm_level=0 fgm_kind=0 knockback_base=0
+PlayFGM value=cue:se_attackair_n01
+SyncWait frames=2
+ClearAttackCollAll value=0
+AsyncWait frames=8
+MakeAttackColl attack_id=0 group_id=0 joint_id=18 damage=1 can_rebound=1 element=0 size=200 off_x=41 off_y=272 off_z=-290 angle=100 knockback_scale=100 knockback_weight=10 is_hit_ground_air=3 shield_damage=0 fgm_level=0 fgm_kind=0 knockback_base=0
+MakeAttackColl attack_id=1 group_id=0 joint_id=18 damage=1 can_rebound=1 element=0 size=170 off_x=23 off_y=150 off_z=-160 angle=100 knockback_scale=100 knockback_weight=10 is_hit_ground_air=3 shield_damage=0 fgm_level=0 fgm_kind=0 knockback_base=0
+MakeAttackColl attack_id=2 group_id=0 joint_id=16 damage=1 can_rebound=1 element=0 size=150 off_x=0 off_y=0 off_z=0 angle=100 knockback_scale=100 knockback_weight=10 is_hit_ground_air=3 shield_damage=0 fgm_level=0 fgm_kind=0 knockback_base=0
+PlayFGM value=cue:se_attackair_n01
+SyncWait frames=2
+ClearAttackCollAll value=0
+AsyncWait frames=11
+MakeAttackColl attack_id=0 group_id=0 joint_id=18 damage=1 can_rebound=1 element=0 size=200 off_x=41 off_y=272 off_z=-290 angle=100 knockback_scale=100 knockback_weight=10 is_hit_ground_air=3 shield_damage=0 fgm_level=0 fgm_kind=0 knockback_base=0
+MakeAttackColl attack_id=1 group_id=0 joint_id=18 damage=1 can_rebound=1 element=0 size=170 off_x=23 off_y=150 off_z=-160 angle=100 knockback_scale=100 knockback_weight=10 is_hit_ground_air=3 shield_damage=0 fgm_level=0 fgm_kind=0 knockback_base=0
+MakeAttackColl attack_id=2 group_id=0 joint_id=16 damage=1 can_rebound=1 element=0 size=150 off_x=0 off_y=0 off_z=0 angle=100 knockback_scale=100 knockback_weight=10 is_hit_ground_air=3 shield_damage=0 fgm_level=0 fgm_kind=0 knockback_base=0
+PlayFGM value=cue:se_attackair_n01
 SyncWait frames=2
 ClearAttackCollAll value=0
 AsyncWait frames=14
-MakeAttackColl attack_id=0 group_id=0 joint_id=18 damage=8 can_rebound=1 element=0 size=200 off_x=23 off_y=150 off_z=-160 angle=361 knockback_scale=100 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=1 fgm_kind=0 knockback_base=15
-MakeAttackColl attack_id=1 group_id=0 joint_id=18 damage=7 can_rebound=1 element=0 size=170 off_x=11 off_y=75 off_z=-80 angle=361 knockback_scale=100 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=1 fgm_kind=0 knockback_base=15
-MakeAttackColl attack_id=2 group_id=0 joint_id=16 damage=7 can_rebound=1 element=0 size=150 off_x=0 off_y=0 off_z=0 angle=361 knockback_scale=100 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=1 fgm_kind=0 knockback_base=15
-PlayFGMStoreInfo value=cue:se_swing_m
-SyncWait frames=8
-SetFlag1 value=0
+MakeAttackColl attack_id=0 group_id=0 joint_id=18 damage=1 can_rebound=1 element=0 size=200 off_x=41 off_y=272 off_z=-290 angle=100 knockback_scale=100 knockback_weight=10 is_hit_ground_air=3 shield_damage=0 fgm_level=0 fgm_kind=0 knockback_base=0
+MakeAttackColl attack_id=1 group_id=0 joint_id=18 damage=1 can_rebound=1 element=0 size=170 off_x=23 off_y=150 off_z=-160 angle=100 knockback_scale=100 knockback_weight=10 is_hit_ground_air=3 shield_damage=0 fgm_level=0 fgm_kind=0 knockback_base=0
+MakeAttackColl attack_id=2 group_id=0 joint_id=16 damage=1 can_rebound=1 element=0 size=150 off_x=0 off_y=0 off_z=0 angle=100 knockback_scale=100 knockback_weight=10 is_hit_ground_air=3 shield_damage=0 fgm_level=0 fgm_kind=0 knockback_base=0
+PlayFGM value=cue:se_attackair_n01
+SyncWait frames=2
 ClearAttackCollAll value=0
+AsyncWait frames=17
+MakeAttackColl attack_id=0 group_id=0 joint_id=18 damage=1 can_rebound=1 element=0 size=200 off_x=41 off_y=272 off_z=-290 angle=100 knockback_scale=100 knockback_weight=10 is_hit_ground_air=3 shield_damage=0 fgm_level=0 fgm_kind=0 knockback_base=0
+MakeAttackColl attack_id=1 group_id=0 joint_id=18 damage=1 can_rebound=1 element=0 size=170 off_x=23 off_y=150 off_z=-160 angle=100 knockback_scale=100 knockback_weight=10 is_hit_ground_air=3 shield_damage=0 fgm_level=0 fgm_kind=0 knockback_base=0
+MakeAttackColl attack_id=2 group_id=0 joint_id=16 damage=1 can_rebound=1 element=0 size=150 off_x=0 off_y=0 off_z=0 angle=100 knockback_scale=100 knockback_weight=10 is_hit_ground_air=3 shield_damage=0 fgm_level=0 fgm_kind=0 knockback_base=0
+PlayFGM value=cue:se_attackair_n01
+SyncWait frames=2
+ClearAttackCollAll value=0
+AsyncWait frames=21
+MakeAttackColl attack_id=0 group_id=0 joint_id=18 damage=5 can_rebound=1 element=0 size=220 off_x=41 off_y=272 off_z=-290 angle=55 knockback_scale=180 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=1 fgm_kind=0 knockback_base=30
+MakeAttackColl attack_id=1 group_id=0 joint_id=18 damage=5 can_rebound=1 element=0 size=190 off_x=23 off_y=150 off_z=-160 angle=55 knockback_scale=180 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=1 fgm_kind=0 knockback_base=30
+MakeAttackColl attack_id=2 group_id=0 joint_id=16 damage=5 can_rebound=1 element=0 size=160 off_x=0 off_y=0 off_z=0 angle=55 knockback_scale=180 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=1 fgm_kind=0 knockback_base=30
+PlayFGMStoreInfo value=cue:se_swing_m
+SyncWait frames=2
+ClearAttackCollAll value=0
+AsyncWait frames=30
+SetFlag1 value=0
 End value=0

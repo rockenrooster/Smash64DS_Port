@@ -1,5 +1,5 @@
 {
- "comment": "Ultimate's rapid jab's start and first push (c00attack100start, c00attack100): the staff held level ahead and pushed with the burst, her front turned toward the camera as the 3DS's rapid jab (Ultimate turns away: yaw -50), eased back to her wait after the push. Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
+ "comment": "Ultimate's rapid jab's start and first push (c00attack100start, c00attack100): the staff held level ahead and pushed with the burst, eased back to her wait after the push. Ultimate's facing (owner p6r: the Ultimate data \"should be more authoritative than the 3DS mp4s\"; the 3DS's turn toward the camera put her staff's thrust off her plane). Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
  "ultimate": {
   "fighter": "palutena",
   "skeleton": "peach",
@@ -34,24 +34,6 @@
      ]
     ]
    }
-  ],
-  "yaw": [
-   [
-    0,
-    0
-   ],
-   [
-    4,
-    -50
-   ],
-   [
-    20,
-    -50
-   ],
-   [
-    34,
-    0
-   ]
   ],
   "blend_to": {
    "motion": "a00wait1",

@@ -1,5 +1,5 @@
 {
- "comment": "Ultimate's rapid jab finisher (c00attackend): the staff swung up through a burst; its hit at 3, turned toward the camera and back as it settles into her wait. Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
+ "comment": "Ultimate's rapid jab finisher (c00attackend): the staff swung up through a burst; its hit at 3, settling into her wait. Ultimate's facing (owner p6r: the Ultimate data \"should be more authoritative than the 3DS mp4s\"; the 3DS's turn toward the camera put her staff's thrust off her plane). Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
  "ultimate": {
   "fighter": "palutena",
   "skeleton": "peach",
@@ -28,20 +28,6 @@
    [
     40,
     49
-   ]
-  ],
-  "yaw": [
-   [
-    0,
-    -50
-   ],
-   [
-    16,
-    -50
-   ],
-   [
-    34,
-    0
    ]
   ]
  }

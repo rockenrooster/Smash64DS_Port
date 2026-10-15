@@ -1,5 +1,5 @@
 {
- "comment": "Ultimate's up tilt (c02attackhi3): on her knees, looking up, bending back, the staff spinning above her hand off her palm (owner p6p); turned toward the camera as the 3DS's (yaw -60 while she kneels). Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
+ "comment": "Ultimate's up tilt (c02attackhi3): on her knees, looking up, bending back, the staff spinning above her hand off her palm (owner p6p). Ultimate's facing (owner p6r: the Ultimate data \"should be more authoritative than the 3DS mp4s\"; the 3DS's turn toward the camera put her staff's thrust off her plane). Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
  "ultimate": {
   "fighter": "palutena",
   "skeleton": "peach",
@@ -38,24 +38,6 @@
    "motion": "a00wait1",
    "frame": 0,
    "frames": 3
-  },
-  "yaw": [
-   [
-    0,
-    0
-   ],
-   [
-    5,
-    -60
-   ],
-   [
-    40,
-    -60
-   ],
-   [
-    54,
-    0
-   ]
-  ]
+  }
  }
 }

@@ -421,8 +421,9 @@ Turn and TurnRun stay Peach's (their facing flip is the game's).
   by length keep Peach's lengths (the walks the attributes' 69/48/60, the
   landings 10, the crouch 5).
 - **Where the 3DS differs.** Ultimate turns her back to the camera in its
-  rapid jab and up tilt; the 3DS faces the camera: those clips turn the
-  whole motion about her vertical ("yaw": -50 and -60), easing back.
+  rapid jab and up tilt; the 3DS faces the camera: those clips turned the
+  whole motion about her vertical ("yaw": -50 and -60), easing back, until
+  owner p6r (Ultimate's facing is back: below).
 - **The dress follows Ultimate's skirt.** Ultimate's eight skirt chains are
   keyed in every motion; each clip writes their hem's moves beside it (a
   `.skirt.json` guide, p6_author.py hands it to `skirt_keys.py`), and the
@@ -454,6 +455,58 @@ Turn and TurnRun stay Peach's (their facing flip is the game's).
   drop, teeter, rolls (Peach's TransN slots) and hit reactions and tumbles.
   Her figatree heap stays Peach's 12,128 bytes: the largest clip, launched
   straight up, drops its shoulder and neck keys to fit.
+
+## Owner p6r (2026-10-15): jabs, down smash, run, dress, attack data
+
+Owner p6r: "much much better 3/5, theme of this review: twitchy and
+stiff/non flowy dress are main blockers ... the SSB Ultimate data is working
+well, should be more authoritative than the 3DS mp4s"; the down smash's
+wings "look wierd at full impact" and it is "too fast use ultimate timing";
+the floating run's "legs and dress look twitchy should be smooth and feet
+hardly need to move"; "jabs seem to be offset diagonally preventing hitting
+enemies"; damage, hit type and angles from Ultimate's attack data (the
+owner's `palutena_attack_data.json`, local) for most attacks, not Explosive
+Flame.
+
+- **The jabs.** Jab 1's hits were on her shield arm, behind her in
+  Ultimate's motion (it thrusts the staff): they are on the staff's head
+  and middle now. Jab 2 and the rapid jab turned her toward the camera (the
+  3DS's facing, "yaw" -50), which put the staff's thrust 280-550 units off
+  her plane: Ultimate's facing is back (the up tilt's too), and her
+  hitboxes lie in her plane whatever the motion (`NDSP4Overrides.planar_hits`:
+  Ultimate collides in two dimensions, SSB64 tests the third).
+- **Down smash** plays Ultimate's motion frame for frame (its hit 16-18,
+  Ultimate's 17-19; 67 frames to her first actionable one), keyed every
+  other frame for her figatree heap. Its wings, flat on the floor at the
+  slam, were edge-on to the side camera (thin crumpled lines): from the
+  slam until they lift each wing bone turns about its length to show its
+  face, the feathers kept up (`p6_wings.py` "face_camera"), so they lie as
+  two broad crescents along the floor.
+- **The run** holds her legs near their mean pose (a quarter of Ultimate's
+  swing, averaged over nine frames round the loop: ultimate.py "still") and
+  the dress's guide averaged alike ("skirt_smooth"); the hem's shift moved
+  up to 18 units a frame, now 4.
+- **The dress, every clip.** The hem solver's five parameters are averaged
+  over five frames (wrapped through a loop) and the band over five (it was
+  three): its twitch was a frame's search landing near the last one's
+  solution rather than on it.
+- **Attack data.** Ultimate's ATTACK arguments (its "bkb" column the set
+  knockback, "wbk" the base); the owner's file is Ultimate 1.0.0 and lists
+  one hit of some moves, ultimateframedata's damage fills the rest. Jab 1
+  3%; the finisher 4%; forward tilt one hit over Ultimate's two windows
+  (6% then 7%, 40, growth 80, base 78); up tilt's four light hits and a 3%
+  launcher (85, growth 195, base 60); down tilt 5% (75); dash attack 9% /
+  5% late (60); forward smash 16% close / 13% far (361, growth 102, base
+  40); up smash 16/12% early, 13/9% late (88; the owner's 1.5x knockback
+  kept); down smash 15% close / 13% far; neutral air five light hits and a
+  5% launcher (55, growth 180, base 30); forward air 10% (45, growth 92,
+  base 31) and back air 12% (361, growth 95, base 30), single hits as
+  Ultimate's; up air Ultimate's multi-hit, five light hits and a 5%
+  launcher (88, growth 152, base 50); down air 11% (55: Ultimate's is not
+  a spike); the counterattack 10% (361, growth 65, base 30). Multi-hits
+  keep a light set knockback (10-15) where Ultimate pulls the target in
+  with angles SSB64 has not (365-367). Explosive Flame, Warp, grabs and
+  throws unchanged.
 
 ## Animations (the owner's 3DS references, 2026-10-14)
 

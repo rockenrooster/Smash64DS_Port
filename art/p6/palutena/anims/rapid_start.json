@@ -1,5 +1,5 @@
 {
- "comment": "Ultimate's rapid jab's start (c00attack100start into c00attack100), turned toward the camera as jab 2. Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
+ "comment": "Ultimate's rapid jab's start (c00attack100start into c00attack100). Ultimate's facing (owner p6r: the Ultimate data \"should be more authoritative than the 3DS mp4s\"; the 3DS's turn toward the camera put her staff's thrust off her plane). Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
  "ultimate": {
   "fighter": "palutena",
   "skeleton": "peach",
@@ -34,16 +34,6 @@
      ]
     ]
    }
-  ],
-  "yaw": [
-   [
-    0,
-    -50
-   ],
-   [
-    8,
-    -50
-   ]
   ]
  }
 }

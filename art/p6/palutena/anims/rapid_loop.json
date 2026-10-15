@@ -1,5 +1,5 @@
 {
- "comment": "Ultimate's rapid jab (c00attack100), one period on the loop's 24 frames, turned toward the camera. Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
+ "comment": "Ultimate's rapid jab (c00attack100), one period on the loop's 24 frames. Ultimate's facing (owner p6r: the Ultimate data \"should be more authoritative than the 3DS mp4s\"; the 3DS's turn toward the camera put her staff's thrust off her plane). Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
  "ultimate": {
   "fighter": "palutena",
   "skeleton": "peach",
@@ -18,16 +18,6 @@
     22
    ]
   ],
-  "loop": 0,
-  "yaw": [
-   [
-    0,
-    -50
-   ],
-   [
-    24,
-    -50
-   ]
-  ]
+  "loop": 0
  }
 }

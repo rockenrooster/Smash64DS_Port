@@ -1,8 +1,26 @@
 {
- "comment": "Palutena's down smash wings (scripts/p6/p6_wings.py): Ultimate's godwing motion (c04attacklw4, the same rig as the kit's godwing) baked onto her wing rig, the article started at her clip's motion frame 14 so its slam meets the body's hit (owner p6p: the wings rise from behind her shoulders, cover her body in the flap and stretch out straight at the impact; the down smash's lie flat along the ground).",
+ "comment": "Palutena's down smash wings (scripts/p6/p6_wings.py): Ultimate's godwing motion (c04attacklw4, the same rig as the kit's godwing) baked onto her wing rig, the article started at her clip's motion frame 14 so its slam meets the body's hit (owner p6p: the wings rise from behind her shoulders, cover her body in the flap and stretch out straight at the impact; the down smash's lie flat along the ground). Owner p6r (\"wings look weird at full impact\"): flat on the floor they were edge-on to the side camera, so from the slam (frame 18) until they lift (54-64) each bone turns about its length to show its face (\"face_camera\", the feathers kept up).",
  "ultimate": {
   "motion": "c04attacklw4",
   "clip": "dsmash",
-  "offset": 14
+  "offset": 14,
+  "face_camera": [
+   [
+    15,
+    0
+   ],
+   [
+    18,
+    1
+   ],
+   [
+    54,
+    1
+   ],
+   [
+    64,
+    0
+   ]
+  ]
  }
 }

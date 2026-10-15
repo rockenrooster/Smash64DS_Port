@@ -1,11 +1,11 @@
 {
- "comment": "Ultimate's down smash (c04attacklw4): the staff raised, then stooped low as the wings slam flat along the ground; its hit at SSB64's 10. The wings: art/p6/palutena/wings/dsmash.json. Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
+ "comment": "Ultimate's down smash (c04attacklw4) on Ultimate's timing, frame for frame (owner p6r: \"down smash too fast use ultimate timing\"): the staff raised, then stooped low as the wings slam flat along the ground; its hit at 16-18 (Ultimate's 17-19), her first actionable frame Ultimate's 68, the motion's rest drawn into the last six frames. Keys every other frame (her figatree heap). The wings: art/p6/palutena/wings/dsmash.json. Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
  "ultimate": {
   "fighter": "palutena",
   "skeleton": "peach",
   "scene": "builds/p6-art/palutena/3ds2ds/scene_high/scene.json",
   "header": "0x1371",
-  "length": 50,
+  "length": 67,
   "first_slot": 0,
   "motion": "c04attacklw4",
   "time": [
@@ -14,19 +14,11 @@
     0
    ],
    [
-    10,
-    16
+    61,
+    61
    ],
    [
-    14,
-    19
-   ],
-   [
-    40,
-    72
-   ],
-   [
-    50,
+    67,
     89
    ]
   ],
@@ -34,6 +26,7 @@
    "motion": "a00wait1",
    "frame": 0,
    "frames": 3
-  }
+  },
+  "key_step": 2
  }
 }
