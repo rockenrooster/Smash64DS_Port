@@ -435,17 +435,25 @@ def world_mesh(wing: Wing, torso: np.ndarray, p: Params) -> list:
     """Model-space (TopN-relative) triangles of both wings for a pose:
     [(side, corners 3x3, st 3x2)]; torso is her torso row's 4x4 model
     matrix."""
-    pr, pt, ps = pair_local(wing, p, torso)
+    pr, _pt, ps = pair_local(wing, p, torso)
+    return world_mesh_pose(wing, torso, pr, ps, bone_poses(wing, p))
+
+
+def world_mesh_pose(wing: Wing, torso: np.ndarray, pr: np.ndarray, ps: float, poses: list,
+                    poses_r: list | None = None) -> list:
+    """world_mesh from the pair's rotation and size and the bones' poses
+    (the right wing's own when given, else the left's mirrored)."""
     pair_r = torso[:3, :3] @ pr * ps
-    pair_t = torso[:3, :3] @ pt + torso[:3, 3]
-    poses = bone_poses(wing, p)
+    pair_t = torso[:3, :3] @ wing.pair_origin + torso[:3, 3]
     out = []
     for side in ("L", "R"):
         placed = []
         for vert in wing.verts:
-            rot, trans, (sx, sy) = poses[vert.bone]
+            rot, trans, (sx, sy) = (poses_r if side == "R" and poses_r is not None else poses)[vert.bone]
             local = vert.local * np.array([sx, sy, 1.0])
-            if side == "R":
+            if side == "R" and poses_r is not None:
+                local = MIRROR @ local
+            elif side == "R":
                 rot, trans, local = MIRROR @ rot @ MIRROR, MIRROR @ trans, MIRROR @ local
             placed.append(pair_r @ (rot @ local + trans) + pair_t)
         for k in range(len(BONES)):
@@ -539,7 +547,8 @@ def torso_frames(clip_name: str, scene: dict | None = None) -> list[np.ndarray]:
     DC.apply_scene_skeleton(f, scene)
     recipe = json.loads((REPO / "art" / "p6" / "palutena" / "anims" / f"{clip_name}.json")
                         .read_text(encoding="utf-8"))
-    if int(recipe.get("keyposes", {}).get("first_slot", 0)) != 0:
+    kind = recipe.get("keyposes") or recipe.get("ultimate") or {}
+    if int(kind.get("first_slot", 0)) != 0:
         raise WingError(f"{clip_name}: a TransN clip; the torso bake assumes none")
     clip = A.decode(A.build(recipe, f.rom))
     length = max((st.length for st in clip.streams.values()), default=0)
@@ -548,7 +557,11 @@ def torso_frames(clip_name: str, scene: dict | None = None) -> list[np.ndarray]:
 
 # ---------------------------------------------------------------- the table
 
-ROW_VALUES = 6 + 4 + 8 * len(BONES)
+# The torso node (translation, turn), the pair (turn, size), then each bone's
+# translation, turn and two scales: the left wing's, then the right's (its
+# own since Ultimate's godwing animates the wings apart; stored as the left
+# side would be, the reader mirrors the right wing's values back).
+ROW_VALUES = 6 + 4 + 2 * 8 * len(BONES)
 
 
 def _s16(v: float) -> int:
@@ -570,14 +583,22 @@ def bake_row(wing: Wing, torso: np.ndarray, p: Params) -> list[int]:
     torso node's translation and rotation; the pair's rotation and size; per
     left bone its translation, rotation and x and y scale (relative to the
     pair)."""
+    pr, _pt, ps = pair_local(wing, p, torso)
+    return bake_row_pose(torso, pr, ps, bone_poses(wing, p))
+
+
+def bake_row_pose(torso: np.ndarray, pr: np.ndarray, ps: float, poses: list,
+                  poses_r: list | None = None) -> list[int]:
+    """bake_row from the pair's rotation and size and the bones' poses (the
+    right wing's own when given, else the left's: the reader mirrors it)."""
     row = []
     tr = torso[:3, :3]
     rot = tr / np.linalg.norm(tr, axis=0)
     row += [_s16(v) for v in torso[:3, 3]]
     row += [_angle16(a) for a in rpy(rot)]
-    pr, _pt, ps = pair_local(wing, p, torso)
     row += [_angle16(a) for a in rpy(pr)] + [_s16(ps * SCALE_UNIT)]
-    for rot_b, trans_b, (sx, sy) in bone_poses(wing, p):
+    right = poses if poses_r is None else [(MIRROR @ r @ MIRROR, MIRROR @ t, sc) for r, t, sc in poses_r]
+    for rot_b, trans_b, (sx, sy) in list(poses) + list(right):
         row += [_s16(v) for v in trans_b] + [_angle16(a) for a in rpy(rot_b)]
         row += [_s16(sx * SCALE_UNIT), _s16(sy * SCALE_UNIT)]
     if len(row) != ROW_VALUES:
@@ -585,8 +606,66 @@ def bake_row(wing: Wing, torso: np.ndarray, p: Params) -> list[int]:
     return row
 
 
+def ultimate_poses(wing: Wing, recipe: dict, length: int) -> list:
+    """Per frame of her smash clip (0..length): the pair's rotation and size
+    and the bones' poses from Ultimate's godwing motion (recipe "ultimate":
+    {"motion", "clip": her anims recipe, "offset": the clip's motion frame
+    the wing article starts at}), or None where it has not started or has
+    ended. The godwing is the kit's rig (the same bones and rest): each bone
+    turns from its rest as Ultimate's does (W_bone B_bone^-1, our bone's
+    rest frame after), its joint where Ultimate's is (in our units, relative
+    to the pair's rest origin, divided by the pair's size, as the table
+    keeps it); its stretch and fan Ultimate's local x and z scales (y is the
+    wing's normal there). The right wing likewise from WingR1-4, its rest
+    the left's mirrored."""
+    sys.path.insert(0, str(HERE))
+    import ultimate as U
+    ut = recipe["ultimate"]
+    body = json.loads((REPO / "art" / "p6" / "palutena" / "anims" / (ut["clip"] + ".json"))
+                      .read_text(encoding="utf-8"))["ultimate"]
+    parts = U._parts(body, int(body["length"]))
+    src = U.Source("palutena", ut["motion"], model="godwing")
+    offset = float(ut.get("offset", 0.0))
+    names = ["WingL1", "WingL2", "WingL3", "WingL4"]
+    names_r = ["WingR1", "WingR2", "WingR3", "WingR4"]
+    bind = {n: np.asarray(src.bind_world(n), float) for n in ["Wing"] + names + names_r}
+    rb = {n: U._rot(m) for n, m in bind.items()}
+    k = (np.linalg.norm(wing.bones[1].origin - wing.bones[0].origin)
+         / np.linalg.norm(bind["WingL2"][:3, 3] - bind["WingL1"][:3, 3]))
+    out = []
+    for g in range(length + 1):
+        u = U.time_map(U._part_at(parts, g)["time"], g) - offset
+        if u < 0.0 or u > src.frames - 1:
+            out.append(None)
+            continue
+        W = src.worlds(u)
+        i = src.idx
+        wr = U._rot(W[i["Wing"]])
+        dwing = wr @ rb["Wing"].T
+        size = float(np.linalg.norm(W[i["Wing"]][:3, 0]) / np.linalg.norm(bind["Wing"][:3, 0]))
+        sides = []
+        for side_names, mirror in ((names, False), (names_r, True)):
+            poses = []
+            for b, n in zip(wing.bones, side_names):
+                dk = U._rot(W[i[n]]) @ rb[n].T
+                rest = MIRROR @ b.frame @ MIRROR if mirror else b.frame
+                rot = dwing.T @ dk @ rest
+                trans = dwing.T @ (np.asarray(W[i[n]], float)[:3, 3] - bind["Wing"][:3, 3]) * k / max(size, 1e-3)
+                loc = src._local(n, u)
+                poses.append((rot, trans, (float(np.linalg.norm(loc[:3, 0])), float(np.linalg.norm(loc[:3, 2])))))
+            sides.append(poses)
+        out.append((dwing, size, sides[0], sides[1]))
+    return out
+
+
 def bake(wing: Wing, recipe: dict, torsos: list[np.ndarray]) -> tuple[int, int, list]:
     """(first frame, last frame, rows) of the frames the wings show."""
+    if "ultimate" in recipe:
+        poses = ultimate_poses(wing, recipe, len(torsos) - 1)
+        shown = [g for g, p in enumerate(poses) if p is not None]
+        if not shown or shown != list(range(shown[0], shown[-1] + 1)):
+            raise WingError("the godwing's frames are not one span of the clip")
+        return shown[0], shown[-1], [bake_row_pose(torsos[g], *poses[g]) for g in shown]
     keys = sorted(k["frame"] for k in recipe["keys"])
     first, last = int(math.ceil(keys[0])), min(int(math.floor(keys[-1])), len(torsos) - 1)
     rows = []

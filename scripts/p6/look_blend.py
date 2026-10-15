@@ -78,9 +78,12 @@ BONE_ROWS = {
 # Per object: a fixed row, or a rule name (vertex and face rules below).
 OBJECT_ROWS = {
     "DS_face": 8, "DS_hair_cap": 8,
-    # The long hair rides the upper back (card: hair split between the head
-    # and the back), its nape collar with it.
-    "DS_hair_panels": 2,
+    # The long hair hangs from the head on Peach's row 9 (the head's child,
+    # which draws nothing else in her look): her Ultimate clips turn it along
+    # Ultimate's hair chains (ultimate.py), every other clip holds it to the
+    # bodice (skirt_keys.py) as it rode before (owner p6p, 2026-10-15: on the
+    # bodice it stood out behind her lunges like a board).
+    "DS_hair_panels": 9,
     "DS_chest": "chest", "DS_dress": "dress", "DS_arms": "bones", "DS_hands": "bones",
     "DS_legs": "legs",
     "DS_staff": 14, "DS_staff_gem_bb": 14, "DS_staff_wings_sprite": 14,

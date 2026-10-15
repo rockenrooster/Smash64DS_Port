@@ -1,0 +1,22 @@
+{
+ "comment": "Ultimate's launched low (f01damageflylw). Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
+ "ultimate": {
+  "fighter": "palutena",
+  "skeleton": "peach",
+  "scene": "builds/p6-art/palutena/3ds2ds/scene_high/scene.json",
+  "header": "0x1397",
+  "length": 29,
+  "first_slot": 0,
+  "motion": "f01damageflylw",
+  "time": [
+   [
+    0,
+    0
+   ],
+   [
+    29,
+    36
+   ]
+  ]
+ }
+}

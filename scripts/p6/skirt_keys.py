@@ -70,6 +70,10 @@ import coverage as C  # noqa: E402
 import dress_check as D  # noqa: E402
 
 ROW_PELVIS, ROW_UPPER, ROW_HEM = 1, 25, 26
+# Her hair panels' row (look_blend.py: the head's child) and the bodice they
+# hung from: a clip that does not turn the hair itself (all but the Ultimate
+# ones, ultimate.py) keeps it on the bodice as the look had it.
+ROW_HAIR, ROW_HAIR_FROM, ROW_HEAD = 9, 2, 8
 # The legs: shin rows (their origins are the knees), foot rows (the ankles).
 KNEES = (17, 22)
 ANKLES = (18, 23)
@@ -217,6 +221,12 @@ class Skirt:
         self.axis_xy = self.ring25_local[:, :2].mean(axis=0)
         self.top = D._periodic(*self._profile(self.ring25_local))
         self.upper_rest = D.upper_rest_of(scene, self.bind)
+        # The hem at rest in the pelvis's frame and each vertex's direction
+        # about it (a guide's hem moves are given by direction).
+        self.hem_pelvis = (np.linalg.inv(b1) @ np.c_[hem_model, np.ones(len(hem_model))].T).T[:, :3]
+        c = self.hem_pelvis.mean(axis=0)
+        self.hem_az = np.arctan2(self.hem_pelvis[:, 0] - c[0], self.hem_pelvis[:, 2] - c[2])
+        self.hair_row = any(v.get("object") == "DS_hair_panels" and v["joint"] == ROW_HAIR for v in verts)
 
     # ------------------------------------------------------------ the axis
 
@@ -374,14 +384,14 @@ class Skirt:
         pel = legs @ rot.T + self.rest25[:3, 3]
         return np.where(above, D.upper_outs(pel, self.upper_rest), out)
 
-    def cost(self, p, fl, prev) -> float:
+    def cost(self, p, fl, prev, rest=HEM_REST) -> float:
         hem = self.hem_points(p)
         # The axis inside the hem (its angles all round it).
         h_ang = np.sort(np.arctan2(hem[:, 1] - self.axis_xy[1], hem[:, 0] - self.axis_xy[0]))
         if float(np.max(np.diff(np.append(h_ang, h_ang[0] + 2 * np.pi)))) >= np.pi * 0.9:
             return 1e6
         o = np.maximum(self.outs(p, fl) + MARGIN, 0.0) / OUT_UNIT
-        c = float(np.sum(((p - HEM_REST) / HEM_SCALE) ** 2)) + float(np.sum(self.legs.weight * o * o))
+        c = float(np.sum(((p - rest) / HEM_SCALE) ** 2)) + float(np.sum(self.legs.weight * o * o))
         if prev is not None:
             c += TEMPORAL * float(np.sum(((p - prev) / HEM_STEP) ** 2))
         panel = np.linalg.norm(hem - self.ring25_local, axis=1) - self.panel_rest
@@ -390,14 +400,15 @@ class Skirt:
         lift = hem[:, 2] - (self.top_z - MIN_SPAN)
         return c + float(np.sum(np.maximum(lift, 0.0) ** 2)) / 25.0
 
-    def solve_hem(self, legs, prev):
+    def solve_hem(self, legs, prev, rest=HEM_REST):
         """The hem shape for one frame's legs (row 25's frame), searched
-        from the frame before's (prev) and from rest."""
+        from the frame before's (prev) and from rest (a guide's hem when
+        given: the shape it stays nearest)."""
         fl = self.frame_legs(legs)
         lo, hi = (HEM_LO - HEM_REST) / HEM_SCALE, (HEM_HI - HEM_REST) / HEM_SCALE
-        f = lambda x: self.cost(HEM_REST + x * HEM_SCALE, fl, prev)
-        starts = [(np.zeros(5), 0.5)] if prev is None else [((prev - HEM_REST) / HEM_SCALE, 0.2),
-                                                            (np.zeros(5), 0.5)]
+        f = lambda x: self.cost(HEM_REST + x * HEM_SCALE, fl, prev, rest)
+        r0 = (np.asarray(rest) - HEM_REST) / HEM_SCALE
+        starts = [(r0, 0.5)] if prev is None else [((prev - HEM_REST) / HEM_SCALE, 0.2), (r0, 0.5)]
         best = None
         for x0, step in starts:
             if best is not None and f(x0) >= best[1]:
@@ -409,17 +420,47 @@ class Skirt:
 
     # ------------------------------------------------------------ the clip
 
-    def clip_keys(self, clip: A.Clip, anim_flags: int, trail: float = 0.0):
+    def clip_keys(self, clip: A.Clip, anim_flags: int, trail: float = 0.0, guide=None):
         """Per frame: row 25's rotation (Euler) and the hem's shape."""
-        return self._solve(clip, anim_flags, trail)["keys"]
+        return self._solve(clip, anim_flags, trail, guide)["keys"]
 
-    def _solve(self, clip: A.Clip, anim_flags: int, trail: float = 0.0) -> dict:
+    def guide_hems(self, guide: dict, n: int) -> list:
+        """A guide's hem per frame (the pelvis's frame): the rest hem moved
+        as the source's skirt hem moves in each direction about it
+        (ultimate.py: Ultimate's eight skirt chains' ends)."""
+        az = np.asarray(guide["azimuths"], dtype=float)
+        out = []
+        for i in range(n):
+            d = np.asarray(guide["hem"][min(i, len(guide["hem"]) - 1)], dtype=float)
+            xs, cols = D._periodic(az, d[:, 0], d[:, 1], d[:, 2])
+            move = np.stack([np.interp(self.hem_az, xs, col) for col in cols], axis=1)
+            out.append(self.hem_pelvis + move)
+        return out
+
+    def fit_hem(self, pts25) -> np.ndarray:
+        """The hem shape nearest hem points given in row 25's frame."""
+        lo, hi = (HEM_LO - HEM_REST) / HEM_SCALE, (HEM_HI - HEM_REST) / HEM_SCALE
+        f = lambda x: float(np.sum((self.hem_points(HEM_REST + x * HEM_SCALE) - pts25) ** 2))
+        x, _v = _search(f, np.zeros(5), lo, hi, 0.5)
+        return HEM_REST + x * HEM_SCALE
+
+    def _solve(self, clip: A.Clip, anim_flags: int, trail: float = 0.0, guide=None) -> dict:
         length = max((st.length for st in clip.streams.values()), default=0)
         frames = self.f.pose_frames(clip, anim_flags, length)
         loops = {st.loop for st in clip.streams.values()}
         loop = loops.pop() if len(loops) == 1 else None
-        targets = [self.target_axis(mats, trail) for _root, mats in frames]
-        axes = self.flow(frames, targets, loop)
+        origin = self.rest25[:3, 3]
+        ghems = self.guide_hems(guide, len(frames)) if guide else None
+        if ghems is not None:
+            # A guided clip's band points at its guide hem's middle (the
+            # source's skirt already swings and lags): no spring.
+            axes = []
+            for g in ghems:
+                d = g.mean(axis=0) - origin
+                axes.append(self.cap_tilt(d / max(np.linalg.norm(d), 1e-6)))
+        else:
+            targets = [self.target_axis(mats, trail) for _root, mats in frames]
+            axes = self.flow(frames, targets, loop)
         rest_rot = lambda d: _align(self.rest_axis(), d) @ self.rest25[:3, :3]
         twists = [self.spread_twist(mats, d, rest_rot(d)) for (_root, mats), d in zip(frames, axes)]
         # Smoothing: the axis and the twist, a centred window.
@@ -435,10 +476,13 @@ class Skirt:
         order = list(range(n))
         if loop is not None and 0 <= loop < n - 1:
             order += list(range(loop, n))
+        rests = [HEM_REST] * n
+        if ghems is not None:
+            rests = [self.fit_hem((g - origin) @ rot) for g, rot in zip(ghems, rots)]
         hems = [None] * n
         prev = None
         for i in order:
-            prev = self.solve_hem(legs[i], prev)
+            prev = self.solve_hem(legs[i], prev, rests[i])
             hems[i] = prev
         out = []
         prev_e = tuple(self.f.skel.rotate[ROW_UPPER])
@@ -558,11 +602,11 @@ class Skirt:
                 out.streams[slot] = new
         return out
 
-    def apply(self, clip: A.Clip, anim_flags: int, trail: float = 0.0) -> A.Clip:
+    def apply(self, clip: A.Clip, anim_flags: int, trail: float = 0.0, guide=None) -> A.Clip:
         """The clip with rows 25 and 26 keyed from her legs (the band
-        trailed behind her by `trail`), her legs held where the dress cannot
-        hold them."""
-        solved = self._solve(clip, anim_flags, trail)
+        trailed behind her by `trail`; or a guide's hem moves, the source's
+        skirt), her legs held where the dress cannot hold them."""
+        solved = self._solve(clip, anim_flags, trail, guide)
         frames0 = solved["frames"]
         held = np.zeros((2, len(frames0)))
         source = clip
@@ -572,7 +616,7 @@ class Skirt:
                 break
             held = self._ease(need)
             clip = self.hold(source, anim_flags, frames0, held)
-            solved = self._solve(clip, anim_flags, trail)
+            solved = self._solve(clip, anim_flags, trail, guide)
         keys = solved["keys"]
         length = len(keys) - 1
         loops = {st.loop for st in clip.streams.values()}
@@ -594,7 +638,30 @@ class Skirt:
             st26.tracks[7 + k] = A.Track([round(h[k] * C.SCALE_UNIT) for _r, h in keys], 0)
         out.streams[slot_of(ROW_UPPER)] = st25
         out.streams[slot_of(ROW_HEM)] = st26
+        if self.hair_row and guide is None:
+            out.streams[slot_of(ROW_HAIR)] = self._hair_on_bodice(solved["frames"], loop,
+                                                                   clip.streams.get(slot_of(ROW_HAIR)))
         return out
+
+    def _hair_on_bodice(self, frames, loop, old):
+        """Row 9's keys holding the hair to the bodice (its bind relation),
+        any translation keys the clip had kept."""
+        rot = lambda m: np.linalg.svd(m[:3, :3])[0] @ np.linalg.svd(m[:3, :3])[2]
+        rel = rot(self.bind[ROW_HAIR_FROM]).T @ rot(self.bind[ROW_HAIR])
+        prev = tuple(self.f.skel.rotate[ROW_HAIR])
+        eul = []
+        for _root, mats in frames:
+            local = rot(mats[ROW_HEAD]).T @ rot(mats[ROW_HAIR_FROM]) @ rel
+            prev = A.to_euler(local, prev)
+            eul.append(prev)
+        st = A.Stream(len(frames) - 1, loop)
+        for k in range(3):
+            st.tracks[k] = A.Track([round(e[k] * A.ROT_UNIT) for e in eul], 0)
+        if old is not None:
+            for k, t in old.tracks.items():
+                if k >= 3:
+                    st.tracks[k] = t
+        return st
 
 
 def main() -> int:

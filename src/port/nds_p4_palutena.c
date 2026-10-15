@@ -984,7 +984,7 @@ static void ndsP4PalutenaPillarProcUpdate(GObj *effect_gobj)
 #define PAL_WINGS_MAGIC 0x50574E48u         /* "PWNH" */
 #define PAL_WINGS_BONES 4
 #define PAL_WINGS_NODES (3 + (2 * PAL_WINGS_BONES))
-#define PAL_WINGS_VALUES (6 + 4 + (8 * PAL_WINGS_BONES))
+#define PAL_WINGS_VALUES (6 + 4 + (2 * 8 * PAL_WINGS_BONES))   /* both wings (p6_wings.py ROW_VALUES) */
 #define PAL_WINGS_CLIP_FSMASH 0             /* p6_wings.py CLIPS */
 #define PAL_WINGS_CLIP_DSMASH 1
 #define PAL_WINGS_ANGLE (F_CST_DTOR32(360.0F) / 65536.0F)
@@ -1113,10 +1113,11 @@ static void ndsP4PalutenaWingsPose(GObj *effect_gobj, GObj *fighter_gobj, s32 cl
 
     for (k = 0; k < PAL_WINGS_BONES; k++)
     {
-        const s16 *bone = &row[10 + (8 * k)];
-
         for (side = 0; side < 2; side++)
         {
+            /* Each wing its own values (Ultimate's godwing animates them
+             * apart), the right wing's stored mirrored as the left's. */
+            const s16 *bone = &row[10 + (8 * ((side * PAL_WINGS_BONES) + k))];
             DObj *b = nodes[3 + (side * PAL_WINGS_BONES) + k];
             f32 mirror = (side == 0) ? 1.0F : -1.0F;
 

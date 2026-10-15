@@ -1,0 +1,25 @@
+{
+ "comment": "Ultimate's forward roll (b02escapef) on the row's 32 frames; the TransN slot Peach's (the roll's distance). Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
+ "ultimate": {
+  "fighter": "palutena",
+  "skeleton": "peach",
+  "scene": "builds/p6-art/palutena/3ds2ds/scene_high/scene.json",
+  "header": "0x13ae",
+  "length": 32,
+  "first_slot": 1,
+  "motion": "b02escapef",
+  "time": [
+   [
+    0,
+    0
+   ],
+   [
+    32,
+    52
+   ]
+  ],
+  "transn": {
+   "clip": "0x13ae"
+  }
+ }
+}

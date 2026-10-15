@@ -39,44 +39,189 @@
   }
  },
  "motions": {
+  "3": {
+   "comment": "RebirthWait: her wait (Ultimate's)",
+   "anim": "builds/p6-art/palutena/anims/wait.o2r"
+  },
+  "4": {
+   "comment": "Wait (owner p6p: her stance turned toward the camera, the staff gripped high and leaned back): Ultimate's wait",
+   "anim": "builds/p6-art/palutena/anims/wait.o2r"
+  },
   "5": {
-   "comment": "WalkSlow (owner p6i/p6j: her walk): Peach's stride narrowed under the dress, the staff carried in her near hand slanted, its gem leading up ahead at her head's height (key poses on the owner's half-speed 3DS Walking clip)",
+   "comment": "WalkSlow: Ultimate's slow walk",
    "anim": "builds/p6-art/palutena/anims/walk_slow.o2r"
   },
   "6": {
-   "comment": "WalkMiddle: as WalkSlow, Peach's middle stride",
+   "comment": "WalkMiddle: Ultimate's walk",
    "anim": "builds/p6-art/palutena/anims/walk_middle.o2r"
   },
   "7": {
-   "comment": "WalkFast: as WalkSlow, Peach's fast stride",
+   "comment": "WalkFast: Ultimate's fast walk",
    "anim": "builds/p6-art/palutena/anims/walk_fast.o2r"
   },
+  "8": {
+   "comment": "WalkEnd: Ultimate's walk brake",
+   "anim": "builds/p6-art/palutena/anims/walk_end.o2r"
+  },
   "9": {
-   "comment": "Dash (owner p6i: her floating run): from her wait the staff swung back and a push into the glide (key poses on the owner's half-speed 3DS Running clip)",
+   "comment": "Dash: Ultimate's dash, her glide's push-off",
    "anim": "builds/p6-art/palutena/anims/dash_run.o2r"
   },
   "10": {
-   "comment": "Run (owner p6i: \"running animation (floating)\"): leaning far into a glide, the staff carried slanted with its gem low behind her, the shield arm out ahead, a slow flutter (key poses on the owner's half-speed 3DS Running clip)",
+   "comment": "Run: Ultimate's floating run",
    "anim": "builds/p6-art/palutena/anims/run.o2r"
   },
   "11": {
-   "comment": "RunBrake: out of the glide leaning back, the staff stood gem down and swung up behind her",
+   "comment": "RunBrake: Ultimate's run brake",
    "anim": "builds/p6-art/palutena/anims/run_brake.o2r"
   },
-  "164": {
-   "comment": "Appeal: down taunt (card: lets go of the staff, brushes her hair back, halo glows, retakes the staff): the staff stood upright on the floor behind her and let go, her hand brushing her hair back, reaching back with an open palm, the staff retaken (key poses on the owner's half-speed 3DS clip)",
-   "anim": "builds/p6-art/palutena/anims/appeal.o2r",
-   "script": "scripts/p6/palutena/motions/appeal.ms"
+  "14": {
+   "comment": "KneeBend: Ultimate's jump squat",
+   "anim": "builds/p6-art/palutena/anims/kneebend.o2r"
   },
-  "195": {
-   "comment": "AppearL (status 0xDC): entry, her gate before her",
-   "anim": "builds/p6-art/palutena/anims/entry.o2r",
-   "script": "scripts/p6/palutena/motions/entry.ms"
+  "15": {
+   "comment": "GuardKneeBend: as KneeBend",
+   "anim": "builds/p6-art/palutena/anims/kneebend.o2r"
   },
-  "196": {
-   "comment": "AppearR (status 0xDD): entry, as AppearL",
-   "anim": "builds/p6-art/palutena/anims/entry.o2r",
-   "script": "scripts/p6/palutena/motions/entry.ms"
+  "16": {
+   "comment": "JumpF: Ultimate's",
+   "anim": "builds/p6-art/palutena/anims/jump_f.o2r"
+  },
+  "17": {
+   "comment": "JumpB: Ultimate's",
+   "anim": "builds/p6-art/palutena/anims/jump_b.o2r"
+  },
+  "18": {
+   "comment": "JumpAerialF: Ultimate's, the TransN slot Peach's",
+   "anim": "builds/p6-art/palutena/anims/jump_aerial_f.o2r"
+  },
+  "19": {
+   "comment": "JumpAerialB: Ultimate's, the TransN slot Peach's",
+   "anim": "builds/p6-art/palutena/anims/jump_aerial_b.o2r"
+  },
+  "20": {
+   "comment": "Fall: Ultimate's",
+   "anim": "builds/p6-art/palutena/anims/fall.o2r"
+  },
+  "21": {
+   "comment": "FallAerial: Ultimate's",
+   "anim": "builds/p6-art/palutena/anims/fall_aerial.o2r"
+  },
+  "22": {
+   "comment": "Squat: Ultimate's crouch",
+   "anim": "builds/p6-art/palutena/anims/squat.o2r"
+  },
+  "23": {
+   "comment": "SquatWait: Ultimate's",
+   "anim": "builds/p6-art/palutena/anims/squat_wait.o2r"
+  },
+  "24": {
+   "comment": "SquatRv: Ultimate's",
+   "anim": "builds/p6-art/palutena/anims/squat_rv.o2r"
+  },
+  "25": {
+   "comment": "LandingLight: Ultimate's",
+   "anim": "builds/p6-art/palutena/anims/landing_light.o2r"
+  },
+  "26": {
+   "comment": "LandingHeavy: Ultimate's",
+   "anim": "builds/p6-art/palutena/anims/landing_heavy.o2r"
+  },
+  "27": {
+   "comment": "Pass: Ultimate's platform drop",
+   "anim": "builds/p6-art/palutena/anims/pass.o2r"
+  },
+  "28": {
+   "comment": "GuardPass: as Pass",
+   "anim": "builds/p6-art/palutena/anims/pass.o2r"
+  },
+  "29": {
+   "comment": "OttottoWait: Ultimate's teeter",
+   "anim": "builds/p6-art/palutena/anims/ottotto_wait.o2r"
+  },
+  "30": {
+   "comment": "Ottotto: Ultimate's teeter start",
+   "anim": "builds/p6-art/palutena/anims/ottotto.o2r"
+  },
+  "31": {
+   "comment": "DamageHi1: Ultimate's",
+   "anim": "builds/p6-art/palutena/anims/damage_hi1.o2r"
+  },
+  "32": {
+   "comment": "DamageHi2: Ultimate's",
+   "anim": "builds/p6-art/palutena/anims/damage_hi2.o2r"
+  },
+  "33": {
+   "comment": "DamageHi3: Ultimate's",
+   "anim": "builds/p6-art/palutena/anims/damage_hi3.o2r"
+  },
+  "34": {
+   "comment": "DamageN1: Ultimate's",
+   "anim": "builds/p6-art/palutena/anims/damage_n1.o2r"
+  },
+  "35": {
+   "comment": "DamageN2: Ultimate's",
+   "anim": "builds/p6-art/palutena/anims/damage_n2.o2r"
+  },
+  "36": {
+   "comment": "DamageN3: Ultimate's",
+   "anim": "builds/p6-art/palutena/anims/damage_n3.o2r"
+  },
+  "37": {
+   "comment": "DamageLw1: Ultimate's",
+   "anim": "builds/p6-art/palutena/anims/damage_lw1.o2r"
+  },
+  "38": {
+   "comment": "DamageLw2: Ultimate's",
+   "anim": "builds/p6-art/palutena/anims/damage_lw2.o2r"
+  },
+  "39": {
+   "comment": "DamageLw3: Ultimate's",
+   "anim": "builds/p6-art/palutena/anims/damage_lw3.o2r"
+  },
+  "40": {
+   "comment": "DamageAir1: Ultimate's",
+   "anim": "builds/p6-art/palutena/anims/damage_air1.o2r"
+  },
+  "41": {
+   "comment": "DamageAir2: Ultimate's",
+   "anim": "builds/p6-art/palutena/anims/damage_air2.o2r"
+  },
+  "42": {
+   "comment": "DamageAir3: Ultimate's",
+   "anim": "builds/p6-art/palutena/anims/damage_air3.o2r"
+  },
+  "44": {
+   "comment": "DamageFlyHi: Ultimate's",
+   "anim": "builds/p6-art/palutena/anims/damage_fly_hi.o2r"
+  },
+  "45": {
+   "comment": "DamageFlyN: Ultimate's",
+   "anim": "builds/p6-art/palutena/anims/damage_fly_n.o2r"
+  },
+  "46": {
+   "comment": "DamageFlyLw: Ultimate's",
+   "anim": "builds/p6-art/palutena/anims/damage_fly_lw.o2r"
+  },
+  "47": {
+   "comment": "DamageFlyTop: Ultimate's",
+   "anim": "builds/p6-art/palutena/anims/damage_fly_top.o2r"
+  },
+  "48": {
+   "comment": "DamageFlyRoll: Ultimate's tumble",
+   "anim": "builds/p6-art/palutena/anims/damage_fly_roll.o2r"
+  },
+  "50": {
+   "comment": "DamageFall: Ultimate's tumble fall",
+   "anim": "builds/p6-art/palutena/anims/damage_fall.o2r"
+  },
+  "136": {
+   "comment": "EscapeF: Ultimate's forward roll, the TransN slot Peach's",
+   "anim": "builds/p6-art/palutena/anims/escape_f.o2r"
+  },
+  "137": {
+   "comment": "EscapeB: Ultimate's back roll, the TransN slot Peach's",
+   "anim": "builds/p6-art/palutena/anims/escape_b.o2r"
   },
   "146": {
    "comment": "Catch: grab (card: telekinetic clutch), Peach's with the box 20% farther and a psionic flash",
@@ -90,103 +235,118 @@
    "comment": "ThrowB: Peach's back throw made telekinetic, as ThrowF",
    "script": "scripts/p6/palutena/motions/throwb.ms"
   },
+  "164": {
+   "comment": "Appeal: down taunt (D4): Ultimate's, she turns to face the camera, the halo above her (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
+   "anim": "builds/p6-art/palutena/anims/appeal.o2r",
+   "script": "scripts/p6/palutena/motions/appeal.ms"
+  },
   "165": {
-   "comment": "Attack11: jab 1: the shield bash, the staff swung up behind her (owner p6i: the 3DS's continuous jab; key poses on the owner's half-speed 3DS clip)",
+   "comment": "Attack11: jab 1: the staff drawn back and thrust ahead (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
    "script": "scripts/p6/palutena/motions/jab1.ms",
    "anim": "builds/p6-art/palutena/anims/jab1.o2r"
   },
   "166": {
-   "comment": "Attack12: jab 2: the staff thrust level ahead at her waist with a lunge and a light burst; the rapid jab may follow (key poses on the owner's half-speed 3DS clip)",
+   "comment": "Attack12: jab 2: the staff pushed ahead with a burst, the rapid jab's start (the 3DS's continuous jab) (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
    "script": "scripts/p6/palutena/motions/jab2.ms",
    "anim": "builds/p6-art/palutena/anims/jab2.o2r"
   },
   "167": {
-   "comment": "AttackDash: the shield charge (D3): the staff swung under her, a wide stance and a deep lunge with the shield thrust far out, sliding behind it; its own TransN lunge curve (key poses on the owner's half-speed 3DS clip)",
+   "comment": "AttackDash: the shield charge (D3), its travel the TransN slot's (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
    "script": "scripts/p6/palutena/motions/dash.ms",
    "anim": "builds/p6-art/palutena/anims/dash.o2r"
   },
   "170": {
-   "comment": "AttackS3: forward tilt (card: the staff spun ahead): a twirl sweeping the staff low ahead, then the staff let go to spin upright before her open palm, caught upright (key poses on the owner's half-speed 3DS clip)",
+   "comment": "AttackS3: forward tilt: the staff spun ahead of her (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
    "script": "scripts/p6/palutena/motions/ftilt.ms",
    "anim": "builds/p6-art/palutena/anims/ftilt.o2r"
   },
   "174": {
-   "comment": "AttackHi3: up tilt (card: the staff spun overhead): on her knees, the arm up, the staff spun overhead in a plane low ahead and high behind (key poses on the owner's half-speed 3DS clip)",
+   "comment": "AttackHi3: up tilt: on her knees, the staff spinning above her hand (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
    "script": "scripts/p6/palutena/motions/utilt.ms",
    "anim": "builds/p6-art/palutena/anims/utilt.o2r"
   },
   "176": {
-   "comment": "AttackLw3: down tilt (card: the staff spun along the ground): from her crouch a low lunge, the staff thrust out along the floor (key poses on the owner's half-speed 3DS clip)",
+   "comment": "AttackLw3: down tilt: from her crouch, the staff spun along the ground (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
    "script": "scripts/p6/palutena/motions/dtilt.ms",
    "anim": "builds/p6-art/palutena/anims/dtilt.o2r"
   },
-  "179": {
-   "comment": "AttackS4: forward smash (card: the wings): the shield out as she rises on her toes, a hop with the wings raised in a V, the hit a bow with the staff upright ahead as the wings sweep down long and low ahead (key poses on the owner's half-speed 3DS clip)",
-   "script": "scripts/p6/palutena/motions/fsmash.ms",
-   "anim": "builds/p6-art/palutena/anims/fsmash.o2r"
-  },
   "177": {
-   "comment": "AttackS4Hi: the forward smash at an angle plays it as it is (Peach's angled smash clip and scripts replaced; ftCommonAttackS4SetStatus angles a smash whose AttackS4HiS has a clip)",
+   "comment": "AttackS4Hi: the forward smash at an angle plays it as it is (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
    "script": "scripts/p6/palutena/motions/fsmash.ms",
    "anim": "builds/p6-art/palutena/anims/fsmash.o2r"
   },
   "178": {
-   "comment": "AttackS4HiS: the forward smash at an angle plays it as it is (Peach's angled smash clip and scripts replaced; ftCommonAttackS4SetStatus angles a smash whose AttackS4HiS has a clip)",
+   "comment": "AttackS4HiS: the forward smash at an angle plays it as it is (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
+   "script": "scripts/p6/palutena/motions/fsmash.ms",
+   "anim": "builds/p6-art/palutena/anims/fsmash.o2r"
+  },
+  "179": {
+   "comment": "AttackS4: forward smash: the wings' slam (their table: art/p6/palutena/wings/fsmash.json) (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
    "script": "scripts/p6/palutena/motions/fsmash.ms",
    "anim": "builds/p6-art/palutena/anims/fsmash.o2r"
   },
   "180": {
-   "comment": "AttackS4LwS: the forward smash at an angle plays it as it is (Peach's angled smash clip and scripts replaced; ftCommonAttackS4SetStatus angles a smash whose AttackS4HiS has a clip)",
+   "comment": "AttackS4LwS: the forward smash at an angle plays it as it is (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
    "script": "scripts/p6/palutena/motions/fsmash.ms",
    "anim": "builds/p6-art/palutena/anims/fsmash.o2r"
   },
   "181": {
-   "comment": "AttackS4Lw: the forward smash at an angle plays it as it is (Peach's angled smash clip and scripts replaced; ftCommonAttackS4SetStatus angles a smash whose AttackS4HiS has a clip)",
+   "comment": "AttackS4Lw: the forward smash at an angle plays it as it is (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
    "script": "scripts/p6/palutena/motions/fsmash.ms",
    "anim": "builds/p6-art/palutena/anims/fsmash.o2r"
   },
   "182": {
-   "comment": "AttackHi4: up smash (card: the light pillar ahead of her): turned to the camera gathering the light with the staff low, thrust straight up overhead as the pillar rises (key poses on the owner's half-speed 3DS clip)",
+   "comment": "AttackHi4: up smash: the arm thrown up, the light pillar ahead of her (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
    "script": "scripts/p6/palutena/motions/usmash.ms",
    "anim": "builds/p6-art/palutena/anims/usmash.o2r"
   },
   "183": {
-   "comment": "AttackLw4: down smash (card: the wings down both sides): turned to the camera, the staff over her head in a ring of wings, a deep squat with the staff's head slammed to the floor as the wings lie flat both sides (key poses on the owner's half-speed 3DS clip)",
+   "comment": "AttackLw4: down smash: stooped low, the wings flat along the ground (art/p6/palutena/wings/dsmash.json) (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
    "script": "scripts/p6/palutena/motions/dsmash.ms",
    "anim": "builds/p6-art/palutena/anims/dsmash.o2r"
   },
   "184": {
-   "comment": "AttackAirN: neutral air (card: the staff spun beside her): the staff whirled once round before her in the camera's plane (key poses on the owner's half-speed 3DS clip)",
+   "comment": "AttackAirN: neutral air: the staff whirled round her (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
    "script": "scripts/p6/palutena/motions/nair.ms",
    "anim": "builds/p6-art/palutena/anims/nair.o2r"
   },
   "185": {
-   "comment": "AttackAirF: forward air: a flying kick, her left leg out through the slit with a burst at the foot, the staff raised behind her head (the owner's half-speed 3DS clip, as the card's flying kick; key poses)",
+   "comment": "AttackAirF: forward air: the side kick (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
    "script": "scripts/p6/palutena/motions/fair.ms",
    "anim": "builds/p6-art/palutena/anims/fair.o2r"
   },
   "186": {
-   "comment": "AttackAirB: back air (card: a backfist with the shield arm): her back turned, the shield thrust out behind her in a burst of light (key poses on the owner's half-speed 3DS clip)",
+   "comment": "AttackAirB: back air: the back-handed slap with the shield (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
    "script": "scripts/p6/palutena/motions/bair.ms",
    "anim": "builds/p6-art/palutena/anims/bair.o2r"
   },
   "187": {
-   "comment": "AttackAirHi: up air (card: a twirl, the halo above her): turned to the camera, the staff held upright before her in the light, the halo above (key poses on the owner's half-speed 3DS clip)",
+   "comment": "AttackAirHi: up air: the twirl, the halo above her (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
    "script": "scripts/p6/palutena/motions/uair.ms",
    "anim": "builds/p6-art/palutena/anims/uair.o2r"
   },
   "188": {
-   "comment": "AttackAirLw: down air: a stomp, turned to the camera with arms spread, her left leg driven straight down with a burst at the foot (the owner's half-speed 3DS clip; key poses)",
+   "comment": "AttackAirLw: down air: the downward kick (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
    "script": "scripts/p6/palutena/motions/dair.ms",
    "anim": "builds/p6-art/palutena/anims/dair.o2r"
   },
+  "195": {
+   "comment": "AppearL (status 0xDC): entry, her gate before her (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
+   "anim": "builds/p6-art/palutena/anims/entry.o2r",
+   "script": "scripts/p6/palutena/motions/entry.ms"
+  },
+  "196": {
+   "comment": "AppearR (status 0xDD): entry, as AppearL (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
+   "anim": "builds/p6-art/palutena/anims/entry.o2r",
+   "script": "scripts/p6/palutena/motions/entry.ms"
+  },
   "219": {
-   "comment": "Explosive Flame: a quarter turn into a wide stance, the staff arm straight at the target (owner p6i: the owner's Ultimate clip; key poses)",
+   "comment": "Explosive Flame (D2): the staff swung overhead and pointed at the target (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
    "anim": "builds/p6-art/palutena/anims/flame.o2r",
    "script": "scripts/p6/palutena/motions/flame.ms"
   },
   "220": {
-   "comment": "Explosive Flame in the air: the ground cast's upper body over her fall's legs (key poses)",
+   "comment": "Explosive Flame in the air (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
    "anim": "builds/p6-art/palutena/anims/flame_air.o2r",
    "script": "scripts/p6/palutena/motions/flame.ms"
   },
@@ -206,37 +366,37 @@
    "script": "scripts/p6/palutena/motions/warp_end.ms"
   },
   "224": {
-   "comment": "Counter / Reflect",
+   "comment": "Counter / Reflect (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
    "anim": "builds/p6-art/palutena/anims/counter.o2r",
    "script": "scripts/p6/palutena/motions/counter.ms"
   },
   "225": {
-   "comment": "Counter / Reflect in the air",
+   "comment": "Counter / Reflect in the air (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
    "anim": "builds/p6-art/palutena/anims/counter_air.o2r",
    "script": "scripts/p6/palutena/motions/counter.ms"
   },
   "226": {
-   "comment": "Counter: the counterattack",
+   "comment": "Counter: the counterattack (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
    "anim": "builds/p6-art/palutena/anims/counter_hit.o2r",
    "script": "scripts/p6/palutena/motions/counter_hit.ms"
   },
   "227": {
-   "comment": "Counter: the counterattack in the air",
+   "comment": "Counter: the counterattack in the air (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
    "anim": "builds/p6-art/palutena/anims/counter_hit_air.o2r",
    "script": "scripts/p6/palutena/motions/counter_hit.ms"
   },
   "228": {
-   "comment": "Attack100Start (appended, owner p6i): her rapid jab's start, from jab 2's thrust into the held staff (key poses on the owner's half-speed 3DS clip)",
+   "comment": "Attack100Start (appended, owner p6i): her rapid jab's start (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
    "anim": "builds/p6-art/palutena/anims/rapid_start.o2r",
    "script": "scripts/p6/palutena/motions/rapid_start.ms"
   },
   "229": {
-   "comment": "Attack100Loop (appended): the staff held level ahead, pushed out a little with each burst of light, four a loop",
+   "comment": "Attack100Loop (appended): the staff held level ahead, pushed with each burst (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
    "anim": "builds/p6-art/palutena/anims/rapid_loop.o2r",
    "script": "scripts/p6/palutena/motions/rapid_loop.ms"
   },
   "230": {
-   "comment": "Attack100End (appended): the finisher, a last thrust with a burst that launches, the staff swung up and over her head",
+   "comment": "Attack100End (appended): the finisher, the staff swung up through a burst (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
    "anim": "builds/p6-art/palutena/anims/rapid_end.o2r",
    "script": "scripts/p6/palutena/motions/rapid_end.ms"
   }
@@ -392,7 +552,12 @@
    "motion": 228,
    "attack_id": 4,
    "sflags": 16,
-   "procs": ["ftCommonAttack100StartProcUpdate", null, "ftPhysicsApplyGroundVelFriction", "mpCommonSetFighterFallOnEdgeBreak"]
+   "procs": [
+    "ftCommonAttack100StartProcUpdate",
+    null,
+    "ftPhysicsApplyGroundVelFriction",
+    "mpCommonSetFighterFallOnEdgeBreak"
+   ]
   },
   "259": {
    "comment": "Attack100Loop (appended): Fox's row",
@@ -400,7 +565,12 @@
    "motion": 229,
    "attack_id": 4,
    "sflags": 16,
-   "procs": ["ftCommonAttack100LoopProcUpdate", "ftCommonAttack100LoopProcInterrupt", "ftPhysicsApplyGroundVelFriction", "mpCommonSetFighterFallOnEdgeBreak"]
+   "procs": [
+    "ftCommonAttack100LoopProcUpdate",
+    "ftCommonAttack100LoopProcInterrupt",
+    "ftPhysicsApplyGroundVelFriction",
+    "mpCommonSetFighterFallOnEdgeBreak"
+   ]
   },
   "260": {
    "comment": "Attack100End (appended): Fox's row",
@@ -408,7 +578,12 @@
    "motion": 230,
    "attack_id": 4,
    "sflags": 16,
-   "procs": ["ftAnimEndSetWait", null, "ftPhysicsApplyGroundVelFriction", "mpCommonSetFighterFallOnEdgeBreak"]
+   "procs": [
+    "ftAnimEndSetWait",
+    null,
+    "ftPhysicsApplyGroundVelFriction",
+    "mpCommonSetFighterFallOnEdgeBreak"
+   ]
   }
  },
  "kind_tables": {
@@ -461,16 +636,54 @@
     "weapon": {
      "comment": "Explosive Flame's fire (nds_p4_palutena.c PAL_FLAME_*): made at frame 10, the burn from 15 (radius 320), the blast 29-31 (radius 430), at the near, middle and far distances",
      "y": 320,
-     "offsets_z": [450, 750, 1610],
-     "phases": [{"frames": [15, 28], "radius": 320}, {"frames": [29, 31], "radius": 430}]
+     "offsets_z": [
+      450,
+      750,
+      1610
+     ],
+     "phases": [
+      {
+       "frames": [
+        15,
+        28
+       ],
+       "radius": 320
+      },
+      {
+       "frames": [
+        29,
+        31
+       ],
+       "radius": 430
+      }
+     ]
     }
    },
    "NSPA": {
     "weapon": {
      "comment": "Explosive Flame's fire (nds_p4_palutena.c PAL_FLAME_*): made at frame 10, the burn from 15 (radius 320), the blast 29-31 (radius 430), at the near, middle and far distances",
      "y": 320,
-     "offsets_z": [450, 750, 1610],
-     "phases": [{"frames": [15, 28], "radius": 320}, {"frames": [29, 31], "radius": 430}]
+     "offsets_z": [
+      450,
+      750,
+      1610
+     ],
+     "phases": [
+      {
+       "frames": [
+        15,
+        28
+       ],
+       "radius": 320
+      },
+      {
+       "frames": [
+        29,
+        31
+       ],
+       "radius": 430
+      }
+     ]
     }
    },
    "DASH_ATTACK": {
@@ -480,46 +693,7 @@
  },
  "pose": [
   {
-   "comment": "Walks (WalkSlow, WalkMiddle, WalkFast, WalkEnd): Peach's with a smaller stride under the dress and the staff held up as in her wait (owner's 3DS walking reference, 2026-10-14).",
-   "motions": [
-    8
-   ],
-   "ops": [
-    {
-     "op": "blend",
-     "rows": [
-      15,
-      16,
-      17,
-      18,
-      19,
-      20,
-      21,
-      22,
-      23,
-      24
-     ],
-     "amount": 0.35
-    },
-    {
-     "op": "blend",
-     "rows": [
-      10,
-      11,
-      12,
-      13,
-      14
-     ],
-     "amount": 0.75,
-     "toward": {
-      "clip": "0x1371",
-      "frame": 0
-     }
-    }
-   ]
-  },
-  {
-   "comment": "Dash, Run, RunBrake, TurnRun: Peach's with a smaller stride and the body leaning into the run (the 3DS running reference).",
+   "comment": "TurnRun: Peach's with a smaller stride and the body leaning into the run (the 3DS running reference).",
    "motions": [
     13
    ],
@@ -552,18 +726,9 @@
    ]
   },
   {
-   "comment": "Turn, KneeBend, jumps, falls and landings: Peach's with the legs closer together under the dress (the 3DS jumps reference).",
+   "comment": "Turn: Peach's with the legs closer together under the dress.",
    "motions": [
-    12,
-    14,
-    16,
-    17,
-    18,
-    19,
-    20,
-    21,
-    25,
-    26
+    12
    ],
    "ops": [
     {
@@ -581,46 +746,6 @@
       24
      ],
      "amount": 0.35
-    }
-   ]
-  },
-  {
-   "comment": "Squat, SquatWait, SquatRv: Peach's crouch with the knees together under the dress.",
-   "motions": [
-    22,
-    23,
-    24
-   ],
-   "ops": [
-    {
-     "op": "blend",
-     "rows": [
-      15,
-      16,
-      17,
-      18,
-      19,
-      20,
-      21,
-      22,
-      23,
-      24
-     ],
-     "amount": 0.45
-    }
-   ]
-  },
-  {
-   "comment": "Dash, Run, RunBrake (owner p6i: her floating run): their own clips; the dress trailed behind her (skirt_keys.py trail).",
-   "motions": [
-    9,
-    10,
-    11
-   ],
-   "ops": [
-    {
-     "op": "skirt",
-     "trail": 0.35
     }
    ]
   }

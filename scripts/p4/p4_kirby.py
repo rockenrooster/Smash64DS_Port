@@ -198,15 +198,16 @@ CUSTOM_POWERS = {
         # staff's band (joint 14's first span: rows 4-10 of 64, its 16
         # columns wrapping, three times round; her own circlet is painted on
         # her face, too dark at 16 colours); and down his back a sheet of her
-        # hair panels' texture (joint 2's third span: columns 5-27 across,
-        # rows 1-62 down), a third of the way round behind him, off his body
-        # and hanging. scripts/p6/hat_preview.py renders it on him.
+        # hair panels' texture (joint 9's only span since look_hair.py moved
+        # the panels off the bodice: columns 5-27 across, rows 1-62 down), a
+        # third of the way round behind him, off his body and hanging.
+        # scripts/p6/hat_preview.py renders it on him.
         "hat": {"kind": "spans", "joint": 8, "detail": 1, "spans": (1,),
                 "scale": (4.8, 3.6, 4.4), "offset": (0, -38, 14),
                 "bands": (
                     {"joint": 14, "span": 0, "rows": ((122, 119, 4.0), (106, 131, 10.0)), "segments": 12,
                      "texels_around": 48},
-                    {"joint": 2, "span": 2, "segments": 8, "texels_around": 22, "texel_start": 5.0,
+                    {"joint": 9, "span": 0, "segments": 8, "texels_around": 22, "texel_start": 5.0,
                      "start_angle": 120.0, "arc": 120.0,
                      "rows": ((150, 92, 1.0), (110, 136, 12.0), (60, 158, 26.0), (0, 161, 40.0),
                               (-60, 152, 52.0), (-100, 142, 62.0))},

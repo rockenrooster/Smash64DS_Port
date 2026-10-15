@@ -427,6 +427,11 @@ def author_motions(resolved: dict, events: dict, motions: dict, name: str, out: 
             authored.setdefault("anims", {})[str(index)] = fid
             authored.setdefault("anims_sha256", {})[str(index)] = hashlib.sha256(bytes(blob)).hexdigest()
             clips[entry["anim"]] = fid
+            # An Ultimate clip's skirt guide (anim.py writes it beside the
+            # clip): author_skirt keys its dress from it.
+            guide = src.with_suffix(".skirt.json")
+            if guide.exists():
+                authored.setdefault("skirt_guides", {})[f"{fid:#x}"] = str(guide.relative_to(REPO).as_posix())
         if "anim_id" in entry:
             # A clip already in the content's closure (Quick Draw's slash is
             # Roy's forward-tilt clip): named, not copied.
@@ -495,18 +500,21 @@ def author_motions(resolved: dict, events: dict, motions: dict, name: str, out: 
 SKIRT_CACHE = REPO / "builds" / "p6-cache" / "skirt"
 
 
-def _skirt_keyed(sk, clip, blob: bytes, flags: int, trail: float, salt) -> bytes:
-    """The clip keyed for the skirt (skirt_keys.Skirt.apply) and encoded over
-    blob's header, from SKIRT_CACHE when the same clip, flags, trail and
+def _skirt_keyed(sk, clip, blob: bytes, flags: int, trail: float, salt, guide: bytes | None = None) -> bytes:
+    """The clip keyed for the skirt (skirt_keys.Skirt.apply; guided by an
+    Ultimate clip's skirt guide when it has one) and encoded over blob's
+    header, from SKIRT_CACHE when the same clip, flags, trail, guide and
     solver (salt: its sources, the scene, the skeleton) made it before."""
     import anim as A
     h = salt.copy()
     h.update(A.encode(clip, blob))
     h.update(struct.pack("<If", flags, trail))
+    if guide is not None:
+        h.update(guide)
     path = SKIRT_CACHE / f"{h.hexdigest()}.o2r"
     if path.exists():
         return path.read_bytes()
-    out = A.encode(sk.apply(clip, flags, trail), blob)
+    out = A.encode(sk.apply(clip, flags, trail, json.loads(guide) if guide is not None else None), blob)
     SKIRT_CACHE.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(f".{id(out):x}.tmp")
     tmp.write_bytes(out)
@@ -553,6 +561,7 @@ def author_skirt(resolved: dict, events: dict, skirt: dict | None, name: str, ou
     made: dict[tuple, int] = {}
     replaced = set()
     authored = resolved["authored"]
+    guides = {int(k, 16): (REPO / v).read_bytes() for k, v in authored.get("skirt_guides", {}).items()}
     group_of: dict[int, int] = {}
     for g, group in enumerate(pose or ()):
         for index in group["motions"]:
@@ -586,7 +595,8 @@ def author_skirt(resolved: dict, events: dict, skirt: dict | None, name: str, ou
                                              op.get("frames"), int(op.get("ease", 0)), lead)
                     else:
                         raise AuthorError(f"spec pose: op {kind!r}")
-                new = bytearray(_skirt_keyed(sk, clip, blob, row["anim_flags"], trail, salt))
+                new = bytearray(_skirt_keyed(sk, clip, blob, row["anim_flags"], trail, salt,
+                                             guides.get(fid) if group is None else None))
                 own = window <= fid < window + 0x100 and group is None and not any(
                     k[0] == fid for k in made)
                 nid = fid if own else next_id

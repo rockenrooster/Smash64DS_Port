@@ -610,7 +610,7 @@ def with_transn_slot(clip: Clip) -> Clip:
     return out
 
 
-def build(recipe: dict, rom) -> bytes:
+def build(recipe: dict, rom, extras: dict | None = None) -> bytes:
     """A clip from its recipe (art/p6/<name>/anims/*.json): a source clip
     (file id in the reference ROM), optionally retargeted ("retarget":
     {"from", "to", "height_scale", "first_slot": a TransN clip's 1, "item":
@@ -624,7 +624,8 @@ def build(recipe: dict, rom) -> bytes:
     tree -- "blend" rows toward the bind pose or a frame of another clip,
     "turn" a row about the model's axes; or, with no "source", "keys": a
     clip from key poses, or "keyposes": key poses over clip frames with
-    turns, aims and leg IK, keyposes.py); the O2R container keeps the source's header
+    turns, aims and leg IK, keyposes.py, or "ultimate": an Ultimate motion
+    on her rig, ultimate.py); the O2R container keeps the source's header
     (p6_author.py gives it its own id; a keyed clip takes "header": a
     clip of the same tree's id for its header)."""
     import pose_ops
@@ -640,6 +641,15 @@ def build(recipe: dict, rom) -> bytes:
             scales = keyposes.scene_scales(scene, len(skel.parents))
         clips = {int(str(r["clip"]), 0): decode(rom.o2r(int(str(r["clip"]), 0))) for r in keyposes.refs(kp)}
         clip = keyposes.build(skel, kp, clips, len(skel.parents) - 1 + int(kp.get("first_slot", 0)), scales)
+    elif "ultimate" in recipe:
+        import keyposes
+        import ultimate
+        ut = recipe["ultimate"]
+        blob = rom.o2r(int(str(ut["header"]), 0))
+        skel = skeleton(rom, ut["skeleton"])
+        scene = json.loads((HERE.parents[1] / ut["scene"]).read_text(encoding="utf-8"))
+        keyposes.scene_skeleton(skel, scene)
+        clip = ultimate.build(skel, ut, keyposes.scene_scales(scene, len(skel.parents)), rom, extras)
     elif "keys" in recipe:
         blob = rom.o2r(int(str(recipe["header"]), 0))
         skel = skeleton(rom, recipe["skeleton"])
@@ -761,9 +771,17 @@ def main() -> int:
         sys.path.insert(0, str(HERE.parent))
         import remix_rom as R
         recipe = json.loads(args.build.read_text(encoding="utf-8"))
-        blob = build(recipe, R.Rom(args.staging / "ssb64asm.z64"))
+        extras: dict = {}
+        blob = build(recipe, R.Rom(args.staging / "ssb64asm.z64"), extras)
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_bytes(blob)
+        # An Ultimate clip's skirt guide beside it (p6_author.py hands it to
+        # skirt_keys.py); none beside a clip without one.
+        guide = args.out.with_suffix(".skirt.json")
+        if "skirt_guide" in extras:
+            guide.write_text(json.dumps(extras["skirt_guide"]) + "\n", encoding="utf-8", newline="\n")
+        elif guide.exists():
+            guide.unlink()
         print(f"anim: {args.build.name} -> {args.out} ({len(blob)} bytes)")
         return 0
     ap.print_help()

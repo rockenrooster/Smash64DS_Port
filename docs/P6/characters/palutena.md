@@ -387,7 +387,78 @@ Defaults for the specials:
   blast from the staff (Marth's counter override, `NDSP4Overrides.update_damage`),
   and a projectile is reflected (Fox's reflector rule). Ground and air.
 
+## Animations from Ultimate's motions (owner p6p, 2026-10-15)
+
+Owner p6p review (rating 1/5 -> 2/5, a note per move) with "I also have some
+source files for palutenas animations for SSB Ultimate which may help
+immensely" (the owner's extraction of Ultimate's `.nuanmb` motions, local,
+`../ssbu-recomp/build/palutena_motion`). Every move she plays is now
+Ultimate's own motion retargeted onto her rig (`scripts/p6/ultimate.py`,
+anim.py recipe "ultimate"; `art/p6/palutena/anims/*.json` name the motion and
+the timing, never its data: the motions and the skeleton they play on, the
+owner's DAE rip, stay local, P6 D1). Warp stays as the owner approved it;
+Turn and TurnRun stay Peach's (their facing flip is the game's).
+
+- **The retarget.** Both rigs' binds are T-poses facing +z, so each of her
+  rows takes its Ultimate bone's turn from its bind (W_row = W_bone
+  B_bone^-1 B_row). Her proportions are Ultimate's at about 24.9 model units
+  an Ultimate unit (her legs' ratio), but Peach's torso turns about the
+  pelvis origin, below her hips: the pelvis, torso, shoulders and neck are
+  placed where Ultimate's scaled hips, waist, shoulders and neck are (keyed
+  translations, bounded), and her ankles reach Ultimate's by two-bone IK, the
+  soles kept. The staff takes the Stick bone's pose through a calibration of
+  the two staffs (their length and the ornament's plane), held where
+  Ultimate's hand holds it (61 units nearer the gem than before: owner p6p,
+  "grips staff higher") and leaving the hand as Ultimate's does (the up
+  tilt's and neutral air's floating staff). The shield sprite turns with
+  the forearm twisted about its length to follow the Shield bone's face.
+- **Timing.** Hit frames stay SSB64's (the card's): each recipe maps its
+  frames onto Ultimate's piecewise (`time` anchors: Ultimate's frame data's
+  hit onto the script's), so wind-ups are quicker where SSB64's moves are
+  faster (forward air's kick at 3 against Ultimate's 9); the last frames
+  reach Ultimate's last, which is her wait or fall, and attacks ease in from
+  the wait or fall over three frames ("blend_from"). Clips the game times
+  by length keep Peach's lengths (the walks the attributes' 69/48/60, the
+  landings 10, the crouch 5).
+- **Where the 3DS differs.** Ultimate turns her back to the camera in its
+  rapid jab and up tilt; the 3DS faces the camera: those clips turn the
+  whole motion about her vertical ("yaw": -50 and -60), easing back.
+- **The dress follows Ultimate's skirt.** Ultimate's eight skirt chains are
+  keyed in every motion; each clip writes their hem's moves beside it (a
+  `.skirt.json` guide, p6_author.py hands it to `skirt_keys.py`), and the
+  hem solver aims her band at the guide's hem and stays nearest its shape
+  (fitted to her five hem parameters each frame) while still holding her
+  legs: the dress lies on the floor around her when she kneels, flies up
+  with a kick, and the kicking shin leaves it below the knee as the 3DS's
+  (owner p6p: "dress doesn't articulate well").
+- **Hair.** Her long hair panels moved from the bodice to Peach's row 9
+  (the head's child; `look_blend.py` OBJECT_ROWS; a separate list, no seam):
+  her Ultimate clips turn it along Ultimate's two back hair
+  chains, so it hangs and swings from her head instead of standing out
+  behind a leaning torso; every other clip keeps it on the bodice as before
+  (`skirt_keys.py` keys row 9).
+- **Wings.** Ultimate's godwing is the kit's godwing rig (the same bones and
+  rest), so `art/p6/palutena/wings/{fsmash,dsmash}.json` bake Ultimate's
+  godwing motions (c03attacks4s, c04attacklw4) onto her wing table, the
+  article started where its slam meets the body's hit (her clip's motion
+  frames 11 and 14).
+- **Moves.** jab 1 c00attack11 (pull back, thrust); jab 2 and the rapid jab
+  c00attack100start/c00attack100 (the staff pushed with each burst), the
+  finisher c00attackend; dash attack c00attackdash (its TransN travel scaled
+  to the old 765 units); tilts c01attacks3s, c02attackhi3, c02attacklw3;
+  smashes c03attacks4s, c04attackhi4, c04attacklw4; aerials c05attackair*;
+  Explosive Flame d01specials/d01specialairs; Counter d03speciallwr,
+  d03specialairlwr and their attacks; down taunt j01appeallwr; entry
+  j00entryr; and now her wait, walks, dash, run, brake, jump squat, jumps,
+  double jumps (Peach's TransN slots), falls, crouch, landings, platform
+  drop, teeter, rolls (Peach's TransN slots) and hit reactions and tumbles.
+  Her figatree heap stays Peach's 12,128 bytes: the largest clip, launched
+  straight up, drops its shoulder and neck keys to fit.
+
 ## Animations (the owner's 3DS references, 2026-10-14)
+
+Superseded by Ultimate's motions above (the recipes below were keyposes;
+kept as the record of p6i/p6j).
 
 The owner's 3DS clips (local, `decomp/alt_assets/Fighters/Super Smash Bros
 3DS/Palutena/`; Explosive Flame from Ultimate) are the reference for her

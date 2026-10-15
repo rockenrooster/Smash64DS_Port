@@ -1,0 +1,23 @@
+{
+ "comment": "Ultimate's crouch (a05squatwait), its loop. Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
+ "ultimate": {
+  "fighter": "palutena",
+  "skeleton": "peach",
+  "scene": "builds/p6-art/palutena/3ds2ds/scene_high/scene.json",
+  "header": "0x1382",
+  "length": 90,
+  "first_slot": 0,
+  "motion": "a05squatwait",
+  "time": [
+   [
+    0,
+    0
+   ],
+   [
+    90,
+    90
+   ]
+  ],
+  "loop": 0
+ }
+}

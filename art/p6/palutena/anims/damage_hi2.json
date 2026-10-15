@@ -1,0 +1,22 @@
+{
+ "comment": "Ultimate's hit reaction (f00damagehi2) on Peach's row's length. Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
+ "ultimate": {
+  "fighter": "palutena",
+  "skeleton": "peach",
+  "scene": "builds/p6-art/palutena/3ds2ds/scene_high/scene.json",
+  "header": "0x138a",
+  "length": 24,
+  "first_slot": 0,
+  "motion": "f00damagehi2",
+  "time": [
+   [
+    0,
+    0
+   ],
+   [
+    24,
+    23
+   ]
+  ]
+ }
+}
