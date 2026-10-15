@@ -661,6 +661,116 @@ def _part_at(parts: list, g: int) -> dict:
     return parts[-1]
 
 
+def _window(n: int, g: int, half: int, loop) -> list:
+    """The frames of a centred window about g: wrapped through a loop's
+    period (frames loop..n-1), clamped otherwise."""
+    if loop is not None and 0 <= loop < n - 1:
+        period = n - 1 - loop
+        out = []
+        for d in range(-half, half + 1):
+            k = g + d
+            if k > n - 1:
+                k = loop + (k - loop) % period
+            elif k < loop:
+                k = (n - 1) - (loop - k) % period if g >= loop else max(k, 0)
+            out.append(k)
+        return out
+    return [min(max(g + d, 0), n - 1) for d in range(-half, half + 1)]
+
+
+def _mean_rot(mats) -> np.ndarray:
+    qs = [P._quat(m) for m in mats]
+    ref = qs[0]
+    acc = sum((q if np.dot(q, ref) >= 0 else -q) for q in qs)
+    return P._mat(acc / max(np.linalg.norm(acc), 1e-9))
+
+
+def _still(st: dict, per_rot: list, per_tr: list, length: int, loop) -> None:
+    """Rows held near their mean pose ("still": owner p6r, the floating run's
+    "legs ... look twitchy should be smooth and feet hardly need to move"):
+    each row's rotation a centred average over "window" frames (wrapped
+    through a loop), then drawn toward the clip's mean by all but "keep" of
+    its swing; translations alike."""
+    n = length + 1
+    half = int(st.get("window", 9)) // 2
+    keep = float(st.get("keep", 0.25))
+    for r in st["rows"]:
+        rots = [per_rot[g][r] for g in range(n)]
+        trs = [np.asarray(per_tr[g][r], float) for g in range(n)]
+        mean_r, mean_t = _mean_rot(rots), np.mean(trs, axis=0)
+        for g in range(n):
+            w = _window(n, g, half, loop)
+            per_rot[g][r] = P.slerp(mean_r, _mean_rot([rots[k] for k in w]), keep)
+            per_tr[g][r] = [float(v) for v in mean_t + (np.mean([trs[k] for k in w], axis=0) - mean_t) * keep]
+
+
+def _item_path(skel: A.Skeleton, cfg: dict, ip: dict, per_rot: list, per_tr: list, length: int) -> None:
+    """The item thrown up and caught (Aether's Ragnell, owner p6r: Ultimate's
+    sword model motion left the blade wandering): from the hand at "release"
+    [r0, r1] it flies, eased over "throw" frames, to where the hand meets it
+    at "catch" [c0, c1], turning about the lateral axis (whole turns at about
+    "spin" degrees a frame, ending as the hand holds it), and hangs there in
+    the world while the fighter rises from "takeoff": "rise" game units each
+    frame after it (the status code's table), or "vel" up less "gravity" a
+    frame ("tvel" the fastest fall); game units over the fighter's "size" are
+    the model's. Its point "centre" along the blade is the one that flies;
+    [c0, c1] eases it back into the hand."""
+    it = cfg["item"]
+    ir, hr = it["row"], it["hand"]
+    r0, r1 = (int(x) for x in ip["release"])
+    c0, c1 = (int(x) for x in ip["catch"])
+    axis = np.asarray(it["axis"], float) / np.linalg.norm(it["axis"])
+    mid = axis * float(ip.get("centre", 0.0))
+    size = float(ip.get("size", 1.0))
+    jump = int(ip["takeoff"])
+    table = [float(v) for v in ip.get("rise", ())]
+
+    def rise(g):
+        n = max(g - jump, 0)
+        if table:
+            return sum(table[:n]) / size
+        h, v, grav, tvel = 0.0, float(ip["vel"]), float(ip["gravity"]), float(ip.get("tvel", 1e9))
+        for _ in range(n):
+            h += v
+            v = max(v - grav, -tvel)
+        return h / size
+
+    def rot_x(phi):
+        c, s = math.cos(phi), math.sin(phi)
+        return np.array([[1.0, 0.0, 0.0], [0.0, c, -s], [0.0, s, c]])
+
+    worlds = [K._worlds(skel, per_rot[g], per_tr[g]) for g in range(length + 1)]
+    held = [(rr[ir], pp[ir] + rr[ir] @ mid) for rr, pp in worlds]
+    r_rel, p_rel = held[r0]
+    hang = held[c1][1] + np.array([0.0, rise(c1), 0.0])
+    # The blade's angle in the camera's plane at release and at the catch:
+    # rot_x(phi) takes an angle atan2(y, z) down by phi.
+    b0, b1 = r_rel @ axis, held[c1][0] @ axis
+    turn = (math.atan2(b0[1], b0[2]) - math.atan2(b1[1], b1[2])) % (2.0 * math.pi)
+    span = max(c1 - r0, 1)
+    turns = max(round(math.radians(float(ip.get("spin", 24.0))) * span / (2.0 * math.pi)), 0)
+    total = turn + 2.0 * math.pi * turns
+    throw = max(float(ip.get("throw", 4.0)), 1.0)
+    for g in range(r0, min(c1, length) + 1):
+        tau = g - r0
+        e = min(tau / throw, 1.0)
+        e = 1.0 - (1.0 - e) * (1.0 - e)
+        centre = p_rel + (hang - p_rel) * e - np.array([0.0, rise(g), 0.0])
+        rot = rot_x(total * tau / span) @ r_rel
+        hr_, hp_ = held[g]
+        if r1 > r0 and g < r1:
+            w = (g - r0) / float(r1 - r0)
+            rot, centre = P.slerp(hr_, rot, w), hp_ + (centre - hp_) * w
+        if c1 > c0 and g > c0:
+            w = (g - c0) / float(c1 - c0)
+            w = w * w * (3.0 - 2.0 * w)
+            rot, centre = P.slerp(rot, hr_, w), centre + (hp_ - centre) * w
+        rr, pp = worlds[g]
+        origin = centre - rot @ mid
+        per_rot[g][ir] = rr[hr].T @ rot
+        per_tr[g][ir] = [float(v) for v in rr[hr].T @ (origin - pp[hr])]
+
+
 def build(skel: A.Skeleton, spec: dict, scales=None, rom=None, extras: dict | None = None) -> A.Clip:
     fighter = spec.get("fighter", "palutena")
     cfg = FIGHTERS[fighter]
@@ -669,7 +779,13 @@ def build(skel: A.Skeleton, spec: dict, scales=None, rom=None, extras: dict | No
     sources = {}
     for p in parts:
         if p["motion"] not in sources:
-            sources[p["motion"]] = Source(fighter, p["motion"])
+            # "keep_trans": the motion's Trans moves the body in place (a
+            # step in and back that the game's position does not take).
+            sources[p["motion"]] = Source(fighter, p["motion"], keep_trans=bool(spec.get("keep_trans")))
+            if spec.get("item_motion") is False:
+                # The item in the hand throughout: its own model's motion
+                # left out ("item_path" throws it instead).
+                sources[p["motion"]].item = None
     rt = Retarget(skel, scales, sources[parts[0]["motion"]], cfg, spec)
     per_rot, per_tr, hems = [], [], []
     for g in range(length + 1):
@@ -679,6 +795,17 @@ def build(skel: A.Skeleton, spec: dict, scales=None, rom=None, extras: dict | No
         per_rot.append(lr)
         per_tr.append(tr)
         hems.append(rt.skirt_moves(u, src, yaw) if cfg.get("skirt") else None)
+    if spec.get("item_path"):
+        _item_path(skel, cfg, spec["item_path"], per_rot, per_tr, length)
+    if spec.get("still"):
+        _still(spec["still"], per_rot, per_tr, length, spec.get("loop"))
+    if spec.get("skirt_smooth") and cfg.get("skirt"):
+        # The guide's hem a centred average over that many frames (Ultimate's
+        # skirt chains are baked physics: their jitter is the dress's twitch).
+        half = int(spec["skirt_smooth"]) // 2
+        raw = [np.asarray(h, float) for h in hems]
+        hems = [np.mean([raw[k] for k in _window(len(raw), g, half, spec.get("loop"))], axis=0).tolist()
+                for g in range(len(raw))]
     if extras is not None and spec.get("skirt", True) and cfg.get("skirt"):
         # The dress follows Ultimate's skirt (skirt_keys.py guide), its last
         # frames drawn back with the pose (blend_to) by the same weights.

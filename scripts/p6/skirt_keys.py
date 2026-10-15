@@ -111,7 +111,11 @@ HOLD_ROWS = ((16, 17), (21, 22))
 HOLD_STEPS = (0.15, 0.3, 0.45, 0.6, 0.75, 0.9, 1.0)
 HOLD_RAMP = 0.2
 HOLD_PASSES = 4
-SMOOTH = 3
+SMOOTH = 5
+# The solved hem a centred average over this many frames (owner p6r: "twitchy
+# and stiff/non flowy dress are main blockers"): a frame's search lands near
+# the last one's, not on it, and the hem's shift jumped up to 18 units a frame.
+HEM_SMOOTH = 5
 # The band's spring (per frame): the pull toward its target and the share of
 # its angular speed kept.
 SPRING = 0.3
@@ -119,6 +123,23 @@ DAMPING = 0.6
 # The most the band's axis lags its target (a tumble's spin would leave her
 # legs behind the dress).
 MAX_LAG_DEG = 25.0
+
+
+def _window(n: int, i: int, half: int, loop) -> list:
+    """A centred window's frames about i: wrapped through a loop's period
+    (frames loop..n-1, its last frame its first), clamped otherwise."""
+    if loop is not None and 0 <= loop < n - 1:
+        period = n - 1 - loop
+        out = []
+        for d in range(-half, half + 1):
+            k = i + d
+            if k > n - 1:
+                k = loop + (k - loop) % period
+            elif k < loop:
+                k = (n - 1) - (loop - k) % period if i >= loop else max(k, 0)
+            out.append(k)
+        return out
+    return [min(max(i + d, 0), n - 1) for d in range(-half, half + 1)]
 
 
 def _align(a, b):
@@ -463,13 +484,14 @@ class Skirt:
             axes = self.flow(frames, targets, loop)
         rest_rot = lambda d: _align(self.rest_axis(), d) @ self.rest25[:3, :3]
         twists = [self.spread_twist(mats, d, rest_rot(d)) for (_root, mats), d in zip(frames, axes)]
-        # Smoothing: the axis and the twist, a centred window.
+        # Smoothing: the axis and the twist, a centred window (wrapped
+        # through a loop).
         n = len(axes)
         rots = []
         for i in range(n):
-            lo, hi = max(0, i - SMOOTH // 2), min(n, i + SMOOTH // 2 + 1)
-            a = np.mean(axes[lo:hi], axis=0)
-            rots.append(self.band_rot(a / max(np.linalg.norm(a), 1e-6), float(np.mean(twists[lo:hi]))))
+            w = _window(n, i, SMOOTH // 2, loop)
+            a = np.mean([axes[k] for k in w], axis=0)
+            rots.append(self.band_rot(a / max(np.linalg.norm(a), 1e-6), float(np.mean([twists[k] for k in w]))))
         legs = [self.legs_local(mats, rot) for (_root, mats), rot in zip(frames, rots)]
         # The hem, frame by frame from the one before (a loop's period twice,
         # so its first frame follows its last).
@@ -484,6 +506,9 @@ class Skirt:
         for i in order:
             prev = self.solve_hem(legs[i], prev, rests[i])
             hems[i] = prev
+        if HEM_SMOOTH > 1:
+            raw = [np.asarray(h, dtype=float) for h in hems]
+            hems = [np.mean([raw[k] for k in _window(n, i, HEM_SMOOTH // 2, loop)], axis=0) for i in range(n)]
         out = []
         prev_e = tuple(self.f.skel.rotate[ROW_UPPER])
         for rot, hem in zip(rots, hems):

@@ -328,6 +328,12 @@ typedef struct NDSP4Overrides
      * 0 for joints 4-35, of word 1 for the next 32 (Meta Knight's left-hand
      * item joint). */
     u32 static_parts[2];
+    /* ftMainProcPhysicsMap's hitbox positions lie in the fighter's plane
+     * (its TopN's z): P6 clips are Ultimate's motions, swung toward and away
+     * from the camera, and Ultimate's hits collide in two dimensions where
+     * SSB64's test the third (owner p6r: "jabs seem to be offset diagonally
+     * preventing hitting enemies"). */
+    u8 planar_hits;
 } NDSP4Overrides;
 
 /* Item kinds past the source's last (nITKindEnumCount, as Remix numbers its
@@ -695,6 +701,17 @@ const NDSP4Fighter *ndsP4Fighter(u32 content);
  * anim_rate) when it applies to `status_id` (anim_rate_statuses):
  * ftMainSetStatus's speed and Remix's frame speed multiplier. */
 f32 ndsP4ScaleAnimSpeed(GObj *fighter_gobj, s32 status_id, f32 speed);
+/* ftMainProcPhysicsMap's hitbox placement (battleship_ftmain.c): `pos` put in
+ * the fighter's plane when its content has planar_hits. */
+void ndsP4AttackCollPlanarSlow(const FTStruct *fp, Vec3f *pos);
+static inline void ndsP4AttackCollWorldPosition(const FTStruct *fp, DObj *joint, Vec3f *pos)
+{
+    gmCollisionGetFighterPartsWorldPosition(joint, pos);
+    if (__builtin_expect(fp->nds_p4_content != 0u, 0))
+    {
+        ndsP4AttackCollPlanarSlow(fp, pos);
+    }
+}
 /* ftParamGetStaledDamage for a hitbox `fp` makes, times its content's damage
  * scale (NDSP4Fighter damage_scale): battleship_ftmain.c. */
 s32 ndsP4StaledDamage(const FTStruct *fp, s32 player, s32 damage, s32 attack_id,

@@ -658,10 +658,58 @@ def ultimate_poses(wing: Wing, recipe: dict, length: int) -> list:
     return out
 
 
+def _weight(keys, g: float) -> float:
+    """A [[frame, weight], ...] curve at frame g (linear, held past its ends)."""
+    pts = sorted((float(a), float(b)) for a, b in keys)
+    if g <= pts[0][0]:
+        return pts[0][1]
+    for (a0, b0), (a1, b1) in zip(pts, pts[1:]):
+        if g <= a1:
+            t = (g - a0) / max(a1 - a0, 1e-9)
+            t = t * t * (3.0 - 2.0 * t)
+            return b0 + (b1 - b0) * t
+    return pts[-1][1]
+
+
+def face_camera(wing: Wing, torso: np.ndarray, pose: tuple, w: float) -> tuple:
+    """A pose with each bone turned about its length by w of the turn that
+    shows its face to the camera (model x), its feathers kept up (owner p6r:
+    the down smash's wings "look weird at full impact": lying flat on the
+    floor, Ultimate's are edge-on to our side camera, thin crumpled lines).
+    The bones' joints stay where they are."""
+    dwing, size, poses_l, poses_r = pose
+    tr = torso[:3, :3] / np.linalg.norm(torso[:3, :3], axis=0)
+    pair = tr @ dwing
+    out = []
+    for poses, mirror in ((poses_l, False), (poses_r, True)):
+        turned = []
+        for k, (rot, trans, sc) in enumerate(poses):
+            a = pair @ rot
+            # Which way the feathers lie across the bone (its local y).
+            ys = [wing.verts[i].local[1] for i in wing.bone_verts.get(k, ())]
+            across = 1.0 if (not ys or float(np.mean(ys)) >= 0.0) else -1.0
+            if mirror:
+                across = across            # MIRROR flips x only: y and z keep their sense
+            base = math.atan2(-a[0, 1], a[0, 2])
+            best = None
+            for phi in (base, base + math.pi):
+                phi = (phi + math.pi) % (2.0 * math.pi) - math.pi
+                up = float((a @ rot_x(math.degrees(phi)) @ np.array([0.0, across, 0.0]))[1])
+                if best is None or up > best[0]:
+                    best = (up, phi)
+            turned.append((rot @ rot_x(math.degrees(best[1] * w)), trans, sc))
+        out.append(turned)
+    return dwing, size, out[0], out[1]
+
+
 def bake(wing: Wing, recipe: dict, torsos: list[np.ndarray]) -> tuple[int, int, list]:
     """(first frame, last frame, rows) of the frames the wings show."""
     if "ultimate" in recipe:
         poses = ultimate_poses(wing, recipe, len(torsos) - 1)
+        fc = recipe["ultimate"].get("face_camera")
+        if fc:
+            poses = [p if p is None or _weight(fc, g) <= 0.0 else face_camera(wing, torsos[g], p, _weight(fc, g))
+                     for g, p in enumerate(poses)]
         shown = [g for g, p in enumerate(poses) if p is not None]
         if not shown or shown != list(range(shown[0], shown[-1] + 1)):
             raise WingError("the godwing's frames are not one span of the clip")

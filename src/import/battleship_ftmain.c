@@ -417,8 +417,17 @@ static inline void ndsP4FTMainSetHitInteractStats(FTStruct *fp, u32 attack_group
 #define NDS_P4_ABSORB_wp ndsP4FTMainUpdateAbsorbStatWeapon(wp
 void ndsP4FTMainUpdateAbsorbStatWeapon(WPStruct *wp, WPAttackColl *wp_attack_coll,
                                        FTStruct *fp, GObj *fighter_gobj);
+/* P6: a content's hitboxes in its plane (NDSP4Overrides.planar_hits).
+ * ftMainProcPhysicsMap's two calls, the only ones in this TU, place the
+ * attack collisions, its attacker in `fp`; ft/fighter.h declared the source
+ * function above. */
+#define gmCollisionGetFighterPartsWorldPosition(joint_, pos_) \
+    ndsP4AttackCollWorldPosition(fp, (joint_), (pos_))
 #endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftmain.c"
+#if NDS_P4
+#undef gmCollisionGetFighterPartsWorldPosition
+#endif
 #if NDS_P5
 #undef ftMainProcessHitCollisionStatsMain
 #undef NDS_P5_HIT_STATS_GObj

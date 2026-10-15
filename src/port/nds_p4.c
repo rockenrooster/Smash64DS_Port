@@ -239,6 +239,16 @@ f32 ndsP4ScaleAnimSpeed(GObj *fighter_gobj, s32 status_id, f32 speed)
     return speed * *f->anim_rate;
 }
 
+void ndsP4AttackCollPlanarSlow(const FTStruct *fp, Vec3f *pos)
+{
+    const NDSP4Overrides *o = ndsP4Overrides(fp);
+
+    if ((o != NULL) && (o->planar_hits != 0u))
+    {
+        pos->z = fp->joints[nFTPartsJointTopN]->translate.vec.f.z;
+    }
+}
+
 s32 ndsP4StaledDamage(const FTStruct *fp, s32 player, s32 damage, s32 attack_id,
                       u16 motion_count)
 {

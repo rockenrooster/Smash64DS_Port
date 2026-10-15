@@ -1211,6 +1211,8 @@ const NDSP4Overrides gNdsP4PalutenaOverrides = {
     .update_damage = ndsP4PalutenaUpdateDamage,
     .entry_case = ndsP4PalutenaEntryCase,
     .after_proc_map = ndsP4PalutenaAfterProcMap,
+    /* Ultimate's motions; its hits collide in the stage's plane. */
+    .planar_hits = 1u,
 };
 
 #if NDS_P2_KIRBY
