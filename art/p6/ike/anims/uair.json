@@ -1,0 +1,31 @@
+{
+ "comment": "Ultimate's up air (c05attackairhi): the arc over his head, its hit at 12-17. Retargeted onto Roy's tree with his look by scripts/p6/ultimate.py (Roy's bind aligned to the T-pose) from the owner's local Ultimate files (never committed, P6 D1); Ultimate's timing, frame for frame (owner p6r).",
+ "ultimate": {
+  "fighter": "ike",
+  "skeleton": "roy",
+  "scene": "builds/p6-art/ike/look/low_v3/scene.json",
+  "header": "0xcce",
+  "length": 55,
+  "first_slot": 0,
+  "motion": "c05attackairhi",
+  "time": [
+   [
+    0,
+    0
+   ],
+   [
+    49,
+    49
+   ],
+   [
+    55,
+    64
+   ]
+  ],
+  "blend_from": {
+   "motion": "a04fall",
+   "frame": 0,
+   "frames": 3
+  }
+ }
+}

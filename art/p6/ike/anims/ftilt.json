@@ -1,0 +1,31 @@
+{
+ "comment": "Ultimate's forward tilt (c01attacks3s): the horizontal cleave, its hit at 11-12. Retargeted onto Roy's tree with his look by scripts/p6/ultimate.py (Roy's bind aligned to the T-pose) from the owner's local Ultimate files (never committed, P6 D1); Ultimate's timing, frame for frame (owner p6r).",
+ "ultimate": {
+  "fighter": "ike",
+  "skeleton": "roy",
+  "scene": "builds/p6-art/ike/look/low_v3/scene.json",
+  "header": "0xcce",
+  "length": 40,
+  "first_slot": 0,
+  "motion": "c01attacks3s",
+  "time": [
+   [
+    0,
+    0
+   ],
+   [
+    34,
+    34
+   ],
+   [
+    40,
+    61
+   ]
+  ],
+  "blend_from": {
+   "motion": "a00wait1",
+   "frame": 0,
+   "frames": 3
+  }
+ }
+}

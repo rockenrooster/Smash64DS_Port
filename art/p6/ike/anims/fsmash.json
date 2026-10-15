@@ -1,12 +1,12 @@
 {
- "comment": "Ultimate's forward smash (c03attacks4s) on his slide (the old TransN travel: 540 into the slam, owner p6j); its hit at 14 (Roy's script, Ultimate's 31st); keys every other frame. Retargeted onto Roy's tree with his look by scripts/p6/ultimate.py (Roy's bind aligned to the T-pose) from the owner's local Ultimate files (never committed, P6 D1).",
+ "comment": "Ultimate's forward smash (c03attacks4s): the overhead slam, its hits at 30-31 and 32-34, the blade flat on the floor after; in place, his step in and back Ultimate's Trans on the body (owner p6r: \"he also lunges too far forward\"); keys every third frame (his figatree heap). Retargeted onto Roy's tree with his look by scripts/p6/ultimate.py (Roy's bind aligned to the T-pose) from the owner's local Ultimate files (never committed, P6 D1); Ultimate's timing, frame for frame (owner p6r).",
  "ultimate": {
   "fighter": "ike",
   "skeleton": "roy",
   "scene": "builds/p6-art/ike/look/low_v3/scene.json",
   "header": "0xcce",
-  "length": 60,
-  "first_slot": 1,
+  "length": 82,
+  "first_slot": 0,
   "motion": "c03attacks4s",
   "time": [
    [
@@ -14,71 +14,20 @@
     0
    ],
    [
-    14,
-    30
+    76,
+    76
    ],
    [
-    18,
-    34
-   ],
-   [
-    40,
-    70
-   ],
-   [
-    60,
+    82,
     91
    ]
   ],
-  "transn": {
-   "travel": [
-    [
-     0,
-     0
-    ],
-    [
-     9,
-     0
-    ],
-    [
-     12,
-     260
-    ],
-    [
-     14,
-     540
-    ],
-    [
-     34,
-     545
-    ],
-    [
-     42,
-     470
-    ],
-    [
-     50,
-     230
-    ],
-    [
-     56,
-     40
-    ],
-    [
-     58,
-     0
-    ],
-    [
-     60,
-     0
-    ]
-   ]
-  },
+  "keep_trans": true,
+  "key_step": 3,
   "blend_from": {
    "motion": "a00wait1",
    "frame": 0,
    "frames": 3
-  },
-  "key_step": 2
+  }
  }
 }

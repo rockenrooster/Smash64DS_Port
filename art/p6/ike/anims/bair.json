@@ -1,0 +1,31 @@
+{
+ "comment": "Ultimate's back air (c05attackairb): the thrust behind him, its hit at 6-8. Retargeted onto Roy's tree with his look by scripts/p6/ultimate.py (Roy's bind aligned to the T-pose) from the owner's local Ultimate files (never committed, P6 D1); Ultimate's timing, frame for frame (owner p6r).",
+ "ultimate": {
+  "fighter": "ike",
+  "skeleton": "roy",
+  "scene": "builds/p6-art/ike/look/low_v3/scene.json",
+  "header": "0xcce",
+  "length": 53,
+  "first_slot": 0,
+  "motion": "c05attackairb",
+  "time": [
+   [
+    0,
+    0
+   ],
+   [
+    47,
+    47
+   ],
+   [
+    53,
+    62
+   ]
+  ],
+  "blend_from": {
+   "motion": "a04fall",
+   "frame": 0,
+   "frames": 3
+  }
+ }
+}

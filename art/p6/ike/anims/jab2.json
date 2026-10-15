@@ -1,11 +1,11 @@
 {
- "comment": "Ultimate's jab 2 (c00attack12): the forward kick with his right foot (owner p6p); its hit at 6. Retargeted onto Roy's tree with his look by scripts/p6/ultimate.py (Roy's bind aligned to the T-pose) from the owner's local Ultimate files (never committed, P6 D1).",
+ "comment": "Ultimate's jab 2 (c00attack12): the forward kick with his right foot, its hit at 2-3, jab 3 from 8. Retargeted onto Roy's tree with his look by scripts/p6/ultimate.py (Roy's bind aligned to the T-pose) from the owner's local Ultimate files (never committed, P6 D1); Ultimate's timing, frame for frame (owner p6r).",
  "ultimate": {
   "fighter": "ike",
   "skeleton": "roy",
   "scene": "builds/p6-art/ike/look/low_v3/scene.json",
   "header": "0xcce",
-  "length": 20,
+  "length": 26,
   "first_slot": 0,
   "motion": "c00attack12",
   "time": [
@@ -14,19 +14,11 @@
     0
    ],
    [
-    6,
-    2
-   ],
-   [
-    11,
-    5
-   ],
-   [
-    16,
-    15
-   ],
-   [
     20,
+    20
+   ],
+   [
+    26,
     43
    ]
   ]

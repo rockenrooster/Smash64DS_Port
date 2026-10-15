@@ -1,11 +1,11 @@
 {
- "comment": "Ultimate's up smash (c04attackhi4): one strong overhead swing (owner p6p); its hits from 7. Retargeted onto Roy's tree with his look by scripts/p6/ultimate.py (Roy's bind aligned to the T-pose) from the owner's local Ultimate files (never committed, P6 D1).",
+ "comment": "Ultimate's up smash (c04attackhi4): the overhead swing, its hits at 24-28 and 29-30; keys every other frame. Retargeted onto Roy's tree with his look by scripts/p6/ultimate.py (Roy's bind aligned to the T-pose) from the owner's local Ultimate files (never committed, P6 D1); Ultimate's timing, frame for frame (owner p6r).",
  "ultimate": {
   "fighter": "ike",
   "skeleton": "roy",
   "scene": "builds/p6-art/ike/look/low_v3/scene.json",
   "header": "0xcce",
-  "length": 49,
+  "length": 69,
   "first_slot": 0,
   "motion": "c04attackhi4",
   "time": [
@@ -14,23 +14,11 @@
     0
    ],
    [
-    7,
-    20
+    63,
+    63
    ],
    [
-    11,
-    24
-   ],
-   [
-    18,
-    30
-   ],
-   [
-    35,
-    60
-   ],
-   [
-    49,
+    69,
     85
    ]
   ],
@@ -38,6 +26,7 @@
    "motion": "a00wait1",
    "frame": 0,
    "frames": 3
-  }
+  },
+  "key_step": 2
  }
 }

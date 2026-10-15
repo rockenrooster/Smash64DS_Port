@@ -1,5 +1,5 @@
 {
- "comment": "Ultimate's jab 1 (c00attack11): the left-handed punch with a lunge, Ragnell drawn back (owner p6p); its hit at SSB64's 5. Retargeted onto Roy's tree with his look by scripts/p6/ultimate.py (Roy's bind aligned to the T-pose) from the owner's local Ultimate files (never committed, P6 D1).",
+ "comment": "Ultimate's jab 1 (c00attack11): the left punch, its hit at 3-4, jab 2 from 8 (Ultimate's frames 4-5 and 9). Retargeted onto Roy's tree with his look by scripts/p6/ultimate.py (Roy's bind aligned to the T-pose) from the owner's local Ultimate files (never committed, P6 D1); Ultimate's timing, frame for frame (owner p6r).",
  "ultimate": {
   "fighter": "ike",
   "skeleton": "roy",
@@ -14,16 +14,8 @@
     0
    ],
    [
-    5,
-    3
-   ],
-   [
-    9,
-    6
-   ],
-   [
     16,
-    15
+    16
    ],
    [
     22,

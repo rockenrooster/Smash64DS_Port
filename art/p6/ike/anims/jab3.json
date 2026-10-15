@@ -1,11 +1,11 @@
 {
- "comment": "Ultimate's jab 3 (c00attack13): Ragnell swung up over him from his own stance (owner p6p); its hit at 4, its recovery hurried into his wait by 16. Retargeted onto Roy's tree with his look by scripts/p6/ultimate.py (Roy's bind aligned to the T-pose) from the owner's local Ultimate files (never committed, P6 D1).",
+ "comment": "Ultimate's jab 3 (c00attack13): Ragnell swung up over him, its hit at 4-7. Retargeted onto Roy's tree with his look by scripts/p6/ultimate.py (Roy's bind aligned to the T-pose) from the owner's local Ultimate files (never committed, P6 D1); Ultimate's timing, frame for frame (owner p6r).",
  "ultimate": {
   "fighter": "ike",
   "skeleton": "roy",
   "scene": "builds/p6-art/ike/look/low_v3/scene.json",
   "header": "0xcce",
-  "length": 16,
+  "length": 39,
   "first_slot": 0,
   "motion": "c00attack13",
   "time": [
@@ -14,19 +14,11 @@
     0
    ],
    [
-    4,
-    4
+    33,
+    33
    ],
    [
-    7,
-    7
-   ],
-   [
-    12,
-    24
-   ],
-   [
-    16,
+    39,
     61
    ]
   ]

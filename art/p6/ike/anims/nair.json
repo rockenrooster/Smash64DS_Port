@@ -1,0 +1,32 @@
+{
+ "comment": "Ultimate's neutral air (c05attackairn): the spin round him, its hits at 9-13 and 14-21. Retargeted onto Roy's tree with his look by scripts/p6/ultimate.py (Roy's bind aligned to the T-pose) from the owner's local Ultimate files (never committed, P6 D1); Ultimate's timing, frame for frame (owner p6r).",
+ "ultimate": {
+  "fighter": "ike",
+  "skeleton": "roy",
+  "scene": "builds/p6-art/ike/look/low_v3/scene.json",
+  "header": "0xcce",
+  "length": 58,
+  "first_slot": 0,
+  "motion": "c05attackairn",
+  "time": [
+   [
+    0,
+    0
+   ],
+   [
+    52,
+    52
+   ],
+   [
+    58,
+    68
+   ]
+  ],
+  "blend_from": {
+   "motion": "a04fall",
+   "frame": 0,
+   "frames": 3
+  },
+  "key_step": 2
+ }
+}

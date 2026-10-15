@@ -1,22 +1,23 @@
 {
- "comment": "Ultimate's Aether's plunge (d02specialhi3), held while he falls. Retargeted onto Roy's tree with his look by scripts/p6/ultimate.py (Roy's bind aligned to the T-pose) from the owner's local Ultimate files (never committed, P6 D1).",
+ "comment": "Ultimate's Aether's plunge (d02specialhi3, its frames 1-4: its first and last frames' hips are 57 units below, the owner p6r's \"corrupted\"), its loop. Retargeted onto Roy's tree with his look by scripts/p6/ultimate.py (Roy's bind aligned to the T-pose) from the owner's local Ultimate files (never committed, P6 D1); Ultimate's timing, frame for frame (owner p6r).",
  "ultimate": {
   "fighter": "ike",
   "skeleton": "roy",
   "scene": "builds/p6-art/ike/look/low_v3/scene.json",
   "header": "0xcce",
-  "length": 70,
+  "length": 12,
   "first_slot": 0,
   "motion": "d02specialhi3",
   "time": [
    [
     0,
-    0
+    1
    ],
    [
-    70,
-    5
+    12,
+    4
    ]
-  ]
+  ],
+  "loop": 0
  }
 }

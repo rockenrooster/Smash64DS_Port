@@ -685,7 +685,8 @@ SUBSET_FILES = {
 # Kirby's copies play Kirby's own animations and take none. Ike (owner,
 # 2026-10-14): "more slow and lumbering compared to Roy, but much more
 # powerful": 0.75x Roy's speed on his attacks (OWNER_ANIM_RATE_STATUSES) and
-# 1.5x the power (OWNER_DAMAGE_SCALES).
+# 1.5x the power (OWNER_DAMAGE_SCALES); since p6r (2026-10-15) his attacks
+# are Ultimate's own timing and damage, the rate on Roy's run only.
 OWNER_ANIM_RATES = {"sheik": 1.1, "ike": 0.75}
 # The statuses a content's animation rate applies to (NDSP4Fighter
 # anim_rate_statuses); a content not listed takes it on every status. Ike
@@ -696,16 +697,20 @@ OWNER_ANIM_RATES = {"sheik": 1.1, "ike": 0.75}
 # Roy's down special rows), nor his landings, getup and ledge attacks,
 # throws, items or movement.
 OWNER_ANIM_RATE_STATUSES = {
-    "ike": sorted([0xBD]                             # Appeal: the counter (nds_p4_ike.c status_replace;
-                                                      # status_id keeps it, Remix's frame speed reads it)
-                  + [0xBE, 0xBF]                      # Attack11, Attack12
-                  + list(range(0xC1, 0xD6))           # the tilts .. AttackAirLw (0xC0 AttackDash not)
-                  + [0xF1, 0xF2, 0xF5, 0xF6]          # Eruption's ends (0xEF/0xF0, 0xF3/0xF4 its charge)
-                  + list(range(0xF9, 0x108))),        # Attack13, Quick Draw, Aether, the counter
+    # Owner p6r (2026-10-15): "use ultimate timing for Ike since Ike is meant
+    # to be slower and more lumbering" -- his attacks now play Ultimate's
+    # motions frame for frame (art/p6/ike/anims) at 1.0; the rate stays on
+    # Roy's run (owner p6r: "revert running animation (running speed also too
+    # fast)": his dash and run speeds 0.75, OWNER_ATTRIBUTE_SCALES, the clips
+    # slowed to match) and on Eruption's ends, still Roy's clips.
+    "ike": sorted([0x0F, 0x10, 0x11, 0x13]           # Dash, Run, RunBrake, TurnRun
+                  + [0xF1, 0xF2, 0xF5, 0xF6]),        # Eruption's ends (0xEF/0xF0, 0xF3/0xF4 its charge)
 }
 # A content's hitboxes' damage, times this as each is made (after staling:
 # NDSP4Fighter damage_scale, battleship_ftmain.c ftParamGetStaledDamage).
-OWNER_DAMAGE_SCALES = {"ike": 1.5}
+# Ike's 1.5x (owner p6f) ended with p6r: his attacks carry Ultimate's own
+# damage (the owner's attack data, scripts/p6/ike/motions).
+OWNER_DAMAGE_SCALES: dict[str, float] = {}
 OWNER_ATTRIBUTE_SCALES = {
     "wario": {"jump_height_mul": 0.75 ** 0.5, "jump_height_base": 0.75 ** 0.5},
     # P7 B2 (owner, 2026-10-12): Bowser walks and runs at 0.75x, to stop his
@@ -715,6 +720,10 @@ OWNER_ATTRIBUTE_SCALES = {
     # frame, docs/P7/P7_STATUS.md B2): his run slid 2.31x where Fox's and
     # Link's sit near 1.1x; 0.75x leaves 1.73x.
     "bowser": {"walk_speed_mul": 0.75, "dash_speed": 0.75, "run_speed": 0.75},
+    # Owner p6r (2026-10-15): Ike's run "too fast" -- Roy's dash and run at
+    # 0.75 (Ultimate's Ike runs at 0.7 of its Roy), his clips at the 0.75
+    # animation rate with them (OWNER_ANIM_RATE_STATUSES).
+    "ike": {"dash_speed": 0.75, "run_speed": 0.75},
 }
 # Model IA textures whose intensity the native owner must not draw. Meta
 # Knight's Mach Tornado (model 0x15EE lists at 0x97C0 and 0x9AA0, render mode

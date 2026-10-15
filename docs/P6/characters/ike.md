@@ -293,6 +293,66 @@ P6 D1), on Roy's tree with his look:
   Roy's (owner p6i), as do his other attacks, his entry and his hit
   reactions.
 
+## Ultimate's timing and attack data (owner p6r, 2026-10-15)
+
+Owner p6r (3/5, "almost there"): "use ultimate timing for Ike since Ike is
+meant to be slower and more lumbering"; damage, hit type and angles from
+Ultimate's attack data (the owner's `ike_attack_data.json`, extracted from
+the game's 1.0.0 module beside the motions, local); "revert running
+animation (running speed also too fast) ... remove footstep SFX"; "Up
+Special looks janky and corrupted"; the forward smash stops short facing
+left and lunges too far, the sword should end flat on the floor; Quick
+Draw "hardly knocks the enemy back".
+
+- **Timing.** Every attack plays Ultimate's motion frame for frame (our
+  frame N is its frame N; ultimateframedata's frame N is our N - 1) to its
+  first actionable frame, the motion's rest drawn into the last six frames;
+  the scripts' hits are on Ultimate's frames. His 0.75 animation rate and
+  1.5x damage (owner p6f/p6h) are gone from his attacks
+  (`generate_p4_fighter.py`): the rate stays on Roy's run and Eruption's
+  ends only.
+- **All his attacks are Ultimate's now:** jabs, dash attack, the three
+  tilts, the three smashes, the five aerials and their landings (Ultimate's
+  landing lag: 8, 14, 11, 9, 14 frames), Quick Draw, Aether and the
+  counter. Eruption, getup and ledge attacks, grabs and throws stay Roy's
+  (at Roy's damage now).
+- **Attack data.** The owner's JSON is Ultimate's ATTACK arguments: its
+  "bkb" column is the set knockback (SSB64's knockback_weight) and its
+  "wbk" the base knockback; damage rounds halves up. Where the JSON lists
+  one hit of a move with two (the early up tilt and up smash, the forward
+  smash's strong hit, the dash attack), the other's damage is
+  ultimateframedata's with the listed hit's knockback. Quick Draw's slash:
+  6% and up to 7 more by charge, 60, growth 88, base 70.
+- **Hit placement.** Ultimate collides in two dimensions, SSB64 in three:
+  his swings pass toward and away from the camera, so his hitboxes are put
+  in his plane (`NDSP4Overrides.planar_hits`, battleship_ftmain.c). Jab 2's
+  hits are on the kicking right leg (they were on his standing shin); the
+  forward tilt's are ahead of him at TopN offsets as Ultimate's (the blade
+  sweeps round his side at its hit frames).
+- **The forward smash** plays in place with Ultimate's Trans on the body
+  (his step in and back), the blade flat on the floor from the slam to
+  about frame 60; the old 540-unit TransN slide is gone (it ran him into
+  ledges, which is the likely "stops too soon facing left").
+- **Aether** was corrupted by Ultimate's plunge loop (d02specialhi3): its
+  first and last frames carry the hips 57 units below, so the clip passed
+  through them and he vanished; the plunge now loops its frames 1-4.
+  Ragnell no longer follows the sword model's motion (it wandered up to
+  2,000 units off): "item_path" (ultimate.py) throws it up at 14, hangs it
+  in the world, spinning, and puts it back in his hand when it meets it at
+  46. The rise is Ultimate's: 40 frames on the ground (the throw and the
+  pause), the leap on Ultimate's Trans curve (eight frames, 0.85 of its
+  height: nds_p4_ike.c `sNdsP4IkeAetherRise`, the recipe's "rise" the same
+  table), then he hangs for the spin until the plunge. Armour 4-34, the
+  throw's hit at 14 (6%, set knockback 140 at 96), three 1% hits from 43,
+  the falling hit from 50 (3%), the landing's 6%.
+- **The run** is Roy's again with its dust but no step sound
+  (`motions/run.ms`); his dash and run speeds 0.75 (OWNER_ATTRIBUTE_SCALES)
+  and those statuses' clips at 0.75 with them; Quick Draw's dash four times
+  his run speed so its reach stays.
+- **Figatree heap** stays under Roy's 11,728 bytes: the dash attack, up and
+  down smash, neutral air and Aether key every other frame, the forward
+  smash every third.
+
 ## Audio (local inputs, never committed)
 
 Both sets are in `decomp/alt_assets/Fighters/Super Smash Bros Ultimate/Fighters/`

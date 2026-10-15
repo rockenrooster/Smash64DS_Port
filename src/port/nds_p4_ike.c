@@ -52,19 +52,27 @@ void ndsP4RoyEntryCase(FTStruct *fp);
 
 /* Quick Draw (card defaults): up to 75 frames of charge (60 in the card;
  * owner playtest 2026-10-14, p6d: 1.25x as long to the farthest dash); a
- * dash of 8 to 20 frames by charge at three times his run speed; the slash
- * on contact gains up to 9 damage by charge. */
+ * dash of 8 to 20 frames by charge at four times his run speed (three times
+ * Roy's: owner p6r slowed his run to 0.75); the slash on contact gains up to
+ * 7 damage by charge (Ultimate's 6-13). */
 #define IKE_QD_CHARGE_MAX 75
 #define IKE_QD_DASH_MIN 8
 #define IKE_QD_DASH_RANGE 12
-#define IKE_QD_SPEED_MUL 3.0F
-#define IKE_QD_SLASH_BONUS 9
+#define IKE_QD_SPEED_MUL 4.0F
+#define IKE_QD_SLASH_BONUS 7
 #define IKE_QD_AIR_FALL_MAX 8.0F
 
-/* Aether: the take-off speed (ground, air), the plunge's speed and the
- * stick drift during the rise (Final Cutter's, ftkirbyspecialhi.c). */
-#define IKE_AETHER_RISE_VEL 110.0F
-#define IKE_AETHER_RISE_VEL_AIR 100.0F
+/* Aether (owner p6p: "throws sword up forcefully, pause, jumps to sword,
+ * pause for spin, comes back down"; owner p6r: Ultimate's timing): the leap
+ * Ultimate's (d02specialhi2's Trans y over its frames 21-26, 1,594 units for
+ * Ike's size, drawn over eight frames at 0.85 of its height), a unit a frame
+ * after the script's take-off (flag2), then he hangs for the spin until the
+ * clip ends; from the air 0.9 as high. scripts/p6/ike/anims recipe
+ * aether_rise ("item_path" "rise") hangs Ragnell on the same table. The
+ * plunge's speed and the stick drift during the rise (Final Cutter's,
+ * ftkirbyspecialhi.c). */
+static const f32 sNdsP4IkeAetherRise[] = { 96.0F, 250.0F, 280.0F, 240.0F, 190.0F, 140.0F, 100.0F, 59.0F };
+#define IKE_AETHER_RISE_AIR_MUL 0.9F
 #define IKE_AETHER_FALL_VEL 130.0F
 #define IKE_AETHER_DRIFT_MUL 0.5F
 #define IKE_AETHER_ARMOUR 200.0F
@@ -314,6 +322,8 @@ static void ndsP4IkeAetherStart(GObj *fighter_gobj, s32 status_id)
 
     ndsP4IkeSetStatus(fighter_gobj, status_id);
     fp->is_fastfall = FALSE;
+    /* status_vars word 0: the leap's frames so far. */
+    *ndsP4IkeVar(fp, 0) = 0;
 }
 
 /* ground_usp. */
@@ -365,21 +375,24 @@ void ndsP4IkeAetherRiseMain(GObj *fighter_gobj)
     }
 }
 
-/* Rise physics: grounded until the script's jump (flag2 1), then the
- * take-off speed once (flag2 2) and gravity with a weak drift. */
+/* Rise physics: grounded until the script's jump (flag2 1), then the leap
+ * (flag2 2: the table's speed a frame) and the hang at its top, a weak
+ * drift throughout. */
 void ndsP4IkeAetherRisePhysics(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
     FTAttributes *attr = fp->attr;
+    s32 *leap = ndsP4IkeVar(fp, 0);
+    f32 mul = (fp->status_id == IKE_STATUS_AETHER_RISE) ? 1.0F : IKE_AETHER_RISE_AIR_MUL;
 
     if (fp->motion_vars.flags.flag2 == 1)
     {
         mpCommonSetFighterAir(fp);
-        fp->physics.vel_air.y = (fp->status_id == IKE_STATUS_AETHER_RISE) ?
-            IKE_AETHER_RISE_VEL : IKE_AETHER_RISE_VEL_AIR;
+        fp->physics.vel_air.y = sNdsP4IkeAetherRise[0] * mul;
         fp->physics.vel_air.x = (f32)fp->lr * 8.0F;
         fp->motion_vars.flags.flag2 = 2;
         fp->jumps_used = attr->jumps_max;
+        *leap = 1;
         return;
     }
     if (fp->ga == nMPKineticsGround)
@@ -387,12 +400,17 @@ void ndsP4IkeAetherRisePhysics(GObj *fighter_gobj)
         ftPhysicsApplyGroundVelFriction(fighter_gobj);
         return;
     }
-    if (fp->motion_vars.flags.flag2 == 0)
+    if ((fp->motion_vars.flags.flag2 != 0) && (*leap < (s32)ARRAY_COUNT(sNdsP4IkeAetherRise)))
     {
-        /* An air start hangs until the jump. */
+        fp->physics.vel_air.y = sNdsP4IkeAetherRise[*leap] * mul;
+        (*leap)++;
+    }
+    else
+    {
+        /* An air start hangs until the jump; the leap's top holds for the
+         * spin. */
         fp->physics.vel_air.y = 0.0F;
     }
-    else ftPhysicsApplyGravityDefault(fp, attr);
 
     if (ftPhysicsCheckClampAirVelXDecMax(fp, attr) == FALSE)
     {
@@ -494,8 +512,8 @@ void ndsP4IkeOnStatus(GObj *fighter_gobj, s32 status_id)
 }
 
 /* Owner playtest p6i: the jab combo steps forward, the third strike most
- * (the 3DS reference's lunge). Over each jab's step (its animation frames,
- * which his 0.75 rate stretches with the clip) he moves `speed` units a tic
+ * (the 3DS reference's lunge). Over each jab's step (its animation frames
+ * before the hit, Ultimate's timing since p6r) he moves `speed` units a tic
  * along his facing, before the tic's physics and map, so the floor and
  * walls take the step as any motion: about 25, 40 and 150 units. (A held
  * ground speed did not: the floor's friction, 6.4 a tic on Dream Land,
@@ -508,9 +526,9 @@ typedef struct NDSP4IkeJabStep
 } NDSP4IkeJabStep;
 
 static const NDSP4IkeJabStep sNdsP4IkeJabSteps[] = {
-    { nFTCommonStatusAttack11, 1.0F, 4.0F, 6.0F },
-    { nFTCommonStatusAttack12, 2.0F, 6.0F, 7.5F },
-    { IKE_STATUS_ATTACK13, 2.0F, 7.0F, 22.0F },
+    { nFTCommonStatusAttack11, 0.0F, 3.0F, 8.5F },
+    { nFTCommonStatusAttack12, 0.0F, 3.0F, 13.0F },
+    { IKE_STATUS_ATTACK13, 1.0F, 5.0F, 37.5F },
 };
 
 static void ndsP4IkeBeforePhysicsMap(GObj *fighter_gobj)
@@ -545,6 +563,8 @@ const NDSP4Overrides gNdsP4IkeOverrides = {
     .update_damage = ndsP4IkeUpdateDamage,
     .status_replace = sNdsP4IkeStatusReplace,
     .before_physics_map = ndsP4IkeBeforePhysicsMap,
+    /* Ultimate's motions; its hits collide in the stage's plane. */
+    .planar_hits = 1u,
 };
 
 #endif /* NDS_P4_CODE_IKE */

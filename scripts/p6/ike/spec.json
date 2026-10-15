@@ -37,17 +37,9 @@
    "comment": "WalkEnd: Ultimate's (walk_end, art/p6/ike/anims, ultimate.py)",
    "anim": "builds/p6-art/ike/anims/walk_end.o2r"
   },
-  "9": {
-   "comment": "Dash: Ultimate's (dash_run, art/p6/ike/anims, ultimate.py)",
-   "anim": "builds/p6-art/ike/anims/dash_run.o2r"
-  },
   "10": {
-   "comment": "Run: Ultimate's (run, art/p6/ike/anims, ultimate.py)",
-   "anim": "builds/p6-art/ike/anims/run.o2r"
-  },
-  "11": {
-   "comment": "RunBrake: Ultimate's (run_brake, art/p6/ike/anims, ultimate.py)",
-   "anim": "builds/p6-art/ike/anims/run_brake.o2r"
+   "comment": "Run: Roy's clip again, at 0.75 with his run speed (owner p6r: \"revert running animation (running speed also too fast) ... remove footstep SFX\"): Roy's script without the step sound",
+   "script": "scripts/p6/ike/motions/run.ms"
   },
   "14": {
    "comment": "KneeBend: Ultimate's (kneebend, art/p6/ike/anims, ultimate.py)",
@@ -102,41 +94,95 @@
    "anim": "builds/p6-art/ike/anims/landing_heavy.o2r"
   },
   "165": {
-   "comment": "Attack11: jab 1: the left punch with a lunge (Ultimate's motion, art/p6/ike/anims, scripts/p6/ultimate.py)",
+   "comment": "Attack11: jab 1, the left punch (Ultimate's motion and timing, art/p6/ike/anims, scripts/p6/ultimate.py)",
    "anim": "builds/p6-art/ike/anims/jab1.o2r",
    "script": "scripts/p6/ike/motions/jab1.ms"
   },
   "166": {
-   "comment": "Attack12: jab 2: the forward kick with his right foot (Ultimate's motion, art/p6/ike/anims, scripts/p6/ultimate.py)",
+   "comment": "Attack12: jab 2, the forward kick with his right foot (Ultimate's motion and timing, art/p6/ike/anims, scripts/p6/ultimate.py)",
    "anim": "builds/p6-art/ike/anims/jab2.o2r",
    "script": "scripts/p6/ike/motions/jab2.ms"
   },
   "167": {
-   "comment": "AttackDash: dash attack: the rising slash, its travel the TransN slot's (Ultimate's motion, art/p6/ike/anims, scripts/p6/ultimate.py)",
+   "comment": "AttackDash: the rising slash, its travel the TransN slot's (Ultimate's motion and timing, art/p6/ike/anims, scripts/p6/ultimate.py)",
    "anim": "builds/p6-art/ike/anims/dash.o2r",
    "script": "scripts/p6/ike/motions/dash.ms"
   },
+  "170": {
+   "comment": "AttackS3: forward tilt, the horizontal cleave (Ultimate's motion and timing, art/p6/ike/anims, scripts/p6/ultimate.py)",
+   "anim": "builds/p6-art/ike/anims/ftilt.o2r",
+   "script": "scripts/p6/ike/motions/ftilt.ms"
+  },
   "174": {
-   "comment": "AttackHi3: up tilt: the arm fully extended overhead (Ultimate's motion, art/p6/ike/anims, scripts/p6/ultimate.py)",
+   "comment": "AttackHi3: up tilt, Ragnell swept up over him (Ultimate's motion and timing, art/p6/ike/anims, scripts/p6/ultimate.py)",
    "anim": "builds/p6-art/ike/anims/utilt.o2r",
    "script": "scripts/p6/ike/motions/utilt.ms"
   },
+  "176": {
+   "comment": "AttackLw3: down tilt, the low sweep from his crouch (Ultimate's motion and timing, art/p6/ike/anims, scripts/p6/ultimate.py)",
+   "anim": "builds/p6-art/ike/anims/dtilt.o2r",
+   "script": "scripts/p6/ike/motions/dtilt.ms"
+  },
   "179": {
-   "comment": "AttackS4: forward smash on his slide, Roy's script (Ike's 1.5x power is OWNER_DAMAGE_SCALES) (Ultimate's motion, art/p6/ike/anims, scripts/p6/ultimate.py)",
+   "comment": "AttackS4: forward smash, the overhead slam in place (owner p6r: \"lunges too far forward\"), Ragnell flat on the floor after (Ultimate's motion and timing, art/p6/ike/anims, scripts/p6/ultimate.py)",
    "anim": "builds/p6-art/ike/anims/fsmash.o2r",
-   "script_edits": {
-    "element": {
-     "1": 3
-    },
-    "drop": [
-     "RemixSetHitboxFGM"
-    ]
-   }
+   "script": "scripts/p6/ike/motions/fsmash.ms",
+   "anim_flags": "0x0"
   },
   "182": {
-   "comment": "AttackHi4: up smash: one strong overhead swing (Ultimate's motion, art/p6/ike/anims, scripts/p6/ultimate.py)",
+   "comment": "AttackHi4: up smash, one strong overhead swing (Ultimate's motion and timing, art/p6/ike/anims, scripts/p6/ultimate.py)",
    "anim": "builds/p6-art/ike/anims/usmash.o2r",
    "script": "scripts/p6/ike/motions/usmash.ms"
+  },
+  "183": {
+   "comment": "AttackLw4: down smash, in front then behind (Ultimate's motion and timing, art/p6/ike/anims, scripts/p6/ultimate.py)",
+   "anim": "builds/p6-art/ike/anims/dsmash.o2r",
+   "script": "scripts/p6/ike/motions/dsmash.ms"
+  },
+  "184": {
+   "comment": "AttackAirN: neutral air, the spin round him (Ultimate's motion and timing, art/p6/ike/anims, scripts/p6/ultimate.py)",
+   "anim": "builds/p6-art/ike/anims/nair.o2r",
+   "script": "scripts/p6/ike/motions/nair.ms"
+  },
+  "185": {
+   "comment": "AttackAirF: forward air, the arc in front (Ultimate's motion and timing, art/p6/ike/anims, scripts/p6/ultimate.py)",
+   "anim": "builds/p6-art/ike/anims/fair.o2r",
+   "script": "scripts/p6/ike/motions/fair.ms"
+  },
+  "186": {
+   "comment": "AttackAirB: back air, the thrust behind him (Ultimate's motion and timing, art/p6/ike/anims, scripts/p6/ultimate.py)",
+   "anim": "builds/p6-art/ike/anims/bair.o2r",
+   "script": "scripts/p6/ike/motions/bair.ms"
+  },
+  "187": {
+   "comment": "AttackAirHi: up air, the arc over his head (Ultimate's motion and timing, art/p6/ike/anims, scripts/p6/ultimate.py)",
+   "anim": "builds/p6-art/ike/anims/uair.o2r",
+   "script": "scripts/p6/ike/motions/uair.ms"
+  },
+  "188": {
+   "comment": "AttackAirLw: down air, the meteor arc under him (Ultimate's motion and timing, art/p6/ike/anims, scripts/p6/ultimate.py)",
+   "anim": "builds/p6-art/ike/anims/dair.o2r",
+   "script": "scripts/p6/ike/motions/dair.ms"
+  },
+  "189": {
+   "comment": "LandingAirN: neutral air's landing, Ultimate's 8 frames of lag (Ultimate's motion and timing, art/p6/ike/anims, scripts/p6/ultimate.py)",
+   "anim": "builds/p6-art/ike/anims/landing_air_n.o2r"
+  },
+  "190": {
+   "comment": "LandingAirF: forward air's landing, 14 frames (Ultimate's motion and timing, art/p6/ike/anims, scripts/p6/ultimate.py)",
+   "anim": "builds/p6-art/ike/anims/landing_air_f.o2r"
+  },
+  "191": {
+   "comment": "LandingAirB: back air's landing, 11 frames (Ultimate's motion and timing, art/p6/ike/anims, scripts/p6/ultimate.py)",
+   "anim": "builds/p6-art/ike/anims/landing_air_b.o2r"
+  },
+  "192": {
+   "comment": "LandingAirHi: up air's landing, 9 frames (Ultimate's motion and timing, art/p6/ike/anims, scripts/p6/ultimate.py)",
+   "anim": "builds/p6-art/ike/anims/landing_air_hi.o2r"
+  },
+  "193": {
+   "comment": "LandingAirLw: down air's landing, 14 frames (Ultimate's motion and timing, art/p6/ike/anims, scripts/p6/ultimate.py)",
+   "anim": "builds/p6-art/ike/anims/landing_air_lw.o2r"
   },
   "214": {
    "comment": "SpecialLwStart ground (Roy's Flare Blade, his Eruption): its charge sound as the loop sound a new status stops (owner playtest 2026-10-14, p6d)",
@@ -165,52 +211,52 @@
    "comment": "SpecialAirLwEnd at full charge: as 216"
   },
   "224": {
-   "comment": "Attack13 (appended; Roy's 195 is his entry): jab 3: Ragnell swung up over him (Ultimate's motion, art/p6/ike/anims, scripts/p6/ultimate.py)",
+   "comment": "Attack13 (appended; Roy's 195 is his entry): jab 3, Ragnell swung up over him (Ultimate's motion and timing, art/p6/ike/anims, scripts/p6/ultimate.py)",
    "anim": "builds/p6-art/ike/anims/jab3.o2r",
    "script": "scripts/p6/ike/motions/jab3.ms"
   },
   "225": {
-   "comment": "Quick Draw: charge, skating back, Ragnell angled back (Ultimate's motion, art/p6/ike/anims, scripts/p6/ultimate.py)",
+   "comment": "Quick Draw: charge, skating back, Ragnell angled back (Ultimate's motion and timing, art/p6/ike/anims, scripts/p6/ultimate.py)",
    "anim": "builds/p6-art/ike/anims/qd_charge.o2r",
    "script": "scripts/p6/ike/motions/qd_charge.ms"
   },
   "226": {
-   "comment": "Quick Draw: dash (Ultimate's motion, art/p6/ike/anims, scripts/p6/ultimate.py)",
+   "comment": "Quick Draw: dash (Ultimate's motion and timing, art/p6/ike/anims, scripts/p6/ultimate.py)",
    "anim": "builds/p6-art/ike/anims/qd_dash.o2r",
    "script": "scripts/p6/ike/motions/qd_dash.ms"
   },
   "227": {
-   "comment": "Quick Draw: slash, swung to his right (Ultimate's motion, art/p6/ike/anims, scripts/p6/ultimate.py)",
+   "comment": "Quick Draw: slash, swung to his right (owner p6r: knockback as Ultimate's) (Ultimate's motion and timing, art/p6/ike/anims, scripts/p6/ultimate.py)",
    "anim": "builds/p6-art/ike/anims/qd_slash.o2r",
    "script": "scripts/p6/ike/motions/qd_slash.ms"
   },
   "228": {
-   "comment": "Quick Draw: miss, the slash's follow-through (Ultimate's motion, art/p6/ike/anims, scripts/p6/ultimate.py)",
+   "comment": "Quick Draw: miss, the slash's follow-through (Ultimate's motion and timing, art/p6/ike/anims, scripts/p6/ultimate.py)",
    "anim": "builds/p6-art/ike/anims/qd_end.o2r",
    "script": "scripts/p6/ike/motions/qd_end.ms"
   },
   "229": {
-   "comment": "Aether: Ragnell thrown up, the leap to it and the spin (Ultimate's motion, art/p6/ike/anims, scripts/p6/ultimate.py)",
+   "comment": "Aether: Ragnell thrown up, the pause, the leap to it, the spin (owner p6p/p6r) (Ultimate's motion and timing, art/p6/ike/anims, scripts/p6/ultimate.py)",
    "anim": "builds/p6-art/ike/anims/aether_rise.o2r",
    "script": "scripts/p6/ike/motions/aether_rise.ms"
   },
   "230": {
-   "comment": "Aether: descent, the plunge (Ultimate's motion, art/p6/ike/anims, scripts/p6/ultimate.py)",
+   "comment": "Aether: the plunge (Ultimate's motion and timing, art/p6/ike/anims, scripts/p6/ultimate.py)",
    "anim": "builds/p6-art/ike/anims/aether_fall.o2r",
    "script": "scripts/p6/ike/motions/aether_fall.ms"
   },
   "231": {
-   "comment": "Aether: landing (Ultimate's motion, art/p6/ike/anims, scripts/p6/ultimate.py)",
+   "comment": "Aether: landing (Ultimate's motion and timing, art/p6/ike/anims, scripts/p6/ultimate.py)",
    "anim": "builds/p6-art/ike/anims/aether_land.o2r",
    "script": "scripts/p6/ike/motions/aether_land.ms"
   },
   "232": {
-   "comment": "Counter (taunt) (Ultimate's motion, art/p6/ike/anims, scripts/p6/ultimate.py)",
+   "comment": "Counter (taunt) (Ultimate's motion and timing, art/p6/ike/anims, scripts/p6/ultimate.py)",
    "anim": "builds/p6-art/ike/anims/counter.o2r",
    "script": "scripts/p6/ike/motions/counter.ms"
   },
   "233": {
-   "comment": "Counter: strike (Ultimate's motion, art/p6/ike/anims, scripts/p6/ultimate.py)",
+   "comment": "Counter: strike (Ultimate's motion and timing, art/p6/ike/anims, scripts/p6/ultimate.py)",
    "anim": "builds/p6-art/ike/anims/counter_hit.o2r",
    "script": "scripts/p6/ike/motions/counter_hit.ms"
   }

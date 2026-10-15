@@ -1,11 +1,11 @@
 {
- "comment": "Ultimate's Quick Draw's dash (d01specialsdash). Retargeted onto Roy's tree with his look by scripts/p6/ultimate.py (Roy's bind aligned to the T-pose) from the owner's local Ultimate files (never committed, P6 D1).",
+ "comment": "Ultimate's Quick Draw's dash (d01specialsdash), its loop. Retargeted onto Roy's tree with his look by scripts/p6/ultimate.py (Roy's bind aligned to the T-pose) from the owner's local Ultimate files (never committed, P6 D1); Ultimate's timing, frame for frame (owner p6r).",
  "ultimate": {
   "fighter": "ike",
   "skeleton": "roy",
   "scene": "builds/p6-art/ike/look/low_v3/scene.json",
   "header": "0xcce",
-  "length": 32,
+  "length": 16,
   "first_slot": 0,
   "motion": "d01specialsdash",
   "time": [
@@ -14,9 +14,10 @@
     0
    ],
    [
-    32,
+    16,
     16
    ]
-  ]
+  ],
+  "loop": 0
  }
 }

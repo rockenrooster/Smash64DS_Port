@@ -1,11 +1,11 @@
 {
- "comment": "Ultimate's Aether's throw and leap (d02specialhi1, then d02specialhi2 from the jump at 9): Ragnell thrown up hard, a pause, the leap to it, the spin (owner p6p); the sword model's own motion carries the blade off his hand. Retargeted onto Roy's tree with his look by scripts/p6/ultimate.py (Roy's bind aligned to the T-pose) from the owner's local Ultimate files (never committed, P6 D1).",
+ "comment": "Ultimate's Aether (d02specialhi1, then d02specialhi2 from 18): Ragnell thrown up hard at 14 (its hit), a pause in the crouch, the leap to it at 40, caught at 46, the spin, the turn down (owner p6p: \"throws sword up forcefully, pause, jumps to sword, pause for spin, comes back down\"); the blade's flight item_path (it hangs where the hand meets it), his leap Ultimate's. Retargeted onto Roy's tree with his look by scripts/p6/ultimate.py (Roy's bind aligned to the T-pose) from the owner's local Ultimate files (never committed, P6 D1); Ultimate's timing, frame for frame (owner p6r).",
  "ultimate": {
   "fighter": "ike",
   "skeleton": "roy",
   "scene": "builds/p6-art/ike/look/low_v3/scene.json",
   "header": "0xcce",
-  "length": 30,
+  "length": 64,
   "first_slot": 0,
   "parts": [
    {
@@ -16,7 +16,7 @@
       0
      ],
      [
-      9,
+      17,
       17
      ]
     ]
@@ -25,11 +25,11 @@
     "motion": "d02specialhi2",
     "time": [
      [
-      10,
+      18,
       0
      ],
      [
-      30,
+      64,
       46
      ]
     ]
@@ -39,6 +39,33 @@
    "motion": "a00wait1",
    "frame": 0,
    "frames": 3
+  },
+  "item_motion": false,
+  "key_step": 2,
+  "item_path": {
+   "release": [
+    14,
+    16
+   ],
+   "catch": [
+    43,
+    46
+   ],
+   "throw": 5,
+   "centre": 220,
+   "spin": 30,
+   "takeoff": 39,
+   "rise": [
+    96,
+    250,
+    280,
+    240,
+    190,
+    140,
+    100,
+    59
+   ],
+   "size": 0.84
   }
  }
 }
