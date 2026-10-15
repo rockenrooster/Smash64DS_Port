@@ -2,21 +2,25 @@
 """P6 Palutena's wings in her forward and down smash, as a rigged effect
 (owner playtest p6i follow-up, 2026-10-14: "the wings need lots of work, they
 should articulate and stretch and be mostly symmetrical ... polished and like
-they belong in the DS version").
+they belong in the DS version"; then "your wings look disconnected in
+parts").
 
-The torso-row card variants of the first pass (art/p6/palutena/look/parts.json
-"wings_forward", "wings_down") were one rigid card a wing in three poses. The
-wings are now an effect of their own in her special file 2, drawn natively as
+The wings are an effect of their own in her special file 2, drawn natively as
 her pillar is (scripts/p4/p4_articles.py "wings"), with a skeleton: the kit's
 godwing (godwing.dae: a wing a side, four bones each, LwingNa-d; the right
 wing the left's mirror) at the look's fit_scale.
 
-Art. Each bone draws one card: the kit wing's feathers of that bone rendered
-flat in the wing's plane from its outer side (an impostor), cut out of one
-64x64 CI4 atlas (colour 0 clear). The cards of a wing lie a little apart along
-the plane's normal, the inner ones in front, as the kit's feathers overlap;
-the feathers' edge texels are darkened a little (RIM_SHADE) so the white
-wings keep their shape over a bright stage.
+Art. A wing is one continuous mesh: the kit wing's feathers rendered flat in
+the wing's plane from its outer side (an impostor) into one 128x32 CI4 image
+(colour 0 clear; the feathers' edge texels darkened a little, RIM_SHADE, so
+the white wings keep their shape over a bright stage), mapped onto a grid of
+COLS columns along the wing by ROWS rows across it. Each column rides one
+bone (the bone whose span along the wing holds it); a quad between two
+bones' columns is drawn by the later bone with the earlier bone's vertices
+still in the vertex cache (each bone loads into its own half of the cache),
+so it stretches across the joint (the entry-effect compiler records those
+corners' earlier matrix; the runtime keeps its slot) and the wing bends
+without gaps. The first pass's card a bone came apart at the joints.
 
 Tree (DObjDesc depth in brackets):
 
@@ -24,8 +28,9 @@ Tree (DObjDesc depth in brackets):
     [1] torso   her torso row (2) relative to TopN, from her smash clip
     [2] pair    the wings' root between her shoulder blades (the kit's
                 WingN, on BustN); its scale grows and shrinks the wings
-    [3] La      bone a of the left wing, [4] its card, [4] bone b ...
-    [3] Ra      the right wing, the left's mirror
+    [3] La..Ld  the left wing's bones, each relative to the pair (the chain
+                composed offline), its list its part of the mesh
+    [3] Ra..Rd  the right wing's, the left's mirror
 
 Motion. art/p6/palutena/wings/<smash>.json keys each wing's pose on her
 smash clip's frames (the owner's 3DS reference beside it): the pair's size
@@ -36,24 +41,25 @@ body seen side on), "pair_roll" (one wing a little above the other) and
 "pair_pitch"; bone a's turn in the pair's frame ("a": pitch, forward and
 back; yaw, out and in; roll, up and down) and "twist" (the whole wing about
 its own length: a wing laid flat reads as a thin arc from the side, the
-3DS down smash's), bones b-d's turns in their own
-bind frames ("b".."d": twist, curl out of the wing's plane, fold in it), each
-bone's "stretch" (its card's length and its child's distance) and "fan" (its
-card's feather length). Keys pass through a Catmull-Rom spline, stopping at
-the ends and at "hold" keys. The bake samples every frame of the
-clip in the visible span: the torso node from the clip's own pose (anim.py,
-keyposes.py, the look scene's skeleton), then every node's translation, its
-rotation as BattleShip's RPY Euler angles (syMatrixRotRpyRF: R = Rz Ry Rx)
-and its scale, into a table her code reads every tic
+3DS down smash's), bones b-d's turns in their own bind frames ("b".."d":
+twist, curl out of the wing's plane, fold in it), each bone's "stretch"
+(along its length, its child's distance with it) and "fan" (across it, the
+feathers' length). Keys pass through a Catmull-Rom spline, stopping at the
+ends and at "hold" keys. The bake samples every frame of the clip in the
+visible span: the torso node from the clip's own pose (anim.py, keyposes.py,
+the look scene's skeleton), the pair, and each bone's translation, rotation
+(BattleShip's RPY Euler angles: syMatrixRotRpyRF, R = Rz Ry Rx) and scale
+relative to the pair, into a table her code reads every tic
 (src/port/nds_p4_palutena.c) at her animation frame (fighter anim_frame), so
 the wings stay on her through hitlag and leave with the status.
 
-Kit-derived: the atlas, cards and table live in builds/ (D10); this module
+Kit-derived: the image, mesh and table live in builds/ (D10); this module
 and the motion recipes are the committed part. p6_gate.py writes the tree
-into her special file 2 (write); world_cards gives a pose's cards in model
-space for review renders.
+into her special file 2 (write); world_mesh gives a pose's triangles in
+model space (review renders, and her victory poses' static wings:
+look_parts.py "wings_pose").
 
-    p6_wings.py [--atlas atlas.png]     (the rig, the cards and the bake's spans)
+    p6_wings.py [--image wing.png]      (the rig, the mesh and the bake's spans)
 """
 from __future__ import annotations
 
@@ -78,9 +84,11 @@ SCENE = REPO / "builds" / "p6-art" / "palutena" / "3ds2ds" / "scene_high" / "sce
 RECIPES = REPO / "art" / "p6" / "palutena" / "wings"
 BONES = ("a", "b", "c", "d")
 TORSO_ROW = 2                 # her torso row (fighter joint 6)
-ATLAS = 64                    # the cards' CI4 atlas side (2 KB, TMEM's half)
-CARD_GAP = 3.0                # units between a wing's cards along its normal
-RENDER_DENSITY = 2.0          # pixels a unit for the high-resolution segments
+TEX_W, TEX_H = 128, 32        # the wing's image: CI4, TMEM's half (2 KB)
+COLS = (3, 3, 3, 4)           # mesh columns a bone (d's last at the tip)
+ROWS = 3                      # across the wing: leading edge, middle, feathers' ends
+BANK = 16                     # vertex cache slots a bone (two halves of 32)
+RENDER_DENSITY = 2.0          # pixels a unit for the high-resolution render
 ANGLE_UNIT = 65536.0 / (2.0 * math.pi)   # table angles: s16 binary angle
 SCALE_UNIT = 4096.0                      # table scales: s16 / 4096
 
@@ -96,10 +104,13 @@ class Bone:
     name: str                 # "a".."d"
     origin: np.ndarray        # in the pair node's frame (her torso's axes)
     frame: np.ndarray         # 3x3, columns x (along the bone), y, z (normal)
-    card: tuple               # (u0, u1, v0, v1) in the bone frame
-    depth: float              # the card's offset along the normal
-    image: np.ndarray         # RGBA, high resolution, rows from v1 down to v0
-    atlas: tuple = None       # (x, y, w, h) texels in the atlas
+
+
+@dataclass
+class Vert:
+    bone: int                 # the bone it rides (0..3)
+    local: np.ndarray         # in that bone's frame
+    st: tuple                 # texels in the wing's image
 
 
 @dataclass
@@ -108,8 +119,10 @@ class Wing:
     bones: list               # Bone a..d (left wing)
     normal: np.ndarray
     fit: float
-    atlas_rgba: np.ndarray = None
-    density: float = 0.0      # atlas texels a unit
+    image: np.ndarray = None  # RGBA, TEX_H x TEX_W (before the rim)
+    verts: list = field(default_factory=list)        # Vert, column by column
+    tris: dict = field(default_factory=dict)         # bone -> [(i, j, k)]
+    bone_verts: dict = field(default_factory=dict)   # bone -> [vertex index]
 
 
 def _scene() -> dict:
@@ -124,11 +137,11 @@ def _dominant(mesh, tri, names) -> str:
     return names[acc.most_common(1)[0][0]]
 
 
-def _render_segment(tris: np.ndarray, uvs: np.ndarray, tex: np.ndarray, card: tuple,
-                    density: float) -> np.ndarray:
-    """The segment's triangles (bone-frame u, v, depth) textured into an
-    image covering `card`, seen from +depth; rows run from v1 down to v0."""
-    u0, u1, v0, v1 = card
+def _render(tris: np.ndarray, uvs: np.ndarray, tex: np.ndarray, box: tuple,
+            density: float) -> np.ndarray:
+    """Triangles (plane u, v, depth) textured into an image covering `box`
+    (u0, u1, v0, v1), seen from +depth; rows run from v1 down to v0."""
+    u0, u1, v0, v1 = box
     w = max(1, int(math.ceil((u1 - u0) * density)))
     h = max(1, int(math.ceil((v1 - v0) * density)))
     img = np.zeros((h, w, 4), dtype=float)
@@ -166,84 +179,6 @@ def _render_segment(tris: np.ndarray, uvs: np.ndarray, tex: np.ndarray, card: tu
     return img
 
 
-def load_wing(scene: dict | None = None) -> Wing:
-    """The kit's left wing as four bones with flat cards (module docstring)."""
-    scene = scene or _scene()
-    fit = float(scene["fit_scale"])
-    torso = np.array(scene["joints"][TORSO_ROW]["world"], dtype=float)
-    model = dae_reader.read(KIT / "godwing.dae")
-    mesh = model.meshes[0]
-    names = [j.name for j in model.joints]
-    world = {j.name: np.array([j.world[3], j.world[7], j.world[11]]) * fit for j in model.joints}
-    # The pair node: the kit's WingN, in her torso row's frame (its rest
-    # frame is the model's axes: x her left, y up, z her front).
-    pair_world = world["WingN"]
-    pair = pair_world - torso[:3, 3]
-    segments = {b: [] for b in BONES}
-    for tri in mesh.triangles:
-        d = _dominant(mesh, tri, names)
-        if d.startswith("Lwing"):
-            segments[d[-1]].append(tri)
-    pos = {i: np.array(model.skinned_position(mesh, i)) * fit - pair_world
-           for b in BONES for tri in segments[b] for i in tri}
-    pts = np.array(list(pos.values()))
-    centred = pts - pts.mean(0)
-    _u, _s, vt = np.linalg.svd(centred, full_matrices=False)
-    normal = vt[2] / np.linalg.norm(vt[2])
-    if normal[0] < 0:
-        normal = -normal           # the left wing's outer side: her left
-    origins = {b: world[f"LwingN{b}"] - pair_world for b in BONES}
-    # The tip: the farthest point of bone d's feathers from its joint.
-    d_pts = np.array([pos[i] for tri in segments["d"] for i in tri])
-    tip = d_pts[np.argmax(np.linalg.norm(d_pts - origins["d"], axis=1))]
-    tex = _kit_texture()
-    bones = []
-    for k, b in enumerate(BONES):
-        nxt = origins[BONES[k + 1]] if k + 1 < len(BONES) else tip
-        x = nxt - origins[b]
-        x = x - normal * float(np.dot(x, normal))
-        x /= np.linalg.norm(x)
-        y = np.cross(normal, x)
-        frame = np.stack([x, y, normal], axis=1)
-        tris = np.array([[(pos[i] - origins[b]) @ frame for i in tri] for tri in segments[b]])
-        uvs = np.array([[mesh.pool.uvs[i] for i in tri] for tri in segments[b]], dtype=float)
-        flat = tris.reshape(-1, 3)
-        card = (float(flat[:, 0].min()) - 2.0, float(flat[:, 0].max()) + 2.0,
-                float(flat[:, 1].min()) - 2.0, float(flat[:, 1].max()) + 2.0)
-        image = _render_segment(tris, uvs, tex, card, RENDER_DENSITY)
-        bones.append(Bone(b, origins[b], frame, card, CARD_GAP * (len(BONES) - 1 - k), image))
-    wing = Wing(pair, bones, normal, fit)
-    pack_atlas(wing)
-    return wing
-
-
-def _kit_texture() -> np.ndarray:
-    from PIL import Image
-    return np.asarray(Image.open(KIT / "Yoshi_Wing.png").convert("RGBA"))
-
-
-# ---------------------------------------------------------------- the atlas
-
-def _shelf(sizes: list, side: int):
-    """Shelf-pack (w, h) rectangles, tallest first, into side x side; the
-    places, or None."""
-    order = sorted(range(len(sizes)), key=lambda i: -sizes[i][1])
-    places = [None] * len(sizes)
-    x = y = shelf = 0
-    for i in order:
-        w, h = sizes[i]
-        if w > side:
-            return None
-        if x + w > side:
-            x, y, shelf = 0, y + shelf, 0
-        if y + h > side:
-            return None
-        places[i] = (x, y)
-        x += w
-        shelf = max(shelf, h)
-    return places
-
-
 def _box_premultiplied(src: np.ndarray, w: int, h: int) -> tuple[np.ndarray, np.ndarray]:
     """Area-averaged alpha and colour of an RGBA image at w x h, the colour
     averaged over coverage (premultiplied) so clear texels add no black."""
@@ -260,33 +195,101 @@ def _box_premultiplied(src: np.ndarray, w: int, h: int) -> tuple[np.ndarray, np.
     return a * 255.0, rgb.clip(0.0, 255.0)
 
 
-def pack_atlas(wing: Wing) -> None:
-    """The densest texels-a-unit at which the four cards fit the atlas (a
-    texel of margin each), and each card's place."""
-    lo, hi = 0.01, 1.0
-    best = None
-    for _ in range(40):
-        mid = (lo + hi) / 2
-        sizes = [(int(math.ceil((b.card[1] - b.card[0]) * mid)) + 1,
-                  int(math.ceil((b.card[3] - b.card[2]) * mid)) + 1) for b in wing.bones]
-        places = _shelf(sizes, ATLAS)
-        if places is None:
-            hi = mid
-        else:
-            lo, best = mid, (mid, sizes, places)
-    if best is None:
-        raise WingError("wing cards do not fit the atlas")
-    density, sizes, places = best
-    wing.density = density
+def load_wing(scene: dict | None = None) -> Wing:
+    """The kit's left wing: its four bones, its image and its mesh (module
+    docstring)."""
+    scene = scene or _scene()
+    fit = float(scene["fit_scale"])
+    torso = np.array(scene["joints"][TORSO_ROW]["world"], dtype=float)
+    model = dae_reader.read(KIT / "godwing.dae")
+    mesh = model.meshes[0]
+    names = [j.name for j in model.joints]
+    world = {j.name: np.array([j.world[3], j.world[7], j.world[11]]) * fit for j in model.joints}
+    # The pair node: the kit's WingN, in her torso row's frame (its rest
+    # frame is the model's axes: x her left, y up, z her front).
+    pair_world = world["WingN"]
+    pair = pair_world - torso[:3, 3]
+    wing_tris = [tri for tri in mesh.triangles if _dominant(mesh, tri, names).startswith("Lwing")]
+    pos = {i: np.array(model.skinned_position(mesh, i)) * fit - pair_world
+           for tri in wing_tris for i in tri}
+    pts = np.array(list(pos.values()))
+    centred = pts - pts.mean(0)
+    _u, _s, vt = np.linalg.svd(centred, full_matrices=False)
+    normal = vt[2] / np.linalg.norm(vt[2])
+    if normal[0] < 0:
+        normal = -normal           # the left wing's outer side: her left
+    origins = {b: world[f"LwingN{b}"] - pair_world for b in BONES}
+    d_tris = [tri for tri in wing_tris if _dominant(mesh, tri, names) == "LwingNd"]
+    d_pts = np.array([pos[i] for tri in d_tris for i in tri])
+    tip = d_pts[np.argmax(np.linalg.norm(d_pts - origins["d"], axis=1))]
+    bones = []
+    for k, b in enumerate(BONES):
+        nxt = origins[BONES[k + 1]] if k + 1 < len(BONES) else tip
+        x = nxt - origins[b]
+        x = x - normal * float(np.dot(x, normal))
+        x /= np.linalg.norm(x)
+        y = np.cross(normal, x)
+        bones.append(Bone(b, origins[b], np.stack([x, y, normal], axis=1)))
+    wing = Wing(pair, bones, normal, fit)
+    # The wing's plane: from bone a's joint toward the tip (u), across (v).
+    o = origins["a"]
+    u_ax = tip - o
+    u_ax = u_ax - normal * float(np.dot(u_ax, normal))
+    u_ax /= np.linalg.norm(u_ax)
+    v_ax = np.cross(normal, u_ax)
+    plane = np.stack([u_ax, v_ax, normal], axis=1)
+    tris = np.array([[(pos[i] - o) @ plane for i in tri] for tri in wing_tris])
+    uvs = np.array([[mesh.pool.uvs[i] for i in tri] for tri in wing_tris], dtype=float)
+    flat = tris.reshape(-1, 3)
+    box = (float(flat[:, 0].min()) - 2.0, float(flat[:, 0].max()) + 2.0,
+           float(flat[:, 1].min()) - 2.0, float(flat[:, 1].max()) + 2.0)
+    big = _render(tris, uvs, _kit_texture(), box, RENDER_DENSITY)
+    a, rgb = _box_premultiplied(big, TEX_W, TEX_H)
+    wing.image = np.concatenate([rgb, a[..., None]], axis=-1)
+    _mesh(wing, plane, o, box)
+    return wing
+
+
+def _mesh(wing: Wing, plane: np.ndarray, o: np.ndarray, box: tuple) -> None:
+    """The grid: COLS columns a bone along u (a bone's from where its joint
+    falls on u; bone a's from the image's start, d's last at its end), ROWS
+    rows across; each vertex in its bone's frame, its texel in the image."""
+    u0, u1, v0, v1 = box
+    starts = [u0] + [float((b.origin - o) @ plane[:, 0]) for b in wing.bones[1:]] + [u1]
+    cols = []
+    for k in range(len(BONES)):
+        n = COLS[k]
+        last = k == len(BONES) - 1
+        for i in range(n):
+            frac = i / (n - 1) if last else i / n
+            cols.append((starts[k] + (starts[k + 1] - starts[k]) * frac, k))
+    rows = [v1 + (v0 - v1) * r / (ROWS - 1) for r in range(ROWS)]
+    index = {}
+    for c, (u, k) in enumerate(cols):
+        bone = wing.bones[k]
+        for r, v in enumerate(rows):
+            p = o + plane[:, 0] * u + plane[:, 1] * v
+            local = bone.frame.T @ (p - bone.origin)
+            st = ((u - u0) / (u1 - u0) * TEX_W, (v1 - v) / (v1 - v0) * TEX_H)
+            index[(c, r)] = len(wing.verts)
+            wing.bone_verts.setdefault(k, []).append(len(wing.verts))
+            wing.verts.append(Vert(k, local, st))
+    for k in range(len(BONES)):
+        if len(wing.bone_verts[k]) > BANK:
+            raise WingError(f"bone {BONES[k]}: {len(wing.bone_verts[k])} vertices, a bank holds {BANK}")
+        wing.tris[k] = []
+    for c in range(len(cols) - 1):
+        owner = cols[c + 1][1]
+        if cols[c][1] not in (owner, owner - 1):
+            raise WingError("a quad spans more than two bones")
+        for r in range(ROWS - 1):
+            q0, q1, q2, q3 = index[(c, r)], index[(c + 1, r)], index[(c + 1, r + 1)], index[(c, r + 1)]
+            wing.tris[owner] += [(q0, q1, q2), (q0, q2, q3)]
+
+
+def _kit_texture() -> np.ndarray:
     from PIL import Image
-    atlas = np.zeros((ATLAS, ATLAS, 4), dtype=float)
-    for b, (w, h), (x, y) in zip(wing.bones, sizes, places):
-        w0, h0 = w - 1, h - 1
-        a, rgb = _box_premultiplied(b.image, w0, h0)
-        atlas[y:y + h0, x:x + w0, :3] = rgb
-        atlas[y:y + h0, x:x + w0, 3] = a
-        b.atlas = (x, y, w0, h0)
-    wing.atlas_rgba = atlas
+    return np.asarray(Image.open(KIT / "Yoshi_Wing.png").convert("RGBA"))
 
 
 # The feathers' rim: each opaque texel beside a clear one darkened a little
@@ -295,10 +298,10 @@ RIM_SHADE = 0.86
 RIM_TINT = (0.92, 0.95, 1.0)
 
 
-def atlas_ci4(wing: Wing) -> tuple[list, list]:
-    """The atlas as CI4 indices and an RGBA palette (index 0 clear)."""
+def image_ci4(wing: Wing) -> tuple[list, list]:
+    """The wing's image as CI4 indices and an RGBA palette (index 0 clear)."""
     import look_blend
-    rgba = wing.atlas_rgba.copy()
+    rgba = wing.image.copy()
     opaque = rgba[..., 3] >= 110
     rgba[..., 3] = np.where(opaque, 255, 0)
     edge = np.zeros_like(opaque)
@@ -308,15 +311,10 @@ def atlas_ci4(wing: Wing) -> tuple[list, list]:
     return look_blend.quantize(rgba.astype(np.uint8), 16, True)
 
 
-def card_corners(bone: Bone, density: float) -> list:
-    """The card's four corners: (x, y, z) in the bone frame and (s, t) in
-    texels, counter-clockwise from the outer side."""
-    u0, u1, v0, v1 = bone.card
-    x, y, w, h = bone.atlas
-    return [((u0, v1, bone.depth), (x, y)),
-            ((u0, v0, bone.depth), (x, y + h)),
-            ((u1, v0, bone.depth), (x + w, y + h)),
-            ((u1, v1, bone.depth), (x + w, y))]
+def image_rgba(wing: Wing) -> np.ndarray:
+    """The CI4 image back as RGBA (previews, her victory poses' texture)."""
+    idx, pal = image_ci4(wing)
+    return np.array([[pal[i] for i in row] for row in idx], dtype=np.uint8)
 
 
 # ---------------------------------------------------------------- the rig
@@ -354,10 +352,6 @@ def rpy(r: np.ndarray) -> tuple[float, float, float]:
     return x, y, z
 
 
-def rpy_matrix(x: float, y: float, z: float) -> np.ndarray:
-    return rot_z(math.degrees(z)) @ rot_y(math.degrees(y)) @ rot_x(math.degrees(x))
-
-
 def _log(r: np.ndarray) -> np.ndarray:
     """A rotation matrix's rotation vector (axis times angle, radians)."""
     c = max(-1.0, min(1.0, (float(np.trace(r)) - 1.0) / 2.0))
@@ -384,41 +378,41 @@ def _exp(v: np.ndarray) -> np.ndarray:
 
 @dataclass
 class Params:
-    """A wing pose (module docstring): degrees, scales. `level` 0..1 turns
-    the pair from her torso's turn toward her TopN's axes (1: the wings keep
-    the battle camera's plane however her chest twists)."""
+    """A wing pose (module docstring): degrees, scales."""
     size: float = 1.0
     pair_pitch: float = 0.0
     level: float = 0.0
     pair_yaw: float = 0.0               # the pair turned about her vertical
     pair_roll: float = 0.0              # one wing up, the other down
     twist: float = 0.0                  # the whole wing about its own length
-    a: tuple = (0.0, 0.0, 0.0)           # pitch, yaw, roll in the pair's frame
+    a: tuple = (0.0, 0.0, 0.0)          # pitch, yaw, roll in the pair's frame
     bends: dict = field(default_factory=lambda: {b: (0.0, 0.0, 0.0) for b in BONES[1:]})
     stretch: dict = field(default_factory=lambda: {b: 1.0 for b in BONES})
     fan: dict = field(default_factory=lambda: {b: 1.0 for b in BONES})
 
 
-def bone_locals(wing: Wing, p: Params) -> list[tuple[np.ndarray, np.ndarray]]:
-    """Each bone's local (rotation, translation) under its parent (the pair
-    node for bone a) for the pose."""
+def bone_poses(wing: Wing, p: Params) -> list[tuple[np.ndarray, np.ndarray, tuple]]:
+    """Each bone's (rotation, translation, (stretch, fan)) relative to the
+    pair node: the chain composed (a child's joint moves with its parent's
+    stretch), its own scale left for its own vertices."""
     out = []
-    parent_frame = np.eye(3)
-    parent_origin = np.zeros(3)
-    parent_stretch = 1.0
+    parent_frame, parent_origin, parent_stretch = np.eye(3), np.zeros(3), 1.0
+    rot_w, trans_w = np.eye(3), np.zeros(3)
     for k, bone in enumerate(wing.bones):
         rot = parent_frame.T @ bone.frame
         trans = parent_frame.T @ (bone.origin - parent_origin)
         if k == 0:
             # The wing turns about its own root (the kit's LwingNa), the
-            # turn's axes the pair's.
+            # turn's axes the pair's; then about its own length.
             pitch, yaw, roll = p.a
             rot = rot_z(roll) @ rot_y(yaw) @ rot_x(pitch) @ rot @ rot_x(p.twist)
+            rot_w, trans_w = rot, trans
         else:
             twist, curl, fold = p.bends[bone.name]
             rot = rot @ rot_x(twist) @ rot_y(curl) @ rot_z(fold)
-            trans = trans * parent_stretch
-        out.append((rot, trans))
+            trans_w = trans_w + rot_w @ (trans * parent_stretch)
+            rot_w = rot_w @ rot
+        out.append((rot_w.copy(), trans_w.copy(), (p.stretch[bone.name], p.fan[bone.name])))
         parent_frame, parent_origin = bone.frame, bone.origin
         parent_stretch = p.stretch[bone.name]
     return out
@@ -426,43 +420,39 @@ def bone_locals(wing: Wing, p: Params) -> list[tuple[np.ndarray, np.ndarray]]:
 
 def pair_local(wing: Wing, p: Params, torso: np.ndarray) -> tuple[np.ndarray, np.ndarray, float]:
     """The pair node's local rotation, translation and scale under the torso
-    node: `level` of the way to undoing the torso's turn, then its pitch."""
+    node: `level` of the way to undoing the torso's turn, then its yaw, roll
+    and pitch."""
     tr = torso[:3, :3] / np.linalg.norm(torso[:3, :3], axis=0)
     undo = _exp(_log(tr.T) * p.level)
     return (undo @ rot_y(p.pair_yaw) @ rot_z(p.pair_roll) @ rot_x(p.pair_pitch),
             wing.pair_origin.copy(), p.size)
 
 
-def world_cards(wing: Wing, torso: np.ndarray, p: Params) -> list:
-    """Model-space (TopN-relative) card corners for both wings: [(side, bone,
-    corners 4x3, st 4x2)]; torso is her torso row's 4x4 model matrix."""
+MIRROR = np.diag([-1.0, 1.0, 1.0])
+
+
+def world_mesh(wing: Wing, torso: np.ndarray, p: Params) -> list:
+    """Model-space (TopN-relative) triangles of both wings for a pose:
+    [(side, corners 3x3, st 3x2)]; torso is her torso row's 4x4 model
+    matrix."""
     pr, pt, ps = pair_local(wing, p, torso)
-    pair = torso @ _affine(pr, pt, ps)
+    pair_r = torso[:3, :3] @ pr * ps
+    pair_t = torso[:3, :3] @ pt + torso[:3, 3]
+    poses = bone_poses(wing, p)
     out = []
-    mirror = np.diag([-1.0, 1.0, 1.0, 1.0])
     for side in ("L", "R"):
-        m = pair
-        for bone, (rot, trans) in zip(wing.bones, bone_locals(wing, p)):
-            local = _affine(rot, trans, 1.0)
+        placed = []
+        for vert in wing.verts:
+            rot, trans, (sx, sy) = poses[vert.bone]
+            local = vert.local * np.array([sx, sy, 1.0])
             if side == "R":
-                local = mirror @ local @ mirror
-            m = m @ local
-            card = m @ np.diag([p.stretch[bone.name], p.fan[bone.name], 1.0, 1.0])
-            corners = []
-            st = []
-            for (x, y, z), (s, t) in card_corners(bone, wing.density):
-                v = np.array([-x if side == "R" else x, y, z, 1.0])
-                corners.append((card @ v)[:3])
-                st.append((s, t))
-            out.append((side, bone.name, np.array(corners), np.array(st, dtype=float)))
+                rot, trans, local = MIRROR @ rot @ MIRROR, MIRROR @ trans, MIRROR @ local
+            placed.append(pair_r @ (rot @ local + trans) + pair_t)
+        for k in range(len(BONES)):
+            for tri in wing.tris[k]:
+                out.append((side, np.array([placed[i] for i in tri]),
+                            np.array([wing.verts[i].st for i in tri], dtype=float)))
     return out
-
-
-def _affine(rot: np.ndarray, trans: np.ndarray, scale: float) -> np.ndarray:
-    m = np.eye(4)
-    m[:3, :3] = rot * scale
-    m[:3, 3] = trans
-    return m
 
 
 # ---------------------------------------------------------------- the motion
@@ -496,6 +486,11 @@ def _params(v: np.ndarray) -> Params:
     p.stretch = {b: float(v[18 + i]) for i, b in enumerate(BONES)}
     p.fan = {b: float(v[22 + i]) for i, b in enumerate(BONES)}
     return p
+
+
+def params_of(key: dict) -> Params:
+    """One key's pose (her victory poses' static wings)."""
+    return _params(_key_vector(key))
 
 
 def evaluate(recipe: dict, frame: float) -> Params | None:
@@ -553,8 +548,7 @@ def torso_frames(clip_name: str, scene: dict | None = None) -> list[np.ndarray]:
 
 # ---------------------------------------------------------------- the table
 
-NODES_PER_SIDE = 2 * len(BONES)
-ROW_VALUES = 6 + 4 + 6 * len(BONES) + 2 * len(BONES)
+ROW_VALUES = 6 + 4 + 8 * len(BONES)
 
 
 def _s16(v: float) -> int:
@@ -564,22 +558,28 @@ def _s16(v: float) -> int:
     return i
 
 
+def _angle16(a: float) -> int:
+    """A turn in radians as an s16 binary angle, wrapped (a half turn either
+    way is the same turn: +pi rounds to -0x8000)."""
+    i = int(round(a * ANGLE_UNIT))
+    return ((i + 0x8000) % 0x10000) - 0x8000
+
+
 def bake_row(wing: Wing, torso: np.ndarray, p: Params) -> list[int]:
     """One frame's table row (src/port/nds_p4_palutena.c reads it): the
     torso node's translation and rotation; the pair's rotation and size; per
-    left bone its translation and rotation; per card its x and y scale."""
+    left bone its translation, rotation and x and y scale (relative to the
+    pair)."""
     row = []
     tr = torso[:3, :3]
-    sc = np.linalg.norm(tr, axis=0)
-    rot = tr / sc
+    rot = tr / np.linalg.norm(tr, axis=0)
     row += [_s16(v) for v in torso[:3, 3]]
-    row += [_s16(a * ANGLE_UNIT) for a in rpy(rot)]
+    row += [_angle16(a) for a in rpy(rot)]
     pr, _pt, ps = pair_local(wing, p, torso)
-    row += [_s16(a * ANGLE_UNIT) for a in rpy(pr)] + [_s16(ps * SCALE_UNIT)]
-    for rot_b, trans_b in bone_locals(wing, p):
-        row += [_s16(v) for v in trans_b] + [_s16(a * ANGLE_UNIT) for a in rpy(rot_b)]
-    for b in BONES:
-        row += [_s16(p.stretch[b] * SCALE_UNIT), _s16(p.fan[b] * SCALE_UNIT)]
+    row += [_angle16(a) for a in rpy(pr)] + [_s16(ps * SCALE_UNIT)]
+    for rot_b, trans_b, (sx, sy) in bone_poses(wing, p):
+        row += [_s16(v) for v in trans_b] + [_angle16(a) for a in rpy(rot_b)]
+        row += [_s16(sx * SCALE_UNIT), _s16(sy * SCALE_UNIT)]
     if len(row) != ROW_VALUES:
         raise WingError(f"row of {len(row)} values, the reader takes {ROW_VALUES}")
     return row
@@ -591,8 +591,7 @@ def bake(wing: Wing, recipe: dict, torsos: list[np.ndarray]) -> tuple[int, int, 
     first, last = int(math.ceil(keys[0])), min(int(math.floor(keys[-1])), len(torsos) - 1)
     rows = []
     for fr in range(first, last + 1):
-        p = evaluate(recipe, fr)
-        rows.append(bake_row(wing, torsos[fr], p))
+        rows.append(bake_row(wing, torsos[fr], evaluate(recipe, fr)))
     return first, last, rows
 
 
@@ -602,8 +601,8 @@ def bake(wing: Wing, recipe: dict, torsos: list[np.ndarray]) -> tuple[int, int, 
 # PAL_WINGS_CLIP_*): her forward smash (AttackS4 and its angled four) and
 # down smash (AttackLw4).
 CLIPS = ("fsmash", "dsmash")
-TABLE_MAGIC = 0x50574E47      # "PWNG"
-TREE_ROWS = 3 + 2 * NODES_PER_SIDE + 1       # root, torso, pair, the wings, the end
+TABLE_MAGIC = 0x50574E48      # "PWNH": the mesh's table (bones relative to the pair)
+TREE_ROWS = 3 + 2 * len(BONES) + 1           # root, torso, pair, the bones, the end
 G_LIGHTING = 0x00020000
 G_CULL_BACK = 0x00000400
 # The model writer's cut-out state (as p6_gate.py's pillar cards).
@@ -615,15 +614,31 @@ def _vtx(x: float, y: float, z: float, s: float, t: float) -> bytes:
     xs, ys, zs = (int(round(c)) for c in (x, y, z))
     for c in (xs, ys, zs):
         if not -0x8000 <= c <= 0x7FFF:
-            raise WingError(f"card corner ({x}, {y}, {z}) overflows s16")
+            raise WingError(f"vertex ({x}, {y}, {z}) overflows s16")
     return struct.pack(">hhhHhh", xs, ys, zs, 0, int(round(s)), int(round(t))) + bytes((255, 255, 255, 255))
 
 
-def _card_list(n, file_id: int, tex_at: int, pal_at: int, vtx_at: int) -> list:
-    """A card's list: the atlas and its palette loaded as the pillar's cards
-    load theirs (p6_gate.py), one quad, unlit, two-sided, cut out."""
-    line = ATLAS * 4 // 64
-    mask = ATLAS.bit_length() - 1
+def _tri_cmds(n, tris: list) -> list:
+    out = []
+    for k in range(0, len(tris) - 1, 2):
+        a, b = tris[k], tris[k + 1]
+        out.append(n.Gfx(0x06000000 | (a[0] * 2 << 16) | (a[1] * 2 << 8) | a[2] * 2,
+                         (b[0] * 2 << 16) | (b[1] * 2 << 8) | b[2] * 2))
+    if len(tris) % 2:
+        a = tris[-1]
+        out.append(n.Gfx(0x05000000 | (a[0] * 2 << 16) | (a[1] * 2 << 8) | a[2] * 2, 0))
+    return out
+
+
+def _bone_list(n, file_id: int, tex_at: int, pal_at: int, vtx_at: int, count: int,
+               base: int, tris: list) -> list:
+    """A bone's list: the image and its palette loaded as the pillar's cards
+    load theirs (p6_gate.py), the bone's vertices into its bank of the
+    vertex cache (from `base`), its triangles by cache slot (those reaching
+    back to the previous bone's bank use the vertices its list left there),
+    unlit, two-sided, cut out."""
+    line = TEX_W * 4 // 64
+    masks, maskt = TEX_W.bit_length() - 1, TEX_H.bit_length() - 1
     clamp = 2
     cmds = [n.Gfx(0xE7000000, 0),
             n.Gfx(0xD9000000 | (0xFFFFFF & ~(G_LIGHTING | G_CULL_BACK)), 0),
@@ -632,19 +647,19 @@ def _card_list(n, file_id: int, tex_at: int, pal_at: int, vtx_at: int) -> list:
     cmds += [n.Gfx(0xFC127E05, 0xFF17F3FF), n.Gfx(0xF9000000, 0),
              n.Gfx(0xE7000000, 0), n.Gfx(0xFA000000, 0xFFFFFFFF), n.Gfx(0xE8000000, 0),
              n.Gfx(0xF5000100, 0x05000000),
-             n.Gfx(0xF5500000, (7 << 24) | (mask << 14) | (mask << 4)),
-             n.Gfx(0xF5400000 | (line << 9), (clamp << 18) | (mask << 14) | (clamp << 8) | (mask << 4)),
+             n.Gfx(0xF5500000, (7 << 24) | (maskt << 14) | (masks << 4)),
+             n.Gfx(0xF5400000 | (line << 9), (clamp << 18) | (maskt << 14) | (clamp << 8) | (masks << 4)),
              n.Gfx(0xFD100000, pal_at // 4, ("intern", file_id, pal_at)),
              n.Gfx(0xE6000000, 0), n.Gfx(0xF0000000, 0x0503C000), n.Gfx(0xE7000000, 0),
              n.Gfx(0xD7000002, 0xFFFFFFFF),
-             n.Gfx(0xF2000000, (((ATLAS - 1) << 2) << 12) | ((ATLAS - 1) << 2)),
+             n.Gfx(0xF2000000, (((TEX_W - 1) << 2) << 12) | ((TEX_H - 1) << 2)),
              n.Gfx(0xFD500000, tex_at // 4, ("intern", file_id, tex_at)),
              n.Gfx(0xE6000000, 0),
-             n.Gfx(0xF3000000, (7 << 24) | ((ATLAS * ATLAS // 4 - 1) << 12) | (2048 // line)),
+             n.Gfx(0xF3000000, (7 << 24) | ((TEX_W * TEX_H // 4 - 1) << 12) | (2048 // line)),
              n.Gfx(0xE7000000, 0),
-             n.Gfx(0x01000000 | (4 << 12) | (4 << 1), vtx_at, ("intern", file_id, vtx_at)),
-             n.Gfx(0x06000000 | (0 << 16) | (2 << 8) | 4, (0 << 16) | (4 << 8) | 6),
-             n.Gfx(0xE7000000, 0)]
+             n.Gfx(0x01000000 | (count << 12) | ((base + count) << 1), vtx_at, ("intern", file_id, vtx_at))]
+    cmds += _tri_cmds(n, tris)
+    cmds += [n.Gfx(0xE7000000, 0)]
     cmds += [n.Gfx(w0, w1) for w0, w1 in CUTOUT_OFF]
     cmds += [n.Gfx(0xE3001001, 0x00000000),
              n.Gfx(0xD9FFFFFF, G_LIGHTING | G_CULL_BACK),
@@ -662,46 +677,55 @@ def _halfword_pairs(values: list) -> bytes:
 
 def write(app, file_id: int, tree_at: int, scene: dict | None = None) -> dict:
     """The wings into her special file (p6_gate.py's Appender `app`, the
-    tree's TREE_ROWS rows reserved at `tree_at`): the atlas and palette,
-    each card's vertices and list (the right wing's mirrored), the tree,
+    tree's TREE_ROWS rows reserved at `tree_at`): the image and palette,
+    each bone's vertices and list (the right wing's mirrored), the tree,
     then the table. Returns the offsets."""
     import n64_model as n
+    import model_writer as mw
     scene = scene or _scene()
     wing = load_wing(scene)
-    idx, pal = atlas_ci4(wing)
-    import model_writer as mw
+    idx, pal = image_ci4(wing)
     app.align(8)
     tex_at = app.put(mw.ci4_bytes(idx))
     app.align(8)
     pal_at = app.put(mw.rgba5551(pal))
     lists = {}
     for side in ("L", "R"):
-        for bone in wing.bones:
-            corners = card_corners(bone, wing.density)
-            blob = b"".join(_vtx(-x if side == "R" else x, y, z, s * 32, t * 32)
-                            for (x, y, z), (s, t) in corners)
+        slot = {}
+        for k in range(len(BONES)):
+            base = (k % 2) * BANK
+            for j, vi in enumerate(wing.bone_verts[k]):
+                slot[vi] = base + j
+            blob = b""
+            for vi in wing.bone_verts[k]:
+                vert = wing.verts[vi]
+                x, y, z = vert.local
+                blob += _vtx(-x if side == "R" else x, y, z, vert.st[0] * 32, vert.st[1] * 32)
             app.align(8)
             vtx_at = app.put(blob)
-            dl, slots = n.encode_dl(_card_list(n, file_id, tex_at, pal_at, vtx_at))
+            for tri in wing.tris[k]:
+                for vi in tri:
+                    if wing.verts[vi].bone not in (k, k - 1):
+                        raise WingError(f"bone {BONES[k]}: a corner on bone {wing.verts[vi].bone}")
+            tris = [tuple(slot[vi] for vi in tri) for tri in wing.tris[k]]
+            dl, slots = n.encode_dl(_bone_list(n, file_id, tex_at, pal_at, vtx_at,
+                                               len(wing.bone_verts[k]), base, tris))
             app.align(8)
             at = app.put(dl)
             for rel, target in slots.items():
                 app.slot(at + rel, target)
-            lists[(side, bone.name)] = at
+            lists[(side, BONES[k])] = at
     # The tree: rest values; her code sets every node each tic.
-    rest = Params()
     torso_rest = np.array(scene["joints"][TORSO_ROW]["world"], dtype=float)
     rows = [(0, None, (0.0, 0.0, 0.0), (0.0, 0.0, 0.0)),
             (1, None, tuple(torso_rest[:3, 3]), (0.0, 0.0, 0.0)),
             (2, None, tuple(wing.pair_origin), (0.0, 0.0, 0.0))]
+    rest = bone_poses(wing, Params())
     for side in ("L", "R"):
-        for k, (bone, (rot, trans)) in enumerate(zip(wing.bones, bone_locals(wing, rest))):
-            x, y, z = rpy(rot)
+        for k, (rot, trans, _scale) in enumerate(rest):
             if side == "R":
-                trans = trans * np.array([-1.0, 1.0, 1.0])
-                y, z = -y, -z
-            rows.append((3 + k, None, tuple(trans), (x, y, z)))
-            rows.append((4 + k, lists[(side, bone.name)], (0.0, 0.0, 0.0), (0.0, 0.0, 0.0)))
+                rot, trans = MIRROR @ rot @ MIRROR, MIRROR @ trans
+            rows.append((3, lists[(side, BONES[k])], tuple(trans), rpy(rot)))
     rows.append((n.JOINT_TREE_END, None, (0.0, 0.0, 0.0), (0.0, 0.0, 0.0)))
     if len(rows) != TREE_ROWS:
         raise WingError(f"{len(rows)} tree rows, {TREE_ROWS} reserved")
@@ -714,9 +738,7 @@ def write(app, file_id: int, tree_at: int, scene: dict | None = None) -> dict:
         struct.pack_into(">3f", app.f.data, at + 20, *r)
         struct.pack_into(">3f", app.f.data, at + 32, 1.0, 1.0, 1.0)
     # The table.
-    baked = []
-    for name in CLIPS:
-        baked.append(bake(wing, load_recipe(name), torso_frames(name, scene)))
+    baked = [bake(wing, load_recipe(name), torso_frames(name, scene)) for name in CLIPS]
     app.align(8)
     table_at = app.here
     head = 12 + 12 * len(CLIPS)
@@ -728,30 +750,28 @@ def write(app, file_id: int, tree_at: int, scene: dict | None = None) -> dict:
     blob = struct.pack(">III", TABLE_MAGIC, ROW_VALUES, len(CLIPS))
     blob += b"".join(struct.pack(">III", *c) for c in clip_rows)
     app.put(blob + body)
-    return {"tree": tree_at, "table": table_at, "atlas": tex_at, "lists": lists,
+    return {"tree": tree_at, "table": table_at, "image": tex_at, "lists": lists,
             "clips": {name: (c[0], c[1]) for name, c in zip(CLIPS, clip_rows)},
-            "bytes": app.here - tex_at}
+            "bytes": app.here - tex_at,
+            "mesh": {"verts": len(wing.verts), "tris": sum(len(t) for t in wing.tris.values())}}
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--atlas", type=Path, help="write the atlas preview (PNG)")
+    ap.add_argument("--image", type=Path, help="write the wing's image (PNG, 4x)")
     args = ap.parse_args()
     wing = load_wing()
-    print(f"pair {np.round(wing.pair_origin, 1)} normal {np.round(wing.normal, 3)} "
-          f"density {wing.density:.3f} texels/unit")
-    for b in wing.bones:
-        print(b.name, "origin", np.round(b.origin, 1), "card", [round(v, 1) for v in b.card],
-              "atlas", b.atlas)
+    print(f"pair {np.round(wing.pair_origin, 1)} normal {np.round(wing.normal, 3)}")
+    for k, b in enumerate(wing.bones):
+        print(b.name, "origin", np.round(b.origin, 1), "verts", len(wing.bone_verts[k]),
+              "tris", len(wing.tris[k]))
     for name in CLIPS:
         first, last, rows = bake(wing, load_recipe(name), torso_frames(name))
         print(f"{name}: frames {first}-{last}, {len(rows)} rows of {ROW_VALUES}")
-    if args.atlas:
+    if args.image:
         from PIL import Image
-        idx, pal = atlas_ci4(wing)
-        img = np.array([[pal[i] for i in row] for row in idx], dtype=np.uint8)
-        Image.fromarray(img, "RGBA").resize((ATLAS * 6, ATLAS * 6), Image.NEAREST).save(args.atlas)
-        print(args.atlas)
+        Image.fromarray(image_rgba(wing), "RGBA").resize((TEX_W * 4, TEX_H * 4), Image.NEAREST).save(args.image)
+        print(args.image)
     return 0
 
 

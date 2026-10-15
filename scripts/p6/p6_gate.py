@@ -21,8 +21,8 @@ one authored atlas (look_parts.py authored:pillar_burst), unlit and cut out.
 Her code scales the cards over the effect's life (the burst).
 
 A third tree at WINGS_TREE holds her forward and down smash's wings
-(scripts/p6/p6_wings.py: the kit's godwing rigged, cards cut from one atlas,
-and the table her code poses them from every tic), its table's address in
+(scripts/p6/p6_wings.py: the kit's godwing rigged, a continuous mesh a wing,
+and the table her code poses it from every tic), its table's address in
 the word after the tree's rows (WINGS_TABLE_SLOT).
 
     p6_gate.py --out builds/p6-art/palutena/gate/1b10 [--preview gate.png]
@@ -336,7 +336,7 @@ def main() -> int:
         from PIL import Image
         Image.fromarray(info["preview"]).resize((TEX * 4, TEX * 4), Image.NEAREST).save(args.preview)
     w = info["wings"]
-    print(f"p6 wings: tree {w['tree']:#x}, table {w['table']:#x}, {w['bytes']} bytes, clips {w['clips']}")
+    print(f"p6 wings: tree {w['tree']:#x}, table {w['table']:#x}, {w['bytes']} bytes, mesh {w['mesh']}, clips {w['clips']}")
     print(f"p6 gate: {args.out} {len(blob)} bytes, tree {info['tree']:#x}, pillar {info['pillar']:#x}, scale {info['scale']:.2f}, "
           f"hinges L {info['hinges']['L']:.0f} R {info['hinges']['R']:.0f}")
     return 0

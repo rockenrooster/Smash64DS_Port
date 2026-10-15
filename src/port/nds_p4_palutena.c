@@ -892,27 +892,30 @@ static void ndsP4PalutenaPillarProcUpdate(GObj *effect_gobj)
 
 /* Her forward and down smash's wings (owner p6i follow-up, 2026-10-14: "they
  * should articulate and stretch and be mostly symmetrical ... polished and
- * like they belong in the DS version"; the torso row's card poses before
- * were rigid): an effect of the third tree in her special file 2
- * (scripts/p6/p6_wings.py: the kit's godwing, a wing a side of four bones,
- * each bone a card cut from one atlas; the right wing the left's mirror),
- * drawn natively (scripts/p4/p4_articles.py "wings"). It is made on the
- * smash's first tic and attached to her (fp->is_effect_attach), so her next
- * status removes it (ftMainSetStatus) and hitlag holds it with her.
+ * like they belong in the DS version"; then "your wings look disconnected in
+ * parts"): an effect of the third tree in her special file 2
+ * (scripts/p6/p6_wings.py: the kit's godwing, a wing a side of four bones;
+ * each wing one continuous mesh whose quads between two bones reach back to
+ * the earlier bone's vertices, so it bends without gaps; the right wing the
+ * left's mirror), drawn natively (scripts/p4/p4_articles.py "wings"). It is
+ * made on the smash's first tic and attached to her (fp->is_effect_attach),
+ * so her next status removes it (ftMainSetStatus) and hitlag holds it with
+ * her.
  *
  * Every tic, after her map proc, its nodes are posed from the table the
  * file's word at PAL_WINGS_TABLE_SLOT names, at her animation frame
  * (fighter anim_frame): the root takes her TopN's transform, the torso node
  * her clip's torso row relative to TopN, the pair node its turn and size,
- * each left bone its translation and turn and each card its stretch; the
- * right wing the left's values mirrored (x translation, y and z turns
- * negated). Outside the table's frames the root is hidden. Angles are s16
- * binary angles, scales s16 over 4096. */
+ * each left bone (the pair's children, the chain composed offline) its
+ * translation, turn and x and y scale; the right wing the left's values
+ * mirrored (x translation, y and z turns negated). Outside the table's
+ * frames the root is hidden. Angles are s16 binary angles, scales s16 over
+ * 4096. */
 #define PAL_WINGS_TREE 0x1B8                /* p6_gate.py WINGS_TREE */
-#define PAL_WINGS_TABLE_SLOT 0x528          /* p6_gate.py WINGS_TABLE_SLOT */
-#define PAL_WINGS_MAGIC 0x50574E47u         /* "PWNG" */
+#define PAL_WINGS_TABLE_SLOT 0x3C8          /* p6_gate.py WINGS_TABLE_SLOT */
+#define PAL_WINGS_MAGIC 0x50574E48u         /* "PWNH" */
 #define PAL_WINGS_BONES 4
-#define PAL_WINGS_NODES (3 + (4 * PAL_WINGS_BONES))
+#define PAL_WINGS_NODES (3 + (2 * PAL_WINGS_BONES))
 #define PAL_WINGS_VALUES (6 + 4 + (8 * PAL_WINGS_BONES))
 #define PAL_WINGS_CLIP_FSMASH 0             /* p6_wings.py CLIPS */
 #define PAL_WINGS_CLIP_DSMASH 1
@@ -1014,22 +1017,15 @@ static void ndsP4PalutenaWingsPose(GObj *effect_gobj, GObj *fighter_gobj, s32 cl
         root->flags |= DOBJ_FLAG_HIDDEN;
         return;
     }
-    /* The tree (p6_wings.py write): root, torso, pair, then per side four
-     * bones, each with its card as its first child and the next bone after
-     * the card. */
+    /* The tree (p6_wings.py write): root, torso, pair, then the pair's
+     * children, the left wing's four bones and the right wing's. */
     nodes[0] = root;
     nodes[1] = root->child;
     nodes[2] = nodes[1]->child;
-    for (side = 0; side < 2; side++)
+    nodes[3] = nodes[2]->child;
+    for (k = 4; k < PAL_WINGS_NODES; k++)
     {
-        DObj *bone = (side == 0) ? nodes[2]->child : nodes[3]->sib_next;
-
-        for (k = 0; k < PAL_WINGS_BONES; k++)
-        {
-            nodes[3 + (side * 2 * PAL_WINGS_BONES) + (2 * k)] = bone;
-            nodes[4 + (side * 2 * PAL_WINGS_BONES) + (2 * k)] = bone->child;
-            bone = bone->child->sib_next;
-        }
+        nodes[k] = nodes[k - 1]->sib_next;
     }
     root->flags &= ~DOBJ_FLAG_HIDDEN;
     row = (const s16 *)((const u8 *)table + rows->rows) + ((frame - (s32)rows->first) * PAL_WINGS_VALUES);
@@ -1049,22 +1045,20 @@ static void ndsP4PalutenaWingsPose(GObj *effect_gobj, GObj *fighter_gobj, s32 cl
 
     for (k = 0; k < PAL_WINGS_BONES; k++)
     {
-        const s16 *bone = &row[10 + (6 * k)];
-        const s16 *card = &row[10 + (6 * PAL_WINGS_BONES) + (2 * k)];
+        const s16 *bone = &row[10 + (8 * k)];
 
         for (side = 0; side < 2; side++)
         {
-            DObj *b = nodes[3 + (side * 2 * PAL_WINGS_BONES) + (2 * k)];
-            DObj *c = nodes[4 + (side * 2 * PAL_WINGS_BONES) + (2 * k)];
+            DObj *b = nodes[3 + (side * PAL_WINGS_BONES) + k];
             f32 mirror = (side == 0) ? 1.0F : -1.0F;
 
             b->translate.vec.f.x = (f32)bone[0] * mirror;
             b->translate.vec.f.y = bone[1];
             b->translate.vec.f.z = bone[2];
             ndsP4PalutenaWingsSetTurn(b, &bone[3], mirror);
-            c->scale.vec.f.x = (f32)card[0] * PAL_WINGS_SCALE;
-            c->scale.vec.f.y = (f32)card[1] * PAL_WINGS_SCALE;
-            c->scale.vec.f.z = 1.0F;
+            b->scale.vec.f.x = (f32)bone[6] * PAL_WINGS_SCALE;
+            b->scale.vec.f.y = (f32)bone[7] * PAL_WINGS_SCALE;
+            b->scale.vec.f.z = 1.0F;
         }
     }
 }

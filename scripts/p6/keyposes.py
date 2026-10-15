@@ -13,6 +13,7 @@ moves are authored as key poses against them and reviewed as sheets).
                "orient": {"2": [pitch, yaw, roll]},
                "aims": [{"row": 11, "to": [x, y, z]}, {"row": 14, "axis": [0, 0, 1], "to": [0, 0, 1]}],
                "ik": [{"chain": [22, 23, 24], "target": "keep", "pole": [0, 0, 1]}],
+               "aims_after": [{"row": 14, "axis": [0, 0, 1], "to": [0, 1, 0]}],
                "place": [{"row": 14, "at": [x, y, z]}],
                "ease": "smooth" | "linear" | "in" | "out"}, ...],
      "spin": [{"row": 14, "axis": [1, 0, 0], "degrees": 720, "frames": [6, 18],
@@ -22,7 +23,10 @@ moves are authored as key poses against them and reviewed as sheets).
      "interp": "spline"}}
 
 A key starts from a base pose (its "from", else the recipe's "base": a
-clip's frame). In order: "trans" offsets rows' translations (model units:
+clip's frame, its "blend" {"rows", "amount"} drawing those rows toward
+their rest as a pose group's blend op does: her fall's and crouch's
+narrowed legs, so a clip from them meets the game's without the clip
+itself blended, its keyed legs then reaching where they are put). In order: "trans" offsets rows' translations (model units:
 the hips' height for a crouch or a hop); "turns" turn rows about the model's
 axes as the base holds their parents (a row turns with everything below
 it); "orient" sets rows' world orientations, parents first: yaw about up,
@@ -32,7 +36,14 @@ lunge leaning into its facing); "aims" turn a row so its first child (or
 "child") -- or a local "axis"
 of its own -- points along a model direction; "ik" bends a two-bone chain so
 its end reaches a target ("keep": where the base pose had it, plus an
-optional "offset") with the middle joint toward "pole"; "place" puts a row's
+optional "offset"; or a model position: a hand put where the reference
+holds it) with the middle joint toward "pole" (and with "hinge", a model
+direction: the joint's hinge in the bind pose -- an elbow's vertical, a
+knee's across -- the rows turned about their lengths to keep it across
+the chain's plane); "aims_after" are aims made
+after the chains are bent (the staff in a hand an "ik" placed; an aim "to"
+"keep" only twists the row about its own direction: the shield's face);
+"place" puts a row's
 origin at a model position (a held item let go: Ike's thrown Ragnell), its
 rotation kept. Between keys every
 row's rotation slerps and its translation lerps, eased into the later key.
@@ -165,6 +176,8 @@ def _aim(skel, local, trans, row, to, child=None, axis=None, twist=None):
     else:
         c = _first_child(skel, row) if child is None else int(child)
         d = pos[c] - pos[row]
+    if isinstance(to, str) and to == "keep":
+        to = d
     D = _turn_between(d, to)
     w = D @ rots[row]
     if twist is not None:
@@ -181,7 +194,7 @@ def _aim(skel, local, trans, row, to, child=None, axis=None, twist=None):
     local[row] = pw.T @ w
 
 
-def _ik(skel, local, trans, chain, target, pole):
+def _ik(skel, local, trans, chain, target, pole, hinge=None):
     a, b, c = chain
     rots, pos = _worlds(skel, local, trans)
     l1 = np.linalg.norm(pos[b] - pos[a])
@@ -195,7 +208,40 @@ def _ik(skel, local, trans, chain, target, pole):
     cos_a = float(np.clip((l1 * l1 + d * d - l2 * l2) / (2 * l1 * d), -1.0, 1.0))
     knee = pos[a] + l1 * (cos_a * u + np.sqrt(max(0.0, 1 - cos_a * cos_a)) * v)
     _aim(skel, local, trans, a, knee - pos[a], child=b)
+    if hinge is not None:
+        # The joint's hinge kept across the chain's plane: each row turned
+        # about its own length so its rest hinge (a model direction in the
+        # bind pose) lies along the plane's normal -- without it the rows'
+        # twist is whatever the shortest turn from the base pose left, and
+        # two keys a turn apart flip the forearm between them.
+        end = pos[a] + u * d
+        n = np.cross(knee - pos[a], end - knee)
+        if np.linalg.norm(n) > 1e-6 * l1 * l2:
+            n = n / np.linalg.norm(n)
+            _twist_to(skel, local, trans, a, knee - pos[a], hinge, n)
     _aim(skel, local, trans, b, (pos[a] + u * d) - knee, child=c)
+    if hinge is not None and np.linalg.norm(n) > 0.5:
+        _twist_to(skel, local, trans, b, (pos[a] + u * d) - knee, hinge, n)
+
+
+def _twist_to(skel, local, trans, row, along, hinge, n):
+    """Turn `row` about `along` (its own length) so its rest `hinge` (a model
+    direction in the bind pose) lies toward `n`."""
+    bind = _bind_worlds(skel)
+    rots, _pos = _worlds(skel, local, trans)
+    ax = np.asarray(along, dtype=float); ax = ax / np.linalg.norm(ax)
+    h = rots[row] @ (bind[row].T @ np.asarray(hinge, dtype=float))
+    h = h - np.dot(h, ax) * ax
+    m = n - np.dot(n, ax) * ax
+    if np.linalg.norm(h) < 1e-6 or np.linalg.norm(m) < 1e-6:
+        return
+    h = h / np.linalg.norm(h); m = m / np.linalg.norm(m)
+    th = math.atan2(float(np.dot(np.cross(h, m), ax)), float(np.dot(h, m)))
+    k = np.array([[0, -ax[2], ax[1]], [ax[2], 0, -ax[0]], [-ax[1], ax[0], 0]])
+    w = (np.eye(3) + math.sin(th) * k + (1 - math.cos(th)) * (k @ k)) @ rots[row]
+    p = skel.parents[row]
+    pw = rots[p] if p >= 0 else np.eye(3)
+    local[row] = pw.T @ w
 
 
 def scene_skeleton(skel: A.Skeleton, scene: dict) -> A.Skeleton:
@@ -296,6 +342,13 @@ def key_pose(skel: A.Skeleton, clips: dict, key: dict, base: dict, first_slot: i
             if st is not None and any(4 <= k <= 6 for k in st.tracks):
                 trans[r] = [trans[r][k] * scales[r][k] for k in range(3)]
     local = [A.euler(*r) for r in rot]
+    bl = ref.get("blend")
+    if bl:
+        # The reference's rows drawn toward their rest as her pose group draws
+        # its clip's (pose_ops blend toward "rest"): a key from her fall or
+        # crouch starts from the narrowed legs the game shows.
+        for r in bl["rows"]:
+            local[int(r)] = P.slerp(local[int(r)], A.euler(*skel.rotate[int(r)]), float(bl["amount"]))
     base_rots, base_pos = _worlds(skel, local, trans)
     for r, d in (key.get("trans") or {}).items():
         r = int(r)
@@ -321,7 +374,9 @@ def key_pose(skel: A.Skeleton, clips: dict, key: dict, base: dict, first_slot: i
         if tgt == "keep" or isinstance(tgt, dict):
             off = np.asarray((tgt.get("offset", [0, 0, 0]) if isinstance(tgt, dict) else [0, 0, 0]), dtype=float)
             tgt = base_pos[chain[2]] + off
-        _ik(skel, out, trans, chain, tgt, ik.get("pole", [0, 0, 1]))
+        _ik(skel, out, trans, chain, tgt, ik.get("pole", [0, 0, 1]), ik.get("hinge"))
+    for aim in key.get("aims_after") or ():
+        _aim(skel, out, trans, int(aim["row"]), aim["to"], aim.get("child"), aim.get("axis"), aim.get("twist"))
     for pl in key.get("place") or ():
         r = int(pl["row"])
         p = skel.parents[r]

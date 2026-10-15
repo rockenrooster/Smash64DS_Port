@@ -1,6 +1,6 @@
 {
  "schema": 1,
- "comment": "Palutena's parts shown on demand (A10, scripts/p6/look_parts.py): each a model-part variant of an existing row drawing that row's list plus cut-out cards, two-sided. Corners are in the look's rest model space (y up, she faces +z; the battle camera sees her x axis as depth, so the cards lie across y and z). The wings (her victory poses, win1 and win3: SetModelPartID joint 6 part 1) are her smash wings' art (owner, 2026-10-14: \"use the new wing art for the victory poses too\"): the rig's eight cards (scripts/p6/p6_wings.py) posed by wings_pose, a wings recipe key, spread up and out from her shoulder blades for the Results camera, which sees her from the front. The halo (up air, the down taunt, the victory and select poses: joint 12 part 2) is an authored gold ring above her head, two crossed cards: one faces the battle camera, the other the select and Results cameras, which see her from the front. The light pillar is not a part any more (owner playtest 2026-10-14, round 2: her animation turned the hips row's cards behind her): it is an effect in her special file 2 (scripts/p6/p6_gate.py), its atlas look_parts.py's authored:pillar_burst. Her forward and down smash draw the same wings rigged, an effect in her special file 2 (scripts/p6/p6_wings.py), not this part.",
+ "comment": "Palutena's parts shown on demand (A10, scripts/p6/look_parts.py): each a model-part variant of an existing row drawing that row's list plus cut-out cards, two-sided. Corners are in the look's rest model space (y up, she faces +z; the battle camera sees her x axis as depth, so the cards lie across y and z). The wings (her victory poses, win1 and win3: SetModelPartID joint 6 part 1) are her smash wings' art (owner, 2026-10-14: \"use the new wing art for the victory poses too\"): the rig's mesh (scripts/p6/p6_wings.py) posed once by wings_pose, a wings recipe key, spread up and out from her shoulder blades for the Results camera, which sees her from the front. The halo (up air, the down taunt, the victory and select poses: joint 12 part 2) is an authored gold ring above her head, two crossed cards: one faces the battle camera, the other the select and Results cameras, which see her from the front. The light pillar is not a part any more (owner playtest 2026-10-14, round 2: her animation turned the hips row's cards behind her): it is an effect in her special file 2 (scripts/p6/p6_gate.py), its atlas look_parts.py's authored:pillar_burst. Her forward and down smash draw the same wings rigged, an effect in her special file 2 (scripts/p6/p6_wings.py), not this part.",
  "parts": [
   {
    "name": "wings",
@@ -9,8 +9,8 @@
    "texture": {
     "source": "authored:wings",
     "size": [
-     64,
-     64
+     128,
+     32
     ]
    },
    "wings_pose": {

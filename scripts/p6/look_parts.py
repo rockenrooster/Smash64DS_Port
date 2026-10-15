@@ -14,8 +14,9 @@ outline keeping only what lies below a polyline, or an authored image) and
 its cards' corners in the model's rest space (a card's optional `st`: its
 corners' texel coordinates, for an atlas). Palutena's victory-pose wings are
 her smash wings' art (scripts/p6/p6_wings.py): the texture "authored:wings"
-is their atlas and "wings_pose" (a wings recipe key) poses the rig's eight
-cards at her torso row's rest, in place of listed cards. Parts naming one `texture_key`
+is their image and "wings_pose" (a wings recipe key) poses the rig's mesh at
+her torso row's rest, its triangles in place of listed cards (a card of
+three corners is one triangle). Parts naming one `texture_key`
 share one texture (the writer stores a texture file once): the variants of
 an animated part, shown in turn by its script. This adds the parts to the
 look's scenes (`parts`) for model_writer.py.
@@ -153,8 +154,7 @@ def texture(spec: dict) -> np.ndarray:
     elif src == "authored:wings":
         sys.path.insert(0, str(HERE))
         import p6_wings
-        idx, pal = p6_wings.atlas_ci4(p6_wings.load_wing())
-        img = Image.fromarray(np.array([[pal[i] for i in row] for row in idx], dtype=np.uint8), "RGBA")
+        img = Image.fromarray(p6_wings.image_rgba(p6_wings.load_wing()), "RGBA")
     elif src.startswith("kit:"):
         img = Image.open(KIT / src[4:]).convert("RGBA")
     else:
@@ -184,6 +184,7 @@ def card_geometry(part: dict, joint_world: np.ndarray, base_vertex: int):
     inv = np.linalg.inv(joint_world)
     w, h = part["texture"]["size"]
     verts, tris = [], []
+    shared = {}
     for quad in part["cards"]:
         corners = quad["corners"]
         st = quad.get("st", [[0, 0], [w, 0], [w, h], [0, h]])
@@ -192,6 +193,21 @@ def card_geometry(part: dict, joint_world: np.ndarray, base_vertex: int):
         # black facing right), and up takes the same light either way.
         n = np.array(part.get("normal", (0.0, 1.0, 0.0)), dtype=float)
         n = n / (np.linalg.norm(n) or 1.0)
+        if len(corners) == 3:
+            # A mesh's triangle: its corners shared with its neighbours'.
+            ids = []
+            for p, (s, t) in zip(corners, quad["st"]):
+                key = (tuple(round(float(x), 2) for x in p), int(round(s * 32)), int(round(t * 32)))
+                if key not in shared:
+                    local = inv @ np.array([*p, 1.0])
+                    shared[key] = base_vertex + len(verts)
+                    verts.append({"joint": part["joint"], "local": [round(float(x), 4) for x in local[:3]],
+                                  "model": [float(x) for x in p], "st": [key[1], key[2]],
+                                  "flag": 0, "normal": [int(round(x * 127)) for x in n],
+                                  "rgba": [255, 255, 255, 255], "object": "part:" + part["name"]})
+                ids.append(shared[key])
+            tris.append(ids)
+            continue
         first = base_vertex + len(verts)
         for p, (s, t) in zip(corners, st):
             local = inv @ np.array([*p, 1.0])
@@ -205,16 +221,16 @@ def card_geometry(part: dict, joint_world: np.ndarray, base_vertex: int):
 
 
 def wing_cards(part: dict, scene: dict) -> list:
-    """The smash wings' cards (p6_wings.py) at the part's "wings_pose",
-    attached to her torso row at its rest: corners in the model's rest
-    space, `st` in the atlas's texels."""
+    """The smash wings' mesh (p6_wings.py) at the part's "wings_pose",
+    attached to her torso row at its rest: three-corner cards in the model's
+    rest space, `st` in the image's texels."""
     sys.path.insert(0, str(HERE))
     import p6_wings
     wing = p6_wings.load_wing(scene)
     torso = np.array(scene["joints"][p6_wings.TORSO_ROW]["world"], dtype=float)
-    pose = p6_wings._params(p6_wings._key_vector(part["wings_pose"]))
+    pose = p6_wings.params_of(part["wings_pose"])
     return [{"corners": corners.tolist(), "st": st.tolist()}
-            for _side, _bone, corners, st in p6_wings.world_cards(wing, torso, pose)]
+            for _side, corners, st in p6_wings.world_mesh(wing, torso, pose)]
 
 
 def apply(recipe: dict, scene: dict) -> dict:

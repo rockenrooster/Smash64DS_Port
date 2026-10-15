@@ -1,58 +1,64 @@
 {
- "comment": "Palutena's down smash wings (scripts/p6/p6_wings.py), keyed on her dsmash clip's frames against the owner's 3DS reference (Strong_Down_A, frames 28-66) at true scale: turned to the camera's plane (level 1, the pair a quarter turn) and twisted nearly edge-on, as the 3DS's read from its camera: thin crescents raised over her head, swept out and down, slammed to the floor at her front and back at the hit (frame 10) as long thin arcs, about her height each side, a rebound and a low flutter, then rising into a V and gone at 36.",
+ "comment": "Palutena's down smash wings (scripts/p6/p6_wings.py), keyed on her down smash clip's frames against the owner's half-speed 3DS clip (Strong_Down_A, 1 frame a tick; ours 0-10 = its 11-29, 10-30 = 29-60, 30-50 = 60-92) at true scale: sprouting over her shoulders and rising into a ring over her head, the tips curled in (0-8), flung open into two thin crescents (9), flat out along the floor both sides at the hit (10, SSB64's speed), held there fluttering as she stays down (to 33), rising into an arch with the tips still at the floor (36-39), gull wings with the outer feathers drooping (41), a wide shallow V, thin and shrinking (44-46), gone (49).",
  "keys": [
   {
    "frame": 0,
    "size": 0.1,
    "level": 1,
    "pair_yaw": 90,
-   "twist": 80,
+   "twist": 40,
    "a": [
     0,
     -90,
-    104
+    96
    ],
    "b": [
     0,
     0,
-    -30
+    10
    ],
    "c": [
     0,
     0,
-    -25
+    10
    ],
    "d": [
     0,
     0,
-    -20
+    8
+   ],
+   "stretch": [
+    1,
+    1.05,
+    1.1,
+    1.15
    ]
   },
   {
    "frame": 3,
-   "size": 0.8,
+   "size": 0.6,
    "level": 1,
    "pair_yaw": 90,
-   "twist": 80,
+   "twist": 36,
    "a": [
     0,
     -90,
-    100
+    84
    ],
    "b": [
     0,
     0,
-    -24
+    18
    ],
    "c": [
     0,
     0,
-    -22
+    20
    ],
    "d": [
     0,
     0,
-    -18
+    16
    ],
    "stretch": [
     1,
@@ -63,62 +69,95 @@
   },
   {
    "frame": 6,
-   "size": 0.98,
+   "size": 0.7,
    "level": 1,
    "pair_yaw": 90,
-   "twist": 78,
+   "twist": 34,
    "a": [
     0,
     -90,
-    96
+    80
    ],
    "b": [
     0,
     0,
-    -20
+    22
    ],
    "c": [
     0,
     0,
-    -20
+    24
    ],
    "d": [
     0,
     0,
-    -16
+    18
    ],
    "stretch": [
     1,
     1.05,
-    1.12,
-    1.18
+    1.1,
+    1.15
    ]
   },
   {
    "frame": 8,
-   "size": 1.0,
+   "size": 0.78,
    "level": 1,
    "pair_yaw": 90,
-   "twist": 70,
+   "twist": 40,
    "a": [
     0,
     -90,
-    38
+    72
    ],
    "b": [
     0,
     0,
-    -4
+    16
    ],
    "c": [
     0,
     0,
-    -2
+    18
    ],
    "d": [
     0,
     0,
-    0
+    14
+   ],
+   "stretch": [
+    1,
+    1.05,
+    1.1,
+    1.15
+   ]
+  },
+  {
+   "frame": 9,
+   "size": 1.0,
+   "level": 1,
+   "pair_yaw": 90,
+   "twist": 72,
+   "a": [
+    0,
+    -90,
+    34
+   ],
+   "b": [
+    0,
+    0,
+    8
+   ],
+   "c": [
+    0,
+    0,
+    10
+   ],
+   "d": [
+    0,
+    0,
+    10
    ],
    "stretch": [
     1,
@@ -129,142 +168,77 @@
   },
   {
    "frame": 10,
-   "size": 0.95,
-   "level": 1,
-   "pair_yaw": 90,
-   "twist": 62,
-   "a": [
-    0,
-    -90,
-    -46
-   ],
-   "b": [
-    0,
-    0,
-    6
-   ],
-   "c": [
-    0,
-    0,
-    8
-   ],
-   "d": [
-    0,
-    0,
-    8
-   ],
-   "stretch": [
-    1,
-    1.05,
-    1.12,
-    1.18
-   ]
-  },
-  {
-   "frame": 12,
-   "size": 0.95,
+   "size": 1.0,
    "level": 1,
    "pair_yaw": 90,
    "twist": 60,
    "a": [
     0,
     -90,
-    -33
+    -40
    ],
    "b": [
     0,
     0,
-    2
+    15
    ],
    "c": [
     0,
     0,
-    3
+    20
    ],
    "d": [
     0,
     0,
-    3
+    15
    ],
    "stretch": [
     1,
-    1.05,
-    1.1,
-    1.15
-   ]
+    1.15,
+    1.3,
+    1.4
+   ],
+   "hold": true
   },
   {
-   "frame": 15,
-   "size": 0.95,
+   "frame": 13,
+   "size": 1.0,
    "level": 1,
    "pair_yaw": 90,
-   "twist": 62,
+   "twist": 58,
    "a": [
     0,
     -90,
-    -39
+    -34
    ],
    "b": [
     0,
     0,
-    5
+    13
    ],
    "c": [
     0,
     0,
-    6
+    17
    ],
    "d": [
     0,
     0,
-    6
+    13
    ],
    "stretch": [
     1,
-    1.05,
-    1.1,
-    1.15
+    1.15,
+    1.3,
+    1.4
    ]
   },
   {
-   "frame": 19,
-   "size": 0.95,
+   "frame": 17,
+   "size": 1.0,
    "level": 1,
    "pair_yaw": 90,
    "twist": 60,
-   "a": [
-    0,
-    -90,
-    -35
-   ],
-   "b": [
-    0,
-    0,
-    3
-   ],
-   "c": [
-    0,
-    0,
-    4
-   ],
-   "d": [
-    0,
-    0,
-    4
-   ],
-   "stretch": [
-    1,
-    1.05,
-    1.1,
-    1.15
-   ]
-  },
-  {
-   "frame": 23,
-   "size": 0.95,
-   "level": 1,
-   "pair_yaw": 90,
-   "twist": 62,
    "a": [
     0,
     -90,
@@ -273,120 +247,291 @@
    "b": [
     0,
     0,
-    5
+    16
    ],
    "c": [
     0,
     0,
-    6
+    20
    ],
    "d": [
     0,
     0,
-    5
+    15
    ],
    "stretch": [
     1,
-    1.05,
-    1.1,
-    1.15
+    1.15,
+    1.3,
+    1.4
    ]
   },
   {
-   "frame": 26,
-   "size": 0.95,
+   "frame": 22,
+   "size": 1.0,
    "level": 1,
    "pair_yaw": 90,
-   "twist": 64,
+   "twist": 58,
    "a": [
     0,
     -90,
-    -33
+    -35
    ],
    "b": [
     0,
     0,
-    2
+    13
    ],
    "c": [
     0,
     0,
-    2
+    17
    ],
    "d": [
     0,
     0,
-    2
+    13
    ],
    "stretch": [
     1,
-    1.05,
-    1.1,
-    1.15
+    1.15,
+    1.3,
+    1.4
    ]
   },
   {
-   "frame": 30,
-   "size": 0.88,
+   "frame": 27,
+   "size": 1.0,
    "level": 1,
    "pair_yaw": 90,
-   "twist": 70,
+   "twist": 60,
    "a": [
     0,
     -90,
-    30
+    -38
    ],
    "b": [
     0,
     0,
-    -6
+    16
    ],
    "c": [
     0,
     0,
-    -8
+    20
    ],
    "d": [
     0,
     0,
-    -6
+    15
    ],
    "stretch": [
     1,
-    1.05,
-    1.1,
-    1.12
+    1.15,
+    1.3,
+    1.4
    ]
   },
   {
    "frame": 33,
-   "size": 0.5,
+   "size": 1.0,
    "level": 1,
    "pair_yaw": 90,
-   "twist": 76,
+   "twist": 58,
    "a": [
     0,
     -90,
-    60
+    -35
    ],
    "b": [
     0,
     0,
-    -18
+    13
    ],
    "c": [
     0,
     0,
-    -18
+    17
    ],
    "d": [
     0,
     0,
-    -14
+    13
+   ],
+   "stretch": [
+    1,
+    1.15,
+    1.3,
+    1.4
    ]
   },
   {
    "frame": 36,
+   "size": 0.98,
+   "level": 1,
+   "pair_yaw": 90,
+   "twist": 44,
+   "a": [
+    0,
+    -90,
+    10
+   ],
+   "b": [
+    0,
+    0,
+    -24
+   ],
+   "c": [
+    0,
+    0,
+    -30
+   ],
+   "d": [
+    0,
+    0,
+    -26
+   ],
+   "stretch": [
+    1,
+    1.08,
+    1.15,
+    1.2
+   ]
+  },
+  {
+   "frame": 39,
+   "size": 0.95,
+   "level": 1,
+   "pair_yaw": 90,
+   "twist": 40,
+   "a": [
+    0,
+    -90,
+    24
+   ],
+   "b": [
+    0,
+    0,
+    -28
+   ],
+   "c": [
+    0,
+    0,
+    -32
+   ],
+   "d": [
+    0,
+    0,
+    -28
+   ],
+   "stretch": [
+    1,
+    1.05,
+    1.1,
+    1.15
+   ]
+  },
+  {
+   "frame": 41,
+   "size": 0.92,
+   "level": 1,
+   "pair_yaw": 90,
+   "twist": 50,
+   "a": [
+    0,
+    -90,
+    34
+   ],
+   "b": [
+    0,
+    0,
+    -8
+   ],
+   "c": [
+    0,
+    0,
+    -28
+   ],
+   "d": [
+    0,
+    0,
+    -34
+   ],
+   "stretch": [
+    1,
+    1.05,
+    1.1,
+    1.15
+   ]
+  },
+  {
+   "frame": 44,
+   "size": 0.9,
+   "level": 1,
+   "pair_yaw": 90,
+   "twist": 74,
+   "a": [
+    0,
+    -90,
+    8
+   ],
+   "b": [
+    0,
+    0,
+    -2
+   ],
+   "c": [
+    0,
+    0,
+    -4
+   ],
+   "d": [
+    0,
+    0,
+    -4
+   ],
+   "stretch": [
+    1,
+    1.05,
+    1.1,
+    1.15
+   ]
+  },
+  {
+   "frame": 46,
+   "size": 0.62,
+   "level": 1,
+   "pair_yaw": 90,
+   "twist": 78,
+   "a": [
+    0,
+    -90,
+    22
+   ],
+   "b": [
+    0,
+    0,
+    -4
+   ],
+   "c": [
+    0,
+    0,
+    -6
+   ],
+   "d": [
+    0,
+    0,
+    -6
+   ],
+   "stretch": [
+    1,
+    1.05,
+    1.1,
+    1.15
+   ]
+  },
+  {
+   "frame": 49,
    "size": 0.0,
    "level": 1,
    "pair_yaw": 90,
@@ -394,22 +539,28 @@
    "a": [
     0,
     -90,
-    75
+    36
    ],
    "b": [
     0,
     0,
-    -30
+    -8
    ],
    "c": [
     0,
     0,
-    -26
+    -10
    ],
    "d": [
     0,
     0,
-    -20
+    -10
+   ],
+   "stretch": [
+    1,
+    1.05,
+    1.1,
+    1.15
    ]
   }
  ]

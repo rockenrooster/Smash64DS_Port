@@ -40,7 +40,7 @@
  },
  "motions": {
   "5": {
-   "comment": "WalkSlow (owner p6i: her walk): Peach's stride narrowed under the dress, her upper body upright with the staff held upright before her (key poses on the owner's 3DS reference at 30 fps)",
+   "comment": "WalkSlow (owner p6i/p6j: her walk): Peach's stride narrowed under the dress, the staff carried in her near hand slanted, its gem leading up ahead at her head's height (key poses on the owner's half-speed 3DS Walking clip)",
    "anim": "builds/p6-art/palutena/anims/walk_slow.o2r"
   },
   "6": {
@@ -52,19 +52,19 @@
    "anim": "builds/p6-art/palutena/anims/walk_fast.o2r"
   },
   "9": {
-   "comment": "Dash (owner p6i: her floating run): from her wait a push into the glide (key poses on the owner's 3DS reference at 30 fps)",
+   "comment": "Dash (owner p6i: her floating run): from her wait the staff swung back and a push into the glide (key poses on the owner's half-speed 3DS Running clip)",
    "anim": "builds/p6-art/palutena/anims/dash_run.o2r"
   },
   "10": {
-   "comment": "Run (owner p6i: \"running animation (floating)\"): leaning far into a glide, the staff level ahead, a slow flutter (key poses on the owner's 3DS reference at 30 fps)",
+   "comment": "Run (owner p6i: \"running animation (floating)\"): leaning far into a glide, the staff carried slanted with its gem low behind her, the shield arm out ahead, a slow flutter (key poses on the owner's half-speed 3DS Running clip)",
    "anim": "builds/p6-art/palutena/anims/run.o2r"
   },
   "11": {
-   "comment": "RunBrake: out of the glide leaning back, the staff brought up",
+   "comment": "RunBrake: out of the glide leaning back, the staff stood gem down and swung up behind her",
    "anim": "builds/p6-art/palutena/anims/run_brake.o2r"
   },
   "164": {
-   "comment": "Appeal: down taunt (card: lets go of the staff, brushes her hair back, halo glows, retakes the staff): the staff stood upright on the floor and let go, her hand brushing her hair back (key poses on the owner's 3DS reference)",
+   "comment": "Appeal: down taunt (card: lets go of the staff, brushes her hair back, halo glows, retakes the staff): the staff stood upright on the floor behind her and let go, her hand brushing her hair back, reaching back with an open palm, the staff retaken (key poses on the owner's half-speed 3DS clip)",
    "anim": "builds/p6-art/palutena/anims/appeal.o2r",
    "script": "scripts/p6/palutena/motions/appeal.ms"
   },
@@ -91,37 +91,37 @@
    "script": "scripts/p6/palutena/motions/throwb.ms"
   },
   "165": {
-   "comment": "Attack11: jab 1: the shield pushed ahead (owner p6i: the 3DS's continuous jab; key poses on the owner's 3DS reference at 30 fps)",
+   "comment": "Attack11: jab 1: the shield bash, the staff swung up behind her (owner p6i: the 3DS's continuous jab; key poses on the owner's half-speed 3DS clip)",
    "script": "scripts/p6/palutena/motions/jab1.ms",
    "anim": "builds/p6-art/palutena/anims/jab1.o2r"
   },
   "166": {
-   "comment": "Attack12: jab 2: the staff thrust at her hip with a light burst; the rapid jab may follow (key poses on the owner's 3DS reference)",
+   "comment": "Attack12: jab 2: the staff thrust level ahead at her waist with a lunge and a light burst; the rapid jab may follow (key poses on the owner's half-speed 3DS clip)",
    "script": "scripts/p6/palutena/motions/jab2.ms",
    "anim": "builds/p6-art/palutena/anims/jab2.o2r"
   },
   "167": {
-   "comment": "AttackDash: the shield charge (D3): the shield thrust ahead and held through the slide, Peach's TransN travel (key poses on the owner's 3DS reference)",
+   "comment": "AttackDash: the shield charge (D3): the staff swung under her, a wide stance and a deep lunge with the shield thrust far out, sliding behind it; its own TransN lunge curve (key poses on the owner's half-speed 3DS clip)",
    "script": "scripts/p6/palutena/motions/dash.ms",
    "anim": "builds/p6-art/palutena/anims/dash.o2r"
   },
   "170": {
-   "comment": "AttackS3: forward tilt (card: the staff spun ahead): the staff spun twice like a windmill before her (key poses on the owner's 3DS reference)",
+   "comment": "AttackS3: forward tilt (card: the staff spun ahead): a twirl sweeping the staff low ahead, then the staff let go to spin upright before her open palm, caught upright (key poses on the owner's half-speed 3DS clip)",
    "script": "scripts/p6/palutena/motions/ftilt.ms",
    "anim": "builds/p6-art/palutena/anims/ftilt.o2r"
   },
   "174": {
-   "comment": "AttackHi3: up tilt (card: the staff spun overhead): on her knees, the staff spun level overhead (key poses on the owner's 3DS reference)",
+   "comment": "AttackHi3: up tilt (card: the staff spun overhead): on her knees, the arm up, the staff spun overhead in a plane low ahead and high behind (key poses on the owner's half-speed 3DS clip)",
    "script": "scripts/p6/palutena/motions/utilt.ms",
    "anim": "builds/p6-art/palutena/anims/utilt.o2r"
   },
   "176": {
-   "comment": "AttackLw3: down tilt (card: the staff spun along the ground): from her crouch the staff swept along the floor (key poses on the owner's 3DS reference)",
+   "comment": "AttackLw3: down tilt (card: the staff spun along the ground): from her crouch a low lunge, the staff thrust out along the floor (key poses on the owner's half-speed 3DS clip)",
    "script": "scripts/p6/palutena/motions/dtilt.ms",
    "anim": "builds/p6-art/palutena/anims/dtilt.o2r"
   },
   "179": {
-   "comment": "AttackS4: forward smash (card: the wings): her wings out, the staff raised back and swung over to level ahead in a lunge (key poses on the owner's 3DS reference)",
+   "comment": "AttackS4: forward smash (card: the wings): the shield out as she rises on her toes, a hop with the wings raised in a V, the hit a bow with the staff upright ahead as the wings sweep down long and low ahead (key poses on the owner's half-speed 3DS clip)",
    "script": "scripts/p6/palutena/motions/fsmash.ms",
    "anim": "builds/p6-art/palutena/anims/fsmash.o2r"
   },
@@ -146,37 +146,37 @@
    "anim": "builds/p6-art/palutena/anims/fsmash.o2r"
   },
   "182": {
-   "comment": "AttackHi4: up smash (card: the light pillar ahead of her): the staff raised straight up as the pillar rises (key poses on the owner's 3DS reference)",
+   "comment": "AttackHi4: up smash (card: the light pillar ahead of her): turned to the camera gathering the light with the staff low, thrust straight up overhead as the pillar rises (key poses on the owner's half-speed 3DS clip)",
    "script": "scripts/p6/palutena/motions/usmash.ms",
    "anim": "builds/p6-art/palutena/anims/usmash.o2r"
   },
   "183": {
-   "comment": "AttackLw4: down smash (card: the wings down both sides): her wings out, low sweeps behind then ahead (key poses on the owner's 3DS reference)",
+   "comment": "AttackLw4: down smash (card: the wings down both sides): turned to the camera, the staff over her head in a ring of wings, a deep squat with the staff's head slammed to the floor as the wings lie flat both sides (key poses on the owner's half-speed 3DS clip)",
    "script": "scripts/p6/palutena/motions/dsmash.ms",
    "anim": "builds/p6-art/palutena/anims/dsmash.o2r"
   },
   "184": {
-   "comment": "AttackAirN: neutral air (card: the staff spun beside her): the staff spun twice around her (key poses on the owner's 3DS reference)",
+   "comment": "AttackAirN: neutral air (card: the staff spun beside her): the staff whirled once round before her in the camera's plane (key poses on the owner's half-speed 3DS clip)",
    "script": "scripts/p6/palutena/motions/nair.ms",
    "anim": "builds/p6-art/palutena/anims/nair.o2r"
   },
   "185": {
-   "comment": "AttackAirF: forward air: the staff thrust ahead with a burst (the owner's 3DS reference over the card's flying kick; key poses)",
+   "comment": "AttackAirF: forward air: a flying kick, her left leg out through the slit with a burst at the foot, the staff raised behind her head (the owner's half-speed 3DS clip, as the card's flying kick; key poses)",
    "script": "scripts/p6/palutena/motions/fair.ms",
    "anim": "builds/p6-art/palutena/anims/fair.o2r"
   },
   "186": {
-   "comment": "AttackAirB: back air (card: a backfist with the shield arm): the shield bashed out behind her (key poses on the owner's 3DS reference)",
+   "comment": "AttackAirB: back air (card: a backfist with the shield arm): her back turned, the shield thrust out behind her in a burst of light (key poses on the owner's half-speed 3DS clip)",
    "script": "scripts/p6/palutena/motions/bair.ms",
    "anim": "builds/p6-art/palutena/anims/bair.o2r"
   },
   "187": {
-   "comment": "AttackAirHi: up air (card: a twirl, the halo above her): the staff raised, the halo above (key poses on the owner's 3DS reference)",
+   "comment": "AttackAirHi: up air (card: a twirl, the halo above her): turned to the camera, the staff held upright before her in the light, the halo above (key poses on the owner's half-speed 3DS clip)",
    "script": "scripts/p6/palutena/motions/uair.ms",
    "anim": "builds/p6-art/palutena/anims/uair.o2r"
   },
   "188": {
-   "comment": "AttackAirLw: down air: the shield swept under her (the owner's 3DS reference over the card's roundhouse kick; key poses)",
+   "comment": "AttackAirLw: down air: a stomp, turned to the camera with arms spread, her left leg driven straight down with a burst at the foot (the owner's half-speed 3DS clip; key poses)",
    "script": "scripts/p6/palutena/motions/dair.ms",
    "anim": "builds/p6-art/palutena/anims/dair.o2r"
   },
@@ -226,17 +226,17 @@
    "script": "scripts/p6/palutena/motions/counter_hit.ms"
   },
   "228": {
-   "comment": "Attack100Start (appended, owner p6i): her rapid jab's start, from jab 2's thrust into the held staff (key poses on the owner's 3DS reference)",
+   "comment": "Attack100Start (appended, owner p6i): her rapid jab's start, from jab 2's thrust into the held staff (key poses on the owner's half-speed 3DS clip)",
    "anim": "builds/p6-art/palutena/anims/rapid_start.o2r",
    "script": "scripts/p6/palutena/motions/rapid_start.ms"
   },
   "229": {
-   "comment": "Attack100Loop (appended): the staff held ahead, a burst of light four times a loop",
+   "comment": "Attack100Loop (appended): the staff held level ahead, pushed out a little with each burst of light, four a loop",
    "anim": "builds/p6-art/palutena/anims/rapid_loop.o2r",
    "script": "scripts/p6/palutena/motions/rapid_loop.ms"
   },
   "230": {
-   "comment": "Attack100End (appended): the finisher, a burst that launches and the staff swung overhead",
+   "comment": "Attack100End (appended): the finisher, a last thrust with a burst that launches, the staff swung up and over her head",
    "anim": "builds/p6-art/palutena/anims/rapid_end.o2r",
    "script": "scripts/p6/palutena/motions/rapid_end.ms"
   }
