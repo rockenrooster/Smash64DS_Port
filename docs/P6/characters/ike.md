@@ -207,6 +207,47 @@ Defaults for the new specials:
   top (knees to his chest, the blade drawn in, thrown open into the chop),
   the descent still moving, an impact with a recoil; it and the up tilt move
   on a spline (keyposes "interp").
+- **Owner p6j (2026-10-14): the half-speed clips.** The owner re-recorded
+  his seven references at 2560x1440 and half speed (one video frame a game
+  tic; Neutral_A_Combo, Running_Side_A, Strong_Side_A, Strong_Up_A, Up_A,
+  Neutral_B_Charge_Dash, UP_B) and asked for his moves redone from them, as
+  Palutena's were. Each clip was measured at true scale (his height matched
+  to ours, a model-unit grid over the frame; Running_Side_A faces left and
+  was read mirrored, the travelling ones with the floor held and his own x
+  followed) -- Ragnell's grip and direction, his left hand, head, hips and
+  feet -- and every key puts them where the clip has them, solved to arm and
+  leg IK on his built clip (keyposes absolute IK targets, aims after IK,
+  hinges). His frame data stays: each clip keeps its old length and its
+  script's hit frames, the clip mapped onto them piecewise. Roy's stance is
+  kept (his wait: his back half to the camera), so the poses read as the
+  clip's silhouette. Now his own clips, as key poses:
+  - Jabs: jab 1 a left punch with a lunge (his chest turned so the left
+    shoulder leads); jab 2 a kick with his back leg, Ragnell swung back; jab
+    3 Ragnell over the top into a deep lunge along the floor. His code's
+    steps stay (about 25, 40 and 150 units).
+  - Dash attack: Ragnell drawn up behind his head, a low lunge with it
+    trailing behind, swept round his far side into a kneeling thrust ahead
+    (the hit), tipped upright, rising; the old lunge travel (about 1,010).
+  - Up tilt: a crouch with the blade low ahead and the left fist up, rising
+    with it level at his waist, a hop with it level overhead, landing with it
+    swept low ahead.
+  - Forward smash (his own clip now; Roy's script): both hands lift Ragnell
+    overhead, it hangs down his back and is cocked level behind him as he
+    leans back, swung over the top as he steps in, slammed down into a deep
+    lunge with the blade along the floor ahead (the hit, frame 14), held,
+    rising. Its reach is the clip's: the tip about 730 units ahead at the
+    slam (Roy's clip reached about 990 with its 270-unit step).
+  - Up smash: Ragnell drawn up behind him in a low crouch, swung down
+    before him and up in an arc overhead (the hits), over and down behind
+    into a wide crouch.
+  - Quick Draw: the charge a deep crouch with Ragnell upright before him;
+    the dash a long low lunge with it thrust out ahead; the slash (its own
+    clip now) and the miss the same follow-through, Ragnell swept up and
+    back over his head and brought down low ahead (the 3DS slashes at the
+    dash's end either way).
+  - Aether: the toss, the climb and the flip stay (they follow the clip);
+    the plunge is now tucked with Ragnell level ahead at his waist, the
+    landing a deep crouch with the blade along the floor ahead.
 - **Counter:** Marth's window and return rule. SSB64's Appeal is ground-only,
   so the counter is too.
 
