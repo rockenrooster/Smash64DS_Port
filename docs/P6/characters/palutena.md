@@ -26,6 +26,21 @@ the game: [P6_STATUS look record](../P6_STATUS.md#palutena-look-record). The
 brief below is the bake-off's (kept for the parts still to come: wings,
 halo, pillar, gate, costumes, Kirby hat).
 
+**Legs fuller (owner, 2026-10-15: "they look a little too skinny").** The
+hand-built legs (5-sided tubes, 2026-10-14) were about 70-80% of the
+baseline's width below the knee. Their rings now sit near the baseline's
+cross-sections (measured by slicing the baseline's leg mesh): hip ring
+0.80 -> 0.86, knee 0.52 -> 0.68, ankle 0.33 -> 0.48 (kit units; the
+baseline's ankle, still a taper from the knee as the owner asked), the
+shoes unchanged; the knee as wide as the baseline's, the calf and ankle
+about 90%. Only the leg rings moved (the work copy's `DS_legs` in the
+owner's .blend; the skinny one kept hidden in `_tmp` as
+`DS_legs_v4_skinny_bak`); the leg texture is baked again, the low detail
+reduced again (`look_reduce.py`, 56 leg triangles as before), and the look
+rebuilt through the same chain (`look_blend.py`, `p6_costumes.py`,
+`look_skirt.py`, `look_parts.py`, `model_writer.py`). The dress solver
+holds the fuller legs as well.
+
 Source: picked by the owner from two best-effort candidates at the same
 budget (plan D12, [Look bake-off](../P6_PLAN.md#look-bake-off-g0)): **Track
 K**, the 3DS kit's Palutena (`decomp/alt_assets/Fighters/Super Smash Bros 3DS/Palutena/`,
