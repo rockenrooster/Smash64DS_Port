@@ -1,0 +1,22 @@
+{
+ "comment": "Ultimate's double jump back (a03jumpaerialb) (its XRotN slot left still). Retargeted onto Roy's tree with his look by scripts/p6/ultimate.py (Roy's bind aligned to the T-pose) from the owner's local Ultimate files (never committed, P6 D1).",
+ "ultimate": {
+  "fighter": "ike",
+  "skeleton": "roy",
+  "scene": "builds/p6-art/ike/look/low_v3/scene.json",
+  "header": "0xcce",
+  "length": 60,
+  "first_slot": 1,
+  "motion": "a03jumpaerialb",
+  "time": [
+   [
+    0,
+    0
+   ],
+   [
+    60,
+    51
+   ]
+  ]
+ }
+}

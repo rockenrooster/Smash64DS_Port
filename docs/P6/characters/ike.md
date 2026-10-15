@@ -253,6 +253,46 @@ Defaults for the new specials:
 - **Counter:** Marth's window and return rule. SSB64's Appeal is ground-only,
   so the counter is too.
 
+## Animations from Ultimate's motions (owner p6p, 2026-10-15)
+
+Owner p6p review of his clips (the stance first: "default stance wrong",
+the left foot forward facing right; jab 1 a left punch, jab 2 a forward
+kick with the right foot, the up smash one strong overhead swing, Quick
+Draw's charge skating back and its slash to his right, Aether "throws sword
+up forcefully, pause, jumps to sword, pause for spin, comes back down"),
+with the owner's extraction of Ultimate's motions beside Palutena's
+(`../ssbu-recomp/build/ike_motion`, local). His clips are Ultimate's own
+motions retargeted as hers are (`scripts/p6/ultimate.py`, anim.py
+"ultimate" recipes in `art/p6/ike/anims`; nothing of Ultimate committed,
+P6 D1), on Roy's tree with his look:
+
+- **His skeleton** is the game's own `model.nusktb` (there is no DAE rip of
+  him), extracted from the owner's data.arc beside the motions
+  (`ike_motion/fighter/ike/model/body/c00/model.nusktb`, local).
+- **Roy's bind is not a T-pose** (his arms hang, his legs stand apart):
+  "align" turns each limb row's bind onto Ultimate's bind direction before
+  the turns are carried over (W_row = W_bone B_bone^-1 A_row B_row).
+- **Ragnell** follows Ultimate's Sword bone (the blade along its +y, its
+  face x; ours row 14's z and y), and where a motion has its own sword
+  motion (Aether's throw) the sword model's HaveR rides on the Sword bone,
+  so the blade leaves his hand as Ultimate's does.
+- **His cape** (Roy's rows 15-18) turns with Ultimate's centre mantle chain
+  (S_MantleC1-4).
+- **Timing.** His hit frames stay the card's (and Roy's for the forward
+  smash, on its old slide: TransN 540 into the slam); the dash attack's
+  travel is Ultimate's scaled to the old 1,012 units. Clips the game times
+  by length keep Roy's lengths (walks 50/35/30, landings 11, crouch 8);
+  JumpB and JumpAerialB keep their XRotN slot (left still).
+- **His figatree heap** stays Roy's 11,728 bytes: the forward smash and dash
+  attack key every other frame ("key_step": 2), the run one 34-frame period.
+- Clips: jabs c00attack11/12/13, dash attack c00attackdash, up tilt
+  c02attackhi3, forward smash c03attacks4s, up smash c04attackhi4, Quick
+  Draw d01specialsstart/dash/attack/end, Aether d02specialhi1-4, Counter
+  d03speciallw and its hit, and his wait, walks, dash, run, brake, jump
+  squat, jumps, double jumps, falls, crouch and landings. Eruption stays
+  Roy's (owner p6i), as do his other attacks, his entry and his hit
+  reactions.
+
 ## Audio (local inputs, never committed)
 
 Both sets are in `decomp/alt_assets/Fighters/Super Smash Bros Ultimate/Fighters/`

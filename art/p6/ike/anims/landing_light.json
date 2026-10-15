@@ -1,0 +1,22 @@
+{
+ "comment": "Ultimate's light landing (a05landinglight) on Roy's 11 frames. Retargeted onto Roy's tree with his look by scripts/p6/ultimate.py (Roy's bind aligned to the T-pose) from the owner's local Ultimate files (never committed, P6 D1).",
+ "ultimate": {
+  "fighter": "ike",
+  "skeleton": "roy",
+  "scene": "builds/p6-art/ike/look/low_v3/scene.json",
+  "header": "0xcce",
+  "length": 11,
+  "first_slot": 0,
+  "motion": "a05landinglight",
+  "time": [
+   [
+    0,
+    0
+   ],
+   [
+    11,
+    15
+   ]
+  ]
+ }
+}

@@ -1,0 +1,27 @@
+{
+ "comment": "Ultimate's dash (a02dash) on Roy's 29 frames. Retargeted onto Roy's tree with his look by scripts/p6/ultimate.py (Roy's bind aligned to the T-pose) from the owner's local Ultimate files (never committed, P6 D1).",
+ "ultimate": {
+  "fighter": "ike",
+  "skeleton": "roy",
+  "scene": "builds/p6-art/ike/look/low_v3/scene.json",
+  "header": "0xcce",
+  "length": 29,
+  "first_slot": 0,
+  "motion": "a02dash",
+  "time": [
+   [
+    0,
+    0
+   ],
+   [
+    29,
+    37
+   ]
+  ],
+  "blend_from": {
+   "motion": "a00wait1",
+   "frame": 0,
+   "frames": 3
+  }
+ }
+}

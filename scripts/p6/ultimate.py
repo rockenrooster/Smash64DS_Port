@@ -40,7 +40,9 @@ length so its face follows Ultimate's Shield bone, the hand kept.
 
 "time" maps the clip's frames onto the motion's (piecewise linear between
 [frame, motion frame] anchors: Ultimate's hit frames onto the script's);
-"transn" writes the motion's Trans travel (scaled) into the TransN slot
+"key_step": N keys every N frames (the frames between interpolated), so a
+dense clip fits its fighter's figatree heap. "transn" writes the motion's
+Trans travel (scaled; or a "travel" curve, or a clip's slot) into the TransN slot
 ("first_slot": 1, AttackDash); otherwise the Trans bone is held at rest and
 the clip plays in place (the walks' and run's travel is the game's).
 """
@@ -86,7 +88,10 @@ FIGHTERS = {
         # along +y and its face x.
         "item": {"row": 14, "hand": 13, "bone": "Sword", "have": "HaveR",
                  "axis": [0.0, 0.0, 1.0], "normal": [0.0, 1.0, 0.0],
-                 "bone_axis": [0.0, 1.0, 0.0], "bone_normal": [1.0, 0.0, 0.0], "slide": 0.0},
+                 "bone_axis": [0.0, 1.0, 0.0], "bone_normal": [1.0, 0.0, 0.0], "slide": 0.0,
+                 # The sword model's own motion, where a motion has one (Aether's
+                 # throw, the taunt): its HaveR (the blade's root) on the Sword bone.
+                 "model": "sword", "model_bone": "HaveR"},
     },
     "palutena": {
         "dae": "decomp/alt_assets/Fighters/Super Smash Bros Ultimate/Fighters/Palutena/palutena.dae",
@@ -246,6 +251,38 @@ def _rot(m):
 _SKELETONS: dict = {}
 
 
+class ItemMotion:
+    """An item model's motion (motion/<model>/c00/<motion>.nuanmb): one
+    bone's local transform at fractional frames (the model's root sits on
+    the body's item bone; its bone carries the mesh)."""
+
+    def __init__(self, fighter: str, model: str, motion: str, bone: str):
+        import ssbh_data_py
+        path = motion_dir(fighter, model) / f"{motion}.nuanmb"
+        self.vals = None
+        if path.exists():
+            anim = ssbh_data_py.anim_data.read_anim(str(path))
+            for g in anim.groups:
+                if "Transform" not in str(g.group_type):
+                    continue
+                for node in g.nodes:
+                    if node.name == bone:
+                        self.vals = node.tracks[0].values
+
+    def local(self, u):
+        if not self.vals:
+            return np.eye(4)
+        n = len(self.vals)
+        u = min(max(float(u), 0.0), n - 1.0)
+        f0 = int(math.floor(u)); f1 = min(f0 + 1, n - 1); t = u - f0
+        a, b = self.vals[f0], self.vals[f1]
+        m = np.eye(4)
+        sc = (1 - t) * np.asarray(a.scale, float) + t * np.asarray(b.scale, float)
+        m[:3, :3] = _quat_mat(_slerp(a.rotation, b.rotation, t)) @ np.diag(sc)
+        m[:3, 3] = (1 - t) * np.asarray(a.translation, float) + t * np.asarray(b.translation, float)
+        return m
+
+
 class Source:
     """An Ultimate motion on its skeleton, sampled at fractional frames."""
 
@@ -278,6 +315,9 @@ class Source:
                 for tr in node.tracks:
                     self.tracks[node.name] = tr.values
         self.keep_trans = keep_trans
+        it = cfg.get("item") or {}
+        self.item = (ItemMotion(fighter, it["model"], motion, it["model_bone"])
+                     if model == "body" and it.get("model") else None)
         self.bind = [_rot(j["world"]) for j in self.skel]
         self.bind_pos = [np.asarray(j["world"], float)[:3, 3].copy() for j in self.skel]
 
@@ -416,6 +456,11 @@ class Retarget:
             Y[:3, :3] = _axis_angle(np.array([0.0, 1.0, 0.0]), math.radians(yaw))
             W = [Y @ w for w in W]
         i = src.idx
+        it = cfg["item"]
+        if src.item is not None:
+            # The item model's bone on the body's item bone (the sword thrown).
+            W = list(W)
+            W[i[it["bone"]]] = W[i[it["bone"]]] @ src.item.local(u)
         P = {n: np.asarray(W[i[n]], float)[:3, 3] for n in src.idx}
         R = {n: _rot(W[i[n]]) for n in self.src_bind_inv}
         world = [None] * self.rows
@@ -671,13 +716,37 @@ def build(skel: A.Skeleton, spec: dict, scales=None, rom=None, extras: dict | No
             per_tr[g] = [[a[c] + (b[c] - a[c]) * w for c in range(3)] for a, b in zip(per_tr[g], tr_t)]
             if hem_t is not None:
                 hems[g] = ((1.0 - w) * np.asarray(hems[g]) + w * hem_t).tolist()
+    step = int(spec.get("key_step", 1))
+    if step > 1:
+        # Keys every `step` frames, the frames between them interpolated: a
+        # dense clip compacts to about 1/step of its keys (a figatree heap).
+        keep = set(range(0, length + 1, step)) | {length}
+        grid = sorted(keep)
+        for g in range(length + 1):
+            if g in keep:
+                continue
+            a = max(x for x in grid if x < g)
+            b = min(x for x in grid if x > g)
+            w = (g - a) / float(b - a)
+            per_rot[g] = [P.slerp(x, y, w) for x, y in zip(per_rot[a], per_rot[b])]
+            per_tr[g] = [[x[c] + (y[c] - x[c]) * w for c in range(3)] for x, y in zip(per_tr[a], per_tr[b])]
     first_slot = int(spec.get("first_slot", 0))
     clip = frames_to_clip(skel, scales, per_rot, per_tr, length, spec.get("loop"), first_slot)
     tn = spec.get("transn")
     if tn:
         if first_slot < 1:
             raise ValueError("ultimate transn needs first_slot 1")
-        if isinstance(tn, dict) and "clip" in tn:
+        if isinstance(tn, dict) and "travel" in tn:
+            # A forward travel curve (keyposes "travel"): the game's slide kept.
+            z = K.travel_curve(tn["travel"], length)
+            st = A.Stream(length, None)
+            for c in range(3):
+                st.tracks[c] = A.Track([0] * (length + 1), 0)
+            st.tracks[4] = A.Track([0] * (length + 1), 0)
+            st.tracks[5] = A.Track([0] * (length + 1), 0)
+            st.tracks[6] = A.Track([round(v * A.TRANS_UNIT) for v in z], 0)
+            clip.streams[0] = st
+        elif isinstance(tn, dict) and "clip" in tn:
             # The TransN slot of a clip of the tree (a roll's travel kept the game's).
             src_st = A.decode(rom.o2r(int(str(tn["clip"]), 0))).streams[0]
             fac = float(tn.get("scale", 1.0))

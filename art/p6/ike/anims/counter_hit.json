@@ -1,4 +1,30 @@
 {
- "comment": "The counter's strike (card: Marth's counter clips).",
- "source": "0xd71"
+ "comment": "Ultimate's counterattack (d03speciallwhit); its hit at 4. Retargeted onto Roy's tree with his look by scripts/p6/ultimate.py (Roy's bind aligned to the T-pose) from the owner's local Ultimate files (never committed, P6 D1).",
+ "ultimate": {
+  "fighter": "ike",
+  "skeleton": "roy",
+  "scene": "builds/p6-art/ike/look/low_v3/scene.json",
+  "header": "0xcce",
+  "length": 36,
+  "first_slot": 0,
+  "motion": "d03speciallwhit",
+  "time": [
+   [
+    0,
+    0
+   ],
+   [
+    4,
+    3
+   ],
+   [
+    12,
+    8
+   ],
+   [
+    36,
+    48
+   ]
+  ]
+ }
 }

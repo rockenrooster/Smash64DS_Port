@@ -1,0 +1,23 @@
+{
+ "comment": "Ultimate's wait (a00wait1): his stance, the left foot forward facing right (owner p6p: \"default stance wrong\"). Retargeted onto Roy's tree with his look by scripts/p6/ultimate.py (Roy's bind aligned to the T-pose) from the owner's local Ultimate files (never committed, P6 D1).",
+ "ultimate": {
+  "fighter": "ike",
+  "skeleton": "roy",
+  "scene": "builds/p6-art/ike/look/low_v3/scene.json",
+  "header": "0xcce",
+  "length": 144,
+  "first_slot": 0,
+  "motion": "a00wait1",
+  "time": [
+   [
+    0,
+    0
+   ],
+   [
+    144,
+    144
+   ]
+  ],
+  "loop": 0
+ }
+}

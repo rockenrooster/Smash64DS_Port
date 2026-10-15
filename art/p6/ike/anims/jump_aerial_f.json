@@ -1,0 +1,22 @@
+{
+ "comment": "Ultimate's double jump forward (a03jumpaerialf). Retargeted onto Roy's tree with his look by scripts/p6/ultimate.py (Roy's bind aligned to the T-pose) from the owner's local Ultimate files (never committed, P6 D1).",
+ "ultimate": {
+  "fighter": "ike",
+  "skeleton": "roy",
+  "scene": "builds/p6-art/ike/look/low_v3/scene.json",
+  "header": "0xcce",
+  "length": 50,
+  "first_slot": 0,
+  "motion": "a03jumpaerialf",
+  "time": [
+   [
+    0,
+    0
+   ],
+   [
+    50,
+    51
+   ]
+  ]
+ }
+}
