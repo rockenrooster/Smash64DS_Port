@@ -1,26 +1,43 @@
 #!/usr/bin/env python3
 """P6: Palutena's dress against her legs, every motion (owner playtest
-2026-10-14: in EVERY animation the dress surrounds her legs, except at the
-slit).
+2026-10-14: in EVERY animation the dress surrounds her legs).
 
 Each motion's clip is posed on the content's own skeleton (coverage.py
 Fighter.pose_frames: her rows, translate_scales, the TransN slot); the look
 scene's dress and leg vertices ride their rows from the bind pose. The skirt
-is measured as cones between rings (each ring's centre and mean radius,
-posed): one from its top ring to its hem ring, or, once the skirt hangs from
-Peach's dress rows (look_skirt.py), the upper band (the waist ring to the
-cut ring on row 1) and the lower band (row 25's ring to the hem on row 26).
-A leg vertex between a band's two rings whose distance from its axis passes
-the band's radius there is outside the dress by that much. Vertices on the slit's side of the skirt (its angle
-within SLIT_HALF_DEG of the slit's direction, in the skirt's own frame) are
-reported apart: the slit lets that leg out.
+hangs from Peach's dress rows (look_skirt.py): the upper band (the waist ring
+to the cut ring on row 1) and the lower band (row 25's ring to the hem on
+row 26); an older one-band skirt is one band from its top ring to its hem.
+
+Her leg mesh is rings (the hip's on rows 16/21, the knee's on 17/22, the
+ankle's on 18/23) joined by tubes, so the dress is checked at points along
+them (LegSamples), as the owner's 3DS references show it (owner p6j,
+2026-10-14: "the slit leg actually never comes out of the dress at all";
+"if Palutena takes a step forward where the knee pokes out, the dress should
+be stretched over it"):
+
+- the thigh and the knee ("core") are inside the dress: inside the lower
+  band and above its hem, or, above the band's top ring, inside the upper
+  band (measured in the pelvis's frame against its rest shape: the short
+  upper band shears when the torso bends);
+- the shin does not come through the lower band's side above the hem; below
+  the hem it shows (a raised knee lifts the hem, the shin hangs from under
+  it, as on the 3DS);
+- the feet are free (the 3DS's show under her dress).
+
+The lower band is measured as drawn (band_outs): the surface from its top
+ring to its hem, each ring taken by angle about the axis through their
+centres (its axial place and radius in a point's direction), so a hem
+stretched, tilted or lifted over a raised knee (skirt_keys.py) is measured as
+it is. Both legs count, the slit's too (owner p6j); the slit leg's worst is
+reported apart.
 
     dress_check.py --staging builds/p4-staging/extra-96621af \\
         --export builds/p4-staging/export-x/palutena \\
         --scene builds/p6-art/palutena/3ds2ds/scene_high/scene.json [--json out.json]
 
-Prints, per motion, the frames and the worst distance a leg vertex reaches
-outside the dress (away from the slit, and at it), worst first.
+Prints, per motion, the frames and the worst distance a leg point reaches
+outside the dress (either leg, and the slit leg's), worst first.
 """
 from __future__ import annotations
 
@@ -41,11 +58,20 @@ DRESS = "DS_dress"
 LEGS = "DS_legs"
 # Below the hips: the skirt's part of the dress (the bodice is above).
 SKIRT_TOP_Y = 335.0
-# Leg rows above the foot (the hip and knee rings, thigh and shin lists).
+# Leg rows (the hip, knee and ankle rings).
 LEG_ROWS = (16, 17, 18, 21, 22, 23)
-SLIT_HALF_DEG = 35.0
-# Below this many units outside, a vertex is within the cloth's thickness.
+# Each leg's rows: hip ring, knee ring, ankle ring (the slit's leg first).
+LEG_CHAINS = ((16, 17, 18), (21, 22, 23))
+# Points along each thigh (hip ring to knee ring; 1.0 is the knee) and each
+# shin (knee ring to ankle ring) with their weights: the thigh's and the
+# shin's first (the knee) are core (weight 1.0).
+THIGH_AT = (0.25, 0.5, 0.75, 1.0)
+SHIN_AT = ((0.15, 1.0), (0.4, 0.5), (0.65, 0.25))
+# Below this many units outside, a point is within the cloth's thickness.
 TOLERANCE = 4.0
+# The band's measure for a point it does not hold to anything (above its top
+# ring, or a shin below the hem).
+FREE = -1.0e9
 
 
 def rings(scene: dict):
@@ -104,72 +130,125 @@ def ring(pts: np.ndarray):
     return c, float(np.linalg.norm(pts - c, axis=1).mean())
 
 
-def check_frame(dress_pts, bands, leg_pts, slit_dir_local, pelvis=None, upper_rest=None):
-    """(worst outside away from the slit, worst at the slit) for one pose.
+class LegSamples:
+    """Points along her legs (the leg mesh's tubes between its rings): each
+    knee vertex paired with the hip ring's and the ankle ring's vertex
+    nearest it in angle about the leg (bind pose), points THIGH_AT along the
+    first pair and SHIN_AT along the second."""
 
-    One band (the old skirt): a leg vertex between its rings outside it.
-    Two (look_skirt.py): a vertex between the lower band's rings outside it;
-    one above the lower band's top ring is held to the upper band, measured
-    in the pelvis's frame against its rest shape (`upper_rest`: the band's
-    axis point, height range and radii there) -- the short upper band shears
-    when the torso bends, and a sheared band's own axis says nothing about
-    the hips; a vertex below the hem is never outside."""
-    worst, worst_slit = 0.0, 0.0
-    lower = bands[-1]
-    per = _band_out(dress_pts, lower[0], lower[1], leg_pts, slit_dir_local, keep_t=True)
-    for k, item in enumerate(per):
-        if item is None:
-            continue
-        t, o, slit = item
-        if t > 1.0:
-            continue
-        if t < 0.0:
-            if upper_rest is None or pelvis is None:
+    def __init__(self, scene: dict):
+        verts = scene["vertices"]
+        ids = [i for i, v in enumerate(verts) if v.get("object") == LEGS and v["joint"] in LEG_ROWS]
+        self.model = np.array([verts[i]["model"] for i in ids], dtype=float)
+        self.rows = [verts[i]["joint"] for i in ids]
+        on = lambda row: [k for k, r in enumerate(self.rows) if r == row]
+        pa, pb, frac, weight, core, leg = [], [], [], [], [], []
+        for n, (hip, knee, ankle) in enumerate(LEG_CHAINS):
+            ring_h, ring_k, ring_a = on(hip), on(knee), on(ankle)
+            if not (ring_h and ring_k and ring_a):
                 continue
-            q = (pelvis @ np.append(leg_pts[k], 1.0))[:3]
-            centre, y_lo, y_hi, r_lo, r_hi = upper_rest
-            if not y_lo - 10.0 <= q[1] <= y_hi:
-                continue
-            a = min(max((q[1] - y_lo) / max(y_hi - y_lo, 1.0), 0.0), 1.0)
-            o = float(np.hypot(q[0] - centre[0], q[2] - centre[2])) - (r_lo + (r_hi - r_lo) * a)
-            slit = False
-        if o <= TOLERANCE:
-            continue
-        if slit:
-            worst_slit = max(worst_slit, o)
-        else:
-            worst = max(worst, o)
-    return worst, worst_slit
+
+            def angle(k, ring_):
+                c = self.model[ring_].mean(axis=0)
+                v = self.model[k] - c
+                return np.arctan2(v[2], v[0])
+
+            def nearest(k, ring_):
+                a = angle(k, ring_k)
+                return min(ring_, key=lambda j: abs(np.angle(np.exp(1j * (angle(j, ring_) - a)))))
+            for k in ring_k:
+                h = nearest(k, ring_h)
+                for f in THIGH_AT:
+                    pa.append(h), pb.append(k), frac.append(f), weight.append(1.0), core.append(True), leg.append(n)
+                a = nearest(k, ring_a)
+                for f, w in SHIN_AT:
+                    pa.append(k), pb.append(a), frac.append(f), weight.append(w), core.append(w >= 1.0), leg.append(n)
+        self.a = np.array(pa, dtype=int)
+        self.b = np.array(pb, dtype=int)
+        self.f = np.array(frac)[:, None]
+        self.weight = np.array(weight)
+        self.core = np.array(core, dtype=bool)
+        self.leg = np.array(leg, dtype=int)
+        self.slit = self.leg == 0
+
+    def posed(self, mats, inv_bind) -> np.ndarray:
+        """The points in model space for one pose."""
+        v = posed(self.model, self.rows, mats, inv_bind)
+        return v[self.a] * (1.0 - self.f) + v[self.b] * self.f
 
 
-def _band_out(dress_pts, top, hem, leg_pts, slit_dir_local, keep_t=False):
-    """Per leg vertex: None when it is not between the band's rings, else
-    (how far outside the band, on the slit's side); with keep_t, every
-    vertex as (t along the band, how far outside, on the slit's side)."""
-    ct, rt = ring(dress_pts[top])
-    ch, rh = ring(dress_pts[hem])
-    axis = ch - ct
-    length = float(np.linalg.norm(axis))
-    if length < 1.0:
-        return [None] * len(leg_pts)
-    u = axis / length
-    # The skirt's own frame: u down its axis, the slit's direction across it.
-    s = slit_dir_local - np.dot(slit_dir_local, u) * u
-    s = s / max(np.linalg.norm(s), 1e-6)
-    out = []
-    for p in leg_pts:
-        d = p - ct
-        t = float(np.dot(d, u)) / length
-        if not keep_t and not 0.0 <= t <= 1.0:
-            out.append(None)
-            continue
-        radial = d - np.dot(d, u) * u
-        dist = float(np.linalg.norm(radial))
-        cosang = float(np.dot(radial / max(dist, 1e-6), s))
-        tc = min(max(t, 0.0), 1.0)
-        item = (dist - (rt + (rh - rt) * tc), cosang >= np.cos(np.radians(SLIT_HALF_DEG)))
-        out.append((t,) + item if keep_t else item)
-    return out
+def _ring_angles(rel, u, e1, e2):
+    a = rel @ u
+    radial = rel - np.outer(a, u)
+    return np.arctan2(radial @ e2, radial @ e1), a, np.linalg.norm(radial, axis=1)
+
+
+def _periodic(ang, *vals):
+    order = np.argsort(ang)
+    ang = ang[order]
+    xs = np.concatenate([ang - 2 * np.pi, ang, ang + 2 * np.pi])
+    return xs, [np.concatenate([v[order]] * 3) for v in vals]
+
+
+def band_profile_outs(a, rho, a_top, r_top, a_hem, r_hem, core) -> np.ndarray:
+    """band_outs from the points' depths a and radii rho about the axis and
+    the rings' depths and radii in their directions."""
+    span = np.maximum(a_hem - a_top, 1.0)
+    s = (a - a_top) / span
+    band = r_top + np.clip(s, 0.0, 1.0) * (r_hem - r_top)
+    side = (rho - band) * span / np.hypot(span, r_hem - r_top)
+    out = np.where(s > 1.0, np.where(core, np.maximum(side, a - a_hem), FREE), side)
+    return np.where(s < 0.0, FREE, out)
+
+
+def band_outs(top: np.ndarray, hem: np.ndarray, pts: np.ndarray, core: np.ndarray,
+              origin: np.ndarray, u: np.ndarray, across: np.ndarray) -> np.ndarray:
+    """Per point: how far outside the lower band it is (signed: negative
+    inside), FREE where the band holds it to nothing (above its top ring:
+    the upper band's; a shin below the hem). The band is the surface from
+    its top ring to its hem ring, each ring taken by angle about its axis
+    (the line through origin along u, down the band: row 25's -z through its
+    ring's centre) -- its depth down the axis and radius in the point's
+    direction, interpolated between its vertices -- the distance taken
+    across the band's slope; a core point below the hem is outside by how
+    far below it is."""
+    e1 = across - np.dot(across, u) * u
+    if np.linalg.norm(e1) < 1e-3:
+        e1 = np.cross(u, [0.0, 1.0, 0.0])
+    e1 = e1 / np.linalg.norm(e1)
+    e2 = np.cross(u, e1)
+    xt, (at, rt) = _periodic(*_ring_angles(top - origin, u, e1, e2))
+    xh, (ah, rh) = _periodic(*_ring_angles(hem - origin, u, e1, e2))
+    ang, a, rho = _ring_angles(pts - origin, u, e1, e2)
+    return band_profile_outs(a, rho, np.interp(ang, xt, at), np.interp(ang, xt, rt),
+                             np.interp(ang, xh, ah), np.interp(ang, xh, rh), core)
+
+
+def upper_rest_of(scene: dict, bind) -> tuple | None:
+    """The upper band's rest shape in the pelvis's frame (its axis point,
+    height range and radii there), or None for a one-band skirt."""
+    verts = scene["vertices"]
+    bands, _hem, _slit = rings(scene)
+    if len(bands) != 2:
+        return None
+    pin = np.linalg.inv(bind[1])
+    to_p = lambda i: (pin @ np.append(verts[i]["model"], 1.0))[:3]
+    top = np.array([to_p(i) for i in bands[0][0]])
+    low = np.array([to_p(i) for i in bands[0][1]])
+    centre = np.vstack([top, low]).mean(axis=0)
+    rad = lambda pts: float(np.hypot(pts[:, 0] - centre[0], pts[:, 2] - centre[2]).mean())
+    return centre, float(low[:, 1].mean()), float(top[:, 1].mean()), rad(low), rad(top)
+
+
+def upper_outs(pts_pelvis: np.ndarray, upper_rest) -> np.ndarray:
+    """Per point (the pelvis's frame): how far outside the upper band's rest
+    shape (its axis point, height range and radii there), FREE off its
+    height range."""
+    centre, y_lo, y_hi, r_lo, r_hi = upper_rest
+    y = pts_pelvis[:, 1]
+    a = np.clip((y - y_lo) / max(y_hi - y_lo, 1.0), 0.0, 1.0)
+    o = np.hypot(pts_pelvis[:, 0] - centre[0], pts_pelvis[:, 2] - centre[2]) - (r_lo + (r_hi - r_lo) * a)
+    return np.where((y >= y_lo - 10.0) & (y <= y_hi), o, FREE)
 
 
 class Report:
@@ -188,36 +267,45 @@ class Report:
         remap = {i: k for k, i in enumerate(dress_idx)}
         self.bands = [([remap[i] for i in a], [remap[i] for i in b]) for a, b in bands]
         self.hem_row = verts[hem[0]]["joint"]
-        self.hem_c = np.array([verts[i]["model"] for i in hem]).mean(axis=0)
-        # The slit faces the +x front (the hem's u 0.65) when no slit vertex says.
-        self.slit_c = (np.array([verts[i]["model"] for i in slit]).mean(axis=0) if slit
-                       else self.hem_c + np.array([1.0, 0.0, 0.6]))
-        legs = [i for i, v in enumerate(verts) if v.get("object") == LEGS and v["joint"] in LEG_ROWS]
-        self.leg_model = np.array([verts[i]["model"] for i in legs])
-        self.leg_rows = [verts[i]["joint"] for i in legs]
-        self.upper_rest = None
-        if len(bands) == 2:
-            pin = np.linalg.inv(bind[1])
-            to_p = lambda i: (pin @ np.append(verts[i]["model"], 1.0))[:3]
-            top = np.array([to_p(i) for i in bands[0][0]])
-            low = np.array([to_p(i) for i in bands[0][1]])
-            centre = np.vstack([top, low]).mean(axis=0)
-            rad = lambda pts: float(np.hypot(pts[:, 0] - centre[0], pts[:, 2] - centre[2]).mean())
-            self.upper_rest = (centre, float(low[:, 1].mean()), float(top[:, 1].mean()), rad(low), rad(top))
+        self.legs = LegSamples(scene)
+        self.upper_rest = upper_rest_of(scene, bind)
+
+    def frame_outs(self, mats) -> np.ndarray:
+        """Per leg point, how far outside the dress (FREE: nothing holds it)."""
+        dp = posed(self.dress_model, self.dress_rows, mats, self.inv_bind)
+        lp = self.legs.posed(mats, self.inv_bind)
+        top, hem = self.bands[-1]
+        origin = dp[top].mean(axis=0)
+        if self.upper_rest is not None:
+            # Row 25's axis: its -z through its ring's centre.
+            u = -mats[25][:3, 2] / np.linalg.norm(mats[25][:3, 2])
+            across = mats[25][:3, 0]
+        else:
+            u = dp[hem].mean(axis=0) - origin
+            u = u / max(np.linalg.norm(u), 1e-6)
+            across = mats[1][:3, 0]
+        out = band_outs(dp[top], dp[hem], lp, self.legs.core, origin, u, across)
+        if self.upper_rest is not None:
+            pin = np.linalg.inv(mats[1])
+            q = (pin @ np.c_[lp, np.ones(len(lp))].T).T[:, :3]
+            up = upper_outs(q, self.upper_rest)
+            # Above the lower band's top: the upper band holds the core.
+            above = ((lp - origin) @ u < 0.0) & self.legs.core
+            out = np.where(above, up, out)
+        return out
 
     def clip(self, clip: A.Clip, anim_flags: int):
-        """(frames, frames with a leg out, worst out away from the slit,
-        worst at the slit)."""
+        """(frames, frames with a leg out, worst out of either leg, worst of
+        the slit leg)."""
         length = max((st.length for st in clip.streams.values()), default=0)
         frames = self.fighter.pose_frames(clip, anim_flags, length)
         worst, worst_slit, bad = 0.0, 0.0, 0
-        inv = self.inv_bind
         for _root, mats in frames:
-            dp = posed(self.dress_model, self.dress_rows, mats, inv)
-            lp = posed(self.leg_model, self.leg_rows, mats, inv)
-            m = mats[self.hem_row] @ inv[self.hem_row]
-            sd = (m @ np.append(self.slit_c, 1.0))[:3] - (m @ np.append(self.hem_c, 1.0))[:3]
-            w, ws = check_frame(dp, self.bands, lp, sd, np.linalg.inv(mats[1]), self.upper_rest)
+            out = self.frame_outs(mats)
+            w = float(out.max(initial=0.0))
+            ws = float(out[self.legs.slit].max(initial=0.0))
+            w = w if w > TOLERANCE else 0.0
+            ws = ws if ws > TOLERANCE else 0.0
             worst, worst_slit = max(worst, w), max(worst_slit, ws)
             bad += 1 if w > 0 else 0
         return length + 1, bad, worst, worst_slit
@@ -253,9 +341,9 @@ def main() -> int:
     rows_out.sort(key=lambda r: -r["worst"])
     for r in rows_out:
         print(f"motion {r['motion']:3d} clip {r['clip']:>7} frames {r['frames']:3d} "
-              f"out {r['frames_out']:3d}  worst {r['worst']:6.1f}  slit {r['worst_slit']:6.1f}")
+              f"out {r['frames_out']:3d}  worst {r['worst']:6.1f}  slit leg {r['worst_slit']:6.1f}")
     clean = sum(1 for r in rows_out if r["worst"] <= 0)
-    print(f"dress check: {clean} of {len(rows_out)} motions clean (away from the slit)")
+    print(f"dress check: {clean} of {len(rows_out)} motions clean (both legs)")
     if args.json:
         args.json.write_text(json.dumps(rows_out, indent=1) + "\n", encoding="utf-8", newline="\n")
     return 0

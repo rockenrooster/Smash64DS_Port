@@ -490,6 +490,30 @@ def author_motions(resolved: dict, events: dict, motions: dict, name: str, out: 
                            "sha256": hashlib.sha256(bytes(ram)).hexdigest()}
 
 
+# Keyed skirt clips by what they are made from (skirt_keys.py's solve is a
+# few seconds a clip and deterministic): build output only.
+SKIRT_CACHE = REPO / "builds" / "p6-cache" / "skirt"
+
+
+def _skirt_keyed(sk, clip, blob: bytes, flags: int, trail: float, salt) -> bytes:
+    """The clip keyed for the skirt (skirt_keys.Skirt.apply) and encoded over
+    blob's header, from SKIRT_CACHE when the same clip, flags, trail and
+    solver (salt: its sources, the scene, the skeleton) made it before."""
+    import anim as A
+    h = salt.copy()
+    h.update(A.encode(clip, blob))
+    h.update(struct.pack("<If", flags, trail))
+    path = SKIRT_CACHE / f"{h.hexdigest()}.o2r"
+    if path.exists():
+        return path.read_bytes()
+    out = A.encode(sk.apply(clip, flags, trail), blob)
+    SKIRT_CACHE.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(f".{id(out):x}.tmp")
+    tmp.write_bytes(out)
+    tmp.replace(path)
+    return out
+
+
 def author_skirt(resolved: dict, events: dict, skirt: dict | None, name: str, out: Path,
                  staging: Path | None, pose: list | None = None) -> None:
     """Every clip the content plays, keyed for its skirt (spec "skirt":
@@ -517,6 +541,11 @@ def author_skirt(resolved: dict, events: dict, skirt: dict | None, name: str, ou
     window = CONTENT_WINDOW[name]
     fighter = coverage.load(staging, out, resolved, events)
     sk = skirt_keys.Skirt(fighter, scene)
+    salt = hashlib.sha256()
+    for src in ("skirt_keys.py", "dress_check.py", "coverage.py", "anim.py"):
+        salt.update((HERE / src).read_bytes())
+    salt.update((REPO / skirt["scene"]).read_bytes())
+    salt.update(json.dumps([fighter.skel.parents, fighter.skel.translate, fighter.skel.rotate]).encode())
     o2r = out / "o2r"
     closure = {r["file_id"]: r for r in resolved["file_closure"]}
     next_id = max([f for f in closure if window + ANIM_FIRST <= f < window + 0x100] +
@@ -557,8 +586,7 @@ def author_skirt(resolved: dict, events: dict, skirt: dict | None, name: str, ou
                                              op.get("frames"), int(op.get("ease", 0)), lead)
                     else:
                         raise AuthorError(f"spec pose: op {kind!r}")
-                keyed = sk.apply(clip, row["anim_flags"], trail)
-                new = bytearray(A.encode(keyed, blob))
+                new = bytearray(_skirt_keyed(sk, clip, blob, row["anim_flags"], trail, salt))
                 own = window <= fid < window + 0x100 and group is None and not any(
                     k[0] == fid for k in made)
                 nid = fid if own else next_id
