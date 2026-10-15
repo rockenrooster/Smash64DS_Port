@@ -34,7 +34,9 @@ axes: 1 keeps the wings in the battle camera's plane however her chest
 twists), "pair_yaw" (a quarter turn lays the wings across the screen for a
 body seen side on), "pair_roll" (one wing a little above the other) and
 "pair_pitch"; bone a's turn in the pair's frame ("a": pitch, forward and
-back; yaw, out and in; roll, up and down), bones b-d's turns in their own
+back; yaw, out and in; roll, up and down) and "twist" (the whole wing about
+its own length: a wing laid flat reads as a thin arc from the side, the
+3DS down smash's), bones b-d's turns in their own
 bind frames ("b".."d": twist, curl out of the wing's plane, fold in it), each
 bone's "stretch" (its card's length and its child's distance) and "fan" (its
 card's feather length). Keys pass through a Catmull-Rom spline, stopping at
@@ -390,6 +392,7 @@ class Params:
     level: float = 0.0
     pair_yaw: float = 0.0               # the pair turned about her vertical
     pair_roll: float = 0.0              # one wing up, the other down
+    twist: float = 0.0                  # the whole wing about its own length
     a: tuple = (0.0, 0.0, 0.0)           # pitch, yaw, roll in the pair's frame
     bends: dict = field(default_factory=lambda: {b: (0.0, 0.0, 0.0) for b in BONES[1:]})
     stretch: dict = field(default_factory=lambda: {b: 1.0 for b in BONES})
@@ -410,7 +413,7 @@ def bone_locals(wing: Wing, p: Params) -> list[tuple[np.ndarray, np.ndarray]]:
             # The wing turns about its own root (the kit's LwingNa), the
             # turn's axes the pair's.
             pitch, yaw, roll = p.a
-            rot = rot_z(roll) @ rot_y(yaw) @ rot_x(pitch) @ rot
+            rot = rot_z(roll) @ rot_y(yaw) @ rot_x(pitch) @ rot @ rot_x(p.twist)
         else:
             twist, curl, fold = p.bends[bone.name]
             rot = rot @ rot_x(twist) @ rot_y(curl) @ rot_z(fold)
@@ -464,8 +467,8 @@ def _affine(rot: np.ndarray, trans: np.ndarray, scale: float) -> np.ndarray:
 
 # ---------------------------------------------------------------- the motion
 
-KEY_FIELDS = ("size", "pair_pitch", "level", "pair_yaw", "pair_roll", "a", "b", "c", "d",
-              "stretch", "fan")
+KEY_FIELDS = ("size", "pair_pitch", "level", "pair_yaw", "pair_roll", "twist", "a", "b", "c",
+              "d", "stretch", "fan")
 
 
 def _key_vector(key: dict) -> np.ndarray:
@@ -475,7 +478,7 @@ def _key_vector(key: dict) -> np.ndarray:
         raise WingError(f"key at frame {key.get('frame')}: unknown fields {sorted(unknown)}")
     v = [float(key.get("size", 1.0)), float(key.get("pair_pitch", 0.0)),
          float(key.get("level", 0.0)), float(key.get("pair_yaw", 0.0)),
-         float(key.get("pair_roll", 0.0))]
+         float(key.get("pair_roll", 0.0)), float(key.get("twist", 0.0))]
     v += [float(x) for x in key.get("a", (0.0, 0.0, 0.0))]
     for b in BONES[1:]:
         v += [float(x) for x in key.get(b, (0.0, 0.0, 0.0))]
@@ -488,10 +491,10 @@ def _key_vector(key: dict) -> np.ndarray:
 
 def _params(v: np.ndarray) -> Params:
     p = Params(size=float(v[0]), pair_pitch=float(v[1]), level=float(v[2]),
-               pair_yaw=float(v[3]), pair_roll=float(v[4]), a=tuple(v[5:8]))
-    p.bends = {b: tuple(v[8 + 3 * i:11 + 3 * i]) for i, b in enumerate(BONES[1:])}
-    p.stretch = {b: float(v[17 + i]) for i, b in enumerate(BONES)}
-    p.fan = {b: float(v[21 + i]) for i, b in enumerate(BONES)}
+               pair_yaw=float(v[3]), pair_roll=float(v[4]), twist=float(v[5]), a=tuple(v[6:9]))
+    p.bends = {b: tuple(v[9 + 3 * i:12 + 3 * i]) for i, b in enumerate(BONES[1:])}
+    p.stretch = {b: float(v[18 + i]) for i, b in enumerate(BONES)}
+    p.fan = {b: float(v[22 + i]) for i, b in enumerate(BONES)}
     return p
 
 

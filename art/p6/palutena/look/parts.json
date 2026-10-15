@@ -1,104 +1,41 @@
 {
  "schema": 1,
- "comment": "Palutena's parts shown on demand (A10, scripts/p6/look_parts.py): each a model-part variant of an existing row drawing that row's list plus cut-out cards, two-sided. Corners are in the look's rest model space (y up, she faces +z; the battle camera sees her x axis as depth, so the cards lie across y and z). The wings (her victory poses, win1 and win3: SetModelPartID joint 6 part 1) are the kit's wing image (godwing, its full feathered wing, the island above it cleared), one card a side sweeping up and back from her shoulder blades. The halo (up air, the down taunt, the victory and select poses: joint 12 part 2) is an authored gold ring above her head, two crossed cards: one faces the battle camera, the other the select and Results cameras, which see her from the front. The light pillar is not a part any more (owner playtest 2026-10-14, round 2: her animation turned the hips row's cards behind her): it is an effect in her special file 2 (scripts/p6/p6_gate.py), its atlas look_parts.py's authored:pillar_burst. Owner p6i follow-up: her forward and down smash draw rigged wings of their own (an effect in her special file 2, scripts/p6/p6_wings.py), not these cards.",
+ "comment": "Palutena's parts shown on demand (A10, scripts/p6/look_parts.py): each a model-part variant of an existing row drawing that row's list plus cut-out cards, two-sided. Corners are in the look's rest model space (y up, she faces +z; the battle camera sees her x axis as depth, so the cards lie across y and z). The wings (her victory poses, win1 and win3: SetModelPartID joint 6 part 1) are her smash wings' art (owner, 2026-10-14: \"use the new wing art for the victory poses too\"): the rig's eight cards (scripts/p6/p6_wings.py) posed by wings_pose, a wings recipe key, spread up and out from her shoulder blades for the Results camera, which sees her from the front. The halo (up air, the down taunt, the victory and select poses: joint 12 part 2) is an authored gold ring above her head, two crossed cards: one faces the battle camera, the other the select and Results cameras, which see her from the front. The light pillar is not a part any more (owner playtest 2026-10-14, round 2: her animation turned the hips row's cards behind her): it is an effect in her special file 2 (scripts/p6/p6_gate.py), its atlas look_parts.py's authored:pillar_burst. Her forward and down smash draw the same wings rigged, an effect in her special file 2 (scripts/p6/p6_wings.py), not this part.",
  "parts": [
   {
    "name": "wings",
    "joint": 2,
    "variant": 1,
    "texture": {
-    "source": "kit:Palutena/godwing/Yoshi_Wing.png",
-    "keep_below": [
-     [
-      0,
-      212
-     ],
-     [
-      35,
-      191
-     ],
-     [
-      95,
-      163
-     ],
-     [
-      230,
-      168
-     ],
-     [
-      256,
-      178
-     ]
-    ],
-    "clear": [
-     [
-      200,
-      225,
-      256,
-      256
-     ]
-    ],
-    "crop": [
-     0,
-     155,
-     256,
-     256
-    ],
+    "source": "authored:wings",
     "size": [
      64,
-     32
+     64
     ]
    },
-   "cards": [
-    {
-     "corners": [
-      [
-       14,
-       470,
-       -22
-      ],
-      [
-       80,
-       690,
-       -370
-      ],
-      [
-       80,
-       450,
-       -370
-      ],
-      [
-       14,
-       300,
-       -22
-      ]
-     ]
-    },
-    {
-     "corners": [
-      [
-       -14,
-       470,
-       -22
-      ],
-      [
-       -80,
-       690,
-       -370
-      ],
-      [
-       -80,
-       450,
-       -370
-      ],
-      [
-       -14,
-       300,
-       -22
-      ]
-     ]
-    }
-   ],
+   "wings_pose": {
+    "size": 0.85,
+    "a": [
+     0,
+     -70,
+     24
+    ],
+    "b": [
+     0,
+     0,
+     6
+    ],
+    "c": [
+     0,
+     0,
+     4
+    ],
+    "d": [
+     0,
+     0,
+     2
+    ]
+   },
    "texture_key": "wings"
   },
   {

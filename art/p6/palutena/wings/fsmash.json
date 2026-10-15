@@ -1,20 +1,525 @@
 {
- "comment": "Palutena's forward smash wings (scripts/p6/p6_wings.py), keyed on her fsmash clip's frames against the owner's 3DS reference (Strong_Side_A, its frames 4-38): sprouting behind her shoulders, raised straight up as she winds up, swung out and round to her front at the hit (frame 14, SSB64's speed), stretched long with a slam past and a settle, fluttering through the hold, swung back up, folded and gone.",
+ "comment": "Palutena's forward smash wings (scripts/p6/p6_wings.py), keyed on her fsmash clip's frames against the owner's 3DS reference (Strong_Side_A, frames 4-38) at true scale (her height matched; owner: \"do the wings stretch like the 3DS animations do?\"): sprouting small behind her shoulders and growing as they rise straight up (a little V, about 0.6-0.8 of the full wing), whipped down in front to the floor, stretched long (frame 13), level and longest at the hit (frame 14, SSB64's speed), a slam past, then retracting through the hold (the 3DS's tip draws in about a tenth), rising and opening into a V across the camera's plane, shrinking and gone at 43.",
  "keys": [
-  {"frame": 2, "size": 0.05, "level": 0.8, "a": [100, -5, 6], "b": [0, 0, -45], "c": [0, 0, -35], "d": [0, 0, -25]},
-  {"frame": 5, "size": 0.7, "level": 0.8, "a": [97, -6, 6], "b": [0, 0, -30], "c": [0, 0, -25], "d": [0, 0, -18]},
-  {"frame": 8, "size": 1.1, "level": 0.8, "a": [90, -10, 6], "b": [0, 0, -14], "c": [0, 0, -12], "d": [0, 0, -8], "fan": [1.05, 1.05, 1.05, 1.0]},
-  {"frame": 10, "size": 1.0, "level": 0.8, "a": [82, -16, 6], "b": [0, 0, -4], "c": [0, 0, -4], "d": [0, 0, -2], "stretch": [1.0, 1.0, 1.05, 1.05], "fan": [1.1, 1.1, 1.05, 1.0]},
-  {"frame": 12, "size": 1.0, "level": 0.8, "a": [45, -105, 0], "b": [0, 8, 4], "c": [0, 8, 4], "d": [0, 5, 4], "stretch": [1.0, 1.08, 1.25, 1.3], "fan": [1.3, 1.25, 1.15, 1.0]},
-  {"frame": 14, "size": 1.0, "level": 0.8, "pair_roll": 5, "a": [-24, -172, 0], "b": [0, 0, 8], "c": [0, -4, 8], "d": [0, -6, 6], "stretch": [1.0, 1.15, 1.4, 1.5], "fan": [2.0, 1.7, 1.3, 1.05]},
-  {"frame": 16, "size": 1.0, "level": 0.8, "pair_roll": 5, "a": [-30, -174, 0], "b": [0, 0, 10], "c": [0, -6, 10], "d": [0, -8, 8], "stretch": [1.0, 1.18, 1.48, 1.58], "fan": [2.05, 1.75, 1.3, 1.05]},
-  {"frame": 19, "size": 1.0, "level": 0.8, "pair_roll": 5, "a": [-16, -168, 0], "b": [0, 0, 4], "c": [0, -2, 3], "d": [0, -4, 0], "stretch": [1.0, 1.15, 1.38, 1.48], "fan": [2.0, 1.7, 1.3, 1.05]},
-  {"frame": 22, "size": 1.0, "level": 0.8, "pair_roll": 5, "a": [-21, -170, 0], "b": [0, 0, 7], "c": [0, -4, 6], "d": [0, -6, 5], "stretch": [1.0, 1.15, 1.4, 1.5], "fan": [2.0, 1.7, 1.3, 1.05]},
-  {"frame": 26, "size": 1.0, "level": 0.8, "pair_roll": 5, "a": [-17, -169, 0], "b": [0, 0, 5], "c": [0, -3, 4], "d": [0, -5, 2], "stretch": [1.0, 1.15, 1.38, 1.48], "fan": [2.0, 1.7, 1.3, 1.05]},
-  {"frame": 30, "size": 1.0, "level": 0.8, "a": [55, -95, 0], "b": [0, 0, -8], "c": [0, 5, -8], "d": [0, 5, -4], "stretch": 1.1, "fan": [1.3, 1.25, 1.1, 1.0]},
-  {"frame": 34, "size": 1.0, "level": 0.8, "a": [92, -28, 12], "b": [0, 0, -8], "c": [0, 0, -6], "d": [0, 0, -2], "fan": [1.1, 1.1, 1.05, 1.0]},
-  {"frame": 37, "size": 0.9, "level": 0.8, "a": [84, -22, 12], "b": [0, 0, -20], "c": [0, 0, -16], "d": [0, 0, -10]},
-  {"frame": 40, "size": 0.5, "level": 0.8, "a": [92, -18, 12], "b": [0, 0, -32], "c": [0, 0, -26], "d": [0, 0, -16]},
-  {"frame": 43, "size": 0.0, "level": 0.8, "a": [96, -14, 10], "b": [0, 0, -42], "c": [0, 0, -32], "d": [0, 0, -22]}
+  {
+   "frame": 2,
+   "size": 0.05,
+   "level": 0.8,
+   "a": [
+    100,
+    -5,
+    6
+   ],
+   "b": [
+    0,
+    0,
+    -45
+   ],
+   "c": [
+    0,
+    0,
+    -35
+   ],
+   "d": [
+    0,
+    0,
+    -25
+   ]
+  },
+  {
+   "frame": 5,
+   "size": 0.45,
+   "level": 0.8,
+   "a": [
+    98,
+    -6,
+    6
+   ],
+   "b": [
+    0,
+    0,
+    -30
+   ],
+   "c": [
+    0,
+    0,
+    -25
+   ],
+   "d": [
+    0,
+    0,
+    -18
+   ],
+   "fan": 0.85,
+   "pair_yaw": 20
+  },
+  {
+   "frame": 8,
+   "size": 0.62,
+   "level": 0.8,
+   "a": [
+    92,
+    -10,
+    6
+   ],
+   "b": [
+    0,
+    0,
+    -16
+   ],
+   "c": [
+    0,
+    0,
+    -12
+   ],
+   "d": [
+    0,
+    0,
+    -8
+   ],
+   "fan": 0.85,
+   "stretch": [
+    1.0,
+    1.05,
+    1.1,
+    1.1
+   ],
+   "pair_yaw": 30
+  },
+  {
+   "frame": 11,
+   "size": 0.78,
+   "level": 0.8,
+   "a": [
+    82,
+    -18,
+    6
+   ],
+   "b": [
+    0,
+    0,
+    -6
+   ],
+   "c": [
+    0,
+    0,
+    -5
+   ],
+   "d": [
+    0,
+    0,
+    -3
+   ],
+   "fan": 0.9,
+   "stretch": [
+    1.0,
+    1.05,
+    1.12,
+    1.15
+   ],
+   "pair_yaw": 30
+  },
+  {
+   "frame": 12,
+   "size": 0.92,
+   "level": 0.8,
+   "a": [
+    40,
+    -100,
+    0
+   ],
+   "b": [
+    0,
+    8,
+    4
+   ],
+   "c": [
+    0,
+    8,
+    4
+   ],
+   "d": [
+    0,
+    5,
+    4
+   ],
+   "stretch": [
+    1.0,
+    1.1,
+    1.3,
+    1.35
+   ],
+   "fan": [
+    1.2,
+    1.15,
+    1.0,
+    0.9
+   ]
+  },
+  {
+   "frame": 13,
+   "size": 1.0,
+   "level": 0.8,
+   "a": [
+    -48,
+    -160,
+    0
+   ],
+   "b": [
+    0,
+    -4,
+    8
+   ],
+   "c": [
+    0,
+    -8,
+    10
+   ],
+   "d": [
+    0,
+    -10,
+    8
+   ],
+   "stretch": [
+    1.0,
+    1.2,
+    1.45,
+    1.55
+   ],
+   "fan": [
+    1.6,
+    1.5,
+    1.2,
+    1.0
+   ]
+  },
+  {
+   "frame": 14,
+   "size": 1.0,
+   "level": 0.8,
+   "pair_roll": 5,
+   "a": [
+    -16,
+    -172,
+    0
+   ],
+   "b": [
+    0,
+    0,
+    8
+   ],
+   "c": [
+    0,
+    -4,
+    8
+   ],
+   "d": [
+    0,
+    -6,
+    6
+   ],
+   "stretch": [
+    1.0,
+    1.15,
+    1.38,
+    1.48
+   ],
+   "fan": [
+    2.0,
+    1.7,
+    1.3,
+    1.05
+   ]
+  },
+  {
+   "frame": 16,
+   "size": 1.0,
+   "level": 0.8,
+   "pair_roll": 5,
+   "a": [
+    -20,
+    -174,
+    0
+   ],
+   "b": [
+    0,
+    0,
+    10
+   ],
+   "c": [
+    0,
+    -6,
+    10
+   ],
+   "d": [
+    0,
+    -8,
+    8
+   ],
+   "stretch": [
+    1.0,
+    1.15,
+    1.42,
+    1.52
+   ],
+   "fan": [
+    2.05,
+    1.75,
+    1.3,
+    1.05
+   ]
+  },
+  {
+   "frame": 19,
+   "size": 1.0,
+   "level": 0.8,
+   "pair_roll": 5,
+   "a": [
+    -12,
+    -169,
+    0
+   ],
+   "b": [
+    0,
+    0,
+    4
+   ],
+   "c": [
+    0,
+    -2,
+    3
+   ],
+   "d": [
+    0,
+    -4,
+    0
+   ],
+   "stretch": [
+    1.0,
+    1.12,
+    1.34,
+    1.42
+   ],
+   "fan": [
+    2.0,
+    1.7,
+    1.3,
+    1.05
+   ]
+  },
+  {
+   "frame": 22,
+   "size": 1.0,
+   "level": 0.8,
+   "pair_roll": 5,
+   "a": [
+    -16,
+    -170,
+    0
+   ],
+   "b": [
+    0,
+    0,
+    7
+   ],
+   "c": [
+    0,
+    -4,
+    6
+   ],
+   "d": [
+    0,
+    -6,
+    5
+   ],
+   "stretch": [
+    1.0,
+    1.1,
+    1.28,
+    1.36
+   ],
+   "fan": [
+    1.95,
+    1.65,
+    1.25,
+    1.05
+   ]
+  },
+  {
+   "frame": 26,
+   "size": 0.98,
+   "level": 0.8,
+   "pair_roll": 5,
+   "a": [
+    -8,
+    -168,
+    0
+   ],
+   "b": [
+    0,
+    0,
+    4
+   ],
+   "c": [
+    0,
+    -3,
+    3
+   ],
+   "d": [
+    0,
+    -5,
+    2
+   ],
+   "stretch": [
+    1.0,
+    1.08,
+    1.22,
+    1.3
+   ],
+   "fan": [
+    1.8,
+    1.55,
+    1.2,
+    1.0
+   ]
+  },
+  {
+   "frame": 29,
+   "size": 0.95,
+   "level": 0.9,
+   "pair_yaw": 55,
+   "a": [
+    30,
+    -125,
+    30
+   ],
+   "b": [
+    0,
+    0,
+    -6
+   ],
+   "c": [
+    0,
+    4,
+    -6
+   ],
+   "d": [
+    0,
+    4,
+    -4
+   ],
+   "stretch": 1.1,
+   "fan": [
+    1.2,
+    1.15,
+    1.05,
+    1.0
+   ]
+  },
+  {
+   "frame": 32,
+   "size": 1.0,
+   "level": 1,
+   "pair_yaw": 90,
+   "a": [
+    0,
+    -90,
+    50
+   ],
+   "b": [
+    0,
+    0,
+    -10
+   ],
+   "c": [
+    0,
+    0,
+    -8
+   ],
+   "d": [
+    0,
+    0,
+    -5
+   ],
+   "fan": 1.0
+  },
+  {
+   "frame": 36,
+   "size": 0.95,
+   "level": 1,
+   "pair_yaw": 90,
+   "a": [
+    0,
+    -90,
+    56
+   ],
+   "b": [
+    0,
+    0,
+    -18
+   ],
+   "c": [
+    0,
+    0,
+    -15
+   ],
+   "d": [
+    0,
+    0,
+    -10
+   ]
+  },
+  {
+   "frame": 40,
+   "size": 0.45,
+   "level": 1,
+   "pair_yaw": 90,
+   "a": [
+    0,
+    -90,
+    66
+   ],
+   "b": [
+    0,
+    0,
+    -30
+   ],
+   "c": [
+    0,
+    0,
+    -26
+   ],
+   "d": [
+    0,
+    0,
+    -16
+   ]
+  },
+  {
+   "frame": 43,
+   "size": 0.0,
+   "level": 1,
+   "pair_yaw": 90,
+   "a": [
+    0,
+    -90,
+    76
+   ],
+   "b": [
+    0,
+    0,
+    -40
+   ],
+   "c": [
+    0,
+    0,
+    -32
+   ],
+   "d": [
+    0,
+    0,
+    -22
+   ]
+  }
  ]
 }

@@ -12,7 +12,10 @@ The recipe (art/p6/<name>/look/parts.json, committed) gives each part's
 joint and variant, its texture (a crop of a kit image with an optional
 outline keeping only what lies below a polyline, or an authored image) and
 its cards' corners in the model's rest space (a card's optional `st`: its
-corners' texel coordinates, for an atlas). Parts naming one `texture_key`
+corners' texel coordinates, for an atlas). Palutena's victory-pose wings are
+her smash wings' art (scripts/p6/p6_wings.py): the texture "authored:wings"
+is their atlas and "wings_pose" (a wings recipe key) poses the rig's eight
+cards at her torso row's rest, in place of listed cards. Parts naming one `texture_key`
 share one texture (the writer stores a texture file once): the variants of
 an animated part, shown in turn by its script. This adds the parts to the
 look's scenes (`parts`) for model_writer.py.
@@ -147,6 +150,11 @@ def texture(spec: dict) -> np.ndarray:
         img = Image.fromarray(authored_pillar(w * 4, h * 4).astype(np.uint8), "RGBA")
     elif src == "authored:pillar_burst":
         img = Image.fromarray(authored_pillar_burst(w * 4, h * 4).astype(np.uint8), "RGBA")
+    elif src == "authored:wings":
+        sys.path.insert(0, str(HERE))
+        import p6_wings
+        idx, pal = p6_wings.atlas_ci4(p6_wings.load_wing())
+        img = Image.fromarray(np.array([[pal[i] for i in row] for row in idx], dtype=np.uint8), "RGBA")
     elif src.startswith("kit:"):
         img = Image.open(KIT / src[4:]).convert("RGBA")
     else:
@@ -196,9 +204,24 @@ def card_geometry(part: dict, joint_world: np.ndarray, base_vertex: int):
     return verts, tris
 
 
+def wing_cards(part: dict, scene: dict) -> list:
+    """The smash wings' cards (p6_wings.py) at the part's "wings_pose",
+    attached to her torso row at its rest: corners in the model's rest
+    space, `st` in the atlas's texels."""
+    sys.path.insert(0, str(HERE))
+    import p6_wings
+    wing = p6_wings.load_wing(scene)
+    torso = np.array(scene["joints"][p6_wings.TORSO_ROW]["world"], dtype=float)
+    pose = p6_wings._params(p6_wings._key_vector(part["wings_pose"]))
+    return [{"corners": corners.tolist(), "st": st.tolist()}
+            for _side, _bone, corners, st in p6_wings.world_cards(wing, torso, pose)]
+
+
 def apply(recipe: dict, scene: dict) -> dict:
     parts = []
     for part in recipe["parts"]:
+        if "wings_pose" in part:
+            part = dict(part, cards=wing_cards(part, scene))
         tex = texture(part["texture"])
         idx, pal = _quantize(tex, 16, True)
         w, h = part["texture"]["size"]

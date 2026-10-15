@@ -168,11 +168,12 @@ reduced to the HUD's 8x10 CI4 sprite with one LUT a costume
 (`scripts/p6/p6_stock.py`, written in place over Peach's). The victory
 poses' wings and the halo are model-part variants of existing rows
 (`scripts/p6/look_parts.py`, recipe `art/p6/palutena/look/parts.json`): the
-torso row's part 1 draws its list plus two cut-out cards of the kit's
-feathered wing (godwing), sweeping up and back from her shoulder blades; the
-head row's part 2 adds an authored gold ring above her head, two crossed
-cards: one faces the battle camera, the other the select and Results
-cameras, which see her from the front. Her up air shows the halo (joint 12);
+torso row's part 1 draws its list plus the smash wings' art (owner: "use the
+new wing art for the victory poses too"), the rig's eight cards posed once
+by `wings_pose` (a wings recipe key), spread up and out from her shoulder
+blades for the Results camera, which sees her from the front; the head
+row's part 2 adds an authored gold ring above her head, two crossed cards:
+one faces the battle camera, the other the select and Results cameras. Her up air shows the halo (joint 12);
 a status change resets the parts. Her smashes' wings are an effect of their
 own (below, Animations).
 
@@ -372,15 +373,22 @@ momentum or force ... follow them as close as possible." Since then:
   `dsmash.json` against the owner's 3DS clips (Catmull-Rom between keys;
   "level" turns the pair from the torso's twist to the battle camera's
   plane, "pair_yaw" a quarter turn lays the down smash's wings across the
-  screen). Forward smash: sprouting behind her shoulders, raised straight
-  up as she winds up, swung out and round to her front at the hit (frame
-  14, SSB64's speed kept: owner p6i), stretched long with a slam past and a
-  settle, fluttering, swung back up, folded and gone at 43; its hits on the
-  wings' inner and outer reach (TopN) and the staff. Down smash: sprouting
-  above her, raised closing over her head, flapped down to the floor at her
-  front and back at the hit (frame 10) with a rebound, fluttering low, swept
-  back up into a V and gone at 36; a hit on each wing's inner and outer
-  reach. (Before: the torso row's card poses, rigid; cards hinged on the
+  screen, "twist" turns a wing about its length). Owner: "do the wings
+  stretch like the 3DS animations do?": keyed again against the clips at
+  true scale (her height matched; the 3DS wing's reach measured frame by
+  frame): forward smash's wings sprout small behind her shoulders and grow
+  as they rise (a little V, 0.6-0.8 of the full wing, as the 3DS's), whip
+  down in front to the floor stretched long (frame 13), level and longest
+  at the hit (frame 14, SSB64's speed kept: owner p6i; about 1.6 her height
+  ahead, the 3DS's 1.5-1.7), slam past, draw in through the hold (the 3DS's
+  tip retracts about a tenth), rise and open into a V across the camera's
+  plane and shrink away at 43; its hits on the wings' inner and outer reach
+  (TopN) and the staff. Down smash's wings read as the 3DS's do from its
+  camera, nearly edge-on: thin crescents over her head, swept out and down,
+  slammed to the floor at her front and back at the hit (frame 10) as long
+  thin arcs about her height each side (first pass: broad wings 1.45 her
+  height), a rebound and a low flutter, then a rising V, gone at 36; a hit
+  on each wing's inner and outer reach, low. (Before: the torso row's card poses, rigid; cards hinged on the
   shoulder rows were declined by the native owner, a changed live root
   vector.) Up smash: the staff thrust straight up as the pillar rises and
   held while it stands.
