@@ -144,6 +144,10 @@ ARTICLES = {
         # (scripts/p6/p6_gate.py PILLAR_TREE), made by her code for the
         # whole match.
         {"name": "pillar", "special": 2, "dobjdesc": 0xDC},
+        # Her forward and down smash's wings, a third tree (p6_gate.py
+        # WINGS_TREE, scripts/p6/p6_wings.py): eight cards, each a bone's,
+        # posed by her code every tic.
+        {"name": "wings", "special": 2, "dobjdesc": 0x1B8},
     ),
     "piano": (
         # fireball.asm struct_book: WPAttributes at 0 of Piano file 6

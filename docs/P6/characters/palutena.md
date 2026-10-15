@@ -165,15 +165,16 @@ the red, blue and green teams): 0 white (c00), 1 black (c06), 2 red (c05),
 sheet: `builds/p6-art/palutena/costumes/sheet.png` (local; for the owner's
 approval). Her stock icon is the kit's stock icon row (the sheet's 28th),
 reduced to the HUD's 8x10 CI4 sprite with one LUT a costume
-(`scripts/p6/p6_stock.py`, written in place over Peach's). The wings and the
-halo are model-part variants of existing rows (`scripts/p6/look_parts.py`,
-recipe `art/p6/palutena/look/parts.json`): the torso row's part 1 draws its
-list plus two cut-out cards of the kit's feathered wing (godwing), sweeping
-up and back from her shoulder blades; the head row's part 2 adds an authored
-gold ring above her head, two crossed cards: one faces the battle camera,
-the other the select and Results cameras, which see her from the front.
-Her forward and down smash scripts show the wings (SetModelPartID joint 6),
-her up air the halo (joint 12); a status change resets the parts.
+(`scripts/p6/p6_stock.py`, written in place over Peach's). The victory
+poses' wings and the halo are model-part variants of existing rows
+(`scripts/p6/look_parts.py`, recipe `art/p6/palutena/look/parts.json`): the
+torso row's part 1 draws its list plus two cut-out cards of the kit's
+feathered wing (godwing), sweeping up and back from her shoulder blades; the
+head row's part 2 adds an authored gold ring above her head, two crossed
+cards: one faces the battle camera, the other the select and Results
+cameras, which see her from the front. Her up air shows the halo (joint 12);
+a status change resets the parts. Her smashes' wings are an effect of their
+own (below, Animations).
 
 **Pillar, taunt, entry, victory poses (2026-10-14).** The up smash's light
 pillar is one column of cyan light 325 units ahead of her on her floor
@@ -249,9 +250,9 @@ defaults on SSB64's scale, tuned against Peach.
 | Up tilt | AttackHi3 | new: kneels, spins the staff overhead | multi-hit |
 | Down tilt | AttackLw3 | new: kneels, spins the staff along the ground | low hits |
 | Dash attack | AttackDash | new: **shield charge** (D3) | shield hitbox |
-| Forward smash | AttackS4 | new: wings conjured and flapped forward | hitboxes on the wing joints |
+| Forward smash | AttackS4 | new: wings conjured and flapped forward | hitboxes on the wings' reach (TopN) and the staff |
 | Up smash | AttackHi4 | new: staff raised, a cyan light pillar erupts ahead of her | a tall column of hitboxes where the pillar effect stands; the highest vertical reach of her moves |
-| Down smash | AttackLw4 | new: wings flap downward on both sides | wing joints |
+| Down smash | AttackLw4 | new: wings flap downward on both sides | the wings' reach front and back (TopN) |
 | Neutral air | AttackAirN | new: staff spun beside her right arm | multi-hit |
 | Forward air | AttackAirF | new: flying kick | — |
 | Back air | AttackAirB | new: backfist with the shield arm | — |
@@ -353,17 +354,36 @@ momentum or force ... follow them as close as possible." Since then:
 - **Dash attack.** Out of her run she gathers the shield, lunges (its own
   TransN curve, keyposes "transn" "travel": about 760 units) with the shield
   punched out, slides on it and rises.
-- **Smashes and wings.** The wings animate as the torso row's poses: its
-  model-part variants 1 (folded up and back), 2 (swept forward low) and 3
-  (flapped down to the floor at her front and back), `look_parts.py` parts
-  wings, wings_forward and wings_down, switched by the smash scripts at their
-  frames while the torso turns and leans with the clip: forward smash leans
-  back with the wings folded and sweeps them forward as she lunges (the hit on
-  the wings and the staff); down smash flaps them down at both sides as she
-  drops (a hit at each). (Cards hinged on the shoulder rows were tried
-  first: rows that draw nothing change the native owner's live root vector
-  while shown, and those frames were declined.) Up smash: the staff thrust
-  straight up as the pillar rises and held while it stands.
+- **Smashes and wings.** Owner p6i follow-up ("they should articulate and
+  stretch and be mostly symmetrical ... polished and like they belong in the
+  DS version"): the wings are a rigged effect in her special file 2
+  (`scripts/p6/p6_wings.py`, written by `p6_gate.py`; drawn natively, its
+  eight cards `p4_articles.py` "wings"). The kit's godwing gives the rig, a
+  wing a side of four bones (LwingNa-d; the right wing the left's mirror),
+  and the art: each bone one card, the kit wing's feathers of that bone
+  rendered flat in the wing's plane from its outer side, cut from one 64x64
+  CI4 atlas with a light rim on the feathers. Her code
+  (`nds_p4_palutena.c`) makes the effect on the smash's first tic, attached
+  to her (the next status removes it, hitlag holds it), and poses it every
+  tic after her map proc at her animation frame from a table in the file:
+  the root on her TopN, a node on her clip's torso row, the pair node (its
+  turn and size: the wings grow and shrink), each bone's turn and the cards'
+  stretch. The motion is keyed in `art/p6/palutena/wings/fsmash.json` and
+  `dsmash.json` against the owner's 3DS clips (Catmull-Rom between keys;
+  "level" turns the pair from the torso's twist to the battle camera's
+  plane, "pair_yaw" a quarter turn lays the down smash's wings across the
+  screen). Forward smash: sprouting behind her shoulders, raised straight
+  up as she winds up, swung out and round to her front at the hit (frame
+  14, SSB64's speed kept: owner p6i), stretched long with a slam past and a
+  settle, fluttering, swung back up, folded and gone at 43; its hits on the
+  wings' inner and outer reach (TopN) and the staff. Down smash: sprouting
+  above her, raised closing over her head, flapped down to the floor at her
+  front and back at the hit (frame 10) with a rebound, fluttering low, swept
+  back up into a V and gone at 36; a hit on each wing's inner and outer
+  reach. (Before: the torso row's card poses, rigid; cards hinged on the
+  shoulder rows were declined by the native owner, a changed live root
+  vector.) Up smash: the staff thrust straight up as the pillar rises and
+  held while it stands.
 - **Aerials.** Neutral: the staff whirled around her, knees tucked. Forward:
   her body laid out level behind the thrust. Back: the shield thrust out
   behind her. Up: turned to the camera, the staff stretched up, the halo

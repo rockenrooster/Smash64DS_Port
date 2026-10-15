@@ -20,6 +20,11 @@ facing the camera, the glow, the core and the bloom at its foot -- cut from
 one authored atlas (look_parts.py authored:pillar_burst), unlit and cut out.
 Her code scales the cards over the effect's life (the burst).
 
+A third tree at WINGS_TREE holds her forward and down smash's wings
+(scripts/p6/p6_wings.py: the kit's godwing rigged, cards cut from one atlas,
+and the table her code poses them from every tic), its table's address in
+the word after the tree's rows (WINGS_TABLE_SLOT).
+
     p6_gate.py --out builds/p6-art/palutena/gate/1b10 [--preview gate.png]
 
 Kit-derived: the file stays local (D10); this recipe is the committed part.
@@ -39,6 +44,7 @@ sys.path.insert(0, str(HERE))
 import dae_reader  # noqa: E402
 import n64_model as N  # noqa: E402
 import model_writer as M  # noqa: E402
+import p6_wings  # noqa: E402
 
 KIT = REPO / "decomp" / "alt_assets" / "Fighters" / "Super Smash Bros 3DS" / "Palutena" / "gate"
 # The O2R resource header every P6 file carries (its own id follows it).
@@ -52,6 +58,10 @@ U_CROP = 0.75         # the image's door half (its right quarter is the edges')
 DOBJ_END = N.JOINT_TREE_END
 # The pillar's tree, after the gate's five rows (p4_articles.py "pillar").
 PILLAR_TREE = 5 * N.DOBJ_DESC_SIZE
+# The wings' tree after the pillar's five rows, then the word that names
+# the wings' table (src/port/nds_p4_palutena.c PAL_WINGS_TREE, _TABLE_SLOT).
+WINGS_TREE = 10 * N.DOBJ_DESC_SIZE
+WINGS_TABLE_SLOT = WINGS_TREE + p6_wings.TREE_ROWS * N.DOBJ_DESC_SIZE
 PILLAR_HEIGHT = 2500.0     # 2x her first pillar's 1,250 (owner p6f notes; 1.5x and 1.25x before)
 PILLAR_TEX = 64            # the atlas (CI4, 2 KB)
 # Each card: atlas region (s0, t0, s1, t1 in texels), width, bottom, top, z.
@@ -175,6 +185,9 @@ def build() -> tuple[bytes, dict]:
     pillar_at = app.put(bytes(N.DOBJ_DESC_SIZE * 5))
     if pillar_at != PILLAR_TREE:
         raise GateError(f"pillar tree at {pillar_at:#x}, p4_articles.py names {PILLAR_TREE:#x}")
+    wings_at = app.put(bytes(N.DOBJ_DESC_SIZE * p6_wings.TREE_ROWS + 4))
+    if wings_at != WINGS_TREE:
+        raise GateError(f"wings tree at {wings_at:#x}, p4_articles.py names {WINGS_TREE:#x}")
     doors = {}
     for side in ("L", "R"):
         mesh = meshes[side]
@@ -241,7 +254,10 @@ def build() -> tuple[bytes, dict]:
             app.slot(at + 4, ("intern", FILE_ID, dl))
         struct.pack_into(">3f", f.data, at + 8, *t)
         struct.pack_into(">3f", f.data, at + 32, 1.0, 1.0, 1.0)
+    wings = p6_wings.write(app, FILE_ID, wings_at)
+    app.slot(WINGS_TABLE_SLOT, ("intern", FILE_ID, wings["table"]))
     info = {"tree": tree_at, "pillar": pillar_at, "lists": lists, "pillar_lists": pillar_lists,
+            "wings": wings,
             "scale": scale, "hinges": {s: doors[s]["hinge"] for s in doors}, "preview": preview}
     return f.to_bytes(), info
 
@@ -319,6 +335,8 @@ def main() -> int:
     if args.preview:
         from PIL import Image
         Image.fromarray(info["preview"]).resize((TEX * 4, TEX * 4), Image.NEAREST).save(args.preview)
+    w = info["wings"]
+    print(f"p6 wings: tree {w['tree']:#x}, table {w['table']:#x}, {w['bytes']} bytes, clips {w['clips']}")
     print(f"p6 gate: {args.out} {len(blob)} bytes, tree {info['tree']:#x}, pillar {info['pillar']:#x}, scale {info['scale']:.2f}, "
           f"hinges L {info['hinges']['L']:.0f} R {info['hinges']['R']:.0f}")
     return 0

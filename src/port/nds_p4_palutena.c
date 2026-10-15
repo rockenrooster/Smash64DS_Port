@@ -890,15 +890,221 @@ static void ndsP4PalutenaPillarProcUpdate(GObj *effect_gobj)
     ep->effect_vars.common.size = tic + 1;
 }
 
-/* ftMainProcPhysicsMap's per-frame hook: in the up smash, the pillar's
- * columns sweep, and its flag0 makes the pillar once. */
+/* Her forward and down smash's wings (owner p6i follow-up, 2026-10-14: "they
+ * should articulate and stretch and be mostly symmetrical ... polished and
+ * like they belong in the DS version"; the torso row's card poses before
+ * were rigid): an effect of the third tree in her special file 2
+ * (scripts/p6/p6_wings.py: the kit's godwing, a wing a side of four bones,
+ * each bone a card cut from one atlas; the right wing the left's mirror),
+ * drawn natively (scripts/p4/p4_articles.py "wings"). It is made on the
+ * smash's first tic and attached to her (fp->is_effect_attach), so her next
+ * status removes it (ftMainSetStatus) and hitlag holds it with her.
+ *
+ * Every tic, after her map proc, its nodes are posed from the table the
+ * file's word at PAL_WINGS_TABLE_SLOT names, at her animation frame
+ * (fighter anim_frame): the root takes her TopN's transform, the torso node
+ * her clip's torso row relative to TopN, the pair node its turn and size,
+ * each left bone its translation and turn and each card its stretch; the
+ * right wing the left's values mirrored (x translation, y and z turns
+ * negated). Outside the table's frames the root is hidden. Angles are s16
+ * binary angles, scales s16 over 4096. */
+#define PAL_WINGS_TREE 0x1B8                /* p6_gate.py WINGS_TREE */
+#define PAL_WINGS_TABLE_SLOT 0x528          /* p6_gate.py WINGS_TABLE_SLOT */
+#define PAL_WINGS_MAGIC 0x50574E47u         /* "PWNG" */
+#define PAL_WINGS_BONES 4
+#define PAL_WINGS_NODES (3 + (4 * PAL_WINGS_BONES))
+#define PAL_WINGS_VALUES (6 + 4 + (8 * PAL_WINGS_BONES))
+#define PAL_WINGS_CLIP_FSMASH 0             /* p6_wings.py CLIPS */
+#define PAL_WINGS_CLIP_DSMASH 1
+#define PAL_WINGS_ANGLE (F_CST_DTOR32(360.0F) / 65536.0F)
+#define PAL_WINGS_SCALE (1.0F / 4096.0F)
+
+extern GObj *gGCCommonLinks[];
+
+typedef struct NDSP4PalWingsClip
+{
+    u32 first;                  /* the clip frames the wings show */
+    u32 last;
+    u32 rows;                   /* from the table's start */
+} NDSP4PalWingsClip;
+
+typedef struct NDSP4PalWingsTable
+{
+    u32 magic;
+    u32 values;                 /* s16 values a row */
+    u32 clips;
+    NDSP4PalWingsClip clip[2];
+} NDSP4PalWingsTable;
+
+static s32 ndsP4PalutenaWingsClip(s32 status_id)
+{
+    if ((status_id >= nFTCommonStatusAttackS4Hi) && (status_id <= nFTCommonStatusAttackS4Lw))
+    {
+        return PAL_WINGS_CLIP_FSMASH;
+    }
+    return (status_id == nFTCommonStatusAttackLw4) ? PAL_WINGS_CLIP_DSMASH : -1;
+}
+
+/* Her status changing removes it; this is the guard should one keep it. */
+static void ndsP4PalutenaWingsProcUpdate(GObj *effect_gobj)
+{
+    EFStruct *ep = efGetStruct(effect_gobj);
+
+    if ((ep->fighter_gobj == NULL) ||
+        (ndsP4PalutenaWingsClip(ftGetStruct(ep->fighter_gobj)->status_id) < 0))
+    {
+        efManagerSetPrevStructAlloc(ep);
+        gcEjectGObj(effect_gobj);
+    }
+}
+
+static EFDesc sNdsP4PalutenaWingsDesc = {
+    0x4 | EFFECT_FLAG_USERDATA, 10, &gNdsP4PalutenaSpecial2,
+    { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0x00 },
+    { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0x00 },
+    ndsP4PalutenaWingsProcUpdate, gcDrawDObjTreeForGObj,
+    PAL_WINGS_TREE, 0x0, 0x0, 0x0
+};
+
+static GObj *ndsP4PalutenaWingsFind(GObj *fighter_gobj)
+{
+    GObj *effect_gobj;
+
+    for (effect_gobj = gGCCommonLinks[nGCCommonLinkIDEffect]; effect_gobj != NULL;
+         effect_gobj = effect_gobj->link_next)
+    {
+        EFStruct *ep = efGetStruct(effect_gobj);
+
+        if ((ep != NULL) && (ep->fighter_gobj == fighter_gobj) &&
+            (ep->proc_update == ndsP4PalutenaWingsProcUpdate))
+        {
+            return effect_gobj;
+        }
+    }
+    return NULL;
+}
+
+static void ndsP4PalutenaWingsSetTurn(DObj *dobj, const s16 *turn, f32 mirror)
+{
+    dobj->rotate.vec.f.x = (f32)turn[0] * PAL_WINGS_ANGLE;
+    dobj->rotate.vec.f.y = (f32)turn[1] * PAL_WINGS_ANGLE * mirror;
+    dobj->rotate.vec.f.z = (f32)turn[2] * PAL_WINGS_ANGLE * mirror;
+}
+
+static void ndsP4PalutenaWingsPose(GObj *effect_gobj, GObj *fighter_gobj, s32 clip)
+{
+    const NDSP4PalWingsTable *table;
+    const NDSP4PalWingsClip *rows;
+    DObj *root = DObjGetStruct(effect_gobj);
+    DObj *topn = DObjGetStruct(fighter_gobj);
+    DObj *nodes[PAL_WINGS_NODES];
+    const s16 *row;
+    f32 size;
+    s32 frame;
+    s32 side;
+    s32 k;
+
+    table = *(const NDSP4PalWingsTable **)((const u8 *)gNdsP4PalutenaSpecial2 + PAL_WINGS_TABLE_SLOT);
+    frame = (s32)(fighter_gobj->anim_frame + 0.5F);
+    rows = &table->clip[clip];
+
+    if ((table->magic != PAL_WINGS_MAGIC) || (table->values != PAL_WINGS_VALUES) ||
+        (frame < (s32)rows->first) || (frame > (s32)rows->last))
+    {
+        root->flags |= DOBJ_FLAG_HIDDEN;
+        return;
+    }
+    /* The tree (p6_wings.py write): root, torso, pair, then per side four
+     * bones, each with its card as its first child and the next bone after
+     * the card. */
+    nodes[0] = root;
+    nodes[1] = root->child;
+    nodes[2] = nodes[1]->child;
+    for (side = 0; side < 2; side++)
+    {
+        DObj *bone = (side == 0) ? nodes[2]->child : nodes[3]->sib_next;
+
+        for (k = 0; k < PAL_WINGS_BONES; k++)
+        {
+            nodes[3 + (side * 2 * PAL_WINGS_BONES) + (2 * k)] = bone;
+            nodes[4 + (side * 2 * PAL_WINGS_BONES) + (2 * k)] = bone->child;
+            bone = bone->child->sib_next;
+        }
+    }
+    root->flags &= ~DOBJ_FLAG_HIDDEN;
+    row = (const s16 *)((const u8 *)table + rows->rows) + ((frame - (s32)rows->first) * PAL_WINGS_VALUES);
+
+    root->translate.vec.f = topn->translate.vec.f;
+    root->rotate.vec.f = topn->rotate.vec.f;
+    root->scale.vec.f = topn->scale.vec.f;
+
+    nodes[1]->translate.vec.f.x = row[0];
+    nodes[1]->translate.vec.f.y = row[1];
+    nodes[1]->translate.vec.f.z = row[2];
+    ndsP4PalutenaWingsSetTurn(nodes[1], &row[3], 1.0F);
+
+    ndsP4PalutenaWingsSetTurn(nodes[2], &row[6], 1.0F);
+    size = (f32)row[9] * PAL_WINGS_SCALE;
+    nodes[2]->scale.vec.f.x = nodes[2]->scale.vec.f.y = nodes[2]->scale.vec.f.z = size;
+
+    for (k = 0; k < PAL_WINGS_BONES; k++)
+    {
+        const s16 *bone = &row[10 + (6 * k)];
+        const s16 *card = &row[10 + (6 * PAL_WINGS_BONES) + (2 * k)];
+
+        for (side = 0; side < 2; side++)
+        {
+            DObj *b = nodes[3 + (side * 2 * PAL_WINGS_BONES) + (2 * k)];
+            DObj *c = nodes[4 + (side * 2 * PAL_WINGS_BONES) + (2 * k)];
+            f32 mirror = (side == 0) ? 1.0F : -1.0F;
+
+            b->translate.vec.f.x = (f32)bone[0] * mirror;
+            b->translate.vec.f.y = bone[1];
+            b->translate.vec.f.z = bone[2];
+            ndsP4PalutenaWingsSetTurn(b, &bone[3], mirror);
+            c->scale.vec.f.x = (f32)card[0] * PAL_WINGS_SCALE;
+            c->scale.vec.f.y = (f32)card[1] * PAL_WINGS_SCALE;
+            c->scale.vec.f.z = 1.0F;
+        }
+    }
+}
+
+/* In a wing smash: the wings made on its first tic, posed every tic. */
+static void ndsP4PalutenaWings(GObj *fighter_gobj, FTStruct *fp, s32 clip)
+{
+    GObj *effect_gobj = ndsP4PalutenaWingsFind(fighter_gobj);
+
+    if (effect_gobj == NULL)
+    {
+        Vec3f pos = DObjGetStruct(fighter_gobj)->translate.vec.f;
+
+        effect_gobj = ndsP4EntryMakeEffect(&sNdsP4PalutenaWingsDesc, &pos);
+        if (effect_gobj == NULL)
+        {
+            return;
+        }
+        efGetStruct(effect_gobj)->fighter_gobj = fighter_gobj;
+        fp->is_effect_attach = TRUE;
+    }
+    ndsP4PalutenaWingsPose(effect_gobj, fighter_gobj, clip);
+}
+
+/* ftMainProcPhysicsMap's per-frame hook: in the forward and down smash, the
+ * wings; in the up smash, the pillar's columns sweep, and its flag0 makes
+ * the pillar once. */
 static void ndsP4PalutenaAfterProcMap(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
     GObj *effect_gobj;
     Vec3f pos;
+    s32 clip = ndsP4PalutenaWingsClip(fp->status_id);
     s32 i;
 
+    if (clip >= 0)
+    {
+        ndsP4PalutenaWings(fighter_gobj, fp, clip);
+        return;
+    }
     if (fp->status_id != nFTCommonStatusAttackHi4)
     {
         return;
