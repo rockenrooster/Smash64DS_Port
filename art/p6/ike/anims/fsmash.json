@@ -1,5 +1,5 @@
 {
- "comment": "Ike's forward smash (AttackS4; the owner's half-speed 3DS clip, Strong_Side_A, 1 frame a tick; his script's hit at clip frame 14 kept, his 0.75 attack rate playing it at tick 18.7; clip 0-14 = its 30-68, 14-35 = 68-96, 35-60 = 96-122), Ragnell's tip, his hands, head and feet placed where the clip has them (arm and leg IK) in Roy's stance: both hands lifting the hilt to his shoulder (2) and overhead with the blade down ahead (4-7, the sparkle), the blade hung down his back (9) and cocked level behind him as he leans back (11-12), swung over the top upright ahead as he steps in (13), the slam into a deep lunge with the blade along the floor ahead (14, the hit), held (to 24), the blade tipping up (35), rising (40-52), his wait (60).",
+ "comment": "Ike's forward smash (AttackS4; the owner's half-speed 3DS clip, Strong_Side_A, 1 frame a tick; his script's hit at clip frame 14 kept, his 0.75 attack rate playing it at tick 18.7; clip 0-14 = its 30-68, 14-35 = 68-96, 35-60 = 96-122), Ragnell's tip, his hands, head and feet placed where the clip has them (arm and leg IK) in Roy's stance: both hands lifting the hilt to his shoulder (2) and overhead with the blade down ahead (4-7, the sparkle), the blade hung down his back (9) and cocked level behind him as he leans back (11-12), swung over the top upright ahead as he steps in (13), the slam into a deep lunge with the blade along the floor ahead (14, the hit), held (to 24), the blade tipping up (35), rising (40-52), his wait (60). TransN (owner p6j: his old range back): a lunging slide of about 540 units into the slam (the tip about 1,260 from where he stood, as Roy's clip reached), drawn back as he rises.",
  "keyposes": {
   "skeleton": "roy",
   "scene": "builds/p6-art/ike/look/low_v3/scene.json",
@@ -1709,6 +1709,38 @@
    "travel": [
     [
      0,
+     0
+    ],
+    [
+     9,
+     0
+    ],
+    [
+     12,
+     260
+    ],
+    [
+     14,
+     540
+    ],
+    [
+     34,
+     545
+    ],
+    [
+     42,
+     470
+    ],
+    [
+     50,
+     230
+    ],
+    [
+     56,
+     40
+    ],
+    [
+     58,
      0
     ],
     [

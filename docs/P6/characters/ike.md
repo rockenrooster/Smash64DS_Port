@@ -235,8 +235,10 @@ Defaults for the new specials:
     overhead, it hangs down his back and is cocked level behind him as he
     leans back, swung over the top as he steps in, slammed down into a deep
     lunge with the blade along the floor ahead (the hit, frame 14), held,
-    rising. Its reach is the clip's: the tip about 730 units ahead at the
-    slam (Roy's clip reached about 990 with its 270-unit step).
+    rising. Owner p6j: "for Ike add old range back": the clip slides him in
+    (keyposes "transn" "travel": about 540 units over frames 9-14, drawn
+    back as he rises), so the tip lands about 1,260 units from where he
+    stood, as Roy's clip reached (its own 730 alone).
   - Up smash: Ragnell drawn up behind him in a low crouch, swung down
     before him and up in an arc overhead (the hits), over and down behind
     into a wide crouch.
