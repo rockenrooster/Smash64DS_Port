@@ -826,7 +826,7 @@ voices: converted at build time, never committed, D1/D10):
 side; `backlight02` the same in grey), `backlight00`/`03` (the ring behind
 her), `flash00`/`01` (soft radial glows), `tracecolor01/03/07` and
 `traceline01`/`tracealpha00` (the staff trail's colour ramps and alpha
-mask). The godwing model's Ultimate motions cover only the forward and down
+mask; not needed for the solid trail). The godwing model's Ultimate motions cover only the forward and down
 smash and the up taunt; the up air's and up smash's light wings are effects,
 not that model, so these are drawn as cards.
 
@@ -838,27 +838,34 @@ not that model, so these are drawn as cards.
    matrix rows (row 14's grip-to-gem axis is (0.10, 0.68, -0.73)), so a
    trail row gets an arbitrary local axis (`NDSP4SwordTrail` and
    `ndsP4UpdateSwordTrail`, the generator and `author_sword_trails`), from
-   the grip to the gem (about 0 to 400). Colours from `tracecolor01` (cyan to
-   white). The game's trail is untextured, Gouraud only: a textured,
-   alpha-masked trail (`tracealpha00`) would be a second step, a new path in
-   `renderer_adapter_fighter.c` (`ndsFighterDrawAfterImage`).
+   the grip to the gem (about 0 to 400). Solid (owner p6x): the game's own
+   untextured trail, a Gouraud gradient from cyan at the grip to white at the
+   gem, so no trail texture.
 2. **Gem glow** -- a camera-facing card at the gem (row 14 plus the gem's
    offset, about (41, 272, -290) as her staff hits use), `flash01` as a
    translucent radial glow, pulsed and scaled; a tree in her special file 2
    beside the pillar and wings (`p6_gate.py`), placed every tic by her code
    from the staff joint's matrix. A move turns it on and off from its script
    (a flag word her code reads, as the pillar's flag0 does), with a fade.
-3. **Overhead light wings** -- two cards behind her shoulders (`backlight01`,
-   the right one mirrored), hung from her torso row so they follow her lean,
-   with a per-move timeline (spread in, hold, fade) in a small table her code
-   reads every tic (as the smash wings' table); `backlight00` as an optional
-   ring behind her head. In the forward and down smash they sit behind the
-   godwing mesh wings (the "light" over the physical wings Ultimate shows).
+3. **Overhead light wings** -- the glowing wing effect (Ultimate's
+   `backlight01`: soft cyan-white feather strokes of light), not her white
+   feathered wings: two translucent cards behind her shoulders, the right
+   one mirrored, each about her height (owner p6x, as Ultimate), hung from
+   her torso row so they follow her lean, with a per-move timeline (spread
+   in, hold, fade) in a small table her code reads every tic (as the smash
+   wings' table). The taunt adds the glowing ring behind her head
+   (`backlight00`). In the forward and down smash the glow sits behind the
+   white godwing mesh wings, which stay as they are.
 
-**Costs (DS).** Textures: CI4/IA texels at 64x64 or 64x128 (2-4 KB each,
-about 12 KB for all; her special file 2 is 28 KB now). Geometry: one card a
-glow, two a wing set, a trail's at most 30 vertices; translucent, drawn
-after the opaque scene (DS 3D sorts translucent polygons after opaque).
+**Costs (DS).** Ultimate's textures are 128-256 texels RGBA; each is scaled
+down and made one grey intensity-and-alpha image (soft edges kept, as
+Meta Knight's IA8 Mach Tornado masks are drawn with graded alpha), tinted
+cyan-white by the card's colour, so one image serves every move: the light
+wing 64x64 (from 256x256), the ring 32x64 (from 128x256), the glow 32x32
+(from 128x128); about 6 KB at 8 bits a texel, less at 4. Her special file 2
+is 28 KB now. Geometry: one card a glow, two a wing set, a trail's at most
+30 vertices; translucent, drawn after the opaque scene (DS 3D sorts
+translucent polygons after opaque).
 CPU: one matrix and a few card vertices a tic while a piece is shown. Her
 lean draw path and GX slot budget (15 cross slots) are not touched: the
 cards are an effect's own tree, as the pillar.
@@ -870,11 +877,9 @@ air and taunt (the timeline table). Each: lab captures of the move from a
 following camera, a 1,800-frame CPU match, 0 native failures, 0 lean
 declines, then the owner's review.
 
-**For the owner to pick:** the colours (Ultimate's cyan-white, or gold to
-match her trim); whether the trail should be textured (Ultimate's soft
-edge) or the game's solid gradient; the wings' size against her height
-(Ultimate's are about her height); and the taunt's wings with or without the
-ring.
+**Owner's picks (p6x, 2026-10-16):** colours Ultimate's cyan-white; the
+staff trail solid (the game's gradient); the light wings about her height;
+the taunt with the light wings and the ring. Still a plan: nothing built.
 
 ## Animations (the owner's 3DS references, 2026-10-14)
 
