@@ -1,5 +1,5 @@
 {
- "comment": "Ultimate's entry (j00entryr): she walks out toward the camera from her gate (owner p6p: \"totally borked\" before); its TransN slot empty (with_transn_slot) as the Appear rows need. Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
+ "comment": "Ultimate's entry (j00entryr): she walks out of her gate toward the camera (owner p6p: \"totally borked\" before); its TransN slot empty (with_transn_slot) as the Appear rows need. Owner p6v: Ultimate's walk runs along the model's -x (its fighters face +-x in their entries), the game's Appear faces her to the camera (lr 0), so she walked left along the stage: turned 90 deg (\"yaw\") she walks from 583 units behind the stage's plane, through her gate (scripts/p6/p6_gate.py FRONT), and stops on the plane. Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
  "ultimate": {
   "fighter": "palutena",
   "skeleton": "peach",
@@ -8,6 +8,12 @@
   "length": 120,
   "first_slot": 0,
   "motion": "j00entryr",
+  "yaw": [
+   [
+    0,
+    90
+   ]
+  ],
   "time": [
    [
     0,

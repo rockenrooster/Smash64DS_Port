@@ -1,5 +1,5 @@
 {
- "comment": "Ultimate's Aether (d02specialhi1, then d02specialhi2 from 18): Ragnell swung from behind him, under and up in front (its hit, 14-17) and thrown up from there at 17 (owner p6t: \"uppercut into throw\"; thrown at 14 it left from behind him), a pause in the crouch, the leap to it at 40, caught at 46, the spin, the turn down (owner p6p: \"throws sword up forcefully, pause, jumps to sword, pause for spin, comes back down\"); the blade's flight item_path (it hangs where the hand meets it), his leap Ultimate's. Retargeted onto Roy's tree with his look by scripts/p6/ultimate.py (Roy's bind aligned to the T-pose) from the owner's local Ultimate files (never committed, P6 D1); Ultimate's timing, frame for frame (owner p6r).",
+ "comment": "Ultimate's Aether (d02specialhi1, then d02specialhi2 from 18): Ragnell swung from behind him, under and up in front (its hit, 14-17) and thrown up from there at 17 (owner p6t: \"uppercut into throw\"; thrown at 14 it left from behind him), a pause in the crouch, the leap to it at 40, caught at 46, the spin, the turn down (owner p6p: \"throws sword up forcefully, pause, jumps to sword, pause for spin, comes back down\"); the blade's flight item_path (it hangs 200 units ahead of where the hand meets it: owner p6v, \"a little more in front of Ike, to match the downward long swipe\"; it hung 280 behind his hips), his leap Ultimate's. Retargeted onto Roy's tree with his look by scripts/p6/ultimate.py (Roy's bind aligned to the T-pose) from the owner's local Ultimate files (never committed, P6 D1); Ultimate's timing, frame for frame (owner p6r).",
  "ultimate": {
   "fighter": "ike",
   "skeleton": "roy",
@@ -53,6 +53,7 @@
    ],
    "throw": 5,
    "centre": 275,
+   "ahead": 200,
    "spin": 30,
    "takeoff": 39,
    "rise": [

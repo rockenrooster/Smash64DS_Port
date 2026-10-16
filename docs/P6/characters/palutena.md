@@ -682,6 +682,56 @@ wrong: its turn is gone again).
   18 units a frame, 20 before; the forward air's 126, 278); her largest
   clip 14,048 bytes (14,144).
 
+## Owner p6v (2026-10-16): the entry, the smashes' sounds, items, down air
+
+Owner p6v (4.8/5): the entry's door "should be behind fighter plane so
+palutena can walk through it and stop on the fighter plane ... currently she
+walks left along the fighter plane. Door should 100% oscure Palutena until
+doors open"; the down smash's "wing slam animaiton is not syncronized
+correctly"; the smashes' "Wing SFX and enemy hit SFX should play together
+if there is a hit"; items "should revert back to peaches" (the beam sword,
+fan, ray gun and bat swing and scale wrongly); the down air "uses wrong
+SFX", its torso "twists too much out of alignment with hips at full
+impact"; neutral air "plays several of the same SFX"; Warp's delay "can be
+longer (1.25x longer)".
+
+- **The entry.** Ultimate's entry walk runs along the model's -x (its
+  fighters enter facing their side); SSB64's Appear turns her to the camera
+  (lr 0), so she walked left along the stage behind a gate standing 260
+  units in front of her. The clip is turned 90 degrees (ultimate.py
+  "yaw"): she walks 583 units out of the background toward the camera and
+  stops on the stage's plane. The gate stands 380 units behind the plane
+  (`p6_gate.py` FRONT), its closed doors hiding her (she starts 200 behind
+  them); they part toward the camera from tic 10, wide enough for her by
+  22, and she reaches them at about 31; the gate shrinks into its doorstep
+  from 84. Her sparkles are at the doors; her shadow, drawn under her entry
+  position, shows from 96 as she nears it.
+- **Down smash's wings** were an old table: her special file 2 (gate,
+  pillar, wings; `p6_gate.py`) is built by hand, not by make, and was last
+  built before p6r retimed the down smash. Rebuilt.
+- **Sounds.** The wings' sound (both smashes) and the down air's burst were
+  stored sounds, which SSB64 stops when a hit lands, so a hit played only
+  its own. They play to their end now, started so their loud part meets the
+  hit (the wings' rises over five frames: from 9 for the forward smash's hit
+  at 14, from 11 for the down smash's at 16; the down air's from 4 for 7).
+  The down air's hit sound is a kick's (it was a punch's). Neutral air
+  started its one-second whirl at each of its five light hits; it plays
+  once, from frame 1.
+- **Items.** Item pickups, throws, swings, shooting and the hammer (motions
+  88-133) are Peach's clips again; her dress is keyed on them as on every
+  clip she plays.
+- **Down air.** At the kick her torso turned about 160 degrees from her hips
+  (Ultimate spreads that twist over its waist bone; her tree has none).
+  From 6 to 9 her hips turn 30 degrees toward the camera and her torso 55
+  toward her hips, each about its own up so its lean is kept (ultimate.py
+  "turn" with "axis": "up"), held to 24 and eased out by 30: the twist
+  about 105 degrees.
+- **Warp** waits 1.25x as long before she vanishes (the start's clip, 12
+  frames to 15: anim.py "retime").
+- **Her legs in the dress** (`dress_check.py` as built): her 114 own clips'
+  thighs and knees out on 21 of 4,265 frames, her shins through the side on
+  7; the entry clean; Peach's item clips at most 4.8 units out, on 2 frames.
+
 ## Animations (the owner's 3DS references, 2026-10-14)
 
 Superseded by Ultimate's motions above (the recipes below were keyposes;

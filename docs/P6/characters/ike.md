@@ -420,6 +420,44 @@ it comes up from behind".
   17 (`item_path` release 17-18, from 14-16): thrown at 14 it left from
   behind him, as Ultimate's hand still was.
 
+## Owner p6v (2026-10-16): trails, the up smash, Eruption's blast
+
+Owner p6v (4.9/5): "ragnell sword trails should be more gold/yellow
+instead of red, and should match ragnels 1.25x length"; "run start and run
+stop SFX should be reverted to exactly Roy's SFX"; "Up smash has yaw issues
+and I can't seem to see the overhead swipe in the animation in game";
+Aether's thrown sword "a little more in front of Ike (to match the downward
+long swipe more)"; the dash attack should "lunge forward about 1.25x
+farther during upwards swing"; Eruption "fully charged needs a 2x bigger
+hitbox and exp"; Quick Draw's "minimum dash distance should be adjusted to
+be 0.75x. max unchanged".
+
+- **Trails.** His swing trail runs gold (255, 200, 0) at the guard to a
+  pale yellow tip (it was red-orange to white), along Ragnell from its
+  guard to its tip, 100 to 600 (the blade is 100-601 since p6s; the trail
+  stopped at 462.5); Eruption's blue trail takes the same reach.
+- **Run start and stop** play Roy's own sounds again (Dash 0x75 and
+  RunBrake 0x80 left out of the cue map; Ultimate's dash_start and
+  dash_stop stay on his jumps).
+- **Up smash.** The blade's arc in his plane -- Ultimate's 24.5-28: ahead,
+  overhead, behind -- took 2.5 frames, between two shown ones (the game
+  shows every other frame), so the overhead never showed; before it the
+  blade comes round his side in depth (Ultimate's own path). The swing now
+  runs 24-30 (time map), shown ahead low, up ahead, up behind and behind,
+  keyed every frame; its hits stay at 24-28 and 29-30.
+- **Aether.** The thrown sword hangs 200 units ahead of where his hand meets
+  it (ultimate.py `item_path` "ahead"; it hung 280 units behind his hips).
+- **Dash attack.** Its travel through the rising swing (frames 10-20) is
+  1.25x as long, 611 units to 763 (ultimate.py `transn` "boost"); the whole
+  lunge 1,012 to 1,165.
+- **Eruption at full charge.** Its blast hitbox is twice the size (912 to
+  1,824: spec `script_edits` "size_scale" on Roy's strong-end rows 217 and
+  221) and its explosion twice the size: the script's (effect 29) is left
+  out ("drop_effects") and `nds_p4_roy.c` makes it where the script did,
+  at scale 2, as the blast opens.
+- **Quick Draw** dashes 6 to 20 frames by charge (8 to 20: the shortest
+  0.75x as long, the longest kept).
+
 ## Audio (local inputs, never committed)
 
 Both sets are in `decomp/alt_assets/Fighters/Super Smash Bros Ultimate/Fighters/`

@@ -196,7 +196,14 @@
    "comment": "SpecialLwEnd ground: Roy's clip (owner p6i: Roy's again)"
   },
   "217": {
-   "comment": "SpecialLwEnd at full charge: as 216"
+   "comment": "SpecialLwEnd at full charge: as 216, its blast twice the size (owner p6v)",
+   "script_edits": {
+    "comment": "Owner p6v: \"fully charged needs a 2x bigger hitbox and exp\": Roy's strong swing's blast hitbox twice the size (912 to 1,824) and its explosion (effect 29) left to his code, which makes it twice the size where the script did (nds_p4_roy.c ndsP4IkeEruptionBlast)",
+    "size_scale": 2.0,
+    "drop_effects": [
+     29
+    ]
+   }
   },
   "218": {
    "comment": "SpecialAirLwStart: as 214",
@@ -209,7 +216,14 @@
    "comment": "SpecialAirLwEnd: as 216"
   },
   "221": {
-   "comment": "SpecialAirLwEnd at full charge: as 216"
+   "comment": "SpecialAirLwEnd at full charge: as 217",
+   "script_edits": {
+    "comment": "Owner p6v: \"fully charged needs a 2x bigger hitbox and exp\": Roy's strong swing's blast hitbox twice the size (912 to 1,824) and its explosion (effect 29) left to his code, which makes it twice the size where the script did (nds_p4_roy.c ndsP4IkeEruptionBlast)",
+    "size_scale": 2.0,
+    "drop_effects": [
+     29
+    ]
+   }
   },
   "224": {
    "comment": "Attack13 (appended; Roy's 195 is his entry): jab 3, Ragnell swung up over him (Ultimate's motion and timing, art/p6/ike/anims, scripts/p6/ultimate.py)",
@@ -477,31 +491,33 @@
  },
  "sword_trails": {
   "17": {
-   "comment": "His swing trail along Ragnell 1.25x as long as Roy's sword (owner p6s: \"make Ike's sword 1.25x longer\")",
-   "start": 87.5,
-   "end": 462.5
+   "comment": "His swing trail, gold to a pale yellow tip (owner p6v: \"more gold/yellow instead of red\"), along Ragnell from its guard to its tip, 100 to 600 (owner p6v: \"should match Ragnell's 1.25x length\"; its blade 100-601 since p6s, the trail stopped at 462.5)",
+   "colour_1": "ffc80000",
+   "colour_2": "ffffa000",
+   "start": 100.0,
+   "end": 600.0
   },
   "18": {
-   "comment": "His swing trail along Ragnell 1.25x as long as Roy's sword (owner p6s: \"make Ike's sword 1.25x longer\")",
-   "start": 87.5,
-   "end": 462.5
+   "comment": "Roy's Double-Edge Dance trail (his side special's rows, unused by Ike), along Ragnell from its guard to its tip, 100 to 600 (owner p6v: \"should match Ragnell's 1.25x length\"; its blade 100-601 since p6s, the trail stopped at 462.5)",
+   "start": 100.0,
+   "end": 600.0
   },
   "19": {
-   "comment": "His swing trail along Ragnell 1.25x as long as Roy's sword (owner p6s: \"make Ike's sword 1.25x longer\")",
-   "start": 87.5,
-   "end": 462.5
+   "comment": "Roy's Double-Edge Dance trail (his side special's rows, unused by Ike), along Ragnell from its guard to its tip, 100 to 600 (owner p6v: \"should match Ragnell's 1.25x length\"; its blade 100-601 since p6s, the trail stopped at 462.5)",
+   "start": 100.0,
+   "end": 600.0
   },
   "20": {
-   "comment": "His swing trail along Ragnell 1.25x as long as Roy's sword (owner p6s: \"make Ike's sword 1.25x longer\")",
-   "start": 87.5,
-   "end": 462.5
+   "comment": "Roy's Double-Edge Dance trail (his side special's rows, unused by Ike), along Ragnell from its guard to its tip, 100 to 600 (owner p6v: \"should match Ragnell's 1.25x length\"; its blade 100-601 since p6s, the trail stopped at 462.5)",
+   "start": 100.0,
+   "end": 600.0
   },
   "21": {
-   "comment": "Eruption's swing trail, Roy's Flare Blade trail with red and blue swapped; along Ragnell 1.25x as long (owner p6s)",
+   "comment": "Eruption's swing trail, Roy's Flare Blade trail with red and blue swapped, along Ragnell from its guard to its tip, 100 to 600 (owner p6v: \"should match Ragnell's 1.25x length\"; its blade 100-601 since p6s, the trail stopped at 462.5)",
    "colour_1": "0000ff00",
    "colour_2": "006ce000",
-   "start": 62.5,
-   "end": 475.0
+   "start": 100.0,
+   "end": 600.0
   }
  },
  "cpu": {

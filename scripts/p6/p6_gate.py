@@ -7,10 +7,13 @@ door at its outer edge. Its front faces (twelve triangles a door) become one
 display list a door, textured from the image's door half (the faces' own
 planar mapping) as a 64x64 CI4 image, unlit and two-sided. The file holds a
 DObjDesc tree -- the root (placed at her entry position by the entry case,
-src/port/nds_p4_palutena.c), a node `front` units toward the camera, and
-the two doors on their hinges -- then the lists, the vertices, the image and
+src/port/nds_p4_palutena.c), a node FRONT units toward the camera (behind
+her entry position when negative), and the two doors on their hinges -- then the lists, the vertices, the image and
 its palette, as an O2R container in her special file 2 (the entry effect
-draws it natively: scripts/p4/p4_articles.py's "gate" root).
+draws it natively: scripts/p4/p4_articles.py's "gate" root). Owner p6v: the
+gate stands behind the stage's plane (FRONT negative) and she walks out of
+it toward the camera (art/p6/palutena/anims/entry.json), hidden by its doors
+until they part toward the camera, and stops on the plane.
 
 The same file holds her up smash's light pillar (owner playtest 2026-10-14,
 round 2: one column in front of her, exactly vertical; owner p6j: redone on
@@ -56,7 +59,12 @@ HEADER = bytes(4) + b"OLER" + bytes(4) + bytes.fromhex("efbeadde") * 2 + bytes(0
 
 FILE_ID = 0x1B10
 HEIGHT = 920.0        # world units: 1.3 times her height (her kit's ratio)
-FRONT = 260.0         # the doors stand this far toward the camera from her
+# The doors' plane, toward the camera from her entry position: behind the
+# stage's plane, between her entry walk's start (583 units back) and its end
+# (on the plane). Her front reaches it at frame ~31, the doors 78 deg open
+# (60 deg, room for her, from tic 22: nds_p4_palutena.c PAL_GATE_*); swung
+# open they reach to 53 units behind the plane.
+FRONT = -380.0
 TEX = 64              # the door image's side (CI4: 2 KB, TMEM's half)
 U_CROP = 0.75         # the image's door half (its right quarter is the edges')
 DOBJ_END = N.JOINT_TREE_END

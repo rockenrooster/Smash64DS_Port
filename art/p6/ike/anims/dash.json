@@ -1,5 +1,5 @@
 {
- "comment": "Ultimate's dash attack (c00attackdash): the rising slash, its hit at 14-18; its Trans travel in the TransN slot (0.81 of Ultimate's, the old clip's 1,012 units); keys every other frame. Retargeted onto Roy's tree with his look by scripts/p6/ultimate.py (Roy's bind aligned to the T-pose) from the owner's local Ultimate files (never committed, P6 D1); Ultimate's timing, frame for frame (owner p6r).",
+ "comment": "Ultimate's dash attack (c00attackdash): the rising slash, its hit at 14-18; its Trans travel in the TransN slot (0.81 of Ultimate's, the old clip's 1,012 units), the lunge through the rising swing (frames 10-20) 1.25x as far (owner p6v: \"needs to lunge forward about 1.25x farther during upwards swing\"); keys every other frame. Retargeted onto Roy's tree with his look by scripts/p6/ultimate.py (Roy's bind aligned to the T-pose) from the owner's local Ultimate files (never committed, P6 D1); Ultimate's timing, frame for frame (owner p6r).",
  "ultimate": {
   "fighter": "ike",
   "skeleton": "roy",
@@ -37,7 +37,12 @@
    ]
   ],
   "transn": {
-   "scale": 0.81
+   "scale": 0.81,
+   "boost": [
+    10,
+    20,
+    1.25
+   ]
   },
   "key_step": 2
  }

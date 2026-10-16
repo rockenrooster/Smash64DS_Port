@@ -155,6 +155,39 @@ void ndsP4RoyDSPAirWaitMain(GObj *fighter_gobj)
     ndsP4RoyDSPWaitMain(fighter_gobj, ROY_STATUS_DSPA_STRONG_END, ROY_STATUS_DSPA_END);
 }
 
+#if NDS_P4_CODE_IKE
+/* Ike's Eruption at full charge (owner p6v: "fully charged needs a 2x
+ * bigger hitbox and exp"): his strong swing's script (scripts/p6/ike/
+ * spec.json script_edits) doubles its blast hitbox and leaves out its
+ * explosion (effect 29 at TopN 0, 160, 768), made here as the blast opens,
+ * twice the size, as Snake's C4 scales the same effect. */
+#define IKE_ERUPTION_BLAST_SCALE 2.0F
+#define IKE_ERUPTION_BLAST_UP 160.0F
+#define IKE_ERUPTION_BLAST_AHEAD 768.0F
+
+#include <ef/effect.h>
+#include <if/interface.h>
+
+LBParticle *efManagerSparkleWhiteMultiExplodeMakeEffect(Vec3f *pos);
+
+static void ndsP4IkeEruptionBlast(FTStruct *fp)
+{
+    Vec3f pos;
+    LBParticle *pc;
+
+    pos.x = 0.0F;
+    pos.y = IKE_ERUPTION_BLAST_UP;
+    pos.z = IKE_ERUPTION_BLAST_AHEAD;
+    gmCollisionGetFighterPartsWorldPosition(fp->joints[nFTPartsJointTopN], &pos);
+    pc = efManagerSparkleWhiteMultiExplodeMakeEffect(&pos);
+
+    if (pc != NULL)
+    {
+        pc->xf->scale.x = pc->xf->scale.y = pc->xf->scale.z = IKE_ERUPTION_BLAST_SCALE;
+    }
+}
+#endif
+
 /* RoyDSP.end_main_ (0xF1/0xF2/0xF5/0xF6 update): the strong swing's
  * recoil (10% when the script sets temp variable 3), then each hitbox
  * that has just opened takes 2 damage a level and 8 + 2 a level shield
@@ -171,6 +204,12 @@ void ndsP4RoyDSPEndMain(GObj *fighter_gobj)
     {
         ftParamUpdateDamage(fp, 10);
         fp->motion_vars.flags.flag2 = 0;
+#if NDS_P4_CODE_IKE
+        if (ndsP4Content(fp) == NDS_P4_CONTENT_IKE)
+        {
+            ndsP4IkeEruptionBlast(fp);
+        }
+#endif
     }
     charge = *ndsP4RoyCharge(fp);
     shield = charge + 8;

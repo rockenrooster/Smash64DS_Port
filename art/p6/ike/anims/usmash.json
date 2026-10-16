@@ -1,5 +1,5 @@
 {
- "comment": "Ultimate's up smash (c04attackhi4): the overhead swing, its hits at 24-28 and 29-30; keys every other frame. Retargeted onto Roy's tree with his look by scripts/p6/ultimate.py (Roy's bind aligned to the T-pose) from the owner's local Ultimate files (never committed, P6 D1); Ultimate's timing, frame for frame (owner p6r).",
+ "comment": "Ultimate's up smash (c04attackhi4): the overhead swing, its hits at 24-28 and 29-30; keys every other frame. Retargeted onto Roy's tree with his look by scripts/p6/ultimate.py (Roy's bind aligned to the T-pose) from the owner's local Ultimate files (never committed, P6 D1); Ultimate's timing, frame for frame (owner p6r). Owner p6v, \"I can't seem to see the overhead swipe\": the blade's arc in his plane (Ultimate's 24.5-28: ahead, up, behind) fell between the two shown frames (the game shows every other); it runs 24-30 now, shown at 24 (ahead, low), 26 (up ahead), 28 (up behind) and 30 (behind), keyed every frame.",
  "ultimate": {
   "fighter": "ike",
   "skeleton": "roy",
@@ -11,7 +11,7 @@
   "key_dense": [
    [
     22,
-    28
+    32
    ]
   ],
   "time": [
@@ -28,7 +28,15 @@
     24
    ],
    [
-    26.5,
+    26,
+    25.5
+   ],
+   [
+    28,
+    26.5
+   ],
+   [
+    30,
     29
    ],
    [

@@ -1,5 +1,5 @@
 {
- "comment": "Ultimate's down air (c05attackairlw): the downward kick, her body swinging toward the camera (owner p6p); its hits from 7. Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
+ "comment": "Ultimate's down air (c05attackairlw): the downward kick, her body swinging toward the camera (owner p6p); its hits from 7. Owner p6v: at the kick her torso twisted ~160 deg from her hips (Ultimate spreads that over its waist bone; her tree has none), so from 6 to 9 her hips twist 30 deg toward the camera and her torso 55 toward her hips (about their own up, their lean kept), held to 24, eased out by 30. Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
  "ultimate": {
   "fighter": "palutena",
   "skeleton": "peach",
@@ -38,6 +38,52 @@
    "motion": "a04fall",
    "frame": 0,
    "frames": 3
-  }
+  },
+  "turn": [
+   {
+    "row": 1,
+    "axis": "up",
+    "keys": [
+     [
+      6,
+      0
+     ],
+     [
+      9,
+      30
+     ],
+     [
+      24,
+      30
+     ],
+     [
+      30,
+      0
+     ]
+    ]
+   },
+   {
+    "row": 2,
+    "axis": "up",
+    "keys": [
+     [
+      6,
+      0
+     ],
+     [
+      9,
+      -55
+     ],
+     [
+      24,
+      -55
+     ],
+     [
+      30,
+      0
+     ]
+    ]
+   }
+  ]
  }
 }

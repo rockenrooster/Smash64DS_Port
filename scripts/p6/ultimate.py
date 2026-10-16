@@ -760,15 +760,26 @@ def _turns(skel: A.Skeleton, turns: list, per_rot: list, per_tr: list, length: i
     [[frame, degrees], ...]}, ...], linear between keys; + leans the row's
     top forward, about the model's x; a row's turn carries its children, so a
     later row's adds to it): owner p6s, her up tilt "leaning back far, facing
-    upwards ... like the limbo" -- Ultimate's backbend eased."""
+    upwards ... like the limbo" -- Ultimate's backbend eased. "axis": "up"
+    twists the row about its own up as posed (its lean kept; + turns its
+    front toward the model's +x), "y" about the model's vertical: owner p6v,
+    her down air's hips and torso turned toward each other."""
+    bind = None
     for t in turns:
         r = int(t["row"])
+        about = t.get("axis", "x")
+        if about == "up" and bind is None:
+            bind, _bp = K._worlds(skel, [A.euler(*e) for e in skel.rotate], [list(v) for v in skel.translate])
         for g in range(length + 1):
             deg = _keyed(t["keys"], g)
             if not deg:
                 continue
             rr, _pp = K._worlds(skel, per_rot[g], per_tr[g])
-            turn = _axis_angle(np.array([1.0, 0.0, 0.0]), math.radians(deg))
+            if about == "up":
+                ax = rr[r] @ bind[r].T @ np.array([0.0, 1.0, 0.0])
+            else:
+                ax = np.array({"x": [1.0, 0.0, 0.0], "y": [0.0, 1.0, 0.0]}[about])
+            turn = _axis_angle(ax / np.linalg.norm(ax), math.radians(deg))
             parent = skel.parents[r]
             pw = rr[parent] if parent >= 0 else np.eye(3)
             per_rot[g][r] = pw.T @ (turn @ rr[r])
@@ -810,7 +821,10 @@ def _item_path(skel: A.Skeleton, cfg: dict, ip: dict, per_rot: list, per_tr: lis
     frame after it (the status code's table), or "vel" up less "gravity" a
     frame ("tvel" the fastest fall); game units over the fighter's "size" are
     the model's. Its point "centre" along the blade is the one that flies;
-    [c0, c1] eases it back into the hand."""
+    [c0, c1] eases it back into the hand. "ahead" (model units, his facing)
+    hangs it that much farther in front of him than where the hand meets it
+    (owner p6v: Aether's thrown sword "a little more in front of Ike, to
+    match the downward long swipe")."""
     it = cfg["item"]
     ir, hr = it["row"], it["hand"]
     r0, r1 = (int(x) for x in ip["release"])
@@ -838,7 +852,7 @@ def _item_path(skel: A.Skeleton, cfg: dict, ip: dict, per_rot: list, per_tr: lis
     worlds = [K._worlds(skel, per_rot[g], per_tr[g]) for g in range(length + 1)]
     held = [(rr[ir], pp[ir] + rr[ir] @ mid) for rr, pp in worlds]
     r_rel, p_rel = held[r0]
-    hang = held[c1][1] + np.array([0.0, rise(c1), 0.0])
+    hang = held[c1][1] + np.array([0.0, rise(c1), float(ip.get("ahead", 0.0))])
     # The blade's angle in the camera's plane at release and at the catch:
     # rot_x(phi) takes an angle atan2(y, z) down by phi.
     b0, b1 = r_rel @ axis, held[c1][0] @ axis
@@ -1031,6 +1045,14 @@ def build(skel: A.Skeleton, spec: dict, scales=None, rom=None, extras: dict | No
             z0 = tsrc.trans_z(time_map(part["time"], 0))
             fac = float(tn.get("scale", 1.0)) if isinstance(tn, dict) else 1.0
             z = [(tsrc.trans_z(time_map(part["time"], g)) - z0) * rt.k * fac for g in range(length + 1)]
+            if isinstance(tn, dict) and tn.get("boost"):
+                # The travel over frames [a, b] times `factor`, the frames
+                # after carried the extra (owner p6v: Ike's dash attack
+                # lunging 1.25x as far through its rising swing).
+                a, b, k = int(tn["boost"][0]), int(tn["boost"][1]), float(tn["boost"][2])
+                za, zb = z[a], z[b]
+                z = [v if g <= a else (za + (v - za) * k if g <= b else v + (zb - za) * (k - 1.0))
+                     for g, v in enumerate(z)]
             st = A.Stream(length, None)
             for c in range(3):
                 st.tracks[c] = A.Track([0] * (length + 1), 0)

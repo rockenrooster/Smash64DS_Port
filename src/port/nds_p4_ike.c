@@ -52,12 +52,13 @@ void ndsP4RoyEntryCase(FTStruct *fp);
 
 /* Quick Draw (card defaults): up to 75 frames of charge (60 in the card;
  * owner playtest 2026-10-14, p6d: 1.25x as long to the farthest dash); a
- * dash of 8 to 20 frames by charge at four times his run speed (three times
- * Roy's: owner p6r slowed his run to 0.75); the slash on contact gains up to
- * 7 damage by charge (Ultimate's 6-13). */
+ * dash of 6 to 20 frames by charge (owner p6v: the shortest 0.75x of its 8,
+ * the longest kept) at four times his run speed (three times Roy's: owner
+ * p6r slowed his run to 0.75); the slash on contact gains up to 7 damage by
+ * charge (Ultimate's 6-13). */
 #define IKE_QD_CHARGE_MAX 75
-#define IKE_QD_DASH_MIN 8
-#define IKE_QD_DASH_RANGE 12
+#define IKE_QD_DASH_MIN 6
+#define IKE_QD_DASH_RANGE 14
 #define IKE_QD_SPEED_MUL 4.0F
 #define IKE_QD_SLASH_BONUS 7
 #define IKE_QD_AIR_FALL_MAX 8.0F

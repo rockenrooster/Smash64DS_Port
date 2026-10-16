@@ -732,13 +732,16 @@ static s32 ndsP4PalutenaUpdateDamage(FTStruct *fp, s32 damage)
  * Her entry_script row is her own (scripts/p6/palutena/spec.json kind_tables
  * "entry_script"): this case makes her gate, the DObjDesc tree at 0 of her
  * special file 2 (scripts/p6/p6_gate.py: the root at her entry position, a
- * node toward the camera, the two doors on their hinges), drawn natively as
- * an entry effect (scripts/p4/p4_articles.py's "gate" root). Its update parts
- * the doors from tic PAL_GATE_OPEN_AT over PAL_GATE_OPEN_TICS, each turning
- * PAL_GATE_OPEN_DEG on its hinge toward the camera, then shrinks the gate
- * away from PAL_GATE_SHRINK_AT and ejects it at PAL_GATE_END, inside her
- * entry clip (scripts/p6/palutena/motions/entry.ms times her sparkles to
- * the parting). The tic count is the effect's (effect_vars.common.size). */
+ * node behind it -- the stage's plane -- the two doors on their hinges),
+ * drawn natively as an entry effect (scripts/p4/p4_articles.py's "gate"
+ * root). Its update parts the doors from tic PAL_GATE_OPEN_AT over
+ * PAL_GATE_OPEN_TICS, each turning PAL_GATE_OPEN_DEG on its hinge toward the
+ * camera, then shrinks the gate away about its doorstep from
+ * PAL_GATE_SHRINK_AT and ejects it at PAL_GATE_END, inside her entry clip:
+ * she walks out of it toward the camera, hidden by the closed doors, and
+ * stops on the plane (owner p6v; scripts/p6/palutena/motions/entry.ms times
+ * her sparkles to the parting). The tic count is the effect's
+ * (effect_vars.common.size). */
 #define PAL_GATE_OPEN_AT 10
 #define PAL_GATE_OPEN_TICS 24
 #define PAL_GATE_OPEN_DEG 80.0F

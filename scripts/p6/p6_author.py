@@ -319,14 +319,18 @@ def assemble_block(lines: list[str], ram: bytearray, events: dict, label: str,
 def edited_script(rom, events: dict, row: dict, edits: dict, index: int) -> list[str]:
     """The base's own script for a motion as text, edited (A5, a reused move):
     "damage_scale" multiplies every MakeAttackColl's damage (rounded, at
-    least 1), "element" maps elements ({"1": 3}: fire to slash), "drop" lists
-    command names to leave out, "frame_speed" puts a RemixFrameSpeedMultiplier
-    first (flag 0: animation and script clock together). The command words
-    come from the staged ROM; a script with pointer commands is refused."""
+    least 1), "size_scale" every MakeAttackColl's size, "element" maps
+    elements ({"1": 3}: fire to slash), "drop" lists command names to leave
+    out and "drop_effects" Effect commands by effect id (Ike's full Eruption:
+    its blast made twice the size by his code, owner p6v), "frame_speed" puts
+    a RemixFrameSpeedMultiplier first (flag 0: animation and script clock
+    together). The command words come from the staged ROM; a script with
+    pointer commands is refused."""
     import mscript
     if rom is None:
         raise AuthorError(f"spec motions {index}: script_edits need the staged ROM (--staging)")
-    unknown = set(edits) - {"damage_scale", "element", "drop", "frame_speed", "comment"}
+    unknown = set(edits) - {"damage_scale", "size_scale", "element", "drop", "drop_effects", "frame_speed",
+                            "comment"}
     if unknown:
         raise AuthorError(f"spec motions {index}: unknown script_edits {sorted(unknown)}")
     root = row.get("script_root")
@@ -340,14 +344,17 @@ def edited_script(rom, events: dict, row: dict, edits: dict, index: int) -> list
         bits = struct.unpack(">I", struct.pack(">f", float(edits["frame_speed"])))[0]
         out.append(f"RemixFrameSpeedMultiplier value={(bits + 0x8000) >> 16}")
     scale = float(edits.get("damage_scale", 1.0))
+    size_scale = float(edits.get("size_scale", 1.0))
     element = {int(str(k), 0): int(v) for k, v in (edits.get("element") or {}).items()}
     drop = set(edits.get("drop") or ())
+    drop_effects = {int(v) for v in edits.get("drop_effects") or ()}
     for text in mscript.block_commands(rom, events, root):
         op, fields = mscript.parse(text)
-        if op in drop:
+        if op in drop or (op == "Effect" and fields.get("effect_id") in drop_effects):
             continue
         if op == "MakeAttackColl":
             fields["damage"] = max(1, int(fields["damage"] * scale + 0.5))
+            fields["size"] = int(fields["size"] * size_scale + 0.5)
             fields["element"] = element.get(fields["element"], fields["element"])
             text = op + " " + " ".join(f"{k}={v}" for k, v in fields.items())
         out.append(text)
