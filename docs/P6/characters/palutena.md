@@ -797,6 +797,13 @@ you are' voice cue".
   trail runs along her shin from 5 to 13: a sword trail of her own (Peach has
   none), row 23 on the knee row along the shin (`author_sword_trails` adds a
   content's own rows now).
+- **Down air, follow-up** (owner p6x, the hits drawn: frames 7-11 sat in a
+  cluster under her feet, and the swing up behind her, which the trail shows
+  as the back of the U, had none): the hits run to 13, 1.25x the size (foot
+  469, shin 344) and moved 50 up the leg toward her body (the foot's
+  along its ankle-to-knee axis, the shin's to 7 from the knee), so they
+  cover her body more; in game, facing left, they run from 252 ahead at
+  frame 6 to 213 behind at 12-13.
 - **The taunt** says "Ready when you are" (`appeal02`: 1.2 s, five syllables,
   a voiced R onset; `appeal01`, which it played, has an S early on).
 
