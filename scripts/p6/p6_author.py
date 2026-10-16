@@ -817,17 +817,30 @@ def author_sword_trails(resolved: dict, rows: dict) -> None:
     hex, alpha unused) and reach ("start", "end": along the part's axis) on
     the content's own copy of its base's SwordTrail.asm rows: Ike's Eruption
     swing trail blue where Roy's Flare Blade's is red, his trails along his
-    longer Ragnell."""
+    longer Ragnell. An id the base has no row for is a new row of the
+    content's own (its "model_part", the row a trail follows, and "axis", the
+    joint matrix row it runs along, then the rest; the content's character):
+    Palutena's down air kick trail on her shin (owner p6x)."""
     if not rows:
         return
     by_id = {t["id"]: t for t in resolved["sword_trails"]}
     for key, entry in sorted(rows.items(), key=lambda kv: int(kv[0], 0)):
         trail = by_id.get(int(key, 0))
-        if trail is None:
-            raise AuthorError(f"spec sword_trails: no trail {key} in the base")
-        unknown = set(entry) - {"colour_1", "colour_2", "start", "end", "comment"}
+        unknown = set(entry) - {"colour_1", "colour_2", "start", "end", "model_part", "axis", "comment"}
         if unknown:
             raise AuthorError(f"spec sword_trails {key}: unknown keys {sorted(unknown)}")
+        if trail is None:
+            missing = {"model_part", "axis", "colour_1", "colour_2", "start", "end"} - set(entry)
+            if missing:
+                raise AuthorError(f"spec sword_trails: no trail {key} in the base, and a new row needs {sorted(missing)}")
+            if not 0 < int(key, 0) <= 0xFF or int(entry["axis"]) > 2:
+                raise AuthorError(f"spec sword_trails {key}: id 1-255, axis 0-2")
+            trail = {"id": int(key, 0), "character": resolved["remix_kind_id"], "model_part": int(entry["model_part"]),
+                     "axis": int(entry["axis"])}
+            resolved["sword_trails"].append(trail)
+            by_id[trail["id"]] = trail
+        elif "model_part" in entry or "axis" in entry:
+            raise AuthorError(f"spec sword_trails {key}: the base's row keeps its part and axis")
         for k in ("colour_1", "colour_2"):
             if k in entry:
                 trail[k] = int(str(entry[k]), 16)

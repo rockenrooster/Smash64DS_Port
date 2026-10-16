@@ -856,6 +856,7 @@ void ndsP4MrgawDSPAttacksMain(GObj *fighter_gobj)
 #if NDS_P2_KIRBY
 static void ndsP4MrgawKirbyOnStatus(GObj *fighter_gobj, s32 status_id);
 static void ndsP4MrgawKirbyColAnimEnd(GObj *fighter_gobj);
+static void ndsP4MrgawKirbyAfterProcMap(GObj *fighter_gobj);
 #endif
 
 const NDSP4Overrides gNdsP4MrgawOverrides = {
@@ -865,6 +866,7 @@ const NDSP4Overrides gNdsP4MrgawOverrides = {
 #if NDS_P2_KIRBY
     .kirby_on_status = ndsP4MrgawKirbyOnStatus,
     .kirby_colanim_end = ndsP4MrgawKirbyColAnimEnd,
+    .kirby_after_proc_map = ndsP4MrgawKirbyAfterProcMap,
 #endif
 };
 
@@ -1032,6 +1034,23 @@ static void ndsP4MrgawKirbyOnStatus(GObj *fighter_gobj, s32 status_id)
 static void ndsP4MrgawKirbyColAnimEnd(GObj *fighter_gobj)
 {
     ndsP4MrgawKirbySilhouette(fighter_gobj);
+}
+
+/* Every frame he holds the power (kirby_after_proc_map: after the frame's
+ * colour animation update, before he is drawn), the black figure over any
+ * colour a status, an item or a flash set (owner p6x: hurt, item and copy
+ * animations still showed his skin; "please check 100% of Kirby's
+ * animations"). The status and colour-animation-end hooks above put it back
+ * at once on those events; this holds it on every other frame, including
+ * the copy's own animation from the frame he takes the power. */
+static void ndsP4MrgawKirbyAfterProcMap(GObj *fighter_gobj)
+{
+    GMColAnim *colanim = &ftGetStruct(fighter_gobj)->colanim;
+
+    colanim->is_use_color1 = TRUE;
+    colanim->color1.r = colanim->color1.g = colanim->color1.b = 0;
+    colanim->color1.a = 0xFF;
+    colanim->color1.ir = colanim->color1.ig = colanim->color1.ib = colanim->color1.ia = 0;
 }
 #endif /* NDS_P2_KIRBY */
 

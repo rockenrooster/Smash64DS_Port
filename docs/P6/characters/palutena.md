@@ -778,6 +778,104 @@ staff floating and motionless off to the side".
   staff row keyed against her hand every frame; spec "pose" groups take
   "menu_motions").
 
+## Owner p6x (2026-10-16): the entry, the down air, the taunt
+
+Owner p6x (4.99/5): the intro "should not be playing any explosion VFX";
+the down air "still hard to hit someone with this attack. its meant to be a
+wide downwards sweeping kick (wide 'U' shape downwards swipe kick) ... maybe
+add a white trail vfx to her leg/foot"; the taunt "should be the 'Ready when
+you are' voice cue".
+
+- **The entry** has no burst (the SparkleWhiteMulti at the doors at tic 22);
+  the small sparkle as the doors part stays.
+- **Down air.** Its hits follow the kick again, on the foot and the middle
+  of the shin, from 6 to 11 as the foot sweeps from ahead, under her and up
+  behind (2 frames under her before): the game tests a hit along its path
+  from the frame before, so the six frames sweep the U, and her hits lie in
+  her plane (`planar_hits`), so the foot's depth (which flips with her
+  facing) does not move them. The sparkle stays under her on TopN. A white
+  trail runs along her shin from 5 to 13: a sword trail of her own (Peach has
+  none), row 23 on the knee row along the shin (`author_sword_trails` adds a
+  content's own rows now).
+- **The taunt** says "Ready when you are" (`appeal02`: 1.2 s, five syllables,
+  a voiced R onset; `appeal01`, which it played, has an S early on).
+
+## VFX plan (owner p6x, 2026-10-16: plan only, nothing built yet)
+
+Owner p6x: "we will need some special palutena VFX for her attacks that use
+the overhead light wing shaped VFX, staff VFX trails, and gem glow light
+VFX ... (no implementation yet, just plan)". The owner's list:
+
+| Move | Staff trail | Gem glow | Overhead light wings |
+|---|---|---|---|
+| Forward air | yes (staff spins) | yes | |
+| Neutral air | yes (staff spins) | yes | |
+| Up tilt | yes (staff spins) | yes | |
+| Down tilt | yes (staff spins) | yes | |
+| Jab combo | | yes | |
+| Up air | | yes | yes |
+| Up smash | | | yes |
+| Forward smash | | | yes |
+| Down smash | | | yes |
+| Taunt | | | yes |
+
+**Inputs.** Ultimate's own effect textures are in the owner's local rip
+(`decomp/alt_assets/.../Ultimate/Fighters/Palutenas Effects/`; used like her
+voices: converted at build time, never committed, D1/D10):
+`ef_palutena_backlight01` (the light wings: three cyan feather strokes, one
+side; `backlight02` the same in grey), `backlight00`/`03` (the ring behind
+her), `flash00`/`01` (soft radial glows), `tracecolor01/03/07` and
+`traceline01`/`tracealpha00` (the staff trail's colour ramps and alpha
+mask). The godwing model's Ultimate motions cover only the forward and down
+smash and the up taunt; the up air's and up smash's light wings are effects,
+not that model, so these are drawn as cards.
+
+**Three pieces, each built once and timed per move:**
+
+1. **Staff trail** -- the sword-trail system Ike's Ragnell and her down air
+   use (`SetAfterImage`, three samples a trail, filled between in 30-degree
+   steps, coloured base to tip). Her staff's length is not one of its joint's
+   matrix rows (row 14's grip-to-gem axis is (0.10, 0.68, -0.73)), so a
+   trail row gets an arbitrary local axis (`NDSP4SwordTrail` and
+   `ndsP4UpdateSwordTrail`, the generator and `author_sword_trails`), from
+   the grip to the gem (about 0 to 400). Colours from `tracecolor01` (cyan to
+   white). The game's trail is untextured, Gouraud only: a textured,
+   alpha-masked trail (`tracealpha00`) would be a second step, a new path in
+   `renderer_adapter_fighter.c` (`ndsFighterDrawAfterImage`).
+2. **Gem glow** -- a camera-facing card at the gem (row 14 plus the gem's
+   offset, about (41, 272, -290) as her staff hits use), `flash01` as a
+   translucent radial glow, pulsed and scaled; a tree in her special file 2
+   beside the pillar and wings (`p6_gate.py`), placed every tic by her code
+   from the staff joint's matrix. A move turns it on and off from its script
+   (a flag word her code reads, as the pillar's flag0 does), with a fade.
+3. **Overhead light wings** -- two cards behind her shoulders (`backlight01`,
+   the right one mirrored), hung from her torso row so they follow her lean,
+   with a per-move timeline (spread in, hold, fade) in a small table her code
+   reads every tic (as the smash wings' table); `backlight00` as an optional
+   ring behind her head. In the forward and down smash they sit behind the
+   godwing mesh wings (the "light" over the physical wings Ultimate shows).
+
+**Costs (DS).** Textures: CI4/IA texels at 64x64 or 64x128 (2-4 KB each,
+about 12 KB for all; her special file 2 is 28 KB now). Geometry: one card a
+glow, two a wing set, a trail's at most 30 vertices; translucent, drawn
+after the opaque scene (DS 3D sorts translucent polygons after opaque).
+CPU: one matrix and a few card vertices a tic while a piece is shown. Her
+lean draw path and GX slot budget (15 cross slots) are not touched: the
+cards are an effect's own tree, as the pillar.
+
+**Order.** (1) Gem glow on the jab combo, up air and tilts (smallest, proves
+the card path and the script flag). (2) Staff trail on the four spinning
+moves (the trail row with a free axis). (3) Light wings on the smashes, up
+air and taunt (the timeline table). Each: lab captures of the move from a
+following camera, a 1,800-frame CPU match, 0 native failures, 0 lean
+declines, then the owner's review.
+
+**For the owner to pick:** the colours (Ultimate's cyan-white, or gold to
+match her trim); whether the trail should be textured (Ultimate's soft
+edge) or the game's solid gradient; the wings' size against her height
+(Ultimate's are about her height); and the taunt's wings with or without the
+ring.
+
 ## Animations (the owner's 3DS references, 2026-10-14)
 
 Superseded by Ultimate's motions above (the recipes below were keyposes;

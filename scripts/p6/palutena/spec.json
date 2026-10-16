@@ -1297,5 +1297,16 @@
     }
    ]
   }
- ]
+ ],
+ "sword_trails": {
+  "23": {
+   "comment": "Owner p6x: the down air \"meant to be a wide downwards sweeping kick ... maybe add a white trail vfx to her leg/foot\": a trail of her own (no Peach row) on her left shin (row 17, the knee, along its x to the ankle at 115), from just below the knee past the ankle, white (motions/dair.ms SetAfterImage 23).",
+   "model_part": 17,
+   "axis": 0,
+   "colour_1": "e8f4ff00",
+   "colour_2": "ffffff00",
+   "start": 20.0,
+   "end": 160.0
+  }
+ }
 }

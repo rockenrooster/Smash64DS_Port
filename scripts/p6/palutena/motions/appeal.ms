@@ -3,10 +3,12 @@
 # her hand brushing her hair back (art/p6/palutena/anims/appeal.json, key
 # poses on the owner's 3DS reference, 2026-10-14), her halo (the head row's
 # part 2) glowing with a sparkle at her head (owner p6i: no burst); her voice
-# and swing cues where Peach's script has its own.
+# and swing cues where Peach's script has its own. Owner p6x: her line "Ready
+# when you are" (appeal02: 1.2 s, five syllables, a voiced R onset; appeal01
+# has an early S).
 SetSlopeContour flags=3
 MakeRumble length=0 rumble_id=6
-PlayVoiceStoreInfo value=cue:appeal01
+PlayVoiceStoreInfo value=cue:appeal02
 SyncWait frames=12
 SetModelPartID joint_id=12 modelpart_id=2
 Effect joint_id=12 effect_id=31 flag=0 off_x=0 off_y=120 off_z=0 rng_x=0 rng_y=0 rng_z=0

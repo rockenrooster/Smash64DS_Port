@@ -2287,7 +2287,14 @@ Remix's statuses; the catch takes them as any power):
   to it) and cleared with the power (`ndsP4KirbyClearSilhouette`). A blend
   made in the renderer alone (`ndsRendererAdapterFighterColorModulate`) left
   him pink: the lean path re-tints a list only when its tint-tile set moves,
-  which a colour animation drives.
+  which a colour animation drives. Owner p6x (2026-10-16: hurt, item and
+  copy animations still showed his skin, "please check 100% of Kirby's
+  animations"): a status or item colour animation running held the blend
+  off, and the copy's own animation ran before any status change gave it;
+  the black is now set every frame he holds the power, after the frame's
+  colour animation update (`kirby_after_proc_map`,
+  `ndsP4MrgawKirbyAfterProcMap`), over any colour a status, item or flash
+  sets.
 - **Snake: a hand grenade and his bandana.** Snake's grenade, made at the
   Thunder Jolt toss's flag already thrown (his neutral throw; his forward one
   with the stick forward), two out at most for that Kirby, counted on the item

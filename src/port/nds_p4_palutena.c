@@ -1223,7 +1223,7 @@ static void ndsP4PalutenaDress(GObj *fighter_gobj, FTStruct *fp)
     f32 forward_speed, forward_accel, target, fall;
     s32 i;
 
-    if ((fp->player < 0) || (fp->player >= GMCOMMON_PLAYERS_MAX))
+    if (fp->player >= GMCOMMON_PLAYERS_MAX)
     {
         return;
     }
