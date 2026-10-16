@@ -56,7 +56,20 @@ bends there:
   of the tree, row 26's only child);
 - the slit's V runs through both bands: the mid ring has a vertex on each of
   its edges (on the line from the slit's top to its hem vertex), the V open
-  below them.
+  below them; owner p6t ("make the slit smaller", "a miniscule amount"): its
+  top SLIT_DROP lower and its hem opening SLIT_HEM wide (two hem vertices of
+  its own);
+- the hem's rest radius HEM_SCALE of the approved model's about its centre
+  (owner p6t: "hem radius should be 10% smaller at default rest ... while
+  keeping A-line"), the mid ring on the line from row 25's ring to it, or
+  CONCAVE of its radius in from that line (the dress's slight concave flare;
+  the owner's pick of the candidates, 9%);
+- the hem moved HEM_SHIFT (x, z), the band tilting about row 25's ring with
+  it: her wait (the cloth's rest, skirt_keys.py) stands with one leg well
+  behind the other, and the approved model's hem, centred on its bind pose's
+  legs, met the back leg (owner p6t: "the dress cone should point more
+  backwards to give the legs even space around them"; legclear.py measured
+  the room in front of and behind her legs even with it).
 
     look_skirt.py --scene <scene.json> [--scene ...] [--samples high|low]
 
@@ -88,6 +101,19 @@ ROW_HELD, HELD_HIDDEN_PART = 28, 3
 # The mid ring's height (model units; her knees are at 153, the hem at about
 # 65, row 25's ring at 294).
 MID_Y = 165.0
+# The slit (owner p6t, "make the slit smaller ... a miniscule amount"): its
+# opening at the hem in u about its top's u (the hem samples' span SLIT was
+# 0.139), and how far down the band its top moves (model units).
+SLIT_HEM = 0.125
+SLIT_DROP = 12.0
+# The hem's radius at rest (a fraction of the approved model's, about its
+# centre) and the mid ring's inset from the straight line to it (a fraction
+# of its radius; 0: a straight A-line).
+HEM_SCALE = 0.9
+CONCAVE = 0.09
+# The hem's move at rest (model units: x to her left, z forward), the mid
+# ring's along the band's line with it.
+HEM_SHIFT = (-28.0, -46.0)
 # The row 25 ring: this much above the cut and this fraction of its radius,
 # inside the upper band's lower edge.
 OVERLAP_UP = 6.0
@@ -156,6 +182,20 @@ def _cut_ring(verts: list[dict], tris: list[dict], y: float) -> list[dict]:
     return ring
 
 
+def _centre(points: np.ndarray) -> np.ndarray:
+    """The x/z centroid of a ring's polygon (its points in order; a last point
+    on the first, the seam's copy, dropped)."""
+    if len(points) > 2 and np.linalg.norm(points[0] - points[-1]) < 1e-3:
+        points = points[:-1]
+    x, z = points[:, 0], points[:, 2]
+    x1, z1 = np.roll(x, -1), np.roll(z, -1)
+    cross = x * z1 - x1 * z
+    area = cross.sum() / 2.0
+    if abs(area) < 1e-6:
+        return np.array([x.mean(), z.mean()])
+    return np.array([((x + x1) * cross).sum(), ((z + z1) * cross).sum()]) / (6.0 * area)
+
+
 def split_band(scene: dict) -> dict:
     """The lower band (row 25's ring to the hem on row 26) split at MID_Y by
     a mid ring on row 26, the hem moved to row 27 (the module's note)."""
@@ -200,6 +240,13 @@ def split_band(scene: dict) -> dict:
                             scale=[1.0, 1.0, 1.0], has_list=True)
     joints[ROW_MID] = dict(joints[ROW_MID], world=w_mid.tolist(), translate=offset(w25, w_mid))
     inv_mid, inv_hem = np.linalg.inv(w_mid), np.linalg.inv(w_hem)
+    # The hem's rest radius (owner p6t: "10% smaller at default rest"),
+    # about its centre.
+    hem_xz = _centre(np.array([verts[i]["model"] for i in hem], dtype=float))
+    for i in hem:
+        p = np.array(verts[i]["model"], dtype=float)
+        p[[0, 2]] = hem_xz + (p[[0, 2]] - hem_xz) * HEM_SCALE + np.asarray(HEM_SHIFT, dtype=float)
+        verts[i]["model"] = [round(float(x), 3) for x in p]
     for i in hem:
         verts[i]["joint"] = ROW_HEM3
         verts[i]["local"] = [round(float(x), 3) for x in (inv_hem @ np.append(verts[i]["model"], 1.0))[:3]]
@@ -223,9 +270,43 @@ def split_band(scene: dict) -> dict:
                       "rgba": list(proto["rgba"]), "object": DRESS})
         return len(verts) - 1
 
-    mid = [add(at(a, h, MID_Y)) for a, h in zip(ring25, hem)]
-    v_left = add(at(apex, hem[slit_k], MID_Y))
-    v_right = add(at(apex, hem[slit_k + 1], MID_Y))
+    # The mid ring on the line from row 25's ring to the hem (an A-line), or
+    # CONCAVE of its radius in from it.
+    mid_q = [at(a, h, MID_Y) for a, h in zip(ring25, hem)]
+    mid_xz = _centre(np.array([q["pos"] for q in mid_q]))
+
+    def inset(q: dict) -> dict:
+        q["pos"][[0, 2]] = mid_xz + (q["pos"][[0, 2]] - mid_xz) * (1.0 - CONCAVE)
+        return q
+
+    mid = [add(inset(q)) for q in mid_q]
+    # The slit (owner p6t: "make the slit smaller" -- a minuscule change):
+    # its top moved SLIT_DROP down the band, its opening at the hem
+    # SLIT_HEM wide about the top's u (two hem vertices of its own; it was
+    # the hem samples' span, SLIT), its edges through the mid ring.
+    u_c = float(verts[apex]["uv"][0])
+
+    def along(i0: int, i1: int, u: float, row: int) -> int:
+        """A vertex on the ring between vertices i0 and i1 at u (row: its row)."""
+        t = (u - verts[i0]["uv"][0]) / (verts[i1]["uv"][0] - verts[i0]["uv"][0])
+        lerp = lambda key: (np.array(verts[i0][key], dtype=float) +
+                            (np.array(verts[i1][key], dtype=float) - np.array(verts[i0][key], dtype=float)) * t)
+        q = {"pos": lerp("model"), "uv": lerp("uv"), "normal": lerp("normal")}
+        i = add(q)
+        if row != ROW_MID:
+            verts[i]["joint"] = row
+            verts[i]["local"] = [round(float(x), 3) for x in (inv_hem @ np.append(q["pos"], 1.0))[:3]]
+        return i
+    hem_l = along(hem[slit_k], hem[slit_k + 1], u_c - SLIT_HEM / 2.0, ROW_HEM3)
+    hem_r = along(hem[slit_k], hem[slit_k + 1], u_c + SLIT_HEM / 2.0, ROW_HEM3)
+    hem_c = along(hem[slit_k], hem[slit_k + 1], u_c, ROW_HEM3)
+    q = at(apex, hem_c, float(verts[apex]["model"][1]) - SLIT_DROP)
+    w25 = np.array(joints[ROW_UPPER]["world"], dtype=float)
+    verts[apex]["model"] = [round(float(x), 3) for x in q["pos"]]
+    verts[apex]["local"] = [round(float(x), 3) for x in (np.linalg.inv(w25) @ np.append(q["pos"], 1.0))[:3]]
+    verts[apex]["uv"] = [round(float(x), 5) for x in q["uv"]]
+    v_left = add(inset(at(apex, hem_l, MID_Y)))
+    v_right = add(inset(at(apex, hem_r, MID_Y)))
     new_tris = []
 
     def tri(row: int, a: int, b: int, c: int) -> None:
@@ -241,8 +322,10 @@ def split_band(scene: dict) -> dict:
             tri(ROW_MID, a, v_left, apex)
             tri(ROW_MID, apex, v_right, b)
             tri(ROW_MID, b, v_right, m1)
-            tri(ROW_HEM3, m0, h0, v_left)
-            tri(ROW_HEM3, v_right, h1, m1)
+            tri(ROW_HEM3, m0, h0, hem_l)
+            tri(ROW_HEM3, m0, hem_l, v_left)
+            tri(ROW_HEM3, v_right, hem_r, m1)
+            tri(ROW_HEM3, m1, hem_r, h1)
             continue
         tri(ROW_MID, a, m0, b)
         tri(ROW_MID, b, m0, m1)
@@ -252,7 +335,7 @@ def split_band(scene: dict) -> dict:
     scene["triangles"] = [t for t in tris if id(t) not in old] + new_tris
     return {"split": len(band), "upper": sum(1 for t in new_tris if t["joint"] == ROW_MID),
             "lower": sum(1 for t in new_tris if t["joint"] == ROW_HEM3), "mid_ring": len(mid) + 2,
-            "mid_y": MID_Y}
+            "mid_y": MID_Y, "hem_scale": HEM_SCALE, "concave": CONCAVE, "hem_shift": list(HEM_SHIFT)}
 
 
 def remesh(scene: dict, detail: str) -> dict:

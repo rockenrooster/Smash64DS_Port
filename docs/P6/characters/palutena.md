@@ -613,6 +613,62 @@ further)".
   Still Peach's: being grabbed and thrown, the guard (its shield-pose
   rows), the shield-break flight, the rebirth and the pipe.
 
+## Owner p6t (2026-10-15): the dress's shape, the slit, her joints in game
+
+Owner p6t (4/5): the dress's "natural" pose "seems to look more like a hoop
+dress instead of palutena's slightly concave A-Line dress"; "its only very
+slightly concave ... stick to a-line that you can measure"; "make the slit
+smaller" ("I only wanted to move it a miniscule amount"; of four candidates
+"Let's go with 12 lower for now"); "hem radius should be 10% smaller at
+default rest ... While keeping a line"; concavity candidates ("Oh wow I
+really like D"); "for the default resting pose the dress cone should point
+more backwards to give the legs even space around them"; "we will need leg
+clipping checks"; the down air "a little janky ... head/chest/arm areas
+seem out of sorts"; the up tilt's backbend was right (only the dress was
+wrong: its turn is gone again).
+
+- **An A-line at rest.** The cloth's natural pose is the model's again
+  (`skirt_keys.py`): Ultimate's skirt chains are measured from Ultimate's
+  wait (ultimate.py "skirt_rest"), not its bind, whose dress is narrower,
+  so its wait no longer flares hers; the dress hangs toward straight down
+  by the pelvis's tilt only; her legs' capsules are 0.85 of the leg mesh's
+  radius with no margin. Her wait's rings are the scene's to the unit.
+- **The slit** keeps its V through both bands, its top 12 units lower and
+  its hem opening 0.125 of the way round (it was 0.139; `look_skirt.py`
+  SLIT_DROP, SLIT_HEM).
+- **The rest shape (candidate D, tilted back).** The hem is 0.9 of the
+  approved model's radius about its centre (HEM_SCALE: 114 to 103), the mid
+  ring 9% of its radius in from the line from the hips to the hem (CONCAVE;
+  the candidates were 0, 3, 6 and 9%), and the hem moves back and toward
+  her left (HEM_SHIFT, the band tilting about row 25's ring): her wait
+  stands with one leg well behind the other, and the hem centred on the
+  model's bind legs met that leg (0 units of room behind it, 92 in front).
+  Now 40 in front and 40 behind at the hem, 21 and 20 at her knees
+  (measured on the wait's cloth), at least 31 through the idle loop.
+- **The joints the game locked.** SSB64 makes a fighter with the joints
+  its `FTAttributes.animlock` names locked at rest (`ftParamSetAnimLocks`)
+  and frees them only in a motion whose row sets anim_flags bit 0. Peach's
+  are rows 3, 10, 15, 18, 20 and 23 -- her shoulders, her hips'
+  orientation and her ankles -- which her N64 clips never key; no row of
+  Palutena's set the bit, so every Ultimate motion played with those at
+  rest in the game (her arms and legs off the renders: the down air's arms,
+  legs through the dress the cloth was solved around). Her own clips now
+  key them all (`anim.py` `key_rest_rows`), her rows with her clips set bit
+  0 (spec `"anim_locks": "rest"`), and her code frees them there and holds
+  them at rest in Peach's clips (`NDSP4Overrides.anim_locks_rest`,
+  `ndsP4AnimLocksRest`). 144 of her 184 clips moved them more than 15
+  degrees.
+- **The leg check** (owner p6t: "we will need leg clipping checks"): every
+  clip keyed by the cloth for this shape, then `dress_check.py`'s measure
+  per frame, her thighs and knees apart from her shins: only her wait (0
+  of 181 frames) and a few others keep them inside; walking 14-26 units
+  out (the back leg through the back of the dress mid-stride), the run 22,
+  jumps and the squat 40-60, the down smash 98, flips, tumbles and the
+  ledge's rises up to 178 (upside down the dress falls toward her head).
+  A wider leg push alone helps the walk, run and squat and worsens the
+  jumps and forward air: the next pass makes the rings' fit hold the
+  thighs and knees (rows 26 and 27 widen or move until they are in).
+
 ## Animations (the owner's 3DS references, 2026-10-14)
 
 Superseded by Ultimate's motions above (the recipes below were keyposes;

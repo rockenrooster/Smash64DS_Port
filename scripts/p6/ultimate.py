@@ -124,6 +124,8 @@ FIGHTERS = {
         # p6s).
         "skirt": [f"S_Skirt{d}4_null" for d in ("F", "FL", "L", "BL", "B", "BR", "R", "FR")],
         "skirt_mid": [f"S_Skirt{d}3" for d in ("F", "FL", "L", "BL", "B", "BR", "R", "FR")],
+        # Where the skirt's moves are measured from: her standing wait.
+        "skirt_rest": ["a00wait1", 0],
         # The held joint (row 28: the grab's and heavy items' hold, look_skirt.py
         # "joint_roles") where Ultimate's Throw bone is, in a recipe that asks
         # ("held": the catch, the throws, heavy items).
@@ -131,6 +133,8 @@ FIGHTERS = {
     },
 }
 DEFAULT_ROOT = REPO.parent / "ssbu-recomp" / "build"
+# The hair card's angle from hanging (degrees) its large angles ease toward.
+HAIR_SOFT = 60.0
 
 
 class UltimateError(SystemExit):
@@ -322,6 +326,7 @@ class Source:
                 for tr in node.tracks:
                     self.tracks[node.name] = tr.values
         self.keep_trans = keep_trans
+        self.fighter = fighter
         it = cfg.get("item") or {}
         self.item = (ItemMotion(fighter, it["model"], motion, it["model_bone"])
                      if model == "body" and it.get("model") else None)
@@ -570,6 +575,19 @@ class Retarget:
         if hc and not self.spec.get("no_hair"):
             hr = hc["row"]
             world[hr] = self._hair_frame(W, src) @ self._hair_bind_inv @ self.bind[hr]
+            # Ultimate's long hair flies out as she drops; the panels are one
+            # stiff card, which then stands out from her head like a sheet
+            # (owner p6t, down air: "head/chest/arm areas seem out of
+            # sorts"): its angle from hanging eased toward HAIR_SOFT
+            # (a -> S * (1 - exp(-a / S))).
+            hang = world[hr] @ self.bind[hr].T @ np.array([0.0, -1.0, 0.0])
+            down = np.array([0.0, -1.0, 0.0])
+            a = float(np.arccos(np.clip(np.dot(hang, down) / max(np.linalg.norm(hang), 1e-9), -1.0, 1.0)))
+            if a > 1e-3:
+                soft = math.radians(HAIR_SOFT)
+                ax = np.cross(hang, down)
+                ax = ax / max(np.linalg.norm(ax), 1e-9)
+                world[hr] = _axis_angle(ax, a - soft * (1.0 - math.exp(-a / soft))) @ world[hr]
             settle(hr)
         # The feet where Ultimate's scaled ankles are, the soles kept.
         if self.spec.get("plant", True):
@@ -617,10 +635,9 @@ class Retarget:
             self._hbi = self._hair_frame_of(lambda n: self.src_bind_pos[n], np.eye(3)).T
         return self._hbi
 
-    def skirt_moves(self, u, src, yaw=0.0, names=None):
-        """Ultimate's hem points' (or the named skirt joints') moves from
-        their rest in the hips' frame (our pelvis's: both binds face +z), in
-        our units, at frame u."""
+    def _skirt_points(self, u, src, yaw, names):
+        """The named skirt joints in the hips' frame (our pelvis's: both
+        binds face +z), Ultimate's units, at frame u."""
         W = src.worlds(u)
         if yaw:
             Y = np.eye(4)
@@ -630,12 +647,27 @@ class Retarget:
         hip = self.cfg["pelvis"]["bone"]
         H = _rot(W[i[hip]]) @ _rot(src.bind_world(hip)).T
         ph = np.asarray(W[i[hip]], float)[:3, 3]
-        out = []
-        for n in (names or self.cfg["skirt"]):
-            now = H.T @ (np.asarray(W[i[n]], float)[:3, 3] - ph)
-            rest = self.src_bind_pos[n] - self.src_bind_pos[hip]
-            out.append([float(v) for v in (now - rest) * self.k])
-        return out
+        return [H.T @ (np.asarray(W[i[n]], float)[:3, 3] - ph) for n in names]
+
+    def skirt_moves(self, u, src, yaw=0.0, names=None):
+        """Ultimate's hem points' (or the named skirt joints') moves in the
+        hips' frame, in our units, at frame u: from where her standing wait
+        has them ("skirt_rest", owner p6t: the dress in its natural pose is
+        the look's A-line, and Ultimate's own skirt hangs wider at the knees
+        standing than in its bind), or from the bind."""
+        names = names or self.cfg["skirt"]
+        now = self._skirt_points(u, src, yaw, names)
+        sr = self.cfg.get("skirt_rest")
+        if sr:
+            key = (sr[0], float(sr[1]), tuple(names))
+            cache = self.__dict__.setdefault("_skirt_rest", {})
+            if key not in cache:
+                cache[key] = self._skirt_points(float(sr[1]), Source(src.fighter, sr[0]), 0.0, names)
+            rest = cache[key]
+        else:
+            hip = self.cfg["pelvis"]["bone"]
+            rest = [self.src_bind_pos[n] - self.src_bind_pos[hip] for n in names]
+        return [[float(v) for v in (a - b) * self.k] for a, b in zip(now, rest)]
 
     def skirt_azimuths(self, names=None):
         pts = np.array([self.src_bind_pos[n] for n in (names or self.cfg["skirt"])])

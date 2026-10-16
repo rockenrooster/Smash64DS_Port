@@ -27,8 +27,8 @@ keys come from a cloth model baked over the clip (Skirt.cloth):
 - each point follows that target through a damped spring (SPRING_MID,
   SPRING_HEM: the hem lags more, the cloth's weight), then the constraints
   hold (FEEDBACK of their move kept as speed): the lengths, the rings'
-  edges (RING_STRETCH), her legs -- each thigh and shin a capsule of the
-  leg mesh's radius plus MARGIN, pushing the points, the chains' segments
+  edges (RING_STRETCH), her legs -- each thigh and shin a capsule of
+  LEG_RADIUS of the leg mesh's radius plus MARGIN, pushing the points, the chains' segments
   and the rings' edges out from her middle (never to the nearer side: a
   kick would pass the dress under the thigh), so a raised knee stretches
   the dress over it (owner p6j) -- the hem's points drawn LEVEL with each
@@ -83,9 +83,10 @@ ROW_HAIR, ROW_HAIR_FROM, ROW_HEAD = 9, 2, 8
 LEGS = ((16, 17, 18), (21, 22, 23))
 # The cloth (model units, per frame of the clip):
 # Each chain hangs from its point on row 25's ring: its segments point the
-# way the dress's rest shape about the pelvis does, drawn toward straight
-# down by HANG (the upper band, near the hips) and HANG_HEM (the lower).
-HANG, HANG_HEM = 0.45, 0.7
+# way the dress's rest shape about the pelvis does, turned back toward
+# hanging as they were by HANG (the upper band, near the hips) and HANG_HEM
+# (the lower) of the pelvis's tilt from upright.
+HANG, HANG_HEM = 0.4, 0.65
 # A guided clip: the points drawn this share of the way to where Ultimate's
 # chains put them.
 GUIDE_W = 0.65
@@ -99,7 +100,12 @@ SQUASH = 0.8                # nor shorter than this share (on a floor it spreads
 RING_STRETCH = (0.7, 1.5)   # a ring's edges within these shares of their rest
 LEVEL = 0.35                # the hem's points drawn this share to their mean height
 FLOOR_Y = 3.0               # the hem's least height on a floor (the mid ring's: + 8)
-MARGIN = 7.0                # the cloth kept this far off a leg's surface
+# Her legs' capsules: LEG_RADIUS of the leg mesh's radius, and the cloth
+# kept MARGIN off them (owner p6t, "the natural pose ... more like a hoop
+# dress": the look's A-line passes within a few units of her knees, and a
+# margin pushed it out into a bulge there standing).
+LEG_RADIUS = 0.85
+MARGIN = 0.0
 FEEDBACK = 0.3              # share of a constraint's move the spring keeps
 ITER = 3                    # constraint passes a frame
 # The fit:
@@ -308,7 +314,10 @@ class Skirt:
             raise SystemExit("the scene's skirt is not on rows 25/26/27 (look_skirt.py split_band)")
         uv = lambda i: float(verts[i]["uv"][0])
         ring25 = sorted(bands[1][0], key=uv)
-        hem = sorted(hem, key=uv)
+        # The hem's samples at the ring's u (the slit's own two hem vertices
+        # ride the fit).
+        us25 = [uv(i) for i in ring25]
+        hem = sorted((i for i in hem if any(abs(uv(i) - u) < 1e-3 for u in us25)), key=uv)
         mid_all = bands[2][0]
         hem_u = [uv(i) for i in hem]
         # The mid ring's samples on the band's sides (one per hem sample, at
@@ -365,6 +374,7 @@ class Skirt:
         self.hair_row = any(v.get("object") == "DS_hair_panels" and v["joint"] == ROW_HAIR for v in verts)
         self.roles = scene.get("joint_roles") or []
         self.rest_axis = self.rest25[:3, :3] @ np.array([0.0, 0.0, -1.0])
+        self.pelvis_bind_inv = np.linalg.inv(self.bind[ROW_PELVIS][:3, :3])
 
     # ------------------------------------------------------------ the guide
 
@@ -412,9 +422,20 @@ class Skirt:
             if trail:
                 fwd = m[:3, 2] / max(np.linalg.norm(m[:3, 2]), 1e-6)
                 air = -trail * fwd
-            d1 = unit(unit(rest1 - anchor) * (1.0 - HANG) + (down + air) * HANG)
+            # Gravity acts on her tilt: standing, the dress is the look's
+            # A-line (owner p6t: "the natural pose ... more like a hoop
+            # dress"); as her hips turn from upright, each segment turns
+            # HANG (HANG_HEM) of the way back toward hanging as it did.
+            pd = m[:3, :3] @ self.pelvis_bind_inv @ down
+            pd = pd / max(np.linalg.norm(pd), 1e-6)
+            tilt_axis = np.cross(pd, down)
+            tilt = float(np.arctan2(np.linalg.norm(tilt_axis), np.dot(pd, down)))
+            ax = tilt_axis / max(np.linalg.norm(tilt_axis), 1e-9)
+            back1 = _turn(ax, HANG * tilt) if tilt > 1e-4 else np.eye(3)
+            back2 = _turn(ax, HANG_HEM * tilt) if tilt > 1e-4 else np.eye(3)
+            d1 = unit(unit(rest1 - anchor) @ back1.T + air * HANG)
             t1 = anchor + d1 * self.len1[:, None]
-            d2 = unit(unit(rest2 - rest1) * (1.0 - HANG_HEM) + (down + air) * HANG_HEM)
+            d2 = unit(unit(rest2 - rest1) @ back2.T + air * HANG_HEM)
             t2 = t1 + d2 * self.len2[:, None]
             if g_mid is not None:
                 t1 = t1 + (to_model(m, g_mid[i][:k]) - t1) * GUIDE_W
@@ -433,8 +454,9 @@ class Skirt:
             caps = []
             for (hip, knee, ankle), (rh, rk, ra) in zip(LEGS, self.radii):
                 ph, pk, pa = mats[hip][:3, 3], mats[knee][:3, 3], mats[ankle][:3, 3]
-                caps.append((ph, pk, rh + MARGIN, rk + MARGIN))
-                caps.append((pk, pa, rk + MARGIN, ra + MARGIN))
+                rh, rk, ra = rh * LEG_RADIUS + MARGIN, rk * LEG_RADIUS + MARGIN, ra * LEG_RADIUS + MARGIN
+                caps.append((ph, pk, rh, rk))
+                caps.append((pk, pa, rk, ra))
             q1, q2 = p1.copy(), p2.copy()
             centre = m[:3, 3]
             # Each chain's outward direction: from the pelvis's vertical axis

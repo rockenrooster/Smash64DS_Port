@@ -38,6 +38,7 @@
    "script": "scripts/p6/palutena/motions/win4.ms"
   }
  },
+ "anim_locks": "rest",
  "motions": {
   "3": {
    "comment": "RebirthWait: her wait (Ultimate's)",
