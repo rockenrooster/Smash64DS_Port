@@ -732,6 +732,52 @@ longer (1.25x longer)".
   thighs and knees out on 21 of 4,265 frames, her shins through the side on
   7; the entry clean; Peach's item clips at most 4.8 units out, on 2 frames.
 
+## Owner p6w (2026-10-16): sounds, reach, items, the clap
+
+Owner p6w (4.95/5): the intro "should not be playing any voice SFX";
+forward and up tilt "Change hit SFX to the same one as the forward air a.
+make hitbox 1.15x"; up air "multiple SFX bug. make hitbox 1.15x"; down air
+"the twinkle sparkle is no longer directly under palutena 100% of the time
+... like the 'hitbox' moves around ... make the hitbox 1.25x"; item
+animations missing sounds ("running beam sword, missing beam sword swing
+SFX and palutena effort SFX") and the bat's and beam sword's side smashes
+"should swing all the way to the ground flat, but stop short"; the smashes'
+hits "should extend to just past the fully extended wing tips by 12 units";
+the second jump "still uses peach SFX"; the results clap "should have the
+staff floating and motionless off to the side".
+
+- **The entry** has no voice (her line at the doors' parting is gone).
+- **Forward and up tilt** hit with the forward air's sound (a heavy
+  punch, level 2; theirs were medium and light) and hitboxes 1.15x the size.
+- **Up air** plays its shimmer once, from frame 4 so it peaks at the last
+  hit (it started again at each of six hits); hitboxes 1.15x.
+- **Down air.** Its hits and sparkle sat on the swinging foot and knee,
+  whose depth flips toward or away from the camera with her facing (and
+  moved with p6v's hip turn); they are on TopN under her now (115 below,
+  30 ahead, where the foot meets them; Ultimate's hit is on its top bone),
+  1.25x the size.
+- **Forward and down smash.** The far hits reach 12 units past the wings'
+  tips at full stretch (`p6_wings.py`'s mesh as baked): the forward smash's
+  tips 892 ahead, its hit to 904; the down smash's 724 each side, to 736.
+- **The second jump** plays her own sound (`se_palutena_jump02`) where
+  Peach's double-jump sound was (FGM 0x2BF, `audio.json` map).
+- **Item sounds.** SSB64's item swings and throws carry no voice, only the
+  item's swing sound (the game's shared swing scripts, called from each
+  fighter's); hers now add her voice (spec `script_edits` "insert": Peach's
+  scripts kept, their calls into the shared scripts kept as calls): the
+  quick swings attack01, the strong ones attack02, the dash swings attack03
+  (the side smashes keep their smash voice), the throws attack04, the heavy
+  throws attack05; the beam sword's and the star rod's swings also her swing
+  sound (the rod's had none; the sword's own kept).
+- **The item side smash** (Swing4, all four items) swings down flat: the
+  item row is pitched down so the item lies about 12 degrees below level,
+  its tip at the floor, from the hit (20) to 40 (`pose_ops.pitch`, spec
+  "pose"; it stopped about 18 degrees above level).
+- **The results clap.** Her staff floats still, upright, beside her (230
+  to her right, at her hand's height) while she claps (`pose_ops.pin`: the
+  staff row keyed against her hand every frame; spec "pose" groups take
+  "menu_motions").
+
 ## Animations (the owner's 3DS references, 2026-10-14)
 
 Superseded by Ultimate's motions above (the recipes below were keyposes;

@@ -324,21 +324,34 @@ def edited_script(rom, events: dict, row: dict, edits: dict, index: int) -> list
     out and "drop_effects" Effect commands by effect id (Ike's full Eruption:
     its blast made twice the size by his code, owner p6v), "frame_speed" puts
     a RemixFrameSpeedMultiplier first (flag 0: animation and script clock
-    together). The command words come from the staged ROM; a script with
-    pointer commands is refused."""
+    together), "insert" adds lines before a command ([{"before": op, "nth":
+    1, "lines": [...]}]: Palutena's item swings and throws given her voice,
+    owner p6w). The command words come from the staged ROM; a script's
+    Subroutine calls into RAM blocks (the game's shared item swings) are kept
+    as calls, any other pointer command is refused."""
     import mscript
     if rom is None:
         raise AuthorError(f"spec motions {index}: script_edits need the staged ROM (--staging)")
     unknown = set(edits) - {"damage_scale", "size_scale", "element", "drop", "drop_effects", "frame_speed",
-                            "comment"}
+                            "insert", "comment"}
     if unknown:
         raise AuthorError(f"spec motions {index}: unknown script_edits {sorted(unknown)}")
     root = row.get("script_root")
     if row.get("script") in (None, 0, NO_SCRIPT) or root not in events["blocks"]:
         raise AuthorError(f"spec motions {index}: script_edits on a motion with no script of its own")
     block = events["blocks"][root]
-    if block.get("edges") or any(c.get("to") for c in block["commands"]):
-        raise AuthorError(f"spec motions {index}: script_edits on a script with pointer commands")
+    calls = [c for c in block["commands"] if c.get("to")]
+    if (any(c["op"] != "Subroutine" or not str(c["to"]).startswith("ram:") for c in calls)
+            or any(e.get("kind") != "call" for e in block.get("edges") or ())):
+        raise AuthorError(f"spec motions {index}: script_edits on a script with pointer commands "
+                          "other than Subroutine calls into RAM")
+    inserts = {}
+    for ins in edits.get("insert") or ():
+        key = (str(ins["before"]), int(ins.get("nth", 1)))
+        if key in inserts:
+            raise AuthorError(f"spec motions {index}: two inserts before {key}")
+        inserts[key] = [str(x) for x in ins["lines"]]
+    seen_ops: dict[str, int] = {}
     out = []
     if "frame_speed" in edits:
         bits = struct.unpack(">I", struct.pack(">f", float(edits["frame_speed"])))[0]
@@ -348,16 +361,23 @@ def edited_script(rom, events: dict, row: dict, edits: dict, index: int) -> list
     element = {int(str(k), 0): int(v) for k, v in (edits.get("element") or {}).items()}
     drop = set(edits.get("drop") or ())
     drop_effects = {int(v) for v in edits.get("drop_effects") or ()}
-    for text in mscript.block_commands(rom, events, root):
+    for cmd, text in zip(block["commands"], mscript.block_commands(rom, events, root)):
         op, fields = mscript.parse(text)
+        seen_ops[op] = seen_ops.get(op, 0) + 1
+        out.extend(inserts.pop((op, seen_ops[op]), ()))
         if op in drop or (op == "Effect" and fields.get("effect_id") in drop_effects):
             continue
-        if op == "MakeAttackColl":
+        if cmd.get("to"):
+            # A call into a RAM block (assemble_block writes its address).
+            text = f"{op} -> {cmd['to']}"
+        elif op == "MakeAttackColl":
             fields["damage"] = max(1, int(fields["damage"] * scale + 0.5))
             fields["size"] = int(fields["size"] * size_scale + 0.5)
             fields["element"] = element.get(fields["element"], fields["element"])
             text = op + " " + " ".join(f"{k}={v}" for k, v in fields.items())
         out.append(text)
+    if inserts:
+        raise AuthorError(f"spec motions {index}: script_edits insert before {sorted(inserts)}: no such command")
     return out
 
 
@@ -557,10 +577,12 @@ def author_skirt(resolved: dict, events: dict, skirt: dict | None, name: str, ou
     the next id of the window, once per (clip, flags), and leaves the
     closure when nothing plays it any more.
 
-    Spec "pose" (a list of {"motions": [...], "ops": [...]}): before the
-    skirt's keys, those motions' clips take pose_ops.py operations (a
-    smaller stride, the staff held up: Peach's clips made hers, the owner's
-    3DS references, 2026-10-14)."""
+    Spec "pose" (a list of {"motions": [...], "menu_motions": [...], "ops":
+    [...]}): before the skirt's keys, those motions' clips take pose_ops.py
+    operations (a smaller stride, the staff held up: Peach's clips made hers,
+    the owner's 3DS references, 2026-10-14; "pitch", an item swung down to
+    the floor, and "pin", the staff floating still while she claps: owner
+    p6w)."""
     if not skirt:
         return
     if staging is None:
@@ -586,18 +608,19 @@ def author_skirt(resolved: dict, events: dict, skirt: dict | None, name: str, ou
     replaced = set()
     authored = resolved["authored"]
     guides = {int(k, 16): (REPO / v).read_bytes() for k, v in authored.get("skirt_guides", {}).items()}
-    group_of: dict[int, int] = {}
+    group_of: dict[tuple, int] = {}
     for g, group in enumerate(pose or ()):
-        for index in group["motions"]:
-            if int(index) in group_of:
-                raise AuthorError(f"spec pose: motion {index} in two groups")
-            group_of[int(index)] = g
+        for menu, key in ((False, "motions"), (True, "menu_motions")):
+            for index in group.get(key, ()):
+                if (menu, int(index)) in group_of:
+                    raise AuthorError(f"spec pose: {key} {index} in two groups")
+                group_of[(menu, int(index))] = g
     for menu, rows in ((False, resolved["motions"]), (True, resolved["menu_motions"])):
         for row in rows:
             fid = row["anim_file_id"]
             if not fid:
                 continue
-            group = None if menu else group_of.get(row["index"])
+            group = group_of.get((menu, row["index"]))
             key = (fid, row["anim_flags"], group)
             if key not in made:
                 blob = fighter.rom.o2r(fid)
@@ -617,6 +640,18 @@ def author_skirt(resolved: dict, events: dict, skirt: dict | None, name: str, ou
                     elif kind == "turn":
                         clip = pose_ops.turn(clip, fighter.skel, int(op["row"]), op["deg"],
                                              op.get("frames"), int(op.get("ease", 0)), lead)
+                    elif kind == "pitch":
+                        clip = pose_ops.pitch(clip, fighter.skel, int(op["row"]), op["axis"], op["keys"], lead)
+                    elif kind == "pin":
+                        # The row held still in the model (its parent's
+                        # frames from the clip as posed so far).
+                        r = int(op["row"])
+                        frames = fighter.pose_frames(clip, row["anim_flags"], pose_ops._length(clip))
+                        target = pose_ops.pin_target(frames[int(op.get("frame", 0))][1][r], op["up"], op["pos"])
+                        ts = (fighter.translate_scales[r + coverage.ROW_JOINT]
+                              if fighter.translate_scales is not None else (1.0, 1.0, 1.0))
+                        clip = pose_ops.pin(clip, fighter.skel, r, [m[fighter.skel.parents[r]] for _root, m in frames],
+                                            target, lead, ts)
                     else:
                         raise AuthorError(f"spec pose: op {kind!r}")
                 new = bytearray(_skirt_keyed(sk, clip, blob, row["anim_flags"], trail, salt,
@@ -650,7 +685,8 @@ def author_skirt(resolved: dict, events: dict, skirt: dict | None, name: str, ou
     # ids (an OverlayRom over the image).
     authored["skirt_clips"] = sorted(set(made.values()) - set(authored.get("anims", {}).values()))
     if pose:
-        authored["pose_groups"] = [{"motions": g["motions"], "ops": len(g["ops"])} for g in pose]
+        authored["pose_groups"] = [{"motions": g.get("motions", []), "menu_motions": g.get("menu_motions", []),
+                                "ops": len(g["ops"])} for g in pose]
     authored["skirt"] = {"scene": skirt["scene"], "clips": len(made),
                          "scene_sha256": sha256(REPO / skirt["scene"]),
                          "dropped": len(dropped)}

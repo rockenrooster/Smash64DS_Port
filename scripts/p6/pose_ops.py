@@ -148,6 +148,104 @@ def turn(clip: A.Clip, skel: A.Skeleton, row: int, deg, frames=None, ease: int =
     return clip
 
 
+def _keyed(keys, f: float) -> float:
+    """A piecewise [[frame, value], ...] at f, eased between keys (held past
+    its ends)."""
+    pts = sorted((float(a), float(b)) for a, b in keys)
+    if f <= pts[0][0]:
+        return pts[0][1]
+    for (a0, b0), (a1, b1) in zip(pts, pts[1:]):
+        if f <= a1:
+            u = (f - a0) / max(a1 - a0, 1e-9)
+            return b0 + (b1 - b0) * u * u * (3 - 2 * u)
+    return pts[-1][1]
+
+
+def _about(axis, rad: float) -> np.ndarray:
+    k = np.asarray(axis, float) / np.linalg.norm(axis)
+    K = np.array([[0, -k[2], k[1]], [k[2], 0, -k[0]], [-k[1], k[0], 0]])
+    return np.eye(3) + np.sin(rad) * K + (1 - np.cos(rad)) * (K @ K)
+
+
+def pitch(clip: A.Clip, skel: A.Skeleton, row: int, axis, keys, first_slot: int = 0) -> A.Clip:
+    """The row turned so its local `axis` (a held item's length: row 14's +y)
+    drops by the keyed degrees ([[frame, degrees], ...], eased; + takes it
+    down) about the level axis across it, whatever its depth: owner p6w,
+    Palutena's item side smash swung down flat to the floor."""
+    length = _length(clip)
+    a = np.asarray(axis, float) / np.linalg.norm(axis)
+    out = []
+    for f in range(length + 1):
+        _t, rot = A.pose(clip, skel, f, first_slot)
+        locs = [A.euler(*r) for r in rot]
+        worlds = []
+        for i, m in enumerate(locs):
+            par = skel.parents[i]
+            worlds.append(m if par < 0 else worlds[par] @ m)
+        m = locs[row]
+        deg = _keyed(keys, f)
+        if deg:
+            d = worlds[row] @ a
+            across = np.cross(d, np.array([0.0, 1.0, 0.0]))
+            if np.linalg.norm(across) > 1e-6:
+                par = skel.parents[row]
+                pw = worlds[par] if par >= 0 else np.eye(3)
+                m = pw.T @ _about(across, -np.radians(deg)) @ worlds[row]
+        out.append(m)
+    _write_row(clip, skel, row, first_slot, out, length)
+    return clip
+
+
+def pin_target(ref: np.ndarray, up, pos) -> np.ndarray:
+    """A row's model-space transform from a reference frame's (`ref`, 4x4):
+    turned so its local `up` points straight up, moved to `pos`."""
+    r = ref[:3, :3] / np.linalg.norm(ref[:3, :3], axis=0)
+    d = r @ (np.asarray(up, float) / np.linalg.norm(up))
+    w = np.array([0.0, 1.0, 0.0])
+    c = np.cross(d, w)
+    q = np.eye(3) if np.linalg.norm(c) < 1e-9 else _about(c, np.arccos(np.clip(d @ w, -1.0, 1.0)))
+    out = np.eye(4)
+    out[:3, :3] = q @ r
+    out[:3, 3] = np.asarray(pos, float)
+    return out
+
+
+def pin(clip: A.Clip, skel: A.Skeleton, row: int, parent_worlds, target: np.ndarray,
+        first_slot: int = 0, translate_scale=(1.0, 1.0, 1.0)) -> A.Clip:
+    """The row held at one model-space transform (`target`) on every frame,
+    whatever its parent does: its rotation and translation keyed against
+    the parent's model-space matrices (`parent_worlds`, one a frame, scale
+    included), the translation divided by the row's translate scale as the
+    game multiplies it: owner p6w, Palutena's staff floating still beside
+    her while she claps."""
+    length = _length(clip)
+    slot = row + first_slot
+    old = clip.streams.get(slot)
+    loop = old.loop if old is not None else (
+        next(iter({st.loop for st in clip.streams.values()}), None) if clip.streams else None)
+    st = A.Stream(length, loop)
+    if old is not None:
+        for k, tr in old.tracks.items():
+            if k > 6:
+                st.tracks[k] = tr
+    prev = tuple(skel.rotate[row])
+    eul, trs = [], []
+    for f in range(length + 1):
+        mp = np.asarray(parent_worlds[min(f, len(parent_worlds) - 1)], float)
+        rp = mp[:3, :3] / np.linalg.norm(mp[:3, :3], axis=0)
+        prev = A.to_euler(rp.T @ target[:3, :3], prev)
+        eul.append(prev)
+        trs.append((np.linalg.inv(mp) @ np.append(target[:3, 3], 1.0))[:3])
+    for k in range(3):
+        st.tracks[k] = A.Track([round(e[k] * A.ROT_UNIT) for e in eul], 0)
+        d = translate_scale[k] if abs(translate_scale[k]) > 1e-6 else 1.0
+        st.tracks[4 + k] = A.Track([round(t[k] / d * A.TRANS_UNIT) for t in trs], 0)
+    clip.streams[slot] = st
+    if clip.slots <= slot:
+        clip.slots = slot + 1
+    return clip
+
+
 def blend(clip: A.Clip, skel: A.Skeleton, rows, amount: float, toward="rest", first_slot: int = 0,
           toward_clip: A.Clip | None = None) -> A.Clip:
     """`toward`: "rest", {"frame": n} (the clip's own frame n) or, with

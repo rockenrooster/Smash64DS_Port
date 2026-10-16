@@ -1,7 +1,7 @@
 {
  "schema": "p6-audio-v1",
  "content": "palutena",
- "comment": "Palutena's sound cues (docs/P6/characters/palutena.md, Audio; plan D5-D9): Ultimate's voices (vc_palutena) and effects (se_palutena), the narrator's name call and the crowd cheer, from the owner's local folder (ignored, never tracked). The map sends each FGM id Peach's scripts, attributes and kind tables play (Peach's voices; the vanilla swings) to a cue; her own scripts name cues as cue:<name>.",
+ "comment": "Palutena's sound cues (docs/P6/characters/palutena.md, Audio; plan D5-D9): Ultimate's voices (vc_palutena) and effects (se_palutena), the narrator's name call and the crowd cheer, from the owner's local folder (ignored, never tracked). The map sends each FGM id Peach's scripts, attributes and kind tables play (Peach's voices; the vanilla swings) to a cue; her own scripts name cues as cue:<name>. Owner p6w: her second jump played Peach's double-jump sound (0x2BF in Peach's JumpAerialF/B scripts): it plays her own, se_palutena_jump02.",
  "source": "decomp/alt_assets/Fighters/Super Smash Bros Ultimate/Fighters",
  "cues": {
   "announcer": {
@@ -184,6 +184,10 @@
    "file": "se_palutena/se_palutena_jump01.wav",
    "kind": "effect"
   },
+  "se_jump02": {
+   "file": "se_palutena/se_palutena_jump02.wav",
+   "kind": "effect"
+  },
   "se_landing01": {
    "file": "se_palutena/se_palutena_landing01.wav",
    "kind": "effect"
@@ -309,6 +313,7 @@
   "0x2b": "se_swing_s",
   "0x102": "se_swing_l",
   "0x103": "se_swing_m",
-  "0x104": "se_swing_s"
+  "0x104": "se_swing_s",
+  "0x2bf": "se_jump02"
  }
 }

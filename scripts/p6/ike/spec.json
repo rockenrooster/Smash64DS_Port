@@ -491,9 +491,9 @@
  },
  "sword_trails": {
   "17": {
-   "comment": "His swing trail, gold to a pale yellow tip (owner p6v: \"more gold/yellow instead of red\"), along Ragnell from its guard to its tip, 100 to 600 (owner p6v: \"should match Ragnell's 1.25x length\"; its blade 100-601 since p6s, the trail stopped at 462.5)",
+   "comment": "His swing trail, gold at the guard to a white tip (owner p6v: \"more gold/yellow instead of red\"; owner p6w: \"white/gold not fully yellow/gold\", the tip white as Roy's was), along Ragnell from its guard to its tip, 100 to 600 (owner p6v: \"should match Ragnell's 1.25x length\"; its blade 100-601 since p6s, the trail stopped at 462.5)",
    "colour_1": "ffc80000",
-   "colour_2": "ffffa000",
+   "colour_2": "ffffff00",
    "start": 100.0,
    "end": 600.0
   },

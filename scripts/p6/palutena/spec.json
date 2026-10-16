@@ -364,6 +364,362 @@
    "comment": "CliffEscapeSlow2: Ultimate's (owner p6s)",
    "anim": "builds/p6-art/palutena/anims/cliff_escape_slow2.o2r"
   },
+  "91": {
+   "comment": "LightThrowDash: Peach's clip and script, her voice added (owner p6w)",
+   "script_edits": {
+    "comment": "Owner p6w (item motions missing her effort voice and swing sounds): Peach's script with attack04 before its Subroutine (the release or the swing)",
+    "insert": [
+     {
+      "before": "Subroutine",
+      "lines": [
+       "PlayVoiceStoreInfo value=cue:attack04"
+      ]
+     }
+    ]
+   }
+  },
+  "92": {
+   "comment": "LightThrowF: Peach's clip and script, her voice added (owner p6w)",
+   "script_edits": {
+    "comment": "Owner p6w (item motions missing her effort voice and swing sounds): Peach's script with attack04 before its Subroutine (the release or the swing)",
+    "insert": [
+     {
+      "before": "Subroutine",
+      "lines": [
+       "PlayVoiceStoreInfo value=cue:attack04"
+      ]
+     }
+    ]
+   }
+  },
+  "93": {
+   "comment": "LightThrowB: Peach's clip and script, her voice added (owner p6w)",
+   "script_edits": {
+    "comment": "Owner p6w (item motions missing her effort voice and swing sounds): Peach's script with attack04 before its Subroutine (the release or the swing)",
+    "insert": [
+     {
+      "before": "Subroutine",
+      "lines": [
+       "PlayVoiceStoreInfo value=cue:attack04"
+      ]
+     }
+    ]
+   }
+  },
+  "94": {
+   "comment": "LightThrowHi: Peach's clip and script, her voice added (owner p6w)",
+   "script_edits": {
+    "comment": "Owner p6w (item motions missing her effort voice and swing sounds): Peach's script with attack04 before its Subroutine (the release or the swing)",
+    "insert": [
+     {
+      "before": "Subroutine",
+      "lines": [
+       "PlayVoiceStoreInfo value=cue:attack04"
+      ]
+     }
+    ]
+   }
+  },
+  "95": {
+   "comment": "LightThrowLw: Peach's clip and script, her voice added (owner p6w)",
+   "script_edits": {
+    "comment": "Owner p6w (item motions missing her effort voice and swing sounds): Peach's script with attack04 before its Subroutine (the release or the swing)",
+    "insert": [
+     {
+      "before": "Subroutine",
+      "lines": [
+       "PlayVoiceStoreInfo value=cue:attack04"
+      ]
+     }
+    ]
+   }
+  },
+  "100": {
+   "comment": "LightThrowAirF: Peach's clip and script, her voice added (owner p6w)",
+   "script_edits": {
+    "comment": "Owner p6w (item motions missing her effort voice and swing sounds): Peach's script with attack04 before its Subroutine (the release or the swing)",
+    "insert": [
+     {
+      "before": "Subroutine",
+      "lines": [
+       "PlayVoiceStoreInfo value=cue:attack04"
+      ]
+     }
+    ]
+   }
+  },
+  "101": {
+   "comment": "LightThrowAirB: Peach's clip and script, her voice added (owner p6w)",
+   "script_edits": {
+    "comment": "Owner p6w (item motions missing her effort voice and swing sounds): Peach's script with attack04 before its Subroutine (the release or the swing)",
+    "insert": [
+     {
+      "before": "Subroutine",
+      "lines": [
+       "PlayVoiceStoreInfo value=cue:attack04"
+      ]
+     }
+    ]
+   }
+  },
+  "102": {
+   "comment": "LightThrowAirHi: Peach's clip and script, her voice added (owner p6w)",
+   "script_edits": {
+    "comment": "Owner p6w (item motions missing her effort voice and swing sounds): Peach's script with attack04 before its Subroutine (the release or the swing)",
+    "insert": [
+     {
+      "before": "Subroutine",
+      "lines": [
+       "PlayVoiceStoreInfo value=cue:attack04"
+      ]
+     }
+    ]
+   }
+  },
+  "103": {
+   "comment": "LightThrowAirLw: Peach's clip and script, her voice added (owner p6w)",
+   "script_edits": {
+    "comment": "Owner p6w (item motions missing her effort voice and swing sounds): Peach's script with attack04 before its Subroutine (the release or the swing)",
+    "insert": [
+     {
+      "before": "Subroutine",
+      "lines": [
+       "PlayVoiceStoreInfo value=cue:attack04"
+      ]
+     }
+    ]
+   }
+  },
+  "108": {
+   "comment": "HeavyThrowF: Peach's clip and script, her voice added (owner p6w)",
+   "script_edits": {
+    "comment": "Owner p6w (item motions missing her effort voice and swing sounds): Peach's script with attack05 before its SetFlag0 (the release or the swing)",
+    "insert": [
+     {
+      "before": "SetFlag0",
+      "lines": [
+       "PlayVoiceStoreInfo value=cue:attack05"
+      ]
+     }
+    ]
+   }
+  },
+  "109": {
+   "comment": "HeavyThrowB: Peach's clip and script, her voice added (owner p6w)",
+   "script_edits": {
+    "comment": "Owner p6w (item motions missing her effort voice and swing sounds): Peach's script with attack05 before its SetFlag0 (the release or the swing)",
+    "insert": [
+     {
+      "before": "SetFlag0",
+      "lines": [
+       "PlayVoiceStoreInfo value=cue:attack05"
+      ]
+     }
+    ]
+   }
+  },
+  "112": {
+   "comment": "SwordSwing1: Peach's clip and script, her voice added (owner p6w)",
+   "script_edits": {
+    "comment": "Owner p6w (item motions missing her effort voice and swing sounds): Peach's script with attack01, se_swing_m before its Subroutine (the release or the swing)",
+    "insert": [
+     {
+      "before": "Subroutine",
+      "lines": [
+       "PlayVoiceStoreInfo value=cue:attack01",
+       "PlayFGM value=cue:se_swing_m"
+      ]
+     }
+    ]
+   }
+  },
+  "113": {
+   "comment": "SwordSwing3: Peach's clip and script, her voice added (owner p6w)",
+   "script_edits": {
+    "comment": "Owner p6w (item motions missing her effort voice and swing sounds): Peach's script with attack02, se_swing_l before its Subroutine (the release or the swing)",
+    "insert": [
+     {
+      "before": "Subroutine",
+      "lines": [
+       "PlayVoiceStoreInfo value=cue:attack02",
+       "PlayFGM value=cue:se_swing_l"
+      ]
+     }
+    ]
+   }
+  },
+  "114": {
+   "comment": "SwordSwing4: Peach's clip and script, her voice added (owner p6w)",
+   "script_edits": {
+    "comment": "Owner p6w (item motions missing her effort voice and swing sounds): Peach's script with se_swing_l before its Subroutine (the release or the swing)",
+    "insert": [
+     {
+      "before": "Subroutine",
+      "lines": [
+       "PlayFGM value=cue:se_swing_l"
+      ]
+     }
+    ]
+   }
+  },
+  "115": {
+   "comment": "SwordSwingDash: Peach's clip and script, her voice added (owner p6w)",
+   "script_edits": {
+    "comment": "Owner p6w (item motions missing her effort voice and swing sounds): Peach's script with attack03, se_swing_l before its Subroutine (the release or the swing)",
+    "insert": [
+     {
+      "before": "Subroutine",
+      "lines": [
+       "PlayVoiceStoreInfo value=cue:attack03",
+       "PlayFGM value=cue:se_swing_l"
+      ]
+     }
+    ]
+   }
+  },
+  "116": {
+   "comment": "BatSwing1: Peach's clip and script, her voice added (owner p6w)",
+   "script_edits": {
+    "comment": "Owner p6w (item motions missing her effort voice and swing sounds): Peach's script with attack01 before its Subroutine (the release or the swing)",
+    "insert": [
+     {
+      "before": "Subroutine",
+      "lines": [
+       "PlayVoiceStoreInfo value=cue:attack01"
+      ]
+     }
+    ]
+   }
+  },
+  "117": {
+   "comment": "BatSwing3: Peach's clip and script, her voice added (owner p6w)",
+   "script_edits": {
+    "comment": "Owner p6w (item motions missing her effort voice and swing sounds): Peach's script with attack02 before its Subroutine (the release or the swing)",
+    "insert": [
+     {
+      "before": "Subroutine",
+      "lines": [
+       "PlayVoiceStoreInfo value=cue:attack02"
+      ]
+     }
+    ]
+   }
+  },
+  "119": {
+   "comment": "BatSwingDash: Peach's clip and script, her voice added (owner p6w)",
+   "script_edits": {
+    "comment": "Owner p6w (item motions missing her effort voice and swing sounds): Peach's script with attack03 before its Subroutine (the release or the swing)",
+    "insert": [
+     {
+      "before": "Subroutine",
+      "lines": [
+       "PlayVoiceStoreInfo value=cue:attack03"
+      ]
+     }
+    ]
+   }
+  },
+  "120": {
+   "comment": "HarisenSwing1: Peach's clip and script, her voice added (owner p6w)",
+   "script_edits": {
+    "comment": "Owner p6w (item motions missing her effort voice and swing sounds): Peach's script with attack01 before its Subroutine (the release or the swing)",
+    "insert": [
+     {
+      "before": "Subroutine",
+      "lines": [
+       "PlayVoiceStoreInfo value=cue:attack01"
+      ]
+     }
+    ]
+   }
+  },
+  "121": {
+   "comment": "HarisenSwing3: Peach's clip and script, her voice added (owner p6w)",
+   "script_edits": {
+    "comment": "Owner p6w (item motions missing her effort voice and swing sounds): Peach's script with attack02 before its Subroutine (the release or the swing)",
+    "insert": [
+     {
+      "before": "Subroutine",
+      "lines": [
+       "PlayVoiceStoreInfo value=cue:attack02"
+      ]
+     }
+    ]
+   }
+  },
+  "123": {
+   "comment": "HarisenSwingDash: Peach's clip and script, her voice added (owner p6w)",
+   "script_edits": {
+    "comment": "Owner p6w (item motions missing her effort voice and swing sounds): Peach's script with attack03 before its Subroutine (the release or the swing)",
+    "insert": [
+     {
+      "before": "Subroutine",
+      "lines": [
+       "PlayVoiceStoreInfo value=cue:attack03"
+      ]
+     }
+    ]
+   }
+  },
+  "124": {
+   "comment": "StarRodSwing1: Peach's clip and script, her voice added (owner p6w)",
+   "script_edits": {
+    "comment": "Owner p6w (item motions missing her effort voice and swing sounds): Peach's script with attack01, se_swing_m before its Subroutine (the release or the swing)",
+    "insert": [
+     {
+      "before": "Subroutine",
+      "lines": [
+       "PlayVoiceStoreInfo value=cue:attack01",
+       "PlayFGM value=cue:se_swing_m"
+      ]
+     }
+    ]
+   }
+  },
+  "125": {
+   "comment": "StarRodSwing3: Peach's clip and script, her voice added (owner p6w)",
+   "script_edits": {
+    "comment": "Owner p6w (item motions missing her effort voice and swing sounds): Peach's script with attack02, se_swing_l before its Subroutine (the release or the swing)",
+    "insert": [
+     {
+      "before": "Subroutine",
+      "lines": [
+       "PlayVoiceStoreInfo value=cue:attack02",
+       "PlayFGM value=cue:se_swing_l"
+      ]
+     }
+    ]
+   }
+  },
+  "126": {
+   "comment": "StarRodSwing4: Peach's clip and script, her voice added (owner p6w)",
+   "script_edits": {
+    "comment": "Owner p6w (item motions missing her effort voice and swing sounds): Peach's script with se_swing_l before its Subroutine (the release or the swing)",
+    "insert": [
+     {
+      "before": "Subroutine",
+      "lines": [
+       "PlayFGM value=cue:se_swing_l"
+      ]
+     }
+    ]
+   }
+  },
+  "127": {
+   "comment": "StarRodSwingDash: Peach's clip and script, her voice added (owner p6w)",
+   "script_edits": {
+    "comment": "Owner p6w (item motions missing her effort voice and swing sounds): Peach's script with attack03, se_swing_l before its Subroutine (the release or the swing)",
+    "insert": [
+     {
+      "before": "Subroutine",
+      "lines": [
+       "PlayVoiceStoreInfo value=cue:attack03",
+       "PlayFGM value=cue:se_swing_l"
+      ]
+     }
+    ]
+   }
+  },
   "136": {
    "comment": "EscapeF: Ultimate's forward roll, the TransN slot Peach's",
    "anim": "builds/p6-art/palutena/anims/escape_f.o2r"
@@ -874,5 +1230,72 @@
     "travel": "run"
    }
   }
- }
+ },
+ "pose": [
+  {
+   "comment": "Owner p6w: the bat's and beam sword's side smash (Swing4, Peach's clip, all four items) should swing all the way down flat to the floor, but stopped about 18 deg above level (the grip 120 up): the item row (14, the light item's joint) pitched down so the item's length (its +y) lies about 12.5 deg below level from the hit (20) to 40, the tip at the floor, eased in at 17 and out by 46 (pose_ops.pitch).",
+   "motions": [
+    114,
+    118,
+    122,
+    126
+   ],
+   "ops": [
+    {
+     "op": "pitch",
+     "row": 14,
+     "axis": [
+      0,
+      1,
+      0
+     ],
+     "keys": [
+      [
+       17,
+       0
+      ],
+      [
+       20,
+       25
+      ],
+      [
+       24,
+       28
+      ],
+      [
+       40,
+       31
+      ],
+      [
+       46,
+       0
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "comment": "Owner p6w: the results clap with her staff floating still beside her: row 14 (the staff) held at one transform for the whole clip, upright, 230 to her right at her hand's height (pose_ops.pin).",
+   "menu_motions": [
+    5
+   ],
+   "ops": [
+    {
+     "op": "pin",
+     "row": 14,
+     "up": [
+      0,
+      1,
+      0
+     ],
+     "frame": 0,
+     "pos": [
+      -230,
+      330,
+      40
+     ]
+    }
+   ]
+  }
+ ]
 }

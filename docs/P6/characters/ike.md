@@ -457,6 +457,9 @@ be 0.75x. max unchanged".
   at scale 2, as the blast opens.
 - **Quick Draw** dashes 6 to 20 frames by charge (8 to 20: the shortest
   0.75x as long, the longest kept).
+- **Owner p6w (4.99/5):** the trail "white/gold not fully yellow/gold": gold
+  at the guard to a white tip (it had been red to white, then gold to pale
+  yellow).
 
 ## Audio (local inputs, never committed)
 
