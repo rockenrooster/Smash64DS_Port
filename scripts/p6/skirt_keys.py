@@ -43,9 +43,20 @@ frame): row 25's turn by the least-squares rotation of the chains about its
 origin (its twist about the band held to MAX_TWIST_DEG), row 26's and row
 27's translation, turn and scale across (x, y) by least squares on their
 rings' samples, from the frame before's (TEMPORAL) and near their rest
-(REST). The rows' keys are put on shared knots, straight between them
-(KNOT_EPS), so the clip compacts small. Her legs are as the clip has them
-(the old hem solver turned a leg it could not hold toward its rest).
+(REST). Then her legs are held (owner p6t, "we will need leg clipping
+checks": the rigid rings lost the legs the cloth held, and the cloth alone
+loses a kick or a tuck): where a point of her thighs, knees or shins
+(dress_check's; a shin may show below the hem, never through the dress's
+side) is outside the dress as drawn (dress_check.dress_outs), row 25 turns and
+rows 26 and 27 move, turn and widen as little as puts every one CONTAIN_IN
+inside (_contain; a knee raised far out, kneeling or thrown, is tried
+again from row 25 turned toward it, CONTAIN_TURNS). Gravity turns the
+dress back toward hanging by at most HANG_TILT_MAX of her tilt, so a flip
+does not drop it past her legs. The rows' keys are put on shared knots,
+straight between them (KNOT_EPS), so the clip compacts small; a frame the
+straight lines let a leg out of is made a knot. Her legs are as the clip
+has them (the old hem solver turned a leg it could not hold toward its
+rest).
 
 Row 27 was Peach's held joint (the grab's and heavy items': the scene's
 "joint_roles" moved it to row 28): a clip that installs its hidden part keys
@@ -106,6 +117,10 @@ FLOOR_Y = 3.0               # the hem's least height on a floor (the mid ring's:
 # margin pushed it out into a bulge there standing).
 LEG_RADIUS = 0.85
 MARGIN = 0.0
+# Gravity turns the dress back toward hanging by at most this tilt of her
+# hips: past it (a flip, a tumble) it stays along her legs (the owner's rule,
+# playtest 2026-10-14: the dress surrounds her legs in every animation).
+HANG_TILT_MAX = np.radians(90.0)
 FEEDBACK = 0.3              # share of a constraint's move the spring keeps
 ITER = 3                    # constraint passes a frame
 # The fit:
@@ -121,6 +136,18 @@ FIT_HI = np.array([400.0, 400.0, 400.0, 3.2, 3.2, 3.2, 1.6, 1.6])
 # translation 4 a unit: 1.5 units; scale 4096: 0.012), so the clip compacts
 # to a few keys a row (the figatree heap: p4_anim_compact.py).
 KNOT_EPS = {"rot": 4, "trans": 6, "scale": 48}
+# Holding her legs (owner p6t, "we will need leg clipping checks"): after the
+# fit, rows 26 and 27 move, turn and widen until her thighs and knees
+# (dress_check's core points) are CONTAIN_IN units inside the bands as drawn,
+# drawn CONTAIN_KEEP toward the fit and TEMPORAL toward the frame before.
+CONTAIN_IN = 3.0
+CONTAIN_KEEP = 0.01
+# ... and toward the frame before's holding (row 25's turn too), so a held
+# dress does not jump frame to frame.
+CONTAIN_TEMPORAL = 0.4
+CONTAIN_HI = np.array([400.0, 400.0, 400.0, 3.2, 3.2, 3.2, 2.2, 2.2])
+# Row 25's turns toward a knee the first try left out, tried as new starts.
+CONTAIN_TURNS = (25.0, 50.0, 80.0, 110.0)
 
 
 def _window(n: int, i: int, half: int, loop) -> list:
@@ -180,6 +207,40 @@ def _local(x) -> np.ndarray:
     return m
 
 
+def _gauss_newton(resid, x0: np.ndarray, scale: np.ndarray, lo: np.ndarray, hi: np.ndarray,
+                  iters: int = 12) -> np.ndarray:
+    """Damped Gauss-Newton on resid with a numeric Jacobian (steps of 1e-4
+    of each parameter's scale), clipped to lo..hi."""
+    x = np.clip(np.array(x0, dtype=float), lo, hi)
+    lam = 1e-3
+    r = resid(x)
+    cost = float(r @ r)
+    for _ in range(iters):
+        jac = np.empty((len(r), len(x)))
+        for k in range(len(x)):
+            h = 1e-4 * scale[k]
+            xp = x.copy()
+            xp[k] += h
+            jac[:, k] = (resid(xp) - r) / h
+        g = jac.T @ r
+        hmat = jac.T @ jac
+        while True:
+            step = np.linalg.solve(hmat + lam * np.diag(np.diag(hmat) + 1e-9), -g)
+            xn = np.clip(x + step, lo, hi)
+            rn = resid(xn)
+            cn = float(rn @ rn)
+            if cn < cost:
+                x, r, cost = xn, rn, cn
+                lam = max(lam * 0.3, 1e-7)
+                break
+            lam *= 10.0
+            if lam > 1e6:
+                return x
+        if float(np.abs(step).max()) < 1e-5:
+            break
+    return x
+
+
 def _fit(base: np.ndarray, pts: np.ndarray, targets: np.ndarray, x0: np.ndarray, rest: np.ndarray,
          prev: np.ndarray | None, iters: int = 12) -> np.ndarray:
     """A row's parameters (_local) putting its points (row-local) nearest
@@ -194,34 +255,7 @@ def _fit(base: np.ndarray, pts: np.ndarray, targets: np.ndarray, x0: np.ndarray,
             r.append(np.sqrt(TEMPORAL * len(pts)) * (x - prev) / FIT_SCALE * 10.0)
         return np.concatenate(r)
 
-    x = np.clip(np.array(x0, dtype=float), FIT_LO, FIT_HI)
-    lam = 1e-3
-    r = resid(x)
-    cost = float(r @ r)
-    for _ in range(iters):
-        jac = np.empty((len(r), len(x)))
-        for k in range(len(x)):
-            h = 1e-4 * FIT_SCALE[k]
-            xp = x.copy()
-            xp[k] += h
-            jac[:, k] = (resid(xp) - r) / h
-        g = jac.T @ r
-        hmat = jac.T @ jac
-        while True:
-            step = np.linalg.solve(hmat + lam * np.diag(np.diag(hmat) + 1e-9), -g)
-            xn = np.clip(x + step, FIT_LO, FIT_HI)
-            rn = resid(xn)
-            cn = float(rn @ rn)
-            if cn < cost:
-                x, r, cost = xn, rn, cn
-                lam = max(lam * 0.3, 1e-7)
-                break
-            lam *= 10.0
-            if lam > 1e6:
-                return x
-        if float(np.abs(step).max()) < 1e-5:
-            break
-    return x
+    return _gauss_newton(resid, x0, FIT_SCALE, FIT_LO, FIT_HI, iters)
 
 
 def _closest_on_segments(p0, p1, q0, q1):
@@ -246,17 +280,17 @@ def _closest_on_segments(p0, p1, q0, q1):
     return s, t
 
 
-def _knots(st: A.Stream, loop) -> None:
+def _knots(st: A.Stream, loop, must=()) -> None:
     """The stream's tracks (all from frame 0, every frame) put on shared
-    knots, straight between them, each within its KNOT_EPS (a loop's start
-    and the last frame are knots)."""
+    knots, straight between them, each within its KNOT_EPS (a loop's start,
+    the last frame and the frames in `must` are knots)."""
     tracks = sorted(st.tracks)
     if not tracks:
         return
     vals = {k: np.array(st.tracks[k].values, dtype=float) for k in tracks}
     eps = {k: KNOT_EPS["rot"] if k < 3 else KNOT_EPS["trans"] if k < 7 else KNOT_EPS["scale"] for k in tracks}
     n = len(vals[tracks[0]])
-    fixed = {0, n - 1} | ({loop} if loop is not None and 0 <= loop < n else set())
+    fixed = {0, n - 1} | ({loop} if loop is not None and 0 <= loop < n else set()) | {f for f in must if 0 <= f < n}
     knots = [0]
     a = 0
     while a < n - 1:
@@ -371,6 +405,19 @@ class Skirt:
                 rel = ring - a
                 return float(np.linalg.norm(rel - np.outer(rel @ d, d), axis=1).mean())
             self.radii.append((radius(pts[hip], ph, pk), radius(pts[knee], ph, pk), radius(pts[ankle], pk, pa)))
+        # The dress check (dress_check.Report): the lower bands' rings as
+        # drawn (each ring's vertices in its row's frame) and her legs' points,
+        # for holding the legs in the fit (_contain).
+        self.report = D.Report(fighter, scene)
+        rep = self.report
+        self._chain_loc = []
+        for ids in rep.chain:
+            rows = {rep.dress_rows[i] for i in ids}
+            if len(rows) != 1:
+                raise SystemExit(f"a dress ring on rows {sorted(rows)}")
+            row = rows.pop()
+            hp = np.c_[rep.dress_model[ids], np.ones(len(ids))]
+            self._chain_loc.append((self.inv_bind[row] @ hp.T).T)
         self.hair_row = any(v.get("object") == "DS_hair_panels" and v["joint"] == ROW_HAIR for v in verts)
         self.roles = scene.get("joint_roles") or []
         self.rest_axis = self.rest25[:3, :3] @ np.array([0.0, 0.0, -1.0])
@@ -430,6 +477,7 @@ class Skirt:
             pd = pd / max(np.linalg.norm(pd), 1e-6)
             tilt_axis = np.cross(pd, down)
             tilt = float(np.arctan2(np.linalg.norm(tilt_axis), np.dot(pd, down)))
+            tilt = min(tilt, HANG_TILT_MAX)
             ax = tilt_axis / max(np.linalg.norm(tilt_axis), 1e-9)
             back1 = _turn(ax, HANG * tilt) if tilt > 1e-4 else np.eye(3)
             back2 = _turn(ax, HANG_HEM * tilt) if tilt > 1e-4 else np.eye(3)
@@ -540,6 +588,76 @@ class Skirt:
 
     # ------------------------------------------------------------- the fit
 
+    def _outs(self, mats, lp, m25, x26, x27) -> np.ndarray:
+        """Her legs' points' distances outside the dress drawn with row 25 at
+        m25 (the pelvis's frame) and rows 26 and 27 at x26, x27
+        (dress_check.dress_outs: negative inside; FREE where nothing holds
+        the point -- a shin below the hem shows)."""
+        m = mats[ROW_PELVIS] @ m25
+        ms = [m, m @ _local(x26)]
+        ms.append(ms[1] @ _local(x27))
+        rings = [(mm @ loc.T).T[:, :3] for mm, loc in zip(ms, self._chain_loc)]
+        axes = [-mm[:3, 2] / max(np.linalg.norm(mm[:3, 2]), 1e-9) for mm in ms[:2]]
+        pin = np.linalg.inv(mats[ROW_PELVIS])
+        q = (pin @ np.c_[lp, np.ones(len(lp))].T).T[:, :3]
+        return D.dress_outs(rings, axes, ms[0][:3, 0], lp, self.report.legs.core, q, self.report.upper_rest)
+
+    def _contain(self, mats, lp, m25, x26, x27, prev26, prev27, prev_d25):
+        """Row 25 turned and rows 26 and 27 moved, turned and widened as
+        little as holds her legs CONTAIN_IN inside the dress
+        (from the fit, toward the frame before's): (row 25's rotation, x26,
+        x27)."""
+        p0 = np.r_[0.0, 0.0, 0.0, x26, x27]
+        prev = None if prev26 is None else np.r_[prev_d25, prev26, prev27]
+        scale = np.r_[0.3, 0.3, 0.3, FIT_SCALE, FIT_SCALE]
+        lo = np.r_[-1.6, -1.6, -1.6, FIT_LO, FIT_LO]
+        hi = np.r_[1.6, 1.6, 1.6, CONTAIN_HI, CONTAIN_HI]
+        n = len(p0)
+
+        def turned(p):
+            v = p[:3]
+            ang = float(np.linalg.norm(v))
+            m = m25.copy()
+            if ang > 1e-9:
+                m[:3, :3] = _turn(v / ang, ang) @ m25[:3, :3]
+            return m
+
+        def resid(p):
+            r = [np.maximum(self._outs(mats, lp, turned(p), p[3:11], p[11:]) + CONTAIN_IN, 0.0),
+                 np.sqrt(CONTAIN_KEEP * n) * (p - p0) / scale * 10.0]
+            if prev is not None:
+                r.append(np.sqrt(CONTAIN_TEMPORAL * n) * (p - prev) / scale * 10.0)
+            return np.concatenate(r)
+
+        p = _gauss_newton(resid, p0, scale, lo, hi, iters=16)
+        if float(self._outs(mats, lp, turned(p), p[3:11], p[11:]).max(initial=-1e9)) > 0.0:
+            # A knee raised far from the dress (kneeling, a throw): start
+            # again with row 25 turned toward the worst point (CONTAIN_TURNS),
+            # its band's axis that much nearer it; the least cost wins.
+            out = self._outs(mats, lp, turned(p), p[3:11], p[11:])
+            pts = lp
+            m = mats[ROW_PELVIS] @ m25
+            axis = -m[:3, 2] / max(np.linalg.norm(m[:3, 2]), 1e-9)
+            to = pts[int(np.argmax(out))] - m[:3, 3]
+            to = to / max(np.linalg.norm(to), 1e-9)
+            cross = np.cross(axis, to)
+            if np.linalg.norm(cross) > 1e-6:
+                # The turn as a rotation vector in the pelvis's frame (turned
+                # pre-multiplies m25's rotation there).
+                v = np.linalg.inv(mats[ROW_PELVIS][:3, :3]) @ (cross / np.linalg.norm(cross))
+                v = v / max(np.linalg.norm(v), 1e-9)
+                r = resid(p)
+                best, best_cost = p, float(r @ r)
+                for deg in CONTAIN_TURNS:
+                    start = p0.copy()
+                    start[:3] = v * np.radians(deg)
+                    q = _gauss_newton(resid, start, scale, lo, hi, iters=16)
+                    rq = resid(q)
+                    if float(rq @ rq) < best_cost:
+                        best, best_cost = q, float(rq @ rq)
+                p = best
+        return turned(p)[:3, :3], p[3:11], p[11:], p[:3].copy()
+
     def fit(self, frames, mids, hems):
         """Per frame: row 25's local rotation, row 26's and row 27's fit
         parameters."""
@@ -551,6 +669,7 @@ class Skirt:
         x26 = self.x26_rest.copy()
         x27 = self.x27_rest.copy()
         prev26 = prev27 = None
+        prev_d25 = np.zeros(3)
         rest_down = self.rest25[:3, :3]
         a_rest = np.vstack([self.mid_p[:k], self.hem_p[:k]]) - origin
         w = np.r_[np.full(k, 1.0), np.full(k, 0.5)]
@@ -576,7 +695,14 @@ class Skirt:
             x26 = _fit(m25, self.mid_local, full(m_p), x26, self.x26_rest, prev26)
             m26 = m25 @ _local(x26)
             x27 = _fit(m26, self.hem_local, full(h_p), x27, self.x27_rest, prev27)
-            prev26, prev27 = x26.copy(), x27.copy()
+            # Her thighs and knees held (_contain), as dress_check measures.
+            mats = frames[i][1]
+            lp = self.report.legs.posed(mats, self.report.inv_bind)
+            # Every frame, so a hold eases out toward the fit (switched on
+            # only where a leg was out, the rows snapped back from the hold
+            # the frame the leg came back in: a walk's hem 28 units sideways).
+            rot, x26, x27, d25 = self._contain(mats, lp, m25, x26, x27, prev26, prev27, prev_d25)
+            prev26, prev27, prev_d25 = x26.copy(), x27.copy(), d25
             out.append((rot, x26.copy(), x27.copy()))
         return out
 
@@ -630,6 +756,25 @@ class Skirt:
                 if st is not None:
                     out.streams[new_slot] = st
                     out.slots = max(out.slots, new_slot + 1)
+        # The keys on knots; a frame whose straight lines let her thighs or
+        # knees out (_contain held them on every frame) becomes a knot too.
+        must: set = set()
+        streams = self._keys(fits, loop, length, must)
+        for _ in range(8):
+            bad = self._keyed_out(streams, solved["frames"]) - must
+            if not bad:
+                break
+            must |= bad
+            streams = self._keys(fits, loop, length, must)
+        for row, st in streams.items():
+            out.streams[slot_of(row)] = st
+        if self.hair_row and guide is None:
+            out.streams[slot_of(ROW_HAIR)] = self._hair_on_bodice(solved["frames"], loop,
+                                                                   clip.streams.get(slot_of(ROW_HAIR)))
+        return out
+
+    def _keys(self, fits, loop, length, must) -> dict:
+        """Rows 25, 26 and 27's streams from the fits, on knots (_knots)."""
         prev_e = tuple(self.f.skel.rotate[ROW_UPPER])
         eul25 = []
         for rot, _x26, _x27 in fits:
@@ -638,8 +783,8 @@ class Skirt:
         st25 = A.Stream(length, loop)
         for k in range(3):
             st25.tracks[k] = A.Track([round(e[k] * A.ROT_UNIT) for e in eul25], 0)
-        _knots(st25, loop)
-        out.streams[slot_of(ROW_UPPER)] = st25
+        _knots(st25, loop, must)
+        streams = {ROW_UPPER: st25}
         for row, idx in ((ROW_MID, 1), (ROW_HEM, 2)):
             st = A.Stream(length, loop)
             xs = [f[idx] for f in fits]
@@ -655,12 +800,29 @@ class Skirt:
                 st.tracks[4 + k] = A.Track([round(x[k] * A.TRANS_UNIT) for x in xs], 0)
             for k in range(2):
                 st.tracks[7 + k] = A.Track([round(x[6 + k] * C.SCALE_UNIT) for x in xs], 0)
-            _knots(st, loop)
-            out.streams[slot_of(row)] = st
-        if self.hair_row and guide is None:
-            out.streams[slot_of(ROW_HAIR)] = self._hair_on_bodice(solved["frames"], loop,
-                                                                   clip.streams.get(slot_of(ROW_HAIR)))
-        return out
+            _knots(st, loop, must)
+            streams[row] = st
+        return streams
+
+    def _keyed_out(self, streams, frames) -> set:
+        """The frames where the keyed rows let a thigh or knee out (past
+        CONTAIN_IN's margin)."""
+        st25, st26, st27 = streams[ROW_UPPER], streams[ROW_MID], streams[ROW_HEM]
+        val = lambda st, k, i: float(st.tracks[k].values[i])
+        bad = set()
+        for i, (_root, mats) in enumerate(frames):
+            m25 = np.eye(4)
+            m25[:3, :3] = A.euler(*(val(st25, k, i) / A.ROT_UNIT for k in range(3)))
+            m25[:3, 3] = self.rest25[:3, 3]
+            xs = []
+            for st in (st26, st27):
+                xs.append(np.r_[[val(st, 4 + k, i) / A.TRANS_UNIT for k in range(3)],
+                                [val(st, k, i) / A.ROT_UNIT for k in range(3)],
+                                [val(st, 7 + k, i) / C.SCALE_UNIT for k in range(2)]])
+            lp = self.report.legs.posed(mats, self.report.inv_bind)
+            if float(self._outs(mats, lp, m25, xs[0], xs[1]).max(initial=-1e9)) > 0.0:
+                bad.add(i)
+        return bad
 
     def _hair_on_bodice(self, frames, loop, old):
         """Row 9's keys holding the hair to the bodice (its bind relation),

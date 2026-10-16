@@ -75,6 +75,12 @@ TOLERANCE = 4.0
 # The band's measure for a point it does not hold to anything (above its top
 # ring, or a shin below the hem).
 FREE = -1.0e9
+# The three-ring dress (dress_outs): a point within SEAM_OVERLAP of a band's
+# length past the ring two bands share is measured on both; a point above
+# the lower bands' top ring, to ABOVE_REACH of the first band's length, is
+# held by that band extended upward as well as by the upper band.
+SEAM_OVERLAP = 0.15
+ABOVE_REACH = 0.5
 
 
 def rings(scene: dict):
@@ -262,6 +268,44 @@ def chain_outs(rings_: list, axes: list, across: np.ndarray, pts: np.ndarray, co
     return out, s0
 
 
+def dress_outs(rings_: list, axes: list, across: np.ndarray, pts: np.ndarray, core: np.ndarray,
+               q_pelvis: np.ndarray, upper_rest) -> np.ndarray:
+    """Per point: how far outside the dress (negative inside; FREE where
+    nothing holds it), continuous where chain_outs jumps (owner p6t, the leg
+    check; skirt_keys.py holds her legs by it): the lower bands as
+    chain_outs measures them, but a point within SEAM_OVERLAP of the ring
+    two bands share measured on both (the larger: bands about different
+    axes disagree at their ring), and a point above the first band's top
+    ring (to ABOVE_REACH of its length) held by that band extended upward or
+    by the upper band's rest shape (q_pelvis: the points in the pelvis's
+    frame), whichever holds it better -- the dress at her hips is both. A
+    core point below the hem is out by how far below; a shin there is
+    free."""
+    inf = 1.0e9
+    n = len(rings_) - 1
+    val = np.full(len(pts), -inf)
+    held = np.zeros(len(pts), dtype=bool)
+    s0 = None
+    for b in range(n):
+        s, side, below = _band_terms(rings_[b], rings_[b + 1], pts, rings_[b].mean(axis=0), axes[b], across)
+        lo = -ABOVE_REACH if b == 0 else -SEAM_OVERLAP
+        hi = 1.0 + SEAM_OVERLAP if b < n - 1 else 1.0
+        if b == 0:
+            s0 = s
+        sel = (s >= lo) & (s <= hi)
+        val = np.where(sel, np.maximum(val, side), val)
+        held |= sel
+        if b == n - 1:
+            past = s > 1.0
+            val = np.where(past & core, np.maximum(val, np.maximum(side, below)), val)
+            held |= past & core
+    lower = np.where(held, val, inf)
+    up = upper_outs(q_pelvis, upper_rest)
+    up = np.where(up <= FREE * 0.5, inf, up)
+    out = np.where(s0 < 0.0, np.minimum(lower, up), lower)
+    return np.where(out >= inf * 0.5, FREE, out)
+
+
 def band_outs(top: np.ndarray, hem: np.ndarray, pts: np.ndarray, core: np.ndarray,
               origin: np.ndarray, u: np.ndarray, across: np.ndarray) -> np.ndarray:
     """Per point: how far outside the lower band it is (signed: negative
@@ -344,9 +388,12 @@ class Report:
             # Each lower band's axis: its top ring's row's -z (row 25's, the
             # mid ring's row 26) through the ring's centre.
             axes = [-mats[r][:3, 2] / np.linalg.norm(mats[r][:3, 2]) for r in self.axis_rows]
-            out, s0 = chain_outs([dp[r] for r in self.chain], axes, mats[25][:3, 0], lp, self.legs.core)
             pin = np.linalg.inv(mats[1])
             q = (pin @ np.c_[lp, np.ones(len(lp))].T).T[:, :3]
+            if len(self.chain) == 3:
+                return dress_outs([dp[r] for r in self.chain], axes, mats[25][:3, 0], lp, self.legs.core, q,
+                                  self.upper_rest)
+            out, s0 = chain_outs([dp[r] for r in self.chain], axes, mats[25][:3, 0], lp, self.legs.core)
             up = upper_outs(q, self.upper_rest)
             # Above the lower band's top: the upper band holds the core.
             above = (s0 < 0.0) & self.legs.core

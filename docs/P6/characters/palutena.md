@@ -658,16 +658,29 @@ wrong: its turn is gone again).
   them at rest in Peach's clips (`NDSP4Overrides.anim_locks_rest`,
   `ndsP4AnimLocksRest`). 144 of her 184 clips moved them more than 15
   degrees.
-- **The leg check** (owner p6t: "we will need leg clipping checks"): every
-  clip keyed by the cloth for this shape, then `dress_check.py`'s measure
-  per frame, her thighs and knees apart from her shins: only her wait (0
-  of 181 frames) and a few others keep them inside; walking 14-26 units
-  out (the back leg through the back of the dress mid-stride), the run 22,
-  jumps and the squat 40-60, the down smash 98, flips, tumbles and the
-  ledge's rises up to 178 (upside down the dress falls toward her head).
-  A wider leg push alone helps the walk, run and squat and worsens the
-  jumps and forward air: the next pass makes the rings' fit hold the
-  thighs and knees (rows 26 and 27 widen or move until they are in).
+- **Her legs held** (owner p6t: "we will need leg clipping checks"). The
+  check (`dress_check.py`, every clip as built): before, 12 of her 133
+  clips kept her thighs and knees inside, out on 2,677 of 4,843 frames
+  (walking 26 units out, the back leg through the back of the dress
+  mid-stride; jumps and the squat 40-60; flips and tumbles up to 178). The
+  cloth itself held the walk and the run; the rings' rigid fit lost them,
+  and the cloth alone lost a kick or a tuck. Now, after each frame's fit,
+  `skirt_keys.py` holds her legs: row 25 turns and rows 26 and 27 move,
+  turn and widen as little as puts every point of her thighs, knees and
+  shins 3 units inside (a shin may show below the hem, never through the
+  dress's side), drawn toward the fit and the frame before, so the dress
+  eases from hold to hold; a knee raised far out (kneeling, thrown) is
+  tried again from row 25 turned toward it; gravity turns the dress at
+  most 90 degrees of her tilt, so a flip leaves it on her legs. The check
+  measures as it holds (`dress_outs`): a point near the mid ring on both
+  bands, one at her hips on the upper band or the lower band's top,
+  whichever holds it. As built: her thighs and knees out on 24 of
+  4,843 frames (2,677 before), her shins through the dress's side on 7
+  (1,053); 113 of the 133 clips clean, the rest out on one to three frames
+  (the back tech, the forward air, getup rolls, the back throw); the hem
+  moves less frame to frame than the cloth alone gave it (the walk's worst
+  18 units a frame, 20 before; the forward air's 126, 278); her largest
+  clip 14,048 bytes (14,144).
 
 ## Animations (the owner's 3DS references, 2026-10-14)
 
