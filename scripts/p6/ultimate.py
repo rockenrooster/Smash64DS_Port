@@ -124,6 +124,10 @@ FIGHTERS = {
         # p6s).
         "skirt": [f"S_Skirt{d}4_null" for d in ("F", "FL", "L", "BL", "B", "BR", "R", "FR")],
         "skirt_mid": [f"S_Skirt{d}3" for d in ("F", "FL", "L", "BL", "B", "BR", "R", "FR")],
+        # The held joint (row 28: the grab's and heavy items' hold, look_skirt.py
+        # "joint_roles") where Ultimate's Throw bone is, in a recipe that asks
+        # ("held": the catch, the throws, heavy items).
+        "held": {"row": 28, "bone": "Throw"},
     },
 }
 DEFAULT_ROOT = REPO.parent / "ssbu-recomp" / "build"
@@ -582,6 +586,17 @@ class Retarget:
                 K._ik(skel, local, trans, [a_, b_, c_], tgt, pole, [1.0, 0.0, 0.0])
                 rr, pp = K._worlds(skel, local, trans)
                 local[c_] = rr[b_].T @ foot_w
+        # The held joint where Ultimate's Throw bone is (scaled about the
+        # hips as her body is): the fighter she holds, or the crate.
+        hd = cfg.get("held")
+        if hd and self.spec.get("held") and hd["row"] < self.rows:
+            hr = hd["row"]
+            target = hip_target + (P[hd["bone"]] - P[pel["bone"]]) * self.k
+            rr, pp = K._worlds(skel, local, trans)
+            par = skel.parents[hr]
+            pw_r = rr[par] if par >= 0 else np.eye(3)
+            pw_p = pp[par] if par >= 0 else np.zeros(3)
+            trans[hr] = [float(v) for v in pw_r.T @ (target - pw_p)]
         return local, trans
 
     def _hair_frame_of(self, pos, head_rot):
@@ -936,7 +951,8 @@ def build(skel: A.Skeleton, spec: dict, scales=None, rom=None, extras: dict | No
             per_rot[g] = [P.slerp(x, y, w) for x, y in zip(per_rot[a], per_rot[b])]
             per_tr[g] = [[x[c] + (y[c] - x[c]) * w for c in range(3)] for x, y in zip(per_tr[a], per_tr[b])]
     first_slot = int(spec.get("first_slot", 0))
-    clip = frames_to_clip(skel, scales, per_rot, per_tr, length, spec.get("loop"), first_slot)
+    clip = frames_to_clip(skel, scales, per_rot, per_tr, length, spec.get("loop"), first_slot,
+                          bool(spec.get("held")))
     tn = spec.get("transn")
     if tn:
         if first_slot < 1:
@@ -950,6 +966,23 @@ def build(skel: A.Skeleton, spec: dict, scales=None, rom=None, extras: dict | No
             st.tracks[4] = A.Track([0] * (length + 1), 0)
             st.tracks[5] = A.Track([0] * (length + 1), 0)
             st.tracks[6] = A.Track([round(v * A.TRANS_UNIT) for v in z], 0)
+            clip.streams[0] = st
+        elif isinstance(tn, dict) and tn.get("absolute"):
+            # The motion's Trans where it is (its height and its travel,
+            # scaled), not its travel from its first frame: the ledge's, where
+            # Ultimate hangs her from the corner (her hands on it) and the
+            # second part's TransN steps carry her onto the stage
+            # (ftCommonCliffCommon2ProcPhysics).
+            part = parts[0]
+            tsrc = Source(fighter, part["motion"], keep_trans=True)
+            yz = [[float(tsrc._local("Trans", time_map(part["time"], g))[c, 3]) * rt.k for c in (1, 2)]
+                  for g in range(length + 1)]
+            st = A.Stream(length, spec.get("loop"))
+            for c in range(3):
+                st.tracks[c] = A.Track([0] * (length + 1), 0)
+            st.tracks[4] = A.Track([0] * (length + 1), 0)
+            st.tracks[5] = A.Track([round(v[0] * A.TRANS_UNIT) for v in yz], 0)
+            st.tracks[6] = A.Track([round(v[1] * A.TRANS_UNIT) for v in yz], 0)
             clip.streams[0] = st
         elif isinstance(tn, dict) and "clip" in tn:
             # The TransN slot of a clip of the tree (a roll's travel kept the game's).
@@ -976,12 +1009,15 @@ def build(skel: A.Skeleton, spec: dict, scales=None, rom=None, extras: dict | No
     return clip
 
 
-def frames_to_clip(skel: A.Skeleton, scales, per_rot, per_tr, length: int, loop, first_slot: int) -> A.Clip:
+def frames_to_clip(skel: A.Skeleton, scales, per_rot, per_tr, length: int, loop, first_slot: int,
+                   last_row: bool = False) -> A.Clip:
     """A clip of per-frame row poses (keyposes.py's writer: a row the poses
     move gets its rotation tracks, and its translation tracks divided by its
-    translate_scale when it moves)."""
+    translate_scale when it moves). The tree's last row is a hidden part's
+    (Peach's held joint, Palutena's row 28): a clip keys it only when it
+    asks (`last_row`: a hidden part's DObj hangs after the made rows)."""
     rows = len(skel.parents)
-    slots = rows - 1 + first_slot
+    slots = rows - (0 if last_row else 1) + first_slot
     clip = A.Clip(slots)
     for r in range(rows):
         slot = r + first_slot

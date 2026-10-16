@@ -247,13 +247,20 @@ def _twist_to(skel, local, trans, row, along, hinge, n):
 def scene_skeleton(skel: A.Skeleton, scene: dict) -> A.Skeleton:
     """The skeleton with the look scene's rest translations (each joint's
     offset from its parent's world, as model_writer.py writes them; the
-    rotations stay the tree's)."""
+    rotations stay the tree's), its parents and the rows it adds past the
+    tree (model_writer.py tree_descs: Palutena's row 28, the held joint,
+    its rest rotation its "base_row"'s)."""
     worlds = [np.array(j["world"], dtype=float) for j in scene["joints"]]
+    base = len(skel.translate)
     for j, row in enumerate(scene["joints"]):
-        if j >= len(skel.translate):
-            break
         p = row["parent"]
         local = worlds[j] if p < 0 else np.linalg.inv(worlds[p]) @ worlds[j]
+        if j >= base:
+            skel.parents.append(p)
+            skel.translate.append(tuple(float(c) for c in local[:3, 3]))
+            skel.rotate.append(tuple(skel.rotate[int(row.get("base_row", j))]))
+            continue
+        skel.parents[j] = p
         skel.translate[j] = tuple(float(c) for c in local[:3, 3])
     return skel
 

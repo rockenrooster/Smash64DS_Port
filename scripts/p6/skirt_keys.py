@@ -600,11 +600,12 @@ class Skirt:
             mask = 0
             for part in role.get("hidden_parts", ()):
                 mask |= 1 << (31 - int(part))
-            if anim_flags & mask:
-                lead = C.first_slot(anim_flags)
+            lead = C.first_slot(anim_flags)
+            new_slot = lead + len(self.f.rows)
+            if anim_flags & mask and new_slot not in clip.streams:
+                # (A clip made on the new tree keys it there already.)
                 st = clip.streams.get(lead + int(role["from"]))
                 if st is not None:
-                    new_slot = lead + len(self.f.rows)
                     out.streams[new_slot] = st
                     out.slots = max(out.slots, new_slot + 1)
         prev_e = tuple(self.f.skel.rotate[ROW_UPPER])

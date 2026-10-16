@@ -299,9 +299,77 @@
    "comment": "Rebound: Ultimate's (owner p6s)",
    "anim": "builds/p6-art/palutena/anims/rebound.o2r"
   },
+  "72": {
+   "comment": "CliffCatch: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/cliff_catch.o2r"
+  },
+  "73": {
+   "comment": "CliffWait: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/cliff_wait.o2r"
+  },
+  "74": {
+   "comment": "CliffQuick: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/cliff_quick.o2r"
+  },
+  "75": {
+   "comment": "CliffClimbQuick1: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/cliff_climb_quick1.o2r"
+  },
+  "76": {
+   "comment": "CliffClimbQuick2: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/cliff_climb_quick2.o2r"
+  },
+  "77": {
+   "comment": "CliffSlow: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/cliff_slow.o2r"
+  },
+  "78": {
+   "comment": "CliffClimbSlow1: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/cliff_climb_slow1.o2r"
+  },
+  "79": {
+   "comment": "CliffClimbSlow2: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/cliff_climb_slow2.o2r"
+  },
+  "80": {
+   "comment": "CliffAttackQuick1: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/cliff_attack_quick1.o2r"
+  },
+  "81": {
+   "comment": "CliffAttackQuick2: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/cliff_attack_quick2.o2r"
+  },
+  "82": {
+   "comment": "CliffAttackSlow1: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/cliff_attack_slow1.o2r"
+  },
+  "83": {
+   "comment": "CliffAttackSlow2: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/cliff_attack_slow2.o2r"
+  },
+  "84": {
+   "comment": "CliffEscapeQuick1: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/cliff_escape_quick1.o2r"
+  },
+  "85": {
+   "comment": "CliffEscapeQuick2: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/cliff_escape_quick2.o2r"
+  },
+  "86": {
+   "comment": "CliffEscapeSlow1: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/cliff_escape_slow1.o2r"
+  },
+  "87": {
+   "comment": "CliffEscapeSlow2: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/cliff_escape_slow2.o2r"
+  },
   "88": {
    "comment": "LightGet: Ultimate's (owner p6s)",
    "anim": "builds/p6-art/palutena/anims/light_get.o2r"
+  },
+  "89": {
+   "anim": "builds/p6-art/palutena/anims/heavy_get.o2r",
+   "comment": "HeavyGet: Ultimate's (owner p6s)"
   },
   "90": {
    "comment": "LightThrowDrop: Ultimate's (owner p6s)",
@@ -342,6 +410,22 @@
   "103": {
    "comment": "LightThrowAirLw: Ultimate's (owner p6s)",
    "anim": "builds/p6-art/palutena/anims/light_throw_air_lw.o2r"
+  },
+  "108": {
+   "anim": "builds/p6-art/palutena/anims/heavy_throw.o2r",
+   "comment": "HeavyThrowF (and B, F4, B4: Ultimate's (owner p6s)"
+  },
+  "109": {
+   "comment": "as motion 108 (Peach's row shares its clip): Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/heavy_throw.o2r"
+  },
+  "110": {
+   "comment": "as motion 108 (Peach's row shares its clip): Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/heavy_throw.o2r"
+  },
+  "111": {
+   "comment": "as motion 108 (Peach's row shares its clip): Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/heavy_throw.o2r"
   },
   "112": {
    "comment": "SwordSwing1 (and the bat's, fan's and star rod's): Ultimate's (owner p6s)",
@@ -468,16 +552,23 @@
    "anim": "builds/p6-art/palutena/anims/fura_fura.o2r"
   },
   "146": {
-   "comment": "Catch: grab (card: telekinetic clutch), Peach's with the box 20% farther and a psionic flash",
-   "script": "scripts/p6/palutena/motions/catch.ms"
+   "comment": "Catch: grab (card: telekinetic clutch), Peach's with the box 20% farther and a psionic flash; Ultimate's motion (owner p6s)",
+   "script": "scripts/p6/palutena/motions/catch.ms",
+   "anim": "builds/p6-art/palutena/anims/catch.o2r"
+  },
+  "147": {
+   "anim": "builds/p6-art/palutena/anims/catch_pull.o2r",
+   "comment": "CatchPull: Ultimate's (owner p6s)"
   },
   "148": {
-   "comment": "ThrowF: Peach's throw made telekinetic (psionic glows at her hands, her throw sound)",
-   "script": "scripts/p6/palutena/motions/throwf.ms"
+   "comment": "ThrowF: Peach's throw made telekinetic (psionic glows at her hands, her throw sound); Ultimate's motion (owner p6s)",
+   "script": "scripts/p6/palutena/motions/throwf.ms",
+   "anim": "builds/p6-art/palutena/anims/throw_f.o2r"
   },
   "149": {
-   "comment": "ThrowB: Peach's back throw made telekinetic, as ThrowF",
-   "script": "scripts/p6/palutena/motions/throwb.ms"
+   "comment": "ThrowB: Peach's back throw made telekinetic, as ThrowF; Ultimate's motion (owner p6s)",
+   "script": "scripts/p6/palutena/motions/throwb.ms",
+   "anim": "builds/p6-art/palutena/anims/throw_b.o2r"
   },
   "164": {
    "comment": "Appeal: down taunt (D4): Ultimate's, she turns to face the camera, the halo above her (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",

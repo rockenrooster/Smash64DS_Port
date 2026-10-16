@@ -593,8 +593,24 @@ further)".
   ceiling hits, the knockdowns, getups, getup rolls and attacks, the techs,
   the clank, item pick-up, throws, swings (sword, bat, fan and star rod
   share them), shooting and the hammer, the shield-break fall and the dizzy
-  loop (a loop plays at Ultimate's own pace). Still Peach's: the ledge,
-  grabs and throws, being grabbed and thrown, the guard (its shield-pose
+  loop (a loop plays at Ultimate's own pace).
+- **Ports, second batch: the ledge, the grab and throws, heavy items.**
+  The ledge's statuses are windows of Ultimate's one motion each (the
+  catch, the hang at Ultimate's own pace; the shared pull-up, then each
+  climb's, attack's and roll's rise and its step, swing or roll onto the
+  stage), with Ultimate's Trans where it is in the TransN slot (ultimate.py
+  "transn": {"absolute"}): she hangs from the corner by her raised hand
+  (650 units below it, Peach's 442), and the second parts' TransN steps
+  carry her onto the stage as SSB64 moves a fighter there
+  (`ftCommonCliffCommon2ProcPhysics`; the climb ends 167 units in, as
+  Peach's). The grab, its pull and the throws keep her scripts' frames (the
+  box at 6 on Ultimate's grab at 7, each release on Ultimate's release
+  frame 20), the held joint (row 28) where Ultimate's Throw bone is
+  (ultimate.py "held"; `keyposes.scene_skeleton` gives the recipes' tree the
+  scene's added rows, `frames_to_clip` keys the hidden part's row for
+  them): the caught fighter in front of her at the waist, lifted and flung.
+  Heavy items too (Peach plays one throw both ways: the game turns her).
+  Still Peach's: being grabbed and thrown, the guard (its shield-pose
   rows), the shield-break flight, the rebirth and the pipe.
 
 ## Animations (the owner's 3DS references, 2026-10-14)

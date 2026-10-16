@@ -1,0 +1,27 @@
+{
+ "comment": "Ultimate's Catch (e00catch) on Peach's row's 16 frames, the held joint (row 28) where Ultimate's Throw bone is (owner p6s: \"port the rest of her animations that still use peach's\"): the grab (her script's box at 6, Ultimate's grab at 7). Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
+ "ultimate": {
+  "fighter": "palutena",
+  "skeleton": "peach",
+  "scene": "builds/p6-art/palutena/3ds2ds/scene_high/scene.json",
+  "header": "0x13b0",
+  "length": 16,
+  "first_slot": 0,
+  "motion": "e00catch",
+  "time": [
+   [
+    0,
+    0
+   ],
+   [
+    6,
+    7
+   ],
+   [
+    16,
+    24
+   ]
+  ],
+  "held": true
+ }
+}
