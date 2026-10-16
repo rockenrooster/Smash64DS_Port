@@ -1,9 +1,10 @@
 # Aether's throw, leap and spin (d02specialhi1, then d02specialhi2 from 18).
 # Ultimate's frames (ultimateframedata, its frame N our N - 1) and the owner's
 # Ultimate attack data (ike_attack_data.json: damage, angle, growth, set and
-# base knockback; owner p6r): armour (flag1) 4-34; Ragnell thrown up at 14,
+# base knockback; owner p6r): armour (flag1) 4-34; Ragnell's uppercut,
 # its hit 6% at 96 with set knockback 140 (its trail on throughout: owner p6s)
-# (14-17, on the flying blade); the leap at 40 (flag2: nds_p4_ike.c rises on
+# (14-17, the blade in his hand from behind him, under and up in front: owner
+# p6t, "uppercut into throw"), thrown up from there at 17; the leap at 40 (flag2: nds_p4_ike.c rises on
 # Ultimate's curve and hangs for the spin); 1% hits at 43, 46 and 49 (90, set
 # knockback 50: Ultimate's 367 pulls them in); the falling hit, 3% (280, set
 # knockback 40), from 50 into the plunge.

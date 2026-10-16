@@ -393,6 +393,33 @@ against the ground, maybe go slightly past the ground a couple of degrees";
   turns 98 degrees from his facing in Ultimate's own motions (Palutena's 54).
   A comparison of the turn is with the owner; nothing changes until a pick.
 
+## In the game as in the renders (owner p6t, 2026-10-15)
+
+Owner p6t (4.5/5): "some yaw issues in game that don't show in your
+renders" -- Aether's sword "off upon coming down", the forward smash; the
+up throw "should hit enemy in front of ike (uppercut into throw), instead
+it comes up from behind".
+
+- **The joints the game locked.** SSB64 makes a fighter with the joints its
+  `FTAttributes.animlock` names locked (`ftParamSetAnimLocks`: the local
+  matrix computed once, at rest) and frees them only in a motion whose row
+  sets anim_flags bit 0; Roy's are rows 3, 10, 15, 21, 24, 26 and 29 (his
+  shoulders, hips' orientation, toes), which his N64 clips never key. No
+  row of Ike's set the bit, so every Ultimate motion played with those
+  joints at rest: his right shoulder 70 degrees off Aether's fall, his
+  sword arm and Ragnell with it (a probe of the joints' DObj values matched
+  the clip; their cached matrices held the rest pose). His own clips now
+  key them all (`anim.py` `key_rest_rows`, at rest where Ultimate leaves
+  them), his rows with his clips set bit 0 (spec `"anim_locks": "rest"`,
+  `p6_author.py`), and his code frees the joints in those rows and holds
+  them at rest in Roy's (`NDSP4Overrides.anim_locks_rest`,
+  `ndsP4AnimLocksRest`), never taking the lock's scale-compensating
+  matrices. 49 of his 169 clips moved those joints more than 15 degrees.
+- **Aether's throw is an uppercut.** Ragnell stays in his hand from behind
+  him, under and up in front (its hit, 14-17) and is thrown from there at
+  17 (`item_path` release 17-18, from 14-16): thrown at 14 it left from
+  behind him, as Ultimate's hand still was.
+
 ## Audio (local inputs, never committed)
 
 Both sets are in `decomp/alt_assets/Fighters/Super Smash Bros Ultimate/Fighters/`

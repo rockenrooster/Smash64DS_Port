@@ -362,6 +362,8 @@ sb32 ndsP4LowDetailSelect(void)
 
 void ftNessSpecialLwProcAbsorb(GObj *fighter_gobj);
 void ftParamsUpdateFighterPartsTransformAll(DObj *dobj);
+void ftParamSetAnimLocks(FTStruct *fp);
+void ftParamClearAnimLocks(FTStruct *fp);
 
 void ndsP4ProcAbsorb(GObj *fighter_gobj)
 {
@@ -2677,11 +2679,72 @@ sb32 ndsP4StaticPartDObj(const DObj *dobj)
     return ndsP4StaticPart(ftGetStruct(dobj->parent_gobj), parts->joint_id);
 }
 
+/* NDSP4Overrides.anim_locks_rest, after the status setter's own lock step.
+ * The fighter is made with its FTAttributes.animlock joints locked at rest
+ * (ftParamSetAnimLocks: transform_update_mode 3, the matrix computed once)
+ * and the source frees them only in a motion whose row sets anim_flags bit
+ * 0, then locks them again where the last clip left them. The base's N64
+ * clips never key them; the content's own clips (Ultimate's motions) do,
+ * and with no row setting the bit the game drew those clips with the
+ * shoulders, hips and shins at rest (owner p6t: Ike's sword "yaw issues in
+ * game that don't show in your renders", Palutena's dair). A row with the
+ * bit (p6_author.py "anim_locks") frees them; any other row holds them at
+ * rest, as the making did (its clip leaves them out, or keys them for the
+ * lock to ignore: Roy's guard); and is_use_animlocks stays FALSE, the plain
+ * parts matrices the content's clips are made for (the source's lock rows
+ * take the scale-compensating NCS path). */
+static void ndsP4AnimLocksRest(FTStruct *fp)
+{
+    const FTCommonPart *part;
+    u32 *animlock;
+    u32 flags0;
+    u32 flags1;
+    u32 current;
+    s32 i;
+
+    if (fp->anim_desc.flags.is_use_animlocks)
+    {
+        ftParamClearAnimLocks(fp);
+    }
+    else if ((fp->attr != NULL) && (fp->attr->animlock != NULL) &&
+             (fp->attr->commonparts_container != NULL))
+    {
+        part = &fp->attr->commonparts_container->commonparts[0];
+        animlock = fp->attr->animlock;
+        flags0 = animlock[0];
+        flags1 = animlock[1];
+        /* ftParamSetAnimLocks' walk, so the same joints. */
+        for (i = nFTPartsJointCommonStart; (flags0 != 0u) || (flags1 != 0u); i++)
+        {
+            current = (i < (ARRAY_COUNT(fp->joints) - 1)) ? flags0 : flags1;
+            if ((current & 0x80000000u) && (fp->joints[i] != NULL))
+            {
+                fp->joints[i]->rotate.vec.f =
+                    part->dobjdesc[i - nFTPartsJointCommonStart].rotate;
+            }
+            if (i < (ARRAY_COUNT(fp->joints) - 1))
+            {
+                flags0 <<= 1;
+            }
+            else
+            {
+                flags1 <<= 1;
+            }
+        }
+        ftParamSetAnimLocks(fp);
+    }
+    fp->is_use_animlocks = FALSE;
+}
+
 void ndsP4AfterSetStatus(GObj *fighter_gobj, s32 status_id)
 {
     const NDSP4Fighter *f =
         ndsP4Fighter(ftGetStruct(fighter_gobj)->nds_p4_content);
 
+    if ((f != NULL) && (f->overrides != NULL) && f->overrides->anim_locks_rest)
+    {
+        ndsP4AnimLocksRest(ftGetStruct(fighter_gobj));
+    }
     if ((f != NULL) && (f->on_status != NULL))
     {
         f->on_status(fighter_gobj, status_id);

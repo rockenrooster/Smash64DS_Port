@@ -339,6 +339,13 @@ typedef struct NDSP4Overrides
      * 1v1"); every other battle the low (ndsFTManagerBattleLowDetail). Such
      * a match loads the content's whole pack, both details (S15). */
     u8 duel_high_detail;
+    /* The content's own clips move the joints FTAttributes.animlock names
+     * (the base's shoulders, hips, shins: its N64 clips leave them to the
+     * lock): a row with anim_flags bit 0 (p6_author.py "anim_locks") frees
+     * them, every other row holds them at rest, and the fighter keeps the
+     * plain parts matrices (ndsP4AnimLocksRest; owner p6t, Ike's in-game
+     * yaw: the lock held his shoulders at rest under Ultimate's motions). */
+    u8 anim_locks_rest;
 } NDSP4Overrides;
 
 /* Item kinds past the source's last (nITKindEnumCount, as Remix numbers its

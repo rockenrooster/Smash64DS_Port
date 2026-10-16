@@ -1,6 +1,7 @@
 {
  "comment": "Warp's travel (she is invisible): the raised pose held.",
  "source": "0x13fe",
+ "skeleton": "peach",
  "frames": [
   12,
   12

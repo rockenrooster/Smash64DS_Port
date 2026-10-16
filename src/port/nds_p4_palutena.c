@@ -1350,6 +1350,8 @@ const NDSP4Overrides gNdsP4PalutenaOverrides = {
     /* Ultimate's motions; its hits collide in the stage's plane. */
     .planar_hits = 1u,
     .duel_high_detail = 1u,
+    /* They move Peach's locked shoulders and shins (spec "anim_locks"). */
+    .anim_locks_rest = 1u,
 };
 
 #if NDS_P2_KIRBY

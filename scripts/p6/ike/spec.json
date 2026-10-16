@@ -12,6 +12,7 @@
    "from": "builds/p6-art/ike/look/1a03"
   }
  },
+ "anim_locks": "rest",
  "motions": {
   "3": {
    "comment": "RebirthWait: Ultimate's (wait, art/p6/ike/anims, ultimate.py)",

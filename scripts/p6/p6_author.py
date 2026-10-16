@@ -41,7 +41,10 @@ SPEC_IDENTITY = {"schema", "content", "comment"}
 SPEC_SCHEMA = "p6-spec-v1"
 # Spec keys this author applies.
 SPEC_APPLIED = {"files", "motions", "menu_motions", "statuses", "attributes", "kind_tables", "cpu",
-                "colanims", "sword_trails", "skirt", "pose"}
+                "colanims", "sword_trails", "skirt", "pose", "anim_locks"}
+# anim_flags bit 0 (FTAnimDesc is_use_animlocks): the row's clip moves the
+# joints FTAttributes.animlock names (spec "anim_locks", author_motions).
+ANIM_FLAG_LOCKS = 0x1
 # "files": the content's own files by role: the descriptor slot each
 # replaces. Its main and model (model_writer.py); a special file of its own
 # (p6_gate.py: Palutena's entry gate in special 2), which only the content's
@@ -113,7 +116,7 @@ def author(base_export: Path, name: str, spec_path: Path | None, out: Path,
         import remix_rom
         rom = remix_rom.Rom(staging / "ssb64asm.z64")
     author_motions(resolved, events, spec.get("motions") or {}, name, out, rom,
-                   spec.get("menu_motions") or {})
+                   spec.get("menu_motions") or {}, spec.get("anim_locks"))
     author_skirt(resolved, events, spec.get("skirt"), name, out, staging, spec.get("pose") or [])
     author_statuses(resolved, spec.get("statuses") or {})
     author_attributes(resolved, spec.get("attributes") or {})
@@ -352,7 +355,7 @@ def edited_script(rom, events: dict, row: dict, edits: dict, index: int) -> list
 
 
 def author_motions(resolved: dict, events: dict, motions: dict, name: str, out: Path,
-                   rom=None, menu_motions: dict | None = None) -> None:
+                   rom=None, menu_motions: dict | None = None, anim_locks: str | None = None) -> None:
     """The spec's motions (index -> {"anim", "anim_flags", "script",
     "script_edits"}); the index one past the base's last appends a motion
     (Ike's jab 3: the base's own row for it is another move):
@@ -368,7 +371,17 @@ def author_motions(resolved: dict, events: dict, motions: dict, name: str, out: 
     The motion row takes the new clip and script; the generator reads both
     through OverlayRom. `menu_motions` gives the menu (submotion) rows
     their own scripts the same way: the Results and select poses (1-4 the
-    wins, 5 the clap)."""
+    wins, 5 the clap).
+
+    `anim_locks` "rest" (spec "anim_locks"; owner p6t, the in-game yaw and
+    knees): the base's N64 clips leave the joints FTAttributes.animlock
+    names (shoulders, hips, shins) to the game's lock, which held them at
+    rest in the content's own clips too. A row whose "anim" is a built clip
+    (anim.py keys those rows, at rest where the clip leaves them) takes
+    anim_flags bit 0, and the content's code (NDSP4Overrides.anim_locks_rest,
+    nds_p4.c) moves them in those rows and holds them at rest in the others."""
+    if anim_locks not in (None, "rest"):
+        raise AuthorError(f"spec anim_locks: {anim_locks!r} (\"rest\" or none)")
     if not motions and not menu_motions:
         return
     if name not in CONTENT_WINDOW:
@@ -444,6 +457,9 @@ def author_motions(resolved: dict, events: dict, motions: dict, name: str, out: 
             row["inherited"]["anim_file_id"] = False
         if "anim_flags" in entry:
             row["anim_flags"] = int(str(entry["anim_flags"]), 0)
+            row["inherited"]["anim_flags"] = False
+        if anim_locks == "rest" and "anim" in entry:
+            row["anim_flags"] |= ANIM_FLAG_LOCKS
             row["inherited"]["anim_flags"] = False
         if "script" in entry and "script_edits" in entry:
             raise AuthorError(f"spec motions {index}: a script or script_edits, not both")

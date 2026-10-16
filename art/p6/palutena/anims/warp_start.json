@@ -1,6 +1,7 @@
 {
  "comment": "Warp (card: new, the vanish): Peach's parasol-opening start to frame 12, the staff raised overhead.",
  "source": "0x13fe",
+ "skeleton": "peach",
  "frames": [
   0,
   12

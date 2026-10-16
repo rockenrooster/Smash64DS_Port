@@ -599,6 +599,49 @@ def skeleton(rom, name: str, detail: str = "high") -> Skeleton:
                                               N.RelocFile.read(rom.o2r(model)), attr), detail)
 
 
+def lock_rows(rom, name: str) -> list[int]:
+    """The tree rows the game holds still in a motion whose row does not set
+    anim_flags bit 0 (FTAttributes.animlock, two u32 masks from bit 31 of the
+    first: ftParamSetAnimLocks freezes those joints' matrices): the base's
+    shoulders, hips and shins, which its N64 clips never key."""
+    import n64_model as N
+    main, model, attr = SKELETONS[name]
+    fm = N.FighterModel(N.RelocFile.read(rom.o2r(main)), N.RelocFile.read(rom.o2r(model)), attr)
+    ref = fm.main.ptr(fm.attr + fm.lay["FTAttributes.animlock"])
+    if ref is None:
+        return []
+    if ref[0] != "intern":
+        raise ValueError(f"{name}: FTAttributes.animlock outside the main file")
+    masks = struct.unpack_from(">2I", fm.main.data, ref[2])
+    return [i for i in range(64) if (masks[i // 32] >> (31 - i % 32)) & 1]
+
+
+def key_rest_rows(clip: Clip, skel: Skeleton, rows, first_slot: int = 0) -> Clip:
+    """The clip with rotation tracks at the bind pose for the rows it leaves
+    out of `rows`. In the game a joint a clip does not key keeps what the
+    last clip left; the lock rows (lock_rows) were held at rest by the lock,
+    which a P6 row turns off (anim_flags bit 0, p6_author.py "anim_locks"),
+    so its clip keys them all -- at rest where the clip leaves them, as
+    pose() poses them."""
+    streams = list(clip.streams.values())
+    if not streams:
+        return clip
+    model = max(streams, key=lambda st: st.length)
+    for r in rows:
+        if r >= len(skel.rotate):
+            continue
+        slot = first_slot + r
+        st = clip.streams.get(slot)
+        if st is None:
+            st = Stream(model.length, model.loop, loop_skips_steps=model.loop_skips_steps)
+            clip.streams[slot] = st
+            clip.slots = max(clip.slots, slot + 1)
+        for k in range(3):
+            if k not in st.tracks:
+                st.tracks[k] = Track([round(skel.rotate[r][k] * ROT_UNIT)] * (st.length + 1), 0)
+    return clip
+
+
 def with_transn_slot(clip: Clip) -> Clip:
     """The clip with an empty TransN slot before its rows, for a motion row
     with the TransN flag (the Appear statuses read the TransN joint, which
@@ -641,6 +684,7 @@ def build(recipe: dict, rom, extras: dict | None = None) -> bytes:
             scales = keyposes.scene_scales(scene, len(skel.parents))
         clips = {int(str(r["clip"]), 0): decode(rom.o2r(int(str(r["clip"]), 0))) for r in keyposes.refs(kp)}
         clip = keyposes.build(skel, kp, clips, len(skel.parents) - 1 + int(kp.get("first_slot", 0)), scales)
+        tree, lead = (kp["skeleton"], skel), int(kp.get("first_slot", 0))
     elif "ultimate" in recipe:
         import keyposes
         import ultimate
@@ -650,13 +694,16 @@ def build(recipe: dict, rom, extras: dict | None = None) -> bytes:
         scene = json.loads((HERE.parents[1] / ut["scene"]).read_text(encoding="utf-8"))
         keyposes.scene_skeleton(skel, scene)
         clip = ultimate.build(skel, ut, keyposes.scene_scales(scene, len(skel.parents)), rom, extras)
+        tree, lead = (ut["skeleton"], skel), int(ut.get("first_slot", 0))
     elif "keys" in recipe:
         blob = rom.o2r(int(str(recipe["header"]), 0))
         skel = skeleton(rom, recipe["skeleton"])
         clip = pose_ops.keys(skel, recipe["keys"], len(skel.parents) - 1)
+        tree, lead = (recipe["skeleton"], skel), 0
     else:
         blob = rom.o2r(int(str(recipe["source"]), 0))
         clip = decode(blob)
+        tree, lead = None, int(recipe.get("first_slot", 0))
     rt = recipe.get("retarget")
     if rt:
         src, dst = skeleton(rom, rt["from"]), skeleton(rom, rt["to"])
@@ -693,6 +740,12 @@ def build(recipe: dict, rom, extras: dict | None = None) -> bytes:
                                      int(op.get("ease", 0)), int(op.get("first_slot", 0)))
             else:
                 raise ValueError(f"recipe op {kind!r}")
+    # The lock rows keyed (key_rest_rows): a source clip's tree is the
+    # retarget's or the recipe's "skeleton".
+    name = tree[0] if tree else (rt["to"] if rt else recipe.get("skeleton"))
+    if name is None:
+        raise ValueError("recipe: a source clip names its tree (\"skeleton\") for its lock rows")
+    clip = key_rest_rows(clip, tree[1] if tree else skeleton(rom, name), lock_rows(rom, name), lead)
     if recipe.get("transn_slot"):
         clip = with_transn_slot(clip)
     return encode(clip, blob, int(recipe.get("eps", ANIM_EPS)))

@@ -565,6 +565,8 @@ const NDSP4Overrides gNdsP4IkeOverrides = {
     .before_physics_map = ndsP4IkeBeforePhysicsMap,
     /* Ultimate's motions; its hits collide in the stage's plane. */
     .planar_hits = 1u,
+    /* They move Roy's locked shoulders and toes (spec "anim_locks"). */
+    .anim_locks_rest = 1u,
 };
 
 #endif /* NDS_P4_CODE_IKE */
