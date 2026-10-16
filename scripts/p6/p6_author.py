@@ -526,9 +526,10 @@ def author_skirt(resolved: dict, events: dict, skirt: dict | None, name: str, ou
                  staging: Path | None, pose: list | None = None) -> None:
     """Every clip the content plays, keyed for its skirt (spec "skirt":
     {"scene": its look's high scene}): Palutena's skirt hangs from Peach's
-    dress rows (look_skirt.py), and skirt_keys.py keys rows 25 and 26 from
-    her legs in each clip, so in every motion the dress holds her legs (the
-    owner's requirement, playtest 2026-10-14). A clip of the content's own
+    dress rows and row 27 (look_skirt.py), and skirt_keys.py keys rows 25,
+    26 and 27 from a cloth model around her legs in each clip, so in every
+    motion the dress holds her legs (the owner's requirement, playtest
+    2026-10-14) and hangs and flows (owner p6s). A clip of the content's own
     window is rewritten under its id; a base clip (Peach's) is copied under
     the next id of the window, once per (clip, flags), and leaves the
     closure when nothing plays it any more.

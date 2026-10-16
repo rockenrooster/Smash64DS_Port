@@ -1,0 +1,23 @@
+{
+ "comment": "Ultimate's ShieldBreakFall (a04damagefall) looping at its own pace (52 frames) (owner p6s: \"port the rest of her animations that still use peach's\"): falling after the break. Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
+ "ultimate": {
+  "fighter": "palutena",
+  "skeleton": "peach",
+  "scene": "builds/p6-art/palutena/3ds2ds/scene_high/scene.json",
+  "header": "0x139b",
+  "length": 52,
+  "first_slot": 0,
+  "motion": "a04damagefall",
+  "time": [
+   [
+    0,
+    0
+   ],
+   [
+    52,
+    52
+   ]
+  ],
+  "loop": 0
+ }
+}

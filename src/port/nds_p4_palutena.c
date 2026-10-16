@@ -1152,9 +1152,144 @@ static void ndsP4PalutenaWings(GObj *fighter_gobj, FTStruct *fp, s32 clip)
     ndsP4PalutenaWingsPose(effect_gobj, fighter_gobj, clip);
 }
 
-/* ftMainProcPhysicsMap's per-frame hook: in the forward and down smash, the
- * wings; in the up smash, the pillar's columns sweep, and its flag0 makes
- * the pillar once. */
+/* Her dress at run time (owner p6s, 2026-10-15: "skirt behaves like a paper
+ * cone, instead of a heavy, flowy dress"; option B over option A's keys,
+ * scripts/p6/skirt_keys.py): the clips key the dress rows from a cloth
+ * model of each motion, which cannot know how she moves through the stage.
+ * A spring over the clip's pose does: the dress swings back as she speeds
+ * up and forward as she stops or turns, trails at speed, flares as she
+ * falls, and settles. Rows 25 (the band's top), 27 (the hem, a further lag)
+ * turn about their own x (lateral) axis; rows 26 and 27 flare (scale
+ * across). Hitlag freezes it.
+ *
+ * The pose engine may hold a body joint's fields between the ticks it
+ * evaluates (NDS_FT_POSE_HOLD), so each field's clip value is kept: a field
+ * still holding what this wrote last tick has not been rewritten. */
+#define PAL_DRESS_ROWS 3
+#define PAL_DRESS_JOINT(row) (nFTPartsJointCommonStart + (row))
+#define PAL_DRESS_SPRING 0.12F
+#define PAL_DRESS_DAMP 0.45F
+/* Radians of swing a unit of forward speed (the trail), and a unit a frame
+ * of forward acceleration (the lag). */
+#define PAL_DRESS_TRAIL 0.0035F
+#define PAL_DRESS_LAG 0.012F
+#define PAL_DRESS_SWING_MAX F_CST_DTOR32(24.0F)
+/* Flare (a scale across) a unit of falling speed. */
+#define PAL_DRESS_FLARE 0.004F
+#define PAL_DRESS_FLARE_MAX 0.18F
+/* A jump in position this large (a respawn, a warp) starts the spring over. */
+#define PAL_DRESS_TELEPORT 400.0F
+
+typedef struct NDSP4PalutenaDress
+{
+    GObj *fighter_gobj;
+    Vec3f pos;
+    Vec3f vel;
+    f32 swing;
+    f32 swing_vel;
+    f32 flare;
+    f32 flare_vel;
+    /* Per row 25, 26, 27: rotate.x, scale.x, scale.y as the clip set them,
+     * and as this wrote them. */
+    f32 base[PAL_DRESS_ROWS][3];
+    f32 wrote[PAL_DRESS_ROWS][3];
+    u8 valid;
+} NDSP4PalutenaDress;
+
+static NDSP4PalutenaDress sNdsP4PalutenaDress[GMCOMMON_PLAYERS_MAX];
+
+static void ndsP4PalutenaDressField(NDSP4PalutenaDress *d, s32 r, s32 k, f32 *field, sb32 scale, f32 amount)
+{
+    f32 v;
+
+    if (!d->valid || (*field != d->wrote[r][k]))
+    {
+        d->base[r][k] = *field;
+    }
+    v = scale ? (d->base[r][k] * (1.0F + amount)) : (d->base[r][k] + amount);
+    *field = v;
+    d->wrote[r][k] = v;
+}
+
+static void ndsP4PalutenaDress(GObj *fighter_gobj, FTStruct *fp)
+{
+    NDSP4PalutenaDress *d;
+    DObj *row[PAL_DRESS_ROWS];
+    Vec3f pos = DObjGetStruct(fighter_gobj)->translate.vec.f;
+    Vec3f vel;
+    f32 forward_speed, forward_accel, target, fall;
+    s32 i;
+
+    if ((fp->player < 0) || (fp->player >= GMCOMMON_PLAYERS_MAX))
+    {
+        return;
+    }
+    d = &sNdsP4PalutenaDress[fp->player];
+    for (i = 0; i < PAL_DRESS_ROWS; i++)
+    {
+        row[i] = fp->joints[PAL_DRESS_JOINT(25 + i)];
+        if (row[i] == NULL)
+        {
+            d->valid = FALSE;
+            return;
+        }
+    }
+    vel.x = pos.x - d->pos.x;
+    vel.y = pos.y - d->pos.y;
+    vel.z = pos.z - d->pos.z;
+    if ((d->fighter_gobj != fighter_gobj) || !d->valid ||
+        (ABSF(vel.x) + ABSF(vel.y) > PAL_DRESS_TELEPORT))
+    {
+        d->fighter_gobj = fighter_gobj;
+        d->vel.x = d->vel.y = d->vel.z = 0.0F;
+        d->swing = d->swing_vel = d->flare = d->flare_vel = 0.0F;
+        vel = d->vel;
+        d->valid = FALSE;
+    }
+    d->pos = pos;
+    if (fp->hitlag_tics == 0)
+    {
+        forward_speed = vel.x * (f32)fp->lr;
+        forward_accel = (vel.x - d->vel.x) * (f32)fp->lr;
+        target = forward_speed * PAL_DRESS_TRAIL;
+        target = (target > PAL_DRESS_SWING_MAX) ? PAL_DRESS_SWING_MAX :
+                 (target < -PAL_DRESS_SWING_MAX) ? -PAL_DRESS_SWING_MAX : target;
+        d->swing_vel += (PAL_DRESS_SPRING * (target - d->swing)) - (PAL_DRESS_DAMP * d->swing_vel) +
+                        (PAL_DRESS_LAG * forward_accel);
+        d->swing += d->swing_vel;
+        if (d->swing > PAL_DRESS_SWING_MAX)
+        {
+            d->swing = PAL_DRESS_SWING_MAX;
+            d->swing_vel = 0.0F;
+        }
+        else if (d->swing < -PAL_DRESS_SWING_MAX)
+        {
+            d->swing = -PAL_DRESS_SWING_MAX;
+            d->swing_vel = 0.0F;
+        }
+        fall = (vel.y < 0.0F) ? -vel.y : 0.0F;
+        target = fall * PAL_DRESS_FLARE;
+        target = (target > PAL_DRESS_FLARE_MAX) ? PAL_DRESS_FLARE_MAX : target;
+        d->flare_vel += (PAL_DRESS_SPRING * (target - d->flare)) - (PAL_DRESS_DAMP * d->flare_vel);
+        d->flare += d->flare_vel;
+        if (d->flare < 0.0F)
+        {
+            d->flare = 0.0F;
+        }
+        d->vel = vel;
+    }
+    ndsP4PalutenaDressField(d, 0, 0, &row[0]->rotate.vec.f.x, FALSE, d->swing * 0.65F);
+    ndsP4PalutenaDressField(d, 1, 1, &row[1]->scale.vec.f.x, TRUE, d->flare * 0.5F);
+    ndsP4PalutenaDressField(d, 1, 2, &row[1]->scale.vec.f.y, TRUE, d->flare * 0.5F);
+    ndsP4PalutenaDressField(d, 2, 0, &row[2]->rotate.vec.f.x, FALSE, d->swing * 0.45F);
+    ndsP4PalutenaDressField(d, 2, 1, &row[2]->scale.vec.f.x, TRUE, d->flare);
+    ndsP4PalutenaDressField(d, 2, 2, &row[2]->scale.vec.f.y, TRUE, d->flare);
+    d->valid = TRUE;
+}
+
+/* ftMainProcPhysicsMap's per-frame hook: her dress's spring; in the forward
+ * and down smash, the wings; in the up smash, the pillar's columns sweep,
+ * and its flag0 makes the pillar once. */
 static void ndsP4PalutenaAfterProcMap(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
@@ -1163,6 +1298,7 @@ static void ndsP4PalutenaAfterProcMap(GObj *fighter_gobj)
     s32 clip = ndsP4PalutenaWingsClip(fp->status_id);
     s32 i;
 
+    ndsP4PalutenaDress(fighter_gobj, fp);
     if (clip >= 0)
     {
         ndsP4PalutenaWings(fighter_gobj, fp, clip);
@@ -1213,6 +1349,7 @@ const NDSP4Overrides gNdsP4PalutenaOverrides = {
     .after_proc_map = ndsP4PalutenaAfterProcMap,
     /* Ultimate's motions; its hits collide in the stage's plane. */
     .planar_hits = 1u,
+    .duel_high_detail = 1u,
 };
 
 #if NDS_P2_KIRBY

@@ -1,0 +1,25 @@
+{
+ "comment": "Ultimate's DownBackD (f04downbackd) on Peach's row's 36 frames; the TransN slot Peach's (its travel) (owner p6s: \"port the rest of her animations that still use peach's\"): the getup roll back, face down. Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
+ "ultimate": {
+  "fighter": "palutena",
+  "skeleton": "peach",
+  "scene": "builds/p6-art/palutena/3ds2ds/scene_high/scene.json",
+  "header": "0x13a6",
+  "length": 36,
+  "first_slot": 1,
+  "motion": "f04downbackd",
+  "time": [
+   [
+    0,
+    0
+   ],
+   [
+    36,
+    45
+   ]
+  ],
+  "transn": {
+   "clip": "0x13a6"
+  }
+ }
+}

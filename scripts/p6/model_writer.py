@@ -119,9 +119,47 @@ def ci4_bytes(texels) -> bytes:
     return bytes(out)
 
 
+# Owner p6s (Palutena): "Brighter colors: lets go with the A+B (4th
+# mockup)". A: every palette the writer writes lifted (--lift-palettes,
+# lift_colour): the whites brighter and cleaner, the greens and blues
+# brighter and more saturated. B: the lists' ambient light raised
+# (--ambient, the preludes' G_MW_LIGHTCOL light 2).
+LIFT_PALETTES = False
+
+
+def lift_colour(rgb) -> list:
+    """A palette colour lifted (owner p6s, mock-up A): a white (saturation
+    under 0.2, value over 0.5) to value * 1.22 + 0.06 at half its
+    saturation; a green (hue 70-170) value * 1.4, saturation * 1.15; a blue
+    (hue 185-255) value * 1.35, saturation * 1.1."""
+    import colorsys
+    r, g, b = (c / 255.0 for c in rgb[:3])
+    h, s, v = colorsys.rgb_to_hsv(r, g, b)
+    hd = h * 360.0
+    if s < 0.2 and v > 0.5:
+        v, s = min(1.0, v * 1.22 + 0.06), s * 0.5
+    elif 70.0 <= hd <= 170.0 and s > 0.2:
+        v, s = min(1.0, v * 1.4), min(1.0, s * 1.15)
+    elif 185.0 <= hd <= 255.0 and s > 0.2:
+        v, s = min(1.0, v * 1.35), min(1.0, s * 1.1)
+    r, g, b = colorsys.hsv_to_rgb(h, s, v)
+    return [round(r * 255), round(g * 255), round(b * 255)] + list(rgb[3:])
+
+
+def ambient_preludes(scene: dict, rgb: int) -> None:
+    """The scene's preludes with light 2's colour (the ambient: G_MOVEWORD
+    G_MW_LIGHTCOL at 0x18 and 0x1C) set to rgb."""
+    for cmds in (scene.get("preludes") or {}).values():
+        for c in cmds or ():
+            if int(c[0], 16) in (0xDB0A0018, 0xDB0A001C):
+                c[1] = f"{(rgb << 8) & 0xFFFFFF00:08x}"
+
+
 def rgba5551(palette) -> bytes:
     out = bytearray()
     for c in palette:
+        if LIFT_PALETTES:
+            c = lift_colour(c)
         r, g, b = (int(x) for x in c[:3])
         a = int(c[3]) if len(c) > 3 else 255
         out += struct.pack(">H", ((r >> 3) << 11) | ((g >> 3) << 6) | ((b >> 3) << 1) | (1 if a >= 128 else 0))
@@ -709,14 +747,52 @@ def write_rules_in_place(fm: N.FighterModel, model: N.RelocFile, rules: list, pa
     return sorted(set(written))
 
 
-def joint_rows(fm: N.FighterModel, detail: str, scene: dict, offsets: dict[int, int]) -> bytes:
-    """The detail's JointTree: the base's rows with the look's translations
-    and the new lists."""
+DEPTH_MASK = 0xFFF
+
+
+def tree_depths(rows: list, scene: dict) -> list[int]:
+    """The tree's id words (depth in the low 12 bits) with the scene's
+    parents: a row the scene hangs from another parent than the base's
+    (look_skirt.py: Palutena's hem on row 27, Peach's last row, from row 26)
+    takes its parent's depth plus one. lbCommonSetupFighterPartsDObjs hangs
+    each row from the last row before it one level up, so the new parent
+    must be that row (row 27 follows row 26's list)."""
+    ids = [row.depth for row in rows]
+    joints = scene["joints"]
+    count = min(len(rows) - 1, len(joints))
+    for i in range(count):
+        p = joints[i]["parent"]
+        want = 0 if p < 0 else (ids[p] & DEPTH_MASK) + 1
+        if (ids[i] & DEPTH_MASK) != want:
+            ids[i] = (ids[i] & ~DEPTH_MASK) | want
+    for i in range(count):
+        d = ids[i] & DEPTH_MASK
+        parent = -1 if d == 0 else max((k for k in range(i) if (ids[k] & DEPTH_MASK) == d - 1), default=-2)
+        if parent != joints[i]["parent"]:
+            raise WriterError(f"row {i}: the scene hangs it from row {joints[i]['parent']}, "
+                              f"the tree's order from row {parent}")
+    return ids
+
+
+def tree_descs(fm: N.FighterModel, detail: str, scene: dict) -> list:
+    """The detail's tree rows: the base's, then any row the scene adds past
+    them (its "base_row": the base row whose rest it starts from), then the
+    base's terminator."""
     rows = fm.trees[detail]
+    joints = scene["joints"]
+    extra = [rows[int(j["base_row"])] for j in joints[len(rows) - 1:]]
+    return list(rows[:-1]) + extra + [rows[-1]]
+
+
+def joint_rows(fm: N.FighterModel, detail: str, scene: dict, offsets: dict[int, int]) -> bytes:
+    """The detail's JointTree: the base's rows with the look's translations,
+    parents (tree_depths), added rows (tree_descs) and the new lists."""
+    rows = tree_descs(fm, detail, scene)
     worlds = [np.array(j["world"], dtype=float) for j in scene["joints"]]
+    ids = tree_depths(rows, scene)
     out = bytearray()
     for index, row in enumerate(rows):
-        r = N.Joint(row.depth, row.dl, row.translate, row.rotate, row.scale)
+        r = N.Joint(ids[index], row.dl, row.translate, row.rotate, row.scale)
         if index < len(worlds):
             p = scene["joints"][index]["parent"]
             local = worlds[index] if p < 0 else np.linalg.inv(worlds[p]) @ worlds[index]
@@ -727,7 +803,7 @@ def joint_rows(fm: N.FighterModel, detail: str, scene: dict, offsets: dict[int, 
 
 
 def write(base_export: Path, scenes: dict[str, Path], main_id: int, model_id: int, out: Path,
-          alias: frozenset = frozenset(), textures: list | None = None) -> dict:
+          alias: frozenset = frozenset(), textures: list | None = None, ambient: int | None = None) -> dict:
     fm = N.FighterModel.from_export(base_export)
     model = N.RelocFile(fm.model.header, model_id, bytearray(fm.model.data), dict(fm.model.intern),
                         dict(fm.model.extern), list(fm.model.spare_externs))
@@ -774,6 +850,8 @@ def write(base_export: Path, scenes: dict[str, Path], main_id: int, model_id: in
     joint_mobjs: dict = {}
     for detail, path in scenes.items():
         scene = json.loads(path.read_text(encoding="utf-8"))
+        if ambient is not None:
+            ambient_preludes(scene, ambient)
         lw = ListWriter(fm, model, scene, detail, None)
         lw.new_textures = shared_textures
         offsets = lw.build(app)
@@ -799,7 +877,7 @@ def write(base_export: Path, scenes: dict[str, Path], main_id: int, model_id: in
         app.align(8)
         tree_at = app.here
         app.put(joint_rows(fm, detail, scene, offsets))
-        for index in range(len(fm.trees[detail])):
+        for index in range(len(tree_descs(fm, detail, scene))):
             if offsets.get(index) is not None:
                 app.slot(tree_at + index * N.DOBJ_DESC_SIZE + 4, ("intern", model_id, offsets[index]))
         part = fm.commonparts + DETAIL_INDEX[detail] * lay["sizeof(FTCommonPart)"]
@@ -835,6 +913,17 @@ def write(base_export: Path, scenes: dict[str, Path], main_id: int, model_id: in
                                      "triangles": len(scene["triangles"])}
     if part_lists:
         report["parts"] = write_part_descs(fm, main, model_id, part_lists, tree_lists, joint_mobjs, alias)
+    # A row the base never made a DObj for (FTAttributes.setup_parts) that a
+    # detail now draws (Palutena's hem on row 27): its bit set, so the tree
+    # makes it.
+    made = set_setup_parts(fm, main, {j for lists in tree_lists.values() for j in lists})
+    if made:
+        report["setup_parts_added"] = made
+    # A row's role moved to another row (look_skirt.py: Peach's held joint,
+    # row 27, to row 28): the attributes that name its joint name the new one.
+    roles = json.loads(next(iter(scenes.values())).read_text(encoding="utf-8")).get("joint_roles") or []
+    if roles:
+        report["joint_roles"] = move_joint_roles(fm, main, roles)
     # A look on its own proportions plays the base's clips at its limb
     # lengths: FTAttributes.translate_scales (look_blend.py), one Vec3f per
     # fighter joint, appended to the main file.
@@ -856,6 +945,51 @@ def write(base_export: Path, scenes: dict[str, Path], main_id: int, model_id: in
     report["model_size"] = len(model.data)
     (out / "writer.json").write_text(json.dumps(report, indent=1) + "\n", encoding="utf-8")
     return report
+
+
+def move_joint_roles(fm: N.FighterModel, main: N.RelocFile, roles: list) -> list:
+    """Each role's joint (row + 4) renamed in FTAttributes: the held-item
+    joints, the feet, the effect joints, and the named hidden parts' root
+    and parent (FTHiddenPart: root, parent, part index, kind)."""
+    lay = fm.lay
+    done = []
+    for role in roles:
+        old, new = int(role["from"]) + 4, int(role["to"]) + 4
+        fields = [lay["FTAttributes.joint_itemheavy_id"], lay["FTAttributes.joint_itemlight_id"],
+                  lay["FTAttributes.joint_rfoot_id"], lay["FTAttributes.joint_lfoot_id"]]
+        fields += [lay["FTAttributes.effect_joint_ids"] + 4 * k for k in range(5)]
+        for off in fields:
+            at = fm.attr + off
+            if struct.unpack_from(">i", main.data, at)[0] == old:
+                struct.pack_into(">i", main.data, at, new)
+                done.append([off, old, new])
+        ref = main.ptr(fm.attr + lay["FTAttributes.hiddenparts"])
+        for part in role.get("hidden_parts", ()):
+            if ref is None or ref[0] != "intern":
+                raise WriterError("the role names hidden parts but hiddenparts is not in the main file")
+            at = ref[2] + 16 * int(part)
+            for k in range(2):
+                if struct.unpack_from(">i", main.data, at + 4 * k)[0] == old:
+                    struct.pack_into(">i", main.data, at + 4 * k, new)
+                    done.append([f"hidden {part}.{k}", old, new])
+    return done
+
+
+def set_setup_parts(fm: N.FighterModel, main: N.RelocFile, rows: set) -> list[int]:
+    """Set FTAttributes.setup_parts' bit (two u32 masks from bit 31 of the
+    first) for each of these rows the base does not make; returns them."""
+    ref = main.ptr(fm.attr + fm.lay["FTAttributes.setup_parts"])
+    if ref is None or ref[0] != "intern":
+        raise WriterError("setup_parts is not in the main file")
+    masks = list(struct.unpack_from(">2I", main.data, ref[2]))
+    added = []
+    for row in sorted(rows):
+        word, bit = row // 32, 31 - row % 32
+        if not (masks[word] >> bit) & 1:
+            masks[word] |= 1 << bit
+            added.append(row)
+    struct.pack_into(">2I", main.data, ref[2], *masks)
+    return added
 
 
 def write_part_descs(fm: N.FighterModel, main: N.RelocFile, model_id: int, part_lists: dict,
@@ -958,7 +1092,13 @@ def main() -> int:
     ap.add_argument("--alias", default="", help="joints whose every model-part variant draws the look's list")
     ap.add_argument("--textures", type=Path, action="append", default=[],
                     help="in-place texture writes (face_frames.py writer.json)")
+    ap.add_argument("--lift-palettes", action="store_true",
+                    help="every palette written lifted (lift_colour: owner p6s, Palutena brighter)")
+    ap.add_argument("--ambient", type=lambda s: int(s, 16),
+                    help="the lists' ambient light colour, RRGGBB hex (the base's preludes')")
     args = ap.parse_args()
+    global LIFT_PALETTES
+    LIFT_PALETTES = bool(args.lift_palettes)
     scenes = {}
     for s in args.scene:
         detail, path = s.split("=", 1)
@@ -967,7 +1107,7 @@ def main() -> int:
         scenes[detail] = Path(path)
     alias = frozenset(int(x) for x in args.alias.split(",") if x)
     textures = [t for path in args.textures for t in json.loads(path.read_text(encoding="utf-8"))]
-    report = write(args.base_export, scenes, args.main_id, args.model_id, args.out, alias, textures)
+    report = write(args.base_export, scenes, args.main_id, args.model_id, args.out, alias, textures, args.ambient)
     print(json.dumps(report["details"], indent=1))
     print(f"model {args.model_id:#x}: {report['model_size']} bytes -> {args.out}")
     return 0

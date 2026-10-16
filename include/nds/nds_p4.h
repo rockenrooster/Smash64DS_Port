@@ -334,6 +334,11 @@ typedef struct NDSP4Overrides
      * SSB64's test the third (owner p6r: "jabs seem to be offset diagonally
      * preventing hitting enemies"). */
     u8 planar_hits;
+    /* A VS match of one or two fighters draws the content's high detail
+     * (ndsP4DuelHighDetail; owner p6s, Palutena: "Lets try High for a
+     * 1v1"); every other battle the low (ndsFTManagerBattleLowDetail). Such
+     * a match loads the content's whole pack, both details (S15). */
+    u8 duel_high_detail;
 } NDSP4Overrides;
 
 /* Item kinds past the source's last (nITKindEnumCount, as Remix numbers its
@@ -744,6 +749,9 @@ u32 ndsP4PlayerContent(u32 player);
  * match's selection must not reach the menus or the 1P modes). Only a
  * content whose parent is `fkind` counts. */
 u32 ndsP4MakeContent(s32 player, s32 fkind);
+/* A fighter made for `player` keeps its high detail in a VS match of one or
+ * two fighters (NDSP4Overrides.duel_high_detail). */
+sb32 ndsP4DuelHighDetail(s32 player, s32 fkind);
 /* The match's selection: in the VS battle and its Results only. */
 u32 ndsP4MatchContent(s32 player);
 /* VS character select: the content a slot's preview shows (0 = none). */

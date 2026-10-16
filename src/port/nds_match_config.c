@@ -206,6 +206,10 @@ volatile u32 gNdsLabFourCpuCostumes __attribute__((used)) = 0xffffffffu;
 /* Boot-poked team shade (FTStruct.shade, 1-3: a team's second and third
  * fighter of one kind), one byte a slot; 0xFF keeps the preset's (none). */
 volatile u32 gNdsLabFourCpuShades __attribute__((used)) = 0xffffffffu;
+/* Boot-poked: nonzero leaves slots 2 and 3 empty, a two-fighter match (the
+ * NDS_LAB_FOURCPU_TWO build's, at run time: a P6 content's 1v1 high detail,
+ * owner p6s). */
+volatile u32 gNdsLabFourCpuTwo __attribute__((used)) = 0u;
 /* Boot-poked item switch (0 keeps every kind) and rate (the enum count or
  * more keeps the preset's; 5 is very high). With the source's dITManagerForceMonsterKind this puts one Poke
  * Ball Pokemon on screen for an owner capture. */
@@ -548,6 +552,11 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
             {
                 cfg->fighters[slot].shade = (u8)shade;
             }
+        }
+        if (gNdsLabFourCpuTwo != 0u)
+        {
+            cfg->fighters[2].pkind = nFTPlayerKindNot;
+            cfg->fighters[3].pkind = nFTPlayerKindNot;
         }
     }
 #endif

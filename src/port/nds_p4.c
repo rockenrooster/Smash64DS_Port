@@ -340,6 +340,21 @@ sb32 ndsP4LowDetailBattle(void)
         TRUE : FALSE;
 }
 
+sb32 ndsP4DuelHighDetail(s32 player, s32 fkind)
+{
+    u32 content;
+    const NDSP4Fighter *f;
+
+    if ((gSCManagerSceneData.scene_curr != nSCKindVSBattle) || (gSCManagerBattleState == NULL) ||
+        ((gSCManagerBattleState->pl_count + gSCManagerBattleState->cp_count) > 2))
+    {
+        return FALSE;
+    }
+    content = ndsP4MakeContent(player, fkind);
+    f = (content != 0u) ? ndsP4Fighter(content) : NULL;
+    return ((f != NULL) && (f->overrides != NULL) && (f->overrides->duel_high_detail != 0u)) ? TRUE : FALSE;
+}
+
 sb32 ndsP4LowDetailSelect(void)
 {
     return (gSCManagerSceneData.scene_curr == nSCKindPlayersVS) ? TRUE : FALSE;

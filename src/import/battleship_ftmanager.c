@@ -1281,6 +1281,12 @@ static void ndsFTManagerBattleLowDetail(FTDesc *desc)
     {
         return;
     }
+#if NDS_P4
+    if (ndsP4DuelHighDetail((s32)desc->player, desc->fkind) != FALSE)
+    {
+        return;
+    }
+#endif
     if ((scene == (u32)nSCKindVSBattle) || (scene == (u32)nSCKind1PGame) ||
         (scene == (u32)nSCKind1PBonusStage) ||
         (scene == (u32)nSCKind1PTrainingMode))

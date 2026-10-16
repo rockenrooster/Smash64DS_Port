@@ -36,10 +36,32 @@ surface crosses CUT_Y, the hem ring the old hem's; positions, uv and normals
 are interpolated along each ring. The old skirt triangles leave the scene
 (their vertices stay, unreferenced).
 
+Owner p6s (2026-10-15): "skirt behaves like a paper cone, instead of a heavy,
+flowy dress" -- one straight band from the hips to the hem. The lower band is
+split at MID_Y (about her knees) by a mid ring (split_band), so the dress
+bends there:
+
+- row 26 (Peach's hem row) holds the mid ring, its origin moved up the band
+  to MID_Y; the hem moves to row 27, Peach's last tree row, hung from row 26
+  where row 26's origin was (model_writer.py writes the tree's depth from
+  the scene's parents and makes the row's DObj, FTAttributes.setup_parts);
+- row 27 was the joint a grab holds the caught fighter by and a heavy item
+  rides (FTAttributes.joint_itemheavy_id, Peach's hidden part 3: catch,
+  throws, heavy items): that role moves to a new row 28 hung from row 0 as
+  row 27 was (the scene's "joint_roles": model_writer.py writes the row and
+  points the attributes at it; skirt_keys.py moves those clips' keys);
+- the band from row 25's ring to the mid ring is drawn by row 26 from row
+  25's seam load, the band from the mid ring to the hem by row 27 from row
+  26's: each seam a parent and the child drawn next (row 27 is the last row
+  of the tree, row 26's only child);
+- the slit's V runs through both bands: the mid ring has a vertex on each of
+  its edges (on the line from the slit's top to its hem vertex), the V open
+  below them.
+
     look_skirt.py --scene <scene.json> [--scene ...] [--samples high|low]
 
 Rewrites each scene in place; a scene whose skirt is already on row 26 is
-left alone.
+split (once: a skirt on row 27 is left alone).
 """
 from __future__ import annotations
 
@@ -56,8 +78,16 @@ CUT_Y = 288.0
 # Row 25's origin (the band's pivot) moved up from Peach's (y 252.6) to her
 # hip joints' height, so the whole thigh hangs inside the band that turns.
 PIVOT_Y = 280.0
-# Rows: the pelvis, the bodice, Peach's dress rows.
+# Rows: the pelvis, the bodice, Peach's dress rows (the hem's row before
+# the split; split_band moves it to ROW_HEM3, the mid ring onto ROW_HEM).
 ROW_PELVIS, ROW_BODICE, ROW_UPPER, ROW_HEM = 1, 2, 25, 26
+ROW_MID, ROW_HEM3 = 26, 27
+# Where row 27's role goes (the held joint: FTAttributes.joint_itemheavy_id,
+# hidden part 3).
+ROW_HELD, HELD_HIDDEN_PART = 28, 3
+# The mid ring's height (model units; her knees are at 153, the hem at about
+# 65, row 25's ring at 294).
+MID_Y = 165.0
 # The row 25 ring: this much above the cut and this fraction of its radius,
 # inside the upper band's lower edge.
 OVERLAP_UP = 6.0
@@ -126,9 +156,108 @@ def _cut_ring(verts: list[dict], tris: list[dict], y: float) -> list[dict]:
     return ring
 
 
+def split_band(scene: dict) -> dict:
+    """The lower band (row 25's ring to the hem on row 26) split at MID_Y by
+    a mid ring on row 26, the hem moved to row 27 (the module's note)."""
+    verts, tris, joints = scene["vertices"], scene["triangles"], scene["joints"]
+    if any(t["joint"] == ROW_HEM3 for t in tris):
+        return {"skipped": "already split"}
+    band = [t for t in tris if t["joint"] == ROW_HEM and t.get("object") == DRESS]
+    if not band:
+        raise SkirtError("no lower band on row 26 to split")
+    material = band[0]["material"]
+    used = sorted({i for t in band for i in t["v"]})
+    on25 = [i for i in used if verts[i]["joint"] == ROW_UPPER]
+    hem = sorted((i for i in used if verts[i]["joint"] == ROW_HEM), key=lambda i: verts[i]["uv"][0])
+    y25 = max(verts[i]["model"][1] for i in on25)
+    ring25 = sorted((i for i in on25 if verts[i]["model"][1] > y25 - 1.0), key=lambda i: verts[i]["uv"][0])
+    apex = [i for i in on25 if verts[i]["model"][1] <= y25 - 1.0]
+    if len(apex) != 1 or len(ring25) != len(hem):
+        raise SkirtError(f"lower band: ring {len(ring25)}, hem {len(hem)}, slit top {len(apex)}")
+    apex = apex[0]
+    us = [verts[i]["uv"][0] for i in ring25]
+    if any(abs(a - verts[h]["uv"][0]) > 1e-3 for a, h in zip(us, hem)):
+        raise SkirtError("the band's ring and hem are not sampled at the same u")
+    slit_k = next((k for k in range(len(us) - 1) if abs(us[k] - SLIT[0]) < 1e-3 and abs(us[k + 1] - SLIT[1]) < 1e-3),
+                  None)
+    if slit_k is None:
+        raise SkirtError("no slit span between the band's samples")
+    # Row 26 up the band to MID_Y (along row 25's -z, as row 26 hangs); row
+    # 27 where row 26 was.
+    w25 = np.array(joints[ROW_UPPER]["world"], dtype=float)
+    w_hem = np.array(joints[ROW_HEM]["world"], dtype=float)
+    down = (w25[1, 3] - MID_Y) / (w25[1, 3] - w_hem[1, 3])
+    w_mid = w_hem.copy()
+    w_mid[:3, 3] = w25[:3, 3] + (w_hem[:3, 3] - w25[:3, 3]) * down
+    offset = lambda parent, child: [float(x) for x in (np.linalg.inv(parent) @ child)[:3, 3]]
+    # Row 27's role (the held joint) to a new row 28, as row 27 was.
+    if len(joints) != ROW_HEM3 + 1:
+        raise SkirtError(f"the scene has {len(joints)} rows, not Peach's {ROW_HEM3 + 1}")
+    joints.append(dict(joints[ROW_HEM3], index=ROW_HELD, base_row=ROW_HEM3, has_list=False))
+    scene["joint_roles"] = [{"from": ROW_HEM3, "to": ROW_HELD, "hidden_parts": [HELD_HIDDEN_PART]}]
+    joints[ROW_HEM3] = dict(joints[ROW_HEM3], parent=ROW_MID, depth=int(joints[ROW_MID]["depth"]) + 1,
+                            world=w_hem.tolist(), translate=offset(w_mid, w_hem), rotate=[0.0, 0.0, 0.0],
+                            scale=[1.0, 1.0, 1.0], has_list=True)
+    joints[ROW_MID] = dict(joints[ROW_MID], world=w_mid.tolist(), translate=offset(w25, w_mid))
+    inv_mid, inv_hem = np.linalg.inv(w_mid), np.linalg.inv(w_hem)
+    for i in hem:
+        verts[i]["joint"] = ROW_HEM3
+        verts[i]["local"] = [round(float(x), 3) for x in (inv_hem @ np.append(verts[i]["model"], 1.0))[:3]]
+    proto = verts[hem[0]]
+
+    def at(a: int, b: int, y: float) -> dict:
+        """Where the line from vertex a down to vertex b reaches height y."""
+        pa, pb = np.array(verts[a]["model"], dtype=float), np.array(verts[b]["model"], dtype=float)
+        s = (pa[1] - y) / (pa[1] - pb[1])
+        lerp = lambda key: np.array(verts[a][key], dtype=float) + (np.array(verts[b][key], dtype=float) -
+                                                                    np.array(verts[a][key], dtype=float)) * s
+        return {"pos": pa + (pb - pa) * s, "uv": lerp("uv"), "normal": lerp("normal")}
+
+    def add(q: dict) -> int:
+        n = q["normal"]
+        n = n / max(np.linalg.norm(n), 1e-6) * 127.0
+        verts.append({"joint": ROW_MID, "local": [round(float(x), 3) for x in (inv_mid @ np.append(q["pos"], 1.0))[:3]],
+                      "model": [round(float(x), 3) for x in q["pos"]],
+                      "uv": [round(float(x), 5) for x in q["uv"]], "st": None,
+                      "flag": proto.get("flag", 0), "normal": [int(round(float(x))) for x in n],
+                      "rgba": list(proto["rgba"]), "object": DRESS})
+        return len(verts) - 1
+
+    mid = [add(at(a, h, MID_Y)) for a, h in zip(ring25, hem)]
+    v_left = add(at(apex, hem[slit_k], MID_Y))
+    v_right = add(at(apex, hem[slit_k + 1], MID_Y))
+    new_tris = []
+
+    def tri(row: int, a: int, b: int, c: int) -> None:
+        new_tris.append({"joint": row, "v": [a, b, c], "material": material, "object": DRESS})
+
+    for k in range(len(us) - 1):
+        a, b, m0, m1, h0, h1 = ring25[k], ring25[k + 1], mid[k], mid[k + 1], hem[k], hem[k + 1]
+        if k == slit_k:
+            # Above the V's top, either side of it to the mid ring, then
+            # either side of it to the hem; open between its edges.
+            tri(ROW_MID, a, apex, b)
+            tri(ROW_MID, a, m0, v_left)
+            tri(ROW_MID, a, v_left, apex)
+            tri(ROW_MID, apex, v_right, b)
+            tri(ROW_MID, b, v_right, m1)
+            tri(ROW_HEM3, m0, h0, v_left)
+            tri(ROW_HEM3, v_right, h1, m1)
+            continue
+        tri(ROW_MID, a, m0, b)
+        tri(ROW_MID, b, m0, m1)
+        tri(ROW_HEM3, m0, h0, m1)
+        tri(ROW_HEM3, m1, h0, h1)
+    old = {id(t) for t in band}
+    scene["triangles"] = [t for t in tris if id(t) not in old] + new_tris
+    return {"split": len(band), "upper": sum(1 for t in new_tris if t["joint"] == ROW_MID),
+            "lower": sum(1 for t in new_tris if t["joint"] == ROW_HEM3), "mid_ring": len(mid) + 2,
+            "mid_y": MID_Y}
+
+
 def remesh(scene: dict, detail: str) -> dict:
     verts, tris, joints = scene["vertices"], scene["triangles"], scene["joints"]
-    if any(verts[i]["joint"] == ROW_HEM for t in tris for i in t["v"]):
+    if any(verts[i]["joint"] in (ROW_HEM, ROW_HEM3) for t in tris for i in t["v"]):
         return {"skipped": "already on row 26"}
     skirt = [t for t in tris if t.get("object") == DRESS and
              any(verts[i]["model"][1] < WAIST_Y - 1.0 for i in t["v"])]
@@ -260,6 +389,7 @@ def main() -> int:
         scene = json.loads(path.read_text(encoding="utf-8"))
         detail = scene.get("detail") or ("low" if "low" in path.parent.name else "high")
         info = remesh(scene, "low" if detail == "low" else "high")
+        info["mid"] = split_band(scene)
         path.write_bytes((json.dumps(scene, indent=0) + "\n").encode("utf-8"))
         print(f"look skirt: {path} {info}")
     return 0

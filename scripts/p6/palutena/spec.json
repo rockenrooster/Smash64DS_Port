@@ -18,7 +18,7 @@
  },
  "skirt": {
   "scene": "builds/p6-art/palutena/3ds2ds/scene_high/scene.json",
-  "comment": "Owner playtest 2026-10-14: in every animation the dress surrounds her legs, except at the slit. Her skirt hangs from Peach's dress rows (scripts/p6/look_skirt.py); every clip she plays gets rows 25 and 26 keyed from her legs (scripts/p6/skirt_keys.py)."
+  "comment": "Owner playtest 2026-10-14: in every animation the dress surrounds her legs, except at the slit. Her skirt hangs from Peach's dress rows and row 27 (scripts/p6/look_skirt.py: row 25's ring, the mid ring on row 26, the hem on row 27; the grab's and heavy items' hold, Peach's row 27, moved to a new row 28); every clip she plays gets rows 25, 26 and 27 keyed from a cloth model around her legs (scripts/p6/skirt_keys.py; owner p6s: \"heavy, flowy dress\")."
  },
  "menu_motions": {
   "1": {
@@ -74,6 +74,14 @@
   "11": {
    "comment": "RunBrake: Ultimate's run brake",
    "anim": "builds/p6-art/palutena/anims/run_brake.o2r"
+  },
+  "12": {
+   "comment": "Turn: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/turn.o2r"
+  },
+  "13": {
+   "comment": "TurnRun: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/turn_run.o2r"
   },
   "14": {
    "comment": "KneeBend: Ultimate's jump squat",
@@ -191,6 +199,10 @@
    "comment": "DamageAir3: Ultimate's",
    "anim": "builds/p6-art/palutena/anims/damage_air3.o2r"
   },
+  "43": {
+   "comment": "DamageE: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/damage_elec.o2r"
+  },
   "44": {
    "comment": "DamageFlyHi: Ultimate's",
    "anim": "builds/p6-art/palutena/anims/damage_fly_hi.o2r"
@@ -211,9 +223,213 @@
    "comment": "DamageFlyRoll: Ultimate's tumble",
    "anim": "builds/p6-art/palutena/anims/damage_fly_roll.o2r"
   },
+  "49": {
+   "comment": "WallDamage: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/wall_damage.o2r"
+  },
   "50": {
    "comment": "DamageFall: Ultimate's tumble fall",
    "anim": "builds/p6-art/palutena/anims/damage_fall.o2r"
+  },
+  "51": {
+   "comment": "FallSpecial: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/fall_special.o2r"
+  },
+  "52": {
+   "comment": "LandingFallSpecial: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/landing_fall_special.o2r"
+  },
+  "57": {
+   "comment": "StopCeil: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/stop_ceil.o2r"
+  },
+  "58": {
+   "comment": "DownBounceD: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/down_bounce_d.o2r"
+  },
+  "59": {
+   "comment": "DownBounceU: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/down_bounce_u.o2r"
+  },
+  "60": {
+   "comment": "DownStandD: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/down_stand_d.o2r"
+  },
+  "61": {
+   "comment": "DownStandU: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/down_stand_u.o2r"
+  },
+  "62": {
+   "comment": "PassiveStandF: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/passive_stand_f.o2r"
+  },
+  "63": {
+   "comment": "PassiveStandB: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/passive_stand_b.o2r"
+  },
+  "64": {
+   "comment": "DownForwardD: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/down_forward_d.o2r"
+  },
+  "65": {
+   "comment": "DownForwardU: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/down_forward_u.o2r"
+  },
+  "66": {
+   "comment": "DownBackD: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/down_back_d.o2r"
+  },
+  "67": {
+   "comment": "DownBackU: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/down_back_u.o2r"
+  },
+  "68": {
+   "comment": "DownAttackD: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/down_attack_d.o2r"
+  },
+  "69": {
+   "comment": "DownAttackU: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/down_attack_u.o2r"
+  },
+  "70": {
+   "comment": "Passive: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/passive.o2r"
+  },
+  "71": {
+   "comment": "Rebound: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/rebound.o2r"
+  },
+  "88": {
+   "comment": "LightGet: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/light_get.o2r"
+  },
+  "90": {
+   "comment": "LightThrowDrop: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/light_throw_drop.o2r"
+  },
+  "91": {
+   "comment": "LightThrowDash: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/light_throw_dash.o2r"
+  },
+  "92": {
+   "comment": "LightThrowF (and B): Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/light_throw_f.o2r"
+  },
+  "93": {
+   "comment": "as motion 92 (Peach's row shares its clip): Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/light_throw_f.o2r"
+  },
+  "94": {
+   "comment": "LightThrowHi: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/light_throw_hi.o2r"
+  },
+  "95": {
+   "comment": "LightThrowLw: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/light_throw_lw.o2r"
+  },
+  "100": {
+   "comment": "LightThrowAirF (and B): Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/light_throw_air_f.o2r"
+  },
+  "101": {
+   "comment": "as motion 100 (Peach's row shares its clip): Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/light_throw_air_f.o2r"
+  },
+  "102": {
+   "comment": "LightThrowAirHi: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/light_throw_air_hi.o2r"
+  },
+  "103": {
+   "comment": "LightThrowAirLw: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/light_throw_air_lw.o2r"
+  },
+  "112": {
+   "comment": "SwordSwing1 (and the bat's, fan's and star rod's): Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/item_swing1.o2r"
+  },
+  "113": {
+   "comment": "SwordSwing3 (and the others'): Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/item_swing3.o2r"
+  },
+  "114": {
+   "comment": "SwordSwing4 (and the others'): Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/item_swing4.o2r"
+  },
+  "115": {
+   "comment": "SwordSwingDash (and the others'): Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/item_swing_dash.o2r"
+  },
+  "116": {
+   "comment": "as motion 112 (Peach's row shares its clip): Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/item_swing1.o2r"
+  },
+  "117": {
+   "comment": "as motion 113 (Peach's row shares its clip): Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/item_swing3.o2r"
+  },
+  "118": {
+   "comment": "as motion 114 (Peach's row shares its clip): Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/item_swing4.o2r"
+  },
+  "119": {
+   "comment": "as motion 115 (Peach's row shares its clip): Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/item_swing_dash.o2r"
+  },
+  "120": {
+   "comment": "as motion 112 (Peach's row shares its clip): Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/item_swing1.o2r"
+  },
+  "121": {
+   "comment": "as motion 113 (Peach's row shares its clip): Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/item_swing3.o2r"
+  },
+  "122": {
+   "comment": "as motion 114 (Peach's row shares its clip): Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/item_swing4.o2r"
+  },
+  "123": {
+   "comment": "as motion 115 (Peach's row shares its clip): Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/item_swing_dash.o2r"
+  },
+  "124": {
+   "comment": "as motion 112 (Peach's row shares its clip): Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/item_swing1.o2r"
+  },
+  "125": {
+   "comment": "as motion 113 (Peach's row shares its clip): Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/item_swing3.o2r"
+  },
+  "126": {
+   "comment": "as motion 114 (Peach's row shares its clip): Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/item_swing4.o2r"
+  },
+  "127": {
+   "comment": "as motion 115 (Peach's row shares its clip): Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/item_swing_dash.o2r"
+  },
+  "128": {
+   "comment": "LGunShoot (and the fire flower's): Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/item_shoot.o2r"
+  },
+  "129": {
+   "comment": "LGunShootAir (and the fire flower's): Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/item_shoot_air.o2r"
+  },
+  "130": {
+   "comment": "as motion 128 (Peach's row shares its clip): Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/item_shoot.o2r"
+  },
+  "131": {
+   "comment": "as motion 129 (Peach's row shares its clip): Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/item_shoot_air.o2r"
+  },
+  "132": {
+   "comment": "HammerWait: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/hammer_wait.o2r"
+  },
+  "133": {
+   "comment": "HammerWalk: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/hammer_walk.o2r"
   },
   "136": {
    "comment": "EscapeF: Ultimate's forward roll, the TransN slot Peach's",
@@ -222,6 +438,34 @@
   "137": {
    "comment": "EscapeB: Ultimate's back roll, the TransN slot Peach's",
    "anim": "builds/p6-art/palutena/anims/escape_b.o2r"
+  },
+  "139": {
+   "comment": "ShieldBreakFall: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/shield_break_fall.o2r"
+  },
+  "140": {
+   "comment": "as motion 58 (Peach's row shares its clip): Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/down_bounce_d.o2r"
+  },
+  "141": {
+   "comment": "as motion 59 (Peach's row shares its clip): Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/down_bounce_u.o2r"
+  },
+  "142": {
+   "comment": "as motion 60 (Peach's row shares its clip): Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/down_stand_d.o2r"
+  },
+  "143": {
+   "comment": "as motion 61 (Peach's row shares its clip): Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/down_stand_u.o2r"
+  },
+  "144": {
+   "comment": "FuraFura: Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/fura_fura.o2r"
+  },
+  "145": {
+   "comment": "as motion 144 (Peach's row shares its clip): Ultimate's (owner p6s)",
+   "anim": "builds/p6-art/palutena/anims/fura_fura.o2r"
   },
   "146": {
    "comment": "Catch: grab (card: telekinetic clutch), Peach's with the box 20% farther and a psionic flash",
@@ -690,64 +934,5 @@
     "travel": "run"
    }
   }
- },
- "pose": [
-  {
-   "comment": "TurnRun: Peach's with a smaller stride and the body leaning into the run (the 3DS running reference).",
-   "motions": [
-    13
-   ],
-   "ops": [
-    {
-     "op": "blend",
-     "rows": [
-      15,
-      16,
-      17,
-      18,
-      19,
-      20,
-      21,
-      22,
-      23,
-      24
-     ],
-     "amount": 0.4
-    },
-    {
-     "op": "turn",
-     "row": 2,
-     "deg": [
-      12,
-      0,
-      0
-     ]
-    }
-   ]
-  },
-  {
-   "comment": "Turn: Peach's with the legs closer together under the dress.",
-   "motions": [
-    12
-   ],
-   "ops": [
-    {
-     "op": "blend",
-     "rows": [
-      15,
-      16,
-      17,
-      18,
-      19,
-      20,
-      21,
-      22,
-      23,
-      24
-     ],
-     "amount": 0.35
-    }
-   ]
-  }
- ]
+ }
 }

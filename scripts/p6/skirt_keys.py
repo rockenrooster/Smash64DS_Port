@@ -1,51 +1,55 @@
 #!/usr/bin/env python3
-"""P6: keys for Palutena's skirt rows, from her legs, for every clip.
+"""P6: keys for Palutena's dress rows, from a cloth model, for every clip.
 
-Her skirt hangs from Peach's dress rows (look_skirt.py): the lower band from
-row 25's ring (row 25 turns about its origin, just under the hips) to the
-hem on row 26 (row 25's child, 243 units down its -z axis). Peach's clips
-key both rows for her gown; the gown is not hers, so every clip of hers
-takes these keys instead (the owner's requirement, playtest 2026-10-14: in
-EVERY animation the dress surrounds her legs):
+Her skirt (look_skirt.py) is three rings: row 25's ring at her hips (row 25
+turns about its origin, just under the hips), the mid ring on row 26 about
+her knees (row 25's child) and the hem on row 27 (row 26's child); the band
+from each ring to the next is drawn between them. Every clip of hers takes
+these rows' keys (the owner's requirement, playtest 2026-10-14: in EVERY
+animation the dress surrounds her legs).
 
-- row 25 turns so its -z axis (the band's axis) points at the middle of her
-  knees and ankles, as seen from its origin, drawn GRAVITY of the way toward
-  straight down (the cloth hangs), at most MAX_TILT_DEG from straight down
-  the pelvis, and turns about that axis so its local y lies along her legs'
-  spread (one leg's knee and ankle from the other's, across the axis);
-- row 26 shapes the hem: its ring scaled across (sx) and along the spread
-  (sy), tilted about the across axis (one end of the spread lifted toward
-  the waist, the other let down) and moved along the spread (dy) and up the
-  band (dz), so the band (dress_check.band_outs: the surface from row 25's
-  ring to the hem) holds her thighs and knees inside it, above the hem, and
-  keeps her shins from coming through its side, with MARGIN to spare, the
-  hem as near its rest shape as that allows. Owner p6j (2026-10-14), from
-  the 3DS: "the slit leg actually never comes out of the dress at all" (both
-  legs are held) and "if Palutena takes a step forward where the knee pokes
-  out, the dress should be stretched over it": a knee raised ahead lifts
-  the hem's front over it (the shin hangs from under it, as the 3DS's
-  does), the back hanging behind the other leg; a stride stretches it along
-  the stride. Each frame's hem is the least costly (HEM_SCALE a unit of
-  each change from rest, OUT_UNIT a unit of a point's distance outside,
-  TEMPORAL a share of the change from the frame before, by HEM_STEP), found
-  by a Nelder-Mead search within HEM_LO..HEM_HI from the frame before's.
+Owner p6s (2026-10-15): "Skirt/hem issues, skirt behaves like a paper cone,
+instead of a heavy, flowy dress"; the hem "flat against the ground" when she
+kneels or crouches, "more flat relative to the horizontal plane" when she
+runs; no twitching or spinning (the forward tilt, the wait, the run). The
+keys come from a cloth model baked over the clip (Skirt.cloth):
 
-Owner playtest p6i (2026-10-14): "Dress is not flowing". The band's axis
-follows its target (above) through a damped spring in the model's space
-(SPRING, DAMPING): it lags her turns and swings (at most MAX_LAG_DEG) and
-settles after them, and a looping clip's spring runs three periods so its
-keys loop. A pose
-group's "skirt" op trails it (its axis drawn toward behind her by "trail":
-the run, the dash). The hem is solved on the axis the spring gives, so the
-band still holds her legs where it lags.
+- one chain a sample of the rings (look_skirt.SAMPLES' u): from its point on
+  row 25's ring (carried by the pelvis) to its mid ring point and its hem
+  point, two segments no longer than their rest by STRETCH, nor shorter
+  than SQUASH of it;
+- each chain hangs: its segments point the way the dress's rest shape about
+  the pelvis does, drawn toward straight down (HANG near the hips, HANG_HEM
+  below); in a clip made from Ultimate's motion its points are drawn
+  GUIDE_W of the way to where Ultimate's own skirt chains put them
+  (ultimate.py's guide: the chains' third joints for the mid ring, their
+  ends for the hem, moved from their rest as Ultimate's are);
+- each point follows that target through a damped spring (SPRING_MID,
+  SPRING_HEM: the hem lags more, the cloth's weight), then the constraints
+  hold (FEEDBACK of their move kept as speed): the lengths, the rings'
+  edges (RING_STRETCH), her legs -- each thigh and shin a capsule of the
+  leg mesh's radius plus MARGIN, pushing the points, the chains' segments
+  and the rings' edges out from her middle (never to the nearer side: a
+  kick would pass the dress under the thigh), so a raised knee stretches
+  the dress over it (owner p6j) -- the hem's points drawn LEVEL with each
+  other, and, on a clip with her feet on a floor, the points kept on it
+  (FLOOR_Y) and spread out from her: kneeling, the hem lies on the ground;
+- a looping clip runs three periods and keeps the last, so its keys loop.
+  (A cloth driven by velocity from the constraints' moves blew up where a
+  crouch put the rest dress under the floor.)
 
-Where no hem can hold a leg (a clip made for another fighter: a lunge or a
-kick past the dress), the leg is held: its thigh and shin turned toward
-their rest (straight down) as far as the dress then holds it (HOLD_STEPS of
-the way, tested on the frame alone), eased in and out over the frames
-around (HOLD_RAMP a frame), and the clip solved again from the held legs,
-up to HOLD_PASSES times while a frame is still out (owner p6j: on the 3DS
-her leg never leaves her dress).
+Each frame's rows are then fitted to the cloth's points (the pelvis's
+frame): row 25's turn by the least-squares rotation of the chains about its
+origin (its twist about the band held to MAX_TWIST_DEG), row 26's and row
+27's translation, turn and scale across (x, y) by least squares on their
+rings' samples, from the frame before's (TEMPORAL) and near their rest
+(REST). The rows' keys are put on shared knots, straight between them
+(KNOT_EPS), so the clip compacts small. Her legs are as the clip has them
+(the old hem solver turned a leg it could not hold toward its rest).
+
+Row 27 was Peach's held joint (the grab's and heavy items': the scene's
+"joint_roles" moved it to row 28): a clip that installs its hidden part keys
+it one slot later.
 
 The keys are computed on the content's own skeleton and look scene
 (coverage.py Fighter.pose_frames; the scene's leg and skirt vertices).
@@ -69,60 +73,48 @@ import anim as A  # noqa: E402
 import coverage as C  # noqa: E402
 import dress_check as D  # noqa: E402
 
-ROW_PELVIS, ROW_UPPER, ROW_HEM = 1, 25, 26
+ROW_PELVIS, ROW_UPPER, ROW_MID, ROW_HEM = 1, 25, 26, 27
 # Her hair panels' row (look_blend.py: the head's child) and the bodice they
 # hung from: a clip that does not turn the hair itself (all but the Ultimate
 # ones, ultimate.py) keeps it on the bodice as the look had it.
 ROW_HAIR, ROW_HAIR_FROM, ROW_HEAD = 9, 2, 8
-# The legs: shin rows (their origins are the knees), foot rows (the ankles).
-KNEES = (17, 22)
-ANKLES = (18, 23)
-MAX_TILT_DEG = 75.0
-# How far the band's axis is drawn toward straight down (model space).
-GRAVITY = 0.1
-MARGIN = 6.0
-# The ring's turn about the band's axis toward her legs' spread: at most
-# MAX_TWIST_DEG, eased in from SPREAD_MIN to SPREAD_FULL units of spread.
-MAX_TWIST_DEG = 60.0
-SPREAD_MIN, SPREAD_FULL = 30.0, 120.0
-# The hem's shape (row 26 in row 25's frame): scale across, scale along the
-# spread, tilt (radians; + lifts the +y end), move along the spread, move up
-# the band. Its limits, the change that costs a unit, the change from the
-# frame before that costs TEMPORAL; a point OUT_UNIT outside costs a unit
-# (times its weight); the hem keeps MIN_SPAN below row 25's ring each way.
-HEM_REST = np.array([1.0, 1.0, 0.0, 0.0, 0.0])
-HEM_LO = np.array([0.9, 0.9, np.radians(-50.0), -100.0, -10.0])
-HEM_HI = np.array([1.45, 1.75, np.radians(50.0), 100.0, 140.0])
-HEM_SCALE = np.array([0.4, 0.6, np.radians(45.0), 90.0, 150.0])
-HEM_STEP = np.array([0.08, 0.12, np.radians(6.0), 15.0, 15.0])
-TEMPORAL = 0.3
-OUT_UNIT = 2.5
-MIN_SPAN = 40.0
-# The cloth's length: each panel (row 25's ring vertex to its hem vertex)
-# shortened by PANEL_SHORTEN or stretched by PANEL_STRETCH costs PANEL_W
-# over the panels (a hem lifted all round is a shorter dress, not one held
-# up by a knee).
-PANEL_SHORTEN, PANEL_STRETCH, PANEL_W = 35.0, 60.0, 3.0
-SEARCH_EVALS = 260
-# Holding a leg the hem cannot: its thigh and shin turned these shares of
-# the way to their rest, the least that clears (a frame's share less
-# HOLD_RAMP each frame away, around it).
-HOLD_ROWS = ((16, 17), (21, 22))
-HOLD_STEPS = (0.15, 0.3, 0.45, 0.6, 0.75, 0.9, 1.0)
-HOLD_RAMP = 0.2
-HOLD_PASSES = 4
-SMOOTH = 5
-# The solved hem a centred average over this many frames (owner p6r: "twitchy
-# and stiff/non flowy dress are main blockers"): a frame's search lands near
-# the last one's, not on it, and the hem's shift jumped up to 18 units a frame.
-HEM_SMOOTH = 5
-# The band's spring (per frame): the pull toward its target and the share of
-# its angular speed kept.
-SPRING = 0.3
-DAMPING = 0.6
-# The most the band's axis lags its target (a tumble's spin would leave her
-# legs behind the dress).
-MAX_LAG_DEG = 25.0
+# The legs: (hip, knee, ankle) rows of each (dress_check.LEG_CHAINS; the
+# thigh row's origin is the hip, the shin's the knee, the foot's the ankle).
+LEGS = ((16, 17, 18), (21, 22, 23))
+# The cloth (model units, per frame of the clip):
+# Each chain hangs from its point on row 25's ring: its segments point the
+# way the dress's rest shape about the pelvis does, drawn toward straight
+# down by HANG (the upper band, near the hips) and HANG_HEM (the lower).
+HANG, HANG_HEM = 0.45, 0.7
+# A guided clip: the points drawn this share of the way to where Ultimate's
+# chains put them.
+GUIDE_W = 0.65
+# Each point follows its target through a damped spring (per frame): the
+# hem lags more than the mid ring (the cloth's weight).
+SPRING_MID, SPRING_HEM = 0.30, 0.16
+DAMP = 0.75                 # share of the critical damping
+SUB = 2                     # spring steps a frame
+STRETCH = 0.06              # a segment no longer than its rest by this share
+SQUASH = 0.8                # nor shorter than this share (on a floor it spreads)
+RING_STRETCH = (0.7, 1.5)   # a ring's edges within these shares of their rest
+LEVEL = 0.35                # the hem's points drawn this share to their mean height
+FLOOR_Y = 3.0               # the hem's least height on a floor (the mid ring's: + 8)
+MARGIN = 7.0                # the cloth kept this far off a leg's surface
+FEEDBACK = 0.3              # share of a constraint's move the spring keeps
+ITER = 3                    # constraint passes a frame
+# The fit:
+MAX_TILT_DEG = 80.0         # row 25's band axis from its rest
+MAX_TWIST_DEG = 20.0        # row 25's turn about the band
+REST = 0.02                 # a fit's pull to the row's rest (per unit of FIT_SCALE)
+TEMPORAL = 0.05             # a fit's pull to the frame before's
+FIT_SCALE = np.array([60.0, 60.0, 60.0, 0.5, 0.5, 0.5, 0.3, 0.3])
+FIT_LO = np.array([-400.0, -400.0, -400.0, -3.2, -3.2, -3.2, 0.75, 0.75])
+FIT_HI = np.array([400.0, 400.0, 400.0, 3.2, 3.2, 3.2, 1.6, 1.6])
+# The keys: each row's tracks put on shared knots, straight between them,
+# within these raw units (turn 512 a radian: about half a degree;
+# translation 4 a unit: 1.5 units; scale 4096: 0.012), so the clip compacts
+# to a few keys a row (the figatree heap: p4_anim_compact.py).
+KNOT_EPS = {"rot": 4, "trans": 6, "scale": 48}
 
 
 def _window(n: int, i: int, half: int, loop) -> list:
@@ -142,76 +134,166 @@ def _window(n: int, i: int, half: int, loop) -> list:
     return [min(max(i + d, 0), n - 1) for d in range(-half, half + 1)]
 
 
-def _align(a, b):
-    """The smallest rotation taking unit vector a to unit vector b."""
-    v = np.cross(a, b)
-    c = float(np.dot(a, b))
-    if c < -0.9999:
-        return np.diag([1.0, -1.0, -1.0])
-    k = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
-    return np.eye(3) + k + k @ k / (1.0 + c)
-
-
 def _turn(axis, ang):
     """The rotation by ang (radians) about a unit axis."""
     k = np.array([[0, -axis[2], axis[1]], [axis[2], 0, -axis[0]], [-axis[1], axis[0], 0]])
     return np.eye(3) + np.sin(ang) * k + (1.0 - np.cos(ang)) * (k @ k)
 
 
-def _toward(R, Rb, a):
-    """Rotation R turned share a of the way to Rb."""
-    Q = Rb @ R.T
-    ang = float(np.arccos(np.clip((np.trace(Q) - 1.0) / 2.0, -1.0, 1.0)))
-    if ang < 1e-6:
-        return R
-    axis = np.array([Q[2, 1] - Q[1, 2], Q[0, 2] - Q[2, 0], Q[1, 0] - Q[0, 1]])
-    n = np.linalg.norm(axis)
-    if n < 1e-9:
-        return R
-    return _turn(axis / n, a * ang) @ R
+def _kabsch(a: np.ndarray, b: np.ndarray, w: np.ndarray) -> np.ndarray:
+    """The rotation taking points a (about the origin) nearest to b."""
+    h = (a * w[:, None]).T @ b
+    u, _s, vt = np.linalg.svd(h)
+    d = np.sign(np.linalg.det(vt.T @ u.T))
+    return vt.T @ np.diag([1.0, 1.0, d]) @ u.T
 
 
-def _search(f, x0, lo, hi, step=0.5, evals=SEARCH_EVALS, tol=1e-3):
-    """Nelder-Mead over a box (points clipped into it): (best x, its cost)."""
-    n = len(x0)
-    clip = lambda x: np.minimum(np.maximum(x, lo), hi)
-    pts = [clip(np.array(x0, dtype=float))]
-    for i in range(n):
-        x = pts[0].copy()
-        x[i] = x[i] + step if x[i] + step <= hi[i] else x[i] - step
-        pts.append(clip(x))
-    vals = [f(x) for x in pts]
-    used = len(vals)
-    while used < evals:
-        order = np.argsort(vals, kind="stable")
-        pts = [pts[i] for i in order]
-        vals = [vals[i] for i in order]
-        if vals[-1] - vals[0] < tol:
+def _swing_twist(q: np.ndarray, axis: np.ndarray):
+    """q as a swing (taking the axis where q does) after a twist about it:
+    (swing, twist angle)."""
+    to = q @ axis
+    v = np.cross(axis, to)
+    s, c = np.linalg.norm(v), float(np.dot(axis, to))
+    swing = np.eye(3) if s < 1e-9 else _turn(v / s, np.arctan2(s, c))
+    twist = swing.T @ q
+    # twist turns about the axis: its angle from a vector across it.
+    e = np.cross(axis, [1.0, 0.0, 0.0])
+    if np.linalg.norm(e) < 1e-3:
+        e = np.cross(axis, [0.0, 0.0, 1.0])
+    e /= np.linalg.norm(e)
+    f = twist @ e
+    return swing, float(np.arctan2(np.dot(np.cross(e, f), axis), np.dot(e, f)))
+
+
+def _local(x) -> np.ndarray:
+    """A row's local matrix from fit parameters (translation, euler turn,
+    scale across): syMatrixTraRotRpyRSca, scale z 1."""
+    m = np.eye(4)
+    m[:3, :3] = A.euler(x[3], x[4], x[5]) @ np.diag([x[6], x[7], 1.0])
+    m[:3, 3] = x[:3]
+    return m
+
+
+def _fit(base: np.ndarray, pts: np.ndarray, targets: np.ndarray, x0: np.ndarray, rest: np.ndarray,
+         prev: np.ndarray | None, iters: int = 12) -> np.ndarray:
+    """A row's parameters (_local) putting its points (row-local) nearest
+    the targets under the parent's matrix base: damped Gauss-Newton with a
+    numeric Jacobian, clipped to FIT_LO..FIT_HI."""
+    hp = np.c_[pts, np.ones(len(pts))]
+
+    def resid(x):
+        r = [((base @ _local(x) @ hp.T).T[:, :3] - targets).ravel()]
+        r.append(np.sqrt(REST * len(pts)) * (x - rest) / FIT_SCALE * 10.0)
+        if prev is not None:
+            r.append(np.sqrt(TEMPORAL * len(pts)) * (x - prev) / FIT_SCALE * 10.0)
+        return np.concatenate(r)
+
+    x = np.clip(np.array(x0, dtype=float), FIT_LO, FIT_HI)
+    lam = 1e-3
+    r = resid(x)
+    cost = float(r @ r)
+    for _ in range(iters):
+        jac = np.empty((len(r), len(x)))
+        for k in range(len(x)):
+            h = 1e-4 * FIT_SCALE[k]
+            xp = x.copy()
+            xp[k] += h
+            jac[:, k] = (resid(xp) - r) / h
+        g = jac.T @ r
+        hmat = jac.T @ jac
+        while True:
+            step = np.linalg.solve(hmat + lam * np.diag(np.diag(hmat) + 1e-9), -g)
+            xn = np.clip(x + step, FIT_LO, FIT_HI)
+            rn = resid(xn)
+            cn = float(rn @ rn)
+            if cn < cost:
+                x, r, cost = xn, rn, cn
+                lam = max(lam * 0.3, 1e-7)
+                break
+            lam *= 10.0
+            if lam > 1e6:
+                return x
+        if float(np.abs(step).max()) < 1e-5:
             break
-        centre = np.mean(pts[:-1], axis=0)
-        xr = clip(centre + (centre - pts[-1]))
-        fr = f(xr)
-        used += 1
-        if fr < vals[0]:
-            xe = clip(centre + 2.0 * (centre - pts[-1]))
-            fe = f(xe)
-            used += 1
-            pts[-1], vals[-1] = (xe, fe) if fe < fr else (xr, fr)
-        elif fr < vals[-2]:
-            pts[-1], vals[-1] = xr, fr
-        else:
-            xc = clip(centre + 0.5 * ((xr if fr < vals[-1] else pts[-1]) - centre))
-            fc = f(xc)
-            used += 1
-            if fc < min(fr, vals[-1]):
-                pts[-1], vals[-1] = xc, fc
-            else:
-                for i in range(1, len(pts)):
-                    pts[i] = clip(pts[0] + 0.5 * (pts[i] - pts[0]))
-                    vals[i] = f(pts[i])
-                used += n
-    i = int(np.argmin(vals))
-    return pts[i], vals[i]
+    return x
+
+
+def _closest_on_segments(p0, p1, q0, q1):
+    """Closest points of segments p0-p1 and q0-q1: (s, t) along each."""
+    d1, d2, r = p1 - p0, q1 - q0, p0 - q0
+    a, e, f = float(d1 @ d1), float(d2 @ d2), float(d2 @ r)
+    if a < 1e-9 and e < 1e-9:
+        return 0.0, 0.0
+    if a < 1e-9:
+        return 0.0, min(max(f / e, 0.0), 1.0)
+    c = float(d1 @ r)
+    if e < 1e-9:
+        return min(max(-c / a, 0.0), 1.0), 0.0
+    b = float(d1 @ d2)
+    den = a * e - b * b
+    s = min(max((b * f - c * e) / den, 0.0), 1.0) if den > 1e-9 else 0.0
+    t = (b * s + f) / e
+    if t < 0.0:
+        t, s = 0.0, min(max(-c / a, 0.0), 1.0)
+    elif t > 1.0:
+        t, s = 1.0, min(max((b - c) / a, 0.0), 1.0)
+    return s, t
+
+
+def _knots(st: A.Stream, loop) -> None:
+    """The stream's tracks (all from frame 0, every frame) put on shared
+    knots, straight between them, each within its KNOT_EPS (a loop's start
+    and the last frame are knots)."""
+    tracks = sorted(st.tracks)
+    if not tracks:
+        return
+    vals = {k: np.array(st.tracks[k].values, dtype=float) for k in tracks}
+    eps = {k: KNOT_EPS["rot"] if k < 3 else KNOT_EPS["trans"] if k < 7 else KNOT_EPS["scale"] for k in tracks}
+    n = len(vals[tracks[0]])
+    fixed = {0, n - 1} | ({loop} if loop is not None and 0 <= loop < n else set())
+    knots = [0]
+    a = 0
+    while a < n - 1:
+        b = a + 1
+        while b + 1 < n and b not in fixed:
+            c = b + 1
+            ok = True
+            for k in tracks:
+                v = vals[k]
+                f = np.arange(a + 1, c)
+                line = v[a] + (v[c] - v[a]) * (f - a) / (c - a)
+                if np.any(np.abs(v[a + 1:c] - line) > eps[k]):
+                    ok = False
+                    break
+            if not ok:
+                break
+            b = c
+        knots.append(b)
+        a = b
+    for k in tracks:
+        v = vals[k]
+        new = v.copy()
+        for a, b in zip(knots, knots[1:]):
+            f = np.arange(a, b + 1)
+            new[a:b + 1] = v[a] + (v[b] - v[a]) * (f - a) / (b - a)
+        st.tracks[k] = A.Track([int(round(x)) for x in new], 0)
+
+
+def _exit_along(q: np.ndarray, o: np.ndarray, a, b, ra: float, rb: float, steps: int = 12) -> np.ndarray:
+    """Per point (rows of q): how far along its unit direction (rows of o)
+    it must move to leave the capsule a-b (radii ra at a, rb at b); 0 if
+    outside."""
+    ab = b - a
+    l2 = max(float(ab @ ab), 1e-9)
+    reach = 2.5 * max(ra, rb)
+    ts = np.linspace(0.0, reach, steps + 1)
+    pts = q[:, None, :] + o[:, None, :] * ts[None, :, None]
+    t = np.clip(((pts - a) @ ab) / l2, 0.0, 1.0)
+    c = a + t[..., None] * ab
+    inside = np.linalg.norm(pts - c, axis=2) < ra + t * (rb - ra)
+    first_out = np.where(inside.all(axis=1), steps, np.argmin(inside, axis=1))
+    out = ts[np.minimum(first_out, steps)]
+    return np.where(inside[:, 0], out, 0.0)
 
 
 class Skirt:
@@ -221,448 +303,337 @@ class Skirt:
         D.apply_scene_skeleton(fighter, scene)
         self.bind = D.bind_mats(fighter)
         self.inv_bind = [np.linalg.inv(m) for m in self.bind]
-        bands, _hem, _slit = D.rings(scene)
-        if len(bands) != 2:
-            raise SystemExit("the scene's skirt is not on rows 25/26 (look_skirt.py)")
-        ring25, hem = bands[1]
-        self.legs = D.LegSamples(scene)
-        # Row 25's rest frame in the pelvis's, and the rings in row 25's and
-        # row 26's frames (bind pose).
-        b1, b25, b26 = self.bind[ROW_PELVIS], self.bind[ROW_UPPER], self.bind[ROW_HEM]
-        self.rest25 = np.linalg.inv(b1) @ b25
-        ring_model = np.array([verts[i]["model"] for i in ring25])
-        hem_model = np.array([verts[i]["model"] for i in hem])
-        self.ring25_local = (np.linalg.inv(b25) @ np.c_[ring_model, np.ones(len(ring_model))].T).T[:, :3]
-        self.hem_local = (np.linalg.inv(b26) @ np.c_[hem_model, np.ones(len(hem_model))].T).T[:, :3]
-        self.hem_rest_t = np.array(self.f.skel.translate[ROW_HEM], dtype=float)
-        self.top_z = float(self.ring25_local[:, 2].mean())
-        self.panel_rest = np.linalg.norm(self.hem_points(HEM_REST) - self.ring25_local, axis=1)
-        # The band is measured about row 25's own axis (its -z through its
-        # ring's centre, dress_check.band_outs): the ring's profile is fixed.
-        self.axis_xy = self.ring25_local[:, :2].mean(axis=0)
-        self.top = D._periodic(*self._profile(self.ring25_local))
-        self.upper_rest = D.upper_rest_of(scene, self.bind)
-        # The hem at rest in the pelvis's frame and each vertex's direction
-        # about it (a guide's hem moves are given by direction).
-        self.hem_pelvis = (np.linalg.inv(b1) @ np.c_[hem_model, np.ones(len(hem_model))].T).T[:, :3]
-        c = self.hem_pelvis.mean(axis=0)
-        self.hem_az = np.arctan2(self.hem_pelvis[:, 0] - c[0], self.hem_pelvis[:, 2] - c[2])
+        bands, hem, _slit = D.rings(scene)
+        if len(bands) != 3:
+            raise SystemExit("the scene's skirt is not on rows 25/26/27 (look_skirt.py split_band)")
+        uv = lambda i: float(verts[i]["uv"][0])
+        ring25 = sorted(bands[1][0], key=uv)
+        hem = sorted(hem, key=uv)
+        mid_all = bands[2][0]
+        hem_u = [uv(i) for i in hem]
+        # The mid ring's samples on the band's sides (one per hem sample, at
+        # its u; the slit's two edge vertices are carried by the fit).
+        mid = []
+        for u in hem_u:
+            mid.append(min(mid_all, key=lambda i: (abs(uv(i) - u), -abs(verts[i]["model"][1]))))
+        self.hem_u = hem_u
+        b1 = self.bind[ROW_PELVIS]
+        pin = np.linalg.inv(b1)
+        to_pelvis = lambda i: (pin @ np.append(verts[i]["model"], 1.0))[:3]
+        # Rest points in the pelvis's frame (a chain per sample; u 1 is u 0).
+        self.top_p = np.array([to_pelvis(i) for i in ring25])
+        self.mid_p = np.array([to_pelvis(i) for i in mid])
+        self.hem_p = np.array([to_pelvis(i) for i in hem])
+        if len(self.top_p) != len(self.hem_p):
+            raise SystemExit("row 25's ring and the hem differ in samples")
+        self.chains = len(hem) - 1 if abs(hem_u[-1] - 1.0) < 1e-3 and abs(hem_u[0]) < 1e-3 else len(hem)
+        self.len1 = np.linalg.norm(self.mid_p - self.top_p, axis=1)[:self.chains]
+        self.len2 = np.linalg.norm(self.hem_p - self.mid_p, axis=1)[:self.chains]
+        ring_len = lambda p: np.linalg.norm(np.roll(p[:self.chains], -1, axis=0) - p[:self.chains], axis=1)
+        self.edge_mid, self.edge_hem = ring_len(self.mid_p), ring_len(self.hem_p)
+        # The rows' rest: row 25's in the pelvis's frame, 26's in 25's, 27's
+        # in 26's (bind), and each ring's points in its own row's frame.
+        self.rest25 = pin @ self.bind[ROW_UPPER]
+        self.rest26 = np.linalg.inv(self.bind[ROW_UPPER]) @ self.bind[ROW_MID]
+        self.rest27 = np.linalg.inv(self.bind[ROW_MID]) @ self.bind[ROW_HEM]
+        loc = lambda row, ids: np.array([(self.inv_bind[row] @ np.append(verts[i]["model"], 1.0))[:3] for i in ids])
+        self.mid_local = loc(ROW_MID, mid)
+        self.hem_local = loc(ROW_HEM, hem)
+        self.x26_rest = np.r_[self.rest26[:3, 3], 0.0, 0.0, 0.0, 1.0, 1.0]
+        self.x27_rest = np.r_[self.rest27[:3, 3], 0.0, 0.0, 0.0, 1.0, 1.0]
+        # Each chain's azimuth about the hem's centre (a guide's moves are
+        # given by direction, ultimate.py).
+        c = self.hem_p.mean(axis=0)
+        self.az_hem = np.arctan2(self.hem_p[:, 0] - c[0], self.hem_p[:, 2] - c[2])
+        c = self.mid_p.mean(axis=0)
+        self.az_mid = np.arctan2(self.mid_p[:, 0] - c[0], self.mid_p[:, 2] - c[2])
+        # The legs' capsules' radii (hip, knee, ankle) from the leg mesh's
+        # rings about each leg's line (bind pose).
+        self.radii = []
+        for hip, knee, ankle in LEGS:
+            pts = {r: np.array([v["model"] for v in verts if v.get("object") == D.LEGS and v["joint"] == r])
+                   for r in (hip, knee, ankle)}
+            ph, pk, pa = (self.bind[r][:3, 3] for r in (hip, knee, ankle))
+
+            def radius(ring, a, b):
+                if not len(ring):
+                    return 30.0
+                d = (b - a) / np.linalg.norm(b - a)
+                rel = ring - a
+                return float(np.linalg.norm(rel - np.outer(rel @ d, d), axis=1).mean())
+            self.radii.append((radius(pts[hip], ph, pk), radius(pts[knee], ph, pk), radius(pts[ankle], pk, pa)))
         self.hair_row = any(v.get("object") == "DS_hair_panels" and v["joint"] == ROW_HAIR for v in verts)
+        self.roles = scene.get("joint_roles") or []
+        self.rest_axis = self.rest25[:3, :3] @ np.array([0.0, 0.0, -1.0])
 
-    # ------------------------------------------------------------ the axis
+    # ------------------------------------------------------------ the guide
 
-    def rest_axis(self):
-        return self.rest25[:3, :3] @ np.array([0.0, 0.0, -1.0])
-
-    def target_axis(self, mats, trail: float = 0.0):
-        """The band's target axis (unit, the pelvis's frame) for one posed
-        frame: at the knees and ankles, drawn down, trailed, tilt-capped."""
-        pelvis = mats[ROW_PELVIS]
-        pinv = np.linalg.inv(pelvis)
-        to_pelvis = lambda p: (pinv @ np.append(p, 1.0))[:3]
-        origin = self.rest25[:3, 3]
-        pts = [to_pelvis(mats[r][:3, 3]) for r in KNEES + ANKLES]
-        target = np.mean(pts, axis=0) - origin
-        n = np.linalg.norm(target)
-        d = target / n if n > 1e-3 else self.rest_axis()
-        down = pinv[:3, :3] @ np.array([0.0, -1.0, 0.0])
-        d = (1.0 - GRAVITY) * d + GRAVITY * down / max(np.linalg.norm(down), 1e-6)
-        if trail:
-            back = pinv[:3, :3] @ np.array([0.0, 0.0, -1.0])
-            d = d + trail * back / max(np.linalg.norm(back), 1e-6)
-        d /= max(np.linalg.norm(d), 1e-6)
-        return self.cap_tilt(d)
-
-    def cap_tilt(self, d):
-        rest_axis = self.rest_axis()
-        ang = np.degrees(np.arccos(np.clip(np.dot(d, rest_axis), -1.0, 1.0)))
-        if ang > MAX_TILT_DEG:
-            axis = np.cross(rest_axis, d)
-            axis /= max(np.linalg.norm(axis), 1e-6)
-            t = np.radians(MAX_TILT_DEG)
-            d = rest_axis * np.cos(t) + np.cross(axis, rest_axis) * np.sin(t)
-        return d
-
-    def spread_twist(self, mats, d, rot) -> float:
-        """The turn (radians) about the band's axis d putting the ring's
-        local y (rot's) along her legs' spread across the axis: the one
-        leg's knee and ankle from the other's (the pelvis's frame), eased in
-        from SPREAD_MIN to SPREAD_FULL units of spread, at most
-        MAX_TWIST_DEG either way (the nearer end of the spread)."""
-        pinv = np.linalg.inv(mats[ROW_PELVIS])
-        to_pelvis = lambda p: (pinv @ np.append(p, 1.0))[:3]
-        left = np.mean([to_pelvis(mats[r][:3, 3]) for r in (KNEES[0], ANKLES[0])], axis=0)
-        right = np.mean([to_pelvis(mats[r][:3, 3]) for r in (KNEES[1], ANKLES[1])], axis=0)
-        v = left - right
-        v = v - np.dot(v, d) * d
-        size = float(np.linalg.norm(v))
-        w = min(max((size - SPREAD_MIN) / (SPREAD_FULL - SPREAD_MIN), 0.0), 1.0)
-        if w <= 0.0:
-            return 0.0
-        v = v / size
-        ey = rot[:, 1]
-        ang = float(np.arctan2(np.dot(np.cross(ey, v), d), np.dot(ey, v)))
-        if ang > np.pi / 2:
-            ang -= np.pi
-        elif ang < -np.pi / 2:
-            ang += np.pi
-        lim = np.radians(MAX_TWIST_DEG)
-        return w * min(max(ang, -lim), lim)
-
-    def band_rot(self, d, twist):
-        """Row 25's local rotation (the pelvis's frame): its -z along d,
-        turned about it by twist."""
-        return _turn(d, twist) @ _align(self.rest_axis(), d) @ self.rest25[:3, :3]
-
-    def flow(self, frames, targets, loop) -> list:
-        """The band's axis per frame (the pelvis's frame): each frame's
-        target followed through the spring in the model's space; a looping
-        clip runs three periods and keeps the last."""
-        world = [frames[i][1][ROW_PELVIS][:3, :3] @ targets[i] for i in range(len(targets))]
-        n = len(world)
-        start = loop if (loop is not None and 0 <= loop < n - 1) else None
-        order = list(range(n))
-        if start is not None:
-            period = list(range(start, n))
-            order = list(range(n)) + period + period
-        s = world[order[0]] / max(np.linalg.norm(world[order[0]]), 1e-6)
-        v = np.zeros(3)
-        out = [None] * n
-        for i in order:
-            t = world[i] / max(np.linalg.norm(world[i]), 1e-6)
-            v = v * DAMPING + SPRING * np.cross(s, t)
-            ang = float(np.linalg.norm(v))
-            if ang > 1e-9:
-                k = v / ang
-                s = s * np.cos(ang) + np.cross(k, s) * np.sin(ang) + k * np.dot(k, s) * (1 - np.cos(ang))
-            s = s / max(np.linalg.norm(s), 1e-6)
-            lag = float(np.arccos(np.clip(np.dot(s, t), -1.0, 1.0)))
-            if lag > np.radians(MAX_LAG_DEG):
-                k = np.cross(s, t)
-                k = k / max(np.linalg.norm(k), 1e-9)
-                s = _turn(k, lag - np.radians(MAX_LAG_DEG)) @ s
-                v = v * 0.5
-            out[i] = s
-        pel = [frames[i][1][ROW_PELVIS][:3, :3] for i in range(n)]
-        local = []
+    def _guide_points(self, guide: dict, key: str, rest: np.ndarray, az: np.ndarray, n: int) -> list:
+        """A guide's points per frame (the pelvis's frame): the rest points
+        moved as the source's chains move in each direction about them."""
+        gaz = np.asarray(guide["mid_azimuths" if key == "mid" else "azimuths"], dtype=float)
+        rows = guide[key]
+        out = []
         for i in range(n):
-            d = np.linalg.inv(pel[i]) @ out[i]
-            local.append(self.cap_tilt(d / max(np.linalg.norm(d), 1e-6)))
-        return local
+            d = np.asarray(rows[min(i, len(rows) - 1)], dtype=float)
+            xs, cols = D._periodic(gaz, d[:, 0], d[:, 1], d[:, 2])
+            move = np.stack([np.interp(az, xs, col) for col in cols], axis=1)
+            out.append(rest + move)
+        return out
 
-    # ------------------------------------------------------------- the hem
+    # ------------------------------------------------------------ the cloth
 
-    def hem_points(self, p) -> np.ndarray:
-        """The hem ring in row 25's frame for hem shape p."""
-        sx, sy, tilt, dy, dz = p
-        h = self.hem_local
-        x, y, z = h[:, 0] * sx, h[:, 1] * sy, h[:, 2]
-        c, s = np.cos(tilt), np.sin(tilt)
-        t = self.hem_rest_t
-        return np.c_[x + t[0], y * c - z * s + t[1] + dy, y * s + z * c + t[2] + dz]
+    def cloth(self, frames, loop, guide=None, trail: float = 0.0, floor: bool = True):
+        """The cloth's mid and hem points per frame (model space)."""
+        n = len(frames)
+        k = self.chains
+        pel = [frames[i][1][ROW_PELVIS] for i in range(n)]
+        to_model = lambda m, p: (m @ np.c_[p, np.ones(len(p))].T).T[:, :3]
+        g_mid = g_hem = None
+        if guide is not None and guide.get("mid"):
+            g_mid = self._guide_points(guide, "mid", self.mid_p, self.az_mid, n)
+        if guide is not None and guide.get("hem"):
+            g_hem = self._guide_points(guide, "hem", self.hem_p, self.az_hem, n)
+        order = list(range(n))
+        if loop is not None and 0 <= loop < n - 1:
+            period = list(range(loop + 1, n))
+            order = list(range(n)) + period + period
+        down = np.array([0.0, -1.0, 0.0])
+        unit = lambda v: v / np.maximum(np.linalg.norm(v, axis=1), 1e-6)[:, None]
+        p1 = p2 = v1 = v2 = None
+        out1, out2 = [None] * n, [None] * n
+        for i in order:
+            m = pel[i]
+            mats = frames[i][1]
+            anchor = to_model(m, self.top_p[:k])
+            rest1 = to_model(m, self.mid_p[:k])
+            rest2 = to_model(m, self.hem_p[:k])
+            air = np.zeros(3)
+            if trail:
+                fwd = m[:3, 2] / max(np.linalg.norm(m[:3, 2]), 1e-6)
+                air = -trail * fwd
+            d1 = unit(unit(rest1 - anchor) * (1.0 - HANG) + (down + air) * HANG)
+            t1 = anchor + d1 * self.len1[:, None]
+            d2 = unit(unit(rest2 - rest1) * (1.0 - HANG_HEM) + (down + air) * HANG_HEM)
+            t2 = t1 + d2 * self.len2[:, None]
+            if g_mid is not None:
+                t1 = t1 + (to_model(m, g_mid[i][:k]) - t1) * GUIDE_W
+            if g_hem is not None:
+                t2 = t2 + (to_model(m, g_hem[i][:k]) - t2) * GUIDE_W
+            if p1 is None:
+                p1, p2 = t1.copy(), t2.copy()
+                v1, v2 = np.zeros_like(p1), np.zeros_like(p2)
+            else:
+                for _ in range(SUB):
+                    for p, v, t, kk in ((p1, v1, t1, SPRING_MID), (p2, v2, t2, SPRING_HEM)):
+                        kk = kk / (SUB * SUB)
+                        c = 2.0 * np.sqrt(kk) * DAMP
+                        v += kk * (t - p) - c * v
+                        p += v
+            caps = []
+            for (hip, knee, ankle), (rh, rk, ra) in zip(LEGS, self.radii):
+                ph, pk, pa = mats[hip][:3, 3], mats[knee][:3, 3], mats[ankle][:3, 3]
+                caps.append((ph, pk, rh + MARGIN, rk + MARGIN))
+                caps.append((pk, pa, rk + MARGIN, ra + MARGIN))
+            q1, q2 = p1.copy(), p2.copy()
+            centre = m[:3, 3]
+            # Each chain's outward direction: from the pelvis's vertical axis
+            # through its anchor, across (the pelvis's frame).
+            o = self.top_p[:k].copy()
+            o[:, 1] = 0.0
+            o = o / np.maximum(np.linalg.norm(o, axis=1), 1e-6)[:, None]
+            self._outward = o @ m[:3, :3].T
+            for _ in range(ITER):
+                self._constrain(anchor, q1, q2, caps, floor, centre)
+            v1 += (q1 - p1) * FEEDBACK
+            v2 += (q2 - p2) * FEEDBACK
+            p1, p2 = q1, q2
+            out1[i], out2[i] = p1.copy(), p2.copy()
+        return out1, out2
 
-    def legs_local(self, mats, rot) -> np.ndarray:
-        """Her leg points in row 25's frame (rot its rotation in the
-        pelvis's)."""
-        m25 = np.eye(4)
-        m25[:3, :3] = rot
-        m25[:3, 3] = self.rest25[:3, 3]
-        inv = np.linalg.inv(mats[ROW_PELVIS] @ m25)
-        pts = self.legs.posed(mats, self.inv_bind)
-        return (inv @ np.c_[pts, np.ones(len(pts))].T).T[:, :3]
+    def _constrain(self, anchor, q1, q2, caps, floor, centre):
+        """One pass of the cloth's constraints, in place."""
+        k = self.chains
+        # Lengths: the mid point from its anchor, the hem from the mid.
+        for base, q, rest in ((anchor, q1, self.len1), (q1, q2, self.len2)):
+            d = q - base
+            ln = np.linalg.norm(d, axis=1)
+            want = np.clip(ln, rest * SQUASH, rest * (1.0 + STRETCH))
+            q[:] = base + d * (want / np.maximum(ln, 1e-6))[:, None]
+        # The rings' edges: neither collapsed nor torn.
+        for q, rest in ((q1, self.edge_mid), (q2, self.edge_hem)):
+            d = np.roll(q, -1, axis=0) - q
+            ln = np.linalg.norm(d, axis=1)
+            want = np.clip(ln, rest * RING_STRETCH[0], rest * RING_STRETCH[1])
+            corr = d * ((ln - want) / np.maximum(ln, 1e-6))[:, None] * 0.5
+            q += corr
+            q -= np.roll(corr, 1, axis=0)
+        # Her legs push the cloth out from her middle (the dress around her
+        # legs, never through them: a kick lifts the dress over the thigh):
+        # each point, each chain's segments (their lower end moved) and each
+        # ring's edges (both ends) out of the legs' capsules along their
+        # chain's outward direction.
+        out_dir = self._outward
+        for a, b, ra, rb in caps:
+            for q in (q1, q2):
+                q += out_dir * _exit_along(q, out_dir, a, b, ra, rb)[:, None]
+            for upper, lower in ((anchor, q1), (q1, q2)):
+                for j in range(k):
+                    s, t = _closest_on_segments(upper[j], lower[j], a, b)
+                    pc = upper[j] + (lower[j] - upper[j]) * s
+                    need = _exit_along(pc[None], out_dir[j][None], a, b, ra, rb)[0]
+                    if need > 0.0:
+                        lower[j] += out_dir[j] * need / max(s, 0.35)
+            for q in (q1, q2):
+                for j in range(k):
+                    jn = (j + 1) % k
+                    s, t = _closest_on_segments(q[j], q[jn], a, b)
+                    pc = q[j] + (q[jn] - q[j]) * s
+                    o = out_dir[j] + out_dir[jn]
+                    o = o / max(np.linalg.norm(o), 1e-6)
+                    need = _exit_along(pc[None], o[None], a, b, ra, rb)[0]
+                    if need > 0.0:
+                        w = need / ((1.0 - s) ** 2 + s ** 2)
+                        q[j] += o * w * (1.0 - s)
+                        q[jn] += o * w * s
+        # The hem level, and on a floor: a point under it is lifted onto it
+        # and spread out from her (the cloth lies on the ground).
+        y = q2[:, 1]
+        q2[:, 1] = y + LEVEL * (y.mean() - y)
+        if floor:
+            for q, base, rest, y0 in ((q1, anchor, self.len1, FLOOR_Y + 8.0), (q2, q1, self.len2, FLOOR_Y)):
+                low = q[:, 1] < y0
+                if not low.any():
+                    continue
+                q[low, 1] = y0
+                dy = np.abs(base[:, 1] - y0)
+                reach = np.sqrt(np.maximum((rest * 0.95) ** 2 - dy ** 2, 0.0))
+                have = np.linalg.norm((q - base)[:, [0, 2]], axis=1)
+                grow = np.where(low, np.maximum(reach - have, 0.0), 0.0)
+                if grow.any():
+                    flat = q - centre
+                    flat[:, 1] = 0.0
+                    flat = flat / np.maximum(np.linalg.norm(flat, axis=1), 1e-6)[:, None]
+                    q += flat * grow[:, None]
 
-    def _profile(self, pts):
-        """Points (row 25's frame) by angle about the band's axis: (angle,
-        depth down the axis, radius)."""
-        rel = pts[:, :2] - self.axis_xy
-        return np.arctan2(rel[:, 1], rel[:, 0]), -pts[:, 2], np.hypot(rel[:, 0], rel[:, 1])
+    # ------------------------------------------------------------- the fit
 
-    def frame_legs(self, legs):
-        """One frame's leg points for the hem search: their angle, depth and
-        radius about the axis, and the ring's depth and radius there."""
-        ang, depth, rho = self._profile(legs)
-        xt, (at, rt) = self.top
-        return ang, depth, rho, np.interp(ang, xt, at), np.interp(ang, xt, rt)
-
-    def outs(self, p, fl) -> np.ndarray:
-        """Per leg point, how far outside the band with hem shape p
-        (dress_check.band_outs about row 25's axis)."""
-        ang, depth, rho, a_top, r_top = fl
-        xh, (ah, rh) = D._periodic(*self._profile(self.hem_points(p)))
-        return D.band_profile_outs(depth, rho, a_top, r_top, np.interp(ang, xh, ah),
-                                   np.interp(ang, xh, rh), self.legs.core)
-
-    def full_outs(self, p, legs, rot) -> np.ndarray:
-        """outs, with the core above the band's top ring held to the upper
-        band (dress_check.Report.frame_outs)."""
-        fl = self.frame_legs(legs)
-        out = self.outs(p, fl)
-        if self.upper_rest is None:
-            return out
-        above = (fl[1] < fl[3]) & self.legs.core
-        if not above.any():
-            return out
-        pel = legs @ rot.T + self.rest25[:3, 3]
-        return np.where(above, D.upper_outs(pel, self.upper_rest), out)
-
-    def cost(self, p, fl, prev, rest=HEM_REST) -> float:
-        hem = self.hem_points(p)
-        # The axis inside the hem (its angles all round it).
-        h_ang = np.sort(np.arctan2(hem[:, 1] - self.axis_xy[1], hem[:, 0] - self.axis_xy[0]))
-        if float(np.max(np.diff(np.append(h_ang, h_ang[0] + 2 * np.pi)))) >= np.pi * 0.9:
-            return 1e6
-        o = np.maximum(self.outs(p, fl) + MARGIN, 0.0) / OUT_UNIT
-        c = float(np.sum(((p - rest) / HEM_SCALE) ** 2)) + float(np.sum(self.legs.weight * o * o))
-        if prev is not None:
-            c += TEMPORAL * float(np.sum(((p - prev) / HEM_STEP) ** 2))
-        panel = np.linalg.norm(hem - self.ring25_local, axis=1) - self.panel_rest
-        c += PANEL_W * float(np.mean((np.minimum(panel, 0.0) / PANEL_SHORTEN) ** 2 +
-                                     (np.maximum(panel, 0.0) / PANEL_STRETCH) ** 2))
-        lift = hem[:, 2] - (self.top_z - MIN_SPAN)
-        return c + float(np.sum(np.maximum(lift, 0.0) ** 2)) / 25.0
-
-    def solve_hem(self, legs, prev, rest=HEM_REST):
-        """The hem shape for one frame's legs (row 25's frame), searched
-        from the frame before's (prev) and from rest (a guide's hem when
-        given: the shape it stays nearest)."""
-        fl = self.frame_legs(legs)
-        lo, hi = (HEM_LO - HEM_REST) / HEM_SCALE, (HEM_HI - HEM_REST) / HEM_SCALE
-        f = lambda x: self.cost(HEM_REST + x * HEM_SCALE, fl, prev, rest)
-        r0 = (np.asarray(rest) - HEM_REST) / HEM_SCALE
-        starts = [(r0, 0.5)] if prev is None else [((prev - HEM_REST) / HEM_SCALE, 0.2), (r0, 0.5)]
-        best = None
-        for x0, step in starts:
-            if best is not None and f(x0) >= best[1]:
-                continue
-            x, v = _search(f, x0, lo, hi, step)
-            if best is None or v < best[1]:
-                best = (x, v)
-        return HEM_REST + best[0] * HEM_SCALE
+    def fit(self, frames, mids, hems):
+        """Per frame: row 25's local rotation, row 26's and row 27's fit
+        parameters."""
+        n = len(frames)
+        k = self.chains
+        full = lambda pts: np.vstack([pts, pts[:len(self.hem_p) - k]])   # u 1 is u 0
+        origin = self.rest25[:3, 3]
+        out = []
+        x26 = self.x26_rest.copy()
+        x27 = self.x27_rest.copy()
+        prev26 = prev27 = None
+        rest_down = self.rest25[:3, :3]
+        a_rest = np.vstack([self.mid_p[:k], self.hem_p[:k]]) - origin
+        w = np.r_[np.full(k, 1.0), np.full(k, 0.5)]
+        for i in range(n):
+            pel = frames[i][1][ROW_PELVIS]
+            pin = np.linalg.inv(pel)
+            to_p = lambda p: (pin @ np.c_[p, np.ones(len(p))].T).T[:, :3]
+            m_p, h_p = to_p(mids[i]), to_p(hems[i])
+            q = _kabsch(a_rest, np.vstack([m_p, h_p]) - origin, w)
+            swing, twist = _swing_twist(q, self.rest_axis)
+            lim = np.radians(MAX_TWIST_DEG)
+            twist = min(max(twist, -lim), lim)
+            # Tilt capped: the swing's angle at most MAX_TILT_DEG.
+            to = swing @ self.rest_axis
+            ang = float(np.arccos(np.clip(np.dot(to, self.rest_axis), -1.0, 1.0)))
+            if ang > np.radians(MAX_TILT_DEG):
+                v = np.cross(self.rest_axis, to)
+                swing = _turn(v / max(np.linalg.norm(v), 1e-9), np.radians(MAX_TILT_DEG))
+            rot = swing @ _turn(self.rest_axis, twist) @ rest_down
+            m25 = np.eye(4)
+            m25[:3, :3] = rot
+            m25[:3, 3] = origin
+            x26 = _fit(m25, self.mid_local, full(m_p), x26, self.x26_rest, prev26)
+            m26 = m25 @ _local(x26)
+            x27 = _fit(m26, self.hem_local, full(h_p), x27, self.x27_rest, prev27)
+            prev26, prev27 = x26.copy(), x27.copy()
+            out.append((rot, x26.copy(), x27.copy()))
+        return out
 
     # ------------------------------------------------------------ the clip
 
-    def clip_keys(self, clip: A.Clip, anim_flags: int, trail: float = 0.0, guide=None):
-        """Per frame: row 25's rotation (Euler) and the hem's shape."""
-        return self._solve(clip, anim_flags, trail, guide)["keys"]
-
-    def guide_hems(self, guide: dict, n: int) -> list:
-        """A guide's hem per frame (the pelvis's frame): the rest hem moved
-        as the source's skirt hem moves in each direction about it
-        (ultimate.py: Ultimate's eight skirt chains' ends)."""
-        az = np.asarray(guide["azimuths"], dtype=float)
-        out = []
-        for i in range(n):
-            d = np.asarray(guide["hem"][min(i, len(guide["hem"]) - 1)], dtype=float)
-            xs, cols = D._periodic(az, d[:, 0], d[:, 1], d[:, 2])
-            move = np.stack([np.interp(self.hem_az, xs, col) for col in cols], axis=1)
-            out.append(self.hem_pelvis + move)
-        return out
-
-    def fit_hem(self, pts25) -> np.ndarray:
-        """The hem shape nearest hem points given in row 25's frame."""
-        lo, hi = (HEM_LO - HEM_REST) / HEM_SCALE, (HEM_HI - HEM_REST) / HEM_SCALE
-        f = lambda x: float(np.sum((self.hem_points(HEM_REST + x * HEM_SCALE) - pts25) ** 2))
-        x, _v = _search(f, np.zeros(5), lo, hi, 0.5)
-        return HEM_REST + x * HEM_SCALE
-
-    def _solve(self, clip: A.Clip, anim_flags: int, trail: float = 0.0, guide=None) -> dict:
+    def _solve(self, clip: A.Clip, anim_flags: int, trail: float = 0.0, guide=None):
         length = max((st.length for st in clip.streams.values()), default=0)
         frames = self.f.pose_frames(clip, anim_flags, length)
         loops = {st.loop for st in clip.streams.values()}
         loop = loops.pop() if len(loops) == 1 else None
-        origin = self.rest25[:3, 3]
-        ghems = self.guide_hems(guide, len(frames)) if guide else None
-        if ghems is not None:
-            # A guided clip's band points at its guide hem's middle (the
-            # source's skirt already swings and lags): no spring.
-            axes = []
-            for g in ghems:
-                d = g.mean(axis=0) - origin
-                axes.append(self.cap_tilt(d / max(np.linalg.norm(d), 1e-6)))
+        if guide is not None and "floor" in guide:
+            floor = bool(guide["floor"])
         else:
-            targets = [self.target_axis(mats, trail) for _root, mats in frames]
-            axes = self.flow(frames, targets, loop)
-        rest_rot = lambda d: _align(self.rest_axis(), d) @ self.rest25[:3, :3]
-        twists = [self.spread_twist(mats, d, rest_rot(d)) for (_root, mats), d in zip(frames, axes)]
-        # Smoothing: the axis and the twist, a centred window (wrapped
-        # through a loop).
-        n = len(axes)
-        rots = []
-        for i in range(n):
-            w = _window(n, i, SMOOTH // 2, loop)
-            a = np.mean([axes[k] for k in w], axis=0)
-            rots.append(self.band_rot(a / max(np.linalg.norm(a), 1e-6), float(np.mean([twists[k] for k in w]))))
-        legs = [self.legs_local(mats, rot) for (_root, mats), rot in zip(frames, rots)]
-        # The hem, frame by frame from the one before (a loop's period twice,
-        # so its first frame follows its last).
-        order = list(range(n))
-        if loop is not None and 0 <= loop < n - 1:
-            order += list(range(loop, n))
-        rests = [HEM_REST] * n
-        if ghems is not None:
-            rests = [self.fit_hem((g - origin) @ rot) for g, rot in zip(ghems, rots)]
-        hems = [None] * n
-        prev = None
-        for i in order:
-            prev = self.solve_hem(legs[i], prev, rests[i])
-            hems[i] = prev
-        if HEM_SMOOTH > 1:
-            raw = [np.asarray(h, dtype=float) for h in hems]
-            hems = [np.mean([raw[k] for k in _window(n, i, HEM_SMOOTH // 2, loop)], axis=0) for i in range(n)]
-        out = []
-        prev_e = tuple(self.f.skel.rotate[ROW_UPPER])
-        for rot, hem in zip(rots, hems):
-            prev_e = A.to_euler(rot, prev_e)
-            out.append((prev_e, hem))
-        return {"keys": out, "frames": frames, "rots": rots, "legs": legs, "hems": hems, "length": length}
-
-    # ------------------------------------------------------------ the hold
-
-    def _held_mats(self, mats, leg, a):
-        """mats with one leg's thigh and shin turned share a of the way to
-        their rest (its foot following)."""
-        m = list(mats)
-        for row in HOLD_ROWS[leg] + (ANKLES[leg],):
-            p = self.f.skel.parents[row]
-            local = np.linalg.inv(mats[p]) @ mats[row]
-            if row in HOLD_ROWS[leg]:
-                M = local[:3, :3]
-                sc = np.linalg.norm(M, axis=0)
-                local = local.copy()
-                local[:3, :3] = _toward(M / sc, A.euler(*self.f.skel.rotate[row]), a) * sc
-            m[row] = m[p] @ local
-        return m
-
-    def hold_need(self, solved, frames0, held) -> np.ndarray:
-        """Per leg and frame, the share of the way to rest the leg needs:
-        where the solved clip still has it out, the least of HOLD_STEPS past
-        its share held now (`held`) that clears it, tested on that frame of
-        the clip as it came (frames0) alone; elsewhere its share now."""
-        rots, legs, hems = solved["rots"], solved["legs"], solved["hems"]
-        need = held.copy()
-        for i in range(len(rots)):
-            out = self.full_outs(hems[i], legs[i], rots[i])
-            for leg in (0, 1):
-                mask = self.legs.leg == leg
-                if float(out[mask].max(initial=-1.0)) <= D.TOLERANCE:
-                    continue
-                steps = [a for a in HOLD_STEPS if a > held[leg, i] + 1e-6]
-                if not steps:
-                    continue
-                # The least step that clears, by halving (a leg turned
-                # further toward rest is no further out).
-                lo, hi = 0, len(steps) - 1
-                while lo < hi:
-                    mid = (lo + hi) // 2
-                    l2 = self.legs_local(self._held_mats(frames0[i][1], leg, steps[mid]), rots[i])
-                    o2 = self.full_outs(self.solve_hem(l2, hems[i]), l2, rots[i])
-                    if float(o2[mask].max(initial=-1.0)) <= D.TOLERANCE:
-                        hi = mid
-                    else:
-                        lo = mid + 1
-                need[leg, i] = steps[lo]
-        return need
-
-    @staticmethod
-    def _ease(need) -> np.ndarray:
-        """Each frame's share, eased in and out over the frames around."""
-        held = np.zeros_like(need)
-        cols = np.nonzero(need.any(axis=0))[0]
-        for i in range(need.shape[1]):
-            for j in cols:
-                held[:, i] = np.maximum(held[:, i], need[:, j] - HOLD_RAMP * abs(i - j))
-        return np.clip(held, 0.0, 1.0)
+            # Her feet on a floor: an ankle at standing height most frames.
+            low = [min(m[r][:3, 3][1] for r in (LEGS[0][2], LEGS[1][2])) for _root, m in frames]
+            floor = float(np.mean(np.array(low) < 60.0)) > 0.5
+        mids, hems = self.cloth(frames, loop, guide, trail, floor)
+        fits = self.fit(frames, mids, hems)
+        return {"frames": frames, "fits": fits, "loop": loop, "length": length, "floor": floor,
+                "mids": mids, "hems": hems}
 
     def _slot_of(self, anim_flags):
         lead_slot = C.first_slot(anim_flags)
         rows = self.f.rows
         return (lambda row: lead_slot + rows.index(row)) if rows is not None else (lambda row: lead_slot + row)
 
-    def hold(self, clip: A.Clip, anim_flags: int, frames, held) -> A.Clip:
-        """The clip (posed as frames) with each leg's thigh and shin turned
-        `held` (per leg and frame) of the way to their rest."""
-        length = len(frames) - 1
-        slot_of = self._slot_of(anim_flags)
-        out = A.Clip(clip.slots)
-        out.streams = dict(clip.streams)
-        for leg in (0, 1):
-            if not held[leg].any():
-                continue
-            for row in HOLD_ROWS[leg]:
-                slot = slot_of(row)
-                st = clip.streams.get(slot)
-                if st is None or not any(k in st.tracks for k in range(3)):
-                    continue   # not turned: at its rest already
-                if st.length < length and st.loop is not None:
-                    continue
-                rest = A.euler(*self.f.skel.rotate[row])
-                p = self.f.skel.parents[row]
-                new = A.Stream(length, st.loop, dict(st.tracks), st.loop_skips_steps)
-                if st.length < length:
-                    for k, t in st.tracks.items():
-                        new.tracks[k] = A.Track(list(t.values) + [t.values[-1]] * (length - st.length),
-                                                t.lead, t.step)
-                cols = {k: (list(new.tracks[k].values), new.tracks[k].lead) if k in new.tracks
-                        else ([round(self.f.skel.rotate[row][k] * A.ROT_UNIT)] * (length + 1), 0)
-                        for k in range(3)}
-                for f in range(length + 1):
-                    a = float(held[leg, f])
-                    if a <= 0.0:
-                        continue
-                    mats = frames[f][1]
-                    local = np.linalg.inv(mats[p]) @ mats[row]
-                    M = local[:3, :3]
-                    R = M / np.linalg.norm(M, axis=0)
-                    near = tuple((cols[k][0][f - cols[k][1]] if f >= cols[k][1] else cols[k][0][0]) / A.ROT_UNIT
-                                 for k in range(3))
-                    e = A.to_euler(_toward(R, rest, a), near)
-                    for k in range(3):
-                        vals, lead = cols[k]
-                        if f >= lead:
-                            vals[f - lead] = round(e[k] * A.ROT_UNIT)
-                for k in range(3):
-                    vals, lead = cols[k]
-                    step = new.tracks[k].step if k in new.tracks else None
-                    new.tracks[k] = A.Track(vals, lead, step)
-                out.streams[slot] = new
-        return out
-
     def apply(self, clip: A.Clip, anim_flags: int, trail: float = 0.0, guide=None) -> A.Clip:
-        """The clip with rows 25 and 26 keyed from her legs (the band
-        trailed behind her by `trail`; or a guide's hem moves, the source's
-        skirt), her legs held where the dress cannot hold them."""
+        """The clip with rows 25, 26 and 27 keyed from the cloth (the air
+        moving back past her by `trail` units a frame; a guide's chains:
+        Ultimate's skirt)."""
         solved = self._solve(clip, anim_flags, trail, guide)
-        frames0 = solved["frames"]
-        held = np.zeros((2, len(frames0)))
-        source = clip
-        for _ in range(HOLD_PASSES):
-            need = self.hold_need(solved, frames0, held)
-            if np.array_equal(need, held):
-                break
-            held = self._ease(need)
-            clip = self.hold(source, anim_flags, frames0, held)
-            solved = self._solve(clip, anim_flags, trail, guide)
-        keys = solved["keys"]
-        length = len(keys) - 1
-        loops = {st.loop for st in clip.streams.values()}
-        loop = loops.pop() if len(loops) == 1 else None
+        fits, loop, length = solved["fits"], solved["loop"], solved["length"]
         slot_of = self._slot_of(anim_flags)
         # The joint array reaches the skirt's rows (a clip whose array ended
         # before them had none to point at).
         out = A.Clip(max(clip.slots, slot_of(ROW_HEM) + 1))
         out.streams = dict(clip.streams)
+        # A row's role moved (look_skirt.py: the held joint, row 27, to row
+        # 28): a clip that installs its hidden part keyed that DObj after the
+        # rows the fighter makes (it hangs last from row 0), the hem's slot
+        # now; its keys move one past the made rows.
+        for role in self.roles:
+            mask = 0
+            for part in role.get("hidden_parts", ()):
+                mask |= 1 << (31 - int(part))
+            if anim_flags & mask:
+                lead = C.first_slot(anim_flags)
+                st = clip.streams.get(lead + int(role["from"]))
+                if st is not None:
+                    new_slot = lead + len(self.f.rows)
+                    out.streams[new_slot] = st
+                    out.slots = max(out.slots, new_slot + 1)
+        prev_e = tuple(self.f.skel.rotate[ROW_UPPER])
+        eul25 = []
+        for rot, _x26, _x27 in fits:
+            prev_e = A.to_euler(rot, prev_e)
+            eul25.append(prev_e)
         st25 = A.Stream(length, loop)
         for k in range(3):
-            st25.tracks[k] = A.Track([round(r[k] * A.ROT_UNIT) for r, _h in keys], 0)
-        st26 = A.Stream(length, loop)
-        t = self.hem_rest_t
-        st26.tracks[0] = A.Track([round(h[2] * A.ROT_UNIT) for _r, h in keys], 0)
-        st26.tracks[5] = A.Track([round((t[1] + h[3]) * A.TRANS_UNIT) for _r, h in keys], 0)
-        st26.tracks[6] = A.Track([round((t[2] + h[4]) * A.TRANS_UNIT) for _r, h in keys], 0)
-        for k in range(2):
-            st26.tracks[7 + k] = A.Track([round(h[k] * C.SCALE_UNIT) for _r, h in keys], 0)
+            st25.tracks[k] = A.Track([round(e[k] * A.ROT_UNIT) for e in eul25], 0)
+        _knots(st25, loop)
         out.streams[slot_of(ROW_UPPER)] = st25
-        out.streams[slot_of(ROW_HEM)] = st26
+        for row, idx in ((ROW_MID, 1), (ROW_HEM, 2)):
+            st = A.Stream(length, loop)
+            xs = [f[idx] for f in fits]
+            # Euler angles unwrapped frame to frame.
+            prev = np.zeros(3)
+            angs = []
+            for x in xs:
+                e = A.to_euler(A.euler(*x[3:6]), tuple(prev))
+                prev = np.array(e)
+                angs.append(e)
+            for k in range(3):
+                st.tracks[k] = A.Track([round(a[k] * A.ROT_UNIT) for a in angs], 0)
+                st.tracks[4 + k] = A.Track([round(x[k] * A.TRANS_UNIT) for x in xs], 0)
+            for k in range(2):
+                st.tracks[7 + k] = A.Track([round(x[6 + k] * C.SCALE_UNIT) for x in xs], 0)
+            _knots(st, loop)
+            out.streams[slot_of(row)] = st
         if self.hair_row and guide is None:
             out.streams[slot_of(ROW_HAIR)] = self._hair_on_bodice(solved["frames"], loop,
                                                                    clip.streams.get(slot_of(ROW_HAIR)))

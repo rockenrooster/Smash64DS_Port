@@ -508,6 +508,95 @@ Flame.
   with angles SSB64 has not (365-367). Explosive Flame, Warp, grabs and
   throws unchanged.
 
+## Owner p6s (2026-10-15): a dress that hangs and flows
+
+Owner p6s (3.5/5): "Skirt/hem issues, skirt behaves like a paper cone,
+instead of a heavy, flowy dress" -- the hem "flat against ground" when she
+kneels or crouches (up tilt, down tilt, down smash), "more flat relative to
+horizontal plane" (dash, up air, run brake), narrower over a kick (forward
+air) and in the run, no twitching or spinning (forward tilt, forward smash,
+wait, run); "lets go with option A and B for her dress"; "Lets try High for
+a 1v1"; her Ultimate attack data at the latest patch's values but for
+Explosive Flame and the up smash; "Brighter colors: lets go with the A+B";
+the up tilt "leaning back far, facing upwards ... like the limbo"; the down
+smash's wings "more left/right symmetrical (staff-side wing goes down
+further)".
+
+- **The dress is three rings (option A's rig).** The lower band (row 25's
+  ring at her hips to the hem) was one straight band: it is split at her
+  knees (`look_skirt.py` split_band, MID_Y 165) by a mid ring on row 26,
+  the hem on row 27 hung from row 26, so the dress bends there. Each band
+  is drawn by its lower ring's row from its parent's seam load (row 27 is
+  the tree's last row, drawn right after row 26); the slit's V runs through
+  both (the mid ring has a vertex on each of its edges). +22 triangles high
+  (467), +18 low (307); her GX cross slots are now all 15 (row 26's
+  binding).
+- **Row 27 was the grab's hold.** Peach's row 27 is the joint a grab holds
+  the caught fighter by and a heavy item rides
+  (`FTAttributes.joint_itemheavy_id` 31, hidden part 3: catch, the throws,
+  heavy items). The role moved to a new row 28 hung from row 0 as row 27
+  was (the scene's "joint_roles": `model_writer.py` writes the row,
+  `tree_depths` takes each row's depth from the scene's parents, the
+  attributes and the hidden part name joint 32); a clip that installs the
+  hidden part keys it one slot later (`skirt_keys.py`).
+- **The keys (option A).** `skirt_keys.py` is a cloth model baked over each
+  clip: a chain a sample of the rings hangs from row 25's ring, its two
+  segments pointing the way the rest dress does about the pelvis drawn
+  toward straight down (HANG 0.45 at the hips, HANG_HEM 0.7 below), drawn
+  0.65 of the way to Ultimate's own skirt chains in a clip made from
+  Ultimate's motion (ultimate.py's guide now carries the chains' third
+  joints for the mid ring as well as their ends for the hem); each point
+  follows its target through a damped spring, the hem more slowly than the
+  mid ring (the cloth's weight); her legs push it out from her middle
+  (thigh and shin capsules of the leg mesh's radius plus 7 units, against
+  the points, the chains' segments and the rings' edges: a kick lifts the
+  dress over the thigh, the shin hangs from under it); the hem's points
+  are drawn level with each other and, where her feet are on a floor, kept
+  on it and spread out from her (kneeling, the hem lies on the ground). The
+  rows are then fitted to the cloth: row 25's turn by least squares (its
+  twist about the band held to 20 degrees), rows 26 and 27 translation,
+  turn and scale across. The hold that turned her legs toward their rest
+  where the dress could not hold them is gone (the "jumpy legs" of the down
+  smash and neutral air). The rows' keys are put on shared knots within
+  half a degree / 1.5 units, so the clips stay small (her largest,
+  13,148 bytes).
+- **The spring at run time (option B).** `nds_p4_palutena.c`
+  `ndsP4PalutenaDress`, every frame before the parts' transforms: the dress
+  rows swing back as she speeds up and forward as she stops or turns,
+  trail at speed (0.0035 radians a unit of speed, at most 24 degrees),
+  flare as she falls (scale across, at most 0.18), and settle; hitlag
+  freezes it. A field the pose engine held (`NDS_FT_POSE_HOLD`) is told
+  from one it rewrote by the value this wrote last.
+- **High in a 1v1.** A VS match of one or two fighters draws her high
+  detail (`NDSP4Overrides.duel_high_detail`, `ndsP4DuelHighDetail`); such a
+  match loads her whole pack, both details, already.
+- **Brighter (A+B).** Every palette of her files lifted (`model_writer.py
+  --lift-palettes`: whites brighter and cleaner, greens and blues brighter
+  and more saturated) and her lists' ambient light raised 0x4C to 0x6A
+  (`--ambient`).
+- **Up tilt** keeps Ultimate's kneeling spin with her torso turned 25
+  degrees and her head 40 more toward her facing through it, her hair
+  turned back by both so it falls as Ultimate's does (ultimate.py "turn").
+- **Down smash wings** are both the forward wing's pose, mirrored: the one
+  behind her went about 100 units into the floor (`p6_wings.py`
+  "symmetric").
+- **Attack data at the latest patch.** ultimateframedata's damage where it
+  differs from the 1.0.0 data: dash attack 11% / 7% late, the up tilt's
+  launcher 5% (4.5), down tilt 9% (8.5) to a grounded opponent and 5% to
+  one in the air (ground-only and air-only hitboxes). Angles and knockback
+  stay the owner's data's; Explosive Flame and the up smash unchanged.
+- **Peach's clips ported ("port the rest of her animations that still use
+  peach's"), first batch.** Ultimate's motions on Peach's rows' lengths and
+  flags, so their scripts' frames and travel stay (a TransN row keeps
+  Peach's slot): the turn and the run's turn (their pose groups gone), the
+  helpless fall after Warp and its landing, the electric shock, wall and
+  ceiling hits, the knockdowns, getups, getup rolls and attacks, the techs,
+  the clank, item pick-up, throws, swings (sword, bat, fan and star rod
+  share them), shooting and the hammer, the shield-break fall and the dizzy
+  loop (a loop plays at Ultimate's own pace). Still Peach's: the ledge,
+  grabs and throws, being grabbed and thrown, the guard (its shield-pose
+  rows), the shield-break flight, the rebirth and the pipe.
+
 ## Animations (the owner's 3DS references, 2026-10-14)
 
 Superseded by Ultimate's motions above (the recipes below were keyposes;

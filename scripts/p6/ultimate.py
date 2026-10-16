@@ -119,8 +119,11 @@ FIGHTERS = {
         # two back hair chains (root, end) with the head they hang from.
         "hair": {"row": 9, "head": "Head", "chains": [["S_HairBL1", "S_HairBL5_null"],
                                                       ["S_HairBR1", "S_HairBR5_null"]]},
-        # The skirt's eight chains' ends (the hem; skirt_keys.py's guide).
+        # The skirt's eight chains' ends (the hem; skirt_keys.py's guide) and
+        # their third joints (about her knees: the dress's mid ring, owner
+        # p6s).
         "skirt": [f"S_Skirt{d}4_null" for d in ("F", "FL", "L", "BL", "B", "BR", "R", "FR")],
+        "skirt_mid": [f"S_Skirt{d}3" for d in ("F", "FL", "L", "BL", "B", "BR", "R", "FR")],
     },
 }
 DEFAULT_ROOT = REPO.parent / "ssbu-recomp" / "build"
@@ -599,9 +602,10 @@ class Retarget:
             self._hbi = self._hair_frame_of(lambda n: self.src_bind_pos[n], np.eye(3)).T
         return self._hbi
 
-    def skirt_moves(self, u, src, yaw=0.0):
-        """Ultimate's hem points' moves from their rest in the hips' frame
-        (our pelvis's: both binds face +z), in our units, at frame u."""
+    def skirt_moves(self, u, src, yaw=0.0, names=None):
+        """Ultimate's hem points' (or the named skirt joints') moves from
+        their rest in the hips' frame (our pelvis's: both binds face +z), in
+        our units, at frame u."""
         W = src.worlds(u)
         if yaw:
             Y = np.eye(4)
@@ -612,14 +616,14 @@ class Retarget:
         H = _rot(W[i[hip]]) @ _rot(src.bind_world(hip)).T
         ph = np.asarray(W[i[hip]], float)[:3, 3]
         out = []
-        for n in self.cfg["skirt"]:
+        for n in (names or self.cfg["skirt"]):
             now = H.T @ (np.asarray(W[i[n]], float)[:3, 3] - ph)
             rest = self.src_bind_pos[n] - self.src_bind_pos[hip]
             out.append([float(v) for v in (now - rest) * self.k])
         return out
 
-    def skirt_azimuths(self):
-        pts = np.array([self.src_bind_pos[n] for n in self.cfg["skirt"]])
+    def skirt_azimuths(self, names=None):
+        pts = np.array([self.src_bind_pos[n] for n in (names or self.cfg["skirt"])])
         c = pts.mean(axis=0)
         return [float(a) for a in np.arctan2(pts[:, 0] - c[0], pts[:, 2] - c[2])]
 
@@ -704,10 +708,29 @@ def _still(st: dict, per_rot: list, per_tr: list, length: int, loop) -> None:
             per_tr[g][r] = [float(v) for v in mean_t + (np.mean([trs[k] for k in w], axis=0) - mean_t) * keep]
 
 
+def _turns(skel: A.Skeleton, turns: list, per_rot: list, per_tr: list, length: int) -> None:
+    """Rows turned toward her facing or away ("turn": [{"row": r, "keys":
+    [[frame, degrees], ...]}, ...], linear between keys; + leans the row's
+    top forward, about the model's x; a row's turn carries its children, so a
+    later row's adds to it): owner p6s, her up tilt "leaning back far, facing
+    upwards ... like the limbo" -- Ultimate's backbend eased."""
+    for t in turns:
+        r = int(t["row"])
+        for g in range(length + 1):
+            deg = _keyed(t["keys"], g)
+            if not deg:
+                continue
+            rr, _pp = K._worlds(skel, per_rot[g], per_tr[g])
+            turn = _axis_angle(np.array([1.0, 0.0, 0.0]), math.radians(deg))
+            parent = skel.parents[r]
+            pw = rr[parent] if parent >= 0 else np.eye(3)
+            per_rot[g][r] = pw.T @ (turn @ rr[r])
+
+
 def _item_pitch(skel: A.Skeleton, cfg: dict, keys, per_rot: list, per_tr: list, length: int) -> None:
     """The item turned about its grip so its tip drops ("item_pitch":
     [[frame, degrees], ...], eased between keys): about the horizontal axis
-    across the blade (owner p6r: Ike's forward smash "slam the sword 100%
+    across the blade (owner p6s: Ike's forward smash "slam the sword 100%
     flat against the ground, maybe go slightly past the ground a couple of
     degrees")."""
     it = cfg["item"]
@@ -813,7 +836,8 @@ def build(skel: A.Skeleton, spec: dict, scales=None, rom=None, extras: dict | No
                 # left out ("item_path" throws it instead).
                 sources[p["motion"]].item = None
     rt = Retarget(skel, scales, sources[parts[0]["motion"]], cfg, spec)
-    per_rot, per_tr, hems = [], [], []
+    per_rot, per_tr, hems, mids = [], [], [], []
+    mid_names = cfg.get("skirt_mid")
     for g in range(length + 1):
         part = _part_at(parts, g)
         u, src, yaw = time_map(part["time"], g), sources[part["motion"]], _keyed(spec.get("yaw"), g)
@@ -821,10 +845,13 @@ def build(skel: A.Skeleton, spec: dict, scales=None, rom=None, extras: dict | No
         per_rot.append(lr)
         per_tr.append(tr)
         hems.append(rt.skirt_moves(u, src, yaw) if cfg.get("skirt") else None)
+        mids.append(rt.skirt_moves(u, src, yaw, mid_names) if mid_names else None)
     if spec.get("item_path"):
         _item_path(skel, cfg, spec["item_path"], per_rot, per_tr, length)
     if spec.get("item_pitch"):
         _item_pitch(skel, cfg, spec["item_pitch"], per_rot, per_tr, length)
+    if spec.get("turn"):
+        _turns(skel, spec["turn"], per_rot, per_tr, length)
     if spec.get("still"):
         _still(spec["still"], per_rot, per_tr, length, spec.get("loop"))
     if spec.get("skirt_smooth") and cfg.get("skirt"):
@@ -834,10 +861,21 @@ def build(skel: A.Skeleton, spec: dict, scales=None, rom=None, extras: dict | No
         raw = [np.asarray(h, float) for h in hems]
         hems = [np.mean([raw[k] for k in _window(len(raw), g, half, spec.get("loop"))], axis=0).tolist()
                 for g in range(len(raw))]
+        if mid_names:
+            raw = [np.asarray(h, float) for h in mids]
+            mids = [np.mean([raw[k] for k in _window(len(raw), g, half, spec.get("loop"))], axis=0).tolist()
+                    for g in range(len(raw))]
     if extras is not None and spec.get("skirt", True) and cfg.get("skirt"):
         # The dress follows Ultimate's skirt (skirt_keys.py guide), its last
         # frames drawn back with the pose (blend_to) by the same weights.
         extras["skirt_guide"] = {"azimuths": rt.skirt_azimuths(), "hem": hems}
+        if mid_names:
+            extras["skirt_guide"].update(mid_azimuths=rt.skirt_azimuths(mid_names), mid=mids)
+        # Her feet on a floor (skirt_keys.py keeps the hem on it): not in an
+        # aerial, a jump, a fall or a tumble (the recipe's "floor" decides).
+        names = [p["motion"] for p in parts]
+        extras["skirt_guide"]["floor"] = bool(spec.get("floor", not any(
+            w in n for n in names for w in ("air", "jump", "fall", "fly", "cliff", "passive", "escapeair"))))
     bf = spec.get("blend_from")
     if bf:
         # The first frames eased in from another motion's pose (the wait or
@@ -847,6 +885,8 @@ def build(skel: A.Skeleton, spec: dict, scales=None, rom=None, extras: dict | No
         lr_f, tr_f = rt.pose(float(bf.get("frame", 0)), fsrc, float(bf.get("yaw", 0.0)))
         hem_f = (np.asarray(rt.skirt_moves(float(bf.get("frame", 0)), fsrc, float(bf.get("yaw", 0.0))))
                  if cfg.get("skirt") else None)
+        mid_f = (np.asarray(rt.skirt_moves(float(bf.get("frame", 0)), fsrc, float(bf.get("yaw", 0.0)), mid_names))
+                 if mid_names else None)
         last = int(bf.get("frames", 3))
         for g in range(0, min(last, length + 1)):
             w = g / float(last)
@@ -855,6 +895,8 @@ def build(skel: A.Skeleton, spec: dict, scales=None, rom=None, extras: dict | No
             per_tr[g] = [[b[c] + (a[c] - b[c]) * w for c in range(3)] for a, b in zip(per_tr[g], tr_f)]
             if hem_f is not None:
                 hems[g] = (w * np.asarray(hems[g]) + (1.0 - w) * hem_f).tolist()
+            if mid_f is not None:
+                mids[g] = (w * np.asarray(mids[g]) + (1.0 - w) * mid_f).tolist()
     bt = spec.get("blend_to")
     if bt:
         # The last frames drawn toward another motion's pose (the wait she
@@ -863,6 +905,8 @@ def build(skel: A.Skeleton, spec: dict, scales=None, rom=None, extras: dict | No
         lr_t, tr_t = rt.pose(float(bt.get("frame", 0)), tsrc, float(bt.get("yaw", 0.0)))
         hem_t = (np.asarray(rt.skirt_moves(float(bt.get("frame", 0)), tsrc, float(bt.get("yaw", 0.0))))
                  if cfg.get("skirt") else None)
+        mid_t = (np.asarray(rt.skirt_moves(float(bt.get("frame", 0)), tsrc, float(bt.get("yaw", 0.0)), mid_names))
+                 if mid_names else None)
         first, last = (int(x) for x in bt["frames"])
         for g in range(max(first, 0), length + 1):
             w = 1.0 if g >= last else (g - first) / max(last - first, 1)
@@ -871,6 +915,8 @@ def build(skel: A.Skeleton, spec: dict, scales=None, rom=None, extras: dict | No
             per_tr[g] = [[a[c] + (b[c] - a[c]) * w for c in range(3)] for a, b in zip(per_tr[g], tr_t)]
             if hem_t is not None:
                 hems[g] = ((1.0 - w) * np.asarray(hems[g]) + w * hem_t).tolist()
+            if mid_t is not None:
+                mids[g] = ((1.0 - w) * np.asarray(mids[g]) + w * mid_t).tolist()
     step = int(spec.get("key_step", 1))
     if step > 1:
         # Keys every `step` frames, the frames between them interpolated: a

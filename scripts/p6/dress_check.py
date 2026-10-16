@@ -6,8 +6,11 @@ Each motion's clip is posed on the content's own skeleton (coverage.py
 Fighter.pose_frames: her rows, translate_scales, the TransN slot); the look
 scene's dress and leg vertices ride their rows from the bind pose. The skirt
 hangs from Peach's dress rows (look_skirt.py): the upper band (the waist ring
-to the cut ring on row 1) and the lower band (row 25's ring to the hem on
-row 26); an older one-band skirt is one band from its top ring to its hem.
+to the cut ring on row 1) and the lower bands, row 25's ring to the mid ring
+on row 26 and on to the hem on row 27 (owner p6s; before the split, one band
+to the hem on row 26), each measured about its top ring's row's axis
+(chain_outs); an older one-band skirt is one band from its top ring to its
+hem.
 
 Her leg mesh is rings (the hip's on rows 16/21, the knee's on 17/22, the
 ankle's on 18/23) joined by tubes, so the dress is checked at points along
@@ -84,6 +87,14 @@ def rings(scene: dict):
     skirt = [i for i, v in enumerate(verts) if v.get("object") == DRESS and v["model"][1] <= SKIRT_TOP_Y
              and i in drawn]
     on = lambda row: [i for i in skirt if verts[i]["joint"] == row]
+    if on(27):
+        # Three rings (look_skirt.py split_band): row 25's ring, the mid ring
+        # on row 26 (with the slit's two edge vertices), the hem on row 27.
+        ys = np.array([verts[i]["model"][1] for i in skirt])
+        top = [i for i in skirt if verts[i]["model"][1] > ys.max() - 12.0]
+        y25 = max(verts[i]["model"][1] for i in on(25))
+        ring25 = [i for i in on(25) if verts[i]["model"][1] > y25 - 12.0]
+        return [(top, on(1)), (ring25, on(26)), (on(26), on(27))], on(27), []
     if on(26):
         ys = np.array([verts[i]["model"][1] for i in skirt])
         top = [i for i in skirt if verts[i]["model"][1] > ys.max() - 12.0]
@@ -109,6 +120,11 @@ def apply_scene_skeleton(fighter: C.Fighter, scene: dict) -> None:
         p = row["parent"]
         local = worlds[j] if p < 0 else np.linalg.inv(worlds[p]) @ worlds[j]
         fighter.skel.translate[j] = tuple(float(c) for c in local[:3, 3])
+        # The scene's tree (model_writer.py writes its parents and makes a
+        # drawn row's DObj): Palutena's hem row 27 hangs from row 26.
+        fighter.skel.parents[j] = p
+        if row.get("has_list") and fighter.rows is not None and j not in fighter.rows:
+            fighter.rows = sorted(fighter.rows + [j])
 
 
 def bind_mats(fighter: C.Fighter):
@@ -201,6 +217,51 @@ def band_profile_outs(a, rho, a_top, r_top, a_hem, r_hem, core) -> np.ndarray:
     return np.where(s < 0.0, FREE, out)
 
 
+def _band_terms(top: np.ndarray, bottom: np.ndarray, pts: np.ndarray, origin: np.ndarray, u: np.ndarray,
+                across: np.ndarray):
+    """One band's measure of the points (band_outs): their place down it
+    (0 at its top ring, 1 at its bottom ring), their distance outside its
+    side, and how far below its bottom ring they are."""
+    e1 = across - np.dot(across, u) * u
+    if np.linalg.norm(e1) < 1e-3:
+        e1 = np.cross(u, [0.0, 1.0, 0.0])
+    e1 = e1 / np.linalg.norm(e1)
+    e2 = np.cross(u, e1)
+    xt, (at, rt) = _periodic(*_ring_angles(top - origin, u, e1, e2))
+    xh, (ah, rh) = _periodic(*_ring_angles(bottom - origin, u, e1, e2))
+    ang, a, rho = _ring_angles(pts - origin, u, e1, e2)
+    a_top, r_top = np.interp(ang, xt, at), np.interp(ang, xt, rt)
+    a_hem, r_hem = np.interp(ang, xh, ah), np.interp(ang, xh, rh)
+    span = np.maximum(a_hem - a_top, 1.0)
+    s = (a - a_top) / span
+    band = r_top + np.clip(s, 0.0, 1.0) * (r_hem - r_top)
+    return s, (rho - band) * span / np.hypot(span, r_hem - r_top), a - a_hem
+
+
+def chain_outs(rings_: list, axes: list, across: np.ndarray, pts: np.ndarray, core: np.ndarray):
+    """band_outs over a chain of bands (ring i to ring i + 1, about the axis
+    axes[i] through ring i's centre): a point is measured on the first band
+    it is not below; above the first ring it is FREE, below the last (the
+    hem) a core point is out by how far below. Also the points' place down
+    the first band (negative: above it)."""
+    out = np.full(len(pts), FREE)
+    done = np.zeros(len(pts), dtype=bool)
+    n = len(rings_) - 1
+    s0 = None
+    for b in range(n):
+        s, side, below = _band_terms(rings_[b], rings_[b + 1], pts, rings_[b].mean(axis=0), axes[b], across)
+        if b == 0:
+            s0 = s
+            done |= s < 0.0
+        held = ~done & (s <= 1.0)
+        out = np.where(held, side, out)
+        done |= held
+        if b == n - 1:
+            past = ~done
+            out = np.where(past, np.where(core, np.maximum(side, below), FREE), out)
+    return out, s0
+
+
 def band_outs(top: np.ndarray, hem: np.ndarray, pts: np.ndarray, core: np.ndarray,
               origin: np.ndarray, u: np.ndarray, across: np.ndarray) -> np.ndarray:
     """Per point: how far outside the lower band it is (signed: negative
@@ -229,7 +290,7 @@ def upper_rest_of(scene: dict, bind) -> tuple | None:
     height range and radii there), or None for a one-band skirt."""
     verts = scene["vertices"]
     bands, _hem, _slit = rings(scene)
-    if len(bands) != 2:
+    if len(bands) < 2:
         return None
     pin = np.linalg.inv(bind[1])
     to_p = lambda i: (pin @ np.append(verts[i]["model"], 1.0))[:3]
@@ -267,6 +328,10 @@ class Report:
         remap = {i: k for k, i in enumerate(dress_idx)}
         self.bands = [([remap[i] for i in a], [remap[i] for i in b]) for a, b in bands]
         self.hem_row = verts[hem[0]]["joint"]
+        # The lower bands' rings (row 25's to the hem) and the rows whose -z
+        # is each band's axis.
+        self.chain = [self.bands[1][0]] + [b[1] for b in self.bands[1:]] if len(bands) > 1 else None
+        self.axis_rows = [verts[a[0]]["joint"] for a, _b in bands[1:]] if len(bands) > 1 else None
         self.legs = LegSamples(scene)
         self.upper_rest = upper_rest_of(scene, bind)
 
@@ -275,24 +340,21 @@ class Report:
         dp = posed(self.dress_model, self.dress_rows, mats, self.inv_bind)
         lp = self.legs.posed(mats, self.inv_bind)
         top, hem = self.bands[-1]
-        origin = dp[top].mean(axis=0)
         if self.upper_rest is not None:
-            # Row 25's axis: its -z through its ring's centre.
-            u = -mats[25][:3, 2] / np.linalg.norm(mats[25][:3, 2])
-            across = mats[25][:3, 0]
-        else:
-            u = dp[hem].mean(axis=0) - origin
-            u = u / max(np.linalg.norm(u), 1e-6)
-            across = mats[1][:3, 0]
-        out = band_outs(dp[top], dp[hem], lp, self.legs.core, origin, u, across)
-        if self.upper_rest is not None:
+            # Each lower band's axis: its top ring's row's -z (row 25's, the
+            # mid ring's row 26) through the ring's centre.
+            axes = [-mats[r][:3, 2] / np.linalg.norm(mats[r][:3, 2]) for r in self.axis_rows]
+            out, s0 = chain_outs([dp[r] for r in self.chain], axes, mats[25][:3, 0], lp, self.legs.core)
             pin = np.linalg.inv(mats[1])
             q = (pin @ np.c_[lp, np.ones(len(lp))].T).T[:, :3]
             up = upper_outs(q, self.upper_rest)
             # Above the lower band's top: the upper band holds the core.
-            above = ((lp - origin) @ u < 0.0) & self.legs.core
-            out = np.where(above, up, out)
-        return out
+            above = (s0 < 0.0) & self.legs.core
+            return np.where(above, up, out)
+        origin = dp[top].mean(axis=0)
+        u = dp[hem].mean(axis=0) - origin
+        u = u / max(np.linalg.norm(u), 1e-6)
+        return band_outs(dp[top], dp[hem], lp, self.legs.core, origin, u, mats[1][:3, 0])
 
     def clip(self, clip: A.Clip, anim_flags: int):
         """(frames, frames with a leg out, worst out of either leg, worst of

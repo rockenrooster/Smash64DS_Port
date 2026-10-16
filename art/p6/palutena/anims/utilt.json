@@ -1,5 +1,5 @@
 {
- "comment": "Ultimate's up tilt (c02attackhi3): on her knees, looking up, bending back, the staff spinning above her hand off her palm (owner p6p). Ultimate's facing (owner p6r: the Ultimate data \"should be more authoritative than the 3DS mp4s\"; the 3DS's turn toward the camera put her staff's thrust off her plane). Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
+ "comment": "Ultimate's up tilt (c02attackhi3): on her knees, looking up, bending back, the staff spinning above her hand off her palm (owner p6p). Ultimate's facing (owner p6r: the Ultimate data \"should be more authoritative than the 3DS mp4s\"; the 3DS's turn toward the camera put her staff's thrust off her plane). Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1). Owner p6s (\"leaning back far, facing upwards twirling staff like the limbo or the matrix\"): her torso turned 25 degrees and her head 40 more toward her facing through the spin, her hair turned back by both so it falls as Ultimate's does (\"turn\", ultimate.py).",
  "ultimate": {
   "fighter": "palutena",
   "skeleton": "peach",
@@ -38,6 +38,83 @@
    "motion": "a00wait1",
    "frame": 0,
    "frames": 3
-  }
+  },
+  "turn": [
+   {
+    "row": 2,
+    "keys": [
+     [
+      4,
+      0
+     ],
+     [
+      12,
+      20
+     ],
+     [
+      24,
+      25
+     ],
+     [
+      40,
+      25
+     ],
+     [
+      47,
+      0
+     ]
+    ]
+   },
+   {
+    "row": 8,
+    "keys": [
+     [
+      4,
+      0
+     ],
+     [
+      12,
+      30
+     ],
+     [
+      24,
+      40
+     ],
+     [
+      40,
+      40
+     ],
+     [
+      47,
+      0
+     ]
+    ]
+   },
+   {
+    "row": 9,
+    "keys": [
+     [
+      4,
+      0
+     ],
+     [
+      12,
+      -50
+     ],
+     [
+      24,
+      -65
+     ],
+     [
+      40,
+      -65
+     ],
+     [
+      47,
+      0
+     ]
+    ]
+   }
+  ]
  }
 }

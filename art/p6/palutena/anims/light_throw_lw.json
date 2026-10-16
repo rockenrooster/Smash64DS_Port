@@ -1,0 +1,22 @@
+{
+ "comment": "Ultimate's LightThrowLw (h01lightthrowlw) on Peach's row's 25 frames (owner p6s: \"port the rest of her animations that still use peach's\"): thrown down. Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
+ "ultimate": {
+  "fighter": "palutena",
+  "skeleton": "peach",
+  "scene": "builds/p6-art/palutena/3ds2ds/scene_high/scene.json",
+  "header": "0x13d0",
+  "length": 25,
+  "first_slot": 0,
+  "motion": "h01lightthrowlw",
+  "time": [
+   [
+    0,
+    0
+   ],
+   [
+    25,
+    27
+   ]
+  ]
+ }
+}

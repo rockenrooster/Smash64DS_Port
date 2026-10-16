@@ -702,6 +702,26 @@ def face_camera(wing: Wing, torso: np.ndarray, pose: tuple, w: float) -> tuple:
     return dwing, size, out[0], out[1]
 
 
+def symmetric(wing: Wing, torso: np.ndarray, pose: tuple, keep: str) -> tuple:
+    """A pose whose two wings mirror each other across her facing (owner
+    p6s, the down smash: "wings more left/right symmetrical (staff-side wing
+    goes down further)"): the wing `keep` ("left": the one ahead of her in
+    the down smash) as it is, the other its mirror image across the plane
+    through the pair's origin square to her facing (model z), bone by bone
+    in the other wing's own frames (world_mesh_pose's)."""
+    dwing, size, poses_l, poses_r = pose
+    pair_r = torso[:3, :3] @ dwing * size
+    inv = np.linalg.inv(pair_r)
+    flip = inv @ np.diag([1.0, 1.0, -1.0]) @ pair_r
+    if keep == "left":
+        poses_r = [(flip @ r @ MIRROR, flip @ t, sc) for r, t, sc in poses_l]
+    elif keep == "right":
+        poses_l = [(flip @ r @ MIRROR, flip @ t, sc) for r, t, sc in poses_r]
+    else:
+        raise WingError(f"symmetric {keep!r}: left or right")
+    return dwing, size, poses_l, poses_r
+
+
 def bake(wing: Wing, recipe: dict, torsos: list[np.ndarray]) -> tuple[int, int, list]:
     """(first frame, last frame, rows) of the frames the wings show."""
     if "ultimate" in recipe:
@@ -710,6 +730,9 @@ def bake(wing: Wing, recipe: dict, torsos: list[np.ndarray]) -> tuple[int, int, 
         if fc:
             poses = [p if p is None or _weight(fc, g) <= 0.0 else face_camera(wing, torsos[g], p, _weight(fc, g))
                      for g, p in enumerate(poses)]
+        sym = recipe["ultimate"].get("symmetric")
+        if sym is not None:
+            poses = [p if p is None else symmetric(wing, torsos[g], p, sym) for g, p in enumerate(poses)]
         shown = [g for g, p in enumerate(poses) if p is not None]
         if not shown or shown != list(range(shown[0], shown[-1] + 1)):
             raise WingError("the godwing's frames are not one span of the clip")
