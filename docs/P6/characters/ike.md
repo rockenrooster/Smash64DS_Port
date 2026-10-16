@@ -353,6 +353,46 @@ Draw "hardly knocks the enemy back".
   down smash, neutral air and Aether key every other frame, the forward
   smash every third.
 
+## Faster swings, a longer Ragnell (owner p6s, 2026-10-15)
+
+Owner p6s (4/5): "the slow wind ups are fine, but the actual swings should
+be much faster and forceful"; "Up Special needs trails throughout especially
+when Ike comes down with his sword parallel to the ground"; "Make Ike's
+sword 1.25x longer"; the forward smash should "slam the sword 100% flat
+against the ground, maybe go slightly past the ground a couple of degrees";
+"Run start animation too long".
+
+- **Swings.** Each swing (the blade's tip fast, from frame W to E of
+  Ultimate's motion, about its hit H) plays twice as fast about its hit: the
+  wind-up runs to H - (H - W) / 2, the follow-through ends at
+  H + (E - H) / 2, the hit pose stays on the hit frame (the scripts' hits do
+  not move), and the recovery takes the frames saved. The swing is keyed
+  every frame (`key_dense`, ultimate.py) so the clip's every-other-frame keys
+  do not smear the arc. The forward smash goes from overhead (30) to the
+  slam (32) in two frames.
+- **The forward smash's slam** pitches the blade 5 degrees past flat, its
+  tip into the floor, from 33 to 55, back to Ultimate's by 62 (`item_pitch`:
+  the item's row turned about the axis across the blade and the vertical).
+- **Ragnell 1.25x.** The sword's vertices scaled 1.25 along the blade from
+  the grip (`look_r.py scale-joint`, joint 14; written as 0x1A00/0x1A03 as
+  before). Its hits moved out with it: the blade's tip and middle at 525 and
+  250 (from 420 and 200), Aether's at 475 and 150, Quick Draw's slash at
+  250; the sword's effects at 220 and 440, the forward smash's impact at
+  760, the trail's reach (`sword_trails`) 87.5 to 462.5 (Aether's 62.5 to
+  475).
+- **Aether's trail** is on from the throw (frame 6) through the plunge and
+  the landing.
+- **The run start** (Dash) plays at full rate: the 0.75 rate stays on the
+  run and Eruption's ends only (`OWNER_ANIM_RATE_STATUSES`).
+- **Figatree heap:** the down smash keys every frame only through its two
+  swings (11,508 bytes, under Roy's 11,728).
+- **"Playing diagonally"** (open): measured on the clips, his swings already
+  run most in his plane at Ultimate's facing -- over all his swings the
+  tip's travel is 28% in depth; his body turned 30 degrees toward his facing
+  makes it 36%, 45 degrees 39%. What faces the camera is his body: his chest
+  turns 98 degrees from his facing in Ultimate's own motions (Palutena's 54).
+  A comparison of the turn is with the owner; nothing changes until a pick.
+
 ## Audio (local inputs, never committed)
 
 Both sets are in `decomp/alt_assets/Fighters/Super Smash Bros Ultimate/Fighters/`

@@ -702,8 +702,9 @@ OWNER_ANIM_RATE_STATUSES = {
     # motions frame for frame (art/p6/ike/anims) at 1.0; the rate stays on
     # Roy's run (owner p6r: "revert running animation (running speed also too
     # fast)": his dash and run speeds 0.75, OWNER_ATTRIBUTE_SCALES, the clips
-    # slowed to match) and on Eruption's ends, still Roy's clips.
-    "ike": sorted([0x0F, 0x10, 0x11, 0x13]           # Dash, Run, RunBrake, TurnRun
+    # slowed to match; owner p6s: "run start animation too long", the dash's
+    # clip at 1.0 again) and on Eruption's ends, still Roy's clips.
+    "ike": sorted([0x10, 0x11, 0x13]                 # Run, RunBrake, TurnRun
                   + [0xF1, 0xF2, 0xF5, 0xF6]),        # Eruption's ends (0xEF/0xF0, 0xF3/0xF4 its charge)
 }
 # A content's hitboxes' damage, times this as each is made (after staling:

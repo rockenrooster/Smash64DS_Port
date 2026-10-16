@@ -704,6 +704,32 @@ def _still(st: dict, per_rot: list, per_tr: list, length: int, loop) -> None:
             per_tr[g][r] = [float(v) for v in mean_t + (np.mean([trs[k] for k in w], axis=0) - mean_t) * keep]
 
 
+def _item_pitch(skel: A.Skeleton, cfg: dict, keys, per_rot: list, per_tr: list, length: int) -> None:
+    """The item turned about its grip so its tip drops ("item_pitch":
+    [[frame, degrees], ...], eased between keys): about the horizontal axis
+    across the blade (owner p6r: Ike's forward smash "slam the sword 100%
+    flat against the ground, maybe go slightly past the ground a couple of
+    degrees")."""
+    it = cfg["item"]
+    ir = it["row"]
+    axis = np.asarray(it["axis"], float) / np.linalg.norm(it["axis"])
+    for g in range(length + 1):
+        deg = _keyed(keys, g)
+        if not deg:
+            continue
+        rr, _pp = K._worlds(skel, per_rot[g], per_tr[g])
+        blade = rr[ir] @ axis
+        across = np.cross(blade, np.array([0.0, 1.0, 0.0]))
+        n = float(np.linalg.norm(across))
+        if n < 1e-6:
+            continue
+        # Turning by -deg about blade x up takes the tip down.
+        turn = _axis_angle(across / n, -math.radians(deg))
+        parent = skel.parents[ir]
+        pw = rr[parent] if parent >= 0 else np.eye(3)
+        per_rot[g][ir] = pw.T @ (turn @ rr[ir])
+
+
 def _item_path(skel: A.Skeleton, cfg: dict, ip: dict, per_rot: list, per_tr: list, length: int) -> None:
     """The item thrown up and caught (Aether's Ragnell, owner p6r: Ultimate's
     sword model motion left the blade wandering): from the hand at "release"
@@ -797,6 +823,8 @@ def build(skel: A.Skeleton, spec: dict, scales=None, rom=None, extras: dict | No
         hems.append(rt.skirt_moves(u, src, yaw) if cfg.get("skirt") else None)
     if spec.get("item_path"):
         _item_path(skel, cfg, spec["item_path"], per_rot, per_tr, length)
+    if spec.get("item_pitch"):
+        _item_pitch(skel, cfg, spec["item_pitch"], per_rot, per_tr, length)
     if spec.get("still"):
         _still(spec["still"], per_rot, per_tr, length, spec.get("loop"))
     if spec.get("skirt_smooth") and cfg.get("skirt"):
@@ -848,6 +876,10 @@ def build(skel: A.Skeleton, spec: dict, scales=None, rom=None, extras: dict | No
         # Keys every `step` frames, the frames between them interpolated: a
         # dense clip compacts to about 1/step of its keys (a figatree heap).
         keep = set(range(0, length + 1, step)) | {length}
+        # "key_dense": [[first, last], ...] frames keyed every frame (a fast
+        # swing keeps its snap).
+        for a_, b_ in spec.get("key_dense", ()):
+            keep |= set(range(max(int(a_), 0), min(int(b_), length) + 1))
         grid = sorted(keep)
         for g in range(length + 1):
             if g in keep:

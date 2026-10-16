@@ -11,8 +11,8 @@ AsyncWait frames=8
 SetTexturePartID texturepart_id=1 frame=6
 PlayVoiceStoreInfo value=1445
 AsyncWait frames=12
-MakeAttackColl attack_id=0 group_id=0 joint_id=18 damage=16 can_rebound=1 element=3 size=220 off_x=0 off_y=0 off_z=420 angle=48 knockback_scale=100 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=2 fgm_kind=5 knockback_base=40
-MakeAttackColl attack_id=1 group_id=0 joint_id=18 damage=16 can_rebound=1 element=3 size=220 off_x=0 off_y=0 off_z=200 angle=48 knockback_scale=100 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=2 fgm_kind=5 knockback_base=40
+MakeAttackColl attack_id=0 group_id=0 joint_id=18 damage=16 can_rebound=1 element=3 size=220 off_x=0 off_y=0 off_z=525 angle=48 knockback_scale=100 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=2 fgm_kind=5 knockback_base=40
+MakeAttackColl attack_id=1 group_id=0 joint_id=18 damage=16 can_rebound=1 element=3 size=220 off_x=0 off_y=0 off_z=250 angle=48 knockback_scale=100 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=2 fgm_kind=5 knockback_base=40
 MakeAttackColl attack_id=2 group_id=0 joint_id=16 damage=16 can_rebound=1 element=3 size=180 off_x=0 off_y=0 off_z=0 angle=48 knockback_scale=100 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=2 fgm_kind=5 knockback_base=40
 MakeAttackColl attack_id=3 group_id=0 joint_id=6 damage=16 can_rebound=1 element=3 size=180 off_x=0 off_y=0 off_z=0 angle=48 knockback_scale=100 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=2 fgm_kind=5 knockback_base=40
 PlayFGMStoreInfo value=258
@@ -22,15 +22,15 @@ ClearAttackCollAll value=0
 AsyncWait frames=26
 PlaySmashVoice value=0
 AsyncWait frames=31
-MakeAttackColl attack_id=0 group_id=0 joint_id=18 damage=19 can_rebound=1 element=3 size=220 off_x=0 off_y=0 off_z=420 angle=48 knockback_scale=100 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=2 fgm_kind=5 knockback_base=40
-MakeAttackColl attack_id=1 group_id=0 joint_id=18 damage=19 can_rebound=1 element=3 size=220 off_x=0 off_y=0 off_z=200 angle=48 knockback_scale=100 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=2 fgm_kind=5 knockback_base=40
+MakeAttackColl attack_id=0 group_id=0 joint_id=18 damage=19 can_rebound=1 element=3 size=220 off_x=0 off_y=0 off_z=525 angle=48 knockback_scale=100 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=2 fgm_kind=5 knockback_base=40
+MakeAttackColl attack_id=1 group_id=0 joint_id=18 damage=19 can_rebound=1 element=3 size=220 off_x=0 off_y=0 off_z=250 angle=48 knockback_scale=100 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=2 fgm_kind=5 knockback_base=40
 MakeAttackColl attack_id=2 group_id=0 joint_id=16 damage=19 can_rebound=1 element=3 size=180 off_x=0 off_y=0 off_z=0 angle=48 knockback_scale=100 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=2 fgm_kind=5 knockback_base=40
 MakeAttackColl attack_id=3 group_id=0 joint_id=6 damage=19 can_rebound=1 element=3 size=180 off_x=0 off_y=0 off_z=0 angle=48 knockback_scale=100 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=2 fgm_kind=5 knockback_base=40
 PlayFGMStoreInfo value=258
 Effect joint_id=0 effect_id=15 flag=0 off_x=0 off_y=0 off_z=-350 rng_x=0 rng_y=0 rng_z=0
 SyncWait frames=2
-MakeAttackColl attack_id=0 group_id=0 joint_id=18 damage=9 can_rebound=1 element=3 size=220 off_x=0 off_y=0 off_z=420 angle=61 knockback_scale=100 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=1 fgm_kind=5 knockback_base=30
-MakeAttackColl attack_id=1 group_id=0 joint_id=18 damage=9 can_rebound=1 element=3 size=220 off_x=0 off_y=0 off_z=200 angle=61 knockback_scale=100 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=1 fgm_kind=5 knockback_base=30
+MakeAttackColl attack_id=0 group_id=0 joint_id=18 damage=9 can_rebound=1 element=3 size=220 off_x=0 off_y=0 off_z=525 angle=61 knockback_scale=100 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=1 fgm_kind=5 knockback_base=30
+MakeAttackColl attack_id=1 group_id=0 joint_id=18 damage=9 can_rebound=1 element=3 size=220 off_x=0 off_y=0 off_z=250 angle=61 knockback_scale=100 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=1 fgm_kind=5 knockback_base=30
 MakeAttackColl attack_id=2 group_id=0 joint_id=16 damage=9 can_rebound=1 element=3 size=180 off_x=0 off_y=0 off_z=0 angle=61 knockback_scale=100 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=1 fgm_kind=5 knockback_base=30
 ClearAttackCollID value=3
 SyncWait frames=3

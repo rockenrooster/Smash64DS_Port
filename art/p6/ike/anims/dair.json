@@ -3,15 +3,33 @@
  "ultimate": {
   "fighter": "ike",
   "skeleton": "roy",
-  "scene": "builds/p6-art/ike/look/low_v3/scene.json",
+  "scene": "builds/p6-art/ike/look/low_v4/scene.json",
   "header": "0xcce",
   "length": 53,
   "first_slot": 0,
   "motion": "c05attackairlw",
+  "key_dense": [
+   [
+    13,
+    17
+   ]
+  ],
   "time": [
    [
     0,
     0
+   ],
+   [
+    14.0,
+    13
+   ],
+   [
+    15,
+    15
+   ],
+   [
+    15.5,
+    16
    ],
    [
     47,

@@ -754,8 +754,10 @@ def author_colanims(resolved: dict, rows: dict) -> None:
 
 def author_sword_trails(resolved: dict, rows: dict) -> None:
     """The spec's trail colours ("<id>": {"colour_1", "colour_2"}, RGBA32
-    hex, alpha unused) on the content's own copy of its base's SwordTrail.asm
-    rows: Ike's Eruption swing trail blue where Roy's Flare Blade's is red."""
+    hex, alpha unused) and reach ("start", "end": along the part's axis) on
+    the content's own copy of its base's SwordTrail.asm rows: Ike's Eruption
+    swing trail blue where Roy's Flare Blade's is red, his trails along his
+    longer Ragnell."""
     if not rows:
         return
     by_id = {t["id"]: t for t in resolved["sword_trails"]}
@@ -763,12 +765,15 @@ def author_sword_trails(resolved: dict, rows: dict) -> None:
         trail = by_id.get(int(key, 0))
         if trail is None:
             raise AuthorError(f"spec sword_trails: no trail {key} in the base")
-        unknown = set(entry) - {"colour_1", "colour_2", "comment"}
+        unknown = set(entry) - {"colour_1", "colour_2", "start", "end", "comment"}
         if unknown:
             raise AuthorError(f"spec sword_trails {key}: unknown keys {sorted(unknown)}")
         for k in ("colour_1", "colour_2"):
             if k in entry:
                 trail[k] = int(str(entry[k]), 16)
+        for k in ("start", "end"):
+            if k in entry:
+                trail[k] = float(entry[k])
     resolved["authored"]["sword_trails"] = {k: {c: v for c, v in e.items() if c != "comment"}
                                             for k, e in rows.items()}
 

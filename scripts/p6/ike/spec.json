@@ -475,10 +475,32 @@
   }
  },
  "sword_trails": {
+  "17": {
+   "comment": "His swing trail along Ragnell 1.25x as long as Roy's sword (owner p6s: \"make Ike's sword 1.25x longer\")",
+   "start": 87.5,
+   "end": 462.5
+  },
+  "18": {
+   "comment": "His swing trail along Ragnell 1.25x as long as Roy's sword (owner p6s: \"make Ike's sword 1.25x longer\")",
+   "start": 87.5,
+   "end": 462.5
+  },
+  "19": {
+   "comment": "His swing trail along Ragnell 1.25x as long as Roy's sword (owner p6s: \"make Ike's sword 1.25x longer\")",
+   "start": 87.5,
+   "end": 462.5
+  },
+  "20": {
+   "comment": "His swing trail along Ragnell 1.25x as long as Roy's sword (owner p6s: \"make Ike's sword 1.25x longer\")",
+   "start": 87.5,
+   "end": 462.5
+  },
   "21": {
-   "comment": "Eruption's swing trail, Roy's Flare Blade trail with red and blue swapped",
+   "comment": "Eruption's swing trail, Roy's Flare Blade trail with red and blue swapped; along Ragnell 1.25x as long (owner p6s)",
    "colour_1": "0000ff00",
-   "colour_2": "006ce000"
+   "colour_2": "006ce000",
+   "start": 62.5,
+   "end": 475.0
   }
  },
  "cpu": {

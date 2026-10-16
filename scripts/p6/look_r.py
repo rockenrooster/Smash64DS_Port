@@ -604,7 +604,36 @@ def main() -> int:
     c.add_argument("--out", type=Path, required=True)
     c.add_argument("--migrate-edits", action="store_true",
                    help="record each edit's deleted triangles as vertex sets in its file")
+    j = sub.add_parser("scale-joint", help="a joint's vertices scaled in its own frame (Ike's Ragnell 1.25x long)")
+    j.add_argument("--scene", type=Path, required=True)
+    j.add_argument("--joint", type=int, required=True)
+    j.add_argument("--factors", type=float, nargs=3, required=True, help="local x, y, z")
+    j.add_argument("--centre", type=float, nargs=3, default=(0.0, 0.0, 0.0), help="local point that stays")
+    j.add_argument("--out", type=Path, required=True, help="directory for the scaled scene.json")
     args = ap.parse_args()
+    if args.cmd == "scale-joint":
+        # Owner p6s: "make Ike's sword 1.25x longer" -- the blade's vertices
+        # along its own length from the grip (the joint's origin), the
+        # model positions recomputed; the scene's textures travel with it.
+        scene = json.loads(args.scene.read_text(encoding="utf-8"))
+        w = np.array(scene["joints"][args.joint]["world"], dtype=float)
+        c, k = np.array(args.centre, dtype=float), np.array(args.factors, dtype=float)
+        n = 0
+        for v in scene["vertices"]:
+            if v["joint"] != args.joint:
+                continue
+            local = c + (np.asarray(v["local"], dtype=float) - c) * k
+            v["local"] = [int(round(float(x))) for x in local]
+            v["model"] = [round(float(x), 4) for x in (w @ np.append(local, 1.0))[:3]]
+            n += 1
+        args.out.mkdir(parents=True, exist_ok=True)
+        for png in args.scene.parent.glob("*.png"):
+            target = args.out / png.name
+            if not target.exists():
+                target.write_bytes(png.read_bytes())
+        (args.out / "scene.json").write_text(json.dumps(scene), encoding="utf-8")
+        print(f"scale-joint: {n} vertices of joint {args.joint} -> {args.out}")
+        return 0
     if args.cmd == "compose":
         base = json.loads(args.base.read_text(encoding="utf-8"))
         fit = json.loads(args.fit.read_text(encoding="utf-8"))
