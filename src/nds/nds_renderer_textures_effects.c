@@ -2727,11 +2727,20 @@ static s32 ndsRendererHardwareReplaceTextureData(
     }
 
     DC_FlushRange(texture, staged_bytes);
+    /* DMA 3, never 0 (2026-10-18). Channel 0 is the geometry FIFO's: the
+     * fighter replay and the stage program leave their FIFO transfer running
+     * for the next writer to wait on (NDS_GX_DMA0_WAIT), and a copy started
+     * on channel 0 meanwhile rewrote that transfer's registers mid-list. The
+     * engine was left waiting on a command's missing parameters, and the next
+     * CPU write to a full FIFO stalled the ARM9 on the bus, IRQs and the
+     * freeze watchdog with it: the owner's silent host freezes (music still
+     * playing), and the 10/07 report's DMA0 that never finished. Channel 3's
+     * other users (the menu framebuffer and UI kit copies) are synchronous. */
     if (row_map == NULL)
     {
         for (offset = 0u; offset < texture_bytes; offset += staged_bytes)
         {
-            dmaCopyWords(0, texture, (u8 *)vram_address + offset,
+            dmaCopyWords(3, texture, (u8 *)vram_address + offset,
                          staged_bytes);
         }
     }
@@ -2750,7 +2759,7 @@ static s32 ndsRendererHardwareReplaceTextureData(
             {
                 run++;
             }
-            dmaCopyWords(0, (const u8 *)texture + (source_row * row_bytes),
+            dmaCopyWords(3, (const u8 *)texture + (source_row * row_bytes),
                          (u8 *)vram_address + (i * row_bytes),
                          run * row_bytes);
             i += run;

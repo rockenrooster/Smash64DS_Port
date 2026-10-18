@@ -16,6 +16,7 @@
 #include <nds/nds_r2_hwmath_bench.h>
 #endif
 #include <nds/nds_platform.h>
+#include <nds/nds_gx_dma.h>
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_renderer.h>
 #include <nds/nds_results_oam.h>
@@ -2415,6 +2416,17 @@ void __real_glColorSubTableEXT(int target, int start, int count, int empty1,
 #define NDS_PLATFORM_GL_LIBC_ROOM 4096u
 __attribute__((used)) volatile u32 gNdsPlatformGlLibcRefusals;
 
+/* libnds's texture upload copies on DMA 0 (glTexImage2D programs DMA0SAD..
+ * DMA0CNT), the channel the geometry FIFO's transfers run on, and the
+ * renderer leaves a FIFO transfer running for the next writer to wait on.
+ * Started meanwhile, the copy rewrote that transfer mid-list: the engine
+ * waited on a command's missing parameters and the next CPU write to the
+ * full FIFO stalled the ARM9 on the bus, the freeze watchdog with it
+ * (2026-10-18, owner hardware: a silent host freeze, music still playing).
+ * Every upload and palette load waits for the transfer first (bounded:
+ * NDS_GX_DMA0_WAIT clears a stall that outlasts four frames). */
+#define NDS_PLATFORM_GL_DMA0_SITE 9u
+
 int __wrap_glTexImage2D(int target, int empty1, GL_TEXTURE_TYPE_ENUM type,
                         int sizeX, int sizeY, int empty2, int param,
                         const void *texture)
@@ -2425,6 +2437,7 @@ int __wrap_glTexImage2D(int target, int empty1, GL_TEXTURE_TYPE_ENUM type,
         NDS_DIAG(gNdsPlatformGlLibcRefusals++);
         return 0;
     }
+    NDS_GX_DMA0_WAIT(NDS_PLATFORM_GL_DMA0_SITE);
     return __real_glTexImage2D(target, empty1, type, sizeX, sizeY, empty2,
                                param, texture);
 }
@@ -2440,6 +2453,7 @@ void __wrap_glColorTableEXT(int target, int empty1, u16 width, int empty2,
         NDS_DIAG(gNdsPlatformGlLibcRefusals++);
         return;
     }
+    NDS_GX_DMA0_WAIT(NDS_PLATFORM_GL_DMA0_SITE);
     __real_glColorTableEXT(target, empty1, width, empty2, empty3, table);
 }
 
@@ -2447,6 +2461,7 @@ void __wrap_glColorSubTableEXT(int target, int start, int count, int empty1,
                                int empty2, const u16 *data)
 {
     ndsPlatformTransitionThawIf3DShown();
+    NDS_GX_DMA0_WAIT(NDS_PLATFORM_GL_DMA0_SITE);
     __real_glColorSubTableEXT(target, start, count, empty1, empty2, data);
 }
 
