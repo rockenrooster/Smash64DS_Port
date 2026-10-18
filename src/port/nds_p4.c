@@ -1561,6 +1561,68 @@ const NDSP4Jab *ndsP4JabRows(const FTStruct *fp)
     return ((f != NULL) && (f->jab != NULL)) ? f->jab : &none;
 }
 
+#if NDS_P2_KIRBY && NDS_P2_MMARIO
+static void ndsKirbyMetalAfterProcMap(FTStruct *fp);
+#endif
+
+volatile u32 gNdsP4EntryDeferLoads;
+volatile u32 gNdsP4EntryDeferDeclines;
+
+/* The FTData special-file id and global for slot 1-4. */
+static void **ndsP4SpecialFileSlot(const NDSP4Fighter *f, u32 special, u32 *file_id)
+{
+    switch (special)
+    {
+    case 1u: *file_id = f->data->file_special1_id; return f->data->p_file_special1;
+    case 2u: *file_id = f->data->file_special2_id; return f->data->p_file_special2;
+    case 3u: *file_id = f->data->file_special3_id; return f->data->p_file_special3;
+    case 4u: *file_id = f->data->file_special4_id; return f->data->p_file_special4;
+    default: *file_id = 0u; return NULL;
+    }
+}
+
+sb32 ndsP4DefersEntryDependency(u32 content, u32 dep_asset)
+{
+    const NDSP4Fighter *f = ndsP4Fighter(content);
+    u32 file_id;
+
+    if ((f == NULL) || (f->overrides == NULL) ||
+        (f->overrides->entry_deferred_special == 0u) ||
+        (ndsP4SpecialFileSlot(f, f->overrides->entry_deferred_special, &file_id) == NULL))
+    {
+        return FALSE;
+    }
+    return ((file_id != 0u) && (file_id == dep_asset)) ? TRUE : FALSE;
+}
+
+void ndsP4EntryFileEnsure(FTStruct *fp)
+{
+    const NDSP4Fighter *f = ndsP4Fighter(fp->nds_p4_content);
+    void **slot;
+    void *data;
+    u32 file_id;
+
+    if ((f == NULL) || (f->overrides == NULL) ||
+        (f->overrides->entry_deferred_special == 0u))
+    {
+        return;
+    }
+    slot = ndsP4SpecialFileSlot(f, f->overrides->entry_deferred_special, &file_id);
+    if ((slot == NULL) || (*slot != NULL))
+    {
+        return;
+    }
+    data = ndsRelocLoadDeferredEntryFile(fp->nds_p4_content,
+                                         NDS_P4_ENTRY_DEFER_KEEP_FREE);
+    if (data == NULL)
+    {
+        gNdsP4EntryDeferDeclines++;
+        return;
+    }
+    *slot = data;
+    gNdsP4EntryDeferLoads++;
+}
+
 void ndsP4AfterProcMapSlow(GObj *fighter_gobj)
 {
     const FTStruct *fp = ftGetStruct(fighter_gobj);
@@ -1581,6 +1643,12 @@ void ndsP4AfterProcMapSlow(GObj *fighter_gobj)
             f->overrides->kirby_after_proc_map(fighter_gobj);
         }
     }
+#if NDS_P2_KIRBY && NDS_P2_MMARIO
+    if (fp->nds_kirby_metal != 0u)
+    {
+        ndsKirbyMetalAfterProcMap(ftGetStruct(fighter_gobj));
+    }
+#endif
 #endif
 }
 
@@ -2133,6 +2201,172 @@ sb32 ndsP4KirbyPlayerNoCopy(s32 player)
     return ndsP4KirbyNoCopy(ndsP4MatchContent(player));
 }
 
+#if NDS_P2_MMARIO
+/* Owner 2026-10-18 ("Metal Mario Kirby hat (metal skin overlay similar to
+ * mrgaw hat and gravity like metal Mario)"): a Kirby who swallows Metal Mario
+ * takes Mario's power, as the source's copy row gives him, and Metal Mario's
+ * metal with it until he loses the copy -- his skin a metal grey through the
+ * colour animation's blend (MRGAW's black figure is the same field at full
+ * strength) and Metal Mario's gravity and fall speeds. A Kirby who swallows
+ * such a Kirby takes the metal on with the copy, as he takes the copy_id.
+ *
+ * The gravity is a copy of the Kirby's attributes with Metal Mario's three
+ * fall values in it (every reader of attr->gravity, tvel_base and tvel_fast
+ * sees them: the source's physics, his specials, the CPU's jump arcs), taken
+ * from the battle's asset storage once a match per player; when no copy fits
+ * the metal skin still holds and the fall stays Kirby's. */
+/* The colour animation's blend replaces his material's diffuse and ambient
+ * colours (full strength), the hardware still lights them by his normals, and
+ * the DS multiplies his texture by the lit colour (no N64 fog blend): a dim
+ * cyan-grey cancels his pink, ~70,70,81 in shadow to ~139,141,162 in full
+ * light, a blue-steel grey with the lighting's contrast. MRGAW's black figure
+ * is the same field with black. */
+#define NDS_KIRBY_METAL_R 0x4Au
+#define NDS_KIRBY_METAL_G 0x70u
+#define NDS_KIRBY_METAL_B 0x78u
+#define NDS_KIRBY_METAL_A 0xFFu
+/* The heap the copy may leave: the battle's low-water floor. */
+#define NDS_KIRBY_METAL_KEEP_FREE 25600u
+
+static u8 sNdsKirbyMetalPending[4];
+static f32 sNdsKirbyMetalFall[4][3];
+static FTAttributes *sNdsKirbyMetalAttr[4];
+static FTAttributes *sNdsKirbyMetalOwnAttr[4];
+
+void ndsKirbyMetalResetMatch(void)
+{
+    u32 i;
+
+    for (i = 0u; i < 4u; i++)
+    {
+        sNdsKirbyMetalPending[i] = 0u;
+        sNdsKirbyMetalAttr[i] = NULL;
+        sNdsKirbyMetalOwnAttr[i] = NULL;
+    }
+}
+
+static void ndsKirbyMetalCatch(FTStruct *kirby_fp, FTStruct *victim_fp)
+{
+    u32 player = kirby_fp->player & 3u;
+    sb32 metal = FALSE;
+
+    if ((kirby_fp->fkind == nFTKindKirby) && (victim_fp->attr != NULL))
+    {
+        if (victim_fp->fkind == nFTKindMMario)
+        {
+            metal = TRUE;
+        }
+        else if (((victim_fp->fkind == nFTKindKirby) ||
+                  (victim_fp->fkind == nFTKindNKirby)) &&
+                 (victim_fp->nds_kirby_metal != 0u))
+        {
+            metal = TRUE;
+        }
+    }
+    sNdsKirbyMetalPending[player] = (u8)metal;
+    if (metal != FALSE)
+    {
+        /* The source's copy row gives Metal Mario none (Kirby's own id):
+         * he takes Mario's power and cap, in metal (owner: "Metal Mario
+         * Kirby hat"). */
+        if (victim_fp->fkind == nFTKindMMario)
+        {
+            kirby_fp->status_vars.kirby.specialn.copy_id = nFTKindMario;
+        }
+        sNdsKirbyMetalFall[player][0] = victim_fp->attr->gravity;
+        sNdsKirbyMetalFall[player][1] = victim_fp->attr->tvel_base;
+        sNdsKirbyMetalFall[player][2] = victim_fp->attr->tvel_fast;
+    }
+}
+
+static sb32 ndsKirbyMetalIsSkin(const GMColAnim *colanim)
+{
+    return ((colanim->is_use_color1 != FALSE) && (colanim->cs[0].p_script == NULL) &&
+            (colanim->color1.r == NDS_KIRBY_METAL_R) &&
+            (colanim->color1.g == NDS_KIRBY_METAL_G) &&
+            (colanim->color1.b == NDS_KIRBY_METAL_B) &&
+            (colanim->color1.a == NDS_KIRBY_METAL_A)) ? TRUE : FALSE;
+}
+
+static void ndsKirbyMetalClear(FTStruct *fp)
+{
+    u32 player = fp->player & 3u;
+
+    if (fp->nds_kirby_metal == 0u)
+    {
+        return;
+    }
+    fp->nds_kirby_metal = 0u;
+    if ((sNdsKirbyMetalAttr[player] != NULL) &&
+        (fp->attr == sNdsKirbyMetalAttr[player]) &&
+        (sNdsKirbyMetalOwnAttr[player] != NULL))
+    {
+        fp->attr = sNdsKirbyMetalOwnAttr[player];
+    }
+    if (ndsKirbyMetalIsSkin(&fp->colanim) != FALSE)
+    {
+        ftParamResetColAnim(&fp->colanim);
+    }
+}
+
+/* ftKirbySpecialNCopyInitCopyVars with a copy taken (battleship_kirby.c):
+ * the metal is what the catch saw, whether or not the copy_id changed (a
+ * Kirby with Mario's power who swallows Metal Mario turns metal; one with
+ * the metal who swallows Mario loses it). */
+void ndsKirbyMetalTake(FTStruct *fp)
+{
+    u32 player = fp->player & 3u;
+    FTAttributes *metal;
+
+    if (sNdsKirbyMetalPending[player] == 0u)
+    {
+        ndsKirbyMetalClear(fp);
+        return;
+    }
+    sNdsKirbyMetalPending[player] = 0u;
+    metal = sNdsKirbyMetalAttr[player];
+    if ((metal == NULL) && (fp->attr != NULL))
+    {
+        metal = (FTAttributes *)ndsSceneAssetTryAlloc(sizeof(FTAttributes), 8u,
+                                                      NDS_KIRBY_METAL_KEEP_FREE);
+        sNdsKirbyMetalAttr[player] = metal;
+    }
+    if ((metal != NULL) && (fp->attr != NULL))
+    {
+        if (fp->attr != metal)
+        {
+            sNdsKirbyMetalOwnAttr[player] = fp->attr;
+            __builtin_memcpy(metal, fp->attr, sizeof(FTAttributes));
+        }
+        metal->gravity = sNdsKirbyMetalFall[player][0];
+        metal->tvel_base = sNdsKirbyMetalFall[player][1];
+        metal->tvel_fast = sNdsKirbyMetalFall[player][2];
+        fp->attr = metal;
+    }
+    fp->nds_kirby_metal = 1u;
+}
+
+/* Every frame he holds the metal (after the frame's colour animation update,
+ * before he is drawn): the metal grey over his skin while no colour
+ * animation runs -- a hit flash, an item's or a status's colour shows
+ * through, and the metal comes back when it ends. */
+static void ndsKirbyMetalAfterProcMap(FTStruct *fp)
+{
+    GMColAnim *colanim = &fp->colanim;
+
+    if ((colanim->cs[0].p_script == NULL) && (colanim->cs[1].p_script == NULL))
+    {
+        colanim->is_use_color1 = TRUE;
+        colanim->color1.r = NDS_KIRBY_METAL_R;
+        colanim->color1.g = NDS_KIRBY_METAL_G;
+        colanim->color1.b = NDS_KIRBY_METAL_B;
+        colanim->color1.a = NDS_KIRBY_METAL_A;
+        colanim->color1.ir = colanim->color1.ig = colanim->color1.ib =
+            colanim->color1.ia = 0;
+    }
+}
+#endif
+
 /* The catch takes the victim content's power, or the one a victim Kirby
  * holds (ftKirbySpecialNCatchProcUpdate: a Kirby passes on his copy_id).
  * Only a Kirby takes one: Polygon Kirby keeps the parent's copy, as Remix's
@@ -2160,6 +2394,9 @@ void ndsP4KirbyCatch(FTStruct *kirby_fp, FTStruct *victim_fp)
         }
     }
     sNdsP4KirbyPending[kirby_fp->player & 3u] = (u8)power;
+#if NDS_P2_KIRBY && NDS_P2_MMARIO
+    ndsKirbyMetalCatch(kirby_fp, victim_fp);
+#endif
 }
 
 u32 ndsP4KirbyPendingPower(const FTStruct *fp)
@@ -2208,6 +2445,9 @@ void ndsP4KirbySetMotionScript(FTStruct *fp, const u32 *script)
 void ndsP4KirbyLoseCopy(FTStruct *fp)
 {
     ndsP4KirbyClearSilhouette(fp);
+#if NDS_P2_KIRBY && NDS_P2_MMARIO
+    ndsKirbyMetalClear(fp);
+#endif
     fp->nds_p4_kirby_copy = 0u;
     fp->nds_p4_kirby_hat = 0u;
 }

@@ -175,6 +175,10 @@ typedef struct NDSP4Overrides
      * entry_script names, on its own files (Bowser's Clown Copter in the
      * Falcon Flyer's case). */
     void (*entry_case)(FTStruct *fp);
+    /* 1-4: the special file only entry_case draws (Sonic's Tails plane,
+     * 75 KB), which a match loads at the entry when the heap can spare it
+     * (ndsP4EntryFileEnsure) instead of with the fighter; 0: none. */
+    u8 entry_deferred_special;
     /* ftCommonThrowSetStatus's forward throw takes Kirby's path, airborne,
      * with this status (Bowser's 0xE5; 0: the parent's ground throw). */
     s32 throw_f_kirby_status;
@@ -814,6 +818,25 @@ sb32 ndsP4StaticPartDObj(const DObj *dobj);
 const NDSP4Entry *ndsP4Entry(const FTStruct *fp);
 /* The content's effect makers (S6), or NULL. */
 const NDSP4Overrides *ndsP4Overrides(const FTStruct *fp);
+/* Memory (2026-10-18, the shipping layout: four heavy contents with Sonic
+ * ran out of heap at battle start). The battle loader leaves a content's
+ * entry-only special file (NDSP4Overrides.entry_deferred_special) out of its
+ * Main closure (ndsRelocPatchCompactBattleMainExterns asks
+ * ndsP4DefersEntryDependency); ftCommonAppearSetStatus loads it just before
+ * the content's entry_case, from the overlay loan or the heap with
+ * NDS_P4_ENTRY_DEFER_KEEP_FREE left over, and publishes its special-file
+ * global and Main slot. When it does not fit, the entry runs without the
+ * file's effect (ndsP4EntryMakeEffect counts a miss): the fighter makes his
+ * entry, the vehicle stays away. */
+#define NDS_P4_ENTRY_DEFER_KEEP_FREE (40u * 1024u)
+sb32 ndsP4DefersEntryDependency(u32 content, u32 dep_asset);
+void ndsP4EntryFileEnsure(FTStruct *fp);
+/* reloc_preview_pack.c: the deferred row's load and Main patch; the file's
+ * data, or NULL (no row this match, or no room). */
+void *ndsRelocLoadDeferredEntryFile(u32 content, u32 keep_free);
+extern volatile u32 gNdsP4EntryDeferLoads;
+extern volatile u32 gNdsP4EntryDeferDeclines;
+
 /* NDSP4Overrides.entry_case: one effect of a vanilla entry case on the
  * content's own description (Remix's struct for that case: its file, DObjDesc
  * and animation offsets), placed at the entry position as the source maker
@@ -828,7 +851,8 @@ static inline void ndsP4AfterProcMap(GObj *fighter_gobj)
 {
     const FTStruct *fp = ftGetStruct(fighter_gobj);
 
-    if (__builtin_expect((fp->nds_p4_content | fp->nds_p4_kirby_copy) != 0u, 0))
+    if (__builtin_expect((fp->nds_p4_content | fp->nds_p4_kirby_copy |
+                          fp->nds_kirby_metal) != 0u, 0))
     {
         ndsP4AfterProcMapSlow(fighter_gobj);
     }
@@ -928,6 +952,11 @@ void ndsP4KirbyCopyInitCopyVars(GObj *fighter_gobj);
 void ndsP4KirbyLoseCopy(FTStruct *fp);
 /* The black figure of MRGAW's custom power ends with the power. */
 void ndsP4KirbyClearSilhouette(FTStruct *fp);
+/* Owner 2026-10-18: a Kirby holding Metal Mario's copy (nds_kirby_metal),
+ * set as he takes a copy (ndsP4KirbyCopyInitCopyVars) from what the catch
+ * saw (ndsP4KirbyCatch); every battle's fighter pool starts without it. */
+void ndsKirbyMetalTake(FTStruct *fp);
+void ndsKirbyMetalResetMatch(void);
 /* A custom power's status runs its own motion events in place of the copy
  * motion's, which carry the copied fighter's sounds and flashes (owner
  * BUGS.md 2026-10-12): one word of the source's motion command encoding

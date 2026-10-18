@@ -71,7 +71,28 @@ void battleship_ftKirbySpecialNCopyInitCopyVars(GObj *fighter_gobj);
  * place before the source's take path runs as written, so the parent's copy
  * row it passes ftParamSetModelPartDefaultID draws nothing; the power's hat
  * (its Remix hat, drawn in its source hat's place, S8) follows it. */
+static void ndsP4KirbyCopyInitCopyVarsPower(GObj *fighter_gobj);
+
 void ndsP4KirbyCopyInitCopyVars(GObj *fighter_gobj)
+{
+#if NDS_P2_KIRBY && NDS_P2_MMARIO
+    /* A Kirby taking a copy also takes or drops Metal Mario's metal
+     * (nds_p4.c ndsKirbyMetalTake), whether or not the copy_id moves. */
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    sb32 take = ((fp->fkind == nFTKindKirby) &&
+                 (fp->motion_vars.flags.flag1 != 0)) ? TRUE : FALSE;
+
+    ndsP4KirbyCopyInitCopyVarsPower(fighter_gobj);
+    if (take != FALSE)
+    {
+        ndsKirbyMetalTake(fp);
+    }
+#else
+    ndsP4KirbyCopyInitCopyVarsPower(fighter_gobj);
+#endif
+}
+
+static void ndsP4KirbyCopyInitCopyVarsPower(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
     u32 power = ndsP4KirbyPendingPower(fp);

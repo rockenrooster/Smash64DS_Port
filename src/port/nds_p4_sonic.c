@@ -1611,6 +1611,8 @@ static void ndsP4SonicOnInit(FTStruct *fp)
 const NDSP4Overrides gNdsP4SonicOverrides = {
     .on_init = ndsP4SonicOnInit,
     .entry_case = ndsP4SonicEntryCase,
+    /* The Tails plane (special file 3, 75 KB) draws in the entry only. */
+    .entry_deferred_special = 3,
     .on_damage = ndsP4SonicOnDamage,
     .air_special_block = ndsP4SonicAirSpecialBlock,
 };

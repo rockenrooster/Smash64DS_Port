@@ -9525,6 +9525,10 @@ static void *ndsRelocStaticBufferForAsset(u32 asset_id, size_t asset_size)
  * above the rest of this file's counter block. */
 volatile u32 gNdsRelocHeapDeclineCount;
 
+#if NDS_P4
+static u32 sNdsRelocEnsureKeepFree;
+#endif
+
 static NDSRelocLoadedFile *ndsRelocEnsureLoadedAsset(u32 asset_id)
 {
     NDSRelocLoadedFile *loaded;
@@ -9561,8 +9565,11 @@ static NDSRelocLoadedFile *ndsRelocEnsureLoadedAsset(u32 asset_id)
          * the anim cache was moved off the heap for on 2026-07-29; that fix
          * covered ndsR2AnimCacheStore and left the two loaders that reach the
          * heap on their own. See the arena's own use of this guard at :6078. */
-        if (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap, asset_size,
-                                0x10) == FALSE)
+        if (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap, asset_size
+#if NDS_P4
+                                + sNdsRelocEnsureKeepFree
+#endif
+                                , 0x10) == FALSE)
         {
             gNdsRelocHeapDeclineCount++;
             ndsRelocRecordExternalFixupFail(asset_id);

@@ -1324,6 +1324,62 @@ static __attribute__((noinline, noreturn)) void ndsBattleCoreExternHalt(s32 fkin
     ndsPreviewPackLoadHalt(14u, (u32)fkind);
 }
 
+#if NDS_P4
+/* A content's deferred entry row (nds_p4.h ndsP4DefersEntryDependency), kept
+ * for the match whose heap generation wrote it. */
+typedef struct NDSRelocDeferredEntry
+{
+    void *main_data;
+    u32 generation;
+    u16 slot;
+    u16 dep_asset;
+    u16 target_offset;
+    u16 pad;
+} NDSRelocDeferredEntry;
+static NDSRelocDeferredEntry sNdsRelocDeferredEntries[NDS_P4_CONTENT_LIMIT];
+
+void *ndsRelocLoadDeferredEntryFile(u32 content, u32 keep_free)
+{
+    NDSRelocDeferredEntry *d;
+    NDSRelocLoadedFile *main_loaded;
+    NDSRelocLoadedFile *dep;
+    u32 main_offset;
+    u32 dep_offset;
+
+    if (content >= NDS_P4_CONTENT_LIMIT)
+    {
+        return NULL;
+    }
+    d = &sNdsRelocDeferredEntries[content];
+    if ((d->generation != gNdsTaskmanHeapGeneration + 1u) || (d->main_data == NULL))
+    {
+        return NULL;
+    }
+    main_loaded = ndsRelocFindLoadedFileByData(d->main_data);
+    if (main_loaded == NULL)
+    {
+        return NULL;
+    }
+    sNdsRelocEnsureKeepFree = keep_free;
+    dep = ndsRelocEnsureLoadedAsset(d->dep_asset);
+    sNdsRelocEnsureKeepFree = 0u;
+    if (dep == NULL)
+    {
+        return NULL;
+    }
+    ndsRelocAddStatusBufferFile(d->dep_asset, dep->data);
+    if ((d->target_offset != NDS_BATTLE_EXTERN_LOAD_ONLY) &&
+        (ndsPreviewFileOffset(main_loaded, d->slot, sizeof(void *), &main_offset) != FALSE) &&
+        (ndsPreviewFileOffset(dep, d->target_offset, 1u, &dep_offset) != FALSE))
+    {
+        ndsRelocWriteNativePointer((u8 *)main_loaded->data + main_offset,
+                                   (u8 *)dep->data + dep_offset);
+    }
+    d->generation = 0u;
+    return dep->data;
+}
+#endif
+
 s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
 {
     NDSBattleExternHeader header;
@@ -1465,6 +1521,23 @@ s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
         {
             continue;
         }
+        /* An entry-only special file waits for the entry (nds_p4.h,
+         * ndsP4EntryFileEnsure): this row is kept to load and patch then. */
+        if ((fkind >= (s32)NDS_P4_SEL_BASE) &&
+            ((u32)fkind - NDS_P4_SEL_BASE < NDS_P4_CONTENT_LIMIT) &&
+            (ndsP4DefersEntryDependency((u32)fkind - NDS_P4_SEL_BASE,
+                                        rows[i].dep_asset) != FALSE))
+        {
+            NDSRelocDeferredEntry *d =
+                &sNdsRelocDeferredEntries[(u32)fkind - NDS_P4_SEL_BASE];
+
+            d->main_data = main_loaded->data;
+            d->slot = rows[i].slot;
+            d->dep_asset = rows[i].dep_asset;
+            d->target_offset = rows[i].target_offset;
+            d->generation = gNdsTaskmanHeapGeneration + 1u;
+            continue;
+        }
 #endif
         dep = ndsRelocFindLoadedFileByAsset(rows[i].dep_asset);
         was_loaded = (dep != NULL) ? TRUE : FALSE;
@@ -1511,6 +1584,15 @@ s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
     }
 #endif
     return TRUE;
+}
+#endif
+
+#if NDS_P4 && !(NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS)
+void *ndsRelocLoadDeferredEntryFile(u32 content, u32 keep_free)
+{
+    (void)content;
+    (void)keep_free;
+    return NULL;
 }
 #endif
 

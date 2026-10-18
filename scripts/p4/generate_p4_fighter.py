@@ -1090,7 +1090,12 @@ def fighter_spec(resolved: dict) -> dict:
         raise GenError(f"parent {parent} has no particle bank global")
     return spec
 
-THROW_DATA_BYTES = 28  # FTThrowHitDesc, the larger of the two SetThrow targets
+# A SetThrow target is a pair of FTThrowHitDesc (28 B each): the throw and,
+# [1], the release when the grabber is hit (ftCommonThrownSetStatusDamageRelease
+# reads capture_fp->throw_desc[1]). 28 copied only the first, and the release
+# read the next copied block's commands as a status id (2026-10-18: four CPUs
+# on Peach's Castle, Mr. Game & Watch hit while holding Palutena).
+THROW_DATA_BYTES = 56
 SPRITE_BYTES = 68      # libultra Sprite (include/PR/sp.h)
 SPRITE_READ_BYTES = 56  # through Sprite.bitmap, the last field read
 

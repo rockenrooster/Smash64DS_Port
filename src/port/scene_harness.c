@@ -664,7 +664,7 @@ void ndsDevSceneHarnessApply(void)
         return;
 
     case NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE:
-#if NDS_P2_MENU_SHELL
+#if NDS_P2_MENU_SHELL &&     !(defined(NDS_LAB_FOURCPU_WORDS) && NDS_LAB_FOURCPU_WORDS)
         /* P2-1d. The VS shell boots the GAME, not the match: the flow starts
          * at the splash and the player reaches the battle through the menus.
          *
@@ -674,7 +674,14 @@ void ndsDevSceneHarnessApply(void)
          * the menus enter is the canonical one. ONLY the boot scene moves, and
          * only under this flag: at NDS_P2_MENU_SHELL == 0, which is every
          * published and Boundary configuration, mode 163 still boots straight
-         * into nSCKindVSBattle with nSCKindMaps behind it. */
+         * into nSCKindVSBattle with nSCKindMaps behind it.
+         *
+         * LAB ONLY (NDS_LAB_FOURCPU_WORDS, 2026-10-18): the four-CPU sweep
+         * built with the shipping image's flags (shell, 1P game) still boots
+         * the match, so the worst-case search measures the heap and frame
+         * cost of the layout that ships: the shell's 445 KB overlay is the
+         * VS battle's loan and the arena is the shipping one less the tick
+         * HUD's (618,752 B; play-p7a 641,536; the bare sweep's 978,688). */
         ndsSceneHarnessSetDefaultScene(nSCKindStartup, nSCKindStartup);
 #else
         ndsSceneHarnessSetDefaultScene(nSCKindVSBattle, nSCKindMaps);

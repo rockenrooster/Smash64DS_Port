@@ -1208,7 +1208,34 @@ static NDSAudioFgmPackEntry *ndsAudioFgmFindP4Entry(u16 id)
 }
 #endif
 
+static NDSAudioFgmPackEntry *ndsAudioFgmFindEntryDirect(u16 id);
+
+/* A played vanilla id whose program only forks another cue (0x123 forks
+ * 287, DeadSlam: Crash's up special landing, owner 2026-10-18) is that cue
+ * (scripts/p4/p4_audio.py vanilla_alias, NDS_P4_FGM_ALIAS_ROWS). */
 static NDSAudioFgmPackEntry *ndsAudioFgmFindEntry(u16 id)
+{
+    NDSAudioFgmPackEntry *entry = ndsAudioFgmFindEntryDirect(id);
+
+#if NDS_P4 && defined(NDS_P4_FGM_ALIAS_ROWS)
+    if (entry == NULL)
+    {
+        switch (id)
+        {
+#define NDS_P4_FGM_ALIAS_CASE(alias_, target_)                                 \
+        case (alias_):                                                         \
+            return ndsAudioFgmFindEntryDirect((u16)(target_));
+        NDS_P4_FGM_ALIAS_ROWS(NDS_P4_FGM_ALIAS_CASE)
+#undef NDS_P4_FGM_ALIAS_CASE
+        default:
+            break;
+        }
+    }
+#endif
+    return entry;
+}
+
+static NDSAudioFgmPackEntry *ndsAudioFgmFindEntryDirect(u16 id)
 {
     u32 i;
 

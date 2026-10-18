@@ -209,7 +209,11 @@ void ftManagerAllocFighter(u32 data_flags, s32 allocs_num)
             sFTManagerStructsAllocBuf[i].nds_p4_content = 0u;
             sFTManagerStructsAllocBuf[i].nds_p4_kirby_copy = 0u;
             sFTManagerStructsAllocBuf[i].nds_p4_kirby_hat = 0u;
+            sFTManagerStructsAllocBuf[i].nds_kirby_metal = 0u;
         }
+#if NDS_P2_KIRBY && NDS_P2_MMARIO
+        ndsKirbyMetalResetMatch();
+#endif
         ndsP4SetupFileSizes(data_flags);
     }
 #endif
@@ -556,6 +560,27 @@ static void ndsP4SetupFilesForParent(s32 fkind)
             ndsBaseFTManagerSetupFilesAllKind(fkind);
         }
         sNdsP4FtDataView = sNdsP4FtDataReal;
+#if NDS_P2_KIRBY
+        /* A content that inhales on Kirby's code (Dedede's DededeNSP hooks)
+         * draws Kirby's inhale wind from Kirby's particle bank, which only a
+         * Kirby's setup registers: without one in the match the wind maker
+         * found bank -1 every tic (owner 2026-10-18, Dedede's spat star
+         * never showed: each failed wind leaked an effect, and the 38 were
+         * gone a second into the first inhale). The bank is linked script
+         * data; registering it costs no heap. */
+        if ((f->overrides != NULL) && (f->overrides->kirby_inhale_status != NULL))
+        {
+            const FTData *kirby = sNdsP4FtDataReal[nFTKindKirby];
+
+            if ((kirby != NULL) && (kirby->p_particle != NULL) &&
+                (kirby->particles_script_lo != 0))
+            {
+                *kirby->p_particle = efParticleGetLoadBankID(
+                    kirby->particles_script_lo, kirby->particles_script_hi,
+                    kirby->particles_texture_lo, kirby->particles_texture_hi);
+            }
+        }
+#endif
         ndsP4LoadOpenSpecialFiles(content, f->data);
         ndsP4PublishParentMotion(f);
         ndsEFManagerRetryDeferredDescs();
@@ -1532,6 +1557,7 @@ void ftManagerDestroyFighter(GObj *fighter_gobj)
         ftGetStruct(fighter_gobj)->nds_p4_content = 0u;
         ftGetStruct(fighter_gobj)->nds_p4_kirby_copy = 0u;
         ftGetStruct(fighter_gobj)->nds_p4_kirby_hat = 0u;
+        ftGetStruct(fighter_gobj)->nds_kirby_metal = 0u;
 #endif
     }
     ndsBaseFTManagerDestroyFighter(fighter_gobj);

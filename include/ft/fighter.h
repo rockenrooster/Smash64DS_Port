@@ -3898,7 +3898,10 @@ typedef struct FTStruct {
      * joint 6 shows in the source hat's place, 0 = a source part. */
     u8 nds_p4_kirby_copy;
     u8 nds_p4_kirby_hat;
-    u16 nds_p4_kirby_reserved;
+    /* A Kirby holding Metal Mario's copy (nds_p4.c, owner 2026-10-18): his
+     * metal skin and Metal Mario's gravity, 0 = none. */
+    u8 nds_kirby_metal;
+    u8 nds_p4_kirby_reserved;
 } FTStruct;
 
 typedef struct FTCamera {

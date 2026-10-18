@@ -8166,7 +8166,7 @@ $(NDS_P4_AUDIO_DIR)/fgm_p4.bin $(NDS_P4_AUDIO_DIR)/nds_p4_bgm.generated.inc \
 		$(PROJECT_ROOT)/scripts/sfx/bgm/render-audio-bgm.py \
 		$(PROJECT_ROOT)/scripts/sfx/vadpcm_decode.py \
 		$(PROJECT_ROOT)/scripts/p6/p6_audio.py $(wildcard $(PROJECT_ROOT)/scripts/p6/*/audio.json) \
-		$(NDS_P4_EXPORT_FILES) \
+		$(NDS_P4_EXPORT_FILES) $(PROJECT_ROOT)/assets/audio/fgm_phase_pack_ima.bin \
 		$(NDS_BUILD_CONFIG)
 	python "$(PROJECT_ROOT)/scripts/p4/p4_audio.py" --staging "$(NDS_P4_STAGING)" \
 		$(foreach content,$(NDS_P4_CONTENTS),--content $(content)) --out "$(NDS_P4_AUDIO_DIR)" \

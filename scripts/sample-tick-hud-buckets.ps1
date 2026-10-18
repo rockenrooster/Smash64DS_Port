@@ -641,6 +641,9 @@ try {
         'set confirm off',
         'set remotetimeout 30',
         "target remote 127.0.0.1:$($context.GdbPort)",
+        # melonDS's stub stores binary (X) writes unescaped: a poked byte
+        # 0x23/0x24/0x2A/0x7D (gkind 42) reads back corrupted. Hex M writes.
+        'set remote X-packet off',
         $bootGlobalLines,
         $setGlobalLines,
         $gdbExtraLines,
@@ -687,6 +690,9 @@ try {
         'set confirm off',
         'set remotetimeout 30',
         "target remote 127.0.0.1:$($context.GdbPort)",
+        # melonDS's stub stores binary (X) writes unescaped: a poked byte
+        # 0x23/0x24/0x2A/0x7D (gkind 42) reads back corrupted. Hex M writes.
+        'set remote X-packet off',
         $bootGlobalLines,
         $setGlobalLines,
         $gdbExtraLines,

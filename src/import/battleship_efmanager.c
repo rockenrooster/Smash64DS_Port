@@ -230,7 +230,47 @@ void efManagerKirbyInhaleWindProcUpdate(GObj *effect_gobj);
 #define efManagerKirbyInhaleWindProcUpdate(g_) ndsBaseEFManagerKirbyInhaleWindProcUpdate(g_)
 #define gFTDataKirbyMainMotion ndsP4KirbyCopyFile()
 #endif
+#define efManagerKirbyInhaleWindMakeEffect ndsBaseEFManagerKirbyInhaleWindMakeEffect
 #include "../../decomp/BattleShip-main/decomp/src/ef/efmanager.c"
+#undef efManagerKirbyInhaleWindMakeEffect
+
+/* The source's inhale wind takes an effect struct and an effect GObj before it
+ * asks the particle bank for the wind, and keeps both when no wind comes back
+ * (efmanager.c:6089: the pc == NULL, xf == NULL and users_num == 0 returns):
+ * a GObj with no process that never leaves, holding its struct. The inhale
+ * asks again every tic until one is made, so a bank that cannot make the wind
+ * emptied the 38-struct pool within a second of the first inhale, and every
+ * effect after it failed to make (owner 2026-10-18: Dedede's spat star never
+ * showed; Kirby's bank, -1 with no Kirby in the match). No bank, no attempt;
+ * any other failure hands the struct back and ejects the GObj it was given. */
+LBParticle *efManagerKirbyInhaleWindMakeEffect(GObj *fighter_gobj)
+{
+    EFStruct *ep = sEFManagerStructsAllocFree;
+    s32 free_num = sEFManagerStructsFreeNum;
+    LBParticle *pc;
+    GObj *gobj;
+
+    if (gFTDataKirbyParticleBankID < 0)
+    {
+        return NULL;
+    }
+    pc = ndsBaseEFManagerKirbyInhaleWindMakeEffect(fighter_gobj);
+    if ((pc == NULL) && (ep != NULL) && (sEFManagerStructsFreeNum < free_num))
+    {
+        for (gobj = gGCCommonLinks[nGCCommonLinkIDEffect]; gobj != NULL;
+             gobj = gobj->link_next)
+        {
+            if (gobj->user_data.p == ep)
+            {
+                efManagerSetPrevStructAlloc(ep);
+                gcEjectGObj(gobj);
+                break;
+            }
+        }
+    }
+    return pc;
+}
+
 #if NDS_P4
 #undef efManagerKirbyInhaleWindProcUpdate
 #undef gFTDataKirbyMainMotion

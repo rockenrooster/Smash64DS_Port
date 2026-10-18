@@ -466,6 +466,7 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
         status_id = p4_entry->appear_status[entry_id];
         if ((p4_port != NULL) && (p4_port->entry_case != NULL))
         {
+            ndsP4EntryFileEnsure(fp);
             p4_port->entry_case(fp);
         }
     }

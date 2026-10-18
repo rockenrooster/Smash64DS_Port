@@ -23,6 +23,13 @@ One choice is the DS's own: Remix's automatic note length (the file size /
 out through its envelope's release after the note ends. The DS cue plays the
 whole sample (its duration is at least the sample's).
 
+Every sound id an enabled content plays (its motion scripts' sound
+commands, its hitbox and taunt-voice overrides, its ported code's FGM
+constants) that neither the vanilla pack nor these rows carry is added too
+(owner 2026-10-18, Crash's up special landing was silent): a Remix id from
+its FGM.asm row, whatever folder declares it; a vanilla id rendered from the
+vanilla tables by the vanilla pack's full-program renderer.
+
 Output (ROM-derived, so under the ignored build tree only): ``fgm_p4.bin``
 in the vanilla pack's layout with magic ``FGP4`` -- header, 32-byte entries,
 IMA bodies on 32-byte boundaries -- and ``fgm_p4.json`` with each cue's
@@ -100,7 +107,8 @@ def fgm_ids(bass_out: str) -> dict[str, list[int]]:
     declaration order: one name can be added more than once (Ganondorf's
     ten PLACEHOLDER sounds), each time with its own id."""
     ids: dict[str, list[int]] = {}
-    for match in re.finditer(r"Added (\S+)\s*\nFGM_ID: 0x([0-9A-Fa-f]+)", bass_out):
+    # A name may hold spaces (Ganondorf's "Ganondorf/sounds/53 deflectsound2").
+    for match in re.finditer(r"Added ([^\n]+?)[ \t]*\nFGM_ID: 0x([0-9A-Fa-f]+)", bass_out):
         ids.setdefault(match.group(1), []).append(int(match.group(2), 16))
     return ids
 
@@ -248,15 +256,114 @@ def program_record(row: dict, fgm_id: int, staging: Path, renderer, extract, cod
     }
 
 
-def add_sound_rows(fgm_asm: str, content_dir: str) -> list[dict]:
-    """FGM.asm's add_sound calls for one content, in declaration order."""
+BASE_PACK = ROOT / "assets" / "audio" / "fgm_phase_pack_ima.bin"
+PORT_SRC = ROOT / "src" / "port"
+# Motion-script sound commands (remix_export.py EVENTS / REMIX_CUSTOM) and
+# how each carries its id.
+SOUND_OPS_26 = ("PlayFGM", "PlayFGMStoreInfo", "PlayVoiceStoreInfo",
+                "PlayLoopSFXStoreInfo", "PlayLoopVoiceStoreInfo")
+VANILLA_FGM_IDS = 688             # the vanilla pack's id space (nds_audio_fgm.c)
+
+
+def base_pack_ids() -> set[int]:
+    """The ids the vanilla pack (assets/audio, rendered by the vanilla
+    renderer) carries."""
+    data = BASE_PACK.read_bytes()
+    magic, _version, count = struct.unpack_from("<4sHH", data, 0)
+    if magic != b"FGM1":
+        raise ValueError(f"{BASE_PACK}: not an FGM1 pack")
+    return {struct.unpack_from("<H", data, 16 + 32 * i)[0] for i in range(count)}
+
+
+def played_sound_ids(export_root: Path, contents: list[str]) -> dict[int, list[str]]:
+    """Every sound id the listed contents play: their exports' motion
+    scripts and their ported code's FGM constants (src/port/nds_p4_<name>.c)."""
+    played: dict[int, list[str]] = {}
+
+    def note(fgm_id: int, where: str) -> None:
+        if 0 <= fgm_id < 0xFFFF:
+            played.setdefault(fgm_id, []).append(where)
+
+    for name in dict.fromkeys(EXPORT_DIRS[c] for c in contents):
+        events = export_root / name / "events.json"
+        if events.exists():
+            for block in json.loads(events.read_text(encoding="utf-8"))["blocks"].values():
+                for cmd in block["commands"]:
+                    op, words = cmd["op"], cmd["words"]
+                    where = f"{name} {block.get('label') or block['start']} {op}"
+                    if op in SOUND_OPS_26:
+                        note(words[0] & 0x3FFFFFF, where)
+                    elif op == "RemixSetHitboxFGM" and (words[0] & 0xFFFF) != 0xFFFF:
+                        note(words[0] & 0x7FFF, where)
+                    elif op == "RemixLVoiceSFX":
+                        note(words[0] & 0xFFFF, where)
+                        if len(words) > 1:
+                            note(words[1] & 0xFFFF, where)
+        code = PORT_SRC / f"nds_p4_{name}.c"
+        if code.exists():
+            for m in re.finditer(r"^#define\s+(\w*FGM\w*)\s+(0x[0-9A-Fa-f]+|\d+)u?\s",
+                                 code.read_text(encoding="utf-8", errors="replace"), re.M):
+                note(int(m.group(2), 0), f"{name} {m.group(1)}")
+    return played
+
+
+def vanilla_alias(fgm_id: int, vanilla: dict) -> int | None:
+    """The cue a vanilla program only forks (set_unk* rows, one fork_voice,
+    stop_voice, no articulation or note), or None: 0x123 forks 287
+    (DeadSlam), 630's three callers fork 630."""
+    program = vanilla["ucd"]["entries"][fgm_id]["program"]
+    forks = [r for r in program if r[0] == "fork_voice"]
+    rest = [r for r in program if r[0] not in ("fork_voice", "stop_voice")
+            and not r[0].startswith("set_unk")]
+    return int(forks[0][1]) if (len(forks) == 1 and not rest) else None
+
+
+def vanilla_record(fgm_id: int, renderer, codec, vanilla: dict) -> dict:
+    """A vanilla cue the vanilla pack does not carry, rendered whole from
+    the vanilla tables (as its full-program cues are)."""
+    ucd = vanilla["ucd"]["entries"][fgm_id]["program"]
+    pcm, meta = renderer.render_fgm_composite_aot(
+        fgm_id, vanilla["ucd"], vanilla["articulations"], vanilla["modulators"],
+        vanilla["instrument"], vanilla["ctl_by_offset"], vanilla["tbl"], codec,
+        vanilla["sine"], output_rate=renderer.FGM_OUTPUT_RATE)
+    while len(pcm) > 1 and pcm[-1] == 0:
+        pcm.pop()
+    ima = renderer.ima_encode(pcm)
+    metrics = renderer.audio_metrics(pcm, renderer.ima_decode(ima, len(pcm)))
+    if metrics["ima_snr_db"] < 14.0:
+        ima = renderer.ima_encode_lookahead(pcm)
+        metrics = renderer.audio_metrics(pcm, renderer.ima_decode(ima, len(pcm)))
+    if len(ima) > P4_MAX_CUE_IMA_BYTES:
+        raise ValueError(f"vanilla FGM {fgm_id:#x}: {len(ima)} B IMA exceeds the P4 cue bound")
+    return {
+        "id": fgm_id,
+        "name": f"vanilla_{fgm_id:#05x}",
+        "type": "FGM_TYPE_VANILLA",
+        "flags": FLAG_PAUSE_WITH_GAME if (last(ucd, "set_unk1F", 0) & 0x80) else 0,
+        "frequency": meta["aot_output_frequency_hz"],
+        "volume": 127,
+        "pan": 64,
+        "duration_ticks": meta["duration_ticks"],
+        "note_ticks": [r[3] for r in ucd if r[0] == "note"],
+        "sample_count": len(pcm),
+        "ima": ima,
+        "ucd_program": ucd,
+        "articulation_program": [],
+        "voice_programs": meta["voice_program_ids"],
+        "ima_snr_db": metrics["ima_snr_db"],
+    }
+
+
+def add_sound_rows(fgm_asm: str, content_dir: str | None) -> list[dict]:
+    """FGM.asm's add_sound calls for one content (every call when
+    `content_dir` is None), in declaration order."""
     rows = []
     pattern = re.compile(
-        r"^\s*add_sound\(\s*([^,\s]+)\s*,\s*(\w+)\s*,\s*(\w+)\s*,\s*(-?\w+)\s*,\s*(-?\w+)\s*\)",
+        r"^\s*add_sound\(\s*([^,\n]+?)\s*,\s*(\w+)\s*,\s*(\w+)\s*,\s*(-?\w+)\s*,\s*(-?\w+)\s*\)",
         re.M)
     for match in pattern.finditer(fgm_asm):
         name, rate, kind, reverb, length = match.groups()
-        if not name.startswith(content_dir + "/"):
+        if (content_dir is not None) and not name.startswith(content_dir + "/"):
             continue
         if kind not in FGM_TYPES:
             raise ValueError(f"{name}: unknown FGM type {kind}")
@@ -271,7 +378,7 @@ def add_sound_rows(fgm_asm: str, content_dir: str) -> list[dict]:
             "length": int(length, 0),
         })
     for match in re.finditer(r"^\s*add_sound_advanced\(\s*([^,\s]+)", fgm_asm, re.M):
-        if match.group(1).startswith(content_dir + "/"):
+        if (content_dir is not None) and match.group(1).startswith(content_dir + "/"):
             raise ValueError(f"{match.group(1)}: add_sound_advanced is not ported")
     return rows
 
@@ -342,8 +449,10 @@ def last(program: list[list], op: str, default=None):
     return value
 
 
-def build(staging: Path, contents: list[str], out_dir: Path) -> dict:
-    """One pack with every listed content's cues (each FGM id once)."""
+def build(staging: Path, contents: list[str], out_dir: Path,
+          export_root: Path | None = None) -> dict:
+    """One pack with every listed content's cues (each FGM id once), and
+    every id they play that no pack carries (played_sound_ids)."""
     renderer = load_module(RENDERER, "fgm_phase_pack_renderer")
     extract = load_module(EXTRACT_FGM, "extract_fgm")
     sys.path.insert(0, str(ROOT / "scripts" / "sfx"))
@@ -355,6 +464,7 @@ def build(staging: Path, contents: list[str], out_dir: Path) -> dict:
     programs = []
     authored = [EXPORT_DIRS[c] for c in contents
                 if "base" in p4_contents.row_of(EXPORT_DIRS[c], _REGISTRY)]
+    tokens = list(contents)
     contents = list(dict.fromkeys(SOURCES[c] for c in contents))
     for content in contents:
         content_rows = add_sound_rows(fgm_asm, CONTENT_DIRS[content])
@@ -362,6 +472,42 @@ def build(staging: Path, contents: list[str], out_dir: Path) -> dict:
             raise ValueError(f"{content}: no add_sound rows in FGM.asm")
         rows += content_rows + extra_sound_rows(fgm_asm, content)
         programs += program_sound_rows(fgm_asm, content)
+    # Played ids no pack carries (played_sound_ids): a Remix id's add_sound
+    # row by its FGM_ID (any folder), a vanilla id rendered below.
+    vanilla_missing = []
+    added = {}
+    unresolved = []
+    if export_root is not None:
+        planned = set()
+        uses_by_name: dict[str, int] = {}
+        for row in rows:
+            k = uses_by_name.get(row["name"], 0)
+            uses_by_name[row["name"]] = k + 1
+            named = ids.get(row["name"], [])
+            if k < len(named):
+                planned.add(named[k])
+        planned |= {ids[r["name"]][0] for r in programs if ids.get(r["name"])}
+        have = base_pack_ids() | planned
+        id_rows = {}
+        all_rows = add_sound_rows(fgm_asm, None)
+        seen: dict[str, int] = {}
+        for row in all_rows:
+            k = seen.get(row["name"], 0)
+            seen[row["name"]] = k + 1
+            named = ids.get(row["name"], [])
+            if k < len(named):
+                id_rows[named[k]] = row
+        for fgm_id, where in sorted(played_sound_ids(export_root, tokens).items()):
+            if fgm_id in have:
+                continue
+            if fgm_id < VANILLA_FGM_IDS:
+                vanilla_missing.append(fgm_id)
+                added[fgm_id] = where
+            elif fgm_id in id_rows:
+                rows.append(dict(id_rows[fgm_id], fgm_id=fgm_id))
+                added[fgm_id] = where
+            else:
+                unresolved.append((fgm_id, where))
     tick_us = renderer.FGM_TIMER_MICROSECONDS
     records = []
     uses: dict[str, int] = {}
@@ -369,9 +515,12 @@ def build(staging: Path, contents: list[str], out_dir: Path) -> dict:
         use = uses.get(row["name"], 0)
         uses[row["name"]] = use + 1
         named = ids.get(row["name"], [])
-        if use >= len(named):
+        if "fgm_id" in row:
+            fgm_id = row["fgm_id"]
+        elif use >= len(named):
             raise ValueError(f"{row['name']}: no FGM_ID in bass.out")
-        fgm_id = named[use]
+        else:
+            fgm_id = named[use]
         aifc = read_aifc(staging / "src" / f"{row.get('sample', row['name'])}.aifc")
         # FGM.asm: an explicit length, else the file's FORM size / 177.
         length = row["length"] if row["length"] != -1 else aifc["form_size"] // 177
@@ -433,7 +582,20 @@ def build(staging: Path, contents: list[str], out_dir: Path) -> dict:
             "source_frames": aifc["comm"]["frames"],
             "ima_snr_db": metrics["ima_snr_db"],
         })
-    vanilla = vanilla_audio(renderer, extract) if programs else None
+    vanilla = vanilla_audio(renderer, extract) if (programs or vanilla_missing) else None
+    aliases = []
+    base_ids = base_pack_ids() if vanilla_missing else set()
+    for fgm_id in vanilla_missing:
+        target = vanilla_alias(fgm_id, vanilla)
+        if target is not None:
+            if (target not in base_ids) and (target not in {r["id"] for r in records}):
+                records.append(vanilla_record(target, renderer, vadpcm_decode, vanilla))
+            aliases.append((fgm_id, target))
+            continue
+        try:
+            records.append(vanilla_record(fgm_id, renderer, vadpcm_decode, vanilla))
+        except (ValueError, KeyError, IndexError) as error:
+            print(f"p4 audio: vanilla FGM {fgm_id:#x} not rendered: {error}", file=sys.stderr)
     for row in programs:
         named = ids.get(row["name"], [])
         if len(named) != 1:
@@ -448,6 +610,10 @@ def build(staging: Path, contents: list[str], out_dir: Path) -> dict:
     for name in authored:
         records += p6_audio.records(name, renderer)
 
+    for fgm_id, where in unresolved:
+        if all(r["id"] != fgm_id for r in records):
+            print(f"p4 audio: {fgm_id:#x} played ({where[0]}) has no FGM.asm row",
+                  file=sys.stderr)
     records.sort(key=lambda r: r["id"])
     if len({r["id"] for r in records}) != len(records):
         raise ValueError("two contents add the same FGM id")
@@ -475,11 +641,18 @@ def build(staging: Path, contents: list[str], out_dir: Path) -> dict:
     (out_dir / "fgm_p4.bin").write_bytes(pack)
     # The runtime's entry table is sized by this build's pack.
     (out_dir / "nds_p4_fgm.generated.h").write_text(
-        "/* Generated by scripts/p4/p4_audio.py: the P4 sound pack's entry count. */\n"
-        f"#define NDS_P4_FGM_ENTRY_COUNT {len(records)}u\n",
+        "/* Generated by scripts/p4/p4_audio.py: the P4 sound pack's entry count,\n"
+        " * and the played vanilla ids whose programs only fork another cue\n"
+        " * (vanilla_alias): the lookup follows them. */\n"
+        f"#define NDS_P4_FGM_ENTRY_COUNT {len(records)}u\n"
+        f"#define NDS_P4_FGM_ALIAS_COUNT {len(aliases)}u\n"
+        "#define NDS_P4_FGM_ALIAS_ROWS(X) \\\n"
+        + "".join(f"    X({a:#x}u, {t:#x}u) \\\n" for a, t in aliases) + "\n",
         encoding="utf-8", newline="\n")
     manifest = {
         "format": "FGP4", "version": PACK_VERSION, "contents": contents,
+        "added_played_ids": {f"{k:#x}": v[:4] for k, v in sorted(added.items())},
+        "aliases": {f"{a:#x}": f"{t:#x}" for a, t in aliases},
         "pack_bytes": len(pack), "pack_sha256": hashlib.sha256(pack).hexdigest(),
         "entries": [{k: v for k, v in r.items() if k != "ima"} for r in records],
     }
@@ -570,7 +743,7 @@ def main() -> int:
     parser.add_argument("--export-root", type=Path, required=True,
                         help="remix_export.py output root (<content>/resolved.json)")
     args = parser.parse_args()
-    manifest = build(args.staging, args.content, args.out)
+    manifest = build(args.staging, args.content, args.out, args.export_root)
     tracks = []
     for content in args.content:
         # Contents may share a victory song: one track a song.
