@@ -221,7 +221,13 @@ void sc1PGameStartScene(void)
     if (p7 != FALSE)
     {
         p7_saved = dSC1PGameStageDesc[stage];
-        dSC1PGameStageDesc[stage].gkind = gNdsP7Challenger.gkind;
+        /* A row with no stage of its own (NDS_P7_ANY: Peach) fights on the
+         * carrier row's; writing 0xFF loaded no ground and faulted in
+         * grWallpaperMakeStatic (walk witness, 2026-10-18). */
+        if (gNdsP7Challenger.gkind != NDS_P7_ANY)
+        {
+            dSC1PGameStageDesc[stage].gkind = gNdsP7Challenger.gkind;
+        }
         dSC1PGameStageDesc[stage].fkind[0] = gNdsP7Challenger.fkind;
     }
     /* Campaign dependencies carry every opponent, including all polygon
