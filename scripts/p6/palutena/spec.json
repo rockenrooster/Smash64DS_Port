@@ -26,15 +26,15 @@
    "script": "scripts/p6/palutena/motions/win1.ms"
   },
   "2": {
-   "comment": "Win2: Peach's clip, her halo above her",
+   "comment": "Win2: Peach's clip (her halo removed, owner 2026-10-17)",
    "script": "scripts/p6/palutena/motions/win2.ms"
   },
   "3": {
-   "comment": "Win3: Peach's clip, wings and halo",
+   "comment": "Win3: Peach's clip, her wings (no halo: owner 2026-10-17)",
    "script": "scripts/p6/palutena/motions/win3.ms"
   },
   "4": {
-   "comment": "Win4, the select screen's Selected pose: Peach's third clip, her halo",
+   "comment": "Win4, the select screen's Selected pose: Peach's third clip (no halo: owner 2026-10-17)",
    "script": "scripts/p6/palutena/motions/win4.ms"
   }
  },
@@ -776,7 +776,7 @@
    "anim": "builds/p6-art/palutena/anims/throw_b.o2r"
   },
   "164": {
-   "comment": "Appeal: down taunt (D4): Ultimate's, she turns to face the camera, the halo above her (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
+   "comment": "Appeal: down taunt (D4): Ultimate's, she turns to face the camera (no halo: owner 2026-10-17) (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
    "anim": "builds/p6-art/palutena/anims/appeal.o2r",
    "script": "scripts/p6/palutena/motions/appeal.ms"
   },
@@ -861,7 +861,7 @@
    "anim": "builds/p6-art/palutena/anims/bair.o2r"
   },
   "187": {
-   "comment": "AttackAirHi: up air: the twirl, the halo above her (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
+   "comment": "AttackAirHi: up air: the twirl (no halo: owner 2026-10-17) (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
    "script": "scripts/p6/palutena/motions/uair.ms",
    "anim": "builds/p6-art/palutena/anims/uair.o2r"
   },

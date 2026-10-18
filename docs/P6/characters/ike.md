@@ -461,6 +461,24 @@ be 0.75x. max unchanged".
   at the guard to a white tip (it had been red to white, then gold to pale
   yellow).
 
+## Entry into the wait (owner BUGS.md, 2026-10-17)
+
+"Needs same intro blend as Palutena"; "its mostly the stance and sword
+position snap that's jarring": his entry is Roy's (clip 0xd4d, both Appear
+rows), which ends about 105 degrees from his wait's first pose at the cut,
+stance and Ragnell alike. Both sides need the same turn: AppearR (status 220,
+motion 195) plays facing the camera (TopN 0, lr 0) into a wait at +90, and
+AppearL (221, 196) plays turned 180 degrees (his parent Captain's
+`is_rotate`) into a wait at -90 -- +90 either way (gdb, lab: TopN 0 and pi
+through the entries, then +-pi/2). So one clip for both rows
+(`art/p6/ike/anims/entry.json`): Roy's entry with its last 20 frames
+(100-120) eased into his wait's frame 0 turned +90 degrees (anim.py op
+`blend_to`, `pose_ops.blend_to`: every keyed row slerped and its translation
+lerped, smoothstep). The turn goes on his hips row, the topmost keyed one:
+his root row is never keyed, and a turn written into it held into every clip
+after (the first try, 2026-10-17). The last frame meets the turned wait pose
+within 0.2 units (every drawn row); frames before 100 are Roy's.
+
 ## Audio (local inputs, never committed)
 
 Both sets are in `decomp/alt_assets/Fighters/Super Smash Bros Ultimate/Fighters/`

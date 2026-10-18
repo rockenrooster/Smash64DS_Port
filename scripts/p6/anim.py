@@ -665,7 +665,9 @@ def build(recipe: dict, rom, extras: dict | None = None) -> bytes:
     TransN slot ("transn_slot": true, with_transn_slot); posed
     ("ops": a list of pose_ops.py operations, in order, on the clip's own
     tree -- "blend" rows toward the bind pose or a frame of another clip,
-    "turn" a row about the model's axes; or, with no "source", "keys": a
+    "turn" a row about the model's axes, "blend_to" the last frames eased
+    into another clip's pose (an entry into the wait the game cuts to); or,
+    with no "source", "keys": a
     clip from key poses, or "keyposes": key poses over clip frames with
     turns, aims and leg IK, keyposes.py, or "ultimate": an Ultimate motion
     on her rig, ultimate.py); the O2R container keeps the source's header
@@ -726,18 +728,28 @@ def build(recipe: dict, rom, extras: dict | None = None) -> bytes:
         clip = spin(clip, row + int(sp.get("first_slot", 0)), rest, sp["axis"], float(sp["degrees"]),
                     int(sp["frames"][0]), int(sp["frames"][1]))
     if recipe.get("ops"):
-        tree = skeleton(rom, rt["to"] if rt else recipe["skeleton"])
+        op_tree = skeleton(rom, rt["to"] if rt else recipe["skeleton"])
         for op in recipe["ops"]:
             kind = op["op"]
             if kind == "blend":
                 toward = op.get("toward", "rest")
                 other = (decode(rom.o2r(int(str(toward["clip"]), 0)))
                          if isinstance(toward, dict) and "clip" in toward else None)
-                clip = pose_ops.blend(clip, tree, [int(r) for r in op["rows"]], float(op["amount"]),
+                clip = pose_ops.blend(clip, op_tree, [int(r) for r in op["rows"]], float(op["amount"]),
                                       toward, int(op.get("first_slot", 0)), toward_clip=other)
             elif kind == "turn":
-                clip = pose_ops.turn(clip, tree, int(op["row"]), op["deg"], op.get("frames"),
+                clip = pose_ops.turn(clip, op_tree, int(op["row"]), op["deg"], op.get("frames"),
                                      int(op.get("ease", 0)), int(op.get("first_slot", 0)))
+            elif kind == "blend_to":
+                # The last frames eased into another clip's pose: {"toward":
+                # {"anim": built O2R under builds/ | "clip": id, "frame",
+                # "first_slot", "yaw"}, "frames": [first, last], "first_slot"}.
+                toward = op["toward"]
+                other = (decode((HERE.parents[1] / toward["anim"]).read_bytes()) if "anim" in toward
+                         else decode(rom.o2r(int(str(toward["clip"]), 0))))
+                clip = pose_ops.blend_to(clip, op_tree, other, int(toward.get("frame", 0)), op["frames"],
+                                         int(op.get("first_slot", 0)), int(toward.get("first_slot", 0)),
+                                         float(toward.get("yaw", 0.0)))
             else:
                 raise ValueError(f"recipe op {kind!r}")
     # The lock rows keyed (key_rest_rows): a source clip's tree is the

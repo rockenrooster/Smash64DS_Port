@@ -17,11 +17,17 @@ on top of whatever the clip already does ("turn") or of the bind pose
   that far toward the bind pose, the clip's own frame n or another clip's
   (a smaller stride: the legs toward standing; the staff arm toward the
   wait's);
+- blend_to: {"toward": {"anim": a built O2R | "clip": id, "frame",
+  "first_slot", "yaw"}, "frames": [first, last], "first_slot"} -- the
+  clip's last frames eased into that pose (turned "yaw" degrees about the
+  vertical), every row (an entry into the wait);
 - keys: {"length", "loop" (a frame or null), "keys": [{"frame", "rows":
   {row: [x, y, z]}}]} -- a clip from key poses (turns from the bind pose),
   smoothstep slerp between keys; rows no key names stay at rest.
 """
 from __future__ import annotations
+
+import math
 
 import numpy as np
 
@@ -263,6 +269,64 @@ def blend(clip: A.Clip, skel: A.Skeleton, rows, amount: float, toward="rest", fi
             target = [mats[int(toward["frame"])]] * len(mats)
         _write_row(clip, skel, row, first_slot,
                    [slerp(m, t, float(amount)) for m, t in zip(mats, target)], length)
+    return clip
+
+
+def blend_to(clip: A.Clip, skel: A.Skeleton, other: A.Clip, frame: int, frames,
+             first_slot: int = 0, other_first_slot: int = 0, yaw: float = 0.0) -> A.Clip:
+    """The clip's last frames drawn toward another clip's pose at `frame`
+    (the wait the game cuts to after it), that pose turned `yaw` degrees
+    about the vertical (an entry plays facing the camera, the wait turned to
+    the fighter's side): every row's rotation slerped and its translation
+    lerped toward that pose, smoothstep-eased from frames[0] to all of it at
+    frames[1], held after (a row neither clip keys stays at rest in both)."""
+    length = _length(clip)
+    t_trans, t_rot = A.pose(other, skel, int(frame), other_first_slot)
+    rows = len(skel.rotate)
+    # Only rows a clip keys: a row neither keys keeps what the clip before
+    # left it (the bind pose here), and a key written into it would stay
+    # after the cut.
+    keyed = ({slot - first_slot for slot in clip.streams} |
+             {slot - other_first_slot for slot in other.streams})
+    keyed = {r for r in keyed if 0 <= r < rows}
+    if yaw:
+        # The turn goes on the topmost keyed rows: their unkeyed ancestors
+        # rest unturned (Roy's root row is never keyed: turned, it would hold
+        # the turn into every clip that follows).
+        c, s = math.cos(math.radians(yaw)), math.sin(math.radians(yaw))
+        turn = np.array([[c, 0.0, s], [0.0, 1.0, 0.0], [-s, 0.0, c]])
+        for row in sorted(keyed):
+            p = skel.parents[row]
+            while p >= 0 and p not in keyed:
+                p = skel.parents[p]
+            if p < 0:
+                t_rot[row] = list(A.to_euler(turn @ A.euler(*t_rot[row]), tuple(t_rot[row])))
+                t_trans[row] = [float(v) for v in turn @ np.asarray(t_trans[row], float)]
+    first, last = (int(x) for x in frames)
+
+    def weight(g: int) -> float:
+        if g < first:
+            return 0.0
+        w = 1.0 if g >= last else (g - first) / float(max(last - first, 1))
+        return w * w * (3.0 - 2.0 * w)
+
+    poses = [A.pose(clip, skel, g, first_slot) for g in range(length + 1)]
+    for row in sorted(keyed):
+        target = A.euler(*t_rot[row])
+        mats = [A.euler(*rot[row]) for _t, rot in poses]
+        if any(not np.allclose(m, target, atol=1e-4) for m in mats[first:]):
+            _write_row(clip, skel, row, first_slot,
+                       [slerp(m, target, weight(g)) for g, m in enumerate(mats)], length)
+        trans = [tr[row] for tr, _r in poses]
+        if any(not np.allclose(t, t_trans[row], atol=1e-3) for t in trans[first:]):
+            st = clip.streams[row + first_slot] if (row + first_slot) in clip.streams else None
+            if st is None:
+                _write_row(clip, skel, row, first_slot, mats, length)
+                st = clip.streams[row + first_slot]
+            for c in range(3):
+                st.tracks[4 + c] = A.Track(
+                    [round((t[c] + (t_trans[row][c] - t[c]) * weight(g)) * A.TRANS_UNIT)
+                     for g, t in enumerate(trans)], 0)
     return clip
 
 

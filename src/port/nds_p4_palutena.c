@@ -1169,19 +1169,22 @@ static void ndsP4PalutenaWings(GObj *fighter_gobj, FTStruct *fp, s32 clip)
  *   point) -- while the jab combo, the tilts that spin the staff
  *   (forward, up, down), neutral air and up air wield it. The spinning
  *   moves also draw the staff's trail (sword trail 24, their scripts).
- * - The overhead light wings (PAL_LIGHT_TREE: two cards of feathered light
- *   fanning out from behind her head, the right the left's mirror; the
- *   ring's two halves about her head, the taunt's) in the three smashes, up
- *   air and the taunt. Owner p6aa (2026-10-17: "light wings look wrong,
- *   positioned wrong and scale wrong, check 3ds reference mp4 files"): as the
- *   3DS's (Strong_Side_A, Strong_Up_A, Strong_Down_A, Air_Up_A, Taunt_2),
- *   rooted behind the base of her head (PAL_WING_ROOT_UP past the head
- *   joint, PAL_LIGHT_BEHIND behind it), each about 0.3 her height
- *   (p6_light.py WING_SIZE), nearly level and tipped up a little as they
- *   open, turned with the line from her neck to her head so they lean as
- *   she does; shown when the 3DS shows them: the forward smash's wind-up
- *   before its godwings, the up smash's pillar, the down smash's slam, up
- *   air's last hit, the taunt's pose.
+ * - The overhead light wings (PAL_LIGHT_TREE: a small glowing orb above her
+ *   head and two cards of feathered light fanning out from beside it, the
+ *   right the left's mirror; the ring's two halves about her head, the
+ *   taunt's) in the three smashes, up air and the taunt. As the 3DS forward
+ *   smash's wind-up draws them (owner p6ab, 2026-10-17, Strong_Side_A
+ *   frames 0-10: "camera facing", "the 2 light wings should be separated by
+ *   the small glowing circle", "mostly camera facing with slight rotations
+ *   toward the faced direction"): one plane turned to the camera, then
+ *   PAL_LIGHT_YAW toward the way she faces; the orb PAL_ORB_UP above her
+ *   head joint (her head's base), PAL_ORB_BACK toward her back and
+ *   PAL_LIGHT_BEHIND behind her; each wing level (PAL_WING_DROOP down at its tip), its
+ *   strokes meeting PAL_WING_GAP to the orb's side and PAL_WING_DROP below
+ *   its centre, the wing behind her PAL_WING_FAR as wide as the one she
+ *   faces. Shown when the 3DS shows them: the forward smash's wind-up before
+ *   its godwings, the up smash's pillar, the down smash's slam, up air's
+ *   last hit, the taunt's pose.
  *
  * A move's window is over its clip's frames: grown in from `first` to
  * `full`, held, faded from `fade` to `last`. The level a piece shows is the
@@ -1196,16 +1199,19 @@ static void ndsP4PalutenaWings(GObj *fighter_gobj, FTStruct *fp, s32 clip)
 #define PAL_GLOW_TREE 0x424                 /* p6_gate.py GLOW_TREE */
 #define PAL_LIGHT_TREE 0x4D4                /* p6_gate.py LIGHT_TREE */
 #define PAL_STAFF_JOINT (nFTPartsJointCommonStart + 14)
-#define PAL_NECK_JOINT (nFTPartsJointCommonStart + 7)
 #define PAL_HEAD_JOINT (nFTPartsJointCommonStart + 8)
 #define PAL_GLOW_TOWARD_CAMERA 150.0F
 #define PAL_GLOW_SHIMMER 0.9F
-#define PAL_LIGHT_BEHIND 40.0F
-#define PAL_LIGHT_LEAN_MAX 0.6F             /* radians */
-#define PAL_LIGHT_TILT 0.12F                /* radians, folded */
-#define PAL_LIGHT_SPREAD 0.1F               /* radians more, open */
+#define PAL_LIGHT_BEHIND 60.0F
+#define PAL_LIGHT_YAW 0.25F                 /* radians */
 #define PAL_LIGHT_FOLDED 0.55F              /* the wings' size, folded */
-#define PAL_WING_ROOT_UP 25.0F              /* past the head joint: the base of her head */
+#define PAL_ORB_UP 165.0F                   /* above the head joint: over her crown */
+#define PAL_ORB_BACK 20.0F
+#define PAL_RING_UP 25.0F                   /* the taunt's ring: the base of her head */
+#define PAL_WING_GAP 117.0F
+#define PAL_WING_DROP 93.0F
+#define PAL_WING_DROOP 0.16F                /* radians */
+#define PAL_WING_FAR 0.72F
 #define PAL_LIGHT_DECAY 0.25F
 #define PAL_LIGHT_SHOWN 0.04F
 
@@ -1256,6 +1262,7 @@ typedef struct NDSP4PalLight
 static NDSP4PalLight sNdsP4PalutenaLight[GMCOMMON_PLAYERS_MAX];
 
 extern void func_ovl2_800EDBA4(DObj *main_dobj);
+extern GObj *gGMCameraGObj;
 static void ndsP4PalutenaGlowProcUpdate(GObj *effect_gobj);
 static void ndsP4PalutenaLightProcUpdate(GObj *effect_gobj);
 
@@ -1410,6 +1417,43 @@ static f32 ndsP4PalutenaLightNext(f32 window, f32 last)
     return (window > eased) ? window : ((eased > 0.0F) ? eased : 0.0F);
 }
 
+/* The unit vector from `pos` to the battle camera's eye (+z without one). */
+static void ndsP4PalutenaToCamera(const Vec3f *pos, Vec3f *out)
+{
+    f32 len;
+
+    out->x = 0.0F;
+    out->y = 0.0F;
+    out->z = 1.0F;
+    if (gGMCameraGObj == NULL)
+    {
+        return;
+    }
+    out->x = CObjGetStruct(gGMCameraGObj)->vec.eye.x - pos->x;
+    out->y = CObjGetStruct(gGMCameraGObj)->vec.eye.y - pos->y;
+    out->z = CObjGetStruct(gGMCameraGObj)->vec.eye.z - pos->z;
+    len = sqrtf((out->x * out->x) + (out->y * out->y) + (out->z * out->z));
+    if (len < 1.0F)
+    {
+        out->x = 0.0F;
+        out->y = 0.0F;
+        out->z = 1.0F;
+        return;
+    }
+    out->x /= len;
+    out->y /= len;
+    out->z /= len;
+}
+
+/* A root whose cards (its x-y plane) face `to`, then `yaw` more about the
+ * vertical (RotRpyR: its z axis is (cos x sin y, -sin x, cos x cos y)). */
+static void ndsP4PalutenaFace(DObj *root, const Vec3f *to, f32 yaw)
+{
+    root->rotate.vec.f.x = -syUtilsArcTan2(to->y, sqrtf((to->x * to->x) + (to->z * to->z)));
+    root->rotate.vec.f.y = syUtilsArcTan2(to->x, to->z) + yaw;
+    root->rotate.vec.f.z = 0.0F;
+}
+
 static void ndsP4PalutenaLight(GObj *fighter_gobj, FTStruct *fp)
 {
     static const Vec3f origin = { 0.0F, 0.0F, 0.0F };
@@ -1419,6 +1463,7 @@ static void ndsP4PalutenaLight(GObj *fighter_gobj, FTStruct *fp)
     u32 ring = 0u;
     u32 unused;
     Vec3f pos;
+    Vec3f to = { 0.0F, 0.0F, 1.0F };
     f32 level;
 
     level = ndsP4PalutenaLightNext(
@@ -1429,7 +1474,10 @@ static void ndsP4PalutenaLight(GObj *fighter_gobj, FTStruct *fp)
     if (level >= PAL_LIGHT_SHOWN)
     {
         ndsP4PalutenaJointPoint(fp, PAL_STAFF_JOINT, &sNdsP4PalutenaGem, &pos);
-        pos.z += PAL_GLOW_TOWARD_CAMERA;
+        ndsP4PalutenaToCamera(&pos, &to);
+        pos.x += to.x * PAL_GLOW_TOWARD_CAMERA;
+        pos.y += to.y * PAL_GLOW_TOWARD_CAMERA;
+        pos.z += to.z * PAL_GLOW_TOWARD_CAMERA;
     }
     else
     {
@@ -1441,6 +1489,7 @@ static void ndsP4PalutenaLight(GObj *fighter_gobj, FTStruct *fp)
         DObj *root = DObjGetStruct(effect_gobj);
         f32 size = level * ((((s32)frame & 1) != 0) ? PAL_GLOW_SHIMMER : 1.0F);
 
+        ndsP4PalutenaFace(root, &to, 0.0F);
         root->scale.vec.f.x = root->scale.vec.f.y = root->scale.vec.f.z = size;
     }
 
@@ -1451,51 +1500,37 @@ static void ndsP4PalutenaLight(GObj *fighter_gobj, FTStruct *fp)
     state->light = level;
     if (level >= PAL_LIGHT_SHOWN)
     {
-        Vec3f neck;
-        Vec3f up;
-        f32 len;
+        f32 lr = (fp->lr < 0) ? -1.0F : 1.0F;
 
-        ndsP4PalutenaJointPoint(fp, PAL_NECK_JOINT, &origin, &neck);
         ndsP4PalutenaJointPoint(fp, PAL_HEAD_JOINT, &origin, &pos);
-        up.x = pos.x - neck.x;
-        up.y = pos.y - neck.y;
-        len = sqrtf((up.x * up.x) + (up.y * up.y));
-        if (len > 1.0F)
-        {
-            pos.x += up.x * (PAL_WING_ROOT_UP / len);
-            pos.y += up.y * (PAL_WING_ROOT_UP / len);
-        }
-        else
-        {
-            pos.y += PAL_WING_ROOT_UP;
-        }
+        pos.x -= lr * PAL_ORB_BACK;
+        pos.y += PAL_ORB_UP;
         pos.z -= PAL_LIGHT_BEHIND;
         effect_gobj = ndsP4PalutenaLightEffect(fighter_gobj, &sNdsP4PalutenaLightDesc, level, &pos);
         if (effect_gobj != NULL)
         {
             DObj *root = DObjGetStruct(effect_gobj);
-            DObj *wing_l = root->child;
+            DObj *orb = root->child;
+            DObj *wing_l = orb->sib_next;
             DObj *wing_r = wing_l->sib_next;
             DObj *ring_l = wing_r->sib_next;
             DObj *ring_r = ring_l->sib_next;
-            f32 lean = -syUtilsArcTan2(up.x, up.y);
-            f32 tilt = PAL_LIGHT_TILT + (PAL_LIGHT_SPREAD * level);
             f32 size = PAL_LIGHT_FOLDED + ((1.0F - PAL_LIGHT_FOLDED) * level);
             f32 ring_size = (ring != 0u) ? level : 0.0F;
 
-            if (lean > PAL_LIGHT_LEAN_MAX)
-            {
-                lean = PAL_LIGHT_LEAN_MAX;
-            }
-            else if (lean < -PAL_LIGHT_LEAN_MAX)
-            {
-                lean = -PAL_LIGHT_LEAN_MAX;
-            }
-            root->rotate.vec.f.z = lean;
-            wing_l->rotate.vec.f.z = -tilt;
-            wing_r->rotate.vec.f.z = tilt;
-            wing_l->scale.vec.f.x = wing_l->scale.vec.f.y = size;
-            wing_r->scale.vec.f.x = wing_r->scale.vec.f.y = size;
+            ndsP4PalutenaToCamera(&pos, &to);
+            ndsP4PalutenaFace(root, &to, lr * PAL_LIGHT_YAW);
+            orb->scale.vec.f.x = orb->scale.vec.f.y = size;
+            wing_l->translate.vec.f.x = -PAL_WING_GAP * size;
+            wing_r->translate.vec.f.x = PAL_WING_GAP * size;
+            wing_l->translate.vec.f.y = wing_r->translate.vec.f.y = -PAL_WING_DROP * size;
+            wing_l->rotate.vec.f.z = PAL_WING_DROOP;
+            wing_r->rotate.vec.f.z = -PAL_WING_DROOP;
+            wing_l->scale.vec.f.x = size * ((lr > 0.0F) ? PAL_WING_FAR : 1.0F);
+            wing_r->scale.vec.f.x = size * ((lr > 0.0F) ? 1.0F : PAL_WING_FAR);
+            wing_l->scale.vec.f.y = wing_r->scale.vec.f.y = size;
+            ring_l->translate.vec.f.x = ring_r->translate.vec.f.x = lr * PAL_ORB_BACK;
+            ring_l->translate.vec.f.y = ring_r->translate.vec.f.y = PAL_RING_UP - PAL_ORB_UP;
             ring_l->scale.vec.f.x = ring_l->scale.vec.f.y = ring_size;
             ring_r->scale.vec.f.x = ring_r->scale.vec.f.y = ring_size;
         }

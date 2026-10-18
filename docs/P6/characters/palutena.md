@@ -935,7 +935,8 @@ the taunt with the light wings and the ring.
   ring's halves behind her head in the taunt only (a soft ring drawn by
   `p6_light.py`, 32x64 a half: Ultimate's `backlight00` and `03` carry a
   filled inner glow that drew as a sheet of light over the stage in the first
-  lab run); every mask's lowest level is cleared so no card's rectangle shows; at her neck, 90 behind her, the
+  lab run); every mask's lowest level is cleared so no card's rectangle shows
+  (the first pass; owner p6aa and p6ab below redid it); at her neck, 90 behind her, the
   root turned with the line from her neck to her head (her lean, within
   0.6 rad), each wing tilted up 0.2 rad folded to 0.55 open and grown from
   0.45 to full size as it opens. In the forward and down smash the glow sits
@@ -955,6 +956,35 @@ the taunt with the light wings and the ring.
   26-74; the wings a paler cyan-white (`96e8ff`); the taunt's ring 170 across
   at the wings' root. The gem's glow sits 150 toward the camera (was 40) so it
   draws over the gem's ornament.
+- **Owner p6ab (2026-10-17):** "Look at the 3ds fsmash wind up (best light
+  wing reference). The light wing VFX should always be camera facing like in
+  the 3ds fsmash wind up. The 2 light wings should be separated by the small
+  glowing circle", then "it's mostly camera facing with slight rotations
+  toward the faced direction". `Strong_Side_A` frames 0-10 (2560x1440,
+  measured at 4x): a white orb about a quarter of her height across, its
+  centre above her crown and a little behind her head; each wing three cyan
+  crescents fanning out from beside the orb's lower half, level (the strokes
+  droop about 10 degrees more than Ultimate's image), the pair as wide as she
+  is tall, the wing on the side she faces about 1.25 times as wide as the
+  other. Redone so: one plane turned to the battle camera's eye every tic
+  (`ndsP4PalutenaFace`; the gem's glow too, its 150 now along the line to
+  the eye), then 0.25 rad toward the way she faces; a new card, the orb
+  (`p6_light.py` "orb": a 32x32 disc, full to 0.6 of its radius, soft to its
+  edge, 84 to the card's edge, white), at the tree's origin; the wings' card
+  240 by 186 (was 250 square), its anchor (0.84, 0.47), each wing's anchor 88
+  to the orb's side and 70 below its centre, drooping 0.16 rad, the wing
+  behind her 0.8 as wide; the orb 170 past her head joint along her neck, 25
+  toward her back, 60 behind her; no lean (the wings stay level); the
+  taunt's ring where it was (25 past the head joint).
+- **Halo removed (owner 2026-10-17):** "that gold ring/sphere thing that
+  appears above palutena (like on her intro and taunt) can be removed from
+  the game, it looks really out of place": no script shows the head row's
+  part 2 (the authored gold ring, two crossed cards) any more -- her entry,
+  down taunt, Explosive Flame, up air and the Results and Selected poses
+  (their `SetModelPartID joint_id=12 modelpart_id=2` and its reset gone);
+  the up air's hitboxes stay on the head joint. The part itself stays in the
+  model until the look is next written (`art/p6/palutena/look/parts.json`,
+  `look_parts.py` authored:halo), unused.
 - **Windows** (`sNdsP4PalutenaGlowWindows`, `sNdsP4PalutenaLightWindows`, by
   motion and clip frame): each grows in, holds and fades over its move; a
   piece shows the window's level or last tic's less 0.25, so a jab into the

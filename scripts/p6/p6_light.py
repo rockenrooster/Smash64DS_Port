@@ -10,12 +10,13 @@ natively as entry effects, placed and sized every tic by her code
 
 - The gem's glow: a root her code puts at her staff's gem and two cards
   facing the camera, a soft cyan halo and a white core.
-- The overhead light wings: a root her code puts between her shoulders, the
-  left wing's card (Ultimate's backlight01, three feather strokes of light
-  fanning out from her back), the right wing's (the left's mirror), and the
-  two halves of the ring behind her head for her taunt (a soft ring drawn
-  here: Ultimate's backlight00 and 03 carry a filled inner glow that drew as
-  a sheet of light over the stage).
+- The overhead light wings: a root her code puts above her head and turns
+  to the camera, the small glowing orb there, the left wing's card
+  (Ultimate's backlight01, three feather strokes of light fanning out from
+  beside the orb), the right wing's (the left's mirror), and the two halves
+  of the ring about her head for her taunt (a soft ring drawn here:
+  Ultimate's backlight00 and 03 carry a filled inner glow that drew as a
+  sheet of light over the stage).
 
 Each image is an I4 coverage mask (the DS's A5I3: graded alpha, its colour
 the card's PRIM), scaled down from Ultimate's effect textures in the owner's
@@ -45,17 +46,26 @@ GLOW_CARDS = (
     ("core", "glow", 64.0, (255, 255, 255, 255)),
 )
 GLOW_ROWS = len(GLOW_CARDS) + 2
-# The wings' cards: the image's anchor (where its three strokes meet, in
-# texels over its side) sits on the node's origin, the card WING_SIZE
-# across (owner p6aa, the 3DS's: each wing about 0.3 her height, from behind
-# the base of her head); the right wing mirrors the left about x. The ring's halves: the
-# left half of the ring, RING_RADIUS across and twice that high, mirrored.
-WING_SIZE = 250.0
-WING_ANCHOR = (0.86, 0.52)
+# The light's cards, all in one plane her code turns to the camera (owner
+# p6ab, 2026-10-17: the 3DS forward smash's wind-up, Strong_Side_A frames
+# 0-10: "camera facing", "the 2 light wings separated by the small glowing
+# circle"). The orb: a soft white disc ORB_HALF from its centre to the
+# card's edge, its centre the tree's origin. The wings' cards: the image's
+# anchor (where its three strokes meet, in texels over its side) sits on the
+# node's origin, the card WING_W across and WING_H high (the 3DS's wing is
+# wider than Ultimate's image); the right wing mirrors the left about x. The
+# ring's halves: the left half of the ring, RING_RADIUS across and twice
+# that high, mirrored.
+ORB_HALF = 115.0
+ORB_CORE = 0.6
+WING_W = 358.0
+WING_H = 244.0
+WING_ANCHOR = (0.84, 0.47)
 RING_RADIUS = 170.0
 LIGHT_CARDS = (
-    ("wing_l", "wing", (150, 232, 255, 245)),
-    ("wing_r", "wing", (150, 232, 255, 245)),
+    ("orb", "orb", (235, 250, 255, 240)),
+    ("wing_l", "wing", (100, 230, 255, 255)),
+    ("wing_r", "wing", (100, 230, 255, 255)),
     ("ring_l", "ring", (190, 242, 255, 230)),
     ("ring_r", "ring", (190, 242, 255, 230)),
 )
@@ -63,6 +73,7 @@ LIGHT_ROWS = len(LIGHT_CARDS) + 2
 IMAGES = {
     # name: (Ultimate's texture (its alpha), width, height)
     "glow": ("ef_palutena_flash01.png", 32, 32),
+    "orb": (None, 32, 32),
     "wing": ("ef_palutena_backlight01.png", 64, 64),
     "ring": (None, 32, 64),
 }
@@ -103,6 +114,11 @@ def image_i4(kind: str) -> tuple[np.ndarray, int, int]:
         ys, xs = np.mgrid[0:256, 0:128].astype(np.float32)
         r = np.hypot((xs + 0.5 - 128.0) / 128.0, (ys + 0.5 - 128.0) / 128.0)
         a = np.clip(1.0 - np.abs(r - RING_AT) / RING_BAND, 0.0, 1.0) ** 1.5
+    elif kind == "orb":
+        # A disc full to ORB_CORE of its radius, soft to its edge.
+        ys, xs = np.mgrid[0:256, 0:256].astype(np.float32)
+        r = np.hypot((xs + 0.5 - 128.0) / 128.0, (ys + 0.5 - 128.0) / 128.0)
+        a = np.clip((1.0 - r) / (1.0 - ORB_CORE), 0.0, 1.0) ** 1.5
     else:
         a = _alpha(source)
     if kind == "glow":
@@ -113,13 +129,18 @@ def image_i4(kind: str) -> tuple[np.ndarray, int, int]:
         a = np.concatenate([a, a[::-1, :]], axis=0)
         a = a / max(float(a.max()), 1e-6)
         a = a ** 0.6
+    if kind == "wing":
+        # The 3DS's strokes are solid light: Ultimate's soft edges firmed
+        # (gamma 0.6) so each stroke reads as a bar at the DS's size.
+        a = a / max(float(a.max()), 1e-6)
+        a = a ** 0.6
     img = Image.fromarray((np.clip(a, 0.0, 1.0) * 255.0).astype(np.uint8), "L")
     img = img.resize((w, h), Image.LANCZOS)
     levels = np.rint(np.asarray(img, dtype=np.float32) / 255.0 * 15.0).astype(int)
     # No faint haze over the card: the lowest level clear, so a card's
     # rectangle never shows.
     levels[levels <= 1] = 0
-    if kind == "glow":
+    if kind in ("glow", "orb"):
         # The rim fully clear: no square edge where the card ends.
         levels[0, :] = levels[-1, :] = 0
         levels[:, 0] = levels[:, -1] = 0
@@ -173,12 +194,14 @@ def _card_list(fid: int, tex_at: int, w: int, h: int, vtx_at: int, prim: tuple) 
 
 def _corners(kind: str, name: str, w: int, h: int, half: float = 0.0) -> list:
     """The card's corners (x, y, s, t texels), top left first, clockwise."""
-    if kind == "glow":
+    if kind == "orb":
+        half = ORB_HALF
+    if kind in ("glow", "orb"):
         return [(-half, half, 0, 0), (half, half, w, 0), (half, -half, w, h), (-half, -half, 0, h)]
     if kind == "wing":
         ax, ay = WING_ANCHOR
-        left, right = -ax * WING_SIZE, (1.0 - ax) * WING_SIZE
-        top, bottom = ay * WING_SIZE, -(1.0 - ay) * WING_SIZE
+        left, right = -ax * WING_W, (1.0 - ax) * WING_W
+        top, bottom = ay * WING_H, -(1.0 - ay) * WING_H
     else:
         left, right, top, bottom = -RING_RADIUS, 0.0, RING_RADIUS, -RING_RADIUS
     c = [(left, top, 0, 0), (right, top, w, 0), (right, bottom, w, h), (left, bottom, 0, h)]

@@ -14,6 +14,14 @@
  },
  "anim_locks": "rest",
  "motions": {
+  "195": {
+   "comment": "AppearR (status 220, facing right): Roy's entry clip (0xd4d), its last 20 frames eased into his wait's first pose (art/p6/ike/anims/entry.json; owner BUGS.md 2026-10-17: \"needs same intro blend as Palutena\")",
+   "anim": "builds/p6-art/ike/anims/entry.o2r"
+  },
+  "196": {
+   "comment": "AppearL (status 221, facing left; turned 180 degrees through it, his parent Captain's): the same clip",
+   "anim": "builds/p6-art/ike/anims/entry.o2r"
+  },
   "3": {
    "comment": "RebirthWait: Ultimate's (wait, art/p6/ike/anims, ultimate.py)",
    "anim": "builds/p6-art/ike/anims/wait.o2r"

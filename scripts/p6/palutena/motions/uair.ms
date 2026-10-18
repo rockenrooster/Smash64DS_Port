@@ -1,5 +1,5 @@
 # AttackAirHi: up air, Ultimate's (c05attackairhi): the twirl, the staff
-# raised over her and her halo (the head row's part 2) through the hits:
+# raised over her (no halo: owner 2026-10-17) through the hits:
 # Ultimate's multi-hit, five light hits (5, 7, 9, 11, 13; each re-made: 1%,
 # its pull, Ultimate's 367, as 90 with a light set knockback here) and a
 # launching last at 14-15 (5%, 88, growth 152, base 50; Ultimate's attack data
@@ -7,7 +7,6 @@
 # Owner p6w: its sound once (it played at each of five light hits and the
 # last), from 4 so its shimmer peaks at the last hit (14); its hitboxes
 # 1.15x the size.
-SetModelPartID joint_id=12 modelpart_id=2
 AsyncWait frames=4
 PlayFGM value=cue:se_attackair_h01
 AsyncWait frames=5
@@ -51,5 +50,4 @@ SyncWait frames=2
 ClearAttackCollAll value=0
 AsyncWait frames=32
 SetFlag1 value=0
-SetModelPartID joint_id=12 modelpart_id=0
 End value=0
