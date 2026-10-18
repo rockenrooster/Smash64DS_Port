@@ -1144,16 +1144,21 @@ static s32 ndsAudioFgmIsSamusChargeRoot(u16 id)
  * walked up to 573 32-byte entries -- one cache line each -- per lookup, and
  * every cue start and every live handle's update looks one up. Ids are unique
  * (ndsAudioFgmValidateCachedEntry), so the map names the scan's own first
- * match. An id past the map, or a pack that never loaded, takes the scan. */
+ * match. A pack that never loaded takes the scan; so does an id past the
+ * map, unless the map holds every base id (`complete`): a P4 content's sound
+ * ids all lie past it, and their scan of the whole base pack before the P4
+ * pack's own search was 16K cycles a lookup (perf, 2026-10-18). */
 #define NDS_AUDIO_FGM_ID_MAP_COUNT 688u
 static u16 sNdsAudioFgmIdMap[NDS_AUDIO_FGM_ID_MAP_COUNT];
 static u8 sNdsAudioFgmIdMapReady;
+static u8 sNdsAudioFgmIdMapComplete;
 
 static void ndsAudioFgmBuildIdMap(void)
 {
     u32 i;
 
     memset(sNdsAudioFgmIdMap, 0, sizeof(sNdsAudioFgmIdMap));
+    sNdsAudioFgmIdMapComplete = 1u;
     for (i = NDS_AUDIO_FGM_ENTRY_COUNT; i-- != 0u;)
     {
         u16 id = sNdsAudioFgmEntries[i].id;
@@ -1161,6 +1166,10 @@ static void ndsAudioFgmBuildIdMap(void)
         if (id < NDS_AUDIO_FGM_ID_MAP_COUNT)
         {
             sNdsAudioFgmIdMap[id] = (u16)(i + 1u);
+        }
+        else
+        {
+            sNdsAudioFgmIdMapComplete = 0u;
         }
     }
     sNdsAudioFgmIdMapReady = 1u;
@@ -1211,7 +1220,7 @@ static NDSAudioFgmPackEntry *ndsAudioFgmFindEntry(u16 id)
             return &sNdsAudioFgmEntries[i - 1u];
         }
     }
-    else
+    else if ((sNdsAudioFgmIdMapReady == 0u) || (sNdsAudioFgmIdMapComplete == 0u))
     {
         for (i = 0u; i < NDS_AUDIO_FGM_ENTRY_COUNT; i++)
         {

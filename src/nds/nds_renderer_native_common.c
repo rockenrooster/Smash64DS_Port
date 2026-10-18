@@ -5065,9 +5065,15 @@ sb32 ndsRendererEntryEffectP4Admit(const void *dl, u32 *owner_asset_id,
 }
 
 /* Fighter renderer: a content's model part drawn beside the body (Wolf's
- * gun, joint 17), whose list lives outside the content's model file. */
-sb32 ndsRendererEntryEffectP4Sidecar(u32 content, u32 joint,
-                                     u32 *owner_asset_id, u32 *root_offset)
+ * gun, joint 17), whose list lives outside the content's model file. A
+ * Fox-parent content asks for every draw of every fighter; the answer is a
+ * property of the generated table, so it is memoized per content and joint
+ * (perf, 2026-10-18: four Palutenas, who have none, scanned every root at
+ * 46K cycles a frame). Index 0 of the memo: not looked up yet. */
+#define NDS_ENTRY_P4_SIDECAR_MEMO_CONTENTS 64u
+static u16 sNdsEntryP4SidecarMemo[2][NDS_ENTRY_P4_SIDECAR_MEMO_CONTENTS];
+
+static u32 ndsRendererEntryEffectP4SidecarScan(u32 content, u32 joint)
 {
     u32 p;
 
@@ -5077,13 +5083,39 @@ sb32 ndsRendererEntryEffectP4Sidecar(u32 content, u32 joint,
 
         if (((u32)row->content == content) && ((u32)row->sidecar_joint == joint))
         {
-            *owner_asset_id = row->asset_id;
-            *root_offset = sNdsEntryEffectRoots[
-                NDS_ENTRY_EFFECT_P4_ROOT_FIRST + p].source_offset;
-            return TRUE;
+            return p;
         }
     }
-    return FALSE;
+    return NDS_ENTRY_EFFECT_P4_ROOT_COUNT;
+}
+
+sb32 ndsRendererEntryEffectP4Sidecar(u32 content, u32 joint,
+                                     u32 *owner_asset_id, u32 *root_offset)
+{
+    u32 way = ((joint & 0x80u) != 0u) ? 1u : 0u;
+    u32 p;
+
+    if ((content < NDS_ENTRY_P4_SIDECAR_MEMO_CONTENTS) && ((joint & 0x7Fu) == 17u))
+    {
+        u16 *memo = &sNdsEntryP4SidecarMemo[way][content];
+
+        if (*memo == 0u)
+        {
+            *memo = (u16)(ndsRendererEntryEffectP4SidecarScan(content, joint) + 1u);
+        }
+        p = (u32)*memo - 1u;
+    }
+    else
+    {
+        p = ndsRendererEntryEffectP4SidecarScan(content, joint);
+    }
+    if (p >= NDS_ENTRY_EFFECT_P4_ROOT_COUNT)
+    {
+        return FALSE;
+    }
+    *owner_asset_id = sNdsEntryEffectP4Roots[p].asset_id;
+    *root_offset = sNdsEntryEffectRoots[NDS_ENTRY_EFFECT_P4_ROOT_FIRST + p].source_offset;
+    return TRUE;
 }
 #endif
 
@@ -6413,6 +6445,20 @@ static void __attribute__((noinline, cold)) ndsLabFoxGxHash(u32 root_index,
 volatile u32 gNdsEntryEffectGxPainter __attribute__((used, section(".data"))) =
     1u;
 
+/* Perf (2026-10-18): a Z group with matrix overrides (corners the RSP loaded
+ * under an earlier root's matrix: Palutena's wing seams, Mario's pipe body)
+ * draws through the GX as well. The engine transforms each vertex with the
+ * matrix current when its VTX command arrives, so an override corner's own
+ * modelview is loaded between the corners of the open batch (as skinned
+ * NSBMD lists restore bone matrices between vertices) and the root's put
+ * back after it, where the CPU path transformed and divided every corner of
+ * the group (four Palutenas' smash wings: 240 corners each, ~90K cycles a
+ * heavy frame). The projection stays; lighting stays on the CPU. No-Z
+ * override groups keep the CPU painter. Same-ROM A/B word
+ * gNdsEntryEffectGxOverride (0 = the CPU path). */
+volatile u32 gNdsEntryEffectGxOverride __attribute__((used, section(".data"))) =
+    1u;
+
 static void ndsRendererEntryEffectLoadPainter(
     const NDSRendererMatrix20p12 *composed, s32 depth)
 {
@@ -7253,6 +7299,8 @@ s32 ndsRendererSubmitNativeEntryEffect(
         u32 no_z_group;
         u32 cpu_projected_group;
         u32 gx_painter_group;
+        u32 gx_override_group;
+        u32 loaded_slot;
         s32 painter_depth = 0;
         u32 matrix_override_cursor = 0u;
         const NDSEntryEffectPairState *geometry_state =
@@ -7296,8 +7344,11 @@ s32 ndsRendererSubmitNativeEntryEffect(
         gx_painter_group =
             ((no_z_group != FALSE) && (projected_group == FALSE) &&
              (gNdsEntryEffectGxPainter != 0u)) ? TRUE : FALSE;
+        gx_override_group =
+            ((projected_group != FALSE) && (no_z_group == FALSE) &&
+             (gNdsEntryEffectGxOverride != 0u)) ? TRUE : FALSE;
         cpu_projected_group =
-            ((projected_group != FALSE) ||
+            (((projected_group != FALSE) && (gx_override_group == FALSE)) ||
              ((no_z_group != FALSE) && (gx_painter_group == FALSE))) ?
                 TRUE : FALSE;
         stats->othermode_h = (initial_othermode_h & ~othermode_writes->a) |
@@ -7479,6 +7530,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
         hw_lit_group =
             ((gNdsEntryEffectHwLight >= 2u) && (lit != FALSE) &&
              (cpu_projected_group == FALSE) && (gx_painter_group == FALSE) &&
+             (projected_group == FALSE) &&
              (ramp_palette == 0u) && (use_material_color == FALSE) &&
              ((stats->light_dir_mask & NDS_RENDERER_LIGHT_DIR_1_MASK) != 0u) &&
              ((stats->light_color_mask & NDS_ENTRY_EFFECT_LIGHT_COLORS) ==
@@ -7571,8 +7623,15 @@ s32 ndsRendererSubmitNativeEntryEffect(
         }
 
         corner = 0u;
+        /* The split load above holds the root's modelview. */
+        loaded_slot = root_slot;
+        if (gx_override_group != FALSE)
+        {
+            ndsRendererHardwareFighterSetMatrixMode(GL_MODELVIEW);
+        }
         if ((static_proven != FALSE) && (gNdsEntryEffectFastCorners != 0u) &&
             (cpu_projected_group == FALSE) && (gx_painter_group == FALSE) &&
+            (projected_group == FALSE) &&
             ((hw_lit_group != FALSE) || (ramp_palette != 0u)) &&
             ((sNdsEntryEffectRootCoordsFit[root_index >> 5] &
               (1u << (root_index & 31u))) != 0u) &&
@@ -7701,13 +7760,26 @@ s32 ndsRendererSubmitNativeEntryEffect(
             }
             else
             {
+                if ((gx_override_group != FALSE) && (source_slot != loaded_slot))
+                {
+                    ndsRendererHardwareFighterLoadModelviewWorldScaled(
+                        &sNdsRendererEntryEffectModelview[source_slot]);
+                    loaded_slot = source_slot;
+                }
                 glVertex3v16(
                     ndsRendererEntryEffectCoord(vtx->x),
                     ndsRendererEntryEffectCoord(vtx->y),
                     ndsRendererEntryEffectCoord(vtx->z));
             }
         }
-        if ((cpu_projected_group != FALSE) || (gx_painter_group != FALSE))
+        if (gx_override_group != FALSE)
+        {
+            /* The engine may hold an override's modelview: the next group
+             * loads its own. */
+            sNdsRendererHardwareMatrixLoaded = FALSE;
+        }
+        if ((cpu_projected_group != FALSE) || (gx_painter_group != FALSE) ||
+            (gx_override_group != FALSE))
         {
             ndsRendererHardwareEnterProjectedForeground();
         }
@@ -12729,6 +12801,44 @@ typedef struct NDSFtrLeanVariant
 } NDSFtrLeanVariant;
 #define NDS_FTR_LEAN_VARIANT_WORDS \
     ((u32)((sizeof(NDSFtrLeanVariant) + 3u) / 4u))
+
+/* WIDE LISTS LEARN TOO (2026-10-18). A list past an entry's half (Palutena's
+ * 3,215 words against 3,084) takes the whole region, so no other entry can
+ * hold a fresh materialization to learn a variant from, and every flip of
+ * her blink texture materialized her list again: four Palutenas, 82 a match
+ * at ~600K cycles each, all of them in the P95 tail. The region keeps room
+ * for one learn instead. Before a wide list is materialized again in place
+ * for a key its records lack, its words (at the base record) are copied to
+ * the region's tail with the state a record needs (ndsFtrLeanWideHoldBegin);
+ * after, the fresh words in place are diffed against that copy
+ * (ndsFtrLeanWideLearn) under the same patch-site mask and the same limits
+ * as ndsFtrLeanLearnVariant's two entries, and the held state and the fresh
+ * one become records of the one list. A wide entry's capacity, top down:
+ * its records, the copy, this block, the diff mask; its words from the
+ * bottom. The shape test is ndsFtrLeanSameShape's fields as a hash, since
+ * the held header is gone by the time the fresh one exists. */
+typedef struct NDSFtrLeanWideHold
+{
+    u32 magic;
+    u32 word_count;
+    u32 shape;
+    u32 variant_count;          /* the held entry's records ... */
+    u32 variant_next;
+    u32 variant_max;
+    u32 key[NDS_FTR_LEAN_KEY_WORDS];    /* ... and its base state */
+    u32 fence;
+    u32 fence_needed;
+    u32 all_pinned;
+    u32 texture_count;
+    NDSFighterPacketTexture textures[NDS_FIGHTER_PACKET_TEXTURE_MAX];
+} NDSFtrLeanWideHold;
+#define NDS_FTR_LEAN_WIDE_HOLD_WORDS \
+    ((u32)((sizeof(NDSFtrLeanWideHold) + 31u) / 32u * 8u))
+#define NDS_FTR_LEAN_WIDE_HOLD_MAGIC 0x57484c44u
+/* The words a wide list of `count` words keeps for a learn beyond itself:
+ * the copy, the hold block and the mask. */
+#define NDS_FTR_LEAN_WIDE_RELEARN_WORDS(count) \
+    ((count) + NDS_FTR_LEAN_WIDE_HOLD_WORDS + (((count) + 31u) / 32u))
 /* A learn (or the lab verify) masks the patch sites of the fresh list in the
  * top of that entry's own capacity, which holds no record yet. */
 #define NDS_FTR_LEAN_MASK_WORDS ((NDS_FTR_LEAN_WORD_CAPACITY + 31u) / 32u)
@@ -12853,13 +12963,18 @@ static u32 *ndsFtrLeanEntryWords(u32 slot, u32 entry)
     return ndsFtrLeanEntryBase(slot, entry) + NDS_FTR_LEAN_STRUCT_WORDS;
 }
 
-/* Record `record` of an entry: the tail of its word capacity, top down. */
+/* Record `record` of an entry: the tail of its word capacity, top down (a
+ * wide entry's, the whole region's). */
 static NDSFtrLeanVariant *ndsFtrLeanVariantRecord(u32 slot, u32 entry,
                                                   u32 record)
 {
+    const u32 capacity = ((entry < NDS_FTR_LEAN_ENTRIES) &&
+                          ((sNdsFtrLeanSlots[slot].entry[entry].valid &
+                            NDS_FTR_LEAN_VALID_WIDE) != 0u)) ?
+        ndsFtrLeanWideCapacity() : ndsFtrLeanWordCapacity();
+
     return (NDSFtrLeanVariant *)(void *)(ndsFtrLeanEntryWords(slot, entry) +
-        ndsFtrLeanWordCapacity() -
-        ((record + 1u) * NDS_FTR_LEAN_VARIANT_WORDS));
+        capacity - ((record + 1u) * NDS_FTR_LEAN_VARIANT_WORDS));
 }
 
 /* The active entry's list and state, or NULL. */
@@ -15941,7 +16056,9 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
      * Record). Slice 6: above the texgen site map when the list has one --
      * the map sits right after the words, and Link's lists (28 sites) put
      * records 6-7 over it: the dense slots and site_slot[] would be
-     * overwritten by the seventh learned record. A wide list keeps none. */
+     * overwritten by the seventh learned record. A wide list keeps them
+     * above the room a learn in place takes (NDSFtrLeanWideHold), and at
+     * least two (its base and one more) or none. */
     {
         u32 floor = packet->word_count;
         u32 word_capacity = ndsFtrLeanWordCapacity();
@@ -15952,10 +16069,18 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
             floor = ((floor + 7u) & ~7u) + NDS_FTR_LEAN_TEXGEN_MAP_WORDS;
         }
 #endif
-        es->variant_max = ((wide != FALSE) ||
-                           (floor >= word_capacity)) ? 0u :
+        if (wide != FALSE)
+        {
+            floor += NDS_FTR_LEAN_WIDE_RELEARN_WORDS(packet->word_count);
+            word_capacity = ndsFtrLeanWideCapacity();
+        }
+        es->variant_max = (floor >= word_capacity) ? 0u :
             ((word_capacity - floor) /
              NDS_FTR_LEAN_VARIANT_WORDS);
+        if ((wide != FALSE) && (es->variant_max < 2u))
+        {
+            es->variant_max = 0u;
+        }
         if (es->variant_max > NDS_FTR_LEAN_VARIANT_MAX)
         {
             es->variant_max = NDS_FTR_LEAN_VARIANT_MAX;
@@ -16847,13 +16972,14 @@ static u32 ndsFtrLeanSameShape(const NDSFighterPacket *a,
     return TRUE;
 }
 
-/* The words a per-frame patch rewrites, as a bit mask over the list. */
-static void ndsFtrLeanPatchMask(const NDSFighterPacket *packet, u32 *mask)
+/* The words a per-frame patch rewrites, as a bit mask over the list's
+ * first `word_capacity` words. */
+static void ndsFtrLeanPatchMaskN(const NDSFighterPacket *packet, u32 *mask,
+                                 u32 word_capacity)
 {
     u32 i;
     u32 j;
-    u32 word_capacity = ndsFtrLeanWordCapacity();
-    u32 mask_words = ndsFtrLeanMaskWords();
+    u32 mask_words = (word_capacity + 31u) / 32u;
 
     memset(mask, 0, mask_words * sizeof(u32));
 #define NDS_FTR_LEAN_MASK_SET(index_)                                      \
@@ -16897,6 +17023,12 @@ static void ndsFtrLeanPatchMask(const NDSFighterPacket *packet, u32 *mask)
         }
     }
 #undef NDS_FTR_LEAN_MASK_SET
+}
+
+/* ... over an entry's word capacity. */
+static void ndsFtrLeanPatchMask(const NDSFighterPacket *packet, u32 *mask)
+{
+    ndsFtrLeanPatchMaskN(packet, mask, ndsFtrLeanWordCapacity());
 }
 
 static void ndsFtrLeanVariantReject(u32 reason)
@@ -17091,19 +17223,67 @@ ndsFtrLeanLearnVariant(u32 battle_slot, u32 fresh)
         const u32 *aw = a->words;
         const u32 *bw = b->words;
         const u32 count = a->word_count;
+        /* 2026-10-18: a self-contained root's block is a function of its
+         * key (the premise ndsFtrLeanRootCopy copies on), so a block whose
+         * key, place and polygon-ID base are the same in both lists, and
+         * whose textures the held list still has resident, holds the same
+         * words in both: only the head and the blocks that differ are read.
+         * Both ~12 KB lists word by word were ~77K cycles a learn (four
+         * Bowsers: 12 of a census's 26 over-gate frames learned). */
+        const NDSFtrLeanRootRec *ra = ndsFtrLeanRootRecs(a);
+        const NDSFtrLeanRootRec *rb = ndsFtrLeanRootRecs(b);
+        const u32 recs = ((a->root_rec_count != 0u) &&
+                          (a->root_rec_count == b->root_rec_count) &&
+                          (a->texgen_site_count == 0u) &&
+                          (b->texgen_site_count == 0u)) ?
+            (u32)a->root_rec_count : 0u;
+        u32 pos = 0u;
+        u32 r;
 
-        for (i = 0u; i < count; i++)
+        for (r = 0u; r <= recs; r++)
         {
-            if ((aw[i] != bw[i]) &&
-                (((mask[i >> 5] >> (i & 31u)) & 1u) == 0u))
+            u32 stop = count;
+            u32 next = count;
+
+            if (r < recs)
             {
-                if (n == NDS_FTR_LEAN_VARIANT_DIFF_MAX)
+                const NDSFtrLeanRootRec *x = &ra[r];
+                const NDSFtrLeanRootRec *y = &rb[r];
+
+                if ((x->start < pos) || (x->end < x->start) ||
+                    ((u32)x->end > count))
                 {
-                    ndsFtrLeanVariantReject(3u);
-                    return NDS_FTR_LEAN_ENTRY_NONE;
+                    /* Not in order: compare the rest whole. */
+                    r = recs;
                 }
-                diff_index[n++] = (u16)i;
+                else if ((x->key == y->key) && (x->start == y->start) &&
+                         (x->end == y->end) &&
+                         (x->combine_base == y->combine_base) &&
+                         ((x->flags & y->flags & NDS_FTR_LEAN_ROOT_COPY) != 0u) &&
+                         (ndsFtrLeanRootRecResident(b, y) != FALSE))
+                {
+                    stop = x->start;
+                    next = x->end;
+                }
+                else
+                {
+                    continue;
+                }
             }
+            for (i = pos; i < stop; i++)
+            {
+                if ((aw[i] != bw[i]) &&
+                    (((mask[i >> 5] >> (i & 31u)) & 1u) == 0u))
+                {
+                    if (n == NDS_FTR_LEAN_VARIANT_DIFF_MAX)
+                    {
+                        ndsFtrLeanVariantReject(3u);
+                        return NDS_FTR_LEAN_ENTRY_NONE;
+                    }
+                    diff_index[n++] = (u16)i;
+                }
+            }
+            pos = next;
         }
     }
     if (hs->variant_count == 0u)
@@ -17168,6 +17348,299 @@ ndsFtrLeanLearnVariant(u32 battle_slot, u32 fresh)
     }
 #endif
     return held;
+}
+
+/* ndsFtrLeanSameShape's fields, folded (NDSFtrLeanWideHold). */
+static u32 NDS_FIGHTER_PACKET_COLD_CODE
+ndsFtrLeanShapeHash(const NDSFighterPacket *p, const NDSFtrLeanEntryState *es)
+{
+    u32 h = 2166136261u;
+    u32 i;
+    u32 j;
+
+#define NDS_FTR_LEAN_SHAPE(v_) (h = (h ^ (u32)(v_)) * 16777619u)
+    NDS_FTR_LEAN_SHAPE(p->word_count);
+    NDS_FTR_LEAN_SHAPE(p->root_count);
+    NDS_FTR_LEAN_SHAPE(p->projection_index);
+    NDS_FTR_LEAN_SHAPE(p->light_index);
+    NDS_FTR_LEAN_SHAPE(p->light_root);
+    NDS_FTR_LEAN_SHAPE(p->light_valid);
+    NDS_FTR_LEAN_SHAPE(p->needs_fence);
+    NDS_FTR_LEAN_SHAPE(p->texture_count);
+    NDS_FTR_LEAN_SHAPE(p->texgen_group_count);
+    NDS_FTR_LEAN_SHAPE(p->texgen_site_count);
+    NDS_FTR_LEAN_SHAPE(p->triangle_count);
+    NDS_FTR_LEAN_SHAPE(p->run_count);
+    NDS_FTR_LEAN_SHAPE(p->raw_triangles);
+    NDS_FTR_LEAN_SHAPE(p->raw_reuse);
+    NDS_FTR_LEAN_SHAPE(p->cross_triangles);
+    NDS_FTR_LEAN_SHAPE(p->cross_reuse);
+    NDS_FTR_LEAN_SHAPE(p->batch_begin);
+    NDS_FTR_LEAN_SHAPE(p->batch_reuse);
+    NDS_FTR_LEAN_SHAPE(p->batch_end);
+    NDS_FTR_LEAN_SHAPE(p->prepare_begin);
+    NDS_FTR_LEAN_SHAPE(p->prepare_reuse);
+    NDS_FTR_LEAN_SHAPE(p->matrix_loads);
+    NDS_FTR_LEAN_SHAPE(p->texture_binds);
+    NDS_FTR_LEAN_SHAPE(p->vertex_loads);
+    NDS_FTR_LEAN_SHAPE(p->site_count);
+    NDS_FTR_LEAN_SHAPE(p->tint_bind_count);
+    NDS_FTR_LEAN_SHAPE(p->tint_bind_overflow);
+    NDS_FTR_LEAN_SHAPE(p->fence_other);
+    NDS_FTR_LEAN_SHAPE(p->tint_bind_seen);
+    NDS_FTR_LEAN_SHAPE(es->donor_mask);
+    NDS_FTR_LEAN_SHAPE(es->texgen_map);
+    NDS_FTR_LEAN_SHAPE(es->tint_folds);
+    for (i = 0u; (i < p->root_count) && (i < NDS_FIGHTER_PACKET_ROOT_MAX); i++)
+    {
+        const NDSFighterPacketRoot *x = &p->roots[i];
+
+        NDS_FTR_LEAN_SHAPE(x->seed_index);
+        NDS_FTR_LEAN_SHAPE(x->local_count);
+        NDS_FTR_LEAN_SHAPE(x->parent_slot);
+        NDS_FTR_LEAN_SHAPE(x->store_slot);
+        NDS_FTR_LEAN_SHAPE(x->seed_is_identity);
+        for (j = 0u; j < NDS_FIGHTER_PACKET_LOCAL_MAX; j++)
+        {
+            NDS_FTR_LEAN_SHAPE(x->local_index[j]);
+        }
+    }
+    for (i = 0u; (i < p->site_count) && (i < NDS_FIGHTER_PACKET_SITE_MAX); i++)
+    {
+        const NDSFighterPacketShadeSite *x = &p->sites[i];
+
+        NDS_FTR_LEAN_SHAPE(x->index);
+        NDS_FTR_LEAN_SHAPE(x->root);
+        NDS_FTR_LEAN_SHAPE(x->use_material);
+        NDS_FTR_LEAN_SHAPE(x->prim_from_root);
+        NDS_FTR_LEAN_SHAPE(x->light_color_1);
+        NDS_FTR_LEAN_SHAPE(x->light_color_2);
+        NDS_FTR_LEAN_SHAPE(x->material_color);
+    }
+    for (i = 0u; (i < (u32)p->texgen_group_count) &&
+         (i < NDS_FIGHTER_PACKET_TEXGEN_GROUP_MAX); i++)
+    {
+        const NDSFighterPacketTexgenGroup *x = &p->texgen_groups[i];
+
+        NDS_FTR_LEAN_SHAPE(x->scale_s);
+        NDS_FTR_LEAN_SHAPE(x->scale_t);
+        NDS_FTR_LEAN_SHAPE(x->origin_s);
+        NDS_FTR_LEAN_SHAPE(x->origin_t);
+        NDS_FTR_LEAN_SHAPE(x->offset);
+        NDS_FTR_LEAN_SHAPE(x->first_site);
+        NDS_FTR_LEAN_SHAPE(x->site_count);
+        NDS_FTR_LEAN_SHAPE(x->root);
+    }
+    for (i = 0u; (i < (u32)p->texgen_site_count) &&
+         (i < NDS_FIGHTER_PACKET_TEXGEN_SITE_MAX); i++)
+    {
+        NDS_FTR_LEAN_SHAPE(p->texgen_sites[i].index);
+        NDS_FTR_LEAN_SHAPE(p->texgen_sites[i].dense_id);
+    }
+    for (i = 0u; (i < (u32)p->tint_bind_count) &&
+         (i < NDS_FIGHTER_PACKET_TINT_BIND_MAX); i++)
+    {
+        const NDSFighterPacketTintBind *x = &p->tint_binds[i];
+
+        NDS_FTR_LEAN_SHAPE(x->tex_index);
+        NDS_FTR_LEAN_SHAPE(x->pal_index);
+        NDS_FTR_LEAN_SHAPE(x->root);
+        NDS_FTR_LEAN_SHAPE(x->prim_from_root);
+    }
+#undef NDS_FTR_LEAN_SHAPE
+    return h;
+}
+
+/* A wide entry's hold block for a list of `count` words and `records`
+ * records, or NULL when its capacity leaves no room for one. */
+static NDSFtrLeanWideHold *ndsFtrLeanWideHoldAt(u32 battle_slot, u32 count,
+                                                u32 records)
+{
+    const u32 top = records * NDS_FTR_LEAN_VARIANT_WORDS;
+    const u32 capacity = ndsFtrLeanWideCapacity();
+
+    if ((records < 2u) ||
+        ((top + count + NDS_FTR_LEAN_WIDE_RELEARN_WORDS(count)) > capacity))
+    {
+        return NULL;
+    }
+    return (NDSFtrLeanWideHold *)(void *)(ndsFtrLeanEntryWords(battle_slot, 0u) +
+        capacity - top - count - NDS_FTR_LEAN_WIDE_HOLD_WORDS);
+}
+
+u32 NDS_FIGHTER_PACKET_COLD_CODE ndsFtrLeanWideHoldBegin(u32 battle_slot)
+{
+    NDSFtrLeanSlotState *s;
+    NDSFtrLeanEntryState *es;
+    NDSFighterPacket *packet;
+    NDSFtrLeanWideHold *hold;
+    u32 i;
+
+    if (battle_slot >= NDS_FIGHTER_PACKET_SLOTS)
+    {
+        return FALSE;
+    }
+    s = &sNdsFtrLeanSlots[battle_slot];
+    es = &s->entry[0];
+    if (((es->valid & NDS_FTR_LEAN_VALID_WIDE) == 0u) || (s->phys_on != 0u) ||
+        (ndsFtrLeanEntryStale(es, ndsFtrLeanFenceNow()) != FALSE))
+    {
+        return FALSE;
+    }
+    packet = ndsFtrLeanEntryPacket(battle_slot, 0u);
+    hold = ndsFtrLeanWideHoldAt(battle_slot, packet->word_count,
+                                es->variant_max);
+    if (hold == NULL)
+    {
+        return FALSE;
+    }
+    /* The records are differences from the base: the words at it. */
+    if ((es->variant_count != 0u) && (es->variant_cur != 0u))
+    {
+        (void)ndsFtrLeanVariantSwitch(battle_slot, 0u, 0u);
+    }
+    memcpy((u32 *)(void *)hold + NDS_FTR_LEAN_WIDE_HOLD_WORDS, packet->words,
+           packet->word_count * sizeof(u32));
+    hold->magic = NDS_FTR_LEAN_WIDE_HOLD_MAGIC;
+    hold->word_count = packet->word_count;
+    hold->shape = ndsFtrLeanShapeHash(packet, es);
+    hold->variant_count = es->variant_count;
+    hold->variant_next = es->variant_next;
+    hold->variant_max = es->variant_max;
+    for (i = 0u; i < NDS_FTR_LEAN_KEY_WORDS; i++)
+    {
+        hold->key[i] = es->key[i];
+    }
+    hold->fence = es->fence;
+    hold->fence_needed = es->fence_needed;
+    hold->all_pinned = es->all_pinned;
+    hold->texture_count = packet->texture_count;
+    memcpy(hold->textures, packet->textures,
+           (u32)packet->texture_count * sizeof(packet->textures[0]));
+    return TRUE;
+}
+
+void NDS_FIGHTER_PACKET_COLD_CODE ndsFtrLeanWideLearn(u32 battle_slot)
+{
+    NDSFtrLeanSlotState *s;
+    NDSFtrLeanEntryState *es;
+    NDSFighterPacket *packet;
+    NDSFtrLeanWideHold *hold;
+    NDSFtrLeanVariant *v;
+    const u32 *copy;
+    u32 *mask;
+    u32 record;
+    u32 count;
+    u32 n = 0u;
+    u32 i;
+    u16 diff_index[NDS_FTR_LEAN_VARIANT_DIFF_MAX];
+
+    if (battle_slot >= NDS_FIGHTER_PACKET_SLOTS)
+    {
+        return;
+    }
+    s = &sNdsFtrLeanSlots[battle_slot];
+    es = &s->entry[0];
+    if (((es->valid & NDS_FTR_LEAN_VALID_WIDE) == 0u) || (s->phys_on != 0u))
+    {
+        return;
+    }
+    packet = ndsFtrLeanEntryPacket(battle_slot, 0u);
+    count = packet->word_count;
+    /* Where the held list's block sat if the fresh list has its shape. */
+    hold = ndsFtrLeanWideHoldAt(battle_slot, count, es->variant_max);
+    if ((hold == NULL) || (hold->magic != NDS_FTR_LEAN_WIDE_HOLD_MAGIC) ||
+        (hold->word_count != count) ||
+        (hold->variant_max != es->variant_max) ||
+        (hold->texture_count != packet->texture_count))
+    {
+        return;
+    }
+    hold->magic = 0u;
+    if (ndsFtrLeanShapeHash(packet, es) != hold->shape)
+    {
+        ndsFtrLeanVariantReject(1u);
+        return;
+    }
+    copy = (const u32 *)(const void *)hold + NDS_FTR_LEAN_WIDE_HOLD_WORDS;
+    mask = (u32 *)(void *)hold - ((count + 31u) / 32u);
+    ndsFtrLeanPatchMaskN(packet, mask, count);
+    for (i = 0u; i < count; i++)
+    {
+        if ((packet->words[i] != copy[i]) &&
+            (((mask[i >> 5] >> (i & 31u)) & 1u) == 0u))
+        {
+            if (n == NDS_FTR_LEAN_VARIANT_DIFF_MAX)
+            {
+                ndsFtrLeanVariantReject(3u);
+                return;
+            }
+            diff_index[n++] = (u16)i;
+        }
+    }
+    es->variant_count = hold->variant_count;
+    es->variant_next = hold->variant_next;
+    if (es->variant_count == 0u)
+    {
+        /* Record 0: the held state, the base the copy holds. */
+        v = ndsFtrLeanVariantRecord(battle_slot, 0u, 0u);
+        memset(v, 0, sizeof(*v));
+        for (i = 0u; i < NDS_FTR_LEAN_KEY_WORDS; i++)
+        {
+            v->key[i] = hold->key[i];
+        }
+        v->fence = hold->fence;
+        v->fence_needed = (u8)hold->fence_needed;
+        v->all_pinned = (u8)hold->all_pinned;
+        memcpy(v->textures, hold->textures,
+               hold->texture_count * sizeof(hold->textures[0]));
+        es->variant_count = 1u;
+        es->variant_next = 1u;
+    }
+    if (es->variant_count < es->variant_max)
+    {
+        record = es->variant_count++;
+    }
+    else
+    {
+        record = es->variant_next;
+        es->variant_next = (record + 1u < es->variant_max) ? (record + 1u) : 1u;
+        NDS_FTR_LEAN_CTR(gNdsFtrLean.variant_evictions++);
+    }
+    /* The fresh state, which the words in place already hold. */
+    v = ndsFtrLeanVariantRecord(battle_slot, 0u, record);
+    memset(v, 0, sizeof(*v));
+    for (i = 0u; i < NDS_FTR_LEAN_KEY_WORDS; i++)
+    {
+        v->key[i] = es->key[i];
+    }
+    for (i = 0u; i < n; i++)
+    {
+        const u32 word = diff_index[i];
+
+        v->index[i] = (u16)word;
+        v->base[i] = copy[word];
+        v->value[i] = packet->words[word];
+    }
+    v->diff_count = (u8)n;
+    v->fence = es->fence;
+    v->fence_needed = (u8)es->fence_needed;
+    v->all_pinned = (u8)es->all_pinned;
+    memcpy(v->textures, packet->textures,
+           (u32)packet->texture_count * sizeof(packet->textures[0]));
+    es->variant_cur = record;
+#if NDS_FTR_LEAN_LAB
+    gNdsFtrLean.variants_learned++;
+    gNdsFtrLean.variant_diff_words += n;
+    if (n > gNdsFtrLean.variant_diff_max)
+    {
+        gNdsFtrLean.variant_diff_max = n;
+    }
+    if (s->kind < NDS_FTR_LEAN_KINDS)
+    {
+        gNdsFtrLean.k_variants_learned[s->kind]++;
+    }
+#endif
 }
 
 /* Lab: the list an event re-selected (an entry or a record of one) against a
@@ -17853,12 +18326,9 @@ ndsFtrLeanPacketSubmit(u32 battle_slot)
         return 0u;
     }
     words = packet->words;
-    if (((NDS_FTR_LEAN_SLOW_WORD() & NDS_FTR_LEAN_SLOW_SUBMIT) != 0u) ||
-        ((state->valid & NDS_FTR_LEAN_VALID_WIDE) != 0u))
+    if ((NDS_FTR_LEAN_SLOW_WORD() & NDS_FTR_LEAN_SLOW_SUBMIT) != 0u)
     {
-        /* Slice 1's form: clean the whole list. Slice 6: also a wide list's
-         * (its patch sites run past the entry-sized dirty marks; a wide list
-         * is a high-detail state -- pause, DeadUp). */
+        /* Slice 1's form: clean the whole list. */
         memset(state->dirty, 0, sizeof(state->dirty));
         flushed = packet->word_count * sizeof(u32);
         DC_FlushRange(words, flushed);
@@ -17866,6 +18336,23 @@ ndsFtrLeanPacketSubmit(u32 battle_slot)
     else
     {
         flushed = ndsFtrLeanFlushDirty(state, words);
+        if ((state->valid & NDS_FTR_LEAN_VALID_WIDE) != 0u)
+        {
+            /* Slice 6: a wide list's patch sites run past the entry-sized
+             * dirty marks, so the lines past them are cleaned every draw
+             * and the marked ones below as any list's (2026-10-18: four
+             * Palutenas' wide lists, ~400 lines each, were cleaned whole
+             * every frame). */
+            const uintptr_t marked_end = ((uintptr_t)words & ~(uintptr_t)31u) +
+                (NDS_FTR_LEAN_DIRTY_LINES * 32u);
+            const uintptr_t end = (uintptr_t)(words + packet->word_count);
+
+            if (end > marked_end)
+            {
+                DC_FlushRange((const void *)marked_end, (u32)(end - marked_end));
+                flushed += (u32)(end - marked_end);
+            }
+        }
     }
     NDS_FTR_LEAN_CTR(gNdsFtrLean.flush_bytes += flushed);
     (void)flushed;
@@ -18405,6 +18892,17 @@ u32 ndsFtrLeanLearnVariant(u32 battle_slot, u32 fresh)
     (void)battle_slot;
     (void)fresh;
     return NDS_FTR_LEAN_ENTRY_NONE;
+}
+
+u32 ndsFtrLeanWideHoldBegin(u32 battle_slot)
+{
+    (void)battle_slot;
+    return FALSE;
+}
+
+void ndsFtrLeanWideLearn(u32 battle_slot)
+{
+    (void)battle_slot;
 }
 
 void ndsFtrLeanVerifyEntries(u32 battle_slot, u32 held, u32 fresh)

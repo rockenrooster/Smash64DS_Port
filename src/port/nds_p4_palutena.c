@@ -1313,6 +1313,12 @@ typedef struct NDSP4PalLight
     s32 motion;                 /* the move `offset` was taken in */
     u8 anchored;                /* `offset` held */
     u8 ring;                    /* the last window's ring */
+    u8 live[2];                 /* the glow's, the light's effect may exist */
+    /* The windows of the move they were found for (motion_id + 1): a move's
+     * windows are found once, not twice a tic (perf, 2026-10-18). */
+    s32 window_motion;
+    const struct NDSP4PalLightWindow *glow_w;
+    const struct NDSP4PalLightWindow *light_w;
 } NDSP4PalLight;
 
 static NDSP4PalLight sNdsP4PalutenaLight[GMCOMMON_PLAYERS_MAX];
@@ -1418,11 +1424,21 @@ static f32 ndsP4PalutenaLightLevel(const NDSP4PalLightWindow *w, f32 frame)
     return ((f32)w->last - frame) / (f32)(w->last - w->fade);
 }
 
-/* The effect showing `level` (made or found), or NULL once it shows none. */
-static GObj *ndsP4PalutenaLightEffect(GObj *fighter_gobj, EFDesc *desc, f32 level, const Vec3f *pos)
+/* The effect showing `level` (made or found), or NULL once it shows none.
+ * `live` says one may exist: the search over every effect (a status change
+ * that stops her attached effects ends it too, so it is never cached) runs
+ * only then or when one must show (perf, 2026-10-18: four Palutenas searched
+ * twice a tic each, light or not, 14K cycles a frame). */
+static GObj *ndsP4PalutenaLightEffect(GObj *fighter_gobj, EFDesc *desc, f32 level, const Vec3f *pos,
+                                      u8 *live)
 {
-    GObj *effect_gobj = ndsP4PalutenaLightFind(fighter_gobj, desc);
+    GObj *effect_gobj;
 
+    if ((level < PAL_LIGHT_SHOWN) && (*live == 0u))
+    {
+        return NULL;
+    }
+    effect_gobj = ndsP4PalutenaLightFind(fighter_gobj, desc);
     if (level < PAL_LIGHT_SHOWN)
     {
         if (effect_gobj != NULL)
@@ -1430,8 +1446,10 @@ static GObj *ndsP4PalutenaLightEffect(GObj *fighter_gobj, EFDesc *desc, f32 leve
             efManagerSetPrevStructAlloc(efGetStruct(effect_gobj));
             gcEjectGObj(effect_gobj);
         }
+        *live = 0u;
         return NULL;
     }
+    *live = 1u;
     if (effect_gobj == NULL)
     {
         effect_gobj = ndsP4EntryMakeEffect(desc, pos);
@@ -1554,12 +1572,17 @@ static void ndsP4PalutenaLight(GObj *fighter_gobj, FTStruct *fp)
     Vec3f to = { 0.0F, 0.0F, 1.0F };
     f32 level;
 
-    level = ndsP4PalutenaLightNext(
-        ndsP4PalutenaLightLevel(ndsP4PalutenaLightWindow(sNdsP4PalutenaGlowWindows,
-                                                         ARRAY_COUNT(sNdsP4PalutenaGlowWindows),
-                                                         fp->motion_id),
-                                frame),
-        state->glow);
+    if (state->window_motion != (fp->motion_id + 1))
+    {
+        state->window_motion = fp->motion_id + 1;
+        state->glow_w = ndsP4PalutenaLightWindow(sNdsP4PalutenaGlowWindows,
+                                                 ARRAY_COUNT(sNdsP4PalutenaGlowWindows),
+                                                 fp->motion_id);
+        state->light_w = ndsP4PalutenaLightWindow(sNdsP4PalutenaLightWindows,
+                                                  ARRAY_COUNT(sNdsP4PalutenaLightWindows),
+                                                  fp->motion_id);
+    }
+    level = ndsP4PalutenaLightNext(ndsP4PalutenaLightLevel(state->glow_w, frame), state->glow);
     state->glow = level;
     if (level >= PAL_LIGHT_SHOWN)
     {
@@ -1573,7 +1596,8 @@ static void ndsP4PalutenaLight(GObj *fighter_gobj, FTStruct *fp)
     {
         pos = origin;
     }
-    effect_gobj = ndsP4PalutenaLightEffect(fighter_gobj, &sNdsP4PalutenaGlowDesc, level, &pos);
+    effect_gobj = ndsP4PalutenaLightEffect(fighter_gobj, &sNdsP4PalutenaGlowDesc, level, &pos,
+                                           &state->live[0]);
     if (effect_gobj != NULL)
     {
         DObj *root = DObjGetStruct(effect_gobj);
@@ -1583,8 +1607,7 @@ static void ndsP4PalutenaLight(GObj *fighter_gobj, FTStruct *fp)
         root->scale.vec.f.x = root->scale.vec.f.y = root->scale.vec.f.z = size;
     }
 
-    w = ndsP4PalutenaLightWindow(sNdsP4PalutenaLightWindows,
-                                 ARRAY_COUNT(sNdsP4PalutenaLightWindows), fp->motion_id);
+    w = state->light_w;
     ndsP4PalutenaLightAnchor(fighter_gobj, fp, state, w, frame);
     level = ndsP4PalutenaLightNext(ndsP4PalutenaLightLevel(w, frame), state->light);
     state->light = level;
@@ -1607,7 +1630,8 @@ static void ndsP4PalutenaLight(GObj *fighter_gobj, FTStruct *fp)
             /* The move cut short: it fades where it was. */
             pos = state->last_pos;
         }
-        effect_gobj = ndsP4PalutenaLightEffect(fighter_gobj, &sNdsP4PalutenaLightDesc, level, &pos);
+        effect_gobj = ndsP4PalutenaLightEffect(fighter_gobj, &sNdsP4PalutenaLightDesc, level, &pos,
+                                               &state->live[1]);
         if (effect_gobj != NULL)
         {
             DObj *root = DObjGetStruct(effect_gobj);
@@ -1645,11 +1669,23 @@ static void ndsP4PalutenaLight(GObj *fighter_gobj, FTStruct *fp)
             ring_l->translate.vec.f.y = ring_r->translate.vec.f.y = PAL_RING_UP - PAL_ORB_UP;
             ring_l->scale.vec.f.x = ring_l->scale.vec.f.y = ring_size;
             ring_r->scale.vec.f.x = ring_r->scale.vec.f.y = ring_size;
+            /* Not drawn at all outside the taunt (two native cards a frame). */
+            if (ring_size > 0.0F)
+            {
+                ring_l->flags &= ~DOBJ_FLAG_HIDDEN;
+                ring_r->flags &= ~DOBJ_FLAG_HIDDEN;
+            }
+            else
+            {
+                ring_l->flags |= DOBJ_FLAG_HIDDEN;
+                ring_r->flags |= DOBJ_FLAG_HIDDEN;
+            }
         }
     }
     else
     {
-        (void)ndsP4PalutenaLightEffect(fighter_gobj, &sNdsP4PalutenaLightDesc, level, &origin);
+        (void)ndsP4PalutenaLightEffect(fighter_gobj, &sNdsP4PalutenaLightDesc, level, &origin,
+                                       &state->live[1]);
     }
 }
 

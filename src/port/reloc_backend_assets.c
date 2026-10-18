@@ -4850,6 +4850,18 @@ static u32 ndsRelocP2FighterAnimAssetIDForToken(u32 token)
 
 static u32 ndsRelocAssetIDForTokenChain(u32 token)
 {
+#if NDS_P4
+    /* A P4 numeric donor id lies past every row below -- the source's own
+     * ids end at 0x853, and the rows compare those or link addresses -- so
+     * the last row's answer is given first rather than after several hundred
+     * compares (perf, 2026-10-18: a P4 clip fetch whose token the memo had
+     * lost walked the whole chain, 14.5K cycles). */
+    if ((token >= 0x854u) && (token < 0x10000u))
+    {
+        return (ndsP4RelocAssetPath(token) != NULL) ?
+            token : NDS_RELOC_ASSET_INVALID;
+    }
+#endif
 #if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS
     u32 p2_anim_asset_id = ndsRelocP2FighterAnimAssetIDForToken(token);
 

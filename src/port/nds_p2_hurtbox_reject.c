@@ -734,6 +734,23 @@ static const NDSR2CfxMtx *ndsP2HbWorldOf(DObj *joint, NDSR2CfxMtx *scratch,
  * 2026-10-05_float-census). Scales at Q16; the column divide is one hardware
  * reciprocal an axis. `parent` is NULL at the topology root, whose local takes
  * no parent scale. 0 = a value outside the guards (the float chain decides). */
+/* 2^32 / scale for a parent's accumulated scale at Q16, memoized per axis
+ * as the lean builder's (perf, 2026-10-18): a scaled chain carries one
+ * accumulated scale down most of its joints. */
+static int32_t sNdsP2HbLockInvIn[3];
+static int32_t sNdsP2HbLockInvOut[3];
+
+static inline int32_t ndsP2HbLockInv(u32 axis, int32_t scale)
+{
+    if (scale != sNdsP2HbLockInvIn[axis])
+    {
+        sNdsP2HbLockInvOut[axis] =
+            (int32_t)NDS_R2_CFX_DIV64((int64_t)1 << 32, scale);
+        sNdsP2HbLockInvIn[axis] = scale;
+    }
+    return sNdsP2HbLockInvOut[axis];
+}
+
 static int ndsP2HbLocalLock(NDSR2CfxMtx *dst, int32_t nscale[3],
                             const DObj *dobj, const int32_t parent[3])
 {
@@ -798,8 +815,7 @@ static int ndsP2HbLocalLock(NDSR2CfxMtx *dst, int32_t nscale[3],
                 {
                     return 0;
                 }
-                inv[row] = (int32_t)NDS_R2_CFX_DIV64((int64_t)1 << 32,
-                                                     parent[row]);
+                inv[row] = ndsP2HbLockInv(row, parent[row]);
             }
         }
         nscale[row] = s;

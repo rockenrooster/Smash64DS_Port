@@ -505,6 +505,30 @@ void ndsFtrLeanNoteRebind(u32 player_slot)
  * campaign walks. */
 volatile u32 gNdsFtrLeanLockFail;
 
+/* (s32)((1.0F / inv) * 256.0F) for an accumulated scale `inv` at Q16. A
+ * unit scale is 256 exactly; any other is the hardware divide, memoized per
+ * axis: a scaled chain's joints mostly carry their parent's accumulated
+ * scale on (a scaled root over unit joints), so the value an axis divided
+ * by last usually comes back (perf, 2026-10-18: four Bowsers spent 27% of
+ * this builder waiting on the divider). */
+static s32 sNdsFtrLeanLockInvIn[3] = { 1 << 16, 1 << 16, 1 << 16 };
+static s32 sNdsFtrLeanLockInvOut[3] = { 256, 256, 256 };
+
+static inline s32 ndsFtrLeanLockInv(u32 axis, s32 inv)
+{
+    if (inv == (1 << 16))
+    {
+        return 256;
+    }
+    if (inv != sNdsFtrLeanLockInvIn[axis])
+    {
+        sNdsFtrLeanLockInvOut[axis] =
+            (s32)ndsR2HwMathDivideFast((s64)1 << 24, inv);
+        sNdsFtrLeanLockInvIn[axis] = inv;
+    }
+    return sNdsFtrLeanLockInvOut[axis];
+}
+
 /* ARM state (2026-10-06): its 64-bit products were nine __aeabi_lmul calls
  * a joint in Thumb (every Yoshi motion locks). noinline: GCC inlines an ARM
  * function into a Thumb caller and compiles it as Thumb, which kept all nine
@@ -619,13 +643,10 @@ ndsFtrLeanLockLocal(DObj *dobj, s32 *accum, s32 *cells, u32 *has_local)
     scay_l = vec_y >> 8;
     scaz_l = vec_z >> 8;
     /* A unit parent scale (most of a lock chain) divides exactly to 256:
-     * no hardware divide. */
-    scax_inv_l = (inv_x == (1 << 16)) ? 256 :
-        (s32)ndsR2HwMathDivideFast((s64)1 << 24, inv_x);
-    scay_inv_l = (inv_y == (1 << 16)) ? 256 :
-        (s32)ndsR2HwMathDivideFast((s64)1 << 24, inv_y);
-    scaz_inv_l = (inv_z == (1 << 16)) ? 256 :
-        (s32)ndsR2HwMathDivideFast((s64)1 << 24, inv_z);
+     * no hardware divide; a repeated one takes its memo. */
+    scax_inv_l = ndsFtrLeanLockInv(0u, inv_x);
+    scay_inv_l = ndsFtrLeanLockInv(1u, inv_y);
+    scaz_inv_l = ndsFtrLeanLockInv(2u, inv_z);
 
     /* lbCommonMatrixTraRotScaInv's 3x3, row-major at 16.16. */
     cells[0] = (((((cosy * cosz) >> 14) * scax_l) >> 8) * scax_inv_l) >> 8;
@@ -1758,6 +1779,7 @@ rows:
     else
     {
         u32 reason;
+        u32 wide_hold;
 
         if (reuse_plan != FALSE)
         {
@@ -1798,6 +1820,9 @@ rows:
             goto listed;
         }
         ndsFtrLeanNoteKeyMiss(slot, key);
+        /* A wide list about to be materialized again in place keeps its
+         * words for the learn below (2026-10-18). */
+        wide_hold = ndsFtrLeanWideHoldBegin(slot);
         reason = ndsFtrLeanBuildRows(inst, count);
         if (reason == 0u)
         {
@@ -1823,6 +1848,10 @@ rows:
         }
         else
         {
+            if (wide_hold != FALSE)
+            {
+                ndsFtrLeanWideLearn(slot);
+            }
             (void)ndsFtrLeanEntryActivate(slot, entry);
         }
 #if NDS_FTR_LEAN_LAB

@@ -1231,6 +1231,32 @@ static void ndsMenuShellCssSyncTeamSelectAll(void)
  * (mnmessage.c:284-301) -- so entry is the only seam that must place them.
  * One blit for all four keeps it a single NitroFS open on a load frame, the
  * same budget the four gate panels already pay. */
+#if NDS_P4
+/* P7 U7: a cell the save locks draws Remix's NONE plate (the bake's
+ * CSS_LOCKED_CELL<n>_READY<r>, READY-aware as the flashes are); a selection
+ * this build does not compile is baked so already. Appends READY state
+ * `ready`'s covers to `list` from `n`; returns the new count. */
+static u32 ndsMenuShellCssLockedCellCovers(NdsUiKitSurfaceId *list, u32 n,
+                                           u32 ready)
+{
+    u32 cell;
+
+    for (cell = 0u; cell < (u32)NDS_P4_CSS_CELLS; cell++)
+    {
+        u32 sel = (u32)kNdsP4CssCellSel[cell];
+
+        if ((sel == (u32)nFTKindNull) || (sel == NDS_P4_SEL_RANDOM) ||
+            (ndsMenuShellCssProgressLocked(sel) == FALSE))
+        {
+            continue;
+        }
+        list[n++] = (NdsUiKitSurfaceId)(NDS_MN_UI_KIT_SURFACE_CSS_LOCKED_CELL00_READY0 +
+                                        (cell * 2u) + ready);
+    }
+    return n;
+}
+#endif
+
 static void ndsMenuShellCssSyncLockedCells(void)
 {
     NdsUiKitSurfaceId list[4];
@@ -1239,37 +1265,13 @@ static void ndsMenuShellCssSyncLockedCells(void)
 
 #if NDS_P4
     {
-        /* P7 U7: a cell the save locks draws Remix's NONE plate (the bake's
-         * CSS_LOCKED_CELL<n>_READY<r>, READY-aware as the flashes are); a
-         * selection this build does not compile is baked so already. */
-        NdsUiKitSurfaceId cells[8];
-        u32 ready = (sCssReadyShown == 1u) ? 1u : 0u;
-        u32 n = 0u;
-        u32 cell;
+        NdsUiKitSurfaceId cells[NDS_P4_CSS_CELLS];
+        u32 n = ndsMenuShellCssLockedCellCovers(
+            cells, 0u, (sCssReadyShown == 1u) ? 1u : 0u);
 
         (void)list;
         (void)count;
         (void)portrait;
-        for (cell = 0u; cell < (u32)NDS_P4_CSS_CELLS; cell++)
-        {
-            u32 sel = (u32)kNdsP4CssCellSel[cell];
-
-            if ((sel == (u32)nFTKindNull) || (sel == NDS_P4_SEL_RANDOM) ||
-                (ndsMenuShellCssProgressLocked(sel) == FALSE))
-            {
-                continue;
-            }
-            cells[n++] = (NdsUiKitSurfaceId)(NDS_MN_UI_KIT_SURFACE_CSS_LOCKED_CELL00_READY0 +
-                                             (cell * 2u) + ready);
-            if (n == (u32)(sizeof(cells) / sizeof(cells[0])))
-            {
-                if (ndsUiKitBlitSurfaces(cells, n) != FALSE)
-                {
-                    gNdsMenuShellCssPanelBlitCount += n;
-                }
-                n = 0u;
-            }
-        }
         if ((n != 0u) && (ndsUiKitBlitSurfaces(cells, n) != FALSE))
         {
             gNdsMenuShellCssPanelBlitCount += n;
@@ -2443,11 +2445,29 @@ static void ndsMenuShellCssShowReady(u32 lit)
     NdsUiKitSurfaceId state = (lit != FALSE) ?
         NDS_MN_UI_KIT_SURFACE_CSS_READY_ON :
         NDS_MN_UI_KIT_SURFACE_CSS_READY_OFF;
+#if NDS_P4
+    /* The READY band (0,71,320,22) crosses the bottom portrait row, and its
+     * state surface restores the unlocked base there: the covers of what the
+     * save locks ride the same blit, right behind it. Re-covering after the
+     * foreground and flash blits below (several NitroFS opens) let the
+     * display scan the band out between, so a blink edge sometimes showed a
+     * locked fighter (owner BUGS.md, CSS). */
+    NdsUiKitSurfaceId band[1u + NDS_P4_CSS_CELLS];
+    u32 band_count;
 
+    band[0] = state;
+    band_count = ndsMenuShellCssLockedCellCovers(band, 1u,
+                                                 (lit != FALSE) ? 1u : 0u);
+    if (ndsUiKitBlitSurfaces(band, band_count) != FALSE)
+    {
+        gNdsMenuShellCssPanelBlitCount += band_count;
+    }
+#else
     if (ndsUiKitBlitSurfaces(&state, 1u) != FALSE)
     {
         gNdsMenuShellCssPanelBlitCount++;
     }
+#endif
     ndsUiKitClearForegroundRect(NDS_CSS_DS(0), NDS_CSS_DS(71),
                                 (u32)NDS_CSS_DS(320),
                                 18u); /* baked 22-source-row box -> 18 DS rows */
@@ -2482,10 +2502,12 @@ static void ndsMenuShellCssShowReady(u32 lit)
      * flash.  Its state surface overwrites the overlap, so re-apply only live
      * flash rectangles using the matching READY-aware baked variant. */
     ndsMenuShellCssRedrawVisibleFlashes();
+#if !NDS_P4
     /* The READY band (0,71,320,22) crosses the bottom portrait row, and its
      * state surface restores the unlocked base there -- so a blink edge would
      * erase rows 71..93 of a save-locked cell. Re-cover what the save locks. */
     ndsMenuShellCssSyncLockedCells();
+#endif
 }
 
 /* --- Actions -------------------------------------------------------------- */
@@ -3810,6 +3832,29 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
                         label = (sCssIsTeamBattle != FALSE) ?
                             NDS_MN_UI_KIT_SURFACE_CSS_MODE_TEAM :
                             NDS_MN_UI_KIT_SURFACE_CSS_MODE_FFA;
+#if NDS_P4
+                        {
+                            /* The mode label box (27,24,113,22) crosses the
+                             * top portrait row and its state surface
+                             * restores the unlocked base there: the locked
+                             * covers ride the same blit (as the READY band's,
+                             * ndsMenuShellCssShowReady). */
+                            NdsUiKitSurfaceId box[1u + NDS_P4_CSS_CELLS];
+                            u32 box_count;
+
+                            box[0] = label;
+                            box_count = ndsMenuShellCssLockedCellCovers(
+                                box, 1u, (sCssReadyShown == 1u) ? 1u : 0u);
+                            if (ndsUiKitBlitSurfaces(box, box_count) != FALSE)
+                            {
+                                gNdsMenuShellCssPanelBlitCount += box_count;
+                                if (sCssEntryStatesShown != 0u)
+                                {
+                                    sCssEntryStatesShown = (u32)label + 1u;
+                                }
+                            }
+                        }
+#else
                         if (ndsUiKitBlitSurfaces(&label, 1u) != FALSE)
                         {
                             gNdsMenuShellCssPanelBlitCount++;
@@ -3818,6 +3863,7 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
                                 sCssEntryStatesShown = (u32)label + 1u;
                             }
                         }
+#endif
                         /* mnPlayersVSUpdateGameMode:1918 stops every current FGM
                          * before the scroll and new mode announcement. */
                         ndsAudioFgmStopAll();
@@ -3828,10 +3874,12 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
                          * source DL-34 selectors are foreground BG3. */
                         ndsMenuShellCssSyncPanels((u32)NDS_CSS_SLOTS);
                         ndsMenuShellCssSyncTeamSelectAll();
+#if !NDS_P4
                         /* The mode label box (27,24,113,22) crosses the top
                          * portrait row, and its state surface restores the
                          * unlocked base there -- re-cover what the save locks. */
                         ndsMenuShellCssSyncLockedCells();
+#endif
                         gNdsMenuShellCssModeToggleCount++;
                         return;
                     }
