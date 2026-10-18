@@ -498,7 +498,10 @@ void sc1PManagerUpdateScene(void)
 
         gNdsP7LabChallengerRow = 0xFFu;
         ndsP7SetupPlayer();
-        gNdsP7LabChallengerResult = (u32)ndsP7FightChallenger(row);
+        /* A stage row has no challenger: its message alone. */
+        gNdsP7LabChallengerResult =
+            (ndsP7UnlockRow(row)->kind == NDS_P7_UNLOCK_STAGE) ? 1u :
+            (u32)ndsP7FightChallenger(row);
         if (gNdsP7LabChallengerResult == 1u)
         {
             /* Its message (U6), as a win shows it; nothing is unlocked. */

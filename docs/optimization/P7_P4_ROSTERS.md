@@ -7,9 +7,12 @@ the mirror rosters did not. This file records what the census found and what
 each pass changed. Gate: WORK P95 <= 1,120,000.
 
 **Owner, 2026-10-18:** the 1,120,000 gate (>= 95% of frames within two
-VBlanks) holds for original-cast and mixed rosters; four IDENTICAL heavy
-P4/P6 contents get a stress target: P95 <= 1,250,000 and >= 90% of frames
-within two VBlanks.
+VBlanks) holds for the original cast on every stage (Hyrule Temple and the
+busy stages included); four heavy P4/P6 contents -- four IDENTICAL ones
+(mirrors) or four DIFFERENT ones (mixes, approved that evening) -- get a
+stress target: P95 <= 1,250,000 and >= 90% of frames within two VBlanks.
+Hyrule Temple's scenery may be simplified so its compiled stage fits, the
+owner seeing screenshots first.
 
 ## Dream Land, 1,960 frames, WORK P95
 
