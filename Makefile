@@ -1828,6 +1828,9 @@ NDS_R2_FIGHTER_SHUFFLE_FOLD ?= 0
 # with this off -- and off is the configuration that resembles the published
 # ROM, which has no such block. On for a device read or a screenshot.
 NDS_TICK_HUD_DRAW ?= 1
+# Samples per bucket in the tick HUD's ring (src/nds/nds_platform.c). The gate
+# ROM takes 32 (below); scripts/sample-tick-hud-buckets.ps1 reads it from the ELF.
+NDS_TICK_HUD_WINDOW ?= 128
 # P2-2p8 (2026-10-04): the developer FPS console's periodic rows (FPS/UP, SLIP,
 # VBI, GIT) beside it, same reasoning: the sampler reads the counters, never
 # the console text (src/nds/nds_platform.c).
@@ -2925,6 +2928,13 @@ override NDS_BATTLE_FPS_HUD_DRAW := 0
 # D12a: the fine span clocks too (~120 reads a frame); a run that wants the
 # per-bucket breakdown pokes gNdsTickHudSpans=1 at boot.
 override NDS_TICK_HUD_SPANS_DEFAULT := 0
+# 2026-10-18: the ring's bss is battle heap the published ROM has (the arena
+# follows .main.bss). 34 buckets x 128 samples were 17,408 B, and in the ship
+# layout the gate ROM declined stage GX programs and shrank the motion cache
+# where the play ROM did not. 32 samples a ring stop give 13,056 B back.
+ifneq ($(origin NDS_TICK_HUD_WINDOW),command line)
+NDS_TICK_HUD_WINDOW := 32
+endif
 ifeq ($(NDS_P2_FOUR_CPU_ROSTER),1)
 # P2-3r15: THIS IS NOW THE DEFAULT ARM, not the lab arm -- the flag defaults to
 # 1 on this target (see its declaration above). `NDS_P2_FOUR_CPU_ROSTER=0`
@@ -7255,6 +7265,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_FIGHTER_HW_LIGHT $(NDS_R2_FIGHTER_HW_LIGHT)'; \
 		echo '#define NDS_R2_FIGHTER_SOFT_LIGHT_KEEP $(NDS_R2_FIGHTER_SOFT_LIGHT_KEEP)'; \
 		echo '#define NDS_TICK_HUD_DRAW $(NDS_TICK_HUD_DRAW)'; \
+		echo '#define NDS_TICK_HUD_WINDOW $(NDS_TICK_HUD_WINDOW)u'; \
 		echo '#define NDS_BATTLE_FPS_HUD_DRAW $(NDS_BATTLE_FPS_HUD_DRAW)'; \
 		echo '#define NDS_TICK_HUD_SPANS_DEFAULT $(NDS_TICK_HUD_SPANS_DEFAULT)'; \
 		echo '#define NDS_DIAG_COUNTERS $(NDS_DIAG_COUNTERS)'; \

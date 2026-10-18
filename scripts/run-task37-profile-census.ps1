@@ -42,6 +42,11 @@ param(
     # tick-HUD ROM and differs only in the scene it boots, so numbers from the
     # two remain comparable.
     [string]$Target = 'smash64ds-battle-playable-tickhud-hwtri',
+    # NAME=value words set at main() before the game runs (one GDB attach,
+    # then detach): the lab ROM's boot-poked stage, roster and contents
+    # (gNdsLabFourCpuGkind, gNdsLabFourCpuKinds, gNdsLabP4Content), so one
+    # profile ROM serves every stage and roster instead of one build each.
+    [string[]]$BootSetGlobals = @(),
     # Extra `make` variables for the build, e.g. -MakeFlags NDS_R2_BOTH_CPU=1.
     # Without this the harness could only build the Boundary configuration, so a
     # census of THE GATE arm had to be hand-built and then driven with -NoBuild --
@@ -228,10 +233,18 @@ try {
     Remove-Item $csv, $meta, $regions, $emulatorOut, $emulatorErr `
         -Force -ErrorAction SilentlyContinue
 
+    $BootSetGlobals = @($BootSetGlobals |
+        ForEach-Object { $_ -split '[,\s]+' } | Where-Object { $_ -ne '' })
+    foreach ($bs in $BootSetGlobals) {
+        if ($bs -notmatch '^[A-Za-z_][A-Za-z0-9_]*=(0x[0-9A-Fa-f]+|\d+)$') {
+            throw ("-BootSetGlobals element '$bs' is not a single NAME=number assignment.")
+        }
+    }
     $configState = Enable-MelonDSGdbConfig `
         -MelonDSPath $context.MelonDSPath -GdbPort $context.GdbPort `
         -Arm7Port $context.Arm7Port `
-        -Persistent:([bool]$context.PersistentConfig) -MuteAudio
+        -Persistent:([bool]$context.PersistentConfig) -MuteAudio `
+        -BreakOnStartup:($BootSetGlobals.Count -ne 0)
 
     $env:MELONDS_ARM9_PROFILE_CSV = $csv
     Write-Host "scene:         $Scene$(if ($isResults) { ' (window counts Results tics, not presented frames)' })"
@@ -251,6 +264,36 @@ try {
         -RedirectStandardOutput $emulatorOut `
         -RedirectStandardError $emulatorErr `
         -WindowStyle Hidden -PassThru
+    if ($BootSetGlobals.Count -ne 0) {
+        # One attach per emulator run: stop at main (after the crt0 copies
+        # that would overwrite an earlier write), write the words with hex M
+        # packets (melonDS stores binary X writes unescaped), and detach.
+        Wait-MelonDSGdbListener -Process $emulator -Port $context.GdbPort | Out-Null
+        $gdbExe = Join-Path $(if ($env:DEVKITARM) { $env:DEVKITARM } else { 'C:/devkitPro/devkitARM' }) 'bin\arm-none-eabi-gdb.exe'
+        $gdbCmd = Join-Path $temp 'task37-census.boot.gdb'
+        $gdbLog = Join-Path $temp 'task37-census.boot.log'
+        @('set pagination off', 'set confirm off', 'set remotetimeout 30',
+          "target remote 127.0.0.1:$($context.GdbPort)", 'set remote X-packet off',
+          'tbreak main', 'continue') +
+            @($BootSetGlobals | ForEach-Object {
+                $kv = $_ -split '=', 2
+                "set variable $($kv[0]) = $($kv[1])"
+                "printf `"BOOTSET $($kv[0])=%u\n`", $($kv[0])"
+            }) +
+            @('detach', 'quit') | Set-Content -LiteralPath $gdbCmd -Encoding ascii
+        $gdbProc = Start-Process -FilePath $gdbExe -ArgumentList @('-batch', '-x', $gdbCmd, $elf) `
+            -PassThru -WindowStyle Hidden -RedirectStandardOutput $gdbLog `
+            -RedirectStandardError (Join-Path $temp 'task37-census.boot.err')
+        if (-not $gdbProc.WaitForExit(120000)) {
+            Stop-Process -Id $gdbProc.Id -Force
+            throw 'The boot-poke GDB session did not finish within 120 s.'
+        }
+        $set = @(Get-Content -LiteralPath $gdbLog | Where-Object { $_ -match '^BOOTSET ' })
+        if ($set.Count -ne $BootSetGlobals.Count) {
+            throw ("Boot pokes read back $($set.Count) of $($BootSetGlobals.Count) words; see $gdbLog.")
+        }
+        $set | ForEach-Object { Write-Host $_ }
+    }
 
     # The metadata file is written last, so its appearance means the whole
     # report set is on disk. Size stability guards against reading a partial

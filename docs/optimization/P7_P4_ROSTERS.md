@@ -267,3 +267,47 @@ Mr. Game & Watch and Palutena 1,428,032 -> 1,340,032 (77.5% -> 84.9% within
 two VBlanks); Palutena, Bowser, Meta Knight and Ike 1,502,656 -> 1,370,432
 (70.3% -> 81.2%); the mirrors and the cast unchanged (1,079,872 cast; Bowser
 1,189,120; Crash 1,177,088; Palutena 1,246,208).
+
+## The gate ROM's instrument (2026-10-18, `s7`)
+
+The tick HUD's sample ring is battle heap the published ROM has: the arena
+follows `.main.bss`, and 34 buckets x 128 samples were 17,408 B of it. The
+four-CPU gate ROM now keeps 32 samples a bucket (`NDS_TICK_HUD_WINDOW`,
+4,352 B; 128 on every other tick-HUD target), and
+`scripts/sample-tick-hud-buckets.ps1` reads the window from the ELF and stops
+every 24 presented frames on the universal marker (the four-CPU arm's sparse
+marker fires every 32 frames, a whole ring, which reads as an unchanged head).
+The gate ROM's data and bss are still 8,800 B over the play ROM's (the ring,
+the CYCLE 98 material census's 2 KB, the HUD's percentile rows), and its ITCM
+leaves out four functions the play ROM keeps.
+
+Dream Land unless named, 1,960 frames, WORK P95 (frames within two VBlanks):
+
+| roster | `s6` | `s7` |
+|---|---|---|
+| original cast | 1,079,872 (96.0%) | 1,078,464 (96.0%) |
+| original cast, Saffron City | 1,260,480 (87.5%) | 1,218,688 (88.1%) |
+| original cast, Hyrule Temple | 1,504,512 (26.6%) | 1,472,896 (31.5%) |
+| Crash, Sonic, Mr. Game & Watch, Palutena | 1,340,032 (84.9%) | 1,256,064 (90.2%) |
+| Palutena, Bowser, Meta Knight, Ike | 1,370,432 (81.2%) | 1,320,640 (86.8%) |
+
+`scripts/run-task37-profile-census.ps1 -BootSetGlobals` writes the lab ROM's
+stage, roster and content words at `main` (one GDB attach, then detach), so
+one profile build serves every stage and roster.
+
+## Hyrule Temple draws its stage uncompiled (2026-10-18)
+
+Its stage program (`hyruletemple.gxp`) is 61,888 B of body and 9,204 B of run
+memo, and loading it needs that plus the 62,020 B the loader keeps free: the
+gate ROM declined it (`gNdsP2StageProgReason` 3, the loan full with 249 KB
+spilled), and so does the play ROM (`play-p7f`, the cast: 122,512 B free at the
+first stage draw). The match grows ~64 KB after that, so the program does not
+fit in either layout. Drawn uncompiled, the stage costs 409K ticks a frame at
+P50 (span `STG`; Dream Land's compiled stage 129K), most of it each painter
+triangle loading its own composed matrix on the CPU
+(`ndsRendererNativeStageLoadNoZMatrix`, `ndsRendererBuildShiftedRawHardwareMatrix`,
+`ndsRendererLoadHardwareMatrixPair`: ~380K cycles a frame) and the Z runs'
+CPU submit (`ndsRendererCommitNativeStageSegment`, ~300K cycles). Open: a
+smaller program (per-run matrix loads written by the CPU instead of 253
+16-word patch sites, a shorter memo) or the compiled path's one matrix a
+painter run (`MTX_TRANS` per triangle) on the uncompiled path.

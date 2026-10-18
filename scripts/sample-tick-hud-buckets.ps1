@@ -118,7 +118,10 @@ param(
     # is what lets the stitcher PROVE it did not alias a wrap rather than assume
     # it. A stride at 128 would make a full wrap indistinguishable from no
     # advance at all.
-    [ValidateRange(8,120)][int]$RingStopStride = 96,
+    # -1 (the default): three quarters of the ROM's ring window, which the ELF
+    # gives (sBattleTickHudRing's size; NDS_TICK_HUD_WINDOW, 32 on the gate
+    # ROM since 2026-10-18 and 128 elsewhere): 24 or 96.
+    [ValidateRange(-1,120)][int]$RingStopStride = -1,
     # 4096 was the cap until 2026-08-13. It fits a whole 3600-tick match twice
     # over (1,600 samples cover 86.7% of one) and is far too small for R2-07's
     # FIVE-minute acceptance match, which presents ~9,000 frames: capped, that
@@ -443,10 +446,13 @@ try {
                 Where-Object { ($_ -split '\s+')[-1] -eq 'sBattleTickHudRing' })
             if ($ringLine.Count -eq 1) {
                 $ringSymBytes = [Convert]::ToInt64((($ringLine[0] -split '\s+')[1]), 16)
-                $ringExpected = [int64]$bucketNames.Count * 128 * 4
-                if ($ringSymBytes -ne $ringExpected) {
-                    throw ("sBattleTickHudRing is $ringSymBytes B in $([System.IO.Path]::GetFileName($elf)) " +
-                        "but this script's $($bucketNames.Count) bucket names need $ringExpected B. " +
+                # The ring is bucketNames x NDS_TICK_HUD_WINDOW words: the
+                # window is the build's (32 on the gate ROM, 128 elsewhere).
+                $ringRowBytes = [int64]$bucketNames.Count * 4
+                $ringElfWindow = if (($ringSymBytes % $ringRowBytes) -eq 0) { [int]($ringSymBytes / $ringRowBytes) } else { 0 }
+                if ($ringElfWindow -notin @(32, 64, 128)) {
+                    throw ("sBattleTickHudRing is $ringSymBytes B in $([System.IO.Path]::GetFileName($elf)), " +
+                        "not $($bucketNames.Count) bucket names x 32, 64 or 128 samples. " +
                         'The ROM and scripts/sample-tick-hud-buckets.ps1 disagree on enum NDSTickHudBucket.')
                 }
             }
@@ -488,7 +494,12 @@ try {
             # stop: its 128-entry guest ring is the sample source, and the
             # normal stop stride is 96. Prefer the sparse marker when the exact
             # ELF provides it; all other targets retain the universal marker.
-            if ($RingDump -and $symbols.Contains('ndsBattlePlayableTickHudSparseMarker')) {
+            # A ring under 128 samples (the gate ROM's 32) keeps the universal
+            # marker: stops rounded up to a 32-frame marker would land a whole
+            # ring apart, which reads as an unchanged head.
+            $sparseWindowOk = (-not (Get-Variable -Name ringElfWindow -ErrorAction SilentlyContinue)) -or
+                ($ringElfWindow -ge 128)
+            if ($RingDump -and $sparseWindowOk -and $symbols.Contains('ndsBattlePlayableTickHudSparseMarker')) {
                 $ringMarker = 'ndsBattlePlayableTickHudSparseMarker'
             }
         }
@@ -543,7 +554,11 @@ try {
     $tickHudFormat = (, '%u' * ($sampleColumnCount + 1)) -join ','
     $ringPath = Join-Path $temp 'tick-hud-ring.bin'
     $fbRingPath = Join-Path $temp 'tick-hud-fallback-ring.bin'
-    $ringWindow = 128
+    $ringWindow = if ((Get-Variable -Name ringElfWindow -ErrorAction SilentlyContinue) -and ($ringElfWindow -gt 0)) { $ringElfWindow } else { 128 }
+    if ($RingStopStride -lt 0) { $RingStopStride = [int][Math]::Floor($ringWindow * 3 / 4) }
+    if ($RingStopStride -ge $ringWindow) {
+        throw ("-RingStopStride $RingStopStride must be below the ROM's $ringWindow-sample ring.")
+    }
     $ringBytes = $bucketNames.Count * $ringWindow * 4
     # Inclusive frame window, matching the per-frame collector: StartFrame=1,
     # Samples=1973 means rows 1..1973, not 1..1974. The old +Samples form was
@@ -1011,7 +1026,7 @@ try {
                     throw ("Tick-HUD ring stop $k read an unchanged ring head " +
                         "($head) after $presentedDelta presented frames " +
                         "(frames $prevFrame..$frame). That is either a stalled " +
-                        'ring or an exact 128-slot wrap, and the two are ' +
+                        "ring or an exact $ringWindow-slot wrap, and the two are " +
                         'indistinguishable from the head alone. Lower ' +
                         '-RingStopStride.')
                 }

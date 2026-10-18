@@ -3291,7 +3291,12 @@ static u32 sBattlePhaseHudAvgSampleCount;
  * per refresh interval instead of every frame. That is strictly cheaper than
  * what it replaces: nine iprintf calls per presented frame become nine per
  * refresh, so the HUD now perturbs the loop it measures far less. */
+/* NDS_TICK_HUD_WINDOW (Makefile): 128, or 32 on the four-CPU gate ROM, whose
+ * ring is battle heap the published ROM has (scripts/sample-tick-hud-buckets.ps1
+ * reads the window from the ELF). */
+#ifndef NDS_TICK_HUD_WINDOW
 #define NDS_TICK_HUD_WINDOW 128u
+#endif
 /* volatile: the GDB sampler reads this ring out of the ELF, and with
  * NDS_TICK_HUD_DRAW=0 nothing in the ROM reads it, so dead-store elimination
  * plus --gc-sections deleted the array outright and the sampler failed with
