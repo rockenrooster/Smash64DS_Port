@@ -139,9 +139,11 @@ ARTICLES = {
         # Her light effects (p6_gate.py GLOW_TREE, LIGHT_TREE; scripts/p6/
         # p6_light.py; the owner's p6x VFX plan): the gem's glow, and the
         # overhead light wings with the taunt's ring, cards placed by her
-        # code every tic.
+        # code every tic. "material": each light card's list calls its
+        # DObj's one MObj (segment E) for PRIM, whose alpha her code fades
+        # (owner p6ac).
         {"name": "glow", "special": 2, "dobjdesc": 0x424},
-        {"name": "light", "special": 2, "dobjdesc": 0x4D4},
+        {"name": "light", "special": 2, "dobjdesc": 0x4D4, "material": True},
     ),
     "piano": (
         # fireball.asm struct_book: WPAttributes at 0 of Piano file 6

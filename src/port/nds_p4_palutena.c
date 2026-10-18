@@ -92,10 +92,10 @@ extern uintptr_t llITCommonDataFFlowerFlameWeaponAttributes;
  * its trigger unknown: no fire is made while one of hers is burning at all
  * (a fire lives PAL_FLAME_BLAST_AT + PAL_FLAME_BLAST_TICS tics; her cast is
  * longer than that, so two casts never overlap). Owner p6z (2026-10-17): the
- * far 0.9x (1610 -> 1449). */
+ * far 0.9x (1610 -> 1449); owner p6ac: 1500. */
 #define PAL_FLAME_NEAR 450.0F
 #define PAL_FLAME_MID 750.0F
-#define PAL_FLAME_FAR 1449.0F
+#define PAL_FLAME_FAR 1500.0F
 #define PAL_FLAME_HEIGHT 320.0F
 #define PAL_FLAME_STICK 20
 #define PAL_FLAME_BURN_AT 5
@@ -120,7 +120,12 @@ extern uintptr_t llITCommonDataFFlowerFlameWeaponAttributes;
  * reappears; from the air she ends in special fall. A wall or ceiling met
  * nearly head-on stops her; one met at a glancing angle she slides along
  * (Pikachu's Quick Attack's rule), so an upward warp beside a wall rides it
- * to the ledge. A CPU recovering travels only as far as its target. */
+ * to the ledge. A CPU recovering travels only as far as its target.
+ * Owner p6ac (2026-10-17: "horizontal teleports seem to get caught on the
+ * ground easily"): a backward stick on the ground (atan2's +180) went up into
+ * the air and landed a tic later, 200 units on; it travels along the ground
+ * now, and a sideways or downward-sideways travel that meets a floor goes on
+ * along it for its frames left, as Ultimate's warp slides along a surface. */
 #define PAL_WARP_FRAMES 10
 #define PAL_WARP_FRAMES_MIN 3
 #define PAL_WARP_SPEED 200.0F
@@ -480,13 +485,15 @@ static void ndsP4PalutenaWarpGo(GObj *fighter_gobj)
         angle = F_CST_DTOR32(45.0F) * (f32)(s32)((angle / F_CST_DTOR32(45.0F)) +
                                                  ((angle < 0.0F) ? -0.5F : 0.5F));
     }
-    if ((fp->ga == nMPKineticsGround) && (angle <= 0.0F) && (angle > F_CST_DTOR32(-90.0F)))
+    if ((fp->ga == nMPKineticsGround) && (angle <= 0.0F) && (angle >= F_CST_DTOR32(-90.0F)))
     {
         status_id = PAL_STATUS_WARP;
         angle = 0.0F;
     }
-    else if ((fp->ga == nMPKineticsGround) && (angle <= F_CST_DTOR32(-90.0F)))
+    else if ((fp->ga == nMPKineticsGround) &&
+             ((angle < F_CST_DTOR32(-90.0F)) || (angle > F_CST_DTOR32(179.0F))))
     {
+        /* Back along the ground: atan2 gives +180 for a level backward stick. */
         status_id = PAL_STATUS_WARP;
         angle = F_CST_DTOR32(180.0F);
     }
@@ -592,9 +599,28 @@ void ndsP4PalutenaWarpGroundMap(GObj *fighter_gobj)
     mpCommonProcFighterOnFloor(fighter_gobj, ndsP4PalutenaWarpOffEdge);
 }
 
+/* A floor met: a travel with a sideways part and none upward goes on along
+ * the ground, forward or back, for its frames left; any other appears. */
 static void ndsP4PalutenaWarpLand(GObj *fighter_gobj)
 {
-    mpCommonSetFighterGround(ftGetStruct(fighter_gobj));
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    f32 angle = *ndsP4PalutenaVarF(fp, 0);
+    s32 frames = *ndsP4PalutenaVar(fp, 1);
+    f32 across = __cosf(angle);
+
+    mpCommonSetFighterGround(fp);
+    if ((__sinf(angle) < 0.01F) && ((across > 0.1F) || (across < -0.1F)) && (frames > 1))
+    {
+        ftMainSetStatus(fighter_gobj, PAL_STATUS_WARP, fighter_gobj->anim_frame, 1.0F,
+                        FTSTATUS_PRESERVE_NONE);
+        fp = ftGetStruct(fighter_gobj);
+        *ndsP4PalutenaVarF(fp, 0) = (across > 0.0F) ? 0.0F : F_CST_DTOR32(180.0F);
+        *ndsP4PalutenaVar(fp, 1) = frames;
+        fp->is_invisible = TRUE;
+        fp->is_jostle_ignore = TRUE;
+        ftParamSetHitStatusAll(fighter_gobj, nGMHitStatusIntangible);
+        return;
+    }
     ndsP4PalutenaWarpAppear(fighter_gobj);
 }
 
@@ -1195,9 +1221,25 @@ static void ndsP4PalutenaWings(GObj *fighter_gobj, FTStruct *fp, s32 clip)
  * attached (a status change that stops her attached effects stops it too,
  * and the next tic makes it again at the level it had). The glow shimmers
  * (PAL_GLOW_SHIMMER on odd tics); it sits PAL_GLOW_TOWARD_CAMERA nearer the
- * camera than the gem, so it draws over the gem's ornament (owner p6aa). */
+ * camera than the gem, so it draws over the gem's ornament (owner p6aa).
+ *
+ * The light wings keep Ultimate's timing (owner p6ac, 2026-10-17: "not
+ * lasting as long as they should be, or the fade out isn't gradual enough";
+ * her effect scripts in the owner's Ultimate files): each move makes
+ * palutena_backlight once, on "top" (her feet) at a fixed height, at its
+ * smash's hit (the forward and down smash's frame 16, the up smash's 16 at
+ * rate 1.1, up air's backlight2 at 7, the taunt's at 54 at rate 0.8),
+ * mapped through each clip's time anchors. Its emitters live 38 frames (32
+ * for backlight2): in by 6% of that, held to about 45%, then fading out to
+ * the end; each card fades by its material's alpha (p6_light.py), at full
+ * size once grown. Like Ultimate's, the light does not follow her head:
+ * its offset from her root is taken from her head until the window's
+ * `anchor` frame and held from there (owner p6ac: the down smash's at its
+ * full impact; the forward smash's as she stands, frame 0, where the owner
+ * placed it). */
 #define PAL_GLOW_TREE 0x424                 /* p6_gate.py GLOW_TREE */
 #define PAL_LIGHT_TREE 0x4D4                /* p6_gate.py LIGHT_TREE */
+#define PAL_LIGHT_MOBJSUBS 0x608            /* p6_gate.py LIGHT_MOBJSUBS */
 #define PAL_STAFF_JOINT (nFTPartsJointCommonStart + 14)
 #define PAL_HEAD_JOINT (nFTPartsJointCommonStart + 8)
 #define PAL_GLOW_TOWARD_CAMERA 150.0F
@@ -1225,38 +1267,52 @@ typedef struct NDSP4PalLightWindow
     u8 fade;                    /* fades out */
     u8 last;
     u8 ring;                    /* the light: the taunt's ring too */
+    u8 anchor;                  /* the light: its place taken until here */
 } NDSP4PalLightWindow;
 
-/* scripts/p6/palutena/spec.json "motions" (the clips' hits: motions/*.ms). */
+/* scripts/p6/palutena/spec.json "motions" (the clips' hits: the motion
+ * scripts). */
 static const NDSP4PalLightWindow sNdsP4PalutenaGlowWindows[] = {
-    { 165, 2, 4, 9, 14, 0 },    /* jab 1 (hits 4-7) */
-    { 166, 0, 2, 12, 18, 0 },   /* jab 2 (hits 4-10) */
-    { 228, 0, 2, 8, 8, 0 },     /* rapid jab start, full into the loop */
-    { 229, 0, 0, 24, 24, 0 },   /* rapid jab loop */
-    { 230, 0, 0, 8, 14, 0 },    /* rapid jab finisher (hits 3-6) */
-    { 170, 6, 8, 33, 38, 0 },   /* forward tilt (hits 9-32) */
-    { 174, 3, 5, 34, 39, 0 },   /* up tilt (hits 6-33) */
-    { 176, 3, 5, 11, 15, 0 },   /* down tilt (hits 6-10) */
-    { 184, 2, 4, 24, 29, 0 },   /* neutral air (hits 5-23) */
-    { 187, 3, 5, 17, 22, 0 },   /* up air (hits 5-16) */
+    { 165, 2, 4, 9, 14, 0, 0 },     /* jab 1 (hits 4-7) */
+    { 166, 0, 2, 12, 18, 0, 0 },    /* jab 2 (hits 4-10) */
+    { 228, 0, 2, 8, 8, 0, 0 },      /* rapid jab start, full into the loop */
+    { 229, 0, 0, 24, 24, 0, 0 },    /* rapid jab loop */
+    { 230, 0, 0, 8, 14, 0, 0 },     /* rapid jab finisher (hits 3-6) */
+    { 170, 6, 8, 33, 38, 0, 0 },    /* forward tilt (hits 9-32) */
+    { 174, 3, 5, 34, 39, 0, 0 },    /* up tilt (hits 6-33) */
+    { 176, 3, 5, 22, 26, 0, 0 },    /* down tilt (hits 6-9, its spin to 22) */
+    { 184, 3, 5, 32, 39, 0, 0 },    /* neutral air (its hit 7-29) */
+    { 187, 3, 5, 17, 22, 0, 0 },    /* up air (hits 5-16) */
 };
 
+/* Ultimate's frames through each clip's time anchors (art/p6/palutena/
+ * anims, "time"). */
 static const NDSP4PalLightWindow sNdsP4PalutenaLightWindows[] = {
-    { 187, 10, 13, 20, 26, 0 }, /* up air: its last hit (14) */
-    { 182, 10, 13, 24, 30, 0 }, /* up smash: with the pillar (12) */
-    { 177, 0, 3, 8, 11, 0 },    /* forward smash, angled up: the wind-up, */
-    { 178, 0, 3, 8, 11, 0 },    /* gone as the godwings come (10) */
-    { 179, 0, 3, 8, 11, 0 },    /* forward smash */
-    { 180, 0, 3, 8, 11, 0 },
-    { 181, 0, 3, 8, 11, 0 },    /* forward smash, angled down */
-    { 183, 14, 17, 28, 34, 0 }, /* down smash: from the slam (16) */
-    { 164, 26, 32, 64, 74, 1 }, /* taunt: the pose, with the ring */
+    { 187, 4, 5, 18, 23, 0, 4 },    /* up air: backlight2 at 7, held to 71% */
+    { 182, 11, 13, 33, 44, 0, 11 }, /* up smash: with the pillar (16) */
+    { 177, 14, 16, 26, 37, 0, 0 },  /* forward smash, angled up: the hit (16) */
+    { 178, 14, 16, 26, 37, 0, 0 },
+    { 179, 14, 16, 26, 37, 0, 0 },  /* forward smash */
+    { 180, 14, 16, 26, 37, 0, 0 },
+    { 181, 14, 16, 26, 37, 0, 0 },  /* forward smash, angled down */
+    { 183, 16, 18, 33, 54, 0, 16 }, /* down smash: the slam (16) */
+    { 164, 46, 48, 65, 85, 1, 46 }, /* taunt (54 of 99), with the ring */
 };
+
+/* Each light card's material alpha at full (p6_light.py LIGHT_CARDS):
+ * the orb, the wings, the ring's halves. */
+static const u8 sNdsP4PalutenaLightAlpha[] = { 240, 255, 255, 230, 230 };
 
 typedef struct NDSP4PalLight
 {
     f32 glow;                   /* the level each showed last tic */
     f32 light;
+    Vec3f offset;               /* the light's place from her root */
+    Vec3f last_pos;             /* where it showed last tic */
+    f32 last_frame;
+    s32 motion;                 /* the move `offset` was taken in */
+    u8 anchored;                /* `offset` held */
+    u8 ring;                    /* the last window's ring */
 } NDSP4PalLight;
 
 static NDSP4PalLight sNdsP4PalutenaLight[GMCOMMON_PLAYERS_MAX];
@@ -1279,7 +1335,7 @@ static EFDesc sNdsP4PalutenaLightDesc = {
     { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0x00 },
     { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0x00 },
     ndsP4PalutenaLightProcUpdate, gcDrawDObjTreeForGObj,
-    PAL_LIGHT_TREE, 0x0, 0x0, 0x0
+    PAL_LIGHT_TREE, PAL_LIGHT_MOBJSUBS, 0x0, 0x0
 };
 
 /* Her code places it every tic (effect_vars.common.size: tics since); one
@@ -1328,35 +1384,38 @@ static GObj *ndsP4PalutenaLightFind(GObj *fighter_gobj, const EFDesc *desc)
     return NULL;
 }
 
-/* The window's level at her clip frame, 0 outside it. */
-static f32 ndsP4PalutenaLightLevel(const NDSP4PalLightWindow *w, u32 count, s32 motion, f32 frame,
-                                   u32 *ring)
+/* The move's window, or NULL. */
+static const NDSP4PalLightWindow *ndsP4PalutenaLightWindow(const NDSP4PalLightWindow *w, u32 count,
+                                                            s32 motion)
 {
     u32 i;
 
     for (i = 0u; i < count; i++, w++)
     {
-        if (w->motion != motion)
+        if (w->motion == motion)
         {
-            continue;
+            return w;
         }
-        *ring = w->ring;
-        if ((frame < (f32)w->first) || (frame > (f32)w->last))
-        {
-            return 0.0F;
-        }
-        if (frame < (f32)w->full)
-        {
-            return (frame - (f32)w->first) / (f32)(w->full - w->first);
-        }
-        if ((frame <= (f32)w->fade) || (w->last == w->fade))
-        {
-            return 1.0F;
-        }
-        return ((f32)w->last - frame) / (f32)(w->last - w->fade);
     }
-    *ring = 0u;
-    return 0.0F;
+    return NULL;
+}
+
+/* The window's level at her clip frame, 0 outside it (or without one). */
+static f32 ndsP4PalutenaLightLevel(const NDSP4PalLightWindow *w, f32 frame)
+{
+    if ((w == NULL) || (frame < (f32)w->first) || (frame > (f32)w->last))
+    {
+        return 0.0F;
+    }
+    if (frame < (f32)w->full)
+    {
+        return (frame - (f32)w->first) / (f32)(w->full - w->first);
+    }
+    if ((frame <= (f32)w->fade) || (w->last == w->fade))
+    {
+        return 1.0F;
+    }
+    return ((f32)w->last - frame) / (f32)(w->last - w->fade);
 }
 
 /* The effect showing `level` (made or found), or NULL once it shows none. */
@@ -1454,21 +1513,52 @@ static void ndsP4PalutenaFace(DObj *root, const Vec3f *to, f32 yaw)
     root->rotate.vec.f.z = 0.0F;
 }
 
+/* The light's place from her root: her head's, taken every tic of a light
+ * move until its window's anchor frame, then held to the move's end (a move
+ * begun again takes it again). */
+static void ndsP4PalutenaLightAnchor(GObj *fighter_gobj, FTStruct *fp, NDSP4PalLight *state,
+                                     const NDSP4PalLightWindow *w, f32 frame)
+{
+    static const Vec3f origin = { 0.0F, 0.0F, 0.0F };
+    const Vec3f *root = &DObjGetStruct(fighter_gobj)->translate.vec.f;
+    Vec3f head;
+
+    if ((w == NULL) || (state->motion != fp->motion_id) || (frame < state->last_frame))
+    {
+        state->anchored = FALSE;
+        state->motion = (w != NULL) ? fp->motion_id : -1;
+    }
+    state->last_frame = frame;
+    if ((w == NULL) || (state->anchored != FALSE))
+    {
+        return;
+    }
+    ndsP4PalutenaJointPoint(fp, PAL_HEAD_JOINT, &origin, &head);
+    state->offset.x = head.x - root->x;
+    state->offset.y = head.y - root->y;
+    state->offset.z = head.z - root->z;
+    if (frame >= (f32)w->anchor)
+    {
+        state->anchored = TRUE;
+    }
+}
+
 static void ndsP4PalutenaLight(GObj *fighter_gobj, FTStruct *fp)
 {
     static const Vec3f origin = { 0.0F, 0.0F, 0.0F };
     NDSP4PalLight *state = &sNdsP4PalutenaLight[fp->player & 3u];
     f32 frame = fighter_gobj->anim_frame;
+    const NDSP4PalLightWindow *w;
     GObj *effect_gobj;
-    u32 ring = 0u;
-    u32 unused;
     Vec3f pos;
     Vec3f to = { 0.0F, 0.0F, 1.0F };
     f32 level;
 
     level = ndsP4PalutenaLightNext(
-        ndsP4PalutenaLightLevel(sNdsP4PalutenaGlowWindows, ARRAY_COUNT(sNdsP4PalutenaGlowWindows),
-                                fp->motion_id, frame, &unused),
+        ndsP4PalutenaLightLevel(ndsP4PalutenaLightWindow(sNdsP4PalutenaGlowWindows,
+                                                         ARRAY_COUNT(sNdsP4PalutenaGlowWindows),
+                                                         fp->motion_id),
+                                frame),
         state->glow);
     state->glow = level;
     if (level >= PAL_LIGHT_SHOWN)
@@ -1493,19 +1583,30 @@ static void ndsP4PalutenaLight(GObj *fighter_gobj, FTStruct *fp)
         root->scale.vec.f.x = root->scale.vec.f.y = root->scale.vec.f.z = size;
     }
 
-    level = ndsP4PalutenaLightNext(
-        ndsP4PalutenaLightLevel(sNdsP4PalutenaLightWindows, ARRAY_COUNT(sNdsP4PalutenaLightWindows),
-                                fp->motion_id, frame, &ring),
-        state->light);
+    w = ndsP4PalutenaLightWindow(sNdsP4PalutenaLightWindows,
+                                 ARRAY_COUNT(sNdsP4PalutenaLightWindows), fp->motion_id);
+    ndsP4PalutenaLightAnchor(fighter_gobj, fp, state, w, frame);
+    level = ndsP4PalutenaLightNext(ndsP4PalutenaLightLevel(w, frame), state->light);
     state->light = level;
     if (level >= PAL_LIGHT_SHOWN)
     {
         f32 lr = (fp->lr < 0) ? -1.0F : 1.0F;
 
-        ndsP4PalutenaJointPoint(fp, PAL_HEAD_JOINT, &origin, &pos);
-        pos.x -= lr * PAL_ORB_BACK;
-        pos.y += PAL_ORB_UP;
-        pos.z -= PAL_LIGHT_BEHIND;
+        if (w != NULL)
+        {
+            const Vec3f *at = &DObjGetStruct(fighter_gobj)->translate.vec.f;
+
+            pos.x = at->x + state->offset.x - (lr * PAL_ORB_BACK);
+            pos.y = at->y + state->offset.y + PAL_ORB_UP;
+            pos.z = at->z + state->offset.z - PAL_LIGHT_BEHIND;
+            state->last_pos = pos;
+            state->ring = w->ring;
+        }
+        else
+        {
+            /* The move cut short: it fades where it was. */
+            pos = state->last_pos;
+        }
         effect_gobj = ndsP4PalutenaLightEffect(fighter_gobj, &sNdsP4PalutenaLightDesc, level, &pos);
         if (effect_gobj != NULL)
         {
@@ -1515,9 +1616,20 @@ static void ndsP4PalutenaLight(GObj *fighter_gobj, FTStruct *fp)
             DObj *wing_r = wing_l->sib_next;
             DObj *ring_l = wing_r->sib_next;
             DObj *ring_r = ring_l->sib_next;
-            f32 size = PAL_LIGHT_FOLDED + ((1.0F - PAL_LIGHT_FOLDED) * level);
-            f32 ring_size = (ring != 0u) ? level : 0.0F;
+            DObj *card;
+            f32 grown = ((w != NULL) && (frame < (f32)w->full)) ? level : 1.0F;
+            f32 size = PAL_LIGHT_FOLDED + ((1.0F - PAL_LIGHT_FOLDED) * grown);
+            f32 ring_size = (state->ring != 0u) ? size : 0.0F;
+            u32 i;
 
+            for (card = orb, i = 0u; (card != NULL) && (i < ARRAY_COUNT(sNdsP4PalutenaLightAlpha));
+                 card = card->sib_next, i++)
+            {
+                if (card->mobj != NULL)
+                {
+                    card->mobj->sub.primcolor.s.a = (u8)(sNdsP4PalutenaLightAlpha[i] * level);
+                }
+            }
             ndsP4PalutenaToCamera(&pos, &to);
             ndsP4PalutenaFace(root, &to, lr * PAL_LIGHT_YAW);
             orb->scale.vec.f.x = orb->scale.vec.f.y = size;

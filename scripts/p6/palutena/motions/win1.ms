@@ -1,31 +1,13 @@
-# Win1 (Results pose 1): Peach's first victory clip and its script (her
-# blinks; her win cue where Peach's voice was), her wings out (the torso
-# row's part 1).
-SetModelPartID joint_id=6 modelpart_id=1
-AsyncWait frames=13
+# Win1 (Results pose 1): Ultimate's first victory (j02win1; owner p6ac,
+# 2026-10-17: the pose was Peach's clip, her wings out and motionless --
+# Ultimate's wins have no wings, so none here), its sound script
+# (sound_win1a): her win cue at 15, her hop at 23 (Ultimate's appeal_s02 at
+# 33 is not among her sounds). Eyes open throughout, as Ultimate's.
+SetModelPartID joint_id=6 modelpart_id=0
+SetTexturePartID texturepart_id=0 frame=0
+SetTexturePartID texturepart_id=1 frame=0
+AsyncWait frames=15
 PlayVoiceStoreInfo value=cue:win01
-AsyncWait frames=31
-SetTexturePartID texturepart_id=0 frame=2
-SetTexturePartID texturepart_id=1 frame=2
-AsyncWait frames=33
-SetTexturePartID texturepart_id=0 frame=3
-SetTexturePartID texturepart_id=1 frame=3
-AsyncWait frames=37
-SetTexturePartID texturepart_id=0 frame=2
-SetTexturePartID texturepart_id=1 frame=2
-AsyncWait frames=39
-SetTexturePartID texturepart_id=0 frame=0
-SetTexturePartID texturepart_id=1 frame=0
-AsyncWait frames=76
-SetTexturePartID texturepart_id=0 frame=2
-SetTexturePartID texturepart_id=1 frame=2
-AsyncWait frames=78
-SetTexturePartID texturepart_id=0 frame=3
-SetTexturePartID texturepart_id=1 frame=3
-AsyncWait frames=82
-SetTexturePartID texturepart_id=0 frame=2
-SetTexturePartID texturepart_id=1 frame=2
-AsyncWait frames=84
-SetTexturePartID texturepart_id=0 frame=0
-SetTexturePartID texturepart_id=1 frame=0
+AsyncWait frames=23
+PlayFGM value=cue:se_jump02
 End value=0

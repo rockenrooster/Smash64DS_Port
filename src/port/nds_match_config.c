@@ -27,6 +27,7 @@
 #include <ft/fighter.h>
 #include <if/interface.h>
 #include <nds/nds_p4.h>
+#include <nds/nds_p5.h>
 #include <nds/nds_match_config.h>
 #include <nds/nds_scene_harness.h>
 #include <sc/scene.h>
@@ -459,8 +460,13 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
     cfg->item_toggles = ~0u;
     cfg->item_appearance_rate = nSCBattleItemSwitchMiddle;
 #if defined(NDS_LAB_FOURCPU_WORDS) && NDS_LAB_FOURCPU_WORDS
-    /* LAB ONLY (Makefile NDS_LAB_FOURCPU_SWEEP or _WORDS): boot-poked stage. */
-    if (gNdsLabFourCpuGkind < 9u)
+    /* LAB ONLY (Makefile NDS_LAB_FOURCPU_SWEEP or _WORDS): boot-poked stage,
+     * a VS stage or a landed P5 stage (the worst-case search covers both). */
+    if ((gNdsLabFourCpuGkind < 9u)
+#if NDS_P5
+        || (ndsP5StageAdmitted(gNdsLabFourCpuGkind) != FALSE)
+#endif
+        )
     {
         cfg->gkind = (u8)gNdsLabFourCpuGkind;
     }

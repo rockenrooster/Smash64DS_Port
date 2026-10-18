@@ -398,7 +398,8 @@ def author_motions(resolved: dict, events: dict, motions: dict, name: str, out: 
     The motion row takes the new clip and script; the generator reads both
     through OverlayRom. `menu_motions` gives the menu (submotion) rows
     their own scripts the same way: the Results and select poses (1-4 the
-    wins, 5 the clap).
+    wins, 5 the clap); and their own built clips ("anim", as a motion's:
+    owner p6ac, Palutena's Ultimate wins).
 
     `anim_locks` "rest" (spec "anim_locks"; owner p6t, the in-game yaw and
     knees): the base's N64 clips leave the joints FTAttributes.animlock
@@ -422,6 +423,42 @@ def author_motions(resolved: dict, events: dict, motions: dict, name: str, out: 
     replaced = set()
     next_id = window + ANIM_FIRST
     clips: dict[str, int] = {}
+
+    def place_clip(anim: str, row: dict, where: str, table: str) -> None:
+        """The built clip `anim` as `row`'s: copied once into the content's
+        file window (rows naming the same clip share it), its skirt guide
+        noted; `table` names the authored record ("anims", "menu_anims")."""
+        nonlocal next_id
+        if anim in clips:
+            fid = clips[anim]
+        else:
+            src = REPO / anim
+            if not src.exists():
+                raise AuthorError(f"spec {where}: {src} not built (anim.py makes it)")
+            blob = bytearray(src.read_bytes())
+            if blob[4:8] != b"OLER":
+                raise AuthorError(f"spec {where}: {src} is not an O2R container")
+            fid = next_id
+            next_id += 1
+            if fid >= window + 0x100:
+                raise AuthorError(f"{name}: more clips than its file window holds")
+            struct.pack_into("<I", blob, 0x40, fid)
+            (o2r / f"{fid:04x}").write_bytes(bytes(blob))
+            n = struct.unpack_from("<I", blob, 0x48)[0]
+            size = struct.unpack_from("<I", blob, 0x4C + 2 * n)[0]
+            resolved["file_closure"].append({"file_id": fid, "vanilla_id": False, "bytes": size, "externs": []})
+            authored.setdefault(table + "_sha256", {})[str(row["index"])] = hashlib.sha256(bytes(blob)).hexdigest()
+            clips[anim] = fid
+            # An Ultimate clip's skirt guide (anim.py writes it beside the
+            # clip): author_skirt keys its dress from it.
+            guide = src.with_suffix(".skirt.json")
+            if guide.exists():
+                authored.setdefault("skirt_guides", {})[f"{fid:#x}"] = str(guide.relative_to(REPO).as_posix())
+        replaced.add(row["anim_file_id"])
+        row["anim_file_id"] = fid
+        row["inherited"]["anim_file_id"] = False
+        authored.setdefault(table, {})[str(row["index"])] = fid
+
     for key in sorted(motions, key=lambda k: int(k, 0)):
         entry = motions[key]
         index = int(key, 0)
@@ -439,39 +476,8 @@ def author_motions(resolved: dict, events: dict, motions: dict, name: str, out: 
         unknown = set(entry) - {"anim", "anim_id", "anim_flags", "script", "script_edits", "comment"}
         if unknown:
             raise AuthorError(f"spec motions {index}: unknown keys {sorted(unknown)}")
-        if "anim" in entry and entry["anim"] in clips:
-            fid = clips[entry["anim"]]
-            replaced.add(row["anim_file_id"])
-            row["anim_file_id"] = fid
-            row["inherited"]["anim_file_id"] = False
-            authored.setdefault("anims", {})[str(index)] = fid
-        elif "anim" in entry:
-            src = REPO / entry["anim"]
-            if not src.exists():
-                raise AuthorError(f"spec motions {index}: {src} not built (anim.py makes it)")
-            blob = bytearray(src.read_bytes())
-            if blob[4:8] != b"OLER":
-                raise AuthorError(f"spec motions {index}: {src} is not an O2R container")
-            fid = next_id
-            next_id += 1
-            if fid >= window + 0x100:
-                raise AuthorError(f"{name}: more clips than its file window holds")
-            struct.pack_into("<I", blob, 0x40, fid)
-            (o2r / f"{fid:04x}").write_bytes(bytes(blob))
-            n = struct.unpack_from("<I", blob, 0x48)[0]
-            size = struct.unpack_from("<I", blob, 0x4C + 2 * n)[0]
-            resolved["file_closure"].append({"file_id": fid, "vanilla_id": False, "bytes": size, "externs": []})
-            replaced.add(row["anim_file_id"])
-            row["anim_file_id"] = fid
-            row["inherited"]["anim_file_id"] = False
-            authored.setdefault("anims", {})[str(index)] = fid
-            authored.setdefault("anims_sha256", {})[str(index)] = hashlib.sha256(bytes(blob)).hexdigest()
-            clips[entry["anim"]] = fid
-            # An Ultimate clip's skirt guide (anim.py writes it beside the
-            # clip): author_skirt keys its dress from it.
-            guide = src.with_suffix(".skirt.json")
-            if guide.exists():
-                authored.setdefault("skirt_guides", {})[f"{fid:#x}"] = str(guide.relative_to(REPO).as_posix())
+        if "anim" in entry:
+            place_clip(entry["anim"], row, f"motions {index}", "anims")
         if "anim_id" in entry:
             # A clip already in the content's closure (Quick Draw's slash is
             # Roy's forward-tilt clip): named, not copied.
@@ -512,9 +518,14 @@ def author_motions(resolved: dict, events: dict, motions: dict, name: str, out: 
         row = menu_rows.get(index)
         if row is None:
             raise AuthorError(f"spec menu_motions: no menu motion {index} in the base")
-        unknown = set(entry) - {"script", "comment"}
+        unknown = set(entry) - {"script", "anim", "comment"}
         if unknown:
-            raise AuthorError(f"spec menu_motions {index}: unknown keys {sorted(unknown)} (a script only)")
+            raise AuthorError(f"spec menu_motions {index}: unknown keys {sorted(unknown)} (a script, a clip)")
+        if "anim" in entry:
+            place_clip(entry["anim"], row, f"menu_motions {index}", "menu_anims")
+            if anim_locks == "rest":
+                row["anim_flags"] |= ANIM_FLAG_LOCKS
+                row["inherited"]["anim_flags"] = False
         src = REPO / entry["script"]
         lines = [ln.split("#", 1)[0].strip() for ln in src.read_text(encoding="utf-8").splitlines()]
         lines = [ln for ln in lines if ln]
@@ -683,7 +694,8 @@ def author_skirt(resolved: dict, events: dict, skirt: dict | None, name: str, ou
     resolved["file_closure"] = [r for r in resolved["file_closure"] if r["file_id"] not in dropped]
     # The generator and coverage.py read the content's own clips by these
     # ids (an OverlayRom over the image).
-    authored["skirt_clips"] = sorted(set(made.values()) - set(authored.get("anims", {}).values()))
+    authored["skirt_clips"] = sorted(set(made.values()) - set(authored.get("anims", {}).values()) -
+                                     set(authored.get("menu_anims", {}).values()))
     if pose:
         authored["pose_groups"] = [{"motions": g.get("motions", []), "menu_motions": g.get("menu_motions", []),
                                 "ops": len(g["ops"])} for g in pose]

@@ -22,15 +22,18 @@
  },
  "menu_motions": {
   "1": {
-   "comment": "Win1: Peach's clip, her wings out",
+   "comment": "Win1: Ultimate's first victory (owner p6ac: Peach's clip with motionless wings before; Ultimate's wins have none) (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
+   "anim": "builds/p6-art/palutena/anims/win1.o2r",
    "script": "scripts/p6/palutena/motions/win1.ms"
   },
   "2": {
-   "comment": "Win2: Peach's clip (her halo removed, owner 2026-10-17)",
+   "comment": "Win2: Ultimate's second victory (owner p6ac) (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
+   "anim": "builds/p6-art/palutena/anims/win2.o2r",
    "script": "scripts/p6/palutena/motions/win2.ms"
   },
   "3": {
-   "comment": "Win3: Peach's clip, her wings (no halo: owner 2026-10-17)",
+   "comment": "Win3: Ultimate's third victory (owner p6ac) (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
+   "anim": "builds/p6-art/palutena/anims/win3.o2r",
    "script": "scripts/p6/palutena/motions/win3.ms"
   },
   "4": {
@@ -1179,7 +1182,7 @@
      "offsets_z": [
       450,
       750,
-      1449
+      1500
      ],
      "phases": [
       {
@@ -1206,7 +1209,7 @@
      "offsets_z": [
       450,
       750,
-      1449
+      1500
      ],
      "phases": [
       {
@@ -1309,7 +1312,7 @@
    "end": 160.0
   },
   "24": {
-   "comment": "Owner p6x VFX plan (picks 2026-10-16: solid, Ultimate's cyan-white): her staff's trail in the four moves that spin it (forward tilt, neutral air, up tilt, down tilt; motions/*.ms SetAfterImage 24): along row 14's grip-to-gem line (axis 3, a local direction; her staff's hit offsets lie on it), from her grip (0) to just past the gem's tip (260; the staff's mesh reaches 249 along it), cyan at the grip to white at the gem, the game's untextured gradient.",
+   "comment": "Owner p6x VFX plan (picks 2026-10-16: solid, Ultimate's cyan-white): her staff's trail in the four moves that spin it (forward tilt, neutral air, up tilt, down tilt; motions/*.ms SetAfterImage 24): along row 14's grip-to-gem line (axis 3, a local direction; her staff's hit offsets lie on it), from her grip (0) to just past the gem's tip (260; the staff's mesh reaches 249 along it), cyan at the grip to white at the gem, the game's untextured gradient. Owner p6ac (2026-10-17: \"staff VFX trails should be for both ends of the staff\", as Ultimate's palutena_wand_trace on the whole stick): from just past the butt's tip (-275; the mesh reaches -270) to the gem's, one light cyan-white over its length (the game's two-colour gradient cannot be cyan in the middle).",
    "model_part": 14,
    "axis": 3,
    "local": [
@@ -1317,9 +1320,9 @@
     0.681,
     -0.725
    ],
-   "colour_1": "40c8ff00",
-   "colour_2": "ffffff00",
-   "start": 0.0,
+   "colour_1": "b4f0ff00",
+   "colour_2": "b4f0ff00",
+   "start": -275.0,
    "end": 260.0
   }
  }

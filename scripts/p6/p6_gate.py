@@ -105,6 +105,9 @@ WINGS_TABLE_SLOT = WINGS_TREE + p6_wings.TREE_ROWS * N.DOBJ_DESC_SIZE
 # p4_articles.py "glow", "light").
 GLOW_TREE = WINGS_TABLE_SLOT + 4
 LIGHT_TREE = GLOW_TREE + p6_light.GLOW_ROWS * N.DOBJ_DESC_SIZE
+# The light's MObjSub*** table right after its rows (nds_p4_palutena.c
+# PAL_LIGHT_MOBJSUBS): its cards fade by their live material (owner p6ac).
+LIGHT_MOBJSUBS = LIGHT_TREE + p6_light.LIGHT_ROWS * N.DOBJ_DESC_SIZE
 # The model writer's cut-out state (model_writer.CUTOUT_ON / _OFF).
 CUTOUT_ON = [N.Gfx(0xE2001E01, 0x00000001), N.Gfx(0xE200001C, 0xC4113078)]
 CUTOUT_OFF = [N.Gfx(0xE2001E01, 0x00000000), N.Gfx(0xE200001C, 0xC4112078)]
@@ -233,6 +236,9 @@ def build() -> tuple[bytes, dict]:
     if (glow_at, light_at) != (GLOW_TREE, LIGHT_TREE):
         raise GateError(f"light trees at {glow_at:#x}, {light_at:#x}; p4_articles.py names "
                         f"{GLOW_TREE:#x}, {LIGHT_TREE:#x}")
+    light_mobj_at = app.put(bytes(4 * p6_light.LIGHT_DOBJS))
+    if light_mobj_at != LIGHT_MOBJSUBS:
+        raise GateError(f"light materials at {light_mobj_at:#x}, expected {LIGHT_MOBJSUBS:#x}")
     doors = {}
     for side in ("L", "R"):
         mesh = meshes[side]
@@ -301,7 +307,7 @@ def build() -> tuple[bytes, dict]:
         struct.pack_into(">3f", f.data, at + 32, 1.0, 1.0, 1.0)
     wings = p6_wings.write(app, FILE_ID, wings_at)
     app.slot(WINGS_TABLE_SLOT, ("intern", FILE_ID, wings["table"]))
-    light = p6_light.write(app, FILE_ID, glow_at, light_at)
+    light = p6_light.write(app, FILE_ID, glow_at, light_at, light_mobj_at)
     info = {"tree": tree_at, "pillar": pillar_at, "lists": lists, "pillar_lists": pillar_lists,
             "wings": wings, "light": light,
             "scale": scale, "hinges": {s: doors[s]["hinge"] for s in doors}, "preview": preview}
@@ -382,7 +388,8 @@ def main() -> int:
     w = info["wings"]
     print(f"p6 wings: tree {w['tree']:#x}, table {w['table']:#x}, {w['bytes']} bytes, mesh {w['mesh']}, clips {w['clips']}")
     lt = info["light"]
-    print(f"p6 light: glow tree {lt['glow']:#x}, light tree {lt['light']:#x}, images {lt['images']}")
+    print(f"p6 light: glow tree {lt['glow']:#x}, light tree {lt['light']:#x}, "
+          f"materials {lt['mobjsubs']:#x}, images {lt['images']}")
     print(f"p6 gate: {args.out} {len(blob)} bytes, tree {info['tree']:#x}, pillar {info['pillar']:#x}, scale {info['scale']:.2f}, "
           f"hinges L {info['hinges']['L']:.0f} R {info['hinges']['R']:.0f}")
     return 0

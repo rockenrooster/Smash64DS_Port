@@ -999,6 +999,73 @@ the taunt with the light wings and the ring.
 - **"Forward a"** in the owner's list is read as the forward tilt (the staff
   spun ahead of her); her forward air is a kick and has no staff to light.
 
+## Owner p6ac (2026-10-17): the light wings' life, the wins, the warp, moves
+
+The owner's p6ac playtest (`docs/BUGS.md`, Palutena):
+
+- **Light wings, timing from Ultimate's data.** "Not lasting as long as they
+  should be, OR the fade out isn't gradual enough ... can we check
+  ultimate's data". Her effect scripts (the owner's `ssbu-recomp` build,
+  `fighters/palutena/acmd/effect.cpp`; the forward and up smash's, which
+  that decompiler could not lift, read from the module's calls) make
+  `palutena_backlight` once, `EFFECT_FOLLOW` on `top` (her feet) at a fixed
+  height: the forward smash at frame 16 (`top` + (1, 21, 2.5), yaw -50 or
+  -55 by facing), the down smash at 16 ((3, 13.5, 0)), the up smash at 16
+  (rate 1.1, (4, 21.5, 2.5)), up air `backlight2` at 7 ((0, 23, 0)), the down
+  taunt at 54 (rate 0.8, alpha 0.9). No script turns it off: it lives its
+  emitters' life (`ef_palutena.eff`, VFXB emitter field 0x8B8: 38 frames,
+  `backlight2` 32), alpha in by 6% of that, held to 42% (the additive layer)
+  or 48% (the alpha one), then down to nothing at 100%; scale constant. The
+  3DS's `Strong_Side_A` agrees: no light in its wind-up (frames 12-28); its
+  frames 0-11 are the previous smash's wings still up as she stands, cut
+  when the next move starts. So the windows are Ultimate's frames through
+  each clip's time anchors (forward smash 14-16-26-37, down smash 16-18-33-54,
+  up smash 11-13-33-44, up air 4-5-18-23, taunt 46-48-65-85), and the light
+  now fades by alpha: each card's list calls its DObj's material (segment E;
+  `p6_light.py` MObjSub, MOBJ_FLAG_PRIMCOLOR, table at 0x608 of her special
+  file 2; `p4_articles.py` "light" `material`) and her code sets the live
+  material's alpha each tic (the native renderer reads it as the polygon's
+  alpha), the cards at full size once grown.
+- **Down smash: no vertical follow.** "Use palutena's head height at full
+  impact for the spawn reference": as Ultimate's (`top`, not her head), the
+  light's place from her root is her head's until the window's anchor frame
+  and held from there: the down smash's at its impact (16), the forward
+  smash's as she stands (frame 0, the place the owner approved in p6ab), the
+  others at their first frame.
+- **Explosive Flame**'s far distance 1,500 (was 1,449).
+- **Victory poses.** "What animation is she playing Peach or an ultimate
+  anim? If ultimate, then port white wing animation too": Peach's three
+  clips, with the authored wings as still cards on her torso. Ultimate's
+  three wins (`j02win1-3`, 130 frames) have no wings at all (the godwing
+  article plays only the smashes and the up taunt: its motion list has six
+  entries), so the Results poses are now Ultimate's clips (`art/p6/palutena/
+  anims/win1-3.json`, keyed every third frame at eps 8 so they stay under
+  her largest clip, 8.2-9.5 KB), no wings, her win cues and sounds at
+  Ultimate's frames (`sound_win1a`, `2a`, `3`; `appeal_s02` and one unnamed
+  sound are not among hers), win 3's blink at Ultimate's frames.
+  `p6_author.py` gained built clips for menu motions (`"anim"`, authored
+  `menu_anims`; `coverage.py` and `generate_p4_fighter.py` read them). The
+  Selected pose (Win4) stays Peach's.
+- **Warp.** "Horizontal teleports seem to get caught on the ground easily":
+  a level backward stick on the ground has atan2 +180, which neither ground
+  test took, so she lifted into the air and landed the next tic (200 units).
+  Back along the ground is a ground travel now; and an air travel with a
+  sideways part and none upward that meets a floor goes on along it for its
+  frames left (Ultimate's warp slides along surfaces), instead of ending.
+- **Staff trail on both ends** (Ultimate's `palutena_wand_trace` runs the
+  whole stick): trail 24 from -275 (past the butt's tip; the mesh reaches
+  -270) to 260, one light cyan-white (`b4f0ff`) over its length.
+- **Down tilt**: its staff spin twice as long (Ultimate's 13-28, the sweep,
+  over clip frames 6-23; 41 frames, was 32); its hit where it was (6-9), the
+  trail 5-22.
+- **Gem glow**: its white core 25% bigger (half size 80) and brighter (its
+  coverage x1.25, its own image "core").
+- **Neutral air**: at 0.75 (its clip's anchors 4/3 as late, 67 frames), one
+  hit instead of five light ones and a launcher: 6% from 7 and 7% from 18
+  (the forward tilt's damage, re-made live so it hits once), cleared at 30,
+  hitboxes 1.25x the launcher's (275, 238, 200), the launcher's 55, growth
+  180, base 30.
+
 ## Animations (the owner's 3DS references, 2026-10-14)
 
 Superseded by Ultimate's motions above (the recipes below were keyposes;

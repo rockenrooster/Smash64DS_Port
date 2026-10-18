@@ -245,9 +245,12 @@ static void ndsSceneHarnessSeedBattlePlayableDefaults(void)
 /* LAB (Results harness only): a boot-poked podium. One nFTKind byte a slot,
  * 0xFF an empty slot; the default keeps the Mario/Fox seed below. Slot 0 is
  * the human, the rest CPUs, and a repeated kind takes the CSS's next costume.
- * The slot named by gNdsLabResultsWinner KOs every other player once. */
+ * The slot named by gNdsLabResultsWinner KOs every other player once.
+ * gNdsLabResultsContents: one P4 content byte a slot (0 the original cast),
+ * its kind byte then the content's setup parent (P6 wins, owner p6ac). */
 volatile u32 gNdsLabResultsKinds __attribute__((used)) = 0xffffffffu;
 volatile u32 gNdsLabResultsWinner __attribute__((used));
+volatile u32 gNdsLabResultsContents __attribute__((used));
 
 static void ndsSceneHarnessSeedResultsLabPodium(void)
 {
@@ -278,6 +281,7 @@ static void ndsSceneHarnessSeedResultsLabPodium(void)
             }
         }
         cfg->fighters[i].fkind = (u8)kind;
+        cfg->fighters[i].p4_content = (u8)(gNdsLabResultsContents >> (i * 8));
         cfg->fighters[i].pkind = (i == 0) ? nFTPlayerKindMan :
             nFTPlayerKindCom;
         cfg->fighters[i].level = 3;

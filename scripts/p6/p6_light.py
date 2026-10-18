@@ -23,6 +23,13 @@ the card's PRIM), scaled down from Ultimate's effect textures in the owner's
 local rip (decomp/alt_assets/.../Palutenas Effects; never committed, P6 D1,
 like her voices); the cards are translucent and unlit: colour PRIM, alpha
 TEXEL0 * PRIM (the combine the entry-effect compiler takes for I4).
+
+The light's cards take their PRIM from a material (owner p6ac, 2026-10-17:
+the wings "not lasting as long as they should, or the fade out isn't
+gradual enough"): each card's DObj has one MObj (MOBJ_FLAG_PRIMCOLOR, its
+MObjSub here, the tree's MObjSub*** table at LIGHT_MOBJSUBS) and its list
+calls segment E where the PRIM was, so her code fades a card by its live
+MObj's alpha, as Ultimate's backlight fades.
 """
 from __future__ import annotations
 
@@ -43,7 +50,8 @@ FX = (REPO / "decomp" / "alt_assets" / "Fighters" / "Super Smash Bros Ultimate" 
 GLOW_CARDS = (
     # name, image, half size, PRIM (r, g, b, a)
     ("halo", "glow", 160.0, (150, 228, 255, 190)),
-    ("core", "glow", 64.0, (255, 255, 255, 255)),
+    # The core 25% bigger and brighter than first made (owner p6ac).
+    ("core", "core", 80.0, (255, 255, 255, 255)),
 )
 GLOW_ROWS = len(GLOW_CARDS) + 2
 # The light's cards, all in one plane her code turns to the camera (owner
@@ -70,9 +78,18 @@ LIGHT_CARDS = (
     ("ring_r", "ring", (190, 242, 255, 230)),
 )
 LIGHT_ROWS = len(LIGHT_CARDS) + 2
+# The tree's DObjs (its root, then each card) as gcAddMObjAll walks them:
+# one MObjSub*** entry each, the root's NULL.
+LIGHT_DOBJS = len(LIGHT_CARDS) + 1
+# MObjSub (sys/objtypes.h): flags at 0x30 (MOBJ_FLAG_PRIMCOLOR), primcolor
+# (RGBA8888) at 0x50; scau/scav at 0x1C/0x20 one, as a fighter's are.
+MOBJSUB_SIZE = 0x78
+MOBJ_FLAG_PRIMCOLOR = 0x0200
+SEGMENT_E_SLOT0 = 0x0E000000
 IMAGES = {
     # name: (Ultimate's texture (its alpha), width, height)
     "glow": ("ef_palutena_flash01.png", 32, 32),
+    "core": ("ef_palutena_flash01.png", 32, 32),
     "orb": (None, 32, 32),
     "wing": ("ef_palutena_backlight01.png", 64, 64),
     "ring": (None, 32, 64),
@@ -121,7 +138,7 @@ def image_i4(kind: str) -> tuple[np.ndarray, int, int]:
         a = np.clip((1.0 - r) / (1.0 - ORB_CORE), 0.0, 1.0) ** 1.5
     else:
         a = _alpha(source)
-    if kind == "glow":
+    if kind in ("glow", "core"):
         # flash01 is a quarter of a disc (its centre the bottom-right
         # corner): mirrored to the whole disc, its peak made full and its
         # falloff widened (gamma 0.6) so a small card still reads as a glow.
@@ -129,6 +146,9 @@ def image_i4(kind: str) -> tuple[np.ndarray, int, int]:
         a = np.concatenate([a, a[::-1, :]], axis=0)
         a = a / max(float(a.max()), 1e-6)
         a = a ** 0.6
+        if kind == "core":
+            # The core 25% brighter (owner p6ac): its coverage, white PRIM.
+            a = a * 1.25
     if kind == "wing":
         # The 3DS's strokes are solid light: Ultimate's soft edges firmed
         # (gamma 0.6) so each stroke reads as a bar at the DS's size.
@@ -140,7 +160,7 @@ def image_i4(kind: str) -> tuple[np.ndarray, int, int]:
     # No faint haze over the card: the lowest level clear, so a card's
     # rectangle never shows.
     levels[levels <= 1] = 0
-    if kind in ("glow", "orb"):
+    if kind in ("glow", "core", "orb"):
         # The rim fully clear: no square edge where the card ends.
         levels[0, :] = levels[-1, :] = 0
         levels[:, 0] = levels[:, -1] = 0
@@ -163,18 +183,23 @@ def _vtx(x: float, y: float, s: float, t: float) -> bytes:
     return struct.pack(">hhhHhh", xs, ys, 0, 0, int(round(s)), int(round(t))) + bytes((255, 255, 255, 255))
 
 
-def _card_list(fid: int, tex_at: int, w: int, h: int, vtx_at: int, prim: tuple) -> list:
+def _card_list(fid: int, tex_at: int, w: int, h: int, vtx_at: int, prim: tuple | None) -> list:
     """One quad (four vertices at vtx_at), its I4 image loaded as the N64
-    loads a 4-bit block (16-bit load tile), translucent at PRIM."""
+    loads a 4-bit block (16-bit load tile), translucent at PRIM (or, prim
+    None, at its DObj's material: a call to segment E's first slot)."""
     line = max(1, w * 4 // 64)                   # 4-bit row in 64-bit words
     masks, maskt = w.bit_length() - 1, h.bit_length() - 1
     clamp = 2
-    r, g, b, a = prim
+    if prim is None:
+        colour = N.Gfx(0xDE000000, SEGMENT_E_SLOT0)
+    else:
+        r, g, b, a = prim
+        colour = N.Gfx(0xFA000000, (r << 24) | (g << 16) | (b << 8) | a)
     return [N.Gfx(0xE7000000, 0),
             N.Gfx(0xD9000000 | (0xFFFFFF & ~(G_LIGHTING | G_CULL_BACK)), 0),
             N.Gfx(0xE3001001, 0x00000000)] + XLU_ON + [
             I4_COMBINE, N.Gfx(0xF9000000, 0),
-            N.Gfx(0xE7000000, 0), N.Gfx(0xFA000000, (r << 24) | (g << 16) | (b << 8) | a),
+            N.Gfx(0xE7000000, 0), colour,
             N.Gfx(0xE8000000, 0),
             N.Gfx(0xF5900000, (7 << 24) | (maskt << 14) | (masks << 4)),
             N.Gfx(0xF5800000 | (line << 9), (clamp << 18) | (maskt << 14) | (clamp << 8) | (masks << 4)),
@@ -211,9 +236,21 @@ def _corners(kind: str, name: str, w: int, h: int, half: float = 0.0) -> list:
     return c
 
 
-def write(app, fid: int, glow_at: int, light_at: int) -> dict:
-    """The images, the cards' lists and both trees' rows (their space
-    already allocated at glow_at and light_at)."""
+def _mobjsub(prim: tuple) -> bytes:
+    """A material that sets only PRIM (MOBJ_FLAG_PRIMCOLOR), in the file's
+    big-endian layout (the loader word-swaps it; attachment restores the
+    u16/u8 lanes, ndsRelocCopyMObjSubForAttachment)."""
+    sub = bytearray(MOBJSUB_SIZE)
+    struct.pack_into(">ff", sub, 0x1C, 1.0, 1.0)
+    struct.pack_into(">H", sub, 0x30, MOBJ_FLAG_PRIMCOLOR)
+    sub[0x50:0x54] = bytes(prim)
+    return bytes(sub)
+
+
+def write(app, fid: int, glow_at: int, light_at: int, mobj_at: int) -> dict:
+    """The images, the cards' lists, both trees' rows (their space already
+    allocated at glow_at and light_at) and the light's materials (its
+    MObjSub*** table allocated at mobj_at)."""
     images = {}
     for kind in IMAGES:
         levels, w, h = image_i4(kind)
@@ -221,7 +258,7 @@ def write(app, fid: int, glow_at: int, light_at: int) -> dict:
         images[kind] = (app.put(_i4_bytes(levels)), w, h)
     lists = {}
 
-    def card(name: str, kind: str, prim: tuple, half: float = 0.0) -> int:
+    def card(name: str, kind: str, prim: tuple | None, half: float = 0.0) -> int:
         tex_at, w, h = images[kind]
         app.align(8)
         vtx_at = app.put(b"".join(_vtx(x, y, s * 32, t * 32) for x, y, s, t in _corners(kind, name, w, h, half)))
@@ -235,7 +272,17 @@ def write(app, fid: int, glow_at: int, light_at: int) -> dict:
     for name, kind, half, prim in GLOW_CARDS:
         lists[name] = card(name, kind, prim, half)
     for name, kind, prim in LIGHT_CARDS:
-        lists[name] = card(name, kind, prim)
+        lists[name] = card(name, kind, None)
+    # The light's materials: entry 0 (the root) NULL, then per card a
+    # NULL-ended list naming its MObjSub.
+    subs = {}
+    for k, (name, _kind, prim) in enumerate(LIGHT_CARDS):
+        app.align(8)
+        sub_at = app.put(_mobjsub(prim))
+        list_at = app.put(bytes(8))
+        app.slot(list_at, ("intern", fid, sub_at))
+        app.slot(mobj_at + 4 * (k + 1), ("intern", fid, list_at))
+        subs[name] = sub_at
 
     def rows(at: int, names: list) -> None:
         tree = [(0, None)] + [(1, lists[n]) for n in names] + [(N.JOINT_TREE_END, None)]
@@ -249,5 +296,5 @@ def write(app, fid: int, glow_at: int, light_at: int) -> dict:
 
     rows(glow_at, [c[0] for c in GLOW_CARDS])
     rows(light_at, [c[0] for c in LIGHT_CARDS])
-    return {"glow": glow_at, "light": light_at, "lists": lists,
+    return {"glow": glow_at, "light": light_at, "mobjsubs": mobj_at, "subs": subs, "lists": lists,
             "images": {k: (v[1], v[2]) for k, v in images.items()}}

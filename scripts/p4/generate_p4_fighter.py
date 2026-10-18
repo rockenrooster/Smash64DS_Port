@@ -1976,7 +1976,7 @@ def main() -> int:
     # Its skirt's keyed copies of every clip it plays (p6_author.py "skirt")
     # likewise.
     authored_ids = ([new for _old, new in authored_files.values()] + list(authored.get("anims", {}).values()) +
-                    list(authored.get("skirt_clips") or []))
+                    list(authored.get("menu_anims", {}).values()) + list(authored.get("skirt_clips") or []))
     authored_ram = authored.get("ram")
     copies = authored.get("copies") or {}
     if authored_ids or authored_ram or copies:
