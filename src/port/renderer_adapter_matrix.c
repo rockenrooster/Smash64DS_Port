@@ -26,6 +26,7 @@
 #include <nds/nds_native_actor_yoster_cloud.h>
 #endif
 #include <ft/ftdata_file_slots.h>
+#include <nds/nds_frontend_overlay.h>
 
 #ifndef NDS_RENDERER_HW_TRIANGLES
 #define NDS_RENDERER_HW_TRIANGLES 0
@@ -9605,6 +9606,8 @@ static u32 ndsRendererAdapterNormalizeNativeGeometryMode(u32 geometry_mode)
 }
 #endif
 
+/* Memory syTaskmanMalloc can hand out: the taskman arena, or in a VS battle
+ * the frontend overlay's loan, which it takes first (2026-10-18). */
 static s32 ndsFighterDLScanRangeInTaskmanArena(const void *ptr, size_t bytes)
 {
     const u8 *arena = ndsTaskmanArenaStart();
@@ -9612,10 +9615,13 @@ static s32 ndsFighterDLScanRangeInTaskmanArena(const void *ptr, size_t bytes)
     uintptr_t addr = (uintptr_t)ptr;
     size_t arena_size = ndsTaskmanArenaSize();
 
-    if ((ptr == NULL) || (arena == NULL) || (addr < base) ||
-        (addr > (base + arena_size)))
+    if (ptr == NULL)
     {
         return FALSE;
+    }
+    if ((arena == NULL) || (addr < base) || (addr > (base + arena_size)))
+    {
+        return ndsFrontendOverlayLoanContains(ptr, bytes);
     }
     return (bytes <= (arena_size - (size_t)(addr - base))) ? TRUE : FALSE;
 }

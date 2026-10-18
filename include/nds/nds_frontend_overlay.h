@@ -27,6 +27,7 @@ void *ndsFrontendOverlayBorrowForSelect(u32 *bytes);
 /* Scene-lifetime asset storage. The loan is separate from the existing taskman
  * allocation, whose newlib header and ownership must never be overwritten. */
 void *ndsFrontendOverlayTryAlloc(size_t bytes, u32 alignment);
+s32 ndsFrontendOverlayLoanContains(const void *ptr, size_t bytes);
 void *ndsSceneAssetAlloc(size_t bytes, u32 alignment);
 /* Atomic admission: preserve keep_free bytes in the taskman heap, including
  * alignment, and leave both cursors unchanged on rejection. */

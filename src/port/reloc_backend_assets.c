@@ -14335,13 +14335,12 @@ static u32 sNdsR2AnimCacheCount;
  * sNdsR2AnimCacheExtentOrigin (the block's base when reserved, which the
  * elastic yield only moves forward), Hi rounded up: every payload and every
  * ring slot starts 16-aligned, so the unit test is the byte test. An entry
- * outside the units' range reads as never overlapping. Same-ROM A/B word
- * gNdsR2AnimCacheExtents (0 = scan the entries). */
+ * outside the units' range reads as never overlapping (and is scanned as
+ * the entries were before). */
 static u16 sNdsR2AnimCacheLo[NDS_R2_ANIM_CACHE_ENTRIES];
 static u16 sNdsR2AnimCacheHi[NDS_R2_ANIM_CACHE_ENTRIES];
 static u8 sNdsR2AnimCacheRef[NDS_R2_ANIM_CACHE_ENTRIES];
 static uintptr_t sNdsR2AnimCacheExtentOrigin;
-__attribute__((used, section(".data"))) volatile u32 gNdsR2AnimCacheExtents = 1u;
 #define NDS_R2_ANIM_EXTENT_NONE 0xffffu
 
 static inline u32 ndsR2AnimExtentUnitFloor(const void *p)
@@ -14854,6 +14853,7 @@ static sb32 ndsR2BattlePackCarveWorthIt(void)
     u32 seen = 0u;
     u32 distinct = 0u;
     sb32 has_packed_kind = FALSE;
+    sb32 has_content = FALSE;
 
     if (gSCManagerBattleState == NULL)
     {
@@ -14871,6 +14871,19 @@ static sb32 ndsR2BattlePackCarveWorthIt(void)
         {
             continue;
         }
+#if NDS_P4
+        /* A content plays its own clips, never the pack's: its kind is its
+         * parent's, so four Palutenas (Fox) took the pack's carve, its
+         * 128 KB keep-free declined it, the decline latched, and the match
+         * ran with no motion cache at all (2026-10-18; every Fox-parent
+         * content: Falco, Wolf, Peach, Sonic, Palutena). It neither wants
+         * the pack nor counts as one of its kinds. */
+        if (ndsP4MatchContent(i) != 0u)
+        {
+            has_content = TRUE;
+            continue;
+        }
+#endif
         if ((seen & (1u << fkind)) == 0u)
         {
             seen |= 1u << fkind;
@@ -14884,8 +14897,9 @@ static sb32 ndsR2BattlePackCarveWorthIt(void)
     gNdsBattlePackCarveMatchKinds = distinct;
     if (distinct == 0u)
     {
-        /* No roster yet -- do not spend the decision on an empty state. */
-        return TRUE;
+        /* No roster yet -- do not spend the decision on an empty state --
+         * unless every player is a content (no pack kind at all). */
+        return (has_content != FALSE) ? FALSE : TRUE;
     }
     return ((has_packed_kind != FALSE) &&
             (distinct <= NDS_BATTLEPACK_CARVE_MAX_KINDS)) ? TRUE : FALSE;
@@ -15734,22 +15748,13 @@ static sb32 ndsBattlePackResidencyStep(void)
 
 #endif /* NDS_R2_BATTLEPACK */
 
-/* Where each asset id's entry was last found, by its low byte. A hint only:
- * it is checked against the entry before use, so an entry that moved (removal
- * swaps the last entry down) or left just costs the scan it replaces. Entries
- * are unique per asset (every store follows a failed find), so the hinted entry
- * is the one the scan would return. */
-static u8 sNdsR2AnimCacheHint[256];
-
-/* An exact index over the entries (P2-2p8, 2026-09-29): the hint answered a
- * hit, but every miss scanned all entries, and most finds miss -- the preload
- * steps ask after clips not yet held (1,348 finds a gate match at 872 ticks
- * each). Open addressing on the asset id, 512 slots for at most 256 entries,
- * slot = entry index + 1 (0 empty), kept in step with every store, removal
- * and reset. Entries are unique per asset, so it returns the entry the scan
- * would. Same-ROM A/B word gNdsR2AnimCacheIndexed (0 = hint and scan; the
- * index is maintained either way). */
-__attribute__((used, section(".data"))) volatile u32 gNdsR2AnimCacheIndexed = 1u;
+/* An exact index over the entries (P2-2p8, 2026-09-29): a low-byte hint
+ * answered a hit, but every miss scanned all entries, and most finds miss --
+ * the preload steps ask after clips not yet held (1,348 finds a gate match at
+ * 872 ticks each). Open addressing on the asset id, 512 slots for at most 256
+ * entries, slot = entry index + 1 (0 empty), kept in step with every store,
+ * removal and reset. Entries are unique per asset, so it returns the entry a
+ * scan would. (The hint-and-scan arm and its A/B word left 2026-10-18.) */
 
 static inline u32 ndsR2AnimCacheIndexHome(u32 asset_id)
 {
@@ -15822,8 +15827,7 @@ static void ndsR2AnimCacheIndexDelete(u32 hole)
 
 static NDSR2AnimCacheEntry *ndsR2AnimCacheFind(u32 asset_id)
 {
-    u32 i;
-    u32 hint;
+    u32 slot;
 
     /* The ownership test belongs on the READ path too, not only where the arena is
      * reserved. Every entry's payload points into the reserved block, so once the
@@ -15838,28 +15842,9 @@ static NDSR2AnimCacheEntry *ndsR2AnimCacheFind(u32 asset_id)
     {
         return NULL;
     }
-    if (gNdsR2AnimCacheIndexed != 0u)
-    {
-        const u32 slot = ndsR2AnimCacheIndexSlot(asset_id);
-
-        return (slot == NDS_R2_ANIM_CACHE_INDEX_NONE) ? NULL :
-            &sNdsR2AnimCache[sNdsR2AnimCacheIndex[slot] - 1u];
-    }
-    hint = sNdsR2AnimCacheHint[asset_id & 0xffu];
-    if ((hint < sNdsR2AnimCacheCount) &&
-        (sNdsR2AnimCache[hint].asset_id == asset_id))
-    {
-        return &sNdsR2AnimCache[hint];
-    }
-    for (i = 0u; i < sNdsR2AnimCacheCount; i++)
-    {
-        if (sNdsR2AnimCache[i].asset_id == asset_id)
-        {
-            sNdsR2AnimCacheHint[asset_id & 0xffu] = (u8)i;
-            return &sNdsR2AnimCache[i];
-        }
-    }
-    return NULL;
+    slot = ndsR2AnimCacheIndexSlot(asset_id);
+    return (slot == NDS_R2_ANIM_CACHE_INDEX_NONE) ? NULL :
+        &sNdsR2AnimCache[sNdsR2AnimCacheIndex[slot] - 1u];
 }
 
 static void ndsR2AnimCacheRemoveEntry(u32 index)
@@ -15923,7 +15908,6 @@ static void ndsR2AnimCacheEvictRawRange(u32 offset, u32 size)
     ndsR2AnimPinsRescueRange(write_start, write_end);
 #endif
 
-    if (gNdsR2AnimCacheExtents != 0u)
     {
         const u32 lo = ndsR2AnimExtentUnitFloor(write_start);
         const u32 hi = ndsR2AnimExtentUnitCeil(write_end);
@@ -15977,9 +15961,7 @@ static void ndsR2AnimCacheEvictRawRange(u32 offset, u32 size)
  * Same ROM, four lab stages: 4-8% fewer reads (replayed on the lab traces:
  * 7-12%; LRU 8-12%). Bounded: after NDS_R2_ANIM_CACHE_CLOCK_STEPS steps (each clears at
  * least one mark) the range is evicted as before. Only which clips stay
- * cached changes; a clip's bytes are the same wherever they come from.
- * Same-ROM A/B word gNdsR2AnimCacheClock. */
-__attribute__((used, section(".data"))) volatile u32 gNdsR2AnimCacheClock = 1u;
+ * cached changes; a clip's bytes are the same wherever they come from. */
 __attribute__((used)) volatile u32 gNdsR2AnimCacheClockSkips;
 #define NDS_R2_ANIM_CACHE_CLOCK_STEPS 8u
 
@@ -16014,7 +15996,6 @@ static void *ndsR2AnimCacheRawRingAllocAligned(u32 size, u32 align)
         aligned = first;
         gNdsR2AnimCacheRawRecycles++;
     }
-    if (gNdsR2AnimCacheClock != 0u)
     {
         u32 steps;
 
@@ -16027,8 +16008,7 @@ static void *ndsR2AnimCacheRawRingAllocAligned(u32 size, u32 align)
             const u32 ulo = ndsR2AnimExtentUnitFloor(lo);
             const u32 uhi = ndsR2AnimExtentUnitCeil(hi);
 
-            if ((gNdsR2AnimCacheExtents != 0u) &&
-                (ulo != NDS_R2_ANIM_EXTENT_NONE) &&
+            if ((ulo != NDS_R2_ANIM_EXTENT_NONE) &&
                 (uhi != NDS_R2_ANIM_EXTENT_NONE))
             {
                 for (i = 0u; i < sNdsR2AnimCacheCount; i++)
@@ -16291,8 +16271,7 @@ static const NDSR2AnimCacheEntry *ndsR2AnimDirectReadEntry(u32 asset_id)
  * elastic give-back, the arena drop) and the heap reset waits for all of them
  * (ndsR2AnimPrefetchDrain, battleship_sys_malloc.c). Two requests at most in
  * flight: the ARM7 mailbox holds 32 (FGM fills use 16, a sync read and its
- * resends 4). Same-ROM
- * A/B word gNdsR2AnimPrefetch. */
+ * resends 4). */
 #include <nds/nds_audio_storage.h>
 #include <nds/generated/nds_clip_successors.generated.h>
 
@@ -16309,8 +16288,6 @@ typedef struct NDSR2AnimPrefetch {
     u32 busy;
 } NDSR2AnimPrefetch;
 static NDSR2AnimPrefetch sNdsR2AnimPrefetchSlots[NDS_R2_ANIM_PREFETCH_SLOTS];
-/* Bit 0: the prefetch; bit 1: its learned successors (below). */
-__attribute__((used, section(".data"))) volatile u32 gNdsR2AnimPrefetch = 3u;
 __attribute__((used)) volatile u32 gNdsR2AnimPrefetchIssued;
 __attribute__((used)) volatile u32 gNdsR2AnimPrefetchLanded;
 __attribute__((used)) volatile u32 gNdsR2AnimPrefetchWaits;
@@ -16457,7 +16434,7 @@ static void ndsR2AnimLearnNote(const void *heap, u32 asset_id)
 {
     u32 f;
 
-    if (((gNdsR2AnimPrefetch & 2u) == 0u) || (asset_id > 0xffffu))
+    if (asset_id > 0xffffu)
     {
         return;
     }
@@ -16491,7 +16468,7 @@ static void ndsR2AnimPrefetchNote(u32 asset_id)
 {
     u32 i;
 
-    if ((gNdsR2AnimPrefetch == 0u) || (sNdsR2AnimCacheArenaElastic == FALSE))
+    if (sNdsR2AnimCacheArenaElastic == FALSE)
     {
         return;
     }
@@ -16574,7 +16551,7 @@ static u32 ndsR2AnimPrefetchNextCandidate(void)
                 }
             }
         }
-        else if ((gNdsR2AnimPrefetch & 2u) != 0u)
+        else
         {
             const u32 clip = sNdsR2AnimPrefetchQueue[0];
             const u32 way = clip & (NDS_R2_ANIM_LEARN_WAYS - 1u);
@@ -16659,10 +16636,9 @@ static sb32 ndsR2AnimPrefetchIssue(u32 next)
 
 void ndsR2AnimPrefetchIdle(void)
 {
-    if ((gNdsR2AnimPrefetch == 0u) ||
-        ((sNdsR2AnimPrefetchQueueCount == 0u) &&
-         (sNdsR2AnimPrefetchSlots[0].busy == 0u) &&
-         (sNdsR2AnimPrefetchSlots[1].busy == 0u)))
+    if ((sNdsR2AnimPrefetchQueueCount == 0u) &&
+        (sNdsR2AnimPrefetchSlots[0].busy == 0u) &&
+        (sNdsR2AnimPrefetchSlots[1].busy == 0u))
     {
         return;
     }

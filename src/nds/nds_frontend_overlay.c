@@ -277,6 +277,32 @@ static void *ndsFrontendOverlayTryAllocIn(u8 **cursor, u8 *limit,
     return (void *)start;
 }
 
+/* A VS battle's syTaskmanMalloc takes the loan first, so a buffer it handed
+ * out (an effect's display lists, an MObj chain) may sit in the lent range
+ * rather than the taskman arena; the renderer's range checks accept both
+ * (a Crash mirror's effect DLs failed native as BAD_ASSET, 2026-10-18). Only
+ * the bytes already lent: [start, cursor) and Results' second range. */
+s32 ndsFrontendOverlayLoanContains(const void *ptr, size_t bytes)
+{
+    uintptr_t addr = (uintptr_t)ptr;
+
+    if ((sNdsFrontendCursor != NULL) &&
+        (addr >= (uintptr_t)__nds_frontend_start) &&
+        (addr < (uintptr_t)sNdsFrontendCursor) &&
+        (bytes <= (size_t)((uintptr_t)sNdsFrontendCursor - addr)))
+    {
+        return TRUE;
+    }
+    if ((sNdsFrontendCursor2 != NULL) &&
+        (addr >= (uintptr_t)__nds_frontend_select_start) &&
+        (addr < (uintptr_t)sNdsFrontendCursor2) &&
+        (bytes <= (size_t)((uintptr_t)sNdsFrontendCursor2 - addr)))
+    {
+        return TRUE;
+    }
+    return FALSE;
+}
+
 void *ndsSceneAssetAlloc(size_t bytes, u32 alignment)
 {
     void *storage = ndsFrontendOverlayTryAlloc(bytes, alignment);

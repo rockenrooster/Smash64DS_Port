@@ -764,9 +764,8 @@ static s32 ndsS2DSampleNearestRaw(const NDSSource2DSource *source,
  * strip for every x below its width). When all four taps are opaque the
  * blend's divides reduce exactly to a shift: the alpha factor cancels,
  * (255 S + 255 * 2^15) / (255 * 2^16) = floor((S + 2^15) / 2^16).
- * gNdsS2DRowSampler 0 is the per-pixel path (same-ROM A/B); 1 with
- * gNdsS2DRowVerify 1 runs both and counts differing pixels. */
-volatile u32 gNdsS2DRowSampler __attribute__((used, section(".data"))) = 1u;
+ * gNdsS2DRowVerify 1 runs both and counts differing pixels. (The row
+ * sampler's A/B word left 2026-10-18.) */
 volatile u32 gNdsS2DRowVerify __attribute__((used, section(".data")));
 volatile u32 gNdsS2DRowVerifyPixels;
 volatile u32 gNdsS2DRowVerifyMismatches;
@@ -1598,7 +1597,7 @@ static s32 ndsS2DWriteCell(NDSSource2DCell *cell,
     for (y = 0u; y < cell->cell_height; y++)
     {
         u32 dy = (u32)cell->tile_y + y;
-        const u32 rows = (gNdsS2DRowSampler != 0u) ? 1u : 0u;
+        const u32 rows = 1u;
         const u32 verify = ((rows != 0u) && (gNdsS2DRowVerify != 0u)) ? 1u : 0u;
         NDSSource2DRowPair pair;
         NDSSource2DSrcRow nearest_row;
@@ -1953,7 +1952,7 @@ static s32 ndsS2DDrawBackground(const SObj *sobj,
         s32 out_y = screen_y + y;
         u16 *row;
         s32 x;
-        const u32 rows = (gNdsS2DRowSampler != 0u) ? 1u : 0u;
+        const u32 rows = 1u;
         NDSSource2DRowPair pair;
         const u32 *rgba0 = NULL;
         const u32 *rgba1 = NULL;

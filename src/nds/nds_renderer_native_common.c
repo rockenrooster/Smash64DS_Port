@@ -5456,8 +5456,7 @@ static s32 ndsRendererEntryEffectVertex(u32 corner,
  * (~330 corners) on about half the match's frames, and that fence walked
  * every corner of every root each time. A root's static half is now proven
  * once and remembered here; the checks that depend on live state (materials,
- * texture names, the traversal's modelview mask) still run on every draw.
- * Same-ROM A/B word: gNdsEntryEffectStaticOnce (0 = prove every draw). */
+ * texture names, the traversal's modelview mask) still run on every draw. */
 static u32 sNdsEntryEffectRootStaticOk[
     (NDS_ENTRY_EFFECT_ROOT_COUNT + 31u) / 32u];
 /* Set with the root's static bit when every corner's position also converts
@@ -5474,8 +5473,6 @@ ndsRendererEntryEffectPositionFits(const NDSEntryEffectPosition *position)
             (position->y <= limit) && (position->y >= -limit - 1) &&
             (position->z <= limit) && (position->z >= -limit - 1)) ? 1u : 0u;
 }
-volatile u32 gNdsEntryEffectStaticOnce __attribute__((used, section(".data"))) =
-    1u;
 
 /* ndsRendererEntryEffectVertex for a corner of a proven root. */
 static inline __attribute__((always_inline)) void
@@ -5538,12 +5535,9 @@ ndsRendererEntryEffectCoord(s16 value)
  * Not exact: the engine's five-bit light arithmetic differs from the CPU's
  * eight-bit clamp by a step or two of 31, the approximation every fighter
  * already draws with. CPU-projected groups, ramp palettes and material-folded
- * (PRIM x SHADE) groups keep the CPU shade.
- *
- * Same-ROM A/B word gNdsEntryEffectHwLight: 0 = the old path (direction per
- * group, CPU shade), 1 = direction once per root (exact), 2 = engine light. */
-volatile u32 gNdsEntryEffectHwLight __attribute__((used, section(".data"))) =
-    2u;
+ * (PRIM x SHADE) groups keep the CPU shade. The direction is prepared once
+ * per root. (The per-group direction and CPU-shade arms and their A/B word
+ * left 2026-10-18.) */
 u32 gNdsEntryEffectHwLitGroups;
 u32 gNdsEntryEffectCpuLitGroups;
 
@@ -5553,10 +5547,7 @@ u32 gNdsEntryEffectCpuLitGroups;
  * spent ~141 instructions a corner on Sector Z's Arwing (the table walk
  * spilled to the stack, each corner round-tripped an NDSRendererInputVertex
  * through memory, and the normal took three divides); this one reads each
- * table once and writes the four FIFO words. Same words. Same-ROM A/B word
- * gNdsEntryEffectFastCorners (0 = the general loop). */
-volatile u32 gNdsEntryEffectFastCorners __attribute__((used, section(".data"))) =
-    1u;
+ * table once and writes the four FIFO words. Same words. */
 u32 gNdsEntryEffectFastCornerGroups;
 /* Defined after NDS_R2_NORMAL_PACK, below. */
 static u32 ndsRendererEntryEffectFastCornersReady(void);
@@ -5580,10 +5571,7 @@ static void ndsRendererEntryEffectEmitFastCorners(u32 first, u32 count,
  * on one ordinary draw, and replays them while its inherited state is
  * unchanged. What names the live texture system holds is still derived on
  * every draw: the texture name, the bind, the merged parameter word and the
- * ramp palette. Same GX words. Same-ROM A/B word gNdsEntryEffectStateCache
- * (0 = resolve every draw). */
-volatile u32 gNdsEntryEffectStateCache __attribute__((used, section(".data"))) =
-    1u;
+ * ramp palette. Same GX words. */
 u32 gNdsEntryEffectStateRecords;
 u32 gNdsEntryEffectStateReplays;
 
@@ -5617,7 +5605,7 @@ typedef struct NDSEntryEffectStateRoot
     u32 light_color_1;
     u32 light_color_2;
     u32 light_color_mask;
-    u32 words;          /* gNdsEntryEffectHwLight, gNdsEntryEffectFastCorners */
+    u32 words;          /* ndsRendererEntryEffectStateWords at the record */
 } NDSEntryEffectStateRoot;
 
 static NDSEntryEffectStateRoot sNdsEntryEffectStateRoots[NDS_ENTRY_STATE_ROOTS];
@@ -5627,10 +5615,7 @@ static NDSEntryEffectStateRoot sNdsEntryEffectStateRoots[NDS_ENTRY_STATE_ROOTS];
  * groups, or a later root's cross-matrix corners that name it. The roots such
  * corners name are fixed by the generated override table; any other root
  * composes on its first CPU-projected group, and most never have one (Sector
- * Z's Arwing: eight roots a frame). Same-ROM A/B word gNdsEntryEffectLazyComposed
- * (0 = compose every root at submit). */
-volatile u32 gNdsEntryEffectLazyComposed __attribute__((used, section(".data"))) =
-    1u;
+ * Z's Arwing: eight roots a frame). */
 static u32 sNdsEntryEffectOverrideSourceMask[
     (NDS_ENTRY_EFFECT_ROOT_COUNT + 31u) / 32u];
 static u8 sNdsEntryEffectOverrideSourceReady;
@@ -5756,7 +5741,9 @@ static sb32 ndsRendererEntryEffectP4State(
 static inline __attribute__((always_inline)) u32
 ndsRendererEntryEffectStateWords(void)
 {
-    return gNdsEntryEffectHwLight | (gNdsEntryEffectFastCorners << 8);
+    /* The engine-light and fast-corner arms the recorded state assumes
+     * (their A/B words' shipped values, 2 and 1). */
+    return 2u | (1u << 8);
 }
 
 static u32 ndsRendererEntryEffectStateMatches(
@@ -6440,10 +6427,7 @@ static void __attribute__((noinline, cold)) ndsLabFoxGxHash(u32 root_index,
  * -- so the GX gets the root's composed matrix with its z column replaced by
  * that constant, at the GX clip scale (CPU clip / 256,
  * ndsRendererBuildRawHardwareMatrix). x and y are the same transform done by
- * the engine; the engine also clips what the CPU path only divided. Same-ROM
- * A/B word gNdsEntryEffectGxPainter (0 = the CPU painter). */
-volatile u32 gNdsEntryEffectGxPainter __attribute__((used, section(".data"))) =
-    1u;
+ * the engine; the engine also clips what the CPU path only divided. */
 
 /* Perf (2026-10-18): a Z group with matrix overrides (corners the RSP loaded
  * under an earlier root's matrix: Palutena's wing seams, Mario's pipe body)
@@ -6454,10 +6438,7 @@ volatile u32 gNdsEntryEffectGxPainter __attribute__((used, section(".data"))) =
  * back after it, where the CPU path transformed and divided every corner of
  * the group (four Palutenas' smash wings: 240 corners each, ~90K cycles a
  * heavy frame). The projection stays; lighting stays on the CPU. No-Z
- * override groups keep the CPU painter. Same-ROM A/B word
- * gNdsEntryEffectGxOverride (0 = the CPU path). */
-volatile u32 gNdsEntryEffectGxOverride __attribute__((used, section(".data"))) =
-    1u;
+ * override groups keep the CPU painter. */
 
 static void ndsRendererEntryEffectLoadPainter(
     const NDSRendererMatrix20p12 *composed, s32 depth)
@@ -6611,9 +6592,8 @@ s32 ndsRendererSubmitNativeEntryEffect(
      * dictionary packet has more indices, so all of them are fenced here once
      * and the hot submit loop can remain branch-light. */
     static_proven =
-        ((gNdsEntryEffectStaticOnce != 0u) &&
-         ((sNdsEntryEffectRootStaticOk[root_index >> 5] &
-           (1u << (root_index & 31u))) != 0u)) ? TRUE : FALSE;
+        ((sNdsEntryEffectRootStaticOk[root_index >> 5] &
+          (1u << (root_index & 31u))) != 0u) ? TRUE : FALSE;
     for (group_offset = 0u; group_offset < root->group_count; group_offset++)
     {
         const NDSEntryEffectGroup *group =
@@ -7010,8 +6990,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
 
     ndsRendererHardwareEndBatch();
     sNdsRendererEntryEffectModelview[root_slot] = *config->initial_modelview;
-    if ((gNdsEntryEffectLazyComposed == 0u) ||
-        (ndsRendererEntryEffectIsOverrideSource(root_index) != 0u))
+    if (ndsRendererEntryEffectIsOverrideSource(root_index) != 0u)
     {
         ndsRendererMtxMul20p12(
             config->initial_modelview, config->initial_projection,
@@ -7029,8 +7008,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
         (u32)(root - &sNdsEntryEffectRoots[0]), config);
 #endif
 
-    if ((gNdsEntryEffectStateCache != 0u) && (static_proven != FALSE) &&
-        (material_count == 0u) &&
+    if ((static_proven != FALSE) && (material_count == 0u) &&
         (root_offset != gNdsEntryEffectWitnessRoot))
     {
         if ((owner_asset_id == 161u) &&
@@ -7342,11 +7320,9 @@ s32 ndsRendererSubmitNativeEntryEffect(
             ((stats->geometry_mode & NDS_RENDERER_GEOM_ZBUFFER) == 0u) ?
                 TRUE : FALSE;
         gx_painter_group =
-            ((no_z_group != FALSE) && (projected_group == FALSE) &&
-             (gNdsEntryEffectGxPainter != 0u)) ? TRUE : FALSE;
+            ((no_z_group != FALSE) && (projected_group == FALSE)) ? TRUE : FALSE;
         gx_override_group =
-            ((projected_group != FALSE) && (no_z_group == FALSE) &&
-             (gNdsEntryEffectGxOverride != 0u)) ? TRUE : FALSE;
+            ((projected_group != FALSE) && (no_z_group == FALSE)) ? TRUE : FALSE;
         cpu_projected_group =
             (((projected_group != FALSE) && (gx_override_group == FALSE)) ||
              ((no_z_group != FALSE) && (gx_painter_group == FALSE))) ?
@@ -7419,8 +7395,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
         /* The direction depends on the battle light and this root's
          * modelview, and no group changes either: once per root. */
         if ((lit != FALSE) &&
-            ((gNdsEntryEffectHwLight == 0u) ||
-             ((light_direction_valid_slots & (1u << root_slot)) == 0u)))
+            ((light_direction_valid_slots & (1u << root_slot)) == 0u))
         {
             ndsRendererHardwarePrepareLitDirection(
                 stats, config->initial_modelview,
@@ -7523,12 +7498,12 @@ s32 ndsRendererSubmitNativeEntryEffect(
         use_vertex_color = ndsRendererHardwareUseVertexColor(stats);
         poly_fmt = ndsRendererHardwarePolyFmt(stats, polygon_alpha);
         /* Lit groups are shaded on the CPU below unless the engine lights
-         * them (hw_lit_group, see gNdsEntryEffectHwLight); otherwise
+         * them (hw_lit_group); otherwise
          * POLY_FORMAT_LIGHT0 must stay absent even if a previous hardware-lit
          * owner left a light vector in GX state. */
         poly_fmt &= ~((u32)POLY_FORMAT_LIGHT0);
         hw_lit_group =
-            ((gNdsEntryEffectHwLight >= 2u) && (lit != FALSE) &&
+            ((lit != FALSE) &&
              (cpu_projected_group == FALSE) && (gx_painter_group == FALSE) &&
              (projected_group == FALSE) &&
              (ramp_palette == 0u) && (use_material_color == FALSE) &&
@@ -7629,7 +7604,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
         {
             ndsRendererHardwareFighterSetMatrixMode(GL_MODELVIEW);
         }
-        if ((static_proven != FALSE) && (gNdsEntryEffectFastCorners != 0u) &&
+        if ((static_proven != FALSE) &&
             (cpu_projected_group == FALSE) && (gx_painter_group == FALSE) &&
             (projected_group == FALSE) &&
             ((hw_lit_group != FALSE) || (ramp_palette != 0u)) &&
@@ -7924,7 +7899,6 @@ s32 ndsRendererReplayNativeEntryEffectFox(u32 root_offset,
     if ((config == NULL) ||
         (stats == NULL) || (config->initial_projection == NULL) ||
         (config->initial_modelview == NULL) ||
-        (gNdsEntryEffectStateCache == 0u) || (gNdsEntryEffectStaticOnce == 0u) ||
         (root_offset == gNdsEntryEffectWitnessRoot))
     {
         return FALSE;
@@ -8026,8 +8000,7 @@ s32 ndsRendererReplayNativeEntryEffectFox(u32 root_offset,
 
     ndsRendererHardwareEndBatch();
     sNdsRendererEntryEffectModelview[root_slot] = *config->initial_modelview;
-    if ((gNdsEntryEffectLazyComposed == 0u) ||
-        (ndsRendererEntryEffectIsOverrideSource(root_index) != 0u))
+    if (ndsRendererEntryEffectIsOverrideSource(root_index) != 0u)
     {
         ndsRendererMtxMul20p12(
             config->initial_modelview, config->initial_projection,

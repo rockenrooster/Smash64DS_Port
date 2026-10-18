@@ -1275,15 +1275,13 @@ typedef struct NDSShieldPoseMemo
 #define NDS_SHIELD_POSE_MEMO_HEAD_BYTES ((sizeof(NDSShieldPoseMemo) + 3u) & ~3u)
 __attribute__((used)) volatile u32 gNdsShieldPoseMemoHits;
 __attribute__((used)) volatile u32 gNdsShieldPoseMemoFills;
-__attribute__((used)) volatile u32 gNdsShieldPoseMemo = 1u; /* A/B word */
 
 static NDSShieldPoseMemo *ndsShieldPoseMemoFor(const FTStruct *fp)
 {
     u32 bytes = 0u;
     u8 *tail;
 
-    if ((gNdsShieldPoseMemo == 0u) ||
-        ((u32)fp->player >= NDS_SHIELD_POSE_MEMO_SLOTS) ||
+    if (((u32)fp->player >= NDS_SHIELD_POSE_MEMO_SLOTS) ||
         (fp->fkind == nFTKindKirby) || (fp->fkind == nFTKindNKirby))
     {
         return NULL;
