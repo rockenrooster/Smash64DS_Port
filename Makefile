@@ -776,7 +776,10 @@ NDS_NET_LAB_INPUT ?= 0
 # P3 lab: drive the real menus through host/join, lobby, stage and rematch
 # on the two-instance harness (src/nds/net/nds_net_autopilot.c).
 NDS_NET_LAB_LOBBY ?= 0
-# P3 lab: with the autopilot, the guest's radio drops out mid-match.
+# P3 lab: with the autopilot, the guest's radio drops out mid-match (1: for
+# 40 s once, past the 30 s stall bound, the match ends; N > 1: for N VBlanks
+# every 1,200 batches on each console in turn, which the lockstep must ride
+# out; gNdsNetLabDropMode 1 freezes the game thread instead).
 NDS_NET_LAB_DROP ?= 0
 # P3 lab: with the autopilot, ten matches whose descriptor the host fills in:
 # each VS stage in turn, two level-9 CPUs, every item at the highest rate.

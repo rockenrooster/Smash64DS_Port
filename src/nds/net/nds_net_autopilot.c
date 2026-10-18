@@ -6,7 +6,9 @@
  * NDS_NET_LAB_SOAK the two swap every room). Keys are ORed into the keypad by
  * ndsPlatformReadInput, so every screen reads them as a player's presses. */
 #include <string.h>
+#include <nds/bios.h>
 #include <nds/input.h>
+#include <nds/interrupts.h>
 
 #include <PR/os.h>
 #include <ssb_types.h>
@@ -44,6 +46,18 @@ static u32 sApScreen = 0xFFFFFFFFu;
 static u32 sApScene = 0xFFFFFFFFu;
 static u32 sApTics;
 static u32 sApDropped;
+#if NDS_NET_LAB_DROP > 1
+/* The batch the last dropout started at, in this match (all ones: none). */
+static u32 sApDropBatch = 0xFFFFFFFFu;
+volatile u32 gNdsNetLabDrops;
+/* The dropout's length in VBlanks: NDS_NET_LAB_DROP, a probe may set it
+ * before the first match. */
+volatile u32 gNdsNetLabDropVBlanks __attribute__((used)) = NDS_NET_LAB_DROP;
+/* 0: the radio goes deaf (a dropout). 1: the game thread stops for the same
+ * VBlanks with the radio untouched, so nothing drains its receive ring (a
+ * freeze, the hardware reports of 2026-10-07/12). */
+volatile u32 gNdsNetLabDropMode __attribute__((used));
+#endif
 /* Matches since this console last entered VS Mode (picks happen once a room). */
 static u32 sApSessionMatches;
 
@@ -151,6 +165,9 @@ u32 ndsNetLabAutopilotKeys(void)
         {
             gNdsNetAutopilotMatches++;
             sApSessionMatches++;
+#if NDS_NET_LAB_DROP > 1
+            sApDropBatch = 0xFFFFFFFFu;
+#endif
         }
         else if (scene != (u32)nSCKindVSBattle && scene != (u32)nSCKindVSResults &&
                  screen == NDS_MENU_SHELL_SCREEN_VSMODE && screen != sApScreen)
@@ -168,15 +185,43 @@ u32 ndsNetLabAutopilotKeys(void)
 
     if (scene == (u32)nSCKindVSBattle)
     {
-#if NDS_NET_LAB_DROP
-        /* The guest's radio drops out for 15 s in the middle of the first
-         * match: both consoles must end it as NO CONTEST and meet again in
-         * the lobby for the second. */
+#if NDS_NET_LAB_DROP == 1
+        /* The guest's radio drops out for 40 s in the middle of the first
+         * match, past the 30 s stall bound: both consoles must end it as NO
+         * CONTEST and meet again in the lobby for the second. */
         if (sApRole == 2u && sApDropped == 0u && gNdsNetAutopilotMatches == 1u &&
             gNdsNetBatch >= 300u)
         {
             sApDropped = 1u;
-            gNdsNetLabMuteUntil = ndsPlatformVBlankCount() + 900u;
+            gNdsNetLabMuteUntil = ndsPlatformVBlankCount() + (60u * 40u);
+        }
+#elif NDS_NET_LAB_DROP > 1
+        /* NDS_NET_LAB_DROP=N: dropouts the lockstep must ride out (owner,
+         * 2026-10-18: recovering from a freeze or lag is unreliable). Every
+         * match, every 1,200 batches from batch 300 the guest's radio goes
+         * deaf for N VBlanks (gNdsNetLabDropVBlanks), and 600 batches after
+         * each the host's: under the 10 s abort, each match must resume with
+         * 0 desyncs. */
+        {
+            const u32 first = (sApRole == 2u) ? 300u : 900u;
+
+            if (gNdsNetBatch >= first && ((gNdsNetBatch - first) % 1200u) == 0u &&
+                gNdsNetBatch != sApDropBatch)
+            {
+                sApDropBatch = gNdsNetBatch;
+                gNdsNetLabDrops++;
+                if (gNdsNetLabDropMode == 1u)
+                {
+                    const u32 until = ndsPlatformVBlankCount() + gNdsNetLabDropVBlanks;
+
+                    while ((s32)(until - ndsPlatformVBlankCount()) > 0)
+                        swiWaitForVBlank();
+                }
+                else
+                {
+                    gNdsNetLabMuteUntil = ndsPlatformVBlankCount() + gNdsNetLabDropVBlanks;
+                }
+            }
         }
 #endif
         return 0u; /* the lockstep scripts its own pad (NDS_NET_LAB_INPUT) */

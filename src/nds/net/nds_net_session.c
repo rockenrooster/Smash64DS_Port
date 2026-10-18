@@ -63,7 +63,12 @@
 #define NDS_NET_RING_TICKS        256u      /* per port, power of two */
 #define NDS_NET_INPUT_MAX         24u       /* records per INPUT packet */
 #define NDS_NET_DIGEST_RING       64u       /* batches, power of two */
-#define NDS_NET_STALL_ABORT_VBLANKS (60u * 10u)
+/* A stall ends the match after 30 s without progress (owner, 2026-10-18:
+ * recovering from a freeze or lag was unreliable; in the two-console harness
+ * dropouts of 2-9 s and game freezes of 3-7 s all resumed in step, and the
+ * old 10 s bound ended anything longer). Anyone waiting may leave sooner by
+ * holding START (ndsNetHoldsLeave). */
+#define NDS_NET_STALL_ABORT_VBLANKS (60u * 30u)
 /* The first batch also absorbs the consoles' different battle load times. */
 #define NDS_NET_STALL_ABORT_FIRST   (60u * 30u)
 #define NDS_NET_STALL_NOTICE        20u
@@ -522,13 +527,23 @@ static u32 ndsNetLeaveKeys(void)
 }
 
 /* Plan section 10: START pauses for the host alone, so a guest's held START
- * is its Leave command; its first press says so on the lower screen. */
-static u32 ndsNetGuestHoldsLeave(void)
+ * is its Leave command; its first press says so on the lower screen. While
+ * the lockstep waits (`stalled`) no pause can open, so the host may leave the
+ * same way: its leaving closes the room, the match NO CONTEST for everyone. */
+static u32 ndsNetHoldsLeave(u32 stalled)
 {
     const u32 now = ndsPlatformVBlankCount() + 1u;
 
-    if (gNdsNetLocalPort == sNetHostPort)
+    if ((gNdsNetLocalPort == sNetHostPort) && (stalled == 0u))
+    {
+        /* Out of the stall START is the host's pause again. */
+        if (sNetLeaveHeldSince != 0u)
+        {
+            sNetLeaveHeldSince = 0u;
+            ndsNetUiLine(22, "");
+        }
         return 0u;
+    }
     if ((ndsNetLeaveKeys() & KEY_START) == 0u)
     {
         if (sNetLeaveHeldSince != 0u)
@@ -594,7 +609,7 @@ void ndsNetBattleGate(void)
         ndsNetStoreRecord(me, tick, value);
         ndsNetStoreRecord(me, tick + 1u, value);
         sNetProducedBatch = sNetBatch + 1u;
-        if (ndsNetGuestHoldsLeave() != 0u)
+        if (ndsNetHoldsLeave(0u) != 0u)
         {
             ndsNetLeaveMatch();
             return;
@@ -631,16 +646,20 @@ void ndsNetBattleGate(void)
         if ((waited & 3u) == 0u)
         {
             ndsNetSendInput();
-            /* A guest may leave while waiting, too. */
+            /* Anyone may leave while waiting. */
             (void)ndsPlatformReadInput();
-            if (ndsNetGuestHoldsLeave() != 0u)
+            if (ndsNetHoldsLeave(1u) != 0u)
             {
                 ndsNetLeaveMatch();
                 return;
             }
         }
         if (waited == NDS_NET_STALL_NOTICE)
+        {
             ndsNetWaitNotice(sNetBatch);
+            if (sNetLeaveHeldSince == 0u)
+                ndsNetUiLine(22, " Hold START to leave.");
+        }
 #if NDS_FREEZE_DIAGNOSTICS
         /* Diagnostic playtests: the radio's own counters (frames sent and
          * received, TX buffer stalls, RX ring overflows) and the batch it
@@ -656,8 +675,15 @@ void ndsNetBattleGate(void)
         if (waited >= ((sNetBatch == 0u) ? NDS_NET_STALL_ABORT_FIRST :
                                            NDS_NET_STALL_ABORT_VBLANKS))
         {
-            /* No progress: end the match rather than invent input. */
+            /* No progress: end the match rather than invent input. The stall
+             * still counts (it is the longest a match saw). */
+            gNdsNetStallBatches++;
+            gNdsNetStallVBlanks += waited;
+            if (waited > gNdsNetStallMaxVBlanks)
+                gNdsNetStallMaxVBlanks = waited;
             ndsNetUiLine(21, " Connection lost.");
+            if (sNetLeaveHeldSince == 0u)
+                ndsNetUiLine(22, "");
             ndsNetLockstepAbort();
             return;
         }
@@ -665,6 +691,8 @@ void ndsNetBattleGate(void)
     if (waited >= NDS_NET_STALL_NOTICE)
     {
         ndsNetUiLine(21, "");
+        if (sNetLeaveHeldSince == 0u)
+            ndsNetUiLine(22, "");
 #if NDS_FREEZE_DIAGNOSTICS
         ndsNetUiLine(20, "");
 #endif
