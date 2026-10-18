@@ -12,8 +12,12 @@
 #define NDS_NET_ERR_SIZE     -5   /* payload empty or too large */
 #define NDS_NET_ERR_FULL     -6   /* TX ring full */
 
-/* The default channel. */
-#define NDS_NET_DEFAULT_CHANNEL 1u
+/* The channel every room uses (owner, 2026-10-18: 13, hard-coded first).
+ * Nintendo's own local play uses 1, 7 and 13; US Wi-Fi routers sit on 1, 6
+ * and 11 and never on 12-13, so 13 is usually the quietest. The ARM7 refuses
+ * a channel the console's firmware calibration does not enable
+ * (NDS_NET_ERR_CHANNEL); retail units enable 1-13 in every region. */
+#define NDS_NET_DEFAULT_CHANNEL 13u
 
 /* --- Link (src/nds/net/nds_net_link.c) --------------------------------- */
 int ndsNetLinkAttach(void);
