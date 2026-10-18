@@ -13,7 +13,8 @@ and odd rows swapped. Two ways:
   fighter, one column a kit costume) is resized to the sprite's size, its
   default costume quantized to the shared index image (index 0 clear), and
   each costume's LUT is the mean colour of that costume's icon under each
-  index (p6_costumes.py's costume picks, as many as the base has LUTs).
+  index (p6_costumes.py's costume picks, as many as the base has LUTs), a
+  costume's hair recolour (p6_costumes.HAIR_RECOLORS) on its hair entries.
 - A recolour of the base's own icon (Ike, owner 2026-10-14: "you can just
   recolor roy's stock sprites"): the base's texels stay; each costume's LUT
   is the base's first costume's, its hair indices moved to the look's hair
@@ -143,6 +144,7 @@ def build_kit(name: str, fm: N.FighterModel) -> tuple[list, list, np.ndarray]:
     idx = np.array(idx)
     writes = []
     pals = []
+    recolors = p6_costumes.HAIR_RECOLORS.get(name, {})
     for k, img in enumerate(imgs):
         pal = []
         for i in range(16):
@@ -151,6 +153,9 @@ def build_kit(name: str, fm: N.FighterModel) -> tuple[list, list, np.ndarray]:
                 pal.append(list(pal0[i]))
             else:
                 pal.append([int(round(c)) for c in img[m][:, :3].mean(axis=0)] + [255])
+        if k in recolors:
+            pal = [list(pal[0])] + p6_costumes.recolor(pal[1:], recolors[k],
+                                                       p6_costumes.hair_top([pal[1:]]))
         pals.append(pal)
         writes.append({"image": buf, "texels": padded(idx, stride), "palette": pal, "palette_at": [luts[k]]})
     return writes, pals, idx

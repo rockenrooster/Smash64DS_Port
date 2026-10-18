@@ -17,6 +17,11 @@ hair) keeps one palette; the others get `costume_palettes` in the scene,
 which model_writer.py turns into MObj palettes (one per costume, picked by
 the costume's palette animation as the base's materials are).
 
+A costume can also recolour the hair, which no kit alternate does
+(HAIR_RECOLORS): every green entry of the hair materials' palettes moves
+onto a ramp by its brightness (owner, 2026-10-18: the blue costume blonde).
+p6_stock.py gives the stock icon's hair the same ramp.
+
     p6_costumes.py --name palutena --corr builds/p6-art/palutena/costumes/corr.npz \\
         --scene builds/p6-art/palutena/3ds2ds/scene_high/scene.json \\
         --scene builds/p6-art/palutena/3ds2ds/scene_low/scene.json [--sheet sheet.png]
@@ -44,6 +49,47 @@ COSTUMES = {
                  "picks": ["c00", "c06", "c05", "c04", "c03", "c07", "c01", "c02", "c00"],
                  "names": ["white", "black", "red", "blue", "green", "purple", "pink", "sky", "white"]},
 }
+# Costume hair recolours (owner, 2026-10-18: "the blue palutena variant to
+# have blonde hair"): costume index -> ramp, over the hair materials.
+HAIR_RECOLORS = {"palutena": {3: "blonde"}}
+HAIR_MATERIALS = {"palutena": ("DS_hair_cap", "DS_hair_panels")}
+# (brightness, colour) stops; brightness is an entry's largest channel over
+# the hair's brightest (hair_top), so the look's shading carries over.
+RAMPS = {"blonde": [(0.0, (24, 16, 6)), (0.25, (96, 66, 24)), (0.5, (166, 124, 54)),
+                    (0.75, (220, 182, 96)), (1.0, (250, 226, 150))]}
+
+
+def is_hair(rgb) -> bool:
+    """A green entry of a hair palette (hue 60-180 degrees, not grey); black,
+    the skin the hair's edge meets and the clear entry stay."""
+    import colorsys
+    h, s_, v = colorsys.rgb_to_hsv(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255)
+    return v > 0.02 and s_ >= 0.2 and 60.0 <= h * 360.0 <= 180.0
+
+
+def hair_top(palettes) -> int:
+    """The brightest hair entry's largest channel over the given palettes."""
+    return max([max(c[:3]) for pal in palettes for c in pal if is_hair(c)] or [255])
+
+
+def recolor(pal: list, ramp: str, top: int) -> list:
+    """The palette with each hair entry on `ramp` (alpha kept)."""
+    stops = RAMPS[ramp]
+    out = []
+    for c in pal:
+        if not is_hair(c):
+            out.append(list(c))
+            continue
+        t = min(1.0, max(c[:3]) / float(top))
+        for (t0, c0), (t1, c1) in zip(stops, stops[1:]):
+            if t <= t1:
+                f = (t - t0) / (t1 - t0) if t1 > t0 else 0.0
+                rgb = [int(round(a + (b - a) * f)) for a, b in zip(c0, c1)]
+                break
+        out.append(rgb + list(c[3:]))
+    return out
+
+
 # DS object -> its texture's file key in the scenes (model_writer's names).
 OBJECTS = {"DS_face": "DS_face", "DS_hair_cap": "DS_hair_cap", "DS_hair_panels": "DS_hair_panels",
            "DS_chest": "DS_chest", "DS_dress": "DS_dress", "DS_arms": "DS_arms", "DS_hands": "DS_hands",
@@ -134,6 +180,10 @@ def build(name: str, corr_path: Path, scenes: list[Path]) -> dict:
     alt = {pick: kit_images(spec["kit"], pick, names) for pick in dict.fromkeys(spec["picks"])}
     loaded = [json.loads(p.read_text(encoding="utf-8")) for p in scenes]
     report = {}
+    recolors = HAIR_RECOLORS.get(name, {})
+    hair_keys = HAIR_MATERIALS.get(name, ())
+    top = hair_top([m["texture"]["palette"] for s in loaded for m in s["materials"]
+                    if (m.get("texture") or {}).get("file") in hair_keys])
     for obj, key in OBJECTS.items():
         if obj not in corr.files:
             continue
@@ -146,6 +196,9 @@ def build(name: str, corr_path: Path, scenes: list[Path]) -> dict:
         for pick in spec["picks"]:
             mean, valid = deltas(corr[obj], images0, alt[pick], size)
             pals.append(palettes(tex, mean, valid))
+        if key in hair_keys:
+            for k, ramp in recolors.items():
+                pals[k] = recolor(pals[k], ramp, top)
         moved = max(max(abs(a - b) for ca, cb in zip(p, pals[0]) for a, b in zip(ca[:3], cb[:3]))
                     for p in pals)
         report[key] = round(float(moved), 1)
