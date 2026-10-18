@@ -332,6 +332,12 @@ typedef struct NDSP4Overrides
      * 0 for joints 4-35, of word 1 for the next 32 (Meta Knight's left-hand
      * item joint). */
     u32 static_parts[2];
+    /* Joints the guard leaves out as it does a static part (its joint count
+     * and pose walks), and nothing else: a P6 look's joints its base's guard
+     * tables never had, which would shift every guard row after them (the
+     * guard indexes its tables by the joints' running count). Bits as in
+     * static_parts. */
+    u32 guard_skip[2];
     /* ftMainProcPhysicsMap's hitbox positions lie in the fighter's plane
      * (its TopN's z): P6 clips are Ultimate's motions, swung toward and away
      * from the camera, and Ultimate's hits collide in two dimensions where
@@ -814,6 +820,10 @@ void ndsP4EjectHiddenPartID(FTStruct *fp, s32 hiddenpart_id);
  * guard tables leave out (fix_ftCommonGuardUpdateJoints_ and
  * lbCommonAddDObjAnimJointAll_extended_). */
 sb32 ndsP4StaticPartDObj(const DObj *dobj);
+/* The guard's joint count and pose walks: a static part or one of
+ * NDSP4Overrides.guard_skip. */
+sb32 ndsP4GuardSkips(const FTStruct *fp, s32 joint_id);
+sb32 ndsP4GuardSkipsDObj(const DObj *dobj);
 /* ftCommonAppearSetStatus: the content's entry row, or NULL. */
 const NDSP4Entry *ndsP4Entry(const FTStruct *fp);
 /* The content's effect makers (S6), or NULL. */

@@ -1195,7 +1195,7 @@ s32 ndsShieldPoseTryApplySingle(DObj *dobj, f32 angle)
 #if NDS_P4
             /* EXTRA's static parts are left out of the count
              * (StaticPart.asm fix_ftCommonGuardUpdateJoints_). */
-            && (ndsP4StaticPart(fp, i) == FALSE)
+            && (ndsP4GuardSkips(fp, i) == FALSE)
 #endif
             )
         {
@@ -1540,8 +1540,9 @@ s32 ndsShieldPoseTryApplyAll(DObj *root_dobj, f32 angle)
 
 #if NDS_P4
         /* A static part takes no guard row and no animation
-         * (lbCommonAddDObjAnimJointAll_extended_). */
-        if (ndsP4StaticPartDObj(current) != FALSE)
+         * (lbCommonAddDObjAnimJointAll_extended_), nor does a joint the
+         * content's guard tables never had (NDSP4Overrides.guard_skip). */
+        if (ndsP4GuardSkipsDObj(current) != FALSE)
         {
             current->anim_wait = AOBJ_ANIM_NULL;
             joint--;
@@ -1623,7 +1624,7 @@ s32 ndsShieldPoseTryPlayBatch(GObj *fighter_gobj)
         u16 handle;
 
 #if NDS_P4
-        if (ndsP4StaticPartDObj(current) != FALSE)
+        if (ndsP4GuardSkipsDObj(current) != FALSE)
         {
             current->anim_wait = AOBJ_ANIM_NULL;
             joint--;

@@ -217,7 +217,7 @@ static void ndsP4GuardRun(GObj *fighter_gobj, void (*body)(GObj *))
         for (i = nFTPartsJointCommonStart;
              (i < (s32)ARRAY_COUNT(fp->joints)) && (count < 4); i++)
         {
-            if ((fp->joints[i] != NULL) && (ndsP4StaticPart(fp, i) != FALSE))
+            if ((fp->joints[i] != NULL) && (ndsP4GuardSkips(fp, i) != FALSE))
             {
                 ids[count] = i;
                 saved[count++] = fp->joints[i];

@@ -2964,6 +2964,42 @@ sb32 ndsP4StaticPartDObj(const DObj *dobj)
     return ndsP4StaticPart(ftGetStruct(dobj->parent_gobj), parts->joint_id);
 }
 
+sb32 ndsP4GuardSkips(const FTStruct *fp, s32 joint_id)
+{
+    const NDSP4Overrides *o;
+    u32 bit;
+
+    if (ndsP4StaticPart(fp, joint_id) != FALSE)
+    {
+        return TRUE;
+    }
+    if ((joint_id < nFTPartsJointCommonStart) ||
+        (joint_id >= (nFTPartsJointCommonStart + 64)))
+    {
+        return FALSE;
+    }
+    o = ndsP4StaticOverrides(fp);
+    if (o == NULL)
+    {
+        return FALSE;
+    }
+    bit = (u32)(joint_id - nFTPartsJointCommonStart);
+
+    return (o->guard_skip[bit >> 5] & (0x80000000u >> (bit & 31u))) ? TRUE : FALSE;
+}
+
+sb32 ndsP4GuardSkipsDObj(const DObj *dobj)
+{
+    const FTParts *parts = dobj->user_data.p;
+
+    if ((parts == NULL) || (dobj->parent_gobj == NULL) ||
+        (dobj->parent_gobj->id != nGCCommonKindFighter))
+    {
+        return FALSE;
+    }
+    return ndsP4GuardSkips(ftGetStruct(dobj->parent_gobj), parts->joint_id);
+}
+
 /* NDSP4Overrides.anim_locks_rest, after the status setter's own lock step.
  * The fighter is made with its FTAttributes.animlock joints locked at rest
  * (ftParamSetAnimLocks: transform_update_mode 3, the matrix computed once)

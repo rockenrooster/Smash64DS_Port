@@ -1891,6 +1891,12 @@ const NDSP4Overrides gNdsP4PalutenaOverrides = {
     /* They move Peach's locked shoulders, hips and ankles (spec
      * "anim_locks"). */
     .anim_locks_rest = 1u,
+    /* Her guard plays Peach's tables, whose rows follow Peach's joints. Her
+     * dress hem (row 27, joint 31) is a joint Peach never had (p6s: Peach's
+     * row 27, the heavy-item hold, moved to row 28), so counted it moved the
+     * hold and YRotN one row on: YRotN got no row, and her shield sat at her
+     * feet (owner, 2026-10-18). Left out, the hold takes Peach's hold row. */
+    .guard_skip = { 0x80000000u >> (31 - nFTPartsJointCommonStart), 0u },
 };
 
 #if NDS_P2_KIRBY
