@@ -242,6 +242,8 @@ NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssRandomCount;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssRandomFallbackCount;
 /* P4: tokens the CSS random chooser resolved (its cell, owner 2026-10-17). */
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssRandomChooserCount;
+/* P7 U8: SELECT on VS Options that opened something. */
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellVsOptionsCheatCount;
 /* P2-1N (3): frames a slot's doors spent mid-slide -- engagement proof. */
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssDoorSlideFrames;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellSssCursorSlot;

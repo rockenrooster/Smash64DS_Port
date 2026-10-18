@@ -62,7 +62,7 @@ void *gNdsP5HazardFileBowserSt;
 /* Hazards.asm. */
 #define NDS_P5_BOMB_RESPAWN_TIME (0x3C * 5)        /* replenish_bowser_bombs_ */
 #define NDS_P5_BOMB_FLASH_TIME 120                 /* BOWSER_BOMB_FLASH_TIME */
-#define NDS_P5_BOMB_X 2990.0F                      /* 0x453AE000 */
+#define NDS_P5_BOMB_X 2990.0F                      /* 0x453AE000, times the stage's scale */
 #define NDS_P5_BOMB_Y 512.0F                       /* 0x44000000 */
 #define NDS_P5_BOMB_ECB_BOTTOM (-416.0F)           /* 0xC3D00000 */
 #define NDS_P5_BOMB_MAPOBJ_KIND 4                  /* add_item_, a Dream Land stage */
@@ -93,6 +93,17 @@ u32 ndsP5BattleGkind(void)
 {
     return (gSCManagerBattleState != NULL) ?
         (u32)gSCManagerBattleState->gkind : 0xFFFFFFFFu;
+}
+
+/* An owner stage scale (P7 S0, stages.json owner_scale): what the stage's
+ * code places across it moves out with it; heights stay (A10). */
+static f32 ndsP5StageScale(s32 gkind)
+{
+#define NDS_P5_SCALE_ROW(g, s) if (gkind == (g)) { return (s); }
+    NDS_P5_STAGE_SCALE_ROWS(NDS_P5_SCALE_ROW)
+#undef NDS_P5_SCALE_ROW
+    (void)gkind;
+    return 1.0F;
 }
 
 static u32 ndsP5StageIs(s32 gkind)
@@ -129,7 +140,7 @@ static GObj *ndsP5BowserBombAdd(u32 side)
     ids[0] = 0;
     mpCollisionGetMapObjIDsKind(NDS_P5_BOMB_MAPOBJ_KIND, ids);
     mpCollisionGetMapObjPositionID(ids[0], &pos);
-    pos.x = (side == 0u) ? NDS_P5_BOMB_X : -NDS_P5_BOMB_X;
+    pos.x = ((side == 0u) ? NDS_P5_BOMB_X : -NDS_P5_BOMB_X) * ndsP5StageScale(NDS_P5_GKIND_BOWSERST);
     pos.y = NDS_P5_BOMB_Y;
     vel.x = vel.y = vel.z = 0.0F;
 

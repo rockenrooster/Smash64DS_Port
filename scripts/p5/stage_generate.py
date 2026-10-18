@@ -364,11 +364,21 @@ def learn(stage: dict, stage_dir: Path) -> dict:
     return pins
 
 
-def build_stage(stage: dict, stage_dir: Path, learn_pins: bool) -> dict:
+def build_stage(stage: dict, stage_dir: Path, learn_pins: bool, owner_scale: float = 1.0) -> dict:
     """Generate one Remix stage's packet (learning its pins when asked) and
     write its include, blob, GX template and converted wallpaper into its
-    export directory. Returns the facts the runtime's C rows need."""
+    export directory. Returns the facts the runtime's C rows need. An
+    owner_scale (stages.json, P7 S0) scales its geometry as A10 reads it
+    (owner_scale.py) before the packet is baked and the files are staged."""
     name, cname = CNAMES[stage["name"]]
+    scaled = None
+    if float(owner_scale) != 1.0:
+        scaled = owner_scaled(stage, stage_dir, float(owner_scale))
+        geo = stage_dir / "o2r" / f"{stage['map_geometry'][0]:04x}"
+        _SCALED_O2R[str(geo.resolve())] = scaled[0]
+        r = scaled[1]
+        print(f"stage_generate: {stage['name']} owner scale {owner_scale}: {len(r.roots)} root rows, "
+              f"{r.vertices} vertices, {r.mapobjs} map objects, ledges {r.ledges}")
     gen._BLOB_GKIND[name] = stage["gkind"]
     if name not in gx.STAGES:
         gx.STAGES = tuple(gx.STAGES) + (name,)
@@ -423,7 +433,7 @@ def build_stage(stage: dict, stage_dir: Path, learn_pins: bool) -> dict:
     write_if_changed(stage_dir / f"native_stage_{name}.bin", blob)
     write_if_changed(stage_dir / f"{name}.gxp", gxp)
     wallpaper = convert_wallpaper(stage, stage_dir, name)
-    nitro = stage_nitro_files(stage, stage_dir)
+    nitro = stage_nitro_files(stage, stage_dir, scaled)
     owners = {o[0]: o for o in desc.owner_specs}
     capture = []
     for seg in packet.segments:
@@ -447,10 +457,39 @@ def build_stage(stage: dict, stage_dir: Path, learn_pins: bool) -> dict:
         "dense": len(packet.vertices), "materials": len(packet.materials),
         "assets": list(desc.adapter_asset_ids), "sizes": list(desc.adapter_asset_sizes),
         "capture": capture, "wallpaper": wallpaper,
+        "owner_scale": float(owner_scale),
     }
 
 
-def stage_nitro_files(stage: dict, stage_dir: Path) -> list[int]:
+# P7 S0 (owner_scale.py): the scaled geometry O2R a stage's packet is baked
+# from, by the source file's resolved path (load_o2r reads it after the
+# source's pin check), and the scale's report for its header and rows.
+_SCALED_O2R: dict[str, bytes] = {}
+_checked_bytes = gen.checked_bytes
+
+
+def _checked_scaled(repo_root, spec):
+    data = _checked_bytes(repo_root, spec)
+    return _SCALED_O2R.get(str((repo_root / spec.path).resolve()), data)
+
+
+gen.checked_bytes = _checked_scaled
+
+
+def owner_scaled(stage: dict, stage_dir: Path, scale: float):
+    """The stage's geometry O2R scaled (owner_scale.py), and its report."""
+    import owner_scale as OS  # noqa: E402
+    import generate_compact_ground_maps as gcm  # noqa: E402
+    geo_fid, geo_at = stage["map_geometry"]
+    f = gcm.parse_o2r((stage_dir / "o2r" / f"{geo_fid:04x}").read_bytes(), f"{geo_fid:04x}")
+    slots = dict(gcm.chain_slots(bytes(f.payload), f.internal_head, f"{geo_fid:04x}"))
+    layers = [L["dobjdesc"][1] for L in stage["layers"]
+              if L["dobjdesc"] is not None and L["dobjdesc"][0] == geo_fid]
+    report = OS.geometry(f.payload, slots, layers, geo_at, scale)
+    return gcm.serialize_o2r(f), report
+
+
+def stage_nitro_files(stage: dict, stage_dir: Path, scaled=None) -> list[int]:
     """The files the build stages in nitro:/reloc/p4, under <stage>/nitro/:
     the map as a compact ground map and the rest of its tree but the
     wallpaper container. A map's extern tree is what the battle loads, and
@@ -471,12 +510,23 @@ def stage_nitro_files(stage: dict, stage_dir: Path) -> list[int]:
                                     (o2r / f"{wall_fid:04x}").read_bytes())
     nitro = stage_dir / "nitro"
     nitro.mkdir(parents=True, exist_ok=True)
-    write_if_changed(nitro / f"{map_fid:04x}", compact.data)
+    data = compact.data
+    if scaled is not None:
+        # P7 S0: the header's side bounds out as far as the ledges move.
+        import owner_scale as OS  # noqa: E402
+        cf = gcm.parse_o2r(data, f"{map_fid:04x}")
+        OS.header(cf.payload, stage["header"]["offset"], scaled[1])
+        data = gcm.serialize_o2r(cf)
+    write_if_changed(nitro / f"{map_fid:04x}", data)
     files = [map_fid]
+    geo_fid = stage["map_geometry"][0]
     for fid in list(stage["files"]) + list(stage.get("hazard_files", ())):
         if fid in (map_fid, wall_fid):
             continue
-        write_if_changed(nitro / f"{fid:04x}", (o2r / f"{fid:04x}").read_bytes())
+        body = (o2r / f"{fid:04x}").read_bytes()
+        if scaled is not None and fid == geo_fid:
+            body = scaled[0]
+        write_if_changed(nitro / f"{fid:04x}", body)
         files.append(fid)
     return sorted(files)
 
@@ -552,6 +602,11 @@ def write_runtime(out: Path, facts: list[dict]) -> None:
           " * (the registry's hazard_files; Bowser's Stadium's bomb header). */",
           "#define NDS_P5_HAZARD_FILE_ROWS(X) \\"]
     h += [f"    X({s['gkind']}, {f:#x}u) \\" for s in facts for f in s["hazard_roots"]]
+    h += ["    /* end */", "",
+          "/* X(gkind, scale): an owner stage scale (stages.json owner_scale, P7 S0):",
+          " * the stage's code constants that place things across it read it. */",
+          "#define NDS_P5_STAGE_SCALE_ROWS(X) \\"]
+    h += [f"    X({s['gkind']}, {s['owner_scale']!r}F) \\" for s in facts if s.get("owner_scale", 1.0) != 1.0]
     h += ["    /* end */", ""]
     if facts:
         h += ["/* Their packets join the blob maxima the workspaces are sized by. */"]
@@ -628,7 +683,7 @@ def main() -> int:
     for row in rows:
         stage_dir = args.stages_root / row["name"]
         stage = json.loads((stage_dir / "stage.json").read_text(encoding="utf-8"))
-        facts.append(build_stage(stage, stage_dir, args.learn))
+        facts.append(build_stage(stage, stage_dir, args.learn, float(row.get("owner_scale", 1.0))))
     write_runtime(args.runtime_out, facts)
     return 0
 

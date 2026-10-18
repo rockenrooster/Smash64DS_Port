@@ -471,32 +471,94 @@ static void ndsMenuShellCssAnnounce(u32 slot)
  * mask for the four newcomers (Luigi, Ness, Captain, Purin -- the set
  * mnMessageApplyUnlock writes, mnmessage.c:287), and a fresh cart starts with
  * all four locked (scmanager.c:313-314): the ? plate over a dark shadow.
- * Owner 2026-10-01: every fighter works, so the VS character select offers all
- * twelve from the first boot -- no locked cell, no plate, no shade. The save
- * mask itself is untouched, so the 1P challengers and unlock messages still
- * run as the source wrote them. */
+ * Owner 2026-10-01 opened all twelve; P7 (docs/P7/P7_Implementation_Plan.md
+ * U7, assumption A3, approved 2026-10-13) restores the source's lock and adds
+ * its own for Metal Mario and the contents (nds_p7_progress.c), with SELECT on
+ * VS Options opening everything (U8). Dev-open builds (harness, lab, walk)
+ * still see every fighter (ndsP7DevOpen). */
+/* The save's fighter bits for the source's four newcomers: this console's,
+ * or in a wireless room the host's (its unlock byte carries the same four:
+ * mnMessageApplyUnlock writes both, mnmessage.c:287-293; plan 7.1, P7 A1). */
+static u32 ndsMenuShellCssFighterMask(void)
+{
+    if (ndsNetInSession() != 0u)
+    {
+        u32 unlock = ndsNetLobbyUnlockMask();
+        u32 mask = 0u;
+
+        mask |= ((unlock & LBBACKUP_UNLOCK_MASK_LUIGI) != 0u) ? (1u << nFTKindLuigi) : 0u;
+        mask |= ((unlock & LBBACKUP_UNLOCK_MASK_NESS) != 0u) ? (1u << nFTKindNess) : 0u;
+        mask |= ((unlock & LBBACKUP_UNLOCK_MASK_CAPTAIN) != 0u) ? (1u << nFTKindCaptain) : 0u;
+        mask |= ((unlock & LBBACKUP_UNLOCK_MASK_PURIN) != 0u) ? (1u << nFTKindPurin) : 0u;
+        return mask;
+    }
+    return (u32)gSCManagerBackupData.fighter_mask;
+}
+
+/* A P7 fighter bit: this console's, or in a room the host's (A1). */
+static u32 ndsMenuShellCssP7FighterOpen(u32 sel)
+{
+    if (ndsNetInSession() != 0u)
+    {
+        return ndsNetLobbyP7FighterOpen(sel);
+    }
+    return ndsP7FighterUnlocked(sel);
+}
+
 static u32 ndsMenuShellCssSaveLocked(u32 fkind)
 {
-    (void)fkind;
-    return FALSE;
+    if (ndsP7DevOpen() != FALSE)
+    {
+        return FALSE;
+    }
+    switch (fkind)
+    {
+    case (u32)nFTKindNess:
+    case (u32)nFTKindPurin:
+    case (u32)nFTKindCaptain:
+    case (u32)nFTKindLuigi:
+        return ((ndsMenuShellCssFighterMask() & (1u << fkind)) != 0u) ? FALSE : TRUE;
+    default:
+        return FALSE;
+    }
+}
+
+/* P7: the save's lock on a selection this build compiles -- the source's four
+ * newcomers by its fighter mask, Metal Mario and the contents by the P7 block
+ * (by selection id; in a wireless room the host's, A1). */
+static u32 ndsMenuShellCssProgressLocked(u32 sel)
+{
+#if NDS_P4
+    if (ndsMenuShellCssSelContent(sel) != 0u)
+    {
+        return (ndsMenuShellCssP7FighterOpen(NDS_P7_SEL_CONTENT(ndsMenuShellCssSelContent(sel))) != FALSE) ?
+            FALSE : TRUE;
+    }
+#endif
+    if (sel == (u32)nFTKindMMario)
+    {
+        return (ndsMenuShellCssP7FighterOpen(NDS_P7_SEL_METAL) != FALSE) ? FALSE : TRUE;
+    }
+    return ndsMenuShellCssSaveLocked(sel);
 }
 
 static u32 ndsMenuShellCssFighterLocked(u32 fkind)
 {
 #if NDS_P4
-    /* A Remix selection exists when this build compiles its content. */
+    /* A Remix selection exists when this build compiles its content, and is
+     * open when the save has unlocked it (P7). */
     if (ndsMenuShellCssSelContent(fkind) != 0u)
     {
-        return (ndsP4Fighter(ndsMenuShellCssSelContent(fkind)) == NULL) ?
-            TRUE : FALSE;
+        return ((ndsP4Fighter(ndsMenuShellCssSelContent(fkind)) == NULL) ||
+                (ndsMenuShellCssProgressLocked(fkind) != FALSE)) ? TRUE : FALSE;
     }
 #endif
 #ifdef NDS_P4_CSS_GATE_KIND_13
     /* Metal Mario: the source kind P4 makes selectable (p4_css.py KINDS); no
-     * save bit unlocks him in the source. */
+     * save bit unlocks him in the source, the P7 block does. */
     if (fkind == (u32)nFTKindMMario)
     {
-        return FALSE;
+        return ndsMenuShellCssProgressLocked(fkind);
     }
 #endif
     if (fkind >= NDS_CSS_PORTRAITS)
@@ -1176,9 +1238,44 @@ static void ndsMenuShellCssSyncLockedCells(void)
     u32 portrait;
 
 #if NDS_P4
-    /* Their CSS_LOCKED_* boxes are the vanilla grid's cells; the save locks
-     * no VS cell (ndsMenuShellCssSaveLocked), and the P4 grid draws its own. */
-    return;
+    {
+        /* P7 U7: a cell the save locks draws Remix's NONE plate (the bake's
+         * CSS_LOCKED_CELL<n>_READY<r>, READY-aware as the flashes are); a
+         * selection this build does not compile is baked so already. */
+        NdsUiKitSurfaceId cells[8];
+        u32 ready = (sCssReadyShown == 1u) ? 1u : 0u;
+        u32 n = 0u;
+        u32 cell;
+
+        (void)list;
+        (void)count;
+        (void)portrait;
+        for (cell = 0u; cell < (u32)NDS_P4_CSS_CELLS; cell++)
+        {
+            u32 sel = (u32)kNdsP4CssCellSel[cell];
+
+            if ((sel == (u32)nFTKindNull) || (sel == NDS_P4_SEL_RANDOM) ||
+                (ndsMenuShellCssProgressLocked(sel) == FALSE))
+            {
+                continue;
+            }
+            cells[n++] = (NdsUiKitSurfaceId)(NDS_MN_UI_KIT_SURFACE_CSS_LOCKED_CELL00_READY0 +
+                                             (cell * 2u) + ready);
+            if (n == (u32)(sizeof(cells) / sizeof(cells[0])))
+            {
+                if (ndsUiKitBlitSurfaces(cells, n) != FALSE)
+                {
+                    gNdsMenuShellCssPanelBlitCount += n;
+                }
+                n = 0u;
+            }
+        }
+        if ((n != 0u) && (ndsUiKitBlitSurfaces(cells, n) != FALSE))
+        {
+            gNdsMenuShellCssPanelBlitCount += n;
+        }
+        return;
+    }
 #endif
 
     for (portrait = 0u; portrait < (u32)NDS_CSS_PORTRAITS; portrait++)

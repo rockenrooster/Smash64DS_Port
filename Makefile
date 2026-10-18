@@ -4861,8 +4861,9 @@ endif
 # costs no ROM, which is cheaper to reason about than a second flag in the file
 # list that has to stay in step with the one in the sources.
 CFILES += nds_fox_gun.c
-# P2-7 save data: the FAT-backed SRAM image and the transcribed lbbackup.c.
-CFILES += nds_backup.c battleship_lbbackup.c
+# P2-7 save data: the FAT-backed SRAM image and the transcribed lbbackup.c;
+# P7's progress block in the same image (docs/P7/P7_Implementation_Plan.md U1).
+CFILES += nds_backup.c battleship_lbbackup.c nds_p7_progress.c
 ifeq ($(NDS_IMPORT_BATTLESHIP_FT_PUBLIC),1)
 CFILES += battleship_ftpublic.c
 endif

@@ -584,6 +584,24 @@ static void ndsMenuShellUpdateVsOptions(u32 held, u32 taps)
         ndsMenuShellGoto((u32)nSCKindVSItemSwitch);
         return;
     }
+    /* P7 U8 (owner brief): SELECT opens everything -- every source unlock,
+     * every new fighter and stage -- and saves it with the cheat flag; one
+     * cue (the message screen's, A7), the menu's refusal when all was open
+     * already. Records and 1P completion are not faked. */
+    if ((taps & NDS_INPUT_SELECT) != 0u)
+    {
+        if (ndsP7UnlockAll() != FALSE)
+        {
+            lbBackupWrite();
+            (void)ndsAudioFgmPlay((u16)nSYAudioFGMDeadUpStar);
+            gNdsMenuShellVsOptionsCheatCount++;
+        }
+        else
+        {
+            (void)ndsAudioFgmPlay((u16)nSYAudioFGMMenuDenied);
+        }
+        return;
+    }
     /* B commits and returns to the VS menu (:1294-1301). A and START do
      * nothing elsewhere here except confirm a value row below. */
     if ((taps & NDS_INPUT_B) != 0u)

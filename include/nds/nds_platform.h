@@ -14,7 +14,8 @@ enum NDSInput {
     NDS_INPUT_X     = 1u << 7,
     NDS_INPUT_Y     = 1u << 8,
     NDS_INPUT_L     = 1u << 9,
-    NDS_INPUT_R     = 1u << 10
+    NDS_INPUT_R     = 1u << 10,
+    NDS_INPUT_SELECT = 1u << 11
 };
 
 enum NDSOriginalSpriteOverlayLayer {

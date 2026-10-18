@@ -52,6 +52,8 @@ NDS_P5_RUNTIME_OUT := $(NDS_P5_GEN)/nds_p5_native_stages.generated.h \
 	$(NDS_P5_GEN)/nds_p5_wallpapers.generated.inc
 $(NDS_P5_RUNTIME_OUT) &: $(NDS_P5_EXPORT_STAMP) \
 		$(PROJECT_ROOT)/scripts/p5/stage_generate.py \
+		$(PROJECT_ROOT)/scripts/p5/owner_scale.py \
+		$(PROJECT_ROOT)/scripts/p5/stages.json \
 		$(wildcard $(PROJECT_ROOT)/scripts/p5/pins/*.json) \
 		$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py \
 		$(PROJECT_ROOT)/scripts/stages/compile_nds_stage_gx.py \

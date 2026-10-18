@@ -26,6 +26,16 @@ static inline u32 ndsP5StageAdmitted(u32 gkind)
     return FALSE;
 }
 
+/* The stage's P7 unlock id (stages.json "unlock_id"), or -1. */
+static inline s32 ndsP5StageUnlockId(u32 gkind)
+{
+#define NDS_P5_UNLOCK_ROW(g, token, unlock, landed, inishie, none, b0, b1, frame) \
+    if (gkind == (u32)(g)) { return (s32)(unlock); }
+    NDS_P5_STAGE_ROWS(NDS_P5_UNLOCK_ROW)
+#undef NDS_P5_UNLOCK_ROW
+    return -1;
+}
+
 /* A Remix stage (as opposed to a vanilla 1P arena): its kind is past the
  * source's last ground, nGRKindBonus2Ness (40). */
 static inline u32 ndsP5StageIsRemix(u32 gkind)

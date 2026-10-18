@@ -18,7 +18,11 @@ def host_source(diagnostic=False):
     shim = (ROOT / "src/import/battleship_lbbackup.c").read_text()
     functions = "\n".join(function(shim, name) for name in (
         "lbBackupCreateChecksum", "lbBackupIsChecksumValid", "lbBackupWrite",
-        "lbBackupIsSramValid", "lbBackupClearAllData"))
+        "lbBackupIsSramValid", "lbBackupClearNewcomers", "lbBackupClearPrize",
+        "lbBackupClearAllData"))
+    # P7 U1: the progress block beside the source's copies.
+    p7 = "\n".join(re.sub(r"^#include[^\n]*", "", (ROOT / path).read_text(), flags=re.M)
+                   for path in ("include/nds/nds_p7.h", "src/nds/nds_p7_progress.c"))
     original = (ROOT / "decomp/BattleShip-main/decomp/src/sc/scmanager.c").read_text()
     defaults = braced(original, r"LBBackupData dSCManagerDefaultBackupData\s*=\s*\{", True)
     backup = re.sub(r"^#include[^\n]*", "", (ROOT / "src/nds/nds_backup.c").read_text(), flags=re.M)
@@ -42,10 +46,17 @@ typedef uint8_t ub8;
 typedef uint16_t u16;
 typedef int16_t s16;
 typedef uint32_t u32;
+typedef uint64_t u64;
 typedef int32_t s32;
 typedef int sb32;
 ''' + types + "\n" + defines + "\n" + defaults + r'''
 static LBBackupData gSCManagerBackupData;
+volatile u32 gNdsSceneHarnessMode;
+#define LBBACKUP_UNLOCK_MASK_NEWCOMERS 0x0Fu
+#define LBBACKUP_UNLOCK_MASK_ALL 0x7Fu
+#define LBBACKUP_UNLOCK_MASK_PRIZE (LBBACKUP_UNLOCK_MASK_ALL & ~LBBACKUP_UNLOCK_MASK_NEWCOMERS)
+#define LBBACKUP_CHARACTER_MASK_ALL 0xFFFu
+#define LBBACKUP_GROUND_MASK_ALL 0x1FFu
 s32 lbBackupCreateChecksum(LBBackupData *backup);
 void ndsBackupSramRead(uintptr_t offset, void *data, size_t size);
 void ndsBackupSramWrite(void *data, uintptr_t offset, size_t size);
@@ -101,6 +112,11 @@ static int mock_rename(const char *from, const char *to)
     dst->exists = 1; src->exists = 0; mutation(); return 0;
 }
 static int fatInitDefault(void) { return volume; }
+/* libdvm's device lookup (mount once) and the development tally. */
+static int FindDevice(const char *name) { (void)name; return -1; }
+void ndsFsLock(void) {}
+void ndsFsUnlock(void) {}
+#define NDS_DIAG(x) (x)
 #define FILE void
 #define fopen mock_fopen
 #define fread mock_fread
@@ -108,7 +124,7 @@ static int fatInitDefault(void) { return volume; }
 #define fclose mock_fclose
 #define remove mock_remove
 #define rename mock_rename
-''' + backup + "\n" + functions + r'''
+''' + backup + "\n" + p7 + "\n" + functions + r'''
 static void reboot(void)
 {
     sNdsBackupLoaded = sNdsBackupMountTried = 0;
@@ -178,6 +194,38 @@ int main(void)
     CHECK(gSCManagerBackupData.unlock_mask == 0);
     CHECK(gSCManagerBackupData.spgame_records[0].bonus1_time == I_MIN_TO_TICS(60));
     CHECK(reload() == 0);
+    /* P7 U1: the progress block. Dev-open builds see everything. */
+    if (ndsP7DevOpen() == FALSE) {
+        fresh(); CHECK(gNdsP7ProgressLoadResult == 3u);
+        CHECK(ndsP7FighterUnlocked(13u) == FALSE); CHECK(ndsP7Cheated() == FALSE);
+        ndsP7SetFighterUnlocked(13u); ndsP7SetStageUnlocked(4u); score(100);
+        CHECK(reload() == 100); CHECK(gNdsP7ProgressLoadResult == 1u);
+        CHECK(ndsP7FighterUnlocked(13u)); CHECK(ndsP7StageUnlocked(4u));
+        CHECK(ndsP7FighterUnlocked(14u) == FALSE);
+        /* One copy torn: the other. Both: the defaults, the source untouched. */
+        disk[0].data[3040u + 9u] ^= 1; CHECK(reload() == 100);
+        CHECK(gNdsP7ProgressLoadResult == 2u); CHECK(ndsP7FighterUnlocked(13u));
+        lbBackupWrite();
+        disk[0].data[3040u + 9u] ^= 1; disk[0].data[3104u + 9u] ^= 1;
+        CHECK(reload() == 100); CHECK(gNdsP7ProgressLoadResult == 3u);
+        CHECK(ndsP7FighterUnlocked(13u) == FALSE);
+        /* A pre-P7 save (no block) and a file that ends after the source. */
+        fresh(); score(150); memset(&disk[0].data[3040], 0, 128);
+        CHECK(reload() == 150); CHECK(gNdsP7ProgressLoadResult == 3u);
+        fresh(); ndsP7SetFighterUnlocked(20u); score(160); disk[0].size = 3036;
+        CHECK(reload() == 160); CHECK(ndsP7FighterUnlocked(20u) == FALSE);
+        /* Clears: Prize the stages, Newcomers the fighters, All Data both and
+         * the cheat; SELECT opens everything once. */
+        fresh(); CHECK(ndsP7UnlockAll()); CHECK(ndsP7UnlockAll() == FALSE); lbBackupWrite();
+        CHECK(reload() == 0); CHECK(ndsP7Cheated()); CHECK(ndsP7FighterUnlocked(32u));
+        CHECK(ndsP7StageUnlocked(6u)); CHECK(gSCManagerBackupData.fighter_mask == 0xFFFu);
+        lbBackupClearPrize(); lbBackupWrite(); CHECK(reload() == 0);
+        CHECK(ndsP7StageUnlocked(6u) == FALSE); CHECK(ndsP7FighterUnlocked(32u));
+        lbBackupClearNewcomers(); lbBackupWrite(); CHECK(reload() == 0);
+        CHECK(ndsP7FighterUnlocked(32u) == FALSE); CHECK(ndsP7Cheated());
+        lbBackupClearAllData(); lbBackupWrite(); CHECK(reload() == 0);
+        CHECK(ndsP7Cheated() == FALSE);
+    }
     return 0;
 }
 '''

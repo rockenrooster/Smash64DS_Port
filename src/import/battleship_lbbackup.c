@@ -23,6 +23,7 @@
 #include <sc/scene.h>
 #include <sys/audio.h>
 #include <nds/nds_backup.h>
+#include <nds/nds_p7.h>
 
 #ifndef ARRAY_COUNT
 #define ARRAY_COUNT(array) (sizeof(array) / sizeof((array)[0]))
@@ -71,7 +72,8 @@ void lbBackupWrite(void)
     (void)ndsBackupFlush();
 }
 
-/* lbbackup.c:44-63 */
+/* lbbackup.c:44-63, then P7's progress block (U1): its own copies, read
+ * after the source's are settled and never touching them. */
 sb32 lbBackupIsSramValid(void)
 {
     ndsBackupSramRead(NDS_LBBACKUP_COPY0_OFFSET, &gSCManagerBackupData, sizeof(LBBackupData));
@@ -81,11 +83,15 @@ sb32 lbBackupIsSramValid(void)
         if (lbBackupIsChecksumValid() == FALSE)
         {
             gSCManagerBackupData = dSCManagerDefaultBackupData;
+            ndsP7ProgressLoad();
             lbBackupWrite();
             return FALSE;
         }
+        ndsP7ProgressLoad();
         lbBackupWrite();
+        return TRUE;
     }
+    ndsP7ProgressLoad();
     return TRUE;
 }
 
@@ -146,12 +152,13 @@ void lbBackupCorrectErrors(void)
     }
 }
 
-/* lbbackup.c:126-131 */
+/* lbbackup.c:126-131; P7: the new fighters are newcomers too (U1). */
 void lbBackupClearNewcomers(void)
 {
     gSCManagerBackupData.unlock_mask &= ~LBBACKUP_UNLOCK_MASK_NEWCOMERS;
     gSCManagerBackupData.unlock_mask |= dSCManagerDefaultBackupData.unlock_mask;
     gSCManagerBackupData.fighter_mask = dSCManagerDefaultBackupData.fighter_mask;
+    ndsP7ClearFighters();
 }
 
 /* lbbackup.c:135-146 */
@@ -195,17 +202,20 @@ void lbBackupClearBonusStageTime(void)
     }
 }
 
-/* lbbackup.c:176-183 */
+/* lbbackup.c:176-183; P7: the new stages are prizes, the new fighters stay
+ * (the source's newcomer/prize split, U1). */
 void lbBackupClearPrize(void)
 {
     gSCManagerBackupData.unlock_mask &= ~LBBACKUP_UNLOCK_MASK_PRIZE;
     gSCManagerBackupData.unlock_mask |= dSCManagerDefaultBackupData.unlock_mask;
     gSCManagerBackupData.ground_mask = dSCManagerDefaultBackupData.ground_mask;
     gSCManagerBackupData.vs_itemswitch_battles = dSCManagerDefaultBackupData.vs_itemswitch_battles;
+    ndsP7ClearStages();
 }
 
-/* lbbackup.c:186-189 */
+/* lbbackup.c:186-189; P7: all of its block, the cheat included (U1, U8). */
 void lbBackupClearAllData(void)
 {
     gSCManagerBackupData = dSCManagerDefaultBackupData;
+    ndsP7ClearAll();
 }

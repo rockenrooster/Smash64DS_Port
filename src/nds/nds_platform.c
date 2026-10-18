@@ -847,6 +847,7 @@ u32 ndsPlatformReadInput(void)
     if (held & KEY_Y) input |= NDS_INPUT_Y;
     if (held & KEY_L) input |= NDS_INPUT_L;
     if (held & KEY_R) input |= NDS_INPUT_R;
+    if (held & KEY_SELECT) input |= NDS_INPUT_SELECT;
 
     return input;
 }

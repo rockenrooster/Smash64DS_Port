@@ -2689,11 +2689,15 @@ def p4_cell_box(cell: dict) -> tuple[int, int, int, int]:
     return (cell["x"], cell["y"], width, height)
 
 
-def p4_css_screen_parts(flash_cell: int | None = None) -> tuple[Placement, ...]:
+def p4_css_screen_parts(flash_cell: int | None = None,
+                        locked_cell: int | None = None) -> tuple[Placement, ...]:
     grid = P4_CSS["grid"]
     parts = [STONE_FULL_BLEED]
     for cell in P4_CSS["cells"]:
         offset = cell["flash"] if cell["cell"] == flash_cell else cell["portrait"]
+        if cell["cell"] == locked_cell:
+            # P7 U7: the save locks it (the NONE plate, the question mark).
+            offset = P4_CSS["none_portrait"]
         o2r, symbol = p4_sprite("portraits", offset)
         parts.append(Placement(o2r, symbol, cell["x"], cell["y"], False,
                                scale=(grid["scale_num"] * 4,
@@ -3238,6 +3242,19 @@ if P4_CSS is not None:
                     f"CSS_FLASH_CELL{_cell['cell']:02d}_"
                     f"{'ON' if _on else 'OFF'}_READY{_ready}",
                     (), None, under=_under, box=_box))
+
+# P7 U7: a save-locked cell's plate, per cell and READY state (the runtime
+# indexes CSS_LOCKED_CELL00_READY0 + cell * 2 + ready), restored over the cell
+# whenever a state surface has drawn its unlocked portrait.
+if P4_CSS is not None and "none_portrait" in P4_CSS:
+    for _cell in P4_CSS["cells"]:
+        _box = p4_cell_box(_cell)
+        for _ready in (0, 1):
+            _ready_parts = CSS_READY_PARTS if _ready else ()
+            SURFACE_SOURCES.append(SurfaceSpec(
+                f"CSS_LOCKED_CELL{_cell['cell']:02d}_READY{_ready}",
+                (), None, under=(p4_css_screen_parts(None, _cell["cell"]) + _ready_parts),
+                box=_box))
 
 # The screen-coverage audit normally derives a surface's source ownership from
 # `SurfaceSpec.parts`.  These flash surfaces are the one deliberate exception:
@@ -3786,6 +3803,16 @@ def sss_preview(token: str, part: Placement) -> SurfaceSpec:
 
 def _sss_surface_sources() -> list[SurfaceSpec]:
     sources = [SurfaceSpec("SSS_SCREEN", SSS_BACKGROUND, MENU_FIELD)]
+    if P5_SSS is not None:
+        # P7 U7: each cell's locked plate (the runtime blits SSS_LOCKED_CELL00
+        # + slot over a P5 stage the save has not opened), one per cell so
+        # the slot indexes it.
+        for _slot, _cell in enumerate(P5_SSS["cells"]):
+            sources.append(SurfaceSpec(
+                f"SSS_LOCKED_CELL{_slot:02d}",
+                (Placement("MNPlayersPortraits", SSS_LOCKED_SYMBOL,
+                           _cell["x"], _cell["y"], False, dest=SSS_ICON_DEST),),
+                None, under=SSS_BACKGROUND))
     for name, _gkind, o2r, symbol in SSS_PREVIEW_WALLPAPER:
         sources.append(sss_preview(
             f"SSS_PREVIEW_{name}",

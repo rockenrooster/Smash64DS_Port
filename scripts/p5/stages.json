@@ -14,7 +14,7 @@
   {"name": "first_destination", "title": "First Destination", "token": "FIRST_DESTINATION", "remix_id": 42, "gkind": 41,
    "source": "remix", "descriptor": null, "c_name": "firstdest", "c_symbol": "FirstDest", "logo": "SMASH",
    "camera": "default", "bgm": null, "items": "header", "hazard": null, "unlock_id": 3, "landed": true},
-  {"name": "bowsers_stadium", "title": "Bowser's Stadium", "token": "BOWSERS_STADIUM", "remix_id": 67, "gkind": 42,
+  {"name": "bowsers_stadium", "owner_scale": 1.5, "title": "Bowser's Stadium", "token": "BOWSERS_STADIUM", "remix_id": 67, "gkind": 42,
    "source": "remix", "descriptor": null, "c_name": "bowserst", "c_symbol": "BowserSt", "logo": "BOWSER",
    "camera": "default", "bgm": null, "items": "header", "hazard": "bombs", "hazard_files": [2482],
    "unlock_id": 4, "landed": true},

@@ -231,7 +231,9 @@ def emit_sss(out: Path, staging: Path, rows: list[dict], stages_root: Path | Non
                         logo=logo, logo_sprite=logo_offsets[logo],
                         logo_dx=_f32_unit(logo_pos.get("X_" + logo, 0)),
                         logo_dy=_f32_unit(logo_pos.get("Y_" + logo, 0)),
-                        zoom=round(f32("zoom_table", rid), 4),
+                        # P7 S0 (A10): a scaled stage's preview zooms out
+                        # by its scale, so it still fits its frame.
+                        zoom=round(f32("zoom_table", rid) / float(row.get("owner_scale", 1.0)), 4),
                         training_parent=u8("background_table", rid),
                         map_file=u32("stage_file_table", rid * 2),
                         map_offset=u32("stage_file_table", rid * 2 + 1),

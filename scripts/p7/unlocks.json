@@ -1,0 +1,34 @@
+{
+ "comment": "P7 U3 (docs/P7/P7_Implementation_Plan.md Board 2, approved 2026-10-13): one row per new unlock, read by scripts/p7/generate_p7_unlocks.py into src/nds/nds_p7_unlocks.generated.inc and evaluated by src/nds/nds_p7_unlocks.c. Every condition is met playing an original fighter at an original trigger site: 'run_end' (the 1P Game cleared), 'stage_clear' (a 1P stage cleared), 'bonus1_end' / 'bonus2_end' (a bonus practice finished), 'unlock' (another row's unlock: a companion). Difficulty 0 Very Easy .. 4 Very Hard. A row whose content is not compiled is skipped. Banjo & Kazooie's row (24) is retired with him (2026-10-17).",
+ "fighters": [
+  {"sel": 12, "name": "Metal Mario", "site": "stage_clear", "stage": "MMario", "fighters": ["Luigi"], "delivery": "direct"},
+  {"sel": 20, "name": "Peach", "site": "run_end", "fighters": ["Mario"], "max_falls": 0, "delivery": "direct"},
+  {"sel": 16, "name": "Bowser", "site": "run_end", "fighters": ["Mario", "Luigi"], "min_difficulty": 2, "requires": [20], "delivery": "challenger", "stage": "bowsers_stadium"},
+  {"sel": 19, "name": "Wario", "site": "run_end", "fighters": ["Bowser"], "min_difficulty": 2, "delivery": "challenger", "stage": "Inishie"},
+  {"sel": 27, "name": "Mad Piano", "site": "run_end", "fighters": ["Luigi"], "delivery": "challenger", "stage": "Castle"},
+  {"sel": 13, "name": "Falco", "site": "run_end", "fighters": ["Fox"], "min_difficulty": 2, "delivery": "challenger", "stage": "Sector"},
+  {"sel": 15, "name": "Wolf", "site": "run_end", "fighters": ["Fox"], "min_difficulty": 3, "max_continues": 0, "requires": [13], "delivery": "challenger", "stage": "Sector"},
+  {"sel": 14, "name": "Ganondorf", "site": "run_end", "fighters": ["Link"], "min_difficulty": 2, "delivery": "challenger", "stage": "Hyrule"},
+  {"sel": 23, "name": "Sheik", "site": "bonus_end", "fighters": ["Link"], "bonus_records": {"targets": 10, "platforms": 10}, "delivery": "challenger", "stage": "Hyrule"},
+  {"sel": 17, "name": "Marth", "site": "run_end", "min_difficulty": 3, "max_continues": 0, "delivery": "challenger", "stage": "Hyrule"},
+  {"sel": 18, "name": "Roy", "site": "run_end", "min_difficulty": 4, "requires": [17], "delivery": "challenger", "stage": "Zebes"},
+  {"sel": 22, "name": "Lanky Kong", "site": "run_end", "fighters": ["Donkey"], "min_difficulty": 2, "delivery": "challenger", "stage": "Jungle"},
+  {"sel": 21, "name": "Crash", "site": "run_end", "min_race_left_s": 20, "delivery": "challenger", "stage": "Jungle", "provisional": "threshold set from a measured run before it ships"},
+  {"sel": 25, "name": "Sonic", "site": "run_end", "max_time_s": 659, "delivery": "challenger", "stage": "Yoster"},
+  {"sel": 26, "name": "King Dedede", "site": "run_end", "fighters": ["Kirby"], "min_difficulty": 2, "delivery": "challenger", "stage": "Pupupu"},
+  {"sel": 28, "name": "Meta Knight", "site": "run_end", "fighters": ["Kirby"], "min_difficulty": 3, "max_continues": 0, "requires": [26], "delivery": "challenger", "stage": "Pupupu"},
+  {"sel": 29, "name": "Mr. Game & Watch", "site": "run_end", "all_cleared": true, "delivery": "challenger", "stage": "duel_zone"},
+  {"sel": 30, "name": "Snake", "site": "run_end", "min_difficulty": 2, "max_continues": 0, "stock_setting": 1, "delivery": "challenger", "stage": "Yamabuki"},
+  {"sel": 31, "name": "Ike", "site": "run_end", "min_difficulty": 4, "max_continues": 0, "requires": [17, 18], "delivery": "challenger", "stage": "Hyrule"},
+  {"sel": 32, "name": "Palutena", "site": "bonus1_end", "all_targets": true, "delivery": "challenger", "stage": "Hyrule"}
+ ],
+ "stages": [
+  {"stage": "meta_crystal", "site": "unlock", "requires": [12], "delivery": "companion"},
+  {"stage": "bowsers_stadium", "site": "unlock", "requires": [16], "delivery": "companion"},
+  {"stage": "hyrule_temple", "site": "unlock", "requires": [14, 23], "delivery": "companion"},
+  {"stage": "final_destination", "site": "run_end", "min_difficulty": 3, "delivery": "direct"},
+  {"stage": "first_destination", "site": "run_end", "min_difficulty": 4, "delivery": "direct"},
+  {"stage": "duel_zone", "site": "stage_clear", "stage_cleared": "Zako", "max_stage_falls": 0, "delivery": "direct"},
+  {"stage": "dinosaur_land", "site": "run_end", "fighters": ["Yoshi"], "delivery": "direct"}
+ ]
+}

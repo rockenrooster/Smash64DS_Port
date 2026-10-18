@@ -30,6 +30,7 @@
 #include <sc/scene.h>
 
 #include <nds/nds_match_config.h>
+#include <nds/nds_p7.h>
 #include <nds/nds_net.h>
 #include <nds/nds_net_link.h>
 #include <nds/nds_net_lobby.h>
@@ -71,8 +72,13 @@
 #define NDS_NET_LOBBY_RULES_BYTES 5u
 #define NDS_NET_LOBBY_NAMES_AT \
     (NDS_NET_LOBBY_RULES_AT + NDS_NET_LOBBY_RULES_BYTES)
-#define NDS_NET_LOBBY_BODY_BYTES \
+/* Then the host's P7 masks (docs/P7/P7_Implementation_Plan.md U7, A1: the
+ * host's save decides fighters and stages on every console): the new
+ * fighters' two words and the new stages', little-endian. */
+#define NDS_NET_LOBBY_P7_AT \
     (NDS_NET_LOBBY_NAMES_AT + (NDS_NET_PORTS - 1u) * NDS_NET_NAME_LEN)
+#define NDS_NET_LOBBY_P7_BYTES 12u
+#define NDS_NET_LOBBY_BODY_BYTES (NDS_NET_LOBBY_P7_AT + NDS_NET_LOBBY_P7_BYTES)
 
 extern void ndsNetLinkGetUserName(char out[NDS_NET_NAME_LEN + 1u]);
 
@@ -121,6 +127,8 @@ static u32 sSnapTeamBattle;
 static u32 sSnapFresh;
 /* The host's save unlock mask and rules from the latest snapshot. */
 static u32 sHostUnlockMask;
+/* The host's P7 masks: fighters (two words), stages. */
+static u32 sHostP7[3];
 static u8 sHostRules[NDS_NET_LOBBY_RULES_BYTES];
 static char sSnapNames[NDS_NET_PORTS][NDS_NET_NAME_LEN + 1u];
 static char sHostName[NDS_NET_NAME_LEN + 1u];
@@ -356,6 +364,7 @@ static void ndsNetLobbyReset(void)
     memset(sRoomSeen, 0, sizeof(sRoomSeen));
     memset(sHostName, 0, sizeof(sHostName));
     sHostUnlockMask = 0u;
+    memset(sHostP7, 0, sizeof(sHostP7));
     memset(sHostRules, 0, sizeof(sHostRules));
     memset(sSnapNames, 0, sizeof(sSnapNames));
 }
@@ -725,6 +734,13 @@ static void ndsNetLobbyReceive(void)
                            NDS_NET_NAME_LEN);
                     sSnapNames[p][NDS_NET_NAME_LEN] = '\0';
                 }
+                for (p = 0u; p < 3u; p++)
+                {
+                    const u8 *w = body + NDS_NET_LOBBY_P7_AT + (p * 4u);
+
+                    sHostP7[p] = (u32)w[0] | ((u32)w[1] << 8) |
+                                 ((u32)w[2] << 16) | ((u32)w[3] << 24);
+                }
                 sSnapFresh = 1u;
                 if (((sHumanMask >> sLocalPort) & 1u) == 0u)
                     sLost = 1u;   /* the host dropped us */
@@ -868,6 +884,19 @@ static void ndsNetHostSendLobby(void)
         else
             memset(buf + n, 0, NDS_NET_NAME_LEN);
         n += NDS_NET_NAME_LEN;
+    }
+    {
+        u32 words[3];
+        u32 w;
+
+        ndsP7Masks(words, &words[2]);
+        for (w = 0u; w < 3u; w++)
+        {
+            buf[n++] = (u8)words[w];
+            buf[n++] = (u8)(words[w] >> 8);
+            buf[n++] = (u8)(words[w] >> 16);
+            buf[n++] = (u8)(words[w] >> 24);
+        }
     }
     ndsNetSend(buf, n);
 }
@@ -1373,6 +1402,42 @@ uint32_t ndsNetLobbyUnlockMask(void)
 {
     return (sRole == NDS_NET_ROLE_GUEST) ? sHostUnlockMask :
         (u32)gSCManagerBackupData.unlock_mask;
+}
+
+static void ndsNetLobbyP7Words(u32 words[3])
+{
+    if (sRole == NDS_NET_ROLE_GUEST)
+    {
+        words[0] = sHostP7[0];
+        words[1] = sHostP7[1];
+        words[2] = sHostP7[2];
+        return;
+    }
+    ndsP7Masks(words, &words[2]);
+}
+
+uint32_t ndsNetLobbyP7FighterOpen(uint32_t sel)
+{
+    u32 words[3];
+
+    if (sel >= 64u)
+    {
+        return FALSE;
+    }
+    ndsNetLobbyP7Words(words);
+    return ((words[sel >> 5] >> (sel & 31u)) & 1u) ? TRUE : FALSE;
+}
+
+uint32_t ndsNetLobbyP7StageOpen(uint32_t stage)
+{
+    u32 words[3];
+
+    if (stage >= 32u)
+    {
+        return FALSE;
+    }
+    ndsNetLobbyP7Words(words);
+    return ((words[2] >> stage) & 1u) ? TRUE : FALSE;
 }
 
 uint32_t ndsNetLobbyGuestRules(uint8_t rules[3])

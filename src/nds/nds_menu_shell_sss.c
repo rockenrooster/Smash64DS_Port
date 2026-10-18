@@ -481,8 +481,24 @@ static u32 ndsMenuShellSssGroundLocked(u32 gkind)
     if (gkind > (u32)nGRKindInishie)
     {
 #if NDS_P5
-        /* A P5 stage is offered once it has landed (P7 adds its unlock). */
-        return (ndsP5StageAdmitted(gkind) != FALSE) ? FALSE : TRUE;
+        /* A P5 stage is offered once it has landed and the save has opened
+         * it (P7 U7: its unlock id in the progress block; in a wireless room
+         * the host's, A1). */
+        if (ndsP5StageAdmitted(gkind) == FALSE)
+        {
+            return TRUE;
+        }
+        {
+            s32 unlock = ndsP5StageUnlockId(gkind);
+
+            if ((unlock >= 0) && (ndsP7DevOpen() == FALSE) &&
+                (((ndsNetInSession() != 0u) ? ndsNetLobbyP7StageOpen((u32)unlock) :
+                                              ndsP7StageUnlocked((u32)unlock)) == FALSE))
+            {
+                return TRUE;
+            }
+        }
+        return FALSE;
 #else
         return TRUE;
 #endif
@@ -653,6 +669,28 @@ static void ndsMenuShellSssPopulate(void)
 
         (void)ndsUiKitBlitForegroundSurfaces(&front, 1u);
     }
+#if NDS_P5
+    {
+        /* P7 U7: SSS_SCREEN bakes every landed stage's icon; a P5 stage the
+         * save has not opened takes the locked plate over it. */
+        u32 slot;
+
+        for (slot = 0u; slot < NDS_SSS_SLOTS; slot++)
+        {
+            u32 gkind = (u32)kNdsSssSlotGkind[slot];
+            NdsUiKitSurfaceId plate;
+
+            if ((gkind <= (u32)nGRKindInishie) || (gkind == NDS_SSS_GKIND_RANDOM) ||
+                (gkind == NDS_SSS_GKIND_NONE) || (ndsP5StageAdmitted(gkind) == FALSE) ||
+                (ndsMenuShellSssGroundLocked(gkind) == FALSE))
+            {
+                continue;
+            }
+            plate = (NdsUiKitSurfaceId)(NDS_MN_UI_KIT_SURFACE_SSS_LOCKED_CELL00 + slot);
+            (void)ndsUiKitBlitSurfaces(&plate, 1u);
+        }
+    }
+#endif
     ndsMenuShellSssShowSelection(2u);
 }
 

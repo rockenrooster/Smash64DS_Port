@@ -1313,10 +1313,73 @@ static void ndsFTManagerSelectLowDetail(FTDesc *desc)
 }
 #endif
 
+#if NDS_P2_MMARIO
+/* P7 B5 (docs/P7/P7_Implementation_Plan.md Board 3, the owner's brief): in a
+ * VS battle Metal Mario falls 1.25x as fast and dashes and runs at his walk's
+ * top speed, his Dash, Run and RunBrake motions his fast walk's. A VS copy of
+ * his attributes (the main file's stay the source's) and those three rows of
+ * his motion table, which every make outside a VS battle puts back, so the
+ * 1P campaign's boss and his stage are the source's. */
+#define NDS_P7_MMARIO_VS_GRAVITY 1.25F
+
+extern FTMotionDesc dFTMMarioMotionDescs[];
+
+static FTAttributes sNdsP7MMarioVsAttr;
+static FTMotionDesc sNdsP7MMarioRows[3];
+static u32 sNdsP7MMarioRowsSaved;
+
+static u32 ndsP7MMarioVs(const FTDesc *desc)
+{
+    return ((desc != NULL) && (desc->fkind == nFTKindMMario) &&
+            (desc->pkind != nFTPlayerKindDemo) &&
+            (gSCManagerSceneData.scene_curr == nSCKindVSBattle)) ? TRUE : FALSE;
+}
+
+static void ndsP7MMarioRows(u32 vs)
+{
+    static const s32 rows[3] = {
+        nFTCommonMotionDash, nFTCommonMotionRun, nFTCommonMotionRunBrake
+    };
+    u32 i;
+
+    if (sNdsP7MMarioRowsSaved == FALSE)
+    {
+        for (i = 0u; i < 3u; i++)
+        {
+            sNdsP7MMarioRows[i] = dFTMMarioMotionDescs[rows[i]];
+        }
+        sNdsP7MMarioRowsSaved = TRUE;
+    }
+    for (i = 0u; i < 3u; i++)
+    {
+        dFTMMarioMotionDescs[rows[i]] = (vs != FALSE) ?
+            dFTMMarioMotionDescs[nFTCommonMotionWalkFast] : sNdsP7MMarioRows[i];
+    }
+}
+
+static void ndsP7MMarioVsAttr(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    f32 walk_top = F_CONTROLLER_RANGE_MAX * fp->attr->walk_speed_mul;
+
+    sNdsP7MMarioVsAttr = *fp->attr;
+    sNdsP7MMarioVsAttr.gravity *= NDS_P7_MMARIO_VS_GRAVITY;
+    sNdsP7MMarioVsAttr.dash_speed = walk_top;
+    sNdsP7MMarioVsAttr.run_speed = walk_top;
+    fp->attr = &sNdsP7MMarioVsAttr;
+}
+#endif
+
 GObj *ftManagerMakeFighter(FTDesc *desc)
 {
 #if NDS_P2_1P_GAME && NDS_P2_MENU_WALK
     ndsCampaignWalkCpuRoute(desc);
+#endif
+#if NDS_P2_MMARIO
+    if ((desc != NULL) && (desc->fkind == nFTKindMMario))
+    {
+        ndsP7MMarioRows(ndsP7MMarioVs(desc));
+    }
 #endif
     ndsFTManagerBattleLowDetail(desc);
 #if NDS_P4
@@ -1437,6 +1500,12 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
 #endif
                                        );
         }
+#if NDS_P2_MMARIO
+        if ((fighter_gobj != NULL) && (ndsP7MMarioVs(desc) != FALSE))
+        {
+            ndsP7MMarioVsAttr(fighter_gobj);
+        }
+#endif
         return fighter_gobj;
     }
 }

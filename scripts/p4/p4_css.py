@@ -331,6 +331,8 @@ def main() -> int:
         })
 
     spec = {"schema": "p4-css-v1", "grid": GRID, "screen": SCREEN, "cells": cells, "fighters": fighters,
+            # P7 U7: a save-locked cell draws Remix's NONE plate at run time.
+            "none_portrait": portraits["NONE"],
             "files": {"portraits": str(o2r / f"{PORTRAIT_FILE:04x}"),
                       "names": str(o2r / f"{NAME_FILE:04x}"),
                       "logos": str(o2r / f"{LOGO_FILE:04x}")}}

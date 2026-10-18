@@ -120,6 +120,10 @@ uint32_t ndsNetLobbyGuestRules(uint8_t rules[3]);
  * guest has from the snapshot. It gates the stage select on every console and
  * is never written to a guest's save. */
 uint32_t ndsNetLobbyUnlockMask(void);
+/* P7 (U7, A1): the room's new fighters and stages -- the host's, by
+ * selection id and stage unlock id (include/nds/nds_p7.h). */
+uint32_t ndsNetLobbyP7FighterOpen(uint32_t sel);
+uint32_t ndsNetLobbyP7StageOpen(uint32_t stage);
 
 /* A LEAVE the session layer read during a match (port, or 0xFF for the host
  * closing the room). The host drops that member if the radio address is its
