@@ -1,5 +1,9 @@
 # Banjo & Kazooie — P4 character subplan
 
+**Retired (owner, 2026-10-17):** removed from the roster; his select cell is
+the random chooser ([P4 status](../P4_STATUS.md#banjo--kazooie-retired-owner-2026-10-17)).
+The card below is the record of what was built.
+
 **Status:** planned; source slices inspected, no DS implementation or performance pass claimed.  
 **Source:** `JSsixtyfour/smashremix` at `5e04fe7fcd023cd43c71f25f89bb6e810d254d55`.  
 **Default production wave:** 5 (Revision 3). Parent: [master](../New_Characters.md).

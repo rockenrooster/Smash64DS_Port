@@ -2493,6 +2493,25 @@ Four Sonics, WORK P95: 1,264,000 -> 1,209,792 (memos) -> 1,167,808 (wider
 memos) -> 1,111,360 (state cache; entry frames' mean 1.159M -> 1.070M,
 1,862/1,961 in two VBlanks).
 
+## Banjo & Kazooie retired (owner, 2026-10-17)
+
+The owner removed Banjo & Kazooie from the roster: "Banjo & Kazooie removed
+(Change CSS slot to a random chooser like SSS has)". Content 12 left the
+registry (`scripts/p4/contents.json`; its id is never reused), with his code
+(`src/port/nds_p4_banjo.c`), his generator rows (`generate_p4_fighter.py`'s
+routine map, entry port, special files and pose budget; `p4_articles.py`'s
+egg and entry wave; `p4_kirby.py`'s power prefix) and his weapon kind
+(`nWPKindMonsterEnd + 3` stays unused). Kirby's hat generator now deletes hat
+images a retired content left in a build directory (a seeded build compiled
+Banjo's stale hat and failed). The P3 stress roster puts Ike in his place.
+
+His select cell (row 3, column 11) is the **random chooser**
+(`p4_css.py` RANDOM, `NDS_P4_SEL_RANDOM`): Remix's RANDOM portrait; a token
+dropped on it takes one time-RNG draw over the unlocked cells (the CPU's own
+random, `ndsMenuShellCssP4RandomSel`), moves to that cell and drops there.
+While a token rides over it no fighter shows; the chooser itself is never
+drawn by a random pick.
+
 ## Board 1 status (master plan Revision 3)
 
 | Item | State |

@@ -6,6 +6,11 @@
 # damage the latest patch's 4.5% (5; ultimateframedata, owner p6s; 1.0.0's 2.5).
 # Owner p6w: its hit sound the forward air's (a heavy punch, level 2) and its
 # hitboxes 1.15x the size.
+# Owner p6x VFX plan (picks 2026-10-16): her staff's solid cyan-white trail
+# (sword trail 24, spec sword_trails: row 14's grip-to-gem line) while it
+# spins, 5 to 34.
+AsyncWait frames=5
+SetAfterImage is_itemswing=24 drawstatus=0
 AsyncWait frames=6
 PlayVoiceStoreInfo value=cue:attack03
 MakeAttackColl attack_id=0 group_id=0 joint_id=18 damage=1 can_rebound=1 element=0 size=265 off_x=41 off_y=272 off_z=-290 angle=100 knockback_scale=100 knockback_weight=15 is_hit_ground_air=3 shield_damage=0 fgm_level=2 fgm_kind=0 knockback_base=0
@@ -47,4 +52,6 @@ PlayFGM value=cue:se_swing_m
 Effect joint_id=18 effect_id=31 flag=0 off_x=23 off_y=150 off_z=-160 rng_x=0 rng_y=0 rng_z=0
 SyncWait frames=3
 ClearAttackCollAll value=0
+AsyncWait frames=34
+SetAfterImage is_itemswing=0 drawstatus=-1
 End value=0

@@ -4,6 +4,15 @@ Owner of the live P6 state. The plan is [P6_PLAN.md](P6_PLAN.md); the cards
 are [characters/ike.md](characters/ike.md) and
 [characters/palutena.md](characters/palutena.md).
 
+**State (2026-10-17):** goal P6-P7 (owner 2026-10-17: P6 is done when the
+VFX plan is built and approved after the owner's playtest). Palutena's VFX
+plan is built (staff trail, gem glow, overhead light wings and the taunt's
+ring; [card](characters/palutena.md#built-2026-10-17-owner-p6z)) with the
+p6z fixes (her entry eases into her wait on both sides; Explosive Flame's far
+distance 0.9x), in the playtest ROM for the owner's review. Banjo & Kazooie
+is retired from the roster (owner 2026-10-17; content id 12 never reused),
+his select cell the random chooser.
+
 **State (2026-10-13, night):** active (goal P5-P7). Move cards approved (I1,
 P1). A1 done: Ike (19) and Palutena (20) are registry contents built from
 Roy's and Peach's exports (null clones) and play in every ROM. Palutena's

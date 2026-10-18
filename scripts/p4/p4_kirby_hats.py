@@ -634,6 +634,13 @@ def main() -> int:
     (hats_dir / "nds_p4_kirby_hats.generated.h").write_text("\n".join(header), encoding="utf-8",
                                                             newline="\n")
 
+    # The build compiles every image file here: one a content no longer in
+    # the roster left (Banjo's, retired 2026-10-17) would be stale.
+    wanted = {f"nds_native_fighter_p4kirbyhat_{hat:02x}_{detail}.image.c"
+              for hat, _base, _content, _per in built for detail in DETAILS}
+    for old in hats_dir.glob("nds_native_fighter_p4kirbyhat_*.image.c"):
+        if old.name not in wanted:
+            old.unlink()
     for hat, _base, _content, per_detail in built:
         for detail in DETAILS:
             (hats_dir / f"nds_native_fighter_p4kirbyhat_{hat:02x}_{detail}.image.c").write_text(

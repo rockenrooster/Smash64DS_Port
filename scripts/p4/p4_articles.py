@@ -92,18 +92,6 @@ ARTICLES = {
         {"name": "entry_beam", "special": 3, "dobjdesc": 0x638, "dllinks": True, "entry": True,
          "material": True},
     ),
-    "banjo": (
-        # BanjoSpecial.asm forward_egg_projectile_struct and
-        # backward_egg_projectile_struct: one WPAttributes at 0 of Banjo
-        # file 9.
-        {"name": "egg", "special": 4, "wpattributes": 0x0},
-        # linkshared.asm entry_anim_struct_1_BANJO and _2_BANJO: the Link
-        # entry's wave (DObjDesc 0x878) and beam (0x240) on his file 8.
-        {"name": "entry_wave", "special": 3, "dobjdesc": 0x878, "dllinks": True, "entry": True,
-         "material": True},
-        {"name": "entry_beam", "special": 3, "dobjdesc": 0x240, "dllinks": True, "entry": True,
-         "material": True},
-    ),
     "lanky": (
         # LankySpecial.asm grape_projectile_struct: WPAttributes at 0 of
         # Lanky file 6 (its graphic in file 8).
@@ -148,6 +136,12 @@ ARTICLES = {
         # WINGS_TREE, scripts/p6/p6_wings.py): eight cards, each a bone's,
         # posed by her code every tic.
         {"name": "wings", "special": 2, "dobjdesc": 0x210},
+        # Her light effects (p6_gate.py GLOW_TREE, LIGHT_TREE; scripts/p6/
+        # p6_light.py; the owner's p6x VFX plan): the gem's glow, and the
+        # overhead light wings with the taunt's ring, cards placed by her
+        # code every tic.
+        {"name": "glow", "special": 2, "dobjdesc": 0x424},
+        {"name": "light", "special": 2, "dobjdesc": 0x4D4},
     ),
     "piano": (
         # fireball.asm struct_book: WPAttributes at 0 of Piano file 6

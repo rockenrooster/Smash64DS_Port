@@ -383,7 +383,7 @@ sb32 ndsP4ColAnimEnd(GObj *fighter_gobj);
  * kind, and Remix's projectile ids reuse the source's. */
 #define NDS_P4_WP_KIND_WOLF_BLASTER (nWPKindMonsterEnd + 1)
 #define NDS_P4_WP_KIND_SHEIK_NEEDLE (nWPKindMonsterEnd + 2)
-#define NDS_P4_WP_KIND_BANJO_EGG (nWPKindMonsterEnd + 3)
+/* nWPKindMonsterEnd + 3 was Banjo's egg (content 12, retired 2026-10-17). */
 #define NDS_P4_WP_KIND_LANKY_GRAPE (nWPKindMonsterEnd + 4)
 #define NDS_P4_WP_KIND_SONIC_SPRING (nWPKindMonsterEnd + 5)
 #define NDS_P4_WP_KIND_WADDLEDOO_BEAM (nWPKindMonsterEnd + 6)
@@ -440,7 +440,9 @@ enum
  * nFTPartsJointCommonStart) along that joint's matrix row `axis` (0 X, 1 Y,
  * 2 Z) from `start` to `end`, base colour `colour_1` to tip colour
  * `colour_2` (RGBA32, alpha unused). A content lists the rows whose
- * character is its own. */
+ * character is its own. Axis 3 (P6, Palutena's staff: its grip-to-gem line
+ * is none of its joint's matrix rows) runs along `local`, a direction in the
+ * joint's own frame (unit length), instead. */
 typedef struct NDSP4SwordTrail
 {
     u8 id;
@@ -451,6 +453,7 @@ typedef struct NDSP4SwordTrail
     u32 colour_2;
     f32 start;
     f32 end;
+    f32 local[3];
 } NDSP4SwordTrail;
 
 /* Remix's entry_action and entry_script rows (Character.asm): the appear
@@ -672,6 +675,9 @@ typedef struct NDSP4Fighter
 /* Character-select selection ids: an original's fkind, or NDS_P4_SEL_BASE +
  * content for a Remix selection (above every FTKind and nFTKindNull). */
 #define NDS_P4_SEL_BASE 0x40u
+/* The grid's random chooser (owner 2026-10-17, Banjo & Kazooie's cell): never
+ * a fighter -- a token dropped on it takes a random unlocked selection. */
+#define NDS_P4_SEL_RANDOM 0xFEu
 static inline u32 ndsP4SelContent(u32 sel)
 {
     return ((sel > NDS_P4_SEL_BASE) &&

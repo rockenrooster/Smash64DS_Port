@@ -251,40 +251,6 @@ CALLBACK_PORTS = {
     "SheikDSP.attack_collision_": "ndsP4SheikDSPAttackMap",
     "SheikDSP.recoil_main_": "ndsP4SheikDSPRecoilMain",
     "SheikDSP.recoil_physics_": "ndsP4SheikDSPRecoilPhysics",
-    # src/port/nds_p4_banjo.c
-    "BanjoNSP.ground_begin_initial_": "ndsP4BanjoNSPGroundInitial",
-    "BanjoNSP.air_begin_initial_": "ndsP4BanjoNSPAirInitial",
-    "BanjoNSP.begin_main_": "ndsP4BanjoNSPBeginMain",
-    "BanjoNSP.ground_begin_collision_": "ndsP4BanjoNSPBeginGroundMap",
-    "BanjoNSP.air_begin_collision_": "ndsP4BanjoNSPBeginAirMap",
-    "BanjoNSP.shoot_forward_main_": "ndsP4BanjoNSPShootForwardMain",
-    "BanjoNSP.shoot_backward_main_": "ndsP4BanjoNSPShootBackwardMain",
-    "BanjoNSP.air_shoot_physics_": "ndsP4BanjoNSPAirShootPhysics",
-    "BanjoNSP.ground_shoot_forward_collision_": "ndsP4BanjoNSPShootForwardGroundMap",
-    "BanjoNSP.ground_shoot_backward_collision_": "ndsP4BanjoNSPShootBackwardGroundMap",
-    "BanjoNSP.air_shoot_forward_collision_": "ndsP4BanjoNSPShootForwardAirMap",
-    "BanjoNSP.air_shoot_backward_collision_": "ndsP4BanjoNSPShootBackwardAirMap",
-    "BanjoUSP.initial_": "ndsP4BanjoUSPInitial",
-    "BanjoUSP.begin_main_": "ndsP4BanjoUSPBeginMain",
-    "BanjoUSP.begin_physics_": "ndsP4BanjoUSPBeginPhysics",
-    "BanjoUSP.begin_collision_": "ndsP4BanjoUSPBeginMap",
-    "BanjoUSP.attack_main_": "ndsP4BanjoUSPAttackMain",
-    "BanjoUSP.attack_interupt_": "ndsP4BanjoUSPAttackInterrupt",
-    "BanjoUSP.attack_physics_": "ndsP4BanjoUSPAttackPhysics",
-    "BanjoUSP.attack_collision_": "ndsP4BanjoUSPAttackMap",
-    "BanjoUSP.attack_end_main_": "ndsP4BanjoUSPAttackEndMain",
-    "BanjoUSP.collision_": "ndsP4BanjoUSPMap",
-    "BanjoUSP.recoil_move_": "ndsP4BanjoUSPRecoilMove",
-    "BanjoUSP.recoil_physics_": "ndsP4BanjoUSPRecoilPhysics",
-    "BanjoUSP.wall_splat_main_": "ndsP4BanjoUSPWallSplatMain",
-    "BanjoUSP.splat_physics_": "ndsP4BanjoUSPSplatPhysics",
-    "BanjoDSP.ground_initial_": "ndsP4BanjoDSPGroundInitial",
-    "BanjoDSP.air_initial_": "ndsP4BanjoDSPAirInitial",
-    "BanjoDSP.aerial_main_": "ndsP4BanjoDSPAerialMain",
-    "BanjoDSP.air_move_": "ndsP4BanjoDSPAirMove",
-    "BanjoDSP.physics_": "ndsP4BanjoDSPPhysics",
-    "BanjoDSP.collision_": "ndsP4BanjoDSPMap",
-    "BanjoDSP.grounded_collision_": "ndsP4BanjoDSPGroundMap",
     # src/port/nds_p4_sonic.c
     "SonicNSP.begin_initial_": "ndsP4SonicNSPInitial",
     "SonicNSP.begin_main_": "ndsP4SonicNSPBeginMain",
@@ -467,8 +433,6 @@ ENTRY_PORTS = {
     # get_entry_anim_struct_ and get_entry_file_ptr_ give it his file 7,
     # which is his own storage (OWN_SPECIAL_FILES).
     "ganondorf": 0x8013DD14,
-    # Link's case (wave and beam) on the content's entry-effects file 3.
-    "banjo": 0x8013DCCC,
     "marth": "Marth.marth_entry_routine_",  # then Link's case
     "roy": "Roy.roy_entry_routine_",        # then Link's case
     # Donkey Kong's barrel case: Lanky's Tag Barrel (file 2), Tails' plane
@@ -515,10 +479,6 @@ OWN_SPECIAL_FILES = {
     # runs for them).
     "marth": (3,),
     "roy": (3,),
-    # BanjoNSP's eggs (4, Banjo file 9; Captain has no special file 4).
-    # His entry's wave and beam (3, Banjo file 8; Captain's Falcon Punch
-    # code, the other reader of special file 3, never runs for him).
-    "banjo": (3, 4),
     # LankyNSP's grape (1, Lanky file 6; Mario's fireball code, the other
     # reader of special file 1, never runs for him).
     # His entry's Tag Barrel (2, Lanky file 7; Mario's entry pipe, the
@@ -640,7 +600,6 @@ EVENT32_SHARED = {
     "crash": 1004,
     "lanky": 866,
     "sheik": 663,
-    "banjo": 842,
     "sonic": 2039,
     "dedede": 580,
     "piano": 391,
@@ -2757,11 +2716,17 @@ def main() -> int:
     lines += ["/* Remix sword trails (SwordTrail.asm add_sword_trail rows for this character). */",
               f"const NDSP4SwordTrail g{ident}SwordTrails[{max(len(trails), 1)}] = {{"]
     for t in trails:
-        if t["id"] > 0xFF or t["model_part"] > 0xFF or t["axis"] > 2:
+        # Axis 3 (an authored row, P6 Palutena's staff): a local direction
+        # of the joint's own frame ("local", unit length) instead of a row.
+        if (t["id"] > 0xFF or t["model_part"] > 0xFF or t["axis"] > 3 or
+                ((t["axis"] == 3) != ("local" in t))):
             raise SystemExit(f"sword trail {t['id']}: unsupported row {t}")
+        local = ""
+        if t["axis"] == 3:
+            local = ", { " + ", ".join(c_float(c) for c in t["local"]) + " }"
         lines.append(f"    {{ {t['id']}, {t['model_part']}, {t['axis']}, 0, "
                      f"{t['colour_1']:#010x}u, {t['colour_2']:#010x}u, "
-                     f"{c_float(t['start'])}, {c_float(t['end'])} }},")
+                     f"{c_float(t['start'])}, {c_float(t['end'])}{local} }},")
     lines += ["};", f"const u32 g{ident}SwordTrailCount = {len(trails)};", "",
               "/* Entry rows: appear statuses (right, left), effect, lab stand-in. */",
               f"const NDSP4Entry g{ident}Entry = {{ {{ {appear[0]:#x}, {appear[1]:#x} }}, "

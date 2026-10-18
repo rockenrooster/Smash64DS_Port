@@ -32,6 +32,10 @@ A third tree at WINGS_TREE holds her forward and down smash's wings
 and the table her code poses it from every tic), its table's address in
 the word after the tree's rows (WINGS_TABLE_SLOT).
 
+Fourth and fifth, her light effects (owner p6x VFX plan; scripts/p6/
+p6_light.py): the gem's glow at GLOW_TREE and the overhead light wings with
+the taunt's ring at LIGHT_TREE, cards her code places and sizes every tic.
+
     p6_gate.py --out builds/p6-art/palutena/gate/1b10 [--preview gate.png]
 
 Kit-derived: the file stays local (D10); this recipe is the committed part.
@@ -51,6 +55,7 @@ sys.path.insert(0, str(HERE))
 import dae_reader  # noqa: E402
 import n64_model as N  # noqa: E402
 import model_writer as M  # noqa: E402
+import p6_light  # noqa: E402
 import p6_wings  # noqa: E402
 
 KIT = REPO / "decomp" / "alt_assets" / "Fighters" / "Super Smash Bros 3DS" / "Palutena" / "gate"
@@ -94,6 +99,12 @@ PILLAR_ROWS = len(PILLAR_CARDS) + 2
 # p4_articles.py "wings").
 WINGS_TREE = PILLAR_TREE + PILLAR_ROWS * N.DOBJ_DESC_SIZE
 WINGS_TABLE_SLOT = WINGS_TREE + p6_wings.TREE_ROWS * N.DOBJ_DESC_SIZE
+# Her light effects after the wings' table word (scripts/p6/p6_light.py; the
+# owner's p6x VFX plan): the gem's glow, then the overhead light wings and
+# the taunt's ring (src/port/nds_p4_palutena.c PAL_GLOW_TREE, PAL_LIGHT_TREE;
+# p4_articles.py "glow", "light").
+GLOW_TREE = WINGS_TABLE_SLOT + 4
+LIGHT_TREE = GLOW_TREE + p6_light.GLOW_ROWS * N.DOBJ_DESC_SIZE
 # The model writer's cut-out state (model_writer.CUTOUT_ON / _OFF).
 CUTOUT_ON = [N.Gfx(0xE2001E01, 0x00000001), N.Gfx(0xE200001C, 0xC4113078)]
 CUTOUT_OFF = [N.Gfx(0xE2001E01, 0x00000000), N.Gfx(0xE200001C, 0xC4112078)]
@@ -217,6 +228,11 @@ def build() -> tuple[bytes, dict]:
     wings_at = app.put(bytes(N.DOBJ_DESC_SIZE * p6_wings.TREE_ROWS + 4))
     if wings_at != WINGS_TREE:
         raise GateError(f"wings tree at {wings_at:#x}, p4_articles.py names {WINGS_TREE:#x}")
+    glow_at = app.put(bytes(N.DOBJ_DESC_SIZE * p6_light.GLOW_ROWS))
+    light_at = app.put(bytes(N.DOBJ_DESC_SIZE * p6_light.LIGHT_ROWS))
+    if (glow_at, light_at) != (GLOW_TREE, LIGHT_TREE):
+        raise GateError(f"light trees at {glow_at:#x}, {light_at:#x}; p4_articles.py names "
+                        f"{GLOW_TREE:#x}, {LIGHT_TREE:#x}")
     doors = {}
     for side in ("L", "R"):
         mesh = meshes[side]
@@ -285,8 +301,9 @@ def build() -> tuple[bytes, dict]:
         struct.pack_into(">3f", f.data, at + 32, 1.0, 1.0, 1.0)
     wings = p6_wings.write(app, FILE_ID, wings_at)
     app.slot(WINGS_TABLE_SLOT, ("intern", FILE_ID, wings["table"]))
+    light = p6_light.write(app, FILE_ID, glow_at, light_at)
     info = {"tree": tree_at, "pillar": pillar_at, "lists": lists, "pillar_lists": pillar_lists,
-            "wings": wings,
+            "wings": wings, "light": light,
             "scale": scale, "hinges": {s: doors[s]["hinge"] for s in doors}, "preview": preview}
     return f.to_bytes(), info
 
@@ -364,6 +381,8 @@ def main() -> int:
         Image.fromarray(info["preview"]).resize((TEX * 4, TEX * 4), Image.NEAREST).save(args.preview)
     w = info["wings"]
     print(f"p6 wings: tree {w['tree']:#x}, table {w['table']:#x}, {w['bytes']} bytes, mesh {w['mesh']}, clips {w['clips']}")
+    lt = info["light"]
+    print(f"p6 light: glow tree {lt['glow']:#x}, light tree {lt['light']:#x}, images {lt['images']}")
     print(f"p6 gate: {args.out} {len(blob)} bytes, tree {info['tree']:#x}, pillar {info['pillar']:#x}, scale {info['scale']:.2f}, "
           f"hinges L {info['hinges']['L']:.0f} R {info['hinges']['R']:.0f}")
     return 0

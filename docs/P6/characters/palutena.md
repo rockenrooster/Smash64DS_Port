@@ -807,7 +807,25 @@ you are' voice cue".
 - **The taunt** says "Ready when you are" (`appeal02`: 1.2 s, five syllables,
   a voiced R onset; `appeal01`, which it played, has an S early on).
 
-## VFX plan (owner p6x, 2026-10-16: plan only, nothing built yet)
+## Owner p6z (2026-10-17): the entry's end, Explosive Flame's reach
+
+Owner p6z (BUGS.md): "After the intro animation, it instantly snaps to the
+idle animation"; "explosive flame max distance change to 0.9x".
+
+- **The entry's end.** Both Appear statuses played one clip, Ultimate's right
+  entry (j00entryr turned 90 degrees so she walks toward the camera), which
+  ends in her wait's pose facing right. The game's Appear holds her TopN
+  facing the camera (lr 0) and Wait turns it to her side, so entering facing
+  left she turned 180 degrees into her wait in one frame. AppearL (motion
+  195) now plays Ultimate's left entry (`anims/entry_l.json`: j00entryl
+  turned -90), and both clips ease their last 8 frames into the wait's first
+  pose turned as they are (`blend_to` a00wait1 frame 0): the right entry's
+  last frame was within 7 degrees of it already, the left's within 16. Lab:
+  the cut to Wait shows no jump.
+- **Explosive Flame's far distance** 0.9x: 1,610 to 1,449 (`PAL_FLAME_FAR`;
+  the CPU's measured reach in the spec follows); the near and middle stay.
+
+## VFX plan (owner p6x, 2026-10-16; built 2026-10-17, below)
 
 Owner p6x: "we will need some special palutena VFX for her attacks that use
 the overhead light wing shaped VFX, staff VFX trails, and gem glow light
@@ -886,7 +904,70 @@ declines, then the owner's review.
 
 **Owner's picks (p6x, 2026-10-16):** colours Ultimate's cyan-white; the
 staff trail solid (the game's gradient); the light wings about her height;
-the taunt with the light wings and the ring. Still a plan: nothing built.
+the taunt with the light wings and the ring.
+
+### Built (2026-10-17, owner p6z)
+
+- **Staff trail** (forward tilt, neutral air, up tilt, down tilt): sword
+  trail 24 (spec `sword_trails`), the game's untextured gradient from cyan
+  (`40c8ff`) at her grip to white at the gem, along row 14's grip-to-gem
+  line from her grip (0) to just past the gem's tip (260; the staff's mesh
+  runs -270 to 249 along that line, the far hit at 400 lies past it). A trail row now takes `"axis": 3` and a `"local"`
+  direction in its joint's frame (`NDSP4SwordTrail.local`,
+  `ndsP4UpdateSwordTrail`, `p6_author.author_sword_trails`,
+  `generate_p4_fighter.py`), since the staff's line is none of its joint's
+  matrix rows. The four scripts turn it on a frame before the first hit and
+  off a frame after the last (`SetAfterImage 24`).
+- **Gem glow** (jab combo, the three tilts, neutral air, up air): the fourth
+  tree of her special file 2 (`scripts/p6/p6_light.py`, `GLOW_TREE` 0x424): a
+  cyan halo (320 across) and a white core (128) facing the camera, both one
+  32x32 I4 coverage mask from Ultimate's `flash01` (its quarter mirrored to a
+  disc, gamma 0.6), translucent, PRIM colour, drawn natively as an entry
+  effect (`p4_articles.py` "glow"). Her code (`ndsP4PalutenaLight`, after her
+  map proc) puts it on the gem (row 14's point (23, 150, -160), about 220
+  along the staff: its ornament, the staff's mid hit and sparkle point; 40
+  toward the camera) every tic, sized by the move's window and shimmering
+  on odd frames.
+- **Overhead light wings** (the three smashes, up air, the taunt): the fifth
+  tree (`LIGHT_TREE` 0x4D4): the left wing a 760-unit card of Ultimate's
+  `backlight01` (a 64x64 I4 mask, three feather strokes) anchored where its
+  strokes meet, the right its mirror, both a deeper cyan (`6edeff`), and the
+  ring's halves behind her head in the taunt only (a soft ring drawn by
+  `p6_light.py`, 32x64 a half: Ultimate's `backlight00` and `03` carry a
+  filled inner glow that drew as a sheet of light over the stage in the first
+  lab run); every mask's lowest level is cleared so no card's rectangle shows; at her neck, 90 behind her, the
+  root turned with the line from her neck to her head (her lean, within
+  0.6 rad), each wing tilted up 0.2 rad folded to 0.55 open and grown from
+  0.45 to full size as it opens. In the forward and down smash the glow sits
+  behind the white godwing wings.
+- **Owner p6aa (2026-10-17):** "Glow should draw in front of the gem, light
+  wings look wrong, positioned wrong and scale wrong, check 3ds reference mp4
+  files and retry". The 3DS references (`Strong_Side_A`, `Strong_Up_A`,
+  `Strong_Down_A`, `Air_Up_A`, `Taunt_2`; local) show the light wings small
+  and at her head: each about 0.3 her height, rooted behind the base of her
+  head, rising about 20 degrees as they fan out to either side; shown in the forward
+  smash's wind-up (gone as its godwings come), the up smash's pillar, the down
+  smash's slam, up air's last hit and the taunt's pose. Redone so: the wing
+  card 250 (was 760), the root 25 past the head joint along the neck-to-head
+  line and 40 behind it (was the neck, 90 behind), tipped up 0.12 rad folded
+  to 0.22 open (was 0.20-0.55), grown from 0.55 of its size; their windows
+  forward smash 0-11, up smash 10-30, down smash 14-34, up air 10-26, taunt
+  26-74; the wings a paler cyan-white (`96e8ff`); the taunt's ring 170 across
+  at the wings' root. The gem's glow sits 150 toward the camera (was 40) so it
+  draws over the gem's ornament.
+- **Windows** (`sNdsP4PalutenaGlowWindows`, `sNdsP4PalutenaLightWindows`, by
+  motion and clip frame): each grows in, holds and fades over its move; a
+  piece shows the window's level or last tic's less 0.25, so a jab into the
+  next and a move cut short ease rather than cut. The effects are hers
+  (hitlag pauses them), not attached, and end themselves if her code stops
+  placing them.
+- **Costs:** 3.5 KB of images and 5.6 KB of file (her special file 2 27,880 to
+  33,536 B), A5I3 textures 7 KB of effect VRAM; two effect objects a
+  Palutena at most. Lab (two Palutenas, 1v1, every move forced, 900 frames):
+  0 native failures, 0 lean declines, 0 effect misses
+  (`artifacts/visibility/p6-vfx/`, local).
+- **"Forward a"** in the owner's list is read as the forward tilt (the staff
+  spun ahead of her); her forward air is a kick and has no staff to light.
 
 ## Animations (the owner's 3DS references, 2026-10-14)
 

@@ -871,12 +871,12 @@
    "anim": "builds/p6-art/palutena/anims/dair.o2r"
   },
   "195": {
-   "comment": "AppearL (status 0xDC): entry, her gate before her (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
-   "anim": "builds/p6-art/palutena/anims/entry.o2r",
+   "comment": "AppearL (status 0xDC, facing left): entry, her gate before her (Ultimate's left entry, art/p6/palutena/anims/entry_l.json, scripts/p6/ultimate.py; owner p6z: its own clip, it had played AppearR's and turned into its wait)",
+   "anim": "builds/p6-art/palutena/anims/entry_l.o2r",
    "script": "scripts/p6/palutena/motions/entry.ms"
   },
   "196": {
-   "comment": "AppearR (status 0xDD): entry, as AppearL (Ultimate's motion, art/p6/palutena/anims, scripts/p6/ultimate.py)",
+   "comment": "AppearR (status 0xDD, facing right): entry, her gate before her (Ultimate's right entry, art/p6/palutena/anims/entry.json, scripts/p6/ultimate.py)",
    "anim": "builds/p6-art/palutena/anims/entry.o2r",
    "script": "scripts/p6/palutena/motions/entry.ms"
   },
@@ -1179,7 +1179,7 @@
      "offsets_z": [
       450,
       750,
-      1610
+      1449
      ],
      "phases": [
       {
@@ -1206,7 +1206,7 @@
      "offsets_z": [
       450,
       750,
-      1610
+      1449
      ],
      "phases": [
       {
@@ -1307,6 +1307,20 @@
    "colour_2": "ffffff00",
    "start": 20.0,
    "end": 160.0
+  },
+  "24": {
+   "comment": "Owner p6x VFX plan (picks 2026-10-16: solid, Ultimate's cyan-white): her staff's trail in the four moves that spin it (forward tilt, neutral air, up tilt, down tilt; motions/*.ms SetAfterImage 24): along row 14's grip-to-gem line (axis 3, a local direction; her staff's hit offsets lie on it), from her grip (0) to just past the gem's tip (260; the staff's mesh reaches 249 along it), cyan at the grip to white at the gem, the game's untextured gradient.",
+   "model_part": 14,
+   "axis": 3,
+   "local": [
+    0.103,
+    0.681,
+    -0.725
+   ],
+   "colour_1": "40c8ff00",
+   "colour_2": "ffffff00",
+   "start": 0.0,
+   "end": 260.0
   }
  }
 }

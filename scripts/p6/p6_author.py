@@ -820,23 +820,34 @@ def author_sword_trails(resolved: dict, rows: dict) -> None:
     longer Ragnell. An id the base has no row for is a new row of the
     content's own (its "model_part", the row a trail follows, and "axis", the
     joint matrix row it runs along, then the rest; the content's character):
-    Palutena's down air kick trail on her shin (owner p6x)."""
+    Palutena's down air kick trail on her shin (owner p6x). Axis 3 runs
+    along "local", a direction in the joint's own frame (normalized here):
+    her staff's grip-to-gem line, which no matrix row of its joint is
+    (owner p6x VFX plan)."""
     if not rows:
         return
     by_id = {t["id"]: t for t in resolved["sword_trails"]}
     for key, entry in sorted(rows.items(), key=lambda kv: int(kv[0], 0)):
         trail = by_id.get(int(key, 0))
-        unknown = set(entry) - {"colour_1", "colour_2", "start", "end", "model_part", "axis", "comment"}
+        unknown = set(entry) - {"colour_1", "colour_2", "start", "end", "model_part", "axis", "local", "comment"}
         if unknown:
             raise AuthorError(f"spec sword_trails {key}: unknown keys {sorted(unknown)}")
         if trail is None:
             missing = {"model_part", "axis", "colour_1", "colour_2", "start", "end"} - set(entry)
             if missing:
                 raise AuthorError(f"spec sword_trails: no trail {key} in the base, and a new row needs {sorted(missing)}")
-            if not 0 < int(key, 0) <= 0xFF or int(entry["axis"]) > 2:
-                raise AuthorError(f"spec sword_trails {key}: id 1-255, axis 0-2")
+            if not 0 < int(key, 0) <= 0xFF or int(entry["axis"]) > 3:
+                raise AuthorError(f"spec sword_trails {key}: id 1-255, axis 0-3")
+            if (int(entry["axis"]) == 3) != ("local" in entry):
+                raise AuthorError(f"spec sword_trails {key}: axis 3 and \"local\" go together")
             trail = {"id": int(key, 0), "character": resolved["remix_kind_id"], "model_part": int(entry["model_part"]),
                      "axis": int(entry["axis"])}
+            if "local" in entry:
+                v = [float(c) for c in entry["local"]]
+                n = sum(c * c for c in v) ** 0.5
+                if len(v) != 3 or n == 0.0:
+                    raise AuthorError(f"spec sword_trails {key}: \"local\" is a nonzero 3-vector")
+                trail["local"] = [c / n for c in v]
             resolved["sword_trails"].append(trail)
             by_id[trail["id"]] = trail
         elif "model_part" in entry or "axis" in entry:

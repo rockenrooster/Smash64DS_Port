@@ -1105,7 +1105,7 @@ static void ndsNetLabSweepDescriptor(NdsMatchConfig *cfg)
          * five-minute time. */
         static const u8 kStressStages[2] = { nGRKindHyrule, nGRKindSector };
         static const u8 kStressContent[4][NDS_NET_PORTS] = {
-            { 4u, 9u, 12u, 14u },  /* Bowser, Crash, Banjo, Dedede */
+            { 4u, 9u, 19u, 14u },  /* Bowser, Crash, Ike, Dedede (Banjo, 12, retired) */
             { 13u, 10u, 16u, 3u }, /* Sonic, Lanky, Meta Knight, Wolf */
             { 2u, 8u, 18u, 0u },   /* Ganondorf, Peach, Snake, Kirby */
             { 5u, 6u, 11u, 17u },  /* Marth, Roy, Sheik, MRGAW */

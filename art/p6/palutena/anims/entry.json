@@ -1,5 +1,5 @@
 {
- "comment": "Ultimate's entry (j00entryr): she walks out of her gate toward the camera (owner p6p: \"totally borked\" before); its TransN slot empty (with_transn_slot) as the Appear rows need. Owner p6v: Ultimate's walk runs along the model's -x (its fighters face +-x in their entries), the game's Appear faces her to the camera (lr 0), so she walked left along the stage: turned 90 deg (\"yaw\") she walks from 583 units behind the stage's plane, through her gate (scripts/p6/p6_gate.py FRONT), and stops on the plane. Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
+ "comment": "Ultimate's entry (j00entryr): she walks out of her gate toward the camera (owner p6p: \"totally borked\" before); its TransN slot empty (with_transn_slot) as the Appear rows need. Owner p6v: Ultimate's walk runs along the model's -x (its fighters face +-x in their entries), the game's Appear faces her to the camera (lr 0), so she walked left along the stage: turned 90 deg (\"yaw\") she walks from 583 units behind the stage's plane, through her gate (scripts/p6/p6_gate.py FRONT), and stops on the plane. Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1). Owner p6z (2026-10-17: \"it instantly snaps to the idle animation\"): the last 8 frames ease into the wait's first pose (blend_to a00wait1 frame 0, turned as the entry is), so the cut to Wait (her TopN turned to her facing) is seamless. This clip is AppearR's (facing right); AppearL plays entry_l.json, Ultimate's j00entryl turned the other way (it had played this one and turned 180 degrees into its wait).",
  "ultimate": {
   "fighter": "palutena",
   "skeleton": "peach",
@@ -23,7 +23,16 @@
     120,
     120
    ]
-  ]
+  ],
+  "blend_to": {
+   "motion": "a00wait1",
+   "frame": 0,
+   "yaw": 90,
+   "frames": [
+    112,
+    120
+   ]
+  }
  },
  "transn_slot": true
 }

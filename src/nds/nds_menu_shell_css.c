@@ -567,6 +567,37 @@ static s32 ndsMenuShellCssP4Cell(u32 sel)
     }
     return -1;
 }
+
+/* Remix's random draws among every available selection: one time-RNG draw
+ * over the unlocked cells, in cell order (the random chooser is no fighter:
+ * ndsMenuShellCssFighterLocked holds it locked, so it is never drawn). */
+static u32 ndsMenuShellCssP4RandomSel(void)
+{
+    u32 available = 0u;
+    u32 pick;
+    u32 cell;
+
+    for (cell = 0u; cell < (u32)NDS_P4_CSS_CELLS; cell++)
+    {
+        if (ndsMenuShellCssFighterLocked((u32)kNdsP4CssCellSel[cell]) == FALSE)
+        {
+            available++;
+        }
+    }
+    pick = (u32)syUtilsRandTimeUCharRange((s32)available);
+    for (cell = 0u; cell < (u32)NDS_P4_CSS_CELLS; cell++)
+    {
+        if (ndsMenuShellCssFighterLocked((u32)kNdsP4CssCellSel[cell]) != FALSE)
+        {
+            continue;
+        }
+        if (pick-- == 0u)
+        {
+            return (u32)kNdsP4CssCellSel[cell];
+        }
+    }
+    return (u32)nFTKindMario;
+}
 #endif
 
 /* mnPlayersVSCenterPuckInPortrait, mnplayersvs.c:3454. */
@@ -616,6 +647,24 @@ static void ndsMenuShellCssCenterPuck(u32 slot, u32 fkind)
     }
 }
 
+#if NDS_P4
+/* The P4 grid cell under the (scaled) token's centre, or -1 off the grid
+ * (Remix's get_character_id_). */
+static s32 ndsMenuShellCssPuckP4Cell(u32 slot)
+{
+    s32 cx = (s32)sCssPuckX[slot] + NDS_CSS_P4_PUCK_CX - NDS_P4_CSS_X;
+    s32 cy = (s32)sCssPuckY[slot] + NDS_CSS_P4_PUCK_CY - NDS_P4_CSS_Y;
+
+    if ((cx < 0) || (cy < 0) ||
+        (cx >= (NDS_P4_CSS_COLUMNS * NDS_P4_CSS_PITCH)) ||
+        (cy >= (NDS_P4_CSS_ROWS * NDS_P4_CSS_PITCH)))
+    {
+        return -1;
+    }
+    return ((cy / NDS_P4_CSS_PITCH) * NDS_P4_CSS_COLUMNS) + (cx / NDS_P4_CSS_PITCH);
+}
+#endif
+
 /* mnPlayersVSGetPuckFighterKind, mnplayersvs.c:3001 -- which fighter the
  * token's CENTRE is over, or nFTKindNull. */
 static u32 ndsMenuShellCssPuckFighterKind(u32 slot)
@@ -626,19 +675,15 @@ static u32 ndsMenuShellCssPuckFighterKind(u32 slot)
 
 #if NDS_P4
     {
-        /* get_character_id_: the cell under the (scaled) token's centre. */
-        s32 cx = (s32)sCssPuckX[slot] + NDS_CSS_P4_PUCK_CX - NDS_P4_CSS_X;
-        s32 cy = (s32)sCssPuckY[slot] + NDS_CSS_P4_PUCK_CY - NDS_P4_CSS_Y;
+        /* get_character_id_: the cell under the (scaled) token's centre. Over
+         * the random chooser it is no fighter until the token drops. */
+        s32 cell = ndsMenuShellCssPuckP4Cell(slot);
 
-        if ((cx < 0) || (cy < 0) ||
-            (cx >= (NDS_P4_CSS_COLUMNS * NDS_P4_CSS_PITCH)) ||
-            (cy >= (NDS_P4_CSS_ROWS * NDS_P4_CSS_PITCH)))
+        if (cell < 0)
         {
             return (u32)nFTKindNull;
         }
-        fkind = (u32)kNdsP4CssCellSel[((cy / NDS_P4_CSS_PITCH) *
-                                       NDS_P4_CSS_COLUMNS) +
-                                      (cx / NDS_P4_CSS_PITCH)];
+        fkind = (u32)kNdsP4CssCellSel[cell];
         return (ndsMenuShellCssFighterLocked(fkind) != FALSE) ?
             (u32)nFTKindNull : fkind;
     }
@@ -2392,6 +2437,32 @@ static u32 ndsMenuShellCssSelectFighter(void)
         ndsMenuShellCssDrop((u32)sCssHeld);
         return TRUE;
     }
+#if NDS_P4
+    {
+        /* The random chooser (owner 2026-10-17, "like SSS has"): a token
+         * dropped on it takes a random unlocked selection, moves to that
+         * cell and drops there, as if put on it -- the slot re-manned as a
+         * portrait drop re-mans it (mnplayersvs.c:3550). */
+        u32 slot = (u32)sCssHeld;
+        s32 cell = ndsMenuShellCssPuckP4Cell(slot);
+
+        if ((cell >= 0) && ((u32)kNdsP4CssCellSel[cell] == NDS_P4_SEL_RANDOM))
+        {
+            u32 pick = ndsMenuShellCssP4RandomSel();
+
+            sCssFkind[slot] = (u8)pick;
+            if ((sCssPkind[slot] == (u8)nFTPlayerKindNot) &&
+                (slot == (u32)NDS_CSS_CURSOR_SLOT))
+            {
+                sCssPkind[slot] = (u8)nFTPlayerKindMan;
+            }
+            ndsMenuShellCssCenterPuck(slot, pick);
+            gNdsMenuShellCssRandomChooserCount++;
+            ndsMenuShellCssDrop(slot);
+            return TRUE;
+        }
+    }
+#endif
     /* The token is over a locked cell or off the grid: the source refuses with
      * the cue it spends on every refusal, and the token stays in hand. */
     ndsMenuShellCssCue(NDS_CSS_FGM_DENIED);
@@ -2483,37 +2554,8 @@ static void ndsMenuShellCssApplyKind(u32 slot)
              * not substitute frame parity: it is distribution-equivalent for
              * two choices but not the source RNG state/sequence. */
 #if NDS_P4
-            /* P4: Remix's random draws among every available selection; one
-             * time-RNG draw over the unlocked cells, in cell order. */
-            {
-                u32 available = 0u;
-                u32 pick;
-                u32 cell;
-
-                for (cell = 0u; cell < (u32)NDS_P4_CSS_CELLS; cell++)
-                {
-                    if (ndsMenuShellCssFighterLocked(
-                            (u32)kNdsP4CssCellSel[cell]) == FALSE)
-                    {
-                        available++;
-                    }
-                }
-                pick = (u32)syUtilsRandTimeUCharRange((s32)available);
-                fkind = (u32)nFTKindMario;
-                for (cell = 0u; cell < (u32)NDS_P4_CSS_CELLS; cell++)
-                {
-                    if (ndsMenuShellCssFighterLocked(
-                            (u32)kNdsP4CssCellSel[cell]) != FALSE)
-                    {
-                        continue;
-                    }
-                    if (pick-- == 0u)
-                    {
-                        fkind = (u32)kNdsP4CssCellSel[cell];
-                        break;
-                    }
-                }
-            }
+            /* P4: Remix's random draws among every available selection. */
+            fkind = ndsMenuShellCssP4RandomSel();
 #else
             do
             {
@@ -3103,6 +3145,8 @@ __attribute__((used)) volatile u32 gNdsMenuShellCssWalkTourDoneCount;
  * lap fell back to the old input path. That is a defect in the snapshot, not a
  * tolerable outcome, and it must read 0. */
 __attribute__((used)) volatile u32 gNdsMenuShellCssWalkTourNotReadyCount;
+/* The selection the random chooser drew in the walk's lap (0xff: never). */
+__attribute__((used)) volatile u32 gNdsMenuShellCssWalkChooserSel = 0xffu;
 __attribute__((used)) volatile u32
     gNdsMenuShellCssWalkTourTriangles[NDS_CSS_PORTRAITS];
 
@@ -3162,6 +3206,22 @@ static u32 ndsMenuShellCssWalkTourStep(void)
     {
         sCssWalkTourFinished = 1u;
         gNdsMenuShellCssWalkTourDoneCount++;
+#if NDS_P4
+        /* The random chooser, once a lap (owner 2026-10-17): slot 0's token
+         * dropped on its cell takes a random unlocked selection
+         * (gNdsMenuShellCssWalkChooserSel; the gate restore below puts the
+         * walk's own pair back). */
+        if (ndsMenuShellCssP4Cell(NDS_P4_SEL_RANDOM) >= 0)
+        {
+            ndsMenuShellCssCenterPuck((u32)0, NDS_P4_SEL_RANDOM);
+            sCssFkind[(u32)0] = (u8)nFTKindNull;
+            sCssSelected[(u32)0] = 0u;
+            sCssHeld = 0;
+            sCssStatus = NDS_CSS_STATUS_GRAB;
+            (void)ndsMenuShellCssSelectFighter();
+            gNdsMenuShellCssWalkChooserSel = (u32)sCssFkind[(u32)0];
+        }
+#endif
         /* The roster tour consumed the walk's input while it owned the
          * screen. Replay that input from the unchanged initial cursor after
          * restoring the pair: its CPU-arrow leg proves that CSS, not the

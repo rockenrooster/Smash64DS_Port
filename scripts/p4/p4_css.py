@@ -63,8 +63,13 @@ SCREEN = {"header_dy": -18, "card_pitch": 80, "card_x": 2, "card_y": 133,
 LAYOUT = (
     "MRGAW", "PIANO", "METAL", "LUIGI", "MARIO", "DONKEY", "LINK", "SAMUS", "CAPTAIN", "GND", "SONIC",
     "PALUTENA", "DEDEDE", "METAKNIGHT", "NESS", "YOSHI", "KIRBY", "FOX", "PIKACHU", "JIGGLYPUFF", "FALCO", "SHEIK",
-    "IKE", "SNAKE", "CRASH", "WARIO", "PEACH", "BOWSER", "WOLF", "LANKY", "ROY", "MARTH", "BANJO",
+    "IKE", "SNAKE", "CRASH", "WARIO", "PEACH", "BOWSER", "WOLF", "LANKY", "ROY", "MARTH", "RANDOM",
 )
+# The random chooser (owner 2026-10-17: Banjo & Kazooie's cell, the content
+# retired, "a random chooser like SSS has"): Remix's RANDOM portrait; a token
+# dropped on it takes a random selection among the unlocked cells
+# (src/nds/nds_menu_shell_css.c, NDS_P4_SEL_RANDOM).
+RANDOM = "RANDOM"
 # Original cast: Remix constant name -> fkind.
 ORIGINALS = {"MARIO": 0, "FOX": 1, "DONKEY": 2, "SAMUS": 3, "LUIGI": 4, "LINK": 5,
              "YOSHI": 6, "CAPTAIN": 7, "KIRBY": 8, "PIKACHU": 9, "JIGGLYPUFF": 10, "NESS": 11}
@@ -137,6 +142,8 @@ def announcer_ids(fgm_text: str) -> dict[str, int]:
 def write_c_tables(path: Path, cells: list[dict], fighters: list[dict]) -> None:
     """The runtime half of the grid (src/nds/nds_menu_shell_css.c, P4 arm)."""
     def sel(cell: dict) -> str:
+        if cell.get("random"):
+            return "NDS_P4_SEL_RANDOM"
         if cell["fkind"] is not None:
             return f"{cell['fkind']}u"
         if cell["locked"]:
@@ -157,7 +164,8 @@ def write_c_tables(path: Path, cells: list[dict], fighters: list[dict]) -> None:
         f"#define NDS_P4_CSS_Y {GRID['y']}",
         '#include "nds_p4_css_screen.generated.h"',
         "/* Each cell's selection: an original's fkind, NDS_P4_SEL_BASE + content,",
-        " * or nFTKindNull for a selection this build does not compile. */",
+        " * NDS_P4_SEL_RANDOM for the random chooser, or nFTKindNull for a",
+        " * selection this build does not compile. */",
         "static const u8 kNdsP4CssCellSel[NDS_P4_CSS_CELLS] = {",
     ]
     for row in range(GRID["rows"]):
@@ -258,7 +266,9 @@ def main() -> int:
         row, col = divmod(index, GRID["columns"])
         cell = {"cell": index, "row": row, "col": col, "token": token,
                 "x": GRID["x"] + col * GRID["pitch"], "y": GRID["y"] + row * GRID["pitch"]}
-        if token in ORIGINALS:
+        if token == RANDOM:
+            cell.update(fkind=None, content=0, locked=False, random=True)
+        elif token in ORIGINALS:
             cell.update(fkind=ORIGINALS[token], content=0, locked=False)
         elif token in KINDS:
             cell.update(fkind=KINDS[token]["fkind"], content=0, locked=False)
@@ -269,12 +279,16 @@ def main() -> int:
         # question mark).
         key = ART.get(token, token)
         key = key if key in portraits else None
+        if token == RANDOM:
+            key = "RANDOM"
         if key is None or cell["locked"]:
             key = "NONE"
         cell["portrait"] = portraits[key]
         if not cell["locked"] and "portrait" in present.get(token, {}):
             cell["portrait"] = present[token]["portrait"]
-        cell["flash"] = cell["portrait"] + FLASH_STRIDE
+        # The random chooser never flashes (the token moves to the cell it
+        # picks, which does): its "flash" is its portrait.
+        cell["flash"] = cell["portrait"] if cell.get("random") else cell["portrait"] + FLASH_STRIDE
         cells.append(cell)
 
     fighters = []

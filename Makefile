@@ -7872,7 +7872,7 @@ battleship_mv%.o battleship_scstaffroll.o battleship_scexplain.o battleship_sc1p
 # A P4 fighter's own routines (src/port/nds_p4_<name>.c) run only for that
 # fighter, in its specials, but all fifteen are resident in every scene, the
 # character select's included: their bytes are size-optimized.
-nds_p4_falco.o nds_p4_bowser.o nds_p4_marth.o nds_p4_roy.o nds_p4_wario.o nds_p4_peach.o nds_p4_crash.o nds_p4_lanky.o nds_p4_sheik.o nds_p4_banjo.o nds_p4_sonic.o nds_p4_dedede.o nds_p4_wolf.o nds_p4_ike.o nds_p4_palutena.o: CFLAGS += -Os
+nds_p4_falco.o nds_p4_bowser.o nds_p4_marth.o nds_p4_roy.o nds_p4_wario.o nds_p4_peach.o nds_p4_crash.o nds_p4_lanky.o nds_p4_sheik.o nds_p4_sonic.o nds_p4_dedede.o nds_p4_wolf.o nds_p4_ike.o nds_p4_palutena.o: CFLAGS += -Os
 # The measured renderer is cache-resident on retail hardware and wins in ARM
 # state despite melonDS's main-RAM fetch model.
 #

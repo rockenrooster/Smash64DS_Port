@@ -83,7 +83,7 @@ KIRBY_SIDECAR_BIT = 0x80
 POWER_PREFIX = {
     "falco": "FALCO", "ganondorf": "GND", "wolf": "WOLF", "bowser": "BOWSER",
     "marth": "MARTH", "roy": "ROY", "wario": "WARIO", "peach": "PEACH",
-    "crash": "CRASH", "lanky": "LANKY", "sheik": "SHEIK", "banjo": "BANJO",
+    "crash": "CRASH", "lanky": "LANKY", "sheik": "SHEIK",
     "sonic": "SONIC", "dedede": "DEDEDE", "piano": "PIANO",
 }
 # Powers the source does not have (owner request 2026-10-12, "Brawl-style"):

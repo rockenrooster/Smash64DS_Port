@@ -366,6 +366,7 @@ extern volatile u32 gNdsMenuShellCssAnnounceCount;
 extern volatile u32 gNdsMenuShellCssModeToggleCount;
 extern volatile u32 gNdsMenuShellCssRandomCount;
 extern volatile u32 gNdsMenuShellCssRandomFallbackCount;
+extern volatile u32 gNdsMenuShellCssRandomChooserCount;
 extern volatile u32 gNdsMenuShellCssDoorSlideFrames;
 /* Live source-fighter preview proof. Updated after the source process step and
  * before its display callbacks each CSS frame; retained across CSS teardown so

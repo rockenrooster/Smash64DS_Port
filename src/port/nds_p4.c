@@ -1285,9 +1285,10 @@ void ndsP4UpdateSwordTrail(FTStruct *fp)
     }
     /* initial_setup_: the row's model part instead of Link's joint 11, then
      * the source's Link-sword step (ftmain.c, ftMainProcParams' afterimage
-     * switch); axis_setup_: the row's matrix row instead of Z. */
+     * switch); axis_setup_: the row's matrix row instead of Z, or (axis 3)
+     * the row's local direction through the joint's matrix. */
     joint = fp->joints[row->model_part + nFTPartsJointCommonStart];
-    if ((joint == NULL) || (row->axis > 2u))
+    if ((joint == NULL) || (row->axis > 3u))
     {
         return;
     }
@@ -1297,9 +1298,24 @@ void ndsP4UpdateSwordTrail(FTStruct *fp)
     desc->translate_x = parts->mtx_translate[3][0];
     desc->translate_y = parts->mtx_translate[3][1];
     desc->translate_z = parts->mtx_translate[3][2];
-    desc->vec.x = parts->mtx_translate[row->axis][0];
-    desc->vec.y = parts->mtx_translate[row->axis][1];
-    desc->vec.z = parts->mtx_translate[row->axis][2];
+    if (row->axis == 3u)
+    {
+        desc->vec.x = (row->local[0] * parts->mtx_translate[0][0]) +
+                      (row->local[1] * parts->mtx_translate[1][0]) +
+                      (row->local[2] * parts->mtx_translate[2][0]);
+        desc->vec.y = (row->local[0] * parts->mtx_translate[0][1]) +
+                      (row->local[1] * parts->mtx_translate[1][1]) +
+                      (row->local[2] * parts->mtx_translate[2][1]);
+        desc->vec.z = (row->local[0] * parts->mtx_translate[0][2]) +
+                      (row->local[1] * parts->mtx_translate[1][2]) +
+                      (row->local[2] * parts->mtx_translate[2][2]);
+    }
+    else
+    {
+        desc->vec.x = parts->mtx_translate[row->axis][0];
+        desc->vec.y = parts->mtx_translate[row->axis][1];
+        desc->vec.z = parts->mtx_translate[row->axis][2];
+    }
 
     if (fp->afterimage.desc_id == 2)
     {

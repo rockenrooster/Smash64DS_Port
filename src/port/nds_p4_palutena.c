@@ -91,10 +91,11 @@ extern uintptr_t llITCommonDataFFlowerFlameWeaponAttributes;
  * is younger than PAL_FLAME_COOLDOWN tics. Owner p6i: one more double cast,
  * its trigger unknown: no fire is made while one of hers is burning at all
  * (a fire lives PAL_FLAME_BLAST_AT + PAL_FLAME_BLAST_TICS tics; her cast is
- * longer than that, so two casts never overlap). */
+ * longer than that, so two casts never overlap). Owner p6z (2026-10-17): the
+ * far 0.9x (1610 -> 1449). */
 #define PAL_FLAME_NEAR 450.0F
 #define PAL_FLAME_MID 750.0F
-#define PAL_FLAME_FAR 1610.0F
+#define PAL_FLAME_FAR 1449.0F
 #define PAL_FLAME_HEIGHT 320.0F
 #define PAL_FLAME_STICK 20
 #define PAL_FLAME_BURN_AT 5
@@ -1155,6 +1156,356 @@ static void ndsP4PalutenaWings(GObj *fighter_gobj, FTStruct *fp, s32 clip)
     ndsP4PalutenaWingsPose(effect_gobj, fighter_gobj, clip);
 }
 
+/* Her light effects (owner p6x VFX plan, docs/P6/characters/palutena.md;
+ * the owner's picks 2026-10-16: Ultimate's cyan-white, the light wings
+ * about her height, the taunt with the wings and the ring). Two trees in her
+ * special file 2 after the wings' (scripts/p6/p6_light.py), drawn natively
+ * (scripts/p4/p4_articles.py "glow", "light"), placed every tic after her
+ * map proc:
+ *
+ * - The gem's glow (PAL_GLOW_TREE: a cyan halo and a white core facing the
+ *   camera) on her staff's gem -- row 14's point at its ornament (about 220
+ *   along the staff, which ends at 249; the staff's mid hit and sparkle
+ *   point) -- while the jab combo, the tilts that spin the staff
+ *   (forward, up, down), neutral air and up air wield it. The spinning
+ *   moves also draw the staff's trail (sword trail 24, their scripts).
+ * - The overhead light wings (PAL_LIGHT_TREE: two cards of feathered light
+ *   fanning out from behind her head, the right the left's mirror; the
+ *   ring's two halves about her head, the taunt's) in the three smashes, up
+ *   air and the taunt. Owner p6aa (2026-10-17: "light wings look wrong,
+ *   positioned wrong and scale wrong, check 3ds reference mp4 files"): as the
+ *   3DS's (Strong_Side_A, Strong_Up_A, Strong_Down_A, Air_Up_A, Taunt_2),
+ *   rooted behind the base of her head (PAL_WING_ROOT_UP past the head
+ *   joint, PAL_LIGHT_BEHIND behind it), each about 0.3 her height
+ *   (p6_light.py WING_SIZE), nearly level and tipped up a little as they
+ *   open, turned with the line from her neck to her head so they lean as
+ *   she does; shown when the 3DS shows them: the forward smash's wind-up
+ *   before its godwings, the up smash's pillar, the down smash's slam, up
+ *   air's last hit, the taunt's pose.
+ *
+ * A move's window is over its clip's frames: grown in from `first` to
+ * `full`, held, faded from `fade` to `last`. The level a piece shows is the
+ * window's, or what it showed last tic less PAL_LIGHT_DECAY when that is
+ * more, so a status change (a jab into the next, a move cut short) eases it
+ * rather than cuts it. Its effect is made when it shows and ejected when it
+ * no longer does; it is hers (ep->fighter_gobj, so hitlag pauses it), not
+ * attached (a status change that stops her attached effects stops it too,
+ * and the next tic makes it again at the level it had). The glow shimmers
+ * (PAL_GLOW_SHIMMER on odd tics); it sits PAL_GLOW_TOWARD_CAMERA nearer the
+ * camera than the gem, so it draws over the gem's ornament (owner p6aa). */
+#define PAL_GLOW_TREE 0x424                 /* p6_gate.py GLOW_TREE */
+#define PAL_LIGHT_TREE 0x4D4                /* p6_gate.py LIGHT_TREE */
+#define PAL_STAFF_JOINT (nFTPartsJointCommonStart + 14)
+#define PAL_NECK_JOINT (nFTPartsJointCommonStart + 7)
+#define PAL_HEAD_JOINT (nFTPartsJointCommonStart + 8)
+#define PAL_GLOW_TOWARD_CAMERA 150.0F
+#define PAL_GLOW_SHIMMER 0.9F
+#define PAL_LIGHT_BEHIND 40.0F
+#define PAL_LIGHT_LEAN_MAX 0.6F             /* radians */
+#define PAL_LIGHT_TILT 0.12F                /* radians, folded */
+#define PAL_LIGHT_SPREAD 0.1F               /* radians more, open */
+#define PAL_LIGHT_FOLDED 0.55F              /* the wings' size, folded */
+#define PAL_WING_ROOT_UP 25.0F              /* past the head joint: the base of her head */
+#define PAL_LIGHT_DECAY 0.25F
+#define PAL_LIGHT_SHOWN 0.04F
+
+static const Vec3f sNdsP4PalutenaGem = { 23.0F, 150.0F, -160.0F };
+
+typedef struct NDSP4PalLightWindow
+{
+    u16 motion;                 /* fp->motion_id */
+    u8 first;                   /* clip frames: grows in */
+    u8 full;
+    u8 fade;                    /* fades out */
+    u8 last;
+    u8 ring;                    /* the light: the taunt's ring too */
+} NDSP4PalLightWindow;
+
+/* scripts/p6/palutena/spec.json "motions" (the clips' hits: motions/*.ms). */
+static const NDSP4PalLightWindow sNdsP4PalutenaGlowWindows[] = {
+    { 165, 2, 4, 9, 14, 0 },    /* jab 1 (hits 4-7) */
+    { 166, 0, 2, 12, 18, 0 },   /* jab 2 (hits 4-10) */
+    { 228, 0, 2, 8, 8, 0 },     /* rapid jab start, full into the loop */
+    { 229, 0, 0, 24, 24, 0 },   /* rapid jab loop */
+    { 230, 0, 0, 8, 14, 0 },    /* rapid jab finisher (hits 3-6) */
+    { 170, 6, 8, 33, 38, 0 },   /* forward tilt (hits 9-32) */
+    { 174, 3, 5, 34, 39, 0 },   /* up tilt (hits 6-33) */
+    { 176, 3, 5, 11, 15, 0 },   /* down tilt (hits 6-10) */
+    { 184, 2, 4, 24, 29, 0 },   /* neutral air (hits 5-23) */
+    { 187, 3, 5, 17, 22, 0 },   /* up air (hits 5-16) */
+};
+
+static const NDSP4PalLightWindow sNdsP4PalutenaLightWindows[] = {
+    { 187, 10, 13, 20, 26, 0 }, /* up air: its last hit (14) */
+    { 182, 10, 13, 24, 30, 0 }, /* up smash: with the pillar (12) */
+    { 177, 0, 3, 8, 11, 0 },    /* forward smash, angled up: the wind-up, */
+    { 178, 0, 3, 8, 11, 0 },    /* gone as the godwings come (10) */
+    { 179, 0, 3, 8, 11, 0 },    /* forward smash */
+    { 180, 0, 3, 8, 11, 0 },
+    { 181, 0, 3, 8, 11, 0 },    /* forward smash, angled down */
+    { 183, 14, 17, 28, 34, 0 }, /* down smash: from the slam (16) */
+    { 164, 26, 32, 64, 74, 1 }, /* taunt: the pose, with the ring */
+};
+
+typedef struct NDSP4PalLight
+{
+    f32 glow;                   /* the level each showed last tic */
+    f32 light;
+} NDSP4PalLight;
+
+static NDSP4PalLight sNdsP4PalutenaLight[GMCOMMON_PLAYERS_MAX];
+
+extern void func_ovl2_800EDBA4(DObj *main_dobj);
+static void ndsP4PalutenaGlowProcUpdate(GObj *effect_gobj);
+static void ndsP4PalutenaLightProcUpdate(GObj *effect_gobj);
+
+static EFDesc sNdsP4PalutenaGlowDesc = {
+    0x4 | EFFECT_FLAG_USERDATA, 10, &gNdsP4PalutenaSpecial2,
+    { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0x00 },
+    { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0x00 },
+    ndsP4PalutenaGlowProcUpdate, gcDrawDObjTreeForGObj,
+    PAL_GLOW_TREE, 0x0, 0x0, 0x0
+};
+
+static EFDesc sNdsP4PalutenaLightDesc = {
+    0x4 | EFFECT_FLAG_USERDATA, 10, &gNdsP4PalutenaSpecial2,
+    { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0x00 },
+    { nGCMatrixKindTraRotRpyRSca, nGCMatrixKindNull, 0x00 },
+    ndsP4PalutenaLightProcUpdate, gcDrawDObjTreeForGObj,
+    PAL_LIGHT_TREE, 0x0, 0x0, 0x0
+};
+
+/* Her code places it every tic (effect_vars.common.size: tics since); one
+ * left unplaced (her match over, she gone) ends itself. Hitlag pauses it.
+ * Each tree has its own (ndsP4PalutenaLightFind tells them apart by it). */
+static void ndsP4PalutenaLightTic(GObj *effect_gobj)
+{
+    EFStruct *ep = efGetStruct(effect_gobj);
+
+    if (ep->is_pause_effect)
+    {
+        return;
+    }
+    if (++ep->effect_vars.common.size > 3)
+    {
+        efManagerSetPrevStructAlloc(ep);
+        gcEjectGObj(effect_gobj);
+    }
+}
+
+static void ndsP4PalutenaGlowProcUpdate(GObj *effect_gobj)
+{
+    ndsP4PalutenaLightTic(effect_gobj);
+}
+
+static void ndsP4PalutenaLightProcUpdate(GObj *effect_gobj)
+{
+    ndsP4PalutenaLightTic(effect_gobj);
+}
+
+static GObj *ndsP4PalutenaLightFind(GObj *fighter_gobj, const EFDesc *desc)
+{
+    GObj *effect_gobj;
+
+    for (effect_gobj = gGCCommonLinks[nGCCommonLinkIDEffect]; effect_gobj != NULL;
+         effect_gobj = effect_gobj->link_next)
+    {
+        EFStruct *ep = efGetStruct(effect_gobj);
+
+        if ((ep != NULL) && (ep->fighter_gobj == fighter_gobj) &&
+            (ep->proc_update == desc->proc_update))
+        {
+            return effect_gobj;
+        }
+    }
+    return NULL;
+}
+
+/* The window's level at her clip frame, 0 outside it. */
+static f32 ndsP4PalutenaLightLevel(const NDSP4PalLightWindow *w, u32 count, s32 motion, f32 frame,
+                                   u32 *ring)
+{
+    u32 i;
+
+    for (i = 0u; i < count; i++, w++)
+    {
+        if (w->motion != motion)
+        {
+            continue;
+        }
+        *ring = w->ring;
+        if ((frame < (f32)w->first) || (frame > (f32)w->last))
+        {
+            return 0.0F;
+        }
+        if (frame < (f32)w->full)
+        {
+            return (frame - (f32)w->first) / (f32)(w->full - w->first);
+        }
+        if ((frame <= (f32)w->fade) || (w->last == w->fade))
+        {
+            return 1.0F;
+        }
+        return ((f32)w->last - frame) / (f32)(w->last - w->fade);
+    }
+    *ring = 0u;
+    return 0.0F;
+}
+
+/* The effect showing `level` (made or found), or NULL once it shows none. */
+static GObj *ndsP4PalutenaLightEffect(GObj *fighter_gobj, EFDesc *desc, f32 level, const Vec3f *pos)
+{
+    GObj *effect_gobj = ndsP4PalutenaLightFind(fighter_gobj, desc);
+
+    if (level < PAL_LIGHT_SHOWN)
+    {
+        if (effect_gobj != NULL)
+        {
+            efManagerSetPrevStructAlloc(efGetStruct(effect_gobj));
+            gcEjectGObj(effect_gobj);
+        }
+        return NULL;
+    }
+    if (effect_gobj == NULL)
+    {
+        effect_gobj = ndsP4EntryMakeEffect(desc, pos);
+        if (effect_gobj == NULL)
+        {
+            return NULL;
+        }
+        efGetStruct(effect_gobj)->fighter_gobj = fighter_gobj;
+    }
+    efGetStruct(effect_gobj)->effect_vars.common.size = 0;
+    DObjGetStruct(effect_gobj)->translate.vec.f = *pos;
+    return effect_gobj;
+}
+
+/* A joint's point (in its own frame) in the world. Her map proc runs before
+ * ftParamsUpdateFighterPartsTransformAll clears the parts' matrix flags, so
+ * the matrices this caches are recomputed for every later reader. */
+static void ndsP4PalutenaJointPoint(FTStruct *fp, s32 joint_id, const Vec3f *local, Vec3f *out)
+{
+    DObj *joint = fp->joints[joint_id];
+    FTParts *parts;
+
+    if (joint == NULL)
+    {
+        *out = DObjGetStruct(fp->fighter_gobj)->translate.vec.f;
+        return;
+    }
+    parts = joint->user_data.p;
+    func_ovl2_800EDBA4(joint);
+    out->x = (local->x * parts->mtx_translate[0][0]) + (local->y * parts->mtx_translate[1][0]) +
+             (local->z * parts->mtx_translate[2][0]) + parts->mtx_translate[3][0];
+    out->y = (local->x * parts->mtx_translate[0][1]) + (local->y * parts->mtx_translate[1][1]) +
+             (local->z * parts->mtx_translate[2][1]) + parts->mtx_translate[3][1];
+    out->z = (local->x * parts->mtx_translate[0][2]) + (local->y * parts->mtx_translate[1][2]) +
+             (local->z * parts->mtx_translate[2][2]) + parts->mtx_translate[3][2];
+}
+
+static f32 ndsP4PalutenaLightNext(f32 window, f32 last)
+{
+    f32 eased = last - PAL_LIGHT_DECAY;
+
+    return (window > eased) ? window : ((eased > 0.0F) ? eased : 0.0F);
+}
+
+static void ndsP4PalutenaLight(GObj *fighter_gobj, FTStruct *fp)
+{
+    static const Vec3f origin = { 0.0F, 0.0F, 0.0F };
+    NDSP4PalLight *state = &sNdsP4PalutenaLight[fp->player & 3u];
+    f32 frame = fighter_gobj->anim_frame;
+    GObj *effect_gobj;
+    u32 ring = 0u;
+    u32 unused;
+    Vec3f pos;
+    f32 level;
+
+    level = ndsP4PalutenaLightNext(
+        ndsP4PalutenaLightLevel(sNdsP4PalutenaGlowWindows, ARRAY_COUNT(sNdsP4PalutenaGlowWindows),
+                                fp->motion_id, frame, &unused),
+        state->glow);
+    state->glow = level;
+    if (level >= PAL_LIGHT_SHOWN)
+    {
+        ndsP4PalutenaJointPoint(fp, PAL_STAFF_JOINT, &sNdsP4PalutenaGem, &pos);
+        pos.z += PAL_GLOW_TOWARD_CAMERA;
+    }
+    else
+    {
+        pos = origin;
+    }
+    effect_gobj = ndsP4PalutenaLightEffect(fighter_gobj, &sNdsP4PalutenaGlowDesc, level, &pos);
+    if (effect_gobj != NULL)
+    {
+        DObj *root = DObjGetStruct(effect_gobj);
+        f32 size = level * ((((s32)frame & 1) != 0) ? PAL_GLOW_SHIMMER : 1.0F);
+
+        root->scale.vec.f.x = root->scale.vec.f.y = root->scale.vec.f.z = size;
+    }
+
+    level = ndsP4PalutenaLightNext(
+        ndsP4PalutenaLightLevel(sNdsP4PalutenaLightWindows, ARRAY_COUNT(sNdsP4PalutenaLightWindows),
+                                fp->motion_id, frame, &ring),
+        state->light);
+    state->light = level;
+    if (level >= PAL_LIGHT_SHOWN)
+    {
+        Vec3f neck;
+        Vec3f up;
+        f32 len;
+
+        ndsP4PalutenaJointPoint(fp, PAL_NECK_JOINT, &origin, &neck);
+        ndsP4PalutenaJointPoint(fp, PAL_HEAD_JOINT, &origin, &pos);
+        up.x = pos.x - neck.x;
+        up.y = pos.y - neck.y;
+        len = sqrtf((up.x * up.x) + (up.y * up.y));
+        if (len > 1.0F)
+        {
+            pos.x += up.x * (PAL_WING_ROOT_UP / len);
+            pos.y += up.y * (PAL_WING_ROOT_UP / len);
+        }
+        else
+        {
+            pos.y += PAL_WING_ROOT_UP;
+        }
+        pos.z -= PAL_LIGHT_BEHIND;
+        effect_gobj = ndsP4PalutenaLightEffect(fighter_gobj, &sNdsP4PalutenaLightDesc, level, &pos);
+        if (effect_gobj != NULL)
+        {
+            DObj *root = DObjGetStruct(effect_gobj);
+            DObj *wing_l = root->child;
+            DObj *wing_r = wing_l->sib_next;
+            DObj *ring_l = wing_r->sib_next;
+            DObj *ring_r = ring_l->sib_next;
+            f32 lean = -syUtilsArcTan2(up.x, up.y);
+            f32 tilt = PAL_LIGHT_TILT + (PAL_LIGHT_SPREAD * level);
+            f32 size = PAL_LIGHT_FOLDED + ((1.0F - PAL_LIGHT_FOLDED) * level);
+            f32 ring_size = (ring != 0u) ? level : 0.0F;
+
+            if (lean > PAL_LIGHT_LEAN_MAX)
+            {
+                lean = PAL_LIGHT_LEAN_MAX;
+            }
+            else if (lean < -PAL_LIGHT_LEAN_MAX)
+            {
+                lean = -PAL_LIGHT_LEAN_MAX;
+            }
+            root->rotate.vec.f.z = lean;
+            wing_l->rotate.vec.f.z = -tilt;
+            wing_r->rotate.vec.f.z = tilt;
+            wing_l->scale.vec.f.x = wing_l->scale.vec.f.y = size;
+            wing_r->scale.vec.f.x = wing_r->scale.vec.f.y = size;
+            ring_l->scale.vec.f.x = ring_l->scale.vec.f.y = ring_size;
+            ring_r->scale.vec.f.x = ring_r->scale.vec.f.y = ring_size;
+        }
+    }
+    else
+    {
+        (void)ndsP4PalutenaLightEffect(fighter_gobj, &sNdsP4PalutenaLightDesc, level, &origin);
+    }
+}
+
 /* Her dress at run time (owner p6s, 2026-10-15: "skirt behaves like a paper
  * cone, instead of a heavy, flowy dress"; option B over option A's keys,
  * scripts/p6/skirt_keys.py): the clips key the dress rows from a cloth
@@ -1302,6 +1653,7 @@ static void ndsP4PalutenaAfterProcMap(GObj *fighter_gobj)
     s32 i;
 
     ndsP4PalutenaDress(fighter_gobj, fp);
+    ndsP4PalutenaLight(fighter_gobj, fp);
     if (clip >= 0)
     {
         ndsP4PalutenaWings(fighter_gobj, fp, clip);
