@@ -8,6 +8,7 @@
 #if NDS_P2_1P_GAME
 
 #include <nds/nds_frontend_overlay.h>
+#include <nds/nds_p7.h>
 #include <stdint.h>
 #include <ssb_types.h>
 #include <ft/fighter.h>
@@ -103,6 +104,40 @@ static void ndsSC1PGameAllocFighters(u32 flags, s32 source_capacity)
 /* The Boss camera base uses this address as raw file-offset arithmetic;
  * StageLastFile2's Layer1DObj starts at the source offset 0x4d48. */
 #define llGRLastMapFileHead (*(uintptr_t *)(uintptr_t)0x4d48u)
+
+/* P7 U5: a P7 challenger fights on its row's stage, which may have no
+ * challenger start points (the source's four challenger stages do): its two
+ * players then take the stage's VS starts. The source's spawn lookups
+ * (sc1pgame.c:913-945) halt on a missing point. */
+static s32 ndsSC1PGameP7MapObjKind(s32 kind)
+{
+    if ((gNdsP7Challenger.active == 0u) || (mpCollisionGetMapObjCountKind(kind) != 0))
+    {
+        return kind;
+    }
+    if (kind == nMPMapObjKind1PGameChallengerPlayer)
+    {
+        return nMPMapObjKindBattlePlayer1;
+    }
+    if ((kind >= nMPMapObjKind1PGameChallengerEnemyStart) &&
+        (kind <= nMPMapObjKind1PGameChallengerEnemyEnd))
+    {
+        return nMPMapObjKindBattlePlayer2 + (kind - nMPMapObjKind1PGameChallengerEnemyStart);
+    }
+    return kind;
+}
+
+static s32 ndsSC1PGameMapObjCountKind(s32 kind)
+{
+    return mpCollisionGetMapObjCountKind(ndsSC1PGameP7MapObjKind(kind));
+}
+
+static void ndsSC1PGameMapObjIDsKind(s32 kind, s32 *ids)
+{
+    mpCollisionGetMapObjIDsKind(ndsSC1PGameP7MapObjKind(kind), ids);
+}
+#define mpCollisionGetMapObjCountKind ndsSC1PGameMapObjCountKind
+#define mpCollisionGetMapObjIDsKind ndsSC1PGameMapObjIDsKind
 /* The overlay copy of the source (scripts/import-overlays/battleship/
  * src_sc_sc1pmode_sc1pgame.patch): identical except that the N64
  * title-signature check in sc1PGameFuncStart -- a DMA read of the cartridge
@@ -111,6 +146,8 @@ static void ndsSC1PGameAllocFighters(u32 flags, s32 source_capacity)
  * a data pointer inside the function. */
 #include <battleship_overlay/src/sc/sc1pmode/sc1pgame.c>
 #undef ftManagerAllocFighter
+#undef mpCollisionGetMapObjCountKind
+#undef mpCollisionGetMapObjIDsKind
 
 #if NDS_P2_KIRBY && NDS_RENDERER_HW_TRIANGLES
 /* Admit the copy hats this ladder fight can show before its fighter loop,
@@ -168,6 +205,11 @@ static void ndsSC1PGameBridgeRefuse(u8 stage)
 void sc1PGameStartScene(void)
 {
     u8 stage = gSCManagerSceneData.spgame_stage;
+    /* P7 U5: a P7 challenger rides the source's first challenger rows (A4)
+     * with its stage and fighter in them, for this fight only. */
+    sb32 p7 = ((gNdsP7Challenger.active != 0u) &&
+               (stage == (u8)nSC1PGameStageChallengerStart)) ? TRUE : FALSE;
+    SC1PGameStage p7_saved;
 
     gNdsSC1PGameBridgeStageRequested = stage;
 
@@ -175,6 +217,12 @@ void sc1PGameStartScene(void)
     {
         ndsSC1PGameBridgeRefuse(stage);
         return;
+    }
+    if (p7 != FALSE)
+    {
+        p7_saved = dSC1PGameStageDesc[stage];
+        dSC1PGameStageDesc[stage].gkind = gNdsP7Challenger.gkind;
+        dSC1PGameStageDesc[stage].fkind[0] = gNdsP7Challenger.fkind;
     }
     /* Campaign dependencies carry every opponent, including all polygon
      * donors and Master Hand's native owner. The source setup chooses actual
@@ -220,6 +268,10 @@ void sc1PGameStartScene(void)
         setup.scene_setup.arena_start = ndsTaskmanArenaStart();
         setup.scene_setup.arena_size = ndsTaskmanArenaSize();
         scManagerFuncUpdate(&setup);
+    }
+    if (p7 != FALSE)
+    {
+        dSC1PGameStageDesc[stage] = p7_saved;
     }
 
     sc1PGameInitBonusStats();

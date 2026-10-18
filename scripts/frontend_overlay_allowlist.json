@@ -1178,6 +1178,11 @@
       "reason": "Linker boundary symbol: the VS character select's loan takes the address range before its own block as preview storage; it is an address, never called or read."
     },
     {
+      "source_symbol": "sc1PBonusStageStartScene",
+      "target_symbol": "ndsP7BonusPracticeEnded",
+      "reason": "P7 U4: a bonus practice's unlock rows, after the board restored the front-end tail; the 1P manager's seam is in the 1P battle-time head, resident for the whole practice."
+    },
+    {
       "source_symbol": "ndsFrontendOverlayLoanContains",
       "target_symbol": "__nds_frontend_start",
       "reason": "Linker boundary symbol: the renderer's range check accepts buffers syTaskmanMalloc lent from the loan; it compares an address, never calls or reads it."

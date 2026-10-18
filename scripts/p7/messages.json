@@ -1,0 +1,34 @@
+{
+ "comment": "P7 U6 (docs/P7/P7_Implementation_Plan.md): the unlock message lines, rendered by scripts/p7/generate_p7_messages.py in the source's style (src/nds/nds_p7_messages.generated.inc). A fighter's message is 'You can now use <name>,' over '<epithet>.'; a stage's 'A new battle arena has been added:' over '<name>!'. Keys are the unlock rows' names (scripts/p7/unlocks.json).",
+ "fighters": {
+  "Metal Mario": "the hero cast in metal",
+  "Peach": "princess of the Mushroom Kingdom",
+  "Bowser": "the King of the Koopas",
+  "Wario": "Mario's greedy rival",
+  "Mad Piano": "the haunted grand",
+  "Falco": "the Star Fox ace",
+  "Wolf": "leader of Star Wolf",
+  "Ganondorf": "the King of Evil",
+  "Sheik": "the Sheikah warrior",
+  "Marth": "the Hero-King",
+  "Roy": "the young lion",
+  "Lanky Kong": "the long-armed ape",
+  "Crash": "the wild bandicoot",
+  "Sonic": "the fastest thing alive",
+  "King Dedede": "the self-proclaimed king",
+  "Meta Knight": "the masked swordsman",
+  "Mr. Game & Watch": "the flat hero",
+  "Snake": "the legendary soldier",
+  "Ike": "the radiant hero",
+  "Palutena": "the goddess of light"
+ },
+ "stages": {
+  "meta_crystal": "Meta Crystal",
+  "bowsers_stadium": "Bowser's Stadium",
+  "hyrule_temple": "Hyrule Temple",
+  "final_destination": "Final Destination",
+  "first_destination": "First Destination",
+  "duel_zone": "Duel Zone",
+  "dinosaur_land": "Dinosaur Land"
+ }
+}

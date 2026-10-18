@@ -183,6 +183,55 @@ u32 ndsP7UnlockMatch(const NDSP7Run *run, u8 *out, u32 max)
     return n;
 }
 
+u32 ndsP7UnlockCompanions(u8 *out, u32 max)
+{
+    u32 n = 0u;
+    u32 i;
+
+    if (out == NULL)
+    {
+        return 0u;
+    }
+    for (i = 0u; i < NDS_P7_UNLOCK_ROWS; i++)
+    {
+        const NDSP7UnlockRow *row = &sNdsP7UnlockRows[i];
+
+        if ((row->site != NDS_P7_SITE_UNLOCK) || (ndsP7UnlockOpen(row) != FALSE) ||
+            (ndsP7UnlockCompiled(row) == FALSE) || (ndsP7UnlockHave(row->requires, 0u) == FALSE))
+        {
+            continue;
+        }
+        if (n < max)
+        {
+            out[n++] = (u8)i;
+        }
+    }
+    return n;
+}
+
+u32 ndsP7UnlockPending(const NDSP7UnlockRow *row)
+{
+    return ((row != NULL) && (ndsP7UnlockOpen(row) == FALSE) &&
+            (ndsP7UnlockCompiled(row) != FALSE) &&
+            (ndsP7UnlockHave(row->requires, 0u) != FALSE)) ? TRUE : FALSE;
+}
+
+void ndsP7UnlockDeliver(const NDSP7UnlockRow *row)
+{
+    if (row == NULL)
+    {
+        return;
+    }
+    if (row->kind == NDS_P7_UNLOCK_FIGHTER)
+    {
+        ndsP7SetFighterUnlocked(row->id);
+    }
+    else
+    {
+        ndsP7SetStageUnlocked(row->id);
+    }
+}
+
 /* This build's contents and stages: a row whose fighter or stage (or whose
  * challenger's stage) is not compiled stays dormant. The host test supplies
  * its own (NDS_P7_UNLOCK_HOOKS 0). */
@@ -190,6 +239,34 @@ u32 ndsP7UnlockMatch(const NDSP7Run *run, u8 *out, u32 max)
 #define NDS_P7_UNLOCK_HOOKS 1
 #endif
 #if NDS_P7_UNLOCK_HOOKS
+/* U5: resident, since the content queries run in resident code (the 1P
+ * manager that sets it lives in the front-end overlay's head). */
+NDSP7Challenger gNdsP7Challenger;
+
+u32 ndsP7ChallengerContent(s32 player)
+{
+    const SCBattleState *state = gSCManagerBattleState;
+
+    if ((gNdsP7Challenger.active == 0u) || (gNdsP7Challenger.content == 0u) ||
+        (player < 0) || (player >= GMCOMMON_PLAYERS_MAX))
+    {
+        return 0u;
+    }
+    if (gSCManagerSceneData.scene_curr == nSCKind1PChallenger)
+    {
+        /* The screen's one fighter (sc1pchallenger.c:213). */
+        return (player == 0) ? gNdsP7Challenger.content : 0u;
+    }
+    /* The fight's enemy: the one CPU the challenger rows make. */
+    if ((state != NULL) && (state->players[player].pkind == nFTPlayerKindCom) &&
+        (state->players[player].is_spgame_enemy != FALSE) &&
+        (state->players[player].fkind == gNdsP7Challenger.fkind))
+    {
+        return gNdsP7Challenger.content;
+    }
+    return 0u;
+}
+
 u32 ndsP7UnlockContentCompiled(u32 content)
 {
 #if NDS_P4

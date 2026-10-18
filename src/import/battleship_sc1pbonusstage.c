@@ -48,6 +48,7 @@
 #if NDS_P2_1P_GAME
 
 #include <nds/nds_frontend_overlay.h>
+#include <nds/nds_p7.h>
 #include <stdint.h>
 #include <PR/gbi.h>
 #include <PR/os.h>
@@ -170,9 +171,13 @@ void ndsBaseSC1PBonusStageStartScene(void);
 
 void sc1PBonusStageStartScene(void)
 {
+    u8 entry_prev = gSCManagerSceneData.scene_prev;
+
     ndsBaseSC1PBonusStageStartScene();
     /* As sc1PGameStartScene: the board may have borrowed the frontend tail. */
     ndsFrontendOverlayRestoreTail();
+    /* P7 U4: a practice's unlock rows (Sheik, Palutena). */
+    ndsP7BonusPracticeEnded(entry_prev);
 }
 
 #if NDS_P2_MENU_WALK

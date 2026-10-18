@@ -35,5 +35,8 @@ void ndsSource2DSetTranslucentBitmaps(const void *first, const void *second);
 /* The scene's BLDCNT/BLDALPHA/BLDY for this frame, written at the commit.
  * The first call saves the standing blend; the tenant's exit restores it. */
 void ndsSource2DSetBlend(u16 bldcnt, u16 bldalpha, u16 bldy);
+/* A translucent fill rectangle (source frame coordinates, 0xRRGGBBAA) over
+ * the background picture: blended into BG2's pixels once per picture. */
+void ndsSource2DFillTranslucent(s32 ulx, s32 uly, s32 lrx, s32 lry, u32 rgba);
 
 #endif

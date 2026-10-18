@@ -91,6 +91,10 @@
 #include <nds/arm9/video.h>
 #include <nds/nds_platform.h>
 #include <nds/nds_renderer.h>
+#include <nds/nds_p4.h>
+#if NDS_P4
+#include "nds_p4_css_screen.generated.h"
+#endif
 
 #define sc1PChallengerStartScene ndsBaseSC1PChallengerStartScene
 void ndsBaseSC1PChallengerStartScene(void);
@@ -211,6 +215,64 @@ static void ndsSC1PChallengerFillRect(Gfx *pkt, s32 ulx, s32 uly, s32 lrx,
 
 static void ndsSC1PChallengerDraw(void);
 
+#if NDS_P4
+/* P7 U5: a content challenger (battleship_sc1pmanager.c) turns in as its own
+ * model -- its select-screen pack and motion file, the VS select's content
+ * path (ndsFTManagerSetupPreviewFilesP4), in place of the source's whole
+ * files -- at its own menu zoom in place of its parent's row of
+ * dSCSubsysFighterScales (the Results podium's). */
+static void ndsSC1PChallengerSetupFiles(s32 fkind)
+{
+    u32 content = ndsP4MatchContent(0);
+
+    if ((content != 0u) && (ndsFTManagerSetupPreviewFilesP4(content) != FALSE))
+    {
+        return;
+    }
+    ftManagerSetupFilesAllKind(fkind);
+}
+
+static f32 sNdsSC1PChallengerScales[nFTKindEnumCount];
+
+/* Read only at the challenger's own kind (sc1pchallenger.c:224-226). */
+static const f32 *ndsSC1PChallengerScales(void)
+{
+    s32 fkind = gSCManagerSceneData.challenger_fkind;
+    const NDSP4Fighter *f = ndsP4Fighter(ndsP4MatchContent(0));
+
+    if ((fkind >= 0) && (fkind < nFTKindEnumCount))
+    {
+        sNdsSC1PChallengerScales[fkind] = ((f != NULL) && (f->present != NULL)) ?
+            f->present->menu_zoom : dSCSubsysFighterScales[fkind];
+    }
+    return sNdsSC1PChallengerScales;
+}
+/* A content's demo idle (submotion row 0) can be its entry -- Snake under his
+ * cardboard box, a turning black box on this screen (2026-10-18) -- so the
+ * challenger turns in its select-screen pose instead (the VS select's
+ * Selected row, nds_p4_css_screen.generated.h), set just before the source
+ * blacks it out (sc1pchallenger.c:228). */
+static const u8 kNdsSC1PChallengerSelectedRow[NDS_P4_CONTENT_LIMIT] =
+    NDS_P4_CSS_SELECTED_ROWS;
+
+static sb32 ndsSC1PChallengerColAnim(GObj *fighter_gobj, s32 colanim_id, s32 unused)
+{
+    u32 content = ndsP4MatchContent(0);
+
+    if ((fighter_gobj != NULL) && (content != 0u) && (content < NDS_P4_CONTENT_LIMIT) &&
+        (kNdsSC1PChallengerSelectedRow[content] >= 1u) &&
+        (kNdsSC1PChallengerSelectedRow[content] <= 4u))
+    {
+        scSubsysFighterSetStatus(fighter_gobj,
+            nFTDemoStatusNull + (s32)kNdsSC1PChallengerSelectedRow[content]);
+    }
+    return ftParamCheckSetFighterColAnimID(fighter_gobj, colanim_id, unused);
+}
+#define ftManagerSetupFilesAllKind ndsSC1PChallengerSetupFiles
+#define dSCSubsysFighterScales (ndsSC1PChallengerScales())
+#define ftParamCheckSetFighterColAnimID ndsSC1PChallengerColAnim
+#endif
+
 #undef gDPSetPrimColor
 #define gDPSetPrimColor(pkt, m, l, r, g, b, a) \
     ndsSC1PChallengerPrimColor((pkt), (m), (l), (r), (g), (b), (a))
@@ -219,6 +281,11 @@ static void ndsSC1PChallengerDraw(void);
     ndsSC1PChallengerFillRect((pkt), (ulx), (uly), (lrx), (lry))
 #define gcDrawAll ndsSC1PChallengerDraw
 #include "../../decomp/BattleShip-main/decomp/src/sc/sc1pmode/sc1pchallenger.c"
+#if NDS_P4
+#undef ftManagerSetupFilesAllKind
+#undef dSCSubsysFighterScales
+#undef ftParamCheckSetFighterColAnimID
+#endif
 #undef gcDrawAll
 #undef gDPFillRectangle
 #undef gDPSetPrimColor

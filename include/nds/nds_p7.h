@@ -107,9 +107,74 @@ const NDSP7UnlockRow *ndsP7UnlockRow(u32 index);
  * order, then the companions they open: row indices into out (at most max),
  * their count. The save's 1P records are read as the run left them. */
 u32 ndsP7UnlockMatch(const NDSP7Run *run, u8 *out, u32 max);
+/* The companion rows (a stage that comes with a fighter) whose
+ * prerequisites are all unlocked now and which are not yet: row indices into
+ * out (at most max), their count. Asked after each delivered unlock. */
+u32 ndsP7UnlockCompanions(u8 *out, u32 max);
+/* A row still to deliver: not unlocked, compiled, its prerequisites
+ * unlocked now (a queued challenger whose prerequisite was lost waits). */
+u32 ndsP7UnlockPending(const NDSP7UnlockRow *row);
+/* A row's unlock: its fighter or stage bit (the caller commits with
+ * lbBackupWrite). */
+void ndsP7UnlockDeliver(const NDSP7UnlockRow *row);
 /* This build's contents and stages (nds_p7_unlocks.c). */
 u32 ndsP7UnlockContentCompiled(u32 content);
 u32 ndsP7UnlockStageCompiled(u32 gkind);
+
+/* U4/U5: the P7 challenger on screen or fighting (the 1P manager's DS seam,
+ * battleship_sc1pmanager.c). While it is active its content is the match's:
+ * the challenger screen's fighter (player 0) and the 1P fight's enemy
+ * (ndsP4MatchContent). The fight rides the source's first challenger rows
+ * (Luigi's: one stock, no time limit, level {6,7,7,8,9} less the level drop,
+ * handicap 6, items off, A4) with the row's stage and fighter in them
+ * (battleship_sc1pgame_runtime.c). */
+typedef struct NDSP7Challenger
+{
+    u8 active;
+    u8 row;         /* its unlock row */
+    u8 fkind;       /* the kind the source makes: a content's parent */
+    u8 content;     /* its content; 0 for an original kind */
+    u8 gkind;       /* the fight's stage */
+} NDSP7Challenger;
+extern NDSP7Challenger gNdsP7Challenger;
+u32 ndsP7ChallengerContent(s32 player);
+/* The bonus practice's end (battleship_sc1pbonusstage.c; `entry_prev`: the
+ * scene the bonus stage was started from): its P7 rows; a challenger among
+ * them routes the next scene to the 1P manager, which fights it and returns
+ * to the practice menu. */
+void ndsP7BonusPracticeEnded(u32 entry_prev);
+/* U6: one message screen per unlock row, back to back (the source's message
+ * scene with the row's lines; battleship_mnmessage.c). The caller sets the
+ * scene to nSCKindMessage. */
+void ndsP7ShowMessages(const u8 *rows, u32 count);
+
+/* U2: wide VS records (src/nds/nds_p7_records.c). The source's
+ * LBBackupVSRecord widened to every selection id, one row each, in a file
+ * beside the save; the source's twelve-by-twelve block stays the source's. */
+#define NDS_P7_RECORD_BYTES 260u
+typedef struct NDSP7VSRecord
+{
+    u16 ko_count[NDS_P7_SEL_COUNT];
+    u32 time_used;
+    u32 damage_given;
+    u32 damage_taken;
+    u16 unk;
+    u16 selfdestructs;
+    u16 games_played;
+    u16 player_count_tally;
+    u16 player_count_tallies[NDS_P7_SEL_COUNT];
+    u16 played_against[NDS_P7_SEL_COUNT];
+} NDSP7VSRecord;
+struct SCBattleState;
+/* Row `sel` (zero when there is no file or no row). */
+void ndsP7RecordsRead(u32 sel, NDSP7VSRecord *out);
+/* A finished match (mnVSResultsSaveBackup's arithmetic): every player's row,
+ * its opponents by their own selection ids (`sel` per player slot). */
+void ndsP7RecordsAddMatch(const struct SCBattleState *state, const u8 sel[4]);
+/* Backup Clear's VS Record class and All Data. */
+void ndsP7RecordsClear(void);
+/* A player's selection id: an original's kind, Metal Mario's, a content's. */
+u32 ndsP7SelOf(s32 fkind, u32 content);
 
 /* Dev-open builds (the lab sweep, the four-CPU stress, both-CPU and
  * fast-logic harnesses, and walks) see every fighter and stage, as they

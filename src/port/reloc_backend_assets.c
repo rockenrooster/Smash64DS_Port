@@ -7277,6 +7277,33 @@ static NDSRelocLoadedFile *ndsRelocRegisterLoadedFile(
                                           FALSE);
 }
 
+/* A block the port builds itself (P7's unlock message: its Bitmap row and
+ * texels), registered as this scene's loaded file so the sprite presenter --
+ * which keys its cells by file provenance (nds_source2d.c) -- draws it. The
+ * asset id is outside the ROM's and the P4 files'; nothing in it needs fixing
+ * up. */
+s32 ndsRelocRegisterSyntheticFile(u32 asset_id, void *data, u32 size)
+{
+    NDSRelocAssetHeader header;
+    NDSRelocLoadedFile *loaded;
+
+    if ((data == NULL) || (size == 0u))
+    {
+        return FALSE;
+    }
+    memset(&header, 0, sizeof(header));
+    header.data_size = size;
+    loaded = ndsRelocRegisterLoadedFile(asset_id, 0u, data, &header);
+    if (loaded == NULL)
+    {
+        return FALSE;
+    }
+    loaded->internal_fixups_applied = TRUE;
+    loaded->external_fixups_applied = TRUE;
+    loaded->format_fixups_applied = TRUE;
+    return TRUE;
+}
+
 static void ndsRelocMarkLoadedFileRelativeOffsets(NDSRelocLoadedFile *loaded)
 {
     if (loaded == NULL)

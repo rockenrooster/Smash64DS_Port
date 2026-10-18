@@ -231,6 +231,9 @@ static u32 sNdsS2DFrameObjects;
 /* The RGB a no-attribute draw multiplies RGBA/CI texels by: the prim colour
  * its display callback set under a MODULATE combine (0xffffff = none). */
 static u32 sNdsS2DModulate = 0xffffffu;
+/* The translucent fill BG2's picture carries (0xRRGGBBAA, 0 = none): see
+ * ndsSource2DFillTranslucent. */
+static u32 sNdsS2DFillApplied;
 
 volatile u32 gNdsSource2DEnterCount;
 volatile u32 gNdsSource2DExitCount;
@@ -1876,6 +1879,7 @@ static void ndsS2DClearBackground(void)
         return;
     }
     sNdsS2DBackgroundCount = 0u;
+    sNdsS2DFillApplied = 0u;
     layer = ndsPlatformGetOriginalSpriteOverlayLayer(FALSE, &pitch, &width,
                                                      &height, &epoch);
     if (layer != NULL)
@@ -1931,6 +1935,13 @@ static s32 ndsS2DDrawBackground(const SObj *sobj,
     {
         return 1;
     }
+    if ((index != 0u) && (sNdsS2DFillApplied != 0u))
+    {
+        /* A new upper layer over a filled picture: the fill went over the
+         * layers drawn before it, so the next frame rebuilds the stack. */
+        ndsS2DClearBackground();
+        return 1;
+    }
     layer = ndsPlatformGetOriginalSpriteOverlayLayer(FALSE, &pitch, &width,
                                                      &height, &epoch);
     if ((layer == NULL) || (pitch < 256u))
@@ -1942,6 +1953,7 @@ static s32 ndsS2DDrawBackground(const SObj *sobj,
     if (index == 0u)
     {
         dmaFillHalfWords(0u, layer, 256u * 256u * sizeof(u16));
+        sNdsS2DFillApplied = 0u;
     }
     step_x_q16 = ((u32)(u16)sobj->sprite.width << 16) / final_width;
     step_y_q16 = ((u32)(u16)sobj->sprite.height << 16) / final_height;
@@ -2265,6 +2277,7 @@ static void ndsS2DEnterNow(void)
     sNdsS2DFrameNeedsCommit = 0u;
     sNdsS2DResetPending = 0u;
     sNdsS2DBackgroundCount = 0u;
+    sNdsS2DFillApplied = 0u;
     sNdsS2DFrameBackgrounds = 0u;
     sNdsS2DFrameObjects = 0u;
     oamInit(&oamMain, SpriteMapping_Bmp_1D_128, false);
@@ -2341,6 +2354,7 @@ void ndsSource2DExit(void)
     oamUpdate(&oamMain);
     ndsS2DResetCache();
     sNdsS2DBackgroundCount = 0u;
+    sNdsS2DFillApplied = 0u;
     sNdsS2DActive = 0u;
     NDS_DIAG(gNdsSource2DExitCount++);
 #endif
@@ -2477,6 +2491,94 @@ void ndsSource2DSetTranslucentBitmaps(const void *first, const void *second)
 #else
     (void)first;
     (void)second;
+#endif
+}
+
+/* A fill rectangle under an XLU render mode, over everything drawn before
+ * it (the message screen's tint, mnmessage.c:83-96: 0x0000FF3F over the
+ * frame after the wallpaper, under the message and the exclaim). In a
+ * tenant's frame only the BG2 picture is under it, so the picture's pixels
+ * take the source blend -- colour x alpha + memory x (1 - alpha), memory the
+ * cleared frame's black where no layer wrote -- once per picture. */
+void ndsSource2DFillTranslucent(s32 ulx, s32 uly, s32 lrx, s32 lry, u32 rgba)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    u8 ramp[3][32];
+    u16 *layer;
+    u32 pitch;
+    u32 width;
+    u32 height;
+    u32 epoch;
+    u32 alpha = rgba & 0xffu;
+    s32 x0;
+    s32 y0;
+    s32 x1;
+    s32 y1;
+    s32 x;
+    s32 y;
+    u32 c;
+    u32 i;
+
+    if ((sNdsS2DActive == 0u) || (sNdsS2DBackgroundCount == 0u) ||
+        (sNdsS2DFillApplied == rgba))
+    {
+        return;
+    }
+    if (sNdsS2DFillApplied != 0u)
+    {
+        /* Another fill over a filled picture: rebuilt next frame. */
+        ndsS2DClearBackground();
+        return;
+    }
+    layer = ndsPlatformGetOriginalSpriteOverlayLayer(FALSE, &pitch, &width,
+                                                     &height, &epoch);
+    if ((layer == NULL) || (pitch < 256u))
+    {
+        NDS_DIAG(gNdsSource2DFailBackground++);
+        return;
+    }
+    for (c = 0u; c < 3u; c++)
+    {
+        u32 fill = (rgba >> (24u - (c * 8u))) & 0xffu;
+
+        for (i = 0u; i < 32u; i++)
+        {
+            u32 memory = (i << 3) | (i >> 2);
+
+            ramp[c][i] = (u8)(((fill * alpha) + (memory * (255u - alpha)) +
+                               127u) / 255u >> 3);
+        }
+    }
+    x0 = ndsS2DMapCoord(ulx, NDS_S2D_SRC_ORIGIN_X, NDS_S2D_SCALE_X_Q16);
+    y0 = ndsS2DMapCoord(uly, NDS_S2D_SRC_ORIGIN_Y, NDS_S2D_SCALE_Y_Q16);
+    x1 = ndsS2DMapCoord(lrx, NDS_S2D_SRC_ORIGIN_X, NDS_S2D_SCALE_X_Q16);
+    y1 = ndsS2DMapCoord(lry, NDS_S2D_SRC_ORIGIN_Y, NDS_S2D_SCALE_Y_Q16);
+    x0 = (x0 < 0) ? 0 : x0;
+    y0 = (y0 < 0) ? 0 : y0;
+    x1 = (x1 > 256) ? 256 : x1;
+    y1 = (y1 > 192) ? 192 : y1;
+    ndsPlatformHideOriginalSpriteOverlayUntilCommit(FALSE);
+    for (y = y0; y < y1; y++)
+    {
+        u16 *row = &layer[(u32)y * pitch];
+
+        for (x = x0; x < x1; x++)
+        {
+            u32 pixel = ((row[x] & 0x8000u) != 0u) ? row[x] : 0u;
+
+            row[x] = (u16)(0x8000u | ramp[0][pixel & 31u] |
+                           ((u32)ramp[1][(pixel >> 5) & 31u] << 5) |
+                           ((u32)ramp[2][(pixel >> 10) & 31u] << 10));
+        }
+    }
+    (void)ndsPlatformCommitOriginalSpriteFinalLayer(FALSE, 256u * 192u);
+    sNdsS2DFillApplied = rgba;
+#else
+    (void)ulx;
+    (void)uly;
+    (void)lrx;
+    (void)lry;
+    (void)rgba;
 #endif
 }
 

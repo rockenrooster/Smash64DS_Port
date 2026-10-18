@@ -1174,7 +1174,9 @@ void ndsMenuShellWalkDrive1PSourceMenus(void)
         if ((sWalk1PArmed != 0u) &&
             (curr != (u32)nSCKind1PGame) &&
             (curr != (u32)nSCKind1PStageClear) &&
-            (curr != (u32)nSCKind1PContinue))
+            (curr != (u32)nSCKind1PContinue) &&
+            (curr != (u32)nSCKind1PChallenger) &&
+            (curr != (u32)nSCKindMessage))
         {
             ndsControllerPlaybackSetPad(0u, 0u, 0, 0);
         }

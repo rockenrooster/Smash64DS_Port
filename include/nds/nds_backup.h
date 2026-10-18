@@ -4,6 +4,7 @@
 #include <PR/ultratypes.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 
 /* P2-7 save data. The source keeps its save in N64 SRAM: lbbackup.c writes
  * two copies of LBBackupData (at byte 0 and at the next 16-byte boundary past
@@ -31,6 +32,25 @@ void ndsBackupSramWrite(void *ram_src, uintptr_t sram_dst, size_t size);
 /* Write the image to the file. lbBackupWrite calls it once after both of its
  * copies land, so a save is one file write, not two. TRUE on success. */
 s32 ndsBackupFlush(void);
+
+/* Siblings of the save (P7 U2's VS records): other files kept beside it on
+ * the volume the save was read from, written through the same transaction.
+ * Callers hold the file-system lock (ndsFsLock). Recovery order: the
+ * canonical name, its .bak, its .tmp. */
+#define NDS_BACKUP_SIBLING_RECORDS 0u
+#define NDS_BACKUP_RECOVERY_NAMES 3u
+typedef s32 (*NDSBackupWriter)(FILE *tmp, void *ctx);
+FILE *ndsBackupOpenSibling(u32 sibling, u32 recovery, const char *mode);
+/* `write` fills the temporary; `*src` (a file being read for it, or NULL)
+ * is closed before the promotion renames anything; the canonical file is
+ * kept as .bak. TRUE when the new file is in place. */
+s32 ndsBackupTransactSibling(u32 sibling, NDSBackupWriter write, void *ctx,
+                             FILE **src);
+/* A sibling's temporary promoted to its canonical name: the one valid copy
+ * left by an interrupted promotion, before that name is written again. */
+s32 ndsBackupPromoteSibling(u32 sibling);
+void ndsFsLock(void);
+void ndsFsUnlock(void);
 
 /* One read each, for the verifier and for gdb. */
 #define NDS_BACKUP_LOAD_UNTRIED 0u

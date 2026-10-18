@@ -176,7 +176,7 @@ void lbBackupClear1PHighScore(void)
     }
 }
 
-/* lbbackup.c:150-159 */
+/* lbbackup.c:150-159; P7: the wide records too (U2). */
 void lbBackupClearVSRecord(void)
 {
     s32 i;
@@ -186,6 +186,7 @@ void lbBackupClearVSRecord(void)
         gSCManagerBackupData.vs_records[i] = dSCManagerDefaultBackupData.vs_records[i];
     }
     gSCManagerBackupData.vs_total_battles = dSCManagerDefaultBackupData.vs_total_battles;
+    ndsP7RecordsClear();
 }
 
 /* lbbackup.c:162-173 */
@@ -218,4 +219,5 @@ void lbBackupClearAllData(void)
 {
     gSCManagerBackupData = dSCManagerDefaultBackupData;
     ndsP7ClearAll();
+    ndsP7RecordsClear();
 }

@@ -80,17 +80,24 @@ void syTaskmanStartTask(SYTaskmanSetup *tsetup)
      * fighter after them: Kirby's parts ran the general heap out in
      * gcAddMObjForDObj at the Continue after Master Hand (walk sweep
      * 2026-10-04, HALT malloc-overflow scene 49). */
+    /* The challenger screen (sc1pchallenger.c) reserves the same two 32 KiB
+     * graphics heaps, 48 KiB RDP buffer and two 20,000 B display lists, then
+     * makes its one fighter: a P7 content challenger's model and owner image
+     * did not fit beside them (Snake, 2026-10-18: 30,980 B short). Its lists
+     * are a fighter drawn natively and four sprites, as Results'. */
     if ((desc != NULL) &&
         (((desc->flags & NDS_SCENE_FLAG_BATTLE) != 0u) ||
          (gSCManagerSceneData.scene_curr == nSCKind1PIntro) ||
          (gSCManagerSceneData.scene_curr == nSCKind1PGamePlayers) ||
          (gSCManagerSceneData.scene_curr == nSCKindVSResults) ||
+         (gSCManagerSceneData.scene_curr == nSCKind1PChallenger) ||
          (gSCManagerSceneData.scene_curr == nSCKind1PContinue)) &&
         (ndsBattleSetupIsRebudgeted(tsetup) == FALSE))
     {
         ds_setup = *tsetup;
         ndsBattleRebudgetSceneSetup(&ds_setup);
-        if (gSCManagerSceneData.scene_curr == nSCKindVSResults)
+        if ((gSCManagerSceneData.scene_curr == nSCKindVSResults) ||
+            (gSCManagerSceneData.scene_curr == nSCKind1PChallenger))
         {
             /* Results' display procs write state and fill words only (the
              * fighters draw natively): measured 2026-10-04 on the heaviest

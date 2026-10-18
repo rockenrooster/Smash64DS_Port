@@ -4862,8 +4862,10 @@ endif
 # list that has to stay in step with the one in the sources.
 CFILES += nds_fox_gun.c
 # P2-7 save data: the FAT-backed SRAM image and the transcribed lbbackup.c;
-# P7's progress block in the same image (docs/P7/P7_Implementation_Plan.md U1).
-CFILES += nds_backup.c battleship_lbbackup.c nds_p7_progress.c
+# P7's progress block in the same image (docs/P7/P7_Implementation_Plan.md U1),
+# its unlock registry's evaluator (U3; the 1P manager's seam reads it) and the
+# wide VS records beside the save (U2).
+CFILES += nds_backup.c battleship_lbbackup.c nds_p7_progress.c nds_p7_unlocks.c nds_p7_records.c
 ifeq ($(NDS_IMPORT_BATTLESHIP_FT_PUBLIC),1)
 CFILES += battleship_ftpublic.c
 endif
@@ -8858,6 +8860,15 @@ $(NITROFS_DIR)/menus/battle_hud.bin: $(NDS_BATTLE_HUD_ASSET)
 	cp $< $@
 
 $(OUTPUT).nds: $(NITROFS_DIR)/menus/battle_hud.bin
+
+# P7 U6: the unlock messages' texels (scripts/p7/generate_p7_messages.py, our
+# own rendering, committed); the message screen reads its row from NitroFS.
+NDS_P7_MESSAGES_ASSET := $(PROJECT_ROOT)/assets/p7/messages.bin
+$(NITROFS_DIR)/p7/messages.bin: $(NDS_P7_MESSAGES_ASSET)
+	@mkdir -p $(dir $@)
+	cp $< $@
+
+$(OUTPUT).nds: $(NITROFS_DIR)/p7/messages.bin
 
 # Source-entry AOT packet.  The generator imports the same display-list/texture
 # decoders as the static battle bake and SHA-pins all three source containers;

@@ -148,6 +148,10 @@ void ndsRelocReleaseHeapRange(void *base, size_t size);
 /* Resolve a live pointer through the authoritative loaded-file table. Used by
  * route diagnostics and safe wherever a caller needs stable asset provenance
  * instead of a taskman-heap address. */
+/* A port-built block registered as this scene's loaded file (asset ids from
+ * NDS_RELOC_SYNTHETIC_ASSET_BASE up; reloc_backend_assets.c). */
+#define NDS_RELOC_SYNTHETIC_ASSET_BASE 0x00FE0000u
+s32 ndsRelocRegisterSyntheticFile(u32 asset_id, void *data, u32 size);
 s32 ndsRelocGetLoadedPointerProvenance(const void *ptr, u32 *out_asset_id,
                                        u32 *out_offset);
 s32 ndsRelocCopyMObjSubForAttachment(struct MObjSub *dst,

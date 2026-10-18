@@ -12,6 +12,7 @@
 #include <nds/nds_controller.h>
 #include <nds/nds_match_config.h>
 #include <nds/nds_p4.h>
+#include <nds/nds_p7.h>
 #include <nds/nds_platform.h>
 #include <nds/nds_renderer.h>
 #include <nds/nds_results_oam.h>
@@ -650,6 +651,18 @@ void ndsP4MNVSResultsSaveBackup(void)
     for (i = 0; i < GMCOMMON_PLAYERS_MAX; i++)
     {
         gSCManagerTransferBattleState.players[i].pkind = pkind[i];
+    }
+    /* P7 U2: every player's wide row, contents and Metal Mario included,
+     * each opponent by its own selection id. */
+    {
+        u8 sel[GMCOMMON_PLAYERS_MAX];
+
+        for (i = 0; i < GMCOMMON_PLAYERS_MAX; i++)
+        {
+            sel[i] = (u8)ndsP7SelOf(gSCManagerTransferBattleState.players[i].fkind,
+                (ndsP4Fighter(gNdsP4PlayerContent[i]) != NULL) ? gNdsP4PlayerContent[i] : 0u);
+        }
+        ndsP7RecordsAddMatch(&gSCManagerTransferBattleState, sel);
     }
 }
 #endif

@@ -29,6 +29,7 @@
 #include <sys/audio.h>
 #include <sys/taskman.h>
 #include <wp/weapon.h>
+#include <nds/nds_p7.h>
 #if NDS_P2_KIRBY
 #include <reloc_data.h>
 #include "kirby/nds_p4_kirby.generated.h"
@@ -309,6 +310,13 @@ u32 ndsP4MatchContent(s32 player)
     case nSCKindVSBattle:
     case nSCKindVSResults:
         return gNdsP4PlayerContent[player];
+#if NDS_P2_1P_GAME
+    case nSCKind1PChallenger:
+    case nSCKind1PGame:
+        /* P7 U5: a content challenger's screen and fight
+         * (battleship_sc1pmanager.c); 0 in every other 1P scene. */
+        return ndsP7ChallengerContent(player);
+#endif
     default:
         return 0u;
     }
@@ -344,9 +352,21 @@ sb32 ndsP4DuelHighDetail(s32 player, s32 fkind)
 {
     u32 content;
     const NDSP4Fighter *f;
+    sb32 duel = FALSE;
 
-    if ((gSCManagerSceneData.scene_curr != nSCKindVSBattle) || (gSCManagerBattleState == NULL) ||
-        ((gSCManagerBattleState->pl_count + gSCManagerBattleState->cp_count) > 2))
+    if ((gSCManagerSceneData.scene_curr == nSCKindVSBattle) && (gSCManagerBattleState != NULL) &&
+        ((gSCManagerBattleState->pl_count + gSCManagerBattleState->cp_count) <= 2))
+    {
+        duel = TRUE;
+    }
+#if NDS_P2_1P_GAME
+    /* P7 U5: a challenger fight is one on one. */
+    if ((gSCManagerSceneData.scene_curr == nSCKind1PGame) && (gNdsP7Challenger.active != 0u))
+    {
+        duel = TRUE;
+    }
+#endif
+    if (duel == FALSE)
     {
         return FALSE;
     }
@@ -544,6 +564,15 @@ sb32 ndsP4ParentFilesNeeded(s32 fkind)
     {
         state = &gSCManagerTransferBattleState;
     }
+#if NDS_P2_1P_GAME
+    else if ((gSCManagerSceneData.scene_curr == nSCKind1PGame) &&
+             (gNdsP7Challenger.active != 0u))
+    {
+        /* P7 U5: a content challenger's fight loads no parent files unless
+         * the player is the parent. */
+        state = gSCManagerBattleState;
+    }
+#endif
     else
     {
         return TRUE;
@@ -559,7 +588,7 @@ sb32 ndsP4ParentFilesNeeded(s32 fkind)
         {
             continue;
         }
-        if (ndsP4Fighter(gNdsP4PlayerContent[player]) == NULL)
+        if (ndsP4Fighter(ndsP4MatchContent(player)) == NULL)
         {
             return TRUE;
         }

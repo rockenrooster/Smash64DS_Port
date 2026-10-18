@@ -1341,6 +1341,8 @@ volatile u32 gNdsCampaignWalkMeasure;
 static u32 sNdsCampaignBattlePlaybackFrame;
 static u32 sNdsCampaignStageClearPlaybackFrame;
 static u32 sNdsCampaignContinuePlaybackFrame;
+static u32 sNdsCampaignTapFrame;
+static sb32 sNdsCampaignTapPlayback;
 static sb32 sNdsCampaignTransitionTracking;
 static sb32 sNdsCampaignTallyFinalProofStopped;
 
@@ -1448,7 +1450,21 @@ static GObj *ndsCampaignFindOpponentGObj(void)
 static void ndsCampaignDrivePlayback(void)
 {
     const u32 scene = (u32)gSCManagerSceneData.scene_curr;
+    static u32 sNdsCampaignTapScene;
 
+    /* Frames into the current scene, for the taps at the end. */
+    if (sNdsCampaignTapScene != scene)
+    {
+        sNdsCampaignTapScene = scene;
+        sNdsCampaignTapFrame = 0u;
+        if (sNdsCampaignTapPlayback != FALSE)
+        {
+            ndsControllerPlaybackSetPad(0u, 0u, 0, 0);
+            ndsControllerPlaybackSetEnabled(FALSE);
+            ndsControllerPlaybackSetConnectedMask(0u);
+            sNdsCampaignTapPlayback = FALSE;
+        }
+    }
     if (scene == (u32)nSCKind1PGame)
     {
         GObj *player_gobj;
@@ -1651,6 +1667,27 @@ static void ndsCampaignDrivePlayback(void)
     {
         ndsCampaignTransitionTrackHeap();
         ndsControllerPlaybackSetPad(0u, 0u, 0, 0);
+    }
+
+    /* P7 U10: the challenger screen and an unlock message wait for A after
+     * 120 tics (sc1pchallenger.c:316, mnmessage.c:309); the walk taps it
+     * from tic 150, so a challenger witness runs end to end. */
+    if ((gNdsMenuShellWalkRoute == 1u) &&
+        ((scene == (u32)nSCKind1PChallenger) || (scene == (u32)nSCKindMessage)))
+    {
+        /* The source screen reads the controller pipeline: the walk's pad
+         * reaches it only while playback is on (off again at the next scene,
+         * above). */
+        if (gNdsControllerPlaybackEnabled == 0u)
+        {
+            ndsControllerPlaybackSetConnectedMask(0x1u);
+            ndsControllerPlaybackSetEnabled(TRUE);
+            sNdsCampaignTapPlayback = TRUE;
+        }
+        sNdsCampaignTapFrame++;
+        ndsControllerPlaybackSetPad(0u,
+            ((sNdsCampaignTapFrame >= 150u) && ((sNdsCampaignTapFrame % 24u) <= 1u)) ?
+                A_BUTTON : 0u, 0, 0);
     }
 }
 #endif

@@ -72,6 +72,12 @@
 #if NDS_P2_1P_GAME
 
 #include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <nds/nds_backup.h>
+#include <nds/nds_p7.h>
+#include <nds/nds_reloc_assets.h>
+#include <nds/nds_source2d.h>
 #include <PR/gbi.h>
 #include <PR/ultratypes.h>
 #include <gm/gmsound.h>
@@ -96,13 +102,214 @@ sb32 sc1PManagerCheckUnlockSoundTest(void);
 #define mnMessageStartScene ndsBaseMNMessageStartScene
 void ndsBaseMNMessageStartScene(void);
 
+/* The tint (mnMessageTintProcDisplay, :83-96): its fill rectangle -- prim
+ * (0x00, 0x00, 0xFF, 0x3F) under G_RM_AA_XLU_SURF -- is the source 2D
+ * presenter's translucent fill over the wallpaper; the state words around it
+ * are consumed as every tenant's are. It was the screen's one native
+ * failure a frame (SPRITE / NO_PROGRAM at the menu fill drain). */
+#pragma push_macro("gDPFillRectangle")
+#undef gDPFillRectangle
+#define gDPFillRectangle(pkt, ulx, uly, lrx, lry) \
+    ndsSource2DFillTranslucent((ulx), (uly), (lrx), (lry), 0x0000FF3Fu)
+
 #include "../../decomp/BattleShip-main/decomp/src/mn/mncommon/mnmessage.c"
 
+#pragma pop_macro("gDPFillRectangle")
 #undef mnMessageStartScene
 
 void mnMessageStartScene(void)
 {
     ndsBaseMNMessageStartScene();
+}
+
+/* P7 U6: a P7 unlock's message. The source's scene -- the collage
+ * wallpaper, the tint, the exclaim, the four cameras, the message BGM and
+ * cue, the 120-tic hold and A/B/START -- built from its own makers, with the
+ * row's lines (scripts/p7/generate_p7_messages.py, the source's I4 style:
+ * NitroFS p7/messages.bin, read into this scene's heap) in place of the
+ * source sprite, and no source unlock applied: the 1P manager's seam
+ * delivered the row before its message shows. */
+typedef struct NDSP7Message
+{
+    u8 row;
+    u8 width;
+    u8 height;
+    s16 x;
+    s16 y;
+    u32 offset;
+} NDSP7Message;
+#include "../nds/nds_p7_messages.generated.inc"
+
+static Sprite sNdsP7MessageSprite;
+static const NDSP7Message *sNdsP7MessageCurrent;
+
+/* The row's Bitmap and texels in one block of this scene's heap, the texels
+ * read from the file and the block registered as the scene's loaded file
+ * (the sprite presenter draws only what a file holds). NULL when it cannot
+ * be read: the screen shows the wallpaper and the exclaim alone. */
+static Bitmap *ndsP7MessageLoad(const NDSP7Message *m)
+{
+    u32 header[2];
+    u32 bytes = ((u32)m->width / 2u) * (u32)m->height;
+    u32 head = (sizeof(Bitmap) + 7u) & ~7u;
+    u8 *block = syTaskmanMalloc(head + bytes, 8);
+    Bitmap *bitmap = (Bitmap *)block;
+    FILE *file;
+    sb32 ok = FALSE;
+
+    if (block == NULL)
+    {
+        return NULL;
+    }
+    ndsFsLock();
+    file = fopen("nitro:/p7/messages.bin", "rb");
+    if (file != NULL)
+    {
+        ok = ((fread(header, sizeof(header), 1u, file) == 1u) &&
+              (header[0] == NDS_P7_MESSAGE_MAGIC) && (header[1] == NDS_P7_MESSAGE_BYTES) &&
+              (fseek(file, (long)(sizeof(header) + m->offset), SEEK_SET) == 0) &&
+              (fread(block + head, 1u, bytes, file) == bytes)) ? TRUE : FALSE;
+        fclose(file);
+    }
+    ndsFsUnlock();
+    if (ok == FALSE)
+    {
+        return NULL;
+    }
+    memset(bitmap, 0, sizeof(*bitmap));
+    bitmap->width = m->width;
+    bitmap->width_img = m->width;
+    bitmap->buf = block + head;
+    bitmap->actualHeight = m->height;
+    if (ndsRelocRegisterSyntheticFile(NDS_RELOC_SYNTHETIC_ASSET_BASE + m->row, block,
+                                      head + bytes) == FALSE)
+    {
+        return NULL;
+    }
+    return bitmap;
+}
+
+static void ndsP7MessageMakeLines(const NDSP7Message *m)
+{
+    GObj *gobj;
+    SObj *sobj;
+    Bitmap *bitmap = ndsP7MessageLoad(m);
+
+    if (bitmap == NULL)
+    {
+        return;
+    }
+    memset(&sNdsP7MessageSprite, 0, sizeof(sNdsP7MessageSprite));
+    sNdsP7MessageSprite.width = m->width;
+    sNdsP7MessageSprite.height = m->height;
+    sNdsP7MessageSprite.scalex = 1.0F;
+    sNdsP7MessageSprite.scaley = 1.0F;
+    sNdsP7MessageSprite.red = 0xFF;
+    sNdsP7MessageSprite.green = 0xFF;
+    sNdsP7MessageSprite.blue = 0xFF;
+    sNdsP7MessageSprite.alpha = 0xFF;
+    sNdsP7MessageSprite.nbitmaps = 1;
+    sNdsP7MessageSprite.bmheight = m->height;
+    sNdsP7MessageSprite.bmHreal = m->height;
+    sNdsP7MessageSprite.bmfmt = G_IM_FMT_I;
+    sNdsP7MessageSprite.bmsiz = G_IM_SIZ_4b;
+    sNdsP7MessageSprite.bitmap = bitmap;
+
+    gobj = gcMakeGObjSPAfter(0, NULL, 3, GOBJ_PRIORITY_DEFAULT);
+    gcAddGObjDisplay(gobj, lbCommonDrawSObjAttr, 1, GOBJ_PRIORITY_DEFAULT, ~0);
+    sobj = lbCommonMakeSObjForGObj(gobj, &sNdsP7MessageSprite);
+    sobj->sprite.attr &= ~SP_FASTCOPY;
+    sobj->sprite.attr |= SP_TRANSPARENT;
+    sobj->pos.x = m->x;
+    sobj->pos.y = m->y;
+}
+
+/* mnMessageFuncRun (:305-325) without the source's unlock. */
+static void ndsP7MessageFuncRun(GObj *gobj)
+{
+    (void)gobj;
+    sMNMessageTotalTimeTics++;
+    if (sMNMessageTotalTimeTics >= 120)
+    {
+        if (sMNMessageUnk0x80132660 != 0)
+        {
+            sMNMessageUnk0x80132660--;
+        }
+        if ((scSubsysControllerGetPlayerStickInRangeLR(-30, 30) != FALSE) &&
+            (scSubsysControllerGetPlayerStickInRangeUD(-30, 30) != FALSE))
+        {
+            sMNMessageUnk0x80132660 = 0;
+        }
+        if (scSubsysControllerGetPlayerTapButtons(A_BUTTON | B_BUTTON | START_BUTTON) != FALSE)
+        {
+            syTaskmanSetLoadScene();
+        }
+    }
+}
+
+/* mnMessageFuncStart (:328-358) with the row's lines. */
+static void ndsP7MessageFuncStart(void)
+{
+    LBRelocSetup rl_setup;
+
+    rl_setup.table_addr = (uintptr_t)&lLBRelocTableAddr;
+    rl_setup.table_files_num = (u32)&llRelocFileCount;
+    rl_setup.file_heap = NULL;
+    rl_setup.file_heap_size = 0;
+    rl_setup.status_buffer = sMNMessageStatusBuffer;
+    rl_setup.status_buffer_size = ARRAY_COUNT(sMNMessageStatusBuffer);
+    rl_setup.force_status_buffer = NULL;
+    rl_setup.force_status_buffer_size = 0;
+
+    lbRelocInitSetup(&rl_setup);
+    lbRelocLoadFilesListed(dMNMessageFileIDs, sMNMessageFiles);
+    gcMakeGObjSPAfter(0, ndsP7MessageFuncRun, 0, GOBJ_PRIORITY_DEFAULT);
+    gcMakeDefaultCameraGObj(0, GOBJ_PRIORITY_DEFAULT, 100, 0, GPACK_RGBA8888(0x00, 0x00, 0x00, 0x00));
+
+    sMNMessageUnk0x80132660 = 0;
+    sMNMessageTotalTimeTics = 0;
+    mnMessageMakeWallpaperCamera();
+    mnMessageMakeMessageCamera();
+    mnMessageMakeTintCamera();
+    mnMessageMakeExclaimCamera();
+    mnMessageMakeWallpaper();
+    mnMessageMakeTint();
+    mnMessageMakeExclaim();
+    ndsP7MessageMakeLines(sNdsP7MessageCurrent);
+
+    syAudioPlayBGM(0, nSYAudioBGMMessage);
+    func_800269C0_275C0(nSYAudioFGMDeadUpStar);
+}
+
+void ndsP7ShowMessages(const u8 *rows, u32 count)
+{
+    SYTaskmanSetup setup;
+    u32 i;
+    u32 k;
+
+    for (i = 0u; (rows != NULL) && (i < count); i++)
+    {
+        sNdsP7MessageCurrent = NULL;
+        for (k = 0u; k < NDS_P7_MESSAGE_COUNT; k++)
+        {
+            if (sNdsP7Messages[k].row == rows[i])
+            {
+                sNdsP7MessageCurrent = &sNdsP7Messages[k];
+                break;
+            }
+        }
+        if (sNdsP7MessageCurrent == NULL)
+        {
+            continue;
+        }
+        dMNMessageVideoSetup.zbuffer = SYVIDEO_ZBUFFER_START(320, 240, 0, 10, u16);
+        syVideoInit(&dMNMessageVideoSetup);
+        setup = dMNMessageTaskmanSetup;
+        setup.func_start = ndsP7MessageFuncStart;
+        setup.scene_setup.arena_size =
+            (size_t)((uintptr_t)&ovl1_VRAM - (uintptr_t)&ovl22_BSS_END);
+        syTaskmanStartTask(&setup);
+    }
 }
 
 #endif /* NDS_P2_1P_GAME */

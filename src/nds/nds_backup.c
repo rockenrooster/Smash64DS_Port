@@ -278,3 +278,99 @@ s32 ndsBackupFlush(void)
     ndsFsUnlock();
     return result;
 }
+
+/* Siblings: P7 U2's VS records (nds_p7_records.c), named after the save the
+ * same way (a harness build's are diagnostic too). */
+#if (NDS_DEV_SCENE_HARNESS != NDS_DEV_SCENE_HARNESS_NORMAL) || \
+    NDS_P2_MENU_WALK || NDS_HARNESS_FAST_LOGIC || NDS_R2_BOTH_CPU || \
+    NDS_P2_FOUR_CPU_STRESS
+#define NDS_BACKUP_RECORDS_FILENAME "smash64ds-diagnostic-vs.sav"
+#else
+#define NDS_BACKUP_RECORDS_FILENAME "smash64ds-vs.sav"
+#endif
+static const char *const sNdsBackupSiblingNames[][NDS_BACKUP_RECOVERY_NAMES] = {
+    { "fat:/" NDS_BACKUP_RECORDS_FILENAME, "fat:/" NDS_BACKUP_RECORDS_FILENAME ".bak",
+      "fat:/" NDS_BACKUP_RECORDS_FILENAME ".tmp" },
+    { "sd:/" NDS_BACKUP_RECORDS_FILENAME, "sd:/" NDS_BACKUP_RECORDS_FILENAME ".bak",
+      "sd:/" NDS_BACKUP_RECORDS_FILENAME ".tmp" },
+};
+
+/* The sibling's names on the save's volume, or NULL without one. */
+static const char *const *ndsBackupSiblingNames(u32 sibling)
+{
+    u32 i;
+
+    if (sibling != NDS_BACKUP_SIBLING_RECORDS)
+    {
+        return NULL;
+    }
+    ndsBackupLoadUnlocked();
+    for (i = 0u; i < sizeof(sNdsBackupPaths) / sizeof(sNdsBackupPaths[0]); i++)
+    {
+        if (sNdsBackupPath == sNdsBackupPaths[i])
+        {
+            return sNdsBackupSiblingNames[i];
+        }
+    }
+    return NULL;
+}
+
+FILE *ndsBackupOpenSibling(u32 sibling, u32 recovery, const char *mode)
+{
+    const char *const *names = ndsBackupSiblingNames(sibling);
+
+    if ((names == NULL) || (recovery >= NDS_BACKUP_RECOVERY_NAMES) || (mode == NULL))
+    {
+        return NULL;
+    }
+    return fopen(names[recovery], mode);
+}
+
+s32 ndsBackupPromoteSibling(u32 sibling)
+{
+    const char *const *names = ndsBackupSiblingNames(sibling);
+
+    if (names == NULL)
+    {
+        return FALSE;
+    }
+    remove(names[0]); /* absent or rejected by the caller */
+    return (rename(names[2], names[0]) == 0) ? TRUE : FALSE;
+}
+
+s32 ndsBackupTransactSibling(u32 sibling, NDSBackupWriter write, void *ctx, FILE **src)
+{
+    const char *const *names = ndsBackupSiblingNames(sibling);
+    FILE *tmp;
+    s32 ok;
+
+    if ((names == NULL) || (write == NULL))
+    {
+        return FALSE;
+    }
+    tmp = fopen(names[2], "wb");
+    if (tmp == NULL)
+    {
+        return FALSE;
+    }
+    ok = write(tmp, ctx);
+    if (fclose(tmp) != 0)
+    {
+        ok = FALSE;
+    }
+    if ((src != NULL) && (*src != NULL))
+    {
+        fclose(*src);
+        *src = NULL;
+    }
+    if (ok == FALSE)
+    {
+        remove(names[2]);
+        return FALSE;
+    }
+    /* The save's promotion: FAT rename need not replace a target, so the
+     * canonical file steps aside as .bak first (absent: nothing to keep). */
+    remove(names[1]);
+    (void)rename(names[0], names[1]);
+    return (rename(names[2], names[0]) == 0) ? TRUE : FALSE;
+}

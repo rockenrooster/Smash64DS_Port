@@ -57,6 +57,8 @@ static u64 sFighters, sStages, sContents, sGkinds;
 ''' + header + r'''
 u32 ndsP7FighterUnlocked(u32 sel) { return (u32)((sFighters >> sel) & 1u); }
 u32 ndsP7StageUnlocked(u32 stage) { return (u32)((sStages >> stage) & 1u); }
+void ndsP7SetFighterUnlocked(u32 sel) { sFighters |= 1ull << sel; }
+void ndsP7SetStageUnlocked(u32 stage) { sStages |= 1ull << stage; }
 u32 ndsP7UnlockContentCompiled(u32 content) { return (u32)((sContents >> content) & 1u); }
 u32 ndsP7UnlockStageCompiled(u32 gkind) { return (u32)((sGkinds >> gkind) & 1u); }
 ''' + table + "\n" + body.replace('"nds_p7_unlocks.generated.inc"', '') + r'''
