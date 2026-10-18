@@ -5358,6 +5358,9 @@ static s32 ndsRendererEntryEffectCornersSelect(u32 root_index)
 }
 
 #ifdef NDS_ENTRY_EFFECT_P4_CORNER_BLOCKS
+/* The heap a corner block must leave for the setup's allocations after it
+ * (the fighters' thread stacks, 4,216 B each). */
+#define NDS_ENTRY_P4_CORNERS_KEEP_FREE (8u * 1024u)
 /* At battle setup, before any entry draws: the blocks of the contents in the
  * match from nitro:/p4/entry_corners.bin into this scene's heap. A block that
  * does not fit or read stays out; its roots then fail closed (counted). */
@@ -5379,10 +5382,15 @@ ndsRendererEntryP4CornersLoad(void)
         {
             continue;
         }
-        /* A VS battle's idle overlay tail first, then the heap if it fits. */
+        /* A VS battle's idle overlay tail first, then the heap if it fits with
+         * room left for the setup's last allocations (the fighters' thread
+         * stacks): four heavy contents on Congo Jungle took the heap's last
+         * bytes here and the next thread stack halted (2026-10-18). A block
+         * that would take that room stays out: its roots draw nothing. */
         data = ndsVSBattleOverlayTryAlloc(bytes, 4u);
         if ((data == NULL) &&
-            (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap, bytes, 4u) == FALSE))
+            (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap,
+                                 bytes + NDS_ENTRY_P4_CORNERS_KEEP_FREE, 4u) == FALSE))
         {
             continue;
         }

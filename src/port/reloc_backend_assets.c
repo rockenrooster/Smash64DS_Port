@@ -18544,8 +18544,10 @@ size_t lbRelocLoadFilesExtern(u32 *ids, u32 len, void **files, void *heap)
         gNdsMapsOriginalLoadedFileCount = len;
         gNdsMapsOriginalRelocResult = NDS_MAPS_ORIGINAL_RELOC_PASS;
     }
+    /* Seven outside Sudden Death: the announcer's letters load only for it
+     * (battleship_scvsbattle.c ndsSCVSBattleLoadCommonFiles). */
     if ((gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&
-        (len == 8u))
+        ((len == 8u) || (len == 7u)))
     {
         gNdsSCVSBattleOriginalLoadedFileCount = len;
         gNdsSCVSBattleOriginalRelocResult =

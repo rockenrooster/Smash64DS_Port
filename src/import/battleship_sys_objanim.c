@@ -1971,14 +1971,43 @@ static u32 ndsAObjEvent32RosterClips(const SCPlayerData *players)
     return need;
 }
 
+/* The roster margin is the cast's: the event32 clips its fighters' motions
+ * are, which the elastic cache and the prefetch keep normalized (the 09-30
+ * rows above). A P4 content's motions are FIGATREE and its share is its own
+ * allowance, measured over four of it on Castle with that stage's share in
+ * it, so a roster of contents alone takes no margin (2026-10-18: Crash,
+ * Sonic, Mr. Game & Watch and Palutena on Congo Jungle held 2,273 of the
+ * 5,786 entries the bound gave them, and the heap fell 832 B under the
+ * latch). */
+static u32 ndsAObjEvent32RosterMargin(const SCPlayerData *players)
+{
+#if NDS_P4
+    u32 i;
+
+    for (i = 0u; i < GMCOMMON_PLAYERS_MAX; i++)
+    {
+        if ((players[i].pkind != nFTPlayerKindNot) &&
+            (ndsP4MatchContent((s32)i) == 0u))
+        {
+            return NDS_AOBJ_EVENT32_ROSTER_MARGIN;
+        }
+    }
+    return 0u;
+#else
+    (void)players;
+    return NDS_AOBJ_EVENT32_ROSTER_MARGIN;
+#endif
+}
+
 static u32 ndsAObjEvent32RosterLimit(u32 gkind, u32 limit)
 {
-    u32 need = ndsAObjEvent32StagePart(gkind) + NDS_AOBJ_EVENT32_ROSTER_MARGIN;
+    u32 need = ndsAObjEvent32StagePart(gkind);
 
     if (gSCManagerBattleState == NULL)
     {
         return limit;
     }
+    need += ndsAObjEvent32RosterMargin(gSCManagerBattleState->players);
     need += ndsAObjEvent32RosterClips(gSCManagerBattleState->players);
     if (need > NDS_AOBJ_EVENT32_LIMIT_MAX)
     {

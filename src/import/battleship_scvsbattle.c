@@ -83,7 +83,51 @@ void ndsBaseSCVSBattleStartSuddenDeath(void);
 void ndsBaseSCVSBattleFuncUpdate(void);
 
 #include <battleship_overlay/src/sc/sccommon/scvsbattle.c>
+
+/* The heap the finished battle left as this scene enters its Sudden Death
+ * (ndsSCVSBattleManagerFuncUpdate; a match's heap only shrinks, so this is
+ * its low-water): the same stage and no more fighters, the forecast of what
+ * Sudden Death leaves. All ones outside it. */
+static u32 sNdsSCVSBattleLastBattleFree = 0xffffffffu;
+
+/* What Sudden Death must leave beside SUDDEN DEATH!'s letters:
+ * ifCommonSetMaxNumGObj's latch (ifcommon.c:3160). */
+#define NDS_SCVSBATTLE_LETTERS_KEEP_FREE (25u * 1024u)
+
+/* The common interface files, less IFCommonAnnounceCommon outside Sudden
+ * Death. Its 32,496 B hold the letters of SUDDEN DEATH! and of the 1P bonus
+ * boards' FAILURE and COMPLETE! (ifcommon.c:2363, :3243, :3255); a VS battle
+ * shows only the first, and only in the Sudden Death that restarts this scene
+ * with every file loaded again. Four heavy contents on Congo Jungle ran the
+ * heap out with those letters resident and unread (2026-10-18). Sudden Death
+ * loads them when the battle before it left room for them above the latch;
+ * otherwise it announces itself by voice alone
+ * (battleship_ifcommon.c ifCommonSuddenDeathMakeInterface) rather than run
+ * the heap out. The bonus boards and the 1P game load their own list. */
+static void ndsSCVSBattleLoadCommonFiles(void)
+{
+    u32 count = ARRAY_COUNT(dGMCommonFileIDs);
+
+    if (dGMCommonFileIDs[count - 1u] == (u32)&llIFCommonAnnounceCommonFileID)
+    {
+        u32 letters = (u32)lbRelocGetAllocSize(&dGMCommonFileIDs[count - 1u], 1u);
+
+        if ((gSCManagerSceneData.is_suddendeath == FALSE) ||
+            (sNdsSCVSBattleLastBattleFree <
+             (letters + NDS_SCVSBATTLE_LETTERS_KEEP_FREE)))
+        {
+            count--;
+            gGMCommonFiles[count] = NULL;
+        }
+    }
+    lbRelocLoadFilesExtern(dGMCommonFileIDs, count, gGMCommonFiles,
+        syTaskmanMalloc(lbRelocGetAllocSize(dGMCommonFileIDs, count), 0x10));
+}
+#pragma push_macro("lbRelocLoadFilesListed")
+#undef lbRelocLoadFilesListed
+#define lbRelocLoadFilesListed(file_ids, out_ptrs) ndsSCVSBattleLoadCommonFiles()
 #include "../../decomp/BattleShip-main/decomp/src/sc/sccommon/scvsbattlefiles.c"
+#pragma pop_macro("lbRelocLoadFilesListed")
 
 #undef scVSBattleStartScene
 #undef scVSBattleStartBattle
@@ -117,6 +161,12 @@ void ndsSCVSBattleManagerFuncUpdate(SYTaskmanSetup *setup)
     {
         ds_setup.func_start = scVSBattleStartSuddenDeath;
     }
+    /* The finished battle's heap is still in place: its free bytes for the
+     * Sudden Death's letters (ndsSCVSBattleLoadCommonFiles). */
+    sNdsSCVSBattleLastBattleFree =
+        (ds_setup.func_start == scVSBattleStartSuddenDeath) ?
+            (u32)((uintptr_t)gSYTaskmanGeneralHeap.end -
+                  (uintptr_t)gSYTaskmanGeneralHeap.ptr) : 0xffffffffu;
     gNdsSCVSBattleLifecycleArenaAdapterCount++;
     scManagerFuncUpdate(&ds_setup);
 }
@@ -309,7 +359,7 @@ void scVSBattleStartBattle(void)
     gNdsSCVSBattleOriginalScenePrev = gSCManagerSceneData.scene_prev;
     gNdsSCVSBattleOriginalSceneCurr = gSCManagerSceneData.scene_curr;
 
-    if (gNdsSCVSBattleOriginalLoadedFileCount == 8u)
+    if (gNdsSCVSBattleOriginalLoadedFileCount != 0u)
     {
         gNdsSCVSBattleOriginalSetupMask |=
             NDS_SCVSBATTLE_SETUP_FILES_READY;

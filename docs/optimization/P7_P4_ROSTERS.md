@@ -182,3 +182,88 @@ Palutenas with 315 KB of free heap run at the same P95 as with no motion
 cache: the over-gate frames are drawing (MISC P95 644K against the cast's
 543K; four distinct heavy contents 821-955K), not clip reads. Mixes of
 heavy contents are the open gap: 1.43-1.50M against the 1.12M gate.
+
+## Heap across the stages (2026-10-18)
+
+The heaviest mix found (Crash, Sonic, Mr. Game & Watch, Palutena) and two
+like it (Captain or Ganondorf in Crash's place) on every VS and P5 stage,
+`build-sweep-s4`, 300 frames from the start (heap low-water; the sweep's
+arena is 24,832 B under the play ROM's, the tick HUD's cost):
+
+| stage | Crash, Sonic, G&W, Palutena | Captain, ... | Ganondorf, ... |
+|---|---|---|---|
+| Peach's Castle (0) | 51,236 | 51,024 | 47,272 |
+| Sector Z (1) | 6,832 | 16,412 | 21,492 |
+| Congo Jungle (2) | out of heap | out of heap | out of heap |
+| Planet Zebes (3) | 6,896 | 16,224 | 22,888 |
+| Hyrule Castle (4) | 55,696 | 48,336 | 54,348 |
+| Yoshi's Island (5) | out of heap | 10,872 | 12,636 |
+| Dream Land (6) | 45,240 | 51,412 | 49,468 |
+| Saffron City (7) | out of heap | 4,896 | 6,348 |
+| Mushroom Kingdom (8) | 38,488 | 47,356 | 49,816 |
+| Meta Crystal (13) | 56,864 | 53,300 | 47,932 |
+| Duel Zone (14) | 61,744 | 60,056 | 50,608 |
+| Final Destination (16) | 10,300 | 25,536 | 26,848 |
+| First Destination (41) | 55,472 | 50,736 | 53,988 |
+| Bowser's Stadium (42) | 53,592 | 66,584 | 67,464 |
+| Hyrule Temple (43) | out of heap | 1,980 | 5,640 |
+| Dinosaur Land (44) | 13,384 | 27,184 | 31,072 |
+
+An ordered census of the Jungle run (`census2.ps1`): the overlay loan (all
+445,344 B) holds the battle's common files (56 KB), the HUD's (50 KB), the
+ground and its collision (95 KB), the stage blob (21 KB), the item pool and
+the items' common file (15 + 83 KB), the fighters' pools (36 KB) and one owner
+image (38 KB); the heap then takes the stage's own files (66 KB), the effects'
+common files (97 KB), and per content its pack (27-64 KB), its other files
+(Palutena 67 KB, her wings file 35 KB of it), shield poses, tables, figatree
+heap and owner image; the entry corners and the stage's GX list come last and
+find the heap empty (the GX list declines; a thread stack overflows).
+
+What changed (2026-10-18), measured on the ship ROM (`play-p7d`, real menus,
+the roster and stage poked at the battle start, 900 frames of a 3-minute
+match; the heaviest mix):
+
+- **The announcer's letters stay out of a VS battle.** IFCommonAnnounceCommon
+  (32,496 B: SUDDEN DEATH!, and the 1P bonus boards' FAILURE and COMPLETE!)
+  was resident in every VS battle and read only by a Sudden Death
+  (`battleship_scvsbattle.c` `ndsSCVSBattleLoadCommonFiles`). A Sudden Death
+  loads it when the battle before it left its bytes plus the 25 KiB latch
+  (`ifCommonSetMaxNumGObj`); otherwise SUDDEN DEATH! is announced by voice
+  only (`battleship_ifcommon.c` `ifCommonSuddenDeathMakeInterface`), never by
+  running the heap out.
+- **No battle coroutine left.** The start lamps (`ifCommonCountdownThread`)
+  and Sudden Death's start (`ifCommonSuddenDeathThread`) run as function
+  processes with the thread's ticks (as the announcer and the entry threads
+  already did), so no 4,208 B coroutine block is taken.
+- **The entry corners keep 8 KiB free** (`NDS_ENTRY_P4_CORNERS_KEEP_FREE`):
+  a block that would take the last bytes before the setup's own allocations
+  stays out (its roots draw nothing) instead of halting the match.
+
+| stage | before | after |
+|---|---|---|
+| Congo Jungle (2) | out of heap | 26,304 |
+| Yoshi's Island (5) | 7,728 | 37,376 |
+| Saffron City (7) | 4,152 | 29,672 |
+| Hyrule Temple (43) | 1,960 | 28,408 |
+| Sector Z (1) | 15,520 | 46,048 |
+| Planet Zebes (3) | 16,584 | 46,952 |
+| Final Destination (16) | 20,472 | 42,064 |
+| Dinosaur Land (44) | 21,904 | 40,500 |
+
+(Yoshi's Island through Dinosaur Land were measured before the coroutine
+change, Jungle and Hyrule Temple after it.) Congo Jungle was 832 B under
+25,600 after the first two; nothing is left idle in the loan
+(`sNdsFrontendLoanEnd - sNdsFrontendCursor` 0, 201,216 B spilled to the
+heap). The event32 ledger gave that roster 5,786 entries and 2,273 were live
+(on Hyrule Temple, a P5 stage under the flat 5,120 bound, 1,328): a roster
+of contents alone no longer takes the cast's 384-entry roster margin
+(`ndsAObjEvent32RosterMargin`; a content's own allowance is a measured
+four-of-it peak with Castle's stage share in it), 5,402 entries, and the
+Jungle row above is with it.
+
+The freed heap moved frame cost too (sweep `s6`, Dream Land, 1,960 frames,
+replay digests identical to `s4` on all six rosters): Crash, Sonic,
+Mr. Game & Watch and Palutena 1,428,032 -> 1,340,032 (77.5% -> 84.9% within
+two VBlanks); Palutena, Bowser, Meta Knight and Ike 1,502,656 -> 1,370,432
+(70.3% -> 81.2%); the mirrors and the cast unchanged (1,079,872 cast; Bowser
+1,189,120; Crash 1,177,088; Palutena 1,246,208).

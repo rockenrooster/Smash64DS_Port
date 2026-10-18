@@ -115,6 +115,7 @@ static void ndsIFCommonAddGObjDisplay(GObj *gobj,
 #define ifCommonBattleUpdateInterfaceAll ndsIFCommonBattleUpdateInterfaceAllOriginal
 #define ifCommonPlayerTagMakeInterface ndsIFCommonPlayerTagMakeInterfaceOriginal
 #define ifCommonItemArrowSetAttr ndsIFCommonItemArrowSetAttrOriginal
+#define ifCommonSuddenDeathMakeInterface ndsIFCommonSuddenDeathMakeInterfaceOriginal
 #if NDS_P5
 #define ifCommonBattleSetGameStatusWait ndsIFCommonBattleSetGameStatusWaitOriginal
 #endif
@@ -145,6 +146,7 @@ static void ndsIFCommonAddGObjDisplay(GObj *gobj,
 #undef ifCommonBattleUpdateInterfaceAll
 #undef ifCommonEntryAllMakeInterface
 #undef ifCommonItemArrowSetAttr
+#undef ifCommonSuddenDeathMakeInterface
 #if NDS_P5
 #undef ifCommonBattleSetGameStatusWait
 #endif
@@ -159,19 +161,235 @@ static void ndsIFCommonAnnounceProcUpdate(GObj *interface_gobj)
     gcEjectGObj(interface_gobj);
 }
 
+/* ifCommonSuddenDeathThread (ifcommon.c:2328-2337): 90 ticks of SUDDEN
+ * DEATH!, then GO and the GObj's end. */
+static void ndsIFCommonSuddenDeathProcUpdate(GObj *interface_gobj)
+{
+    if (interface_gobj->user_data.s != 0)
+    {
+        interface_gobj->user_data.s--;
+        return;
+    }
+    ifCommonAnnounceGoMakeInterface();
+    ifCommonPlayerDamageSetShowInterface();
+    ifCommonAnnounceGoSetStatus();
+    func_800269C0_275C0(nSYAudioVoiceAnnounceGo);
+    gcEjectGObj(interface_gobj);
+}
+
+/* ifCommonCountdownThread (ifcommon.c:2045-2187), the start lamps, one call a
+ * tick: each call does what the thread did between two of its
+ * gcSleepCurrentGObjThread(1) calls, the thread's locals kept here (one
+ * countdown at a time; its GObj's user data holds the lamp SObj). Ticks
+ * 1-60 slide the lamps in; from tick 61 the switch runs on 60.., the lamps
+ * light at 2, 3, 4 and 5 seconds (GO at 5) and at 6 the slide out starts,
+ * the GObj ending at tick 421 -- the thread's ticks exactly. */
+typedef struct NDSIFCommonCountdown
+{
+    s32 timer;
+    s32 phase;          /* 0 slide in, 1 lamps, 2 slide out */
+    s32 lamp_status;
+    f32 scale;
+    SObj *sobj;
+    SObj *child_sobj;
+} NDSIFCommonCountdown;
+
+static NDSIFCommonCountdown sNdsIFCommonCountdown;
+
+static void ndsIFCommonCountdownSlide(GObj *interface_gobj, f32 step)
+{
+    SObj *sobj;
+
+    for (sobj = SObjGetStruct(interface_gobj); sobj != NULL; sobj = sobj->next)
+    {
+        sobj->pos.y += step;
+    }
+}
+
+static void ndsIFCommonCountdownProcUpdate(GObj *interface_gobj)
+{
+    NDSIFCommonCountdown *cd = &sNdsIFCommonCountdown;
+    SObj *other_sobj;
+    SObj *new_sobj;
+    f32 rscale;
+    s32 main_status = -1;
+
+    if (cd->phase == 0)
+    {
+        ndsIFCommonCountdownSlide(interface_gobj, 0.8833333F);
+        if (++cd->timer == 60)
+        {
+            cd->phase = 1;
+        }
+        return;
+    }
+    if (cd->phase == 2)
+    {
+        if (cd->timer >= I_SEC_TO_TICS(7))
+        {
+            gcEjectGObj(interface_gobj);
+            return;
+        }
+        ndsIFCommonCountdownSlide(interface_gobj, -0.8833333F);
+        cd->timer++;
+        return;
+    }
+    if (cd->sobj == NULL)
+    {
+        cd->sobj = ifGetSObj(interface_gobj);
+        cd->lamp_status = -1;
+        cd->child_sobj = cd->sobj->next->next;
+    }
+    switch (cd->timer)
+    {
+    case I_SEC_TO_TICS(2):
+        main_status = cd->lamp_status = 6;
+        func_800269C0_275C0(nSYAudioVoiceAnnounceThree);
+        break;
+
+    case I_SEC_TO_TICS(3):
+        main_status = cd->lamp_status = 7;
+        func_800269C0_275C0(nSYAudioVoiceAnnounceTwo);
+        break;
+
+    case I_SEC_TO_TICS(4):
+        main_status = cd->lamp_status = 8;
+        func_800269C0_275C0(nSYAudioVoiceAnnounceOne);
+        break;
+
+    case I_SEC_TO_TICS(5):
+        ifCommonAnnounceGoMakeInterface();
+        ifCommonAnnounceGoSetStatus();
+        ifCommonPlayerDamageSetShowInterface();
+        main_status = cd->lamp_status = 9;
+        func_800269C0_275C0(nSYAudioVoiceAnnounceGo);
+        break;
+
+    case I_SEC_TO_TICS(6):
+        /* The thread's goto finish: the slide out's first tick is this one. */
+        cd->phase = 2;
+        ndsIFCommonCountdownSlide(interface_gobj, -0.8833333F);
+        cd->timer++;
+        return;
+    }
+    if (cd->lamp_status != -1)
+    {
+        if (main_status != -1)
+        {
+            SObj *child_sobj = cd->child_sobj;
+
+            gcEjectSObj(cd->sobj->next);
+            gcEjectSObj(cd->sobj);
+
+            cd->sobj = ifCommonTrafficMakeSObj(interface_gobj, cd->lamp_status);
+            cd->sobj->sprite.scalex = cd->sobj->sprite.scaley = cd->scale = 3.0F;
+            new_sobj = ifCommonTrafficMakeSObj(interface_gobj, cd->lamp_status + 5);
+
+            if (cd->lamp_status == 9)
+            {
+                other_sobj = child_sobj->prev;
+
+                child_sobj->sprite.red = dIFCommonTrafficGoBacklightR[1];
+                child_sobj->sprite.green = dIFCommonTrafficGoBacklightG[1];
+                child_sobj->sprite.blue = dIFCommonTrafficGoBacklightB[1];
+
+                child_sobj->envcolor.r = dIFCommonTrafficGoShadowR[1];
+                child_sobj->envcolor.g = dIFCommonTrafficGoShadowG[1];
+                child_sobj->envcolor.b = dIFCommonTrafficGoShadowB[1];
+
+                if (other_sobj != NULL)
+                {
+                    other_sobj->next = child_sobj->next;
+                }
+                other_sobj = child_sobj->next;
+
+                if (other_sobj != NULL)
+                {
+                    other_sobj->prev = child_sobj->prev;
+                }
+                new_sobj->next = child_sobj;
+
+                child_sobj->prev = new_sobj;
+                child_sobj->next = NULL;
+            }
+        }
+        if (cd->scale != 1.0F)
+        {
+            cd->scale -= 0.2F;
+
+            if (cd->scale < 1.0F)
+            {
+                cd->scale = 1;
+            }
+            cd->sobj->sprite.scalex = cd->sobj->sprite.scaley = cd->scale;
+
+            rscale = (cd->scale - 1.0F) * 0.5F;
+
+            cd->sobj->pos.x = dIFCommonTrafficSpriteData[cd->lamp_status].pos.x -
+                              (rscale * cd->sobj->sprite.width);
+            cd->sobj->pos.y = dIFCommonTrafficSpriteData[cd->lamp_status].pos.y -
+                              (rscale * cd->sobj->sprite.height);
+        }
+    }
+    cd->timer++;
+}
+
+/* The battle's source threads as function processes: a DS GObj thread takes
+ * a 4,208-byte coroutine block from the heap, and the countdown's was the
+ * allocation four heavy contents on Congo Jungle could not make (2026-10-18;
+ * the entry threads went the same way earlier, ndsIFCommonEntryAllProcUpdate).
+ * Each keeps its thread's ticks; `user_data.s` counts a sleep. */
 static GObjProcess *ndsIFCommonAddGObjProcess(
     GObj *gobj, void (*proc)(GObj *), u8 kind, u32 priority)
 {
-    if ((proc == ifCommonAnnounceThread) &&
-        (kind == nGCProcessKindThread))
+    if (kind == nGCProcessKindThread)
     {
-        /* The source thread only sleeps 60 ticks and ejects this GObj. Keep
-         * that lifetime without allocating a 4,208-byte coroutine stack. */
-        gobj->user_data.s = 60;
-        proc = ndsIFCommonAnnounceProcUpdate;
-        kind = nGCProcessKindFunc;
+        if (proc == ifCommonAnnounceThread)
+        {
+            /* The source thread only sleeps 60 ticks and ejects this GObj. */
+            gobj->user_data.s = 60;
+            proc = ndsIFCommonAnnounceProcUpdate;
+            kind = nGCProcessKindFunc;
+        }
+        else if (proc == ifCommonSuddenDeathThread)
+        {
+            gobj->user_data.s = 90;
+            proc = ndsIFCommonSuddenDeathProcUpdate;
+            kind = nGCProcessKindFunc;
+        }
+        else if (proc == ifCommonCountdownThread)
+        {
+            static const NDSIFCommonCountdown start = { 0 };
+
+            sNdsIFCommonCountdown = start;
+            proc = ndsIFCommonCountdownProcUpdate;
+            kind = nGCProcessKindFunc;
+        }
     }
     return gcAddGObjProcess(gobj, proc, kind, priority);
+}
+
+/* SUDDEN DEATH! when the battle could not keep its letters
+ * (battleship_scvsbattle.c ndsSCVSBattleLoadCommonFiles): the source's
+ * interface -- its thread's 90 ticks and GO, the voice, the wait -- without
+ * the letters' SObjs. */
+void ifCommonSuddenDeathMakeInterface(void)
+{
+    GObj *interface_gobj;
+
+    if (gGMCommonFiles[7] != NULL)
+    {
+        ndsIFCommonSuddenDeathMakeInterfaceOriginal();
+        return;
+    }
+    interface_gobj = gcMakeGObjSPAfter(nGCCommonKindInterface, NULL,
+                                       nGCCommonLinkIDInterface,
+                                       GOBJ_PRIORITY_DEFAULT);
+    ndsIFCommonAddGObjProcess(interface_gobj, ifCommonSuddenDeathThread,
+                              nGCProcessKindThread, 5);
+    func_800269C0_275C0(nSYAudioVoiceAnnounceSuddenDeath);
+
+    gSCManagerBattleState->game_status = nSCBattleGameStatusWait;
 }
 
 u32 ndsIFCommonSkipDamageDisplay(void);
