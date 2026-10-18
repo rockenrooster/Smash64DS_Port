@@ -23,6 +23,7 @@
 #include <nds/nds_scene_manager.h>
 #include <nds/nds_platform.h>
 #include <sc/scene.h> /* gSCManagerSceneData, for the registered-kind arena rule below */
+#include <nds/nds_frontend_overlay.h>
 
 #define syTaskmanStartTask ndsBaseSyTaskmanStartTask
 #define syTaskmanMalloc ndsBaseSyTaskmanMalloc
@@ -255,6 +256,27 @@ void *syTaskmanMalloc(size_t size, u32 align)
     if (sNdsTaskmanMallocRegion != NULL)
     {
         return syMallocSet(sNdsTaskmanMallocRegion, size, align);
+    }
+    /* A VS battle borrows the front-end overlay's whole range for the scene
+     * (nds_frontend_overlay.c), and everything the scene allocates lives
+     * exactly as long: its allocations take the loan first and the general
+     * heap after it. Before 2026-10-18 only the contents' packs, images and
+     * files did (ndsSceneAssetAlloc), so a match whose contents left the loan
+     * idle -- a mirror, the original cast -- paid the stage, items, effects
+     * and interface from the heap beside ~100-250 KB of unused loan, and the
+     * elastic motion cache (the heap's free top) was that much smaller: four
+     * Bowsers in the shipping layout, 18 KB of cache and a 32% hit rate
+     * against 54 KB and 53% with the bare lab layout's bigger heap. A match
+     * whose demand fills the loan is unchanged; what does not fit still goes
+     * to the heap, and admission checks keep reading the heap. */
+    if (gSCManagerSceneData.scene_curr == nSCKindVSBattle)
+    {
+        void *loan = ndsFrontendOverlayTryAlloc(size, (align != 0u) ? align : 4u);
+
+        if (loan != NULL)
+        {
+            return loan;
+        }
     }
 
 #if NDS_R2_SECOND_ENTRY_DIAG
