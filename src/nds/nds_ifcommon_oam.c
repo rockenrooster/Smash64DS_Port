@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <nds/arm9/background.h>
+#include <nds/arm9/console.h>
 #include <nds/arm9/sprite.h>
 #include <nds/arm9/video.h>
 #include <nds/dma.h>
@@ -2750,15 +2752,59 @@ static u32 ndsIFCommonRleEncode(const u16 *in, u32 n, u16 *out, u32 cap)
     return o;
 }
 
+/* Where an end stream is kept (2026-10-18). Bank H is the sub screen's BG0
+ * console (nds_platform.c consoleInit: 4bpp font tiles from its char base,
+ * one 2 KB map at its map base), and the bytes between the font's last tile
+ * and the map are drawn by nothing: 22,528 B, which hold both streams
+ * (22,104 B, every one of them a match's heap before). VRAM takes no byte
+ * stores, so the caller copies halfwords; the decode reads halfwords. A
+ * stream that does not fit takes the scene heap, as it did. */
+#define NDS_IFCOMMON_END_SPARE_BANK_BASE 0x06200000u
+#define NDS_IFCOMMON_END_SPARE_BANK_BYTES 0x8000u
+__attribute__((used)) volatile u32 gNdsIFCommonEndBakedSpareBytes;
+
+static u16 *ndsIFCommonEndBakeStore(u32 words, u32 *spare_used)
+{
+    PrintConsole *console = consoleSelect(NULL);
+    u32 bytes = ((words * (u32)sizeof(u16)) + 3u) & ~3u;
+    uintptr_t lo;
+    uintptr_t hi;
+    uintptr_t at;
+
+    consoleSelect(console);
+    if ((console != NULL) && (console->consoleInitialised != false) &&
+        (console->bgLayer == 0u) && ((REG_BG0CNT_SUB & BIT(7)) == 0u) &&
+        (console->fontBgGfx != NULL) && (console->fontBgMap != NULL))
+    {
+        /* A 4bpp tile is 32 bytes. */
+        lo = (uintptr_t)console->fontBgGfx +
+             (((uintptr_t)console->fontCharOffset +
+               (uintptr_t)console->font.numChars) * 32u);
+        hi = (uintptr_t)console->fontBgMap;
+        at = ((lo + 3u) & ~(uintptr_t)3u) + *spare_used;
+        if ((lo >= NDS_IFCOMMON_END_SPARE_BANK_BASE) && (hi > lo) &&
+            (hi <= (NDS_IFCOMMON_END_SPARE_BANK_BASE +
+                    NDS_IFCOMMON_END_SPARE_BANK_BYTES)) &&
+            ((at + bytes) <= hi))
+        {
+            *spare_used += bytes;
+            gNdsIFCommonEndBakedSpareBytes += bytes;
+            return (u16 *)at;
+        }
+    }
+    return (u16 *)syTaskmanMalloc(bytes, 4u);
+}
+
 /* Bake TIME UP (0) and GAME SET (1) into RAM images of the end bank, exactly
  * as ndsIFCommonNativeOamPrepareAnnouncement would bake them into OBJ VRAM,
- * and keep them run-length coded on the scene heap. `scratch` holds one bank
- * image; `code` holds the worst-case stream. Must run while the full file is
- * still the prepared file. */
+ * and keep them run-length coded (ndsIFCommonEndBakeStore). `scratch` holds
+ * one bank image; `code` holds the worst-case stream. Must run while the
+ * full file is still the prepared file. */
 s32 ndsIFCommonNativeOamBakeEndVariants(u16 *scratch, u16 *code,
                                         u32 code_capacity_words)
 {
     u32 game_set;
+    u32 spare_used = 0u;
 
     if ((sNdsIFCommonPrepared == FALSE) || (sNdsIFCommonCompact != FALSE) ||
         (scratch == NULL) || (code == NULL))
@@ -2793,13 +2839,18 @@ s32 ndsIFCommonNativeOamBakeEndVariants(u16 *scratch, u16 *code,
             scratch, NDS_IFCOMMON_END_BANK_BYTES / sizeof(u16), code,
             code_capacity_words);
         resident = (words != 0u) ?
-            (u16 *)syTaskmanMalloc(words * sizeof(u16), 4u) : NULL;
+            ndsIFCommonEndBakeStore(words, &spare_used) : NULL;
         if (resident == NULL)
         {
             NDS_DIAG(gNdsIFCommonEndBakedFailCount++);
             return FALSE;
         }
-        memcpy(resident, code, words * sizeof(u16));
+        /* Halfword stores (VRAM drops byte stores): volatile keeps the
+         * compiler from turning the loop into memcpy. */
+        for (slot = 0u; slot < words; slot++)
+        {
+            ((volatile u16 *)resident)[slot] = code[slot];
+        }
         sNdsIFCommonEndBaked[game_set] = resident;
         sNdsIFCommonEndBakedWords[game_set] = words;
         NDS_DIAG(gNdsIFCommonEndBakedBytes += words * sizeof(u16));

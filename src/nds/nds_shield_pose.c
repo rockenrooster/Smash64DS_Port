@@ -205,6 +205,7 @@ static s32 NDS_SHIELD_POSE_HOT_CODE ndsShieldPoseDecodeBaseRow(
     const NDSShieldPoseView *view, u32 row, DObjDesc *dst);
 extern DObj *lbCommonGetTreeDObjNextFromRoot(DObj *dobj, DObj *root);
 extern void ftMainPlayAnimEventsAll(GObj *fighter_gobj);
+extern void lbCommonPlayTranslateScaledDObjAnim(DObj *dobj, Vec3f *scale);
 extern void ndsBaseGcAddDObjAnimJoint(DObj *dobj, AObjEvent32 *anim_joint,
                                       f32 anim_frame);
 
@@ -668,7 +669,6 @@ static s32 NDS_SHIELD_POSE_CODE ndsShieldPoseNativeSelected(
     const void *expected;
 
     if ((fp == NULL) || (fp->attr == NULL) || (sector >= 8u) ||
-        (fp->is_have_translate_scale != FALSE) ||
         (ndsShieldPoseGetView(package, view) == FALSE))
     {
         return FALSE;
@@ -926,9 +926,41 @@ static u32 ndsShieldPoseScriptTracks(const AObjEvent32 *scratch, u32 words)
     return 0xffffffffu;
 }
 
+/* The translate scale the source's guard plays a joint with: the row of
+ * translate_scales at the joint's fp->joints index (ftParamUpdateAnimKeys
+ * under ftCommonGuardInitJoints; YRotN's row in ftCommonGuardUpdateJoints,
+ * whose joint is YRotN), NULL for a fighter without them. The tree walk
+ * meets the joints in their array order, so the search starts at `hint`. */
+static Vec3f *ndsShieldPoseJointScale(const FTStruct *fp, const DObj *dobj,
+                                      u32 *hint)
+{
+    const u32 count = ARRAY_COUNT(fp->joints);
+    u32 i = *hint;
+    u32 k;
+
+    if ((fp->is_have_translate_scale == FALSE) ||
+        (fp->attr->translate_scales == NULL))
+    {
+        return NULL;
+    }
+    for (k = 0u; k < count; k++, i++)
+    {
+        if (i >= count)
+        {
+            i = 0u;
+        }
+        if (fp->joints[i] == dobj)
+        {
+            *hint = i + 1u;
+            return &fp->attr->translate_scales[i];
+        }
+    }
+    return NULL;
+}
+
 static s32 NDS_SHIELD_POSE_CODE ndsShieldPoseApplyScript(
     const NDSShieldPoseView *view, DObj *dobj, u16 handle, f32 angle,
-    u32 *out_tracks)
+    u32 *out_tracks, Vec3f *scale)
 {
     AObjEvent32 stack_scratch[NDS_SHIELD_POSE_MAX_SCRATCH_WORDS];
     AObjEvent32 *scratch = (view->scratch != NULL) ? view->scratch : stack_scratch;
@@ -945,7 +977,18 @@ static s32 NDS_SHIELD_POSE_CODE ndsShieldPoseApplyScript(
     }
     ndsBaseGcAddDObjAnimJoint(dobj, scratch, angle);
     gcParseDObjAnimJoint(dobj);
-    gcPlayDObjAnimJoint(dobj);
+    /* A content on its own proportions (translate_scales, a P6 look) plays
+     * its guard as the source does, through the scaled player
+     * (2026-10-18: Palutena's raw ShieldPose file was 22 KB of a four-heavy
+     * match's heap). */
+    if (scale != NULL)
+    {
+        lbCommonPlayTranslateScaledDObjAnim(dobj, scale);
+    }
+    else
+    {
+        gcPlayDObjAnimJoint(dobj);
+    }
     dobj->anim_joint.event32 = NULL;
     if (ndsShieldPoseReturnsAObjs(dobj) != FALSE)
     {
@@ -1099,6 +1142,27 @@ s32 ndsShieldPoseResolveExternalFixup(u32 owner_asset, u32 dep_asset,
     return -1;
 }
 
+/* A joint past the package's table: the source reads the table's NULL
+ * terminator there (every guard table ends with one), so the joint gets no
+ * script -- a content whose skeleton has more joints than its guard file
+ * covers (Palutena: Peach's 29-entry tables, 30 joints from XRotN). Its old
+ * script must not stay behind for the source's parser. */
+static void ndsShieldPoseApplyNone(DObj *dobj)
+{
+    AObj *aobj;
+
+    for (aobj = dobj->aobj; aobj != NULL; aobj = aobj->next)
+    {
+        aobj->kind = nGCAnimKindNone;
+    }
+    dobj->anim_joint.event32 = NULL;
+    dobj->anim_wait = AOBJ_ANIM_NULL;
+    if ((dobj->aobj != NULL) && (ndsShieldPoseReturnsAObjs(dobj) != FALSE))
+    {
+        gcRemoveAObjFromDObj(dobj);
+    }
+}
+
 s32 ndsShieldPoseTryApplySingle(DObj *dobj, f32 angle)
 {
     FTStruct *fp;
@@ -1108,6 +1172,7 @@ s32 ndsShieldPoseTryApplySingle(DObj *dobj, f32 angle)
     s32 i;
     s32 joint_num = 0;
     u16 handle;
+    u32 hint = nFTPartsJointYRotN;
 
     if ((dobj == NULL) || (dobj->parent_gobj == NULL))
     {
@@ -1138,15 +1203,29 @@ s32 ndsShieldPoseTryApplySingle(DObj *dobj, f32 angle)
         }
     }
     joint_num--;
-    if ((joint_num < 0) || ((u32)joint_num >= view.h->joint_count) ||
-        ((u32)joint_num >= view.h->base_count))
+    if ((joint_num < 0) || ((u32)joint_num >= view.h->base_count))
     {
+        dobj->anim_joint.event32 = NULL;
+        dobj->anim_wait = AOBJ_ANIM_NULL;
         gNdsShieldPoseDecodeFailCount++;
         return -1;
     }
+    if ((u32)joint_num >= view.h->joint_count)
+    {
+        ndsShieldPoseApplyNone(dobj);
+        if (ndsShieldPoseRefreshBaseRow(&view, (u32)joint_num) == FALSE)
+        {
+            gNdsShieldPoseDecodeFailCount++;
+            return -1;
+        }
+        gNdsShieldPoseSingleApplyCount++;
+        return 1;
+    }
     handle = view.handles[(sector * view.h->joint_count) + (u32)joint_num];
     if ((handle == NDS_SHIELD_POSE_NULL_HANDLE) ||
-        (ndsShieldPoseApplyScript(&view, dobj, handle, angle, NULL) == FALSE) ||
+        (ndsShieldPoseApplyScript(&view, dobj, handle, angle, NULL,
+                                  ndsShieldPoseJointScale(fp, dobj, &hint)) ==
+         FALSE) ||
         (ndsShieldPoseRefreshBaseRow(&view, (u32)joint_num) == FALSE))
     {
         dobj->anim_joint.event32 = NULL;
@@ -1407,6 +1486,7 @@ s32 ndsShieldPoseTryApplyAll(DObj *root_dobj, f32 angle)
     s32 package;
     u32 sector;
     u32 joint = 0u;
+    u32 hint = 0u;
     DObj *current;
 
     if ((root_dobj == NULL) || (root_dobj->parent_gobj == NULL))
@@ -1472,9 +1552,10 @@ s32 ndsShieldPoseTryApplyAll(DObj *root_dobj, f32 angle)
 #endif
         if (joint >= view.h->joint_count)
         {
-            gNdsShieldPoseDecodeFailCount++;
-            ndsShieldPoseMarkBatchFailure(root_dobj->parent_gobj);
-            return -1;
+            /* Past the table: its NULL terminator (ndsShieldPoseApplyNone),
+             * as lbCommonAddDObjAnimJointAll plays a NULL entry. */
+            current->anim_wait = AOBJ_ANIM_NULL;
+            continue;
         }
         handle = view.handles[(sector * view.h->joint_count) + joint];
         if (handle == NDS_SHIELD_POSE_NULL_HANDLE)
@@ -1483,7 +1564,9 @@ s32 ndsShieldPoseTryApplyAll(DObj *root_dobj, f32 angle)
             continue;
         }
         if (ndsShieldPoseApplyScript(&view, current, handle, angle,
-                                     &tracks) == FALSE)
+                                     &tracks,
+                                     ndsShieldPoseJointScale(fp, current,
+                                                             &hint)) == FALSE)
         {
             current->anim_joint.event32 = NULL;
             current->anim_wait = AOBJ_ANIM_NULL;
@@ -1497,7 +1580,7 @@ s32 ndsShieldPoseTryApplyAll(DObj *root_dobj, f32 angle)
                 (u16)(NDS_SHIELD_POSE_MEMO_POSED | tracks);
         }
     }
-    if (joint != view.h->joint_count)
+    if (joint < view.h->joint_count)
     {
         gNdsShieldPoseDecodeFailCount++;
         ndsShieldPoseMarkBatchFailure(root_dobj->parent_gobj);
@@ -1551,9 +1634,8 @@ s32 ndsShieldPoseTryPlayBatch(GObj *fighter_gobj)
 #endif
         if (joint >= view.h->joint_count)
         {
-            gNdsShieldPoseDecodeFailCount++;
-            sNdsShieldPoseBatchRoot = NULL;
-            return -1;
+            current->anim_wait = AOBJ_ANIM_NULL;
+            continue;
         }
         handle = view.handles[
             ((u32)sNdsShieldPoseBatchSector * view.h->joint_count) + joint];
@@ -1561,7 +1643,7 @@ s32 ndsShieldPoseTryPlayBatch(GObj *fighter_gobj)
             AOBJ_ANIM_NULL : AOBJ_ANIM_END;
     }
     sNdsShieldPoseBatchRoot = NULL;
-    if (joint != view.h->joint_count)
+    if (joint < view.h->joint_count)
     {
         gNdsShieldPoseDecodeFailCount++;
         return -1;

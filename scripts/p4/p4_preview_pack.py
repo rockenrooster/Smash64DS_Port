@@ -34,6 +34,8 @@ include/nds/nds_preview_pack.h.
 from __future__ import annotations
 
 import argparse
+import bisect
+import collections
 import json
 import struct
 import sys
@@ -227,7 +229,7 @@ def variant_roots(main: P.O2RFile, model_id: int, attr: int, trees) -> set[int]:
 
 
 def high_only_spans(main: P.O2RFile, model: P.O2RFile, model_id: int, attr: int,
-                    trees, pruned, other_targets: set[int]):
+                    trees, pruned, other_targets: set[int], dead=()):
     """Kept model ranges only the high detail reads, for the battle pack a
     match of three or four fighters loads: there a content draws its
     low-detail model in the close-ups too (nds_p4.c
@@ -239,7 +241,8 @@ def high_only_spans(main: P.O2RFile, model: P.O2RFile, model_id: int, attr: int,
     one; it is pruned when only the other joints' high rows and the high
     model-part rows reach it. Returns the ranges and the slots (Main and
     model offsets, as ("main"|"model", slot)) that point into them, which
-    the pack writes NULL."""
+    the pack writes NULL. A slot in `dead` (model bytes nothing reaches,
+    orphan_spans) names nothing the fighter reads: it is written NULL too."""
     import bisect
 
     lay = ft_layout.layout()
@@ -366,6 +369,9 @@ def high_only_spans(main: P.O2RFile, model: P.O2RFile, model_id: int, attr: int,
             continue
         if in_ranges(slot, spans) or in_ranges(slot, pruned):
             continue
+        if in_ranges(slot, dead):
+            nulls.append(("model", slot))
+            continue
         if ("model", slot) not in [w for ws in high.values() for w in ws]:
             raise PackError(f"model slot {slot:#x} names high-only bytes at {ref[2]:#x}")
         nulls.append(("model", slot))
@@ -373,6 +379,113 @@ def high_only_spans(main: P.O2RFile, model: P.O2RFile, model_id: int, attr: int,
         if t in high_regions:
             nulls.extend(w for w in ws if w[0] == "main")
     return spans, set(nulls)
+
+
+def image_extents(model: P.O2RFile, dls) -> dict[int, int]:
+    """The bytes each display list's texture loads read from an image, by
+    image offset: G_SETTIMG then G_LOADBLOCK (lrs + 1 texels of the
+    SETTIMG size), G_LOADTILE (rows through lrt at the SETTIMG width) or
+    G_LOADTLUT (count + 1 16-bit entries)."""
+    sizes: dict[int, int] = {}
+    for a, b in dls:
+        img = None
+        for off in range(a, b - 7, 8):
+            w0, w1 = struct.unpack_from(">II", model.data, off)
+            op = w0 >> 24
+            if op == 0xFD:
+                ref = model.ptr(off + 4)
+                img = ((ref[2], (w0 >> 19) & 3, (w0 & 0xFFF) + 1)
+                       if ref is not None and ref[0] == "intern" else None)
+            elif img is not None and op in (0xF3, 0xF4, 0xF0):
+                t, siz, width = img
+                if op == 0xF3:
+                    n = ((((w1 >> 12) & 0xFFF) + 1) * (4 << siz) + 7) // 8
+                elif op == 0xF4:
+                    n = ((((w1 & 0xFFF) >> 2) + 1) * width * (4 << siz) + 7) // 8
+                else:
+                    n = (((w1 >> 14) & 0x3FF) + 1) * 2
+                sizes[t] = max(sizes.get(t, 0), n)
+    return sizes
+
+
+def orphan_spans(main: P.O2RFile, model: P.O2RFile, model_id: int,
+                 other_targets: set[int], pruned, dls):
+    """Model bytes no pointer reaches: the closure of Main's and every other
+    file's pointers into the model through the model's own. An authored look
+    (scripts/p6) leaves its base's replaced lists and vertices behind, which
+    nothing draws or reads (2026-10-18: 51 KB of Palutena's battle pack, 38 KB
+    of Ike's; every Remix content has none). A run of them is dropped whole
+    behind a region whose extent is known -- pruned geometry, an array of
+    pointers and zero words, an image no larger than its region, or a display
+    list whose G_ENDDL ends the region -- so nothing the fighter reads runs on
+    into it. Behind any other region (a script whose end the player never
+    reaches, say) the run's first region stays as a guard and the rest goes.
+    Returns (spans, kept bytes, the runs kept: dead bytes the pack still
+    carries)."""
+    external = set(other_targets) | {t for k, f, t in main.slots.values()
+                                     if k == "extern" and f == model_id}
+    targets = sorted({v[2] for v in model.slots.values() if v[0] == "intern"}
+                     | external | {0})
+    ends = dict(zip(targets, targets[1:] + [len(model.data)]))
+
+    def region(off):
+        return targets[bisect.bisect_right(targets, off) - 1]
+
+    region_slots = collections.defaultdict(list)
+    for slot, ref in model.slots.items():
+        region_slots[region(slot)].append(ref)
+    seen: set[int] = set()
+    stack = [region(t) for t in external]
+    while stack:
+        r = stack.pop()
+        if r in seen:
+            continue
+        seen.add(r)
+        stack.extend(region(ref[2]) for ref in region_slots[r] if ref[0] == "intern")
+    images = image_extents(model, dls)
+
+    def ends_in_enddl(a, b):
+        off = a
+        while off + 8 <= b:
+            op = model.data[off]
+            if op == 0xDF or (op == 0xDE and model.data[off + 1] == 1):
+                return off + 8 == b
+            off += 8
+        return False
+
+    def exact(r):
+        a, b = r, ends[r]
+        if sum(max(0, min(b, y) - max(a, x)) for x, y in pruned) == b - a:
+            return True
+        if (b - a) % 4 == 0 and all(o in model.slots or model.u32(o) == 0
+                                    for o in range(a, b, 4)):
+            return True
+        if (b - a) % 8 == 0 and ends_in_enddl(a, b):
+            return True
+        return a in images and images[a] <= b - a
+
+    spans, kept, kept_runs = [], 0, []
+    i = 0
+    while i < len(targets):
+        if targets[i] in seen:
+            i += 1
+            continue
+        j = i
+        while j + 1 < len(targets) and targets[j + 1] not in seen:
+            j += 1
+        a, b = targets[i], ends[targets[j]]
+        if i > 0 and exact(targets[i - 1]):
+            spans.append((a, b))
+        elif i > 0 and j > i:
+            guard = ends[targets[i]]
+            spans.append((guard, b))
+            kept += guard - a
+            kept_runs.append((a, guard))
+        else:
+            kept += b - a
+            kept_runs.append((a, b))
+        i = j + 1
+    return spans, kept, kept_runs
 
 
 def half_res_frames(main: P.O2RFile, model: P.O2RFile, model_id: int, attr: int,
@@ -498,13 +611,16 @@ def build(o2r_dir: Path, main_id: int, model_id: int, attr: int, kind: int,
             if kind_ == "extern" and target_fid == model_id:
                 other_targets.add(target)
                 others.append((fid, slot, target))
+    # Bytes nothing reaches go from both packs (orphan_spans).
+    orphans, orphan_kept, dead = orphan_spans(main, model, model_id, other_targets, pruned, dls)
+    pruned = merge(pruned + orphans)
     # The low-detail battle pack also drops what only the high detail reads;
     # the slots naming it read NULL ("drop": no manifest row restores them).
     drops = set()
     high_bytes = 0
     if low_only:
         spans, drops = high_only_spans(main, model, model_id, attr, tables["trees"],
-                                       pruned, other_targets)
+                                       pruned, other_targets, dead)
         high_bytes = sum(b - a for a, b in spans)
         pruned = merge(pruned + spans)
     # The battle pack's material frames at half resolution: each frame keeps
@@ -693,6 +809,7 @@ def build(o2r_dir: Path, main_id: int, model_id: int, attr: int, kind: int,
         "kind": kind, "main_bytes": main_len, "model_bytes": len(model.data),
         "model_kept_bytes": kept_bytes, "geometry_bytes": sum(b - a for a, b in pruned),
         "display_lists": len(dls), "roots": len(roots), "variant_roots": len(variants),
+        "orphan_bytes": sum(b - a for a, b in orphans), "orphan_kept_bytes": orphan_kept,
         "root_cells": len(cells),
         "fixups": len(fixups), "null_fixups": {f"{k:#x}": v for k, v in sorted(nulls.items())},
         "file_bytes": file_bytes, "manifest_rows": len(externs), "dangling_externs": dangling,

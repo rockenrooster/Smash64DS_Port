@@ -21,7 +21,9 @@ than the runtime's stack scratch decodes into a scratch of its own
 A content that guards with its parent's vanilla ShieldPose file at the same
 nine targets (Falco with Fox's, Ganondorf with Captain's) uses the parent's
 package, as the Polygon Team does; one whose parent has no package (Wario,
-Mario's) keeps the raw file.
+Mario's) keeps the raw file. A content on its own proportions
+(translate_scales, a P6 look) gets its package too: the runtime plays its
+guard through the source's scaled player (2026-10-18).
 
 The package and its row are build output (they derive from the user's ROM).
 """
@@ -96,16 +98,6 @@ def guard_targets(o2r: Path, main_id: int, attr: int):
     if any(r is None for r in refs) or len({r[0] for r in refs}) != 1:
         raise ShieldPoseError("the nine guard pointers do not name one file")
     return [lookup_slot] + table_slots, refs[0][0], [r[1] for r in refs]
-
-
-def translate_scaled(o2r: Path, main_id: int, attr: int) -> bool:
-    """Main's translate_scales is set (a P6 look on its own proportions,
-    scripts/p6/look_blend.py): the native guard does not scale, so the raw
-    file and the source path serve it (ftCommonGuardGetJointTransformScale)."""
-    lay = ft_layout.layout()
-    main = _O2R(o2r / f"{main_id:04x}")
-    scales = attr + lay["FTAttributes.translate_scales"]
-    return scales in main.slots or main.u32(scales) != 0
 
 
 def _corpus(sp: _O2R, dobj_off: int, table_offs: list[int]):
@@ -255,16 +247,13 @@ def _encode(rows: int, base_raw, corpus) -> dict:
 
 def build(o2r: Path, main_id: int, attr: int, parent_fkind: int):
     """(blob or None, row): the content's own package, or the parent's to
-    alias (alias_fkind), or neither (the raw file stays: also a content with
-    translate_scales)."""
+    alias (alias_fkind), or neither (the raw file stays)."""
     slots, shield_id, targets = guard_targets(o2r, main_id, attr)
     row = {"main_asset": main_id, "shield_asset": shield_id, "main_fixup_slots": slots,
            "dobj_offset": targets[0], "table_offsets": targets[1:], "alias_fkind": -1,
            "blob_bytes": 0, "base_count": 0, "scratch_words": 0}
     if any(s > 0xFFFF for s in slots) or any(t > 0xFFFF for t in targets):
         raise ShieldPoseError("a guard slot or target exceeds u16")
-    if translate_scaled(o2r, main_id, attr):
-        return None, row
     path = o2r / f"{shield_id:04x}"
     if not path.exists():
         spec = next((s for s in SP.SPECS if s.shield_id == shield_id), None)
