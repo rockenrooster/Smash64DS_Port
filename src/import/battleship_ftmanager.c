@@ -1571,8 +1571,11 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
      * joint 6's model part from freed memory and the preview drew 6 of its
      * 7 roots into ndsPreviewPackLoadHalt(20). Owner r70: the CSS froze
      * after a 4P match. */
+    /* The Training select is the native VS screen too (P7 C4): without the
+     * table its Kirby preview read the copy table through NULL. */
     if ((desc != NULL) && (desc->fkind == nFTKindKirby) &&
         ((gSCManagerSceneData.scene_curr == nSCKindPlayersVS) ||
+         (gSCManagerSceneData.scene_curr == nSCKindPlayers1PTraining) ||
          (gSCManagerSceneData.scene_curr == nSCKind1PGamePlayers) ||
          (gSCManagerSceneData.scene_curr == nSCKind1PBonus1Players) ||
          (gSCManagerSceneData.scene_curr == nSCKind1PBonus2Players)) &&
