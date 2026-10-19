@@ -1954,6 +1954,10 @@ NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS ?= 0
 # and an out-of-memory halt spins silently); every measurement target keeps
 # it off.
 NDS_FREEZE_DIAGNOSTICS ?= $(if $(filter smash64ds,$(TARGET)),1,0)
+# Bounded pipelining (owner 2026-10-19): a battle frame's next game logic
+# may start this many scanlines before its swap retrace (131 = half a
+# VBlank interval); 0 is the old loop. gNdsPresentLeadLines A/Bs at boot.
+NDS_PRESENT_LEAD ?= 131
 NDS_TASK9_FLOAT_CENSUS ?= 0
 NDS_TASK9_FLOAT_ITCM ?= 1
 # 2026-08-16 ITCM reclaim. Two of the six Task 9 libgcc members are DEAD CODE in
@@ -7307,6 +7311,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_DEBUG_HUD $(NDS_DEBUG_HUD)'; \
 		echo '#define NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS $(NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS)'; \
 		echo '#define NDS_FREEZE_DIAGNOSTICS $(NDS_FREEZE_DIAGNOSTICS)'; \
+		echo '#define NDS_PRESENT_LEAD $(NDS_PRESENT_LEAD)u'; \
 		echo '#define NDS_TASK9_FLOAT_CENSUS $(NDS_TASK9_FLOAT_CENSUS)'; \
 		echo '#define NDS_TASK9_FLOAT_ITCM $(NDS_TASK9_FLOAT_ITCM)'; \
 		echo '#define NDS_TASK9_FLOAT_PHASE2 $(NDS_TASK9_FLOAT_PHASE2)'; \

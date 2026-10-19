@@ -140,6 +140,12 @@ uint32_t ndsNetSessionInMatch(void)
     return (gNdsNetSessionState == NDS_NET_SESSION_RUNNING) ? 1u : 0u;
 }
 
+uint32_t ndsNetSessionHostPort(void)
+{
+    return (gNdsNetSessionState == NDS_NET_SESSION_RUNNING) ?
+        sNetHostPort : NDS_NET_PORTS;
+}
+
 /* --- Records ------------------------------------------------------------- */
 
 static void ndsNetStoreRecord(u32 port, u32 tick, u32 value)

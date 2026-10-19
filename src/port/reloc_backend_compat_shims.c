@@ -7196,25 +7196,21 @@ void ftParamSetModelPartID(GObj *fighter_gobj, s32 joint_id,
     ndsFTParamInvalidateModelPartRenderer(fighter_gobj, fp);
 }
 
-#if NDS_P2_1P_GAME
-sb32 ndsFTManagerCampaignCpuLowDetail(s32 player);
-#endif
+sb32 ndsFTManagerLowDetailOnly(s32 player);
 
 void ftParamSetModelPartDetailAll(GObj *fighter_gobj, u8 detail)
 {
     FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
     s32 i;
 
-#if NDS_P2_1P_GAME
-    /* P7 C1: a campaign CPU in a battle of three or four keeps its low
-     * detail (battleship_ftmanager.c ndsFTManagerCampaignCpuLowDetail: its
-     * high image is not loaded there). */
+    /* P7 C1, owner 2026-10-19: a CPU (or a wireless guest) in a campaign or
+     * VS battle of three or four keeps its low detail (battleship_ftmanager.c
+     * ndsFTManagerLowDetailOnly: its high image is not loaded there). */
     if ((fp != NULL) && (detail == nFTPartsDetailHigh) &&
-        (ndsFTManagerCampaignCpuLowDetail(fp->player) != FALSE))
+        (ndsFTManagerLowDetailOnly(fp->player) != FALSE))
     {
         detail = nFTPartsDetailLow;
     }
-#endif
 
 #if NDS_P4
     /* Owner 2026-10-08 (S15): the KO and pause close-ups keep a content's
@@ -13357,9 +13353,15 @@ void ftParamSetModelPartDefaultID(GObj *fighter_gobj, s32 joint_id,
              * the previous occupant's or zero. */
             u32 hat_slot = (gNdsSceneManagerCurrIsBattle != 0u) ?
                 (u32)fp->player : (u32)fp->nds_slot;
+            /* Owner 2026-10-19: a fighter kept low in a battle of three or four
+             * (ndsFTManagerLowDetailOnly) never draws the high hat, and the
+             * match admitted none (nds_kirby_hat_residency.c). */
+            const u32 hat_high_reachable =
+                (ndsFTManagerLowDetailOnly(fp->player) == FALSE) ? 1u : 0u;
 
-            if ((ndsRendererNativeEnsureKirbyCopyHat(
-                     hat_slot, (u32)modelpart_id, 0u) == FALSE) ||
+            if (((hat_high_reachable != 0u) &&
+                 (ndsRendererNativeEnsureKirbyCopyHat(
+                      hat_slot, (u32)modelpart_id, 0u) == FALSE)) ||
                 ((hat_low_reachable != 0u) &&
                  (ndsRendererNativeEnsureKirbyCopyHat(
                       hat_slot, (u32)modelpart_id, 1u) == FALSE)))

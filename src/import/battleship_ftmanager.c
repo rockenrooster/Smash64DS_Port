@@ -27,6 +27,7 @@
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_scene_manager.h>
 #include <nds/nds_shield_pose.h>
+#include <nds/nds_net_session.h>
 #include <nds/generated/nds_fighter_production.generated.h>
 #include <nds/generated/nds_native_fighter_image.generated.h>
 #include <nds/nds_p4_native.h>
@@ -1153,26 +1154,41 @@ u32 ndsFTManagerOwnerImageSlotLive(u32 image_slot)
 #endif
 #endif
 
-#if NDS_P2_1P_GAME
 /* P7 C1: in a campaign battle of three or four fighters a CPU keeps its
  * low-detail model in the KO and pause close-ups too, as S15 keeps a
  * content's (ftParamSetModelPartDetailAll), so only that image loads. With
  * the CPUs' high images resident, Palutena's campaign ran out of memory
  * setting up Giant DK (his own 21,340 B high image among them) and the
- * Polygon Team. */
-sb32 ndsFTManagerCampaignCpuLowDetail(s32 player)
+ * Polygon Team. Owner 2026-10-19: VS battles of three or four too (humans keep
+ * high): the 19-30 KB high images of a four-CPU match left Hyrule Temple's
+ * 71 KB stage program without room to load. In a wireless match only the host
+ * pauses, so the other humans keep low as the CPUs do (owner, same day); the
+ * host's port is every console's, so all of them agree on each fighter. */
+sb32 ndsFTManagerLowDetailOnly(s32 player)
 {
-    if ((gSCManagerSceneData.scene_curr != nSCKind1PGame) ||
+    u32 pkind;
+
+    if (((gSCManagerSceneData.scene_curr != nSCKindVSBattle)
+#if NDS_P2_1P_GAME
+         && (gSCManagerSceneData.scene_curr != nSCKind1PGame)
+#endif
+        ) ||
         (gSCManagerBattleState == NULL) || (player < 0) ||
-        (player >= GMCOMMON_PLAYERS_MAX))
+        (player >= GMCOMMON_PLAYERS_MAX) ||
+        ((gSCManagerBattleState->pl_count +
+          gSCManagerBattleState->cp_count) < 3))
     {
         return FALSE;
     }
-    return ((gSCManagerBattleState->players[player].pkind == nFTPlayerKindCom) &&
-            ((gSCManagerBattleState->pl_count +
-              gSCManagerBattleState->cp_count) >= 3)) ? TRUE : FALSE;
+    pkind = (u32)gSCManagerBattleState->players[player].pkind;
+    if (pkind == (u32)nFTPlayerKindCom)
+    {
+        return TRUE;
+    }
+    return ((pkind == (u32)nFTPlayerKindMan) &&
+            (ndsNetSessionHostPort() < NDS_NET_PORTS) &&
+            ((u32)player != ndsNetSessionHostPort())) ? TRUE : FALSE;
 }
-#endif
 
 void ndsFTManagerEnsureOwnerImages(FTDesc *desc)
 {
@@ -1224,13 +1240,11 @@ void ndsFTManagerEnsureOwnerImages(FTDesc *desc)
                 first_detail = last_detail = 1u;
             }
 #endif
-#if NDS_P2_1P_GAME
-            if ((desc->pkind == nFTPlayerKindCom) &&
-                (ndsFTManagerCampaignCpuLowDetail(desc->player) != FALSE))
+            if ((desc->pkind != nFTPlayerKindDemo) &&
+                (ndsFTManagerLowDetailOnly(desc->player) != FALSE))
             {
                 first_detail = last_detail = 1u;
             }
-#endif
 
             /* The VS select's previews and the Results podium keep their
              * detail too (the original cast HIGH, a content LOW in the

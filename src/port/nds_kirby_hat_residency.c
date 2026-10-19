@@ -93,6 +93,26 @@ static u32 ndsKirbyHatCountKirbys(void)
     }
     return kirbys;
 }
+
+sb32 ndsFTManagerLowDetailOnly(s32 player);
+
+/* Owner 2026-10-19: a Kirby kept low in a VS battle of three or four (a CPU,
+ * or a wireless guest: ndsFTManagerLowDetailOnly) keeps its low detail in the
+ * close-ups, so its hats load low only; the high ones are for a Kirby that can
+ * be drawn high. */
+static u32 ndsKirbyHatHighReachable(void)
+{
+    s32 player;
+
+    for (player = 0; player < GMCOMMON_PLAYERS_MAX; player++)
+    {
+        if ((gSCManagerBattleState->players[player].pkind != nFTPlayerKindNot) &&
+            (gSCManagerBattleState->players[player].fkind == nFTKindKirby) &&
+            (ndsFTManagerLowDetailOnly(player) == FALSE))
+            return TRUE;
+    }
+    return FALSE;
+}
 #endif
 
 static void ndsKirbyHatAdmit(u32 high, u32 low)
@@ -127,6 +147,7 @@ void ndsKirbyHatPrepareMatch(void)
          * its power shows load in low detail only. */
         if (with_low != 0u) { low = high | p4; }
         else { high |= p4; }
+        if (ndsKirbyHatHighReachable() == FALSE) { high = 0u; }
 #if NDS_P4
         /* A power's Remix hats load in the detail the match draws: a Kirby
          * holding one stays low in the close-ups of a battle of three or four

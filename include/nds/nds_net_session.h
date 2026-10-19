@@ -24,6 +24,11 @@
  * compare per batch. */
 uint32_t ndsNetSessionInMatch(void);
 
+/* The host's port in a lockstep match, NDS_NET_PORTS otherwise. Every console
+ * holds the same value, so a rule keyed on it stays in lockstep (only the
+ * host can pause: battleship_ftmanager.c ndsFTManagerLowDetailOnly). */
+uint32_t ndsNetSessionHostPort(void);
+
 /* Leave lockstep after a match (the character select calls it when no room
  * is open, so a finished lab match does not gate the next offline battle). */
 void ndsNetLockstepDisarm(void);

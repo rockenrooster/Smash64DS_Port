@@ -220,6 +220,17 @@ void ndsPlatformTickHudSample(void);
 u32 ndsPlatformVBlankCount(void);
 void ndsPlatformSchedulePresentAtVBlank(u32 vblank);
 void ndsPlatformEndFrame(void);
+/* BOUNDED PIPELINING (owner 2026-10-19; nds_platform.c, the block above
+ * ndsPlatformPresentLeadEnable). While enabled, a battle frame's EndFrame
+ * returns once its swap retrace is gNdsPresentLeadLines scanlines away (the
+ * next frame's game logic starts on this frame's spare time) and the retrace's
+ * commits run on the present thread; Retire, before the next draw, waits for
+ * that commit and returns the VBlank the frame was swapped in at (0 when no
+ * frame led). Disable retires the last one. */
+extern volatile u32 gNdsPresentLeadLines;
+void ndsPlatformPresentLeadEnable(u32 enable);
+u32 ndsPlatformPresentLeadRetire(void);
+u32 ndsPlatformPresentLeadPending(void);
 void ndsPlatformProfileSampleFrameBoundaryGXState(void);
 u32 ndsPlatformTicks(void);
 u32 ndsPlatformHeldKeys(void);

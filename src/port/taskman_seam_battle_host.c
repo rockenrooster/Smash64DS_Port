@@ -912,17 +912,58 @@ static void ndsBattlePlayablePresentFrame(void)
     ndsBattlePlayablePacingUpdate();
 }
 
+/* A led frame's phase, accounted when it is retired (bounded pipelining,
+ * nds_platform.c ndsPlatformPresentLeadEnable). */
+static u32 sNdsBattlePlayableLeadPhase;
+
+static void ndsBattlePlayableAccountPresent(u32 phase, u32 actual);
+
+/* The led frame before this one has its swap retrace committed before this
+ * frame draws, and is accounted at the VBlank it was swapped in at. */
+static void ndsBattlePlayableRetireLed(void)
+{
+    const u32 wait_start = cpuGetTiming();
+    const u32 led = ndsPlatformPresentLeadRetire();
+    const u32 waited = cpuGetTiming() - wait_start;
+
+#if NDS_TICK_HUD
+    gNdsTickHudVBlankWaitTicks += waited;
+#endif
+    /* The particle LOD reads this iteration's work from its start stamp; the
+     * wait for the led frame's swap is not work. */
+    if (gNdsBattleIterationStartTick != 0u)
+    {
+        gNdsBattleIterationStartTick =
+            (gNdsBattleIterationStartTick + waited) | 1u;
+    }
+    if (led != 0u)
+    {
+        ndsBattlePlayableAccountPresent(sNdsBattlePlayableLeadPhase, led);
+    }
+}
+
 static void ndsBattlePlayablePresentRealtimeFrame(void)
 {
     u32 phase = ndsBattlePlayablePacingPhase();
-    u32 target = sNdsBattlePlayableLastPresentVBlank +
-                 NDS_BATTLE_PLAYABLE_PRESENT_VBLANKS;
-    u32 actual;
-    u32 interval;
+    u32 target;
 
+    ndsBattlePlayableRetireLed();
+    target = sNdsBattlePlayableLastPresentVBlank +
+             NDS_BATTLE_PLAYABLE_PRESENT_VBLANKS;
     ndsPlatformSchedulePresentAtVBlank(target);
     ndsBattlePlayablePresentFrame();
-    actual = ndsPlatformVBlankCount();
+    if (ndsPlatformPresentLeadPending() != 0u)
+    {
+        sNdsBattlePlayableLeadPhase = phase;
+        return;
+    }
+    ndsBattlePlayableAccountPresent(phase, ndsPlatformVBlankCount());
+}
+
+static void ndsBattlePlayableAccountPresent(u32 phase, u32 actual)
+{
+    u32 interval;
+
     interval = actual - sNdsBattlePlayableLastPresentVBlank;
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsRendererProfilePresentIntervalVBlanks = interval;
@@ -1271,6 +1312,8 @@ void ndsR2HostBattlePrepare(void)
     ndsFighterMarioFoxNaturalMotionPrepare();
 #endif
     ndsBattlePlayablePacingStart(0u);
+    /* Bounded pipelining for this battle's frames (owner 2026-10-19). */
+    ndsPlatformPresentLeadEnable(TRUE);
 }
 
 void ndsR2HostBattleIterationBegin(void)
@@ -1953,6 +1996,9 @@ void ndsR2HostBattlePresent(void)
 
 void ndsR2HostBattleFinish(void)
 {
+    /* The last led frame swaps in before the scene moves on. */
+    ndsBattlePlayableRetireLed();
+    ndsPlatformPresentLeadEnable(FALSE);
     ndsBattlePlayableRecordLifecycleTaskmanExit();
     ndsBattlePlayablePacingFinish();
 }

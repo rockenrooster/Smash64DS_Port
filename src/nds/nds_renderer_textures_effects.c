@@ -14313,7 +14313,21 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
             rec[7] = key_hash;
             rec[8] = (use_texel1 != FALSE) ? (0x80000000u |
                                               key.prim_lod_fraction) : 0u;
-            rec[9] = 0u;
+            /* The image's provenance: its asset id (high half) and offset
+             * (low half, in 16-byte units), 0xffffffff when unknown. */
+            {
+                u32 asset = 0xffffffffu;
+                u32 offset = 0xffffffffu;
+
+                rec[9] = 0xffffffffu;
+                if ((ndsRelocGetLoadedPointerProvenance(
+                         (const void *)(uintptr_t)key.image, &asset,
+                         &offset) != FALSE) &&
+                    (asset <= 0xffffu))
+                {
+                    rec[9] = (asset << 16) | ((offset >> 4) & 0xffffu);
+                }
+            }
             /* The debugger reads memory, not the data cache. */
             DC_FlushRange(rec, sizeof(gNdsLabTexMiss[0]));
         }

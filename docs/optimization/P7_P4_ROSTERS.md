@@ -380,3 +380,90 @@ texture memo (the full resolver twice a frame while a bomb was out), and the
 heaviest mix on Hyrule Castle has two pre-existing native failures: a
 Bob-omb's texture bind fails (`gNdsItemBombHeiSubmitStep` 3) with four heavy
 contents' textures resident.
+
+## Bounded pipelining, the CPUs' low detail and Hyrule Temple's memory (2026-10-19, `s16`/`s17`)
+
+`s16` (HEAD 082148f0e09, cast on every VS and P5 stage) regressed Hyrule
+Temple to 1,477,376 (31% two-VBlank): its stage program stopped loading
+(`gNdsP2StageProgReason` 3). An allocation census against `s12` showed why:
+the 1P campaign and P7 work grew the resident `.main` by 18,432 B, and the
+frontend overlay a VS battle borrows shrank by 32,864 B, so the battle had
+19.5 KB less in all; the program had loaded with 3.3 KB to spare. Four-CPU
+Hyrule Temple at the program's load: 92,756 B free against the 108,980 B it
+asks (71,092 B body and memo plus the 37,888 B it keeps).
+
+Owner 2026-10-19 (two rulings):
+
+- **CPUs keep low detail in 3-4 fighter VS battles** (as contents and the
+  campaign's CPUs already did): their high images (19-30 KB each) are not
+  loaded and the KO and pause close-ups draw them low; humans keep high, and
+  in a wireless match only the host does (only the host pauses; every console
+  knows the host's port, so they agree). `ndsFTManagerLowDetailOnly`
+  (battleship_ftmanager.c) is the one rule for the image load, the close-up
+  clamp (`ftParamSetModelPartDetailAll`) and Kirby's copy hats (a Kirby kept
+  low loads low hats only).
+- **Bounded pipelining**: a battle frame's next game logic may start up to half
+  a VBlank (131 scanlines) before its swap retrace (~8 ms more input latency on
+  average), and the gate stays both numbers (WORK P95 and cadence).
+  `nds_platform.c` (the block above ndsPlatformPresentLeadEnable): the flush is
+  held to the retrace before the scheduled one, EndFrame returns at the lead
+  line (a VCount interrupt), and the retrace's commits (deferred palettes, fade,
+  wallpaper affine, texture refreshes, OAM planes) run on a present thread one
+  priority above the main thread; the next draw waits for that commit
+  (`ndsPlatformPresentLeadRetire`). Game order and the replay digest are
+  unchanged. A simulation over the `s16` ring CSVs (scratchpad pipe_sim.py)
+  gave the cast 96-99% two-VBlank on every failing stage at 0.5 VBlank.
+  `gNdsPresentLeadLines` 0 at boot is the old loop on the same ROM.
+
+First look (`s17`, Hyrule Temple cast, 600 frames): the program loads again,
+heap low-water 49,760, WORK P95 1,076,096, 590 of 600 frames within two
+VBlanks; every frame led and 423 of them ran their logic past the retrace (the
+commit had landed when the draw began).
+
+Cast, `s16` -> `s17` (1,960 frames, WORK P95 and frames within two VBlanks;
+replay digests identical on every stage; 0 native failures):
+
+| stage | `s16` | `s17` |
+|---|---|---|
+| Peach's Castle (0) | 1,138,432 (93.3%) | 1,149,440 (98.8%) |
+| Sector Z (1) | 1,144,768 (93.5%) | 1,111,936 (98.8%) |
+| Congo Jungle (2) | 1,145,216 (93.6%) | 1,120,128 (98.9%) |
+| Yoshi's Island (5) | 1,188,544 (91.1%) | 1,176,640 (98.5%) |
+| Saffron City (7) | 1,253,440 (85.7%) | 1,213,568 (97.3%) |
+| Mushroom Kingdom (8) | 1,185,856 (91.6%) | 1,183,488 (98.0%) |
+| Bowser's Stadium (42) | 1,130,048 (93.9%) | 1,127,232 (98.9%) |
+| Hyrule Temple (43) | 1,477,376 (31.3%) | 1,221,824 (97.2%) |
+| Dinosaur Land (44) | 1,188,800 (92.2%) | 1,173,568 (98.2%) |
+
+Cadence now passes everywhere; WORK P95 still fails on eight. The frames
+over the budget are logic frames: against the median, the 93rd-98th
+percentile frames carry +190-250K of SRC and +85-113K of draw (MISC).
+
+Mid-match first-use script normalization (Dream Land cast, frames 150-700): 64
+scripts in 16 frames -- fighter model parts' MObjs (15), the catch and item-get
+swirls (9 each), the KO blast (9, 206 commands), damage slashes, Whispy's
+anims, the impact wave, the quake and Link's bomb and boomerang.
+
+Two tries that went back out (`s18`/`s19`, same day):
+
+- **Normalizing the common effects' scripts at load** (efManagerInitEffects,
+  every NDS_EF_MANAGER_DESCS desc's DObj and MObj scripts): Congo Jungle's
+  replay digest diverged from frame 140 (before GO) and its event32 ledger
+  filled (3,026 of 3,026); the other stages moved by noise. The tail's
+  normalizations were not the effects' first uses.
+- **A per-fighter hurtbox cache epoch** (only the cleared fighter's cached
+  worlds dropped): Saffron 1,213,568 -> 1,211,584 and a few frames of digest
+  drift (Peach's Castle from frame 1388). The global epoch stays.
+
+`s20` (the particle heavy-frame LOD's elapsed time no longer counts the wait
+for the led frame's swap, so it marks only frames whose own work is heavy):
+every stage's digest identical to `s17`, WORK P95 within noise (Saffron
+1,215,232; Hyrule Temple 1,219,648; Peach's Castle 1,146,944).
+
+Where Saffron's tail goes (`s17` profile, 20 costliest frames): ~120 hurtbox
+tests a frame against weapons (69.5) and items (51), each building its joint's
+fixed-point world (LocalFromDObj, Compose, WorldOf, DamageBox: ~167K ticks a
+frame there, ~40K elsewhere); fighter attacks are under one test a frame.
+Peach's Castle and Yoshi's Island tails are spread: texture conversions (a
+third of the frames), first-use normalization (12-16 of 20), lean
+materialization (6), synchronous sound reads (12), pose parse (all 20).

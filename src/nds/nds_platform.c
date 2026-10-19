@@ -521,6 +521,13 @@ static void ndsPlatformVBlankInterrupt(void)
     sVBlankCount++;
 }
 
+/* The present lead's wake line (ndsPlatformPresentLeadEnable): a handler of
+ * its own so the dispatcher acknowledges it; the waiting thread is the
+ * point. */
+static void ndsPlatformVCountInterrupt(void)
+{
+}
+
 /* An ARM9 self-restart lived here briefly, as the cheap way past the rematch's
  * second-entry geometry corruption. It is deleted rather than left default-off
  * because it does not work and a dead selector is worse than none. The full
@@ -4682,6 +4689,9 @@ __attribute__((weak)) void ndsR2AnimPrefetchIdle(void)
 }
 
 static u32 sIdlePresentVBlank;
+/* A led frame's idle ends its lead before the retrace (ndsPlatformPresent-
+ * LeadWait): the scanlines the deadline comes early by. */
+static u32 sIdleLeadLines;
 
 /* cpuGetTiming ticks (2,130 a scanline) until the VBlank this frame will be
  * presented at: the next one, or `earliest` when the pacing scheduled a later
@@ -4696,6 +4706,7 @@ u32 ndsPlatformTicksToPresentVBlank(void)
     {
         lines += 263u * (u32)(ahead - 1);
     }
+    lines = (lines > sIdleLeadLines) ? (lines - sIdleLeadLines) : 0u;
     return lines * 2130u;
 }
 
@@ -4720,6 +4731,288 @@ static void ndsPlatformWaitForScheduledVBlank(void)
     }
 }
 
+#if NDS_RENDERER_HW_TRIANGLES
+/* What the swap retrace commits for the frame it shows: everything after the
+ * wait in EndFrame, run there or, for a led frame, on the present thread. */
+static void ndsPlatformPostSwapCommit(void)
+{
+    /* Single final fade application, after all draws: the published lbFade
+     * frame (if any) becomes the MASTER_BRIGHT level for the commit below.
+     * Covers 3D, both staging layers, and fade-only frames with no staging
+     * commit; blackout precedence resolves inside the sole register owner. */
+    ndsLBFadePushHardwareFrame();
+#if NDS_SCENE_MIP_CACHE_LAB
+    ndsPlatformSceneWallpaperCommitAffine();
+#endif
+    ndsPlatformCommitNativeWallpaperAffine();
+    ndsRendererHardwareCommitPendingTextureRefreshes();
+    ndsIFCommonNativeOamCommit();
+    ndsResultsOamCommit();
+    ndsSource2DCommit();
+#if NDS_P2_UI_KIT
+    /* P2-1c. After the battle's OBJ tenant, because the two share one shadow
+     * OAM and the later publisher wins; they are never live in the same scene,
+     * so this ordering only decides which one pays for the oamUpdate. */
+    ndsUiKitCommit();
+#endif
+#if NDS_SCENE_MIP_CACHE_LAB
+    if (sSceneMipCapturePending != 0u)
+    {
+        /* EndFrame runs after the SObj compositor committed BG2. Mark that
+         * exact source wallpaper as retained without copying it through GX
+         * texture VRAM or consuming a second VBlank. */
+        ndsPlatformSceneMipFinishCapture();
+        ndsPlatformSceneWallpaperCommitAffine();
+    }
+#endif
+    /* A layer written this frame shows with the OBJ planes committed above. */
+    ndsPlatformRevealOriginalSpriteOverlay();
+#if NDS_TRANSITION_HOLD && NDS_RENDERER_HW_TRIANGLES
+    /* The next scene's first complete frame replaces the snapshot. */
+    if ((sNdsTransitionSnapshotBank != 0u) &&
+        (sNdsTransitionHold == NDS_TRANSITION_HOLD_NONE) &&
+        (ndsVideoGetTransitionBlackout() == FALSE))
+    {
+        ndsPlatformTransitionSnapshotRestore();
+        NDS_DIAG(gNdsTransitionSnapshotReleaseCount++);
+    }
+#endif
+    /* Release brightness only after this frame's BG/OAM owners committed. */
+    ndsVideoBlackoutCommit();
+    sTicks++;
+}
+#endif
+
+/* BOUNDED PIPELINING (owner 2026-10-19). A battle frame used to flush, sleep
+ * to its swap retrace and only then run the next frame's game logic, so a
+ * heavy logic frame (a status change's clip load and parse, a list
+ * materialized for its new pose) could not use the spare time the frame
+ * before it left: 6-15% of the cast's frames took three VBlanks on eight
+ * stages. Now, while the battle host enables it, EndFrame returns once the
+ * swap retrace is at most gNdsPresentLeadLines scanlines away (half a VBlank
+ * by default, the owner's bound on the added input latency, ~8 ms on
+ * average), and the next frame's logic runs from there. Game order, the
+ * replay digest and the image are unchanged: the logic still runs after the
+ * draw that reads it.
+ *
+ * What the retrace itself must commit for the frame it shows -- the deferred
+ * palettes, the fade, the wallpaper's affine, the texture refreshes, the OAM
+ * planes -- cannot wait for the logic: the rendering engine reads the new
+ * frame's VRAM from line 214. A thread above the main thread's priority
+ * sleeps on VBlank and runs that commit at the swap retrace, preempting the
+ * logic; the logic touches none of it (no DMA, VRAM, OAM or GX of its own),
+ * and the next draw starts only after the commit (Retire). The flush itself
+ * is held until the retrace before the scheduled one, so a frame whose draw
+ * ended early still swaps at its scheduled retrace.
+ *
+ * A frame that needs the old path's extras -- a scene's first 3D frame
+ * (BG0's reveal waits a second retrace), bank D's return, a held snapshot --
+ * presents the old way. gNdsPresentLeadLines 0 is the old loop throughout
+ * (one ROM A/Bs both through a boot poke). */
+#ifndef NDS_PRESENT_LEAD
+#define NDS_PRESENT_LEAD 0
+#endif
+#define NDS_PRESENT_LEAD_LIVE (NDS_RENDERER_HW_TRIANGLES && (NDS_PRESENT_LEAD != 0))
+__attribute__((used)) volatile u32 gNdsPresentLeadLines = NDS_PRESENT_LEAD;
+/* Frames that led, and led frames whose next logic still ran past their
+ * retrace (the next draw started late). */
+__attribute__((used)) volatile u32 gNdsPresentLeadFrames;
+__attribute__((used)) volatile u32 gNdsPresentLeadLate;
+#if NDS_PRESENT_LEAD_LIVE
+#include <calico/system/mailbox.h>
+static Thread sNdsPresentThread;
+static u8 sNdsPresentThreadStack[2048] __attribute__((aligned(8)));
+static u32 sNdsPresentMailSlots[2];
+static Mailbox sNdsPresentMail;
+static u32 sNdsPresentThreadStarted;
+static u32 sNdsPresentLeadOn;
+/* Main thread: a led frame waits for Retire. */
+static u32 sNdsPresentLeadPending;
+/* Present thread: the retrace to commit at, and the frame waiting for it. */
+static volatile u32 sNdsPresentLeadSwap;
+static volatile u32 sNdsPresentLeadArmed;
+
+static int ndsPlatformPresentThreadMain(void *arg)
+{
+    (void)arg;
+    for (;;)
+    {
+        threadWaitForVBlank();
+        if ((sNdsPresentLeadArmed != 0u) &&
+            ((s32)(sVBlankCount - sNdsPresentLeadSwap) >= 0))
+        {
+            const u32 at = sVBlankCount;
+
+            /* The first retrace after the flush swapped the frame in. */
+            ndsRendererCommitDeferredPalettes();
+            ndsPlatformPostSwapCommit();
+            sNdsPresentLeadArmed = 0u;
+            (void)mailboxTrySend(&sNdsPresentMail, at);
+        }
+    }
+    return 0;
+}
+
+/* The flush waits for the retrace before the scheduled one, so the swap
+ * lands on it rather than a retrace early. */
+static void ndsPlatformPresentLeadHoldFlush(u32 earliest)
+{
+    while ((earliest != 0u) && ((s32)((sVBlankCount + 1u) - earliest) < 0))
+    {
+        NDS_FREEZE_DIAGNOSTICS_VBLANK_WAIT();
+        threadWaitForVBlank();
+    }
+}
+
+/* After the flush: arm the retrace's commit, then sleep until it is at most
+ * gNdsPresentLeadLines away (or past). */
+static void ndsPlatformPresentLeadWait(u32 swap)
+{
+    const u32 lead = gNdsPresentLeadLines;
+
+    sNdsPresentLeadSwap = swap;
+    sNdsPresentLeadArmed = 1u;
+    sNdsPresentLeadPending = 1u;
+    gNdsPresentLeadFrames++;
+    if ((s32)(sVBlankCount - swap) >= 0)
+    {
+        /* The retrace passed between the flush and the arming: the present
+         * thread woke before there was anything to commit. */
+        const IrqState st = irqLock();
+        const u32 armed = sNdsPresentLeadArmed;
+
+        sNdsPresentLeadArmed = 0u;
+        irqUnlock(st);
+        if (armed != 0u)
+        {
+            ndsRendererCommitDeferredPalettes();
+            ndsPlatformPostSwapCommit();
+            (void)mailboxTrySend(&sNdsPresentMail, sVBlankCount);
+        }
+        return;
+    }
+    sIdlePresentVBlank = swap;
+    sIdleLeadLines = lead;
+    ndsR2AnimPrefetchIdle();
+    for (;;)
+    {
+        const u32 count = sVBlankCount;
+        const u32 line = REG_VCOUNT;
+
+        if ((s32)(count - swap) >= 0)
+        {
+            break;
+        }
+        if (((count + 1u) == swap) && (line < 192u) &&
+            ((192u - line) <= lead))
+        {
+            break;
+        }
+        NDS_FREEZE_DIAGNOSTICS_VBLANK_WAIT();
+        /* The wake line, or the retrace itself should the line pass
+         * between the test and the wait. */
+        (void)threadIrqWait(true, IRQ_VCOUNT | IRQ_VBLANK);
+    }
+    sIdleLeadLines = 0u;
+}
+
+/* A battle frame with a scheduled retrace and none of the old path's
+ * extras leads. */
+static u32 ndsPlatformPresentLeadThisFrame(u32 submitted)
+{
+    if ((sNdsPresentLeadOn == 0u) || (submitted == 0u) ||
+        (sEarliestPresentVBlank == 0u) ||
+        (s3dLayerEnableOnNextPresent != FALSE) ||
+        (sOriginalSpriteOverlayBg3ReturnPending != 0u))
+    {
+        return FALSE;
+    }
+#if NDS_TRANSITION_HOLD
+    if ((sNdsTransitionSnapshotBank != 0u) ||
+        (sNdsTransitionHold != NDS_TRANSITION_HOLD_NONE))
+    {
+        return FALSE;
+    }
+#endif
+    return TRUE;
+}
+#endif
+
+void ndsPlatformPresentLeadEnable(u32 enable)
+{
+#if NDS_PRESENT_LEAD_LIVE
+    const u32 lead = gNdsPresentLeadLines;
+
+    if ((enable == FALSE) || (lead == 0u) || (lead >= 192u))
+    {
+        (void)ndsPlatformPresentLeadRetire();
+        if (sNdsPresentLeadOn != 0u)
+        {
+            irqDisable(IRQ_VCOUNT);
+            REG_DISPSTAT &= ~DISPSTAT_IE_VCOUNT;
+        }
+        sNdsPresentLeadOn = 0u;
+        return;
+    }
+    if (sNdsPresentThreadStarted == 0u)
+    {
+        mailboxPrepare(&sNdsPresentMail, sNdsPresentMailSlots,
+                       sizeof(sNdsPresentMailSlots) /
+                           sizeof(sNdsPresentMailSlots[0]));
+        threadPrepare(&sNdsPresentThread, ndsPlatformPresentThreadMain, NULL,
+                      &sNdsPresentThreadStack[sizeof(sNdsPresentThreadStack)],
+                      MAIN_THREAD_PRIO - 1u);
+        threadStart(&sNdsPresentThread);
+        irqSet(IRQ_VCOUNT, ndsPlatformVCountInterrupt);
+        sNdsPresentThreadStarted = 1u;
+    }
+    SetYtrigger((int)(192u - lead));
+    REG_DISPSTAT |= DISPSTAT_IE_VCOUNT;
+    irqEnable(IRQ_VCOUNT);
+    sNdsPresentLeadOn = 1u;
+#else
+    (void)enable;
+#endif
+}
+
+u32 ndsPlatformPresentLeadPending(void)
+{
+#if NDS_PRESENT_LEAD_LIVE
+    return sNdsPresentLeadPending;
+#else
+    return 0u;
+#endif
+}
+
+/* Before the next draw: the led frame's retrace has committed (waiting for
+ * it if the logic finished early). -> the VBlank it was swapped in at. */
+u32 ndsPlatformPresentLeadRetire(void)
+{
+#if NDS_PRESENT_LEAD_LIVE
+    u32 at;
+
+    if (sNdsPresentLeadPending == 0u)
+    {
+        return 0u;
+    }
+    sNdsPresentLeadPending = 0u;
+    if (sNdsPresentLeadArmed == 0u)
+    {
+        gNdsPresentLeadLate++;
+    }
+    else
+    {
+        sIdlePresentVBlank = sNdsPresentLeadSwap;
+        ndsR2AnimPrefetchIdle();
+    }
+    NDS_FREEZE_DIAGNOSTICS_VBLANK_WAIT();
+    at = mailboxRecv(&sNdsPresentMail);
+    return at;
+#else
+    return 0u;
+#endif
+}
+
 void ndsPlatformEndFrame(void)
 {
 #if NDS_TICK_HUD
@@ -4741,6 +5034,10 @@ void ndsPlatformEndFrame(void)
 #endif
 #if NDS_RENDERER_HW_TRIANGLES
     u32 submitted;
+#if NDS_PRESENT_LEAD_LIVE
+    u32 lead = FALSE;
+    u32 lead_flush_vblank = 0u;
+#endif
 
 #if NDS_TRANSITION_HOLD
     /* A present while a frame is held is a loading service present -- every
@@ -4768,6 +5065,9 @@ void ndsPlatformEndFrame(void)
         ndsAudioReleaseDeferredBGM();
     }
     submitted = ndsRendererHardwareConsumeSubmittedFrame();
+#if NDS_PRESENT_LEAD_LIVE
+    lead = ndsPlatformPresentLeadThisFrame(submitted);
+#endif
     if ((submitted != 0u) || (sOriginalSpriteOverlayNeedsFlush != FALSE))
     {
         if (submitted != 0u)
@@ -4853,7 +5153,29 @@ void ndsPlatformEndFrame(void)
 #if NDS_TASK29_GX_CENSUS
         ndsRendererTask29GXRecordFlush(GL_TRANS_MANUALSORT);
 #endif
+#if NDS_PRESENT_LEAD_LIVE
+        if (lead != FALSE)
+        {
+            /* Idle until the retrace before the scheduled one: WAIT, not the
+             * flush's MISC. */
+#if NDS_TICK_HUD
+            const u32 hold_start = cpuGetTiming();
+#endif
+            ndsPlatformPresentLeadHoldFlush(sEarliestPresentVBlank);
+#if NDS_TICK_HUD
+            {
+                const u32 held = cpuGetTiming() - hold_start;
+
+                gNdsTickHudVBlankWaitTicks += held;
+                tickhud_flush_start += held;
+            }
+#endif
+        }
+#endif
         glFlush(GL_TRANS_MANUALSORT);
+#if NDS_PRESENT_LEAD_LIVE
+        lead_flush_vblank = sVBlankCount;
+#endif
 #if NDS_TICK_HUD
         gNdsTickHudFlushTicks += cpuGetTiming() - tickhud_flush_start;
 #endif
@@ -4889,6 +5211,22 @@ void ndsPlatformEndFrame(void)
 #endif
 #if NDS_TICK_HUD
     tickhud_wait_start = cpuGetTiming();
+#endif
+#if NDS_PRESENT_LEAD_LIVE
+    if (lead != FALSE)
+    {
+        /* The swap is the retrace after the flush; its commit is the
+         * present thread's, and the next logic starts at the lead. */
+        sEarliestPresentVBlank = 0u;
+        ndsPlatformPresentLeadWait(lead_flush_vblank + 1u);
+#if NDS_TICK_HUD
+        gNdsTickHudVBlankWaitTicks += cpuGetTiming() - tickhud_wait_start;
+#endif
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+        gNdsRendererProfileVBlankWaitTicks = cpuGetTiming() - profile_start;
+#endif
+        return;
+    }
 #endif
     ndsPlatformWaitForScheduledVBlank();
 #if NDS_TICK_HUD
@@ -4943,50 +5281,7 @@ void ndsPlatformEndFrame(void)
     DC_FlushRange((const void *)&gNdsVramBankDLent, sizeof(u32));
     DC_FlushRange((const void *)&gNdsVramBg3RefusedWrites, sizeof(u32));
 #endif
-    /* Single final fade application, after all draws: the published lbFade
-     * frame (if any) becomes the MASTER_BRIGHT level for the commit below.
-     * Covers 3D, both staging layers, and fade-only frames with no staging
-     * commit; blackout precedence resolves inside the sole register owner. */
-    ndsLBFadePushHardwareFrame();
-#if NDS_SCENE_MIP_CACHE_LAB
-    ndsPlatformSceneWallpaperCommitAffine();
-#endif
-    ndsPlatformCommitNativeWallpaperAffine();
-    ndsRendererHardwareCommitPendingTextureRefreshes();
-    ndsIFCommonNativeOamCommit();
-    ndsResultsOamCommit();
-    ndsSource2DCommit();
-#if NDS_P2_UI_KIT
-    /* P2-1c. After the battle's OBJ tenant, because the two share one shadow
-     * OAM and the later publisher wins; they are never live in the same scene,
-     * so this ordering only decides which one pays for the oamUpdate. */
-    ndsUiKitCommit();
-#endif
-#if NDS_SCENE_MIP_CACHE_LAB
-    if (sSceneMipCapturePending != 0u)
-    {
-        /* EndFrame runs after the SObj compositor committed BG2. Mark that
-         * exact source wallpaper as retained without copying it through GX
-         * texture VRAM or consuming a second VBlank. */
-        ndsPlatformSceneMipFinishCapture();
-        ndsPlatformSceneWallpaperCommitAffine();
-    }
-#endif
-    /* A layer written this frame shows with the OBJ planes committed above. */
-    ndsPlatformRevealOriginalSpriteOverlay();
-#if NDS_TRANSITION_HOLD && NDS_RENDERER_HW_TRIANGLES
-    /* The next scene's first complete frame replaces the snapshot. */
-    if ((sNdsTransitionSnapshotBank != 0u) &&
-        (sNdsTransitionHold == NDS_TRANSITION_HOLD_NONE) &&
-        (ndsVideoGetTransitionBlackout() == FALSE))
-    {
-        ndsPlatformTransitionSnapshotRestore();
-        NDS_DIAG(gNdsTransitionSnapshotReleaseCount++);
-    }
-#endif
-    /* Release brightness only after this frame's BG/OAM owners committed. */
-    ndsVideoBlackoutCommit();
-    sTicks++;
+    ndsPlatformPostSwapCommit();
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsRendererProfilePostVBlankTicks +=
         cpuGetTiming() - profile_start;
