@@ -3289,6 +3289,18 @@ SURFACE_SOURCES.append(SurfaceSpec(
                "llMNPlayersGameModesTeamBattleTextSprite",
                27, 24 + CSS_HEADER_DY, False, (0x61, 0xAD, 0x49)),),
     None, under=css_screen_parts(), box=CSS_MODE_BOX))
+# P7 C4 (owner, 2026-10-18: Training enabled): the training select is this
+# screen with two slots. mnPlayers1PTrainingMakeLabels (:850-885) draws
+# TRAINING MODE at (27,24) under the FFA tint and has no rule bar, so its one
+# state covers the mode label and the rule selector both: the label, and the
+# base where the selector would be.
+CSS_MODE_TRAINING_BOX = (27, 22 + CSS_HEADER_DY, 203, 24)
+SURFACE_SOURCES.append(SurfaceSpec(
+    "CSS_MODE_TRAINING",
+    (Placement("MNPlayersGameModes",
+               "llMNPlayersGameModesTrainingModeTextSprite",
+               27, 24 + CSS_HEADER_DY, False, (0xE3, 0xAC, 0x04)),),
+    None, under=css_screen_parts(), box=CSS_MODE_TRAINING_BOX))
 
 # (2) BACK: `llMNPlayersCommonBackButtonSprite` at (244,23) — static, so it
 # joins the CSS base rather than being a state. The old font composition of

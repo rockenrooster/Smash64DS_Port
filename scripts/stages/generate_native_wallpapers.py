@@ -86,8 +86,9 @@ class WallpaperSource:
 
 
 # The nine VS stages, the 1P arenas and bonus boards (small Yoshi's Island
-# shares StageYoshi), plus VS Results; Training's wallpapers are not here yet. Container choice per map header extern list,
-# quoted in the module docstring; order follows dMNMapsFileInfos.
+# shares StageYoshi), Training's three, plus VS Results. Container choice per
+# map header extern list, quoted in the module docstring; order follows
+# dMNMapsFileInfos.
 SOURCES: tuple[WallpaperSource, ...] = (
     WallpaperSource("pupupu", "reloc_stages/StageDreamLand", 0x58, 0x26C88, True, 0x10058),
     WallpaperSource("zebes", "reloc_stages/StageZebes", 0x59, 0x26C88, True, 0x10059),
@@ -107,6 +108,13 @@ SOURCES: tuple[WallpaperSource, ...] = (
     WallpaperSource("zako", "reloc_stages/StageInishieWallpaper", 0x61, 0x26C88, True, 0x10061),
     WallpaperSource("metal", "reloc_stages/StageLastWallpaper", 0x62, 0x26C88, True, 0x10062),
     WallpaperSource("bonus", "reloc_stages/StageMetalWallpaper", 0x77, 0x26C88, True, 0x10077),
+    # P7 C4 (2026-10-18): Training's backdrops, dSC1PTrainingModeWallpaperDescs
+    # (sc1ptrainingmode.c:79-84), drawn static in place of each stage's own
+    # (sc1PTrainingModeLoadWallpaper), so the scene no longer force-loads a
+    # 156 KB container into its heap. Their registry ids are the files'.
+    WallpaperSource("training_black", "reloc_stages/GRWallpaperTrainingBlack", 0x1A, 0x20718, True),
+    WallpaperSource("training_yellow", "reloc_stages/GRWallpaperTrainingYellow", 0x1B, 0x20718, True),
+    WallpaperSource("training_blue", "reloc_stages/GRWallpaperTrainingBlue", 0x1C, 0x20718, True),
     WallpaperSource("results", "reloc_menus/MNVSResults", 0x22, 0xD5C8, False),
 )
 

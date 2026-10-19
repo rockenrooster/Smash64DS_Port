@@ -88,6 +88,12 @@
 #include <sys/rdp.h>
 #include <sys/taskman.h>
 #include <sys/video.h>
+#include <nds/nds_ifcommon_oam.h>
+#include <nds/nds_native_wallpaper.h>
+#include <nds/nds_p5.h>
+#if NDS_P5
+#include "nds_p5_preview.generated.h"
+#endif
 
 /* Port headers declare no gmCamera makers (decomp gm/gmcamera.h:53-83);
  * same extern pattern as battleship_scvsbattle.c:42-61. */
@@ -137,13 +143,141 @@ void sc1PTrainingModeUpdateCursorPosition(void);
 #define sc1PTrainingModeStartScene ndsBaseSC1PTrainingModeStartScene
 void ndsBaseSC1PTrainingModeStartScene(void);
 
+/* P7 C4 (2026-10-18). Training draws its backdrop natively and reads its
+ * per-ground tables by the stage's Training parent.
+ *  - sc1PTrainingModeLoadWallpaper (called by grwallpaper.c:271) force-loaded
+ *    the backdrop's container over the map's wallpaper, 156 KB of the scene
+ *    heap (reloc_backend_assets.c gave a compact map that region), and with
+ *    two heavy contents the second fighter's allocation halted (walk-tr3,
+ *    ndsSyMallocOverflowHalt). It now names the backdrop: the static
+ *    wallpaper keeps the map's Sprite for its placement and draws the
+ *    converted image (generate_native_wallpapers.py training_*,
+ *    sprite_preview_backend.c).
+ *  - dSC1PTrainingModeWallpaperIDs and its heap offsets have the source's
+ *    nine grounds; a P5 stage reads them through Remix's background_table
+ *    parent (Stages.asm training_id_fix_, patched at the start of
+ *    sc1PTrainingModeInitDisplayVars), as the fog colour there does. The
+ *    display-vars definition keeps the source body under a base name; its
+ *    call (no argument) reaches the port's copy. */
+#define sc1PTrainingModeLoadWallpaper ndsBaseSC1PTrainingModeLoadWallpaper
+void ndsBaseSC1PTrainingModeLoadWallpaper(void);
+#define NDS_TRAINING_DISPLAY_VARS_void ndsBaseSC1PTrainingModeInitDisplayVars(void
+#define NDS_TRAINING_DISPLAY_VARS_ ndsSC1PTrainingModeInitDisplayVars(
+#define sc1PTrainingModeInitDisplayVars(arg) NDS_TRAINING_DISPLAY_VARS_##arg)
+static void ndsSC1PTrainingModeInitDisplayVars(void);
+/* The sprite file's four position-and-sprite arrays hold each position as
+ * two s16 in one word, and the loader's word byteswap leaves the pair
+ * exchanged (a label's y read as its x: the menu's ten labels stacked on one
+ * row). The load keeps the source body under a base name; its call reaches
+ * the port's copy, which swaps the pairs back. */
+#define NDS_TRAINING_LOAD_SPRITES_void ndsBaseSC1PTrainingModeLoadSprites(void
+#define NDS_TRAINING_LOAD_SPRITES_ ndsSC1PTrainingModeLoadSprites(
+#define sc1PTrainingModeLoadSprites(arg) NDS_TRAINING_LOAD_SPRITES_##arg)
+static void ndsSC1PTrainingModeLoadSprites(void);
+/* The menu's box and the cursor's underline are display callbacks that write
+ * fill rectangles (sc1PTrainingModeMenuProcDisplay :1090,
+ * sc1PTrainingModeUnderlineProcDisplay :1642); the port's copies below hand
+ * the rectangles to the native battle presenter
+ * (nds_ifcommon_oam.c ndsIFCommonTrainingFillRect). Only the definitions are
+ * renamed (a function-like macro): the scene's gcAddGObjDisplay references
+ * name the port's. */
+void sc1PTrainingModeMenuProcDisplay(GObj *interface_gobj);
+void sc1PTrainingModeUnderlineProcDisplay(GObj *interface_gobj);
+#define sc1PTrainingModeMenuProcDisplay(arg)     ndsBaseSC1PTrainingModeMenuProcDisplay(arg)
+#define sc1PTrainingModeUnderlineProcDisplay(arg)     ndsBaseSC1PTrainingModeUnderlineProcDisplay(arg)
+
 #include "../../decomp/BattleShip-main/decomp/src/sc/sc1pmode/sc1ptrainingmode.c"
 
+#undef sc1PTrainingModeUnderlineProcDisplay
+#undef sc1PTrainingModeMenuProcDisplay
+
+#undef sc1PTrainingModeLoadSprites
+#undef sc1PTrainingModeInitDisplayVars
+#undef sc1PTrainingModeLoadWallpaper
 #undef sc1PTrainingModeStartScene
+
+/* The ground whose Training rows this battle reads. */
+static s32 ndsSC1PTrainingModeTableGkind(void)
+{
+    s32 gkind = gSCManagerBattleState->gkind;
+
+#if NDS_P5
+#define NDS_TRAINING_PARENT_ROW(g, parent) \
+    if (gkind == (s32)(g)) { gkind = (s32)(parent); }
+    NDS_P5_TRAINING_ROWS(NDS_TRAINING_PARENT_ROW)
+#undef NDS_TRAINING_PARENT_ROW
+#endif
+    return ((u32)gkind < ARRAY_COUNT(dSC1PTrainingModeWallpaperIDs)) ?
+        gkind : (s32)nGRKindPupupu;
+}
+
+u32 gNdsTrainingWallpaperAsset;
+
+void sc1PTrainingModeLoadWallpaper(void)
+{
+    /* dSC1PTrainingModeWallpaperDescs' order is the files': Black 0x1A,
+     * Yellow 0x1B, Blue 0x1C, the converted images' registry ids. */
+    gNdsTrainingWallpaperAsset = NDS_TRAINING_WALLPAPER_ASSET_BLACK +
+        (u32)dSC1PTrainingModeWallpaperIDs[ndsSC1PTrainingModeTableGkind()];
+}
+
+void sc1PTrainingModeMenuProcDisplay(GObj *interface_gobj)
+{
+    (void)interface_gobj;
+    /* :1094-1097: PRIM 00/64/FF at alpha 0x64 under G_RM_CLD_SURF. */
+    ndsIFCommonTrainingFillRect(68, 47, 253, 198, 0x0064FFu, 0x64u);
+}
+
+void sc1PTrainingModeUnderlineProcDisplay(GObj *interface_gobj)
+{
+    (void)interface_gobj;
+    /* :1646-1648: opaque red, FILL cycle. */
+    ndsIFCommonTrainingFillRect(sSC1PTrainingModeMenu.cursor_ulx,
+                                sSC1PTrainingModeMenu.cursor_uly,
+                                sSC1PTrainingModeMenu.cursor_lrx,
+                                sSC1PTrainingModeMenu.cursor_lry,
+                                0xFF0000u, 0xFFu);
+}
+
+static void ndsSC1PTrainingModeSwapPositions(SC1PTrainingModeSprites *rows,
+                                             u32 count)
+{
+    u32 i;
+
+    for (i = 0u; i < count; i++)
+    {
+        s16 x = rows[i].pos.y;
+
+        rows[i].pos.y = rows[i].pos.x;
+        rows[i].pos.x = x;
+    }
+}
+
+static void ndsSC1PTrainingModeLoadSprites(void)
+{
+    ndsBaseSC1PTrainingModeLoadSprites();
+    /* The rows the scene reads: the stat labels (4, :692), the menu labels
+     * (10, :1060), and the two option tables (6, :1473; 28, :1508). */
+    ndsSC1PTrainingModeSwapPositions(sSC1PTrainingModeMenu.display_label_sprites, 4u);
+    ndsSC1PTrainingModeSwapPositions(sSC1PTrainingModeMenu.menu_label_sprites, 10u);
+    ndsSC1PTrainingModeSwapPositions(sSC1PTrainingModeMenu.unk_trainmenu_0x34, 6u);
+    ndsSC1PTrainingModeSwapPositions(sSC1PTrainingModeMenu.unk_trainmenu_0x38, 28u);
+}
+
+static void ndsSC1PTrainingModeInitDisplayVars(void)
+{
+    gMPCollisionGroundData->fog_color = dSC1PTrainingModeWallpaperDescs[
+        dSC1PTrainingModeWallpaperIDs[ndsSC1PTrainingModeTableGkind()]].fog_color;
+    ifCommonPlayerMagnifyMakeInterface();
+    gIFCommonPlayerInterface.is_magnify_display = TRUE;
+}
 
 void sc1PTrainingModeStartScene(void)
 {
     ndsBaseSC1PTrainingModeStartScene();
+    /* The menu box's blend ends with the scene (Exit or Reset from the menu
+     * leaves while it shows). */
+    ndsIFCommonTrainingEnd();
 }
 
 #endif /* NDS_P2_1P_GAME */

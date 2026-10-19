@@ -699,6 +699,16 @@ static inline u32 ndsP4SelContent(u32 sel)
  * (or a lab descriptor) next to gSCManagerBattleState->players[].fkind, which
  * holds the parent kind. */
 extern u8 gNdsP4PlayerContent[GMCOMMON_PLAYERS_MAX];
+/* P7 C4: the training select's two contents, [0] the man and [1] the COM.
+ * sc1PTrainingModeInitVars seats the man at gSCManagerSceneData.player and
+ * the COM at the other of 0/1; ndsP4MatchContent answers the training battle
+ * from these. Written by the native select's commit. */
+extern u8 gNdsP4TrainingContent[2];
+/* P7 C1: the 1P campaign player's content (0 for an original). The campaign
+ * scenes seat the player at gSCManagerSceneData.player with
+ * gSCManagerSceneData.fkind, the content's setup parent; ndsP4MatchContent
+ * answers the player's slot from this while that parent is the kind. */
+extern u8 gNdsP4OnePlayerContent;
 
 /* A vanilla `x->fkind == nFTKind<Parent>` compare that Remix leaves alone
  * sees a Remix fighter's own character id on the N64, so the fighter takes

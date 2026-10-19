@@ -691,6 +691,16 @@ static s32 ndsSObjDrawCachedWallpaperFinal(SObj *sobj, u32 combine_mode)
      * key kNDSNativeWallpapers is written against. */
     (void)ndsRelocCompactGroundMapWallpaperKey(&asset_id, &bitmap_offset);
 #endif
+#if NDS_P2_1P_GAME
+    /* P7 C4: Training's backdrop stands in for the stage's own (the static
+     * wallpaper keeps the map's Sprite for its placement). */
+    if ((gSCManagerSceneData.scene_curr == nSCKind1PTrainingMode) &&
+        (gNdsTrainingWallpaperAsset != 0u))
+    {
+        asset_id = gNdsTrainingWallpaperAsset;
+        bitmap_offset = NDS_TRAINING_WALLPAPER_BITMAP;
+    }
+#endif
     if (palette == NULL)
     {
         /* Battle wallpapers keep the presentation stretch; the Results

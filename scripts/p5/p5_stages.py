@@ -294,6 +294,12 @@ def write_preview_header(path: Path, cells: list[dict]) -> None:
         "#define NDS_P5_PREVIEW_ROWS(X) \\",
     ]
     lines += [f"    X({c['gkind']}, {c['zoom']!r}F) \\" for c in rows]
+    lines += ["    /* end */",
+              "/* X(gkind, parent): the source ground whose Training rows a P5 stage",
+              " * reads (Remix Stages.asm background_table, training_id_fix_). */",
+              "#define NDS_P5_TRAINING_ROWS(X) \\"]
+    lines += [f"    X({c['gkind']}, {c['training_parent']}) \\"
+              for c in rows if "training_parent" in c]
     lines += ["    /* end */", "#endif", ""]
     write_if_changed(path, "\n".join(lines))
 

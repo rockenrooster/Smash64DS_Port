@@ -89,6 +89,7 @@
 #define NDS_RELOC_ASSET_MN_COMMON_FONTS 0x21u
 #define NDS_RELOC_ASSET_FT_STOCKS_ZAKO 0x19u
 #define NDS_RELOC_ASSET_MN_VS_RESULTS 0x22u
+#define NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES 0x1du /* reloc_extern_data/MiscData029, stage_reloc_file.py */
 #define NDS_RELOC_ASSET_NNESS_MODEL 0x138u /* reloc_fighters_main/NNessModel, admit_fighter.py --fighter polygons */
 #define NDS_RELOC_ASSET_NPURIN_MODEL 0x132u /* reloc_fighters_main/NPurinModel, admit_fighter.py --fighter polygons */
 #define NDS_RELOC_ASSET_NPIKACHU_MODEL 0x133u /* reloc_fighters_main/NPikachuModel, admit_fighter.py --fighter polygons */
@@ -3209,6 +3210,243 @@ static const NDSRelocSpriteNormalizeDesc
     /* MNSelectCommon (reloc asset 0x15), stage_reloc_file.py --extend. */
     { NDS_RELOC_ASSET_MN_SELECT_COMMON, 0x0440u, 64u, 32u, 1u,
       G_IM_FMT_CI, G_IM_SIZ_4b },
+    /* _29_ (reloc asset 0x1d), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x0098u, 8u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x0178u, 8u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x02d8u, 9u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x03b8u, 8u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x0518u, 9u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x0678u, 10u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x07d8u, 9u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x0938u, 9u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x0a98u, 9u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x0bf8u, 9u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x0e58u, 31u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x14b8u, 91u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x1798u, 37u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x19f8u, 32u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x1f58u, 78u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x24b8u, 80u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x2698u, 24u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x2af8u, 57u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x2e58u, 47u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x33b8u, 73u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x3798u, 52u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x3ff8u, 126u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x43d8u, 56u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x4738u, 48u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x4c98u, 73u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x50f8u, 62u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x5558u, 57u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x5738u, 22u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x5918u, 22u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x5b78u, 26u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x5d58u, 23u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x6038u, 37u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x6318u, 35u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x65f8u, 37u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x68d8u, 35u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x6c38u, 43u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x6d18u, 8u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x6df8u, 8u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x6f58u, 14u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x7338u, 50u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x7698u, 44u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x79f8u, 43u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x7cd8u, 40u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x7f90u, 34u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x85f8u, 89u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x88d8u, 36u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x8b38u, 28u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x9048u, 75u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x9558u, 80u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x9720u, 23u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x9b08u, 50u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x9e38u, 47u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0xa318u, 69u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0xa6f8u, 54u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0xad30u, 86u, 17u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0xb158u, 60u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0xb538u, 51u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0xba18u, 69u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0xbdf8u, 54u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0xc1a0u, 54u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0xc388u, 22u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0xc568u, 22u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0xc748u, 22u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0xc928u, 22u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0xcc08u, 37u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0xcee8u, 33u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0xd1a0u, 39u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0xd488u, 34u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0xd7e8u, 42u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0xdb90u, 49u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0xdec8u, 48u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0xe270u, 49u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0xe6d8u, 16u, 16u, 1u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0xea08u, 48u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0xedb0u, 49u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0xf160u, 49u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0xf588u, 57u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0xf8e8u, 46u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0xfb10u, 194u, 4u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x10060u, 4u, 152u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x105b0u, 4u, 152u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x107e0u, 194u, 4u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x10890u, 9u, 9u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x10940u, 9u, 9u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x10a68u, 23u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x10ca8u, 73u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x10ee8u, 73u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x11068u, 34u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x11248u, 62u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x11488u, 77u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x11608u, 43u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x11848u, 66u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x119c8u, 43u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x11c08u, 76u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x11d88u, 44u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x12048u, 64u, 19u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x121c8u, 34u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x12348u, 44u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x12588u, 72u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x12768u, 64u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x129a8u, 77u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x12ac8u, 26u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x12be8u, 27u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x12d08u, 29u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x12e28u, 27u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x12f48u, 23u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x13068u, 23u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x131e8u, 34u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x13368u, 45u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x13488u, 23u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x13668u, 56u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x13968u, 108u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x13ae8u, 42u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x13c68u, 44u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x13de8u, 34u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x13f68u, 34u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x14088u, 22u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES, 0x141a8u, 32u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b }
 };
 
 static const NDSTitleSpriteDesc sNdsTitleSpriteDescs[] = {
@@ -3366,6 +3604,7 @@ __attribute__((weak)) uintptr_t llITCommonDataStarRodWeaponAttributes = 0x4d4u;
 static const NDSRelocKnownAssetSymbol sNdsKnownAssetSymbols[] = {
     NDS_IFCOMMON_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
     NDS_VS_RESULTS_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_SC1P_TRAINING_SPRITES_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
     /* BossModel/BossMain own no offset symbols (file-id only), so they have
      * no NDS_*_RELOC_SYMBOLS macro and no known-symbol row; same for every
      * symbol-less polygon file below. */
@@ -4930,6 +5169,10 @@ static u32 ndsRelocAssetIDForTokenChain(u32 token)
     if (token == ndsRelocFileID(&llIFCommonPlayerTagsFileID)) return NDS_RELOC_ASSET_IF_COMMON_PLAYER_TAGS;
     if (token == ndsRelocFileID(&llIFCommonAnnounceCommonFileID)) return NDS_RELOC_ASSET_IF_COMMON_ANNOUNCE;
     if (token == ndsRelocFileID(&llMNVSResultsFileID)) return NDS_RELOC_ASSET_MN_VS_RESULTS;
+    if (token == ndsRelocFileID(&ll_29_FileID)) return NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES;
+    /* Its raw id too: SC1PTrainingMode's 118 sprite pointers are externs
+     * into it (P7 C4), and an extern list carries file ids. */
+    if (token == NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES) return NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES;
     if (token == ndsRelocFileID(&llNNessModelFileID)) return NDS_RELOC_ASSET_NNESS_MODEL;
     if (token == ndsRelocFileID(&llNNessMainFileID)) return NDS_RELOC_ASSET_NNESS_MAIN;
     if (token == ndsRelocFileID(&llNPurinModelFileID)) return NDS_RELOC_ASSET_NPURIN_MODEL;
@@ -5963,6 +6206,7 @@ static s32 ndsRelocAssetIsMenu(u32 asset_id)
 {
     switch (asset_id)
     {
+    case NDS_RELOC_ASSET_SC1P_TRAINING_SPRITES:
     case NDS_RELOC_ASSET_NNESS_MODEL:
     case NDS_RELOC_ASSET_NNESS_MAIN:
     case NDS_RELOC_ASSET_NPURIN_MODEL:
@@ -6597,40 +6841,6 @@ static __attribute__((noinline)) s32 ndsRelocCompactGroundMapWallpaperKey(
     return TRUE;
 }
 
-#if NDS_P2_1P_GAME
-/* Training Mode swaps in its own wallpaper (decomp sc1ptrainingmode.c:652) by
- * force-loading the training file at `wallpaper - 0x26c88`, the base of the
- * wallpaper container a SOURCE map's tree holds. A compact map holds none, so
- * that base would land 0x26c88 bytes before the map and the load would overwrite
- * whatever precedes it. Give Training the region the source tree gave it --
- * container-sized, `wallpaper` where the source puts it -- before anything reads
- * the pointer; the training wallpaper then replaces both. Called by
- * mpCollisionInitGroundData with the map file it just loaded. */
-#define NDS_RELOC_COMPACT_TRAINING_WALLPAPER_BYTES 0x26cd0u
-static __attribute__((noinline)) void ndsRelocCompactGroundMapPrepareTraining(
-    void *file, MPGroundData *ground_data)
-{
-    const Sprite *sprite;
-    void *region;
-
-    if ((ground_data == NULL) ||
-        (gSCManagerSceneData.scene_curr != nSCKind1PTrainingMode))
-    {
-        return;
-    }
-    sprite = ndsRelocCompactGroundMapSprite(ndsRelocFindLoadedFileByData(file));
-    if ((sprite == NULL) || (sprite != ground_data->wallpaper))
-    {
-        return;
-    }
-    region = syTaskmanMalloc(NDS_RELOC_COMPACT_TRAINING_WALLPAPER_BYTES, 0x10);
-    if (region != NULL)
-    {
-        ground_data->wallpaper = (Sprite *)((u8 *)region +
-            NDS_RELOC_SYMBOL_STAGE_DREAM_LAND_SPRITE);
-    }
-}
-#endif
 #endif
 
 /* R2-07 cycle 109. The memo is four-way move-to-front, not one-deep.

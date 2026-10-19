@@ -1136,7 +1136,8 @@ s32 ndsMNPlayers1PGameWalkCursor(s32 *x, s32 *y);
 void ndsMNPlayers1PGameWalkUnlockAll(void);
 #endif
 /* The 1P Mode menu tab the walk confirms, as down taps from 1P GAME: 0 the
- * campaign, 2 Bonus 1 Practice, 3 Bonus 2 Practice (Training is closed). The
+ * campaign, 1 Training (its select is the native VS screen, which the shell
+ * walk's own CSS script drives), 2 Bonus 1 Practice, 3 Bonus 2 Practice. The
  * bonus character selects take the same puck path as the 1P one. */
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalk1PModeDowns = 0u;
 

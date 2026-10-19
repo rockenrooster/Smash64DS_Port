@@ -418,11 +418,13 @@ static void ndsBattlePlayablePacingStart(u32 fast_logic)
     {
         ndsPlatformSetOriginalSpriteOverlayEnabled(TRUE);
         if ((gSCManagerBattleState != NULL) &&
-            ((u32)gSCManagerBattleState->gkind <= 8u))
+            ((u32)gSCManagerBattleState->gkind <= 8u) &&
+            (gSCManagerSceneData.scene_curr != nSCKind1PTrainingMode))
         {
             /* Pay the single 84,480-byte NitroFS upload during battle setup.
              * The renderer owner replaces this setup affine from the live
-             * camera before the first presented battle frame. */
+             * camera before the first presented battle frame. Training draws
+             * its own backdrop (the static wallpaper). */
             (void)ndsNativeBattleWallpaperPreload(
                 (u32)gSCManagerBattleState->gkind);
         }
@@ -1566,6 +1568,42 @@ static void ndsCampaignDrivePlayback(void)
         {
             ndsControllerPlaybackSetPad(0u, 0u, 0, 0);
         }
+        return;
+    }
+
+    if (scene == (u32)nSCKind1PTrainingMode)
+    {
+        /* Training walk (route 1, P7 C4's witness): the menu opened and
+         * worked the way a player works it -- START 150 updates in, DOWN at
+         * 210 (CP to ITEM), RIGHT at 250 (the next item), START at 400 to
+         * close -- every 600 updates; otherwise the pad stays neutral. */
+        u32 t;
+        u16 button = 0u;
+        s8 stick_x = 0;
+        s8 stick_y = 0;
+
+        if ((gNdsMenuShellWalkRoute != 1u) || (gSCManagerBattleState == NULL))
+        {
+            ndsControllerPlaybackSetPad(0u, 0u, 0, 0);
+            return;
+        }
+        ndsControllerPlaybackSetConnectedMask(1u);
+        ndsControllerPlaybackSetEnabled(TRUE);
+        sNdsCampaignBattlePlaybackFrame++;
+        t = sNdsCampaignBattlePlaybackFrame % 600u;
+        if ((t == 150u) || (t == 151u) || (t == 400u) || (t == 401u))
+        {
+            button = START_BUTTON;
+        }
+        else if ((t == 210u) || (t == 211u))
+        {
+            stick_y = -80;
+        }
+        else if ((t == 250u) || (t == 251u))
+        {
+            stick_x = 80;
+        }
+        ndsControllerPlaybackSetPad(0u, button, stick_x, stick_y);
         return;
     }
 

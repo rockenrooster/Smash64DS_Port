@@ -244,6 +244,11 @@ NDS_VS_RESULTS_RELOC_SYMBOLS(NDS_DEFINE_VS_RESULTS_RELOC_SYMBOL)
 NDS_TRANSITION_RELOC_SYMBOLS(NDS_DEFINE_TRANSITION_RELOC_SYMBOL)
 #undef NDS_DEFINE_TRANSITION_RELOC_SYMBOL
 
+uintptr_t ll_29_FileID = 0x1du;
+#define NDS_DEFINE_SC1P_TRAINING_SPRITES_RELOC_SYMBOL(asset, name, value) uintptr_t name = value;
+NDS_SC1P_TRAINING_SPRITES_RELOC_SYMBOLS(NDS_DEFINE_SC1P_TRAINING_SPRITES_RELOC_SYMBOL)
+#undef NDS_DEFINE_SC1P_TRAINING_SPRITES_RELOC_SYMBOL
+
 /* The Poke Ball throw effect's ITCommonData closure. Defined unconditionally,
  * like every other row above: these are plain offsets, and the item core's
  * absence is a residency question the resolver already answers by finding no

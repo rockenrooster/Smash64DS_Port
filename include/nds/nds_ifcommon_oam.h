@@ -52,6 +52,11 @@ void ndsIFCommonNativeOamReleaseCloudTextures(void);
 void ndsIFCommonNativeOamBeginFrame(void);
 s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj);
 void ndsIFCommonNativeOamCommit(void);
+/* P7 C4: Training's menu box and cursor underline (source frame, inclusive
+ * corners; alpha < 255 blends), and the box blend's end at scene exit. */
+void ndsIFCommonTrainingFillRect(s32 ulx, s32 uly, s32 lrx, s32 lry,
+                                 u32 rgb, u32 alpha);
+void ndsIFCommonTrainingEnd(void);
 
 #define NDS_TASK39_FX_ENGAGED_SPRITES (1u << 0)
 #define NDS_TASK39_FX_ENGAGED_FLASH (1u << 1)

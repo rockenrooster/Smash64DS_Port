@@ -714,7 +714,9 @@ void ndsMenuShellRunVSMode(void)
  * track unless it was entered FROM the stage select, then announces the mode
  * already carried by the transfer state.  Do not hard-code FREE FOR ALL here:
  * returning from Maps while Team Battle is selected must say TEAM BATTLE just
- * as the source does. */
+ * as the source does. The training select's tail (mnplayers1ptraining.c
+ * :3204-3209) is the same rule with TRAINING MODE, which AnnounceMode says
+ * in that mode. */
 static void ndsMenuShellCssPlayBgm(void)
 {
     if ((u8)gSCManagerSceneData.scene_prev != (u8)nSCKindMaps)

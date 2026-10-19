@@ -4994,6 +4994,7 @@ static s32 ndsRendererAdapterPrepareNativeStageOwnerBody(
      * must not blank an otherwise valid native background. */
     if ((cobj != NULL) && (gSCManagerBattleState != NULL) &&
         ((u32)gSCManagerBattleState->gkind <= 8u) &&
+        (gSCManagerSceneData.scene_curr != nSCKind1PTrainingMode) &&
         (sNdsRendererAdapterStagePreviewMode == 0u))
     {
         (void)ndsNativeBattleWallpaperDraw(

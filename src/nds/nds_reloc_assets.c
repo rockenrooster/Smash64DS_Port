@@ -115,6 +115,7 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
     { 0x26, 0x26, "nitro:/reloc/reloc_interface/IFCommonPlayerTags" },
     { 0x19, 0x19, "nitro:/reloc/reloc_fighters_common/FTStocksZako" },
     { 0x22, 0x22, "nitro:/reloc/reloc_menus/MNVSResults" },
+    { 0x1d, 0x1d, "nitro:/reloc/reloc_extern_data/MiscData029" },
     { 0x138, 0x138, "nitro:/reloc/reloc_fighters_main/NNessModel" },
     { 0xf1, 0xf1, "nitro:/reloc/reloc_fighters_main/NNessMain" },
     { 0x132, 0x132, "nitro:/reloc/reloc_fighters_main/NPurinModel" },

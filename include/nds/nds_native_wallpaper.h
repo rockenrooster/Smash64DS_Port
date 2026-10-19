@@ -24,4 +24,13 @@ s32 ndsWallpaperPerspQ(u32 motion, const Vec3f *eye, const Vec3f *at,
                        s32 *pos_x_q16, s32 *pos_y_q16, s32 *scale_q16);
 void ndsNativeWallpaperInvalidate(void);
 
+/* P7 C4: Training's backdrop, named by battleship_sc1ptrainingmode.c
+ * sc1PTrainingModeLoadWallpaper (0 before a Training battle): the converted
+ * GRWallpaperTraining image the static wallpaper draws in the map's place.
+ * Ids are the files' (Black, Yellow, Blue); the bitmap offset is the
+ * generator's key for all three. */
+#define NDS_TRAINING_WALLPAPER_ASSET_BLACK 0x1Au
+#define NDS_TRAINING_WALLPAPER_BITMAP 0x204C8u
+extern u32 gNdsTrainingWallpaperAsset;
+
 #endif

@@ -234,14 +234,18 @@ __attribute__((used)) volatile u32 gNdsSC1PIntroStillsMissing;
  * stage's VS fighters right; what passes the edge is clipped. */
 #define NDS_SC1P_INTRO_STILL_EDGE_SHIFT 8
 
+/* A row at a time (2026-10-18): reading the whole texture at once asked the
+ * scene heap for colors * 2 + tex_w * tex_h bytes, 66,048 for Captain
+ * Falcon's 256x256 player card, 8 KB more than stage 1's intro had left, and
+ * the campaign froze there (ndsSyMallocOverflowHalt, walk walk-c1a). The
+ * palette and one row now sit on the stack and nothing is allocated. */
 static s32 ndsSC1PIntroBlitStill(const char *path, u16 *layer, u32 pitch,
                                  s32 shift)
 {
     NDSSC1PIntroStillHeader header;
     FILE *file;
-    u16 *palette;
-    u8 *texels;
-    u32 bytes;
+    u16 palette[256];
+    u8 row[256];
     u32 y;
     s32 ok = FALSE;
 
@@ -256,33 +260,31 @@ static s32 ndsSC1PIntroBlitStill(const char *path, u16 *layer, u32 pitch,
         (header.magic == NDS_SC1P_INTRO_STILL_MAGIC) &&
         (header.colors != 0u) && (header.colors <= 256u) &&
         (header.w <= header.tex_w) && (header.h <= header.tex_h) &&
+        (header.tex_w <= sizeof(row)) &&
         ((u32)header.x + header.w <= 256u) &&
-        ((u32)header.y + header.h <= 192u))
+        ((u32)header.y + header.h <= 192u) &&
+        (fread(palette, sizeof(u16), header.colors, file) == header.colors))
     {
-        bytes = (header.colors * sizeof(u16)) +
-                ((u32)header.tex_w * header.tex_h);
-        palette = syTaskmanMalloc(bytes, 0x4u);
-        if ((palette != NULL) &&
-            (fread(palette, 1u, bytes, file) == bytes))
+        ok = TRUE;
+        for (y = 0u; y < header.h; y++)
         {
-            texels = (u8 *)(palette + header.colors);
-            for (y = 0u; y < header.h; y++)
+            u16 *dst = layer + ((header.y + y) * pitch);
+            u32 x;
+
+            if (fread(row, 1u, header.tex_w, file) != header.tex_w)
             {
-                const u8 *row = texels + (y * header.tex_w);
-                u16 *dst = layer + ((header.y + y) * pitch);
-                u32 x;
+                ok = FALSE;
+                break;
+            }
+            for (x = 0u; x < header.w; x++)
+            {
+                const s32 sx = (s32)header.x + (s32)x + shift;
 
-                for (x = 0u; x < header.w; x++)
+                if ((row[x] != 0u) && (sx >= 0) && (sx < 256))
                 {
-                    const s32 sx = (s32)header.x + (s32)x + shift;
-
-                    if ((row[x] != 0u) && (sx >= 0) && (sx < 256))
-                    {
-                        dst[sx] = palette[row[x]] | 0x8000u;
-                    }
+                    dst[sx] = palette[row[x]] | 0x8000u;
                 }
             }
-            ok = TRUE;
         }
     }
     fclose(file);

@@ -292,6 +292,12 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
          * with the shell on, because this switch runs first -- and the imported
          * scene's own StartScene is compiled out at NDS_P2_MENU_SHELL so the
          * heavy original func_start cannot run either. */
+#if NDS_P2_1P_GAME
+    case nSCKindPlayers1PTraining:
+        /* P7 C4: the training select is the same native screen in its
+         * two-slot mode (nds_menu_shell_css.c sCssTraining); the imported
+         * mnplayers1ptraining.c scene had no presenter. */
+#endif
         ndsMenuShellRunCharSelect();
         ndsFinishTaskmanRun();
         gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
@@ -483,7 +489,6 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
      * the challenger to its fight, the ending to the credits, the credits to
      * the title), which the pump's LoadScene return honours. */
     case nSCKind1PGamePlayers:
-    case nSCKindPlayers1PTraining:
     case nSCKind1PBonus1Players:
     case nSCKind1PBonus2Players:
     case nSCKind1PIntro:

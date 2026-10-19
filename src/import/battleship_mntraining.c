@@ -110,7 +110,18 @@ void ndsBaseMNPlayers1PTrainingStartScene(void);
 
 void mnPlayers1PTrainingStartScene(void)
 {
+#if NDS_P2_MENU_SHELL
+    /* P7 C4 (2026-10-18): the training select is the native VS screen in its
+     * two-slot mode (nds_menu_shell_css.c sCssTraining), so the scene starts
+     * as that screen's does (nds_menu_shell_router.c mnPlayersVSStartScene:
+     * the VS select's taskman declaration, func_start NULL). The source's
+     * mnPlayers1PTrainingFuncStart loads eight menu files and makes the SObj
+     * graph and two fighters for the RDP path, and it never returned (walk
+     * walk-tr2: scene 18 entered, its func_start reached, the screen never). */
+    mnPlayersVSStartScene();
+#else
     ndsBaseMNPlayers1PTrainingStartScene();
+#endif
 }
 
 #endif /* NDS_P2_1P_GAME */

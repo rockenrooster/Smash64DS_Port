@@ -356,6 +356,14 @@ static u32 sCssBackTics;
  * the mode-label toggle, and written back through the descriptor on commit.
  * P2-2 also makes sCssTeam[] live through the source RED/BLUE/GREEN controls. */
 static u8 sCssIsTeamBattle;
+/* P7 C4 (owner, 2026-10-18: "Training mode enabled"). This screen is also
+ * the training select (mnplayers1ptraining.c): the man in the cursor's slot
+ * and the COM in the other of 0/1 (mnPlayers1PTrainingInitVars), the other
+ * two shut; no mode toggle, rule bar, kind buttons or CPU level (the training
+ * menu owns the COM). START always opens the stage select, B goes back to the
+ * 1P menu, and the commit writes the scene's training_man/com pair
+ * (mnPlayers1PTrainingSetSceneData) and each one's content. */
+static u8 sCssTraining;
 /* 1 + the mode label surface ndsMenuShellCssPopulate last blitted with BACK
  * over this entry's base surfaces; 0 until it has. */
 static u32 sCssEntryStatesShown;
@@ -425,6 +433,12 @@ static void ndsMenuShellCssCue(u32 id)
  * mode-toggle handler — FREE FOR ALL (512) or TEAM BATTLE (526). */
 static void ndsMenuShellCssAnnounceMode(void)
 {
+    if (sCssTraining != 0u)
+    {
+        /* nSYAudioVoiceAnnounceTrainingMode, mnplayers1ptraining.c:3209. */
+        ndsMenuShellCssCue(530u);
+        return;
+    }
     ndsMenuShellCssCue((sCssIsTeamBattle != FALSE) ? 526u : 512u);
 }
 
@@ -919,6 +933,10 @@ static u32 ndsMenuShellCssRuleArrow(void)
 {
     s32 step;
 
+    if (sCssTraining != 0u)
+    {
+        return FALSE;
+    }
     if (ndsMenuShellCssBoxHit(210, 230, 12 + NDS_CSS_HEADER_DY,
                               35 + NDS_CSS_HEADER_DY) != FALSE)
     {
@@ -1861,7 +1879,8 @@ static void ndsMenuShellCssDrawArrows(void)
         u32 value = (is_cpu != FALSE) ? (u32)sCssLevel[i] :
             (u32)sCssHandicap[i];
         u32 live = (((is_cpu != FALSE) || (is_human_handicap != FALSE)) &&
-                    (sCssArrowsShown != FALSE)) ? TRUE : FALSE;
+                    (sCssArrowsShown != FALSE) && (sCssTraining == 0u)) ?
+            TRUE : FALSE;
 
         if ((live != FALSE) && (value > NDS_CSS_LEVEL_MIN))
         {
@@ -1905,9 +1924,11 @@ static void ndsMenuShellCssPopulate(void)
     {
         NdsUiKitSurfaceId entry_states[2];
 
-        entry_states[0] = (sCssIsTeamBattle != FALSE) ?
-            NDS_MN_UI_KIT_SURFACE_CSS_MODE_TEAM :
-            NDS_MN_UI_KIT_SURFACE_CSS_MODE_FFA;
+        entry_states[0] = (sCssTraining != 0u) ?
+            NDS_MN_UI_KIT_SURFACE_CSS_MODE_TRAINING :
+            ((sCssIsTeamBattle != FALSE) ?
+                 NDS_MN_UI_KIT_SURFACE_CSS_MODE_TEAM :
+                 NDS_MN_UI_KIT_SURFACE_CSS_MODE_FFA);
         entry_states[1] = NDS_MN_UI_KIT_SURFACE_CSS_BACK;
         /* 2026-10-12: once per entry and mode, not per populate: a carried
          * token re-populates on every portrait it crosses, and these two
@@ -1919,7 +1940,10 @@ static void ndsMenuShellCssPopulate(void)
             gNdsMenuShellCssPanelBlitCount += 2u;
         }
     }
-    ndsMenuShellCssShowRule();
+    if (sCssTraining == 0u)
+    {
+        ndsMenuShellCssShowRule();
+    }
 
     /* P2-1L (5): EVERY portrait cell is backdrop art now. The old twelve OBJ
      * slots were dead after that migration and are no longer reserved; P2-1
@@ -1929,10 +1953,18 @@ static void ndsMenuShellCssPopulate(void)
     {
         s32 panel = (s32)(i * 69u);
 
-        /* The player-kind button, mnplayersvs.c:963. */
-        ndsUiKitSetSprite(NDS_CSS_SPRITE_KIND0 + i,
-                          ndsMenuShellCssKindImage((u32)sCssPkind[i]),
-                          NDS_CSS_DS(NDS_CSS_CARD_X(panel, 64)), NDS_CSS_DS(NDS_CSS_CARD_Y(131)));
+        /* The player-kind button, mnplayersvs.c:963. The training select
+         * has none (its slots' kinds are fixed). */
+        if (sCssTraining != 0u)
+        {
+            ndsUiKitHideSprite(NDS_CSS_SPRITE_KIND0 + i);
+        }
+        else
+        {
+            ndsUiKitSetSprite(NDS_CSS_SPRITE_KIND0 + i,
+                              ndsMenuShellCssKindImage((u32)sCssPkind[i]),
+                              NDS_CSS_DS(NDS_CSS_CARD_X(panel, 64)), NDS_CSS_DS(NDS_CSS_CARD_Y(131)));
+        }
 
         /* P2-1j (e): the panel's own player tag, mnPlayersVSMakePlayerKind
          * (:969) -- a CPU slot draws the shared CP art at `p*69+26` and a
@@ -1981,11 +2013,12 @@ static void ndsMenuShellCssPopulate(void)
         /* CP LEVEL / HANDICAP and its value, mnplayersvs.c:2700-2799. Auto and
          * On both show a human handicap row; only On gets editable arrows
          * (:2792-2798, :2803-2821). CPU level remains editable in every mode. */
-        if (((sCssPkind[i] == (u8)nFTPlayerKindCom) &&
-             (sCssSelected[i] != 0u)) ||
-            ((sCssPkind[i] == (u8)nFTPlayerKindMan) &&
-             (sCssSelected[i] != 0u) &&
-             (gNdsMatchConfig.handicap_mode != (u8)nSCBattleHandicapOff)))
+        if ((sCssTraining == 0u) &&
+            (((sCssPkind[i] == (u8)nFTPlayerKindCom) &&
+              (sCssSelected[i] != 0u)) ||
+             ((sCssPkind[i] == (u8)nFTPlayerKindMan) &&
+              (sCssSelected[i] != 0u) &&
+              (gNdsMatchConfig.handicap_mode != (u8)nSCBattleHandicapOff))))
         {
             u32 value;
 
@@ -2708,6 +2741,10 @@ static u32 ndsMenuShellCssCheckKindButton(void)
 {
     u32 slot;
 
+    if (sCssTraining != 0u)
+    {
+        return FALSE;
+    }
     for (slot = 0u; slot < (u32)NDS_CSS_SLOTS; slot++)
     {
         s32 panel = (s32)(slot * 69u);
@@ -2805,8 +2842,8 @@ static u32 ndsMenuShellCssCheckLevelArrows(void)
 {
     u32 slot;
 
-    /* P3: CPU levels and handicaps are the host's. */
-    if (ndsMenuShellCssNetGuest() != FALSE)
+    /* P3: CPU levels and handicaps are the host's. Training has neither. */
+    if ((ndsMenuShellCssNetGuest() != FALSE) || (sCssTraining != 0u))
     {
         return FALSE;
     }
@@ -2899,10 +2936,38 @@ static void ndsMenuShellCssRecall(void)
 /* mnPlayersVSSetSceneData, mnplayersvs.c:4379 -- through the P2-1a descriptor,
  * which is the battle's only input, rather than straight into the battle
  * state. The rules half stays whatever the VS menu committed. */
+/* mnPlayers1PTrainingSetSceneData (mnplayers1ptraining.c:2911): the man's
+ * and the COM's kind and costume, each a selection's setup parent with its
+ * content beside it. */
+static void ndsMenuShellCssCommitTraining(void)
+{
+    const u32 man = (u32)NDS_CSS_CURSOR_SLOT;
+    const u32 com = (man == 0u) ? 1u : 0u;
+
+    gSCManagerSceneData.training_man_fkind =
+        (u8)ndsMenuShellCssSelFkind((u32)sCssFkind[man]);
+    gSCManagerSceneData.training_man_costume =
+        (u8)(ndsMNPlayersVSPreviewGetAppearance(man) & 0xffu);
+    gSCManagerSceneData.training_com_fkind =
+        (u8)ndsMenuShellCssSelFkind((u32)sCssFkind[com]);
+    gSCManagerSceneData.training_com_costume =
+        (u8)(ndsMNPlayersVSPreviewGetAppearance(com) & 0xffu);
+#if NDS_P4
+    gNdsP4TrainingContent[0] = (u8)ndsMenuShellCssSelContent((u32)sCssFkind[man]);
+    gNdsP4TrainingContent[1] = (u8)ndsMenuShellCssSelContent((u32)sCssFkind[com]);
+#endif
+    gNdsMenuShellCssCommitCount++;
+}
+
 static void ndsMenuShellCssCommit(void)
 {
     u32 i;
 
+    if (sCssTraining != 0u)
+    {
+        ndsMenuShellCssCommitTraining();
+        return;
+    }
     for (i = 0u; i < (u32)NDS_MATCH_FIGHTERS_MAX; i++)
     {
         NdsMatchFighterConfig *slot = &gNdsMatchConfig.fighters[i];
@@ -3064,7 +3129,10 @@ static void ndsMenuShellCssBack(void)
      * stop, BGM 10 would keep playing under a VS menu that then starts 44 over
      * the top of it. */
     ndsAudioBgmStopAll();
-    ndsMenuShellGoto((u32)nSCKindVSMode);
+    /* mnPlayers1PTrainingBackTo1PMode (:2046): the training select's way out
+     * is the 1P menu, with the same commit and stop. */
+    ndsMenuShellGoto((sCssTraining != 0u) ? (u32)nSCKind1PMode :
+                                            (u32)nSCKindVSMode);
 }
 
 /* mnPlayersVSUpdateCursorNoRecall, mnplayersvs.c:3128. The band is 38..124 --
@@ -3711,6 +3779,13 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
                 ndsMenuShellGoto((u32)nSCKindMaps);
                 return;
             }
+            /* mnPlayers1PTrainingFuncRun:2963: training always opens the
+             * stage select. */
+            if (sCssTraining != 0u)
+            {
+                ndsMenuShellGoto((u32)nSCKindMaps);
+                return;
+            }
             /* mnPlayersVSFuncRun:4493-4508. The source opens Stage Select when
              * enabled and otherwise rolls a different unlocked ground before
              * entering battle. */
@@ -3823,7 +3898,8 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
                     }
                     if ((ndsMenuShellCssBoxHit(27, 137, 14 + NDS_CSS_HEADER_DY,
                                                35 + NDS_CSS_HEADER_DY) != FALSE) &&
-                        (ndsMenuShellCssNetGuest() == FALSE))
+                        (ndsMenuShellCssNetGuest() == FALSE) &&
+                        (sCssTraining == 0u))
                     {
                         NdsUiKitSurfaceId label;
 
@@ -4007,6 +4083,69 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
     gNdsMenuShellCssCursorStatus = sCssStatus;
 }
 
+/* mnPlayers1PTrainingInitVars (mnplayers1ptraining.c:3058-3112): the man
+ * keeps the scene's training_man fighter (none on a first visit, so the token
+ * opens in the hand), the COM keeps training_com's or, with none, takes a
+ * random unlocked one; the other two slots are shut. Each slot's content
+ * rides gNdsP4TrainingContent. No team battle in training. */
+static void ndsMenuShellCssInitTraining(void)
+{
+    const u32 man = (u32)NDS_CSS_CURSOR_SLOT;
+    const u32 com = (man == 0u) ? 1u : 0u;
+    u32 i;
+
+    sCssIsTeamBattle = 0u;
+    for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
+    {
+        u32 fkind = (u32)nFTKindNull;
+        u32 slot_index = (i == man) ? 0u : 1u;
+
+        if ((i != man) && (i != com))
+        {
+            sCssPkind[i] = (u8)nFTPlayerKindNot;
+            sCssFkind[i] = (u8)nFTKindNull;
+            sCssSelected[i] = 0u;
+            ndsMenuShellCssCenterPuck(i, (u32)nFTKindNull);
+            continue;
+        }
+        sCssPkind[i] = (i == man) ? (u8)nFTPlayerKindMan : (u8)nFTPlayerKindCom;
+        fkind = (i == man) ? (u32)gSCManagerSceneData.training_man_fkind :
+                             (u32)gSCManagerSceneData.training_com_fkind;
+#if NDS_P4
+        if ((fkind != (u32)nFTKindNull) &&
+            (ndsP4Fighter(gNdsP4TrainingContent[slot_index]) != NULL))
+        {
+            fkind = NDS_P4_SEL_BASE + (u32)gNdsP4TrainingContent[slot_index];
+        }
+#else
+        (void)slot_index;
+#endif
+        if ((fkind != (u32)nFTKindNull) &&
+            (ndsMenuShellCssFighterLocked(fkind) != FALSE))
+        {
+            fkind = (u32)nFTKindNull;
+        }
+        if ((i == com) && (fkind == (u32)nFTKindNull))
+        {
+#if NDS_P4
+            fkind = ndsMenuShellCssP4RandomSel();
+#else
+            do
+            {
+                fkind = (u32)syUtilsRandTimeUCharRange(
+                    (s32)nFTKindPlayableEnd + 1);
+            }
+            while (ndsMenuShellCssFighterLocked(fkind) != FALSE);
+#endif
+        }
+        sCssFkind[i] = (u8)fkind;
+        sCssLevel[i] = 3u;
+        sCssTeam[i] = (u8)((i == man) ? nSCBattleTeamIDRed : nSCBattleTeamIDBlue);
+        sCssSelected[i] = (fkind != (u32)nFTKindNull) ? 1u : 0u;
+        ndsMenuShellCssCenterPuck(i, fkind);
+    }
+}
+
 /* mnPlayersVSInitVars + mnPlayersVSInitPlayer + mnPlayersVSInitSlot,
  * mnplayersvs.c:4670/:4579/:4698, reading the P2-1a descriptor instead of
  * gSCManagerTransferBattleState: the descriptor is what the battle consumes, so
@@ -4040,7 +4179,12 @@ static void ndsMenuShellCssInit(void)
         ndsNetLockstepDisarm();
     }
     ndsNetUiClear();
-    sCssCursorSlot = (sCssNet != 0u) ? ndsNetLobbyLocalPort() : 0u;
+    sCssTraining = ((sCssNet == 0u) &&
+                    ((u32)gSCManagerSceneData.scene_curr ==
+                     (u32)nSCKindPlayers1PTraining)) ? 1u : 0u;
+    sCssCursorSlot = (sCssNet != 0u) ? ndsNetLobbyLocalPort() :
+        (((sCssTraining != 0u) && (gSCManagerSceneData.player < 2u)) ?
+             (u32)gSCManagerSceneData.player : 0u);
     /* mnPlayersVSMakeCursor seats player p at x 40 + 68p. */
     sCssCursorX = NDS_CSS_CURSOR_HOME_X + 68 * (s32)sCssCursorSlot;
     sCssCursorY = NDS_CSS_CURSOR_HOME_Y;
@@ -4113,6 +4257,10 @@ static void ndsMenuShellCssInit(void)
         sCssSelected[i] = (sCssFkind[i] != (u8)nFTKindNull) ? 1u : 0u;
         ndsMenuShellCssCenterPuck(i, (u32)sCssFkind[i]);
         gNdsMenuShellCssCommitSlot[i] = 0u;
+    }
+    if (sCssTraining != 0u)
+    {
+        ndsMenuShellCssInitTraining();
     }
     /* P3: this console's own port is always a human in a room. */
     if ((sCssNet != 0u) &&

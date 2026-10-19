@@ -50,6 +50,12 @@ USAGE
   python scripts/menus/stage_reloc_file.py --file SC1PStageClear1 --check
   python scripts/menus/stage_reloc_file.py --file SC1PStageClear1 --dry-run
   python scripts/menus/stage_reloc_file.py --file IFCommonDigits --extend
+  python scripts/menus/stage_reloc_file.py --file _29_ --container \
+      reloc_extern_data/MiscData029 --token SC1P_TRAINING_SPRITES --list ...
+
+A file the decomp left unnamed (ll_29_FileID, its symbols ll_29_*) sits in an
+o2r container of another name; --container names it (relative to
+BattleShip_o2r) and --token the C spelling, since a numeric name has none.
 """
 from __future__ import annotations
 
@@ -207,13 +213,14 @@ def hand_asset_name(backend: str, file_id: int) -> str | None:
 
 
 class Plan:
-    def __init__(self, root: Path, name: str, extend: bool = False) -> None:
+    def __init__(self, root: Path, name: str, extend: bool = False,
+                 container: str | None = None, token: str | None = None) -> None:
         file_ids, symbols = parse_decomp(root)
         if name not in file_ids:
             raise StageError(f"{name}: no ll{name}FileID in reloc_data.us.h")
         self.name = name
         self.file_id = file_ids[name]
-        self.token = macro_token(name)
+        self.token = token or macro_token(name)
         self.extend = extend
         self.hand_asset: str | None = None
         self.symbols = file_symbols(name, file_ids, symbols)
@@ -228,8 +235,16 @@ class Plan:
             header = read(root, HEADER)
             self.symbols = {sym: off for sym, off in self.symbols.items()
                             if re.search(rf"\b{sym}\b", header) is None}
-        self.container = find_container(root, name)
+        if container is not None:
+            self.container = root / "decomp/BattleShip-main/BattleShip_o2r" / container
+            if not self.container.is_file():
+                raise StageError(f"{container}: no such o2r container")
+        else:
+            self.container = find_container(root, name)
         self.dir = self.container.parent.name
+        # The o2r container's own name: the NitroFS path and the staging list
+        # entry (for a named file, the decomp's name).
+        self.cname = self.container.name
         reloc = Container(self.container)
         if reloc.file_id != self.file_id:
             raise StageError(f"{name}: container id {reloc.file_id:#x} != "
@@ -298,7 +313,7 @@ class Plan:
 
     def define_line(self) -> str:
         return (f"#define {self.asset} 0x{self.file_id:x}u "
-                f"/* {self.dir}/{self.name}, stage_reloc_file.py */\n")
+                f"/* {self.dir}/{self.cname}, stage_reloc_file.py */\n")
 
     def token_line(self) -> str:
         return (f"    if (token == ndsRelocFileID(&ll{self.name}FileID)) "
@@ -324,10 +339,10 @@ class Plan:
 
     def assets_line(self) -> str:
         return (f"    {{ 0x{self.file_id:x}, 0x{self.file_id:x}, "
-                f'"nitro:/reloc/{self.dir}/{self.name}" }},\n')
+                f'"nitro:/reloc/{self.dir}/{self.cname}" }},\n')
 
     def make_entry(self) -> str:
-        return f"{self.dir}/{self.name}"
+        return f"{self.dir}/{self.cname}"
 
 
 # -- surface edits --------------------------------------------------------
@@ -379,7 +394,11 @@ def edit_backend(text: str, plan: Plan) -> str:
         end = text.find("\n};", start)
         if end < 0:
             raise StageError(f"{BACKEND}: table end not found")
-        text = text[:end] + plan.geometry_block() + text[end:]
+        block = plan.geometry_block()
+        if text[:end].rstrip().endswith(","):
+            # The table's last row keeps a trailing comma: no separator.
+            block = block[1:]
+        text = text[:end] + block + text[end:]
     if not plan.extend and plan.case_line() not in text:
         anchor = (f"static s32 {plan.classifier}(u32 asset_id)\n{{\n"
                   f"    switch (asset_id)\n    {{\n")
@@ -486,12 +505,18 @@ def main(argv: list[str] | None = None) -> int:
                         help="Makefile staging list to add the file to (apply mode)")
     parser.add_argument("--extend", action="store_true",
                         help="add only the symbols a hand-staged file lacks")
+    parser.add_argument("--container", default=None,
+                        help="o2r container under BattleShip_o2r when its name "
+                             "is not the file's (an unnamed decomp file)")
+    parser.add_argument("--token", default=None,
+                        help="C spelling for the file's defines and macros")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args(argv)
     root = args.repo_root.resolve()
     try:
-        plan = Plan(root, args.file, extend=args.extend)
+        plan = Plan(root, args.file, extend=args.extend,
+                    container=args.container, token=args.token)
         report(plan)
         if args.extend and not plan.symbols:
             print(f"{plan.name}: nothing to extend")

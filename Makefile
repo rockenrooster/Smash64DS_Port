@@ -4218,7 +4218,7 @@ NDS_MN_UI_KIT_ASSET := $(PROJECT_ROOT)/assets/menus/mn_ui_kit.bin
 # P3: the networked character select's 2P-4P player art (its own pack).
 NDS_MN_UI_KIT_NET_ASSET := $(PROJECT_ROOT)/assets/menus/mn_ui_kit_net.bin
 NDS_NATIVE_WALLPAPER_INC := $(PROJECT_ROOT)/src/nds/generated/native_wallpapers.generated.inc
-NDS_NATIVE_WALLPAPER_NAMES := pupupu zebes jungle yoster yamabuki castle sector hyrule inishie last zako metal bonus results
+NDS_NATIVE_WALLPAPER_NAMES := pupupu zebes jungle yoster yamabuki castle sector hyrule inishie last zako metal bonus training_black training_yellow training_blue results
 NDS_NATIVE_WALLPAPER_ASSETS := $(foreach name,$(NDS_NATIVE_WALLPAPER_NAMES),$(PROJECT_ROOT)/assets/wallpapers/native_wallpaper_$(name).bin)
 # P2-2/P2-3. The lower battle HUD is AOT-only: source IFCommon digits and each
 # admitted fighter's portrait/stock icon are baked straight into tiled 4bpp
@@ -5840,7 +5840,8 @@ NDS_MODES_RELOC_FILES := \
 	reloc_stages/GRWallpaperTrainingYellow \
 	reloc_scene/SCExplainGraphics \
 	reloc_scene/SCExplainMain \
-	reloc_menus/MNScreenAdjust
+	reloc_menus/MNScreenAdjust \
+	reloc_extern_data/MiscData029
 
 NDS_VSBATTLE_RELOC_FILES := \
 	reloc_interface/IFCommonPlayer \

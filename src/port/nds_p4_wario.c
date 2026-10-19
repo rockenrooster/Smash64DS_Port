@@ -29,6 +29,7 @@
 #if NDS_P4_WARIO
 
 #include <ef/effect.h>
+#include <ft/ftcomputer.h>
 #include <sys/audio.h>
 #if NDS_P2_KIRBY
 #include "kirby/nds_p4_kirby.generated.h"
@@ -685,6 +686,67 @@ static sb32 ndsP4WarioShoulderedInterrupt(GObj *victim_gobj)
     (void)victim_gobj;
     return TRUE;
 }
+
+/* Wario.asm recovery_logic, the CPU's: run after the recover objective's
+ * walk (AI.asm custom_recovery_logic). In the aerial Body Slam it drops the
+ * command and holds the stick up and toward the nearer ledge (Remix's path
+ * there reads the X difference before computing it; toward the ledge is the
+ * routine's stated intent). Otherwise, with that ledge more than 2496 units
+ * away in X, it targets the ledge and slams toward it (Remix's NSP_TOWARDS)
+ * when 1000 or more units above it, or less than 1496 units below it with a
+ * jump left (200 with none). Without it his CPUs never slam back: with his
+ * jumps at 0.75x (B1), four Wario CPUs on Dream Land self-destructed 6 of
+ * 16 falls where the cast did 1 of 12 (P7 B1, 2026-10-18). Offsets: 0x24
+ * status_id, 0x78
+ * coll_data.p_translate, 0x1CC+0x4C..0x58 computer.cliff_left_pos/
+ * cliff_right_pos, 0x1CC+0x60/0x64 computer.target_pos, attributes + 0x64
+ * jumps_max, 0x148 jumps_used, 0x1C8/0x1C9 input.cp.stick_range. */
+static void ndsP4WarioComputerRecover(FTStruct *fp)
+{
+    FTComputer *com = &fp->computer;
+    const Vec3f *pos = fp->coll_data.p_translate;
+    f32 ledge_x;
+    f32 ledge_y;
+    f32 dx;
+    f32 dy;
+
+    if (ABSF(com->cliff_left_pos.x - pos->x) <=
+        ABSF(com->cliff_right_pos.x - pos->x))
+    {
+        ledge_x = com->cliff_left_pos.x;
+        ledge_y = com->cliff_left_pos.y;
+    }
+    else
+    {
+        ledge_x = com->cliff_right_pos.x;
+        ledge_y = com->cliff_right_pos.y;
+    }
+    dx = ledge_x - pos->x;
+    dy = ledge_y - pos->y;
+    if (fp->status_id == WARIO_STATUS_NSP_AIR)
+    {
+        ndsP4ComputerSetCommandImmediate(fp, nNDSP4ComputerInputNull);
+        fp->input.cp.stick_range.y = 80;
+        fp->input.cp.stick_range.x = (dx < 0.0F) ? -80 : 80;
+        return;
+    }
+    if (ABSF(dx) <= 2496.0F)
+    {
+        return;
+    }
+    if (!(dy <= -1000.0F) &&
+        (((fp->jumps_used < fp->attr->jumps_max) ? 1496.0F : 200.0F) <= dy))
+    {
+        return;
+    }
+    com->target_pos.x = ledge_x;
+    com->target_pos.y = ledge_y;
+    ndsP4ComputerSetCommandImmediate(fp, nNDSP4ComputerInputNSPTowards);
+}
+
+const NDSP4Computer gNdsP4WarioComputer = {
+    .recover = ndsP4WarioComputerRecover,
+};
 
 const NDSP4Overrides gNdsP4WarioOverrides = {
     .on_hit_interact = ndsP4WarioOnHitInteract,

@@ -47,6 +47,8 @@ void ftComputerSetControlPKThunder(FTStruct *fp);
 void gcSetAnimSpeed(GObj *gobj, f32 anim_speed);
 
 u8 gNdsP4PlayerContent[GMCOMMON_PLAYERS_MAX];
+u8 gNdsP4TrainingContent[2];
+u8 gNdsP4OnePlayerContent;
 f32 gNdsP4TranslationMultiplier[GMCOMMON_PLAYERS_MAX] = { 1.0F, 1.0F, 1.0F, 1.0F };
 u32 gNdsP4EnvColor[GMCOMMON_PLAYERS_MAX];
 /* Remix custom commands no P4 content has needed yet: counted, never silent. */
@@ -281,6 +283,15 @@ u32 ndsP4PlayerContent(u32 player)
     {
         return 0u;
     }
+    /* An empty seat's fighter_gobj is whatever the battle state last held:
+     * the 1P game keeps its state across stages, so after a team stage the
+     * seats a one-enemy stage leaves empty point at freed GObjs (the battle
+     * HUD hashes every seat each frame; a content player's campaign aborted
+     * reading one at stage 3, walk-tr4, 2026-10-19). */
+    if (gSCManagerBattleState->players[player].pkind == nFTPlayerKindNot)
+    {
+        return 0u;
+    }
     gobj = gSCManagerBattleState->players[player].fighter_gobj;
     if ((gobj == NULL) || (gobj->user_data.p == NULL))
     {
@@ -311,11 +322,42 @@ u32 ndsP4MatchContent(s32 player)
     case nSCKindVSResults:
         return gNdsP4PlayerContent[player];
 #if NDS_P2_1P_GAME
-    case nSCKind1PChallenger:
+    case nSCKind1PBonusStage:
+        /* The campaign's boards are entered from nSCKind1PGame
+         * (sc1PBonusStageInitVars) and seat the campaign player; practice
+         * boards take the bonus select's fighter (C2). */
+        if (gSCManagerSceneData.scene_prev != nSCKind1PGame)
+        {
+            return 0u;
+        }
+        /* fall through */
     case nSCKind1PGame:
-        /* P7 U5: a content challenger's screen and fight
-         * (battleship_sc1pmanager.c); 0 in every other 1P scene. */
+        /* P7 C1: the campaign player, while its kind is the content's
+         * parent (the select wrote both). */
+        if (player == (s32)gSCManagerSceneData.player)
+        {
+            const NDSP4Fighter *f = ndsP4Fighter(gNdsP4OnePlayerContent);
+
+            return ((f != NULL) &&
+                    (f->parent_kind == (s32)gSCManagerSceneData.fkind)) ?
+                (u32)gNdsP4OnePlayerContent : 0u;
+        }
+        /* P7 U5: a content challenger's fight (battleship_sc1pmanager.c). */
         return ndsP7ChallengerContent(player);
+    case nSCKind1PChallenger:
+        /* P7 U5: a content challenger's screen; 0 in every other 1P scene. */
+        return ndsP7ChallengerContent(player);
+    case nSCKind1PTrainingMode:
+        /* P7 C4: the man and the COM by the scene's own seats. */
+        if (player == (s32)gSCManagerSceneData.player)
+        {
+            return gNdsP4TrainingContent[0];
+        }
+        if (player == ((gSCManagerSceneData.player == 0) ? 1 : 0))
+        {
+            return gNdsP4TrainingContent[1];
+        }
+        return 0u;
 #endif
     default:
         return 0u;

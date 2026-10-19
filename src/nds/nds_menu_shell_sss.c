@@ -75,10 +75,11 @@
  *   - THE 5-MINUTE IDLE RETURN (mnmaps.c:1451) is attract behaviour and
  *     belongs to P2-7, exactly as it does on the mode select and the CSS.
  *   - TRAINING MODE. `sMNMapsIsTrainingMode` is set when scene_prev is
- *     nSCKindPlayers1PTraining (mnmaps.c:1415); that scene is P2-7, so the
- *     flag is FALSE by construction here and its two branches -- the training
- *     wallpaper set and the 1PTrainingMode destination -- are absent rather
- *     than transcribed-and-dead.
+ *     nSCKindPlayers1PTraining (mnmaps.c:1415). Since Training opened again
+ *     (P7 C4, 2026-10-18) its branches are here: the cursor and the commit
+ *     use `maps_training_gkind`, A goes to nSCKind1PTrainingMode and B back
+ *     to the training select (sSssIsTraining). The training preview's Smash
+ *     logo backdrop (mnmaps.c:938) is not drawn: the cell's own preview is.
  *
  * ONE LOCKED CELL IS DRAWN WHERE THE SOURCE DRAWS NOTHING, and it is the row's
  * only presentation ADDITION. mnMapsMakeIcons simply skips a locked ground, so
@@ -775,6 +776,9 @@ static u32 ndsMenuShellSssRandomGround(void)
  * belong to the character select and the rules to the VS menu, and
  * ndsMatchConfigApply re-installs the whole struct so the other two halves
  * survive untouched. */
+/* mnMapsInitVars:1415: entered from the training select. */
+static u32 sSssIsTraining;
+
 static void ndsMenuShellSssCommit(void)
 {
     u32 slot_gkind = (u32)kNdsSssSlotGkind[sSssCursorSlot];
@@ -839,7 +843,14 @@ static void ndsMenuShellSssCommit(void)
      * all, so a return trip opens on the cell the player last chose
      * (mnMapsInitVars:1418 reads it back). ndsMatchConfigApply owns
      * gSCManagerSceneData.gkind and does not touch this field. */
-    gSCManagerSceneData.maps_vsmode_gkind = (u8)slot_gkind;
+    if (sSssIsTraining != 0u)
+    {
+        gSCManagerSceneData.maps_training_gkind = (u8)slot_gkind;
+    }
+    else
+    {
+        gSCManagerSceneData.maps_vsmode_gkind = (u8)slot_gkind;
+    }
     gNdsMenuShellSssCommitGkind = gkind;
     gNdsMenuShellSssCommitSlotGkind = slot_gkind;
     gNdsMenuShellSssCommitCount++;
@@ -963,7 +974,8 @@ static void ndsMenuShellUpdateSss(u32 held, u32 taps)
          * is now the last stop before the battle. */
         gNdsMenuShellWalkLoops++;
 #endif
-        ndsMenuShellGoto((u32)nSCKindVSBattle);
+        ndsMenuShellGoto((sSssIsTraining != 0u) ?
+                             (u32)nSCKind1PTrainingMode : (u32)nSCKindVSBattle);
         return;
     }
     /* B. mnmaps.c:1481 -- it commits on the way out too, and it plays NOTHING. */
@@ -975,7 +987,9 @@ static void ndsMenuShellUpdateSss(u32 held, u32 taps)
         {
             ndsNetLobbyHostSetPhase(NDS_NET_PHASE_CSS);
         }
-        ndsMenuShellGoto((u32)nSCKindPlayersVS);
+        ndsMenuShellGoto((sSssIsTraining != 0u) ?
+                             (u32)nSCKindPlayers1PTraining :
+                             (u32)nSCKindPlayersVS);
         return;
     }
 
@@ -1037,8 +1051,12 @@ static void ndsMenuShellUpdateSss(u32 held, u32 taps)
  * nSCKindPlayersVS or nSCKindPlayers1PTraining; only the first exists here. */
 static void ndsMenuShellSssInit(void)
 {
-    sSssCursorSlot =
-        ndsMenuShellSssSlotOfGkind((u32)gSCManagerSceneData.maps_vsmode_gkind);
+    sSssIsTraining = ((u32)gSCManagerSceneData.scene_prev ==
+                      (u32)nSCKindPlayers1PTraining) ? 1u : 0u;
+    sSssCursorSlot = ndsMenuShellSssSlotOfGkind(
+        (sSssIsTraining != 0u) ?
+            (u32)gSCManagerSceneData.maps_training_gkind :
+            (u32)gSCManagerSceneData.maps_vsmode_gkind);
     if (ndsMenuShellSssSlotLocked(sSssCursorSlot) != FALSE)
     {
         sSssCursorSlot = ndsMenuShellSssSlotOfGkind((u32)nGRKindPupupu);
