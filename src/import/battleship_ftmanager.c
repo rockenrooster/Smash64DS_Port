@@ -308,6 +308,16 @@ sb32 ndsP7OnePlayerMetalActive(void)
     case nSCKind1PContinue:
     case nSCKindEnding:
         return TRUE;
+#if NDS_1P_INTRO_BAKE
+    case nSCKind1PIntro:
+    {
+        /* LAB: the still bake makes the player's card as Metal Mario
+         * (battleship_sc1pintro.c gNdsIntroBakePlayerCard). */
+        extern volatile u32 gNdsIntroBakePlayerCard;
+
+        return (gNdsIntroBakePlayerCard != 0u) ? TRUE : FALSE;
+    }
+#endif
     case nSCKind1PBonusStage:
         return (gSCManagerSceneData.scene_prev == nSCKind1PGame) ? TRUE : FALSE;
     default:

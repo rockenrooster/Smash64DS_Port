@@ -194,6 +194,13 @@ static void ndsRendererAdapterReflectCameraView(const CObj *cobj, u32 kind,
     }
 }
 
+#if NDS_1P_INTRO_BAKE
+/* Set by the 1P intro's still bake around its own draw only
+ * (battleship_sc1pintro.c, in the frontend overlay): the reset LookAt under a
+ * camera whose view the bake moved into the projection, into world space. */
+void (*gNdsAdapterLookAtHook)(LookAt *look_at);
+#endif
+
 const LookAt *ndsRendererAdapterCurrentLookAt(void)
 {
     /* BattleShip Interpreter::SpReset initializes these two coefficient
@@ -231,6 +238,16 @@ const LookAt *ndsRendererAdapterCurrentLookAt(void)
             }
         }
     }
+#if NDS_1P_INTRO_BAKE
+    if (gNdsAdapterLookAtHook != NULL)
+    {
+        static LookAt baked_look_at;
+
+        baked_look_at = reset_look_at;
+        gNdsAdapterLookAtHook(&baked_look_at);
+        return &baked_look_at;
+    }
+#endif
     return &reset_look_at;
 }
 

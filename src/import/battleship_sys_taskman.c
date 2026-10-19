@@ -294,6 +294,10 @@ void *syTaskmanMalloc(size_t size, u32 align)
         (gSCManagerSceneData.scene_curr == nSCKind1PBonusStage) ||
         (gSCManagerSceneData.scene_curr == nSCKind1PTrainingMode) ||
         (gSCManagerSceneData.scene_curr == nSCKindEnding) ||
+#if NDS_1P_INTRO_BAKE
+        /* LAB: the still bake's live intro (nds_frontend_overlay.c). */
+        (gSCManagerSceneData.scene_curr == nSCKind1PIntro) ||
+#endif
         (gSCManagerSceneData.scene_curr == nSCKind1PContinue))
     {
         void *loan = ndsFrontendOverlayTryAlloc(size, (align != 0u) ? align : 4u);

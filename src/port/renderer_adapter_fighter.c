@@ -369,6 +369,14 @@ void ndsFighterDisplayContractSetLightCount(u32 count)
     }
 }
 
+#if NDS_1P_INTRO_BAKE
+/* Set by the 1P intro's still bake around its own draw only
+ * (battleship_sc1pintro.c, in the frontend overlay, which the resident
+ * renderer never names): the light under a camera whose view the bake moved
+ * into the projection, from view into world space. */
+void (*gNdsFighterDisplayLightHook)(Light *light);
+#endif
+
 void ndsFighterDisplayContractSetLight(const Light *light, u32 slot)
 {
     if ((light == NULL) || (slot != 1u))
@@ -376,6 +384,13 @@ void ndsFighterDisplayContractSetLight(const Light *light, u32 slot)
         return;
     }
     sNdsFighterDisplayCurrentLight = *light;
+#if NDS_1P_INTRO_BAKE
+    if (gNdsFighterDisplayLightHook != NULL)
+    {
+        gNdsFighterDisplayLightHook(&sNdsFighterDisplayCurrentLight);
+        light = &sNdsFighterDisplayCurrentLight;
+    }
+#endif
     sNdsFighterDisplayCurrentLightValid = TRUE;
     if (sNdsFighterDisplayContract.active != 0u)
     {

@@ -9,7 +9,24 @@ param(
     [string]$Only = '',
     [switch]$SkipExisting,
     [int]$Tic = 240,
-    [int]$TimeoutSeconds = 300
+    [int]$TimeoutSeconds = 300,
+    # P7 C1: also the player's cards of these contents (p<card>_c<NN>_<C>,
+    # their four royal costumes) and of Metal Mario (p<card>_13_0); a P4 bake
+    # ROM (the NDS_P4_* and NDS_P5 flags beside NDS_1P_INTRO_BAKE=1).
+    [int[]]$Contents = @(),
+    [switch]$Metal,
+    # Only the content and Metal Mario cards.
+    [switch]$CardsOnly,
+    # P7 C1: these contents' congratulations stills (studio_c<NN>): the player
+    # card in the studio framing (gNdsIntroBakeStudio*), for
+    # scripts/p6/p6_congra_plates.py.
+    [int[]]$Studio = @(),
+    # The full figure at the card camera's 11-degree lens: ~5,500 units away,
+    # aimed at the hips; -StudioStatus a demo status for the pose (65537 =
+    # nFTDemoStatusWin1, the Results victory poses), 0 the card's.
+    [int]$StudioDist = 5500, [int]$StudioY = 0, [int]$StudioYaw = 25, [int]$StudioStatus = 0,
+    # Debug: gdb lines added to every job's session before it runs.
+    [string[]]$ExtraGdb = @()
 )
 # Bakes the 1P intro's fighter stills from the DS renderer (P2-6; the owner
 # chose rendered stills for the shipping intro, which runs static).
@@ -98,12 +115,53 @@ foreach ($i in 0..7) {
 foreach ($i in @(0, 1, 2, 3, 5, 6, 7, 8, 9, 11)) {
     $jobs.Add(@{ Name = ('o12m{0:00}' -f $i); Stage = 12; Show = 64; PlayerKind = 11; PlayerCostume = 0; Member = $i })
 }
+if ($CardsOnly) { $jobs.Clear() }
+# The player's card is made as the content at the bake (nds_p4.c
+# ndsP4MatchContent, gNdsIntroBakePlayerCard): its parent's kind, the
+# content poked beside it, each of its royal costumes (default_costumes[0..3]).
+$kindIds = @{ nFTKindMario = 0; nFTKindFox = 1; nFTKindDonkey = 2; nFTKindSamus = 3; nFTKindLuigi = 4;
+              nFTKindLink = 5; nFTKindYoshi = 6; nFTKindCaptain = 7; nFTKindKirby = 8; nFTKindPikachu = 9;
+              nFTKindPurin = 10; nFTKindNess = 11 }
+if ($Contents.Count -gt 0) {
+    $gen = Join-Path $root "$RomDir\p4"
+    $rows = @{}
+    foreach ($m in (Select-String -Path (Join-Path $gen 'nds_p4_contents.generated.h') -Pattern '^\s+X\((\d+), \w+, \w+, (\w+), (nFTKind\w+),')) {
+        $rows[[int]$m.Matches[0].Groups[1].Value] = @{ Name = $m.Matches[0].Groups[2].Value; Parent = $kindIds[$m.Matches[0].Groups[3].Value] }
+    }
+    foreach ($c in $Contents) {
+        if (-not $rows.ContainsKey($c)) { throw "content $c is not in this bake ROM" }
+        $r = $rows[$c]
+        $line = Select-String -Path (Join-Path $gen "$($r.Name)\nds_p4_$($r.Name).generated.c") -Pattern '\.default_costumes = \{ ([\d, ]+) \}' | Select-Object -First 1
+        $royal = @($line.Matches[0].Groups[1].Value.Split(',')[0..3] | ForEach-Object { [int]$_.Trim() } | Select-Object -Unique)
+        foreach ($card in @(@(0, 0), @(1, 4), @(3, 6))) {
+            foreach ($costume in $royal) {
+                $jobs.Add(@{ Name = ('p{0}_c{1:00}_{2}' -f $card[0], $c, $costume); Stage = $card[1]; Show = (1 -shl $card[0]);
+                             PlayerKind = $r.Parent; PlayerCostume = $costume; Content = $c })
+            }
+        }
+    }
+}
+foreach ($c in $Studio) {
+    if (-not $rows) { throw "-Studio needs -Contents with the same ids" }
+    $r = $rows[$c]
+    $jobs.Add(@{ Name = ('studio_c{0:00}' -f $c); Stage = 0; Show = 1; PlayerKind = $r.Parent; PlayerCostume = 0;
+                 Content = $c; StudioDist = $StudioDist; StudioY = $StudioY; StudioYaw = $StudioYaw; StudioStatus = $StudioStatus })
+}
+if ($Metal) {
+    foreach ($card in @(@(0, 0), @(1, 4), @(3, 6))) {
+        # Metal Mario plays the campaign as Mario's kind with the metal flag
+        # (nds_menu_shell_css.c ndsMenuShellCssOnePCommit) and is made as
+        # himself: the intro's camera and tables stop at the twelve kinds.
+        $jobs.Add(@{ Name = ('p{0}_13_0' -f $card[0]); Stage = $card[1]; Show = (1 -shl $card[0]);
+                     PlayerKind = 0; PlayerCostume = 0; Metal = 1 })
+    }
+}
 if ($Only -ne '') { $jobs = @($jobs | Where-Object { $_.Name -match $Only }) }
 if ($SkipExisting) { $jobs = @($jobs | Where-Object { -not (Test-Path (Join-Path $OutDir ($_.Name + '.raw'))) }) }
 "jobs: $($jobs.Count)"
 
 $bakeOne = {
-    param($root, $romDir, $outDir, $slot, $tic, $timeout, $job)
+    param($root, $romDir, $outDir, $slot, $tic, $timeout, $job, $extraGdb)
     $ErrorActionPreference = 'Stop'
     . (Join-Path $root 'scripts\lib\melonds.ps1')
     $context = Initialize-MelonDSVerifierContext -Root $root -RunnerSlot $slot -NoBuild
@@ -122,7 +180,7 @@ $bakeOne = {
     $p = $null
     try {
         $p = Start-Process -FilePath $melon -ArgumentList @((Join-Path $root "$romDir\smash64ds.nds")) `
-            -WorkingDirectory (Split-Path $melon) -PassThru
+            -WorkingDirectory (Split-Path $melon) -WindowStyle Minimized -PassThru
         Wait-MelonDSGdbListener -Process $p -Port $port | Out-Null
         $g = @(
             'set pagination off', 'set confirm off', "target remote localhost:$port", 'set $poked = 0',
@@ -131,11 +189,42 @@ $bakeOne = {
             # The walk skips the intro; let this one run.
             'break ndsSceneManagerEnter', 'commands', 'silent',
             'if gSCManagerSceneData.scene_curr == 14', 'set variable gNdsMenuShellWalkRoute = 0',
-            'else', 'set variable gNdsMenuShellWalkRoute = 1', 'end', 'continue', 'end',
+            'else', 'set variable gNdsMenuShellWalkRoute = 1', 'end'
+        )
+        if ($job.ContainsKey('Content')) {
+            # The 1P select picks the content as a player would (its walk's
+            # target, ndsMenuShellCssWalkOnePTarget): its commit writes the
+            # parent's kind and the content, and its preview the content's
+            # images, as the campaign's own intro sees them.
+            $g += @('if gSCManagerSceneData.scene_curr == 17',
+                    'set $ca = (unsigned)&gNdsP4OnePlayerContent', 'set $cw = *(unsigned*)($ca & ~3)',
+                    'set $cs = ($ca & 3) * 8',
+                    "set variable *(unsigned*)(`$ca & ~3) = (`$cw & ~(0xff << `$cs)) | ($($job.Content) << `$cs)",
+                    'end')
+        }
+        $g += @(
+            'continue', 'end',
             'break sc1PIntroInitVars', 'commands', 'silent',
             "set variable $player.fkind = $($job.PlayerKind)", "set variable $player.costume = $($job.PlayerCostume)",
             "set variable $player.shade = 0"
         )
+        if ($job.ContainsKey('Content')) {
+            # gNdsP4OnePlayerContent is a byte: a word read-modify-write
+            # (a gdb byte write stalls melonDS).
+            $g += @('set $ca = (unsigned)&gNdsP4OnePlayerContent', 'set $cw = *(unsigned*)($ca & ~3)',
+                    'set $cs = ($ca & 3) * 8',
+                    "set variable *(unsigned*)(`$ca & ~3) = (`$cw & ~(0xff << `$cs)) | ($($job.Content) << `$cs)",
+                    # The scene's kind the 1P select wrote beside it: the parent.
+                    'set $ka = (unsigned)&gSCManagerSceneData.fkind', 'set $kw = *(unsigned*)($ka & ~3)',
+                    'set $ks = ($ka & 3) * 8',
+                    "set variable *(unsigned*)(`$ka & ~3) = (`$kw & ~(0xff << `$ks)) | ($($job.PlayerKind) << `$ks)")
+        }
+        if ($job.ContainsKey('Metal')) {
+            # gNdsP7OnePlayerMetal is a byte: a word read-modify-write.
+            $g += @('set $ma = (unsigned)&gNdsP7OnePlayerMetal', 'set $mw = *(unsigned*)($ma & ~3)',
+                    'set $ms = ($ma & 3) * 8',
+                    'set variable *(unsigned*)($ma & ~3) = ($mw & ~(0xff << $ms)) | (1 << $ms)')
+        }
         if ($job.ContainsKey('Ally1Kind')) {
             $g += @("set variable $ally0.fkind = $($job.Ally1Kind)", "set variable $ally0.costume = $($job.Ally1Costume)",
                     "set variable $ally0.shade = 0")
@@ -143,6 +232,12 @@ $bakeOne = {
         if ($job.ContainsKey('Ally2Kind')) {
             $g += @("set variable $ally1.fkind = $($job.Ally2Kind)", "set variable $ally1.costume = $($job.Ally2Costume)",
                     "set variable $ally1.shade = 0")
+        }
+        if ($job.ContainsKey('StudioDist')) {
+            $g += @("set variable gNdsIntroBakeStudioDist = $($job.StudioDist)",
+                    "set variable gNdsIntroBakeStudioY = $($job.StudioY)",
+                    "set variable gNdsIntroBakeStudioYaw = $($job.StudioYaw)",
+                    "set variable gNdsIntroBakeStudioStatus = $($job.StudioStatus)")
         }
         $member = if ($job.ContainsKey('Member')) { $job.Member } else { -1 }
         $depth = (Join-Path $outDir ($job.Name + '.depth')) -replace '\\', '/'
@@ -159,9 +254,8 @@ $bakeOne = {
             'printf "HALT malloc-overflow scene=%u tic=%u\n", gSCManagerSceneData.scene_curr, sc1PIntroTotalTimeTics',
             'bt 8', 'kill', 'quit', 'end',
             'break __excpt_entry', 'commands', 'printf "HALT exception scene=%u\n", gSCManagerSceneData.scene_curr',
-            'bt 6', 'kill', 'quit', 'end',
-            'continue'
-        )
+            'bt 6', 'kill', 'quit', 'end'
+        ) + $extraGdb + @('continue')
         $g | Set-Content -LiteralPath $cmd -Encoding ascii
         $gp = Start-Process -FilePath 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe' `
             -ArgumentList @('-batch', '-x', $cmd, (Join-Path $root "$romDir\smash64ds.elf")) -PassThru `
@@ -183,7 +277,7 @@ while (($queue.Count -gt 0) -or ($running.Count -gt 0)) {
     foreach ($slot in $Slots) {
         if ((-not $running.ContainsKey($slot)) -and ($queue.Count -gt 0)) {
             $running[$slot] = Start-Job -ScriptBlock $bakeOne `
-                -ArgumentList $root, $RomDir, $OutDir, $slot, $Tic, $TimeoutSeconds, $queue.Dequeue()
+                -ArgumentList $root, $RomDir, $OutDir, $slot, $Tic, $TimeoutSeconds, $queue.Dequeue(), $ExtraGdb
         }
     }
     Start-Sleep -Milliseconds 500

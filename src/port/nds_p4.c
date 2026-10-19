@@ -360,6 +360,17 @@ u32 ndsP4MatchContent(s32 player)
         }
         /* P7 U5: a content challenger's fight (battleship_sc1pmanager.c). */
         return ndsP7ChallengerContent(player);
+#if NDS_1P_INTRO_BAKE
+    case nSCKind1PIntro:
+    {
+        /* LAB: the still bake's live intro makes the player's card as the
+         * campaign player's content (battleship_sc1pintro.c
+         * gNdsIntroBakePlayerCard); the shipping intro makes no fighter. */
+        extern volatile u32 gNdsIntroBakePlayerCard;
+
+        return (gNdsIntroBakePlayerCard != 0u) ? (u32)gNdsP4OnePlayerContent : 0u;
+    }
+#endif
     case nSCKind1PChallenger:
         /* P7 U5: a content challenger's screen; 0 in every other 1P scene. */
         return ndsP7ChallengerContent(player);

@@ -646,6 +646,22 @@ volatile u32 gNdsIntroBakeArmed __attribute__((used));
 volatile u32 gNdsIntroBakeCount __attribute__((used));
 volatile s32 gNdsIntroBakeMember __attribute__((used)) = -1;
 volatile s32 gNdsIntroBakeDepth __attribute__((used));
+/* P7 C1: nonzero while the player's card is made, which a content bake
+ * makes as the campaign player's content (nds_p4.c ndsP4MatchContent):
+ * every intro fighter is made as player 0. */
+volatile u32 gNdsIntroBakePlayerCard __attribute__((used));
+/* P7 C1 (owner 2026-10-19): an authored content's congratulations still is
+ * its player card in a studio framing -- the player card's camera aimed at
+ * the fighter's root plus gNdsIntroBakeStudioY, from gNdsIntroBakeStudioDist
+ * away and gNdsIntroBakeStudioYaw degrees round from the front (0: the card's
+ * own camera). scripts/p6/p6_congra_plates.py makes the plates from it. */
+volatile s32 gNdsIntroBakeStudioDist __attribute__((used));
+volatile s32 gNdsIntroBakeStudioY __attribute__((used));
+volatile s32 gNdsIntroBakeStudioYaw __attribute__((used));
+/* The studio still's pose: 0 keeps the card's, otherwise the demo status the
+ * fighter takes at its first studio frame (nFTDemoStatusWin1.. the Results
+ * victory poses), captured at the bake's tic. */
+volatile s32 gNdsIntroBakeStudioStatus __attribute__((used));
 static GObj *sNdsIntroBakeMemberGObj;
 static CObj *sNdsIntroBakeStageCamera;
 extern float cosf(float x);
@@ -658,12 +674,206 @@ void __attribute__((noinline, used)) ndsIntroBakeCaptured(void)
     __asm__ volatile("" ::: "memory");
 }
 
+/* The player card's camera (display link 31, sc1PIntroMakeFighterCamera)
+ * aimed at the card's fighter for the studio still. */
+static void ndsSC1PIntroBakeStudio(GObj *fighter_gobj)
+{
+    DObj *topn = DObjGetStruct(fighter_gobj);
+    DObj *transn = (topn != NULL) ? topn->child : NULL;
+    GObj *camera_gobj;
+    Vec3f pos;
+    f32 yaw = (f32)gNdsIntroBakeStudioYaw * (3.14159265F / 180.0F);
+    f32 dist = (f32)gNdsIntroBakeStudioDist;
+
+    if (topn == NULL)
+    {
+        return;
+    }
+    pos = topn->translate.vec.f;
+    if (transn != NULL)
+    {
+        f32 c = cosf(topn->rotate.vec.f.y);
+        f32 sn = sinf(topn->rotate.vec.f.y);
+        Vec3f t = transn->translate.vec.f;
+
+        pos.x += (t.x * c) + (t.z * sn);
+        pos.y += t.y;
+        pos.z += (t.z * c) - (t.x * sn);
+    }
+    pos.y += (f32)gNdsIntroBakeStudioY;
+    for (camera_gobj = gGCCommonLinks[16]; camera_gobj != NULL;
+         camera_gobj = camera_gobj->link_next)
+    {
+        CObj *cobj;
+
+        if ((camera_gobj->camera_mask & COBJ_MASK_DLLINK(31)) == 0u)
+        {
+            continue;
+        }
+        cobj = CObjGetStruct(camera_gobj);
+        cobj->vec.at.x = pos.x;
+        cobj->vec.at.y = pos.y;
+        cobj->vec.at.z = pos.z;
+        cobj->vec.eye.x = pos.x + (dist * sinf(yaw));
+        cobj->vec.eye.y = pos.y;
+        cobj->vec.eye.z = pos.z + (dist * cosf(yaw));
+        cobj->vec.up.x = 0.0F;
+        cobj->vec.up.y = 1.0F;
+        cobj->vec.up.z = 0.0F;
+    }
+}
+
+/* The intro's fighter cameras load their view into the modelview (XObj kinds
+ * 7 and 15, sc1PIntroMakeFighterCamera / the stage cameras), which the lean
+ * fighter path never takes (renderer_fighter_lean.c, the camera decline:
+ * every card was skipped and the capture held no fighter). The bake moves
+ * the view to the projection (the even form of the same kind) before each
+ * draw: the same clip matrix, the battle cameras' convention. The XObj's
+ * padding byte marks the fold, so the fighter's light, which the source
+ * gives in view space under such a camera, is turned into world space
+ * (ndsSC1PIntroBakeLightToWorld). */
+#define NDS_SC1P_INTRO_BAKE_FOLD_TAG 0xB7u
+/* renderer_adapter_fighter.c: the light capture's hook, set around the
+ * bake's draw (ndsSC1PIntroBakeBeforeDraw / AfterDraw). */
+extern void (*gNdsFighterDisplayLightHook)(Light *light);
+void ndsSC1PIntroBakeLightToWorld(Light *light);
+/* renderer_adapter_matrix.c: the texgen LookAt's hook, set alike. */
+extern void (*gNdsAdapterLookAtHook)(LookAt *look_at);
+void ndsSC1PIntroBakeLookAtToWorld(LookAt *look_at);
+/* decomp sys/matrix.h */
+void syMatrixLookAtF(Mtx44f *mf, f32 eye_x, f32 eye_y, f32 eye_z, f32 at_x,
+                     f32 at_y, f32 at_z, f32 up_x, f32 up_y, f32 up_z);
+void syMatrixModLookAtF(Mtx44f *mf, f32 eye_x, f32 eye_y, f32 eye_z,
+                        f32 at_x, f32 at_y, f32 at_z, f32 roll, f32 up_x,
+                        f32 up_y, f32 up_z);
+
+static void ndsSC1PIntroBakeFoldCameraViews(void)
+{
+    GObj *camera_gobj;
+
+    for (camera_gobj = gGCCommonLinks[16]; camera_gobj != NULL;
+         camera_gobj = camera_gobj->link_next)
+    {
+        CObj *cobj = CObjGetStruct(camera_gobj);
+        s32 i;
+
+        if (cobj == NULL)
+        {
+            continue;
+        }
+        for (i = 0; i < cobj->xobjs_num; i++)
+        {
+            XObj *xobj = cobj->xobjs[i];
+
+            if ((xobj != NULL) && (xobj->kind >= 7) && (xobj->kind <= 17) &&
+                ((xobj->kind & 1) != 0))
+            {
+                xobj->kind--;
+                xobj->unk05 = NDS_SC1P_INTRO_BAKE_FOLD_TAG;
+            }
+        }
+    }
+}
+
+/* Under a folded camera (above), a direction the source gives in view space
+ * -- the fighter's light, the texgen LookAt -- into world space: the view the
+ * camera's own kind builds (objdisplay.c's LookAt / ModLookAt forms,
+ * renderer_adapter_matrix.c), its rotation applied transposed. FALSE when the
+ * current camera was not folded. */
+static sb32 ndsSC1PIntroBakeDirToWorld(s8 dir[3])
+{
+    CObj *cobj = (gGCCurrentCamera != NULL) ?
+        CObjGetStruct(gGCCurrentCamera) : NULL;
+    Mtx44f mf;
+    u32 kind = 0u;
+    f32 world[3];
+    f32 len;
+    s32 i;
+
+    if (cobj == NULL)
+    {
+        return FALSE;
+    }
+    for (i = 0; i < cobj->xobjs_num; i++)
+    {
+        XObj *xobj = cobj->xobjs[i];
+
+        if ((xobj != NULL) && (xobj->unk05 == NDS_SC1P_INTRO_BAKE_FOLD_TAG))
+        {
+            kind = (u32)xobj->kind | 1u;
+        }
+    }
+    if (kind == 0u)
+    {
+        return FALSE;
+    }
+    if ((kind == 7u) || (kind == 13u))
+    {
+        syMatrixLookAtF(&mf, cobj->vec.eye.x, cobj->vec.eye.y,
+                        cobj->vec.eye.z, cobj->vec.at.x, cobj->vec.at.y,
+                        cobj->vec.at.z, cobj->vec.up.x, cobj->vec.up.y,
+                        cobj->vec.up.z);
+    }
+    else
+    {
+        const sb32 y_up = ((kind == 9u) || (kind == 15u)) ? TRUE : FALSE;
+
+        syMatrixModLookAtF(&mf, cobj->vec.eye.x, cobj->vec.eye.y,
+                           cobj->vec.eye.z, cobj->vec.at.x, cobj->vec.at.y,
+                           cobj->vec.at.z, cobj->vec.up.x, 0.0F,
+                           (y_up != FALSE) ? 1.0F : 0.0F,
+                           (y_up != FALSE) ? 0.0F : 1.0F);
+    }
+    for (i = 0; i < 3; i++)
+    {
+        world[i] = ((f32)dir[0] * mf[i][0]) + ((f32)dir[1] * mf[i][1]) +
+                   ((f32)dir[2] * mf[i][2]);
+    }
+    len = sqrtf((world[0] * world[0]) + (world[1] * world[1]) +
+                (world[2] * world[2]));
+    if (len < 1.0F)
+    {
+        return FALSE;
+    }
+    for (i = 0; i < 3; i++)
+    {
+        f32 v = (world[i] * 127.0F) / len;
+
+        dir[i] = (s8)((v < 0.0F) ? (v - 0.5F) : (v + 0.5F));
+    }
+    return TRUE;
+}
+
+/* The display contract's light capture (renderer_adapter_fighter.c). */
+void ndsSC1PIntroBakeLightToWorld(Light *light)
+{
+    if (light != NULL)
+    {
+        (void)ndsSC1PIntroBakeDirToWorld(light->l.dir);
+    }
+}
+
+/* The texgen LookAt (renderer_adapter_matrix.c
+ * ndsRendererAdapterCurrentLookAt): Metal Mario's chrome read the camera-space
+ * reset directions against world normals and drew near black. */
+void ndsSC1PIntroBakeLookAtToWorld(LookAt *look_at)
+{
+    if (look_at != NULL)
+    {
+        (void)ndsSC1PIntroBakeDirToWorld(look_at->l[0].l.dir);
+        (void)ndsSC1PIntroBakeDirToWorld(look_at->l[1].l.dir);
+    }
+}
+
 static void ndsSC1PIntroBakeBeforeDraw(void)
 {
     GObj *fighter_gobj;
 
     glDisable(GL_ANTIALIAS);
     glClearColor(0, 0, 0, 0);
+    ndsSC1PIntroBakeFoldCameraViews();
+    gNdsFighterDisplayLightHook = ndsSC1PIntroBakeLightToWorld;
+    gNdsAdapterLookAtHook = ndsSC1PIntroBakeLookAtToWorld;
     for (fighter_gobj = gGCCommonLinks[nGCCommonLinkIDFighter];
          fighter_gobj != NULL;
          fighter_gobj = fighter_gobj->link_next)
@@ -676,11 +886,25 @@ static void ndsSC1PIntroBakeBeforeDraw(void)
         {
             fighter_gobj->flags |= GOBJ_FLAG_HIDDEN;
         }
+        else if ((gNdsIntroBakeStudioDist > 0) &&
+                 (group & ((1u << 0) | (1u << 1) | (1u << 3))))
+        {
+            if ((gNdsIntroBakeStudioStatus != 0) &&
+                (ftGetStruct(fighter_gobj)->status_id !=
+                 gNdsIntroBakeStudioStatus))
+            {
+                scSubsysFighterSetStatus(fighter_gobj,
+                                         gNdsIntroBakeStudioStatus);
+            }
+            ndsSC1PIntroBakeStudio(fighter_gobj);
+        }
     }
 }
 
 static void ndsSC1PIntroBakeAfterDraw(void)
 {
+    gNdsFighterDisplayLightHook = NULL;
+    gNdsAdapterLookAtHook = NULL;
     if (gNdsIntroBakeArmed == 0u)
     {
         if ((u32)sc1PIntroTotalTimeTics == gNdsIntroBakeTic)
@@ -779,7 +1003,9 @@ static void ndsSC1PIntroBakeMakeCard(FTDemoDesc fighter, s32 card, s32 heap)
     }
     ndsSC1PIntroBakeHeap(heap);
     sc1PIntroMakeFighterCamera(fighter.fkind, card);
+    gNdsIntroBakePlayerCard = ((card == 0) || (card == 1) || (card == 3)) ? 1u : 0u;
     sc1PIntroMakeFighter(fighter, card, &sSC1PIntroFigatreeHeaps[heap]);
+    gNdsIntroBakePlayerCard = 0u;
 }
 
 /* sc1PIntroSetupFighterFiles, minus the kinds this bake never makes. */
@@ -791,7 +1017,10 @@ static void ndsSC1PIntroBakeSetupFighterFiles(s32 stage)
          * card numbering) and no VS fighter at all. */
         if ((gNdsIntroBakeShow & ((1u << 0) | (1u << 1) | (1u << 3))) != 0u)
         {
+            /* A content's own files with its parent's (P7 C1). */
+            gNdsIntroBakePlayerCard = 1u;
             ftManagerSetupFilesAllKind(sSC1PIntroPlayerFighterDemoDesc.fkind);
+            gNdsIntroBakePlayerCard = 0u;
         }
         if ((gNdsIntroBakeShow & ((1u << 2) | (1u << 4))) != 0u)
         {

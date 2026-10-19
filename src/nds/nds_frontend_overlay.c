@@ -197,7 +197,14 @@ void ndsFrontendOverlayBeginScene(u32 kind)
         sNdsFrontendTailLoaned = 1u;
     }
     else if (((kind == (u32)nSCKindEnding) ||
-              (kind == (u32)nSCKind1PContinue)) &&
+              (kind == (u32)nSCKind1PContinue)
+#if NDS_1P_INTRO_BAKE
+              /* LAB: the still bake's live intro makes the cards' fighters
+               * (battleship_sc1pintro.c), which the shipping intro never
+               * does: Palutena's high image (24,940 B) ran its heap out. */
+              || (kind == (u32)nSCKind1PIntro)
+#endif
+             ) &&
              (sNdsFrontendLoaded != 0u) && (sNdsFrontendTailDirty == 0u))
     {
         /* The 1P ending movie runs its own code (the middle range), the 1P
