@@ -298,19 +298,39 @@ Dream Land unless named, 1,960 frames, WORK P95 (frames within two VBlanks):
 stage, roster and content words at `main` (one GDB attach, then detach), so
 one profile build serves every stage and roster.
 
-## Hyrule Temple draws its stage uncompiled (2026-10-18)
+## Hyrule Temple's stage program, and the P5 stages' fast path (2026-10-18)
 
-Its stage program (`hyruletemple.gxp`) is 61,888 B of body and 9,204 B of run
-memo, and loading it needs that plus the 62,020 B the loader keeps free: the
-gate ROM declined it (`gNdsP2StageProgReason` 3, the loan full with 249 KB
-spilled), and so does the play ROM (`play-p7f`, the cast: 122,512 B free at the
-first stage draw). The match grows ~64 KB after that, so the program does not
-fit in either layout. Drawn uncompiled, the stage costs 409K ticks a frame at
-P50 (span `STG`; Dream Land's compiled stage 129K), most of it each painter
-triangle loading its own composed matrix on the CPU
-(`ndsRendererNativeStageLoadNoZMatrix`, `ndsRendererBuildShiftedRawHardwareMatrix`,
-`ndsRendererLoadHardwareMatrixPair`: ~380K cycles a frame) and the Z runs'
-CPU submit (`ndsRendererCommitNativeStageSegment`, ~300K cycles). Open: a
-smaller program (per-run matrix loads written by the CPU instead of 253
-16-word patch sites, a shorter memo) or the compiled path's one matrix a
-painter run (`MTX_TRANS` per triangle) on the uncompiled path.
+Hyrule Temple's stage program (`hyruletemple.gxp`) is 61,888 B of body and
+9,204 B of run memo. The loader kept 62,020 B free beside it (the 25,600 B
+floor plus the 36,420 B a match grows after the load) and declined it in both
+layouts (`gNdsP2StageProgReason` 3; the play ROM had 122,512 B free at the
+first stage draw), so the temple drew uncompiled: 409K ticks of `STG` a frame
+at P50 against Dream Land's 129K, most of it each painter triangle loading its
+own matrix on the CPU. A census of the cast match's allocations after the load
+found 36 KB of growth, all of it draw caches with floors of their own (a lean
+spare 17.7 KB, the world caches 13.3 KB, a lean texture block 5.1 KB): the
+program now keeps the floor and a 12 KB margin (`NDS_STAGE_GX_HEAP_KEEP_FREE`),
+loads, and the caches decline instead.
+
+The P5 stages also drew their programs run by run: the per-run path (run
+culling, a patch and DMA a run) is the 1P venues', keyed on gkind >= 9, and
+the P5 stages take 1P venues' gkinds (13, 14, 16) or come after them (41-44).
+A VS battle now takes the segment's one-DMA path whatever the gkind.
+
+Cast, WORK P95 (frames within two VBlanks), replay digests identical:
+
+| stage | before | `s9`/`s10` |
+|---|---|---|
+| Hyrule Temple (43) | 1,472,896 (31.5%) | 1,271,424 (84.4%), heap low-water 27,736 |
+| Meta Crystal (13) | 1,136,896 (93.8%) | 1,105,600 (95.2%) |
+| Bowser's Stadium (42) | 1,136,448 (93.8%) | 1,123,072 (94.3%) |
+| Dinosaur Land (44) | 1,218,688 (90.2%) | 1,194,496 (92.5%) |
+| Final Destination (16) | 1,032,384 (96.8%) | 1,002,048 (97.4%) |
+| Duel Zone (14) | 944,448 | 931,968 |
+| First Destination (41) | 998,912 | 967,168 |
+
+Heavy mixes on the tight stages still decline their programs (gate ROM, Crash,
+Sonic, Mr. Game & Watch and Palutena): Hyrule Temple 1,666,560 (heap 21,172),
+Congo Jungle 1,458,176 (16,816), Saffron City 1,449,344 (24,164), Yoshi's
+Island 1,461,952 (31,148). The gate ROM's arena is still ~8.8 KB under the
+play ROM's (the tick HUD's ring, rows and the CYCLE 98 material census).
