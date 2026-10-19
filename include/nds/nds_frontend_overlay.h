@@ -35,5 +35,8 @@ void *ndsSceneAssetTryAlloc(size_t bytes, u32 alignment, size_t keep_free);
 /* A VS battle's battle-lifetime data from the loaned range's idle tail, or
  * NULL (any other scene, or no room): the caller then takes its usual heap. */
 void *ndsVSBattleOverlayTryAlloc(size_t bytes, u32 alignment);
+/* TRUE in a VS battle scene (gSCManagerSceneData.scene_curr), for code that
+ * does not include the scene header (the renderer). */
+u32 ndsSceneIsVSBattle(void);
 
 #endif

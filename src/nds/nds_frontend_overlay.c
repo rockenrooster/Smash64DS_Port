@@ -326,6 +326,11 @@ void *ndsSceneAssetAlloc(size_t bytes, u32 alignment)
  * ledger, the contents' match tables, the shield poses, the entry corners --
  * takes that tail first. Only a VS battle: a campaign battle's tail holds
  * its own files. */
+u32 ndsSceneIsVSBattle(void)
+{
+    return (gSCManagerSceneData.scene_curr == nSCKindVSBattle) ? TRUE : FALSE;
+}
+
 void *ndsVSBattleOverlayTryAlloc(size_t bytes, u32 alignment)
 {
     if (gSCManagerSceneData.scene_curr != nSCKindVSBattle)

@@ -6,7 +6,16 @@
 _Static_assert(sizeof(NDSStageGxHeader) == 48, "stage GX header ABI");
 _Static_assert(sizeof(NDSStageGxRun) == 32, "stage GX run ABI");
 _Static_assert(sizeof(NDSStageGxPatch) == 8, "stage GX patch ABI");
-#define NDS_STAGE_GX_HEAP_KEEP_FREE (25600u + 36420u)
+/* The body loads at the first stage draw. What the match allocates after
+ * that is draw caches that check their own floors and decline (the lean
+ * spares, the world caches; the elastic motion cache yields): Hyrule
+ * Temple's cast match grew 36 KB, 17.7 KB of it a lean spare and 13.3 KB
+ * the world caches (2026-10-18 census). So the body keeps the 25,600 B
+ * floor (the GObj cap latches under it) and a 12 KB margin for the
+ * allocations that cannot decline, not the whole 36,420 B growth: a
+ * stage program is worth more than the caches that would take its bytes
+ * (Hyrule Temple drew uncompiled, 409K ticks a frame). */
+#define NDS_STAGE_GX_HEAP_KEEP_FREE (25600u + 12288u)
 #define NDS_STAGE_GX_NOZ_LOCAL 16u
 
 volatile u32 gNdsP2StageProgDraws, gNdsP2StageProgWords;
@@ -333,11 +342,9 @@ static sb32 __attribute__((noinline, cold, optimize("Os"))) ndsStageGxLoad(void)
     /* The body lives as long as the battle. A VS battle's idle overlay tail
      * takes it first (2026-10-13: a vanilla roster leaves ~170 KB of the
      * loan idle, and Hyrule Temple's 61,936 B body never fit the heap, so the
-     * stage drew uncompiled at 20 FPS). Otherwise it is battle-lifetime heap:
-     * it loads at the first stage draw, and the match still grows the heap
-     * after that: 36,420 B on the heavy roster (phase3-residency, probe
-     * 92984). Keep the 25,600 B floor above both, or decline and draw the
-     * stage uncompiled. */
+     * stage drew uncompiled at 20 FPS). Otherwise it is battle-lifetime heap
+     * with NDS_STAGE_GX_HEAP_KEEP_FREE left over, or the stage draws
+     * uncompiled. */
     body = ndsVSBattleOverlayTryAlloc(
         h.body_bytes + (h.run_count * sizeof(NDSStageGxRunMemo)), 32u);
     if (body == NULL)
@@ -426,6 +433,16 @@ static inline sb32 ndsStageGxInsideNear(const NDSStageGxRun *run, const NDSRende
  * Multi-binding runs are never skipped. The nine VS venues keep the old path
  * until measured. */
 #define NDS_STAGE_GX_CULL_FIRST_GKIND 9u /* nGRKindPupupuSmall: 1P venues on */
+/* The 1P venues cull their runs and take the per-run path. A VS battle frames
+ * its whole stage, so it takes the segment's one-DMA path whatever its gkind:
+ * the P5 stages reuse 1P venues' gkinds (13, 14, 16) or come after them
+ * (41-44), and Dinosaur Land's per-run draws and NoZ read-backs cost ~106K
+ * cycles a frame over Dream Land's (2026-10-18 profile). */
+static inline sb32 ndsStageGxCullsRuns(void)
+{
+    return ((sNdsNativeStagePacketActive->gkind >= NDS_STAGE_GX_CULL_FIRST_GKIND) &&
+            (ndsSceneIsVSBattle() == FALSE)) ? TRUE : FALSE;
+}
 volatile u32 gNdsStageGxCulledRuns;
 /* P2-6 (2026-10-02): A RIGID RUN TESTS ITS WORLD BOX. A rigid binding's world
  * is constant until the next capture, so its runs' object-space boxes go to
@@ -484,7 +501,7 @@ static sb32 ndsStageGxRunOutsideView(u32 index)
     u32 plane;
     u32 axis;
 
-    if ((sNdsNativeStagePacketActive->gkind < NDS_STAGE_GX_CULL_FIRST_GKIND) ||
+    if ((ndsStageGxCullsRuns() == FALSE) ||
         ((r->binding_lo != 0u) == (r->binding_hi != 0u)) ||
         ((r->binding_lo & (r->binding_lo - 1u)) != 0u) ||
         ((r->binding_hi & (r->binding_hi - 1u)) != 0u))
@@ -1448,7 +1465,7 @@ static sb32 __attribute__((noinline)) ndsStageGxCommitFast(
         (segment_index >= NDS_STAGE_GX_FAST_SEGMENTS) || (stats == NULL) ||
         (projection == NULL) || (composed_all == NULL) ||
         (sNdsNativeStageOwnerExecution.camera_modelview == NULL) ||
-        (sNdsNativeStagePacketActive->gkind >= NDS_STAGE_GX_CULL_FIRST_GKIND))
+        (ndsStageGxCullsRuns() != FALSE))
     {
         return FALSE;
     }
