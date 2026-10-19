@@ -241,6 +241,10 @@ SECTIONS {
             .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
         :nds_menu_shell.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx
             .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
+        /* P7 U9: the VS Record screen's numbers (nds_menu_shell.o is the
+         * only caller). */
+        :nds_p7_vsrecord.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx
+            .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
         :battleship_mnplayersvs.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx
             .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
         /* The select screens' Selected clips (battleship_scsubsysdata_ft.c,

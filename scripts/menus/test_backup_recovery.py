@@ -49,6 +49,7 @@ typedef uint32_t u32;
 typedef uint64_t u64;
 typedef int32_t s32;
 typedef int sb32;
+typedef float f32;
 ''' + types + "\n" + defines + "\n" + defaults + r'''
 static LBBackupData gSCManagerBackupData;
 volatile u32 gNdsSceneHarnessMode;
@@ -118,6 +119,7 @@ void ndsFsLock(void) {}
 void ndsFsUnlock(void) {}
 #define NDS_DIAG(x) (x)
 #define FILE void
+typedef s32 (*NDSBackupWriter)(FILE *tmp, void *ctx);
 #define fopen mock_fopen
 #define fread mock_fread
 #define fwrite mock_fwrite
@@ -125,6 +127,11 @@ void ndsFsUnlock(void) {}
 #define remove mock_remove
 #define rename mock_rename
 ''' + backup + "\n" + p7 + "\n" + functions + r'''
+/* The wide records files (nds_p7_records.c) are their own tests'. */
+void ndsP7RecordsClear(void) {}
+void ndsP7OnePRecordsClear(u32 fields) { (void)fields; }
+void ndsP7OnePSaveBegin(void) {}
+void ndsP7OnePSaveEnd(void) {}
 static void reboot(void)
 {
     sNdsBackupLoaded = sNdsBackupMountTried = 0;

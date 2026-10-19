@@ -62,6 +62,7 @@ const NDSP4Fighter *ndsP4Fighter(u32 content)
 ''' + header + r'''
 static NDSP7VSRecord sRows[NDS_P7_SEL_COUNT];
 u32 ndsP7FighterUnlocked(u32 sel) { return sSelUnlocked[sel]; }
+u32 ndsP7DevOpen(void) { return 0u; }
 void ndsP7RecordsReadRange(u32 first, u32 count, NDSP7VSRecord *rows)
 {
     u32 i;

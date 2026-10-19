@@ -1366,6 +1366,91 @@ s32 ndsUiKitBlitSurfaceCopy(u32 surface, const u8 *buffer)
     return TRUE;
 }
 
+s32 ndsUiKitDrawCopyRect(u32 surface, const u8 *buffer, u32 src_x, u32 src_y,
+                         u32 width, u32 height, s32 dest_x, s32 dest_y)
+{
+    const NdsUiKitSurfaceMetric *metric;
+    u32 pitch = 0u;
+    u32 layer_w = 0u;
+    u32 layer_h = 0u;
+    u16 *layer;
+    u32 row;
+
+    if ((surface >= NDS_MN_UI_KIT_SURFACE_COUNT) || (buffer == NULL))
+    {
+        return FALSE;
+    }
+    metric = &kNdsUiKitSurfaceMetrics[surface];
+    if (((src_x + width) > (u32)metric->width) ||
+        ((src_y + height) > (u32)metric->height))
+    {
+        return FALSE;
+    }
+    layer = ndsPlatformGetOriginalSpriteOverlayLayer(FALSE, &pitch, &layer_w,
+                                                     &layer_h, NULL);
+    if ((layer == NULL) || (pitch == 0u))
+    {
+        gNdsUiKitSurfaceNoLayerCount++;
+        return FALSE;
+    }
+    for (row = 0u; row < height; row++)
+    {
+        const u16 *src = (const u16 *)buffer +
+                         (((src_y + row) * (u32)metric->width) + src_x);
+        s32 dy = dest_y + (s32)row;
+        u32 col;
+
+        if ((dy < 0) || (dy >= (s32)layer_h))
+        {
+            continue;
+        }
+        for (col = 0u; col < width; col++)
+        {
+            s32 dx = dest_x + (s32)col;
+            u16 texel = src[col];
+
+            if ((texel != 0u) && (dx >= 0) && (dx < (s32)layer_w))
+            {
+                layer[((u32)dy * pitch) + (u32)dx] = texel;
+            }
+        }
+    }
+    return TRUE;
+}
+
+void ndsUiKitFillRect(s32 x, s32 y, u32 width, u32 height, u16 texel)
+{
+    u32 pitch = 0u;
+    u32 layer_w = 0u;
+    u32 layer_h = 0u;
+    u16 *layer = ndsPlatformGetOriginalSpriteOverlayLayer(
+        FALSE, &pitch, &layer_w, &layer_h, NULL);
+    s32 x0 = x;
+    s32 y0 = y;
+    s32 x1 = x + (s32)width;
+    s32 y1 = y + (s32)height;
+    s32 row;
+
+    if ((layer == NULL) || (pitch == 0u) || (width == 0u) || (height == 0u))
+    {
+        return;
+    }
+    if (x0 < 0) { x0 = 0; }
+    if (y0 < 0) { y0 = 0; }
+    if (x1 > (s32)layer_w) { x1 = (s32)layer_w; }
+    if (y1 > (s32)layer_h) { y1 = (s32)layer_h; }
+    for (row = y0; row < y1; row++)
+    {
+        u16 *dst = &layer[((u32)row * pitch) + (u32)x0];
+        s32 i;
+
+        for (i = 0; i < (x1 - x0); i++)
+        {
+            dst[i] = texel;
+        }
+    }
+}
+
 u16 *ndsUiKitBackgroundSpare(u32 *out_bytes)
 {
     u32 pitch = 0u;

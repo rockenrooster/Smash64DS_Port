@@ -778,17 +778,21 @@ static const NdsMenuWalkStep kNdsMenuWalkItemSwitch[] = {
  * input. If Sound Test is locked its row does not exist, the second DOWN wraps
  * back to Characters and A is refused again -- so the script ends with B,
  * which leaves DATA instead of spinning. That closes the walk without a lap
- * rather than hanging, and needs no unlock-mask dependency here. */
+ * rather than hanging, and needs no unlock-mask dependency here.
+ *
+ * P7 U9 (2026-10-19) opened VS Record again, so the walk enters it first (one
+ * DOWN from Characters) and Sound Test on the way back; each script still
+ * ends with B, so a refused row leaves DATA rather than looping. */
 static const NdsMenuWalkStep kNdsMenuWalkDataEnter[] = {
-    { 0u, 2u }, { (u16)NDS_INPUT_DOWN, 1u }, { 0u, 1u },
-    { (u16)NDS_INPUT_DOWN, 1u }, { (u16)NDS_INPUT_A, 1u },
+    { 0u, 2u }, { (u16)NDS_INPUT_DOWN, 1u }, { (u16)NDS_INPUT_A, 1u },
     { 0u, 2u }, { (u16)NDS_INPUT_B, 1u }
 };
 static const NdsMenuWalkStep kNdsMenuWalkDataAfterCharacters[] = {
     { 0u, 2u }, { (u16)NDS_INPUT_DOWN, 1u }, { (u16)NDS_INPUT_A, 1u }
 };
 static const NdsMenuWalkStep kNdsMenuWalkDataAfterVSRecord[] = {
-    { 0u, 2u }, { (u16)NDS_INPUT_DOWN, 1u }, { (u16)NDS_INPUT_A, 1u }
+    { 0u, 2u }, { (u16)NDS_INPUT_DOWN, 1u }, { (u16)NDS_INPUT_A, 1u },
+    { 0u, 2u }, { (u16)NDS_INPUT_B, 1u }
 };
 static const NdsMenuWalkStep kNdsMenuWalkDataAfterSoundTest[] = {
     { 0u, 2u }, { (u16)NDS_INPUT_B, 1u }
@@ -798,8 +802,16 @@ static const NdsMenuWalkStep kNdsMenuWalkCharacters[] = {
     { 0u, 2u }, { (u16)NDS_INPUT_RIGHT, 1u },
     { (u16)NDS_INPUT_LEFT, 1u }, { (u16)NDS_INPUT_B, 1u }
 };
+/* P7 U9: every view -- A to Ranking, a sort step, A to Individual, a
+ * fighter step -- then B back through them to DATA, dwelling a second and a
+ * half on each so a capture sees it. */
 static const NdsMenuWalkStep kNdsMenuWalkVSRecord[] = {
-    { 0u, 2u }, { (u16)NDS_INPUT_B, 1u }
+    { 0u, 90u }, { (u16)NDS_INPUT_DOWN, 1u }, { 0u, 90u },
+    { (u16)NDS_INPUT_A, 1u }, { 0u, 90u }, { (u16)NDS_INPUT_R, 1u },
+    { 0u, 90u }, { (u16)NDS_INPUT_A, 1u }, { 0u, 90u },
+    { (u16)NDS_INPUT_RIGHT, 1u }, { 0u, 90u }, { (u16)NDS_INPUT_B, 1u },
+    { 0u, 30u }, { (u16)NDS_INPUT_B, 1u }, { 0u, 30u },
+    { (u16)NDS_INPUT_B, 1u }
 };
 static const NdsMenuWalkStep kNdsMenuWalkSoundTest[] = {
     { 0u, 2u }, { (u16)NDS_INPUT_B, 1u }

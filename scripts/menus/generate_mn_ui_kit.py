@@ -733,6 +733,10 @@ class Surface:
     # is a hand-computed constant that silently rots the next time a scale or
     # a centring rule changes.
     sites: dict[str, tuple[int, int, int, int]] = field(default_factory=dict)
+    # P7 U9. The same landing rectangles in PART ORDER, relative to the
+    # surface's own origin: an atlas places one symbol more than once (a digit
+    # in two colours), which a by-symbol map cannot hold.
+    rects: list[tuple[int, int, int, int]] = field(default_factory=list)
 
 
 def box_scale(raster: list[list[tuple[int, int, int, int]]],
@@ -1587,8 +1591,10 @@ def convert_surface(cache: dict[str, RelocFile], offsets: dict[str, int],
         part.symbol: (x0, y0, len(raster[0]), len(raster))
         for part, (x0, y0, raster) in zip(spec.parts, placed)
     }
+    rects = [(x0 - left, y0 - top, len(raster[0]), len(raster))
+             for x0, y0, raster in placed]
     return Surface(spec.token, spec.token, width, height, left, top, opaque,
-                   texels, sites)
+                   texels, sites, rects)
 
 
 # ---------------------------------------------------------------------------
@@ -1794,6 +1800,39 @@ def emit_manifest(path: Path, glyphs: list[Glyph], images: list[Image],
                      "[NDS_MN_UI_KIT_MODE_ENTRY_COUNT][2] "
                      "__attribute__((unused)) = {")
         lines.append(f"    {rows},")
+        lines.append("};")
+        lines.append("")
+    atlas = next((s for s in surfaces if s.token == "VSREC_ATLAS"), None)
+    if atlas is not None:
+        # P7 U9 -- the VS Record atlas's rectangles, as they landed, and the
+        # screen's unsorted fighter order (the select grid's).
+        if len(atlas.rects) != len(VSREC_ATLAS_NAMES):
+            raise ConvertError("VSREC_ATLAS: rects and names disagree")
+        lines.append("/* P7 U9 -- {x, y, w, h} of each VS Record atlas part, "
+                     "relative to")
+        lines.append(" * NDS_MN_UI_KIT_SURFACE_VSREC_ATLAS's origin. */")
+        lines.append(f"#define NDS_MN_UI_KIT_VSREC_RECT_COUNT "
+                     f"{len(atlas.rects)}u")
+        lines.append(f"#define NDS_MN_UI_KIT_VSREC_ICON {VSREC_ICON}u")
+        lines.append(f"#define NDS_MN_UI_KIT_VSREC_SELS {VSREC_SELS}u")
+        lines.append(f"#define NDS_MN_UI_KIT_VSREC_PORTRAIT_X "
+                     f"{VSREC_PORTRAIT_XY[0]}")
+        lines.append(f"#define NDS_MN_UI_KIT_VSREC_PORTRAIT_Y "
+                     f"{VSREC_PORTRAIT_XY[1]}")
+        for index, name in enumerate(VSREC_ATLAS_NAMES):
+            lines.append(f"#define NDS_MN_UI_KIT_VSREC_RECT_{name} {index}u")
+        lines.append("static const u8 kNdsUiKitVsrecRects"
+                     "[NDS_MN_UI_KIT_VSREC_RECT_COUNT][4] "
+                     "__attribute__((unused)) = {")
+        for (x, y, w, h), name in zip(atlas.rects, VSREC_ATLAS_NAMES):
+            lines.append(f"    {{ {x}u, {y}u, {w}u, {h}u }}, /* {name} */")
+        lines.append("};")
+        order = vsrec_order()
+        lines.append(f"#define NDS_MN_UI_KIT_VSREC_ORDER_COUNT {len(order)}u")
+        lines.append("static const u8 kNdsUiKitVsrecOrder"
+                     "[NDS_MN_UI_KIT_VSREC_ORDER_COUNT] "
+                     "__attribute__((unused)) = {")
+        lines.append("    " + ", ".join(f"{sel}u" for sel in order) + ",")
         lines.append("};")
         lines.append("")
     lines.append("#endif /* NDS_MN_UI_KIT_GENERATED_INC */")
@@ -5045,6 +5084,217 @@ def net_hint(word: str) -> SurfaceSpec:
 NET_HINT_SURFACE_SPECS = tuple(net_hint(_word) for _word in NET_START_WORDS)
 
 
+# ---------------------------------------------------------------------------
+# P7 U9 (2026-10-19) -- the VS Record screen over every selectable fighter.
+# ---------------------------------------------------------------------------
+#
+# mnVSRecordFuncStart (mn/mndata/mnvsrecord.c:2168) draws three views of the
+# twelve fighters on a black field: the DATA header plate, the VS RECORD
+# label and the view's subtitle (:524, :592), a one-pixel grid in
+# 0x62/0x62/0x6A (:795), fighter icons, and every number in the source's own
+# 4x7 digits, cream over black (mnVSRecordMakeDigits :255). Up to 33
+# selection ids do not fit its tables, so the native screen
+# (nds_menu_shell_vsrecord.c) pages them and draws from two kinds of surface:
+# an opaque BASE per view -- the field, the header, the label, the subtitle
+# and the view's fixed art -- blitted when the view changes, and one keyed
+# ATLAS it loads once and copies sub-rectangles of for everything that moves.
+#
+# THE ATLAS. An icon per selection id: its Remix select portrait (the P4
+# grid's cell; a vanilla bake uses the source's MNPlayersPortraits for the
+# twelve and Mario's for Metal Mario), box-filtered 32 -> 16. The source's
+# digits, point, colon and slash in the two colours it draws numbers in --
+# cream table values (:1239) and grey portrait stats (:1082) -- at the
+# source's own 4x7: at the frame's 4/5 they are 3x6 and do not read. The
+# column labels at the frame's 4/5, grey as the source tints them (:1599).
+# Every rectangle is published in part order (kNdsUiKitVsrecRects), so the
+# runtime never hand-copies a bake coordinate.
+VSREC_SELS = 33  # P7 selection ids: the twelve, Metal Mario, contents 1-20
+VSREC_ICON = 16
+VSREC_FIELD = (0x00, 0x00, 0x00)  # mnVSRecordFuncStart's camera fill
+VSREC_CREAM = (0xE5, 0xD1, 0x99)
+VSREC_GREY = (0x8A, 0x88, 0x92)
+VSREC_ORANGE = (0xE3, 0x7D, 0x0C)
+VSREC_DIGIT_PITCH = 5
+VSREC_DIGIT_ROWS = (("CREAM", VSREC_CREAM, 48), ("GREY", VSREC_GREY, 56))
+VSREC_SYMBOLS = (("POINT", "SymbolPoint", 50), ("COLON", "SymbolColon", 53),
+                 ("SLASH", "SymbolSlash", 56))
+VSREC_LABELS = ("WinPercent", "KOs", "TKO", "SDPercent", "Time", "UsePercent",
+                "Avg", "KOd", "Total")
+VSREC_LABEL_SLOT = 32
+VSREC_LABELS_Y = 64
+VSREC_ATLAS_H = 82
+# mnVSRecordGetFighterKindByIndex (:120): the order a vanilla bake lists.
+VSREC_VANILLA_ORDER = (0, 2, 5, 3, 6, 8, 1, 9, 4, 7, 11, 10, 12)
+VSREC_VANILLA_PORTRAIT = ("Mario", "Fox", "Donkey", "Samus", "Luigi", "Link",
+                          "Yoshi", "Captain", "Kirby", "Pikachu", "Purin",
+                          "Ness")
+# The Indiv view's portrait plate and the portrait centred on it, DS pixels.
+VSREC_WALLPAPER_XY = (12, 38)
+VSREC_PORTRAIT_XY = (19, 44)
+
+
+def ds_src(value: int) -> int:
+    """The source-frame coordinate whose 4/5 lands on DS pixel `value`."""
+    src = (value * FRAME_SCALE[1]) // FRAME_SCALE[0]
+    while frame_pos(src) < value:
+        src += 1
+    if frame_pos(src) != value:
+        raise ConvertError(f"no source coordinate lands on DS {value}")
+    return src
+
+
+def vsrec_cell_sel(cell: dict) -> int | None:
+    """A P4 grid cell's P7 selection id (nds_p7.h), None for the chooser."""
+    if cell.get("random"):
+        return None
+    if cell["fkind"] is not None:
+        return 12 if cell["fkind"] == 13 else cell["fkind"]
+    return 12 + cell["content"]
+
+
+def vsrec_order() -> tuple[int, ...]:
+    """The screen's unsorted order: the select grid's, row by row."""
+    if P4_CSS is None:
+        return VSREC_VANILLA_ORDER
+    return tuple(sel for sel in (vsrec_cell_sel(c) for c in P4_CSS["cells"])
+                 if sel is not None)
+
+
+def vsrec_portrait(sel: int) -> tuple[str, str]:
+    """(o2r, symbol) of selection `sel`'s select portrait."""
+    if P4_CSS is not None:
+        for cell in P4_CSS["cells"]:
+            if vsrec_cell_sel(cell) == sel:
+                return p4_sprite("portraits", cell["portrait"])
+        return p4_sprite("portraits", P4_CSS["none_portrait"])
+    fkind = 0 if sel == 12 else sel
+    if fkind < len(VSREC_VANILLA_PORTRAIT):
+        return ("MNPlayersPortraits",
+                f"llMNPlayersPortraits{VSREC_VANILLA_PORTRAIT[fkind]}Sprite")
+    return ("MNPlayersPortraits",
+            "llMNPlayersPortraitsPortraitQuestionMarkSprite")
+
+
+def vsrec_atlas() -> tuple[tuple[str, ...], tuple[Placement, ...]]:
+    names: list[str] = []
+    parts: list[Placement] = []
+    for sel in range(VSREC_SELS):
+        o2r, symbol = vsrec_portrait(sel)
+        names.append(f"ICON_{sel}")
+        parts.append(Placement(o2r, symbol,
+                               ds_src((sel % 16) * VSREC_ICON),
+                               ds_src((sel // 16) * VSREC_ICON), False,
+                               dest=(VSREC_ICON, VSREC_ICON)))
+    for tone, tint, y in VSREC_DIGIT_ROWS:
+        for digit in range(10):
+            names.append(f"{tone}_{digit}")
+            parts.append(Placement("MNVSRecordMain",
+                                   f"llMNVSRecordMainDigit{digit}Sprite",
+                                   ds_src(digit * VSREC_DIGIT_PITCH),
+                                   ds_src(y), False, tint, env=VSREC_FIELD,
+                                   scale=(1, 1)))
+        for token, sprite, x in VSREC_SYMBOLS:
+            names.append(f"{tone}_{token}")
+            parts.append(Placement("MNVSRecordMain",
+                                   f"llMNVSRecordMain{sprite}Sprite",
+                                   ds_src(x), ds_src(y), False, tint,
+                                   env=VSREC_FIELD, scale=(1, 1)))
+    for index, label in enumerate(VSREC_LABELS):
+        names.append(f"LABEL_{label.upper()}")
+        parts.append(Placement("MNVSRecordMain",
+                               f"llMNVSRecordMainLabel{label}Sprite",
+                               ds_src((index % 8) * VSREC_LABEL_SLOT),
+                               ds_src(VSREC_LABELS_Y + 10 * (index // 8)),
+                               False, VSREC_GREY))
+    return tuple(names), tuple(parts)
+
+
+VSREC_ATLAS_NAMES, _VSREC_ATLAS_PARTS = vsrec_atlas()
+
+
+def vsrec_header(subtitle: str) -> list[Placement]:
+    """mnVSRecordMakeLabels (:524) and the view's subtitle (:592)."""
+    return [
+        Placement("MNDataCommon", "llMNDataCommonDataHeaderSprite", 24, 17,
+                  False, (0x5F, 0x58, 0x46)),
+        Placement("MNVSRecordMain", "llMNVSRecordMainLabelSprite", 99, 23,
+                  False, (0xF2, 0xC7, 0x0D), env=VSREC_FIELD),
+        Placement("MNVSRecordMain", subtitle, 222, 28, False,
+                  (0x00, 0x00, 0x00)),
+    ]
+
+
+def vsrec_down_arrows() -> Placement:
+    """mnVSRecordMakeResortArrows (:667), on Battle Score and Ranking."""
+    return Placement("MNVSRecordMain", "llMNVSRecordMainDownArrowsSprite",
+                     281, 39, False, VSREC_ORANGE)
+
+
+def vsrec_wallpaper() -> Placement:
+    return Placement("MNVSRecordMain", "llMNVSRecordMainPortraitWallpaperSprite",
+                     ds_src(VSREC_WALLPAPER_XY[0]),
+                     ds_src(VSREC_WALLPAPER_XY[1]), False)
+
+
+def vsrec_base(token: str, parts: list[Placement]) -> SurfaceSpec:
+    return SurfaceSpec(token, tuple(parts), VSREC_FIELD, box=(0, 0, 320, 240))
+
+
+# The Indiv view's text, in the source's menu font at twice its size so it
+# reads (the source's "ATTACK 3TOTAL" kerning escape becomes a plain space).
+VSREC_INDIV_LINES = ("RANKING", "USED %", "ATTACK TOTAL", "DAMAGE TOTAL")
+VSREC_INDIV_LINE_X = 70
+VSREC_INDIV_LINE_Y = 40
+VSREC_INDIV_LINE_STEP = 12
+# The Indiv table's row labels (mnVSRecordMakeIndivPortraitAll :1719).
+VSREC_INDIV_ROW_LABELS = ("WinPercent", "KOs", "KOd", "Avg")
+VSREC_INDIV_ROW_Y = 113
+VSREC_INDIV_ROW_STEP = 15
+
+VSREC_SURFACE_SPECS = (
+    SurfaceSpec("VSREC_ATLAS", _VSREC_ATLAS_PARTS, None,
+                box=(0, 0, 320, ds_src(VSREC_ATLAS_H))),
+    vsrec_base("VSREC_BASE_SCORE", vsrec_header(
+        "llMNVSRecordMainBattleScoreSprite") + [
+        vsrec_down_arrows(),
+        Placement("MNVSRecordMain", "llMNVSRecordMainLabelTotalSprite",
+                  ds_src(222), ds_src(38), False, VSREC_GREY)]),
+    vsrec_base("VSREC_BASE_RANK", vsrec_header(
+        "llMNVSRecordMainUnknown2Sprite") + [
+        vsrec_down_arrows(),
+        Placement("MNVSRecordMain", "llMNVSRecordMainSideArrowsSprite",
+                  ds_src(1), ds_src(36), False, VSREC_ORANGE)]),
+    vsrec_base("VSREC_BASE_INDIV", vsrec_header(
+        "llMNVSRecordMainUnknown1Sprite") + [
+        vsrec_wallpaper(),
+        Placement("MNDataCommon", "llMNDataCommonArrowLSprite",
+                  ds_src(2), ds_src(57), False, VSREC_ORANGE),
+        Placement("MNDataCommon", "llMNDataCommonArrowRSprite",
+                  ds_src(57), ds_src(57), False, VSREC_ORANGE),
+        *(Placement("MNCommonFonts", "", ds_src(VSREC_INDIV_LINE_X),
+                    ds_src(VSREC_INDIV_LINE_Y + _row * VSREC_INDIV_LINE_STEP),
+                    False, VSREC_GREY, text=_text, text_scale=2)
+          for _row, _text in enumerate(VSREC_INDIV_LINES)),
+        *(Placement("MNVSRecordMain", f"llMNVSRecordMainLabel{_label}Sprite",
+                    ds_src(2),
+                    ds_src(VSREC_INDIV_ROW_Y + 3 +
+                           _row * VSREC_INDIV_ROW_STEP),
+                    False, VSREC_GREY)
+          for _row, _label in enumerate(VSREC_INDIV_ROW_LABELS))]),
+    # The Indiv portrait, one state per selection id over the plate, so a
+    # change re-blits exactly (the portraits carry transparent texels).
+    *(SurfaceSpec(f"VSREC_PORTRAIT_{_sel}",
+                  (Placement(*vsrec_portrait(_sel),
+                             ds_src(VSREC_PORTRAIT_XY[0]),
+                             ds_src(VSREC_PORTRAIT_XY[1]), False,
+                             dest=(32, 32)),),
+                  VSREC_FIELD, under=(vsrec_wallpaper(),),
+                  box=(ds_src(VSREC_PORTRAIT_XY[0]),
+                       ds_src(VSREC_PORTRAIT_XY[1]), 40, 40))
+      for _sel in range(VSREC_SELS)),
+)
+
+
 
 # ---------------------------------------------------------------------------
 # P2-1i -- the title screen's own background: `mnTitleMakeFire`.
@@ -5715,9 +5965,12 @@ def main(argv: list[str] | None = None) -> int:
     # The wireless VS START states are newer still.
     surfaces.extend(convert_surface(cache, offsets, repo_root, spec)
                     for spec in NET_START_SURFACE_SPECS)
-    # Their captions are newest of all.
+    # Their captions are newer still.
     surfaces.extend(convert_surface(cache, offsets, repo_root, spec)
                     for spec in NET_HINT_SURFACE_SPECS)
+    # The VS Record screen's art (P7 U9) is newest of all.
+    surfaces.extend(convert_surface(cache, offsets, repo_root, spec)
+                    for spec in VSREC_SURFACE_SPECS)
     check_title_anim_block(surfaces)
     check_bonus_css_shared_states(surfaces)
 

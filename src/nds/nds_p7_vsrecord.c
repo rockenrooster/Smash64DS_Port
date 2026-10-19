@@ -18,9 +18,14 @@
 #include <nds/nds_p7.h>
 
 /* The source's mnVSRecordCheckHaveFighterKind: Ness, Purin, Captain and Luigi
- * behind the save's fighter mask, everything else admitted. */
+ * behind the save's fighter mask, everything else admitted -- every one in a
+ * dev-open build, as the VS select (ndsMenuShellCssSaveLocked). */
 static u32 ndsP7VsRecordOriginalShown(u32 kind)
 {
+    if (ndsP7DevOpen() != FALSE)
+    {
+        return TRUE;
+    }
     switch (kind)
     {
     case nFTKindNess:

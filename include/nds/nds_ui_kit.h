@@ -261,6 +261,15 @@ s32 ndsUiKitCacheSurface(u32 surface);
  * was an open + 7.8 KB read + hash + flush per sliding slot per tic. */
 s32 ndsUiKitLoadSurfaceCopy(u32 surface, u8 *buffer, u32 capacity);
 s32 ndsUiKitBlitSurfaceCopy(u32 surface, const u8 *buffer);
+/* P7 U9: a KEYED sub-rectangle of such a copy drawn into BG2 at (dest_x,
+ * dest_y), clipped to the layer -- the VS Record screen copies its icons,
+ * digits and labels out of one resident atlas this way, so a cursor move
+ * costs no NitroFS work. FALSE when the rectangle leaves the surface. */
+s32 ndsUiKitDrawCopyRect(u32 surface, const u8 *buffer, u32 src_x, u32 src_y,
+                         u32 width, u32 height, s32 dest_x, s32 dest_y);
+/* P7 U9: a solid BG2 rectangle (DS BGR5551, bit 15 opaque), clipped: grid
+ * lines, cursor highlights and erased table cells. */
+void ndsUiKitFillRect(s32 x, s32 y, u32 width, u32 height, u16 texel);
 /* The same copy without arena bytes: BG2's offscreen rows (192-255 of its
  * 256x256 bitmap; every backdrop row clips to the 192-row screen) hold a
  * surface's on-screen rectangle, saved after its blit and restored VRAM to

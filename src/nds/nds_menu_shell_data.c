@@ -202,11 +202,14 @@ static void ndsMenuShellPopulateData(void)
  * index must not enter a deferred screen just because its scene is still
  * registered. `ndsSceneManagerFind` answering non-NULL is a statement about
  * registration, never about policy -- do not unregister the scenes instead,
- * which would also break the return path. */
+ * which would also break the return path.
+ *
+ * P7 U9 (2026-10-19) opens VS Record: the approved P7 plan makes it every
+ * fighter's records screen (nds_menu_shell_vsrecord.c). Characters stays
+ * deferred. */
 static s32 ndsMenuShellDataKindActivatable(u32 want_kind)
 {
-    return ((want_kind == (u32)nSCKindCharacters) ||
-            (want_kind == (u32)nSCKindVSRecord)) ? FALSE : TRUE;
+    return (want_kind == (u32)nSCKindCharacters) ? FALSE : TRUE;
 }
 
 static void ndsMenuShellUpdateData(u32 held, u32 taps)
