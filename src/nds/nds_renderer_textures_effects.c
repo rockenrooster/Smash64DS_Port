@@ -3001,6 +3001,22 @@ void ndsRendererHardwareReleaseStageWarmTextures(void)
  * src/nds/nds_native_pikachu_thunderground_coverage.inc. */
 s32 ndsNativeThunderGroundReleaseOneCoverageTexture(void);
 
+s32 ndsFtrLeanAdmitOpenHoles(void);
+void ndsFtrLeanAdmitCloseHoles(void);
+/* Uploads that took A+B's holes (ndsFtrLeanAdmitOpenHoles). */
+volatile u32 gNdsFtrAdmitHoleUploads;
+#if (NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE)
+/* A benchmark build compiles no admission and no bank lock. */
+s32 ndsFtrLeanAdmitOpenHoles(void)
+{
+    return FALSE;
+}
+
+void ndsFtrLeanAdmitCloseHoles(void)
+{
+}
+#endif
+
 static s32 ndsRendererHardwareEvictTexture(
     const NDSRendererHardwareTextureCacheEntry *exclude)
 {
@@ -13485,6 +13501,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     u32 render_tile_index;
     u32 render_tile_flags;
     u32 upload_attempts;
+    sb32 holes_open;
     u32 primary_image;
     u32 primary_image_format;
     u32 primary_image_size;
@@ -15036,6 +15053,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
         ndsRendererHardwareEndBatch();
         ndsRendererHardwareBindTextureName(stats, (u32)entry->name);
         upload_attempts = 0u;
+        holes_open = FALSE;
         while (ndsRendererHardwareFencedGlTexImage2D(
                    GL_TEXTURE_2D, 0, resident_texture_type, size_x, size_y, 0,
                    params, sNdsRendererHardwareTextureScratch) == 0)
@@ -15045,20 +15063,39 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
             if ((upload_attempts >= NDS_RENDERER_HW_TEXTURE_CACHE_COUNT) ||
                 (ndsRendererHardwareEvictTexture(entry) == FALSE))
             {
-                ndsRendererHardwareRejectTexture(
-                    stats, format, size,
-                    NDS_RENDERER_HW_TEXREJECT_TEXIMAGE);
-                return FALSE;
+                /* Nothing in the cache may go: once more with A+B's holes
+                 * (ndsFtrLeanAdmitOpenHoles), then refuse. */
+                if ((holes_open != FALSE) ||
+                    (ndsFtrLeanAdmitOpenHoles() == FALSE))
+                {
+                    if (holes_open != FALSE)
+                    {
+                        ndsFtrLeanAdmitCloseHoles();
+                    }
+                    ndsRendererHardwareRejectTexture(
+                        stats, format, size,
+                        NDS_RENDERER_HW_TEXREJECT_TEXIMAGE);
+                    return FALSE;
+                }
+                holes_open = TRUE;
             }
             if (ndsRendererHardwareFencedGlGenTextures(
                     1, &entry->name) == 0)
             {
+                if (holes_open != FALSE)
+                {
+                    ndsFtrLeanAdmitCloseHoles();
+                }
                 ndsRendererHardwareRejectTexture(
                     stats, format, size,
                     NDS_RENDERER_HW_TEXREJECT_GENTEX);
                 return FALSE;
             }
             ndsRendererHardwareBindTextureName(stats, (u32)entry->name);
+        }
+        if (holes_open != FALSE)
+        {
+            ndsFtrLeanAdmitCloseHoles();
         }
         if (resident_palette_entries != 0u)
         {
@@ -18818,6 +18855,35 @@ void ndsFtrLeanAdmitLockRegions(void)
                        gNdsFtrAdmitLab.lock_frame = gNdsRendererProfileFrameCount,
                        gNdsFtrAdmitLab.lock_after =
                            (u32)glGlobalData.vramLock[0]));
+}
+
+/* D IS FULL AND THE CACHE HAS NOTHING TO GIVE (2026-10-18). After the lock D
+ * alone serves the battle's uploads, and its bytes can all be held by what
+ * the cache may not evict: the admission's D chunks and the names other
+ * owners keep (effects, weapons). Four heavy contents on Hyrule Castle left D
+ * 128 B and A+B 28.5 KB of free holes, and a Bob-omb's bind failed every
+ * frame it was out (2 native failure rows a match). The cache's upload takes
+ * those holes once before it refuses: A+B unlocked for that one upload, the
+ * lock word restored after; what lands there is an ordinary entry, evicted
+ * and freed as any other. FALSE when A+B were not locked by this battle. */
+static int sNdsFtrAdmitHolesSavedLock;
+
+s32 ndsFtrLeanAdmitOpenHoles(void)
+{
+    if ((sNdsFtrAdmitRegions == 0u) || (sNdsFtrAdmitLocked == 0u))
+    {
+        return FALSE;
+    }
+    sNdsFtrAdmitHolesSavedLock = glGlobalData.vramLock[0];
+    glUnlockVRAMBank((u16 *)VRAM_A);
+    glUnlockVRAMBank((u16 *)VRAM_B);
+    gNdsFtrAdmitHoleUploads++;
+    return TRUE;
+}
+
+void ndsFtrLeanAdmitCloseHoles(void)
+{
+    glGlobalData.vramLock[0] = sNdsFtrAdmitHolesSavedLock;
 }
 
 #if NDS_VRAM_CENSUS_LIVE
