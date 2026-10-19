@@ -7,6 +7,9 @@
 #if NDS_P5
 #include "nds_p5_native_stages.generated.h"
 #endif
+#if NDS_P4
+#include "nds_p4_onep_art.generated.h"
+#endif
 
 #if NDS_P4
 
@@ -49,6 +52,7 @@ void gcSetAnimSpeed(GObj *gobj, f32 anim_speed);
 u8 gNdsP4PlayerContent[GMCOMMON_PLAYERS_MAX];
 u8 gNdsP4TrainingContent[2];
 u8 gNdsP4OnePlayerContent;
+u8 gNdsP7BonusPracticeContent;
 f32 gNdsP4TranslationMultiplier[GMCOMMON_PLAYERS_MAX] = { 1.0F, 1.0F, 1.0F, 1.0F };
 u32 gNdsP4EnvColor[GMCOMMON_PLAYERS_MAX];
 /* Remix custom commands no P4 content has needed yet: counted, never silent. */
@@ -328,6 +332,18 @@ u32 ndsP4MatchContent(s32 player)
          * boards take the bonus select's fighter (C2). */
         if (gSCManagerSceneData.scene_prev != nSCKind1PGame)
         {
+            /* P7 C2: a practice's player, while its kind is the content's
+             * parent (sc1PBonusStageInitVars seats bonus_fkind). */
+            if ((player == (s32)gSCManagerSceneData.player) &&
+                ((gSCManagerSceneData.scene_prev == nSCKind1PBonus1Players) ||
+                 (gSCManagerSceneData.scene_prev == nSCKind1PBonus2Players)))
+            {
+                const NDSP4Fighter *f = ndsP4Fighter(gNdsP7BonusPracticeContent);
+
+                return ((f != NULL) &&
+                        (f->parent_kind == (s32)gSCManagerSceneData.bonus_fkind)) ?
+                    (u32)gNdsP7BonusPracticeContent : 0u;
+            }
             return 0u;
         }
         /* fall through */
@@ -457,7 +473,10 @@ static sb32 ndsP4SceneIsSelect(void)
     return ((scene == (u32)nSCKindPlayersVS)
 #if NDS_P2_1P_GAME && NDS_P2_MENU_SHELL
             || (scene == (u32)nSCKindPlayers1PTraining) ||
-            (scene == (u32)nSCKind1PGamePlayers)
+            (scene == (u32)nSCKind1PGamePlayers) ||
+            /* P7 C2: the bonus practice selects too. */
+            (scene == (u32)nSCKind1PBonus1Players) ||
+            (scene == (u32)nSCKind1PBonus2Players)
 #endif
            ) ? TRUE : FALSE;
 }
@@ -3233,13 +3252,14 @@ const char *ndsP4RelocAssetPath(u32 file_id)
 {
     static char path[] = "nitro:/reloc/p4/0000";
     static const char hex[] = "0123456789abcdef";
+    u32 found = FALSE;
     u32 c;
 
     if (file_id > 0xFFFFu)
     {
         return NULL;
     }
-    for (c = 1u; c <= NDS_P4_CONTENT_LIMIT; c++)
+    for (c = 1u; (c <= NDS_P4_CONTENT_LIMIT) && (found == FALSE); c++)
     {
         const NDSP4Fighter *f = (c < NDS_P4_CONTENT_LIMIT) ? ndsP4Fighter(c) : NULL;
         const u16 *assets = (f != NULL) ? f->assets : NULL;
@@ -3253,36 +3273,42 @@ const char *ndsP4RelocAssetPath(u32 file_id)
             count = gNdsP4KirbyRelocAssetCount;
         }
 #endif
-        if (ndsP4AssetListHas(assets, count, file_id) != FALSE)
-        {
-            u32 at = sizeof(path) - 5u;
-
-            path[at + 0u] = hex[(file_id >> 12) & 0xFu];
-            path[at + 1u] = hex[(file_id >> 8) & 0xFu];
-            path[at + 2u] = hex[(file_id >> 4) & 0xFu];
-            path[at + 3u] = hex[file_id & 0xFu];
-            return path;
-        }
+        found = ndsP4AssetListHas(assets, count, file_id);
     }
 #if NDS_P5 && (NDS_P5_RELOC_FILE_COUNT > 0)
+    if (found == FALSE)
     {
         /* P5: the Remix stages' map, geometry and wallpaper files, staged
          * beside the contents' (scripts/p5/p5_rules.mk). */
         static const u16 kP5Files[] = { NDS_P5_RELOC_FILE_IDS };
 
-        if (ndsP4AssetListHas(kP5Files, NDS_P5_RELOC_FILE_COUNT, file_id) != FALSE)
-        {
-            u32 at = sizeof(path) - 5u;
-
-            path[at + 0u] = hex[(file_id >> 12) & 0xFu];
-            path[at + 1u] = hex[(file_id >> 8) & 0xFu];
-            path[at + 2u] = hex[(file_id >> 4) & 0xFu];
-            path[at + 3u] = hex[file_id & 0xFu];
-            return path;
-        }
+        found = ndsP4AssetListHas(kP5Files, NDS_P5_RELOC_FILE_COUNT, file_id);
     }
 #endif
-    return NULL;
+#if NDS_P4_ONEP_ART_FILE_COUNT > 0
+    if (found == FALSE)
+    {
+        /* P7 C1: the contents' congratulations plates and intro names
+         * (scripts/p4/p4_onep_art.py; battleship_mncongra.c,
+         * battleship_sc1pintro.c). */
+        static const u16 kOnePArtFiles[] = { NDS_P4_ONEP_ART_FILE_IDS };
+
+        found = ndsP4AssetListHas(kOnePArtFiles, NDS_P4_ONEP_ART_FILE_COUNT, file_id);
+    }
+#endif
+    if (found == FALSE)
+    {
+        return NULL;
+    }
+    {
+        u32 at = sizeof(path) - 5u;
+
+        path[at + 0u] = hex[(file_id >> 12) & 0xFu];
+        path[at + 1u] = hex[(file_id >> 8) & 0xFu];
+        path[at + 2u] = hex[(file_id >> 4) & 0xFu];
+        path[at + 3u] = hex[file_id & 0xFu];
+    }
+    return path;
 }
 
 sb32 ndsP4LabSkipsDependency(u32 owner_asset, u32 dep_asset)

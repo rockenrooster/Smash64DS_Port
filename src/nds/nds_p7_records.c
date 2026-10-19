@@ -131,21 +131,38 @@ static FILE *ndsP7RecordsOpen(const NDSP7RecordsTable *table)
     return NULL;
 }
 
-/* Row `sel` of an open, validated file (zero without one). */
+/* The source's blank 1P row (scmanager.c dSCManagerDefaultBackupData): both
+ * bonus stages' best times an hour, everything else zero. A stored time of 0
+ * (a row never written, or written before 2026-10-19 by the zero blank) is
+ * that hour: no board is cleared in no time, and the source's record logic
+ * writes only a time below the stored one. */
+#define NDS_P7_1P_NO_TIME ((u32)I_MIN_TO_TICS(60))
+
+/* Row `sel` of an open, validated file (the blank row without one). */
 static void ndsP7RecordsReadFrom(const NDSP7RecordsTable *table, FILE *file, u32 sel,
                                  void *out)
 {
     memset(out, 0, table->row_bytes);
-    if ((file == NULL) || (sel >= NDS_P7_SEL_COUNT))
-    {
-        return;
-    }
-    if ((fseek(file, (long)(sizeof(NDSP7RecordsHeader) + (sel * table->row_bytes)),
-               SEEK_SET) != 0) ||
-        (fread(out, table->row_bytes, 1u, file) != 1u))
+    if ((file != NULL) && (sel < NDS_P7_SEL_COUNT) &&
+        ((fseek(file, (long)(sizeof(NDSP7RecordsHeader) + (sel * table->row_bytes)),
+                SEEK_SET) != 0) ||
+         (fread(out, table->row_bytes, 1u, file) != 1u)))
     {
         memset(out, 0, table->row_bytes);
         gNdsP7RecordsReadFailCount++;
+    }
+    if (table == &kNdsP7OnePTable)
+    {
+        LBBackup1PRecord *row = (LBBackup1PRecord *)out;
+
+        if (row->bonus1_time == 0u)
+        {
+            row->bonus1_time = NDS_P7_1P_NO_TIME;
+        }
+        if (row->bonus2_time == 0u)
+        {
+            row->bonus2_time = NDS_P7_1P_NO_TIME;
+        }
     }
 }
 
@@ -445,9 +462,10 @@ void ndsP7RecordsAddMatch(const SCBattleState *state, const u8 sel[GMCOMMON_PLAY
 
 /* --- C3: the 1P records ------------------------------------------------ */
 
-/* Backup Clear: the classes' fields zeroed in every row, as the source's
- * lbBackupClear1PHighScore / lbBackupClearBonusStageTime reset its twelve
- * (their defaults are zero). One pass reading the old file row by row. */
+/* Backup Clear: the classes' fields reset in every row to the blank row's,
+ * as the source's lbBackupClear1PHighScore / lbBackupClearBonusStageTime
+ * reset its twelve (zero, the bonus times an hour). One pass reading the old
+ * file row by row. */
 void ndsP7OnePRecordsClear(u32 fields)
 {
     LBBackup1PRecord rows[NDS_P7_SEL_COUNT / 4u];
@@ -483,9 +501,9 @@ void ndsP7OnePRecordsClear(u32 fields)
             }
             if ((fields & NDS_P7_1P_CLEAR_BONUS) != 0u)
             {
-                row->bonus1_time = 0u;
+                row->bonus1_time = NDS_P7_1P_NO_TIME;
                 row->bonus1_task_count = 0u;
-                row->bonus2_time = 0u;
+                row->bonus2_time = NDS_P7_1P_NO_TIME;
                 row->bonus2_task_count = 0u;
             }
         }

@@ -158,3 +158,19 @@ $(OUTPUT).nds: $(NDS_P4_ADMISSION)
 # __wrap_nitroromResolvePath, which answers "reloc/p4/<id>" without walking
 # the directory's 2,161 names through the ARM7 storage path.
 LDFLAGS += -Wl,--wrap=nitroromResolvePath
+# P7 C1: the contents' own 1P art (scripts/p4/p4_onep_art.py): Remix's
+# congratulations plates and stage intro names, staged beside the contents'
+# files; nds_p4.c resolves their ids, battleship_mncongra.c and
+# battleship_sc1pintro.c show a content's.
+NDS_P4_ONEP_ART_HEADER := $(NDS_P4_GEN)/nds_p4_onep_art.generated.h
+$(NDS_P4_ONEP_ART_HEADER): $(NDS_P4_STAGING)/ssb64asm.z64 \
+		$(PROJECT_ROOT)/scripts/p4/p4_onep_art.py $(PROJECT_ROOT)/scripts/p4/remix_rom.py \
+		$(PROJECT_ROOT)/scripts/p4/contents.json $(NDS_BUILD_CONFIG)
+	python "$(PROJECT_ROOT)/scripts/p4/p4_onep_art.py" --staging "$(NDS_P4_STAGING)" \
+		--contents "$(NDS_P4_ENABLED)" --out "$(NDS_P4_GEN)"
+nds_p4.o battleship_mncongra.o battleship_sc1pintro.o scene_backend.o: $(NDS_P4_ONEP_ART_HEADER)
+$(NDS_P4_GEN)/onep_art/.nitrofs-staged: $(NDS_P4_ONEP_ART_HEADER)
+	@mkdir -p $(NITROFS_DIR)/reloc/p4
+	@for f in $(NDS_P4_GEN)/onep_art/o2r/*; do if [ -e "$$f" ]; then cp -f "$$f" "$(NITROFS_DIR)/reloc/p4/$${f##*/}" || exit 1; fi; done
+	@touch $@
+$(OUTPUT).nds: $(NDS_P4_GEN)/onep_art/.nitrofs-staged

@@ -836,8 +836,10 @@ void *ndsRelocPreviewFighterLoadBegin(s32 fkind)
         (gSCManagerSceneData.scene_curr != nSCKindPlayersVS)
 #if NDS_P2_1P_GAME && NDS_P2_MENU_SHELL
         && (gSCManagerSceneData.scene_curr != nSCKindPlayers1PTraining)
-        /* P7 C1: the 1P select is the same screen. */
+        /* P7 C1: the 1P select is the same screen; C2: the bonus selects. */
         && (gSCManagerSceneData.scene_curr != nSCKind1PGamePlayers)
+        && (gSCManagerSceneData.scene_curr != nSCKind1PBonus1Players)
+        && (gSCManagerSceneData.scene_curr != nSCKind1PBonus2Players)
 #endif
         )
     {

@@ -85,9 +85,40 @@ extern void mnCongraFuncLights(Gfx **dls);
 
 #undef mnCongraStartScene
 
+#if NDS_P4
+#include <nds/nds_p4.h>
+#include "nds_p4_onep_art.generated.h"
+
+/* P7 C1: a content that won the campaign shows its own still pair -- Remix's
+ * (SinglePlayer.asm set_ending_image, scripts/p4/p4_onep_art.py) -- in its
+ * parent's row of dMNCongraPictures for the scene; TRUE when it borrowed the
+ * row (`saved` holds the source's). A content Remix has no pair for keeps its
+ * parent's, and Metal Mario Mario's, as Remix shows him. */
+static sb32 ndsMNCongraContentPicture(s32 fkind, MNCongraPicture *saved)
+{
+    const u32 content = (u32)gNdsP4OnePlayerContent;
+    const NDSP4Fighter *f = ndsP4Fighter(content);
+
+    if ((gSCManagerSceneData.scene_prev != nSCKind1PGame) || (f == NULL) ||
+        (f->parent_kind != fkind) || (fkind < nFTKindPlayableStart) ||
+        (fkind > nFTKindPlayableEnd))
+    {
+        return FALSE;
+    }
+#define NDS_MN_CONGRA_CONTENT_ROW(c, bottom, top)     if (content == (u32)(c))     {         *saved = dMNCongraPictures[fkind];         dMNCongraPictures[fkind].bottom_file_id = (bottom);         dMNCongraPictures[fkind].bottom_offset = NDS_P4_CONGRA_SPRITE_OFFSET;         dMNCongraPictures[fkind].top_file_id = (top);         dMNCongraPictures[fkind].top_offset = NDS_P4_CONGRA_SPRITE_OFFSET;         return TRUE;     }
+    NDS_P4_CONGRA_ROWS(NDS_MN_CONGRA_CONTENT_ROW)
+#undef NDS_MN_CONGRA_CONTENT_ROW
+    return FALSE;
+}
+#endif
+
 void mnCongraStartScene(void)
 {
     SYTaskmanSetup setup;
+#if NDS_P4
+    MNCongraPicture saved;
+    sb32 borrowed;
+#endif
 
     switch (gSCManagerSceneData.scene_prev)
     {
@@ -113,7 +144,16 @@ void mnCongraStartScene(void)
     setup.scene_setup.arena_start = ndsTaskmanArenaStart();
     setup.scene_setup.arena_size = ndsTaskmanArenaSize();
     setup.func_start = mnCongraFuncStart;
+#if NDS_P4
+    borrowed = ndsMNCongraContentPicture(sMNCongraFighterKind, &saved);
+#endif
     syTaskmanStartTask(&setup);
+#if NDS_P4
+    if (borrowed != FALSE)
+    {
+        dMNCongraPictures[sMNCongraFighterKind] = saved;
+    }
+#endif
 }
 
 #endif /* NDS_P2_1P_GAME */

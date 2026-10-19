@@ -18,6 +18,10 @@
 #include <nds/arm9/cache.h>
 #include <nds/generated/nds_fighter_production.generated.h>
 #include <nds/nds_p4.h>
+#if NDS_P4
+/* P7 C1: the contents' 1P art sprites (scripts/p4/p4_onep_art.py). */
+#include "nds_p4_onep_art.generated.h"
+#endif
 #include <nds/nds_battlepack_anim.h>
 #include <nds/nds_ifcommon_oam.h>
 #include <nds/nds_reloc_assets.h>
@@ -11105,6 +11109,24 @@ static s32 ndsRelocNormalizeBattleInterfaceSprites(
                 {
                     return FALSE;
                 }
+            }
+        }
+    }
+    {
+        /* P7 C1: the contents' congratulations plates and intro names. */
+        static const NDSRelocSpriteNormalizeDesc kOnePArt[] = {
+#define NDS_RELOC_ONEP_ART_ROW(file, offset, width, height, bitmaps, fmt, siz) \
+            { (file), (offset), (width), (height), (bitmaps), (fmt), (siz) },
+            NDS_P4_ONEP_ART_SPRITE_ROWS(NDS_RELOC_ONEP_ART_ROW)
+#undef NDS_RELOC_ONEP_ART_ROW
+            { 0u, 0u, 0u, 0u, 0u, 0u, 0u }
+        };
+
+        for (i = 0u; kOnePArt[i].asset_id != 0u; i++)
+        {
+            if (ndsRelocNormalizeSpriteDesc(loaded, &kOnePArt[i]) == FALSE)
+            {
+                return FALSE;
             }
         }
     }

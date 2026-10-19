@@ -709,6 +709,10 @@ extern u8 gNdsP4TrainingContent[2];
  * gSCManagerSceneData.fkind, the content's setup parent; ndsP4MatchContent
  * answers the player's slot from this while that parent is the kind. */
 extern u8 gNdsP4OnePlayerContent;
+/* P7 C2: the bonus practice's content, beside gSCManagerSceneData.bonus_fkind
+ * (its parent); the practice board seats it as the campaign's boards seat
+ * gNdsP4OnePlayerContent. Written by the native bonus select's commit. */
+extern u8 gNdsP7BonusPracticeContent;
 
 /* A vanilla `x->fkind == nFTKind<Parent>` compare that Remix leaves alone
  * sees a Remix fighter's own character id on the N64, so the fighter takes

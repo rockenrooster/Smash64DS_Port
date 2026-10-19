@@ -174,7 +174,11 @@ static void ndsSC1PIntroDraw(void);
  * says a content's or Metal Mario's own name; see ndsSC1PIntroPlayFGM. */
 void *ndsSC1PIntroPlayFGM(u16 id);
 #define func_800269C0_275C0(id) ndsSC1PIntroPlayFGM(id)
+/* P7 C1: the player's name label too (ndsSC1PIntroMakeSObj). */
+SObj *ndsSC1PIntroMakeSObj(GObj *gobj, Sprite *sprite);
+#define lbCommonMakeSObjForGObj(gobj, sprite) ndsSC1PIntroMakeSObj(gobj, sprite)
 #include "../../decomp/BattleShip-main/decomp/src/sc/sc1pmode/sc1pintro.c"
+#undef lbCommonMakeSObjForGObj
 #undef func_800269C0_275C0
 #undef sc1PIntroFuncStart
 #undef scManagerFuncDraw
@@ -220,6 +224,63 @@ void *ndsSC1PIntroPlayFGM(u16 id)
         }
     }
     return func_800269C0_275C0(id);
+}
+
+#if NDS_P4
+#include "nds_p4_onep_art.generated.h"
+#endif
+
+/* The player's own name sprite, NULL for the source's: a content's is
+ * Remix's 1P name texture (SinglePlayer.asm add_to_single_player), a file of
+ * its own (scripts/p4/p4_onep_art.py) read into the scene's heap; Metal
+ * Mario's is the intro file's METAL MARIO text, as Remix names him. */
+static Sprite *ndsSC1PIntroOwnName(void)
+{
+    const s32 fkind = sSC1PIntroPlayerFighterDemoDesc.fkind;
+#if NDS_P4
+    const u32 content = (u32)gNdsP4OnePlayerContent;
+    const NDSP4Fighter *f = ndsP4Fighter(content);
+
+    if ((f != NULL) && (f->parent_kind == fkind))
+    {
+#define NDS_SC1P_INTRO_NAME_ROW(c, file, offset) \
+        if (content == (u32)(c)) \
+        { \
+            const void *id = (const void *)(uintptr_t)(file); \
+            void *data = lbRelocGetExternHeapFile( \
+                id, syTaskmanMalloc(lbRelocGetFileSize(id), 0x10)); \
+            return (data != NULL) ? \
+                lbRelocGetFileData(Sprite *, data, (const void *)(uintptr_t)(offset)) : NULL; \
+        }
+        NDS_P4_INTRO_NAME_ROWS(NDS_SC1P_INTRO_NAME_ROW)
+#undef NDS_SC1P_INTRO_NAME_ROW
+        return NULL;
+    }
+#endif
+    if ((gNdsP7OnePlayerMetal != 0u) && (fkind == nFTKindMario))
+    {
+        return lbRelocGetFileData(Sprite *, sSC1PIntroFiles[0],
+                                  &llSC1PIntroMetalMarioTextSprite);
+    }
+    return NULL;
+}
+
+/* sc1PIntroMakeName (:544) makes the name GObj's first SObj from the
+ * player's kind's sprite; for a content or Metal Mario it is their own name
+ * instead, before sc1PIntroSetNamePositions lays the row out by its width. */
+SObj *ndsSC1PIntroMakeSObj(GObj *gobj, Sprite *sprite)
+{
+    if ((gobj != NULL) && (gobj == sSC1PIntroNameGObj) &&
+        (SObjGetStruct(gobj) == NULL))
+    {
+        Sprite *own = ndsSC1PIntroOwnName();
+
+        if (own != NULL)
+        {
+            sprite = own;
+        }
+    }
+    return lbCommonMakeSObjForGObj(gobj, sprite);
 }
 
 #undef sc1PIntroStartScene

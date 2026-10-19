@@ -4921,6 +4921,64 @@ BONUS_CSS_SURFACE_SPECS = (
 )
 
 
+# P7 C2 (2026-10-19): with Remix contents compiled, the Bonus 1/2 Practice
+# selects are the native screen's one-card mode too (nds_menu_shell_css.c
+# sCssOneP 2) on Remix's grid, as the 1P select is (ONEP_P4_*). Their base is
+# the grid with mnPlayers1PBonusMakeGate's red card and 1P tag and BACK lifted
+# with the header; the bonus kind's title, the card's emblem and name for every
+# selection the VS screen has a gate for (CSS_FIGHTER_TOKEN order:
+# BONUS_P4_GATE_F<n>), the record row and the total row are states over it, as
+# the vanilla family's are over its grid. The READY band is the 1P select's
+# (ONEP_P4_READY_*) and the digits are BONUS_DIGIT_*: both bases are the bare
+# grid inside the band and the save-lock cells (check_bonus_css_shared_states).
+if P4_CSS is not None:
+    def bonus_p4_css_screen_parts() -> tuple[Placement, ...]:
+        return tuple(list(p4_css_screen_parts()) + [
+            Placement("MNPlayers1PMode", "llMNPlayers1PModeRedCardSprite",
+                      58, 127, False),
+            Placement("MNPlayersCommon", "llMNPlayersCommon1PTextSprite",
+                      66, 132, False, (0x00, 0x00, 0x00)),
+            Placement("MNPlayersCommon", "llMNPlayersCommonBackButtonSprite",
+                      244, 23 + CSS_HEADER_DY, False),
+        ])
+
+    _BONUS_P4 = bonus_p4_css_screen_parts()
+    SURFACE_SOURCES.append(SurfaceSpec("BONUS_P4_CSS_SCREEN", _BONUS_P4,
+                                       MENU_FIELD))
+    for _token, _symbol in BONUS_TITLE_STATES:
+        SURFACE_SOURCES.append(SurfaceSpec(
+            f"BONUS_P4_TITLE_{_token}",
+            (Placement("MNPlayersGameModes", _symbol, 27, 24 + CSS_HEADER_DY,
+                       False, (0xE3, 0xAC, 0x04)),),
+            None, under=_BONUS_P4,
+            box=(BONUS_TITLE_BOX[0], BONUS_TITLE_BOX[1] + CSS_HEADER_DY,
+                 BONUS_TITLE_BOX[2], BONUS_TITLE_BOX[3])))
+    SURFACE_SOURCES.append(SurfaceSpec(
+        "BONUS_P4_GATE_EMPTY", (), None, under=_BONUS_P4, box=BONUS_GATE_BOX))
+    for _index in range(len(CSS_FIGHTER_TOKEN)):
+        _emblem = CSS_EMBLEM_SYMBOL[_index]
+        if not isinstance(_emblem, tuple):
+            _emblem = ("FTEmblemSprites", _emblem)
+        _name = CSS_NAME_SYMBOL[_index]
+        if not isinstance(_name, tuple):
+            _name = ("MNPlayersCommon", _name)
+        SURFACE_SOURCES.append(SurfaceSpec(
+            f"BONUS_P4_GATE_F{_index}",
+            (Placement(_emblem[0], _emblem[1], 68, 144, False,
+                       (0x00, 0x00, 0x00)),
+             Placement(_name[0], _name[1], 66, 202, False,
+                       trim_clear=_name[0].startswith("p4:"))),
+            None, under=_BONUS_P4, box=BONUS_GATE_BOX))
+    for _token, _parts in BONUS_RECORD_STATES:
+        SURFACE_SOURCES.append(SurfaceSpec(
+            f"BONUS_P4_RECORD_{_token}", _parts, None, under=_BONUS_P4,
+            box=BONUS_RECORD_BOX))
+    for _token, _parts in BONUS_TOTAL_STATES:
+        SURFACE_SOURCES.append(SurfaceSpec(
+            f"BONUS_P4_TOTAL_{_token}", _parts, None, under=_BONUS_P4,
+            box=BONUS_TOTAL_BOX))
+
+
 # P3: VS START carries the wireless choice as a value word inside its own tab,
 # the way the rule button carries TIME/STOCK: OFF, HOST or JOIN, chosen with
 # left/right and confirmed with A. The source has no art for the words, so they
@@ -5360,7 +5418,22 @@ def check_bonus_css_shared_states(surfaces: list[Surface]) -> None:
                 "check needs full-screen bases")
         return surface.texels[sy * surface.width + sx]
 
-    for base_token, state_token in shared:
+    checks = [("BONUS_CSS_SCREEN", base_token, state_token)
+              for base_token, state_token in shared]
+    # P7 C2: a P4 build's bonus selects are the native screen's one-card mode
+    # over BONUS_P4_CSS_SCREEN, blitting the 1P select's READY band and the
+    # P4 grid's save-lock covers (ndsMenuShellCssShowReady,
+    # ndsMenuShellCssLockedCellCovers).
+    if P4_CSS is not None:
+        checks += [("BONUS_P4_CSS_SCREEN", "ONEP_P4_CSS_SCREEN", token)
+                   for token in ("ONEP_P4_READY_ON", "ONEP_P4_READY_OFF")]
+        checks += [("BONUS_P4_CSS_SCREEN", "CSS_SCREEN", token)
+                   for token in by_token
+                   if token.startswith("CSS_LOCKED_CELL") and
+                   token.endswith("_READY0")]
+
+    for bonus_token, base_token, state_token in checks:
+        bonus = by_token[bonus_token]
         base = by_token[base_token]
         state = by_token[state_token]
         mismatch = sum(
@@ -5370,7 +5443,7 @@ def check_bonus_css_shared_states(surfaces: list[Surface]) -> None:
             if texel(bonus, x, y) != texel(base, x, y))
         if mismatch != 0:
             raise ConvertError(
-                f"BONUS_CSS_SCREEN differs from {base_token} in {mismatch} "
+                f"{bonus_token} differs from {base_token} in {mismatch} "
                 f"texels inside {state_token}'s box; the bonus select would "
                 "restore that box with the other screen's art")
 

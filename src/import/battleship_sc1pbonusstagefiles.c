@@ -63,12 +63,21 @@ static intptr_t sNdsP7BonusSavedBumper[2];
 static u8 sNdsP7BonusBorrowed;
 __attribute__((used)) volatile u32 gNdsP7BonusBoardKind;
 
-/* The bonus stage's player content: the campaign's player (its parent is
- * the kind the source chose by). */
+/* The bonus stage's player content: the campaign's player, or a practice's
+ * (its parent is the kind the source chose by). */
 static u32 ndsP7BonusContent(void)
 {
     const NDSP4Fighter *f;
 
+    if ((gSCManagerSceneData.scene_prev == nSCKind1PBonus1Players) ||
+        (gSCManagerSceneData.scene_prev == nSCKind1PBonus2Players))
+    {
+        /* The bonus select's content (C2), its parent the practice's kind. */
+        f = ndsP4Fighter(gNdsP7BonusPracticeContent);
+        return ((f != NULL) &&
+                (f->parent_kind == (s32)gSCManagerSceneData.bonus_fkind)) ?
+            (u32)gNdsP7BonusPracticeContent : 0u;
+    }
     if (gSCManagerSceneData.scene_prev != nSCKind1PGame)
     {
         return 0u;

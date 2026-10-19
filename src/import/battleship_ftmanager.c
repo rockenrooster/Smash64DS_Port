@@ -282,11 +282,21 @@ static s32 ndsFTManagerHeapPlayer(s32 fkind)
  * Contents ride their parents the same way. Set by the 1P select's commit
  * (nds_menu_shell_css.c). */
 u8 gNdsP7OnePlayerMetal;
+/* P7 C2: the same for a bonus practice (its board seats bonus_fkind, Mario's
+ * kind); set by the bonus select's commit. */
+u8 gNdsP7BonusPracticeMetal;
 
 #if NDS_P2_1P_GAME && NDS_P2_MMARIO
 
 sb32 ndsP7OnePlayerMetalActive(void)
 {
+    if ((gSCManagerSceneData.scene_curr == nSCKind1PBonusStage) &&
+        (gSCManagerSceneData.scene_prev != nSCKind1PGame))
+    {
+        return ((gNdsP7BonusPracticeMetal != 0u) &&
+                (gSCManagerSceneData.bonus_fkind == nFTKindMario)) ?
+            TRUE : FALSE;
+    }
     if (gNdsP7OnePlayerMetal == 0u)
     {
         return FALSE;

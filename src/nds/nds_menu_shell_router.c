@@ -166,8 +166,11 @@ static void ndsMenuShellEnterBackdrop(u32 screen)
 #if NDS_P4
         if (sCssOneP != 0u)
         {
-            /* P7 C1: the 1P select's own base over the same grid. */
-            NdsUiKitSurfaceId onep = NDS_MN_UI_KIT_SURFACE_ONEP_P4_CSS_SCREEN;
+            /* P7 C1: the 1P select's own base over the same grid; C2: the
+             * bonus selects' own. */
+            NdsUiKitSurfaceId onep = NDS_CSS_BONUS ?
+                NDS_MN_UI_KIT_SURFACE_BONUS_P4_CSS_SCREEN :
+                NDS_MN_UI_KIT_SURFACE_ONEP_P4_CSS_SCREEN;
 
             (void)ndsUiKitBlitSurfaces(&onep, 1u);
             break;

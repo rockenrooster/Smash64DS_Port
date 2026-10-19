@@ -70,6 +70,9 @@
 #include <sys/rdp.h>
 #include <sys/taskman.h>
 #include <sys/video.h>
+#if NDS_P4
+#include <nds/nds_p4.h>
+#endif
 
 /* Source declarations normally supplied by sc1pbonusstage.h, lbcommon.h,
  * mpcollision.h and gmcamera.h. The port's umbrella headers are narrower. */
@@ -199,10 +202,39 @@ void ndsBaseSC1PBonusStageStartScene(void);
 
 void ndsP7BonusBoardEnd(void);
 
+/* P7 C2: a practice's player when it is not its kind's own -- a content
+ * (under its parent's kind) or Metal Mario (under Mario's) -- else past the
+ * table: C3 keeps its records under the practice's kind for the scene, as
+ * the campaign's run does (battleship_sc1pmanager.c). */
+extern u8 gNdsP7BonusPracticeMetal;
+extern u8 gNdsP7OnePlayerMetal;
+
+static u32 ndsSC1PBonusPracticeSel(void)
+{
+#if NDS_P4
+    const NDSP4Fighter *f = ndsP4Fighter(gNdsP7BonusPracticeContent);
+
+    if ((f != NULL) && (f->parent_kind == (s32)gSCManagerSceneData.bonus_fkind))
+    {
+        return NDS_P7_SEL_CONTENT(gNdsP7BonusPracticeContent);
+    }
+#endif
+    return ((gNdsP7BonusPracticeMetal != 0u) &&
+            (gSCManagerSceneData.bonus_fkind == nFTKindMario)) ?
+        NDS_P7_SEL_METAL : NDS_P7_SEL_COUNT;
+}
+
 void sc1PBonusStageStartScene(void)
 {
     u8 entry_prev = gSCManagerSceneData.scene_prev;
+    const u32 practice = ((entry_prev == nSCKind1PBonus1Players) ||
+                          (entry_prev == nSCKind1PBonus2Players)) ? TRUE : FALSE;
 
+    if (practice != FALSE)
+    {
+        ndsP7OnePRunBegin((s32)gSCManagerSceneData.bonus_fkind,
+                          ndsSC1PBonusPracticeSel());
+    }
     ndsBaseSC1PBonusStageStartScene();
     /* P7 C2: the descriptor rows a content's board borrowed. */
     ndsP7BonusBoardEnd();
@@ -210,6 +242,21 @@ void sc1PBonusStageStartScene(void)
     ndsFrontendOverlayRestoreTail();
     /* P7 U4: a practice's unlock rows (Sheik, Palutena). */
     ndsP7BonusPracticeEnded(entry_prev);
+    if (practice != FALSE)
+    {
+        ndsP7OnePRunEnd();
+        if (gSCManagerSceneData.scene_curr == nSCKind1PGame)
+        {
+            /* The practice goes on into the campaign -- Luigi's challenge
+             * (sc1pbonusstage.c:1227) or its unlock rows' challengers -- with
+             * bonus_fkind as the player's kind: the content and the metal
+             * flag go with it. */
+#if NDS_P4
+            gNdsP4OnePlayerContent = gNdsP7BonusPracticeContent;
+#endif
+            gNdsP7OnePlayerMetal = gNdsP7BonusPracticeMetal;
+        }
+    }
 }
 
 #if NDS_P2_MENU_WALK

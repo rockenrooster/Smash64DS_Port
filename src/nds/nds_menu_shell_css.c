@@ -380,9 +380,30 @@ static u8 sCssOnePLevel;
 static u8 sCssOnePStock;
 static u8 sCssOnePTime;
 static u32 sCssOnePShown;
+/* P7 C2 (owner, 2026-10-18: "Bonus stages for all chars"). sCssOneP 2: the
+ * Bonus 1/2 Practice selects (mnplayers1pbonus.c), the same one card 33 px
+ * right (MakeGate :755) with no time, level or stock: the bonus kind's title,
+ * toggled by an A on it (UpdateGameMode :2081, sCssBonusKind 0 Break the
+ * Targets, 1 Board the Platforms), the puck fighter's record and the
+ * all-fighter total under the card (MakeHiScore :1171, MakeTotalTime :1187);
+ * START, or 140 tics after a pick (SelectFighterPuck :288, FuncRun :2714),
+ * starts the kind's board. sCssBonusShown/RecordShown/TotalShown are 1 + the
+ * key each row last showed; sCssBonusPicked the last frame's pick. */
+#define NDS_CSS_ONEP_GAME 1u
+#define NDS_CSS_ONEP_BONUS 2u
+static u8 sCssBonusKind;
+static u8 sCssBonusWait;
+static u8 sCssBonusPicked;
+static u32 sCssBonusShown;
+static u32 sCssBonusRecordShown;
+static u32 sCssBonusTotalShown;
+static u32 sCssBonusTotal[3];
+static u32 sCssBonusTotalKey;
 #define NDS_CSS_ONEP (sCssOneP != 0u)
+#define NDS_CSS_BONUS (sCssOneP == NDS_CSS_ONEP_BONUS)
 #else
 #define NDS_CSS_ONEP 0
+#define NDS_CSS_BONUS 0
 #endif
 /* 1 + the mode label surface ndsMenuShellCssPopulate last blitted with BACK
  * over this entry's base surfaces; 0 until it has. */
@@ -456,8 +477,12 @@ static void ndsMenuShellCssAnnounceMode(void)
 #if NDS_P4
     if (sCssOneP != 0u)
     {
-        /* mnPlayers1PGameFuncStart's tail (:3478). */
-        ndsMenuShellCssCue((u32)nSYAudioVoiceAnnounceSelectPlayer);
+        /* mnPlayers1PGameFuncStart's tail (:3478); the bonus selects
+         * announce nothing (mnPlayers1PBonusFuncStart :2814-2873). */
+        if (NDS_CSS_BONUS == 0)
+        {
+            ndsMenuShellCssCue((u32)nSYAudioVoiceAnnounceSelectPlayer);
+        }
         return;
     }
 #endif
@@ -1492,26 +1517,36 @@ _Static_assert(NDS_MN_UI_KIT_SURFACE_ONEP_P4_LEVEL_VERY_HARD ==
                    NDS_MN_UI_KIT_SURFACE_ONEP_P4_LEVEL_VERY_EASY + 4u,
                "1P level surfaces must stay contiguous in level order");
 
+_Static_assert(NDS_MN_UI_KIT_SURFACE_BONUS_P4_RECORD_NONE ==
+                   NDS_MN_UI_KIT_SURFACE_BONUS_P4_GATE_F0 + NDS_CSS_GATE_FIGHTERS,
+               "bonus cards must be one per gate fighter, contiguous");
+
 static NdsUiKitSurfaceId ndsMenuShellCssOnePGateSurface(void)
 {
     u32 state = ndsMenuShellCssGateState(0u);
 
     if ((state >= NDS_CSS_GATE_MAN_F0) && (state < NDS_CSS_GATE_COM_F0))
     {
-        return (NdsUiKitSurfaceId)(NDS_MN_UI_KIT_SURFACE_ONEP_P4_GATE_F0 +
-                                   (state - NDS_CSS_GATE_MAN_F0));
+        return (NdsUiKitSurfaceId)(
+            (NDS_CSS_BONUS ? NDS_MN_UI_KIT_SURFACE_BONUS_P4_GATE_F0 :
+                             NDS_MN_UI_KIT_SURFACE_ONEP_P4_GATE_F0) +
+            (state - NDS_CSS_GATE_MAN_F0));
     }
-    return NDS_MN_UI_KIT_SURFACE_ONEP_P4_GATE_EMPTY;
+    return NDS_CSS_BONUS ? NDS_MN_UI_KIT_SURFACE_BONUS_P4_GATE_EMPTY :
+                           NDS_MN_UI_KIT_SURFACE_ONEP_P4_GATE_EMPTY;
 }
 
 /* The puck fighter's record (mnPlayers1PGameMakeFighterRecord :1469-1561),
  * for every selection: the source's row for an original, C3's wide row for
  * Metal Mario and a content (nds_p7_records.c), read once as the select opens
- * (ndsMenuShellCssInitOneP). */
+ * (ndsMenuShellCssInitOneP). The bonus selects read the same rows' bonus
+ * fields (C2). */
 typedef struct NDSCssOnePRecord
 {
     u32 hiscore;
     u32 bonuses;
+    u32 bonus_time[2];
+    u8 bonus_count[2];
     u8 difficulty;
 } NDSCssOnePRecord;
 static NDSCssOnePRecord sCssOnePWide[NDS_P7_SEL_COUNT - GMCOMMON_FIGHTERS_PLAYABLE_NUM];
@@ -1526,6 +1561,10 @@ static void ndsMenuShellCssOnePCacheRecord(u32 sel, const LBBackup1PRecord *row,
     (void)ctx;
     dst->hiscore = row->spgame_hiscore;
     dst->bonuses = row->spgame_total_bonuses;
+    dst->bonus_time[0] = row->bonus1_time;
+    dst->bonus_time[1] = row->bonus2_time;
+    dst->bonus_count[0] = row->bonus1_task_count;
+    dst->bonus_count[1] = row->bonus2_task_count;
     dst->difficulty = row->spgame_best_difficulty;
 }
 
@@ -1622,6 +1661,218 @@ static void ndsMenuShellCssOnePShowRecord(void)
     if (ndsUiKitBlitSurfacesAt(surface, site, n) != FALSE)
     {
         sCssOnePRecordShown = shown;
+        gNdsMenuShellCssPanelBlitCount++;
+    }
+}
+
+/* mnPlayers1PBonusGetMins/Sec/CSec (:963-983); the hundredths' float
+ * division ((tics % 6) / 0.554F, truncated) is its table. */
+static void ndsMenuShellCssBonusSplit(u32 tics, u32 *out)
+{
+    static const u8 kHundredths[6] = { 0u, 1u, 3u, 5u, 7u, 9u };
+    const u32 in_min = tics % (u32)TIME_MIN;
+
+    out[0] = tics / (u32)TIME_MIN;
+    out[1] = in_min / (u32)TIME_SEC;
+    out[2] = (((in_min % (u32)TIME_SEC) / 6u) * 10u) + kHundredths[in_min % 6u];
+}
+
+/* mnPlayers1PBonusGetBestTime (:938-960): under an hour. */
+static u32 ndsMenuShellCssBonusBestTime(u32 tics)
+{
+    return (tics > (u32)(I_HRS_TO_TICS(1) - 1)) ?
+        (u32)(I_HRS_TO_TICS(1) - 1) : tics;
+}
+
+/* The total row (mnPlayers1PBonusMakeTotalTime :1187-1244), made as the
+ * select opens and on a title toggle (:2860, :2093) once every original has
+ * cleared the kind (CheckBonusCompleteAll :2799, the twelve source rows): the
+ * unlocked originals' minutes, seconds and hundredths summed apart
+ * (GetTotalMins/Sec/CSec :985-1031, CheckFighterLocked :380 on the save's
+ * mask) with its own carries. Its key, 0 for no row. */
+static u32 ndsMenuShellCssBonusTotalKey(void)
+{
+    const u32 kind = (u32)sCssBonusKind;
+    u32 sum[3] = { 0u, 0u, 0u };
+    u32 carry;
+    s32 fkind;
+
+    for (fkind = nFTKindPlayableStart; fkind <= nFTKindPlayableEnd; fkind++)
+    {
+        const LBBackup1PRecord *row = &gSCManagerBackupData.spgame_records[fkind];
+
+        if (((kind == 0u) ? row->bonus1_task_count : row->bonus2_task_count) !=
+            SCBATTLE_BONUSGAME_TASK_MAX)
+        {
+            return 0u;
+        }
+    }
+    for (fkind = nFTKindPlayableStart; fkind <= nFTKindPlayableEnd; fkind++)
+    {
+        const LBBackup1PRecord *row = &gSCManagerBackupData.spgame_records[fkind];
+        u32 split[3];
+
+        if (((fkind == nFTKindNess) || (fkind == nFTKindPurin) ||
+             (fkind == nFTKindCaptain) || (fkind == nFTKindLuigi)) &&
+            ((gSCManagerBackupData.fighter_mask & (1 << fkind)) == 0))
+        {
+            continue;
+        }
+        ndsMenuShellCssBonusSplit(ndsMenuShellCssBonusBestTime(
+                                      (kind == 0u) ? row->bonus1_time :
+                                                     row->bonus2_time),
+                                  split);
+        sum[0] += split[0];
+        sum[1] += split[1];
+        sum[2] += split[2];
+    }
+    carry = sum[2] / 100u;
+    sCssBonusTotal[2] = sum[2] % 100u;
+    sum[1] += carry;
+    sCssBonusTotal[1] = sum[1] % (u32)TIME_SEC;
+    sCssBonusTotal[0] = sum[0] + (sum[1] / (u32)TIME_SEC);
+    return (1u << 31) | ((sCssBonusTotal[0] % 1000u) << 14) |
+           ((sCssBonusTotal[1] % 100u) << 7) | (sCssBonusTotal[2] % 100u);
+}
+
+/* The bonus selects' rows over BONUS_P4_CSS_SCREEN, in one open: the kind's
+ * title (MakeLabels :877-910), the puck fighter's record (MakeHiScore
+ * :1171-1178, re-made by the puck process every frame :2248: the best time
+ * once it has cleared the kind's tasks -- CheckBonusComplete :1153, MakeBestTime
+ * :1033-1094 -- else the best count and the kind's word, MakeBestTaskCount
+ * :1107-1150, REGION_US; nothing with no fighter) and the total row, each
+ * re-blitted only when its key changed. A content's and Metal Mario's record
+ * is C3's wide row's (sCssOnePWide). Digits are the vanilla presenter's
+ * keyed glyphs at mnPlayers1PBonusMakeNumber's sites (nds_menu_shell_onep.c). */
+static void ndsMenuShellCssBonusShowRows(void)
+{
+    const u32 total_key = sCssBonusTotalKey;
+    NdsUiKitSurfaceId surface[1u + (1u + 6u) + (1u + 7u)];
+    s16 site[2u * (1u + (1u + 6u) + (1u + 7u))];
+    const u32 kind = (u32)sCssBonusKind;
+    const u32 state = ndsMenuShellCssGateState(0u);
+    u32 record = 0u;
+    u32 split[3] = { 0u, 0u, 0u };
+    u32 count = 0u;
+    u32 n = 0u;
+    u32 shown[3];
+
+    shown[0] = sCssBonusShown;
+    shown[1] = sCssBonusRecordShown;
+    shown[2] = sCssBonusTotalShown;
+    if ((state >= NDS_CSS_GATE_MAN_F0) && (state < NDS_CSS_GATE_COM_F0))
+    {
+        const u32 sel = (u32)sCssFkind[0];
+        const u32 p7 = ndsP7SelOf((s32)ndsMenuShellCssSelFkind(sel),
+                                  ndsMenuShellCssSelContent(sel));
+        u32 time = 0u;
+
+        if (p7 < GMCOMMON_FIGHTERS_PLAYABLE_NUM)
+        {
+            const LBBackup1PRecord *row = &gSCManagerBackupData.spgame_records[p7];
+
+            time = (kind == 0u) ? row->bonus1_time : row->bonus2_time;
+            count = (kind == 0u) ? row->bonus1_task_count : row->bonus2_task_count;
+            record = 1u;
+        }
+        else if (p7 < NDS_P7_SEL_COUNT)
+        {
+            const NDSCssOnePRecord *row =
+                &sCssOnePWide[p7 - GMCOMMON_FIGHTERS_PLAYABLE_NUM];
+
+            time = row->bonus_time[kind];
+            count = row->bonus_count[kind];
+            record = 1u;
+        }
+        if (record != 0u)
+        {
+            if (count == SCBATTLE_BONUSGAME_TASK_MAX)
+            {
+                ndsMenuShellCssBonusSplit(ndsMenuShellCssBonusBestTime(time),
+                                          split);
+                record = (1u << 28) | ((split[0] % 100u) << 16) |
+                         ((split[1] % 100u) << 8) | (split[2] % 100u);
+            }
+            else
+            {
+                record = (2u << 28) | (kind << 24) | (count % 100u);
+            }
+        }
+    }
+    if (sCssBonusShown != kind + 1u)
+    {
+        surface[n] = (kind == 0u) ? NDS_MN_UI_KIT_SURFACE_BONUS_P4_TITLE_TARGETS :
+                                    NDS_MN_UI_KIT_SURFACE_BONUS_P4_TITLE_PLATFORMS;
+        site[2u * n] = NDS_UI_KIT_SITE_BAKED;
+        site[(2u * n) + 1u] = 0;
+        n++;
+        shown[0] = kind + 1u;
+    }
+    if (sCssBonusRecordShown != record + 1u)
+    {
+        site[2u * n] = NDS_UI_KIT_SITE_BAKED;
+        site[(2u * n) + 1u] = 0;
+        if ((record >> 28) == 1u)
+        {
+            /* BEST TIME and the marks; minutes, seconds and hundredths end at
+             * 237, 259 and 283 on row 195. */
+            surface[n++] = NDS_MN_UI_KIT_SURFACE_BONUS_P4_RECORD_TIME;
+            n = ndsMenuShellCssOnePNumber(surface, site, n,
+                                          NDS_MN_UI_KIT_SURFACE_BONUS_DIGIT_0,
+                                          split[0], 237, 195, 2u);
+            n = ndsMenuShellCssOnePNumber(surface, site, n,
+                                          NDS_MN_UI_KIT_SURFACE_BONUS_DIGIT_0,
+                                          split[1], 259, 195, 2u);
+            n = ndsMenuShellCssOnePNumber(surface, site, n,
+                                          NDS_MN_UI_KIT_SURFACE_BONUS_DIGIT_0,
+                                          split[2], 283, 195, 2u);
+        }
+        else if ((record >> 28) == 2u)
+        {
+            /* The kind's word, two places ending at 225 on row 194. */
+            surface[n++] = (kind == 0u) ?
+                NDS_MN_UI_KIT_SURFACE_BONUS_P4_RECORD_TARGETS :
+                NDS_MN_UI_KIT_SURFACE_BONUS_P4_RECORD_PLATFORMS;
+            n = ndsMenuShellCssOnePNumber(surface, site, n,
+                                          NDS_MN_UI_KIT_SURFACE_BONUS_DIGIT_0,
+                                          count % 100u, 225, 194, 2u);
+        }
+        else
+        {
+            surface[n++] = NDS_MN_UI_KIT_SURFACE_BONUS_P4_RECORD_NONE;
+        }
+        shown[1] = record + 1u;
+    }
+    if (sCssBonusTotalShown != total_key + 1u)
+    {
+        site[2u * n] = NDS_UI_KIT_SITE_BAKED;
+        site[(2u * n) + 1u] = 0;
+        if (total_key == 0u)
+        {
+            surface[n++] = NDS_MN_UI_KIT_SURFACE_BONUS_P4_TOTAL_NONE;
+        }
+        else
+        {
+            /* TOTAL BEST TIME and the marks; hundredths and seconds end at
+             * 283 and 259, the minutes' three places at 237, on row 206. */
+            surface[n++] = NDS_MN_UI_KIT_SURFACE_BONUS_P4_TOTAL_TIME;
+            n = ndsMenuShellCssOnePNumber(surface, site, n,
+                                          NDS_MN_UI_KIT_SURFACE_BONUS_DIGIT_0,
+                                          sCssBonusTotal[2], 283, 206, 2u);
+            n = ndsMenuShellCssOnePNumber(surface, site, n,
+                                          NDS_MN_UI_KIT_SURFACE_BONUS_DIGIT_0,
+                                          sCssBonusTotal[1], 259, 206, 2u);
+            n = ndsMenuShellCssOnePNumber(surface, site, n,
+                                          NDS_MN_UI_KIT_SURFACE_BONUS_DIGIT_0,
+                                          sCssBonusTotal[0], 237, 206, 3u);
+        }
+        shown[2] = total_key + 1u;
+    }
+    if ((n != 0u) && (ndsUiKitBlitSurfacesAt(surface, site, n) != FALSE))
+    {
+        sCssBonusShown = shown[0];
+        sCssBonusRecordShown = shown[1];
+        sCssBonusTotalShown = shown[2];
         gNdsMenuShellCssPanelBlitCount++;
     }
 }
@@ -2081,7 +2332,11 @@ static void ndsMenuShellCssSyncPanels(u32 budget)
             sCssPanelSurface[0] = card;
             gNdsMenuShellCssPanelBlitCount++;
         }
-        if (budget != 0u)
+        if ((budget != 0u) && NDS_CSS_BONUS)
+        {
+            ndsMenuShellCssBonusShowRows();
+        }
+        else if (budget != 0u)
         {
             ndsMenuShellCssOnePShowRecord();
         }
@@ -2134,6 +2389,17 @@ static void ndsMenuShellCssDrawArrows(void)
     u32 i;
 
 #if NDS_P4
+    if (NDS_CSS_BONUS)
+    {
+        /* The bonus selects have no LEVEL or STOCK row. */
+        for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
+        {
+            ndsUiKitHideSprite(NDS_CSS_SPRITE_ARROWL0 + i);
+            ndsUiKitHideSprite(NDS_CSS_SPRITE_ARROWR0 + i);
+        }
+        ndsUiKitHideSprite(NDS_CSS_SPRITE_DIGIT0);
+        return;
+    }
     if (sCssOneP != 0u)
     {
         ndsMenuShellCssOnePDrawArrows();
@@ -2198,7 +2464,11 @@ static void ndsMenuShellCssPopulate(void)
      * select's title and BACK are in its base; its time and level are
      * states. */
 #if NDS_P4
-    if (sCssOneP != 0u)
+    if (NDS_CSS_BONUS)
+    {
+        ndsMenuShellCssBonusShowRows();
+    }
+    else if (sCssOneP != 0u)
     {
         ndsMenuShellCssOnePShowOptions();
     }
@@ -3299,6 +3569,41 @@ static void ndsMenuShellCssOnePCommit(void)
     lbBackupWrite();
     gNdsMenuShellCssCommitCount++;
 }
+
+/* mnPlayers1PBonusSetSceneData (:2678): the placed fighter and its costume
+ * (the man player stays the scene's), a Remix selection's setup parent with
+ * its content beside it and Metal Mario as Mario with the metal flag, as the
+ * 1P select's (C1); the practice board reads them (battleship_sc1pbonusstage
+ * files, nds_p4.c ndsP4MatchContent). No save write here, as the source. */
+extern u8 gNdsP7BonusPracticeMetal;
+
+static void ndsMenuShellCssBonusCommit(void)
+{
+    const u32 sel = (u32)sCssFkind[0];
+
+    gNdsP7BonusPracticeMetal = 0u;
+    gNdsP7BonusPracticeContent = 0u;
+    gSCManagerSceneData.bonus_fkind = (u8)nFTKindNull;
+    if ((sCssSelected[0] != 0u) && (sel != (u32)nFTKindNull))
+    {
+        gSCManagerSceneData.bonus_fkind = (u8)ndsMenuShellCssSelFkind(sel);
+        gNdsP7BonusPracticeContent = (u8)ndsMenuShellCssSelContent(sel);
+    }
+    gSCManagerSceneData.bonus_costume =
+        (u8)(ndsMNPlayersVSPreviewGetAppearance(0u) & 0xffu);
+    if (gSCManagerSceneData.bonus_fkind == (u8)nFTKindMMario)
+    {
+        gSCManagerSceneData.bonus_fkind = (u8)nFTKindMario;
+        gSCManagerSceneData.bonus_costume = 0u;
+        gNdsP7BonusPracticeMetal = 1u;
+    }
+    /* The kind's select is the scene the board and the 1P menu are left
+     * from (mnPlayers1PBonusFuncRun :2716, BackTo1PMode :2032): the shell's
+     * exit makes the current scene the previous one. */
+    gSCManagerSceneData.scene_curr = (sCssBonusKind == 0u) ?
+        (u8)nSCKind1PBonus1Players : (u8)nSCKind1PBonus2Players;
+    gNdsMenuShellCssCommitCount++;
+}
 #endif
 
 static void ndsMenuShellCssCommit(void)
@@ -3311,6 +3616,11 @@ static void ndsMenuShellCssCommit(void)
         return;
     }
 #if NDS_P4
+    if (NDS_CSS_BONUS)
+    {
+        ndsMenuShellCssBonusCommit();
+        return;
+    }
     if (sCssOneP != 0u)
     {
         ndsMenuShellCssOnePCommit();
@@ -3494,6 +3804,28 @@ static u32 ndsMenuShellCssOnePCheckOptions(void)
     s32 step = 0;
     u8 *value = NULL;
 
+    if (NDS_CSS_BONUS)
+    {
+        /* mnPlayers1PBonusCursorProcUpdate (:2116-2126): the title flips the
+         * kind (CheckGameModeInRange :2056; UpdateGameMode :2081 re-makes
+         * the title, the record and the total row, no cue), then BACK. */
+        if (ndsMenuShellCssBoxHit(27, 207, 14 + NDS_CSS_HEADER_DY,
+                                  35 + NDS_CSS_HEADER_DY) != FALSE)
+        {
+            sCssBonusKind = (sCssBonusKind == 0u) ? 1u : 0u;
+            sCssBonusTotalKey = ndsMenuShellCssBonusTotalKey();
+            ndsMenuShellCssBonusShowRows();
+            return TRUE;
+        }
+        if (ndsMenuShellCssBoxHit(244, 292, 13 + NDS_CSS_HEADER_DY,
+                                  34 + NDS_CSS_HEADER_DY) != FALSE)
+        {
+            ndsMenuShellCssBack();
+            ndsMenuShellCssCue(NDS_CSS_FGM_SCROLL2);
+            return NDS_CSS_ONEP_LEFT;
+        }
+        return FALSE;
+    }
     if ((ndsMenuShellCssBoxHit(210, 230, 12 + NDS_CSS_HEADER_DY,
                                35 + NDS_CSS_HEADER_DY) != FALSE) ||
         (ndsMenuShellCssBoxHit(140, 160, 12 + NDS_CSS_HEADER_DY,
@@ -3576,8 +3908,11 @@ static u32 ndsMenuShellCssCheckPreviewCostume(void)
         s32 costume;
 
         /* The 1P card's body between its tag and its name (MakeGate :880,
-         * the name at y 202). */
-        if ((ndsMenuShellCssBoxHit(25, 107, 146, 200) == FALSE) ||
+         * the name at y 202); the bonus selects' card is 33 px right
+         * (mnPlayers1PBonusMakeGate :755). */
+        const s32 card_x = NDS_CSS_BONUS ? 58 : 25;
+
+        if ((ndsMenuShellCssBoxHit(card_x, card_x + 82, 146, 200) == FALSE) ||
             (sCssSelected[0] == 0u) || (sCssFkind[0] == (u8)nFTKindNull))
         {
             return FALSE;
@@ -4559,6 +4894,8 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
     {
         u32 ready;
         u32 lit;
+        /* The walk's START placed its fighter this frame (below). */
+        u32 walk_placed = FALSE;
 #if NDS_P2_MENU_WALK && !NDS_P2_SHELL_ARGMAX_ROSTER
 #if !((NDS_P2_LINK && (NDS_P2_PROOF_FIGHTER0 == 5)) || \
       (NDS_P2_CAPTAIN && (NDS_P2_PROOF_FIGHTER0 == 7)))
@@ -4575,9 +4912,11 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
             (sMenuTics > (u32)NDS_CSS_START_ARM_TICS))
         {
             ndsMenuShellCssWalkRestoreGate();
+            walk_placed = TRUE;
         }
 #endif
 #endif
+        (void)walk_placed;
         ready = ndsMenuShellCssCheckReady();
 
         if (ready != FALSE)
@@ -4599,6 +4938,37 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
             ndsMenuShellCssShowReady(lit);
         }
 
+#if NDS_P4
+        if (NDS_CSS_BONUS)
+        {
+            /* mnPlayers1PBonusFuncRun (:2711-2723): a pick arms a 140-tic
+             * wait (SelectFighterPuck :288) that a recall or a re-grab drops;
+             * START, or the wait running out, starts the kind's board at
+             * once -- no cheer, no START delay, no refusal cue. */
+            if (sCssSelected[0] == 0u)
+            {
+                sCssBonusWait = 0u;
+            }
+            else if (sCssBonusPicked == 0u)
+            {
+                sCssBonusWait = 140u;
+            }
+            sCssBonusPicked = sCssSelected[0];
+            /* The walk's START is its pick: the board starts on the wait,
+             * the select showing the fighter meanwhile. */
+            if ((sCssBonusWait != 0u) &&
+                ((--sCssBonusWait == 0u) ||
+                 (((taps & NDS_INPUT_START) != 0u) && (walk_placed == FALSE))))
+            {
+                sCssBonusWait = 0u;
+                ndsMenuShellCssCommit();
+                gNdsMenuShellCssStartCount++;
+                ndsMenuShellGoto((u32)nSCKind1PBonusStage);
+                return;
+            }
+        }
+        else
+#endif
         if (((taps & NDS_INPUT_START) != 0u) &&
             (sMenuTics > (u32)NDS_CSS_START_ARM_TICS) &&
             (ndsMenuShellCssNetGuest() == FALSE))
@@ -4737,6 +5107,37 @@ static void ndsMenuShellCssInitOneP(void)
         5u : (u8)SCBATTLE_TIMELIMIT_INFINITE;
     sCssOnePShown = 0u;
 }
+
+/* mnPlayers1PBonusInitVars / InitPlayer / ResetPlayer (:2755/:2743/:1533):
+ * the kind is the scene's, the man's token opens in the hand (no fighter is
+ * kept from a last visit), the other three slots are shut; the records as
+ * the 1P select reads them, and the total row's value. */
+static void ndsMenuShellCssInitBonus(void)
+{
+    u32 i;
+
+    sCssIsTeamBattle = 0u;
+    sCssBonusKind = ((u32)gSCManagerSceneData.scene_curr ==
+                     (u32)nSCKind1PBonus1Players) ? 0u : 1u;
+    sCssBonusWait = 0u;
+    sCssBonusPicked = 0u;
+    sCssBonusShown = 0u;
+    sCssBonusRecordShown = 0u;
+    sCssBonusTotalShown = 0u;
+    ndsP7OnePRecordsVisit(GMCOMMON_FIGHTERS_PLAYABLE_NUM,
+                          NDS_P7_SEL_COUNT - GMCOMMON_FIGHTERS_PLAYABLE_NUM,
+                          ndsMenuShellCssOnePCacheRecord, NULL);
+    sCssBonusTotalKey = ndsMenuShellCssBonusTotalKey();
+    for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
+    {
+        sCssPkind[i] = (i == 0u) ? (u8)nFTPlayerKindMan : (u8)nFTPlayerKindNot;
+        sCssFkind[i] = (u8)nFTKindNull;
+        sCssSelected[i] = 0u;
+        sCssTeam[i] = (u8)nSCBattleTeamIDRed;
+        sCssLevel[i] = 3u;
+        ndsMenuShellCssCenterPuck(i, (u32)nFTKindNull);
+    }
+}
 #endif
 
 /* mnPlayersVSInitVars + mnPlayersVSInitPlayer + mnPlayersVSInitSlot,
@@ -4782,13 +5183,26 @@ static void ndsMenuShellCssInit(void)
     sCssCursorX = NDS_CSS_CURSOR_HOME_X + 68 * (s32)sCssCursorSlot;
     sCssCursorY = NDS_CSS_CURSOR_HOME_Y;
 #if NDS_P4
-    sCssOneP = ((sCssNet == 0u) &&
-                ((u32)gSCManagerSceneData.scene_curr ==
-                 (u32)nSCKind1PGamePlayers)) ? 1u : 0u;
+    sCssOneP = 0u;
+    if (sCssNet == 0u)
+    {
+        const u32 scene = (u32)gSCManagerSceneData.scene_curr;
+
+        if (scene == (u32)nSCKind1PGamePlayers)
+        {
+            sCssOneP = NDS_CSS_ONEP_GAME;
+        }
+        else if ((scene == (u32)nSCKind1PBonus1Players) ||
+                 (scene == (u32)nSCKind1PBonus2Players))
+        {
+            sCssOneP = NDS_CSS_ONEP_BONUS;
+        }
+    }
     if (sCssOneP != 0u)
     {
-        /* mnPlayers1PGameMakeCursor (:2948). */
-        sCssCursorX = 60;
+        /* mnPlayers1PGameMakeCursor (:2948), mnPlayers1PBonusMakeCursor
+         * (:2366: x 80). */
+        sCssCursorX = NDS_CSS_BONUS ? 80 : 60;
         sCssCursorY = 170;
     }
 #endif
@@ -4867,11 +5281,16 @@ static void ndsMenuShellCssInit(void)
         ndsMenuShellCssInitTraining();
     }
 #if NDS_P4
-    if (sCssOneP != 0u)
+    if (NDS_CSS_BONUS)
+    {
+        ndsMenuShellCssInitBonus();
+    }
+    else if (sCssOneP != 0u)
     {
         ndsMenuShellCssInitOneP();
     }
-    /* The 1P card stands its fighter where the 1P select does. */
+    /* The 1P card stands its fighter where the 1P select does (the bonus
+     * selects' where theirs do). */
     ndsMNPlayersVSPreviewSetOnePlayerLayout((u32)sCssOneP);
 #endif
     /* P3: this console's own port is always a human in a room. */

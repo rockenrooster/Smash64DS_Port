@@ -308,6 +308,9 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
     case nSCKind1PGamePlayers:
         /* P7 C1: with Remix contents the 1P select is the native screen
          * in its one-card mode (sCssOneP) on Remix's grid. */
+    case nSCKind1PBonus1Players:
+    case nSCKind1PBonus2Players:
+        /* P7 C2: and so are the bonus practice selects (sCssOneP 2). */
 #endif
 #endif
         ndsMenuShellRunCharSelect();
@@ -502,9 +505,9 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
      * the title), which the pump's LoadScene return honours. */
 #if !NDS_P4
     case nSCKind1PGamePlayers:
-#endif
     case nSCKind1PBonus1Players:
     case nSCKind1PBonus2Players:
+#endif
     case nSCKind1PIntro:
     case nSCKind1PChallenger:
     case nSCKind1PStageClear:

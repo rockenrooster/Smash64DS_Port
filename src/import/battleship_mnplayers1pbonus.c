@@ -247,8 +247,17 @@ static void ndsMNPlayers1PBonusDraw(void)
     ndsPlatformReset3DViewport();
 }
 
+extern void mnPlayersVSStartScene(void);
+
 void mnPlayers1PBonusStartScene(void)
 {
+#if NDS_P2_MENU_SHELL && NDS_P4
+    /* P7 C2 (2026-10-19): with Remix contents the bonus practice selects are
+     * the native VS screen in its one-card mode (nds_menu_shell_css.c
+     * sCssOneP 2), started as the 1P select is (battleship_mnplayers1pgame.c). */
+    mnPlayersVSStartScene();
+    return;
+#endif
     /* Same overlay-lifetime gap for overlay 29 (scmanager.c:1181-1197):
      * source InitVars (mnplayers1pbonus.c:2755-2776) nulls only
      * TotalTimeGObj, while MakeBestTime / MakeBestTaskCount (:1043, :1116)

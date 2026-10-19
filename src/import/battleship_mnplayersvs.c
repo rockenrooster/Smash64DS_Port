@@ -2842,9 +2842,10 @@ static sb32 ndsMNPlayersVSPreviewReleaseResidentKind(s32 fkind)
 #define NDS_CSS_OUTER_PREVIEW_INSET 40.0F
 static u32 sNdsPlayersVSPreviewOnePlayer;
 
+/* 0 the VS cards, 1 the 1P select's card, 2 the bonus selects' (P7 C2). */
 void ndsMNPlayersVSPreviewSetOnePlayerLayout(u32 enabled)
 {
-    sNdsPlayersVSPreviewOnePlayer = (enabled != 0u) ? 1u : 0u;
+    sNdsPlayersVSPreviewOnePlayer = (enabled <= 2u) ? enabled : 1u;
 }
 
 static void ndsMNPlayersVSPreviewApplyOuterSlotInset(u32 slot,
@@ -2884,7 +2885,10 @@ static void ndsMNPlayersVSPreviewApplyOuterSlotInset(u32 slot,
         {
             scale = dSCSubsysFighterScales[nFTKindMario];
         }
-        root->translate.vec.f.x = -1100.0F;
+        /* The bonus selects' card (layout 2) is 33 px right: their fighter
+         * stands at x -700 (mnPlayers1PBonusMakeFighter :1357). */
+        root->translate.vec.f.x =
+            (sNdsPlayersVSPreviewOnePlayer == 2u) ? -700.0F : -1100.0F;
         root->translate.vec.f.y = -850.0F;
         root->scale.vec.f.x = scale;
         root->scale.vec.f.y = scale;
