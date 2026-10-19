@@ -334,3 +334,49 @@ Sonic, Mr. Game & Watch and Palutena): Hyrule Temple 1,666,560 (heap 21,172),
 Congo Jungle 1,458,176 (16,816), Saffron City 1,449,344 (24,164), Yoshi's
 Island 1,461,952 (31,148). The gate ROM's arena is still ~8.8 KB under the
 play ROM's (the tick HUD's ring, rows and the CYCLE 98 material census).
+
+## Where the cast's P95 frames come from (2026-10-18, `s11`/`s12`)
+
+Cast on every VS and P5 stage, `build-sweep-s10` (1,960 frames; target
+1,120,000 and 95% within two VBlanks): Peach's Castle 1,143,680 (93.2%),
+Sector Z 1,119,616 (94.6%), Congo Jungle 1,140,160 (94.0%), Planet Zebes
+1,089,472 (96.1%), Hyrule Castle 1,006,336 (97.5%), Yoshi's Island 1,186,112
+(90.9%), Saffron City 1,216,448 (88.2%), Mushroom Kingdom 1,192,000 (91.9%),
+Bowser's Stadium 1,123,072 (94.3%), Dinosaur Land 1,194,496 (92.5%), Hyrule
+Temple 1,271,424 (84.4%); the rest pass. Over-budget frames are spread
+evenly through the match (not warm-up).
+
+The very top frames are lean list materializations: 13 of Dinosaur Land's 20
+most expensive profiled frames hold one (`ndsFtrLeanMaterialize` entry counts
+in the per-region profile), ~300-400K ticks each (diag ROM, `gNdsFtrLean.
+materialize_ticks`). Two fixes (fb12a2d3d45):
+
+- The spare and pool kept 62,020 B free plus every pending spare: Dinosaur
+  Land's cast never had either (90,964 B free at the start). They now keep the
+  stage body's floor (25,600 + 12,288).
+- Only 27 of Dream Land's 80 materializations could copy unchanged root blocks
+  (ROOT BLOCKS): Captain Falcon's tables set a blend colour, and a root reading
+  the carried colour failed self-containment. The colour is in no list word
+  (only the G_AC_THRESHOLD decline reads it), so such a root now keys the
+  decline bit and a copy leaves the colour as its walk would. Every plan
+  records; the lab verify arm compared 311 re-selected lists with fresh walks:
+  no mismatch.
+
+They cut the worst frames (13-14 of the top 120 by 50-300K) but barely move
+the 98th: Dinosaur Land 1,194,496 -> 1,170,432, Mushroom Kingdom 1,192,000 ->
+1,184,064, the others within a few thousand. The frames around the 95th
+percentile (profile ranks 12-32 of 385 against the median third, Dinosaur
+Land) are status changes: animation start (`ndsFtPoseParse`/`Play`/
+`BindEntry`, the figatree load) ~98K cycles over the median, lean
+materialization ~90K, first-use script normalization 27K, audio sample reads
+(`ndsAudioStorageReadSync`) 28K, hurtbox tests 30K. Saffron City's extra is the
+hurtbox kernel (~240 tests in a heavy frame from the Pokemon's weapons and
+items, each composing the victim's joint chain; the decomp's hit_detect_range
+box already pre-filters), Hyrule Temple's its collision sweeps (~105K ticks a
+frame, ~70K over Dream Land) and its stage program's commit (~50K).
+
+Also found: Link's bomb drew its body and fuse lists through one owner
+texture memo (the full resolver twice a frame while a bomb was out), and the
+heaviest mix on Hyrule Castle has two pre-existing native failures: a
+Bob-omb's texture bind fails (`gNdsItemBombHeiSubmitStep` 3) with four heavy
+contents' textures resident.
