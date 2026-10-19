@@ -3259,6 +3259,18 @@ static sb32 ndsP4AssetListHas(const u16 *assets, u32 count, u32 file_id)
  * loader's find, the relocation's range checks): a binary search a list,
  * where the linear walk of every list cost four Banjos ~10K cycles a frame
  * of their over-gate frames (2026-10-12 census). */
+/* The answers memoized, eight ids round robin (2026-10-19): the lists are
+ * constant for the build, and the loader's range checks ask the same few ids
+ * over and over -- 15K cycles a frame of four Snakes' costliest frames on
+ * Hyrule Temple went to the searches. */
+#define NDS_P4_PATH_MEMO 8u
+static u32 sNdsP4PathMemoId[NDS_P4_PATH_MEMO] = {
+    0xFFFFFFFFu, 0xFFFFFFFFu, 0xFFFFFFFFu, 0xFFFFFFFFu,
+    0xFFFFFFFFu, 0xFFFFFFFFu, 0xFFFFFFFFu, 0xFFFFFFFFu
+};
+static u8 sNdsP4PathMemoFound[NDS_P4_PATH_MEMO];
+static u32 sNdsP4PathMemoNext;
+
 const char *ndsP4RelocAssetPath(u32 file_id)
 {
     static char path[] = "nitro:/reloc/p4/0000";
@@ -3269,6 +3281,14 @@ const char *ndsP4RelocAssetPath(u32 file_id)
     if (file_id > 0xFFFFu)
     {
         return NULL;
+    }
+    for (c = 0u; c < NDS_P4_PATH_MEMO; c++)
+    {
+        if (sNdsP4PathMemoId[c] == file_id)
+        {
+            found = sNdsP4PathMemoFound[c];
+            goto answer;
+        }
     }
     for (c = 1u; (c <= NDS_P4_CONTENT_LIMIT) && (found == FALSE); c++)
     {
@@ -3307,6 +3327,10 @@ const char *ndsP4RelocAssetPath(u32 file_id)
         found = ndsP4AssetListHas(kOnePArtFiles, NDS_P4_ONEP_ART_FILE_COUNT, file_id);
     }
 #endif
+    sNdsP4PathMemoId[sNdsP4PathMemoNext] = file_id;
+    sNdsP4PathMemoFound[sNdsP4PathMemoNext] = (u8)found;
+    sNdsP4PathMemoNext = (sNdsP4PathMemoNext + 1u) % NDS_P4_PATH_MEMO;
+answer:
     if (found == FALSE)
     {
         return NULL;
