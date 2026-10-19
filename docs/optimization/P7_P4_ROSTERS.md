@@ -530,3 +530,38 @@ with 2,280+ to spare. Probes now read `gNdsAObjEvent32NormalizeFailCount`.
 Remaining cast stages on `s21` (pipelined): Zebes 1,083,904, Hyrule Castle
 1,020,480, Dream Land 1,074,688, gkind 13 1,110,528, 14 927,104, 16
 1,005,376, 41 971,840 -- all under 1,120,000, 98.8-99.8% within two VBlanks.
+
+## Saffron City and Hyrule Temple mirrors (2026-10-19, `s23`)
+
+Four identical CPUs of each content (`build-sweep-s23`, ship layout, pipelined), 1,960
+frames, WORK P95 / within two VBlanks / heap low-water:
+
+| content | Saffron City (g7) | Hyrule Temple (g43) |
+|---|---|---|
+| c1 Falco | 1,126,528 / 98.9% / 59,696 | 1,122,432 / 99.1% / 103,392 |
+| c2 Ganondorf | 1,193,280 / 97.8% / 40,500 | 1,186,240 / 98.3% / 45,576 |
+| c3 Wolf | 1,213,056 / 97.3% / 47,696 | 1,201,152 / 98.2% / 37,680 |
+| c4 Bowser | 1,335,104 / 94.7% / 41,292 **over** | 1,308,672 / 94.9% / 46,580 **over** |
+| c5 Marth | 1,208,384 / 97.5% / 45,524 | 1,267,712 / 96.5% / 45,932 **over** |
+| c6 Roy | 1,297,152 / 95.7% / 50,316 **over** | 1,357,056 / 93.1% / 31,736 **over** |
+| c7 Wario | 1,138,624 / 99.5% / 41,664 | 1,152,704 / 99.3% / 44,240 |
+| c8 Peach | 1,155,648 / 98.6% / 36,064 | 1,151,104 / 99.1% / 38,584 |
+| c9 Crash | 1,271,936 / 96.1% / 47,648 **over** | 1,322,880 / 95.6% / 32,544 **over** |
+| c10 Lanky | 1,105,408 / 98.8% / 41,112 | 1,201,472 / 98.2% / 42,464 |
+| c11 Sheik | 1,172,352 / 99.0% / 42,896 | 1,201,216 / 98.6% / 43,832 |
+| c13 Sonic | 1,302,208 / 95.1% / 44,356 **over** | 1,281,920 / 96.0% / 44,864 **over** |
+| c14 Dedede | 1,138,304 / 98.8% / 45,604 | 1,241,024 / 97.7% / 45,464 |
+| c15 Mad Piano | 930,560 / 99.9% / 59,088 | 1,000,960 / 99.9% / 42,736 |
+| c16 Meta Knight | 1,320,448 / 95.1% / 24,040 **over** **heap** | 1,319,104 / 95.9% / 32,860 **over** |
+| c17 Mr. Game & Watch | 1,120,704 / 99.1% / 36,160 | 1,240,448 / 97.6% / 35,152 |
+| c18 Snake | 1,235,328 / 97.1% / 45,160 | 1,368,640 / 91.6% / 45,024 **over** |
+| c19 Ike | 1,274,368 / 96.4% / 44,332 **over** | 1,358,720 / 91.6% / 49,572 **over** |
+| c20 Palutena | 1,310,528 / 93.3% / 270,992 **over** | 1,327,808 / 92.3% / 221,336 **over** |
+
+Against the stress target (P95 <= 1,250,000, >= 90%): Saffron 12/19 and Hyrule
+Temple 10/19 pass; every run is >= 90% within two VBlanks (lowest 91.6%) and the
+P95 misses are 1.4-9.5%. Four Meta Knights on Saffron leave 24,040 bytes of heap, under
+the 25,600 floor. 0 native failures, 0 lean declines, 0 ledger refusals everywhere.
+Over-gate frames on Hyrule Temple (`s20p` cast profile) are first-use costs: event-script
+normalization 12% of the premium, texture binds 8%, the lean packet's variant learning
+and materialize 18%, pose parse 4%; on Saffron the hurtbox tests (~25%) lead.

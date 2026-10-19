@@ -1687,6 +1687,8 @@ static inline u8 ndsAObjEvent32WordSig(u32 word)
     return (u8)((word * 0x9E3779B1u) >> 24);
 }
 static u32 sNdsAObjEvent32NormalizedCount;
+/* The recent run's keys, at the top of the array (see CommitKeys). */
+static u32 sNdsAObjEvent32RecentCount;
 static u32 sNdsAObjEvent32PlanCount;
 
 /* A main-RAM command's key with signature `sig`. */
@@ -2134,6 +2136,7 @@ sb32 ndsAObjEvent32ConfigureNormalizedCapacity(u32 gkind)
     sNdsAObjEvent32Keys = storage;
     sNdsAObjEvent32NormalizedLimit = limit;
     sNdsAObjEvent32NormalizedCount = 0u;
+    sNdsAObjEvent32RecentCount = 0u;
     sNdsAObjEvent32PlanCount = 0u;
     sNdsAObjEvent32PlanSegmentCount = 0u;
     sNdsEvent32InterpDescFixedCount = 0u;
@@ -2180,21 +2183,124 @@ volatile u32 gNdsAObjEvent32HashOverflowCount;
 volatile u32 gNdsAObjEvent32HashOracleRuns;
 volatile u32 gNdsAObjEvent32HashOracleMismatch;
 
-/* The plan's keys, written over its pointers at [Count, Count + count), join
- * the sorted run [0, Count). The plan is sorted in place first (a plan is a
- * few forward runs, so insertion is near linear), then merged from the top
- * through a buffer: a small static one, or the free tail above the plan when
- * a big plan fits there twice (stage layer scripts at load); with neither,
- * key by key, each moving the run above its place up one. */
+/* THE LEDGER'S RECENT RUN (2026-10-19). A script's keys used to merge into
+ * the one sorted run at commit, moving every key above its place: thousands
+ * of keys a script, nine cycles each (Hyrule Temple's over-gate frames spent
+ * 144K cycles a frame there, 80% in that loop; census 2026-10-19 s20p). New
+ * keys now merge into a second, small sorted run at the top of the same
+ * array, [Limit - Recent, Limit), and that run folds into the main one only
+ * when it would pass NDS_AOBJ_EVENT32_RECENT_MAX. A key is in exactly one of
+ * the two runs, a lookup searches both, and the capacity is the array's as
+ * before: Count + Plan + Recent <= Limit. */
 #define NDS_AOBJ_EVENT32_MERGE_BUFFER 256u
+#define NDS_AOBJ_EVENT32_RECENT_MAX NDS_AOBJ_EVENT32_MERGE_BUFFER
 static u32 sNdsAObjEvent32MergeBuffer[NDS_AOBJ_EVENT32_MERGE_BUFFER];
+__attribute__((used)) volatile u32 gNdsAObjEvent32RecentFolds;
 
+/* Every committed key, both runs. */
+static inline u32 ndsAObjEvent32NormalizedTotal(void)
+{
+    return sNdsAObjEvent32NormalizedCount + sNdsAObjEvent32RecentCount;
+}
+
+/* The first recent key at or above main-RAM word index `word`, as an array
+ * index in [Limit - Recent, Limit]. */
+static u32 ndsAObjEvent32RecentLowerBound(u32 word)
+{
+    const u32 *keys = sNdsAObjEvent32Keys;
+    u32 lo = sNdsAObjEvent32NormalizedLimit - sNdsAObjEvent32RecentCount;
+    u32 hi = sNdsAObjEvent32NormalizedLimit;
+
+    while (lo < hi)
+    {
+        u32 mid = (lo + hi) >> 1;
+
+        if ((keys[mid] >> 8) < word)
+        {
+            lo = mid + 1u;
+        }
+        else
+        {
+            hi = mid;
+        }
+    }
+    return lo;
+}
+
+/* keys[src, src + words) to keys[dst, ...), dst above src: top down, eight
+ * words a step, so an overlapping move reads each block before it writes. */
+static void ndsAObjEvent32MoveUp(u32 *keys, u32 dst, u32 src, u32 words)
+{
+    u32 *d = keys + dst + words;
+    const u32 *s = keys + src + words;
+
+    while (words >= 8u)
+    {
+        u32 w0, w1, w2, w3, w4, w5, w6, w7;
+
+        s -= 8;
+        d -= 8;
+        w0 = s[0]; w1 = s[1]; w2 = s[2]; w3 = s[3];
+        w4 = s[4]; w5 = s[5]; w6 = s[6]; w7 = s[7];
+        d[0] = w0; d[1] = w1; d[2] = w2; d[3] = w3;
+        d[4] = w4; d[5] = w5; d[6] = w6; d[7] = w7;
+        words -= 8u;
+    }
+    while (words-- != 0u)
+    {
+        *--d = *--s;
+    }
+}
+
+/* Merges `count` sorted keys from `from` into the main run [0, Count) from
+ * the top: each key, largest first, finds its place by binary search and the
+ * main keys above it move up past it as one block. Keys are unique, so "above
+ * it" is "greater than it". [Count, Count + count) must be free. */
+static void ndsAObjEvent32MergeIntoMain(const u32 *from, u32 count)
+{
+    u32 *keys = sNdsAObjEvent32Keys;
+    u32 a = sNdsAObjEvent32NormalizedCount;
+    s32 b;
+
+    for (b = (s32)count - 1; b >= 0; b--)
+    {
+        const u32 key = from[b];
+        u32 lo = 0u;
+        u32 hi = a;
+
+        while (lo < hi)
+        {
+            u32 mid = (lo + hi) >> 1;
+
+            if (keys[mid] > key)
+            {
+                hi = mid;
+            }
+            else
+            {
+                lo = mid + 1u;
+            }
+        }
+        /* keys[lo, a) are above the key: they end below the b keys still
+         * to place. */
+        ndsAObjEvent32MoveUp(keys, lo + (u32)b + 1u, lo, a - lo);
+        keys[lo + (u32)b] = key;
+        a = lo;
+    }
+    sNdsAObjEvent32NormalizedCount += count;
+}
+
+/* The plan's keys, written over its pointers at [Count, Count + count), are
+ * sorted in place (a plan is a few forward runs, so insertion is near
+ * linear), then join the recent run -- or, for a plan bigger than that run
+ * may hold (stage layer scripts at load), the main run. */
 static void ndsAObjEvent32CommitKeys(u32 count)
 {
     u32 *keys = sNdsAObjEvent32Keys;
     u32 n = sNdsAObjEvent32NormalizedCount;
     u32 *plan = keys + n;
-    u32 *buffer = NULL;
+    u32 *buffer = sNdsAObjEvent32MergeBuffer;
+    u32 v;
     u32 i;
 
     for (i = 1u; i < count; i++)
@@ -2209,40 +2315,23 @@ static void ndsAObjEvent32CommitKeys(u32 count)
         }
         plan[j] = key;
     }
-    if ((count == 0u) || (n == 0u) || (keys[n - 1u] < plan[0]))
+    if (count == 0u)
     {
-        sNdsAObjEvent32NormalizedCount = n + count;
         return;
     }
-    if (count <= NDS_AOBJ_EVENT32_MERGE_BUFFER)
+    if (count > NDS_AOBJ_EVENT32_RECENT_MAX)
     {
-        buffer = sNdsAObjEvent32MergeBuffer;
-    }
-    else if ((sNdsAObjEvent32NormalizedLimit - n - count) >= count)
-    {
-        buffer = plan + count;
-    }
-    if (buffer != NULL)
-    {
-        s32 a = (s32)n - 1;
-        s32 b = (s32)count - 1;
-        u32 out = n + count;
-
-        memcpy(buffer, plan, count * sizeof(u32));
-        while (b >= 0)
+        /* Above the main run and below the recent one, the free tail holds
+         * a second copy when it can; with neither, key by key. */
+        if ((sNdsAObjEvent32NormalizedLimit - sNdsAObjEvent32RecentCount -
+             n - count) >= count)
         {
-            if ((a >= 0) && (keys[a] > buffer[b]))
-            {
-                keys[--out] = keys[a--];
-            }
-            else
-            {
-                keys[--out] = buffer[b--];
-            }
+            u32 *copy = plan + count;
+
+            memcpy(copy, plan, count * sizeof(u32));
+            ndsAObjEvent32MergeIntoMain(copy, count);
+            return;
         }
-    }
-    else
-    {
         for (i = 0u; i < count; i++)
         {
             u32 key = keys[n + i];
@@ -2254,8 +2343,49 @@ static void ndsAObjEvent32CommitKeys(u32 count)
             keys[at] = key;
             sNdsAObjEvent32NormalizedCount = n + i + 1u;
         }
+        sNdsAObjEvent32NormalizedCount = n + count;
+        return;
     }
-    sNdsAObjEvent32NormalizedCount = n + count;
+    v = sNdsAObjEvent32RecentCount;
+    if ((v + count) > NDS_AOBJ_EVENT32_RECENT_MAX)
+    {
+        /* The fold. The sorted plan becomes the recent run, at the top, and
+         * the old run -- held in the buffer first -- merges into the main
+         * one, whose growth to Count + v stays below the plan's new place
+         * (Count + v + count <= Limit). */
+        const u32 top = sNdsAObjEvent32NormalizedLimit;
+
+        memcpy(buffer, &keys[top - v], v * sizeof(u32));
+        memmove(&keys[top - count], plan, count * sizeof(u32));
+        sNdsAObjEvent32RecentCount = count;
+        ndsAObjEvent32MergeIntoMain(buffer, v);
+        NDS_DIAG(gNdsAObjEvent32RecentFolds++);
+        return;
+    }
+    memcpy(buffer, plan, count * sizeof(u32));
+    /* Forward merge of the buffer and the recent run into the count slots
+     * below it and the run itself: the write never passes the recent read,
+     * and once the buffer is spent the rest of the run is in place. */
+    {
+        u32 *dst = keys + (sNdsAObjEvent32NormalizedLimit - v - count);
+        const u32 *r = keys + (sNdsAObjEvent32NormalizedLimit - v);
+        const u32 *r_end = keys + sNdsAObjEvent32NormalizedLimit;
+        const u32 *b = buffer;
+        const u32 *b_end = buffer + count;
+
+        while (b < b_end)
+        {
+            if ((r < r_end) && (*r < *b))
+            {
+                *dst++ = *r++;
+            }
+            else
+            {
+                *dst++ = *b++;
+            }
+        }
+    }
+    sNdsAObjEvent32RecentCount = v + count;
 }
 
 /* Sector Z Arwing flight-path descriptors (asset 0x99, MiscDataBank153).
@@ -2351,6 +2481,26 @@ void ndsAObjEvent32ForgetRange(const void *base, size_t size)
         else
         {
             NDS_DIAG(gNdsAObjEvent32ForgetSkips++);
+        }
+        if (sNdsAObjEvent32RecentCount != 0u)
+        {
+            /* The recent run is anchored at the top: its keys below the
+             * range move up over it. */
+            u32 rlo = ndsAObjEvent32RecentLowerBound(
+                (u32)((start - NDS_AOBJ_EVENT32_RAM_BASE + 3u) >> 2));
+            u32 rhi = ndsAObjEvent32RecentLowerBound(
+                (u32)((end - NDS_AOBJ_EVENT32_RAM_BASE + 3u) >> 2));
+
+            if (rhi > rlo)
+            {
+                u32 base = sNdsAObjEvent32NormalizedLimit -
+                           sNdsAObjEvent32RecentCount;
+
+                ndsAObjEvent32MoveUp(sNdsAObjEvent32Keys, base + (rhi - rlo),
+                                     base, rlo - base);
+                sNdsAObjEvent32RecentCount -= rhi - rlo;
+                NDS_DIAG(gNdsAObjEvent32ForgetHoleRemovals += rhi - rlo);
+            }
         }
     }
 
@@ -2636,6 +2786,16 @@ static s32 ndsAObjEvent32FindNormalized(AObjEvent32 *command)
         NDS_DIAG(gNdsAObjEvent32HashHitCount++);
         return (s32)at;
     }
+    if (sNdsAObjEvent32RecentCount != 0u)
+    {
+        at = ndsAObjEvent32RecentLowerBound(word);
+        if ((at < sNdsAObjEvent32NormalizedLimit) &&
+            ((sNdsAObjEvent32Keys[at] >> 8) == word))
+        {
+            NDS_DIAG(gNdsAObjEvent32HashHitCount++);
+            return (s32)at;
+        }
+    }
     NDS_DIAG(gNdsAObjEvent32HashMissCount++);
     return -1;
 }
@@ -2669,7 +2829,7 @@ static s32 ndsAObjEvent32FindPlanned(AObjEvent32 *command)
 /* Room for one more plan entry above the committed keys. */
 static sb32 ndsAObjEvent32PlanReserve(void)
 {
-    return ((sNdsAObjEvent32NormalizedCount + sNdsAObjEvent32PlanCount) <
+    return ((ndsAObjEvent32NormalizedTotal() + sNdsAObjEvent32PlanCount) <
             sNdsAObjEvent32NormalizedLimit) ? TRUE : FALSE;
 }
 
@@ -3092,13 +3252,13 @@ static sb32 ndsAObjEvent32NormalizeScript(
     }
     ndsAObjEvent32CommitKeys(sNdsAObjEvent32PlanCount);
 
-    if (sNdsAObjEvent32NormalizedCount > gNdsAObjEvent32NormalizedHighWater)
+    if (ndsAObjEvent32NormalizedTotal() > gNdsAObjEvent32NormalizedHighWater)
     {
-        gNdsAObjEvent32NormalizedHighWater = sNdsAObjEvent32NormalizedCount;
+        gNdsAObjEvent32NormalizedHighWater = ndsAObjEvent32NormalizedTotal();
     }
-    if (sNdsAObjEvent32NormalizedCount > gNdsAObjEvent32LiveHighWater)
+    if (ndsAObjEvent32NormalizedTotal() > gNdsAObjEvent32LiveHighWater)
     {
-        gNdsAObjEvent32LiveHighWater = sNdsAObjEvent32NormalizedCount;
+        gNdsAObjEvent32LiveHighWater = ndsAObjEvent32NormalizedTotal();
     }
     gNdsAObjEvent32NormalizeScriptCount++;
     gNdsAObjEvent32NormalizeCommandCount += sNdsAObjEvent32PlanCount;
@@ -3114,6 +3274,7 @@ void ndsAObjEvent32ResetNormalizedScripts(void)
     sNdsAObjEvent32Keys = NULL;
     sNdsAObjEvent32NormalizedLimit = 0u;
     sNdsAObjEvent32NormalizedCount = 0u;
+    sNdsAObjEvent32RecentCount = 0u;
     sNdsAObjEvent32PlanCount = 0u;
     sNdsAObjEvent32PlanSegmentCount = 0u;
     /* Discarded with the ledger it shadows, in the same breath. */
