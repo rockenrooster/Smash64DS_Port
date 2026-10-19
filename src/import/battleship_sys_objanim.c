@@ -1860,8 +1860,17 @@ static u32 ndsAObjEvent32CapacityForGKind(u32 gkind, sb32 *stage_bound)
  * of 3,072 and 2,752 of 3,358). A flat 2,048 held too, but its heap on
  * Sector Z's default roster pushed the Arwing's flight table and DMA arena
  * under their heap checks (STG +26K a frame). Receipt
- * 2026-09-30_p2-2p8-event32-margin. */
-#define NDS_AOBJ_EVENT32_ROSTER_MARGIN 384u
+ * 2026-09-30_p2-2p8-event32-margin.
+ *
+ * 2026-10-19: 384 no longer held for the original cast either. With the CPUs
+ * kept low in battles of three or four (their high images gone) the elastic
+ * motion cache is larger and keeps more of the cast's clips normalized: the
+ * cast's 1,960-frame lab rows refused scripts at the limit on Congo Jungle
+ * (7, high water 3,024 of 3,026), Hyrule Castle (7, 2,001 of 2,003) and
+ * Planet Zebes (1, 5,036 of 5,047) -- reason 12, silent, nf 0. The margin is
+ * 896 (+2 KB of a battle's heap; the cast's low-water was 36-57 KB on those
+ * stages). Receipt artifacts/performance/2026-10-19_ledger. */
+#define NDS_AOBJ_EVENT32_ROSTER_MARGIN 896u
 #define NDS_AOBJ_EVENT32_MOTION_MARGIN 768u
 static const u16 sNdsAObjEvent32EntryClipCommands[nFTKindPlayableEnd + 1] = {
     378u, /* Mario 0x279 */
