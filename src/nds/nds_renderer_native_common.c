@@ -12842,9 +12842,14 @@ typedef struct NDSFtrLeanWideHold
  * two halves as entries 0 and 1, so it restores the identity map first. */
 #define NDS_FTR_LEAN_SPARE NDS_FTR_LEAN_ENTRIES
 /* The stage body's floor (nds_stage_gx.exec.inc): the GObj cap latches the
- * moment the general heap drops under 25,600 B, and a match grows it by up to
- * 36,420 B after the allocation. */
-#define NDS_FTR_LEAN_SPARE_KEEP_FREE (25600u + 36420u)
+ * moment the general heap drops under 25,600 B; the spare and the pool keep
+ * that and 12 KB more (NDS_STAGE_GX_HEAP_KEEP_FREE). 2026-10-18: they kept
+ * 36,420 B more, a match's growth after the stage body's allocation -- which
+ * was the optional caches with floors of their own, this spare among them --
+ * so Dinosaur Land's cast (90,964 B free at the start, 79,700 needed) drew
+ * the whole match with no spare and no pool: ~92 lists materialized, each one
+ * a frame in the P95 tail, against Dream Land's ~46 with three spares. */
+#define NDS_FTR_LEAN_SPARE_KEEP_FREE (25600u + 12288u)
 
 typedef struct NDSFtrLeanSlotState
 {
@@ -13570,8 +13575,15 @@ ndsFtrLeanSelfImageOf(const NDSNativeFighterRuntimeTables *tables)
 /* One root's state writes in walk order, against what its runs read. A
  * material is not counted as a write (its effects vary by frame), so state
  * only a material sets reads as carried. Returns FALSE at the first read of
- * carried state:
- *   every run      the combine; the blend colour where anything sets one
+ * carried state, else NDS_FTR_LEAN_SELF_OK, with NDS_FTR_LEAN_SELF_BLEND when a
+ * run reads the blend colour the roots before it left (where anything sets
+ * one). The blend colour is in no list word: a list reads it only for the
+ * G_AC_THRESHOLD decline (ndsFtrLeanMatRun), so such a root keys the carried
+ * colour's decline bit (ndsFtrLeanRootKeyCarriedBlend) and a copy of it leaves
+ * the colour as its walk would (ndsFtrLeanRootBlendEnd) -- 2026-10-18: Captain
+ * Falcon's tables set one, and two thirds of the cast's materializations
+ * walked every root for it (~300K ticks each, the P95 tail).
+ *   every run      the combine
  *   textured run   G_TEXTURE, an image, a block or tile load, the render
  *                  tile's SETTILE and SETTILESIZE, a TLUT load where anything
  *                  loads one, and every othermode_h bit any root writes
@@ -13587,6 +13599,8 @@ ndsFtrLeanSelfImageOf(const NDSNativeFighterRuntimeTables *tables)
 #define NDS_FTR_LEAN_HAVE_BLEND 32u
 #define NDS_FTR_LEAN_HAVE_LIGHT1 64u
 #define NDS_FTR_LEAN_HAVE_LIGHT2 128u
+#define NDS_FTR_LEAN_SELF_OK 1u
+#define NDS_FTR_LEAN_SELF_BLEND 2u
 typedef struct NDSFtrLeanSelfWalk
 {
     u32 have;
@@ -13728,6 +13742,7 @@ ndsFtrLeanRootSelfContained(const NDSNativeFighterRuntimeTables *tables,
 {
     const NDSRendererNativeFighterPreamble *preamble = input->preamble;
     NDSFtrLeanSelfWalk w;
+    u32 carried_blend = 0u;
     u32 e;
 
     memset(&w, 0, sizeof(w));
@@ -13790,8 +13805,7 @@ ndsFtrLeanRootSelfContained(const NDSNativeFighterRuntimeTables *tables,
         if (((any & NDS_FTR_LEAN_ANY_BLEND) != 0u) &&
             ((w.have & NDS_FTR_LEAN_HAVE_BLEND) == 0u))
         {
-            NDS_FTR_LEAN_CTR(gNdsFtrLean.root_self_fail[4]++);
-            return FALSE;
+            carried_blend = NDS_FTR_LEAN_SELF_BLEND;
         }
         if ((family == NDS_NATIVE_DIRECT_POLICY_TEXTURED_LIT) ||
             (family == NDS_NATIVE_DIRECT_POLICY_TEXTURED_PASS2))
@@ -13821,7 +13835,88 @@ ndsFtrLeanRootSelfContained(const NDSNativeFighterRuntimeTables *tables,
             }
         }
     }
-    return TRUE;
+    if (carried_blend != 0u)
+    {
+        NDS_FTR_LEAN_CTR(gNdsFtrLean.root_self_fail[4]++);
+    }
+    return NDS_FTR_LEAN_SELF_OK | carried_blend;
+}
+
+/* The blend colour a walk of `root` leaves, from `carried`: the last
+ * G_SETBLENDCOLOR of its state spans and materials, in walk order (before
+ * span, material, after span per epoch, then the tail). */
+static u32 NDS_FIGHTER_PACKET_COLD_CODE
+ndsFtrLeanRootBlendEnd(const NDSNativeFighterRuntimeTables *tables,
+                       const NDSNativeRoot *root,
+                       const NDSRendererNativeFighterRoot *input, u32 carried)
+{
+    u32 blend = carried;
+    u32 e;
+    u32 pass;
+
+    for (e = 0u; e <= (u32)root->epoch_count; e++)
+    {
+        const NDSNativeEpoch *epoch = (e < (u32)root->epoch_count) ?
+            &tables->epochs[(u32)root->first_epoch + e] : NULL;
+
+        for (pass = 0u; pass < 2u; pass++)
+        {
+            u16 first;
+            u32 count;
+            u32 i;
+
+            if (epoch == NULL)
+            {
+                if (pass != 0u)
+                {
+                    break;
+                }
+                first = root->tail_state_first;
+                count = root->tail_state_count;
+            }
+            else
+            {
+                first = (pass == 0u) ? epoch->before_state_first :
+                    epoch->after_state_first;
+                count = (pass == 0u) ? epoch->before_state_count :
+                    epoch->after_state_count;
+            }
+            if ((count != 0u) && (first != NDS_NATIVE_STATE_NONE))
+            {
+                for (i = 0u; i < count; i++)
+                {
+                    const NDSNativeStateDelta *d = &tables->state_deltas[
+                        tables->state_sequence[first + i]];
+
+                    if (d->effect == NDS_NATIVE_STATE_BLEND)
+                    {
+                        blend = d->w1;
+                    }
+                }
+            }
+            if ((epoch != NULL) && (pass == 0u) &&
+                (epoch->material_slot != NDS_NATIVE_MATERIAL_NONE) &&
+                ((u32)epoch->material_slot < input->material_count) &&
+                (input->materials != NULL) &&
+                ((input->materials[epoch->material_slot].effects &
+                  NDS_RENDERER_NATIVE_MATERIAL_BLEND) != 0u))
+            {
+                blend = input->materials[epoch->material_slot].blend_color;
+            }
+        }
+    }
+    return blend;
+}
+
+/* A root reading the carried blend colour keys what its walk reads of it:
+ * whether a G_AC_THRESHOLD run would decline (ndsFtrLeanMatRun). */
+static inline u32 ndsFtrLeanRootKeyCarriedBlend(u32 key, u32 blend_color)
+{
+    u32 h = (key ^ (((blend_color & 0xf0u) != 0u) ? 0x5bd1e995u :
+                                                   0x27d4eb2fu)) * 16777619u;
+
+    h ^= h >> 15;
+    return (h != 0u) ? h : 1u;
 }
 
 /* ndsFtrLeanRootSelfContained's answers, by root and the inputs it reads
@@ -15352,6 +15447,7 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
     NDSFighterPacket *donors[NDS_FTR_LEAN_ENTRIES + 1u];
     u32 donor_count = 0u;
     u32 plan_any = 0u;
+    u32 blend_roots = 0u;
     u32 record;
     u32 root_count;
     u32 root_index;
@@ -15546,10 +15642,16 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
               sNdsNativeProductionResolvedLightPreambleCounts[root_index])) ?
                 TRUE : FALSE;
 
-        if (ndsFtrLeanRootSelfContainedCached(
-                t, r, light_ok, &inputs[root_index], plan_any) == FALSE)
+        const u32 self = ndsFtrLeanRootSelfContainedCached(
+            t, r, light_ok, &inputs[root_index], plan_any);
+
+        if (self == FALSE)
         {
             record = FALSE;
+        }
+        else if ((self & NDS_FTR_LEAN_SELF_BLEND) != 0u)
+        {
+            blend_roots |= 1u << root_index;
         }
     }
     NDS_FTR_LEAN_CTR(gNdsFtrLean.root_plans += (record != FALSE) ? 1u : 0u);
@@ -15632,6 +15734,11 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
                 (const void *)sNdsNativeFighterActiveRootLightPreambles,
                 sNdsNativeFighterActiveRootLightPreambleCount, palette_slot,
                 m.vtx10, gNdsFtrLeanRootMaterialKey[root_index]);
+            if ((blend_roots & (1u << root_index)) != 0u)
+            {
+                root_key = ndsFtrLeanRootKeyCarriedBlend(root_key,
+                                                         stats->blend_color);
+            }
         }
         if (donor_count != 0u)
         {
@@ -15683,6 +15790,10 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
             if (copied != FALSE)
             {
                 NDS_FTR_LEAN_CTR(gNdsFtrLean.root_copies++);
+                /* The roots after it read the colour its walk leaves. */
+                stats->blend_color = ndsFtrLeanRootBlendEnd(
+                    sNdsNativeFighterActiveTables, root, input,
+                    stats->blend_color);
                 continue;
             }
         }

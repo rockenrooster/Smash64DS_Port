@@ -20,11 +20,15 @@
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_LINK
 
 /* Texture memo per bind site (ndsRendererHardwareBindTextureOwnerMemo):
- * the fixed texture re-resolved through the full resolver every draw. */
-static NDSRendererOwnerTextureMemo sNdsNativeOwnerTexMemo_linkbomb[1];
+ * the fixed texture re-resolved through the full resolver every draw. One
+ * per list (2026-10-18): the body (CI, TLUT) and the fuse (IA8) bind two
+ * textures each drawn frame, and one shared memo missed on both -- the full
+ * resolver twice a frame while a bomb was out (78 of 385 profiled Dream Land
+ * frames). */
+static NDSRendererOwnerTextureMemo sNdsNativeOwnerTexMemo_linkbomb[2];
 
 static sb32 ndsNativeLinkBombEmit(
-    const s16 *verts, const u32 *colors,
+    const s16 *verts, const u32 *colors, u32 memo_index,
     const NDSRendererConfig *config, NDSRendererStats *stats,
     NDSRendererTraversalState *state)
 {
@@ -53,8 +57,8 @@ static sb32 ndsNativeLinkBombEmit(
     NDS_FIGHTER_PACKET_DMA_WAIT();
     ndsRendererHardwareEndBatch();
     if (ndsRendererHardwareBindTextureOwnerMemo(
-            &sNdsNativeOwnerTexMemo_linkbomb[0], 0u, stats, config,
-            state) == FALSE)
+            &sNdsNativeOwnerTexMemo_linkbomb[memo_index], memo_index, stats,
+            config, state) == FALSE)
     {
         gNdsLinkBombSubmitStep = 3u;
         return FALSE;
@@ -156,7 +160,7 @@ sb32 ndsRendererSubmitNativeLinkBomb(
         ndsNativeLinkBombBodySetup(stats, tlut, image);
         if (ndsNativeLinkBombEmit(
                 sNdsNativeLinkBombBodyVerts, sNdsNativeLinkBombBodyVertColors,
-                config, stats, &state) == FALSE)
+                0u, config, stats, &state) == FALSE)
         {
             return FALSE;
         }
@@ -176,7 +180,7 @@ sb32 ndsRendererSubmitNativeLinkBomb(
         ndsNativeLinkBombFuseSetup(stats, image);
         if (ndsNativeLinkBombEmit(
                 sNdsNativeLinkBombFuseVerts, sNdsNativeLinkBombFuseVertColors,
-                config, stats, &state) == FALSE)
+                1u, config, stats, &state) == FALSE)
         {
             return FALSE;
         }

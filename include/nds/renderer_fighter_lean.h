@@ -397,8 +397,10 @@ typedef struct NDSFtrLeanCounters
     u32 verify_tint_mismatch;   /* ... tint bind words */
     u32 root_self_fail[8];      /* first self-containment failure: 0 load
                                    tile, 1 light colours, 2 light direction,
-                                   3 combine, 4 blend, 5 texture state,
-                                   6 render tile, 7 othermode_h bits */
+                                   3 combine, 4 (not a failure since
+                                   2026-10-18: a self-contained root that
+                                   reads the carried blend colour), 5 texture
+                                   state, 6 render tile, 7 othermode_h bits */
     u32 pool_store_words;       /* words copied into the pool */
     u32 pool_revive_words;      /* ... copied back out of it */
     u32 root_copy_words;        /* root block words copied from donors */
