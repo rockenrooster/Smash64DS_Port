@@ -25,14 +25,29 @@ SECTIONS {
 INSERT BEFORE .main;
 
 SECTIONS {
-    /* FOUR OUTPUT SECTIONS, ONE LOAD SEGMENT (2026-10-11). The linker merges
+    /* FIVE OUTPUT SECTIONS, ONE LOAD SEGMENT (2026-10-11; training's, 2026-10-19). The linker merges
      * identical strings across the input sections of one output section, and
      * the VS Results block's fighter names were merged into a 1P select's copy
      * in the range Results lends (garbage names, a data abort). Each range a
-     * scene keeps -- the 1P head, the select's block, the Results block -- is
+     * scene keeps -- training's head, the 1P head, the select's block, the Results block -- is
      * its own output section, so its strings stay inside it. */
-    .ovl.frontend.head ALIGN(32) : {
+    /* TRAINING'S HEAD (P7 C4, 2026-10-19): a training battle runs only its
+     * own scene and the common-file loader, so it keeps just this section and
+     * borrows everything after __nds_frontend_training_end -- the 1P head
+     * below too (the 1P Game's, the bonus stages', Master Hand's, the
+     * Polygons' motion tables). Two contents on Hyrule Temple ran the heap out
+     * with the whole head kept (sc1PTrainingModeFuncStart, 8 B left). Its own
+     * output section, so its merged strings stay inside it;
+     * check_frontend_overlay.py holds it to that range. */
+    .ovl.frontend.training ALIGN(32) : {
         __nds_frontend_start = .;
+        :battleship_sc1ptrainingmode.o (.text .text.* .rodata .rodata.*)
+        :battleship_sc1pgame_runtime.o (.text.ndsSC1PLoadCommonFiles)
+        . = ALIGN(32);
+        __nds_frontend_training_end = .;
+    } AT>ovlmem :ovl_frontend = 0xff
+
+    .ovl.frontend.head . : {
         /* 1P BATTLE-TIME HEAD (2026-10-01). Everything a 1P, bonus or
          * training battle can execute or read from this overlay sits
          * first; a battle of those kinds keeps it and borrows the tail
@@ -42,7 +57,6 @@ SECTIONS {
          * the overlay before any tail code runs again. */
         :battleship_sc1pmanager.o (.text .text.* .rodata .rodata.*)
         :battleship_sc1pgame_runtime.o (.text .text.* .rodata .rodata.*)
-        :battleship_sc1ptrainingmode.o (.text .text.* .rodata .rodata.*)
         :battleship_sc1pbonusstage.o (.text .text.* .rodata .rodata.*)
         :battleship_sc1pbonusstagefiles.o (.text .text.* .rodata .rodata.*)
         :battleship_sc1pgameboss.o (.text .text.* .rodata .rodata.*)

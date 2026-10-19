@@ -684,6 +684,11 @@
     },
     {
       "source_symbol": "ndsFrontendOverlayBeginScene",
+      "target_symbol": "__nds_frontend_training_end",
+      "reason": "Overlay owner uses training's head end as the address where a training battle's loan starts (P7 C4), not as executable code."
+    },
+    {
+      "source_symbol": "ndsFrontendOverlayBeginScene",
       "target_symbol": "__nds_frontend_end",
       "reason": "Overlay owner uses the linker range as addresses for the exclusive scene-asset loan, not as executable code."
     },

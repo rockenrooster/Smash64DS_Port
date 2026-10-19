@@ -11,6 +11,9 @@ extern u8 __nds_frontend_start[];
 extern u8 __nds_frontend_end[];
 /* End of the 1P battle-time head (linker/nds_frontend_overlay.ld). */
 extern u8 __nds_frontend_1p_end[];
+/* End of training's own head, the first part of the 1P head (the same
+ * script): a training battle keeps only that. */
+extern u8 __nds_frontend_training_end[];
 /* Start of the VS character select's block (the same script): the select lends
  * everything before it. */
 extern u8 __nds_frontend_select_start[];
@@ -188,10 +191,14 @@ void ndsFrontendOverlayBeginScene(u32 kind)
          * whole range. The previous scene's status buffers live in the tail:
          * drop the relocator's reference before the bytes are reused (this
          * scene installs its own in its FuncStart, after this seam). */
+        u8 *keep_end = (kind == (u32)nSCKind1PTrainingMode) ?
+            __nds_frontend_training_end : __nds_frontend_1p_end;
+
         ndsRelocReleaseSceneStatusBuffers();
-        sNdsFrontendCursor = __nds_frontend_1p_end;
-        gNdsFrontendOverlayLoanBytes =
-            (u32)(__nds_frontend_end - __nds_frontend_1p_end);
+        /* Training runs only its own head (linker script): the rest of the
+         * 1P head lends too. */
+        sNdsFrontendCursor = keep_end;
+        gNdsFrontendOverlayLoanBytes = (u32)(__nds_frontend_end - keep_end);
         gNdsFrontendOverlayLoanCount++;
         NDS_DIAG(gNdsFrontendOverlayTailLoanCount++);
         sNdsFrontendTailLoaned = 1u;

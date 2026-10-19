@@ -1375,6 +1375,9 @@ volatile u32 gNdsCampaignStageClearPlaybackFrameCount;
 volatile u32 gNdsCampaignStageClearPlaybackTapCount;
 volatile u32 gNdsCampaignContinuePlaybackFrameCount;
 volatile u32 gNdsCampaignContinuePlaybackTapCount;
+/* The training walk's menu cycle (600 updates each) that takes EXIT instead
+ * of closing the menu (P7 C4's exit witness); 0 never exits. */
+volatile u32 gNdsCampaignTrainingExitCycle = 2u;
 volatile u32 gNdsCampaignTransitionHeapFreeMin = 0xffffffffu;
 volatile u32 gNdsCampaignTransitionStartStage = 0xffffffffu;
 /* Pacing measurement window, GDB-written at a 1P battle's scene entry and
@@ -1635,7 +1638,25 @@ static void ndsCampaignDrivePlayback(void)
         ndsControllerPlaybackSetEnabled(TRUE);
         sNdsCampaignBattlePlaybackFrame++;
         t = sNdsCampaignBattlePlaybackFrame % 600u;
-        if ((t == 150u) || (t == 151u) || (t == 400u) || (t == 401u))
+        if ((gNdsCampaignTrainingExitCycle != 0u) &&
+            ((sNdsCampaignBattlePlaybackFrame / 600u) >=
+             gNdsCampaignTrainingExitCycle))
+        {
+            /* The exit: START, UP (the menu wraps from CP to EXIT), A. */
+            if ((t == 150u) || (t == 151u))
+            {
+                button = START_BUTTON;
+            }
+            else if ((t == 210u) || (t == 211u))
+            {
+                stick_y = 80;
+            }
+            else if ((t == 260u) || (t == 261u))
+            {
+                button = A_BUTTON;
+            }
+        }
+        else if ((t == 150u) || (t == 151u) || (t == 400u) || (t == 401u))
         {
             button = START_BUTTON;
         }

@@ -531,7 +531,8 @@ def _select_block_violations(elf: Elf32, symbol_tables: dict[int, list[Symbol]],
         symbol_tables[symtab.index] = elf.symbols(symtab)
     symbols = symbol_tables[symtab.index]
     names = ("__nds_frontend_start", "__nds_frontend_select_start",
-             "__nds_frontend_select_end", "__nds_frontend_results_start")
+             "__nds_frontend_select_end", "__nds_frontend_results_start",
+             "__nds_frontend_training_end", "__nds_frontend_end")
     marks = {s.name: s.value for s in symbols if s.name in names}
     if "__nds_frontend_start" not in marks or "__nds_frontend_select_start" not in marks:
         return []
@@ -543,6 +544,11 @@ def _select_block_violations(elf: Elf32, symbol_tables: dict[int, list[Symbol]],
     rules = [((sel, sel_end), ((lo, sel),))]
     if res is not None:
         rules.append(((res, sel), ((lo, res), (sel, sel_end))))
+    # A training battle keeps only [start, training_end) and lends the rest.
+    train_end = marks.get("__nds_frontend_training_end")
+    end = marks.get("__nds_frontend_end")
+    if train_end is not None and end is not None:
+        rules.append(((lo, train_end), ((train_end, end),)))
     overlay_index = _source_symbol_indexes(elf, symbols, include_overlay=True)
     found: dict[tuple[str, str], dict[str, str]] = {}
     for rsec in elf.sections:
