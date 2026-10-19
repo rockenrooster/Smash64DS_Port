@@ -629,10 +629,17 @@ void ndsP4MNVSResultsPlayWinBGM(void)
     syAudioPlayBGM(0, p4->victory_bgm);
 }
 
+/* P7 U2's acceptance (no visible hitch at Results): the source block's save
+ * and the wide records' add, in cpuGetTiming ticks, inside FuncStart. */
+volatile u32 gNdsVSResultsSaveTicks;
+volatile u32 gNdsVSResultsRecordsTicks;
+
 void ndsP4MNVSResultsSaveBackup(void)
 {
     u8 pkind[GMCOMMON_PLAYERS_MAX];
     s32 i;
+    u32 t0 = cpuGetTiming();
+    u32 t1;
 
     /* VS records are kept per original kind; a P4 fighter has no record row
      * until the records tier (docs/P4/P4_STATUS.md), so it neither records
@@ -652,6 +659,8 @@ void ndsP4MNVSResultsSaveBackup(void)
     {
         gSCManagerTransferBattleState.players[i].pkind = pkind[i];
     }
+    t1 = cpuGetTiming();
+    gNdsVSResultsSaveTicks = t1 - t0;
     /* P7 U2: every player's wide row, contents and Metal Mario included,
      * each opponent by its own selection id. */
     {
@@ -664,6 +673,7 @@ void ndsP4MNVSResultsSaveBackup(void)
         }
         ndsP7RecordsAddMatch(&gSCManagerTransferBattleState, sel);
     }
+    gNdsVSResultsRecordsTicks = cpuGetTiming() - t1;
 }
 #endif
 
