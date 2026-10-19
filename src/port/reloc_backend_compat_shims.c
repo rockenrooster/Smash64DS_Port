@@ -7196,10 +7196,25 @@ void ftParamSetModelPartID(GObj *fighter_gobj, s32 joint_id,
     ndsFTParamInvalidateModelPartRenderer(fighter_gobj, fp);
 }
 
+#if NDS_P2_1P_GAME
+sb32 ndsFTManagerCampaignCpuLowDetail(s32 player);
+#endif
+
 void ftParamSetModelPartDetailAll(GObj *fighter_gobj, u8 detail)
 {
     FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
     s32 i;
+
+#if NDS_P2_1P_GAME
+    /* P7 C1: a campaign CPU in a battle of three or four keeps its low
+     * detail (battleship_ftmanager.c ndsFTManagerCampaignCpuLowDetail: its
+     * high image is not loaded there). */
+    if ((fp != NULL) && (detail == nFTPartsDetailHigh) &&
+        (ndsFTManagerCampaignCpuLowDetail(fp->player) != FALSE))
+    {
+        detail = nFTPartsDetailLow;
+    }
+#endif
 
 #if NDS_P4
     /* Owner 2026-10-08 (S15): the KO and pause close-ups keep a content's

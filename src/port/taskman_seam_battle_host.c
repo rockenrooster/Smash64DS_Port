@@ -1,6 +1,7 @@
 #include <nds/nds_native_wallpaper.h>
 #include <nds/nds_r2_hwmath_unit.h>
 #include <sys/video.h>
+#include <nds/nds_p5.h>
 
 /* Effect-instance pool free count (efmanager.c:1720), sampled per presented
  * frame for the NDS_R2_EFFECT_POOL low-water. See include/nds/nds_effects.h. */
@@ -1626,7 +1627,7 @@ static void ndsCampaignDrivePlayback(void)
         if ((sNdsCampaignBattlePlaybackFrame > 120u) &&
             ((sNdsCampaignBattlePlaybackFrame % 60u) == 0u))
         {
-            if (gSCManagerBattleState->gkind >= nGRKindBonus2Start)
+            if (ndsGrBonusClass(gSCManagerBattleState->gkind) == 2u)
             {
                 ndsCampaignWalkBoardOnePlatform();
             }

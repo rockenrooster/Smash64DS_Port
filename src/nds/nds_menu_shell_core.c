@@ -490,6 +490,15 @@ static const NdsMenuWalkStep kNdsMenuWalkMode[] = {
 static const NdsMenuWalkStep kNdsMenuWalkMode1P[] = {
     { (u16)NDS_INPUT_A, 1u }
 };
+/* P7 C1: the 1P select on the native screen (a P4 build). The START arm's
+ * walk snapshot (ndsMenuShellCssWalkRestoreGate) places the walk's fighter,
+ * so the script dwells past the 60-tic START arm and presses START. */
+static const NdsMenuWalkStep kNdsMenuWalkCss1P[] = {
+    { 0u, 90u },
+    { (u16)NDS_INPUT_START, 1u }
+};
+/* nds_menu_shell_css.c, later in this TU. */
+static u32 ndsMenuShellCssWalkOneP(void);
 /* P2-7 Data proof. DATA is the fourth source row, so three DOWN taps followed
  * by A takes the exact Title -> ModeSelect -> Data path a player uses. */
 static const NdsMenuWalkStep kNdsMenuWalkModeData[] = {
@@ -866,6 +875,13 @@ static u32 ndsMenuShellWalkTap(u32 screen, u32 *out_tap)
         script = kNdsMenuWalkMode1P;
         length = (u32)(sizeof(kNdsMenuWalkMode1P) /
                        sizeof(kNdsMenuWalkMode1P[0]));
+    }
+    else if ((screen == NDS_MENU_SHELL_SCREEN_CSS) &&
+             (ndsMenuShellCssWalkOneP() != FALSE))
+    {
+        script = kNdsMenuWalkCss1P;
+        length = (u32)(sizeof(kNdsMenuWalkCss1P) /
+                       sizeof(kNdsMenuWalkCss1P[0]));
     }
     else if ((screen == NDS_MENU_SHELL_SCREEN_MODE) &&
              (gNdsMenuShellWalkRoute == 2u))

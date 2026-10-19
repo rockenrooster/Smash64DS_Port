@@ -209,6 +209,9 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
 /* P4: the Remix content the slot's next sync shows on its kind (0 = the
  * original); a content change rebuilds the preview like a kind change. */
 void ndsMNPlayersVSPreviewSetContent(u32 slot, u32 content);
+/* P7 C1: nonzero while the screen is the 1P select, whose one fighter stands
+ * on its own card (mnPlayers1PGameMakeFighter) rather than on slot 0's. */
+void ndsMNPlayersVSPreviewSetOnePlayerLayout(u32 enabled);
 s32 ndsMNPlayersVSPreviewCycleCostume(u32 slot);
 u32 ndsMNPlayersVSPreviewGetAppearance(u32 slot);
 /* P3: mirror the costume the host resolved (TRUE when the preview changed). */

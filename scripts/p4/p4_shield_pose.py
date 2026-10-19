@@ -50,8 +50,9 @@ VALUE_WIDE_ESCAPE = 253
 DOBJ_DESC_SIZE = 0x2C
 DOBJ_DESC_SENTINEL = 18
 # The original cast's packages by vanilla fkind (SP.SPECS).
-SPEC_FKINDS = {"Fox": 1, "Donkey": 2, "Samus": 3, "Link": 5, "Captain": 7,
-               "Kirby": 8, "Pikachu": 9, "Purin": 10, "Ness": 11}
+SPEC_FKINDS = {"Mario": 0, "Fox": 1, "Donkey": 2, "Samus": 3, "Link": 5,
+               "Yoshi": 6, "Captain": 7, "Kirby": 8, "Pikachu": 9, "Purin": 10,
+               "Ness": 11}
 
 
 class ShieldPoseError(Exception):

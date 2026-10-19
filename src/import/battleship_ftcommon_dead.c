@@ -52,7 +52,18 @@ sb32 ndsBaseFTCommonDeadCheckInterruptCommon(GObj *fighter_gobj);
 #define ftManagerDestroyFighterWeapons(gobj_) \
     (ftManagerDestroyFighterWeapons(gobj_), ndsP4OnDead(gobj_))
 #endif
+#if NDS_P5
+#include <nds/nds_p5.h>
+/* P7 C2: a content's own bonus board (past the source's last ground) is a
+ * bonus board for the death rules too. */
+#define nGRKindBonus1End \
+    ((ndsP5BonusClass((u32)gSCManagerBattleState->gkind) != 0u) ? \
+     0x7FFFFFFF : nGRKindBonus1End)
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommondead.c"
+#if NDS_P5
+#undef nGRKindBonus1End
+#endif
 #if NDS_P4
 #undef ftManagerDestroyFighterWeapons
 #endif

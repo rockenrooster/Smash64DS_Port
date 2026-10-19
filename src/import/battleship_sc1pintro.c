@@ -120,6 +120,10 @@
 #include <nds/nds_platform.h>
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_task37_profile.h>
+#if NDS_P4
+#include <nds/nds_p4.h>
+#endif
+#include <string.h>
 /* LAB: a profile ROM built with NDS_TASK37_PROFILE_START=65000 (a battle
  * frame no run reaches) profiles the 1P intro's first draw instead. */
 #if NDS_TASK37_PROFILE && (NDS_TASK37_PROFILE_START == 65000u)
@@ -166,9 +170,57 @@ static void ndsSC1PIntroDraw(void);
  * 1P CSS bridge does for its single preview. */
 #define scManagerFuncDraw ndsSC1PIntroDraw
 #define sc1PIntroFuncStart ndsBaseSC1PIntroFuncStart
+/* P7 C1: the announcer's name call for the player (sc1PIntroUpdateAnnounce)
+ * says a content's or Metal Mario's own name; see ndsSC1PIntroPlayFGM. */
+void *ndsSC1PIntroPlayFGM(u16 id);
+#define func_800269C0_275C0(id) ndsSC1PIntroPlayFGM(id)
 #include "../../decomp/BattleShip-main/decomp/src/sc/sc1pmode/sc1pintro.c"
+#undef func_800269C0_275C0
 #undef sc1PIntroFuncStart
 #undef scManagerFuncDraw
+
+/* P7 C1: who the campaign's player is beyond the kind the source reads -- a
+ * Remix content rides its parent's kind (nds_p4.c gNdsP4OnePlayerContent),
+ * Metal Mario rides Mario's (battleship_ftmanager.c gNdsP7OnePlayerMetal). */
+extern u8 gNdsP7OnePlayerMetal;
+#if NDS_P4
+extern u8 gNdsP4OnePlayerContent;
+#endif
+
+void *ndsSC1PIntroPlayFGM(u16 id)
+{
+    /* sc1pintro.c:1708-1722 fighter_voices, the name call the source makes
+     * once, before sSC1PIntroIsAnnouncedFighterName goes TRUE. */
+    static const u16 kNames[12] = {
+        nSYAudioVoiceAnnounceMario, nSYAudioVoiceAnnounceFox,
+        nSYAudioVoiceAnnounceDonkey, nSYAudioVoiceAnnounceSamus,
+        nSYAudioVoiceAnnounceLuigi, nSYAudioVoiceAnnounceLink,
+        nSYAudioVoiceAnnounceYoshi, nSYAudioVoiceAnnounceCaptain,
+        nSYAudioVoiceAnnounceKirby, nSYAudioVoiceAnnouncePikachu,
+        nSYAudioVoiceAnnouncePurin, nSYAudioVoiceAnnounceNess
+    };
+    s32 fkind = sSC1PIntroPlayerFighterDemoDesc.fkind;
+
+    if ((sSC1PIntroIsAnnouncedFighterName == FALSE) &&
+        (fkind >= 0) && (fkind < 12) && (id == kNames[fkind]))
+    {
+#if NDS_P4
+        const NDSP4Fighter *f = ndsP4Fighter(gNdsP4OnePlayerContent);
+
+        if ((f != NULL) && (f->parent_kind == fkind) &&
+            (f->present != NULL) && (f->present->announce_fgm != 0u))
+        {
+            id = (u16)f->present->announce_fgm;
+        }
+        else
+#endif
+        if ((gNdsP7OnePlayerMetal != 0u) && (fkind == nFTKindMario))
+        {
+            id = nSYAudioVoiceAnnounceMMario;
+        }
+    }
+    return func_800269C0_275C0(id);
+}
 
 #undef sc1PIntroStartScene
 
@@ -224,6 +276,8 @@ typedef struct NDSSC1PIntroStillHeader
 
 __attribute__((used)) volatile u32 gNdsSC1PIntroStillsDrawn;
 __attribute__((used)) volatile u32 gNdsSC1PIntroStillsMissing;
+/* A content's or Metal Mario's own card not baked yet (P7 C1). */
+__attribute__((used)) volatile u32 gNdsSC1PIntroOwnStillsMissing;
 
 /* How far each still moves outward from where the bake captured it (owner,
  * 2026-10-06: "Rendered stills are still not horizontally offset correctly,
@@ -338,6 +392,45 @@ static void ndsSC1PIntroDrawStill(char kind, u32 card, FTDemoDesc *desc,
 {
     char path[48];
 
+    /* P7 C1: the player's card for a content (p<card>_c<NN>_<costume>) or
+     * for Metal Mario (kind 13), baked as the source kinds' are; until one
+     * is, the card the source kind shows. */
+    if ((kind == 'p') && (desc == &sSC1PIntroPlayerFighterDemoDesc))
+    {
+        sb32 own = FALSE;
+
+#if NDS_P4
+        const NDSP4Fighter *f = ndsP4Fighter(gNdsP4OnePlayerContent);
+
+        if ((f != NULL) && (f->parent_kind == desc->fkind))
+        {
+            /* p<card>_<NN>_<C> with the content's number, then the 'c'. */
+            u32 at = sizeof("nitro:/intro/p0_") - 1u;
+
+            ndsSC1PIntroStillPath(path, kind, card, 1u,
+                                  (s32)gNdsP4OnePlayerContent, desc->costume);
+            memmove(&path[at + 1u], &path[at], strlen(&path[at]) + 1u);
+            path[at] = 'c';
+            own = TRUE;
+        }
+        else
+#endif
+        if ((gNdsP7OnePlayerMetal != 0u) && (desc->fkind == nFTKindMario))
+        {
+            ndsSC1PIntroStillPath(path, kind, card, 1u, nFTKindMMario, 0);
+            own = TRUE;
+        }
+        if (own != FALSE)
+        {
+            if (ndsSC1PIntroBlitStill(path, layer, pitch,
+                                      -NDS_SC1P_INTRO_STILL_EDGE_SHIFT) != FALSE)
+            {
+                NDS_DIAG(gNdsSC1PIntroStillsDrawn++);
+                return;
+            }
+            gNdsSC1PIntroOwnStillsMissing++;
+        }
+    }
     ndsSC1PIntroStillPath(path, kind, card, 1u, desc->fkind, desc->costume);
     if (ndsSC1PIntroBlitStill(path, layer, pitch,
                               -NDS_SC1P_INTRO_STILL_EDGE_SHIFT) != FALSE)

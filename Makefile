@@ -6543,6 +6543,12 @@ endif
 ifeq ($(NDS_P2_NESS),1)
 NDS_SHIELD_POSE_IDS += 11
 endif
+# P7 C1: Mario's and Yoshi's packages (the Polygon Team's Mario, Luigi and
+# Yoshi guard with them too).
+NDS_SHIELD_POSE_IDS += 00
+ifeq ($(NDS_P2_YOSHI),1)
+NDS_SHIELD_POSE_IDS += 06
+endif
 NDS_NITROFS_SHIELD_POSE_FILES := $(foreach id,$(NDS_SHIELD_POSE_IDS),$(NITROFS_DIR)/fighters/shield_pose/$(id).bin)
 # P2-2p8 Phase 1 slice 2b: the fighter texture admission table, one NitroFS
 # payload for all twelve kinds (the runtime reads only the kinds in a match).
@@ -6573,6 +6579,8 @@ NDS_SHIELD_POSE_PREREQ := \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/scsubsys/scsubsysdatapurin.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/scsubsys/scsubsysdatacaptain.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/scsubsys/scsubsysdatapikachu.c \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/scsubsys/scsubsysdatamario.c \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/scsubsys/scsubsysdatayoshi.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/relocData/213_DonkeyMain.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/relocData/209_FoxMain.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/relocData/239_NessMain.c \
@@ -8271,6 +8279,51 @@ $(NDS_COMPACT_GROUND_MAP_TARGETS): $(NITROFS_DIR)/reloc/%: $(BATTLESHIP_O2R)/%
 
 $(NDS_COMPACT_GROUND_MAP_TARGETS): $(NDS_COMPACT_GROUND_MAP_CONTAINERS) \
 		$(NDS_COMPACT_GROUND_MAPS_STAMP) \
+		$(PROJECT_ROOT)/scripts/stages/generate_compact_ground_maps.py
+
+# P7 C1 (2026-10-19): compact polygon models. The Fighting Polygon Team loads
+# all eleven polygon models, and ~127 KB of them is N64 geometry the DS never
+# reads (the native owners draw from generated programs keyed by each display
+# list's source offset). scripts/fighters/generate_compact_polygon_models.py
+# keeps the joint tree and an identity cell per named display list; the
+# runtime side is ndsRelocCompactModelProbe (src/port/reloc_backend_assets.c),
+# which a plain file passes unchanged, so `NDS_P2_COMPACT_POLYGON_MODELS=0`
+# stages the plain copies as the A/B control. Default 1 with the 1P game, the
+# only scene family that loads them; the stamp re-stages on a flip.
+NDS_P2_COMPACT_POLYGON_MODELS ?= $(if $(filter 1,$(NDS_P2_1P_GAME)),1,0)
+NDS_COMPACT_POLYGON_MODEL_FILES := \
+	reloc_fighters_main/NMarioModel reloc_fighters_main/NFoxModel \
+	reloc_fighters_main/NYoshiModel reloc_fighters_main/NKirbyModel \
+	reloc_fighters_main/NPurinModel reloc_fighters_main/NPikachuModel \
+	reloc_fighters_main/NDonkeyModel reloc_fighters_main/NSamusModel \
+	reloc_fighters_main/NLinkModel reloc_fighters_main/NCaptainModel \
+	reloc_fighters_main/NNessModel
+NDS_COMPACT_POLYGON_MODEL_REFERRERS := \
+	$(foreach main,NMarioMain NLuigiMain NFoxMain NYoshiMain NKirbyMain \
+		NPurinMain NPikachuMain NDonkeyMain NSamusMain NLinkMain \
+		NCaptainMain NNessMain,$(BATTLESHIP_O2R)/reloc_fighters_main/$(main))
+NDS_COMPACT_POLYGON_MODELS_STAMP := $(PROJECT_ROOT)/$(BUILD)/nds_compact_polygon_models.stamp
+
+$(NDS_COMPACT_POLYGON_MODELS_STAMP): FORCE
+	@mkdir -p $(dir $@)
+	@printf %s "$(NDS_P2_COMPACT_POLYGON_MODELS)" > $@.tmp
+	@if ! cmp -s $@.tmp $@; then mv -f $@.tmp $@; else rm -f $@.tmp; fi
+
+NDS_COMPACT_POLYGON_MODEL_TARGETS := \
+	$(foreach file,$(NDS_COMPACT_POLYGON_MODEL_FILES),$(NITROFS_DIR)/reloc/$(file))
+
+$(NDS_COMPACT_POLYGON_MODEL_TARGETS): $(NITROFS_DIR)/reloc/%: $(BATTLESHIP_O2R)/%
+	@mkdir -p $(dir $@)
+	@if test "$(NDS_P2_COMPACT_POLYGON_MODELS)" = 1; then \
+		python "$(PROJECT_ROOT)/scripts/fighters/generate_compact_polygon_models.py" \
+			--o2r-root "$(BATTLESHIP_O2R)" --model "$*" --output "$@" || exit 1; \
+	else \
+		cp "$(BATTLESHIP_O2R)/$*" "$@"; \
+	fi
+
+$(NDS_COMPACT_POLYGON_MODEL_TARGETS): $(NDS_COMPACT_POLYGON_MODEL_REFERRERS) \
+		$(NDS_COMPACT_POLYGON_MODELS_STAMP) \
+		$(PROJECT_ROOT)/scripts/fighters/generate_compact_polygon_models.py \
 		$(PROJECT_ROOT)/scripts/stages/generate_compact_ground_maps.py
 
 $(NITROFS_DIR)/relocdata/us/%: $(BATTLESHIP_RELOCDATA)/%

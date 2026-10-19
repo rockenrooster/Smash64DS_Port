@@ -28,6 +28,7 @@
 /* P2-3f9: gSCManagerBattleState -- the animation cache's BattlePack carve is a
  * per-match decision and the roster is where that decision comes from. */
 #include <sc/scene.h>
+#include <nds/nds_p5.h>
 
 #if NDS_R2_BATTLEPACK && !NDS_R2_ANIM_CACHE
 /* Structural, not documentation. The resident pack IS the animation arena's
@@ -935,7 +936,13 @@ typedef struct NDSRelocLoadedFile {
     u8 format_fixups_applied;
     u8 fixups_applying;
     u8 offsets_are_relative;
+    /* [0]/[1] preview pack kind and section; [2] nonzero for a compact
+     * polygon model (ndsRelocCompactModelProbe). */
     u8 reserved[3];
+    /* A compact polygon model's backed range, as source offsets from `data`:
+     * only [compact_lo, compact_hi) is memory of this file. */
+    u16 compact_lo;
+    u16 compact_hi;
 } NDSRelocLoadedFile;
 
 /* THIRD SITE OF THE SAME CONDITION, and it must move with the other two: the
@@ -5884,8 +5891,7 @@ static u32 ndsRelocEvent32CapacityGKind(void)
         return gkind;
     }
     if ((gSCManagerSceneData.scene_curr == nSCKind1PBonusStage) &&
-        (gkind >= (u32)nGRKindBonusStageStart) &&
-        (gkind <= (u32)nGRKindBonusStageEnd))
+        (ndsGrBonusClass((s32)gkind) != 0u))
     {
         return gkind;
     }
@@ -6628,6 +6634,17 @@ static s32 ndsRelocPointerRangeInLoadedFile(const NDSRelocLoadedFile *loaded,
     {
         return FALSE;
     }
+    if (loaded->reserved[2] != 0u)
+    {
+        /* A compact polygon model owns only its backed range: the source
+         * offsets around it are other allocations' bytes. */
+        uintptr_t offset = addr - base;
+
+        return ((offset >= loaded->compact_lo) &&
+                (offset < loaded->compact_hi) &&
+                (size <= (size_t)(loaded->compact_hi - offset))) ? TRUE :
+                                                                   FALSE;
+    }
     return ndsRelocRangeInLoadedFile(loaded, addr - base, size);
 }
 
@@ -7340,6 +7357,117 @@ static void ndsRelocForgetNormalizedWeaponAttrs(u32 asset_id)
     }
 }
 
+/* COMPACT POLYGON MODELS (P7 C1, 2026-10-19). The Fighting Polygon Team loads
+ * all eleven polygon models, and ~127 KB of them is N64 geometry the DS never
+ * reads: the native owners draw from generated programs keyed by each display
+ * list's source offset. scripts/fighters/generate_compact_polygon_models.py
+ * stages each model as a 16-byte header ('NCPM', source size, X, cell count
+ * << 16 | S), one {G_ENDDL, source offset} identity cell per display list
+ * anything names, and the data the DS reads -- the joint tree and any DObj.dls
+ * table -- byte for byte from source offset X. The record keeps source
+ * offsets: data = storage + S - X and data_size = the source size, so the
+ * joint tree's slots and other files' extern targets resolve unchanged, and
+ * only [compact_lo, compact_hi) is backed (ndsRelocPointerRangeInLoadedFile).
+ * A plain file (NDS_P2_COMPACT_POLYGON_MODELS=0) has no header and loads as
+ * before. */
+#define NDS_RELOC_COMPACT_MODEL_MAGIC 0x4e43504du
+#define NDS_RELOC_COMPACT_MODEL_HEADER 16u
+
+volatile u32 gNdsRelocCompactModelCount;
+volatile u32 gNdsRelocCompactModelCellMisses;
+
+/* A freshly read payload, still big-endian: TRUE and the record's geometry
+ * when it is a compact polygon model. */
+static s32 ndsRelocCompactModelProbe(u32 asset_id, const void *data,
+                                     u32 payload_size, u32 *out_source_size,
+                                     u32 *out_lo, u32 *out_hi)
+{
+    const u8 *bytes = data;
+    u32 source_size;
+    u32 x;
+    u32 s;
+    u32 cells;
+
+    if ((asset_id < NDS_RELOC_ASSET_NMARIO_MODEL) ||
+        (asset_id > NDS_RELOC_ASSET_NNESS_MODEL) || (bytes == NULL) ||
+        (payload_size < NDS_RELOC_COMPACT_MODEL_HEADER) ||
+        (ndsRelocReadBe32(bytes) != NDS_RELOC_COMPACT_MODEL_MAGIC))
+    {
+        return FALSE;
+    }
+    source_size = ndsRelocReadBe32(bytes + 4u);
+    x = ndsRelocReadBe32(bytes + 8u);
+    s = ndsRelocReadBe32(bytes + 12u) & 0xffffu;
+    cells = ndsRelocReadBe32(bytes + 12u) >> 16;
+    if ((s < NDS_RELOC_COMPACT_MODEL_HEADER + (cells * 8u)) ||
+        (s > payload_size) || (x < s) || ((x & 3u) != 0u) ||
+        (((x - s) & 3u) != 0u) ||
+        ((x + (payload_size - s)) > source_size) ||
+        ((x + (payload_size - s)) > 0xffffu))
+    {
+        return FALSE;
+    }
+    *out_source_size = source_size;
+    *out_lo = x - s;
+    *out_hi = x + (payload_size - s);
+    return TRUE;
+}
+
+/* The identity cell standing for the display list at `source_offset`, or NULL.
+ * Needs the swapped payload. */
+static void *ndsRelocCompactModelCell(const NDSRelocLoadedFile *loaded,
+                                      u32 source_offset)
+{
+    const u8 *header = (const u8 *)loaded->data + loaded->compact_lo;
+    u8 *cells = (u8 *)loaded->data + loaded->compact_lo +
+                NDS_RELOC_COMPACT_MODEL_HEADER;
+    u32 lo = 0u;
+    u32 hi = ndsRelocReadNative32(header + 12u) >> 16;
+
+    while (lo < hi)
+    {
+        u32 mid = lo + ((hi - lo) >> 1);
+        u32 cell_source = ndsRelocReadNative32(cells + (mid * 8u) + 4u);
+
+        if (source_offset < cell_source)
+        {
+            hi = mid;
+        }
+        else if (source_offset > cell_source)
+        {
+            lo = mid + 1u;
+        }
+        else
+        {
+            return cells + (mid * 8u);
+        }
+    }
+    gNdsRelocCompactModelCellMisses++;
+    return NULL;
+}
+
+/* Where a fixup into `loaded` lands: the source offset, or for a compact
+ * model's unbacked display list its cell (NULL when it has none). */
+static void *ndsRelocLoadedFileTarget(const NDSRelocLoadedFile *loaded,
+                                      u32 offset)
+{
+    if ((loaded->reserved[2] != 0u) &&
+        ((offset < loaded->compact_lo) || (offset >= loaded->compact_hi)))
+    {
+        return ndsRelocCompactModelCell(loaded, offset);
+    }
+    return (u8 *)loaded->data + offset;
+}
+
+/* The first byte of a record's storage (a compact model's `data` is a
+ * virtual base below it). */
+static const void *ndsRelocLoadedFileStorage(const NDSRelocLoadedFile *loaded)
+{
+    return (loaded->reserved[2] != 0u) ?
+        (const void *)((const u8 *)loaded->data + loaded->compact_lo) :
+        loaded->data;
+}
+
 static NDSRelocLoadedFile *ndsRelocRegisterLoadedFileImpl(
     u32 asset_id, u32 bit, void *data, const NDSRelocAssetHeader *header,
     const u16 *known_extern_file_ids, u32 known_extern_count,
@@ -7472,6 +7600,23 @@ static NDSRelocLoadedFile *ndsRelocRegisterLoadedFileImpl(
     loaded->fixups_applying = FALSE;
     loaded->offsets_are_relative = FALSE;
     loaded->reserved[0] = loaded->reserved[1] = loaded->reserved[2] = 0u;
+    loaded->compact_lo = loaded->compact_hi = 0u;
+    {
+        u32 source_size;
+        u32 lo;
+        u32 hi;
+
+        if (ndsRelocCompactModelProbe(asset_id, data, header->data_size,
+                                      &source_size, &lo, &hi) != FALSE)
+        {
+            loaded->data = (u8 *)data - lo;
+            loaded->data_size = source_size;
+            loaded->compact_lo = (u16)lo;
+            loaded->compact_hi = (u16)hi;
+            loaded->reserved[2] = 1u;
+            gNdsRelocCompactModelCount++;
+        }
+    }
     if (sNdsRelocRelativeOffsetsMemo == loaded)
     {
         sNdsRelocRelativeOffsetsMemo = NULL;
@@ -7573,6 +7718,12 @@ static s32 ndsRelocApplyWordByteSwap(NDSRelocLoadedFile *loaded)
     {
         gNdsOpeningRoomRelocWordSwapFailCount++;
         return FALSE;
+    }
+    if (loaded->reserved[2] != 0u)
+    {
+        return ndsRelocApplyWordByteSwapRange(
+            loaded->asset_id, loaded->data, loaded->compact_lo,
+            (u32)loaded->compact_hi - loaded->compact_lo, TRUE);
     }
     return ndsRelocApplyWordByteSwapRange(loaded->asset_id, loaded->data, 0u,
                                           loaded->data_size, TRUE);
@@ -8038,7 +8189,7 @@ void ndsRelocReleaseHeapRange(void *base, size_t size)
     while (i < sNdsRelocLoadedFileCount)
     {
         if (ndsRelocPointerInHeapRange(base, size,
-                sNdsRelocLoadedFiles[i].data) != FALSE)
+                ndsRelocLoadedFileStorage(&sNdsRelocLoadedFiles[i])) != FALSE)
         {
             u32 remaining;
 
@@ -10038,7 +10189,10 @@ static s32 ndsRelocApplyExternalPointerFixups(NDSRelocLoadedFile *loaded)
             continue;
         }
 #endif
-        if ((dep == NULL) || (target_offset >= dep->data_size))
+        /* A compact polygon model's display lists are identity cells: a
+         * main's model-part slot aimed at one lands on its cell. */
+        if ((dep == NULL) || (target_offset >= dep->data_size) ||
+            (ndsRelocLoadedFileTarget(dep, (u32)target_offset) == NULL))
         {
             loaded->external_fixup_fail_count++;
             if (gNdsRelocExternalFixupFailCount == 0u)
@@ -10050,7 +10204,8 @@ static s32 ndsRelocApplyExternalPointerFixups(NDSRelocLoadedFile *loaded)
         }
 
         ndsRelocWriteNativePointer((u8 *)loaded->data + slot_offset,
-                                   (u8 *)dep->data + target_offset);
+                                   ndsRelocLoadedFileTarget(
+                                       dep, (u32)target_offset));
 
         loaded->external_fixup_count++;
         ndsRelocRecordExternalFixupSuccess(loaded->asset_id, dep->asset_id);
@@ -13072,7 +13227,9 @@ static NDSRelocLoadedFile *ndsRelocLoadExternTreeAsset(u32 asset_id,
         ndsRelocRecordExternalFixupFail(asset_id);
         return NULL;
     }
-    ndsRelocAddStatusBufferFile(asset_id, file_alloc);
+    /* loaded->data, not file_alloc: a compact polygon model's record names
+     * its source offsets from a base below its storage. */
+    ndsRelocAddStatusBufferFile(asset_id, loaded->data);
 
     if (ndsRelocApplyWordByteSwap(loaded) == FALSE)
     {
@@ -18075,7 +18232,8 @@ void *lbRelocGetForceExternHeapFile(const void *file_id, void *heap)
     if ((file != NULL) && (heap != NULL) && (file != heap))
     {
         loaded = ndsRelocFindLoadedFileByData(file);
-        if (loaded != NULL)
+        /* A compact polygon model is not a contiguous image to copy. */
+        if ((loaded != NULL) && (loaded->reserved[2] == 0u))
         {
             ndsRelocCopyLoadedFileToHeap(loaded, heap);
             file = heap;

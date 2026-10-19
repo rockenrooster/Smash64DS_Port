@@ -88,7 +88,11 @@ void syTaskmanStartTask(SYTaskmanSetup *tsetup)
     if ((desc != NULL) &&
         (((desc->flags & NDS_SCENE_FLAG_BATTLE) != 0u) ||
          (gSCManagerSceneData.scene_curr == nSCKind1PIntro) ||
+#if !(NDS_P2_MENU_SHELL && NDS_P4)
+         /* A P4 build's 1P select is the native screen (P7 C1): the VS
+          * select's own setup, not rebudgeted either. */
          (gSCManagerSceneData.scene_curr == nSCKind1PGamePlayers) ||
+#endif
          (gSCManagerSceneData.scene_curr == nSCKindVSResults) ||
          (gSCManagerSceneData.scene_curr == nSCKind1PChallenger) ||
          (gSCManagerSceneData.scene_curr == nSCKind1PContinue)) &&
@@ -275,8 +279,22 @@ void *syTaskmanMalloc(size_t size, u32 align)
      * Bowsers in the shipping layout, 18 KB of cache and a 32% hit rate
      * against 54 KB and 53% with the bare lab layout's bigger heap. A match
      * whose demand fills the loan is unchanged; what does not fit still goes
-     * to the heap, and admission checks keep reading the heap. */
-    if (gSCManagerSceneData.scene_curr == nSCKindVSBattle)
+     * to the heap, and admission checks keep reading the heap.
+     *
+     * A campaign, bonus or training battle borrows the overlay's tail the
+     * same way (ndsFrontendOverlayBeginScene: 361,056 B on the walk layout),
+     * and until 2026-10-19 only its contents' files took it: with the
+     * original cast the tail sat idle while the 1P game ran its heap out --
+     * 8,784 B left at Giant DK, an out-of-memory halt spawning the Fighting
+     * Polygon Team (P7 C1, plain Captain Falcon). Its allocations take the
+     * loan first too, as do the 1P ending movie's and continue screen's
+     * (they borrow the Results and select blocks). */
+    if ((gSCManagerSceneData.scene_curr == nSCKindVSBattle) ||
+        (gSCManagerSceneData.scene_curr == nSCKind1PGame) ||
+        (gSCManagerSceneData.scene_curr == nSCKind1PBonusStage) ||
+        (gSCManagerSceneData.scene_curr == nSCKind1PTrainingMode) ||
+        (gSCManagerSceneData.scene_curr == nSCKindEnding) ||
+        (gSCManagerSceneData.scene_curr == nSCKind1PContinue))
     {
         void *loan = ndsFrontendOverlayTryAlloc(size, (align != 0u) ? align : 4u);
 

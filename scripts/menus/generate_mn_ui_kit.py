@@ -3198,6 +3198,140 @@ SURFACE_SOURCES.append(SurfaceSpec(
     "ONEP_READY_OFF", (), None,
     under=onep_css_screen_parts(), box=CSS_READY_BOX))
 
+# P7 C1 (2026-10-19): with Remix contents compiled, the 1P select is the
+# native screen's one-card mode (nds_menu_shell_css.c sCssOneP) on Remix's
+# grid. Its base is the grid over the 1P select's own lower half (the red
+# card, OPTION, LEVEL and STOCK), the title, BACK and the time selector lifted
+# with the header (CSS_HEADER_DY) as the VS screen lifts its own. Its states:
+# the time, the five levels, the card's emblem and name for every selection
+# the VS screen has a gate for (CSS_FIGHTER_TOKEN order: ONEP_P4_GATE_F<n>),
+# and the READY band.
+if P4_CSS is not None:
+    def onep_p4_css_screen_parts() -> tuple[Placement, ...]:
+        dy = CSS_HEADER_DY
+        return tuple(list(p4_css_screen_parts()) + [
+            Placement("MNPlayers1PMode", "llMNPlayers1PModeRedCardSprite",
+                      25, 127, False),
+            Placement("MNPlayersCommon", "llMNPlayersCommon1PTextSprite",
+                      33, 132, False, (0x00, 0x00, 0x00)),
+            Placement("MNPlayers1PMode", "", 157, 136, False,
+                      fill=(0x57, 0x60, 0x88, 0xFF), size=(163, 5)),
+            Placement("MNPlayers1PMode", "llMNPlayers1PMode1PlayerGameTextSprite",
+                      27, 24 + dy, False, (0xE3, 0xAC, 0x04)),
+            Placement("MNPlayersCommon", "llMNPlayersCommonBackButtonSprite",
+                      244, 23 + dy, False),
+            Placement("MNPlayers1PMode", "llMNPlayers1PModeOptionTextSprite",
+                      180, 129, False, (0xAF, 0xB1, 0xCC),
+                      env=(0x00, 0x00, 0x00)),
+            Placement("MNPlayers1PMode", "llMNPlayers1PModeOptionOutlineSprite",
+                      128, 141, False, (0x57, 0x60, 0x88),
+                      tile=(184, 64), period=(None, 32)),
+            Placement("MNPlayers1PMode", "llMNPlayers1PModeLevelColonTextSprite",
+                      145, 159, False, (0xC5, 0xB6, 0xA7)),
+            Placement("MNPlayers1PMode", "llMNPlayers1PModeStockColonTextSprite",
+                      144, 179, False, (0xC5, 0xB6, 0xA7)),
+        ])
+
+    _ONEP_P4 = onep_p4_css_screen_parts()
+    SURFACE_SOURCES.append(SurfaceSpec("ONEP_P4_CSS_SCREEN", _ONEP_P4,
+                                       MENU_FIELD))
+    for _token, _symbol, _x, _y in (
+            ("5", "llMNPlayersCommon5DarkSprite", 196, 23),
+            ("INF", "llMNPlayersCommonInfinityDarkSprite", 194, 24)):
+        SURFACE_SOURCES.append(SurfaceSpec(
+            f"ONEP_P4_TIME_{_token}",
+            (Placement("MNPlayersCommon", "llMNPlayersCommonTimeSelectorSprite",
+                       140, 22 + CSS_HEADER_DY, False),
+             Placement("MNPlayersCommon", _symbol, _x, _y + CSS_HEADER_DY,
+                       False, (0xFF, 0xFF, 0xFF), env=(0x32, 0x1C, 0x0E))),
+            None, under=_ONEP_P4, box=(140, 22 + CSS_HEADER_DY, 90, 16)))
+    for _token, _symbol, _x, _rgb in ONEP_LEVEL_STATES:
+        SURFACE_SOURCES.append(SurfaceSpec(
+            f"ONEP_P4_LEVEL_{_token}",
+            (Placement("MNPlayersDifficulty", _symbol, _x, 159, False, _rgb),),
+            None, under=_ONEP_P4, box=ONEP_LEVEL_BOX))
+    SURFACE_SOURCES.append(SurfaceSpec(
+        "ONEP_P4_GATE_EMPTY", (), None, under=_ONEP_P4, box=ONEP_GATE_BOX))
+    for _index in range(len(CSS_FIGHTER_TOKEN)):
+        _emblem = CSS_EMBLEM_SYMBOL[_index]
+        if not isinstance(_emblem, tuple):
+            _emblem = ("FTEmblemSprites", _emblem)
+        _name = CSS_NAME_SYMBOL[_index]
+        if not isinstance(_name, tuple):
+            _name = ("MNPlayersCommon", _name)
+        SURFACE_SOURCES.append(SurfaceSpec(
+            f"ONEP_P4_GATE_F{_index}",
+            (Placement(_emblem[0], _emblem[1], 35, 144, False,
+                       (0x00, 0x00, 0x00)),
+             Placement(_name[0], _name[1], 33, 202, False,
+                       trim_clear=_name[0].startswith("p4:"))),
+            None, under=_ONEP_P4, box=ONEP_GATE_BOX))
+    SURFACE_SOURCES.append(SurfaceSpec(
+        "ONEP_P4_READY_ON", CSS_READY_PARTS, None,
+        under=_ONEP_P4, box=CSS_READY_BOX))
+    SURFACE_SOURCES.append(SurfaceSpec(
+        "ONEP_P4_READY_OFF", (), None, under=_ONEP_P4, box=CSS_READY_BOX))
+
+    # The puck fighter's record (mnPlayers1PGameMakeFighterRecord :1469-1561):
+    # HIGH SCORE in the menu font, grey, set by mnPlayers1PGameMakeString's
+    # own advance (:358-399: each letter's width plus GetCharacterSpacing's
+    # pair rule, three for a space) from (142,201); the bonus count's
+    # parentheses in blue at (258,199) and (286,199). The digits are keyed
+    # glyphs the runtime places (BONUS_DIGIT_* grey, ONEP_P4_BLUE_DIGIT_*),
+    # the best difficulty the 1P mode file's Smash logo in its colour at
+    # (126,198) (ONEP_P4_RECORD_LOGO_*).
+    def onep_record_string(text: str, x: float, y: int, rgb) -> list:
+        widths = (5, 4, 4, 4, 4, 4, 4, 4, 3, 4, 4, 4, 5, 5, 4, 4, 5, 4, 4, 5,
+                  4, 5, 5, 5, 5, 4)
+        parts = []
+        for index, char in enumerate(text):
+            if char == " ":
+                x += 3
+                continue
+            following = text[index + 1] if index + 1 < len(text) else ""
+            if char == "A":
+                spacing = 0 if following in "FPTVY" and following else 1
+            elif char in "FPVY":
+                spacing = 0 if following in "AT" and following else 1
+            elif char in "QT":
+                spacing = 1 if following in "'." and following else 0
+            else:
+                spacing = 0 if following == "T" else 1
+            parts.append(Placement("MNCommonFonts",
+                                   f"llMNCommonFontsLetter{char}Sprite",
+                                   int(x), y, False, rgb))
+            x += widths[ord(char) - ord("A")] + spacing
+        return parts
+
+    ONEP_RECORD_BOX = (120, 194, 180, 18)
+    SURFACE_SOURCES.append(SurfaceSpec(
+        "ONEP_P4_RECORD_ON",
+        tuple(onep_record_string("HIGH SCORE", 142, 201, (0x7E, 0x7C, 0x77)) + [
+            Placement("MNPlayers1PMode",
+                      "llMNPlayers1PModeOpeningParenthesisSprite", 258, 199,
+                      False, (0x40, 0x6F, 0xCD)),
+            Placement("MNPlayers1PMode",
+                      "llMNPlayers1PModeClosingParenthesisSprite", 286, 199,
+                      False, (0x40, 0x6F, 0xCD))]),
+        None, under=_ONEP_P4, box=ONEP_RECORD_BOX))
+    SURFACE_SOURCES.append(SurfaceSpec(
+        "ONEP_P4_RECORD_OFF", (), None, under=_ONEP_P4, box=ONEP_RECORD_BOX))
+    for _level, _rgb in enumerate(((0x41, 0x6F, 0xE4), (0x8D, 0xBB, 0x5A),
+                                   (0xE4, 0xBE, 0x41), (0xE4, 0x78, 0x41),
+                                   (0xE4, 0x41, 0x41)), start=1):
+        SURFACE_SOURCES.append(SurfaceSpec(
+            f"ONEP_P4_RECORD_LOGO_{_level}",
+            (Placement("MNPlayers1PMode", "llMNPlayers1PModeSmashLogoSprite",
+                       0, 0, False, _rgb),),
+            None, box=(0, 0, 16, 11)))
+    for _digit in range(10):
+        SURFACE_SOURCES.append(SurfaceSpec(
+            f"ONEP_P4_BLUE_DIGIT_{_digit}",
+            (Placement("IFCommonDigits", f"llIFCommonDigits{_digit}Sprite",
+                       0, 0, False, (0x40, 0x6F, 0xCD),
+                       env=(0x00, 0x00, 0x00)),),
+            None, box=(0, 0, 8, 10)))
+
 # The band GObj above is display link 38 through mnPlayersVSMakeReadyCamera
 # (priority 10), whereas PRESS/START below it is display link 28 through the
 # player-kind camera (priority 50). BG2 carries the state/restoration copy used

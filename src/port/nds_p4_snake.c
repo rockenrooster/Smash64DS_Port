@@ -2890,17 +2890,37 @@ static void ndsP4SnakeComputerRecover(FTStruct *fp)
     }
 }
 
-/* The target fighter's position, its body's centre when `centre`. */
+/* The target fighter's position, its body's centre when `centre`. A target
+ * the stage has since removed answers FALSE: the Fighting Polygon Team
+ * replaces its fighters mid-battle, and a CPU Snake's target was a removed
+ * polygon's (a data abort here, P7 C1 2026-10-19). */
 static sb32 ndsP4SnakeComputerTarget(FTStruct *fp, sb32 centre, f32 *x, f32 *y)
 {
     GObj *target = fp->computer.target_gobj;
+    GObj *gobj;
     FTStruct *tfp;
 
     if (target == NULL)
     {
         return FALSE;
     }
+    for (gobj = gGCCommonLinks[nGCCommonLinkIDFighter]; gobj != NULL;
+         gobj = gobj->link_next)
+    {
+        if (gobj == target)
+        {
+            break;
+        }
+    }
+    if (gobj == NULL)
+    {
+        return FALSE;
+    }
     tfp = ftGetStruct(target);
+    if ((tfp == NULL) || (tfp->coll_data.p_translate == NULL))
+    {
+        return FALSE;
+    }
     *x = tfp->coll_data.p_translate->x;
     *y = tfp->coll_data.p_translate->y + ((centre != FALSE) ? tfp->coll_data.map_coll.center : 0.0F);
 
@@ -2924,9 +2944,12 @@ static void ndsP4SnakeComputerNikita(FTStruct *fp)
     {
         return;
     }
+    if (ndsP4SnakeComputerTarget(fp, TRUE, &tx, &ty) == FALSE)
+    {
+        return;
+    }
     ndsP4ComputerSetCommandImmediate(fp, nNDSP4ComputerInputNull);
     dobj = DObjGetStruct(ip->item_gobj);
-    (void)ndsP4SnakeComputerTarget(fp, TRUE, &tx, &ty);
     dx = tx - dobj->translate.vec.f.x;
     dy = ty - dobj->translate.vec.f.y;
     d2 = (dx * dx) + (dy * dy);

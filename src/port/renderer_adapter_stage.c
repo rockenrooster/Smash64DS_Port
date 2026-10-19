@@ -55,6 +55,7 @@
 #include <nds/nds_preview_pack.h>
 #include <nds/nds_native_wallpaper.h>
 #include <sys/objman.h>
+#include <nds/nds_p5.h>
 
 #if NDS_RENDERER_HW_TRIANGLES
 extern void gcDrawDObjTreeDLLinksForGObj(GObj *gobj);
@@ -3655,9 +3656,9 @@ static sb32 ndsRendererAdapterIsForeignStageSubtree(const DObj *dobj)
 {
     const NDSRelocLoadedFile *loaded;
 
+    /* A Board the Platforms board, the source's or a content's (P7 C2). */
     if ((gSCManagerBattleState == NULL) ||
-        (gSCManagerBattleState->gkind < nGRKindBonus2Start) ||
-        (gSCManagerBattleState->gkind > nGRKindBonus2End) ||
+        (ndsGrBonusClass(gSCManagerBattleState->gkind) != 2u) ||
         (dobj == NULL) || (dobj->dl_link == NULL))
     {
         return FALSE;

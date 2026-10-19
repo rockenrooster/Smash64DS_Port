@@ -165,15 +165,47 @@ sb32 sc1PManagerCheckUnlockSoundTest(void);
 #define sc1PBonusStageStartScene ndsBaseSC1PBonusStageStartScene
 void ndsBaseSC1PBonusStageStartScene(void);
 
+#if NDS_P5
+#include <nds/nds_p5.h>
+/* P7 C2: a content's own board (stages.json `bonus`, a kind past the
+ * source's last ground) reads as its class's board: Break the Targets
+ * passes the Bonus1 bounds and Board the Platforms the Bonus2 ones, and
+ * either indexes row 0 of the descriptor tables, which
+ * ndsP7BonusBoardBegin fills with its words for the scene
+ * (battleship_sc1pbonusstagefiles.c). The InitVars arithmetic runs on the
+ * default battle state's kind and keeps the source constants. */
+#define NDS_SC1P_BONUS_OWN_CLASS \
+    ndsP5BonusClass((u32)gSCManagerBattleState->gkind)
+#define nGRKindBonus1Start \
+    ((NDS_SC1P_BONUS_OWN_CLASS == 1u) ? (s32)gSCManagerBattleState->gkind : \
+     nGRKindBonus1Start)
+#define nGRKindBonus2Start \
+    ((NDS_SC1P_BONUS_OWN_CLASS == 2u) ? (s32)gSCManagerBattleState->gkind : \
+     ((NDS_SC1P_BONUS_OWN_CLASS == 1u) ? 0x7FFFFFFF : nGRKindBonus2Start))
+#define nGRKindBonus1End \
+    ((NDS_SC1P_BONUS_OWN_CLASS == 1u) ? (s32)gSCManagerBattleState->gkind : \
+     ((NDS_SC1P_BONUS_OWN_CLASS == 2u) ? -1 : nGRKindBonus1End))
+#endif
+
 #include "../../decomp/BattleShip-main/decomp/src/sc/sc1pmode/sc1pbonusstage.c"
 
+#if NDS_P5
+#undef nGRKindBonus1Start
+#undef nGRKindBonus2Start
+#undef nGRKindBonus1End
+#undef NDS_SC1P_BONUS_OWN_CLASS
+#endif
 #undef sc1PBonusStageStartScene
+
+void ndsP7BonusBoardEnd(void);
 
 void sc1PBonusStageStartScene(void)
 {
     u8 entry_prev = gSCManagerSceneData.scene_prev;
 
     ndsBaseSC1PBonusStageStartScene();
+    /* P7 C2: the descriptor rows a content's board borrowed. */
+    ndsP7BonusBoardEnd();
     /* As sc1PGameStartScene: the board may have borrowed the frontend tail. */
     ndsFrontendOverlayRestoreTail();
     /* P7 U4: a practice's unlock rows (Sheik, Palutena). */

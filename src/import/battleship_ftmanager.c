@@ -274,10 +274,88 @@ static s32 ndsFTManagerHeapPlayer(s32 fkind)
 }
 #endif
 
+/* P7 C1: Metal Mario plays the campaign under Mario's kind in every source
+ * table -- the records, the bonus boards and the intro, continue and
+ * congratulations rows stop at the twelve -- and as himself wherever a
+ * fighter is made: the player's seat in the campaign's battles and its bonus
+ * boards, and the one fighter of the continue screen and the ending movie.
+ * Contents ride their parents the same way. Set by the 1P select's commit
+ * (nds_menu_shell_css.c). */
+u8 gNdsP7OnePlayerMetal;
+
+#if NDS_P2_1P_GAME && NDS_P2_MMARIO
+
+sb32 ndsP7OnePlayerMetalActive(void)
+{
+    if (gNdsP7OnePlayerMetal == 0u)
+    {
+        return FALSE;
+    }
+    switch (gSCManagerSceneData.scene_curr)
+    {
+    case nSCKind1PGame:
+    case nSCKind1PContinue:
+    case nSCKindEnding:
+        return TRUE;
+    case nSCKind1PBonusStage:
+        return (gSCManagerSceneData.scene_prev == nSCKind1PGame) ? TRUE : FALSE;
+    default:
+        return FALSE;
+    }
+}
+
+/* Another seat of this battle is Mario himself (the Mario Bros stage). */
+static sb32 ndsP7OnePlayerMetalOtherMario(void)
+{
+    s32 player;
+
+    if ((gSCManagerSceneData.scene_curr != nSCKind1PGame) ||
+        (gSCManagerBattleState == NULL))
+    {
+        return FALSE;
+    }
+    for (player = 0; player < GMCOMMON_PLAYERS_MAX; player++)
+    {
+        if ((player != gSCManagerSceneData.player) &&
+            (gSCManagerBattleState->players[player].pkind != nFTPlayerKindNot) &&
+            (gSCManagerBattleState->players[player].fkind == nFTKindMario))
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+static void ndsP7OnePlayerMetalDesc(FTDesc *desc)
+{
+    if ((desc != NULL) && (desc->fkind == nFTKindMario) &&
+        (ndsP7OnePlayerMetalActive() != FALSE) &&
+        ((desc->pkind == nFTPlayerKindDemo) ||
+         (desc->player == gSCManagerSceneData.player)))
+    {
+        desc->fkind = nFTKindMMario;
+        desc->costume = 0;
+    }
+}
+#endif
+
 void *ftManagerAllocFigatreeHeapKind(s32 fkind)
 {
-    FTData *data = dFTManagerDataFiles[fkind];
+    FTData *data;
     void *heap;
+
+#if NDS_P2_1P_GAME && NDS_P2_MMARIO
+    /* The player's heap is asked for under Mario's kind: size it for
+     * whichever of the two takes more. */
+    if ((fkind == nFTKindMario) && (ndsP7OnePlayerMetalActive() != FALSE) &&
+        (dFTManagerDataFiles[nFTKindMMario] != NULL) &&
+        (dFTManagerDataFiles[nFTKindMMario]->file_anim_size >
+         dFTManagerDataFiles[nFTKindMario]->file_anim_size))
+    {
+        fkind = nFTKindMMario;
+    }
+#endif
+    data = dFTManagerDataFiles[fkind];
 #if NDS_P4
     /* A P4 player constructs through its parent's kind, whose row the scene
      * raised to its largest selected child (nds_p4.c ndsP4SetupFileSizes):
@@ -692,6 +770,18 @@ sb32 ndsFTManagerSetupPreviewFilesP4(u32 content)
 
 void ftManagerSetupFilesAllKind(s32 fkind)
 {
+#if NDS_P2_1P_GAME && NDS_P2_MMARIO
+    /* The campaign's Metal Mario player: his own files, and Mario's only
+     * when another seat is Mario. */
+    if ((fkind == nFTKindMario) && (ndsP7OnePlayerMetalActive() != FALSE))
+    {
+        ftManagerSetupFilesAllKind(nFTKindMMario);
+        if (ndsP7OnePlayerMetalOtherMario() == FALSE)
+        {
+            return;
+        }
+    }
+#endif
 #if NDS_P4
     ndsP4SetupFilesForParent(fkind);
     if (ndsP4ParentFilesNeeded(fkind) == FALSE)
@@ -1053,6 +1143,27 @@ u32 ndsFTManagerOwnerImageSlotLive(u32 image_slot)
 #endif
 #endif
 
+#if NDS_P2_1P_GAME
+/* P7 C1: in a campaign battle of three or four fighters a CPU keeps its
+ * low-detail model in the KO and pause close-ups too, as S15 keeps a
+ * content's (ftParamSetModelPartDetailAll), so only that image loads. With
+ * the CPUs' high images resident, Palutena's campaign ran out of memory
+ * setting up Giant DK (his own 21,340 B high image among them) and the
+ * Polygon Team. */
+sb32 ndsFTManagerCampaignCpuLowDetail(s32 player)
+{
+    if ((gSCManagerSceneData.scene_curr != nSCKind1PGame) ||
+        (gSCManagerBattleState == NULL) || (player < 0) ||
+        (player >= GMCOMMON_PLAYERS_MAX))
+    {
+        return FALSE;
+    }
+    return ((gSCManagerBattleState->players[player].pkind == nFTPlayerKindCom) &&
+            ((gSCManagerBattleState->pl_count +
+              gSCManagerBattleState->cp_count) >= 3)) ? TRUE : FALSE;
+}
+#endif
+
 void ndsFTManagerEnsureOwnerImages(FTDesc *desc)
 {
     /* Electric bodies share one image across HIGH/LOW; load at construction,
@@ -1103,12 +1214,23 @@ void ndsFTManagerEnsureOwnerImages(FTDesc *desc)
                 first_detail = last_detail = 1u;
             }
 #endif
+#if NDS_P2_1P_GAME
+            if ((desc->pkind == nFTPlayerKindCom) &&
+                (ndsFTManagerCampaignCpuLowDetail(desc->player) != FALSE))
+            {
+                first_detail = last_detail = 1u;
+            }
+#endif
 
             /* The VS select's previews and the Results podium keep their
              * detail too (the original cast HIGH, a content LOW in the
              * select and in a three- or four-fighter match's Results:
              * ndsFTManagerSelectLowDetail), so only that image (S15). */
             if (((gSCManagerSceneData.scene_curr == nSCKindPlayersVS) ||
+#if NDS_P2_1P_GAME && NDS_P2_MENU_SHELL
+                 /* The training select is the same native screen. */
+                 (gSCManagerSceneData.scene_curr == nSCKindPlayers1PTraining) ||
+#endif
                  (gSCManagerSceneData.scene_curr == nSCKindVSResults)) &&
                 (desc->pkind == nFTPlayerKindDemo))
             {
@@ -1350,9 +1472,24 @@ static FTAttributes sNdsP7MMarioVsAttr;
 
 static u32 ndsP7MMarioVs(const FTDesc *desc)
 {
-    return ((desc != NULL) && (desc->fkind == nFTKindMMario) &&
-            (desc->pkind != nFTPlayerKindDemo) &&
-            (gSCManagerSceneData.scene_curr == nSCKindVSBattle)) ? TRUE : FALSE;
+    if ((desc == NULL) || (desc->fkind != nFTKindMMario) ||
+        (desc->pkind == nFTPlayerKindDemo))
+    {
+        return FALSE;
+    }
+    if ((gSCManagerSceneData.scene_curr == nSCKindVSBattle) ||
+        (gSCManagerSceneData.scene_curr == nSCKind1PTrainingMode))
+    {
+        return TRUE;
+    }
+#if NDS_P2_1P_GAME
+    /* P7 C1: the campaign's Metal Mario player is the selectable one too;
+     * his stage's Metal Mario stays the source's. */
+    return ((ndsP7OnePlayerMetalActive() != FALSE) &&
+            (desc->player == gSCManagerSceneData.player)) ? TRUE : FALSE;
+#else
+    return FALSE;
+#endif
 }
 
 static void ndsP7MMarioVsAttr(GObj *fighter_gobj)
@@ -1369,6 +1506,9 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
 {
 #if NDS_P2_1P_GAME && NDS_P2_MENU_WALK
     ndsCampaignWalkCpuRoute(desc);
+#endif
+#if NDS_P2_1P_GAME && NDS_P2_MMARIO
+    ndsP7OnePlayerMetalDesc(desc);
 #endif
     ndsFTManagerBattleLowDetail(desc);
 #if NDS_P4

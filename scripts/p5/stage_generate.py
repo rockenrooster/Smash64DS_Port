@@ -54,7 +54,7 @@ GRDISPLAY = "decomp/BattleShip-main/decomp/src/gr/grdisplay.c"
 sys.path.insert(0, str(HERE))
 import p5_stages  # noqa: E402
 CNAMES = {r["name"]: (r["c_name"], r["c_symbol"])
-          for r in p5_stages.load_registry() if r["source"] == "remix"}
+          for r in p5_stages.load_remix_rows(landed=False)}
 
 
 class DonorError(SystemExit):
@@ -242,8 +242,9 @@ DONOR_BODY_MAX = 64 * 1024
 # The generator caps a packet's const slab at 24 KiB before the donor trim
 # drops the vertices no corner names (Hyrule Temple: 82,292 B loaded, 33,348
 # B kept). The cap that holds is the blob loader's, on the trimmed packet
-# (nds_native_stage_blob.c, 40 KiB under P5).
-DONOR_SLAB_MAX = 40 * 1024
+# (nds_native_stage_blob.c, 56 KiB under P5: P7 C2's Board the Platforms for
+# Peach keeps 51,792 B; the slab is allocated by its size).
+DONOR_SLAB_MAX = 56 * 1024
 gen.MAX_SLAB_BYTES = max(gen.MAX_SLAB_BYTES, 128 * 1024)
 
 
@@ -449,6 +450,7 @@ def build_stage(stage: dict, stage_dir: Path, learn_pins: bool, owner_scale: flo
         "map_file": stage["header"]["file"], "map_offset": stage["header"]["offset"],
         "files": nitro,
         "hazard_roots": list(stage.get("hazard_roots", ())),
+        "bonus": stage.get("bonus"),
         "remix_bgm": stage.get("remix_bgm"),
         "header_bgm": stage["bgm_id"],
         "wallpaper_file": stage["wallpaper"][0],
@@ -566,7 +568,7 @@ def convert_wallpaper(stage: dict, stage_dir: Path, name: str) -> dict:
             "filename": asset.filename}
 
 
-def write_runtime(out: Path, facts: list[dict]) -> None:
+def write_runtime(out: Path, facts: list[dict], content_bonus: list[dict] | None = None) -> None:
     """The C rows the runtime reads for the Remix stages this build carries:
     nds_p5_native_stages.generated.h (rows, the reloc files, the packet
     maxima folded into the blob maxima) and nds_p5_adapter.generated.inc (the
@@ -607,6 +609,22 @@ def write_runtime(out: Path, facts: list[dict]) -> None:
           " * the stage's code constants that place things across it read it. */",
           "#define NDS_P5_STAGE_SCALE_ROWS(X) \\"]
     h += [f"    X({s['gkind']}, {s['owner_scale']!r}F) \\" for s in facts if s.get("owner_scale", 1.0) != 1.0]
+    h += ["    /* end */", "",
+          "/* X(gkind, class, w0, w1, w2): a bonus stage's btx words (P7 C2,",
+          " * stage_export.py): Break the Targets (1) {targets start, DObjDesc,",
+          " * AObjEvent32}, Board the Platforms (2) the bumpers' {DObjDesc,",
+          " * AObjEvent32}, offsets in its map file. */",
+          "#define NDS_P5_BONUS_STAGE_ROWS(X) \\"]
+    for s in facts:
+        if s.get("bonus"):
+            w = list(s["bonus"]["words"]) + [0] * (3 - len(s["bonus"]["words"]))
+            h.append(f"    X({s['gkind']}, {1 if s['bonus']['class'] == 'btt' else 2}, "
+                     f"{w[0]:#x}u, {w[1]:#x}u, {w[2]:#x}u) \\")
+    h += ["    /* end */", "",
+          "/* X(content, btt, btp): each content's bonus stages' kinds (P7 C2,",
+          " * stage_export.py contents_bonus.json): its donor row's pair. */",
+          "#define NDS_P5_CONTENT_BONUS_ROWS(X) \\"]
+    h += [f"    X({r['content']}, {r['btt']}, {r['btp']}) \\" for r in (content_bonus or [])]
     h += ["    /* end */", ""]
     if facts:
         h += ["/* Their packets join the blob maxima the workspaces are sized by. */"]
@@ -674,17 +692,18 @@ def main() -> int:
     ap.add_argument("--learn", action="store_true",
                     help="derive and write scripts/p5/pins/<stage>.json first")
     args = ap.parse_args()
-    rows = [r for r in p5_stages.load_registry() if r["source"] == "remix"]
+    rows = p5_stages.load_remix_rows(landed=not args.stage)
     if args.stage:
         rows = [r for r in rows if r["name"] in set(args.stage)]
-    else:
-        rows = [r for r in rows if r["landed"]]
     facts = []
     for row in rows:
         stage_dir = args.stages_root / row["name"]
         stage = json.loads((stage_dir / "stage.json").read_text(encoding="utf-8"))
         facts.append(build_stage(stage, stage_dir, args.learn, float(row.get("owner_scale", 1.0))))
-    write_runtime(args.runtime_out, facts)
+    bonus_path = args.stages_root / "contents_bonus.json"
+    content_bonus = (json.loads(bonus_path.read_text(encoding="utf-8"))
+                     if bonus_path.exists() else [])
+    write_runtime(args.runtime_out, facts, content_bonus)
     return 0
 
 

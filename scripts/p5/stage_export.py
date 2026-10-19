@@ -101,8 +101,20 @@ def export_stage(rom: remix_rom.Rom, u32, u8, f32, row: dict, out: Path,
     rid = row["remix_id"]
     map_fid = u32("stage_file_table", rid * 2)
     hoff = u32("stage_file_table", rid * 2 + 1)
-    if u8("class_table", rid) != 0:
-        raise ExportError(f"{row['name']}: Remix class {u8('class_table', rid)} is not BATTLE")
+    want = p5_stages.BONUS_CLASSES.get(row.get("class"), 0)
+    if u8("class_table", rid) != want:
+        raise ExportError(f"{row['name']}: Remix class {u8('class_table', rid)} is not {want}")
+    # P7 C2: a bonus stage's btx words (Stages.asm add_stage, bonus_pointer_table):
+    # Break the Targets' {targets start, DObjDesc, AObjEvent32} offsets in
+    # its map file, Board the Platforms' bumper {DObjDesc, AObjEvent32} -- the
+    # rows of the source's dSC1PBonusStageTargetDescs / BumperDescs.
+    bonus = None
+    if want != 0:
+        pointer = u32("bonus_pointer_table", rid)
+        if pointer == 0:
+            raise ExportError(f"{row['name']}: no bonus_pointer_table row")
+        bonus = {"class": row["class"],
+                 "words": [rom.u32_ram(pointer + 4 * k) for k in range(3 if want == 3 else 2)]}
     slot = Slots(rom)
     data = rom.file_bytes(map_fid)
     if hoff + HEADER_BYTES > len(data):
@@ -169,6 +181,7 @@ def export_stage(rom: remix_rom.Rom, u32, u8, f32, row: dict, out: Path,
         "team_map_bounds": list(struct.unpack_from(">4h", data, hoff + 0x92)),
         "zoom_start": list(struct.unpack_from(">3h", data, hoff + 0x9A)),
         "zoom_end": list(struct.unpack_from(">3h", data, hoff + 0xA0)),
+        "bonus": bonus,
         "remix": {
             "zoom": round(f32("zoom_table", rid), 4),
             "background_parent": u8("background_table", rid),
@@ -178,6 +191,49 @@ def export_stage(rom: remix_rom.Rom, u32, u8, f32, row: dict, out: Path,
     }
     p5_stages.write_if_changed(out / "stage.json", json.dumps(stage, indent=1) + "\n")
     return stage
+
+
+def export_content_bonus(staging: Path, out: Path) -> None:
+    """P7 C2: each content's Break the Targets and Board the Platforms kinds
+    (contents_bonus.json): the pair its donor's character row names (the
+    staging's Character.asm define_character, btt_stage_id/btp_stage_id), a
+    vanilla board by its source kind (Remix keeps the vanilla ids), a Remix
+    one by its bonus row's kind; an authored content (P6) borrows the pair
+    stages.json `bonus_borrow` names."""
+    import re
+    registry = json.loads(p5_stages.REGISTRY.read_text(encoding="utf-8"))
+    contents = json.loads((HERE.parent / "p4" / "contents.json").read_text(encoding="utf-8"))["contents"]
+    stages_asm = (staging / "src" / "Stages.asm").read_text(encoding="utf-8", errors="replace")
+    ids = p5_stages.asm_scope_constants(stages_asm, "id")
+    by_remix = {r["remix_id"]: r["gkind"] for r in p5_stages.load_bonus_registry()}
+    chars = (staging / "src" / "Character.asm").read_text(encoding="utf-8", errors="replace")
+
+    def kind_of(stage_token: str) -> int:
+        rid = ids[stage_token]
+        if 0x11 <= rid <= 0x28:
+            return rid          # a vanilla board: its id is its source kind
+        if rid not in by_remix:
+            raise ExportError(f"Stages.id.{stage_token}: no bonus row in stages.json")
+        return by_remix[rid]
+
+    def pair(remix: str) -> list[int]:
+        m = re.search(r"^\s*define_character\(" + re.escape(remix) + r",([^\n]*)\)", chars, re.M)
+        if m is None:
+            raise ExportError(f"Character.asm: no define_character({remix}, ...)")
+        args = [a.strip() for a in (remix + "," + m.group(1)).split(",")]
+        return [kind_of(args[i].rsplit(".", 1)[-1]) for i in (15, 16)]
+
+    rows = []
+    by_name = {c["name"]: c for c in contents}
+    for c in contents:
+        remix = c.get("remix")
+        if remix is None:
+            remix = registry.get("bonus_borrow", {}).get(c["name"])
+        if remix is None:
+            remix = by_name.get(c.get("base"), {}).get("remix")
+        btt, btp = pair(remix)
+        rows.append({"content": c["id"], "name": c["name"], "btt": btt, "btp": btp})
+    p5_stages.write_if_changed(out / "contents_bonus.json", json.dumps(rows, indent=1) + "\n")
 
 
 def main() -> int:
@@ -191,9 +247,7 @@ def main() -> int:
     ap.add_argument("--verify-repeat", action="store_true",
                     help="export twice and require identical bytes")
     args = ap.parse_args()
-    rows = [r for r in p5_stages.load_registry() if r["source"] == "remix"]
-    if args.landed:
-        rows = [r for r in rows if r["landed"]]
+    rows = p5_stages.load_remix_rows(landed=args.landed)
     if args.stage:
         names = set(args.stage)
         rows = [r for r in rows if r["name"] in names]
@@ -201,6 +255,7 @@ def main() -> int:
         if missing:
             raise ExportError(f"not Remix stages in stages.json: {sorted(missing)}")
     rom, u32, u8, f32, table = p5_stages.remix_tables(args.staging)
+    export_content_bonus(args.staging, args.out)
     for row in rows:
         out = args.out / row["name"]
         stage = export_stage(rom, u32, u8, f32, row, out, table)

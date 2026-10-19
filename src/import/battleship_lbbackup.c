@@ -66,10 +66,14 @@ sb32 lbBackupIsChecksumValid(void)
 /* lbbackup.c:36-41 */
 void lbBackupWrite(void)
 {
+    /* P7 C3: a content's or Metal Mario's run keeps its own row in its
+     * parent's slot; the image saves the parent's, the row its own file. */
+    ndsP7OnePSaveBegin();
     gSCManagerBackupData.checksum = lbBackupCreateChecksum(&gSCManagerBackupData);
     ndsBackupSramWrite(&gSCManagerBackupData, NDS_LBBACKUP_COPY0_OFFSET, sizeof(LBBackupData));
     ndsBackupSramWrite(&gSCManagerBackupData, NDS_LBBACKUP_COPY1_OFFSET, sizeof(LBBackupData));
     (void)ndsBackupFlush();
+    ndsP7OnePSaveEnd();
 }
 
 /* lbbackup.c:44-63, then P7's progress block (U1): its own copies, read
@@ -161,7 +165,7 @@ void lbBackupClearNewcomers(void)
     ndsP7ClearFighters();
 }
 
-/* lbbackup.c:135-146 */
+/* lbbackup.c:135-146; P7: the wide 1P records' run fields too (C3). */
 void lbBackupClear1PHighScore(void)
 {
     s32 i;
@@ -174,6 +178,7 @@ void lbBackupClear1PHighScore(void)
         gSCManagerBackupData.spgame_records[i].spgame_best_difficulty = dSCManagerDefaultBackupData.spgame_records[i].spgame_best_difficulty;
         gSCManagerBackupData.spgame_records[i].is_spgame_complete     = dSCManagerDefaultBackupData.spgame_records[i].is_spgame_complete;
     }
+    ndsP7OnePRecordsClear(NDS_P7_1P_CLEAR_RUN);
 }
 
 /* lbbackup.c:150-159; P7: the wide records too (U2). */
@@ -189,7 +194,7 @@ void lbBackupClearVSRecord(void)
     ndsP7RecordsClear();
 }
 
-/* lbbackup.c:162-173 */
+/* lbbackup.c:162-173; P7: the wide 1P records' bonus fields too (C3). */
 void lbBackupClearBonusStageTime(void)
 {
     s32 i;
@@ -201,6 +206,7 @@ void lbBackupClearBonusStageTime(void)
         gSCManagerBackupData.spgame_records[i].bonus2_time       = dSCManagerDefaultBackupData.spgame_records[i].bonus2_time;
         gSCManagerBackupData.spgame_records[i].bonus2_task_count = dSCManagerDefaultBackupData.spgame_records[i].bonus2_task_count;
     }
+    ndsP7OnePRecordsClear(NDS_P7_1P_CLEAR_BONUS);
 }
 
 /* lbbackup.c:176-183; P7: the new stages are prizes, the new fighters stay
@@ -220,4 +226,5 @@ void lbBackupClearAllData(void)
     gSCManagerBackupData = dSCManagerDefaultBackupData;
     ndsP7ClearAll();
     ndsP7RecordsClear();
+    ndsP7OnePRecordsClear(NDS_P7_1P_CLEAR_ALL);
 }

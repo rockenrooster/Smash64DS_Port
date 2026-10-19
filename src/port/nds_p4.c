@@ -347,6 +347,20 @@ u32 ndsP4MatchContent(s32 player)
     case nSCKind1PChallenger:
         /* P7 U5: a content challenger's screen; 0 in every other 1P scene. */
         return ndsP7ChallengerContent(player);
+    case nSCKind1PContinue:
+    case nSCKindEnding:
+        /* P7 C1: the campaign player's figure on the continue screen and in
+         * the ending (mnPlayers1PGameContinueMakeFighter,
+         * mvEndingMakeFighter: seat 0, the select's kind). */
+        if (player == 0)
+        {
+            const NDSP4Fighter *f = ndsP4Fighter(gNdsP4OnePlayerContent);
+
+            return ((f != NULL) &&
+                    (f->parent_kind == (s32)gSCManagerSceneData.fkind)) ?
+                (u32)gNdsP4OnePlayerContent : 0u;
+        }
+        return 0u;
     case nSCKind1PTrainingMode:
         /* P7 C4: the man and the COM by the scene's own seats. */
         if (player == (s32)gSCManagerSceneData.player)
@@ -380,9 +394,25 @@ s32 ndsP4PipeTurnKind(const FTStruct *fp)
         (s32)fp->fkind : NDS_P4_FOREIGN_FKIND;
 }
 
+/* S15 (owner 2026-10-08): a content in a battle of three or four fighters
+ * keeps its low detail. The campaign's team stages are such battles too (P7
+ * C1: Palutena's high image and pack ran Giant DK's and the Polygon Team's
+ * setups out of memory). */
 sb32 ndsP4LowDetailBattle(void)
 {
-    if (gSCManagerSceneData.scene_curr != nSCKindVSBattle)
+    const u32 scene = (u32)gSCManagerSceneData.scene_curr;
+
+    if ((scene != (u32)nSCKindVSBattle)
+#if NDS_P2_1P_GAME
+        && (scene != (u32)nSCKind1PGame) &&
+        (scene != (u32)nSCKind1PBonusStage) &&
+        (scene != (u32)nSCKind1PTrainingMode)
+#endif
+       )
+    {
+        return FALSE;
+    }
+    if (gSCManagerBattleState == NULL)
     {
         return FALSE;
     }
@@ -417,9 +447,24 @@ sb32 ndsP4DuelHighDetail(s32 player, s32 fkind)
     return ((f != NULL) && (f->overrides != NULL) && (f->overrides->duel_high_detail != 0u)) ? TRUE : FALSE;
 }
 
+/* The native character select: the VS select, and the training and (P7 C1)
+ * 1P selects it also runs as -- its previews take their contents from the
+ * screen (sNdsP4PreviewContent), not from a match's seats. */
+static sb32 ndsP4SceneIsSelect(void)
+{
+    const u32 scene = (u32)gSCManagerSceneData.scene_curr;
+
+    return ((scene == (u32)nSCKindPlayersVS)
+#if NDS_P2_1P_GAME && NDS_P2_MENU_SHELL
+            || (scene == (u32)nSCKindPlayers1PTraining) ||
+            (scene == (u32)nSCKind1PGamePlayers)
+#endif
+           ) ? TRUE : FALSE;
+}
+
 sb32 ndsP4LowDetailSelect(void)
 {
-    return (gSCManagerSceneData.scene_curr == nSCKindPlayersVS) ? TRUE : FALSE;
+    return ndsP4SceneIsSelect();
 }
 
 void ftNessSpecialLwProcAbsorb(GObj *fighter_gobj);
@@ -584,7 +629,7 @@ u32 ndsP4MakeContent(s32 player, s32 fkind)
     {
         return 0u;
     }
-    content = (gSCManagerSceneData.scene_curr == nSCKindPlayersVS) ?
+    content = (ndsP4SceneIsSelect() != FALSE) ?
         sNdsP4PreviewContent[player] : ndsP4MatchContent(player);
     f = ndsP4Fighter(content);
     return ((f != NULL) && (f->parent_kind == fkind)) ? content : 0u;

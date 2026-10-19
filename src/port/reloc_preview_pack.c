@@ -8,7 +8,16 @@ u32 ndsRelocUseBattleCoreFighterData(void)
 {
 #if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
     return (gNdsSceneManagerCurrIsBattle != 0u) ||
-           (gSCManagerSceneData.scene_curr == nSCKindVSResults);
+           (gSCManagerSceneData.scene_curr == nSCKindVSResults)
+#if NDS_P2_1P_GAME
+           /* P7 C1: the 1P continue and the ending movie stand one fighter
+            * in its demo poses, as Results does, and a content's whole main
+            * tree did not fit there (Palutena's continue: 262,320 B asked,
+            * 140,960 free, 2026-10-19). */
+           || (gSCManagerSceneData.scene_curr == nSCKind1PContinue)
+           || (gSCManagerSceneData.scene_curr == nSCKindEnding)
+#endif
+           ;
 #else
     return FALSE;
 #endif
@@ -271,6 +280,20 @@ static u32 ndsRelocNativeRootOffset(const NDSRelocLoadedFile *loaded, const Gfx 
 {
     const NDSPreviewPackSection *section = ndsPreviewSection(loaded, NULL);
     u32 offset = (u32)((uintptr_t)dl - (uintptr_t)loaded->data);
+    if ((section == NULL) && (loaded->reserved[2] != 0u))
+    {
+        /* A compact polygon model: its display lists are the same identity
+         * cells, ahead of the joint tree (ndsRelocCompactModelProbe). */
+        u32 cells = (u32)loaded->compact_lo + NDS_RELOC_COMPACT_MODEL_HEADER;
+
+        if ((offset >= cells) && (offset < loaded->compact_hi) &&
+            (((offset - cells) & 7u) == 0u) &&
+            (ndsRelocReadNative32(dl) == 0xdf000000u))
+        {
+            return ndsRelocReadNative32((const u8 *)dl + 4u);
+        }
+        return offset;
+    }
     if (section == NULL) { return loaded->reserved[0] ? UINT32_MAX : offset; }
     if ((offset < section->roots_offset) ||
         (((offset - section->roots_offset) & 7u) != 0u) ||
@@ -293,6 +316,10 @@ const void *ndsRelocNativeRootAddress(const void *base, u32 root_offset)
         return NULL;
     }
     loaded = ndsRelocFindLoadedFileByData((void *)base);
+    if ((loaded != NULL) && (loaded->reserved[2] != 0u))
+    {
+        return ndsRelocLoadedFileTarget(loaded, root_offset);
+    }
     if ((loaded == NULL) || (loaded->reserved[0] == 0u))
     {
         return (const u8 *)base + root_offset;
@@ -324,6 +351,10 @@ static u32 ndsRelocSceneShowsPreviewFighter(void)
     u8 scene = gSCManagerSceneData.scene_curr;
 
     return ((scene == nSCKind1PGamePlayers) || (scene == nSCKindPlayersVS) ||
+#if NDS_P2_1P_GAME && NDS_P2_MENU_SHELL
+            /* P7 C4: the training select is the native VS screen. */
+            (scene == nSCKindPlayers1PTraining) ||
+#endif
             (scene == nSCKind1PBonus1Players) ||
             (scene == nSCKind1PBonus2Players)) ? TRUE : FALSE;
 }
@@ -802,7 +833,13 @@ void *ndsRelocPreviewFighterLoadBegin(s32 fkind)
         (ndsPreviewKindIndex(fkind) < 0)) { return NULL; }
 #if NDS_P4
     if ((fkind == nFTKindMMario) &&
-        (gSCManagerSceneData.scene_curr != nSCKindPlayersVS))
+        (gSCManagerSceneData.scene_curr != nSCKindPlayersVS)
+#if NDS_P2_1P_GAME && NDS_P2_MENU_SHELL
+        && (gSCManagerSceneData.scene_curr != nSCKindPlayers1PTraining)
+        /* P7 C1: the 1P select is the same screen. */
+        && (gSCManagerSceneData.scene_curr != nSCKind1PGamePlayers)
+#endif
+        )
     {
         return NULL;
     }

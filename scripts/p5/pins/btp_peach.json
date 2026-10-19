@@ -1,0 +1,52 @@
+{
+ "expected_counts": {
+  "callbacks": 2,
+  "dobjs": 29,
+  "bindings": 19,
+  "commands": 1505,
+  "vertex_commands": 99,
+  "source_vertices": 2607,
+  "modify_vertex_commands": 0,
+  "triangle_commands": 297,
+  "triangles": 570,
+  "runs": 126,
+  "texture_epochs": 71,
+  "material_events": 0,
+  "cross_runs": 0,
+  "cross_tris": 0,
+  "cross_corners": 0,
+  "state_events": 691,
+  "state_deltas": 61,
+  "sync_events": 399,
+  "submit_classes": [
+   61,
+   48,
+   461
+  ],
+  "alpha_clone_vertices": 6
+ },
+ "material_command_partition": [],
+ "segment_partition": [
+  [
+   0,
+   4,
+   0,
+   9,
+   0,
+   10
+  ],
+  [
+   1,
+   6,
+   9,
+   10,
+   10,
+   116
+  ]
+ ],
+ "include_sha": "615ba6c85a09e2b312144c0f1c73240a884f4cc80c9518d3bc01fe775fa5764b",
+ "o2r": {
+  "stage_geometry": "98ec471f809834f62925341037ad6182e1d6fbdf195a79e9c93a30c904190701",
+  "stage_map": "ad9e251a113e3418ce82770275f1f6eb7def66fc9287dd9c8b96858eef8b55ab"
+ }
+}

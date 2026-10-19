@@ -130,7 +130,8 @@ static void ndsIFCommonAddGObjDisplay(GObj *gobj,
  * is a VS stage, so it reads the bound as unreachable and announces GAME SET;
  * the bound is unchanged for every source kind. */
 #define nGRKindBonusStageStart \
-    (((u32)gSCManagerBattleState->gkind > (u32)nGRKindBonusStageEnd) ? \
+    ((((u32)gSCManagerBattleState->gkind > (u32)nGRKindBonusStageEnd) && \
+      (ndsP5BonusClass((u32)gSCManagerBattleState->gkind) == 0u)) ? \
      0x7FFFFFFF : nGRKindBonusStageStart)
 #endif
 #include "../../decomp/BattleShip-main/decomp/src/if/ifcommon.c"

@@ -186,7 +186,14 @@ void sc1PTrainingModeUnderlineProcDisplay(GObj *interface_gobj);
 #define sc1PTrainingModeMenuProcDisplay(arg)     ndsBaseSC1PTrainingModeMenuProcDisplay(arg)
 #define sc1PTrainingModeUnderlineProcDisplay(arg)     ndsBaseSC1PTrainingModeUnderlineProcDisplay(arg)
 
+/* Training shows none of IFCommonAnnounceCommon's letters
+ * (battleship_sc1pgame_runtime.c ndsSC1PLoadCommonFiles). */
+void ndsSC1PLoadCommonFiles(sb32 keep_letters);
+#pragma push_macro("lbRelocLoadFilesListed")
+#undef lbRelocLoadFilesListed
+#define lbRelocLoadFilesListed(file_ids, out_ptrs) ndsSC1PLoadCommonFiles(FALSE)
 #include "../../decomp/BattleShip-main/decomp/src/sc/sc1pmode/sc1ptrainingmode.c"
+#pragma pop_macro("lbRelocLoadFilesListed")
 
 #undef sc1PTrainingModeUnderlineProcDisplay
 #undef sc1PTrainingModeMenuProcDisplay

@@ -12,6 +12,7 @@
 #include <PR/sp.h>
 #include <nds/nds_ifcommon_oam.h>
 #include <nds/nds_platform.h>
+#include <nds/nds_p5.h>
 
 #if NDS_SHIP_TELEMETRY
 #define NDS_IFCOMMON_TELEMETRY_TICK() cpuGetTiming()
@@ -4361,7 +4362,7 @@ static s32 ndsIFCommonIsBonusTaskGObj(struct GObj *gobj)
     {
         return FALSE;
     }
-    return (gobj == ((gSCManagerBattleState->gkind >= nGRKindBonus2Start) ?
+    return (gobj == ((ndsGrBonusClass(gSCManagerBattleState->gkind) == 2u) ?
                      gGRCommonStruct.bonus2.interface_gobj :
                      gGRCommonStruct.bonus1.interface_gobj)) ? TRUE : FALSE;
 }

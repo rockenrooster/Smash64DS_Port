@@ -36,11 +36,22 @@ static inline s32 ndsP5StageUnlockId(u32 gkind)
     return -1;
 }
 
-/* A Remix stage (as opposed to a vanilla 1P arena): its kind is past the
- * source's last ground, nGRKindBonus2Ness (40). */
+/* P7 C2: a content's own bonus board (stages.json `bonus`): 1 Break the
+ * Targets, 2 Board the Platforms; 0 for every other kind. */
+static inline u32 ndsP5BonusClass(u32 gkind)
+{
+#define NDS_P5_BONUS_CLASS_ROW(g, token, cls)     if (gkind == (u32)(g)) { return (u32)(cls); }
+    NDS_P5_BONUS_ROWS(NDS_P5_BONUS_CLASS_ROW)
+#undef NDS_P5_BONUS_CLASS_ROW
+    return 0u;
+}
+
+/* A Remix VS stage (as opposed to a vanilla 1P arena or a content's bonus
+ * board): its kind is past the source's last ground, nGRKindBonus2Ness (40). */
 static inline u32 ndsP5StageIsRemix(u32 gkind)
 {
-    return ((gkind > 40u) && (gkind <= NDS_P5_GKIND_MAX)) ? TRUE : FALSE;
+    return ((gkind > 40u) && (gkind <= NDS_P5_GKIND_MAX) &&
+            (ndsP5BonusClass(gkind) == 0u)) ? TRUE : FALSE;
 }
 
 /* Remix Camera.asm: the stages whose row routes the match camera to the
@@ -68,5 +79,25 @@ static inline s32 ndsP5StageSongSwitch(u32 gkind, u32 frame, u32 bgm_default)
     return -1;
 }
 #endif
+
+/* Which bonus board a kind is: 1 Break the Targets, 2 Board the Platforms
+ * (the source's nGRKindBonus1Mario..Ness 17-28 and nGRKindBonus2Mario..Ness
+ * 29-40, and P7 C2's content boards), 0 for every other kind. */
+static inline u32 ndsGrBonusClass(s32 gkind)
+{
+    if ((gkind >= 17) && (gkind <= 28))
+    {
+        return 1u;
+    }
+    if ((gkind >= 29) && (gkind <= 40))
+    {
+        return 2u;
+    }
+#if NDS_P5
+    return ndsP5BonusClass((u32)gkind);
+#else
+    return 0u;
+#endif
+}
 
 #endif

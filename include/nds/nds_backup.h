@@ -38,6 +38,8 @@ s32 ndsBackupFlush(void);
  * Callers hold the file-system lock (ndsFsLock). Recovery order: the
  * canonical name, its .bak, its .tmp. */
 #define NDS_BACKUP_SIBLING_RECORDS 0u
+/* P7 C3's 1P records (nds_p7_records.c). */
+#define NDS_BACKUP_SIBLING_1P_RECORDS 1u
 #define NDS_BACKUP_RECOVERY_NAMES 3u
 typedef s32 (*NDSBackupWriter)(FILE *tmp, void *ctx);
 FILE *ndsBackupOpenSibling(u32 sibling, u32 recovery, const char *mode);

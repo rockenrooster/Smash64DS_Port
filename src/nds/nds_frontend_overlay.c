@@ -196,6 +196,24 @@ void ndsFrontendOverlayBeginScene(u32 kind)
         NDS_DIAG(gNdsFrontendOverlayTailLoanCount++);
         sNdsFrontendTailLoaned = 1u;
     }
+    else if (((kind == (u32)nSCKindEnding) ||
+              (kind == (u32)nSCKind1PContinue)) &&
+             (sNdsFrontendLoaded != 0u) && (sNdsFrontendTailDirty == 0u))
+    {
+        /* The 1P ending movie runs its own code (the middle range), the 1P
+         * manager's (the head) and then the staff roll's and Congratulations'
+         * (the middle again); the continue screen runs its own and the
+         * manager's. The Results block and the select's block after it are
+         * idle until the overlay reloads. A content's ending fighter ran the
+         * heap out there (P7 C1, Wario: 35,760 B asked, 14,376 free,
+         * 2026-10-19); they lend 199,712 B on the walk layout. */
+        sNdsFrontendCursor = __nds_frontend_results_start;
+        sNdsFrontendLoanEnd = __nds_frontend_select_end;
+        gNdsFrontendOverlayLoanBytes =
+            (u32)(__nds_frontend_select_end - __nds_frontend_results_start);
+        gNdsFrontendOverlayLoanCount++;
+        sNdsFrontendTailLoaned = 1u;
+    }
     else if ((kind == (u32)nSCKindVSResults) && (sNdsFrontendLoaded != 0u))
     {
         /* VS Results runs only its own block, linked last; everything before

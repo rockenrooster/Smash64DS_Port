@@ -115,6 +115,29 @@ def load_registry() -> list[dict]:
     return rows
 
 
+BONUS_CLASSES = {"btt": 3, "btp": 2}   # Stages.asm `class`: BTT 3, BTP 2
+
+
+def load_bonus_registry() -> list[dict]:
+    """P7 C2: the contents' bonus stages (stages.json `bonus`): Remix Break
+    the Targets / Board the Platforms stages, kinds after the VS stages', no
+    select cell and no unlock of their own."""
+    rows = json.loads(REGISTRY.read_text(encoding="utf-8")).get("bonus", [])
+    seen = {r["gkind"] for r in load_registry()}
+    for row in rows:
+        if row["gkind"] in seen or row.get("class") not in BONUS_CLASSES:
+            raise StageError(f"stages.json: bonus row {row['name']}: duplicate gkind or no class")
+        seen.add(row["gkind"])
+    return rows
+
+
+def load_remix_rows(landed: bool = True) -> list[dict]:
+    """Every Remix stage the pipeline exports and converts: the VS stages
+    and the bonus stages."""
+    rows = [r for r in load_registry() if r["source"] == "remix"] + load_bonus_registry()
+    return [r for r in rows if r["landed"]] if landed else rows
+
+
 def asm_scope_constants(text: str, scope: str) -> dict[str, int]:
     """`constant NAME(expr)` rows inside `scope <scope> {`, expr a hex sum."""
     m = re.search(r"scope\s+" + re.escape(scope) + r"\s*:?\s*\{", text)
@@ -152,9 +175,16 @@ def emit_header(path: Path, rows: list[dict]) -> None:
             f"{1 if row['landed'] else 0}, {1 if row['camera'] == 'inishie' else 0}, "
             f"{1 if row['items'] == 'none' else 0}, {b0}, {b1}, "
             f"{row.get('bgm_switch_frame', 0)}) \\")
+    bonus = load_bonus_registry()
     lines += ["    /* end */", "",
               f"#define NDS_P5_STAGE_COUNT {len(rows)}u",
-              f"#define NDS_P5_GKIND_MAX {max(r['gkind'] for r in rows)}u", "",
+              f"#define NDS_P5_GKIND_MAX {max(r['gkind'] for r in rows + bonus)}u", "",
+              "/* P7 C2: X(gkind, TOKEN, class) -- a content's bonus stage, class 1",
+              " * Break the Targets, 2 Board the Platforms. */",
+              "#define NDS_P5_BONUS_ROWS(X) \\"]
+    lines += [f"    X({r['gkind']}, {r['token']}, {1 if r['class'] == 'btt' else 2}) \\"
+              for r in bonus if r["landed"]]
+    lines += ["    /* end */", "",
               "#endif", ""]
     text = "\n".join(lines)
     write_if_changed(path, text)
@@ -345,9 +375,9 @@ def main() -> int:
         print(" ".join(f"{r['name']}:{r['gkind']}" for r in rows))
         return 0
     if args.remix_landed:
-        # "name:c_name" per landed Remix stage, for the NitroFS staging rule.
-        print(" ".join(f"{r['name']}:{r['c_name']}" for r in rows
-                       if r["source"] == "remix" and r["landed"]))
+        # "name:c_name" per landed Remix stage (the bonus stages included),
+        # for the NitroFS staging rule.
+        print(" ".join(f"{r['name']}:{r['c_name']}" for r in load_remix_rows()))
         return 0
     if args.header is not None:
         emit_header(args.header, rows)

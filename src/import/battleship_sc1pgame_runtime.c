@@ -144,7 +144,14 @@ static void ndsSC1PGameMapObjIDsKind(s32 kind, s32 *ids)
  * header plus a CALL into relocData file 200's MIPS code -- is compiled out
  * under SSB64_TARGET_NDS, since no include-side seam can skip a call through
  * a data pointer inside the function. */
+/* The common interface files, less IFCommonAnnounceCommon outside Race to
+ * the Finish (below). */
+void ndsSC1PLoadCommonFiles(sb32 keep_letters);
+#pragma push_macro("lbRelocLoadFilesListed")
+#undef lbRelocLoadFilesListed
+#define lbRelocLoadFilesListed(file_ids, out_ptrs)     ndsSC1PLoadCommonFiles(         (gSCManagerSceneData.spgame_stage == nSC1PGameStageBonus3) ? TRUE : FALSE)
 #include <battleship_overlay/src/sc/sc1pmode/sc1pgame.c>
+#pragma pop_macro("lbRelocLoadFilesListed")
 #undef ftManagerAllocFighter
 #undef mpCollisionGetMapObjCountKind
 #undef mpCollisionGetMapObjIDsKind
@@ -184,6 +191,28 @@ static void ndsSC1PGamePrepareKirbyHats(void)
 #endif
 
 #undef sc1PGameStartScene
+
+/* The common interface files (gmcommon.c), less IFCommonAnnounceCommon unless
+ * `keep_letters`. Its 32,496 B are the letters of SUDDEN DEATH!, FAILURE and
+ * COMPLETE! (ifcommon.c:2363, :3243, :3255): the campaign shows the last two
+ * only in Race to the Finish (sc1PGameInitTimeUpMessage, grbonus3.c:86) and
+ * Training never, while TIME UP and GAME SET are IFCommonGameStatus's. VS
+ * drops them the same way (battleship_scvsbattle.c), which these battles did
+ * not: Giant DK's and the Polygon Team's setups ran the heap out with them
+ * resident and unread (P7 C1, Palutena's campaign). */
+void ndsSC1PLoadCommonFiles(sb32 keep_letters)
+{
+    u32 count = ARRAY_COUNT(dGMCommonFileIDs);
+
+    if ((keep_letters == FALSE) &&
+        (dGMCommonFileIDs[count - 1u] == (u32)&llIFCommonAnnounceCommonFileID))
+    {
+        count--;
+        gGMCommonFiles[count] = NULL;
+    }
+    lbRelocLoadFilesExtern(dGMCommonFileIDs, count, gGMCommonFiles,
+        syTaskmanMalloc(lbRelocGetAllocSize(dGMCommonFileIDs, count), 0x10));
+}
 
 /* Bridge diagnostics: what was asked, what booted, what was refused and why.
  * RefusedStage is indexed by spgame_stage (CommonStart..ChallengerEnd). */

@@ -110,10 +110,17 @@ static u32 ndsSeamRunSourceMenuScene(struct SYTaskFunction *tfunc, u32 is_result
          * the driver is menu-shell code in the frontend overlay's select
          * block, which VS Results lends as scene-asset memory, so the VS
          * route must not call into it there (a data abort after an Ike and
-         * Palutena match, 2026-10-14). */
-        if (gNdsMenuShellWalkRoute == 1u)
+         * Palutena match, 2026-10-14). The 1P ending movie lends that block
+         * too (2026-10-19), so the driver also waits for the overlay's tail
+         * to be resident. */
         {
-            ndsMenuShellWalkDrive1PSourceMenus();
+            s32 ndsFrontendOverlayTailResident(void);
+
+            if ((gNdsMenuShellWalkRoute == 1u) &&
+                (ndsFrontendOverlayTailResident() != FALSE))
+            {
+                ndsMenuShellWalkDrive1PSourceMenus();
+            }
         }
 #endif
         if (is_results != 0u)
@@ -297,6 +304,11 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
         /* P7 C4: the training select is the same native screen in its
          * two-slot mode (nds_menu_shell_css.c sCssTraining); the imported
          * mnplayers1ptraining.c scene had no presenter. */
+#if NDS_P4
+    case nSCKind1PGamePlayers:
+        /* P7 C1: with Remix contents the 1P select is the native screen
+         * in its one-card mode (sCssOneP) on Remix's grid. */
+#endif
 #endif
         ndsMenuShellRunCharSelect();
         ndsFinishTaskmanRun();
@@ -488,7 +500,9 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
      * nSCKind1PGame, the intro to the fight, the tally to the next stage,
      * the challenger to its fight, the ending to the credits, the credits to
      * the title), which the pump's LoadScene return honours. */
+#if !NDS_P4
     case nSCKind1PGamePlayers:
+#endif
     case nSCKind1PBonus1Players:
     case nSCKind1PBonus2Players:
     case nSCKind1PIntro:

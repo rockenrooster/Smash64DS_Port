@@ -163,6 +163,16 @@ static void ndsMenuShellEnterBackdrop(u32 screen)
                                          sizeof(kNdsMenuVsSurfaces[0])));
         break;
     case NDS_MENU_SHELL_SCREEN_CSS:
+#if NDS_P4
+        if (sCssOneP != 0u)
+        {
+            /* P7 C1: the 1P select's own base over the same grid. */
+            NdsUiKitSurfaceId onep = NDS_MN_UI_KIT_SURFACE_ONEP_P4_CSS_SCREEN;
+
+            (void)ndsUiKitBlitSurfaces(&onep, 1u);
+            break;
+        }
+#endif
         (void)ndsUiKitBlitSurfaces(kNdsMenuCssSurfaces,
                                    (u32)(sizeof(kNdsMenuCssSurfaces) /
                                          sizeof(kNdsMenuCssSurfaces[0])));

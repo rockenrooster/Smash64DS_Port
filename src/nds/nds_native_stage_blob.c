@@ -40,12 +40,14 @@
 #endif
 #define NDS_NATIVE_STAGE_BLOB_BODY_CAP_BYTES (32u * 1024u)
 #if NDS_P5
-/* P5: Hyrule Temple's packet, the largest stage (slab 33,348 B, body 34,788
- * B); the vanilla stages stay under the old caps. */
+/* P5: Hyrule Temple's packet (slab 33,348 B, body 34,788 B), and P7 C2's
+ * Board the Platforms for Peach (slab 51,792 B), the largest; the vanilla
+ * stages stay under the old caps. Both are sanity bounds: the body is
+ * allocated by its own size. */
 #undef NDS_NATIVE_STAGE_BLOB_MAX_SLAB_BYTES
-#define NDS_NATIVE_STAGE_BLOB_MAX_SLAB_BYTES (40u * 1024u)
+#define NDS_NATIVE_STAGE_BLOB_MAX_SLAB_BYTES (56u * 1024u)
 #undef NDS_NATIVE_STAGE_BLOB_BODY_CAP_BYTES
-#define NDS_NATIVE_STAGE_BLOB_BODY_CAP_BYTES (40u * 1024u)
+#define NDS_NATIVE_STAGE_BLOB_BODY_CAP_BYTES (56u * 1024u)
 #endif
 /* nds_renderer_assets.c: the owner's run and vertex workspace for a packet's
  * counts, allocated beside its slab. */

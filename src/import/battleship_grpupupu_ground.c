@@ -111,12 +111,19 @@ void ndsBaseGRCommonSetupInitAll(void);
  * (Remix Stages.asm function_table: CLONE), so for it both bounds read as
  * unreachable and the dispatch makes nothing -- the bounds are unchanged for
  * every source kind. */
+/* P7 C2: a content's own bonus board lies past them too, and reads its own
+ * class's bound as its own kind (Board the Platforms reaches InitBonus2, Break
+ * the Targets MakeBonus1Ground). */
 #define nGRKindBonus2Start \
-    (((u32)gSCManagerBattleState->gkind > (u32)nGRKindBonusStageEnd) ? \
-     0x7FFFFFFF : nGRKindBonus2Start)
+    ((ndsP5BonusClass((u32)gSCManagerBattleState->gkind) == 2u) ? \
+     (s32)gSCManagerBattleState->gkind : \
+     (((u32)gSCManagerBattleState->gkind > (u32)nGRKindBonusStageEnd) ? \
+      0x7FFFFFFF : nGRKindBonus2Start))
 #define nGRKindBonus1Start \
-    (((u32)gSCManagerBattleState->gkind > (u32)nGRKindBonusStageEnd) ? \
-     0x7FFFFFFF : nGRKindBonus1Start)
+    ((ndsP5BonusClass((u32)gSCManagerBattleState->gkind) == 1u) ? \
+     (s32)gSCManagerBattleState->gkind : \
+     (((u32)gSCManagerBattleState->gkind > (u32)nGRKindBonusStageEnd) ? \
+      0x7FFFFFFF : nGRKindBonus1Start))
 #endif
 #if NDS_P5
 #define grMainSetupMakeGround ndsBaseGRMainSetupMakeGround
@@ -699,8 +706,7 @@ void grCommonSetupInitAll(void)
          (gSCManagerBattleState->gkind == nGRKindZako) ||
          (gSCManagerBattleState->gkind == nGRKindBonus3) ||
          (gSCManagerBattleState->gkind == nGRKindLast) ||
-         ((gSCManagerBattleState->gkind >= nGRKindBonus1Start) &&
-          (gSCManagerBattleState->gkind <= nGRKindBonus2End))) &&
+         (ndsGrBonusClass(gSCManagerBattleState->gkind) != 0u)) &&
         (gMPCollisionGroundData != NULL) &&
         (gNdsSCVSBattleStageGroundDataReady != 0u))
     {

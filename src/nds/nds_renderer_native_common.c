@@ -4932,8 +4932,11 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
 }
 
 #ifdef NDS_ENTRY_EFFECT_P4_ROOT_COUNT
-/* The battle's players' contents (character select or a lab descriptor). */
-extern u8 gNdsP4PlayerContent[];
+/* The battle's players' contents: the VS select's or a lab descriptor's, and
+ * in a campaign, bonus or training battle its own seats' (P7 C1: Palutena's
+ * and Snake's article roots failed closed in the 1P game, their corner
+ * blocks never loaded). nds_p4.c. */
+extern u32 ndsP4MatchContent(s32 player);
 
 static sb32 ndsRendererEntryEffectP4ContentInMatch(u32 content)
 {
@@ -4955,7 +4958,7 @@ static sb32 ndsRendererEntryEffectP4ContentInMatch(u32 content)
 
     for (player = 0u; player < 4u; player++)
     {
-        if ((u32)gNdsP4PlayerContent[player] == content)
+        if (ndsP4MatchContent((s32)player) == content)
         {
             return TRUE;
         }

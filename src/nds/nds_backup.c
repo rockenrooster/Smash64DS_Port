@@ -285,22 +285,29 @@ s32 ndsBackupFlush(void)
     NDS_P2_MENU_WALK || NDS_HARNESS_FAST_LOGIC || NDS_R2_BOTH_CPU || \
     NDS_P2_FOUR_CPU_STRESS
 #define NDS_BACKUP_RECORDS_FILENAME "smash64ds-diagnostic-vs.sav"
+#define NDS_BACKUP_1P_RECORDS_FILENAME "smash64ds-diagnostic-1p.sav"
 #else
 #define NDS_BACKUP_RECORDS_FILENAME "smash64ds-vs.sav"
+#define NDS_BACKUP_1P_RECORDS_FILENAME "smash64ds-1p.sav"
 #endif
-static const char *const sNdsBackupSiblingNames[][NDS_BACKUP_RECOVERY_NAMES] = {
-    { "fat:/" NDS_BACKUP_RECORDS_FILENAME, "fat:/" NDS_BACKUP_RECORDS_FILENAME ".bak",
-      "fat:/" NDS_BACKUP_RECORDS_FILENAME ".tmp" },
-    { "sd:/" NDS_BACKUP_RECORDS_FILENAME, "sd:/" NDS_BACKUP_RECORDS_FILENAME ".bak",
-      "sd:/" NDS_BACKUP_RECORDS_FILENAME ".tmp" },
+#define NDS_BACKUP_SIBLING_NAMES(volume, name)     { volume name, volume name ".bak", volume name ".tmp" }
+/* [sibling][volume]: the VS records (U2), the 1P records (C3). */
+static const char *const sNdsBackupSiblingNames[][2][NDS_BACKUP_RECOVERY_NAMES] = {
+    { NDS_BACKUP_SIBLING_NAMES("fat:/", NDS_BACKUP_RECORDS_FILENAME),
+      NDS_BACKUP_SIBLING_NAMES("sd:/", NDS_BACKUP_RECORDS_FILENAME) },
+    { NDS_BACKUP_SIBLING_NAMES("fat:/", NDS_BACKUP_1P_RECORDS_FILENAME),
+      NDS_BACKUP_SIBLING_NAMES("sd:/", NDS_BACKUP_1P_RECORDS_FILENAME) },
 };
+_Static_assert(sizeof(sNdsBackupSiblingNames[0]) / sizeof(sNdsBackupSiblingNames[0][0]) ==
+                   sizeof(sNdsBackupPaths) / sizeof(sNdsBackupPaths[0]),
+               "one sibling name set per save volume");
 
 /* The sibling's names on the save's volume, or NULL without one. */
 static const char *const *ndsBackupSiblingNames(u32 sibling)
 {
     u32 i;
 
-    if (sibling != NDS_BACKUP_SIBLING_RECORDS)
+    if (sibling >= sizeof(sNdsBackupSiblingNames) / sizeof(sNdsBackupSiblingNames[0]))
     {
         return NULL;
     }
@@ -309,7 +316,7 @@ static const char *const *ndsBackupSiblingNames(u32 sibling)
     {
         if (sNdsBackupPath == sNdsBackupPaths[i])
         {
-            return sNdsBackupSiblingNames[i];
+            return sNdsBackupSiblingNames[sibling][i];
         }
     }
     return NULL;

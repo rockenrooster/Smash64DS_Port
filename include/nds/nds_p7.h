@@ -176,6 +176,38 @@ void ndsP7RecordsClear(void);
 /* A player's selection id: an original's kind, Metal Mario's, a content's. */
 u32 ndsP7SelOf(s32 fkind, u32 content);
 
+/* C3: wide 1P records (src/nds/nds_p7_records.c). The source's
+ * LBBackup1PRecord (high score, continues, bonuses, best difficulty, both
+ * bonus times and counts, completion) one row per selection id, in a second
+ * file beside the save; the source's twelve rows stay the source's. A content
+ * or Metal Mario plays the 1P game and the bonus stages under its parent's
+ * kind, so for the run the parent's source row holds the player's own row:
+ * every save writes the parent's row back in its place and the player's row
+ * to this file (lbBackupWrite), and the run's end restores the parent's. */
+#define NDS_P7_1P_RECORD_BYTES 32u
+struct LBBackup1PRecord;
+/* Row `sel` (zero when there is no file or no row). */
+void ndsP7OnePRecordsRead(u32 sel, struct LBBackup1PRecord *out);
+/* Rows [first, first + count) to `visit`, through one open of the file. */
+void ndsP7OnePRecordsVisit(u32 first, u32 count,
+                           void (*visit)(u32 sel, const struct LBBackup1PRecord *row,
+                                         void *ctx),
+                           void *ctx);
+/* Backup Clear's 1P High Score (the run's fields) and Bonus Stage Time (the
+ * bonus fields) classes, and All Data (every field). */
+#define NDS_P7_1P_CLEAR_RUN 1u
+#define NDS_P7_1P_CLEAR_BONUS 2u
+#define NDS_P7_1P_CLEAR_ALL 3u
+void ndsP7OnePRecordsClear(u32 fields);
+/* The run of a content or Metal Mario (`sel`) under `parent_kind`'s row;
+ * a no-op for an original. */
+void ndsP7OnePRunBegin(s32 parent_kind, u32 sel);
+void ndsP7OnePRunEnd(void);
+/* lbBackupWrite, around the image write: the parent's own row in place,
+ * then the player's back and into the file. */
+void ndsP7OnePSaveBegin(void);
+void ndsP7OnePSaveEnd(void);
+
 /* Dev-open builds (the lab sweep, the four-CPU stress, both-CPU and
  * fast-logic harnesses, and walks) see every fighter and stage, as they
  * always have. By build flag: the shipping ROM's own loop is scene harness

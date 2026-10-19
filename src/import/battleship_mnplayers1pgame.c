@@ -248,8 +248,18 @@ static void ndsMNPlayers1PGameDraw(void)
     ndsPlatformReset3DViewport();
 }
 
+extern void mnPlayersVSStartScene(void);
+
 void mnPlayers1PGameStartScene(void)
 {
+#if NDS_P2_MENU_SHELL && NDS_P4
+    /* P7 C1 (2026-10-19): with Remix contents the 1P select is the native
+     * VS screen in its one-card mode (nds_menu_shell_css.c sCssOneP), so the
+     * scene starts as that screen's does (nds_menu_shell_router.c
+     * mnPlayersVSStartScene: func_start NULL), as the training select's. */
+    mnPlayersVSStartScene();
+    return;
+#endif
     /* N64 overlay 27 is DMA-loaded on every entry (scmanager.c:1167-1171),
      * zeroing BSS; the DS TU stays resident, and source InitVars
      * (mnplayers1pgame.c:3387-3409) nulls every entry GObj handle except

@@ -3,6 +3,7 @@
 #include <nds/nds_scene_harness.h>
 #include <nds/nds_scene_manager.h>
 #include <nds/nds_task37_itcm.h>
+#include <nds/nds_p5.h>
 #include <it/item.h>
 #if NDS_R2_FIREBALL_QUAD
 /* The baked fireball texels/palettes and the GL_RGB16 upload they need. Only
@@ -15054,9 +15055,9 @@ static void ndsStageGCDrawAllLoopSubmitForeignSubtrees(GObj *display)
     sb32 began = FALSE;
     DObj *root;
 
+    /* A Board the Platforms board, the source's or a content's (P7 C2). */
     if ((display == NULL) || (gSCManagerBattleState == NULL) ||
-        (gSCManagerBattleState->gkind < nGRKindBonus2Start) ||
-        (gSCManagerBattleState->gkind > nGRKindBonus2End) ||
+        (ndsGrBonusClass(gSCManagerBattleState->gkind) != 2u) ||
         (sNdsStageGCDrawAllLoopHardwareSubmitActive == FALSE))
     {
         return;

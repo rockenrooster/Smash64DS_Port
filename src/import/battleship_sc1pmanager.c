@@ -489,6 +489,26 @@ volatile u32 gNdsP7LabChallengerRow = 0xFFu;
 volatile u32 gNdsP7LabChallengerResult = 0xFFu;
 #endif
 
+/* The campaign player's selection id when it is not its kind's own: a
+ * content (it plays under its parent's kind) or Metal Mario (under Mario's,
+ * battleship_ftmanager.c gNdsP7OnePlayerMetal); else past the table. */
+extern u8 gNdsP7OnePlayerMetal;
+
+static u32 ndsSC1PManagerPlayerSel(void)
+{
+#if NDS_P4
+    const NDSP4Fighter *f = ndsP4Fighter(gNdsP4OnePlayerContent);
+
+    if ((f != NULL) && (f->parent_kind == (s32)gSCManagerSceneData.fkind))
+    {
+        return NDS_P7_SEL_CONTENT(gNdsP4OnePlayerContent);
+    }
+#endif
+    return ((gNdsP7OnePlayerMetal != 0u) &&
+            (gSCManagerSceneData.fkind == nFTKindMario)) ?
+        NDS_P7_SEL_METAL : NDS_P7_SEL_COUNT;
+}
+
 void sc1PManagerUpdateScene(void)
 {
 #if NDS_P2_MENU_WALK
@@ -554,8 +574,12 @@ void sc1PManagerUpdateScene(void)
     }
     sNdsP7StageFalls = 0u;
     sNdsP7RaceLeft = NDS_P7_NO_RACE;
+    /* C3: a content or Metal Mario keeps its own 1P records under its
+     * parent's kind for the run (nds_p7_records.c). */
+    ndsP7OnePRunBegin((s32)gSCManagerSceneData.fkind, ndsSC1PManagerPlayerSel());
     ndsBaseSC1PManagerUpdateScene();
     ndsP7AfterManager();
+    ndsP7OnePRunEnd();
 }
 
 #endif /* NDS_P2_1P_GAME */

@@ -2840,6 +2840,13 @@ static sb32 ndsMNPlayersVSPreviewReleaseResidentKind(s32 fkind)
  * remain untouched. Set the exact derived root position instead of accumulating
  * an offset so repeated player-kind / grab rebuilds are idempotent. */
 #define NDS_CSS_OUTER_PREVIEW_INSET 40.0F
+static u32 sNdsPlayersVSPreviewOnePlayer;
+
+void ndsMNPlayersVSPreviewSetOnePlayerLayout(u32 enabled)
+{
+    sNdsPlayersVSPreviewOnePlayer = (enabled != 0u) ? 1u : 0u;
+}
+
 static void ndsMNPlayersVSPreviewApplyOuterSlotInset(u32 slot,
                                                       GObj *fighter_gobj)
 {
@@ -2855,6 +2862,36 @@ static void ndsMNPlayersVSPreviewApplyOuterSlotInset(u32 slot,
     {
         return;
     }
+#if NDS_P4
+    if ((sNdsPlayersVSPreviewOnePlayer != 0u) && (slot == 0u))
+    {
+        /* P7 C1: the 1P select's card is unscaled, so its fighter stands
+         * where mnPlayers1PGameMakeFighter puts it (:1767-1774, x -1100,
+         * y -850) at its own scale -- Remix's menu_zoom for a content. */
+        s32 fkind = sMNPlayersVSSlots[slot].fkind;
+        f32 scale = ((fkind >= nFTKindPlayableStart) &&
+                     (fkind <= nFTKindPlayableEnd)) ?
+            dSCSubsysFighterScales[fkind] : root->scale.vec.f.x;
+        const NDSP4Fighter *f = ndsP4Fighter(
+            ndsCssPreviewKindContent(sNdsPlayersVSPreviewShownKind[slot]));
+
+        if ((f != NULL) && (f->present != NULL))
+        {
+            scale = f->present->menu_zoom;
+        }
+        else if (ndsCssPreviewKindIsMMario(
+                     sNdsPlayersVSPreviewShownKind[slot]) != FALSE)
+        {
+            scale = dSCSubsysFighterScales[nFTKindMario];
+        }
+        root->translate.vec.f.x = -1100.0F;
+        root->translate.vec.f.y = -850.0F;
+        root->scale.vec.f.x = scale;
+        root->scale.vec.f.y = scale;
+        root->scale.vec.f.z = scale;
+        return;
+    }
+#endif
 
     x = ((f32)slot * 840.0F) - 1250.0F;
     if (slot == 0u)
@@ -3814,6 +3851,7 @@ void ndsMNPlayersVSPreviewExit(void)
 {
     u32 slot;
 
+    sNdsPlayersVSPreviewOnePlayer = 0u;
     if (sNdsPlayersVSPreviewActive == FALSE)
     {
         return;
