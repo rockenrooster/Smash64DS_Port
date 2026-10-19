@@ -467,3 +467,66 @@ frame there, ~40K elsewhere); fighter attacks are under one test a frame.
 Peach's Castle and Yoshi's Island tails are spread: texture conversions (a
 third of the frames), first-use normalization (12-16 of 20), lean
 materialization (6), synchronous sound reads (12), pose parse (all 20).
+
+Later 2026-10-19:
+
+- **Stress rosters on `s20`** (pipelined; 1,960 frames, WORK P95 and frames
+  within two VBlanks): four Palutenas 1,259,392 (96.3%) on Dream Land,
+  1,307,904 (93.2%) on Saffron, 1,328,064 (92.3%) on Hyrule Temple; four
+  Bowsers 1,200,384 (97.7%), 1,330,688 (94.8%), 1,305,088 (94.9%). Cadence
+  meets the stress target everywhere; WORK P95 misses 1,250,000 on Saffron and
+  Hyrule Temple.
+- **Hyrule Temple's layers are the temple.** Hiding layer 0 (the "secondary"
+  layer: 100 of the template's 177 runs, 195 of its 527 triangles) or layer 3
+  leaves the fighters standing on the sky (`artifacts/visibility/p7-ht/`), so
+  a layer cannot simply go; the template is 13,196 GX words a frame, 430
+  patches (177 material, 104 composed no-Z, 98 no-Z runs, 51 composed).
+- **Refuted, `s21`:** deduplicating the stage commit's per-run tail (texture
+  stamps of consecutive runs on one entry, one span-state write): every
+  digest identical, WORK P95 within +-5K on all nine stages. Reverted.
+- Where the remaining tail lives (census, top-20 frames): status changes
+  (pose parse/bind, the setter, motion copies), the hurtbox kernel against
+  weapons and items (Saffron's Charmander flame and Link's bombs against all
+  four fighters every tick), first-use normalization, sound and clip reads;
+  each remaining lever measures 2-10K.
+
+Four-mirror rosters on Dream Land, `s21` (pipelined; 1,960 frames; WORK P95,
+frames within two VBlanks, heap low-water; 0 native failures on every row):
+
+| content | P95 | 2-VB | heap |
+|---|---|---|---|
+| c1 Falco | 1,047,168 | 99.4% | 60,848 |
+| c2 Ganondorf | 1,077,632 | 99.3% | 38,072 |
+| c3 Wolf | 1,114,688 | 99.2% | 49,136 |
+| c4 Bowser | 1,198,272 | 97.8% | 38,228 |
+| c5 Marth | 1,183,616 | 98.1% | 39,112 |
+| c6 Roy | 1,179,072 | 98.3% | 45,184 |
+| c7 Wario | 1,052,416 | 99.6% | 34,752 |
+| c8 Peach | 1,068,800 | 99.5% | 31,312 |
+| c9 Crash | 1,179,776 | 97.7% | 42,580 |
+| c10 Lanky | 1,053,632 | 99.3% | 39,256 |
+| c11 Sheik | 1,116,736 | 99.4% | 35,848 |
+| c13 Sonic | 1,123,264 | 98.7% | 38,028 |
+| c14 Dedede | 1,177,536 | 98.3% | 37,136 |
+| c15 Mad Piano | 931,712 | 99.9% | 141,212 |
+| c16 Meta Knight | 1,216,384 | 97.6% | 42,304 |
+| c17 Mr. Game & Watch | 1,128,832 | 98.3% | 47,684 |
+| c18 Snake | 1,104,576 | 99.2% | 39,848 |
+| c19 Ike | 1,181,056 | 98.1% | 43,124 |
+| c20 Palutena | 1,259,904 | 96.2% | 334,552 |
+
+Eighteen of nineteen meet the stress target (P95 <= 1,250,000, >= 90%);
+four Palutenas are 9,904 over.
+
+**The event-script ledger refused scripts for the cast** (found 2026-10-19
+reading high water against limit in the sweep extras): Congo Jungle 7,
+Hyrule Castle 7, Planet Zebes 1 refusals in 1,960-frame cast matches, reason
+12, no native failure. The CPUs' low detail had grown the elastic motion
+cache and the cast's normalized clips with it. Roster margin 384 -> 896
+(`59970c16490`): 0 refusals on the nine stage-bound stages (peaks 3,128 /
+2,105 / 5,058, 400-500 to spare), digests identical, P95 noise; Ness, Yoshi,
+Pikachu and Purin on Jungle, Zebes, Castle and Yoshi's Island peak 3,084-5,911
+with 2,280+ to spare. Probes now read `gNdsAObjEvent32NormalizeFailCount`.
+Remaining cast stages on `s21` (pipelined): Zebes 1,083,904, Hyrule Castle
+1,020,480, Dream Land 1,074,688, gkind 13 1,110,528, 14 927,104, 16
+1,005,376, 41 971,840 -- all under 1,120,000, 98.8-99.8% within two VBlanks.
