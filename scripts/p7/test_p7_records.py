@@ -36,7 +36,7 @@ def _source() -> str:
 #include <stdlib.h>
 #include <string.h>
 typedef unsigned char u8; typedef unsigned short u16; typedef unsigned int u32;
-typedef unsigned long long u64; typedef int s32; typedef signed char s8;
+typedef unsigned long long u64; typedef int s32; typedef signed char s8; typedef float f32;
 #define TRUE 1
 #define FALSE 0
 #define NDS_DIAG(...) do { __VA_ARGS__; } while (0)
@@ -50,6 +50,14 @@ typedef struct { u8 pkind; u8 fkind; u32 total_damage_given; u32 total_damage_al
                  u32 total_selfdestructs; u32 total_kos_players[4]; } SCPlayer;
 typedef struct SCBattleState { u32 time_passed; SCPlayer players[4]; } SCBattleState;
 #define NDS_BACKUP_SIBLING_RECORDS 0u
+#define NDS_BACKUP_SIBLING_1P_RECORDS 1u
+typedef unsigned char ub8;
+/* C3's wide 1P rows share the module (sc/scene.h LBBackup1PRecord). */
+typedef struct LBBackup1PRecord { u32 spgame_hiscore; u32 spgame_continues; u32 spgame_total_bonuses;
+    u8 spgame_best_difficulty; u32 bonus1_time; u8 bonus1_task_count; u32 bonus2_time;
+    u8 bonus2_task_count; ub8 is_spgame_complete; } LBBackup1PRecord;
+static struct { LBBackup1PRecord spgame_records[12]; } gSCManagerBackupData;
+struct { u8 fkind; } gSCManagerSceneData;
 #define NDS_BACKUP_RECOVERY_NAMES 3u
 typedef s32 (*NDSBackupWriter)(FILE *tmp, void *ctx);
 static char sDir[512];

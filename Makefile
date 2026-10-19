@@ -4881,8 +4881,9 @@ CFILES += nds_fox_gun.c
 # P2-7 save data: the FAT-backed SRAM image and the transcribed lbbackup.c;
 # P7's progress block in the same image (docs/P7/P7_Implementation_Plan.md U1),
 # its unlock registry's evaluator (U3; the 1P manager's seam reads it) and the
-# wide VS records beside the save (U2).
-CFILES += nds_backup.c battleship_lbbackup.c nds_p7_progress.c nds_p7_unlocks.c nds_p7_records.c
+# wide VS records beside the save (U2) and the VS Record screen's numbers
+# over them (U9).
+CFILES += nds_backup.c battleship_lbbackup.c nds_p7_progress.c nds_p7_unlocks.c nds_p7_records.c nds_p7_vsrecord.c
 ifeq ($(NDS_IMPORT_BATTLESHIP_FT_PUBLIC),1)
 CFILES += battleship_ftpublic.c
 endif

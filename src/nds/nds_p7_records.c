@@ -194,6 +194,28 @@ void ndsP7OnePRecordsRead(u32 sel, LBBackup1PRecord *out)
     ndsP7RecordsReadRow(&kNdsP7OnePTable, sel, out);
 }
 
+void ndsP7RecordsReadRange(u32 first, u32 count, NDSP7VSRecord *rows)
+{
+    FILE *file;
+    u32 i;
+
+    if (rows == NULL)
+    {
+        return;
+    }
+    ndsFsLock();
+    file = ndsP7RecordsOpen(&kNdsP7VSTable);
+    for (i = 0u; i < count; i++)
+    {
+        ndsP7RecordsReadFrom(&kNdsP7VSTable, file, first + i, &rows[i]);
+    }
+    if (file != NULL)
+    {
+        fclose(file);
+    }
+    ndsFsUnlock();
+}
+
 void ndsP7OnePRecordsVisit(u32 first, u32 count,
                            void (*visit)(u32 sel, const LBBackup1PRecord *row, void *ctx),
                            void *ctx)

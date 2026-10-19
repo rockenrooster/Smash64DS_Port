@@ -45,7 +45,7 @@ def host_source() -> str:
 #include <stdlib.h>
 #include <string.h>
 typedef unsigned char u8; typedef unsigned short u16; typedef unsigned int u32;
-typedef unsigned long long u64; typedef int s32; typedef unsigned char ub8;
+typedef unsigned long long u64; typedef int s32; typedef unsigned char ub8; typedef float f32;
 #define TRUE 1
 #define FALSE 0
 #define GMCOMMON_FIGHTERS_PLAYABLE_NUM 12

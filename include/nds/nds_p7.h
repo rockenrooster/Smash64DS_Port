@@ -168,6 +168,32 @@ typedef struct NDSP7VSRecord
 struct SCBattleState;
 /* Row `sel` (zero when there is no file or no row). */
 void ndsP7RecordsRead(u32 sel, NDSP7VSRecord *out);
+/* Rows [first, first + count) through one open of the file (the VS Record
+ * screen); a row past the table or the file reads zero. */
+void ndsP7RecordsReadRange(u32 first, u32 count, NDSP7VSRecord *rows);
+
+/* U9: the VS Record screen's numbers (src/nds/nds_p7_vsrecord.c). The screen
+ * owns the buffer (10.4 KB of rows, from its scene heap); `i`/`j` index the
+ * shown fighters, sel[i] their selection ids, in the source's order then
+ * Metal Mario then the contents. */
+typedef struct NDSP7VsRecordData
+{
+    u32 count;
+    u8 sel[NDS_P7_SEL_COUNT];
+    NDSP7VSRecord rows[NDS_P7_SEL_COUNT];
+} NDSP7VsRecordData;
+void ndsP7VsRecordLoad(NDSP7VsRecordData *d);
+u32 ndsP7VsRecordKOsAgainst(const NDSP7VsRecordData *d, u32 i, u32 j);
+u32 ndsP7VsRecordKOs(const NDSP7VsRecordData *d, u32 i);
+u32 ndsP7VsRecordTKO(const NDSP7VsRecordData *d, u32 i);
+u32 ndsP7VsRecordTotalTKO(const NDSP7VsRecordData *d);
+f32 ndsP7VsRecordWinPercent(const NDSP7VsRecordData *d, u32 i);
+f32 ndsP7VsRecordSDPercent(const NDSP7VsRecordData *d, u32 i);
+u32 ndsP7VsRecordTimeUsed(const NDSP7VsRecordData *d, u32 i);
+f32 ndsP7VsRecordUsePercent(const NDSP7VsRecordData *d, u32 i);
+f32 ndsP7VsRecordAvg(const NDSP7VsRecordData *d, u32 i);
+f32 ndsP7VsRecordWinPercentAgainst(const NDSP7VsRecordData *d, u32 i, u32 j);
+f32 ndsP7VsRecordAvgAgainst(const NDSP7VsRecordData *d, u32 i, u32 j);
 /* A finished match (mnVSResultsSaveBackup's arithmetic): every player's row,
  * its opponents by their own selection ids (`sel` per player slot). */
 void ndsP7RecordsAddMatch(const struct SCBattleState *state, const u8 sel[4]);
