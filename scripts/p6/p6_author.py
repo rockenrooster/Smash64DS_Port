@@ -841,7 +841,7 @@ def author_sword_trails(resolved: dict, rows: dict) -> None:
     by_id = {t["id"]: t for t in resolved["sword_trails"]}
     for key, entry in sorted(rows.items(), key=lambda kv: int(kv[0], 0)):
         trail = by_id.get(int(key, 0))
-        unknown = set(entry) - {"colour_1", "colour_2", "start", "end", "model_part", "axis", "local", "comment"}
+        unknown = set(entry) - {"colour_1", "colour_2", "start", "end", "model_part", "axis", "local", "gap", "comment"}
         if unknown:
             raise AuthorError(f"spec sword_trails {key}: unknown keys {sorted(unknown)}")
         if trail is None:
@@ -870,6 +870,13 @@ def author_sword_trails(resolved: dict, rows: dict) -> None:
         for k in ("start", "end"):
             if k in entry:
                 trail[k] = float(entry[k])
+        if "gap" in entry:
+            # The stretch of the line the trail leaves out (owner 2026-10-19: the
+            # staff's middle third), inside the line and not empty.
+            lo, hi = (float(c) for c in entry["gap"])
+            if not (min(trail["start"], trail["end"]) < lo < hi < max(trail["start"], trail["end"])):
+                raise AuthorError(f"spec sword_trails {key}: gap {lo}..{hi} not inside the line")
+            trail["gap"] = [lo, hi]
     resolved["authored"]["sword_trails"] = {k: {c: v for c, v in e.items() if c != "comment"}
                                             for k, e in rows.items()}
 

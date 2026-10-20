@@ -5875,14 +5875,14 @@ extern SYColorRGBA dFTDisplayMainItemAfterImageColor2;
  * turn of at most 180 degrees in 30 degree steps): 15 edges, 30 vertices. */
 #define NDS_AFTERIMAGE_MAX_VERTICES 32u
 
-static void ndsFighterDrawAfterImage(FTStruct *fp)
+/* One strip of the trail: the samples' line from `var_f20` to `var_f22`
+ * along each sample's direction, `color1` at the first end. */
+static void ndsFighterDrawAfterImageStrip(FTStruct *fp, f32 var_f20,
+                                          f32 var_f22, const u8 color1[3],
+                                          const u8 color2[3])
 {
     s16 xyz[NDS_AFTERIMAGE_MAX_VERTICES][3];
     u8 rgba[NDS_AFTERIMAGE_MAX_VERTICES][4];
-    u8 color1[3];
-    u8 color2[3];
-    f32 var_f20;
-    f32 var_f22;
     f32 rotate;
     s32 add_alpha = 0;
     s32 base_alpha = 0xFF;
@@ -5893,49 +5893,6 @@ static void ndsFighterDrawAfterImage(FTStruct *fp)
     s16 origin[3];
     NDSRendererMatrix20p12 composed;
 
-#define NDS_AFTERIMAGE_RGB(dst_, src_) \
-    ((dst_)[0] = (src_).r, (dst_)[1] = (src_).g, (dst_)[2] = (src_).b)
-    switch (fp->afterimage.is_itemswing)
-    {
-    case FALSE:
-        var_f20 = 50.0F;
-        var_f22 = 250.0F;
-        NDS_AFTERIMAGE_RGB(color1, dFTDisplayMainDefaultAfterImageColor1);
-        NDS_AFTERIMAGE_RGB(color2, dFTDisplayMainDefaultAfterImageColor2);
-        break;
-
-    case TRUE:
-        var_f20 = 80.0F;
-        var_f22 = 580.0F;
-        NDS_AFTERIMAGE_RGB(color1, dFTDisplayMainItemAfterImageColor1);
-        NDS_AFTERIMAGE_RGB(color2, dFTDisplayMainItemAfterImageColor2);
-        break;
-
-    default:
-#if NDS_P4
-    {
-        const NDSP4SwordTrail *row =
-            ndsP4SwordTrail(fp, (u32)fp->afterimage.is_itemswing);
-
-        if (row == NULL)
-        {
-            return;
-        }
-        var_f20 = row->start;
-        var_f22 = row->end;
-        color1[0] = (u8)(row->colour_1 >> 24);
-        color1[1] = (u8)(row->colour_1 >> 16);
-        color1[2] = (u8)(row->colour_1 >> 8);
-        color2[0] = (u8)(row->colour_2 >> 24);
-        color2[1] = (u8)(row->colour_2 >> 16);
-        color2[2] = (u8)(row->colour_2 >> 8);
-        break;
-    }
-#else
-        return;
-#endif
-    }
-#undef NDS_AFTERIMAGE_RGB
     rotate = F_CLC_DTOR32(30.0F);
 
     index = fp->afterimage.desc_id;
@@ -6076,6 +6033,71 @@ static void ndsFighterDrawAfterImage(FTStruct *fp)
     }
     (void)ndsRendererSubmitAfterImage(&composed, (const s16 (*)[3])xyz,
                                       (const u8 (*)[4])rgba, count);
+}
+
+static void ndsFighterDrawAfterImage(FTStruct *fp)
+{
+    u8 color1[3];
+    u8 color2[3];
+    f32 var_f20;
+    f32 var_f22;
+    f32 gap_lo = 0.0F;
+    f32 gap_hi = 0.0F;
+
+#define NDS_AFTERIMAGE_RGB(dst_, src_) \
+    ((dst_)[0] = (src_).r, (dst_)[1] = (src_).g, (dst_)[2] = (src_).b)
+    switch (fp->afterimage.is_itemswing)
+    {
+    case FALSE:
+        var_f20 = 50.0F;
+        var_f22 = 250.0F;
+        NDS_AFTERIMAGE_RGB(color1, dFTDisplayMainDefaultAfterImageColor1);
+        NDS_AFTERIMAGE_RGB(color2, dFTDisplayMainDefaultAfterImageColor2);
+        break;
+
+    case TRUE:
+        var_f20 = 80.0F;
+        var_f22 = 580.0F;
+        NDS_AFTERIMAGE_RGB(color1, dFTDisplayMainItemAfterImageColor1);
+        NDS_AFTERIMAGE_RGB(color2, dFTDisplayMainItemAfterImageColor2);
+        break;
+
+    default:
+#if NDS_P4
+    {
+        const NDSP4SwordTrail *row =
+            ndsP4SwordTrail(fp, (u32)fp->afterimage.is_itemswing);
+
+        if (row == NULL)
+        {
+            return;
+        }
+        var_f20 = row->start;
+        var_f22 = row->end;
+        gap_lo = row->gap_lo;
+        gap_hi = row->gap_hi;
+        color1[0] = (u8)(row->colour_1 >> 24);
+        color1[1] = (u8)(row->colour_1 >> 16);
+        color1[2] = (u8)(row->colour_1 >> 8);
+        color2[0] = (u8)(row->colour_2 >> 24);
+        color2[1] = (u8)(row->colour_2 >> 16);
+        color2[2] = (u8)(row->colour_2 >> 8);
+        break;
+    }
+#else
+        return;
+#endif
+    }
+#undef NDS_AFTERIMAGE_RGB
+    /* A row with a gap (P6, owner 2026-10-19: Palutena's staff, its middle third
+     * clear) is two strips of the same samples around it. */
+    if (gap_lo < gap_hi)
+    {
+        ndsFighterDrawAfterImageStrip(fp, var_f20, gap_lo, color1, color2);
+        ndsFighterDrawAfterImageStrip(fp, gap_hi, var_f22, color1, color2);
+        return;
+    }
+    ndsFighterDrawAfterImageStrip(fp, var_f20, var_f22, color1, color2);
 }
 #endif
 

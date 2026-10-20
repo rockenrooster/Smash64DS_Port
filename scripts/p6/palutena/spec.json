@@ -1312,7 +1312,7 @@
    "end": 160.0
   },
   "24": {
-   "comment": "Owner p6x VFX plan (picks 2026-10-16: solid, Ultimate's cyan-white): her staff's trail in the four moves that spin it (forward tilt, neutral air, up tilt, down tilt; motions/*.ms SetAfterImage 24): along row 14's grip-to-gem line (axis 3, a local direction; her staff's hit offsets lie on it), from her grip (0) to just past the gem's tip (260; the staff's mesh reaches 249 along it), cyan at the grip to white at the gem, the game's untextured gradient. Owner p6ac (2026-10-17: \"staff VFX trails should be for both ends of the staff\", as Ultimate's palutena_wand_trace on the whole stick): from just past the butt's tip (-275; the mesh reaches -270) to the gem's, one light cyan-white over its length (the game's two-colour gradient cannot be cyan in the middle).",
+   "comment": "Owner p6x VFX plan (picks 2026-10-16: solid, Ultimate's cyan-white): her staff's trail in the four moves that spin it (forward tilt, neutral air, up tilt, down tilt; motions/*.ms SetAfterImage 24): along row 14's grip-to-gem line (axis 3, a local direction; her staff's hit offsets lie on it), from her grip (0) to just past the gem's tip (260; the staff's mesh reaches 249 along it), cyan at the grip to white at the gem, the game's untextured gradient. Owner p6ac (2026-10-17: \"staff VFX trails should be for both ends of the staff\", as Ultimate's palutena_wand_trace on the whole stick): from just past the butt's tip (-275; the mesh reaches -270) to the gem's, one light cyan-white over its length (the game's two-colour gradient cannot be cyan in the middle). Owner (2026-10-19): \"the middle third of the staff doesn't need trails\", then (after play-p7l) \"instead of 1/3 size we need to reduce to 1/4\": each end's trail a quarter of the mesh (-270 to 249 along the line), the middle (-140 to 119) left clear, two strips.",
    "model_part": 14,
    "axis": 3,
    "local": [
@@ -1323,7 +1323,8 @@
    "colour_1": "b4f0ff00",
    "colour_2": "b4f0ff00",
    "start": -275.0,
-   "end": 260.0
+   "end": 260.0,
+   "gap": [-140.0, 119.0]
   }
  }
 }

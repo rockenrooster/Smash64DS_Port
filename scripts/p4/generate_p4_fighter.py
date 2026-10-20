@@ -2739,6 +2739,10 @@ def main() -> int:
         local = ""
         if t["axis"] == 3:
             local = ", { " + ", ".join(c_float(c) for c in t["local"]) + " }"
+        # An authored gap (P6, owner 2026-10-19): the stretch of the line left
+        # undrawn, the trail two strips around it.
+        if "gap" in t:
+            local += f", .gap_lo = {c_float(t['gap'][0])}, .gap_hi = {c_float(t['gap'][1])}"
         lines.append(f"    {{ {t['id']}, {t['model_part']}, {t['axis']}, 0, "
                      f"{t['colour_1']:#010x}u, {t['colour_2']:#010x}u, "
                      f"{c_float(t['start'])}, {c_float(t['end'])}{local} }},")

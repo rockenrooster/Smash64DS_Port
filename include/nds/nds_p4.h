@@ -452,7 +452,9 @@ enum
  * `colour_2` (RGBA32, alpha unused). A content lists the rows whose
  * character is its own. Axis 3 (P6, Palutena's staff: its grip-to-gem line
  * is none of its joint's matrix rows) runs along `local`, a direction in the
- * joint's own frame (unit length), instead. */
+ * joint's own frame (unit length), instead. `gap_lo` < `gap_hi` leaves that
+ * stretch of the line out: the trail is two strips, start to gap_lo and gap_hi
+ * to end (P6, owner 2026-10-19: her staff's middle third); 0, 0 is the whole line. */
 typedef struct NDSP4SwordTrail
 {
     u8 id;
@@ -464,6 +466,8 @@ typedef struct NDSP4SwordTrail
     f32 start;
     f32 end;
     f32 local[3];
+    f32 gap_lo;
+    f32 gap_hi;
 } NDSP4SwordTrail;
 
 /* Remix's entry_action and entry_script rows (Character.asm): the appear
