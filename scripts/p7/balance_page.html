@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>Smash64DS Balance Sheet</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,6 +16,8 @@
   --accent-soft: #fbe3e7;
   --row: #f6f7fa;
   --chip: #e4e7ee;
+  --hi-bg: #fde2e1; --hi-fg: #9f1239;
+  --lo-bg: #dbeafe; --lo-fg: #1e40af;
   --fire: #c2410c;
   --elec: #a16207;
   --slash: #4b5563;
@@ -29,6 +32,7 @@
   :root:not([data-theme="light"]) {
     --bg: #12141a; --panel: #1a1d25; --fg: #e5e8ef; --muted: #9aa1b3; --line: #2b2f3b;
     --accent: #ff5a6a; --accent-soft: #3a1a22; --row: #1e212a; --chip: #262a35;
+    --hi-bg: #4a1720; --hi-fg: #ffb3bd; --lo-bg: #172a4d; --lo-fg: #a9c7ff;
     --fire: #fb923c; --elec: #facc15; --slash: #a3aab8; --coin: #e0b84c; --freeze: #7aa7ff; --sleep: #b794ff;
     color-scheme: dark;
   }
@@ -36,6 +40,7 @@
 :root[data-theme="dark"] {
   --bg: #12141a; --panel: #1a1d25; --fg: #e5e8ef; --muted: #9aa1b3; --line: #2b2f3b;
   --accent: #ff5a6a; --accent-soft: #3a1a22; --row: #1e212a; --chip: #262a35;
+  --hi-bg: #4a1720; --hi-fg: #ffb3bd; --lo-bg: #172a4d; --lo-fg: #a9c7ff;
   --fire: #fb923c; --elec: #facc15; --slash: #a3aab8; --coin: #e0b84c; --freeze: #7aa7ff; --sleep: #b794ff;
   color-scheme: dark;
 }
@@ -68,18 +73,34 @@ select { font: 600 15px var(--display); padding: 6px 10px; border-radius: 8px; b
 .sheet-head .meta { color: var(--muted); font-size: 13px; }
 .scroll { overflow-x: auto; }
 table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
-th, td { padding: 6px 10px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--line); }
+table.fixed { table-layout: fixed; }
+th, td { padding: 6px 10px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--line); overflow: hidden; text-overflow: ellipsis; }
 th { font: 600 12px var(--display); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); background: var(--panel); position: sticky; top: 0; }
-th button { font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
-th button:hover { color: var(--accent); }
-th[aria-sort] button { color: var(--fg); }
+th.num { text-align: right; }
+table.sortable th { cursor: pointer; user-select: none; }
+table.sortable th:hover { color: var(--accent); }
+th[aria-sort] { color: var(--fg); }
 td.num { font-family: var(--mono); font-size: 13px; text-align: right; }
 td.dmg { font-weight: 600; color: var(--accent); }
-td.move { font-weight: 600; }
+td.move { font-weight: 600; white-space: normal; }
+td.move a, td a { color: inherit; text-decoration: none; border-bottom: 1px solid var(--line); }
+td a:hover { color: var(--accent); border-color: var(--accent); }
 td.sub { color: var(--muted); font-size: 12px; }
+td.frames { font-family: var(--mono); font-size: 12px; white-space: normal; overflow-wrap: anywhere; }
+td.flags { white-space: normal; }
 tbody tr.first td { border-top: 1px solid var(--line); }
 tbody tr.cont td.move, tbody tr.cont td.sub { color: transparent; }
 tbody tr:nth-child(even) td { background: var(--row); }
+tbody tr:hover td { background: var(--chip); }
+tbody tr.flagged td.move { box-shadow: inset 3px 0 0 var(--accent); }
+td.num.hi { background: var(--hi-bg) !important; color: var(--hi-fg); font-weight: 700; }
+td.num.lo { background: var(--lo-bg) !important; color: var(--lo-fg); font-weight: 700; }
+.flag { display: inline-block; font: 600 11px var(--display); letter-spacing: 0.04em; padding: 1px 7px; margin: 1px 4px 1px 0; border-radius: 6px; white-space: nowrap; }
+.flag.hi { background: var(--hi-bg); color: var(--hi-fg); }
+.flag.lo { background: var(--lo-bg); color: var(--lo-fg); }
+td.score { position: relative; }
+td.score .bar { position: absolute; left: 0; top: 6px; bottom: 6px; background: var(--accent-soft); border-right: 2px solid var(--accent); }
+td.score .v { position: relative; font-weight: 600; }
 .el { font: 600 11px var(--display); text-transform: uppercase; letter-spacing: 0.06em; padding: 1px 7px; border-radius: 999px; border: 1px solid currentColor; }
 .el.fire { color: var(--fire); } .el.electric { color: var(--elec); } .el.slash { color: var(--slash); }
 .el.coin { color: var(--coin); } .el.freezing { color: var(--freeze); } .el.sleep { color: var(--sleep); }
@@ -92,9 +113,6 @@ tbody tr:nth-child(even) td { background: var(--row); }
 .toc a { color: var(--fg); text-decoration: none; border-bottom: 1px solid var(--line); margin-right: 10px; white-space: nowrap; }
 .toc a:hover { color: var(--accent); border-color: var(--accent); }
 #static { display: grid; gap: 16px; }
-.interactive { display: none; }
-html.js .interactive { display: grid; gap: 16px; }
-html.js #static { display: none; }
 @media (max-width: 560px) { .group h2 { width: 100%; } header h1 { font-size: 26px; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -102,25 +120,8 @@ html.js #static { display: none; }
 <div class="wrap">
   <header>
     <h1>Smash64DS <span>Balance Sheet</span></h1>
-    <p>Every fighter's attacks as the game runs them: hitbox damage, launch angle, knockback, size and the frames each hit is out. Pick a fighter, or compare one move across the whole roster.</p>
+    <p>Every fighter's attacks as the game runs them: hitbox damage, launch angle, knockback, size and the frames each hit is out. Start with the fighter scores and the outlier list, then open a fighter's sheet or compare one move across the whole roster.</p>
   </header>
-
-  <div class="interactive">
-    <div class="controls">
-      <div class="seg" role="group" aria-label="View">
-        <button id="mode-fighter" type="button" aria-pressed="true">By fighter</button>
-        <button id="mode-move" type="button" aria-pressed="false">Compare a move</button>
-      </div>
-      <label id="move-pick" hidden>Move <select id="move-select"></select></label>
-    </div>
-
-    <div class="roster" id="roster"></div>
-
-    <section class="sheet" aria-live="polite">
-      <div class="sheet-head"><h3 id="sheet-title"></h3><span class="meta" id="sheet-meta"></span></div>
-      <div class="scroll"><table id="table"></table></div>
-    </section>
-  </div>
 
   <div id="static">
 <!--__STATIC__-->
@@ -130,121 +131,31 @@ html.js #static { display: none; }
     <div><b>Frames</b> are animation frames at 60 per second, counted from 1; "end" means the hit stays out until the move ends. <b>Startup</b> is the first frame a hit is out.</div>
     <div><b>Angle</b> 361 is the Sakurai angle. <b>KBG</b> knockback growth, <b>BKB</b> base knockback, <b>Fixed</b> set knockback (fixed knockback replaces growth when it is not 0). <b>Size</b> is the hitbox radius in game units.</div>
     <div><b>Throws</b> list the throw's own launch (damage, angle, knockback) apart from any hitbox the throw animation makes. Projectiles and hits made by a fighter's code (fireballs, blasters) are not in move scripts and are not listed, except Palutena's Explosive Flame.</div>
+    <div><b>KB 100%</b> is the hit's knockback on a standard-weight target at 100% once the hit lands (the game's formula, no handicap): one number for KBG, BKB and Fixed together.</div>
+    <div><b>Scores</b> rank each fighter's standard moves (the compare list) against every fighter with the same move: <b>Damage</b> by <b>Total %</b>, the move's damage when every hit lands (a box out in several windows hits once in each; clean and late boxes count as the stronger; a rapid jab counts its strongest hit), <b>Power</b> by KB 100%, <b>Speed</b> by startup (faster is higher). Each is the mean percentile, so 50 is the roster middle and 100 the top on every move; <b>Overall</b> is the mean of the three. Specials, projectiles and combos are not scored.</div>
+    <div><b>Outliers</b> are values at least 2.5 robust deviations (median absolute deviation) from the roster median for the same move and at least 25% away from it (startup: 3 frames and 30%). <span class="flag hi">red</span> reads stronger than the roster (more damage or knockback, faster startup), <span class="flag lo">blue</span> weaker. Grabs are compared on startup only, and a move whose boxes all show 0 damage (its damage set by code) is not compared on damage or power. A far-off value can also be a script the sheet reads wrongly, so check it in game before changing it.</div>
     <div>Inherited moves come from the fighter's base (Palutena from Peach, Ike from Roy) where no script of their own replaces them.</div>
   </div>
 </div>
 
 <script>
-document.documentElement.classList.add("js");
-const DATA = /*__DATA__*/[];
-const GROUPS = [["Original", "Original 12"], ["Remix/EXTRA", "Remix & EXTRA"], ["Authored", "Authored"]];
-const MOVE_KEYS = [
-  ["Attack11", "Jab 1"], ["Attack12", "Jab 2"], ["Attack13", "Jab 3"], ["Attack100Loop", "Rapid jab"],
-  ["AttackDash", "Dash attack"], ["AttackS3", "Forward tilt"], ["AttackHi3", "Up tilt"], ["AttackLw3", "Down tilt"],
-  ["AttackS4", "Forward smash"], ["AttackHi4", "Up smash"], ["AttackLw4", "Down smash"],
-  ["AttackAirN", "Neutral air"], ["AttackAirF", "Forward air"], ["AttackAirB", "Back air"],
-  ["AttackAirHi", "Up air"], ["AttackAirLw", "Down air"], ["Catch", "Grab"],
-  ["ThrowF", "Forward throw"], ["ThrowB", "Back throw"],
-];
-const state = { mode: "fighter", fighter: 0, move: "AttackS4", sortKey: "damage", sortDir: -1 };
-try {
-  const saved = JSON.parse(localStorage.getItem("bs-state") || "{}");
-  Object.assign(state, saved);
-} catch (e) {}
-if (!(state.fighter >= 0 && state.fighter < DATA.length)) state.fighter = 0;
-function save() { try { localStorage.setItem("bs-state", JSON.stringify(state)); } catch (e) {} }
-
-const $ = (id) => document.getElementById(id);
-const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-const angle = (a) => (a === 361 ? "361 (S)" : a);
-const elem = (e) => (e && e !== "normal" ? `<span class="el ${esc(e)}">${esc(e)}</span>` : "");
-
-function renderRoster() {
-  const roster = $("roster");
-  roster.hidden = state.mode !== "fighter";
-  if (roster.hidden) return;
-  roster.innerHTML = GROUPS.map(([g, label]) => {
-    const chips = DATA.map((f, i) => [f, i]).filter(([f]) => f.g === g).map(([f, i]) =>
-      `<button type="button" class="chip" data-i="${i}" aria-pressed="${i === state.fighter}">${esc(f.n)}</button>`).join("");
-    return `<div class="group"><h2>${label}</h2>${chips}</div>`;
-  }).join("");
-  roster.querySelectorAll(".chip").forEach((b) => b.addEventListener("click", () => {
-    state.fighter = +b.dataset.i; save(); render();
+/* Click a heading of a sortable table to sort it; the tables are complete without this. */
+document.querySelectorAll("table.sortable").forEach((table) => {
+  table.querySelectorAll("th").forEach((th, col) => th.addEventListener("click", () => {
+    const dir = th.getAttribute("aria-sort") === "descending" ? 1 : -1;
+    table.querySelectorAll("th").forEach((h) => h.removeAttribute("aria-sort"));
+    th.setAttribute("aria-sort", dir > 0 ? "ascending" : "descending");
+    const body = table.tBodies[0];
+    const key = (tr) => {
+      const t = tr.cells[col].textContent.trim();
+      const n = parseFloat(t.replace(/[^0-9.+-]/g, ""));
+      return t === "" || t === "-" ? null : (isNaN(n) || !/^[-+]?\d/.test(t) ? t.toLowerCase() : n);
+    };
+    [...body.rows].sort((a, b) => {
+      const x = key(a), y = key(b);
+      if (x === null) return 1; if (y === null) return -1;
+      return (x < y ? -1 : x > y ? 1 : 0) * dir;
+    }).forEach((tr) => body.appendChild(tr));
   }));
-}
-
-function fighterTable() {
-  const f = DATA[state.fighter];
-  $("sheet-title").textContent = f.n;
-  const count = f.mv.length;
-  $("sheet-meta").textContent = `${f.g === "Remix/EXTRA" ? "Remix & EXTRA" : f.g} · ${count} moves` + (f.x ? ` · ${f.x}` : "");
-  const head = `<thead><tr><th>Move</th><th>Script</th><th>Frames</th><th class="num">Dmg %</th><th class="num">Angle</th><th class="num">KBG</th><th class="num">BKB</th><th class="num">Fixed</th><th class="num">Size</th><th>Element</th></tr></thead>`;
-  const rows = [];
-  for (const mv of f.mv) {
-    const tags = (mv.i ? `<span class="tag">from ${esc(mv.i)}</span>` : "") + (mv.n ? `<span class="tag" title="${esc(mv.n)}">code</span>` : "");
-    const lines = mv.h.map((h) => ({ frames: h[0], dmg: h[2], ang: h[3], kbg: h[4], bkb: h[5], wkb: h[6], size: h[7], el: h[8] }));
-    if (mv.t) lines.push({ frames: "throw", dmg: mv.t[0], ang: mv.t[1], kbg: mv.t[2], bkb: mv.t[3], wkb: mv.t[4], size: "", el: mv.t[5] });
-    lines.forEach((l, k) => {
-      rows.push(`<tr class="${k === 0 ? "first" : "cont"}"><td class="move">${esc(mv.l)}${k === 0 ? tags : ""}</td><td class="sub">${esc(mv.m)}</td>` +
-        `<td class="num">${esc(l.frames)}</td><td class="num dmg">${l.dmg}</td><td class="num">${angle(l.ang)}</td>` +
-        `<td class="num">${l.kbg}</td><td class="num">${l.bkb}</td><td class="num">${l.wkb}</td><td class="num">${l.size}</td><td>${elem(l.el)}</td></tr>`);
-    });
-  }
-  $("table").innerHTML = head + `<tbody>${rows.join("")}</tbody>`;
-}
-
-function strongest(mv) {
-  let best = null;
-  for (const h of mv.h) if (!best || h[2] > best[2]) best = h;
-  return best;
-}
-
-function moveTable() {
-  const key = state.move;
-  const label = (MOVE_KEYS.find((k) => k[0] === key) || [key, key])[1];
-  $("sheet-title").textContent = label;
-  const rows = [];
-  DATA.forEach((f) => {
-    const mv = f.mv.find((m) => m.m === key);
-    if (!mv) return;
-    const isThrow = key === "ThrowF" || key === "ThrowB";
-    const h = isThrow && mv.t ? null : strongest(mv);
-    const firsts = mv.h.map((x) => x[1]).filter((x) => x != null);
-    const startup = firsts.length ? Math.min(...firsts) : null;
-    const r = h ? { frames: h[0], dmg: h[2], ang: h[3], kbg: h[4], bkb: h[5], wkb: h[6], size: h[7], el: h[8] }
-      : { frames: "throw", dmg: mv.t[0], ang: mv.t[1], kbg: mv.t[2], bkb: mv.t[3], wkb: mv.t[4], size: "", el: mv.t[5] };
-    rows.push({ name: f.n, group: f.g, startup, hits: mv.h.length, inh: mv.i, ...r });
-  });
-  const k = state.sortKey, d = state.sortDir;
-  const val = (r) => (k === "name" ? r.name : (r[k] === "" || r[k] == null ? -Infinity : r[k]));
-  rows.sort((a, b) => (val(a) < val(b) ? -d : val(a) > val(b) ? d : a.name.localeCompare(b.name)));
-  $("sheet-meta").textContent = `${rows.length} fighters · strongest hit of each` + (key.startsWith("Throw") ? " (the throw's own launch)" : "");
-  const cols = [["name", "Fighter"], ["startup", "Startup"], ["frames", "Frames"], ["dmg", "Dmg %"], ["ang", "Angle"], ["kbg", "KBG"], ["bkb", "BKB"], ["wkb", "Fixed"], ["size", "Size"], ["el", "Element"], ["hits", "Hits"]];
-  const head = `<thead><tr>${cols.map(([c, t]) => `<th${c === k ? ` aria-sort="${d > 0 ? "ascending" : "descending"}"` : ""}${["name", "frames", "el"].includes(c) ? "" : ` class="num"`}><button type="button" data-k="${c}">${t}${c === k ? (d > 0 ? " ▲" : " ▼") : ""}</button></th>`).join("")}</tr></thead>`;
-  const body = rows.map((r) => `<tr><td class="move">${esc(r.name)}${r.inh ? `<span class="tag">from ${esc(r.inh)}</span>` : ""}</td>` +
-    `<td class="num">${r.startup ?? ""}</td><td class="num">${esc(r.frames)}</td><td class="num dmg">${r.dmg}</td><td class="num">${angle(r.ang)}</td>` +
-    `<td class="num">${r.kbg}</td><td class="num">${r.bkb}</td><td class="num">${r.wkb}</td><td class="num">${r.size}</td><td>${elem(r.el)}</td><td class="num">${r.hits}</td></tr>`).join("");
-  $("table").innerHTML = head + `<tbody>${body}</tbody>`;
-  $("table").querySelectorAll("th button").forEach((b) => b.addEventListener("click", () => {
-    const c = b.dataset.k === "dmg" ? "dmg" : b.dataset.k;
-    if (state.sortKey === c) state.sortDir = -state.sortDir; else { state.sortKey = c; state.sortDir = c === "name" ? 1 : -1; }
-    save(); render();
-  }));
-}
-
-function render() {
-  $("mode-fighter").setAttribute("aria-pressed", state.mode === "fighter");
-  $("mode-move").setAttribute("aria-pressed", state.mode === "move");
-  $("move-pick").hidden = state.mode !== "move";
-  renderRoster();
-  if (state.mode === "fighter") fighterTable(); else moveTable();
-}
-
-$("move-select").innerHTML = MOVE_KEYS.map(([k, t]) => `<option value="${k}">${t}</option>`).join("");
-$("move-select").value = state.move;
-$("move-select").addEventListener("change", (e) => { state.move = e.target.value; save(); render(); });
-$("mode-fighter").addEventListener("click", () => { state.mode = "fighter"; save(); render(); });
-$("mode-move").addEventListener("click", () => { state.mode = "move"; save(); render(); });
-if (state.sortKey === "damage") state.sortKey = "dmg";
-render();
+});
 </script>

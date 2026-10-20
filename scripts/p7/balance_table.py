@@ -400,7 +400,11 @@ def originals() -> list[dict]:
     for title, name, src in ORIGINALS:
         scripts, throws = parse_motion_source(DECOMP / "relocData" / src)
         m = re.search(r"FTMotionDesc\s+dFT" + name + r"MotionDescs\[\]\s*=\s*\{(.*?)\n\};", ftdata, re.S)
-        descs = [split_args(d.group(1)) for d in re.finditer(r"\{([^{}]*)\}", m.group(1))]
+        # Three values a desc. Some entries are written without their braces
+        # (brace elision), so the values are read flat and grouped by three;
+        # reading braced groups only put every later move two rows early.
+        flat = [x.strip() for x in split_args(re.sub(r"[{}]", " ", m.group(1))) if x.strip()]
+        descs = [flat[i:i + 3] for i in range(0, len(flat) - 2, 3)]
         header = None
         for h in (DECOMP / "ft" / "ftchar").glob(f"ft{name.lower()}/ft{name.lower()}.h"):
             header = h.read_text(encoding="utf-8", errors="replace")
@@ -783,8 +787,6 @@ def write_html(data: list[dict], path: Path) -> None:
                 m["s"] = mv["speed"]
             moves.append(m)
         slim.append({"n": f["name"], "g": f["group"], "x": f.get("notes", ""), "mv": moves})
-    blob = json.dumps(slim, separators=(",", ":")).replace("</", "<\\/")
-    page = page.replace("/*__DATA__*/[]", blob)
     path.write_text(page.replace("<!--__STATIC__-->", static_html(slim)), encoding="utf-8")
 
 
@@ -797,11 +799,139 @@ COMPARE_KEYS = [
     ("Catch", "Grab"), ("ThrowF", "Forward throw"), ("ThrowB", "Back throw"),
 ]
 
+# Knockback is compared at one reference: a standard-weight target (weight 1.0)
+# at 100% once the hit lands, the game's own formula (ftParamGetCommonKnockback,
+# ft/ftparam.c) with no handicap and the damage ratio at 100.
+REF_PERCENT = 100
+# A move is flagged when its value sits this many robust standard deviations
+# from the roster's median for the same move (median absolute deviation).
+OUTLIER_Z = 2.5
+METRICS = (("dmg", "Total damage"), ("kb", "KB at 100%"), ("start", "Startup"))
+
+
+def kb_at(d, kbg, bkb, wkb) -> float:
+    if wkb:
+        base = (1.0 + 10.0 * wkb * 0.05) * 1.4 + 18.0
+    else:
+        base = (REF_PERCENT * 0.1 + REF_PERCENT * d * 0.05) * 1.4 + 18.0
+    return min(2500.0, base * kbg * 0.01 + bkb)
+
+
+def move_damage(hits: list, key: str) -> int:
+    """The move's damage when every hit lands. A box out in two or more
+    separate windows with the same values is a multi-hit (the script refreshes
+    it), so it counts once a window; the strongest single-window box (a clean
+    hit, or a multi-hit's finisher) adds once. Clean and late boxes are single
+    windows and count as the stronger one; a rapid jab loops, so it counts its
+    strongest hit."""
+    if key == "Attack100Loop":
+        return max(h[2] for h in hits)
+    multi: dict[str, tuple] = {}
+    single = 0
+    for h in hits:
+        spans = [p for p in str(h[0]).split(",") if p.strip()]
+        if len(spans) >= 2:
+            d, _n = multi.get(str(h[0]), (0, 0))
+            multi[str(h[0])] = (max(d, h[2]), len(spans))
+        else:
+            single = max(single, h[2])
+    return sum(d * n for d, n in multi.values()) + single
+
+
+def move_metrics(mv: dict, key: str):
+    """The move's comparable numbers: its strongest damage, its strongest
+    knockback at the reference, its first active frame, and the row shown."""
+    if key.startswith("Throw") and mv.get("t"):
+        t = mv["t"]
+        return {"dmg": t[0], "kb": round(kb_at(t[0], t[2], t[3], t[4])), "start": None,
+                "row": ("throw", t[0], t[1], t[2], t[3], t[4], "", t[5]), "hits": len(mv["h"])}
+    if not mv["h"]:
+        return None
+    best = max(mv["h"], key=lambda h: (h[2], kb_at(h[2], h[4], h[5], h[6])))
+    firsts = [h[1] for h in mv["h"] if h[1] is not None]
+    # A grab's boxes catch rather than hit, and a move whose every box has 0
+    # damage takes its damage from code: neither is compared on damage or power.
+    strong = key != "Catch" and max(h[2] for h in mv["h"]) > 0
+    return {"dmg": move_damage(mv["h"], key) if strong else None,
+            "kb": round(max(kb_at(h[2], h[4], h[5], h[6]) for h in mv["h"])) if strong else None,
+            "start": min(firsts) if firsts else None,
+            "row": (best[0], best[2], best[3], best[4], best[5], best[6], best[7], best[8]),
+            "hits": len(mv["h"])}
+
+
+def _median(v: list) -> float:
+    v = sorted(v)
+    n = len(v)
+    return v[n // 2] if n % 2 else (v[n // 2 - 1] + v[n // 2]) / 2
+
+
+def _robust_z(x, values: list) -> float:
+    med = _median(values)
+    mad = _median([abs(y - med) for y in values])
+    if mad > 0:
+        return 0.6745 * (x - med) / mad
+    mean_abs = sum(abs(y - med) for y in values) / len(values)
+    return 0.7979 * (x - med) / mean_abs if mean_abs > 0 else 0.0
+
+
+def analyse(slim: list[dict]) -> tuple[dict, list, dict]:
+    """Per-move roster metrics, the outlier list and each fighter's scores.
+
+    A fighter's Damage, Power and Speed scores are the mean percentile of their
+    standard moves (the compare list) against every fighter that has the same
+    move: 50 is the roster middle, 100 the top of every move. Overall is the
+    mean of the three."""
+    table: dict[str, list] = {}
+    for key, _title in COMPARE_KEYS:
+        rows = []
+        for fi, f in enumerate(slim):
+            mv = next((m for m in f["mv"] if m["m"] == key), None)
+            mm = move_metrics(mv, key) if mv is not None else None
+            if mm is not None:
+                mm.update({"fi": fi, "inh": mv.get("i"), "flags": {}})
+                rows.append(mm)
+        table[key] = rows
+    pct: dict[int, dict] = {fi: {"dmg": [], "kb": [], "start": []} for fi in range(len(slim))}
+    outliers = []
+    titles = dict(COMPARE_KEYS)
+    for key, rows in table.items():
+        for metric, label in METRICS:
+            vals = [r[metric] for r in rows if r[metric] is not None]
+            if len(vals) < 5:
+                continue
+            med = _median(vals)
+            for r in rows:
+                x = r[metric]
+                if x is None:
+                    continue
+                less = sum(1 for y in vals if y < x)
+                same = sum(1 for y in vals if y == x)
+                p = (less + 0.5 * same) / len(vals)
+                pct[r["fi"]][metric].append(1.0 - p if metric == "start" else p)
+                z = _robust_z(x, vals)
+                gap = abs(x - med)
+                far = gap >= (max(3.0, 0.3 * med) if metric == "start" else 0.25 * med)
+                if abs(z) >= OUTLIER_Z and far:
+                    stronger = (z < 0) if metric == "start" else (z > 0)
+                    r["flags"][metric] = "hi" if stronger else "lo"
+                    outliers.append({"fi": r["fi"], "key": key, "move": titles[key], "metric": label,
+                                     "value": x, "median": med, "z": z, "stronger": stronger})
+    outliers.sort(key=lambda o: -abs(o["z"]))
+    scores = {}
+    for fi, p in pct.items():
+        s = {k: (round(100 * sum(v) / len(v)) if v else None) for k, v in p.items()}
+        parts = [v for v in s.values() if v is not None]
+        s["overall"] = round(sum(parts) / len(parts)) if parts else None
+        s["moves"] = len(p["dmg"])
+        s["flags"] = sum(1 for o in outliers if o["fi"] == fi)
+        scores[fi] = s
+    return table, outliers, scores
+
 
 def static_html(slim: list[dict]) -> str:
-    """The same tables the page's script draws, written out whole, so a viewer
-    that runs no script (a file preview) still shows every fighter."""
+    """Every table written out whole: the page needs no script to show them."""
     e = html.escape
+    table, outliers, scores = analyse(slim)
 
     def ang(a):
         return "361 (S)" if a == 361 else str(a)
@@ -812,17 +942,81 @@ def static_html(slim: list[dict]) -> str:
     def anchor(name):
         return "f-" + re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
 
-    out = ['<nav class="toc" aria-label="Fighters">']
+    def cols(widths):
+        return "<colgroup>" + "".join(f'<col style="width:{w}">' for w in widths) + "</colgroup>"
+
+    def th(label, num=False):
+        return f'<th{" class=num" if num else ""}>{label}</th>'
+
+    def flag_text(o, short=False):
+        sign = "+" if o["z"] > 0 else "-"
+        word = "stronger" if o["stronger"] else "weaker"
+        med = f'{o["median"]:g}'
+        if short:
+            return f'{o["metric"]} {o["value"]} vs {med}'
+        return f'{word}: {o["metric"]} {o["value"]} vs roster {med} ({sign}{abs(o["z"]):.1f})'
+
+    flags_by_move: dict[tuple, list] = {}
+    for o in outliers:
+        flags_by_move.setdefault((o["fi"], o["key"]), []).append(o)
+
+    def flag_cell(fi, key):
+        fl = flags_by_move.get((fi, key), [])
+        return " ".join(f'<span class="flag {"hi" if o["stronger"] else "lo"}" title="{e(flag_text(o))}">'
+                        f'{e(flag_text(o, True))}</span>' for o in fl)
+
+    out = ['<nav class="toc" aria-label="Contents">',
+           '<p><b>Start</b> <a href="#scores">Fighter scores</a> <a href="#outliers">Outlier attacks</a></p>']
     for g, label in (("Original", "Original 12"), ("Remix/EXTRA", "Remix &amp; EXTRA"),
                      ("Authored", "Authored")):
         links = " ".join(f'<a href="#{anchor(f["n"])}">{e(f["n"])}</a>' for f in slim if f["g"] == g)
         out.append(f'<p><b>{label}</b> {links}</p>')
     out.append('<p><b>Compare</b> ' + " ".join(
         f'<a href="#m-{k.lower()}">{e(t)}</a>' for k, t in COMPARE_KEYS) + "</p></nav>")
-    head = ("<thead><tr><th>Move</th><th>Script</th><th>Frames</th><th class=\"num\">Dmg %</th>"
-            "<th class=\"num\">Angle</th><th class=\"num\">KBG</th><th class=\"num\">BKB</th>"
-            "<th class=\"num\">Fixed</th><th class=\"num\">Size</th><th>Element</th></tr></thead>")
-    for f in slim:
+
+    # Fighter scores, best overall first.
+    order = sorted(range(len(slim)), key=lambda fi: (-(scores[fi]["overall"] or 0), slim[fi]["n"]))
+    rank = {fi: i + 1 for i, fi in enumerate(order)}
+
+    def bar(v):
+        if v is None:
+            return '<td class="num">-</td>'
+        return f'<td class="num score"><span class="bar" style="width:{v}%"></span><span class="v">{v}</span></td>'
+
+    body = "".join(
+        f'<tr><td class="num">{rank[fi]}</td><td class="move"><a href="#{anchor(slim[fi]["n"])}">{e(slim[fi]["n"])}</a></td>'
+        f'{bar(scores[fi]["overall"])}{bar(scores[fi]["dmg"])}{bar(scores[fi]["kb"])}{bar(scores[fi]["start"])}'
+        f'<td class="num">{scores[fi]["moves"]}</td><td class="num">{scores[fi]["flags"] or ""}</td></tr>'
+        for fi in order)
+    out.append('<section class="sheet" id="scores"><div class="sheet-head"><h3>Fighter scores</h3>'
+               '<span class="meta">standard moves only (the compare list); 50 = the roster middle; '
+               'click a heading to sort</span></div><div class="scroll"><table class="sortable fixed" style="min-width:760px">'
+               + cols(["56px", "190px", "120px", "120px", "120px", "120px", "80px", "auto"])
+               + "<thead><tr>" + th("Rank", True) + th("Fighter") + th("Overall", True) + th("Damage", True)
+               + th("Power", True) + th("Speed", True) + th("Moves", True) + th("Outliers", True)
+               + f"</tr></thead><tbody>{body}</tbody></table></div></section>")
+
+    # Outlier attacks, most extreme first.
+    body = "".join(
+        f'<tr class="{"hi" if o["stronger"] else "lo"}"><td class="move"><a href="#{anchor(slim[o["fi"]]["n"])}">'
+        f'{e(slim[o["fi"]]["n"])}</a></td><td><a href="#m-{o["key"].lower()}">{e(o["move"])}</a></td>'
+        f'<td>{e(o["metric"])}</td><td class="num">{o["value"]}</td><td class="num">{o["median"]:g}</td>'
+        f'<td class="num">{"+" if o["z"] > 0 else "-"}{abs(o["z"]):.1f}</td>'
+        f'<td><span class="flag {"hi" if o["stronger"] else "lo"}">{"stronger" if o["stronger"] else "weaker"}</span></td></tr>'
+        for o in outliers)
+    out.append('<section class="sheet" id="outliers"><div class="sheet-head"><h3>Outlier attacks</h3>'
+               f'<span class="meta">{len(outliers)} values at least {OUTLIER_Z:g} robust deviations and 25% from the roster median '
+               'for the same move, most extreme first</span></div><div class="scroll"><table class="sortable fixed" style="min-width:760px">'
+               + cols(["190px", "150px", "120px", "90px", "110px", "100px", "auto"])
+               + "<thead><tr>" + th("Fighter") + th("Move") + th("Stat") + th("Value", True) + th("Roster median", True)
+               + th("Deviation", True) + th("Reads as") + f"</tr></thead><tbody>{body}</tbody></table></div></section>")
+
+    # One sheet per fighter.
+    fcols = cols(["190px", "150px", "120px", "64px", "76px", "56px", "56px", "56px", "56px", "72px", "92px", "auto"])
+    head = ("<thead><tr>" + th("Move") + th("Script") + th("Frames") + th("Dmg %", True) + th("Angle", True)
+            + th("KBG", True) + th("BKB", True) + th("Fixed", True) + th("Size", True) + th("KB 100%", True)
+            + th("Element") + th("Outliers") + "</tr></thead>")
+    for fi, f in enumerate(slim):
         rows = []
         for mv in f["mv"]:
             tags = (f'<span class="tag">from {e(mv["i"])}</span>' if mv.get("i") else "") + \
@@ -831,49 +1025,54 @@ def static_html(slim: list[dict]) -> str:
             if mv.get("t"):
                 t = mv["t"]
                 lines.append(("throw", t[0], t[1], t[2], t[3], t[4], "", t[5]))
+            flags = flag_cell(fi, mv["m"])
             for k, l in enumerate(lines):
-                rows.append(f'<tr class="{"first" if k == 0 else "cont"}"><td class="move">{e(mv["l"])}'
-                            f'{tags if k == 0 else ""}</td><td class="sub">{e(mv["m"])}</td>'
-                            f'<td class="num">{e(str(l[0]))}</td><td class="num dmg">{l[1]}</td>'
+                kb = round(kb_at(l[1], l[3], l[4], l[5]))
+                rows.append(f'<tr class="{"first" if k == 0 else "cont"}{" flagged" if flags else ""}">'
+                            f'<td class="move">{e(mv["l"])}{tags if k == 0 else ""}</td><td class="sub">{e(mv["m"])}</td>'
+                            f'<td class="frames">{e(str(l[0]))}</td><td class="num dmg">{l[1]}</td>'
                             f'<td class="num">{ang(l[2])}</td><td class="num">{l[3]}</td>'
                             f'<td class="num">{l[4]}</td><td class="num">{l[5]}</td>'
-                            f'<td class="num">{l[6]}</td><td>{el(l[7])}</td></tr>')
+                            f'<td class="num">{l[6]}</td><td class="num">{kb}</td><td>{el(l[7])}</td>'
+                            f'<td class="flags">{flags if k == 0 else ""}</td></tr>')
+        s = scores[fi]
         group = "Remix &amp; EXTRA" if f["g"] == "Remix/EXTRA" else e(f["g"])
-        meta = f'{group} · {len(f["mv"])} moves' + (f' · {e(f["x"])}' if f.get("x") else "")
+        meta = (f'{group} · {len(f["mv"])} moves · score {s["overall"]} (rank {rank[fi]} of {len(slim)}): '
+                f'damage {s["dmg"]}, power {s["kb"]}, speed {s["start"]}'
+                + (f' · {e(f["x"])}' if f.get("x") else ""))
         out.append(f'<section class="sheet" id="{anchor(f["n"])}"><div class="sheet-head"><h3>{e(f["n"])}</h3>'
-                   f'<span class="meta">{meta}</span></div><div class="scroll"><table>{head}'
-                   f'<tbody>{"".join(rows)}</tbody></table></div></section>')
-    chead = ("<thead><tr><th>Fighter</th><th class=\"num\">Startup</th><th>Frames</th>"
-             "<th class=\"num\">Dmg %</th><th class=\"num\">Angle</th><th class=\"num\">KBG</th>"
-             "<th class=\"num\">BKB</th><th class=\"num\">Fixed</th><th class=\"num\">Size</th>"
-             "<th>Element</th><th class=\"num\">Hits</th></tr></thead>")
+                   f'<span class="meta">{meta}</span></div><div class="scroll"><table class="fixed" style="min-width:1060px">'
+                   f'{fcols}{head}<tbody>{"".join(rows)}</tbody></table></div></section>')
+
+    # One sheet per standard move across the roster.
+    ccols = cols(["190px", "72px", "120px", "64px", "70px", "76px", "56px", "56px", "56px", "56px", "72px", "92px", "52px", "auto"])
+    chead = ("<thead><tr>" + th("Fighter") + th("Startup", True) + th("Frames") + th("Dmg %", True) + th("Total %", True)
+             + th("Angle", True) + th("KBG", True) + th("BKB", True) + th("Fixed", True) + th("Size", True) + th("KB 100%", True)
+             + th("Element") + th("Hits", True) + th("Outliers") + "</tr></thead>")
     for key, title in COMPARE_KEYS:
-        rows = []
-        for f in slim:
-            mv = next((m for m in f["mv"] if m["m"] == key), None)
-            if mv is None:
-                continue
-            if key.startswith("Throw") and mv.get("t"):
-                t = mv["t"]
-                r = ("throw", t[0], t[1], t[2], t[3], t[4], "", t[5])
-            elif mv["h"]:
-                h = max(mv["h"], key=lambda x: x[2])
-                r = (h[0], h[2], h[3], h[4], h[5], h[6], h[7], h[8])
-            else:
-                continue
-            firsts = [h[1] for h in mv["h"] if h[1] is not None]
-            rows.append((r[1], f["n"], min(firsts) if firsts else "", r, len(mv["h"]), mv.get("i")))
-        rows.sort(key=lambda x: (-x[0], x[1]))
+        rows = sorted(table[key], key=lambda r: (-(r["dmg"] or 0), slim[r["fi"]]["n"]))
+        vals = {m: [r[m] for r in rows if r[m] is not None] for m, _ in METRICS}
+        med = {m: (_median(v) if v else None) for m, v in vals.items()}
+
+        def cell(r, m, text):
+            c = r["flags"].get(m)
+            return f'<td class="num{" dmg" if m == "dmg" else ""}{" " + c if c else ""}">{text}</td>'
+
         body = "".join(
-            f'<tr><td class="move">{e(n)}{f"<span class=tag>from {e(i)}</span>" if i else ""}</td>'
-            f'<td class="num">{s}</td><td class="num">{e(str(r[0]))}</td><td class="num dmg">{r[1]}</td>'
-            f'<td class="num">{ang(r[2])}</td><td class="num">{r[3]}</td><td class="num">{r[4]}</td>'
-            f'<td class="num">{r[5]}</td><td class="num">{r[6]}</td><td>{el(r[7])}</td>'
-            f'<td class="num">{hits}</td></tr>'
-            for _d, n, s, r, hits, i in rows)
+            f'<tr><td class="move"><a href="#{anchor(slim[r["fi"]]["n"])}">{e(slim[r["fi"]]["n"])}</a>'
+            f'{f"<span class=tag>from {e(r["inh"])}</span>" if r["inh"] else ""}</td>'
+            + cell(r, "start", "" if r["start"] is None else r["start"])
+            + f'<td class="frames">{e(str(r["row"][0]))}</td><td class="num dmg">{r["row"][1]}</td>'
+            + cell(r, "dmg", "" if r["dmg"] is None else r["dmg"])
+            + f'<td class="num">{ang(r["row"][2])}</td><td class="num">{r["row"][3]}</td><td class="num">{r["row"][4]}</td>'
+            f'<td class="num">{r["row"][5]}</td><td class="num">{r["row"][6]}</td>' + cell(r, "kb", "" if r["kb"] is None else r["kb"])
+            + f'<td>{el(r["row"][7])}</td><td class="num">{r["hits"]}</td><td class="flags">{flag_cell(r["fi"], key)}</td></tr>'
+            for r in rows)
+        medtxt = ", ".join(f'{lbl.lower()} {med[m]:g}' for m, lbl in METRICS if med[m] is not None)
         out.append(f'<section class="sheet" id="m-{key.lower()}"><div class="sheet-head"><h3>{e(title)}</h3>'
-                   f'<span class="meta">{len(rows)} fighters · strongest hit of each, highest damage first'
-                   f'</span></div><div class="scroll"><table>{chead}<tbody>{body}</tbody></table></div></section>')
+                   f'<span class="meta">{len(rows)} fighters · strongest hit of each, highest damage first · '
+                   f'roster median: {medtxt}</span></div><div class="scroll"><table class="sortable fixed" style="min-width:1170px">'
+                   f'{ccols}{chead}<tbody>{body}</tbody></table></div></section>')
     return "\n".join(out)
 
 
