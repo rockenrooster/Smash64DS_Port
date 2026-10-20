@@ -215,7 +215,12 @@ machinery goes (`docs/OLD_MACHINERY_DELETED.md`).
   GO never pushes a frame past two VBlanks. A four-fighter match still reads
   clips from the card (361 misses in a 1,960-frame cast match on Hyrule
   Temple: four movesets do not fit the heap's motion cache); the gate ROM
-  rings each frame's storage wait (`STRD`) so the criterion is measured, not
-  argued.
+  rings each frame's storage wait (`STRD`, `e383dd324d6`) and
+  `scripts/p7/check_motion_read_push.py` counts the frames a read pushed past
+  two VBlanks. `build-sweep-s35`: cast on Hyrule Temple, Saffron, Sector Z
+  and Dream Land, Ike mirrors on Hyrule Temple, Bowser mirrors on Saffron --
+  203-300 frames a match with a read, 19-88 frames past two VBlanks, 11-48 of
+  those with a read, **0 pushed by it** (each would be late without its
+  read). Met on those six; the worst-case sweep carries it from here.
 - **Four-CPU WORK P95** (docs/optimization/P7_P4_ROSTERS.md): the cast is ~8%
   over 1,120,000 on its busiest stages.
