@@ -54,43 +54,20 @@ SECTIONS {
          * (__nds_frontend_1p_end..__nds_frontend_end, menu and scene code
          * plus the scene status buffers) as asset storage, as a VS battle
          * borrows the whole range. ndsFrontendOverlayRestoreTail reloads
-         * the overlay before any tail code runs again. */
+         * the overlay before any tail code runs again.
+         *
+         * PER STAGE (2026-10-20): the head is five output sections -- this
+         * core (the manager and the 1P Game, which every 1P battle runs and
+         * returns into), Giant Donkey Kong's motion table, Master Hand's code
+         * and table, the Fighting Polygon Team's motion tables, the bonus
+         * boards' and Race to the Finish's code -- and a battle keeps the core
+         * and only its own stage's parts (ndsFrontendOverlayBeginScene; Race
+         * to the Finish runs the Polygons and its own code, adjacent): Bowser and
+         * Ganondorf ended Giant Donkey Kong 12-13 KB from the heap's end with
+         * the whole head kept. Each part is its own output section, so the
+         * strings it merges stay inside it. */
         :battleship_sc1pmanager.o (.text .text.* .rodata .rodata.*)
         :battleship_sc1pgame_runtime.o (.text .text.* .rodata .rodata.*)
-        :battleship_sc1pbonusstage.o (.text .text.* .rodata .rodata.*)
-        :battleship_sc1pbonusstagefiles.o (.text .text.* .rodata .rodata.*)
-        :battleship_sc1pgameboss.o (.text .text.* .rodata .rodata.*)
-        :battleship_ftboss.o (.text .text.* .rodata .rodata.*)
-        :battleship_ftboss_status_1.o (.text .text.* .rodata .rodata.*)
-        :battleship_ftboss_status_2.o (.text .text.* .rodata .rodata.*)
-        :battleship_ftboss_status_3.o (.text .text.* .rodata .rodata.*)
-        :battleship_ftboss_status_4.o (.text .text.* .rodata .rodata.*)
-        :battleship_wpbossbullet.o (.text .text.* .rodata .rodata.*)
-        :battleship_grbonus3.o (.text .text.* .rodata .rodata.*)
-        :battleship_item_tarubomb.o (.text .text.* .rodata .rodata.*)
-        :battleship_item_target.o (.text .text.* .rodata .rodata.*)
-        :battleship_ftboss.o (.data.dFTBossSpecialStatusDescs
-            .data.dFTBossWaitRandomArrayLookup .data.dFTBossWaitRandomNoGround
-            .data.dFTBossWaitRandomGround .data.dFTBossWaitRandomStatusLookup
-            .data.dFTBossWaitRandomStatusIDs)
-        :battleship_wpbossbullet.o (.data.dWPBossBulletNormalWeaponDesc
-            .data.dWPBossBulletHardWeaponDesc)
-        :battleship_item_target.o (.data.dITTargetItemDesc)
-        :battleship_item_tarubomb.o (.data.dITTaruBombItemDesc
-            .data.dITTaruBombStatusDescs)
-        :battleship_sc1pgameboss.o (.data.dSC1PGameBossWallpapers
-            .data.dSC1PGameBossPlans0 .data.dSC1PGameBossPlans1
-            .data.dSC1PGameBossPlans2 .data.dSC1PGameBossPlans3
-            .data.dSC1PGameBossAnims0 .data.dSC1PGameBossAnims1
-            .data.dSC1PGameBossAnims2 .data.dSC1PGameBossAnims3
-            .data.dSC1PGameBossEffects0 .data.dSC1PGameBossEffects1
-            .data.dSC1PGameBossEffects2 .data.dSC1PGameBossEffects3
-            .data.dSC1PGameBossCometEnvColorR .data.dSC1PGameBossCometEnvColorG
-            .data.dSC1PGameBossCometEnvColorB)
-        :battleship_sc1pbonusstage.o (.data.dSC1PBonusStageTargetDescs
-            .data.dSC1PBonusStageBumperDescs .data.dSC1PBonusStagePlatformDescs
-            .data.dSC1PBonusStageBoardedPlatformDescs
-            .data.dSC1PBonusStageTimerUnitLengths .data.dSC1PBonusStageTimerDigitPositions)
         :battleship_sc1pgame_runtime.o (.data.dSC1PGameStageDesc
             .data.dSC1PGameComputerDesc .data.dSC1PGameZoomEyeX .data.dSC1PGameZoomEyeY
             .data.dSC1PGameKirbyTeamCopyKinds .data.dSC1PGameStageCommonSleepTics)
@@ -101,18 +78,74 @@ SECTIONS {
             .data.dSC1PManager1PChallengerOverlay .data.dSC1PManagerEndingOverlay
             .data.dSC1PManagerStaffrollOverlay .data.dSC1PManagerCongraOverlay
             .data.dSC1PManagerMessageOverlay)
-        /* The 1P Game's opponents' motion tables (2026-10-11): the Fighting
-         * Polygon Team, Giant Donkey Kong and Master Hand are made only by
-         * the 1P Game and its intro, which keep this head; their FTData rows
-         * stay resident (ftManagerAllocFighter writes every kind's row). VS
-         * battles borrow these 36 KB. */
+        . = ALIGN(32);
+        __nds_frontend_1p_gdonkey = .;
+    } AT>ovlmem :ovl_frontend = 0xff
+
+    /* The 1P Game's opponents' motion tables (2026-10-11): the Fighting
+     * Polygon Team, Giant Donkey Kong and Master Hand are made only by the
+     * 1P Game and its intro, which keep this head; their FTData rows stay
+     * resident (ftManagerAllocFighter writes every kind's row, not these
+     * tables). VS battles borrow these 36 KB; each 1P stage keeps only its
+     * own opponents' table. */
+    .ovl.frontend.gdonkey . : {
+        :battleship_ftdata.o (.data.dFTGDonkeyMotionDescs)
+        . = ALIGN(32);
+        __nds_frontend_1p_boss = .;
+    } AT>ovlmem :ovl_frontend = 0xff
+
+    .ovl.frontend.boss . : {
+        :battleship_sc1pgameboss.o (.text .text.* .rodata .rodata.*)
+        :battleship_ftboss.o (.text .text.* .rodata .rodata.*)
+        :battleship_ftboss_status_1.o (.text .text.* .rodata .rodata.*)
+        :battleship_ftboss_status_2.o (.text .text.* .rodata .rodata.*)
+        :battleship_ftboss_status_3.o (.text .text.* .rodata .rodata.*)
+        :battleship_ftboss_status_4.o (.text .text.* .rodata .rodata.*)
+        :battleship_wpbossbullet.o (.text .text.* .rodata .rodata.*)
+        :battleship_ftboss.o (.data.dFTBossSpecialStatusDescs
+            .data.dFTBossWaitRandomArrayLookup .data.dFTBossWaitRandomNoGround
+            .data.dFTBossWaitRandomGround .data.dFTBossWaitRandomStatusLookup
+            .data.dFTBossWaitRandomStatusIDs)
+        :battleship_wpbossbullet.o (.data.dWPBossBulletNormalWeaponDesc
+            .data.dWPBossBulletHardWeaponDesc)
+        :battleship_sc1pgameboss.o (.data.dSC1PGameBossWallpapers
+            .data.dSC1PGameBossPlans0 .data.dSC1PGameBossPlans1
+            .data.dSC1PGameBossPlans2 .data.dSC1PGameBossPlans3
+            .data.dSC1PGameBossAnims0 .data.dSC1PGameBossAnims1
+            .data.dSC1PGameBossAnims2 .data.dSC1PGameBossAnims3
+            .data.dSC1PGameBossEffects0 .data.dSC1PGameBossEffects1
+            .data.dSC1PGameBossEffects2 .data.dSC1PGameBossEffects3
+            .data.dSC1PGameBossCometEnvColorR .data.dSC1PGameBossCometEnvColorG
+            .data.dSC1PGameBossCometEnvColorB)
+        :battleship_ftdata.o (.data.dFTBossMotionDescs)
+        . = ALIGN(32);
+        __nds_frontend_1p_polygon = .;
+    } AT>ovlmem :ovl_frontend = 0xff
+
+    .ovl.frontend.polygon . : {
         :battleship_ftdata.o (.data.dFTNMarioMotionDescs .data.dFTNFoxMotionDescs
             .data.dFTNDonkeyMotionDescs .data.dFTNSamusMotionDescs
             .data.dFTNLuigiMotionDescs .data.dFTNLinkMotionDescs
             .data.dFTNYoshiMotionDescs .data.dFTNCaptainMotionDescs
             .data.dFTNKirbyMotionDescs .data.dFTNPikachuMotionDescs
-            .data.dFTNPurinMotionDescs .data.dFTNNessMotionDescs
-            .data.dFTGDonkeyMotionDescs .data.dFTBossMotionDescs)
+            .data.dFTNPurinMotionDescs .data.dFTNNessMotionDescs)
+        . = ALIGN(32);
+        __nds_frontend_1p_bonus = .;
+    } AT>ovlmem :ovl_frontend = 0xff
+
+    .ovl.frontend.bonus . : {
+        :battleship_sc1pbonusstage.o (.text .text.* .rodata .rodata.*)
+        :battleship_sc1pbonusstagefiles.o (.text .text.* .rodata .rodata.*)
+        :battleship_grbonus3.o (.text .text.* .rodata .rodata.*)
+        :battleship_item_tarubomb.o (.text .text.* .rodata .rodata.*)
+        :battleship_item_target.o (.text .text.* .rodata .rodata.*)
+        :battleship_item_target.o (.data.dITTargetItemDesc)
+        :battleship_item_tarubomb.o (.data.dITTaruBombItemDesc
+            .data.dITTaruBombStatusDescs)
+        :battleship_sc1pbonusstage.o (.data.dSC1PBonusStageTargetDescs
+            .data.dSC1PBonusStageBumperDescs .data.dSC1PBonusStagePlatformDescs
+            .data.dSC1PBonusStageBoardedPlatformDescs
+            .data.dSC1PBonusStageTimerUnitLengths .data.dSC1PBonusStageTimerDigitPositions)
         . = ALIGN(32);
         __nds_frontend_1p_end = .;
     } AT>ovlmem :ovl_frontend = 0xff

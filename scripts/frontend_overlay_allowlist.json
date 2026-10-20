@@ -684,6 +684,26 @@
     },
     {
       "source_symbol": "ndsFrontendOverlayBeginScene",
+      "target_symbol": "__nds_frontend_1p_gdonkey",
+      "reason": "Overlay owner uses the end of the 1P head's core (the start of its per-stage parts) as the address where a 1P battle's, the ending's or the continue screen's loan starts (2026-10-20), not as executable code."
+    },
+    {
+      "source_symbol": "ndsFrontendOverlayBeginScene",
+      "target_symbol": "__nds_frontend_1p_polygon",
+      "reason": "Overlay owner uses the end of Master Hand's part as a loan boundary (Master Hand's loan starts there; the Polygon stage's and Race to the Finish's second range ends there), not as executable code."
+    },
+    {
+      "source_symbol": "ndsFrontendOverlayBeginScene",
+      "target_symbol": "__nds_frontend_1p_boss",
+      "reason": "Overlay owner uses the end of Giant Donkey Kong's motion table part as a loan boundary (the Giant Donkey Kong stage's loan starts there; Master Hand's second range ends there), not as executable code."
+    },
+    {
+      "source_symbol": "ndsFrontendOverlayBeginScene",
+      "target_symbol": "__nds_frontend_1p_bonus",
+      "reason": "Overlay owner uses the end of the Fighting Polygon Team's motion tables as a loan boundary (the Polygon stage's loan starts there; a bonus board's second range ends there), not as executable code."
+    },
+    {
+      "source_symbol": "ndsFrontendOverlayBeginScene",
       "target_symbol": "__nds_frontend_training_end",
       "reason": "Overlay owner uses training's head end as the address where a training battle's loan starts (P7 C4), not as executable code."
     },
@@ -965,12 +985,12 @@
     {
       "source_symbol": "scene_backend.c::ndsCampaignDrivePlayback",
       "target_symbol": "ndsCampaignWalkBreakOneTarget",
-      "reason": "Campaign-walk lab only (NDS_P2_MENU_WALK): the resident drive calls this only in nSCKind1PBonusStage, whose board code is in the overlay's 1P head, loaded for the whole 1P campaign; a battle loans only the tail past __nds_frontend_1p_end."
+      "reason": "Campaign-walk lab only (NDS_P2_MENU_WALK): the resident drive calls this only in nSCKind1PBonusStage, whose board code is in the overlay's 1P head's bonus part, which a bonus battle keeps (it lends the tail past __nds_frontend_1p_end and the parts before __nds_frontend_1p_bonus)."
     },
     {
       "source_symbol": "scene_backend.c::ndsCampaignDrivePlayback",
       "target_symbol": "ndsCampaignWalkBoardOnePlatform",
-      "reason": "Campaign-walk lab only (NDS_P2_MENU_WALK): the resident drive calls this only in nSCKind1PBonusStage, whose board code is in the overlay's 1P head, loaded for the whole 1P campaign; a battle loans only the tail past __nds_frontend_1p_end."
+      "reason": "Campaign-walk lab only (NDS_P2_MENU_WALK): the resident drive calls this only in nSCKind1PBonusStage, whose board code is in the overlay's 1P head's bonus part, which a bonus battle keeps (it lends the tail past __nds_frontend_1p_end and the parts before __nds_frontend_1p_bonus)."
     },
     {
       "source_symbol": "ftCommonAppearProcUpdate",

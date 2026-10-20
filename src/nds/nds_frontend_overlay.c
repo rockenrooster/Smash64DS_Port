@@ -14,6 +14,14 @@ extern u8 __nds_frontend_1p_end[];
 /* End of training's own head, the first part of the 1P head (the same
  * script): a training battle keeps only that. */
 extern u8 __nds_frontend_training_end[];
+/* The 1P head's per-stage parts, in order after its core (the same script):
+ * Giant Donkey Kong's motion table, Master Hand's code and table, the
+ * Fighting Polygon Team's motion tables, the bonus boards' and Race to the
+ * Finish's code. */
+extern u8 __nds_frontend_1p_gdonkey[];
+extern u8 __nds_frontend_1p_boss[];
+extern u8 __nds_frontend_1p_polygon[];
+extern u8 __nds_frontend_1p_bonus[];
 /* Start of the VS character select's block (the same script): the select lends
  * everything before it. */
 extern u8 __nds_frontend_select_start[];
@@ -25,7 +33,9 @@ extern u8 __nds_frontend_select_end[];
 static u8 *sNdsFrontendCursor;
 /* Where the current loan ends: the overlay's end, or the Results block. */
 static u8 *sNdsFrontendLoanEnd;
-/* Results' second range (the select's block), taken once the first is full. */
+/* A second range, taken once the first is full: Results' (the select's
+ * block), or the 1P head's idle parts before the part a stage keeps. */
+static u8 *sNdsFrontendStart2;
 static u8 *sNdsFrontendCursor2;
 static u8 *sNdsFrontendLoanEnd2;
 static u32 sNdsFrontendInitialized;
@@ -161,9 +171,70 @@ void *ndsFrontendOverlayBorrowForSelect(u32 *bytes)
     return __nds_frontend_start;
 }
 
+/* The loan: range 1 from `first` to the overlay's end, and range 2
+ * [start2, end2) when there is one (taken once range 1 is full). */
+static void ndsFrontendOverlayLendRanges(u8 *first, u8 *start2, u8 *end2)
+{
+    sNdsFrontendCursor = first;
+    sNdsFrontendLoanEnd = __nds_frontend_end;
+    gNdsFrontendOverlayLoanBytes = (u32)(__nds_frontend_end - first);
+    if ((start2 != NULL) && (end2 > start2))
+    {
+        sNdsFrontendStart2 = start2;
+        sNdsFrontendCursor2 = start2;
+        sNdsFrontendLoanEnd2 = end2;
+        gNdsFrontendOverlayLoanBytes += (u32)(end2 - start2);
+    }
+}
+
+/* A 1P Game or bonus battle keeps the 1P head's core -- the manager and the
+ * 1P Game, which every 1P battle runs and returns into -- and the parts its
+ * stage runs (linker script, in order: Giant Donkey Kong's motion table,
+ * Master Hand's code and table, the Fighting Polygon Team's motion tables,
+ * the bonus boards' and Race to the Finish's code; the Race runs Polygons
+ * too); every other part lends with the tail. */
+static void ndsFrontendOverlayLend1P(u32 kind)
+{
+    if (kind == (u32)nSCKind1PBonusStage)
+    {
+        /* Break the Targets, Board the Platforms (practice or campaign). */
+        ndsFrontendOverlayLendRanges(__nds_frontend_1p_end,
+                                     __nds_frontend_1p_gdonkey,
+                                     __nds_frontend_1p_bonus);
+        return;
+    }
+    switch (gSCManagerSceneData.spgame_stage)
+    {
+    case nSC1PGameStageDonkey:
+        ndsFrontendOverlayLendRanges(__nds_frontend_1p_boss, NULL, NULL);
+        break;
+    case nSC1PGameStageBoss:
+        ndsFrontendOverlayLendRanges(__nds_frontend_1p_polygon,
+                                     __nds_frontend_1p_gdonkey,
+                                     __nds_frontend_1p_boss);
+        break;
+    case nSC1PGameStageZako:
+        ndsFrontendOverlayLendRanges(__nds_frontend_1p_bonus,
+                                     __nds_frontend_1p_gdonkey,
+                                     __nds_frontend_1p_polygon);
+        break;
+    case nSC1PGameStageBonus3:
+        /* The Race's Polygons and its own code, adjacent. */
+        ndsFrontendOverlayLendRanges(__nds_frontend_1p_end,
+                                     __nds_frontend_1p_gdonkey,
+                                     __nds_frontend_1p_polygon);
+        break;
+    default:
+        /* Every other ladder stage and every challenger fight. */
+        ndsFrontendOverlayLendRanges(__nds_frontend_1p_gdonkey, NULL, NULL);
+        break;
+    }
+}
+
 void ndsFrontendOverlayBeginScene(u32 kind)
 {
     sNdsFrontendCursor = NULL;
+    sNdsFrontendStart2 = NULL;
     sNdsFrontendCursor2 = NULL;
     sNdsFrontendLoanEnd2 = NULL;
     gNdsFrontendOverlayLoanBytes = 0u;
@@ -191,14 +262,18 @@ void ndsFrontendOverlayBeginScene(u32 kind)
          * whole range. The previous scene's status buffers live in the tail:
          * drop the relocator's reference before the bytes are reused (this
          * scene installs its own in its FuncStart, after this seam). */
-        u8 *keep_end = (kind == (u32)nSCKind1PTrainingMode) ?
-            __nds_frontend_training_end : __nds_frontend_1p_end;
-
         ndsRelocReleaseSceneStatusBuffers();
         /* Training runs only its own head (linker script): the rest of the
-         * 1P head lends too. */
-        sNdsFrontendCursor = keep_end;
-        gNdsFrontendOverlayLoanBytes = (u32)(__nds_frontend_end - keep_end);
+         * 1P head lends too. A 1P Game or bonus battle keeps the head's core
+         * and its own stage's part. */
+        if (kind == (u32)nSCKind1PTrainingMode)
+        {
+            ndsFrontendOverlayLendRanges(__nds_frontend_training_end, NULL, NULL);
+        }
+        else
+        {
+            ndsFrontendOverlayLend1P(kind);
+        }
         gNdsFrontendOverlayLoanCount++;
         NDS_DIAG(gNdsFrontendOverlayTailLoanCount++);
         sNdsFrontendTailLoaned = 1u;
@@ -225,6 +300,20 @@ void ndsFrontendOverlayBeginScene(u32 kind)
         sNdsFrontendLoanEnd = __nds_frontend_select_end;
         gNdsFrontendOverlayLoanBytes =
             (u32)(__nds_frontend_select_end - __nds_frontend_results_start);
+        /* The ending runs no stage's part of the 1P head (Giant Donkey
+         * Kong's and the Polygons' tables, Master Hand, the bonus boards),
+         * and no ladder stage follows it: those parts lend too (2026-10-20:
+         * Bowser's ending fighter left the room table 38 KB short, and the
+         * room went undrawn). The continue screen keeps them: the manager
+         * goes from it back into the stage it continues, with no reload. */
+        if (kind == (u32)nSCKindEnding)
+        {
+            sNdsFrontendStart2 = __nds_frontend_1p_gdonkey;
+            sNdsFrontendCursor2 = __nds_frontend_1p_gdonkey;
+            sNdsFrontendLoanEnd2 = __nds_frontend_1p_end;
+            gNdsFrontendOverlayLoanBytes +=
+                (u32)(__nds_frontend_1p_end - __nds_frontend_1p_gdonkey);
+        }
         gNdsFrontendOverlayLoanCount++;
         sNdsFrontendTailLoaned = 1u;
     }
@@ -236,6 +325,7 @@ void ndsFrontendOverlayBeginScene(u32 kind)
          * dispatch reloads the overlay once an allocation landed in it. */
         sNdsFrontendCursor = __nds_frontend_start;
         sNdsFrontendLoanEnd = __nds_frontend_results_start;
+        sNdsFrontendStart2 = __nds_frontend_select_start;
         sNdsFrontendCursor2 = __nds_frontend_select_start;
         sNdsFrontendLoanEnd2 = __nds_frontend_select_end;
         gNdsFrontendOverlayLoanBytes =
@@ -249,6 +339,7 @@ void ndsFrontendOverlayBeginScene(u32 kind)
 void ndsFrontendOverlayEndScene(void)
 {
     sNdsFrontendCursor = NULL;
+    sNdsFrontendStart2 = NULL;
     sNdsFrontendCursor2 = NULL;
 }
 
@@ -283,7 +374,7 @@ void *ndsFrontendOverlayTryAlloc(size_t bytes, u32 alignment)
         gNdsFrontendOverlayUsedBytes =
             (u32)(sNdsFrontendCursor - __nds_frontend_start) +
             ((sNdsFrontendCursor2 != NULL) ?
-                 (u32)(sNdsFrontendCursor2 - __nds_frontend_select_start) : 0u);
+                 (u32)(sNdsFrontendCursor2 - sNdsFrontendStart2) : 0u);
         gNdsFrontendOverlayAllocCount++;
     }
     return storage;
@@ -326,7 +417,7 @@ s32 ndsFrontendOverlayLoanContains(const void *ptr, size_t bytes)
         return TRUE;
     }
     if ((sNdsFrontendCursor2 != NULL) &&
-        (addr >= (uintptr_t)__nds_frontend_select_start) &&
+        (addr >= (uintptr_t)sNdsFrontendStart2) &&
         (addr < (uintptr_t)sNdsFrontendCursor2) &&
         (bytes <= (size_t)((uintptr_t)sNdsFrontendCursor2 - addr)))
     {
