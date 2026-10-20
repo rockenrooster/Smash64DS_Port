@@ -85,6 +85,8 @@ from pathlib import Path
 import numpy as np
 
 DRESS = "DS_dress"
+# The waist ring's height: the dress's lowest bodice (row 2) vertices
+# (look_blend.py's rule), about 328 re-aimed, 327 in the owner's pose.
 WAIST_Y = 328.0
 HEM_MAX_Y = 90.0
 CUT_Y = 288.0
@@ -120,15 +122,21 @@ OVERLAP_UP = 6.0
 OVERLAP_IN = 0.96
 # Foot rows that take their own copy of the ankle ring (their parent's).
 FOOT_ROWS = (19, 24)
-# The slit: the hem's open span in u (the old hem's two vertices beside it);
-# its top is the old skirt's one vertex between them, above the hem.
-SLIT = (0.58333, 0.72222)
-# The rings' samples in u: the lower band's (the hem's, with the slit's two
-# edges) and the upper band's cut ring (fewer: the band is short).
-SAMPLES = {
-    "high": [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.58333, 0.72222, 0.81481, 0.90741, 1.0],
-    "low": [0.0, 0.125, 0.25, 0.375, 0.5, 0.58333, 0.72222, 0.86111, 1.0],
-}
+# The slit: the hem's open span in u, between the one pair of hem
+# neighbours no triangle joins (_slit_span); its top is the highest skirt
+# vertex between them above the hem. The approved model's span was (0.58333,
+# 0.72222), its top at u 0.6583; the 2026-10-20 base's is (0.63056, 0.76944),
+# its top at 0.70, under the belt's red gem (owner 2026-10-20: "slit should
+# be more centered under the red gem on her left hip"), and its mid ring puts
+# two more vertices between them, on the slit's edges.
+# The rings' samples in u (ring_samples()): the lower band's -- the hem's, with
+# the slit's two edges: FRONT to u 0.5, then as many as keep each step within
+# FRONT_STEP up to the slit, then BACK_SPANS even steps from it round to u 1
+# (the approved model's span gives the samples the look had) -- and the
+# upper band's cut ring (fewer: the band is short).
+FRONT = {"high": [0.0, 0.1, 0.2, 0.3, 0.4, 0.5], "low": [0.0, 0.125, 0.25, 0.375, 0.5]}
+FRONT_STEP = {"high": 0.09, "low": 0.14}
+BACK_SPANS = {"high": 3, "low": 2}
 SAMPLES_UPPER = {
     "high": [0.0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1.0],
     "low": [0.0, 0.16667, 0.33333, 0.5, 0.66667, 0.83333, 1.0],
@@ -137,6 +145,30 @@ SAMPLES_UPPER = {
 
 class SkirtError(SystemExit):
     pass
+
+
+def ring_samples(detail: str, slit) -> list:
+    """The lower band's samples in u about a slit span (u0, u1)."""
+    out = list(FRONT[detail])
+    gap = slit[0] - out[-1]
+    n = max(1, int(np.ceil(gap / FRONT_STEP[detail] - 1e-9)))
+    out += [round(out[-1] + gap * k / n, 5) for k in range(1, n)]
+    out += [round(float(slit[0]), 5), round(float(slit[1]), 5)]
+    m = BACK_SPANS[detail]
+    out += [round(slit[1] + (1.0 - slit[1]) * k / m, 5) for k in range(1, m)]
+    return out + [1.0]
+
+
+def _slit_span(verts: list, tris: list, hem: list) -> tuple:
+    """The hem's open span: the one pair of hem neighbours (by u; `hem` the
+    hem's vertex ids) that no triangle joins."""
+    joined = {(a, b) for t in tris for a in t["v"] for b in t["v"]}
+    us = sorted(hem, key=lambda i: verts[i]["uv"][0])
+    gaps = [(float(verts[a]["uv"][0]), float(verts[b]["uv"][0])) for a, b in zip(us, us[1:])
+            if (a, b) not in joined and verts[b]["uv"][0] - verts[a]["uv"][0] > 1e-3]
+    if len(gaps) != 1:
+        raise SkirtError(f"the hem's open spans: {gaps}")
+    return gaps[0]
 
 
 def _ring_interp(points: list[dict], u: float) -> dict:
@@ -196,7 +228,7 @@ def _centre(points: np.ndarray) -> np.ndarray:
     return np.array([((x + x1) * cross).sum(), ((z + z1) * cross).sum()]) / (6.0 * area)
 
 
-def split_band(scene: dict) -> dict:
+def split_band(scene: dict, hem_shift=HEM_SHIFT) -> dict:
     """The lower band (row 25's ring to the hem on row 26) split at MID_Y by
     a mid ring on row 26, the hem moved to row 27 (the module's note)."""
     verts, tris, joints = scene["vertices"], scene["triangles"], scene["joints"]
@@ -218,10 +250,12 @@ def split_band(scene: dict) -> dict:
     us = [verts[i]["uv"][0] for i in ring25]
     if any(abs(a - verts[h]["uv"][0]) > 1e-3 for a, h in zip(us, hem)):
         raise SkirtError("the band's ring and hem are not sampled at the same u")
-    slit_k = next((k for k in range(len(us) - 1) if abs(us[k] - SLIT[0]) < 1e-3 and abs(us[k + 1] - SLIT[1]) < 1e-3),
-                  None)
-    if slit_k is None:
-        raise SkirtError("no slit span between the band's samples")
+    # The slit's span: the samples whose hem vertices no band triangle joins.
+    joined = {(a, b) for t in band for a in t["v"] for b in t["v"]}
+    open_k = [k for k in range(len(us) - 1) if (hem[k], hem[k + 1]) not in joined]
+    if len(open_k) != 1:
+        raise SkirtError(f"slit spans between the band's samples: {open_k}")
+    slit_k = open_k[0]
     # Row 26 up the band to MID_Y (along row 25's -z, as row 26 hangs); row
     # 27 where row 26 was.
     w25 = np.array(joints[ROW_UPPER]["world"], dtype=float)
@@ -245,7 +279,7 @@ def split_band(scene: dict) -> dict:
     hem_xz = _centre(np.array([verts[i]["model"] for i in hem], dtype=float))
     for i in hem:
         p = np.array(verts[i]["model"], dtype=float)
-        p[[0, 2]] = hem_xz + (p[[0, 2]] - hem_xz) * HEM_SCALE + np.asarray(HEM_SHIFT, dtype=float)
+        p[[0, 2]] = hem_xz + (p[[0, 2]] - hem_xz) * HEM_SCALE + np.asarray(hem_shift, dtype=float)
         verts[i]["model"] = [round(float(x), 3) for x in p]
     for i in hem:
         verts[i]["joint"] = ROW_HEM3
@@ -283,7 +317,7 @@ def split_band(scene: dict) -> dict:
     # The slit (owner p6t: "make the slit smaller" -- a minuscule change):
     # its top moved SLIT_DROP down the band, its opening at the hem
     # SLIT_HEM wide about the top's u (two hem vertices of its own; it was
-    # the hem samples' span, SLIT), its edges through the mid ring.
+    # the hem samples' span), its edges through the mid ring.
     u_c = float(verts[apex]["uv"][0])
 
     def along(i0: int, i1: int, u: float, row: int) -> int:
@@ -335,30 +369,34 @@ def split_band(scene: dict) -> dict:
     scene["triangles"] = [t for t in tris if id(t) not in old] + new_tris
     return {"split": len(band), "upper": sum(1 for t in new_tris if t["joint"] == ROW_MID),
             "lower": sum(1 for t in new_tris if t["joint"] == ROW_HEM3), "mid_ring": len(mid) + 2,
-            "mid_y": MID_Y, "hem_scale": HEM_SCALE, "concave": CONCAVE, "hem_shift": list(HEM_SHIFT)}
+            "mid_y": MID_Y, "hem_scale": HEM_SCALE, "concave": CONCAVE, "hem_shift": [float(x) for x in hem_shift]}
 
 
 def remesh(scene: dict, detail: str) -> dict:
     verts, tris, joints = scene["vertices"], scene["triangles"], scene["joints"]
     if any(verts[i]["joint"] in (ROW_HEM, ROW_HEM3) for t in tris for i in t["v"]):
         return {"skipped": "already on row 26"}
+    waist_y = min((v["model"][1] for v in verts if v.get("object") == DRESS and v["joint"] == ROW_BODICE),
+                  default=WAIST_Y)
     skirt = [t for t in tris if t.get("object") == DRESS and
-             any(verts[i]["model"][1] < WAIST_Y - 1.0 for i in t["v"])]
+             any(verts[i]["model"][1] < waist_y - 1.0 for i in t["v"])]
     if not skirt:
         raise SkirtError("no skirt triangles")
     material = skirt[0]["material"]
     used = sorted({i for t in skirt for i in t["v"]})
-    waist = sorted((i for i in used if abs(verts[i]["model"][1] - WAIST_Y) < 1.0 and
+    waist = sorted((i for i in used if abs(verts[i]["model"][1] - waist_y) < 1.0 and
                     verts[i]["joint"] == ROW_BODICE), key=lambda i: verts[i]["uv"][0])
-    hem = sorted((_point(verts[i]) for i in used if verts[i]["model"][1] < HEM_MAX_Y),
-                 key=lambda q: q["u"])
+    hem_ids = [i for i in used if verts[i]["model"][1] < HEM_MAX_Y]
+    hem = sorted((_point(verts[i]) for i in hem_ids), key=lambda q: q["u"])
+    slit = _slit_span(verts, skirt, hem_ids)
     cut = _cut_ring(verts, skirt, CUT_Y)
     if len(waist) < 4 or len(hem) < 4 or len(cut) < 4:
         raise SkirtError(f"rings: waist {len(waist)}, hem {len(hem)}, cut {len(cut)}")
-    apex = [_point(verts[i]) for i in used if SLIT[0] + 1e-4 < verts[i]["uv"][0] < SLIT[1] - 1e-4
+    apex = [_point(verts[i]) for i in used if slit[0] + 1e-4 < verts[i]["uv"][0] < slit[1] - 1e-4
             and HEM_MAX_Y < verts[i]["model"][1] < CUT_Y]
-    if len(apex) != 1:
-        raise SkirtError(f"slit top: {len(apex)} vertices between the slit's hem vertices")
+    if not apex:
+        raise SkirtError("slit top: no vertex between the slit's hem vertices")
+    apex = [max(apex, key=lambda q: q["pos"][1])]
     # Row 25 up to the pivot; row 26 keeps its offset from it.
     old25 = np.array(joints[ROW_UPPER]["world"], dtype=float)
     local26 = np.linalg.inv(old25) @ np.array(joints[ROW_HEM]["world"], dtype=float)
@@ -382,7 +420,7 @@ def remesh(scene: dict, detail: str) -> dict:
                       "rgba": list(proto["rgba"]), "object": DRESS})
         return len(verts) - 1
 
-    samples = SAMPLES[detail]
+    samples = ring_samples(detail, slit)
     upper = SAMPLES_UPPER[detail]
     cut_pts = [_ring_interp(cut, u) for u in samples]
     hem_pts = [_ring_interp(hem, u) for u in samples]
@@ -431,7 +469,7 @@ def remesh(scene: dict, detail: str) -> dict:
     # The lower band: quads between the rings; the slit's span closes above
     # and beside its V.
     for k in range(len(samples) - 1):
-        if abs(samples[k] - SLIT[0]) < 1e-4 and abs(samples[k + 1] - SLIT[1]) < 1e-4:
+        if abs(samples[k] - slit[0]) < 1e-4 and abs(samples[k + 1] - slit[1]) < 1e-4:
             tri(ROW_HEM, ring25[k], slit_top, ring25[k + 1])
             tri(ROW_HEM, ring25[k], ring26[k], slit_top)
             tri(ROW_HEM, slit_top, ring26[k + 1], ring25[k + 1])
@@ -461,7 +499,88 @@ def remesh(scene: dict, detail: str) -> dict:
     for j in (ROW_UPPER, ROW_HEM):
         joints[j]["has_list"] = True
     return {"removed": len(skirt), "added": len(new_tris), "waist": len(waist), "ring": len(samples),
-            "ankle_vertices_copied": copied}
+            "slit": [round(u, 5) for u in slit], "slit_top_u": round(top["u"], 5), "ankle_vertices_copied": copied}
+
+
+# Her legs at rest: every leg point between the hem and the waist this far
+# (model units) inside the dress as drawn (leg_clearance).
+LEG_CLEAR = 2.0
+
+
+def _ray_tri(o: np.ndarray, d: np.ndarray, a: np.ndarray, b: np.ndarray, c: np.ndarray):
+    """Distance along the ray o + t d to triangle abc, or None."""
+    e1, e2 = b - a, c - a
+    p = np.cross(d, e2)
+    det = float(e1 @ p)
+    if abs(det) < 1e-9:
+        return None
+    s = o - a
+    u = float(s @ p) / det
+    if u < 0.0 or u > 1.0:
+        return None
+    q = np.cross(s, e1)
+    v = float(d @ q) / det
+    if v < 0.0 or u + v > 1.0:
+        return None
+    t = float(e2 @ q) / det
+    return t if t > 0.0 else None
+
+
+def leg_clearance(scene: dict) -> dict:
+    """Her legs inside the dress at rest (owner 2026-10-20: "left thigh clips
+    through dress" in the default pose; the approved model's thigh tops pass
+    within half a unit of its dress, and this dress -- the hem's HEM_SCALE,
+    the CONCAVE mid ring, row 25's ring drawn in -- sits a few units inside
+    that surface just below the hips). A leg vertex between the hem and the
+    waist that is not LEG_CLEAR inside the dress, measured along the level
+    ray from the dress's axis at its height (the waist ring's centre to the
+    hem's), moves in along that ray to LEG_CLEAR inside; a point the ray
+    reaches through the slit is left (it shows through it, as the approved
+    model's). Each copy of a point (its rows' and uvs') moves with it."""
+    verts, tris, joints = scene["vertices"], scene["triangles"], scene["joints"]
+    dress = [[np.array(verts[i]["model"], dtype=float) for i in t["v"]] for t in tris if t.get("object") == DRESS]
+    used = sorted({i for t in tris if t.get("object") == DRESS for i in t["v"]})
+    waist_y = min(verts[i]["model"][1] for i in used if verts[i]["joint"] == ROW_BODICE)
+    waist = np.array([verts[i]["model"] for i in used if verts[i]["joint"] == ROW_BODICE
+                      and verts[i]["model"][1] < waist_y + 1.0], dtype=float)
+    hem = np.array([verts[i]["model"] for i in used if verts[i]["model"][1] < HEM_MAX_Y], dtype=float)
+    cw, ch = waist.mean(axis=0), hem.mean(axis=0)
+    legs = [i for i, v in enumerate(verts) if v.get("object") == "DS_legs"]
+    by_pos: dict = {}
+    for i in legs:
+        by_pos.setdefault(tuple(round(float(x), 3) for x in verts[i]["model"]), []).append(i)
+    inv = {}
+    moved, worst = 0, 0.0
+    for key, ids in by_pos.items():
+        p = np.array(key, dtype=float)
+        if not ch[1] + 5.0 < p[1] < waist_y - 2.0:
+            continue
+        t = (waist_y - p[1]) / (waist_y - ch[1])
+        c = cw + (ch - cw) * t
+        c[1] = p[1]
+        d = p - c
+        d[1] = 0.0
+        r = float(np.linalg.norm(d))
+        if r < 1e-6:
+            continue
+        d /= r
+        hits = [h for h in (_ray_tri(c, d, *tri) for tri in dress) if h is not None]
+        if not hits:
+            continue
+        want = min(hits) - LEG_CLEAR
+        if r <= want:
+            continue
+        worst = max(worst, r - min(hits))
+        q = c + d * want
+        q[1] = p[1]
+        for i in ids:
+            row = verts[i]["joint"]
+            if row not in inv:
+                inv[row] = np.linalg.inv(np.array(joints[row]["world"], dtype=float))
+            verts[i]["model"] = [round(float(x), 3) for x in q]
+            verts[i]["local"] = [round(float(x), 3) for x in (inv[row] @ np.append(q, 1.0))[:3]]
+        moved += 1
+    return {"leg_points_moved": moved, "worst_outside": round(worst, 2), "clear": LEG_CLEAR}
 
 
 def band_normals(scene: dict) -> dict:
@@ -520,12 +639,22 @@ def band_normals(scene: dict) -> dict:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--scene", type=Path, action="append", required=True)
+    ap.add_argument("--hem-shift", type=lambda t: tuple(float(x) for x in t.split(",")), default=HEM_SHIFT,
+                    help="the hem's move at rest, x,z model units (default HEM_SHIFT)")
     args = ap.parse_args()
+    # What the rest leaves of HEM_SHIFT, the clips' cloth takes (skirt_keys.py
+    # "skirt_clip_shift"): owner 2026-10-20 approved a rest even about her legs,
+    # and p6t's cone that points back in her wait stays in the clips.
+    clip_shift = [round(float(a - b), 3) for a, b in zip(HEM_SHIFT, args.hem_shift)]
     for path in args.scene:
         scene = json.loads(path.read_text(encoding="utf-8"))
         detail = scene.get("detail") or ("low" if "low" in path.parent.name else "high")
         info = remesh(scene, "low" if detail == "low" else "high")
-        info["mid"] = split_band(scene)
+        info["mid"] = split_band(scene, args.hem_shift)
+        info["legs"] = leg_clearance(scene)
+        if any(clip_shift):
+            scene["skirt_clip_shift"] = clip_shift
+            info["clip_shift"] = clip_shift
         info["normals"] = band_normals(scene)
         path.write_bytes((json.dumps(scene, indent=0) + "\n").encode("utf-8"))
         print(f"look skirt: {path} {info}")

@@ -124,11 +124,15 @@ def _rot3(m):
 SKELETON_FROM = {"peach": {2: "HipN"}}
 
 
-def fit(kit: D.Model, base: dict, role_map: dict, role_name: str = "") -> dict:
+def fit(kit: D.Model, base: dict, role_map: dict, role_name: str = "", reaim: bool = True) -> dict:
     """The kit fitted onto `base` (a model_scene.py scene dict): scaled
     uniformly to the base's height and turned into the base's rest pose, its
     own bone lengths kept (owner, 2026-10-13: "do not stretch palutena, just
-    scale to similar size as peach")."""
+    scale to similar size as peach").
+
+    `reaim` False keeps the kit's own pose (only scaled and moved onto the
+    base's floor): every joint keeps its bind rotation, so a mesh posed by
+    any of its bones is the kit's bind shape (the owner's T-pose)."""
     base_pos = [(j["world"][0][3], j["world"][1][3], j["world"][2][3]) for j in base["joints"]]
     names = [j.name for j in kit.joints]
     kit_pos = [_pos(j.world) for j in kit.joints]
@@ -158,7 +162,7 @@ def fit(kit: D.Model, base: dict, role_map: dict, role_name: str = "") -> dict:
         # do (the base's rest pose: arms out), toward every mapped child
         # found first down each branch.
         pairs = []
-        if names[i] in role_map:
+        if reaim and names[i] in role_map:
             here = base_pos[role_map[names[i]]]
             stack = list(children[i])
             while stack:

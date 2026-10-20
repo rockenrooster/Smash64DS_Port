@@ -50,7 +50,7 @@ def _uvkey(uv) -> tuple:
 
 class Mesh:
     def __init__(self, obj: dict, relax_uv: bool = False, class_min: dict | None = None,
-                 silhouette: bool = False):
+                 silhouette: bool = False, keep_classes=(), keep_points=()):
         self.name = obj["name"]
         self.relax_uv = relax_uv
         self.class_min = {int(k): int(v) for k, v in (class_min or {}).items()}
@@ -64,6 +64,18 @@ class Mesh:
         # Vertices on the front view's outline (the face's width at the
         # cheeks and jaw: the owner's "skinnier from a distance") never move.
         self.fixed = set(self.outline()) if silhouette else set()
+        # Classes (rows) whose vertices never move (keep_classes: the dress's
+        # skirt, which look_skirt.py rebuilds from its hem and slit).
+        self.fixed |= {i for i in range(n) if self.cls[i] in set(keep_classes)}
+        # Vertices at named kit points never move (keep_points: the hair cap's
+        # ring in front of and beside the face's crown point, which the cap
+        # reduced without them let through, owner 2026-10-20 "head point
+        # poking out of top of hair looking like a horn").
+        for q in keep_points:
+            near = [i for i in range(n) if np.linalg.norm(self.pos[i] - np.asarray(q, dtype=float)) < 1e-2]
+            if not near:
+                raise SystemExit(f"{self.name}: no vertex at keep point {q}")
+            self.fixed |= set(near)
 
     def outline(self) -> list[int]:
         pts = sorted(range(len(self.pos)), key=lambda i: (self.pos[i][0], self.pos[i][1]))
@@ -264,6 +276,62 @@ class Mesh:
                     continue
                 self.apply(mu, mv, remap2, vt, edges)
 
+    def flip_slivers(self, min_angle: float) -> int:
+        """Each live triangle with an angle under min_angle (degrees) turns
+        its longest edge where the two new triangles' least angle is larger,
+        both face their old pair's way, all four corners are one row's and
+        each keeps one uv (owner
+        2026-10-20: the low's "triangles under armpit can be simplified" --
+        two slivers a side where the chest meets the arm)."""
+        def least(vs) -> float:
+            p = [self.pos[i] for i in vs]
+            out = []
+            for k in range(3):
+                a, b, c = p[k], p[(k + 1) % 3], p[(k + 2) % 3]
+                u, w = b - a, c - a
+                den = np.linalg.norm(u) * np.linalg.norm(w)
+                out.append(np.degrees(np.arccos(np.clip(float(u @ w) / den, -1.0, 1.0))) if den > 0 else 0.0)
+            return min(out)
+        flipped = 0
+        for k, t in enumerate(self.tris):
+            if not self.alive[k] or least(t["v"]) >= min_angle:
+                continue
+            vs = t["v"]
+            a, b = max(((vs[i], vs[(i + 1) % 3]) for i in range(3)),
+                       key=lambda e: np.linalg.norm(self.pos[e[0]] - self.pos[e[1]]))
+            other = [j for j, u in enumerate(self.tris) if j != k and self.alive[j] and a in u["v"] and b in u["v"]]
+            if len(other) != 1:
+                continue
+            j = other[0]
+            u = self.tris[j]
+            c = next(i for i in vs if i not in (a, b))
+            d = next(i for i in u["v"] if i not in (a, b))
+            uv = {}
+            for tri in (t, u):
+                for i, x in zip(tri["v"], tri["uv"]):
+                    uv.setdefault(i, set()).add(_uvkey(x))
+            if any(len(uv[i]) != 1 for i in (a, b, c, d)):
+                continue
+            # One row's surface only (a seam's triangles keep their rows).
+            if len({self.cls[i] for i in (a, b, c, d)}) != 1:
+                continue
+            n_old = self.normal(t["v"]) + self.normal(u["v"])
+            # t is (a, b, c) in its winding order: the new pair (c, a, d) and (c, d, b).
+            ia = vs.index(a)
+            if vs[(ia + 1) % 3] != b:
+                a, b = b, a
+            new = [[c, a, d], [c, d, b]]
+            if min(least(n) for n in new) <= least(vs):
+                continue
+            if any(np.dot(self.normal(n), n_old) <= 0.5 * np.linalg.norm(self.normal(n)) * np.linalg.norm(n_old)
+                   for n in new):
+                continue
+            for tri, n in ((t, new[0]), (u, new[1])):
+                tri["v"] = list(n)
+                tri["uv"] = [list(next(iter(uv[i]))) for i in n]
+            flipped += 1
+        return flipped
+
     def to_object(self) -> dict:
         tris = self.live()
         used = sorted({i for t in tris for i in t["v"]})
@@ -306,10 +374,13 @@ def reduce_dump(dump: dict, recipe: dict) -> tuple[dict, dict]:
             obj = drop_small_parts(obj, int(recipe["drop_parts_up_to"][name]))
         target = int(targets.get(name, len(obj["triangles"])))
         m = Mesh(obj, name in recipe.get("relax_uv", ()), (recipe.get("class_min") or {}).get(name),
-                 name in recipe.get("keep_outline", ()))
+                 name in recipe.get("keep_outline", ()), (recipe.get("keep_classes") or {}).get(name, ()),
+                 (recipe.get("keep_points") or {}).get(name, ()))
         before = m.count()
         if target < before:
             m.reduce(target)
+        if name in (recipe.get("flip_slivers") or {}):
+            m.flip_slivers(float(recipe["flip_slivers"][name]))
         o = m.to_object()
         out["objects"].append(o)
         report[obj["name"]] = [before, len(o["triangles"]), "mirror" if m.mirror is not None else "-"]
@@ -320,7 +391,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("dump", type=Path)
     ap.add_argument("--targets", type=Path, required=True,
-                    help="the recipe: targets (object -> triangles), relax_uv, class_min, keep_outline")
+                    help="the recipe: targets (object -> triangles), relax_uv, class_min, keep_outline, "
+                         "keep_classes, keep_points")
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
     dump = json.loads(args.dump.read_text(encoding="utf-8"))

@@ -1,11 +1,11 @@
 {
- "comment": "Palutena's low detail (every VS battle draws it): triangles per object of the owner's approved Blender model after scripts/p6/look_reduce.py; 278 is the plan's cap. drop_parts_up_to: the shoes' stiletto heel blocks (separate six-triangle pieces, about a pixel in battle) go; relax_uv: the shoes' UV islands would block every collapse; class_min: the leg tubes keep four sides (rows 16-18, 21-23); keep_outline: the face keeps its front outline.",
+ "comment": "Palutena's low detail (every VS battle draws it): triangles per object of the owner's approved Blender model (the 2026-10-20 base, 3DS_to_DS_Palutena_v2.blend) after scripts/p6/look_reduce.py. drop_parts_up_to: the shoes' stiletto heel blocks (separate six-triangle pieces, about a pixel in battle) go; relax_uv: the shoes' UV islands would block every collapse; class_min: the leg tubes keep five sides at the hips and knees, four at the ankles (rows 16-18, 21-23; owner 2026-10-20: four at the hip dropped a different corner than at the knee, a twisted thigh that looked 'much bigger around at the top'); keep_outline: the face keeps its front outline; keep_classes: the dress's skirt (row 1) stays whole, look_skirt.py rebuilds it from its hem and slit; keep_points: the hair cap's ring in front of and beside the face's crown point (owner 2026-10-20: 'head point poking out of top of hair looking like a horn'); flip_slivers: the chest's sliver triangles under the arms turn their long edge (owner 2026-10-20: 'triangles under armpit can be simplified').",
  "targets": {
   "DS_face": 50,
-  "DS_hair_cap": 28,
+  "DS_hair_cap": 32,
   "DS_hair_panels": 22,
   "DS_chest": 28,
-  "DS_dress": 36,
+  "DS_dress": 58,
   "DS_arms": 32,
   "DS_hands": 12,
   "DS_legs": 48,
@@ -16,11 +16,11 @@
  ],
  "class_min": {
   "DS_legs": {
-   "16": 4,
-   "17": 4,
+   "16": 5,
+   "17": 5,
    "18": 4,
-   "21": 4,
-   "22": 4,
+   "21": 5,
+   "22": 5,
    "23": 4
   }
  },
@@ -29,5 +29,32 @@
  ],
  "drop_parts_up_to": {
   "DS_legs": 6
+ },
+ "keep_classes": {
+  "DS_dress": [
+   1
+  ]
+ },
+ "keep_points": {
+  "DS_hair_cap": [
+   [
+    0.0,
+    19.62,
+    1.47
+   ],
+   [
+    1.05,
+    19.62,
+    0.25
+   ],
+   [
+    -1.05,
+    19.62,
+    0.25
+   ]
+  ]
+ },
+ "flip_slivers": {
+  "DS_chest": 10
  }
 }

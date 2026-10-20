@@ -370,10 +370,26 @@ class Skirt:
         if len(self.top_p) != len(self.hem_p):
             raise SystemExit("row 25's ring and the hem differ in samples")
         self.chains = len(hem) - 1 if abs(hem_u[-1] - 1.0) < 1e-3 and abs(hem_u[0]) < 1e-3 else len(hem)
-        self.len1 = np.linalg.norm(self.mid_p - self.top_p, axis=1)[:self.chains]
-        self.len2 = np.linalg.norm(self.hem_p - self.mid_p, axis=1)[:self.chains]
+        # The cloth's rest: the drawn rest, or with the scene's clip shift
+        # (look_skirt.py: a look whose rest is even about her legs, owner
+        # 2026-10-20) its hem moved by it and its mid ring along the line
+        # from row 25's ring to the moved hem -- the owner's p6t cone that
+        # points back in her wait. The fit keeps the drawn rest (a_rest), so
+        # row 25 tilts the band as that rest geometry once was tilted.
+        self.cloth_mid_p, self.cloth_hem_p = self.mid_p, self.hem_p
+        shift = scene.get("skirt_clip_shift")
+        if shift:
+            sv = np.array([float(shift[0]), 0.0, float(shift[1])])
+            model = lambda ids: np.array([verts[i]["model"] for i in ids], dtype=float)
+            top_m, mid_m, hem_m = model(ring25), model(mid), model(hem)
+            f = (top_m[:, 1] - mid_m[:, 1]) / (top_m[:, 1] - hem_m[:, 1])
+            to_p = lambda pts: (pin @ np.c_[pts, np.ones(len(pts))].T).T[:, :3]
+            self.cloth_mid_p = to_p(mid_m + f[:, None] * sv)
+            self.cloth_hem_p = to_p(hem_m + sv)
+        self.len1 = np.linalg.norm(self.cloth_mid_p - self.top_p, axis=1)[:self.chains]
+        self.len2 = np.linalg.norm(self.cloth_hem_p - self.cloth_mid_p, axis=1)[:self.chains]
         ring_len = lambda p: np.linalg.norm(np.roll(p[:self.chains], -1, axis=0) - p[:self.chains], axis=1)
-        self.edge_mid, self.edge_hem = ring_len(self.mid_p), ring_len(self.hem_p)
+        self.edge_mid, self.edge_hem = ring_len(self.cloth_mid_p), ring_len(self.cloth_hem_p)
         # The rows' rest: row 25's in the pelvis's frame, 26's in 25's, 27's
         # in 26's (bind), and each ring's points in its own row's frame.
         self.rest25 = pin @ self.bind[ROW_UPPER]
@@ -386,10 +402,10 @@ class Skirt:
         self.x27_rest = np.r_[self.rest27[:3, 3], 0.0, 0.0, 0.0, 1.0, 1.0]
         # Each chain's azimuth about the hem's centre (a guide's moves are
         # given by direction, ultimate.py).
-        c = self.hem_p.mean(axis=0)
-        self.az_hem = np.arctan2(self.hem_p[:, 0] - c[0], self.hem_p[:, 2] - c[2])
-        c = self.mid_p.mean(axis=0)
-        self.az_mid = np.arctan2(self.mid_p[:, 0] - c[0], self.mid_p[:, 2] - c[2])
+        c = self.cloth_hem_p.mean(axis=0)
+        self.az_hem = np.arctan2(self.cloth_hem_p[:, 0] - c[0], self.cloth_hem_p[:, 2] - c[2])
+        c = self.cloth_mid_p.mean(axis=0)
+        self.az_mid = np.arctan2(self.cloth_mid_p[:, 0] - c[0], self.cloth_mid_p[:, 2] - c[2])
         # The legs' capsules' radii (hip, knee, ankle) from the leg mesh's
         # rings about each leg's line (bind pose).
         self.radii = []
@@ -448,9 +464,9 @@ class Skirt:
         to_model = lambda m, p: (m @ np.c_[p, np.ones(len(p))].T).T[:, :3]
         g_mid = g_hem = None
         if guide is not None and guide.get("mid"):
-            g_mid = self._guide_points(guide, "mid", self.mid_p, self.az_mid, n)
+            g_mid = self._guide_points(guide, "mid", self.cloth_mid_p, self.az_mid, n)
         if guide is not None and guide.get("hem"):
-            g_hem = self._guide_points(guide, "hem", self.hem_p, self.az_hem, n)
+            g_hem = self._guide_points(guide, "hem", self.cloth_hem_p, self.az_hem, n)
         order = list(range(n))
         if loop is not None and 0 <= loop < n - 1:
             period = list(range(loop + 1, n))
@@ -463,8 +479,8 @@ class Skirt:
             m = pel[i]
             mats = frames[i][1]
             anchor = to_model(m, self.top_p[:k])
-            rest1 = to_model(m, self.mid_p[:k])
-            rest2 = to_model(m, self.hem_p[:k])
+            rest1 = to_model(m, self.cloth_mid_p[:k])
+            rest2 = to_model(m, self.cloth_hem_p[:k])
             air = np.zeros(3)
             if trail:
                 fwd = m[:3, 2] / max(np.linalg.norm(m[:3, 2]), 1e-6)

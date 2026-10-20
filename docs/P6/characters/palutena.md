@@ -103,6 +103,73 @@ change to the look scenes is in the game only once `model_writer.py` has run.
 Both details side by side, decoded from the export, are in
 `builds/p6-art/palutena/blender/palutena_ds_high_low.blend` (local).
 
+**The look rebuilt from the approved model (owner 2026-10-20).** Seen side
+by side in Blender, the DS models "look much different than my original
+approved model", with the left thigh through the dress, a hair/neck gap at the
+back, and in the low a horn of the head through the hair, holes in the hair, a
+thigh "much bigger around at the top" and slivers under the arms. Causes:
+
+- `look_blend.py` posed every vertex by its dominant bone's `kit_fit` re-aim
+  (each bone turned to Peach's bone directions) and bound it to one row: her
+  bust turned 6 degrees forward, her head and hair 8 back, her hips 5, her
+  right hand 26 against her hips; neck, head and shoulders 15 units forward,
+  feet 23 back. Rigid rows tore every join, and since `ultimate.py` applies
+  each bone's turn from a T-pose bind, every Ultimate clip carried the tilt.
+  `look_blend.py --no-reaim` (`kit_fit.fit(reaim=False)`) keeps the kit's own
+  pose: the rest is the owner's T-pose, every part where the approved model
+  has it (translate_scales recomputed; the rows' rotations stay Peach's).
+- The owner's Blender file draws every inside (back-face culling off): the
+  approved model's nape is the hair cap's inside. The DS hair cap was
+  one-sided; it is two-sided now (`TWO_SIDED`).
+- `look_reduce.py` dropped the hair cap's ring point in front of the face's
+  crown point (the horn, and a gap between face and cap on top) and different
+  leg-ring corners from ring to ring (a twisted thigh). The recipe
+  (`art/p6/palutena/look/low.json`) now keeps those cap points (`keep_points`),
+  keeps the hip and knee rings five-sided (`class_min`), keeps the skirt whole
+  for `look_skirt.py` (`keep_classes`) and turns the chest's two slivers a
+  side under the arms (`flip_slivers`, one row's surface only).
+- At 16 colours the dress texture had no red left after its texture edit (the
+  bodice's top band and the hip's gem went to the trim's browns):
+  `KEEP_PATCHES` entries with the "red" filter keep one red each.
+
+The base is the owner's file copied to
+`builds/p6-art/palutena/blender/3DS_to_DS_Palutena_v2.blend` (the original in
+`decomp/` untouched): the face 68 -> 48 triangles (eye and mouth vertices that
+are texture, dissolved, the look unchanged), the slit centred under the gem
+(its top at the texture's u 0.70, the gem's centre, its hem opening 0.63056 to
+0.76944; the dress texture's cylinder projection is exact, so moved vertices
+take their uv from it; the original 3DS slit's black texels that now showed
+are painted over), and the tuned concave mid ring (9% in at the knees). That
+file also holds the low as an editable copy (`DS_low_work`) and the
+side-by-side lineup (old and new DS high and low, decoded scenes).
+
+`look_skirt.py` finds the slit from the hem's open span (no fixed u), takes
+the highest vertex inside it as the top (the base's mid ring puts two more
+there), and moves any leg point that is not 2 units inside the dress at rest
+in along the ray from the dress's axis (`leg_clearance`: 4 thigh-top points,
+3-4 units, where the band sits a little inside the approved surface). The rest
+dress is even about her legs (`--hem-shift=0,0`); the p6t cone that points
+back in her wait stays in the clips (`skirt_clip_shift`, the cloth's rest in
+`skirt_keys.py`, row 25 tilting the band as the old rest geometry was).
+Result: high 451 triangles (469 before), low 318 (309); 0 leg points outside
+the dress at rest (the old high's thigh was 8 units out). Every clip rebuilt
+and re-keyed (`dress_check.py` as built, both exports measured the same way):
+172 of 221 motions clean, as with the re-aimed look; 139 frames with a leg
+point out of 8,088 against 121, most of the difference one KO clip (Peach's
+motion 0: the right thigh 4-9 units out on 34 frames); the single-frame spikes
+of 50-170 units (a point measured past the hem's side at an extreme pose) are
+in both. Her native owner's census pins were learned again
+(`p4_native_owner.py --learn`: 451/318 triangles, 292/248 GX restores).
+
+Chain (local, kit-derived outputs under `builds/p6-art/palutena/`): dump the
+v2 file's `3DS_to_DS_Work` (`scripts/p6/blender/dump_look.py`) to
+`3ds2ds_v2/work_dump.json`; `look_reduce.py` it with the recipe to
+`3ds2ds_v2/low_dump.json`; `look_blend.py --no-reaim` for both details into
+`3ds2ds/scene_high` and `scene_low`; `p6_costumes.py`; `look_skirt.py
+--hem-shift=0,0`; `look_parts.py`; `model_writer.py` as above; make rebuilds
+every clip and the export. The re-aimed scenes, look files and clips are kept
+beside them as `*_reaim_20261020`.
+
 ## Move card (approved 2026-10-13, P1)
 
 **Owner requirement for her animations (playtest 2026-10-14).** In EVERY

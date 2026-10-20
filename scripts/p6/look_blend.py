@@ -11,7 +11,8 @@ into the content's model and main files.
 Skeleton. The look keeps the base's JointTree rows and rotations; each row's
 place comes from the kit's proportions (kit_fit.fit: uniformly scaled to the
 base's height, bones re-aimed into the base's rest pose, the kit's bone
-lengths kept), except:
+lengths kept; with --no-reaim the kit's own pose, only scaled: the rest is
+the owner's T-pose, every part where the owner's model has it), except:
 
 - KEEP_BASE rows keep the base's own translation. The base's animations key
   these rows' translations around a rest of zero (the hips and the torso: 139
@@ -92,8 +93,11 @@ OBJECT_ROWS = {
 WAIST_Y = 13.2          # kit height of the dress waist ring (bodice above, skirt below)
 ANKLE_Y = 1.3           # kit height of the ankle ring (the shoe below it)
 # Two-sided parts: the dress (its inside shows through the slit), the long
-# hair (one sheet), the sprites.
-TWO_SIDED = {"DS_dress", "DS_hair_panels", "DS_staff_gem_bb", "DS_staff_wings_sprite", "DS_shield_sprite"}
+# hair (one sheet), the hair cap (open at the nape: from behind or below its
+# inside fills the gap above the hair panels, owner 2026-10-20 "hair/neck gap
+# in back"; the owner's Blender view draws every inside), the sprites.
+TWO_SIDED = {"DS_dress", "DS_hair_panels", "DS_hair_cap", "DS_staff_gem_bb", "DS_staff_wings_sprite",
+             "DS_shield_sprite"}
 TEXTURE_SCALE = 0.5     # of the baked size, both details (a texture is shared)
 # Palette entries a patch of a texture keeps for itself: the box (u0, v0, u1,
 # v1 of the baked image, v from its top) and how many entries its texels
@@ -101,7 +105,24 @@ TEXTURE_SCALE = 0.5     # of the baked size, both details (a texture is shared)
 # a large neighbour: the dress's skin between the bust and the neck (the
 # baseline paints it on the dress mesh, beside the chest's skin) became the
 # cloth's cream, a pale inverted V on her chest (owner playtest 2026-10-14).
-KEEP_PATCHES = {"DS_dress": [((0.375, 0.015625, 0.625, 0.0625), 2)]}
+# A third field "red" keeps only the box's saturated reds (RED_PATCH): the
+# bodice's top band and the hip's gem, which a palette without its own red
+# folded into the trim's browns (owner 2026-10-20: "missing the Red of the
+# red gem on her left hip and the red of the top band of the top of her
+# dress").
+KEEP_PATCHES = {"DS_dress": [((0.375, 0.015625, 0.625, 0.0625), 2),
+                             ((0.0, 0.02, 1.0, 0.11), 1, "red"),
+                             ((0.63, 0.25, 0.79, 0.39), 1, "red")]}
+
+
+def red_patch(rgb: np.ndarray) -> np.ndarray:
+    """The texels (rows of RGB 0-255) of a saturated red: hue within 15
+    degrees of red, saturation over 0.45, value over 0.25."""
+    c = np.asarray(rgb, dtype=float) / 255.0
+    mx, mn = c.max(1), c.min(1)
+    sat = np.where(mx > 0, (mx - mn) / np.maximum(mx, 1e-9), 0.0)
+    red_hue = (c[:, 0] >= mx - 1e-9) & ((c[:, 0] - np.maximum(c[:, 1], c[:, 2])) > 0.0) &               (np.abs(c[:, 1] - c[:, 2]) / np.maximum(mx - mn, 1e-9) * 60.0 <= 15.0)
+    return red_hue & (sat > 0.45) & (mx > 0.25)
 
 # The staff. The owner's model holds it as the kit's bind pose does: level,
 # pointing forward from the right hand, which the base's clips turn into a
@@ -188,10 +209,10 @@ def settle(rows: list, parents: list) -> list:
 
 # ------------------------------------------------------------------ skeleton
 
-def skeleton(kit: D.Model, base: dict) -> tuple[dict, list, list, dict]:
+def skeleton(kit: D.Model, base: dict, reaim: bool = True) -> tuple[dict, list, list, dict]:
     """The look's joint worlds (4x4, the base's rotations), the fit, and the
     translate_scales table with the rows it could not scale."""
-    fit = kit_fit.fit(kit, base, kit_fit.ROLE_MAPS["peach"], "peach")
+    fit = kit_fit.fit(kit, base, kit_fit.ROLE_MAPS["peach"], "peach", reaim=reaim)
     skel = [np.array(p, dtype=float) for p in fit["skeleton"]]
     for row, at in COINCIDE.items():
         skel[row] = skel[at].copy()
@@ -268,9 +289,12 @@ def _keep_patches(pts: np.ndarray, c: np.ndarray, rgba: np.ndarray, cutout: bool
     then the rest are refitted around them."""
     h, w = rgba.shape[:2]
     fixed: list = []
-    for (u0, v0, u1, v1), entries in keep:
+    for spec in keep:
+        (u0, v0, u1, v1), entries = spec[0], spec[1]
         patch = rgba[int(v0 * h):int(v1 * h), int(u0 * w):int(u1 * w)].reshape(-1, 4).astype(float)
         patch = patch[patch[:, 3] >= 128, :3] if cutout else patch[:, :3]
+        if len(spec) > 2 and spec[2] == "red":
+            patch = patch[red_patch(patch)]
         if len(patch) == 0:
             raise LookError(f"keep patch {(u0, v0, u1, v1)} has no texels")
         fixed += list(_kmeans(patch, entries, np.random.default_rng(1)))
@@ -372,13 +396,14 @@ def _pow2_down(n: int, least: int) -> int:
 
 # ---------------------------------------------------------------------- scene
 
-def build(dump: dict, kit: D.Model, base: dict, fit_base: dict, detail: str, out: Path) -> dict:
+def build(dump: dict, kit: D.Model, base: dict, fit_base: dict, detail: str, out: Path,
+          reaim: bool = True) -> dict:
     """`base`: the base's scene for this detail (preludes); `fit_base`: the
     high scene, so both details share one skeleton."""
     out.mkdir(parents=True, exist_ok=True)
     if [j["parent"] for j in base["joints"]] != [j["parent"] for j in fit_base["joints"]]:
         raise LookError("the detail's tree differs from the high tree")
-    fit, worlds, scales, unscaled = skeleton(kit, fit_base)
+    fit, worlds, scales, unscaled = skeleton(kit, fit_base, reaim)
     s = fit["scale"]
     kj = {j.name: j for j in kit.joints}
     fj = {j["name"]: j for j in fit["joints"]}
@@ -469,7 +494,7 @@ def build(dump: dict, kit: D.Model, base: dict, fit_base: dict, detail: str, out
         joints.append(jj)
     scene = {"detail": detail, "costume": 0, "joints": joints, "vertices": vertices, "triangles": triangles,
              "materials": materials, "preludes": base.get("preludes") or {}, "source": "look_blend.py",
-             "fit_scale": s, "translate_scales": scales}
+             "fit_scale": s, "translate_scales": scales, "reaim": reaim}
     (out / "scene.json").write_text(json.dumps(scene), encoding="utf-8")
     report.update({"triangles": len(triangles), "vertices": len(vertices), "materials": len(materials),
                    "texture_bytes": sum(m["texture"]["width"] * m["texture"]["height"] // 2 + 32 for m in materials)})
@@ -484,13 +509,15 @@ def main() -> int:
     ap.add_argument("--base", type=Path, required=True, help="the base's scene.json for this detail")
     ap.add_argument("--fit-base", type=Path, help="the base's high scene.json (default: --base)")
     ap.add_argument("--detail", choices=("high", "low"), required=True)
+    ap.add_argument("--no-reaim", action="store_true",
+                    help="keep the kit's own pose (the owner's T-pose) instead of re-aiming its bones")
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
     dump = json.loads(args.dump.read_text(encoding="utf-8"))
     kit = D.read(args.kit)
     base = json.loads(args.base.read_text(encoding="utf-8"))
     fit_base = json.loads(args.fit_base.read_text(encoding="utf-8")) if args.fit_base else base
-    report = build(dump, kit, base, fit_base, args.detail, args.out)
+    report = build(dump, kit, base, fit_base, args.detail, args.out, reaim=not args.no_reaim)
     print(json.dumps({k: report[k] for k in ("triangles", "vertices", "materials", "texture_bytes", "seams",
                                               "moved", "rows", "unscaled")}, sort_keys=True))
     return 0
