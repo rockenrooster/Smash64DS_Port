@@ -1,5 +1,5 @@
 {
- "comment": "Ultimate's ThrowB (e01throwb) on Peach's row's 45 frames, the held joint (row 28) where Ultimate's Throw bone is; the TransN slot Peach's (owner p6s: \"port the rest of her animations that still use peach's\"): the back throw (her script's release at 26, Ultimate's at 20). Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
+ "comment": "Ultimate's ThrowB (e01throwb) on Peach's row's 45 frames, the held joint (row 28) where Ultimate's Throw bone is; the TransN slot Peach's (owner p6s: \"port the rest of her animations that still use peach's\"): the back throw (her script's release at 26, Ultimate's at 20). Owner 2026-10-20 (the dress fanned out too wide): the arabesque's legs at most 90 degrees apart (split_max: the left thigh turned toward the right; Ultimate's 161 at frame 28). Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
  "ultimate": {
   "fighter": "palutena",
   "skeleton": "peach",
@@ -25,6 +25,19 @@
   "held": true,
   "transn": {
    "clip": "0x13b3"
-  }
+  },
+  "split_max": [
+   {
+    "row": 16,
+    "other": 21,
+    "deg": 90,
+    "keys": [
+     [
+      0,
+      1
+     ]
+    ]
+   }
+  ]
  }
 }

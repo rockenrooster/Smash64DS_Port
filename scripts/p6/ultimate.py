@@ -46,8 +46,9 @@ Trans travel (scaled; or a "travel" curve, or a clip's slot) into the TransN slo
 ("first_slot": 1, AttackDash); otherwise the Trans bone is held at rest and
 the clip plays in place (the walks' and run's travel is the game's).
 
-"raise_max" and "straighten" shape a leg after the turns (_legs: a thigh
-held to at most a raise from the pelvis's down, a knee straightened);
+"raise_max", "split_max" and "straighten" shape a leg after the turns
+(_legs: a thigh held to at most a raise from the pelvis's down or an angle
+from the other thigh, a knee straightened);
 "dress" ({"slit_free": ..., "cloth_follow": ..., "slit_turn": ...}) goes
 into the skirt guide (skirt_keys.py: a kick that leaves the dress at the
 slit).
@@ -801,7 +802,11 @@ def _legs(skel: A.Skeleton, spec: dict, per_rot: list, per_tr: list, length: int
     its raise past d degrees. "straighten": [{"row": knee row, "keys":
     [[frame, weight], ...]}]: the row turned about its bend by that weight
     of its bend past the rest's, so its bone runs on from its parent's as at
-    rest. Weights eased between keys, held past their ends."""
+    rest. "split_max": [{"row": hip row, "other": the other hip row, "deg":
+    d, "keys": ...}]: the thigh turned toward the other's by that weight of
+    the angle between them past d degrees (owner 2026-10-20, her back
+    throw's arabesque: the legs 90 degrees apart, not 180). Weights eased
+    between keys, held past their ends."""
     bind, bpos = K._worlds(skel, [A.euler(*e) for e in skel.rotate], [list(v) for v in skel.translate])
     down0 = bind[1].T @ np.array([0.0, -1.0, 0.0])
 
@@ -832,6 +837,17 @@ def _legs(skel: A.Skeleton, spec: dict, per_rot: list, per_tr: list, length: int
             over = angle(b, down) - cap
             if over > 0.0:
                 turn_row(g, r, np.cross(b, down), over * w, rr)
+    for t in spec.get("split_max", ()):
+        r, o, cap = int(t["row"]), int(t["other"]), math.radians(float(t["deg"]))
+        for g in range(length + 1):
+            w = _keyed(t["keys"], g)
+            if not w:
+                continue
+            rr, pp = K._worlds(skel, per_rot[g], per_tr[g])
+            b, c = bone(pp, r), bone(pp, o)
+            over = angle(b, c) - cap
+            if over > 0.0:
+                turn_row(g, r, np.cross(b, c), over * w, rr)
     for t in spec.get("straighten", ()):
         r = int(t["row"])
         p = skel.parents[r]
@@ -975,7 +991,7 @@ def build(skel: A.Skeleton, spec: dict, scales=None, rom=None, extras: dict | No
         _item_pitch(skel, cfg, spec["item_pitch"], per_rot, per_tr, length)
     if spec.get("turn"):
         _turns(skel, spec["turn"], per_rot, per_tr, length)
-    if spec.get("raise_max") or spec.get("straighten"):
+    if spec.get("raise_max") or spec.get("straighten") or spec.get("split_max"):
         _legs(skel, spec, per_rot, per_tr, length)
     if spec.get("still"):
         _still(spec["still"], per_rot, per_tr, length, spec.get("loop"))

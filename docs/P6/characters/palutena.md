@@ -1238,6 +1238,15 @@ game's camera, back faces culled as the DS culls them):
   (Palutena 0x1F68/0x1F69, Ike 0x1F66/0x1F67). Witnessed (walk ROM,
   content 20): Master Hand, the stage clear, the ending, the staff roll and
   her congratulations with her picture, 0 native failures.
+- **The back throw** ("fans out dress too wide"): Ultimate's inverted
+  arabesque opens her legs to 161 degrees (frame 28), and the dress, held
+  around both, spread into a disc. Two candidates were rendered as videos
+  from the game's camera with the victim on her held joint: her down taunt
+  sped up onto Ness's back throw's 45 frames with Ness's victim path, and
+  Ultimate's throw with the legs at most 90 degrees apart. The owner took
+  the second: `throw_b.json` `split_max` turns the left thigh toward the
+  right past 90 degrees (`ultimate.py` `_legs`), frames 22-38; the throw's
+  timing, release (26) and victims are unchanged.
 
 ## Animations (the owner's 3DS references, 2026-10-14)
 
