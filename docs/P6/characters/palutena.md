@@ -88,6 +88,21 @@ Both candidates must meet every line below.
   the gate article.
 - Kirby hat: green hair and tiara, from the picked model's head spans.
 
+**The dress band's normals reach her files (2026-10-20).** The 2026-10-19
+band-normals fix (`look_skirt.py`, `996f5f3c52d`, the owner's "lower half of
+her dress is darker" on Results) rewrote both look scenes but not her model
+files: `model_writer.py` writes `builds/p6-art/palutena/look/1b00` and `1b03`
+from the scenes by hand, outside make, and they were still the 2026-10-18
+write -- decoded from the build's export, the shipped band's normals pointed
+0.43 outward (high) and 0.40 (low) against the scenes' 0.91. Rewritten with
+the same arguments (`--alias 6,8,12,13,14 --textures
+builds/p6-art/palutena/costumes/stock.json --lift-palettes --ambient
+6a6a6a`): only the band vertices' normal bytes change (224 bytes; the main
+file identical), and the export now reads 0.93 outward, 0.75 at the least. A
+change to the look scenes is in the game only once `model_writer.py` has run.
+Both details side by side, decoded from the export, are in
+`builds/p6-art/palutena/blender/palutena_ds_high_low.blend` (local).
+
 ## Move card (approved 2026-10-13, P1)
 
 **Owner requirement for her animations (playtest 2026-10-14).** In EVERY

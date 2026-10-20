@@ -205,12 +205,17 @@ other lab builds do; a player can only pick an unlocked fighter.
 
 ## Still open against the goal
 
-- **Owner questions** (`docs/OWNER_QUESTIONS.md`): Palutena's victory end
-  poses, the up smash pillar, the fan speed, the wireless lag's hardware,
-  the motion-read criterion, the old machinery, a P95 approximation.
+Owner answers, 2026-10-20 (`docs/OWNER_QUESTIONS.md`): the victory end poses
+were never in question (the 1P card was: c4, shield rolled, `8e37a1646e7`);
+the up smash column stays at the drawn pillar; the fan speed is the source's;
+the wireless lag was seen on two DS units with different SD cards; the old
+machinery goes (`docs/OLD_MACHINERY_DELETED.md`).
 
-- **Motion reads after GO.** The goal asks for 0; a four-fighter match reads
-  clips from the card throughout (361 misses in a 1,960-frame cast match on
-  Hyrule Temple: four movesets do not fit the heap's motion cache).
+- **Motion reads after GO.** The owner replaced "0" with: a motion read after
+  GO never pushes a frame past two VBlanks. A four-fighter match still reads
+  clips from the card (361 misses in a 1,960-frame cast match on Hyrule
+  Temple: four movesets do not fit the heap's motion cache); the gate ROM
+  rings each frame's storage wait (`STRD`) so the criterion is measured, not
+  argued.
 - **Four-CPU WORK P95** (docs/optimization/P7_P4_ROSTERS.md): the cast is ~8%
   over 1,120,000 on its busiest stages.
