@@ -88,6 +88,7 @@ td a:hover { color: var(--accent); border-color: var(--accent); }
 td.sub { color: var(--muted); font-size: 12px; }
 td.frames { font-family: var(--mono); font-size: 12px; white-space: normal; overflow-wrap: anywhere; }
 td.flags { white-space: normal; }
+.note { display: block; color: var(--muted); font-size: 12px; white-space: normal; margin-bottom: 2px; }
 tbody tr.first td { border-top: 1px solid var(--line); }
 tbody tr.cont td.move, tbody tr.cont td.sub { color: transparent; }
 tbody tr:nth-child(even) td { background: var(--row); }
@@ -129,7 +130,7 @@ td.score .v { position: relative; font-weight: 600; }
 
   <div class="legend">
     <div><b>Frames</b> are animation frames at 60 per second, counted from 1; "end" means the hit stays out until the move ends. <b>Startup</b> is the first frame a hit is out.</div>
-    <div><b>Angle</b> 361 is the Sakurai angle. <b>KBG</b> knockback growth, <b>BKB</b> base knockback, <b>Fixed</b> set knockback (fixed knockback replaces growth when it is not 0). <b>Size</b> is the hitbox radius in game units.</div>
+    <div><b>Angle</b> 361 is the Sakurai angle. <b>KBG</b> knockback growth, <b>BKB</b> base knockback, <b>Fixed</b> set knockback (fixed knockback replaces growth when it is not 0). <b>Radius</b> is the hitbox's radius in game units as the game uses it (a script's size halved). Box positions scale with the fighter's model size; radii do not. <b>Active</b> counts the frames any of the move's boxes is out.</div>
     <div><b>Throws</b> list the throw's own launch (damage, angle, knockback) apart from any hitbox the throw animation makes. Projectiles and hits made by a fighter's code (fireballs, blasters) are not in move scripts and are not listed, except Palutena's Explosive Flame.</div>
     <div><b>KB 100%</b> is the hit's knockback on a standard-weight target at 100% once the hit lands (the game's formula, no handicap): one number for KBG, BKB and Fixed together.</div>
     <div><b>Scores</b> rank each fighter's standard moves (the compare list) against every fighter with the same move: <b>Damage</b> by <b>Total %</b>, the move's damage when every hit lands (a box out in several windows hits once in each; clean and late boxes count as the stronger; a rapid jab counts its strongest hit), <b>Power</b> by KB 100%, <b>Speed</b> by startup (faster is higher). <b>KBG</b> and <b>BKB</b> score the same hit's knockback growth and base knockback on their own (they are inside Power already, so Overall leaves them out). Each is the mean percentile, so 50 is the roster middle and 100 the top on every move; <b>Overall</b> is the mean of the three. Specials, projectiles and combos are not scored.</div>
