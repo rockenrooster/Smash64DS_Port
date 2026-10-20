@@ -1,8 +1,0 @@
-#ifndef NDS_TASK10_HARDWARE_CALIBRATION_H
-#define NDS_TASK10_HARDWARE_CALIBRATION_H
-
-#if NDS_TASK10_HARDWARE_CALIBRATION
-void ndsTask10HardwareCalibrationRun(void);
-#endif
-
-#endif
