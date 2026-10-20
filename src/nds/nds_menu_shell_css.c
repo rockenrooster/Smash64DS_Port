@@ -3067,10 +3067,13 @@ static void ndsMenuShellCssShowReady(u32 lit)
 #if NDS_P4
     /* The READY band (0,71,320,22) crosses the bottom portrait row, and its
      * state surface restores the unlocked base there: the covers of what the
-     * save locks ride the same blit, right behind it. Re-covering after the
-     * foreground and flash blits below (several NitroFS opens) let the
-     * display scan the band out between, so a blink edge sometimes showed a
-     * locked fighter (owner BUGS.md, CSS). */
+     * save locks ride the same blit, and the band draws around them
+     * (ndsUiKitBlitSurfacesSparing). Re-covering after the foreground and
+     * flash blits below (several NitroFS opens) let the display scan the band
+     * out between; drawing the covers right behind the band in one open still
+     * left the slices the covers stream in -- frames on a slow card -- so a
+     * blink edge showed a locked fighter (owner BUGS.md, CSS, 2026-10-18 and
+     * again 2026-10-20). */
     NdsUiKitSurfaceId band[1u + NDS_P4_CSS_CELLS];
     u32 band_count;
 
@@ -3083,7 +3086,7 @@ static void ndsMenuShellCssShowReady(u32 lit)
     }
     band_count = ndsMenuShellCssLockedCellCovers(band, 1u,
                                                  (lit != FALSE) ? 1u : 0u);
-    if (ndsUiKitBlitSurfaces(band, band_count) != FALSE)
+    if (ndsUiKitBlitSurfacesSparing(band, band_count) != FALSE)
     {
         gNdsMenuShellCssPanelBlitCount += band_count;
     }
@@ -4407,6 +4410,26 @@ static void ndsMenuShellCssNetSetTeamBattle(u32 team_battle)
     sCssIsTeamBattle = (team_battle != 0u) ? 1u : 0u;
     label = (sCssIsTeamBattle != FALSE) ? NDS_MN_UI_KIT_SURFACE_CSS_MODE_TEAM :
                                           NDS_MN_UI_KIT_SURFACE_CSS_MODE_FFA;
+#if NDS_P4
+    {
+        /* The host's toggle (the box over the top portrait row): the locked
+         * covers ride the same blit and the box draws around them. */
+        NdsUiKitSurfaceId box[1u + NDS_P4_CSS_CELLS];
+        u32 box_count;
+
+        box[0] = label;
+        box_count = ndsMenuShellCssLockedCellCovers(
+            box, 1u, (sCssReadyShown == 1u) ? 1u : 0u);
+        if (ndsUiKitBlitSurfacesSparing(box, box_count) != FALSE)
+        {
+            gNdsMenuShellCssPanelBlitCount += box_count;
+            if (sCssEntryStatesShown != 0u)
+            {
+                sCssEntryStatesShown = (u32)label + 1u;
+            }
+        }
+    }
+#else
     if (ndsUiKitBlitSurfaces(&label, 1u) != FALSE)
     {
         gNdsMenuShellCssPanelBlitCount++;
@@ -4415,9 +4438,12 @@ static void ndsMenuShellCssNetSetTeamBattle(u32 team_battle)
             sCssEntryStatesShown = (u32)label + 1u;
         }
     }
+#endif
     ndsMenuShellCssSyncPanels((u32)NDS_CSS_SLOTS);
     ndsMenuShellCssSyncTeamSelectAll();
+#if !NDS_P4
     ndsMenuShellCssSyncLockedCells();
+#endif
 }
 
 static void ndsMenuShellCssNetLeave(void)
@@ -4794,7 +4820,8 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
                             /* The mode label box (27,24,113,22) crosses the
                              * top portrait row and its state surface
                              * restores the unlocked base there: the locked
-                             * covers ride the same blit (as the READY band's,
+                             * covers ride the same blit and the box draws
+                             * around them (as the READY band's,
                              * ndsMenuShellCssShowReady). */
                             NdsUiKitSurfaceId box[1u + NDS_P4_CSS_CELLS];
                             u32 box_count;
@@ -4802,7 +4829,8 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
                             box[0] = label;
                             box_count = ndsMenuShellCssLockedCellCovers(
                                 box, 1u, (sCssReadyShown == 1u) ? 1u : 0u);
-                            if (ndsUiKitBlitSurfaces(box, box_count) != FALSE)
+                            if (ndsUiKitBlitSurfacesSparing(box, box_count) !=
+                                FALSE)
                             {
                                 gNdsMenuShellCssPanelBlitCount += box_count;
                                 if (sCssEntryStatesShown != 0u)

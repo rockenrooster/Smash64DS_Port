@@ -223,6 +223,10 @@ u32 ndsUiKitNumberWidth(s32 value);
  * surface was composited over, which is why that field is a bake-time
  * constant rather than something the runtime has to remember. --- */
 s32 ndsUiKitBlitSurfaces(const NdsUiKitSurfaceId *surfaces, u32 count);
+/* surfaces[0] drawn around the rectangles of surfaces[1..count), then those
+ * over it: a state surface and the covers that hide part of it, with no
+ * frame showing what the covers hide (nds_ui_kit.c). */
+s32 ndsUiKitBlitSurfacesSparing(const NdsUiKitSurfaceId *surfaces, u32 count);
 /* Same baked-surface path, but to the main-engine foreground bitmap (BG3).
  * Character Select uses this for the source team selector, whose display link
  * is in front of the fighter preview. */

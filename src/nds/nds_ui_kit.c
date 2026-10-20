@@ -956,6 +956,88 @@ static u8 *ndsUiKitSurfaceCacheBlock(s32 allocate)
 _Static_assert(NDS_MN_UI_KIT_SURFACE_MAX_ROW_BYTES <= NDS_UI_KIT_STAGING_BYTES,
                "one surface row must fit the staging buffer");
 
+/* Rectangles the current blit leaves alone (ndsUiKitBlitSurfacesSparing),
+ * screen space, [x0, x1) x [y0, y1). Empty outside that one call. */
+#define NDS_UI_KIT_SPARED_MAX 48u
+typedef struct NdsUiKitSpared
+{
+    s16 x0, y0, x1, y1;
+} NdsUiKitSpared;
+static NdsUiKitSpared sNdsUiKitSpared[NDS_UI_KIT_SPARED_MAX];
+static u32 sNdsUiKitSparedCount;
+
+static void ndsUiKitWriteRun(const u16 *src, u16 *dst, s32 count, u16 opaque)
+{
+    s32 i;
+
+    if (count <= 0)
+    {
+        return;
+    }
+    if (opaque != 0u)
+    {
+        dmaCopyHalfWords(3, src, dst, (u32)count * sizeof(u16));
+        return;
+    }
+    for (i = 0; i < count; i++)
+    {
+        if (src[i] != 0u)
+        {
+            dst[i] = src[i];
+        }
+    }
+}
+
+/* The row [dx, dx + count) of screen row dy, minus the spared rectangles
+ * that cross that row. */
+static void ndsUiKitSurfaceRowSparing(const u16 *src, u16 *dst, s32 dx, s32 dy,
+                                      s32 count, u16 opaque)
+{
+    s16 x0[NDS_UI_KIT_SPARED_MAX];
+    s16 x1[NDS_UI_KIT_SPARED_MAX];
+    u32 n = 0u;
+    u32 i;
+    s32 x = dx;
+    s32 end = dx + count;
+
+    for (i = 0u; i < sNdsUiKitSparedCount; i++)
+    {
+        const NdsUiKitSpared *r = &sNdsUiKitSpared[i];
+        u32 j;
+
+        if ((dy < r->y0) || (dy >= r->y1) || (r->x1 <= dx) || (r->x0 >= end))
+        {
+            continue;
+        }
+        /* Insertion by left edge. */
+        for (j = n; (j > 0u) && (x0[j - 1u] > r->x0); j--)
+        {
+            x0[j] = x0[j - 1u];
+            x1[j] = x1[j - 1u];
+        }
+        x0[j] = r->x0;
+        x1[j] = r->x1;
+        n++;
+    }
+    for (i = 0u; (i < n) && (x < end); i++)
+    {
+        if (x0[i] > x)
+        {
+            s32 stop = (x0[i] < end) ? x0[i] : end;
+
+            ndsUiKitWriteRun(src + (x - dx), dst + (x - dx), stop - x, opaque);
+        }
+        if (x1[i] > x)
+        {
+            x = x1[i];
+        }
+    }
+    if (x < end)
+    {
+        ndsUiKitWriteRun(src + (x - dx), dst + (x - dx), end - x, opaque);
+    }
+}
+
 /* One row into BG2, clipped on all four edges.
  *
  * The clipping is not defensive padding: the title emblem's 4/5 origin is
@@ -992,6 +1074,11 @@ static void ndsUiKitSurfaceRow(const u16 *src, u16 *layer, u32 pitch,
     }
     dst = layer + ((u32)dy * pitch) + (u32)dx;
     src += sx;
+    if (sNdsUiKitSparedCount != 0u)
+    {
+        ndsUiKitSurfaceRowSparing(src, dst, dx, dy, count, metric->opaque);
+        return;
+    }
     if (metric->opaque != 0u)
     {
         /* Nothing to key out, so the whole row is one 16-bit DMA. This is the
@@ -1090,9 +1177,11 @@ static s32 ndsUiKitBlitOneSurface(NdsRelocAssetStream *stream, u32 index,
     return TRUE;
 }
 
+/* `spare_first` != 0: surfaces[0..spare_first) draw around the rectangles
+ * of surfaces[spare_first..count), which then draw over them. */
 static s32 ndsUiKitBlitSurfacesLayer(const NdsUiKitSurfaceId *surfaces,
                                      const s16 *sites, u32 count,
-                                     sb32 is_foreground)
+                                     sb32 is_foreground, u32 spare_first)
 {
     NdsRelocAssetStream stream;
     u32 start = cpuGetTiming();
@@ -1124,8 +1213,37 @@ static s32 ndsUiKitBlitSurfacesLayer(const NdsUiKitSurfaceId *surfaces,
         return FALSE;
     }
     gNdsUiKitSurfaceOpenCount++;
+    sNdsUiKitSparedCount = 0u;
+    if ((spare_first != 0u) && (spare_first < count) && (sites == NULL) &&
+        ((count - spare_first) <= NDS_UI_KIT_SPARED_MAX))
+    {
+        for (i = spare_first; i < count; i++)
+        {
+            const NdsUiKitSurfaceMetric *m;
+            NdsUiKitSpared *r = &sNdsUiKitSpared[sNdsUiKitSparedCount];
+
+            if (surfaces[i] >= NDS_MN_UI_KIT_SURFACE_COUNT)
+            {
+                continue;
+            }
+            m = &kNdsUiKitSurfaceMetrics[surfaces[i]];
+            r->x0 = m->x;
+            r->y0 = m->y;
+            r->x1 = (s16)(m->x + (s16)m->width);
+            r->y1 = (s16)(m->y + (s16)m->height);
+            sNdsUiKitSparedCount++;
+        }
+    }
+    else
+    {
+        spare_first = 0u;
+    }
     for (i = 0u; i < count; i++)
     {
+        if (i == spare_first)
+        {
+            sNdsUiKitSparedCount = 0u;
+        }
         if (surfaces[i] >= NDS_MN_UI_KIT_SURFACE_COUNT)
         {
             ok = FALSE;
@@ -1138,6 +1256,7 @@ static s32 ndsUiKitBlitSurfacesLayer(const NdsUiKitSurfaceId *surfaces,
             ok = FALSE;
         }
     }
+    sNdsUiKitSparedCount = 0u;
     ndsRelocAssetStreamClose(&stream);
     gNdsUiKitSurfaceTicks += cpuGetTiming() - start;
     return ok;
@@ -1145,19 +1264,32 @@ static s32 ndsUiKitBlitSurfacesLayer(const NdsUiKitSurfaceId *surfaces,
 
 s32 ndsUiKitBlitSurfaces(const NdsUiKitSurfaceId *surfaces, u32 count)
 {
-    return ndsUiKitBlitSurfacesLayer(surfaces, NULL, count, FALSE);
+    return ndsUiKitBlitSurfacesLayer(surfaces, NULL, count, FALSE, 0u);
+}
+
+/* surfaces[0] around the rectangles of surfaces[1..count), then those: for a
+ * state surface that restores an unlocked base under it (the CSS READY band,
+ * the TEAM/FFA box) and the save's covers that hide part of that base. Each
+ * surface streams from NitroFS in 2 KiB slices, and on a slow card the
+ * covers landed frames after the band -- the owner's "Ready to Fight banner
+ * flashes glimpses of locked portraits" (BUGS.md). Sparing their rectangles
+ * keeps the previous cover on screen until its new variant lands, so no
+ * frame shows the base under it. */
+s32 ndsUiKitBlitSurfacesSparing(const NdsUiKitSurfaceId *surfaces, u32 count)
+{
+    return ndsUiKitBlitSurfacesLayer(surfaces, NULL, count, FALSE, 1u);
 }
 
 s32 ndsUiKitBlitForegroundSurfaces(const NdsUiKitSurfaceId *surfaces,
                                    u32 count)
 {
-    return ndsUiKitBlitSurfacesLayer(surfaces, NULL, count, TRUE);
+    return ndsUiKitBlitSurfacesLayer(surfaces, NULL, count, TRUE, 0u);
 }
 
 s32 ndsUiKitBlitSurfacesAt(const NdsUiKitSurfaceId *surfaces,
                            const s16 *sites, u32 count)
 {
-    return ndsUiKitBlitSurfacesLayer(surfaces, sites, count, FALSE);
+    return ndsUiKitBlitSurfacesLayer(surfaces, sites, count, FALSE, 0u);
 }
 
 void ndsUiKitClearForegroundRect(s32 x, s32 y, u32 width, u32 height)
