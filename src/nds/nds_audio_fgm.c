@@ -1634,7 +1634,11 @@ void *ndsAudioFgmLendTail(u32 keep, u32 *out_bytes)
     return &sNdsAudioFgmCache[keep];
 }
 
-/* The tail is the arena's again; no cue was left pointing into it. */
+static void ndsAudioFgmRetryDeferred(void);
+
+/* The tail is the arena's again; no cue was left pointing into it. A cue
+ * waiting for room (ndsAudioFgmPlayWhenRoom: the select's START cheer) starts
+ * its fill now, ahead of the next scene's loads. */
 void ndsAudioFgmReclaimTail(void)
 {
     if (sNdsAudioFgmTailLent == 0u)
@@ -1643,6 +1647,7 @@ void ndsAudioFgmReclaimTail(void)
     }
     gNdsAudioFgmArenaLimit = NDS_AUDIO_FGM_CACHE_BYTES;
     sNdsAudioFgmTailLent = 0u;
+    ndsAudioFgmRetryDeferred();
 }
 
 /* -> the slot holding or filling this cue, or -1. */
@@ -1710,6 +1715,98 @@ static s32 ndsAudioFgmCacheAcquire(const NDSAudioFgmPackEntry *entry)
     sNdsAudioFgmCacheSlots[best].fill_state = NDS_AUDIO_FGM_FILL_READY;
     DC_FlushRange(sNdsAudioFgmCacheSlots[best].data, entry->data_bytes);
     return best;
+}
+
+/* Owner BUGS.md CSS row (2026-10-19): "pressing start to enter SSS doesn't
+ * play the crowd SFX cue". The select lends the arena's tail to its previews
+ * (ndsAudioFgmLendTail keeps 72 KiB), and the cheer's 36,804-byte body found
+ * no room there while the fighter name the pick had just called still
+ * played: a pinned name placed after FREE FOR ALL leaves under 36 KiB on
+ * either side of it, so the request failed (gNdsAudioFgmNoFitCount) and
+ * nothing sounded. A walk that waited before START always had room, which is
+ * why no capture heard the miss. A cue asked for through
+ * ndsAudioFgmPlayWhenRoom waits instead: each update asks again once the
+ * arena could place it (the name ended, or the select gave the tail back at
+ * its exit), until it starts, NDS_AUDIO_FGM_DEFER_MAX_MS passes or StopAll
+ * drops it. One request at a time; a later one replaces it. */
+#define NDS_AUDIO_FGM_DEFER_MAX_MS 2000u
+static u16 sNdsAudioFgmDeferredId;
+static u8 sNdsAudioFgmDeferredPan;
+static u32 sNdsAudioFgmDeferredDeadline;
+volatile u32 gNdsAudioFgmDeferredWaitCount;
+volatile u32 gNdsAudioFgmDeferredStartCount;
+volatile u32 gNdsAudioFgmDeferredExpireCount;
+
+/* -> TRUE when the cache holds `entry` or the arena could place it now. */
+static s32 ndsAudioFgmCueHasRoom(const NDSAudioFgmPackEntry *entry)
+{
+    u32 offset;
+    u32 i;
+
+    for (i = 0u; i < NDS_AUDIO_FGM_CACHE_SLOT_COUNT; i++)
+    {
+        const NDSAudioFgmCacheSlot *slot = &sNdsAudioFgmCacheSlots[i];
+
+        if ((slot->data != NULL) && (slot->fgm_id == entry->id) &&
+            (slot->data_bytes == entry->data_bytes) &&
+            (slot->fill_state != NDS_AUDIO_FGM_FILL_FAILED))
+        {
+            return TRUE;
+        }
+    }
+    return ndsAudioFgmArenaPlace((entry->data_bytes + 31u) & ~31u, &offset);
+}
+
+static void ndsAudioFgmRetryDeferred(void)
+{
+    const NDSAudioFgmPackEntry *entry;
+    u16 id = sNdsAudioFgmDeferredId;
+
+    if (id == 0u)
+    {
+        return;
+    }
+    entry = ndsAudioFgmFindEntry(id);
+    if ((entry == NULL) ||
+        ((s32)(cpuGetTiming() - sNdsAudioFgmDeferredDeadline) >= 0))
+    {
+        sNdsAudioFgmDeferredId = 0u;
+        gNdsAudioFgmDeferredExpireCount++;
+        return;
+    }
+    if (ndsAudioFgmCueHasRoom(entry) == FALSE)
+    {
+        return;
+    }
+    /* Cleared first: ndsAudioFgmPlayAtPan runs ndsAudioFgmUpdate, which comes
+     * back here. */
+    sNdsAudioFgmDeferredId = 0u;
+    if (ndsAudioFgmPlayAtPan(id, sNdsAudioFgmDeferredPan) != NULL)
+    {
+        gNdsAudioFgmDeferredStartCount++;
+    }
+}
+
+alSoundEffect *ndsAudioFgmPlayWhenRoom(u16 fgm_id, u8 pan)
+{
+    const NDSAudioFgmPackEntry *entry;
+
+    /* Releases the cues that have ended before the room is judged. */
+    ndsAudioFgmUpdate();
+    entry = ndsAudioFgmFindEntry(fgm_id);
+    if ((entry != NULL) && (gNdsAudioFgmLoaded != 0u) &&
+        (fgm_id < sNdsAudioFgmNewStartLimit) &&
+        (ndsAudioFgmCueHasRoom(entry) == FALSE))
+    {
+        sNdsAudioFgmDeferredId = fgm_id;
+        sNdsAudioFgmDeferredPan = pan;
+        sNdsAudioFgmDeferredDeadline =
+            cpuGetTiming() +
+            (u32)(((u64)BUS_CLOCK * NDS_AUDIO_FGM_DEFER_MAX_MS) / 1000u);
+        gNdsAudioFgmDeferredWaitCount++;
+        return NULL;
+    }
+    return ndsAudioFgmPlayAtPan(fgm_id, pan);
 }
 
 static u16 ndsAudioFgmNextInstanceToken(void)
@@ -2793,6 +2890,11 @@ void ndsAudioFgmUpdate(void)
             }
         }
     }
+    /* After this update's releases, so a cue that just ended makes room. Not
+     * on the no-handle return above: that head is ITCM text (nds_hot_text.ld),
+     * which had no byte to spare, and a cue only waits while a playing one
+     * pins the arena -- or until the tail comes back (ndsAudioFgmReclaimTail). */
+    ndsAudioFgmRetryDeferred();
 }
 
 /* 2026-09-30 (owner, r58: "menu navigation sounds ... play after the next
@@ -2961,6 +3063,7 @@ void ndsAudioFgmStopAll(void)
     u32 i;
 
     gNdsAudioFgmStopAllCalls++;
+    sNdsAudioFgmDeferredId = 0u;
     for (i = 0u; i < NDS_AUDIO_FGM_HANDLE_COUNT; i++)
     {
         if (sNdsAudioFgmHandles[i].live != FALSE)

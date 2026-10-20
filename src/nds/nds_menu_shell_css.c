@@ -470,6 +470,17 @@ static void ndsMenuShellCssCue(u32 id)
     (void)ndsAudioFgmPlay((u16)id);
 }
 
+/* START's crowd cheer. Owner BUGS.md CSS row (2026-10-19): it was silent when
+ * START followed a pick closely -- the name the pick called still held the
+ * cue arena the previews leave the select, and the cheer's body had no room
+ * -- so it waits for room instead (ndsAudioFgmPlayWhenRoom). */
+static void ndsMenuShellCssCheer(void)
+{
+    gNdsMenuShellCssCueCount++;
+    gNdsMenuShellCssCueLastId = NDS_CSS_VOICE_CHEER;
+    (void)ndsAudioFgmPlayWhenRoom((u16)NDS_CSS_VOICE_CHEER, 64u);
+}
+
 /* P2-1N (4): the mode announcer voice, shared by the source's entry tail and
  * mode-toggle handler — FREE FOR ALL (512) or TEAM BATTLE (526). */
 static void ndsMenuShellCssAnnounceMode(void)
@@ -4944,7 +4955,9 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
             /* mnPlayers1PBonusFuncRun (:2711-2723): a pick arms a 140-tic
              * wait (SelectFighterPuck :288) that a recall or a re-grab drops;
              * START, or the wait running out, starts the kind's board at
-             * once -- no cheer, no START delay, no refusal cue. */
+             * once -- no START delay, no refusal cue. The source has no
+             * cheer here either; the owner asked for VS's (BUGS.md CSS row,
+             * 2026-10-19), so the board starts with it. */
             if (sCssSelected[0] == 0u)
             {
                 sCssBonusWait = 0u;
@@ -4961,6 +4974,7 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
                  (((taps & NDS_INPUT_START) != 0u) && (walk_placed == FALSE))))
             {
                 sCssBonusWait = 0u;
+                ndsMenuShellCssCheer();
                 ndsMenuShellCssCommit();
                 gNdsMenuShellCssStartCount++;
                 ndsMenuShellGoto((u32)nSCKind1PBonusStage);
@@ -4975,7 +4989,7 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
         {
             if (ready != FALSE)
             {
-                ndsMenuShellCssCue(NDS_CSS_VOICE_CHEER);
+                ndsMenuShellCssCheer();
                 ndsMenuShellCssIdleSlotsNot();
                 sCssStartWait = (u32)NDS_CSS_START_WAIT;
                 gNdsMenuShellCssStartCount++;

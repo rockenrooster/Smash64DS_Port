@@ -171,6 +171,9 @@ void ndsAudioFgmReclaimTail(void);
 void ndsAudioFgmStop(alSoundEffect *effect);
 alSoundEffect *ndsAudioFgmPlay(u16 fgm_id);
 alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan);
+/* A cue the arena has no room for yet waits (up to 2 s) and starts when it
+ * has, instead of failing; NULL while it waits (nds_audio_fgm.c). */
+alSoundEffect *ndsAudioFgmPlayWhenRoom(u16 fgm_id, u8 pan);
 /* Source Boss cinematic admission limit. Existing handles keep playing.
  * Dynamic internal-fork gating is a separate, still-open mixer adaptation. */
 void ndsAudioFgmSaveAndBlockNewStarts(u16 *out_saved);
