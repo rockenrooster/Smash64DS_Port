@@ -107,11 +107,15 @@ void ndsP7ProgressLoad(void)
 
 /* By build, not by gNdsSceneHarnessMode: the shipping ROM runs the game's
  * own loop as scene harness 163 (battle_playable_realtime), so the mode
- * cannot tell a probe from a player. */
+ * cannot tell a probe from a player. The wireless lobby autopilot is one of
+ * these: its stress descriptors play contents a fresh save keeps locked, and
+ * the character select cleared those picks on the way back from the first
+ * match, so the host's START never took (2026-10-20). */
 u32 ndsP7DevOpen(void)
 {
 #if NDS_P2_MENU_WALK || (defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP) || \
-    NDS_P2_FOUR_CPU_STRESS || NDS_R2_BOTH_CPU || NDS_HARNESS_FAST_LOGIC
+    NDS_P2_FOUR_CPU_STRESS || NDS_R2_BOTH_CPU || NDS_HARNESS_FAST_LOGIC || \
+    NDS_NET_LAB_LOBBY
     return TRUE;
 #else
     return FALSE;
