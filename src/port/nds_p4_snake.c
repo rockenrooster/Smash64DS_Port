@@ -3123,6 +3123,12 @@ const NDSP4Overrides gNdsP4SnakeOverrides = {
     .on_landing = ndsP4SnakeOnLanding,
     .on_damage = ndsP4SnakeOnDamage,
     .item = ndsP4SnakeItem,
+    /* main.asm custom_capture_action: ThrownDK (Shouldered here) for his
+     * grab's victim, as Wario's and Mad Piano's. Without it the victim took
+     * the source's CapturePulled at his item joint, turned by that joint into
+     * his body during the hold and wrong through the throws (owner p7h,
+     * 2026-10-19: "the enemy fighter looks weird"). */
+    .capture_status = nFTCommonStatusShouldered,
     .shouldered_interrupt = ndsP4SnakeShoulderedInterrupt,
     .status_replace = sNdsP4SnakeStatusReplace,
 };
