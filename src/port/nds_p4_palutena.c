@@ -128,7 +128,9 @@ extern uintptr_t llITCommonDataFFlowerFlameWeaponAttributes;
  * ground easily"): a backward stick on the ground (atan2's +180) went up into
  * the air and landed a tic later, 200 units on; it travels along the ground
  * now, and a sideways or downward-sideways travel that meets a floor goes on
- * along it for its frames left, as Ultimate's warp slides along a surface. */
+ * along it for its frames left, as Ultimate's warp slides along a surface.
+ * Owner (2026-10-19): on a platform she could drop through, a downward warp
+ * goes down through it; straight down on solid ground she stays put. */
 #define PAL_WARP_FRAMES 10
 #define PAL_WARP_FRAMES_MIN 3
 #define PAL_WARP_SPEED 200.0F
@@ -457,9 +459,11 @@ static void ndsP4PalutenaVanish(GObj *fighter_gobj)
 }
 
 /* The start's end: the stick (in eight directions, neutral up) gives the
- * travel's angle; on the ground a level or downward stick travels along the
- * ground, anything else lifts her. A CPU recovering aims at its recovery
- * target (ftComputer's, the ledge it makes for: card "CPU"). */
+ * travel's angle; on the ground a level or downward-sideways stick travels
+ * along the ground and straight down stays put, except that any downward
+ * stick on a platform she could drop through goes down through it; anything
+ * else lifts her. A CPU recovering aims at its recovery target
+ * (ftComputer's, the ledge it makes for: card "CPU"). */
 static void ndsP4PalutenaWarpGo(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
@@ -488,10 +492,31 @@ static void ndsP4PalutenaWarpGo(GObj *fighter_gobj)
         angle = F_CST_DTOR32(45.0F) * (f32)(s32)((angle / F_CST_DTOR32(45.0F)) +
                                                  ((angle < 0.0F) ? -0.5F : 0.5F));
     }
+    if ((fp->ga == nMPKineticsGround) && (angle < F_CST_DTOR32(-22.5F)) &&
+        (angle > F_CST_DTOR32(-157.5F)) &&
+        ((fp->coll_data.floor_flags & MAP_VERTEX_COLL_PASS) != 0u))
+    {
+        /* Owner (2026-10-19): a downward warp on a platform she could drop
+         * through goes down through it at its angle, the floor's line passed
+         * as ftCommonPassSetStatusParam passes it. */
+        mpCommonSetFighterAir(fp);
+        ftMainSetStatus(fighter_gobj, PAL_STATUS_WARP + PAL_AIR, 0.0F, 1.0F,
+                        FTSTATUS_PRESERVE_NONE);
+        fp = ftGetStruct(fighter_gobj);
+        fp->coll_data.ignore_line_id = fp->coll_data.floor_line_id;
+        fp->tap_stick_y = FTINPUT_STICKBUFFER_TICS_MAX;
+        *ndsP4PalutenaVarF(fp, 0) = angle;
+        *ndsP4PalutenaVar(fp, 1) = frames;
+        ndsP4PalutenaVanish(fighter_gobj);
+        return;
+    }
     if ((fp->ga == nMPKineticsGround) && (angle <= 0.0F) && (angle >= F_CST_DTOR32(-90.0F)))
     {
         status_id = PAL_STATUS_WARP;
-        angle = 0.0F;
+        /* Straight down on a floor she cannot pass stays where she stands
+         * (owner 2026-10-19: no sideways travel for a downward warp);
+         * WarpPhysics reads the -90 as no ground speed. */
+        angle = (angle < F_CST_DTOR32(-67.5F)) ? F_CST_DTOR32(-90.0F) : 0.0F;
     }
     else if ((fp->ga == nMPKineticsGround) &&
              ((angle < F_CST_DTOR32(-90.0F)) || (angle > F_CST_DTOR32(179.0F))))
@@ -572,8 +597,8 @@ void ndsP4PalutenaWarpPhysics(GObj *fighter_gobj)
         /* The ground speed moves her only once it is carried along the
          * floor into her air velocity, as every ground physics proc does
          * (owner playtest 2026-10-14: a sideways warp on the ground did not
-         * move). */
-        fp->physics.vel_ground.x = x;
+         * move). A straight-down warp on solid ground (-90) travels nowhere. */
+        fp->physics.vel_ground.x = (angle < 0.0F) ? 0.0F : x;
         ftPhysicsSetGroundVelTransferAir(fighter_gobj);
     }
     else
@@ -884,9 +909,14 @@ static void ndsP4PalutenaGateProcUpdate(GObj *effect_gobj)
 
 static const f32 sNdsP4PalutenaPillarRise[PAL_PILLAR_RISE] = { 0.18F, 0.45F, 1.0F };
 
+/* Owner (2026-10-19): the column's top at the pillar's drawn top plus 6.
+ * Its cards are 2,500 tall (p6_gate.py PILLAR_HEIGHT) but draw to about
+ * 2,048 above her floor (measured; the DS's v16 vertex range at the x16
+ * factor, nds_renderer_textures_effects.c): 1,565 x her size 1.185 =
+ * 1,854, the hitbox's 200 radius above it: 2,054 (it reached 2,925). */
 static const f32 sNdsP4PalutenaPillarColumn[2][2] = {
-    { 200.0F, 1250.0F },    /* attack 0: the floor to the middle */
-    { 1250.0F, 2300.0F },   /* attack 1: the middle to the top */
+    { 200.0F, 883.0F },     /* attack 0: the floor to the middle */
+    { 883.0F, 1565.0F },    /* attack 1: the middle to the top */
 };
 
 static void ndsP4PalutenaPillarProcUpdate(GObj *effect_gobj);
