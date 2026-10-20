@@ -1084,9 +1084,12 @@ DIRECT_POLICY_COMBINE_ALIASES = {
     # vertices have SHADEa == 1 -- the same proof _check_combine_alias_alpha
     # runs per triangle for the Pikachu alias.
     (0xfcfffe05, 0xff1679ff): (0xfcfffe05, 0xff167dff),
-    # EXTRA's Meta Knight's sword trail (model 0x15EE lists at 0x93D0 and
-    # 0x94F8, joint 34 part 0): its triangles are never emitted
-    # (DIRECT_POLICY_COMBINE_INVISIBLE); the alias keeps the state rows valid.
+    # NOT exact (EXTRA's Meta Knight's jab flame, model 0x15EE lists at 0x93D0
+    # and 0x94F8, joint 34 part 0, shown by his jab's SetModelPartID): a 32x32
+    # CI4 flame whose TLUT gives the background alpha 0. Its source combine
+    # reads LOD_FRACTION and the previous pixel (see the set below); family 0
+    # draws the texture over the vertex colour (white), so the flame shows with
+    # its background cut out (owner p7h, 2026-10-19: "jab VFX missing").
     (0xfc123245, 0x00400087): (0xfc127e05, 0xff17f3ff),
     # NOT exact (P4, Meta Knight's Mach Tornado, model 0x15EE lists at 0x97C0
     # and 0x9AA0, render mode 0x00504130): colour PRIM*SHADE*PRIM (PRIM
@@ -1098,14 +1101,14 @@ DIRECT_POLICY_COMBINE_ALIASES = {
 }
 # Source G_SETCOMBINE pairs whose output alpha is zero, so under a blending
 # render mode their triangles draw nothing on the N64: emitted as no
-# triangles. EXTRA's Meta Knight's two sword-trail quads (32x32 CI4, PRIM
-# alpha 0x30, render mode 0x441049D8: FORCE_BL, ZMODE_XLU, the second cycle
-# CLR_IN*A_IN + CLR_MEM*(1-A_IN)) take cycle-1 alpha (TEXEL1 - COMBINED) *
-# LOD_FRACTION + 0, and LOD_FRACTION stays 0 with texture LOD off. The DS drew
-# them opaque, black around the flame (owner, 2026-10-11).
-DIRECT_POLICY_COMBINE_INVISIBLE = frozenset((
-    (0xfc123245, 0x00400087),
-))
+# triangles. Empty since 2026-10-19: EXTRA's Meta Knight's two jab-flame quads
+# (32x32 CI4, PRIM alpha 0x30, render mode 0x441049D8: FORCE_BL, ZMODE_XLU,
+# the second cycle CLR_IN*A_IN + CLR_MEM*(1-A_IN)) take cycle-1 alpha
+# (TEXEL1 - COMBINED) * LOD_FRACTION + 0, which this set read as zero (LOD
+# off); the owner sees the flame on his reference (p7h: "jab VFX missing"),
+# so they draw through the alias above. (2026-10-11 they had drawn opaque,
+# black around the flame, before that alias.)
+DIRECT_POLICY_COMBINE_INVISIBLE = frozenset()
 DIRECT_POLICY_TEXTURED_EPOCHS = frozenset((0, 4, 5, 19, 24, 30, 31, 47, 48))
 DIRECT_POLICY_LIT_ONLY_EPOCHS = frozenset(
     (3, 11, 14, 17, 22, 26, 28, 32, 36, 38, 42, 46)
