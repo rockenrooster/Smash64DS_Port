@@ -806,7 +806,9 @@ REF_PERCENT = 100
 # A move is flagged when its value sits this many robust standard deviations
 # from the roster's median for the same move (median absolute deviation).
 OUTLIER_Z = 2.5
-METRICS = (("dmg", "Total damage"), ("kb", "KB at 100%"), ("start", "Startup"))
+METRICS = (("dmg", "Total damage"), ("kb", "KB at 100%"), ("kbg", "KBG"), ("bkb", "BKB"),
+           ("start", "Startup"))
+SCORED = ("dmg", "kb", "start")
 
 
 def kb_at(d, kbg, bkb, wkb) -> float:
@@ -844,6 +846,7 @@ def move_metrics(mv: dict, key: str):
     if key.startswith("Throw") and mv.get("t"):
         t = mv["t"]
         return {"dmg": t[0], "kb": round(kb_at(t[0], t[2], t[3], t[4])), "start": None,
+                "kbg": t[2], "bkb": t[3],
                 "row": ("throw", t[0], t[1], t[2], t[3], t[4], "", t[5]), "hits": len(mv["h"])}
     if not mv["h"]:
         return None
@@ -854,6 +857,7 @@ def move_metrics(mv: dict, key: str):
     strong = key != "Catch" and max(h[2] for h in mv["h"]) > 0
     return {"dmg": move_damage(mv["h"], key) if strong else None,
             "kb": round(max(kb_at(h[2], h[4], h[5], h[6]) for h in mv["h"])) if strong else None,
+            "kbg": best[4] if strong else None, "bkb": best[5] if strong else None,
             "start": min(firsts) if firsts else None,
             "row": (best[0], best[2], best[3], best[4], best[5], best[6], best[7], best[8]),
             "hits": len(mv["h"])}
@@ -891,7 +895,7 @@ def analyse(slim: list[dict]) -> tuple[dict, list, dict]:
                 mm.update({"fi": fi, "inh": mv.get("i"), "flags": {}})
                 rows.append(mm)
         table[key] = rows
-    pct: dict[int, dict] = {fi: {"dmg": [], "kb": [], "start": []} for fi in range(len(slim))}
+    pct: dict[int, dict] = {fi: {m: [] for m, _l in METRICS} for fi in range(len(slim))}
     outliers = []
     titles = dict(COMPARE_KEYS)
     for key, rows in table.items():
@@ -910,7 +914,8 @@ def analyse(slim: list[dict]) -> tuple[dict, list, dict]:
                 pct[r["fi"]][metric].append(1.0 - p if metric == "start" else p)
                 z = _robust_z(x, vals)
                 gap = abs(x - med)
-                far = gap >= (max(3.0, 0.3 * med) if metric == "start" else 0.25 * med)
+                far = gap >= (max(3.0, 0.3 * med) if metric == "start" else
+                              max(10.0, 0.25 * med) if metric in ("kbg", "bkb") else 0.25 * med)
                 if abs(z) >= OUTLIER_Z and far:
                     stronger = (z < 0) if metric == "start" else (z > 0)
                     r["flags"][metric] = "hi" if stronger else "lo"
@@ -920,7 +925,7 @@ def analyse(slim: list[dict]) -> tuple[dict, list, dict]:
     scores = {}
     for fi, p in pct.items():
         s = {k: (round(100 * sum(v) / len(v)) if v else None) for k, v in p.items()}
-        parts = [v for v in s.values() if v is not None]
+        parts = [s[k] for k in SCORED if s[k] is not None]
         s["overall"] = round(sum(parts) / len(parts)) if parts else None
         s["moves"] = len(p["dmg"])
         s["flags"] = sum(1 for o in outliers if o["fi"] == fi)
@@ -985,15 +990,16 @@ def static_html(slim: list[dict]) -> str:
 
     body = "".join(
         f'<tr><td class="num">{rank[fi]}</td><td class="move"><a href="#{anchor(slim[fi]["n"])}">{e(slim[fi]["n"])}</a></td>'
-        f'{bar(scores[fi]["overall"])}{bar(scores[fi]["dmg"])}{bar(scores[fi]["kb"])}{bar(scores[fi]["start"])}'
+        f'{bar(scores[fi]["overall"])}{bar(scores[fi]["dmg"])}{bar(scores[fi]["kb"])}{bar(scores[fi]["kbg"])}'
+        f'{bar(scores[fi]["bkb"])}{bar(scores[fi]["start"])}'
         f'<td class="num">{scores[fi]["moves"]}</td><td class="num">{scores[fi]["flags"] or ""}</td></tr>'
         for fi in order)
     out.append('<section class="sheet" id="scores"><div class="sheet-head"><h3>Fighter scores</h3>'
                '<span class="meta">standard moves only (the compare list); 50 = the roster middle; '
-               'click a heading to sort</span></div><div class="scroll"><table class="sortable fixed" style="min-width:760px">'
-               + cols(["56px", "190px", "120px", "120px", "120px", "120px", "80px", "auto"])
+               'click a heading to sort</span></div><div class="scroll"><table class="sortable fixed" style="min-width:980px">'
+               + cols(["56px", "190px", "110px", "110px", "110px", "110px", "110px", "110px", "70px", "auto"])
                + "<thead><tr>" + th("Rank", True) + th("Fighter") + th("Overall", True) + th("Damage", True)
-               + th("Power", True) + th("Speed", True) + th("Moves", True) + th("Outliers", True)
+               + th("Power", True) + th("KBG", True) + th("BKB", True) + th("Speed", True) + th("Moves", True) + th("Outliers", True)
                + f"</tr></thead><tbody>{body}</tbody></table></div></section>")
 
     # Outlier attacks, most extreme first.
@@ -1038,7 +1044,7 @@ def static_html(slim: list[dict]) -> str:
         s = scores[fi]
         group = "Remix &amp; EXTRA" if f["g"] == "Remix/EXTRA" else e(f["g"])
         meta = (f'{group} · {len(f["mv"])} moves · score {s["overall"]} (rank {rank[fi]} of {len(slim)}): '
-                f'damage {s["dmg"]}, power {s["kb"]}, speed {s["start"]}'
+                f'damage {s["dmg"]}, power {s["kb"]} (KBG {s["kbg"]}, BKB {s["bkb"]}), speed {s["start"]}'
                 + (f' · {e(f["x"])}' if f.get("x") else ""))
         out.append(f'<section class="sheet" id="{anchor(f["n"])}"><div class="sheet-head"><h3>{e(f["n"])}</h3>'
                    f'<span class="meta">{meta}</span></div><div class="scroll"><table class="fixed" style="min-width:1060px">'
@@ -1064,8 +1070,8 @@ def static_html(slim: list[dict]) -> str:
             + cell(r, "start", "" if r["start"] is None else r["start"])
             + f'<td class="frames">{e(str(r["row"][0]))}</td><td class="num dmg">{r["row"][1]}</td>'
             + cell(r, "dmg", "" if r["dmg"] is None else r["dmg"])
-            + f'<td class="num">{ang(r["row"][2])}</td><td class="num">{r["row"][3]}</td><td class="num">{r["row"][4]}</td>'
-            f'<td class="num">{r["row"][5]}</td><td class="num">{r["row"][6]}</td>' + cell(r, "kb", "" if r["kb"] is None else r["kb"])
+            + f'<td class="num">{ang(r["row"][2])}</td>' + cell(r, "kbg", r["row"][3]) + cell(r, "bkb", r["row"][4])
+            + f'<td class="num">{r["row"][5]}</td><td class="num">{r["row"][6]}</td>' + cell(r, "kb", "" if r["kb"] is None else r["kb"])
             + f'<td>{el(r["row"][7])}</td><td class="num">{r["hits"]}</td><td class="flags">{flag_cell(r["fi"], key)}</td></tr>'
             for r in rows)
         medtxt = ", ".join(f'{lbl.lower()} {med[m]:g}' for m, lbl in METRICS if med[m] is not None)
