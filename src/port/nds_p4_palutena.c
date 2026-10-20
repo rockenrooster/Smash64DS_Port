@@ -92,9 +92,9 @@ extern uintptr_t llITCommonDataFFlowerFlameWeaponAttributes;
  * its trigger unknown: no fire is made while one of hers is burning at all
  * (a fire lives PAL_FLAME_BLAST_AT + PAL_FLAME_BLAST_TICS tics; her cast is
  * longer than that, so two casts never overlap). Owner p6z (2026-10-17): the
- * far 0.9x (1610 -> 1449); owner p6ac: 1500. Owner p7h (2026-10-19): both
- * hitboxes 0.9x (the burn's 640 -> 576, the blast's 860 -> 774; the effects
- * keep their size). */
+ * far 0.9x (1610 -> 1449); owner p6ac: 1500. Owner p7h (2026-10-19): the
+ * blast's hitbox 10% bigger than the burn's (860 -> 704; the burn's 640 kept,
+ * the effects their size). */
 #define PAL_FLAME_NEAR 450.0F
 #define PAL_FLAME_MID 750.0F
 #define PAL_FLAME_FAR 1500.0F
@@ -105,10 +105,10 @@ extern uintptr_t llITCommonDataFFlowerFlameWeaponAttributes;
 #define PAL_FLAME_BLAST_AT 19
 #define PAL_FLAME_BLAST_TICS 3
 #define PAL_FLAME_BURN_DAMAGE 1
-#define PAL_FLAME_BURN_SIZE 576.0F
+#define PAL_FLAME_BURN_SIZE 640.0F
 #define PAL_FLAME_BURN_KNOCKBACK_WEIGHT 3
 #define PAL_FLAME_BLAST_DAMAGE 19
-#define PAL_FLAME_BLAST_SIZE 774.0F
+#define PAL_FLAME_BLAST_SIZE 704.0F
 #define PAL_FLAME_BLAST_ANGLE 361
 #define PAL_FLAME_BLAST_KNOCKBACK_SCALE 95
 #define PAL_FLAME_BLAST_KNOCKBACK_BASE 40
