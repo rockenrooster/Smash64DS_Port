@@ -25,6 +25,10 @@ param(
     # aimed at the hips; -StudioStatus a demo status for the pose (65537 =
     # nFTDemoStatusWin1, the Results victory poses), 0 the card's.
     [int]$StudioDist = 5500, [int]$StudioY = 0, [int]$StudioYaw = 25, [int]$StudioStatus = 0,
+    # The content cards' pose (-Contents): 0 the card's own (the content's
+    # IntroL), otherwise a demo status as -StudioStatus (owner 2026-10-19:
+    # Palutena's took her base's intro pose, the staff through her head).
+    [int]$CardStatus = 0,
     # Debug: gdb lines added to every job's session before it runs.
     [string[]]$ExtraGdb = @()
 )
@@ -136,7 +140,8 @@ if ($Contents.Count -gt 0) {
         foreach ($card in @(@(0, 0), @(1, 4), @(3, 6))) {
             foreach ($costume in $royal) {
                 $jobs.Add(@{ Name = ('p{0}_c{1:00}_{2}' -f $card[0], $c, $costume); Stage = $card[1]; Show = (1 -shl $card[0]);
-                             PlayerKind = $r.Parent; PlayerCostume = $costume; Content = $c })
+                             PlayerKind = $r.Parent; PlayerCostume = $costume; Content = $c;
+                             CardStatus = $CardStatus })
             }
         }
     }
@@ -232,6 +237,9 @@ $bakeOne = {
         if ($job.ContainsKey('Ally2Kind')) {
             $g += @("set variable $ally1.fkind = $($job.Ally2Kind)", "set variable $ally1.costume = $($job.Ally2Costume)",
                     "set variable $ally1.shade = 0")
+        }
+        if ($job.ContainsKey('CardStatus') -and ($job.CardStatus -ne 0)) {
+            $g += @("set variable gNdsIntroBakeStudioStatus = $($job.CardStatus)")
         }
         if ($job.ContainsKey('StudioDist')) {
             $g += @("set variable gNdsIntroBakeStudioDist = $($job.StudioDist)",

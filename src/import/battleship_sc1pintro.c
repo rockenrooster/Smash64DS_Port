@@ -658,9 +658,10 @@ volatile u32 gNdsIntroBakePlayerCard __attribute__((used));
 volatile s32 gNdsIntroBakeStudioDist __attribute__((used));
 volatile s32 gNdsIntroBakeStudioY __attribute__((used));
 volatile s32 gNdsIntroBakeStudioYaw __attribute__((used));
-/* The studio still's pose: 0 keeps the card's, otherwise the demo status the
- * fighter takes at its first studio frame (nFTDemoStatusWin1.. the Results
- * victory poses), captured at the bake's tic. */
+/* The still's pose, studio or card: 0 keeps the card's, otherwise the demo
+ * status the player's (or an ally's) card fighter takes at its first drawn
+ * frame (nFTDemoStatusWin1.. the Results victory poses), captured at the
+ * bake's tic. */
 volatile s32 gNdsIntroBakeStudioStatus __attribute__((used));
 static GObj *sNdsIntroBakeMemberGObj;
 static CObj *sNdsIntroBakeStageCamera;
@@ -886,9 +887,11 @@ static void ndsSC1PIntroBakeBeforeDraw(void)
         {
             fighter_gobj->flags |= GOBJ_FLAG_HIDDEN;
         }
-        else if ((gNdsIntroBakeStudioDist > 0) &&
-                 (group & ((1u << 0) | (1u << 1) | (1u << 3))))
+        else if (group & ((1u << 0) | (1u << 1) | (1u << 3)))
         {
+            /* The pose applies to a card in its own framing too (owner
+             * 2026-10-19: Palutena's card took her base's intro pose, the
+             * staff through her head; her cards take a victory end pose). */
             if ((gNdsIntroBakeStudioStatus != 0) &&
                 (ftGetStruct(fighter_gobj)->status_id !=
                  gNdsIntroBakeStudioStatus))
@@ -896,7 +899,10 @@ static void ndsSC1PIntroBakeBeforeDraw(void)
                 scSubsysFighterSetStatus(fighter_gobj,
                                          gNdsIntroBakeStudioStatus);
             }
-            ndsSC1PIntroBakeStudio(fighter_gobj);
+            if (gNdsIntroBakeStudioDist > 0)
+            {
+                ndsSC1PIntroBakeStudio(fighter_gobj);
+            }
         }
     }
 }
