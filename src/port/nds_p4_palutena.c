@@ -94,7 +94,8 @@ extern uintptr_t llITCommonDataFFlowerFlameWeaponAttributes;
  * longer than that, so two casts never overlap). Owner p6z (2026-10-17): the
  * far 0.9x (1610 -> 1449); owner p6ac: 1500. Owner p7h (2026-10-19): the
  * blast's hitbox 10% bigger than the burn's (860 -> 704; the burn's 640 kept,
- * the effects their size). */
+ * the effects their size). Owner p7h follow-up (2026-10-19): the blast's base
+ * knockback 40 -> 35. */
 #define PAL_FLAME_NEAR 450.0F
 #define PAL_FLAME_MID 750.0F
 #define PAL_FLAME_FAR 1500.0F
@@ -111,7 +112,7 @@ extern uintptr_t llITCommonDataFFlowerFlameWeaponAttributes;
 #define PAL_FLAME_BLAST_SIZE 704.0F
 #define PAL_FLAME_BLAST_ANGLE 361
 #define PAL_FLAME_BLAST_KNOCKBACK_SCALE 95
-#define PAL_FLAME_BLAST_KNOCKBACK_BASE 40
+#define PAL_FLAME_BLAST_KNOCKBACK_BASE 35
 /* In the air she nearly hangs while casting. */
 #define PAL_FLAME_AIR_FALL_MAX 12.0F
 
