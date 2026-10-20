@@ -488,11 +488,24 @@ static void ndsMenuShellCssAnnounceMode(void)
 #if NDS_P4
     if (sCssOneP != 0u)
     {
-        /* mnPlayers1PGameFuncStart's tail (:3478); the bonus selects
-         * announce nothing (mnPlayers1PBonusFuncStart :2814-2873). */
+        /* mnPlayers1PGameFuncStart's tail (:3478). A bonus select announces
+         * its kind in mnPlayers1PBonusMakeLabels (:901-903, from FuncStart
+         * :2858 and from the kind toggle, UpdateGameMode :2090) -- missed
+         * here until the owner's BUGS.md row (2026-10-19). Its 33-36 KiB
+         * voices wait for room (ndsAudioFgmPlayWhenRoom) like the cheer. */
         if (NDS_CSS_BONUS == 0)
         {
             ndsMenuShellCssCue((u32)nSYAudioVoiceAnnounceSelectPlayer);
+        }
+        else
+        {
+            const u32 id = (sCssBonusKind == 0u) ?
+                (u32)nSYAudioVoiceAnnounceBreakTheTargets :
+                (u32)nSYAudioVoiceAnnounceBoardThePlatforms;
+
+            gNdsMenuShellCssCueCount++;
+            gNdsMenuShellCssCueLastId = id;
+            (void)ndsAudioFgmPlayWhenRoom((u16)id, 64u);
         }
         return;
     }
@@ -3819,13 +3832,15 @@ static u32 ndsMenuShellCssOnePCheckOptions(void)
     {
         /* mnPlayers1PBonusCursorProcUpdate (:2116-2126): the title flips the
          * kind (CheckGameModeInRange :2056; UpdateGameMode :2081 re-makes
-         * the title, the record and the total row, no cue), then BACK. */
+         * the title -- announcing the new kind, MakeLabels :901 -- the
+         * record and the total row), then BACK. */
         if (ndsMenuShellCssBoxHit(27, 207, 14 + NDS_CSS_HEADER_DY,
                                   35 + NDS_CSS_HEADER_DY) != FALSE)
         {
             sCssBonusKind = (sCssBonusKind == 0u) ? 1u : 0u;
             sCssBonusTotalKey = ndsMenuShellCssBonusTotalKey();
             ndsMenuShellCssBonusShowRows();
+            ndsMenuShellCssAnnounceMode();
             return TRUE;
         }
         if (ndsMenuShellCssBoxHit(244, 292, 13 + NDS_CSS_HEADER_DY,
