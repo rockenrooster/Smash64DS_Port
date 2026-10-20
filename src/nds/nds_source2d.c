@@ -156,6 +156,8 @@ typedef struct NDSSource2DBank
     u32 modulate;
     u32 lut_asset_id;
     u32 lut_offset;
+    /* The frame a ramp or flat bank was last used in (sNdsS2DFrameStamp). */
+    u32 frame;
     u16 colors[16];
 } NDSSource2DBank;
 
@@ -210,6 +212,9 @@ static s32 sNdsS2DNextOamId = 127;
 static u32 sNdsS2DFrameSprites;
 static u32 sNdsS2DFrameNeedsCommit;
 static u32 sNdsS2DPaletteDirty;
+/* Counts frames (ndsSource2DBeginFrame): a bank no sprite of this frame has
+ * used is free to recolour (ndsS2DReuseBank). */
+static u32 sNdsS2DFrameStamp;
 static u32 sNdsS2DActive;
 static u32 sNdsS2DEnterPending;
 /* A scene's translucent light sprites and its blend registers (the 1P
@@ -234,6 +239,12 @@ static u32 sNdsS2DModulate = 0xffffffu;
 /* The translucent fill BG2's picture carries (0xRRGGBBAA, 0 = none): see
  * ndsSource2DFillTranslucent. */
 static u32 sNdsS2DFillApplied;
+/* The size and place (key words 4 and 5) BG2's affine shows its lone layer
+ * at, when the layer's picture shrinks or moves without being written again
+ * (the 1P Game Over's room, 1% smaller a frame); sNdsS2DBackgroundScaled
+ * while they differ from the layer's key (the affine not the identity). */
+static u32 sNdsS2DBackgroundShown[2];
+static u32 sNdsS2DBackgroundScaled;
 
 volatile u32 gNdsSource2DEnterCount;
 volatile u32 gNdsSource2DExitCount;
@@ -678,6 +689,18 @@ static void ndsS2DBilerp(const u32 taps[4], u32 fx, u32 fy, u8 rgba[4])
         rgba[0] = rgba[1] = rgba[2] = 0u;
         return;
     }
+    if (((taps[0] ^ taps[1]) | (taps[0] ^ taps[2]) | (taps[0] ^ taps[3])) <
+        0x100u)
+    {
+        /* One colour under every tap (an I texel is white): the weighted
+         * average is that colour exactly, without the three divisions (no
+         * divide instruction on the ARM9) -- most of a translucent light's
+         * pixels. */
+        rgba[0] = (u8)(taps[0] >> 24);
+        rgba[1] = (u8)(taps[0] >> 16);
+        rgba[2] = (u8)(taps[0] >> 8);
+        return;
+    }
     for (channel = 0u; channel < 3u; channel++)
     {
         u32 shift = 24u - (channel * 8u);
@@ -1037,6 +1060,43 @@ static const u32 *ndsS2DRgbaRow(const NDSSource2DSource *source,
     return texels;
 }
 
+/* A filtered cell's source rows, each converted once over the span of
+ * columns the cell reads (texels x0 .. x0 + n - 1) into the scratch's upper
+ * half -- a ramp cell's indices take at most its lower 2 KB -- so a texel is
+ * converted about once a row pair instead of once a tap: the per-tap reads
+ * cost the Continue screen's spotlight 34 VBlanks for 528 rows. Slot s holds
+ * source row y[s] (~0u: none); the pair's other row (keep_y) stays. */
+#define NDS_S2D_CELL_SPAN_MAX 256u
+
+static const u32 *ndsS2DCellSpan(const NDSSource2DSource *source,
+                                 const NDSSource2DSrcRow *row, u32 x0, u32 n,
+                                 u32 span_y[2], u32 keep_y)
+{
+    u32 slot;
+    u32 *texels;
+    u32 x;
+
+    for (slot = 0u; slot < 2u; slot++)
+    {
+        if (span_y[slot] == row->y)
+        {
+            return &sNdsS2DScratch[512u + (slot * NDS_S2D_CELL_SPAN_MAX)];
+        }
+    }
+    slot = (span_y[0] == keep_y) ? 1u : 0u;
+    texels = &sNdsS2DScratch[512u + (slot * NDS_S2D_CELL_SPAN_MAX)];
+    span_y[slot] = ~0u;
+    for (x = 0u; x < n; x++)
+    {
+        if (ndsS2DRowTapRGBA(source, row, x0 + x, &texels[x]) == 0)
+        {
+            return NULL;
+        }
+    }
+    span_y[slot] = row->y;
+    return texels;
+}
+
 /* ---- palettes ---- */
 
 static s32 ndsS2DTakeBank(void)
@@ -1051,6 +1111,28 @@ static s32 ndsS2DTakeBank(void)
         return -1;
     }
     return (s32)sNdsS2DBankCount++;
+}
+
+/* A ramp or flat bank no sprite of this frame has used, recoloured for a
+ * colour no bank holds: a sprite whose colours step every frame (the 1P Game
+ * Over's letters fade in over 100 frames) took a new bank a frame, ran the 16
+ * out in 16 and fell back to direct-colour cells baked every frame until the
+ * cell cache failed. The palette and the OAM are written together
+ * (ndsSource2DCommit), and every bank this frame's sprites name keeps its
+ * colours. */
+static s32 ndsS2DReuseBank(u8 kind)
+{
+    u32 i;
+
+    for (i = 0u; i < sNdsS2DBankCount; i++)
+    {
+        if ((sNdsS2DBanks[i].kind == kind) &&
+            (sNdsS2DBanks[i].frame != sNdsS2DFrameStamp))
+        {
+            return (s32)i;
+        }
+    }
+    return ndsS2DTakeBank();
 }
 
 static s32 ndsS2DRampBank(const SObj *sobj)
@@ -1071,16 +1153,17 @@ static s32 ndsS2DRampBank(const SObj *sobj)
     }
     for (i = 0u; i < sNdsS2DBankCount; i++)
     {
-        const NDSSource2DBank *b = &sNdsS2DBanks[i];
+        NDSSource2DBank *b = &sNdsS2DBanks[i];
 
         if ((b->kind == NDS_S2D_BANK_RAMP) && (b->prim_r == sprite->red) &&
             (b->prim_g == sprite->green) && (b->prim_b == sprite->blue) &&
             (b->env_r == env_r) && (b->env_g == env_g) && (b->env_b == env_b))
         {
+            b->frame = sNdsS2DFrameStamp;
             return (s32)i;
         }
     }
-    taken = ndsS2DTakeBank();
+    taken = ndsS2DReuseBank(NDS_S2D_BANK_RAMP);
     if (taken < 0)
     {
         return -1;
@@ -1088,6 +1171,7 @@ static s32 ndsS2DRampBank(const SObj *sobj)
     bank = &sNdsS2DBanks[taken];
     memset(bank, 0, sizeof(*bank));
     bank->kind = NDS_S2D_BANK_RAMP;
+    bank->frame = sNdsS2DFrameStamp;
     bank->prim_r = sprite->red;
     bank->prim_g = sprite->green;
     bank->prim_b = sprite->blue;
@@ -1120,15 +1204,16 @@ static s32 ndsS2DFlatBank(const SObj *sobj)
 
     for (i = 0u; i < sNdsS2DBankCount; i++)
     {
-        const NDSSource2DBank *b = &sNdsS2DBanks[i];
+        NDSSource2DBank *b = &sNdsS2DBanks[i];
 
         if ((b->kind == NDS_S2D_BANK_FLAT) && (b->prim_r == sprite->red) &&
             (b->prim_g == sprite->green) && (b->prim_b == sprite->blue))
         {
+            b->frame = sNdsS2DFrameStamp;
             return (s32)i;
         }
     }
-    taken = ndsS2DTakeBank();
+    taken = ndsS2DReuseBank(NDS_S2D_BANK_FLAT);
     if (taken < 0)
     {
         return -1;
@@ -1136,6 +1221,7 @@ static s32 ndsS2DFlatBank(const SObj *sobj)
     bank = &sNdsS2DBanks[taken];
     memset(bank, 0, sizeof(*bank));
     bank->kind = NDS_S2D_BANK_FLAT;
+    bank->frame = sNdsS2DFrameStamp;
     bank->prim_r = sprite->red;
     bank->prim_g = sprite->green;
     bank->prim_b = sprite->blue;
@@ -1583,12 +1669,37 @@ static s32 ndsS2DWriteCell(NDSSource2DCell *cell,
     u32 step_y_q16 = ((u32)cell->source_height << 16) / cell->final_height;
     u8 *scratch = (u8 *)sNdsS2DScratch;
     u32 pixels = (u32)cell->cell_width * cell->cell_height;
+    const u32 source_width = (u32)(u16)source->sprite->width;
+    u32 span_x0 = 0u;
+    u32 span_n = 0u;
+    u32 span_y[2] = { ~0u, ~0u };
     u32 bytes;
     u32 x;
     u32 y;
 
     bytes = (cell->encoding == NDS_S2D_ENC_BMP) ? (pixels * 2u) :
         ((cell->encoding == NDS_S2D_ENC_LUT8) ? pixels : (pixels / 2u));
+    if ((cell->encoding != NDS_S2D_ENC_LUT4) &&
+        (cell->encoding != NDS_S2D_ENC_LUT8) &&
+        ((cell->encoding == NDS_S2D_ENC_BMP) || (bytes <= 2048u)) &&
+        (cell->tile_x < cell->final_width))
+    {
+        u32 last = (u32)cell->tile_x + cell->cell_width;
+        u32 a0;
+        u32 a1;
+        u32 b0;
+        u32 b1;
+
+        last = ((last < cell->final_width) ? last : cell->final_width) - 1u;
+        (void)ndsS2DFilteredColumns(source_width, step_x_q16, cell->tile_x,
+                                    &a0, &a1);
+        (void)ndsS2DFilteredColumns(source_width, step_x_q16, last, &b0, &b1);
+        if (((b1 - a0) + 1u) <= NDS_S2D_CELL_SPAN_MAX)
+        {
+            span_x0 = a0;
+            span_n = (b1 - a0) + 1u;
+        }
+    }
     if (cell->encoding == NDS_S2D_ENC_BMP)
     {
         dmaFillHalfWords(0u, cell->gfx, bytes);
@@ -1604,6 +1715,8 @@ static s32 ndsS2DWriteCell(NDSSource2DCell *cell,
         const u32 verify = ((rows != 0u) && (gNdsS2DRowVerify != 0u)) ? 1u : 0u;
         NDSSource2DRowPair pair;
         NDSSource2DSrcRow nearest_row;
+        const u32 *span0 = NULL;
+        const u32 *span1 = NULL;
 
         if (dy >= cell->final_height)
         {
@@ -1625,6 +1738,14 @@ static s32 ndsS2DWriteCell(NDSSource2DCell *cell,
             else
             {
                 ndsS2DPrepareFilteredRows(source, step_y_q16, dy, &pair);
+                if (span_n != 0u)
+                {
+                    span0 = ndsS2DCellSpan(source, &pair.row0, span_x0, span_n,
+                                           span_y, pair.row1.y);
+                    span1 = (span0 != NULL) ?
+                        ndsS2DCellSpan(source, &pair.row1, span_x0, span_n,
+                                       span_y, pair.row0.y) : NULL;
+                }
             }
         }
         for (x = 0u; x < cell->cell_width; x++)
@@ -1690,7 +1811,34 @@ static s32 ndsS2DWriteCell(NDSSource2DCell *cell,
                 }
                 continue;
             }
-            if (rows != 0u)
+            if (span1 != NULL)
+            {
+                u32 x0;
+                u32 x1;
+                u32 taps[4];
+                const u32 fx = ndsS2DFilteredColumns(source_width, step_x_q16,
+                                                     dx, &x0, &x1);
+
+                taps[0] = span0[x0 - span_x0];
+                taps[1] = span0[x1 - span_x0];
+                taps[2] = span1[x0 - span_x0];
+                taps[3] = span1[x1 - span_x0];
+                ndsS2DBlendTaps(taps, fx, pair.fy, rgba);
+                if (verify != 0u)
+                {
+                    u8 want[4] = { 0u, 0u, 0u, 0u };
+                    s32 want_ok = ndsS2DSampleFiltered(source, step_x_q16,
+                                                       step_y_q16, dx, dy,
+                                                       want);
+
+                    NDS_DIAG(gNdsS2DRowVerifyPixels++);
+                    if ((want_ok == 0) || (memcmp(want, rgba, sizeof(want)) != 0))
+                    {
+                        NDS_DIAG(gNdsS2DRowVerifyMismatches++);
+                    }
+                }
+            }
+            else if (rows != 0u)
             {
                 s32 ok = ndsS2DSampleFilteredRows(source, &pair, step_x_q16,
                                                   dx, rgba);
@@ -1880,6 +2028,11 @@ static void ndsS2DClearBackground(void)
     }
     sNdsS2DBackgroundCount = 0u;
     sNdsS2DFillApplied = 0u;
+    if (sNdsS2DBackgroundScaled != 0u)
+    {
+        sNdsS2DBackgroundScaled = 0u;
+        (void)ndsPlatformQueueNativeWallpaperAffine(256, 256, 0, 0);
+    }
     layer = ndsPlatformGetOriginalSpriteOverlayLayer(FALSE, &pitch, &width,
                                                      &height, &epoch);
     if (layer != NULL)
@@ -1890,9 +2043,73 @@ static void ndsS2DClearBackground(void)
     }
 }
 
+/* The frame's first picture is BG2's lone layer's (its image, palette and
+ * modulate), perhaps at another size or place: it stays the background
+ * however small it gets (the Game Over's room shrinking to nothing). */
+static s32 ndsS2DIsBackgroundLayer(const NDSSource2DSource *source)
+{
+    const u32 *key = sNdsS2DBackgroundKey[0];
+
+    return ((sNdsS2DFrameBackgrounds == 0u) && (sNdsS2DBackgroundCount == 1u) &&
+            (sNdsS2DFillApplied == 0u) && (key[0] == source->asset_id) &&
+            (key[1] == source->bitmap_offset) &&
+            (key[2] == source->lut_asset_id) &&
+            (key[3] == source->lut_offset) && (key[6] == sNdsS2DModulate)) ?
+        1 : 0;
+}
+
+/* BG2's lone layer shown at a smaller size or another place through BG2's
+ * affine, not written again: the hardware samples the picture written at
+ * its key's size (already filtered; the N64 filters a shrinking sprite with
+ * no mipmaps either). A larger size, or a picture written partly off
+ * screen, is written again at the new size. Writing a 208x147 picture costs
+ * several VBlanks of CPU, so a picture that changed size every frame (the
+ * Game Over's room) stalled every frame, and writing it again at each
+ * halving stalled 3-9 VBlanks. */
+static s32 ndsS2DScaleBackground(const u32 *key, u32 final_width,
+                                 u32 final_height, s32 screen_x, s32 screen_y)
+{
+    const u32 *baked = sNdsS2DBackgroundKey[0];
+    u32 baked_w = baked[4] >> 16;
+    u32 baked_h = baked[4] & 0xffffu;
+    s32 baked_x = (s32)(s16)(baked[5] >> 16);
+    s32 baked_y = (s32)(s16)(baked[5] & 0xffffu);
+    s32 pa;
+    s32 pd;
+
+    if ((sNdsS2DBackgroundCount != 1u) || (sNdsS2DFillApplied != 0u) ||
+        (memcmp(key, baked, 4u * sizeof(u32)) != 0) || (key[6] != baked[6]) ||
+        (final_width > baked_w) || (final_height > baked_h) ||
+        (baked_x < 0) || (baked_y < 0) || ((baked_x + (s32)baked_w) > 256) ||
+        ((baked_y + (s32)baked_h) > 192))
+    {
+        return 0;
+    }
+    if ((sNdsS2DBackgroundShown[0] == key[4]) &&
+        (sNdsS2DBackgroundShown[1] == key[5]))
+    {
+        return 1;
+    }
+    /* Texture x = X0 + (x - X1) * W0 / W1: PA the step (8.8), the reference
+     * point the texel at screen 0 (20.8). */
+    pa = (s32)((((baked_w << 9) / final_width) + 1u) >> 1);
+    pd = (s32)((((baked_h << 9) / final_height) + 1u) >> 1);
+    if (ndsPlatformQueueNativeWallpaperAffine(pa, pd,
+                                              (baked_x << 8) - (pa * screen_x),
+                                              (baked_y << 8) - (pd * screen_y)) == FALSE)
+    {
+        return 0;
+    }
+    sNdsS2DBackgroundShown[0] = key[4];
+    sNdsS2DBackgroundShown[1] = key[5];
+    sNdsS2DBackgroundScaled = 1u;
+    return 1;
+}
+
 /* A large sprite drawn before the frame's first OBJ sprite, as the next BG2
  * layer: each layer is written once while its image, size and place, and
- * every layer under it, stay the same. */
+ * every layer under it, stay the same; a lone layer that only shrinks or
+ * moves is scaled by BG2's affine (ndsS2DScaleBackground). */
 static s32 ndsS2DDrawBackground(const SObj *sobj,
                                 const NDSSource2DSource *source,
                                 u32 final_width, u32 final_height,
@@ -1919,6 +2136,20 @@ static s32 ndsS2DDrawBackground(const SObj *sobj,
     if (index < sNdsS2DBackgroundCount)
     {
         if (memcmp(key, sNdsS2DBackgroundKey[index], sizeof(key)) == 0)
+        {
+            if ((index == 0u) && (sNdsS2DBackgroundScaled != 0u))
+            {
+                /* Back at the size and place it was written at. */
+                sNdsS2DBackgroundScaled = 0u;
+                sNdsS2DBackgroundShown[0] = key[4];
+                sNdsS2DBackgroundShown[1] = key[5];
+                (void)ndsPlatformQueueNativeWallpaperAffine(256, 256, 0, 0);
+            }
+            return 1;
+        }
+        if ((index == 0u) &&
+            (ndsS2DScaleBackground(key, final_width, final_height, screen_x,
+                                   screen_y) != 0))
         {
             return 1;
         }
@@ -2048,6 +2279,12 @@ static s32 ndsS2DDrawBackground(const SObj *sobj,
     (void)ndsPlatformCommitOriginalSpriteFinalLayer(FALSE, 256u * 192u);
     (void)ndsPlatformQueueNativeWallpaperAffine(256, 256, 0, 0);
     memcpy(sNdsS2DBackgroundKey[index], key, sizeof(key));
+    if (index == 0u)
+    {
+        sNdsS2DBackgroundScaled = 0u;
+        sNdsS2DBackgroundShown[0] = key[4];
+        sNdsS2DBackgroundShown[1] = key[5];
+    }
     sNdsS2DBackgroundCount = index + 1u;
     NDS_DIAG(gNdsSource2DBackgroundWrites++);
     return 1;
@@ -2095,7 +2332,8 @@ static void ndsS2DDrawSObj(const SObj *sobj)
      * room exists). */
     if ((background_candidate != 0u) && (translucent == 0u))
     {
-        if (((final_width * final_height) >= NDS_S2D_BACKGROUND_AREA) &&
+        if ((((final_width * final_height) >= NDS_S2D_BACKGROUND_AREA) ||
+             (ndsS2DIsBackgroundLayer(&source) != 0)) &&
             (sNdsS2DFrameBackgrounds < NDS_S2D_BACKGROUND_LAYERS))
         {
             if (ndsS2DDrawBackground(sobj, &source, final_width, final_height,
@@ -2278,6 +2516,11 @@ static void ndsS2DEnterNow(void)
     sNdsS2DResetPending = 0u;
     sNdsS2DBackgroundCount = 0u;
     sNdsS2DFillApplied = 0u;
+    if (sNdsS2DBackgroundScaled != 0u)
+    {
+        sNdsS2DBackgroundScaled = 0u;
+        (void)ndsPlatformQueueNativeWallpaperAffine(256, 256, 0, 0);
+    }
     sNdsS2DFrameBackgrounds = 0u;
     sNdsS2DFrameObjects = 0u;
     oamInit(&oamMain, SpriteMapping_Bmp_1D_128, false);
@@ -2355,6 +2598,11 @@ void ndsSource2DExit(void)
     ndsS2DResetCache();
     sNdsS2DBackgroundCount = 0u;
     sNdsS2DFillApplied = 0u;
+    if (sNdsS2DBackgroundScaled != 0u)
+    {
+        sNdsS2DBackgroundScaled = 0u;
+        (void)ndsPlatformQueueNativeWallpaperAffine(256, 256, 0, 0);
+    }
     sNdsS2DActive = 0u;
     NDS_DIAG(gNdsSource2DExitCount++);
 #endif
@@ -2378,6 +2626,7 @@ void ndsSource2DBeginFrame(void)
     {
         return;
     }
+    sNdsS2DFrameStamp++;
     if (sNdsS2DResetPending != 0u)
     {
         sNdsS2DResetPending = 0u;
@@ -2524,9 +2773,11 @@ void ndsSource2DFillTranslucent(s32 ulx, s32 uly, s32 lrx, s32 lry, u32 rgba)
     {
         return;
     }
-    if (sNdsS2DFillApplied != 0u)
+    if ((sNdsS2DFillApplied != 0u) || (sNdsS2DBackgroundScaled != 0u))
     {
-        /* Another fill over a filled picture: rebuilt next frame. */
+        /* Another fill over a filled picture, or a picture BG2's affine
+         * scales (the fill's screen rectangle would be scaled with it):
+         * rebuilt next frame. */
         ndsS2DClearBackground();
         return;
     }
