@@ -92,7 +92,9 @@ extern uintptr_t llITCommonDataFFlowerFlameWeaponAttributes;
  * its trigger unknown: no fire is made while one of hers is burning at all
  * (a fire lives PAL_FLAME_BLAST_AT + PAL_FLAME_BLAST_TICS tics; her cast is
  * longer than that, so two casts never overlap). Owner p6z (2026-10-17): the
- * far 0.9x (1610 -> 1449); owner p6ac: 1500. */
+ * far 0.9x (1610 -> 1449); owner p6ac: 1500. Owner p7h (2026-10-19): both
+ * hitboxes 0.9x (the burn's 640 -> 576, the blast's 860 -> 774; the effects
+ * keep their size). */
 #define PAL_FLAME_NEAR 450.0F
 #define PAL_FLAME_MID 750.0F
 #define PAL_FLAME_FAR 1500.0F
@@ -103,10 +105,10 @@ extern uintptr_t llITCommonDataFFlowerFlameWeaponAttributes;
 #define PAL_FLAME_BLAST_AT 19
 #define PAL_FLAME_BLAST_TICS 3
 #define PAL_FLAME_BURN_DAMAGE 1
-#define PAL_FLAME_BURN_SIZE 640.0F
+#define PAL_FLAME_BURN_SIZE 576.0F
 #define PAL_FLAME_BURN_KNOCKBACK_WEIGHT 3
 #define PAL_FLAME_BLAST_DAMAGE 19
-#define PAL_FLAME_BLAST_SIZE 860.0F
+#define PAL_FLAME_BLAST_SIZE 774.0F
 #define PAL_FLAME_BLAST_ANGLE 361
 #define PAL_FLAME_BLAST_KNOCKBACK_SCALE 95
 #define PAL_FLAME_BLAST_KNOCKBACK_BASE 40
@@ -1197,8 +1199,9 @@ static void ndsP4PalutenaWings(GObj *fighter_gobj, FTStruct *fp, s32 clip)
  *   moves also draw the staff's trail (sword trail 24, their scripts).
  * - The overhead light wings (PAL_LIGHT_TREE: a small glowing orb above her
  *   head and two cards of feathered light fanning out from beside it, the
- *   right the left's mirror; the ring's two halves about her head, the
- *   taunt's) in the three smashes, up air and the taunt. As the 3DS forward
+ *   right the left's mirror; the ring's two halves about her head, which
+ *   no window shows since owner p7h) in the three smashes, up air and the
+ *   taunt. As the 3DS forward
  *   smash's wind-up draws them (owner p6ab, 2026-10-17, Strong_Side_A
  *   frames 0-10: "camera facing", "the 2 light wings should be separated by
  *   the small glowing circle", "mostly camera facing with slight rotations
@@ -1282,21 +1285,25 @@ static const NDSP4PalLightWindow sNdsP4PalutenaGlowWindows[] = {
     { 174, 3, 5, 34, 39, 0, 0 },    /* up tilt (hits 6-33) */
     { 176, 3, 5, 22, 26, 0, 0 },    /* down tilt (hits 6-9, its spin to 22) */
     { 184, 3, 5, 32, 39, 0, 0 },    /* neutral air (its hit 7-29) */
-    { 187, 3, 5, 17, 22, 0, 0 },    /* up air (hits 5-16) */
+    { 187, 6, 10, 34, 44, 0, 0 },   /* up air (hits 10-32: its clip at 0.5, owner p7h) */
 };
 
 /* Ultimate's frames through each clip's time anchors (art/p6/palutena/
- * anims, "time"). */
+ * anims, "time"), each grown in one frame sooner than that (owner p7h,
+ * 2026-10-19: "draw 1 frame sooner ... 1 frame longer overall"). */
 static const NDSP4PalLightWindow sNdsP4PalutenaLightWindows[] = {
-    { 187, 4, 5, 18, 23, 0, 4 },    /* up air: backlight2 at 7, held to 71% */
-    { 182, 11, 13, 33, 44, 0, 11 }, /* up smash: with the pillar (16) */
-    { 177, 14, 16, 26, 37, 0, 0 },  /* forward smash, angled up: the hit (16) */
-    { 178, 14, 16, 26, 37, 0, 0 },
-    { 179, 14, 16, 26, 37, 0, 0 },  /* forward smash */
-    { 180, 14, 16, 26, 37, 0, 0 },
-    { 181, 14, 16, 26, 37, 0, 0 },  /* forward smash, angled down */
-    { 183, 16, 18, 33, 54, 0, 16 }, /* down smash: the slam (16) */
-    { 164, 46, 48, 65, 85, 1, 46 }, /* taunt (54 of 99), with the ring */
+    { 187, 7, 9, 36, 46, 0, 8 },    /* up air: backlight2 at 7, held to 71% (its clip at 0.5) */
+    { 182, 10, 12, 33, 44, 0, 11 }, /* up smash: with the pillar (16) */
+    { 177, 13, 15, 26, 37, 0, 0 },  /* forward smash, angled up: the hit (16) */
+    { 178, 13, 15, 26, 37, 0, 0 },
+    { 179, 13, 15, 26, 37, 0, 0 },  /* forward smash */
+    { 180, 13, 15, 26, 37, 0, 0 },
+    { 181, 13, 15, 26, 37, 0, 0 },  /* forward smash, angled down */
+    { 183, 15, 17, 33, 54, 0, 16 }, /* down smash: the slam (16) */
+    /* Taunt: shown from frame 12 with her white sparkle and its sound
+     * (motions/appeal.ms), not Ultimate's 54, and without the ring (owner
+     * p7h, 2026-10-19: "an extra blue/green ring ... remove it"). */
+    { 164, 11, 13, 65, 85, 0, 12 },
 };
 
 /* Each light card's material alpha at full (p6_light.py LIGHT_CARDS):

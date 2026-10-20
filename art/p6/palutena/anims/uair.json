@@ -1,11 +1,11 @@
 {
- "comment": "Ultimate's up air (c05attackairhi): the graceful twirl with the staff overhead (owner p6p); its hit at 5, the twirl carried past it. Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
+ "comment": "Ultimate's up air (c05attackairhi): the graceful twirl with the staff overhead (owner p6p); its hit at 5, the twirl carried past it. Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1). Owner p7h (2026-10-19): played at 0.5 (every anchor's clip frame twice as late; motions/uair.ms with it).",
  "ultimate": {
   "fighter": "palutena",
   "skeleton": "peach",
   "scene": "builds/p6-art/palutena/3ds2ds/scene_high/scene.json",
   "header": "0x137f",
-  "length": 40,
+  "length": 80,
   "first_slot": 0,
   "motion": "c05attackairhi",
   "time": [
@@ -14,19 +14,19 @@
     0
    ],
    [
-    5,
+    10,
     9
    ],
    [
-    15,
+    30,
     24
    ],
    [
-    32,
+    64,
     55
    ],
    [
-    40,
+    80,
     65
    ]
   ],
