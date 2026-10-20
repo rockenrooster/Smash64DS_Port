@@ -1236,6 +1236,17 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
         gNdsTickHudBuckets[nNDSTickHudBucketDigestA] = sNdsReplayDigest[0];
         gNdsTickHudBuckets[nNDSTickHudBucketDigestB] = sNdsReplayDigest[1];
 #endif
+        {
+            /* The storage service counts its waits in Calico ticks (64
+             * cpuGetTiming ticks each, battleship_mnmaps.c's reader). */
+            extern volatile u32 gNdsAudioStorageWaitTicks64;
+            static u32 s_storage_wait_prev;
+            const u32 storage_wait = gNdsAudioStorageWaitTicks64;
+
+            gNdsTickHudBuckets[nNDSTickHudBucketStorageWait] =
+                (storage_wait - s_storage_wait_prev) * 64u;
+            s_storage_wait_prev = storage_wait;
+        }
         /* Feed the HUD percentile window here, on the per-iteration path. The
          * HUD renderer only runs about twice a second, so sampling inside it
          * would build the distribution from half-second-spaced single frames

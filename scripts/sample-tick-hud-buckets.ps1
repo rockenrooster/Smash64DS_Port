@@ -341,7 +341,7 @@ $bucketNames = @('ALL', 'FTR', 'STG', 'BG', 'AUD', 'HUD', 'SRC', 'MISC', 'OTHR',
                  'SINT', 'SPHD', 'SPHC',
                  'MWPN', 'MITM', 'MEFX', 'MACT', 'MPRT', 'MTEX', 'MCAP', 'MPRO',
                  'MCAM', 'MFLS', 'GPOL', 'GVTX',
-                 'DGSA', 'DGSB')
+                 'DGSA', 'DGSB', 'STRD')
 # DGSA/DGSB (P2-2p8 Phase 0) are the gameplay replay digest after the undrawn
 # and the drawn logic tick; not ticks, excluded from every total, compared by
 # scripts/compare-replay-digest.py.
@@ -365,7 +365,7 @@ $srcSubBuckets = @('SHDT', 'SWRM', 'GCRA', 'SCPU', 'SCAT', 'SPRM',
                    'SINT', 'SPHD', 'SPHC',
                    'MWPN', 'MITM', 'MEFX', 'MACT', 'MPRT', 'MTEX',
                    'MCAP', 'MPRO', 'MCAM', 'MFLS', 'GPOL', 'GVTX',
-                   'DGSA', 'DGSB')
+                   'DGSA', 'DGSB', 'STRD')
 # Must match enum NDSTickHudNativeOwnerFallbackReason in include/nds/nds_startup.h.
 $fallbackReasons = if ($FallbackCensus) {
     @('calls', 'eligible', 'animLock', 'selected', 'displayList',
@@ -448,6 +448,14 @@ try {
                 $ringSymBytes = [Convert]::ToInt64((($ringLine[0] -split '\s+')[1]), 16)
                 # The ring is bucketNames x NDS_TICK_HUD_WINDOW words: the
                 # window is the build's (32 on the gate ROM, 128 elsewhere).
+                # STRD (2026-10-20) is the newest column: a ROM built before it
+                # rings one bucket fewer, and is read without it.
+                if ((($ringSymBytes % ([int64]$bucketNames.Count * 4)) -ne 0) -and
+                    (($ringSymBytes % ([int64]($bucketNames.Count - 1) * 4)) -eq 0) -and
+                    ($bucketNames[-1] -eq 'STRD')) {
+                    $bucketNames = @($bucketNames | Where-Object { $_ -ne 'STRD' })
+                    $srcSubBuckets = @($srcSubBuckets | Where-Object { $_ -ne 'STRD' })
+                }
                 $ringRowBytes = [int64]$bucketNames.Count * 4
                 $ringElfWindow = if (($ringSymBytes % $ringRowBytes) -eq 0) { [int]($ringSymBytes / $ringRowBytes) } else { 0 }
                 if ($ringElfWindow -notin @(32, 64, 128)) {

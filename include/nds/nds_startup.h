@@ -4586,6 +4586,14 @@ enum NDSTickHudBucket {
      * (scripts/compare-replay-digest.py). */
     nNDSTickHudBucketDigestA,
     nNDSTickHudBucketDigestB,
+    /* This frame's synchronous storage waits (gNdsAudioStorageWaitTicks64's
+     * delta, cpuGetTiming ticks): every card read the frame waited for, the
+     * motion clips a status change missed in the cache among them. Owner
+     * 2026-10-20 replaced "0 motion reads after GO" with "a motion read never
+     * pushes a frame past two VBlanks": a presented frame past two VBlanks
+     * whose busy time less this column would have fit counts against it
+     * (scripts/p7/check_motion_read_push.py). A sub-span, out of every total. */
+    nNDSTickHudBucketStorageWait,
     nNDSTickHudBucketCount,
     /* The on-screen table stops at OTHR: the console is 24 rows and rows 20-23
      * already carry the legend, the VBlank histogram and the build stamp. WAIT
