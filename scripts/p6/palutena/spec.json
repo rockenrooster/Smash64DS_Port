@@ -39,6 +39,11 @@
   "4": {
    "comment": "Win4, the select screen's Selected pose: Peach's third clip (no halo: owner 2026-10-17)",
    "script": "scripts/p6/palutena/motions/win4.ms"
+  },
+  "13": {
+   "comment": "IntroL, the 1P card pose (owner 2026-10-19/20: candidate c4, the shield turned off her body): Peach's IntroL body, her arms re-posed (art/p6/palutena/anims/intro_l.json)",
+   "anim": "builds/p6-art/palutena/anims/intro_l.o2r",
+   "script": "scripts/p6/palutena/motions/intro_l.ms"
   }
  },
  "anim_locks": "rest",

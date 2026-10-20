@@ -1,0 +1,70 @@
+{
+ "comment": "Palutena's 1P card pose (menu motion 13, IntroL; owner 2026-10-19/20, candidate c4 with the shield turned off her body): Peach's IntroL body (the card's) with her arms re-posed -- the staff arm a little out from her body, the upper arm angled down, the elbow bent, the staff up and away from her; the shield arm down at her side, the forearm rolled 65 degrees so the shield clears her dress. Directions (her body frame: side, up, forward): staff upper arm (0.60, -0.70, 0.30), forearm (0.40, 0.45, 0.80), staff (0.25, 0.95, 0.20); shield upper arm (0.30, -0.94, -0.05), forearm (0.25, -0.80, 0.50), roll -65.",
+ "source": "0x1415",
+ "skeleton": "peach",
+ "ops": [
+  {
+   "op": "turn",
+   "row": 4,
+   "deg": [
+    53.015,
+    -160.335,
+    16.927
+   ]
+  },
+  {
+   "op": "turn",
+   "row": 5,
+   "deg": [
+    -0.595,
+    -98.377,
+    153.627
+   ]
+  },
+  {
+   "op": "turn",
+   "row": 6,
+   "deg": [
+    -0.349,
+    0.076,
+    24.505
+   ]
+  },
+  {
+   "op": "turn",
+   "row": 11,
+   "deg": [
+    37.723,
+    133.217,
+    -29.439
+   ]
+  },
+  {
+   "op": "turn",
+   "row": 12,
+   "deg": [
+    41.321,
+    166.853,
+    -20.735
+   ]
+  },
+  {
+   "op": "turn",
+   "row": 13,
+   "deg": [
+    -88.133,
+    -20.188,
+    86.498
+   ]
+  },
+  {
+   "op": "turn",
+   "row": 14,
+   "deg": [
+    -0.178,
+    -180.0,
+    -0.003
+   ]
+  }
+ ]
+}
