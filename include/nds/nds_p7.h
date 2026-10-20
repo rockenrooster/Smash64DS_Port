@@ -233,6 +233,15 @@ void ndsP7OnePRunEnd(void);
  * then the player's back and into the file. */
 void ndsP7OnePSaveBegin(void);
 void ndsP7OnePSaveEnd(void);
+/* Around a source test that reads every fighter's row (an unlock's
+ * character mask): the parent's own row in place, then the player's back,
+ * so a content's records never count as its parent's. No-ops outside a
+ * content's or Metal Mario's run. */
+void ndsP7OnePParentBegin(void);
+void ndsP7OnePParentEnd(void);
+/* The parent's own row while such a run holds the player's in its place,
+ * else NULL. */
+const struct LBBackup1PRecord *ndsP7OnePParentRow(void);
 
 /* Dev-open builds (the lab sweep, the four-CPU stress, both-CPU and
  * fast-logic harnesses, and walks) see every fighter and stage, as they

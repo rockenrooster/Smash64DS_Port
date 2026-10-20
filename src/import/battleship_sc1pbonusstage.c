@@ -224,11 +224,43 @@ static u32 ndsSC1PBonusPracticeSel(void)
         NDS_P7_SEL_METAL : NDS_P7_SEL_COUNT;
 }
 
+/* P7 C3: Luigi's challenge (sc1pbonusstage.c:1212) tests every starter's
+ * Break the Targets row, and in a content's or Metal Mario's practice the
+ * parent's row holds the player's: a clear that is the player's and not the
+ * parent's own does not call him. The source's next test, the Sound Test's,
+ * then runs as it would have (its own wrapper reads the parent's row). */
+static void ndsSC1PBonusLuigiTest(u8 stage, u8 fkind, u8 costume)
+{
+    const LBBackup1PRecord *parent = ndsP7OnePParentRow();
+
+    if ((parent == NULL) ||
+        (gSCManagerSceneData.scene_curr != nSCKind1PGame) ||
+        (gSCManagerSceneData.spgame_stage != nSC1PGameStageLuigi) ||
+        (parent->bonus1_task_count == SCBATTLE_BONUSGAME_TASK_MAX) ||
+        ((LBBACKUP_CHARACTER_MASK_STARTER &
+          LBBACKUP_MASK_FIGHTER(gSCManagerSceneData.bonus_fkind)) == 0u))
+    {
+        return;
+    }
+    gSCManagerSceneData.spgame_stage = stage;
+    gSCManagerSceneData.fkind = fkind;
+    gSCManagerSceneData.costume = costume;
+    gSCManagerSceneData.scene_curr = nSCKind1PBonus1Players;
+    if (sc1PManagerCheckUnlockSoundTest() != FALSE)
+    {
+        gSCManagerSceneData.unlock_messages[0] = nLBBackupUnlockSoundTest;
+        gSCManagerSceneData.scene_curr = nSCKindMessage;
+    }
+}
+
 void sc1PBonusStageStartScene(void)
 {
     u8 entry_prev = gSCManagerSceneData.scene_prev;
     const u32 practice = ((entry_prev == nSCKind1PBonus1Players) ||
                           (entry_prev == nSCKind1PBonus2Players)) ? TRUE : FALSE;
+    const u8 stage = gSCManagerSceneData.spgame_stage;
+    const u8 fkind = gSCManagerSceneData.fkind;
+    const u8 costume = gSCManagerSceneData.costume;
 
     if (practice != FALSE)
     {
@@ -236,6 +268,10 @@ void sc1PBonusStageStartScene(void)
                           ndsSC1PBonusPracticeSel());
     }
     ndsBaseSC1PBonusStageStartScene();
+    if (practice != FALSE)
+    {
+        ndsSC1PBonusLuigiTest(stage, fkind, costume);
+    }
     /* P7 C2: the descriptor rows a content's board borrowed. */
     ndsP7BonusBoardEnd();
     /* As sc1PGameStartScene: the board may have borrowed the frontend tail. */

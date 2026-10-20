@@ -616,3 +616,37 @@ void ndsP7OnePSaveEnd(void)
     }
     ndsFsUnlock();
 }
+
+/* The source's unlock tests (Luigi's challenge, the Sound Test, Mushroom
+ * Kingdom) read every fighter's row for a character mask; a content's row in
+ * its parent's place would count as the parent's. */
+static LBBackup1PRecord sNdsP7OnePTestRow;
+static u32 sNdsP7OnePTestDepth;
+
+void ndsP7OnePParentBegin(void)
+{
+    LBBackup1PRecord *row;
+
+    if ((sNdsP7OnePRunKind < 0) || (sNdsP7OnePTestDepth++ != 0u))
+    {
+        return;
+    }
+    row = &gSCManagerBackupData.spgame_records[sNdsP7OnePRunKind];
+    sNdsP7OnePTestRow = *row;
+    *row = sNdsP7OnePParentRow;
+}
+
+void ndsP7OnePParentEnd(void)
+{
+    if ((sNdsP7OnePRunKind < 0) || (sNdsP7OnePTestDepth == 0u) ||
+        (--sNdsP7OnePTestDepth != 0u))
+    {
+        return;
+    }
+    gSCManagerBackupData.spgame_records[sNdsP7OnePRunKind] = sNdsP7OnePTestRow;
+}
+
+const LBBackup1PRecord *ndsP7OnePParentRow(void)
+{
+    return (sNdsP7OnePRunKind >= 0) ? &sNdsP7OnePParentRow : NULL;
+}

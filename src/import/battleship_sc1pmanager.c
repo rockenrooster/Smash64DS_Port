@@ -76,14 +76,30 @@ void ndsP7ManagerMessageScene(void);
 
 #define sc1PManagerUpdateScene ndsBaseSC1PManagerUpdateScene
 void ndsBaseSC1PManagerUpdateScene(void);
+/* P7 C3: the Sound Test's test reads every fighter's bonus rows; in a
+ * content's (or Metal Mario's) practice the parent's row holds the
+ * player's, so the source's test runs with the parent's own in place. */
+#define sc1PManagerCheckUnlockSoundTest ndsBaseSC1PManagerCheckUnlockSoundTest
+sb32 ndsBaseSC1PManagerCheckUnlockSoundTest(void);
 
 #include "../../decomp/BattleShip-main/decomp/src/sc/sc1pmode/sc1pmanager.c"
 
+#undef sc1PManagerCheckUnlockSoundTest
 #undef sc1PManagerUpdateScene
 #undef sc1PGameStartScene
 #undef sc1PStageClearStartScene
 #undef mnCongraStartScene
 #undef mnMessageStartScene
+
+sb32 sc1PManagerCheckUnlockSoundTest(void)
+{
+    sb32 result;
+
+    ndsP7OnePParentBegin();
+    result = ndsBaseSC1PManagerCheckUnlockSoundTest();
+    ndsP7OnePParentEnd();
+    return result;
+}
 
 /* ---- P7 U4/U5: challengers and unlocks beyond the source's ---- */
 
@@ -360,6 +376,21 @@ void ndsP7ManagerCongraScene(void)
 /* A5: Mushroom Kingdom's message comes last -- the queue before it. */
 void ndsP7ManagerMessageScene(void)
 {
+    const LBBackup1PRecord *parent = ndsP7OnePParentRow();
+
+    /* P7 C3: Mushroom Kingdom's test (sc1pmanager.c:555) reads every
+     * starter's 1P clear, and in a content's or Metal Mario's run the
+     * parent's row holds the player's: a clear that is the player's and not
+     * the parent's own does not open the stage. */
+    if ((gSCManagerSceneData.unlock_messages[0] == nLBBackupUnlockInishie) &&
+        (parent != NULL) && (parent->is_spgame_complete == FALSE) &&
+        ((LBBACKUP_CHARACTER_MASK_STARTER &
+          LBBACKUP_MASK_FIGHTER(gSCManagerSceneData.fkind)) != 0u))
+    {
+        memset(gSCManagerSceneData.unlock_messages, nLBBackupUnlockEnumCount,
+               sizeof(gSCManagerSceneData.unlock_messages));
+        return;
+    }
     if ((gSCManagerSceneData.unlock_messages[0] == nLBBackupUnlockInishie) &&
         ((sNdsP7QueueCount != 0u) || (sNdsP7OwedCount != 0u)))
     {
