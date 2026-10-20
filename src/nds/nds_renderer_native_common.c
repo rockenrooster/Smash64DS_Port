@@ -12844,15 +12844,22 @@ typedef struct NDSFtrLeanWideHold
  * every loop over NDS_FTR_LEAN_ENTRIES leaves it alone. A wide list needs the
  * two halves as entries 0 and 1, so it restores the identity map first. */
 #define NDS_FTR_LEAN_SPARE NDS_FTR_LEAN_ENTRIES
-/* The stage body's floor (nds_stage_gx.exec.inc): the GObj cap latches the
- * moment the general heap drops under 25,600 B; the spare and the pool keep
- * that and 12 KB more (NDS_STAGE_GX_HEAP_KEEP_FREE). 2026-10-18: they kept
- * 36,420 B more, a match's growth after the stage body's allocation -- which
- * was the optional caches with floors of their own, this spare among them --
- * so Dinosaur Land's cast (90,964 B free at the start, 79,700 needed) drew
- * the whole match with no spare and no pool: ~92 lists materialized, each one
- * a frame in the P95 tail, against Dream Land's ~46 with three spares. */
-#define NDS_FTR_LEAN_SPARE_KEEP_FREE (25600u + 12288u)
+/* The GObj cap latches the moment the general heap drops under 25,600 B; the
+ * spare and the pool keep that and a margin for what the match takes after
+ * them. Until 2026-10-18 the margin was 36,420 B, a match's growth after the
+ * stage body's allocation -- which was the optional caches with floors of
+ * their own, this spare among them -- so Dinosaur Land's cast (90,964 B free
+ * at the start, 79,700 needed) drew the whole match with no spare and no
+ * pool: ~92 lists materialized, each one a frame in the P95 tail, against
+ * Dream Land's ~46 with three spares; it became the stage body's 12 KB
+ * (NDS_STAGE_GX_HEAP_KEEP_FREE).
+ * 2026-10-20 (stability audit): 12 KB is a one-minute match's growth, not a
+ * long one's. What the source's own pools (GObjs, DObjs, XObjs, MObjs, SObjs,
+ * processes, particles) take from the first frame on: 14,780 B in five
+ * minutes of four heavy contents on Yoshi's Island with items at the default
+ * rate, 19,800 B at Very High, 13,784 B on the campaign's Yoshi Team after
+ * Sonic's four spares (its low 24,584). So 24 KB. */
+#define NDS_FTR_LEAN_SPARE_KEEP_FREE (25600u + 24576u)
 
 typedef struct NDSFtrLeanSlotState
 {
