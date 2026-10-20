@@ -299,8 +299,11 @@ p4_colanims.py, p4_css.py
   (both tracks' ops), `art/p6/<name>/anims/` (authored clip layers),
   `art/p6/<name>/authored.blend` and its export (the pieces neither source
   has), `art/p6/common/` (the Kid Icarus emblem). Local: `builds/p6-art/<name>/`
-  (the built look and its .blend) and `artifacts/p6/review/` (review renders
-  and the G0 sheet). Ignored: the three rip folders, `art/**/*.local.blend`
+  (the built look), `assets/fighters/<name>/blender/` (the authored fighters'
+  Blender files, owner 2026-10-20: the look's work copy and its lineups, the
+  textures it links beside it in `textures/`, older sessions in `old_*/`;
+  `assets/` is ignored) and `artifacts/p6/review/` (review renders and the G0
+  sheet). Ignored: the three rip folders, `art/**/*.local.blend`
   (scenes that link kit or Ultimate files) and `art/**/voice.local/`.
 
 ## Board 1 — authoring machinery
@@ -438,7 +441,7 @@ ported), and line 2's routine list is the move card. Added:
 - **Hitboxes are authored with the clip**: the review render shows them and
   the lab's hitbox census confirms them.
 - **Reference use:** the kit and the Ultimate models open only in local
-  scenes (`*.local.blend`, `builds/p6-art/`). No tracked file holds their
+  scenes (`*.local.blend`, `builds/p6-art/`, `assets/fighters/`). No tracked file holds their
   data: built geometry, textures, icons and renders stay under `builds/` and
   `artifacts/`, and the look ops hold anchors and offsets only.
 

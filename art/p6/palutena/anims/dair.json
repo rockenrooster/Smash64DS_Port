@@ -1,5 +1,5 @@
 {
- "comment": "Ultimate's down air (c05attackairlw): the downward kick, her body swinging toward the camera (owner p6p); its hits from 7. Owner p6v: at the kick her torso twisted ~160 deg from her hips (Ultimate spreads that over its waist bone; her tree has none), so from 6 to 9 her hips twist 30 deg toward the camera and her torso 55 toward her hips (about their own up, their lean kept), held to 24, eased out by 30. Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
+ "comment": "Ultimate's down air (c05attackairlw): the downward kick, her body swinging toward the camera (owner p6p); its hits from 7. Owner p6v: at the kick her torso twisted ~160 deg from her hips (Ultimate spreads that over its waist bone; her tree has none), so from 6 to 9 her hips twist 30 deg toward the camera and her torso 55 toward her hips (about their own up, their lean kept), held to 24, eased out by 30. Owner 2026-10-20: the kick held at its full raise, the thigh at most 58.3 deg from her hips' down (f24's: \"free f13-f20 should look more like f24\"), the knee fully extended from 7 to 24 and bent again by 28 (raise_max, straighten); the dress holds both legs to 11, then lets the slit leg out (it lifted over the raised thigh like an umbrella, \"shows the whole underside of her skirt to the camera\"), the cloth drawn onto its target 12-16 so the kick's spin does not flatten it, and the slit turned 30 deg at 7-11 (45 at 12, back by 15) so the leg runs through it (\"the slit needs to be rotated\"). Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
  "ultimate": {
   "fighter": "palutena",
   "skeleton": "peach",
@@ -84,6 +84,105 @@
      ]
     ]
    }
-  ]
+  ],
+  "raise_max": [
+   {
+    "row": 16,
+    "deg": 58.3,
+    "keys": [
+     [
+      11,
+      0
+     ],
+     [
+      12,
+      1
+     ],
+     [
+      24,
+      1
+     ],
+     [
+      25,
+      0
+     ]
+    ]
+   }
+  ],
+  "straighten": [
+   {
+    "row": 17,
+    "keys": [
+     [
+      6,
+      0
+     ],
+     [
+      7,
+      1
+     ],
+     [
+      24,
+      1
+     ],
+     [
+      28,
+      0
+     ]
+    ]
+   }
+  ],
+  "dress": {
+   "slit_free": [
+    [
+     12,
+     34
+    ]
+   ],
+   "cloth_follow": [
+    [
+     11,
+     0
+    ],
+    [
+     12,
+     0.6
+    ],
+    [
+     16,
+     0.6
+    ],
+    [
+     19,
+     0
+    ]
+   ],
+   "slit_turn": [
+    [
+     5,
+     0
+    ],
+    [
+     7,
+     30
+    ],
+    [
+     11,
+     30
+    ],
+    [
+     12,
+     45
+    ],
+    [
+     13,
+     25
+    ],
+    [
+     15,
+     0
+    ]
+   ]
+  }
  }
 }

@@ -116,6 +116,15 @@ CONCAVE = 0.09
 # The hem's move at rest (model units: x to her left, z forward), the mid
 # ring's along the band's line with it.
 HEM_SHIFT = (-28.0, -46.0)
+# The same rest hem for a look in the owner's own pose (look_blend.py
+# --no-reaim): the re-aimed look's hips had turned its skirt 5 degrees
+# forward, its hem about 21 units ahead of the owner's model's, before
+# HEM_SHIFT; this puts the hem where that look's was (the hems' centres
+# measured 2026-10-20), so skirt_keys.py's cloth hangs and keys her clips as
+# the owner tuned them. (A rest even about her legs with the shift left to
+# the clips' cloth over-tilted her run's dress: "a twitch" from her dash into
+# it, the down air's skirt turned up to the camera, owner 2026-10-20.)
+HEM_SHIFT_OWNER_POSE = (-33.3, -25.2)
 # The row 25 ring: this much above the cut and this fraction of its radius,
 # inside the upper band's lower edge.
 OVERLAP_UP = 6.0
@@ -639,22 +648,19 @@ def band_normals(scene: dict) -> dict:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--scene", type=Path, action="append", required=True)
-    ap.add_argument("--hem-shift", type=lambda t: tuple(float(x) for x in t.split(",")), default=HEM_SHIFT,
-                    help="the hem's move at rest, x,z model units (default HEM_SHIFT)")
+    ap.add_argument("--hem-shift", type=lambda t: tuple(float(x) for x in t.split(",")), default=None,
+                    help="the hem's move at rest, x,z model units (default HEM_SHIFT, or HEM_SHIFT_OWNER_POSE "
+                         "for a scene in the owner's pose)")
     args = ap.parse_args()
-    # What the rest leaves of HEM_SHIFT, the clips' cloth takes (skirt_keys.py
-    # "skirt_clip_shift"): owner 2026-10-20 approved a rest even about her legs,
-    # and p6t's cone that points back in her wait stays in the clips.
-    clip_shift = [round(float(a - b), 3) for a, b in zip(HEM_SHIFT, args.hem_shift)]
     for path in args.scene:
         scene = json.loads(path.read_text(encoding="utf-8"))
         detail = scene.get("detail") or ("low" if "low" in path.parent.name else "high")
         info = remesh(scene, "low" if detail == "low" else "high")
-        info["mid"] = split_band(scene, args.hem_shift)
+        hem_shift = args.hem_shift
+        if hem_shift is None:
+            hem_shift = HEM_SHIFT_OWNER_POSE if scene.get("reaim") is False else HEM_SHIFT
+        info["mid"] = split_band(scene, hem_shift)
         info["legs"] = leg_clearance(scene)
-        if any(clip_shift):
-            scene["skirt_clip_shift"] = clip_shift
-            info["clip_shift"] = clip_shift
         info["normals"] = band_normals(scene)
         path.write_bytes((json.dumps(scene, indent=0) + "\n").encode("utf-8"))
         print(f"look skirt: {path} {info}")

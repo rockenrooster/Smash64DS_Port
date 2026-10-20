@@ -101,7 +101,7 @@ builds/p6-art/palutena/costumes/stock.json --lift-palettes --ambient
 file identical), and the export now reads 0.93 outward, 0.75 at the least. A
 change to the look scenes is in the game only once `model_writer.py` has run.
 Both details side by side, decoded from the export, are in
-`builds/p6-art/palutena/blender/palutena_ds_high_low.blend` (local).
+`assets/fighters/palutena/blender/palutena_ds_high_low.blend` (local).
 
 **The look rebuilt from the approved model (owner 2026-10-20).** Seen side
 by side in Blender, the DS models "look much different than my original
@@ -133,8 +133,11 @@ thigh "much bigger around at the top" and slivers under the arms. Causes:
   `KEEP_PATCHES` entries with the "red" filter keep one red each.
 
 The base is the owner's file copied to
-`builds/p6-art/palutena/blender/3DS_to_DS_Palutena_v2.blend` (the original in
-`decomp/` untouched): the face 68 -> 48 triangles (eye and mouth vertices that
+`assets/fighters/palutena/blender/3DS_to_DS_Palutena_v2.blend` (the original in
+`decomp/` untouched; the authored fighters' Blender files live under the
+ignored `assets/fighters/<name>/blender/`, owner 2026-10-20, the textures the
+work copy links in `textures/` beside it, the 2026-10-13 sessions in
+`old_2026-10-13/`): the face 68 -> 48 triangles (eye and mouth vertices that
 are texture, dissolved, the look unchanged), the slit centred under the gem
 (its top at the texture's u 0.70, the gem's centre, its hem opening 0.63056 to
 0.76944; the dress texture's cylinder projection is exact, so moved vertices
@@ -147,27 +150,38 @@ side-by-side lineup (old and new DS high and low, decoded scenes).
 the highest vertex inside it as the top (the base's mid ring puts two more
 there), and moves any leg point that is not 2 units inside the dress at rest
 in along the ray from the dress's axis (`leg_clearance`: 4 thigh-top points,
-3-4 units, where the band sits a little inside the approved surface). The rest
-dress is even about her legs (`--hem-shift=0,0`); the p6t cone that points
-back in her wait stays in the clips (`skirt_clip_shift`, the cloth's rest in
-`skirt_keys.py`, row 25 tilting the band as the old rest geometry was).
-Result: high 451 triangles (469 before), low 318 (309); 0 leg points outside
-the dress at rest (the old high's thigh was 8 units out). Every clip rebuilt
-and re-keyed (`dress_check.py` as built, both exports measured the same way):
-172 of 221 motions clean, as with the re-aimed look; 139 frames with a leg
-point out of 8,088 against 121, most of the difference one KO clip (Peach's
-motion 0: the right thigh 4-9 units out on 34 frames); the single-frame spikes
-of 50-170 units (a point measured past the hem's side at an extreme pose) are
-in both. Her native owner's census pins were learned again
-(`p4_native_owner.py --learn`: 451/318 triangles, 292/248 GX restores).
+3-4 units, where the band sits a little inside the approved surface). The
+p6t cone that points back in her wait is in the rest geometry, as it was: the
+approved model's hem sits about 21 units behind the re-aimed one's, so the
+hem moves (-33.3, -25.2) in a scene built without re-aim (`HEM_SHIFT_OWNER_POSE`,
+picked by the scene's `reaim` key; -28, -46 in a re-aimed one) and the band's
+cone is the old one (the run's band 41-44 degrees from her hips' down, as
+before). The p7p build had the rest dress even about her legs and the cone
+turned into every clip instead (`skirt_clip_shift`, row 25 tilting the band in
+the cloth's rest); the owner's playtest found "a twitch that wasn't there
+before" from the dash into the run (its band at 50-55 degrees) and the down
+air's dress lifted, so that was dropped and `skirt_keys.py`'s cloth is as it
+was. The low keeps the high's long hair whole (36 triangles): reduced, its
+two half-panels on coincident vertex pairs left holes and loose triangles
+(owner p7p: "triangles are not all connected ... most visible from the
+back"). Result: high 451 triangles (469 before), low 332 (309); 0 leg points
+outside the dress at rest (the old high's thigh was 8 units out). Every clip
+rebuilt and re-keyed (`dress_check.py` as built, measured the same way as the
+re-aimed look's export): 167 of 221 motions clean (172 before); 129 frames
+with a leg point out of 8,088 (121), 21 of them the down air's by design (its
+slit leg out from 12 to 34, below), 108 without it (119); the single-frame
+spikes of 40-120 units (a point measured past the hem's side at an extreme
+pose) come and go between the two. Her native owner's census pins were
+learned again (`p4_native_owner.py --learn`: 451/332 triangles, 292/248 GX
+restores).
 
 Chain (local, kit-derived outputs under `builds/p6-art/palutena/`): dump the
 v2 file's `3DS_to_DS_Work` (`scripts/p6/blender/dump_look.py`) to
 `3ds2ds_v2/work_dump.json`; `look_reduce.py` it with the recipe to
 `3ds2ds_v2/low_dump.json`; `look_blend.py --no-reaim` for both details into
-`3ds2ds/scene_high` and `scene_low`; `p6_costumes.py`; `look_skirt.py
---hem-shift=0,0`; `look_parts.py`; `model_writer.py` as above; make rebuilds
-every clip and the export. The re-aimed scenes, look files and clips are kept
+`3ds2ds/scene_high` and `scene_low`; `p6_costumes.py`; `look_skirt.py` (its
+hem shift by the scene's pose); `look_parts.py`; `model_writer.py` as above;
+make rebuilds every clip and the export. The re-aimed scenes, look files and clips are kept
 beside them as `*_reaim_20261020`.
 
 ## Move card (approved 2026-10-13, P1)
@@ -1147,6 +1161,43 @@ The owner's p6ac playtest (`docs/BUGS.md`, Palutena):
   (the forward tilt's damage, re-made live so it hits once), cleared at 30,
   hitboxes 1.25x the launcher's (275, 238, 200), the launcher's 55, growth
   180, base 30.
+
+## Owner 2026-10-20: the down air's kick and dress
+
+The owner's playtest of p7p: the down air (facing right) "shows the whole
+underside of her skirt to the camera", and it "usually has her leg use the
+slit opening for her leg to show through". After its sweep the kick holds
+her slit leg (the left, rows 16-18) out at her hips' height, the thigh up to
+84 degrees from her hips' down (frames 13-27), and `_contain` held both legs
+in the dress: rows 26 and 27 widened the hem to 1.75x and lifted it over the
+thigh like an umbrella, its inside 69-81% of the dress the camera saw in the
+hold. Changed from the owner's reviews of renders (her posed scene from the
+game's camera, back faces culled as the DS culls them):
+
+- **The kick** ("free f24 looks perfect as the max angle for the thigh for
+  full impact, full kick impact though should also have the knee fully
+  extended"; "free f13-f20 should look more like f24"): the recipe's
+  `raise_max` holds the thigh to at most 58.3 degrees from her hips' down
+  (frame 24's) from 12 to 24, and `straighten` puts the knee at its rest bend
+  (7 degrees) from 7 to 24, bent again by 28 (`ultimate.py` `_legs`, after
+  the turns).
+- **The dress** (its recipe's `dress` keys, into the clip's skirt guide):
+  both legs are held to frame 11, so in the sweep the dress hangs as an A-line
+  about the straight leg, and from 12 to 34 the slit leg is let out
+  (`skirt_keys.py` `slit_free`: its capsules do not push the cloth and
+  `_contain` does not hold it), so the dress hangs while the kick leaves at
+  the slit. "The dress also doesn't need to be so flat": the cloth's spring
+  lag, spun out by the kick, flattened it even with no legs at all (a
+  half-angle of 43 degrees, 20 at rest), so `cloth_follow` draws the cloth
+  0.6 of the way onto its target from 12 to 16. "The slit needs to be rotated
+  in f8 - 12 like how f13 is": `slit_turn` turns row 25 about its band (and
+  the cloth's points with it) 30 degrees from 7 to 11 and 45 at 12, back to
+  none by 15, so the straight leg runs down through the slit's opening.
+- Measured (the share of the dress's drawn pixels that are its inside):
+  facing right 1-13% from 8 to 24 (69-81% before) and 30-37% at 27-31 as the
+  leg comes back; facing left 0% after 12, 39-69% at 8-10 (the slit's inner
+  side). A variant that let the hold ease out after the kick (19% at worst)
+  was not taken ("Row 2: + slit turn looks the best").
 
 ## Animations (the owner's 3DS references, 2026-10-14)
 

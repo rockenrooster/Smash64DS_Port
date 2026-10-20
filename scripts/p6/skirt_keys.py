@@ -58,6 +58,22 @@ straight lines let a leg out of is made a knot. Her legs are as the clip
 has them (the old hem solver turned a leg it could not hold toward its
 rest).
 
+A guide (ultimate.py, with the recipe's "dress" keys) shapes a kick that
+leaves the dress (owner 2026-10-20, her down air: it "shows the whole
+underside of her skirt to the camera" and "usually has her leg use the slit
+opening for her leg to show through"):
+- "slit_free" ([[first, last], ...]): on those frames the slit leg's
+  capsules do not push the cloth and _contain does not hold it, so the dress
+  hangs while the leg kicks out at the slit (held, the dress lifted over the
+  raised thigh like an umbrella);
+- "cloth_follow" ([[frame, weight], ...], eased like every keyed weight
+  here): the cloth drawn that weight of the way onto its target each frame
+  (the lag a fast turn spins out of it flattens the dress);
+- "slit_turn" ([[frame, degrees], ...]): row 25 turned about its band, the
+  cloth's points with it, so the slit's opening runs along the leg (owner:
+  "the slit needs to be rotated ... so that it looks like the leg is coming
+  out of the slit").
+
 Row 27 was Peach's held joint (the grab's and heavy items': the scene's
 "joint_roles" moved it to row 28): a clip that installs its hidden part keys
 it one slot later.
@@ -165,6 +181,21 @@ def _window(n: int, i: int, half: int, loop) -> list:
             out.append(k)
         return out
     return [min(max(i + d, 0), n - 1) for d in range(-half, half + 1)]
+
+
+def _eased(keys, g: float) -> float:
+    """[[frame, value], ...] at frame g: smoothstep between keys, held past
+    the ends (0 without keys)."""
+    if not keys:
+        return 0.0
+    pts = sorted((float(a), float(b)) for a, b in keys)
+    if g <= pts[0][0]:
+        return pts[0][1]
+    for (a0, b0), (a1, b1) in zip(pts, pts[1:]):
+        if g <= a1:
+            t = (g - a0) / max(a1 - a0, 1e-9)
+            return b0 + (b1 - b0) * t * t * (3.0 - 2.0 * t)
+    return pts[-1][1]
 
 
 def _turn(axis, ang):
@@ -370,26 +401,10 @@ class Skirt:
         if len(self.top_p) != len(self.hem_p):
             raise SystemExit("row 25's ring and the hem differ in samples")
         self.chains = len(hem) - 1 if abs(hem_u[-1] - 1.0) < 1e-3 and abs(hem_u[0]) < 1e-3 else len(hem)
-        # The cloth's rest: the drawn rest, or with the scene's clip shift
-        # (look_skirt.py: a look whose rest is even about her legs, owner
-        # 2026-10-20) its hem moved by it and its mid ring along the line
-        # from row 25's ring to the moved hem -- the owner's p6t cone that
-        # points back in her wait. The fit keeps the drawn rest (a_rest), so
-        # row 25 tilts the band as that rest geometry once was tilted.
-        self.cloth_mid_p, self.cloth_hem_p = self.mid_p, self.hem_p
-        shift = scene.get("skirt_clip_shift")
-        if shift:
-            sv = np.array([float(shift[0]), 0.0, float(shift[1])])
-            model = lambda ids: np.array([verts[i]["model"] for i in ids], dtype=float)
-            top_m, mid_m, hem_m = model(ring25), model(mid), model(hem)
-            f = (top_m[:, 1] - mid_m[:, 1]) / (top_m[:, 1] - hem_m[:, 1])
-            to_p = lambda pts: (pin @ np.c_[pts, np.ones(len(pts))].T).T[:, :3]
-            self.cloth_mid_p = to_p(mid_m + f[:, None] * sv)
-            self.cloth_hem_p = to_p(hem_m + sv)
-        self.len1 = np.linalg.norm(self.cloth_mid_p - self.top_p, axis=1)[:self.chains]
-        self.len2 = np.linalg.norm(self.cloth_hem_p - self.cloth_mid_p, axis=1)[:self.chains]
+        self.len1 = np.linalg.norm(self.mid_p - self.top_p, axis=1)[:self.chains]
+        self.len2 = np.linalg.norm(self.hem_p - self.mid_p, axis=1)[:self.chains]
         ring_len = lambda p: np.linalg.norm(np.roll(p[:self.chains], -1, axis=0) - p[:self.chains], axis=1)
-        self.edge_mid, self.edge_hem = ring_len(self.cloth_mid_p), ring_len(self.cloth_hem_p)
+        self.edge_mid, self.edge_hem = ring_len(self.mid_p), ring_len(self.hem_p)
         # The rows' rest: row 25's in the pelvis's frame, 26's in 25's, 27's
         # in 26's (bind), and each ring's points in its own row's frame.
         self.rest25 = pin @ self.bind[ROW_UPPER]
@@ -402,10 +417,10 @@ class Skirt:
         self.x27_rest = np.r_[self.rest27[:3, 3], 0.0, 0.0, 0.0, 1.0, 1.0]
         # Each chain's azimuth about the hem's centre (a guide's moves are
         # given by direction, ultimate.py).
-        c = self.cloth_hem_p.mean(axis=0)
-        self.az_hem = np.arctan2(self.cloth_hem_p[:, 0] - c[0], self.cloth_hem_p[:, 2] - c[2])
-        c = self.cloth_mid_p.mean(axis=0)
-        self.az_mid = np.arctan2(self.cloth_mid_p[:, 0] - c[0], self.cloth_mid_p[:, 2] - c[2])
+        c = self.hem_p.mean(axis=0)
+        self.az_hem = np.arctan2(self.hem_p[:, 0] - c[0], self.hem_p[:, 2] - c[2])
+        c = self.mid_p.mean(axis=0)
+        self.az_mid = np.arctan2(self.mid_p[:, 0] - c[0], self.mid_p[:, 2] - c[2])
         # The legs' capsules' radii (hip, knee, ankle) from the leg mesh's
         # rings about each leg's line (bind pose).
         self.radii = []
@@ -456,17 +471,19 @@ class Skirt:
 
     # ------------------------------------------------------------ the cloth
 
-    def cloth(self, frames, loop, guide=None, trail: float = 0.0, floor: bool = True):
-        """The cloth's mid and hem points per frame (model space)."""
+    def cloth(self, frames, loop, guide=None, trail: float = 0.0, floor: bool = True,
+              slit_free: frozenset = frozenset()):
+        """The cloth's mid and hem points per frame (model space; the slit
+        leg pushes no cloth on the slit_free frames)."""
         n = len(frames)
         k = self.chains
         pel = [frames[i][1][ROW_PELVIS] for i in range(n)]
         to_model = lambda m, p: (m @ np.c_[p, np.ones(len(p))].T).T[:, :3]
         g_mid = g_hem = None
         if guide is not None and guide.get("mid"):
-            g_mid = self._guide_points(guide, "mid", self.cloth_mid_p, self.az_mid, n)
+            g_mid = self._guide_points(guide, "mid", self.mid_p, self.az_mid, n)
         if guide is not None and guide.get("hem"):
-            g_hem = self._guide_points(guide, "hem", self.cloth_hem_p, self.az_hem, n)
+            g_hem = self._guide_points(guide, "hem", self.hem_p, self.az_hem, n)
         order = list(range(n))
         if loop is not None and 0 <= loop < n - 1:
             period = list(range(loop + 1, n))
@@ -479,8 +496,8 @@ class Skirt:
             m = pel[i]
             mats = frames[i][1]
             anchor = to_model(m, self.top_p[:k])
-            rest1 = to_model(m, self.cloth_mid_p[:k])
-            rest2 = to_model(m, self.cloth_hem_p[:k])
+            rest1 = to_model(m, self.mid_p[:k])
+            rest2 = to_model(m, self.hem_p[:k])
             air = np.zeros(3)
             if trail:
                 fwd = m[:3, 2] / max(np.linalg.norm(m[:3, 2]), 1e-6)
@@ -515,8 +532,16 @@ class Skirt:
                         c = 2.0 * np.sqrt(kk) * DAMP
                         v += kk * (t - p) - c * v
                         p += v
+            pull = _eased(guide.get("cloth_follow"), i) if guide is not None else 0.0
+            if pull:
+                p1 += (t1 - p1) * pull
+                p2 += (t2 - p2) * pull
+                v1 *= 1.0 - pull
+                v2 *= 1.0 - pull
             caps = []
-            for (hip, knee, ankle), (rh, rk, ra) in zip(LEGS, self.radii):
+            for leg, ((hip, knee, ankle), (rh, rk, ra)) in enumerate(zip(LEGS, self.radii)):
+                if leg == 0 and i in slit_free:
+                    continue
                 ph, pk, pa = mats[hip][:3, 3], mats[knee][:3, 3], mats[ankle][:3, 3]
                 rh, rk, ra = rh * LEG_RADIUS + MARGIN, rk * LEG_RADIUS + MARGIN, ra * LEG_RADIUS + MARGIN
                 caps.append((ph, pk, rh, rk))
@@ -604,7 +629,7 @@ class Skirt:
 
     # ------------------------------------------------------------- the fit
 
-    def _outs(self, mats, lp, m25, x26, x27) -> np.ndarray:
+    def _outs(self, mats, lp, m25, x26, x27, slit_free: bool = False) -> np.ndarray:
         """Her legs' points' distances outside the dress drawn with row 25 at
         m25 (the pelvis's frame) and rows 26 and 27 at x26, x27
         (dress_check.dress_outs: negative inside; FREE where nothing holds
@@ -616,9 +641,11 @@ class Skirt:
         axes = [-mm[:3, 2] / max(np.linalg.norm(mm[:3, 2]), 1e-9) for mm in ms[:2]]
         pin = np.linalg.inv(mats[ROW_PELVIS])
         q = (pin @ np.c_[lp, np.ones(len(lp))].T).T[:, :3]
-        return D.dress_outs(rings, axes, ms[0][:3, 0], lp, self.report.legs.core, q, self.report.upper_rest)
+        out = D.dress_outs(rings, axes, ms[0][:3, 0], lp, self.report.legs.core, q, self.report.upper_rest)
+        # The slit leg out at the slit (a guide's slit_free frame): free.
+        return np.where(self.report.legs.slit, D.FREE, out) if slit_free else out
 
-    def _contain(self, mats, lp, m25, x26, x27, prev26, prev27, prev_d25):
+    def _contain(self, mats, lp, m25, x26, x27, prev26, prev27, prev_d25, slit_free: bool = False):
         """Row 25 turned and rows 26 and 27 moved, turned and widened as
         little as holds her legs CONTAIN_IN inside the dress
         (from the fit, toward the frame before's): (row 25's rotation, x26,
@@ -639,18 +666,18 @@ class Skirt:
             return m
 
         def resid(p):
-            r = [np.maximum(self._outs(mats, lp, turned(p), p[3:11], p[11:]) + CONTAIN_IN, 0.0),
+            r = [np.maximum(self._outs(mats, lp, turned(p), p[3:11], p[11:], slit_free) + CONTAIN_IN, 0.0),
                  np.sqrt(CONTAIN_KEEP * n) * (p - p0) / scale * 10.0]
             if prev is not None:
                 r.append(np.sqrt(CONTAIN_TEMPORAL * n) * (p - prev) / scale * 10.0)
             return np.concatenate(r)
 
         p = _gauss_newton(resid, p0, scale, lo, hi, iters=16)
-        if float(self._outs(mats, lp, turned(p), p[3:11], p[11:]).max(initial=-1e9)) > 0.0:
+        if float(self._outs(mats, lp, turned(p), p[3:11], p[11:], slit_free).max(initial=-1e9)) > 0.0:
             # A knee raised far from the dress (kneeling, a throw): start
             # again with row 25 turned toward the worst point (CONTAIN_TURNS),
             # its band's axis that much nearer it; the least cost wins.
-            out = self._outs(mats, lp, turned(p), p[3:11], p[11:])
+            out = self._outs(mats, lp, turned(p), p[3:11], p[11:], slit_free)
             pts = lp
             m = mats[ROW_PELVIS] @ m25
             axis = -m[:3, 2] / max(np.linalg.norm(m[:3, 2]), 1e-9)
@@ -674,7 +701,7 @@ class Skirt:
                 p = best
         return turned(p)[:3, :3], p[3:11], p[11:], p[:3].copy()
 
-    def fit(self, frames, mids, hems):
+    def fit(self, frames, mids, hems, slit_free: frozenset = frozenset(), guide=None):
         """Per frame: row 25's local rotation, row 26's and row 27's fit
         parameters."""
         n = len(frames)
@@ -708,6 +735,16 @@ class Skirt:
             m25 = np.eye(4)
             m25[:3, :3] = rot
             m25[:3, 3] = origin
+            turn = np.radians(_eased((guide or {}).get("slit_turn"), i))
+            if turn:
+                # The slit turned (a guide's slit_turn): row 25 about its band
+                # and the cloth's points with it.
+                axis = rot @ np.array([0.0, 0.0, -1.0])
+                spin = _turn(axis / np.linalg.norm(axis), turn)
+                rot = spin @ rot
+                m25[:3, :3] = rot
+                m_p = origin + (m_p - origin) @ spin.T
+                h_p = origin + (h_p - origin) @ spin.T
             x26 = _fit(m25, self.mid_local, full(m_p), x26, self.x26_rest, prev26)
             m26 = m25 @ _local(x26)
             x27 = _fit(m26, self.hem_local, full(h_p), x27, self.x27_rest, prev27)
@@ -717,7 +754,7 @@ class Skirt:
             # Every frame, so a hold eases out toward the fit (switched on
             # only where a leg was out, the rows snapped back from the hold
             # the frame the leg came back in: a walk's hem 28 units sideways).
-            rot, x26, x27, d25 = self._contain(mats, lp, m25, x26, x27, prev26, prev27, prev_d25)
+            rot, x26, x27, d25 = self._contain(mats, lp, m25, x26, x27, prev26, prev27, prev_d25, i in slit_free)
             prev26, prev27, prev_d25 = x26.copy(), x27.copy(), d25
             out.append((rot, x26.copy(), x27.copy()))
         return out
@@ -735,10 +772,11 @@ class Skirt:
             # Her feet on a floor: an ankle at standing height most frames.
             low = [min(m[r][:3, 3][1] for r in (LEGS[0][2], LEGS[1][2])) for _root, m in frames]
             floor = float(np.mean(np.array(low) < 60.0)) > 0.5
-        mids, hems = self.cloth(frames, loop, guide, trail, floor)
-        fits = self.fit(frames, mids, hems)
+        slit_free = frozenset(f for a, b in (guide or {}).get("slit_free", ()) for f in range(int(a), int(b) + 1))
+        mids, hems = self.cloth(frames, loop, guide, trail, floor, slit_free)
+        fits = self.fit(frames, mids, hems, slit_free, guide)
         return {"frames": frames, "fits": fits, "loop": loop, "length": length, "floor": floor,
-                "mids": mids, "hems": hems}
+                "mids": mids, "hems": hems, "slit_free": slit_free}
 
     def _slot_of(self, anim_flags):
         lead_slot = C.first_slot(anim_flags)
@@ -777,7 +815,7 @@ class Skirt:
         must: set = set()
         streams = self._keys(fits, loop, length, must)
         for _ in range(8):
-            bad = self._keyed_out(streams, solved["frames"]) - must
+            bad = self._keyed_out(streams, solved["frames"], solved["slit_free"]) - must
             if not bad:
                 break
             must |= bad
@@ -820,9 +858,9 @@ class Skirt:
             streams[row] = st
         return streams
 
-    def _keyed_out(self, streams, frames) -> set:
+    def _keyed_out(self, streams, frames, slit_free: frozenset = frozenset()) -> set:
         """The frames where the keyed rows let a thigh or knee out (past
-        CONTAIN_IN's margin)."""
+        CONTAIN_IN's margin; the slit leg free on the slit_free frames)."""
         st25, st26, st27 = streams[ROW_UPPER], streams[ROW_MID], streams[ROW_HEM]
         val = lambda st, k, i: float(st.tracks[k].values[i])
         bad = set()
@@ -836,7 +874,7 @@ class Skirt:
                                 [val(st, k, i) / A.ROT_UNIT for k in range(3)],
                                 [val(st, 7 + k, i) / C.SCALE_UNIT for k in range(2)]])
             lp = self.report.legs.posed(mats, self.report.inv_bind)
-            if float(self._outs(mats, lp, m25, xs[0], xs[1]).max(initial=-1e9)) > 0.0:
+            if float(self._outs(mats, lp, m25, xs[0], xs[1], i in slit_free).max(initial=-1e9)) > 0.0:
                 bad.add(i)
         return bad
 

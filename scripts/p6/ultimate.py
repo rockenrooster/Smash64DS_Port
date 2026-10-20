@@ -45,6 +45,12 @@ dense clip fits its fighter's figatree heap. "transn" writes the motion's
 Trans travel (scaled; or a "travel" curve, or a clip's slot) into the TransN slot
 ("first_slot": 1, AttackDash); otherwise the Trans bone is held at rest and
 the clip plays in place (the walks' and run's travel is the game's).
+
+"raise_max" and "straighten" shape a leg after the turns (_legs: a thigh
+held to at most a raise from the pelvis's down, a knee straightened);
+"dress" ({"slit_free": ..., "cloth_follow": ..., "slit_turn": ...}) goes
+into the skirt guide (skirt_keys.py: a kick that leaves the dress at the
+slit).
 """
 from __future__ import annotations
 
@@ -785,6 +791,62 @@ def _turns(skel: A.Skeleton, turns: list, per_rot: list, per_tr: list, length: i
             per_rot[g][r] = pw.T @ (turn @ rr[r])
 
 
+def _legs(skel: A.Skeleton, spec: dict, per_rot: list, per_tr: list, length: int) -> None:
+    """A leg's kick shaped (owner 2026-10-20, her down air: "free f24 looks
+    perfect as the max angle for the thigh for full impact, full kick impact
+    though should also have the knee fully extended"; "free f13-f20 should
+    look more like f24"). "raise_max": [{"row": hip row, "deg": d, "keys":
+    [[frame, weight], ...]}]: the thigh (the row's bone to its first child)
+    turned toward the pelvis's down (row 1's, as posed) by that weight of
+    its raise past d degrees. "straighten": [{"row": knee row, "keys":
+    [[frame, weight], ...]}]: the row turned about its bend by that weight
+    of its bend past the rest's, so its bone runs on from its parent's as at
+    rest. Weights eased between keys, held past their ends."""
+    bind, bpos = K._worlds(skel, [A.euler(*e) for e in skel.rotate], [list(v) for v in skel.translate])
+    down0 = bind[1].T @ np.array([0.0, -1.0, 0.0])
+
+    def bone(pos, r):
+        v = np.asarray(pos[K._first_child(skel, r)], float) - np.asarray(pos[r], float)
+        return v / max(float(np.linalg.norm(v)), 1e-9)
+
+    def angle(u, v):
+        return math.acos(max(-1.0, min(1.0, float(u @ v))))
+
+    def turn_row(g, r, axis, rad, rr):
+        n = float(np.linalg.norm(axis))
+        if n < 1e-9 or abs(rad) < 1e-9:
+            return
+        parent = skel.parents[r]
+        pw = rr[parent] if parent >= 0 else np.eye(3)
+        per_rot[g][r] = pw.T @ (_axis_angle(axis / n, rad) @ rr[r])
+
+    for t in spec.get("raise_max", ()):
+        r, cap = int(t["row"]), math.radians(float(t["deg"]))
+        for g in range(length + 1):
+            w = _keyed(t["keys"], g)
+            if not w:
+                continue
+            rr, pp = K._worlds(skel, per_rot[g], per_tr[g])
+            down = rr[1] @ down0
+            b = bone(pp, r)
+            over = angle(b, down) - cap
+            if over > 0.0:
+                turn_row(g, r, np.cross(b, down), over * w, rr)
+    for t in spec.get("straighten", ()):
+        r = int(t["row"])
+        p = skel.parents[r]
+        rest = angle(bone(bpos, p), bone(bpos, r))
+        for g in range(length + 1):
+            w = _keyed(t["keys"], g)
+            if not w:
+                continue
+            rr, pp = K._worlds(skel, per_rot[g], per_tr[g])
+            a, b = bone(pp, p), bone(pp, r)
+            bend = angle(a, b) - rest
+            if bend > 0.0:
+                turn_row(g, r, np.cross(b, a), bend * w, rr)
+
+
 def _item_pitch(skel: A.Skeleton, cfg: dict, keys, per_rot: list, per_tr: list, length: int) -> None:
     """The item turned about its grip so its tip drops ("item_pitch":
     [[frame, degrees], ...], eased between keys): about the horizontal axis
@@ -913,6 +975,8 @@ def build(skel: A.Skeleton, spec: dict, scales=None, rom=None, extras: dict | No
         _item_pitch(skel, cfg, spec["item_pitch"], per_rot, per_tr, length)
     if spec.get("turn"):
         _turns(skel, spec["turn"], per_rot, per_tr, length)
+    if spec.get("raise_max") or spec.get("straighten"):
+        _legs(skel, spec, per_rot, per_tr, length)
     if spec.get("still"):
         _still(spec["still"], per_rot, per_tr, length, spec.get("loop"))
     if spec.get("skirt_smooth") and cfg.get("skirt"):
@@ -937,6 +1001,8 @@ def build(skel: A.Skeleton, spec: dict, scales=None, rom=None, extras: dict | No
         names = [p["motion"] for p in parts]
         extras["skirt_guide"]["floor"] = bool(spec.get("floor", not any(
             w in n for n in names for w in ("air", "jump", "fall", "fly", "cliff", "passive", "escapeair"))))
+        # The dress's own keys for a kick that leaves it (skirt_keys.py).
+        extras["skirt_guide"].update(spec.get("dress") or {})
     bf = spec.get("blend_from")
     if bf:
         # The first frames eased in from another motion's pose (the wait or
