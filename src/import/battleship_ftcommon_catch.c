@@ -280,7 +280,17 @@ void ndsBaseFTCommonThrownUpdateDamageStats(FTStruct *this_fp);
 void ndsBaseFTCommonThrownSetStatusDamageRelease(GObj *fighter_gobj);
 void ndsBaseFTCommonThrownSetStatusNoDamageRelease(GObj *fighter_gobj);
 
+#if NDS_P4
+/* Owner p7h (2026-10-19): a content's damage scale (NDSP4Fighter
+ * damage_scale) takes its throws too. The file's three staled-damage calls
+ * are the throw's damage, each with the thrower in capture_fp. */
+#define ftParamGetStaledDamage(player_, damage_, attack_id_, count_) \
+    ndsP4StaledDamage(capture_fp, (player_), (damage_), (attack_id_), (count_))
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonthrown2.c"
+#if NDS_P4
+#undef ftParamGetStaledDamage
+#endif
 
 #undef ftCommonThrownReleaseFighterLoseGrip
 #undef ftCommonThrownDecideFighterLoseGrip

@@ -678,6 +678,9 @@ typedef struct NDSP4Fighter
      * every hitbox its fighters' scripts make or re-damage, after staling
      * (1.0 for most). */
     const f32 *damage_scale;
+    /* 1: damage_scale leaves the smash attacks (statuses AttackS4Hi..AttackLw4)
+     * at their own damage (OWNER_DAMAGE_SCALE_SKIPS_SMASH: Bowser's +10%). */
+    const u8 *damage_scale_skips_smash;
     /* Optional: the parent's routines it replaces (Remix's id hooks). */
     const NDSP4Overrides *overrides;
 } NDSP4Fighter;
@@ -755,7 +758,8 @@ static inline void ndsP4AttackCollWorldPosition(const FTStruct *fp, DObj *joint,
     }
 }
 /* ftParamGetStaledDamage for a hitbox `fp` makes, times its content's damage
- * scale (NDSP4Fighter damage_scale): battleship_ftmain.c. */
+ * scale (NDSP4Fighter damage_scale): battleship_ftmain.c; and for a throw `fp`
+ * makes (battleship_ftcommon_catch.c, fp the thrower). */
 s32 ndsP4StaledDamage(const FTStruct *fp, s32 player, s32 damage, s32 attack_id,
                       u16 motion_count);
 /* The content whose code a content runs (nds_p4_contents.h NDS_P4_CODE_ROWS):

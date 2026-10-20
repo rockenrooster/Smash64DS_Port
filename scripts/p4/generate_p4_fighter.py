@@ -670,7 +670,15 @@ OWNER_ANIM_RATE_STATUSES = {
 # NDSP4Fighter damage_scale, battleship_ftmain.c ftParamGetStaledDamage).
 # Ike's 1.5x (owner p6f) ended with p6r: his attacks carry Ultimate's own
 # damage (the owner's attack data, scripts/p6/ike/motions).
-OWNER_DAMAGE_SCALES: dict[str, float] = {}
+# Owner p7h (2026-10-19): Bowser's damage +10% on everything but his smash
+# attacks (OWNER_DAMAGE_SCALE_SKIPS_SMASH), Wario's -5% across the board. The
+# scale also takes the throws' damage (battleship_ftcommon_catch.c); rounding
+# is the staled damage times the scale, half up.
+OWNER_DAMAGE_SCALES: dict[str, float] = {"bowser": 1.10, "wario": 0.95}
+# Contents whose damage scale leaves the smash attacks (the common statuses
+# AttackS4Hi..AttackLw4) at their own damage (NDSP4Fighter
+# damage_scale_skips_smash).
+OWNER_DAMAGE_SCALE_SKIPS_SMASH = {"bowser"}
 OWNER_ATTRIBUTE_SCALES = {
     "wario": {"jump_height_mul": 0.75 ** 0.5, "jump_height_base": 0.75 ** 0.5},
     # P7 B2 (owner, 2026-10-12): Bowser walks and runs at 0.75x, to stop his
@@ -2673,7 +2681,9 @@ def main() -> int:
               + ", ".join(f"{s:#x}" for s in (OWNER_ANIM_RATE_STATUSES.get(spec['name']) or [0xFFFF])) + " };",
               f"const u16 g{ident}AnimRateStatusCount = {len(OWNER_ANIM_RATE_STATUSES.get(spec['name']) or [])};",
               "/* Its hitboxes' damage scale (OWNER_DAMAGE_SCALES). */",
-              f"const f32 g{ident}DamageScale = {float(OWNER_DAMAGE_SCALES.get(spec['name'], 1.0))!r}F;", "",
+              f"const f32 g{ident}DamageScale = {float(OWNER_DAMAGE_SCALES.get(spec['name'], 1.0))!r}F;",
+              "/* 1: the scale leaves its smash attacks alone (OWNER_DAMAGE_SCALE_SKIPS_SMASH). */",
+              f"const u8 g{ident}DamageScaleSkipsSmash = {1 if spec['name'] in OWNER_DAMAGE_SCALE_SKIPS_SMASH else 0};", "",
               "/* FTFileSize: main closure, largest main-motion and menu-motion figatree. */",
               f"const FTFileSize g{ident}FileSize = {{ {sizes[0]}u, {sizes[1]}u, {sizes[2]}u }};", "",
               "/* HUD: the stock icon as one 8x8 OBJ4 cell and its costume LUTs",

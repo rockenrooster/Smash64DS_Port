@@ -97,7 +97,8 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
     extern const f32 gNdsP4##T##AnimRate; \
     extern const u16 gNdsP4##T##AnimRateStatuses[]; \
     extern const u16 gNdsP4##T##AnimRateStatusCount; \
-    extern const f32 gNdsP4##T##DamageScale;
+    extern const f32 gNdsP4##T##DamageScale; \
+    extern const u8 gNdsP4##T##DamageScaleSkipsSmash;
 #define NDS_P4_ROW(T, title, parent, on_status_hook, computer_rows, override_rows) \
     { \
         .name = (title), .parent_kind = (parent), \
@@ -138,6 +139,7 @@ __attribute__((used)) volatile u32 gNdsP4UnportedMotionEventLast;
         .anim_rate_statuses = gNdsP4##T##AnimRateStatuses, \
         .anim_rate_status_count = &gNdsP4##T##AnimRateStatusCount, \
         .damage_scale = &gNdsP4##T##DamageScale, \
+        .damage_scale_skips_smash = &gNdsP4##T##DamageScaleSkipsSmash, \
         .overrides = (override_rows), \
     }
 
@@ -263,6 +265,14 @@ s32 ndsP4StaledDamage(const FTStruct *fp, s32 player, s32 damage, s32 attack_id,
     const NDSP4Fighter *f = ndsP4Fighter(fp->nds_p4_content);
 
     if ((f == NULL) || (f->damage_scale == NULL) || (*f->damage_scale == 1.0F))
+    {
+        return staled;
+    }
+    /* Owner p7h (2026-10-19): Bowser's +10% is on his non-smash attacks. */
+    if ((f->damage_scale_skips_smash != NULL) &&
+        (*f->damage_scale_skips_smash != 0u) &&
+        (fp->status_id >= nFTCommonStatusAttackS4Hi) &&
+        (fp->status_id <= nFTCommonStatusAttackLw4))
     {
         return staled;
     }

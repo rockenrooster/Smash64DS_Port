@@ -633,6 +633,14 @@ def contents(rom: StagingRom) -> list[dict]:
             motion = motion_name.get(mo["index"], f"Motion{mo['index']}")
             if SKIP_MOTIONS.match(motion):
                 continue
+            dscale = G.OWNER_DAMAGE_SCALES.get(name, 1.0)
+            if (dscale != 1.0) and not ((name in G.OWNER_DAMAGE_SCALE_SKIPS_SMASH) and
+                                        re.match(r"Attack(S4|Hi4|Lw4)", motion)):
+                # The game's own rounding (nds_p4.c ndsP4StaledDamage): half up.
+                for h in hits:
+                    h["damage"] = int(h["damage"] * dscale + 0.5)
+                if tl.throw is not None:
+                    tl.throw["damage"] = int(tl.throw["damage"] * dscale + 0.5)
             entry = {"motion": motion, "motion_id": mo["index"], "label": move_label(motion),
                      "hits": hits, "throw": tl.throw}
             if tl.speed:
@@ -644,6 +652,10 @@ def contents(rom: StagingRom) -> list[dict]:
             notes.append(f"animations at {G.OWNER_ANIM_RATES[name]}x")
         if scaled_motions:
             notes.append(f"boxes {scale_rows.get('scale')}x in motions {sorted(scaled_motions)}")
+        if name in G.OWNER_DAMAGE_SCALES:
+            notes.append(f"damage {G.OWNER_DAMAGE_SCALES[name]}x"
+                         + (" (smash attacks excluded)" if name in G.OWNER_DAMAGE_SCALE_SKIPS_SMASH else "")
+                         + ", throws included")
         fighter = {"name": TITLES.get(name, row.get("title", name.title())), "group": "Remix/EXTRA",
                    "notes": "; ".join(notes), "moves": moves, "key": name}
         fighters.append(fighter)
