@@ -812,33 +812,22 @@ ndsMPLineExtentRejects(MPVertexArray *ids, MPVertexPosContainer *verts,
 /* P2-6 (2026-10-02): inline in the two sweeps that call it. Out of line in
  * ITCM it was a long call per line from their main-RAM Thumb (the Race: 256
  * calls a frame at 131 cycles each, 1p-pf12r-st11). */
-static inline int ndsMPLineExtentSweepRejects(MPVertexArray *ids,
-                                       MPVertexPosContainer *verts,
-                                       u32 line_id, u32 vertex_first,
-                                       u32 vertex_count,
-                                       const Vec3f *sweep_position,
-                                       const Vec3f *sweep_translate)
+/* The sweep's y span as compare keys (ndsFcmpKey), made once per group by
+ * the sweeps instead of per line (2026-10-19): key_min_y is the lesser key of
+ * position.y and translate.y, key_max_y the greater. */
+static inline int ndsMPLineExtentSweepRejectsKeys(MPVertexArray *ids,
+                                                  MPVertexPosContainer *verts,
+                                                  u32 line_id, u32 vertex_first,
+                                                  u32 vertex_count,
+                                                  u32 key_min_y, u32 key_max_y)
 {
-    f32 sweep_min_y;
-    f32 sweep_max_y;
-
     if (ndsMPLineExtentReady(ids, verts, line_id, vertex_first,
                              vertex_count) == 0)
     {
         return 0;
     }
-    if (NDS_FCMP_LT(sweep_position->y, sweep_translate->y))
-    {
-        sweep_min_y = sweep_position->y;
-        sweep_max_y = sweep_translate->y;
-    }
-    else
-    {
-        sweep_min_y = sweep_translate->y;
-        sweep_max_y = sweep_position->y;
-    }
-    if (NDS_FCMP_LT(sNdsMPLineExtentMaxYEps[line_id], sweep_min_y) ||
-        NDS_FCMP_LT(sweep_max_y, sNdsMPLineExtentMinYEps[line_id]))
+    if ((ndsFcmpKey(sNdsMPLineExtentMaxYEps[line_id]) < key_min_y) ||
+        (key_max_y < ndsFcmpKey(sNdsMPLineExtentMinYEps[line_id])))
     {
         NDS_DIAG(gNdsMPLineSweepRejects++);
         return 1;
@@ -3269,7 +3258,7 @@ static s32 sNdsMPWallSweepEdgeInt[NDS_MP_YAKUMONO_DOBJ_SLOTS][4];
 
 /* The floor and ceiling sweeps' group reject (P2-2p8, 2026-09-29): a line
  * those sweeps test is one whose y span meets the sweep's y span within 0.001
- * (ndsMPLineExtentSweepRejects; the segment kernel's own y gate and the flat
+ * (ndsMPLineExtentSweepRejectsKeys; the segment kernel's own y gate and the flat
  * branch's condition say the same), and a group's lines all lie inside the
  * group's [ext_lo, ext_hi] (their coll_pos, the y extents for these kinds).
  * The same truncated superset as the wall sweep's decides that no line of the
@@ -3287,15 +3276,19 @@ volatile u32 gNdsMPSweepGroupRejects;
  * goes to the kernel. */
 volatile u32 gNdsMPSweepSegmentXRejects;
 
-/* TRUE when a non-flat segment's x span misses [sweep_min, sweep_max]. */
-static inline sb32 ndsMPSweepSegmentXMisses(const Vec3f *v1, const Vec3f *v2,
-                                            f32 sweep_min, f32 sweep_max)
+/* TRUE when a non-flat segment's x span misses the sweep's, with the sweep's
+ * span as compare keys made once per group (2026-10-19; key_min the lesser of
+ * position.x's and translate.x's keys, key_max the greater): the keys of the
+ * segment's ends order as the floats do (nds_fcmp.h). */
+static inline sb32 ndsMPSweepSegmentXMissesKeys(const Vec3f *v1, const Vec3f *v2,
+                                                u32 key_min, u32 key_max)
 {
-    const f32 min_x = NDS_FCMP_LT(v1->x, v2->x) ? v1->x : v2->x;
-    const f32 max_x = NDS_FCMP_GT(v1->x, v2->x) ? v1->x : v2->x;
+    const u32 k1 = ndsFcmpKey(v1->x);
+    const u32 k2 = ndsFcmpKey(v2->x);
+    const u32 lo = (k1 < k2) ? k1 : k2;
+    const u32 hi = (k1 > k2) ? k1 : k2;
 
-    return (NDS_FCMP_LT(max_x, sweep_min) || NDS_FCMP_LT(sweep_max, min_x)) ?
-        TRUE : FALSE;
+    return ((hi < key_min) || (key_max < lo)) ? TRUE : FALSE;
 }
 
 /* ndsMPWallSweepTrunc's answer without its two calls: trunc(v) when
@@ -6595,14 +6588,26 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
             group_translate.y = translate->y - vedge_y;
         }
         window_state = 0u;
+        /* The sweep's bounds and their compare keys, once per group: neither
+         * point changes within it (2026-10-19; they were re-keyed for every
+         * line, ~27% of this function on Hyrule Temple). The flat-ascending
+         * test's float compares become key compares: the keys order as the
+         * floats do (NaN excluded, as everywhere in nds_fcmp.h), and its
+         * min/max pairs pick the lesser and greater key. */
+        const u32 key_px = ndsFcmpKey(group_position.x);
+        const u32 key_tx = ndsFcmpKey(group_translate.x);
+        const u32 key_py = ndsFcmpKey(group_position.y);
+        const u32 key_ty = ndsFcmpKey(group_translate.y);
+        const u32 key_min_x = (key_px < key_tx) ? key_px : key_tx;
+        const u32 key_max_x = (key_px < key_tx) ? key_tx : key_px;
+        const u32 key_min_y = (key_py < key_ty) ? key_py : key_ty;
+        const u32 key_max_y = (key_py < key_ty) ? key_ty : key_py;
         for (line_id = first; line_id < end; line_id++)
         {
             u32 vertex_first = ndsMPVertexLinkFirst(links, (u32)line_id);
             u32 vertex_count = ndsMPVertexLinkCount(links, (u32)line_id);
             const Vec3f *sweep_position = &group_position;
             const Vec3f *sweep_translate = &group_translate;
-            f32 sweep_min_x;
-            f32 sweep_max_x;
             u32 j;
             u32 j_first;
             u32 j_last;
@@ -6613,17 +6618,12 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
                 NDS_DIAG(gNdsStageCollisionLoopBadVertexCount++);
                 continue;
             }
-            if (ndsMPLineExtentSweepRejects(ids, verts, (u32)line_id,
-                                            vertex_first, vertex_count,
-                                            sweep_position,
-                                            sweep_translate) != 0)
+            if (ndsMPLineExtentSweepRejectsKeys(ids, verts, (u32)line_id,
+                                                vertex_first, vertex_count,
+                                                key_min_y, key_max_y) != 0)
             {
                 continue;
             }
-            sweep_min_x = NDS_FCMP_LT(sweep_position->x, sweep_translate->x) ?
-                sweep_position->x : sweep_translate->x;
-            sweep_max_x = NDS_FCMP_LT(sweep_position->x, sweep_translate->x) ?
-                sweep_translate->x : sweep_position->x;
             if (ndsMPSweepSegmentRun(ids, verts, line_id, vertex_first,
                                      vertex_count, sweep_position,
                                      sweep_translate, +1, &window_state,
@@ -6649,23 +6649,24 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
                 const sb32 seg_flat =
                     (ndsFcmpBits(v1.y) == ndsFcmpBits(v2.y)) ? TRUE : FALSE;
 
-                if ((seg_flat != FALSE) &&
-                    (sweep_translate->y > sweep_position->y) &&
-                    (sweep_position->y <= v1.y) &&
-                    (sweep_translate->y >= v1.y) &&
-                    (((sweep_position->x < sweep_translate->x) ?
-                        sweep_position->x : sweep_translate->x) <=
-                        ((v1.x > v2.x) ? v1.x : v2.x)) &&
-                    (((sweep_position->x > sweep_translate->x) ?
-                        sweep_position->x : sweep_translate->x) >=
-                        ((v1.x < v2.x) ? v1.x : v2.x)))
+                if (seg_flat != FALSE)
                 {
-                    is_flat_ascending = TRUE;
-                    saw_flat_ascending_sweep = TRUE;
+                    const u32 key_v1y = ndsFcmpKey(v1.y);
+                    const u32 key_v1x = ndsFcmpKey(v1.x);
+                    const u32 key_v2x = ndsFcmpKey(v2.x);
+
+                    if ((key_ty > key_py) && (key_py <= key_v1y) &&
+                        (key_ty >= key_v1y) &&
+                        (key_min_x <= ((key_v1x > key_v2x) ? key_v1x : key_v2x)) &&
+                        (key_max_x >= ((key_v1x < key_v2x) ? key_v1x : key_v2x)))
+                    {
+                        is_flat_ascending = TRUE;
+                        saw_flat_ascending_sweep = TRUE;
+                    }
                 }
                 if ((seg_flat == FALSE) &&
-                    (ndsMPSweepSegmentXMisses(&v1, &v2, sweep_min_x,
-                                              sweep_max_x) != FALSE))
+                    (ndsMPSweepSegmentXMissesKeys(&v1, &v2, key_min_x,
+                                                  key_max_x) != FALSE))
                 {
                     NDS_DIAG(gNdsMPSweepSegmentXRejects++);
                     continue;
@@ -6957,14 +6958,22 @@ static sb32 ndsStageMPCeilFloorLoopSweep(Vec3f *position,
             group_translate.y = translate->y - vedge_y;
         }
         window_state = 0u;
+        /* The sweep's compare keys once per group, as the floor sweep makes
+         * them (2026-10-19). */
+        const u32 key_px = ndsFcmpKey(group_position.x);
+        const u32 key_tx = ndsFcmpKey(group_translate.x);
+        const u32 key_py = ndsFcmpKey(group_position.y);
+        const u32 key_ty = ndsFcmpKey(group_translate.y);
+        const u32 key_min_x = (key_px < key_tx) ? key_px : key_tx;
+        const u32 key_max_x = (key_px < key_tx) ? key_tx : key_px;
+        const u32 key_min_y = (key_py < key_ty) ? key_py : key_ty;
+        const u32 key_max_y = (key_py < key_ty) ? key_ty : key_py;
         for (line_id = first; line_id < end; line_id++)
         {
             u32 vertex_first = ndsMPVertexLinkFirst(links, (u32)line_id);
             u32 vertex_count = ndsMPVertexLinkCount(links, (u32)line_id);
             const Vec3f *sweep_position = &group_position;
             const Vec3f *sweep_translate = &group_translate;
-            f32 sweep_min_x;
-            f32 sweep_max_x;
             u32 j;
             u32 j_first;
             u32 j_last;
@@ -6974,17 +6983,12 @@ static sb32 ndsStageMPCeilFloorLoopSweep(Vec3f *position,
                 NDS_DIAG(gNdsStageCollisionLoopBadVertexCount++);
                 continue;
             }
-            if (ndsMPLineExtentSweepRejects(ids, verts, (u32)line_id,
-                                            vertex_first, vertex_count,
-                                            sweep_position,
-                                            sweep_translate) != 0)
+            if (ndsMPLineExtentSweepRejectsKeys(ids, verts, (u32)line_id,
+                                                vertex_first, vertex_count,
+                                                key_min_y, key_max_y) != 0)
             {
                 continue;
             }
-            sweep_min_x = NDS_FCMP_LT(sweep_position->x, sweep_translate->x) ?
-                sweep_position->x : sweep_translate->x;
-            sweep_max_x = NDS_FCMP_LT(sweep_position->x, sweep_translate->x) ?
-                sweep_translate->x : sweep_position->x;
             if (ndsMPSweepSegmentRun(ids, verts, line_id, vertex_first,
                                      vertex_count, sweep_position,
                                      sweep_translate, -1, &window_state,
@@ -7007,8 +7011,8 @@ static sb32 ndsStageMPCeilFloorLoopSweep(Vec3f *position,
                 ndsMPVertexF32Get(verts, v2_id, &v2.x, &v2.y);
                 NDS_DIAG(gNdsStageMPCeilFloorLoopLineSweepVisitCount++);
                 if ((ndsFcmpBits(v1.y) != ndsFcmpBits(v2.y)) &&
-                    (ndsMPSweepSegmentXMisses(&v1, &v2, sweep_min_x,
-                                              sweep_max_x) != FALSE))
+                    (ndsMPSweepSegmentXMissesKeys(&v1, &v2, key_min_x,
+                                                  key_max_x) != FALSE))
                 {
                     NDS_DIAG(gNdsMPSweepSegmentXRejects++);
                     continue;
