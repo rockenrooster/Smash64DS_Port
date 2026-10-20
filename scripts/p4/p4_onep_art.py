@@ -20,7 +20,10 @@ of its own (id NAME_FILE_BASE + content), so the intro loads a few hundred
 bytes instead of Remix's 58 KB names file. All of them go to nitro:/reloc/p4
 (nds_p4.c ndsP4RelocAssetPath); the header lists them for
 battleship_mncongra.c and battleship_sc1pintro.c, which show a content's in
-its parent's place. A content Remix has no art for (P6's) keeps its parent's.
+its parent's place. An authored content (P6's, no Remix art; owner
+2026-10-19) has its name spelled in the names' font and its plates made from
+a still of its own model when one is there (assets/congra/c<NN>.png, local,
+scripts/p6/p6_congra_still.py); without it, its parent's.
 
     p4_onep_art.py --staging <extra-*> --contents "<names>" --out <BUILD>/p4
 writes <out>/nds_p4_onep_art.generated.h and <out>/onep_art/o2r/<id>.
@@ -47,10 +50,100 @@ NAMES_FILE = 0xC
 # synthesized id (staged files end below 0x1700, the contents' synthesized
 # blocks and exports below 0x1C00).
 NAME_FILE_BASE = 0x1F00
+# An authored content's plates: the 300x220 still the congratulations screen
+# shows (its upper half the top plate at (10, 10), its lower the bottom at
+# (10, 120): mncongra.c), as files in TEMPLATE_PLATE's layout (Mario's bottom
+# plate; every plate, vanilla or Remix, shares its Sprite, bitmaps and
+# strips), ids CONGRA_FILE_BASE + 2 * content (bottom) and the next (top).
+CONGRA_DIR = HERE.parent.parent / "assets" / "congra"
+TEMPLATE_PLATE = 186
+CONGRA_FILE_BASE = 0x1F40
+PLATE_W, PLATE_H = 300, 110
 
 
 class OnePArtError(RuntimeError):
     pass
+
+
+def png_rgba(path: Path) -> list[bytes]:
+    """An 8-bit RGB or RGBA, non-interlaced PNG's rows as RGBA8 bytes."""
+    import zlib
+    data = path.read_bytes()
+    if data[:8] != b"\x89PNG\r\n\x1a\n":
+        raise OnePArtError(f"{path}: not a PNG")
+    at, idat, head = 8, b"", None
+    while at < len(data):
+        n = struct.unpack_from(">I", data, at)[0]
+        tag = data[at + 4:at + 8]
+        if tag == b"IHDR":
+            head = struct.unpack_from(">IIBBBBB", data, at + 8)
+        elif tag == b"IDAT":
+            idat += data[at + 8:at + 8 + n]
+        at += 12 + n
+    width, height, depth, kind, _comp, _filt, interlace = head
+    if depth != 8 or kind not in (2, 6) or interlace:
+        raise OnePArtError(f"{path}: only 8-bit RGB/RGBA, non-interlaced")
+    bpp = 3 if kind == 2 else 4
+    raw = zlib.decompress(idat)
+    stride = width * bpp
+    rows, prev = [], bytearray(stride)
+    for y in range(height):
+        f = raw[y * (stride + 1)]
+        line = bytearray(raw[y * (stride + 1) + 1:(y + 1) * (stride + 1)])
+        for i in range(stride):
+            a = line[i - bpp] if i >= bpp else 0
+            b = prev[i]
+            c = prev[i - bpp] if i >= bpp else 0
+            if f == 1:
+                line[i] = (line[i] + a) & 0xFF
+            elif f == 2:
+                line[i] = (line[i] + b) & 0xFF
+            elif f == 3:
+                line[i] = (line[i] + ((a + b) >> 1)) & 0xFF
+            elif f == 4:
+                p = a + b - c
+                pa, pb, pc = abs(p - a), abs(p - b), abs(p - c)
+                line[i] = (line[i] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 0xFF
+        prev = line
+        if bpp == 3:
+            rows.append(b"".join(bytes(line[x:x + 3]) + b"\xff" for x in range(0, stride, 3)))
+        else:
+            rows.append(bytes(line))
+    return rows
+
+
+def plate_o2r(rom: R.Rom, rows: list[bytes], file_id: int) -> bytes:
+    """One plate (PLATE_H rows of PLATE_W RGBA8 texels) as TEMPLATE_PLATE's
+    file with its texels replaced: each bitmap's strip of rows as the staged
+    plates store them, a strip's odd rows in TMEM order (the two 64-bit words
+    of each 16 bytes swapped)."""
+    data = bytearray(rom.file_bytes(TEMPLATE_PLATE))
+    slots = rom.reloc_slots(TEMPLATE_PLATE)
+    if len(data) != VICTORY_FILE_BYTES or rom.extern_ids(TEMPLATE_PLATE):
+        raise OnePArtError(f"file {TEMPLATE_PLATE}: not a victory plate")
+    bitmaps = slots[VICTORY_OFFSET + 52][1]
+    y = 0
+    for i in range(struct.unpack_from(">h", data, VICTORY_OFFSET + 40)[0]):
+        at = bitmaps + 16 * i
+        width, width_img = struct.unpack_from(">hh", data, at)
+        count = struct.unpack_from(">h", data, at + 12)[0]
+        buf = slots[at + 8][1]
+        if (width, width_img) != (PLATE_W, PLATE_W) or y + count > PLATE_H:
+            raise OnePArtError(f"file {TEMPLATE_PLATE}: unexpected plate strips")
+        for r in range(count):
+            line = bytearray(rows[y + r])
+            if r & 1:
+                for k in range(0, len(line), 16):
+                    line[k:k + 8], line[k + 8:k + 16] = line[k + 8:k + 16], line[k:k + 8]
+            data[buf + r * width_img * 4:buf + r * width_img * 4 + len(line)] = line
+        y += count
+    if y != PLATE_H:
+        raise OnePArtError(f"file {TEMPLATE_PLATE}: {y} plate rows")
+    blob = bytearray(rom.o2r(TEMPLATE_PLATE))
+    head = len(R.O2R_HEADER)
+    struct.pack_into("<I", blob, head, file_id)
+    blob[head + 16:] = data
+    return bytes(blob)
 
 
 def file_constants(src: Path) -> dict[str, int]:
@@ -299,6 +392,8 @@ def main() -> int:
     ap.add_argument("--staging", type=Path, required=True)
     ap.add_argument("--contents", required=True, help="the enabled contents' names")
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument("--congra-dir", type=Path, default=CONGRA_DIR,
+                    help="authored contents' congratulations stills (c<NN>.png)")
     args = ap.parse_args()
 
     registry = json.loads((HERE / "contents.json").read_text(encoding="utf-8"))["contents"]
@@ -329,6 +424,17 @@ def main() -> int:
                 write_if_changed(o2r_dir / f"{fid:04x}", blob)
                 intro.append((content["id"], fid, offset))
                 sprites.append((fid, offset, width, len(picture), 1, 4, 0))
+            still = args.congra_dir / f"c{content['id']:02d}.png"
+            if still.exists():
+                rows = png_rgba(still)
+                if len(rows) != 2 * PLATE_H or len(rows[0]) != 4 * PLATE_W:
+                    raise OnePArtError(f"{still}: not {PLATE_W}x{2 * PLATE_H}")
+                bottom = CONGRA_FILE_BASE + 2 * content["id"]
+                template = rom.file_bytes(TEMPLATE_PLATE)
+                for fid, half in ((bottom, rows[PLATE_H:]), (bottom + 1, rows[:PLATE_H])):
+                    write_if_changed(o2r_dir / f"{fid:04x}", plate_o2r(rom, half, fid))
+                    sprites.append(sprite_row(template, fid, VICTORY_OFFSET))
+                congra.append((content["id"], bottom, bottom + 1))
             continue
         bottom = plates.get(remix)
         if bottom is not None and bottom >= 0x854:

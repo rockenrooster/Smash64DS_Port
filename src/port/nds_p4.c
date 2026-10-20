@@ -21,6 +21,7 @@
 #include <ef/effect.h>
 #include <it/item.h>
 #include <nds/nds_reloc_assets.h>
+#include <nds/nds_ft_pose.h>
 #include <nds/nds_frontend_overlay.h>
 #include <nds/nds_kirby_hat_residency.h>
 #include <nds/nds_renderer.h>
@@ -3196,6 +3197,154 @@ void ndsP4AfterSetStatus(GObj *fighter_gobj, s32 status_id)
     if ((f != NULL) && (f->on_status != NULL))
     {
         f->on_status(fighter_gobj, status_id);
+    }
+}
+
+/* A content's pose blend (NDSP4Overrides.pose_blends): the joints' values
+ * kept when the status changes, one slot a player. 48 joints cover every
+ * content's common joints (Palutena's 29). */
+#define NDS_P4_POSE_BLEND_JOINTS 48u
+typedef struct NDSP4PoseBlendSlot
+{
+    FTStruct *fp;
+    s32 status_id;
+    u16 frames;
+    u16 tick;
+    u8 count;
+    Vec3f rotate[NDS_P4_POSE_BLEND_JOINTS];
+    Vec3f translate[NDS_P4_POSE_BLEND_JOINTS];
+} NDSP4PoseBlendSlot;
+static NDSP4PoseBlendSlot sNdsP4PoseBlend[4];
+
+static s32 ndsP4PoseBlendJointLimit(const FTStruct *fp)
+{
+    u32 limit = nFTPartsJointCommonStart + fp->nds_common_joint_count;
+
+    if ((fp->nds_common_joint_count == 0u) || (limit > nFTPartsJointNumMax))
+    {
+        limit = nFTPartsJointNumMax;
+    }
+    if (limit > nFTPartsJointCommonStart + NDS_P4_POSE_BLEND_JOINTS)
+    {
+        limit = nFTPartsJointCommonStart + NDS_P4_POSE_BLEND_JOINTS;
+    }
+    return (s32)limit;
+}
+
+void ndsP4PoseBlendBegin(GObj *fighter_gobj, s32 status_id)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    NDSP4PoseBlendSlot *slot = &sNdsP4PoseBlend[fp->player & 3u];
+    const NDSP4Overrides *o = ndsP4Overrides(fp);
+    const NDSP4PoseBlend *b;
+    s32 limit;
+    s32 i;
+
+    if (slot->fp == fp)
+    {
+        slot->fp = NULL;
+    }
+    if ((o == NULL) || (o->pose_blends == NULL))
+    {
+        return;
+    }
+    for (b = o->pose_blends; b->from_status >= 0; b++)
+    {
+        if ((b->from_status == fp->status_id) && (b->to_status == status_id))
+        {
+            break;
+        }
+    }
+    if (b->from_status < 0)
+    {
+        return;
+    }
+    /* The pose the fighter shows now: the clip it leaves has played this
+     * tick's frame, the new one has not yet run its first. */
+    limit = ndsP4PoseBlendJointLimit(fp);
+    for (i = nFTPartsJointCommonStart; i < limit; i++)
+    {
+        DObj *joint = fp->joints[i];
+
+        if (joint != NULL)
+        {
+            slot->rotate[i - nFTPartsJointCommonStart] = joint->rotate.vec.f;
+            slot->translate[i - nFTPartsJointCommonStart] = joint->translate.vec.f;
+        }
+    }
+    slot->count = (u8)(limit - nFTPartsJointCommonStart);
+    slot->status_id = status_id;
+    slot->frames = b->frames;
+    slot->tick = 0u;
+    slot->fp = fp;
+}
+
+/* `to` moved `w` of the way from `from` along the shorter way round. */
+static f32 ndsP4PoseBlendAngle(f32 from, f32 to, f32 w)
+{
+    f32 d = to - from;
+
+    while (d > F_CST_DTOR32(180.0F))
+    {
+        d -= F_CST_DTOR32(360.0F);
+    }
+    while (d < -F_CST_DTOR32(180.0F))
+    {
+        d += F_CST_DTOR32(360.0F);
+    }
+    return from + (d * w);
+}
+
+void ndsP4PoseBlendAfterAnimKeys(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    NDSP4PoseBlendSlot *slot = &sNdsP4PoseBlend[fp->player & 3u];
+    sb32 body_fresh;
+    f32 t;
+    f32 w;
+    s32 i;
+
+    if ((slot->fp != fp) || (fp->status_id != slot->status_id))
+    {
+        return;
+    }
+    slot->tick++;
+    if (slot->tick > slot->frames)
+    {
+        slot->fp = NULL;
+        return;
+    }
+    /* Ticks 1..frames, eased (smoothstep): the first shows the kept pose
+     * barely moved, the last most of the way to the clip's. */
+    t = (f32)slot->tick / (f32)(slot->frames + 1u);
+    w = t * t * (3.0F - (2.0F * t));
+    /* A held tick (the pose engine plays the body every other tick) leaves
+     * its joints as the last blended tick drew them; joints it does not own
+     * are played every tick and blend every tick. */
+    body_fresh = ndsFtPoseBodyChangedThisTick(fighter_gobj);
+    for (i = 0; i < (s32)slot->count; i++)
+    {
+        s32 id = nFTPartsJointCommonStart + i;
+        DObj *joint = fp->joints[id];
+        Vec3f *r;
+        Vec3f *tr;
+
+        if (joint == NULL)
+        {
+            continue;
+        }
+        if ((body_fresh == FALSE) && (ndsFtPoseOwnsJoint(fighter_gobj, (u32)id) != FALSE))
+        {
+            continue;
+        }
+        r = &joint->rotate.vec.f;
+        tr = &joint->translate.vec.f;
+        r->x = ndsP4PoseBlendAngle(slot->rotate[i].x, r->x, w);
+        r->y = ndsP4PoseBlendAngle(slot->rotate[i].y, r->y, w);
+        r->z = ndsP4PoseBlendAngle(slot->rotate[i].z, r->z, w);
+        tr->x = slot->translate[i].x + ((tr->x - slot->translate[i].x) * w);
+        tr->y = slot->translate[i].y + ((tr->y - slot->translate[i].y) * w);
+        tr->z = slot->translate[i].z + ((tr->z - slot->translate[i].z) * w);
     }
 }
 

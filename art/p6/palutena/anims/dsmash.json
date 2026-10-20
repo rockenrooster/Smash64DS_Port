@@ -1,5 +1,5 @@
 {
- "comment": "Ultimate's down smash (c04attacklw4) on Ultimate's timing, frame for frame (owner p6r: \"down smash too fast use ultimate timing\"): the staff raised, then stooped low as the wings slam flat along the ground; its hit at 16-18 (Ultimate's 17-19), her first actionable frame Ultimate's 68, the motion's rest drawn into the last six frames. Keys every other frame (her figatree heap). The wings: art/p6/palutena/wings/dsmash.json. Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
+ "comment": "Ultimate's down smash (c04attacklw4) on Ultimate's timing, frame for frame (owner p6r: \"down smash too fast use ultimate timing\"): the staff raised, then stooped low as the wings slam flat along the ground; its hit at 16-18 (Ultimate's 17-19), her first actionable frame Ultimate's 68, the motion's rest drawn into the last six frames. Keys every other frame (her figatree heap). The wings: art/p6/palutena/wings/dsmash.json. Owner 2026-10-20 (candidate E): through the crouch her right upper arm went into her dress, so from 14 to 58 (eased over 6) her torso leans back 10 degrees and her right shoulder swings out 20 (pose_ops turns about her body's axes). Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
  "ultimate": {
   "fighter": "palutena",
   "skeleton": "peach",
@@ -28,5 +28,36 @@
    "frames": 3
   },
   "key_step": 2
- }
+ },
+ "skeleton": "peach",
+ "ops": [
+  {
+   "op": "turn",
+   "row": 2,
+   "deg": [
+    -10.0,
+    0.0,
+    0.0
+   ],
+   "frames": [
+    14,
+    58
+   ],
+   "ease": 6
+  },
+  {
+   "op": "turn",
+   "row": 11,
+   "deg": [
+    0.0,
+    0.0,
+    -20.0
+   ],
+   "frames": [
+    14,
+    58
+   ],
+   "ease": 6
+  }
+ ]
 }

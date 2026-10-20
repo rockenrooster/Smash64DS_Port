@@ -1199,6 +1199,46 @@ game's camera, back faces culled as the DS culls them):
   side). A variant that let the hold ease out after the kick (19% at worst)
   was not taken ("Row 2: + slit turn looks the best").
 
+## Owner 2026-10-20 (later): the run's blend, the card's head, the down smash, her congratulations
+
+- **Dash into run** ("palutena's start run > run animation still twitches,
+  it needs to be a perfectly smooth blend"). Her dash is Peach's stride and
+  her run Ultimate's lean, and the game cuts from the dash's frame 11 to the
+  run's first (`dash_to_run` 12): her hips turn 28 degrees, her legs 58-112
+  and her dress 34 in one tick; the earlier fix (the run's clip shifted to
+  start nearer the dash's last pose) still twitched. Now the status change
+  blends: `NDSP4Overrides.pose_blends` names {Dash, Run, 10 ticks}; the
+  `ftMainSetStatus` wrapper keeps the joints' rotations and translations
+  (`ndsP4PoseBlendBegin`, the common joints to her joint count) and each
+  clip play, between the clip's keys and the part transforms, moves them
+  from the kept pose to the clip's by a smoothstep weight (shortest-arc
+  angles; `ndsP4PoseBlendAfterAnimKeys`, `src/port/nds_p4.c`). The joints
+  the pose engine holds at 30 Hz (`NDS_FT_POSE_HOLD`) blend only on the ticks
+  it evaluates the body. `ftMainPlayAnim` lives in the full ITCM (8 more
+  bytes overflowed `itcm`), so its call keeps one argument and the tail
+  (`ndsFTMainPlayAnimTail`, `battleship_ftmain.c`) runs in main RAM.
+- **The 1P card's head** ("not have a tilted head and to have the chin
+  tilted up ever so slightly? like 3 degrees"): `intro_l.json` turns the head
+  (row 8) by (-9.5, -1.8, -16.8) degrees: pitch +3.0 (chin up), roll 0, her
+  yaw toward the camera (-48.4) kept. Her card stills and her congratulations
+  still were baked again from that clip.
+- **The down smash** (the dress "still trying to keep cone shape which
+  causes arms to clip into dress"): candidates rendered from the game's
+  camera with the arms' vertices inside the dress counted; the owner took E,
+  her torso (row 2) back 10 degrees and her right arm (row 11) out 20 from
+  14 to 58, eased over 6 (`dsmash.json` `ops`). Arm vertices inside the
+  dress over the clip: 307 before, 34.
+- **Her congratulations** (owner 2026-10-19, "ok lets do it"): Ike and
+  Palutena have no Remix plates, so `scripts/p4/p4_onep_art.py` makes them
+  from the content's local still (`assets/congra/c<NN>.png`, 300x220, from
+  `scripts/p6/p6_congra_still.py`; kit-derived, never committed): Remix's
+  plate format (template plate 186's file: a 300x110 RGBA32 sprite in 37
+  strips of 3 rows, each odd row's 64-bit words swapped as TMEM holds them),
+  the bottom half and the top as files 0x1F40 + 2 x content and the next
+  (Palutena 0x1F68/0x1F69, Ike 0x1F66/0x1F67). Witnessed (walk ROM,
+  content 20): Master Hand, the stage clear, the ending, the staff roll and
+  her congratulations with her picture, 0 native failures.
+
 ## Animations (the owner's 3DS references, 2026-10-14)
 
 Superseded by Ultimate's motions above (the recipes below were keyposes;

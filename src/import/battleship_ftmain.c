@@ -352,6 +352,24 @@ static void ndsP4SearchHitWeapon(GObj *fighter_gobj) __attribute__((noinline));
  * part transforms, its one call in this TU. */
 #define ftParamsUpdateFighterPartsTransformAll(topn_) \
     (ndsP4AfterProcMap(fighter_gobj), ftParamsUpdateFighterPartsTransformAll(topn_))
+/* A content's pose blend (ndsP4PoseBlendAfterAnimKeys) moves the joints
+ * between the clip's keys and the part transforms: ftMainPlayAnim's call,
+ * this TU's only one, whose joint is always the fighter's TopN. ftMainPlayAnim
+ * lives in the full ITCM, so its call keeps one argument (the same size) and
+ * the tail runs here, in main RAM. */
+static void __attribute__((noinline)) ndsFTMainPlayAnimTail(GObj *fighter_gobj)
+{
+    ndsP4PoseBlendAfterAnimKeys(fighter_gobj);
+#if NDS_LAB_STATUS_PRICE
+    ndsLabTimedPartsTransform(ftGetStruct(fighter_gobj)->joints[nFTPartsJointTopN]);
+#else
+    ftParamsUpdateFighterPartsTransform(ftGetStruct(fighter_gobj)->joints[nFTPartsJointTopN]);
+#endif
+}
+#if NDS_LAB_STATUS_PRICE
+#undef ftParamsUpdateFighterPartsTransform
+#endif
+#define ftParamsUpdateFighterPartsTransform(joint_) ndsFTMainPlayAnimTail(fighter_gobj)
 /* P4 S5: Remix hooks ftMainSetHitInteractStats's head (Wario.asm
  * body_slam_recoil_). The source defines the function and calls it in this
  * TU, so the name is told apart by its first argument's first token: the
@@ -521,6 +539,9 @@ void ndsP4FTMainUpdateAbsorbStatWeapon(WPStruct *wp, WPAttackColl *wp_attack_col
 #undef NDS_P4_SEARCH_WEAPON_GObj
 #undef NDS_P4_SEARCH_WEAPON_fighter_gobj
 #undef ftParamsUpdateFighterPartsTransformAll
+#if !NDS_LAB_STATUS_PRICE
+#undef ftParamsUpdateFighterPartsTransform
+#endif
 #undef ftMotionEventCast
 #define ftMotionEventCast(event, type) ((type *)(event)->p_script)
 #undef dFTMainSpecialStatusDescs
@@ -773,6 +794,9 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
              * on the speed of the statuses it names (the one entered), the
              * motion script's clock with it. */
             anim_speed = ndsP4ScaleAnimSpeed(fighter_gobj, nds_p4_status, anim_speed);
+            /* The joints as the status being left shows them, for a blend
+             * into this one (NDSP4Overrides.pose_blends). */
+            ndsP4PoseBlendBegin(fighter_gobj, nds_p4_status);
         }
     }
     battleship_ftMainSetStatus(fighter_gobj, nds_p4_status, frame_begin,

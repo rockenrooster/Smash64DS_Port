@@ -1,5 +1,5 @@
 {
- "comment": "Palutena's 1P card pose (menu motion 13, IntroL; owner 2026-10-19/20, candidate c4 with the shield turned off her body): Peach's IntroL body (the card's) with her arms re-posed -- the staff arm a little out from her body, the upper arm angled down, the elbow bent, the staff up and away from her; the shield arm down at her side, the forearm rolled 65 degrees so the shield clears her dress. Directions (her body frame: side, up, forward): staff upper arm (0.60, -0.70, 0.30), forearm (0.40, 0.45, 0.80), staff (0.25, 0.95, 0.20); shield upper arm (0.30, -0.94, -0.05), forearm (0.25, -0.80, 0.50), roll -65.",
+ "comment": "Palutena's 1P card pose (menu motion 13, IntroL; owner 2026-10-19/20, candidate c4 with the shield turned off her body): Peach's IntroL body (the card's) with her arms re-posed -- the staff arm a little out from her body, the upper arm angled down, the elbow bent, the staff up and away from her; the shield arm down at her side, the forearm rolled 65 degrees so the shield clears her dress. Directions (her body frame: side, up, forward): staff upper arm (0.60, -0.70, 0.30), forearm (0.40, 0.45, 0.80), staff (0.25, 0.95, 0.20); shield upper arm (0.30, -0.94, -0.05), forearm (0.25, -0.80, 0.50), roll -65. Owner 2026-10-20: the head level (it was tilted 18 degrees and its chin 3.7 down) with the chin 3 degrees up, its yaw kept: row 8 turned (-9.527, -1.827, -16.837).",
  "source": "0x1415",
  "skeleton": "peach",
  "ops": [
@@ -64,6 +64,15 @@
     -0.178,
     -180.0,
     -0.003
+   ]
+  },
+  {
+   "op": "turn",
+   "row": 8,
+   "deg": [
+    -9.527,
+    -1.827,
+    -16.837
    ]
   }
  ]
