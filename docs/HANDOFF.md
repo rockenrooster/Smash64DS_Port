@@ -27,6 +27,8 @@ each, ~1 a P95-band frame vs 0.25 at the median, +47..+66K of the band on every 
 the over-gate premium) are the common owners; both paths are already compact, so the remaining cuts are small.
 Motion reads after GO: 218 a match on Sector Z seed 1 (the done-criterion asks 0).
 
+**State 2026-10-20 (P6-P7, stability):** `STABILITY_AUDIT.md` -- every mode on every fighter on the shipping layout (1P campaign, both bonus practices, Training, VS menus to Results and back, 5-minute four-player all-items matches, two-console wireless with heavy mixes). Fixed on the way: a content's records counting as its parent's in the source's unlock tests (`fb1b096b36d`); the overlay's 1P head kept whole in every 1P battle (Giant DK 12-13 KB from the heap's end, Bowser's ending room undrawn: `ce34551ba4c`); the lean caches' 12 KB margin under the source pools' growth in long battles (Sonic's Yoshi Team 24,584; now 24 KB, P95 unchanged: `027a3a964b0`). Palutena's 1P card is the owner's c4 with the shield rolled off her dress (`8e37a1646e7`; cards rebaked, `play-p7n`). Open: WORK P95 (`optimization/P7_P4_ROSTERS.md`) and the owner's answers in `OWNER_QUESTIONS.md` (victory end poses, pillar, fan speed, wireless lag hardware, the 0-motion-reads criterion, old machinery, a P95 approximation).
+
 ## Continue, do not restart
 
 With an intact context, execute the cursor's next unfinished action. Do not
