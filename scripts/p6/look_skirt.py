@@ -464,6 +464,59 @@ def remesh(scene: dict, detail: str) -> dict:
             "ankle_vertices_copied": copied}
 
 
+def band_normals(scene: dict) -> dict:
+    """The lower band's vertex normals from its own surface, in each
+    vertex's row frame (owner 2026-10-19: "the lower half of her dress is
+    darker" on the results screen).
+
+    remesh and split_band carried each new vertex's normal over from the old
+    dress vertices it was interpolated from: a normal in THEIR rows' frames,
+    stored on rows 25, 26 and 27, whose rest frames are turned from those.
+    The engine turns a normal by its own row's matrix, so the band's normals
+    pointed off the surface -- some inward or down (measured outward share
+    0.39-0.47, against the bodice's 0.93): the band lit dark wherever the
+    light came from the front. Each normal is the area-weighted mean of its
+    band triangles' (model space, each turned outward from the dress's
+    axis), taken into its row's frame as look_blend.py takes the look's."""
+    verts, tris, joints = scene["vertices"], scene["triangles"], scene["joints"]
+    band = [t for t in tris if t.get("object") == DRESS and t["joint"] in (ROW_MID, ROW_HEM3)]
+    if not band:
+        raise SkirtError("no lower band on rows 26 and 27")
+    used = sorted({i for t in band for i in t["v"]})
+    rows = {verts[i]["joint"] for i in used}
+    if not rows <= {ROW_UPPER, ROW_MID, ROW_HEM3}:
+        raise SkirtError(f"lower band vertices on rows {sorted(rows)}")
+    pos = {i: np.array(verts[i]["model"], dtype=float) for i in used}
+    # Each ring's own axis (the hem sits back of the waist, HEM_SHIFT): a
+    # vertex's outward is from its row's ring centre.
+    centre = {j: _centre(np.array([pos[i] for i in used if verts[i]["joint"] == j]))
+              for j in rows}
+    axis_of = lambda i: centre[verts[i]["joint"]]
+    nsum = {i: np.zeros(3) for i in used}
+    for t in band:
+        a, b, c = (pos[i] for i in t["v"])
+        fn = np.cross(b - a, c - a)
+        mid = (a + b + c) / 3.0
+        ax = np.mean([axis_of(i) for i in t["v"]], axis=0)
+        out = np.array([mid[0] - ax[0], 0.0, mid[2] - ax[1]])
+        if float(np.dot(fn, out)) < 0.0:
+            fn = -fn
+        for i in t["v"]:
+            nsum[i] += fn
+    inv = {j: np.linalg.inv(np.array(joints[j]["world"], dtype=float)) for j in rows}
+    outward = []
+    for i in used:
+        n = nsum[i] / (np.linalg.norm(nsum[i]) or 1.0)
+        p, ax = pos[i], axis_of(i)
+        out = np.array([p[0] - ax[0], 0.0, p[2] - ax[1]])
+        outward.append(float(np.dot(n, out / (np.linalg.norm(out) or 1.0))))
+        nl = inv[verts[i]["joint"]][:3, :3] @ n
+        nl = nl / (np.linalg.norm(nl) or 1.0)
+        verts[i]["normal"] = [int(round(float(c) * 127)) for c in nl]
+    return {"vertices": len(used), "outward_min": round(min(outward), 2),
+            "outward_mean": round(float(np.mean(outward)), 2)}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--scene", type=Path, action="append", required=True)
@@ -473,6 +526,7 @@ def main() -> int:
         detail = scene.get("detail") or ("low" if "low" in path.parent.name else "high")
         info = remesh(scene, "low" if detail == "low" else "high")
         info["mid"] = split_band(scene)
+        info["normals"] = band_normals(scene)
         path.write_bytes((json.dumps(scene, indent=0) + "\n").encode("utf-8"))
         print(f"look skirt: {path} {info}")
     return 0
