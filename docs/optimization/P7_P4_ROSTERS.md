@@ -565,3 +565,25 @@ the 25,600 floor. 0 native failures, 0 lean declines, 0 ledger refusals everywhe
 Over-gate frames on Hyrule Temple (`s20p` cast profile) are first-use costs: event-script
 normalization 12% of the premium, texture binds 8%, the lean packet's variant learning
 and materialize 18%, pose parse 4%; on Saffron the hurtbox tests (~25%) lead.
+
+## Collision sweep keys and the stage matrix memo (2026-10-19, `s27`/`s28`)
+
+`s27` (committed c8af1ef888b): the floor and ceiling sweeps make their sweep's
+compare keys once a group instead of once a line. Exact (digests IDENTICAL
+against `s26` on the cast at Hyrule Temple and Saffron, four Bowsers on
+Saffron and four Snakes on Hyrule Temple). WORK P95:
+
+| run | before | `s27` |
+|---|---|---|
+| cast, Hyrule Temple | 1,220,096 (`s25`) | 1,215,616 |
+| cast, Saffron | 1,210,688 (`s26`) | 1,214,720 (noise) |
+| four Snakes, Hyrule Temple | 1,319,680 (`s26`) | 1,303,872 |
+| four Bowsers, Saffron | 1,329,728 (`s25`) | 1,324,544 |
+
+`s28` (refuted, reverted): `ndsStageGxComposedFor`'s memo slot
+`((binding << 3) | shift) & 31` keeps only a binding's low two bits, so a
+stage's bindings share four slots per shift (~46 rebuilds a frame on Hyrule
+Temple). Slotting by `binding + 8 x shift` and building into the slot was
+exact (digests IDENTICAL on the same four runs) but moved nothing (P95 -64 to
++1,984), so the rebuilds are not where the frames go. The gate is still open:
+the cast sits ~8.5% over 1,120,000 and the heavy mirrors 4-6% over 1,250,000.
