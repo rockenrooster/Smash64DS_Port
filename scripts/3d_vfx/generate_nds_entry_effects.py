@@ -1254,6 +1254,86 @@ P5_CONTENT_BASE = 64
 P4_MATERIAL_ALIASES = {1: 0}
 
 
+# A run of a content's entry-only corners shorter than this lends nothing.
+P4_ENTRY_RUN_MIN = 64
+
+
+def p4_entry_run_lines(p4: list, p4_root_first: int, group_rows: list,
+                       blocks: dict[int, tuple[int, int, int]]) -> list[str]:
+    """The P4 entry roots (articles.json "entry": the vehicles, gates and
+    waves a content's entry draws, before GO) and the runs of each content's
+    corner block only they draw, merged: a VS battle lends those runs once
+    its entries are over (nds_renderer_native_common.c
+    ndsRendererEntryP4RetireEntries), and an entry root then draws nothing.
+    A root another row also names (the same storage and offset) is not an
+    entry root here."""
+    def merge(ranges):
+        out = []
+        for a, b in sorted(ranges):
+            if out and a <= out[-1][1]:
+                out[-1] = (out[-1][0], max(out[-1][1], b))
+            else:
+                out.append((a, b))
+        return out
+
+    named: dict[tuple, set] = {}
+    for p4_root in p4:
+        row = p4_root.row
+        named.setdefault((row["storage"], row.get("via", 0), row["offset"]), set()).add(
+            bool(row.get("entry")))
+    entry = [bool(r.row.get("entry")) and r.row["storage"] is not None and
+             named[(r.row["storage"], r.row.get("via", 0), r.row["offset"])] == {True}
+             for r in p4]
+    spans: dict[tuple[int, bool], list] = {}
+    for first, triangles, group, _, _ in group_rows:
+        root = group.state.root_index
+        if root < p4_root_first:
+            continue
+        p = root - p4_root_first
+        spans.setdefault((p4[p].content_id, entry[p]), []).append((first, first + 3 * triangles))
+    runs = []
+    for (content, is_entry), ranges in sorted(spans.items()):
+        if not is_entry or content not in blocks:
+            continue
+        block_first = blocks[content][0]
+        for lo, hi in merge(ranges):
+            for x, y in merge(spans.get((content, False), [])):
+                if x < hi and lo < y:
+                    raise SystemExit(f"P4 content {content}: entry corners share a run "
+                                     "with another root's")
+            if hi - lo >= P4_ENTRY_RUN_MIN:
+                runs.append((content, lo - block_first, hi - lo))
+    lines = [
+        "/* P4 entry roots (articles.json \"entry\", named by no other row): bit p",
+        " * of word p / 32 for root p. The runs of each content's corner block only",
+        " * they draw (first corner relative to the block's), which a VS battle",
+        " * lends once its entries are over (ndsRendererEntryP4RetireEntries). */",
+        f"#define NDS_ENTRY_EFFECT_P4_ENTRY_RUN_COUNT {len(runs)}u",
+    ]
+    if not runs:
+        return lines + [""]
+    words = [0] * ((len(p4) + 31) // 32)
+    for p, is_entry in enumerate(entry):
+        if is_entry:
+            words[p // 32] |= 1 << (p % 32)
+    lines += [
+        "static const u32 sNdsEntryEffectP4EntryRoots"
+        "[(NDS_ENTRY_EFFECT_P4_ROOT_COUNT + 31u) / 32u] = {",
+        "    " + ", ".join(f"0x{w:08x}u" for w in words) + ",",
+        "};",
+        "typedef struct NDSEntryEffectP4EntryRun",
+        "{",
+        "    u16 content;",
+        "    u16 first;",
+        "    u16 count;",
+        "} NDSEntryEffectP4EntryRun;",
+        "static const NDSEntryEffectP4EntryRun "
+        "sNdsEntryEffectP4EntryRuns[NDS_ENTRY_EFFECT_P4_ENTRY_RUN_COUNT] = {",
+    ]
+    lines += [f"    {{ {c}u, {first}u, {count}u }}," for c, first, count in runs]
+    return lines + ["};", ""]
+
+
 def load_p4_rows(paths: list[Path], resources: dict[int, census.O2RResource]) -> list[dict]:
     """--p4: each content's articles.json; its files are the content's O2R
     exports in the o2r directory beside it."""
@@ -2037,6 +2117,7 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
         for content, (first, count, offset) in sorted(rows.items()):
             lines.append(f"    [{content}] = {{ {first}u, {count}u, {offset}u }},")
         lines += ["};", ""]
+        lines += p4_entry_run_lines(p4, p4_root_first, group_rows, rows)
 
     # Only corners whose RSP cache slot was loaded under an earlier DObj root
     # need an override; the group root is the exact source default.

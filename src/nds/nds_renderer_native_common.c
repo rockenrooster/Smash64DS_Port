@@ -4950,16 +4950,56 @@ static sb32 ndsRendererEntryEffectP4ContentInMatch(u32 content)
  * same bits. */
 #define NDS_P4_VARIANT_PALETTE_FOLLOWS 0x80u
 #define NDS_P4_VARIANT_MATERIAL 0x40u
+/* An entry root whose entry is over (ndsRendererEntryP4RetireEntries): the
+ * caller draws nothing. */
+#define NDS_P4_VARIANT_RETIRED 0x20u
 /* The rows' answers by display list (2026-10-13): every effect, weapon and
  * item DObj asked on every draw, and the walk reads each row's file pointer
  * -- four Sonics' entry planes paid 122K cycles a frame here. A list's
  * answer holds for the heap generation: the contents' special files load
- * once a scene and its bump heap never reuses an address within one. */
+ * once a scene and its bump heap never reuses an address within one (the
+ * dead bytes a VS battle lends out are reused, but never as a display list
+ * a DObj names). */
 #define NDS_ENTRY_P4_ADMIT_MEMO 256u
 #define NDS_ENTRY_P4_ADMIT_NONE 0xffffu
 static const void *sNdsEntryP4AdmitMemoDl[NDS_ENTRY_P4_ADMIT_MEMO];
 static u16 sNdsEntryP4AdmitMemoRow[NDS_ENTRY_P4_ADMIT_MEMO];
 static u32 sNdsEntryP4AdmitMemoGen;
+
+/* ENTRY ROOTS RETIRE (P7, 2026-10-21). A content's entry vehicles, gates and
+ * waves (articles.json "entry") draw only before GO in a VS battle, and a
+ * VSBattle never asks for them again after it; their corners are then dead
+ * bytes of this scene's heap. ndsRendererEntryP4RetireEntries marks a
+ * content's entry roots retired and lends their corner runs to the battle
+ * (scvsbattle.c once GO has come and no entry root drew for two frames; and
+ * at once for an entry-only special file that did not fit, nds_p4.c, whose
+ * roots cannot draw). A retired root's draw is nothing. */
+#if defined(NDS_ENTRY_EFFECT_P4_CORNER_BLOCKS) && \
+    defined(NDS_ENTRY_EFFECT_P4_ENTRY_RUN_COUNT)
+#if NDS_ENTRY_EFFECT_P4_ENTRY_RUN_COUNT > 0
+#define NDS_ENTRY_P4_RETIRE 1
+#endif
+#endif
+#ifndef NDS_ENTRY_P4_RETIRE
+#define NDS_ENTRY_P4_RETIRE 0
+#endif
+#if NDS_ENTRY_P4_RETIRE
+static u32 sNdsEntryP4Retired[(NDS_ENTRY_EFFECT_P4_ROOT_COUNT + 31u) / 32u];
+static u32 sNdsEntryP4RetiredScene = 0xffffffffu;
+/* The presented frame that last drew an entry root, as
+ * sNdsEntryEffectStartupDrawSerial is for the startup-only textures. */
+static u32 sNdsEntryP4EntryDrawSerial;
+
+static sb32 ndsRendererEntryP4IsEntry(u32 p)
+{
+    return ((sNdsEntryEffectP4EntryRoots[p >> 5] >> (p & 31u)) & 1u) != 0u;
+}
+
+u32 ndsRendererEntryP4EntryIdleFrames(void)
+{
+    return (sNdsRendererHardwareFrameSerial + 1u) - sNdsEntryP4EntryDrawSerial;
+}
+#endif
 
 static void ndsRendererEntryEffectP4AdmitRow(u32 p, u32 *owner_asset_id,
                                              u32 *root_offset,
@@ -4973,6 +5013,20 @@ static void ndsRendererEntryEffectP4AdmitRow(u32 p, u32 *owner_asset_id,
     *variant_count = row->variant_count |
         (((row->material_flags & 1u) != 0u) ? NDS_P4_VARIANT_PALETTE_FOLLOWS : 0u) |
         (((row->material_flags & 2u) != 0u) ? NDS_P4_VARIANT_MATERIAL : 0u);
+#if NDS_ENTRY_P4_RETIRE
+    if (ndsRendererEntryP4IsEntry(p) != FALSE)
+    {
+        if ((sNdsEntryP4RetiredScene == gNdsRendererSceneTextureVramResetCount) &&
+            (((sNdsEntryP4Retired[p >> 5] >> (p & 31u)) & 1u) != 0u))
+        {
+            *variant_count |= NDS_P4_VARIANT_RETIRED;
+        }
+        else
+        {
+            sNdsEntryP4EntryDrawSerial = sNdsRendererHardwareFrameSerial + 1u;
+        }
+    }
+#endif
 }
 
 sb32 ndsRendererEntryEffectP4Admit(const void *dl, u32 *owner_asset_id,
@@ -5393,6 +5447,90 @@ ndsRendererEntryP4CornersLoad(void)
         (void)ndsRendererHardwareFencedTextureFclose(file);
     }
     sNdsEntryP4CornerScene = gNdsRendererSceneTextureVramResetCount;
+}
+#endif
+
+#if NDS_ENTRY_P4_RETIRE
+void ndsBattleDeadSpanAdd(void *base, u32 bytes);
+u32 ndsSceneIsVSBattle(void);
+__attribute__((used)) volatile u32 gNdsEntryP4RetiredCornerBytes;
+
+/* Retire the entry roots of every content in the match whose corners are
+ * loaded -- with `storage`, only a content all of whose entry roots live in
+ * that special file -- and lend their corner runs (each run's span in the
+ * position, s, t and colour rows). Each content once a scene. */
+void ndsRendererEntryP4RetireEntries(void **storage)
+{
+    static u32 retired_contents[(NDS_ENTRY_EFFECT_P4_CONTENT_SLOTS + 31u) / 32u];
+    u32 content;
+
+    if ((ndsSceneIsVSBattle() == FALSE) ||
+        (sNdsEntryP4CornerScene != gNdsRendererSceneTextureVramResetCount))
+    {
+        return;
+    }
+    if (sNdsEntryP4RetiredScene != gNdsRendererSceneTextureVramResetCount)
+    {
+        memset(sNdsEntryP4Retired, 0, sizeof(sNdsEntryP4Retired));
+        memset(retired_contents, 0, sizeof(retired_contents));
+        sNdsEntryP4RetiredScene = gNdsRendererSceneTextureVramResetCount;
+    }
+    for (content = 0u; content < NDS_ENTRY_EFFECT_P4_CONTENT_SLOTS; content++)
+    {
+        const NDSEntryEffectP4CornerBlock *block = &sNdsEntryEffectP4CornerBlocks[content];
+        u16 *data = (u16 *)(uintptr_t)sNdsEntryP4CornerData[content];
+        sb32 any = FALSE;
+        sb32 all = TRUE;
+        u32 p;
+        u32 r;
+
+        if ((data == NULL) || (block->count == 0u) ||
+            (((retired_contents[content >> 5] >> (content & 31u)) & 1u) != 0u))
+        {
+            continue;
+        }
+        for (p = 0u; p < NDS_ENTRY_EFFECT_P4_ROOT_COUNT; p++)
+        {
+            if (((u32)sNdsEntryEffectP4Roots[p].content == content) &&
+                (ndsRendererEntryP4IsEntry(p) != FALSE))
+            {
+                any = TRUE;
+                if ((storage != NULL) && (sNdsEntryEffectP4Roots[p].storage != storage))
+                {
+                    all = FALSE;
+                }
+            }
+        }
+        if ((any == FALSE) || (all == FALSE))
+        {
+            continue;
+        }
+        for (p = 0u; p < NDS_ENTRY_EFFECT_P4_ROOT_COUNT; p++)
+        {
+            if (((u32)sNdsEntryEffectP4Roots[p].content == content) &&
+                (ndsRendererEntryP4IsEntry(p) != FALSE))
+            {
+                sNdsEntryP4Retired[p >> 5] |= 1u << (p & 31u);
+            }
+        }
+        retired_contents[content >> 5] |= 1u << (content & 31u);
+        for (r = 0u; r < NDS_ENTRY_EFFECT_P4_ENTRY_RUN_COUNT; r++)
+        {
+            const NDSEntryEffectP4EntryRun *run = &sNdsEntryEffectP4EntryRuns[r];
+            u32 k;
+
+            if ((u32)run->content != content)
+            {
+                continue;
+            }
+            for (k = 0u; k < 4u; k++)
+            {
+                ndsBattleDeadSpanAdd(data + k * (u32)block->count + run->first,
+                                     (u32)run->count * 2u);
+                gNdsEntryP4RetiredCornerBytes += (u32)run->count * 2u;
+            }
+        }
+    }
 }
 #endif
 

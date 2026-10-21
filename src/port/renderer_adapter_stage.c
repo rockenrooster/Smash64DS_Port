@@ -6835,6 +6835,9 @@ ndsRendererAdapterEntryEffectAccumulate(const NDSRendererStats *stats)
  * baked with palette i; a list with no TEXID frames needs the live material. */
 #define NDS_P4_VARIANT_PALETTE_FOLLOWS 0x80u
 #define NDS_P4_VARIANT_MATERIAL 0x40u
+/* An entry root whose entry is over: its corners are lent out, it draws
+ * nothing (ndsRendererEntryP4RetireEntries). */
+#define NDS_P4_VARIANT_RETIRED 0x20u
 sb32 ndsRendererEntryEffectP4Admit(const void *dl, u32 *owner_asset_id,
                                    u32 *root_offset, u32 *variant_count);
 #endif
@@ -6894,6 +6897,10 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
         (ndsRendererEntryEffectP4Admit(dl, &owner_asset_id, &root_offset,
                                        &p4_variant_count) != FALSE))
     {
+        if ((p4_variant_count & NDS_P4_VARIANT_RETIRED) != 0u)
+        {
+            return TRUE;
+        }
         base = (const u8 *)dl - root_offset;
         candidate = TRUE;
     }

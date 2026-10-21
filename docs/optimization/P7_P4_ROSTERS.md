@@ -800,3 +800,54 @@ passes are the roster's heap census and its profile. Hyrule Castle's two
 lean declines are Mr. Game & Watch's (`nNDSFtrLeanDeclineStale`, bit 16 of
 `gNdsFtrLeanDeclineReasons[41]`): a fresh list whose textures were not
 resident at its guard.
+
+### Their images, Yoshi's Island, and the entry roots' corners (`s49`/`s50`)
+
+* The packet bakes the articles' texels too (`sNdsEntryEffectTexels*`, and
+  `nitro:/p4/entry_texels.bin` for the contents), so the images an article
+  root's lists load are dead with the lists: `p4_dead_spans.py` adds them,
+  keeping any image an MObj's image or palette table names (a material root
+  takes its TLUT from the live MObj). 66 rows, 12 files, 89,888 B; Crash's
+  14,304, Palutena's 18,848, Sonic's 28,224 when his file loads. The
+  registry holds 16 files / 64 ranges a generation, ascending, and the span
+  allocator 64.
+* Yoshi's Island's geometry file lends its dead lists after all: an external
+  relocation keeps its 16 bytes instead of excluding the file (4,816 B).
+* `generate_nds_entry_effects.py --p4` emits the entry roots
+  (articles.json "entry": the vehicles, gates and waves, named by no other
+  row) and the runs of each content's corner block only they draw.
+  `ndsRendererEntryP4RetireEntries` marks a content's entry roots retired and
+  lends the runs' position, s, t and colour spans: at GO once no entry root
+  drew for two presented frames (scvsbattle.c, beside the startup-only
+  texture retirement), and at once when an entry-only special file does not
+  fit (Sonic's Tails plane: his roots cannot draw). A retired root's draw is
+  nothing. Sonic 9,840 B, Crash 2,904, Palutena 576 (13,320 for the heavy
+  roster).
+
+Heavy roster on `s50`, WORK P95 (two-VBlank share) and low-water:
+
+| stage | P95 | low-water |
+|---|---|---|
+| Peach's Castle (0) | 1,269,184 (96.3%) | 51,056 |
+| Sector Z (1) | 1,426,304 (92.4%) | 36,316 |
+| Congo Jungle (2) | 1,396,224 (93.1%) | 31,108 |
+| Planet Zebes (3) | 1,403,392 (93.4%) | 52,972 |
+| Hyrule Castle (4) | 1,253,312 (96.8%) | 50,784 |
+| Yoshi's Island (5) | 1,449,792 (91.6%) | 36,780 |
+| Dream Land (6) | 1,322,368 (95.5%) | 51,360 |
+| Saffron City (7) | 1,411,776 (92.4%) | 37,180 |
+| Mushroom Kingdom (8) | 1,417,344 (93.0%) | 50,528 |
+| Meta Crystal (13) | 1,203,520 (96.8%) | 51,152 |
+| Duel Zone (14) | 1,059,776 (99.1%) | 53,808 |
+| Final Destination (16) | 1,306,816 (95.7%) | 49,860 |
+| First Destination (41) | 1,176,896 (98.2%) | 59,392 |
+| Bowser's Stadium (42) | 1,181,952 (98.5%) | 58,832 |
+| Hyrule Temple (43) | 1,706,112 (68.2%) | 42,636 |
+| Dinosaur Land (44) | 1,446,848 (88.9%) | 39,268 |
+
+Every stage now stays above the 25,600 B floor with this roster (it was
+under on six), 0 native failures. The P95 is the roster's own: the heavy
+frames are lean materializations (27 of the 43 over-gate frames in the
+`s48` profile on Congo Jungle), audio card reads and the effects, and on the
+stages whose program still does not fit (Congo Jungle, Final Destination)
+the uncompiled stage path, ~290K cycles a frame.

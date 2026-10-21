@@ -137,10 +137,11 @@ s32 ndsRelocAssetReadFighterStreamClipSpan(u32 asset_id, void *dst, u32 span);
 s32 ndsRelocGetLoadedAssetView(u32 asset_id, const void **out_data,
                                u32 *out_size);
 /* Lend `count` dead byte ranges [lo, hi) of a loaded file (16-aligned offsets
- * from its data) for this heap generation: from here on an address inside
- * one is no longer the file's. Returns the file's data, or NULL (not loaded
- * in this scene, not `expect_size` bytes, a range out of bounds, the file
- * lent already, or the generation's twelve files / 32 ranges taken). */
+ * from its data, ascending) for this heap generation: from here on an address
+ * inside one is no longer the file's. Returns the file's data, or NULL (not
+ * loaded in this scene, not `expect_size` bytes, a range out of bounds or out
+ * of order, the file lent already, or the generation's 16 files / 64 ranges
+ * taken). */
 void *ndsRelocLendDeadSpans(u32 asset_id, u32 expect_size, const u32 *lo,
                             const u32 *hi, u32 count);
 /* CSS residency seams. The first loads one source reloc tree by numeric asset

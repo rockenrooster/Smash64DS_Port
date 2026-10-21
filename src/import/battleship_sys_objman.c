@@ -361,7 +361,7 @@ void *ndsBattleIdleScratchAlloc(size_t size, u32 alignment)
  * only the entry-effect packet draws (ndsP4LendArticleDeadSpans).
  * syTaskmanMalloc takes them after a VS battle's loan and before the heap,
  * best fit. Re-seeded by every gcSetupObjman, like the idle scratch above. */
-#define NDS_BATTLE_DEAD_SPAN_MAX 32u
+#define NDS_BATTLE_DEAD_SPAN_MAX 64u
 extern volatile u32 gNdsTaskmanHeapGeneration;
 static u8 *sNdsBattleDeadSpanCursor[NDS_BATTLE_DEAD_SPAN_MAX];
 static u8 *sNdsBattleDeadSpanEnd[NDS_BATTLE_DEAD_SPAN_MAX];

@@ -66,10 +66,15 @@ void gmRumbleInitPlayers(void);
 void ndsSCVSBattleManagerFuncUpdate(SYTaskmanSetup *setup);
 void ndsRendererHardwareReleaseEntryStartupTextures(void);
 u32 ndsRendererEntryEffectStartupIdleFrames(void);
+/* Weak: the renderer defines them only in a build whose contents have
+ * entry-only corners (generate_nds_entry_effects.py --p4). */
+void ndsRendererEntryP4RetireEntries(void **storage) __attribute__((weak));
+u32 ndsRendererEntryP4EntryIdleFrames(void) __attribute__((weak));
 static void ndsSCVSBattleBeginScenePlacement(void);
 static void ndsSCVSBattleStartPlayBGM(void);
 static void ndsSCVSBattlePrepareBeforeTimer(void);
 static u32 sNdsSCVSBattleEntryStartupTexturesRetired;
+static u32 sNdsSCVSBattleEntryRootsRetired;
 
 #define scVSBattleStartScene ndsBaseSCVSBattleStartScene
 #define scVSBattleStartBattle ndsBaseSCVSBattleStartBattle
@@ -200,6 +205,7 @@ void ndsFtrLeanAdmitSceneTexturesReady(void);
 void ndsBattlePrepareSceneTextures(void)
 {
     sNdsSCVSBattleEntryStartupTexturesRetired = FALSE;
+    sNdsSCVSBattleEntryRootsRetired = FALSE;
     ndsIFCommonNativeOamReleaseCloudTextures();
 #if NDS_R2_PARTICLE_DRAW
     /* Before the reset, for the reason above: glResetTextures invalidates
@@ -474,6 +480,20 @@ void scVSBattleFuncUpdate(void)
          * the prepare keeps the bands it holds and fills only the missing
          * ones, two frames into GO. */
         (void)ndsRendererHardwarePrepareDamageFlyMDustTextures();
+    }
+    /* The contents' entry roots retire the same way, by their own draws: an
+     * entry effect still flying at GO keeps its corners until it has not
+     * drawn for two presented frames; then they are the battle's allocation
+     * space (ndsRendererEntryP4RetireEntries). */
+    if ((sNdsSCVSBattleEntryRootsRetired == FALSE) &&
+        (ndsRendererEntryP4RetireEntries != NULL) &&
+        (ndsRendererEntryP4EntryIdleFrames != NULL) &&
+        (gSCManagerBattleState != NULL) &&
+        (gSCManagerBattleState->game_status == nSCBattleGameStatusGo) &&
+        (ndsRendererEntryP4EntryIdleFrames() >= 2u))
+    {
+        ndsRendererEntryP4RetireEntries(NULL);
+        sNdsSCVSBattleEntryRootsRetired = TRUE;
     }
 
 #if NDS_R2_ANIM_CACHE

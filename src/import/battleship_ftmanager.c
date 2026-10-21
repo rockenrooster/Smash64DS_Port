@@ -580,11 +580,12 @@ static void ndsP4LoadOpenSpecialFiles(u32 content, FTData *data)
 
 /* P7 (2026-10-21): the contents' article display lists and vertices, which
  * only the entry-effect packet draws -- the runtime admits a list by comparing
- * a DObj's list pointer with *storage + offset and never reads it -- lent to
- * a VS battle as allocation space once their files load, as the stage's are
- * (reloc_backend_compat_shims.c ndsNativeStageLendDeadSpans): Crash's and
- * Palutena's 8 KB each, Wolf's 10 KB, and Sonic's 22 KB when his entry-only
- * file loads at the entry (nds_p4.c ndsP4EntryFileEnsure asks again then).
+ * a DObj's list pointer with *storage + offset and never reads it, its
+ * vertices or the images it loads (the packet bakes texels) -- lent to a VS
+ * battle as allocation space once their files load, as the stage's are
+ * (reloc_backend_compat_shims.c ndsNativeStageLendDeadSpans): Crash's 15 KB,
+ * Palutena's 19 KB, Wolf's 12 KB, and Sonic's 28 KB when his entry-only file
+ * loads at the entry (nds_p4.c ndsP4EntryFileEnsure asks again then).
  * The rows, by file, are scripts/p4/p4_dead_spans.py's; a file not loaded in
  * this scene, of another size, or lent already is refused by the registry.
  * A root that declines its native draw is rejected by the stage body, which
@@ -597,7 +598,7 @@ static void ndsP4LoadOpenSpecialFiles(u32 content, FTData *data)
 #endif
 void ndsBattleDeadSpanAdd(void *base, u32 bytes);
 /* A file's ranges the registry takes (p4_dead_spans.py FILE_SPANS). */
-#define NDS_P4_DEAD_SPAN_FILE_SPANS 8u
+#define NDS_P4_DEAD_SPAN_FILE_SPANS 16u
 
 void ndsP4LendArticleDeadSpans(void)
 {

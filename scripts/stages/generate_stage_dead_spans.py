@@ -10,9 +10,10 @@ scripts/p5/stage_generate.py dead_spans does for the Remix stages.
 
 The ranges are what the layer owners' DObjs reach (the grDisplayLayer
 callbacks: the runtime skips a lent layer's source draw), less anything an
-actor owner reaches, merged, shrunk to 16-byte bounds. Any other pointer
-into them -- from the file itself or from another file of the stage --
-falsifies, as does an image load inside one.
+actor owner reaches and each external relocation's 16 bytes, merged, shrunk
+to 16-byte bounds. Any other pointer into them -- from the file itself or
+from another file of the stage -- falsifies, as does an image load inside
+one.
 
     python scripts/stages/generate_stage_dead_spans.py --output <header>
 """
@@ -155,14 +156,14 @@ def stage_rows(name: str, gkind: int):
     blocks, vertices, images = reach(geo, layer_roots, slots)
     a_blocks, a_vertices, a_images = reach(geo, actor_roots, slots)
     dead = subtract(merge(blocks + vertices), merge(a_blocks + a_vertices + a_images))
-    if geo.external:
-        # Its extern chain runs through its display lists, and a failed
-        # external pass retries later: nothing of such a file is lent.
-        print(f"STAGE_DEAD_SPANS {name}: file {geo.file_id} has external relocations, skipped")
-        return []
+    # An external relocation keeps its 16 bytes: its chain runs through the
+    # display lists, and a failed external pass retries later, reading and
+    # writing only the chain's own words (Yoshi's Island).
+    reached = dead
+    dead = subtract(dead, sorted({(s & ~15, (s & ~15) + 16) for s in geo.external}))
     for slot, target in slots.items():
         inside = any(a <= target < b for a, b in dead)
-        if inside and not any(a <= slot < b for a, b in dead) and slot not in identity:
+        if inside and not any(a <= slot < b for a, b in reached) and slot not in identity:
             raise DeadSpanError(f"{name}: {geo.file_id}+0x{slot:x} points into a dead range")
     for a, b in images:
         if any(a < y and x < b for x, y in dead):

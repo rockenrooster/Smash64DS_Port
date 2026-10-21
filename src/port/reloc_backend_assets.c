@@ -6620,9 +6620,9 @@ static void ndsRelocSetForceStatusBufferFile(u32 token, void *addr)
  * (ndsRelocLendDeadSpans): an address inside one of their holes belongs to
  * whatever was allocated there, not to the file. A heap generation's: the
  * stage's geometry and the match's content files (holes of file f are
- * [first[f], first[f + 1])). */
-#define NDS_RELOC_HOLE_FILE_MAX 12u
-#define NDS_RELOC_HOLE_MAX 32u
+ * [first[f], first[f + 1]), ascending). */
+#define NDS_RELOC_HOLE_FILE_MAX 16u
+#define NDS_RELOC_HOLE_MAX 64u
 static const void *sNdsRelocHoleData[NDS_RELOC_HOLE_FILE_MAX];
 static u8 sNdsRelocHoleFirst[NDS_RELOC_HOLE_FILE_MAX + 1u];
 static u32 sNdsRelocHoleGeneration;
@@ -6648,8 +6648,11 @@ static sb32 ndsRelocRangeTouchesHole(const void *data, uintptr_t offset,
         }
         for (i = sNdsRelocHoleFirst[f]; i < sNdsRelocHoleFirst[f + 1u]; i++)
         {
-            if ((offset < sNdsRelocHoleHi[i]) &&
-                (sNdsRelocHoleLo[i] < offset + ((size != 0u) ? size : 1u)))
+            if (offset + ((size != 0u) ? size : 1u) <= sNdsRelocHoleLo[i])
+            {
+                break;
+            }
+            if (offset < sNdsRelocHoleHi[i])
             {
                 return TRUE;
             }
@@ -7052,7 +7055,8 @@ void *ndsRelocLendDeadSpans(u32 asset_id, u32 expect_size, const u32 *lo,
     {
         if ((lo[i] >= hi[i]) || (hi[i] > loaded->data_size) ||
             (((lo[i] | hi[i]) & 15u) != 0u) ||
-            ((((uintptr_t)loaded->data + lo[i]) & 15u) != 0u))
+            ((((uintptr_t)loaded->data + lo[i]) & 15u) != 0u) ||
+            ((i != 0u) && (lo[i] < hi[i - 1u])))
         {
             return NULL;
         }

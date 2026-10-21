@@ -1751,6 +1751,10 @@ sb32 ndsP4DefersEntryDependency(u32 content, u32 dep_asset)
     return ((file_id != 0u) && (file_id == dep_asset)) ? TRUE : FALSE;
 }
 
+/* Weak: nds_renderer_native_common.c, in a build whose contents have
+ * entry-only corners. */
+void ndsRendererEntryP4RetireEntries(void **storage) __attribute__((weak));
+
 void ndsP4EntryFileEnsure(FTStruct *fp)
 {
     const NDSP4Fighter *f = ndsP4Fighter(fp->nds_p4_content);
@@ -1773,6 +1777,13 @@ void ndsP4EntryFileEnsure(FTStruct *fp)
     if (data == NULL)
     {
         gNdsP4EntryDeferDeclines++;
+        /* The file's roots cannot draw this battle: when they are all of the
+         * content's entry roots (Sonic's Tails plane), their corners go back
+         * to the battle now. */
+        if (ndsRendererEntryP4RetireEntries != NULL)
+        {
+            ndsRendererEntryP4RetireEntries(slot);
+        }
         return;
     }
     *slot = data;
