@@ -153,18 +153,6 @@ typedef struct NDSP4ShieldPose
     u16 scratch_words;
 } NDSP4ShieldPose;
 
-/* A content's cross-fade into a status from another: entering `to` from
- * `from`, the joints move from the pose the fighter was in to the new clip's
- * over `frames` ticks (ndsP4PoseBlendBegin). A row with from < 0 ends the
- * list. */
-typedef struct NDSP4PoseBlend
-{
-    s16 from_status;
-    s16 to_status;
-    u16 frames;
-    u16 pad;
-} NDSP4PoseBlend;
-
 /* P4: the parent's routines a content replaces, where Remix hooks the
  * parent's code on the content's character id. The effect makers (S6) build
  * the content's own effect from its own special files (the generator's
@@ -368,10 +356,6 @@ typedef struct NDSP4Overrides
      * plain parts matrices (ndsP4AnimLocksRest; owner p6t, Ike's in-game
      * yaw: the lock held his shoulders at rest under Ultimate's motions). */
     u8 anim_locks_rest;
-    /* Status changes the joints cross-fade through instead of cutting
-     * (owner 2026-10-20, Palutena's dash into her run: "it needs to be a
-     * perfectly smooth blend"); NULL: none. */
-    const NDSP4PoseBlend *pose_blends;
 } NDSP4Overrides;
 
 /* Item kinds past the source's last (nITKindEnumCount, as Remix numbers its
@@ -1122,13 +1106,6 @@ void ndsP4LabSpecialStandIn(GObj *fighter_gobj);
 extern volatile u32 gNdsP4LabSpecialStandIns;
 /* ftMainSetStatus prologue: Remix change_action_ resets. */
 void ndsP4OnSetStatus(GObj *fighter_gobj);
-/* ftMainSetStatus, before the new clip's first play: a content's pose blend
- * into `status_id` (NDSP4Overrides.pose_blends) keeps the joints' current
- * values, or any blend running ends. */
-void ndsP4PoseBlendBegin(GObj *fighter_gobj, s32 status_id);
-/* ftMainPlayAnim, between the clip's keys and the part transforms: a running
- * blend moves the joints from the kept pose toward the clip's. */
-void ndsP4PoseBlendAfterAnimKeys(GObj *fighter_gobj);
 /* CPU (src/import/battleship_ftcomputer*.c). The content's hand-ported
  * routines, or NULL for the original cast. */
 const NDSP4Computer *ndsP4Computer(const FTStruct *fp);

@@ -55,6 +55,7 @@ slit).
 """
 from __future__ import annotations
 
+import json
 import math
 import os
 import xml.etree.ElementTree as ET
@@ -959,7 +960,10 @@ def _item_path(skel: A.Skeleton, cfg: dict, ip: dict, per_rot: list, per_tr: lis
         per_tr[g][ir] = [float(v) for v in rr[hr].T @ (origin - pp[hr])]
 
 
-def build(skel: A.Skeleton, spec: dict, scales=None, rom=None, extras: dict | None = None) -> A.Clip:
+def _frames(skel: A.Skeleton, spec: dict, scales=None):
+    """A recipe's rows over its frames (each a rotation matrix and a
+    translation) and its skirt guide (the hem's and the mid ring's moves),
+    as build() keys them, with its Retarget and its parts."""
     fighter = spec.get("fighter", "palutena")
     cfg = FIGHTERS[fighter]
     length = int(spec["length"])
@@ -1006,19 +1010,6 @@ def build(skel: A.Skeleton, spec: dict, scales=None, rom=None, extras: dict | No
             raw = [np.asarray(h, float) for h in mids]
             mids = [np.mean([raw[k] for k in _window(len(raw), g, half, spec.get("loop"))], axis=0).tolist()
                     for g in range(len(raw))]
-    if extras is not None and spec.get("skirt", True) and cfg.get("skirt"):
-        # The dress follows Ultimate's skirt (skirt_keys.py guide), its last
-        # frames drawn back with the pose (blend_to) by the same weights.
-        extras["skirt_guide"] = {"azimuths": rt.skirt_azimuths(), "hem": hems}
-        if mid_names:
-            extras["skirt_guide"].update(mid_azimuths=rt.skirt_azimuths(mid_names), mid=mids)
-        # Her feet on a floor (skirt_keys.py keeps the hem on it): not in an
-        # aerial, a jump, a fall or a tumble (the recipe's "floor" decides).
-        names = [p["motion"] for p in parts]
-        extras["skirt_guide"]["floor"] = bool(spec.get("floor", not any(
-            w in n for n in names for w in ("air", "jump", "fall", "fly", "cliff", "passive", "escapeair"))))
-        # The dress's own keys for a kick that leaves it (skirt_keys.py).
-        extras["skirt_guide"].update(spec.get("dress") or {})
     bf = spec.get("blend_from")
     if bf:
         # The first frames eased in from another motion's pose (the wait or
@@ -1060,6 +1051,68 @@ def build(skel: A.Skeleton, spec: dict, scales=None, rom=None, extras: dict | No
                 hems[g] = ((1.0 - w) * np.asarray(hems[g]) + w * hem_t).tolist()
             if mid_t is not None:
                 mids[g] = ((1.0 - w) * np.asarray(mids[g]) + w * mid_t).tolist()
+    bi = spec.get("blend_into")
+    if bi:
+        # The frames before the game's cut to another motion eased into that
+        # motion's own frames, moving with them, so the cut lands on its
+        # first: her dash, which the game leaves for her run at frame "cut"
+        # (dash_to_run; the dash's frame before it is the last one shown).
+        # Owner 2026-10-20: "the end of the start run animation should be
+        # pretty much the exact same as the 1st frame of the running
+        # animation". "frames": [first, last], the ease in (the other's frames
+        # in full from `last`, so the frame before the cut is the one before
+        # its first: a loop's last); "leave": the frame a clip played on past
+        # the cut (a tapped dash) is its own again. The other is a recipe of
+        # the same tree and scene (art/p6/<fighter>/anims/<recipe>.json).
+        other = json.loads((REPO / "art" / "p6" / fighter / "anims" / f"{bi['recipe']}.json")
+                           .read_text(encoding="utf-8"))["ultimate"]
+        if (other.get("skeleton"), other.get("scene")) != (spec.get("skeleton"), spec.get("scene")):
+            raise UltimateError(f"blend_into {bi['recipe']}: another tree or scene")
+        o_rot, o_tr, o_hem, o_mid, _o_rt, _o_parts = _frames(skel, other, scales)
+        o_len, o_loop = int(other["length"]), other.get("loop")
+        cut, leave = int(bi["cut"]), int(bi.get("leave", length + 1))
+        first, last = (int(x) for x in bi["frames"])
+        for g in range(max(first, 0), min(leave, length + 1)):
+            if g < last:
+                w = (g - first) / float(max(last - first, 1))
+            elif g <= cut:
+                w = 1.0
+            else:
+                w = 1.0 - (g - cut) / float(max(leave - cut, 1))
+            w = w * w * (3.0 - 2.0 * w)
+            k = g - cut
+            if o_loop is not None:
+                k = int(o_loop) + (k - int(o_loop)) % (o_len - int(o_loop))
+            else:
+                k = min(max(k, 0), o_len)
+            per_rot[g] = [P.slerp(a, b, w) for a, b in zip(per_rot[g], o_rot[k])]
+            per_tr[g] = [[a[c] + (b[c] - a[c]) * w for c in range(3)] for a, b in zip(per_tr[g], o_tr[k])]
+            if hems[g] is not None and o_hem[k] is not None:
+                hems[g] = ((1.0 - w) * np.asarray(hems[g]) + w * np.asarray(o_hem[k])).tolist()
+            if mids[g] is not None and o_mid[k] is not None:
+                mids[g] = ((1.0 - w) * np.asarray(mids[g]) + w * np.asarray(o_mid[k])).tolist()
+    return per_rot, per_tr, hems, mids, rt, parts
+
+
+def build(skel: A.Skeleton, spec: dict, scales=None, rom=None, extras: dict | None = None) -> A.Clip:
+    fighter = spec.get("fighter", "palutena")
+    cfg = FIGHTERS[fighter]
+    length = int(spec["length"])
+    per_rot, per_tr, hems, mids, rt, parts = _frames(skel, spec, scales)
+    mid_names = cfg.get("skirt_mid")
+    if extras is not None and spec.get("skirt", True) and cfg.get("skirt"):
+        # The dress follows Ultimate's skirt (skirt_keys.py guide), its last
+        # frames drawn back with the pose (blend_to) by the same weights.
+        extras["skirt_guide"] = {"azimuths": rt.skirt_azimuths(), "hem": hems}
+        if mid_names:
+            extras["skirt_guide"].update(mid_azimuths=rt.skirt_azimuths(mid_names), mid=mids)
+        # Her feet on a floor (skirt_keys.py keeps the hem on it): not in an
+        # aerial, a jump, a fall or a tumble (the recipe's "floor" decides).
+        names = [p["motion"] for p in parts]
+        extras["skirt_guide"]["floor"] = bool(spec.get("floor", not any(
+            w in n for n in names for w in ("air", "jump", "fall", "fly", "cliff", "passive", "escapeair"))))
+        # The dress's own keys for a kick that leaves it (skirt_keys.py).
+        extras["skirt_guide"].update(spec.get("dress") or {})
     step = int(spec.get("key_step", 1))
     if step > 1:
         # Keys every `step` frames, the frames between them interpolated: a

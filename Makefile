@@ -7866,6 +7866,9 @@ $(NDS_P4_LAB_FALLBACK_STAMP): FORCE
 	@mkdir -p $(dir $@); v='$(NDS_P4_LAB_FALLBACK)'; \
 	[ "$$(cat $@ 2>/dev/null)" = "$$v" ] || echo "$$v" > $@
 $(foreach row,$(NDS_P4_REGISTRY),$(eval $(call NDS_P4_EXPORT_RULE,$(call nds_p4_field,$(row),1),$(call nds_p4_field,$(row),2),$(call nds_p4_field,$(row),3),$(call nds_p4_field,$(row),4),$(call nds_p4_field,$(row),5))))
+# A clip whose frames ease into another recipe's (ultimate.py "blend_into")
+# is rebuilt with that recipe: Palutena's dash with her run.
+$(PROJECT_ROOT)/builds/p6-art/palutena/anims/dash_run.o2r: $(PROJECT_ROOT)/art/p6/palutena/anims/run.json
 $(foreach row,$(NDS_P4_ENABLED_ROWS),$(eval $(call NDS_P4_CONTENT_RULES,$(call nds_p4_field,$(row),1),$(call nds_p4_field,$(row),2),$(call nds_p4_field,$(row),3),$(call nds_p4_field,$(row),4),$(shell echo $$((64 + $(call nds_p4_field,$(row),4)))))))
 # Every content's O2R containers, staged into NitroFS beside the vanilla reloc
 # files in one recipe: contents share files (Marth's and Roy's), and two

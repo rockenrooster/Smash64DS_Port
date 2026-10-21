@@ -1919,18 +1919,8 @@ static void ndsP4PalutenaEntryCase(FTStruct *fp)
     }
 }
 
-/* Her dash is Peach's stride and her run Ultimate's lean, and the game cuts
- * from the dash's frame 11 to the run's first (dash_to_run 12): her hips
- * turned 28 degrees, her legs 58-112, her dress 34 in one tick. Owner
- * 2026-10-20: "it needs to be a perfectly smooth blend". */
-static const NDSP4PoseBlend sNdsP4PalutenaPoseBlends[] = {
-    { nFTCommonStatusDash, nFTCommonStatusRun, 10u, 0u },
-    { -1, -1, 0u, 0u },
-};
-
 const NDSP4Overrides gNdsP4PalutenaOverrides = {
     .update_damage = ndsP4PalutenaUpdateDamage,
-    .pose_blends = sNdsP4PalutenaPoseBlends,
     .entry_case = ndsP4PalutenaEntryCase,
     .after_proc_map = ndsP4PalutenaAfterProcMap,
     /* Ultimate's motions; its hits collide in the stage's plane. */

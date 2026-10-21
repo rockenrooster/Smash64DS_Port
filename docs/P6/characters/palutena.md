@@ -1266,6 +1266,42 @@ game's camera, back faces culled as the DS culls them):
   them), and her draw restores 22 more matrices a frame (314 high, 270
   low). The cards and her congratulations still were baked again.
 
+## Owner 2026-10-20 (night): the dash ends on the run's first frame
+
+- **Dash into run, again** (BUGS.md, after play-p7v: "palutena's run start >
+  run animation is STILL bugged. the end of the start run animation should
+  be pretty much the exact same as the 1st frame of the running animation.
+  there is an obvious angle difference that is jarring with just a single
+  left or right d-pad press"). The 10-tick blend above started from the
+  wrong pose: Ultimate's dash (a02dash) straightens up over the frames the
+  game shows last (10 and 11: her body upright, the staff vertical), so she
+  leaned in the dash, stood up at its end and leaned again over the run's
+  first ten ticks (the clips rendered as the game cuts them, before and
+  after: scratch `runfix/run_video.py`).
+- Now the dash's own frames lead into the run: `ultimate.py` `blend_into`
+  eases the dash's frames 4-11 (smoothstep) into her run's own frames,
+  moving with them (the run's 112-119 of its 120-frame loop), so the game's
+  cut at the dash's frame 12 (`dash_to_run`) lands on the run's frame 0 as
+  if the run had been playing; a dash played on past the cut (the stick let
+  go before the run) eases back to its own frames by 20
+  (`art/p6/palutena/anims/dash_run.json`). A recipe's frames are now built
+  by `_frames`, split out of `build()` so the other recipe can be built
+  alongside; the Makefile rebuilds `dash_run.o2r` when `run.json` changes.
+- The runtime blend is gone (`NDSP4Overrides.pose_blends`,
+  `ndsP4PoseBlendBegin`/`AfterAnimKeys`, `ftMainPlayAnim`'s main-RAM tail):
+  nothing else used it, and its four player slots held 4.6 KB of BSS.
+- Every other recipe builds byte-identical with the split (179 of 180
+  Palutena and Ike clips and skirt guides against HEAD's `ultimate.py`; the
+  dash the one that differs).
+- Lab (`build-sweep-s38`, forced input from her wait: Turn, Dash, Run; the
+  joints' rotations each tick at the parts transform, scratch
+  `cap_run2.ps1`): the largest change a tick in the four tracked joints
+  (rows 1, 2, 16 and 21) from the dash's last frames through the
+  run's first twelve ticks is 0.3-0.6 degrees across the cut and 6.4 in the
+  dash's own ease, against 50 degrees at the cut before and 35-46 degrees
+  flickering over the next eight ticks (the blend and the 30 Hz pose hold
+  alternating). Frames: `artifacts/visibility/p6-vfx/palurun38/dash_run_sheet.png`.
+
 ## Animations (the owner's 3DS references, 2026-10-14)
 
 Superseded by Ultimate's motions above (the recipes below were keyposes;

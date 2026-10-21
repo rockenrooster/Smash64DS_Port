@@ -1,5 +1,5 @@
 {
- "comment": "Ultimate's dash (a02dash): the glide's push-off (owner p6p: lower, the feet trailing, the head level), on the Dash row's 28 frames. Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
+ "comment": "Ultimate's dash (a02dash): the glide's push-off (owner p6p: lower, the feet trailing, the head level), on the Dash row's 28 frames; its frames 4-11 eased into her run's own frames so the game's cut to the run (dash_to_run 12) lands on the run's first, and a dash played on past it (no run) eased back by 20 (owner 2026-10-20: \"the end of the start run animation should be pretty much the exact same as the 1st frame of the running animation\"). Retargeted onto her rig by scripts/p6/ultimate.py from the owner's local Ultimate files (never committed, P6 D1).",
  "ultimate": {
   "fighter": "palutena",
   "skeleton": "peach",
@@ -22,6 +22,15 @@
    "motion": "a00wait1",
    "frame": 0,
    "frames": 3
+  },
+  "blend_into": {
+   "recipe": "run",
+   "cut": 12,
+   "frames": [
+    4,
+    11
+   ],
+   "leave": 20
   }
  }
 }
