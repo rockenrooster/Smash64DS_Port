@@ -851,3 +851,29 @@ frames are lean materializations (27 of the 43 over-gate frames in the
 `s48` profile on Congo Jungle), audio card reads and the effects, and on the
 stages whose program still does not fit (Congo Jungle, Final Destination)
 the uncompiled stage path, ~290K cycles a frame.
+
+### The mirrors on `s50` (2026-10-21)
+
+Four identical contents, WORK P95 (two-VBlank share), 1,960 frames:
+
+* Dream Land, all nineteen: 935,424 (Mad Piano) to 1,224,192 (Meta Knight),
+  every one >= 95.1%; only Palutena over the stress target at 1,278,464.
+* Saffron City: Palutena 1,280,192, Bowser 1,316,224, Crash 1,275,584, Sonic
+  1,297,472, Meta Knight 1,316,672, Snake 1,273,024, Ike 1,266,496, Roy
+  1,292,928 (all >= 94.8%).
+* Hyrule Temple: Palutena 1,385,344 (89.4%), Bowser 1,240,064, Crash
+  1,304,960, Sonic 1,278,720, Meta Knight 1,310,464, Snake 1,298,048, Ike
+  1,356,224, Roy 1,345,856.
+
+Their stage programs load (reason 0); the cost is the fighters'. Four
+Palutenas on Hyrule Temple (`s52p` profile): the lean kernel 139K cycles a
+frame, the pose player ~215K (parse 90K: her clips key every frame), the
+stage program 104K, collision ~150K, soft-float ~85K; the over-gate frames
+are her pillar and wings (the entry-effect submit +121K a frame).
+
+Tried and dropped, both reverted: the compiled program's translated painter
+in the uncompiled no-Z path (`s51`: heavy roster on Hyrule Temple 1,706,112
+-> 1,702,208, Congo Jungle 1,396,224 -> 1,403,328), and a fast corner loop
+for unlit per-corner-colour entry groups (`s52`: the same GX words, replay
+digests identical, Palutena's mirrors -0.4% to +0.4%): the submit's tail looks
+bound by the geometry engine, not the loop.
