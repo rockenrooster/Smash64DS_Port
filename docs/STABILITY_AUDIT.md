@@ -133,6 +133,10 @@ rematch:
   Knight, Wolf; Ganondorf, Peach, Snake, Kirby; Marth, Roy, Sheik, Mr. Game &
   Watch), every item at Very High, Hyrule Castle and Sector Z: 0 desyncs,
   0 aborts, heap low-water 31,100 (`NDS_NET_LAB_SWEEP_REPRO=3`).
+- Re-run 2026-10-21 on the dead-byte lending (`d6a78692b1a`, ship-config
+  lab ROM `net-rep3b`, the same four mixes and settings): 0 desyncs, 0 aborts
+  on both consoles, host heap low-water 47,728 after three matches (was
+  31,100).
 - Three 1-minute matches (the sweep): both consoles load the selected stage in
   150-153 VBlanks (2.5 s) and start within a frame of each other. The owner's
   "client lags the host loading the stage" is not in the game
