@@ -44,7 +44,7 @@ generated stage and item code (`*.exec.inc`) that tests them. Proof: every confi
 `make -n -B` compile list preprocessed (`-E -P`) before and after, 483 translation units x 4
 configs, byte-identical.
 
-## The P1 battle targets and the Results lab (13 + 1) -- this commit
+## The P1 battle targets and the Results lab (13 + 1) -- `5da3bb2599b`
 
 `smash64ds-battle-playable-hwtri` (the frozen P1 battle ROM) and its tick-HUD, proof, audio-FGM,
 fast, Task 49 differ, freeze-diagnostics on/off, coarse (and its three variants) and forensic
