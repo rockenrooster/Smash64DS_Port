@@ -176,3 +176,13 @@ $(NDS_P4_GEN)/onep_art/.nitrofs-staged: $(NDS_P4_ONEP_ART_HEADER)
 	@for f in $(NDS_P4_GEN)/onep_art/o2r/*; do if [ -e "$$f" ]; then cp -f "$$f" "$(NITROFS_DIR)/reloc/p4/$${f##*/}" || exit 1; fi; done
 	@touch $@
 $(OUTPUT).nds: $(NDS_P4_GEN)/onep_art/.nitrofs-staged
+# P7: the contents' dead article geometry (scripts/p4/p4_dead_spans.py): the
+# display lists and vertices only the entry-effect packet draws, which
+# battleship_ftmanager.c lends to a VS battle once their files load.
+NDS_P4_DEAD_SPANS_H := $(NDS_P4_GEN)/nds_p4_dead_spans.generated.h
+$(NDS_P4_DEAD_SPANS_H): $(PROJECT_ROOT)/scripts/p4/p4_dead_spans.py \
+		$(PROJECT_ROOT)/scripts/p4/p4_native_owner.py \
+		$(foreach name,$(NDS_P4_ENABLED),$(NDS_P4_GEN)/$(name)/articles.json)
+	python "$(PROJECT_ROOT)/scripts/p4/p4_dead_spans.py" --gen-root "$(NDS_P4_GEN)" \
+		--contents "$(NDS_P4_ENABLED)" --out "$@"
+battleship_ftmanager.o: $(NDS_P4_DEAD_SPANS_H)

@@ -1777,6 +1777,9 @@ void ndsP4EntryFileEnsure(FTStruct *fp)
     }
     *slot = data;
     gNdsP4EntryDeferLoads++;
+    /* Sonic's Tails plane draws from the entry-effect packet: its lists
+     * and vertices go back to the battle the moment the file is in. */
+    ndsP4LendArticleDeadSpans();
 }
 
 void ndsP4AfterProcMapSlow(GObj *fighter_gobj)

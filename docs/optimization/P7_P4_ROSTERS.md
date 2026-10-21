@@ -733,3 +733,70 @@ replay digests identical to `s40`. Saffron City's mixes (P95, two VBlanks):
 
 Saffron's mix A now stays above the GObj latch (low-water 20,912 ->
 25,992 B) and pays for every effect it spawns, as Hyrule Temple's did.
+
+## The contents' dead article geometry (2026-10-21, `s47`/`s48`)
+
+The heaviest four-different roster (Crash, Sonic, Mr. Game & Watch,
+Palutena; fkinds 0, 1, 0, 1) starved the heap on half the stages on `s46`:
+low-water 4,728 B on Congo Jungle, 4,816 on Yoshi's Island, 7,516 on Saffron
+City, 11,316 on Final Destination, under the 25,600 B floor, and with no
+stage program on eight stages (`P2StageProgReason` 3: neither the whole
+program nor any segment range fit).
+
+A content's effects and weapons draw from the entry-effect packet, which
+bakes their geometry: the runtime admits a list by comparing a DObj's list
+pointer with `*storage + offset` and never reads it (a root that declines
+its native draw goes to the stage body, which rejects it as `NO_PROGRAM` and
+interprets nothing). The lists and vertices still sit in the special files.
+
+* `scripts/p4/p4_dead_spans.py` emits, per file, the ranges the article roots
+  of every enabled content reach (`articles.json`, unioned: Marth, Roy and Ike
+  share 0xDA7), less what a model-part sidecar reaches (the fighter
+  renderer's, Kirby's held weapons included). Only a content's own files
+  (ids past 0x852) qualify. A range stays live when a pointer outside the
+  ranges -- in the file or in any staged file -- names it other than at a
+  root (a display-list call outside them would read it), or when an image
+  load overlaps it; an external relocation keeps its 16 bytes, the chain's
+  own words. Bowser's 7,584 B, Crash's 0x141A and Lanky's 0x1510 stay: the
+  parent's weapon attributes in Main (Yoshi's star, Mario's fireball) name a
+  vertex array or a list inside them as data. 22 rows, 9 files, 49,296 B.
+* `battleship_ftmanager.c ndsP4LendArticleDeadSpans` runs after each
+  content's files load (and from `ndsP4EntryFileEnsure` once Sonic's
+  entry-only Tails plane file loads, 21,568 B of its 75,168): a VS battle
+  lends every loaded, unlent file's rows. The reloc registry now holds holes
+  for up to 12 files (32 ranges) a heap generation and refuses a file that
+  is not this scene's own whole copy; the battle's span allocator holds 32.
+
+Heavy roster, WORK P95 (frames within two VBlanks) and heap low-water,
+1,960 frames (`s45`/`s46` -> `s47`; 16,224 B of article bytes lent at battle
+start, Sonic's file not loaded in these matches):
+
+| stage | P95 before | P95 `s47` | low-water before | low-water `s47` |
+|---|---|---|---|---|
+| Peach's Castle (0) | 1,331,904 | 1,270,336 (96.3%) | 45,360 | 44,592 |
+| Sector Z (1) | 1,544,640 | 1,474,816 (90.3%) | 19,816 | 26,464 |
+| Congo Jungle (2) | 1,360,576 | 1,408,000 (93.6%) | 4,728 | 7,936 |
+| Planet Zebes (3) | 1,346,560 | 1,415,424 (93.4%) | 15,136 | 27,456 |
+| Hyrule Castle (4) | 1,304,448 | 1,279,680 (96.0%) | 39,904 | 41,704 |
+| Yoshi's Island (5) | 1,448,000 | 1,484,800 (89.2%) | 4,816 | 14,080 |
+| Dream Land (6) | 1,359,104 | 1,336,064 (95.2%) | 24,476 | 37,372 |
+| Saffron City (7) | 1,520,000 | 1,483,584 (90.9%) | 7,516 | 20,460 |
+| Mushroom Kingdom (8) | 1,457,792 | 1,450,112 (92.2%) | 24,072 | 37,632 |
+| Meta Crystal (13) | 1,214,528 | 1,207,232 (96.7%) | 42,164 | 44,044 |
+| Duel Zone (14) | 1,070,848 | 1,065,920 (99.0%) | 45,984 | 43,936 |
+| Final Destination (16) | 1,315,648 | 1,324,928 (95.7%) | 11,316 | 23,720 |
+| First Destination (41) | 1,236,352 | 1,193,792 (98.0%) | 48,312 | 47,592 |
+| Bowser's Stadium (42) | 1,211,840 | 1,194,368 (98.0%) | 38,820 | 49,860 |
+| Hyrule Temple (43) | 1,708,928 | 1,704,320 (68.4%) | 22,976 | 25,920 |
+| Dinosaur Land (44) | 1,465,280 | 1,485,248 (86.7%) | 13,036 | 27,456 |
+
+Where the heap stays under the GObj latch the match keeps fewer effects, so a
+stage whose low-water rose past it can read a higher P95 (Planet Zebes):
+that is the cost of every effect drawing. Congo Jungle, Yoshi's Island,
+Saffron City and Final Destination are still under the floor with this
+roster, and
+the roster is over the 1,250,000 stress target on ten stages: the next
+passes are the roster's heap census and its profile. Hyrule Castle's two
+lean declines are Mr. Game & Watch's (`nNDSFtrLeanDeclineStale`, bit 16 of
+`gNdsFtrLeanDeclineReasons[41]`): a fresh list whose textures were not
+resident at its guard.

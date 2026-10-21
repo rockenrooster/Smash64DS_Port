@@ -578,6 +578,79 @@ static void ndsP4LoadOpenSpecialFiles(u32 content, FTData *data)
     }
 }
 
+/* P7 (2026-10-21): the contents' article display lists and vertices, which
+ * only the entry-effect packet draws -- the runtime admits a list by comparing
+ * a DObj's list pointer with *storage + offset and never reads it -- lent to
+ * a VS battle as allocation space once their files load, as the stage's are
+ * (reloc_backend_compat_shims.c ndsNativeStageLendDeadSpans): Crash's and
+ * Palutena's 8 KB each, Wolf's 10 KB, and Sonic's 22 KB when his entry-only
+ * file loads at the entry (nds_p4.c ndsP4EntryFileEnsure asks again then).
+ * The rows, by file, are scripts/p4/p4_dead_spans.py's; a file not loaded in
+ * this scene, of another size, or lent already is refused by the registry.
+ * A root that declines its native draw is rejected by the stage body, which
+ * never interprets a list. */
+#if __has_include("nds_p4_dead_spans.generated.h")
+#include "nds_p4_dead_spans.generated.h"
+#endif
+#if !defined(NDS_P4_DEAD_SPAN_ROWS)
+#define NDS_P4_DEAD_SPAN_ROWS(X)
+#endif
+void ndsBattleDeadSpanAdd(void *base, u32 bytes);
+/* A file's ranges the registry takes (p4_dead_spans.py FILE_SPANS). */
+#define NDS_P4_DEAD_SPAN_FILE_SPANS 8u
+
+void ndsP4LendArticleDeadSpans(void)
+{
+    static const struct
+    {
+        u32 file;
+        u32 file_bytes;
+        u32 offset;
+        u32 bytes;
+    } rows[] = {
+#define NDS_P4_DEAD_SPAN_ROW(file, file_bytes, offset, bytes) \
+        { (file), (file_bytes), (offset), (bytes) },
+        NDS_P4_DEAD_SPAN_ROWS(NDS_P4_DEAD_SPAN_ROW)
+#undef NDS_P4_DEAD_SPAN_ROW
+        { 0xffffffffu, 0u, 0u, 0u }
+    };
+    u32 lo[NDS_P4_DEAD_SPAN_FILE_SPANS];
+    u32 hi[NDS_P4_DEAD_SPAN_FILE_SPANS];
+    u32 i = 0u;
+
+    if (gSCManagerSceneData.scene_curr != nSCKindVSBattle)
+    {
+        return;
+    }
+    while (rows[i].file != 0xffffffffu)
+    {
+        const u32 file = rows[i].file;
+        const u32 file_bytes = rows[i].file_bytes;
+        u32 count = 0u;
+        u8 *data;
+        u32 k;
+
+        for (; rows[i].file == file; i++)
+        {
+            if (count < NDS_P4_DEAD_SPAN_FILE_SPANS)
+            {
+                lo[count] = rows[i].offset;
+                hi[count] = rows[i].offset + rows[i].bytes;
+                count++;
+            }
+        }
+        data = (u8 *)ndsRelocLendDeadSpans(file, file_bytes, lo, hi, count);
+        if (data == NULL)
+        {
+            continue;
+        }
+        for (k = 0u; k < count; k++)
+        {
+            ndsBattleDeadSpanAdd(data + lo[k], hi[k] - lo[k]);
+        }
+    }
+}
+
 /* S15: a content's match loads its select-screen pack -- Main whole, the
  * model without the display lists its native owner image draws -- in place
  * of the source loader's whole files (ftManagerSetupFilesMainKind), restores
@@ -681,6 +754,7 @@ static void ndsP4SetupFilesForParent(s32 fkind)
         }
 #endif
         ndsP4LoadOpenSpecialFiles(content, f->data);
+        ndsP4LendArticleDeadSpans();
         ndsP4PublishParentMotion(f);
         ndsEFManagerRetryDeferredDescs();
         ndsP4BindMenuScripts(content);

@@ -863,6 +863,9 @@ const NDSP4Overrides *ndsP4Overrides(const FTStruct *fp);
 #define NDS_P4_ENTRY_DEFER_KEEP_FREE (40u * 1024u)
 sb32 ndsP4DefersEntryDependency(u32 content, u32 dep_asset);
 void ndsP4EntryFileEnsure(FTStruct *fp);
+/* battleship_ftmanager.c: lend the loaded content files' dead article
+ * geometry to a VS battle (each file once a heap generation). */
+void ndsP4LendArticleDeadSpans(void);
 /* reloc_preview_pack.c: the deferred row's load and Main patch; the file's
  * data, or NULL (no row this match, or no room). */
 void *ndsRelocLoadDeferredEntryFile(u32 content, u32 keep_free);

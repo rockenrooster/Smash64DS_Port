@@ -357,10 +357,11 @@ void *ndsBattleIdleScratchAlloc(size_t size, u32 alignment)
 
 /* Dead bytes of the battle's own files lent as allocation space: a stage's
  * display lists and vertex arrays, which nothing reads once its native packet
- * draws (ndsNativeStageLendDeadSpans). syTaskmanMalloc takes them after a VS
- * battle's loan and before the heap, best fit. Re-seeded by every
- * gcSetupObjman, like the idle scratch above. */
-#define NDS_BATTLE_DEAD_SPAN_MAX 4u
+ * draws (ndsNativeStageLendDeadSpans), and the contents' article lists, which
+ * only the entry-effect packet draws (ndsP4LendArticleDeadSpans).
+ * syTaskmanMalloc takes them after a VS battle's loan and before the heap,
+ * best fit. Re-seeded by every gcSetupObjman, like the idle scratch above. */
+#define NDS_BATTLE_DEAD_SPAN_MAX 32u
 extern volatile u32 gNdsTaskmanHeapGeneration;
 static u8 *sNdsBattleDeadSpanCursor[NDS_BATTLE_DEAD_SPAN_MAX];
 static u8 *sNdsBattleDeadSpanEnd[NDS_BATTLE_DEAD_SPAN_MAX];

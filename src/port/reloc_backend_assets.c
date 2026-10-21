@@ -6616,32 +6616,45 @@ static void ndsRelocSetForceStatusBufferFile(u32 token, void *addr)
                           sNdsRelocForceStatusBufferMax, token, addr);
 }
 
-/* A loaded file whose dead bytes the battle lent out as allocation space
- * (ndsRelocLendDeadSpans): an address inside one of its holes belongs to
- * whatever was allocated there, not to the file. One file a heap generation
- * (the stage's geometry). */
-#define NDS_RELOC_HOLE_MAX 4u
-static const void *sNdsRelocHoleData;
+/* Loaded files whose dead bytes the battle lent out as allocation space
+ * (ndsRelocLendDeadSpans): an address inside one of their holes belongs to
+ * whatever was allocated there, not to the file. A heap generation's: the
+ * stage's geometry and the match's content files (holes of file f are
+ * [first[f], first[f + 1])). */
+#define NDS_RELOC_HOLE_FILE_MAX 12u
+#define NDS_RELOC_HOLE_MAX 32u
+static const void *sNdsRelocHoleData[NDS_RELOC_HOLE_FILE_MAX];
+static u8 sNdsRelocHoleFirst[NDS_RELOC_HOLE_FILE_MAX + 1u];
 static u32 sNdsRelocHoleGeneration;
-static u32 sNdsRelocHoleCount;
+static u32 sNdsRelocHoleFileCount;
 static u32 sNdsRelocHoleLo[NDS_RELOC_HOLE_MAX];
 static u32 sNdsRelocHoleHi[NDS_RELOC_HOLE_MAX];
 
-static sb32 ndsRelocRangeTouchesHole(uintptr_t offset, size_t size)
+static sb32 ndsRelocRangeTouchesHole(const void *data, uintptr_t offset,
+                                     size_t size)
 {
+    u32 f;
     u32 i;
 
     if (sNdsRelocHoleGeneration != gNdsTaskmanHeapGeneration)
     {
         return FALSE;
     }
-    for (i = 0u; i < sNdsRelocHoleCount; i++)
+    for (f = 0u; f < sNdsRelocHoleFileCount; f++)
     {
-        if ((offset < sNdsRelocHoleHi[i]) &&
-            (sNdsRelocHoleLo[i] < offset + ((size != 0u) ? size : 1u)))
+        if (sNdsRelocHoleData[f] != data)
         {
-            return TRUE;
+            continue;
         }
+        for (i = sNdsRelocHoleFirst[f]; i < sNdsRelocHoleFirst[f + 1u]; i++)
+        {
+            if ((offset < sNdsRelocHoleHi[i]) &&
+                (sNdsRelocHoleLo[i] < offset + ((size != 0u) ? size : 1u)))
+            {
+                return TRUE;
+            }
+        }
+        return FALSE;
     }
     return FALSE;
 }
@@ -6663,8 +6676,8 @@ static s32 ndsRelocPointerRangeInLoadedFile(const NDSRelocLoadedFile *loaded,
     {
         return FALSE;
     }
-    if ((loaded->data == sNdsRelocHoleData) &&
-        (ndsRelocRangeTouchesHole(addr - base, size) != FALSE))
+    if ((sNdsRelocHoleFileCount != 0u) &&
+        (ndsRelocRangeTouchesHole(loaded->data, addr - base, size) != FALSE))
     {
         return FALSE;
     }
@@ -7007,15 +7020,33 @@ void *ndsRelocLendDeadSpans(u32 asset_id, u32 expect_size, const u32 *lo,
                             const u32 *hi, u32 count)
 {
     const NDSRelocLoadedFile *loaded = ndsRelocFindLoadedFileByAsset(asset_id);
+    u32 first;
     u32 i;
 
+    if (sNdsRelocHoleGeneration != gNdsTaskmanHeapGeneration)
+    {
+        sNdsRelocHoleFileCount = 0u;
+        sNdsRelocHoleFirst[0] = 0u;
+        sNdsRelocHoleGeneration = gNdsTaskmanHeapGeneration;
+    }
+    first = sNdsRelocHoleFirst[sNdsRelocHoleFileCount];
+    /* This scene's own copy, whole (a compact model owns only part of its
+     * range), once. */
     if ((loaded == NULL) || (loaded->data == NULL) ||
-        (loaded->data_size != expect_size) || (count == 0u) ||
-        (count > NDS_RELOC_HOLE_MAX) ||
-        ((sNdsRelocHoleGeneration == gNdsTaskmanHeapGeneration) &&
-         (sNdsRelocHoleCount != 0u)))
+        (loaded->data_size != expect_size) || (loaded->reserved[2] != 0u) ||
+        (loaded->owner_scene != (u32)gSCManagerSceneData.scene_curr) ||
+        (loaded->owner_generation != sNdsRelocSceneGeneration) ||
+        (count == 0u) || (sNdsRelocHoleFileCount >= NDS_RELOC_HOLE_FILE_MAX) ||
+        (count > NDS_RELOC_HOLE_MAX - first))
     {
         return NULL;
+    }
+    for (i = 0u; i < sNdsRelocHoleFileCount; i++)
+    {
+        if (sNdsRelocHoleData[i] == loaded->data)
+        {
+            return NULL;
+        }
     }
     for (i = 0u; i < count; i++)
     {
@@ -7028,12 +7059,12 @@ void *ndsRelocLendDeadSpans(u32 asset_id, u32 expect_size, const u32 *lo,
     }
     for (i = 0u; i < count; i++)
     {
-        sNdsRelocHoleLo[i] = lo[i];
-        sNdsRelocHoleHi[i] = hi[i];
+        sNdsRelocHoleLo[first + i] = lo[i];
+        sNdsRelocHoleHi[first + i] = hi[i];
     }
-    sNdsRelocHoleCount = count;
-    sNdsRelocHoleData = loaded->data;
-    sNdsRelocHoleGeneration = gNdsTaskmanHeapGeneration;
+    sNdsRelocHoleData[sNdsRelocHoleFileCount] = loaded->data;
+    sNdsRelocHoleFileCount++;
+    sNdsRelocHoleFirst[sNdsRelocHoleFileCount] = (u8)(first + count);
     /* A memoized containment answer may name this file for an address in a
      * hole the moment it is lent. */
     memset(sNdsRelocFindContainingMemo, 0xff,
