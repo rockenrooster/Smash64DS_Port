@@ -435,6 +435,8 @@ def build_stage(stage: dict, stage_dir: Path, learn_pins: bool, owner_scale: flo
     write_if_changed(stage_dir / f"{name}.gxp", gxp)
     wallpaper = convert_wallpaper(stage, stage_dir, name)
     nitro = stage_nitro_files(stage, stage_dir, scaled)
+    dead_bytes, dead = (dead_spans(stage, stage_dir) if stage["name"] in DEAD_SPAN_STAGES
+                        else (0, []))
     owners = {o[0]: o for o in desc.owner_specs}
     capture = []
     for seg in packet.segments:
@@ -460,6 +462,8 @@ def build_stage(stage: dict, stage_dir: Path, learn_pins: bool, owner_scale: flo
         "assets": list(desc.adapter_asset_ids), "sizes": list(desc.adapter_asset_sizes),
         "capture": capture, "wallpaper": wallpaper,
         "owner_scale": float(owner_scale),
+        "dead_file": stage["map_geometry"][0], "dead_file_bytes": dead_bytes,
+        "dead_spans": dead,
     }
 
 
@@ -489,6 +493,117 @@ def owner_scaled(stage: dict, stage_dir: Path, scale: float):
               if L["dobjdesc"] is not None and L["dobjdesc"][0] == geo_fid]
     report = OS.geometry(f.payload, slots, layers, geo_at, scale)
     return gcm.serialize_o2r(f), report
+
+
+# The stages whose geometry file lends its dead bytes to the battle (P7,
+# owner 2026-10-21: free memory for the heaviest mixes, Hyrule Temple first).
+DEAD_SPAN_STAGES = frozenset(("hyrule_temple",))
+DEAD_SPAN_MIN = 512
+
+
+def dead_spans(stage: dict, stage_dir: Path) -> tuple[int, list[tuple[int, int]]]:
+    """(payload bytes, [(offset, bytes)]): the geometry file's ranges that hold
+    only display lists and vertex arrays the layers' DObjs reach. Once the
+    stage's native packet loads, nothing reads them: the owner draws the
+    packet, a layer's DL pointer is only compared (the binding check), and the
+    runtime skips the layers' source draw when it lends them
+    (ndsNativeStageLendDeadSpans). Any other pointer into a range falsifies,
+    as does an image load inside one."""
+    import generate_compact_ground_maps as gcm  # noqa: E402
+    geo_fid = stage["map_geometry"][0]
+    name = f"{geo_fid:04x}"
+    f = gcm.parse_o2r((stage_dir / "nitro" / name).read_bytes(), name)
+    data = bytes(f.payload)
+    if f.external_head != 0xFFFF:
+        raise DonorError(f"{stage['name']}: geometry file {name} has external relocations")
+    slots = dict(gcm.chain_slots(data, f.internal_head, name))
+
+    def u32(at: int) -> int:
+        return struct.unpack_from(">I", data, at)[0]
+
+    roots, identity = set(), set()
+    for layer in stage["layers"]:
+        if layer["dobjdesc"] is None:
+            continue
+        fid, base = layer["dobjdesc"]
+        if fid != geo_fid:
+            raise DonorError(f"{stage['name']}: layer {layer['index']} DObjs outside {name}")
+        dl_link = (stage["layer_mask"] >> layer["index"]) & 1
+        for i in range(layer["dobj_count"]):
+            slot = base + i * 0x2C + 4
+            if slot not in slots:
+                continue
+            identity.add(slot)
+            if not dl_link:
+                roots.add(slots[slot])
+                continue
+            at = slots[slot]
+            while u32(at) != 4:  # DObjDLLink: list_id 4 ends the array
+                if at + 4 in slots:
+                    identity.add(at + 4)
+                    roots.add(slots[at + 4])
+                at += 8
+    blocks, vertices, images, seen = [], [], [], set()
+
+    def walk(at: int) -> None:
+        if at in seen:
+            return
+        seen.add(at)
+        start, img = at, None
+        while True:
+            w0, w1 = struct.unpack_from(">II", data, at)
+            op = w0 >> 24
+            if op == 0x01:  # G_VTX
+                if at + 4 not in slots:
+                    raise DonorError(f"{stage['name']}: G_VTX at {name}+0x{at:x} without an address")
+                vertices.append((slots[at + 4], slots[at + 4] + ((w0 >> 12) & 0xFF) * 16))
+            elif op == 0xFD:  # G_SETTIMG
+                img = (slots.get(at + 4), (w0 >> 19) & 3, (w0 & 0xFFF) + 1)
+            elif op in (0xF3, 0xF4, 0xF0) and img is not None and img[0] is not None:
+                t, siz, width = img
+                if op == 0xF3:
+                    n = ((((w1 >> 12) & 0xFFF) + 1) * (4 << siz) + 7) // 8
+                elif op == 0xF4:
+                    n = ((((w1 & 0xFFF) >> 2) + 1) * width * (4 << siz) + 7) // 8
+                else:
+                    n = (((w1 >> 14) & 0x3FF) + 1) * 2
+                images.append((t, t + n))
+            elif op == 0xDE:  # G_DL
+                if at + 4 in slots:
+                    walk(slots[at + 4])
+                if (w0 >> 16) & 0xFF == 1:
+                    at += 8
+                    break
+            elif op == 0xDF:
+                at += 8
+                break
+            at += 8
+        blocks.append((start, at))
+
+    for root in sorted(roots):
+        walk(root)
+    spans = []
+    for a, b in sorted(blocks + vertices):
+        if spans and a <= spans[-1][1]:
+            spans[-1] = (spans[-1][0], max(spans[-1][1], b))
+        else:
+            spans.append((a, b))
+
+    def inside(x: int) -> bool:
+        return any(a <= x < b for a, b in spans)
+
+    for slot, target in slots.items():
+        if inside(target) and not inside(slot) and slot not in identity:
+            raise DonorError(f"{stage['name']}: {name}+0x{slot:x} points into a dead range")
+    for a, b in images:
+        if any(a < y and x < b for x, y in spans):
+            raise DonorError(f"{stage['name']}: an image load at 0x{a:x} overlaps a dead range")
+    out = []
+    for a, b in spans:
+        a, b = (a + 15) & ~15, b & ~15
+        if b - a >= DEAD_SPAN_MIN:
+            out.append((a, b - a))
+    return len(data), out
 
 
 def stage_nitro_files(stage: dict, stage_dir: Path, scaled=None) -> list[int]:
@@ -625,6 +740,13 @@ def write_runtime(out: Path, facts: list[dict], content_bonus: list[dict] | None
           " * stage_export.py contents_bonus.json): its donor row's pair. */",
           "#define NDS_P5_CONTENT_BONUS_ROWS(X) \\"]
     h += [f"    X({r['content']}, {r['btt']}, {r['btp']}) \\" for r in (content_bonus or [])]
+    h += ["    /* end */", "",
+          "/* X(gkind, file, file bytes, offset, bytes): a geometry file's dead",
+          " * display-list and vertex bytes, lent to the battle as allocation space",
+          " * once the stage's packet loads (stage_generate.py dead_spans). */",
+          "#define NDS_P5_DEAD_SPAN_ROWS(X) \\"]
+    h += [f"    X({s['gkind']}, {s['dead_file']:#x}u, {s['dead_file_bytes']}u, {a:#x}u, {n}u) \\"
+          for s in facts for a, n in s.get("dead_spans", ())]
     h += ["    /* end */", ""]
     if facts:
         h += ["/* Their packets join the blob maxima the workspaces are sized by. */"]

@@ -6,6 +6,7 @@
 _Static_assert(sizeof(NDSStageGxHeader) == 48, "stage GX header ABI");
 _Static_assert(sizeof(NDSStageGxRun) == 32, "stage GX run ABI");
 _Static_assert(sizeof(NDSStageGxPatch) == 8, "stage GX patch ABI");
+_Static_assert(sizeof(NDSStageGxSegment) == 16, "stage GX segment ABI");
 /* The body loads at the first stage draw. What the match allocates after
  * that is draw caches that check their own floors and decline (the lean
  * spares, the world caches; the elastic motion cache yields): Hyrule
@@ -65,13 +66,24 @@ typedef struct NDSStageGxRunMemo
     u32 textured;
     u32 material_gen;           /* texture key generation + 1; 0 = unwritten */
     u32 projection_serial;      /* sNdsStageGxProjSerial its NOZ words hold */
-    /* A rigid run's world-space box for the cull (ndsStageGxRunOutsideView),
-     * valid while world_serial is gNdsStageRigidWorldSerial + 1. */
+} NDSStageGxRunMemo;
+/* A rigid run's world-space box for the cull (ndsStageGxRunOutsideView),
+ * valid while world_serial is gNdsStageRigidWorldSerial + 1. Only a program
+ * that culls carries them (ndsStageGxCullsRuns: never a VS battle, where
+ * they were 28 B of every run's memo: 4,956 B of Hyrule Temple's). */
+typedef struct NDSStageGxRunWorld
+{
     s32 world_lo[3];
     s32 world_hi[3];
     u32 world_serial;
-} NDSStageGxRunMemo;
+} NDSStageGxRunWorld;
 static NDSStageGxRunMemo *sNdsStageGxRunMemo;
+static NDSStageGxRunWorld *sNdsStageGxRunWorld;
+/* The segments whose slices this battle loaded (bit per segment): a heap
+ * short of the whole program takes the best consecutive range of them
+ * (ndsStageGxLoad), and the rest draw uncompiled. */
+static u32 sNdsStageGxSegmentMask;
+volatile u32 gNdsP2StageProgSegments;
 static NDSRendererMatrix20p12 sNdsStageGxProjCopy;
 static u32 sNdsStageGxProjSerial, sNdsStageGxProjGen;
 /* Bumped by every successful program load (the segment fast path's tables
@@ -106,14 +118,19 @@ static u32 ndsStageGxSourceHash(void)
     return hash;
 }
 
-static sb32 ndsStageGxValidate(const NDSStageGxHeader *h, const u8 *body)
+/* The loaded runs [run_lo, run_hi), whose patches and words must lie in the
+ * loaded slices [patch_lo, patch_hi) and [word_lo, word_hi). The tables are
+ * indexed as the whole program's: a partial load's pointers are biased by
+ * its slices' first rows (ndsStageGxLoad). */
+static sb32 ndsStageGxValidate(const NDSStageGxHeader *h,
+                               const NDSStageGxRun *runs,
+                               const NDSStageGxPatch *patches, const u32 *words,
+                               u32 run_lo, u32 run_hi, u32 patch_lo,
+                               u32 patch_hi, u32 word_lo, u32 word_hi)
 {
-    const NDSStageGxRun *runs = (const NDSStageGxRun *)body;
-    const NDSStageGxPatch *patches = (const NDSStageGxPatch *)(runs + h->run_count);
-    const u32 *words = (const u32 *)(patches + h->patch_count);
     u32 i;
     u64 static_world = (u64)h->static_world_lo | ((u64)h->static_world_hi << 32);
-    for (i = 0u; i < h->run_count; i++)
+    for (i = run_lo; i < run_hi; i++)
     {
         const NDSStageGxRun *r = &runs[i];
         u32 segment, wanted = FALSE, p, cursor, end, depth = 0u, vertices = 0u;
@@ -128,8 +145,9 @@ static sb32 ndsStageGxValidate(const NDSStageGxHeader *h, const u8 *body)
         if (wanted == FALSE) { if (r->word_count != 0u) { return FALSE; } continue; }
         if (r->word_count < 4u || r->segment != segment ||
             r->triangles != sNdsNativeStageRuns[i].triangle_count ||
-            (u32)r->first_word + r->word_count > h->word_count ||
-            (u32)r->first_patch + r->patch_count > h->patch_count) { return FALSE; }
+            r->first_word < word_lo || (u32)r->first_word + r->word_count > word_hi ||
+            r->first_patch < patch_lo ||
+            (u32)r->first_patch + r->patch_count > patch_hi) { return FALSE; }
         if (words[r->first_word] != 0x002B2A29u) { return FALSE; }
         /* The bounds admit the GPU path only when the entire run is inside.
          * Refuse a producer whose bounds omit any source corner. */
@@ -310,19 +328,56 @@ static const char *const sNdsStageGxPaths[] = {
 #define NDS_STAGE_GX_PATH_COUNT \
     (sizeof(sNdsStageGxPaths) / sizeof(sNdsStageGxPaths[0]))
 
+static inline sb32 ndsStageGxCullsRuns(void);
+
+/* Battle-lifetime bytes for a program or a part of one: a VS battle's idle
+ * overlay tail first (2026-10-13: a vanilla roster leaves ~170 KB of the
+ * loan idle, and Hyrule Temple's 61,936 B body never fit the heap, so the
+ * stage drew uncompiled at 20 FPS), otherwise heap with
+ * NDS_STAGE_GX_HEAP_KEEP_FREE left over, or NULL. */
+static u8 *ndsStageGxAllocBody(u32 bytes)
+{
+    u8 *body = ndsVSBattleOverlayTryAlloc(bytes, 32u);
+
+    if (body == NULL)
+    {
+        if ((uintptr_t)gSYTaskmanGeneralHeap.end < (uintptr_t)gSYTaskmanGeneralHeap.ptr ||
+            (uintptr_t)gSYTaskmanGeneralHeap.end - (uintptr_t)gSYTaskmanGeneralHeap.ptr <
+                bytes + NDS_STAGE_GX_HEAP_KEEP_FREE)
+        { return NULL; }
+        body = syTaskmanMalloc(bytes, 32u);
+    }
+    return body;
+}
+
+/* A PROGRAM A SEGMENT RANGE AT A TIME (P7, 2026-10-21). The heaviest mixes
+ * of four contents leave Hyrule Temple's frame 0 60,668 B of heap (with the
+ * stage's dead bytes lent), and its whole program needs 66,136 B beside the
+ * 37,888 B keep-free: it drew uncompiled, ~330K ticks a frame. Format 9's
+ * trailer gives each segment's slices and hash, so a heap short of the whole
+ * program loads the consecutive segment range worth the most (no-Z
+ * triangles, the uncompiled path's expensive ones, weigh three) that fits,
+ * and the others draw uncompiled. At most this many segments are ranked. */
+#define NDS_STAGE_GX_PARTIAL_SEGMENTS 8u
+
 static sb32 __attribute__((noinline, cold, optimize("Os"))) ndsStageGxLoad(void)
 {
     NdsRelocAssetStream stream = { NULL };
     NDSStageGxHeader h;
+    NDSStageGxSegment seg[NDS_STAGE_GX_PARTIAL_SEGMENTS];
     u8 *body;
     u32 reason = 1u;
     u32 gkind = sNdsNativeStagePacketActive->gkind;
+    u32 memo_unit;
+    u32 run_lo, run_hi, patch_lo, patch_hi, word_lo, word_hi;
+    u32 mask;
     if ((gkind >= NDS_STAGE_GX_PATH_COUNT) || (sNdsStageGxPaths[gkind] == NULL))
     { return FALSE; }
     if (sNdsStageGxGeneration != gNdsTaskmanHeapGeneration)
     {
         sNdsStageGxGeneration = gNdsTaskmanHeapGeneration;
         sNdsStageGxRuns = NULL; sNdsStageGxAttempted = FALSE;
+        sNdsStageGxSegmentMask = 0u;
     }
     if (sNdsStageGxRuns != NULL) { return TRUE; }
     if (sNdsStageGxAttempted != FALSE) { return FALSE; }
@@ -330,7 +385,7 @@ static sb32 __attribute__((noinline, cold, optimize("Os"))) ndsStageGxLoad(void)
     if (!ndsRelocAssetStreamOpen(&stream, sNdsStageGxPaths[gkind]) ||
         !ndsRelocAssetStreamRead(&stream, 0u, &h, sizeof(h))) { goto failed; }
     reason = 2u;
-    if (h.magic != 0x31505847u || h.version != 8u || h.gkind != gkind ||
+    if (h.magic != 0x31505847u || h.version != 9u || h.gkind != gkind ||
         h.run_count != NDS_NATIVE_STAGE_RUN_COUNT || h.word_count == 0u || h.word_count > 16384u ||
         h.patch_count > 4096u || NDS_NATIVE_STAGE_SEGMENT_COUNT >= 32u ||
         h.segment_mask != (1u << NDS_NATIVE_STAGE_SEGMENT_COUNT) - 1u ||
@@ -339,40 +394,152 @@ static sb32 __attribute__((noinline, cold, optimize("Os"))) ndsStageGxLoad(void)
         h.body_bytes != h.run_count * sizeof(NDSStageGxRun) + h.patch_count * 8u + h.word_count * 4u ||
         h.source_hash != ndsStageGxSourceHash()) { goto failed; }
     reason = 3u;
-    /* The body lives as long as the battle. A VS battle's idle overlay tail
-     * takes it first (2026-10-13: a vanilla roster leaves ~170 KB of the
-     * loan idle, and Hyrule Temple's 61,936 B body never fit the heap, so the
-     * stage drew uncompiled at 20 FPS). Otherwise it is battle-lifetime heap
-     * with NDS_STAGE_GX_HEAP_KEEP_FREE left over, or the stage draws
-     * uncompiled. */
-    body = ndsVSBattleOverlayTryAlloc(
-        h.body_bytes + (h.run_count * sizeof(NDSStageGxRunMemo)), 32u);
-    if (body == NULL)
+    memo_unit = sizeof(NDSStageGxRunMemo) +
+        ((ndsStageGxCullsRuns() != FALSE) ? sizeof(NDSStageGxRunWorld) : 0u);
+    run_lo = 0u; run_hi = h.run_count;
+    patch_lo = 0u; patch_hi = h.patch_count;
+    word_lo = 0u; word_hi = h.word_count;
+    mask = h.segment_mask;
+    body = ndsStageGxAllocBody(h.body_bytes + h.run_count * memo_unit);
+    if (body != NULL)
     {
-        if ((uintptr_t)gSYTaskmanGeneralHeap.end < (uintptr_t)gSYTaskmanGeneralHeap.ptr ||
-            (uintptr_t)gSYTaskmanGeneralHeap.end - (uintptr_t)gSYTaskmanGeneralHeap.ptr <
-                h.body_bytes + (h.run_count * sizeof(NDSStageGxRunMemo)) +
-                NDS_STAGE_GX_HEAP_KEEP_FREE)
+        reason = 4u;
+        if (!ndsRelocAssetStreamRead(&stream, sizeof(h), body, h.body_bytes) ||
+            ndsStageGxHashBytes(body, h.body_bytes, 2166136261u) != h.body_hash)
         { goto failed; }
-        body = syTaskmanMalloc(
-            h.body_bytes + (h.run_count * sizeof(NDSStageGxRunMemo)), 32u);
+        sNdsStageGxRuns = (NDSStageGxRun *)(void *)body;
+        sNdsStageGxPatches = (NDSStageGxPatch *)(sNdsStageGxRuns + h.run_count);
+        sNdsStageGxWords = (u32 *)(void *)(sNdsStageGxPatches + h.patch_count);
+        body += h.body_bytes;
     }
-    if (body == NULL) { goto failed; }
-    reason = 4u;
-    if (!ndsRelocAssetStreamRead(&stream, sizeof(h), body, h.body_bytes) ||
-        ndsStageGxHashBytes(body, h.body_bytes, 2166136261u) != h.body_hash ||
-        !ndsStageGxValidate(&h, body)) { goto failed; }
+    else
+    {
+        const u32 table_at = sizeof(h) + h.body_bytes;
+        const u32 count = NDS_NATIVE_STAGE_SEGMENT_COUNT;
+        u32 value[NDS_STAGE_GX_PARTIAL_SEGMENTS];
+        u64 tried = 0u;
+        u32 stored = 0u;
+        u32 i, a, b;
+
+        if ((count > NDS_STAGE_GX_PARTIAL_SEGMENTS) ||
+            !ndsRelocAssetStreamRead(&stream, table_at, &stored, sizeof(stored)) ||
+            (stored != count) ||
+            !ndsRelocAssetStreamRead(&stream, table_at + sizeof(stored), seg,
+                                     count * sizeof(seg[0]))) { goto failed; }
+        for (i = 0u; i < count; i++)
+        {
+            const NDSNativeStageSegment *s = &sNdsNativeStageSegments[i];
+            u32 r;
+
+            if ((seg[i].first_run != s->first_run) || (seg[i].run_count != s->run_count) ||
+                (seg[i].first_patch != ((i == 0u) ? 0u :
+                    (u32)seg[i - 1u].first_patch + seg[i - 1u].patch_count)) ||
+                (seg[i].first_word != ((i == 0u) ? 0u :
+                    (u32)seg[i - 1u].first_word + seg[i - 1u].word_count)) ||
+                ((u32)seg[i].first_run + seg[i].run_count > h.run_count) ||
+                ((u32)seg[i].first_patch + seg[i].patch_count > h.patch_count) ||
+                ((u32)seg[i].first_word + seg[i].word_count > h.word_count))
+            { goto failed; }
+            value[i] = 0u;
+            for (r = s->first_run; r < (u32)s->first_run + s->run_count; r++)
+            {
+                const NDSNativeStageRun *native = &sNdsNativeStageRuns[r];
+
+                value[i] += 2u + (u32)native->triangle_count *
+                    ((native->submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z) ? 3u : 1u);
+            }
+        }
+        /* The ranges by value, the best that fits first; a refused try
+         * allocates nothing. */
+        body = NULL;
+        while (body == NULL)
+        {
+            u32 best = 0u, best_a = 0u, best_b = 0u, bytes;
+
+            for (a = 0u; a < count; a++)
+            {
+                u32 sum = 0u;
+
+                for (b = a; b < count; b++)
+                {
+                    sum += value[b];
+                    if ((((tried >> (a * NDS_STAGE_GX_PARTIAL_SEGMENTS + b)) & 1u) == 0u) &&
+                        (sum > best))
+                    {
+                        best = sum; best_a = a; best_b = b;
+                    }
+                }
+            }
+            if (best == 0u) { goto failed; }
+            tried |= (u64)1u << (best_a * NDS_STAGE_GX_PARTIAL_SEGMENTS + best_b);
+            run_lo = seg[best_a].first_run;
+            run_hi = (u32)seg[best_b].first_run + seg[best_b].run_count;
+            patch_lo = seg[best_a].first_patch;
+            patch_hi = (u32)seg[best_b].first_patch + seg[best_b].patch_count;
+            word_lo = seg[best_a].first_word;
+            word_hi = (u32)seg[best_b].first_word + seg[best_b].word_count;
+            bytes = (run_hi - run_lo) * (sizeof(NDSStageGxRun) + memo_unit) +
+                (patch_hi - patch_lo) * sizeof(NDSStageGxPatch) +
+                (word_hi - word_lo) * 4u;
+            body = ndsStageGxAllocBody(bytes);
+            mask = ((1u << (best_b + 1u)) - 1u) & ~((1u << best_a) - 1u);
+        }
+        reason = 4u;
+        {
+            u8 *runs = body;
+            u8 *patches = runs + (run_hi - run_lo) * sizeof(NDSStageGxRun);
+            u8 *words = patches + (patch_hi - patch_lo) * sizeof(NDSStageGxPatch);
+
+            if (!ndsRelocAssetStreamRead(&stream, sizeof(h) + run_lo * sizeof(NDSStageGxRun),
+                                         runs, (run_hi - run_lo) * sizeof(NDSStageGxRun)) ||
+                !ndsRelocAssetStreamRead(&stream, sizeof(h) + h.run_count * sizeof(NDSStageGxRun) +
+                                             patch_lo * sizeof(NDSStageGxPatch),
+                                         patches, (patch_hi - patch_lo) * sizeof(NDSStageGxPatch)) ||
+                !ndsRelocAssetStreamRead(&stream, sizeof(h) + h.run_count * sizeof(NDSStageGxRun) +
+                                             h.patch_count * sizeof(NDSStageGxPatch) + word_lo * 4u,
+                                         words, (word_hi - word_lo) * 4u)) { goto failed; }
+            for (i = 0u; i < count; i++)
+            {
+                u32 hash = 2166136261u;
+
+                if ((mask & (1u << i)) == 0u) { continue; }
+                hash = ndsStageGxHashBytes(runs + (seg[i].first_run - run_lo) * sizeof(NDSStageGxRun),
+                                           seg[i].run_count * sizeof(NDSStageGxRun), hash);
+                hash = ndsStageGxHashBytes(patches + (seg[i].first_patch - patch_lo) *
+                                               sizeof(NDSStageGxPatch),
+                                           seg[i].patch_count * sizeof(NDSStageGxPatch), hash);
+                hash = ndsStageGxHashBytes(words + (seg[i].first_word - word_lo) * 4u,
+                                           seg[i].word_count * 4u, hash);
+                if (hash != seg[i].hash) { goto failed; }
+            }
+            /* Indexed as the whole program's tables: each pointer is biased
+             * by its slice's first row, which only the loaded segments'
+             * runs ever index past. */
+            sNdsStageGxRuns = (NDSStageGxRun *)(void *)runs - run_lo;
+            sNdsStageGxPatches = (NDSStageGxPatch *)(void *)patches - patch_lo;
+            sNdsStageGxWords = (u32 *)(void *)words - word_lo;
+            body = words + (word_hi - word_lo) * 4u;
+        }
+    }
+    if (!ndsStageGxValidate(&h, sNdsStageGxRuns, sNdsStageGxPatches, sNdsStageGxWords,
+                            run_lo, run_hi, patch_lo, patch_hi, word_lo, word_hi))
+    { sNdsStageGxRuns = NULL; goto failed; }
     ndsRelocAssetStreamClose(&stream);
-    sNdsStageGxRuns = (NDSStageGxRun *)body;
-    sNdsStageGxPatches = (NDSStageGxPatch *)(sNdsStageGxRuns + h.run_count);
-    sNdsStageGxWords = (u32 *)(sNdsStageGxPatches + h.patch_count);
     sNdsStageGxStaticWorld = (u64)h.static_world_lo | ((u64)h.static_world_hi << 32);
-    sNdsStageGxRunMemo = (NDSStageGxRunMemo *)(void *)(body + h.body_bytes);
-    memset(sNdsStageGxRunMemo, 0, h.run_count * sizeof(NDSStageGxRunMemo));
+    /* The memos (and a culling program's world boxes) follow the tables. */
+    memset(body, 0, (run_hi - run_lo) * memo_unit);
+    sNdsStageGxRunMemo = (NDSStageGxRunMemo *)(void *)body - run_lo;
+    sNdsStageGxRunWorld = (memo_unit > sizeof(NDSStageGxRunMemo)) ?
+        (NDSStageGxRunWorld *)(void *)(body + (run_hi - run_lo) * sizeof(NDSStageGxRunMemo)) - run_lo :
+        NULL;
+    sNdsStageGxSegmentMask = mask;
     sNdsStageGxProjSerial++;
     sNdsStageGxProjGen = 0u;
     sNdsStageGxLoadSerial++;
-    gNdsP2StageProgLoads++; gNdsP2StageProgBytes = h.body_bytes;
+    gNdsP2StageProgLoads++;
+    gNdsP2StageProgBytes = (run_hi - run_lo) * (sizeof(NDSStageGxRun) + memo_unit) +
+        (patch_hi - patch_lo) * sizeof(NDSStageGxPatch) + (word_hi - word_lo) * 4u;
+    gNdsP2StageProgSegments = mask;
     return TRUE;
 failed:
     ndsRelocAssetStreamClose(&stream);
@@ -394,6 +561,8 @@ static sb32 ndsStageGxEligible(u32 segment)
      * within one heap generation. */
     if (gNdsRendererAdapterStagePreviewArmed != 0u) { return FALSE; }
     if (!ndsStageGxLoad()) { NDS_DIAG(gNdsP2StageProgDeclines++); return FALSE; }
+    /* A partial load's other segments draw uncompiled. */
+    if ((sNdsStageGxSegmentMask & (1u << segment)) == 0u) { return FALSE; }
     if ((sNdsStageGxStaticWorld & ~sNdsNativeStageOwnerExecution.rigid_binding_mask) != 0u)
     { gNdsP2StageProgDeclines++; gNdsP2StageProgReason = 7u; return FALSE; }
     return TRUE;
@@ -458,7 +627,7 @@ static u32 sNdsStageGxCullCameraGen = UINT_MAX;
 
 static void ndsStageGxRigidWorldBox(const NDSStageGxRun *r,
                                     const NDSRendererMatrix20p12 *w,
-                                    NDSStageGxRunMemo *memo)
+                                    NDSStageGxRunWorld *memo)
 {
     u32 corner;
     u32 axis;
@@ -517,14 +686,16 @@ static sb32 ndsStageGxRunOutsideView(u32 index)
     if ((sNdsNativeStageOwnerExecution.rigid_binding_mask &
          ((u64)1u << binding)) != 0u)
     {
-        NDSStageGxRunMemo *memo = &sNdsStageGxRunMemo[index];
+        NDSStageGxRunWorld *memo;
 
-        if ((sNdsNativeStageOwnerExecution.binding_world == NULL) ||
+        if ((sNdsStageGxRunWorld == NULL) ||
+            (sNdsNativeStageOwnerExecution.binding_world == NULL) ||
             (sNdsNativeStageOwnerExecution.camera_modelview == NULL) ||
             (sNdsNativeStageOwnerExecution.projection == NULL))
         {
             return FALSE;
         }
+        memo = &sNdsStageGxRunWorld[index];
         if (memo->world_serial != gNdsStageRigidWorldSerial + 1u)
         {
             ndsStageGxRigidWorldBox(

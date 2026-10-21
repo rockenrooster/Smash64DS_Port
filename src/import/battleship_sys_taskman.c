@@ -39,6 +39,8 @@ extern size_t ndsTaskmanArenaSize(void);
  * for a battle scene, applied below to every registered BATTLE kind. */
 extern void ndsBattleRebudgetSceneSetup(SYTaskmanSetup *setup);
 extern s32 ndsBattleSetupIsRebudgeted(const SYTaskmanSetup *setup);
+/* battleship_sys_objman.c: the stage's lent dead bytes. */
+extern void *ndsBattleDeadSpanAlloc(size_t size, u32 alignment);
 
 void syTaskmanStartTask(SYTaskmanSetup *tsetup)
 {
@@ -302,6 +304,13 @@ void *syTaskmanMalloc(size_t size, u32 align)
     {
         void *loan = ndsFrontendOverlayTryAlloc(size, (align != 0u) ? align : 4u);
 
+        if (loan != NULL)
+        {
+            return loan;
+        }
+        /* Then the dead bytes the battle's stage lent (a VS battle only:
+         * ndsNativeStageLendDeadSpans), before the heap. */
+        loan = ndsBattleDeadSpanAlloc(size, (align != 0u) ? align : 4u);
         if (loan != NULL)
         {
             return loan;

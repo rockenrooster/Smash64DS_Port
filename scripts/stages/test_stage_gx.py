@@ -18,8 +18,11 @@ import compile_nds_stage_gx as gx
 def test_compiled_corners_patch_coverage_and_stack(name):
     packet = gx.stage.generate(gx.stage._paths.REPO_ROOT, name)
     blob = gx.compile_packet(packet, name)
-    assert len(blob) - gx.HEADER.size <= gx.body_max(name)
     header, runs, patches, words = gx.decode(blob)
+    assert header[8] <= gx.body_max(name)
+    # v9's segment trailer: consecutive slices, one per packet segment.
+    table = gx.decode_segments(blob)
+    assert [t[:2] for t in table] == [(s.first_run, s.run_count) for s in packet.segments]
     assert header[2] == gx.stage.blob_gkind(name)
     assert header[6] == (1 << len(packet.segments)) - 1 and header[7] == gx.signature(packet)
     static_mask = header[10] | (header[11] << 32)

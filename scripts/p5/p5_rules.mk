@@ -99,7 +99,12 @@ NDS_P5_REMIX_LANDED := $(shell python "$(PROJECT_ROOT)/scripts/p5/p5_stages.py" 
 NDS_P5_LANDED_NAMES := $(foreach r,$(NDS_P5_REMIX_LANDED),$(word 1,$(subst :, ,$(r))))
 NDS_P5_LANDED_CNAMES := $(foreach r,$(NDS_P5_REMIX_LANDED),$(word 2,$(subst :, ,$(r))))
 NDS_P5_NITROFS_STAMP := $(NDS_P5_GEN)/.nitrofs-staged
-$(NDS_P5_NITROFS_STAMP): $(NDS_P5_RUNTIME_OUT) $(NDS_P5_BGM_INC)
+# The staged files themselves too: the generator rewrites a file only when
+# its bytes change, so a new GX template under unchanged C rows (format 9,
+# 2026-10-21) left the old one staged.
+$(NDS_P5_NITROFS_STAMP): $(NDS_P5_RUNTIME_OUT) $(NDS_P5_BGM_INC) \
+		$(wildcard $(NDS_P5_STAGES_DIR)/*/*.gxp $(NDS_P5_STAGES_DIR)/*/native_stage_*.bin \
+			$(NDS_P5_STAGES_DIR)/*/native_wallpaper_p5_*.bin $(NDS_P5_STAGES_DIR)/*/nitro/*)
 	@mkdir -p $(NITROFS_DIR)/reloc/p4 $(NITROFS_DIR)/stages $(NITROFS_DIR)/wallpapers $(NITROFS_DIR)/p5/audio
 	@for n in $(NDS_P5_LANDED_NAMES); do \
 		for f in $(NDS_P5_STAGES_DIR)/$$n/nitro/*; do cp -f "$$f" "$(NITROFS_DIR)/reloc/p4/$${f##*/}" || exit 1; done; \

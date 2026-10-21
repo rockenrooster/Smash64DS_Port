@@ -53,6 +53,7 @@ RUN_V1 = struct.Struct('<6H')
 RUN_V2 = struct.Struct('<6H6h')
 RUN = struct.Struct('<6H6h2I')
 PATCH = struct.Struct('<4H')
+SEGMENT = struct.Struct('<6HI')
 PARAMS = {0: 0, 0x10: 1, 0x11: 0, 0x12: 1, 0x15: 0, 0x16: 16, 0x18: 16, 0x19: 12,
           0x1C: 3, 0x20: 1, 0x22: 1, 0x23: 2, 0x29: 1, 0x2A: 1, 0x2B: 1,
           0x40: 1, 0x41: 0}
@@ -383,18 +384,80 @@ def compile_packet(packet, name='dreamland'):
     body += struct.pack(f'<{len(words)}I', *words)
     if len(body) > body_max(name):
         raise ValueError('GX template exceeds the stage body heap ceiling')
-    return HEADER.pack(MAGIC, 8, stage.blob_gkind(name), len(runs), len(words),
+    return HEADER.pack(MAGIC, 9, stage.blob_gkind(name), len(runs), len(words),
                        len(patches), (1 << len(packet.segments)) - 1, signature(packet), len(body),
-                       stage.fnv1a_bytes(body), baked_mask & 0xFFFFFFFF, baked_mask >> 32) + body
+                       stage.fnv1a_bytes(body), baked_mask & 0xFFFFFFFF, baked_mask >> 32) + body +         segment_table(packet, runs, body)
+
+
+def segment_table(packet, runs, body):
+    """Format v9's trailer: each segment's slices of the run, patch and word
+    tables, with one hash over its three slices, so a battle short of heap
+    can load the program a segment range at a time
+    (nds_stage_gx.exec.inc ndsStageGxLoad). The slices of consecutive
+    segments are consecutive: the words are laid out segment by segment."""
+    nr = len(runs)
+    np = sum(r[3] for r in runs)
+    out = struct.pack('<I', len(packet.segments))
+    next_patch = next_word = 0
+    for segment in packet.segments:
+        ids = range(segment.first_run, segment.first_run + segment.run_count)
+        first_patch = min((runs[i][2] for i in ids if runs[i][3]), default=next_patch)
+        patch_count = sum(runs[i][3] for i in ids)
+        first_word = min((runs[i][0] for i in ids if runs[i][1]), default=next_word)
+        word_count = sum(runs[i][1] for i in ids)
+        if (first_patch, first_word) != (next_patch, next_word):
+            raise ValueError('GX segment slices are not consecutive')
+        for i in ids:
+            r = runs[i]
+            if r[1] and not (first_word <= r[0] and r[0] + r[1] <= first_word + word_count and
+                             first_patch <= r[2] and r[2] + r[3] <= first_patch + patch_count):
+                raise ValueError('GX run outside its segment slices')
+        run_slice = body[segment.first_run * RUN.size:(segment.first_run + segment.run_count) * RUN.size]
+        patches_at = nr * RUN.size
+        words_at = patches_at + np * PATCH.size
+        patch_slice = body[patches_at + first_patch * PATCH.size:patches_at + (first_patch + patch_count) * PATCH.size]
+        word_slice = body[words_at + first_word * 4:words_at + (first_word + word_count) * 4]
+        out += SEGMENT.pack(segment.first_run, segment.run_count, first_patch, patch_count,
+                            first_word, word_count, stage.fnv1a_bytes(run_slice + patch_slice + word_slice))
+        next_patch, next_word = first_patch + patch_count, first_word + word_count
+    if (next_patch, next_word) != (np, sum(r[1] for r in runs)):
+        raise ValueError('GX segment slices do not cover the tables')
+    return out
+
+
+def decode_segments(blob):
+    """A v9 program's segment table: [(first_run, run_count, first_patch,
+    patch_count, first_word, word_count, hash)], each hash checked."""
+    header = HEADER.unpack_from(blob)
+    nr, nw, np, nb = header[3], header[4], header[5], header[8]
+    at = HEADER.size + nb
+    if header[1] < 9 or len(blob) < at + 4:
+        raise ValueError('No GX segment table')
+    count = struct.unpack_from('<I', blob, at)[0]
+    if len(blob) != at + 4 + count * SEGMENT.size:
+        raise ValueError('Invalid GX segment table length')
+    body = blob[HEADER.size:at]
+    patches_at, words_at = nr * RUN.size, nr * RUN.size + np * PATCH.size
+    table = [SEGMENT.unpack_from(blob, at + 4 + i * SEGMENT.size) for i in range(count)]
+    for fr, rc, fp, pc, fw, wc, h in table:
+        data = (body[fr * RUN.size:(fr + rc) * RUN.size] +
+                body[patches_at + fp * PATCH.size:patches_at + (fp + pc) * PATCH.size] +
+                body[words_at + fw * 4:words_at + (fw + wc) * 4])
+        if fr + rc > nr or fp + pc > np or fw + wc > nw or stage.fnv1a_bytes(data) != h:
+            raise ValueError('Invalid GX segment slice')
+    return table
 
 
 def decode(blob):
     header = HEADER.unpack_from(blob)
     magic, version, _, nr, nw, np, _, _, nb, checksum, _, _ = header
-    if magic != MAGIC or version not in (1, 2, 3, 4, 5, 6, 7, 8) or len(blob) != HEADER.size + nb:
+    if magic != MAGIC or version not in (1, 2, 3, 4, 5, 6, 7, 8, 9) or (
+            len(blob) != HEADER.size + nb if version < 9 else len(blob) < HEADER.size + nb):
         raise ValueError('Invalid GX header/length')
-    record = {1: RUN_V1, 2: RUN_V2, 3: RUN, 4: RUN, 5: RUN, 6: RUN, 7: RUN, 8: RUN}[version]
-    if nb != nr * record.size + np * PATCH.size + nw * 4 or stage.fnv1a_bytes(blob[HEADER.size:]) != checksum:
+    if version >= 9:
+        decode_segments(blob)
+    record = {1: RUN_V1, 2: RUN_V2, 3: RUN, 4: RUN, 5: RUN, 6: RUN, 7: RUN, 8: RUN, 9: RUN}[version]
+    if nb != nr * record.size + np * PATCH.size + nw * 4 or stage.fnv1a_bytes(blob[HEADER.size:HEADER.size + nb]) != checksum:
         raise ValueError('Invalid GX body')
     pos = HEADER.size
     runs = [record.unpack_from(blob, pos + i * record.size) for i in range(nr)]

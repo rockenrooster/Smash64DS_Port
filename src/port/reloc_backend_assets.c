@@ -6616,6 +6616,36 @@ static void ndsRelocSetForceStatusBufferFile(u32 token, void *addr)
                           sNdsRelocForceStatusBufferMax, token, addr);
 }
 
+/* A loaded file whose dead bytes the battle lent out as allocation space
+ * (ndsRelocLendDeadSpans): an address inside one of its holes belongs to
+ * whatever was allocated there, not to the file. One file a heap generation
+ * (the stage's geometry). */
+#define NDS_RELOC_HOLE_MAX 4u
+static const void *sNdsRelocHoleData;
+static u32 sNdsRelocHoleGeneration;
+static u32 sNdsRelocHoleCount;
+static u32 sNdsRelocHoleLo[NDS_RELOC_HOLE_MAX];
+static u32 sNdsRelocHoleHi[NDS_RELOC_HOLE_MAX];
+
+static sb32 ndsRelocRangeTouchesHole(uintptr_t offset, size_t size)
+{
+    u32 i;
+
+    if (sNdsRelocHoleGeneration != gNdsTaskmanHeapGeneration)
+    {
+        return FALSE;
+    }
+    for (i = 0u; i < sNdsRelocHoleCount; i++)
+    {
+        if ((offset < sNdsRelocHoleHi[i]) &&
+            (sNdsRelocHoleLo[i] < offset + ((size != 0u) ? size : 1u)))
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
 static s32 ndsRelocPointerRangeInLoadedFile(const NDSRelocLoadedFile *loaded,
                                              const void *ptr, size_t size)
 {
@@ -6630,6 +6660,11 @@ static s32 ndsRelocPointerRangeInLoadedFile(const NDSRelocLoadedFile *loaded,
     base = (uintptr_t)loaded->data;
     addr = (uintptr_t)ptr;
     if ((addr < base) || (addr > (base + loaded->data_size)))
+    {
+        return FALSE;
+    }
+    if ((loaded->data == sNdsRelocHoleData) &&
+        (ndsRelocRangeTouchesHole(addr - base, size) != FALSE))
     {
         return FALSE;
     }
@@ -6966,6 +7001,44 @@ static NDSRelocLoadedFile *ndsRelocFindLoadedFileContaining(const void *ptr,
     }
     NDS_DIAG(gNdsRelocFindMemoAbsent++);
     return NULL;
+}
+
+void *ndsRelocLendDeadSpans(u32 asset_id, u32 expect_size, const u32 *lo,
+                            const u32 *hi, u32 count)
+{
+    const NDSRelocLoadedFile *loaded = ndsRelocFindLoadedFileByAsset(asset_id);
+    u32 i;
+
+    if ((loaded == NULL) || (loaded->data == NULL) ||
+        (loaded->data_size != expect_size) || (count == 0u) ||
+        (count > NDS_RELOC_HOLE_MAX) ||
+        ((sNdsRelocHoleGeneration == gNdsTaskmanHeapGeneration) &&
+         (sNdsRelocHoleCount != 0u)))
+    {
+        return NULL;
+    }
+    for (i = 0u; i < count; i++)
+    {
+        if ((lo[i] >= hi[i]) || (hi[i] > loaded->data_size) ||
+            (((lo[i] | hi[i]) & 15u) != 0u) ||
+            ((((uintptr_t)loaded->data + lo[i]) & 15u) != 0u))
+        {
+            return NULL;
+        }
+    }
+    for (i = 0u; i < count; i++)
+    {
+        sNdsRelocHoleLo[i] = lo[i];
+        sNdsRelocHoleHi[i] = hi[i];
+    }
+    sNdsRelocHoleCount = count;
+    sNdsRelocHoleData = loaded->data;
+    sNdsRelocHoleGeneration = gNdsTaskmanHeapGeneration;
+    /* A memoized containment answer may name this file for an address in a
+     * hole the moment it is lent. */
+    memset(sNdsRelocFindContainingMemo, 0xff,
+           sizeof(sNdsRelocFindContainingMemo));
+    return loaded->data;
 }
 
 s32 ndsRelocPointerRangeInLoadedFiles(const void *ptr, size_t size)

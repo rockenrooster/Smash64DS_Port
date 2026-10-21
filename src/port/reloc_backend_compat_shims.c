@@ -13624,6 +13624,109 @@ void lbParticleDrawTextures(GObj *gobj)
 /* renderer_adapter_matrix.c, included later in this translation unit. */
 void ndsRendererAdapterNativeStagePreloadAssets(void);
 
+/* THE STAGE'S DEAD BYTES (P7, 2026-10-21). A native stage's geometry file
+ * still carries the display lists and vertex arrays its packet was generated
+ * from, and once the packet loads nothing reads them: the owner draws the
+ * packet, and a layer's DL pointer is only compared by the binding check.
+ * Hyrule Temple's are 40,224 B of the 59,856 B file. A VS battle lends them as
+ * allocation space (syTaskmanMalloc takes them after the loan), the reloc
+ * registry stops calling an address inside them the file's, and the draw loop
+ * skips a layer's source draw (ndsNativeStageLayerLent) -- the one path that
+ * would interpret them, run only on a frame the owner declines, which the
+ * heaviest mixes never showed (0 rejects, 2026-10-21). The rows are
+ * scripts/p5/stage_generate.py's dead_spans. */
+void ndsBattleDeadSpanAdd(void *base, u32 bytes);
+__attribute__((used)) volatile u32 gNdsNativeStageLayersLent;
+__attribute__((used)) volatile u32 gNdsNativeStageLentLayerSkips;
+static u32 sNdsNativeStageLayersLentGeneration;
+
+void ndsNativeStageLendDeadSpans(u32 gkind)
+{
+#if NDS_P5 && defined(NDS_P5_DEAD_SPAN_ROWS)
+    static const struct
+    {
+        u32 gkind;
+        u32 file;
+        u32 file_bytes;
+        u32 offset;
+        u32 bytes;
+    } rows[] = {
+#define NDS_P5_DEAD_SPAN_ROW(g, file, file_bytes, offset, bytes) \
+        { (g), (file), (file_bytes), (offset), (bytes) },
+        NDS_P5_DEAD_SPAN_ROWS(NDS_P5_DEAD_SPAN_ROW)
+#undef NDS_P5_DEAD_SPAN_ROW
+        { 0xffffffffu, 0u, 0u, 0u, 0u }
+    };
+    u32 lo[4];
+    u32 hi[4];
+    u32 file = 0u;
+    u32 file_bytes = 0u;
+    u32 count = 0u;
+    u32 i;
+    u8 *data;
+
+    gNdsNativeStageLayersLent = 0u;
+    if ((gSCManagerSceneData.scene_curr != nSCKindVSBattle) ||
+        (ndsNativeStageBlobPacket() == NULL))
+    {
+        return;
+    }
+    for (i = 0u; i < ARRAY_COUNT(rows); i++)
+    {
+        if ((rows[i].gkind != gkind) || (count >= ARRAY_COUNT(lo)) ||
+            ((count != 0u) && (rows[i].file != file)))
+        {
+            continue;
+        }
+        file = rows[i].file;
+        file_bytes = rows[i].file_bytes;
+        lo[count] = rows[i].offset;
+        hi[count] = rows[i].offset + rows[i].bytes;
+        count++;
+    }
+    if (count == 0u)
+    {
+        return;
+    }
+    data = (u8 *)ndsRelocLendDeadSpans(file, file_bytes, lo, hi, count);
+    if (data == NULL)
+    {
+        return;
+    }
+    for (i = 0u; i < count; i++)
+    {
+        ndsBattleDeadSpanAdd(data + lo[i], hi[i] - lo[i]);
+    }
+    sNdsNativeStageLayersLentGeneration = gNdsTaskmanHeapGeneration;
+    gNdsNativeStageLayersLent = 1u;
+#else
+    (void)gkind;
+    gNdsNativeStageLayersLent = 0u;
+#endif
+}
+
+s32 ndsNativeStageLayerLent(const void *gobj)
+{
+    u32 i;
+
+    if ((gNdsNativeStageLayersLent == 0u) ||
+        (sNdsNativeStageLayersLentGeneration != gNdsTaskmanHeapGeneration))
+    {
+        return FALSE;
+    }
+    for (i = 0u; i < 4u; i++)
+    {
+        if ((gobj != NULL) && (gobj == gGRCommonLayerGObjs[i]))
+        {
+            /* Counted in every build: a sweep reads 0 here or the lent
+             * bytes cost a frame of stage. */
+            gNdsNativeStageLentLayerSkips++;
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
 void mpCollisionInitGroundData(void)
 {
     ndsMPCollisionInvalidateTopology();
@@ -13802,6 +13905,7 @@ void mpCollisionInitGroundData(void)
             /* And every asset that packet references (defined later in this
              * translation unit, renderer_adapter_matrix.c). */
             ndsRendererAdapterNativeStagePreloadAssets();
+            ndsNativeStageLendDeadSpans(i);
             gNdsSCVSBattleStageMask |= (1u << 0);
             gNdsSCVSBattleStageMask |= (1u << 1);
             gNdsSCVSBattleStageMask |= (1u << 2);

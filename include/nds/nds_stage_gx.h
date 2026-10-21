@@ -24,5 +24,13 @@ typedef struct NDSStageGxRun {
 typedef struct NDSStageGxPatch {
     uint16_t word, kind, index, aux;
 } NDSStageGxPatch;
+/* Version 9's trailer (after the body: a u32 count, then one row a packet
+ * segment): the segment's slices of the run, patch and word tables, which
+ * are consecutive from one segment to the next, and one FNV-1a over the
+ * three slices in that order. */
+typedef struct NDSStageGxSegment {
+    uint16_t first_run, run_count, first_patch, patch_count, first_word, word_count;
+    uint32_t hash;
+} NDSStageGxSegment;
 
 #endif

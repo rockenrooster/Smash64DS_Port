@@ -652,3 +652,67 @@ within two VBlanks):
 are not what the rest of the tail is made of: with every frame that holds one
 (+-1) set to the median, four Roys on Hyrule Temple would read 1,328,384
 (8% of their top 5% hold one) and four Bowsers on Saffron 1,259,712 (20%).
+
+## Hyrule Temple's mixes: the stage's dead bytes and a program a segment range at a time (2026-10-21, `s42`/`s44`)
+
+The four-different heavy mixes on Hyrule Temple were memory-bound (owner
+2026-10-21: free memory, small visual cuts allowed on Hyrule Temple only).
+Mix A (Bowser, Crash, Ike, Dedede) left 21,468 B of heap at frame 0, so the
+stage's 61,936 B program never loaded and the stage drew uncompiled (~330K
+ticks a frame); the heap's low-water was 14,128 B, under the 25,600 B floor
+and the source's GObj latch at 25 KiB. The census on `s40`:
+
+* The figatree heaps are no spare buffers here: with 21 KB free the elastic
+  motion cache is 8,000 B (45 hits, 608 misses a match), so the fighters'
+  clips load straight into those heaps. Merging them into the cache frees
+  nothing under this pressure.
+* Hyrule Temple's geometry file (0x982, 59,856 B) still carries the display
+  lists and vertex arrays its native packet was generated from: 40,224 B in
+  three ranges, reached only by the layer DObjs' display-list pointers, which
+  the binding check compares and nothing reads. The stage owner rejected 0
+  frames, so the source draw that would read them never ran.
+
+What changed:
+
+* `stage_generate.py dead_spans` emits the ranges (`NDS_P5_DEAD_SPAN_ROWS`),
+  falsifying on any other pointer into them or an image load inside one.
+  Once the packet's assets are resident, a VS battle lends them
+  (`ndsNativeStageLendDeadSpans`): `syTaskmanMalloc` takes them after the
+  loan, best fit; the reloc registry's containment test stops calling an
+  address inside them the file's (`ndsRelocLendDeadSpans`); the draw loop
+  skips a lent layer's source draw (`ndsNativeStageLayerLent`, counted in
+  every build: 0 in every run). Mix A's frame 0 heap 21,468 -> 60,668 B,
+  low-water 14,128 -> 45,904 B, motion cache 8,000 -> 44,288 B, 40,184 of the
+  40,224 B served.
+* GX template format 9 appends each segment's slices of the run, patch and
+  word tables and one hash over them. A heap short of the whole program loads
+  the consecutive segment range worth the most that fits under the same
+  keep-free (no-Z triangles weigh three), and the other segments draw
+  uncompiled. The run memo dropped its world box, which only a culling
+  program reads (never a VS battle): Hyrule Temple's program 71,092 -> 66,136
+  B with its memos.
+* `p5_rules.mk` stages a stage's template when the template changes; the
+  stamp used to follow the C rows only, so format 9 left Hyrule Temple's old
+  one in NitroFS (`s43`, discarded).
+
+WORK P95 (frames within two VBlanks), 1,960 frames:
+
+| mix (contents) | HT `s40` | HT `s44` (program loaded) | Saffron `s40` | Saffron `s44` |
+|---|---|---|---|---|
+| 4, 9, 19, 14 (A) | 1,686,208 (62.1%) | 1,648,128 (64.3%, segment 2) | 1,526,144 (86.8%) | 1,496,256 (89.5%, none) |
+| 13, 10, 16, 3 | 1,595,136 (77.7%) | 1,381,504 (94.6%, whole) | 1,401,920 (93.8%) | 1,413,696 (93.4%, 0-3) |
+| 2, 8, 18, 0 | 1,483,200 (72.8%) | 1,360,256 (89.7%, segment 0) | 1,318,272 (95.1%) | 1,285,120 (95.8%, 0) |
+| 5, 6, 11, 17 | 1,529,984 (71.8%) | 1,334,080 (94.5%, whole) | 1,332,288 (94.8%) | 1,344,448 (94.4%, 0-3) |
+
+The cast is unchanged (Hyrule Temple 1,209,152, Dream Land 1,069,440; replay
+digests identical to `s40` after the one-frame pre-GO shift). Replay digests
+are identical `s42` -> `s44` on every Hyrule Temple mix; mix A's moved from
+`s40` because its heap no longer falls under the GObj latch (more effects
+spawn: its median WORK +47K), and Saffron's mix A still falls under it
+(low-water 20,912 B) and moves with any layout change. 0 native failures,
+0 lean declines.
+
+Mix A on Hyrule Temple stays the worst mix: with the latch gone it draws
+every effect, and only segment 2 (11,128 B) fits beside the keep-free. The
+vanilla stages' geometry files hold 8,640-14,584 B of the same dead bytes
+each (Saffron City 14,488 B in three ranges), not yet lent.

@@ -355,6 +355,82 @@ void *ndsBattleIdleScratchAlloc(size_t size, u32 alignment)
     return (void *)aligned;
 }
 
+/* Dead bytes of the battle's own files lent as allocation space: a stage's
+ * display lists and vertex arrays, which nothing reads once its native packet
+ * draws (ndsNativeStageLendDeadSpans). syTaskmanMalloc takes them after a VS
+ * battle's loan and before the heap, best fit. Re-seeded by every
+ * gcSetupObjman, like the idle scratch above. */
+#define NDS_BATTLE_DEAD_SPAN_MAX 4u
+extern volatile u32 gNdsTaskmanHeapGeneration;
+static u8 *sNdsBattleDeadSpanCursor[NDS_BATTLE_DEAD_SPAN_MAX];
+static u8 *sNdsBattleDeadSpanEnd[NDS_BATTLE_DEAD_SPAN_MAX];
+static u32 sNdsBattleDeadSpanCount;
+/* The heap generation the spans were lent in: a Sudden Death re-entry
+ * allocates before its own gcSetupObjman, and the last instance's bytes are
+ * the new one's by then. */
+static u32 sNdsBattleDeadSpanGeneration;
+__attribute__((used)) volatile u32 gNdsBattleDeadSpanLentBytes;
+__attribute__((used)) volatile u32 gNdsBattleDeadSpanServedBytes;
+__attribute__((used)) volatile u32 gNdsBattleDeadSpanServedCount;
+
+void ndsBattleDeadSpanAdd(void *base, u32 bytes)
+{
+    if ((base == NULL) || (bytes == 0u))
+    {
+        return;
+    }
+    if (sNdsBattleDeadSpanGeneration != gNdsTaskmanHeapGeneration)
+    {
+        sNdsBattleDeadSpanCount = 0u;
+        sNdsBattleDeadSpanGeneration = gNdsTaskmanHeapGeneration;
+    }
+    if (sNdsBattleDeadSpanCount >= NDS_BATTLE_DEAD_SPAN_MAX)
+    {
+        return;
+    }
+    sNdsBattleDeadSpanCursor[sNdsBattleDeadSpanCount] = (u8 *)base;
+    sNdsBattleDeadSpanEnd[sNdsBattleDeadSpanCount] = (u8 *)base + bytes;
+    sNdsBattleDeadSpanCount++;
+    gNdsBattleDeadSpanLentBytes += bytes;
+}
+
+void *ndsBattleDeadSpanAlloc(size_t size, u32 alignment)
+{
+    u32 best = NDS_BATTLE_DEAD_SPAN_MAX;
+    uintptr_t best_start = 0u;
+    uintptr_t best_left = ~(uintptr_t)0u;
+    u32 i;
+
+    if ((sNdsBattleDeadSpanCount == 0u) || (size == 0u) || (alignment == 0u) ||
+        ((alignment & (alignment - 1u)) != 0u) ||
+        (sNdsBattleDeadSpanGeneration != gNdsTaskmanHeapGeneration))
+    {
+        return NULL;
+    }
+    for (i = 0u; i < sNdsBattleDeadSpanCount; i++)
+    {
+        uintptr_t start = ((uintptr_t)sNdsBattleDeadSpanCursor[i] +
+                           (alignment - 1u)) & ~(uintptr_t)(alignment - 1u);
+        uintptr_t end = (uintptr_t)sNdsBattleDeadSpanEnd[i];
+
+        if ((start <= end) && (size <= end - start) &&
+            ((end - start - size) < best_left))
+        {
+            best = i;
+            best_start = start;
+            best_left = end - start - size;
+        }
+    }
+    if (best == NDS_BATTLE_DEAD_SPAN_MAX)
+    {
+        return NULL;
+    }
+    sNdsBattleDeadSpanCursor[best] = (u8 *)(best_start + size);
+    gNdsBattleDeadSpanServedBytes += (u32)size;
+    gNdsBattleDeadSpanServedCount++;
+    return (void *)best_start;
+}
+
 /* Weak: the accessor exists only when fighter packets are compiled in. */
 void *ndsRendererFighterPacketIdleRegion(u32 battle_slot, u32 *bytes)
     __attribute__((weak));
@@ -375,6 +451,10 @@ void gcSetupObjman(GCSetup *setup)
     sNdsBattleIdleScratch = NULL;
     sNdsBattleIdleScratchBytes = 0u;
     gNdsBattleIdleScratchServedBytes = 0u;
+    sNdsBattleDeadSpanCount = 0u;
+    gNdsBattleDeadSpanLentBytes = 0u;
+    gNdsBattleDeadSpanServedBytes = 0u;
+    gNdsBattleDeadSpanServedCount = 0u;
     u32 aobj_pool_count = NDS_R2_AOBJ_POOL_COUNT;
 
     memset(sNdsGcNdlSerialSlots, 0, sizeof(sNdsGcNdlSerialSlots));
