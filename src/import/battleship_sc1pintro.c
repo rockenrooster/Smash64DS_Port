@@ -734,6 +734,7 @@ static void ndsSC1PIntroBakeStudio(GObj *fighter_gobj)
  * gives in view space under such a camera, is turned into world space
  * (ndsSC1PIntroBakeLightToWorld). */
 #define NDS_SC1P_INTRO_BAKE_FOLD_TAG 0xB7u
+#define NDS_SC1P_INTRO_BAKE_CARD_FAR 65536.0F
 /* renderer_adapter_fighter.c: the light capture's hook, set around the
  * bake's draw (ndsSC1PIntroBakeBeforeDraw / AfterDraw). */
 extern void (*gNdsFighterDisplayLightHook)(Light *light);
@@ -761,6 +762,20 @@ static void ndsSC1PIntroBakeFoldCameraViews(void)
         if (cobj == NULL)
         {
             continue;
+        }
+        /* The N64's microcode does not clip at the far plane (the depth
+         * saturates); the DS's does. Giant DK's farthest ally stands some
+         * 16,300 units from its card camera (sc1PIntroGetFighterCObjDesc,
+         * card 5) against the source's far of 16,384, and the bake kept only
+         * his head (owner 2026-10-20: "only shows head of fartherest fighter
+         * which was luigi"). A card shows one fighter, so a farther plane
+         * costs nothing. */
+        if (((camera_gobj->camera_mask &
+              (COBJ_MASK_DLLINK(29) | COBJ_MASK_DLLINK(30) |
+               COBJ_MASK_DLLINK(31))) != 0u) &&
+            (cobj->projection.persp.far < NDS_SC1P_INTRO_BAKE_CARD_FAR))
+        {
+            cobj->projection.persp.far = NDS_SC1P_INTRO_BAKE_CARD_FAR;
         }
         for (i = 0; i < cobj->xobjs_num; i++)
         {

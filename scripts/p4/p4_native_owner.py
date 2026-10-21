@@ -655,7 +655,7 @@ def learn(name: str, o2r_dir: Path, attr_offset: int) -> dict:
     register(name, o2r_dir, attr_offset, pins)
     for detail in ("high", "low"):
         cross = _cross_bindings(name, detail)
-        pins[f"cross_{detail}"] = [[b, CROSS_SLOT_FIRST + i] for i, b in enumerate(cross)]
+        pins[f"cross_{detail}"] = [[b, s] for b, s in zip(cross, _cross_slots(len(cross)))]
     if pins["cross_low"] == pins["cross_high"]:
         del pins["cross_low"]
     pins["gx"] = [1, 0, 0, len(pins["cross_high"]), 0]
@@ -732,15 +732,25 @@ def _set_detail(pins: dict, detail: str, index: int, value: int) -> None:
 CROSS_SLOT_LAST = 30
 
 
+def _cross_slots(count: int) -> list[int]:
+    """The physical slots of `count` cross bindings: 16 up, or top-aligned to
+    30 past fifteen (Palutena's seventeen, the generator's
+    OWNER_CROSS_SLOT_FLOORS; its depth check guards the stack below)."""
+    first = min(CROSS_SLOT_FIRST, CROSS_SLOT_LAST + 1 - count)
+    if first < 0:
+        raise SystemExit("learn: cross bindings exceed the GX palette")
+    return list(range(first, first + count))
+
+
 def _add_cross(pins: dict, detail: str, binding: int) -> None:
     if "cross_low" not in pins:
         pins["cross_low"] = [list(row) for row in pins["cross_high"]]
     rows = pins[f"cross_{detail}"]
     if any(b == binding for b, _slot in rows):
         raise SystemExit(f"learn: {detail} binding {binding} already has a GX slot")
-    if CROSS_SLOT_FIRST + len(rows) > CROSS_SLOT_LAST:
-        raise SystemExit(f"learn: {detail} cross bindings exceed the GX palette")
-    rows.append([binding, CROSS_SLOT_FIRST + len(rows)])
+    rows.append([binding, 0])
+    for row, slot in zip(rows, _cross_slots(len(rows))):
+        row[1] = slot
 
 
 def _merge_light_preambles(name: str, high: dict, low: dict) -> None:

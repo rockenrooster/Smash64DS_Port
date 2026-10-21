@@ -1247,6 +1247,24 @@ game's camera, back faces culled as the DS culls them):
   the second: `throw_b.json` `split_max` turns the left thigh toward the
   right past 90 degrees (`ultimate.py` `_legs`), frames 22-38; the throw's
   timing, release (26) and victims are unchanged.
+- **The hair at the nape** (p7s: "1p rendered still shows background
+  through hair behind neck, check hair triangles on high and low"): the
+  long hair's top edge meets the hair cap on five shared points, the hair
+  on row 9 and the cap on the head (8); Peach's clips hold row 9 to the
+  bodice (`skirt_keys.py`), so when the head turns (the card: 48 degrees
+  toward the camera, the chin up 3) the seam opened -- a slit behind the
+  head in both details (92 and 97 hole pixels in a close render of the card
+  pose). `look_blend.py` WELDS puts the hair's corners on and tucked under
+  the cap (7) on the head's row, a seam into row 9 (its next-drawn child),
+  so the seam stays shut and the hair's first band stretches instead; the
+  hair held to the head instead was worse (144). The model is 1,664 bytes
+  larger (the head's list loads the seam corners). The native owner's
+  CROSS runs need a GX snapshot slot for both rows: 17 cross bindings, past
+  the 15 under the hierarchy floor, so her slots run 14..30 top-aligned as
+  Boss's (`generate_nds_native_owners.py` OWNER_CROSS_SLOT_FLOORS; her
+  deepest row is 7 against his 8; `p4_native_owner.py --learn` assigns
+  them), and her draw restores 22 more matrices a frame (314 high, 270
+  low). The cards and her congratulations still were baked again.
 
 ## Animations (the owner's 3DS references, 2026-10-14)
 

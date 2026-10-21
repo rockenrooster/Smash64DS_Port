@@ -98,6 +98,17 @@ ANKLE_Y = 1.3           # kit height of the ankle ring (the shoe below it)
 # in back"; the owner's Blender view draws every inside), the sprites.
 TWO_SIDED = {"DS_dress", "DS_hair_panels", "DS_hair_cap", "DS_staff_gem_bb", "DS_staff_wings_sprite",
              "DS_shield_sprite"}
+# Corners an object shares with another's, drawn by that object's row (a
+# seam): the long hair's top edge meets the hair cap on five shared points
+# at the nape, and with the hair on row 9 and the cap on the head (8) the
+# seam opened whenever row 9 turned off the head -- her Peach clips hold it
+# to the bodice while the head turns (owner 2026-10-20, p7s: the 1P card
+# "shows background through hair behind neck"). On the head's row the seam
+# stays shut and the hair's first band stretches instead; its two top
+# corners tucked under the cap (10 units in) ride the head too, so the
+# strands beside the cheeks hang from the scalp.
+WELDS = {"DS_hair_panels": ("DS_hair_cap", 8)}
+WELD_EPS = 12.0         # model units: the shared points and the tucked corners (the next is 29 away)
 TEXTURE_SCALE = 0.5     # of the baked size, both details (a texture is shared)
 # Palette entries a patch of a texture keeps for itself: the box (u0, v0, u1,
 # v1 of the baked image, v from its top) and how many entries its texels
@@ -429,6 +440,13 @@ def build(dump: dict, kit: D.Model, base: dict, fit_base: dict, detail: str, out
         posed_all[obj["name"]] = [pose(dominant(v["groups"]) or "HeadN", v["kit"]) for v in obj["vertices"]]
     if all(name in posed_all for name in HELD):
         report["held"] = hold_staff(posed_all, dump)
+    welded = {}
+    for name, (onto, row) in WELDS.items():
+        if name in posed_all and onto in posed_all:
+            other = np.array(posed_all[onto], dtype=float)
+            welded[name] = {i: row for i, q in enumerate(posed_all[name])
+                            if float(np.min(np.linalg.norm(other - q, axis=1))) < WELD_EPS}
+    report["welded"] = {k: len(v) for k, v in welded.items()}
     for obj in dump["objects"]:
         name = obj["name"]
         verts = obj["vertices"]
@@ -459,6 +477,8 @@ def build(dump: dict, kit: D.Model, base: dict, fit_base: dict, detail: str, out
                                           "wrap": ["clamp", "clamp"] if cutout else ["repeat", "clamp"]}})
         for t in obj["triangles"]:
             want = face_rows(name, verts, t["v"])
+            if name in welded:
+                want = [welded[name].get(i, w) for i, w in zip(t["v"], want)]
             rows = settle(want, parents)
             if len(set(rows)) == 2:
                 report["seams"] += 1
@@ -518,7 +538,7 @@ def main() -> int:
     base = json.loads(args.base.read_text(encoding="utf-8"))
     fit_base = json.loads(args.fit_base.read_text(encoding="utf-8")) if args.fit_base else base
     report = build(dump, kit, base, fit_base, args.detail, args.out, reaim=not args.no_reaim)
-    print(json.dumps({k: report[k] for k in ("triangles", "vertices", "materials", "texture_bytes", "seams",
+    print(json.dumps({k: report[k] for k in ("triangles", "vertices", "materials", "texture_bytes", "seams", "welded",
                                               "moved", "rows", "unscaled")}, sort_keys=True))
     return 0
 

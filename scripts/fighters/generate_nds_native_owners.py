@@ -1126,6 +1126,8 @@ PACKED_DENSE_ID_LIMIT = 1 << PACKED_DENSE_ID_BITS
 PACKED_GX_SLOT_CURRENT = 31
 GX_CAMERA_SEED_SLOT = 0
 GX_HIERARCHY_SLOT_LIMIT = 16
+# Owners whose cross bindings start under the 16-floor (decode_joint_topology).
+OWNER_CROSS_SLOT_FLOORS = {"boss": 14, "palutena": 14}
 JOINT_SCHEDULE_PUSH_BEFORE = 1 << 15
 DOBJ_DESC_SIZE = 44
 SOURCE_G_MOVEWORD = 0xdb
@@ -4607,8 +4609,13 @@ def decode_joint_topology(
     # stores/restores any slot <= 30 with the live chain on SP-relative
     # pushes, so slots above Boss's own live peak are safe: camera seed +
     # TopN + source depth 8 peaks at 9, and 14..15 keep a five-slot moat.
-    # The 16-floor stays fail-closed for every other owner.
-    slot_floor = 14 if owner_name == "boss" else GX_HIERARCHY_SLOT_LIMIT
+    # Palutena (P6): her hair hangs from the head on its own row and their
+    # seam (the nape, owner 2026-10-20) brings both rows' bindings, 17 as
+    # Boss's; her deepest row is 7 (the staff), under Boss's 8, so 14..30
+    # keep at least his moat (decode_joint_topology refuses a depth that
+    # reaches the lowest slot). The 16-floor stays fail-closed for every
+    # other owner.
+    slot_floor = OWNER_CROSS_SLOT_FLOORS.get(owner_name, GX_HIERARCHY_SLOT_LIMIT)
     cross_bindings = owner_cross_binding_slots(owner_name, detail)
     if descriptor_overrides is not None:
         canonical_descriptors = _owner_joint_descriptors(
