@@ -12861,6 +12861,68 @@ typedef struct NDSFtrLeanWideHold
  * Sonic's four spares (its low 24,584). So 24 KB. */
 #define NDS_FTR_LEAN_SPARE_KEEP_FREE (25600u + 24576u)
 
+/* THE LEARN'S COPY OFF THE REGION (2026-10-20). A wide list keeping its own
+ * copy for a learn needs twice its words below its records: the region's
+ * 7,504 hold two records only up to ~3,560 list words. Palutena's grew to
+ * 3,698 (her hair shut at the nape, the low's hair whole), her variants went
+ * to 0, and every blink flip materialized her list again: four Palutenas 52
+ * a 900-frame match against 20 (WORK P95 1,275,456 -> 1,412,608 on Dream
+ * Land); her high list (4,588, a duel's or a human's) never had room. The
+ * copy, its hold block and its mask only live from ndsFtrLeanWideHoldBegin
+ * to ndsFtrLeanWideLearn in one draw, so one buffer a heap generation holds
+ * them for every slot (sized to the longest list asked for, in 1,024-word
+ * steps, taken under the spare's floor), and the region keeps its words for
+ * records. Without it -- no room on the heap -- the copy sits in the region
+ * as before. */
+#define NDS_FTR_LEAN_WIDE_SCRATCH_STEP 1024u
+static u32 *sNdsFtrLeanWideScratch;
+static u32 sNdsFtrLeanWideScratchWords;
+static u32 sNdsFtrLeanWideScratchGen;
+
+/* The learn's buffer for a list of `count` words, or NULL. `allocate` takes
+ * one (a larger one when the held buffer is too small: the heap is a bump
+ * arena, so the old one waits for the generation's end) when the heap has
+ * its room above the floor. */
+static NDS_FIGHTER_PACKET_COLD_CODE u32 *ndsFtrLeanWideScratch(u32 count,
+                                                               u32 allocate)
+{
+    const u32 need = NDS_FTR_LEAN_WIDE_RELEARN_WORDS(count);
+    u32 words;
+    u32 bytes;
+    u32 *buffer;
+
+    if ((sNdsFtrLeanWideScratch != NULL) &&
+        (sNdsFtrLeanWideScratchGen != gNdsTaskmanHeapGeneration))
+    {
+        sNdsFtrLeanWideScratch = NULL;
+        sNdsFtrLeanWideScratchWords = 0u;
+    }
+    if ((sNdsFtrLeanWideScratch != NULL) && (sNdsFtrLeanWideScratchWords >= need))
+    {
+        return sNdsFtrLeanWideScratch;
+    }
+    if ((allocate == FALSE) || (count > NDS_FTR_LEAN_WIDE_CAPACITY))
+    {
+        return NULL;
+    }
+    words = (need + NDS_FTR_LEAN_WIDE_SCRATCH_STEP - 1u) &
+            ~(NDS_FTR_LEAN_WIDE_SCRATCH_STEP - 1u);
+    bytes = words * (u32)sizeof(u32);
+    if (((uintptr_t)gSYTaskmanGeneralHeap.end <
+         (uintptr_t)gSYTaskmanGeneralHeap.ptr) ||
+        (((uintptr_t)gSYTaskmanGeneralHeap.end -
+          (uintptr_t)gSYTaskmanGeneralHeap.ptr) <
+         bytes + NDS_FTR_LEAN_SPARE_KEEP_FREE) ||
+        ((buffer = syTaskmanMalloc(bytes, 32u)) == NULL))
+    {
+        return NULL;
+    }
+    sNdsFtrLeanWideScratch = buffer;
+    sNdsFtrLeanWideScratchWords = words;
+    sNdsFtrLeanWideScratchGen = gNdsTaskmanHeapGeneration;
+    return buffer;
+}
+
 typedef struct NDSFtrLeanSlotState
 {
     NDSFtrLeanEntryState entry[NDS_FTR_LEAN_ENTRIES + 1u]; /* [2] the spare */
@@ -16173,7 +16235,11 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
 #endif
         if (wide != FALSE)
         {
-            floor += NDS_FTR_LEAN_WIDE_RELEARN_WORDS(packet->word_count);
+            /* The learn's copy off the region when the scratch takes it. */
+            if (ndsFtrLeanWideScratch(packet->word_count, TRUE) == NULL)
+            {
+                floor += NDS_FTR_LEAN_WIDE_RELEARN_WORDS(packet->word_count);
+            }
             word_capacity = ndsFtrLeanWideCapacity();
         }
         es->variant_max = (floor >= word_capacity) ? 0u :
@@ -17554,15 +17620,26 @@ ndsFtrLeanShapeHash(const NDSFighterPacket *p, const NDSFtrLeanEntryState *es)
 }
 
 /* A wide entry's hold block for a list of `count` words and `records`
- * records, or NULL when its capacity leaves no room for one. */
+ * records -- in the learn's scratch (its mask, the block, then the copy)
+ * when there is one, else in the region above the list -- or NULL when
+ * neither has room. */
 static NDSFtrLeanWideHold *ndsFtrLeanWideHoldAt(u32 battle_slot, u32 count,
                                                 u32 records)
 {
     const u32 top = records * NDS_FTR_LEAN_VARIANT_WORDS;
     const u32 capacity = ndsFtrLeanWideCapacity();
+    u32 *scratch;
 
-    if ((records < 2u) ||
-        ((top + count + NDS_FTR_LEAN_WIDE_RELEARN_WORDS(count)) > capacity))
+    if (records < 2u)
+    {
+        return NULL;
+    }
+    scratch = ndsFtrLeanWideScratch(count, FALSE);
+    if ((scratch != NULL) && ((top + count) <= capacity))
+    {
+        return (NDSFtrLeanWideHold *)(void *)(scratch + ((count + 31u) / 32u));
+    }
+    if ((top + count + NDS_FTR_LEAN_WIDE_RELEARN_WORDS(count)) > capacity)
     {
         return NULL;
     }
