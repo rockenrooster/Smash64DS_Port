@@ -44,8 +44,19 @@ generated stage and item code (`*.exec.inc`) that tests them. Proof: every confi
 `make -n -B` compile list preprocessed (`-E -P`) before and after, 483 translation units x 4
 configs, byte-identical.
 
+## The P1 battle targets and the Results lab (13 + 1) -- this commit
+
+`smash64ds-battle-playable-hwtri` (the frozen P1 battle ROM) and its tick-HUD, proof, audio-FGM,
+fast, Task 49 differ, freeze-diagnostics on/off, coarse (and its three variants) and forensic
+siblings, the `p1`/`p1-tick` goals, and `smash64ds-results-lab-hwtri` (it no longer built: the
+P7 menu shell's VS Mode, Options and Record calls fail its frontend-overlay check; the walk ROM
+reaches Results). The measurement block is now the gate target's alone. Every live config's
+`make -n -B` command list is unchanged. The sampler, the profile census, the soak watch and the
+boot-headroom check default to the gate target.
+
 ## Still to do
 
-- The P1-family targets (`smash64ds-battle-playable-*`) and the scripts only they use: with the
-  branches above gone they build the production renderer anyway. The results lab
-  (`smash64ds-results-lab-hwtri`) is being checked on the production path.
+- The P1/P2 verifier framework those targets fed, dormant since September: `verify-all.ps1`,
+  `verify-dev-fast.ps1`, `check-docs.ps1`, `check-architecture.ps1`, the harness registry and its
+  check, `check-gbi-decode-fixtures.ps1`, the `verify-battle-playable-*` verifiers and the probes
+  only they run; `docs/VERIFYING.md` and `docs/HARNESSES.md` with them.

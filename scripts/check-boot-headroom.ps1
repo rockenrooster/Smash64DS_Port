@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [string]$Build = 'build-tick-hud-buckets',
-    [string]$Target = 'smash64ds-battle-playable-tickhud-hwtri',
+    [string]$Target = 'smash64ds-p2-fourcpu-tickhud-hwtri',
     [string]$Nm = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-nm.exe',
     [string]$Size = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-size.exe'
 )

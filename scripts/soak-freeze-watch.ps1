@@ -5,7 +5,7 @@ param(
     [int]$GdbPort = 4619,
     [int]$RunnerSlot = -1,
     [string]$Build = 'build-r2-bothcpu',
-    [string]$Target = 'smash64ds-battle-playable-tickhud-hwtri',
+    [string]$Target = 'smash64ds-p2-fourcpu-tickhud-hwtri',
     [switch]$NoBuild,
     # NDS_R2_BOTH_CPU, passed to make explicitly. Defaults ON because the default
     # -Build IS the both-CPU stress ROM, and because the flag defaults to 0 in the

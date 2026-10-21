@@ -8,7 +8,7 @@ param(
     # four-fighter arm supplies its dedicated tick-HUD target here instead of
     # cloning this collector (and inevitably drifting its percentile/cadence
     # accounting).
-    [string]$Target = 'smash64ds-battle-playable-tickhud-hwtri',
+    [string]$Target = 'smash64ds-p2-fourcpu-tickhud-hwtri',
     [string]$Build = 'build-tick-hud-buckets',
     [switch]$NoBuild,
     # Requires a ROM built NDS_TASK68_FALLBACK_CENSUS=1. Off by default because

@@ -22,7 +22,7 @@ function Resolve-Smash64DSBuildOutput {
         [Parameter(Mandatory=$true)][string]$Build,
         [Parameter(Mandatory=$true)][ValidateSet('.nds','.elf','.map','.sym','.ds.gba')][string]$Extension
     )
-    $publishedTargets = @('smash64ds', 'smash64ds-battle-playable-hwtri')
+    $publishedTargets = @('smash64ds')
     $outputRoot = if ($publishedTargets -contains $Target) {
         [System.IO.Path]::GetFullPath($Root)
     } else {

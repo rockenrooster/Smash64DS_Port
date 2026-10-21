@@ -63,7 +63,7 @@ ifneq ($(filter build%,$(BUILD)),)
 override BUILD := $(BUILD_OUTPUT_ROOT)/$(BUILD)
 endif
 endif
-NDS_PUBLISHED_TARGETS := smash64ds smash64ds-battle-playable-hwtri
+NDS_PUBLISHED_TARGETS := smash64ds
 override NDS_PUBLISH_USER_ROM := $(if $(filter $(TARGET),$(NDS_PUBLISHED_TARGETS)),1,0)
 NDS_OUTPUT_ROOT ?= $(if $(filter 1,$(NDS_PUBLISH_USER_ROM)),$(PROJECT_ROOT),$(PROJECT_ROOT)/$(BUILD))
 # A PUBLISHED TARGET NAME PUBLISHES, whatever BUILD says. That is intended --
@@ -2515,269 +2515,25 @@ endif
 ifeq ($(NDS_BATTLE_PROFILE),0)
 $(error NDS_BATTLE_PROFILE=0 (DS-native precompiled path) is not implemented yet; it lands with Task 51. Set NDS_BATTLE_PROFILE=1.)
 endif
-NDS_RENDERER_FAST_RUN_DEFAULT ?= $(if $(filter smash64ds-battle-playable-coarse-hwtri,$(TARGET)),8,0)
+NDS_RENDERER_FAST_RUN_DEFAULT ?= 0
 # R1 retirement, done (2026-10-20, old machinery): fighter hierarchy mode 7, the
 # per-root hardware executor, the CPU triangle rasteriser and the resident
 # raw-path tables are gone from the sources; every target builds the production
 # fighter path, which nds_renderer.h still checks (profile 0, mode 8/9,
 # NO_ORACLE, HW light, Task 56 streams).
 override NDS_FIGHTER_LEGACY_EXEC := 0
-ifeq ($(TARGET),smash64ds-battle-playable-hwtri)
-# This is the only published P1 battle ROM. Keep the complete realtime
-# configuration intrinsic to the target so direct builds and verifiers cannot
-# silently publish a software-rendered or non-interactive variant.
-override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
-override NDS_DEV_LIVE_INPUT_PREVIEW := 1
-override NDS_HARNESS_FAST_LOGIC := 0
-override NDS_RENDERER_HW_TRIANGLES := 1
-override NDS_DEBUG_HUD := 0
-override NDS_RENDERER_PROFILE_LEVEL := 0
-override NDS_SHIP_TELEMETRY := 0
-override NDS_TICK_HUD := 0
-override NDS_RENDERER_FAST_RUN_DEFAULT := 9
-override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
-override NDS_TASK36_HW_COMPOSE := 2
-# R2-08: THE SWITCH (SwitchPlan §6). The Boundary configuration is produced by
-# the Runtime 2 battle path. The Runtime 1 loop stays in-tree as the oracle, so
-# it needs a way to be built: `override` defeats a command-line 0, exactly as it
-# does for NDS_R2_CUBIC_FIXED below, and without an escape hatch a Runtime 1
-# control arm silently builds identical to the candidate.
-ifneq ($(NDS_R2_LAB_R1_PATH),1)
-override NDS_R2_PATH := 1
-endif
-# R2-03 E17: split matrix load. Stops composing modelview x projection on the
-# CPU and lets the geometry engine multiply, -17,600 FTR P50. Boundary green in
-# both flag states, geometry proven identical (136,640 P0 triangles either way
-# over the same 480-frame window), owner-approved 2026-07-28.
-override NDS_R2_FIGHTER_HW_MTX := 1
-# Slice 43 was withdrawn on 2026-08-11 after the owner found a periodic one-frame
-# fighter disappearance. The later full-match repair closed the GX matrix-stack
-# leak, and the 2026-08-15 matched-tic diff masks were explicitly owner-accepted
-# (0.0358-0.1742% battle-screen variance, GXSTAT 0x06000000, gameplay invariants
-# unchanged). Owner policy 2026-08-16: accepted optimisations ship enabled.
-override NDS_R2_FIGHTER_GX_COMPOSE := 1
-# Slice 44: the stage's per-frame transform revalidation round-robins over 8
-# frames instead of re-proving all 42 bindings constant every frame. Matched
-# control from the same tree, 1,600-frame both-CPU gate: WORK-H P50 -17,088 /
-# P95 -35,904, i.e. 2.0x and 4.2x the +/-8,544 floor, and it lands where it was
-# aimed -- STG P50 -19,904 / P95 -24,192 with FTR flat. VBlank histogram
-# 2:1621->2:1644 with 3/4/5+ all down. Engagement on both sides: RigidChecks
-# 6,627 of 53,014 sweep slots is exactly 1/8, and 53,014 = 26 x 2,039 means
-# every frame swept, so the rigid mask never once demoted. StaleReuse 28,518
-# against 28,546 predicted. The game viewport is pixel-identical at two
-# frame-locked tics (118,000 px, max channel delta 0) and both arms read
-# damage 130/51 stock x1 at the lock, so neither presentation nor simulation
-# moved. Not graduated onto the BUGS.md #9 floor arms below: those exist to
-# compare the rigid path against the CPU path and a stride would confound them.
-override NDS_R2_STAGE_VALIDATE_STRIDE := 8
-# R2-03 E16: the fighter's per-vertex lighting runs on the geometry engine
-# instead of the CPU. -35,072 FTR P50, VBlank histogram 2:381->2:418, geometry
-# bit-identical (181,440 P0 triangles either way). Requires HW_MTX above for the
-# vector matrix. Boundary green, owner-approved 2026-07-28.
-override NDS_R2_FIGHTER_HW_LIGHT := 1
-# R2-03 E32: the hitlag shuffle no longer knocks the native fighter owner off
-# its path, so the generic display-list interpreter stops running as a second
-# renderer for the 5 frames of a hitlag burst. -51,136 WORK-H P95, 17/128
-# over-gate frames -> 13/128.
-#
-# ACCEPTED WITH A KNOWN VISUAL RESIDUAL, owner-approved 2026-07-29: the struck
-# fighter does not flash white during those frames. E62 established this is a
-# generator gap, not a runtime bug -- the flash clears G_LIGHTING and draws
-# vertex colours raw, and the owner has no flash-colour data baked. Every
-# non-flash frame is pixel-identical to the generic path. Tracked in
-# KNOWN_ISSUES.md; do NOT enable NDS_R2_UNLIT_VERTEX_EPOCH as a fix, E62 proved
-# it emits packed normals and is visibly worse.
-override NDS_R2_FIGHTER_SHUFFLE_FOLD := 1
-# R2-03 E64b: the animation cubic Hermite in Q12 fixed point. -26,944 WORK-H
-# P95, -20,352 P50, SRC P50 -9,344, over-gate 12/128 -> 9/128, 135,871
-# evaluations with zero saturations, Boundary green. Owner-authorized 2026-07-29
-# as a non-bit-exact change. Step and Linear nodes keep the decomp's own
-# expressions, so 45.3% of AObj nodes stay bit-identical.
-#
-# EQUIVALENCE, settled by E65 -- and note the correction path, because two
-# earlier versions of this comment were wrong in opposite directions. The first
-# claimed "the Task 9 state hash did NOT move"; it had never run
-# (`NDS_TASK9_STATE_HASH ?= 0`, nothing in verify-all.ps1 references it). The
-# second called the hash "the right instrument"; it is not. The hash asserts
-# bit-exactness and this change is authorized NON-bit-exact, so it can only ever
-# report "differs", which says nothing about whether gameplay moved.
-#
-# The right instrument is an error bound, and it now runs on every profile:
-# scripts/check_r2_cubic_error_bound.py, wired into
-# check-gbi-decode-fixtures.ps1. It extracts this kernel from between the
-# NDS_R2_CUBIC_FIXED_KERNEL_BEGIN/END markers plus gcGetInterpValueCubic from the
-# decomp, compiles both on the host and sweeps. Worst deviation 0.0028 rad on
-# rotation tracks and 0.0067 world units on translation tracks, against a 0.02
-# gate set by hitbox scale. Joint values reach gameplay only through
-# gmCollisionGetFighterPartsWorldPosition, so that cannot flip a hit decision.
-#
-# E65 also lifted the basis to Q16 and moved the evaluator to ARM
-# (__attribute__((noinline, target("arm")))) because this TU builds -mthumb,
-# which has no SMULL: the 64-bit multiplies were eight `bl __aeabi_lmul` a call.
-# A FURTHER -35,584 P95 on top of the numbers above, so the totals here are the
-# E64b step alone. Do not remove that attribute.
-#
-# Arm A added a 256-entry conversion cache and REGRESSED (+21,632 P95) on 10 KB
-# of BSS plus a 1,824-byte .text.hot member. Do not re-add the cache; the
-# reasoning is in battleship_sys_objanim.c.
-#
-# NDS_R2_LAB_CUBIC_OFF=1 is the escape hatch that makes this A/B-able at all:
-# `override` defeats a command-line 0, so without it the control arm silently
-# builds identical to the candidate and the comparison reads "no difference".
-ifneq ($(NDS_R2_LAB_CUBIC_OFF),1)
-override NDS_R2_CUBIC_FIXED := 1
-endif
-# R2-03 E46: the fighter state-delta path into ITCM. The switch was already
-# resident; the span loop and every Record*/SyncTextureTile helper it dispatches
-# to were in main RAM, so all 134.5 before-span applications a frame left
-# zero-wait ITCM for icache-served code. Placement only -- no behaviour change.
-# FTR P50 -12,032, WORK P50 -12,416 over the same 128-frame window, with the
-# untouched STG/SRC buckets moving +768/-1,216 to bound the noise. The gain is
-# 4x the state-span bracket's -3,128 because ApplyMaterial (27.7/frame) and the
-# texture prepare (46.4/frame) call the same helpers. +1,016 bytes of .itcm.
-# The old 1,896-free estimate is superseded by the exact ledger above.
-override NDS_R2_DELTA_PATH_ITCM := 1
-# R2-04 E1/E4/E5: fighter animation payload cache plus a stepped warm preload.
-# lbRelocGetForceExternHeapFile re-read an animation off the cartridge on every
-# call. The cache keys on asset_id and stores the byte-swapped pre-fixup image,
-# re-running fixups per destination so "force" still restores pristine data. The
-# warm list makes the match's 41 measured animations (91,104 bytes) resident one
-# per scene update across the countdown; loading all 41 in one call at
-# scVSBattleStartBattle misses a BGM buffer seam and kills the music for the
-# match. Misses 29 -> 2, WORK-H P95 1,364,992 -> 1,232,640. Cycle 105 re-measured
-# the list at 85 animations / 197,184 bytes and resized the arena to match; the
-# 41 above is the Boundary-derived figure it replaced.
-override NDS_R2_ANIM_CACHE := 1
-# Cycle 108: run the AObj16 lane swap + successor scan ONCE per warmed animation,
-# at warm time, instead of on every force load. The pass is position-independent,
-# so the transformed image survives the per-destination copy; the intrusive fixup
-# list is recorded and restored around it because applying fixups consumes it.
-# Measured on ONE binary with the runtime route (standing rule 7): WORK-H P95
-# -15,693 over 68.4% of the change, so ~-23,000 whole -- which the separately
-# linked arm reads as -22,806. Coverage 351/351 hits, 85/85 prebaked, all four
-# decline counters 0, heap free-min unchanged at 42,136.
-override NDS_R2_AOBJ16_PREBAKE := 1
-# Task 53: re-activate Task 36 rigid-stage replay. Relaxes the arena admission
-# guard (nds_renderer.c:4195/:4247) from the legacy exact-0x150000 check to
-# "admit any usable arena >= 0x130000" -- the robust downward-stepping allocator
-# (src/port/diagnostics.c:7368) cannot secure the full 0x150000 on the DS heap,
-# so replay had been silently DISABLED since the allocator was made robust.
-# E2 (2026-07-24): replay bit-exact with the generic emit (Task 49 differ
-# ZERO_DEVIATION, 2860/2860 words); STG P50 -187,648 (-33%), VBlank tail up
-# (3-VBlank share 426->474, 4->80, 5+->12), ALL P50 flat (saved CPU
-# redistributes to OTHR). Owner visual approved 2026-07-24. Default-on here;
-# the flag is one-line revertable if a device A/B rejects the pacing gain.
-override NDS_TASK53_REPLAY_ARENA_FIX := 1
-# Task 49: the battle-pipeline selector. Profile 1 = today's shipping path
-# (the correctness oracle). Kept explicit here so the published ROM cannot
-# silently slip to the not-yet-implemented profile 0.
-override NDS_BATTLE_PROFILE := 1
-# Task 44: stage steady-state admission + dense binding lists. Exact (no
-# fidelity change); ships on with Task 36 replay.
-override NDS_TASK44_STAGE_STEADY := 1
-# R2-02: the three kept stage cuts, graduated 2026-07-28. Together they take STG
-# P50 351,488 -> 212,480 (-139,008, -40%) and put the frame at 2 VBlanks where
-# the previous shipping ROM sat at 3.
-#
-# All three are exactness-preserving, so none of them spends the PROJECT_GOAL.md
-# fidelity budget and none needs the owner's visual-oracle call:
-#   E1a  reuses a prepared run table that is a pure function of the generated
-#        tables and a traversal state Task 44 already proves unchanged;
-#        -94,784, down on 128/128 frames, 4-VBlank frames 50 -> 12 of 566.
-#   E2   sends the identical Task 36 word stream by GXFIFO DMA instead of a CPU
-#        store loop; -30,912.
-#   E7   hoists the camera operands out of the per-binding compose loop;
-#        -11,840, and binding_composed[] is bit-identical to the pre-E7 arm for
-#        all 42 bindings at frames 260/420/500/700/1100/1700.
-override NDS_R2_STAGE_DIRECT := 1
-override NDS_R2_STAGE_DMA := 1
-override NDS_R2_STAGE_VIEWPROJ := 1
-# R2-02 E8, 2026-07-28. Elides the owner preflight for the five segments the
-# Task 36 replay does not serve, whose outputs nothing reads once E1a's table is
-# valid. STG P50 212,480 -> 177,088, under the 180,000 phase budget; 2-VBlank
-# frames 13 -> 198 of 565. Exact: the DS top screen is pixel-identical to the
-# pre-E8 arm at the simulation-clock lock, and the elision counter reads exactly
-# 5 per frame.
-override NDS_R2_STAGE_PREFLIGHT := 1
-# R2-03 E9: the fighter-parts matrix path converted float -> N64 16.16 -> DS
-# 20.12, and the intermediate was a lossless round trip -- COMBINE_INTEGRAL/
-# COMBINE_FRACTIONAL split exactly what MtxCellS16p16 recombines. Converting
-# straight to 20.12 is bit-exact by construction, not by tolerance. A/B on
-# identical source: MatrixPrep 122,765 -> 110,777, world build 105,425 ->
-# 93,830. Exact: 0 mismatches over 8,108 conversions against the two-step, and
-# 0 fallbacks to the source routine.
-override NDS_R2_FIGHTER_MTX_DIRECT := 1
-# R2-03 E12: the native fighter path has no Gfx command site, so the resolver's
-# existing site cache -- keyed on state->source_command_site -- misses on every
-# fighter run and the full resolve runs each time. The memo is that same cache
-# re-keyed on run_index, which E5 proved is what the answer depends on. A/B on
-# identical source: texture prepare 45,952 -> 12,362, the whole function 82,042
-# -> 49,318. Nine distinct textured runs are resolved once each for the entire
-# match: 1,074 hits, 9 fills, 0 stale entries, and 0 mismatches over 1,083
-# level-2 comparisons.
-override NDS_R2_FIGHTER_RUN_MEMO := 1
-# Task 37: seven hot leaves (memset, memcpy, memcmp, __ieee754_sqrtf and three
-# renderer/fighter helpers, 906 bytes) into ITCM free space. Named work P50
-# -59,328 ticks, 3-VBlank share 71.7% -> 76.0%, 5+ VBlank 5.2% -> 3.1%.
-#
-# Shipping on the owner's explicit decision, 2026-07-22, with the state-hash
-# gate still RED. That is deliberate and the reasoning is on the record:
-# Task 45 dumped the raw FTStruct bytes of both builds and found all 215
-# differing words are main-RAM heap pointers offset by exactly +0x180 -- the
-# image shrinks 384 bytes when this code leaves .main, so every heap object
-# below it relocates. Zero gameplay values differ. The gate is reporting
-# relocated addresses as changed state. The leak was NOT root-caused (two
-# mechanism hypotheses were falsified), so the gate stays red rather than being
-# adjusted to pass. See ClaudeFable5_Task45_FTStructLocalize_20260722.md.
-#
-# P2 correctness rebank, 2026-08-30.  LEAVES is a bitmask
-# (1=libc 2=libm 4=port).  The later shipping v4-c238 census measured the
-# Task-37 libm __ieee754_sqrtf leaf at just 60 cycles total / 236 code bytes;
-# keep the still-hot libc + port leaves (mask 5) and return that stale libm
-# admission to main RAM.  This is placement-only and pairs with the
-# _arm_fixunssfsi main-RAM placement above to restore hard ITCM headroom for
-# the source-faithful live model-part root resolver.
-override NDS_TASK37_ITCM_LEAVES := 5
-override NDS_SCENE_MIP_CACHE_LAB := 0
-override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
-override NDS_IFCOMMON_HYBRID_OAM := 0
-override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
-override NDS_TASK16_FLOAT_COMPARE := 1
-override NDS_TASK16_FLOAT_I2F := 1
-override NDS_TASK16_FLOAT_ADDSUB := 1
-# Retail Task-32 A/B reduced the normalized 4+/5+ pacing tail.
-override NDS_TASK32_DRAW_HOT_TEXT := 1
-# Task 39: the owner-approved hurt flash, hit sparks, and flat 2D shield.
-override NDS_TASK39_FX_SPRITES := 1
-override NDS_TASK39_FX_FLASH := 1
-endif
-ifneq ($(filter $(TARGET),smash64ds-battle-playable-tickhud-hwtri smash64ds-p2-fourcpu-tickhud-hwtri smash64ds-battle-playable-proof-hwtri smash64ds-battle-playable-audio-fgm-hwtri smash64ds-results-lab-hwtri),)
+ifeq ($(TARGET),smash64ds-p2-fourcpu-tickhud-hwtri)
 # Profile-0 shipping path plus either the lightweight Task 41 timers or the
 # full diagnostic publications required by GDB proof runs.
 #
-# smash64ds-results-lab-hwtri and the focused audio-FGM proof target ride this
-# block deliberately. Results must differ only in the scene it boots; audio-FGM
-# must differ only in what its verifier observes. Both therefore compile the
-# same accepted renderer/gameplay path as the shipping/proof ROM rather than
-# inheriting stale generic defaults. Adding them to the filter instead of
-# cloning the block is what keeps future accepted-path flags from drifting.
-ifeq ($(TARGET),smash64ds-results-lab-hwtri)
-override NDS_DEV_SCENE_HARNESS := results_playable
-else
 override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
-endif
 override NDS_DEV_LIVE_INPUT_PREVIEW := 1
 override NDS_HARNESS_FAST_LOGIC := 0
 override NDS_RENDERER_HW_TRIANGLES := 1
 override NDS_DEBUG_HUD := 0
 override NDS_RENDERER_PROFILE_LEVEL := 0
-ifneq ($(filter $(TARGET),smash64ds-battle-playable-tickhud-hwtri smash64ds-p2-fourcpu-tickhud-hwtri smash64ds-results-lab-hwtri),)
 override NDS_SHIP_TELEMETRY := 0
 override NDS_TICK_HUD := 1
-else
-override NDS_SHIP_TELEMETRY := 1
-override NDS_TICK_HUD := 0
-endif
 override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_TASK36_HW_COMPOSE := 2
@@ -2785,17 +2541,8 @@ override NDS_TASK36_HW_COMPOSE := 2
 # carry every published flag or the instrument measures a path the user is not
 # running, and check-tickhud-parity.ps1 fails a one-sided edit (BENCH_MAKE_R2_PATH,
 # Makefile:4203).
-#
-# smash64ds-results-lab-hwtri is EXCLUDED, and it is not a taste call: this
-# block's filter admits it, but it overrides NDS_DEV_SCENE_HARNESS to
-# results_playable above, and both taskman_seam.c and src/nds/r2/nds_r2_battle.c
-# `#error` when NDS_R2_PATH=1 under any harness but battle_playable. Without the
-# guard the Results lab stops compiling. check-tickhud-parity.ps1 compares only
-# the published and tick-HUD targets, so the exclusion cannot hide drift.
-ifneq ($(TARGET),smash64ds-results-lab-hwtri)
 ifneq ($(NDS_R2_LAB_R1_PATH),1)
 override NDS_R2_PATH := 1
-endif
 endif
 # R2-03 E17/E16: match the published block. Any flag there is on this one too.
 override NDS_R2_FIGHTER_HW_MTX := 1
@@ -2875,17 +2622,6 @@ endif
 # every tick-HUD bucket and every GDB proof a reading of a different binary.
 # Track the published placement exactly (2026-08-30 rebank: libc + port).
 override NDS_TASK37_ITCM_LEAVES := 5
-ifeq ($(TARGET),smash64ds-results-lab-hwtri)
-ifeq ($(NDS_TASK91_DRAW_PHASE_CENSUS),1)
-# Task 91 instruments the fighter owner itself, including ITCM-resident hot
-# helpers.  The shipping-equivalent Results lab keeps only 736 bytes of spare
-# ITCM with the accepted Task-37 placement, so adding the census overflows the
-# linker before it can measure anything.  Placement is not the mechanism Task
-# 91 measures; give this diagnostic build its code headroom without changing
-# the ordinary Results lab or any published configuration.
-override NDS_TASK37_ITCM_LEAVES := 0
-endif
-endif
 override NDS_SCENE_MIP_CACHE_LAB := 0
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
 override NDS_IFCOMMON_HYBRID_OAM := 0
@@ -2893,16 +2629,6 @@ override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
 override NDS_TASK16_FLOAT_COMPARE := 1
 override NDS_TASK16_FLOAT_I2F := 1
 override NDS_TASK16_FLOAT_ADDSUB := 1
-ifeq ($(TARGET),smash64ds-results-lab-hwtri)
-ifeq ($(NDS_TASK91_DRAW_PHASE_CENSUS),1)
-# The Task-91 counters add 296 bytes inside already-ITCM native-owner code.
-# The generic Task-16 compare + i2f placement is 328 bytes in this build and
-# is outside the mechanism under census, so evict only those two diagnostic
-# leaves.  Keep add/sub and all native renderer/matrix placement unchanged.
-override NDS_TASK16_FLOAT_COMPARE := 0
-override NDS_TASK16_FLOAT_I2F := 0
-endif
-endif
 override NDS_TASK32_DRAW_HOT_TEXT := 1
 override NDS_TASK39_FX_SPRITES := 1
 override NDS_TASK39_FX_FLASH := 1
@@ -3025,79 +2751,6 @@ override NDS_P2_FOUR_CPU_KIND3 := $(word 4,$(NDS_LAB_FOURCPU_KINDS))
 endif
 endif
 endif
-endif
-# Source-state gameplay proof target.  Fast logic cannot use NDS_R2_PATH (the
-# R2 battle loop is the realtime loop), but its renderer must still be a
-# coherent current DS configuration.  This target had been relying on generic
-# defaults and drifted as accepted renderer features graduated globally, first
-# producing an impossible profile-2/Task56 pair and then a partial GX-compose
-# configuration.  Keep the bounded gameplay loop, but pin the same accepted
-# renderer/backend bundle as the scene-boundary fast target below.  No tick
-# figure from this target is a performance figure.
-ifeq ($(TARGET),smash64ds-battle-playable-fast-hwtri)
-override NDS_DEV_SCENE_HARNESS := battle_playable
-override NDS_DEV_LIVE_INPUT_PREVIEW := 0
-override NDS_HARNESS_FAST_LOGIC := 1
-# The battlepack blob buys gameplay-frame CPU at the price of ~288 KiB of
-# arena residency. This target's charter (above) says no tick figure from it
-# is a performance figure, and with the pack resident the bounded proof's
-# memory ledger ends the run at 95,424 B headroom against its 131,072 B
-# reserve (P2-3r3, 2026-08-23). BATTLEPACK=0 with KEEP_CACHE=1 is the
-# measured isolation-control arm (2026-08-15 BATTLEPACK_ISOLATION.md): the
-# grown arena and raw cache stay exactly as the shipping pair has them, only
-# the blob is absent — headroom returns without changing any address the
-# pack arm measured.
-override NDS_R2_BATTLEPACK := 0
-override NDS_R2_BATTLEPACK_KEEP_CACHE := 1
-override NDS_RENDERER_HW_TRIANGLES := 1
-override NDS_DEBUG_HUD := 0
-override NDS_RENDERER_PROFILE_LEVEL := 0
-override NDS_SHIP_TELEMETRY := 1
-override NDS_TICK_HUD := 0
-override NDS_RENDERER_FAST_RUN_DEFAULT := 9
-override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
-override NDS_TASK36_HW_COMPOSE := 2
-override NDS_R2_FIGHTER_HW_MTX := 1
-override NDS_R2_FIGHTER_GX_COMPOSE := 1
-# Task 40's cycler is profile-1-only by design: its large diagnostic arrays and
-# markers must never enter the profile-0 shipping image. The historical coarse
-# profile target predates the current native-owner renderer and no longer forms
-# a coherent build (GX compose + profile instrumentation violates the current
-# soft-light contract). Reuse this bounded, non-performance gameplay target for
-# the audit instead. Keep the accepted split-matrix path, but let the CPU own the
-# hierarchy compose while profile-1 instrumentation is present; the audit is
-# proving animation acquisition/playback, not renderer timing or GX equivalence.
-ifneq ($(NDS_FIGHTER_ANIM_AUDIT),0)
-override NDS_RENDERER_PROFILE_LEVEL := 1
-override NDS_R2_FIGHTER_GX_COMPOSE := 0
-endif
-override NDS_R2_STAGE_VALIDATE_STRIDE := 8
-override NDS_R2_FIGHTER_HW_LIGHT := 1
-override NDS_R2_FIGHTER_SHUFFLE_FOLD := 1
-override NDS_R2_CUBIC_FIXED := 1
-override NDS_R2_DELTA_PATH_ITCM := 1
-override NDS_R2_ANIM_CACHE := 1
-override NDS_R2_AOBJ16_PREBAKE := 1
-override NDS_TASK53_REPLAY_ARENA_FIX := 1
-override NDS_BATTLE_PROFILE := 1
-override NDS_TASK44_STAGE_STEADY := 1
-override NDS_R2_STAGE_DIRECT := 1
-override NDS_R2_STAGE_DMA := 1
-override NDS_R2_STAGE_VIEWPROJ := 1
-override NDS_R2_STAGE_PREFLIGHT := 1
-override NDS_R2_FIGHTER_MTX_DIRECT := 1
-override NDS_R2_FIGHTER_RUN_MEMO := 1
-override NDS_TASK37_ITCM_LEAVES := 5
-override NDS_SCENE_MIP_CACHE_LAB := 0
-override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
-override NDS_IFCOMMON_HYBRID_OAM := 0
-override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
-override NDS_TASK16_FLOAT_COMPARE := 1
-override NDS_TASK16_FLOAT_I2F := 1
-override NDS_TASK16_FLOAT_ADDSUB := 1
-override NDS_TASK32_DRAW_HOT_TEXT := 1
-override NDS_TASK39_FX_SPRITES := 1
-override NDS_TASK39_FX_FLASH := 1
 endif
 # P2-1d VS shell lab target: the playable menu flow, in the SHIPPING battle
 # configuration.
@@ -3408,127 +3061,6 @@ override NDS_P2_STAGE_INISHIE := 1
 override NDS_P2_STAGE_SECTOR := 1
 override NDS_R2_EFFECT_POOL := 38
 endif
-# Task 49 GX-differ lab target. Its OWN block (appending to the tickhud/proof
-# block breaks the structural pin at check-gbi-decode-fixtures.ps1:1847).
-# Profile 1 (oracle instrumentation), HW_COMPOSE=2 (capture the real shipping
-# compose stream), affine off (profile 1 + affine OOMs the arena), and NO
-# NDS_TASK37_ITCM_LEAVES so the differ hook has ITCM headroom. The tickhud
-# block overrides ITCM_LEAVES:=7 and PROFILE_LEVEL:=0; those overrides beat
-# the command line, so the differ must NOT build on the tickhud target.
-ifeq ($(TARGET),smash64ds-battle-playable-task49-differ-hwtri)
-override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
-override NDS_DEV_LIVE_INPUT_PREVIEW := 1
-override NDS_HARNESS_FAST_LOGIC := 0
-override NDS_RENDERER_HW_TRIANGLES := 1
-override NDS_DEBUG_HUD := 0
-override NDS_RENDERER_PROFILE_LEVEL := 1
-override NDS_RENDERER_FAST_RUN_DEFAULT := 9
-override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
-override NDS_TASK36_HW_COMPOSE := 2
-# Keep the differ on the same accepted battle/runtime program it is comparing.
-# This target is intentionally separate from the profile-0 proof/tick-HUD block
-# above, so it has to carry that block's renderer prerequisites explicitly.
-override NDS_R2_PATH := 1
-override NDS_R2_FIGHTER_HW_MTX := 1
-override NDS_R2_FIGHTER_GX_COMPOSE := 1
-override NDS_R2_STAGE_VALIDATE_STRIDE := 8
-override NDS_R2_FIGHTER_HW_LIGHT := 1
-override NDS_R2_FIGHTER_SHUFFLE_FOLD := 1
-override NDS_R2_CUBIC_FIXED := 1
-override NDS_R2_DELTA_PATH_ITCM := 1
-override NDS_R2_ANIM_CACHE := 1
-override NDS_R2_AOBJ16_PREBAKE := 1
-override NDS_BATTLE_PROFILE := 1
-override NDS_TASK44_STAGE_STEADY := 1
-override NDS_R2_STAGE_DIRECT := 1
-override NDS_R2_STAGE_DMA := 1
-override NDS_R2_STAGE_VIEWPROJ := 1
-override NDS_R2_STAGE_PREFLIGHT := 1
-override NDS_R2_FIGHTER_MTX_DIRECT := 1
-override NDS_R2_FIGHTER_RUN_MEMO := 1
-override NDS_SCENE_MIP_CACHE_LAB := 0
-override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
-override NDS_IFCOMMON_HYBRID_OAM := 0
-override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
-override NDS_TASK16_FLOAT_COMPARE := 1
-override NDS_TASK16_FLOAT_I2F := 1
-override NDS_TASK16_FLOAT_ADDSUB := 1
-override NDS_TASK32_DRAW_HOT_TEXT := 1
-override NDS_TASK39_FX_SPRITES := 1
-override NDS_TASK39_FX_FLASH := 1
-# Profile-1 keeps the reloc symbol registry live.  Its ITCommonData rows include
-# the Star Rod weapon-attribute symbol, whose owning definition deliberately
-# lives in the shared item core rather than the generic reloc diagnostics TU.
-override NDS_P2_ITEM_CORE := 1
-override NDS_TASK49_GX_DIFFER := 1
-# Task 55 E2: the differ target keeps the replay path live (Task 53) so the
-# Task 55 elision can be captured. NDS_TASK55_STAGE_GEOM stays command-line
-# controlled here (0 = baseline stream, 1 = elided stream) so a single target
-# captures both halves of the A/B.
-override NDS_TASK53_REPLAY_ARENA_FIX := 1
-endif
-NDS_FREEZE_DIAGNOSTIC_TARGETS := \
-	smash64ds-battle-playable-freeze-diagnostics-on-hwtri \
-	smash64ds-battle-playable-freeze-diagnostics-off-hwtri
-ifneq ($(filter $(TARGET),$(NDS_FREEZE_DIAGNOSTIC_TARGETS)),)
-# These nonpublishing A/B targets are release-equivalent except for the
-# diagnostics switch. Their distinct target and build names prevent one ROM
-# from overwriting the other.
-override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
-override NDS_DEV_LIVE_INPUT_PREVIEW := 1
-override NDS_HARNESS_FAST_LOGIC := 0
-override NDS_RENDERER_HW_TRIANGLES := 1
-override NDS_DEBUG_HUD := 0
-override NDS_RENDERER_PROFILE_LEVEL := 0
-override NDS_RENDERER_FAST_RUN_DEFAULT := 9
-override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
-override NDS_SCENE_MIP_CACHE_LAB := 0
-override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
-override NDS_IFCOMMON_HYBRID_OAM := 0
-override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
-override NDS_TASK16_FLOAT_COMPARE := 1
-override NDS_TASK16_FLOAT_I2F := 1
-override NDS_TASK16_FLOAT_ADDSUB := 1
-override NDS_TASK32_DRAW_HOT_TEXT := 1
-override NDS_TASK39_FX_SPRITES := 1
-override NDS_TASK39_FX_FLASH := 1
-override NDS_FREEZE_DIAGNOSTICS := $(if $(filter %-on-hwtri,$(TARGET)),1,0)
-endif
-ifeq ($(TARGET),smash64ds-battle-playable-freeze-diagnostics-off-hwtri)
-# The off build is the canonical release payload in an isolated build tree.
-override NDS_OUTPUT_BASENAME := smash64ds-battle-playable-hwtri
-endif
-ifeq ($(TARGET),smash64ds-battle-playable-coarse-hwtri)
-# This is the user-testable fast-iteration ROM, not a generic build alias.
-# Keep its complete realtime/live-input configuration intrinsic to the target
-# so a direct make invocation cannot silently emit a non-user-facing ROM.
-override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
-override NDS_DEV_LIVE_INPUT_PREVIEW := 1
-override NDS_HARNESS_FAST_LOGIC := 0
-override NDS_RENDERER_HW_TRIANGLES := 1
-override NDS_DEBUG_HUD := 0
-override NDS_RENDERER_PROFILE_LEVEL := 1
-override NDS_RENDERER_FAST_RUN_DEFAULT := 8
-endif
-ifeq ($(TARGET),smash64ds-battle-playable-forensic-hwtri)
-override NDS_DEBUG_HUD := 0
-override NDS_RENDERER_PROFILE_LEVEL := 2
-endif
-ifeq ($(TARGET),smash64ds-battle-playable-coarse-triangle-noop-hwtri)
-override NDS_DEBUG_HUD := 0
-override NDS_RENDERER_PROFILE_LEVEL := 1
-override NDS_RENDERER_BENCHMARK_MODE := 1
-endif
-ifeq ($(TARGET),smash64ds-battle-playable-coarse-cpu-prep-no-gx-hwtri)
-override NDS_DEBUG_HUD := 0
-override NDS_RENDERER_PROFILE_LEVEL := 1
-override NDS_RENDERER_BENCHMARK_MODE := 2
-endif
-ifeq ($(TARGET),smash64ds-battle-playable-coarse-warm-no-upload-hwtri)
-override NDS_DEBUG_HUD := 0
-override NDS_RENDERER_PROFILE_LEVEL := 1
-override NDS_RENDERER_BENCHMARK_MODE := 4
-endif
 override NDS_IMPORT_BATTLESHIP_FTMAIN := 1
 override NDS_IMPORT_BATTLESHIP_FTMANAGER := 1
 override NDS_IMPORT_BATTLESHIP_FTCOMPUTER := 1
@@ -3821,14 +3353,6 @@ else
 $(error Unknown NDS_DEV_SCENE_HARNESS "$(NDS_DEV_SCENE_HARNESS)"; use normal, a verifier harness name from scripts/lib/harness-registry.ps1, or a lab-only harness named in this block such as results_playable)
 endif
 
-# Profile 2 is an exact semantic oracle rather than a latency benchmark.  Its
-# instrumentation and paired native/generic paths are large enough that an O2
-# realtime build can crowd the BattleShip scene arena below its verified
-# 0x130000-byte floor.  Keep only the forensic target size-optimized; profile
-# 0/1 battle-playable ROMs retain the O2 performance contract.
-ifeq ($(TARGET),smash64ds-battle-playable-forensic-hwtri)
-CFLAGS += -Os
-endif
 
 CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions
 ASFLAGS := -g $(ARCH)
@@ -6023,20 +5547,6 @@ run: $(BUILD)
 p2-fighter-production-manifest:
 	@python scripts/fighters/generate_fighter_production_manifest.py --repo-root .
 
-# P1 convenience goals. P1 ships smash64ds-battle-playable-hwtri.nds and is
-# measured on its flag-identical tick-HUD sibling; bare `make` builds the P2
-# smash64ds.nds the milestone does not need. These wrap the exact TARGET/BUILD
-# pairs the Boundary verifier and sample-tick-hud-buckets.ps1 already use, so
-# alias builds stay incremental with harness builds. The sub-makes run
-# sequentially -- one build at a time is still the rule -- and `p1-tick` alone
-# is the cheap compile check during iteration.
-.PHONY: p1 p1-tick
-p1:
-	@+$(MAKE) --no-print-directory TARGET=smash64ds-battle-playable-hwtri BUILD=build-battle-playable-canonical-hwtri-harness
-	@+$(MAKE) --no-print-directory TARGET=smash64ds-battle-playable-tickhud-hwtri BUILD=build-tick-hud-buckets
-
-p1-tick:
-	@+$(MAKE) --no-print-directory TARGET=smash64ds-battle-playable-tickhud-hwtri BUILD=build-tick-hud-buckets
 
 else
 

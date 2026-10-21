@@ -34,14 +34,9 @@ param(
     # match before the window opens, so give them a long -TimeoutSeconds.
     [ValidateSet('Battle','Results')]
     [string]$Scene = 'Battle',
-    # Which ROM the window is measured on. The default is the tick-HUD battle
-    # ROM every census before 2026-07-30 used. `smash64ds-results-lab-hwtri`
-    # boots straight into VS Results with a finished match seeded, which is the
-    # difference between a Results profile costing twenty minutes of emulated
-    # match and costing seconds. It rides the same Makefile block as the
-    # tick-HUD ROM and differs only in the scene it boots, so numbers from the
-    # two remain comparable.
-    [string]$Target = 'smash64ds-battle-playable-tickhud-hwtri',
+    # Which ROM the window is measured on: the four-CPU gate ROM (the P1
+    # battle and Results lab targets were retired on 2026-10-20).
+    [string]$Target = 'smash64ds-p2-fourcpu-tickhud-hwtri',
     # NAME=value words set at main() before the game runs (one GDB attach,
     # then detach): the lab ROM's boot-poked stage, roster and contents
     # (gNdsLabFourCpuGkind, gNdsLabFourCpuKinds, gNdsLabP4Content), so one
