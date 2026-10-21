@@ -222,5 +222,7 @@ machinery goes (`docs/OLD_MACHINERY_DELETED.md`).
   203-300 frames a match with a read, 19-88 frames past two VBlanks, 11-48 of
   those with a read, **0 pushed by it** (each would be late without its
   read). Met on those six; the worst-case sweep carries it from here.
-- **Four-CPU WORK P95** (docs/optimization/P7_P4_ROSTERS.md): the cast is ~8%
-  over 1,120,000 on its busiest stages.
+- **Four-CPU WORK P95** (docs/optimization/P7_P4_ROSTERS.md): the owner set the
+  cast gate at 1,250,000 (2026-10-20; >=95% within two VBlanks kept), which
+  the cast meets on every stage (1,232,640 at worst, Hyrule Temple); the heavy
+  4-identical mirrors are still over their 1,250,000 / 90% target.

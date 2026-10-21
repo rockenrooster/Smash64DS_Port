@@ -587,3 +587,30 @@ Temple). Slotting by `binding + 8 x shift` and building into the slot was
 exact (digests IDENTICAL on the same four runs) but moved nothing (P95 -64 to
 +1,984), so the rebuilds are not where the frames go. The gate is still open:
 the cast sits ~8.5% over 1,120,000 and the heavy mirrors 4-6% over 1,250,000.
+
+## The cast gate at 1,250,000 (owner 2026-10-20, `s35`/`s36p`)
+
+Cast on `s35` (ship layout, pipelined, 1,960 frames), WORK P95: Hyrule
+Temple 1,232,640, Saffron 1,230,656, Sector Z 1,117,632, Yoshi's Island
+1,117,504; every stage 97-99% within two VBlanks. Profiles of HEAD
+(`build-prof-s36`, 384 frames from 200) split the P90-97 band against the
+P25-75 control by subsystem (scratchpad `band_groups.py`):
+
+- Hyrule Temple: premium 401K a frame (profile cycles) -- pose and animation
+  19%, stage collision 18% (275K a control frame: the wall sweeps), other
+  logic 17%, fighter and stage render 14%, clip reads 7%, hurtboxes 6%,
+  status changes 5%.
+- Saffron: premium 723K -- hurtbox tests 36% (105 reject tests and 60 world
+  compositions a band frame, Charmander's flames near the fighters),
+  other logic 17%, render 13%, particles 13%.
+
+No subsystem carries the ~9% to 1,120,000, and the digest-identical
+candidates found add up to ~4-5%. The owner relaxed the cast gate to the
+mirrors' number: **WORK P95 <= 1,250,000 with >=95% of frames within two
+VBlanks**; the cast passes it on every stage. The heavy 4-identical mirrors
+remain over it (`s23`: Bowser, Roy, Crash, Sonic, Meta Knight, Snake, Ike,
+Palutena; `s35`: four Bowsers on Saffron 1,343,936, four Snakes on Hyrule
+Temple 1,337,408), so the exact candidates go on: hurtbox worlds reused
+across the pose hold's held tick, particle update and draw, clip
+prefetch, the pose parser's precomputed segments, the bind's AObj reset
+walk.
