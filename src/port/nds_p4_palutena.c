@@ -95,7 +95,7 @@ extern uintptr_t llITCommonDataFFlowerFlameWeaponAttributes;
  * far 0.9x (1610 -> 1449); owner p6ac: 1500. Owner p7h (2026-10-19): the
  * blast's hitbox 10% bigger than the burn's (860 -> 704; the burn's 640 kept,
  * the effects their size). Owner p7h follow-up (2026-10-19): the blast's base
- * knockback 40 -> 35. */
+ * knockback 40 -> 35. Owner (2026-10-21): the blast's damage 19 -> 18. */
 #define PAL_FLAME_NEAR 450.0F
 #define PAL_FLAME_MID 750.0F
 #define PAL_FLAME_FAR 1500.0F
@@ -108,7 +108,7 @@ extern uintptr_t llITCommonDataFFlowerFlameWeaponAttributes;
 #define PAL_FLAME_BURN_DAMAGE 1
 #define PAL_FLAME_BURN_SIZE 640.0F
 #define PAL_FLAME_BURN_KNOCKBACK_WEIGHT 3
-#define PAL_FLAME_BLAST_DAMAGE 19
+#define PAL_FLAME_BLAST_DAMAGE 18
 #define PAL_FLAME_BLAST_SIZE 704.0F
 #define PAL_FLAME_BLAST_ANGLE 361
 #define PAL_FLAME_BLAST_KNOCKBACK_SCALE 95

@@ -14,19 +14,30 @@
 # flag at 64.
 # Owner p7h follow-up (2026-10-19): knockback growth 110, base 35 (were
 # 152 and 50).
+# Owner (2026-10-21): electric (element 2) with the zap hit sound (fgm_kind
+# 4, nSYAudioFGMShockM), damage 2x (6 -> 12, 7 -> 14), knockback growth 0.7x
+# (110 -> 77), and the boxes cover her upper half and above her head: the
+# staff's two kept, the TopN box above her head 368 -> 400 (centre 806 up,
+# radius 200: 606 to 1,006), and a fourth TopN box the staff box 0's size
+# (299) over her upper body, its top meeting the head box (centre 456 up:
+# 306 to 606; her half height 303, head top 606); the launcher's each 23
+# bigger as before. TopN offsets are scaled by her size (1.185), radii are
+# not.
 AsyncWait frames=8
 PlayFGM value=cue:se_attackair_h01
 AsyncWait frames=10
 SetFlag1 value=50
 PlayVoiceStoreInfo value=cue:attack06
 Effect joint_id=0 effect_id=42 flag=0 off_x=0 off_y=680 off_z=0 rng_x=0 rng_y=0 rng_z=0
-MakeAttackColl attack_id=0 group_id=0 joint_id=18 damage=6 can_rebound=1 element=0 size=299 off_x=41 off_y=272 off_z=-290 angle=88 knockback_scale=110 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=1 fgm_kind=0 knockback_base=35
-MakeAttackColl attack_id=1 group_id=0 joint_id=18 damage=6 can_rebound=1 element=0 size=253 off_x=23 off_y=150 off_z=-160 angle=88 knockback_scale=110 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=1 fgm_kind=0 knockback_base=35
-MakeAttackColl attack_id=2 group_id=0 joint_id=0 damage=6 can_rebound=1 element=0 size=368 off_x=0 off_y=680 off_z=0 angle=88 knockback_scale=110 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=1 fgm_kind=0 knockback_base=35
+MakeAttackColl attack_id=0 group_id=0 joint_id=18 damage=12 can_rebound=1 element=2 size=299 off_x=41 off_y=272 off_z=-290 angle=88 knockback_scale=77 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=1 fgm_kind=4 knockback_base=35
+MakeAttackColl attack_id=1 group_id=0 joint_id=18 damage=12 can_rebound=1 element=2 size=253 off_x=23 off_y=150 off_z=-160 angle=88 knockback_scale=77 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=1 fgm_kind=4 knockback_base=35
+MakeAttackColl attack_id=2 group_id=0 joint_id=0 damage=12 can_rebound=1 element=2 size=400 off_x=0 off_y=680 off_z=0 angle=88 knockback_scale=77 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=1 fgm_kind=4 knockback_base=35
+MakeAttackColl attack_id=3 group_id=0 joint_id=0 damage=12 can_rebound=1 element=2 size=299 off_x=0 off_y=385 off_z=0 angle=88 knockback_scale=77 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=1 fgm_kind=4 knockback_base=35
 AsyncWait frames=28
-MakeAttackColl attack_id=0 group_id=0 joint_id=18 damage=7 can_rebound=1 element=0 size=322 off_x=41 off_y=272 off_z=-290 angle=88 knockback_scale=110 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=1 fgm_kind=0 knockback_base=35
-MakeAttackColl attack_id=1 group_id=0 joint_id=18 damage=7 can_rebound=1 element=0 size=276 off_x=23 off_y=150 off_z=-160 angle=88 knockback_scale=110 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=1 fgm_kind=0 knockback_base=35
-MakeAttackColl attack_id=2 group_id=0 joint_id=0 damage=7 can_rebound=1 element=0 size=391 off_x=0 off_y=680 off_z=0 angle=88 knockback_scale=110 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=1 fgm_kind=0 knockback_base=35
+MakeAttackColl attack_id=0 group_id=0 joint_id=18 damage=14 can_rebound=1 element=2 size=322 off_x=41 off_y=272 off_z=-290 angle=88 knockback_scale=77 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=1 fgm_kind=4 knockback_base=35
+MakeAttackColl attack_id=1 group_id=0 joint_id=18 damage=14 can_rebound=1 element=2 size=276 off_x=23 off_y=150 off_z=-160 angle=88 knockback_scale=77 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=1 fgm_kind=4 knockback_base=35
+MakeAttackColl attack_id=2 group_id=0 joint_id=0 damage=14 can_rebound=1 element=2 size=423 off_x=0 off_y=680 off_z=0 angle=88 knockback_scale=77 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=1 fgm_kind=4 knockback_base=35
+MakeAttackColl attack_id=3 group_id=0 joint_id=0 damage=14 can_rebound=1 element=2 size=322 off_x=0 off_y=385 off_z=0 angle=88 knockback_scale=77 knockback_weight=0 is_hit_ground_air=3 shield_damage=0 fgm_level=1 fgm_kind=4 knockback_base=35
 AsyncWait frames=32
 ClearAttackCollAll value=0
 AsyncWait frames=64

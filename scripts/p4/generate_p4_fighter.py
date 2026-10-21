@@ -692,6 +692,8 @@ OWNER_ATTRIBUTE_SCALES = {
     # 0.75 (Ultimate's Ike runs at 0.7 of its Roy), his clips at the 0.75
     # animation rate with them (OWNER_ANIM_RATE_STATUSES).
     "ike": {"dash_speed": 0.75, "run_speed": 0.75},
+    # Owner (2026-10-21): Palutena runs 1.1x faster.
+    "palutena": {"run_speed": 1.1},
 }
 # Model IA textures whose intensity the native owner must not draw. Meta
 # Knight's Mach Tornado (model 0x15EE lists at 0x97C0 and 0x9AA0, render mode
