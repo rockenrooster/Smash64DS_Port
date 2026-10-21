@@ -713,6 +713,23 @@ spawn: its median WORK +47K), and Saffron's mix A still falls under it
 0 lean declines.
 
 Mix A on Hyrule Temple stays the worst mix: with the latch gone it draws
-every effect, and only segment 2 (11,128 B) fits beside the keep-free. The
-vanilla stages' geometry files hold 8,640-14,584 B of the same dead bytes
-each (Saffron City 14,488 B in three ranges), not yet lent.
+every effect, and only segment 2 (11,128 B) fits beside the keep-free.
+
+The vanilla VS stages lend theirs too (`s45`,
+`scripts/stages/generate_stage_dead_spans.py`, also checking the stage's
+other files for pointers into the ranges): Peach's Castle 8,624 B, Sector Z
+14,576, Congo Jungle 11,680, Planet Zebes 9,152, Hyrule Castle 12,752,
+Saffron City 14,464, Mushroom Kingdom 8,624; Yoshi's Island's geometry file
+has external relocations and lends nothing. The cast on all eight: WORK P95
+1,016,960-1,212,544, >= 97.3% within two VBlanks, 0 lent-layer skips,
+replay digests identical to `s40`. Saffron City's mixes (P95, two VBlanks):
+
+| mix | `s44` | `s45` |
+|---|---|---|
+| 4, 9, 19, 14 (A) | 1,496,256 (89.5%) | 1,541,760 (80.5%, segment 3) |
+| 13, 10, 16, 3 | 1,413,696 (93.4%) | 1,377,728 (94.2%, whole) |
+| 2, 8, 18, 0 | 1,285,120 (95.8%) | 1,256,896 (96.5%, 0-1) |
+| 5, 6, 11, 17 | 1,344,448 (94.4%) | 1,341,568 (94.3%, whole) |
+
+Saffron's mix A now stays above the GObj latch (low-water 20,912 ->
+25,992 B) and pays for every effect it spawns, as Hyrule Temple's did.

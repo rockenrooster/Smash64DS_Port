@@ -8008,6 +8008,15 @@ $(NDS_NATIVE_STAGE_BLOB_DIR)/native_stage_%.bin: $(PROJECT_ROOT)/src/nds/nds_nat
 $(NITROFS_DIR)/stages/native_stage_%.bin: $(NDS_NATIVE_STAGE_BLOB_DIR)/native_stage_%.bin
 	@mkdir -p $(dir $@)
 	@cp $< $@
+# The VS stages' dead geometry bytes (display lists and vertex arrays their
+# packets were generated from), lent to a battle once the packet loads
+# (reloc_backend_compat_shims.c ndsNativeStageLendDeadSpans).
+NDS_STAGE_DEAD_SPANS_H := $(NDS_NATIVE_STAGE_BLOB_DIR)/nds_stage_dead_spans.generated.h
+$(NDS_STAGE_DEAD_SPANS_H): $(PROJECT_ROOT)/scripts/stages/generate_stage_dead_spans.py $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	@mkdir -p $(dir $@)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_stage_dead_spans.py" --output "$@"
+scene_backend.o: $(NDS_STAGE_DEAD_SPANS_H)
+CFLAGS += -I$(NDS_NATIVE_STAGE_BLOB_DIR)
 
 # Phase 2 GX templates live on NitroFS; no duplicated template slab in main RAM.
 NDS_STAGE_GX_STAGES := castle sector jungle zebes hyrule yoster dreamland yamabuki inishie

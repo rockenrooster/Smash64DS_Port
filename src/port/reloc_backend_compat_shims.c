@@ -13634,15 +13634,27 @@ void ndsRendererAdapterNativeStagePreloadAssets(void);
  * skips a layer's source draw (ndsNativeStageLayerLent) -- the one path that
  * would interpret them, run only on a frame the owner declines, which the
  * heaviest mixes never showed (0 rejects, 2026-10-21). The rows are
- * scripts/p5/stage_generate.py's dead_spans. */
+ * scripts/p5/stage_generate.py's dead_spans and, for the vanilla VS stages
+ * (8.6-14.6 KB each), scripts/stages/generate_stage_dead_spans.py's. */
 void ndsBattleDeadSpanAdd(void *base, u32 bytes);
 __attribute__((used)) volatile u32 gNdsNativeStageLayersLent;
 __attribute__((used)) volatile u32 gNdsNativeStageLentLayerSkips;
 static u32 sNdsNativeStageLayersLentGeneration;
 
+#if __has_include("nds_stage_dead_spans.generated.h")
+/* The VS stages' rows (scripts/stages/generate_stage_dead_spans.py). */
+#include "nds_stage_dead_spans.generated.h"
+#endif
+#if !defined(NDS_STAGE_DEAD_SPAN_ROWS)
+#define NDS_STAGE_DEAD_SPAN_ROWS(X)
+#endif
+#if !(NDS_P5 && defined(NDS_P5_DEAD_SPAN_ROWS))
+#undef NDS_P5_DEAD_SPAN_ROWS
+#define NDS_P5_DEAD_SPAN_ROWS(X)
+#endif
+
 void ndsNativeStageLendDeadSpans(u32 gkind)
 {
-#if NDS_P5 && defined(NDS_P5_DEAD_SPAN_ROWS)
     static const struct
     {
         u32 gkind;
@@ -13651,10 +13663,11 @@ void ndsNativeStageLendDeadSpans(u32 gkind)
         u32 offset;
         u32 bytes;
     } rows[] = {
-#define NDS_P5_DEAD_SPAN_ROW(g, file, file_bytes, offset, bytes) \
+#define NDS_DEAD_SPAN_ROW(g, file, file_bytes, offset, bytes) \
         { (g), (file), (file_bytes), (offset), (bytes) },
-        NDS_P5_DEAD_SPAN_ROWS(NDS_P5_DEAD_SPAN_ROW)
-#undef NDS_P5_DEAD_SPAN_ROW
+        NDS_STAGE_DEAD_SPAN_ROWS(NDS_DEAD_SPAN_ROW)
+        NDS_P5_DEAD_SPAN_ROWS(NDS_DEAD_SPAN_ROW)
+#undef NDS_DEAD_SPAN_ROW
         { 0xffffffffu, 0u, 0u, 0u, 0u }
     };
     u32 lo[4];
@@ -13699,10 +13712,6 @@ void ndsNativeStageLendDeadSpans(u32 gkind)
     }
     sNdsNativeStageLayersLentGeneration = gNdsTaskmanHeapGeneration;
     gNdsNativeStageLayersLent = 1u;
-#else
-    (void)gkind;
-    gNdsNativeStageLayersLent = 0u;
-#endif
 }
 
 s32 ndsNativeStageLayerLent(const void *gobj)
