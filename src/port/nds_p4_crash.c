@@ -342,6 +342,11 @@ static GObj *ndsP4CrashMakeDigGfx(GObj *fighter_gobj)
     DObj *dobj;
     DObj *top = fp->joints[nFTPartsJointTopN];
 
+    /* The slot is a status word the last status left whatever it held in:
+     * an effect that is not made (no free effect, under the GObj latch:
+     * Yoshi's Island's heaviest mix, 2026-10-21) must leave it NULL, or the
+     * dig's graphic update follows the old word. */
+    *ndsP4CrashDigGfx(fp) = NULL;
     if (gNdsP4CrashSpecial2 == NULL)
     {
         return NULL;
