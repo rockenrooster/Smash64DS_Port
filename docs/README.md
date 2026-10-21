@@ -44,6 +44,7 @@ in the existing batch receipt rather than reapplying unchanged patches.
 | `../.agents/skills/nds-coding-practices/` | Project-specific DS hardware/API recipes; not scheduling, verification cadence or closure policy |
 | `P3_Multiplayer/` | P3 wireless plans; outside P2 |
 | `P4/` | Later new-character plans; outside original-content P2 |
+| `balance/` | Fighter and stage balance: the balance sheet (local, rebuilt by `scripts/p7/build-balance-table.ps1`) and the owner's changes in force |
 | `../scripts/README.md` | Repository script layout/path convention |
 
 ## P2 owners

@@ -13,8 +13,8 @@ Read-only over what the build itself reads:
   * the authored contents: scripts/p6/<name>/motions/*.ms over spec.json,
     the rest their base's.
 
-The values are the game data's, so the output stays local (artifacts/, never
-committed): `--json` for the data, `--html` for the page.
+The values are the game data's, so the output stays local (docs/balance,
+git-ignored, never committed): `--json` for the data, `--html` for the page.
 
 Frames are the script's animation frames, 1-based (a box made at frame 0 of
 the clip is "1"); a box still out at the script's end runs "to the end". A

@@ -42,6 +42,11 @@
 
 # Lab / dev-only
 /artifacts/
+# The balance sheet is the game's own data (scripts/p7/build-balance-table.ps1
+# writes it here): it stays local, as does the owner's shortcut beside it.
+/docs/balance/balance.html
+/docs/balance/balance.json
+/docs/balance/*.lnk
 /logs/
 /.tura/
 /.opencode/
