@@ -347,9 +347,7 @@ volatile u32 gNdsBattlePlayablePacingPhasePresentCount[
     NDS_BATTLE_PLAYABLE_PACING_PHASE_COUNT];
 volatile u32 gNdsBattlePlayablePacingPhaseSlipCount[
     NDS_BATTLE_PLAYABLE_PACING_PHASE_COUNT];
-#if (NDS_HARNESS_FAST_LOGIC == 0) && \
-    (NDS_RENDERER_HW_TRIANGLES != 0) && \
-    (NDS_DEV_LIVE_INPUT_PREVIEW != 0)
+#if (NDS_HARNESS_FAST_LOGIC == 0) && (NDS_DEV_LIVE_INPUT_PREVIEW != 0)
 volatile u32 gNdsBuildModeCanonicalWord = NDS_BUILD_MODE_CANO_WORD;
 volatile u32 gNdsBuildModeShippedWord = NDS_BUILD_MODE_SHIP_WORD;
 #else

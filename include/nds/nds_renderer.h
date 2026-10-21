@@ -173,7 +173,7 @@
 /* Task 56 emits fighter GL_TRIANGLE_STRIP/QUAD primitive streams; the native
  * fighter production path is compiled only when HW triangles are on and the
  * instrumentation level is below the forensic oracle. */
-#if NDS_TASK56_FIGHTER_PRIMITIVES && !NDS_RENDERER_HW_TRIANGLES
+#if NDS_TASK56_FIGHTER_PRIMITIVES && 0
 #error "NDS_TASK56_FIGHTER_PRIMITIVES requires NDS_RENDERER_HW_TRIANGLES (native fighter path)"
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
@@ -191,7 +191,7 @@
 #error "NDS_DREAMLAND_DS_MESH must be 0 or 1"
 #endif
 
-#if NDS_DREAMLAND_DS_MESH && !NDS_RENDERER_HW_TRIANGLES
+#if NDS_DREAMLAND_DS_MESH && 0
 #error "NDS_DREAMLAND_DS_MESH requires NDS_RENDERER_HW_TRIANGLES (native stage path)"
 #endif
 #if NDS_DREAMLAND_DS_MESH && (NDS_RENDERER_PROFILE_LEVEL >= 2)
@@ -299,22 +299,9 @@ extern volatile u32 gNdsG1SiteOccupancy;
  * other target and the host tools keep the default 1 and compile exactly as
  * before. The guard turns a flag combination that would need one of the retired
  * modes into a build error instead of a fighter with no executor. */
-#ifndef NDS_FIGHTER_LEGACY_EXEC
-#define NDS_FIGHTER_LEGACY_EXEC 1
-#endif
 
-#if (NDS_FIGHTER_LEGACY_EXEC != 0) && (NDS_FIGHTER_LEGACY_EXEC != 1)
-#error "NDS_FIGHTER_LEGACY_EXEC must be 0 or 1"
-#endif
 
-#if !NDS_FIGHTER_LEGACY_EXEC && \
-    (!NDS_RENDERER_HW_TRIANGLES || (NDS_RENDERER_PROFILE_LEVEL != 0) || \
-     !NDS_R2_FIGHTER_NO_ORACLE || !NDS_R2_FIGHTER_HW_LIGHT || \
-     (NDS_TASK56_FIGHTER_PRIMITIVES < 1) || NDS_R2_STRIP_ROUTE || \
-     NDS_RENDERER_SCREEN_SPACE_CENSUS || \
-     (NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE) || \
-     (NDS_RENDERER_FAST_RUN_DEFAULT < \
-      NDS_RENDERER_FAST_RUN_NATIVE_FIGHTER_OWNER_PRODUCTION))
+#if (((NDS_RENDERER_PROFILE_LEVEL != 0) || (!NDS_R2_FIGHTER_NO_ORACLE) || (!NDS_R2_FIGHTER_HW_LIGHT) || (NDS_TASK56_FIGHTER_PRIMITIVES < 1) || NDS_R2_STRIP_ROUTE) || NDS_RENDERER_SCREEN_SPACE_CENSUS) || (NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE) || (NDS_RENDERER_FAST_RUN_DEFAULT < NDS_RENDERER_FAST_RUN_NATIVE_FIGHTER_OWNER_PRODUCTION)
 #error "NDS_FIGHTER_LEGACY_EXEC=0 needs HW triangles, profile 0, NO_ORACLE, HW light, Task 56 streams (no strip route or census) and fast-run mode 8 or 9"
 #endif
 
@@ -1889,8 +1876,7 @@ s32 ndsRendererValidateNativeFighterOwner(
     u32 root_count,
     const u32 *root_offsets,
     const u32 *material_counts);
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER && NDS_RENDERER_HW_TRIANGLES
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && NDS_RENDERER_M2_DETAILED_LEDGER
 void ndsRendererProfileCensusNativeFighterSchedule(
     u32 slot,
     const u8 *joint_parents,

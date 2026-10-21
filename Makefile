@@ -133,7 +133,10 @@ NDS_HARNESS_ITEMS_ON ?= 0
 # source tick. Shipping targets leave this off; the request changes presentation
 # only and never creates, releases, or mutates gameplay state.
 NDS_HARNESS_FAST_PRESENT_ON_REQUEST ?= 0
-NDS_RENDERER_HW_TRIANGLES ?= 0
+# The DS hardware triangle path is the only one (2026-10-20, old machinery:
+# the software-triangle branches are gone from the sources). The define stays
+# in the config header for generated code that still tests it.
+override NDS_RENDERER_HW_TRIANGLES := 1
 NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY ?= 0
 NDS_RENDERER_PROFILE_LEVEL ?= 2
 NDS_SHIP_TELEMETRY ?= 1
@@ -2513,15 +2516,12 @@ ifeq ($(NDS_BATTLE_PROFILE),0)
 $(error NDS_BATTLE_PROFILE=0 (DS-native precompiled path) is not implemented yet; it lands with Task 51. Set NDS_BATTLE_PROFILE=1.)
 endif
 NDS_RENDERER_FAST_RUN_DEFAULT ?= $(if $(filter smash64ds-battle-playable-coarse-hwtri,$(TARGET)),8,0)
-# R1 retirement, P2 targets only. 0 drops fighter hierarchy mode 7, the per-root hardware
-# executor, the CPU triangle rasteriser and the resident raw-path tables; the P1 family and
-# every other name keep 1 and build exactly as before. nds_renderer.h refuses 0 outside the
-# production fighter configuration (profile 0, mode 8/9, NO_ORACLE, HW light, Task 56 streams).
-NDS_FIGHTER_LEGACY_EXEC ?= $(if $(filter smash64ds smash64ds-p2-shell-hwtri smash64ds-p2-shell-freeplay-hwtri smash64ds-p2-shell-loop-hwtri smash64ds-p2-fourcpu-tickhud-hwtri,$(TARGET)),0,1)
-ifneq ($(filter $(NDS_FIGHTER_LEGACY_EXEC),0 1),)
-else
-$(error NDS_FIGHTER_LEGACY_EXEC must be 0 or 1)
-endif
+# R1 retirement, done (2026-10-20, old machinery): fighter hierarchy mode 7, the
+# per-root hardware executor, the CPU triangle rasteriser and the resident
+# raw-path tables are gone from the sources; every target builds the production
+# fighter path, which nds_renderer.h still checks (profile 0, mode 8/9,
+# NO_ORACLE, HW light, Task 56 streams).
+override NDS_FIGHTER_LEGACY_EXEC := 0
 ifeq ($(TARGET),smash64ds-battle-playable-hwtri)
 # This is the only published P1 battle ROM. Keep the complete realtime
 # configuration intrinsic to the target so direct builds and verifiers cannot

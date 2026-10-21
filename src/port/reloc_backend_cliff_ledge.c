@@ -15589,10 +15589,8 @@ static void ndsFighterMarioFoxStageGCDrawAllLoopReset(void)
     gNdsStageGCDrawAllLoopHardwareCarryShortTileSeedCount = 0u;
     gNdsStageGCDrawAllLoopHardwareCarrySegmentSeedCount = 0u;
     sNdsStageGCDrawAllLoopCurrentDisplayLinkID = -1;
-#if NDS_RENDERER_HW_TRIANGLES
     sNdsStageGCDrawAllLoopHardwareSubmitActive = FALSE;
     sNdsStageGCDrawAllLoopHardwareSubmitCount = 0u;
-#endif
 }
 
 void ndsFighterMarioFoxStageGCDrawAllLoopPrepare(void)
@@ -15701,9 +15699,7 @@ void ndsFighterMarioFoxStageGCDrawAllLoopFinalize(void)
             NDS_FIGHTER_MARIOFOX_STAGE_GCDRAWALL_LOOP_PASS;
         gNdsFighterMarioFoxStageGCDrawAllLoopSafeResult =
             NDS_FIGHTER_MARIOFOX_STAGE_GCDRAWALL_LOOP_SAFE_PASS;
-#if NDS_RENDERER_HW_TRIANGLES
         ndsStageGCDrawAllLoopSubmitHardwareFrame();
-#endif
     }
 }
 

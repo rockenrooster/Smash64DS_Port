@@ -407,7 +407,6 @@ static void ndsIFCommonPlayerDamageProcDisplayGate(GObj *interface_gobj)
     ifCommonPlayerDamageProcDisplay(interface_gobj);
 }
 
-#if NDS_RENDERER_HW_TRIANGLES
 void ndsIFCommonNativeOamPauseBorder(void);
 
 /* ifCommonBattlePauseProcDisplay's border frame as OBJ runs (the five fill
@@ -419,7 +418,6 @@ static void ndsIFCommonBattlePauseProcDisplayNative(GObj *interface_gobj)
     ndsIFCommonNativeOamPauseBorder();
     lbCommonClearExternSpriteParams();
 }
-#endif
 
 static void ndsIFCommonAddGObjDisplay(GObj *gobj,
                                       void (*proc_display)(GObj *),
@@ -430,12 +428,10 @@ static void ndsIFCommonAddGObjDisplay(GObj *gobj,
     {
         proc_display = ndsIFCommonPlayerDamageProcDisplayGate;
     }
-#if NDS_RENDERER_HW_TRIANGLES
     if (proc_display == ifCommonBattlePauseProcDisplay)
     {
         proc_display = ndsIFCommonBattlePauseProcDisplayNative;
     }
-#endif
     gcAddGObjDisplay(gobj, proc_display, dl_link, priority, camera_tag);
 }
 

@@ -241,25 +241,22 @@ void ndsBattlePrepareSceneTextures(void)
      * the countdown. Still after the static set, so it stays above that span. */
     (void)ndsRendererHardwarePrepareParticleAtlas();
 #endif
-#if NDS_R2_IMPACT_WAVE_NATIVE && NDS_RENDERER_HW_TRIANGLES
+#if NDS_R2_IMPACT_WAVE_NATIVE
     /* Tiny and last on purpose: five 16x32 PAL16 names cannot fragment the
      * allocator ahead of the large interface/particle allocations above. The
      * gameplay draw then performs a name bind only -- no N64 texel/TLUT decode,
      * conversion, cache lookup or texture allocation on an impact frame. */
     (void)ndsRendererHardwarePrepareImpactWaveTextures();
 #endif
-#if NDS_RENDERER_HW_TRIANGLES
     /* M1: the 13 DamageSlash MaterialAnim frames are only 10,752 bytes in
      * PAL16.  Make them resident here so a hit frame performs a name bind and
      * never replaces texture storage from inside gcDrawAll. */
     (void)ndsRendererHardwarePrepareDamageSlashTextures();
-#endif
-#if NDS_R2_REBIRTH_HALO_NATIVE && NDS_RENDERER_HW_TRIANGLES
+#if NDS_R2_REBIRTH_HALO_NATIVE
     /* Five tiny AOT-native names (four PAL16, one A5I3) after every large
      * scene allocation. Rebirth frames therefore bind only resident DS data. */
     (void)ndsRendererHardwarePrepareRebirthHaloTextures();
 #endif
-#if NDS_RENDERER_HW_TRIANGLES
     /* Mario pipe / Fox Arwing carry 24 small preconverted PAL16/A5I3 images.
      * Allocate them after every larger scene owner so entry frames perform only
      * resident DS texture binds -- no N64 texture/TLUT conversion and no hot
@@ -268,8 +265,7 @@ void ndsBattlePrepareSceneTextures(void)
     /* Allocate the small dust planes after the larger entry owners. Convert
      * once before GO; effect draws only bind these resident native names. */
     (void)ndsRendererHardwarePrepareDamageFlyMDustTextures();
-#endif
-#if NDS_R2_FOX_GUN_OVERLAY && NDS_RENDERER_HW_TRIANGLES
+#if NDS_R2_FOX_GUN_OVERLAY
     /* The source can reveal Fox's gun long after GO. Prepare its 256-byte
      * texels and 32-byte palette now, after the large scene allocations;
      * first use must only bind the resident name. */
@@ -439,7 +435,6 @@ void scVSBattleFuncUpdate(void)
 {
     ndsBaseSCVSBattleFuncUpdate();
 
-#if NDS_RENDERER_HW_TRIANGLES
     /* VSBattle cannot request the fighter-specific match-entry props again
      * after the source transitions to GO; stock loss uses the separate rebirth
      * halo owner.  Retire only the generator-proved startup-only texture names
@@ -480,7 +475,6 @@ void scVSBattleFuncUpdate(void)
          * ones, two frames into GO. */
         (void)ndsRendererHardwarePrepareDamageFlyMDustTextures();
     }
-#endif
 
 #if NDS_R2_ANIM_CACHE
     /* Normally exhausted by the pre-BGM barrier. Keep the bounded step here as

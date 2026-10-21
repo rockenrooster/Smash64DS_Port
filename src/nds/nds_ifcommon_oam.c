@@ -47,9 +47,6 @@ s32 ndsRendererHardwarePrepareIFCommonA3I5Atlas(
     u32 width, u32 height, const u16 palette[32],
     NDSRendererTextureFillCallback fill, void *user_data, u32 *texture_name);
 
-#ifndef NDS_RENDERER_HW_TRIANGLES
-#define NDS_RENDERER_HW_TRIANGLES 0
-#endif
 
 #define NDS_IFCOMMON_GAME_STATUS_SIZE 0x252d4u
 #define NDS_IFCOMMON_OBJ_GFX_ALIGNMENT 128u
@@ -2190,11 +2187,9 @@ void ndsIFCommonNativeOamDiscardTextures(void)
  * allocator actually depends on. */
 void ndsIFCommonNativeOamReleaseCloudTextures(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     ndsIFCommonReleaseCloudAtlases();
     ndsIFCommonReleaseTrafficAtlas();
     gNdsIFCommonNativeOamCloudReleaseCount++;
-#endif
 }
 
 void ndsIFCommonNativeOamInit(void)
@@ -2239,7 +2234,6 @@ void ndsIFCommonNativeOamInit(void)
     gNdsTask39FxArenaBootSize = gNdsTaskmanArenaChosenSize;
     gNdsTask39FxObjVramBytes = 0u;
     gNdsTask39FxObjVramRemaining = NDS_IFCOMMON_OBJ_VRAM_BYTES;
-#if NDS_RENDERER_HW_TRIANGLES
     /* The battle's first OBJ write: a held frame's OBJs (the 1P intro's,
      * nds_source2d.c) still read bank E and the OAM, so the hold ends here
      * (ndsPlatformTransitionThaw), before the init and the atlas bakes. */
@@ -2247,7 +2241,6 @@ void ndsIFCommonNativeOamInit(void)
     oamInit(&oamMain, SpriteMapping_Bmp_1D_128, false);
     oamClear(&oamMain, 0, 128);
     oamUpdate(&oamMain);
-#endif
 }
 
 /* Fixed GO slot bases inside the GO bank. G 7168 + O 7168 + ! 3072. */
@@ -2256,7 +2249,6 @@ static const u32 sNdsIFCommonGoSlotBases[3] = { 0u, 7168u, 14336u };
 s32 ndsIFCommonNativeOamPrepareGameStatus(void *file_data,
                                            size_t file_size)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     u32 start;
     u32 vram_cursor;
     u32 go_index;
@@ -2359,11 +2351,6 @@ s32 ndsIFCommonNativeOamPrepareGameStatus(void *file_data,
     gNdsIFCommonNativeOamPrepareTicks = cpuGetTiming() - start;
     gNdsIFCommonNativeOamPrepareSuccessCount++;
     return TRUE;
-#else
-    (void)file_data;
-    (void)file_size;
-    return FALSE;
-#endif
 }
 
 /* Bake the source-selected ending into the end bank. The source SObj
@@ -2374,7 +2361,6 @@ s32 ndsIFCommonNativeOamPrepareGameStatus(void *file_data,
  * phase inactive so a retry re-bakes cleanly without falsely reading ready. */
 s32 ndsIFCommonNativeOamPrepareAnnouncement(u32 game_set)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     const NDSIFCommonEndSlot *slots;
     u32 start;
     u32 slot;
@@ -2536,15 +2522,10 @@ s32 ndsIFCommonNativeOamPrepareAnnouncement(u32 game_set)
     gNdsIFCommonNativeOamPrepareTicks += cpuGetTiming() - start;
     gNdsIFCommonNativeOamPrepareSuccessCount++;
     return TRUE;
-#else
-    (void)game_set;
-    return FALSE;
-#endif
 }
 
 s32 ndsIFCommonNativeOamPrepareClouds(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     u32 start;
 
     if ((sNdsIFCommonPrepared == FALSE) ||
@@ -2592,9 +2573,6 @@ s32 ndsIFCommonNativeOamPrepareClouds(void)
     }
     gNdsIFCommonNativeOamPrepareTicks += cpuGetTiming() - start;
     return TRUE;
-#else
-    return FALSE;
-#endif
 }
 
 #if defined(NDS_IF_GAMESTATUS_COMPACT) && NDS_IF_GAMESTATUS_COMPACT
@@ -2944,7 +2922,6 @@ void ndsIFCommonNativeOamBeginFrame(void)
     gNdsIFCommonNativeOamFrameClearedObjects = 0u;
     gNdsIFCommonNativeOamFrameIdle = 0u;
     sNdsIFCommonFrameNeedsCommit = FALSE;
-#if NDS_RENDERER_HW_TRIANGLES
     if (sNdsIFCommonPreviousLowestOamID < 128)
     {
         u32 start = NDS_IFCOMMON_TELEMETRY_TICK();
@@ -2957,7 +2934,6 @@ void ndsIFCommonNativeOamBeginFrame(void)
             gNdsIFCommonNativeOamFrameBeginTicks, start);
         sNdsIFCommonFrameNeedsCommit = TRUE;
     }
-#endif
     sNdsIFCommonNextOamID = 127;
     sNdsIFCommonMatrixCount = 0u;
 #if NDS_SHIP_TELEMETRY
@@ -5066,7 +5042,6 @@ static s32 ndsIFCommonPauseRun(s32 x0, s32 y0, s32 length, sb32 vertical)
  * draws them, at the 0.8 grid. */
 void ndsIFCommonNativeOamPauseBorder(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     static const s16 kRects[5][4] = {
         { 26, 24, 294, 26 }, { 26, 24, 28, 199 }, { 26, 197, 190, 199 },
         { 292, 24, 294, 199 }, { 279, 197, 294, 199 },
@@ -5093,7 +5068,6 @@ void ndsIFCommonNativeOamPauseBorder(void)
             return;
         }
     }
-#endif
 }
 
 static s32 ndsIFCommonEmitPause(struct GObj *gobj)
@@ -5765,7 +5739,6 @@ static u16 *ndsIFCommonTrainingBoxCell(u16 rgb15)
 void ndsIFCommonTrainingFillRect(s32 ulx, s32 uly, s32 lrx, s32 lry,
                                  u32 rgb, u32 alpha)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     s32 x0 = (ulx * 4 + 2) / 5;
     s32 y0 = (uly * 4 + 2) / 5;
     s32 x1 = ((lrx + 1) * 4 + 2) / 5;
@@ -5860,9 +5833,6 @@ void ndsIFCommonTrainingFillRect(s32 ulx, s32 uly, s32 lrx, s32 lry,
             x += step;
         }
     }
-#else
-    (void)ulx; (void)uly; (void)lrx; (void)lry; (void)rgb; (void)alpha;
-#endif
 }
 
 /* The box blend's end: when the menu closed (no box last frame) and when
@@ -5889,7 +5859,6 @@ static void ndsIFCommonTrainingFrameBegin(void)
 
 s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     SObj *sobj;
     SObj *scan;
     u32 required_objects = 0u;
@@ -6101,15 +6070,10 @@ s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj)
     }
     NDS_IFCOMMON_TELEMETRY_ADD(gNdsIFCommonNativeOamFrameTicks, start);
     return TRUE;
-#else
-    (void)gobj;
-    return FALSE;
-#endif
 }
 
 void ndsIFCommonNativeOamCommit(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     if (sNdsIFCommonFrameNeedsCommit != FALSE)
     {
         u32 start = NDS_IFCOMMON_TELEMETRY_TICK();
@@ -6134,5 +6098,4 @@ void ndsIFCommonNativeOamCommit(void)
         gNdsIFCommonNativeOamFrameIdle = 1u;
         gNdsIFCommonNativeOamIdleFrameCount++;
     }
-#endif
 }

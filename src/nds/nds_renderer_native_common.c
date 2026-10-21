@@ -2,7 +2,6 @@
 
 
 
-#if NDS_RENDERER_HW_TRIANGLES
 static inline u32 ndsRendererNativeRunSubmitClass(const NDSNativeRun *run)
 {
     return (u32)run->submit_class & NDS_NATIVE_RUN_SUBMIT_CLASS_MASK;
@@ -1041,7 +1040,6 @@ static s32 ndsRendererHardwareBindImpactWaveTexture(
     NDSRendererStats *stats, const NDSRendererTileState *render_tile,
     u32 variant)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     u32 name;
     u32 params;
 
@@ -1071,12 +1069,6 @@ static s32 ndsRendererHardwareBindImpactWaveTexture(
     stats->hardware_texture_height = NDS_RENDERER_IMPACT_WAVE_TEX_HEIGHT;
     NDS_DIAG(gNdsImpactWaveNativeTextureBindCount++);
     return TRUE;
-#else
-    (void)stats;
-    (void)render_tile;
-    (void)variant;
-    return FALSE;
-#endif
 }
 #endif
 
@@ -1090,7 +1082,7 @@ s32 ndsRendererSubmitNativeImpactWave(
     NDSRendererStats *stats)
 {
     NDS_FIGHTER_PACKET_DMA_WAIT();
-#if NDS_RENDERER_HW_TRIANGLES && NDS_R2_IMPACT_WAVE_NATIVE
+#if NDS_R2_IMPACT_WAVE_NATIVE
     NDSRendererTraversalVertexStorage vertex_storage;
     NDSRendererTraversalState state;
     const NDSRendererTileState *render_tile;
@@ -1571,7 +1563,6 @@ s32 ndsRendererSubmitNativeVisualEffect(
     const NDSRendererConfig *config, NDSRendererStats *stats)
 {
     NDS_FIGHTER_PACKET_DMA_WAIT();
-#if NDS_RENDERER_HW_TRIANGLES
     NDSRendererTraversalVertexStorage vertex_storage;
     NDSRendererTraversalState state;
     const NDSVisualEffectGroup *group;
@@ -1784,12 +1775,6 @@ s32 ndsRendererSubmitNativeVisualEffect(
     }
     ndsRendererHardwareEndBatch();
     return TRUE;
-#else
-    (void)template_index;
-    (void)config;
-    (void)stats;
-    return FALSE;
-#endif
 }
 
 #if NDS_R2_REBIRTH_HALO_NATIVE
@@ -1804,7 +1789,6 @@ static s32 ndsRendererHardwareBindRebirthHaloTexture(
     NDSRendererStats *stats, const NDSRendererTileState *render_tile,
     u32 texture_slot, u32 upload_width, u32 upload_height, u32 format)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     u32 name;
     u32 params;
 
@@ -1830,15 +1814,6 @@ static s32 ndsRendererHardwareBindRebirthHaloTexture(
     stats->hardware_texture_height = upload_height;
     NDS_DIAG(gNdsRebirthHaloNativeTextureBindCount++);
     return TRUE;
-#else
-    (void)stats;
-    (void)render_tile;
-    (void)texture_slot;
-    (void)upload_width;
-    (void)upload_height;
-    (void)format;
-    return FALSE;
-#endif
 }
 
 static void ndsRendererRebirthHaloGeometry(NDSRendererStats *stats, u32 mode)
@@ -2594,7 +2569,7 @@ s32 ndsRendererSubmitNativeRebirthHalo(
     NDSRendererStats *stats)
 {
     NDS_FIGHTER_PACKET_DMA_WAIT();
-#if NDS_RENDERER_HW_TRIANGLES && NDS_R2_REBIRTH_HALO_NATIVE
+#if NDS_R2_REBIRTH_HALO_NATIVE
     NDSRendererTraversalVertexStorage vertex_storage;
     NDSRendererTraversalState state;
 #if NDS_R2_REBIRTH_HALO_FULL_OFFLOAD
@@ -3401,8 +3376,7 @@ ndsRendererNativeDirectReject(NDSRendererStats *stats)
  * difference". Build the probe with NDS_R2_FIGHTER_PACKET=0. */
 #error "NDS_LAB_NO_CULL needs NDS_R2_FIGHTER_PACKET=0; a packet replay ignores every arm"
 #endif
-#if NDS_R2_STRIP_ROUTE && (NDS_TASK56_FIGHTER_PRIMITIVES >= 1) && \
-    (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_RENDERER_HW_TRIANGLES
+#if (NDS_R2_STRIP_ROUTE && (NDS_TASK56_FIGHTER_PRIMITIVES >= 1)) && (NDS_RENDERER_PROFILE_LEVEL < 2)
 #define NDS_LAB_SEAM_ARM_COUNT 5u
 #define NDS_LAB_SEAM_STRIP_ARM 3u
 #define NDS_LAB_SEAM_SOURCE_WORLD_ARM 4u
@@ -6373,18 +6347,12 @@ __attribute__((used)) volatile u32 gNdsEntryEffectRejectRoot;
  * entry effect already playing can outlive GO: Samus's drew three more frames
  * on Jungle, Zebes, Hyrule and Dream Land and found its texture name 0 (the
  * refusal at the texture-slot check, 2026-09-30 native-owner census). */
-#if NDS_RENDERER_HW_TRIANGLES
 static u32 sNdsEntryEffectStartupDrawSerial;
-#endif
 
 u32 ndsRendererEntryEffectStartupIdleFrames(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     return (sNdsRendererHardwareFrameSerial + 1u) -
            sNdsEntryEffectStartupDrawSerial;
-#else
-    return 0xffffffffu;
-#endif
 }
 
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP && NDS_ENTRY_PACKET_LIVE
@@ -6477,8 +6445,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
     const NDSRendererConfig *config, NDSRendererStats *stats)
 {
     NDS_FIGHTER_PACKET_DMA_WAIT();
-#if NDS_RENDERER_HW_TRIANGLES && \
-    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
     const NDSEntryEffectRoot *root;
     u32 group_offset;
     u32 matrix_generation;
@@ -7890,7 +7857,7 @@ __attribute__((used)) volatile u32 gNdsEntryEffectFoxReplayDeclines;
 s32 ndsRendererReplayNativeEntryEffectFox(u32 root_offset,
     const NDSRendererConfig *config, NDSRendererStats *stats)
 {
-#if NDS_RENDERER_HW_TRIANGLES && NDS_ENTRY_PACKET_LIVE
+#if NDS_ENTRY_PACKET_LIVE
     const NDSEntryEffectRoot *root;
     NDSEntryEffectStateRoot *state_root;
     const NDSEntryEffectGroupState *state_groups;
@@ -8182,8 +8149,7 @@ ndsRendererPrepareEntryKoPalettes(void)
     return TRUE;
 }
 
-#if NDS_RENDERER_HW_TRIANGLES && \
-    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
 volatile u32 gNdsEntryEffectNativeTexturePrepareFailCount;
 
 /* EACH TEXTURE FAILS ALONE. The first refused texture used to end the setup,
@@ -8391,8 +8357,7 @@ ndsRendererPrepareEntryEffectTextureSet(u32 skip_startup)
 
 s32 ndsRendererHardwarePrepareEntryEffectTextures(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES && \
-    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
 #ifdef NDS_ENTRY_EFFECT_P4_CORNER_BLOCKS
     ndsRendererEntryP4CornersLoad();
 #endif
@@ -8404,8 +8369,7 @@ s32 ndsRendererHardwarePrepareEntryEffectTextures(void)
 
 s32 ndsRendererHardwarePrepareEntryEffectGameplayTextures(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES && \
-    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
     return ndsRendererPrepareEntryEffectTextureSet(1u);
 #else
     return FALSE;
@@ -11828,8 +11792,7 @@ ndsRendererNativeEmitProductionRawUntexturedRun(
     }
 }
 
-#if (NDS_TASK56_FIGHTER_PRIMITIVES >= 1) && \
-    (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_RENDERER_HW_TRIANGLES
+#if (NDS_TASK56_FIGHTER_PRIMITIVES >= 1) && (NDS_RENDERER_PROFILE_LEVEL < 2)
 /* The one-binary A/B for the strips, same instrument as gNdsR2AnimCutRoute.
  * .data and aligned(32) so it owns its cache line and no neighbouring
  * counter's write-back can stamp the poke. Default 1 = strips, so an unpoked
@@ -18941,7 +18904,7 @@ void ndsFtrLeanNoteTextureUpload(u32 bytes)
 #endif
 }
 
-#if NDS_VRAM_CENSUS_LIVE && NDS_RENDERER_HW_TRIANGLES &&     (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_VRAM_CENSUS_LIVE && (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
 /* Slice 2b lab words outside this TU's structs (nds_platform.c). */
 extern volatile u32 gNdsVramBankDLent;
 extern volatile u32 gNdsVramBg3RefusedWrites;
@@ -18957,7 +18920,7 @@ void ndsFtrLeanCountersPublish(void)
 #if NDS_FTR_LEAN_ATTR_LIVE
     DC_FlushRange(&gNdsFtrLeanAttr, sizeof(gNdsFtrLeanAttr));
 #endif
-#if NDS_VRAM_CENSUS_LIVE && NDS_RENDERER_HW_TRIANGLES &&     (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_VRAM_CENSUS_LIVE && (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
     /* Slice 2b: the admission lab and the words the sampler reads once at
      * the end -- flushed every frame so a GDB read is never a stale line. */
     DC_FlushRange(&gNdsFtrAdmitLab, sizeof(gNdsFtrAdmitLab));
@@ -19317,8 +19280,7 @@ static s32 ndsRendererNativeSubmitProductionRun(
     }
     else
     {
-#if (NDS_TASK56_FIGHTER_PRIMITIVES >= 1) && \
-    (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_RENDERER_HW_TRIANGLES
+#if (NDS_TASK56_FIGHTER_PRIMITIVES >= 1) && (NDS_RENDERER_PROFILE_LEVEL < 2)
         /* Task 56: RAW runs emit DS-native primitive groups (strips + residual
          * triangles) compiled host-side. The first group's begin-batch already
          * ran in PrepareProductionRun; this walk re-begins only on type change
@@ -20070,9 +20032,8 @@ void ndsRendererCommitDeferredPalettes(void)
 #endif
 }
 
-#endif
 
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 typedef struct NDSNativeHierarchyTables
 {
     const NDSNativeRoot *roots;

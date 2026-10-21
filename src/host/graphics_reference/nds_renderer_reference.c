@@ -36,13 +36,11 @@ ndsRendererApplyVertexCommand(
     u32 count;
     const u8 *src;
     u32 i;
-#if NDS_RENDERER_HW_TRIANGLES
     const NDSRendererHardwareLightDirection *prepared_light_direction = NULL;
 #if NDS_RENDERER_PROFILE_LEVEL < 2
     const u32 *prepared_light_shade_lut = NULL;
 #endif
     u32 matrix_snapshot = NDS_RENDERER_MATRIX_SNAPSHOT_INVALID;
-#endif
 
     if ((stats == NULL) || (state == NULL))
     {
@@ -63,12 +61,6 @@ ndsRendererApplyVertexCommand(
     {
         stats->vertex_count = v0 + count;
     }
-#if !NDS_RENDERER_HW_TRIANGLES
-    if (state->matrix_valid == 0u)
-    {
-        return;
-    }
-#endif
 
     src = ndsRendererResolveDataPointer(config,
                                         (const void *)(uintptr_t)w1,
@@ -78,7 +70,6 @@ ndsRendererApplyVertexCommand(
         NDS_RENDERER_RECORD_PROOF_ONLY(stats->skip_command_count++);
         return;
     }
-#if NDS_RENDERER_HW_TRIANGLES
     if (state->matrix_valid != 0u)
     {
         matrix_snapshot = ndsRendererAcquireCurrentMatrixSnapshot(state);
@@ -109,22 +100,14 @@ ndsRendererApplyVertexCommand(
         }
 #endif
     }
-#endif
 
     for (i = 0u; i < count; i++)
     {
         u32 index = v0 + i;
-#if NDS_RENDERER_HW_TRIANGLES
         NDSRendererInputVertex *input = &state->input_vertices[index];
         u32 mask = 1u << index;
-#else
-        NDSRendererInputVertex input_storage;
-        NDSRendererInputVertex *input = &input_storage;
-        NDSRendererClipVertex20p12 *out = &state->vertices[index];
-#endif
 
         ndsRendererDecodeInputVertex(input, src + (i * 16u));
-#if NDS_RENDERER_HW_TRIANGLES
         ndsRendererProfileRecordSourceVertexLoad();
         state->input_vertex_valid_mask |= mask;
         if (ndsRendererHardwareRawVertexFits(input) != FALSE)
@@ -160,12 +143,10 @@ ndsRendererApplyVertexCommand(
         {
             state->current_transform_vertex_mask |= mask;
         }
-#endif
         if (state->matrix_valid == 0u)
         {
             continue;
         }
-#if NDS_RENDERER_HW_TRIANGLES
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
         (void)ndsRendererTransformCachedVertex(
             stats, state, index, &state->matrix, matrix_snapshot);
@@ -176,19 +157,6 @@ ndsRendererApplyVertexCommand(
         {
             (void)ndsRendererTransformCachedVertex(
                 stats, state, index, &state->matrix, matrix_snapshot);
-        }
-#endif
-#else
-        ndsRendererTransformVertex20p12(&state->matrix, input, out);
-        state->vertex_valid_mask |= 1u << index;
-        stats->matrix_transform_count++;
-        stats->transformed_vertex_count++;
-        if (stats->transformed_vertex_count == 1u)
-        {
-            stats->first_transformed_x = out->x;
-            stats->first_transformed_y = out->y;
-            stats->first_transformed_z = out->z;
-            stats->first_transformed_w = out->w;
         }
 #endif
     }
@@ -202,11 +170,8 @@ static inline void ndsRendererExecuteTriangleCommand(
     u32 w0,
     u32 w1)
 {
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     u32 triangle_submit_start;
-#endif
-#if !NDS_RENDERER_HW_TRIANGLES
-    (void)config;
 #endif
 
     NDS_RENDERER_RECORD_PROOF_ONLY(stats->triangle_command_count++);
@@ -216,11 +181,8 @@ static inline void ndsRendererExecuteTriangleCommand(
         u32 packed = ndsGBIDecodeF3DEX2Tri1(w0);
 
         stats->triangle_count++;
-#if NDS_RENDERER_HW_TRIANGLES
         if (sNdsRendererHardwareNoOracle == 0u)
-#endif
         ndsRendererRecordTransformedTriangle(stats, state, packed);
-#if NDS_RENDERER_HW_TRIANGLES
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
         triangle_submit_start = cpuGetTiming();
 #endif
@@ -233,20 +195,16 @@ static inline void ndsRendererExecuteTriangleCommand(
         sNdsRendererProfileTriangleSubmitTicks +=
             cpuGetTiming() - triangle_submit_start;
 #endif
-#endif
         return;
     }
 
     stats->triangle_count += 2u;
-#if NDS_RENDERER_HW_TRIANGLES
     if (sNdsRendererHardwareNoOracle == 0u)
     {
-#endif
         ndsRendererRecordTransformedTriangle(
             stats, state, ndsGBIDecodeF3DEX2Tri2First(w0));
         ndsRendererRecordTransformedTriangle(
             stats, state, ndsGBIDecodeF3DEX2Tri2Second(w1));
-#if NDS_RENDERER_HW_TRIANGLES
     }
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     triangle_submit_start = cpuGetTiming();
@@ -265,10 +223,8 @@ static inline void ndsRendererExecuteTriangleCommand(
     sNdsRendererProfileTriangleSubmitTicks +=
         cpuGetTiming() - triangle_submit_start;
 #endif
-#endif
 }
 
-#if NDS_RENDERER_HW_TRIANGLES
 /* Direct immutable TRI-run records are topology only.  Live vertex, matrix,
  * material, texture, and light state remains in the traversal object and is
  * rebound by the existing exact path.  The cache is reset with reloc/source
@@ -792,7 +748,6 @@ static void NDS_RENDERER_FAST_RUN_CODE ndsRendererExecuteFastRawCurrentRun(
     *dl_io = dl;
     *list_index_io = list_index;
 }
-#endif
 
 static void NDS_R2_CENSUS_EVICTED_CODE
 ndsRendererScanList(const Gfx *dl,
@@ -876,7 +831,7 @@ ndsRendererScanColdCommand(const Gfx *dl,
     {
         const Gfx *raw_branch = command.raw_branch_dl;
         const Gfx *branch = command.resolved_branch_dl;
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
         u32 parent_branch_path = state->semantic_branch_path;
         u32 child_branch_path;
 #endif
@@ -902,7 +857,7 @@ ndsRendererScanColdCommand(const Gfx *dl,
         if ((w0 & (1u << 16)) != 0)
         {
             stats->branch_jump_count++;
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
             child_branch_path = ndsRendererSemanticBranchPath(
                 parent_branch_path, list_index, depth + 1u, TRUE);
             state->semantic_branch_path = child_branch_path;
@@ -913,14 +868,14 @@ ndsRendererScanColdCommand(const Gfx *dl,
         }
 
         stats->branch_call_count++;
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
         child_branch_path = ndsRendererSemanticBranchPath(
             parent_branch_path, list_index, depth + 1u, FALSE);
         state->semantic_branch_path = child_branch_path;
 #endif
         ndsRendererScanList(branch, config, stats, state, depth + 1u,
                             callback, callback_user);
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
         state->semantic_branch_path = parent_branch_path;
 #endif
         return (stats->blocker != NDS_RENDERER_BLOCKER_NONE) ?
@@ -1045,14 +1000,11 @@ ndsRendererScanList(const Gfx *dl,
         w0 = dl->words.w0;
         w1 = dl->words.w1;
         op = w0 >> 24;
-#if NDS_RENDERER_HW_TRIANGLES
         state->source_command_site = dl;
-#endif
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
         state->semantic_command_index = i;
         state->semantic_tri2_half = 0u;
 #endif
-#if NDS_RENDERER_HW_TRIANGLES
         /* Preserve the source-command boundary: only adjacent TRI1/TRI2
          * opcodes may share a GX triangle group. In particular, close before
          * VTX/MODIFYVTX mutate the cached vertices and before any matrix,
@@ -1069,7 +1021,6 @@ ndsRendererScanList(const Gfx *dl,
             state->prepared_projected_xy_valid_mask = 0u;
             state->prepared_projected_source_z_valid_mask = 0u;
         }
-#endif
         if ((callback != NULL) || (op == NDS_RENDERER_OP_DL))
         {
             u32 cold_action = ndsRendererScanColdCommand(
@@ -1114,7 +1065,6 @@ ndsRendererScanList(const Gfx *dl,
         {
             ndsRendererExecuteTriangleCommand(
                 stats, config, state, op, w0, w1);
-#if NDS_RENDERER_HW_TRIANGLES
             /* Immutable adjacent TRI commands have no intervening source
              * state transition. Profile 0/1 has no command callback, so
              * replay the remainder of the run without rebuilding a generic
@@ -1159,7 +1109,6 @@ ndsRendererScanList(const Gfx *dl,
                     stats, config, state, next_op, next_w0,
                     next_dl->words.w1);
             }
-#endif
 #endif
             break;
         }
@@ -1312,20 +1261,14 @@ void ndsRendererScanDisplayList(const Gfx *dl,
                                 const NDSRendererConfig *config,
                                 NDSRendererStats *stats)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     /* Host runs do not share derived source-pointer plans across submissions. */
     memset(sNdsRendererDirectRawPlans, 0, sizeof(sNdsRendererDirectRawPlans));
     sNdsRendererDirectRawEntryCount = 0u;
-#endif
     NDSRendererTraversalState state;
     NDSRendererTraversalVertexStorage vertex_storage;
-#if NDS_RENDERER_HW_TRIANGLES
     NDSRendererMatrixSnapshot
         matrix_snapshot_storage[NDS_RENDERER_MATRIX_SNAPSHOT_CAPACITY];
     NDSRendererMatrixSnapshot *matrix_snapshots = matrix_snapshot_storage;
-#else
-    NDSRendererMatrixSnapshot *matrix_snapshots = NULL;
-#endif
 
     if (stats == NULL)
     {
@@ -1341,9 +1284,7 @@ void ndsRendererScanDisplayList(const Gfx *dl,
     ndsRendererInitTraversalState(&state, config, stats, &vertex_storage,
                                   matrix_snapshots, 0u);
     ndsRendererScanList(dl, config, stats, &state, 0, NULL, NULL);
-#if NDS_RENDERER_HW_TRIANGLES
     ndsRendererHardwareEndBatch();
-#endif
     if (stats->blocker != NDS_RENDERER_BLOCKER_NONE)
     {
         return;
@@ -1378,20 +1319,14 @@ void ndsRendererExecuteDisplayListWithVertexCache(
     NDSRendererStats *stats,
     NDSRendererVertexCache *vertex_cache)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     memset(sNdsRendererDirectRawPlans, 0, sizeof(sNdsRendererDirectRawPlans));
     sNdsRendererDirectRawEntryCount = 0u;
-#endif
     NDS_FIGHTER_PACKET_DMA_WAIT();
     NDSRendererTraversalState state;
     NDSRendererTraversalVertexStorage vertex_storage;
-#if NDS_RENDERER_HW_TRIANGLES
     NDSRendererMatrixSnapshot
         local_matrix_snapshots[NDS_RENDERER_MATRIX_SNAPSHOT_CAPACITY];
     NDSRendererMatrixSnapshot *matrix_snapshots = local_matrix_snapshots;
-#else
-    NDSRendererMatrixSnapshot *matrix_snapshots = NULL;
-#endif
     u32 matrix_snapshot_count = 0u;
 
     if (stats == NULL)
@@ -1405,13 +1340,11 @@ void ndsRendererExecuteDisplayListWithVertexCache(
         return;
     }
 
-#if NDS_RENDERER_HW_TRIANGLES
     if (vertex_cache != NULL)
     {
         matrix_snapshots = vertex_cache->matrix_snapshots;
         matrix_snapshot_count = vertex_cache->matrix_snapshot_count;
     }
-#endif
     ndsRendererInitTraversalState(&state, config, stats, &vertex_storage,
                                   matrix_snapshots, matrix_snapshot_count);
     if (vertex_cache != NULL)
@@ -1421,7 +1354,6 @@ void ndsRendererExecuteDisplayListWithVertexCache(
          * clearing and copying every 32-slot plane around each list. */
         state.vertices = vertex_cache->transformed_vertices;
         state.vertex_valid_mask = vertex_cache->transformed_valid_mask;
-#if NDS_RENDERER_HW_TRIANGLES
         state.input_vertices = vertex_cache->input_vertices;
         state.input_vertex_valid_mask = vertex_cache->input_valid_mask;
         state.raw_vertex_fit_mask = vertex_cache->raw_vertex_fit_mask;
@@ -1430,24 +1362,19 @@ void ndsRendererExecuteDisplayListWithVertexCache(
             vertex_cache->vertex_color_valid_mask;
         state.vertex_matrix_snapshot = vertex_cache->vertex_matrix_snapshot;
         state.vertex_clip_snapshot = vertex_cache->vertex_clip_snapshot;
-#endif
     }
     ndsRendererScanList(dl, config, stats, &state, 0, callback,
                         callback_user);
     if (vertex_cache != NULL)
     {
         vertex_cache->transformed_valid_mask = state.vertex_valid_mask;
-#if NDS_RENDERER_HW_TRIANGLES
         vertex_cache->input_valid_mask = state.input_vertex_valid_mask;
         vertex_cache->raw_vertex_fit_mask = state.raw_vertex_fit_mask;
         vertex_cache->vertex_color_valid_mask =
             state.vertex_color_valid_mask;
         vertex_cache->matrix_snapshot_count = state.matrix_snapshot_count;
-#endif
     }
-#if NDS_RENDERER_HW_TRIANGLES
     ndsRendererHardwareEndBatch();
-#endif
     if (stats->blocker != NDS_RENDERER_BLOCKER_NONE)
     {
         return;

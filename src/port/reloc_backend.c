@@ -821,10 +821,8 @@ typedef struct NDSFighterLivePreviewState
 static NDSFighterLivePreviewState sNdsFighterLivePreviewStates[2];
 static sb32 sNdsFTMainSetStatusCompatReplayActive = FALSE;
 static void ndsRelocNormalizeMObjSubWordSwapped(MObjSub *mobjsub);
-#if NDS_RENDERER_HW_TRIANGLES
 static void ndsRendererAdapterResetSceneCaches(void);
 static void ndsRendererAdapterPrepareWorldCaches(void);
-#endif
 
 /* Every write to `gMPCollisionGeometry` goes through this so the vertex/extent
  * caches keyed on it are dropped at the moment the data they describe stops

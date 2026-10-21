@@ -13030,7 +13030,6 @@ s32 ndsFighterMarioFoxStageGCDrawAllLoopProofActive(void)
 static GObj *sNdsStageGCDrawAllLoopCurrentCameraGObj;
 static GObj *sNdsStageGCDrawAllLoopCurrentDisplayGObj;
 static s32 sNdsStageGCDrawAllLoopCurrentDisplayLinkID;
-#if NDS_RENDERER_HW_TRIANGLES
 static sb32 sNdsStageGCDrawAllLoopHardwareSubmitActive;
 static sb32 sNdsStageGCDrawAllLoopNativeStageArmed;
 static u32 sNdsStageGCDrawAllLoopHardwareSubmitCount;
@@ -13644,7 +13643,6 @@ static void ndsStageGCDrawAllLoopSubmitWeaponDObj(GObj *weapon_gobj,
         sNdsStageGCDrawAllLoopHardwareSubmitCount;
 }
 
-#if NDS_RENDERER_HW_TRIANGLES
 extern void wpDisplayDLHead1(GObj *weapon_gobj);
 
 /*
@@ -13798,7 +13796,6 @@ s32 ndsStageGCDrawAllLoopSubmitNdlWeapon(void *camera_gobj_ptr,
     gNdsWeaponRendererLastYBits = y_bits;
     return TRUE;
 }
-#endif /* NDS_RENDERER_HW_TRIANGLES */
 
 /* First generic item hardware owner.  BattleShip draws items on link 11 using
  * gcDrawDObjTree* just like stage/effects, but until LinkBomb there was no DS
@@ -14194,7 +14191,6 @@ void ndsStageGCDrawAllLoopRecordNdlItemSubmit(
     gNdsStageGCDrawAllLoopHardwareSubmitCount =
         sNdsStageGCDrawAllLoopHardwareSubmitCount;
 }
-#endif
 
 static sb32 ndsStageGCDrawAllLoopClassifyGObj(GObj *gobj, u32 *mask,
                                               sb32 *is_layer)
@@ -14568,7 +14564,6 @@ s32 ndsStageGCDrawAllLoopSubmitNdlGround(void *camera_gobj,
     return handled;
 }
 
-#if NDS_RENDERER_HW_TRIANGLES
 /* GROUND-ACTORS: generic fallback for the Ground-kind stage actors the
  * classify branch rejects. Source: grzebes.c:80-83 (acid map_gobj, Ground
  * kind, gcDrawDObjTreeDLLinksForGObj on link 12), grsector.c:1098-1102
@@ -14777,7 +14772,7 @@ static void ndsStageGCDrawAllLoopSubmitGroundActorDObj(GObj *actor_gobj,
     u32 triangle_delta;
     u32 initial_geometry_mode;
     sb32 is_actor = FALSE;
-#if NDS_P2_STAGE_SECTOR && NDS_RENDERER_HW_TRIANGLES
+#if NDS_P2_STAGE_SECTOR
     sb32 is_sector_arwing = FALSE;
     u32 two_pass_dobjs = 0u;
 #endif
@@ -14802,9 +14797,7 @@ static void ndsStageGCDrawAllLoopSubmitGroundActorDObj(GObj *actor_gobj,
     if (ndsStageGCDrawAllLoopIsSectorArwing(actor_gobj) != FALSE)
     {
         is_actor = TRUE;
-#if NDS_RENDERER_HW_TRIANGLES
         is_sector_arwing = TRUE;
-#endif
     }
 #endif
 #if NDS_P2_STAGE_YAMABUKI
@@ -14844,7 +14837,7 @@ static void ndsStageGCDrawAllLoopSubmitGroundActorDObj(GObj *actor_gobj,
      * cost ~5 FPS on the same frame, so the proven stage route stays. */
     ndsRendererAdapterBeginStageTraversal();
     sNdsStageGCDrawAllLoopActorKeepsZBuffer = TRUE;
-#if NDS_P2_STAGE_SECTOR && NDS_RENDERER_HW_TRIANGLES
+#if NDS_P2_STAGE_SECTOR
     /* Sector Z's Arwing: the scan's lists in two passes, matrices first
      * (ndsRendererAdapterSubmitArwingTwoPass). The scan's own bookkeeping for
      * an actor (owner mask 0) is the submit count and the kind bit. */
@@ -14892,7 +14885,6 @@ static void ndsStageGCDrawAllLoopSubmitGroundActorDObj(GObj *actor_gobj,
     NDS_DIAG(gNdsStageGCDrawAllLoopGroundActorSubmitCount++);
 }
 #endif
-#endif /* NDS_RENDERER_HW_TRIANGLES */
 
 static void ndsStageGCDrawAllLoopScanDObjs(GObj *gobj, u32 owner_mask,
                                            sb32 is_layer, u32 kind,
@@ -14912,9 +14904,6 @@ static void ndsStageGCDrawAllLoopScanDObjs(GObj *gobj, u32 owner_mask,
     {
         return;
     }
-#if !NDS_RENDERER_HW_TRIANGLES
-    (void)callback_kind;
-#endif
     stack[stack_count++] = root;
     while ((stack_count != 0u) && (scanned < ARRAY_COUNT(stack)))
     {
@@ -14963,7 +14952,6 @@ static void ndsStageGCDrawAllLoopScanDObjs(GObj *gobj, u32 owner_mask,
                 gNdsStageGCDrawAllLoopMapMObjMask |= owner_mask;
             }
         }
-#if NDS_RENDERER_HW_TRIANGLES
         /* DOBJ_FLAG_NOTEXTURE: the source skips this DObj's own lists and
          * still draws its children (objdisplay.c:1568, :1714). */
         if ((dobj->dv != NULL) &&
@@ -14989,7 +14977,6 @@ static void ndsStageGCDrawAllLoopScanDObjs(GObj *gobj, u32 owner_mask,
             gNdsStageGCDrawAllLoopHardwareSubmitCount =
                 sNdsStageGCDrawAllLoopHardwareSubmitCount;
         }
-#endif
         if ((dobj->sib_next != NULL) && (stack_count < ARRAY_COUNT(stack)))
         {
             stack[stack_count++] = dobj->sib_next;
@@ -15006,12 +14993,8 @@ void ndsStageGCDrawAllLoopRecordCameraCallback(void)
 {
     if ((ndsFighterMarioFoxStageGCDrawAllLoopProofActive() == FALSE) ||
         (gNdsSceneManagerCurrIsBattle == 0u) ||
-#if NDS_RENDERER_HW_TRIANGLES
         ((sNdsFighterGCDrawAllLoopDisplayActive == FALSE) &&
          (sNdsStageGCDrawAllLoopHardwareSubmitActive == FALSE)))
-#else
-        (sNdsFighterGCDrawAllLoopDisplayActive == FALSE))
-#endif
     {
         return;
     }
@@ -15042,7 +15025,7 @@ volatile u32 gNdsTask103FinishTicks;
 volatile u32 gNdsTask103FinishCount;
 #endif
 
-#if NDS_P2_1P_GAME && NDS_RENDERER_HW_TRIANGLES
+#if NDS_P2_1P_GAME
 /* Board the Platforms: the platforms hung under a layer the native packet just
  * drew (ndsRendererAdapterIsForeignStageSubtree) draw here, after it, as the
  * source's gcDrawDObjTreeDLLinks reaches them inside the same layer. Each
@@ -15148,12 +15131,8 @@ ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
 
     if ((ndsFighterMarioFoxStageGCDrawAllLoopProofActive() == FALSE) ||
         (gNdsSceneManagerCurrIsBattle == 0u) ||
-#if NDS_RENDERER_HW_TRIANGLES
         ((sNdsFighterGCDrawAllLoopDisplayActive == FALSE) &&
          (sNdsStageGCDrawAllLoopHardwareSubmitActive == FALSE)))
-#else
-        (sNdsFighterGCDrawAllLoopDisplayActive == FALSE))
-#endif
     {
         return FALSE;
     }
@@ -15161,7 +15140,6 @@ ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
     sNdsStageGCDrawAllLoopCurrentCameraGObj = camera_gobj;
     sNdsStageGCDrawAllLoopCurrentDisplayGObj = display;
     sNdsStageGCDrawAllLoopCurrentDisplayLinkID = link_id;
-#if NDS_RENDERER_HW_TRIANGLES
     /* WHERE THE PROC'S OWN RDP STATE STARTS. This hook runs immediately before
      * `current_gobj->proc_display(current_gobj)` (opening_movie_backend.c:4387),
      * so the four heads here bound exactly the span that proc is about to emit.
@@ -15170,12 +15148,9 @@ ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
      * then calls gcDrawDObjTreeDLLinksForGObj -- so the effect submit reads it
      * back from here instead of any effect-specific field. */
     ndsRendererAdapterMarkDisplayProcHeads();
-#endif
-#if NDS_RENDERER_HW_TRIANGLES
     ndsStageGCDrawAllLoopRecordWeaponCapture(display, link_id);
     ndsStageGCDrawAllLoopRecordItemCapture(display, link_id);
     ndsStageGCDrawAllLoopRecordEffectCapture(display, link_id);
-#endif
     if (ndsStageGCDrawAllLoopClassifyGObj(display, &mask,
                                           &is_layer) != FALSE)
     {
@@ -15215,7 +15190,6 @@ ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
         NDS_DIAG(gNdsStageGCDrawAllLoopNonStageCaptureCount++);
     }
 #endif
-#if NDS_RENDERER_HW_TRIANGLES
     if (sNdsStageGCDrawAllLoopNativeStageArmed != FALSE)
     {
         /* A9: every display GObj of the stage camera passes through here, but
@@ -15268,7 +15242,6 @@ ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
 #endif
 #endif
     }
-#endif
     return FALSE;
 }
 
@@ -15323,7 +15296,6 @@ sb32 ndsResultsEmblemRecordCapturedDisplay(void *camera_gobj,
                                            void *display_gobj,
                                            s32 link_id)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     GObj *display = display_gobj;
     GObj *owned;
     DObj *stack[16];
@@ -15411,12 +15383,6 @@ sb32 ndsResultsEmblemRecordCapturedDisplay(void *camera_gobj,
     }
     NDS_DIAG(gNdsVSResultsEmblemSubmitCount++);
     return TRUE;
-#else
-    (void)camera_gobj;
-    (void)display_gobj;
-    (void)link_id;
-    return FALSE;
-#endif
 }
 #endif /* NDS_IMPORT_BATTLESHIP_VS_RESULTS */
 
@@ -15426,8 +15392,7 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
     u32 mask;
     sb32 is_layer;
     u32 callback_kind = kind;
-#if NDS_RENDERER_HW_TRIANGLES && \
-    (NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1))
+#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
     u32 owner_start = 0u;
 #endif
 
@@ -15445,9 +15410,7 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
         return;
     }
     if ((sNdsFighterGCDrawAllLoopDisplayActive == FALSE)
-#if NDS_RENDERER_HW_TRIANGLES
         && (sNdsStageGCDrawAllLoopHardwareSubmitActive == FALSE)
-#endif
     )
     {
         gNdsStageGCDrawAllLoopManualDisplayCallCount++;
@@ -15456,7 +15419,6 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
     if (ndsStageGCDrawAllLoopClassifyGObj(stage_gobj, &mask,
                                           &is_layer) == FALSE)
     {
-#if NDS_RENDERER_HW_TRIANGLES
         if (sNdsStageGCDrawAllLoopHardwareSubmitActive != FALSE)
         {
             /* R2-07 MISC split. These two submits are the projectile and
@@ -15531,11 +15493,9 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
             gNdsMiscActorDrawTicks += NDS_TICK_HUD_SPAN_CLOCK() - misc_split_mark;
 #endif
         }
-#endif
         return;
     }
     gNdsStageGCDrawAllLoopDObjDrawCallbackCount++;
-#if NDS_RENDERER_HW_TRIANGLES
     if (sNdsStageGCDrawAllLoopHardwareSubmitActive != FALSE)
     {
 #if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
@@ -15543,10 +15503,8 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
 #endif
         ndsRendererAdapterBeginStageTraversal();
     }
-#endif
     ndsStageGCDrawAllLoopScanDObjs(stage_gobj, mask, is_layer, kind,
                                    callback_kind);
-#if NDS_RENDERER_HW_TRIANGLES
     if (sNdsStageGCDrawAllLoopHardwareSubmitActive != FALSE)
     {
         ndsRendererAdapterEndStageTraversal();
@@ -15578,10 +15536,8 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
             NDS_RENDERER_PROFILE_OWNER_STAGE);
 #endif
     }
-#endif
 }
 
-#if NDS_RENDERER_HW_TRIANGLES
 static void ndsStageGCDrawAllLoopBeginHardwareFrame(void)
 {
     Gfx scratch[2];
@@ -15925,11 +15881,9 @@ static void ndsStageGCDrawAllLoopPresentHardwareFrame(void)
         gNdsRendererPhase05PresentHardwareTicks, phase05_present_start);
 #endif
 }
-#endif
 
 void ndsFighterMarioFoxStageGCDrawAllLoopSubmitHardwareFrame(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
 #if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
     /* The legacy fast proof called this once, so its internal submit-count
      * latch doubled as a whole-run one-shot. Renderer-coupled proofs now make
@@ -15942,13 +15896,10 @@ void ndsFighterMarioFoxStageGCDrawAllLoopSubmitHardwareFrame(void)
 #endif
     ndsFighterMarioFoxStageGCDrawAllLoopPrepare();
     ndsStageGCDrawAllLoopSubmitHardwareFrame();
-#endif
 }
 
 void ndsFighterMarioFoxStageGCDrawAllLoopPresentHardwareFrame(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     ndsFighterMarioFoxStageGCDrawAllLoopPrepare();
     ndsStageGCDrawAllLoopPresentHardwareFrame();
-#endif
 }

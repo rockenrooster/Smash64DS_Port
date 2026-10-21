@@ -15,9 +15,6 @@
 #include <sc/scene.h>
 #include <sys/obj.h>
 
-#ifndef NDS_RENDERER_HW_TRIANGLES
-#define NDS_RENDERER_HW_TRIANGLES 0
-#endif
 
 #define NDS_RESULTS_SRC_ORIGIN_X 10
 #define NDS_RESULTS_SRC_ORIGIN_Y 10
@@ -1355,7 +1352,6 @@ void ndsResultsOamEnterPending(void)
 
 void ndsResultsOamEnter(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     u32 tint_bytes = NDS_RESULTS_TINT_CELL_WIDTH *
                      NDS_RESULTS_TINT_CELL_HEIGHT * sizeof(u16);
     u32 i;
@@ -1425,14 +1421,10 @@ void ndsResultsOamEnter(void)
     oamRotateScale(&oamMain, 0, 0, 128, 128);
     sNdsResultsActive = 1u;
     NDS_DIAG(gNdsResultsOamEnterCount++);
-#else
-    NDS_DIAG(gNdsResultsOamFailureInactive++);
-#endif
 }
 
 void ndsResultsOamExit(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     if (sNdsResultsActive == 0u)
     {
         return;
@@ -1457,7 +1449,6 @@ void ndsResultsOamExit(void)
     gNdsResultsOamVramBytes = 0u;
     gNdsResultsOamPaletteCount = 0u;
     NDS_DIAG(gNdsResultsOamExitCount++);
-#endif
 }
 
 s32 ndsResultsOamIsActive(void)
@@ -1467,7 +1458,6 @@ s32 ndsResultsOamIsActive(void)
 
 void ndsResultsOamBeginFrame(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     s32 first_previous;
 
     if (sNdsResultsActive == 0u)
@@ -1486,12 +1476,10 @@ void ndsResultsOamBeginFrame(void)
     sNdsResultsNextTintOamId = 127;
     sNdsResultsPreviousNextOamId = 127;
     NDS_DIAG(gNdsResultsOamBeginFrameCount++);
-#endif
 }
 
 u32 ndsResultsOamBakeGObj(struct GObj *gobj)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     SObj *sobj;
     u32 objects = 0u;
 
@@ -1521,15 +1509,10 @@ u32 ndsResultsOamBakeGObj(struct GObj *gobj)
         }
     }
     return 1u;
-#else
-    (void)gobj;
-    return 0u;
-#endif
 }
 
 s32 ndsResultsOamDrawGObj(struct GObj *gobj)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     SObj *sobj;
     SObj *scan;
     u32 required_objects = 0u;
@@ -1584,13 +1567,8 @@ s32 ndsResultsOamDrawGObj(struct GObj *gobj)
     sNdsResultsFrameNeedsCommit = 1u;
     NDS_DIAG(gNdsResultsOamDrawGObjCount++);
     return 1;
-#else
-    (void)gobj;
-    return 0;
-#endif
 }
 
-#if NDS_RENDERER_HW_TRIANGLES
 /* The tint's effect on the indexed OBJs emitted before it this frame (the
  * entries between the foreground cursor and the top of the foreground range):
  * each moves to its bank's tinted copy, made on first use and recoloured only
@@ -1650,11 +1628,9 @@ static s32 ndsResultsTintEarlierIndexedObjs(u32 source_alpha)
     }
     return 1;
 }
-#endif
 
 s32 ndsResultsOamEmitTintPlane(u32 source_alpha)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     static const s16 positions[4][2] =
     {
         { 0, 0 }, { 128, 0 }, { 0, 128 }, { 128, 128 }
@@ -1692,15 +1668,10 @@ s32 ndsResultsOamEmitTintPlane(u32 source_alpha)
     }
     sNdsResultsFrameNeedsCommit = 1u;
     return 1;
-#else
-    (void)source_alpha;
-    return 0;
-#endif
 }
 
 s32 ndsResultsOamEmitFillRect(s32 sx0, s32 sy0, s32 sx1, s32 sy1)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     u32 source_width;
     u32 source_height;
     u32 mapped_width;
@@ -1779,18 +1750,10 @@ s32 ndsResultsOamEmitFillRect(s32 sx0, s32 sy0, s32 sx1, s32 sy1)
     }
     sNdsResultsFrameNeedsCommit = 1u;
     return 1;
-#else
-    (void)sx0;
-    (void)sy0;
-    (void)sx1;
-    (void)sy1;
-    return 0;
-#endif
 }
 
 void ndsResultsOamCommit(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     if ((sNdsResultsActive == 0u) ||
         ((sNdsResultsFrameNeedsCommit == 0u) && (sNdsResultsPaletteDirty == 0u)))
     {
@@ -1814,5 +1777,4 @@ void ndsResultsOamCommit(void)
     sNdsResultsPreviousNextOamId = sNdsResultsNextOamId;
     sNdsResultsFrameNeedsCommit = 0u;
     NDS_DIAG(gNdsResultsOamCommitCount++);
-#endif
 }

@@ -327,7 +327,7 @@ static void ndsFighterDLDrawCopyPersistentRendererState(
 #undef NDS_RENDERER_COPY_STATE
 }
 
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 static void ndsFighterDLDrawResetTransientRendererStats(
     NDSRendererStats *stats)
 {

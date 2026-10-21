@@ -27,9 +27,6 @@ const LookAt *ndsRendererAdapterCurrentLookAt(void);
 #include <nds/generated/nds_particle_banks.generated.h>
 #endif
 
-#ifndef NDS_RENDERER_HW_TRIANGLES
-#define NDS_RENDERER_HW_TRIANGLES 0
-#endif
 
 #if NDS_TASK49_GX_DIFFER
 /* Forward declaration: the lean ndsRendererTask29GXRecord funnel below needs
@@ -206,21 +203,13 @@ static NDSRendererProfileOwner sNdsRendererRuntimeOwner;
  * summary.  Profile 1 is the low-frequency O2 coarse build, so it must not
  * maintain the generic per-command proof ledger either.  Profile 2 retains
  * the full forensic counters and semantic observer. */
-#if NDS_RENDERER_HW_TRIANGLES
 #define NDS_RENDERER_RECORD_PROOF_ONLY(statement) ((void)0)
-#else
-#define NDS_RENDERER_RECORD_PROOF_ONLY(statement) \
-    do { statement; } while (0)
-#endif
 
-#if NDS_RENDERER_HW_TRIANGLES
 #include <math.h>
 #include <nds.h>
 #include <nds/arm9/postest.h>
-#endif
 
-#if NDS_RENDERER_HW_TRIANGLES && \
-    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX)
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
 #define NDS_RENDERER_BENCHMARK_SINK_WORDS 1024u
 #define NDS_RENDERER_BENCHMARK_SINK_MASK \
     (NDS_RENDERER_BENCHMARK_SINK_WORDS - 1u)
@@ -606,9 +595,7 @@ static inline void ndsRendererBenchmarkGlTexCoord2t16(t16 s, t16 t)
 #define glTexCoord2t16 ndsRendererBenchmarkGlTexCoord2t16
 #endif
 
-#if (NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS || \
-     NDS_TASK49_GX_DIFFER || NDS_TICK_HUD) && \
-    NDS_RENDERER_HW_TRIANGLES
+#if ((NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS) || NDS_TASK49_GX_DIFFER) || NDS_TICK_HUD
 #define NDS_TASK29_GX_MAX_WORDS 16u
 #define NDS_TASK29_GX_CENSUS_CODE \
     __attribute__((noinline, noclone, cold, optimize("Os"), \
@@ -1595,9 +1582,7 @@ static inline void ndsRendererTask29GlVertex3v16(v16 x, v16 y, v16 z)
  * and testing them once per corner cost 24% of the untextured emit. */
 static inline void ndsRendererHardwareWriteColorWord(u32 value)
 {
-#if !NDS_RENDERER_HW_TRIANGLES
-    (void)value;
-#elif NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
     ndsRendererBenchmarkSinkWord(value);
 #else
 #if NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS || \
@@ -1610,9 +1595,7 @@ static inline void ndsRendererHardwareWriteColorWord(u32 value)
 
 static inline void ndsRendererHardwareWriteNormalWord(u32 value)
 {
-#if !NDS_RENDERER_HW_TRIANGLES
-    (void)value;
-#elif NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
     ndsRendererBenchmarkSinkWord(value);
 #else
     GFX_NORMAL = value;
@@ -1621,9 +1604,7 @@ static inline void ndsRendererHardwareWriteNormalWord(u32 value)
 
 static inline void ndsRendererHardwareWriteDiffuseAmbient(u32 value)
 {
-#if !NDS_RENDERER_HW_TRIANGLES
-    (void)value;
-#elif NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
     ndsRendererBenchmarkSinkWord(value);
 #else
     GFX_DIFFUSE_AMBIENT = value;
@@ -1632,9 +1613,7 @@ static inline void ndsRendererHardwareWriteDiffuseAmbient(u32 value)
 
 static inline void ndsRendererHardwareWriteTexCoordWord(u32 value)
 {
-#if !NDS_RENDERER_HW_TRIANGLES
-    (void)value;
-#elif NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
     ndsRendererBenchmarkSinkWord(value);
 #else
 #if NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS || \
@@ -1647,10 +1626,7 @@ static inline void ndsRendererHardwareWriteTexCoordWord(u32 value)
 
 static inline void ndsRendererHardwareWriteVertex16Words(u32 xy, u32 z)
 {
-#if !NDS_RENDERER_HW_TRIANGLES
-    (void)xy;
-    (void)z;
-#elif NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
     ndsRendererBenchmarkSinkWord(xy);
     ndsRendererBenchmarkSinkWord(z);
 #else
@@ -1673,9 +1649,7 @@ static inline void ndsRendererHardwareWriteVertex16Words(u32 xy, u32 z)
 
 static inline void ndsRendererHardwareWriteFighterColorWord(u32 value)
 {
-#if !NDS_RENDERER_HW_TRIANGLES
-    (void)value;
-#elif NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
     ndsRendererBenchmarkSinkWord(value);
 #else
 #if NDS_RENDERER_GX_RECORD_FIGHTER
@@ -1687,9 +1661,7 @@ static inline void ndsRendererHardwareWriteFighterColorWord(u32 value)
 
 static inline void ndsRendererHardwareWriteFighterTexCoordWord(u32 value)
 {
-#if !NDS_RENDERER_HW_TRIANGLES
-    (void)value;
-#elif NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
     ndsRendererBenchmarkSinkWord(value);
 #else
 #if NDS_RENDERER_GX_RECORD_FIGHTER
@@ -1701,10 +1673,7 @@ static inline void ndsRendererHardwareWriteFighterTexCoordWord(u32 value)
 
 static inline void ndsRendererHardwareWriteFighterVertex16Words(u32 xy, u32 z)
 {
-#if !NDS_RENDERER_HW_TRIANGLES
-    (void)xy;
-    (void)z;
-#elif NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
     ndsRendererBenchmarkSinkWord(xy);
     ndsRendererBenchmarkSinkWord(z);
 #else
@@ -2055,15 +2024,10 @@ void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner)
     (NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL | \
      NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX | \
      NDS_RENDERER_VERTEX_CONTEXT_USE_TEXTURE)
-#if NDS_RENDERER_HW_TRIANGLES
 #define NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state) \
     ((state)->texture_prepare_valid = FALSE)
 #define NDS_RENDERER_INVALIDATE_LIGHT_DIRECTION(state) \
     ((state)->prepared_light_direction_valid = FALSE)
-#else
-#define NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state) ((void)(state))
-#define NDS_RENDERER_INVALIDATE_LIGHT_DIRECTION(state) ((void)(state))
-#endif
 
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
 static u32 sNdsRendererProfileGXStatusPostVBlank;
@@ -2614,7 +2578,6 @@ static void ndsRendererSemanticCommitEvent(
 volatile u32 gNdsRendererIFCommonCloudQueuedCount;
 volatile u32 gNdsRendererIFCommonCloudEmittedCount;
 
-#if NDS_RENDERER_HW_TRIANGLES
 typedef enum NDSRendererHWSubmitClass
 {
     NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX = 0,
@@ -6260,4 +6223,3 @@ static inline u32 ndsRendererHardwareLitShadeColorLut(
     }
     return rgb_lut[diffuse_numer] | (u32)vtx->a;
 }
-#endif

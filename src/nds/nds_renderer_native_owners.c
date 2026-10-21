@@ -3,13 +3,13 @@
  * derived only from those matrices for one generation. */
 static u32 sNdsNativeStageMatrixGen = 1u;
 
-#if NDS_P2_STAGE_YOSTER && NDS_RENDERER_HW_TRIANGLES
+#if NDS_P2_STAGE_YOSTER
 #include <nds/nds_native_actor_yoster_cloud.h>
 #include "generated/nds_native_actor_yoster_cloud.generated.inc"
 #include "nds_native_actor_yoster_cloud.exec.inc"
 #endif
 
-#if NDS_P2_STAGE_JUNGLE && NDS_RENDERER_HW_TRIANGLES
+#if NDS_P2_STAGE_JUNGLE
 #include <nds/generated/nds_native_actor_tarucann.generated.h>
 #include "generated/nds_native_actor_tarucann.generated.inc"
 
@@ -247,7 +247,7 @@ s32 ndsRendererExecuteNativeFighterOwnerHierarchy(
     NDSRendererStats *stats,
     u32 *out_hardware_started)
 {
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
     const u8 *asset_base = asset_base_ptr;
     NDSNativeHierarchyTables tables;
     NDSRendererTraversalState *state =
@@ -469,7 +469,7 @@ s32 ndsRendererExecuteNativeFighterOwnerHierarchy(
     return FALSE;
 #endif
 }
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 static s32 ndsRendererNativeStageValidateStateSpanTopology(
     const NDSNativeStageStateSpan *span)
 {

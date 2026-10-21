@@ -1280,7 +1280,7 @@ static void ndsSC1PIntroDraw(void)
 
 void sc1PIntroStartScene(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
     ndsFighterIntroTransientReset();
 #endif
 #if NDS_1P_INTRO_STATIC

@@ -876,9 +876,7 @@ void ndsResetStartupDiagnostics(void)
         };
         ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
     }
-#if (NDS_HARNESS_FAST_LOGIC == 0) && \
-    (NDS_RENDERER_HW_TRIANGLES != 0) && \
-    (NDS_DEV_LIVE_INPUT_PREVIEW != 0)
+#if (NDS_HARNESS_FAST_LOGIC == 0) && (NDS_DEV_LIVE_INPUT_PREVIEW != 0)
     gNdsBuildModeCanonicalWord = NDS_BUILD_MODE_CANO_WORD;
     gNdsBuildModeShippedWord = NDS_BUILD_MODE_SHIP_WORD;
 #else

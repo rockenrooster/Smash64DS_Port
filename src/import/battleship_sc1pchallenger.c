@@ -104,7 +104,7 @@ void sc1PChallengerFuncLights(Gfx **dls);
 void sc1PChallengerFuncStart(void);
 void efManagerInitEffects(void);
 
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 /* Transient native seam (src/port/renderer_adapter_fighter.c): the
  * challenger is one Demo actor that nothing registers, drawn through the
  * scratch binding the 1P intro and the ending use. Cleared at entry so the
@@ -313,7 +313,7 @@ static void ndsSC1PChallengerDraw(void)
 
 void sc1PChallengerStartScene(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
     ndsFighterIntroTransientReset();
 #endif
     sNdsSC1PChallengerPrimRGBA = 0u;

@@ -956,7 +956,7 @@ typedef struct NDSRelocLoadedFile {
  * turns that function's own definition into a macro expansion and fails with
  * "expected identifier or '(' before 'const'" inside reloc_preview_pack.c --
  * which is how this third site was found. */
-#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS || NDS_P2_YOSHI || (NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2))
+#if ((((NDS_P2_1P_GAME || NDS_P2_MENU_SHELL) || NDS_P2_SHELL_ARGMAX_ROSTER) || NDS_P2_COMPACT_BATTLE_FIGHTERS) || NDS_P2_YOSHI) || (NDS_RENDERER_PROFILE_LEVEL < 2)
 static s32 ndsPreviewFileOffset(const NDSRelocLoadedFile *loaded,
                                u32 source_offset, u32 size, u32 *out_offset);
 static u32 ndsRelocNativeSourceSize(const NDSRelocLoadedFile *loaded);
@@ -1051,14 +1051,13 @@ typedef struct NDSFighterDLDrawState {
     u32 color_checksum;
 } NDSFighterDLDrawState;
 
-#if !NDS_RENDERER_HW_TRIANGLES || (NDS_RENDERER_PROFILE_LEVEL >= 2) || \
-    !NDS_R2_FIGHTER_NO_ORACLE
+#if (NDS_RENDERER_PROFILE_LEVEL >= 2) || (!NDS_R2_FIGHTER_NO_ORACLE)
 /* The per-root software-preview history has no native-only consumer. Native
  * draws retain the single traversal state in renderer_adapter_fighter.c. */
 static NDSFighterDLDrawState
     sNdsFighterDLAllDrawStates[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
 #endif
-#if !NDS_RENDERER_HW_TRIANGLES || (NDS_RENDERER_PROFILE_LEVEL >= 2)
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
 static NDSRendererStats
     sNdsFighterDLAllDrawStats[GMCOMMON_PLAYERS_MAX]
                             [NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
@@ -5970,7 +5969,6 @@ static void ndsRelocPrepareSceneCache(void)
 
     if (evicted_files != 0u)
     {
-#if NDS_RENDERER_HW_TRIANGLES
         /* Texture keys hold native pointers into the scene-owned reloc files.
          * Drop every battle entry before those files become stale. */
         ndsRendererHardwareDiscardBattleStaticTextures();
@@ -5983,7 +5981,6 @@ static void ndsRelocPrepareSceneCache(void)
          * sNdsRendererBattleStaticTexturePrepared latch, which already had its
          * invalidation wired; this one did not. */
         ndsIFCommonNativeOamDiscardTextures();
-#endif
         ndsRelocResetLoadedFiles();
     }
 
@@ -6011,11 +6008,9 @@ static void ndsRelocPrepareSceneCache(void)
      * the stage owner would otherwise never learn its generation moved. */
     ndsRelocBumpStageAssetMutation();
 #endif
-#if NDS_RENDERER_HW_TRIANGLES
     /* The adapter's frame-local matrix storage lives in this scene's original
      * taskman heap. Drop its pointer before that heap can be reused. */
     ndsRendererAdapterResetSceneCaches();
-#endif
     gNdsMemoryLedgerEvictedFiles = evicted_files;
     gNdsMemoryLedgerEvictedBytes = evicted_bytes;
 }
@@ -10006,7 +10001,7 @@ static s32 ndsRelocNativeEntryOwnsDependency(u32 owner_asset, u32 dep_asset)
         return TRUE;
     }
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #if NDS_P4
     /* A content's entry article whose images its native packets carry (the
      * Wolfen's four texture pointers into bank 109, Fox's Arwing's case). */
@@ -17505,9 +17500,7 @@ s32 ndsR2AnimCachePreloadFighterFile(const void *file_id)
  * warm-load I/O. */
 void ndsR2AnimCachePreloadMatch(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     ndsRendererAdapterPrepareWorldCaches();
-#endif
     memset(sNdsR2AnimStoredThisMatch, 0, sizeof(sNdsR2AnimStoredThisMatch));
 #if NDS_TICK_HUD
     {
@@ -19108,7 +19101,7 @@ void *ndsRelocGetFileData(void *file, const void *symbol)
  * tree -- from linking. Spelled out rather than hidden behind a macro:
  * this file does not include that header here, and an undefined macro in
  * an #if is silently 0, which is a quieter version of the same bug. */
-#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS || NDS_P2_YOSHI || (NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2))
+#if ((((NDS_P2_1P_GAME || NDS_P2_MENU_SHELL) || NDS_P2_SHELL_ARGMAX_ROSTER) || NDS_P2_COMPACT_BATTLE_FIGHTERS) || NDS_P2_YOSHI) || (NDS_RENDERER_PROFILE_LEVEL < 2)
 #include "reloc_preview_pack.c"
 #else
 const void *ndsRelocNativeForeignImageAddress(const void *base, u32 asset_id,

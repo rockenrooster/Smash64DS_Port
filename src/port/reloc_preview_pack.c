@@ -821,7 +821,7 @@ void *ndsRelocPreviewFighterLoadBegin(s32 fkind)
     u64 expected_size;
     u32 i;
 
-#if !NDS_RENDERER_HW_TRIANGLES || (NDS_RENDERER_PROFILE_LEVEL >= 2)
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     /* The source/oracle renderer still consumes full Gfx/Vtx programs. */
     return NULL;
 #endif

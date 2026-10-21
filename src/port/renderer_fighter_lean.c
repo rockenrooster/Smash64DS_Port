@@ -2477,7 +2477,7 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp)
     {
         ndsFighterDrawFoxGunSidecar(fp);
     }
-#if NDS_P4 && NDS_P2_KIRBY && NDS_RENDERER_HW_TRIANGLES
+#if NDS_P4 && NDS_P2_KIRBY
     /* A custom power's hat on joint 6, the same way, and Meta Knight's
      * tornado while he spins. */
     ndsFighterDrawKirbyHatSidecar(fp);
@@ -2567,8 +2567,7 @@ static void ndsFtrLeanMatchReset(void)
  * binds it. TRUE when the lean draw submitted. */
 volatile u32 gNdsFtrLeanTransientDraws;
 
-#if NDS_P2_1P_GAME && NDS_RENDERER_HW_TRIANGLES && \
-    (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_P2_1P_GAME && (NDS_RENDERER_PROFILE_LEVEL < 2)
 static sb32 ndsFtrLeanTransientDraw(FTStruct *fp, sb32 rebind)
 {
     NDSFtrLeanRunCall call = { NDS_INTRO_TRANSIENT_SCRATCH_SLOT, fp };
@@ -2612,8 +2611,7 @@ static void ndsFtrLeanFrameEnd(void)
     }
     ndsFtrLeanCountersPublish();
 #endif
-#if NDS_VRAM_CENSUS_LIVE && NDS_RENDERER_HW_TRIANGLES && \
-    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_VRAM_CENSUS_LIVE && (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
     ndsVramCensusFrame();   /* slice 2a lab census; no-op unless enabled */
 #endif
 }

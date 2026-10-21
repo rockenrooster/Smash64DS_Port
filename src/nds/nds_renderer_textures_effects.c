@@ -1,7 +1,6 @@
 #include <nds/nds_particle_runtime.h>
 #include <nds/nds_preview_pack.h>
 
-#if NDS_RENDERER_HW_TRIANGLES
 /* The dedicated I4 -> A5I3 owner is shared by the rebirth beam and Yoster's
  * clouds. Its preamble-owned identity only records the image and upload extent;
  * keep the source-row/sampler identity here so a masked 32x32 source baked into
@@ -19,7 +18,6 @@ static u32 sNdsRendererPrimRgbTexel0AlphaLastFormat;
 static u32 sNdsRendererPrimRgbTexel0AlphaLastWidth;
 static u32 sNdsRendererPrimRgbTexel0AlphaLastHeight;
 __attribute__((used)) volatile u32 gNdsRendererPrimEnvMaskedBakeCount;
-#endif
 
 static void ndsRendererRecordTransformedTriangle(
     NDSRendererStats *stats,
@@ -49,7 +47,6 @@ static void ndsRendererRecordTransformedTriangle(
     stats->transformed_triangle_count++;
 }
 
-#if NDS_RENDERER_HW_TRIANGLES
 static s32 ndsRendererRoundShiftS32Signed(s32 value, u32 shift)
 {
     u32 bits;
@@ -128,7 +125,6 @@ static v16 ndsRendererHardwareClampS64ToV16(s64 value)
     return (v16)value;
 }
 
-#if NDS_RENDERER_HW_TRIANGLES
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
 static v16 __attribute__((noinline, optimize("Os")))
 ndsRendererHardwareProjectToV16(s64 numerator, s32 denominator)
@@ -403,7 +399,6 @@ static inline v16 ndsRendererHardwareSourceDepthToV16(
     }
     return depth;
 }
-#endif
 
 static void ndsRendererProfileVertexRange(
     const NDSRendererInputVertex *vtx, v16 x, v16 y, v16 z)
@@ -2905,8 +2900,7 @@ u32 ndsRendererHardwareCommitPendingTextureRefreshes(void)
 #endif
 }
 
-#if NDS_RENDERER_HW_TRIANGLES && \
-    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
 static void ndsFtrCarveNoteRelease(
     const NDSRendererHardwareTextureCacheEntry *entry);
 #endif
@@ -2946,8 +2940,7 @@ ndsRendererHardwareReleaseTexture(
     /* A carved name (slice 2c) has no libnds record: its VRAM belongs to the
      * admission's carve regions, which go back to libnds with their last
      * entry. */
-#if NDS_RENDERER_HW_TRIANGLES && \
-    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
     if ((entry->carve_flags & NDS_FTR_CARVE_F_CARVED) != 0u)
     {
         ndsFtrCarveNoteRelease(entry);
@@ -3092,7 +3085,6 @@ volatile u32 gNdsRendererTextureRangeReleaseEntries;
  * arena. */
 u32 ndsRendererHardwareReleaseTexturesInRange(const void *base, size_t size)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     uintptr_t start;
     uintptr_t end;
     u32 released = 0u;
@@ -3144,14 +3136,9 @@ u32 ndsRendererHardwareReleaseTexturesInRange(const void *base, size_t size)
     }
     NDS_DIAG(gNdsRendererTextureRangeReleaseEntries += released);
     return released;
-#else
-    (void)base;
-    (void)size;
-    return 0u;
-#endif
 }
 
-#if NDS_VRAM_CENSUS_LIVE && NDS_RENDERER_HW_TRIANGLES
+#if NDS_VRAM_CENSUS_LIVE
 /* P2-2p8 Phase 1 slice 2b (lab): dynamic-partition occupancy seen by every
  * allocation -- ready slots, admitted slots -- and allocations that found no
  * takeable slot at all (the ALLOC reject the admitted set could cause). */
@@ -3175,7 +3162,7 @@ ndsRendererHardwareAllocTexture(void)
 
     ndsRendererHardwareRecordBattleTextureFence(
         NDS_RENDERER_BATTLE_TEXTURE_FENCE_ALLOC);
-#if NDS_VRAM_CENSUS_LIVE && NDS_RENDERER_HW_TRIANGLES
+#if NDS_VRAM_CENSUS_LIVE
     {
         u32 ready = 0u;
         u32 admitted = 0u;
@@ -3243,7 +3230,7 @@ ndsRendererHardwareAllocTexture(void)
             return ndsRendererHardwareReleaseTexture(entry);
         }
     }
-#if NDS_VRAM_CENSUS_LIVE && NDS_RENDERER_HW_TRIANGLES
+#if NDS_VRAM_CENSUS_LIVE
     NDS_DIAG(gNdsFtrAdmitDynFull++);
 #endif
     return NULL;
@@ -3275,7 +3262,6 @@ void ndsRendererHardwareDiscardTextureCache(void)
         gNdsRendererBattleStaticTextureViolationCount++;
     }
     sNdsRendererBattleStaticTexturePrepared = FALSE;
-#if NDS_RENDERER_HW_TRIANGLES
     u32 i;
 
     ndsRendererHardwareEndBatch();
@@ -3363,7 +3349,6 @@ void ndsRendererHardwareDiscardTextureCache(void)
     ndsRendererHardwareReleaseFoxGunTexture();
 #endif
     ndsRendererHardwareResetSourceCaches();
-#endif
     sNdsRendererBattleStaticTextureArmed = FALSE;
 }
 
@@ -3400,14 +3385,12 @@ void ndsRendererHardwareDiscardTextureCache(void)
 volatile u32 gNdsRendererSceneTextureVramResetEnable = 1u;
 volatile u32 gNdsRendererSceneTextureVramResetCount;
 
-#if NDS_RENDERER_HW_TRIANGLES && \
-    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
 static void ndsFtrAdmitSceneResetGuard(void);
 #endif
 
 void ndsRendererHardwareResetSceneTextureVram(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     /* The reset frees every texel a held frame's 3D still draws with (the
      * transition hold, nds_platform.c): such a frame ends here. */
     ndsPlatformTransitionThawIf3DShown();
@@ -3441,14 +3424,13 @@ void ndsRendererHardwareResetSceneTextureVram(void)
     sNdsNativeStageOwnerExecution.r2_prepared_valid = 0u;
 #endif
     gNdsRendererSceneTextureVramResetCount++;
-#endif
 }
 
 s32 ndsRendererHardwareUploadSceneMipCache(const u16 *mip0,
                                             const u16 *mip1,
                                             const u16 *mip2)
 {
-#if NDS_RENDERER_HW_TRIANGLES && NDS_SCENE_MIP_CACHE_LAB
+#if NDS_SCENE_MIP_CACHE_LAB
     const u16 *pixels[NDS_RENDERER_SCENE_MIP_COUNT] = {
         mip0, mip1, mip2
     };
@@ -3518,7 +3500,7 @@ s32 ndsRendererHardwareDrawSceneMipCache(u32 mip_index,
                                           u32 columns,
                                           u32 rows)
 {
-#if NDS_RENDERER_HW_TRIANGLES && NDS_SCENE_MIP_CACHE_LAB
+#if NDS_SCENE_MIP_CACHE_LAB
     v16 vertex_x[64];
     v16 vertex_y[64];
     u32 vertex_count;
@@ -3635,8 +3617,7 @@ static s32 ndsRendererHardwarePrepareIFCommonAtlas(
     NDSRendererTextureFillCallback fill, void *user_data, u32 *texture_name,
     u32 color0_transparent)
 {
-#if NDS_RENDERER_HW_TRIANGLES && \
-    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
     int size_x;
     int size_y;
     int name = 0;
@@ -3960,8 +3941,7 @@ static s32 ndsRendererEntryEffectTextureFill(u8 *pixels, u32 bytes,
 
 s32 ndsRendererHardwarePrepareImpactWaveTextures(void)
 {
-#if NDS_R2_IMPACT_WAVE_NATIVE && NDS_RENDERER_HW_TRIANGLES && \
-    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_R2_IMPACT_WAVE_NATIVE && (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
     u32 variant;
 
     for (variant = 0u; variant < NDS_RENDERER_IMPACT_WAVE_VARIANT_COUNT;
@@ -3990,8 +3970,7 @@ s32 ndsRendererHardwarePrepareImpactWaveTextures(void)
 
 s32 ndsRendererHardwarePrepareRebirthHaloTextures(void)
 {
-#if NDS_R2_REBIRTH_HALO_NATIVE && NDS_RENDERER_HW_TRIANGLES && \
-    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_R2_REBIRTH_HALO_NATIVE && (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
     static const struct
     {
         const u8 *pixels;
@@ -4053,8 +4032,7 @@ s32 ndsRendererHardwarePrepareRebirthHaloTextures(void)
 
 void ndsRendererHardwareReleaseIFCommonCloudAtlas(u32 *texture_name)
 {
-#if NDS_RENDERER_HW_TRIANGLES && \
-    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
     int name;
 
     if ((texture_name == NULL) || (*texture_name == 0u))
@@ -4082,8 +4060,7 @@ void ndsRendererHardwareReleaseIFCommonCloudAtlas(u32 *texture_name)
  * native owner's tint batch reads it to aim its single texcoord. */
 #define NDS_R2_FIGHTER_TINT_DIM 8u
 
-#if NDS_RENDERER_HW_TRIANGLES && \
-    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
 /* A SOLID TEXEL, SO A TINTED BODY CAN MULTIPLY AFTER IT SHADES.
  *
  * Fighters draw PRIM x SHADE (then x ENV, which is the stage light colour and
@@ -4454,8 +4431,7 @@ volatile u32 gNdsEntryEffectStartupTextureReleaseBytes;
  * caller says when that stage is live; nothing else keeps its textures. */
 volatile u32 gNdsEntryEffectKeepFoxArwingTextures;
 
-#if NDS_RENDERER_HW_TRIANGLES && \
-    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
 static s32 ndsRendererEntryTextureIsFoxArwing(u32 texture_slot)
 {
     u32 root_index;
@@ -4483,8 +4459,7 @@ static s32 ndsRendererEntryTextureIsFoxArwing(u32 texture_slot)
 void __attribute__((cold, optimize("Os")))
 ndsRendererHardwareReleaseEntryStartupTextures(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES && \
-    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
     u32 i;
 
     for (i = 0u; i < NDS_ENTRY_EFFECT_TEXTURE_COUNT; i++)
@@ -4528,8 +4503,7 @@ ndsRendererHardwareReleaseEntryStartupTextures(void)
 #endif
 }
 
-#if NDS_VRAM_CENSUS_LIVE && NDS_RENDERER_HW_TRIANGLES && \
-    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_VRAM_CENSUS_LIVE && (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
 /* ---------------------------------------------------------------------------
  * P2-2p8 Phase 1 slice 2a (lab only): texture and palette VRAM census.
  *
@@ -5033,8 +5007,7 @@ void ndsVramCensusCaptureBurst(void)
     DC_FlushRange(&gNdsVramCensus, sizeof(gNdsVramCensus));
 }
 
-#if NDS_RENDERER_HW_TRIANGLES && \
-    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
 static void ndsFtrCarveLabPublish(void);
 #endif
 
@@ -5049,8 +5022,7 @@ void ndsVramCensusFrame(void)
 #if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW != 0
     DC_FlushRange(&gNdsTexIdentLab, sizeof(gNdsTexIdentLab));
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && \
-    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
     ndsFtrCarveLabPublish();
 #endif
     if (gNdsVramCensusEnable == 0u)
@@ -5435,8 +5407,7 @@ s32 ndsRendererHardwareDrawIFCommonCloudAtlas(
     u32 texture_x, u32 texture_y, u32 texture_width,
     u32 texture_height, u32 poly_id)
 {
-#if NDS_RENDERER_HW_TRIANGLES && \
-    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
     NDSRendererIFCommonCloudDraw *draw;
 
     if ((texture_name == 0u) || (width_q16 <= 0) || (height_q16 <= 0) ||
@@ -5479,8 +5450,7 @@ s32 ndsRendererHardwareDrawIFCommonCloudAtlas(
 
 static void ndsRendererHardwareEmitIFCommonClouds(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES && \
-    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
     u32 draw_index;
 
     if (sNdsRendererIFCommonCloudQueueCount == 0u)
@@ -6289,7 +6259,6 @@ static s32 ndsRendererHardwareBuildBattleStaticTextureKey(
 
 s32 ndsRendererHardwareRefreshBattleStaticTexturePointers(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     u32 record_index;
     u32 refreshed = 0u;
 
@@ -6381,14 +6350,10 @@ s32 ndsRendererHardwareRefreshBattleStaticTexturePointers(void)
         NDS_DIAG(gNdsRendererBattleStaticTextureRefreshedEntryCount += refreshed);
     }
     return TRUE;
-#else
-    return TRUE;
-#endif
 }
 
 s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     FILE *file = NULL;
     long payload_size;
     u32 record_index;
@@ -6821,14 +6786,6 @@ fail:
     gNdsRendererBattleStaticTextureBankMask = 0u;
     gNdsRendererBattleStaticTexturePrepareFailCount++;
     return FALSE;
-#else
-    if (gNdsRendererBattleStaticTextureEnabled != 0u)
-    {
-        gNdsRendererBattleStaticTexturePrepareCount++;
-        gNdsRendererBattleStaticTexturePrepareFailCount++;
-    }
-    return FALSE;
-#endif
 }
 
 #if NDS_R2_PARTICLE_RUNTIME
@@ -11107,7 +11064,6 @@ void ndsRendererHardwareArmBattleStaticTextures(void)
 
 void ndsRendererHardwareDiscardBattleStaticTextures(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     u32 was_prepared = sNdsRendererBattleStaticTexturePrepared;
 
     sNdsRendererBattleStaticTexturePrepared = FALSE;
@@ -11117,7 +11073,6 @@ void ndsRendererHardwareDiscardBattleStaticTextures(void)
     {
         gNdsRendererBattleStaticTextureTeardownCount++;
     }
-#endif
     sNdsRendererBattleStaticTexturePrepared = FALSE;
     sNdsRendererBattleStaticTextureArmed = FALSE;
     gNdsRendererStaticTexturePreparedNow = 0u;
@@ -11129,7 +11084,6 @@ void ndsRendererHardwareAbortBattleStaticTextures(void)
      * the entry point that makes the scene's textures unrecoverable, so "was it
      * called" must never depend on a build flag. See the row 6 note above. */
     gNdsRendererStageOwnerAbortCount++;
-#if NDS_RENDERER_HW_TRIANGLES
     u32 was_prepared = sNdsRendererBattleStaticTexturePrepared;
 
     /* This deliberately retains the armed bit through every pinned delete.
@@ -11139,7 +11093,6 @@ void ndsRendererHardwareAbortBattleStaticTextures(void)
     {
         gNdsRendererBattleStaticTextureTeardownCount++;
     }
-#endif
     sNdsRendererBattleStaticTexturePrepared = FALSE;
     sNdsRendererBattleStaticTextureArmed = FALSE;
     gNdsRendererStaticTexturePreparedNow = 0u;
@@ -11991,7 +11944,7 @@ static void ndsRendererHardwareRejectTexture(NDSRendererStats *stats,
     /* P2-2p8 Phase 1 slice 1: the fighter texture-admission census's reject
      * witness (first fighter-owned reject, reason + cache census). */
     ndsFtrLeanNoteTextureReject(reason, format, size);
-#if NDS_VRAM_CENSUS_LIVE && NDS_RENDERER_HW_TRIANGLES
+#if NDS_VRAM_CENSUS_LIVE
     gNdsFtrAdmitLastReject = reason;
 #endif
     ndsRendererHardwareRecordBattleTextureFence(
@@ -13403,8 +13356,7 @@ static void ndsRendererHardwareBindPrimRgbTexel0AlphaTexture(
     gNdsRendererPrimRgbTexel0AlphaBindCount++;
 }
 
-#if NDS_RENDERER_HW_TRIANGLES && \
-    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
 /* P2-2p8 Phase 1 slice 2c: while the fighter admission runs, a new cache entry
  * is carved (ndsFtrCarveUpload, with the admission below) instead of taking a
  * libnds name and glTexImage2D. */
@@ -15142,8 +15094,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     entry->key_hash = key_hash;
 #endif
     entry->params = ndsRendererHardwareMergeTextureParams(params);
-#if NDS_VRAM_CENSUS_LIVE && NDS_RENDERER_HW_TRIANGLES && \
-    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_VRAM_CENSUS_LIVE && (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
     /* Slice 2a (lab): the distinct fighter textures each slot uploads. */
     ndsVramCensusNoteCacheKey(entry, &key, resident_palette_entries);
 #endif
@@ -17945,10 +17896,8 @@ ndsRendererSubmitHardwareTriangle(
     }
 }
 #endif
-#endif
 
-#if NDS_RENDERER_HW_TRIANGLES && \
-    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
 /* ---------------------------------------------------------------------------
  * P2-2p8 Phase 1 slice 2b: fighter texture admission and battle VRAM regions
  * (include/nds/renderer_fighter_lean.h, gNdsFtrLeanAdmit).
@@ -19605,170 +19554,3 @@ static void ndsRendererHardwareBindCarvedState(u32 name)
 }
 #endif
 
-#if !NDS_RENDERER_HW_TRIANGLES
-/* Shared scene code owns teardown calls even in the software build.  Keep the
- * hardware-only texture API link-complete without allocating GX state. */
-volatile u32 gNdsRendererBattleStaticTextureEnabled = 0u;
-/* Same reason, and the reason this block exists at all: scVSBattleStartBattle
- * calls the scene texture-VRAM reset unconditionally, so the software build
- * needs the symbol. The counters stay real so a soak against either build reads
- * the same field rather than dropping it. */
-volatile u32 gNdsRendererSceneTextureVramResetEnable = 1u;
-volatile u32 gNdsRendererSceneTextureVramResetCount;
-
-void ndsRendererHardwareResetSceneTextureVram(void)
-{
-    gNdsRendererSceneTextureVramResetCount++;
-}
-
-s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
-{
-    return FALSE;
-}
-
-#if NDS_R2_PARTICLE_RUNTIME
-volatile u32 gNdsRendererParticleAtlasPrepareCount;
-volatile u32 gNdsRendererParticleAtlasFailCount;
-volatile u32 gNdsRendererParticleAtlasBytes;
-volatile u32 gNdsRendererWhispyNativePrepareCount;
-volatile u32 gNdsRendererWhispyNativeFailCount;
-volatile u32 gNdsRendererWhispyNativeBytes;
-#if NDS_R2_FOX_BLASTER_GLOW_AOT
-volatile u32 gNdsRendererFoxBlasterGlowPrepareCount;
-volatile u32 gNdsRendererFoxBlasterGlowFailCount;
-volatile u32 gNdsRendererFoxBlasterGlowBytes;
-#endif
-/* The v16 rail counters' software-renderer twins. `battleship_lbparticle.c`
- * reads the clamp count under NDS_R2_PARTICLE_DRAW, which defaults ON while
- * NDS_RENDERER_HW_TRIANGLES defaults OFF -- so without these three the DEFAULT
- * configuration is the one that fails to link, which is exactly the trap
- * ndsRendererSetParticleCamera fell into on 2026-08-02. They stay real so a
- * soak against either build reads the same field rather than dropping it. */
-volatile u32 gNdsParticleWorldClampCount;
-volatile u32 gNdsParticleScaleEscalations;
-volatile u32 gNdsParticleScaleShiftMax;
-
-/* The particle atlas is a hardware-texture object; the software renderer has
- * no texture cache to hold it, so the draw seam gets a name of 0 and declines
- * rather than the whole configuration failing to link. */
-s32 ndsRendererHardwarePrepareParticleAtlas(void)
-{
-    gNdsRendererParticleAtlasPrepareCount++;
-    gNdsRendererParticleAtlasFailCount++;
-    return FALSE;
-}
-
-u32 ndsRendererHardwareParticleAtlasNameForSheet(u32 sheet)
-{
-    (void)sheet;
-    return 0u;
-}
-
-u32 ndsRendererHardwareParticleAtlasName(void)
-{
-    return 0u;
-}
-
-u32 ndsRendererHardwareFoxBlasterGlowName(void)
-{
-    return 0u;
-}
-
-u32 ndsRendererHardwareWhispyNativeName(u32 texture_id)
-{
-    (void)texture_id;
-    return 0u;
-}
-
-void ndsRendererHardwareDiscardParticleAtlas(void)
-{
-}
-
-/* lbParticleDrawTextures hands the pass its camera unconditionally -- it has no
- * business knowing which renderer is under it -- so this half of the seam must
- * exist in both configurations. It did not, and NDS_RENDERER_HW_TRIANGLES=0
- * with NDS_R2_PARTICLE_RUNTIME=1 is the DEFAULT, i.e. the published
- * smash64ds.nds: `make` with no overrides failed at link on this symbol alone.
- * The three particle entry points below are one seam; add or remove them
- * together. */
-void ndsRendererSetParticleCamera(const NDSRendererMatrix20p12 *projection,
-                                  const NDSRendererMatrix20p12 *modelview)
-{
-    NDS_FIGHTER_PACKET_DMA_WAIT();
-    (void)projection; (void)modelview;
-}
-
-s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
-                                  u32 color, u8 alpha,
-                                  u32 envcolor, u32 particle_flags,
-                                  const Vec3f *right, const Vec3f *up,
-                                  u32 mirror_mask,
-                                  u32 atlas_x, u32 atlas_y,
-                                  u32 atlas_w, u32 atlas_h)
-{
-    NDS_FIGHTER_PACKET_DMA_WAIT();
-    (void)atlas_name; (void)pos; (void)size; (void)color; (void)alpha;
-    (void)envcolor; (void)particle_flags;
-    (void)right; (void)up; (void)mirror_mask;
-    (void)atlas_x; (void)atlas_y; (void)atlas_w; (void)atlas_h;
-    return FALSE;
-}
-
-void ndsRendererSetWhispyNativeBasis(const Vec3f *right, const Vec3f *up)
-{
-    (void)right; (void)up;
-}
-
-s32 ndsRendererParticlePositionToQ12(const Vec3f *pos,
-                                     s32 fixed_center_q12[3])
-{
-    (void)pos;
-    (void)fixed_center_q12;
-    return FALSE;
-}
-
-s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
-                                      u32 texture_slot,
-                                      const Vec3f *pos, f32 size,
-                                      const s32 fixed_center_q12[3],
-                                      s32 fixed_size_q8,
-                                      u32 color, u8 alpha,
-                                      u32 mirror_mask,
-                                      u32 texture_w, u32 texture_h,
-                                      sb32 packet)
-{
-    NDS_FIGHTER_PACKET_DMA_WAIT();
-    (void)texture_name; (void)pos; (void)size; (void)color; (void)alpha;
-    (void)fixed_center_q12; (void)fixed_size_q8;
-    (void)texture_slot; (void)mirror_mask; (void)texture_w; (void)texture_h;
-    (void)packet;
-    return -1;
-}
-
-void ndsRendererEndParticleQuads(void)
-{
-    NDS_FIGHTER_PACKET_DMA_WAIT();
-}
-
-void ndsRendererSetParticleNoDepth(u32 no_depth)
-{
-    (void)no_depth;
-}
-
-void ndsRendererHardwareNoteQuadFrame(void)
-{
-}
-#endif
-
-void ndsRendererHardwareArmBattleStaticTextures(void)
-{
-}
-
-void ndsRendererHardwareDiscardBattleStaticTextures(void)
-{
-}
-
-void ndsRendererHardwareAbortBattleStaticTextures(void)
-{
-}
-#endif

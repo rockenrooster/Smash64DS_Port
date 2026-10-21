@@ -28,13 +28,8 @@
 #include <ft/ftdata_file_slots.h>
 #include <nds/nds_frontend_overlay.h>
 
-#ifndef NDS_RENDERER_HW_TRIANGLES
-#define NDS_RENDERER_HW_TRIANGLES 0
-#endif
 
-#if NDS_RENDERER_HW_TRIANGLES
 #include <nds/timers.h>
-#endif
 
 /* Task 86: see ndsRendererMatrixCopy20p12 in include/nds/nds_renderer.h. Gated
  * so the A/B is one flag, per the Task 79 rule. The definition sits outside the
@@ -42,7 +37,7 @@
  * uses MTXCOPY on both sides of that switch; with it inside, the canonical
  * software target did not compile at all. Folding the triangle flag into the
  * condition keeps the hardware ROM's expansion exactly as it was. */
-#if NDS_RENDERER_HW_TRIANGLES && NDS_TASK86_MATRIX_COPY
+#if NDS_TASK86_MATRIX_COPY
 #define MTXCOPY(d, s) ndsRendererMatrixCopy20p12((d), (s))
 #else
 #define MTXCOPY(d, s) (*(d) = *(s))
@@ -437,8 +432,7 @@ int ndsP2JointItemAttach(DObj *attach, const Vec2f *shuffle, s32 m[4][4]);
 #endif
 #if NDS_LAB_NO_CULL
 extern volatile u32 gNdsLabSeamArm;
-#if NDS_R2_STRIP_ROUTE && (NDS_TASK56_FIGHTER_PRIMITIVES >= 1) && \
-    (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_RENDERER_HW_TRIANGLES
+#if (NDS_R2_STRIP_ROUTE && (NDS_TASK56_FIGHTER_PRIMITIVES >= 1)) && (NDS_RENDERER_PROFILE_LEVEL < 2)
 #define NDS_RENDERER_ADAPTER_LAB_SOURCE_WORLD_ARM 4u
 #else
 #define NDS_RENDERER_ADAPTER_LAB_SOURCE_WORLD_ARM 3u
@@ -550,7 +544,6 @@ static u32 ndsRendererAdapterFighterColorModulate(const FTStruct *fp)
     return 0u;
 }
 
-#if NDS_RENDERER_HW_TRIANGLES
 #if NDS_RENDERER_PROFILE_LEVEL < 2
 static NDSRendererNativeMaterial
     sNdsRendererAdapterNativeOwnerMaterials[
@@ -1768,7 +1761,6 @@ static const NDSRendererAdapterNativeStageDescriptor *const
 #endif
     };
 
-#if NDS_RENDERER_HW_TRIANGLES
 /* NULL when the loaded kind has no baked packet. Every caller treats that as
  * "no native stage", never as Dream Land. */
 static const NDSRendererAdapterNativeStageDescriptor *
@@ -1923,7 +1915,6 @@ u32 ndsRendererAdapterNativeStageAssetSize(u32 index)
     return ((desc != NULL) && (index < desc->asset_count)) ?
         desc->asset_sizes[index] : 0u;
 }
-#endif
 
 typedef struct NDSRendererAdapterNativeStageWorkspace
 {
@@ -2013,7 +2004,7 @@ static NDSRendererAdapterNativeStageWorkspace
     sNdsRendererAdapterNativeStageWorkspace;
 #endif
 
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 static sb32 ndsRendererAdapterCollectFighterTopology(
     DObj *dobj,
     u32 parent_index,
@@ -2145,7 +2136,6 @@ static u32 sNdsRendererAdapterStageWorldNextGeneration;
 static u32 sNdsRendererAdapterStageWorldRebuilds;
 static u8 sNdsRendererAdapterStageWorldIndex[
     NDS_RENDERER_ADAPTER_STAGE_WORLD_INDEX_COUNT];
-#endif
 
 static sb32 ndsRendererAdapterRangeIsEmptySegmentEDL(const Gfx *dl,
                                                      size_t bytes)
@@ -5015,8 +5005,7 @@ static void ndsRendererAdapterApplyMvpRecalc(
     gNdsRendererAdapterCustom47AppliedCount++;
 }
 
-#if NDS_RENDERER_HW_TRIANGLES
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 /* Cycle 99, charter section 3.12: the baked fighter draw plan holds DObj and
  * loaded-file pointers, so it is re-derived at every scene entry -- including a
  * START-restart out of Results -- and never trusted across one. Defined with
@@ -5034,7 +5023,7 @@ static void ndsRendererAdapterResetSceneCaches(void)
 #if NDS_P2_STAGE_SECTOR
     gNdsSectorArwingBasisDecline = 0u;
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
     ndsFighterDrawPlanInvalidate();
 #endif
 #if NDS_R2_FIGHTER_GX_COMPOSE
@@ -5564,9 +5553,7 @@ static u32 ndsRendererAdapterNextStageWorldGeneration(void)
     }
     return generation;
 }
-#endif
 
-#if NDS_RENDERER_HW_TRIANGLES
 /* Local-matrix memo for the uncached world build (P2-2p8, 2026-09-28). On
  * Jungle, Zebes, Yoshi's Island and Saffron the heap refuses the DObj and
  * stage world caches (95-113K free when they are sized, against a ~137K
@@ -5664,7 +5651,6 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrixUncached(
     }
     return TRUE;
 }
-#endif
 
 #if NDS_TASK91_DRAW_PHASE_CENSUS
 /* R2-03 E6. MatrixPrep is 91,338 ticks/frame, four times MaterialPrep, and E5
@@ -5708,15 +5694,12 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrix(
     NDSRendererMatrix20p12 local;
     u32 depth = 0u;
     u32 i;
-#if NDS_RENDERER_HW_TRIANGLES
     const NDSRendererMatrix20p12 *cached;
-#endif
 
     if ((dobj == NULL) || (out == NULL))
     {
         return FALSE;
     }
-#if NDS_RENDERER_HW_TRIANGLES
     cached = ndsRendererAdapterFindDObjWorldMatrix(dobj);
     if (cached != NULL)
     {
@@ -5729,7 +5712,6 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrix(
 #endif
         return TRUE;
     }
-#endif
 
     while ((cursor != NULL) && (cursor != DOBJ_PARENT_NULL) &&
            (depth < NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX))
@@ -5745,7 +5727,6 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrix(
         return FALSE;
     }
 
-#if NDS_RENDERER_HW_TRIANGLES
     for (i = 1u; i < depth; i++)
     {
         cached = ndsRendererAdapterFindDObjWorldMatrix(chain[i]);
@@ -5768,10 +5749,6 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrix(
         NDS_DIAG(gNdsTask91MtxWorldAncestorHit++);
     }
 #endif
-#else
-    ndsRendererAdapterMtxIdentity20p12(out);
-    i = depth;
-#endif
     for (; i != 0u; i--)
     {
 #if NDS_TASK91_DRAW_PHASE_CENSUS
@@ -5791,12 +5768,10 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrix(
 #endif
             /* objdisplay.c:1183-1191 left-multiplies each child local matrix. */
             ndsRendererMtxMulAffine20p12(&local, out, out);
-#if NDS_RENDERER_HW_TRIANGLES
             /* DObj transforms are finalized before the camera's gcDrawAll
              * pass. Cache each prefix for sibling/child draws, and reset at
              * the next presented frame so live fighter poses remain live. */
             ndsRendererAdapterStoreDObjWorldMatrix(chain[i - 1u], out);
-#endif
 #if NDS_TASK68_FALLBACK_CENSUS
             ndsRendererAdapterRecordAttachWorld(chain[i - 1u], out);
 #endif
@@ -5812,8 +5787,7 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrix(
     return TRUE;
 }
 
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && NDS_RENDERER_M2_DETAILED_LEDGER
 static sb32 ndsRendererAdapterBuildDObjWorldMatrixM2Profile(
     DObj *dobj,
     NDSRendererMatrix20p12 *out,
@@ -5897,7 +5871,6 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrixM2Profile(
 }
 #endif
 
-#if NDS_RENDERER_HW_TRIANGLES
 /* P2-2p8 (2026-10-04): A KEYED NODE'S LOCAL, KEPT ACROSS A PARENT CHANGE.
  * The world cache below reuses a node's world only while its parent's
  * generation holds, so a node under a moving parent -- a held item's blade
@@ -6193,7 +6166,6 @@ static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
     }
     return TRUE;
 }
-#endif
 
 static sb32 ndsRendererAdapterBuildCameraMatrices(
     CObj *cobj,
@@ -6414,7 +6386,6 @@ static sb32 ndsRendererAdapterBuildCameraMatrices(
         TRUE : FALSE;
 }
 
-#if NDS_RENDERER_HW_TRIANGLES
 static void ndsRendererAdapterBuildDefaultBattleCameraMatrices(
     NDSRendererMatrix20p12 *projection,
     u32 *projection_valid,
@@ -6734,7 +6705,6 @@ s32 ndsRendererAdapterSetWorldQuadCameraBasisQ12(void *camera_gobj,
     ndsRendererSetParticleCamera(&projection, &modelview);
     return TRUE;
 }
-#endif
 
 /* Defined with the other stage statics further down; declared here because
  * ndsRendererAdapterPrepareInitialMatrices publishes its verdict only for the
@@ -6780,23 +6750,14 @@ static void ndsRendererAdapterPrepareInitialMatrices(
     }
 
     NDS_LAB_PIM_MARK(lab_mark);
-#if NDS_RENDERER_HW_TRIANGLES
     ndsRendererAdapterGetFrameCameraMatrices(
         cobj, &camera_projection, &camera_projection_valid,
         &camera_modelview, &camera_modelview_valid,
         NULL, NULL, NULL);
-#else
-    ndsRendererAdapterBuildCameraMatrices(cobj, &camera_projection,
-                                          &camera_projection_valid,
-                                          &camera_modelview,
-                                          &camera_modelview_valid,
-                                          NULL, NULL, NULL, NULL);
-#endif
     NDS_LAB_PIM_ADD(0, lab_mark);
     NDS_LAB_PIM_MARK(lab_mark);
     if (dobj != NULL)
     {
-#if NDS_RENDERER_HW_TRIANGLES
         if (persistent_stage_world != FALSE)
         {
             dobj_world_valid =
@@ -6804,7 +6765,6 @@ static void ndsRendererAdapterPrepareInitialMatrices(
                     dobj, &dobj_world, FALSE);
         }
         else
-#endif
         {
             dobj_world_valid =
                 ndsRendererAdapterBuildDObjWorldMatrix(dobj, &dobj_world);
@@ -6868,7 +6828,7 @@ static void ndsRendererAdapterPrepareInitialMatrices(
     }
 }
 
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 /* Slice 6 (P2-2p8 Phase 1): always inline. Its callers are the stage binding
  * matrix prep (every stage binding, every frame), the Fox blaster builder
  * and the fighter draw; a fourth call site (the lean path's blaster sidecar)
@@ -7288,7 +7248,6 @@ static void ndsRendererAdapterSetShuffleOffset(const FTStruct *fp)
 }
 #endif
 
-#if NDS_RENDERER_HW_TRIANGLES
 /* ---------------------------------------------------------------------------
  * The flat baked world compose.
  *
@@ -8386,7 +8345,6 @@ ndsRendererAdapterComposeOwnerWorldsSource(
     }
     return TRUE;
 }
-#endif
 
 /* The per-binding world build, outlined. It is the fail-closed path for when
  * the flat compose declines, and in a whole-match census it declined zero times
@@ -8523,11 +8481,9 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
     u32 camera_projection_valid = FALSE;
     u32 camera_modelview_valid = FALSE;
     u32 binding_index;
-#if NDS_RENDERER_HW_TRIANGLES
     NDSRendererMatrix20p12 compose_seed;
     sb32 seed_is_identity;
     u32 flat_worlds = FALSE;
-#endif
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
     u32 m2_phase_start;
@@ -8581,7 +8537,6 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
     }
 
     (void)root;
-#if NDS_RENDERER_HW_TRIANGLES
     /* The seed the whole binding forest hangs off. Camera when there is one, so
      * the compose lands in camera space directly; identity when there is not,
      * which is the old world-space result unchanged. */
@@ -8743,11 +8698,9 @@ gx_compose_declined:
             sNdsRendererAdapterNativeOwnerModelviews, &compose_seed,
             seed_is_identity);
     }
-#endif
     /* `flat_worlds` is decided once, above, and never changes inside the loop,
      * so hoisting it out of the loop is a pure transformation -- and it is what
      * lets the fallback leave the hot function entirely. */
-#if NDS_RENDERER_HW_TRIANGLES
     if (flat_worlds != FALSE)
     {
         /* Nothing left to do per binding but publish the pointer: the compose
@@ -8765,7 +8718,6 @@ gx_compose_declined:
         }
     }
     else
-#endif
     {
         if (ndsRendererAdapterPrepareOwnerMatricesPerBinding(
                 bindings, binding_count, &camera_modelview,

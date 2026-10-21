@@ -61,7 +61,7 @@ extern u8 gSC1PManagerKirbyTeamFinalCopy;
 /* Keep the source runtime and replace only its platform entry. */
 #define sc1PGameStartScene ndsExcludedSC1PGameStartScene
 
-#if NDS_P2_KIRBY && NDS_RENDERER_HW_TRIANGLES
+#if NDS_P2_KIRBY
 #include <nds/nds_kirby_hat_residency.h>
 void ndsRendererNativeBeginKirbyHatMatch(void);
 static void ndsSC1PGamePrepareKirbyHats(void);
@@ -86,7 +86,7 @@ static void ndsSC1PGameAllocFighters(u32 flags, s32 source_capacity)
     }
     ftManagerAllocFighter(flags,
         ((capacity > 0) && (capacity <= source_capacity)) ? capacity : source_capacity);
-#if NDS_P2_KIRBY && NDS_RENDERER_HW_TRIANGLES
+#if NDS_P2_KIRBY
     ndsSC1PGamePrepareKirbyHats();
 #endif
 }
@@ -156,7 +156,7 @@ void ndsSC1PLoadCommonFiles(sb32 keep_letters);
 #undef mpCollisionGetMapObjCountKind
 #undef mpCollisionGetMapObjIDsKind
 
-#if NDS_P2_KIRBY && NDS_RENDERER_HW_TRIANGLES
+#if NDS_P2_KIRBY
 /* Admit the copy hats this ladder fight can show before its fighter loop,
  * as the VS battle does (battleship_scvsbattle.c): the Kirby Team's members
  * are made already holding a power, so their hat binds inside

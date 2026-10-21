@@ -57,7 +57,6 @@
 #include <sys/objman.h>
 #include <nds/nds_p5.h>
 
-#if NDS_RENDERER_HW_TRIANGLES
 extern void gcDrawDObjTreeDLLinksForGObj(GObj *gobj);
 extern volatile u32 gNdsDamageSlashRootMask;
 extern volatile u32 gNdsDamageSlashEffectsSeen;
@@ -77,9 +76,8 @@ sb32 ndsRendererPreflightNativeDamageSlash(
     const void *asset_base, u32 asset_bytes, u32 root_offset,
     const NDSRendererNativeMaterial *material,
     const NDSRendererConfig *config);
-#endif
 
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI && NDS_P2_ITEM_CORE
+#if NDS_P2_STAGE_YAMABUKI && NDS_P2_ITEM_CORE
 extern volatile u32 gNdsYamabukiGluckyCandidateStep;
 extern volatile u32 gNdsYamabukiGluckyItemKind;
 extern volatile u32 gNdsYamabukiGluckyForeignKindCount;
@@ -125,7 +123,7 @@ sb32 ndsRendererSubmitNativeItemFushigibana(
     const NDSRendererConfig *config, NDSRendererStats *stats);
 #endif
 
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+#if NDS_P2_ITEM_CORE
 extern volatile u32 gNdsItemStarKind;
 extern volatile u32 gNdsItemStarForeignKindCount;
 extern volatile u32 gNdsItemStarCandidateStep;
@@ -359,7 +357,6 @@ sb32 ndsRendererSubmitNativeItemIwark(
     const NDSRendererConfig *config, NDSRendererStats *stats);
 #endif
 
-#if NDS_RENDERER_HW_TRIANGLES
 #define NDS_RENDERER_STAGE_DL_HEADS 4u
 
 static NDSFighterDLDrawState sNdsRendererAdapterStagePersistentState;
@@ -1471,9 +1468,7 @@ void ndsRendererAdapterBeginStageTraversal(void)
     }
     ndsRendererInitVertexCache(&sNdsRendererAdapterStageVertexCache);
     sNdsRendererAdapterStagePersistentActive = TRUE;
-#if NDS_RENDERER_HW_TRIANGLES
     ndsRendererProfileSetOwner(NDS_RENDERER_PROFILE_OWNER_STAGE);
-#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     sNdsRendererAdapterStageOwnerOccurrence =
         sNdsRendererAdapterStageNextOccurrence++;
@@ -1539,9 +1534,7 @@ void ndsRendererAdapterEndStageTraversal(void)
                 NDS_RENDERER_PROFILE_OWNER_STAGE].exit_global_hash,
             ndsRendererProfileGlobalStateHash());
 #endif
-#if NDS_RENDERER_HW_TRIANGLES
     ndsRendererProfileSetOwner(NDS_RENDERER_PROFILE_OWNER_NONE);
-#endif
     sNdsRendererAdapterStagePersistentActive = FALSE;
 }
 
@@ -2471,7 +2464,6 @@ static sb32 ndsRendererAdapterBuildNativeMaterial(
 #endif
 }
 
-#if NDS_RENDERER_HW_TRIANGLES
 /*
  * P2-2p8 M1 Native Draw List (NDL), first closed owners.
  *
@@ -3405,9 +3397,8 @@ static s32 ndsRendererAdapterNdlDispatchEffectBody(GObj *camera_gobj,
     gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
     return handled;
 }
-#endif
 
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 /* P2-4n1 step 6: every per-segment fact below reads the active stage's
  * capture row (renderer_adapter_matrix.c). Dream Land's rows are the switch,
  * arrays and ternary that used to live here, value for value. */
@@ -5943,7 +5934,7 @@ static void ndsRendererAdapterRestoreNativeMaterialTextureIds(
     }
 }
 
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 static sb32 ndsRendererAdapterValidateNativeOwnerMaterials(
     const NDSRendererNativeMaterial *materials,
     u32 material_count)
@@ -6008,7 +5999,7 @@ static void ndsRendererAdapterRestoreNativeOwnerMaterialTextureIds(
 }
 #endif
 
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 /* A plan hit skips this outright (see "THE DELETION" at the plan-hit branch), and
  * the plan hits every frame -- the c112 cold map found its body inside the
  * driver's third-largest never-executed run. */
@@ -6695,7 +6686,6 @@ static void ndsStageRejectNativeRender(DObj *dobj, const Gfx *dl,
     }
 }
 
-#if NDS_RENDERER_HW_TRIANGLES
 /* One list's matrices, prepared ahead of its submit (Sector Z's Arwing in two
  * passes, ndsRendererAdapterSubmitArwingTwoPass): exactly what
  * ndsRendererAdapterPrepareInitialMatrices returned for this DObj, before the
@@ -6713,7 +6703,6 @@ typedef struct NDSRendererAdapterEntryPrepared
 } NDSRendererAdapterEntryPrepared;
 
 static const NDSRendererAdapterEntryPrepared *sNdsRendererAdapterEntryPrepared;
-#endif
 
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
 /* LAB ONLY (the any-stage sweep ROM): the FoxSpecial3 Arwing roots this
@@ -6728,7 +6717,6 @@ volatile u32 gNdsLabArwingRootCensus[8][5] __attribute__((used));
 #define NDS_LAB_ARW_MARK(v) ((void)0)
 #endif
 
-#if NDS_RENDERER_HW_TRIANGLES
 /* The entry owner's inherited state, as the executor's stats see it at
  * submit; shared by ndsRendererAdapterTryNativeEntryEffect and the Arwing's
  * replay submit so the two cannot drift. */
@@ -6839,9 +6827,8 @@ ndsRendererAdapterEntryEffectAccumulate(const NDSRendererStats *stats)
     gNdsStageGCDrawAllLoopHardwareTextureRejectCount +=
         stats->hardware_texture_reject_count;
 }
-#endif
 
-#if NDS_P4 && NDS_RENDERER_HW_TRIANGLES
+#if NDS_P4
 /* nds_renderer_native_common.c: a P4 content article root's admission
  * (scripts/p4/p4_articles.py rows in the build's entry-effect packet). The
  * variant count carries these bits (the same values there): frame i was
@@ -6855,7 +6842,6 @@ sb32 ndsRendererEntryEffectP4Admit(const void *dl, u32 *owner_asset_id,
 static sb32 ndsRendererAdapterTryNativeEntryEffect(
     DObj *dobj, const Gfx *dl, GObj *camera_gobj, u32 initial_geometry_mode)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     extern void *gFTManagerCommonFile;
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
     u32 lab_t[5] = { 0u, 0u, 0u, 0u, 0u };
@@ -7681,16 +7667,9 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
     }
 #endif
     return TRUE;
-#else
-    (void)dobj;
-    (void)dl;
-    (void)camera_gobj;
-    (void)initial_geometry_mode;
-    return FALSE;
-#endif
 }
 
-#if NDS_P4 && NDS_RENDERER_HW_TRIANGLES
+#if NDS_P4
 /* A P4 content's model part drawn beside its body (Wolf's gun): its
  * generated root at the hold joint's matrices, with the fighter display's
  * reset geometry mode (the list sets its own lighting). A refusal is
@@ -7731,7 +7710,7 @@ static sb32 ndsRendererAdapterSubmitP4SidecarRoot(
 }
 #endif
 
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PIKACHU
+#if NDS_P2_PIKACHU
 static sb32 ndsRendererAdapterPikachuThunder(NDSRelocLoadedFile *loaded,
     DObj *dobj, const Gfx *dl, const NDSRendererConfig *config, NDSRendererStats *stats)
 {
@@ -7785,7 +7764,6 @@ static sb32 ndsRendererAdapterPikachuThunder(NDSRelocLoadedFile *loaded,
 }
 #endif
 
-#if NDS_RENDERER_HW_TRIANGLES
 static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitDamageFlyMDust(
     DObj *dobj, const NDSRelocLoadedFile *loaded,
     const NDSRendererConfig *config, NDSRendererStats *stats)
@@ -7814,7 +7792,6 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitDamageFlyMDust(
         loaded->data, loaded->data_size, NDS_NATIVE_DAMAGE_FLY_MDUST_ROOT,
         material_ptr, &local, stats);
 }
-#endif
 
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
 /* LAB ONLY (the any-stage sweep ROM): which GObjs reach the generic stage DL
@@ -7935,7 +7912,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
     DObj *dobj, const Gfx *dl, GObj *camera_gobj, u32 initial_geometry_mode);
 
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 /* P2-2p8 (2026-09-29): the fast lane for owners the general body already
  * served. A Samus Charge Shot or a Beam Sword root cost ~42K / ~29K ticks a
  * draw on Dream Land (lab census), a quarter of it the body finding its
@@ -9766,9 +9743,7 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterTryRebirthHalo(
             NDSRendererMatrix20p12 rebirth_modelview;
             const NDSRendererMatrix20p12 *rebirth_projection_ptr;
             const NDSRendererMatrix20p12 *rebirth_modelview_ptr;
-#if NDS_RENDERER_HW_TRIANGLES
             void *rebirth_saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
-#endif
 
             /* 0x2378 and 0x2a88 are the two DL links on the SAME child DObj.
              * Once the first one has emitted both native roots with one matrix
@@ -9790,7 +9765,7 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterTryRebirthHalo(
                 &rebirth_modelview,
                 &rebirth_modelview_ptr);
 
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
             if (sNdsRendererAdapterStagePersistentActive != FALSE)
             {
                 rebirth_render_stats = &sNdsRendererAdapterStagePersistentStats;
@@ -9801,7 +9776,7 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterTryRebirthHalo(
             {
                 rebirth_render_stats = &rebirth_stats;
                 ndsRendererInitStats(rebirth_render_stats);
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
                 if (sNdsRendererAdapterStagePersistentActive != FALSE)
                 {
                     ndsFighterDLDrawCopyPersistentRendererState(
@@ -9868,17 +9843,13 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterTryRebirthHalo(
                     rebirth_render_stats->hardware_texture_ready_count;
                 gNdsStageGCDrawAllLoopHardwareTextureRejectCount +=
                     rebirth_render_stats->hardware_texture_reject_count;
-#if NDS_RENDERER_HW_TRIANGLES
                 ndsTaskmanSampleGraphicsHeap();
                 gSYTaskmanGraphicsHeap.ptr = rebirth_saved_graphics_heap_ptr;
-#endif
                 return TRUE;
             }
             NDS_DIAG(gNdsRebirthHaloNativeFallbackCount++);
-#if NDS_RENDERER_HW_TRIANGLES
             ndsTaskmanSampleGraphicsHeap();
             gSYTaskmanGraphicsHeap.ptr = rebirth_saved_graphics_heap_ptr;
-#endif
         }
     }
     return FALSE;
@@ -9897,7 +9868,7 @@ static void ndsRendererAdapterSubmitStageDLImpl(DObj *dobj, const Gfx *dl,
     {
         return;
     }
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
     {
         NDSStageDLFastCall call = {
             dobj, dl, camera_gobj, initial_geometry_mode
@@ -9921,7 +9892,7 @@ static void ndsRendererAdapterSubmitStageDLImpl(DObj *dobj, const Gfx *dl,
 #endif
     {
         sb32 entry_handled;
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
         NDSStageDLFastCall call = {
             dobj, dl, camera_gobj, initial_geometry_mode
         };
@@ -9967,7 +9938,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
     sb32 rebirth_halo_native_candidate = FALSE;
     sb32 rebirth_halo_native_handled = FALSE;
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_INISHIE
+#if NDS_P2_STAGE_INISHIE
     NDSRendererNativeMaterial inishie_pakkun_material;
     NDSRelocLoadedFile *inishie_pakkun_palette_file = NULL;
     sb32 inishie_pakkun_native_candidate = FALSE;
@@ -9978,7 +9949,6 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
     sb32 inishie_powblock_native_candidate = FALSE;
     sb32 inishie_powblock_native_handled = FALSE;
 #endif
-#if NDS_RENDERER_HW_TRIANGLES
     sb32 charge_shot_native_candidate = FALSE;
     sb32 charge_shot_native_handled = FALSE;
     sb32 thunder_jolt_native_candidate = FALSE;
@@ -10002,8 +9972,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
     sb32 damage_slash_native_settled = FALSE;
     sb32 damage_fly_mdust_native_seen = FALSE;
     sb32 damage_fly_mdust_native_settled = FALSE;
-#endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_NESS
+#if NDS_P2_NESS
     NDSRendererNativeMaterial ness_pkfire_materials[2];
     sb32 ness_pkfire_native_candidate = FALSE;
     sb32 ness_pkfire_native_handled = FALSE;
@@ -10013,26 +9982,26 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
     sb32 ness_pkthunder_native_candidate = FALSE;
     sb32 ness_pkthunder_native_handled = FALSE;
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PURIN
+#if NDS_P2_PURIN
     NDSRendererNativeMaterial purin_sing_material;
     const void *purin_sing_image = NULL;
     u32 purin_sing_root_index = 0u;
     sb32 purin_sing_native_candidate = FALSE;
     sb32 purin_sing_native_handled = FALSE;
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_KIRBY
+#if NDS_P2_KIRBY
     sb32 kirby_vulcan_native_handled = FALSE;
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PIKACHU
+#if NDS_P2_PIKACHU
     sb32 pikachu_thunder_native_handled = FALSE;
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_SAMUS
+#if NDS_P2_SAMUS
     sb32 samus_bomb_native_handled = FALSE;
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_NESS
+#if NDS_P2_NESS
     sb32 ness_pktail_native_handled = FALSE;
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_YOSHI
+#if NDS_P2_YOSHI
     NDSRendererNativeMaterial yoshi_entryegg_material;
     const void *yoshi_entryegg_palette = NULL;
     sb32 yoshi_entryegg_native_candidate = FALSE;
@@ -10045,27 +10014,27 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
     sb32 yoshi_egglay_native_candidate = FALSE;
     sb32 yoshi_egglay_native_handled = FALSE;
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
+#if NDS_P2_STAGE_CASTLE
     NDSRendererNativeMaterial castle_bumper_material;
     sb32 castle_bumper_native_candidate = FALSE;
     sb32 castle_bumper_native_handled = FALSE;
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_SECTOR
+#if NDS_P2_STAGE_SECTOR
     const void *sector_laser_tlut = NULL;
     const void *sector_laser_image = NULL;
     sb32 sector_laser_native_candidate = FALSE;
     sb32 sector_laser_native_handled = FALSE;
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_LINK
+#if NDS_P2_LINK
     u32 link_bomb_root = 0u;
     sb32 link_bomb_native_candidate = FALSE;
     sb32 link_bomb_native_handled = FALSE;
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI
+#if NDS_P2_STAGE_YAMABUKI
     sb32 marumine_native_candidate = FALSE;
     sb32 marumine_native_handled = FALSE;
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI && NDS_P2_ITEM_CORE
+#if NDS_P2_STAGE_YAMABUKI && NDS_P2_ITEM_CORE
     sb32 glucky_native_candidate = FALSE;
     sb32 glucky_native_handled = FALSE;
     sb32 porygon_native_candidate = FALSE;
@@ -10077,7 +10046,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
     sb32 fushigibana_native_candidate = FALSE;
     sb32 fushigibana_native_handled = FALSE;
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+#if NDS_P2_ITEM_CORE
     sb32 item_tomato_native_candidate = FALSE;
     sb32 item_tomato_native_handled = FALSE;
     NDSRendererNativeMaterial item_star_material0;
@@ -10154,7 +10123,6 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
     u32 effect_xform_before = 0u;
     u32 effect_hw_vertex_before = 0u;
     u32 effect_hw_triangle_before = 0u;
-#if NDS_RENDERER_HW_TRIANGLES
     void *saved_graphics_heap_ptr;
 #if NDS_RENDERER_PROFILE_LEVEL < 2
     sb32 detailed_output;
@@ -10170,7 +10138,6 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
     sb32 inherited_texture = FALSE;
     sb32 inherited_tile = FALSE;
     sb32 inherited_segment = FALSE;
-#endif
 #if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
     /* R2-08 phase split. Latched once at entry rather than re-read per phase:
      * the flag is cleared by the tree submit's own epilogue, and a phase that
@@ -10219,9 +10186,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             NDSRendererMatrix20p12 rebirth_modelview;
             const NDSRendererMatrix20p12 *rebirth_projection_ptr;
             const NDSRendererMatrix20p12 *rebirth_modelview_ptr;
-#if NDS_RENDERER_HW_TRIANGLES
             void *rebirth_saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
-#endif
 
             /* 0x2378 and 0x2a88 are the two DL links on the SAME child DObj.
              * Once the first one has emitted both native roots with one matrix
@@ -10243,7 +10208,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                 &rebirth_modelview,
                 &rebirth_modelview_ptr);
 
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
             if (sNdsRendererAdapterStagePersistentActive != FALSE)
             {
                 rebirth_render_stats = &sNdsRendererAdapterStagePersistentStats;
@@ -10254,7 +10219,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             {
                 rebirth_render_stats = &rebirth_stats;
                 ndsRendererInitStats(rebirth_render_stats);
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
                 if (sNdsRendererAdapterStagePersistentActive != FALSE)
                 {
                     ndsFighterDLDrawCopyPersistentRendererState(
@@ -10321,17 +10286,13 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                     rebirth_render_stats->hardware_texture_ready_count;
                 gNdsStageGCDrawAllLoopHardwareTextureRejectCount +=
                     rebirth_render_stats->hardware_texture_reject_count;
-#if NDS_RENDERER_HW_TRIANGLES
                 ndsTaskmanSampleGraphicsHeap();
                 gSYTaskmanGraphicsHeap.ptr = rebirth_saved_graphics_heap_ptr;
-#endif
                 return;
             }
             NDS_DIAG(gNdsRebirthHaloNativeFallbackCount++);
-#if NDS_RENDERER_HW_TRIANGLES
             ndsTaskmanSampleGraphicsHeap();
             gSYTaskmanGraphicsHeap.ptr = rebirth_saved_graphics_heap_ptr;
-#endif
         }
     }
 #endif
@@ -10363,7 +10324,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
 #endif
         return;
     }
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_INISHIE
+#if NDS_P2_STAGE_INISHIE
     /* File 155 root 0x0B40 is not a scale-platform root.  BattleShip's
      * GRInishieMap points the scale map_nodes at 0x05F0; 0x0B40 is the
      * Pakkun ITAttributes DObjDesc child.  Item GObjs are outside the
@@ -10538,7 +10499,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
     }
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_SECTOR
+#if NDS_P2_STAGE_SECTOR
     /* File 153 root 0x1c50 is the ArwingLaser weapon list, and it is the ONLY
      * thing in the game data that can arrive here with this asset and root.
      * Whole-image pointer census: the only two pointers to 153:0x1c50 are
@@ -10620,7 +10581,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
     }
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
+#if NDS_P2_STAGE_CASTLE
     /* File 86 root 0x7558 is the bumper quad.  TWO item kinds reach it with
      * IDENTICAL evidence: 251_ITCommonData.c:934 (NBumper) and :1843
      * (GBumper) carry the same DObjDesc and the same p_mobjsubs, and file 86
@@ -10696,7 +10657,6 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
     }
 #endif
-#if NDS_RENDERER_HW_TRIANGLES
 #if NDS_P2_NESS
     /* Ness PK Fire's WPAttributes live in NessSpecial1, but their `data`
      * pointer resolves to NessSpecial3 root 0x0168.  That root selects exactly
@@ -10802,7 +10762,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         ness_pkthunder_native_candidate = TRUE;
     }
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PURIN
+#if NDS_P2_PURIN
     if ((loaded != NULL) && (loaded->asset_id == NDS_NATIVE_PURIN_SING_ASSET) &&
         (dobj->parent_gobj != NULL) &&
         (dobj->parent_gobj->id == nGCCommonKindEffect) &&
@@ -10835,7 +10795,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
     }
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_YOSHI
+#if NDS_P2_YOSHI
     /* Yoshi's match intro is YoshiSpecial2 root 0x0530, not the YoshiModel
      * shield/escape egg. It has one live segment-E MObj whose MatAnimJoint
      * switches between the two source shell images. Keep that MObj live and
@@ -11284,8 +11244,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             }
         }
     }
-#endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_LINK
+#if NDS_P2_LINK
     /* Link's Bomb, file 353 roots 0x16f8 (DL head 0, body) and 0x17e8 (DL
      * head 1, fuse glow).  ONE OBJECT, TWO LISTS: LinkMain's ITAttributes at
      * 0x40 -- llLinkMainBombItemAttributes, named beside nITKindLinkBomb at
@@ -11438,7 +11397,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
     }
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI
+#if NDS_P2_STAGE_YAMABUKI
     /* Saffron City's Marumine (Electrode), file 159 root 0x06a0.  ONE OBJECT,
      * ONE LIST: GRYamabukiMap's ITAttributes at 0x104 --
      * llGRYamabukiMapMarumineItemAttributes, named beside nITKindMarumine at
@@ -11556,7 +11515,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
     }
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI && NDS_P2_ITEM_CORE
+#if NDS_P2_STAGE_YAMABUKI && NDS_P2_ITEM_CORE
     /* GLucky and Porygon are the two bake-everything Saffron siblings.  Their
      * thirty-word roots contain no 0xDE call, their MObj is NULL, and both the
      * TLUT and image are immutable file-159 fixups.  Keep the same step-9
@@ -11874,7 +11833,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
     }
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+#if NDS_P2_ITEM_CORE
     /* Five common-item owners selected from the player-visible end of the
      * spawn census. Every admission path proves the exact asset/root/kind and
      * the source material topology before arming a fixed native executor. */
@@ -13542,7 +13501,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
 #endif
 
     NDS_LAB_SDL_MARK(0);
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
     detailed_output = (ndsRendererHardwareNoOracleEnabled() == FALSE) ?
         TRUE : FALSE;
     if (detailed_output != FALSE)
@@ -13562,7 +13521,6 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
 #endif
     state.primary_file = loaded;
     state.slot = 0u;
-#if NDS_RENDERER_HW_TRIANGLES
     if (sNdsRendererAdapterStagePersistentActive != FALSE)
     {
         inherited_texture = ndsRendererAdapterStatsHasArmedTexture(
@@ -13609,14 +13567,13 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
 #elif NDS_RENDERER_PROFILE_LEVEL >= 1
     step_start = cpuGetTiming();
 #endif
-#endif
 #if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
     if (phase_effect != FALSE)
     {
         phase_mark = cpuGetTiming();
     }
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
+#if NDS_P2_STAGE_CASTLE
     if (castle_bumper_native_candidate != FALSE)
     {
         /* The native item owner consumes the typed MObj snapshot directly.
@@ -13626,7 +13583,6 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
     }
     else
 #endif
-#if NDS_RENDERER_HW_TRIANGLES
     if ((damage_slash_native_candidate != FALSE) ||
         (damage_fly_mdust_native_seen != FALSE))
     {
@@ -13635,7 +13591,6 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
          * would reintroduce the generic N64 command path this owner removes. */
     }
     else
-#endif
     if (visual_effect_native_candidate != FALSE)
     {
         /* No MObj exists on a template DObj and none is wanted: the owner's
@@ -13644,7 +13599,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
          * executes. */
     }
     else
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_INISHIE
+#if NDS_P2_STAGE_INISHIE
     if (inishie_pakkun_native_candidate != FALSE)
     {
         /* The native item owner consumes the typed MObj snapshot directly. */
@@ -13657,7 +13612,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
     }
     else
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_NESS
+#if NDS_P2_NESS
     if (ness_pkfire_native_candidate != FALSE)
     {
         /* The owner already captured the two live LIGHT1|LIGHT2 materials as
@@ -13687,7 +13642,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         phase_mark = cpuGetTiming();
     }
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 1)
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
     NDS_DIAG(gNdsRendererProfileMaterialTicks += cpuGetTiming() - step_start);
     step_start = cpuGetTiming();
 #endif
@@ -13709,7 +13664,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         gNdsEffectPhaseMatrixTicks += cpuGetTiming() - phase_mark;
     }
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 1)
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
     NDS_DIAG(gNdsRendererProfileMatrixTicks += cpuGetTiming() - step_start);
 #endif
 
@@ -13732,7 +13687,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
     callback_user = &state;
 
     render_stats = &stats;
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
     if (sNdsRendererAdapterStagePersistentActive != FALSE)
     {
         render_stats = &sNdsRendererAdapterStagePersistentStats;
@@ -13751,15 +13706,12 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
     }
 #else
     ndsRendererInitStats(render_stats);
-#if NDS_RENDERER_HW_TRIANGLES
     if (sNdsRendererAdapterStagePersistentActive != FALSE)
     {
         ndsFighterDLDrawCopyPersistentRendererState(
             render_stats, &sNdsRendererAdapterStagePersistentStats);
     }
 #endif
-#endif
-#if NDS_RENDERER_HW_TRIANGLES
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     ndsRendererOwnerSnapshotStats(render_stats, &owner_stats_before);
     step_start = cpuGetTiming();
@@ -13771,7 +13723,6 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         ndsRendererOwnerRootBranchPath(
             loaded, dl, sNdsRendererAdapterStageListOrdinal));
     sNdsRendererAdapterStageListOrdinal++;
-#endif
 #endif
     if (sNdsRendererAdapterEffectSubmitActive != FALSE)
     {
@@ -13868,7 +13819,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
     }
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_INISHIE
+#if NDS_P2_STAGE_INISHIE
     if (inishie_pakkun_native_candidate != FALSE)
     {
         /* Same split-camera contract the entry-effect owner documents at
@@ -13952,7 +13903,6 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
     }
 #endif
-#if NDS_RENDERER_HW_TRIANGLES
  #if NDS_P2_NESS
     if (ness_pkfire_native_candidate != FALSE)
     {
@@ -14009,7 +13959,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
 #endif
     }
  #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PURIN
+#if NDS_P2_PURIN
     if (purin_sing_native_candidate != FALSE)
     {
         NDSRendererConfig sing_config = config;
@@ -14022,7 +13972,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             &sing_config, render_stats);
     }
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PIKACHU
+#if NDS_P2_PIKACHU
     if (loaded != NULL && (loaded->asset_id == NDS_NATIVE_PIKACHU_THUNDER_MODEL ||
                           loaded->asset_id == NDS_NATIVE_PIKACHU_THUNDER_SPECIAL))
     {
@@ -14038,7 +13988,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
 #endif
     }
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_NESS
+#if NDS_P2_NESS
     /* The last PK Thunder trail segment is an EFFECT, not a weapon
      * (efManagerNessPKThunderTrailMakeEffect): its own list at 0x8F98 with a
      * fixed image and fixed prim/env, drawn through gcDrawDObjDLLinksForGObj. */
@@ -14061,7 +14011,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             tail_image, &tail_config, render_stats);
     }
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_SAMUS
+#if NDS_P2_SAMUS
     /* Samus Bomb: one SamusModel billboard. The live MObj only swaps the
      * palette; texels, LOADTLUT and tile state are the source list's own. */
     if ((loaded != NULL) && (loaded->asset_id == NDS_NATIVE_SAMUS_BOMB_ASSET) &&
@@ -14086,7 +14036,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                 &bomb_material, bomb_image, &bomb_config, render_stats);
     }
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_KIRBY
+#if NDS_P2_KIRBY
     if ((loaded != NULL) && (loaded->asset_id == NDS_NATIVE_KIRBY_VULCAN_ASSET) &&
         (dobj->parent_gobj != NULL) && (dobj->parent_gobj->id == nGCCommonKindEffect) &&
         (dobj->mobj == NULL))
@@ -14104,7 +14054,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
     }
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_YOSHI
+#if NDS_P2_YOSHI
     if (yoshi_entryegg_native_candidate != FALSE)
     {
         NDSRendererConfig entryegg_config = config;
@@ -14360,8 +14310,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
          * guard below so one event cannot record two contradictory reasons. */
         damage_slash_native_settled = TRUE;
     }
-#endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
+#if NDS_P2_STAGE_CASTLE
     if (castle_bumper_native_candidate != FALSE)
     {
         /* Same split-camera contract the other fixed owners document: fill
@@ -14403,7 +14352,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
     }
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_SECTOR
+#if NDS_P2_STAGE_SECTOR
     if (sector_laser_native_candidate != FALSE)
     {
         /* Same split-camera contract the Pakkun owner documents above: the
@@ -14447,7 +14396,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
     }
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_LINK
+#if NDS_P2_LINK
     if (link_bomb_native_candidate != FALSE)
     {
         /* Same split-camera contract the other fixed owners document: the
@@ -14489,7 +14438,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
     }
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI
+#if NDS_P2_STAGE_YAMABUKI
     if (marumine_native_candidate != FALSE)
     {
         /* Same split-camera contract the other fixed owners document: fill the
@@ -14530,7 +14479,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
     }
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI && NDS_P2_ITEM_CORE
+#if NDS_P2_STAGE_YAMABUKI && NDS_P2_ITEM_CORE
     if (glucky_native_candidate != FALSE)
     {
         NDSRendererConfig glucky_config = config;
@@ -14665,7 +14614,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
     }
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+#if NDS_P2_ITEM_CORE
     if (item_star_native_candidate != FALSE)
     {
         NDSRendererConfig item_config = config;
@@ -15597,64 +15546,62 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
     }
 #if NDS_R2_IMPACT_WAVE_NATIVE
     if (
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_INISHIE
+#if NDS_P2_STAGE_INISHIE
         (inishie_pakkun_native_handled == FALSE) &&
         (inishie_powblock_native_handled == FALSE) &&
 #endif
 #if NDS_R2_REBIRTH_HALO_NATIVE
         (rebirth_halo_native_handled == FALSE) &&
 #endif
-#if NDS_RENDERER_HW_TRIANGLES
         (charge_shot_native_handled == FALSE) &&
         (thunder_jolt_native_handled == FALSE) &&
         (thunder_ground_native_handled == FALSE) &&
         (thunder_fx_native_handled == FALSE) &&
         (damage_slash_native_settled == FALSE) &&
         (damage_fly_mdust_native_settled == FALSE) &&
-#endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_NESS
+#if NDS_P2_NESS
         (ness_pkfire_native_handled == FALSE) &&
         (ness_pkthunder_native_handled == FALSE) &&
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_YOSHI
+#if NDS_P2_YOSHI
         (yoshi_entryegg_native_handled == FALSE) &&
         (yoshi_egg_native_handled == FALSE) &&
         (yoshi_egglay_native_handled == FALSE) &&
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PURIN
+#if NDS_P2_PURIN
         (purin_sing_native_handled == FALSE) &&
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_KIRBY
+#if NDS_P2_KIRBY
         (kirby_vulcan_native_handled == FALSE) &&
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PIKACHU
+#if NDS_P2_PIKACHU
         (pikachu_thunder_native_handled == FALSE) &&
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_SAMUS
+#if NDS_P2_SAMUS
         (samus_bomb_native_handled == FALSE) &&
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_NESS
+#if NDS_P2_NESS
         (ness_pktail_native_handled == FALSE) &&
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
+#if NDS_P2_STAGE_CASTLE
         (castle_bumper_native_handled == FALSE) &&
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_SECTOR
+#if NDS_P2_STAGE_SECTOR
         (sector_laser_native_handled == FALSE) &&
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_LINK
+#if NDS_P2_LINK
         (link_bomb_native_handled == FALSE) &&
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI
+#if NDS_P2_STAGE_YAMABUKI
         (marumine_native_handled == FALSE) &&
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI && NDS_P2_ITEM_CORE
+#if NDS_P2_STAGE_YAMABUKI && NDS_P2_ITEM_CORE
         (glucky_native_handled == FALSE) &&
         (porygon_native_handled == FALSE) &&
         (hitokage_native_handled == FALSE) &&
         (fushigibana_native_handled == FALSE) &&
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+#if NDS_P2_ITEM_CORE
         (item_star_native_handled == FALSE) &&
         (item_sword_native_handled == FALSE) &&
         (item_hammer_native_handled == FALSE) &&
@@ -15698,7 +15645,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
 #if NDS_R2_REBIRTH_HALO_NATIVE
         (rebirth_halo_native_handled == FALSE) &&
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_INISHIE
+#if NDS_P2_STAGE_INISHIE
         /* The Pakkun owner is checked here as well as in the impact-wave
          * OFF arm below. Without this term the item drew natively 600
          * times in a 300-present run and the stage still recorded 600
@@ -15708,63 +15655,61 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         /* The POW block owner is checked here for the identical reason. */
         (inishie_powblock_native_handled == FALSE) &&
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_SECTOR
+#if NDS_P2_STAGE_SECTOR
         /* The laser owner is checked here AND in the OFF arm below, for the
          * identical reason the Pakkun comment above records. */
         (sector_laser_native_handled == FALSE) &&
 #endif
-#if NDS_RENDERER_HW_TRIANGLES
         (charge_shot_native_handled == FALSE) &&
         (thunder_jolt_native_handled == FALSE) &&
         (thunder_ground_native_handled == FALSE) &&
         (thunder_fx_native_handled == FALSE) &&
         (damage_slash_native_settled == FALSE) &&
         (damage_fly_mdust_native_settled == FALSE) &&
-#endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_NESS
+#if NDS_P2_NESS
         (ness_pkfire_native_handled == FALSE) &&
         (ness_pkthunder_native_handled == FALSE) &&
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_YOSHI
+#if NDS_P2_YOSHI
         (yoshi_entryegg_native_handled == FALSE) &&
         (yoshi_egg_native_handled == FALSE) &&
         (yoshi_egglay_native_handled == FALSE) &&
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PURIN
+#if NDS_P2_PURIN
         (purin_sing_native_handled == FALSE) &&
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_KIRBY
+#if NDS_P2_KIRBY
         (kirby_vulcan_native_handled == FALSE) &&
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PIKACHU
+#if NDS_P2_PIKACHU
         (pikachu_thunder_native_handled == FALSE) &&
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_SAMUS
+#if NDS_P2_SAMUS
         (samus_bomb_native_handled == FALSE) &&
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_NESS
+#if NDS_P2_NESS
         (ness_pktail_native_handled == FALSE) &&
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
+#if NDS_P2_STAGE_CASTLE
         (castle_bumper_native_handled == FALSE) &&
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_LINK
+#if NDS_P2_LINK
         /* The bomb owner is checked here AND in the OFF arm below, for the
          * identical reason the Pakkun comment above records. */
         (link_bomb_native_handled == FALSE) &&
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI
+#if NDS_P2_STAGE_YAMABUKI
         /* The Marumine owner is checked here AND in the OFF arm below, for the
          * identical reason the Pakkun comment above records. */
         (marumine_native_handled == FALSE) &&
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI && NDS_P2_ITEM_CORE
+#if NDS_P2_STAGE_YAMABUKI && NDS_P2_ITEM_CORE
         (glucky_native_handled == FALSE) &&
         (porygon_native_handled == FALSE) &&
         (hitokage_native_handled == FALSE) &&
         (fushigibana_native_handled == FALSE) &&
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+#if NDS_P2_ITEM_CORE
         (item_star_native_handled == FALSE) &&
         (item_sword_native_handled == FALSE) &&
         (item_hammer_native_handled == FALSE) &&
@@ -15813,71 +15758,64 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
  * old trailing-and shape needed a cross-owner fragment inside a nested #if for
  * every owner added, and that fragment is what got forgotten when the Pakkun
  * owner landed with only the ON arm's term. */
-#if NDS_R2_REBIRTH_HALO_NATIVE || \
-    NDS_RENDERER_HW_TRIANGLES || \
-    (NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_INISHIE) || \
-    (NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_SECTOR) || \
-    (NDS_RENDERER_HW_TRIANGLES && NDS_P2_LINK) || \
-    (NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI)
+#if ((((NDS_R2_REBIRTH_HALO_NATIVE || 1) || NDS_P2_STAGE_INISHIE) || NDS_P2_STAGE_SECTOR) || NDS_P2_LINK) || NDS_P2_STAGE_YAMABUKI
     if (TRUE
 #if NDS_R2_REBIRTH_HALO_NATIVE
         && (rebirth_halo_native_handled == FALSE)
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_INISHIE
+#if NDS_P2_STAGE_INISHIE
         && (inishie_pakkun_native_handled == FALSE)
         && (inishie_powblock_native_handled == FALSE)
 #endif
-#if NDS_RENDERER_HW_TRIANGLES
         && (charge_shot_native_handled == FALSE)
         && (thunder_jolt_native_handled == FALSE)
         && (thunder_ground_native_handled == FALSE)
         && (thunder_fx_native_handled == FALSE)
         && (damage_slash_native_settled == FALSE)
         && (damage_fly_mdust_native_settled == FALSE)
-#endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_NESS
+#if NDS_P2_NESS
         && (ness_pkfire_native_handled == FALSE)
         && (ness_pkthunder_native_handled == FALSE)
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_YOSHI
+#if NDS_P2_YOSHI
         && (yoshi_entryegg_native_handled == FALSE)
         && (yoshi_egg_native_handled == FALSE)
         && (yoshi_egglay_native_handled == FALSE)
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PURIN
+#if NDS_P2_PURIN
         && (purin_sing_native_handled == FALSE)
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_KIRBY
+#if NDS_P2_KIRBY
         && (kirby_vulcan_native_handled == FALSE)
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PIKACHU
+#if NDS_P2_PIKACHU
         && (pikachu_thunder_native_handled == FALSE)
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_SAMUS
+#if NDS_P2_SAMUS
         && (samus_bomb_native_handled == FALSE)
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_NESS
+#if NDS_P2_NESS
         && (ness_pktail_native_handled == FALSE)
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
+#if NDS_P2_STAGE_CASTLE
         && (castle_bumper_native_handled == FALSE)
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_SECTOR
+#if NDS_P2_STAGE_SECTOR
         && (sector_laser_native_handled == FALSE)
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_LINK
+#if NDS_P2_LINK
         && (link_bomb_native_handled == FALSE)
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI
+#if NDS_P2_STAGE_YAMABUKI
         && (marumine_native_handled == FALSE)
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI && NDS_P2_ITEM_CORE
+#if NDS_P2_STAGE_YAMABUKI && NDS_P2_ITEM_CORE
         && (glucky_native_handled == FALSE)
         && (porygon_native_handled == FALSE)
         && (hitokage_native_handled == FALSE)
         && (fushigibana_native_handled == FALSE)
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+#if NDS_P2_ITEM_CORE
         && (item_star_native_handled == FALSE)
         && (item_sword_native_handled == FALSE)
         && (item_hammer_native_handled == FALSE)
@@ -15950,7 +15888,6 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             render_stats->hardware_vertex_count - effect_hw_vertex_before;
         gNdsEffectDLHwTriangleCount =
             render_stats->hardware_triangle_count - effect_hw_triangle_before;
-#if NDS_RENDERER_HW_TRIANGLES
         if (sNdsRendererAdapterStagePersistentActive != FALSE)
         {
             gNdsEffectDLVtx0[0] =
@@ -15962,7 +15899,6 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             gNdsEffectDLVtx0[3] =
                 sNdsRendererAdapterStageVertexCache.transformed_vertices[0].w;
         }
-#endif
         gNdsEffectDLBlocker = render_stats->blocker;
         gNdsEffectDLCommandCount = render_stats->command_count;
 #if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
@@ -16029,7 +15965,6 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
 #endif
     }
-#if NDS_RENDERER_HW_TRIANGLES
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     ndsRendererAdapterAccumulateDepth(
         render_stats,
@@ -16097,7 +16032,6 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
     {
         gNdsRendererProfileHardwareOverLimit = 1u;
     }
-#endif
 #endif
     gNdsStageGCDrawAllLoopHardwareTriangleCount +=
         render_stats->hardware_triangle_count;
@@ -17224,87 +17158,3 @@ static void ndsRendererAdapterSubmitStageDObjNode(DObj *dobj, u32 kind,
     }
 }
 
-#else
-s32 ndsRendererAdapterNdlDispatchEffect(void *camera_gobj,
-                                        void *display_gobj,
-                                        s32 link_id)
-{
-    (void)camera_gobj;
-    (void)display_gobj;
-    (void)link_id;
-    return FALSE;
-}
-
-void ndsRendererAdapterBeginStageTraversal(void)
-{
-}
-
-void ndsRendererAdapterEndStageTraversal(void)
-{
-}
-
-void ndsRendererAdapterSubmitStageDObj(void *dobj, u32 kind,
-                                       void *camera_gobj,
-                                       u32 initial_geometry_mode)
-{
-    (void)dobj;
-    (void)kind;
-    (void)camera_gobj;
-    (void)initial_geometry_mode;
-}
-
-void ndsRendererAdapterSubmitEffectDObjTree(void *dobj, u32 kind,
-                                            void *camera_gobj,
-                                            u32 initial_geometry_mode)
-{
-    (void)dobj;
-    (void)kind;
-    (void)camera_gobj;
-    (void)initial_geometry_mode;
-}
-
-void ndsRendererAdapterSubmitWeaponDObjTree(void *dobj, u32 kind,
-                                            void *camera_gobj,
-                                            u32 initial_geometry_mode)
-{
-    (void)dobj;
-    (void)kind;
-    (void)camera_gobj;
-    (void)initial_geometry_mode;
-}
-
-void ndsRendererAdapterSubmitItemDObjTree(void *dobj, u32 kind,
-                                          void *camera_gobj,
-                                          u32 initial_geometry_mode)
-{
-    (void)dobj;
-    (void)kind;
-    (void)camera_gobj;
-    (void)initial_geometry_mode;
-}
-
-void ndsRendererAdapterSubmitItemDObjTreeReplay(void *dobj, u32 kind,
-                                                void *camera_gobj,
-                                                u32 initial_geometry_mode,
-                                                u32 item_kind)
-{
-    (void)item_kind;
-    ndsRendererAdapterBeginStageTraversal();
-    ndsRendererAdapterSubmitItemDObjTree(dobj, kind, camera_gobj,
-                                         initial_geometry_mode);
-    ndsRendererAdapterEndStageTraversal();
-}
-
-void ndsRendererAdapterMarkDisplayProcHeads(void)
-{
-}
-
-void ndsRendererAdapterCaptureDisplayProcColors(void)
-{
-}
-
-void ndsRendererAdapterCaptureItemDisplayProcState(void)
-{
-}
-
-#endif

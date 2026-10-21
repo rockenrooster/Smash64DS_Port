@@ -57,7 +57,7 @@ extern s32 ndsRelocExternTreeSliceStep(void *cursor, u32 byte_budget,
                                        u32 node_budget, void **out_root,
                                        u32 *out_payload_bytes);
 extern void ndsRelocExternTreeSliceCancel(void *cursor);
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 extern void ndsFighterRendererInvalidateMaterialCachesForSlot(u32 slot);
 #endif
 
@@ -506,7 +506,7 @@ static u32 ndsCssPreviewKindDetail(s32 kind)
  * high-water. Link is the largest current combination at < 70 KiB on disk;
  * 80 KiB leaves bounded loader/alignment headroom. Source/oracle profiles still
  * consume full Gfx/Vtx closures and keep the measured 156 KiB raw-tree slot. */
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_PLAYERS_VS_COMPACT_PREVIEW 1
 #else
 #define NDS_PLAYERS_VS_COMPACT_PREVIEW 0
@@ -3460,7 +3460,7 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
              * and shade rules. Clear DS registration around that operation so
              * no stale taskman-arena pointer reaches the native renderer. */
             ndsFighterManagerRegisterDisplayFighter(NULL, slot);
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
             ndsFighterRendererInvalidateMaterialCachesForSlot(slot);
 #endif
             {
@@ -3534,7 +3534,7 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
      * preview. The replacement acquire starts on a later tic, which guarantees
      * release-before-acquire while preventing both operations from stacking. */
     ndsFighterManagerRegisterDisplayFighter(NULL, slot);
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
     ndsFighterRendererInvalidateMaterialCachesForSlot(slot);
 #endif
     if (fighter_gobj != NULL)
@@ -3683,7 +3683,7 @@ s32 ndsMNPlayersVSPreviewCycleCostume(u32 slot)
             sMNPlayersVSSlots[slot].shade = mnPlayersVSGetShade(player);
             ftParamInitAllParts(sMNPlayersVSSlots[slot].player, costume,
                                 sMNPlayersVSSlots[slot].shade);
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
             /* Same reason the preview rebuild clears them: the converted
              * material rows are keyed by MObj address and this changes what
              * those addresses mean. */
@@ -3734,7 +3734,7 @@ sb32 ndsMNPlayersVSPreviewSetCostume(u32 slot, s32 fkind, s32 costume)
     sMNPlayersVSSlots[slot].shade = mnPlayersVSGetShade(player);
     ftParamInitAllParts(sMNPlayersVSSlots[slot].player, costume,
                         sMNPlayersVSSlots[slot].shade);
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
     ndsFighterRendererInvalidateMaterialCachesForSlot(slot);
 #endif
     return TRUE;

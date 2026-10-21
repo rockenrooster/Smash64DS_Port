@@ -366,7 +366,7 @@ static void ndsBattlePlayablePacingStart(u32 fast_logic)
     sNdsBattlePlayablePacingStartTick = cpuGetTiming();
     gNdsBattlePlayablePacingResult = 0;
     gNdsBattlePlayablePacingMode = fast_logic;
-#if (NDS_RENDERER_HW_TRIANGLES != 0) && (NDS_DEV_LIVE_INPUT_PREVIEW != 0)
+#if NDS_DEV_LIVE_INPUT_PREVIEW != 0
     gNdsBuildModeCanonicalWord =
         (fast_logic == 0u) ? NDS_BUILD_MODE_CANO_WORD : 0u;
     gNdsBuildModeShippedWord =
@@ -414,7 +414,6 @@ static void ndsBattlePlayablePacingStart(u32 fast_logic)
         gNdsFighterBattlePlayableRebirthDownFrames +
         gNdsFighterBattlePlayableRebirthStandFrames +
         gNdsFighterBattlePlayableRebirthWaitFrames;
-#if NDS_RENDERER_HW_TRIANGLES
     if (fast_logic == 0u)
     {
         ndsPlatformSetOriginalSpriteOverlayEnabled(TRUE);
@@ -430,7 +429,6 @@ static void ndsBattlePlayablePacingStart(u32 fast_logic)
                 (u32)gSCManagerBattleState->gkind);
         }
     }
-#endif
 }
 
 static void ndsBattlePlayablePacingUpdate(void)
@@ -769,11 +767,7 @@ static void ndsBattlePlayablePresentFrame(void)
     (NDS_RENDERER_PROFILE_LEVEL >= 1)
     draw_start = cpuGetTiming();
 #endif
-#if NDS_RENDERER_HW_TRIANGLES
     ndsFighterMarioFoxStageGCDrawAllLoopPresentHardwareFrame();
-#else
-    gcDrawAll();
-#endif
     ndsSObjPreviewEndFrame();
 #if NDS_SHIP_TELEMETRY || NDS_TICK_HUD || \
     (NDS_RENDERER_PROFILE_LEVEL >= 1)

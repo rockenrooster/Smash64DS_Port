@@ -1,12 +1,10 @@
 typedef struct NDSRendererTraversalVertexStorage
 {
     NDSRendererClipVertex20p12 vertices[NDS_RENDERER_MAX_VTX];
-#if NDS_RENDERER_HW_TRIANGLES
     NDSRendererInputVertex input_vertices[NDS_RENDERER_MAX_VTX];
     u32 vertex_colors[NDS_RENDERER_MAX_VTX];
     u8 vertex_matrix_snapshot[NDS_RENDERER_MAX_VTX];
     u8 vertex_clip_snapshot[NDS_RENDERER_MAX_VTX];
-#endif
 } NDSRendererTraversalVertexStorage;
 
 typedef struct NDSRendererTraversalState
@@ -17,18 +15,15 @@ typedef struct NDSRendererTraversalState
     Mtx matrix_word_raw;
     NDSRendererMatrix20p12 modelview_stack[NDS_RENDERER_MODELVIEW_STACK_SIZE];
     NDSRendererClipVertex20p12 *vertices;
-#if NDS_RENDERER_HW_TRIANGLES
     NDSRendererInputVertex *input_vertices;
     u32 *vertex_colors;
     NDSRendererMatrixSnapshot *matrix_snapshots;
     u8 *vertex_matrix_snapshot;
     u8 *vertex_clip_snapshot;
     const Gfx *source_command_site;
-#endif
     u32 modelview_valid_stack[NDS_RENDERER_MODELVIEW_STACK_SIZE];
     u32 modelview_stack_depth;
     u32 vertex_valid_mask;
-#if NDS_RENDERER_HW_TRIANGLES
     u32 input_vertex_valid_mask;
     u32 vertex_color_valid_mask;
     u32 current_transform_vertex_mask;
@@ -71,17 +66,13 @@ typedef struct NDSRendererTraversalState
     u32 prepared_texcoord_valid_mask;
     u32 prepared_projected_xy_valid_mask;
     u32 prepared_projected_source_z_valid_mask;
-#endif
     u32 projection_valid;
     u32 modelview_valid;
     u32 matrix_valid;
     u32 matrix_word_valid;
-#if NDS_RENDERER_HW_TRIANGLES
     u32 raw_vertex_fit_mask;
-#endif
 } NDSRendererTraversalState;
 
-#if NDS_RENDERER_HW_TRIANGLES
 #define NDS_NATIVE_STATE_OTHERMODE 2u
 #define NDS_NATIVE_STATE_COMBINE 3u
 #define NDS_NATIVE_STATE_TEXTURE 4u
@@ -543,7 +534,7 @@ _Static_assert(sizeof(NDSNativeDirectPolicy) == 12u,
 #include "nds_native_stage_select.inc"
 #include "dreamland_ds_mesh.generated.inc"
 
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 /* P2-2: BattleShip switches every VS fighter to the Low JointTree when three
  * or more fighters are present (scvsbattle.c:188/:460).  The generated owner
  * therefore has two immutable programs with the same ABI but different roots
@@ -818,14 +809,8 @@ static const NDSNativeFighterRuntimeTables sNdsNativeFighterHighTables =
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     sNdsNativeFighterDenseColorSource,
 #endif
-#if NDS_FIGHTER_LEGACY_EXEC
-    sNdsNativeFighterPackedCorners, NDS_FTR_COUNT(sNdsNativeFighterPackedCorners),
-    sNdsNativeFighterRunFirstCorner,
-    NDS_FTR_COUNT(sNdsNativeFighterRunFirstCorner),
-#else
     /* R1 retired: no raw-path reader is compiled, so these stay unlinked. */
     NULL, 0u, NULL, 0u,
-#endif
     sNdsNativeFighterRunFirstUnique,
     sNdsNativeFighterRunUniqueCount,
     sNdsNativeFighterRunUniqueDense,
@@ -860,14 +845,7 @@ static const NDSNativeFighterRuntimeTables sNdsNativeFighterLowTables =
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     sNdsNativeFighterDenseColorSourceLow,
 #endif
-#if NDS_FIGHTER_LEGACY_EXEC
-    sNdsNativeFighterPackedCornersLow,
-    NDS_FTR_COUNT(sNdsNativeFighterPackedCornersLow),
-    sNdsNativeFighterRunFirstCornerLow,
-    NDS_FTR_COUNT(sNdsNativeFighterRunFirstCornerLow),
-#else
     NULL, 0u, NULL, 0u,
-#endif
     sNdsNativeFighterRunFirstUniqueLow,
     sNdsNativeFighterRunUniqueCountLow,
     sNdsNativeFighterRunUniqueDenseLow,
@@ -4091,7 +4069,7 @@ typedef struct NDSImgBindDesc
  * eye and gray-Link failures this closes. Defined beside the memo in
  * nds_renderer_native_common.c, later in this same unity translation unit, and
  * only where that memo exists. */
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 static void ndsRendererNativeForgetFighterRunUvTables(const void *tables);
 #define NDS_IMG_FORGET_RUN_UV(tables_)                                         \
     ndsRendererNativeForgetFighterRunUvTables((const void *)&(tables_))
@@ -8042,6 +8020,5 @@ volatile u32 gNdsR2StagePreflightElideCount;
 static NDSNativeStageValidationCache sNdsNativeStageValidationCache;
 #if NDS_RENDERER_M3_PHASE0_PROFILE
 static u32 sNdsNativeStageTopologyFaultInjected;
-#endif
 #endif
 #endif

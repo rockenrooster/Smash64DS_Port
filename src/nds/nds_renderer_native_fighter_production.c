@@ -45,7 +45,7 @@ ndsRendererExecuteNativeFighterOwnerProduction(
     u32 *out_hardware_started)
 {
     NDS_FIGHTER_PACKET_DMA_WAIT();
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
     const u8 *palette_slots;
     const u8 *binding_palette_slots = NULL;
     const u8 *asset_base = asset_base_ptr;
@@ -461,17 +461,8 @@ ndsRendererExecuteNativeFighterOwnerProduction(
 }
 
 #undef NDS_RENDERER_NATIVE_FIGHTER_FAIL_CODE
-#if !NDS_RENDERER_HW_TRIANGLES
-static void ndsRendererTextureSourceHashCommand(
-    NDSRendererStats *stats, u32 w0, u32 w1)
-{
-    (void)stats;
-    (void)w0;
-    (void)w1;
-}
-#endif
 
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 static void ndsRendererClearNativeFighterOwner(void)
 {
     ndsRendererHardwareEndBatch();
@@ -488,7 +479,7 @@ s32 ndsRendererBeginNativeFighterOwner(
     NDSRendererVertexCache *vertex_cache)
 {
     NDS_FIGHTER_PACKET_DMA_WAIT();
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
     NDSRendererTraversalState *state;
 
     if ((slot >= NDS_NATIVE_FIGHTER_OWNER_COUNT) ||
@@ -530,7 +521,7 @@ s32 ndsRendererEndNativeFighterOwner(
     NDSRendererStats *stats,
     NDSRendererVertexCache *vertex_cache)
 {
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
     NDSRendererTraversalState *state;
     NDSRendererVertexCache *owner_vertex_cache;
     s32 identity_matches;
@@ -574,12 +565,12 @@ s32 ndsRendererEndNativeFighterOwner(
 
 void ndsRendererAbortNativeFighterOwner(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
     ndsRendererClearNativeFighterOwner();
 #endif
 }
 
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 static s32 ndsRendererNativeArraySpanFits(
     u32 first, u32 count, u32 total)
 {
@@ -853,8 +844,7 @@ static s32 ndsRendererValidateNativeRun(
 }
 #endif
 
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER && NDS_RENDERER_HW_TRIANGLES
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && NDS_RENDERER_M2_DETAILED_LEDGER
 void ndsRendererProfileCensusNativeFighterSchedule(
     u32 slot,
     const u8 *joint_parents,
@@ -1050,7 +1040,6 @@ s32 ndsRendererValidateNativeFighterOwner(
     const u32 *root_offsets,
     const u32 *material_counts)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     const NDSNativeRoot *roots;
     const NDSNativeEpoch *epochs;
     u32 expected_count;
@@ -1274,15 +1263,6 @@ s32 ndsRendererValidateNativeFighterOwner(
         }
     }
     return TRUE;
-#else
-    (void)slot;
-    (void)use_low_detail;
-    (void)asset_data_size;
-    (void)root_count;
-    (void)root_offsets;
-    (void)material_counts;
-    return FALSE;
-#endif
 }
 
 #undef NDS_NATIVE_FIGHTER_VALIDATE_REJECT
@@ -1300,23 +1280,8 @@ s32 ndsRendererExecuteNativeFighterRoot(
     NDSRendererStats *stats,
     NDSRendererVertexCache *vertex_cache)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     return ndsRendererExecuteNativeFighterRootHardware(
         slot, root_ordinal, asset_base, root_offset,
         materials, material_count, config,
         callback, callback_user, stats, vertex_cache);
-#else
-    (void)slot;
-    (void)root_ordinal;
-    (void)asset_base;
-    (void)root_offset;
-    (void)materials;
-    (void)material_count;
-    (void)config;
-    (void)callback;
-    (void)callback_user;
-    (void)stats;
-    (void)vertex_cache;
-    return FALSE;
-#endif
 }

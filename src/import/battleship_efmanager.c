@@ -2851,7 +2851,7 @@ void efManagerInitEffects(void)
     gNdsShieldQuadFallbackCount = 0u;
     dEFManagerShieldEffectDesc.proc_display = ndsEFManagerShieldQuadProcDisplay;
 #endif
-#if NDS_R2_FIREBALL_QUAD && NDS_RENDERER_HW_TRIANGLES
+#if NDS_R2_FIREBALL_QUAD
     /* The fireball's baked texture has the same match lifetime as the shield's
      * and is released here for the same reason: START at the results screen
      * restarts the match. It lives in the port file that owns the weapon

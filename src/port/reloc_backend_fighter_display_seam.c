@@ -72,7 +72,6 @@ static void ndsFtDisplayMainProcDisplayBody(GObj *fighter_gobj)
     {
         NDS_DIAG(gNdsFighterWalkDisplayProbeCount++);
     }
-#if NDS_RENDERER_HW_TRIANGLES
     /* THE SOURCE'S INVISIBILITY GATE, WHICH THIS PATH HAD DROPPED.
      *
      * Owner, 2026-08-23: "fighters are present before intros. The whole point
@@ -103,7 +102,6 @@ static void ndsFtDisplayMainProcDisplayBody(GObj *fighter_gobj)
         }
     }
     ndsFighterDisplayContractSubmit(fighter_gobj);
-#endif
 }
 
 sb32 (*dLBCommonFuncMatrixList[])(void) = { NULL };

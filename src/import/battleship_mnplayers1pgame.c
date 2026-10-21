@@ -195,7 +195,7 @@ GObj *ndsMNPlayers1PPreviewMakeFighter(FTDesc *desc)
     /* GObj/DObj/pose free lists survive preview retirement. Only file and
      * owner-image storage belongs in the resettable block. */
     ndsTaskmanSwapMallocRegion(previous);
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
     ndsFighterRendererInvalidateMaterialCachesForSlot((u32)desc->player);
 #endif
     gobj = ftManagerMakeFighter(desc);

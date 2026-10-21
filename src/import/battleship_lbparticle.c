@@ -3122,7 +3122,6 @@ volatile u32 gNdsParticleCameraFixedBasisCount;
 
 static sb32 ndsParticleCameraCanReuseRenderer(const CObj *cobj)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     u32 i;
     u32 present = 0u;
 
@@ -3145,10 +3144,6 @@ static sb32 ndsParticleCameraCanReuseRenderer(const CObj *cobj)
         present++;
     }
     return (present == 1u) ? TRUE : FALSE;
-#else
-    (void)cobj;
-    return FALSE;
-#endif
 }
 
 /* Transitional N04 bridge for the still-float particle transform consumers.
@@ -3273,7 +3268,6 @@ static sb32 ndsParticleSetCurrentCamera(Vec3f *right, Vec3f *up)
                 *up = sNdsParticleCameraUp[way];
                 if (renderer_reuse != FALSE)
                 {
-#if NDS_RENDERER_HW_TRIANGLES
                     /* Re-issued rather than skipped: the renderer's particle
                      * camera is shared state and another owner can replace it
                      * between particle groups. The frame camera cache makes
@@ -3286,7 +3280,6 @@ static sb32 ndsParticleSetCurrentCamera(Vec3f *right, Vec3f *up)
                         gNdsParticleCameraCacheHitCount++;
                         return TRUE;
                     }
-#endif
                     /* A renderer-cache rejection is containment only. Fall
                      * through and rebuild the original source camera below. */
                     break;
@@ -3312,7 +3305,6 @@ static sb32 ndsParticleSetCurrentCamera(Vec3f *right, Vec3f *up)
          * before composing look-at * perspective. Consume that Q12 result
          * instead of paying a second syMatrixLookAtF (three sqrtf plus the
          * surrounding binary32 vector arithmetic) once per moving camera. */
-#if NDS_RENDERER_HW_TRIANGLES
         if ((ndsRendererAdapterSetWorldQuadCameraBasisQ12(
                  gGCCurrentCamera, right_q12, up_q12) != FALSE) &&
             ((right_q12[0] | right_q12[1] | right_q12[2]) != 0) &&
@@ -3338,7 +3330,6 @@ static sb32 ndsParticleSetCurrentCamera(Vec3f *right, Vec3f *up)
             gNdsParticleCameraRendererReuseCount++;
             return TRUE;
         }
-#endif
         /* Keep every old source-camera route below as the correctness fallback
          * if this exact battle-camera reuse cannot be established. */
     }
@@ -4496,7 +4487,7 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
     ndsParticleHeavyLodDecide();
 #if NDS_R2_PARTICLE_DRAW
     atlas_name = ndsRendererHardwareParticleAtlasName();
-#if NDS_RENDERER_HW_TRIANGLES && NDS_R2_WHISPY_NATIVE_AOT
+#if NDS_R2_WHISPY_NATIVE_AOT
     if ((atlas_name != 0u) &&
         (ndsRendererAdapterBeginParticleViewPass(gGCCurrentCamera) != FALSE))
     {

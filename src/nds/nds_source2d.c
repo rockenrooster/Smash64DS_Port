@@ -50,9 +50,6 @@
 #include <sc/scene.h>
 #include <sys/obj.h>
 
-#ifndef NDS_RENDERER_HW_TRIANGLES
-#define NDS_RENDERER_HW_TRIANGLES 0
-#endif
 
 /* The source frame each tenant maps onto the 256x192 screen. Every tenant
  * but one draws in the 320x240 frame and shows (10,10)-(310,230); the staff
@@ -264,7 +261,6 @@ volatile u32 gNdsSource2DFailBanks;
 volatile u32 gNdsSource2DFailOam;
 volatile u32 gNdsSource2DFailBackground;
 
-#if NDS_RENDERER_HW_TRIANGLES
 
 static void ndsS2DRecordFailure(const SObj *sobj, u32 reason)
 {
@@ -2530,11 +2526,9 @@ static void ndsS2DEnterNow(void)
     NDS_DIAG(gNdsSource2DEnterCount++);
 }
 
-#endif /* NDS_RENDERER_HW_TRIANGLES */
 
 void ndsSource2DEnterForScene(u32 scene)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     if (ndsS2DSceneIsTenant(scene) == FALSE)
     {
         return;
@@ -2561,24 +2555,18 @@ void ndsSource2DEnterForScene(u32 scene)
         return;
     }
     ndsS2DEnterNow();
-#else
-    (void)scene;
-#endif
 }
 
 void ndsSource2DEnterPending(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     if (sNdsS2DEnterPending != 0u)
     {
         ndsS2DEnterNow();
     }
-#endif
 }
 
 void ndsSource2DExit(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     sNdsS2DEnterPending = 0u;
     sNdsS2DTranslucentBitmaps[0] = NULL;
     sNdsS2DTranslucentBitmaps[1] = NULL;
@@ -2605,21 +2593,15 @@ void ndsSource2DExit(void)
     }
     sNdsS2DActive = 0u;
     NDS_DIAG(gNdsSource2DExitCount++);
-#endif
 }
 
 s32 ndsSource2DIsActive(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     return ((sNdsS2DActive != 0u) || (sNdsS2DEnterPending != 0u)) ? 1 : 0;
-#else
-    return 0;
-#endif
 }
 
 void ndsSource2DBeginFrame(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     s32 first_previous;
 
     if (sNdsS2DActive == 0u)
@@ -2652,7 +2634,6 @@ void ndsSource2DBeginFrame(void)
     }
     sNdsS2DFrameBackgrounds = 0u;
     sNdsS2DFrameObjects = 0u;
-#endif
 }
 
 s32 ndsSource2DDrawGObj(struct GObj *gobj)
@@ -2662,7 +2643,6 @@ s32 ndsSource2DDrawGObj(struct GObj *gobj)
 
 s32 ndsSource2DDrawGObjModulated(struct GObj *gobj, u32 modulate_rgb)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     SObj *sobj;
 
     if (sNdsS2DActive == 0u)
@@ -2685,16 +2665,10 @@ s32 ndsSource2DDrawGObjModulated(struct GObj *gobj, u32 modulate_rgb)
     }
     sNdsS2DModulate = 0xffffffu;
     return 1;
-#else
-    (void)gobj;
-    (void)modulate_rgb;
-    return 0;
-#endif
 }
 
 void ndsSource2DCommit(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     if (sNdsS2DActive == 0u)
     {
         return;
@@ -2729,18 +2703,12 @@ void ndsSource2DCommit(void)
         REG_BLDALPHA = sNdsS2DBlendRegs[1];
         REG_BLDY = sNdsS2DBlendRegs[2];
     }
-#endif
 }
 
 void ndsSource2DSetTranslucentBitmaps(const void *first, const void *second)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     sNdsS2DTranslucentBitmaps[0] = first;
     sNdsS2DTranslucentBitmaps[1] = second;
-#else
-    (void)first;
-    (void)second;
-#endif
 }
 
 /* A fill rectangle under an XLU render mode, over everything drawn before
@@ -2751,7 +2719,6 @@ void ndsSource2DSetTranslucentBitmaps(const void *first, const void *second)
  * cleared frame's black where no layer wrote -- once per picture. */
 void ndsSource2DFillTranslucent(s32 ulx, s32 uly, s32 lrx, s32 lry, u32 rgba)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     u8 ramp[3][32];
     u16 *layer;
     u32 pitch;
@@ -2824,18 +2791,10 @@ void ndsSource2DFillTranslucent(s32 ulx, s32 uly, s32 lrx, s32 lry, u32 rgba)
     }
     (void)ndsPlatformCommitOriginalSpriteFinalLayer(FALSE, 256u * 192u);
     sNdsS2DFillApplied = rgba;
-#else
-    (void)ulx;
-    (void)uly;
-    (void)lrx;
-    (void)lry;
-    (void)rgba;
-#endif
 }
 
 void ndsSource2DSetBlend(u16 bldcnt, u16 bldalpha, u16 bldy)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     if (sNdsS2DBlendOwned == 0u)
     {
         sNdsS2DBlendSaved[0] = REG_BLDCNT;
@@ -2845,9 +2804,4 @@ void ndsSource2DSetBlend(u16 bldcnt, u16 bldalpha, u16 bldy)
     sNdsS2DBlendRegs[0] = bldcnt;
     sNdsS2DBlendRegs[1] = bldalpha;
     sNdsS2DBlendRegs[2] = bldy;
-#else
-    (void)bldcnt;
-    (void)bldalpha;
-    (void)bldy;
-#endif
 }

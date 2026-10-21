@@ -1584,7 +1584,7 @@ static sb32 ndsFighterHoldsFoxGunSource(const FTStruct *fp)
     return FALSE;
 }
 
-#if NDS_P4 && NDS_RENDERER_HW_TRIANGLES
+#if NDS_P4
 /* nds_renderer_native_common.c: a content's joint-17 model part that lives
  * outside its model file (Wolf's gun in WOLF_WEAPON), drawn as a P4 root. */
 sb32 ndsRendererEntryEffectP4Sidecar(u32 content, u32 joint,
@@ -1595,7 +1595,7 @@ sb32 ndsRendererEntryEffectP4Sidecar(u32 content, u32 joint,
  * content's own gun file (Wolf's runs Fox's code with his own gun). */
 static u32 ndsFighterFoxGunSourceAsset(const FTStruct *fp)
 {
-#if NDS_P4 && NDS_RENDERER_HW_TRIANGLES
+#if NDS_P4
     u32 asset;
     u32 offset;
 
@@ -1702,7 +1702,7 @@ static void ndsFighterDrawFoxGunSidecar(FTStruct *fp)
     CObj *cobj = (gGCCurrentCamera != NULL) ?
         CObjGetStruct(gGCCurrentCamera) : NULL;
     NDSRendererMatrix20p12 sidecar_world;
-#if NDS_P4 && NDS_RENDERER_HW_TRIANGLES
+#if NDS_P4
     u32 asset;
     u32 offset;
 
@@ -1758,7 +1758,7 @@ static void ndsFighterDrawFoxGunSidecar(FTStruct *fp)
     }
 }
 
-#if NDS_P4 && NDS_P2_KIRBY && NDS_RENDERER_HW_TRIANGLES
+#if NDS_P4 && NDS_P2_KIRBY
 /* A Kirby holding a custom power (scripts/p4/p4_kirby.py CUSTOM_POWERS,
  * owner 2026-10-12): its hat, a list cut from the content's model or made on
  * its material (p4_kirby_custom_hats.py), drawn at joint 6 over his plain
@@ -1914,7 +1914,7 @@ static sb32 ndsFighterKirbyTrioBodyActive(const FTStruct *fp)
 }
 #endif
 
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 static sb32 ndsRendererAdapterCollectFighterTopology(
     DObj *dobj,
     u32 parent_index,
@@ -1945,8 +1945,7 @@ static sb32 ndsRendererAdapterCollectFighterTopology(
 
 #endif
 
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && NDS_RENDERER_M2_DETAILED_LEDGER
 
 static void ndsRendererAdapterM2CensusFighter(
     u32 slot,
@@ -2123,7 +2122,7 @@ static const Gfx *ndsFighterDLAllDrawResolveBranch(const Gfx *dl,
     return ndsFighterDLDrawResolveBranch(dl, resolve_kind, user);
 }
 
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 /* ---------------------------------------------------------------------------
  * The invariant half of the production inputs, primed once.
  *
@@ -2627,7 +2626,7 @@ ndsFighterDLAllDrawAccumulateStats(
         return;
     }
 
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     if (slot == 0u)
     {
         ndsRendererAdapterAccumulateDepth(
@@ -2891,7 +2890,7 @@ u32 gNdsTask91GxBusyEnd;
 u32 gNdsTask91GxStatOr;
 #endif
 
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 /* ---------------------------------------------------------------------------
  * Cycle 99 -- the baked fighter draw plan.
  *
@@ -3876,24 +3875,20 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #endif
     DObj *root;
     NDSFighterDLAllDrawCollection collection;
-#if !NDS_RENDERER_HW_TRIANGLES || (NDS_RENDERER_PROFILE_LEVEL >= 2) || \
-    !NDS_R2_FIGHTER_NO_ORACLE
+#if (NDS_RENDERER_PROFILE_LEVEL >= 2) || (!NDS_R2_FIGHTER_NO_ORACLE)
     NDSFighterDLDrawState *states;
 #endif
     NDSFighterDLDrawState persistent_state;
     /* The snapshot table is traversal-owned but too large for BattleShip's
      * nested task stack. Draw callbacks are serialized, so one reset fixed
      * cache preserves the same per-fighter lifetime without caching output. */
-#if NDS_FIGHTER_LEGACY_EXEC
-    static NDSRendererVertexCache persistent_renderer_vertices;
-#endif
-#if !NDS_RENDERER_HW_TRIANGLES || (NDS_RENDERER_PROFILE_LEVEL >= 2)
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     NDSRendererStats *stats;
 #endif
     NDSRendererStats persistent_stats;
     u8 *clean;
     sb32 no_oracle;
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
     sb32 detailed_output;
     u32 runtime_hardware_triangle_count = 0u;
 #endif
@@ -3907,7 +3902,6 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     u32 kirby_trio_head = 0u;
     sb32 kirby_trio_unknown = FALSE;
 #endif
-#if NDS_RENDERER_HW_TRIANGLES
     NDSRendererProfileOwner owner_id;
     u32 expected_asset_id;
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
@@ -3933,18 +3927,11 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         sNdsRendererAdapterNativeOwnerWorkspace.modelviews;
     const NDSRendererMatrix20p12 *native_owner_projection = NULL;
     u32 native_owner_material_saved_root_count = 0u;
-#if NDS_FIGHTER_LEGACY_EXEC
-    sb32 native_owner_started = FALSE;
-#endif
     sb32 native_owner_failed = FALSE;
     sb32 native_owner_production_attempted = FALSE;
     sb32 native_owner_production_mode;
-#if NDS_FIGHTER_LEGACY_EXEC
-    sb32 native_owner_hierarchy_mode;
-#else
     /* R1 retired: hierarchy mode 7 is not compiled, every test of it folds. */
     const sb32 native_owner_hierarchy_mode = FALSE;
-#endif
     u32 native_owner_root_program = 0u;
     /* Cycle 99. TRUE == this draw replayed the baked plan instead of walking
      * the DObj tree and re-resolving every selected root. */
@@ -3965,7 +3952,6 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #endif
     u32 native_material_count = 0u;
     sb32 native_owner_enabled;
-#endif
 #if NDS_R2_DRAW_SUPPRESS_MASK
     /* R2-03 E13. Prices a whole fighter: the phase census says how the draw
      * divides internally, this says what the frame costs without it at all.
@@ -4011,7 +3997,6 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     root_x_before = (root != NULL) ? ndsFloatBits(root->translate.vec.f.x) :
         0u;
 
-#if NDS_RENDERER_HW_TRIANGLES
     owner_id = ndsFighterNativeOwnerProfileId(owner_slot);
     expected_asset_id = ndsFighterNativeOwnerModelAssetId(owner_slot);
     /* Every draw starts fail-closed on the canonical owner. A plan hit below
@@ -4031,13 +4016,12 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     m2_owner = &gNdsRendererProfileOwners[(u32)owner_id];
     m2_phase_start = cpuGetTiming();
 #endif
-#endif
 #if NDS_TASK91_DRAW_PHASE_CENSUS
     gNdsTask91DrawCalls++;
     task91_total_start = cpuGetTiming();
     task91_phase_start = task91_total_start;
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
     /* The transient Intro submit always walks: up to 21 Demo actors share one
      * scratch slot, so a stored plan would replay another actor's DObj
      * pointers on every same-kind pair (Yoshi/Kirby teams, Zako). */
@@ -4094,8 +4078,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #if NDS_TASK91_DRAW_PHASE_CENSUS
     gNdsTask91WalkTicks += cpuGetTiming() - task91_phase_start;
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && NDS_RENDERER_M2_DETAILED_LEDGER
     m2_owner->m2_collection_ticks += cpuGetTiming() - m2_phase_start;
     m2_phase_start = cpuGetTiming();
     ndsRendererAdapterM2CensusFighter(
@@ -4161,17 +4144,16 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
      * memset and the hot ones are not the ones with the most call sites. */
     task91_phase_start = cpuGetTiming();
 #endif
-#if !NDS_RENDERER_HW_TRIANGLES || (NDS_RENDERER_PROFILE_LEVEL >= 2) || \
-    !NDS_R2_FIGHTER_NO_ORACLE
+#if (NDS_RENDERER_PROFILE_LEVEL >= 2) || (!NDS_R2_FIGHTER_NO_ORACLE)
     states = sNdsFighterDLAllDrawStates;
 #endif
-#if !NDS_RENDERER_HW_TRIANGLES || (NDS_RENDERER_PROFILE_LEVEL >= 2)
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     stats = sNdsFighterDLAllDrawStats[slot];
 #endif
     clean = sNdsFighterDLAllDrawClean[slot];
     no_oracle = (ndsRendererHardwareNoOracleEnabled() != FALSE) ? TRUE :
                                                                     FALSE;
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #if NDS_R2_FIGHTER_NO_ORACLE
     /* Live and intro submission pass NULL pixels with NoOracle enabled.
      * Keep resolver segment ownership; no per-root preview history is live. */
@@ -4201,9 +4183,6 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     bzero(&persistent_state, sizeof(persistent_state));
     bzero(clean, sizeof(sNdsFighterDLAllDrawClean[slot]));
 #endif
-#if NDS_FIGHTER_LEGACY_EXEC
-    ndsRendererInitVertexCache(&persistent_renderer_vertices);
-#endif
     ndsRendererInitStats(&persistent_stats);
     if (sNdsFighterDisplayContractPlayback != FALSE)
     {
@@ -4223,21 +4202,6 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         }
         ndsFighterDisplayContractSeedMaterialLights(&persistent_stats);
     }
-#if NDS_RENDERER_HW_TRIANGLES
-#if NDS_FIGHTER_LEGACY_EXEC
-    native_owner_enabled =
-        (((gNdsRendererFastRunMode ==
-           NDS_RENDERER_FAST_RUN_NATIVE_MARIO) && (owner_slot == 0u)) ||
-         ((gNdsRendererFastRunMode ==
-           NDS_RENDERER_FAST_RUN_NATIVE_FOX) && (owner_slot == 1u)) ||
-          (gNdsRendererFastRunMode ==
-           NDS_RENDERER_FAST_RUN_NATIVE_FIGHTERS) ||
-          (gNdsRendererFastRunMode ==
-           NDS_RENDERER_FAST_RUN_NATIVE_FIGHTER_OWNER_PRODUCTION) ||
-           (gNdsRendererFastRunMode ==
-            NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE)) ? TRUE :
-                                                                     FALSE;
-#else
     /* R1 retired: only the production modes admit a native owner. A poked
      * mode 5-7 is not native and takes the fail-closed reject below. */
     native_owner_enabled =
@@ -4245,7 +4209,6 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
           NDS_RENDERER_FAST_RUN_NATIVE_FIGHTER_OWNER_PRODUCTION) ||
          (gNdsRendererFastRunMode ==
           NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE)) ? TRUE : FALSE;
-#endif
 #if NDS_P2_KIRBY
     if (kirby_trio_unknown != FALSE)
     {
@@ -4263,11 +4226,6 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
          (gNdsRendererFastRunMode ==
           NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE)) ? TRUE :
                                                                    FALSE;
-#if NDS_FIGHTER_LEGACY_EXEC
-    native_owner_hierarchy_mode =
-        (gNdsRendererFastRunMode ==
-         NDS_RENDERER_FAST_RUN_NATIVE_FIGHTERS) ? TRUE : FALSE;
-#endif
     if ((native_owner_hierarchy_mode != FALSE) && (use_low_detail != 0u))
     {
         /* Mode 7's hierarchy schedule is generated only from the high-detail
@@ -4823,7 +4781,6 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         }
 #endif
     }
-#endif
 #if NDS_TASK91_DRAW_PHASE_CENSUS
     /* OwnerPrep closes: everything between the revalidation and the point the
      * owner inputs are built and submitted -- the matrix and material
@@ -4831,7 +4788,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
      * charges most of that to its own symbols. */
     NDS_DIAG(gNdsTask91OwnerPrepTicks += cpuGetTiming() - task91_phase_start);
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
     if ((native_owner_enabled != FALSE) &&
         ((native_owner_production_mode != FALSE) ||
          (native_owner_hierarchy_mode != FALSE)) &&
@@ -4971,7 +4928,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         }
     }
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     gNdsRendererProfileOwners[(u32)owner_id].entry_state_hash =
         ndsRendererOwnerHashRuntimeState(&persistent_stats);
     gNdsRendererProfileOwners[(u32)owner_id].entry_vertex_cache_hash =
@@ -4981,34 +4938,9 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     gNdsRendererProfileOwners[(u32)owner_id].entry_global_hash =
         ndsRendererProfileGlobalStateHash();
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
-#if NDS_FIGHTER_LEGACY_EXEC
-    if ((native_owner_enabled != FALSE) &&
-        (native_owner_production_attempted == FALSE))
-    {
-        if (ndsRendererBeginNativeFighterOwner(
-                owner_slot, &persistent_stats,
-                &persistent_renderer_vertices) != FALSE)
-        {
-            native_owner_started = TRUE;
-        }
-        else
-        {
-            ndsRendererAdapterRestoreNativeOwnerMaterialTextureIds(
-                native_owner_material_dobjs,
-                native_owner_material_saved_root_count);
-            native_owner_material_saved_root_count = 0u;
-            native_owner_enabled = FALSE;
-            NDS_P2_NESS_FALLBACK(11u);
-#if NDS_TICK_HUD
-            NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(
-                nNDSTickHudNativeOwnerFallbackBegin);
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #endif
-        }
-    }
-#endif
-#endif
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
     if (native_owner_production_attempted == FALSE)
 #endif
     {
@@ -5029,7 +4961,6 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         NDSRendererMatrix20p12 initial_modelview;
         const NDSRendererMatrix20p12 *initial_projection_ptr;
         const NDSRendererMatrix20p12 *initial_modelview_ptr;
-#if NDS_RENDERER_HW_TRIANGLES
         void *saved_graphics_heap_ptr;
         DObj *material_dobj;
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
@@ -5049,22 +4980,17 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
         NDSRendererOwnerStatsSnapshot owner_stats_before;
 #endif
-#endif
 
-#if NDS_RENDERER_HW_TRIANGLES
         loaded = (native_owner_enabled != FALSE) ?
             native_owner_loaded[i] :
             ndsRelocFindLoadedFileContaining(dl, sizeof(*dl));
-#else
-        loaded = ndsRelocFindLoadedFileContaining(dl, sizeof(*dl));
-#endif
 
         if ((loaded == NULL) &&
             (ndsFighterDLScanRangeInTaskmanArena(dl, sizeof(*dl)) == FALSE))
         {
             continue;
         }
-#if NDS_P2_1P_GAME && NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_P2_1P_GAME && (NDS_RENDERER_PROFILE_LEVEL < 2)
         /* Packed previews contain native root identities, not an interpreter
          * fallback program. A native admission failure is a visible failure
          * to fix at its owning seam, never an empty replacement display list. */
@@ -5122,7 +5048,6 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         }
 #endif
 
-#if NDS_RENDERER_HW_TRIANGLES
         if ((native_owner_enabled != FALSE) && (loaded != NULL) &&
             (loaded->data != NULL) &&
             (ndsFighterNativeLoadedFileAllowed(
@@ -5138,26 +5063,14 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                     TRUE : FALSE;
         }
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-#if NDS_FIGHTER_LEGACY_EXEC
-        if (native_root_enabled != FALSE)
-        {
-            native_materials =
-                sNdsRendererAdapterNativeOwnerMaterials[
-                    sNdsRendererAdapterNativeOwnerMaterialRows[i]];
-            native_material_count = native_owner_material_counts[i];
-        }
-#else
         /* R1 retired: the per-root executor that read these is not compiled. */
         (void)native_materials;
         (void)native_material_count;
 #endif
-#endif
-#endif
 
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2) && \
-    NDS_R2_FIGHTER_NO_ORACLE
+#if (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_R2_FIGHTER_NO_ORACLE
         current_state = &persistent_state;
-#elif NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#elif NDS_RENDERER_PROFILE_LEVEL < 2
         current_state = (detailed_output != FALSE) ? &states[i] :
                                                     &persistent_state;
 #else
@@ -5171,7 +5084,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                 &sNdsFighterDisplayReplayPreambles[collection.indices[i]];
 
             persistent_stats.geometry_mode =
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
                 (native_root_enabled != FALSE) ?
                     ndsRendererAdapterNormalizeNativeGeometryMode(
                         contract_preamble->geometry_mode) :
@@ -5193,7 +5106,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                 persistent_stats.light_dir_mask = 1u;
             }
         }
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
         if (detailed_output != FALSE)
         {
             ndsFighterDLDrawSeedPersistentState(current_state,
@@ -5203,7 +5116,6 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         ndsFighterDLDrawSeedPersistentState(current_state,
                                             &persistent_state);
 #endif
-#if NDS_RENDERER_HW_TRIANGLES
         saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
         step_start = cpuGetTiming();
@@ -5277,8 +5189,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         gNdsRendererProfileMaterialTicks += cpuGetTiming() - step_start;
         step_start = cpuGetTiming();
 #endif
-#endif
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
         if (native_root_enabled != FALSE)
         {
             initial_projection_ptr = native_owner_projection;
@@ -5298,7 +5209,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                 &initial_modelview,
                 &initial_modelview_ptr);
         }
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 1)
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
         gNdsRendererProfileMatrixTicks += cpuGetTiming() - step_start;
 #endif
         config.max_depth = 8u;
@@ -5311,7 +5222,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                 sNdsFighterDisplayReplayPreambles[
                     collection.indices[i]].geometry_mode : 0u;
         config.color_modulate = color_modulate;
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
         if (native_root_enabled != FALSE)
         {
             config.initial_geometry_mode =
@@ -5328,7 +5239,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         config.resolve_data = ndsFighterDLDrawResolveRendererData;
         config.user = current_state;
 
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
         if (detailed_output != FALSE)
         {
             ndsFighterDLDrawResetTransientRendererStats(&persistent_stats);
@@ -5344,7 +5255,6 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                                                     &persistent_stats);
         current_stats = &stats[i];
 #endif
-#if NDS_RENDERER_HW_TRIANGLES
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
         ndsRendererOwnerSnapshotStats(current_stats, &owner_stats_before);
         step_start = cpuGetTiming();
@@ -5355,41 +5265,11 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             ndsRendererOwnerRootBranchPath(
                 loaded, dl, collection.indices[i]));
 #endif
-#endif
-#if NDS_RENDERER_HW_TRIANGLES
 #if NDS_RENDERER_PROFILE_LEVEL < 2
         if (native_owner_failed != FALSE)
         {
             current_stats->blocker = NDS_RENDERER_BLOCKER_UNSUPPORTED;
         }
-#if NDS_FIGHTER_LEGACY_EXEC
-        else if (native_owner_started != FALSE)
-        {
-            if ((native_root_enabled == FALSE) ||
-                (ndsRendererExecuteNativeFighterRoot(
-                     owner_slot, i, loaded->data, native_root_offset,
-                     native_materials, native_material_count,
-                     &config,
-                     (no_oracle != FALSE) ?
-                         NULL : ndsFighterMarioFoxVisitDLDrawCommand,
-                     current_state,
-                     current_stats,
-                     &persistent_renderer_vertices) == FALSE))
-            {
-                /* The compact owner may have submitted earlier runs or
-                 * updated its dense slot map. Never replay this root through
-                 * the generic cache on top of that partial state. */
-                if (current_stats->blocker == NDS_RENDERER_BLOCKER_NONE)
-                {
-                    current_stats->blocker =
-                        NDS_RENDERER_BLOCKER_UNSUPPORTED;
-                }
-                ndsRendererAbortNativeFighterOwner();
-                native_owner_started = FALSE;
-                native_owner_failed = TRUE;
-            }
-        }
-#endif
         else
         {
             ndsFighterRejectNativeRender(fp, collection.dobjs[i], dl,
@@ -5411,11 +5291,6 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                 NDS_NATIVE_FAILURE_REJECTED_PROGRAM, current_stats);
         }
 #endif
-#else
-        ndsFighterRejectNativeRender(fp, collection.dobjs[i], dl,
-                NDS_NATIVE_FAILURE_REJECTED_PROGRAM, current_stats);
-#endif
-#if NDS_RENDERER_HW_TRIANGLES
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
         gNdsRendererProfileDLTicks += cpuGetTiming() - step_start;
         ndsRendererOwnerAccumulateList(
@@ -5425,8 +5300,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             &owner_stats_before, current_stats);
 #endif
         gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
-#endif
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
         if (detailed_output != FALSE)
         {
             ndsFighterDLDrawCapturePersistentState(&persistent_state,
@@ -5436,11 +5310,11 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         ndsFighterDLDrawCapturePersistentState(&persistent_state,
                                                current_state);
 #endif
-#if !NDS_RENDERER_HW_TRIANGLES || (NDS_RENDERER_PROFILE_LEVEL >= 2)
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
         ndsFighterDLDrawCopyPersistentRendererState(&persistent_stats,
                                                     current_stats);
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
         if (detailed_output != FALSE)
         {
             ndsFighterDLAllDrawAccumulateStats(
@@ -5460,22 +5334,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     }
     }
 
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
-#if NDS_FIGHTER_LEGACY_EXEC
-    if (native_owner_started != FALSE)
-    {
-        if (ndsRendererEndNativeFighterOwner(
-                owner_slot, &persistent_stats,
-                &persistent_renderer_vertices) == FALSE)
-        {
-            persistent_stats.blocker =
-                NDS_RENDERER_BLOCKER_UNSUPPORTED;
-            native_owner_failed = TRUE;
-            ndsRendererAbortNativeFighterOwner();
-        }
-        native_owner_started = FALSE;
-    }
-#endif
+#if NDS_RENDERER_PROFILE_LEVEL < 2
     if (native_owner_failed != FALSE)
     {
         u32 failure_index = (collection.selected_count != 0u) ?
@@ -5511,8 +5370,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     }
 #endif
 
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2) && \
-    NDS_R2_FOX_GUN_OVERLAY
+#if (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_R2_FOX_GUN_OVERLAY
     /* File 315 is sidecar-owned on DS, independent of whether the fighter body
      * used native production or the fail-closed generic path. The builder
      * itself gates on Fox + gameplay pkind + the live source model-part state,
@@ -5527,7 +5385,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     }
 #endif
 
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     gNdsRendererProfileOwners[(u32)owner_id].exit_state_hash =
         ndsRendererOwnerHashRuntimeState(&persistent_stats);
     gNdsRendererProfileOwners[(u32)owner_id].exit_vertex_cache_hash =
@@ -5537,11 +5395,9 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     gNdsRendererProfileOwners[(u32)owner_id].exit_global_hash =
         ndsRendererProfileGlobalStateHash();
 #endif
-#if NDS_RENDERER_HW_TRIANGLES
     ndsRendererProfileSetOwner(NDS_RENDERER_PROFILE_OWNER_NONE);
-#endif
 
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
     if (detailed_output == FALSE)
     {
 #if NDS_P2_NESS
@@ -5638,8 +5494,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 }
 #endif /* !NDS_FTR_LEAN_LIVE */
 
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && NDS_RENDERER_M2_DETAILED_LEDGER
 static void ndsRendererAdapterM2FinishOwner(
     volatile NDSRendererOwnerProfile *owner,
     u32 owner_start)
@@ -5681,7 +5536,7 @@ static void ndsRendererAdapterM2FinishOwner(
  * declined -- skipped, since no other renderer is behind it. */
 volatile u32 gNdsFtrLeanSkippedDraws;
 
-#if NDS_P2_1P_GAME && NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_P2_1P_GAME && (NDS_RENDERER_PROFILE_LEVEL < 2)
 /* 1P Intro transient native context.
  *
  * The source Intro holds up to 21 simultaneous Demo actors
@@ -5855,7 +5710,7 @@ static unsigned int ndsFtrLeanRunOnHotStack(void *arg)
 }
 #endif
 
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 /* THE AFTERIMAGE TRAIL. ftDisplayMainDrawAll draws it after the fighter
  * (ftDisplayMainDrawAfterImage) into the translucent list, but here the whole
  * source display runs inside the contract capture, whose lists are dropped,
@@ -6103,7 +5958,6 @@ static void ndsFighterDrawAfterImage(FTStruct *fp)
 
 void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
 {
-#if NDS_RENDERER_HW_TRIANGLES
 #if NDS_IMPORT_BATTLESHIP_VS_RESULTS
     extern volatile u32 gNdsVSResultsFighterSubmitCount;
 #endif
@@ -6331,12 +6185,8 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
     ndsRendererBenchmarkSinkEndOwner(owner_id);
 #endif
-#else
-    (void)fighter_gobj;
-#endif
 }
 
-#if NDS_RENDERER_HW_TRIANGLES
 static void ndsFighterDisplayContractSubmitStageFighters(void)
 {
     GObj *saved_camera = gGCCurrentCamera;
@@ -6374,7 +6224,6 @@ static void ndsFighterDisplayContractSubmitStageFighters(void)
         gNdsRendererPhase05FighterWrapperTicks, phase05_start);
 #endif
 }
-#endif
 
 static void ndsFighterMarioFoxRecordDLAllDrawFromDisplayCallback(
     GObj *fighter_gobj)

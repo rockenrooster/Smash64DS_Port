@@ -20,7 +20,7 @@ volatile u32 gNdsRendererEconomySkippedRunCount;
 volatile u32 gNdsRendererEconomySkippedTriangleCount;
 #endif
 
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
 typedef struct NDSRendererHardwarePendingPosTest
 {
     NDSRendererMatrix20p12 matrix;
@@ -36,7 +36,6 @@ static u32 sNdsRendererHardwarePendingPosTestCount;
 static u32 sNdsRendererHardwarePendingPosTestLastGeneration;
 #endif
 
-#if NDS_RENDERER_HW_TRIANGLES
 static void ndsRendererHardwarePrepareLitDirection(
     const NDSRendererStats *stats,
     const NDSRendererMatrix20p12 *modelview,
@@ -63,7 +62,6 @@ static u32 ndsRendererHardwareLitShadeColor(
     NDSRendererStats *stats,
     const NDSRendererInputVertex *vtx,
     const NDSRendererMatrix20p12 *modelview);
-#endif
 
 static s32 ndsRendererClampS64ToS32(s64 value)
 {
@@ -440,7 +438,6 @@ static void ndsRendererMtxIdentity20p12(NDSRendererMatrix20p12 *out)
     ndsRendererMatrixIdentity20p12(out, 1 << NDS_RENDERER_DS_MTX_FRAC_BITS);
 }
 
-#if NDS_RENDERER_HW_TRIANGLES
 static u32 ndsRendererNextMatrixGeneration(void)
 {
     sNdsRendererMatrixGenerationSerial++;
@@ -456,7 +453,6 @@ static u32 ndsRendererNextMatrixGeneration(void)
     }
     return sNdsRendererMatrixGenerationSerial;
 }
-#endif
 
 static u32 ndsRendererReadU32(const void *ptr)
 {
@@ -1152,7 +1148,6 @@ ndsRendererRecordSetCombine(NDSRendererStats *stats, u32 w0, u32 w1)
 #endif
 }
 
-#if NDS_RENDERER_HW_TRIANGLES
 static u32 ndsRendererMatrixSnapshotSignature(
     const NDSRendererMatrix20p12 *matrix)
 {
@@ -1297,7 +1292,6 @@ static s32 ndsRendererEnsureTransformedVertex(
     return ndsRendererTransformCachedVertex(
         stats, state, index, &snapshot->matrix, snapshot_id);
 }
-#endif
 
 static void ndsRendererComposeMatrix(NDSRendererTraversalState *state)
 {
@@ -1332,13 +1326,11 @@ static void ndsRendererComposeMatrix(NDSRendererTraversalState *state)
         ((state->projection_valid != 0u) ||
          (state->modelview_valid != 0u)) ? TRUE : FALSE;
     state->matrix_word_valid = FALSE;
-#if NDS_RENDERER_HW_TRIANGLES
     /* Cached RSP vertices retain the transform active when they were loaded. */
     state->current_transform_vertex_mask = 0u;
     state->current_matrix_snapshot = NDS_RENDERER_MATRIX_SNAPSHOT_INVALID;
     state->matrix_generation = ndsRendererNextMatrixGeneration();
     NDS_RENDERER_INVALIDATE_LIGHT_DIRECTION(state);
-#endif
 }
 
 static void ndsRendererInitMatrixWordRaw(NDSRendererTraversalState *state)
@@ -1383,7 +1375,6 @@ static void ndsRendererInitTraversalState(NDSRendererTraversalState *state,
     state->vertex_valid_mask = 0u;
     state->vertices = (vertex_storage != NULL) ?
         vertex_storage->vertices : NULL;
-#if NDS_RENDERER_HW_TRIANGLES
     state->input_vertices = (vertex_storage != NULL) ?
         vertex_storage->input_vertices : NULL;
     state->vertex_colors = (vertex_storage != NULL) ?
@@ -1426,10 +1417,6 @@ static void ndsRendererInitTraversalState(NDSRendererTraversalState *state,
     state->prepared_projected_xy_valid_mask = 0u;
     state->prepared_projected_source_z_valid_mask = 0u;
     state->raw_vertex_fit_mask = 0u;
-#else
-    (void)snapshots;
-    (void)snapshot_count;
-#endif
     state->projection_valid = 0u;
     state->modelview_valid = 0u;
     state->matrix_valid = 0u;
@@ -1789,12 +1776,10 @@ static void ndsRendererApplyMatrixMoveWordCommand(
     words[word_index] = w1;
     ndsRendererMtxLoadN64ToDS20p12(&state->matrix_word_raw, &state->matrix);
     state->matrix_valid = TRUE;
-#if NDS_RENDERER_HW_TRIANGLES
     state->current_transform_vertex_mask = 0u;
     state->current_matrix_snapshot = NDS_RENDERER_MATRIX_SNAPSHOT_INVALID;
     state->matrix_generation = ndsRendererNextMatrixGeneration();
     NDS_RENDERER_INVALIDATE_LIGHT_DIRECTION(state);
-#endif
     stats->matrix_command_count++;
     stats->matrix_move_word_count++;
 }
@@ -1862,7 +1847,6 @@ static void ndsRendererApplyModifyVertexCommand(
     packed_index = w0 & 0xffffu;
     index = packed_index / 2u;
 
-#if NDS_RENDERER_HW_TRIANGLES
     if ((where == NDS_RENDERER_MWO_POINT_ST) &&
         ((packed_index & 1u) == 0u) &&
         (index < NDS_RENDERER_MAX_VTX) &&
@@ -1872,12 +1856,6 @@ static void ndsRendererApplyModifyVertexCommand(
         state->input_vertices[index].t = (s16)(w1 & 0xffffu);
         return;
     }
-#else
-    (void)where;
-    (void)packed_index;
-    (void)index;
-    (void)w1;
-#endif
 
     NDS_RENDERER_RECORD_PROOF_ONLY(stats->skip_command_count++);
 }

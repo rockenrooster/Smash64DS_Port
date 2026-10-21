@@ -158,15 +158,10 @@ static void ndsGcRecordNdlLifetime(GObj *gobj)
     u32 old_serial;
     u32 new_serial;
 
-#if NDS_RENDERER_HW_TRIANGLES
     if (gobj == NULL)
     {
         return;
     }
-#else
-    (void)gobj;
-    return;
-#endif
     switch (gobj->id)
     {
     case nGCCommonKindEffect: kind_index = 0u; break;

@@ -142,12 +142,10 @@ void ndsRendererInitVertexCache(NDSRendererVertexCache *vertex_cache)
 
 void ndsRendererHardwareResetSourceCaches(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     memset(sNdsRendererStageTextureSites, 0,
            sizeof(sNdsRendererStageTextureSites));
     sNdsRendererStageTextureSiteNext = 0u;
-#endif
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
     memset(sNdsRendererHardwareCi4IndexCache, 0,
            sizeof(sNdsRendererHardwareCi4IndexCache));
     sNdsRendererHardwareCi4IndexCacheNext = 0u;
@@ -156,11 +154,7 @@ void ndsRendererHardwareResetSourceCaches(void)
 
 void ndsRendererHardwareSetNoOracle(u32 enabled)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     sNdsRendererHardwareNoOracle = (enabled != 0u) ? TRUE : FALSE;
-#else
-    (void)enabled;
-#endif
 }
 
 /* The fighter draw's bracket for sNdsRendererHardwareTexelAlphaGraded
@@ -168,20 +162,12 @@ void ndsRendererHardwareSetNoOracle(u32 enabled)
  * so no effect, item or stage texture sees the request. */
 void ndsRendererHardwareSetTexelAlphaGraded(u32 enabled)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     sNdsRendererHardwareTexelAlphaGraded = (enabled != 0u) ? 1u : 0u;
-#else
-    (void)enabled;
-#endif
 }
 
 u32 ndsRendererHardwareNoOracleEnabled(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     return sNdsRendererHardwareNoOracle;
-#else
-    return FALSE;
-#endif
 }
 
 void ndsRendererProfileSetOwner(NDSRendererProfileOwner owner)
@@ -189,7 +175,6 @@ void ndsRendererProfileSetOwner(NDSRendererProfileOwner owner)
 #if NDS_TASK29_GX_CENSUS
     ndsRendererTask29GXSetOwner(owner);
 #endif
-#if NDS_RENDERER_HW_TRIANGLES
     u32 mode = gNdsRendererFastRunMode;
 
     sNdsRendererRuntimeOwner =
@@ -220,7 +205,6 @@ void ndsRendererProfileSetOwner(NDSRendererProfileOwner owner)
            NDS_RENDERER_FAST_RUN_NATIVE_FIGHTER_OWNER_PRODUCTION)) &&
          ((u32)sNdsRendererRuntimeOwner <
           (u32)NDS_RENDERER_PROFILE_OWNER_COUNT));
-#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     sNdsRendererProfileOwner =
         ((u32)owner < (u32)NDS_RENDERER_PROFILE_OWNER_COUNT) ? owner :
@@ -228,9 +212,6 @@ void ndsRendererProfileSetOwner(NDSRendererProfileOwner owner)
     memset(&sNdsRendererSemanticSourceProvenance, 0,
            sizeof(sNdsRendererSemanticSourceProvenance));
 #else
-#if !NDS_RENDERER_HW_TRIANGLES
-    (void)owner;
-#endif
 #endif
 }
 
@@ -297,7 +278,7 @@ void ndsRendererProfileRecordMaterialOperations(u32 count)
 
 u32 ndsRendererProfileGlobalStateHash(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     u32 hash = 0u;
 
     hash = ndsRendererProfileHashU32(
@@ -452,7 +433,6 @@ void ndsRendererProfileFrameBegin(void)
     memset(sNdsRendererM2ShadeOwnerResidentHitCount, 0,
            sizeof(sNdsRendererM2ShadeOwnerResidentHitCount));
 #endif
-#if NDS_RENDERER_HW_TRIANGLES
     gNdsRendererProfileTexturePairOracleChecks = 0u;
     gNdsRendererProfileTexturePairOracleMismatches = 0u;
     gNdsRendererProfileTextureVBlankQueuedUploads = 0u;
@@ -463,7 +443,6 @@ void ndsRendererProfileFrameBegin(void)
     gNdsRendererProfileTextureVBlankFallbackCount = 0u;
     gNdsRendererProfileTextureVBlankStartLine = 0u;
     gNdsRendererProfileTextureVBlankEndLine = 0u;
-#endif
     sNdsRendererProfileGXStatusPostVBlank = 0u;
     sNdsRendererProfileGXControlPostVBlank = 0u;
     gNdsRendererProfileGXStatusPostVBlank = 0u;
@@ -516,9 +495,7 @@ void ndsRendererProfileFrameBegin(void)
     sNdsRendererStageDepthTraceLastForeground = 0;
     sNdsRendererStageDepthTraceLastValidMask = 0u;
 #endif
-#if NDS_RENDERER_HW_TRIANGLES
     ndsRendererProfileResetSubmitSummary();
-#endif
 #if NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE
     sNdsRendererBenchmarkTriangleCount = 0u;
 #endif
@@ -526,15 +503,13 @@ void ndsRendererProfileFrameBegin(void)
     sNdsRendererBenchmarkSuppressedTextureUploads = 0u;
     sNdsRendererBenchmarkSuppressedTextureUploadBytes = 0u;
 #endif
-#if NDS_RENDERER_HW_TRIANGLES
     sNdsRendererFastRunCount = 0u;
     sNdsRendererFastTriangleCount = 0u;
     memset(sNdsRendererFastOwnerTriangleCount, 0,
            sizeof(sNdsRendererFastOwnerTriangleCount));
     memset(sNdsRendererFastFallbackCount, 0,
            sizeof(sNdsRendererFastFallbackCount));
-#endif
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
     memset(&sNdsRendererRuntimeFrameSummary, 0,
            sizeof(sNdsRendererRuntimeFrameSummary));
     if (gNdsRendererProfileFrameCount == 1u)
@@ -548,7 +523,7 @@ void ndsRendererProfileFrameBegin(void)
         sNdsRendererRuntimeCi4ReusePixelCount = 0u;
     }
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     sNdsRendererHardwarePendingPosTestCount = 0u;
     sNdsRendererHardwarePendingPosTestLastGeneration = 0u;
 #endif
@@ -614,7 +589,6 @@ void ndsRendererProfileFramePublish(void)
     gNdsRendererBenchmarkSuppressedTextureUploadBytes =
         sNdsRendererBenchmarkSuppressedTextureUploadBytes;
 #endif
-#if NDS_RENDERER_HW_TRIANGLES
     gNdsRendererFastRunCount = sNdsRendererFastRunCount;
     gNdsRendererFastTriangleCount = sNdsRendererFastTriangleCount;
     memcpy((void *)gNdsRendererFastOwnerTriangleCount,
@@ -627,7 +601,6 @@ void ndsRendererProfileFramePublish(void)
      * cross-checked group coherently using the same rule as platform proof
      * counters; otherwise owner[0..2] can be one cache line behind Link/total. */
     NDS_PUBLISH_DEBUGGER_GROUP(NDS_RENDERER_FAST_DEBUGGER_GROUP);
-#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsRendererProfileGXStatusPostVBlank =
         sNdsRendererProfileGXStatusPostVBlank;
@@ -697,7 +670,7 @@ void ndsRendererProfileFramePublish(void)
         sNdsRendererSemanticOverflowCount;
 #endif
 #endif
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
     /* One compact publication replaces hot-loop volatile diagnostic writes. */
     gNdsRendererProfileTextureBinds =
         sNdsRendererRuntimeFrameSummary.texture_binds;
@@ -775,7 +748,6 @@ void ndsRendererProfileFramePublish(void)
 
 u32 ndsRendererHardwareConsumeSubmittedFrame(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     u32 submitted;
 
     ndsRendererHardwareEmitIFCommonClouds();
@@ -863,9 +835,6 @@ u32 ndsRendererHardwareConsumeSubmittedFrame(void)
 #endif
     sNdsRendererHardwareFrameSerial++;
     return submitted;
-#else
-    return FALSE;
-#endif
 }
 
 #if NDS_R2_STAGE_ROUTE_PROBE

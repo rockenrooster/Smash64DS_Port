@@ -17,7 +17,7 @@
 #include "nds_p5_native_stages.generated.h"
 #endif
 
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 void ndsFighterRendererInvalidateMaterialCaches(void);
 void ndsFighterRendererInvalidateMaterialCachesForSlot(u32 slot);
 void ndsFighterRendererInvalidateDObjStateCaches(GObj *fighter_gobj);
@@ -2102,7 +2102,7 @@ void ftParamInitAllParts(GObj *fighter_gobj, s32 costume, s32 shade)
         0xFF;
     ftParamInitTexturePartAll(fighter_gobj);
 
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
     /* The source operation above replaces MObjs in place. The DS native
      * renderer caches immutable material conversion by MObj identity, and the
      * source allocator may immediately reuse the just-freed MObj address. Tell
@@ -2756,7 +2756,7 @@ static sb32 ndsFTParamApplyModelPartCurrent(GObj *fighter_gobj, FTStruct *fp,
 static void ndsFTParamInvalidateModelPartRenderer(GObj *fighter_gobj,
                                                    FTStruct *fp)
 {
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_PROFILE_LEVEL < 2
     ndsFighterRendererInvalidateDObjStateCaches(fighter_gobj);
     if (fp != NULL)
     {

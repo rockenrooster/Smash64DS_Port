@@ -42,9 +42,6 @@
 #define NDS_TASK10_GIT_SHORT "unknown"
 #endif
 
-#ifndef NDS_RENDERER_HW_TRIANGLES
-#define NDS_RENDERER_HW_TRIANGLES 0
-#endif
 
 #ifndef NDS_DEBUG_HUD
 #define NDS_DEBUG_HUD 0
@@ -135,11 +132,6 @@ extern volatile u32 gNdsFrameCounter;
  * not evidence. */
 #error "NDS_LAB_NO_CULL needs NDS_BATTLE_FPS_HUD_ENABLED for its arm indicator"
 #endif
-#if !NDS_RENDERER_HW_TRIANGLES
-static u16 *sFramebuffer;
-static u16 *sFramebuffers[2];
-static u32 sDrawFramebufferIndex;
-#endif
 static u32 sTicks;
 static u32 sHeldKeys;
 static volatile u32 sVBlankCount;
@@ -168,7 +160,7 @@ static s32 sNdsTransitionHoldWants3D;
 static u32 sNdsTransitionHoldPresents;
 #define NDS_TRANSITION_HOLD_MAX_PRESENTS 600u
 #endif
-#if NDS_TRANSITION_HOLD && NDS_RENDERER_HW_TRIANGLES
+#if NDS_TRANSITION_HOLD
 /* The transition snapshot (ndsPlatformTransitionSnapshotBegin, below): 0, or
  * 1 + the bank (0 = A, 1 = B: captured into; 2 = C: moved into, see
  * ndsPlatformTransitionSnapshotMoveToC; 3 = D: a battle exit's, see
@@ -205,11 +197,9 @@ static void ndsPlatformTransitionSnapshotLeaveBg3(void)
     }
 }
 #endif
-#if NDS_RENDERER_HW_TRIANGLES
 /* BG2's affine as last written (PA, PD, X, Y; PB = PC = 0 at every write
  * here): a battle exit's held frame redraws the wallpaper through it. */
 static s32 sNdsBg2AffineShown[4] = { 1 << 8, 1 << 8, 0, 0 };
-#endif
 /* Runtime A/B word (the control arm is the same binary); counters read by
  * the transition captures. Decline: 1 brightness, 2 display mode, 3 capture
  * busy, 4 no free texture bank, 5 capture timeout, 6 a battle exit's
@@ -290,7 +280,6 @@ static u32 sBattleTextHudFingerprint = 0xffffffffu;
 static u32 sBattlePhaseHudLastSlipCount;
 #endif
 #endif
-#if NDS_RENDERER_HW_TRIANGLES
 /* The native shell does not rasterize source SObjs. Keep this 150 KiB scratch
  * in the scene that actually uses it, rather than permanently shrinking every
  * scene arena. Hardware commits copy its pixels into BG VRAM immediately. */
@@ -298,17 +287,11 @@ static u16 *sOriginalSpritePreview;
 static u32 sOriginalSpritePreviewGeneration;
 extern volatile u32 gNdsTaskmanHeapGeneration;
 extern void *syTaskmanMalloc(size_t size, u32 align);
-#else
-static u16 sOriginalSpritePreview[
-    NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH *
-    NDS_ORIGINAL_SPRITE_PREVIEW_MAX_HEIGHT];
-#endif
 static u32 sOriginalSpritePreviewWidth;
 static u32 sOriginalSpritePreviewHeight;
 static s32 sOriginalSpritePreviewX;
 static s32 sOriginalSpritePreviewY;
 static u32 sOriginalSpritePreviewReady;
-#if NDS_RENDERER_HW_TRIANGLES
 static int sOriginalSpriteOverlayBg = -1;
 static int sOriginalSpriteOverlayForegroundBg = -1;
 
@@ -387,16 +370,6 @@ static s32 sSceneWallpaperPendingDy;
 static u32 sSceneWallpaperAffinePending;
 static u32 sSceneWallpaperAffineResetPending;
 #endif
-#endif
-#if !NDS_RENDERER_HW_TRIANGLES
-/* Software builds retain the complete 320x240 diagnostic image. Hardware
- * builds commit the staging layer directly to BG VRAM and no longer carry a
- * second full RGB555 wallpaper decode; that DS-only source view belongs to the
- * SObj backend that consumes it. */
-static u16 sOriginalSpriteDisplayPreview[
-    NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH *
-    NDS_ORIGINAL_SPRITE_PREVIEW_MAX_HEIGHT];
-#endif
 static u32 sOriginalSpriteDecodeCacheEpoch = 1u;
 static u32 sOriginalSpriteDisplayPreviewWidth;
 static u32 sOriginalSpriteDisplayPreviewHeight;
@@ -411,19 +384,6 @@ static u32 sOriginalSpriteDisplayPreviewHeight;
  * source has for ndsPlatformBeginOriginalDLPreview, exactly one survives into
  * the shipped battle ELF (ndsOpeningRoomRenderDLPreview), and the only functions
  * holding an address inside either array are the three API entry points here. */
-#if !NDS_RENDERER_HW_TRIANGLES
-static u16 sOriginalDLPreview[
-    NDS_ORIGINAL_DL_PREVIEW_MAX_WIDTH *
-    NDS_ORIGINAL_DL_PREVIEW_MAX_HEIGHT];
-static u16 sOriginalDLDisplayPreview[
-    NDS_ORIGINAL_DL_PREVIEW_DISPLAY_WIDTH *
-    NDS_ORIGINAL_DL_PREVIEW_DISPLAY_HEIGHT];
-static u32 sOriginalDLPreviewWidth;
-static u32 sOriginalDLPreviewHeight;
-static u32 sOriginalDLDisplayPreviewWidth;
-static u32 sOriginalDLDisplayPreviewHeight;
-static u32 sOriginalDLPreviewReady;
-#endif
 #if NDS_DEBUG_HUD
 static u32 sDebugTextFingerprint = 0xffffffffu;
 static u32 sDebugTextReady;
@@ -622,7 +582,6 @@ static void ndsPlatformFastTimingInit(void)
     gNdsFastTimingEnabled = 1u;
 }
 
-#if NDS_RENDERER_HW_TRIANGLES
 /* P2-2p8 S3 (2026-09-28). libnds keeps texture and palette names in
  * DynamicArrays that grow by realloc when a new name reaches their size, and
  * glColorTableEXT stores the new palette index in the texture BEFORE it grows
@@ -647,7 +606,6 @@ static void ndsPlatformReserveGlNameTables(void)
     ok += (DynamicArraySet(&glGlob->deallocPal, last, NULL) != false) ? 1u : 0u;
     gNdsPlatformGlNameTablesReserved = ok;
 }
-#endif
 
 void ndsPlatformInit(void)
 {
@@ -673,7 +631,6 @@ void ndsPlatformInit(void)
     gNdsIFCommonHUDLowerTextMode = 0u;
 #endif
 
-#if NDS_RENDERER_HW_TRIANGLES
     videoSetMode(MODE_5_3D | DISPLAY_BG2_ACTIVE | DISPLAY_BG3_ACTIVE);
     vramSetBankA(VRAM_A_TEXTURE);
     vramSetBankB(VRAM_B_TEXTURE);
@@ -712,19 +669,6 @@ void ndsPlatformInit(void)
                      256u * 256u * sizeof(u16));
     dmaFillHalfWords(0, bgGetGfxPtr(sOriginalSpriteOverlayForegroundBg),
                      256u * 256u * sizeof(u16));
-#else
-    videoSetMode(MODE_FB0);
-    vramSetBankA(VRAM_A_LCD);
-    vramSetBankB(VRAM_B_LCD);
-    sFramebuffers[0] = VRAM_A;
-    sFramebuffers[1] = VRAM_B;
-    sDrawFramebufferIndex = 1;
-    sFramebuffer = sFramebuffers[sDrawFramebufferIndex];
-    dmaFillHalfWords(NDS_TOP_BACKGROUND_COLOR, sFramebuffers[0],
-                     SCREEN_WIDTH * SCREEN_HEIGHT * sizeof(u16));
-    dmaFillHalfWords(NDS_TOP_BACKGROUND_COLOR, sFramebuffers[1],
-                     SCREEN_WIDTH * SCREEN_HEIGHT * sizeof(u16));
-#endif
 
     videoSetModeSub(MODE_0_2D);
     vramSetBankH(VRAM_H_SUB_BG);
@@ -862,47 +806,20 @@ u32 ndsPlatformReadInput(void)
 
 void ndsPlatformBeginFrame(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     return;
-#else
-    dmaFillHalfWords(NDS_TOP_BACKGROUND_COLOR, sFramebuffer,
-                     SCREEN_WIDTH * SCREEN_HEIGHT * sizeof(u16));
-#endif
 }
 
 void ndsPlatformDrawRect(s32 x, s32 y, s32 width, s32 height, u16 color)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     (void)x;
     (void)y;
     (void)width;
     (void)height;
     (void)color;
-#else
-    s32 row;
-    s32 column;
-
-    if (x < 0) { width += x; x = 0; }
-    if (y < 0) { height += y; y = 0; }
-    if (x + width > SCREEN_WIDTH) width = SCREEN_WIDTH - x;
-    if (y + height > SCREEN_HEIGHT) height = SCREEN_HEIGHT - y;
-    if (width <= 0 || height <= 0) return;
-
-    color |= BIT(15);
-    for (row = 0; row < height; row++)
-    {
-        u16 *dst = sFramebuffer + ((y + row) * SCREEN_WIDTH) + x;
-        for (column = 0; column < width; column++)
-        {
-            dst[column] = color;
-        }
-    }
-#endif
 }
 
 s32 ndsPlatformReserveOriginalSpritePreview(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     if ((sOriginalSpritePreview == NULL) ||
         (sOriginalSpritePreviewGeneration != gNdsTaskmanHeapGeneration))
     {
@@ -928,7 +845,6 @@ s32 ndsPlatformReserveOriginalSpritePreview(void)
         }
         sOriginalSpritePreviewGeneration = gNdsTaskmanHeapGeneration;
     }
-#endif
     return TRUE;
 }
 
@@ -973,7 +889,6 @@ u32 ndsPlatformGetOriginalSpritePreviewEpoch(void)
     return sOriginalSpriteDecodeCacheEpoch;
 }
 
-#if NDS_RENDERER_HW_TRIANGLES
 static u32 ndsPlatformAdvanceOriginalSpriteOverlayEpoch(u32 layer)
 {
     sOriginalSpriteOverlayEpoch[layer]++;
@@ -998,7 +913,6 @@ static u32 ndsPlatformOriginalSpriteOverlayClearPixels(void)
 #endif
     return 256u * 256u;
 }
-#endif
 
 u16 *ndsPlatformGetOriginalSpriteOverlayLayer(s32 is_foreground,
                                                u32 *out_pitch,
@@ -1011,7 +925,6 @@ u16 *ndsPlatformGetOriginalSpriteOverlayLayer(s32 is_foreground,
     if (out_height != NULL) { *out_height = 0u; }
     if (out_epoch != NULL) { *out_epoch = 0u; }
 
-#if NDS_RENDERER_HW_TRIANGLES
     {
         u32 layer = (is_foreground != FALSE) ? 1u : 0u;
         int bg = (layer != 0u) ?
@@ -1052,16 +965,11 @@ u16 *ndsPlatformGetOriginalSpriteOverlayLayer(s32 is_foreground,
         }
         return (u16 *)bgGetGfxPtr(bg);
     }
-#else
-    (void)is_foreground;
-    return NULL;
-#endif
 }
 
 u32 ndsPlatformCommitOriginalSpriteFinalLayer(s32 is_foreground,
                                                u32 pixel_write_count)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     u32 layer = (is_foreground != FALSE) ? 1u : 0u;
     int bg = (layer != 0u) ?
         sOriginalSpriteOverlayForegroundBg : sOriginalSpriteOverlayBg;
@@ -1105,32 +1013,8 @@ u32 ndsPlatformCommitOriginalSpriteFinalLayer(s32 is_foreground,
     gNdsOriginalSpritePreviewDisplayHeight = SCREEN_HEIGHT;
     gNdsOriginalSpritePreviewCommitCount++;
     return ndsPlatformAdvanceOriginalSpriteOverlayEpoch(layer);
-#else
-    (void)is_foreground;
-    (void)pixel_write_count;
-    return 0u;
-#endif
 }
 
-#if !NDS_RENDERER_HW_TRIANGLES
-static void ndsPlatformCopyOriginalSpritePreviewNative(
-    u16 *destination, u32 destination_pitch, s32 dst_w, s32 dst_h)
-{
-    s32 y;
-
-    if ((destination == NULL) || (destination_pitch < (u32)dst_w))
-    {
-        return;
-    }
-    for (y = 0; y < dst_h; y++)
-    {
-        memcpy(&destination[y * destination_pitch],
-               &sOriginalSpritePreview[
-                   y * NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH],
-               (size_t)dst_w * sizeof(destination[0]));
-    }
-}
-#endif
 
 static void ndsPlatformScaleOriginalSpritePreviewNearest(
     u16 *destination, u32 destination_pitch, s32 dst_w, s32 dst_h)
@@ -1184,14 +1068,12 @@ void ndsPlatformCommitOriginalSpritePreviewLayer(s32 is_foreground)
 {
     s32 dst_w;
     s32 dst_h;
-#if NDS_RENDERER_HW_TRIANGLES
     const u16 *display_preview = sOriginalSpritePreview;
     if ((display_preview == NULL) ||
         (sOriginalSpritePreviewGeneration != gNdsTaskmanHeapGeneration))
     {
         return;
     }
-#endif
 
     if ((sOriginalSpritePreviewWidth == 0) ||
         (sOriginalSpritePreviewHeight == 0))
@@ -1222,7 +1104,6 @@ void ndsPlatformCommitOriginalSpritePreviewLayer(s32 is_foreground)
         dst_h = NDS_ORIGINAL_SPRITE_PREVIEW_MAX_HEIGHT;
     }
 
-#if NDS_RENDERER_HW_TRIANGLES
     /* Hardware layers consume staging immediately. Downscaling in place is
      * safe because both source coordinates advance at least as quickly as the
      * destination; it leaves the retained display buffer free for immutable
@@ -1238,21 +1119,6 @@ void ndsPlatformCommitOriginalSpritePreviewLayer(s32 is_foreground)
         sOriginalSpritePreviewWidth = (u32)dst_w;
         sOriginalSpritePreviewHeight = (u32)dst_h;
     }
-#else
-    if ((dst_w == (s32)sOriginalSpritePreviewWidth) &&
-        (dst_h == (s32)sOriginalSpritePreviewHeight))
-    {
-        ndsPlatformCopyOriginalSpritePreviewNative(
-            sOriginalSpriteDisplayPreview,
-            NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH, dst_w, dst_h);
-    }
-    else
-    {
-        ndsPlatformScaleOriginalSpritePreviewNearest(
-            sOriginalSpriteDisplayPreview,
-            NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH, dst_w, dst_h);
-    }
-#endif
     sOriginalSpriteDisplayPreviewWidth = (u32)dst_w;
     sOriginalSpriteDisplayPreviewHeight = (u32)dst_h;
     sOriginalSpritePreviewReady = 1;
@@ -1261,7 +1127,6 @@ void ndsPlatformCommitOriginalSpritePreviewLayer(s32 is_foreground)
     gNdsOriginalSpritePreviewDisplayHeight = (u32)dst_h;
     gNdsOriginalSpritePreviewCommitCount++;
 
-#if NDS_RENDERER_HW_TRIANGLES
     {
         u32 layer = (is_foreground != FALSE) ? 1u : 0u;
 
@@ -1337,7 +1202,6 @@ void ndsPlatformCommitOriginalSpritePreviewLayer(s32 is_foreground)
             }
         }
     }
-#endif
 }
 
 void ndsPlatformCommitOriginalSpritePreview(void)
@@ -1347,7 +1211,6 @@ void ndsPlatformCommitOriginalSpritePreview(void)
 
 void ndsPlatformClearOriginalSpriteOverlayLayer(s32 is_foreground)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     int bg = (is_foreground != FALSE) ?
         sOriginalSpriteOverlayForegroundBg : sOriginalSpriteOverlayBg;
 
@@ -1395,9 +1258,6 @@ void ndsPlatformClearOriginalSpriteOverlayLayer(s32 is_foreground)
             (void)ndsPlatformQueueNativeWallpaperAffine(256, 256, 0, 0);
         }
     }
-#else
-    (void)is_foreground;
-#endif
 }
 
 /* A converted wallpaper is written straight into the visible BG2 bitmap, a
@@ -1411,7 +1271,6 @@ void ndsPlatformClearOriginalSpriteOverlayLayer(s32 is_foreground)
  * planes and brightness shows it again. */
 void ndsPlatformHideOriginalSpriteOverlayUntilCommit(s32 is_foreground)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     u32 layer = (is_foreground != FALSE) ? 1u : 0u;
     int bg = (layer != 0u) ?
         sOriginalSpriteOverlayForegroundBg : sOriginalSpriteOverlayBg;
@@ -1423,12 +1282,8 @@ void ndsPlatformHideOriginalSpriteOverlayUntilCommit(s32 is_foreground)
     ndsPlatformTransitionThaw();
     bgHide(bg);
     sOriginalSpriteOverlayRevealPending |= 1u << layer;
-#else
-    (void)is_foreground;
-#endif
 }
 
-#if NDS_RENDERER_HW_TRIANGLES
 static void ndsPlatformRevealOriginalSpriteOverlay(void)
 {
     u32 pending = sOriginalSpriteOverlayRevealPending;
@@ -1445,11 +1300,9 @@ static void ndsPlatformRevealOriginalSpriteOverlay(void)
         bgShow(sOriginalSpriteOverlayForegroundBg);
     }
 }
-#endif
 
 void ndsPlatformSetOriginalSpriteOverlayLayerMask(u32 layer_mask)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     u32 previous_mask;
 
 #if NDS_TRANSITION_HOLD
@@ -1532,9 +1385,6 @@ void ndsPlatformSetOriginalSpriteOverlayLayerMask(u32 layer_mask)
             bgHide(sOriginalSpriteOverlayForegroundBg);
         }
     }
-#else
-    (void)layer_mask;
-#endif
 }
 
 void ndsPlatformSetOriginalSpriteOverlayEnabled(s32 is_enabled)
@@ -1549,7 +1399,6 @@ void ndsPlatformSetOriginalSpriteOverlayEnabled(s32 is_enabled)
  * counted (gNdsVramBg3RefusedWrites). Reads only. */
 u32 ndsPlatformVramBg3Empty(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     const volatile u16 *pixels;
     u32 i;
 
@@ -1571,9 +1420,6 @@ u32 ndsPlatformVramBg3Empty(void)
         }
     }
     return TRUE;
-#else
-    return FALSE;
-#endif
 }
 
 /* Lend bank D to the 3D engine as texture slot 3 (libnds computes a texture's
@@ -1581,7 +1427,6 @@ u32 ndsPlatformVramBg3Empty(void)
  * withheld until ndsPlatformVramReturnBankD. */
 s32 ndsPlatformVramTakeBankD(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
 #if NDS_TRANSITION_HOLD
     /* A battle exit's held frame in D (a battle straight after it) moves to
      * C first, or ends. */
@@ -1619,9 +1464,6 @@ s32 ndsPlatformVramTakeBankD(void)
     gNdsVramBankDLent = 1u;
     gNdsVramBankDTakes++;
     return TRUE;
-#else
-    return FALSE;
-#endif
 }
 
 /* Battle exit: the texture side has released everything in D and locked it;
@@ -1630,19 +1472,16 @@ s32 ndsPlatformVramTakeBankD(void)
  * or its first BG3 write or clear. */
 void ndsPlatformVramReturnBankD(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     if (sOriginalSpriteOverlayBg3Lent != 0u)
     {
         sOriginalSpriteOverlayBg3ReturnPending = 1u;
     }
-#endif
 }
 
 /* Give bank D back to BG3: remap, clear it whole (the texels it held are not
  * an image), and show the foreground again if the scene still wants it. */
 static void ndsPlatformVramReturnBankDNow(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
 #if NDS_TRANSITION_HOLD
     /* A battle exit's held frame is in D: the return waits for its release
      * (BG3 stays hidden meanwhile; a BG3 write ends the frame first). */
@@ -1678,7 +1517,6 @@ static void ndsPlatformVramReturnBankDNow(void)
         }
     }
     sOriginalSpriteOverlayBg3Wanted = 0u;
-#endif
 }
 
 #if defined(NDS_TICK_HUD) && NDS_TICK_HUD
@@ -1690,7 +1528,6 @@ volatile u32 gNdsVramCensusOverlayMask __attribute__((used));
 
 u32 ndsPlatformVramCensusOverlayOpaque(u32 layer)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     int bg = (layer != 0u) ? sOriginalSpriteOverlayForegroundBg :
         sOriginalSpriteOverlayBg;
     const volatile u16 *pixels;
@@ -1711,16 +1548,11 @@ u32 ndsPlatformVramCensusOverlayOpaque(u32 layer)
         }
     }
     return opaque;
-#else
-    (void)layer;
-    return 0xffffffffu;
-#endif
 }
 #endif
 
 void ndsPlatformSet3DLayerEnabled(s32 is_enabled)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     /* MODE_5_3D presents the geometry engine through main BG0. Unlike a
      * software framebuffer, that layer retains the last completed 3D frame
      * when a scene submits no new geometry. Hide the display owner rather than
@@ -1754,9 +1586,6 @@ void ndsPlatformSet3DLayerEnabled(s32 is_enabled)
     }
     s3dLayerEnableOnNextPresent = FALSE;
     REG_DISPCNT &= ~DISPLAY_BG0_ACTIVE;
-#else
-    (void)is_enabled;
-#endif
 }
 
 /* The loading cover (r63): black on both screens at a VBlank, then the old
@@ -1765,7 +1594,6 @@ void ndsPlatformSet3DLayerEnabled(s32 is_enabled)
 static void ndsPlatformTransitionCover(s32 retire_list)
 {
     ndsVideoSetTransitionBlackout(TRUE);
-#if NDS_RENDERER_HW_TRIANGLES
     /* Drain asynchronous submission before retiring the retained GX list. */
     ndsRendererFighterPacketDmaWait();
     if (retire_list != FALSE)
@@ -1779,9 +1607,6 @@ static void ndsPlatformTransitionCover(s32 retire_list)
 #endif
         glFlush(GL_TRANS_MANUALSORT);
     }
-#else
-    (void)retire_list;
-#endif
     /* A scene-boundary wait, with no extra logic tick or gameplay present. */
     swiWaitForVBlank();
     ndsVideoBlackoutCommit();
@@ -1797,7 +1622,7 @@ static void ndsPlatformTransitionCover(s32 retire_list)
     ndsSource2DExit();
 }
 
-#if NDS_TRANSITION_HOLD && NDS_RENDERER_HW_TRIANGLES
+#if NDS_TRANSITION_HOLD
 /* Whether libnds's texture allocator holds any live block inside bank
  * `bank` (0 = A, 1 = B; LCD addresses). */
 static u32 ndsPlatformTextureBankInUse(u32 bank)
@@ -2148,7 +1973,7 @@ static void ndsPlatformTransitionSnapshotBegin(void)
 
 s32 ndsPlatformTransitionSnapshotHoldsBg2(void)
 {
-#if NDS_TRANSITION_HOLD && NDS_RENDERER_HW_TRIANGLES
+#if NDS_TRANSITION_HOLD
     return (sNdsTransitionSnapshotBank == NDS_TRANSITION_SNAPSHOT_BANK_C) ?
         TRUE : FALSE;
 #else
@@ -2167,7 +1992,7 @@ s32 ndsPlatformTransitionSnapshotHoldsBg2(void)
 s32 ndsPlatformTransitionSnapshotToN64Frame(u16 *frame, u32 width,
                                             u32 height)
 {
-#if NDS_TRANSITION_HOLD && NDS_RENDERER_HW_TRIANGLES
+#if NDS_TRANSITION_HOLD
     const u16 *held;
     u8 column[300];
     u32 x;
@@ -2213,7 +2038,7 @@ s32 ndsPlatformTransitionSnapshotToN64Frame(u16 *frame, u32 width,
  * goes back to its texture slot before the upload plans around it. */
 void ndsPlatformTransitionSnapshotAbort(void)
 {
-#if NDS_TRANSITION_HOLD && NDS_RENDERER_HW_TRIANGLES
+#if NDS_TRANSITION_HOLD
     if (sNdsTransitionSnapshotBank == 0u)
     {
         return;
@@ -2264,9 +2089,7 @@ void ndsPlatformTransitionHoldBegin(void)
     sNdsTransitionHoldPresents = 0u;
     NDS_DIAG(gNdsTransitionHoldCount++);
     gNdsTransitionHoldVBlank = sVBlankCount;
-#if NDS_RENDERER_HW_TRIANGLES
     ndsPlatformTransitionSnapshotBegin();
-#endif
 #endif
 }
 
@@ -2339,7 +2162,7 @@ void ndsPlatformTransitionThaw(void)
 
 void ndsPlatformTransitionThawIf3DShown(void)
 {
-#if NDS_TRANSITION_HOLD && NDS_RENDERER_HW_TRIANGLES
+#if NDS_TRANSITION_HOLD
     /* No texture lives in C, and none is placed in D while a battle exit's
      * frame keeps it LCD-mapped (libnds allocates only in banks mapped as
      * texture; a battle's take of D moves or ends it first,
@@ -2388,9 +2211,7 @@ void ndsPlatformSetBackdropColor(u16 color)
 void ndsPlatformBeginSceneTransition(void)
 {
 #if NDS_TRANSITION_HOLD
-#if NDS_RENDERER_HW_TRIANGLES
     ndsRendererFighterPacketDmaWait();
-#endif
     /* A battle's exit has no leaving-frame call: its hold starts here. */
     ndsPlatformTransitionHoldBegin();
     /* The old scene has exited; what runs from now is the next one. */
@@ -2472,7 +2293,6 @@ void __wrap_glColorSubTableEXT(int target, int start, int count, int empty1,
     __real_glColorSubTableEXT(target, start, count, empty1, empty2, data);
 }
 
-#if NDS_RENDERER_HW_TRIANGLES
 static s32 ndsPlatformScaleSourceViewportEdge(s32 value, s32 limit)
 {
     s32 scaled = (value * 4 + 2) / 5;
@@ -2487,7 +2307,6 @@ static s32 ndsPlatformScaleSourceViewportEdge(s32 value, s32 limit)
     }
     return scaled;
 }
-#endif
 
 /* P2-3r7. GFX_VIEWPORT IS A GX COMMAND, SO THESE TWO ARE FIFO WRITERS.
  *
@@ -2510,7 +2329,6 @@ static s32 ndsPlatformScaleSourceViewportEdge(s32 value, s32 limit)
  * sites, so the recorded stream was never the problem -- its delivery was. */
 void ndsPlatformSet3DViewportSource(s32 ulx, s32 uly, s32 lrx, s32 lry)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     s32 x0 = ndsPlatformScaleSourceViewportEdge(ulx, SCREEN_WIDTH);
     s32 y0 = ndsPlatformScaleSourceViewportEdge(uly, SCREEN_HEIGHT);
     s32 x1 = ndsPlatformScaleSourceViewportEdge(lrx, SCREEN_WIDTH) - 1;
@@ -2534,20 +2352,12 @@ void ndsPlatformSet3DViewportSource(s32 ulx, s32 uly, s32 lrx, s32 lry)
     }
     ndsRendererFighterPacketDmaWait();
     glViewport(x0, y0, x1, y1);
-#else
-    (void)ulx;
-    (void)uly;
-    (void)lrx;
-    (void)lry;
-#endif
 }
 
 void ndsPlatformReset3DViewport(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     ndsRendererFighterPacketDmaWait();
     glViewport(0, 0, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1);
-#endif
 }
 
 /* P2-1h. Apply BG2's queued affine NOW instead of at the next present.
@@ -2564,7 +2374,6 @@ static u32 sNativeWallpaperAffinePending;
 
 u32 ndsPlatformQueueNativeWallpaperAffine(s32 pa, s32 pd, s32 dx, s32 dy)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     if ((sOriginalSpriteOverlayBg < 0) || (pa <= 0) || (pa > 32767) ||
         (pd <= 0) || (pd > 32767) ||
         (dx < -134217728) || (dx > 134217727) ||
@@ -2579,15 +2388,10 @@ u32 ndsPlatformQueueNativeWallpaperAffine(s32 pa, s32 pd, s32 dx, s32 dy)
     sNativeWallpaperAffineEpoch = sOriginalSpriteOverlayEpoch[0];
     sNativeWallpaperAffinePending = TRUE;
     return TRUE;
-#else
-    (void)pa; (void)pd; (void)dx; (void)dy;
-    return FALSE;
-#endif
 }
 
 static void ndsPlatformCommitNativeWallpaperAffine(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     if ((sNativeWallpaperAffinePending != FALSE) &&
         (sNativeWallpaperAffineEpoch == sOriginalSpriteOverlayEpoch[0]) &&
         (sOriginalSpriteOverlayBg >= 0))
@@ -2597,7 +2401,6 @@ static void ndsPlatformCommitNativeWallpaperAffine(void)
                                 sNativeWallpaperAffine[2],
                                 sNativeWallpaperAffine[3]);
     }
-#endif
     sNativeWallpaperAffinePending = FALSE;
 }
 
@@ -2615,7 +2418,6 @@ void ndsPlatformCommitOriginalSpriteOverlayTransform(void)
  * PB/PC are zero: the source's fire is axis-aligned. */
 void ndsPlatformSetTitleFireEnabled(s32 is_enabled, s32 pa, s32 pd)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     if (sOriginalSpriteOverlayForegroundBg < 0)
     {
         return;
@@ -2667,16 +2469,10 @@ void ndsPlatformSetTitleFireEnabled(s32 is_enabled, s32 pa, s32 pd)
         REG_BLDCNT &= (u16)~BLEND_DST_BG3;
         gNdsTitleFireDisableCount++;
     }
-#else
-    (void)is_enabled;
-    (void)pa;
-    (void)pd;
-#endif
 }
 
 void ndsPlatformSetTitleFireFrame(s32 atlas_x, s32 atlas_y)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     if (sOriginalSpriteOverlayForegroundBg < 0)
     {
         return;
@@ -2691,13 +2487,9 @@ void ndsPlatformSetTitleFireFrame(s32 atlas_x, s32 atlas_y)
                             sTitleFirePa, 0, 0, sTitleFirePd,
                             atlas_x << 8, atlas_y << 8);
     gNdsTitleFireFrameCount++;
-#else
-    (void)atlas_x;
-    (void)atlas_y;
-#endif
 }
 
-#if NDS_RENDERER_HW_TRIANGLES && NDS_SCENE_MIP_CACHE_LAB
+#if NDS_SCENE_MIP_CACHE_LAB
 static s32 ndsPlatformSceneWallpaperQ16ToQ8(s64 value_q16)
 {
     if (value_q16 < 0)
@@ -2819,7 +2611,7 @@ u32 ndsPlatformSceneWallpaperQueueTransform(s32 origin_x, s32 origin_y,
                                              u32 scale_x_q16,
                                              u32 scale_y_q16)
 {
-#if NDS_RENDERER_HW_TRIANGLES && NDS_SCENE_MIP_CACHE_LAB
+#if NDS_SCENE_MIP_CACHE_LAB
     u32 profile_start = cpuGetTiming();
 
     if (sSceneMipCacheFailed != FALSE)
@@ -2863,7 +2655,7 @@ u32 ndsPlatformSceneWallpaperQueueTransform(s32 origin_x, s32 origin_y,
 
 void ndsPlatformSceneWallpaperConfirmRaster(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES && NDS_SCENE_MIP_CACHE_LAB
+#if NDS_SCENE_MIP_CACHE_LAB
     if ((sSceneMipCapturePending != 0u) &&
         (sSceneMipCacheReady == FALSE) &&
         (sSceneMipCacheFailed == FALSE))
@@ -2873,7 +2665,7 @@ void ndsPlatformSceneWallpaperConfirmRaster(void)
 #endif
 }
 
-#if NDS_RENDERER_HW_TRIANGLES && NDS_SCENE_MIP_CACHE_LAB
+#if NDS_SCENE_MIP_CACHE_LAB
 static void ndsPlatformSceneMipPublishWallpaperHash(const u16 *pixels)
 {
     u32 hash = 2166136261u;
@@ -2945,7 +2737,7 @@ static void ndsPlatformSceneMipFinishCapture(void)
 
 u32 ndsPlatformSceneMipCaptureRequest(u32 mip_index)
 {
-#if NDS_RENDERER_HW_TRIANGLES && NDS_SCENE_MIP_CACHE_LAB
+#if NDS_SCENE_MIP_CACHE_LAB
     if ((sSceneMipCacheReady != FALSE) ||
         (sSceneMipCacheFailed != FALSE))
     {
@@ -2973,7 +2765,7 @@ u32 ndsPlatformSceneMipCaptureRequest(u32 mip_index)
 
 void ndsPlatformSceneMipCacheAbort(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES && NDS_SCENE_MIP_CACHE_LAB
+#if NDS_SCENE_MIP_CACHE_LAB
     if (sSceneMipCacheFailed == FALSE)
     {
         sSceneMipCacheFailed = TRUE;
@@ -2989,7 +2781,7 @@ void ndsPlatformSceneMipCacheAbort(void)
 
 u32 ndsPlatformSceneMipCaptureCompletedCount(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES && NDS_SCENE_MIP_CACHE_LAB
+#if NDS_SCENE_MIP_CACHE_LAB
     return sSceneMipCaptureCompleted;
 #else
     return 0u;
@@ -2998,7 +2790,7 @@ u32 ndsPlatformSceneMipCaptureCompletedCount(void)
 
 u32 ndsPlatformSceneMipCacheReady(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES && NDS_SCENE_MIP_CACHE_LAB
+#if NDS_SCENE_MIP_CACHE_LAB
     return sSceneMipCacheReady;
 #else
     return FALSE;
@@ -3007,7 +2799,7 @@ u32 ndsPlatformSceneMipCacheReady(void)
 
 u32 ndsPlatformSceneMipCacheFailed(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES && NDS_SCENE_MIP_CACHE_LAB
+#if NDS_SCENE_MIP_CACHE_LAB
     return sSceneMipCacheFailed;
 #else
     return FALSE;
@@ -3024,11 +2816,6 @@ void ndsPlatformClearOriginalSpritePreview(void)
     sOriginalSpriteDisplayPreviewWidth = 0;
     sOriginalSpriteDisplayPreviewHeight = 0;
     gNdsOriginalSpritePreviewReady = 0;
-#if !NDS_RENDERER_HW_TRIANGLES
-    memset(sOriginalSpritePreview, 0, sizeof(sOriginalSpritePreview));
-    memset(sOriginalSpriteDisplayPreview, 0,
-           sizeof(sOriginalSpriteDisplayPreview));
-#endif
     sOriginalSpriteDecodeCacheEpoch++;
     if (sOriginalSpriteDecodeCacheEpoch == 0u)
     {
@@ -3038,7 +2825,6 @@ void ndsPlatformClearOriginalSpritePreview(void)
 
 u16 *ndsPlatformBeginOriginalDLPreview(u32 width, u32 height, u32 *out_pitch)
 {
-#if NDS_RENDERER_HW_TRIANGLES
     /* No consumer exists in this configuration, so there is no buffer to hand
      * back. NULL is the caller's already-supported answer, not a new failure
      * mode: ndsOpeningRoomRenderDLPreview sets
@@ -3073,204 +2859,17 @@ u16 *ndsPlatformBeginOriginalDLPreview(u32 width, u32 height, u32 *out_pitch)
     gNdsOriginalDLPreviewCommitCount = 0u;
     gNdsOriginalDLPreviewDrawCount = 0u;
     return NULL;
-#else
-    if ((width == 0) || (height == 0) ||
-        (width > NDS_ORIGINAL_DL_PREVIEW_MAX_WIDTH) ||
-        (height > NDS_ORIGINAL_DL_PREVIEW_MAX_HEIGHT))
-    {
-        return NULL;
-    }
-
-    sOriginalDLPreviewWidth = width;
-    sOriginalDLPreviewHeight = height;
-    sOriginalDLDisplayPreviewWidth = 0;
-    sOriginalDLDisplayPreviewHeight = 0;
-    sOriginalDLPreviewReady = 0;
-    gNdsOriginalDLPreviewReady = 0;
-    gNdsOriginalDLPreviewWidth = width;
-    gNdsOriginalDLPreviewHeight = height;
-    memset(sOriginalDLPreview, 0, sizeof(sOriginalDLPreview));
-
-    if (out_pitch != NULL)
-    {
-        *out_pitch = NDS_ORIGINAL_DL_PREVIEW_MAX_WIDTH;
-    }
-    return sOriginalDLPreview;
-#endif
 }
 
-#if !NDS_RENDERER_HW_TRIANGLES
-static void ndsPlatformBuildOriginalDLDisplayPreview(void)
-{
-    u32 dst_w = sOriginalDLPreviewWidth;
-    u32 dst_h = sOriginalDLPreviewHeight;
-    u32 y;
-
-    if (dst_w > NDS_ORIGINAL_DL_PREVIEW_DISPLAY_WIDTH)
-    {
-        dst_w = NDS_ORIGINAL_DL_PREVIEW_DISPLAY_WIDTH;
-    }
-    if (dst_h > NDS_ORIGINAL_DL_PREVIEW_DISPLAY_HEIGHT)
-    {
-        dst_h = NDS_ORIGINAL_DL_PREVIEW_DISPLAY_HEIGHT;
-    }
-
-    for (y = 0; y < dst_h; y++)
-    {
-        u32 src_y = (y * sOriginalDLPreviewHeight) / dst_h;
-        u16 *dst = &sOriginalDLDisplayPreview[
-            y * NDS_ORIGINAL_DL_PREVIEW_DISPLAY_WIDTH];
-        u32 x;
-
-        for (x = 0; x < dst_w; x++)
-        {
-            u32 src_x = (x * sOriginalDLPreviewWidth) / dst_w;
-            u16 color = sOriginalDLPreview[
-                (src_y * NDS_ORIGINAL_DL_PREVIEW_MAX_WIDTH) + src_x];
-
-            dst[x] = (color != 0) ?
-                color :
-                (u16)(NDS_ORIGINAL_DL_PREVIEW_BG_COLOR | BIT(15));
-        }
-    }
-
-    sOriginalDLDisplayPreviewWidth = dst_w;
-    sOriginalDLDisplayPreviewHeight = dst_h;
-}
-#endif
 
 void ndsPlatformCommitOriginalDLPreview(void)
 {
-#if !NDS_RENDERER_HW_TRIANGLES
-    if ((sOriginalDLPreviewWidth != 0) && (sOriginalDLPreviewHeight != 0))
-    {
-        ndsPlatformBuildOriginalDLDisplayPreview();
-        sOriginalDLPreviewReady = 1;
-        gNdsOriginalDLPreviewReady = 1;
-        gNdsOriginalDLPreviewCommitCount++;
-    }
-#endif
 }
 
 void ndsPlatformClearOriginalDLPreview(void)
 {
-#if !NDS_RENDERER_HW_TRIANGLES
-    sOriginalDLPreviewWidth = 0;
-    sOriginalDLPreviewHeight = 0;
-    sOriginalDLDisplayPreviewWidth = 0;
-    sOriginalDLDisplayPreviewHeight = 0;
-    sOriginalDLPreviewReady = 0;
-    gNdsOriginalDLPreviewReady = 0;
-    gNdsOriginalDLPreviewWidth = 0;
-    gNdsOriginalDLPreviewHeight = 0;
-    memset(sOriginalDLPreview, 0, sizeof(sOriginalDLPreview));
-#endif
 }
 
-#if !NDS_RENDERER_HW_TRIANGLES
-static void ndsPlatformDrawOriginalSpritePreview(void)
-{
-    s32 dst_x;
-    s32 dst_y;
-    s32 dst_w;
-    s32 dst_h;
-    s32 y;
-
-    if ((sOriginalSpritePreviewReady == 0) ||
-        (sOriginalSpritePreviewWidth == 0) ||
-        (sOriginalSpritePreviewHeight == 0))
-    {
-        return;
-    }
-
-    dst_x = (sOriginalSpritePreviewX * SCREEN_WIDTH) / NDS_N64_LOGICAL_WIDTH;
-    dst_y = (sOriginalSpritePreviewY * SCREEN_HEIGHT) / NDS_N64_LOGICAL_HEIGHT;
-    dst_w = (s32)sOriginalSpriteDisplayPreviewWidth;
-    dst_h = (s32)sOriginalSpriteDisplayPreviewHeight;
-
-    if (dst_w <= 0) dst_w = 1;
-    if (dst_h <= 0) dst_h = 1;
-    if ((dst_x + dst_w) > SCREEN_WIDTH)
-    {
-        dst_x = SCREEN_WIDTH - dst_w;
-    }
-    if ((dst_y + dst_h) > SCREEN_HEIGHT)
-    {
-        dst_y = SCREEN_HEIGHT - dst_h;
-    }
-    if (dst_x < 0) dst_x = 0;
-    if (dst_y < 0) dst_y = 0;
-
-    gNdsOriginalSpritePreviewDrawCount++;
-    for (y = 0; y < dst_h; y++)
-    {
-        s32 screen_y = dst_y + y;
-        s32 x;
-
-        if ((screen_y < 0) || (screen_y >= SCREEN_HEIGHT))
-        {
-            continue;
-        }
-
-        for (x = 0; x < dst_w; x++)
-        {
-            s32 screen_x = dst_x + x;
-            u16 color;
-
-            if ((screen_x < 0) || (screen_x >= SCREEN_WIDTH))
-            {
-                continue;
-            }
-
-            color = sOriginalSpriteDisplayPreview[
-                (y * NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH) + x];
-            if (color != 0)
-            {
-                sFramebuffer[(screen_y * SCREEN_WIDTH) + screen_x] = color;
-            }
-        }
-    }
-}
-
-static void ndsPlatformDrawOriginalDLPreview(void)
-{
-    const s32 dst_x = NDS_ORIGINAL_DL_PREVIEW_DISPLAY_X;
-    const s32 dst_y = NDS_ORIGINAL_DL_PREVIEW_DISPLAY_Y;
-    u32 dst_w;
-    u32 dst_h;
-    s32 y;
-
-    if ((gNdsOriginalDLPreviewReady == 0) ||
-        (gNdsOriginalDLPreviewWidth == 0) ||
-        (gNdsOriginalDLPreviewHeight == 0) ||
-        (sOriginalDLDisplayPreviewWidth == 0) ||
-        (sOriginalDLDisplayPreviewHeight == 0))
-    {
-        return;
-    }
-
-    dst_w = sOriginalDLDisplayPreviewWidth;
-    dst_h = sOriginalDLDisplayPreviewHeight;
-
-    gNdsOriginalDLPreviewDrawCount++;
-    ndsPlatformDrawRect(dst_x - 2, dst_y - 2,
-                        (s32)dst_w + 4,
-                        (s32)dst_h + 4,
-                        NDS_ORIGINAL_DL_PREVIEW_BORDER_COLOR);
-    ndsPlatformDrawRect(dst_x - 1, dst_y - 1,
-                        (s32)dst_w + 2,
-                        (s32)dst_h + 2,
-                        NDS_ORIGINAL_DL_PREVIEW_BG_COLOR);
-
-    for (y = 0; y < (s32)dst_h; y++)
-    {
-        memcpy(&sFramebuffer[((dst_y + y) * SCREEN_WIDTH) + dst_x],
-               &sOriginalDLDisplayPreview[
-                   (u32)y * NDS_ORIGINAL_DL_PREVIEW_DISPLAY_WIDTH],
-               dst_w * sizeof(sOriginalDLDisplayPreview[0]));
-    }
-}
-#endif
 
 /* vsniprintf, NOT vsnprintf. All 73 call sites format integers and strings --
  * the HUD's "FPS 24.1" is already assembled from integer tenths, and there is
@@ -3981,8 +3580,7 @@ static void ndsPlatformRenderBattleFpsHud(void)
     /* Row 3 is free in this configuration: row 0 is FPS, row 2 TIME, rows 5/6
      * and 9/10 the two players, rows 11+ the tick HUD. */
     {
-    #if NDS_R2_STRIP_ROUTE && (NDS_TASK56_FIGHTER_PRIMITIVES >= 1) && \
-        (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_RENDERER_HW_TRIANGLES
+#if (NDS_R2_STRIP_ROUTE && (NDS_TASK56_FIGHTER_PRIMITIVES >= 1)) && (NDS_RENDERER_PROFILE_LEVEL < 2)
         static const char *const seam_arm_names[5] = {
             "SEAM 0 shipped     [SELECT]",
             "SEAM 1 cull NONE   [SELECT]",
@@ -4520,11 +4118,6 @@ static u32 ndsPlatformDebugTextFingerprint(void)
 
 void ndsPlatformRenderDebugHud(void)
 {
-#if !NDS_RENDERER_HW_TRIANGLES
-    ndsPlatformDrawOriginalDLPreview();
-    ndsPlatformDrawOriginalSpritePreview();
-    ndsPlatformUpdatePerfCounters();
-#endif
 #if NDS_BATTLE_FPS_HUD_ENABLED && !NDS_DEBUG_HUD
 #if NDS_P2_MENU_SHELL
     if (gNdsMenuShellScreen < NDS_MENU_SHELL_SCREEN_COUNT)
@@ -4719,11 +4312,9 @@ static void ndsPlatformWaitForScheduledVBlank(void)
     sIdlePresentVBlank = earliest;
     ndsR2AnimPrefetchIdle();
     swiWaitForVBlank();
-#if NDS_RENDERER_HW_TRIANGLES
     /* The first retrace after the flush swapped the frame in: the palette
      * rewrites its draws queued land now, before line 214 renders it. */
     ndsRendererCommitDeferredPalettes();
-#endif
     while ((earliest != 0u) &&
            ((s32)(sVBlankCount - earliest) < 0))
     {
@@ -4731,7 +4322,6 @@ static void ndsPlatformWaitForScheduledVBlank(void)
     }
 }
 
-#if NDS_RENDERER_HW_TRIANGLES
 /* What the swap retrace commits for the frame it shows: everything after the
  * wait in EndFrame, run there or, for a led frame, on the present thread. */
 static void ndsPlatformPostSwapCommit(void)
@@ -4767,7 +4357,7 @@ static void ndsPlatformPostSwapCommit(void)
 #endif
     /* A layer written this frame shows with the OBJ planes committed above. */
     ndsPlatformRevealOriginalSpriteOverlay();
-#if NDS_TRANSITION_HOLD && NDS_RENDERER_HW_TRIANGLES
+#if NDS_TRANSITION_HOLD
     /* The next scene's first complete frame replaces the snapshot. */
     if ((sNdsTransitionSnapshotBank != 0u) &&
         (sNdsTransitionHold == NDS_TRANSITION_HOLD_NONE) &&
@@ -4781,7 +4371,6 @@ static void ndsPlatformPostSwapCommit(void)
     ndsVideoBlackoutCommit();
     sTicks++;
 }
-#endif
 
 /* BOUNDED PIPELINING (owner 2026-10-19). A battle frame used to flush, sleep
  * to its swap retrace and only then run the next frame's game logic, so a
@@ -5032,7 +4621,6 @@ void ndsPlatformEndFrame(void)
     u32 phase05_flush_prep_done = FALSE;
     u32 phase05_start = NDS_RENDERER_PHASE05_TICK();
 #endif
-#if NDS_RENDERER_HW_TRIANGLES
     u32 submitted;
 #if NDS_PRESENT_LEAD_LIVE
     u32 lead = FALSE;
@@ -5285,32 +4873,6 @@ void ndsPlatformEndFrame(void)
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsRendererProfilePostVBlankTicks +=
         cpuGetTiming() - profile_start;
-#endif
-#else
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    profile_start = cpuGetTiming();
-#endif
-#if NDS_TICK_HUD
-    tickhud_wait_start = cpuGetTiming();
-#endif
-    ndsPlatformWaitForScheduledVBlank();
-#if NDS_TICK_HUD
-    gNdsTickHudVBlankWaitTicks += cpuGetTiming() - tickhud_wait_start;
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    gNdsRendererProfileVBlankWaitTicks = cpuGetTiming() - profile_start;
-    profile_start = cpuGetTiming();
-#endif
-    ndsLBFadePushHardwareFrame();
-    ndsVideoBlackoutCommit();
-    videoSetMode((sDrawFramebufferIndex == 0) ? MODE_FB0 : MODE_FB1);
-    sDrawFramebufferIndex ^= 1u;
-    sFramebuffer = sFramebuffers[sDrawFramebufferIndex];
-    sTicks++;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    gNdsRendererProfilePostVBlankTicks +=
-        cpuGetTiming() - profile_start;
-#endif
 #endif
 }
 

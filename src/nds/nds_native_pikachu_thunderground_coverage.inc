@@ -8,7 +8,6 @@
  * only how it is cached and uploaded. */
 #include <nds/nds_native_pikachu_thunderground_coverage.h>
 
-#if NDS_RENDERER_HW_TRIANGLES
 
 volatile u32 gNdsThunderGroundCoveragePrepareCount;
 volatile u32 gNdsThunderGroundCoverageBindCount;
@@ -425,4 +424,3 @@ static s32 ndsNativeThunderGroundBindCoverageTexture(
     return TRUE;
 }
 
-#endif

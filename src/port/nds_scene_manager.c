@@ -398,7 +398,7 @@ void ndsSceneManagerExit(void)
 
     ndsPlatformBeginSceneTransition();
 
-#if NDS_P2_STAGE_HYRULE && NDS_RENDERER_HW_TRIANGLES
+#if NDS_P2_STAGE_HYRULE
     /* Taskman finished the frame/VBlank bracket before returning here. Drain
      * renderer-owned DMA before deleting the stage's names/palette references. */
     ndsRendererHardwareReleaseHyruleTextures();
