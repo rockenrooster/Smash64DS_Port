@@ -16,7 +16,7 @@ intent, the board is what is actually next.
 | P2-5 | Items | `p2/P2-5-items.md` | P2-3 partial | Item system, all 20 items + 13 Pokémon, item switch UI |
 | P2-6 | 1P Game | `p2/P2-6-one-player.md` | P2-3, P2-4, P2-5 | Full campaign, bosses/variants, 1P-only stages, bonus stages, score, endings, credits |
 | P2-7 | Modes & meta | `p2/P2-7-modes-meta.md` | P2-1+ | Training, unlocks, records, options, save data, attract, intro cinematic |
-| P3 | Wireless multiplayer | `P3_Multiplayer/Multiplayer.md` | P2 | Out of P2 scope (owner). Multi-card host/join. |
+| P3 | Wireless multiplayer | `P3_Multiplayer/Smash64DS_Multiplayer_Plan.md` | P2 | Out of P2 scope (owner). Multi-card host/join. |
 
 Ordering rationale (owner-ratified 2026-08-17): P2-2 establishes four-fighter
 scaling with existing Mario/Fox content. The campaign consumes the roster,
@@ -126,7 +126,7 @@ The any-four-fighters/any-stage contract and the full release matrix in
 - Intro cinematic deferred to P2-7; P2-1 boots straight to the title (row
   P2-1h deleted the interim splash), then menus.
 - Wireless multiplayer is P3 (multi-card host/join, design already in
-  `docs/P3_Multiplayer/Multiplayer.md`). Determinism discipline (replay
+  `docs/P3_Multiplayer/Smash64DS_Multiplayer_Plan.md`). Determinism discipline (replay
   verifier stays green) is maintained through P2 so lockstep stays cheap.
 - Standing permission to keep `CLAUDE.md`/`AGENTS.md` board and Boundary
   pointers current as phases land (content rules untouched).

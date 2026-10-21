@@ -1,6 +1,11 @@
-# P7 — Unlocks, saves, cheats and fighter balance: implementation plan
+# P7 — Unlocks, saves, cheats and balance: implementation plan
 
-**Revision:** 1 (2026-10-12). **Owner brief:** [P7_Plan.md](P7_Plan.md) (the
+**Revision:** 3 (2026-10-18): Board 4, the 1P campaign, the bonus stages and
+Training for every fighter, from the "1P, Bonus and Training" section the
+owner added to the brief. Revision 2 (2026-10-13): stage balance (S0, S1),
+from the "Stage Balance" section; Final Destination stays the N64 original
+(owner, the same day). Revision 1: 2026-10-12.
+**Owner brief:** [P7_Plan.md](P7_Plan.md) (the
 owner's requirement list; this plan does not replace it). **Live state:**
 [P7_STATUS.md](P7_STATUS.md). **Depends on:** P4 (the eighteen contents and
 selectable Metal Mario). P5 (seven stages) and P6 (Ike, Palutena) are not
@@ -8,8 +13,9 @@ prerequisites: their unlock rows are in the table from the start and stay
 dormant until their content compiles.
 
 P7 adds very little battle code. It is menu, 1P-manager and save work, plus
-five small balance seams. The standing gate still applies to every ROM it
-ships, and P7 must not cost the arena RAM (see "Memory and code placement").
+five small fighter-balance seams and one stage scale. The standing gate still
+applies to every ROM it ships, and P7 must not cost the arena RAM (see
+"Memory and code placement").
 
 ## Product contract
 
@@ -50,6 +56,10 @@ From the brief:
 11. Balance: Wario's jump is 0.75x (done 2026-10-11). Metal Mario as in (4).
     Dedede's neutral A hitbox is 1.25x. Sheik's animations are 1.1x. Bowser's
     walk and run speeds are 0.75x.
+12. Stage balance (added to the brief 2026-10-13): Bowser's Stadium is scaled
+    up 1.5x, because it leaves too little room to fight. Final Destination
+    stays the N64 original in VS and 1P (owner, 2026-10-13, withdrawing the
+    brief's 1.5x line for it).
 
 ### Assumptions (owner may veto any)
 
@@ -96,6 +106,23 @@ From the brief:
 - **A9 Replay digest:** the balance changes are gameplay changes. Each one
   changes the digest once. Record the new baseline then. "Digest identical"
   still means identical between runs of the same build.
+- **A10 Stage scale reading** (S1):
+  - The stage's model and collision scale 1.5x about the main floor's centre
+    (x 0 at the floor's height), so the floor stays at its height and only
+    its width and the walls below it grow. The stage has no platforms (3
+    collision lines), so no jump or platform height changes.
+  - Spawn points, item points, the respawn platform and Bowser's bombs keep
+    their height above the floor; their x scales 1.5x (the bombs move from
+    x +-2990 to +-4485).
+  - The blast zones keep today's distance from the stage (owner,
+    2026-10-13): the side bounds move out by as much as the ledges do, and
+    the top and bottom stay. The camera bounds move out the same way. KO
+    percentages therefore stay near today's. The blast zones are not scaled
+    1.5x.
+  - The select-screen preview zoom is divided by 1.5, so the preview still
+    fits its frame. The wallpaper does not scale.
+  - Like A9, the scale changes the digest once. Record the new baseline
+    then.
 
 ## Repository evidence (2026-10-12)
 
@@ -165,6 +192,13 @@ From the brief:
   `spgame_stock_count` and `spgame_score`; the No Miss Clear bonus bit; and
   the 1P records' `is_spgame_complete`, `bonus1_task_count` and
   `bonus2_task_count`.
+- **Stage data (2026-10-13, from the P5 card).** Bowser's Stadium is a row in
+  `scripts/p5/stages.json`, built by `scripts/p5/stage_generate.py`: Remix's
+  map 0x8CA, geometry 0x8CB and wallpaper 0x8CC (gkind 42). 3 collision
+  lines, 23 map objects; camera bounds 6000/-2100/6000/-6000 and blast bounds
+  8000/-5000/9450/-9450 (top/bottom/right/left). Its bombs sit at x +-2990,
+  y 512, constants ported from Remix's `Hazards.asm` into
+  `src/port/nds_p5_stages.c`.
 
 ## One selection id
 
@@ -213,6 +247,10 @@ id, the fkind and the content. Nothing else hard-codes the numbers.
 
 ## Board 2 — unlock table (approved 2026-10-13)
 
+Banjo & Kazooie's row (24) is retired with him (2026-10-17, P6: his cell is
+the select screen's random chooser). The table's data is
+`scripts/p7/unlocks.json` (U3).
+
 Every condition is met playing an **original** fighter, at an original trigger
 site. "Clear" means the 1P Game is cleared. Difficulty names follow the
 source (Very Easy to Very Hard). "Direct" means a message screen only, with no
@@ -224,8 +262,8 @@ fight. Thresholds marked † are set from a measured run before they ship.
 |---|---|---|---|---|---|
 | 12 | Metal Mario | 1P stage 11 | Beat Metal Mario as Luigi *(owner)* | Direct (A6) | — |
 | 20 | Peach | 1P end | Mario clears on any difficulty with no stock lost (No Miss Clear) *(owner)* | Direct | — |
-| 16 | Bowser | 1P end | Mario or Luigi clears on Normal+, with Peach unlocked | Challenger | Peach's Castle |
-| 19 | Wario | 1P end | Clear with a score of 1,000,000 or more † | Challenger | Mushroom Kingdom |
+| 16 | Bowser | 1P end | Mario or Luigi clears on Normal+, with Peach unlocked | Challenger | Bowser's Stadium |
+| 19 | Wario | 1P end |  Bowser clears on Normal+  | Challenger | Mushroom Kingdom |
 | 27 | Mad Piano | 1P end | Luigi clears on any difficulty | Challenger | Peach's Castle |
 | 13 | Falco | 1P end | Fox clears on Normal+ | Challenger | Sector Z |
 | 15 | Wolf | 1P end | Fox clears on Hard+ with no continues, with Falco unlocked | Challenger | Sector Z |
@@ -234,15 +272,14 @@ fight. Thresholds marked † are set from a measured run before they ship.
 | 17 | Marth | 1P end | Clear on Hard+ with no continues | Challenger | Hyrule Castle |
 | 18 | Roy | 1P end | Clear on Very Hard, with Marth unlocked | Challenger | Planet Zebes |
 | 22 | Lanky Kong | 1P end | Donkey Kong clears on Normal+ | Challenger | Congo Jungle |
-| 24 | Banjo & Kazooie | Bonus 2 end | Donkey Kong boards all 10 platforms | Challenger | Yoshi's Island |
 | 21 | Crash | 1P end | In a cleared run, finish Race to the Finish with 20 s or more left † | Challenger | Congo Jungle |
-| 25 | Sonic | 1P end | Clear in under 10 minutes (the source's Captain rule is 12) | Challenger | Yoshi's Island |
+| 25 | Sonic | 1P end | Clear in under 11 minutes (the source's Captain rule is 12) | Challenger | Yoshi's Island |
 | 26 | King Dedede | 1P end | Kirby clears on Normal+ | Challenger | Dream Land |
 | 28 | Meta Knight | 1P end | Kirby clears on Hard+ with no continues, with Dedede unlocked | Challenger | Dream Land |
 | 29 | Mr. Game & Watch | 1P end | Every original fighter has cleared the 1P Game | Challenger | Duel Zone |
 | 30 | Snake | 1P end | Clear on Normal+ with 1 stock and no continues | Challenger | Saffron City |
 | 31 | Ike (P6) | 1P end | Clear on Very Hard with no continues, with Marth and Roy unlocked | Challenger | Hyrule Castle |
-| 32 | Palutena (P6) | Bonus 1 end | Every original fighter has 10/10 in Break the Targets | Challenger | Dream Land |
+| 32 | Palutena (P6) | Bonus 1 end | Every original fighter has 10/10 in Break the Targets | Challenger | Hyrule Castle |
 
 ### Stages (P5)
 
@@ -261,6 +298,8 @@ the 1P battle. U5's spike measures them like every other challenger stage.
 
 ## Board 3 — balance
 
+### Fighters
+
 Each item ends with: a probe on two heavy stages with the fighter in all four
 slots, CPU recovery still working (lower jumps or gravity can break AI
 recovery), the card updated, and the owner's playtest.
@@ -273,15 +312,57 @@ recovery), the card updated, and the owner's playtest.
 | B4 | Dedede neutral A hitbox 1.25x | `OWNER_HITBOX_SCALES` in the generator: scale the size field of the hitbox commands in his neutral-A motion scripts, with the deviation recorded in the manifest. The generator's round-trip check proves only the size changed. |
 | B5 | Metal Mario (selectable) | Patch a VS copy of his main file's attributes, never the 1P one: gravity x1.25; `dash_speed` and `run_speed` set to his maximum walk speed. Map his Dash, Run and RunBrake motions to the walk-fast animation. The campaign boss, his 1P stage and the campaign digest must be unchanged. If his run clips are no longer needed in VS, they drop from his VS pack. |
 
+### Stages (owner brief, 2026-10-13)
+
+Each item ends with: a four-CPU probe with items on the stage, CPU recovery
+from both ledges, the fighter's on-screen
+height at the widest spread measured before and after (a wider stage pulls
+the camera back on a 256x192 screen), the P5 stage card updated, and the
+owner's playtest.
+
+| # | Item | How |
+|---|---|---|
+| S0 | Owner stage scales | An `owner_scale` field on a stage's row in `scripts/p5/stages.json`. The generator writes the scaled data and records the deviation in the stage's manifest, as `OWNER_ATTRIBUTE_SCALES` does for fighters. Before writing it, inventory every consumer of the stage's coordinates: collision vertices, map objects, the header's camera and blast bounds, the root DObj (scaled there, so joint and material animations follow), the native GX packet, the select-screen preview zoom and stage code constants (Bowser's bombs). A10 says what scales and what keeps its height. One table drives every consumer, and no code hard-codes 1.5. Acceptance: a host round trip proves a scaled stage differs from its source only in the fields A10 names. |
+| S1 | Bowser's Stadium 1.5x | S0's row for gkind 42. The bomb positions in `nds_p5_stages.c` read the stage's scale (x +-4485 on the first make and on respawn), and their height stays y 512. Acceptance: the bombs hover, explode and respawn at the new x; spawns are on the floor; the respawn platform stays in the camera; the preview fits its frame; a fixed move on a fixed victim at the ledge KOs at the same percentage as before (within a few percent, A10); heap low-water and four-CPU P95 are measured on the stage. |
+
+## Board 4 — 1P, bonus stages and Training for every fighter (owner, 2026-10-18)
+
+The owner's brief: every fighter is allowed in the 1P campaign; every
+fighter has bonus stages (Break the Targets, Board the Platforms), Palutena
+and Ike sharing another fighter's pair; Training mode is enabled (it was
+closed on 2026-10-02, `battleship_mn1pmode.c` answers its confirm with the
+denied sound). "Every fighter" means every unlocked one: the select screens
+follow U7's locks, and the SELECT cheat opens them all.
+
+Repository evidence (2026-10-18): the 1P and bonus select screens
+(`battleship_mnplayers1pgame.c`, `battleship_mnplayers1pbonus.c`) are the
+source's twelve cells with its four save locks and no content path; the bonus
+stages are the source's 24 (`nitro:/stages/bonus1_<kind>.gxp`,
+`bonus2_<kind>.gxp`, the vanilla twelve); the Training scene and its menu are
+compiled (`battleship_sc1ptrainingmode.c`, `battleship_mntraining.c`) and the
+scene table already treats it as a battle (`nds_scene_manager.c`). P4's product
+contract named campaign and bonus modes "a later, separately named tier"
+(`docs/P4/New_Characters.md`); this board is that tier.
+
+| # | Item | Acceptance |
+|---|---|---|
+| C0 | **Inventory first (law 7).** Before any code: every per-fighter asset and table the three modes read, for the source's twelve -- the select screens' cells, names and portraits; the 1P stage intro's portraits and names; the continue screen's model; the congratulations still (`mncongra`, one image per fighter); the ending and staff roll; the 1P high scores and the bonus records in `LBBackupData` (twelve wide); each bonus stage's files, collision, map objects (targets, platforms) and the kind-to-stage table; Training's menu, HUD sprites and its fighter and stage selects. For each: what a content or P6 fighter has today, and the gap. | The inventory is in P7_STATUS. Every gap has an owner (C1-C5) or goes to the owner as a question (the congratulations stills, below). |
+| C1 | **1P campaign with every fighter.** The 1P select screen takes the VS grid (P4 cells, Metal Mario, Ike, Palutena) under U7's locks. A content plays the whole campaign as player 1: its battle pack on the 1P arena layout (U5's path, now for the player), its portrait and name in the stage intros, its model on the continue screen, its row in the 1P high scores (C3). The opponents stay the source's: a content plays its parent's opponent list, so the team, giant and metal stages and Master Hand are unchanged. **Spike first, as U5:** heap low-water on every 1P stage with the heaviest contents (Snake, Sonic, Dedede, Palutena, Mr. Game & Watch) as the player, the team stages (Yoshi, Kirby, Fighting Polygon) and Master Hand included. The congratulations stills are per-fighter art (`mncongra.c`, a top and bottom image a fighter): Remix's gallery (`Gallery.asm` `id_table`) shows its own for every Remix content (Roy, Lanky and Mad Piano included), exported as the contents' other art is; EXTRA's three (Meta Knight, Mr. Game & Watch, Snake) and P6's two have none, and for those five the options (the parent's still, a still rendered from the fighter's model, or the source's screen without one) **go to the owner with screenshots first**. | A run from stage 1 to the congratulations screen for one original, the heaviest content, Metal Mario, Ike and Palutena: 0 native failures, 0 motion reads after GO, heap low-water >= 25,600 on every stage, the standing gate on the busiest 1P stages; the owner has picked the stills. |
+| C2 | **Bonus stages for every fighter.** Practice (the bonus select screen takes the VS grid) and in the campaign (its targets and platforms stages pick by the player's kind). A content takes the pair its donor's character row names (Remix `Character.asm` `define_character`, BTT and BTP; EXTRA's for Roy, Lanky, Meta Knight, Mr. Game & Watch and Snake): its own for Falco, Ganondorf, Wario, Bowser, Wolf, Marth, Sonic, Sheik, Dedede, Crash and Peach; the donor's share for Roy (Marth's), Lanky (Donkey Kong's), Meta Knight (Kirby's), Mad Piano, Mr. Game & Watch and Snake (the generic `BTT_STG1` and `BTP_POLY`); Metal Mario keeps Mario's. That is 24 stages beyond the source's 24, exported, converted and pinned as the P5 stages are (files, collision, map objects, the native stage program `bonus1_<id>.gxp` / `bonus2_<id>.gxp`), with kind-to-stage rows beside the source's table, never in it. **Palutena and Ike share another fighter's pair.** Candidates to test (owner picks): Ike -- Marth's pair, the one the donor gives Roy (same series; a vertical up special, Dolphin Slash and Blazer for Aether; a sword's reach), else Link's; Palutena -- Sheik's pair (a teleport recovery, Vanish for Warp), else Peach's. A candidate qualifies when every target can be broken and every platform boarded with the borrowing fighter's moveset (a lab input script per stage, or the owner's playtest), and its time is in the range of the owner's fighter. | Every fighter's two stages load and complete (all targets broken, all platforms boarded) with 0 native failures and heap >= 25,600; a completion records in C3's table and wakes U3's bonus rows; the owner has approved Ike's and Palutena's pairs. |
+| C3 | **Wide 1P and bonus records.** The source keeps 1P high scores and bonus times and completion per fighter, twelve wide. Rows by selection id (40) beside U2's records file, through the same transaction; the source's twelve stay mirrored in `LBBackupData` so its readers are right; Backup Clear's classes clear them as the source's do. The 1P and bonus results screens and the Data screens read them. | Host tests as U2's: a Falco score is Falco's, never Fox's; a reboot holds; a clear clears. The write adds no visible hitch at the results screens. |
+| C4 | **Training mode.** The 1P menu's confirm opens Training again (the denial goes). Its select screen takes the VS grid under U7's locks, its stage select the SSS (P5 stages by U7's stage mask), and its menu (items, the COM's behaviour, speed, view, reset, exit) and HUD are the source's, drawn natively. Training is the source's one man and one COM. Contents, Metal Mario, P6 and Kirby's copies are in it. | Training with one original, the heaviest contents and P6, on every VS and P5 stage, items on: 0 native failures, 0 motion reads after GO, heap >= 25,600; the heaviest content pair's Training on the busiest stages holds the standing gate. |
+| C5 | **Probes and witnesses.** Walk builds: a 1P run per C1 class (start stage knob `NDS_1P_WALK_START_STAGE`), each fighter's two bonus stages (a lab input script per stage, or a completion poke for the records path only), Training per C4. One probe command per item prints its witness block into P7_STATUS. | Every C row's witness is in P7_STATUS. |
+
 ## Order
 
 | Wave | Items | Why this order |
 |---|---|---|
-| A | U1, U3 (no rows yet), U7 for the source's four and the existing contents, U8; B1-B5 (independent) | The first owner ROM: real locks, the cheat to open them, and the balance pass. No 1P battle work. |
+| A | U1, U3 (no rows yet), U7 for the source's four and the existing contents, U8; B1-B5, S0 and S1 (independent) | The first owner ROM: real locks, the cheat to open them, and the balance pass. No 1P battle work. |
 | B | U4, U6, U10; rows Metal Mario, Peach, and the original-site stage rows that need no fight | The chain and the message pipeline, proven without a content in a 1P battle. |
 | C | U5 spike, then U5; every challenger row | The one real engineering risk, isolated. |
 | D | U2, U9 | The records tier, which P4 deferred. The VS Record layout goes to the owner. |
 | E | P5 and P6 rows, as their content lands; the final verification matrix | The rows are already in the table and only wake up. |
+| F | C0, then C4 (no new battle layout), C1 spike then C1, C2, C3, C5 | Board 4 (owner, 2026-10-18). Training first: its battle is the VS one. The 1P layout with a content player is the board's one real risk, isolated by the spike as U5's. C2's bonus rows in U3 wake with it. |
 
 Waves B and D are independent once A lands, so D can run while C's spike
 builds.
@@ -313,10 +394,15 @@ builds.
 - [ ] Cheat set, persisted and erased as U8 says.
 - [ ] Wide VS records and the approved VS Record screen.
 - [ ] B1-B5 in, digest baseline re-recorded once (A9), CPU recovery checked.
+- [ ] S1 in as A10 says, digest baseline re-recorded; Final Destination
+      unchanged from the N64 original in VS and 1P.
 - [ ] Standing gate on the shipping config: four-CPU WORK P95 ≤ 1,120,000,
       ≥ 95% within two VBlanks, 0 native failures, 0 motion reads after GO,
       heap low-water ≥ 25,600. No P3 regression (host and guest with
       different saves).
+- [ ] Board 4: the 1P campaign, both bonus stages and Training for every
+      fighter as C1-C4 say; Ike's and Palutena's bonus pairs and the
+      congratulations stills approved by the owner; C5's witnesses.
 - [ ] Docs: P7_STATUS, the affected P4 cards and BUGS.md rows kept current.
 
 ## Working rules
@@ -330,14 +416,16 @@ builds.
 - Diagnostic ROMs use their own save name. Probes run one at a time (they
   share one DLDI image).
 - Ask the owner only about the Board 2 table, the VS Record layout (U9), the
-  message-sprite sample (U6), and anything that is a very noticeable visual
-  approximation or a contract change.
+  message-sprite sample (U6), Ike's and Palutena's bonus pairs (C2), the
+  contents' congratulations stills (C1), and anything that is a very
+  noticeable visual approximation or a contract change.
 
 ## Top risks
 
-1. **A content in a 1P battle (U5).** The campaign arena layout is not the VS
-   one. The spike decides the in-scene path or the VS-runner fallback before
-   any challenger row is written.
+1. **A content in a 1P battle (U5, C1).** The campaign arena layout is not the
+   VS one. The spike decides the in-scene path or the VS-runner fallback before
+   any challenger row is written; C1's spike repeats it for a content player on
+   every 1P stage, the team stages and Master Hand above all.
 2. **Save write hitch at Results (U2).** The rewrite grows from 4 KB to
    4 KB + 10 KB. Measure it; if it shows, move the records commit to the
    scene's fade.
@@ -347,11 +435,17 @@ builds.
    cheat is the remedy, and the playtest notes must say so.
 5. **Balance knock-ons.** Lower jumps and heavier gravity can break CPU
    recovery. That is why each B row has a CPU recovery check.
+6. **Stage scale knock-ons.** A wider stage pulls the camera back, so
+   fighters draw smaller on the 256x192 screen when they are far apart. The
+   blast zones move with the ledges (A10, owner), so KO distances stay
+   today's; S1 checks a sample KO percentage before and after, and measures
+   the on-screen height.
 
 ## Proposed goal text (for the owner's /goal)
 
 > Implement P7 against docs/P7/P7_Implementation_Plan.md. Done when: every
 > approved unlock row and the source's seven pass the per-unlock checklist;
 > back-to-back challengers work; saves, records, the VS Record screen and the
-> SELECT cheat behave as U1-U9 say; B1-B5 are in; the standing gate holds on
-> the shipping config; no P3 regression; docs current. Guardrails as P4's.
+> SELECT cheat behave as U1-U9 say; B1-B5 and S1 are in; the standing gate
+> holds on the shipping config; no P3 regression; docs current. Guardrails as
+> P4's.

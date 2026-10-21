@@ -2,6 +2,9 @@
 
 **Status:** landed in VS with its bombs (play-p5a, 2026-10-13); owner
 playtest pending.
+**P7:** to be scaled 1.5x, bombs moving to x +-4485 (owner brief,
+2026-10-13; [P7 plan](../../P7/P7_Implementation_Plan.md) S0, S1 and
+assumption A10).
 **Source:** Remix id 0x43 (`Stages.asm`:93); map 0x8CA at offset 0x14
 (`Stages.asm`:348, `stage_file_table` row :4183), geometry 0x8CB, wallpaper
 0x8CC. Port gkind 42. **Wave:** 3, after Dinosaur Land. Parent:

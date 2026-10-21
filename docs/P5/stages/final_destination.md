@@ -1,6 +1,8 @@
 # Final Destination — P5 stage card
 
 **Status:** source inspected (P5.0, 2026-10-12).
+**P7:** keeps the N64 original size in VS and 1P (owner, 2026-10-13; the
+brief's 1.5x line for it was withdrawn).
 **Source:** Remix id 0x10 (`Stages.asm`:38); map 0x10A (GRLastMap, 266) at
 offset 0x00 (Remix `type.FINAL_DESTINATION`, `Stages.asm`:269), geometry
 0x72 (StageLastFile2, 114), wallpaper 0x60. Port gkind 16 (`nGRKindLast`).

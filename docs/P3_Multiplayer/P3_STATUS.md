@@ -323,6 +323,49 @@ The freezes themselves still have no photograph: the report stays on the
 lower screen while a console is stuck and is redrawn every second; a photo of
 it (both consoles if both stop) names the stuck call.
 
+### Recovery from freezes and lag (owner, 2026-10-18)
+
+"Recovering from a freeze or lag in multiplayer is unreliable." In the
+two-console harness (`NDS_NET_LAB_DROP=N`: every 1,200 batches the guest's
+radio goes deaf for N VBlanks, and 600 batches later the host's;
+`gNdsNetLabDropMode` 1 stops the game thread instead, so nothing drains its
+receive ring) every case below N = 600 resumed in step: dropouts of 2, 5 and
+9 s and freezes of 3 and 7 s, two or three one-minute matches each with
+items and two level-9 CPUs, 0 desyncs, 0 aborts, 0 record conflicts,
+2,000-6,100 digest compares per console. Anything longer ended the match:
+a stall abandoned it after 10 s.
+
+- **The stall bound is 30 s** (`NDS_NET_STALL_ABORT_VBLANKS`): a 15 s
+  dropout now resumes (stall high-water 967 VBlanks, match completed, 0
+  desyncs).
+- **Anyone waiting may leave.** While the lockstep waits, "Hold START to
+  leave." shows under the waiting line; holding START 2 s leaves (a guest
+  as before; the host now too, which closes the room, NO CONTEST for
+  everyone). Outside a stall START stays the host's pause.
+- The 40 s dropout of `NDS_NET_LAB_DROP=1` checks the bound: NO CONTEST on
+  both consoles, then the next match.
+
+Hardware freezes longer than 30 s, or a console that never comes back, still
+end the match; the open question for the owner is what the failed
+recoveries showed (a frozen picture, "Connection lost", "Out of sync") and
+for how long.
+
+**Owner hardware, 2026-10-18 (`play-p7f`, channel 13):** the host froze 7 s
+into a two-console match on Peach's Castle, its picture still, no freeze
+report, its music still playing; the guest showed "Waiting for J..." with
+its radio counters (receive ring full 173 times, batch 434). Music means the
+ARM7 ran; no report means the ARM9 stopped where its 1 Hz watchdog (a timer
+IRQ) could not run. The renderer's texture upload (`ndsRendererHardwareReplaceTextureData`
+in `nds_renderer_textures_effects.c`) copied on DMA 0 with `dmaCopyWords(0, ...)`
+while the geometry FIFO's transfer, also DMA 0, could still be running (the
+fighter replay and the stage program leave it for the next writer to wait
+on): the copy rewrote that transfer's registers mid-list, the engine waited
+on a command's missing parameters, and the next CPU write to the full FIFO
+stalls the ARM9 on the bus. The 10/07 report's DMA 0 that "never finished"
+(148 commands queued, busy set) is the same race seen from the DMA wait.
+libnds's own glTexImage2D programs DMA 0 too. The replace copies on DMA 3 now, and the glTexImage2D / glColorTableEXT wraps wait for the FIFO
+transfer first (`02f17b20f59`); a hardware retest decides. Channel 13 stays (owner, 2026-10-18).
+
 ## Testing
 
 - `melonDS-mp`: an export of the owner's melonDS-Accurate `master` (the build
