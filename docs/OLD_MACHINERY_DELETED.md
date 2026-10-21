@@ -32,9 +32,20 @@ them (verify-all.ps1, verify-dev-fast.ps1 and their checks).
 
 `analyze-inline-attribution.py`, `analyze-task34-stage-stream.ps1`, `census-fighter-draw-phases.ps1`, `census-profile-pc-per-region.py`, `census-results-frame-cost.ps1`, `census-stage-run-phases.ps1`, `census-texture-key-rebuild.ps1`, `check-alpha-mux-blast-radius.py`, `check-battle-playable-static-textures.ps1`, `check-fighter-draw-global-texture-state.py`, `check-gbi-packets-fixtures.ps1`, `check-r2-light-stretch.py`, `check-r2-shade-twin.py`, `check_kirby_copyfox_colanim_override.py`, `check_mp_damage_proc_matches_source.py`, `check_video_blackout_seam.py`, `probe-battle-progress.ps1`, `probe-fox-gun-overlay.ps1`, `probe-g1-site-cache-census.ps1`, `probe-kirby-copylink-owner.ps1`, `probe-modelpart-chain.ps1`, `probe-ness-upb-real.ps1`, `probe-ness-upb-shell-real.ps1`, `probe-ness-upb-vfx.ps1`, `probe-purin-owner.ps1`, `probe-results-confetti.ps1`, `probe-samus-owner.ps1`, `probe-shell-four-kind.ps1`, `probe-shield-vfx.ps1`, `probe-trace-symbols.ps1`, `test-parallel-diagnostic-isolation.ps1`, `test_check_build_flag_census.py`, `test_diagnostic_reset_words.py`, `test_frontend_overlay.py`, `test_hyrule_particle_bank.py`, `test_ifcommon_announcements.py`, `test_native_failure_verifiers.py`, `test_native_only_rom.py`, `test_particle_packet.py`, `test_particle_view.py`, `test_replay_digest_compare.py`, `test_samus_roll_runtime_normalizer.py`, `test_samus_roll_spline.py`, `test_staffroll_data_width.py`, `validate-smash64ds-skills.py`, `verify-battle-playable-crowd-envelope-timing.ps1`, `verify-battle-playable-damagefall-recovery.ps1`, `verify-p2-falcon-effects.ps1`, `verify-p2-falcon-entry-native.ps1`, `verify-p2-falcon-modelpart.ps1`, `verify-p2-link-specials.ps1`, `verify-p2-ness-specials.ps1`, `verify-p2-samus-attack-tour.ps1`, `verify-p2-samus-entry-native.ps1`, `verify-p2-samus-matrix.ps1`, `verify-p2-samus-native-owner.ps1`, `verify-p2-samus-shield-roll.ps1`, `verify-p2-samus-state-tour.ps1`, `verify-p2-samus-weapon-transforms.ps1`
 
+## The software-triangle and legacy fighter-executor branches -- `1c8636a6632`
+
+Every live build (play/ship, the gate sweep, the profile build, the walk ROM) compiles
+`NDS_RENDERER_HW_TRIANGLES=1` and `NDS_FIGHTER_LEGACY_EXEC=0`, so the other branches -- the
+CPU triangle rasteriser, fighter hierarchy mode 7, the per-root hardware executor, the raw-path
+tables and every `HW_TRIANGLES=0` path -- were resolved out of 47 hand-written sources (1,948
+lines) by a partial unifdef that only decides conditions naming those two flags (others kept,
+simplified). The Makefile forces both values; the config header still defines them for the
+generated stage and item code (`*.exec.inc`) that tests them. Proof: every config's
+`make -n -B` compile list preprocessed (`-E -P`) before and after, 483 translation units x 4
+configs, byte-identical.
+
 ## Still to do
 
-- The legacy fighter executor (`NDS_FIGHTER_LEGACY_EXEC=1`: hierarchy mode 7, the per-root
-  hardware executor, the CPU triangle rasteriser, the raw-path tables) and the
-  `NDS_RENDERER_HW_TRIANGLES=0` branches. The P1-family targets (battle-playable-*, the results
-  lab) still build with it, so they move to the production path or go first.
+- The P1-family targets (`smash64ds-battle-playable-*`) and the scripts only they use: with the
+  branches above gone they build the production renderer anyway. The results lab
+  (`smash64ds-results-lab-hwtri`) is being checked on the production path.

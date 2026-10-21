@@ -614,3 +614,41 @@ Temple 1,337,408), so the exact candidates go on: hurtbox worlds reused
 across the pose hold's held tick, particle update and draw, clip
 prefetch, the pose parser's precomputed segments, the bind's AObj reset
 walk.
+
+## Palutena's wide list keeps its variants; the mirrors on `s40` (2026-10-20)
+
+Four Palutenas on Dream Land had gone from WORK P95 1,275,456 (`s36`) to
+1,412,608 (`s37`): the evening's look changes (her hair shut at the nape,
+the low's hair whole) took her low list from 3,385 to 3,698 words, past the
+~3,560 at which a wide list's own learn copy still leaves room in its region
+for two variant records. Her records went to 0 and every blink flip
+materialized her list again (52 a 900-frame match against 20; frames of four
+VBlanks 4 -> 24). Her high list (4,588 words, a duel's or a human player's)
+never had room. The learn's copy, hold block and mask live only from
+`ndsFtrLeanWideHoldBegin` to `ndsFtrLeanWideLearn` within one draw, so they
+now sit in one heap buffer a heap generation for every slot (sized to the
+longest list asked for, taken under the spares' floor) and the region keeps
+its words for records (`76531c1a500`): `s39` 1,277,632, 24 materializations,
+8 records; her duel's high list 8 records, 28 -> 10 materializations in 700
+frames. Replay digests identical. A census of every content (four mirrors and
+a duel each, `s40`) finds no other list without records.
+
+The heavy mirrors on `s40` (1,960 frames; target P95 <= 1,250,000 with >= 90%
+within two VBlanks):
+
+| content | Saffron City (g7) | Hyrule Temple (g43) |
+|---|---|---|
+| c4 Bowser | 1,307,904 / 95.3% | 1,243,136 / 96.9% |
+| c5 Marth | 1,196,288 / 97.6% | 1,257,408 / 96.5% |
+| c6 Roy | 1,289,280 / 95.8% | 1,341,056 / 93.4% |
+| c9 Crash | 1,268,096 / 96.4% | 1,315,008 / 95.7% |
+| c13 Sonic | 1,274,048 / 95.2% | 1,268,160 / 96.2% |
+| c16 Meta Knight | 1,312,640 / 95.3% | 1,317,376 / 95.8% |
+| c18 Snake | 1,268,672 / 96.2% | 1,294,272 / 95.9% |
+| c19 Ike | 1,269,888 / 96.6% | 1,347,712 / 92.4% |
+| c20 Palutena | 1,279,040 / 95.6% | 1,379,968 / 89.9% |
+
+0 native failures and 0 lean declines in every run. Lean materializations
+are not what the rest of the tail is made of: with every frame that holds one
+(+-1) set to the median, four Roys on Hyrule Temple would read 1,328,384
+(8% of their top 5% hold one) and four Bowsers on Saffron 1,259,712 (20%).

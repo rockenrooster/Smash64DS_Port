@@ -4,7 +4,12 @@ Owner of the live P6 state. The plan is [P6_PLAN.md](P6_PLAN.md); the cards
 are [characters/ike.md](characters/ike.md) and
 [characters/palutena.md](characters/palutena.md).
 
-**State (2026-10-17):** goal P6-P7 (owner 2026-10-17: P6 is done when the
+**State (2026-10-20): done.** The owner approved Palutena's VFX after the
+p7 playtests ("Palutena VFX approved", 2026-10-20), the last of P6's
+criteria; Ike was rated 5/5 at p6x and Palutena's run start, the last open
+row, was confirmed fixed in play-p7w the same day.
+
+**Earlier (2026-10-17):** goal P6-P7 (owner 2026-10-17: P6 is done when the
 VFX plan is built and approved after the owner's playtest). Palutena's VFX
 plan is built (staff trail, gem glow, overhead light wings and the taunt's
 ring; [card](characters/palutena.md#built-2026-10-17-owner-p6z)) with the
