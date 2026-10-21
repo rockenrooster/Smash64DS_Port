@@ -7076,6 +7076,32 @@ void *ndsRelocLendDeadSpans(u32 asset_id, u32 expect_size, const u32 *lo,
     return loaded->data;
 }
 
+s32 ndsRelocAddressInLentSpan(const void *ptr)
+{
+    const uintptr_t addr = (uintptr_t)ptr;
+    u32 f;
+    u32 i;
+
+    if (sNdsRelocHoleGeneration != gNdsTaskmanHeapGeneration)
+    {
+        return FALSE;
+    }
+    for (f = 0u; f < sNdsRelocHoleFileCount; f++)
+    {
+        const uintptr_t base = (uintptr_t)sNdsRelocHoleData[f];
+
+        for (i = sNdsRelocHoleFirst[f]; i < sNdsRelocHoleFirst[f + 1u]; i++)
+        {
+            if ((addr >= base + sNdsRelocHoleLo[i]) &&
+                (addr < base + sNdsRelocHoleHi[i]))
+            {
+                return TRUE;
+            }
+        }
+    }
+    return FALSE;
+}
+
 s32 ndsRelocPointerRangeInLoadedFiles(const void *ptr, size_t size)
 {
     return (ndsRelocFindLoadedFileContaining(ptr, size) != NULL) ? TRUE :

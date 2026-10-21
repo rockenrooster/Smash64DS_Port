@@ -679,9 +679,13 @@ What changed:
   Once the packet's assets are resident, a VS battle lends them
   (`ndsNativeStageLendDeadSpans`): `syTaskmanMalloc` takes them after the
   loan, best fit; the reloc registry's containment test stops calling an
-  address inside them the file's (`ndsRelocLendDeadSpans`); the draw loop
-  skips a lent layer's source draw (`ndsNativeStageLayerLent`, counted in
-  every build: 0 in every run). Mix A's frame 0 heap 21,468 -> 60,668 B,
+  address inside them the file's (`ndsRelocLendDeadSpans`); a layer's source
+  draw (only on a frame the owner declines) meets the lent list in the stage
+  body, which rejects it unread (`ndsRelocAddressInLentSpan`,
+  `gNdsNativeStageLentLayerSkips`: 0 in every run). (Until 2026-10-21 late the
+  draw loop skipped the layer itself, which grew `gcCaptureCameraGObj` in ITCM
+  by 24 B: every ship build failed to link from `64ba51a3b80`; the lab builds,
+  which evict three ITCM symbols, hid it.) Mix A's frame 0 heap 21,468 -> 60,668 B,
   low-water 14,128 -> 45,904 B, motion cache 8,000 -> 44,288 B, 40,184 of the
   40,224 B served.
 * GX template format 9 appends each segment's slices of the run, patch and

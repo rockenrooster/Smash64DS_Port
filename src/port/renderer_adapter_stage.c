@@ -10315,6 +10315,17 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
     }
 #endif
     loaded = ndsRelocFindLoadedFileContaining(dl, sizeof(*dl));
+    /* A list in a range the battle lent out (a stage layer's, or a content
+     * article's that declined its native draw) is other allocations' bytes
+     * now: rejected unread. */
+    if ((loaded == NULL) && (ndsRelocAddressInLentSpan(dl) != FALSE))
+    {
+        extern volatile u32 gNdsNativeStageLentLayerSkips;
+
+        gNdsNativeStageLentLayerSkips++;
+        ndsStageRejectNativeRender(dobj, dl, NDS_NATIVE_FAILURE_NO_PROGRAM, NULL);
+        return;
+    }
     if ((loaded == NULL) &&
         (ndsFighterDLScanRangeInTaskmanArena(dl, sizeof(*dl)) == FALSE))
     {

@@ -1805,14 +1805,6 @@ gcCaptureCameraGObj(GObj *camera_gobj, sb32 is_tag_mask_or_id)
                     }
 #endif
                     sNdsOpeningRoomCurrentDrawCameraGObj = camera_gobj;
-                    /* A stage layer whose display lists were lent out
-                     * (ndsNativeStageLendDeadSpans) has no source draw. */
-                    if ((native_stage_handled == FALSE) &&
-                        (gNdsNativeStageLayersLent != 0u) &&
-                        (ndsNativeStageLayerLent(current_gobj) != FALSE))
-                    {
-                        native_stage_handled = TRUE;
-                    }
                     if (native_stage_handled == FALSE)
                     {
 #if NDS_TICK_HUD && NDS_P2_MISC_SPLIT

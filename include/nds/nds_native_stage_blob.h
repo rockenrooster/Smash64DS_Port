@@ -104,11 +104,6 @@ void *ndsNativeStageBlobWorkspace(void);
  * and vertex bytes (generated rows) as allocation space; call after the
  * packet's assets are resident. */
 void ndsNativeStageLendDeadSpans(u32 gkind);
-/* Nonzero while this heap generation's stage layers are lent: their source
- * draw would read the lent bytes, so the draw loop skips a layer the native
- * owner did not take (ndsNativeStageLayerLent). */
-extern volatile u32 gNdsNativeStageLayersLent;
-s32 ndsNativeStageLayerLent(const void *gobj);
 
 /* gc-sections drops unreferenced diagnostic globals, hence used. Every one
  * is referenced from the load path. */

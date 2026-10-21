@@ -13629,17 +13629,16 @@ void ndsRendererAdapterNativeStagePreloadAssets(void);
  * from, and once the packet loads nothing reads them: the owner draws the
  * packet, and a layer's DL pointer is only compared by the binding check.
  * Hyrule Temple's are 40,224 B of the 59,856 B file. A VS battle lends them as
- * allocation space (syTaskmanMalloc takes them after the loan), the reloc
- * registry stops calling an address inside them the file's, and the draw loop
- * skips a layer's source draw (ndsNativeStageLayerLent) -- the one path that
- * would interpret them, run only on a frame the owner declines, which the
- * heaviest mixes never showed (0 rejects, 2026-10-21). The rows are
+ * allocation space (syTaskmanMalloc takes them after the loan), and the reloc
+ * registry stops calling an address inside them the file's. A layer's source
+ * draw, run only on a frame the owner declines (the heaviest mixes never
+ * showed one, 2026-10-21), meets a lent list in the stage body, which rejects
+ * it without reading it (renderer_adapter_stage.c, counted in
+ * gNdsNativeStageLentLayerSkips). The rows are
  * scripts/p5/stage_generate.py's dead_spans and, for the vanilla VS stages
  * (8.6-14.6 KB each), scripts/stages/generate_stage_dead_spans.py's. */
 void ndsBattleDeadSpanAdd(void *base, u32 bytes);
-__attribute__((used)) volatile u32 gNdsNativeStageLayersLent;
 __attribute__((used)) volatile u32 gNdsNativeStageLentLayerSkips;
-static u32 sNdsNativeStageLayersLentGeneration;
 
 #if __has_include("nds_stage_dead_spans.generated.h")
 /* The VS stages' rows (scripts/stages/generate_stage_dead_spans.py). */
@@ -13678,7 +13677,6 @@ void ndsNativeStageLendDeadSpans(u32 gkind)
     u32 i;
     u8 *data;
 
-    gNdsNativeStageLayersLent = 0u;
     if ((gSCManagerSceneData.scene_curr != nSCKindVSBattle) ||
         (ndsNativeStageBlobPacket() == NULL))
     {
@@ -13710,30 +13708,6 @@ void ndsNativeStageLendDeadSpans(u32 gkind)
     {
         ndsBattleDeadSpanAdd(data + lo[i], hi[i] - lo[i]);
     }
-    sNdsNativeStageLayersLentGeneration = gNdsTaskmanHeapGeneration;
-    gNdsNativeStageLayersLent = 1u;
-}
-
-s32 ndsNativeStageLayerLent(const void *gobj)
-{
-    u32 i;
-
-    if ((gNdsNativeStageLayersLent == 0u) ||
-        (sNdsNativeStageLayersLentGeneration != gNdsTaskmanHeapGeneration))
-    {
-        return FALSE;
-    }
-    for (i = 0u; i < 4u; i++)
-    {
-        if ((gobj != NULL) && (gobj == gGRCommonLayerGObjs[i]))
-        {
-            /* Counted in every build: a sweep reads 0 here or the lent
-             * bytes cost a frame of stage. */
-            gNdsNativeStageLentLayerSkips++;
-            return TRUE;
-        }
-    }
-    return FALSE;
 }
 
 void mpCollisionInitGroundData(void)

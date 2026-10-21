@@ -144,6 +144,8 @@ s32 ndsRelocGetLoadedAssetView(u32 asset_id, const void **out_data,
  * taken). */
 void *ndsRelocLendDeadSpans(u32 asset_id, u32 expect_size, const u32 *lo,
                             const u32 *hi, u32 count);
+/* TRUE when `ptr` lies in a range this heap generation lent out. */
+s32 ndsRelocAddressInLentSpan(const void *ptr);
 /* CSS residency seams. The first loads one source reloc tree by numeric asset
  * id using syTaskmanMalloc for both payload and reloc metadata, so callers may
  * bracket it with ndsTaskmanSwapMallocRegion. The second retires every reloc
