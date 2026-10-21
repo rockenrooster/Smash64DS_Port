@@ -21,6 +21,14 @@ COMPOSED, CORNER_SOURCE = 10, 11
 # translation, so x, y and w are untouched. One 16-word load a run instead of
 # one a triangle; aux holds the run's triangle count (the depths it consumes).
 NOZ_VIEW_RUN, NOZ_COMPOSED_RUN = 12, 13
+# Format 10 (P7, 2026-10-21): two lossless savings. (1) A composed no-Z run
+# whose triangles need different coordinate shifts takes the translated
+# painter too, its one matrix at the run's largest shift: each corner keeps
+# its own triangle's rounding, scaled into that shift (coordinates()), so it
+# lands where its per-triangle matrix put it (Hyrule Temple: 104 per-triangle
+# loads in 28 runs). (2) VTX_XY / VTX_XZ / VTX_YZ: the geometry engine keeps
+# the last vertex's coordinates, so a corner repeating one of them sends the
+# other two in one word. A run's first corner is always a full VTX_16.
 G_TEXTURE_GEN = 1 << 18
 VS_STAGES = ('castle', 'sector', 'jungle', 'zebes', 'hyrule', 'yoster',
              'dreamland', 'yamabuki', 'inishie')
@@ -55,8 +63,11 @@ RUN = struct.Struct('<6H6h2I')
 PATCH = struct.Struct('<4H')
 SEGMENT = struct.Struct('<6HI')
 PARAMS = {0: 0, 0x10: 1, 0x11: 0, 0x12: 1, 0x15: 0, 0x16: 16, 0x18: 16, 0x19: 12,
-          0x1C: 3, 0x20: 1, 0x22: 1, 0x23: 2, 0x29: 1, 0x2A: 1, 0x2B: 1,
-          0x40: 1, 0x41: 0}
+          0x1C: 3, 0x20: 1, 0x22: 1, 0x23: 2, 0x25: 1, 0x26: 1, 0x27: 1,
+          0x29: 1, 0x2A: 1, 0x2B: 1, 0x40: 1, 0x41: 0}
+VERTEX_OPS = (0x23, 0x25, 0x26, 0x27)
+# The largest shift difference coordinates() keeps exact.
+SHIFT_SPAN_MAX = 4
 # MTX_TRANS(0, 0, -1): one painter depth step nearer (20.12).
 DEPTH_STEP_WORDS = (0, 0, 0xFFFFFFFF)
 
@@ -88,6 +99,17 @@ def run_shift(packet, run, triangle_indices):
     if run.submit_class == stage.SUBMIT_PROJECTED_RANGE_OR_MATRIX and shift == 0:
         raise ValueError('Range run needs an explicit coordinate scale')
     return shift
+
+
+def coordinates(v, shift, matrix_shift):
+    """A corner's VTX_16 coordinates: rounded at its triangle's shift, then
+    scaled to the shift its matrix carries (format 10). The matrix's rows
+    0..2 are the shift-0 rows times 2^matrix_shift, so the corner transforms
+    exactly as round(x / 2^shift) x 16 did under its own shift's matrix."""
+    if not 0 <= matrix_shift - shift <= SHIFT_SPAN_MAX:
+        raise ValueError('Coordinate shift outside its matrix shift span')
+    return [(stage.round_shift_signed(x, shift) * 16) >> (matrix_shift - shift)
+            for x in (v.x, v.y, v.z)]
 
 
 def vertex_colour(policy, rgba):
@@ -262,6 +284,25 @@ def compile_packet(packet, name='dreamland'):
                     emit(op, value)
                     held[op] = value
 
+            last_xyz = None
+
+            def vertex(xyz):
+                # Format 10: a corner repeating one coordinate of the run's
+                # previous corner sends the other two (VTX_XY / XZ / YZ).
+                nonlocal last_xyz
+                if not all(-32768 <= x <= 32767 for x in xyz):
+                    raise ValueError('Vertex does not fit DS VTX16')
+                x, y, z = (c & 0xFFFF for c in xyz)
+                if last_xyz is not None and xyz[2] == last_xyz[2]:
+                    emit(0x25, x | (y << 16))
+                elif last_xyz is not None and xyz[1] == last_xyz[1]:
+                    emit(0x26, x | (z << 16))
+                elif last_xyz is not None and xyz[0] == last_xyz[0]:
+                    emit(0x27, y | (z << 16))
+                else:
+                    emit(0x23, x | (y << 16), z)
+                last_xyz = xyz
+
             # Three consecutive native state words, resolved from the admitted
             # texture objects. No runtime bind/record pass is needed.
             patch(0x29, MATERIAL, run_id)
@@ -272,8 +313,11 @@ def compile_packet(packet, name='dreamland'):
             shifts = [run_shift(packet, run, packet.corners[
                 run.first_corner + t * 3:run.first_corner + t * 3 + 3])
                 for t in range(run.triangle_count)] if is_noz and not cross else []
+            # A composed run's one matrix takes the run's largest shift
+            # (format 10, coordinates()); a static run reloads its world per shift.
+            matrix_shift = max(shifts, default=0)
             if (is_noz and not cross and not policy.geometry_mode & G_TEXTURE_GEN and
-                    (not composed or len(set(shifts)) == 1)):
+                    (not composed or matrix_shift - min(shifts, default=0) <= SHIFT_SPAN_MAX)):
                 # The translated painter (NOZ_VIEW_RUN above).
                 emit(0x10, 0)
                 emit(0x15)  # projection = identity; the depth rides MTX_TRANS
@@ -281,7 +325,7 @@ def compile_packet(packet, name='dreamland'):
                 if composed:
                     emit(0x11)
                     patch(0x16, NOZ_COMPOSED_RUN, run.binding_index,
-                          shifts[0] | (run.triangle_count << 3))
+                          matrix_shift | (run.triangle_count << 3))
                     emit(0x10, 0)
                 else:
                     patch(0x16, NOZ_VIEW_RUN, 0, run.triangle_count)
@@ -308,10 +352,7 @@ def compile_packet(packet, name='dreamland'):
                         color, uv = attributes[index]
                         attribute(0x20, COLOR, index, color)
                         attribute(0x22, UV, index, uv)
-                        xyz = [stage.round_shift_signed(x, shift) * 16 for x in (v.x, v.y, v.z)]
-                        if not all(-32768 <= x <= 32767 for x in xyz):
-                            raise ValueError('Vertex does not fit DS VTX16')
-                        emit(0x23, (xyz[0] & 0xFFFF) | ((xyz[1] & 0xFFFF) << 16), xyz[2] & 0xFFFF)
+                        vertex(coordinates(v, shift, matrix_shift if composed else shift))
                 emit(0x41)
                 emit(0x10, 2)
                 emit(0x12, 1)
@@ -367,11 +408,8 @@ def compile_packet(packet, name='dreamland'):
                     color, uv = attributes[index]
                     attribute(0x20, COLOR, index, color)
                     attribute(0x22, UV, index, uv)
-                    xyz = ([0, 0, 0] if source_corner else
-                           [stage.round_shift_signed(x, vertex_shift) * 16 for x in (v.x, v.y, v.z)])
-                    if not all(-32768 <= x <= 32767 for x in xyz):
-                        raise ValueError('Vertex does not fit DS VTX16')
-                    emit(0x23, (xyz[0] & 0xFFFF) | ((xyz[1] & 0xFFFF) << 16), xyz[2] & 0xFFFF)
+                    vertex([0, 0, 0] if source_corner else
+                           coordinates(v, vertex_shift, vertex_shift))
             emit(0x41)
             emit(0x12, 1)
             runs[run_id] = (first_word, len(words) - first_word, first_patch,
@@ -384,7 +422,7 @@ def compile_packet(packet, name='dreamland'):
     body += struct.pack(f'<{len(words)}I', *words)
     if len(body) > body_max(name):
         raise ValueError('GX template exceeds the stage body heap ceiling')
-    return HEADER.pack(MAGIC, 9, stage.blob_gkind(name), len(runs), len(words),
+    return HEADER.pack(MAGIC, 10, stage.blob_gkind(name), len(runs), len(words),
                        len(patches), (1 << len(packet.segments)) - 1, signature(packet), len(body),
                        stage.fnv1a_bytes(body), baked_mask & 0xFFFFFFFF, baked_mask >> 32) + body +         segment_table(packet, runs, body)
 
@@ -451,12 +489,12 @@ def decode_segments(blob):
 def decode(blob):
     header = HEADER.unpack_from(blob)
     magic, version, _, nr, nw, np, _, _, nb, checksum, _, _ = header
-    if magic != MAGIC or version not in (1, 2, 3, 4, 5, 6, 7, 8, 9) or (
+    if magic != MAGIC or version not in range(1, 11) or (
             len(blob) != HEADER.size + nb if version < 9 else len(blob) < HEADER.size + nb):
         raise ValueError('Invalid GX header/length')
     if version >= 9:
         decode_segments(blob)
-    record = {1: RUN_V1, 2: RUN_V2, 3: RUN, 4: RUN, 5: RUN, 6: RUN, 7: RUN, 8: RUN, 9: RUN}[version]
+    record = {1: RUN_V1, 2: RUN_V2}.get(version, RUN)
     if nb != nr * record.size + np * PATCH.size + nw * 4 or stage.fnv1a_bytes(blob[HEADER.size:HEADER.size + nb]) != checksum:
         raise ValueError('Invalid GX body')
     pos = HEADER.size

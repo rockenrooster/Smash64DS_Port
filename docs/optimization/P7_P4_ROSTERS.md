@@ -881,3 +881,96 @@ in the uncompiled no-Z path (`s51`: heavy roster on Hyrule Temple 1,706,112
 for unlit per-corner-colour entry groups (`s52`: the same GX words, replay
 digests identical, Palutena's mirrors -0.4% to +0.4%): the submit's tail looks
 bound by the geometry engine, not the loop.
+
+## The four mixes on every VS stage (2026-10-21, `s53`)
+
+The worst-case search's mixes of four different contents (fkinds and
+contents: 6,0,7,7 / 4,9,19,14 (A); 1,0,10,1 / 13,10,16,3; 7,1,7,8 / 2,8,18,0;
+7,7,7,0 / 5,6,11,17), each on all sixteen VS stages before format 10. WORK
+P95 (two-VBlank share) and the heap's low-water, 1,960 frames; `*` is over
+the 1,250,000 / 90% stress target:
+
+| stage | A | 13, 10, 16, 3 | 2, 8, 18, 0 | 5, 6, 11, 17 |
+|---|---|---|---|---|
+| Peach's Castle (0) | 1,263,552* (96.4%), 53,536 | 1,184,704 (97.3%), 58,736 | 1,086,528 (99.4%), 47,280 | 1,197,184 (98.5%), 55,616 |
+| Sector Z (1) | 1,409,536* (92.4%), 32,580 | 1,265,088* (97.0%), 66,096 | 1,184,512 (98.2%), 35,520 | 1,278,400* (96.1%), 43,628 |
+| Congo Jungle (2) | 1,467,776* (91.8%), 33,340 | 1,229,888 (97.4%), 52,400 | 1,188,096 (98.5%), 24,372 | 1,217,088 (98.0%), 48,764 |
+| Planet Zebes (3) | 1,333,952* (95.3%), 38,620 | 1,116,032 (98.7%), 58,896 | 1,139,968 (98.4%), 36,768 | 1,149,184 (98.2%), 56,484 |
+| Hyrule Castle (4) | 1,213,376 (97.6%), 54,320 | 1,126,848 (97.9%), 58,352 | 1,063,168 (99.3%), 52,396 | 1,099,712 (98.8%), 59,372 |
+| Yoshi's Island (5) | 1,526,272* (85.9%), 32,044 | 1,283,904* (96.5%), 66,544 | 1,242,944 (97.5%), 31,080 | 1,286,528* (96.5%), 44,452 |
+| Dream Land (6) | 1,257,408* (96.8%), 55,936 | 1,249,920 (97.2%), 60,352 | 1,144,576 (98.9%), 49,620 | 1,196,992 (98.2%), 59,176 |
+| Saffron City (7) | 1,468,288* (87.8%), 29,772 | 1,368,512* (94.3%), 59,024 | 1,260,672* (96.6%), 28,656 | 1,325,376* (94.8%), 42,920 |
+| Mushroom Kingdom (8) | 1,362,368* (94.6%), 55,424 | 1,263,296* (96.8%), 59,552 | 1,170,432 (98.8%), 49,704 | 1,275,904* (96.6%), 59,000 |
+| Meta Crystal (13) | 1,282,112* (96.5%), 49,272 | 1,131,136 (98.3%), 59,600 | 1,119,040 (98.8%), 39,592 | 1,156,480 (98.2%), 52,248 |
+| Duel Zone (14) | 1,166,080 (98.5%), 55,856 | 1,068,224 (98.8%), 65,616 | 1,089,984 (99.2%), 54,004 | 1,078,272 (99.1%), 58,616 |
+| Final Destination (16) | 1,275,520* (96.0%), 47,092 | 1,113,152 (98.3%), 51,024 | 1,044,288 (99.5%), 47,856 | 1,080,576 (99.1%), 45,504 |
+| First Destination (41) | 1,183,872 (97.8%), 61,488 | 1,054,720 (99.0%), 53,456 | 955,456 (99.7%), 59,604 | 1,036,608 (99.4%), 46,328 |
+| Bowser's Stadium (42) | 1,162,816 (98.2%), 60,976 | 1,132,864 (98.2%), 54,304 | 1,075,392 (99.0%), 56,336 | 1,091,200 (98.8%), 62,372 |
+| Hyrule Temple (43) | 1,557,824* (79.6%), 34,780 | 1,345,920* (95.7%), 63,136 | 1,359,104* (89.8%), 33,592 | 1,331,200* (94.7%), 39,212 |
+| Dinosaur Land (44) | 1,445,824* (91.8%), 42,692 | 1,301,184* (96.5%), 60,016 | 1,235,968 (97.2%), 25,956 | 1,303,040* (95.8%), 43,192 |
+
+26 of the 64 runs are over the stress target, mix A on twelve stages (all
+but Hyrule Castle, Duel Zone, First Destination and Bowser's Stadium).
+0 native failures and 0 lean declines in all 64. One run is under the
+25,600 B heap floor: Congo Jungle with Ganondorf, Peach, Snake and Kirby
+(24,372 B; segments 2-3 of its program loaded at frame 0).
+
+## Hyrule Temple's decimation, and GX template format 10 (2026-10-21, `s54`)
+
+The owner allowed Hyrule Temple half-resolution textures and a planar
+decimation of at least 5 degrees to free memory (2026-10-21). The decimation
+first: Blender 5.2's planar decimate (Decimate, DISSOLVE, delimited by
+material and UV, then triangulated) on the stage's native packet, exported
+one object per binding, takes 527 triangles to 526 at 5 degrees, 526 at 10
+and 521 at 20. No coplanar region of a run or of a binding has an interior
+vertex: the mesh is already minimal, and decimation frees nothing. Its
+61,988 B program is per-run state: 177 runs of about three triangles, a
+16-word matrix load each, and 104 more loads, one a triangle, in the 28
+composed no-Z runs whose triangles need different coordinate shifts.
+
+Format 10 (`compile_nds_stage_gx.py`) saves bytes without changing a
+transformed corner:
+
+* A composed no-Z run with mixed shifts takes the translated painter too:
+  one matrix at the run's largest shift. Each corner keeps its own
+  triangle's rounding, scaled into that shift (`coordinates()`): a shift-s
+  matrix's rows 0..2 are the shift-0 rows times 2^s, and a 4.12 coordinate
+  has four bits below the source unit, so for shifts within four of each
+  other x, y and w come out as the per-triangle matrices made them. The
+  painter's depth steps by MTX_TRANS, as on every translated run.
+* VTX_XY / VTX_XZ / VTX_YZ: the geometry engine keeps the previous vertex's
+  coordinates, so a corner repeating one of them sends the other two in one
+  word. A run's first corner is always a full VTX_16 (a run's words are
+  independent of whatever drew before them).
+* The loader accepts version 10 only; its validator takes the three vertex
+  commands (never as a run's first vertex). `test_stage_gx.py` decodes them
+  and checks every corner of the vanilla and 1P programs; the Remix stages'
+  programs pass the same checks.
+
+Hyrule Temple's program 61,988 -> 53,252 B (with the memos 66,136 ->
+57,400 B; segments 33,112 / 21,896 / 11,128 -> 28,688 / 20,100 / 8,612 B).
+The Remix stages' programs are 18.0% smaller (Dinosaur Land 30.2%), the
+vanilla and 1P venues' 10.4% (the VS stages 4.4-12.6%).
+
+On `s54` (against `s53`, the same ROM layout), Hyrule Temple's first segment
+(the 100 no-Z runs, 28,688 B now) fits beside the heavy roster: its frame 0
+heap was 66,612 B, and the segment needs 66,576 B with the keep-free (71,000
+B on `s53`, when only segment 1 fit). WORK P95 (two-VBlank share), p50 and
+the heap's low-water, 1,960 frames:
+
+| Hyrule Temple | `s53` | `s54` |
+|---|---|---|
+| heavy (9, 13, 17, 20) | 1,696,064 (66.2%), p50 1,212,928, 42,572 B, segment 1 | 1,603,008 (80.9%), p50 1,114,048, 35,780 B, segment 0 |
+| mix 4, 9, 19, 14 | 1,557,824 (79.6%), p50 1,136,448, segment 0 | 1,537,984 (81.2%), p50 1,120,512 |
+| mix 13, 10, 16, 3 | 1,345,920 (95.7%), p50 900,992, whole | 1,321,472 (96.1%), p50 880,640 |
+| mix 2, 8, 18, 0 | 1,359,104 (89.8%), p50 1,063,488, segment 0 | 1,345,280 (91.4%), p50 1,045,568 |
+| mix 5, 6, 11, 17 | 1,331,200 (94.7%), p50 975,616, whole | 1,297,920 (96.2%), p50 952,960 |
+
+Where the same segments load, the program alone saves ~20K cycles a frame
+at the median (76 fewer 16-word matrix patches, fewer words to DMA). The
+heavy roster on Congo Jungle (no program fits either way) and the cast on
+Dream Land and Yoshi's Island are unchanged (1,072,768 -> 1,074,240 and
+1,179,136 -> 1,171,968). Replay digests are identical `s53` -> `s54` on all
+ten runs, and four Bowsers on Hyrule Temple (the whole program on both)
+capture pixel-identical frames at 300, 420 and 540. 0 native failures, 0
+lean declines; the ship layout links.

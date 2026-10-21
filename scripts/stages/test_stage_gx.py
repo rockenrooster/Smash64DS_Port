@@ -45,14 +45,14 @@ def test_compiled_corners_patch_coverage_and_stack(name):
                   for t in range(nt)]
         translated = (is_noz and not cross and
                       not packet.policies[run.state_policy].geometry_mode & gx.G_TEXTURE_GEN and
-                      (not composed or len(set(shifts)) == 1))
+                      (not composed or max(shifts) - min(shifts) <= gx.SHIFT_SPAN_MAX))
         assert sum(p[1] == gx.VIEW for p in scope) == (0 if composed or translated else 1)
         assert sum(p[1] in (gx.NOZ, gx.COMPOSED_NOZ) for p in scope) == (nt if is_noz and not cross and not translated else 0)
         # The translated painter: one matrix a run, aux = the depths it takes,
         # and an MTX_TRANS(0, 0, -1) before every later triangle.
         assert [p[2:] for p in scope if p[1] == gx.NOZ_VIEW_RUN] == ([(0, nt)] if translated and not composed else [])
         assert [p[2:] for p in scope if p[1] == gx.NOZ_COMPOSED_RUN] == (
-            [(run.binding_index, shifts[0] | (nt << 3))] if translated and composed else [])
+            [(run.binding_index, max(shifts) | (nt << 3))] if translated and composed else [])
         assert [args for op, args in gx.commands(words[first:first + count]) if op == 0x1C] == (
             [tuple(gx.DEPTH_STEP_WORDS)] * (nt - 1) if translated else [])
         assert sum(p[1] == gx.CORNER_NOZ for p in scope) == (nt*3 if cross and is_noz else 0)
@@ -85,10 +85,17 @@ def test_compiled_corners_patch_coverage_and_stack(name):
             elif op in (0x20, 0x22):
                 baked = attributes[indices[len(actual)]][0 if op == 0x20 else 1]
                 assert args[0] == (0 if baked is None else baked)
-            elif op == 0x23:
+            elif op in gx.VERTEX_OPS:
                 assert depth == 1
-                actual.append(tuple(struct.unpack('<h', struct.pack('<H', n))[0]
-                                    for n in (args[0] & 65535, args[0] >> 16, args[1] & 65535)))
+                a, b = (struct.unpack('<h', struct.pack('<H', n))[0]
+                        for n in (args[0] & 65535, args[0] >> 16))
+                if op == 0x23:
+                    actual.append((a, b, struct.unpack('<h', struct.pack('<H', args[1] & 65535))[0]))
+                else:
+                    # Format 10: the other coordinate is the previous corner's,
+                    # never a run's first corner.
+                    x, y, z = actual[-1]
+                    actual.append({0x25: (a, b, z), 0x26: (a, y, b), 0x27: (x, a, b)}[op])
         # COLOR and TEXCOORD persist in the geometry engine and a run sends a
         # baked value only when it changes: every vertex must still see its
         # own attribute, baked or patched for that very vertex.
@@ -102,7 +109,7 @@ def test_compiled_corners_patch_coverage_and_stack(name):
                 if op in (0x20, 0x22):
                     q = patch_at.get(cursor)
                     held[op] = ('patch', q[2]) if q else ('baked', words[cursor])
-                elif op == 0x23:
+                elif op in gx.VERTEX_OPS:
                     dense = indices[vertex]
                     vertex += 1
                     for a, attr_op in ((0, 0x20), (1, 0x22)):
@@ -120,10 +127,16 @@ def test_compiled_corners_patch_coverage_and_stack(name):
                             packet.corners[run.first_corner:run.first_corner + nt*3])
             for v in vertices:
                 vertex_shift = gx.stage.stage_vertex_coordinate_shift(v) if cross and len({v.matrix_binding for v in vertices}) != 1 else shift
+                # Format 10: a composed translated run's one matrix carries
+                # its largest shift; a corner keeps its triangle's rounding,
+                # scaled exactly into it (at most four bits).
+                matrix_shift = max(shifts) if translated and composed else vertex_shift
+                assert 0 <= matrix_shift - vertex_shift <= 4
                 assert all(record[6+a] <= getattr(v, axis) <= record[9+a] for a, axis in enumerate(('x', 'y', 'z')))
                 # Independent nearest/away-from-zero arithmetic, not the compiler helper.
                 expected.append((0, 0, 0) if source_corner else tuple(
-                    ((-1 if n < 0 else 1) * ((abs(n) + (1 << (vertex_shift-1))) >> vertex_shift) if vertex_shift else n) * 16
+                    (((-1 if n < 0 else 1) * ((abs(n) + (1 << (vertex_shift-1))) >> vertex_shift) if vertex_shift else n) * 16)
+                    >> (matrix_shift - vertex_shift)
                     for n in (v.x, v.y, v.z)))
         assert actual == expected and depth == 0 and mode == 2
         triangles += nt

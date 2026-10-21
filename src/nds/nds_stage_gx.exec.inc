@@ -187,6 +187,10 @@ static sb32 ndsStageGxValidate(const NDSStageGxHeader *h,
                 case 0x20: n = 1u; kind = NDS_STAGE_GX_COLOR; break;
                 case 0x22: n = 1u; kind = NDS_STAGE_GX_UV; break;
                 case 0x23: n = 2u; vertices++; if (depth != 1u) { return FALSE; } break;
+                /* Format 10: VTX_XY / XZ / YZ take the other coordinate from
+                 * the previous vertex, so never a run's first one. */
+                case 0x25: case 0x26: case 0x27: n = 1u;
+                    if (vertices++ == 0u || depth != 1u) { return FALSE; } break;
                 case 0x29: n = 1u; kind = NDS_STAGE_GX_MATERIAL;
                     if (cursor != (u32)r->first_word + 1u) { return FALSE; } break;
                 case 0x2A: n = 1u;
@@ -385,7 +389,7 @@ static sb32 __attribute__((noinline, cold, optimize("Os"))) ndsStageGxLoad(void)
     if (!ndsRelocAssetStreamOpen(&stream, sNdsStageGxPaths[gkind]) ||
         !ndsRelocAssetStreamRead(&stream, 0u, &h, sizeof(h))) { goto failed; }
     reason = 2u;
-    if (h.magic != 0x31505847u || h.version != 9u || h.gkind != gkind ||
+    if (h.magic != 0x31505847u || h.version != 10u || h.gkind != gkind ||
         h.run_count != NDS_NATIVE_STAGE_RUN_COUNT || h.word_count == 0u || h.word_count > 16384u ||
         h.patch_count > 4096u || NDS_NATIVE_STAGE_SEGMENT_COUNT >= 32u ||
         h.segment_mask != (1u << NDS_NATIVE_STAGE_SEGMENT_COUNT) - 1u ||
