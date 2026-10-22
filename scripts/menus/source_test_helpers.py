@@ -44,6 +44,12 @@ SPLIT_SOURCES = {
         "nds_menu_shell_css_cursor.c",
         "nds_menu_shell_css_modes.c",
     )),
+    # A translation unit of its own includes its slices last.
+    "nds/nds_ifcommon_oam.c": ("nds/nds_ifcommon_oam.c", (
+        "nds_ifcommon_oam_status.c",
+        "nds_ifcommon_oam_sobjs.c",
+        "nds_ifcommon_oam_pause.c",
+    )),
     "port/reloc_backend_assets.c": ("port/reloc_backend.c", (
         "reloc_backend_symbol_tables.c",
         "reloc_backend_asset_ids.c",
@@ -68,6 +74,10 @@ def slice_paths(path):
         return [path]
     includes = re.findall(r'^#include "([^"]+)"',
                           (src / parent).read_text(encoding="utf-8"), re.M)
+    if parent == name:
+        if tuple(includes[-len(slices):]) != slices:
+            raise AssertionError(f"{name} no longer includes its slices last, in order")
+        return [path] + [path.with_name(s) for s in slices]
     at = includes.index(path.name)
     if tuple(includes[at + 1:at + 1 + len(slices)]) != slices:
         raise AssertionError(f"{parent} no longer includes the slices of "

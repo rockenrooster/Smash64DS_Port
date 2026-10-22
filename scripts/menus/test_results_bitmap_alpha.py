@@ -23,6 +23,8 @@ import re
 import sys
 from pathlib import Path
 
+from source_test_helpers import source as read_split
+
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "src" / "nds" / "nds_results_oam.c"
 SIBLING = ROOT / "src" / "nds" / "nds_ifcommon_oam.c"
@@ -99,7 +101,7 @@ def main() -> int:
           "the zero-alpha counter is not incremented where the emit happens")
 
     # The contrast proof: the sibling owner has always done this correctly.
-    sibling = SIBLING.read_text(encoding="utf-8")
+    sibling = read_split(SIBLING)
     check("SpriteColorFormat_Bmp) ?" in sibling.replace("\n", " ").replace(
               "  ", " ") or "tile->color_format == SpriteColorFormat_Bmp"
           in sibling,

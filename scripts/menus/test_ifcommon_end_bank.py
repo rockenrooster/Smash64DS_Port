@@ -3,13 +3,13 @@ import re
 import shutil
 import subprocess
 from pathlib import Path
-from source_test_helpers import function, braced
+from source_test_helpers import function, braced, source as read_split
 
 ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_actual_end_bank_preserves_go_sparks_and_tags_and_retries(tmp_path):
-    source = (ROOT / 'src/nds/nds_ifcommon_oam.c').read_text()
+    source = read_split(ROOT / 'src/nds/nds_ifcommon_oam.c')
     defines = '\n'.join(re.findall(r'^#define NDS_IFCOMMON_(?:ASSET_COUNT|MAX_TILES|OBJ_VRAM_BYTES|GAME_STATUS_SIZE|END_FIRST|\w+_BANK_\w+|ANNOUNCE_\w+|USED_BYTES)\b[^\n]*', source, re.M))
     # Keep full macro names: the noncapturing expression above returns lines.
     types = '\n'.join(re.search(r'typedef struct '+n+r'\b.*?\} '+n+r';', source, re.S)[0]

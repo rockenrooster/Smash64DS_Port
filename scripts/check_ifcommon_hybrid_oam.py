@@ -1396,7 +1396,9 @@ def verify(
     kernel_threshold: int = GO_KERNEL_THRESHOLD_DEFAULT,
     export_sources: bool = False,
 ) -> None:
-    source = (root / "src/nds/nds_ifcommon_oam.c").read_text()
+    sys.path.insert(0, str(root / 'scripts/menus'))
+    from source_test_helpers import source as read_split
+    source = read_split(root / "src/nds/nds_ifcommon_oam.c")
     # The nine ending letters have their own source/phase/VRAM checker.
     assets = parse_manifest(source)[:16]
     if any(not assets[index]["tiles"] for index in range(3)):
