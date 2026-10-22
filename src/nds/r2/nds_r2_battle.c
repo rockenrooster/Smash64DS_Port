@@ -33,8 +33,7 @@
 
 /* This file is harness-specific by construction -- the folded constants below
  * are only constant under battle_playable -- so it binds to the canonical scene
- * harness config rather than inheriting the macros by luck.
- * check-harness-registry.ps1 enforces this pairing. */
+ * harness config rather than inheriting the macros by luck. */
 #include "nds_scene_harness_config.h"
 
 #include <nds/nds_scene_harness.h>

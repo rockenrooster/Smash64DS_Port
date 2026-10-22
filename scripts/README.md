@@ -8,11 +8,10 @@ is specialised, and the directory now says which is which.
 
 **The pipeline spine stays flat. Content moves into area folders.**
 
-- **Flat (spine):** everything typed by name or enumerated by the harness
-  registry — `verify-*`, `check-*`, `capture-*`, `compare-*`, `census-*`,
-  `benchmark-*`, `debug-*`, `sample-*`, `soak-*`, `clean-generated.ps1`,
-  `New-Smash64DSSnapshot.ps1`, `suggest-verification.ps1` — plus `lib/`
-  (dot-sourced PowerShell helpers), `fixtures/` (checker inputs), and
+- **Flat (spine):** everything typed by name — `verify-*`, `check-*`,
+  `capture-*`, `compare-*`, `census-*`, `benchmark-*`, `debug-*`, `sample-*`,
+  `soak-*`, `clean-generated.ps1` — plus `lib/` (dot-sourced PowerShell
+  helpers), `fixtures/` (checker inputs), and
   `generated/` (script outputs). These are infrastructure, not content; they
   stay at the top level permanently.
 - **Area folders (content):** generators, compilers, oracles, and their host

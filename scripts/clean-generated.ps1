@@ -3,60 +3,13 @@ param(
     [switch]$Force,
     [switch]$KeepArtifacts,
     [switch]$KeepNormalBuild,
-    [switch]$KeepLatestBuilds,
     [switch]$KeepPublishedBuilds
 )
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 if ($KeepPublishedBuilds) {
     $KeepNormalBuild = $true
-    $KeepLatestBuilds = $true
-}
-$latestKeepPaths = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-$latestKeepLabels = [System.Collections.Generic.List[string]]::new()
-function Resolve-BuildPath {
-    param([string]$Build)
-    if (-not $Build) { return $null }
-    if ([System.IO.Path]::IsPathRooted($Build)) { return $Build }
-    if (($Build -like 'build*') -and (-not $Build.Contains('\')) -and (-not $Build.Contains('/'))) {
-        return (Join-Path (Join-Path $root 'builds') $Build)
-    }
-    return (Join-Path $root $Build)
-}
-function Add-LatestKeepPath {
-    param(
-        [string]$Path,
-        [string]$Label
-    )
-    if (-not $Path) { return }
-    $full = [System.IO.Path]::GetFullPath($Path)
-    if ($latestKeepPaths.Add($full)) {
-        $latestKeepLabels.Add(("{0} -> {1}" -f $Label, $full)) | Out-Null
-    }
-}
-if ($KeepLatestBuilds) {
-    $registryPath = Join-Path $PSScriptRoot 'lib\harness-registry.ps1'
-    if (-not (Test-Path -LiteralPath $registryPath)) {
-        throw "Cannot resolve -KeepLatestBuilds because registry is missing: $registryPath"
-    }
-    . $registryPath
-    $latestPlan = @(Get-Smash64DSVerifyPlan -Profile Boundary)
-    if ($latestPlan.Count -eq 0) {
-        throw 'Cannot resolve -KeepLatestBuilds because Boundary profile returned no entries.'
-    }
-    foreach ($entry in $latestPlan) {
-        if ($entry.Build) {
-            Add-LatestKeepPath -Path (Resolve-BuildPath $entry.Build) -Label ("{0} build" -f $entry.Name)
-        }
-        if ($entry.Target) {
-            foreach ($ext in @('.elf', '.nds', '.ds.gba', '.map', '.sym')) {
-                Add-LatestKeepPath -Path (Join-Path $root ("{0}{1}" -f $entry.Target, $ext)) -Label ("{0} output" -f $entry.Name)
-            }
-        }
-    }
-}
-if ($KeepPublishedBuilds) {
-    Write-Output 'KeepPublishedBuilds preserves only the normal launch build and Boundary battle build.'
+    Write-Output 'KeepPublishedBuilds preserves the normal launch build.'
 }
 function Test-InRoot {
     param([string]$Path)
@@ -83,9 +36,6 @@ function Add-Candidate {
     if (-not (Test-Path -LiteralPath $Path)) { return }
     if (-not (Test-InRoot -Path $Path)) { throw "Refusing to clean path outside repo: $Path" }
     $full = [System.IO.Path]::GetFullPath($Path)
-    if ($KeepLatestBuilds -and $latestKeepPaths.Contains($full)) {
-        return
-    }
     $name = Split-Path -Leaf $Path
     if ($KeepNormalBuild) {
         $normalPreserve = @('build', 'smash64ds.elf', 'smash64ds.nds', 'smash64ds.ds.gba')
@@ -102,12 +52,6 @@ function Add-Candidate {
     }) | Out-Null
 }
 $candidates = [System.Collections.Generic.List[object]]::new()
-if ($KeepLatestBuilds) {
-    Write-Output 'KeepLatestBuilds resolved from Boundary profile:'
-    foreach ($label in $latestKeepLabels) {
-        Write-Output ("  {0}" -f $label)
-    }
-}
 Add-Candidate -Candidates $candidates -Path (Join-Path $root 'build') -Reason 'normal build directory'
 Get-ChildItem -LiteralPath $root -Force -Directory -Filter 'build-*' | ForEach-Object {
     Add-Candidate -Candidates $candidates -Path $_.FullName -Reason 'harness build directory'

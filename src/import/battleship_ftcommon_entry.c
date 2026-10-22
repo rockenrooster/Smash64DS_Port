@@ -183,7 +183,7 @@ static void ndsFTCommonEntryDokanPrepare(s32 fkind)
 
 /* NDS_PARTIAL_IMPORT: decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonentry.c
  *
- * Registered in scripts/check-architecture.ps1. Importing the TU whole would
+ * A partial import. Importing the TU whole would
  * make every unlanded fighter's Appear status enums (nFTSamus*, nFTLink*,
  * nFTYoshi*, nFTKirby*, nFTPikachu*, nFTPurin*, nFTNess*, nFTBoss*) and nine
  * entry-effect makers link requirements of a build that has none of them, and

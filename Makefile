@@ -3350,7 +3350,7 @@ NDS_DEV_SCENE_HARNESS_ID := 164
 # taken here are per-frame Results cost, so it must not be size-optimized.
 CFLAGS += -O2
 else
-$(error Unknown NDS_DEV_SCENE_HARNESS "$(NDS_DEV_SCENE_HARNESS)"; use normal, a verifier harness name from scripts/lib/harness-registry.ps1, or a lab-only harness named in this block such as results_playable)
+$(error Unknown NDS_DEV_SCENE_HARNESS "$(NDS_DEV_SCENE_HARNESS)"; use normal or a harness named in this block)
 endif
 
 

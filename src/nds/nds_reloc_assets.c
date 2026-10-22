@@ -2598,9 +2598,8 @@ s32 ndsRelocAssetLoadIntoZeroedHeap(u32 asset_id, void *dst, u32 align, size_t *
  *
  * The counters are deliberately bumped exactly as the two-call sequence bumped
  * them -- one header, one payload -- because gNdsRelocAssetHeaderReadCount is
- * read as a per-event delta by verify-battle-playable-down-air-stall.ps1, and
- * a load that stopped counting its header would look like a load that never
- * happened. */
+ * read as a per-event delta, and a load that stopped counting its header
+ * would look like a load that never happened. */
 /* Raw NitroFS range read. No asset-table entry, no o2r header, no file id --
  * slice 1's resident figatree pack is the only such payload the animation path
  * reads, and it is streamed in chunks because the seam's budget is one BGM

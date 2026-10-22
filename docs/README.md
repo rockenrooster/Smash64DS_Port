@@ -26,8 +26,7 @@ in the existing batch receipt rather than reapplying unchanged patches.
 | `HANDOFF.md` | Short restart route and immediate package pointer; no second live measurement table |
 | `P2_PLAN.md` + `p2/` | Seven phases, shared dependencies, bounded outcome packages and source-backed unit contracts |
 | `p2/native-optimization/` | Static P2-2p8 native-runtime implementation breakdown; the execution board remains the only live queue |
-| `VERIFYING.md` | Environment/build, focused checks, A/B, registry use, capture and publish/checkpoint procedure |
-| `HARNESSES.md` | Registry authority and harness naming; actual membership comes from the registry |
+| `VERIFYING.md` | Environment/build, the proof a batch needs, focused checks, A/B, runner isolation, capture and publication |
 | `BUGS.md` | Owner-reported playtest wording/order; short permitted annotations only |
 | `BUG_FIXING_PROCESS.md` | Bug diagnosis, native-only rule, observable proof and closure |
 | `p2/BUG_NOTES.md` | Append-only investigation evidence, eliminated hypotheses and scoped measurements |

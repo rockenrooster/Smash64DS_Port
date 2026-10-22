@@ -1137,18 +1137,6 @@ def admit(root: Path, key: str, dry: bool) -> None:
     OPN, OPU, OPL = SPECS[_oak]["Name"], SPECS[_oak]["token"], _oak
     OPF = f"NDS_P2_{OPU}"
 
-    # ---- architecture allowlist -------------------------------------------
-    # Every selectable fighter brings a decomp status header under
-    # include/ft/ftchar/, and check-architecture.ps1 forbids decomp includes
-    # outside src/import unless the file is listed. Variants share their base
-    # kind's status table verbatim (ftmain.c:78-107) and bring no decomp status
-    # header of their own, so they need no allowlist row.
-    if not is_variant:
-        T.replace("scripts/check-architecture.ps1",
-                  f"    'include/ft/ftchar/ft{PL}/ft{PL}status.h',\n",
-                  f"    'include/ft/ftchar/ft{PL}/ft{PL}status.h',\n"
-                  f"    'include/ft/ftchar/ft{L}/ft{L}status.h',\n")
-
     # ---- Makefile ----------------------------------------------------------
     T.replace("Makefile", f"NDS_P2_{PU} ?= 0\n",
               f"NDS_P2_{PU} ?= 0\n"

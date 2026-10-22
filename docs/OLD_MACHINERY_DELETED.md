@@ -222,9 +222,34 @@ configs. Tools that edit or scan the backend read it whole: `stage_reloc_file.py
 to its own file), `mf_corpus.py` and `audit_mn_screen_coverage.py` through `source()`. The defines
 `generate_fighter_production_manifest.py` checks during make stay in the first file.
 
+## The P1/P2 verifier framework -- Phase E of the readability pass (2026-10-22)
+
+Dormant since September, owner OK: 33 scripts go. The drivers (`verify-all.ps1`,
+`verify-dev-fast.ps1`, `verify-boundary.ps1`, `verify-current.ps1`), their checks of the tree
+(`check-docs.ps1`, `check-architecture.ps1`, `check-harness-registry.ps1` and the registry
+`lib/harness-registry.ps1`), the nine `verify-battle-playable-*` verifiers, and what only they
+ran: `assert-melonds-horizontal-detail.ps1`, `check-generator-staleness.ps1`,
+`check-mn-screen-coverage.ps1` (a wrapper of `test_mn_screen_coverage.py`'s audit),
+`check-one-minute-match-verifier.ps1`, the four `check-p2-*` source checks and
+`check_p2_link_weapon_attributes.py`, `check-published-roms.ps1`, the renderer parity corpus
+(its check, microbench, generator and generated header), `check_preview_pack_owner_sizes.py` and
+the obsolete `lib/snapshot-hygiene.ps1`. Found by a reference graph: a script went when every
+script, Makefile rule, source or live doc that names it was itself going.
+
+Kept, because they check live code and pass: `check-fighter-matrix-angle-index.ps1`,
+`check-fighter-production-manifest.ps1`, `check-mp-topology-fixtures.ps1`,
+`check-r2-collision-mtx.ps1`, `check-pupupu-water-aot.ps1`,
+`check-toolchain-path-normalization.ps1` and `check-untracked-dependencies.py`. Kept but
+failing, for H-2 to fix or retire: `check-mp-floor-crossing-fixtures.ps1` (its kernel was
+renamed) and `check-ft-hitstatus-fixtures.ps1` (Fox's animation token table). The generators the
+staleness sweep named stay. `make clean-generated` loses `-KeepLatestBuilds` (the registry's
+Boundary plan); `admit_fighter.py` no longer patches the architecture allowlist.
+`docs/VERIFYING.md` keeps its live procedure; `docs/HARNESSES.md` goes.
+
 ## Still to do
 
-- The P1/P2 verifier framework those targets fed, dormant since September: `verify-all.ps1`,
-  `verify-dev-fast.ps1`, `check-docs.ps1`, `check-architecture.ps1`, the harness registry and its
-  check, `check-gbi-decode-fixtures.ps1`, the `verify-battle-playable-*` verifiers and the probes
-  only they run; `docs/VERIFYING.md` and `docs/HARNESSES.md` with them.
+- `check-gbi-decode-fixtures.ps1`, the framework's last file: it reads the deleted verifiers'
+  text and fails, but the owner's worktree holds it modified, so it stays until that is clean.
+- The legacy fighter executor's last trace: its code went in `1c8636a6632`; the
+  `NDS_FIGHTER_LEGACY_EXEC` knob (Makefile override, config header row, bench line) and the two
+  constant `#error` guards it left in `nds_renderer.h` go with the Makefile's dead knobs (G).
