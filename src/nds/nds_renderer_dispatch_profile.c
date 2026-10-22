@@ -212,34 +212,6 @@ void ndsRendererProfileFrameBegin(void)
 {
     gNdsRendererIFCommonCloudQueuedCount = 0u;
     gNdsRendererIFCommonCloudEmittedCount = 0u;
-#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
-    if (gNdsRendererBenchmarkSinkCalibrationWords == 0u)
-    {
-        u32 calibration_start = cpuGetTiming();
-        u32 i;
-
-        for (i = 0u; i < NDS_RENDERER_BENCHMARK_SINK_WORDS; i++)
-        {
-            ndsRendererBenchmarkSinkWord(i);
-        }
-        gNdsRendererBenchmarkSinkCalibrationTicks =
-            cpuGetTiming() - calibration_start;
-        gNdsRendererBenchmarkSinkCalibrationWords =
-            NDS_RENDERER_BENCHMARK_SINK_WORDS;
-    }
-    sNdsRendererBenchmarkSinkCursor = 0u;
-    sNdsRendererBenchmarkSinkWordCount = 0u;
-    sNdsRendererBenchmarkSinkLastOwnerCursor = 0u;
-    sNdsRendererBenchmarkSinkHashA = 2166136261u;
-    sNdsRendererBenchmarkSinkHashB = 0x9e3779b9u;
-    sNdsRendererBenchmarkSegment0SinkWords = 0u;
-    sNdsRendererBenchmarkSegment0SinkHashA = 2166136261u;
-    sNdsRendererBenchmarkSegment0SinkHashB = 0x9e3779b9u;
-    sNdsRendererBenchmarkSegment0SinkActive = FALSE;
-    sNdsRendererBenchmarkSegment0SinkArmFaults = 0u;
-    memset(sNdsRendererBenchmarkSinkOwnerWords, 0,
-           sizeof(sNdsRendererBenchmarkSinkOwnerWords));
-#endif
     gNdsRendererProfileLevel = NDS_RENDERER_PROFILE_LEVEL;
     gNdsRendererProfileNearPlaneTriangleRejectCount = 0u;
     gNdsRendererProfileRawCurrentCandidateCount = 0u;
@@ -253,13 +225,6 @@ void ndsRendererProfileFrameBegin(void)
     gNdsRendererProfileMatrixPosTestMatrixWordSamples = 0u;
     gNdsRendererProfileMatrixPosTestDropped = 0u;
     ndsRendererProfileResetSubmitSummary();
-#if 0 != NDS_RENDERER_BENCHMARK_NONE
-    sNdsRendererBenchmarkTriangleCount = 0u;
-#endif
-#if 0 == NDS_RENDERER_BENCHMARK_WARM_NO_UPLOAD
-    sNdsRendererBenchmarkSuppressedTextureUploads = 0u;
-    sNdsRendererBenchmarkSuppressedTextureUploadBytes = 0u;
-#endif
     sNdsRendererFastRunCount = 0u;
     sNdsRendererFastTriangleCount = 0u;
     memset(sNdsRendererFastOwnerTriangleCount, 0,
@@ -282,35 +247,6 @@ void ndsRendererProfileFrameBegin(void)
 
 void ndsRendererProfileFramePublish(void)
 {
-#if 0 != NDS_RENDERER_BENCHMARK_NONE
-    gNdsRendererBenchmarkTriangleCount =
-        sNdsRendererBenchmarkTriangleCount;
-#endif
-#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
-    gNdsRendererBenchmarkSinkCursor =
-        sNdsRendererBenchmarkSinkCursor;
-    gNdsRendererBenchmarkSinkWordCount =
-        sNdsRendererBenchmarkSinkWordCount;
-    gNdsRendererBenchmarkSinkHashA = sNdsRendererBenchmarkSinkHashA;
-    gNdsRendererBenchmarkSinkHashB = sNdsRendererBenchmarkSinkHashB;
-    gNdsRendererBenchmarkSegment0SinkWords =
-        sNdsRendererBenchmarkSegment0SinkWords;
-    gNdsRendererBenchmarkSegment0SinkHashA =
-        sNdsRendererBenchmarkSegment0SinkHashA;
-    gNdsRendererBenchmarkSegment0SinkHashB =
-        sNdsRendererBenchmarkSegment0SinkHashB;
-    gNdsRendererBenchmarkSegment0SinkArmFaults =
-        sNdsRendererBenchmarkSegment0SinkArmFaults;
-    memcpy((void *)gNdsRendererBenchmarkSinkOwnerWords,
-           sNdsRendererBenchmarkSinkOwnerWords,
-           sizeof(gNdsRendererBenchmarkSinkOwnerWords));
-#endif
-#if 0 == NDS_RENDERER_BENCHMARK_WARM_NO_UPLOAD
-    gNdsRendererBenchmarkSuppressedTextureUploads =
-        sNdsRendererBenchmarkSuppressedTextureUploads;
-    gNdsRendererBenchmarkSuppressedTextureUploadBytes =
-        sNdsRendererBenchmarkSuppressedTextureUploadBytes;
-#endif
     gNdsRendererFastRunCount = sNdsRendererFastRunCount;
     gNdsRendererFastTriangleCount = sNdsRendererFastTriangleCount;
     memcpy((void *)gNdsRendererFastOwnerTriangleCount,
@@ -424,13 +360,11 @@ u32 ndsRendererHardwareConsumeSubmittedFrame(void)
     sNdsRendererHardwareMatrixLoaded = FALSE;
     sNdsRendererHardwareMatrixMode = NDS_RENDERER_HW_MATRIX_MODE_NONE;
     sNdsRendererHardwareMatrixGeneration = 0u;
-#if 0 == NDS_RENDERER_BENCHMARK_NONE
     /* Tint tiles the frame just asked for are created HERE: the frame's batch
      * is closed and no draw walk is running, and the tracker reset right below
      * cleans up after the upload's own bind. See
      * ndsRendererR2FighterTintLookup for why never inside a walk. */
     ndsRendererHardwareServiceFighterTintTiles();
-#endif
     sNdsRendererHardwareBoundTextureName = 0;
     sNdsRendererHardwareActiveTextureEntry = NULL;
     ndsRendererHardwareInvalidateGXState(NDS_RENDERER_GX_STATE_ALL);

@@ -2554,7 +2554,7 @@ static void ndsFtrLeanFrameEnd(void)
     }
     ndsFtrLeanCountersPublish();
 #endif
-#if NDS_VRAM_CENSUS_LIVE && (0 == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_VRAM_CENSUS_LIVE
     ndsVramCensusFrame();   /* slice 2a lab census; no-op unless enabled */
 #endif
 }

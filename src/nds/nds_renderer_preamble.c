@@ -172,391 +172,6 @@ const LookAt *ndsRendererAdapterCurrentLookAt(void);
 #include <nds.h>
 #include <nds/arm9/postest.h>
 
-#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
-#define NDS_RENDERER_BENCHMARK_SINK_WORDS 1024u
-#define NDS_RENDERER_BENCHMARK_SINK_MASK \
-    (NDS_RENDERER_BENCHMARK_SINK_WORDS - 1u)
-#define NDS_RENDERER_BENCHMARK_SEGMENT0_TRACE_WORDS 3072u
-#define NDS_RENDERER_BENCHMARK_SEGMENT0_RUN_COUNT 26u
-
-u32 gNdsRendererBenchmarkSink[
-    NDS_RENDERER_BENCHMARK_SINK_WORDS] __attribute__((aligned(32)));
-volatile u32 gNdsRendererBenchmarkSinkCursor;
-volatile u32 gNdsRendererBenchmarkSinkWordCount;
-volatile u32 gNdsRendererBenchmarkSinkOwnerWords[
-    NDS_RENDERER_PROFILE_OWNER_COUNT];
-volatile u32 gNdsRendererBenchmarkSinkCalibrationWords;
-volatile u32 gNdsRendererBenchmarkSinkCalibrationTicks;
-volatile u32 gNdsRendererBenchmarkSinkHashA;
-volatile u32 gNdsRendererBenchmarkSinkHashB;
-volatile u32 gNdsRendererBenchmarkSegment0SinkWords;
-volatile u32 gNdsRendererBenchmarkSegment0SinkHashA;
-volatile u32 gNdsRendererBenchmarkSegment0SinkHashB;
-volatile u32 gNdsRendererBenchmarkSegment0SinkArmFaults;
-u32 gNdsRendererBenchmarkSegment0Trace[
-    NDS_RENDERER_BENCHMARK_SEGMENT0_TRACE_WORDS] __attribute__((aligned(32)));
-volatile u32 gNdsRendererBenchmarkSegment0RunWords[
-    NDS_RENDERER_BENCHMARK_SEGMENT0_RUN_COUNT];
-volatile u32 gNdsRendererBenchmarkSegment0RunHashA[
-    NDS_RENDERER_BENCHMARK_SEGMENT0_RUN_COUNT];
-volatile u32 gNdsRendererBenchmarkSegment0RunHashB[
-    NDS_RENDERER_BENCHMARK_SEGMENT0_RUN_COUNT];
-volatile u32 gNdsRendererBenchmarkSegment0RunRawTextureName[
-    NDS_RENDERER_BENCHMARK_SEGMENT0_RUN_COUNT];
-volatile u32 gNdsRendererBenchmarkSegment0RunTextureEpochPlus1[
-    NDS_RENDERER_BENCHMARK_SEGMENT0_RUN_COUNT];
-volatile u32 gNdsRendererBenchmarkSegment0RunTextureImage[
-    NDS_RENDERER_BENCHMARK_SEGMENT0_RUN_COUNT];
-volatile u32 gNdsRendererBenchmarkSegment0RunTextureTlut[
-    NDS_RENDERER_BENCHMARK_SEGMENT0_RUN_COUNT];
-volatile u32 gNdsRendererBenchmarkSegment0RunTextureKeyHashA[
-    NDS_RENDERER_BENCHMARK_SEGMENT0_RUN_COUNT];
-volatile u32 gNdsRendererBenchmarkSegment0RunTextureKeyHashB[
-    NDS_RENDERER_BENCHMARK_SEGMENT0_RUN_COUNT];
-volatile u32 gNdsRendererBenchmarkSegment0RunTextureDescriptor[
-    NDS_RENDERER_BENCHMARK_SEGMENT0_RUN_COUNT];
-volatile u32 gNdsRendererBenchmarkSegment0RunTextureParams[
-    NDS_RENDERER_BENCHMARK_SEGMENT0_RUN_COUNT];
-static u32 sNdsRendererBenchmarkSinkCursor;
-static u32 sNdsRendererBenchmarkSinkWordCount;
-static u32 sNdsRendererBenchmarkSinkLastOwnerCursor;
-static u32 sNdsRendererBenchmarkSinkOwnerWords[
-    NDS_RENDERER_PROFILE_OWNER_COUNT];
-static u32 sNdsRendererBenchmarkSinkHashA;
-static u32 sNdsRendererBenchmarkSinkHashB;
-static u32 sNdsRendererBenchmarkSegment0SinkWords;
-static u32 sNdsRendererBenchmarkSegment0SinkHashA;
-static u32 sNdsRendererBenchmarkSegment0SinkHashB;
-static u32 sNdsRendererBenchmarkSegment0SinkActive;
-static u32 sNdsRendererBenchmarkSegment0SinkArmFaults;
-static u32 sNdsRendererBenchmarkSegment0TextureEpochPlus1;
-static u32 sNdsRendererBenchmarkSegment0TextureEpochSourceOffset;
-static u32 sNdsRendererBenchmarkSegment0TextureEpochMetadata;
-static u32 sNdsRendererBenchmarkSegment0TextureImage;
-static u32 sNdsRendererBenchmarkSegment0TextureTlut;
-static u32 sNdsRendererBenchmarkSegment0TextureTexel1;
-static u32 sNdsRendererBenchmarkSegment0TextureKeyHashA;
-static u32 sNdsRendererBenchmarkSegment0TextureKeyHashB;
-static u32 sNdsRendererBenchmarkSegment0TextureDescriptor;
-static u32 sNdsRendererBenchmarkSegment0TextureFlags;
-static u32 sNdsRendererBenchmarkSegment0TextureParams;
-static u32 sNdsRendererBenchmarkSegment0TexturePolyFmt;
-static u32 sNdsRendererBenchmarkSegment0TextureBinding;
-static u32 sNdsRendererBenchmarkSegment0TextureValid;
-static const void *sNdsRendererBenchmarkSegment0AssetBases[
-    NDS_RENDERER_NATIVE_STAGE_ASSET_COUNT];
-static u32 sNdsRendererBenchmarkFakeTextureName = 1u;
-static u32 sNdsRendererBenchmarkTextureParameter;
-
-static inline u32 ndsRendererBenchmarkSinkHashWordA(u32 hash, u32 value)
-{
-    return (hash ^ value) * 16777619u;
-}
-
-static inline u32 ndsRendererBenchmarkSinkHashWordB(u32 hash, u32 value)
-{
-    hash ^= value + 0x9e3779b9u + (hash << 6) + (hash >> 2);
-    hash = (hash << 7) | (hash >> 25);
-    return hash * 0x85ebca6bu;
-}
-
-static inline void ndsRendererBenchmarkSinkWord(u32 value)
-{
-    gNdsRendererBenchmarkSink[
-        sNdsRendererBenchmarkSinkCursor &
-        NDS_RENDERER_BENCHMARK_SINK_MASK] = value;
-    sNdsRendererBenchmarkSinkCursor++;
-    sNdsRendererBenchmarkSinkWordCount++;
-    sNdsRendererBenchmarkSinkHashA = ndsRendererBenchmarkSinkHashWordA(
-        sNdsRendererBenchmarkSinkHashA, value);
-    sNdsRendererBenchmarkSinkHashB = ndsRendererBenchmarkSinkHashWordB(
-        sNdsRendererBenchmarkSinkHashB, value);
-    if (sNdsRendererBenchmarkSegment0SinkActive != 0u)
-    {
-        if (sNdsRendererBenchmarkSegment0SinkWords <
-            NDS_RENDERER_BENCHMARK_SEGMENT0_TRACE_WORDS)
-        {
-            gNdsRendererBenchmarkSegment0Trace[
-                sNdsRendererBenchmarkSegment0SinkWords] = value;
-        }
-        else
-        {
-            sNdsRendererBenchmarkSegment0SinkArmFaults++;
-        }
-        sNdsRendererBenchmarkSegment0SinkWords++;
-        sNdsRendererBenchmarkSegment0SinkHashA =
-            ndsRendererBenchmarkSinkHashWordA(
-                sNdsRendererBenchmarkSegment0SinkHashA, value);
-        sNdsRendererBenchmarkSegment0SinkHashB =
-            ndsRendererBenchmarkSinkHashWordB(
-                sNdsRendererBenchmarkSegment0SinkHashB, value);
-    }
-}
-
-static void ndsRendererBenchmarkSegment0SinkBegin(void)
-{
-    if (sNdsRendererBenchmarkSegment0SinkActive != 0u)
-    {
-        sNdsRendererBenchmarkSegment0SinkArmFaults++;
-    }
-    sNdsRendererBenchmarkSegment0SinkWords = 0u;
-    sNdsRendererBenchmarkSegment0SinkHashA = 2166136261u;
-    sNdsRendererBenchmarkSegment0SinkHashB = 0x9e3779b9u;
-    sNdsRendererBenchmarkSegment0SinkActive = TRUE;
-    sNdsRendererBenchmarkSegment0TextureEpochPlus1 = 0u;
-    sNdsRendererBenchmarkSegment0TextureEpochSourceOffset = 0u;
-    sNdsRendererBenchmarkSegment0TextureEpochMetadata = 0u;
-    sNdsRendererBenchmarkSegment0TextureImage = 0u;
-    sNdsRendererBenchmarkSegment0TextureTlut = 0u;
-    sNdsRendererBenchmarkSegment0TextureTexel1 = 0u;
-    sNdsRendererBenchmarkSegment0TextureKeyHashA = 0u;
-    sNdsRendererBenchmarkSegment0TextureKeyHashB = 0u;
-    sNdsRendererBenchmarkSegment0TextureDescriptor = 0u;
-    sNdsRendererBenchmarkSegment0TextureFlags = 0u;
-    sNdsRendererBenchmarkSegment0TextureParams = 0u;
-    sNdsRendererBenchmarkSegment0TexturePolyFmt = 0u;
-    sNdsRendererBenchmarkSegment0TextureBinding = 0u;
-    sNdsRendererBenchmarkSegment0TextureValid = FALSE;
-    memset((void *)gNdsRendererBenchmarkSegment0RunWords, 0,
-           sizeof(gNdsRendererBenchmarkSegment0RunWords));
-    memset((void *)gNdsRendererBenchmarkSegment0RunHashA, 0,
-           sizeof(gNdsRendererBenchmarkSegment0RunHashA));
-    memset((void *)gNdsRendererBenchmarkSegment0RunHashB, 0,
-           sizeof(gNdsRendererBenchmarkSegment0RunHashB));
-    memset((void *)gNdsRendererBenchmarkSegment0RunRawTextureName, 0,
-           sizeof(gNdsRendererBenchmarkSegment0RunRawTextureName));
-    memset((void *)gNdsRendererBenchmarkSegment0RunTextureEpochPlus1, 0,
-           sizeof(gNdsRendererBenchmarkSegment0RunTextureEpochPlus1));
-    memset((void *)gNdsRendererBenchmarkSegment0RunTextureImage, 0,
-           sizeof(gNdsRendererBenchmarkSegment0RunTextureImage));
-    memset((void *)gNdsRendererBenchmarkSegment0RunTextureTlut, 0,
-           sizeof(gNdsRendererBenchmarkSegment0RunTextureTlut));
-    memset((void *)gNdsRendererBenchmarkSegment0RunTextureKeyHashA, 0,
-           sizeof(gNdsRendererBenchmarkSegment0RunTextureKeyHashA));
-    memset((void *)gNdsRendererBenchmarkSegment0RunTextureKeyHashB, 0,
-           sizeof(gNdsRendererBenchmarkSegment0RunTextureKeyHashB));
-    memset((void *)gNdsRendererBenchmarkSegment0RunTextureDescriptor, 0,
-           sizeof(gNdsRendererBenchmarkSegment0RunTextureDescriptor));
-    memset((void *)gNdsRendererBenchmarkSegment0RunTextureParams, 0,
-           sizeof(gNdsRendererBenchmarkSegment0RunTextureParams));
-}
-
-static void ndsRendererBenchmarkSegment0SinkEnd(void)
-{
-    if (sNdsRendererBenchmarkSegment0SinkActive == 0u)
-    {
-        sNdsRendererBenchmarkSegment0SinkArmFaults++;
-    }
-    sNdsRendererBenchmarkSegment0SinkActive = FALSE;
-}
-
-static inline void ndsRendererBenchmarkGlEnable(int bits)
-{
-    ndsRendererBenchmarkSinkWord(0xe1000000u | (u32)bits);
-}
-
-static inline void ndsRendererBenchmarkGlDisable(int bits)
-{
-    ndsRendererBenchmarkSinkWord(0xd1000000u | (u32)bits);
-}
-
-static inline void ndsRendererBenchmarkGlAlphaFunc(int threshold)
-{
-    ndsRendererBenchmarkSinkWord((u32)threshold);
-}
-
-static inline void ndsRendererBenchmarkGlFogDensity(int index, int density)
-{
-    ndsRendererBenchmarkSinkWord(
-        ((u32)index & 0xffu) | (((u32)density & 0xffu) << 8));
-}
-
-static inline void ndsRendererBenchmarkGlFogShift(int shift)
-{
-    ndsRendererBenchmarkSinkWord((u32)shift);
-}
-
-static inline void ndsRendererBenchmarkGlFogOffset(int offset)
-{
-    ndsRendererBenchmarkSinkWord((u32)offset);
-}
-
-static inline void ndsRendererBenchmarkGlFogColor(
-    u8 red, u8 green, u8 blue, u8 alpha)
-{
-    ndsRendererBenchmarkSinkWord(
-        (u32)red | ((u32)green << 5) | ((u32)blue << 10) |
-        ((u32)alpha << 15));
-}
-
-static inline void ndsRendererBenchmarkGlTexParameter(int target, int param)
-{
-    (void)target;
-    sNdsRendererBenchmarkTextureParameter = (u32)param;
-    ndsRendererBenchmarkSinkWord((u32)param);
-}
-
-static inline u32 ndsRendererBenchmarkGlGetTexParameter(void)
-{
-    return sNdsRendererBenchmarkTextureParameter;
-}
-
-static inline void ndsRendererBenchmarkGlBindTexture(int target, int name)
-{
-    (void)target;
-    if (sNdsRendererBenchmarkSegment0SinkActive != 0u)
-    {
-        /* A libnds texture name is an opaque CPU handle, not a GX word.
-         * Segment 0 instead records the certified epoch and the actual
-         * pointer-normalized prepared cache key/descriptor. */
-        if (sNdsRendererBenchmarkSegment0TextureValid == FALSE)
-        {
-            sNdsRendererBenchmarkSegment0SinkArmFaults++;
-        }
-        ndsRendererBenchmarkSinkWord(
-            0xb1000000u |
-            (sNdsRendererBenchmarkSegment0TextureEpochPlus1 & 0xffffu));
-        ndsRendererBenchmarkSinkWord(
-            sNdsRendererBenchmarkSegment0TextureEpochSourceOffset);
-        ndsRendererBenchmarkSinkWord(
-            sNdsRendererBenchmarkSegment0TextureEpochMetadata);
-        ndsRendererBenchmarkSinkWord(
-            sNdsRendererBenchmarkSegment0TextureImage);
-        ndsRendererBenchmarkSinkWord(
-            sNdsRendererBenchmarkSegment0TextureTlut);
-        ndsRendererBenchmarkSinkWord(
-            sNdsRendererBenchmarkSegment0TextureTexel1);
-        ndsRendererBenchmarkSinkWord(
-            sNdsRendererBenchmarkSegment0TextureDescriptor);
-        ndsRendererBenchmarkSinkWord(
-            sNdsRendererBenchmarkSegment0TextureFlags);
-        ndsRendererBenchmarkSinkWord(
-            sNdsRendererBenchmarkSegment0TextureParams);
-        ndsRendererBenchmarkSinkWord(
-            sNdsRendererBenchmarkSegment0TexturePolyFmt);
-        ndsRendererBenchmarkSinkWord(
-            sNdsRendererBenchmarkSegment0TextureBinding);
-        ndsRendererBenchmarkSinkWord(
-            sNdsRendererBenchmarkSegment0TextureKeyHashA);
-        ndsRendererBenchmarkSinkWord(
-            sNdsRendererBenchmarkSegment0TextureKeyHashB);
-        return;
-    }
-    ndsRendererBenchmarkSinkWord((u32)name);
-}
-
-static inline int ndsRendererBenchmarkGlGenTextures(int count, int *names)
-{
-    int i;
-
-    if ((count <= 0) || (names == NULL))
-    {
-        return 0;
-    }
-    for (i = 0; i < count; i++)
-    {
-        names[i] = (int)sNdsRendererBenchmarkFakeTextureName++;
-        ndsRendererBenchmarkSinkWord((u32)names[i]);
-    }
-    return 1;
-}
-
-static inline int ndsRendererBenchmarkGlDeleteTextures(int count, int *names)
-{
-    int i;
-
-    if ((count <= 0) || (names == NULL))
-    {
-        return 0;
-    }
-    for (i = 0; i < count; i++)
-    {
-        ndsRendererBenchmarkSinkWord((u32)names[i]);
-    }
-    return 1;
-}
-
-static inline int ndsRendererBenchmarkGlTexImage2D(
-    int target, int empty1, GL_TEXTURE_TYPE_ENUM type,
-    int size_x, int size_y, int empty2, int params, const void *texture)
-{
-    (void)target;
-    (void)empty1;
-    (void)empty2;
-    (void)texture;
-    sNdsRendererBenchmarkTextureParameter = (u32)params;
-    ndsRendererBenchmarkSinkWord((u32)type);
-    ndsRendererBenchmarkSinkWord(
-        ((u32)size_x & 0xffffu) | ((u32)size_y << 16));
-    ndsRendererBenchmarkSinkWord((u32)params);
-    return 1;
-}
-
-static inline void ndsRendererBenchmarkGlMatrixMode(int mode)
-{
-    ndsRendererBenchmarkSinkWord((u32)mode);
-}
-
-static inline void ndsRendererBenchmarkGlLoadMatrix4x4(const m4x4 *matrix)
-{
-    const u32 *words = (const u32 *)matrix;
-    u32 i;
-
-    for (i = 0u; i < 16u; i++)
-    {
-        ndsRendererBenchmarkSinkWord(words[i]);
-    }
-}
-
-static inline void ndsRendererBenchmarkGlVertex3v16(v16 x, v16 y, v16 z)
-{
-    ndsRendererBenchmarkSinkWord(
-        (u32)(u16)x | ((u32)(u16)y << 16));
-    ndsRendererBenchmarkSinkWord((u32)(u16)z);
-}
-
-static inline void ndsRendererBenchmarkGlPolyFmt(u32 params)
-{
-    ndsRendererBenchmarkSinkWord(params);
-}
-
-static inline void ndsRendererBenchmarkGlBegin(GL_GLBEGIN_ENUM mode)
-{
-    ndsRendererBenchmarkSinkWord((u32)mode);
-}
-
-static inline void ndsRendererBenchmarkGlColor(u16 color)
-{
-    ndsRendererBenchmarkSinkWord((u32)color);
-}
-
-static inline void ndsRendererBenchmarkGlTexCoord2t16(t16 s, t16 t)
-{
-    ndsRendererBenchmarkSinkWord(
-        (u32)(u16)s | ((u32)(u16)t << 16));
-}
-
-#define glEnable ndsRendererBenchmarkGlEnable
-#define glDisable ndsRendererBenchmarkGlDisable
-#define glAlphaFunc ndsRendererBenchmarkGlAlphaFunc
-#define glFogDensity ndsRendererBenchmarkGlFogDensity
-#define glFogShift ndsRendererBenchmarkGlFogShift
-#define glFogOffset ndsRendererBenchmarkGlFogOffset
-#define glFogColor ndsRendererBenchmarkGlFogColor
-#define glTexParameter ndsRendererBenchmarkGlTexParameter
-#define glGetTexParameter ndsRendererBenchmarkGlGetTexParameter
-#define glBindTexture ndsRendererBenchmarkGlBindTexture
-#define glGenTextures ndsRendererBenchmarkGlGenTextures
-#define glDeleteTextures ndsRendererBenchmarkGlDeleteTextures
-#define glTexImage2D ndsRendererBenchmarkGlTexImage2D
-#define glMatrixMode ndsRendererBenchmarkGlMatrixMode
-#define glLoadMatrix4x4 ndsRendererBenchmarkGlLoadMatrix4x4
-#define glVertex3v16 ndsRendererBenchmarkGlVertex3v16
-#define glPolyFmt ndsRendererBenchmarkGlPolyFmt
-#define glBegin ndsRendererBenchmarkGlBegin
-#define glColor ndsRendererBenchmarkGlColor
-#define glTexCoord2t16 ndsRendererBenchmarkGlTexCoord2t16
-#endif
 
 #if NDS_TICK_HUD
 #define NDS_TASK29_GX_MAX_WORDS 16u
@@ -828,49 +443,28 @@ static inline void ndsRendererTask29GlVertex3v16(v16 x, v16 y, v16 z)
  * and testing them once per corner cost 24% of the untextured emit. */
 static inline void ndsRendererHardwareWriteColorWord(u32 value)
 {
-#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
-    ndsRendererBenchmarkSinkWord(value);
-#else
     GFX_COLOR = value;
-#endif
 }
 
 static inline void ndsRendererHardwareWriteNormalWord(u32 value)
 {
-#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
-    ndsRendererBenchmarkSinkWord(value);
-#else
     GFX_NORMAL = value;
-#endif
 }
 
 static inline void ndsRendererHardwareWriteDiffuseAmbient(u32 value)
 {
-#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
-    ndsRendererBenchmarkSinkWord(value);
-#else
     GFX_DIFFUSE_AMBIENT = value;
-#endif
 }
 
 static inline void ndsRendererHardwareWriteTexCoordWord(u32 value)
 {
-#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
-    ndsRendererBenchmarkSinkWord(value);
-#else
     GFX_TEX_COORD = value;
-#endif
 }
 
 static inline void ndsRendererHardwareWriteVertex16Words(u32 xy, u32 z)
 {
-#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
-    ndsRendererBenchmarkSinkWord(xy);
-    ndsRendererBenchmarkSinkWord(z);
-#else
     GFX_VERTEX16 = xy;
     GFX_VERTEX16 = z;
-#endif
 }
 
 /* Fighter-owned GX writers omit effect capture, which is armed only
@@ -881,34 +475,22 @@ static inline void ndsRendererHardwareWriteVertex16Words(u32 xy, u32 z)
 
 static inline void ndsRendererHardwareWriteFighterColorWord(u32 value)
 {
-#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
-    ndsRendererBenchmarkSinkWord(value);
-#else
 #if NDS_RENDERER_GX_RECORD_FIGHTER
     ndsRendererTask29GXRecord(NDS_TASK29_GX_COLOR, &value, 1u);
 #endif
     GFX_COLOR = value;
-#endif
 }
 
 static inline void ndsRendererHardwareWriteFighterTexCoordWord(u32 value)
 {
-#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
-    ndsRendererBenchmarkSinkWord(value);
-#else
 #if NDS_RENDERER_GX_RECORD_FIGHTER
     ndsRendererTask29GXRecord(NDS_TASK29_GX_TEX_COORD, &value, 1u);
 #endif
     GFX_TEX_COORD = value;
-#endif
 }
 
 static inline void ndsRendererHardwareWriteFighterVertex16Words(u32 xy, u32 z)
 {
-#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
-    ndsRendererBenchmarkSinkWord(xy);
-    ndsRendererBenchmarkSinkWord(z);
-#else
 #if NDS_RENDERER_GX_RECORD_FIGHTER
     u32 words[2] = {xy, z};
 
@@ -916,22 +498,8 @@ static inline void ndsRendererHardwareWriteFighterVertex16Words(u32 xy, u32 z)
 #endif
     GFX_VERTEX16 = xy;
     GFX_VERTEX16 = z;
-#endif
 }
 
-#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
-void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner)
-{
-    u32 cursor = sNdsRendererBenchmarkSinkCursor;
-
-    if ((u32)owner < NDS_RENDERER_PROFILE_OWNER_COUNT)
-    {
-        sNdsRendererBenchmarkSinkOwnerWords[(u32)owner] +=
-            cursor - sNdsRendererBenchmarkSinkLastOwnerCursor;
-    }
-    sNdsRendererBenchmarkSinkLastOwnerCursor = cursor;
-}
-#endif
 
 #define NDS_RENDERER_OP_NOOP 0x00u
 #define NDS_RENDERER_OP_VTX 0x01u
@@ -2727,10 +2295,6 @@ static int ndsRendererHardwareFencedTextureFclose(FILE *file)
     return fclose(file);
 }
 
-#if 0 != NDS_RENDERER_BENCHMARK_NONE
-volatile u32 gNdsRendererBenchmarkTriangleCount;
-static u32 sNdsRendererBenchmarkTriangleCount;
-#endif
 
 /* Profile 2 compares every phase-masked palette-pair result against the
  * existing exact blend formula before the pixels are submitted to GX. Keep
@@ -2746,12 +2310,6 @@ volatile u32 gNdsRendererProfileTextureVBlankOutsideCount;
 volatile u32 gNdsRendererProfileTextureVBlankFallbackCount;
 volatile u32 gNdsRendererProfileTextureVBlankStartLine;
 volatile u32 gNdsRendererProfileTextureVBlankEndLine;
-#if 0 == NDS_RENDERER_BENCHMARK_WARM_NO_UPLOAD
-volatile u32 gNdsRendererBenchmarkSuppressedTextureUploads;
-volatile u32 gNdsRendererBenchmarkSuppressedTextureUploadBytes;
-static u32 sNdsRendererBenchmarkSuppressedTextureUploads;
-static u32 sNdsRendererBenchmarkSuppressedTextureUploadBytes;
-#endif
 
 static inline void ndsRendererProfileRecordTextureBind(void)
 {
@@ -3157,11 +2715,7 @@ typedef struct NDSRendererHardwareTextureIdent
  *      (Makefile NDS_TEX_IDENT_SHADOW=1, own build dir); the default tick-HUD
  *      ROM keeps the shipping ROM's heap
  *   0  none (shipping and the default tick-HUD ROM) */
-#if 0 != NDS_RENDERER_BENCHMARK_NONE
-#define NDS_RENDERER_HW_TEXTURE_KEY_SHADOW 2
-#else
 #define NDS_RENDERER_HW_TEXTURE_KEY_SHADOW 0
-#endif
 
 typedef struct NDSRendererHardwareResolvedTexture
 {

@@ -1858,24 +1858,6 @@ static s32 ndsRendererHardwareReplaceTextureData(
 {
     ndsRendererHardwareRecordBattleTextureFence(
         NDS_RENDERER_BATTLE_TEXTURE_FENCE_REPLACE_REFRESH);
-#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
-    if ((entry == NULL) || (entry->name == 0) ||
-        (texture == NULL) || (staged_bytes == 0u) ||
-        (texture_bytes == 0u) ||
-        ((row_map == NULL) && ((texture_bytes % staged_bytes) != 0u)) ||
-        ((row_map != NULL) &&
-         ((row_bytes == 0u) || (row_count == 0u) ||
-          (row_count > NDS_RENDERER_HW_TEXTURE_MAX_HEIGHT) ||
-          ((staged_bytes % row_bytes) != 0u) ||
-          (texture_bytes != (row_bytes * row_count)))))
-    {
-        return FALSE;
-    }
-    ndsRendererBenchmarkSinkWord((u32)entry->name);
-    ndsRendererBenchmarkSinkWord(staged_bytes);
-    ndsRendererBenchmarkSinkWord(texture_bytes);
-    return TRUE;
-#else
     void *vram_address;
     uintptr_t vram_first;
     uintptr_t vram_last;
@@ -1981,7 +1963,6 @@ static s32 ndsRendererHardwareReplaceTextureData(
     }
     vramRestorePrimaryBanks(vram_state);
     return TRUE;
-#endif
 }
 
 static s32 ndsRendererHardwareTextureRefreshUses(
@@ -2010,16 +1991,6 @@ static s32 ndsRendererHardwareQueueTextureRefresh(
 {
     ndsRendererHardwareRecordBattleTextureFence(
         NDS_RENDERER_BATTLE_TEXTURE_FENCE_REPLACE_REFRESH);
-#if 0 != NDS_RENDERER_BENCHMARK_NONE
-    (void)entry;
-    (void)pixels;
-    (void)staged_bytes;
-    (void)texture_bytes;
-    (void)row_map;
-    (void)row_bytes;
-    (void)row_count;
-    return FALSE;
-#else
     NDSRendererHardwareTextureRefresh *refresh;
 
     if ((entry == NULL) || (entry->name == 0) || (pixels == NULL) ||
@@ -2049,7 +2020,6 @@ static s32 ndsRendererHardwareQueueTextureRefresh(
         memcpy(refresh->row_map, row_map, row_count);
     }
     return TRUE;
-#endif
 }
 
 u32 ndsRendererHardwareCommitPendingTextureRefreshes(void)
@@ -2081,10 +2051,8 @@ u32 ndsRendererHardwareCommitPendingTextureRefreshes(void)
     return committed;
 }
 
-#if 0 == NDS_RENDERER_BENCHMARK_NONE
 static void ndsFtrCarveNoteRelease(
     const NDSRendererHardwareTextureCacheEntry *entry);
-#endif
 
 static NDSRendererHardwareTextureCacheEntry *
 ndsRendererHardwareReleaseTexture(
@@ -2119,12 +2087,10 @@ ndsRendererHardwareReleaseTexture(
     /* A carved name (slice 2c) has no libnds record: its VRAM belongs to the
      * admission's carve regions, which go back to libnds with their last
      * entry. */
-#if 0 == NDS_RENDERER_BENCHMARK_NONE
     if ((entry->carve_flags & NDS_FTR_CARVE_F_CARVED) != 0u)
     {
         ndsFtrCarveNoteRelease(entry);
     }
-#endif
     /* The key is no longer inside the entry, so zeroing the entry no longer
      * zeroes it. Every reader gates on `ready`, but the particle atlas keeps a
      * slot ready with a deliberately blank key, so a released slot must really
@@ -2177,17 +2143,6 @@ s32 ndsFtrLeanAdmitOpenHoles(void);
 void ndsFtrLeanAdmitCloseHoles(void);
 /* Uploads that took A+B's holes (ndsFtrLeanAdmitOpenHoles). */
 volatile u32 gNdsFtrAdmitHoleUploads;
-#if 0 != NDS_RENDERER_BENCHMARK_NONE
-/* A benchmark build compiles no admission and no bank lock. */
-s32 ndsFtrLeanAdmitOpenHoles(void)
-{
-    return FALSE;
-}
-
-void ndsFtrLeanAdmitCloseHoles(void)
-{
-}
-#endif
 
 static s32 ndsRendererHardwareEvictTexture(
     const NDSRendererHardwareTextureCacheEntry *exclude)
@@ -2554,9 +2509,7 @@ void ndsRendererHardwareDiscardTextureCache(void)
 volatile u32 gNdsRendererSceneTextureVramResetEnable = 1u;
 volatile u32 gNdsRendererSceneTextureVramResetCount;
 
-#if 0 == NDS_RENDERER_BENCHMARK_NONE
 static void ndsFtrAdmitSceneResetGuard(void);
-#endif
 
 void ndsRendererHardwareResetSceneTextureVram(void)
 {
@@ -2570,11 +2523,9 @@ void ndsRendererHardwareResetSceneTextureVram(void)
     {
         return;
     }
-#if 0 == NDS_RENDERER_BENCHMARK_NONE
     /* P2-2p8 Phase 1 slice 2b: a previous battle's texture regions still
      * active here means its exit hook was missed; close them first. */
     ndsFtrAdmitSceneResetGuard();
-#endif
     /* DiscardTextureCache ends the batch, deletes every cache name and the
      * no-texture name, and clears the lookup, refresh queue and active
      * binding. glResetTextures then drops libnds's own texture and palette
@@ -2646,7 +2597,6 @@ static s32 ndsRendererHardwarePrepareIFCommonAtlas(
     NDSRendererTextureFillCallback fill, void *user_data, u32 *texture_name,
     u32 color0_transparent)
 {
-#if 0 == NDS_RENDERER_BENCHMARK_NONE
     int size_x;
     int size_y;
     int name = 0;
@@ -2755,17 +2705,6 @@ static s32 ndsRendererHardwarePrepareIFCommonAtlas(
     sNdsRendererHardwareBoundTextureName = (u32)name;
     sNdsRendererHardwareActiveTextureEntry = NULL;
     return TRUE;
-#else
-    (void)width;
-    (void)height;
-    (void)texture_format;
-    (void)palette;
-    (void)palette_entries;
-    (void)fill;
-    (void)user_data;
-    (void)texture_name;
-    return FALSE;
-#endif
 }
 
 s32 ndsRendererHardwarePrepareIFCommonCloudAtlas(
@@ -2962,7 +2901,6 @@ static s32 ndsRendererEntryEffectTextureFill(u8 *pixels, u32 bytes,
 
 s32 ndsRendererHardwarePrepareImpactWaveTextures(void)
 {
-#if 0 == NDS_RENDERER_BENCHMARK_NONE
     u32 variant;
 
     for (variant = 0u; variant < NDS_RENDERER_IMPACT_WAVE_VARIANT_COUNT;
@@ -2984,14 +2922,10 @@ s32 ndsRendererHardwarePrepareImpactWaveTextures(void)
         NDS_DIAG(gNdsImpactWaveNativeTexturePrepareCount++);
     }
     return TRUE;
-#else
-    return FALSE;
-#endif
 }
 
 s32 ndsRendererHardwarePrepareRebirthHaloTextures(void)
 {
-#if 0 == NDS_RENDERER_BENCHMARK_NONE
     static const struct
     {
         const u8 *pixels;
@@ -3046,14 +2980,10 @@ s32 ndsRendererHardwarePrepareRebirthHaloTextures(void)
         NDS_DIAG(gNdsRebirthHaloNativeTexturePrepareCount++);
     }
     return TRUE;
-#else
-    return FALSE;
-#endif
 }
 
 void ndsRendererHardwareReleaseIFCommonCloudAtlas(u32 *texture_name)
 {
-#if 0 == NDS_RENDERER_BENCHMARK_NONE
     int name;
 
     if ((texture_name == NULL) || (*texture_name == 0u))
@@ -3069,19 +2999,12 @@ void ndsRendererHardwareReleaseIFCommonCloudAtlas(u32 *texture_name)
     }
     sNdsRendererHardwareActiveTextureEntry = NULL;
     *texture_name = 0u;
-#else
-    if (texture_name != NULL)
-    {
-        *texture_name = 0u;
-    }
-#endif
 }
 
 /* Edge of a fighter tint tile, in texels. Outside the guard below because the
  * native owner's tint batch reads it to aim its single texcoord. */
 #define NDS_R2_FIGHTER_TINT_DIM 8u
 
-#if 0 == NDS_RENDERER_BENCHMARK_NONE
 /* A SOLID TEXEL, SO A TINTED BODY CAN MULTIPLY AFTER IT SHADES.
  *
  * Fighters draw PRIM x SHADE (then x ENV, which is the stage light colour and
@@ -3417,24 +3340,6 @@ ndsR2FighterTintReleaseRange(u32 lcd_lo, u32 lcd_hi)
     }
     return released;
 }
-#else
-volatile u32 gNdsR2FighterTintSetGeneration;
-
-static u32 ndsRendererR2FighterTintLookup(u32 material_color)
-{
-    (void)material_color;
-    return 0u;
-}
-
-s32 ndsFtrLeanTintTileWords(u32 rgb, u32 touch, u32 *teximage, u32 *pltt)
-{
-    (void)rgb;
-    (void)touch;
-    (void)teximage;
-    (void)pltt;
-    return FALSE;
-}
-#endif
 
 /* Fighter entry props are required only while VSBattle presents the source
  * match intro.  Their converted texture names are direct GL residents rather
@@ -3452,7 +3357,6 @@ volatile u32 gNdsEntryEffectStartupTextureReleaseBytes;
  * caller says when that stage is live; nothing else keeps its textures. */
 volatile u32 gNdsEntryEffectKeepFoxArwingTextures;
 
-#if 0 == NDS_RENDERER_BENCHMARK_NONE
 static s32 ndsRendererEntryTextureIsFoxArwing(u32 texture_slot)
 {
     u32 root_index;
@@ -3474,13 +3378,11 @@ static s32 ndsRendererEntryTextureIsFoxArwing(u32 texture_slot)
     }
     return FALSE;
 }
-#endif
 
 /* Once a match, two frames into GO: compact, not fast. */
 void __attribute__((cold, optimize("Os")))
 ndsRendererHardwareReleaseEntryStartupTextures(void)
 {
-#if 0 == NDS_RENDERER_BENCHMARK_NONE
     u32 i;
 
     for (i = 0u; i < NDS_ENTRY_EFFECT_TEXTURE_COUNT; i++)
@@ -3521,10 +3423,9 @@ ndsRendererHardwareReleaseEntryStartupTextures(void)
         gNdsEntryEffectStartupTextureReleaseCount++;
         gNdsEntryEffectStartupTextureReleaseBytes += bytes;
     }
-#endif
 }
 
-#if NDS_VRAM_CENSUS_LIVE && (0 == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_VRAM_CENSUS_LIVE
 /* ---------------------------------------------------------------------------
  * P2-2p8 Phase 1 slice 2a (lab only): texture and palette VRAM census.
  *
@@ -4026,9 +3927,7 @@ void ndsVramCensusCaptureBurst(void)
     DC_FlushRange(&gNdsVramCensus, sizeof(gNdsVramCensus));
 }
 
-#if 0 == NDS_RENDERER_BENCHMARK_NONE
 static void ndsFtrCarveLabPublish(void);
-#endif
 
 void ndsVramCensusFrame(void)
 {
@@ -4041,9 +3940,7 @@ void ndsVramCensusFrame(void)
 #if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW != 0
     DC_FlushRange(&gNdsTexIdentLab, sizeof(gNdsTexIdentLab));
 #endif
-#if 0 == NDS_RENDERER_BENCHMARK_NONE
     ndsFtrCarveLabPublish();
-#endif
     if (gNdsVramCensusEnable == 0u)
     {
         return;
@@ -4426,7 +4323,6 @@ s32 ndsRendererHardwareDrawIFCommonCloudAtlas(
     u32 texture_x, u32 texture_y, u32 texture_width,
     u32 texture_height, u32 poly_id)
 {
-#if 0 == NDS_RENDERER_BENCHMARK_NONE
     NDSRendererIFCommonCloudDraw *draw;
 
     if ((texture_name == 0u) || (width_q16 <= 0) || (height_q16 <= 0) ||
@@ -4452,24 +4348,10 @@ s32 ndsRendererHardwareDrawIFCommonCloudAtlas(
     draw->poly_id = poly_id;
     gNdsRendererIFCommonCloudQueuedCount++;
     return TRUE;
-#else
-    (void)texture_name;
-    (void)x_q16;
-    (void)y_q16;
-    (void)width_q16;
-    (void)height_q16;
-    (void)texture_x;
-    (void)texture_y;
-    (void)texture_width;
-    (void)texture_height;
-    (void)poly_id;
-    return FALSE;
-#endif
 }
 
 static void ndsRendererHardwareEmitIFCommonClouds(void)
 {
-#if 0 == NDS_RENDERER_BENCHMARK_NONE
     u32 draw_index;
 
     if (sNdsRendererIFCommonCloudQueueCount == 0u)
@@ -4542,7 +4424,6 @@ static void ndsRendererHardwareEmitIFCommonClouds(void)
     sNdsRendererHardwareMatrixGeneration = 0u;
     sNdsRendererHardwareSubmitted = TRUE;
     sNdsRendererIFCommonCloudQueueCount = 0u;
-#endif
 }
 
 static u32 ndsRendererHardwareTextureNextPow2(u32 value)
@@ -11375,7 +11256,6 @@ static void ndsRendererHardwareBindPrimRgbTexel0AlphaTexture(
     gNdsRendererPrimRgbTexel0AlphaBindCount++;
 }
 
-#if 0 == NDS_RENDERER_BENCHMARK_NONE
 /* P2-2p8 Phase 1 slice 2c: while the fighter admission runs, a new cache entry
  * is carved (ndsFtrCarveUpload, with the admission below) instead of taking a
  * libnds name and glTexImage2D. */
@@ -11398,9 +11278,6 @@ static s32 ndsFtrCarveUpload(NDSRendererHardwareTextureCacheEntry *entry,
 /* Lab: the admission census's key probe -- the resolve path copies the key
  * it built here and returns before the lookup, conversion and upload. */
 static NDSRendererHardwareTextureKey *sNdsFtrAdmitKeyProbe;
-#endif
-#else
-#define NDS_FTR_CARVE_LIVE 0
 #endif
 
 /* The stage select's preview (battleship_mnmaps.c) points this at its
@@ -12216,44 +12093,6 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
             ndsRendererHardwareFindTexel1RefreshTexture(&key);
     }
 
-#if 0 == NDS_RENDERER_BENCHMARK_WARM_NO_UPLOAD
-    if ((sNdsRendererHardwareFrameSerial != 0u) &&
-        (fraction_entry != NULL))
-    {
-        /* The first completed frame populates the exact resident allocations.
-         * Subsequent animated-water key changes retain normal lookup, live
-         * params, texture binding, batches, and geometry while deliberately
-         * keeping the resident pixels from that warm frame. This benchmark
-         * branch occurs before source resolution, conversion, or VRAM upload. */
-        entry = fraction_entry;
-        ndsRendererHardwareBindTextureName(stats, (u32)entry->name);
-        ndsRendererHardwareTextureLookupRemove(entry);
-        ndsRendererHardwareEntrySetKey(entry, &key);
-        sNdsRendererHardwareTextureKeyGeneration++;
-        if (sNdsRendererHardwareTextureKeyGeneration == 0u)
-        {
-            sNdsRendererHardwareTextureKeyGeneration++;
-        }
-        entry->key_generation = sNdsRendererHardwareTextureKeyGeneration;
-        entry->key_hash = key_hash;
-        entry->params = ndsRendererHardwareMergeTextureParams(params);
-        entry->last_used_frame = sNdsRendererHardwareFrameSerial + 1u;
-        entry->ready = TRUE;
-        ndsRendererHardwareTextureLookupInsert(entry);
-        sNdsRendererHardwareActiveTextureEntry = entry;
-        stats->hardware_texture_ready_count++;
-        stats->hardware_texture_format = format;
-        stats->hardware_texture_width = width;
-        stats->hardware_texture_height = height;
-        ndsRendererHardwareApplyTextureParams(entry->params);
-        sNdsRendererBenchmarkSuppressedTextureUploads++;
-        sNdsRendererBenchmarkSuppressedTextureUploadBytes +=
-            upload_width * upload_height * sizeof(u16);
-        ndsRendererStageTextureSiteRemember(
-            state, stats, entry, format, size, width, height);
-        return TRUE;
-    }
-#endif
 
     texels = width * height;
     bytes = ndsRendererHardwareTextureSourceBytes(
@@ -12419,7 +12258,6 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
         gNdsRendererTextureScratchDynamicUploadBytesHighWater, upload_bytes);
     resident_upload_bytes = upload_bytes;
     staged_bytes = upload_bytes;
-#if 0 == NDS_RENDERER_BENCHMARK_NONE
     if (fraction_entry != NULL)
     {
         if ((upload_bytes <=
@@ -12441,7 +12279,6 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
             queue_texture_refresh = TRUE;
         }
     }
-#endif
     if ((use_texel1 != FALSE) &&
         (format == NDS_RENDERER_HW_TEXTURE_FMT_CI) &&
         (size == NDS_RENDERER_HW_TEXTURE_SIZ_4B) &&
@@ -12949,7 +12786,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     entry->key_generation = sNdsRendererHardwareTextureKeyGeneration;
     entry->key_hash = key_hash;
     entry->params = ndsRendererHardwareMergeTextureParams(params);
-#if NDS_VRAM_CENSUS_LIVE && (0 == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_VRAM_CENSUS_LIVE
     /* Slice 2a (lab): the distinct fighter textures each slot uploads. */
     ndsVramCensusNoteCacheKey(entry, &key, resident_palette_entries);
 #endif
@@ -14557,21 +14394,6 @@ static NDSRendererHWSubmitClass ndsRendererHardwareClassifySubmit(
     return NDS_RENDERER_HW_SUBMIT_PROJECTED_CROSS_MATRIX;
 }
 
-#if 0 == NDS_RENDERER_BENCHMARK_TRIANGLE_NOOP
-static void __attribute__((noinline)) NDS_RENDERER_HOT_CODE
-ndsRendererSubmitHardwareTriangle(
-    NDSRendererStats *stats,
-    const NDSRendererConfig *config,
-    NDSRendererTraversalState *state,
-    u32 packed)
-{
-    (void)stats;
-    (void)config;
-    (void)state;
-    (void)packed;
-    sNdsRendererBenchmarkTriangleCount++;
-}
-#else
 /* The c200 canonical census never takes either raw-matrix load arm or the
  * z-buffer accounting arm below.  Keep those exact generic-renderer paths
  * available in main RAM while leaving the projected/no-Z path contiguous. */
@@ -14908,9 +14730,6 @@ ndsRendererSubmitHardwareTriangle(
     }
 
     sNdsRendererHardwareSubmitted = TRUE;
-#if 0 != NDS_RENDERER_BENCHMARK_NONE
-    sNdsRendererBenchmarkTriangleCount++;
-#endif
     stats->hardware_triangle_count++;
     stats->hardware_vertex_count += 3u;
     ndsRendererProfileRecordHardwareTriangle();
@@ -14924,9 +14743,7 @@ ndsRendererSubmitHardwareTriangle(
         stats->hardware_projected_depth_triangle_count++;
     }
 }
-#endif
 
-#if 0 == NDS_RENDERER_BENCHMARK_NONE
 /* ---------------------------------------------------------------------------
  * P2-2p8 Phase 1 slice 2b: fighter texture admission and battle VRAM regions
  * (include/nds/renderer_fighter_lean.h, gNdsFtrLeanAdmit).
@@ -16538,42 +16355,4 @@ static void NDS_FTR_ADMIT_COLD_CODE ndsFtrAdmitSceneResetGuard(void)
      * something. */
     ndsFtrLeanAdmitCarveRetire();
 }
-#else
-volatile u32 gNdsFtrLeanAdmitFail;
-volatile u32 gNdsFtrLeanAdmitFailFirst[4];
-
-u32 ndsFtrLeanAdmitRun(NDSRendererStats *scratch, const u32 *fkind,
-                       const u32 *costume, const u32 *detail,
-                       const u32 *player, const u32 *content, u32 count,
-                       const u32 *base_asset, const void *const *base_data,
-                       u32 base_count, u32 word)
-{
-    (void)scratch; (void)fkind; (void)costume; (void)detail; (void)player;
-    (void)content; (void)count; (void)base_asset; (void)base_data;
-    (void)base_count; (void)word;
-    return 0u;
-}
-
-void ndsFtrLeanAdmitLockRegions(void)
-{
-}
-
-void ndsFtrLeanAdmitBattleExit(void)
-{
-}
-
-void ndsFtrLeanAdmitCarveRetire(void)
-{
-}
-
-/* No admission, so no carved names: bind nothing. */
-static void ndsRendererHardwareBindCarvedState(u32 name)
-{
-    (void)name;
-    GFX_TEX_FORMAT = 0u;
-    GFX_PAL_FORMAT = 0u;
-    glGlobalData.activeTexture = 0;
-    glGlobalData.activePalette = 0;
-}
-#endif
 

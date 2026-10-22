@@ -277,7 +277,6 @@ s32 ndsRendererExecuteNativeFighterOwnerHierarchy(
 
     ndsRendererInitTraversalState(
         state, NULL, stats, NULL, NULL, 0u);
-#if 0 == NDS_RENDERER_BENCHMARK_NONE
     {
         m4x4 camera_hardware;
 
@@ -301,13 +300,11 @@ s32 ndsRendererExecuteNativeFighterOwnerHierarchy(
         sNdsRendererHardwareMatrixLoaded = TRUE;
         stats->hardware_matrix_seed_count++;
     }
-#endif
 
     for (joint_index = 0u; joint_index < tables.joint_count; joint_index++)
     {
         u32 packed = tables.schedule[joint_index];
         u32 binding = (packed >> 5) & 31u;
-#if 0 == NDS_RENDERER_BENCHMARK_NONE
         m4x4 local_hardware;
 
         ndsRendererHardwareEndBatch();
@@ -325,19 +322,14 @@ s32 ndsRendererExecuteNativeFighterOwnerHierarchy(
             NDS_RENDERER_HW_MATRIX_MODE_FIGHTER_HIERARCHY;
         sNdsRendererHardwareMatrixGeneration = matrix_generation;
         sNdsRendererHardwareMatrixLoaded = TRUE;
-#else
-        matrix_generation++;
-#endif
         if (binding != 31u)
         {
             u32 palette_slot = tables.cross_slots[binding];
 
-#if 0 == NDS_RENDERER_BENCHMARK_NONE
             if (palette_slot <= NDS_NATIVE_GX_MATRIX_SLOT_MAX)
             {
                 glStoreMatrix((int)palette_slot);
             }
-#endif
             ndsRendererNativeCommitHierarchyRoot(
                 asset_base, &tables.roots[binding],
                 &hierarchy->roots[binding],
@@ -357,12 +349,10 @@ s32 ndsRendererExecuteNativeFighterOwnerHierarchy(
 
                 if ((cursor_packed & 0x8000u) != 0u)
                 {
-#if 0 == NDS_RENDERER_BENCHMARK_NONE
                     ndsRendererHardwareEndBatch();
                     ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
                     glPopMatrix(1);
                     stats->matrix_pop_count++;
-#endif
                 }
                 cursor = parent;
             }
@@ -1965,172 +1955,6 @@ static inline void ndsRendererNativeStageWriteVertex16(u32 xy, u32 z)
     ndsRendererHardwareWriteVertex16Words(xy, z);
 }
 
-#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
-static u32 ndsRendererBenchmarkSegment0NormalizeAssetAddress(
-    u32 address, u32 *valid)
-{
-    u32 asset_index;
-
-    if (address == 0u)
-    {
-        return 0u;
-    }
-    for (asset_index = 0u;
-         asset_index < NDS_RENDERER_NATIVE_STAGE_ASSET_COUNT;
-         asset_index++)
-    {
-        u32 base = (u32)(uintptr_t)
-            sNdsRendererBenchmarkSegment0AssetBases[asset_index];
-        u32 offset = address - base;
-
-        if ((base != 0u) && (address >= base) &&
-            (offset < sNdsNativeStageAssets[asset_index].payload_size) &&
-            (offset < 0x01000000u))
-        {
-            return ((asset_index + 1u) << 24) | offset;
-        }
-    }
-    *valid = FALSE;
-    return 0xffffffffu;
-}
-
-static void ndsRendererBenchmarkSegment0HashTextureKey(
-    const NDSRendererHardwareTextureCacheEntry *entry,
-    u32 *valid,
-    u32 *image,
-    u32 *tlut,
-    u32 *texel1,
-    u32 *out_hash_a,
-    u32 *out_hash_b)
-{
-    NDSRendererHardwareTextureKey normalized;
-    const u32 *words;
-    u32 hash_a = 2166136261u;
-    u32 hash_b = 0x9e3779b9u;
-    u32 i;
-
-    ndsRendererHardwareEntryCopyKey(entry, &normalized);
-    normalized.image = ndsRendererBenchmarkSegment0NormalizeAssetAddress(
-        normalized.image, valid);
-    normalized.tlut_image =
-        ndsRendererBenchmarkSegment0NormalizeAssetAddress(
-            normalized.tlut_image, valid);
-    normalized.texel1_image =
-        ndsRendererBenchmarkSegment0NormalizeAssetAddress(
-            normalized.texel1_image, valid);
-    *image = normalized.image;
-    *tlut = normalized.tlut_image;
-    *texel1 = normalized.texel1_image;
-    words = (const u32 *)&normalized;
-    for (i = 0u; i < (sizeof(normalized) / sizeof(u32)); i++)
-    {
-        hash_a = ndsRendererBenchmarkSinkHashWordA(hash_a, words[i]);
-        hash_b = ndsRendererBenchmarkSinkHashWordB(hash_b, words[i]);
-    }
-    *out_hash_a = hash_a;
-    *out_hash_b = hash_b;
-}
-
-static void ndsRendererBenchmarkSegment0ArmRun(
-    u32 run_offset,
-    const NDSNativeStageRun *run,
-    const NDSNativeStagePreparedRun *prepared)
-{
-    const NDSRendererHardwareTextureCacheEntry *entry;
-    const NDSNativeStageTextureEpoch *epoch;
-    u32 image = 0u;
-    u32 tlut = 0u;
-    u32 texel1 = 0u;
-    u32 key_hash_a = 0u;
-    u32 key_hash_b = 0u;
-    u32 valid = TRUE;
-
-    if ((run_offset >= NDS_RENDERER_BENCHMARK_SEGMENT0_RUN_COUNT) ||
-        (run == NULL) || (prepared == NULL) ||
-        (run->texture_epoch >= NDS_NATIVE_STAGE_TEXTURE_EPOCH_COUNT))
-    {
-        sNdsRendererBenchmarkSegment0SinkArmFaults++;
-        sNdsRendererBenchmarkSegment0TextureValid = FALSE;
-        return;
-    }
-    epoch = &sNdsNativeStageTextureEpochs[run->texture_epoch];
-    entry = prepared->texture_entry;
-    if (prepared->textured != 0u)
-    {
-        if (ndsRendererNativeStagePreparedTextureValid(prepared) == FALSE)
-        {
-            valid = FALSE;
-        }
-        if (entry != NULL)
-        {
-            ndsRendererBenchmarkSegment0HashTextureKey(
-                entry, &valid, &image, &tlut, &texel1,
-                &key_hash_a, &key_hash_b);
-        }
-    }
-    else if ((entry != NULL) || (prepared->texture_name != 0u))
-    {
-        valid = FALSE;
-    }
-    sNdsRendererBenchmarkSegment0TextureEpochPlus1 =
-        (u32)run->texture_epoch + 1u;
-    sNdsRendererBenchmarkSegment0TextureEpochSourceOffset =
-        epoch->source_command_offset;
-    sNdsRendererBenchmarkSegment0TextureEpochMetadata =
-        (u32)epoch->asset_index |
-        ((u32)epoch->policy_index << 8) |
-        ((u32)epoch->material_event << 16) |
-        ((u32)epoch->flags << 24);
-    sNdsRendererBenchmarkSegment0TextureImage = image;
-    sNdsRendererBenchmarkSegment0TextureTlut = tlut;
-    sNdsRendererBenchmarkSegment0TextureTexel1 = texel1;
-    sNdsRendererBenchmarkSegment0TextureKeyHashA = key_hash_a;
-    sNdsRendererBenchmarkSegment0TextureKeyHashB = key_hash_b;
-    sNdsRendererBenchmarkSegment0TextureDescriptor =
-        ((u32)prepared->texture_format & 0xffu) |
-        (((u32)prepared->texture_width & 0xfffu) << 8) |
-        (((u32)prepared->texture_height & 0xfffu) << 20);
-    sNdsRendererBenchmarkSegment0TextureFlags =
-        (u32)prepared->textured |
-        ((u32)prepared->alpha_test << 8) |
-        ((u32)prepared->alpha_ref << 16);
-    sNdsRendererBenchmarkSegment0TextureParams = prepared->texture_params;
-    sNdsRendererBenchmarkSegment0TexturePolyFmt = prepared->poly_fmt;
-    sNdsRendererBenchmarkSegment0TextureBinding = run->binding_index;
-    sNdsRendererBenchmarkSegment0TextureValid = valid;
-    gNdsRendererBenchmarkSegment0RunRawTextureName[run_offset] =
-        prepared->texture_name;
-    gNdsRendererBenchmarkSegment0RunTextureEpochPlus1[run_offset] =
-        sNdsRendererBenchmarkSegment0TextureEpochPlus1;
-    gNdsRendererBenchmarkSegment0RunTextureImage[run_offset] = image;
-    gNdsRendererBenchmarkSegment0RunTextureTlut[run_offset] = tlut;
-    gNdsRendererBenchmarkSegment0RunTextureKeyHashA[run_offset] = key_hash_a;
-    gNdsRendererBenchmarkSegment0RunTextureKeyHashB[run_offset] = key_hash_b;
-    gNdsRendererBenchmarkSegment0RunTextureDescriptor[run_offset] =
-        sNdsRendererBenchmarkSegment0TextureDescriptor;
-    gNdsRendererBenchmarkSegment0RunTextureParams[run_offset] =
-        prepared->texture_params;
-    if (valid == FALSE)
-    {
-        sNdsRendererBenchmarkSegment0SinkArmFaults++;
-    }
-}
-
-static void ndsRendererBenchmarkSegment0CheckpointRun(u32 run_offset)
-{
-    if (run_offset >= NDS_RENDERER_BENCHMARK_SEGMENT0_RUN_COUNT)
-    {
-        sNdsRendererBenchmarkSegment0SinkArmFaults++;
-        return;
-    }
-    gNdsRendererBenchmarkSegment0RunWords[run_offset] =
-        sNdsRendererBenchmarkSegment0SinkWords;
-    gNdsRendererBenchmarkSegment0RunHashA[run_offset] =
-        sNdsRendererBenchmarkSegment0SinkHashA;
-    gNdsRendererBenchmarkSegment0RunHashB[run_offset] =
-        sNdsRendererBenchmarkSegment0SinkHashB;
-}
-#endif
 
 static s32 ndsRendererNativeStageTask36BindingIsRigid(u32 binding_index)
 {
@@ -3244,10 +3068,6 @@ s32 ndsRendererPrepareNativeStageOwner(
     sNdsNativeStageOwnerExecution.task36_seen_binding_mask = 0u;
     sNdsNativeStageOwnerExecution.task36_local_pushed = FALSE;
     sNdsNativeStageOwnerExecution.task36_segment_active = FALSE;
-#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
-    memset(sNdsRendererBenchmarkSegment0AssetBases, 0,
-           sizeof(sNdsRendererBenchmarkSegment0AssetBases));
-#endif
     if ((gNdsRendererFastRunMode !=
          NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE) ||
         (frame == NULL) || (stats == NULL) ||
@@ -3455,10 +3275,6 @@ s32 ndsRendererPrepareNativeStageOwner(
     sNdsNativeStageOwnerExecution.binding_world = frame->binding_world;
     sNdsNativeStageOwnerExecution.rigid_binding_mask =
         frame->rigid_binding_mask;
-#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
-    memcpy(sNdsRendererBenchmarkSegment0AssetBases, frame->asset_bases,
-           sizeof(sNdsRendererBenchmarkSegment0AssetBases));
-#endif
     ndsRendererInitStats(stats);
     stats->command_count = NDS_NATIVE_STAGE_SOURCE_COMMAND_COUNT;
     stats->vertex_count = NDS_NATIVE_STAGE_SOURCE_VERTEX_COUNT;
@@ -3636,14 +3452,8 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
         return FALSE;
     }
     stage_gx_segment = ndsStageGxEligible(segment_index);
-#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
-    if (segment_index == 0u)
-    {
-        ndsRendererBenchmarkSegment0SinkBegin();
-    }
-#endif
     sNdsRendererRuntimeOwner = NDS_RENDERER_PROFILE_OWNER_STAGE;
-#if NDS_STAGE_GX_FAST_LIVE && (0 == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_STAGE_GX_FAST_LIVE
     /* The whole segment in one patch pass and one DMA when it qualifies
      * (ndsStageGxCommitFast); the per-run loop below otherwise, which then
      * owns the segment's memos until the fast path re-proves them. */
@@ -3679,13 +3489,6 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
             continue;
         }
 
-#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
-        if (segment_index == 0u)
-        {
-            ndsRendererBenchmarkSegment0ArmRun(
-                run_offset, run, prepared_run);
-        }
-#endif
         if ((stage_gx_segment != FALSE) &&
             (ndsStageGxRunOutsideView(run_index) != FALSE))
         {
@@ -3755,12 +3558,6 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
         }
         ndsRendererHardwareEndBatch();
 stage_account_run:
-#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
-        if (segment_index == 0u)
-        {
-            ndsRendererBenchmarkSegment0CheckpointRun(run_offset);
-        }
-#endif
         if (gNdsNativeStageRunWitness != 0u)
         {
             ndsRendererNativeStagePublishRunEmission(run_index, emitted_triangles);
@@ -3775,7 +3572,7 @@ stage_account_run:
         stats->triangle_count += run->triangle_count;
         segment_triangles += run->triangle_count;
     }
-#if NDS_STAGE_GX_FAST_LIVE && (0 == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_STAGE_GX_FAST_LIVE
 stage_gx_fast_done:
 #endif
     ndsStageGxFlush();
@@ -3798,14 +3595,6 @@ stage_gx_fast_done:
     sNdsNativeStageOwnerExecution.committed_segments |=
         (u32)1u << segment_index;
     sNdsRendererRuntimeOwner = NDS_RENDERER_PROFILE_OWNER_NONE;
-#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
-    if (segment_index == 0u)
-    {
-        ndsRendererBenchmarkSegment0SinkEnd();
-        sNdsRendererBenchmarkSegment0TextureValid = FALSE;
-    }
-    ndsRendererBenchmarkSinkEndOwner(NDS_RENDERER_PROFILE_OWNER_STAGE);
-#endif
     return TRUE;
 }
 
@@ -3815,9 +3604,6 @@ void ndsRendererFinishNativeStageOwner(void)
     {
         ndsRendererNativeStageTask36EndSegment();
         ndsRendererHardwareEndBatch();
-#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
-        ndsRendererBenchmarkSinkEndOwner(NDS_RENDERER_PROFILE_OWNER_STAGE);
-#endif
         if ((sNdsNativeStageOwnerExecution.committed_segments !=
              (((u32)1u << NDS_NATIVE_STAGE_SEGMENT_COUNT) - 1u)) ||
             (sNdsNativeStageOwnerExecution.stats == NULL) ||

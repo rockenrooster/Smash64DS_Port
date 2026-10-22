@@ -7931,10 +7931,6 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
 #endif
         }
 #endif
-#if 0 == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
-        ndsRendererBenchmarkSinkEndOwner(
-            NDS_RENDERER_PROFILE_OWNER_STAGE);
-#endif
     }
 }
 

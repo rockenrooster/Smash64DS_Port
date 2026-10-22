@@ -229,9 +229,6 @@ static inline void ndsRendererFastAccountRawTriangles(
     stats->hardware_triangle_count += triangle_count;
     stats->hardware_vertex_count += triangle_count * 3u;
     stats->hardware_zbuffer_triangle_count += triangle_count;
-#if 0 != NDS_RENDERER_BENCHMARK_NONE
-    sNdsRendererBenchmarkTriangleCount += triangle_count;
-#endif
     sNdsRendererHardwareSubmitted = TRUE;
 }
 
@@ -1115,9 +1112,6 @@ s32 ndsRendererSubmitNativeImpactWave(
                 glVertex3v16(out_x, out_y, out_z);
             }
             sNdsRendererHardwareSubmitted = TRUE;
-#if 0 != NDS_RENDERER_BENCHMARK_NONE
-            sNdsRendererBenchmarkTriangleCount++;
-#endif
             stats->triangle_count++;
             stats->hardware_triangle_count++;
             stats->hardware_vertex_count += 3u;
@@ -1521,9 +1515,6 @@ s32 ndsRendererSubmitNativeVisualEffect(
             glVertex3v16(projected_x[index], projected_y[index], out_z);
         }
         sNdsRendererHardwareSubmitted = TRUE;
-#if 0 != NDS_RENDERER_BENCHMARK_NONE
-        sNdsRendererBenchmarkTriangleCount++;
-#endif
         stats->triangle_count++;
         stats->transformed_triangle_count++;
         stats->hardware_triangle_count++;
@@ -4878,7 +4869,7 @@ __attribute__((used)) volatile u32 gNdsEntryEffectPacketReplays;
 __attribute__((used)) volatile u32 gNdsEntryEffectPacketFaults;
 __attribute__((used)) volatile u32 gNdsEntryEffectPacketArenaWords;
 
-#if NDS_FIGHTER_PACKET_LIVE && (0 == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_FIGHTER_PACKET_LIVE
 #define NDS_ENTRY_PACKET_LIVE 1
 #else
 #define NDS_ENTRY_PACKET_LIVE 0
@@ -5455,7 +5446,6 @@ s32 ndsRendererSubmitNativeEntryEffect(
     const NDSRendererConfig *config, NDSRendererStats *stats)
 {
     NDS_FIGHTER_PACKET_DMA_WAIT();
-#if 0 == NDS_RENDERER_BENCHMARK_NONE
     const NDSEntryEffectRoot *root;
     u32 group_offset;
     u32 matrix_generation;
@@ -6798,15 +6788,6 @@ s32 ndsRendererSubmitNativeEntryEffect(
         }
     }
     return TRUE;
-#else
-    (void)owner_asset_id;
-    (void)root_offset;
-    (void)materials;
-    (void)material_count;
-    (void)config;
-    (void)stats;
-    return FALSE;
-#endif
 }
 
 /* P2-2p8 (2026-10-04, owner r75 Sector Z row): Sector Z's Arwing draws eight
@@ -7120,7 +7101,6 @@ ndsRendererPrepareEntryKoPalettes(void)
     return TRUE;
 }
 
-#if 0 == NDS_RENDERER_BENCHMARK_NONE
 volatile u32 gNdsEntryEffectNativeTexturePrepareFailCount;
 
 /* EACH TEXTURE FAILS ALONE. The first refused texture used to end the setup,
@@ -7322,27 +7302,18 @@ ndsRendererPrepareEntryEffectTextureSet(u32 skip_startup)
     }
     return ok;
 }
-#endif
 
 s32 ndsRendererHardwarePrepareEntryEffectTextures(void)
 {
-#if 0 == NDS_RENDERER_BENCHMARK_NONE
 #ifdef NDS_ENTRY_EFFECT_P4_CORNER_BLOCKS
     ndsRendererEntryP4CornersLoad();
 #endif
     return ndsRendererPrepareEntryEffectTextureSet(0u);
-#else
-    return FALSE;
-#endif
 }
 
 s32 ndsRendererHardwarePrepareEntryEffectGameplayTextures(void)
 {
-#if 0 == NDS_RENDERER_BENCHMARK_NONE
     return ndsRendererPrepareEntryEffectTextureSet(1u);
-#else
-    return FALSE;
-#endif
 }
 
 /* libnds's NORMAL_PACK does not mask its z argument -- it is
@@ -10225,9 +10196,6 @@ static inline void ndsRendererNativeAccountGXCrossTriangles(
     stats->hardware_triangle_count += triangle_count;
     stats->hardware_vertex_count += triangle_count * 3u;
     stats->hardware_zbuffer_triangle_count += triangle_count;
-#if 0 != NDS_RENDERER_BENCHMARK_NONE
-    sNdsRendererBenchmarkTriangleCount += triangle_count;
-#endif
     sNdsRendererHardwareSubmitted = TRUE;
 }
 
@@ -16675,9 +16643,6 @@ ndsFtrLeanPacketSubmit(u32 battle_slot)
             packet->raw_reuse;
         sNdsRendererRuntimeFrameSummary.hardware_triangles += raw;
         sNdsRendererRuntimeFrameSummary.hardware_vertices += raw * 3u;
-#if 0 != NDS_RENDERER_BENCHMARK_NONE
-        sNdsRendererBenchmarkTriangleCount += raw;
-#endif
         sNdsRendererHardwareSubmitted = TRUE;
     }
     if (cross != 0u)
@@ -16696,9 +16661,6 @@ ndsFtrLeanPacketSubmit(u32 battle_slot)
         {
             sNdsRendererRuntimeFrameSummary.hardware_over_limit = 1u;
         }
-#if 0 != NDS_RENDERER_BENCHMARK_NONE
-        sNdsRendererBenchmarkTriangleCount += cross;
-#endif
         sNdsRendererHardwareSubmitted = TRUE;
     }
 #if NDS_RENDERER_FRAME_SUMMARY_COUNTERS
@@ -17060,7 +17022,7 @@ void ndsFtrLeanNoteTextureUpload(u32 bytes)
 #endif
 }
 
-#if NDS_VRAM_CENSUS_LIVE && (0 == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_VRAM_CENSUS_LIVE
 /* Slice 2b lab words outside this TU's structs (nds_platform.c). */
 extern volatile u32 gNdsVramBankDLent;
 extern volatile u32 gNdsVramBg3RefusedWrites;
@@ -17076,7 +17038,7 @@ void ndsFtrLeanCountersPublish(void)
 #if NDS_FTR_LEAN_ATTR_LIVE
     DC_FlushRange(&gNdsFtrLeanAttr, sizeof(gNdsFtrLeanAttr));
 #endif
-#if NDS_VRAM_CENSUS_LIVE && (0 == NDS_RENDERER_BENCHMARK_NONE)
+#if NDS_VRAM_CENSUS_LIVE
     /* Slice 2b: the admission lab and the words the sampler reads once at
      * the end -- flushed every frame so a GDB read is never a stale line. */
     DC_FlushRange(&gNdsFtrAdmitLab, sizeof(gNdsFtrAdmitLab));
@@ -17352,13 +17314,6 @@ static s32 ndsRendererNativeSubmitProductionRun(
     }
     submit_class = ndsRendererNativeRunSubmitClass(run);
     run_index = (u32)(run - sNdsNativeFighterActiveTables->runs);
-#if 0 == NDS_RENDERER_BENCHMARK_TRIANGLE_NOOP
-    (void)epoch_policy;
-    (void)current_palette_slot;
-    (void)binding_palette_slots;
-    (void)config;
-    (void)state;
-#elif 0 == NDS_RENDERER_BENCHMARK_NONE
     if (ndsRendererNativePrepareProductionRun(
             run_index, epoch_policy,
             FALSE,
@@ -17404,14 +17359,6 @@ static s32 ndsRendererNativeSubmitProductionRun(
                 run_index, (u32)run->triangle_count * 3u);
         }
     }
-#else
-    (void)epoch_policy;
-    (void)current_palette_slot;
-    (void)binding_palette_slots;
-    (void)config;
-    (void)state;
-    return ndsRendererNativeDirectReject(stats);
-#endif
     stats->triangle_count += run->triangle_count;
     if (ndsRendererNativeRunSubmitClass(run) == NDS_NATIVE_RUN_RAW_CURRENT)
     {
@@ -17509,9 +17456,6 @@ static inline void ndsRendererNativeAccountProjectedCrossTriangle(
     stats->hardware_triangle_count += triangle_count;
     stats->hardware_vertex_count += triangle_count * 3u;
     stats->hardware_projected_depth_triangle_count += triangle_count;
-#if 0 != NDS_RENDERER_BENCHMARK_NONE
-    sNdsRendererBenchmarkTriangleCount += triangle_count;
-#endif
     sNdsRendererHardwareSubmitted = TRUE;
 }
 
@@ -17521,29 +17465,6 @@ static s32 ndsRendererNativeSubmitRunDirect(
     NDSRendererStats *stats,
     NDSRendererTraversalState *state)
 {
-#if 0 == NDS_RENDERER_BENCHMARK_TRIANGLE_NOOP
-    if ((run == NULL) || (config == NULL) || (stats == NULL) ||
-        (state == NULL) || (run->triangle_count == 0u))
-    {
-        return FALSE;
-    }
-    /* This benchmark measures everything surrounding triangle transport.
-     * Consume the generated run as one unit instead of paying the generic
-     * per-triangle fallback loop that production never executes. */
-    stats->triangle_count += run->triangle_count;
-    if (ndsRendererNativeRunSubmitClass(run) == NDS_NATIVE_RUN_RAW_CURRENT)
-    {
-        ndsRendererFastAccountRawTriangles(
-            stats, run->triangle_count,
-            (run->triangle_count != 0u) ? run->triangle_count - 1u : 0u);
-    }
-    else
-    {
-        ndsRendererNativeAccountProjectedCrossTriangle(
-            stats, run->triangle_count);
-    }
-    return TRUE;
-#elif 0 == NDS_RENDERER_BENCHMARK_NONE
     u32 emitted_triangles = 0u;
     u32 run_index;
     u32 i;
@@ -17636,12 +17557,6 @@ static s32 ndsRendererNativeSubmitRunDirect(
         }
         return TRUE;
     }
-#else
-    (void)run;
-    (void)config;
-    (void)stats;
-    (void)state;
-#endif
     return FALSE;
 }
 
@@ -19679,7 +19594,6 @@ static void ndsRendererNativeCommitHierarchyRoot(
 
             ndsRendererNativePrepareHierarchyTexcoords(
                 run_index, prepared_run);
-#if 0 == NDS_RENDERER_BENCHMARK_NONE
             ndsRendererNativeBeginHierarchyBatch(
                 stats, prepared_run, matrix_generation);
             if (submit_class == NDS_NATIVE_RUN_CROSS_MATRIX)
@@ -19701,7 +19615,6 @@ static void ndsRendererNativeCommitHierarchyRoot(
                         run_index, (u32)run->triangle_count * 3u);
                 }
             }
-#endif
             stats->triangle_count += run->triangle_count;
             if (submit_class == NDS_NATIVE_RUN_RAW_CURRENT)
             {

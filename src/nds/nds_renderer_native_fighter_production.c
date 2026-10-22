@@ -147,7 +147,6 @@ ndsRendererExecuteNativeFighterOwnerProduction(
         }
 
         ndsRendererNativeBindProductionRoot(state, input, stats);
-#if 0 == NDS_RENDERER_BENCHMARK_NONE
         *out_hardware_started = TRUE;
         /* The capture is allowed to decline, and when it does the adapter has
          * composed on the CPU exactly as before, so the split loader is still
@@ -167,7 +166,6 @@ ndsRendererExecuteNativeFighterOwnerProduction(
         {
             glStoreMatrix((int)palette_slot);
         }
-#endif
         if (stats->first_opcode == 0u)
         {
             stats->first_opcode = NDS_RENDERER_OP_RDPPIPESYNC;
