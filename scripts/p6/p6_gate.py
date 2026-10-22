@@ -82,8 +82,9 @@ PILLAR_TEX = 64            # the atlas (CI4, 2 KB)
 # translucent). Every card's PRIM is its material's (PILLAR_MOBJSUBS), so her
 # code fades and colours it (src/port/nds_p4_palutena.c). The 3DS's column
 # (the owner's quarter-speed Strong_Up_A clip, owner 2026-10-22, against her
-# height): a white core about 0.23 of it across in a solid cyan glow about
-# 0.68 that fades out past it, a cyan pool on the floor about her height
+# height, HER_HEIGHT; Ultimate's column as wide): a white core about a quarter
+# of it across, rimmed bright cyan to about 0.4, in a blue glow to about 0.9
+# (GLOW_PROFILE), a cyan pool on the floor about her height
 # across (a flash up its foot here, over a stage's foreground), and dust
 # rolling out either way about her height or more, about 0.3 of it high. The dust
 # cards reach out from the foot (x 0), the flare lies over it. The order is
@@ -95,16 +96,24 @@ PILLAR_CARDS = (
     ("dust_l", (64, 16.5, 32, 47.5), -760.0, 0.0, -12.0, 520.0, 12.0, (255, 255, 255, 235)),
     ("dust_r", (32, 16.5, 64, 47.5), 0.0, 760.0, -12.0, 520.0, 12.0, (255, 255, 255, 235)),
     ("flare", (32, 0.5, 64, 15.5), -300.0, 300.0, -80.0, 300.0, 8.0, (255, 255, 255, 240)),
-    ("core", (0, 0, 16, 64), -65.0, 65.0, 0.0, PILLAR_HEIGHT, 4.0, (255, 255, 255, 255)),
-    ("glow", None, -300.0, 300.0, 0.0, PILLAR_HEIGHT, 0.0, (30, 205, 255, 215)),
+    ("core", (0, 0, 32, 64), -150.0, 150.0, 0.0, PILLAR_HEIGHT, 4.0, (255, 255, 255, 255)),
+    ("glow", None, -276.0, 276.0, 0.0, PILLAR_HEIGHT, 0.0, (8, 168, 255, 235)),
 )
 # The glow's own image: an I4 coverage mask (graded alpha, its colour the
-# material's PRIM), solid to GLOW_SOLID of its half width and fading out to
-# its edge, its top rounded over GLOW_CAP of its rows (it rises with a round
-# head), as the 3DS's soft glow.
+# material's PRIM), its top rounded over GLOW_CAP of its rows (it rises with
+# a round head). Across it the glow's strength (GLOW_PROFILE: its distance
+# out from the middle in her heights, HER_HEIGHT units; its alpha) as the
+# owner's clip shows it (owner 2026-10-22; measured, its blue over the
+# stage): full to the core's edge, quickly down to a third by 0.32 of her
+# height out, then a faint tail gone by 0.45 -- the bloom Ultimate's and the
+# 3DS's add, which the DS cannot, drawn in. Ultimate's glow plane reaches as
+# far (0.45 of her height).
 GLOW_W, GLOW_H = 32, 64
-GLOW_SOLID = 0.62
 GLOW_CAP = 14
+HER_HEIGHT = 600.0
+GLOW_PROFILE = ((0.0, 1.0), (0.23, 1.0), (0.24, 0.94), (0.26, 0.74), (0.28, 0.6), (0.3, 0.43),
+                (0.32, 0.31), (0.34, 0.23), (0.36, 0.19), (0.38, 0.16), (0.4, 0.13), (0.42, 0.1),
+                (0.44, 0.06), (0.46, 0.0))
 PILLAR_DOBJS = len(PILLAR_CARDS) + 1
 # The pillar's tree, after the gate's five rows (p4_articles.py "pillar"):
 # its root, its cards, the end.
@@ -348,17 +357,17 @@ def pillar_atlas() -> tuple[bytes, bytes]:
 def glow_i4() -> np.ndarray:
     """The pillar glow's coverage, GLOW_H rows of GLOW_W levels (0-15)."""
     levels = np.zeros((GLOW_H, GLOW_W), dtype=int)
+    reach = next(card[3] for card in PILLAR_CARDS if card[0] == "glow") / HER_HEIGHT
     for y in range(GLOW_H):
         half = 1.0
         if y < GLOW_CAP:
             half = float(np.sqrt(max(0.0, 1.0 - ((GLOW_CAP - y) / GLOW_CAP) ** 2)))
         for x in range(GLOW_W):
-            u = abs((x + 0.5) - GLOW_W / 2.0) / (GLOW_W / 2.0)
-            if half <= 0.0 or u >= half:
+            r = abs((x + 0.5) - GLOW_W / 2.0) / (GLOW_W / 2.0)
+            if half <= 0.0 or r >= half:
                 continue
-            u /= half
-            k = min(max((u - GLOW_SOLID) / (1.0 - GLOW_SOLID), 0.0), 1.0)
-            a = 1.0 - k * k * (3.0 - 2.0 * k)
+            r /= half
+            a = float(np.interp(r * reach, [p[0] for p in GLOW_PROFILE], [p[1] for p in GLOW_PROFILE]))
             levels[y, x] = int(round(a * 15.0))
     levels[levels <= 1] = 0
     return levels

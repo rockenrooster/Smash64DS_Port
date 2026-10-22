@@ -890,17 +890,19 @@ static void ndsP4PalutenaGateProcUpdate(GObj *effect_gobj)
  * (game frames after the column first shows; her height the unit): the tree's
  * cards (p6_gate.py PILLAR_CARDS, in draw order, each its PRIM a live
  * material, PAL_PILLAR_MOBJSUBS): the dust either way along the floor, the
- * pool on the floor at its foot (the flare), the core (white down its middle
- * to cyan, 0.22 across) and the glow (soft, solid to 0.68 across, coloured
- * by its material). The column rises from the floor with a round head over
- * PAL_PILLAR_RISE tics (its height sNdsP4PalutenaPillarRise), posed for tic
- * 0 when made (it drew one frame at full height first); the pool brightest
- * as it rises, fading out by PAL_PILLAR_FLARE_END; the dust rolls out either
+ * pool on the floor at its foot (the flare), the core (white down its middle,
+ * 0.25 across, to bright cyan, 0.5 across) and the glow (full at the core's
+ * edge, faint by 0.7 across and gone by 0.9, coloured by its material: the
+ * owner's clip measured). The column rises from the floor with a round head
+ * over PAL_PILLAR_RISE tics (its height sNdsP4PalutenaPillarRise), posed for
+ * tic 0 when made (it drew one frame at full height first); the pool
+ * brightest as it rises, fading out by PAL_PILLAR_FLARE_END; the dust rolls out either
  * way with it, at its full reach by PAL_PILLAR_DUST_FULL, and settles and
  * fades by PAL_PILLAR_DUST_END; the column stands, its glow shimmering, to
- * PAL_PILLAR_THIN_AT, thins to a line by PAL_PILLAR_LINE_AT as its glow turns
- * violet, and the violet line fades out by PAL_PILLAR_END (its hitboxes, the
- * script's, are up to tic 26). */
+ * PAL_PILLAR_THIN_AT, thins (slowly, then quickly: sNdsP4PalutenaPillarThin)
+ * to a line by PAL_PILLAR_LINE_AT as its glow turns violet, and the violet
+ * line fades out by PAL_PILLAR_END (its hitboxes, the script's, are up to
+ * tic 26). */
 #define PAL_PILLAR_AHEAD 325.0F
 #define PAL_PILLAR_TOWARD_CAMERA 120.0F
 #define PAL_PILLAR_MOBJSUBS 0x620           /* p6_gate.py PILLAR_MOBJSUBS */
@@ -908,16 +910,21 @@ static void ndsP4PalutenaGateProcUpdate(GObj *effect_gobj)
 #define PAL_PILLAR_FLARE_END 11
 #define PAL_PILLAR_DUST_FULL 6
 #define PAL_PILLAR_DUST_END 13
-#define PAL_PILLAR_THIN_AT 28
-#define PAL_PILLAR_LINE_AT 32
+#define PAL_PILLAR_THIN_AT 19
+#define PAL_PILLAR_LINE_AT 33
 #define PAL_PILLAR_END 38
 /* The glow: cyan, turning violet as it thins (from PAL_PILLAR_VIOLET_AT,
  * violet by PAL_PILLAR_LINE_AT + 1), its width a line's from LINE_AT. */
 #define PAL_PILLAR_VIOLET_AT 29
-#define PAL_PILLAR_LINE_W 0.12F
-#define PAL_PILLAR_CORE_LINE_W 0.3F
+#define PAL_PILLAR_LINE_W 0.21F
 
 static const f32 sNdsP4PalutenaPillarRise[PAL_PILLAR_RISE] = { 0.18F, 0.45F, 1.0F };
+
+/* Its width as it thins, per tic from PAL_PILLAR_THIN_AT (percent; the
+ * owner's clip measured, 2026-10-22): slowly, then quickly, to a line's. */
+static const u8 sNdsP4PalutenaPillarThin[PAL_PILLAR_LINE_AT - PAL_PILLAR_THIN_AT] = {
+    100, 95, 92, 89, 87, 84, 79, 73, 68, 63, 53, 42, 32, 21
+};
 
 /* Owner (2026-10-19): the column's top at the pillar's drawn top plus 6.
  * Its cards are 2,500 tall (p6_gate.py PILLAR_HEIGHT) but draw to about
@@ -941,7 +948,7 @@ static EFDesc sNdsP4PalutenaPillarDesc = {
 
 /* The glow's colour full and violet (its material's PRIM at full alpha:
  * p6_gate.py PILLAR_CARDS), the pool's and the dust's alpha. */
-static const u8 sNdsP4PalutenaPillarCyan[4] = { 30, 205, 255, 215 };
+static const u8 sNdsP4PalutenaPillarCyan[4] = { 8, 168, 255, 235 };
 static const u8 sNdsP4PalutenaPillarViolet[3] = { 140, 110, 255 };
 #define PAL_PILLAR_FLARE_ALPHA 240.0F
 #define PAL_PILLAR_DUST_ALPHA 235.0F
@@ -996,13 +1003,11 @@ static void ndsP4PalutenaPillarPose(GObj *effect_gobj, s32 tic)
     }
     else if (tic >= PAL_PILLAR_THIN_AT)
     {
-        f32 p = (f32)(tic - PAL_PILLAR_THIN_AT) / (f32)(PAL_PILLAR_LINE_AT - PAL_PILLAR_THIN_AT);
-
-        width = 1.0F - ((1.0F - PAL_PILLAR_LINE_W) * p);
-        core_width = 1.0F - ((1.0F - PAL_PILLAR_CORE_LINE_W) * p);
+        width = 0.01F * (f32)sNdsP4PalutenaPillarThin[tic - PAL_PILLAR_THIN_AT];
+        core_width = width;
     }
     glow->scale.vec.f.x = ((tic >= PAL_PILLAR_RISE) && (tic < PAL_PILLAR_THIN_AT) && ((tic & 1) != 0)) ?
-        0.94F : width;
+        (0.94F * width) : width;
     glow->scale.vec.f.y = height;
     core->scale.vec.f.x = core_width;
     core->scale.vec.f.y = (core_width > 0.0F) ? height : 0.0F;
