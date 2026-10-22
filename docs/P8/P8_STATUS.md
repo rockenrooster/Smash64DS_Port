@@ -5,11 +5,12 @@ first row that is not done.
 
 ## Cursor
 
-**Next action:** C's splits are done (no port-owned source over 4,000 lines).
-E next (the dormant verifier framework, then the legacy fighter executor), so
-D's headers are not written for files E deletes or F renames; then F, D, G,
-H-2. S1's campaign audit finishes in the background. The owner's BUGS.md rows
-are fixed (play ROM `play-p8d`).
+**Next action:** D (purpose headers: 132 port files have none, 21 a one- or
+two-line one), then R0/P0 and the R and P loops (owner order: C and D before
+the RAM hunt); F, G, H-2 and I interleave with them. C and E are done (E's
+last file, `check-gbi-decode-fixtures.ps1`, waits for the owner's copy to be
+clean). S1's campaign audit finishes in the background. The owner's BUGS.md
+rows are fixed (play ROM `play-p8d`).
 
 **Before the first edit:** when this plan was written (2026-10-22 08:20) a
 session was running the owner's goal "finish Todo list: readability, RAM
@@ -41,7 +42,7 @@ commit with explicit paths only.
 | C split the 13 port files over 4,000 lines | done | C1-C12 and the counter purge: every plan file is under 4,000 lines (largest port file now `nds_renderer_native_entry.c`, 3,965). `renderer_adapter_stage.c`'s 5,677-line body keeps its text: its claim and submit phases are fragments it includes in place (`split_function.py`). `include/ft/fighter.h` (4,933) is the one file left over: a decomp-shaped mirror of BattleShip's ft headers that `scripts/p4/ft_layout.py` and nine other tools parse, so it keeps the source's layout (section 3) |
 | S3 static analysis (`-fanalyzer`, allocations, stacks) | in progress | `-fanalyzer` over the 80 port compiles of the play config: 21 distinct warnings, all triaged false or benign (NULL-checked helpers read as maybe-NULL in `nds_p4.c`; the ARM7 snapshot copy; a zero-count loop; linker-symbol pointer differences; the joint table's parent-first order). `-fstack-usage`: largest frames `ndsAudioParseCtl` 12,384 B (boot, main stack), `ndsRendererAdapterSubmitStageDLBody` 5,192 B, `ndsRendererAdapterTryNativeEntryEffect` 2,888 B; next the allocation audit and the coroutine stack paint |
 | D purpose headers and invariant comments | open | after C |
-| E dormant verifier framework, legacy fighter executor | open | owner OK (`OWNER_QUESTIONS.md` 6) |
+| E dormant verifier framework, legacy fighter executor | done | `1371dee1858`: 33 scripts and `HARNESSES.md` (-9,593 lines); seven passing host checks kept, two failing ones left for H-2; `check-gbi-decode-fixtures.ps1` stays while the owner's worktree holds it modified. The executor itself went in `1c8636a6632`; its knob goes with G |
 | F history names | open | |
 | G Makefile cleanup and split | open | proof: `make -n` identity |
 | H-2 the rest of the tools, `quick_check.ps1` | open | |
@@ -63,6 +64,8 @@ commit with explicit paths only.
 
 Newest first. One line a batch: date, item, commit, proof, numbers.
 
+- 2026-10-22 -- E1: the P1/P2 verifier framework (`1371dee1858`; 33 scripts and `HARNESSES.md`, chosen by a
+  reference graph); `VERIFYING.md` keeps its live procedure; three comment edits preprocess identically.
 - 2026-10-22 -- C12: `renderer_adapter_stage.c` (14,929 lines) into 4 slices (1,764 to 3,152) and
   its body's two phases into in-place fragments (3,166 and 1,825; `ca7f94b6c01`); `scene_backend`
   preprocess-identical in the five configs. The body is 27,680 B of code with ~50 submit arms of
