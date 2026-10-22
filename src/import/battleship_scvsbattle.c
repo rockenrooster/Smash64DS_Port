@@ -475,37 +475,6 @@ void scVSBattleFuncUpdate(void)
         gNdsFighterNaturalMotionBaseVSBattleUpdateCount++;
         ndsFighterMarioFoxNaturalMotionRunVSBattleUpdate();
     }
-    else
-    if (ndsFighterMarioFoxLivePreviewUpdateEnabled() != FALSE)
-    {
-        NDS_DIAG(gNdsFighterLivePreviewBaseVSBattleUpdateCount++);
-        ndsFighterMarioFoxLivePreviewRunVSBattleUpdate();
-    }
-    else if (ndsFighterMarioFoxGCDrawAllLoopUpdateEnabled() != FALSE)
-    {
-        NDS_DIAG(gNdsFighterGCDrawAllLoopBaseVSBattleUpdateCount++);
-        ndsFighterMarioFoxGCDrawAllLoopRunVSBattleUpdate();
-    }
-    else if (ndsFighterMarioFoxGCRunAllLoopUpdateEnabled() != FALSE)
-    {
-        gNdsFighterGCRunAllLoopBaseVSBattleUpdateCount++;
-        ndsFighterMarioFoxGCRunAllLoopRunVSBattleUpdate();
-    }
-    else if (ndsFighterMarioFoxPreviewLoopUpdateEnabled() != FALSE)
-    {
-        NDS_DIAG(gNdsFighterPreviewLoopBaseVSBattleUpdateCount++);
-        ndsFighterMarioFoxPreviewLoopRunVSBattleUpdate();
-    }
-    else if (ndsFighterMarioFoxControllerLoopUpdateEnabled() != FALSE)
-    {
-        NDS_DIAG(gNdsFighterControllerLoopBaseVSBattleUpdateCount++);
-        ndsFighterMarioFoxControllerLoopRunVSBattleUpdate();
-    }
-    else if (ndsFighterMarioFoxSchedulerLoopUpdateEnabled() != FALSE)
-    {
-        NDS_DIAG(gNdsFighterSchedulerLoopBaseVSBattleUpdateCount++);
-        ndsFighterMarioFoxSchedulerLoopRunVSBattleUpdate();
-    }
 }
 
 /* 81,904 RESERVED BYTES THIS PORT WILL NEVER WRITE.

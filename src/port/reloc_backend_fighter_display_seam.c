@@ -25,51 +25,6 @@ static void ndsFtDisplayMainProcDisplayBody(GObj *fighter_gobj)
     {
         NDS_DIAG(gNdsVSResultsFighterDisplayCount++);
     }
-    if ((ndsFighterMarioFoxDisplayProofEnabled() != FALSE) &&
-        (sNdsFighterDisplayProbeActive != FALSE))
-    {
-        ndsFighterMarioFoxRecordDisplayProbe(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxDLAllDrawProofEnabled() != FALSE) &&
-        (sNdsFighterDLAllDrawProbeActive != FALSE))
-    {
-        ndsFighterMarioFoxRecordDLAllDrawFromDisplayCallback(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxPreviewLoopProofEnabled() != FALSE) &&
-        (sNdsFighterPreviewLoopDisplayActive != FALSE))
-    {
-        ndsFighterPreviewLoopRecordDisplayFromCallback(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxGCDrawAllLoopProofEnabled() != FALSE) &&
-        (sNdsFighterGCDrawAllLoopDisplayActive != FALSE))
-    {
-        ndsFighterGCDrawAllLoopRecordDisplayFromCallback(fighter_gobj);
-        return;
-    }
-    if (ndsFighterMarioFoxWalkLoopProofEnabled() != FALSE)
-    {
-        NDS_DIAG(gNdsFighterWalkLoopDisplayProbeCount++);
-        return;
-    }
-    if (ndsFighterMarioFoxWaitProofEnabled() != FALSE)
-    {
-        NDS_DIAG(gNdsFighterWaitDisplayProbeCount++);
-    }
-    if (ndsFighterMarioFoxWaitTickProofEnabled() != FALSE)
-    {
-        NDS_DIAG(gNdsFighterWaitTickDisplayProbeCount++);
-    }
-    if (ndsFighterMarioFoxWaitGroundProofEnabled() != FALSE)
-    {
-        NDS_DIAG(gNdsFighterWaitGroundDisplayProbeCount++);
-    }
-    if (ndsFighterMarioFoxWalkInputProofEnabled() != FALSE)
-    {
-        NDS_DIAG(gNdsFighterWalkDisplayProbeCount++);
-    }
     /* THE SOURCE'S INVISIBILITY GATE, WHICH THIS PATH HAD DROPPED.
      *
      * Owner, 2026-08-23: "fighters are present before intros. The whole point

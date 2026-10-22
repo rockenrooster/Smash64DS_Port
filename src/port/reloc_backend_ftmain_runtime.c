@@ -243,9 +243,6 @@
 #define NDS_DAMAGE_UPDATE_CATCH_RESIST_ORIGINAL 0x10u
 #define NDS_FTMAIN_HITLOG_NUM_MAX 10u
 
-static u32 sNdsFighterDashRunProcParamsLagStartCount;
-static FTHitLog sNdsFighterDashRunHitLogs[NDS_FTMAIN_HITLOG_NUM_MAX];
-static u32 sNdsFighterDashRunHitLogID;
 static const u16 sNdsFighterDashRunHitCollisionFGMs[8][3] = {
     { 40u, 38u, 37u },    /* Punch: S/M/L */
     { 34u, 32u, 31u },    /* Kick: S/M/L */
@@ -349,24 +346,8 @@ void ftMainUpdateAttackStatFighter(FTStruct *other_fp,
                                    GObj *other_gobj,
                                    GObj *this_gobj)
 {
-    u32 effect_count_before = gNdsStageMPLiveHitDamageLoopAttackClashEffectCount;
-
     battleship_ftMainUpdateAttackStatFighter(other_fp, other_hit, this_fp,
                                              this_hit, other_gobj, this_gobj);
-    if ((ndsFighterMarioFoxStageMPLiveHitDamageLoopProofEnabled() != FALSE) &&
-        (gNdsStageMPLiveHitDamageLoopAttackClashEffectCount ==
-            effect_count_before) &&
-        (other_hit != NULL) && (this_hit != NULL))
-    {
-        if ((this_hit->damage - 10) < other_hit->damage)
-        {
-            gNdsStageMPLiveHitDamageLoopAttackClashEffectCount++;
-        }
-        if ((other_hit->damage - 10) < this_hit->damage)
-        {
-            gNdsStageMPLiveHitDamageLoopAttackClashEffectCount++;
-        }
-    }
 }
 
 void ftMainUpdateShieldStatFighter(FTStruct *attacker_fp,
@@ -375,29 +356,9 @@ void ftMainUpdateShieldStatFighter(FTStruct *attacker_fp,
                                    GObj *attacker_gobj,
                                    GObj *victim_gobj)
 {
-    s32 shield_damage_before = (victim_fp != NULL) ?
-        victim_fp->shield_damage : 0;
-    s32 effect_size = (attack_coll != NULL) ? attack_coll->damage : 0;
-
     battleship_ftMainUpdateShieldStatFighter(attacker_fp, attack_coll,
                                              victim_fp, attacker_gobj,
                                              victim_gobj);
-    if ((ndsFighterMarioFoxStageMPLiveHitDamageLoopProofEnabled() != FALSE) &&
-        (attacker_fp != NULL) && (attack_coll != NULL) &&
-        (victim_fp != NULL))
-    {
-        if (victim_fp->shield_damage >= effect_size)
-        {
-            gNdsStageMPLiveHitDamageLoopShieldPlayer = attacker_fp->player;
-        }
-        if ((victim_fp->shield_damage > shield_damage_before) ||
-            (victim_fp->shield_damage_total != 0) ||
-            (attacker_fp->attack_shield_push != 0))
-        {
-            gNdsStageMPLiveHitDamageLoopShieldEffectCount++;
-            gNdsStageMPLiveHitDamageLoopShieldEffectSize = effect_size;
-        }
-    }
 }
 
 void ftMainUpdateCatchStatFighter(FTStruct *attacker_fp,
@@ -531,31 +492,16 @@ void ftMainProcSearchCatch(GObj *fighter_gobj)
 void ftMainSearchHitItem(GObj *fighter_gobj)
 {
     battleship_ftMainSearchHitItem(fighter_gobj);
-    if ((fighter_gobj != NULL) &&
-        (ndsFighterMarioFoxStageMPLiveHitDamageLoopProofEnabled() != FALSE))
-    {
-        gNdsStageMPLiveHitDamageLoopFullCollisionDeferredCount++;
-    }
 }
 
 void ftMainSearchHitWeapon(GObj *fighter_gobj)
 {
     battleship_ftMainSearchHitWeapon(fighter_gobj);
-    if ((fighter_gobj != NULL) &&
-        (ndsFighterMarioFoxStageMPLiveHitDamageLoopProofEnabled() != FALSE))
-    {
-        gNdsStageMPLiveHitDamageLoopFullCollisionDeferredCount++;
-    }
 }
 
 void ftMainSearchGroundHit(GObj *fighter_gobj)
 {
     battleship_ftMainSearchGroundHit(fighter_gobj);
-    if ((fighter_gobj != NULL) &&
-        (ndsFighterMarioFoxStageMPLiveHitDamageLoopProofEnabled() != FALSE))
-    {
-        gNdsStageMPLiveHitDamageLoopFullCollisionDeferredCount++;
-    }
 }
 
 void ftMainProcSearchHitAll(GObj *fighter_gobj)
@@ -653,7 +599,6 @@ __attribute__((used)) volatile u32 gNdsTask108SitrEntryCount;
 __attribute__((used)) volatile u32 gNdsTask108SitrEntryOverflow;
 __attribute__((used)) volatile u32 gNdsTask108SitrTotalCalls;
 __attribute__((used)) volatile u32 gNdsTask108SitrTotalTicks;
-__attribute__((used)) volatile u32 gNdsTask108SitrRefreshCount;
 
 static NdsTask108SitrContext
     sNdsTask108SitrContexts[NDS_TASK108_SITR_CONTEXT_COUNT];
@@ -818,29 +763,6 @@ static void ndsTask108SitrUpdate(GObj *fighter_gobj)
 static void ndsTask108SitrInterrupt(GObj *fighter_gobj)
 {
     ndsTask108SitrDispatch(fighter_gobj, NDS_TASK108_SITR_SLOT_INTERRUPT);
-}
-
-void ndsTask108SitrRefreshCallbacks(GObj *fighter_gobj)
-{
-    NdsTask108SitrContext *context = ndsTask108SitrContextFor(fighter_gobj);
-    FTStruct *fp;
-
-    if ((context == NULL) || (context->active == FALSE) ||
-        (context->fighter_gobj != fighter_gobj))
-    {
-        return;
-    }
-    if (context->in_callback != FALSE)
-    {
-        context->refresh_pending = TRUE;
-        return;
-    }
-    fp = ftGetStruct(fighter_gobj);
-    if (fp != NULL)
-    {
-        gNdsTask108SitrRefreshCount++;
-        ndsTask108SitrWrap(context, fp);
-    }
 }
 
 static void ndsTask108SitrBegin(GObj *fighter_gobj)

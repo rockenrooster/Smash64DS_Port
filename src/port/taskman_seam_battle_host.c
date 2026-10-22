@@ -7,9 +7,6 @@
  * frame for the NDS_R2_EFFECT_POOL low-water. See include/nds/nds_effects.h. */
 extern s32 sEFManagerStructsFreeNum;
 extern volatile u32 gNdsEffectPoolFreeMin;
-extern void ndsFighterMarioFoxSchedulerLoopPrepare(void);
-extern void ndsFighterMarioFoxControllerLoopPrepare(void);
-extern void ndsFighterMarioFoxPreviewLoopPrepare(void);
 
 
 #define NDS_FIGHTER_SCHEDULER_LOOP_UPDATE_MAX 180u

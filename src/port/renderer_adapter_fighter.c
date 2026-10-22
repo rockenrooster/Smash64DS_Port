@@ -4898,46 +4898,6 @@ static void ndsFighterDisplayContractSubmitStageFighters(void)
     gGCCurrentCamera = saved_camera;
 }
 
-static void ndsFighterMarioFoxRecordDLAllDrawFromDisplayCallback(
-    GObj *fighter_gobj)
-{
-    FTStruct *fp;
-    u32 slot;
-
-    if ((fighter_gobj == NULL) || (sNdsFighterDLAllDrawPixels == NULL))
-    {
-        return;
-    }
-
-    fp = ftGetStruct(fighter_gobj);
-    if (ndsFighterStructIsTrackedPointer(fp) == FALSE)
-    {
-        return;
-    }
-
-    slot = (u32)fp->nds_slot;
-    if (slot > 1u)
-    {
-        return;
-    }
-
-    NDS_DIAG(gNdsFighterDLAllDrawDisplayCallbackCount++);
-    if (slot == 0u)
-    {
-        NDS_DIAG(gNdsFighterDLAllDrawP0DisplayCallbackCount++);
-    }
-    else
-    {
-        NDS_DIAG(gNdsFighterDLAllDrawP1DisplayCallbackCount++);
-    }
-
-#if !NDS_FTR_LEAN_LIVE
-    ndsFighterMarioFoxDLAllDrawForSlot(slot, fp,
-                                       sNdsFighterDLAllDrawPixels,
-                                       sNdsFighterDLAllDrawPitch);
-#endif
-}
-
 /* P2-2p8 Phase 1 slice 1: the lean fighter path shares this translation
  * unit (it reads the draw plan, contract and matrix statics above). */
 #include "renderer_fighter_lean.c"

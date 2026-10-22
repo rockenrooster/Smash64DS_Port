@@ -197,12 +197,6 @@ volatile u32 gNdsTransitionThawCaller;
 volatile u32 gNdsTransitionHoldVBlank;
 volatile u32 gNdsTransitionThawVBlank;
 volatile u32 gNdsPlatformHeldKeys;
-static u32 sPerfSampleReady;
-static u32 sPerfLastTick;
-static u32 sPerfLastFrameCounter;
-static u32 sPerfLastLogicTickCount;
-static u32 sPerfLastDLPreviewDrawCount;
-static u32 sPerfLastPreviewCommitCount;
 /* Defined in src/import/battleship_ifcommon.c, beside the HUD mirrors it
  * guards. Declared here rather than in a header because this file must stay
  * out of the BattleShip scene include graph (nds_menu_shell.h's rule). */
@@ -357,13 +351,6 @@ volatile u32 gNdsOriginalDLPreviewWidth;
 volatile u32 gNdsOriginalDLPreviewHeight;
 volatile u32 gNdsOriginalDLPreviewCommitCount;
 volatile u32 gNdsOriginalDLPreviewDrawCount;
-volatile u32 gNdsPerfPresentFps;
-volatile u32 gNdsPerfLogicFps;
-volatile u32 gNdsPerfDLDrawFps;
-volatile u32 gNdsPerfPreviewCommitFps;
-volatile u32 gNdsPerfPreviewCommitCount;
-volatile u32 gNdsPerfSampleCount;
-volatile u32 gNdsPerfSampleWindowTicks;
 volatile u32 gNdsBattlePlayableHudFpsX10;
 volatile u32 gNdsBattlePlayableHudFpsSampleCount;
 volatile u32 gNdsBattlePlayableHudFpsFrameWindow;

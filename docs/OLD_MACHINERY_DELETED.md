@@ -146,6 +146,33 @@ parts of the movement, compat-shim, asset, backup and scene-harness files. Proof
 translation units preprocess byte-identically before and after in the five live configs.
 The code those predicates still guard at run time goes in the next batch.
 
+## The P1 proof code those predicates guarded (33,230 lines) -- Phase B, fifth batch (2026-10-22)
+
+With the harnesses resolved, 79 proof predicates return FALSE in every build: the 73
+`ndsFighterMarioFox*ProofEnabled` and the VS battle loop's six `*UpdateEnabled` gates. Every braced
+`if`/`else if`/`else` chain and `(cond) ? TRUE : FALSE` return they decide is folded (a condition is
+decided only when nothing else in it is a call, cast, member access or assignment, so no side
+effect is dropped), each function's code after a now-unconditional top-level `return` is cut, and
+whatever nothing names any more is deleted to a fixpoint: about 360 functions and 250 variables,
+the proof tours' probes, recorders, loop runners and counters. `reloc_backend_cliff_ledge.c` goes
+from 12,896 lines to 204, `reloc_backend_ftmain_status_compat.c` from 4,489 to 659, the
+collision, damage and hit-pipeline proof slices lose 3,490, 735 and 648, mp_collision 6,887,
+movement 4,094, compat shims 2,204. The VS battle update no longer calls six proof-loop gates
+every frame (`scVSBattleFuncUpdate` 280 to 188 bytes) and ITCM gets 8 bytes back. Kept: the
+statics the host reference renderers (`src/host/graphics_reference/`) use, the FGM table
+`check-fgm-pack-coverage.py` parses, and the six predicates that depend on the build (the battle
+playable and natural-motion proofs are the live path under harness 163).
+
+Proof: every changed translation unit (88 a config) compiles in all five live configs; no new
+`-Wreturn-type` warning (a first run's tail cutter took `return FALSE;` for a declaration of a
+variable named FALSE; the warning diff found it and the batch was redone from the pre-batch tree);
+with the real flags 85 objects are byte-identical and the other three differ only by the deleted
+code, the shorter VS battle update and the unity build's re-decided inlining (one stage-load
+helper, `ndsMPBuildTopologyCache`, 4 bytes longer). The gate ROM (`s61`) keeps every other symbol
+at its `s60` size; replay digests are identical to `s60` over 1,960 samples on three configs (the
+originals on Dream Land and on Remix stage 41, Mr. Game & Watch x4 on stage 41), WORK P95 within
+noise (all three slightly lower); the ship-config play ROM links.
+
 ## Still to do
 
 - The P1/P2 verifier framework those targets fed, dormant since September: `verify-all.ps1`,
