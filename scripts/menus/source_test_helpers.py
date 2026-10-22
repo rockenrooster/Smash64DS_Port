@@ -39,6 +39,11 @@ SPLIT_SOURCES = {
         "reloc_backend_mp_walls.c",
         "reloc_backend_mp_floors.c",
     )),
+    "nds/nds_menu_shell_css.c": ("nds/nds_menu_shell.c", (
+        "nds_menu_shell_css_panels.c",
+        "nds_menu_shell_css_cursor.c",
+        "nds_menu_shell_css_modes.c",
+    )),
     "port/reloc_backend_assets.c": ("port/reloc_backend.c", (
         "reloc_backend_symbol_tables.c",
         "reloc_backend_asset_ids.c",

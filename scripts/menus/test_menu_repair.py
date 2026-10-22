@@ -15,6 +15,8 @@ import shutil
 import subprocess
 import tempfile
 
+from source_test_helpers import source as read_split
+
 
 def function(text: str, name: str) -> str | None:
     # These deliberately small target functions have no braces inside literals.
@@ -448,7 +450,7 @@ def main(argv: list[str] | None = None) -> int:
     backend = (args.repo / "src/port/title_backend.c").read_text(encoding="utf-8")
     options = (args.repo / "src/nds/nds_menu_shell_vsoptions.c").read_text(encoding="utf-8")
     items = (args.repo / "src/nds/nds_menu_shell_items.c").read_text(encoding="utf-8")
-    css = (args.repo / "src/nds/nds_menu_shell_css.c").read_text(encoding="utf-8")
+    css = read_split(args.repo / "src/nds/nds_menu_shell_css.c")
     match_config = (args.repo / "src/port/nds_match_config.c").read_text(encoding="utf-8")
     stub_start = backend.index("NDS_SCENE_STUB(mnUnusedFightersStartScene)")
     stub_end = backend.index("#if !NDS_P2_1P_GAME", stub_start)
