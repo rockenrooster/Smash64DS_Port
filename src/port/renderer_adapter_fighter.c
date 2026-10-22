@@ -56,6 +56,10 @@ static sb32 sNdsFighterDisplayContractPlayback;
 static u32 sNdsFighterDisplayContractLastFrame[GMCOMMON_PLAYERS_MAX] = {
     0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu
 };
+/* The off-screen magnifier's own submit (renderer_fighter_magnify.c): the
+ * culled fighter it draws again, and that draw's projection. */
+static FTStruct *sNdsFighterMagnifyFp;
+static NDSRendererMatrix20p12 sNdsFighterMagnifyProjection;
 /* 1P Intro transient-submit flag. Tentative definition here so the memo-arm
  * gate in the capture path (far above the transient block) can read it;
  * the transient block below owns every write. TRUE only while a transient
@@ -213,8 +217,15 @@ sb32 ndsFighterDisplayContractCheckTargetInBounds(f32 pos_x, f32 pos_y)
     extern sb32 gmCameraCheckTargetInBounds(f32 pos_x, f32 pos_y);
     sb32 is_in_bounds;
 
-    gNdsFighterDisplayContractBoundsXBits = ndsFloatBits(pos_x);
-    gNdsFighterDisplayContractBoundsYBits = ndsFloatBits(pos_y);
+    if (sNdsFighterMagnifyFp != NULL)
+    {
+        /* The magnifier's submit draws the fighter the main pass culled. */
+        return TRUE;
+    }
+    /* Diagnostic words only (exported under NDS_DIAG_COUNTERS): out of the
+     * ship and gate ITCM, which pays for the test above. */
+    NDS_DIAG(gNdsFighterDisplayContractBoundsXBits = ndsFloatBits(pos_x));
+    NDS_DIAG(gNdsFighterDisplayContractBoundsYBits = ndsFloatBits(pos_y));
     is_in_bounds = gmCameraCheckTargetInBounds(pos_x, pos_y);
     if (is_in_bounds != FALSE)
     {
@@ -222,7 +233,7 @@ sb32 ndsFighterDisplayContractCheckTargetInBounds(f32 pos_x, f32 pos_y)
     }
     else
     {
-        gNdsFighterDisplayContractBoundsFailCount++;
+        NDS_DIAG(gNdsFighterDisplayContractBoundsFailCount++);
     }
     return is_in_bounds;
 }
@@ -3385,6 +3396,7 @@ static sb32 ndsFighterIntroTransientSubmit(GObj *fighter_gobj)
 static inline __attribute__((always_inline)) sb32
 ndsFtrLeanRun(u32 slot, FTStruct *fp);
 static void ndsFtrLeanFrameEnd(void);
+static void ndsFighterMagnifyDrawAll(void);
 
 /* ndsFtrLeanRun on the DTCM hot stack (port/coroutine.h). */
 typedef struct NDSFtrLeanRunCall
@@ -3677,8 +3689,8 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
 #endif
         return;
     }
-    if (sNdsFighterDisplayContractLastFrame[(u32)fp->nds_slot] ==
-        gNdsRendererProfileFrameCount)
+    if ((sNdsFighterDisplayContractLastFrame[(u32)fp->nds_slot] ==
+         gNdsRendererProfileFrameCount) && (fp != sNdsFighterMagnifyFp))
     {
         return;
     }
@@ -3774,8 +3786,9 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
 #endif
     }
     ndsRendererHardwareSetTexelAlphaGraded(FALSE);
-    /* ftDisplayMainDrawAll's tail: the afterimage after the fighter. */
-    if (fp->afterimage.drawstatus >= 2)
+    /* ftDisplayMainDrawAll's tail: the afterimage after the fighter (a world
+     * strip: never inside the magnifier's bubble). */
+    if ((fp->afterimage.drawstatus >= 2) && (fp != sNdsFighterMagnifyFp))
     {
         ndsFighterDrawAfterImage(fp);
     }
@@ -3821,6 +3834,7 @@ static void ndsFighterDisplayContractSubmitStageFighters(void)
          * rewind. */
         ndsFighterDisplayContractSubmit(fighter_gobj);
     }
+    ndsFighterMagnifyDrawAll();
     ndsFtrLeanFrameEnd();
     gGCCurrentCamera = saved_camera;
 }
@@ -3828,3 +3842,4 @@ static void ndsFighterDisplayContractSubmitStageFighters(void)
 /* P2-2p8 Phase 1 slice 1: the lean fighter path shares this translation
  * unit (it reads the draw plan, contract and matrix statics above). */
 #include "renderer_fighter_lean.c"
+#include "renderer_fighter_magnify.c"

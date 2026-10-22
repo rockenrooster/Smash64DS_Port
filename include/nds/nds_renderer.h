@@ -1384,6 +1384,28 @@ void ndsRendererFighterPacketInvalidateSlot(u32 slot);
  * it before its first FIFO word. A no-op when no DMA is pending or the packet
  * is off. */
 void ndsRendererFighterPacketDmaWait(void);
+/* The off-screen magnifier (nds_renderer_magnify.c): one bubble's frame in DS
+ * screen pixels at Q12 (y down) -- centre, the fill disc's and the rim's
+ * radii, the arrow's three corners -- and its RGB15 colours. */
+typedef struct NDSRendererMagnifyFrame
+{
+    s32 x_q12;
+    s32 y_q12;
+    s32 radius_x_q12;
+    s32 radius_y_q12;
+    s32 rim_x_q12;
+    s32 rim_y_q12;
+    s32 arrow_q12[3][2];
+    u16 fill_rgb15;
+    u16 rim_rgb15;
+    u16 arrow_rgb15;
+} NDSRendererMagnifyFrame;
+/* The magnified fighter's viewport, screen pixels x0..x1, y0..y1 (y down),
+ * after the previous fighter's packet has left the FIFO. */
+void ndsRendererMagnifySetViewport(s32 x0, s32 y0, s32 x1, s32 y1);
+/* The bubbles' discs, rims and arrows over the frame's fighters. */
+void ndsRendererDrawMagnifyFrames(const NDSRendererMagnifyFrame *frames,
+                                  u32 count);
 /* TRUE when the production execute for these inputs will replay a packet
  * rather than record one, so the adapter may skip the material preparation
  * the replay never reads. Exact: the replay evaluates the same predicate. */

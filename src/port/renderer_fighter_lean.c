@@ -1171,9 +1171,11 @@ static void ndsFtrLeanView(NDSFtrLeanPatchView *view,
     view->event_index = inst->event_index;
     view->root_count = inst->root_count;
     view->modulate = color_modulate;
-    view->projection = (fp->dl_link == 19u) ?
-        ndsFtrLeanFrontProjection(&sNdsFtrLeanProjection, fp) :
-        &sNdsFtrLeanProjection;
+    view->projection = (fp == sNdsFighterMagnifyFp) ?
+        &sNdsFighterMagnifyProjection :
+        ((fp->dl_link == 19u) ?
+         ndsFtrLeanFrontProjection(&sNdsFtrLeanProjection, fp) :
+         &sNdsFtrLeanProjection);
     view->worlds = sNdsFtrLeanWorlds;
     view->inputs = inputs;
 }
