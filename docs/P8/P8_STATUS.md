@@ -5,12 +5,11 @@ first row that is not done.
 
 ## Cursor
 
-**Next action:** the owner's two `BUGS.md` rows first -- the off-screen
-magnifier (designed: a second lean submit of the culled fighter inside the
-bubble's viewport, then the bubble's disc, rim and arrow) and Link's entry wave
-(drawn every frame at alpha ~10/31 but hidden: it sits inside his beam, both
-translucent with polygon ID 1). S1's audits run in slots 8-12 meanwhile; C3
-(`nds_renderer_textures_effects.c` into seven slices) is planned and checked.
+**Next action:** Phase C goes on (C4: the next file the split tool can take;
+`renderer_adapter_stage.c` holds one 5,682-line function and
+`taskman_seam_core.c` one 4,520-line reset list, so both need E/F work, not a
+cut); S1's campaign, VS walk and Metal Mario audits finish in the background.
+The owner's two BUGS.md rows are fixed (play ROM `play-p8b`).
 
 **Before the first edit:** when this plan was written (2026-10-22 08:20) a
 session was running the owner's goal "finish Todo list: readability, RAM
@@ -38,8 +37,8 @@ commit with explicit paths only.
 |---|---|---|
 | Q1-Q3 owner decisions (plan section 7) | answered 2026-10-22 | Q1 yes (AGENTS.md and HANDOFF.md route here); Q2 yes (R10 if R1-R9 leave the heavy mixes short); Q3 P7 only as bugs |
 | H-1 tools S1 and the gate need, into `scripts/tools/` | done | 22 files, `scripts/tools/README.md`: play/walk/gate/soak builds, the probe session and halt probes, the six audit drivers, the wireless lag driver, the worst-case sweep, the heap census, the boot check; no session paths (`common.ps1`); `boot_check.ps1` boots `play-ram1` clean |
-| S1 regression net (full matrix) on HEAD | in progress | ROMs `walk-u19`, `build-soak-s32`, `net-p8a`, `build-sweep-s62` on HEAD `8b9d2a52f9f`; slot images regenerate per slot now (`5075604365a`), five audits side by side. Wireless 2 consoles: 3 matches, 0 desyncs, 0 aborts. Training: 2 of the first 21 runs timed out after a second entry into the training battle (DK, Kirby: the walk's menu drive), rerun next |
-| C split the 13 port files over 4,000 lines | in progress | `nds_renderer_native_common.c` (`7f0dca28600`) and `reloc_backend_assets.c` (C2) done; next `nds_renderer_textures_effects.c` |
+| S1 regression net (full matrix) on HEAD | in progress | ROMs `walk-u19`, `build-soak-s32`, `net-p8a`, `build-sweep-s62` on HEAD `8b9d2a52f9f`; slot images regenerate per slot now (`5075604365a`), five audits side by side. Soak m1-m8 (every fighter, all items, four players): 0 halts, 0 native failures, heap low-water 41,696 at the least. Bonus: 38 practices clean. Training: 29 of 32 to the select; the 3 timeouts (DK, Kirby, Mad Piano) are the probe's: the walk took RESET, the game went on to the Training select at 60 fps, but the scene-entry breakpoint no longer fired (gdb), so no END line. Wireless 2 consoles: 3 matches, 0 desyncs, 0 aborts. Campaign, VS walk (20 laps), Metal Mario running |
+| C split the 13 port files over 4,000 lines | in progress | done: `nds_renderer_native_common.c` (`7f0dca28600`), `reloc_backend_assets.c` (C2), `nds_renderer_textures_effects.c` (C3, `9baf0db6e5f`). Left: `renderer_adapter_stage.c` (a 5,682-line function: needs a split by owner family), `reloc_backend_compat_shims.c`, `renderer_adapter_matrix.c`, `nds_startup.h`, `reloc_backend_movement.c`, `nds_renderer_assets.c`, `nds_ifcommon_oam.c`, `reloc_backend_mp_collision.c`, `nds_menu_shell_css.c`, `taskman_seam_core.c` (a 4,520-line reset list: E first), `diagnostics_renderer_census.c` |
 | S3 static analysis (`-fanalyzer`, allocations, stacks) | in progress | `-fanalyzer` over the 80 port compiles of the play config: 21 distinct warnings, all triaged false or benign (NULL-checked helpers read as maybe-NULL in `nds_p4.c`; the ARM7 snapshot copy; a zero-count loop; linker-symbol pointer differences; the joint table's parent-first order). `-fstack-usage`: largest frames `ndsAudioParseCtl` 12,384 B (boot, main stack), `ndsRendererAdapterSubmitStageDLBody` 5,192 B, `ndsRendererAdapterTryNativeEntryEffect` 2,888 B; next the allocation audit and the coroutine stack paint |
 | D purpose headers and invariant comments | open | after C |
 | E dormant verifier framework, legacy fighter executor | open | owner OK (`OWNER_QUESTIONS.md` 6) |
@@ -64,6 +63,14 @@ commit with explicit paths only.
 
 Newest first. One line a batch: date, item, commit, proof, numbers.
 
+- 2026-10-22 -- C3: `nds_renderer_textures_effects.c` (16,294 lines) into the kept file and 7 slices
+  (1,276 to 3,025 lines; `9baf0db6e5f`); `nds_renderer.o` preprocess-identical in the five configs;
+  the 5 affected test files fail exactly as before (2 pre-existing).
+- 2026-10-22 -- owner rows: the off-screen magnifier (`49170d5e19d`: bubbles at the screen edge, the
+  culled fighter redrawn inside by its lean list, rim and arrow; ship ITCM -8 B) and Link's entry
+  wave (`afad0c94ab2` own polygon ID, `d1165f25cbc` its green texture); witnessed on
+  `build-sweep-s63`/`s64`; play ROM `play-p8b` boots clean.
+- 2026-10-22 -- I: `PERF_LEDGER.md`'s July-September rows to `docs/archive/` (`327946d2392`).
 - 2026-10-22 -- I: P7's in-progress rows closed with their evidence (`ce376f1be3e`).
 - 2026-10-22 -- S1 tools: a slot's DLDI image regenerates while other slots run (`5075604365a`;
   the Training audit had logged 32 empty runs); the shield palette test's C1 shadowing fixed
