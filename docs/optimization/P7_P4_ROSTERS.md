@@ -974,3 +974,59 @@ Dream Land and Yoshi's Island are unchanged (1,072,768 -> 1,074,240 and
 ten runs, and four Bowsers on Hyrule Temple (the whole program on both)
 capture pixel-identical frames at 300, 420 and 540. 0 native failures, 0
 lean declines; the ship layout links.
+
+## A stage program gives way to the heap floor (2026-10-21, `s55`/`s56`)
+
+On `s54` Congo Jungle with Ganondorf, Peach, Snake and Kirby still fell to
+24,788 B. Its heap census: the program (segments 2-3, 6,764 B) loaded at
+frame 0 with 42,484 B left; then Kirby's copy hat took 7,636 B at f1401 and
+the source's object pools (gcGet*SetNextAlloc) 10 KB more. A program's keep-
+free margin cannot know what a match will ask for later, and those pools keep
+growing through a five-minute match (14.8-19.8 KB).
+
+* `ndsStageGxYield`: before `syTaskmanMalloc` would take the heap under
+  the 25,600 B floor, and when `ndsSceneAssetTryAlloc` (Kirby's hats) finds
+  the heap short, the loaded program -- outside a segment's draw, once the
+  DMA that may still read it is done -- becomes a lent dead span that serves
+  the allocation, and the stage draws uncompiled for the rest of the battle
+  (`gNdsP2StageProgYields`).
+* So the margin no longer guards the floor, only how often a match keeps its
+  program to the end: 12 KB -> 8 KB. On `s55` (12 KB) Hyrule Temple's
+  segment 0 had stopped fitting beside the heavy roster: its 36 B of slack on
+  `s54` went to the yield's own code.
+
+The worst-case search on `s56`, 1,960 frames: the four mixes on all
+sixteen stages hold the floor (lowest 25,604 B; four yields, all mix 2, 8,
+18, 0, whose Kirby swallows a P4 content: Congo Jungle, Saffron City, Final
+Destination, Dinosaur Land), 24 of 64 over the stress target (26 on `s53`),
+WORK P95 -5.2K on average (Dinosaur Land -32K to -74K; Saffron City's mix A
+-50K with segments 0-2; its mix 2, 8, 18, 0 +46K, its program yielded). The
+heavy roster and the original cast (WORK P95 (two-VBlank share), low-water;
+`*` over 1,250,000 / 90%):
+
+| stage | heavy (9, 13, 17, 20) | cast |
+|---|---|---|
+| Peach's Castle (0) | 1,282,112* (96.3%), 51,024 | 1,140,160 (98.8%), 59,124 |
+| Sector Z (1) | 1,459,584* (90.3%), 36,572 | 1,109,440 (98.8%), 53,628 |
+| Congo Jungle (2) | 1,518,976* (89.8%), 30,036 | 1,108,416 (99.0%), 73,792 |
+| Planet Zebes (3) | 1,366,144* (93.7%), 51,996 | 1,080,064 (99.0%), 59,496 |
+| Hyrule Castle (4) | 1,264,640* (95.9%), 50,808 | 1,011,904 (99.1%), 60,096 |
+| Yoshi's Island (5) | 1,384,384* (93.1%), 34,048 | 1,181,056 (98.4%), 50,136 |
+| Dream Land (6) | 1,329,408* (95.2%), 51,936 | 1,072,576 (98.9%), 60,824 |
+| Saffron City (7) | 1,470,144* (91.4%), 32,260 | 1,208,064 (97.6%), 63,096 |
+| Mushroom Kingdom (8) | 1,355,968* (94.8%), 51,232 | 1,180,288 (98.3%), 61,472 |
+| Meta Crystal (13) | 1,163,968 (97.4%), 50,768 | 1,108,480 (98.7%), 52,848 |
+| Duel Zone (14) | 1,059,200 (99.1%), 53,616 | 918,144 (99.8%), 62,600 |
+| Final Destination (16) | 1,225,984 (96.5%), 48,788 | 1,005,696 (99.5%), 66,168 |
+| First Destination (41) | 1,204,224 (98.2%), 60,704 | 967,296 (99.7%), 52,088 |
+| Bowser's Stadium (42) | 1,207,360 (97.8%), 58,096 | 1,132,224 (98.9%), 64,336 |
+| Hyrule Temple (43) | 1,609,344* (80.7%), 34,756 | 1,190,272 (98.3%), 48,856 |
+| Dinosaur Land (44) | 1,383,232* (91.3%), 42,556 | 1,133,056 (98.4%), 65,976 |
+
+The cast passes 1,250,000 / 95% on every stage (Saffron City highest,
+1,208,064). Hyrule Temple's heavy roster keeps segment 0 (1,609,344 against
+1,696,064 on `s53`). Replay digests are identical `s53` -> `s56` on all
+64 mixes, the heavy roster on Congo Jungle and Hyrule Temple and the cast on
+Dream Land and Yoshi's Island. 0 native failures; Hyrule Castle's heavy run
+has 5 lean declines (2 on `s50`, Mr. Game & Watch's stale list then). The
+ship layout links.

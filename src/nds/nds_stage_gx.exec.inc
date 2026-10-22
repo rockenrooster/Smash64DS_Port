@@ -12,11 +12,17 @@ _Static_assert(sizeof(NDSStageGxSegment) == 16, "stage GX segment ABI");
  * spares, the world caches; the elastic motion cache yields): Hyrule
  * Temple's cast match grew 36 KB, 17.7 KB of it a lean spare and 13.3 KB
  * the world caches (2026-10-18 census). So the body keeps the 25,600 B
- * floor (the GObj cap latches under it) and a 12 KB margin for the
- * allocations that cannot decline, not the whole 36,420 B growth: a
+ * floor (the GObj cap latches under it) and a margin (12 KB until P7) for
+ * the allocations that cannot decline, not the whole 36,420 B growth: a
  * stage program is worth more than the caches that would take its bytes
- * (Hyrule Temple drew uncompiled, 409K ticks a frame). */
-#define NDS_STAGE_GX_HEAP_KEEP_FREE (25600u + 12288u)
+ * (Hyrule Temple drew uncompiled, 409K ticks a frame).
+ * P7 (2026-10-21): the margin no longer guards the floor -- a program
+ * yields its bytes before an allocation would take the heap under it
+ * (ndsStageGxYield) -- only how often a match keeps its program to the end:
+ * 8 KB covers a match's usual non-declining growth (2-5 KB in a gate
+ * window); a Kirby copy hat (7.6 KB) or a five-minute match's object pools
+ * (15-20 KB) end in a yield. */
+#define NDS_STAGE_GX_HEAP_KEEP_FREE (25600u + 8192u)
 #define NDS_STAGE_GX_NOZ_LOCAL 16u
 
 volatile u32 gNdsP2StageProgDraws, gNdsP2StageProgWords;
@@ -89,6 +95,13 @@ static u32 sNdsStageGxProjSerial, sNdsStageGxProjGen;
 /* Bumped by every successful program load (the segment fast path's tables
  * are rebuilt against it). */
 static u32 sNdsStageGxLoadSerial;
+/* The program's one allocation, which ndsStageGxYield gives back. */
+static u8 *sNdsStageGxBody;
+static u32 sNdsStageGxBodyBytes;
+/* Set from ndsStageGxEligible's yes to the segment commit's last flush: a
+ * program never yields under its own draw. */
+static u32 sNdsStageGxInSegment;
+volatile u32 gNdsP2StageProgYields;
 
 static u32 ndsStageGxHashBytes(const void *data, u32 bytes, u32 hash)
 {
@@ -382,6 +395,7 @@ static sb32 __attribute__((noinline, cold, optimize("Os"))) ndsStageGxLoad(void)
         sNdsStageGxGeneration = gNdsTaskmanHeapGeneration;
         sNdsStageGxRuns = NULL; sNdsStageGxAttempted = FALSE;
         sNdsStageGxSegmentMask = 0u;
+        sNdsStageGxBody = NULL; sNdsStageGxInSegment = 0u;
     }
     if (sNdsStageGxRuns != NULL) { return TRUE; }
     if (sNdsStageGxAttempted != FALSE) { return FALSE; }
@@ -407,6 +421,8 @@ static sb32 __attribute__((noinline, cold, optimize("Os"))) ndsStageGxLoad(void)
     body = ndsStageGxAllocBody(h.body_bytes + h.run_count * memo_unit);
     if (body != NULL)
     {
+        sNdsStageGxBody = body;
+        sNdsStageGxBodyBytes = h.body_bytes + h.run_count * memo_unit;
         reason = 4u;
         if (!ndsRelocAssetStreamRead(&stream, sizeof(h), body, h.body_bytes) ||
             ndsStageGxHashBytes(body, h.body_bytes, 2166136261u) != h.body_hash)
@@ -487,6 +503,8 @@ static sb32 __attribute__((noinline, cold, optimize("Os"))) ndsStageGxLoad(void)
                 (word_hi - word_lo) * 4u;
             body = ndsStageGxAllocBody(bytes);
             mask = ((1u << (best_b + 1u)) - 1u) & ~((1u << best_a) - 1u);
+            sNdsStageGxBody = body;
+            sNdsStageGxBodyBytes = bytes;
         }
         reason = 4u;
         {
@@ -569,6 +587,55 @@ static sb32 ndsStageGxEligible(u32 segment)
     if ((sNdsStageGxSegmentMask & (1u << segment)) == 0u) { return FALSE; }
     if ((sNdsStageGxStaticWorld & ~sNdsNativeStageOwnerExecution.rigid_binding_mask) != 0u)
     { gNdsP2StageProgDeclines++; gNdsP2StageProgReason = 7u; return FALSE; }
+    sNdsStageGxInSegment = 1u;
+    return TRUE;
+}
+
+/* THE PROGRAM GIVES WAY TO THE FLOOR (P7, 2026-10-21). A program loads at
+ * the first stage draw with 12 KB over the 25,600 B floor, and cannot know
+ * what the match will ask for later: Congo Jungle with Ganondorf, Peach,
+ * Snake and Kirby fell to 24,788 B (Kirby's copy hat, 7,636 B at f1401,
+ * then the source's object pools, 10 KB), and those pools keep growing
+ * through a five-minute match (14.8-19.8 KB). syTaskmanMalloc asks this
+ * before the heap would fall under the floor: outside a segment's draw, and
+ * once the DMA that may still read the words is done, the program's bytes
+ * become a lent span, which the allocation takes, and the stage draws
+ * uncompiled for the rest of the battle. */
+void ndsBattleDeadSpanAdd(void *base, u32 bytes);
+extern volatile u32 gNdsBattleDeadSpanLentBytes;
+
+s32 __attribute__((noinline, cold)) ndsStageGxYield(size_t size)
+{
+    u32 lent;
+
+    /* Only for an allocation the program's bytes can hold (32 B for the
+     * span's alignment). */
+    if ((sNdsStageGxRuns == NULL) || (sNdsStageGxBody == NULL) ||
+        (sNdsStageGxGeneration != gNdsTaskmanHeapGeneration) ||
+        (sNdsStageGxInSegment != 0u) || (sNdsStageGxWordCount != 0u) ||
+        (size + 32u > sNdsStageGxBodyBytes))
+    {
+        return FALSE;
+    }
+    NDS_FIGHTER_PACKET_DMA_WAIT();
+    lent = gNdsBattleDeadSpanLentBytes;
+    ndsBattleDeadSpanAdd(sNdsStageGxBody, sNdsStageGxBodyBytes);
+    if (gNdsBattleDeadSpanLentBytes == lent)
+    {
+        return FALSE;
+    }
+    /* sNdsStageGxAttempted stays set: the battle never reloads it. */
+    sNdsStageGxRuns = NULL;
+    sNdsStageGxPatches = NULL;
+    sNdsStageGxWords = NULL;
+    sNdsStageGxRunMemo = NULL;
+    sNdsStageGxRunWorld = NULL;
+    sNdsStageGxSegmentMask = 0u;
+    sNdsStageGxDmaFirst = 0u;
+    sNdsStageGxDmaEnd = 0u;
+    sNdsStageGxLoadSerial++;
+    sNdsStageGxBody = NULL;
+    gNdsP2StageProgYields++;
     return TRUE;
 }
 

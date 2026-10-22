@@ -5111,6 +5111,9 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
 #if NDS_RENDERER_PROFILE_LEVEL == 1
             gNdsRendererM3PostArmFailureCount++;
 #endif
+#if NDS_TASK36_HW_COMPOSE == 2
+            sNdsStageGxInSegment = 0u;
+#endif
             return TRUE;
         }
 #if NDS_TASK103_STAGE_RUN_PHASE
@@ -5243,6 +5246,7 @@ stage_gx_fast_done:
 #endif
 #if NDS_TASK36_HW_COMPOSE == 2
     ndsStageGxFlush();
+    sNdsStageGxInSegment = 0u;
 #if NDS_LAB_STAGE_GX_HASH
     /* LAB: the segment's closing painter state and counters (see
      * gNdsLabStageGxHash). */

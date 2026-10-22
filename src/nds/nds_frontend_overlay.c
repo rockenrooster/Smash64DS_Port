@@ -9,6 +9,11 @@
 
 extern u8 __nds_frontend_start[];
 extern u8 __nds_frontend_end[];
+/* battleship_sys_objman.c: a battle's lent dead bytes; nds_stage_gx.exec.inc
+ * (a build with the stage programs): the loaded program's bytes, given back
+ * as one of them. */
+extern void *ndsBattleDeadSpanAlloc(size_t size, u32 alignment);
+extern s32 ndsStageGxYield(size_t size) __attribute__((weak));
 /* End of the 1P battle-time head (linker/nds_frontend_overlay.ld). */
 extern u8 __nds_frontend_1p_end[];
 /* End of training's own head, the first part of the 1P head (the same
@@ -485,7 +490,16 @@ void *ndsSceneAssetTryAlloc(size_t bytes, u32 alignment, size_t keep_free)
     if (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap,
                            bytes + keep_free, alignment) == FALSE)
     {
-        return NULL;
+        /* Short of the heap, a battle's lent bytes may still hold it: its
+         * dead spans, then the stage program's, which gives way to an asset
+         * the match asks for (Kirby's copy hat: 7,636 B on Congo Jungle). */
+        storage = ndsBattleDeadSpanAlloc(bytes, alignment);
+        if ((storage == NULL) && (ndsStageGxYield != NULL) &&
+            (ndsStageGxYield(bytes + alignment) != FALSE))
+        {
+            storage = ndsBattleDeadSpanAlloc(bytes, alignment);
+        }
+        return storage;
     }
     if (sNdsFrontendCursor != NULL)
     {

@@ -41,6 +41,12 @@ extern void ndsBattleRebudgetSceneSetup(SYTaskmanSetup *setup);
 extern s32 ndsBattleSetupIsRebudgeted(const SYTaskmanSetup *setup);
 /* battleship_sys_objman.c: the stage's lent dead bytes. */
 extern void *ndsBattleDeadSpanAlloc(size_t size, u32 alignment);
+/* nds_stage_gx.exec.inc (a build with the stage programs): the loaded
+ * program's bytes, given back as a lent span. */
+extern s32 ndsStageGxYield(size_t size) __attribute__((weak));
+/* The battle heap's floor: the source latches its GObj count under 25 KiB,
+ * and the P7 gate keeps the low-water at or over it. */
+#define NDS_TASKMAN_HEAP_FLOOR_BYTES 25600u
 
 void syTaskmanStartTask(SYTaskmanSetup *tsetup)
 {
@@ -314,6 +320,20 @@ void *syTaskmanMalloc(size_t size, u32 align)
         if (loan != NULL)
         {
             return loan;
+        }
+        /* Before the heap would fall under the 25,600 B floor, the stage
+         * program gives its bytes back as a lent span
+         * (nds_stage_gx.exec.inc ndsStageGxYield). */
+        if ((ndsStageGxYield != NULL) &&
+            ((uintptr_t)gSYTaskmanGeneralHeap.end <
+                 (uintptr_t)gSYTaskmanGeneralHeap.ptr + size + NDS_TASKMAN_HEAP_FLOOR_BYTES) &&
+            (ndsStageGxYield(size) != FALSE))
+        {
+            loan = ndsBattleDeadSpanAlloc(size, (align != 0u) ? align : 4u);
+            if (loan != NULL)
+            {
+                return loan;
+            }
         }
     }
 
