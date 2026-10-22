@@ -1,4 +1,4 @@
-# P8 status -- stability, RAM and readability
+# P8 status -- stability, RAM, CPU and readability
 
 Live state for [the P8 plan](P8_PLAN.md). One row per item; the cursor is the
 first row that is not done.
@@ -53,11 +53,15 @@ commit with explicit paths only.
 | R0 RAM ledger and buffer peaks | open | after D (owner order) |
 | R1-R9 RAM levers | open | ranked in plan section 4; R4's second printf engine already gone (`41636f74b0f`, 7 KB) |
 | R10 per-fighter code overlays | allowed (owner Q2) | only if R1-R9 leave the heavy mixes short |
-| P spends and storage waits | open | Hyrule Temple's whole program in the heavy mixes first |
+| P0 CPU ledger (band vs median census) | open | profiling only: may run in the background before D |
+| P1-P11 CPU levers | open | ranked in plan section 5; after D, alternate with R by gain over risk |
+| P12 lower update rates | gated | owner's yes, only after P1-P11 |
+| Spends (R's bytes into stage programs, lean spares, the motion arena) | open | Hyrule Temple's whole program with the heavy roster and the mixes first |
 | Final: play ROM, S1 matrix, worst-case search on the final HEAD | open | |
 
 ## Log
 
 Newest first. One line a batch: date, item, commit, proof, numbers.
 
+- 2026-10-22 -- owner: CPU hunting beside the RAM hunting (plan section 5, loop P).
 - 2026-10-22 -- owner answers Q1-Q3; I: `AGENTS.md` and `docs/HANDOFF.md` route to P8.

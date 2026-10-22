@@ -1,8 +1,8 @@
 # Handoff
 
 **Current route (2026-10-22, P8):** `P8/P8_STATUS.md` holds the cursor and the log;
-`P8/P8_PLAN.md` the loops (S bugs, crashes and stalls; C readability and tools; R RAM;
-P the spends), the proof for each kind of change and the goal. P7's open items count
+`P8/P8_PLAN.md` the loops (S bugs, crashes and stalls; C readability and tools; R RAM
+hunting; P CPU hunting), the proof for each kind of change and the goal. P7's open items count
 only as bugs (owner, 2026-10-22). Everything below is history.
 
 P2 follows `PROJECT_GOAL.md` and `P2_PLAN.md`; `P2_EXECUTION_BOARD.md` owns focus, decisions, artifacts and the

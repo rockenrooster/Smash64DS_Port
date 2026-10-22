@@ -1,8 +1,9 @@
-# P8 -- Stability, RAM and readability
+# P8 -- Stability, RAM, CPU and readability
 
 Owner brief (2026-10-22): find RAM savings, bugs and crashes/stalls, and run
 refactoring / human-readability loops, so the game plays more stably and faster
-and is easier to develop on.
+and is easier to develop on. Later the same day: CPU hunting beside the RAM
+hunting (loop P).
 
 Live state and the cursor: [P8_STATUS.md](P8_STATUS.md).
 `PROJECT_GOAL.md` still owns fidelity and acceptance. Nothing in this plan
@@ -94,6 +95,8 @@ Every turn:
    `docs/OWNER_QUESTIONS.md` for new owner text. An owner row goes to the top.
 2. **Pick** the first open item in `P8_STATUS.md`, in this order: a crash,
    freeze or regression any run found; an owner row; the current phase item.
+   After D, RAM (R) and CPU (P) batches alternate, the larger expected gain
+   over risk first.
 3. **One batch:** one rule or one lever, everything it touches, nothing else.
 4. **Prove** it with the matching row of the table below.
 5. **Commit** with explicit paths and log it: the `P8_STATUS.md` row;
@@ -317,25 +320,69 @@ back to margin.
 R1-R9 landed or refuted with numbers; Hyrule Temple keeps its whole program
 with the heavy roster and the four mixes; the floor and the digests hold.
 
-## 5. Loop P -- performance from the spends and the stalls
+## 5. Loop P -- CPU hunting (beside R)
 
-- The spends above, each an A/B on the worst-case set.
-- S4's storage waits (the audio read spin, motion reads) made asynchronous
-  where it measures.
-- The owner-approved Hyrule Temple texture cut (half-res, gkind 43 only) only
-  if Hyrule Temple's heavy roster still misses after its spend.
+Same timing as R: the cuts start after D and alternate with R's batches;
+P0's profiling changes no source and may run in the background earlier.
+Every CPU lever keeps gameplay identical (replay digests) and, where the draw
+path changes, frames pixel-identical; a visible change needs the owner
+(`PROJECT_GOAL.md`'s sacrifice order). R's spends are measured here too.
 
-Gates: the cast keeps <= 1,250,000 / >= 95% on all 16 VS stages; the heavy
-roster's and mixes' over-target counts fall below `s56`'s (11 of 16 and 24 of
-64), recorded at every checkpoint; replay digests identical; no frame pushed
-past two VBlanks by a motion read.
+**P0 The CPU ledger (first).** A profile census of the worst-case set on a
+ship-layout profiling ROM: the heavy roster on Hyrule Temple, Congo Jungle,
+Saffron City and Sector Z; mix A on Hyrule Temple and Saffron City; the cast
+on Saffron City. Split each run into the P95 band (frames P90-P97) and the
+median band per symbol group (`run-task37-profile-census.ps1`,
+`band_groups.py`, `band_all.py`, the lean trace, STRD; promoted under H).
+Output: who owns the band's premium over the median, per stage and roster;
+the same for the menus (the CSS with four previews, SSS, Results) and for
+scene loads (S4's ledger). Re-run after every five P batches.
+
+**Known owners today** (P0 re-ranks them): lean materializations (heavy Congo
+Jungle: 77 in a 900-frame match, 48 of them repeats, no spare); status changes
+(~60K ticks each: the motion parse, the status switch, the new motion's load;
+~1 a band frame against 0.25 at the median); hit detection (21-30% of the
+over-gate premium, 2026-10-07); stages drawn uncompiled (~290K profile cycles
+a frame on Congo Jungle, ~550K on Hyrule Temple in the heavy profiles); Hyrule
+Temple's floor queries; card reads (motion clips; the audio read spin, 7.4M
+ticks a heavy match); the frame-summary recorders (~1,300 ticks a frame,
+feeding only dormant verifiers).
+
+**Tried and refuted -- do not redo without a new invalidator:** the uncompiled
+no-Z translated painter and coloured entry corners (`s51`/`s52`, no P95 gain);
+event32 prenormalize at effect init (Congo Jungle's digest diverged); a
+per-fighter hurtbox epoch (digests diverged, saved nothing); the stage matrix
+memo (`s28`); whole-subsystem soft-float passes (slower, parked 2026-10-06);
+Hyrule Temple decimation (nothing to take).
+
+| # | lever | target | notes |
+|---|---|---|---|
+| P1 | Frame-summary recorders and other per-frame instrumentation off the ship and gate hot path (the gate ring stays) | ~1,300+ ticks every frame | pairs with R4 |
+| P2 | Lean materializations: spares from R's spend, fewer repeats (a learned variant kept across a status's re-entry), a cheaper materialize | the band's top owner in the heavy mixes | lean trace per match |
+| P3 | Status changes: each motion's script header and event stream parsed once at load, a table-driven status switch, the new motion's first frame without a re-parse | ~60K a change, ~1 a band frame | exact: digests identical |
+| P4 | Hit detection: a conservative broad phase (bounding spheres per fighter, weapon and item, from the same positions) in front of the source's exact tests | 21-30% of the band premium; item-dense scenes (Pay Day's coins) | same results, fewer tests |
+| P5 | Stage draws: R's spends (whole programs), and where a program cannot fit, the segment choice weighted by measured cost | uncompiled Congo Jungle ~290K, Hyrule Temple ~550K a frame | with R |
+| P6 | Collision: Hyrule Temple's floor queries (sweep keys, topology cache), per-frame work shared between fighters | Hyrule Temple's band | the `s28` memo is refuted |
+| P7 | Storage waits off the frame: asynchronous audio reads instead of the spin, motion prefetch at the status change (S4) | 7.4M ticks a heavy match; post-GO reads | the STRD criterion holds |
+| P8 | Code placement from P0's band: ITCM re-chosen by ticks saved per byte (it is full: swap, never add), hot data in DTCM, the band's hot functions contiguous for the 8 KB instruction cache, the source's hottest Thumb functions built ARM (`battleship_gmcollision.o` as ARM was worth -511,174 ticks in its census) | broad | the counterpart of R1 |
+| P9 | Soft-float in the band: the hottest float paths to fixed point or the hardware divider and square root, one path at a time | per path | whole-subsystem passes were slower |
+| P10 | Menus and loads: the CSS with four previews, SSS and Results WORK; scene-load CPU (relocation, normalization, decompression) from S4's ledger | menu frames within two VBlanks; shorter loads | |
+| P11 | Hyrule Temple's half-res textures (owner-approved 2026-10-21, gkind 43 only) | Hyrule Temple's heavy roster | only if it still misses after its spend |
+| P12 | Lower update rates where `PROJECT_GOAL.md` allows them (particles, background animation) | | visible: owner's yes first, and only after P1-P11 |
+
+**Exit P:** the heavy roster and the four mixes meet the owner's stress target
+(<= 1,250,000 and >= 90% within two VBlanks) on every VS stage, or every lever
+P1-P11 landed or refuted with numbers; the cast keeps <= 1,250,000 / >= 95% on
+all 16 VS stages with no stage worse than `s56`; replay digests identical;
+no frame pushed past two VBlanks by a motion read. Record the over-target
+counts at every checkpoint (`s56`: heavy 11 of 16, mixes 24 of 64).
 
 ## 6. Done
 
 1. Exit S, on the final HEAD.
 2. Exit C.
 3. Exit R.
-4. Loop P's gates.
+4. Exit P.
 5. A final play ROM, the full S1 matrix and the worst-case search on the final
    HEAD, recorded in `P8_STATUS.md`.
 
@@ -354,19 +401,19 @@ past two VBlanks by a motion read.
 ## 8. Goal block
 
 ```
-/goal run docs/P8/P8_PLAN.md (stability, RAM, readability) as fast as possible; docs/P8/P8_STATUS.md is the cursor.
+/goal run docs/P8/P8_PLAN.md (stability, readability, RAM and CPU hunting) as fast as possible; docs/P8/P8_STATUS.md is the cursor.
 Done when:
 Every owner row in BUGS.md and PLAYTEST_NOTES.md is fixed.
 Stability matrix on the final HEAD (ship layout): every mode x every fighter, 30-min 4P all-items soaks, 2-4 console heavy mixes, 50 rematch laps, seeded fuzz, 16 KB heap-squeeze and slow-SD runs: 0 crashes, 0 freezes, 0 desyncs, 0 native failures; heap low-water >= 25,600; every stack >= 25% free; pool growth flat.
 No port-owned source over 4,000 lines; every port file has a purpose header; history names gone; Makefile split; live tools in scripts/tools with quick_check.ps1 green.
 Battle-resident RAM >= 128 KB below play-p7z (or every lever in P8_PLAN section 4 settled with numbers); Hyrule Temple keeps its whole stage program with the heavy roster and the four mixes.
-Cast WORK P95 <= 1,250,000 with >= 95% in two VBlanks on all 16 VS stages; heavy and mix over-target counts below s56 (11/16, 24/64); replay digests identical; 0 frames pushed by motion reads.
+Heavy roster and the four mixes: WORK P95 <= 1,250,000 with >= 90% in two VBlanks on every VS stage (or every lever in P8_PLAN section 5 settled with numbers); cast <= 1,250,000 with >= 95% on all 16 VS stages, none worse than s56; replay digests identical; 0 frames pushed by motion reads.
 
 Guardrails:
 decomp/ is read-only; game rules stay source code; no visible or audible change without the owner's OK.
 Native-only ROMs; measure the config that ships; instruments and fault injection stay out of the gate and ship ROMs.
 Never edit source while a build is running. One batch = one rule, proved by P8_PLAN section 1's table, committed with explicit paths.
-Bugs and crashes first; readability C/D before the RAM hunt.
+Bugs and crashes first; readability C/D before the RAM and CPU hunts.
 Ask only about visible approximations or a contract change.
 Subagents: NO Subagents.
 Keep docs updated.
