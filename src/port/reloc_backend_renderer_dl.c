@@ -4,5 +4,8 @@
 #include "renderer_adapter_matrix_owner.c"
 #include "renderer_adapter_legacy_dl_probes.c"
 #include "renderer_adapter_stage.c"
+#include "renderer_adapter_stage_packet.c"
+#include "renderer_adapter_stage_lanes.c"
+#include "renderer_adapter_stage_submit.c"
 #include "renderer_adapter_legacy_raster_probes.c"
 #include "renderer_adapter_fighter.c"

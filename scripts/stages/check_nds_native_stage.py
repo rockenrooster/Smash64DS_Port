@@ -633,8 +633,7 @@ def verify_multistage_runtime(repo_root: Path) -> None:
     selector = (repo_root / "src/nds/nds_native_stage_select.inc").read_text(
         encoding="utf-8")
     assets = read_split(repo_root / "src/nds/nds_renderer_assets.c")
-    adapter = (repo_root / "src/port/renderer_adapter_stage.c").read_text(
-        encoding="utf-8")
+    adapter = read_split(repo_root / "src/port/renderer_adapter_stage.c")
     prepare = re.sub(r"\s+", "", generator.named_c_closure(
         owners, "ndsRendererPrepareNativeStageOwner"))
     for field, macro in (
@@ -774,7 +773,7 @@ def verify_camera_binding_contract(repo_root: Path, packet, desc) -> bool:
     require("~packet->camera_binding_mask" in getter,
             "camera-dependent bindings still enter the rigid world cache")
 
-    adapter = (repo_root / "src/port/renderer_adapter_stage.c").read_text(encoding="utf-8")
+    adapter = read_split(repo_root / "src/port/renderer_adapter_stage.c")
     binding = re.sub(r"\s+", "", generator.named_c_closure(
         adapter, "ndsRendererAdapterPrepareNativeStageBindingMatrix"))
     require("(projection_ptr==NULL)&&(modelview_ptr==NULL)" in binding,

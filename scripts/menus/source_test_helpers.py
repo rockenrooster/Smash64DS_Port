@@ -73,6 +73,20 @@ SPLIT_SOURCES = {
         "reloc_backend_motion_cache.c",
         "reloc_backend_force_load.c",
     )),
+    "port/renderer_adapter_stage.c": ("port/reloc_backend_renderer_dl.c", (
+        "renderer_adapter_stage_packet.c",
+        "renderer_adapter_stage_lanes.c",
+        "renderer_adapter_stage_submit.c",
+    )),
+}
+
+# Phases of a function too long for one file, which the function includes in
+# place inside its body: source() reads each where its #include stands.
+INLINE_FRAGMENTS = {
+    "port/renderer_adapter_stage_submit.c": (
+        "renderer_adapter_stage_claims.inc",
+        "renderer_adapter_stage_submits.inc",
+    ),
 }
 
 
@@ -99,10 +113,30 @@ def slice_paths(path):
     return [path] + [path.with_name(s) for s in slices]
 
 
+def fragments(path):
+    """The in-function fragments a file includes (INLINE_FRAGMENTS)."""
+    for name, names in INLINE_FRAGMENTS.items():
+        if Path(path).resolve().as_posix().endswith("/src/" + name):
+            return names
+    return ()
+
+
+def inlined(path):
+    """A file's text with its in-function fragments read in place."""
+    text = Path(path).read_text(encoding="utf-8")
+    for name in fragments(path):
+        line = f'#include "{name}"\n'
+        if text.count(line) != 1:
+            raise AssertionError(f"{Path(path).name} no longer includes {name} once")
+        text = text.replace(line, Path(path).with_name(name).read_text(encoding="utf-8"))
+    return text
+
+
 def source(path):
     """A source file's text; a split file reads whole, its slices appended in
-    the order the unity parent includes them."""
-    return "".join(p.read_text(encoding="utf-8") for p in slice_paths(path))
+    the order the unity parent includes them and its in-function fragments
+    where they are included."""
+    return "".join(inlined(p) for p in slice_paths(path))
 
 
 SLICE_MARK = "/*@@slice {}@@*/\n"
@@ -113,6 +147,8 @@ def read_for_edit(path):
     line before each slice so write_for_edit can put the pieces back."""
     parts = []
     for i, p in enumerate(slice_paths(path)):
+        if fragments(p):
+            raise AssertionError(f"{p.name} includes in-function fragments; edit them directly")
         text = p.read_bytes().decode("utf-8").replace("\r\n", "\n")
         parts.append((SLICE_MARK.format(p.name) if i else "") + text)
     return "".join(parts)

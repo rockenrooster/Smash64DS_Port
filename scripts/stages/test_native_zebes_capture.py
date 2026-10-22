@@ -44,7 +44,7 @@ def test_existing_capture_and_census_refresh_is_idempotent(tmp_path, monkeypatch
 
 
 def test_capture_uses_live_acid_gobj_and_source_callback(tmp_path):
-    adapter = (ROOT/'src/port/renderer_adapter_stage.c').read_text()
+    adapter = read_split(ROOT/'src/port/renderer_adapter_stage.c')
     get = function(adapter,'ndsRendererAdapterNativeStageSegmentGObj')
     matches = function(adapter,'ndsRendererAdapterNativeStageProcMatches')
     callbacks = re.findall(r'grDisplayLayer\d(?:Pri|Sec)ProcDisplay', matches)
@@ -86,7 +86,7 @@ assert(!ndsRendererAdapterNativeStageProcMatches(1,NULL)); return 0; }
 
 
 def test_translation_only_stage_nodes_keep_their_source_matrix_kind(tmp_path):
-    stage = (ROOT/'src/port/renderer_adapter_stage.c').read_text()
+    stage = read_split(ROOT/'src/port/renderer_adapter_stage.c')
     matrix = read_split(ROOT/'src/port/renderer_adapter_matrix.c')
     admit = function(stage,'ndsRendererAdapterNativeStageTransformFlags')
     source = (ROOT/'decomp/BattleShip-main/decomp/src/gr/grcommon/grzebes.c').read_text()

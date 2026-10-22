@@ -47,7 +47,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 GEN_HEADER = os.path.join(
     ROOT, "include", "nds", "generated", "nds_native_item_mball.generated.h")
 EXEC_INC = os.path.join(ROOT, "src", "nds", "nds_native_item_mball.exec.inc")
-ADAPTER = os.path.join(ROOT, "src", "port", "renderer_adapter_stage.c")
+# The general stage DL submit's owner claims, where the admission lives
+# (renderer_adapter_stage_submit.c includes it in place).
+ADAPTER = os.path.join(ROOT, "src", "port", "renderer_adapter_stage_claims.inc")
 EF_SYMBOLS = os.path.join(
     ROOT, "src", "import", "battleship_efmanager_symbols.h")
 ENTRY_SEAM = os.path.join(
