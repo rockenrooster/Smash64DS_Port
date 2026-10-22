@@ -153,6 +153,15 @@ function Repair-MelonDSDldiImageCapacity {
             return
         }
         $live = @(Get-Process melonDS -ErrorAction SilentlyContinue)
+        # A runner slot's private image (slotN\storage\dldi.bin) is only ever
+        # open in that slot's own melonDS: the other slots may keep running.
+        $runnerRoot = [System.IO.Path]::GetFullPath((Join-Path $script:MelonDSRepoRoot `
+            'emulators\melonds-runners')).TrimEnd('\') + '\'
+        if ($nativePath.StartsWith($runnerRoot, [StringComparison]::OrdinalIgnoreCase)) {
+            $slotDir = $runnerRoot + $nativePath.Substring($runnerRoot.Length).Split('\')[0] + '\'
+            $live = @($live | Where-Object {
+                $_.Path -and $_.Path.StartsWith($slotDir, [StringComparison]::OrdinalIgnoreCase) })
+        }
         if ($live.Count -ne 0) {
             throw ("Shared melonDS DLDI image has only $freeBytes free bytes; " +
                    'cannot regenerate it while melonDS is running.')
