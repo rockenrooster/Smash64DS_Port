@@ -1295,22 +1295,6 @@ static int ndsP2HbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
     return 0;
 }
 
-int ndsP2HurtboxRejectTest(const FTAttackColl *attack,
-                           const FTDamageColl *damage)
-{
-    return ndsP2HbRejectPoints(&attack->pos_curr, &attack->pos_prev,
-                               attack->size, damage);
-}
-
-/* The weapon and item attack paths (gmCollisionCheckWeaponAttackFighterDamage
- * Collide / ...ItemAttack...) run the same joint frame and TestRectangle on
- * attack_pos[attack_id]. */
-int ndsP2HurtboxRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
-                             f32 attack_size, const FTDamageColl *damage)
-{
-    return ndsP2HbRejectPoints(pos_curr, pos_prev, attack_size, damage);
-}
-
 /* P2-2p8 (2026-10-05), owner: "Software floating point should not exist,
  * fixed point only". The hurtbox test DECIDED in fixed point. Where the
  * separation tests above cannot prove a miss, the source's float tail decided

@@ -20,10 +20,6 @@
 #define NDS_NET_SESSION_ENDED    3u
 #define NDS_NET_SESSION_ABORTED  4u
 
-/* Whether the battle loop is in a lockstep match. Offline: one load and a
- * compare per batch. */
-uint32_t ndsNetSessionInMatch(void);
-
 /* The host's port in a lockstep match, NDS_NET_PORTS otherwise. Every console
  * holds the same value, so a rule keyed on it stays in lockstep (only the
  * host can pause: battleship_ftmanager.c ndsFTManagerLowDetailOnly). */

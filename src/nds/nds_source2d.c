@@ -2636,11 +2636,6 @@ void ndsSource2DBeginFrame(void)
     sNdsS2DFrameObjects = 0u;
 }
 
-s32 ndsSource2DDrawGObj(struct GObj *gobj)
-{
-    return ndsSource2DDrawGObjModulated(gobj, 0xffffffu);
-}
-
 s32 ndsSource2DDrawGObjModulated(struct GObj *gobj, u32 modulate_rgb)
 {
     SObj *sobj;

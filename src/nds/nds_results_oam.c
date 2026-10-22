@@ -1451,11 +1451,6 @@ void ndsResultsOamExit(void)
     NDS_DIAG(gNdsResultsOamExitCount++);
 }
 
-s32 ndsResultsOamIsActive(void)
-{
-    return (sNdsResultsActive != 0u) ? 1 : 0;
-}
-
 void ndsResultsOamBeginFrame(void)
 {
     s32 first_previous;
@@ -1476,39 +1471,6 @@ void ndsResultsOamBeginFrame(void)
     sNdsResultsNextTintOamId = 127;
     sNdsResultsPreviousNextOamId = 127;
     NDS_DIAG(gNdsResultsOamBeginFrameCount++);
-}
-
-u32 ndsResultsOamBakeGObj(struct GObj *gobj)
-{
-    SObj *sobj;
-    u32 objects = 0u;
-
-    if (sNdsResultsActive == 0u)
-    {
-        NDS_DIAG(gNdsResultsOamFailureInactive++);
-        return 0u;
-    }
-    if (gobj == NULL)
-    {
-        return 0u;
-    }
-    sobj = SObjGetStruct(gobj);
-    if (sobj == NULL)
-    {
-        return 0u;
-    }
-    for (; sobj != NULL; sobj = sobj->next)
-    {
-        if ((sobj->sprite.attr & SP_HIDDEN) != 0u)
-        {
-            continue;
-        }
-        if (ndsResultsPrepareSObj(sobj, &objects) == 0)
-        {
-            return 0u;
-        }
-    }
-    return 1u;
 }
 
 s32 ndsResultsOamDrawGObj(struct GObj *gobj)

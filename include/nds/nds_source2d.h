@@ -20,9 +20,6 @@ void ndsSource2DEnterPending(void);
 void ndsSource2DExit(void);
 s32 ndsSource2DIsActive(void);
 void ndsSource2DBeginFrame(void);
-/* Presents every visible SObj of `gobj`; a sprite it cannot present records
- * a native sprite failure. Returns nonzero when the tenant owns the draw. */
-s32 ndsSource2DDrawGObj(struct GObj *gobj);
 /* A no-attribute draw (lbCommonDrawSObjNoAttr): RGBA/CI texels are multiplied
  * by the prim colour its display callback set (0xRRGGBB; 0xffffff = none). */
 s32 ndsSource2DDrawGObjModulated(struct GObj *gobj, u32 modulate_rgb);

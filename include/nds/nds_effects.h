@@ -169,7 +169,6 @@ extern volatile u32 gNdsVisualEffectNativeDrawCount;
 extern volatile u32 gNdsVisualEffectNativeDeclineCount;
 /* Identity only; the source maker/update still own the GObj. The renderer uses
  * this to replace only ImpactWave's hot display-list execution. */
-s32 ndsEFManagerIsImpactWaveGObj(GObj *effect_gobj);
 s32 ndsEFManagerImpactWaveVariant(GObj *effect_gobj, u32 *variant_out);
 /* Runtime header emitted by efManagerImpactWaveProcDisplay, packed exactly as
  * G_SETPRIMCOLOR/G_SETENVCOLOR consume it. NDL uses this when it skips the

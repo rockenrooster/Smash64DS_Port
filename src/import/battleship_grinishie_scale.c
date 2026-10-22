@@ -50,17 +50,6 @@ u16 dGRInishieScaleMapObjKinds[/* */] = { nMPMapObjKindScaleL,
 u8 dGRInishieScaleLineGroups[/* */] = { 0x01, 0x02 };
 #endif
 
-/* Retired source-scale setup asset provider. The implementation lives
- * host-only; this stub reports the retired presentation path as a native
- * failure and returns no asset, never success for empty rendering. */
-void *ndsGRInishieScaleGetSourceSetupMapHead(void)
-{
-    ndsRendererRecordNativeFailure(NDS_NATIVE_FAILURE_STAGE,
-        (u32)gSCManagerSceneData.scene_curr, 0xffffffffu, nGRKindInishie,
-        0x5f0u, 0u, NDS_NATIVE_FAILURE_NO_PROGRAM);
-    return NULL;
-}
-
 enum grInishieScaleStatus
 {
     nGRInishieScaleStatusWait,

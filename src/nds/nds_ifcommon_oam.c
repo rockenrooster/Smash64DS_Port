@@ -1790,11 +1790,6 @@ void ndsTask39EffectsEngage(u32 mask)
     gNdsTask39FxEngagementMask |= mask;
 }
 
-void ndsTask39EffectsAddDrawTicks(u32 ticks)
-{
-    (void)ticks;
-}
-
 static s32 ndsTask39EffectsArenaValid(void)
 {
     if ((gNdsTask39FxArenaBootSize == 0u) &&

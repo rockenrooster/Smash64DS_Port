@@ -628,13 +628,6 @@ static void ndsFighterRendererInvalidateMaterialRows(void)
     sNdsRendererAdapterMaterialRowClaimMask = 0u;
 }
 
-void ndsFighterRendererInvalidateMaterialCaches(void)
-{
-    /* Unknown/global lifetime seam: preserve the conservative contract. */
-    ndsRendererFighterPacketInvalidateAll();
-    ndsFighterRendererInvalidateMaterialRows();
-}
-
 void ndsFighterRendererInvalidateMaterialCachesForSlot(u32 slot)
 {
     /* Material rows remain global because source free-list reuse can move an

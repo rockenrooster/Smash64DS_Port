@@ -67,16 +67,6 @@ NDS_ATTACK100_ENTRY(Attack100LoopSetStatus)
 NDS_ATTACK100_ENTRY(Attack100EndSetStatus)
 #undef NDS_ATTACK100_ENTRY
 
-void ndsBaseFTCommonAttack100LoopKirbyUpdateEffect(FTStruct *fp)
-{
-    if (__builtin_expect(fp->nds_p4_content != 0u, 0))
-    {
-        ndsP4JabAttack100LoopKirbyUpdateEffect(fp);
-        return;
-    }
-    ndsSourceFTCommonAttack100LoopKirbyUpdateEffect(fp);
-}
-
 sb32 ndsBaseFTCommonAttack100StartCheckInterruptCommon(GObj *fighter_gobj)
 {
     if (__builtin_expect(ftGetStruct(fighter_gobj)->nds_p4_content != 0u, 0))

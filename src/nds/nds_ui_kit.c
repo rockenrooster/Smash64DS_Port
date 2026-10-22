@@ -871,11 +871,6 @@ static u32 ndsUiKitDigitCount(s32 value)
     return digits;
 }
 
-u32 ndsUiKitNumberWidth(s32 value)
-{
-    return ndsUiKitDigitCount(value) * (u32)NDS_UI_KIT_DIGIT_PITCH;
-}
-
 u32 ndsUiKitSetNumber(u32 slot, u32 slots_available, s32 value, s32 right_x,
                       s32 y)
 {

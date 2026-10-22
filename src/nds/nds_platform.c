@@ -724,15 +724,6 @@ void ndsPlatformBeginFrame(void)
     return;
 }
 
-void ndsPlatformDrawRect(s32 x, s32 y, s32 width, s32 height, u16 color)
-{
-    (void)x;
-    (void)y;
-    (void)width;
-    (void)height;
-    (void)color;
-}
-
 s32 ndsPlatformReserveOriginalSpritePreview(void)
 {
     if ((sOriginalSpritePreview == NULL) ||
@@ -2403,35 +2394,6 @@ u32 ndsPlatformSceneWallpaperQueueTransform(s32 origin_x, s32 origin_y,
     return FALSE;
 }
 
-void ndsPlatformSceneWallpaperConfirmRaster(void)
-{
-}
-
-
-u32 ndsPlatformSceneMipCaptureRequest(u32 mip_index)
-{
-    (void)mip_index;
-    return FALSE;
-}
-
-void ndsPlatformSceneMipCacheAbort(void)
-{
-}
-
-u32 ndsPlatformSceneMipCaptureCompletedCount(void)
-{
-    return 0u;
-}
-
-u32 ndsPlatformSceneMipCacheReady(void)
-{
-    return FALSE;
-}
-
-u32 ndsPlatformSceneMipCacheFailed(void)
-{
-    return FALSE;
-}
 
 void ndsPlatformClearOriginalSpritePreview(void)
 {
@@ -2490,10 +2452,6 @@ u16 *ndsPlatformBeginOriginalDLPreview(u32 width, u32 height, u32 *out_pitch)
 
 
 void ndsPlatformCommitOriginalDLPreview(void)
-{
-}
-
-void ndsPlatformClearOriginalDLPreview(void)
 {
 }
 
@@ -3957,10 +3915,6 @@ void ndsPlatformEndFrame(void)
     DC_FlushRange((const void *)&gNdsVramBg3RefusedWrites, sizeof(u32));
 #endif
     ndsPlatformPostSwapCommit();
-}
-
-void ndsPlatformProfileSampleFrameBoundaryGXState(void)
-{
 }
 
 u32 ndsPlatformTicks(void)

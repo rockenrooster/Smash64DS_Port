@@ -205,8 +205,6 @@ s32 ndsUiKitLoadNetPlayerImages(void);
 #define NDS_UI_KIT_DIGIT_PITCH 11
 u32 ndsUiKitSetNumber(u32 slot, u32 slots_available, s32 value, s32 right_x,
                       s32 y);
-/* Layout width in pixels a number of this value will occupy. */
-u32 ndsUiKitNumberWidth(s32 value);
 
 /* --- Backdrop surfaces (P2-1h). `surfaces` indexes the generated manifest
  * (NDS_MN_UI_KIT_SURFACE_*).

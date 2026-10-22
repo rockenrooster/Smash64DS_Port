@@ -125,11 +125,6 @@ static u32 ndsNetHeader(u8 *buf, u32 kind)
     return ndsNetHeaderWrite(buf, kind, sNetSession);
 }
 
-uint32_t ndsNetSessionInMatch(void)
-{
-    return (gNdsNetSessionState == NDS_NET_SESSION_RUNNING) ? 1u : 0u;
-}
-
 uint32_t ndsNetSessionHostPort(void)
 {
     return (gNdsNetSessionState == NDS_NET_SESSION_RUNNING) ?

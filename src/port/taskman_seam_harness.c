@@ -1,8 +1,4 @@
 
-void ndsHarnessFastPresentRequest(void)
-{
-}
-
 
 /* P2-7 item 9. The generic source-MENU pump, factored out of the imported VS
  * Results loop below so every imported SOURCE menu runs the same contract:

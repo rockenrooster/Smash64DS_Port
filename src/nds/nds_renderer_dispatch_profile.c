@@ -208,22 +208,6 @@ void ndsRendererProfileSetSourceProvenance(u32 owner_occurrence,
     (void)root_branch_path;
 }
 
-void ndsRendererProfileRecordFrameBoundaryGXState(u32 status, u32 control)
-{
-    (void)status;
-    (void)control;
-}
-
-void ndsRendererProfileRecordMaterialOperations(u32 count)
-{
-    (void)count;
-}
-
-u32 ndsRendererProfileGlobalStateHash(void)
-{
-    return 0u;
-}
-
 void ndsRendererProfileFrameBegin(void)
 {
     gNdsRendererIFCommonCloudQueuedCount = 0u;

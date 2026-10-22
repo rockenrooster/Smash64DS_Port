@@ -59,7 +59,6 @@ void ndsIFCommonTrainingEnd(void);
 void ndsTask39HitSparkSpawn(const Vec3f *pos, s32 player, s32 size,
                             sb32 is_static, sb32 is_heavy);
 void ndsTask39EffectsUpdate(void);
-void ndsTask39EffectsAddDrawTicks(u32 ticks);
 void ndsTask39EffectsEngage(u32 mask);
 
 extern volatile u32 gNdsIFCommonNativeOamPrepareCount;

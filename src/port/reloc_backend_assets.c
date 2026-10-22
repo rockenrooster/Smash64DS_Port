@@ -7841,16 +7841,6 @@ s32 ndsRelocPointerIsFighterAObj16(const void *ptr)
                TRUE : FALSE;
 }
 
-s32 ndsRelocPointerIsFighterAObj32(const void *ptr)
-{
-    NDSRelocLoadedFile *loaded =
-        ndsRelocFindLoadedFileContaining(ptr, sizeof(u32));
-
-    return ((loaded != NULL) &&
-            (ndsRelocIsFighterAObj32Asset(loaded->asset_id) != FALSE)) ?
-               TRUE : FALSE;
-}
-
 /* Engagement proof, per the standing rule that an optimization which silently
  * never fires is indistinguishable from one that fired and saved nothing.
  * `Resolves` counts the calls to ndsRelocAssetIDForToken this scan actually

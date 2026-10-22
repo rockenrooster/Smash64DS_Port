@@ -119,9 +119,6 @@ s32 ndsRelocPreviewFighterLoadStep(void *handle, u32 byte_budget,
 /* `fkind` is checked against the handle so a stale pointer to a pool row that
  * has since been recycled cannot retire another kind's transaction. */
 void ndsRelocPreviewFighterLoadCancel(void *handle, s32 fkind);
-/* TRUE once Step has returned DONE and the kind's pack is waiting for its
- * owner-boundary publication. */
-s32 ndsRelocPreviewFighterLoadIsStaged(s32 fkind);
 extern volatile u32 gNdsPreviewPackStepCount;
 extern volatile u32 gNdsPreviewPackStepByteMax;
 extern volatile u32 gNdsPreviewPackStageCommitCount;

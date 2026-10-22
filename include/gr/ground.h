@@ -682,7 +682,6 @@ void ndsGRInishieSetupInitAll(void);
 void ndsGRSectorSetupInitAll(void);
 void grInishieMakeScale(void);
 void grInishieScaleProcUpdate(GObj *ground_gobj);
-void *ndsGRInishieScaleGetSourceSetupMapHead(void);
 void ndsGRInishieScaleMakeProofShell(void);
 void mpCollisionClearYakumonoAll(void);
 void mpCollisionInitYakumonoAll(void);

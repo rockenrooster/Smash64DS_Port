@@ -35,7 +35,6 @@ enum NDSOriginalSpriteOverlayLayer {
 void ndsPlatformInit(void);
 u32 ndsPlatformReadInput(void);
 void ndsPlatformBeginFrame(void);
-void ndsPlatformDrawRect(s32 x, s32 y, s32 width, s32 height, u16 color);
 /* Mandatory scene workspace; reserve before optional animation caches. */
 s32 ndsPlatformReserveOriginalSpritePreview(void);
 u16 *ndsPlatformBeginOriginalSpritePreview(u32 width, u32 height,
@@ -148,16 +147,9 @@ extern volatile u32 gNdsTitleFireFrameCount;
 u32 ndsPlatformSceneWallpaperQueueTransform(s32 origin_x, s32 origin_y,
                                              u32 scale_x_q16,
                                              u32 scale_y_q16);
-void ndsPlatformSceneWallpaperConfirmRaster(void);
-u32 ndsPlatformSceneMipCaptureRequest(u32 mip_index);
-void ndsPlatformSceneMipCacheAbort(void);
-u32 ndsPlatformSceneMipCaptureCompletedCount(void);
-u32 ndsPlatformSceneMipCacheReady(void);
-u32 ndsPlatformSceneMipCacheFailed(void);
 u16 *ndsPlatformBeginOriginalDLPreview(u32 width, u32 height,
                                        u32 *out_pitch);
 void ndsPlatformCommitOriginalDLPreview(void);
-void ndsPlatformClearOriginalDLPreview(void);
 extern volatile u32 gNdsOriginalSpritePreviewReady;
 extern volatile u32 gNdsOriginalSpritePreviewCommitCount;
 extern volatile u32 gNdsOriginalSpritePreviewDrawCount;
@@ -231,7 +223,6 @@ extern volatile u32 gNdsPresentLeadLines;
 void ndsPlatformPresentLeadEnable(u32 enable);
 u32 ndsPlatformPresentLeadRetire(void);
 u32 ndsPlatformPresentLeadPending(void);
-void ndsPlatformProfileSampleFrameBoundaryGXState(void);
 u32 ndsPlatformTicks(void);
 u32 ndsPlatformHeldKeys(void);
 

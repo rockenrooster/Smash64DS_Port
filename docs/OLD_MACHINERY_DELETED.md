@@ -94,6 +94,31 @@ all five live configs, and the rebuilt gate ROM (`s58`) has every symbol at its 
 byte-identical except the MRGAW tables (a staging regeneration renumbered his files; replay
 digest identical).
 
+## Functions every link discards (97) -- Phase B, second batch (2026-10-22)
+
+97 extern functions that every live link discards (their `.text.<name>` sections in the linker
+maps) and that nothing names beyond their definition and prototypes, 3,948 lines in 34 files:
+the Mario/Fox proof era's 66 loop prepare/finalize and display hooks (`reloc_backend_mp_collision.c`
+39, `reloc_backend_cliff_ledge.c` 25, `reloc_backend_movement.c` 2), nine platform helpers (the
+scene mip-cache handshake, a rectangle draw, a DL-preview clear, a frame-boundary GX sample), the
+renderer profile's state hash and recorders, the P2 hurtbox reject test, two Q-format animation
+helpers, the Results OAM bake, and single helpers in the effect manager, the battle pack, the UI
+kit, the net session, the preview pack, Source 2D and the reloc assets. Kept by rule: the source's
+own functions in imported files (`func_ovl3_*`, `itLizardonFallUnusedSetStatus`) and the compat
+stubs named after them (`ftPublicDefeatedAddID`, `lbCommonTan`), the libultra shims
+(`osGetThreadId`, `osGetThreadPri`, `osYieldThread`, `osInvalICache`) and the two `__wrap_`
+functions the Makefile's `--wrap` flags bind.
+
+Proof: every changed translation unit (315 a config, the headers' prototypes included) compiles
+in all five live configs with implicit declarations as errors. With the real flags, 301 objects
+are byte-identical and 12 differ only by the deleted functions' sections (the 66 hooks were empty
+in these configs). Two re-decided inlining: the Results OAM draw now inlines its one remaining
+helper (`ndsResultsPrepareSObj`, 8 bytes net), and the reloc AObj16/AObj32 asset tests swapped
+which is out of line (the same calls on the clip admission path). The rebuilt gate ROM (`s60`)
+has every other symbol at its `s59` size, replay digests identical to `s59` over 1,960 samples
+(the originals on Dream Land, Mr. Game & Watch x4 on Remix stage 41), WORK P95 within noise;
+the ship-config play ROM links.
+
 ## Still to do
 
 - The P1/P2 verifier framework those targets fed, dormant since September: `verify-all.ps1`,

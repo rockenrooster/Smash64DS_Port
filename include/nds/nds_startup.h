@@ -3773,7 +3773,6 @@ extern volatile u32 gNdsFighterGCRunAllLoopDrawCallCount;
 extern volatile u32 gNdsFighterGCRunAllLoopMatrixCallCount;
 extern volatile u32 gNdsFighterGCRunAllLoopRootYDriftCount;
 extern volatile u32 gNdsFighterGCRunAllLoopGADriftCount;
-void ndsFighterMarioFoxGCRunAllLoopPrepare(void);
 s32 ndsFighterMarioFoxGCRunAllLoopUpdateEnabled(void);
 void ndsFighterMarioFoxGCRunAllLoopRunVSBattleUpdate(void);
 extern volatile u32 gNdsFighterNaturalMotionResult;
@@ -5125,7 +5124,6 @@ extern volatile u32 gNdsFighterGCDrawAllLoopDrawCallCount;
 extern volatile u32 gNdsFighterGCDrawAllLoopMatrixCallCount;
 extern volatile u32 gNdsFighterGCDrawAllLoopRootYDriftCount;
 extern volatile u32 gNdsFighterGCDrawAllLoopGADriftCount;
-void ndsFighterMarioFoxGCDrawAllLoopPrepare(void);
 s32 ndsFighterMarioFoxGCDrawAllLoopUpdateEnabled(void);
 void ndsFighterMarioFoxGCDrawAllLoopRunVSBattleUpdate(void);
 extern volatile u32 gNdsFighterMarioFoxStageGCDrawAllLoopResult;
@@ -5290,7 +5288,6 @@ void ndsFighterMarioFoxStageGCDrawAllLoopFinalize(void);
 void ndsFighterMarioFoxStageGCDrawAllLoopSubmitHardwareFrame(void);
 void ndsFighterMarioFoxStageGCDrawAllLoopPresentHardwareFrame(void);
 s32 ndsFighterMarioFoxStageGCDrawAllLoopProofActive(void);
-s32 ndsFighterMarioFoxGCDrawAllLoopDisplayActive(void);
 void ndsStageGCDrawAllLoopRecordCameraCallback(void);
 s32 ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
                                                void *display_gobj,
@@ -5412,9 +5409,7 @@ extern volatile u32 gNdsStageCollisionLoopGObjDelta;
 extern volatile u32 gNdsStageCollisionLoopUnexpectedSceneCount;
 extern volatile u32 gNdsStageCollisionLoopUnexpectedStatusCount;
 extern volatile u32 gNdsStageCollisionLoopUnsafeFallbackAfterPrepareCount;
-void ndsFighterMarioFoxStageCollisionLoopPrepare(void);
 void ndsStageCollisionLoopPrepareRuntime(void);
-void ndsFighterMarioFoxStageCollisionLoopFinalize(void);
 extern volatile u32 gNdsFighterMarioFoxStageFloorFollowLoopResult;
 extern volatile u32 gNdsFighterMarioFoxStageFloorFollowLoopSafeResult;
 extern volatile u32 gNdsFighterMarioFoxStageFloorFollowLoopMask;
@@ -5469,8 +5464,6 @@ extern volatile u32 gNdsStageFloorFollowLoopP0StatusFinal;
 extern volatile u32 gNdsStageFloorFollowLoopP1StatusFinal;
 extern volatile u32 gNdsStageFloorFollowLoopP0GAFinal;
 extern volatile u32 gNdsStageFloorFollowLoopP1GAFinal;
-void ndsFighterMarioFoxStageFloorFollowLoopPrepare(void);
-void ndsFighterMarioFoxStageFloorFollowLoopFinalize(void);
 #define NDS_FIGHTER_MARIOFOX_STAGE_FLOOR_EDGE_LOOP_PASS 0x4653454Cu
 #define NDS_FIGHTER_MARIOFOX_STAGE_FLOOR_EDGE_LOOP_SAFE_PASS 0x46534553u
 extern volatile u32 gNdsFighterMarioFoxStageFloorEdgeLoopResult;
@@ -5527,8 +5520,6 @@ extern volatile u32 gNdsStageFloorEdgeLoopFinalAdoptCount;
 extern volatile u32 gNdsStageFloorEdgeLoopUnexpectedSceneCount;
 extern volatile u32 gNdsStageFloorEdgeLoopUnexpectedStatusCount;
 extern volatile u32 gNdsStageFloorEdgeLoopUnsafeFallbackAfterPrepareCount;
-void ndsFighterMarioFoxStageFloorEdgeLoopPrepare(void);
-void ndsFighterMarioFoxStageFloorEdgeLoopFinalize(void);
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPPROCESS_FLOOR_LOOP_PASS 0x46534D50u
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPPROCESS_FLOOR_LOOP_SAFE_PASS 0x46534D53u
 extern volatile u32 gNdsFighterMarioFoxStageMPProcessFloorLoopResult;
@@ -5580,8 +5571,6 @@ extern volatile u32 gNdsStageMPProcessFloorLoopNoFinalRecenterCount;
 extern volatile u32 gNdsStageMPProcessFloorLoopUnexpectedSceneCount;
 extern volatile u32 gNdsStageMPProcessFloorLoopUnexpectedStatusCount;
 extern volatile u32 gNdsStageMPProcessFloorLoopUnsafeCount;
-void ndsFighterMarioFoxStageMPProcessFloorLoopPrepare(void);
-void ndsFighterMarioFoxStageMPProcessFloorLoopFinalize(void);
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPUPDATE_FLOOR_LOOP_PASS 0x46554D50u
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPUPDATE_FLOOR_LOOP_SAFE_PASS 0x46554D53u
 extern volatile u32 gNdsFighterMarioFoxStageMPUpdateFloorLoopResult;
@@ -5657,8 +5646,6 @@ extern volatile u32 gNdsStageMPUpdateFloorLoopOttottoDeniedCount;
 extern volatile u32 gNdsStageMPUpdateFloorLoopUnexpectedSceneCount;
 extern volatile u32 gNdsStageMPUpdateFloorLoopUnexpectedStatusCount;
 extern volatile u32 gNdsStageMPUpdateFloorLoopUnsafeCount;
-void ndsFighterMarioFoxStageMPUpdateFloorLoopPrepare(void);
-void ndsFighterMarioFoxStageMPUpdateFloorLoopFinalize(void);
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPSWEEP_FLOOR_LOOP_PASS 0x46535750u
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPSWEEP_FLOOR_LOOP_SAFE_PASS 0x46535753u
 extern volatile u32 gNdsFighterMarioFoxStageMPSweepFloorLoopResult;
@@ -5705,8 +5692,6 @@ extern volatile u32 gNdsStageMPSweepFloorLoopP1FinalLineIsFloor;
 extern volatile u32 gNdsStageMPSweepFloorLoopP0FloorOK;
 extern volatile u32 gNdsStageMPSweepFloorLoopP1FloorOK;
 extern volatile u32 gNdsStageMPSweepFloorLoopUnsafeCount;
-void ndsFighterMarioFoxStageMPSweepFloorLoopPrepare(void);
-void ndsFighterMarioFoxStageMPSweepFloorLoopFinalize(void);
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCROSS_FLOOR_LOOP_PASS 0x46435250u
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCROSS_FLOOR_LOOP_SAFE_PASS 0x46435253u
 extern volatile u32 gNdsFighterMarioFoxStageMPCrossFloorLoopResult;
@@ -5738,8 +5723,6 @@ extern volatile u32 gNdsStageMPCrossFloorLoopP0TargetLineMatchCount;
 extern volatile u32 gNdsStageMPCrossFloorLoopP0FinalFloorOK;
 extern volatile u32 gNdsStageMPCrossFloorLoopP1FinalFloorOK;
 extern volatile u32 gNdsStageMPCrossFloorLoopUnsafeCount;
-void ndsFighterMarioFoxStageMPCrossFloorLoopPrepare(void);
-void ndsFighterMarioFoxStageMPCrossFloorLoopFinalize(void);
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPADJUST_FLOOR_LOOP_PASS 0x46454150u
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPADJUST_FLOOR_LOOP_SAFE_PASS 0x46454153u
 extern volatile u32 gNdsFighterMarioFoxStageMPAdjustFloorLoopResult;
@@ -5775,8 +5758,6 @@ extern volatile s32 gNdsStageMPAdjustFloorLoopP1FinalLineID;
 extern volatile u32 gNdsStageMPAdjustFloorLoopP0FinalFloorOK;
 extern volatile u32 gNdsStageMPAdjustFloorLoopP1FinalFloorOK;
 extern volatile u32 gNdsStageMPAdjustFloorLoopUnsafeCount;
-void ndsFighterMarioFoxStageMPAdjustFloorLoopPrepare(void);
-void ndsFighterMarioFoxStageMPAdjustFloorLoopFinalize(void);
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPEDGE_FLOOR_LOOP_PASS 0x46454750u
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPEDGE_FLOOR_LOOP_SAFE_PASS 0x46454753u
 extern volatile u32 gNdsFighterMarioFoxStageMPEdgeFloorLoopResult;
@@ -5799,8 +5780,6 @@ extern volatile u32 gNdsStageMPEdgeFloorLoopEdgeUnderRLineKind;
 extern volatile s32 gNdsStageMPEdgeFloorLoopSelectedFloorLineID;
 extern volatile u32 gNdsStageMPEdgeFloorLoopSelectedFloorOK;
 extern volatile u32 gNdsStageMPEdgeFloorLoopUnsafeCount;
-void ndsFighterMarioFoxStageMPEdgeFloorLoopPrepare(void);
-void ndsFighterMarioFoxStageMPEdgeFloorLoopFinalize(void);
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPWALL_FLOOR_LOOP_PASS 0x46574c50u
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPWALL_FLOOR_LOOP_SAFE_PASS 0x46574c53u
 extern volatile u32 gNdsFighterMarioFoxStageMPWallFloorLoopResult;
@@ -6214,24 +6193,13 @@ extern volatile s32 gNdsStageInishieScaleLoopStepLeftYAfterRetractMilli;
 extern volatile s32 gNdsStageInishieScaleLoopStepRightYAfterRetractMilli;
 extern volatile s32 gNdsStageInishieScaleLoopStepLeftSpeedYMilli;
 extern volatile s32 gNdsStageInishieScaleLoopStepRightSpeedYMilli;
-void ndsFighterMarioFoxStageMPWallFloorLoopPrepare(void);
-void ndsFighterMarioFoxStageMPWallFloorLoopFinalize(void);
-void ndsFighterMarioFoxStageMPWallCopyFloorLoopPrepare(void);
 void ndsFighterMarioFoxStageMPWallCopyFloorLoopFinalize(void);
-void ndsFighterMarioFoxStageMPPassFloorLoopPrepare(void);
 void ndsFighterMarioFoxStageMPPassFloorLoopFinalize(void);
-void ndsFighterMarioFoxStageMPPlatformFloorLoopPrepare(void);
 void ndsFighterMarioFoxStageMPPlatformFloorLoopFinalize(void);
-void ndsFighterMarioFoxStageMPPlatformTickFloorLoopPrepare(void);
 void ndsFighterMarioFoxStageMPPlatformTickFloorLoopFinalize(void);
-void ndsFighterMarioFoxStageMPPassInputLoopPrepare(void);
 void ndsFighterMarioFoxStageMPPassInputLoopFinalize(void);
-void ndsFighterMarioFoxStageMPPlatformPosFloorLoopPrepare(void);
 void ndsFighterMarioFoxStageMPPlatformPosFloorLoopFinalize(void);
-void ndsFighterMarioFoxStageMPPlatformSpeedFloorLoopPrepare(void);
 void ndsFighterMarioFoxStageMPPlatformSpeedFloorLoopFinalize(void);
-void ndsFighterMarioFoxStageInishieScaleLoopPrepare(void);
-void ndsFighterMarioFoxStageInishieScaleLoopFinalize(void);
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPSTALE_FLOOR_LOOP_PASS 0x46535450u
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPSTALE_FLOOR_LOOP_SAFE_PASS 0x46535453u
 extern volatile u32 gNdsFighterMarioFoxStageMPStaleFloorLoopResult;
@@ -6261,8 +6229,6 @@ extern volatile u32 gNdsStageMPStaleFloorLoopP0TargetLineMatchCount;
 extern volatile u32 gNdsStageMPStaleFloorLoopP0FinalFloorOK;
 extern volatile u32 gNdsStageMPStaleFloorLoopP1FinalFloorOK;
 extern volatile u32 gNdsStageMPStaleFloorLoopUnsafeCount;
-void ndsFighterMarioFoxStageMPStaleFloorLoopPrepare(void);
-void ndsFighterMarioFoxStageMPStaleFloorLoopFinalize(void);
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPLIVESTALE_FLOOR_LOOP_PASS 0x464c5350u
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPLIVESTALE_FLOOR_LOOP_SAFE_PASS 0x464c5353u
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPMOTIONSTALE_FLOOR_LOOP_PASS 0x464d5350u
@@ -6303,8 +6269,6 @@ extern volatile u32 gNdsStageMPLiveStaleFloorLoopP0TargetLineMatchCount;
 extern volatile u32 gNdsStageMPLiveStaleFloorLoopP0FinalFloorOK;
 extern volatile u32 gNdsStageMPLiveStaleFloorLoopP1FinalFloorOK;
 extern volatile u32 gNdsStageMPLiveStaleFloorLoopUnsafeCount;
-void ndsFighterMarioFoxStageMPLiveStaleFloorLoopPrepare(void);
-void ndsFighterMarioFoxStageMPLiveStaleFloorLoopFinalize(void);
 extern volatile u32 gNdsFighterMarioFoxStageMPMotionStaleFloorLoopResult;
 extern volatile u32 gNdsFighterMarioFoxStageMPMotionStaleFloorLoopSafeResult;
 extern volatile u32 gNdsFighterMarioFoxStageMPMotionStaleFloorLoopMask;
@@ -6333,8 +6297,6 @@ extern volatile s32 gNdsStageMPMotionStaleFloorLoopP1FinalLineID;
 extern volatile u32 gNdsStageMPMotionStaleFloorLoopP0FinalFloorOK;
 extern volatile u32 gNdsStageMPMotionStaleFloorLoopP1FinalFloorOK;
 extern volatile u32 gNdsStageMPMotionStaleFloorLoopUnsafeCount;
-void ndsFighterMarioFoxStageMPMotionStaleFloorLoopPrepare(void);
-void ndsFighterMarioFoxStageMPMotionStaleFloorLoopFinalize(void);
 extern volatile u32 gNdsFighterMarioFoxStageMPCliffStatusFloorLoopResult;
 extern volatile u32 gNdsFighterMarioFoxStageMPCliffStatusFloorLoopSafeResult;
 extern volatile u32 gNdsFighterMarioFoxStageMPCliffStatusFloorLoopMask;
@@ -6362,7 +6324,6 @@ extern volatile s32 gNdsStageMPCliffStatusFloorLoopP1LineFinal;
 extern volatile u32 gNdsStageMPCliffStatusFloorLoopP0FloorEdgeMask;
 extern volatile u32 gNdsStageMPCliffStatusFloorLoopP1FloorEdgeMask;
 extern volatile u32 gNdsStageMPCliffStatusFloorLoopUnsafeCount;
-void ndsFighterMarioFoxStageMPCliffStatusFloorLoopPrepare(void);
 void ndsFighterMarioFoxStageMPCliffStatusFloorLoopFinalize(void);
 extern volatile u32 gNdsFighterMarioFoxStageMPCliffTickFloorLoopResult;
 extern volatile u32 gNdsFighterMarioFoxStageMPCliffTickFloorLoopSafeResult;
@@ -6398,7 +6359,6 @@ extern volatile u32 gNdsStageMPCliffTickFloorLoopP1MotionAfter;
 extern volatile u32 gNdsStageMPCliffTickFloorLoopP1GAAfter;
 extern volatile s32 gNdsStageMPCliffTickFloorLoopP1LineAfter;
 extern volatile u32 gNdsStageMPCliffTickFloorLoopUnsafeCount;
-void ndsFighterMarioFoxStageMPCliffTickFloorLoopPrepare(void);
 void ndsFighterMarioFoxStageMPCliffTickFloorLoopFinalize(void);
 extern volatile u32 gNdsFighterMarioFoxStageMPFallMapFloorLoopResult;
 extern volatile u32 gNdsFighterMarioFoxStageMPFallMapFloorLoopSafeResult;
@@ -6430,7 +6390,6 @@ extern volatile s32 gNdsStageMPFallMapFloorLoopP1VelYBeforeMilli;
 extern volatile s32 gNdsStageMPFallMapFloorLoopP1VelXAfterMilli;
 extern volatile s32 gNdsStageMPFallMapFloorLoopP1VelYAfterMilli;
 extern volatile u32 gNdsStageMPFallMapFloorLoopUnsafeCount;
-void ndsFighterMarioFoxStageMPFallMapFloorLoopPrepare(void);
 void ndsFighterMarioFoxStageMPFallMapFloorLoopFinalize(void);
 extern volatile u32 gNdsFighterMarioFoxStageMPFallLandFloorLoopResult;
 extern volatile u32 gNdsFighterMarioFoxStageMPFallLandFloorLoopSafeResult;
@@ -6470,7 +6429,6 @@ extern volatile s32 gNdsStageMPFallLandFloorLoopP1VelYBeforeMilli;
 extern volatile s32 gNdsStageMPFallLandFloorLoopP1VelXAfterMilli;
 extern volatile s32 gNdsStageMPFallLandFloorLoopP1VelYAfterMilli;
 extern volatile u32 gNdsStageMPFallLandFloorLoopUnsafeCount;
-void ndsFighterMarioFoxStageMPFallLandFloorLoopPrepare(void);
 void ndsFighterMarioFoxStageMPFallLandFloorLoopFinalize(void);
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCEIL_FLOOR_LOOP_PASS 0x46434550u
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCEIL_FLOOR_LOOP_SAFE_PASS 0x46434553u
@@ -6509,7 +6467,6 @@ extern volatile s32 gNdsStageMPCeilFloorLoopTargetTopYMilli;
 extern volatile s32 gNdsStageMPCeilFloorLoopCeilYMilli;
 extern volatile s32 gNdsStageMPCeilFloorLoopCeilDistMilli;
 extern volatile u32 gNdsStageMPCeilFloorLoopUnsafeCount;
-void ndsFighterMarioFoxStageMPCeilFloorLoopPrepare(void);
 void ndsFighterMarioFoxStageMPCeilFloorLoopFinalize(void);
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCEILSTATUS_FLOOR_LOOP_PASS 0x46435350u
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCEILSTATUS_FLOOR_LOOP_SAFE_PASS 0x46435353u
@@ -6544,7 +6501,6 @@ extern volatile s32 gNdsStageMPCeilStatusFloorLoopVelYBeforeMilli;
 extern volatile s32 gNdsStageMPCeilStatusFloorLoopVelYAfterMilli;
 extern volatile u32 gNdsStageMPCeilStatusFloorLoopMaskCurr;
 extern volatile u32 gNdsStageMPCeilStatusFloorLoopMaskStat;
-void ndsFighterMarioFoxStageMPCeilStatusFloorLoopPrepare(void);
 void ndsFighterMarioFoxStageMPCeilStatusFloorLoopFinalize(void);
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCLIFFCATCH_FLOOR_LOOP_PASS 0x46434350u
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCLIFFCATCH_FLOOR_LOOP_SAFE_PASS 0x46434353u
@@ -6602,7 +6558,6 @@ extern volatile u32 gNdsStageMPCliffCatchFloorLoopOccupancyGAAfter;
 extern volatile u32 gNdsStageMPCliffCatchFloorLoopOccupancyIsCliffHoldAfter;
 extern volatile u32 gNdsStageMPCliffCatchFloorLoopOccupancySetStatusDelta;
 extern volatile u32 gNdsStageMPCliffCatchFloorLoopOccupancyLandingParamDelta;
-void ndsFighterMarioFoxStageMPCliffCatchFloorLoopPrepare(void);
 void ndsFighterMarioFoxStageMPCliffCatchFloorLoopFinalize(void);
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCLIFFWAIT_FLOOR_LOOP_PASS 0x46435750u
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCLIFFWAIT_FLOOR_LOOP_SAFE_PASS 0x46435753u
@@ -6645,7 +6600,6 @@ extern volatile s32 gNdsStageMPCliffWaitFloorLoopFallWaitAfterInterrupt;
 extern volatile s32 gNdsStageMPCliffWaitFloorLoopPlayerTagWaitAfterUpdate;
 extern volatile u32 gNdsStageMPCliffWaitFloorLoopCaptureMaskAfterUpdate;
 extern volatile u32 gNdsStageMPCliffWaitFloorLoopProcDamageSetAfterUpdate;
-void ndsFighterMarioFoxStageMPCliffWaitFloorLoopPrepare(void);
 void ndsFighterMarioFoxStageMPCliffWaitFloorLoopFinalize(void);
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCLIFFATTACK_FLOOR_LOOP_PASS 0x46434150u
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCLIFFATTACK_FLOOR_LOOP_SAFE_PASS 0x46434153u
@@ -6683,7 +6637,6 @@ extern volatile u32 gNdsStageMPCliffAttackFloorLoopProcDamageSetAfter;
 extern volatile s32 gNdsStageMPCliffAttackFloorLoopFallWaitBefore;
 extern volatile s32 gNdsStageMPCliffAttackFloorLoopFallWaitAfter;
 extern volatile u32 gNdsStageMPCliffAttackFloorLoopDamageFallCallCount;
-void ndsFighterMarioFoxStageMPCliffAttackFloorLoopPrepare(void);
 void ndsFighterMarioFoxStageMPCliffAttackFloorLoopFinalize(void);
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCLIFFCLIMB_FLOOR_LOOP_PASS 0x46434c50u
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCLIFFCLIMB_FLOOR_LOOP_SAFE_PASS 0x46434c53u
@@ -6761,7 +6714,6 @@ extern volatile s32 gNdsStageMPCliffClimbFloorLoopRecatchCliffIDAfter;
 extern volatile s32 gNdsStageMPCliffClimbFloorLoopRecatchLRBefore;
 extern volatile u32 gNdsStageMPCliffClimbFloorLoopRecatchMaskCurr;
 extern volatile u32 gNdsStageMPCliffClimbFloorLoopRecatchMaskStat;
-void ndsFighterMarioFoxStageMPCliffClimbFloorLoopPrepare(void);
 void ndsFighterMarioFoxStageMPCliffClimbFloorLoopFinalize(void);
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCLIFFCLIMB_ACTION_LOOP_PASS 0x46434c41u
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCLIFFCLIMB_ACTION_LOOP_SAFE_PASS 0x46434c55u
@@ -6816,7 +6768,6 @@ extern volatile s32 gNdsStageMPCliffCommon2BridgeExpectedRootXMilli;
 extern volatile s32 gNdsStageMPCliffCommon2BridgeExpectedRootYMilli;
 extern volatile s32 gNdsStageMPCliffCommon2BridgeFloorDistAfterMilli;
 extern volatile u32 gNdsStageMPCliffCommon2BridgeRootPositionOK;
-void ndsFighterMarioFoxStageMPCliffClimbActionLoopPrepare(void);
 void ndsFighterMarioFoxStageMPCliffClimbActionLoopFinalize(void);
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCLIFFCLIMB_COMMON2_LOOP_PASS 0x464c3250u
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCLIFFCLIMB_COMMON2_LOOP_SAFE_PASS 0x464c3253u
@@ -6855,7 +6806,6 @@ extern volatile u32 gNdsStageMPCliffClimbCommon2LoopProcUpdateSet;
 extern volatile u32 gNdsStageMPCliffClimbCommon2LoopProcPhysicsSet;
 extern volatile u32 gNdsStageMPCliffClimbCommon2LoopProcMapSet;
 extern volatile u32 gNdsStageMPCliffClimbCommon2LoopIsCliffHoldAfterMap;
-void ndsFighterMarioFoxStageMPCliffClimbCommon2LoopPrepare(void);
 void ndsFighterMarioFoxStageMPCliffClimbCommon2LoopFinalize(void);
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCLIFFCLIMB_FINISH_LOOP_PASS 0x46434650u
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCLIFFCLIMB_FINISH_LOOP_SAFE_PASS 0x46434653u
@@ -6889,7 +6839,6 @@ extern volatile s32 gNdsStageMPCliffClimbFinishLoopPlayerTagWaitAfter;
 extern volatile u32 gNdsStageMPCliffClimbFinishLoopIsCliffHoldAfterUpdate;
 extern volatile u32 gNdsStageMPCliffClimbFinishLoopIsJostleIgnoreAfterUpdate;
 extern volatile u32 gNdsStageMPCliffClimbFinishLoopCommonResetMask;
-void ndsFighterMarioFoxStageMPCliffClimbFinishLoopPrepare(void);
 void ndsFighterMarioFoxStageMPCliffClimbFinishLoopFinalize(void);
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCLIFFWAIT_DAMAGE_LOOP_PASS 0x46445750u
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCLIFFWAIT_DAMAGE_LOOP_SAFE_PASS 0x46445753u
@@ -7061,7 +7010,6 @@ extern volatile u32 gNdsStageMPCliffWaitDamageLoopDownStandFlag1AfterTimeout;
 extern volatile u32 gNdsStageMPCliffWaitDamageLoopDownStandProcCallbacksSetAfterTimeout;
 extern volatile s32 gNdsStageMPCliffWaitDamageLoopDownStandStandWaitAfterTimeout;
 extern volatile s32 gNdsStageMPCliffWaitDamageLoopDownStandDamageMulMilli;
-void ndsFighterMarioFoxStageMPCliffWaitDamageLoopPrepare(void);
 void ndsFighterMarioFoxStageMPCliffWaitDamageLoopFinalize(void);
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPPASSIVE_LOOP_PASS 0x46505350u
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPPASSIVE_LOOP_SAFE_PASS 0x46505353u
@@ -7358,7 +7306,6 @@ extern volatile s32 gNdsStageMPPassiveLoopPassiveStandPlayerTagWaitAfterFinal;
 extern volatile s32 gNdsStageMPPassiveLoopPassivePlayerTagWaitAfterFinal;
 extern volatile u32 gNdsStageMPPassiveLoopPassiveStandProcCallbacksSetAfterFinal;
 extern volatile u32 gNdsStageMPPassiveLoopPassiveProcCallbacksSetAfterFinal;
-void ndsFighterMarioFoxStageMPPassiveLoopPrepare(void);
 void ndsFighterMarioFoxStageMPPassiveLoopFinalize(void);
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPDAMAGE_RECOVER_LOOP_PASS 0x46445243u
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPDAMAGE_RECOVER_LOOP_SAFE_PASS 0x46445253u
@@ -7715,7 +7662,6 @@ extern volatile u32 gNdsStageMPLiveHitStatusLoopP0FloorOK;
 extern volatile u32 gNdsStageMPLiveHitStatusLoopP1FloorOK;
 extern volatile u32 gNdsStageMPLiveHitStatusLoopUnsafeCount;
 void ndsFighterMarioFoxStageMPLiveHitDamageLoopPrepare(void);
-void ndsFighterMarioFoxStageMPLiveHitDamageLoopFinalize(void);
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPDOWNWAIT_LOOP_PASS 0x46445749u
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPDOWNWAIT_LOOP_SAFE_PASS 0x46445755u
 extern volatile u32 gNdsFighterMarioFoxStageMPDownWaitLoopResult;
@@ -7868,7 +7814,6 @@ extern volatile s32 gNdsStageMPDownWaitLoopRollBackMotionAfterFinal;
 extern volatile u32 gNdsStageMPDownWaitLoopRollBackGAAfterFinal;
 extern volatile s32 gNdsStageMPDownWaitLoopRollBackPlayerTagWaitAfterFinal;
 extern volatile u32 gNdsStageMPDownWaitLoopRollBackProcCallbacksSetAfterFinal;
-void ndsFighterMarioFoxStageMPDownWaitLoopPrepare(void);
 void ndsFighterMarioFoxStageMPDownWaitLoopFinalize(void);
 #define NDS_FIGHTER_MARIOFOX_STAGE_TURN_LOOP_PASS 0x46545552u
 #define NDS_FIGHTER_MARIOFOX_STAGE_TURN_LOOP_SAFE_PASS 0x46545553u
@@ -7928,7 +7873,6 @@ extern volatile s32 gNdsStageTurnLoopLRFinal;
 extern volatile s32 gNdsStageTurnLoopVelFinalMilli;
 extern volatile s32 gNdsStageTurnLoopPlayerTagWaitAfterFinal;
 extern volatile u32 gNdsStageTurnLoopProcCallbacksAfterFinal;
-void ndsFighterMarioFoxStageTurnLoopPrepare(void);
 void ndsFighterMarioFoxStageTurnLoopFinalize(void);
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPDOWNRECOVER_LOOP_PASS 0x46445250u
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPDOWNRECOVER_LOOP_SAFE_PASS 0x46445253u
@@ -7993,7 +7937,6 @@ extern volatile u32 gNdsStageMPDownRecoverLoopPlayerTagWaitCount;
 extern volatile u32 gNdsStageMPDownRecoverLoopFinalStatusMask;
 extern volatile u32 gNdsStageMPDownRecoverLoopFinalMotionMask;
 extern volatile u32 gNdsStageMPDownRecoverLoopFinalCallbackMask;
-void ndsFighterMarioFoxStageMPDownRecoverLoopPrepare(void);
 void ndsFighterMarioFoxStageMPDownRecoverLoopFinalize(void);
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCLIFFLEDGE_LOOP_PASS 0x464c4750u
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCLIFFLEDGE_LOOP_SAFE_PASS 0x464c4753u
@@ -8029,7 +7972,6 @@ extern volatile s32 gNdsStageMPCliffLedgeLoopClimbFinishMotionAfter;
 extern volatile u32 gNdsStageMPCliffLedgeLoopClimbFinishGAAfter;
 extern volatile s32 gNdsStageMPCliffLedgeLoopClimbFinishCliffIDBefore;
 extern volatile s32 gNdsStageMPCliffLedgeLoopClimbFinishFloorLineAfter;
-void ndsFighterMarioFoxStageMPCliffLedgeLoopPrepare(void);
 void ndsFighterMarioFoxStageMPCliffLedgeLoopFinalize(void);
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCLIFFLIVE_LOOP_PASS 0x464c5650u
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCLIFFLIVE_LOOP_SAFE_PASS 0x464c5653u
@@ -8085,7 +8027,6 @@ extern volatile u32 gNdsStageMPCliffLiveLoopDropMotion;
 extern volatile u32 gNdsStageMPCliffLiveLoopDropGA;
 extern volatile s32 gNdsStageMPCliffLiveLoopDropCliffCatchWait;
 extern volatile u32 gNdsStageMPCliffLiveLoopDropIsCliffHold;
-void ndsFighterMarioFoxStageMPCliffLiveLoopPrepare(void);
 void ndsFighterMarioFoxStageMPCliffLiveLoopFinalize(void);
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCLIFFATTACK_ACTION_LOOP_PASS 0x46434155u
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCLIFFATTACK_ACTION_LOOP_SAFE_PASS 0x46434156u
@@ -8126,7 +8067,6 @@ extern volatile u32 gNdsStageMPCliffAttackActionLoopProcDamageSetAfterQuick2;
 extern volatile u32 gNdsStageMPCliffAttackActionLoopProcUpdateSetAfterQuick1;
 extern volatile u32 gNdsStageMPCliffAttackActionLoopProcMapSetAfterQuick2;
 extern volatile u32 gNdsStageMPCliffAttackActionLoopJostleIgnoreAfterQuick2;
-void ndsFighterMarioFoxStageMPCliffAttackActionLoopPrepare(void);
 void ndsFighterMarioFoxStageMPCliffAttackActionLoopFinalize(void);
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCLIFFCOMMON2_LOOP_PASS 0x46433250u
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCLIFFCOMMON2_LOOP_SAFE_PASS 0x46433253u
@@ -8165,8 +8105,6 @@ extern volatile u32 gNdsStageMPCliffCommon2LoopProcUpdateSet;
 extern volatile u32 gNdsStageMPCliffCommon2LoopProcPhysicsSet;
 extern volatile u32 gNdsStageMPCliffCommon2LoopProcMapSet;
 extern volatile u32 gNdsStageMPCliffCommon2LoopIsCliffHoldAfterMap;
-void ndsFighterMarioFoxStageMPCliffCommon2LoopPrepare(void);
-void ndsFighterMarioFoxStageMPCliffCommon2LoopFinalize(void);
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCLIFFESCAPE_ACTION_LOOP_PASS 0x46434550u
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCLIFFESCAPE_ACTION_LOOP_SAFE_PASS 0x46434553u
 extern volatile u32 gNdsFighterMarioFoxStageMPCliffEscapeActionLoopResult;
@@ -8227,7 +8165,6 @@ extern volatile u32 gNdsStageMPCliffEscapeActionLoopJostleIgnoreAfterQuick2;
 extern volatile s32 gNdsStageMPCliffEscapeActionLoopFallWaitBefore;
 extern volatile s32 gNdsStageMPCliffEscapeActionLoopFallWaitAfterInterrupt;
 extern volatile u32 gNdsStageMPCliffEscapeActionLoopDamageFallCallCount;
-void ndsFighterMarioFoxStageMPCliffEscapeActionLoopPrepare(void);
 void ndsFighterMarioFoxStageMPCliffEscapeActionLoopFinalize(void);
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCLIFFESCAPE_COMMON2_LOOP_PASS 0x46453250u
 #define NDS_FIGHTER_MARIOFOX_STAGE_MPCLIFFESCAPE_COMMON2_LOOP_SAFE_PASS 0x46453253u
@@ -8266,8 +8203,6 @@ extern volatile u32 gNdsStageMPCliffEscapeCommon2LoopProcUpdateSet;
 extern volatile u32 gNdsStageMPCliffEscapeCommon2LoopProcPhysicsSet;
 extern volatile u32 gNdsStageMPCliffEscapeCommon2LoopProcMapSet;
 extern volatile u32 gNdsStageMPCliffEscapeCommon2LoopIsCliffHoldAfterMap;
-void ndsFighterMarioFoxStageMPCliffEscapeCommon2LoopPrepare(void);
-void ndsFighterMarioFoxStageMPCliffEscapeCommon2LoopFinalize(void);
 extern volatile u32 gNdsFighterMarioFoxLivePreviewResult;
 extern volatile u32 gNdsFighterMarioFoxLivePreviewSafeResult;
 extern volatile u32 gNdsFighterMarioFoxLivePreviewMask;
@@ -8390,7 +8325,6 @@ extern volatile u32 gNdsFighterLivePreviewDrawCallCount;
 extern volatile u32 gNdsFighterLivePreviewMatrixCallCount;
 extern volatile u32 gNdsFighterLivePreviewRootYDriftCount;
 extern volatile u32 gNdsFighterLivePreviewGADriftCount;
-void ndsFighterMarioFoxLivePreviewPrepare(void);
 s32 ndsFighterMarioFoxLivePreviewUpdateEnabled(void);
 void ndsFighterMarioFoxLivePreviewRunVSBattleUpdate(void);
 extern volatile u32 gNdsSCVSBattleStageResult;

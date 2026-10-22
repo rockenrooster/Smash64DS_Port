@@ -481,13 +481,6 @@ s32 ndsEFManagerImpactWaveNdlHeader(GObj *effect_gobj, u32 *variant_out,
     return TRUE;
 }
 
-s32 ndsEFManagerIsImpactWaveGObj(GObj *effect_gobj)
-{
-    u32 variant;
-
-    return ndsEFManagerImpactWaveVariant(effect_gobj, &variant);
-}
-
 volatile u32 gNdsRebirthHaloNativeDrawCount;
 volatile u32 gNdsRebirthHaloNativeFallbackCount;
 volatile u32 gNdsRebirthHaloNativeTexturePrepareCount;

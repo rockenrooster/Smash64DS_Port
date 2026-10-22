@@ -17,7 +17,6 @@
 #include "nds_p5_native_stages.generated.h"
 #endif
 
-void ndsFighterRendererInvalidateMaterialCaches(void);
 void ndsFighterRendererInvalidateMaterialCachesForSlot(u32 slot);
 void ndsFighterRendererInvalidateDObjStateCaches(GObj *fighter_gobj);
 

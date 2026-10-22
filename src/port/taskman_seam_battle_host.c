@@ -10,9 +10,6 @@ extern volatile u32 gNdsEffectPoolFreeMin;
 extern void ndsFighterMarioFoxSchedulerLoopPrepare(void);
 extern void ndsFighterMarioFoxControllerLoopPrepare(void);
 extern void ndsFighterMarioFoxPreviewLoopPrepare(void);
-extern void ndsFighterMarioFoxGCRunAllLoopPrepare(void);
-extern void ndsFighterMarioFoxLivePreviewPrepare(void);
-extern u32 ndsSceneMipCacheHoldLogic(void);
 
 
 #define NDS_FIGHTER_SCHEDULER_LOOP_UPDATE_MAX 180u

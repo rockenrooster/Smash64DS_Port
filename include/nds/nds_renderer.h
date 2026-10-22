@@ -1755,9 +1755,6 @@ void ndsRendererProfileSetOwner(NDSRendererProfileOwner owner);
 void ndsRendererProfileSetSourceProvenance(u32 owner_occurrence,
                                            u32 list_ordinal,
                                            u32 root_branch_path);
-void ndsRendererProfileRecordFrameBoundaryGXState(u32 status, u32 control);
-void ndsRendererProfileRecordMaterialOperations(u32 count);
-u32 ndsRendererProfileGlobalStateHash(void);
 void ndsRendererProfileFrameBegin(void);
 void ndsRendererProfileFramePublish(void);
 extern volatile u32 gNdsRendererFastRunMode;

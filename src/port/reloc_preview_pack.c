@@ -976,22 +976,6 @@ void ndsRelocPreviewFighterLoadCancel(void *handle, s32 fkind)
     ndsPreviewPackLoadFree(load);
 }
 
-s32 ndsRelocPreviewFighterLoadIsStaged(s32 fkind)
-{
-    u32 i;
-
-    for (i = 0u; i < NDS_FPC_LOAD_SLOTS; i++)
-    {
-        if ((sNdsPreviewPackLoads[i].state == NDS_FPC_STATE_STAGED) &&
-            (sNdsPreviewPackLoads[i].fkind == (s16)fkind) &&
-            (sNdsPreviewPackLoads[i].generation == sNdsRelocSceneGeneration))
-        {
-            return TRUE;
-        }
-    }
-    return FALSE;
-}
-
 /* One bounded unit of the transaction. `byte_budget` is the largest read/decode
  * span this call may move; 0 means "no bound", which is what the synchronous
  * 1P/battle entry point uses. */

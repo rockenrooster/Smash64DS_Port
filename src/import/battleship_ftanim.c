@@ -508,22 +508,6 @@ ndsR2AnimBuildTrackTable(DObj *root_dobj, AObj **track_aobjs,
         }                                                                    \
     } while (0)
 
-/* Stage 3 exports. The dense track runtime (`src/nds/nds_ftanim_track.c`) does
- * the same two things, so they stay ONE body here rather than two that can
- * drift: the Q migration -- which the dense binder runs once per clip bind
- * instead of once per stepped call -- and the script-exhausted tail `End` runs
- * over the whole AObj list. Both are `q = 1` unconditionally, because the dense
- * path only exists under `NDS_R2_CUBIC_FIXED`. */
-void ndsR2FtAnimAObjToQ(AObj *a)
-{
-    ndsR2AnimAObjToQ(a);
-}
-
-void ndsR2FtAnimAdvanceTailQ(DObj *root_dobj)
-{
-    ndsR2AnimAdvanceTail(root_dobj, 1u);
-}
-
 /* P2-2p6 exports for the fighter pose engine (`src/nds/nds_ft_pose.c`): the
  * Q12 target word and the Q30 reciprocal, the same two bodies the parser
  * above writes into AObjs, so the engine's tracks carry bit-identical values. */

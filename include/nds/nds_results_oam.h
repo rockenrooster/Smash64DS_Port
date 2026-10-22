@@ -10,11 +10,9 @@ void ndsResultsOamExit(void);
 /* An Enter made while a transition held the previous frame (its OBJ, palette
  * and blend writes would show over that frame) runs here, from the Thaw. */
 void ndsResultsOamEnterPending(void);
-s32 ndsResultsOamIsActive(void);
 void ndsResultsOamBeginFrame(void);
 s32 ndsResultsOamDrawGObj(struct GObj *gobj);
 void ndsResultsOamCommit(void);
-u32 ndsResultsOamBakeGObj(struct GObj *gobj);
 s32 ndsResultsOamEmitTintPlane(u32 source_alpha);
 s32 ndsResultsOamEmitFillRect(s32 sx0, s32 sy0, s32 sx1, s32 sy1);
 

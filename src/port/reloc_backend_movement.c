@@ -3706,93 +3706,6 @@ static void ndsFighterGCRunAllLoopGObjProc(GObj *fighter_gobj)
     sNdsFighterGCRunAllLoopActive = FALSE;
 }
 
-void ndsFighterMarioFoxGCRunAllLoopPrepare(void)
-{
-    u32 i;
-
-    if ((ndsFighterMarioFoxGCRunAllLoopProofEnabled() == FALSE) ||
-        (gNdsFighterGCRunAllLoopPrepared != 0u))
-    {
-        return;
-    }
-    if ((gNdsFighterMarioFoxPreviewLoopResult !=
-            NDS_FIGHTER_MARIOFOX_PREVIEW_LOOP_PASS) ||
-        (gNdsFighterMarioFoxPreviewLoopSafeResult !=
-            NDS_FIGHTER_MARIOFOX_PREVIEW_LOOP_SAFE_PASS) ||
-        ((gNdsFighterMarioFoxPreviewLoopMask & 0x7ffu) != 0x7ffu) ||
-        (gNdsFighterMarioFoxPreviewLoopDeferredMask != 0xffu) ||
-        (gNdsFighterMarioFoxPreviewLoopCount != 2u) ||
-        (gNdsFighterPreviewLoopP0StatusFinal !=
-            (u32)nFTCommonStatusWait) ||
-        (gNdsFighterPreviewLoopP1StatusFinal !=
-            (u32)nFTCommonStatusWait) ||
-        (gNdsFighterPreviewLoopP0MotionFinal !=
-            (u32)nFTCommonMotionWait) ||
-        (gNdsFighterPreviewLoopP1MotionFinal !=
-            (u32)nFTCommonMotionWait) ||
-        (gNdsFighterPreviewLoopP0GAFinal != (u32)nMPKineticsGround) ||
-        (gNdsFighterPreviewLoopP1GAFinal != (u32)nMPKineticsGround))
-    {
-        return;
-    }
-
-    bzero(sNdsFighterPreviewLoopStates,
-          sizeof(sNdsFighterPreviewLoopStates));
-    bzero(sNdsFighterGCRunAllLoopProcesses,
-          sizeof(sNdsFighterGCRunAllLoopProcesses));
-    ndsControllerPlaybackReset();
-    ndsControllerPlaybackSetConnectedMask(0x3u);
-    ndsControllerPlaybackSetEnabled(TRUE);
-    gNdsFighterGCRunAllLoopFrameMax =
-        NDS_FIGHTER_GCRUNALL_LOOP_FRAME_MAX;
-    gNdsFighterGCRunAllLoopUpdateMax =
-        NDS_FIGHTER_GCRUNALL_LOOP_UPDATE_MAX;
-    gNdsFighterGCRunAllLoopGObjCountBefore = (u32)gcGetGObjsActiveNum();
-
-    ndsFighterGCRunAllLoopPauseProofOwnedProcesses();
-    ndsFighterGCRunAllLoopPauseNonTargetProcesses();
-
-    for (i = 0u; i < 2u; i++)
-    {
-        FTStruct *fp = &sNdsFighterStructPool[i];
-        GObj *fighter_gobj = fp->fighter_gobj;
-        DObj *root = fp->joints[nFTPartsJointTopN];
-
-        if ((ndsFighterStructIsPoolPointer(fp) == FALSE) ||
-            (fighter_gobj == NULL) || (root == NULL))
-        {
-            NDS_DIAG(gNdsFighterGCRunAllLoopProcessAttachEscapeCount++);
-            continue;
-        }
-        fighter_gobj->flags |= GOBJ_FLAG_NORUN;
-        ndsFighterPreviewLoopRecordStart(i, fp, root);
-        sNdsFighterGCRunAllLoopProcesses[i] =
-            gcAddGObjProcess(fighter_gobj,
-                             ndsFighterGCRunAllLoopGObjProc,
-                             nGCProcessKindFunc,
-                             3);
-        if (sNdsFighterGCRunAllLoopProcesses[i] == NULL)
-        {
-            NDS_DIAG(gNdsFighterGCRunAllLoopProcessAttachEscapeCount++);
-        }
-        else if (i == 0u)
-        {
-            gNdsFighterGCRunAllLoopP0ProcessAttachCount++;
-        }
-        else
-        {
-            NDS_DIAG(gNdsFighterGCRunAllLoopP1ProcessAttachCount++);
-        }
-    }
-
-    ndsFighterGCRunAllLoopCopyFromPreview();
-    if ((sNdsFighterGCRunAllLoopProcesses[0] != NULL) &&
-        (sNdsFighterGCRunAllLoopProcesses[1] != NULL))
-    {
-        gNdsFighterGCRunAllLoopPrepared = 1u;
-    }
-}
-
 s32 ndsFighterMarioFoxGCRunAllLoopUpdateEnabled(void)
 {
     return ((ndsFighterMarioFoxGCRunAllLoopProofEnabled() != FALSE) &&
@@ -9733,11 +9646,6 @@ static void ndsFighterGCDrawAllLoopRecordDisplayFromCallback(
                                   sNdsFighterGCDrawAllLoopPitch);
 }
 
-s32 ndsFighterMarioFoxGCDrawAllLoopDisplayActive(void)
-{
-    return (sNdsFighterGCDrawAllLoopDisplayActive != FALSE) ? TRUE : FALSE;
-}
-
 s32 ndsFighterMarioFoxStageGCDrawAllLoopProofActive(void)
 {
     return ((ndsFighterMarioFoxStageGCDrawAllLoopProofEnabled() != FALSE) &&
@@ -12150,11 +12058,6 @@ static void ndsStageGCDrawAllLoopBeginHardwareFrame(void)
     gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
 }
 
-
-u32 ndsSceneMipCacheHoldLogic(void)
-{
-    return FALSE;
-}
 
 static void ndsStageGCDrawAllLoopSubmitHardwareFrame(void)
 {
